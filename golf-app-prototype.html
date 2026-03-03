@@ -1,0 +1,889 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>Greenback Golf</title>
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:wght@300;400;500;600&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/lucide/0.263.1/umd/lucide.min.js"></script>
+<style>
+  :root {
+    --green-dark: #0f4225;
+    --green-mid:  #2a8a4e;
+    --green-light:#4db875;
+    --lime:       #c8f04a;
+    --white:      #ffffff;
+    --red:        #e84040;
+    --amber:      #e8a040;
+    --gold:       #ffd700;
+    --bg:         #0d2818;
+    --card:       #142e1e;
+    --card2:      #1a3d26;
+    --border:     rgba(255,255,255,0.08);
+    --text:       #f0ece0;
+    --muted:      #7a9080;
+  }
+  *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent;}
+  body{
+    font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);
+    min-height:100vh;display:flex;justify-content:center;align-items:flex-start;
+    padding:20px 16px 80px;
+  }
+  .phone{width:100%;max-width:390px;}
+
+  /* screens */
+  .screen{display:none;flex-direction:column;}
+  .screen.active{display:flex;animation:fadeUp .18s ease;}
+  @keyframes fadeUp{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
+
+  /* topbar */
+  .topbar{display:flex;align-items:center;justify-content:space-between;padding:12px 0 18px;}
+  .topbar-title{font-family:'Bebas Neue',sans-serif;font-size:22px;letter-spacing:2px;color:var(--lime);}
+  .back-btn{background:none;border:none;color:var(--muted);cursor:pointer;
+    display:flex;align-items:center;gap:5px;font-family:'DM Sans',sans-serif;font-size:14px;padding:4px 8px 4px 0;}
+  .back-btn:hover{color:var(--text);}
+  .back-btn svg{width:16px;height:16px;}
+  .topbar-action{background:none;border:none;color:var(--muted);cursor:pointer;
+    font-family:'DM Sans',sans-serif;font-size:14px;padding:4px 0 4px 8px;}
+  .topbar-action:hover{color:var(--text);}
+
+  /* labels */
+  .section-label{font-size:11px;letter-spacing:3px;text-transform:uppercase;color:var(--muted);margin-bottom:12px;}
+  .step-label{font-size:11px;letter-spacing:2px;text-transform:uppercase;color:var(--muted);margin-bottom:4px;}
+  .prog-bar{height:3px;background:var(--card2);border-radius:2px;margin-bottom:20px;overflow:hidden;}
+  .prog-fill{height:100%;background:var(--lime);border-radius:2px;transition:width .3s;}
+
+  /* buttons */
+  .btn-primary{
+    background:var(--lime);color:var(--green-dark);border:none;border-radius:16px;
+    padding:20px 24px;font-family:'Bebas Neue',sans-serif;font-size:22px;letter-spacing:2px;
+    cursor:pointer;transition:transform .1s,opacity .1s;width:100%;
+    display:flex;align-items:center;justify-content:center;gap:8px;
+  }
+  .btn-primary:active{transform:scale(.97);opacity:.9;}
+  .btn-primary svg{width:20px;height:20px;}
+  .btn-secondary{
+    background:var(--card);color:var(--text);border:1.5px solid var(--border);border-radius:16px;
+    padding:18px 24px;font-family:'Bebas Neue',sans-serif;font-size:20px;letter-spacing:2px;
+    cursor:pointer;transition:transform .1s,background .15s;width:100%;
+    display:flex;align-items:center;justify-content:center;gap:8px;
+  }
+  .btn-secondary:active{transform:scale(.97);background:var(--card2);}
+  .btn-secondary svg{width:18px;height:18px;}
+
+  /* home */
+  .home-hdr{padding:24px 0 32px;text-align:center;}
+  .logo{font-family:'Bebas Neue',sans-serif;font-size:52px;letter-spacing:4px;color:var(--lime);line-height:1;}
+  .logo-sub{font-size:11px;letter-spacing:4px;text-transform:uppercase;color:var(--muted);margin-top:4px;}
+  .home-actions{display:flex;flex-direction:column;gap:12px;}
+  .crew-section{margin-top:32px;}
+  .crew-card{
+    background:var(--card);border:1.5px solid var(--border);border-radius:16px;
+    padding:18px 20px;display:flex;align-items:center;justify-content:space-between;
+    cursor:pointer;transition:background .15s;margin-bottom:10px;
+  }
+  .crew-card:active{background:var(--card2);}
+  .crew-names{font-weight:500;font-size:15px;}
+  .crew-meta{font-size:12px;color:var(--muted);margin-top:3px;}
+  .crew-chevron{color:var(--lime);display:flex;align-items:center;}
+  .crew-chevron svg{width:18px;height:18px;}
+
+  /* game select */
+  .game-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:8px;}
+  .game-tile{
+    background:var(--card);border:2px solid var(--border);border-radius:18px;
+    padding:20px 16px;cursor:pointer;transition:all .15s;position:relative;overflow:hidden;
+  }
+  .game-tile.selected{border-color:var(--lime);background:var(--card2);}
+  .game-tile:active{transform:scale(.97);}
+  .game-tile-icon{color:var(--muted);margin-bottom:10px;display:flex;}
+  .game-tile.selected .game-tile-icon{color:var(--lime);}
+  .game-tile-icon svg{width:26px;height:26px;}
+  .game-tile-name{font-family:'Bebas Neue',sans-serif;font-size:24px;letter-spacing:1.5px;margin-bottom:4px;}
+  .game-tile-desc{font-size:11px;color:var(--muted);line-height:1.4;}
+  .game-tile-check{
+    position:absolute;top:12px;right:12px;width:22px;height:22px;
+    background:var(--lime);border-radius:50%;display:flex;align-items:center;justify-content:center;
+    color:var(--green-dark);opacity:0;transition:opacity .15s;
+  }
+  .game-tile-check svg{width:13px;height:13px;}
+  .game-tile.selected .game-tile-check{opacity:1;}
+
+  /* players */
+  .players-list{display:flex;flex-direction:column;gap:10px;margin-top:8px;}
+  .player-row{
+    background:var(--card);border:1.5px solid var(--border);border-radius:14px;
+    padding:12px 14px;display:flex;align-items:center;gap:12px;transition:border-color .15s;
+  }
+  .player-row:focus-within{border-color:rgba(200,240,74,.3);}
+  .player-avatar{
+    width:42px;height:42px;border-radius:50%;background:var(--green-dark);
+    border:2px solid var(--green-mid);display:flex;align-items:center;justify-content:center;
+    font-family:'Bebas Neue',sans-serif;font-size:18px;color:var(--lime);flex-shrink:0;user-select:none;
+  }
+  .player-input-wrap{flex:1;min-width:0;}
+  .player-name-input{
+    background:none;border:none;outline:none;color:var(--text);
+    font-family:'DM Sans',sans-serif;font-size:16px;font-weight:500;width:100%;
+  }
+  .player-name-input::placeholder{color:var(--muted);}
+  .player-hcp-row{display:flex;align-items:center;gap:6px;margin-top:4px;}
+  .player-hcp-label{font-size:11px;color:var(--muted);}
+  .player-hcp-input{
+    background:var(--green-dark);border:none;border-radius:6px;color:var(--lime);
+    font-family:'DM Mono',monospace;font-size:13px;width:40px;padding:3px 6px;text-align:center;outline:none;
+  }
+  .player-remove{
+    background:none;border:none;color:var(--muted);cursor:pointer;padding:6px;
+    border-radius:8px;display:flex;align-items:center;transition:color .15s,background .15s;flex-shrink:0;
+  }
+  .player-remove:hover{color:var(--red);background:rgba(232,64,64,.1);}
+  .player-remove:disabled{opacity:.2;pointer-events:none;}
+  .player-remove svg{width:18px;height:18px;}
+  .add-player-btn{
+    background:var(--card);border:1.5px dashed rgba(200,240,74,.25);border-radius:14px;
+    padding:14px 16px;display:flex;align-items:center;gap:10px;cursor:pointer;
+    transition:all .15s;color:var(--muted);font-family:'DM Sans',sans-serif;font-size:14px;
+    font-weight:500;margin-top:4px;width:100%;
+  }
+  .add-player-btn:hover{border-color:rgba(200,240,74,.5);color:var(--lime);}
+  .add-player-btn:active{background:var(--card2);}
+  .add-player-btn svg{width:18px;height:18px;}
+  .players-note{font-size:11px;color:var(--amber);text-align:center;margin-top:10px;min-height:16px;}
+
+  /* stakes */
+  .stakes-list{display:flex;flex-direction:column;gap:12px;margin-top:8px;}
+  .stakes-row{
+    background:var(--card);border:1.5px solid var(--border);border-radius:14px;
+    padding:16px 18px;display:flex;align-items:center;justify-content:space-between;
+  }
+  .stakes-left{display:flex;align-items:center;gap:12px;}
+  .stakes-icon{color:var(--muted);display:flex;}
+  .stakes-icon svg{width:20px;height:20px;}
+  .stakes-name{font-weight:500;font-size:15px;}
+  .stakes-sub{font-size:11px;color:var(--muted);margin-top:2px;}
+  .stakes-picker{display:flex;align-items:center;gap:10px;}
+  .stake-btn{
+    width:36px;height:36px;border-radius:50%;border:none;background:var(--green-dark);
+    color:var(--lime);font-size:20px;cursor:pointer;display:flex;align-items:center;
+    justify-content:center;transition:background .1s;line-height:1;
+  }
+  .stake-btn:active{background:var(--green-mid);}
+  .stake-val{
+    font-family:'DM Mono',monospace;font-size:20px;font-weight:500;
+    color:var(--lime);min-width:48px;text-align:center;
+  }
+  .no-games-msg{
+    text-align:center;padding:40px 20px;color:var(--muted);font-size:14px;line-height:1.8;
+    display:flex;flex-direction:column;align-items:center;gap:12px;
+  }
+  .no-games-msg svg{width:32px;height:32px;color:var(--green-mid);}
+
+  /* hole */
+  .hole-hdr{
+    background:var(--card);border-radius:20px;padding:18px 20px;
+    margin-bottom:14px;display:flex;align-items:center;justify-content:space-between;
+  }
+  .hole-num{font-family:'Bebas Neue',sans-serif;font-size:52px;color:var(--lime);line-height:1;}
+  .hole-num-label{font-size:10px;letter-spacing:3px;text-transform:uppercase;color:var(--muted);margin-top:2px;}
+  .hole-meta{text-align:right;}
+  .hole-par{font-family:'DM Mono',monospace;font-size:16px;}
+  .game-chips{display:flex;gap:4px;flex-wrap:wrap;justify-content:flex-end;margin-top:6px;}
+  .chip{
+    border-radius:6px;padding:3px 8px;font-size:10px;
+    background:var(--green-dark);color:var(--muted);font-weight:500;
+  }
+  .chip.on{background:rgba(200,240,74,.12);color:var(--lime);}
+
+  /* wolf block */
+  .wolf-block{background:var(--card);border-radius:14px;padding:14px 16px;margin-bottom:12px;}
+  .wolf-block-hdr{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;}
+  .wolf-block-title{font-size:13px;font-weight:500;}
+  .wolf-block-title span{color:var(--lime);}
+  .wolf-block-sub{font-size:11px;color:var(--muted);}
+  .wolf-opts{display:grid;grid-template-columns:1fr 1fr;gap:8px;}
+  .wolf-opt{
+    background:var(--green-dark);border:2px solid transparent;border-radius:10px;
+    padding:10px 12px;text-align:center;cursor:pointer;transition:all .15s;
+    font-size:13px;font-weight:500;color:var(--muted);
+  }
+  .wolf-opt.lone{grid-column:1 / -1;}
+  .wolf-opt.selected{border-color:var(--lime);background:rgba(200,240,74,.08);color:var(--lime);}
+  .wolf-opt:active{transform:scale(.96);}
+
+  /* banker notice */
+  .banker-notice{
+    display:flex;align-items:center;gap:8px;margin-bottom:10px;
+    padding:8px 12px;background:rgba(200,240,74,.05);
+    border:1px solid rgba(200,240,74,.15);border-radius:10px;
+  }
+  .banker-notice svg{width:14px;height:14px;color:var(--lime);flex-shrink:0;}
+  .banker-notice-txt{font-size:12px;color:var(--muted);line-height:1.4;}
+  .banker-notice-txt strong{color:var(--lime);}
+
+  /* score cards */
+  .score-cards{display:flex;flex-direction:column;gap:10px;margin-bottom:12px;}
+  .score-card{
+    background:var(--card);border:1.5px solid var(--border);border-radius:16px;
+    padding:12px 14px;display:flex;align-items:center;justify-content:space-between;
+  }
+  .score-card.is-banker{border-color:rgba(200,240,74,.3);}
+  .sc-left{display:flex;align-items:center;gap:12px;flex:1;min-width:0;}
+  .sc-av{
+    width:40px;height:40px;border-radius:50%;background:var(--green-dark);
+    display:flex;align-items:center;justify-content:center;
+    font-family:'Bebas Neue',sans-serif;font-size:17px;color:var(--lime);flex-shrink:0;
+  }
+  .sc-info{min-width:0;flex:1;}
+  .sc-name{font-weight:500;font-size:14px;display:flex;align-items:center;gap:6px;}
+  .sc-banker-tag{
+    font-size:9px;background:rgba(200,240,74,.15);color:var(--lime);
+    padding:2px 6px;border-radius:5px;font-weight:600;letter-spacing:.5px;text-transform:uppercase;
+  }
+  .sc-sub{font-size:11px;color:var(--muted);margin-top:3px;display:flex;align-items:center;gap:6px;}
+  .bet-picker{display:flex;align-items:center;gap:4px;}
+  .bbet-btn{
+    width:22px;height:22px;border-radius:50%;border:none;background:var(--green-dark);
+    color:var(--lime);font-size:14px;cursor:pointer;
+    display:flex;align-items:center;justify-content:center;line-height:1;
+  }
+  .bbet-btn:active{background:var(--green-mid);}
+  .bbet-val{font-family:'DM Mono',monospace;font-size:13px;color:var(--lime);min-width:28px;text-align:center;}
+  .sc-picker{display:flex;align-items:center;flex-shrink:0;}
+  .sc-btn{
+    width:42px;height:42px;border:none;background:var(--green-dark);color:var(--text);
+    font-size:22px;cursor:pointer;display:flex;align-items:center;justify-content:center;
+    transition:background .1s;line-height:1;
+  }
+  .sc-btn:first-child{border-radius:12px 0 0 12px;}
+  .sc-btn:last-child{border-radius:0 12px 12px 0;}
+  .sc-btn:active{background:var(--green-mid);}
+  .sc-score{
+    width:46px;height:42px;background:var(--bg);
+    display:flex;align-items:center;justify-content:center;
+    font-family:'DM Mono',monospace;font-size:22px;font-weight:500;
+  }
+  .sc-score.eagle{color:var(--gold);}
+  .sc-score.birdie{color:#60d090;}
+  .sc-score.par{color:var(--text);}
+  .sc-score.bogey{color:var(--amber);}
+  .sc-score.double{color:var(--red);}
+
+  /* tally */
+  .tally{background:var(--card);border-radius:14px;padding:12px 16px;margin-bottom:10px;}
+  .tally-hdr{font-size:10px;letter-spacing:3px;text-transform:uppercase;color:var(--muted);margin-bottom:8px;}
+  .tally-row{display:flex;justify-content:space-between;align-items:center;padding:5px 0;}
+  .tally-row+.tally-row{border-top:1px solid var(--border);}
+  .tally-name{font-size:13px;font-weight:500;}
+  .tally-amt{font-family:'DM Mono',monospace;font-size:14px;font-weight:500;}
+  .tally-amt.pos{color:var(--green-light);}
+  .tally-amt.neg{color:var(--red);}
+  .tally-amt.zero{color:var(--muted);}
+
+  /* skins */
+  .skins-block{background:var(--card);border-radius:14px;padding:12px 16px;margin-bottom:10px;}
+  .skins-hdr{font-size:10px;letter-spacing:3px;text-transform:uppercase;color:var(--muted);margin-bottom:8px;}
+  .skins-row{display:flex;gap:6px;flex-wrap:wrap;}
+  .skin-chip{
+    background:var(--green-dark);border-radius:8px;padding:5px 10px;
+    font-size:11px;color:var(--muted);font-family:'DM Mono',monospace;
+  }
+  .skin-chip.won{background:rgba(200,240,74,.12);color:var(--lime);}
+  .skin-chip.carry{background:rgba(232,160,64,.12);color:var(--amber);}
+
+  /* hole dots */
+  .hole-dots{display:flex;gap:5px;flex-wrap:wrap;margin-top:12px;}
+  .h-dot{
+    width:28px;height:28px;border-radius:50%;background:var(--green-dark);
+    display:flex;align-items:center;justify-content:center;
+    font-size:11px;color:var(--muted);cursor:pointer;transition:all .15s;
+  }
+  .h-dot.done{background:var(--green-mid);color:var(--white);}
+  .h-dot.cur{background:var(--lime);color:var(--green-dark);font-weight:700;}
+  .h-dot.gap{background:transparent;width:8px;pointer-events:none;}
+
+  /* hole nav */
+  .hole-nav{display:flex;gap:10px;margin-top:12px;}
+  .hnav-btn{
+    flex:1;background:var(--card);border:1.5px solid var(--border);border-radius:14px;
+    padding:16px;font-family:'Bebas Neue',sans-serif;font-size:18px;letter-spacing:1.5px;
+    cursor:pointer;color:var(--text);transition:all .15s;
+  }
+  .hnav-btn.next{background:var(--lime);color:var(--green-dark);border-color:var(--lime);flex:2;}
+  .hnav-btn:active{transform:scale(.97);}
+
+  /* settlement */
+  .settle-hero{text-align:center;padding:20px 0 24px;}
+  .settle-hero h1{font-family:'Bebas Neue',sans-serif;font-size:42px;letter-spacing:3px;color:var(--lime);}
+  .settle-sub{font-size:13px;color:var(--muted);margin-top:4px;}
+  .settle-cards{display:flex;flex-direction:column;gap:10px;margin-bottom:20px;}
+  .settle-card{background:var(--card);border:1.5px solid var(--border);border-radius:16px;padding:16px 18px;}
+  .settle-card.winner{border-color:rgba(200,240,74,.35);}
+  .settle-card.loser{border-color:rgba(232,64,64,.25);}
+  .settle-name{font-weight:600;font-size:16px;display:flex;align-items:center;gap:10px;}
+  .settle-badge{font-size:10px;padding:3px 8px;border-radius:20px;font-weight:600;letter-spacing:1px;text-transform:uppercase;}
+  .settle-badge.w{background:rgba(200,240,74,.15);color:var(--lime);}
+  .settle-badge.l{background:rgba(232,64,64,.12);color:var(--red);}
+  .settle-total{font-family:'DM Mono',monospace;font-size:28px;font-weight:500;margin-top:8px;}
+  .settle-total.win{color:var(--lime);}
+  .settle-total.lose{color:var(--red);}
+  .settle-lines{margin-top:10px;}
+  .settle-line{
+    display:flex;justify-content:space-between;align-items:center;
+    font-size:12px;color:var(--muted);padding:5px 0;border-top:1px solid var(--border);
+  }
+  .settle-line:first-child{border-top:none;}
+  .settle-line-lbl{display:flex;align-items:center;gap:6px;}
+  .settle-line-lbl svg{width:12px;height:12px;}
+  .settle-line span.pos{font-family:'DM Mono',monospace;color:var(--green-light);}
+  .settle-line span.neg{font-family:'DM Mono',monospace;color:var(--red);}
+  .settle-line span.zero{font-family:'DM Mono',monospace;color:var(--muted);}
+
+  .pay-block{background:var(--card2);border-radius:14px;padding:16px;margin-bottom:20px;}
+  .pay-title{font-size:11px;letter-spacing:3px;text-transform:uppercase;color:var(--muted);margin-bottom:12px;}
+  .pay-row{display:flex;align-items:center;padding:10px 0;border-top:1px solid var(--border);}
+  .pay-row:first-of-type{border-top:none;}
+  .pay-from,.pay-to{font-size:14px;font-weight:500;}
+  .pay-to{text-align:right;}
+  .pay-arrow{color:var(--muted);flex:1;display:flex;align-items:center;justify-content:center;}
+  .pay-arrow svg{width:16px;height:16px;}
+  .pay-amt{
+    font-family:'DM Mono',monospace;font-size:15px;color:var(--lime);
+    background:rgba(200,240,74,.1);padding:4px 10px;border-radius:8px;margin-left:10px;
+  }
+</style>
+</head>
+<body>
+<div class="phone">
+
+<!-- ══ HOME ══ -->
+<div class="screen active" id="s-home">
+  <div class="home-hdr">
+    <div class="logo">Greenback</div>
+    <div class="logo-sub">Golf Betting Scorecard</div>
+  </div>
+  <div class="home-actions">
+    <button class="btn-primary" onclick="go('s-games')">
+      <i data-lucide="plus-circle"></i> New Round
+    </button>
+    <button class="btn-secondary" onclick="go('s-history')">
+      <i data-lucide="clock"></i> Past Rounds
+    </button>
+  </div>
+  <div class="crew-section">
+    <div class="section-label">Your Crews</div>
+    <div class="crew-card" onclick="go('s-games')">
+      <div>
+        <div class="crew-names">The Saturday Boys</div>
+        <div class="crew-meta">Mike · Dave · Connor · You &nbsp;·&nbsp; 3 days ago</div>
+      </div>
+      <div class="crew-chevron"><i data-lucide="chevron-right"></i></div>
+    </div>
+    <div class="crew-card" onclick="go('s-games')">
+      <div>
+        <div class="crew-names">Work Trip</div>
+        <div class="crew-meta">4 players &nbsp;·&nbsp; 2 weeks ago</div>
+      </div>
+      <div class="crew-chevron"><i data-lucide="chevron-right"></i></div>
+    </div>
+  </div>
+</div>
+
+<!-- ══ GAME SELECT ══ -->
+<div class="screen" id="s-games">
+  <div class="topbar">
+    <button class="back-btn" onclick="go('s-home')"><i data-lucide="chevron-left"></i> Back</button>
+    <div class="topbar-title">New Round</div>
+    <div style="width:60px"></div>
+  </div>
+  <div class="step-label">Step 1 of 3 — Pick Games</div>
+  <div class="prog-bar"><div class="prog-fill" style="width:33%"></div></div>
+  <div class="game-grid">
+    <div class="game-tile selected" id="tile-banker" onclick="toggleGame('banker')">
+      <div class="game-tile-check"><i data-lucide="check"></i></div>
+      <div class="game-tile-icon"><i data-lucide="landmark"></i></div>
+      <div class="game-tile-name">Banker</div>
+      <div class="game-tile-desc">1v1 vs. rotating banker each hole</div>
+    </div>
+    <div class="game-tile" id="tile-skins" onclick="toggleGame('skins')">
+      <div class="game-tile-check"><i data-lucide="check"></i></div>
+      <div class="game-tile-icon"><i data-lucide="circle-dollar-sign"></i></div>
+      <div class="game-tile-name">Skins</div>
+      <div class="game-tile-desc">Win a hole outright, take the skin</div>
+    </div>
+    <div class="game-tile" id="tile-nassau" onclick="toggleGame('nassau')">
+      <div class="game-tile-check"><i data-lucide="check"></i></div>
+      <div class="game-tile-icon"><i data-lucide="trophy"></i></div>
+      <div class="game-tile-name">Nassau</div>
+      <div class="game-tile-desc">Front 9 / Back 9 / Total match</div>
+    </div>
+    <div class="game-tile" id="tile-wolf" onclick="toggleGame('wolf')">
+      <div class="game-tile-check"><i data-lucide="check"></i></div>
+      <div class="game-tile-icon"><i data-lucide="users"></i></div>
+      <div class="game-tile-name">Wolf</div>
+      <div class="game-tile-desc">Pick partners after each tee shot</div>
+    </div>
+  </div>
+  <div style="margin-top:24px">
+    <button class="btn-primary" onclick="go('s-players')">
+      Next: Add Players <i data-lucide="arrow-right"></i>
+    </button>
+  </div>
+</div>
+
+<!-- ══ PLAYERS ══ -->
+<div class="screen" id="s-players">
+  <div class="topbar">
+    <button class="back-btn" onclick="go('s-games')"><i data-lucide="chevron-left"></i> Back</button>
+    <div class="topbar-title">Players</div>
+    <div style="width:60px"></div>
+  </div>
+  <div class="step-label">Step 2 of 3 — Who's Playing?</div>
+  <div class="prog-bar"><div class="prog-fill" style="width:66%"></div></div>
+  <div class="players-list" id="players-list"></div>
+  <button class="add-player-btn" id="add-btn" onclick="addPlayer()">
+    <i data-lucide="user-plus"></i> Add Player
+  </button>
+  <div class="players-note" id="players-note"></div>
+  <div style="margin-top:20px">
+    <button class="btn-primary" onclick="go('s-stakes')">
+      Next: Set Stakes <i data-lucide="arrow-right"></i>
+    </button>
+  </div>
+</div>
+
+<!-- ══ STAKES ══ -->
+<div class="screen" id="s-stakes">
+  <div class="topbar">
+    <button class="back-btn" onclick="go('s-players')"><i data-lucide="chevron-left"></i> Back</button>
+    <div class="topbar-title">Stakes</div>
+    <div style="width:60px"></div>
+  </div>
+  <div class="step-label">Step 3 of 3 — Set the Money</div>
+  <div class="prog-bar"><div class="prog-fill" style="width:100%"></div></div>
+  <div class="stakes-list" id="stakes-list"></div>
+  <div style="margin-top:24px">
+    <button class="btn-primary" onclick="go('s-hole')">
+      <i data-lucide="flag"></i> Let's Play
+    </button>
+  </div>
+</div>
+
+<!-- ══ HOLE ══ -->
+<div class="screen" id="s-hole">
+  <div class="topbar">
+    <button class="back-btn" onclick="go('s-stakes')"><i data-lucide="chevron-left"></i> Setup</button>
+    <div class="topbar-title">Scoring</div>
+    <button class="topbar-action" onclick="go('s-settle')">Finish</button>
+  </div>
+  <div class="hole-hdr">
+    <div>
+      <div class="hole-num">3</div>
+      <div class="hole-num-label">Hole</div>
+    </div>
+    <div class="hole-meta">
+      <div class="hole-par">Par 4 · 385 yds</div>
+      <div class="game-chips" id="game-chips"></div>
+    </div>
+  </div>
+  <div id="wolf-block"></div>
+  <div id="banker-notice"></div>
+  <div class="score-cards" id="score-cards"></div>
+  <div id="skins-block"></div>
+  <div id="tally-block"></div>
+  <div class="hole-dots" id="hole-dots"></div>
+  <div class="hole-nav">
+    <button class="hnav-btn">
+      <i data-lucide="chevron-left" style="display:inline-block;vertical-align:middle;width:16px;height:16px"></i> H2
+    </button>
+    <button class="hnav-btn next" onclick="go('s-hole')">Save &amp; Next Hole</button>
+  </div>
+</div>
+
+<!-- ══ SETTLEMENT ══ -->
+<div class="screen" id="s-settle">
+  <div class="topbar">
+    <button class="back-btn" onclick="go('s-hole')"><i data-lucide="chevron-left"></i> Hole 18</button>
+    <div class="topbar-title">Settle Up</div>
+    <div style="width:60px"></div>
+  </div>
+  <div class="settle-hero">
+    <h1>Round Over</h1>
+    <div class="settle-sub">Oct 12 · Pebble Creek · 18 holes</div>
+  </div>
+  <div class="settle-cards" id="settle-cards"></div>
+  <div class="pay-block">
+    <div class="pay-title">Who Pays Who</div>
+    <div class="pay-row">
+      <div class="pay-from">Dave</div>
+      <div class="pay-arrow"><i data-lucide="arrow-right"></i></div>
+      <div class="pay-to">Mike</div>
+      <div class="pay-amt">$18</div>
+    </div>
+    <div class="pay-row">
+      <div class="pay-from">Connor</div>
+      <div class="pay-arrow"><i data-lucide="arrow-right"></i></div>
+      <div class="pay-to">Mike</div>
+      <div class="pay-amt">$16</div>
+    </div>
+    <div class="pay-row">
+      <div class="pay-from">Connor</div>
+      <div class="pay-arrow"><i data-lucide="arrow-right"></i></div>
+      <div class="pay-to">You</div>
+      <div class="pay-amt">$12</div>
+    </div>
+  </div>
+  <button class="btn-primary" onclick="go('s-home')">
+    <i data-lucide="home"></i> Back to Home
+  </button>
+  <div style="margin-top:12px">
+    <button class="btn-secondary" onclick="go('s-home')">
+      <i data-lucide="share-2"></i> Share Results
+    </button>
+  </div>
+</div>
+
+<!-- ══ HISTORY ══ -->
+<div class="screen" id="s-history">
+  <div class="topbar">
+    <button class="back-btn" onclick="go('s-home')"><i data-lucide="chevron-left"></i> Back</button>
+    <div class="topbar-title">Past Rounds</div>
+    <div style="width:60px"></div>
+  </div>
+  <div class="crew-card" onclick="go('s-settle')">
+    <div>
+      <div class="crew-names">Pebble Creek · Oct 12</div>
+      <div class="crew-meta">Mike · Dave · Connor · You &nbsp;·&nbsp; <span style="color:var(--green-light)">You +$12</span></div>
+    </div>
+    <div class="crew-chevron"><i data-lucide="chevron-right"></i></div>
+  </div>
+  <div class="crew-card" onclick="go('s-settle')">
+    <div>
+      <div class="crew-names">Riverview GC · Sep 28</div>
+      <div class="crew-meta">Mike · Dave · Connor · You &nbsp;·&nbsp; <span style="color:var(--red)">You −$31</span></div>
+    </div>
+    <div class="crew-chevron"><i data-lucide="chevron-right"></i></div>
+  </div>
+  <div class="crew-card" onclick="go('s-settle')">
+    <div>
+      <div class="crew-names">The Meadows · Sep 14</div>
+      <div class="crew-meta">Work Trip · 4 players &nbsp;·&nbsp; <span style="color:var(--green-light)">You +$8</span></div>
+    </div>
+    <div class="crew-chevron"><i data-lucide="chevron-right"></i></div>
+  </div>
+</div>
+
+</div><!-- /phone -->
+<script>
+// ─── STATE ───────────────────────────────────────
+const selectedGames = new Set(['banker']);
+
+let players = [
+  {id:1,name:'You',   hcp:14},
+  {id:2,name:'Mike',  hcp:8},
+  {id:3,name:'Dave',  hcp:18},
+  {id:4,name:'Connor',hcp:22},
+];
+let nextId = 5;
+
+const stakeSteps = [1,2,3,5,10,20];
+const stakeVals  = {banker:2, skins:3, nassau:5, wolf:2};
+const scores     = {};
+const bets       = {};
+
+const GAME_CFG = {
+  banker: {label:'Banker', sub:'Min per hole · max set by banker', icon:'landmark'},
+  skins:  {label:'Skins',  sub:'Per skin · carries over on ties',  icon:'circle-dollar-sign'},
+  nassau: {label:'Nassau', sub:'Per match (front / back / total)',  icon:'trophy'},
+  wolf:   {label:'Wolf',   sub:'Base unit per hole',                icon:'users'},
+};
+const MOCK_SETTLE = {
+  1: {name:'You',    total:'+$12', cls:'win', badge:'Up',     banker:'+$6',  skins:'+$8 (2 skins)',  nassau:'−$5 (1-2)', wolf:'+$3'},
+  2: {name:'Mike',   total:'+$34', cls:'win', badge:'Winner', banker:'+$18', skins:'+$21 (5 skins)', nassau:'−$5 (2-1)', wolf:'+$0'},
+  3: {name:'Dave',   total:'−$18', cls:'lose',badge:'Down',   banker:'−$12', skins:'$0',             nassau:'−$15 (0-3)',wolf:'+$9'},
+  4: {name:'Connor', total:'−$28', cls:'lose',badge:'Down',   banker:'−$12', skins:'+$3 (1 skin)',   nassau:'−$5 (1-2)', wolf:'−$14'},
+};
+
+// ─── NAVIGATION ──────────────────────────────────
+function go(id) {
+  document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+  window.scrollTo(0,0);
+  if (id==='s-players') renderPlayers();
+  if (id==='s-stakes')  renderStakes();
+  if (id==='s-hole')    renderHole();
+  if (id==='s-settle')  renderSettle();
+  lucide.createIcons();
+}
+
+// ─── GAME TOGGLE ─────────────────────────────────
+function toggleGame(g) {
+  const tile = document.getElementById('tile-'+g);
+  if (selectedGames.has(g)) { selectedGames.delete(g); tile.classList.remove('selected'); }
+  else                       { selectedGames.add(g);    tile.classList.add('selected'); }
+}
+
+// ─── PLAYERS ─────────────────────────────────────
+function initial(name){ return (name||'?').trim().charAt(0).toUpperCase(); }
+
+function renderPlayers() {
+  const list = document.getElementById('players-list');
+  list.innerHTML = '';
+  players.forEach(p => {
+    const row = document.createElement('div');
+    row.className = 'player-row';
+    row.innerHTML = `
+      <div class="player-avatar" id="av-${p.id}">${initial(p.name)}</div>
+      <div class="player-input-wrap">
+        <input class="player-name-input" value="${p.name}" placeholder="Player name"
+          oninput="onNameInput(${p.id},this)"/>
+        <div class="player-hcp-row">
+          <span class="player-hcp-label">HCP</span>
+          <input class="player-hcp-input" type="number" min="0" max="54" value="${p.hcp}"
+            oninput="onHcpInput(${p.id},this)"/>
+        </div>
+      </div>
+      <button class="player-remove" onclick="removePlayer(${p.id})"
+        ${players.length<=2?'disabled':''} title="Remove">
+        <i data-lucide="x"></i>
+      </button>`;
+    list.appendChild(row);
+  });
+  document.getElementById('add-btn').style.display = players.length>=6 ? 'none':'flex';
+  const note = document.getElementById('players-note');
+  note.style.color = 'var(--amber)';
+  if      (players.length < 2)                             note.textContent = 'Need at least 2 players.';
+  else if (selectedGames.has('wolf') && players.length!==4) note.textContent = 'Wolf requires exactly 4 players.';
+  else                                                      note.textContent = '';
+  lucide.createIcons();
+}
+
+function onNameInput(id, el) {
+  const p = players.find(p=>p.id===id);
+  if (!p) return;
+  p.name = el.value;
+  const av = document.getElementById('av-'+id);
+  if (av) av.textContent = initial(el.value);
+}
+function onHcpInput(id, el) {
+  const p = players.find(p=>p.id===id);
+  if (p) p.hcp = parseInt(el.value)||0;
+}
+function removePlayer(id) {
+  if (players.length<=2) return;
+  players = players.filter(p=>p.id!==id);
+  renderPlayers();
+}
+function addPlayer() {
+  if (players.length>=6) return;
+  players.push({id:nextId++, name:'', hcp:18});
+  renderPlayers();
+  setTimeout(()=>{
+    const inputs = document.querySelectorAll('.player-name-input');
+    if (inputs.length) inputs[inputs.length-1].focus();
+  },50);
+}
+
+// ─── STAKES ──────────────────────────────────────
+function renderStakes() {
+  const list = document.getElementById('stakes-list');
+  list.innerHTML = '';
+  if (selectedGames.size===0) {
+    list.innerHTML = `<div class="no-games-msg">
+      <i data-lucide="circle-slash"></i>
+      No games selected.<br>Go back and pick at least one game.
+    </div>`;
+    lucide.createIcons(); return;
+  }
+  ['banker','skins','nassau','wolf'].forEach(g => {
+    if (!selectedGames.has(g)) return;
+    const c = GAME_CFG[g];
+    const row = document.createElement('div');
+    row.className = 'stakes-row';
+    row.innerHTML = `
+      <div class="stakes-left">
+        <div class="stakes-icon"><i data-lucide="${c.icon}"></i></div>
+        <div>
+          <div class="stakes-name">${c.label}</div>
+          <div class="stakes-sub">${c.sub}</div>
+        </div>
+      </div>
+      <div class="stakes-picker">
+        <button class="stake-btn" onclick="changeStake('${g}',-1)">−</button>
+        <div class="stake-val" id="stk-${g}">$${stakeVals[g]}</div>
+        <button class="stake-btn" onclick="changeStake('${g}',1)">+</button>
+      </div>`;
+    list.appendChild(row);
+  });
+  lucide.createIcons();
+}
+function changeStake(g,dir) {
+  let i = stakeSteps.indexOf(stakeVals[g]);
+  if (i===-1) i=0;
+  i = Math.max(0,Math.min(stakeSteps.length-1,i+dir));
+  stakeVals[g] = stakeSteps[i];
+  const el = document.getElementById('stk-'+g);
+  if (el) el.textContent = '$'+stakeVals[g];
+}
+
+// ─── HOLE ────────────────────────────────────────
+function renderHole() {
+  players.forEach(p=>{
+    if (scores[p.id]===undefined) scores[p.id]=4;
+    if (bets[p.id]===undefined)   bets[p.id]=stakeVals['banker']||2;
+  });
+
+  // game chips
+  const chips = document.getElementById('game-chips');
+  chips.innerHTML = ['banker','skins','nassau','wolf'].map(g=>
+    `<div class="chip${selectedGames.has(g)?' on':''}">${g.charAt(0).toUpperCase()+g.slice(1)}</div>`
+  ).join('');
+
+  // wolf
+  const wolfEl = document.getElementById('wolf-block');
+  if (selectedGames.has('wolf') && players.length===4) {
+    const wolfPlayer = players[1]; // Mike in demo
+    const opts = players.filter((_,i)=>i!==1).map(p=>
+      `<div class="wolf-opt" id="wo-${p.id}" onclick="pickWolf(${p.id})">${p.name||'Player'}</div>`
+    ).join('') + `<div class="wolf-opt lone selected" id="wo-lone" onclick="pickWolf('lone')">Lone Wolf  (×2)</div>`;
+    wolfEl.innerHTML = `<div class="wolf-block">
+      <div class="wolf-block-hdr">
+        <div class="wolf-block-title">Wolf this hole: <span>${wolfPlayer.name||'Wolf'}</span></div>
+        <div class="wolf-block-sub">Pick a partner after each tee shot</div>
+      </div>
+      <div class="wolf-opts">${opts}</div>
+    </div>`;
+  } else wolfEl.innerHTML = '';
+
+  // banker notice
+  const bankEl = document.getElementById('banker-notice');
+  if (selectedGames.has('banker')) {
+    const max = (stakeVals['banker']||2)*4;
+    bankEl.innerHTML = `<div class="banker-notice">
+      <i data-lucide="landmark"></i>
+      <div class="banker-notice-txt">Banker: <strong>${players[0]?.name||'You'}</strong> — tees off last · max bet <strong>$${max}</strong></div>
+    </div>`;
+  } else bankEl.innerHTML='';
+
+  // score cards
+  const sc = document.getElementById('score-cards');
+  sc.innerHTML = '';
+  const par = 4;
+  players.forEach((p,idx)=>{
+    const isBanker = selectedGames.has('banker') && idx===0;
+    const s = scores[p.id]??4, b=bets[p.id]??2;
+    const diff=s-par;
+    const cls = diff<=-2?'eagle':diff===-1?'birdie':diff===0?'par':diff===1?'bogey':'double';
+    const betRow = (!isBanker && selectedGames.has('banker'))
+      ? `<span style="color:var(--border)">·</span>
+         <div class="bet-picker">
+           <button class="bbet-btn" onclick="changeBet(${p.id},-1)">−</button>
+           <span class="bbet-val" id="bet-${p.id}">$${b}</span>
+           <button class="bbet-btn" onclick="changeBet(${p.id},1)">+</button>
+         </div>
+         <span style="color:var(--muted)">vs banker</span>` : '';
+    const card = document.createElement('div');
+    card.className='score-card'+(isBanker?' is-banker':'');
+    card.innerHTML=`
+      <div class="sc-left">
+        <div class="sc-av">${initial(p.name)}</div>
+        <div class="sc-info">
+          <div class="sc-name">${p.name||'Player'}${isBanker?'<span class="sc-banker-tag">Banker</span>':''}</div>
+          <div class="sc-sub">HCP ${p.hcp}${betRow}</div>
+        </div>
+      </div>
+      <div class="sc-picker">
+        <button class="sc-btn" onclick="chScore(${p.id},-1)">−</button>
+        <div class="sc-score ${cls}" id="sc-${p.id}">${s}</div>
+        <button class="sc-btn" onclick="chScore(${p.id},1)">+</button>
+      </div>`;
+    sc.appendChild(card);
+  });
+
+  // skins block
+  const sk = document.getElementById('skins-block');
+  if (selectedGames.has('skins')) {
+    sk.innerHTML=`<div class="skins-block">
+      <div class="skins-hdr">Skin Pot</div>
+      <div class="skins-row">
+        <div class="skin-chip won">H1 · Mike $3</div>
+        <div class="skin-chip carry">H2 · Carry $6</div>
+        <div class="skin-chip">H3 · ?</div>
+      </div>
+    </div>`;
+  } else sk.innerHTML='';
+
+  // tally
+  const tally = document.getElementById('tally-block');
+  const mock=[{n:players[0]?.name||'You',a:'+$4',c:'pos'},{n:players[1]?.name||'Mike',a:'−$7',c:'neg'},
+              {n:players[2]?.name||'Dave',a:'+$2',c:'pos'},{n:players[3]?.name||'Connor',a:'+$1',c:'pos'}];
+  tally.innerHTML='<div class="tally"><div class="tally-hdr">Running Total</div>'+
+    mock.slice(0,players.length).map(t=>`<div class="tally-row">
+      <span class="tally-name">${t.n}</span>
+      <span class="tally-amt ${t.c}">${t.a}</span>
+    </div>`).join('')+'</div>';
+
+  // dots
+  const dots = document.getElementById('hole-dots');
+  dots.innerHTML='';
+  for(let i=1;i<=18;i++){
+    if(i===10){const g=document.createElement('div');g.className='h-dot gap';dots.appendChild(g);}
+    const d=document.createElement('div');
+    d.className='h-dot'+(i<3?' done':i===3?' cur':'');
+    d.textContent=i; dots.appendChild(d);
+  }
+
+  lucide.createIcons();
+}
+
+function chScore(id,dir){
+  scores[id]=Math.max(1,Math.min(9,(scores[id]??4)+dir));
+  const el=document.getElementById('sc-'+id); if(!el) return;
+  el.textContent=scores[id];
+  const d=scores[id]-4;
+  el.className='sc-score '+(d<=-2?'eagle':d===-1?'birdie':d===0?'par':d===1?'bogey':'double');
+}
+function changeBet(id,dir){
+  const min=stakeVals['banker']||1, max=min*4;
+  bets[id]=Math.max(min,Math.min(max,(bets[id]??min)+dir));
+  const el=document.getElementById('bet-'+id); if(el) el.textContent='$'+bets[id];
+}
+function pickWolf(id){
+  document.querySelectorAll('.wolf-opt').forEach(e=>e.classList.remove('selected'));
+  const t=document.getElementById('wo-'+id); if(t) t.classList.add('selected');
+}
+
+// ─── SETTLEMENT ──────────────────────────────────
+function renderSettle(){
+  const gameOrder=['banker','skins','nassau','wolf'];
+  const iconMap={banker:'landmark',skins:'circle-dollar-sign',nassau:'trophy',wolf:'users'};
+  const cards = document.getElementById('settle-cards');
+  cards.innerHTML='';
+  [2,1,3,4].forEach(pid=>{
+    const m=MOCK_SETTLE[pid]||{name:'Player',total:'$0',cls:'',badge:'',banker:'$0',skins:'$0',nassau:'$0',wolf:'$0'};
+    const isWin=m.cls==='win';
+    const lines=gameOrder.filter(g=>selectedGames.has(g)).map(g=>{
+      const v=m[g]||'$0';
+      const vc=v.startsWith('+')?'pos':v.startsWith('−')?'neg':'zero';
+      return `<div class="settle-line">
+        <span class="settle-line-lbl"><i data-lucide="${iconMap[g]}"></i>${g.charAt(0).toUpperCase()+g.slice(1)}</span>
+        <span class="${vc}">${v}</span>
+      </div>`;
+    }).join('');
+    const card=document.createElement('div');
+    card.className='settle-card '+(isWin?'winner':'loser');
+    card.innerHTML=`
+      <div class="settle-name">${m.name} <span class="settle-badge ${isWin?'w':'l'}">${m.badge}</span></div>
+      <div class="settle-total ${m.cls}">${m.total}</div>
+      <div class="settle-lines">${lines}</div>`;
+    cards.appendChild(card);
+  });
+  lucide.createIcons();
+}
+
+// ─── INIT ─────────────────────────────────────────
+renderPlayers();
+lucide.createIcons();
+</script>
+</body>
+</html>
