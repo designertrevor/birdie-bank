@@ -225,6 +225,7 @@
   transition: all 0.15s;
   position: relative;
   overflow: hidden;
+  color: var(--white);
 }
 .game-tile.selected {
   border-color: var(--lime);
@@ -250,11 +251,12 @@
   font-size: 24px;
   letter-spacing: 1.5px;
   margin-bottom: 4px;
+  color: var(--white);
 }
 .game-tile-desc {
   font-size: 11px;
-  color: var(--muted);
   line-height: 1.4;
+  color: var(--muted);
 }
 .game-tile-check {
   position: absolute;
@@ -1081,4 +1083,13 @@
   padding: 4px 10px;
   border-radius: 8px;
   margin-left: 10px;
+}
+
+/* Game tile text: force white (max specificity, hex, !important) */
+#root .game-grid .game-tile,
+#root .game-grid .game-tile .game-tile-name {
+  color: #ffffff !important;
+}
+#root .game-grid .game-tile .game-tile-desc {
+  color: #7a9080 !important;
 }

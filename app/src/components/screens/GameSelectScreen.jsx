@@ -23,11 +23,18 @@ export default function GameSelectScreen() {
           const Icon = cfg.icon
           const selected = selectedGames.includes(key)
           return (
-            <button
+            <div
               key={key}
-              type="button"
+              role="button"
+              tabIndex={0}
               className={`game-tile ${selected ? 'selected' : ''}`}
               onClick={() => toggleGame(key)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' || e.key === ' ') {
+                  e.preventDefault()
+                  toggleGame(key)
+                }
+              }}
             >
               <div className="game-tile-check">
                 <Check size={13} />
@@ -35,9 +42,11 @@ export default function GameSelectScreen() {
               <div className="game-tile-icon">
                 <Icon size={26} />
               </div>
-              <div className="game-tile-name">{cfg.label}</div>
+              <div className="game-tile-name" style={{ color: '#ffffff' }}>
+                {cfg.label}
+              </div>
               <div className="game-tile-desc">{cfg.sub}</div>
-            </button>
+            </div>
           )
         })}
       </div>
