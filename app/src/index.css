@@ -1,0 +1,50 @@
+:root {
+  --green-dark: #0f4225;
+  --green-mid: #2a8a4e;
+  --green-light: #4db875;
+  --lime: #c8f04a;
+  --white: #ffffff;
+  --red: #e84040;
+  --amber: #e8a040;
+  --gold: #ffd700;
+  --bg: #0d2818;
+  --card: #142e1e;
+  --card2: #1a3d26;
+  --border: rgba(255, 255, 255, 0.08);
+  --text: #f0ece0;
+  --muted: #7a9080;
+
+  font-family:
+    'DM Sans',
+    system-ui,
+    -apple-system,
+    BlinkMacSystemFont,
+    'Segoe UI',
+    sans-serif;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+  -webkit-tap-highlight-color: transparent;
+}
+
+body {
+  margin: 0;
+  min-height: 100vh;
+  display: flex;
+  justify-content: center;
+  align-items: flex-start;
+  padding: 20px 16px 80px;
+  background: var(--bg);
+  color: var(--text);
+}
+
+#root {
+  width: 100%;
+  max-width: 390px;
+}
