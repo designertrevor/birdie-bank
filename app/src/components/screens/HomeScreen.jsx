@@ -1,11 +1,31 @@
 import { PlusCircle, Clock, ChevronRight } from 'lucide-react'
 import { useRound } from '../../context/RoundContext'
+import { getCrews } from '../../storage'
+
+function formatCrewDate(ts) {
+  if (!ts) return ''
+  const d = new Date(ts)
+  const now = new Date()
+  const days = Math.floor((now - d) / (24 * 60 * 60 * 1000))
+  if (days === 0) return 'Today'
+  if (days === 1) return 'Yesterday'
+  if (days < 7) return `${days} days ago`
+  if (days < 30) return `${Math.floor(days / 7)} weeks ago`
+  return `${Math.floor(days / 30)} months ago`
+}
 
 export default function HomeScreen() {
-  const { go, resetRound } = useRound()
+  const { go, resetRound, loadCrew } = useRound()
+  const crews = getCrews()
 
   const startNewRound = () => {
     resetRound()
+    go('games')
+  }
+
+  const openCrew = (crew) => {
+    resetRound()
+    loadCrew(crew.players)
     go('games')
   }
 
@@ -24,27 +44,38 @@ export default function HomeScreen() {
         </button>
       </div>
       <div className="crew-section">
-        <div className="section-label">Your Crews</div>
-        <div className="crew-card" onClick={() => go('games')}>
-          <div>
-            <div className="crew-names">The Saturday Boys</div>
-            <div className="crew-meta">
-              Mike · Dave · Connor · You &nbsp;·&nbsp; 3 days ago
+        <div className="section-label-row">
+          <span className="section-label">Your Crews</span>
+          <button
+            type="button"
+            className="btn-add-crew"
+            onClick={() => { resetRound(); go('players') }}
+          >
+            <PlusCircle size={16} /> Add crew
+          </button>
+        </div>
+        {crews.length === 0 ? (
+          <div className="crew-empty">No crews yet. Add players and save as a crew from the Players screen.</div>
+        ) : (
+          crews.map((crew) => (
+            <div
+              key={crew.id}
+              className="crew-card"
+              onClick={() => openCrew(crew)}
+            >
+              <div>
+                <div className="crew-names">{crew.name}</div>
+                <div className="crew-meta">
+                  {crew.players.map((p) => p.name || '—').join(' · ')}
+                  &nbsp;·&nbsp; {formatCrewDate(crew.updatedAt)}
+                </div>
+              </div>
+              <div className="crew-chevron">
+                <ChevronRight size={18} />
+              </div>
             </div>
-          </div>
-          <div className="crew-chevron">
-            <ChevronRight size={18} />
-          </div>
-        </div>
-        <div className="crew-card" onClick={() => go('games')}>
-          <div>
-            <div className="crew-names">Work Trip</div>
-            <div className="crew-meta">4 players &nbsp;·&nbsp; 2 weeks ago</div>
-          </div>
-          <div className="crew-chevron">
-            <ChevronRight size={18} />
-          </div>
-        </div>
+          ))
+        )}
       </div>
     </div>
   )

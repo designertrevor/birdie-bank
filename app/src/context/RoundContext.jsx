@@ -34,6 +34,19 @@ function roundReducer(state, action) {
         players: [...state.players, { id: state.nextPlayerId, name: '', hcp: 18 }],
         nextPlayerId: state.nextPlayerId + 1,
       }
+    case 'ADD_PLAYER_WITH_PROFILE':
+      return {
+        ...state,
+        players: [
+          ...state.players,
+          {
+            id: state.nextPlayerId,
+            name: action.name ?? '',
+            hcp: action.hcp ?? 18,
+          },
+        ],
+        nextPlayerId: state.nextPlayerId + 1,
+      }
     case 'REMOVE_PLAYER':
       return {
         ...state,
@@ -74,8 +87,38 @@ function roundReducer(state, action) {
     }
     case 'SET_CURRENT_HOLE':
       return { ...state, currentHole: action.hole }
+    case 'SET_BANKER_START_INDEX':
+      return { ...state, bankerStartIndex: action.index }
+    case 'TOGGLE_PLAYER_DOUBLED': {
+      const key = `${state.currentHole}-${action.playerId}`
+      const next = { ...state.playerDoubled, [key]: !state.playerDoubled[key] }
+      return { ...state, playerDoubled: next }
+    }
+    case 'TOGGLE_BANKER_DOUBLED_BACK': {
+      const h = state.currentHole
+      const next = { ...state.bankerDoubledBack, [h]: !state.bankerDoubledBack[h] }
+      return { ...state, bankerDoubledBack: next }
+    }
     case 'SET_WOLF_PARTNER':
       return { ...state, wolfPartnerThisHole: action.partner }
+    case 'SET_COURSE': {
+      const totalHoles = action.totalHoles ?? state.totalHoles
+      const courseName = action.courseName ?? state.courseName
+      const currentHole = totalHoles === 9 && state.currentHole > 9 ? 9 : state.currentHole
+      return { ...state, courseName, totalHoles, currentHole }
+    }
+    case 'LOAD_CREW': {
+      const players = (action.players || []).map((p, i) => ({
+        id: state.nextPlayerId + i,
+        name: p.name ?? '',
+        hcp: p.hcp ?? 18,
+      }))
+      return {
+        ...state,
+        players: players.length ? players : state.players,
+        nextPlayerId: state.nextPlayerId + (players.length || 0),
+      }
+    }
     case 'RESET_ROUND':
       return { ...initialState }
     default:
@@ -91,7 +134,12 @@ const initialState = {
   stakeVals: DEFAULT_STAKES,
   scores: {},
   bets: {},
-  currentHole: 3,
+  currentHole: 1,
+  courseName: '',
+  totalHoles: 18,
+  bankerStartIndex: 0,
+  playerDoubled: {},
+  bankerDoubledBack: {},
   wolfPartnerThisHole: null,
 }
 
@@ -112,6 +160,12 @@ function getInitialState() {
       stored.stakeVals && typeof stored.stakeVals === 'object'
         ? { ...initialState.stakeVals, ...stored.stakeVals }
         : initialState.stakeVals,
+    bankerStartIndex:
+      typeof stored.bankerStartIndex === 'number' ? stored.bankerStartIndex : initialState.bankerStartIndex,
+    courseName: typeof stored.courseName === 'string' ? stored.courseName : initialState.courseName,
+    totalHoles: stored.totalHoles === 9 || stored.totalHoles === 18 ? stored.totalHoles : initialState.totalHoles,
+    playerDoubled: stored.playerDoubled && typeof stored.playerDoubled === 'object' ? stored.playerDoubled : initialState.playerDoubled,
+    bankerDoubledBack: stored.bankerDoubledBack && typeof stored.bankerDoubledBack === 'object' ? stored.bankerDoubledBack : initialState.bankerDoubledBack,
   }
 }
 
@@ -145,6 +199,10 @@ export function RoundProvider({ children }) {
 
   const addPlayer = useCallback(() => {
     dispatch({ type: 'ADD_PLAYER' })
+  }, [])
+
+  const addPlayerWithProfile = useCallback((name, hcp) => {
+    dispatch({ type: 'ADD_PLAYER_WITH_PROFILE', name, hcp })
   }, [])
 
   const removePlayer = useCallback((id) => {
@@ -215,6 +273,14 @@ export function RoundProvider({ children }) {
     dispatch({ type: 'SET_WOLF_PARTNER', partner })
   }, [])
 
+  const setCourse = useCallback((courseName, totalHoles) => {
+    dispatch({ type: 'SET_COURSE', courseName, totalHoles })
+  }, [])
+
+  const loadCrew = useCallback((players) => {
+    dispatch({ type: 'LOAD_CREW', players })
+  }, [])
+
   const getBankerRunningTotals = useCallback(
     (upToHole = state.currentHole) => {
       if (!state.selectedGames.includes('banker') || state.players.length < 2) {
@@ -226,7 +292,12 @@ export function RoundProvider({ children }) {
         state.scores,
         state.bets,
         upToHole,
-        stakeMin
+        stakeMin,
+        {
+          bankerStartIndex: state.bankerStartIndex,
+          playerDoubled: state.playerDoubled,
+          bankerDoubledBack: state.bankerDoubledBack,
+        }
       )
     },
     [
@@ -236,8 +307,23 @@ export function RoundProvider({ children }) {
       state.bets,
       state.currentHole,
       state.stakeVals.banker,
+      state.bankerStartIndex,
+      state.playerDoubled,
+      state.bankerDoubledBack,
     ]
   )
+
+  const setBankerStartIndex = useCallback((index) => {
+    dispatch({ type: 'SET_BANKER_START_INDEX', index })
+  }, [])
+
+  const togglePlayerDoubled = useCallback((playerId) => {
+    dispatch({ type: 'TOGGLE_PLAYER_DOUBLED', playerId })
+  }, [])
+
+  const toggleBankerDoubledBack = useCallback(() => {
+    dispatch({ type: 'TOGGLE_BANKER_DOUBLED_BACK' })
+  }, [])
 
   const value = useMemo(
     () => ({
@@ -246,6 +332,7 @@ export function RoundProvider({ children }) {
       resetRound,
       toggleGame,
       addPlayer,
+      addPlayerWithProfile,
       removePlayer,
       setPlayerName,
       setPlayerHcp,
@@ -256,7 +343,12 @@ export function RoundProvider({ children }) {
       getBet,
       setBet,
       setCurrentHole,
+      setBankerStartIndex,
+      togglePlayerDoubled,
+      toggleBankerDoubledBack,
       setWolfPartner,
+      setCourse,
+      loadCrew,
       getBankerRunningTotals,
       initial,
       GAME_KEYS,
@@ -267,6 +359,7 @@ export function RoundProvider({ children }) {
       resetRound,
       toggleGame,
       addPlayer,
+      addPlayerWithProfile,
       removePlayer,
       setPlayerName,
       setPlayerHcp,
@@ -276,7 +369,12 @@ export function RoundProvider({ children }) {
       getBet,
       setBet,
       setCurrentHole,
+      setBankerStartIndex,
+      togglePlayerDoubled,
+      toggleBankerDoubledBack,
       setWolfPartner,
+      setCourse,
+      loadCrew,
       getBankerRunningTotals,
     ]
   )

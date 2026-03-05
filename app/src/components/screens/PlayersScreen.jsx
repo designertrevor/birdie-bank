@@ -1,17 +1,31 @@
-import { ChevronLeft, UserPlus, X, ArrowRight } from 'lucide-react'
+import { useState } from 'react'
+import { ChevronLeft, UserPlus, X, ArrowRight, Save } from 'lucide-react'
 import { useRound } from '../../context/RoundContext'
+import { getCrews, addCrew, getPastPlayers } from '../../storage'
 
 export default function PlayersScreen() {
   const {
     go,
     players,
     selectedGames,
+    courseName,
+    totalHoles,
+    setCourse,
+    bankerStartIndex,
+    setBankerStartIndex,
     addPlayer,
+    addPlayerWithProfile,
     removePlayer,
     setPlayerName,
     setPlayerHcp,
+    loadCrew,
     initial,
   } = useRound()
+  const [useCrewValue, setUseCrewValue] = useState('')
+  const crews = getCrews()
+  const pastPlayers = getPastPlayers()
+  const currentNames = new Set(players.map((p) => (p.name || '').trim().toLowerCase()))
+  const pastToShow = pastPlayers.filter((p) => !currentNames.has((p.name || '').toLowerCase()))
 
   const canRemove = players.length > 2
   const showAdd = players.length < 6
@@ -23,6 +37,22 @@ export default function PlayersScreen() {
       ? 'Wolf requires exactly 4 players.'
       : ''
 
+  const handleUseCrew = (e) => {
+    const id = e.target.value
+    setUseCrewValue(id)
+    if (!id) return
+    const crew = crews.find((c) => c.id === id)
+    if (crew) loadCrew(crew.players)
+  }
+
+  const handleSaveAsCrew = () => {
+    if (players.length < 2) return
+    const name = window.prompt('Crew name', '')
+    if (name == null) return
+    addCrew(name.trim() || 'Unnamed crew', players)
+    setUseCrewValue('')
+  }
+
   return (
     <div className="screen active">
       <div className="topbar">
@@ -32,10 +62,65 @@ export default function PlayersScreen() {
         <div className="topbar-title">Players</div>
         <div style={{ width: 60 }} />
       </div>
-      <div className="step-label">Step 2 of 3 — Who&apos;s Playing?</div>
+      <div className="step-label">Who&apos;s Playing?</div>
       <div className="prog-bar">
         <div className="prog-fill" style={{ width: '66%' }} />
       </div>
+      <div className="course-row">
+        <label className="banker-pick-label">Course</label>
+        <input
+          className="course-name-input"
+          type="text"
+          placeholder="Course name (optional)"
+          value={courseName}
+          onChange={(e) => setCourse(e.target.value, totalHoles)}
+        />
+        <div className="course-holes-toggle">
+          <button
+            type="button"
+            className={totalHoles === 9 ? 'course-holes-btn on' : 'course-holes-btn'}
+            onClick={() => setCourse(courseName, 9)}
+          >
+            9 holes
+          </button>
+          <button
+            type="button"
+            className={totalHoles === 18 ? 'course-holes-btn on' : 'course-holes-btn'}
+            onClick={() => setCourse(courseName, 18)}
+          >
+            18 holes
+          </button>
+        </div>
+      </div>
+      {crews.length > 0 && (
+        <div className="banker-pick-row">
+          <label className="banker-pick-label">Use a crew</label>
+          <select
+            className="banker-pick-select"
+            value={useCrewValue}
+            onChange={handleUseCrew}
+          >
+            <option value="">Choose a crew…</option>
+            {crews.map((c) => (
+              <option key={c.id} value={c.id}>{c.name}</option>
+            ))}
+          </select>
+        </div>
+      )}
+      {selectedGames.includes('banker') && players.length >= 2 && (
+        <div className="banker-pick-row">
+          <label className="banker-pick-label">Banker on hole 1</label>
+          <select
+            className="banker-pick-select"
+            value={bankerStartIndex}
+            onChange={(e) => setBankerStartIndex(Number(e.target.value))}
+          >
+            {players.map((p, i) => (
+              <option key={p.id} value={i}>{p.name || `Player ${i + 1}`}</option>
+            ))}
+          </select>
+        </div>
+      )}
       <div className="players-list">
         {players.map((p) => (
           <div key={p.id} className="player-row">
@@ -49,6 +134,14 @@ export default function PlayersScreen() {
               />
               <div className="player-hcp-row">
                 <span className="player-hcp-label">HCP</span>
+                <button
+                  type="button"
+                  className="player-hcp-btn"
+                  onClick={() => setPlayerHcp(p.id, String(Math.max(0, p.hcp - 1)))}
+                  aria-label="Decrease handicap"
+                >
+                  −
+                </button>
                 <input
                   className="player-hcp-input"
                   type="number"
@@ -57,6 +150,14 @@ export default function PlayersScreen() {
                   value={p.hcp}
                   onChange={(e) => setPlayerHcp(p.id, e.target.value)}
                 />
+                <button
+                  type="button"
+                  className="player-hcp-btn"
+                  onClick={() => setPlayerHcp(p.id, String(Math.min(54, p.hcp + 1)))}
+                  aria-label="Increase handicap"
+                >
+                  +
+                </button>
               </div>
             </div>
             <button
@@ -71,15 +172,50 @@ export default function PlayersScreen() {
           </div>
         ))}
       </div>
+      {pastToShow.length > 0 && showAdd && (
+        <div className="past-players-row">
+          <span className="past-players-label">Add from past:</span>
+          <div className="past-players-chips">
+            {pastToShow.slice(0, 12).map((p) => (
+              <button
+                key={p.name}
+                type="button"
+                className="past-player-chip"
+                onClick={() => addPlayerWithProfile(p.name, p.hcp)}
+              >
+                {p.name} {p.hcp !== 18 ? `(HCP ${p.hcp})` : ''}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
       {showAdd && (
         <button type="button" className="add-player-btn" onClick={addPlayer}>
           <UserPlus size={18} /> Add Player
         </button>
       )}
+      {players.length >= 2 && (
+        <button
+          type="button"
+          className="btn-save-crew"
+          onClick={handleSaveAsCrew}
+        >
+          <Save size={16} /> Save as crew
+        </button>
+      )}
       <div className="players-note">{note}</div>
       <div style={{ marginTop: 20 }}>
-        <button className="btn-primary" onClick={() => go('stakes')}>
-          Next: Set Stakes <ArrowRight size={20} />
+        <button className="btn-primary" onClick={() => go('hole')}>
+          Let&apos;s Play <ArrowRight size={20} />
+        </button>
+      </div>
+      <div style={{ marginTop: 10 }}>
+        <button
+          type="button"
+          className="btn-secondary"
+          onClick={() => go('stakes')}
+        >
+          Set stakes (optional)
         </button>
       </div>
     </div>

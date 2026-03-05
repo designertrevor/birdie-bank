@@ -26,12 +26,19 @@ export default function HoleScreen() {
     selectedGames,
     currentHole,
     setCurrentHole,
+    courseName,
+    totalHoles,
     stakeVals,
+    bankerStartIndex,
+    playerDoubled,
+    bankerDoubledBack,
     getScore,
     setScore,
     getBet,
     setBet,
     getBankerRunningTotals,
+    togglePlayerDoubled,
+    toggleBankerDoubledBack,
     wolfPartnerThisHole,
     setWolfPartner,
     initial,
@@ -39,8 +46,9 @@ export default function HoleScreen() {
 
   const bankerMin = stakeVals.banker ?? 2
   const maxBet = bankerMin * 4
-  const bankerIndex = getBankerIndexForHole(currentHole, players.length)
+  const bankerIndex = getBankerIndexForHole(currentHole, players.length, bankerStartIndex)
   const bankerPlayer = players[bankerIndex]
+  const isBankerDoubledThisHole = !!bankerDoubledBack[currentHole]
   const wolfIndex = (currentHole - 1) % players.length
   const wolfPlayer = players[wolfIndex]
   const otherPlayers = players.filter((_, i) => i !== wolfIndex)
@@ -79,7 +87,9 @@ export default function HoleScreen() {
           <div className="hole-num-label">Hole</div>
         </div>
         <div className="hole-meta">
-          <div className="hole-par">Par 4 · 385 yds</div>
+          <div className="hole-par">
+            {courseName ? `${courseName} · ` : ''}Par 4 · {totalHoles} holes
+          </div>
           <div className="game-chips">
             {['banker', 'skins', 'nassau', 'wolf'].map((g) => (
               <div key={g} className={`chip ${selectedGames.includes(g) ? 'on' : ''}`}>
@@ -126,6 +136,15 @@ export default function HoleScreen() {
           <div className="banker-notice-txt">
             Banker: <strong>{bankerPlayer?.name || '—'}</strong> — tees off last · max bet{' '}
             <strong>${maxBet}</strong>
+            {bankerPlayer && (
+              <button
+                type="button"
+                className={`banker-double-back-btn ${isBankerDoubledThisHole ? 'on' : ''}`}
+                onClick={() => toggleBankerDoubledBack()}
+              >
+                {isBankerDoubledThisHole ? '2× Back' : 'Double back'}
+              </button>
+            )}
           </div>
         </div>
       )}
@@ -167,6 +186,13 @@ export default function HoleScreen() {
                             +
                           </button>
                         </div>
+                        <button
+                          type="button"
+                          className={`sc-double-btn ${playerDoubled[`${currentHole}-${p.id}`] ? 'on' : ''}`}
+                          onClick={() => togglePlayerDoubled(p.id)}
+                        >
+                          {playerDoubled[`${currentHole}-${p.id}`] ? '2×' : 'Double'}
+                        </button>
                         <span style={{ color: 'var(--muted)' }}>vs banker</span>
                       </>
                     )}
@@ -217,18 +243,47 @@ export default function HoleScreen() {
       </div>
 
       <div className="hole-dots">
-        {Array.from({ length: 18 }, (_, i) => i + 1).map((h) => (
-          <span key={h}>
-            {h === 10 && <div className="h-dot gap" aria-hidden />}
-            <button
-              type="button"
-              className={`h-dot ${h < currentHole ? 'done' : h === currentHole ? 'cur' : ''}`}
-              onClick={() => setCurrentHole(h)}
-            >
-              {h}
-            </button>
-          </span>
-        ))}
+        {totalHoles === 9 ? (
+          <div className="hole-dots-row">
+            {Array.from({ length: 9 }, (_, i) => i + 1).map((h) => (
+              <button
+                key={h}
+                type="button"
+                className={`h-dot ${h < currentHole ? 'done' : h === currentHole ? 'cur' : ''}`}
+                onClick={() => setCurrentHole(h)}
+              >
+                {h}
+              </button>
+            ))}
+          </div>
+        ) : (
+          <>
+            <div className="hole-dots-row">
+              {Array.from({ length: 9 }, (_, i) => i + 1).map((h) => (
+                <button
+                  key={h}
+                  type="button"
+                  className={`h-dot ${h < currentHole ? 'done' : h === currentHole ? 'cur' : ''}`}
+                  onClick={() => setCurrentHole(h)}
+                >
+                  {h}
+                </button>
+              ))}
+            </div>
+            <div className="hole-dots-row">
+              {Array.from({ length: 9 }, (_, i) => i + 10).map((h) => (
+                <button
+                  key={h}
+                  type="button"
+                  className={`h-dot ${h < currentHole ? 'done' : h === currentHole ? 'cur' : ''}`}
+                  onClick={() => setCurrentHole(h)}
+                >
+                  {h}
+                </button>
+              ))}
+            </div>
+          </>
+        )}
       </div>
 
       <div className="hole-nav">
@@ -247,7 +302,7 @@ export default function HoleScreen() {
         <button
           type="button"
           className="hnav-btn next"
-          onClick={() => setCurrentHole(Math.min(18, currentHole + 1))}
+          onClick={() => setCurrentHole(Math.min(totalHoles, currentHole + 1))}
         >
           Save & Next Hole
         </button>

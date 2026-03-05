@@ -25,10 +25,10 @@ function formatSettleAmt(n) {
 }
 
 export default function SettlementScreen() {
-  const { go, players, selectedGames, getBankerRunningTotals } = useRound()
+  const { go, players, selectedGames, totalHoles, getBankerRunningTotals } = useRound()
   const gameOrder = ['banker', 'skins', 'nassau', 'wolf']
 
-  const bankerTotals = selectedGames.includes('banker') ? getBankerRunningTotals(18) : {}
+  const bankerTotals = selectedGames.includes('banker') ? getBankerRunningTotals(totalHoles) : {}
   const hasBankerTotals = Object.keys(bankerTotals).length > 0
 
   const totalsByPlayer = {}
