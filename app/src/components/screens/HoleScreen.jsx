@@ -73,7 +73,7 @@ export default function HoleScreen() {
   return (
     <div className="screen active">
       <div className="topbar">
-        <button type="button" className="back-btn" onClick={() => go('stakes')}>
+        <button type="button" className="back-btn" onClick={() => go('course')}>
           <ChevronLeft size={16} /> Setup
         </button>
         <div className="topbar-title">Scoring</div>

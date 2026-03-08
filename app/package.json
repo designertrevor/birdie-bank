@@ -4,7 +4,7 @@
   "version": "0.0.0",
   "type": "module",
   "scripts": {
-    "dev": "vite",
+    "dev": "lsof -ti:5174 | xargs kill -9 2>/dev/null; vite",
     "build": "vite build",
     "lint": "eslint .",
     "format": "prettier --write \"src/**/*.{js,jsx,css,json}\"",

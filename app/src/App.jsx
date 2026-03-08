@@ -3,6 +3,7 @@ import HomeScreen from './components/screens/HomeScreen'
 import GameSelectScreen from './components/screens/GameSelectScreen'
 import PlayersScreen from './components/screens/PlayersScreen'
 import StakesScreen from './components/screens/StakesScreen'
+import CourseScreen from './components/screens/CourseScreen'
 import HoleScreen from './components/screens/HoleScreen'
 import SettlementScreen from './components/screens/SettlementScreen'
 import HistoryScreen from './components/screens/HistoryScreen'
@@ -13,6 +14,7 @@ const SCREENS = {
   games: GameSelectScreen,
   players: PlayersScreen,
   stakes: StakesScreen,
+  course: CourseScreen,
   hole: HoleScreen,
   settle: SettlementScreen,
   history: HistoryScreen,

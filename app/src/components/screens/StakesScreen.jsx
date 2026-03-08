@@ -67,7 +67,7 @@ export default function StakesScreen() {
           })}
       </div>
       <div style={{ marginTop: 24 }}>
-        <button className="btn-primary" onClick={() => go('hole')}>
+        <button className="btn-primary" onClick={() => go('course')}>
           <Flag size={20} /> Let&apos;s Play
         </button>
       </div>

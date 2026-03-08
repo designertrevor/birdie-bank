@@ -451,6 +451,16 @@
   text-align: center;
   outline: none;
 }
+/* Remove number input spinners (redundant with +/- buttons) */
+.player-hcp-input::-webkit-inner-spin-button,
+.player-hcp-input::-webkit-outer-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+.player-hcp-input[type='number'] {
+  -moz-appearance: textfield;
+  appearance: textfield;
+}
 .player-hcp-btn {
   width: 40px;
   height: 40px;

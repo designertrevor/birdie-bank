@@ -29,6 +29,12 @@ export default function HomeScreen() {
     go('games')
   }
 
+  const startAddCrew = () => {
+    resetRound()
+    loadCrew([])
+    go('players')
+  }
+
   return (
     <div className="screen active">
       <div className="home-hdr">
@@ -49,13 +55,13 @@ export default function HomeScreen() {
           <button
             type="button"
             className="btn-add-crew"
-            onClick={() => { resetRound(); go('players') }}
+            onClick={startAddCrew}
           >
             <PlusCircle size={16} /> Add crew
           </button>
         </div>
         {crews.length === 0 ? (
-          <div className="crew-empty">No crews yet. Add players and save as a crew from the Players screen.</div>
+          <div className="crew-empty">No crews yet. Tap Add crew to add players and save.</div>
         ) : (
           crews.map((crew) => (
             <div
@@ -64,10 +70,11 @@ export default function HomeScreen() {
               onClick={() => openCrew(crew)}
             >
               <div>
-                <div className="crew-names">{crew.name}</div>
+                <div className="crew-names">
+                  {crew.players.map((p) => p.name || '—').join(', ')}
+                </div>
                 <div className="crew-meta">
-                  {crew.players.map((p) => p.name || '—').join(' · ')}
-                  &nbsp;·&nbsp; {formatCrewDate(crew.updatedAt)}
+                  {formatCrewDate(crew.updatedAt)}
                 </div>
               </div>
               <div className="crew-chevron">

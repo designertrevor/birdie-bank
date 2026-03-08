@@ -8,11 +8,6 @@ export default function PlayersScreen() {
     go,
     players,
     selectedGames,
-    courseName,
-    totalHoles,
-    setCourse,
-    bankerStartIndex,
-    setBankerStartIndex,
     addPlayer,
     addPlayerWithProfile,
     removePlayer,
@@ -47,9 +42,8 @@ export default function PlayersScreen() {
 
   const handleSaveAsCrew = () => {
     if (players.length < 2) return
-    const name = window.prompt('Crew name', '')
-    if (name == null) return
-    addCrew(name.trim() || 'Unnamed crew', players)
+    const name = players.map((p) => (p.name || '—').trim()).join(', ')
+    addCrew(name, players)
     setUseCrewValue('')
   }
 
@@ -66,32 +60,6 @@ export default function PlayersScreen() {
       <div className="prog-bar">
         <div className="prog-fill" style={{ width: '66%' }} />
       </div>
-      <div className="course-row">
-        <label className="banker-pick-label">Course</label>
-        <input
-          className="course-name-input"
-          type="text"
-          placeholder="Course name (optional)"
-          value={courseName}
-          onChange={(e) => setCourse(e.target.value, totalHoles)}
-        />
-        <div className="course-holes-toggle">
-          <button
-            type="button"
-            className={totalHoles === 9 ? 'course-holes-btn on' : 'course-holes-btn'}
-            onClick={() => setCourse(courseName, 9)}
-          >
-            9 holes
-          </button>
-          <button
-            type="button"
-            className={totalHoles === 18 ? 'course-holes-btn on' : 'course-holes-btn'}
-            onClick={() => setCourse(courseName, 18)}
-          >
-            18 holes
-          </button>
-        </div>
-      </div>
       {crews.length > 0 && (
         <div className="banker-pick-row">
           <label className="banker-pick-label">Use a crew</label>
@@ -103,20 +71,6 @@ export default function PlayersScreen() {
             <option value="">Choose a crew…</option>
             {crews.map((c) => (
               <option key={c.id} value={c.id}>{c.name}</option>
-            ))}
-          </select>
-        </div>
-      )}
-      {selectedGames.includes('banker') && players.length >= 2 && (
-        <div className="banker-pick-row">
-          <label className="banker-pick-label">Banker on hole 1</label>
-          <select
-            className="banker-pick-select"
-            value={bankerStartIndex}
-            onChange={(e) => setBankerStartIndex(Number(e.target.value))}
-          >
-            {players.map((p, i) => (
-              <option key={p.id} value={i}>{p.name || `Player ${i + 1}`}</option>
             ))}
           </select>
         </div>
@@ -205,7 +159,7 @@ export default function PlayersScreen() {
       )}
       <div className="players-note">{note}</div>
       <div style={{ marginTop: 20 }}>
-        <button className="btn-primary" onClick={() => go('hole')}>
+        <button className="btn-primary" onClick={() => go('course')}>
           Let&apos;s Play <ArrowRight size={20} />
         </button>
       </div>
