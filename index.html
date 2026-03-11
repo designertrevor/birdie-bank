@@ -18,6 +18,24 @@
   </head>
   <body>
     <div id="root"></div>
+    <script>
+      // If the app bundle fails to load or throws before React mounts, show a fallback after 4s.
+      (function () {
+        var root = document.getElementById('root')
+        var deadline = Date.now() + 4000
+        function check() {
+          if (Date.now() < deadline) {
+            requestAnimationFrame(check)
+            return
+          }
+          if (!root || !root.firstChild) {
+            root = root || document.body
+            root.innerHTML = '<div style="min-height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:24px;background:#0d2818;color:#f0ece0;font-family:DM Sans,sans-serif;text-align:center"><h1 style="font-size:24px;margin-bottom:12px;color:#c8f04a">App didn’t load</h1><p style="font-size:14px;color:#7a9080;margin-bottom:24px">Try reloading. If you’re offline, connect and refresh.</p><button type="button" onclick="location.reload()" style="padding:12px 24px;background:#c8f04a;color:#0f4225;border:none;border-radius:12px;font-weight:600;cursor:pointer">Reload</button></div>'
+          }
+        }
+        requestAnimationFrame(check)
+      })()
+    </script>
     <script type="module" src="/src/main.jsx"></script>
   </body>
 </html>
