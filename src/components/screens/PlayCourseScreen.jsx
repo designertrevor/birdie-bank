@@ -2,6 +2,7 @@ import { useMemo, useState } from 'react'
 import { Search, Star } from 'lucide-react'
 import { useRound } from '../../context/RoundContext'
 import { getCourses, getRounds } from '../../storage'
+import utahCourses from '@/data/courses-utah.json'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Card } from '@/components/ui/card'
@@ -35,6 +36,15 @@ export default function PlayCourseScreen() {
     if (!s) return favorites
     return favorites.filter((c) => (c.name || '').toLowerCase().includes(s))
   }, [favorites, q])
+
+  const filteredUtah = useMemo(() => {
+    const s = q.trim().toLowerCase()
+    const all = Array.isArray(utahCourses) ? utahCourses : []
+    if (!s) return all.slice(0, 24)
+    return all
+      .filter((c) => (c?.name || '').toLowerCase().includes(s))
+      .slice(0, 40)
+  }, [q])
 
   const filteredRecent = useMemo(() => {
     const s = q.trim().toLowerCase()
@@ -71,6 +81,7 @@ export default function PlayCourseScreen() {
 
       {q.trim() &&
         filteredFavorites.length === 0 &&
+        filteredUtah.length === 0 &&
         filteredRecent.length === 0 && (
           <div className="empty-state" style={{ marginTop: 12 }}>
             <div style={{ fontWeight: 600, color: 'var(--text)' }}>No matches</div>
@@ -84,6 +95,22 @@ export default function PlayCourseScreen() {
             </div>
           </div>
         )}
+
+      {filteredUtah.length > 0 && (
+        <div style={{ marginTop: 14 }}>
+          <div className="section-label">Utah Courses</div>
+          <div className="list">
+            {filteredUtah.map((c) => (
+              <Card key={c.id || `${c.name}-${c.address}`} className="list-row" onClick={() => selectCourse(c.name)}>
+                <div className="list-left">
+                  <span className="list-title">{c.name}</span>
+                  <span className="list-sub">{c.address}</span>
+                </div>
+              </Card>
+            ))}
+          </div>
+        </div>
+      )}
 
       {filteredFavorites.length > 0 && (
         <div style={{ marginTop: 14 }}>

@@ -9,6 +9,9 @@
     "lint": "eslint .",
     "format": "prettier --write \"src/**/*.{js,jsx,css,json}\"",
     "preview": "vite preview",
+    "courses:ut:validate": "node scripts/validate-courses-utah.mjs",
+    "courses:ut:import:csv": "node scripts/import-courses-utah-from-csv.mjs",
+    "courses:ut:seed:osm": "node scripts/seed-courses-utah-from-osm.mjs",
     "test": "vitest run",
     "test:watch": "vitest"
   },

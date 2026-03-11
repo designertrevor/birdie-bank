@@ -1,0 +1,657 @@
+[
+  {
+    "id": "ut-osm-aloha-golf-coffee-lounge-001",
+    "name": "Aloha Golf & Coffee Lounge",
+    "address": "21 East Gentile Street, Layton, UT, 84041"
+  },
+  {
+    "id": "ut-osm-alpine-country-club-002",
+    "name": "Alpine Country Club",
+    "address": "UT (address unknown)"
+  },
+  {
+    "id": "ut-osm-back-nine-003",
+    "name": "Back Nine",
+    "address": "UT (address unknown)"
+  },
+  {
+    "id": "ut-osm-bear-lake-golf-course-004",
+    "name": "Bear Lake Golf Course",
+    "address": "222 Clubhouse Drive, Garden City, UT, 84028"
+  },
+  {
+    "id": "ut-osm-birch-creek-golf-course-005",
+    "name": "Birch Creek Golf Course",
+    "address": "UT (address unknown)"
+  },
+  {
+    "id": "ut-osm-black-desert-golf-course-006",
+    "name": "Black Desert Golf Course",
+    "address": "UT (address unknown)"
+  },
+  {
+    "id": "ut-osm-bloomington-country-club-007",
+    "name": "Bloomington Country Club",
+    "address": "UT (address unknown)"
+  },
+  {
+    "id": "ut-osm-bonneville-golf-course-008",
+    "name": "Bonneville Golf Course",
+    "address": "UT (address unknown)"
+  },
+  {
+    "id": "ut-osm-bountiful-ridge-golf-course-009",
+    "name": "Bountiful Ridge Golf Course",
+    "address": "UT (address unknown)"
+  },
+  {
+    "id": "ut-osm-canyon-breeze-golf-course-010",
+    "name": "Canyon Breeze Golf Course",
+    "address": "371 N Hwy 153, Beaver, UT, 84713"
+  },
+  {
+    "id": "ut-osm-canyon-hills-golf-course-011",
+    "name": "Canyon Hills Golf Course",
+    "address": "445 Golf Course Way, Nephi, UT, 84648"
+  },
+  {
+    "id": "ut-osm-canyons-golf-course-012",
+    "name": "Canyons Golf Course",
+    "address": "4000 Canyons Resort Drive, Park City, UT, 84098"
+  },
+  {
+    "id": "ut-osm-carbon-country-club-013",
+    "name": "Carbon Country Club",
+    "address": "UT (address unknown)"
+  },
+  {
+    "id": "ut-osm-cedar-hills-golf-club-014",
+    "name": "Cedar Hills Golf Club",
+    "address": "Clubhouse Drive, Cedar Hills"
+  },
+  {
+    "id": "ut-osm-cedar-ridge-golf-course-015",
+    "name": "Cedar Ridge Golf Course",
+    "address": "200 East 900 North, Cedar City, UT, 84721"
+  },
+  {
+    "id": "ut-osm-central-valley-golf-course-016",
+    "name": "Central Valley Golf Course",
+    "address": "800 West Central Valley Road, South Salt Lake City, UT, 84119"
+  },
+  {
+    "id": "ut-osm-cherokee-springs-golf-rv-resort-017",
+    "name": "Cherokee Springs Golf & RV Resort",
+    "address": "UT (address unknown)"
+  },
+  {
+    "id": "ut-osm-club-champion-018",
+    "name": "Club Champion",
+    "address": "1010 East 2100 South, Salt Lake City, UT, 84106"
+  },
+  {
+    "id": "ut-osm-copper-golf-club-019",
+    "name": "Copper Golf Club",
+    "address": "UT (address unknown)"
+  },
+  {
+    "id": "ut-osm-copper-rock-golf-course-020",
+    "name": "Copper Rock Golf Course",
+    "address": "UT (address unknown)"
+  },
+  {
+    "id": "ut-osm-copper-rock-golf-course-hole-1-021",
+    "name": "Copper Rock Golf Course - Hole 1",
+    "address": "UT (address unknown)"
+  },
+  {
+    "id": "ut-osm-copper-rock-golf-course-hole-15-022",
+    "name": "Copper Rock Golf Course - Hole 15",
+    "address": "UT (address unknown)"
+  },
+  {
+    "id": "ut-osm-copper-rock-golf-course-hole-6-023",
+    "name": "Copper Rock Golf Course - Hole 6",
+    "address": "UT (address unknown)"
+  },
+  {
+    "id": "ut-osm-coral-canyon-golf-course-024",
+    "name": "Coral Canyon Golf Course",
+    "address": "UT (address unknown)"
+  },
+  {
+    "id": "ut-osm-cottonwood-country-club-025",
+    "name": "Cottonwood Country Club",
+    "address": "UT (address unknown)"
+  },
+  {
+    "id": "ut-osm-crane-field-golf-course-026",
+    "name": "Crane Field Golf Course",
+    "address": "Cranefield Road, Clinton"
+  },
+  {
+    "id": "ut-osm-davis-park-golf-course-027",
+    "name": "Davis Park Golf Course",
+    "address": "1074 East Nicholls Road, Fruit Heights, UT, 84037"
+  },
+  {
+    "id": "ut-osm-dinaland-golf-course-028",
+    "name": "Dinaland Golf Course",
+    "address": "675 South 2000 East, Vernal, UT, 84078"
+  },
+  {
+    "id": "ut-osm-dixie-red-hills-golf-club-029",
+    "name": "Dixie Red Hills Golf Club",
+    "address": "645 West 1250 North, St. George, UT, 84770-1858"
+  },
+  {
+    "id": "ut-osm-eagle-lake-golf-course-030",
+    "name": "Eagle Lake Golf Course",
+    "address": "UT (address unknown)"
+  },
+  {
+    "id": "ut-osm-eagle-mountain-golf-course-031",
+    "name": "Eagle Mountain Golf Course",
+    "address": "UT (address unknown)"
+  },
+  {
+    "id": "ut-osm-eaglewood-golf-course-032",
+    "name": "Eaglewood Golf Course",
+    "address": "1110 East Eaglewood Drive, North Salt Lake, UT, 84054"
+  },
+  {
+    "id": "ut-osm-el-monte-golf-course-033",
+    "name": "El Monte Golf Course",
+    "address": "UT (address unknown)"
+  },
+  {
+    "id": "ut-osm-entrada-at-snow-canyon-country-club-034",
+    "name": "Entrada at Snow Canyon Country Club",
+    "address": "UT (address unknown)"
+  },
+  {
+    "id": "ut-osm-fore-lakes-golf-course-035",
+    "name": "Fore Lakes Golf Course",
+    "address": "UT (address unknown)"
+  },
+  {
+    "id": "ut-osm-forest-dale-golf-course-036",
+    "name": "Forest Dale Golf Course",
+    "address": "UT (address unknown)"
+  },
+  {
+    "id": "ut-osm-fox-hollow-golf-course-037",
+    "name": "Fox Hollow Golf Course",
+    "address": "1400 North 200 East, American Fork, UT, 84003"
+  },
+  {
+    "id": "ut-osm-frank-skul-memorial-golf-course-038",
+    "name": "Frank Skul Memorial Golf Course",
+    "address": "Dugway, UT, 84022"
+  },
+  {
+    "id": "ut-osm-gladstan-golf-course-039",
+    "name": "Gladstan Golf Course",
+    "address": "UT (address unknown)"
+  },
+  {
+    "id": "ut-osm-glen-eagle-golf-club-040",
+    "name": "Glen Eagle Golf Club",
+    "address": "3176 W. 1700 South, Syracuse, UT, 84075"
+  },
+  {
+    "id": "ut-osm-glendale-golf-course-041",
+    "name": "Glendale Golf Course",
+    "address": "2100 South 1640 West, Salt Lake City, UT, 84119"
+  },
+  {
+    "id": "ut-osm-glenmoor-golf-course-042",
+    "name": "Glenmoor Golf Course",
+    "address": "UT (address unknown)"
+  },
+  {
+    "id": "ut-osm-glenwild-golf-club-spa-043",
+    "name": "Glenwild Golf Club & Spa",
+    "address": "7600 Glenwild Drive, Park City, UT, 84098"
+  },
+  {
+    "id": "ut-osm-golf-galaxy-044",
+    "name": "Golf Galaxy",
+    "address": "6148 S State Street, Murray, UT, 84107"
+  },
+  {
+    "id": "ut-osm-green-river-state-park-golf-course-045",
+    "name": "Green River State Park Golf Course",
+    "address": "450 South Green River Boulevard, Green River, UT, 84525"
+  },
+  {
+    "id": "ut-osm-green-spring-golf-course-046",
+    "name": "Green Spring Golf Course",
+    "address": "588 North Green Spring Dr, Washington, UT, 84780"
+  },
+  {
+    "id": "ut-osm-hidden-valley-country-club-047",
+    "name": "Hidden Valley Country Club",
+    "address": "UT (address unknown)"
+  },
+  {
+    "id": "ut-osm-hobble-creek-golf-course-048",
+    "name": "Hobble Creek Golf Course",
+    "address": "94 Hobble Creek Canyon Rd., UT"
+  },
+  {
+    "id": "ut-osm-homestead-golf-club-049",
+    "name": "Homestead Golf Club",
+    "address": "700 North Homestead Drive, Midway, UT, 84049"
+  },
+  {
+    "id": "ut-osm-hubbard-golf-course-hill-air-force-base-050",
+    "name": "Hubbard Golf Course (Hill Air Force Base)",
+    "address": "UT (address unknown)"
+  },
+  {
+    "id": "ut-osm-jeremy-golf-country-club-051",
+    "name": "Jeremy Golf & Country Club",
+    "address": "8770 Jeremy Road, Park City, UT, 84098"
+  },
+  {
+    "id": "ut-osm-lakeside-golf-course-052",
+    "name": "Lakeside Golf Course",
+    "address": "1201 North 1100 West, West Bountiful, UT, 84087"
+  },
+  {
+    "id": "ut-osm-logan-golf-and-country-club-053",
+    "name": "Logan Golf and Country Club",
+    "address": "UT (address unknown)"
+  },
+  {
+    "id": "ut-osm-logan-river-golf-course-054",
+    "name": "Logan River Golf Course",
+    "address": "UT (address unknown)"
+  },
+  {
+    "id": "ut-osm-logan-river-golf-course-clubhouse-055",
+    "name": "Logan River Golf Course Clubhouse",
+    "address": "UT (address unknown)"
+  },
+  {
+    "id": "ut-osm-meadow-brook-golf-course-056",
+    "name": "Meadow Brook Golf Course",
+    "address": "UT (address unknown)"
+  },
+  {
+    "id": "ut-osm-mick-riley-golf-course-057",
+    "name": "Mick Riley Golf Course",
+    "address": "UT (address unknown)"
+  },
+  {
+    "id": "ut-osm-millsite-golf-course-058",
+    "name": "Millsite Golf Course",
+    "address": "W. Canyon Road, Ferron, UT, 84523"
+  },
+  {
+    "id": "ut-osm-moab-golf-club-059",
+    "name": "Moab Golf Club",
+    "address": "UT (address unknown)"
+  },
+  {
+    "id": "ut-osm-mount-ogden-golf-course-060",
+    "name": "Mount Ogden Golf Course",
+    "address": "UT (address unknown)"
+  },
+  {
+    "id": "ut-osm-mountain-dell-golf-course-061",
+    "name": "Mountain Dell Golf Course",
+    "address": "Exit 134 I-80, Parley's Canyon;Salt Lake City, UT, 84109"
+  },
+  {
+    "id": "ut-osm-mountain-view-golf-course-062",
+    "name": "Mountain View Golf Course",
+    "address": "8660 South"
+  },
+  {
+    "id": "ut-osm-mulligans-golf-course-063",
+    "name": "Mulligans Golf Course",
+    "address": "UT (address unknown)"
+  },
+  {
+    "id": "ut-osm-murray-city-golf-course-064",
+    "name": "Murray City Golf Course",
+    "address": "UT (address unknown)"
+  },
+  {
+    "id": "ut-osm-nibley-park-golf-course-065",
+    "name": "Nibley Park Golf Course",
+    "address": "UT (address unknown)"
+  },
+  {
+    "id": "ut-osm-oak-ridge-golf-course-066",
+    "name": "Oak Ridge Golf Course",
+    "address": "UT (address unknown)"
+  },
+  {
+    "id": "ut-osm-ogden-golf-and-country-club-067",
+    "name": "Ogden Golf and Country Club",
+    "address": "UT (address unknown)"
+  },
+  {
+    "id": "ut-osm-old-mill-golf-course-068",
+    "name": "Old Mill Golf Course",
+    "address": "UT (address unknown)"
+  },
+  {
+    "id": "ut-osm-oquirrh-hills-golf-course-069",
+    "name": "Oquirrh Hills Golf Course",
+    "address": "UT (address unknown)"
+  },
+  {
+    "id": "ut-osm-outlaw-golf-club-070",
+    "name": "Outlaw Golf Club",
+    "address": "10725 North Hideout Trail, Hideout, UT, 84036"
+  },
+  {
+    "id": "ut-osm-palisade-state-park-golf-course-071",
+    "name": "Palisade State Park Golf Course",
+    "address": "2200 Palisade Rd, Sterling, UT, 84665"
+  },
+  {
+    "id": "ut-osm-paradise-golf-resort-072",
+    "name": "Paradise Golf Resort",
+    "address": "905 North Main Street, Fillmore, UT, 84631"
+  },
+  {
+    "id": "ut-osm-park-city-golf-course-073",
+    "name": "Park City Golf Course",
+    "address": "1541 Thaynes Canyon Drive, Park City, UT, 84060"
+  },
+  {
+    "id": "ut-osm-park-meadows-country-club-074",
+    "name": "Park Meadows Country Club",
+    "address": "UT (address unknown)"
+  },
+  {
+    "id": "ut-osm-pro-shop-075",
+    "name": "Pro Shop",
+    "address": "UT (address unknown)"
+  },
+  {
+    "id": "ut-osm-pro-shop-at-eagle-mountain-golf-course-076",
+    "name": "Pro Shop at Eagle Mountain Golf Course",
+    "address": "UT (address unknown)"
+  },
+  {
+    "id": "ut-osm-promontory-club-jack-nicklaus-course-077",
+    "name": "Promontory Club - Jack Nicklaus Course",
+    "address": "UT (address unknown)"
+  },
+  {
+    "id": "ut-osm-promontory-club-pete-dye-course-078",
+    "name": "Promontory Club - Pete Dye Course",
+    "address": "UT (address unknown)"
+  },
+  {
+    "id": "ut-osm-promontory-club-the-hills-course-079",
+    "name": "Promontory Club - The Hills Course",
+    "address": "UT (address unknown)"
+  },
+  {
+    "id": "ut-osm-red-ledges-080",
+    "name": "Red Ledges",
+    "address": "UT (address unknown)"
+  },
+  {
+    "id": "ut-osm-remuda-golf-course-081",
+    "name": "Remuda Golf Course",
+    "address": "2600 West 3500 North, Farr West, UT, 84404"
+  },
+  {
+    "id": "ut-osm-river-oaks-golf-course-082",
+    "name": "River Oaks Golf Course",
+    "address": "UT (address unknown)"
+  },
+  {
+    "id": "ut-osm-riverbend-golf-course-083",
+    "name": "Riverbend Golf Course",
+    "address": "UT (address unknown)"
+  },
+  {
+    "id": "ut-osm-riverside-country-club-084",
+    "name": "Riverside Country Club",
+    "address": "2701 North University Avenue, UT"
+  },
+  {
+    "id": "ut-osm-roosevelt-municipal-golf-course-085",
+    "name": "Roosevelt Municipal Golf Course",
+    "address": "1155 West Clubhouse Drive, Roosevelt, UT, 84066"
+  },
+  {
+    "id": "ut-osm-roots-disc-golf-course-086",
+    "name": "Roots Disc Golf Course",
+    "address": "1200 North Redwood Road, Salt Lake City, UT, 84116"
+  },
+  {
+    "id": "ut-osm-rose-park-golf-course-087",
+    "name": "Rose Park Golf Course",
+    "address": "1386 North Redwood Road, Salt Lake City, UT, 84116"
+  },
+  {
+    "id": "ut-osm-round-valley-golf-course-088",
+    "name": "Round Valley Golf Course",
+    "address": "UT (address unknown)"
+  },
+  {
+    "id": "ut-osm-salt-lake-country-club-089",
+    "name": "Salt Lake Country Club",
+    "address": "UT (address unknown)"
+  },
+  {
+    "id": "ut-osm-sand-hollow-resort-090",
+    "name": "Sand Hollow Resort",
+    "address": "5625 West Clubhouse Drive, Hurricane, UT, 84737"
+  },
+  {
+    "id": "ut-osm-schneiter-s-bluff-091",
+    "name": "Schneiter's Bluff",
+    "address": "UT (address unknown)"
+  },
+  {
+    "id": "ut-osm-schneiter-s-pebblebrook-golf-course-092",
+    "name": "Schneiter's Pebblebrook Golf Course",
+    "address": "8968 South 1300 East, Sandy, UT, 84094"
+  },
+  {
+    "id": "ut-osm-schneiters-bluff-golf-course-093",
+    "name": "Schneiters Bluff Golf Course",
+    "address": "300 N 3500 W, West Point, UT, 84015"
+  },
+  {
+    "id": "ut-osm-schneiters-riverside-golf-course-094",
+    "name": "Schneiters Riverside Golf Course",
+    "address": "5460 South Weber Drive, Riverdale, UT, 84405"
+  },
+  {
+    "id": "ut-osm-sky-mountain-golf-course-095",
+    "name": "Sky Mountain Golf Course",
+    "address": "1030 North 2600 West, Hurricane, UT, 84737"
+  },
+  {
+    "id": "ut-osm-skyline-mountain-resort-096",
+    "name": "Skyline Mountain Resort",
+    "address": "UT (address unknown)"
+  },
+  {
+    "id": "ut-osm-skyway-golf-course-097",
+    "name": "Skyway Golf Course",
+    "address": "UT (address unknown)"
+  },
+  {
+    "id": "ut-osm-snow-canyon-country-club-098",
+    "name": "Snow Canyon Country Club",
+    "address": "2537 Entrada Trail, St.George, UT, 84770"
+  },
+  {
+    "id": "ut-osm-soldier-hollow-golf-course-099",
+    "name": "Soldier Hollow Golf Course",
+    "address": "UT (address unknown)"
+  },
+  {
+    "id": "ut-osm-south-mountain-golf-course-100",
+    "name": "South Mountain Golf Course",
+    "address": "UT (address unknown)"
+  },
+  {
+    "id": "ut-osm-southgate-golf-course-101",
+    "name": "Southgate Golf Course",
+    "address": "1975 Tonaquint Drive, St. George, UT, 84770-1858"
+  },
+  {
+    "id": "ut-osm-spanish-oaks-golf-course-102",
+    "name": "Spanish Oaks Golf Course",
+    "address": "2300 East Powerhouse Road, Spanish Fork, UT, 84660"
+  },
+  {
+    "id": "ut-osm-st-george-golf-club-103",
+    "name": "St. George Golf Club",
+    "address": "2190 South 1400 East, St. George, UT, 84770-1858"
+  },
+  {
+    "id": "ut-osm-stansbury-park-golf-course-104",
+    "name": "Stansbury Park Golf Course",
+    "address": "UT (address unknown)"
+  },
+  {
+    "id": "ut-osm-stonebridge-golf-club-105",
+    "name": "Stonebridge Golf Club",
+    "address": "4415 Links Drive, West Valley City, UT, 84120"
+  },
+  {
+    "id": "ut-osm-sun-hills-golf-course-106",
+    "name": "Sun Hills Golf Course",
+    "address": "UT (address unknown)"
+  },
+  {
+    "id": "ut-osm-sun-river-golf-club-107",
+    "name": "Sun River Golf Club",
+    "address": "4210 South Bluegrass Way, St. George, UT, 84730"
+  },
+  {
+    "id": "ut-osm-sunbrook-golf-club-108",
+    "name": "Sunbrook Golf Club",
+    "address": "2366 West Sunbrook Drive, St. George, UT, 84770-1858"
+  },
+  {
+    "id": "ut-osm-sunset-view-golf-course-109",
+    "name": "Sunset View Golf Course",
+    "address": "UT (address unknown)"
+  },
+  {
+    "id": "ut-osm-talonscove-golf-course-110",
+    "name": "TalonsCove Golf Course",
+    "address": "UT (address unknown)"
+  },
+  {
+    "id": "ut-osm-thanksgiving-point-golf-club-111",
+    "name": "Thanksgiving Point Golf Club",
+    "address": "UT (address unknown)"
+  },
+  {
+    "id": "ut-osm-the-barn-golf-club-112",
+    "name": "The Barn Golf Club",
+    "address": "305 West Pleasant View Drive, Pleasant View, UT, 84414"
+  },
+  {
+    "id": "ut-osm-the-hideout-golf-club-113",
+    "name": "The Hideout Golf Club",
+    "address": "549 South Main Street, Monticello, UT, 84535"
+  },
+  {
+    "id": "ut-osm-the-ledges-golf-course-114",
+    "name": "The Ledges Golf Course",
+    "address": "UT (address unknown)"
+  },
+  {
+    "id": "ut-osm-the-links-at-overlake-115",
+    "name": "The Links at Overlake",
+    "address": "UT (address unknown)"
+  },
+  {
+    "id": "ut-osm-the-links-at-sleepy-ridge-116",
+    "name": "The Links at Sleepy Ridge",
+    "address": "730 South Sleepy Ridge Drive, Orem, UT, 84059"
+  },
+  {
+    "id": "ut-osm-the-ranches-golf-club-117",
+    "name": "The Ranches Golf Club",
+    "address": "UT (address unknown)"
+  },
+  {
+    "id": "ut-osm-the-ridge-golf-club-118",
+    "name": "The Ridge Golf Club",
+    "address": "5055 South Westridge Blvd. (5600 West), West Valley City, UT, 84118"
+  },
+  {
+    "id": "ut-osm-the-turn-golf-club-119",
+    "name": "The Turn Golf Club",
+    "address": "UT (address unknown)"
+  },
+  {
+    "id": "ut-osm-thunderbird-golf-course-120",
+    "name": "Thunderbird Golf Course",
+    "address": "UT (address unknown)"
+  },
+  {
+    "id": "ut-osm-timpanogos-golf-course-121",
+    "name": "Timpanogos Golf Course",
+    "address": "1860 South 380 East, Provo, UT, 84606"
+  },
+  {
+    "id": "ut-osm-toad-s-national-golf-course-122",
+    "name": "Toad’s National Golf Course",
+    "address": "1690 W 400 North, Ogden, UT, 84404"
+  },
+  {
+    "id": "ut-osm-topgolf-123",
+    "name": "Topgolf",
+    "address": "UT (address unknown)"
+  },
+  {
+    "id": "ut-osm-tracking-par-124",
+    "name": "Tracking Par",
+    "address": "UT (address unknown)"
+  },
+  {
+    "id": "ut-osm-tuhaye-golf-course-talisker-club-125",
+    "name": "Tuhaye Golf Course (Talisker Club)",
+    "address": "UT (address unknown)"
+  },
+  {
+    "id": "ut-osm-valley-view-golf-course-126",
+    "name": "Valley View Golf Course",
+    "address": "2501 East Gentile Street, Layton, UT, 84040"
+  },
+  {
+    "id": "ut-osm-victory-ranch-golf-club-127",
+    "name": "Victory Ranch Golf Club",
+    "address": "UT (address unknown)"
+  },
+  {
+    "id": "ut-osm-wasatch-mountain-state-golf-course-128",
+    "name": "Wasatch Mountain State Golf Course",
+    "address": "UT (address unknown)"
+  },
+  {
+    "id": "ut-osm-willow-creek-country-club-129",
+    "name": "Willow Creek Country Club",
+    "address": "8505 Willow Creek Drive, Sandy, UT, 84093"
+  },
+  {
+    "id": "ut-osm-wolf-creek-golf-course-130",
+    "name": "Wolf Creek Golf Course",
+    "address": "3900 North Wolf Creek Drive, Eden, UT, 84310"
+  },
+  {
+    "id": "ut-osm-x-golf-131",
+    "name": "X-Golf",
+    "address": "13347 S Teal Ridge Way, Riverton, UT, 84096"
+  }
+]
