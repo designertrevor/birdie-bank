@@ -178,43 +178,48 @@ const initialState = {
 }
 
 function getInitialState() {
-  const stored = loadRound()
-  if (!stored) {
-    const stakeDefaults = getDefaultStakes()
-    const savedPlayers = getPlayers()
-    const players =
-      Array.isArray(savedPlayers) && savedPlayers.length >= 2 ? savedPlayers : initialState.players
-    const maxId = players.reduce((m, p) => Math.max(m, p?.id ?? 0), 0)
+  try {
+    const stored = loadRound()
+    if (!stored) {
+      const stakeDefaults = getDefaultStakes()
+      const savedPlayers = getPlayers()
+      const players =
+        Array.isArray(savedPlayers) && savedPlayers.length >= 2 ? savedPlayers : initialState.players
+      const maxId = (players || []).reduce((m, p) => Math.max(m, p?.id ?? 0), 0)
+      return {
+        ...initialState,
+        players,
+        nextPlayerId: Math.max(initialState.nextPlayerId, maxId + 1),
+        stakeVals:
+          stakeDefaults && typeof stakeDefaults === 'object'
+            ? { ...initialState.stakeVals, ...stakeDefaults }
+            : initialState.stakeVals,
+      }
+    }
     return {
       ...initialState,
-      players,
-      nextPlayerId: Math.max(initialState.nextPlayerId, maxId + 1),
+      ...stored,
+      players:
+        Array.isArray(stored.players) && stored.players.length >= 2
+          ? stored.players
+          : initialState.players,
+      selectedGames: Array.isArray(stored.selectedGames)
+        ? stored.selectedGames
+        : initialState.selectedGames,
       stakeVals:
-        stakeDefaults && typeof stakeDefaults === 'object'
-          ? { ...initialState.stakeVals, ...stakeDefaults }
+        stored.stakeVals && typeof stored.stakeVals === 'object'
+          ? { ...initialState.stakeVals, ...stored.stakeVals }
           : initialState.stakeVals,
+      bankerStartIndex:
+        typeof stored.bankerStartIndex === 'number' ? stored.bankerStartIndex : initialState.bankerStartIndex,
+      courseName: typeof stored.courseName === 'string' ? stored.courseName : initialState.courseName,
+      totalHoles: stored.totalHoles === 9 || stored.totalHoles === 18 ? stored.totalHoles : initialState.totalHoles,
+      playerDoubled: stored.playerDoubled && typeof stored.playerDoubled === 'object' ? stored.playerDoubled : initialState.playerDoubled,
+      bankerDoubledBack: stored.bankerDoubledBack && typeof stored.bankerDoubledBack === 'object' ? stored.bankerDoubledBack : initialState.bankerDoubledBack,
     }
-  }
-  return {
-    ...initialState,
-    ...stored,
-    players:
-      Array.isArray(stored.players) && stored.players.length >= 2
-        ? stored.players
-        : initialState.players,
-    selectedGames: Array.isArray(stored.selectedGames)
-      ? stored.selectedGames
-      : initialState.selectedGames,
-    stakeVals:
-      stored.stakeVals && typeof stored.stakeVals === 'object'
-        ? { ...initialState.stakeVals, ...stored.stakeVals }
-        : initialState.stakeVals,
-    bankerStartIndex:
-      typeof stored.bankerStartIndex === 'number' ? stored.bankerStartIndex : initialState.bankerStartIndex,
-    courseName: typeof stored.courseName === 'string' ? stored.courseName : initialState.courseName,
-    totalHoles: stored.totalHoles === 9 || stored.totalHoles === 18 ? stored.totalHoles : initialState.totalHoles,
-    playerDoubled: stored.playerDoubled && typeof stored.playerDoubled === 'object' ? stored.playerDoubled : initialState.playerDoubled,
-    bankerDoubledBack: stored.bankerDoubledBack && typeof stored.bankerDoubledBack === 'object' ? stored.bankerDoubledBack : initialState.bankerDoubledBack,
+  } catch (e) {
+    console.warn('birdie-bank: getInitialState failed, using defaults', e)
+    return { ...initialState }
   }
 }
 
