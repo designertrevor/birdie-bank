@@ -25,6 +25,11 @@ function formatSettleAmt(n) {
   return '$0'
 }
 
+function formatLongDate(ts) {
+  const d = new Date(ts)
+  return d.toLocaleDateString(undefined, { month: 'short', day: 'numeric' })
+}
+
 export default function SettlementScreen() {
   const {
     go,
@@ -87,8 +92,8 @@ export default function SettlementScreen() {
     .map((p) => p.id)
 
   const subtitle = viewingMode
-    ? `${viewing.courseName || 'Casual Round'} · ${viewing.totalHoles || 18} holes`
-    : `${courseName || 'Casual Round'} · ${totalHoles} holes`
+    ? `${viewing.courseName || 'Casual Round'} · ${formatLongDate(viewing.createdAt)} · ${viewing.totalHoles || 18} holes`
+    : `${courseName || 'Casual Round'} · ${formatLongDate(Date.now())} · ${totalHoles} holes`
 
   const shareText = [
     `Birdie Bank — ${subtitle}`,

@@ -19,6 +19,21 @@ const COURSES_NEXT_ID_KEY = 'birdie-bank-courses-next-id'
 /** Default stakes (prefill Play step 3 + Settings) */
 const DEFAULT_STAKES_KEY = 'birdie-bank-default-stakes'
 
+function emitStorageError(action, error) {
+  try {
+    window.dispatchEvent(
+      new CustomEvent('birdie-bank:storage-error', {
+        detail: {
+          action,
+          message: error?.message || String(error || 'Storage error'),
+        },
+      })
+    )
+  } catch {
+    // no-op
+  }
+}
+
 /**
  * Shape of persisted round (subset of full context state we care to restore).
  * @typedef {{
@@ -57,6 +72,7 @@ export function saveRound(state) {
     window.localStorage.setItem(STORAGE_KEY, JSON.stringify(payload))
   } catch (e) {
     console.warn('birdie-bank: could not save round', e)
+    emitStorageError('saveRound', e)
   }
 }
 
@@ -81,6 +97,7 @@ export function clearRound() {
     window.localStorage.removeItem(STORAGE_KEY)
   } catch (e) {
     console.warn('birdie-bank: could not clear round', e)
+    emitStorageError('clearRound', e)
   }
 }
 
@@ -114,6 +131,7 @@ export function saveFinishedRound(round) {
     window.localStorage.setItem(ROUNDS_KEY, JSON.stringify(next))
   } catch (e) {
     console.warn('birdie-bank: could not save finished round', e)
+    emitStorageError('saveFinishedRound', e)
   }
 }
 
@@ -151,6 +169,7 @@ export function setPlayers(players) {
     window.localStorage.setItem(PLAYERS_KEY, JSON.stringify(players))
   } catch (e) {
     console.warn('birdie-bank: could not save players', e)
+    emitStorageError('setPlayers', e)
   }
 }
 
@@ -218,6 +237,7 @@ export function setCourses(courses) {
     window.localStorage.setItem(COURSES_KEY, JSON.stringify(courses))
   } catch (e) {
     console.warn('birdie-bank: could not save courses', e)
+    emitStorageError('setCourses', e)
   }
 }
 
@@ -284,6 +304,7 @@ export function setDefaultStakes(stakeVals) {
     window.localStorage.setItem(DEFAULT_STAKES_KEY, JSON.stringify(stakeVals))
   } catch (e) {
     console.warn('birdie-bank: could not save default stakes', e)
+    emitStorageError('setDefaultStakes', e)
   }
 }
 

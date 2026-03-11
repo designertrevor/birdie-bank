@@ -1,4 +1,5 @@
 import { ChevronRight } from 'lucide-react'
+import { useEffect, useState } from 'react'
 import { useRound } from '../../context/RoundContext'
 import { getRounds } from '../../storage'
 import { Card } from '@/components/ui/card'
@@ -16,7 +17,16 @@ function formatMoney(n) {
 
 export default function HistoryScreen() {
   const { go, setViewingRoundId } = useRound()
-  const rounds = getRounds()
+  const [loading, setLoading] = useState(true)
+  const [rounds, setRounds] = useState([])
+
+  useEffect(() => {
+    const t = setTimeout(() => {
+      setRounds(getRounds())
+      setLoading(false)
+    }, 120)
+    return () => clearTimeout(t)
+  }, [])
 
   return (
     <div className="screen active">
@@ -24,7 +34,13 @@ export default function HistoryScreen() {
         <div className="tab-title">History</div>
       </div>
 
-      {rounds.length === 0 ? (
+      {loading ? (
+        <>
+          {Array.from({ length: 3 }).map((_, i) => (
+            <div key={i} className="history-row skeleton" />
+          ))}
+        </>
+      ) : rounds.length === 0 ? (
         <div className="empty-state">
           No rounds yet. Tap <strong>Play</strong> to start your first round.
         </div>

@@ -18,6 +18,14 @@ function initial(name) {
 
 const RoundContext = createContext(null)
 
+function hasInProgressRound(state) {
+  if (!state) return false
+  if (state.currentScreen === 'hole') return true
+  if (typeof state.currentHole === 'number' && state.currentHole > 1) return true
+  const scoresCount = state.scores && typeof state.scores === 'object' ? Object.keys(state.scores).length : 0
+  return scoresCount > 0
+}
+
 function roundReducer(state, action) {
   switch (action.type) {
     case 'GO':
@@ -234,6 +242,15 @@ export function RoundProvider({ children }) {
     window.scrollTo(0, 0)
   }, [])
 
+  const resumeIfInProgress = useCallback(() => {
+    if (hasInProgressRound(state)) {
+      dispatch({ type: 'GO', screen: 'hole' })
+      window.scrollTo(0, 0)
+      return true
+    }
+    return false
+  }, [state])
+
   const resetRound = useCallback(() => {
     const stakeDefaults = getDefaultStakes()
     const savedPlayers = getPlayers()
@@ -423,6 +440,7 @@ export function RoundProvider({ children }) {
     () => ({
       ...state,
       go,
+      resumeIfInProgress,
       resetRound,
       startAddCrew,
       toggleGame,
@@ -456,6 +474,7 @@ export function RoundProvider({ children }) {
     [
       state,
       go,
+      resumeIfInProgress,
       resetRound,
       startAddCrew,
       toggleGame,

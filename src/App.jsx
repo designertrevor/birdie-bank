@@ -1,4 +1,6 @@
 import { RoundProvider, useRound } from './context/RoundContext'
+import { useEffect } from 'react'
+import NoticeToast from './components/NoticeToast'
 import AddCrewScreen from './components/screens/AddCrewScreen'
 import CrewDetailScreen from './components/screens/CrewDetailScreen'
 import HistoryScreen from './components/screens/HistoryScreen'
@@ -36,11 +38,17 @@ function getActiveTab(screen) {
 }
 
 function AppContent() {
-  const { currentScreen, go, resetRound, setViewingRoundId } = useRound()
+  const { currentScreen, go, resetRound, setViewingRoundId, resumeIfInProgress } = useRound()
   const Screen = SCREENS[currentScreen] || HistoryScreen
 
   const hideNav = currentScreen === 'hole'
   const active = getActiveTab(currentScreen)
+
+  useEffect(() => {
+    // If there's an in-progress round saved locally, resume scoring on load.
+    resumeIfInProgress()
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- run once on mount
+  }, [])
 
   return (
     <div className={`app-shell ${hideNav ? 'no-nav' : ''}`}>
@@ -78,6 +86,7 @@ function App() {
     <RoundProvider>
       <div className="phone">
         <AppContent />
+        <NoticeToast />
       </div>
     </RoundProvider>
   )

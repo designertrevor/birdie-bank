@@ -10,6 +10,9 @@ export default function PlayGamesScreen() {
   const hasGames = selectedGames.length > 0
   const wolfOn = selectedGames.includes('wolf')
   const wolfBadCount = wolfOn && players.length !== 4
+  const nassauOn = selectedGames.includes('nassau')
+  const nassauBadCount = nassauOn && (players.length < 2 || players.length > 4)
+  const canStart = hasGames && !wolfBadCount && !nassauBadCount
 
   return (
     <div className="screen active">
@@ -67,13 +70,19 @@ export default function PlayGamesScreen() {
           requires exactly 4 players.
         </div>
       )}
+      {nassauBadCount && (
+        <div className="players-note">
+          <AlertTriangle size={14} style={{ display: 'inline-block', verticalAlign: 'middle' }} /> Nassau
+          requires 2–4 players.
+        </div>
+      )}
 
       <div style={{ marginTop: 16 }}>
         <Button
           type="button"
           className="btn-primary"
           onClick={() => go('hole')}
-          disabled={!hasGames}
+          disabled={!canStart}
         >
           Start Round
         </Button>

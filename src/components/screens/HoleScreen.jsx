@@ -169,6 +169,7 @@ export default function HoleScreen() {
                             type="button"
                             className="bbet-btn"
                             onClick={() => setBet(p.id, -1)}
+                            aria-label={`Decrease bet for ${p.name || 'player'}`}
                           >
                             −
                           </Button>
@@ -177,6 +178,7 @@ export default function HoleScreen() {
                             type="button"
                             className="bbet-btn"
                             onClick={() => setBet(p.id, 1)}
+                            aria-label={`Increase bet for ${p.name || 'player'}`}
                           >
                             +
                           </Button>
@@ -185,6 +187,7 @@ export default function HoleScreen() {
                           type="button"
                           className={`sc-double-btn ${playerDoubled[`${currentHole}-${p.id}`] ? 'on' : ''}`}
                           onClick={() => togglePlayerDoubled(p.id)}
+                          aria-label={`Toggle double for ${p.name || 'player'}`}
                         >
                           {playerDoubled[`${currentHole}-${p.id}`] ? '2×' : 'Double'}
                         </Button>
@@ -199,6 +202,7 @@ export default function HoleScreen() {
                   type="button"
                   className="sc-btn"
                   onClick={() => setScore(p.id, -1)}
+                  aria-label={`Decrease score for ${p.name || 'player'}`}
                 >
                   −
                 </Button>
@@ -207,6 +211,7 @@ export default function HoleScreen() {
                   type="button"
                   className="sc-btn"
                   onClick={() => setScore(p.id, 1)}
+                  aria-label={`Increase score for ${p.name || 'player'}`}
                 >
                   +
                 </Button>

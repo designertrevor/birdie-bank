@@ -69,6 +69,22 @@ export default function PlayCourseScreen() {
         />
       </div>
 
+      {q.trim() &&
+        filteredFavorites.length === 0 &&
+        filteredRecent.length === 0 && (
+          <div className="empty-state" style={{ marginTop: 12 }}>
+            <div style={{ fontWeight: 600, color: 'var(--text)' }}>No matches</div>
+            <div style={{ marginTop: 6 }}>
+              Try a different search or skip for a casual round.
+            </div>
+            <div style={{ marginTop: 12 }}>
+              <Button type="button" className="btn-secondary" onClick={() => selectCourse('')}>
+                Skip — casual round
+              </Button>
+            </div>
+          </div>
+        )}
+
       {filteredFavorites.length > 0 && (
         <div style={{ marginTop: 14 }}>
           <div className="section-label">Favorites</div>

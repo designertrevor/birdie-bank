@@ -32,7 +32,15 @@ export default function PlayPlayersScreen() {
 
   const minTwo = players.length >= 2
   const wolfNeedsFour = selectedGames.includes('wolf') && players.length !== 4
-  const note = !minTwo ? 'Minimum 2 players to proceed.' : wolfNeedsFour ? 'Wolf requires exactly 4 players.' : ''
+  const nassauBadCount =
+    selectedGames.includes('nassau') && (players.length < 2 || players.length > 4)
+  const note = !minTwo
+    ? 'Minimum 2 players to proceed.'
+    : wolfNeedsFour
+      ? 'Wolf requires exactly 4 players.'
+      : nassauBadCount
+        ? 'Nassau requires 2–4 players.'
+        : ''
 
   const togglePlayer = (prof) => {
     const key = nameKey(prof.name)

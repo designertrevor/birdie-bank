@@ -41,6 +41,14 @@ export default function SettingsScreen() {
       <div style={{ marginTop: 10 }}>
         <div className="section-label">Players</div>
         <div className="list">
+          {players.length === 0 && (
+            <div className="empty-state">
+              <div style={{ fontWeight: 600, color: 'var(--text)' }}>Add your first players</div>
+              <div style={{ marginTop: 6 }}>
+                Create at least two players to start a round.
+              </div>
+            </div>
+          )}
           {players.map((p) => (
             <Button
               key={p.id}
@@ -81,6 +89,14 @@ export default function SettingsScreen() {
       <div style={{ marginTop: 14 }}>
         <div className="section-label">Crews</div>
         <div className="list">
+          {crews.length === 0 && (
+            <div className="empty-state">
+              <div style={{ fontWeight: 600, color: 'var(--text)' }}>No crews yet</div>
+              <div style={{ marginTop: 6 }}>
+                Save your regular group to set up rounds faster.
+              </div>
+            </div>
+          )}
           {crews.map((c) => (
             <Button
               key={c.id}
@@ -123,6 +139,14 @@ export default function SettingsScreen() {
       <div style={{ marginTop: 14 }}>
         <div className="section-label">Courses</div>
         <div className="list">
+          {courses.length === 0 && (
+            <div className="empty-state">
+              <div style={{ fontWeight: 600, color: 'var(--text)' }}>No favorite courses</div>
+              <div style={{ marginTop: 6 }}>
+                Add a course you play often for one-tap setup.
+              </div>
+            </div>
+          )}
           {courses.map((c) => (
             <Button
               key={c.id}
