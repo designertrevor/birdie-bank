@@ -1,6 +1,8 @@
 import { ChevronLeft, AlertTriangle } from 'lucide-react'
 import { useRound } from '../../context/RoundContext'
 import { GAME_CFG, GAME_KEYS } from '../../constants'
+import { Button } from '@/components/ui/button'
+import { Card } from '@/components/ui/card'
 
 export default function PlayGamesScreen() {
   const { go, players, selectedGames, toggleGame, stakeVals, setStake } = useRound()
@@ -12,9 +14,9 @@ export default function PlayGamesScreen() {
   return (
     <div className="screen active">
       <div className="topbar">
-        <button type="button" className="back-btn" onClick={() => go('playPlayers')}>
+        <Button type="button" className="back-btn" onClick={() => go('playPlayers')}>
           <ChevronLeft size={16} /> Back
-        </button>
+        </Button>
         <div className="topbar-title">Choose Games</div>
         <div style={{ width: 60 }} />
       </div>
@@ -30,8 +32,8 @@ export default function PlayGamesScreen() {
           const selected = selectedGames.includes(g)
           const val = stakeVals[g] ?? 1
           return (
-            <div key={g} className="game-row">
-              <button
+            <Card key={g} className="game-row">
+              <Button
                 type="button"
                 className={`game-row-main ${selected ? 'on' : ''}`}
                 onClick={() => toggleGame(g)}
@@ -40,20 +42,20 @@ export default function PlayGamesScreen() {
                   <div className="game-row-name">{cfg.label}</div>
                 </div>
                 <div className="game-row-right">{selected ? `$${val}` : ''}</div>
-              </button>
+              </Button>
 
               {selected && (
                 <div className="game-row-stake">
-                  <button type="button" className="stake-btn" onClick={() => setStake(g, -1)}>
+                  <Button type="button" className="stake-btn" onClick={() => setStake(g, -1)}>
                     −
-                  </button>
+                  </Button>
                   <div className="stake-val">${val}</div>
-                  <button type="button" className="stake-btn" onClick={() => setStake(g, 1)}>
+                  <Button type="button" className="stake-btn" onClick={() => setStake(g, 1)}>
                     +
-                  </button>
+                  </Button>
                 </div>
               )}
-            </div>
+            </Card>
           )
         })}
       </div>
@@ -67,14 +69,14 @@ export default function PlayGamesScreen() {
       )}
 
       <div style={{ marginTop: 16 }}>
-        <button
+        <Button
           type="button"
           className="btn-primary"
           onClick={() => go('hole')}
           disabled={!hasGames}
         >
           Start Round
-        </button>
+        </Button>
       </div>
     </div>
   )

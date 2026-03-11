@@ -1,4 +1,5 @@
 import { Component } from 'react'
+import { Button } from '@/components/ui/button'
 
 /**
  * Catches React errors in the tree below so one broken component
@@ -39,7 +40,7 @@ export class AppErrorBoundary extends Component {
             Refresh the page to try again. If it keeps happening, the error has been
             logged to the console.
           </p>
-          <button
+          <Button
             type="button"
             onClick={() => this.setState({ hasError: false, error: null })}
             style={{
@@ -53,7 +54,7 @@ export class AppErrorBoundary extends Component {
             }}
           >
             Try again
-          </button>
+          </Button>
         </div>
       )
     }

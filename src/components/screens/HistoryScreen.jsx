@@ -1,6 +1,7 @@
 import { ChevronRight } from 'lucide-react'
 import { useRound } from '../../context/RoundContext'
 import { getRounds } from '../../storage'
+import { Card } from '@/components/ui/card'
 
 function formatShortDate(ts) {
   const d = new Date(ts)
@@ -37,7 +38,7 @@ export default function HistoryScreen() {
             : ''
           const title = `${r.courseName || 'Casual Round'} · ${formatShortDate(r.createdAt)}`
           return (
-            <div
+            <Card
               key={r.id}
               className="history-row"
               onClick={() => {
@@ -57,7 +58,7 @@ export default function HistoryScreen() {
               <div className="history-chevron">
                 <ChevronRight size={18} />
               </div>
-            </div>
+            </Card>
           )
         })
       )}

@@ -3,6 +3,8 @@ import { ChevronRight, PlusCircle } from 'lucide-react'
 import { useRound } from '../../context/RoundContext'
 import { DEFAULT_STAKES, GAME_CFG, GAME_KEYS, STAKE_STEPS } from '../../constants'
 import { getCourses, getCrews, getDefaultStakes, getPlayers, setDefaultStakes } from '../../storage'
+import { Button } from '@/components/ui/button'
+import { Card } from '@/components/ui/card'
 
 function stepStake(current, delta) {
   const i = STAKE_STEPS.indexOf(current)
@@ -40,7 +42,7 @@ export default function SettingsScreen() {
         <div className="section-label">Players</div>
         <div className="list">
           {players.map((p) => (
-            <button
+            <Button
               key={p.id}
               type="button"
               className="list-row"
@@ -57,9 +59,9 @@ export default function SettingsScreen() {
               <div className="list-right">
                 <ChevronRight size={18} />
               </div>
-            </button>
+            </Button>
           ))}
-          <button
+          <Button
             type="button"
             className="list-row"
             onClick={() => {
@@ -72,7 +74,7 @@ export default function SettingsScreen() {
               <PlusCircle size={16} />
               <span className="list-title">Add Player</span>
             </div>
-          </button>
+          </Button>
         </div>
       </div>
 
@@ -80,7 +82,7 @@ export default function SettingsScreen() {
         <div className="section-label">Crews</div>
         <div className="list">
           {crews.map((c) => (
-            <button
+            <Button
               key={c.id}
               type="button"
               className="list-row"
@@ -100,9 +102,9 @@ export default function SettingsScreen() {
               <div className="list-right">
                 <ChevronRight size={18} />
               </div>
-            </button>
+            </Button>
           ))}
-          <button
+          <Button
             type="button"
             className="list-row"
             onClick={() => {
@@ -114,7 +116,7 @@ export default function SettingsScreen() {
               <PlusCircle size={16} />
               <span className="list-title">New Crew</span>
             </div>
-          </button>
+          </Button>
         </div>
       </div>
 
@@ -122,7 +124,7 @@ export default function SettingsScreen() {
         <div className="section-label">Courses</div>
         <div className="list">
           {courses.map((c) => (
-            <button
+            <Button
               key={c.id}
               type="button"
               className="list-row"
@@ -138,9 +140,9 @@ export default function SettingsScreen() {
               <div className="list-right">
                 <ChevronRight size={18} />
               </div>
-            </button>
+            </Button>
           ))}
-          <button
+          <Button
             type="button"
             className="list-row"
             onClick={() => {
@@ -153,7 +155,7 @@ export default function SettingsScreen() {
               <PlusCircle size={16} />
               <span className="list-title">Add Favorite Course</span>
             </div>
-          </button>
+          </Button>
         </div>
       </div>
 
@@ -164,22 +166,22 @@ export default function SettingsScreen() {
             const cfg = GAME_CFG[g]
             const val = defaults[g] ?? DEFAULT_STAKES[g] ?? 1
             return (
-              <div key={g} className="stakes-row">
+              <Card key={g} className="stakes-row">
                 <div className="stakes-left">
                   <div>
                     <div className="stakes-name">{cfg.label}</div>
                   </div>
                 </div>
                 <div className="stakes-picker">
-                  <button type="button" className="stake-btn" onClick={() => changeDefault(g, -1)}>
+                  <Button type="button" className="stake-btn" onClick={() => changeDefault(g, -1)}>
                     −
-                  </button>
+                  </Button>
                   <div className="stake-val">${val}</div>
-                  <button type="button" className="stake-btn" onClick={() => changeDefault(g, 1)}>
+                  <Button type="button" className="stake-btn" onClick={() => changeDefault(g, 1)}>
                     +
-                  </button>
+                  </Button>
                 </div>
-              </div>
+              </Card>
             )
           })}
         </div>

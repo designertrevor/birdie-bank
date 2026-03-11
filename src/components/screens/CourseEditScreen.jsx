@@ -2,6 +2,8 @@ import { useEffect, useMemo, useState } from 'react'
 import { ChevronLeft, Save } from 'lucide-react'
 import { useRound } from '../../context/RoundContext'
 import { addCourse, getCourses, updateCourse } from '../../storage'
+import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
 
 export default function CourseEditScreen() {
   const { go, editCourseId, setEditCourseId, navReturnTo, setNavReturnTo } = useRound()
@@ -36,7 +38,7 @@ export default function CourseEditScreen() {
   return (
     <div className="screen active">
       <div className="topbar">
-        <button
+        <Button
           type="button"
           className="back-btn"
           onClick={() => {
@@ -45,14 +47,14 @@ export default function CourseEditScreen() {
           }}
         >
           <ChevronLeft size={16} /> Back
-        </button>
+        </Button>
         <div className="topbar-title">{existing ? 'Edit Course' : 'Add Course'}</div>
         <div style={{ width: 60 }} />
       </div>
 
       <div className="form">
         <label className="banker-pick-label">Course name</label>
-        <input
+        <Input
           className="course-name-input"
           value={name}
           placeholder="Pebble Creek"
@@ -61,26 +63,26 @@ export default function CourseEditScreen() {
 
         <label className="banker-pick-label">Favorite</label>
         <div className="course-holes-toggle">
-          <button
+          <Button
             type="button"
             className={starred ? 'course-holes-btn on' : 'course-holes-btn'}
             onClick={() => setStarred(true)}
           >
             ★ Starred
-          </button>
-          <button
+          </Button>
+          <Button
             type="button"
             className={!starred ? 'course-holes-btn on' : 'course-holes-btn'}
             onClick={() => setStarred(false)}
           >
             Not starred
-          </button>
+          </Button>
         </div>
       </div>
 
-      <button type="button" className="btn-primary" onClick={save}>
+      <Button type="button" className="btn-primary" onClick={save}>
         <Save size={20} /> Save
-      </button>
+      </Button>
     </div>
   )
 }

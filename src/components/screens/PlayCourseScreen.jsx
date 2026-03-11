@@ -2,6 +2,9 @@ import { useMemo, useState } from 'react'
 import { Search, Star } from 'lucide-react'
 import { useRound } from '../../context/RoundContext'
 import { getCourses, getRounds } from '../../storage'
+import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
+import { Card } from '@/components/ui/card'
 
 function uniqByName(items) {
   const seen = new Set()
@@ -58,7 +61,7 @@ export default function PlayCourseScreen() {
 
       <div className="search-row">
         <Search size={18} />
-        <input
+        <Input
           className="search-input"
           placeholder="Search courses"
           value={q}
@@ -71,12 +74,12 @@ export default function PlayCourseScreen() {
           <div className="section-label">Favorites</div>
           <div className="list">
             {filteredFavorites.map((c) => (
-              <button key={c.id} type="button" className="list-row" onClick={() => selectCourse(c.name)}>
+              <Card key={c.id} className="list-row" onClick={() => selectCourse(c.name)}>
                 <div className="list-left">
                   <Star size={16} />
                   <span className="list-title">{c.name}</span>
                 </div>
-              </button>
+              </Card>
             ))}
           </div>
         </div>
@@ -87,21 +90,25 @@ export default function PlayCourseScreen() {
           <div className="section-label">Recent</div>
           <div className="list">
             {filteredRecent.map((c) => (
-              <button key={`${c.name}-${c.sub}`} type="button" className="list-row" onClick={() => selectCourse(c.name)}>
+              <Card
+                key={`${c.name}-${c.sub}`}
+                className="list-row"
+                onClick={() => selectCourse(c.name)}
+              >
                 <div className="list-left">
                   <span className="list-title">{c.name}</span>
                 </div>
                 <div className="list-right">{c.sub}</div>
-              </button>
+              </Card>
             ))}
           </div>
         </div>
       )}
 
       <div style={{ marginTop: 16 }}>
-        <button type="button" className="btn-secondary" onClick={() => selectCourse('')}>
+        <Button type="button" className="btn-secondary" onClick={() => selectCourse('')}>
           Skip — casual round
-        </button>
+        </Button>
       </div>
     </div>
   )

@@ -2,6 +2,8 @@ import { useState } from 'react'
 import { ChevronLeft, Landmark } from 'lucide-react'
 import { useRound } from '../../context/RoundContext'
 import { getBankerIndexForHole } from '../../logic/banker'
+import { Button } from '@/components/ui/button'
+import { Card } from '@/components/ui/card'
 
 const PAR = 4
 
@@ -94,7 +96,7 @@ export default function HoleScreen() {
       </div>
 
       {selectedGames.includes('wolf') && players.length === 4 && (
-        <div className="wolf-block">
+        <Card className="wolf-block">
           <div className="wolf-block-hdr">
             <div className="wolf-block-title">
               Wolf this hole: <span>{wolfPlayer?.name || 'Wolf'}</span>
@@ -103,43 +105,43 @@ export default function HoleScreen() {
           </div>
           <div className="wolf-opts">
             {otherPlayers.map((p) => (
-              <button
+              <Button
                 key={p.id}
                 type="button"
                 className={`wolf-opt ${wolfPartnerThisHole === p.id ? 'selected' : ''}`}
                 onClick={() => setWolfPartner(p.id)}
               >
                 {p.name || 'Player'}
-              </button>
+              </Button>
             ))}
-            <button
+            <Button
               type="button"
               className={`wolf-opt lone ${wolfPartnerThisHole === 'lone' ? 'selected' : ''}`}
               onClick={() => setWolfPartner('lone')}
             >
               Lone Wolf (×2)
-            </button>
+            </Button>
           </div>
-        </div>
+        </Card>
       )}
 
       {selectedGames.includes('banker') && (
-        <div className="banker-notice">
+        <Card className="banker-notice">
           <Landmark size={14} />
           <div className="banker-notice-txt">
             Banker: <strong>{bankerPlayer?.name || '—'}</strong> — tees off last · max bet{' '}
             <strong>${maxBet}</strong>
             {bankerPlayer && (
-              <button
+              <Button
                 type="button"
                 className={`banker-double-back-btn ${isBankerDoubledThisHole ? 'on' : ''}`}
                 onClick={() => toggleBankerDoubledBack()}
               >
                 {isBankerDoubledThisHole ? '2× Back' : 'Double back'}
-              </button>
+              </Button>
             )}
           </div>
-        </div>
+        </Card>
       )}
 
       <div className="score-cards">
@@ -149,7 +151,7 @@ export default function HoleScreen() {
           const bet = getBet(p.id)
           const cls = scoreClass(score)
           return (
-            <div key={p.id} className={`score-card ${isBanker ? 'is-banker' : ''}`}>
+            <Card key={p.id} className={`score-card ${isBanker ? 'is-banker' : ''}`}>
               <div className="sc-left">
                 <div className="sc-av">{initial(p.name)}</div>
                 <div className="sc-info">
@@ -163,29 +165,29 @@ export default function HoleScreen() {
                       <>
                         <span style={{ color: 'var(--border)' }}>·</span>
                         <div className="bet-picker">
-                          <button
+                          <Button
                             type="button"
                             className="bbet-btn"
                             onClick={() => setBet(p.id, -1)}
                           >
                             −
-                          </button>
+                          </Button>
                           <span className="bbet-val">${bet}</span>
-                          <button
+                          <Button
                             type="button"
                             className="bbet-btn"
                             onClick={() => setBet(p.id, 1)}
                           >
                             +
-                          </button>
+                          </Button>
                         </div>
-                        <button
+                        <Button
                           type="button"
                           className={`sc-double-btn ${playerDoubled[`${currentHole}-${p.id}`] ? 'on' : ''}`}
                           onClick={() => togglePlayerDoubled(p.id)}
                         >
                           {playerDoubled[`${currentHole}-${p.id}`] ? '2×' : 'Double'}
-                        </button>
+                        </Button>
                         <span style={{ color: 'var(--muted)' }}>vs banker</span>
                       </>
                     )}
@@ -193,39 +195,39 @@ export default function HoleScreen() {
                 </div>
               </div>
               <div className="sc-picker">
-                <button
+                <Button
                   type="button"
                   className="sc-btn"
                   onClick={() => setScore(p.id, -1)}
                 >
                   −
-                </button>
+                </Button>
                 <div className={`sc-score ${cls}`}>{score}</div>
-                <button
+                <Button
                   type="button"
                   className="sc-btn"
                   onClick={() => setScore(p.id, 1)}
                 >
                   +
-                </button>
+                </Button>
               </div>
-            </div>
+            </Card>
           )
         })}
       </div>
 
       {selectedGames.includes('skins') && (
-        <div className="skins-block">
+        <Card className="skins-block">
           <div className="skins-hdr">Skin Pot</div>
           <div className="skins-row">
             <div className="skin-chip won">H1 · Mike $3</div>
             <div className="skin-chip carry">H2 · Carry $6</div>
             <div className="skin-chip">H3 · ?</div>
           </div>
-        </div>
+        </Card>
       )}
 
-      <button
+      <Button
         type="button"
         className="tally-toggle"
         onClick={() => setTallyOpen((v) => !v)}
@@ -233,56 +235,56 @@ export default function HoleScreen() {
       >
         <span>Running Total</span>
         <span className="tally-caret">{tallyOpen ? '˄' : '˅'}</span>
-      </button>
+      </Button>
       {tallyOpen && (
-        <div className="tally">
+        <Card className="tally">
           {tallyRows.map((t) => (
             <div key={t.name} className="tally-row">
               <span className="tally-name">{t.name}</span>
               <span className={`tally-amt ${t.cls}`}>{t.amt}</span>
             </div>
           ))}
-        </div>
+        </Card>
       )}
 
       <div className="hole-dots">
         {totalHoles === 9 ? (
           <div className="hole-dots-row">
             {Array.from({ length: 9 }, (_, i) => i + 1).map((h) => (
-              <button
+              <Button
                 key={h}
                 type="button"
                 className={`h-dot ${h < currentHole ? 'done' : h === currentHole ? 'cur' : ''}`}
                 onClick={() => setCurrentHole(h)}
               >
                 {h}
-              </button>
+              </Button>
             ))}
           </div>
         ) : (
           <>
             <div className="hole-dots-row">
               {Array.from({ length: 9 }, (_, i) => i + 1).map((h) => (
-                <button
+                <Button
                   key={h}
                   type="button"
                   className={`h-dot ${h < currentHole ? 'done' : h === currentHole ? 'cur' : ''}`}
                   onClick={() => setCurrentHole(h)}
                 >
                   {h}
-                </button>
+                </Button>
               ))}
             </div>
             <div className="hole-dots-row">
               {Array.from({ length: 9 }, (_, i) => i + 10).map((h) => (
-                <button
+                <Button
                   key={h}
                   type="button"
                   className={`h-dot ${h < currentHole ? 'done' : h === currentHole ? 'cur' : ''}`}
                   onClick={() => setCurrentHole(h)}
                 >
                   {h}
-                </button>
+                </Button>
               ))}
             </div>
           </>
@@ -290,7 +292,7 @@ export default function HoleScreen() {
       </div>
 
       <div className="hole-nav">
-        <button
+        <Button
           type="button"
           className="hnav-btn"
           onClick={() => setCurrentHole(Math.max(1, currentHole - 1))}
@@ -301,8 +303,8 @@ export default function HoleScreen() {
             style={{ display: 'inline-block', verticalAlign: 'middle' }}
           />{' '}
           H{Math.max(1, currentHole - 1)}
-        </button>
-        <button
+        </Button>
+        <Button
           type="button"
           className="hnav-btn next"
           onClick={() => {
@@ -311,7 +313,7 @@ export default function HoleScreen() {
           }}
         >
           {currentHole >= totalHoles ? 'Finish Round' : 'Save & Next Hole'}
-        </button>
+        </Button>
       </div>
     </div>
   )

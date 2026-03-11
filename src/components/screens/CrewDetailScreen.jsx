@@ -2,6 +2,8 @@ import { useEffect } from 'react'
 import { ChevronLeft, Trash2, ChevronRight } from 'lucide-react'
 import { useRound } from '../../context/RoundContext'
 import { getCrews, deleteCrew } from '../../storage'
+import { Button } from '@/components/ui/button'
+import { Card } from '@/components/ui/card'
 
 function formatCrewDate(ts) {
   if (!ts) return ''
@@ -48,7 +50,7 @@ export default function CrewDetailScreen() {
   return (
     <div className="screen active">
       <div className="topbar">
-        <button
+        <Button
           type="button"
           className="back-btn"
           onClick={() => {
@@ -58,7 +60,7 @@ export default function CrewDetailScreen() {
           }}
         >
           <ChevronLeft size={16} /> Back
-        </button>
+        </Button>
         <div className="topbar-title">Crew</div>
         <div style={{ width: 60 }} />
       </div>
@@ -67,24 +69,24 @@ export default function CrewDetailScreen() {
           {crew.players.map((p) => p.name || '—').join(', ')}
         </div>
         <div className="crew-detail-meta">{formatCrewDate(crew.updatedAt)}</div>
-        <div className="crew-detail-list">
+        <Card className="crew-detail-list">
           {crew.players.map((p) => (
             <div key={p.name} className="crew-detail-player">
               <span className="crew-detail-player-name">{p.name || '—'}</span>
               <span className="crew-detail-player-hcp">HCP {p.hcp ?? 18}</span>
             </div>
           ))}
-        </div>
-        <button type="button" className="btn-primary" onClick={handleUseCrew}>
+        </Card>
+        <Button type="button" className="btn-primary" onClick={handleUseCrew}>
           Use this crew <ChevronRight size={20} />
-        </button>
-        <button
+        </Button>
+        <Button
           type="button"
           className="btn-delete-crew"
           onClick={handleDelete}
         >
           <Trash2 size={16} /> Delete crew
-        </button>
+        </Button>
       </div>
     </div>
   )

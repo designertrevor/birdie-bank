@@ -2,6 +2,8 @@ import { ChevronLeft, PlusCircle, Check, ChevronRight } from 'lucide-react'
 import { useMemo } from 'react'
 import { useRound } from '../../context/RoundContext'
 import { getCrews, getPlayers } from '../../storage'
+import { Button } from '@/components/ui/button'
+import { Card } from '@/components/ui/card'
 
 function nameKey(name) {
   return (name || '').trim().toLowerCase()
@@ -43,9 +45,9 @@ export default function PlayPlayersScreen() {
   return (
     <div className="screen active">
       <div className="topbar">
-        <button type="button" className="back-btn" onClick={() => go('playCourse')}>
+        <Button type="button" className="back-btn" onClick={() => go('playCourse')}>
           <ChevronLeft size={16} /> Back
-        </button>
+        </Button>
         <div className="topbar-title">Choose Players</div>
         <div style={{ width: 60 }} />
       </div>
@@ -59,9 +61,8 @@ export default function PlayPlayersScreen() {
         <div className="section-label">My Crews</div>
         <div className="list">
           {crews.map((c) => (
-            <button
+            <Card
               key={c.id}
-              type="button"
               className="list-row"
               onClick={() => {
                 loadCrew(c.players)
@@ -77,9 +78,9 @@ export default function PlayPlayersScreen() {
               <div className="list-right">
                 <ChevronRight size={18} />
               </div>
-            </button>
+            </Card>
           ))}
-          <button
+          <Button
             type="button"
             className="list-row"
             onClick={() => {
@@ -91,7 +92,7 @@ export default function PlayPlayersScreen() {
               <PlusCircle size={16} />
               <span className="list-title">New Crew</span>
             </div>
-          </button>
+          </Button>
         </div>
       </div>
 
@@ -101,7 +102,7 @@ export default function PlayPlayersScreen() {
           {allPlayers.map((p) => {
             const checked = selectedByName.has(nameKey(p.name))
             return (
-              <button
+              <Button
                 key={p.id}
                 type="button"
                 className={`list-row ${checked ? 'checked' : ''}`}
@@ -114,10 +115,10 @@ export default function PlayPlayersScreen() {
                 <div className="list-right">
                   {checked && <Check size={18} />}
                 </div>
-              </button>
+              </Button>
             )
           })}
-          <button
+          <Button
             type="button"
             className="list-row"
             onClick={() => {
@@ -130,21 +131,21 @@ export default function PlayPlayersScreen() {
               <PlusCircle size={16} />
               <span className="list-title">Add new player</span>
             </div>
-          </button>
+          </Button>
         </div>
       </div>
 
       <div className="players-note">{note}</div>
 
       <div style={{ marginTop: 16 }}>
-        <button
+        <Button
           type="button"
           className="btn-primary"
           onClick={() => go('playGames')}
           disabled={!minTwo}
         >
           Next
-        </button>
+        </Button>
       </div>
     </div>
   )

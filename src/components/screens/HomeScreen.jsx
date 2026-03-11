@@ -1,6 +1,8 @@
 import { PlusCircle, Clock, ChevronRight } from 'lucide-react'
 import { useRound } from '../../context/RoundContext'
 import { getCrews } from '../../storage'
+import { Button } from '@/components/ui/button'
+import { Card } from '@/components/ui/card'
 
 function formatCrewDate(ts) {
   if (!ts) return ''
@@ -35,29 +37,29 @@ export default function HomeScreen() {
         <div className="logo-sub">Golf Betting Scorecard</div>
       </div>
       <div className="home-actions">
-        <button className="btn-primary" onClick={startNewRound}>
+        <Button className="btn-primary" onClick={startNewRound}>
           <PlusCircle size={20} /> New Round
-        </button>
-        <button className="btn-secondary" onClick={() => go('history')}>
+        </Button>
+        <Button className="btn-secondary" onClick={() => go('history')}>
           <Clock size={18} /> Past Rounds
-        </button>
+        </Button>
       </div>
       <div className="crew-section">
         <div className="section-label-row">
           <span className="section-label">Your Crews</span>
-          <button
+          <Button
             type="button"
             className="btn-add-crew"
             onClick={startAddCrew}
           >
             <PlusCircle size={16} /> Add crew
-          </button>
+          </Button>
         </div>
         {crews.length === 0 ? (
           <div className="crew-empty">No crews yet. Tap Add crew to add players and save.</div>
         ) : (
           crews.map((crew) => (
-            <div
+            <Card
               key={crew.id}
               className="crew-card"
               onClick={() => openCrew(crew)}
@@ -73,7 +75,7 @@ export default function HomeScreen() {
               <div className="crew-chevron">
                 <ChevronRight size={18} />
               </div>
-            </div>
+            </Card>
           ))
         )}
       </div>

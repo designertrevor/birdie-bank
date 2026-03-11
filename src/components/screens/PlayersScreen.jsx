@@ -2,6 +2,9 @@ import { useState } from 'react'
 import { ChevronLeft, UserPlus, X, ArrowRight, Save } from 'lucide-react'
 import { useRound } from '../../context/RoundContext'
 import { getCrews, addCrew, getPastPlayers } from '../../storage'
+import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
+import { Card } from '@/components/ui/card'
 
 export default function PlayersScreen() {
   const {
@@ -50,9 +53,9 @@ export default function PlayersScreen() {
   return (
     <div className="screen active">
       <div className="topbar">
-        <button type="button" className="back-btn" onClick={() => go('games')}>
+        <Button type="button" className="back-btn" onClick={() => go('games')}>
           <ChevronLeft size={16} /> Back
-        </button>
+        </Button>
         <div className="topbar-title">Players</div>
         <div style={{ width: 60 }} />
       </div>
@@ -77,10 +80,10 @@ export default function PlayersScreen() {
       )}
       <div className="players-list">
         {players.map((p) => (
-          <div key={p.id} className="player-row">
+          <Card key={p.id} className="player-row">
             <div className="player-avatar">{initial(p.name)}</div>
             <div className="player-input-wrap">
-              <input
+              <Input
                 className="player-name-input"
                 value={p.name}
                 placeholder="Player name"
@@ -88,15 +91,15 @@ export default function PlayersScreen() {
               />
               <div className="player-hcp-row">
                 <span className="player-hcp-label">HCP</span>
-                <button
+                <Button
                   type="button"
                   className="player-hcp-btn"
                   onClick={() => setPlayerHcp(p.id, String(Math.max(0, p.hcp - 1)))}
                   aria-label="Decrease handicap"
                 >
                   −
-                </button>
-                <input
+                </Button>
+                <Input
                   className="player-hcp-input"
                   type="number"
                   min={0}
@@ -104,17 +107,17 @@ export default function PlayersScreen() {
                   value={p.hcp}
                   onChange={(e) => setPlayerHcp(p.id, e.target.value)}
                 />
-                <button
+                <Button
                   type="button"
                   className="player-hcp-btn"
                   onClick={() => setPlayerHcp(p.id, String(Math.min(54, p.hcp + 1)))}
                   aria-label="Increase handicap"
                 >
                   +
-                </button>
+                </Button>
               </div>
             </div>
-            <button
+            <Button
               type="button"
               className="player-remove"
               onClick={() => removePlayer(p.id)}
@@ -122,8 +125,8 @@ export default function PlayersScreen() {
               title="Remove"
             >
               <X size={18} />
-            </button>
-          </div>
+            </Button>
+          </Card>
         ))}
       </div>
       {pastToShow.length > 0 && showAdd && (
@@ -131,46 +134,46 @@ export default function PlayersScreen() {
           <span className="past-players-label">Add from past:</span>
           <div className="past-players-chips">
             {pastToShow.slice(0, 12).map((p) => (
-              <button
+              <Button
                 key={p.name}
                 type="button"
                 className="past-player-chip"
                 onClick={() => addPlayerWithProfile(p.name, p.hcp)}
               >
                 {p.name} {p.hcp !== 18 ? `(HCP ${p.hcp})` : ''}
-              </button>
+              </Button>
             ))}
           </div>
         </div>
       )}
       {showAdd && (
-        <button type="button" className="add-player-btn" onClick={addPlayer}>
+        <Button type="button" className="add-player-btn" onClick={addPlayer}>
           <UserPlus size={18} /> Add Player
-        </button>
+        </Button>
       )}
       {players.length >= 2 && (
-        <button
+        <Button
           type="button"
           className="btn-save-crew"
           onClick={handleSaveAsCrew}
         >
           <Save size={16} /> Save as crew
-        </button>
+        </Button>
       )}
       <div className="players-note">{note}</div>
       <div style={{ marginTop: 20 }}>
-        <button className="btn-primary" onClick={() => go('course')}>
+        <Button className="btn-primary" onClick={() => go('course')}>
           Let&apos;s Play <ArrowRight size={20} />
-        </button>
+        </Button>
       </div>
       <div style={{ marginTop: 10 }}>
-        <button
+        <Button
           type="button"
           className="btn-secondary"
           onClick={() => go('stakes')}
         >
           Set stakes (optional)
-        </button>
+        </Button>
       </div>
     </div>
   )

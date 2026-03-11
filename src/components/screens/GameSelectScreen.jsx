@@ -1,6 +1,8 @@
 import { ChevronLeft, Check, ArrowRight } from 'lucide-react'
 import { useRound } from '../../context/RoundContext'
 import { GAME_CFG } from '../../constants'
+import { Button } from '@/components/ui/button'
+import { Card } from '@/components/ui/card'
 
 export default function GameSelectScreen() {
   const { go, selectedGames, toggleGame } = useRound()
@@ -8,9 +10,9 @@ export default function GameSelectScreen() {
   return (
     <div className="screen active">
       <div className="topbar">
-        <button type="button" className="back-btn" onClick={() => go('home')}>
+        <Button type="button" className="back-btn" onClick={() => go('home')}>
           <ChevronLeft size={16} /> Back
-        </button>
+        </Button>
         <div className="topbar-title">New Round</div>
         <div style={{ width: 60 }} />
       </div>
@@ -23,7 +25,7 @@ export default function GameSelectScreen() {
           const Icon = cfg.icon
           const selected = selectedGames.includes(key)
           return (
-            <div
+            <Card
               key={key}
               role="button"
               tabIndex={0}
@@ -46,14 +48,14 @@ export default function GameSelectScreen() {
                 {cfg.label}
               </div>
               <div className="game-tile-desc">{cfg.sub}</div>
-            </div>
+            </Card>
           )
         })}
       </div>
       <div style={{ marginTop: 24 }}>
-        <button className="btn-primary" onClick={() => go('players')}>
+        <Button className="btn-primary" onClick={() => go('players')}>
           Next: Add Players <ArrowRight size={20} />
-        </button>
+        </Button>
       </div>
     </div>
   )

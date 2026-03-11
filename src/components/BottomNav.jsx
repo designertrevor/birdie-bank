@@ -1,18 +1,19 @@
 import { Clock, Play, Settings } from 'lucide-react'
+import { Button } from '@/components/ui/button'
 
 export default function BottomNav({ active, onNavigate }) {
   return (
     <nav className="bottom-nav" aria-label="Bottom navigation">
-      <button
+      <Button
         type="button"
         className={`bn-item ${active === 'history' ? 'on' : ''}`}
         onClick={() => onNavigate('history')}
       >
         <Clock size={18} />
         <span>History</span>
-      </button>
+      </Button>
 
-      <button
+      <Button
         type="button"
         className={`bn-play ${active === 'play' ? 'on' : ''}`}
         onClick={() => onNavigate('play')}
@@ -20,16 +21,16 @@ export default function BottomNav({ active, onNavigate }) {
       >
         <Play size={20} />
         <span>PLAY</span>
-      </button>
+      </Button>
 
-      <button
+      <Button
         type="button"
         className={`bn-item ${active === 'settings' ? 'on' : ''}`}
         onClick={() => onNavigate('settings')}
       >
         <Settings size={18} />
         <span>Settings</span>
-      </button>
+      </Button>
     </nav>
   )
 }

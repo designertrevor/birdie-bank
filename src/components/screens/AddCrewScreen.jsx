@@ -2,6 +2,9 @@ import { useMemo, useState } from 'react'
 import { ChevronLeft, UserPlus, X, Save } from 'lucide-react'
 import { useRound } from '../../context/RoundContext'
 import { addCrew, getPastPlayers } from '../../storage'
+import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
+import { Card } from '@/components/ui/card'
 
 export default function AddCrewScreen() {
   const { go, navReturnTo, setNavReturnTo, initial } = useRound()
@@ -51,7 +54,7 @@ export default function AddCrewScreen() {
   return (
     <div className="screen active">
       <div className="topbar">
-        <button
+        <Button
           type="button"
           className="back-btn"
           onClick={() => {
@@ -60,17 +63,17 @@ export default function AddCrewScreen() {
           }}
         >
           <ChevronLeft size={16} /> Back
-        </button>
+        </Button>
         <div className="topbar-title">Add crew</div>
         <div style={{ width: 60 }} />
       </div>
       <div className="step-label">Add players, then save as a crew.</div>
       <div className="players-list">
         {players.map((p) => (
-          <div key={p.id} className="player-row">
+          <Card key={p.id} className="player-row">
             <div className="player-avatar">{initial(p.name)}</div>
             <div className="player-input-wrap">
-              <input
+              <Input
                 className="player-name-input"
                 value={p.name}
                 placeholder="Player name"
@@ -78,15 +81,15 @@ export default function AddCrewScreen() {
               />
               <div className="player-hcp-row">
                 <span className="player-hcp-label">HCP</span>
-                <button
+                <Button
                   type="button"
                   className="player-hcp-btn"
                   onClick={() => setPlayerHcp(p.id, String(Math.max(0, p.hcp - 1)))}
                   aria-label="Decrease handicap"
                 >
                   −
-                </button>
-                <input
+                </Button>
+                <Input
                   className="player-hcp-input"
                   type="number"
                   min={0}
@@ -94,17 +97,17 @@ export default function AddCrewScreen() {
                   value={p.hcp}
                   onChange={(e) => setPlayerHcp(p.id, e.target.value)}
                 />
-                <button
+                <Button
                   type="button"
                   className="player-hcp-btn"
                   onClick={() => setPlayerHcp(p.id, String(Math.min(54, p.hcp + 1)))}
                   aria-label="Increase handicap"
                 >
                   +
-                </button>
+                </Button>
               </div>
             </div>
-            <button
+            <Button
               type="button"
               className="player-remove"
               onClick={() => removePlayer(p.id)}
@@ -112,8 +115,8 @@ export default function AddCrewScreen() {
               title="Remove"
             >
               <X size={18} />
-            </button>
-          </div>
+            </Button>
+          </Card>
         ))}
       </div>
       {pastToShow.length > 0 && showAdd && (
@@ -121,31 +124,31 @@ export default function AddCrewScreen() {
           <span className="past-players-label">Add from past:</span>
           <div className="past-players-chips">
             {pastToShow.slice(0, 12).map((p) => (
-              <button
+              <Button
                 key={p.name}
                 type="button"
                 className="past-player-chip"
                 onClick={() => addPlayerWithProfile(p.name, p.hcp)}
               >
                 {p.name} {p.hcp !== 18 ? `(HCP ${p.hcp})` : ''}
-              </button>
+              </Button>
             ))}
           </div>
         </div>
       )}
       {showAdd && (
-        <button type="button" className="add-player-btn" onClick={addPlayer}>
+        <Button type="button" className="add-player-btn" onClick={addPlayer}>
           <UserPlus size={18} /> Add Player
-        </button>
+        </Button>
       )}
       {players.length >= 2 && (
-        <button
+        <Button
           type="button"
           className="btn-save-crew"
           onClick={handleSaveAsCrew}
         >
           <Save size={16} /> Save as crew
-        </button>
+        </Button>
       )}
       {players.length < 2 && (
         <div className="players-note">Add at least 2 players to save as a crew.</div>

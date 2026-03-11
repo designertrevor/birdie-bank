@@ -1,6 +1,8 @@
 import { ChevronLeft, CircleSlash, Flag } from 'lucide-react'
 import { useRound } from '../../context/RoundContext'
 import { GAME_CFG, GAME_KEYS } from '../../constants'
+import { Button } from '@/components/ui/button'
+import { Card } from '@/components/ui/card'
 
 export default function StakesScreen() {
   const { go, selectedGames, stakeVals, setStake } = useRound()
@@ -9,9 +11,9 @@ export default function StakesScreen() {
   return (
     <div className="screen active">
       <div className="topbar">
-        <button type="button" className="back-btn" onClick={() => go('players')}>
+        <Button type="button" className="back-btn" onClick={() => go('players')}>
           <ChevronLeft size={16} /> Back
-        </button>
+        </Button>
         <div className="topbar-title">Stakes</div>
         <div style={{ width: 60 }} />
       </div>
@@ -35,7 +37,7 @@ export default function StakesScreen() {
             const Icon = cfg.icon
             const val = stakeVals[g] ?? 1
             return (
-              <div key={g} className="stakes-row">
+              <Card key={g} className="stakes-row">
                 <div className="stakes-left">
                   <div className="stakes-icon">
                     <Icon size={20} />
@@ -46,30 +48,30 @@ export default function StakesScreen() {
                   </div>
                 </div>
                 <div className="stakes-picker">
-                  <button
+                  <Button
                     type="button"
                     className="stake-btn"
                     onClick={() => setStake(g, -1)}
                   >
                     −
-                  </button>
+                  </Button>
                   <div className="stake-val">${val}</div>
-                  <button
+                  <Button
                     type="button"
                     className="stake-btn"
                     onClick={() => setStake(g, 1)}
                   >
                     +
-                  </button>
+                  </Button>
                 </div>
-              </div>
+              </Card>
             )
           })}
       </div>
       <div style={{ marginTop: 24 }}>
-        <button className="btn-primary" onClick={() => go('course')}>
+        <Button className="btn-primary" onClick={() => go('course')}>
           <Flag size={20} /> Let&apos;s Play
-        </button>
+        </Button>
       </div>
     </div>
   )

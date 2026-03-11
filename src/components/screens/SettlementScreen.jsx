@@ -9,6 +9,8 @@ import {
 import { useRound } from '../../context/RoundContext'
 import { computeMinTransfers } from '../../logic/settlement'
 import { getRoundById, saveFinishedRound } from '../../storage'
+import { Button } from '@/components/ui/button'
+import { Card } from '@/components/ui/card'
 
 const GAME_ICONS = {
   banker: Landmark,
@@ -151,7 +153,7 @@ export default function SettlementScreen() {
           const isWin = total > 0
           const badge = total > 0 ? 'Up' : total < 0 ? 'Down' : 'Even'
           return (
-            <div key={pid} className={`settle-card ${isWin ? 'winner' : 'loser'}`}>
+            <Card key={pid} className={`settle-card ${isWin ? 'winner' : 'loser'}`}>
               <div className="settle-name">
                 {m?.name ?? 'Player'}{' '}
                 <span className={`settle-badge ${isWin ? 'w' : 'l'}`}>{badge}</span>
@@ -182,11 +184,11 @@ export default function SettlementScreen() {
                     )
                   })}
               </div>
-            </div>
+            </Card>
           )
         })}
       </div>
-      <div className="pay-block">
+      <Card className="pay-block">
         <div className="pay-title">Who Pays Who</div>
         {payRows.length > 0 ? (
           payRows.map((row, i) => (
@@ -204,10 +206,10 @@ export default function SettlementScreen() {
             No transfers (everyone even) or enter scores for all 18 holes to settle.
           </div>
         )}
-      </div>
+      </Card>
       {!viewingMode && (
         <div style={{ marginBottom: 12 }}>
-          <button
+          <Button
             className="btn-secondary"
             disabled={!canShare}
             onClick={async () => {
@@ -225,12 +227,12 @@ export default function SettlementScreen() {
             }}
           >
             <Share2 size={18} /> Share Results
-          </button>
+          </Button>
         </div>
       )}
-      <button className="btn-primary" onClick={handleDone}>
+      <Button className="btn-primary" onClick={handleDone}>
         Done
-      </button>
+      </Button>
     </div>
   )
 }

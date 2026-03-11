@@ -15,11 +15,11 @@
   --amber: #e8a040;
   --gold: #ffd700;
   --bg: #0d2818;
-  --card: oklch(1 0 0);
+  --card: #142e1e;
   --card2: #1a3d26;
-  --border: oklch(0.922 0 0);
+  --border: rgba(255, 255, 255, 0.08);
   --text: #f0ece0;
-  --muted: oklch(0.97 0 0);
+  --muted: #7a9080;
 
   font-family:
     'DM Sans',
@@ -31,13 +31,13 @@
   text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
-  --background: oklch(1 0 0);
-  --foreground: oklch(0.145 0 0);
-  --card-foreground: oklch(0.145 0 0);
+  --background: #0d2818;
+  --foreground: #f0ece0;
+  --card-foreground: #f0ece0;
   --popover: oklch(1 0 0);
   --popover-foreground: oklch(0.145 0 0);
-  --primary: oklch(0.205 0 0);
-  --primary-foreground: oklch(0.985 0 0);
+  --primary: #c8f04a;
+  --primary-foreground: #0f4225;
   --secondary: oklch(0.97 0 0);
   --secondary-foreground: oklch(0.205 0 0);
   --muted-foreground: oklch(0.556 0 0);

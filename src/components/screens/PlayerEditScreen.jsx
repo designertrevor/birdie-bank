@@ -2,6 +2,8 @@ import { useEffect, useMemo, useState } from 'react'
 import { ChevronLeft, Save } from 'lucide-react'
 import { useRound } from '../../context/RoundContext'
 import { addPlayerProfile, getPlayers, updatePlayerProfile } from '../../storage'
+import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
 
 export default function PlayerEditScreen() {
   const { go, editPlayerId, setEditPlayerId, navReturnTo, setNavReturnTo } = useRound()
@@ -37,7 +39,7 @@ export default function PlayerEditScreen() {
   return (
     <div className="screen active">
       <div className="topbar">
-        <button
+        <Button
           type="button"
           className="back-btn"
           onClick={() => {
@@ -46,14 +48,14 @@ export default function PlayerEditScreen() {
           }}
         >
           <ChevronLeft size={16} /> Back
-        </button>
+        </Button>
         <div className="topbar-title">{existing ? 'Edit Player' : 'Add Player'}</div>
         <div style={{ width: 60 }} />
       </div>
 
       <div className="form">
         <label className="banker-pick-label">Name</label>
-        <input
+        <Input
           className="course-name-input"
           value={name}
           placeholder="Trevor"
@@ -61,7 +63,7 @@ export default function PlayerEditScreen() {
         />
 
         <label className="banker-pick-label">Handicap</label>
-        <input
+        <Input
           className="course-name-input"
           type="number"
           min={0}
@@ -71,9 +73,9 @@ export default function PlayerEditScreen() {
         />
       </div>
 
-      <button type="button" className="btn-primary" onClick={save}>
+      <Button type="button" className="btn-primary" onClick={save}>
         <Save size={20} /> Save
-      </button>
+      </Button>
     </div>
   )
 }
