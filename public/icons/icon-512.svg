@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 512 512">
+  <rect width="512" height="512" rx="96" fill="#0d2818"/>
+  <rect x="36" y="36" width="440" height="440" rx="78" fill="#142e1e" opacity="0.9"/>
+  <text
+    x="256"
+    y="318"
+    text-anchor="middle"
+    font-family="system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif"
+    font-size="210"
+    font-weight="800"
+    letter-spacing="6"
+    fill="#c8f04a"
+  >BB</text>
+</svg>
+
