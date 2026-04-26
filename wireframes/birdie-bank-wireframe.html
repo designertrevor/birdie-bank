@@ -1,0 +1,1330 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Birdie Bank — Prototype v2</title>
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body {
+  background: #d0d0d0;
+  font-family: -apple-system, BlinkMacSystemFont, sans-serif;
+  display: flex; flex-direction: column;
+  align-items: center; min-height: 100vh;
+  padding: 32px 16px;
+}
+.proto-label {
+  font-size: 11px; font-weight: 700; text-transform: uppercase;
+  letter-spacing: 0.1em; color: #777; margin-bottom: 10px;
+}
+.device {
+  width: 390px; height: 844px;
+  border: 3px solid #000; position: relative;
+  overflow: hidden; background: #fff;
+  box-shadow: 0 8px 32px rgba(0,0,0,0.2);
+}
+
+/* SCREENS */
+.screen {
+  position: absolute; top: 0; left: 0;
+  width: 100%; height: 100%;
+  background: #fff; display: none;
+  flex-direction: column; overflow: hidden;
+}
+.screen.active { display: flex; }
+
+/* SHARED */
+.screen-header {
+  padding: 14px 16px; border-bottom: 2px solid #000;
+  display: flex; align-items: center;
+  justify-content: space-between; min-height: 56px; flex-shrink: 0;
+}
+.screen-title { font-size: 22px; font-weight: 700; color: #000; }
+.header-btn { font-size: 14px; border: 2px solid #000; padding: 6px 12px; background: #fff; color: #000; cursor: pointer; font-weight: 600; }
+.header-back { font-size: 22px; color: #000; cursor: pointer; background: none; border: none; padding: 0; line-height: 1; }
+.header-close { font-size: 22px; background: none; border: none; cursor: pointer; color: #000; padding: 0; }
+.sec-label {
+  padding: 7px 16px; font-size: 11px; font-weight: 700;
+  text-transform: uppercase; letter-spacing: 0.08em; color: #888;
+  background: #f5f5f5; border-bottom: 2px solid #000; border-top: 2px solid #000; flex-shrink: 0;
+}
+.scroll { flex: 1; overflow-y: auto; -webkit-overflow-scrolling: touch; }
+.bottom-nav {
+  border-top: 2px solid #000; display: flex; height: 76px; flex-shrink: 0;
+}
+.nav-btn {
+  flex: 1; display: flex; flex-direction: column;
+  align-items: center; justify-content: center; gap: 5px;
+  cursor: pointer; background: none; border: none;
+  border-right: 2px solid #000; padding: 0;
+}
+.nav-btn:last-child { border-right: none; }
+.nav-btn.active { background: #f5f5f5; }
+.nav-btn.center { border-left: 2px solid #000; }
+.nav-sq { width: 22px; height: 22px; border: 2px solid #000; pointer-events: none; }
+.nav-ci { width: 22px; height: 22px; border: 2px solid #000; border-radius: 50%; pointer-events: none; }
+.nav-play { width: 52px; height: 52px; background: #000; display: flex; align-items: center; justify-content: center; pointer-events: none; }
+.nav-play span { color: #fff; font-size: 20px; margin-left: 3px; }
+.nav-lbl { font-size: 10px; font-weight: 700; color: #000; text-transform: uppercase; letter-spacing: 0.06em; pointer-events: none; }
+
+.full-btn {
+  width: 100%; height: 56px; background: #000; color: #fff;
+  font-size: 16px; font-weight: 700; border: none; cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+}
+.full-btn.outline { background: #fff; color: #000; border: 2px solid #000; }
+.full-btn:active { opacity: 0.8; }
+.cta-wrap { padding: 14px 16px; flex-shrink: 0; display: flex; flex-direction: column; gap: 10px; }
+
+/* STEP BAR */
+.step-bar { display: flex; border-bottom: 2px solid #000; flex-shrink: 0; }
+.step { flex: 1; padding: 10px 4px; text-align: center; font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em; color: #bbb; border-right: 2px solid #000; }
+.step:last-child { border-right: none; }
+.step.active { color: #000; background: #f5f5f5; }
+.step.done { color: #000; }
+
+/* LIST */
+.list-item { display: flex; align-items: center; justify-content: space-between; padding: 14px 0; border-bottom: 1.5px solid #e8e8e8; cursor: pointer; }
+.list-item:last-child { border-bottom: none; }
+.list-item:active { background: #f8f8f8; }
+.li-name { font-size: 15px; font-weight: 600; color: #000; }
+.li-sub { font-size: 13px; color: #888; margin-top: 2px; }
+.li-check { width: 28px; height: 28px; border: 2px solid #000; display: flex; align-items: center; justify-content: center; font-size: 14px; flex-shrink: 0; cursor: pointer; background: none; color: #000; }
+.li-check.on { background: #000; color: #fff; }
+.li-check.add { font-size: 20px; font-weight: 300; }
+.add-row { display: flex; align-items: center; gap: 12px; padding: 14px 16px; border-bottom: 2px solid #000; cursor: pointer; }
+.add-row:active { background: #f8f8f8; }
+.add-ci { width: 28px; height: 28px; border: 2px solid #000; display: flex; align-items: center; justify-content: center; font-size: 18px; font-weight: 300; flex-shrink: 0; }
+.add-lbl { font-size: 15px; font-weight: 600; color: #000; }
+
+/* SEARCH */
+.search-box { width: 100%; border: 2px solid #000; padding: 12px 14px; font-size: 15px; outline: none; color: #000; display: block; }
+.search-box::placeholder { color: #aaa; }
+
+/* ROUND CARDS */
+.round-card { border-bottom: 2px solid #000; padding: 16px; cursor: pointer; }
+.round-card:active { background: #f8f8f8; }
+.rc-top { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 4px; }
+.rc-course { font-size: 17px; font-weight: 700; color: #000; }
+.rc-result { font-size: 20px; font-weight: 700; color: #000; }
+.rc-meta { font-size: 13px; color: #888; }
+.rc-players { font-size: 13px; color: #666; margin-top: 3px; }
+
+/* SETTINGS */
+.set-row { display: flex; align-items: center; justify-content: space-between; padding: 16px; border-bottom: 2px solid #000; cursor: pointer; }
+.set-row:active { background: #f8f8f8; }
+.set-name { font-size: 16px; font-weight: 600; color: #000; }
+.set-sub { font-size: 13px; color: #888; margin-top: 2px; }
+.chevron { font-size: 20px; color: #bbb; }
+
+/* GAME ROWS */
+.game-row { display: flex; align-items: center; justify-content: space-between; padding: 16px; border-bottom: 2px solid #000; cursor: pointer; position: relative; }
+.game-row.selected { background: #000; color: #fff; }
+.game-row.locked { opacity: 0.5; cursor: default; }
+.game-row:active:not(.locked) { background: #f0f0f0; }
+.game-row.selected:active { background: #222; }
+.gn { font-size: 17px; font-weight: 700; color: inherit; }
+.gs { font-size: 13px; color: #888; margin-top: 2px; }
+.game-row.selected .gs { color: #aaa; }
+.gp { font-size: 12px; font-weight: 700; border: 2px solid currentColor; padding: 3px 7px; white-space: nowrap; border-radius: 0; }
+.lock-tag { font-size: 11px; font-weight: 700; border: 2px solid #000; padding: 4px 8px; text-transform: uppercase; letter-spacing: 0.06em; }
+.info-btn { position: absolute; right: 16px; top: 50%; transform: translateY(-50%); width: 24px; height: 24px; border: 2px solid #000; border-radius: 0; display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 700; cursor: pointer; background: #fff; color: #000; flex-shrink: 0; }
+.game-row.selected .info-btn { border-color: #fff; color: #fff; background: transparent; }
+
+/* TEE CHIPS */
+.tee-chips { display: flex; gap: 0; flex-wrap: nowrap; }
+.tee-chip { font-size: 11px; font-weight: 700; border: 2px solid #000; padding: 5px 9px; cursor: pointer; background: #fff; color: #000; border-right: none; }
+.tee-chip:last-child { border-right: 2px solid #000; }
+.tee-chip.active { background: #000; color: #fff; }
+
+/* HOLE META */
+.hole-meta { display: flex; border-bottom: 2px solid #000; flex-shrink: 0; }
+.mc { flex: 1; padding: 12px 6px; text-align: center; border-right: 2px solid #000; cursor: pointer; }
+.mc:last-child { border-right: none; }
+.mc:active { background: #f5f5f5; }
+.ml { display: block; font-size: 10px; color: #888; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 3px; }
+.mv { font-size: 20px; font-weight: 700; color: #000; }
+
+.banker-bar { display: flex; align-items: center; justify-content: space-between; padding: 10px 16px; border-bottom: 2px solid #000; background: #f5f5f5; flex-shrink: 0; }
+.bl { font-size: 11px; color: #888; text-transform: uppercase; letter-spacing: 0.05em; }
+.bn { font-size: 16px; font-weight: 700; color: #000; }
+.change-btn { font-size: 13px; border: 2px solid #000; padding: 6px 12px; background: #fff; color: #000; cursor: pointer; font-weight: 600; }
+
+/* PLAYER ROWS - taller to fit bet */
+.player-row { display: flex; align-items: center; gap: 8px; padding: 12px 16px; border-bottom: 2px solid #000; flex-shrink: 0; }
+.player-row.bkr { background: #f5f5f5; }
+.pi { flex: 1; min-width: 0; }
+.pn { font-size: 16px; font-weight: 700; color: #000; display: flex; align-items: center; gap: 6px; margin-bottom: 2px; }
+.bkr-badge { font-size: 9px; font-weight: 700; border: 2px solid #000; padding: 1px 5px; letter-spacing: 0.05em; text-transform: uppercase; flex-shrink: 0; }
+.ps { font-size: 12px; color: #666; }
+
+.score-ctrl { display: flex; align-items: center; border: 2px solid #000; flex-shrink: 0; }
+.sc-btn { width: 40px; height: 40px; font-size: 22px; font-weight: 300; border: none; background: #fff; color: #000; cursor: pointer; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+.sc-btn:first-child { border-right: 2px solid #000; }
+.sc-btn:last-child { border-left: 2px solid #000; }
+.sc-btn:active { background: #f0f0f0; }
+.sc-num { width: 36px; text-align: center; font-size: 18px; font-weight: 700; color: #000; flex-shrink: 0; }
+.sc-lbl { font-size: 9px; text-transform: uppercase; letter-spacing: 0.05em; color: #888; text-align: center; margin-bottom: 2px; }
+
+.player-controls { display: flex; flex-direction: column; gap: 6px; align-items: flex-end; flex-shrink: 0; }
+
+.dbl-btn { font-size: 11px; font-weight: 700; border: 2px solid #000; padding: 6px 10px; background: #fff; color: #000; cursor: pointer; text-align: center; white-space: nowrap; }
+.dbl-btn.on { background: #000; color: #fff; }
+.dbl-btn:disabled { opacity: 0.3; cursor: default; }
+
+.bet-val { font-size: 13px; font-weight: 700; border: 2px solid #000; padding: 6px 10px; cursor: pointer; text-align: center; background: #fff; color: #000; white-space: nowrap; }
+.bet-val:active { background: #f0f0f0; }
+
+.running-total { border-bottom: 2px solid #000; padding: 8px 16px; flex-shrink: 0; }
+.rt-lbl { font-size: 10px; color: #888; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 5px; }
+.rt-items { display: flex; }
+.rt-item { flex: 1; text-align: center; }
+.rt-p { font-size: 11px; color: #666; margin-bottom: 1px; }
+.rt-a { font-size: 15px; font-weight: 700; color: #000; }
+
+.pin-btn { padding: 14px 16px; flex-shrink: 0; border-top: 2px solid #000; }
+
+/* SETTLE UP */
+.detail-hdr { padding: 16px; border-bottom: 2px solid #000; flex-shrink: 0; }
+.dc { font-size: 20px; font-weight: 700; color: #000; margin-bottom: 4px; }
+.dm { font-size: 13px; color: #888; }
+.settle-row { display: flex; align-items: center; gap: 12px; padding: 14px 16px; border-bottom: 2px solid #000; }
+.sr { font-size: 20px; font-weight: 700; color: #000; width: 28px; flex-shrink: 0; }
+.sn { font-size: 17px; font-weight: 700; color: #000; flex: 1; }
+.sa { font-size: 20px; font-weight: 700; color: #000; }
+.pay-row { display: flex; align-items: center; padding: 14px 16px; border-bottom: 1.5px solid #e8e8e8; }
+.pay-row:last-child { border-bottom: none; }
+.pf { font-size: 15px; color: #000; }
+.pa { font-size: 15px; color: #bbb; margin: 0 8px; }
+.pt { font-size: 15px; font-weight: 700; color: #000; }
+.pm { font-size: 16px; font-weight: 700; color: #000; margin-left: auto; }
+
+/* LEDGER */
+.ledger-row { display: flex; align-items: center; padding: 16px; border-bottom: 2px solid #000; cursor: pointer; }
+.ledger-row:active { background: #f8f8f8; }
+.lr-info { flex: 1; }
+.lr-name { font-size: 16px; font-weight: 700; color: #000; }
+.lr-amt { font-size: 14px; color: #888; margin-top: 2px; }
+.lr-status { font-size: 12px; color: #888; margin-top: 2px; }
+.settle-btn { font-size: 13px; font-weight: 700; border: 2px solid #000; padding: 8px 14px; background: #000; color: #fff; cursor: pointer; }
+.settle-btn.settled { background: #fff; color: #000; }
+
+/* ROUND DETAIL */
+.stand-row { display: flex; align-items: center; gap: 12px; padding: 12px 16px; border-bottom: 2px solid #000; }
+.st-num { width: 26px; height: 26px; border: 2px solid #000; display: flex; align-items: center; justify-content: center; font-size: 13px; font-weight: 700; flex-shrink: 0; }
+.st-name { font-size: 15px; font-weight: 600; flex: 1; color: #000; }
+.st-amt { font-size: 17px; font-weight: 700; color: #000; }
+
+/* HOLES TOGGLE */
+.holes-toggle { display: flex; }
+.holes-btn { flex: 1; height: 48px; border: 2px solid #000; font-size: 16px; font-weight: 700; cursor: pointer; background: #fff; color: #000; }
+.holes-btn + .holes-btn { border-left: none; }
+.holes-btn.active { background: #000; color: #fff; }
+
+/* EMPTY */
+.empty-state { padding: 56px 24px; display: flex; flex-direction: column; align-items: center; gap: 12px; text-align: center; flex: 1; }
+.eb { width: 52px; height: 52px; border: 2px solid #000; }
+.et { font-size: 20px; font-weight: 700; color: #000; }
+.es { font-size: 14px; color: #888; line-height: 1.6; max-width: 240px; }
+.ec { margin-top: 8px; border: none; padding: 14px 28px; font-size: 15px; font-weight: 700; background: #000; color: #fff; cursor: pointer; }
+
+/* BOTTOM SHEET OVERLAY */
+.sheet-overlay {
+  position: absolute; top: 0; left: 0; right: 0; bottom: 0;
+  background: rgba(0,0,0,0.45); z-index: 100;
+  display: none; align-items: flex-end;
+}
+.sheet-overlay.open { display: flex; }
+.sheet {
+  background: #fff; width: 100%;
+  border-top: 2px solid #000; padding-bottom: 16px;
+}
+.sheet-handle { width: 36px; height: 4px; background: #ccc; margin: 12px auto 0; border-radius: 2px; }
+.sheet-title { font-size: 16px; font-weight: 700; color: #000; padding: 12px 16px 8px; border-bottom: 2px solid #000; }
+.sheet-item { display: flex; align-items: center; justify-content: space-between; padding: 16px; border-bottom: 1.5px solid #e8e8e8; cursor: pointer; font-size: 16px; font-weight: 600; color: #000; }
+.sheet-item:last-child { border-bottom: none; }
+.sheet-item:active { background: #f5f5f5; }
+.sheet-item.selected { background: #f5f5f5; }
+.sheet-cancel { width: calc(100% - 32px); margin: 12px 16px 0; height: 52px; background: #fff; border: 2px solid #000; font-size: 16px; font-weight: 700; cursor: pointer; }
+
+/* NUMPAD */
+.numpad-overlay {
+  position: absolute; top: 0; left: 0; right: 0; bottom: 0;
+  background: rgba(0,0,0,0.45); z-index: 100;
+  display: none; align-items: flex-end;
+}
+.numpad-overlay.open { display: flex; }
+.numpad-sheet { background: #fff; width: 100%; border-top: 2px solid #000; }
+.numpad-header { padding: 16px; border-bottom: 2px solid #000; display: flex; align-items: center; justify-content: space-between; }
+.numpad-title { font-size: 16px; font-weight: 700; color: #000; }
+.numpad-value { font-size: 28px; font-weight: 700; color: #000; }
+.numpad-grid { display: grid; grid-template-columns: repeat(3, 1fr); }
+.np-btn { height: 64px; border: none; border-right: 2px solid #000; border-top: 2px solid #000; font-size: 22px; font-weight: 600; background: #fff; color: #000; cursor: pointer; display: flex; align-items: center; justify-content: center; }
+.np-btn:nth-child(3n) { border-right: none; }
+.np-btn:active { background: #f0f0f0; }
+.np-btn.confirm { background: #000; color: #fff; font-size: 16px; }
+.np-btn.del { font-size: 18px; }
+
+/* SCORECARD SHEET */
+.sc-sheet { background: #fff; width: 100%; border-top: 2px solid #000; max-height: 80%; overflow-y: auto; }
+.sc-table { width: 100%; border-collapse: collapse; font-size: 12px; }
+.sc-table th { padding: 8px 6px; text-align: center; font-weight: 700; font-size: 10px; text-transform: uppercase; letter-spacing: 0.05em; color: #888; border-bottom: 2px solid #000; border-right: 1px solid #e8e8e8; background: #f5f5f5; }
+.sc-table th:last-child { border-right: none; }
+.sc-table th.cur { background: #000; color: #fff; }
+.sc-table td { padding: 8px 6px; text-align: center; border-bottom: 1.5px solid #e8e8e8; border-right: 1px solid #e8e8e8; color: #000; }
+.sc-table td:last-child { border-right: none; }
+.sc-table td:first-child { font-weight: 700; text-align: left; padding-left: 12px; }
+.sc-table tr:last-child td { border-bottom: none; }
+.sc-table td.cur { background: #f5f5f5; }
+
+/* RULES SHEET */
+.rules-sheet { background: #fff; width: 100%; border-top: 2px solid #000; max-height: 85%; overflow-y: auto; }
+.rules-content { padding: 16px; }
+.rules-title { font-size: 20px; font-weight: 700; color: #000; margin-bottom: 4px; }
+.rules-sub { font-size: 13px; color: #888; margin-bottom: 16px; }
+.rules-section { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em; color: #888; margin-bottom: 8px; margin-top: 16px; }
+.rules-body { font-size: 14px; color: #000; line-height: 1.6; }
+.rules-body li { margin-left: 16px; margin-bottom: 6px; }
+
+/* TOAST */
+.toast { position: absolute; bottom: 96px; left: 50%; transform: translateX(-50%); background: #000; color: #fff; padding: 10px 20px; font-size: 13px; font-weight: 600; white-space: nowrap; opacity: 0; pointer-events: none; transition: opacity 0.2s; z-index: 200; }
+.toast.show { opacity: 1; }
+</style>
+</head>
+<body>
+<div class="proto-label">Birdie Bank — Interactive Prototype v2</div>
+<div class="device" id="device">
+
+<!-- ===================== HISTORY EMPTY ===================== -->
+<div class="screen active" id="s-history-empty">
+  <div class="screen-header"><span class="screen-title">History</span></div>
+  <div style="flex:1;display:flex;align-items:center;justify-content:center;">
+  <div class="empty-state" style="padding:24px;flex:unset;">
+    <div class="eb"></div>
+    <div class="et">No rounds yet</div>
+    <div class="es">Finish a round and your history will show up here.</div>
+    <button class="ec" onclick="go('s-play-game')">Start a round</button>
+  </div>
+  </div>
+  <div class="bottom-nav">
+    <button class="nav-btn active" onclick="go('s-history-empty')"><div class="nav-sq"></div><span class="nav-lbl">History</span></button>
+    <button class="nav-btn center" onclick="go('s-play-game')"><div class="nav-play"><span>▶</span></div></button>
+    <button class="nav-btn" onclick="go('s-settings')"><div class="nav-ci"></div><span class="nav-lbl">Settings</span></button>
+  </div>
+</div>
+
+<!-- ===================== HISTORY ===================== -->
+<div class="screen" id="s-history">
+  <div class="screen-header"><span class="screen-title">History</span></div>
+  <div class="scroll">
+    <div class="sec-label">This week</div>
+    <div class="round-card" onclick="go('s-round-detail')">
+      <div class="rc-top"><div><div class="rc-course">Birch Creek GC</div><div class="rc-meta">Mar 27 · Banker · 9 holes</div><div class="rc-players">Trevor, Bob, John, Tom</div></div><div class="rc-result">+$11</div></div>
+    </div>
+    <div class="sec-label">Last week</div>
+    <div class="round-card" onclick="go('s-round-detail')">
+      <div class="rc-top"><div><div class="rc-course">Pebble Creek GC</div><div class="rc-meta">Mar 20 · Banker · 18 holes</div><div class="rc-players">Trevor, Mike, Dave</div></div><div class="rc-result">−$8</div></div>
+    </div>
+    <div class="round-card" onclick="go('s-round-detail')">
+      <div class="rc-top"><div><div class="rc-course">Logan River GC</div><div class="rc-meta">Mar 18 · Banker · 18 holes</div><div class="rc-players">Trevor, Bob, John, Tom</div></div><div class="rc-result">+$31</div></div>
+    </div>
+  </div>
+  <div class="bottom-nav">
+    <button class="nav-btn active" onclick="go('s-history')"><div class="nav-sq"></div><span class="nav-lbl">History</span></button>
+    <button class="nav-btn center" onclick="go('s-play-game')"><div class="nav-play"><span>▶</span></div></button>
+    <button class="nav-btn" onclick="go('s-settings')"><div class="nav-ci"></div><span class="nav-lbl">Settings</span></button>
+  </div>
+</div>
+
+<!-- ===================== SETTINGS ===================== -->
+<div class="screen" id="s-settings">
+  <div class="screen-header"><span class="screen-title">Settings</span></div>
+  <div class="scroll">
+    <div class="sec-label">Players</div>
+    <div class="set-row" onclick="showToast('Edit player — not built yet')"><div><div class="set-name">Trevor</div><div class="set-sub">HC 6 · You</div></div><span class="chevron">›</span></div>
+    <div class="set-row" onclick="showToast('Edit player — not built yet')"><div><div class="set-name">Bob</div><div class="set-sub">HC 6</div></div><span class="chevron">›</span></div>
+    <div class="set-row" onclick="showToast('Edit player — not built yet')"><div><div class="set-name">John</div><div class="set-sub">HC 2</div></div><span class="chevron">›</span></div>
+    <div class="set-row" onclick="showToast('Edit player — not built yet')"><div><div class="set-name">Tom</div><div class="set-sub">HC 8</div></div><span class="chevron">›</span></div>
+    <div class="add-row" onclick="showToast('Add player — not built yet')"><div class="add-ci">+</div><span class="add-lbl">Add player</span></div>
+    <div class="sec-label">Crews</div>
+    <div class="set-row" onclick="showToast('Edit crew — not built yet')"><div><div class="set-name">Saturday Boys</div><div class="set-sub">Trevor, Bob, John, Tom</div></div><span class="chevron">›</span></div>
+    <div class="add-row" onclick="showToast('Add crew — not built yet')"><div class="add-ci">+</div><span class="add-lbl">Add crew</span></div>
+    <div class="sec-label">Default stakes</div>
+    <div class="set-row" onclick="showToast('Edit stakes — not built yet')"><div class="set-name">Banker</div><div style="display:flex;align-items:center;gap:8px;"><span style="font-size:16px;font-weight:700;">$2 – $5</span><span class="chevron">›</span></div></div>
+  </div>
+  <div class="bottom-nav">
+    <button class="nav-btn" onclick="go('s-history')"><div class="nav-sq"></div><span class="nav-lbl">History</span></button>
+    <button class="nav-btn center" onclick="go('s-play-game')"><div class="nav-play"><span>▶</span></div></button>
+    <button class="nav-btn active" onclick="go('s-settings')"><div class="nav-ci"></div><span class="nav-lbl">Settings</span></button>
+  </div>
+</div>
+
+<!-- ===================== STEP 1: GAME ===================== -->
+<div class="screen" id="s-play-game">
+  <div class="screen-header">
+    <span class="screen-title">New round</span>
+    <button class="header-close" onclick="go('s-history')">✕</button>
+  </div>
+  <div class="step-bar">
+    <div class="step active">Game</div>
+    <div class="step">Course</div>
+    <div class="step">Players</div>
+    <div class="step">Start</div>
+  </div>
+  <div class="scroll">
+    <div class="game-row selected" onclick="showToast('Banker selected')">
+      <div>
+        <div style="display:flex;align-items:center;gap:8px;">
+          <div class="gn">Banker</div>
+          <button onclick="event.stopPropagation();openSheet('sheet-rules')" style="font-size:11px;font-weight:700;border:2px solid #fff;border-radius:0;padding:2px 7px;background:transparent;color:#fff;cursor:pointer;flex-shrink:0;">Rules</button>
+        </div>
+        <div class="gs">3–8 players · Rotating banker each hole</div>
+      </div>
+      <span style="font-size:13px;font-weight:700;color:#fff;">&#10003;</span>
+    </div>
+    <div class="game-row locked">
+      <div><div class="gn">Skins</div><div class="gs">2–8 players · Win the hole outright</div></div>
+      <div style="display:flex;align-items:center;gap:8px;"><div class="lock-tag">Unlock</div></div>
+    </div>
+    <div class="game-row locked">
+      <div><div class="gn">Nassau</div><div class="gs">2–4 players · Front 9, back 9, total</div></div>
+      <div style="display:flex;align-items:center;gap:8px;"><div class="lock-tag">Unlock</div></div>
+    </div>
+    <div class="game-row locked">
+      <div><div class="gn">Wolf</div><div class="gs">4 players exactly · Rotating wolf</div></div>
+      <div style="display:flex;align-items:center;gap:8px;"><div class="lock-tag">Unlock</div></div>
+    </div>
+    <div style="padding:14px 16px;border-bottom:2px solid #000;">
+      <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:#888;margin-bottom:10px;">Holes</div>
+      <div class="holes-toggle">
+        <button class="holes-btn active" onclick="setHoles(this)">9</button>
+        <button class="holes-btn" onclick="setHoles(this)">18</button>
+      </div>
+    </div>
+  </div>
+  <div class="cta-wrap">
+    <button class="full-btn" onclick="go('s-play-course')">Next — Course →</button>
+  </div>
+</div>
+
+<!-- ===================== STEP 2: COURSE ===================== -->
+<div class="screen" id="s-play-course">
+  <div class="screen-header">
+    <button class="header-back" onclick="go('s-play-game')">←</button>
+    <span class="screen-title" style="font-size:18px;">New round</span>
+    <button class="header-close" onclick="go('s-history')">✕</button>
+  </div>
+  <div class="step-bar">
+    <div class="step done">Game</div>
+    <div class="step active">Course</div>
+    <div class="step">Players</div>
+    <div class="step">Start</div>
+  </div>
+  <div class="scroll">
+    <div style="padding:14px 16px;border-bottom:2px solid #000;">
+      <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:#888;margin-bottom:10px;">Select course</div>
+      <input class="search-box" type="text" placeholder="Search courses...">
+    </div>
+    <div class="sec-label">Favorites</div>
+    <div style="padding:0 16px;">
+      <div class="list-item" onclick="selectCourse(this)">
+        <div><div class="li-name">Birch Creek GC</div><div class="li-sub">Smithfield, UT · Par 72 · 5 tees</div></div>
+        <button class="li-check on">✓</button>
+      </div>
+      <div class="list-item" onclick="selectCourse(this)">
+        <div><div class="li-name">Pebble Creek GC</div><div class="li-sub">Tremonton, UT · Par 71 · 4 tees</div></div>
+        <button class="li-check add">+</button>
+      </div>
+      <div class="list-item" onclick="selectCourse(this)">
+        <div><div class="li-name">Logan River GC</div><div class="li-sub">Logan, UT · Par 71 · 4 tees</div></div>
+        <button class="li-check add">+</button>
+      </div>
+    </div>
+    <div class="sec-label">Near me</div>
+    <div style="padding:0 16px;">
+      <div class="list-item" onclick="selectCourse(this)">
+        <div><div class="li-name">Sherwood Hills GC</div><div class="li-sub">Wellsville, UT · Par 72 · 3 tees</div></div>
+        <button class="li-check add">+</button>
+      </div>
+    </div>
+  </div>
+  <div class="cta-wrap">
+    <button class="full-btn" onclick="go('s-play-players')">Next — Players →</button>
+  </div>
+</div>
+
+<!-- ===================== STEP 3: PLAYERS ===================== -->
+<div class="screen" id="s-play-players">
+  <div class="screen-header">
+    <button class="header-back" onclick="go('s-play-course')">←</button>
+    <span class="screen-title" style="font-size:18px;">New round</span>
+    <button class="header-close" onclick="go('s-history')">✕</button>
+  </div>
+  <div class="step-bar">
+    <div class="step done">Game</div>
+    <div class="step done">Course</div>
+    <div class="step active">Players</div>
+    <div class="step">Start</div>
+  </div>
+  <div class="scroll">
+    <div class="sec-label">My crews</div>
+    <div style="padding:0 16px;">
+      <div class="list-item" onclick="toggleCheck(this)">
+        <div><div class="li-name">Saturday Boys</div><div class="li-sub">Trevor · Bob · John · Tom</div></div>
+        <button class="li-check on">✓</button>
+      </div>
+    </div>
+    <div class="sec-label">Players (4 selected)</div>
+    <div style="padding:0 16px;">
+      <!-- Player with tee + HC -->
+      <div style="padding:14px 0;border-bottom:1.5px solid #e8e8e8;">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;">
+          <div><div class="li-name">Trevor</div><div class="li-sub">Course HC: <strong id="hc-trevor">6</strong> <button onclick="editHC('hc-trevor')" style="font-size:11px;border:1.5px solid #000;padding:1px 6px;background:none;cursor:pointer;margin-left:4px;">Edit</button></div></div>
+          <button class="li-check on">✓</button>
+        </div>
+        <div style="font-size:11px;color:#888;margin-bottom:5px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;">Tee</div>
+        <div class="tee-chips">
+          <button class="tee-chip active" onclick="setTee(this)">Blue</button>
+          <button class="tee-chip" onclick="setTee(this)">White</button>
+          <button class="tee-chip" onclick="setTee(this)">Black</button>
+          <button class="tee-chip" onclick="setTee(this)">Ladies</button>
+          <button class="tee-chip" onclick="setTee(this)">Red</button>
+        </div>
+      </div>
+      <div style="padding:14px 0;border-bottom:1.5px solid #e8e8e8;">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;">
+          <div><div class="li-name">Bob</div><div class="li-sub">Course HC: <strong id="hc-bob">6</strong> <button onclick="editHC('hc-bob')" style="font-size:11px;border:1.5px solid #000;padding:1px 6px;background:none;cursor:pointer;margin-left:4px;">Edit</button></div></div>
+          <button class="li-check on">✓</button>
+        </div>
+        <div style="font-size:11px;color:#888;margin-bottom:5px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;">Tee</div>
+        <div class="tee-chips">
+          <button class="tee-chip active" onclick="setTee(this)">Blue</button>
+          <button class="tee-chip" onclick="setTee(this)">White</button>
+          <button class="tee-chip" onclick="setTee(this)">Black</button>
+          <button class="tee-chip" onclick="setTee(this)">Ladies</button>
+          <button class="tee-chip" onclick="setTee(this)">Red</button>
+        </div>
+      </div>
+      <div style="padding:14px 0;border-bottom:1.5px solid #e8e8e8;">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;">
+          <div><div class="li-name">John</div><div class="li-sub">Course HC: <strong id="hc-john">2</strong> <button onclick="editHC('hc-john')" style="font-size:11px;border:1.5px solid #000;padding:1px 6px;background:none;cursor:pointer;margin-left:4px;">Edit</button></div></div>
+          <button class="li-check on">✓</button>
+        </div>
+        <div style="font-size:11px;color:#888;margin-bottom:5px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;">Tee</div>
+        <div class="tee-chips">
+          <button class="tee-chip active" onclick="setTee(this)">Blue</button>
+          <button class="tee-chip" onclick="setTee(this)">White</button>
+          <button class="tee-chip" onclick="setTee(this)">Black</button>
+          <button class="tee-chip" onclick="setTee(this)">Ladies</button>
+          <button class="tee-chip" onclick="setTee(this)">Red</button>
+        </div>
+      </div>
+      <div style="padding:14px 0;border-bottom:none;">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;">
+          <div><div class="li-name">Tom</div><div class="li-sub">Course HC: <strong id="hc-tom">8</strong> <button onclick="editHC('hc-tom')" style="font-size:11px;border:1.5px solid #000;padding:1px 6px;background:none;cursor:pointer;margin-left:4px;">Edit</button></div></div>
+          <button class="li-check on">✓</button>
+        </div>
+        <div style="font-size:11px;color:#888;margin-bottom:5px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;">Tee</div>
+        <div class="tee-chips">
+          <button class="tee-chip active" onclick="setTee(this)">Blue</button>
+          <button class="tee-chip" onclick="setTee(this)">White</button>
+          <button class="tee-chip" onclick="setTee(this)">Black</button>
+          <button class="tee-chip" onclick="setTee(this)">Ladies</button>
+          <button class="tee-chip" onclick="setTee(this)">Red</button>
+        </div>
+      </div>
+    </div>
+    <div class="add-row" onclick="showToast('Add new player — not built yet')"><div class="add-ci">+</div><span class="add-lbl">Add new player</span></div>
+  </div>
+  <div class="cta-wrap">
+    <button class="full-btn" onclick="go('s-play-start')">Next — Review →</button>
+  </div>
+</div>
+
+<!-- ===================== STEP 4: START ===================== -->
+<div class="screen" id="s-play-start">
+  <div class="screen-header">
+    <button class="header-back" onclick="go('s-play-players')">←</button>
+    <span class="screen-title" style="font-size:18px;">New round</span>
+    <button class="header-close" onclick="go('s-history')">✕</button>
+  </div>
+  <div class="step-bar">
+    <div class="step done">Game</div>
+    <div class="step done">Course</div>
+    <div class="step done">Players</div>
+    <div class="step active">Start</div>
+  </div>
+  <div class="scroll">
+    <div style="padding:16px;border-bottom:2px solid #000;">
+      <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:#888;margin-bottom:10px;">Game</div>
+      <div style="font-size:17px;font-weight:700;color:#000;">Banker · 9 holes</div>
+    </div>
+    <div style="padding:16px;border-bottom:2px solid #000;">
+      <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:#888;margin-bottom:10px;">Course</div>
+      <div style="font-size:17px;font-weight:700;color:#000;">Birch Creek GC</div>
+      <div style="font-size:13px;color:#888;margin-top:2px;">Smithfield, UT</div>
+    </div>
+    <div style="padding:16px;border-bottom:2px solid #000;">
+      <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:#888;margin-bottom:10px;">Players</div>
+      <div style="font-size:15px;font-weight:600;color:#000;line-height:2;">Trevor (HC 6 · Blue)<br>Bob (HC 6 · Blue)<br>John (HC 2 · Blue)<br>Tom (HC 8 · Blue)</div>
+    </div>
+    <div style="padding:16px;border-bottom:2px solid #000;">
+      <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:#888;margin-bottom:10px;">Starting hole</div>
+      <div style="font-size:17px;font-weight:700;color:#000;">Hole 1</div>
+    </div>
+  </div>
+  <div class="cta-wrap">
+    <button class="full-btn" onclick="go('s-hole-bets')">Start Round →</button>
+  </div>
+</div>
+
+<!-- ===================== HOLE BETS ===================== -->
+<div class="screen" id="s-hole-bets">
+  <div class="hole-meta">
+    <div class="mc" onclick="openSheet('sheet-scorecard')"><span class="ml">Hole</span><span class="mv">3</span></div>
+    <div class="mc" onclick="openSheet('sheet-scorecard')"><span class="ml">Par</span><span class="mv">4</span></div>
+    <div class="mc" onclick="openSheet('sheet-scorecard')"><span class="ml">Yards</span><span class="mv">385</span></div>
+    <div class="mc" onclick="openSheet('sheet-scorecard')"><span class="ml">HDCP</span><span class="mv">9</span></div>
+  </div>
+  <div class="banker-bar">
+    <div><div class="bl">Banker this hole</div><div class="bn">Trevor</div></div>
+    <button class="change-btn" onclick="openSheet('sheet-banker')">Change</button>
+  </div>
+  <div style="padding:10px 16px;border-bottom:2px solid #000;flex-shrink:0;">
+    <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:#888;">Step 1 of 2 — Set bets &amp; doubles</div>
+  </div>
+  <div class="scroll">
+    <!-- Banker row — no bet, just identity -->
+    <div style="display:flex;align-items:center;padding:20px 16px;border-bottom:2px solid #000;background:#f5f5f5;">
+      <div style="flex:1;">
+        <div style="font-size:18px;font-weight:700;color:#000;display:flex;align-items:center;gap:8px;">Trevor <span class="bkr-badge">Banker</span></div>
+        <div style="font-size:13px;color:#666;margin-top:3px;">HC 6 · No bet this hole</div>
+      </div>
+      <div style="font-size:13px;color:#aaa;font-weight:600;">Doubles after players</div>
+    </div>
+    <!-- Bob -->
+    <div style="border-bottom:2px solid #000;">
+      <div style="display:flex;align-items:center;padding:16px 16px 10px;">
+        <div style="flex:1;"><div style="font-size:18px;font-weight:700;color:#000;">Bob</div><div style="font-size:13px;color:#666;margin-top:2px;">HC 6</div></div>
+        <button onclick="openNumpad('Bob')" style="font-size:22px;font-weight:700;border:2px solid #000;padding:10px 20px;background:#fff;color:#000;cursor:pointer;min-width:80px;text-align:center;">$5</button>
+      </div>
+      <div style="padding:0 16px 16px;display:flex;gap:0;">
+        <button onclick="togglePlayerDouble(this)" class="dbl-btn" style="flex:1;height:56px;font-size:16px;">2× Double</button>
+      </div>
+    </div>
+    <!-- John -->
+    <div style="border-bottom:2px solid #000;">
+      <div style="display:flex;align-items:center;padding:16px 16px 10px;">
+        <div style="flex:1;"><div style="font-size:18px;font-weight:700;color:#000;">John</div><div style="font-size:13px;color:#666;margin-top:2px;">HC 2</div></div>
+        <button onclick="openNumpad('John')" style="font-size:22px;font-weight:700;border:2px solid #000;padding:10px 20px;background:#fff;color:#000;cursor:pointer;min-width:80px;text-align:center;">$4</button>
+      </div>
+      <div style="padding:0 16px 16px;display:flex;gap:0;">
+        <button onclick="togglePlayerDouble(this)" class="dbl-btn" style="flex:1;height:56px;font-size:16px;">2× Double</button>
+      </div>
+    </div>
+    <!-- Tom -->
+    <div style="border-bottom:2px solid #000;">
+      <div style="display:flex;align-items:center;padding:16px 16px 10px;">
+        <div style="flex:1;"><div style="font-size:18px;font-weight:700;color:#000;">Tom</div><div style="font-size:13px;color:#666;margin-top:2px;">HC 8</div></div>
+        <button onclick="openNumpad('Tom')" style="font-size:22px;font-weight:700;border:2px solid #000;padding:10px 20px;background:#fff;color:#000;cursor:pointer;min-width:80px;text-align:center;">$5</button>
+      </div>
+      <div style="padding:0 16px 16px;display:flex;gap:0;">
+        <button onclick="togglePlayerDouble(this)" class="dbl-btn" style="flex:1;height:56px;font-size:16px;">2× Double</button>
+      </div>
+    </div>
+    <!-- Banker double — unlocks if any player doubled -->
+    <div style="padding:16px;border-bottom:2px solid #000;background:#f5f5f5;">
+      <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:#888;margin-bottom:10px;">Banker double back</div>
+      <button id="banker-dbl" disabled onclick="toggleBankerDouble(this)" class="dbl-btn" style="width:100%;height:56px;font-size:16px;opacity:0.3;">4× Double back</button>
+    </div>
+  </div>
+  <div style="padding:14px 16px;border-top:2px solid #000;flex-shrink:0;">
+    <button class="full-btn" onclick="go('s-hole-scores')">Next — Enter Scores →</button>
+  </div>
+</div>
+
+<!-- ===================== HOLE SCORES ===================== -->
+<div class="screen" id="s-hole-scores">
+  <div class="hole-meta">
+    <div class="mc" onclick="openSheet('sheet-scorecard')"><span class="ml">Hole</span><span class="mv">3</span></div>
+    <div class="mc" onclick="openSheet('sheet-scorecard')"><span class="ml">Par</span><span class="mv">4</span></div>
+    <div class="mc" onclick="openSheet('sheet-scorecard')"><span class="ml">Yards</span><span class="mv">385</span></div>
+    <div class="mc" onclick="openSheet('sheet-scorecard')"><span class="ml">HDCP</span><span class="mv">9</span></div>
+  </div>
+  <div class="banker-bar">
+    <div><div class="bl">Banker this hole</div><div class="bn">Trevor</div></div>
+    <button class="change-btn" onclick="go('s-hole-bets')">← Bets</button>
+  </div>
+  <div style="padding:10px 16px;border-bottom:2px solid #000;flex-shrink:0;">
+    <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:#888;">Step 2 of 2 — Enter scores</div>
+  </div>
+  <div class="scroll">
+    <!-- Trevor -->
+    <div style="display:flex;align-items:center;gap:12px;padding:20px 16px;border-bottom:2px solid #000;background:#f5f5f5;">
+      <div style="flex:1;">
+        <div style="font-size:18px;font-weight:700;color:#000;display:flex;align-items:center;gap:8px;">Trevor <span class="bkr-badge">Banker</span></div>
+        <div style="font-size:13px;color:#666;margin-top:3px;">HC 6</div>
+      </div>
+      <div class="score-ctrl" style="border-width:2px;">
+        <button class="sc-btn" style="width:64px;height:64px;font-size:32px;" onclick="adjustScore(this,-1)">−</button>
+        <span class="sc-num" style="width:52px;font-size:26px;">4</span>
+        <button class="sc-btn" style="width:64px;height:64px;font-size:32px;" onclick="adjustScore(this,1)">+</button>
+      </div>
+    </div>
+    <!-- Bob -->
+    <div style="display:flex;align-items:center;gap:12px;padding:20px 16px;border-bottom:2px solid #000;">
+      <div style="flex:1;">
+        <div style="font-size:18px;font-weight:700;color:#000;">Bob</div>
+        <div style="font-size:13px;color:#666;margin-top:3px;">HC 6 · Bet $5</div>
+      </div>
+      <div class="score-ctrl">
+        <button class="sc-btn" style="width:64px;height:64px;font-size:32px;" onclick="adjustScore(this,-1)">−</button>
+        <span class="sc-num" style="width:52px;font-size:26px;">5</span>
+        <button class="sc-btn" style="width:64px;height:64px;font-size:32px;" onclick="adjustScore(this,1)">+</button>
+      </div>
+    </div>
+    <!-- John -->
+    <div style="display:flex;align-items:center;gap:12px;padding:20px 16px;border-bottom:2px solid #000;">
+      <div style="flex:1;">
+        <div style="font-size:18px;font-weight:700;color:#000;">John</div>
+        <div style="font-size:13px;color:#666;margin-top:3px;">HC 2 · Bet $4 · 2×</div>
+      </div>
+      <div class="score-ctrl">
+        <button class="sc-btn" style="width:64px;height:64px;font-size:32px;" onclick="adjustScore(this,-1)">−</button>
+        <span class="sc-num" style="width:52px;font-size:26px;">4</span>
+        <button class="sc-btn" style="width:64px;height:64px;font-size:32px;" onclick="adjustScore(this,1)">+</button>
+      </div>
+    </div>
+    <!-- Tom -->
+    <div style="display:flex;align-items:center;gap:12px;padding:20px 16px;border-bottom:2px solid #000;">
+      <div style="flex:1;">
+        <div style="font-size:18px;font-weight:700;color:#000;">Tom</div>
+        <div style="font-size:13px;color:#666;margin-top:3px;">HC 8 · Bet $5</div>
+      </div>
+      <div class="score-ctrl">
+        <button class="sc-btn" style="width:64px;height:64px;font-size:32px;" onclick="adjustScore(this,-1)">−</button>
+        <span class="sc-num" style="width:52px;font-size:26px;">5</span>
+        <button class="sc-btn" style="width:64px;height:64px;font-size:32px;" onclick="adjustScore(this,1)">+</button>
+      </div>
+    </div>
+    <div class="running-total">
+      <div class="rt-lbl">Running total</div>
+      <div class="rt-items">
+        <div class="rt-item"><div class="rt-p">Trevor</div><div class="rt-a">+$29</div></div>
+        <div class="rt-item"><div class="rt-p">Bob</div><div class="rt-a">−$20</div></div>
+        <div class="rt-item"><div class="rt-p">John</div><div class="rt-a">−$4</div></div>
+        <div class="rt-item"><div class="rt-p">Tom</div><div class="rt-a">−$5</div></div>
+      </div>
+    </div>
+  </div>
+  <div style="padding:14px 16px;border-top:2px solid #000;flex-shrink:0;">
+    <button class="full-btn" onclick="go('s-settle')">Save &amp; Next Hole →</button>
+  </div>
+</div>
+
+<!-- ===================== SETTLE UP ===================== -->
+<div class="screen" id="s-settle">
+  <div class="screen-header"><span class="screen-title">Final results</span></div>
+  <div class="scroll">
+    <div class="detail-hdr"><div class="dc">Birch Creek GC</div><div class="dm">Mar 27 · Banker · 9 holes</div></div>
+    <div class="sec-label">Standings</div>
+    <div class="settle-row"><div class="sr">1</div><div class="sn">Trevor</div><div class="sa">+$29</div></div>
+    <div class="settle-row"><div class="sr">2</div><div class="sn">John</div><div class="sa">−$4</div></div>
+    <div class="settle-row"><div class="sr">3</div><div class="sn">Tom</div><div class="sa">−$5</div></div>
+    <div class="settle-row"><div class="sr">4</div><div class="sn">Bob</div><div class="sa">−$20</div></div>
+    <div class="sec-label">Who pays who</div>
+    <div style="padding:0 16px;">
+      <div class="pay-row"><span class="pf">Bob</span><span class="pa">→</span><span class="pt">Trevor</span><span class="pm">$20</span></div>
+      <div class="pay-row"><span class="pf">John</span><span class="pa">→</span><span class="pt">Trevor</span><span class="pm">$4</span></div>
+      <div class="pay-row"><span class="pf">Tom</span><span class="pa">→</span><span class="pt">Trevor</span><span class="pm">$5</span></div>
+    </div>
+  </div>
+  <div class="cta-wrap">
+    <button class="full-btn" onclick="showToast('Share card — not built yet')">Share results</button>
+    <button class="full-btn outline" onclick="go('s-history')">Done</button>
+  </div>
+</div>
+
+<!-- ===================== ROUND DETAIL ===================== -->
+<div class="screen" id="s-round-detail">
+  <div class="screen-header">
+    <button class="header-back" onclick="go('s-history')">←</button>
+    <span class="screen-title" style="font-size:18px;">Round detail</span>
+    <button class="header-btn" onclick="showToast('Share — not built yet')">Share</button>
+  </div>
+  <div class="scroll">
+    <div class="detail-hdr"><div class="dc">Birch Creek GC</div><div class="dm">Mar 27 · Banker · 9 holes · Trevor, Bob, John, Tom</div></div>
+    <div class="sec-label">Final standings</div>
+    <div class="stand-row"><div class="st-num">1</div><div class="st-name">Trevor</div><div class="st-amt">+$29</div></div>
+    <div class="stand-row"><div class="st-num">2</div><div class="st-name">John</div><div class="st-amt">−$4</div></div>
+    <div class="stand-row"><div class="st-num">3</div><div class="st-name">Tom</div><div class="st-amt">−$5</div></div>
+    <div class="stand-row"><div class="st-num">4</div><div class="st-name">Bob</div><div class="st-amt">−$20</div></div>
+    <div class="sec-label">Who paid who</div>
+    <div style="padding:0 16px;">
+      <div class="pay-row"><span class="pf">Bob</span><span class="pa">→</span><span class="pt">Trevor</span><span class="pm">$20</span></div>
+      <div class="pay-row"><span class="pf">John</span><span class="pa">→</span><span class="pt">Trevor</span><span class="pm">$4</span></div>
+      <div class="pay-row"><span class="pf">Tom</span><span class="pa">→</span><span class="pt">Trevor</span><span class="pm">$5</span></div>
+    </div>
+    <div class="sec-label">Hole by hole</div>
+    <div style="overflow-x:auto;padding:12px 16px;">
+      <table style="border-collapse:collapse;font-size:12px;min-width:100%;">
+        <tr>
+          <td style="padding:5px 8px 5px 0;font-weight:700;font-size:10px;text-transform:uppercase;color:#888;white-space:nowrap;">Hole</td>
+          <td style="padding:5px 6px;text-align:center;font-weight:700;font-size:10px;color:#888;">1</td>
+          <td style="padding:5px 6px;text-align:center;font-weight:700;font-size:10px;color:#888;">2</td>
+          <td style="padding:5px 6px;text-align:center;font-weight:700;font-size:10px;color:#888;">3</td>
+          <td style="padding:5px 6px;text-align:center;font-weight:700;font-size:10px;color:#888;">4–9</td>
+        </tr>
+        <tr style="border-top:1.5px solid #e8e8e8;">
+          <td style="padding:8px 8px 8px 0;font-weight:700;">Trevor</td>
+          <td style="padding:8px 6px;text-align:center;font-weight:700;">+$29</td>
+          <td style="padding:8px 6px;text-align:center;">$0</td>
+          <td style="padding:8px 6px;text-align:center;">$0</td>
+          <td style="padding:8px 6px;text-align:center;color:#ccc;">—</td>
+        </tr>
+        <tr style="border-top:1.5px solid #e8e8e8;">
+          <td style="padding:8px 8px 8px 0;font-weight:700;">Bob</td>
+          <td style="padding:8px 6px;text-align:center;font-weight:700;">−$20</td>
+          <td style="padding:8px 6px;text-align:center;">$0</td>
+          <td style="padding:8px 6px;text-align:center;">$0</td>
+          <td style="padding:8px 6px;text-align:center;color:#ccc;">—</td>
+        </tr>
+        <tr style="border-top:1.5px solid #e8e8e8;">
+          <td style="padding:8px 8px 8px 0;font-weight:700;">John</td>
+          <td style="padding:8px 6px;text-align:center;font-weight:700;">−$4</td>
+          <td style="padding:8px 6px;text-align:center;">$0</td>
+          <td style="padding:8px 6px;text-align:center;">$0</td>
+          <td style="padding:8px 6px;text-align:center;color:#ccc;">—</td>
+        </tr>
+        <tr style="border-top:1.5px solid #e8e8e8;">
+          <td style="padding:8px 8px 8px 0;font-weight:700;">Tom</td>
+          <td style="padding:8px 6px;text-align:center;font-weight:700;">−$5</td>
+          <td style="padding:8px 6px;text-align:center;">$0</td>
+          <td style="padding:8px 6px;text-align:center;">$0</td>
+          <td style="padding:8px 6px;text-align:center;color:#ccc;">—</td>
+        </tr>
+      </table>
+    </div>
+  </div>
+</div>
+
+<!-- ===================== LEDGER ===================== -->
+<div class="screen" id="s-ledger">
+  <div class="screen-header">
+    <button class="header-back" onclick="go('s-history')">←</button>
+    <span class="screen-title">Ledger</span>
+  </div>
+  <div class="scroll">
+    <div class="sec-label">Outstanding</div>
+    <div class="ledger-row" onclick="openSheet('sheet-settle-bob')">
+      <div class="lr-info">
+        <div class="lr-name">Bob</div>
+        <div class="lr-amt">Owes you $20.00</div>
+        <div class="lr-status">Not yet settled · Birch Creek GC · Mar 27</div>
+      </div>
+      <button class="settle-btn">Settle</button>
+    </div>
+    <div class="ledger-row" onclick="openSheet('sheet-settle-john')">
+      <div class="lr-info">
+        <div class="lr-name">John</div>
+        <div class="lr-amt">Owes you $4.00</div>
+        <div class="lr-status">Not yet settled · Birch Creek GC · Mar 27</div>
+      </div>
+      <button class="settle-btn">Settle</button>
+    </div>
+    <div class="ledger-row" onclick="openSheet('sheet-settle-tom')">
+      <div class="lr-info">
+        <div class="lr-name">Tom</div>
+        <div class="lr-amt">Owes you $5.00</div>
+        <div class="lr-status">Not yet settled · Birch Creek GC · Mar 27</div>
+      </div>
+      <button class="settle-btn">Settle</button>
+    </div>
+    <div class="sec-label">Settled</div>
+    <div class="ledger-row">
+      <div class="lr-info">
+        <div class="lr-name">Mike</div>
+        <div class="lr-amt">You owed $8.00</div>
+        <div class="lr-status">Settled Mar 21 · Pebble Creek GC</div>
+      </div>
+      <button class="settle-btn settled">Done</button>
+    </div>
+  </div>
+  <div class="bottom-nav">
+    <button class="nav-btn" onclick="go('s-history')"><div class="nav-sq"></div><span class="nav-lbl">History</span></button>
+    <button class="nav-btn center" onclick="go('s-play-game')"><div class="nav-play"><span>▶</span></div></button>
+    <button class="nav-btn" onclick="go('s-settings')"><div class="nav-ci"></div><span class="nav-lbl">Settings</span></button>
+  </div>
+</div>
+
+<!-- ===================== BOTTOM SHEETS ===================== -->
+
+<!-- BANKER SELECT -->
+<div class="sheet-overlay" id="sheet-banker" onclick="closeSheetOnBg(event,'sheet-banker')">
+  <div class="sheet">
+    <div class="sheet-handle"></div>
+    <div class="sheet-title">Select banker — Hole 3</div>
+    <div class="sheet-item selected" onclick="selectBanker('Trevor')">Trevor <span style="color:#888;font-size:13px;">HC 6</span></div>
+    <div class="sheet-item" onclick="selectBanker('Bob')">Bob <span style="color:#888;font-size:13px;">HC 6</span></div>
+    <div class="sheet-item" onclick="selectBanker('John')">John <span style="color:#888;font-size:13px;">HC 2</span></div>
+    <div class="sheet-item" onclick="selectBanker('Tom')">Tom <span style="color:#888;font-size:13px;">HC 8</span></div>
+    <button class="sheet-cancel" onclick="closeSheet('sheet-banker')">Cancel</button>
+  </div>
+</div>
+
+<!-- SCORECARD -->
+<div class="sheet-overlay" id="sheet-scorecard" onclick="closeSheetOnBg(event,'sheet-scorecard')">
+  <div class="sc-sheet">
+    <div class="sheet-handle"></div>
+    <div class="sheet-title" style="display:flex;justify-content:space-between;align-items:center;">
+      <span>Scorecard</span>
+      <button onclick="closeSheet('sheet-scorecard')" style="background:none;border:none;font-size:20px;cursor:pointer;color:#000;">✕</button>
+    </div>
+
+    <!-- LEGEND -->
+    <div style="display:flex;gap:16px;padding:8px 12px;border-bottom:2px solid #000;background:#fafafa;">
+      <span style="font-size:11px;color:#888;"><strong style="color:#000;">2×</strong> Player doubled</span>
+      <span style="font-size:11px;color:#888;"><strong style="color:#000;">4×</strong> Banker doubled back</span>
+      <span style="font-size:11px;color:#888;"><strong style="color:#000;">B</strong> = Banker that hole</span>
+    </div>
+
+    <div style="overflow-x:auto;">
+      <table class="sc-table" style="min-width:600px;">
+        <thead>
+          <tr>
+            <th style="text-align:left;padding-left:10px;min-width:60px;">Player</th>
+            <th class="cur">1</th>
+            <th>2</th>
+            <th>3 ▸</th>
+            <th>4</th><th>5</th><th>6</th><th>7</th><th>8</th><th>9</th>
+            <th>Total</th>
+          </tr>
+          <!-- Par row -->
+          <tr>
+            <th style="text-align:left;padding-left:10px;background:#fff;font-weight:400;color:#888;">Par</th>
+            <td class="cur" style="text-align:center;font-size:11px;color:#888;padding:3px 4px;">5</td>
+            <td style="text-align:center;font-size:11px;color:#888;padding:3px 4px;">4</td>
+            <td style="text-align:center;font-size:11px;color:#888;padding:3px 4px;">4</td>
+            <td style="text-align:center;font-size:11px;color:#aaa;padding:3px 4px;">4</td>
+            <td style="text-align:center;font-size:11px;color:#aaa;padding:3px 4px;">5</td>
+            <td style="text-align:center;font-size:11px;color:#aaa;padding:3px 4px;">4</td>
+            <td style="text-align:center;font-size:11px;color:#aaa;padding:3px 4px;">3</td>
+            <td style="text-align:center;font-size:11px;color:#aaa;padding:3px 4px;">4</td>
+            <td style="text-align:center;font-size:11px;color:#aaa;padding:3px 4px;">4</td>
+            <td style="text-align:center;font-size:11px;color:#888;padding:3px 4px;">37</td>
+          </tr>
+          <!-- Banker row -->
+          <tr>
+            <th style="text-align:left;padding-left:10px;background:#fff;font-weight:400;color:#888;">Banker</th>
+            <td class="cur" style="text-align:center;font-size:10px;font-weight:700;color:#000;padding:3px 4px;">Trev</td>
+            <td style="text-align:center;font-size:10px;font-weight:700;color:#000;padding:3px 4px;">Bob</td>
+            <td style="text-align:center;font-size:10px;font-weight:700;color:#000;padding:3px 4px;">Trev</td>
+            <td style="text-align:center;font-size:10px;color:#ccc;padding:3px 4px;">—</td>
+            <td style="text-align:center;font-size:10px;color:#ccc;padding:3px 4px;">—</td>
+            <td style="text-align:center;font-size:10px;color:#ccc;padding:3px 4px;">—</td>
+            <td style="text-align:center;font-size:10px;color:#ccc;padding:3px 4px;">—</td>
+            <td style="text-align:center;font-size:10px;color:#ccc;padding:3px 4px;">—</td>
+            <td style="text-align:center;font-size:10px;color:#ccc;padding:3px 4px;">—</td>
+            <td></td>
+          </tr>
+          <!-- Multiplier row -->
+          <tr>
+            <th style="text-align:left;padding-left:10px;background:#fff;font-weight:400;color:#888;">Multi</th>
+            <td class="cur" style="text-align:center;font-size:10px;font-weight:700;color:#000;padding:3px 4px;">4×</td>
+            <td style="text-align:center;font-size:10px;color:#888;padding:3px 4px;">1×</td>
+            <td style="text-align:center;font-size:10px;font-weight:700;color:#000;padding:3px 4px;">2×</td>
+            <td style="text-align:center;font-size:10px;color:#ccc;padding:3px 4px;">—</td>
+            <td style="text-align:center;font-size:10px;color:#ccc;padding:3px 4px;">—</td>
+            <td style="text-align:center;font-size:10px;color:#ccc;padding:3px 4px;">—</td>
+            <td style="text-align:center;font-size:10px;color:#ccc;padding:3px 4px;">—</td>
+            <td style="text-align:center;font-size:10px;color:#ccc;padding:3px 4px;">—</td>
+            <td style="text-align:center;font-size:10px;color:#ccc;padding:3px 4px;">—</td>
+            <td></td>
+          </tr>
+        </thead>
+        <tbody>
+
+          <!-- ── TREVOR ── -->
+          <tr style="border-top:2px solid #000;background:#f9f9f9;">
+            <td rowspan="3" style="font-weight:700;padding-left:10px;vertical-align:top;padding-top:8px;background:#f9f9f9;">Trevor</td>
+            <!-- H1 cur -->
+            <td class="cur" style="text-align:center;font-weight:700;font-size:13px;padding:6px 4px;">4</td>
+            <!-- H2 -->
+            <td style="text-align:center;font-size:13px;padding:6px 4px;">6</td>
+            <!-- H3 -->
+            <td style="text-align:center;font-size:13px;padding:6px 4px;color:#aaa;">—</td>
+            <td style="text-align:center;font-size:13px;padding:6px 4px;color:#ccc;">—</td>
+            <td style="text-align:center;color:#ccc;padding:6px 4px;">—</td><td style="text-align:center;color:#ccc;padding:6px 4px;">—</td><td style="text-align:center;color:#ccc;padding:6px 4px;">—</td><td style="text-align:center;color:#ccc;padding:6px 4px;">—</td><td style="text-align:center;color:#ccc;padding:6px 4px;">—</td>
+            <td style="font-weight:700;text-align:center;">10</td>
+          </tr>
+          <tr style="background:#f9f9f9;">
+            <td class="cur" style="text-align:center;font-size:10px;color:#888;padding:2px 4px;border-top:none;">B · $5</td>
+            <td style="text-align:center;font-size:10px;color:#888;padding:2px 4px;border-top:none;">—</td>
+            <td style="text-align:center;font-size:10px;color:#aaa;padding:2px 4px;border-top:none;">—</td>
+            <td colspan="6" style="border-top:none;"></td><td style="border-top:none;"></td>
+          </tr>
+          <tr style="background:#f9f9f9;border-bottom:2px solid #000;">
+            <td class="cur" style="text-align:center;font-size:11px;font-weight:700;color:#000;padding:3px 4px;border-top:none;">+$20</td>
+            <td style="text-align:center;font-size:11px;font-weight:700;color:#000;padding:3px 4px;border-top:none;">+$9</td>
+            <td style="text-align:center;font-size:11px;color:#aaa;padding:3px 4px;border-top:none;">—</td>
+            <td colspan="6" style="border-top:none;"></td><td style="border-top:none;"></td>
+          </tr>
+
+          <!-- ── BOB ── -->
+          <tr style="background:#fff;">
+            <td rowspan="3" style="font-weight:700;padding-left:10px;vertical-align:top;padding-top:8px;">Bob</td>
+            <td class="cur" style="text-align:center;font-weight:700;font-size:13px;padding:6px 4px;">5</td>
+            <td style="text-align:center;font-size:13px;padding:6px 4px;">4</td>
+            <td style="text-align:center;font-size:13px;color:#aaa;padding:6px 4px;">—</td>
+            <td style="text-align:center;color:#ccc;padding:6px 4px;">—</td>
+            <td style="text-align:center;color:#ccc;padding:6px 4px;">—</td><td style="text-align:center;color:#ccc;padding:6px 4px;">—</td><td style="text-align:center;color:#ccc;padding:6px 4px;">—</td><td style="text-align:center;color:#ccc;padding:6px 4px;">—</td><td style="text-align:center;color:#ccc;padding:6px 4px;">—</td>
+            <td style="font-weight:700;text-align:center;">9</td>
+          </tr>
+          <tr>
+            <td class="cur" style="text-align:center;font-size:10px;color:#888;padding:2px 4px;border-top:none;">$5 · 4×</td>
+            <td style="text-align:center;font-size:10px;color:#888;padding:2px 4px;border-top:none;">B · $5</td>
+            <td style="text-align:center;font-size:10px;color:#aaa;padding:2px 4px;border-top:none;">$5</td>
+            <td colspan="6" style="border-top:none;"></td><td style="border-top:none;"></td>
+          </tr>
+          <tr style="border-bottom:2px solid #000;">
+            <td class="cur" style="text-align:center;font-size:11px;font-weight:700;color:#000;padding:3px 4px;border-top:none;">−$20</td>
+            <td style="text-align:center;font-size:11px;font-weight:700;color:#000;padding:3px 4px;border-top:none;">+$9</td>
+            <td style="text-align:center;font-size:11px;color:#aaa;padding:3px 4px;border-top:none;">—</td>
+            <td colspan="6" style="border-top:none;"></td><td style="border-top:none;"></td>
+          </tr>
+
+          <!-- ── JOHN ── -->
+          <tr style="background:#f9f9f9;">
+            <td rowspan="3" style="font-weight:700;padding-left:10px;vertical-align:top;padding-top:8px;background:#f9f9f9;">John</td>
+            <td class="cur" style="text-align:center;font-weight:700;font-size:13px;padding:6px 4px;">6</td>
+            <td style="text-align:center;font-size:13px;padding:6px 4px;">3</td>
+            <td style="text-align:center;font-size:13px;color:#aaa;padding:6px 4px;">—</td>
+            <td style="text-align:center;color:#ccc;padding:6px 4px;">—</td>
+            <td style="text-align:center;color:#ccc;padding:6px 4px;">—</td><td style="text-align:center;color:#ccc;padding:6px 4px;">—</td><td style="text-align:center;color:#ccc;padding:6px 4px;">—</td><td style="text-align:center;color:#ccc;padding:6px 4px;">—</td><td style="text-align:center;color:#ccc;padding:6px 4px;">—</td>
+            <td style="font-weight:700;text-align:center;">9</td>
+          </tr>
+          <tr style="background:#f9f9f9;">
+            <td class="cur" style="text-align:center;font-size:10px;color:#888;padding:2px 4px;border-top:none;">$4 · 2×</td>
+            <td style="text-align:center;font-size:10px;color:#888;padding:2px 4px;border-top:none;">$4</td>
+            <td style="text-align:center;font-size:10px;color:#aaa;padding:2px 4px;border-top:none;">$4</td>
+            <td colspan="6" style="border-top:none;"></td><td style="border-top:none;"></td>
+          </tr>
+          <tr style="background:#f9f9f9;border-bottom:2px solid #000;">
+            <td class="cur" style="text-align:center;font-size:11px;font-weight:700;color:#000;padding:3px 4px;border-top:none;">+$8</td>
+            <td style="text-align:center;font-size:11px;font-weight:700;color:#000;padding:3px 4px;border-top:none;">−$4</td>
+            <td style="text-align:center;font-size:11px;color:#aaa;padding:3px 4px;border-top:none;">—</td>
+            <td colspan="6" style="border-top:none;"></td><td style="border-top:none;"></td>
+          </tr>
+
+          <!-- ── TOM ── -->
+          <tr style="background:#fff;">
+            <td rowspan="3" style="font-weight:700;padding-left:10px;vertical-align:top;padding-top:8px;">Tom</td>
+            <td class="cur" style="text-align:center;font-weight:700;font-size:13px;padding:6px 4px;">7</td>
+            <td style="text-align:center;font-size:13px;padding:6px 4px;">4</td>
+            <td style="text-align:center;font-size:13px;color:#aaa;padding:6px 4px;">—</td>
+            <td style="text-align:center;color:#ccc;padding:6px 4px;">—</td>
+            <td style="text-align:center;color:#ccc;padding:6px 4px;">—</td><td style="text-align:center;color:#ccc;padding:6px 4px;">—</td><td style="text-align:center;color:#ccc;padding:6px 4px;">—</td><td style="text-align:center;color:#ccc;padding:6px 4px;">—</td><td style="text-align:center;color:#ccc;padding:6px 4px;">—</td>
+            <td style="font-weight:700;text-align:center;">11</td>
+          </tr>
+          <tr>
+            <td class="cur" style="text-align:center;font-size:10px;color:#888;padding:2px 4px;border-top:none;">$5</td>
+            <td style="text-align:center;font-size:10px;color:#888;padding:2px 4px;border-top:none;">$5</td>
+            <td style="text-align:center;font-size:10px;color:#aaa;padding:2px 4px;border-top:none;">$5</td>
+            <td colspan="6" style="border-top:none;"></td><td style="border-top:none;"></td>
+          </tr>
+          <tr style="border-bottom:2px solid #000;">
+            <td class="cur" style="text-align:center;font-size:11px;font-weight:700;color:#000;padding:3px 4px;border-top:none;">−$5</td>
+            <td style="text-align:center;font-size:11px;font-weight:700;color:#000;padding:3px 4px;border-top:none;">−$5</td>
+            <td style="text-align:center;font-size:11px;color:#aaa;padding:3px 4px;border-top:none;">—</td>
+            <td colspan="6" style="border-top:none;"></td><td style="border-top:none;"></td>
+          </tr>
+
+          <!-- ── RUNNING TOTAL ── -->
+          <tr style="background:#000;">
+            <td style="font-size:11px;font-weight:700;color:#fff;padding:6px 10px;text-transform:uppercase;letter-spacing:.05em;">Running $</td>
+            <td style="text-align:center;font-size:11px;font-weight:700;color:#fff;padding:6px 4px;">+$3</td>
+            <td style="text-align:center;font-size:11px;font-weight:700;color:#fff;padding:6px 4px;">+$9</td>
+            <td style="text-align:center;font-size:11px;color:#888;padding:6px 4px;">—</td>
+            <td colspan="6" style=""></td><td></td>
+          </tr>
+
+        </tbody>
+      </table>
+    </div>
+    <button class="sheet-cancel" onclick="closeSheet('sheet-scorecard')" style="margin-bottom:16px;">Close</button>
+  </div>
+</div>
+
+<!-- RULES SHEET -->
+<div class="sheet-overlay" id="sheet-rules" onclick="closeSheetOnBg(event,'sheet-rules')">
+  <div class="rules-sheet">
+    <div class="sheet-handle"></div>
+    <div style="display:flex;justify-content:space-between;align-items:center;padding:14px 16px;border-bottom:2px solid #000;">
+      <span style="font-size:16px;font-weight:700;color:#000;">How to play Banker</span>
+      <button onclick="closeSheet('sheet-rules')" style="background:none;border:none;font-size:20px;cursor:pointer;color:#000;">✕</button>
+    </div>
+    <div class="rules-content">
+      <div class="rules-sub">3–8 players · Rotating banker each hole</div>
+      <div class="rules-section">Overview</div>
+      <div class="rules-body">One player is the Banker each hole. All other players bet against the banker. The player with the lowest net score wins their individual matchup against the banker.</div>
+      <div class="rules-section">Each hole</div>
+      <div class="rules-body">
+        <ol>
+          <li>Select the banker for the hole</li>
+          <li>Each non-banker sets their bet amount</li>
+          <li>Any player can double their bet (2×)</li>
+          <li>If a player doubles, the banker may double back (4×)</li>
+          <li>Enter gross scores for all players</li>
+          <li>Net scores are compared vs the banker</li>
+        </ol>
+      </div>
+      <div class="rules-section">Scoring</div>
+      <div class="rules-body">
+        <ul>
+          <li>If a player's net score beats the banker → player wins their bet</li>
+          <li>If the banker's net score beats a player → banker wins that bet</li>
+          <li>Tied → push, no money changes hands</li>
+          <li>The banker's total is the sum of all individual matchups</li>
+        </ul>
+      </div>
+      <div class="rules-section">Rotation modes</div>
+      <div class="rules-body">
+        <ul>
+          <li>Fixed — same banker all round</li>
+          <li>Every hole — rotates through players</li>
+          <li>Every 9 — one banker per nine</li>
+          <li>Player choice — group picks each hole</li>
+        </ul>
+      </div>
+      <div class="rules-section">Strategy</div>
+      <div class="rules-body">Being banker is high risk, high reward — you play against everyone at once. When you're hot, being banker is very profitable. When you're cold, losses stack fast.</div>
+    </div>
+    <div style="padding:0 16px 16px;">
+      <button class="full-btn" onclick="closeSheet('sheet-rules')">Got it</button>
+    </div>
+  </div>
+</div>
+
+<!-- SETTLE BOB -->
+<div class="sheet-overlay" id="sheet-settle-bob" onclick="closeSheetOnBg(event,'sheet-settle-bob')">
+  <div class="sheet">
+    <div class="sheet-handle"></div>
+    <div class="sheet-title">Settle up with Bob</div>
+    <div style="padding:16px;border-bottom:2px solid #000;">
+      <div style="font-size:15px;color:#888;margin-bottom:4px;">Bob owes you</div>
+      <div style="font-size:32px;font-weight:700;color:#000;">$20.00</div>
+      <div style="font-size:13px;color:#888;margin-top:4px;">Birch Creek GC · Mar 27</div>
+    </div>
+    <div class="sheet-item" onclick="markSettled('sheet-settle-bob','Bob')">Mark as settled</div>
+    <button class="sheet-cancel" onclick="closeSheet('sheet-settle-bob')">Cancel</button>
+  </div>
+</div>
+
+<!-- SETTLE JOHN -->
+<div class="sheet-overlay" id="sheet-settle-john" onclick="closeSheetOnBg(event,'sheet-settle-john')">
+  <div class="sheet">
+    <div class="sheet-handle"></div>
+    <div class="sheet-title">Settle up with John</div>
+    <div style="padding:16px;border-bottom:2px solid #000;">
+      <div style="font-size:15px;color:#888;margin-bottom:4px;">John owes you</div>
+      <div style="font-size:32px;font-weight:700;color:#000;">$4.00</div>
+      <div style="font-size:13px;color:#888;margin-top:4px;">Birch Creek GC · Mar 27</div>
+    </div>
+    <div class="sheet-item" onclick="markSettled('sheet-settle-john','John')">Mark as settled</div>
+    <button class="sheet-cancel" onclick="closeSheet('sheet-settle-john')">Cancel</button>
+  </div>
+</div>
+
+<!-- SETTLE TOM -->
+<div class="sheet-overlay" id="sheet-settle-tom" onclick="closeSheetOnBg(event,'sheet-settle-tom')">
+  <div class="sheet">
+    <div class="sheet-handle"></div>
+    <div class="sheet-title">Settle up with Tom</div>
+    <div style="padding:16px;border-bottom:2px solid #000;">
+      <div style="font-size:15px;color:#888;margin-bottom:4px;">Tom owes you</div>
+      <div style="font-size:32px;font-weight:700;color:#000;">$5.00</div>
+      <div style="font-size:13px;color:#888;margin-top:4px;">Birch Creek GC · Mar 27</div>
+    </div>
+    <div class="sheet-item" onclick="markSettled('sheet-settle-tom','Tom')">Mark as settled</div>
+    <button class="sheet-cancel" onclick="closeSheet('sheet-settle-tom')">Cancel</button>
+  </div>
+</div>
+
+<!-- NUMPAD -->
+<div class="numpad-overlay" id="numpad-overlay" onclick="closeSheetOnBg(event,'numpad-overlay')">
+  <div class="numpad-sheet">
+    <div class="numpad-header">
+      <div class="numpad-title" id="numpad-title">Bob's bet</div>
+      <div class="numpad-value" id="numpad-display">$5</div>
+    </div>
+    <div class="numpad-grid">
+      <button class="np-btn" onclick="npPress('1')">1</button>
+      <button class="np-btn" onclick="npPress('2')">2</button>
+      <button class="np-btn" onclick="npPress('3')">3</button>
+      <button class="np-btn" onclick="npPress('4')">4</button>
+      <button class="np-btn" onclick="npPress('5')">5</button>
+      <button class="np-btn" onclick="npPress('6')">6</button>
+      <button class="np-btn" onclick="npPress('7')">7</button>
+      <button class="np-btn" onclick="npPress('8')">8</button>
+      <button class="np-btn" onclick="npPress('9')">9</button>
+      <button class="np-btn del" onclick="npPress('del')">⌫</button>
+      <button class="np-btn" onclick="npPress('0')">0</button>
+      <button class="np-btn confirm" onclick="npConfirm()">Done</button>
+    </div>
+  </div>
+</div>
+
+<!-- TOAST -->
+<div class="toast" id="toast"></div>
+
+</div><!-- end device -->
+
+<script>
+// Navigation
+function go(id) {
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+  closeAllSheets();
+}
+
+// Sheets
+function openSheet(id) {
+  document.getElementById(id).classList.add('open');
+}
+function closeSheet(id) {
+  document.getElementById(id).classList.remove('open');
+}
+function closeAllSheets() {
+  document.querySelectorAll('.sheet-overlay,.numpad-overlay').forEach(s => s.classList.remove('open'));
+}
+function closeSheetOnBg(e, id) {
+  if (e.target === document.getElementById(id)) closeSheet(id);
+}
+
+// Score +/-
+function adjustScore(btn, delta) {
+  const ctrl = btn.closest('.score-ctrl');
+  const num = ctrl.querySelector('.sc-num');
+  let v = parseInt(num.textContent) + delta;
+  if (v < 1) v = 1;
+  if (v > 12) v = 12;
+  num.textContent = v;
+}
+
+// Player double — enables banker double when any player doubles
+function togglePlayerDouble(btn) {
+  btn.classList.toggle('on');
+  const anyDoubled = document.querySelectorAll('#s-hole-bets .dbl-btn.on').length > 0;
+  const bankerDbl = document.getElementById('banker-dbl');
+  bankerDbl.disabled = !anyDoubled;
+  bankerDbl.style.opacity = anyDoubled ? '1' : '0.3';
+  if (!anyDoubled) bankerDbl.classList.remove('on');
+}
+
+// Banker double
+function toggleBankerDouble(btn) {
+  if (!btn.disabled) btn.classList.toggle('on');
+}
+
+// Banker select from sheet
+function selectBanker(name) {
+  document.querySelector('.bn').textContent = name;
+  document.querySelectorAll('#sheet-banker .sheet-item').forEach(i => i.classList.remove('selected'));
+  event.target.classList.add('selected');
+  setTimeout(() => closeSheet('sheet-banker'), 200);
+}
+
+// Course select
+function selectCourse(row) {
+  const parent = row.closest('.scroll');
+  parent.querySelectorAll('.li-check').forEach(c => { c.classList.remove('on'); c.classList.add('add'); c.textContent = '+'; });
+  const check = row.querySelector('.li-check');
+  check.classList.add('on'); check.classList.remove('add'); check.textContent = '✓';
+}
+
+// Tee select
+function setTee(btn) {
+  const group = btn.closest('.tee-chips');
+  group.querySelectorAll('.tee-chip').forEach(c => c.classList.remove('active'));
+  btn.classList.add('active');
+}
+
+// Toggle player check
+function toggleCheck(row) {
+  const c = row.querySelector('.li-check');
+  if (c.classList.contains('on')) { c.classList.remove('on'); c.classList.add('add'); c.textContent = '+'; }
+  else { c.classList.remove('add'); c.classList.add('on'); c.textContent = '✓'; }
+}
+
+// Holes toggle
+function setHoles(btn) {
+  btn.closest('.holes-toggle').querySelectorAll('.holes-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+}
+
+// HC edit via numpad
+let npHCTarget = null;
+function editHC(id) {
+  npHCTarget = id;
+  npCurrent = '';
+  const playerName = id.replace('hc-','');
+  document.getElementById('numpad-title').textContent = playerName.charAt(0).toUpperCase() + playerName.slice(1) + "'s handicap";
+  document.getElementById('numpad-display').textContent = '—';
+  document.getElementById('numpad-overlay').classList.add('open');
+}
+
+
+// Numpad
+let npCurrent = '';
+let npTarget = null;
+
+function openNumpad(playerName) {
+  npHCTarget = null;
+  document.getElementById('numpad-title').textContent = playerName + "'s bet";
+  npCurrent = '';
+  document.getElementById('numpad-display').textContent = '$—';
+  document.getElementById('numpad-overlay').classList.add('open');
+}
+function npPress(val) {
+  if (val === 'del') { npCurrent = npCurrent.slice(0,-1); }
+  else if (npCurrent.length < 3) { npCurrent += val; }
+  const prefix = npHCTarget ? '' : '$';
+  document.getElementById('numpad-display').textContent = npCurrent ? prefix + npCurrent : (npHCTarget ? '—' : '$—');
+}
+function npConfirm() {
+  if (npHCTarget && npCurrent) {
+    document.getElementById(npHCTarget).textContent = parseInt(npCurrent);
+    npHCTarget = null;
+  } else if (npCurrent) {
+    showToast('Bet set to $' + npCurrent);
+  }
+  npCurrent = '';
+  closeSheet('numpad-overlay');
+}
+
+// Ledger settle
+function markSettled(sheetId, name) {
+  closeSheet(sheetId);
+  showToast(name + ' marked as settled');
+}
+
+// Toast
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 2200);
+}
+
+// Add ledger link to history screen
+document.addEventListener('DOMContentLoaded', () => {
+  const histHeader = document.querySelector('#s-history .screen-header');
+  const ledgerBtn = document.createElement('button');
+  ledgerBtn.className = 'header-btn';
+  ledgerBtn.textContent = 'Ledger';
+  ledgerBtn.onclick = () => go('s-ledger');
+  histHeader.appendChild(ledgerBtn);
+});
+</script>
+</body>
+</html>
