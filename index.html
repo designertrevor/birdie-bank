@@ -286,6 +286,54 @@ body {
 .rules-body { font-size: 14px; color: #000; line-height: 1.6; }
 .rules-body li { margin-left: 16px; margin-bottom: 6px; }
 
+/* NASSAU MATCH STATUS */
+.match-status { display: flex; border-bottom: 2px solid #000; flex-shrink: 0; }
+.ms-tile { flex: 1; padding: 10px 6px; text-align: center; border-right: 2px solid #000; }
+.ms-tile:last-child { border-right: none; }
+.ms-lbl { display: block; font-size: 10px; color: #888; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 2px; }
+.ms-val { display: block; font-size: 17px; font-weight: 700; color: #000; }
+.ms-sub { display: block; font-size: 10px; color: #aaa; margin-top: 1px; }
+.ms-tile.ahead { background: #000; }
+.ms-tile.ahead .ms-lbl { color: #888; }
+.ms-tile.ahead .ms-val { color: #fff; }
+.ms-tile.ahead .ms-sub { color: #888; }
+.ms-tile.behind .ms-val { color: #888; }
+
+.press-bar { padding: 8px 16px; border-bottom: 2px solid #000; background: #f5f5f5; flex-shrink: 0; display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+.press-bar-lbl { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: .05em; color: #888; }
+.press-chip { font-size: 11px; font-weight: 700; border: 2px solid #000; padding: 3px 8px; background: #fff; }
+.press-alert { padding: 12px 16px; border-bottom: 2px solid #000; background: #f5f5f5; flex-shrink: 0; }
+.press-alert-row { display: flex; align-items: center; justify-content: space-between; }
+.press-alert-row + .press-alert-row { margin-top: 10px; }
+.press-alert-txt { font-size: 13px; font-weight: 600; color: #000; }
+.press-call-btn { font-size: 12px; font-weight: 700; border: 2px solid #000; padding: 6px 12px; background: #000; color: #fff; cursor: pointer; }
+
+/* TOGGLE SWITCH */
+.toggle-row { display: flex; align-items: center; justify-content: space-between; padding: 14px 16px; border-bottom: 2px solid #000; }
+.toggle-lbl { font-size: 15px; font-weight: 600; color: #000; }
+.toggle-sub { font-size: 13px; color: #888; margin-top: 2px; }
+.tog { width: 52px; height: 30px; border: 2px solid #000; background: #fff; position: relative; cursor: pointer; flex-shrink: 0; transition: background .15s; }
+.tog.on { background: #000; }
+.tog::after { content:''; position:absolute; top:3px; left:3px; width:20px; height:20px; background:#000; transition:left .15s; }
+.tog.on::after { left:25px; background:#fff; }
+
+/* NASSAU SETUP */
+.nassau-bet-row { display: flex; align-items: center; justify-content: space-between; padding: 14px 16px; border-bottom: 1.5px solid #e8e8e8; }
+.nassau-bet-lbl { font-size: 15px; font-weight: 600; color: #000; }
+.nassau-bet-btn { font-size: 20px; font-weight: 700; border: 2px solid #000; padding: 8px 16px; background: #fff; color: #000; cursor: pointer; min-width: 72px; text-align: center; }
+.press-mode-row { display: flex; }
+.pm-btn { flex: 1; height: 44px; border: 2px solid #000; border-right: none; font-size: 13px; font-weight: 700; cursor: pointer; background: #fff; color: #000; }
+.pm-btn:last-child { border-right: 2px solid #000; }
+.pm-btn.active { background: #000; color: #fff; }
+
+/* NASSAU RESULTS */
+.leg-row { display: flex; align-items: center; padding: 14px 16px; border-bottom: 2px solid #000; }
+.leg-name { font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: .06em; color: #888; width: 56px; flex-shrink: 0; }
+.leg-winner { font-size: 16px; font-weight: 700; color: #000; flex: 1; }
+.leg-tie { color: #bbb !important; }
+.leg-amt { font-size: 17px; font-weight: 700; color: #000; }
+.leg-amt.zero { color: #bbb; }
+
 /* TOAST */
 .toast { position: absolute; bottom: 96px; left: 50%; transform: translateX(-50%); background: #000; color: #fff; padding: 10px 20px; font-size: 13px; font-weight: 600; white-space: nowrap; opacity: 0; pointer-events: none; transition: opacity 0.2s; z-index: 200; }
 .toast.show { opacity: 1; }
@@ -372,23 +420,29 @@ body {
     <div class="step">Start</div>
   </div>
   <div class="scroll">
-    <div class="game-row selected" onclick="showToast('Banker selected')">
+    <div class="game-row selected" id="game-row-banker" onclick="selectGame('banker')">
       <div>
         <div style="display:flex;align-items:center;gap:8px;">
           <div class="gn">Banker</div>
-          <button onclick="event.stopPropagation();openSheet('sheet-rules')" style="font-size:11px;font-weight:700;border:2px solid #fff;border-radius:0;padding:2px 7px;background:transparent;color:#fff;cursor:pointer;flex-shrink:0;">Rules</button>
+          <button onclick="event.stopPropagation();openSheet('sheet-rules')" style="font-size:11px;font-weight:700;border:2px solid #fff;border-radius:0;padding:2px 7px;background:transparent;color:#fff;cursor:pointer;flex-shrink:0;" id="banker-rules-btn">Rules</button>
         </div>
         <div class="gs">3–8 players · Rotating banker each hole</div>
       </div>
-      <span style="font-size:13px;font-weight:700;color:#fff;">&#10003;</span>
+      <span style="font-size:13px;font-weight:700;color:#fff;" id="banker-check">&#10003;</span>
     </div>
     <div class="game-row locked">
       <div><div class="gn">Skins</div><div class="gs">2–8 players · Win the hole outright</div></div>
       <div style="display:flex;align-items:center;gap:8px;"><div class="lock-tag">Unlock</div></div>
     </div>
-    <div class="game-row locked">
-      <div><div class="gn">Nassau</div><div class="gs">2–4 players · Front 9, back 9, total</div></div>
-      <div style="display:flex;align-items:center;gap:8px;"><div class="lock-tag">Unlock</div></div>
+    <div class="game-row" id="game-row-nassau" onclick="selectGame('nassau')">
+      <div>
+        <div style="display:flex;align-items:center;gap:8px;">
+          <div class="gn">Nassau</div>
+          <button onclick="event.stopPropagation();openSheet('sheet-nassau-rules')" style="font-size:11px;font-weight:700;border:2px solid #000;border-radius:0;padding:2px 7px;background:transparent;color:#000;cursor:pointer;flex-shrink:0;" id="nassau-rules-btn">Rules</button>
+        </div>
+        <div class="gs">2 players · Front 9, back 9, total</div>
+      </div>
+      <span style="font-size:13px;font-weight:700;display:none;" id="nassau-check">&#10003;</span>
     </div>
     <div class="game-row locked">
       <div><div class="gn">Wolf</div><div class="gs">4 players exactly · Rotating wolf</div></div>
@@ -449,7 +503,7 @@ body {
     </div>
   </div>
   <div class="cta-wrap">
-    <button class="full-btn" onclick="go('s-play-players')">Next — Players →</button>
+    <button class="full-btn" onclick="goToPlayers()">Next — Players →</button>
   </div>
 </div>
 
@@ -1150,6 +1204,251 @@ body {
   </div>
 </div>
 
+<!-- ===================== NASSAU: PLAYERS ===================== -->
+<div class="screen" id="s-nassau-players">
+  <div class="screen-header">
+    <button class="header-back" onclick="go('s-play-game')">←</button>
+    <span class="screen-title" style="font-size:18px;">New round</span>
+    <button class="header-close" onclick="go('s-history')">✕</button>
+  </div>
+  <div class="step-bar">
+    <div class="step done">Game</div>
+    <div class="step active">Players</div>
+    <div class="step">Setup</div>
+    <div class="step">Start</div>
+  </div>
+  <div class="scroll">
+    <div class="toggle-row">
+      <div>
+        <div class="toggle-lbl">Use handicaps</div>
+        <div class="toggle-sub">Strokes applied per hole by difficulty</div>
+      </div>
+      <div class="tog" id="hc-toggle" onclick="toggleNassauHC()"></div>
+    </div>
+    <!-- Player 1 -->
+    <div style="padding:16px;border-bottom:2px solid #000;">
+      <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:#888;margin-bottom:8px;">Player 1</div>
+      <input type="text" id="np-name-0" value="You" style="font-size:22px;font-weight:700;border:none;border-bottom:2px solid #000;padding:4px 0;width:100%;outline:none;background:transparent;color:#000;">
+      <div id="np-hc-row-0" style="display:none;margin-top:14px;">
+        <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:#888;margin-bottom:8px;">Handicap</div>
+        <button onclick="npEditNassauHC(0)" style="font-size:20px;font-weight:700;border:2px solid #000;padding:8px 18px;background:#fff;color:#000;cursor:pointer;" id="np-hc-btn-0">0</button>
+      </div>
+    </div>
+    <!-- Player 2 -->
+    <div style="padding:16px;border-bottom:2px solid #000;">
+      <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:#888;margin-bottom:8px;">Player 2</div>
+      <input type="text" id="np-name-1" value="Opponent" style="font-size:22px;font-weight:700;border:none;border-bottom:2px solid #000;padding:4px 0;width:100%;outline:none;background:transparent;color:#000;">
+      <div id="np-hc-row-1" style="display:none;margin-top:14px;">
+        <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:#888;margin-bottom:8px;">Handicap</div>
+        <button onclick="npEditNassauHC(1)" style="font-size:20px;font-weight:700;border:2px solid #000;padding:8px 18px;background:#fff;color:#000;cursor:pointer;" id="np-hc-btn-1">0</button>
+      </div>
+    </div>
+  </div>
+  <div class="cta-wrap">
+    <button class="full-btn" onclick="go('s-nassau-config')">Next — Setup →</button>
+  </div>
+</div>
+
+<!-- ===================== NASSAU: CONFIG ===================== -->
+<div class="screen" id="s-nassau-config">
+  <div class="screen-header">
+    <button class="header-back" onclick="go('s-nassau-players')">←</button>
+    <span class="screen-title" style="font-size:18px;">New round</span>
+    <button class="header-close" onclick="go('s-history')">✕</button>
+  </div>
+  <div class="step-bar">
+    <div class="step done">Game</div>
+    <div class="step done">Players</div>
+    <div class="step active">Setup</div>
+    <div class="step">Start</div>
+  </div>
+  <div class="scroll">
+    <div class="sec-label">Bet amounts</div>
+    <div class="nassau-bet-row">
+      <div class="nassau-bet-lbl">Front 9</div>
+      <button class="nassau-bet-btn" id="bet-front" onclick="npEditBet('front')">$5</button>
+    </div>
+    <div class="nassau-bet-row">
+      <div class="nassau-bet-lbl">Back 9</div>
+      <button class="nassau-bet-btn" id="bet-back" onclick="npEditBet('back')">$5</button>
+    </div>
+    <div class="nassau-bet-row" style="border-bottom:2px solid #000;">
+      <div class="nassau-bet-lbl">Total 18</div>
+      <button class="nassau-bet-btn" id="bet-total" onclick="npEditBet('total')">$5</button>
+    </div>
+    <div class="sec-label">Press</div>
+    <div style="padding:14px 16px;border-bottom:2px solid #000;">
+      <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:#888;margin-bottom:10px;">Mode</div>
+      <div class="press-mode-row">
+        <button class="pm-btn active" id="pm-off" onclick="setPressMode('off')">Off</button>
+        <button class="pm-btn" id="pm-manual" onclick="setPressMode('manual')">Manual</button>
+        <button class="pm-btn" id="pm-auto" onclick="setPressMode('auto')">Auto</button>
+      </div>
+    </div>
+    <div id="press-threshold-row" style="display:none;padding:14px 16px;border-bottom:2px solid #000;">
+      <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:#888;margin-bottom:10px;">Auto-press when down by</div>
+      <div style="display:flex;align-items:center;gap:12px;">
+        <button onclick="npEditThreshold()" style="font-size:20px;font-weight:700;border:2px solid #000;padding:8px 18px;background:#fff;color:#000;cursor:pointer;min-width:60px;text-align:center;" id="threshold-btn">2</button>
+        <span style="font-size:15px;color:#888;">holes</span>
+      </div>
+    </div>
+    <div id="press-desc-manual" style="display:none;padding:12px 16px;border-bottom:2px solid #000;background:#fafafa;">
+      <div style="font-size:13px;color:#666;line-height:1.6;">A <strong>Press</strong> button appears during the round when a player is eligible to call one. The trailing player can press at any time once eligible.</div>
+    </div>
+    <div id="press-desc-auto" style="display:none;padding:12px 16px;border-bottom:2px solid #000;background:#fafafa;">
+      <div style="font-size:13px;color:#666;line-height:1.6;">A press triggers automatically when a player falls the set number of holes behind on any leg. A new side bet starts from that hole forward.</div>
+    </div>
+  </div>
+  <div class="cta-wrap">
+    <button class="full-btn" onclick="startNassauRound()">Start Round →</button>
+  </div>
+</div>
+
+<!-- ===================== NASSAU: HOLE ===================== -->
+<div class="screen" id="s-nassau-hole">
+  <div class="hole-meta">
+    <div class="mc"><span class="ml">Hole</span><span class="mv" id="nh-hole">1</span></div>
+    <div class="mc"><span class="ml">Par</span><span class="mv" id="nh-par">5</span></div>
+    <div class="mc"><span class="ml">Yards</span><span class="mv" id="nh-yards">500</span></div>
+    <div class="mc"><span class="ml">HDCP</span><span class="mv" id="nh-hdcp">7</span></div>
+  </div>
+  <div class="match-status">
+    <div class="ms-tile" id="ms-front">
+      <span class="ms-lbl">Front</span>
+      <span class="ms-val" id="ms-front-val">AS</span>
+      <span class="ms-sub" id="ms-front-sub"></span>
+    </div>
+    <div class="ms-tile" id="ms-back">
+      <span class="ms-lbl">Back</span>
+      <span class="ms-val" id="ms-back-val">—</span>
+      <span class="ms-sub" id="ms-back-sub">Starts H10</span>
+    </div>
+    <div class="ms-tile" id="ms-total">
+      <span class="ms-lbl">Total</span>
+      <span class="ms-val" id="ms-total-val">AS</span>
+      <span class="ms-sub" id="ms-total-sub"></span>
+    </div>
+  </div>
+  <div class="press-bar" id="nh-press-bar" style="display:none;">
+    <span class="press-bar-lbl">Presses:</span>
+    <span id="nh-press-chips"></span>
+  </div>
+  <div id="nh-press-alerts" style="display:none;" class="press-alert"></div>
+  <div style="padding:8px 16px;border-bottom:2px solid #000;flex-shrink:0;">
+    <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:#888;" id="nh-progress">Hole 1 of 18</div>
+  </div>
+  <div class="scroll">
+    <div style="display:flex;align-items:center;gap:12px;padding:20px 16px;border-bottom:2px solid #000;">
+      <div style="flex:1;">
+        <div style="font-size:18px;font-weight:700;color:#000;" id="nh-p0-name">You</div>
+        <div style="font-size:13px;color:#666;margin-top:3px;" id="nh-p0-sub"></div>
+      </div>
+      <div class="score-ctrl">
+        <button class="sc-btn" style="width:64px;height:64px;font-size:32px;" onclick="adjustNassauScore(0,-1)">−</button>
+        <span class="sc-num" style="width:52px;font-size:26px;" id="nh-score-0">4</span>
+        <button class="sc-btn" style="width:64px;height:64px;font-size:32px;" onclick="adjustNassauScore(0,1)">+</button>
+      </div>
+    </div>
+    <div style="display:flex;align-items:center;gap:12px;padding:20px 16px;border-bottom:2px solid #000;">
+      <div style="flex:1;">
+        <div style="font-size:18px;font-weight:700;color:#000;" id="nh-p1-name">Opponent</div>
+        <div style="font-size:13px;color:#666;margin-top:3px;" id="nh-p1-sub"></div>
+      </div>
+      <div class="score-ctrl">
+        <button class="sc-btn" style="width:64px;height:64px;font-size:32px;" onclick="adjustNassauScore(1,-1)">−</button>
+        <span class="sc-num" style="width:52px;font-size:26px;" id="nh-score-1">4</span>
+        <button class="sc-btn" style="width:64px;height:64px;font-size:32px;" onclick="adjustNassauScore(1,1)">+</button>
+      </div>
+    </div>
+    <div style="padding:12px 16px;background:#f5f5f5;border-bottom:2px solid #000;">
+      <div style="font-size:11px;color:#888;font-weight:700;text-transform:uppercase;letter-spacing:.05em;margin-bottom:4px;">This hole</div>
+      <div style="font-size:14px;font-weight:600;color:#000;" id="nh-net-preview">—</div>
+    </div>
+  </div>
+  <div style="padding:14px 16px;border-top:2px solid #000;flex-shrink:0;">
+    <button class="full-btn" id="nh-next-btn" onclick="nassauNextHole()">Save &amp; Next Hole →</button>
+  </div>
+</div>
+
+<!-- ===================== NASSAU: RESULTS ===================== -->
+<div class="screen" id="s-nassau-results">
+  <div class="screen-header"><span class="screen-title">Final results</span></div>
+  <div class="scroll">
+    <div class="detail-hdr">
+      <div class="dc">The Barn GC</div>
+      <div class="dm" id="nr-meta">Nassau · 18 holes</div>
+    </div>
+    <div class="sec-label">Leg results</div>
+    <div class="leg-row" id="nr-front">
+      <div class="leg-name">Front</div>
+      <div class="leg-winner">—</div>
+      <div class="leg-amt">—</div>
+    </div>
+    <div class="leg-row" id="nr-back">
+      <div class="leg-name">Back</div>
+      <div class="leg-winner">—</div>
+      <div class="leg-amt">—</div>
+    </div>
+    <div class="leg-row" id="nr-total">
+      <div class="leg-name">Total</div>
+      <div class="leg-winner">—</div>
+      <div class="leg-amt">—</div>
+    </div>
+    <div id="nr-presses-section" style="display:none;">
+      <div class="sec-label">Presses</div>
+      <div id="nr-presses"></div>
+    </div>
+    <div class="sec-label">Final payout</div>
+    <div style="padding:20px 16px;border-bottom:2px solid #000;" id="nr-payout">
+      <div style="font-size:20px;font-weight:700;color:#000;">—</div>
+    </div>
+  </div>
+  <div class="cta-wrap">
+    <button class="full-btn" onclick="showToast('Share — not built yet')">Share results</button>
+    <button class="full-btn outline" onclick="go('s-history')">Done</button>
+  </div>
+</div>
+
+<!-- NASSAU RULES SHEET -->
+<div class="sheet-overlay" id="sheet-nassau-rules" onclick="closeSheetOnBg(event,'sheet-nassau-rules')">
+  <div class="rules-sheet">
+    <div class="sheet-handle"></div>
+    <div style="display:flex;justify-content:space-between;align-items:center;padding:14px 16px;border-bottom:2px solid #000;">
+      <span style="font-size:16px;font-weight:700;color:#000;">How to play Nassau</span>
+      <button onclick="closeSheet('sheet-nassau-rules')" style="background:none;border:none;font-size:20px;cursor:pointer;color:#000;">✕</button>
+    </div>
+    <div class="rules-content">
+      <div class="rules-sub">2 players · Three separate bets in one round</div>
+      <div class="rules-section">Overview</div>
+      <div class="rules-body">Nassau is three bets in one: a wager on the front 9, the back 9, and the full 18 holes. You can win, lose, or tie each leg independently.</div>
+      <div class="rules-section">How it works</div>
+      <div class="rules-body">
+        <ol>
+          <li>Set a dollar amount for Front 9, Back 9, and Total</li>
+          <li>Play match play — each hole, the lower score wins that hole</li>
+          <li>Track your standing on each leg as you go</li>
+          <li>After hole 9, the front 9 leg is decided</li>
+          <li>After hole 18, back 9 and total are decided</li>
+        </ol>
+      </div>
+      <div class="rules-section">The Press</div>
+      <div class="rules-body">
+        <ul>
+          <li>If you're losing a leg by 2+ holes, you can "press"</li>
+          <li>A press starts a brand-new side bet from that hole forward</li>
+          <li>The original bet keeps going — presses add on top</li>
+          <li>Auto-press triggers automatically at your chosen threshold</li>
+        </ul>
+      </div>
+      <div class="rules-section">Ties</div>
+      <div class="rules-body">If a leg ends all square, no money changes hands for that leg.</div>
+    </div>
+    <div style="padding:0 16px 16px;">
+      <button class="full-btn" onclick="closeSheet('sheet-nassau-rules')">Got it</button>
+    </div>
+  </div>
+</div>
+
 <!-- NUMPAD -->
 <div class="numpad-overlay" id="numpad-overlay" onclick="closeSheetOnBg(event,'numpad-overlay')">
   <div class="numpad-sheet">
@@ -1277,22 +1576,41 @@ function editHC(id) {
 // Numpad
 let npCurrent = '';
 let npTarget = null;
+let npNassauTarget = null; // { type:'hc'|'bet'|'threshold', playerIdx?, leg? }
 
 function openNumpad(playerName) {
   npHCTarget = null;
+  npNassauTarget = null;
   document.getElementById('numpad-title').textContent = playerName + "'s bet";
   npCurrent = '';
   document.getElementById('numpad-display').textContent = '$—';
   document.getElementById('numpad-overlay').classList.add('open');
 }
+function npGetPrefix() {
+  if (npHCTarget) return '';
+  if (npNassauTarget) return npNassauTarget.type === 'bet' ? '$' : '';
+  return '$';
+}
 function npPress(val) {
   if (val === 'del') { npCurrent = npCurrent.slice(0,-1); }
   else if (npCurrent.length < 3) { npCurrent += val; }
-  const prefix = npHCTarget ? '' : '$';
-  document.getElementById('numpad-display').textContent = npCurrent ? prefix + npCurrent : (npHCTarget ? '—' : '$—');
+  const prefix = npGetPrefix();
+  const empty = prefix ? '$—' : '—';
+  document.getElementById('numpad-display').textContent = npCurrent ? prefix + npCurrent : empty;
 }
 function npConfirm() {
-  if (npHCTarget && npCurrent) {
+  if (npNassauTarget && npCurrent) {
+    const val = parseInt(npCurrent);
+    if (npNassauTarget.type === 'hc') {
+      document.getElementById('np-hc-btn-' + npNassauTarget.playerIdx).textContent = val;
+    } else if (npNassauTarget.type === 'bet') {
+      document.getElementById('bet-' + npNassauTarget.leg).textContent = '$' + val;
+    } else if (npNassauTarget.type === 'threshold') {
+      document.getElementById('threshold-btn').textContent = val;
+      nassau.press.threshold = val;
+    }
+    npNassauTarget = null;
+  } else if (npHCTarget && npCurrent) {
     document.getElementById(npHCTarget).textContent = parseInt(npCurrent);
     npHCTarget = null;
   } else if (npCurrent) {
@@ -1314,6 +1632,432 @@ function showToast(msg) {
   t.textContent = msg;
   t.classList.add('show');
   setTimeout(() => t.classList.remove('show'), 2200);
+}
+
+// ============================================================
+// NASSAU — COURSE DATA (The Barn, Ogden UT)
+// ============================================================
+const BARN_HOLES = [
+  { par:5, hdcp:7,  yards:500 },
+  { par:4, hdcp:11, yards:355 },
+  { par:5, hdcp:5,  yards:521 },
+  { par:3, hdcp:13, yards:162 },
+  { par:4, hdcp:1,  yards:435 },
+  { par:3, hdcp:17, yards:150 },
+  { par:4, hdcp:3,  yards:407 },
+  { par:3, hdcp:15, yards:175 },
+  { par:5, hdcp:9,  yards:450 },
+  { par:3, hdcp:6,  yards:187 },
+  { par:4, hdcp:10, yards:373 },
+  { par:4, hdcp:14, yards:322 },
+  { par:4, hdcp:12, yards:355 },
+  { par:3, hdcp:18, yards:144 },
+  { par:5, hdcp:4,  yards:511 },
+  { par:4, hdcp:8,  yards:391 },
+  { par:3, hdcp:16, yards:173 },
+  { par:5, hdcp:2,  yards:520 },
+];
+
+// ============================================================
+// NASSAU — STATE
+// ============================================================
+let selectedGame = 'banker';
+let nassauHcEnabled = false;
+
+let nassau = {
+  players: [{ name:'You', handicap:0 }, { name:'Opponent', handicap:0 }],
+  useHandicaps: false,
+  bets: { front:5, back:5, total:5 },
+  press: { mode:'off', threshold:2 },
+  scores: [],
+  presses: [],
+  currentHole: 1,
+  pressIdCounter: 0
+};
+
+// ============================================================
+// GAME SELECTION
+// ============================================================
+function selectGame(game) {
+  selectedGame = game;
+  document.querySelectorAll('.game-row').forEach(r => r.classList.remove('selected'));
+
+  if (game === 'banker') {
+    const row = document.getElementById('game-row-banker');
+    row.classList.add('selected');
+    document.getElementById('banker-check').style.color = '#fff';
+    document.getElementById('nassau-check').style.display = 'none';
+    document.getElementById('banker-rules-btn').style.borderColor = '#fff';
+    document.getElementById('banker-rules-btn').style.color = '#fff';
+    document.querySelectorAll('.holes-btn').forEach(b => { b.disabled = false; b.style.opacity = '1'; });
+  } else if (game === 'nassau') {
+    const row = document.getElementById('game-row-nassau');
+    row.classList.add('selected');
+    document.getElementById('nassau-check').style.display = '';
+    document.getElementById('nassau-check').style.color = '#fff';
+    document.getElementById('nassau-rules-btn').style.borderColor = '#fff';
+    document.getElementById('nassau-rules-btn').style.color = '#fff';
+    document.getElementById('banker-check').style.color = 'transparent';
+    document.getElementById('banker-rules-btn').style.borderColor = '';
+    document.getElementById('banker-rules-btn').style.color = '';
+    // Nassau is always 18 holes
+    document.querySelectorAll('.holes-btn').forEach(b => {
+      if (b.textContent.trim() === '9') {
+        b.classList.remove('active'); b.disabled = true; b.style.opacity = '0.3';
+      } else {
+        b.classList.add('active');
+      }
+    });
+  }
+}
+
+function goToPlayers() {
+  go(selectedGame === 'nassau' ? 's-nassau-players' : 's-play-players');
+}
+
+// ============================================================
+// NASSAU — PLAYER SETUP
+// ============================================================
+function toggleNassauHC() {
+  nassauHcEnabled = !nassauHcEnabled;
+  const tog = document.getElementById('hc-toggle');
+  nassauHcEnabled ? tog.classList.add('on') : tog.classList.remove('on');
+  [0,1].forEach(i => {
+    document.getElementById('np-hc-row-' + i).style.display = nassauHcEnabled ? 'block' : 'none';
+  });
+}
+
+function npEditNassauHC(playerIdx) {
+  npNassauTarget = { type:'hc', playerIdx };
+  npHCTarget = null;
+  npCurrent = '';
+  const name = document.getElementById('np-name-' + playerIdx).value || ('Player ' + (playerIdx+1));
+  document.getElementById('numpad-title').textContent = name + "'s handicap";
+  document.getElementById('numpad-display').textContent = '—';
+  document.getElementById('numpad-overlay').classList.add('open');
+}
+
+// ============================================================
+// NASSAU — CONFIG SETUP
+// ============================================================
+function npEditBet(leg) {
+  npNassauTarget = { type:'bet', leg };
+  npHCTarget = null;
+  npCurrent = '';
+  const labels = { front:'Front 9', back:'Back 9', total:'Total 18' };
+  document.getElementById('numpad-title').textContent = labels[leg] + ' bet';
+  document.getElementById('numpad-display').textContent = '$—';
+  document.getElementById('numpad-overlay').classList.add('open');
+}
+
+function npEditThreshold() {
+  npNassauTarget = { type:'threshold' };
+  npHCTarget = null;
+  npCurrent = '';
+  document.getElementById('numpad-title').textContent = 'Auto-press threshold (holes)';
+  document.getElementById('numpad-display').textContent = '—';
+  document.getElementById('numpad-overlay').classList.add('open');
+}
+
+function setPressMode(mode) {
+  nassau.press.mode = mode;
+  ['off','manual','auto'].forEach(m => {
+    document.getElementById('pm-' + m).classList.toggle('active', m === mode);
+  });
+  document.getElementById('press-threshold-row').style.display = mode === 'auto' ? 'block' : 'none';
+  document.getElementById('press-desc-manual').style.display = mode === 'manual' ? 'block' : 'none';
+  document.getElementById('press-desc-auto').style.display = mode === 'auto' ? 'block' : 'none';
+}
+
+// ============================================================
+// NASSAU — START ROUND
+// ============================================================
+function startNassauRound() {
+  nassau.players[0].name = document.getElementById('np-name-0').value.trim() || 'You';
+  nassau.players[1].name = document.getElementById('np-name-1').value.trim() || 'Opponent';
+  nassau.players[0].handicap = parseInt(document.getElementById('np-hc-btn-0').textContent) || 0;
+  nassau.players[1].handicap = parseInt(document.getElementById('np-hc-btn-1').textContent) || 0;
+  nassau.useHandicaps = nassauHcEnabled;
+  nassau.bets.front  = parseInt(document.getElementById('bet-front').textContent.replace('$','')) || 5;
+  nassau.bets.back   = parseInt(document.getElementById('bet-back').textContent.replace('$','')) || 5;
+  nassau.bets.total  = parseInt(document.getElementById('bet-total').textContent.replace('$','')) || 5;
+  nassau.press.threshold = parseInt(document.getElementById('threshold-btn').textContent) || 2;
+  nassau.scores = [];
+  nassau.presses = [];
+  nassau.currentHole = 1;
+  nassau.pressIdCounter = 0;
+  renderNassauHole();
+  go('s-nassau-hole');
+}
+
+// ============================================================
+// NASSAU — CALCULATIONS
+// ============================================================
+function nassauStrokesOnHole(playerHc, holeHdcp) {
+  if (playerHc <= 0) return 0;
+  const full = Math.floor(playerHc / 18);
+  const extra = playerHc % 18;
+  return full + (holeHdcp <= extra ? 1 : 0);
+}
+
+function nassauLegStatus(leg) {
+  const startHole = leg === 'back' ? 10 : 1;
+  const endHole   = leg === 'front' ? 9 : 18;
+  const legScores = nassau.scores.filter(s => s.hole >= startHole && s.hole <= endHole);
+  const wins = [0,0];
+  legScores.forEach(s => { if (s.winner === 0) wins[0]++; else if (s.winner === 1) wins[1]++; });
+  const holesPlayed = legScores.length;
+  const holesInLeg = endHole - startHole + 1;
+  const holesLeft = holesInLeg - holesPlayed;
+  const diff = wins[0] - wins[1];
+  return { leader: diff > 0 ? 0 : diff < 0 ? 1 : null, by: Math.abs(diff), holesPlayed, holesLeft, wins };
+}
+
+function nassauLegText(status, names, leg) {
+  if (status.holesPlayed === 0) {
+    if (leg === 'back' && nassau.currentHole <= 9) return { val:'—', sub:'Starts H10' };
+    return { val:'AS', sub:'' };
+  }
+  if (status.leader === null) return { val: status.holesLeft === 0 ? 'Tied' : 'AS', sub:'' };
+  const init = names[status.leader].charAt(0).toUpperCase();
+  const sub = status.holesLeft === 0 ? 'Final' : (status.by >= status.holesLeft ? 'Dormie' : '');
+  return { val: '+' + status.by + ' ' + init, sub };
+}
+
+// ============================================================
+// NASSAU — RENDER HOLE SCREEN
+// ============================================================
+function renderNassauHole() {
+  const hole = nassau.currentHole;
+  const hd = BARN_HOLES[hole - 1];
+  const names = nassau.players.map(p => p.name);
+
+  document.getElementById('nh-hole').textContent = hole;
+  document.getElementById('nh-par').textContent = hd.par;
+  document.getElementById('nh-yards').textContent = hd.yards;
+  document.getElementById('nh-hdcp').textContent = hd.hdcp;
+  document.getElementById('nh-progress').textContent = 'Hole ' + hole + ' of 18';
+  document.getElementById('nh-p0-name').textContent = names[0];
+  document.getElementById('nh-p1-name').textContent = names[1];
+
+  const strokes = nassau.players.map(p =>
+    nassau.useHandicaps ? nassauStrokesOnHole(p.handicap, hd.hdcp) : 0
+  );
+  document.getElementById('nh-p0-sub').textContent = nassau.useHandicaps
+    ? 'HC ' + nassau.players[0].handicap + (strokes[0] > 0 ? ' · gets a stroke' : '')
+    : '';
+  document.getElementById('nh-p1-sub').textContent = nassau.useHandicaps
+    ? 'HC ' + nassau.players[1].handicap + (strokes[1] > 0 ? ' · gets a stroke' : '')
+    : '';
+
+  document.getElementById('nh-score-0').textContent = hd.par;
+  document.getElementById('nh-score-1').textContent = hd.par;
+
+  const nextBtn = document.getElementById('nh-next-btn');
+  nextBtn.innerHTML = hole === 18 ? 'Finish Round →' : 'Save &amp; Next Hole →';
+
+  updateMatchStatus();
+  renderPressBar();
+  renderPressAlerts();
+  updateNetPreview();
+}
+
+function updateMatchStatus() {
+  const names = nassau.players.map(p => p.name);
+  ['front','back','total'].forEach(leg => {
+    const s = nassauLegStatus(leg);
+    const t = nassauLegText(s, names, leg);
+    document.getElementById('ms-' + leg + '-val').textContent = t.val;
+    document.getElementById('ms-' + leg + '-sub').textContent = t.sub;
+    const tile = document.getElementById('ms-' + leg);
+    tile.classList.remove('ahead','behind');
+    if (s.leader === 0) tile.classList.add('ahead');
+    else if (s.leader === 1) tile.classList.add('behind');
+  });
+}
+
+function renderPressBar() {
+  const active = nassau.presses.filter(p => p.active);
+  const bar = document.getElementById('nh-press-bar');
+  if (!active.length) { bar.style.display = 'none'; return; }
+  bar.style.display = 'flex';
+  const legLabel = l => l === 'front' ? 'F' : l === 'back' ? 'B' : 'T';
+  document.getElementById('nh-press-chips').innerHTML = active.map(p => {
+    const d = p.holesWon[0] - p.holesWon[1];
+    const status = d === 0 ? 'AS' : '+' + Math.abs(d) + ' ' + nassau.players[d > 0 ? 0 : 1].name.charAt(0);
+    return `<span class="press-chip">${legLabel(p.leg)}-Press: ${status}</span>`;
+  }).join('');
+}
+
+function renderPressAlerts() {
+  const el = document.getElementById('nh-press-alerts');
+  if (nassau.press.mode !== 'manual') { el.style.display = 'none'; return; }
+  const threshold = nassau.press.threshold;
+  const alerts = ['front','back','total'].filter(leg => {
+    const s = nassauLegStatus(leg);
+    if (s.holesLeft === 0 || s.leader === null || s.by < threshold) return false;
+    return !nassau.presses.some(p => p.leg === leg && p.active && p.startHole === nassau.currentHole);
+  }).map(leg => {
+    const s = nassauLegStatus(leg);
+    return { leg, trailing: nassau.players[1 - s.leader].name, by: s.by };
+  });
+  if (!alerts.length) { el.style.display = 'none'; return; }
+  el.style.display = 'block';
+  const legName = l => l === 'front' ? 'Front' : l === 'back' ? 'Back' : 'Total';
+  el.innerHTML = alerts.map(a =>
+    `<div class="press-alert-row">
+      <span class="press-alert-txt">${a.trailing} is ${a.by}-down on ${legName(a.leg)}</span>
+      <button class="press-call-btn" onclick="nassauCallPress('${a.leg}')">Press →</button>
+    </div>`
+  ).join('');
+}
+
+function updateNetPreview() {
+  const hole = nassau.currentHole;
+  const hd = BARN_HOLES[hole - 1];
+  const s0 = parseInt(document.getElementById('nh-score-0').textContent);
+  const s1 = parseInt(document.getElementById('nh-score-1').textContent);
+  const st0 = nassau.useHandicaps ? nassauStrokesOnHole(nassau.players[0].handicap, hd.hdcp) : 0;
+  const st1 = nassau.useHandicaps ? nassauStrokesOnHole(nassau.players[1].handicap, hd.hdcp) : 0;
+  const n0 = s0 - st0, n1 = s1 - st1;
+  const names = nassau.players.map(p => p.name);
+  let line = nassau.useHandicaps
+    ? `${names[0]}: ${s0} (net ${n0}) · ${names[1]}: ${s1} (net ${n1})`
+    : `${names[0]}: ${s0} · ${names[1]}: ${s1}`;
+  line += n0 < n1 ? ` → ${names[0]} wins` : n1 < n0 ? ` → ${names[1]} wins` : ' → Halved';
+  document.getElementById('nh-net-preview').textContent = line;
+}
+
+// ============================================================
+// NASSAU — SCORE ADJUSTMENT
+// ============================================================
+function adjustNassauScore(playerIdx, delta) {
+  const el = document.getElementById('nh-score-' + playerIdx);
+  let v = parseInt(el.textContent) + delta;
+  if (v < 1) v = 1; if (v > 12) v = 12;
+  el.textContent = v;
+  updateNetPreview();
+}
+
+// ============================================================
+// NASSAU — PRESS
+// ============================================================
+function nassauCallPress(leg) {
+  nassau.pressIdCounter++;
+  nassau.presses.push({ id:nassau.pressIdCounter, leg, startHole:nassau.currentHole, holesWon:[0,0], active:true });
+  renderPressBar();
+  renderPressAlerts();
+  const legName = leg === 'front' ? 'Front' : leg === 'back' ? 'Back' : 'Total';
+  showToast('Press called on ' + legName + '!');
+}
+
+function nassauCheckAutoPress() {
+  if (nassau.press.mode !== 'auto') return;
+  const threshold = nassau.press.threshold;
+  ['front','back','total'].forEach(leg => {
+    const s = nassauLegStatus(leg);
+    if (s.holesLeft === 0 || s.leader === null || s.by < threshold) return;
+    if (nassau.presses.some(p => p.leg === leg && p.active && p.startHole === nassau.currentHole)) return;
+    nassauCallPress(leg);
+  });
+}
+
+// ============================================================
+// NASSAU — NEXT HOLE
+// ============================================================
+function nassauNextHole() {
+  const hole = nassau.currentHole;
+  const hd = BARN_HOLES[hole - 1];
+  const s0 = parseInt(document.getElementById('nh-score-0').textContent);
+  const s1 = parseInt(document.getElementById('nh-score-1').textContent);
+  const st0 = nassau.useHandicaps ? nassauStrokesOnHole(nassau.players[0].handicap, hd.hdcp) : 0;
+  const st1 = nassau.useHandicaps ? nassauStrokesOnHole(nassau.players[1].handicap, hd.hdcp) : 0;
+  const net0 = s0 - st0, net1 = s1 - st1;
+  const winner = net0 < net1 ? 0 : net1 < net0 ? 1 : null;
+
+  nassau.scores.push({ hole, gross:[s0,s1], net:[net0,net1], winner });
+
+  nassau.presses.forEach(p => {
+    if (!p.active) return;
+    const endHole = p.leg === 'front' ? 9 : 18;
+    if (hole < p.startHole || hole > endHole) return;
+    if (winner !== null) p.holesWon[winner]++;
+    if (hole === endHole) p.active = false;
+  });
+
+  nassau.currentHole++;
+
+  if (nassau.currentHole > 18) {
+    // Close any still-active presses
+    nassau.presses.forEach(p => { p.active = false; });
+    renderNassauResults();
+    go('s-nassau-results');
+    return;
+  }
+
+  nassauCheckAutoPress();
+  renderNassauHole();
+}
+
+// ============================================================
+// NASSAU — RESULTS
+// ============================================================
+function renderNassauResults() {
+  const names = nassau.players.map(p => p.name);
+  const today = new Date().toLocaleDateString('en-US', { month:'short', day:'numeric' });
+  document.getElementById('nr-meta').textContent = today + ' · Nassau · 18 holes';
+
+  let net = 0; // positive = player 0 wins
+
+  ['front','back','total'].forEach(leg => {
+    const s = nassauLegStatus(leg);
+    const row = document.getElementById('nr-' + leg);
+    const wEl = row.querySelector('.leg-winner');
+    const aEl = row.querySelector('.leg-amt');
+    const bet = nassau.bets[leg];
+    if (s.leader === null) {
+      wEl.textContent = 'Tied'; wEl.className = 'leg-winner leg-tie';
+      aEl.textContent = '$0'; aEl.className = 'leg-amt zero';
+    } else {
+      wEl.textContent = names[s.leader] + ' (+' + s.by + ')'; wEl.className = 'leg-winner';
+      aEl.textContent = '$' + bet; aEl.className = 'leg-amt';
+      net += s.leader === 0 ? bet : -bet;
+    }
+  });
+
+  const completedPresses = nassau.presses;
+  if (completedPresses.length) {
+    document.getElementById('nr-presses-section').style.display = 'block';
+    const legName = l => l === 'front' ? 'Front' : l === 'back' ? 'Back' : 'Total';
+    document.getElementById('nr-presses').innerHTML = completedPresses.map(p => {
+      const d = p.holesWon[0] - p.holesWon[1];
+      const bet = nassau.bets[p.leg];
+      let winnerTxt, amtTxt;
+      if (d === 0) { winnerTxt = 'Tied'; amtTxt = '$0'; }
+      else {
+        const w = d > 0 ? 0 : 1;
+        winnerTxt = names[w]; amtTxt = '$' + bet;
+        net += w === 0 ? bet : -bet;
+      }
+      return `<div class="leg-row">
+        <div class="leg-name" style="width:72px;">Press ${p.id}</div>
+        <div class="leg-winner">${legName(p.leg)} H${p.startHole}+ · ${winnerTxt}</div>
+        <div class="leg-amt">${amtTxt}</div>
+      </div>`;
+    }).join('');
+  } else {
+    document.getElementById('nr-presses-section').style.display = 'none';
+  }
+
+  const payEl = document.getElementById('nr-payout');
+  if (net === 0) {
+    payEl.innerHTML = '<div style="font-size:20px;font-weight:700;color:#000;">All square — no money changes hands</div>';
+  } else {
+    const payer = net > 0 ? names[1] : names[0];
+    const payee = net > 0 ? names[0] : names[1];
+    const amt = Math.abs(net);
+    payEl.innerHTML = `<div style="font-size:14px;color:#888;margin-bottom:6px;">${payer} pays ${payee}</div><div style="font-size:40px;font-weight:700;color:#000;">$${amt}</div>`;
+  }
 }
 
 // Add ledger link to history screen
