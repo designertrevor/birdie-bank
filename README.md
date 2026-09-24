@@ -35,12 +35,10 @@ npm run build
 Without keys the feature is hidden in production. In `npm run dev` it uses a local
 stand-in, so two tabs can act as two phones: open the second one with `?profile=b`.
 
-1. Create a free project at supabase.com.
-2. SQL Editor → run `supabase/schema.sql`.
-3. Project Settings → API: copy the Project URL and the anon (publishable) key.
-4. Vercel → Project → Settings → Environment Variables: add `VITE_SUPABASE_URL` and
-   `VITE_SUPABASE_ANON_KEY` (all environments), then redeploy.
-5. For local dev against the real server, put the same two values in `.env.local`.
+The project is `birdie-bank` in Supabase (West US). Its URL and publishable key live in
+`.env.production`, which Vercel builds with. To rebuild from scratch: create a project,
+run `supabase/schema.sql` in the SQL Editor, and put the new URL and publishable key in
+`.env.production`. To use the real server in `npm run dev`, copy them into `.env.local`.
 
 Rounds are shared by a 6-letter code; anyone with the code can view and score it.
 There are no accounts yet.

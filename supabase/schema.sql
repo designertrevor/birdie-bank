@@ -15,6 +15,8 @@ create table if not exists public.live_holes (
   primary key (code, hole_no)
 );
 
+grant select, insert, update, delete on public.live_rounds, public.live_holes to anon;
+
 -- Anyone who knows a round's 6-letter code can read and write it. There are no accounts yet.
 alter table public.live_rounds enable row level security;
 alter table public.live_holes enable row level security;
