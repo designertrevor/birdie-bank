@@ -96,7 +96,7 @@ export function createRound({ id, game, course, holesCount, nine, startHole, pla
   const withHc = players.map(p => {
     const tee = course.tees?.find(t => t.name === p.tee) || course.tees?.[0] || null;
     const courseHc = effectiveCourseHc(p.index, tee, course, holes, holesCount, p.courseHcOverride).value;
-    return { id: p.id, name: p.name, tee: tee?.name ?? null, index: p.index ?? null, courseHc };
+    return { id: p.id, name: p.name, tee: tee?.name ?? null, index: p.index ?? null, courseHc, courseHcOverride: p.courseHcOverride ?? null };
   });
   const plays = useHandicaps ? strokesOffLow(withHc.map(p => p.courseHc), hcPct) : withHc.map(() => 0);
   return {
@@ -115,6 +115,76 @@ export function createRound({ id, game, course, holesCount, nine, startHole, pla
     pressSeq: 0,
     current: 0,      // index into holes
   };
+}
+
+/**
+ * The nine to keep when an 18-hole round on an 18-hole course drops to 9: whichever nine has
+ * more scored holes, else the one the round started on.
+ */
+export function defaultNine(round) {
+  let front = 0, back = 0;
+  for (const h of round.holes) {
+    if (!holeComplete(round, h)) continue;
+    if (h.no <= 9) front++; else back++;
+  }
+  if (front !== back) return back > front ? 'back' : 'front';
+  return (round.holes[0]?.no ?? 1) >= 10 ? 'back' : 'front';
+}
+
+/**
+ * Change a round in progress between 9 and 18 holes. Scores, bets and wolf picks already
+ * entered stay (they're keyed by hole number); the holes in play, par, course handicaps and
+ * strokes are worked out again for the new length. Nassau presses are cleared because the
+ * legs change with the length. Returns a new round object; `round` is not mutated.
+ */
+function resizedHoles(round, course, holesCount, nine) {
+  // Hole numbers, par and handicaps for the new length; the playing order comes from the round
+  // so holes already scored keep their place (e.g. started on 5: 5–9, 1–4, then 10–18)
+  const byNo = new Map(holesInPlay(course, holesCount, nine).map(h => [h.no, h]));
+  let order = round.holes.map(h => h.no).filter(no => byNo.has(no));
+  if (holesCount === 18) {
+    // A 9-hole course goes round again in the same order; an 18-hole course carries on into the other nine
+    const rest = course.holes.length === 9 ? order.map(no => no + 9) : [...byNo.keys()];
+    for (const no of rest) if (!order.includes(no)) order.push(no);
+  }
+  const list = order.map(no => byNo.get(no));
+  const ranks = rankHoles(list.map(h => h.hdcp));
+  return list.map((h, i) => ({ ...h, rank: ranks[i] }));
+}
+
+export function resizeRound(round, course, holesCount, nine = 'front') {
+  if (holesCount === round.holesCount) return round;
+  const holes = resizedHoles(round, course, holesCount, nine);
+  const ratio = holesCount / round.holesCount;
+  const players = round.players.map(p => {
+    const tee = course.tees?.find(t => t.name === p.tee) || null;
+    // A figure set by hand (stored, or — on older rounds — one that doesn't match the formula) is scaled
+    const was = effectiveCourseHc(p.index, tee, course, round.holes, round.holesCount, null).value;
+    const override = p.courseHcOverride ?? (was === p.courseHc ? null : p.courseHc);
+    if (override != null) {
+      const v = Math.round(override * ratio);
+      return { ...p, courseHc: v, courseHcOverride: v };
+    }
+    return { ...p, courseHc: effectiveCourseHc(p.index, tee, course, holes, holesCount, null).value, courseHcOverride: null };
+  });
+  const plays = round.useHandicaps ? strokesOffLow(players.map(p => p.courseHc), round.hcPct) : players.map(() => 0);
+  const curNo = round.holes[Math.min(round.current, round.holes.length - 1)]?.no;
+  let current = holes.findIndex(h => h.no === curNo);
+  if (current < 0) current = Math.max(0, holes.findIndex(h => !holeComplete(round, h)));
+  if (current >= holes.length) current = holes.length - 1;
+  return {
+    ...round,
+    holesCount, nine: holesCount === 9 && course.holes.length === 18 ? nine : null,
+    holes, par: parOf(holes),
+    players: players.map((p, i) => ({ ...p, plays: plays[i] })),
+    presses: round.game === 'nassau' ? [] : round.presses,
+    current,
+  };
+}
+
+/** Holes with scores that would stop counting if the round were resized to `holes`. */
+export function scoredHolesDropped(round, holes) {
+  return round.holes.filter(h => !holes.some(n => n.no === h.no) && Object.values(round.scores[h.no] || {}).some(v => v != null));
 }
 
 export function strokesFor(round, player, hole) {

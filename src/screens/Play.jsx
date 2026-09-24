@@ -1,11 +1,12 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { Empty, Icon, Numpad, Screen, Sheet, useUI } from '../components/ui.jsx';
+import { Empty, Icon, Numpad, Screen, Segmented, Sheet, useUI } from '../components/ui.jsx';
 import { RulesSheet } from '../components/Rules.jsx';
 import { getState, update, useStore } from '../lib/store.js';
 import {
-  GAMES, bankerHoleSetup, holeAtPos, holeComplete, nassauPressOptions, nassauWinners, nassauAmounts, roundLegs,
-  roundResults, skinsTable, strokesFor, wolfFor,
+  GAMES, bankerHoleSetup, defaultNine, holeAtPos, holeComplete, nassauPressOptions, nassauWinners, nassauAmounts, resizeRound, roundLegs,
+  roundResults, scoredHolesDropped, skinsTable, strokesFor, wolfFor,
 } from '../lib/round.js';
+import { findCourse } from '../lib/courses.js';
 import { money, nassauBets, scoreName, pickupGross } from '../lib/golf.js';
 import { buzz, confettiFrom } from '../lib/delight.js';
 import { useNav } from '../lib/nav.js';
@@ -26,7 +27,7 @@ export default function Play({ id }) {
   }
   // Remount when this hole changes on another phone so the fresh scores show
   const cur = round.holes[Math.min(round.current, round.holes.length - 1)];
-  return <PlayRound key={`${round.current}:${round._remote?.[cur?.no] || 0}`} round={round} />;
+  return <PlayRound key={`${round.holesCount}:${round.current}:${round._remote?.[cur?.no] || 0}`} round={round} />;
 }
 
 function useWakeLock() {
@@ -71,6 +72,7 @@ function PlayRound({ round }) {
   const [betPad, setBetPad] = useState(null);
   const [bankerPick, setBankerPick] = useState(false);
   const [live, setLive] = useState(false);
+  const [holesSheet, setHolesSheet] = useState(false);
   const numRefs = useRef({});
 
   const setScore = (pid, v) => {
@@ -261,8 +263,12 @@ function PlayRound({ round }) {
             <span><Icon name="broadcast" /> {round.shared ? `Live scoring · ${round.shared.code}` : 'Share live scoring'}</span><Icon name="caret-right" />
           </button>
         )}
+        <button className="sheet-item" onClick={() => { setMenu(false); setHolesSheet(true); }}>
+          <span><Icon name="flag-pennant" /> Round length · {round.holesCount} holes</span><Icon name="caret-right" />
+        </button>
         <button className="sheet-item" onClick={endEarly}><span><Icon name="flag-checkered" /> End round</span><Icon name="caret-right" /></button>
       </Sheet>
+      {holesSheet && <HolesSheet round={round} onClose={() => setHolesSheet(false)} />}
       <Sheet open={card} onClose={() => setCard(false)} title="Scorecard" className="sc-sheet">
         <p className="sheet-text">Tap a hole to jump to it and fix scores.</p>
         <Scorecard round={round} current={hole.no} onHole={no => { setCard(false); goHole(round.holes.findIndex(h => h.no === no)); }} />
@@ -291,6 +297,63 @@ function PlayRound({ round }) {
         </>
       )}
     </Screen>
+  );
+}
+
+// --------------------------- Round length ---------------------------------
+
+/** Switch a round in progress between 9 and 18 holes. Mounted only while open so it starts fresh each time. */
+function HolesSheet({ round, onClose }) {
+  const { showToast } = useUI();
+  const course = useStore(s => findCourse(s, round.course.id));
+  const [count, setCount] = useState(round.holesCount);
+  const [nine, setNine] = useState(() => defaultNine(round));
+  const g = GAMES[round.game];
+  const changed = count !== round.holesCount;
+  const preview = useMemo(() => (course && changed ? resizeRound(round, course, count, nine) : null), [round, course, changed, count, nine]);
+  const dropped = preview ? scoredHolesDropped(round, preview.holes) : [];
+  const hcChanges = preview && round.useHandicaps
+    ? round.players.map((p, i) => ({ name: p.name.split(' ')[0], from: p.plays, to: preview.players[i].plays })).filter(c => c.from !== c.to)
+    : [];
+  const apply = () => {
+    update(s => {
+      const r = s.rounds[round.id];
+      Object.assign(r, resizeRound(r, course, count, nine));
+    });
+    onClose();
+    showToast(`Now playing ${count} holes`);
+    buzz(20);
+  };
+  return (
+    <Sheet open onClose={onClose} title="Round length">
+      <p className="sheet-text">Scores you’ve entered stay put. Par, handicaps and strokes are worked out again for the new length.</p>
+      <div style={{ padding: '0 20px 12px' }}>
+        <Segmented value={count} onChange={setCount}
+          options={[9, 18].map(n => ({ value: n, label: `${n} holes`, disabled: !g.holes.includes(n) }))} />
+      </div>
+      {changed && course && count === 9 && course.holes.length === 18 && (
+        <div style={{ padding: '0 20px 12px' }}>
+          <div className="eyebrow" style={{ marginBottom: 8 }}>Which nine</div>
+          <Segmented value={nine} onChange={setNine} options={[{ value: 'front', label: 'Front 9' }, { value: 'back', label: 'Back 9' }]} />
+        </div>
+      )}
+      {!course && <p className="hint-card"><Icon name="info" fill /> This phone doesn’t have {round.course.name} saved, so the round length can’t be changed here.</p>}
+      {course && count === 18 && course.holes.length === 9 && <p className="hint-card"><Icon name="info" fill /> {course.name} has 9 holes, so you’ll play it twice for 18.</p>}
+      {dropped.length > 0 && (
+        <p className="hint-card"><Icon name="warning" fill /> Scores on hole{dropped.length === 1 ? '' : 's'} {dropped.map(h => h.no).join(', ')} won’t count. They’re kept if you switch back.</p>
+      )}
+      {hcChanges.length > 0 && (
+        <p className="hint-card"><Icon name="scales" fill /> Strokes: {hcChanges.map(c => `${c.name} ${c.from} → ${c.to}`).join(', ')}</p>
+      )}
+      {preview && round.game === 'nassau' && round.presses.length > 0 && (
+        <p className="hint-card"><Icon name="lightning" fill /> Presses are cleared — the front, back and total legs change with the round length.</p>
+      )}
+      <div className="cta-wrap">
+        <button className="full-btn" disabled={!preview} onClick={apply}>
+          {changed ? <>Switch to {count} holes <Icon name="arrow-right" /></> : `Playing ${count} holes`}
+        </button>
+      </div>
+    </Sheet>
   );
 }
 
