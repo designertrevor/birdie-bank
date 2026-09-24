@@ -3,7 +3,7 @@ import { Empty, Header, Icon, Numpad, Screen, Segmented, Sheet, Steps, Toggle, u
 import { RulesSheet } from '../components/Rules.jsx';
 import { getState, update, uid, useStore } from '../lib/store.js';
 import { allCourses, coursePar } from '../lib/courses.js';
-import { GAMES, createRound, holesInPlay, roundCourseHandicap } from '../lib/round.js';
+import { GAMES, createRound, effectiveCourseHc, holesInPlay } from '../lib/round.js';
 import { money } from '../lib/golf.js';
 import { useNav } from '../lib/nav.js';
 import { formatIndex, playerLabel, sortedPlayers } from '../lib/format.js';
@@ -199,7 +199,7 @@ function PlayersStep({ game, course, holesCount, nine, picked, setPicked, tees, 
   const courseHc = pid => {
     const p = state.players[pid];
     const tee = course.tees?.find(t => t.name === (tees[pid] || course.tees[0]?.name));
-    return hcOverride[pid] ?? roundCourseHandicap(p.index, tee, course, holes, holesCount);
+    return effectiveCourseHc(p.index, tee, course, holes, holesCount, hcOverride[pid]);
   };
 
   return (
@@ -218,6 +218,7 @@ function PlayersStep({ game, course, holesCount, nine, picked, setPicked, tees, 
           {players.map(p => {
             const on = picked.includes(p.id);
             const hc = on ? courseHc(p.id) : null;
+            const hcNote = hc && { set: ' (set)', index: ' · from index', none: ' · no handicap', whs: '' }[hc.source];
             return (
               <div key={p.id} className={`list-item player-pick ${on ? 'on' : ''}`}>
                 <button className="pick-main" onClick={() => toggle(p.id)} aria-pressed={on}>
@@ -242,7 +243,7 @@ function PlayersStep({ game, course, holesCount, nine, picked, setPicked, tees, 
                       </div>
                     )}
                     <button className="hc-chip" onClick={() => setHcFor(p.id)}>
-                      Course HC <strong>{hc == null ? '—' : hc < 0 ? `+${-hc}` : hc}</strong>{hcOverride[p.id] != null && ' (set)'} <Icon name="pencil-simple" />
+                      Course HC <strong>{hc.value < 0 ? `+${-hc.value}` : hc.value}</strong>{hcNote} <Icon name="pencil-simple" />
                     </button>
                   </div>
                 )}
@@ -259,7 +260,7 @@ function PlayersStep({ game, course, holesCount, nine, picked, setPicked, tees, 
         <button className="full-btn" disabled={!valid} onClick={onNext}>{valid ? <>Next — Setup <Icon name="arrow-right" /></> : needText}</button>
       </div>
       <QuickAddPlayer open={adding} onClose={() => setAdding(false)} onAdded={pid => { setAdding(false); if (picked.length < game.max) setPicked([...picked, pid]); }} />
-      <Numpad open={!!hcFor} title={`${state.players[hcFor]?.name}'s course handicap`} initial={hcFor ? (courseHc(hcFor) ?? '') : ''} allowNegative min={-10} max={60}
+      <Numpad open={!!hcFor} title={`${state.players[hcFor]?.name}'s course handicap`} initial={hcFor ? courseHc(hcFor).value : ''} allowNegative min={-10} max={60}
         onClose={() => setHcFor(null)} onDone={v => { setHcOverride({ ...hcOverride, [hcFor]: v }); setHcFor(null); }} />
     </>
   );

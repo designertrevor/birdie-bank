@@ -492,7 +492,7 @@ button { font-family: inherit; }
 /* ============================================================
    APP COMPONENTS (React build)
    ============================================================ */
-:root { --mute-soft: #7d7d74; }
+:root { --mute-soft: #6f6f66; }
 button { font: inherit; color: inherit; }
 .set-row, .list-item, .ledger-row, .round-card, .sheet-item, .add-row, .resume-card { width: calc(100% - 32px); text-align: left; border: none; font: inherit; color: inherit; }
 .list-item { width: 100%; }

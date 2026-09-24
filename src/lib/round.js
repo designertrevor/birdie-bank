@@ -79,14 +79,25 @@ export function roundCourseHandicap(index, tee, course, holes, holesCount) {
   return holesCount === 9 ? Math.round(full / 2) : full;
 }
 
+/**
+ * Course handicap a player will actually play off: manual override, else WHS from the
+ * tee's rating/slope, else their index (halved for 9 holes), else 0.
+ */
+export function effectiveCourseHc(index, tee, course, holes, holesCount, override) {
+  if (override != null) return { value: override, source: 'set' };
+  const computed = roundCourseHandicap(index, tee, course, holes, holesCount);
+  if (computed != null) return { value: computed, source: 'whs' };
+  if (index != null) return { value: Math.round(holesCount === 9 ? index / 2 : index), source: 'index' };
+  return { value: 0, source: 'none' };
+}
+
 /** Build a new round object from wizard selections. */
 export function createRound({ id, game, course, holesCount, nine, startHole, players, settings, hcPct, useHandicaps = true }) {
   const holes = holesInPlay(course, holesCount, nine, startHole);
   const par = parOf(holes);
   const withHc = players.map(p => {
     const tee = course.tees?.find(t => t.name === p.tee) || course.tees?.[0] || null;
-    const computed = roundCourseHandicap(p.index, tee, course, holes, holesCount);
-    const courseHc = p.courseHcOverride ?? computed ?? (p.index != null ? Math.round(holesCount === 9 ? p.index / 2 : p.index) : 0);
+    const courseHc = effectiveCourseHc(p.index, tee, course, holes, holesCount, p.courseHcOverride).value;
     return { id: p.id, name: p.name, tee: tee?.name ?? null, index: p.index ?? null, courseHc };
   });
   const plays = useHandicaps ? strokesOffLow(withHc.map(p => p.courseHc), hcPct) : withHc.map(() => 0);
