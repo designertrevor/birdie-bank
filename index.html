@@ -6,336 +6,503 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
-<meta name="theme-color" content="#ffffff">
-<title>Birdie Bank — Prototype v2</title>
+<meta name="theme-color" content="#fffaf0">
+<title>Birdie Bank</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,800&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@phosphor-icons/web@2.1.1/src/bold/style.css">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@phosphor-icons/web@2.1.1/src/fill/style.css">
 <style>
-* { box-sizing: border-box; margin: 0; padding: 0; }
-html, body { height: 100%; background: #fff; overscroll-behavior: none; }
-body {
-  font-family: -apple-system, BlinkMacSystemFont, sans-serif;
-  -webkit-tap-highlight-color: transparent;
+/* ============================================================
+   BIRDIE BANK — Clay-inspired theme
+   ============================================================ */
+:root {
+  --canvas: #fffaf0; --surface: #f5f0e0; --surface-strong: #ebe6d6; --card: #ffffff;
+  --ink: #0a0a0a; --body: #3a3a3a; --mute: #6a6a6a; --mute-soft: #9a9a9a;
+  --line: #ebe6d6; --line-soft: #f2edde;
+  --pink: #ff4d8b; --teal: #1a3a3a; --lav: #b8a4ed; --peach: #ffb084;
+  --ochre: #e8b94a; --mint: #a4d4c5; --coral: #ff6b5a;
+  --win: #0f6b4f; --win-bg: #d6efe6; --loss: #c2362a; --loss-bg: #ffe1dc;
+  --display: "Bricolage Grotesque", Inter, system-ui, sans-serif;
+  --spring: cubic-bezier(.3,1.5,.5,1);
+  --ease-out: cubic-bezier(.2,.8,.3,1);
 }
+* { box-sizing: border-box; margin: 0; padding: 0; }
+html, body { height: 100%; background: var(--canvas); overscroll-behavior: none; }
+body {
+  font-family: Inter, system-ui, -apple-system, sans-serif; color: var(--ink);
+  -webkit-font-smoothing: antialiased; -webkit-tap-highlight-color: transparent;
+}
+button { font-family: inherit; }
+.d { font-family: var(--display); }
 .device {
   position: fixed; inset: 0;
   height: 100vh; height: 100dvh;
-  overflow: hidden; background: #fff;
-  padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
+  overflow: hidden; background: var(--canvas);
 }
-.device > .screen { top: env(safe-area-inset-top); bottom: env(safe-area-inset-bottom); left: env(safe-area-inset-left); right: env(safe-area-inset-right); width: auto; height: auto; }
+.device > .screen { top: env(safe-area-inset-top); bottom: 0; left: env(safe-area-inset-left); right: env(safe-area-inset-right); width: auto; height: auto; }
 
 /* SCREENS */
 .screen {
-  position: absolute; top: 0; left: 0;
-  width: 100%; height: 100%;
-  background: #fff; display: none;
-  flex-direction: column; overflow: hidden;
+  position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+  background: var(--canvas); display: none; flex-direction: column; overflow: hidden;
 }
-.screen.active { display: flex; }
+.screen.active { display: flex; animation: screenIn .35s var(--ease-out) both; }
+.screen.active .scroll > * { animation: rise .45s var(--ease-out) both; }
+.screen.active .scroll > *:nth-child(2) { animation-delay: .04s; }
+.screen.active .scroll > *:nth-child(3) { animation-delay: .08s; }
+.screen.active .scroll > *:nth-child(4) { animation-delay: .12s; }
+.screen.active .scroll > *:nth-child(5) { animation-delay: .16s; }
+.screen.active .scroll > *:nth-child(6) { animation-delay: .2s; }
+.screen.active .scroll > *:nth-child(n+7) { animation-delay: .24s; }
+@keyframes screenIn { from { opacity: 0; transform: translateY(10px); } }
+@keyframes rise { from { opacity: 0; transform: translateY(14px); } }
+@keyframes pop { 0% { transform: scale(1); } 40% { transform: scale(1.3); } 100% { transform: scale(1); } }
+@keyframes float { 50% { transform: translateY(-8px) rotate(4deg); } }
+@keyframes wiggle { 0%,100% { transform: rotate(0); } 25% { transform: rotate(-8deg); } 75% { transform: rotate(8deg); } }
+@media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation: none !important; transition: none !important; } }
+
+.ph, .ph-bold, .ph-fill { line-height: 1; }
 
 /* SHARED */
 .screen-header {
-  padding: 14px 16px; border-bottom: 2px solid #000;
-  display: flex; align-items: center;
-  justify-content: space-between; min-height: 56px; flex-shrink: 0;
+  padding: 12px 16px 8px; display: flex; align-items: center; gap: 12px;
+  justify-content: space-between; min-height: 60px; flex-shrink: 0;
 }
-.screen-title { font-size: 22px; font-weight: 700; color: #000; }
-.header-btn { font-size: 14px; border: 2px solid #000; padding: 6px 12px; background: #fff; color: #000; cursor: pointer; font-weight: 600; }
-.header-back { font-size: 22px; color: #000; cursor: pointer; background: none; border: none; padding: 0; line-height: 1; }
-.header-close { font-size: 22px; background: none; border: none; cursor: pointer; color: #000; padding: 0; }
-.sec-label {
-  padding: 7px 16px; font-size: 11px; font-weight: 700;
-  text-transform: uppercase; letter-spacing: 0.08em; color: #888;
-  background: #f5f5f5; border-bottom: 2px solid #000; border-top: 2px solid #000; flex-shrink: 0;
+.screen-title { font-family: var(--display); font-size: 34px; font-weight: 800; letter-spacing: -.03em; color: var(--ink); }
+.screen-header .screen-title[style*="18px"] { font-size: 20px !important; letter-spacing: -.01em; }
+.header-btn {
+  font-size: 14px; font-weight: 600; padding: 9px 14px; border-radius: 999px; border: none;
+  background: var(--surface); color: var(--ink); cursor: pointer; display: inline-flex; align-items: center; gap: 6px;
+  transition: transform .2s var(--spring);
 }
-.scroll { flex: 1; overflow-y: auto; -webkit-overflow-scrolling: touch; }
+.header-back, .header-close, .icon-btn {
+  width: 42px; height: 42px; border-radius: 50%; border: none; background: var(--surface); color: var(--ink);
+  font-size: 20px; display: grid; place-items: center; cursor: pointer; flex-shrink: 0; padding: 0;
+  transition: transform .2s var(--spring);
+}
+.header-btn:active, .header-back:active, .header-close:active, .icon-btn:active { transform: scale(.88); }
+.sec-label, .eyebrow {
+  font-size: 12px; font-weight: 600; text-transform: uppercase; letter-spacing: .08em; color: var(--mute);
+}
+.sec-label { padding: 20px 20px 8px; flex-shrink: 0; }
+.scroll { flex: 1; overflow-y: auto; -webkit-overflow-scrolling: touch; padding-bottom: 16px; }
+
+/* BOTTOM NAV */
 .bottom-nav {
-  border-top: 2px solid #000; display: flex; height: 76px; flex-shrink: 0;
+  display: flex; align-items: center; justify-content: space-around; flex-shrink: 0;
+  padding: 8px 16px calc(10px + env(safe-area-inset-bottom)); background: var(--canvas);
 }
 .nav-btn {
-  flex: 1; display: flex; flex-direction: column;
-  align-items: center; justify-content: center; gap: 5px;
-  cursor: pointer; background: none; border: none;
-  border-right: 2px solid #000; padding: 0;
+  flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px;
+  cursor: pointer; background: none; border: none; padding: 6px 0; color: var(--mute-soft);
+  transition: transform .2s var(--spring);
 }
-.nav-btn:last-child { border-right: none; }
-.nav-btn.active { background: #f5f5f5; }
-.nav-btn.center { border-left: 2px solid #000; }
-.nav-sq { width: 22px; height: 22px; border: 2px solid #000; pointer-events: none; }
-.nav-ci { width: 22px; height: 22px; border: 2px solid #000; border-radius: 50%; pointer-events: none; }
-.nav-play { width: 52px; height: 52px; background: #000; display: flex; align-items: center; justify-content: center; pointer-events: none; }
-.nav-play span { color: #fff; font-size: 20px; margin-left: 3px; }
-.nav-lbl { font-size: 10px; font-weight: 700; color: #000; text-transform: uppercase; letter-spacing: 0.06em; pointer-events: none; }
+.nav-btn:active { transform: scale(.9); }
+.nav-btn i { font-size: 26px; pointer-events: none; }
+.nav-btn.active { color: var(--ink); }
+.nav-play {
+  width: 64px; height: 64px; border-radius: 50%; background: var(--ink); color: #fff;
+  display: grid; place-items: center; pointer-events: none; font-size: 28px;
+  box-shadow: 0 6px 0 var(--pink); transform: translateY(-6px);
+}
+.nav-btn.center:active .nav-play { transform: translateY(0); box-shadow: 0 0 0 var(--pink); }
+.nav-play i { font-size: 28px; }
+.nav-lbl { font-size: 12px; font-weight: 600; pointer-events: none; }
 
+/* BUTTONS */
 .full-btn {
-  width: 100%; height: 56px; background: #000; color: #fff;
-  font-size: 16px; font-weight: 700; border: none; cursor: pointer;
-  display: flex; align-items: center; justify-content: center;
+  width: 100%; height: 58px; background: var(--ink); color: #fff; border-radius: 999px;
+  font-family: var(--display); font-size: 18px; font-weight: 800; border: none; cursor: pointer;
+  display: flex; align-items: center; justify-content: center; gap: 8px;
+  transition: transform .2s var(--spring);
 }
-.full-btn.outline { background: #fff; color: #000; border: 2px solid #000; }
-.full-btn:active { opacity: 0.8; }
-.cta-wrap { padding: 14px 16px; flex-shrink: 0; display: flex; flex-direction: column; gap: 10px; }
+.full-btn i { font-size: 20px; transition: transform .2s var(--spring); }
+.full-btn:active { transform: scale(.96); }
+.full-btn:active i { transform: translateX(4px); }
+.full-btn.outline { background: var(--surface); color: var(--ink); }
+.cta-wrap, .pin-btn { padding: 12px 16px calc(12px + env(safe-area-inset-bottom)); flex-shrink: 0; display: flex; flex-direction: column; gap: 10px; }
+.screen > div[style*="border-top"]:last-child { border-top: none !important; padding-bottom: calc(14px + env(safe-area-inset-bottom)) !important; }
 
 /* STEP BAR */
-.step-bar { display: flex; border-bottom: 2px solid #000; flex-shrink: 0; }
-.step { flex: 1; padding: 10px 4px; text-align: center; font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em; color: #bbb; border-right: 2px solid #000; }
-.step:last-child { border-right: none; }
-.step.active { color: #000; background: #f5f5f5; }
-.step.done { color: #000; }
+.step-bar { display: flex; gap: 6px; padding: 4px 16px 12px; flex-shrink: 0; }
+.step {
+  flex: 1; padding: 8px 4px; text-align: center; font-size: 12px; font-weight: 600;
+  color: var(--mute-soft); background: var(--surface); border-radius: 999px;
+}
+.step.done { background: var(--mint); color: var(--teal); }
+.step.active { background: var(--ink); color: #fff; }
 
 /* LIST */
-.list-item { display: flex; align-items: center; justify-content: space-between; padding: 14px 0; border-bottom: 1.5px solid #e8e8e8; cursor: pointer; }
-.list-item:last-child { border-bottom: none; }
-.list-item:active { background: #f8f8f8; }
-.li-name { font-size: 15px; font-weight: 600; color: #000; }
-.li-sub { font-size: 13px; color: #888; margin-top: 2px; }
-.li-check { width: 28px; height: 28px; border: 2px solid #000; display: flex; align-items: center; justify-content: center; font-size: 14px; flex-shrink: 0; cursor: pointer; background: none; color: #000; }
-.li-check.on { background: #000; color: #fff; }
-.li-check.add { font-size: 20px; font-weight: 300; }
-.add-row { display: flex; align-items: center; gap: 12px; padding: 14px 16px; border-bottom: 2px solid #000; cursor: pointer; }
-.add-row:active { background: #f8f8f8; }
-.add-ci { width: 28px; height: 28px; border: 2px solid #000; display: flex; align-items: center; justify-content: center; font-size: 18px; font-weight: 300; flex-shrink: 0; }
-.add-lbl { font-size: 15px; font-weight: 600; color: #000; }
+.list-item {
+  display: flex; align-items: center; justify-content: space-between; padding: 14px 16px; margin-bottom: 8px;
+  background: var(--card); border-radius: 18px; cursor: pointer; transition: transform .2s var(--spring);
+}
+.list-item:active { transform: scale(.97); }
+.li-name { font-family: var(--display); font-size: 17px; font-weight: 800; color: var(--ink); }
+.li-sub { font-size: 13px; color: var(--mute); margin-top: 2px; }
+.li-check {
+  width: 36px; height: 36px; border-radius: 50%; border: 2px solid var(--surface-strong); display: grid; place-items: center;
+  font-size: 18px; flex-shrink: 0; cursor: pointer; background: var(--card); color: var(--mute);
+  transition: transform .25s var(--spring), background .15s;
+}
+.li-check.on { background: var(--pink); border-color: var(--pink); color: #fff; animation: pop .35s var(--spring); }
+.add-row {
+  display: flex; align-items: center; gap: 12px; padding: 14px 16px; margin: 0 16px 8px;
+  border: 2px dashed var(--surface-strong); border-radius: 18px; cursor: pointer; transition: transform .2s var(--spring);
+}
+.add-row:active { transform: scale(.97); }
+.add-ci { width: 32px; height: 32px; border-radius: 50%; background: var(--ochre); display: grid; place-items: center; font-size: 18px; flex-shrink: 0; }
+.add-lbl { font-size: 15px; font-weight: 600; color: var(--ink); }
 
 /* SEARCH */
-.search-box { width: 100%; border: 2px solid #000; padding: 12px 14px; font-size: 15px; outline: none; color: #000; display: block; }
-.search-box::placeholder { color: #aaa; }
+.search-box {
+  width: 100%; border: none; background: var(--card); border-radius: 999px; padding: 14px 18px;
+  font-size: 16px; outline: none; color: var(--ink); display: block; font-family: inherit;
+}
+.search-box:focus { box-shadow: 0 0 0 3px var(--lav); }
+.search-box::placeholder { color: var(--mute-soft); }
 
-/* ROUND CARDS */
-.round-card { border-bottom: 2px solid #000; padding: 16px; cursor: pointer; }
-.round-card:active { background: #f8f8f8; }
-.rc-top { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 4px; }
-.rc-course { font-size: 17px; font-weight: 700; color: #000; }
-.rc-result { font-size: 20px; font-weight: 700; color: #000; }
-.rc-meta { font-size: 13px; color: #888; }
-.rc-players { font-size: 13px; color: #666; margin-top: 3px; }
+/* HISTORY */
+.season-hero {
+  margin: 4px 16px 4px; background: var(--teal); color: #fff; border-radius: 28px; padding: 22px;
+  position: relative; overflow: hidden; min-height: 188px;
+}
+.season-hero small { font-size: 14px; color: var(--mint); font-weight: 500; }
+.season-big { font-family: var(--display); font-size: 76px; font-weight: 800; letter-spacing: -.04em; line-height: 1; margin: 4px 0 14px; font-variant-numeric: tabular-nums; }
+.season-hero .ball { position: absolute; right: -20px; bottom: -24px; width: 150px; animation: float 3s ease-in-out infinite; }
+.chip { display: inline-flex; align-items: center; gap: 5px; font-size: 13px; font-weight: 600; padding: 6px 12px; border-radius: 999px; margin: 0 6px 6px 0; }
+.chip.ochre { background: var(--ochre); color: var(--ink); transform: rotate(-2deg); }
+.chip.pink { background: var(--pink); color: #fff; transform: rotate(2deg); }
+.round-card {
+  margin: 0 16px 10px; border-radius: 22px; padding: 18px; cursor: pointer; background: var(--peach);
+  transition: transform .25s var(--spring);
+}
+.round-card:nth-of-type(3n+1) { background: var(--peach); }
+.round-card:nth-of-type(3n+2) { background: var(--lav); }
+.round-card:nth-of-type(3n) { background: var(--mint); }
+.round-card:active { transform: scale(.96) rotate(-1deg); }
+.rc-top { display: flex; justify-content: space-between; align-items: center; }
+.rc-course { font-family: var(--display); font-size: 20px; font-weight: 800; color: var(--ink); letter-spacing: -.01em; }
+.rc-result { font-family: var(--display); font-size: 28px; font-weight: 800; color: var(--ink); letter-spacing: -.03em; }
+.rc-meta { font-size: 13px; color: rgba(0,0,0,.62); margin-top: 3px; }
+.rc-players { font-size: 13px; color: rgba(0,0,0,.62); margin-top: 1px; }
 
 /* SETTINGS */
-.set-row { display: flex; align-items: center; justify-content: space-between; padding: 16px; border-bottom: 2px solid #000; cursor: pointer; }
-.set-row:active { background: #f8f8f8; }
-.set-name { font-size: 16px; font-weight: 600; color: #000; }
-.set-sub { font-size: 13px; color: #888; margin-top: 2px; }
-.chevron { font-size: 20px; color: #bbb; }
+.set-row {
+  display: flex; align-items: center; justify-content: space-between; padding: 16px; margin: 0 16px 8px;
+  background: var(--card); border-radius: 18px; cursor: pointer; transition: transform .2s var(--spring);
+}
+.set-row:active { transform: scale(.97); }
+.set-name { font-size: 16px; font-weight: 600; color: var(--ink); }
+.set-sub { font-size: 13px; color: var(--mute); margin-top: 2px; }
+.chevron { font-size: 18px; color: var(--mute-soft); }
 
 /* GAME ROWS */
-.game-row { display: flex; align-items: center; justify-content: space-between; padding: 16px; border-bottom: 2px solid #000; cursor: pointer; position: relative; }
-.game-row.selected { background: #000; color: #fff; }
-.game-row.locked { opacity: 0.5; cursor: default; }
-.game-row:active:not(.locked) { background: #f0f0f0; }
-.game-row.selected:active { background: #222; }
-.gn { font-size: 17px; font-weight: 700; color: inherit; }
-.gs { font-size: 13px; color: #888; margin-top: 2px; }
-.game-row.selected .gs { color: #aaa; }
-.gp { font-size: 12px; font-weight: 700; border: 2px solid currentColor; padding: 3px 7px; white-space: nowrap; border-radius: 0; }
-.lock-tag { font-size: 11px; font-weight: 700; border: 2px solid #000; padding: 4px 8px; text-transform: uppercase; letter-spacing: 0.06em; }
-.info-btn { position: absolute; right: 16px; top: 50%; transform: translateY(-50%); width: 24px; height: 24px; border: 2px solid #000; border-radius: 0; display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 700; cursor: pointer; background: #fff; color: #000; flex-shrink: 0; }
-.game-row.selected .info-btn { border-color: #fff; color: #fff; background: transparent; }
+.game-row {
+  display: flex; align-items: center; justify-content: space-between; padding: 18px; margin: 0 16px 10px;
+  background: var(--card); border-radius: 22px; cursor: pointer; position: relative;
+  transition: transform .25s var(--spring), background .2s;
+}
+.game-row.selected { background: var(--pink); color: #fff; }
+.game-row.locked { background: var(--surface); cursor: default; }
+.game-row.locked .gn, .game-row.locked .gs { opacity: .55; }
+.game-row:active:not(.locked) { transform: scale(.97); }
+.gn { font-family: var(--display); font-size: 22px; font-weight: 800; color: inherit; letter-spacing: -.01em; }
+.gs { font-size: 13px; color: var(--mute); margin-top: 3px; }
+.game-row.selected .gs { color: rgba(255,255,255,.85); }
+.gcheck { font-size: 28px; }
+.game-row:not(.selected) .gcheck { display: none; }
+.game-row.selected .gcheck { animation: pop .35s var(--spring); }
+.rules-chip {
+  font-size: 12px; font-weight: 600; border: none; border-radius: 999px; padding: 4px 10px; cursor: pointer; flex-shrink: 0;
+  background: var(--surface); color: var(--ink); display: inline-flex; align-items: center; gap: 4px;
+}
+.game-row.selected .rules-chip { background: rgba(255,255,255,.25); color: #fff; }
+.lock-tag {
+  font-size: 12px; font-weight: 600; padding: 6px 10px; border-radius: 999px; background: var(--ink); color: #fff;
+  display: inline-flex; align-items: center; gap: 4px;
+}
+.gp { font-size: 12px; font-weight: 700; padding: 3px 8px; border-radius: 999px; background: var(--surface); }
 
 /* TEE CHIPS */
-.tee-chips { display: flex; gap: 0; flex-wrap: nowrap; }
-.tee-chip { font-size: 11px; font-weight: 700; border: 2px solid #000; padding: 5px 9px; cursor: pointer; background: #fff; color: #000; border-right: none; }
-.tee-chip:last-child { border-right: 2px solid #000; }
-.tee-chip.active { background: #000; color: #fff; }
+.tee-chips { display: flex; gap: 6px; flex-wrap: wrap; }
+.tee-chip { font-size: 12px; font-weight: 600; padding: 6px 12px; cursor: pointer; background: var(--surface); color: var(--ink); border: none; border-radius: 999px; transition: transform .2s var(--spring); }
+.tee-chip.active { background: var(--ink); color: #fff; }
+.tee-chip:active { transform: scale(.9); }
 
 /* HOLE META */
-.hole-meta { display: flex; border-bottom: 2px solid #000; flex-shrink: 0; }
-.mc { flex: 1; padding: 12px 6px; text-align: center; border-right: 2px solid #000; cursor: pointer; }
-.mc:last-child { border-right: none; }
-.mc:active { background: #f5f5f5; }
-.ml { display: block; font-size: 10px; color: #888; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 3px; }
-.mv { font-size: 20px; font-weight: 700; color: #000; }
+.hole-meta {
+  display: flex; flex-shrink: 0; margin: 10px 16px 8px; background: var(--teal); border-radius: 24px; padding: 6px;
+}
+.mc { flex: 1; padding: 10px 4px; text-align: center; cursor: pointer; border-radius: 18px; transition: background .15s; }
+.mc:active { background: rgba(255,255,255,.1); }
+.mc:first-child { background: var(--mint); }
+.mc:first-child .ml { color: var(--teal); }
+.mc:first-child .mv { color: var(--teal); }
+.ml { display: block; font-size: 11px; color: var(--mint); text-transform: uppercase; letter-spacing: .06em; margin-bottom: 2px; font-weight: 600; }
+.mv { font-family: var(--display); font-size: 26px; font-weight: 800; color: #fff; font-variant-numeric: tabular-nums; }
 
-.banker-bar { display: flex; align-items: center; justify-content: space-between; padding: 10px 16px; border-bottom: 2px solid #000; background: #f5f5f5; flex-shrink: 0; }
-.bl { font-size: 11px; color: #888; text-transform: uppercase; letter-spacing: 0.05em; }
-.bn { font-size: 16px; font-weight: 700; color: #000; }
-.change-btn { font-size: 13px; border: 2px solid #000; padding: 6px 12px; background: #fff; color: #000; cursor: pointer; font-weight: 600; }
+.banker-bar {
+  display: flex; align-items: center; justify-content: space-between; padding: 12px 12px 12px 18px; margin: 0 16px 8px;
+  background: var(--ochre); border-radius: 20px; flex-shrink: 0;
+}
+.bl { font-size: 12px; color: rgba(0,0,0,.6); font-weight: 600; }
+.bn { font-family: var(--display); font-size: 20px; font-weight: 800; color: var(--ink); display: flex; align-items: center; gap: 6px; }
+.change-btn {
+  font-size: 14px; font-weight: 600; padding: 9px 14px; border-radius: 999px; border: none; background: rgba(255,255,255,.7);
+  color: var(--ink); cursor: pointer; display: inline-flex; align-items: center; gap: 6px; transition: transform .2s var(--spring);
+}
+.change-btn:active { transform: scale(.92); }
 
-/* PLAYER ROWS - taller to fit bet */
-.player-row { display: flex; align-items: center; gap: 8px; padding: 12px 16px; border-bottom: 2px solid #000; flex-shrink: 0; }
-.player-row.bkr { background: #f5f5f5; }
+/* PLAYER ROWS */
+.player-row { display: flex; align-items: center; gap: 8px; padding: 12px 16px; flex-shrink: 0; }
 .pi { flex: 1; min-width: 0; }
-.pn { font-size: 16px; font-weight: 700; color: #000; display: flex; align-items: center; gap: 6px; margin-bottom: 2px; }
-.bkr-badge { font-size: 9px; font-weight: 700; border: 2px solid #000; padding: 1px 5px; letter-spacing: 0.05em; text-transform: uppercase; flex-shrink: 0; }
-.ps { font-size: 12px; color: #666; }
+.pn { font-size: 16px; font-weight: 700; color: var(--ink); display: flex; align-items: center; gap: 6px; margin-bottom: 2px; }
+.pname { font-family: var(--display); font-size: 20px; font-weight: 800; color: var(--ink); letter-spacing: -.01em; }
+.bkr-badge {
+  font-family: Inter, sans-serif; font-size: 11px; font-weight: 600; padding: 3px 8px; border-radius: 999px;
+  background: var(--ochre); color: var(--ink); flex-shrink: 0; display: inline-flex; align-items: center; gap: 3px;
+}
+.ps { font-size: 12px; color: var(--mute); }
+.pcard { background: var(--card); border-radius: 22px; margin: 0 16px 10px; border: none !important; }
+.pcard.bkr { background: #fff6dd; }
 
-.score-ctrl { display: flex; align-items: center; border: 2px solid #000; flex-shrink: 0; }
-.sc-btn { width: 40px; height: 40px; font-size: 22px; font-weight: 300; border: none; background: #fff; color: #000; cursor: pointer; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
-.sc-btn:first-child { border-right: 2px solid #000; }
-.sc-btn:last-child { border-left: 2px solid #000; }
-.sc-btn:active { background: #f0f0f0; }
-.sc-num { width: 36px; text-align: center; font-size: 18px; font-weight: 700; color: #000; flex-shrink: 0; }
-.sc-lbl { font-size: 9px; text-transform: uppercase; letter-spacing: 0.05em; color: #888; text-align: center; margin-bottom: 2px; }
+.score-ctrl { display: flex; align-items: center; gap: 6px; flex-shrink: 0; }
+.sc-btn {
+  width: 52px; height: 52px; border-radius: 50%; border: none; background: var(--surface); color: var(--ink);
+  font-size: 22px; cursor: pointer; display: grid; place-items: center; flex-shrink: 0;
+  transition: transform .2s var(--spring), background .15s;
+}
+.sc-btn:last-child { background: var(--ink); color: #fff; }
+.sc-btn:active { transform: scale(.85); }
+.sc-num { width: 44px; text-align: center; font-family: var(--display); font-size: 32px; font-weight: 800; color: var(--ink); flex-shrink: 0; font-variant-numeric: tabular-nums; }
+.sc-num.bump { animation: pop .3s var(--spring); }
+.sc-num.birdie { color: var(--pink); }
+.sc-num.eagle { color: var(--coral); }
+.sc-lbl { font-size: 10px; text-transform: uppercase; letter-spacing: .05em; color: var(--mute); text-align: center; margin-bottom: 2px; }
+.score-tag { display: block; font-size: 11px; font-weight: 700; text-align: center; margin-top: 2px; min-height: 14px; color: var(--pink); text-transform: uppercase; letter-spacing: .06em; }
 
 .player-controls { display: flex; flex-direction: column; gap: 6px; align-items: flex-end; flex-shrink: 0; }
 
-.dbl-btn { font-size: 11px; font-weight: 700; border: 2px solid #000; padding: 6px 10px; background: #fff; color: #000; cursor: pointer; text-align: center; white-space: nowrap; }
-.dbl-btn.on { background: #000; color: #fff; }
-.dbl-btn:disabled { opacity: 0.3; cursor: default; }
+.dbl-btn {
+  font-size: 15px; font-weight: 700; border: none; border-radius: 999px; padding: 6px 12px; background: var(--surface);
+  color: var(--ink); cursor: pointer; text-align: center; white-space: nowrap; font-family: var(--display);
+  display: inline-flex; align-items: center; justify-content: center; gap: 6px;
+  transition: transform .25s var(--spring), background .15s;
+}
+.dbl-btn:active:not(:disabled) { transform: scale(.95); }
+.dbl-btn.on { background: var(--pink); color: #fff; animation: pop .35s var(--spring); }
+.dbl-btn:disabled { cursor: default; }
 
-.bet-val { font-size: 13px; font-weight: 700; border: 2px solid #000; padding: 6px 10px; cursor: pointer; text-align: center; background: #fff; color: #000; white-space: nowrap; }
-.bet-val:active { background: #f0f0f0; }
+.amt-btn, .bet-val, .nassau-bet-btn {
+  font-family: var(--display); font-size: 24px; font-weight: 800; border: none; border-radius: 16px;
+  padding: 10px 18px; background: var(--surface); color: var(--ink); cursor: pointer; min-width: 80px; text-align: center;
+  transition: transform .2s var(--spring);
+}
+.amt-btn:active, .bet-val:active, .nassau-bet-btn:active { transform: scale(.92); }
 
-.running-total { border-bottom: 2px solid #000; padding: 8px 16px; flex-shrink: 0; }
-.rt-lbl { font-size: 10px; color: #888; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 5px; }
+.running-total { margin: 6px 16px 10px; padding: 14px 12px; background: var(--teal); border-radius: 22px; flex-shrink: 0; border: none !important; }
+.rt-lbl { font-size: 11px; color: var(--mint); text-transform: uppercase; letter-spacing: .06em; margin-bottom: 8px; font-weight: 600; padding-left: 4px; }
 .rt-items { display: flex; }
 .rt-item { flex: 1; text-align: center; }
-.rt-p { font-size: 11px; color: #666; margin-bottom: 1px; }
-.rt-a { font-size: 15px; font-weight: 700; color: #000; }
+.rt-p { font-size: 12px; color: rgba(255,255,255,.7); margin-bottom: 1px; }
+.rt-a { font-family: var(--display); font-size: 20px; font-weight: 800; color: #fff; }
 
-.pin-btn { padding: 14px 16px; flex-shrink: 0; border-top: 2px solid #000; }
+/* MONEY */
+.pos { color: var(--win) !important; }
+.neg { color: var(--loss) !important; }
+.running-total .pos { color: var(--mint) !important; }
+.running-total .neg { color: var(--peach) !important; }
 
 /* SETTLE UP */
-.detail-hdr { padding: 16px; border-bottom: 2px solid #000; flex-shrink: 0; }
-.dc { font-size: 20px; font-weight: 700; color: #000; margin-bottom: 4px; }
-.dm { font-size: 13px; color: #888; }
-.settle-row { display: flex; align-items: center; gap: 12px; padding: 14px 16px; border-bottom: 2px solid #000; }
-.sr { font-size: 20px; font-weight: 700; color: #000; width: 28px; flex-shrink: 0; }
-.sn { font-size: 17px; font-weight: 700; color: #000; flex: 1; }
-.sa { font-size: 20px; font-weight: 700; color: #000; }
-.pay-row { display: flex; align-items: center; padding: 14px 16px; border-bottom: 1.5px solid #e8e8e8; }
-.pay-row:last-child { border-bottom: none; }
-.pf { font-size: 15px; color: #000; }
-.pa { font-size: 15px; color: #bbb; margin: 0 8px; }
-.pt { font-size: 15px; font-weight: 700; color: #000; }
-.pm { font-size: 16px; font-weight: 700; color: #000; margin-left: auto; }
+.detail-hdr { padding: 4px 20px 8px; flex-shrink: 0; }
+.dc { font-family: var(--display); font-size: 26px; font-weight: 800; color: var(--ink); margin-bottom: 2px; letter-spacing: -.02em; }
+.dm { font-size: 13px; color: var(--mute); }
+.winner-hero {
+  margin: 8px 16px 6px; padding: 22px; border-radius: 28px; background: var(--pink); color: #fff; text-align: center;
+  position: relative; overflow: hidden;
+}
+.winner-hero .crown { font-size: 44px; color: var(--ochre); display: inline-block; animation: wiggle 1.2s ease-in-out .4s 2; }
+.winner-hero .wn { font-family: var(--display); font-size: 22px; font-weight: 800; margin-top: 4px; }
+.winner-hero .wa { font-family: var(--display); font-size: 64px; font-weight: 800; letter-spacing: -.04em; line-height: 1; font-variant-numeric: tabular-nums; }
+.winner-hero .ws { font-size: 13px; opacity: .85; margin-top: 4px; }
+.settle-row, .stand-row {
+  display: flex; align-items: center; gap: 12px; padding: 14px 16px; margin: 0 16px 8px; background: var(--card); border-radius: 18px;
+}
+.sr, .st-num {
+  width: 32px; height: 32px; border-radius: 50%; background: var(--surface); display: grid; place-items: center;
+  font-family: var(--display); font-size: 16px; font-weight: 800; color: var(--ink); flex-shrink: 0;
+}
+.settle-row:first-of-type .sr, .stand-row:first-of-type .st-num { background: var(--ochre); }
+.sn, .st-name { font-size: 16px; font-weight: 600; color: var(--ink); flex: 1; }
+.sa, .st-amt { font-family: var(--display); font-size: 22px; font-weight: 800; color: var(--ink); }
+.pay-row { display: flex; align-items: center; padding: 14px 16px; margin-bottom: 8px; background: var(--card); border-radius: 18px; }
+.pf { font-size: 15px; font-weight: 600; color: var(--ink); }
+.pa { font-size: 16px; color: var(--mute-soft); margin: 0 10px; display: inline-flex; }
+.pt { font-size: 15px; font-weight: 600; color: var(--ink); }
+.pm { font-family: var(--display); font-size: 20px; font-weight: 800; color: var(--ink); margin-left: auto; }
 
 /* LEDGER */
-.ledger-row { display: flex; align-items: center; padding: 16px; border-bottom: 2px solid #000; cursor: pointer; }
-.ledger-row:active { background: #f8f8f8; }
+.ledger-row {
+  display: flex; align-items: center; padding: 16px; margin: 0 16px 8px; background: var(--card); border-radius: 18px;
+  cursor: pointer; transition: transform .2s var(--spring);
+}
+.ledger-row:active { transform: scale(.97); }
 .lr-info { flex: 1; }
-.lr-name { font-size: 16px; font-weight: 700; color: #000; }
-.lr-amt { font-size: 14px; color: #888; margin-top: 2px; }
-.lr-status { font-size: 12px; color: #888; margin-top: 2px; }
-.settle-btn { font-size: 13px; font-weight: 700; border: 2px solid #000; padding: 8px 14px; background: #000; color: #fff; cursor: pointer; }
-.settle-btn.settled { background: #fff; color: #000; }
-
-/* ROUND DETAIL */
-.stand-row { display: flex; align-items: center; gap: 12px; padding: 12px 16px; border-bottom: 2px solid #000; }
-.st-num { width: 26px; height: 26px; border: 2px solid #000; display: flex; align-items: center; justify-content: center; font-size: 13px; font-weight: 700; flex-shrink: 0; }
-.st-name { font-size: 15px; font-weight: 600; flex: 1; color: #000; }
-.st-amt { font-size: 17px; font-weight: 700; color: #000; }
+.lr-name { font-family: var(--display); font-size: 18px; font-weight: 800; color: var(--ink); }
+.lr-amt { font-size: 14px; color: var(--body); margin-top: 2px; font-weight: 500; }
+.lr-status { font-size: 12px; color: var(--mute); margin-top: 2px; }
+.settle-btn {
+  font-size: 14px; font-weight: 600; padding: 9px 16px; border-radius: 999px; border: none; background: var(--ink);
+  color: #fff; cursor: pointer; display: inline-flex; align-items: center; gap: 5px;
+}
+.settle-btn.settled { background: var(--win-bg); color: var(--win); }
 
 /* HOLES TOGGLE */
-.holes-toggle { display: flex; }
-.holes-btn { flex: 1; height: 48px; border: 2px solid #000; font-size: 16px; font-weight: 700; cursor: pointer; background: #fff; color: #000; }
-.holes-btn + .holes-btn { border-left: none; }
-.holes-btn.active { background: #000; color: #fff; }
+.holes-toggle, .press-mode-row { display: flex; gap: 4px; background: var(--surface); padding: 4px; border-radius: 999px; }
+.holes-btn, .pm-btn {
+  flex: 1; height: 46px; border: none; border-radius: 999px; font-family: var(--display); font-size: 17px; font-weight: 800;
+  cursor: pointer; background: transparent; color: var(--mute); transition: background .2s, color .2s, transform .2s var(--spring);
+}
+.pm-btn { font-size: 15px; height: 42px; }
+.holes-btn.active, .pm-btn.active { background: var(--ink); color: #fff; }
+.holes-btn:active:not(:disabled), .pm-btn:active { transform: scale(.95); }
 
 /* EMPTY */
-.empty-state { padding: 56px 24px; display: flex; flex-direction: column; align-items: center; gap: 12px; text-align: center; flex: 1; }
-.eb { width: 52px; height: 52px; border: 2px solid #000; }
-.et { font-size: 20px; font-weight: 700; color: #000; }
-.es { font-size: 14px; color: #888; line-height: 1.6; max-width: 240px; }
-.ec { margin-top: 8px; border: none; padding: 14px 28px; font-size: 15px; font-weight: 700; background: #000; color: #fff; cursor: pointer; }
+.empty-state { padding: 56px 24px; display: flex; flex-direction: column; align-items: center; gap: 10px; text-align: center; flex: 1; }
+.empty-illo { width: 150px; height: 150px; animation: float 3s ease-in-out infinite; margin-bottom: 4px; }
+.et { font-family: var(--display); font-size: 28px; font-weight: 800; color: var(--ink); letter-spacing: -.02em; }
+.es { font-size: 15px; color: var(--mute); line-height: 1.5; max-width: 250px; }
+.ec {
+  margin-top: 12px; border: none; padding: 16px 28px; border-radius: 999px; font-family: var(--display); font-size: 18px;
+  font-weight: 800; background: var(--ink); color: #fff; cursor: pointer; display: inline-flex; align-items: center; gap: 8px;
+  box-shadow: 0 6px 0 var(--pink); transition: transform .15s, box-shadow .15s;
+}
+.ec:active { transform: translateY(5px); box-shadow: 0 1px 0 var(--pink); }
 
-/* BOTTOM SHEET OVERLAY */
-.sheet-overlay {
-  position: absolute; top: 0; left: 0; right: 0; bottom: 0;
-  background: rgba(0,0,0,0.45); z-index: 100;
-  display: none; align-items: flex-end;
+/* BOTTOM SHEETS */
+.sheet-overlay, .numpad-overlay {
+  position: absolute; inset: 0; background: rgba(10,26,26,.45); z-index: 100; display: none; align-items: flex-end;
 }
-.sheet-overlay.open { display: flex; }
-.sheet {
-  background: #fff; width: 100%;
-  border-top: 2px solid #000; padding-bottom: 16px;
+.sheet-overlay.open, .numpad-overlay.open { display: flex; animation: fadeIn .2s ease-out; }
+.sheet-overlay.open > *, .numpad-overlay.open > * { animation: sheetUp .4s var(--ease-out); }
+@keyframes fadeIn { from { opacity: 0; } }
+@keyframes sheetUp { from { transform: translateY(100%); } }
+.sheet, .numpad-sheet, .sc-sheet, .rules-sheet {
+  background: var(--canvas); width: 100%; border-radius: 28px 28px 0 0; padding-bottom: calc(16px + env(safe-area-inset-bottom));
 }
-.sheet-handle { width: 36px; height: 4px; background: #ccc; margin: 12px auto 0; border-radius: 2px; }
-.sheet-title { font-size: 16px; font-weight: 700; color: #000; padding: 12px 16px 8px; border-bottom: 2px solid #000; }
-.sheet-item { display: flex; align-items: center; justify-content: space-between; padding: 16px; border-bottom: 1.5px solid #e8e8e8; cursor: pointer; font-size: 16px; font-weight: 600; color: #000; }
-.sheet-item:last-child { border-bottom: none; }
-.sheet-item:active { background: #f5f5f5; }
-.sheet-item.selected { background: #f5f5f5; }
-.sheet-cancel { width: calc(100% - 32px); margin: 12px 16px 0; height: 52px; background: #fff; border: 2px solid #000; font-size: 16px; font-weight: 700; cursor: pointer; }
+.sc-sheet { max-height: 80%; overflow-y: auto; }
+.rules-sheet { max-height: 85%; overflow-y: auto; }
+.sheet-handle { width: 40px; height: 5px; background: var(--surface-strong); margin: 10px auto 0; border-radius: 3px; }
+.sheet-title { font-family: var(--display); font-size: 22px; font-weight: 800; color: var(--ink); padding: 14px 20px 10px; }
+.sheet-item {
+  display: flex; align-items: center; justify-content: space-between; padding: 16px; margin: 0 16px 8px; border-radius: 18px;
+  background: var(--card); cursor: pointer; font-size: 16px; font-weight: 600; color: var(--ink); transition: transform .2s var(--spring);
+}
+.sheet-item:active { transform: scale(.97); }
+.sheet-item.selected { background: var(--pink); color: #fff; }
+.sheet-item.selected span { color: rgba(255,255,255,.85) !important; }
+.sheet-cancel {
+  width: calc(100% - 32px); margin: 8px 16px 0; height: 54px; background: var(--surface); border: none; border-radius: 999px;
+  font-family: var(--display); font-size: 17px; font-weight: 800; cursor: pointer; color: var(--ink);
+}
 
 /* NUMPAD */
-.numpad-overlay {
-  position: absolute; top: 0; left: 0; right: 0; bottom: 0;
-  background: rgba(0,0,0,0.45); z-index: 100;
-  display: none; align-items: flex-end;
+.numpad-header { padding: 18px 20px 10px; display: flex; align-items: center; justify-content: space-between; }
+.numpad-title { font-size: 15px; font-weight: 600; color: var(--mute); }
+.numpad-value { font-family: var(--display); font-size: 40px; font-weight: 800; color: var(--ink); }
+.numpad-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; padding: 8px 16px 0; }
+.np-btn {
+  height: 60px; border: none; border-radius: 18px; font-family: var(--display); font-size: 26px; font-weight: 800;
+  background: var(--card); color: var(--ink); cursor: pointer; display: grid; place-items: center;
+  transition: transform .15s var(--spring), background .1s;
 }
-.numpad-overlay.open { display: flex; }
-.numpad-sheet { background: #fff; width: 100%; border-top: 2px solid #000; }
-.numpad-header { padding: 16px; border-bottom: 2px solid #000; display: flex; align-items: center; justify-content: space-between; }
-.numpad-title { font-size: 16px; font-weight: 700; color: #000; }
-.numpad-value { font-size: 28px; font-weight: 700; color: #000; }
-.numpad-grid { display: grid; grid-template-columns: repeat(3, 1fr); }
-.np-btn { height: 64px; border: none; border-right: 2px solid #000; border-top: 2px solid #000; font-size: 22px; font-weight: 600; background: #fff; color: #000; cursor: pointer; display: flex; align-items: center; justify-content: center; }
-.np-btn:nth-child(3n) { border-right: none; }
-.np-btn:active { background: #f0f0f0; }
-.np-btn.confirm { background: #000; color: #fff; font-size: 16px; }
-.np-btn.del { font-size: 18px; }
+.np-btn:active { transform: scale(.9); background: var(--surface); }
+.np-btn.confirm { background: var(--pink); color: #fff; font-size: 18px; }
+.np-btn.del { font-size: 24px; background: var(--surface); }
 
-/* SCORECARD SHEET */
-.sc-sheet { background: #fff; width: 100%; border-top: 2px solid #000; max-height: 80%; overflow-y: auto; }
+/* SCORECARD */
 .sc-table { width: 100%; border-collapse: collapse; font-size: 12px; }
-.sc-table th { padding: 8px 6px; text-align: center; font-weight: 700; font-size: 10px; text-transform: uppercase; letter-spacing: 0.05em; color: #888; border-bottom: 2px solid #000; border-right: 1px solid #e8e8e8; background: #f5f5f5; }
-.sc-table th:last-child { border-right: none; }
-.sc-table th.cur { background: #000; color: #fff; }
-.sc-table td { padding: 8px 6px; text-align: center; border-bottom: 1.5px solid #e8e8e8; border-right: 1px solid #e8e8e8; color: #000; }
-.sc-table td:last-child { border-right: none; }
+.sc-table th { padding: 8px 6px; text-align: center; font-weight: 600; font-size: 10px; text-transform: uppercase; letter-spacing: .05em; color: var(--mute); background: var(--surface); }
+.sc-table th.cur { background: var(--pink); color: #fff; }
+.sc-table td { padding: 8px 6px; text-align: center; border-bottom: 1px solid var(--line); color: var(--ink); }
 .sc-table td:first-child { font-weight: 700; text-align: left; padding-left: 12px; }
 .sc-table tr:last-child td { border-bottom: none; }
-.sc-table td.cur { background: #f5f5f5; }
+.sc-table td.cur { background: #ffe3ee; }
 
-/* RULES SHEET */
-.rules-sheet { background: #fff; width: 100%; border-top: 2px solid #000; max-height: 85%; overflow-y: auto; }
-.rules-content { padding: 16px; }
-.rules-title { font-size: 20px; font-weight: 700; color: #000; margin-bottom: 4px; }
-.rules-sub { font-size: 13px; color: #888; margin-bottom: 16px; }
-.rules-section { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em; color: #888; margin-bottom: 8px; margin-top: 16px; }
-.rules-body { font-size: 14px; color: #000; line-height: 1.6; }
-.rules-body li { margin-left: 16px; margin-bottom: 6px; }
+/* RULES */
+.rules-content { padding: 4px 20px 16px; }
+.rules-title { font-family: var(--display); font-size: 24px; font-weight: 800; color: var(--ink); margin-bottom: 4px; }
+.rules-sub { font-size: 14px; color: var(--mute); margin-bottom: 12px; }
+.rules-section { font-family: var(--display); font-size: 17px; font-weight: 800; color: var(--ink); margin: 18px 0 6px; }
+.rules-body { font-size: 15px; color: var(--body); line-height: 1.55; }
+.rules-body li { margin-left: 18px; margin-bottom: 6px; }
+.rules-body li::marker { color: var(--pink); font-weight: 700; }
 
 /* NASSAU MATCH STATUS */
-.match-status { display: flex; border-bottom: 2px solid #000; flex-shrink: 0; }
-.ms-tile { flex: 1; padding: 10px 6px; text-align: center; border-right: 2px solid #000; }
-.ms-tile:last-child { border-right: none; }
-.ms-lbl { display: block; font-size: 10px; color: #888; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 2px; }
-.ms-val { display: block; font-size: 17px; font-weight: 700; color: #000; }
-.ms-sub { display: block; font-size: 10px; color: #aaa; margin-top: 1px; }
-.ms-tile.ahead { background: #000; }
-.ms-tile.ahead .ms-lbl { color: #888; }
-.ms-tile.ahead .ms-val { color: #fff; }
-.ms-tile.ahead .ms-sub { color: #888; }
-.ms-tile.behind .ms-val { color: #888; }
+.match-status { display: flex; gap: 6px; margin: 0 16px 8px; flex-shrink: 0; }
+.ms-tile { flex: 1; padding: 10px 6px; text-align: center; background: var(--card); border-radius: 18px; transition: background .25s; }
+.ms-lbl { display: block; font-size: 11px; color: var(--mute); text-transform: uppercase; letter-spacing: .06em; margin-bottom: 2px; font-weight: 600; }
+.ms-val { display: block; font-family: var(--display); font-size: 20px; font-weight: 800; color: var(--ink); }
+.ms-sub { display: block; font-size: 11px; color: var(--mute); margin-top: 1px; }
+.ms-tile.ahead { background: var(--mint); }
+.ms-tile.ahead .ms-lbl, .ms-tile.ahead .ms-sub { color: var(--teal); }
+.ms-tile.ahead .ms-val { color: var(--teal); }
+.ms-tile.behind { background: var(--loss-bg); }
+.ms-tile.behind .ms-val { color: var(--loss); }
 
-.press-bar { padding: 8px 16px; border-bottom: 2px solid #000; background: #f5f5f5; flex-shrink: 0; display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
-.press-bar-lbl { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: .05em; color: #888; }
-.press-chip { font-size: 11px; font-weight: 700; border: 2px solid #000; padding: 3px 8px; background: #fff; }
-.press-alert { padding: 12px 16px; border-bottom: 2px solid #000; background: #f5f5f5; flex-shrink: 0; }
-.press-alert-row { display: flex; align-items: center; justify-content: space-between; }
+.press-bar { padding: 8px 16px; margin: 0 16px 8px; background: var(--lav); border-radius: 18px; flex-shrink: 0; display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+.press-bar-lbl { font-size: 12px; font-weight: 600; color: rgba(0,0,0,.65); }
+.press-chip { font-size: 12px; font-weight: 700; padding: 4px 10px; background: #fff; border-radius: 999px; margin-right: 4px; }
+.press-alert { padding: 12px 12px 12px 16px; margin: 0 16px 8px; background: var(--coral); color: #fff; border-radius: 18px; flex-shrink: 0; }
+.press-alert-row { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
 .press-alert-row + .press-alert-row { margin-top: 10px; }
-.press-alert-txt { font-size: 13px; font-weight: 600; color: #000; }
-.press-call-btn { font-size: 12px; font-weight: 700; border: 2px solid #000; padding: 6px 12px; background: #000; color: #fff; cursor: pointer; }
+.press-alert-txt { font-size: 14px; font-weight: 600; color: #fff; }
+.press-call-btn {
+  font-size: 14px; font-weight: 700; padding: 8px 14px; border-radius: 999px; border: none; background: var(--ink); color: #fff;
+  cursor: pointer; display: inline-flex; align-items: center; gap: 5px; animation: wiggle .6s ease-in-out 2;
+}
 
 /* TOGGLE SWITCH */
-.toggle-row { display: flex; align-items: center; justify-content: space-between; padding: 14px 16px; border-bottom: 2px solid #000; }
-.toggle-lbl { font-size: 15px; font-weight: 600; color: #000; }
-.toggle-sub { font-size: 13px; color: #888; margin-top: 2px; }
-.tog { width: 52px; height: 30px; border: 2px solid #000; background: #fff; position: relative; cursor: pointer; flex-shrink: 0; transition: background .15s; }
-.tog.on { background: #000; }
-.tog::after { content:''; position:absolute; top:3px; left:3px; width:20px; height:20px; background:#000; transition:left .15s; }
-.tog.on::after { left:25px; background:#fff; }
+.toggle-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 16px; margin: 0 16px 10px; background: var(--card); border-radius: 18px; }
+.toggle-lbl { font-size: 16px; font-weight: 600; color: var(--ink); }
+.toggle-sub { font-size: 13px; color: var(--mute); margin-top: 2px; }
+.tog { width: 56px; height: 34px; border-radius: 999px; background: var(--surface-strong); position: relative; cursor: pointer; flex-shrink: 0; transition: background .2s; }
+.tog.on { background: var(--pink); }
+.tog::after { content: ''; position: absolute; top: 4px; left: 4px; width: 26px; height: 26px; border-radius: 50%; background: #fff; box-shadow: 0 1px 3px rgba(0,0,0,.2); transition: left .3s var(--spring); }
+.tog.on::after { left: 26px; }
 
 /* NASSAU SETUP */
-.nassau-bet-row { display: flex; align-items: center; justify-content: space-between; padding: 14px 16px; border-bottom: 1.5px solid #e8e8e8; }
-.nassau-bet-lbl { font-size: 15px; font-weight: 600; color: #000; }
-.nassau-bet-btn { font-size: 20px; font-weight: 700; border: 2px solid #000; padding: 8px 16px; background: #fff; color: #000; cursor: pointer; min-width: 72px; text-align: center; }
-.press-mode-row { display: flex; }
-.pm-btn { flex: 1; height: 44px; border: 2px solid #000; border-right: none; font-size: 13px; font-weight: 700; cursor: pointer; background: #fff; color: #000; }
-.pm-btn:last-child { border-right: 2px solid #000; }
-.pm-btn.active { background: #000; color: #fff; }
+.nassau-bet-row { display: flex; align-items: center; justify-content: space-between; padding: 12px 12px 12px 18px; margin: 0 16px 8px; background: var(--card); border-radius: 18px; border: none !important; }
+.nassau-bet-lbl { font-family: var(--display); font-size: 18px; font-weight: 800; color: var(--ink); }
+.name-input {
+  font-family: var(--display); font-size: 24px; font-weight: 800; border: none; background: var(--surface); border-radius: 14px;
+  padding: 10px 14px; width: 100%; outline: none; color: var(--ink);
+}
+.name-input:focus { box-shadow: 0 0 0 3px var(--lav); }
 
 /* NASSAU RESULTS */
-.leg-row { display: flex; align-items: center; padding: 14px 16px; border-bottom: 2px solid #000; }
-.leg-name { font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: .06em; color: #888; width: 56px; flex-shrink: 0; }
-.leg-winner { font-size: 16px; font-weight: 700; color: #000; flex: 1; }
-.leg-tie { color: #bbb !important; }
-.leg-amt { font-size: 17px; font-weight: 700; color: #000; }
-.leg-amt.zero { color: #bbb; }
+.leg-row { display: flex; align-items: center; padding: 16px; margin: 0 16px 8px; background: var(--card); border-radius: 18px; }
+.leg-name { font-size: 12px; font-weight: 600; text-transform: uppercase; letter-spacing: .06em; color: var(--mute); width: 56px; flex-shrink: 0; }
+.leg-winner { font-size: 16px; font-weight: 600; color: var(--ink); flex: 1; }
+.leg-tie { color: var(--mute-soft) !important; }
+.leg-amt { font-family: var(--display); font-size: 20px; font-weight: 800; color: var(--ink); }
+.leg-amt.zero { color: var(--mute-soft); }
+
+/* Inline-block wrappers used across screens */
+.block { padding: 16px; margin: 0 16px 10px; background: var(--card); border-radius: 20px; }
+.note { padding: 12px 16px; margin: 0 16px 10px; background: var(--surface); border-radius: 18px; }
 
 /* TOAST */
-.toast { position: absolute; bottom: 96px; left: 50%; transform: translateX(-50%); background: #000; color: #fff; padding: 10px 20px; font-size: 13px; font-weight: 600; white-space: nowrap; opacity: 0; pointer-events: none; transition: opacity 0.2s; z-index: 200; }
-.toast.show { opacity: 1; }
+.toast {
+  position: absolute; bottom: calc(110px + env(safe-area-inset-bottom)); left: 50%; transform: translate(-50%, 16px) scale(.9);
+  background: var(--pink); color: #fff; padding: 12px 20px; border-radius: 999px; font-family: var(--display); font-size: 16px;
+  font-weight: 800; white-space: nowrap; opacity: 0; pointer-events: none; z-index: 200;
+  transition: opacity .2s, transform .35s var(--spring);
+}
+.toast.show { opacity: 1; transform: translate(-50%, 0) scale(1); }
+.confetti { position: fixed; pointer-events: none; z-index: 999; border-radius: 2px; }
 </style>
 </head>
 <body>
@@ -346,16 +513,24 @@ body {
   <div class="screen-header"><span class="screen-title">History</span></div>
   <div style="flex:1;display:flex;align-items:center;justify-content:center;">
   <div class="empty-state" style="padding:24px;flex:unset;">
-    <div class="eb"></div>
+    <svg class="empty-illo" viewBox="0 0 150 150" aria-hidden="true">
+      <defs><radialGradient id="ballg" cx="35%" cy="30%"><stop offset="0" stop-color="#fff"/><stop offset="1" stop-color="#d9d2bd"/></radialGradient></defs>
+      <ellipse cx="75" cy="142" rx="34" ry="6" fill="#ebe6d6"/>
+      <path d="M62 108 L75 140 L88 108Z" fill="#ff6b5a"/>
+      <circle cx="75" cy="66" r="46" fill="url(#ballg)"/>
+      <g fill="rgba(0,0,0,.08)"><circle cx="58" cy="48" r="5"/><circle cx="80" cy="40" r="5"/><circle cx="98" cy="58" r="5"/><circle cx="54" cy="92" r="5"/><circle cx="96" cy="86" r="5"/></g>
+      <circle cx="64" cy="66" r="5" fill="#0a0a0a"/><circle cx="86" cy="66" r="5" fill="#0a0a0a"/>
+      <path d="M64 80 Q75 90 86 80" stroke="#0a0a0a" stroke-width="4" fill="none" stroke-linecap="round"/>
+    </svg>
     <div class="et">No rounds yet</div>
-    <div class="es">Finish a round and your history will show up here.</div>
-    <button class="ec" onclick="go('s-play-game')">Start a round</button>
+    <div class="es">Your wins, losses and bragging rights will live here. Go make some history.</div>
+    <button class="ec" onclick="go('s-play-game')"><i class="ph-fill ph-golf"></i> Start a round</button>
   </div>
   </div>
   <div class="bottom-nav">
-    <button class="nav-btn active" onclick="go('s-history-empty')"><div class="nav-sq"></div><span class="nav-lbl">History</span></button>
-    <button class="nav-btn center" onclick="go('s-play-game')"><div class="nav-play"><span>▶</span></div></button>
-    <button class="nav-btn" onclick="go('s-settings')"><div class="nav-ci"></div><span class="nav-lbl">Settings</span></button>
+    <button class="nav-btn active" onclick="go('s-history-empty')"><i class="ph-fill ph-clock-counter-clockwise"></i><span class="nav-lbl">History</span></button>
+    <button class="nav-btn center" onclick="go('s-play-game')"><div class="nav-play"><i class="ph-fill ph-golf"></i></div></button>
+    <button class="nav-btn" onclick="go('s-settings')"><i class="ph-fill ph-gear-six"></i><span class="nav-lbl">Settings</span></button>
   </div>
 </div>
 
@@ -363,22 +538,33 @@ body {
 <div class="screen" id="s-history">
   <div class="screen-header"><span class="screen-title">History</span></div>
   <div class="scroll">
+    <div class="season-hero">
+      <svg class="ball" viewBox="0 0 150 150" aria-hidden="true">
+        <defs><radialGradient id="ballh" cx="35%" cy="30%"><stop offset="0" stop-color="#fff"/><stop offset="1" stop-color="#d9d2bd"/></radialGradient></defs>
+        <path d="M62 110 L75 150 L88 110Z" fill="#ff6b5a"/>
+        <circle cx="75" cy="70" r="46" fill="url(#ballh)"/>
+        <g fill="rgba(0,0,0,.08)"><circle cx="58" cy="52" r="5"/><circle cx="80" cy="44" r="5"/><circle cx="98" cy="62" r="5"/><circle cx="66" cy="76" r="5"/><circle cx="88" cy="86" r="5"/><circle cx="54" cy="96" r="5"/></g>
+      </svg>
+      <small>This season</small>
+      <div class="season-big" data-count="34">+$34</div>
+      <span class="chip ochre"><i class="ph-fill ph-fire"></i> 2 in a row</span><span class="chip pink"><i class="ph-fill ph-bird"></i> 7 birdies</span>
+    </div>
     <div class="sec-label">This week</div>
     <div class="round-card" onclick="go('s-round-detail')">
-      <div class="rc-top"><div><div class="rc-course">Birch Creek GC</div><div class="rc-meta">Mar 27 · Banker · 9 holes</div><div class="rc-players">Trevor, Bob, John, Tom</div></div><div class="rc-result">+$11</div></div>
+      <div class="rc-top"><div><div class="rc-course">Birch Creek GC</div><div class="rc-meta">Mar 27 · Banker · 9 holes</div><div class="rc-players">Trevor, Bob, John, Tom</div></div><div class="rc-result pos">+$11</div></div>
     </div>
-    <div class="sec-label">Last week</div>
+    <div class="sec-label">Last week</div><div>
     <div class="round-card" onclick="go('s-round-detail')">
       <div class="rc-top"><div><div class="rc-course">Pebble Creek GC</div><div class="rc-meta">Mar 20 · Banker · 18 holes</div><div class="rc-players">Trevor, Mike, Dave</div></div><div class="rc-result">−$8</div></div>
     </div>
     <div class="round-card" onclick="go('s-round-detail')">
-      <div class="rc-top"><div><div class="rc-course">Logan River GC</div><div class="rc-meta">Mar 18 · Banker · 18 holes</div><div class="rc-players">Trevor, Bob, John, Tom</div></div><div class="rc-result">+$31</div></div>
-    </div>
+      <div class="rc-top"><div><div class="rc-course">Logan River GC</div><div class="rc-meta">Mar 18 · Banker · 18 holes</div><div class="rc-players">Trevor, Bob, John, Tom</div></div><div class="rc-result pos">+$31</div></div>
+    </div></div>
   </div>
   <div class="bottom-nav">
-    <button class="nav-btn active" onclick="go('s-history')"><div class="nav-sq"></div><span class="nav-lbl">History</span></button>
-    <button class="nav-btn center" onclick="go('s-play-game')"><div class="nav-play"><span>▶</span></div></button>
-    <button class="nav-btn" onclick="go('s-settings')"><div class="nav-ci"></div><span class="nav-lbl">Settings</span></button>
+    <button class="nav-btn active" onclick="go('s-history')"><i class="ph-fill ph-clock-counter-clockwise"></i><span class="nav-lbl">History</span></button>
+    <button class="nav-btn center" onclick="go('s-play-game')"><div class="nav-play"><i class="ph-fill ph-golf"></i></div></button>
+    <button class="nav-btn" onclick="go('s-settings')"><i class="ph-fill ph-gear-six"></i><span class="nav-lbl">Settings</span></button>
   </div>
 </div>
 
@@ -387,21 +573,21 @@ body {
   <div class="screen-header"><span class="screen-title">Settings</span></div>
   <div class="scroll">
     <div class="sec-label">Players</div>
-    <div class="set-row" onclick="showToast('Edit player — not built yet')"><div><div class="set-name">Trevor</div><div class="set-sub">HC 6 · You</div></div><span class="chevron">›</span></div>
-    <div class="set-row" onclick="showToast('Edit player — not built yet')"><div><div class="set-name">Bob</div><div class="set-sub">HC 6</div></div><span class="chevron">›</span></div>
-    <div class="set-row" onclick="showToast('Edit player — not built yet')"><div><div class="set-name">John</div><div class="set-sub">HC 2</div></div><span class="chevron">›</span></div>
-    <div class="set-row" onclick="showToast('Edit player — not built yet')"><div><div class="set-name">Tom</div><div class="set-sub">HC 8</div></div><span class="chevron">›</span></div>
-    <div class="add-row" onclick="showToast('Add player — not built yet')"><div class="add-ci">+</div><span class="add-lbl">Add player</span></div>
+    <div class="set-row" onclick="showToast('Edit player — not built yet')"><div><div class="set-name">Trevor</div><div class="set-sub">HC 6 · You</div></div><span class="chevron"><i class="ph-bold ph-caret-right"></i></span></div>
+    <div class="set-row" onclick="showToast('Edit player — not built yet')"><div><div class="set-name">Bob</div><div class="set-sub">HC 6</div></div><span class="chevron"><i class="ph-bold ph-caret-right"></i></span></div>
+    <div class="set-row" onclick="showToast('Edit player — not built yet')"><div><div class="set-name">John</div><div class="set-sub">HC 2</div></div><span class="chevron"><i class="ph-bold ph-caret-right"></i></span></div>
+    <div class="set-row" onclick="showToast('Edit player — not built yet')"><div><div class="set-name">Tom</div><div class="set-sub">HC 8</div></div><span class="chevron"><i class="ph-bold ph-caret-right"></i></span></div>
+    <div class="add-row" onclick="showToast('Add player — not built yet')"><div class="add-ci"><i class="ph-bold ph-plus"></i></div><span class="add-lbl">Add player</span></div>
     <div class="sec-label">Crews</div>
-    <div class="set-row" onclick="showToast('Edit crew — not built yet')"><div><div class="set-name">Saturday Boys</div><div class="set-sub">Trevor, Bob, John, Tom</div></div><span class="chevron">›</span></div>
-    <div class="add-row" onclick="showToast('Add crew — not built yet')"><div class="add-ci">+</div><span class="add-lbl">Add crew</span></div>
+    <div class="set-row" onclick="showToast('Edit crew — not built yet')"><div><div class="set-name">Saturday Boys</div><div class="set-sub">Trevor, Bob, John, Tom</div></div><span class="chevron"><i class="ph-bold ph-caret-right"></i></span></div>
+    <div class="add-row" onclick="showToast('Add crew — not built yet')"><div class="add-ci"><i class="ph-bold ph-plus"></i></div><span class="add-lbl">Add crew</span></div>
     <div class="sec-label">Default stakes</div>
-    <div class="set-row" onclick="showToast('Edit stakes — not built yet')"><div class="set-name">Banker</div><div style="display:flex;align-items:center;gap:8px;"><span style="font-size:16px;font-weight:700;">$2 – $5</span><span class="chevron">›</span></div></div>
+    <div class="set-row" onclick="showToast('Edit stakes — not built yet')"><div class="set-name">Banker</div><div style="display:flex;align-items:center;gap:8px;"><span style="font-size:16px;font-weight:700;">$2 – $5</span><span class="chevron"><i class="ph-bold ph-caret-right"></i></span></div></div>
   </div>
   <div class="bottom-nav">
-    <button class="nav-btn" onclick="go('s-history')"><div class="nav-sq"></div><span class="nav-lbl">History</span></button>
-    <button class="nav-btn center" onclick="go('s-play-game')"><div class="nav-play"><span>▶</span></div></button>
-    <button class="nav-btn active" onclick="go('s-settings')"><div class="nav-ci"></div><span class="nav-lbl">Settings</span></button>
+    <button class="nav-btn" onclick="go('s-history')"><i class="ph-fill ph-clock-counter-clockwise"></i><span class="nav-lbl">History</span></button>
+    <button class="nav-btn center" onclick="go('s-play-game')"><div class="nav-play"><i class="ph-fill ph-golf"></i></div></button>
+    <button class="nav-btn active" onclick="go('s-settings')"><i class="ph-fill ph-gear-six"></i><span class="nav-lbl">Settings</span></button>
   </div>
 </div>
 
@@ -409,7 +595,7 @@ body {
 <div class="screen" id="s-play-game">
   <div class="screen-header">
     <span class="screen-title">New round</span>
-    <button class="header-close" onclick="go('s-history')">✕</button>
+    <button class="header-close" onclick="go('s-history')"><i class="ph-bold ph-x"></i></button>
   </div>
   <div class="step-bar">
     <div class="step active">Game</div>
@@ -422,32 +608,32 @@ body {
       <div>
         <div style="display:flex;align-items:center;gap:8px;">
           <div class="gn">Banker</div>
-          <button onclick="event.stopPropagation();openSheet('sheet-rules')" style="font-size:11px;font-weight:700;border:2px solid #fff;border-radius:0;padding:2px 7px;background:transparent;color:#fff;cursor:pointer;flex-shrink:0;" id="banker-rules-btn">Rules</button>
+          <button onclick="event.stopPropagation();openSheet('sheet-rules')" class="rules-chip" id="banker-rules-btn"><i class="ph-bold ph-info"></i> Rules</button>
         </div>
         <div class="gs">3–8 players · Rotating banker each hole</div>
       </div>
-      <span style="font-size:13px;font-weight:700;color:#fff;" id="banker-check">&#10003;</span>
+      <span class="gcheck" id="banker-check"><i class="ph-fill ph-check-circle"></i></span>
     </div>
     <div class="game-row locked">
       <div><div class="gn">Skins</div><div class="gs">2–8 players · Win the hole outright</div></div>
-      <div style="display:flex;align-items:center;gap:8px;"><div class="lock-tag">Unlock</div></div>
+      <div style="display:flex;align-items:center;gap:8px;"><div class="lock-tag"><i class="ph-fill ph-lock-simple"></i> Unlock</div></div>
     </div>
     <div class="game-row" id="game-row-nassau" onclick="selectGame('nassau')">
       <div>
         <div style="display:flex;align-items:center;gap:8px;">
           <div class="gn">Nassau</div>
-          <button onclick="event.stopPropagation();openSheet('sheet-nassau-rules')" style="font-size:11px;font-weight:700;border:2px solid #000;border-radius:0;padding:2px 7px;background:transparent;color:#000;cursor:pointer;flex-shrink:0;" id="nassau-rules-btn">Rules</button>
+          <button onclick="event.stopPropagation();openSheet('sheet-nassau-rules')" class="rules-chip" id="nassau-rules-btn"><i class="ph-bold ph-info"></i> Rules</button>
         </div>
         <div class="gs">2 players · Front 9, back 9, total</div>
       </div>
-      <span style="font-size:13px;font-weight:700;display:none;" id="nassau-check">&#10003;</span>
+      <span class="gcheck" id="nassau-check"><i class="ph-fill ph-check-circle"></i></span>
     </div>
     <div class="game-row locked">
       <div><div class="gn">Wolf</div><div class="gs">4 players exactly · Rotating wolf</div></div>
-      <div style="display:flex;align-items:center;gap:8px;"><div class="lock-tag">Unlock</div></div>
+      <div style="display:flex;align-items:center;gap:8px;"><div class="lock-tag"><i class="ph-fill ph-lock-simple"></i> Unlock</div></div>
     </div>
-    <div style="padding:14px 16px;border-bottom:2px solid #000;">
-      <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:#888;margin-bottom:10px;">Holes</div>
+    <div class="block">
+      <div class="eyebrow" style="margin-bottom:10px;">Holes</div>
       <div class="holes-toggle">
         <button class="holes-btn active" onclick="setHoles(this)">9</button>
         <button class="holes-btn" onclick="setHoles(this)">18</button>
@@ -455,16 +641,16 @@ body {
     </div>
   </div>
   <div class="cta-wrap">
-    <button class="full-btn" onclick="go('s-play-course')">Next — Course →</button>
+    <button class="full-btn" onclick="go('s-play-course')">Next — Course <i class="ph-bold ph-arrow-right"></i></button>
   </div>
 </div>
 
 <!-- ===================== STEP 2: COURSE ===================== -->
 <div class="screen" id="s-play-course">
   <div class="screen-header">
-    <button class="header-back" onclick="go('s-play-game')">←</button>
+    <button class="header-back" onclick="go('s-play-game')"><i class="ph-bold ph-arrow-left"></i></button>
     <span class="screen-title" style="font-size:18px;">New round</span>
-    <button class="header-close" onclick="go('s-history')">✕</button>
+    <button class="header-close" onclick="go('s-history')"><i class="ph-bold ph-x"></i></button>
   </div>
   <div class="step-bar">
     <div class="step done">Game</div>
@@ -473,44 +659,44 @@ body {
     <div class="step">Start</div>
   </div>
   <div class="scroll">
-    <div style="padding:14px 16px;border-bottom:2px solid #000;">
-      <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:#888;margin-bottom:10px;">Select course</div>
+    <div class="block">
+      <div class="eyebrow" style="margin-bottom:10px;">Select course</div>
       <input class="search-box" type="text" placeholder="Search courses...">
     </div>
     <div class="sec-label">Favorites</div>
     <div style="padding:0 16px;">
       <div class="list-item" onclick="selectCourse(this)">
         <div><div class="li-name">Birch Creek GC</div><div class="li-sub">Smithfield, UT · Par 72 · 5 tees</div></div>
-        <button class="li-check on">✓</button>
+        <button class="li-check on"><i class="ph-bold ph-check"></i></button>
       </div>
       <div class="list-item" onclick="selectCourse(this)">
         <div><div class="li-name">Pebble Creek GC</div><div class="li-sub">Tremonton, UT · Par 71 · 4 tees</div></div>
-        <button class="li-check add">+</button>
+        <button class="li-check add"><i class="ph-bold ph-plus"></i></button>
       </div>
       <div class="list-item" onclick="selectCourse(this)">
         <div><div class="li-name">Logan River GC</div><div class="li-sub">Logan, UT · Par 71 · 4 tees</div></div>
-        <button class="li-check add">+</button>
+        <button class="li-check add"><i class="ph-bold ph-plus"></i></button>
       </div>
     </div>
     <div class="sec-label">Near me</div>
     <div style="padding:0 16px;">
       <div class="list-item" onclick="selectCourse(this)">
         <div><div class="li-name">Sherwood Hills GC</div><div class="li-sub">Wellsville, UT · Par 72 · 3 tees</div></div>
-        <button class="li-check add">+</button>
+        <button class="li-check add"><i class="ph-bold ph-plus"></i></button>
       </div>
     </div>
   </div>
   <div class="cta-wrap">
-    <button class="full-btn" onclick="goToPlayers()">Next — Players →</button>
+    <button class="full-btn" onclick="goToPlayers()">Next — Players <i class="ph-bold ph-arrow-right"></i></button>
   </div>
 </div>
 
 <!-- ===================== STEP 3: PLAYERS ===================== -->
 <div class="screen" id="s-play-players">
   <div class="screen-header">
-    <button class="header-back" onclick="go('s-play-course')">←</button>
+    <button class="header-back" onclick="go('s-play-course')"><i class="ph-bold ph-arrow-left"></i></button>
     <span class="screen-title" style="font-size:18px;">New round</span>
-    <button class="header-close" onclick="go('s-history')">✕</button>
+    <button class="header-close" onclick="go('s-history')"><i class="ph-bold ph-x"></i></button>
   </div>
   <div class="step-bar">
     <div class="step done">Game</div>
@@ -523,18 +709,18 @@ body {
     <div style="padding:0 16px;">
       <div class="list-item" onclick="toggleCheck(this)">
         <div><div class="li-name">Saturday Boys</div><div class="li-sub">Trevor · Bob · John · Tom</div></div>
-        <button class="li-check on">✓</button>
+        <button class="li-check on"><i class="ph-bold ph-check"></i></button>
       </div>
     </div>
     <div class="sec-label">Players (4 selected)</div>
     <div style="padding:0 16px;">
       <!-- Player with tee + HC -->
-      <div style="padding:14px 0;border-bottom:1.5px solid #e8e8e8;">
+      <div style="padding:14px 0;border-bottom:1px solid var(--line);">
         <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;">
-          <div><div class="li-name">Trevor</div><div class="li-sub">Course HC: <strong id="hc-trevor">6</strong> <button onclick="editHC('hc-trevor')" style="font-size:11px;border:1.5px solid #000;padding:1px 6px;background:none;cursor:pointer;margin-left:4px;">Edit</button></div></div>
-          <button class="li-check on">✓</button>
+          <div><div class="li-name">Trevor</div><div class="li-sub">Course HC: <strong id="hc-trevor">6</strong> <button onclick="editHC('hc-trevor')" style="font-size:11px;border:1.5px solid var(--ink);padding:1px 6px;background:none;cursor:pointer;margin-left:4px;">Edit</button></div></div>
+          <button class="li-check on"><i class="ph-bold ph-check"></i></button>
         </div>
-        <div style="font-size:11px;color:#888;margin-bottom:5px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;">Tee</div>
+        <div class="eyebrow" style="margin-bottom:5px;">Tee</div>
         <div class="tee-chips">
           <button class="tee-chip active" onclick="setTee(this)">Blue</button>
           <button class="tee-chip" onclick="setTee(this)">White</button>
@@ -543,12 +729,12 @@ body {
           <button class="tee-chip" onclick="setTee(this)">Red</button>
         </div>
       </div>
-      <div style="padding:14px 0;border-bottom:1.5px solid #e8e8e8;">
+      <div style="padding:14px 0;border-bottom:1px solid var(--line);">
         <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;">
-          <div><div class="li-name">Bob</div><div class="li-sub">Course HC: <strong id="hc-bob">6</strong> <button onclick="editHC('hc-bob')" style="font-size:11px;border:1.5px solid #000;padding:1px 6px;background:none;cursor:pointer;margin-left:4px;">Edit</button></div></div>
-          <button class="li-check on">✓</button>
+          <div><div class="li-name">Bob</div><div class="li-sub">Course HC: <strong id="hc-bob">6</strong> <button onclick="editHC('hc-bob')" style="font-size:11px;border:1.5px solid var(--ink);padding:1px 6px;background:none;cursor:pointer;margin-left:4px;">Edit</button></div></div>
+          <button class="li-check on"><i class="ph-bold ph-check"></i></button>
         </div>
-        <div style="font-size:11px;color:#888;margin-bottom:5px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;">Tee</div>
+        <div class="eyebrow" style="margin-bottom:5px;">Tee</div>
         <div class="tee-chips">
           <button class="tee-chip active" onclick="setTee(this)">Blue</button>
           <button class="tee-chip" onclick="setTee(this)">White</button>
@@ -557,12 +743,12 @@ body {
           <button class="tee-chip" onclick="setTee(this)">Red</button>
         </div>
       </div>
-      <div style="padding:14px 0;border-bottom:1.5px solid #e8e8e8;">
+      <div style="padding:14px 0;border-bottom:1px solid var(--line);">
         <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;">
-          <div><div class="li-name">John</div><div class="li-sub">Course HC: <strong id="hc-john">2</strong> <button onclick="editHC('hc-john')" style="font-size:11px;border:1.5px solid #000;padding:1px 6px;background:none;cursor:pointer;margin-left:4px;">Edit</button></div></div>
-          <button class="li-check on">✓</button>
+          <div><div class="li-name">John</div><div class="li-sub">Course HC: <strong id="hc-john">2</strong> <button onclick="editHC('hc-john')" style="font-size:11px;border:1.5px solid var(--ink);padding:1px 6px;background:none;cursor:pointer;margin-left:4px;">Edit</button></div></div>
+          <button class="li-check on"><i class="ph-bold ph-check"></i></button>
         </div>
-        <div style="font-size:11px;color:#888;margin-bottom:5px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;">Tee</div>
+        <div class="eyebrow" style="margin-bottom:5px;">Tee</div>
         <div class="tee-chips">
           <button class="tee-chip active" onclick="setTee(this)">Blue</button>
           <button class="tee-chip" onclick="setTee(this)">White</button>
@@ -573,10 +759,10 @@ body {
       </div>
       <div style="padding:14px 0;border-bottom:none;">
         <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;">
-          <div><div class="li-name">Tom</div><div class="li-sub">Course HC: <strong id="hc-tom">8</strong> <button onclick="editHC('hc-tom')" style="font-size:11px;border:1.5px solid #000;padding:1px 6px;background:none;cursor:pointer;margin-left:4px;">Edit</button></div></div>
-          <button class="li-check on">✓</button>
+          <div><div class="li-name">Tom</div><div class="li-sub">Course HC: <strong id="hc-tom">8</strong> <button onclick="editHC('hc-tom')" style="font-size:11px;border:1.5px solid var(--ink);padding:1px 6px;background:none;cursor:pointer;margin-left:4px;">Edit</button></div></div>
+          <button class="li-check on"><i class="ph-bold ph-check"></i></button>
         </div>
-        <div style="font-size:11px;color:#888;margin-bottom:5px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;">Tee</div>
+        <div class="eyebrow" style="margin-bottom:5px;">Tee</div>
         <div class="tee-chips">
           <button class="tee-chip active" onclick="setTee(this)">Blue</button>
           <button class="tee-chip" onclick="setTee(this)">White</button>
@@ -586,19 +772,19 @@ body {
         </div>
       </div>
     </div>
-    <div class="add-row" onclick="showToast('Add new player — not built yet')"><div class="add-ci">+</div><span class="add-lbl">Add new player</span></div>
+    <div class="add-row" onclick="showToast('Add new player — not built yet')"><div class="add-ci"><i class="ph-bold ph-plus"></i></div><span class="add-lbl">Add new player</span></div>
   </div>
   <div class="cta-wrap">
-    <button class="full-btn" onclick="go('s-play-start')">Next — Review →</button>
+    <button class="full-btn" onclick="go('s-play-start')">Next — Review <i class="ph-bold ph-arrow-right"></i></button>
   </div>
 </div>
 
 <!-- ===================== STEP 4: START ===================== -->
 <div class="screen" id="s-play-start">
   <div class="screen-header">
-    <button class="header-back" onclick="go('s-play-players')">←</button>
+    <button class="header-back" onclick="go('s-play-players')"><i class="ph-bold ph-arrow-left"></i></button>
     <span class="screen-title" style="font-size:18px;">New round</span>
-    <button class="header-close" onclick="go('s-history')">✕</button>
+    <button class="header-close" onclick="go('s-history')"><i class="ph-bold ph-x"></i></button>
   </div>
   <div class="step-bar">
     <div class="step done">Game</div>
@@ -607,26 +793,26 @@ body {
     <div class="step active">Start</div>
   </div>
   <div class="scroll">
-    <div style="padding:16px;border-bottom:2px solid #000;">
-      <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:#888;margin-bottom:10px;">Game</div>
-      <div style="font-size:17px;font-weight:700;color:#000;">Banker · 9 holes</div>
+    <div class="block">
+      <div class="eyebrow" style="margin-bottom:10px;">Game</div>
+      <div class="d" style="font-size:17px;font-weight:800;">Banker · 9 holes</div>
     </div>
-    <div style="padding:16px;border-bottom:2px solid #000;">
-      <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:#888;margin-bottom:10px;">Course</div>
-      <div style="font-size:17px;font-weight:700;color:#000;">Birch Creek GC</div>
-      <div style="font-size:13px;color:#888;margin-top:2px;">Smithfield, UT</div>
+    <div class="block">
+      <div class="eyebrow" style="margin-bottom:10px;">Course</div>
+      <div class="d" style="font-size:17px;font-weight:800;">Birch Creek GC</div>
+      <div style="font-size:13px;color:var(--mute);margin-top:2px;">Smithfield, UT</div>
     </div>
-    <div style="padding:16px;border-bottom:2px solid #000;">
-      <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:#888;margin-bottom:10px;">Players</div>
-      <div style="font-size:15px;font-weight:600;color:#000;line-height:2;">Trevor (HC 6 · Blue)<br>Bob (HC 6 · Blue)<br>John (HC 2 · Blue)<br>Tom (HC 8 · Blue)</div>
+    <div class="block">
+      <div class="eyebrow" style="margin-bottom:10px;">Players</div>
+      <div style="font-size:15px;font-weight:600;color:var(--ink);line-height:2;">Trevor (HC 6 · Blue)<br>Bob (HC 6 · Blue)<br>John (HC 2 · Blue)<br>Tom (HC 8 · Blue)</div>
     </div>
-    <div style="padding:16px;border-bottom:2px solid #000;">
-      <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:#888;margin-bottom:10px;">Starting hole</div>
-      <div style="font-size:17px;font-weight:700;color:#000;">Hole 1</div>
+    <div class="block">
+      <div class="eyebrow" style="margin-bottom:10px;">Starting hole</div>
+      <div class="d" style="font-size:17px;font-weight:800;">Hole 1</div>
     </div>
   </div>
   <div class="cta-wrap">
-    <button class="full-btn" onclick="go('s-hole-bets')">Start Round →</button>
+    <button class="full-btn" onclick="go('s-hole-bets')">Start Round <i class="ph-bold ph-arrow-right"></i></button>
   </div>
 </div>
 
@@ -642,56 +828,56 @@ body {
     <div><div class="bl">Banker this hole</div><div class="bn">Trevor</div></div>
     <button class="change-btn" onclick="openSheet('sheet-banker')">Change</button>
   </div>
-  <div style="padding:10px 16px;border-bottom:2px solid #000;flex-shrink:0;">
-    <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:#888;">Step 1 of 2 — Set bets &amp; doubles</div>
+  <div style="padding:6px 20px 8px;flex-shrink:0;">
+    <div class="eyebrow">Step 1 of 2 — Set bets &amp; doubles</div>
   </div>
   <div class="scroll">
     <!-- Banker row — no bet, just identity -->
-    <div style="display:flex;align-items:center;padding:20px 16px;border-bottom:2px solid #000;background:#f5f5f5;">
+    <div class="pcard bkr" style="display:flex;align-items:center;padding:18px 16px;">
       <div style="flex:1;">
-        <div style="font-size:18px;font-weight:700;color:#000;display:flex;align-items:center;gap:8px;">Trevor <span class="bkr-badge">Banker</span></div>
-        <div style="font-size:13px;color:#666;margin-top:3px;">HC 6 · No bet this hole</div>
+        <div class="pname" style="display:flex;align-items:center;gap:8px;">Trevor <span class="bkr-badge"><i class="ph-fill ph-bank"></i> Banker</span></div>
+        <div style="font-size:13px;color:var(--body);margin-top:3px;">HC 6 · No bet this hole</div>
       </div>
-      <div style="font-size:13px;color:#aaa;font-weight:600;">Doubles after players</div>
+      <div style="font-size:13px;color:var(--mute-soft);font-weight:600;">Doubles after players</div>
     </div>
     <!-- Bob -->
-    <div style="border-bottom:2px solid #000;">
+    <div class="pcard">
       <div style="display:flex;align-items:center;padding:16px 16px 10px;">
-        <div style="flex:1;"><div style="font-size:18px;font-weight:700;color:#000;">Bob</div><div style="font-size:13px;color:#666;margin-top:2px;">HC 6</div></div>
-        <button onclick="openNumpad('Bob')" style="font-size:22px;font-weight:700;border:2px solid #000;padding:10px 20px;background:#fff;color:#000;cursor:pointer;min-width:80px;text-align:center;">$5</button>
+        <div style="flex:1;"><div class="pname">Bob</div><div style="font-size:13px;color:var(--body);margin-top:2px;">HC 6</div></div>
+        <button onclick="openNumpad('Bob')" class="amt-btn">$5</button>
       </div>
       <div style="padding:0 16px 16px;display:flex;gap:0;">
-        <button onclick="togglePlayerDouble(this)" class="dbl-btn" style="flex:1;height:56px;font-size:16px;">2× Double</button>
+        <button onclick="togglePlayerDouble(this)" class="dbl-btn" style="flex:1;height:52px;font-size:17px;"><i class="ph-fill ph-lightning"></i> Double it</button>
       </div>
     </div>
     <!-- John -->
-    <div style="border-bottom:2px solid #000;">
+    <div class="pcard">
       <div style="display:flex;align-items:center;padding:16px 16px 10px;">
-        <div style="flex:1;"><div style="font-size:18px;font-weight:700;color:#000;">John</div><div style="font-size:13px;color:#666;margin-top:2px;">HC 2</div></div>
-        <button onclick="openNumpad('John')" style="font-size:22px;font-weight:700;border:2px solid #000;padding:10px 20px;background:#fff;color:#000;cursor:pointer;min-width:80px;text-align:center;">$4</button>
+        <div style="flex:1;"><div class="pname">John</div><div style="font-size:13px;color:var(--body);margin-top:2px;">HC 2</div></div>
+        <button onclick="openNumpad('John')" class="amt-btn">$4</button>
       </div>
       <div style="padding:0 16px 16px;display:flex;gap:0;">
-        <button onclick="togglePlayerDouble(this)" class="dbl-btn" style="flex:1;height:56px;font-size:16px;">2× Double</button>
+        <button onclick="togglePlayerDouble(this)" class="dbl-btn" style="flex:1;height:52px;font-size:17px;"><i class="ph-fill ph-lightning"></i> Double it</button>
       </div>
     </div>
     <!-- Tom -->
-    <div style="border-bottom:2px solid #000;">
+    <div class="pcard">
       <div style="display:flex;align-items:center;padding:16px 16px 10px;">
-        <div style="flex:1;"><div style="font-size:18px;font-weight:700;color:#000;">Tom</div><div style="font-size:13px;color:#666;margin-top:2px;">HC 8</div></div>
-        <button onclick="openNumpad('Tom')" style="font-size:22px;font-weight:700;border:2px solid #000;padding:10px 20px;background:#fff;color:#000;cursor:pointer;min-width:80px;text-align:center;">$5</button>
+        <div style="flex:1;"><div class="pname">Tom</div><div style="font-size:13px;color:var(--body);margin-top:2px;">HC 8</div></div>
+        <button onclick="openNumpad('Tom')" class="amt-btn">$5</button>
       </div>
       <div style="padding:0 16px 16px;display:flex;gap:0;">
-        <button onclick="togglePlayerDouble(this)" class="dbl-btn" style="flex:1;height:56px;font-size:16px;">2× Double</button>
+        <button onclick="togglePlayerDouble(this)" class="dbl-btn" style="flex:1;height:52px;font-size:17px;"><i class="ph-fill ph-lightning"></i> Double it</button>
       </div>
     </div>
     <!-- Banker double — unlocks if any player doubled -->
-    <div style="padding:16px;border-bottom:2px solid #000;background:#f5f5f5;">
-      <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:#888;margin-bottom:10px;">Banker double back</div>
-      <button id="banker-dbl" disabled onclick="toggleBankerDouble(this)" class="dbl-btn" style="width:100%;height:56px;font-size:16px;opacity:0.3;">4× Double back</button>
+    <div class="block" style="background:var(--surface);">
+      <div class="eyebrow" style="margin-bottom:10px;">Banker double back</div>
+      <button id="banker-dbl" disabled onclick="toggleBankerDouble(this)" class="dbl-btn" style="width:100%;height:52px;font-size:17px;opacity:0.3;"><i class="ph-fill ph-lightning"></i> Double back</button>
     </div>
   </div>
-  <div style="padding:14px 16px;border-top:2px solid #000;flex-shrink:0;">
-    <button class="full-btn" onclick="go('s-hole-scores')">Next — Enter Scores →</button>
+  <div class="cta-wrap">
+    <button class="full-btn" onclick="go('s-hole-scores')">Next — Enter Scores <i class="ph-bold ph-arrow-right"></i></button>
   </div>
 </div>
 
@@ -705,72 +891,72 @@ body {
   </div>
   <div class="banker-bar">
     <div><div class="bl">Banker this hole</div><div class="bn">Trevor</div></div>
-    <button class="change-btn" onclick="go('s-hole-bets')">← Bets</button>
+    <button class="change-btn" onclick="go('s-hole-bets')"><i class="ph-bold ph-arrow-left"></i> Bets</button>
   </div>
-  <div style="padding:10px 16px;border-bottom:2px solid #000;flex-shrink:0;">
-    <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:#888;">Step 2 of 2 — Enter scores</div>
+  <div style="padding:6px 20px 8px;flex-shrink:0;">
+    <div class="eyebrow">Step 2 of 2 — Enter scores</div>
   </div>
   <div class="scroll">
     <!-- Trevor -->
-    <div style="display:flex;align-items:center;gap:12px;padding:20px 16px;border-bottom:2px solid #000;background:#f5f5f5;">
+    <div class="pcard bkr" style="display:flex;align-items:center;gap:12px;padding:16px;">
       <div style="flex:1;">
-        <div style="font-size:18px;font-weight:700;color:#000;display:flex;align-items:center;gap:8px;">Trevor <span class="bkr-badge">Banker</span></div>
-        <div style="font-size:13px;color:#666;margin-top:3px;">HC 6</div>
+        <div class="pname" style="display:flex;align-items:center;gap:8px;">Trevor <span class="bkr-badge"><i class="ph-fill ph-bank"></i> Banker</span></div>
+        <div style="font-size:13px;color:var(--body);margin-top:3px;">HC 6</div>
       </div>
-      <div class="score-ctrl" style="border-width:2px;">
-        <button class="sc-btn" style="width:64px;height:64px;font-size:32px;" onclick="adjustScore(this,-1)">−</button>
-        <span class="sc-num" style="width:52px;font-size:26px;">4</span>
-        <button class="sc-btn" style="width:64px;height:64px;font-size:32px;" onclick="adjustScore(this,1)">+</button>
+      <div class="score-ctrl">
+        <button class="sc-btn" onclick="adjustScore(this,-1)"><i class="ph-bold ph-minus"></i></button>
+        <span class="sc-num">4</span>
+        <button class="sc-btn" onclick="adjustScore(this,1)"><i class="ph-bold ph-plus"></i></button>
       </div>
     </div>
     <!-- Bob -->
-    <div style="display:flex;align-items:center;gap:12px;padding:20px 16px;border-bottom:2px solid #000;">
+    <div class="pcard" style="display:flex;align-items:center;gap:12px;padding:16px;">
       <div style="flex:1;">
-        <div style="font-size:18px;font-weight:700;color:#000;">Bob</div>
-        <div style="font-size:13px;color:#666;margin-top:3px;">HC 6 · Bet $5</div>
+        <div class="pname">Bob</div>
+        <div style="font-size:13px;color:var(--body);margin-top:3px;">HC 6 · Bet $5</div>
       </div>
       <div class="score-ctrl">
-        <button class="sc-btn" style="width:64px;height:64px;font-size:32px;" onclick="adjustScore(this,-1)">−</button>
-        <span class="sc-num" style="width:52px;font-size:26px;">5</span>
-        <button class="sc-btn" style="width:64px;height:64px;font-size:32px;" onclick="adjustScore(this,1)">+</button>
+        <button class="sc-btn" onclick="adjustScore(this,-1)"><i class="ph-bold ph-minus"></i></button>
+        <span class="sc-num">5</span>
+        <button class="sc-btn" onclick="adjustScore(this,1)"><i class="ph-bold ph-plus"></i></button>
       </div>
     </div>
     <!-- John -->
-    <div style="display:flex;align-items:center;gap:12px;padding:20px 16px;border-bottom:2px solid #000;">
+    <div class="pcard" style="display:flex;align-items:center;gap:12px;padding:16px;">
       <div style="flex:1;">
-        <div style="font-size:18px;font-weight:700;color:#000;">John</div>
-        <div style="font-size:13px;color:#666;margin-top:3px;">HC 2 · Bet $4 · 2×</div>
+        <div class="pname">John</div>
+        <div style="font-size:13px;color:var(--body);margin-top:3px;">HC 2 · Bet $4 · 2×</div>
       </div>
       <div class="score-ctrl">
-        <button class="sc-btn" style="width:64px;height:64px;font-size:32px;" onclick="adjustScore(this,-1)">−</button>
-        <span class="sc-num" style="width:52px;font-size:26px;">4</span>
-        <button class="sc-btn" style="width:64px;height:64px;font-size:32px;" onclick="adjustScore(this,1)">+</button>
+        <button class="sc-btn" onclick="adjustScore(this,-1)"><i class="ph-bold ph-minus"></i></button>
+        <span class="sc-num">4</span>
+        <button class="sc-btn" onclick="adjustScore(this,1)"><i class="ph-bold ph-plus"></i></button>
       </div>
     </div>
     <!-- Tom -->
-    <div style="display:flex;align-items:center;gap:12px;padding:20px 16px;border-bottom:2px solid #000;">
+    <div class="pcard" style="display:flex;align-items:center;gap:12px;padding:16px;">
       <div style="flex:1;">
-        <div style="font-size:18px;font-weight:700;color:#000;">Tom</div>
-        <div style="font-size:13px;color:#666;margin-top:3px;">HC 8 · Bet $5</div>
+        <div class="pname">Tom</div>
+        <div style="font-size:13px;color:var(--body);margin-top:3px;">HC 8 · Bet $5</div>
       </div>
       <div class="score-ctrl">
-        <button class="sc-btn" style="width:64px;height:64px;font-size:32px;" onclick="adjustScore(this,-1)">−</button>
-        <span class="sc-num" style="width:52px;font-size:26px;">5</span>
-        <button class="sc-btn" style="width:64px;height:64px;font-size:32px;" onclick="adjustScore(this,1)">+</button>
+        <button class="sc-btn" onclick="adjustScore(this,-1)"><i class="ph-bold ph-minus"></i></button>
+        <span class="sc-num">5</span>
+        <button class="sc-btn" onclick="adjustScore(this,1)"><i class="ph-bold ph-plus"></i></button>
       </div>
     </div>
     <div class="running-total">
       <div class="rt-lbl">Running total</div>
       <div class="rt-items">
-        <div class="rt-item"><div class="rt-p">Trevor</div><div class="rt-a">+$29</div></div>
-        <div class="rt-item"><div class="rt-p">Bob</div><div class="rt-a">−$20</div></div>
-        <div class="rt-item"><div class="rt-p">John</div><div class="rt-a">−$4</div></div>
-        <div class="rt-item"><div class="rt-p">Tom</div><div class="rt-a">−$5</div></div>
+        <div class="rt-item"><div class="rt-p">Trevor</div><div class="rt-a pos">+$29</div></div>
+        <div class="rt-item"><div class="rt-p">Bob</div><div class="rt-a neg">−$20</div></div>
+        <div class="rt-item"><div class="rt-p">John</div><div class="rt-a neg">−$4</div></div>
+        <div class="rt-item"><div class="rt-p">Tom</div><div class="rt-a neg">−$5</div></div>
       </div>
     </div>
   </div>
-  <div style="padding:14px 16px;border-top:2px solid #000;flex-shrink:0;">
-    <button class="full-btn" onclick="go('s-settle')">Save &amp; Next Hole →</button>
+  <div class="cta-wrap">
+    <button class="full-btn" onclick="go('s-settle')">Save &amp; Next Hole <i class="ph-bold ph-arrow-right"></i></button>
   </div>
 </div>
 
@@ -778,21 +964,26 @@ body {
 <div class="screen" id="s-settle">
   <div class="screen-header"><span class="screen-title">Final results</span></div>
   <div class="scroll">
-    <div class="detail-hdr"><div class="dc">Birch Creek GC</div><div class="dm">Mar 27 · Banker · 9 holes</div></div>
+    <div class="winner-hero">
+      <i class="ph-fill ph-crown crown"></i>
+      <div class="wn">Trevor takes the pot</div>
+      <div class="wa" data-count="29">+$29</div>
+      <div class="ws">Birch Creek GC · Mar 27 · Banker · 9 holes</div>
+    </div>
     <div class="sec-label">Standings</div>
-    <div class="settle-row"><div class="sr">1</div><div class="sn">Trevor</div><div class="sa">+$29</div></div>
-    <div class="settle-row"><div class="sr">2</div><div class="sn">John</div><div class="sa">−$4</div></div>
-    <div class="settle-row"><div class="sr">3</div><div class="sn">Tom</div><div class="sa">−$5</div></div>
-    <div class="settle-row"><div class="sr">4</div><div class="sn">Bob</div><div class="sa">−$20</div></div>
+    <div class="settle-row"><div class="sr">1</div><div class="sn">Trevor</div><div class="sa pos">+$29</div></div>
+    <div class="settle-row"><div class="sr">2</div><div class="sn">John</div><div class="sa neg">−$4</div></div>
+    <div class="settle-row"><div class="sr">3</div><div class="sn">Tom</div><div class="sa neg">−$5</div></div>
+    <div class="settle-row"><div class="sr">4</div><div class="sn">Bob</div><div class="sa neg">−$20</div></div>
     <div class="sec-label">Who pays who</div>
     <div style="padding:0 16px;">
-      <div class="pay-row"><span class="pf">Bob</span><span class="pa">→</span><span class="pt">Trevor</span><span class="pm">$20</span></div>
-      <div class="pay-row"><span class="pf">John</span><span class="pa">→</span><span class="pt">Trevor</span><span class="pm">$4</span></div>
-      <div class="pay-row"><span class="pf">Tom</span><span class="pa">→</span><span class="pt">Trevor</span><span class="pm">$5</span></div>
+      <div class="pay-row"><span class="pf">Bob</span><span class="pa"><i class="ph-bold ph-arrow-right"></i></span><span class="pt">Trevor</span><span class="pm">$20</span></div>
+      <div class="pay-row"><span class="pf">John</span><span class="pa"><i class="ph-bold ph-arrow-right"></i></span><span class="pt">Trevor</span><span class="pm">$4</span></div>
+      <div class="pay-row"><span class="pf">Tom</span><span class="pa"><i class="ph-bold ph-arrow-right"></i></span><span class="pt">Trevor</span><span class="pm">$5</span></div>
     </div>
   </div>
   <div class="cta-wrap">
-    <button class="full-btn" onclick="showToast('Share card — not built yet')">Share results</button>
+    <button class="full-btn" onclick="showToast('Share card — not built yet')"><i class="ph-bold ph-share-network"></i> Share results</button>
     <button class="full-btn outline" onclick="go('s-history')">Done</button>
   </div>
 </div>
@@ -800,60 +991,60 @@ body {
 <!-- ===================== ROUND DETAIL ===================== -->
 <div class="screen" id="s-round-detail">
   <div class="screen-header">
-    <button class="header-back" onclick="go('s-history')">←</button>
+    <button class="header-back" onclick="go('s-history')"><i class="ph-bold ph-arrow-left"></i></button>
     <span class="screen-title" style="font-size:18px;">Round detail</span>
-    <button class="header-btn" onclick="showToast('Share — not built yet')">Share</button>
+    <button class="header-btn" onclick="showToast('Share — not built yet')"><i class="ph-bold ph-share-network"></i> Share</button>
   </div>
   <div class="scroll">
     <div class="detail-hdr"><div class="dc">Birch Creek GC</div><div class="dm">Mar 27 · Banker · 9 holes · Trevor, Bob, John, Tom</div></div>
     <div class="sec-label">Final standings</div>
-    <div class="stand-row"><div class="st-num">1</div><div class="st-name">Trevor</div><div class="st-amt">+$29</div></div>
-    <div class="stand-row"><div class="st-num">2</div><div class="st-name">John</div><div class="st-amt">−$4</div></div>
-    <div class="stand-row"><div class="st-num">3</div><div class="st-name">Tom</div><div class="st-amt">−$5</div></div>
-    <div class="stand-row"><div class="st-num">4</div><div class="st-name">Bob</div><div class="st-amt">−$20</div></div>
+    <div class="stand-row"><div class="st-num">1</div><div class="st-name">Trevor</div><div class="st-amt pos">+$29</div></div>
+    <div class="stand-row"><div class="st-num">2</div><div class="st-name">John</div><div class="st-amt neg">−$4</div></div>
+    <div class="stand-row"><div class="st-num">3</div><div class="st-name">Tom</div><div class="st-amt neg">−$5</div></div>
+    <div class="stand-row"><div class="st-num">4</div><div class="st-name">Bob</div><div class="st-amt neg">−$20</div></div>
     <div class="sec-label">Who paid who</div>
     <div style="padding:0 16px;">
-      <div class="pay-row"><span class="pf">Bob</span><span class="pa">→</span><span class="pt">Trevor</span><span class="pm">$20</span></div>
-      <div class="pay-row"><span class="pf">John</span><span class="pa">→</span><span class="pt">Trevor</span><span class="pm">$4</span></div>
-      <div class="pay-row"><span class="pf">Tom</span><span class="pa">→</span><span class="pt">Trevor</span><span class="pm">$5</span></div>
+      <div class="pay-row"><span class="pf">Bob</span><span class="pa"><i class="ph-bold ph-arrow-right"></i></span><span class="pt">Trevor</span><span class="pm">$20</span></div>
+      <div class="pay-row"><span class="pf">John</span><span class="pa"><i class="ph-bold ph-arrow-right"></i></span><span class="pt">Trevor</span><span class="pm">$4</span></div>
+      <div class="pay-row"><span class="pf">Tom</span><span class="pa"><i class="ph-bold ph-arrow-right"></i></span><span class="pt">Trevor</span><span class="pm">$5</span></div>
     </div>
     <div class="sec-label">Hole by hole</div>
     <div style="overflow-x:auto;padding:12px 16px;">
       <table style="border-collapse:collapse;font-size:12px;min-width:100%;">
         <tr>
-          <td style="padding:5px 8px 5px 0;font-weight:700;font-size:10px;text-transform:uppercase;color:#888;white-space:nowrap;">Hole</td>
-          <td style="padding:5px 6px;text-align:center;font-weight:700;font-size:10px;color:#888;">1</td>
-          <td style="padding:5px 6px;text-align:center;font-weight:700;font-size:10px;color:#888;">2</td>
-          <td style="padding:5px 6px;text-align:center;font-weight:700;font-size:10px;color:#888;">3</td>
-          <td style="padding:5px 6px;text-align:center;font-weight:700;font-size:10px;color:#888;">4–9</td>
+          <td style="padding:5px 8px 5px 0;font-weight:700;font-size:10px;text-transform:uppercase;color:var(--mute);white-space:nowrap;">Hole</td>
+          <td style="padding:5px 6px;text-align:center;font-weight:700;font-size:10px;color:var(--mute);">1</td>
+          <td style="padding:5px 6px;text-align:center;font-weight:700;font-size:10px;color:var(--mute);">2</td>
+          <td style="padding:5px 6px;text-align:center;font-weight:700;font-size:10px;color:var(--mute);">3</td>
+          <td style="padding:5px 6px;text-align:center;font-weight:700;font-size:10px;color:var(--mute);">4–9</td>
         </tr>
-        <tr style="border-top:1.5px solid #e8e8e8;">
+        <tr style="border-top:1px solid var(--line);">
           <td style="padding:8px 8px 8px 0;font-weight:700;">Trevor</td>
           <td style="padding:8px 6px;text-align:center;font-weight:700;">+$29</td>
           <td style="padding:8px 6px;text-align:center;">$0</td>
           <td style="padding:8px 6px;text-align:center;">$0</td>
-          <td style="padding:8px 6px;text-align:center;color:#ccc;">—</td>
+          <td style="padding:8px 6px;text-align:center;color:var(--mute-soft);">—</td>
         </tr>
-        <tr style="border-top:1.5px solid #e8e8e8;">
+        <tr style="border-top:1px solid var(--line);">
           <td style="padding:8px 8px 8px 0;font-weight:700;">Bob</td>
           <td style="padding:8px 6px;text-align:center;font-weight:700;">−$20</td>
           <td style="padding:8px 6px;text-align:center;">$0</td>
           <td style="padding:8px 6px;text-align:center;">$0</td>
-          <td style="padding:8px 6px;text-align:center;color:#ccc;">—</td>
+          <td style="padding:8px 6px;text-align:center;color:var(--mute-soft);">—</td>
         </tr>
-        <tr style="border-top:1.5px solid #e8e8e8;">
+        <tr style="border-top:1px solid var(--line);">
           <td style="padding:8px 8px 8px 0;font-weight:700;">John</td>
           <td style="padding:8px 6px;text-align:center;font-weight:700;">−$4</td>
           <td style="padding:8px 6px;text-align:center;">$0</td>
           <td style="padding:8px 6px;text-align:center;">$0</td>
-          <td style="padding:8px 6px;text-align:center;color:#ccc;">—</td>
+          <td style="padding:8px 6px;text-align:center;color:var(--mute-soft);">—</td>
         </tr>
-        <tr style="border-top:1.5px solid #e8e8e8;">
+        <tr style="border-top:1px solid var(--line);">
           <td style="padding:8px 8px 8px 0;font-weight:700;">Tom</td>
           <td style="padding:8px 6px;text-align:center;font-weight:700;">−$5</td>
           <td style="padding:8px 6px;text-align:center;">$0</td>
           <td style="padding:8px 6px;text-align:center;">$0</td>
-          <td style="padding:8px 6px;text-align:center;color:#ccc;">—</td>
+          <td style="padding:8px 6px;text-align:center;color:var(--mute-soft);">—</td>
         </tr>
       </table>
     </div>
@@ -863,7 +1054,7 @@ body {
 <!-- ===================== LEDGER ===================== -->
 <div class="screen" id="s-ledger">
   <div class="screen-header">
-    <button class="header-back" onclick="go('s-history')">←</button>
+    <button class="header-back" onclick="go('s-history')"><i class="ph-bold ph-arrow-left"></i></button>
     <span class="screen-title">Ledger</span>
   </div>
   <div class="scroll">
@@ -899,13 +1090,13 @@ body {
         <div class="lr-amt">You owed $8.00</div>
         <div class="lr-status">Settled Mar 21 · Pebble Creek GC</div>
       </div>
-      <button class="settle-btn settled">Done</button>
+      <button class="settle-btn settled"><i class="ph-bold ph-check"></i> Paid</button>
     </div>
   </div>
   <div class="bottom-nav">
-    <button class="nav-btn" onclick="go('s-history')"><div class="nav-sq"></div><span class="nav-lbl">History</span></button>
-    <button class="nav-btn center" onclick="go('s-play-game')"><div class="nav-play"><span>▶</span></div></button>
-    <button class="nav-btn" onclick="go('s-settings')"><div class="nav-ci"></div><span class="nav-lbl">Settings</span></button>
+    <button class="nav-btn" onclick="go('s-history')"><i class="ph-fill ph-clock-counter-clockwise"></i><span class="nav-lbl">History</span></button>
+    <button class="nav-btn center" onclick="go('s-play-game')"><div class="nav-play"><i class="ph-fill ph-golf"></i></div></button>
+    <button class="nav-btn" onclick="go('s-settings')"><i class="ph-fill ph-gear-six"></i><span class="nav-lbl">Settings</span></button>
   </div>
 </div>
 
@@ -916,10 +1107,10 @@ body {
   <div class="sheet">
     <div class="sheet-handle"></div>
     <div class="sheet-title">Select banker — Hole 3</div>
-    <div class="sheet-item selected" onclick="selectBanker('Trevor')">Trevor <span style="color:#888;font-size:13px;">HC 6</span></div>
-    <div class="sheet-item" onclick="selectBanker('Bob')">Bob <span style="color:#888;font-size:13px;">HC 6</span></div>
-    <div class="sheet-item" onclick="selectBanker('John')">John <span style="color:#888;font-size:13px;">HC 2</span></div>
-    <div class="sheet-item" onclick="selectBanker('Tom')">Tom <span style="color:#888;font-size:13px;">HC 8</span></div>
+    <div class="sheet-item selected" onclick="selectBanker('Trevor')">Trevor <span style="color:var(--mute);font-size:13px;">HC 6</span></div>
+    <div class="sheet-item" onclick="selectBanker('Bob')">Bob <span style="color:var(--mute);font-size:13px;">HC 6</span></div>
+    <div class="sheet-item" onclick="selectBanker('John')">John <span style="color:var(--mute);font-size:13px;">HC 2</span></div>
+    <div class="sheet-item" onclick="selectBanker('Tom')">Tom <span style="color:var(--mute);font-size:13px;">HC 8</span></div>
     <button class="sheet-cancel" onclick="closeSheet('sheet-banker')">Cancel</button>
   </div>
 </div>
@@ -930,14 +1121,14 @@ body {
     <div class="sheet-handle"></div>
     <div class="sheet-title" style="display:flex;justify-content:space-between;align-items:center;">
       <span>Scorecard</span>
-      <button onclick="closeSheet('sheet-scorecard')" style="background:none;border:none;font-size:20px;cursor:pointer;color:#000;">✕</button>
+      <button class="icon-btn" onclick="closeSheet('sheet-scorecard')"><i class="ph-bold ph-x"></i></button>
     </div>
 
     <!-- LEGEND -->
-    <div style="display:flex;gap:16px;padding:8px 12px;border-bottom:2px solid #000;background:#fafafa;">
-      <span style="font-size:11px;color:#888;"><strong style="color:#000;">2×</strong> Player doubled</span>
-      <span style="font-size:11px;color:#888;"><strong style="color:#000;">4×</strong> Banker doubled back</span>
-      <span style="font-size:11px;color:#888;"><strong style="color:#000;">B</strong> = Banker that hole</span>
+    <div style="display:flex;gap:16px;padding:8px 12px;border-bottom:1px solid var(--line);background:var(--surface);">
+      <span style="font-size:11px;color:var(--mute);"><strong style="color:var(--ink);">2×</strong> Player doubled</span>
+      <span style="font-size:11px;color:var(--mute);"><strong style="color:var(--ink);">4×</strong> Banker doubled back</span>
+      <span style="font-size:11px;color:var(--mute);"><strong style="color:var(--ink);">B</strong> = Banker that hole</span>
     </div>
 
     <div style="overflow-x:auto;">
@@ -953,150 +1144,150 @@ body {
           </tr>
           <!-- Par row -->
           <tr>
-            <th style="text-align:left;padding-left:10px;background:#fff;font-weight:400;color:#888;">Par</th>
-            <td class="cur" style="text-align:center;font-size:11px;color:#888;padding:3px 4px;">5</td>
-            <td style="text-align:center;font-size:11px;color:#888;padding:3px 4px;">4</td>
-            <td style="text-align:center;font-size:11px;color:#888;padding:3px 4px;">4</td>
-            <td style="text-align:center;font-size:11px;color:#aaa;padding:3px 4px;">4</td>
-            <td style="text-align:center;font-size:11px;color:#aaa;padding:3px 4px;">5</td>
-            <td style="text-align:center;font-size:11px;color:#aaa;padding:3px 4px;">4</td>
-            <td style="text-align:center;font-size:11px;color:#aaa;padding:3px 4px;">3</td>
-            <td style="text-align:center;font-size:11px;color:#aaa;padding:3px 4px;">4</td>
-            <td style="text-align:center;font-size:11px;color:#aaa;padding:3px 4px;">4</td>
-            <td style="text-align:center;font-size:11px;color:#888;padding:3px 4px;">37</td>
+            <th style="text-align:left;padding-left:10px;background:var(--card);font-weight:400;color:var(--mute);">Par</th>
+            <td class="cur" style="text-align:center;font-size:11px;color:var(--mute);padding:3px 4px;">5</td>
+            <td style="text-align:center;font-size:11px;color:var(--mute);padding:3px 4px;">4</td>
+            <td style="text-align:center;font-size:11px;color:var(--mute);padding:3px 4px;">4</td>
+            <td style="text-align:center;font-size:11px;color:var(--mute-soft);padding:3px 4px;">4</td>
+            <td style="text-align:center;font-size:11px;color:var(--mute-soft);padding:3px 4px;">5</td>
+            <td style="text-align:center;font-size:11px;color:var(--mute-soft);padding:3px 4px;">4</td>
+            <td style="text-align:center;font-size:11px;color:var(--mute-soft);padding:3px 4px;">3</td>
+            <td style="text-align:center;font-size:11px;color:var(--mute-soft);padding:3px 4px;">4</td>
+            <td style="text-align:center;font-size:11px;color:var(--mute-soft);padding:3px 4px;">4</td>
+            <td style="text-align:center;font-size:11px;color:var(--mute);padding:3px 4px;">37</td>
           </tr>
           <!-- Banker row -->
           <tr>
-            <th style="text-align:left;padding-left:10px;background:#fff;font-weight:400;color:#888;">Banker</th>
-            <td class="cur" style="text-align:center;font-size:10px;font-weight:700;color:#000;padding:3px 4px;">Trev</td>
-            <td style="text-align:center;font-size:10px;font-weight:700;color:#000;padding:3px 4px;">Bob</td>
-            <td style="text-align:center;font-size:10px;font-weight:700;color:#000;padding:3px 4px;">Trev</td>
-            <td style="text-align:center;font-size:10px;color:#ccc;padding:3px 4px;">—</td>
-            <td style="text-align:center;font-size:10px;color:#ccc;padding:3px 4px;">—</td>
-            <td style="text-align:center;font-size:10px;color:#ccc;padding:3px 4px;">—</td>
-            <td style="text-align:center;font-size:10px;color:#ccc;padding:3px 4px;">—</td>
-            <td style="text-align:center;font-size:10px;color:#ccc;padding:3px 4px;">—</td>
-            <td style="text-align:center;font-size:10px;color:#ccc;padding:3px 4px;">—</td>
+            <th style="text-align:left;padding-left:10px;background:var(--card);font-weight:400;color:var(--mute);">Banker</th>
+            <td class="cur" style="text-align:center;font-size:10px;font-weight:700;color:var(--ink);padding:3px 4px;">Trev</td>
+            <td style="text-align:center;font-size:10px;font-weight:700;color:var(--ink);padding:3px 4px;">Bob</td>
+            <td style="text-align:center;font-size:10px;font-weight:700;color:var(--ink);padding:3px 4px;">Trev</td>
+            <td style="text-align:center;font-size:10px;color:var(--mute-soft);padding:3px 4px;">—</td>
+            <td style="text-align:center;font-size:10px;color:var(--mute-soft);padding:3px 4px;">—</td>
+            <td style="text-align:center;font-size:10px;color:var(--mute-soft);padding:3px 4px;">—</td>
+            <td style="text-align:center;font-size:10px;color:var(--mute-soft);padding:3px 4px;">—</td>
+            <td style="text-align:center;font-size:10px;color:var(--mute-soft);padding:3px 4px;">—</td>
+            <td style="text-align:center;font-size:10px;color:var(--mute-soft);padding:3px 4px;">—</td>
             <td></td>
           </tr>
           <!-- Multiplier row -->
           <tr>
-            <th style="text-align:left;padding-left:10px;background:#fff;font-weight:400;color:#888;">Multi</th>
-            <td class="cur" style="text-align:center;font-size:10px;font-weight:700;color:#000;padding:3px 4px;">4×</td>
-            <td style="text-align:center;font-size:10px;color:#888;padding:3px 4px;">1×</td>
-            <td style="text-align:center;font-size:10px;font-weight:700;color:#000;padding:3px 4px;">2×</td>
-            <td style="text-align:center;font-size:10px;color:#ccc;padding:3px 4px;">—</td>
-            <td style="text-align:center;font-size:10px;color:#ccc;padding:3px 4px;">—</td>
-            <td style="text-align:center;font-size:10px;color:#ccc;padding:3px 4px;">—</td>
-            <td style="text-align:center;font-size:10px;color:#ccc;padding:3px 4px;">—</td>
-            <td style="text-align:center;font-size:10px;color:#ccc;padding:3px 4px;">—</td>
-            <td style="text-align:center;font-size:10px;color:#ccc;padding:3px 4px;">—</td>
+            <th style="text-align:left;padding-left:10px;background:var(--card);font-weight:400;color:var(--mute);">Multi</th>
+            <td class="cur" style="text-align:center;font-size:10px;font-weight:700;color:var(--ink);padding:3px 4px;">4×</td>
+            <td style="text-align:center;font-size:10px;color:var(--mute);padding:3px 4px;">1×</td>
+            <td style="text-align:center;font-size:10px;font-weight:700;color:var(--ink);padding:3px 4px;">2×</td>
+            <td style="text-align:center;font-size:10px;color:var(--mute-soft);padding:3px 4px;">—</td>
+            <td style="text-align:center;font-size:10px;color:var(--mute-soft);padding:3px 4px;">—</td>
+            <td style="text-align:center;font-size:10px;color:var(--mute-soft);padding:3px 4px;">—</td>
+            <td style="text-align:center;font-size:10px;color:var(--mute-soft);padding:3px 4px;">—</td>
+            <td style="text-align:center;font-size:10px;color:var(--mute-soft);padding:3px 4px;">—</td>
+            <td style="text-align:center;font-size:10px;color:var(--mute-soft);padding:3px 4px;">—</td>
             <td></td>
           </tr>
         </thead>
         <tbody>
 
           <!-- ── TREVOR ── -->
-          <tr style="border-top:2px solid #000;background:#f9f9f9;">
-            <td rowspan="3" style="font-weight:700;padding-left:10px;vertical-align:top;padding-top:8px;background:#f9f9f9;">Trevor</td>
+          <tr style="border-top:1px solid var(--line);background:var(--surface);">
+            <td rowspan="3" style="font-weight:700;padding-left:10px;vertical-align:top;padding-top:8px;background:var(--surface);">Trevor</td>
             <!-- H1 cur -->
             <td class="cur" style="text-align:center;font-weight:700;font-size:13px;padding:6px 4px;">4</td>
             <!-- H2 -->
             <td style="text-align:center;font-size:13px;padding:6px 4px;">6</td>
             <!-- H3 -->
-            <td style="text-align:center;font-size:13px;padding:6px 4px;color:#aaa;">—</td>
-            <td style="text-align:center;font-size:13px;padding:6px 4px;color:#ccc;">—</td>
-            <td style="text-align:center;color:#ccc;padding:6px 4px;">—</td><td style="text-align:center;color:#ccc;padding:6px 4px;">—</td><td style="text-align:center;color:#ccc;padding:6px 4px;">—</td><td style="text-align:center;color:#ccc;padding:6px 4px;">—</td><td style="text-align:center;color:#ccc;padding:6px 4px;">—</td>
+            <td style="text-align:center;font-size:13px;padding:6px 4px;color:var(--mute-soft);">—</td>
+            <td style="text-align:center;font-size:13px;padding:6px 4px;color:var(--mute-soft);">—</td>
+            <td style="text-align:center;color:var(--mute-soft);padding:6px 4px;">—</td><td style="text-align:center;color:var(--mute-soft);padding:6px 4px;">—</td><td style="text-align:center;color:var(--mute-soft);padding:6px 4px;">—</td><td style="text-align:center;color:var(--mute-soft);padding:6px 4px;">—</td><td style="text-align:center;color:var(--mute-soft);padding:6px 4px;">—</td>
             <td style="font-weight:700;text-align:center;">10</td>
           </tr>
-          <tr style="background:#f9f9f9;">
-            <td class="cur" style="text-align:center;font-size:10px;color:#888;padding:2px 4px;border-top:none;">B · $5</td>
-            <td style="text-align:center;font-size:10px;color:#888;padding:2px 4px;border-top:none;">—</td>
-            <td style="text-align:center;font-size:10px;color:#aaa;padding:2px 4px;border-top:none;">—</td>
+          <tr style="background:var(--surface);">
+            <td class="cur" style="text-align:center;font-size:10px;color:var(--mute);padding:2px 4px;border-top:none;">B · $5</td>
+            <td style="text-align:center;font-size:10px;color:var(--mute);padding:2px 4px;border-top:none;">—</td>
+            <td style="text-align:center;font-size:10px;color:var(--mute-soft);padding:2px 4px;border-top:none;">—</td>
             <td colspan="6" style="border-top:none;"></td><td style="border-top:none;"></td>
           </tr>
-          <tr style="background:#f9f9f9;border-bottom:2px solid #000;">
-            <td class="cur" style="text-align:center;font-size:11px;font-weight:700;color:#000;padding:3px 4px;border-top:none;">+$20</td>
-            <td style="text-align:center;font-size:11px;font-weight:700;color:#000;padding:3px 4px;border-top:none;">+$9</td>
-            <td style="text-align:center;font-size:11px;color:#aaa;padding:3px 4px;border-top:none;">—</td>
+          <tr style="background:var(--surface);border-bottom:1px solid var(--line);">
+            <td class="cur" style="text-align:center;font-size:11px;font-weight:700;color:var(--ink);padding:3px 4px;border-top:none;">+$20</td>
+            <td style="text-align:center;font-size:11px;font-weight:700;color:var(--ink);padding:3px 4px;border-top:none;">+$9</td>
+            <td style="text-align:center;font-size:11px;color:var(--mute-soft);padding:3px 4px;border-top:none;">—</td>
             <td colspan="6" style="border-top:none;"></td><td style="border-top:none;"></td>
           </tr>
 
           <!-- ── BOB ── -->
-          <tr style="background:#fff;">
+          <tr style="background:var(--card);">
             <td rowspan="3" style="font-weight:700;padding-left:10px;vertical-align:top;padding-top:8px;">Bob</td>
             <td class="cur" style="text-align:center;font-weight:700;font-size:13px;padding:6px 4px;">5</td>
             <td style="text-align:center;font-size:13px;padding:6px 4px;">4</td>
-            <td style="text-align:center;font-size:13px;color:#aaa;padding:6px 4px;">—</td>
-            <td style="text-align:center;color:#ccc;padding:6px 4px;">—</td>
-            <td style="text-align:center;color:#ccc;padding:6px 4px;">—</td><td style="text-align:center;color:#ccc;padding:6px 4px;">—</td><td style="text-align:center;color:#ccc;padding:6px 4px;">—</td><td style="text-align:center;color:#ccc;padding:6px 4px;">—</td><td style="text-align:center;color:#ccc;padding:6px 4px;">—</td>
+            <td style="text-align:center;font-size:13px;color:var(--mute-soft);padding:6px 4px;">—</td>
+            <td style="text-align:center;color:var(--mute-soft);padding:6px 4px;">—</td>
+            <td style="text-align:center;color:var(--mute-soft);padding:6px 4px;">—</td><td style="text-align:center;color:var(--mute-soft);padding:6px 4px;">—</td><td style="text-align:center;color:var(--mute-soft);padding:6px 4px;">—</td><td style="text-align:center;color:var(--mute-soft);padding:6px 4px;">—</td><td style="text-align:center;color:var(--mute-soft);padding:6px 4px;">—</td>
             <td style="font-weight:700;text-align:center;">9</td>
           </tr>
           <tr>
-            <td class="cur" style="text-align:center;font-size:10px;color:#888;padding:2px 4px;border-top:none;">$5 · 4×</td>
-            <td style="text-align:center;font-size:10px;color:#888;padding:2px 4px;border-top:none;">B · $5</td>
-            <td style="text-align:center;font-size:10px;color:#aaa;padding:2px 4px;border-top:none;">$5</td>
+            <td class="cur" style="text-align:center;font-size:10px;color:var(--mute);padding:2px 4px;border-top:none;">$5 · 4×</td>
+            <td style="text-align:center;font-size:10px;color:var(--mute);padding:2px 4px;border-top:none;">B · $5</td>
+            <td style="text-align:center;font-size:10px;color:var(--mute-soft);padding:2px 4px;border-top:none;">$5</td>
             <td colspan="6" style="border-top:none;"></td><td style="border-top:none;"></td>
           </tr>
-          <tr style="border-bottom:2px solid #000;">
-            <td class="cur" style="text-align:center;font-size:11px;font-weight:700;color:#000;padding:3px 4px;border-top:none;">−$20</td>
-            <td style="text-align:center;font-size:11px;font-weight:700;color:#000;padding:3px 4px;border-top:none;">+$9</td>
-            <td style="text-align:center;font-size:11px;color:#aaa;padding:3px 4px;border-top:none;">—</td>
+          <tr style="border-bottom:1px solid var(--line);">
+            <td class="cur" style="text-align:center;font-size:11px;font-weight:700;color:var(--ink);padding:3px 4px;border-top:none;">−$20</td>
+            <td style="text-align:center;font-size:11px;font-weight:700;color:var(--ink);padding:3px 4px;border-top:none;">+$9</td>
+            <td style="text-align:center;font-size:11px;color:var(--mute-soft);padding:3px 4px;border-top:none;">—</td>
             <td colspan="6" style="border-top:none;"></td><td style="border-top:none;"></td>
           </tr>
 
           <!-- ── JOHN ── -->
-          <tr style="background:#f9f9f9;">
-            <td rowspan="3" style="font-weight:700;padding-left:10px;vertical-align:top;padding-top:8px;background:#f9f9f9;">John</td>
+          <tr style="background:var(--surface);">
+            <td rowspan="3" style="font-weight:700;padding-left:10px;vertical-align:top;padding-top:8px;background:var(--surface);">John</td>
             <td class="cur" style="text-align:center;font-weight:700;font-size:13px;padding:6px 4px;">6</td>
             <td style="text-align:center;font-size:13px;padding:6px 4px;">3</td>
-            <td style="text-align:center;font-size:13px;color:#aaa;padding:6px 4px;">—</td>
-            <td style="text-align:center;color:#ccc;padding:6px 4px;">—</td>
-            <td style="text-align:center;color:#ccc;padding:6px 4px;">—</td><td style="text-align:center;color:#ccc;padding:6px 4px;">—</td><td style="text-align:center;color:#ccc;padding:6px 4px;">—</td><td style="text-align:center;color:#ccc;padding:6px 4px;">—</td><td style="text-align:center;color:#ccc;padding:6px 4px;">—</td>
+            <td style="text-align:center;font-size:13px;color:var(--mute-soft);padding:6px 4px;">—</td>
+            <td style="text-align:center;color:var(--mute-soft);padding:6px 4px;">—</td>
+            <td style="text-align:center;color:var(--mute-soft);padding:6px 4px;">—</td><td style="text-align:center;color:var(--mute-soft);padding:6px 4px;">—</td><td style="text-align:center;color:var(--mute-soft);padding:6px 4px;">—</td><td style="text-align:center;color:var(--mute-soft);padding:6px 4px;">—</td><td style="text-align:center;color:var(--mute-soft);padding:6px 4px;">—</td>
             <td style="font-weight:700;text-align:center;">9</td>
           </tr>
-          <tr style="background:#f9f9f9;">
-            <td class="cur" style="text-align:center;font-size:10px;color:#888;padding:2px 4px;border-top:none;">$4 · 2×</td>
-            <td style="text-align:center;font-size:10px;color:#888;padding:2px 4px;border-top:none;">$4</td>
-            <td style="text-align:center;font-size:10px;color:#aaa;padding:2px 4px;border-top:none;">$4</td>
+          <tr style="background:var(--surface);">
+            <td class="cur" style="text-align:center;font-size:10px;color:var(--mute);padding:2px 4px;border-top:none;">$4 · 2×</td>
+            <td style="text-align:center;font-size:10px;color:var(--mute);padding:2px 4px;border-top:none;">$4</td>
+            <td style="text-align:center;font-size:10px;color:var(--mute-soft);padding:2px 4px;border-top:none;">$4</td>
             <td colspan="6" style="border-top:none;"></td><td style="border-top:none;"></td>
           </tr>
-          <tr style="background:#f9f9f9;border-bottom:2px solid #000;">
-            <td class="cur" style="text-align:center;font-size:11px;font-weight:700;color:#000;padding:3px 4px;border-top:none;">+$8</td>
-            <td style="text-align:center;font-size:11px;font-weight:700;color:#000;padding:3px 4px;border-top:none;">−$4</td>
-            <td style="text-align:center;font-size:11px;color:#aaa;padding:3px 4px;border-top:none;">—</td>
+          <tr style="background:var(--surface);border-bottom:1px solid var(--line);">
+            <td class="cur" style="text-align:center;font-size:11px;font-weight:700;color:var(--ink);padding:3px 4px;border-top:none;">+$8</td>
+            <td style="text-align:center;font-size:11px;font-weight:700;color:var(--ink);padding:3px 4px;border-top:none;">−$4</td>
+            <td style="text-align:center;font-size:11px;color:var(--mute-soft);padding:3px 4px;border-top:none;">—</td>
             <td colspan="6" style="border-top:none;"></td><td style="border-top:none;"></td>
           </tr>
 
           <!-- ── TOM ── -->
-          <tr style="background:#fff;">
+          <tr style="background:var(--card);">
             <td rowspan="3" style="font-weight:700;padding-left:10px;vertical-align:top;padding-top:8px;">Tom</td>
             <td class="cur" style="text-align:center;font-weight:700;font-size:13px;padding:6px 4px;">7</td>
             <td style="text-align:center;font-size:13px;padding:6px 4px;">4</td>
-            <td style="text-align:center;font-size:13px;color:#aaa;padding:6px 4px;">—</td>
-            <td style="text-align:center;color:#ccc;padding:6px 4px;">—</td>
-            <td style="text-align:center;color:#ccc;padding:6px 4px;">—</td><td style="text-align:center;color:#ccc;padding:6px 4px;">—</td><td style="text-align:center;color:#ccc;padding:6px 4px;">—</td><td style="text-align:center;color:#ccc;padding:6px 4px;">—</td><td style="text-align:center;color:#ccc;padding:6px 4px;">—</td>
+            <td style="text-align:center;font-size:13px;color:var(--mute-soft);padding:6px 4px;">—</td>
+            <td style="text-align:center;color:var(--mute-soft);padding:6px 4px;">—</td>
+            <td style="text-align:center;color:var(--mute-soft);padding:6px 4px;">—</td><td style="text-align:center;color:var(--mute-soft);padding:6px 4px;">—</td><td style="text-align:center;color:var(--mute-soft);padding:6px 4px;">—</td><td style="text-align:center;color:var(--mute-soft);padding:6px 4px;">—</td><td style="text-align:center;color:var(--mute-soft);padding:6px 4px;">—</td>
             <td style="font-weight:700;text-align:center;">11</td>
           </tr>
           <tr>
-            <td class="cur" style="text-align:center;font-size:10px;color:#888;padding:2px 4px;border-top:none;">$5</td>
-            <td style="text-align:center;font-size:10px;color:#888;padding:2px 4px;border-top:none;">$5</td>
-            <td style="text-align:center;font-size:10px;color:#aaa;padding:2px 4px;border-top:none;">$5</td>
+            <td class="cur" style="text-align:center;font-size:10px;color:var(--mute);padding:2px 4px;border-top:none;">$5</td>
+            <td style="text-align:center;font-size:10px;color:var(--mute);padding:2px 4px;border-top:none;">$5</td>
+            <td style="text-align:center;font-size:10px;color:var(--mute-soft);padding:2px 4px;border-top:none;">$5</td>
             <td colspan="6" style="border-top:none;"></td><td style="border-top:none;"></td>
           </tr>
-          <tr style="border-bottom:2px solid #000;">
-            <td class="cur" style="text-align:center;font-size:11px;font-weight:700;color:#000;padding:3px 4px;border-top:none;">−$5</td>
-            <td style="text-align:center;font-size:11px;font-weight:700;color:#000;padding:3px 4px;border-top:none;">−$5</td>
-            <td style="text-align:center;font-size:11px;color:#aaa;padding:3px 4px;border-top:none;">—</td>
+          <tr style="border-bottom:1px solid var(--line);">
+            <td class="cur" style="text-align:center;font-size:11px;font-weight:700;color:var(--ink);padding:3px 4px;border-top:none;">−$5</td>
+            <td style="text-align:center;font-size:11px;font-weight:700;color:var(--ink);padding:3px 4px;border-top:none;">−$5</td>
+            <td style="text-align:center;font-size:11px;color:var(--mute-soft);padding:3px 4px;border-top:none;">—</td>
             <td colspan="6" style="border-top:none;"></td><td style="border-top:none;"></td>
           </tr>
 
           <!-- ── RUNNING TOTAL ── -->
-          <tr style="background:#000;">
+          <tr style="background:var(--teal);">
             <td style="font-size:11px;font-weight:700;color:#fff;padding:6px 10px;text-transform:uppercase;letter-spacing:.05em;">Running $</td>
             <td style="text-align:center;font-size:11px;font-weight:700;color:#fff;padding:6px 4px;">+$3</td>
             <td style="text-align:center;font-size:11px;font-weight:700;color:#fff;padding:6px 4px;">+$9</td>
-            <td style="text-align:center;font-size:11px;color:#888;padding:6px 4px;">—</td>
+            <td style="text-align:center;font-size:11px;color:var(--mute);padding:6px 4px;">—</td>
             <td colspan="6" style=""></td><td></td>
           </tr>
 
@@ -1111,9 +1302,9 @@ body {
 <div class="sheet-overlay" id="sheet-rules" onclick="closeSheetOnBg(event,'sheet-rules')">
   <div class="rules-sheet">
     <div class="sheet-handle"></div>
-    <div style="display:flex;justify-content:space-between;align-items:center;padding:14px 16px;border-bottom:2px solid #000;">
-      <span style="font-size:16px;font-weight:700;color:#000;">How to play Banker</span>
-      <button onclick="closeSheet('sheet-rules')" style="background:none;border:none;font-size:20px;cursor:pointer;color:#000;">✕</button>
+    <div style="display:flex;justify-content:space-between;align-items:center;padding:12px 16px 4px 20px;">
+      <span class="d" style="font-size:22px;font-weight:800;">How to play Banker</span>
+      <button class="icon-btn" onclick="closeSheet('sheet-rules')"><i class="ph-bold ph-x"></i></button>
     </div>
     <div class="rules-content">
       <div class="rules-sub">3–8 players · Rotating banker each hole</div>
@@ -1162,10 +1353,10 @@ body {
   <div class="sheet">
     <div class="sheet-handle"></div>
     <div class="sheet-title">Settle up with Bob</div>
-    <div style="padding:16px;border-bottom:2px solid #000;">
-      <div style="font-size:15px;color:#888;margin-bottom:4px;">Bob owes you</div>
-      <div style="font-size:32px;font-weight:700;color:#000;">$20.00</div>
-      <div style="font-size:13px;color:#888;margin-top:4px;">Birch Creek GC · Mar 27</div>
+    <div class="block">
+      <div style="font-size:15px;color:var(--mute);margin-bottom:4px;">Bob owes you</div>
+      <div class="d" style="font-size:40px;font-weight:800;letter-spacing:-.03em;">$20.00</div>
+      <div style="font-size:13px;color:var(--mute);margin-top:4px;">Birch Creek GC · Mar 27</div>
     </div>
     <div class="sheet-item" onclick="markSettled('sheet-settle-bob','Bob')">Mark as settled</div>
     <button class="sheet-cancel" onclick="closeSheet('sheet-settle-bob')">Cancel</button>
@@ -1177,10 +1368,10 @@ body {
   <div class="sheet">
     <div class="sheet-handle"></div>
     <div class="sheet-title">Settle up with John</div>
-    <div style="padding:16px;border-bottom:2px solid #000;">
-      <div style="font-size:15px;color:#888;margin-bottom:4px;">John owes you</div>
-      <div style="font-size:32px;font-weight:700;color:#000;">$4.00</div>
-      <div style="font-size:13px;color:#888;margin-top:4px;">Birch Creek GC · Mar 27</div>
+    <div class="block">
+      <div style="font-size:15px;color:var(--mute);margin-bottom:4px;">John owes you</div>
+      <div class="d" style="font-size:40px;font-weight:800;letter-spacing:-.03em;">$4.00</div>
+      <div style="font-size:13px;color:var(--mute);margin-top:4px;">Birch Creek GC · Mar 27</div>
     </div>
     <div class="sheet-item" onclick="markSettled('sheet-settle-john','John')">Mark as settled</div>
     <button class="sheet-cancel" onclick="closeSheet('sheet-settle-john')">Cancel</button>
@@ -1192,10 +1383,10 @@ body {
   <div class="sheet">
     <div class="sheet-handle"></div>
     <div class="sheet-title">Settle up with Tom</div>
-    <div style="padding:16px;border-bottom:2px solid #000;">
-      <div style="font-size:15px;color:#888;margin-bottom:4px;">Tom owes you</div>
-      <div style="font-size:32px;font-weight:700;color:#000;">$5.00</div>
-      <div style="font-size:13px;color:#888;margin-top:4px;">Birch Creek GC · Mar 27</div>
+    <div class="block">
+      <div style="font-size:15px;color:var(--mute);margin-bottom:4px;">Tom owes you</div>
+      <div class="d" style="font-size:40px;font-weight:800;letter-spacing:-.03em;">$5.00</div>
+      <div style="font-size:13px;color:var(--mute);margin-top:4px;">Birch Creek GC · Mar 27</div>
     </div>
     <div class="sheet-item" onclick="markSettled('sheet-settle-tom','Tom')">Mark as settled</div>
     <button class="sheet-cancel" onclick="closeSheet('sheet-settle-tom')">Cancel</button>
@@ -1205,9 +1396,9 @@ body {
 <!-- ===================== NASSAU: PLAYERS ===================== -->
 <div class="screen" id="s-nassau-players">
   <div class="screen-header">
-    <button class="header-back" onclick="go('s-play-game')">←</button>
+    <button class="header-back" onclick="go('s-play-game')"><i class="ph-bold ph-arrow-left"></i></button>
     <span class="screen-title" style="font-size:18px;">New round</span>
-    <button class="header-close" onclick="go('s-history')">✕</button>
+    <button class="header-close" onclick="go('s-history')"><i class="ph-bold ph-x"></i></button>
   </div>
   <div class="step-bar">
     <div class="step done">Game</div>
@@ -1224,35 +1415,35 @@ body {
       <div class="tog" id="hc-toggle" onclick="toggleNassauHC()"></div>
     </div>
     <!-- Player 1 -->
-    <div style="padding:16px;border-bottom:2px solid #000;">
-      <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:#888;margin-bottom:8px;">Player 1</div>
-      <input type="text" id="np-name-0" value="You" style="font-size:22px;font-weight:700;border:none;border-bottom:2px solid #000;padding:4px 0;width:100%;outline:none;background:transparent;color:#000;">
+    <div class="block">
+      <div class="eyebrow" style="margin-bottom:8px;">Player 1</div>
+      <input type="text" id="np-name-0" value="You" class="name-input">
       <div id="np-hc-row-0" style="display:none;margin-top:14px;">
-        <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:#888;margin-bottom:8px;">Handicap</div>
-        <button onclick="npEditNassauHC(0)" style="font-size:20px;font-weight:700;border:2px solid #000;padding:8px 18px;background:#fff;color:#000;cursor:pointer;" id="np-hc-btn-0">0</button>
+        <div class="eyebrow" style="margin-bottom:8px;">Handicap</div>
+        <button onclick="npEditNassauHC(0)" class="amt-btn" id="np-hc-btn-0">0</button>
       </div>
     </div>
     <!-- Player 2 -->
-    <div style="padding:16px;border-bottom:2px solid #000;">
-      <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:#888;margin-bottom:8px;">Player 2</div>
-      <input type="text" id="np-name-1" value="Opponent" style="font-size:22px;font-weight:700;border:none;border-bottom:2px solid #000;padding:4px 0;width:100%;outline:none;background:transparent;color:#000;">
+    <div class="block">
+      <div class="eyebrow" style="margin-bottom:8px;">Player 2</div>
+      <input type="text" id="np-name-1" value="Opponent" class="name-input">
       <div id="np-hc-row-1" style="display:none;margin-top:14px;">
-        <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:#888;margin-bottom:8px;">Handicap</div>
-        <button onclick="npEditNassauHC(1)" style="font-size:20px;font-weight:700;border:2px solid #000;padding:8px 18px;background:#fff;color:#000;cursor:pointer;" id="np-hc-btn-1">0</button>
+        <div class="eyebrow" style="margin-bottom:8px;">Handicap</div>
+        <button onclick="npEditNassauHC(1)" class="amt-btn" id="np-hc-btn-1">0</button>
       </div>
     </div>
   </div>
   <div class="cta-wrap">
-    <button class="full-btn" onclick="go('s-nassau-config')">Next — Setup →</button>
+    <button class="full-btn" onclick="go('s-nassau-config')">Next — Setup <i class="ph-bold ph-arrow-right"></i></button>
   </div>
 </div>
 
 <!-- ===================== NASSAU: CONFIG ===================== -->
 <div class="screen" id="s-nassau-config">
   <div class="screen-header">
-    <button class="header-back" onclick="go('s-nassau-players')">←</button>
+    <button class="header-back" onclick="go('s-nassau-players')"><i class="ph-bold ph-arrow-left"></i></button>
     <span class="screen-title" style="font-size:18px;">New round</span>
-    <button class="header-close" onclick="go('s-history')">✕</button>
+    <button class="header-close" onclick="go('s-history')"><i class="ph-bold ph-x"></i></button>
   </div>
   <div class="step-bar">
     <div class="step done">Game</div>
@@ -1270,35 +1461,35 @@ body {
       <div class="nassau-bet-lbl">Back 9</div>
       <button class="nassau-bet-btn" id="bet-back" onclick="npEditBet('back')">$5</button>
     </div>
-    <div class="nassau-bet-row" style="border-bottom:2px solid #000;">
+    <div class="nassau-bet-row" style="border-bottom:1px solid var(--line);">
       <div class="nassau-bet-lbl">Total 18</div>
       <button class="nassau-bet-btn" id="bet-total" onclick="npEditBet('total')">$5</button>
     </div>
     <div class="sec-label">Press</div>
-    <div style="padding:14px 16px;border-bottom:2px solid #000;">
-      <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:#888;margin-bottom:10px;">Mode</div>
+    <div class="block">
+      <div class="eyebrow" style="margin-bottom:10px;">Mode</div>
       <div class="press-mode-row">
         <button class="pm-btn active" id="pm-off" onclick="setPressMode('off')">Off</button>
         <button class="pm-btn" id="pm-manual" onclick="setPressMode('manual')">Manual</button>
         <button class="pm-btn" id="pm-auto" onclick="setPressMode('auto')">Auto</button>
       </div>
     </div>
-    <div id="press-threshold-row" style="display:none;padding:14px 16px;border-bottom:2px solid #000;">
-      <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:#888;margin-bottom:10px;">Auto-press when down by</div>
+    <div id="press-threshold-row" class="note" style="display:none;">
+      <div class="eyebrow" style="margin-bottom:10px;">Auto-press when down by</div>
       <div style="display:flex;align-items:center;gap:12px;">
-        <button onclick="npEditThreshold()" style="font-size:20px;font-weight:700;border:2px solid #000;padding:8px 18px;background:#fff;color:#000;cursor:pointer;min-width:60px;text-align:center;" id="threshold-btn">2</button>
-        <span style="font-size:15px;color:#888;">holes</span>
+        <button onclick="npEditThreshold()" class="amt-btn" id="threshold-btn">2</button>
+        <span style="font-size:15px;color:var(--mute);">holes</span>
       </div>
     </div>
-    <div id="press-desc-manual" style="display:none;padding:12px 16px;border-bottom:2px solid #000;background:#fafafa;">
-      <div style="font-size:13px;color:#666;line-height:1.6;">A <strong>Press</strong> button appears during the round when a player is eligible to call one. The trailing player can press at any time once eligible.</div>
+    <div id="press-desc-manual" class="note" style="display:none;">
+      <div style="font-size:13px;color:var(--body);line-height:1.6;">A <strong>Press</strong> button appears during the round when a player is eligible to call one. The trailing player can press at any time once eligible.</div>
     </div>
-    <div id="press-desc-auto" style="display:none;padding:12px 16px;border-bottom:2px solid #000;background:#fafafa;">
-      <div style="font-size:13px;color:#666;line-height:1.6;">A press triggers automatically when a player falls the set number of holes behind on any leg. A new side bet starts from that hole forward.</div>
+    <div id="press-desc-auto" class="note" style="display:none;">
+      <div style="font-size:13px;color:var(--body);line-height:1.6;">A press triggers automatically when a player falls the set number of holes behind on any leg. A new side bet starts from that hole forward.</div>
     </div>
   </div>
   <div class="cta-wrap">
-    <button class="full-btn" onclick="startNassauRound()">Start Round →</button>
+    <button class="full-btn" onclick="startNassauRound()">Start Round <i class="ph-bold ph-arrow-right"></i></button>
   </div>
 </div>
 
@@ -1332,39 +1523,39 @@ body {
     <span id="nh-press-chips"></span>
   </div>
   <div id="nh-press-alerts" style="display:none;" class="press-alert"></div>
-  <div style="padding:8px 16px;border-bottom:2px solid #000;flex-shrink:0;">
-    <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:#888;" id="nh-progress">Hole 1 of 18</div>
+  <div style="padding:4px 20px 8px;flex-shrink:0;">
+    <div class="eyebrow" id="nh-progress">Hole 1 of 18</div>
   </div>
   <div class="scroll">
-    <div style="display:flex;align-items:center;gap:12px;padding:20px 16px;border-bottom:2px solid #000;">
+    <div class="pcard" style="display:flex;align-items:center;gap:12px;padding:16px;">
       <div style="flex:1;">
-        <div style="font-size:18px;font-weight:700;color:#000;" id="nh-p0-name">You</div>
-        <div style="font-size:13px;color:#666;margin-top:3px;" id="nh-p0-sub"></div>
+        <div class="pname" id="nh-p0-name">You</div>
+        <div style="font-size:13px;color:var(--body);margin-top:3px;" id="nh-p0-sub"></div>
       </div>
       <div class="score-ctrl">
-        <button class="sc-btn" style="width:64px;height:64px;font-size:32px;" onclick="adjustNassauScore(0,-1)">−</button>
-        <span class="sc-num" style="width:52px;font-size:26px;" id="nh-score-0">4</span>
-        <button class="sc-btn" style="width:64px;height:64px;font-size:32px;" onclick="adjustNassauScore(0,1)">+</button>
+        <button class="sc-btn" onclick="adjustNassauScore(0,-1)"><i class="ph-bold ph-minus"></i></button>
+        <span class="sc-num" id="nh-score-0">4</span>
+        <button class="sc-btn" onclick="adjustNassauScore(0,1)"><i class="ph-bold ph-plus"></i></button>
       </div>
     </div>
-    <div style="display:flex;align-items:center;gap:12px;padding:20px 16px;border-bottom:2px solid #000;">
+    <div class="pcard" style="display:flex;align-items:center;gap:12px;padding:16px;">
       <div style="flex:1;">
-        <div style="font-size:18px;font-weight:700;color:#000;" id="nh-p1-name">Opponent</div>
-        <div style="font-size:13px;color:#666;margin-top:3px;" id="nh-p1-sub"></div>
+        <div class="pname" id="nh-p1-name">Opponent</div>
+        <div style="font-size:13px;color:var(--body);margin-top:3px;" id="nh-p1-sub"></div>
       </div>
       <div class="score-ctrl">
-        <button class="sc-btn" style="width:64px;height:64px;font-size:32px;" onclick="adjustNassauScore(1,-1)">−</button>
-        <span class="sc-num" style="width:52px;font-size:26px;" id="nh-score-1">4</span>
-        <button class="sc-btn" style="width:64px;height:64px;font-size:32px;" onclick="adjustNassauScore(1,1)">+</button>
+        <button class="sc-btn" onclick="adjustNassauScore(1,-1)"><i class="ph-bold ph-minus"></i></button>
+        <span class="sc-num" id="nh-score-1">4</span>
+        <button class="sc-btn" onclick="adjustNassauScore(1,1)"><i class="ph-bold ph-plus"></i></button>
       </div>
     </div>
-    <div style="padding:12px 16px;background:#f5f5f5;border-bottom:2px solid #000;">
-      <div style="font-size:11px;color:#888;font-weight:700;text-transform:uppercase;letter-spacing:.05em;margin-bottom:4px;">This hole</div>
-      <div style="font-size:14px;font-weight:600;color:#000;" id="nh-net-preview">—</div>
+    <div class="note">
+      <div class="eyebrow" style="margin-bottom:4px;">This hole</div>
+      <div style="font-size:14px;font-weight:600;color:var(--ink);" id="nh-net-preview">—</div>
     </div>
   </div>
-  <div style="padding:14px 16px;border-top:2px solid #000;flex-shrink:0;">
-    <button class="full-btn" id="nh-next-btn" onclick="nassauNextHole()">Save &amp; Next Hole →</button>
+  <div class="cta-wrap">
+    <button class="full-btn" id="nh-next-btn" onclick="nassauNextHole()">Save &amp; Next Hole <i class="ph-bold ph-arrow-right"></i></button>
   </div>
 </div>
 
@@ -1397,12 +1588,12 @@ body {
       <div id="nr-presses"></div>
     </div>
     <div class="sec-label">Final payout</div>
-    <div style="padding:20px 16px;border-bottom:2px solid #000;" id="nr-payout">
-      <div style="font-size:20px;font-weight:700;color:#000;">—</div>
+    <div style="padding:20px 16px;border-bottom:1px solid var(--line);" id="nr-payout">
+      <div class="d" style="font-size:20px;font-weight:800;">—</div>
     </div>
   </div>
   <div class="cta-wrap">
-    <button class="full-btn" onclick="showToast('Share — not built yet')">Share results</button>
+    <button class="full-btn" onclick="showToast('Share — not built yet')"><i class="ph-bold ph-share-network"></i> Share results</button>
     <button class="full-btn outline" onclick="go('s-history')">Done</button>
   </div>
 </div>
@@ -1411,9 +1602,9 @@ body {
 <div class="sheet-overlay" id="sheet-nassau-rules" onclick="closeSheetOnBg(event,'sheet-nassau-rules')">
   <div class="rules-sheet">
     <div class="sheet-handle"></div>
-    <div style="display:flex;justify-content:space-between;align-items:center;padding:14px 16px;border-bottom:2px solid #000;">
-      <span style="font-size:16px;font-weight:700;color:#000;">How to play Nassau</span>
-      <button onclick="closeSheet('sheet-nassau-rules')" style="background:none;border:none;font-size:20px;cursor:pointer;color:#000;">✕</button>
+    <div style="display:flex;justify-content:space-between;align-items:center;padding:12px 16px 4px 20px;">
+      <span class="d" style="font-size:22px;font-weight:800;">How to play Nassau</span>
+      <button class="icon-btn" onclick="closeSheet('sheet-nassau-rules')"><i class="ph-bold ph-x"></i></button>
     </div>
     <div class="rules-content">
       <div class="rules-sub">2 players · Three separate bets in one round</div>
@@ -1464,7 +1655,7 @@ body {
       <button class="np-btn" onclick="npPress('7')">7</button>
       <button class="np-btn" onclick="npPress('8')">8</button>
       <button class="np-btn" onclick="npPress('9')">9</button>
-      <button class="np-btn del" onclick="npPress('del')">⌫</button>
+      <button class="np-btn del" onclick="npPress('del')"><i class="ph-bold ph-backspace"></i></button>
       <button class="np-btn" onclick="npPress('0')">0</button>
       <button class="np-btn confirm" onclick="npConfirm()">Done</button>
     </div>
@@ -1477,11 +1668,78 @@ body {
 </div><!-- end device -->
 
 <script>
+// ============================================================
+// DELIGHT — icons, confetti, count-ups, score celebrations
+// ============================================================
+const ICON = {
+  check: '<i class="ph-bold ph-check"></i>',
+  plus: '<i class="ph-bold ph-plus"></i>',
+  arrow: '<i class="ph-bold ph-arrow-right"></i>',
+  flag: '<i class="ph-fill ph-flag-pennant"></i>',
+  lightning: '<i class="ph-fill ph-lightning"></i>',
+  receipt: '<i class="ph-bold ph-receipt"></i>',
+};
+const CLAY = ['#ff4d8b', '#e8b94a', '#b8a4ed', '#a4d4c5', '#ffb084', '#ff6b5a'];
+const reduceMotion = matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+function confetti(x, y, n = 36) {
+  if (reduceMotion) return;
+  for (let i = 0; i < n; i++) {
+    const c = document.createElement('i');
+    c.className = 'confetti';
+    const a = Math.random() * Math.PI * 2, d = 70 + Math.random() * 140;
+    c.style.cssText = `left:${x}px;top:${y}px;width:8px;height:${6 + Math.random() * 8}px;background:${CLAY[i % CLAY.length]};`;
+    document.body.appendChild(c);
+    c.animate([
+      { transform: 'translate(-50%,-50%) rotate(0)', opacity: 1 },
+      { transform: `translate(${Math.cos(a) * d}px,${Math.sin(a) * d - 50}px) rotate(${Math.random() * 540}deg)`, opacity: 1, offset: .7 },
+      { transform: `translate(${Math.cos(a) * d}px,${Math.sin(a) * d + 80}px) rotate(${Math.random() * 720}deg)`, opacity: 0 }
+    ], { duration: 1000 + Math.random() * 500, easing: 'cubic-bezier(.2,.7,.3,1)' }).onfinish = () => c.remove();
+  }
+}
+function confettiFrom(el, n) {
+  const r = el.getBoundingClientRect();
+  confetti(r.left + r.width / 2, r.top + r.height / 2, n);
+}
+
+function countUp(el) {
+  const end = +el.dataset.count, sign = end >= 0 ? '+' : '−', abs = Math.abs(end);
+  if (reduceMotion) { el.textContent = sign + '$' + abs; return; }
+  const t0 = performance.now(), dur = 900;
+  (function tick(t) {
+    const p = Math.min(1, (t - t0) / dur), e = 1 - Math.pow(1 - p, 3);
+    el.textContent = sign + '$' + Math.round(abs * e);
+    if (p < 1) requestAnimationFrame(tick);
+  })(t0);
+}
+
+function onArrive(id) {
+  const screen = document.getElementById(id);
+  screen.querySelectorAll('[data-count]').forEach(countUp);
+  if (id === 's-settle' || id === 's-nassau-results') {
+    setTimeout(() => {
+      const hero = screen.querySelector('.winner-hero') || screen.querySelector('.detail-hdr');
+      if (hero) confettiFrom(hero, 60);
+    }, 250);
+  }
+}
+
+// Pop the number; celebrate birdies and better
+function scoreFeedback(el, score, par) {
+  el.classList.remove('bump', 'birdie', 'eagle');
+  void el.offsetWidth;
+  el.classList.add('bump');
+  const diff = score - par;
+  if (diff <= -2) { el.classList.add('eagle'); showToast(diff === -2 ? 'Eagle!' : 'Albatross?!'); confettiFrom(el, 50); }
+  else if (diff === -1) { el.classList.add('birdie'); showToast('Birdie!'); confettiFrom(el, 28); }
+}
+
 // Navigation
 function go(id) {
   document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
   document.getElementById(id).classList.add('active');
   closeAllSheets();
+  onArrive(id);
 }
 
 // Sheets
@@ -1506,6 +1764,7 @@ function adjustScore(btn, delta) {
   if (v < 1) v = 1;
   if (v > 12) v = 12;
   num.textContent = v;
+  scoreFeedback(num, v, 4);
 }
 
 // Player double — enables banker double when any player doubles
@@ -1534,9 +1793,9 @@ function selectBanker(name) {
 // Course select
 function selectCourse(row) {
   const parent = row.closest('.scroll');
-  parent.querySelectorAll('.li-check').forEach(c => { c.classList.remove('on'); c.classList.add('add'); c.textContent = '+'; });
+  parent.querySelectorAll('.li-check').forEach(c => { c.classList.remove('on'); c.classList.add('add'); c.innerHTML = ICON.plus; });
   const check = row.querySelector('.li-check');
-  check.classList.add('on'); check.classList.remove('add'); check.textContent = '✓';
+  check.classList.add('on'); check.classList.remove('add'); check.innerHTML = ICON.check;
 }
 
 // Tee select
@@ -1549,8 +1808,8 @@ function setTee(btn) {
 // Toggle player check
 function toggleCheck(row) {
   const c = row.querySelector('.li-check');
-  if (c.classList.contains('on')) { c.classList.remove('on'); c.classList.add('add'); c.textContent = '+'; }
-  else { c.classList.remove('add'); c.classList.add('on'); c.textContent = '✓'; }
+  if (c.classList.contains('on')) { c.classList.remove('on'); c.classList.add('add'); c.innerHTML = ICON.plus; }
+  else { c.classList.remove('add'); c.classList.add('on'); c.innerHTML = ICON.check; }
 }
 
 // Holes toggle
@@ -1683,21 +1942,10 @@ function selectGame(game) {
   if (game === 'banker') {
     const row = document.getElementById('game-row-banker');
     row.classList.add('selected');
-    document.getElementById('banker-check').style.color = '#fff';
-    document.getElementById('nassau-check').style.display = 'none';
-    document.getElementById('banker-rules-btn').style.borderColor = '#fff';
-    document.getElementById('banker-rules-btn').style.color = '#fff';
     document.querySelectorAll('.holes-btn').forEach(b => { b.disabled = false; b.style.opacity = '1'; });
   } else if (game === 'nassau') {
     const row = document.getElementById('game-row-nassau');
     row.classList.add('selected');
-    document.getElementById('nassau-check').style.display = '';
-    document.getElementById('nassau-check').style.color = '#fff';
-    document.getElementById('nassau-rules-btn').style.borderColor = '#fff';
-    document.getElementById('nassau-rules-btn').style.color = '#fff';
-    document.getElementById('banker-check').style.color = 'transparent';
-    document.getElementById('banker-rules-btn').style.borderColor = '';
-    document.getElementById('banker-rules-btn').style.color = '';
     // Nassau is always 18 holes
     document.querySelectorAll('.holes-btn').forEach(b => {
       if (b.textContent.trim() === '9') {
@@ -1852,7 +2100,7 @@ function renderNassauHole() {
   document.getElementById('nh-score-1').textContent = hd.par;
 
   const nextBtn = document.getElementById('nh-next-btn');
-  nextBtn.innerHTML = hole === 18 ? 'Finish Round →' : 'Save &amp; Next Hole →';
+  nextBtn.innerHTML = hole === 18 ? 'Finish Round ' + ICON.flag : 'Save &amp; Next Hole ' + ICON.arrow;
 
   updateMatchStatus();
   renderPressBar();
@@ -1905,7 +2153,7 @@ function renderPressAlerts() {
   el.innerHTML = alerts.map(a =>
     `<div class="press-alert-row">
       <span class="press-alert-txt">${a.trailing} is ${a.by}-down on ${legName(a.leg)}</span>
-      <button class="press-call-btn" onclick="nassauCallPress('${a.leg}')">Press →</button>
+      <button class="press-call-btn" onclick="nassauCallPress('${a.leg}')">Press <i class="ph-bold ph-arrow-right"></i></button>
     </div>`
   ).join('');
 }
@@ -1934,6 +2182,7 @@ function adjustNassauScore(playerIdx, delta) {
   let v = parseInt(el.textContent) + delta;
   if (v < 1) v = 1; if (v > 12) v = 12;
   el.textContent = v;
+  scoreFeedback(el, v, BARN_HOLES[nassau.currentHole - 1].par);
   updateNetPreview();
 }
 
@@ -2049,12 +2298,12 @@ function renderNassauResults() {
 
   const payEl = document.getElementById('nr-payout');
   if (net === 0) {
-    payEl.innerHTML = '<div style="font-size:20px;font-weight:700;color:#000;">All square — no money changes hands</div>';
+    payEl.innerHTML = '<div class="d" style="font-size:20px;font-weight:800;">All square — no money changes hands</div>';
   } else {
     const payer = net > 0 ? names[1] : names[0];
     const payee = net > 0 ? names[0] : names[1];
     const amt = Math.abs(net);
-    payEl.innerHTML = `<div style="font-size:14px;color:#888;margin-bottom:6px;">${payer} pays ${payee}</div><div style="font-size:40px;font-weight:700;color:#000;">$${amt}</div>`;
+    payEl.innerHTML = `<div style="font-size:14px;color:var(--mute);margin-bottom:6px;">${payer} pays ${payee}</div><div class="d" style="font-size:48px;font-weight:800;letter-spacing:-.03em;">$${amt}</div>`;
   }
 }
 
@@ -2063,7 +2312,7 @@ document.addEventListener('DOMContentLoaded', () => {
   const histHeader = document.querySelector('#s-history .screen-header');
   const ledgerBtn = document.createElement('button');
   ledgerBtn.className = 'header-btn';
-  ledgerBtn.textContent = 'Ledger';
+  ledgerBtn.innerHTML = ICON.receipt + ' Ledger';
   ledgerBtn.onclick = () => go('s-ledger');
   histHeader.appendChild(ledgerBtn);
 });
