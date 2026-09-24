@@ -18,7 +18,9 @@ html, body { height: 100%; background: var(--canvas); overscroll-behavior: none;
 body {
   font-family: Inter, system-ui, -apple-system, sans-serif; color: var(--ink);
   -webkit-font-smoothing: antialiased; -webkit-tap-highlight-color: transparent;
+  text-wrap: pretty; /* no single-word last lines in running text */
 }
+h1, h2, h3, .screen-title, .sheet-title, .numpad-title, .rules-title, .onboard-title, .play-title { text-wrap: balance; }
 button { font-family: inherit; }
 .d { font-family: var(--display); }
 .device {
