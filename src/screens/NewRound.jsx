@@ -117,7 +117,7 @@ function GameStep({ game, setGame, holesCount, setHolesCount, onNext }) {
         </div>
       </div>
       <div className="cta-wrap">
-        <button className="full-btn" disabled={!game} onClick={onNext}>{game ? <>Next — Course <Icon name="arrow-right" /></> : 'Pick a game'}</button>
+        <button className="full-btn" disabled={!game} onClick={onNext}>{game ? <>Next: Course <Icon name="arrow-right" /></> : 'Pick a game'}</button>
       </div>
       <RulesSheet game={rules} open={!!rules} onClose={() => setRules(null)} />
     </>
@@ -171,7 +171,7 @@ function CourseStep({ courseId, setCourseId, holesCount, nine, setNine, onNext }
         {tooShort && <p className="hint-card"><Icon name="info" fill /> {course.name} has 9 holes, so you’ll play it twice for 18.</p>}
       </div>
       <div className="cta-wrap">
-        <button className="full-btn" disabled={!course} onClick={onNext}>{course ? <>Next — Players <Icon name="arrow-right" /></> : 'Pick a course'}</button>
+        <button className="full-btn" disabled={!course} onClick={onNext}>{course ? <>Next: Players <Icon name="arrow-right" /></> : 'Pick a course'}</button>
       </div>
     </>
   );
@@ -266,7 +266,7 @@ function PlayersStep({ game, course, holesCount, nine, picked, setPicked, tees, 
         )}
       </div>
       <div className="cta-wrap">
-        <button className="full-btn" disabled={!valid} onClick={onNext}>{valid ? <>Next — Setup <Icon name="arrow-right" /></> : needText}</button>
+        <button className="full-btn" disabled={!valid} onClick={onNext}>{valid ? <>Next: Setup <Icon name="arrow-right" /></> : needText}</button>
       </div>
       <QuickAddPlayer open={adding} onClose={() => setAdding(false)} onAdded={pid => { setAdding(false); if (picked.length < game.max) setPicked([...picked, pid]); }} />
       <Numpad open={!!hcFor} title={`${state.players[hcFor]?.name}'s ${holesCount === 9 ? '9-hole ' : ''}course handicap`} initial={hcFor ? courseHc(hcFor).value : ''} allowNegative min={-10} max={60}
@@ -294,10 +294,10 @@ function QuickAddPlayer({ open, onClose, onAdded }) {
         <div style={{ padding: '8px 16px 0' }}>
           <label className="field-label" htmlFor="qa-name">Name</label>
           <input id="qa-name" className="name-input" value={name} onChange={e => setName(e.target.value)} maxLength={24} placeholder="Name" autoFocus />
-          {dup && <p className="field-error">That name is taken — add an initial.</p>}
+          {dup && <p className="field-error">That name is taken. Add an initial.</p>}
           <label className="field-label">Handicap index <span className="opt">optional</span></label>
           <button className="amt-btn" onClick={() => setPad(true)}>{index == null ? 'Add' : formatIndex(index)}</button>
-          <p className="field-help">Their usual 18-hole index — it’s halved automatically for 9-hole games.</p>
+          <p className="field-help">Their usual 18-hole index. It’s halved automatically for 9-hole games.</p>
           <div style={{ marginTop: 16 }}><button className="full-btn" disabled={!t || dup} onClick={add}>Add to round</button></div>
         </div>
       </Sheet>
@@ -357,7 +357,7 @@ function SetupStep({ game, course, holesCount, nine, picked, setPicked, opts, se
 
         <div className="sec-label">Handicaps</div>
         <div className="toggle-row">
-          <div><div className="toggle-lbl">Use handicaps</div><div className="toggle-sub">{game === 'quota' ? 'Sets each player’s quota from their course handicap' : game === 'bbb' ? 'Not needed — points don’t depend on score' : 'Strokes off the low player on the hardest holes'}</div></div>
+          <div><div className="toggle-lbl">Use handicaps</div><div className="toggle-sub">{game === 'quota' ? 'Sets each player’s quota from their course handicap' : game === 'bbb' ? 'Not needed, points don’t depend on score' : 'Strokes off the low player on the hardest holes'}</div></div>
           <Toggle on={useHc} onChange={setUseHc} label="Use handicaps" />
         </div>
         {useHc && (

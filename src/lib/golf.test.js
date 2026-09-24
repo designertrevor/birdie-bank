@@ -196,7 +196,7 @@ test('shared round round-trips and merges per hole', () => {
   const copy = assemble(buildMeta(r), buildHoles(r));
   assert.equal(stable(buildHoles(copy)), stable(buildHoles(r)));
   assert.equal(copy.current, 1);
-  // another phone scores hole 2 — merging it doesn't touch hole 1
+  // another phone scores hole 2. Merging it doesn't touch hole 1
   applyHole(copy, 2, { scores: { a: 4, b: 4 }, banker: null, wolf: null, presses: [{ id: 'x', leg: 'front', start: 2, by: 1 }] });
   assert.deepEqual(copy.scores[1], { a: 3, b: 4 });
   assert.deepEqual(copy.scores[2], { a: 4, b: 4 });

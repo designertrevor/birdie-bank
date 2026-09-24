@@ -190,13 +190,13 @@ function PlayRound({ round }) {
       </div>
       {round.status === 'done' && (
         <button className="finished-banner" onClick={() => nav.reset('history', ['roundDetail', { id: round.id }])}>
-          <Icon name="flag-checkered" fill /> The scorekeeper finished this round — see results <Icon name="arrow-right" />
+          <Icon name="flag-checkered" fill /> The scorekeeper finished this round. See results <Icon name="arrow-right" />
         </button>
       )}
       <div className="hole-meta" onClick={() => setCard(true)} role="button" tabIndex={0} aria-label="Open scorecard">
         <div className="mc"><span className="ml">Hole</span><span className="mv">{hole.no}</span></div>
         <div className="mc"><span className="ml">Par</span><span className="mv">{hole.par}</span></div>
-        <div className="mc"><span className="ml">HDCP</span><span className="mv">{hole.hdcp ?? '—'}</span></div>
+        <div className="mc"><span className="ml">HDCP</span><span className="mv">{hole.hdcp ?? '–'}</span></div>
       </div>
 
       {game === 'banker' && (
@@ -261,7 +261,7 @@ function PlayRound({ round }) {
 
       <div className="cta-wrap play-cta">
         {phase === 'bets' ? (
-          <button className="full-btn" onClick={() => setPhase('scores')}>Bets are in — enter scores <Icon name="arrow-right" /></button>
+          <button className="full-btn" onClick={() => setPhase('scores')}>Bets are in, enter scores <Icon name="arrow-right" /></button>
         ) : (
           <div style={{ display: 'flex', gap: 8 }}>
             <button className="full-btn outline" style={{ width: 64, flex: 'none' }} disabled={idx === 0} onClick={() => goHole(idx - 1)} aria-label="Previous hole"><Icon name="arrow-left" /></button>
@@ -367,7 +367,7 @@ function HolesSheet({ round, onClose }) {
         <p className="hint-card"><Icon name="scales" fill /> Strokes: {hcChanges.map(c => `${c.name} ${c.from} → ${c.to}`).join(', ')}</p>
       )}
       {preview && round.presses.length > 0 && (
-        <p className="hint-card"><Icon name="lightning" fill /> Presses are cleared — the bets change with the round length.</p>
+        <p className="hint-card"><Icon name="lightning" fill /> Presses are cleared. The bets change with the round length.</p>
       )}
       <div className="cta-wrap">
         <button className="full-btn" disabled={!preview} onClick={apply}>
@@ -469,7 +469,7 @@ function BankerPanel({ round, banker, setBanker, phase, setPhase, onPick, onBet 
       </div>
       {phase === 'bets' && (
         <div className="scroll">
-          <div style={{ padding: '6px 20px 8px' }}><div className="eyebrow">Step 1 of 2 — Bets &amp; doubles</div></div>
+          <div style={{ padding: '6px 20px 8px' }}><div className="eyebrow">Step 1 of 2: Bets &amp; doubles</div></div>
           {others.map(p => (
             <div key={p.id} className="pcard">
               <div style={{ display: 'flex', alignItems: 'center', padding: '16px 16px 10px' }}>
@@ -538,7 +538,7 @@ function WolfPanel({ round, wolf, setWolf }) {
   const mult = round.settings.wolf.loneMultiplier;
   return (
     <div className="wolf-panel">
-      <div className="bl" style={{ marginBottom: 8 }}><Icon name="paw-print" fill /> <strong>{w?.name}</strong> is the wolf — pick a partner after tee shots</div>
+      <div className="bl" style={{ marginBottom: 8 }}><Icon name="paw-print" fill /> <strong>{w?.name}</strong> is the wolf. Pick a partner after tee shots</div>
       <div className="chip-row" style={{ padding: 0 }}>
         {others.map(p => (
           <button key={p.id} className={`pill-btn ${wolf.partner === p.id ? 'on' : ''}`} aria-pressed={wolf.partner === p.id}

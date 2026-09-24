@@ -110,7 +110,7 @@ async function resync(roundId) {
   }
 }
 
-// Rounds that were just created on / fetched from the server — nothing to push or pull
+// Rounds that were just created on / fetched from the server: nothing to push or pull
 const freshNext = new Set();
 
 async function start(roundId, { fresh = false } = {}) {

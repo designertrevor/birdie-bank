@@ -169,7 +169,7 @@ export function Courses() {
       <div className="row-main">
         <div className="set-name">{c.name}</div>
         <div className="set-sub">{[c.city, `${c.holes.length} holes`, `Par ${coursePar(c)}`].filter(Boolean).join(' · ')}</div>
-        {!c.custom && !c.verified && <div className="warn-tag"><Icon name="warning" fill /> Not verified — check against the card</div>}
+        {!c.custom && !c.verified && <div className="warn-tag"><Icon name="warning" fill /> Not verified. Check against the card</div>}
       </div>
       <span className="chevron"><Icon name="caret-right" /></span>
     </button>
@@ -179,7 +179,7 @@ export function Courses() {
       <Header title="Courses" onBack={nav.pop} />
       <div className="scroll">
         <div className="sec-label">Your courses</div>
-        {custom.length === 0 && <p className="hint-card"><Icon name="map-pin" fill /> Playing somewhere new? Add it from the scorecard — par and handicap for each hole are all you need.</p>}
+        {custom.length === 0 && <p className="hint-card"><Icon name="map-pin" fill /> Playing somewhere new? Add it from the scorecard. Par and handicap for each hole are all you need.</p>}
         {custom.map(row)}
         <button className="add-row" onClick={() => nav.push('courseEdit', {})}><div className="add-ci"><Icon name="plus" /></div><span className="add-lbl">Add a course</span></button>
         <div className="sec-label">Built in</div>
@@ -285,7 +285,7 @@ export function CourseEdit({ id }) {
                 ))}
               </div>
               <button className="hdcp-btn" onClick={() => setPad({ kind: 'hdcp', i, title: `Hole ${i + 1} handicap`, min: 1, max: 18 })}>
-                HCP {h.hdcp ?? '—'}
+                HCP {h.hdcp ?? '–'}
               </button>
             </div>
           ))}
@@ -307,8 +307,8 @@ export function CourseEdit({ id }) {
               ))}
             </div>
             <div style={{ display: 'flex', gap: 8 }}>
-              <button className="pill-btn" onClick={() => setPad({ kind: 'rating', t: ti, title: `${t.name} course rating`, min: 25, max: 80, decimal: true })}>Rating {t.rating ?? '—'}</button>
-              <button className="pill-btn" onClick={() => setPad({ kind: 'slope', t: ti, title: `${t.name} slope`, min: 55, max: 155 })}>Slope {t.slope ?? '—'}</button>
+              <button className="pill-btn" onClick={() => setPad({ kind: 'rating', t: ti, title: `${t.name} course rating`, min: 25, max: 80, decimal: true })}>Rating {t.rating ?? '–'}</button>
+              <button className="pill-btn" onClick={() => setPad({ kind: 'slope', t: ti, title: `${t.name} slope`, min: 55, max: 155 })}>Slope {t.slope ?? '–'}</button>
             </div>
             {(t.rating == null || t.slope == null) && <p className="field-help">Without rating and slope, course handicaps fall back to each player’s index.</p>}
           </div>

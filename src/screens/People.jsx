@@ -89,7 +89,7 @@ export function PlayerEdit({ id, onSaved }) {
         <div className="block">
           <label className="field-label" htmlFor="pe-name">Name</label>
           <input id="pe-name" className="name-input" value={name} maxLength={24} onChange={e => setName(e.target.value)} placeholder="Name" autoFocus={!existing} />
-          {duplicate && <p className="field-error">Someone already has that name — add an initial so scorecards stay clear.</p>}
+          {duplicate && <p className="field-error">Someone already has that name. Add an initial so scorecards stay clear.</p>}
           <label className="field-label">Handicap index <span className="opt">optional</span></label>
           <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
             <button className="amt-btn" onClick={() => setPad(true)}>{index == null ? 'Add' : formatIndex(index)}</button>
@@ -101,7 +101,7 @@ export function PlayerEdit({ id, onSaved }) {
         </div>
         {existing && id !== state.me && (
           <button className="danger-link" onClick={remove} disabled={inActive}>
-            <Icon name="trash" /> {inActive ? 'In the current round — can’t remove' : 'Remove player'}
+            <Icon name="trash" /> {inActive ? 'In the current round, can’t remove' : 'Remove player'}
           </button>
         )}
       </div>
@@ -130,7 +130,7 @@ export function CrewEdit({ id }) {
     nav.pop();
   };
   const remove = async () => {
-    if (!(await ask({ title: `Delete ${existing.name}?`, text: 'Players stay — only the group is removed.', confirmLabel: 'Delete crew', danger: true }))) return;
+    if (!(await ask({ title: `Delete ${existing.name}?`, text: 'Players stay. Only the group is removed.', confirmLabel: 'Delete crew', danger: true }))) return;
     update(s => { delete s.crews[id]; });
     nav.pop();
   };

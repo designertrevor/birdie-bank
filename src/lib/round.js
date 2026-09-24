@@ -10,10 +10,10 @@ import {
 
 /**
  * Every game the app can score. `teams` says how players are grouped in the setup step:
- *   { count: 2, size: 2 }  — exactly two teams of two (Vegas)
- *   { count: 2 }           — two sides of any size, e.g. 1 v 1, 2 v 2, 1 v 3 (match play)
- *   { count: 2, optional: true } — two sides only when more than two play (Nassau)
- *   { count: [2, 4] }      — two to four teams (scramble)
+ *   { count: 2, size: 2 }: exactly two teams of two (Vegas)
+ *   { count: 2 }: two sides of any size, e.g. 1 v 1, 2 v 2, 1 v 3 (match play)
+ *   { count: 2, optional: true }: two sides only when more than two play (Nassau)
+ *   { count: [2, 4] }: two to four teams (scramble)
  * `order` means the playing order matters (banker rotation, wolf, sixes pairings).
  * `marks` means the scorekeeper records things other than scores on each hole.
  */
@@ -25,7 +25,7 @@ export const GAMES = {
   },
   nassau: {
     name: 'Nassau', min: 2, max: 4, holes: [9, 18], teams: { count: 2, optional: true },
-    blurb: 'Front, back and total — three bets in one',
+    blurb: 'Front, back and total: three bets in one',
     players: '2–4 players', icon: 'flag-pennant', group: 'Classics',
   },
   skins: {
@@ -35,7 +35,7 @@ export const GAMES = {
   },
   wolf: {
     name: 'Wolf', min: 4, max: 4, holes: [9, 18], order: true,
-    blurb: 'Pick a partner each hole — or go it alone',
+    blurb: 'Pick a partner each hole, or go it alone',
     players: '4 players exactly', icon: 'paw-print', group: 'Classics',
   },
   match: {
@@ -45,12 +45,12 @@ export const GAMES = {
   },
   vegas: {
     name: 'Vegas', min: 4, max: 4, holes: [9, 18], teams: { count: 2, size: 2 },
-    blurb: 'Pair up scores into a number — 4 and 5 make 45',
+    blurb: 'Pair up scores into a number: 4 and 5 make 45',
     players: '4 players · 2 v 2', icon: 'dice-five', group: 'Head to head',
   },
   sixes: {
     name: 'Sixes', min: 4, max: 4, holes: [9, 18], order: true,
-    blurb: 'Partners rotate every six holes — Hollywood, round robin',
+    blurb: 'Partners rotate every six holes: Hollywood, round robin',
     players: '4 players exactly', icon: 'arrows-clockwise', group: 'Head to head',
   },
   scramble: {
@@ -65,17 +65,17 @@ export const GAMES = {
   },
   stableford: {
     name: 'Stableford', min: 2, max: 8, holes: [9, 18],
-    blurb: 'Points for every hole — a blow-up only costs you a zero',
+    blurb: 'Points for every hole. A blow-up only costs you a zero',
     players: '2–8 players', icon: 'star', group: 'Totals',
   },
   quota: {
     name: 'Quota', min: 2, max: 8, holes: [9, 18],
-    blurb: 'Beat your own number — 36 minus your handicap',
+    blurb: 'Beat your own number: 36 minus your handicap',
     players: '2–8 players', icon: 'target', group: 'Totals',
   },
   nines: {
     name: 'Nines', min: 3, max: 3, holes: [9, 18],
-    blurb: '5-3-1 — nine points a hole for a threesome',
+    blurb: '5-3-1: nine points a hole for a threesome',
     players: '3 players exactly', icon: 'number-circle-nine', group: 'Points',
   },
   aces: {
@@ -90,12 +90,12 @@ export const GAMES = {
   },
   dots: {
     name: 'Dots', min: 2, max: 8, holes: [9, 18], marks: true,
-    blurb: 'Greenies, sandies, chip-ins — junk that pays',
+    blurb: 'Greenies, sandies, chip-ins: junk that pays',
     players: '2–8 players', icon: 'medal', group: 'Points',
   },
   rabbit: {
     name: 'Rabbit', min: 2, max: 8, holes: [9, 18],
-    blurb: 'Win a hole to catch the rabbit — hold it at the turn',
+    blurb: 'Win a hole to catch the rabbit, hold it at the turn',
     players: '2–8 players', icon: 'rabbit', group: 'Points',
   },
 };
@@ -273,7 +273,7 @@ export function resizeRound(round, course, holesCount, nine = 'front') {
   const ratio = holesCount / round.holesCount;
   const players = round.players.map(p => {
     const tee = course.tees?.find(t => t.name === p.tee) || null;
-    // A figure set by hand (stored, or — on older rounds — one that doesn't match the formula) is scaled
+    // A figure set by hand (stored, or, on older rounds, one that doesn't match the formula) is scaled
     const was = effectiveCourseHc(p.index, tee, course, round.holes, round.holesCount, null).value;
     const override = p.courseHcOverride ?? (was === p.courseHc ? null : p.courseHc);
     if (override != null) {
@@ -359,7 +359,7 @@ export function sideNet(round, side, hole) {
   return bestBall(side.map(pid => netFor(round, playerById(round, pid), hole)));
 }
 
-/** Hole winners (0 | 1 | null) keyed by playing position (1-based) — legs follow playing order. */
+/** Hole winners (0 | 1 | null) keyed by playing position (1-based). Legs follow playing order. */
 export function nassauWinners(round) {
   const [a, b] = sides(round);
   const w = {};

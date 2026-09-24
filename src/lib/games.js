@@ -1,4 +1,4 @@
-// Pure maths for the team and points games. No DOM, no storage — unit tested in games.test.js.
+// Pure maths for the team and points games. No DOM, no storage. Unit tested in games.test.js.
 // Money conventions used across these games:
 //  • "sides": two teams (any sizes). The stake is per player; with uneven sides the total at risk is
 //    stake × the bigger side, and each side splits its share evenly. So in 1 v 3 the loner plays for 3× the stake.
@@ -38,7 +38,7 @@ export function matchLabel(status, name) {
 // Vegas
 // ---------------------------------------------------------------------------
 
-/** A team's Vegas number: low score first, high second — unless a score is 10 or more, which goes first. */
+/** A team's Vegas number: low score first, high second, unless a score is 10 or more, which goes first. */
 export function vegasNumber(a, b) {
   const lo = Math.min(a, b), hi = Math.max(a, b);
   if (hi >= 10) return hi * 10 + lo;

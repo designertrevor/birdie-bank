@@ -24,7 +24,7 @@ export default function Onboarding() {
         <div className="scroll onboard-body">
           <BallIllo className="onboard-illo" />
           <h1 className="onboard-title">Birdie Bank</h1>
-          <p className="onboard-text">Keep score, run the side games and settle up with your crew — without the napkin math.</p>
+          <p className="onboard-text">Keep score, run the side games and settle up with your crew, without the napkin math.</p>
           <div className="onboard-games">
             {[['bank', 'Banker'], ['flag-pennant', 'Nassau'], ['coins', 'Skins'], ['paw-print', 'Wolf'], ['dice-five', 'Vegas'], ['sword', 'Match play'], ['star', 'Stableford'], ['dots-three-circle', '+ 9 more']].map(([i, n]) => (
               <span key={n} className="chip ochre"><Icon name={i} fill /> {n}</span>
@@ -42,10 +42,10 @@ export default function Onboarding() {
         <div className="scroll onboard-body" style={{ textAlign: 'left', alignItems: 'stretch' }}>
           <div className="onboard-badge"><Icon name="handshake" fill /></div>
           <h1 className="onboard-title" style={{ fontSize: 34 }}>Friendly wagers only</h1>
-          <p className="onboard-text" style={{ textAlign: 'left' }}>Birdie Bank tracks bets between friends. It never holds, sends or collects money — you settle up yourselves.</p>
+          <p className="onboard-text" style={{ textAlign: 'left' }}>Birdie Bank tracks bets between friends. It never holds, sends or collects money. You settle up yourselves.</p>
           <ul className="onboard-list">
             <li><Icon name="device-mobile" fill /> Everything is saved on this phone. One person keeps score for the group.</li>
-            <li><Icon name="scales" fill /> Handicaps use the World Handicap System — strokes go to everyone off the best player.</li>
+            <li><Icon name="scales" fill /> Handicaps use the World Handicap System, so strokes go to everyone off the best player.</li>
             <li><Icon name="warning-circle" fill /> Check that betting on golf is legal where you play.</li>
           </ul>
         </div>
@@ -61,12 +61,12 @@ export default function Onboarding() {
     <Screen className="onboard">
       <div className="scroll onboard-body" style={{ textAlign: 'left', alignItems: 'stretch' }}>
         <h1 className="onboard-title" style={{ fontSize: 34 }}>Who’s keeping score?</h1>
-        <p className="onboard-text" style={{ textAlign: 'left' }}>That’s you. Add your name and handicap — you can change these any time.</p>
+        <p className="onboard-text" style={{ textAlign: 'left' }}>That’s you. Add your name and handicap. You can change these any time.</p>
         <label className="field-label" htmlFor="ob-name">Your name</label>
         <input id="ob-name" className="name-input" value={name} onChange={e => setName(e.target.value)} placeholder="e.g. Trevor" autoComplete="given-name" maxLength={24} />
         <label className="field-label">Handicap index <span className="opt">optional</span></label>
         <button className="amt-btn field-btn" onClick={() => setPad(true)}>{index == null ? 'Add' : formatIndex(index)}</button>
-        <p className="field-help">Your usual 18-hole index — it’s halved automatically for 9-hole games. No handicap? Leave it blank and everyone plays straight up.</p>
+        <p className="field-help">Your usual 18-hole index. It’s halved automatically for 9-hole games. No handicap? Leave it blank and everyone plays straight up.</p>
       </div>
       <div className="cta-wrap">
         <button className="full-btn" disabled={!name.trim()} onClick={finish}>Start playing <Icon name="golf" fill /></button>

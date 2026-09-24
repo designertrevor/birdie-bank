@@ -187,7 +187,7 @@ function GameBreakdown({ round, res }) {
           <div key={x.id} className="leg-row">
             <div className="leg-name">{i + 1}</div>
             <div className="leg-winner">{x.name}{round.game === 'scramble' ? <span className="li-sub"> · {round.teams.find(t => t.id === x.id)?.players.map(pid => first(names[pid])).join(', ')}</span> : null}</div>
-            <div className="leg-amt">{x.played ? fmt(x) : '—'}</div>
+            <div className="leg-amt">{x.played ? fmt(x) : '–'}</div>
           </div>
         ))}
       </>
@@ -223,7 +223,7 @@ function GameBreakdown({ round, res }) {
         {res.detail.rabbit.legs.map(l => (
           <div key={l.seg.label} className="leg-row">
             <div className="leg-name">{l.seg.label}</div>
-            <div className={`leg-winner ${!l.holder ? 'leg-tie' : ''}`}>{!l.done ? (l.holder ? `${names[l.holder]} holds it` : 'Loose') : l.holder ? `${names[l.holder]} held it at the end` : 'Loose at the end — no payout'}</div>
+            <div className={`leg-winner ${!l.holder ? 'leg-tie' : ''}`}>{!l.done ? (l.holder ? `${names[l.holder]} holds it` : 'Loose') : l.holder ? `${names[l.holder]} held it at the end` : 'Loose at the end, no payout'}</div>
             <div className={`leg-amt ${l.done && l.holder ? '' : 'zero'}`}>{money(round.settings.rabbit.stake * (round.players.length - 1))}</div>
           </div>
         ))}
@@ -236,7 +236,7 @@ function GameBreakdown({ round, res }) {
     return (
       <>
         <div className="sec-label">Skins won</div>
-        {won.length === 0 && <p className="hint-card"><Icon name="coins" fill /> No skins won — every hole was tied.</p>}
+        {won.length === 0 && <p className="hint-card"><Icon name="coins" fill /> No skins won. Every hole was tied.</p>}
         {won.map(r => (
           <div key={r.hole.no} className="leg-row">
             <div className="leg-name">H{r.hole.no}</div>
@@ -244,7 +244,7 @@ function GameBreakdown({ round, res }) {
             <div className="leg-amt">{r.skins} skin{r.skins > 1 ? 's' : ''}</div>
           </div>
         ))}
-        {t.unclaimed > 0 && <p className="field-help" style={{ padding: '0 20px' }}>{t.unclaimed} skin{t.unclaimed > 1 ? 's' : ''} still carried over at the end — unclaimed.</p>}
+        {t.unclaimed > 0 && <p className="field-help" style={{ padding: '0 20px' }}>{t.unclaimed} skin{t.unclaimed > 1 ? 's' : ''} still carried over at the end, unclaimed.</p>}
       </>
     );
   }
@@ -306,7 +306,7 @@ export function Scorecard({ round, current, onHole }) {
                   const g = round.scores[h.no]?.[p.id];
                   return <td key={h.no} className={`${h.no === current ? 'cur' : ''}`}>{g == null ? <span className="empty-dot">·</span> : <span className={`sc-mark ${cls(g, h.par)}`}>{g}</span>}</td>;
                 })}
-                <td className="tot">{sum.played ? sum.gross : '—'}</td>
+                <td className="tot">{sum.played ? sum.gross : '–'}</td>
               </tr>
             );
           })}

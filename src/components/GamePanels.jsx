@@ -34,7 +34,7 @@ export function MatchPanel({ round, hole }) {
     const b = bets.find(x => x.key === leg);
     const s = b.status;
     const notStarted = pos < b.start && s.played === 0;
-    const val = notStarted ? '—' : s.leader === null ? 'AS' : `${short[s.leader]} ${s.by} up`;
+    const val = notStarted ? '–' : s.leader === null ? 'AS' : `${short[s.leader]} ${s.by} up`;
     const sub = notStarted ? `Starts H${holeAtPos(round, b.start)}` : s.left === 0 ? 'Final' : s.closed ? `Won ${s.by}&${s.left}` : s.dormie ? 'Dormie' : `${s.left} left`;
     return (
       <div key={leg} className={`ms-tile ${s.leader === 0 ? 'ahead' : s.leader === 1 ? 'behind' : ''}`}>
@@ -83,13 +83,13 @@ export function VegasPanel({ round, hole, draft, touched }) {
         {teams.map((t, i) => (
           <div key={t.id} className={`vegas-team ${(i === 0 ? total : -total) > 0 ? 'ahead' : (i === 0 ? total : -total) < 0 ? 'behind' : ''}`}>
             <span className="ms-lbl"><span className={`side-tag ${i === 0 ? 'a' : 'b'}`}>{['A', 'B'][i]}</span> {t.name}</span>
-            <span className="ms-val">{pv ? pv.numbers[i] : '—'}</span>
+            <span className="ms-val">{pv ? pv.numbers[i] : '–'}</span>
             <span className="ms-sub">{pv?.flipped[i] ? 'Flipped by a birdie' : pv ? 'This hole' : 'Enter scores'}</span>
           </div>
         ))}
       </div>
       <div className="vegas-line">
-        {pv ? (pv.diff === 0 ? 'Hole is a push' : `${pv.diff > 0 ? teams[0].name : teams[1].name} take${round.teams ? '' : 's'} ${Math.abs(pv.diff)} point${Math.abs(pv.diff) === 1 ? '' : 's'} · ${money(Math.abs(pv.diff) * point)} each`) : 'Low score first, high second — 4 and 5 make 45'}
+        {pv ? (pv.diff === 0 ? 'Hole is a push' : `${pv.diff > 0 ? teams[0].name : teams[1].name} take${round.teams ? '' : 's'} ${Math.abs(pv.diff)} point${Math.abs(pv.diff) === 1 ? '' : 's'} · ${money(Math.abs(pv.diff) * point)} each`) : 'Low score first, high second: 4 and 5 make 45'}
         <span className="vegas-total">{total === 0 ? 'All square' : `${total > 0 ? teams[0].name : teams[1].name} +${Math.abs(total)} · ${money(Math.abs(total) * point)}`}</span>
       </div>
     </div>
@@ -111,7 +111,7 @@ export function SixesPanel({ round, hole }) {
           const s = m.status;
           const notStarted = pos < m.seg.start && s.played === 0;
           const lead = s.leader === null ? null : pair(m.sides[s.leader]);
-          const val = notStarted ? '—' : s.leader === null ? 'AS' : `${s.by} up`;
+          const val = notStarted ? '–' : s.leader === null ? 'AS' : `${s.by} up`;
           const sub = notStarted ? `H${holeAtPos(round, m.seg.start)}–${holeAtPos(round, m.seg.end)}` : s.left === 0 ? (lead ? `${lead}` : 'Halved') : s.closed ? `${lead} won` : lead ? `${lead} · ${s.left} left` : `${s.left} left`;
           return (
             <div key={m.index} className={`ms-tile ${m === cur ? 'cur' : ''} ${s.leader != null && s.played ? 'ahead' : ''}`}>

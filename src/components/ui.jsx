@@ -108,7 +108,7 @@ function NumpadInner({ title, prefix = '', suffix = '', initial = '', min, max, 
   const tooLow = num != null && min != null && num < min;
   const tooHigh = num != null && max != null && num > max;
   const invalid = num == null || Number.isNaN(num) || tooLow || tooHigh;
-  const shown = v === '' ? '—' : (neg ? '+' : '') + v;
+  const shown = v === '' ? '–' : (neg ? '+' : '') + v;
   return (
     <div className="numpad-overlay open" onClick={e => e.target === e.currentTarget && onClose()} role="dialog" aria-modal="true" aria-label={title}>
       <div className="numpad-sheet">

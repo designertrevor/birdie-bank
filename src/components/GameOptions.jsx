@@ -169,7 +169,7 @@ export function GameOptions({ game, get, set, onAmount, holesCount = 18, compact
       return <>
         {label('Stakes')}
         {amount('dots.value', 'Per dot', { label: 'Per dot' })}
-        {toggle('dots.auto', 'Birdies count', 'A natural birdie is a dot, an eagle is two — straight from the scores')}
+        {toggle('dots.auto', 'Birdies count', 'A natural birdie is a dot, an eagle is two, straight from the scores')}
         <div className="block">
           <div className="eyebrow" style={{ marginBottom: 10 }}>Dots in play</div>
           <div className="chip-row" style={{ padding: 0 }}>
@@ -246,7 +246,7 @@ export function TeamPicker({ game, picked, names, teams, setTeams }) {
         </div>
       ))}
       {problem ? <p className="field-error" style={{ margin: '0 20px 8px' }}>{problem}</p> : (
-        <p className="field-help" style={{ padding: '0 20px' }}>{teams.map((t, i) => `${LETTERS[i]}: ${t.map(pid => names[pid]?.split(' ')[0]).join(' & ') || '—'}`).join(' · ')}</p>
+        <p className="field-help" style={{ padding: '0 20px' }}>{teams.map((t, i) => `${LETTERS[i]}: ${t.map(pid => names[pid]?.split(' ')[0]).join(' & ') || '–'}`).join(' · ')}</p>
       )}
     </>
   );

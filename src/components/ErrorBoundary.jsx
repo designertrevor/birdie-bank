@@ -2,7 +2,7 @@ import { Component } from 'react';
 
 /**
  * Last line of defence: if a screen throws, show a way back instead of a blank page.
- * Data is untouched — everything is already saved in localStorage.
+ * Data is untouched. Everything is already saved in localStorage.
  */
 export default class ErrorBoundary extends Component {
   constructor(props) {

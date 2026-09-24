@@ -10,7 +10,7 @@ export function LivePill({ round }) {
   const st = useSyncStatus();
   if (!round.shared) return null;
   if (round.shared.ended) return <span className="live-pill ended">Sharing ended</span>;
-  const label = st.state === 'offline' ? 'Offline — will sync' : st.state === 'connecting' ? 'Connecting' : 'Live';
+  const label = st.state === 'offline' ? 'Offline, will sync' : st.state === 'connecting' ? 'Connecting' : 'Live';
   return <span className={`live-pill ${st.state}`} role="status"><span className="live-dot" aria-hidden="true" />{label}</span>;
 }
 
@@ -28,7 +28,7 @@ export function ShareSheet({ round, open, onClose }) {
     setBusy(false);
   };
   const send = async () => {
-    const text = `Join my ${GAMES[round.game].name} round at ${round.course.name} on Birdie Bank — code ${code}`;
+    const text = `Join my ${GAMES[round.game].name} round at ${round.course.name} on Birdie Bank. Code ${code}`;
     try {
       if (navigator.share) { await navigator.share({ title: 'Join my round', text, url: link }); return; }
     } catch (e) { if (e?.name === 'AbortError') return; }
@@ -50,7 +50,7 @@ export function ShareSheet({ round, open, onClose }) {
     <Sheet open={open} onClose={onClose} title="Live scoring">
       {!code ? (
         <div style={{ padding: '0 16px' }}>
-          <p className="sheet-text" style={{ padding: '0 4px 12px' }}>Let everyone in the group follow along — or keep score from their own phone. Scores sync hole by hole.</p>
+          <p className="sheet-text" style={{ padding: '0 4px 12px' }}>Let everyone in the group follow along, or keep score from their own phone. Scores sync hole by hole.</p>
           <ul className="onboard-list" style={{ marginTop: 0, marginBottom: 14 }}>
             <li><Icon name="link" fill /> You get a code and a link to send the group.</li>
             <li><Icon name="device-mobile" fill /> Anyone with it can view and enter scores.</li>
@@ -89,7 +89,7 @@ export function JoinSheet({ open, onClose, initialCode = '' }) {
       const remote = await fetchShared(code);
       if (!remote) setErr('No round with that code. Check it with the scorekeeper.');
       else setFound(remote);
-    } catch (e) { setErr(e.message || 'Couldn’t reach the server — check your signal.'); }
+    } catch (e) { setErr(e.message || 'Couldn’t reach the server. Check your signal.'); }
     setBusy(false);
   };
   const join = async me => {

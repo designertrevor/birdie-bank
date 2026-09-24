@@ -1,5 +1,5 @@
 /* ============================================================
-   BIRDIE BANK — Clay-inspired theme
+   BIRDIE BANK: Clay-inspired theme
    ============================================================ */
 :root {
   --canvas: #fffaf0; --surface: #f5f0e0; --surface-strong: #ebe6d6; --card: #ffffff;
@@ -647,7 +647,7 @@ button:disabled { cursor: not-allowed; }
 .swatch.on { box-shadow: 0 0 0 3px var(--canvas), 0 0 0 5px var(--ink); }
 
 /* ============================================================
-   DARK THEME — Settings > Appearance (system / light / dark)
+   DARK THEME: Settings > Appearance (system / light / dark)
    ============================================================ */
 :root[data-theme="dark"] {
   --canvas: #121615; --surface: #202624; --surface-strong: #2c3331; --card: #1a1f1e;

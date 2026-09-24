@@ -1,4 +1,4 @@
-// Pure golf + betting maths. No DOM, no storage — everything here is unit tested.
+// Pure golf + betting maths. No DOM, no storage. Everything here is unit tested.
 
 // ---------------------------------------------------------------------------
 // Handicaps

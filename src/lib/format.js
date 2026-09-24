@@ -3,7 +3,7 @@ import { GAMES, roundResults, scoreSummary } from './round.js';
 import { money } from './golf.js';
 
 export function formatIndex(i) {
-  if (i == null) return '—';
+  if (i == null) return '–';
   const v = Math.abs(i);
   const s = Number.isInteger(v) ? v.toFixed(1) : String(Math.round(v * 10) / 10);
   return (i < 0 ? '+' : '') + s;
@@ -38,7 +38,7 @@ export async function shareRound(round, res, showToast) {
   try {
     if (navigator.share) { await navigator.share({ title: 'Birdie Bank results', text }); return; }
   } catch (e) { if (e?.name === 'AbortError') return; }
-  try { await navigator.clipboard.writeText(text); showToast('Results copied — paste them in the group chat'); }
+  try { await navigator.clipboard.writeText(text); showToast('Results copied. Paste them in the group chat'); }
   catch { showToast('Couldn’t share on this device'); }
 }
 

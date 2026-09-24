@@ -1,5 +1,5 @@
 // Bundled courses. Par, hole handicaps and men's tee ratings/slopes confirmed from the user's scorecards (Sep 2026).
-// Yardages are intentionally left out — Birdie Bank tracks games, not distances.
+// Yardages are intentionally left out. Birdie Bank tracks games, not distances.
 export const COURSES = [
   {
     "id": "birch-creek",
