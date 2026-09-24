@@ -257,7 +257,7 @@ export function CourseEdit({ id }) {
       <Header title={builtIn ? 'Course details' : existing ? 'Edit course' : 'Add a course'} onBack={nav.pop} />
       <div className="scroll">
         {builtIn && (
-          <p className="hint-card"><Icon name={existing.verified ? 'seal-check' : 'warning'} fill /> {existing.verified ? 'Par and handicaps were checked against two sources.' : 'We couldn’t double-check this scorecard. Compare it with the card at the course and fix anything that’s off.'} Changes save as your own copy.</p>
+          <p className="hint-card"><Icon name={existing.verified ? 'seal-check' : 'warning'} fill /> {existing.verified ? 'Par and hole handicaps are confirmed from a real scorecard.' : 'We couldn’t double-check this scorecard. Compare it with the card at the course and fix anything that’s off.'} Changes save as your own copy.</p>
         )}
         <div className="block">
           <label className="field-label" htmlFor="cn">Course name</label>

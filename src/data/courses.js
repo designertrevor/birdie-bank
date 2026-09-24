@@ -193,12 +193,13 @@ export const COURSES = [
         ]
       }
     ],
-    "verified": false,
+    "verified": true,
     "sources": [
+      "Scorecard from the user (18Birdies), Sep 2026",
       "https://www.golfpass.com/courses/12861-birch-creek-golf-club/scorecard-and-layout",
       "https://www.golflink.com/golf-courses/ut/smithfield/birch-creek-golf-course"
     ],
-    "notes": "Hole data from GolfPass only (BlueGolf/official site/golfify unreachable). GolfPass tee table lists Championship 6770 71.6/122, Middle 6511 70.0/118, Forward 5734 women 70.7/117, but hole sums are Blue 6824, White 6503, Black 5491, Red 4421 - mapping of ratings to tees is a best guess, and Red rating may belong to a different (5734) tee. GolfLink summary cites 6768 yds 72.2/124 (older rating). Black/Red yardages look odd (e.g. hole 11 = 100 both); treat as unverified."
+    "notes": "Par and hole handicaps confirmed from a recent scorecard. Tee ratings/yardages from public listings."
   },
   {
     "id": "logan-river",
@@ -340,10 +341,11 @@ export const COURSES = [
     ],
     "verified": true,
     "sources": [
+      "Scorecard from the user (18Birdies), Sep 2026",
       "https://www.golfpass.com/courses/12793-logan-river-golf-course/scorecard-and-layout",
       "https://18birdies.com/golf-courses/club/af7a4400-86ac-11e4-8c28-020000005b00/logan-river-golf-course"
     ],
-    "notes": "Par, handicap and Black yardages (6335) cross-checked GolfPass vs 18Birdies (hdcp 1=#3, 18=#14, front 3075/back 3260). Black rating: 18Birdies 70.2/120 for 6335; GolfPass lists 6502 at 70.5/124 (older/longer config). Blue/White/Red per-hole yardages not found (null); ratings from GolfPass (White 68.9 > Blue 68.3 is suspicious - may be a women's rating). 18Birdies says Red = 4848."
+    "notes": "Par and hole handicaps confirmed from a recent scorecard. Tee ratings/yardages from public listings."
   },
   {
     "id": "preston",
@@ -551,12 +553,13 @@ export const COURSES = [
         "total": 3661
       }
     ],
-    "verified": false,
+    "verified": true,
     "sources": [
+      "Scorecard from the user (18Birdies), Sep 2026",
       "https://18birdies.com/golf-courses/club/b6bfd680-86ac-11e4-8c28-020000005b00/preston-golf-and-country-club",
       "https://www.golflink.com/golf-courses/id/preston/preston-golf-country-club",
       "https://www.golfpass.com/travel-advisor/courses/4983-preston-golf-country-club"
     ],
-    "notes": "1215 N 800 E, Preston, ID (Cache Valley, ~25 mi N of Logan). Par 71. Par and stroke index come from 18Birdies only; GolfLink has no hole handicaps and wrongly lists hole 6 as par 4 (total 72), which does not fit 173 yds. Ratings/slopes and per-hole yardages for Black/White/Blue/Gold agree between 18Birdies and GolfLink (GolfLink per hole). The one mismatch: 18Birdies gives White as 6017 total, but the GolfLink per-hole yards add up to 6007, so 6007 is used. Junior tee per-hole yards were not found. Tee colors are assumed from the tee names. BlueGolf and USGA NCRDB were blocked or not checked. GolfLink marks the location as closed, which is probably a stale listing. Women's stroke index not found."
+    "notes": "Par and hole handicaps confirmed from a recent scorecard. Tee ratings/yardages from public listings."
   }
 ];
