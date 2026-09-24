@@ -66,7 +66,7 @@ export default function Onboarding() {
         <input id="ob-name" className="name-input" value={name} onChange={e => setName(e.target.value)} placeholder="e.g. Trevor" autoComplete="given-name" maxLength={24} />
         <label className="field-label">Handicap index <span className="opt">optional</span></label>
         <button className="amt-btn field-btn" onClick={() => setPad(true)}>{index == null ? 'Add' : formatIndex(index)}</button>
-        <p className="field-help">No handicap? Leave it blank and everyone plays straight up.</p>
+        <p className="field-help">Your usual 18-hole index — it’s halved automatically for 9-hole games. No handicap? Leave it blank and everyone plays straight up.</p>
       </div>
       <div className="cta-wrap">
         <button className="full-btn" disabled={!name.trim()} onClick={finish}>Start playing <Icon name="golf" fill /></button>

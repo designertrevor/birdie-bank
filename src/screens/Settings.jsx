@@ -182,6 +182,11 @@ export function Courses() {
   );
 }
 
+/** Show a source URL as its host name; anything else (e.g. "Scorecard from the user") as written. */
+function sourceLabel(s) {
+  try { return /^https?:\/\//i.test(s) ? new URL(s).hostname.replace(/^www\./, '') : s; } catch { return s; }
+}
+
 const TEE_COLORS = ['#1a1a1a', '#2f6fd6', '#f2f2f2', '#e8b94a', '#d64545', '#2c8c66'];
 
 function blankCourse(n = 18) {
@@ -305,13 +310,13 @@ export function CourseEdit({ id }) {
           <div className="add-ci"><Icon name="plus" /></div><span className="add-lbl">Add tee</span>
         </button>
         {existing && !builtIn && <button className="danger-link" onClick={remove}><Icon name="trash" /> Delete course</button>}
-        {existing?.sources?.length > 0 && <p className="field-help" style={{ padding: '0 20px' }}>Sources: {existing.sources.map(s => new URL(s).hostname.replace('www.', '')).join(', ')}</p>}
+        {existing?.sources?.length > 0 && <p className="field-help" style={{ padding: '0 20px' }}>Sources: {existing.sources.map(sourceLabel).join(', ')}</p>}
       </div>
       <div className="cta-wrap">
         {errors.length > 0 && <p className="field-error" style={{ margin: 0, textAlign: 'center' }}>{errors[0]}</p>}
         <button className="full-btn" disabled={errors.length > 0} onClick={save}>{builtIn ? 'Save my corrections' : 'Save course'}</button>
       </div>
-      <Numpad open={!!pad} title={pad?.title} min={pad?.min} max={pad?.max} allowDecimal={!!pad?.decimal}
+      <Numpad key={pad ? `${pad.kind}-${pad.i ?? pad.t}` : 'none'} open={!!pad} title={pad?.title} min={pad?.min} max={pad?.max} allowDecimal={!!pad?.decimal}
         initial={pad ? (pad.kind === 'hdcp' ? c.holes[pad.i].hdcp : c.tees[pad.t][pad.kind]) ?? '' : ''}
         onClose={() => setPad(null)} onDone={onPad} />
     </Screen>

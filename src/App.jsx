@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { UIProvider } from './components/ui.jsx';
+import ErrorBoundary from './components/ErrorBoundary.jsx';
 import { NavCtx } from './lib/nav.js';
 import { useStore } from './lib/store.js';
 import { bootSync } from './lib/sync.js';
@@ -86,7 +87,9 @@ export default function App() {
     <UIProvider>
       <NavCtx.Provider value={nav}>
         <div className="device">
-          {Top ? <Top key={top.key} {...top.params} /> : <TabScreen key={tab} />}
+          <ErrorBoundary onReset={() => reset('history')}>
+            {Top ? <Top key={top.key} {...top.params} /> : <TabScreen key={tab} />}
+          </ErrorBoundary>
         </div>
       </NavCtx.Provider>
     </UIProvider>

@@ -95,7 +95,7 @@ export function PlayerEdit({ id, onSaved }) {
             <button className="amt-btn" onClick={() => setPad(true)}>{index == null ? 'Add' : formatIndex(index)}</button>
             {index != null && <button className="header-btn" onClick={() => setIndex(null)}>Clear</button>}
           </div>
-          <p className="field-help">Course handicaps are worked out from this for each course and tee.</p>
+          <p className="field-help">Their usual 18-hole index. Course handicaps are worked out from this for each course and tee, and halved for 9-hole games.</p>
           <label className="field-label" htmlFor="pe-venmo">Venmo username <span className="opt">optional</span></label>
           <input id="pe-venmo" className="text-input" value={venmo} onChange={e => setVenmo(e.target.value)} placeholder="@username" autoCapitalize="none" autoCorrect="off" />
         </div>

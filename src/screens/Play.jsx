@@ -40,6 +40,9 @@ function useWakeLock() {
   }, []);
 }
 
+// Unsaved scores per hole ("roundId:holeNo"), kept while moving between holes so nothing typed is lost
+const DRAFTS = new Map();
+
 function PlayRound({ round }) {
   useWakeLock();
   const nav = useNav();
@@ -51,8 +54,14 @@ function PlayRound({ round }) {
 
   // Draft scores for this hole: saved scores, else par (shown muted until touched)
   const saved = round.scores[hole.no] || {};
-  const [draft, setDraft] = useState(() => Object.fromEntries(round.players.map(p => [p.id, saved[p.id] ?? hole.par])));
-  const [touched, setTouched] = useState(() => Object.fromEntries(round.players.map(p => [p.id, saved[p.id] != null])));
+  const draftKey = `${round.id}:${hole.no}`;
+  const kept = DRAFTS.get(draftKey);
+  // Edits you made but haven't saved win over the saved score; otherwise the saved score (which may have come from another phone) wins
+  const wasDirty = !!kept?.dirty;
+  const [dirty, setDirty] = useState(wasDirty);
+  const [draft, setDraft] = useState(() => Object.fromEntries(round.players.map(p => [p.id, (wasDirty ? kept.draft[p.id] : null) ?? saved[p.id] ?? hole.par])));
+  const [touched, setTouched] = useState(() => Object.fromEntries(round.players.map(p => [p.id, saved[p.id] != null || (wasDirty && !!kept.touched[p.id])])));
+  useEffect(() => { DRAFTS.set(draftKey, { draft, touched, dirty }); }, [draftKey, draft, touched, dirty]);
   const [banker, setBanker] = useState(() => (game === 'banker' ? structuredClone(bankerHoleSetup(round, idx)) : null));
   const [phase, setPhase] = useState(() => (game === 'banker' && !holeComplete(round, hole) ? 'bets' : 'scores'));
   const [wolf, setWolf] = useState(() => (game === 'wolf' ? (round.wolf[hole.no] || { wolf: wolfFor(round, idx), partner: undefined }) : null));
@@ -65,6 +74,7 @@ function PlayRound({ round }) {
   const numRefs = useRef({});
 
   const setScore = (pid, v) => {
+    setDirty(true);
     setDraft(d => ({ ...d, [pid]: v }));
     setTouched(t => ({ ...t, [pid]: true }));
     buzz(8);
@@ -77,18 +87,26 @@ function PlayRound({ round }) {
   };
 
 
+  // Where "Save" takes you: the next hole, or the first unscored hole after this one when fixing an earlier score
+  const nextIdx = useMemo(() => {
+    if (isLast) return idx;
+    const later = round.holes.findIndex((h, i) => i > idx && !holeComplete(round, h));
+    return later === -1 ? idx + 1 : later;
+  }, [round, idx, isLast]);
+
   const saveHole = async () => {
     if (game === 'wolf' && wolf.partner === undefined) { showToast('Wolf needs to pick a partner or go lone'); return; }
     const scores = { ...draft };
+    DRAFTS.delete(draftKey);
     update(s => {
       const r = s.rounds[round.id];
       r.scores[hole.no] = scores;
       if (game === 'banker') r.banker[hole.no] = banker;
       if (game === 'wolf') r.wolf[hole.no] = wolf;
-      if (!isLast) r.current = idx + 1;
+      if (!isLast) r.current = nextIdx;
       // Auto presses before the next hole
       if (game === 'nassau' && r.settings.nassau.pressMode === 'auto' && !isLast) {
-        const next = idx + 2; // playing position of the next hole
+        const next = nextIdx + 1; // playing position of the hole we're going to
         for (const o of nassauPressOptions(r, next)) {
           r.presses.push({ id: `auto-${o.leg}-${next}`, leg: o.leg, start: next, by: o.trailing, auto: true });
         }
@@ -97,7 +115,7 @@ function PlayRound({ round }) {
     if (game === 'nassau' && round.settings.nassau.pressMode === 'auto' && !isLast) {
       const r = getState().rounds[round.id];
       const legs = roundLegs(r);
-      const fresh = r.presses.filter(p => p.start === idx + 2);
+      const fresh = r.presses.filter(p => p.start === nextIdx + 1);
       if (fresh.length) showToast(`Auto press: ${fresh.map(p => legs[p.leg].label).join(', ')}`);
     }
     if (isLast) finish();
@@ -229,7 +247,7 @@ function PlayRound({ round }) {
           <div style={{ display: 'flex', gap: 8 }}>
             <button className="full-btn outline" style={{ width: 64, flex: 'none' }} disabled={idx === 0} onClick={() => goHole(idx - 1)} aria-label="Previous hole"><Icon name="arrow-left" /></button>
             <button className="full-btn" style={{ flex: 1 }} onClick={saveHole}>
-              {isLast ? <>Finish round <Icon name="flag-pennant" fill /></> : <>Save &amp; next hole <Icon name="arrow-right" /></>}
+              {isLast ? <>Finish round <Icon name="flag-pennant" fill /></> : nextIdx !== idx + 1 ? <>Save &amp; back to hole {round.holes[nextIdx].no} <Icon name="arrow-right" /></> : <>Save &amp; next hole <Icon name="arrow-right" /></>}
             </button>
           </div>
         )}

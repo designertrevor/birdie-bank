@@ -243,7 +243,7 @@ function PlayersStep({ game, course, holesCount, nine, picked, setPicked, tees, 
                       </div>
                     )}
                     <button className="hc-chip" onClick={() => setHcFor(p.id)}>
-                      Course HC <strong>{hc.value < 0 ? `+${-hc.value}` : hc.value}</strong>{hcNote} <Icon name="pencil-simple" />
+                      {holesCount === 9 ? '9-hole HC' : 'Course HC'} <strong>{hc.value < 0 ? `+${-hc.value}` : hc.value}</strong>{hcNote} <Icon name="pencil-simple" />
                     </button>
                   </div>
                 )}
@@ -260,7 +260,7 @@ function PlayersStep({ game, course, holesCount, nine, picked, setPicked, tees, 
         <button className="full-btn" disabled={!valid} onClick={onNext}>{valid ? <>Next — Setup <Icon name="arrow-right" /></> : needText}</button>
       </div>
       <QuickAddPlayer open={adding} onClose={() => setAdding(false)} onAdded={pid => { setAdding(false); if (picked.length < game.max) setPicked([...picked, pid]); }} />
-      <Numpad open={!!hcFor} title={`${state.players[hcFor]?.name}'s course handicap`} initial={hcFor ? courseHc(hcFor).value : ''} allowNegative min={-10} max={60}
+      <Numpad open={!!hcFor} title={`${state.players[hcFor]?.name}'s ${holesCount === 9 ? '9-hole ' : ''}course handicap`} initial={hcFor ? courseHc(hcFor).value : ''} allowNegative min={-10} max={60}
         onClose={() => setHcFor(null)} onDone={v => { setHcOverride({ ...hcOverride, [hcFor]: v }); setHcFor(null); }} />
     </>
   );
@@ -288,6 +288,7 @@ function QuickAddPlayer({ open, onClose, onAdded }) {
           {dup && <p className="field-error">That name is taken — add an initial.</p>}
           <label className="field-label">Handicap index <span className="opt">optional</span></label>
           <button className="amt-btn" onClick={() => setPad(true)}>{index == null ? 'Add' : formatIndex(index)}</button>
+          <p className="field-help">Their usual 18-hole index — it’s halved automatically for 9-hole games.</p>
           <div style={{ marginTop: 16 }}><button className="full-btn" disabled={!t || dup} onClick={add}>Add to round</button></div>
         </div>
       </Sheet>
