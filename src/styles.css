@@ -454,7 +454,7 @@ button { font-family: inherit; }
 .toggle-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 16px; margin: 0 16px 10px; background: var(--card); border-radius: 18px; }
 .toggle-lbl { font-size: 16px; font-weight: 600; color: var(--ink); }
 .toggle-sub { font-size: 13px; color: var(--mute); margin-top: 2px; }
-.tog { width: 56px; height: 34px; border-radius: 999px; background: var(--surface-strong); position: relative; cursor: pointer; flex-shrink: 0; transition: background .2s; }
+.tog { width: 56px; height: 34px; padding: 0; border: none; box-sizing: border-box; border-radius: 999px; background: var(--surface-strong); position: relative; cursor: pointer; flex-shrink: 0; transition: background .2s; }
 .tog.on { background: var(--pink); }
 .tog::after { content: ''; position: absolute; top: 4px; left: 4px; width: 26px; height: 26px; border-radius: 50%; background: #fff; box-shadow: 0 1px 3px rgba(0,0,0,.2); transition: left .3s var(--spring); }
 .tog.on::after { left: 26px; }
@@ -689,3 +689,58 @@ button:disabled { cursor: not-allowed; }
 .join-row { border-style: solid; background: var(--card); }
 .join-row .add-ci { background: var(--mint); color: var(--teal); }
 .finished-banner { margin: 8px 16px 0; padding: 12px 14px; border: none; border-radius: 16px; background: var(--ochre); color: var(--on-pastel); font-weight: 700; font-size: 14px; display: flex; gap: 8px; align-items: center; justify-content: center; cursor: pointer; flex-shrink: 0; }
+
+/* Team games */
+.sides-line { margin: 0 16px 8px; padding: 8px 14px; background: var(--card); border-radius: 14px; font-size: 13px; font-weight: 600; color: var(--ink); flex-shrink: 0; display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+.sides-v { color: var(--mute); font-weight: 700; padding: 0 2px; }
+.side-tag { display: inline-grid; place-items: center; width: 20px; height: 20px; border-radius: 6px; font-size: 11px; font-weight: 800; font-family: Inter, sans-serif; color: #fff; background: var(--teal); flex-shrink: 0; }
+.side-tag.b { background: var(--coral); }
+.team-row .set-name { font-size: 16px; }
+.team-letters { display: flex; gap: 6px; }
+.team-letter { width: 40px; height: 40px; border-radius: 12px; border: none; background: var(--surface); color: var(--mute); font-weight: 800; font-size: 15px; cursor: pointer; transition: transform .2s var(--spring), background .15s, color .15s; }
+.team-letter:active { transform: scale(.92); }
+.team-letter.on { color: #fff; background: var(--teal); }
+.team-letter.t1.on { background: var(--coral); }
+.team-letter.t2.on { background: var(--ink); color: var(--on-ink); }
+.team-letter.t3.on { background: var(--pink); }
+.sixes-row { display: flex; align-items: center; gap: 8px; padding: 8px 0; font-size: 14px; border-top: 1px solid var(--surface); }
+.sixes-row:first-child { border-top: none; }
+.sixes-holes { color: var(--mute); font-size: 12px; font-weight: 600; width: 92px; flex-shrink: 0; }
+.sixes-pair { font-weight: 700; color: var(--ink); }
+.sixes-v { color: var(--mute); font-weight: 700; }
+.ms-tile.cur { outline: 2px solid var(--ink); outline-offset: -2px; }
+
+/* Vegas */
+.vegas-panel { margin: 0 16px 8px; padding: 12px; background: var(--card); border-radius: 20px; flex-shrink: 0; }
+.vegas-teams { display: flex; gap: 8px; }
+.vegas-team { flex: 1; text-align: center; padding: 8px 6px; border-radius: 14px; background: var(--surface); min-width: 0; }
+.vegas-team .ms-lbl { display: flex; align-items: center; justify-content: center; gap: 6px; text-transform: none; letter-spacing: 0; font-size: 12px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.vegas-team .ms-val { font-size: 28px; }
+.vegas-team.ahead { background: var(--mint); } .vegas-team.ahead .ms-val { color: var(--teal); }
+.vegas-team.behind { background: var(--loss-bg); } .vegas-team.behind .ms-val { color: var(--loss); }
+.vegas-line { margin-top: 8px; font-size: 13px; color: var(--body); display: flex; justify-content: space-between; gap: 8px; align-items: center; flex-wrap: wrap; }
+.vegas-total { font-weight: 700; color: var(--ink); white-space: nowrap; }
+
+/* Marks: bingo bango bongo, dots */
+.marks-card { margin: 0 16px 10px; padding: 4px 14px; background: var(--card); border-radius: 22px; }
+.marks-row { display: flex; align-items: center; gap: 10px; padding: 10px 0; border-top: 1px solid var(--surface); }
+.marks-row:first-child { border-top: none; }
+.marks-lbl { width: 78px; flex-shrink: 0; display: flex; flex-direction: column; font-size: 14px; color: var(--ink); }
+.marks-lbl span { font-size: 11px; color: var(--mute); line-height: 1.2; }
+.pill-btn.sm { padding: 7px 11px; font-size: 13px; background: var(--surface); }
+.pill-btn.sm.on { background: var(--ink); color: var(--on-ink); }
+.pill-btn.sm.auto { background: var(--mint); color: var(--teal); cursor: default; }
+.pcard.with-dots { flex-wrap: wrap; }
+.dots-row { flex-basis: 100%; display: flex; flex-wrap: wrap; gap: 6px; padding-top: 10px; }
+.field-help.pad { padding: 0 20px 6px; }
+
+/* Hole picker sheet */
+.hole-pick-btn { width: 100%; border: none; background: var(--surface); border-radius: 14px; padding: 14px; font: inherit; font-size: 16px; font-weight: 600; color: var(--ink); display: flex; align-items: center; justify-content: space-between; cursor: pointer; }
+.hole-pick-btn i { color: var(--mute); }
+.hole-grid-pick { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; padding: 8px 16px 16px; }
+.hole-opt { border: none; background: var(--surface); border-radius: 14px; padding: 12px 14px; font: inherit; color: var(--ink); text-align: left; display: flex; align-items: baseline; gap: 8px; cursor: pointer; transition: transform .2s var(--spring); }
+.hole-opt:active { transform: scale(.96); }
+.hole-opt strong { font-family: var(--display); font-size: 18px; font-weight: 800; }
+.hole-opt span { font-size: 13px; color: var(--mute); }
+.hole-opt.on { background: var(--ink); color: var(--on-ink); }
+.hole-opt.on span { color: var(--on-ink); opacity: .7; }

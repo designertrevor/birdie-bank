@@ -3,17 +3,19 @@ import { Empty, Icon, Numpad, Screen, Segmented, Sheet, useUI } from '../compone
 import { RulesSheet } from '../components/Rules.jsx';
 import { getState, update, useStore } from '../lib/store.js';
 import {
-  GAMES, bankerHoleSetup, defaultNine, holeAtPos, holeComplete, nassauPressOptions, nassauWinners, nassauAmounts, resizeRound, roundLegs,
-  roundResults, scoredHolesDropped, skinsTable, strokesFor, wolfFor,
+  GAMES, bankerHoleSetup, defaultNine, holeComplete, nassauPressOptions, pressMode, resizeRound, roundLegs,
+  roundResults, scoredHolesDropped, scorers, skinsTable, strokesFor, wolfFor,
 } from '../lib/round.js';
 import { findCourse } from '../lib/courses.js';
-import { money, nassauBets, scoreName, pickupGross } from '../lib/golf.js';
+import { money, scoreName, pickupGross } from '../lib/golf.js';
+import { BBBPicker, DotsRow, MatchPanel, MoneyPanel, PointsPanel, RabbitPanel, SixesPanel, TotalsPanel, VegasPanel } from '../components/GamePanels.jsx';
+import { GameOptions } from '../components/GameOptions.jsx';
+import { optionsProblem, stakeSummary } from '../lib/stakes.js';
 import { buzz, confettiFrom } from '../lib/delight.js';
 import { useNav } from '../lib/nav.js';
 import { Scorecard } from './RoundDetail.jsx';
 import { LivePill, ShareSheet } from '../components/Live.jsx';
 import { syncConfigured } from '../lib/sync.js';
-import { uid } from '../lib/store.js';
 
 export default function Play({ id }) {
   const round = useStore(s => s.rounds[id]);
@@ -52,6 +54,7 @@ function PlayRound({ round }) {
   const hole = round.holes[idx];
   const isLast = idx === round.holes.length - 1;
   const game = round.game;
+  const units = scorers(round); // players, or teams in a scramble
 
   // Draft scores for this hole: saved scores, else par (shown muted until touched)
   const saved = round.scores[hole.no] || {};
@@ -60,9 +63,10 @@ function PlayRound({ round }) {
   // Edits you made but haven't saved win over the saved score; otherwise the saved score (which may have come from another phone) wins
   const wasDirty = !!kept?.dirty;
   const [dirty, setDirty] = useState(wasDirty);
-  const [draft, setDraft] = useState(() => Object.fromEntries(round.players.map(p => [p.id, (wasDirty ? kept.draft[p.id] : null) ?? saved[p.id] ?? hole.par])));
-  const [touched, setTouched] = useState(() => Object.fromEntries(round.players.map(p => [p.id, saved[p.id] != null || (wasDirty && !!kept.touched[p.id])])));
-  useEffect(() => { DRAFTS.set(draftKey, { draft, touched, dirty }); }, [draftKey, draft, touched, dirty]);
+  const [draft, setDraft] = useState(() => Object.fromEntries(units.map(p => [p.id, (wasDirty ? kept.draft[p.id] : null) ?? saved[p.id] ?? hole.par])));
+  const [touched, setTouched] = useState(() => Object.fromEntries(units.map(p => [p.id, saved[p.id] != null || (wasDirty && !!kept.touched[p.id])])));
+  const [marks, setMarks] = useState(() => (GAMES[game].marks ? (wasDirty && kept.marks) || structuredClone(round.marks?.[hole.no] || (game === 'bbb' ? { bingo: null, bango: null, bongo: null } : {})) : null));
+  useEffect(() => { DRAFTS.set(draftKey, { draft, touched, dirty, marks }); }, [draftKey, draft, touched, dirty, marks]);
   const [banker, setBanker] = useState(() => (game === 'banker' ? structuredClone(bankerHoleSetup(round, idx)) : null));
   const [phase, setPhase] = useState(() => (game === 'banker' && !holeComplete(round, hole) ? 'bets' : 'scores'));
   const [wolf, setWolf] = useState(() => (game === 'wolf' ? (round.wolf[hole.no] || { wolf: wolfFor(round, idx), partner: undefined }) : null));
@@ -73,8 +77,10 @@ function PlayRound({ round }) {
   const [bankerPick, setBankerPick] = useState(false);
   const [live, setLive] = useState(false);
   const [holesSheet, setHolesSheet] = useState(false);
+  const [betsSheet, setBetsSheet] = useState(false);
   const numRefs = useRef({});
 
+  const setMarksDirty = m => { setDirty(true); setMarks(m); };
   const setScore = (pid, v) => {
     setDirty(true);
     setDraft(d => ({ ...d, [pid]: v }));
@@ -105,20 +111,21 @@ function PlayRound({ round }) {
       r.scores[hole.no] = scores;
       if (game === 'banker') r.banker[hole.no] = banker;
       if (game === 'wolf') r.wolf[hole.no] = wolf;
+      if (marks) { if (!r.marks) r.marks = {}; r.marks[hole.no] = marks; }
       if (!isLast) r.current = nextIdx;
       // Auto presses before the next hole
-      if (game === 'nassau' && r.settings.nassau.pressMode === 'auto' && !isLast) {
+      if (pressMode(r) === 'auto' && !isLast) {
         const next = nextIdx + 1; // playing position of the hole we're going to
         for (const o of nassauPressOptions(r, next)) {
           r.presses.push({ id: `auto-${o.leg}-${next}`, leg: o.leg, start: next, by: o.trailing, auto: true });
         }
       }
     });
-    if (game === 'nassau' && round.settings.nassau.pressMode === 'auto' && !isLast) {
+    if (pressMode(round) === 'auto' && !isLast) {
       const r = getState().rounds[round.id];
       const legs = roundLegs(r);
       const fresh = r.presses.filter(p => p.start === nextIdx + 1);
-      if (fresh.length) showToast(`Auto press: ${fresh.map(p => legs[p.leg].label).join(', ')}`);
+      if (fresh.length) showToast(game === 'nassau' ? `Auto press: ${fresh.map(p => legs[p.leg].label).join(', ')}` : 'Auto press!');
     }
     if (isLast) finish();
   };
@@ -196,26 +203,35 @@ function PlayRound({ round }) {
         <BankerPanel round={round} banker={banker} setBanker={setBanker} phase={phase} setPhase={setPhase}
           onPick={() => setBankerPick(true)} onBet={pid => setBetPad(pid)} draft={draft} hole={hole} />
       )}
-      {game === 'nassau' && <NassauPanel round={round} hole={hole} />}
-      {game === 'skins' && <SkinsPanel round={round} hole={hole} />}
+      {(game === 'nassau' || game === 'match') && <MatchPanel round={round} hole={hole} />}
+      {game === 'skins' && <SkinsPanel round={round} hole={hole} onChange={() => setBetsSheet(true)} />}
       {game === 'wolf' && <WolfPanel round={round} wolf={wolf} setWolf={setWolf} />}
+      {game === 'vegas' && <VegasPanel round={round} hole={hole} draft={draft} touched={touched} />}
+      {game === 'sixes' && <SixesPanel round={round} hole={hole} />}
+      {(game === 'stroke' || game === 'stableford' || game === 'quota') && <TotalsPanel round={round} />}
+      {(game === 'nines' || game === 'bbb' || game === 'dots') && <PointsPanel round={round} />}
+      {game === 'aces' && <MoneyPanel round={round} results={results} icon="spade" label="Aces & deuces so far" />}
+      {game === 'rabbit' && <RabbitPanel round={round} hole={hole} />}
 
       {phase === 'scores' && (
         <div className="scroll">
-          {round.players.map(p => {
+          {game === 'bbb' && <BBBPicker round={round} marks={marks} setMarks={setMarksDirty} />}
+          {units.map(p => {
             const st = round.useHandicaps ? strokesFor(round, p, hole) : 0;
             const v = draft[p.id];
             const isBanker = banker?.banker === p.id;
             const isWolf = wolf?.wolf === p.id;
             const shown = v === 'X' ? pickupGross(hole.par, st) : v;
             return (
-              <div key={p.id} className={`pcard score-row ${isBanker || isWolf ? 'bkr' : ''}`}>
+              <div key={p.id} className={`pcard score-row ${game === 'dots' ? 'with-dots' : ''} ${isBanker || isWolf ? 'bkr' : ''}`}>
                 <div className="row-main">
                   <div className="pname" style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                     {p.name}
                     {isBanker && <span className="bkr-badge"><Icon name="bank" fill /> Banker</span>}
                     {isWolf && <span className="bkr-badge"><Icon name="paw-print" fill /> Wolf</span>}
+                    {round.teams && !p.team && <span className={`side-tag ${round.teams.findIndex(t => t.players.includes(p.id)) === 0 ? 'a' : 'b'}`}>{['A', 'B', 'C', 'D'][round.teams.findIndex(t => t.players.includes(p.id))]}</span>}
                   </div>
+                  {p.team && <div className="ps">{p.players.map(pid => round.players.find(x => x.id === pid)?.name.split(' ')[0]).join(', ')} · team HC {p.courseHc ?? 0}</div>}
                   <div className="ps">
                     {st > 0 && <span className="stroke-dots" aria-label={`Gets ${st} stroke${st > 1 ? 's' : ''}`}>{'●'.repeat(st)} {st} stroke{st > 1 ? 's' : ''}</span>}
                     {st < 0 && <span className="stroke-dots">Gives {-st} stroke</span>}
@@ -235,6 +251,7 @@ function PlayRound({ round }) {
                   <button className="sc-btn" aria-label={`${p.name} one more`} disabled={v !== 'X' && v >= 15}
                     onClick={() => setScore(p.id, v === 'X' ? hole.par + 1 : Math.min(15, v + 1))}><Icon name="plus" /></button>
                 </div>
+                {game === 'dots' && <DotsRow round={round} player={p} hole={hole} marks={marks} setMarks={setMarksDirty} gross={touched[p.id] ? v : null} />}
               </div>
             );
           })}
@@ -263,12 +280,16 @@ function PlayRound({ round }) {
             <span><Icon name="broadcast" /> {round.shared ? `Live scoring · ${round.shared.code}` : 'Share live scoring'}</span><Icon name="caret-right" />
           </button>
         )}
+        <button className="sheet-item" onClick={() => { setMenu(false); setBetsSheet(true); }}>
+          <span><Icon name="coins" /> Bets · {stakeSummary(game, round.settings)}</span><Icon name="caret-right" />
+        </button>
         <button className="sheet-item" onClick={() => { setMenu(false); setHolesSheet(true); }}>
           <span><Icon name="flag-pennant" /> Round length · {round.holesCount} holes</span><Icon name="caret-right" />
         </button>
         <button className="sheet-item" onClick={endEarly}><span><Icon name="flag-checkered" /> End round</span><Icon name="caret-right" /></button>
       </Sheet>
       {holesSheet && <HolesSheet round={round} onClose={() => setHolesSheet(false)} />}
+      {betsSheet && <BetsSheet round={round} onClose={() => setBetsSheet(false)} />}
       <Sheet open={card} onClose={() => setCard(false)} title="Scorecard" className="sc-sheet">
         <p className="sheet-text">Tap a hole to jump to it and fix scores.</p>
         <Scorecard round={round} current={hole.no} onHole={no => { setCard(false); goHole(round.holes.findIndex(h => h.no === no)); }} />
@@ -345,8 +366,8 @@ function HolesSheet({ round, onClose }) {
       {hcChanges.length > 0 && (
         <p className="hint-card"><Icon name="scales" fill /> Strokes: {hcChanges.map(c => `${c.name} ${c.from} → ${c.to}`).join(', ')}</p>
       )}
-      {preview && round.game === 'nassau' && round.presses.length > 0 && (
-        <p className="hint-card"><Icon name="lightning" fill /> Presses are cleared — the front, back and total legs change with the round length.</p>
+      {preview && round.presses.length > 0 && (
+        <p className="hint-card"><Icon name="lightning" fill /> Presses are cleared — the bets change with the round length.</p>
       )}
       <div className="cta-wrap">
         <button className="full-btn" disabled={!preview} onClick={apply}>
@@ -354,6 +375,59 @@ function HolesSheet({ round, onClose }) {
         </button>
       </div>
     </Sheet>
+  );
+}
+
+// --------------------------- Bets & stakes --------------------------------
+
+/**
+ * Change the bets in a round that's under way, so the group doesn't have to discard the round
+ * when they agree a different stake on the 3rd tee. Money is always worked out from the round's
+ * current settings, so a change applies to every hole, including ones already scored.
+ * Mounted only while open so it starts fresh each time.
+ */
+function BetsSheet({ round, onClose }) {
+  const { showToast } = useUI();
+  const game = round.game;
+  const [opts, setOpts] = useState(() => structuredClone(round.settings));
+  const [pad, setPad] = useState(null); // { path, title, min, max }
+  const set = (path, v) => setOpts(o => { const n = structuredClone(o); const k = path.split('.'); let t = n; for (const x of k.slice(0, -1)) t = t[x]; t[k.at(-1)] = v; return n; });
+  const get = path => path.split('.').reduce((t, k) => t?.[k], opts);
+  const problem = optionsProblem(game, opts);
+  const changed = JSON.stringify(opts[game]) !== JSON.stringify(round.settings[game]);
+  const played = round.holes.filter(h => holeComplete(round, h)).length;
+  const apply = () => {
+    update(s => {
+      const r = s.rounds[round.id];
+      r.settings = { ...r.settings, [game]: structuredClone(opts[game]) };
+      // The agreed bet is next time's default too
+      s.settings = { ...s.settings, [game]: structuredClone(opts[game]) };
+    });
+    onClose();
+    showToast(`Bets updated · ${stakeSummary(game, opts)}`);
+    buzz(20);
+  };
+  return (
+    <>
+      <Sheet open={!pad} onClose={onClose} title="Bets" className="sc-sheet">
+        <p className="sheet-text">
+          {played
+            ? `Money is worked out again for the whole round, including the ${played} hole${played === 1 ? '' : 's'} already played.`
+            : 'Change what’s on the line before the first hole is scored.'}
+        </p>
+        <GameOptions game={game} get={get} set={set} onAmount={(path, title, o) => setPad({ path, title, ...o })} holesCount={round.holesCount}
+          firstName={game === 'banker' ? round.players[0]?.name : null} />
+        {game === 'banker' && <p className="hint-card"><Icon name="info" fill /> The default bet fills in from the next hole. Bets on this hole are set from the Bets button.</p>}
+        {(game === 'nassau' || game === 'match') && round.presses.length > 0 && <p className="hint-card"><Icon name="lightning" fill /> Presses already made pay at the new amounts too.</p>}
+        <div className="cta-wrap">
+          <button className="full-btn" disabled={!changed || !!problem} onClick={apply}>
+            {changed ? <>Update bets <Icon name="arrow-right" /></> : 'No changes yet'}
+          </button>
+        </div>
+      </Sheet>
+      <Numpad open={!!pad} title={pad?.title} prefix="$" initial={pad ? get(pad.path) : ''} min={pad?.min} max={pad?.max}
+        onClose={() => setPad(null)} onDone={v => { set(pad.path, v); setPad(null); }} />
+    </>
   );
 }
 
@@ -433,64 +507,9 @@ function BetExposure({ banker }) {
   return <p className="hint-card"><Icon name="scales" fill /> Banker has {money(total)} riding on this hole.</p>;
 }
 
-// --------------------------- Nassau ---------------------------------------
-
-function NassauPanel({ round, hole }) {
-  const { showToast } = useUI();
-  const winners = nassauWinners(round);
-  const legsDef = roundLegs(round);
-  const LEGS = legsDef;
-  const pos = round.holes.findIndex(h => h.no === hole.no) + 1;
-  const bets = nassauBets(winners, round.presses, nassauAmounts(round), legsDef);
-  const names = round.players.map(p => p.name);
-  const legs = ['front', 'back', 'total'];
-  const options = round.settings.nassau.pressMode === 'manual' && !holeComplete(round, hole) ? nassauPressOptions(round, pos) : [];
-  const activePresses = bets.filter(b => b.press && pos >= b.start && pos <= b.end);
-  const press = o => {
-    update(s => { const r = s.rounds[round.id]; r.presses.push({ id: uid('pr_'), leg: o.leg, start: pos, by: o.trailing }); });
-    showToast(`${names[o.trailing]} pressed the ${LEGS[o.leg].label.toLowerCase()}!`);
-    buzz(30);
-  };
-  const tile = leg => {
-    const b = bets.find(x => x.key === leg);
-    const s = b.status;
-    const notStarted = pos < b.start && s.played === 0;
-    const val = notStarted ? '—' : s.leader === null ? 'AS' : `${names[s.leader].charAt(0).toUpperCase()} ${s.by} up`;
-    const sub = notStarted ? `Starts H${holeAtPos(round, b.start)}` : s.left === 0 ? 'Final' : s.closed ? 'Won' : s.dormie ? 'Dormie' : `${s.left} left`;
-    return (
-      <div key={leg} className={`ms-tile ${s.leader === 0 ? 'ahead' : s.leader === 1 ? 'behind' : ''}`}>
-        <span className="ms-lbl">{LEGS[leg].label}</span><span className="ms-val">{val}</span><span className="ms-sub">{sub}</span>
-      </div>
-    );
-  };
-  return (
-    <>
-      <div className="match-status">{legs.map(tile)}</div>
-      {activePresses.length > 0 && (
-        <div className="press-bar">
-          <span className="press-bar-lbl">Presses</span>
-          {activePresses.map(p => (
-            <span key={p.key} className="press-chip">{LEGS[p.leg].label} from H{holeAtPos(round, p.start)}: {p.status.leader === null ? 'AS' : `${names[p.status.leader].charAt(0)} ${p.status.by} up`}</span>
-          ))}
-        </div>
-      )}
-      {options.length > 0 && (
-        <div className="press-alert">
-          {options.map(o => (
-            <div key={o.leg} className="press-alert-row">
-              <span className="press-alert-txt">{names[o.trailing]} is {o.by} down on the {LEGS[o.leg].label.toLowerCase()}</span>
-              <button className="press-call-btn" onClick={() => press(o)}>Press <Icon name="lightning" fill /></button>
-            </div>
-          ))}
-        </div>
-      )}
-    </>
-  );
-}
-
 // --------------------------- Skins ----------------------------------------
 
-function SkinsPanel({ round, hole }) {
+function SkinsPanel({ round, hole, onChange }) {
   const t = skinsTable(round);
   const row = t.rows.find(r => r.hole.no === hole.no);
   const won = t.rows.filter(r => r.winner);
@@ -505,6 +524,7 @@ function SkinsPanel({ round, hole }) {
       </div>
       <div className="skin-counts">
         {round.players.map(p => <span key={p.id} className="press-chip">{p.name.split(' ')[0]} {counts[p.id]}</span>)}
+        <button className="change-btn" onClick={onChange}>{money(t.value)} a skin</button>
       </div>
     </div>
   );

@@ -26,7 +26,7 @@ export default function Onboarding() {
           <h1 className="onboard-title">Birdie Bank</h1>
           <p className="onboard-text">Keep score, run the side games and settle up with your crew — without the napkin math.</p>
           <div className="onboard-games">
-            {[['bank', 'Banker'], ['flag-pennant', 'Nassau'], ['coins', 'Skins'], ['paw-print', 'Wolf']].map(([i, n]) => (
+            {[['bank', 'Banker'], ['flag-pennant', 'Nassau'], ['coins', 'Skins'], ['paw-print', 'Wolf'], ['dice-five', 'Vegas'], ['sword', 'Match play'], ['star', 'Stableford'], ['dots-three-circle', '+ 9 more']].map(([i, n]) => (
               <span key={n} className="chip ochre"><Icon name={i} fill /> {n}</span>
             ))}
           </div>

@@ -3,7 +3,7 @@
 // different holes never overwrite each other.
 
 /** Fields that belong to one phone only and are never shared. */
-const LOCAL_ONLY = ['scores', 'banker', 'wolf', 'presses', 'current', 'shared', 'localMe', '_remote', 'pressSeq'];
+const LOCAL_ONLY = ['scores', 'banker', 'wolf', 'marks', 'presses', 'current', 'shared', 'localMe', '_remote', 'pressSeq'];
 
 /** JSON with sorted keys so equal data always compares equal. */
 export function stable(v) {
@@ -25,9 +25,10 @@ export function buildHole(round, idx) {
     scores: round.scores[h.no] || null,
     banker: round.banker?.[h.no] || null,
     wolf: round.wolf?.[h.no] || null,
+    marks: round.marks?.[h.no] || null,
     presses: (round.presses || []).filter(p => p.start === idx + 1),
   };
-  const empty = !data.scores && !data.banker && !data.wolf && !data.presses.length;
+  const empty = !data.scores && !data.banker && !data.wolf && !data.marks && !data.presses.length;
   return empty ? null : data;
 }
 
@@ -44,6 +45,8 @@ export function applyHole(round, holeNo, data) {
   if (data?.scores) round.scores[holeNo] = data.scores; else delete round.scores[holeNo];
   if (data?.banker) round.banker[holeNo] = data.banker; else delete round.banker[holeNo];
   if (data?.wolf) round.wolf[holeNo] = data.wolf; else delete round.wolf[holeNo];
+  if (!round.marks) round.marks = {};
+  if (data?.marks) round.marks[holeNo] = data.marks; else delete round.marks[holeNo];
   round.presses = [...(round.presses || []).filter(p => p.start !== idx + 1), ...(data?.presses || [])]
     .sort((a, b) => a.start - b.start || String(a.id).localeCompare(String(b.id)));
   round._remote = { ...(round._remote || {}), [holeNo]: ((round._remote || {})[holeNo] || 0) + 1 };
@@ -57,7 +60,7 @@ export function applyMeta(round, meta) {
 
 /** Build a local round from a fetched shared round. */
 export function assemble(meta, holes) {
-  const round = { ...meta, scores: {}, banker: {}, wolf: {}, presses: [], current: 0 };
+  const round = { ...meta, scores: {}, banker: {}, wolf: {}, marks: {}, presses: [], current: 0 };
   for (const [no, data] of Object.entries(holes || {})) applyHole(round, Number(no), data);
   round._remote = {};
   const firstOpen = round.holes.findIndex(h => !round.scores[h.no] || round.players.some(p => round.scores[h.no][p.id] == null));

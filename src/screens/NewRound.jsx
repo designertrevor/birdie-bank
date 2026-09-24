@@ -3,8 +3,10 @@ import { Empty, Header, Icon, Numpad, Screen, Segmented, Sheet, Steps, Toggle, u
 import { RulesSheet } from '../components/Rules.jsx';
 import { getState, update, uid, useStore } from '../lib/store.js';
 import { allCourses, coursePar, teeDotStyle } from '../lib/courses.js';
-import { GAMES, createRound, effectiveCourseHc, holesInPlay } from '../lib/round.js';
-import { money } from '../lib/golf.js';
+import { GAMES, GAME_GROUPS, createRound, effectiveCourseHc, holesInPlay } from '../lib/round.js';
+import { GameOptions, SixesPreview, TeamPicker } from '../components/GameOptions.jsx';
+import { optionsProblem } from '../lib/stakes.js';
+import { defaultTeams, teamsProblem } from '../lib/teams.js';
 import { useNav } from '../lib/nav.js';
 import { formatIndex, playerLabel, sortedPlayers } from '../lib/format.js';
 
@@ -25,6 +27,7 @@ export default function NewRound() {
   const [opts, setOpts] = useState(() => structuredClone(state.settings));
   const [useHc, setUseHc] = useState(true);
   const [startHole, setStartHole] = useState(null);
+  const [teams, setTeams] = useState(null); // arrays of player ids, for team games
 
   const course = allCourses(state).find(c => c.id === courseId) || null;
 
@@ -43,7 +46,7 @@ export default function NewRound() {
     const id = uid('r_');
     const players = orderedPicked.map(pid => ({ ...s.players[pid], tee: tees[pid] || defaultTee, courseHcOverride: hcOverride[pid] }));
     const settings = structuredClone(opts);
-    const round = createRound({ id, game, course, holesCount, nine, startHole, players, settings, hcPct: opts.hcPct, useHandicaps: useHc });
+    const round = createRound({ id, game, course, holesCount, nine, startHole, players, settings, hcPct: opts.hcPct, useHandicaps: useHc, teams: GAMES[game].teams ? teams : null });
     update(st => {
       if (st.activeRoundId && st.rounds[st.activeRoundId]?.status === 'active') delete st.rounds[st.activeRoundId];
       st.rounds[id] = round;
@@ -67,11 +70,13 @@ export default function NewRound() {
       {step === 1 && <CourseStep courseId={courseId} setCourseId={id => { setCourseId(id); setTees({}); setStartHole(null); }} holesCount={holesCount} nine={nine} setNine={setNine} onNext={() => setStep(2)} />}
       {step === 2 && course && (
         <PlayersStep game={g} course={course} holesCount={holesCount} nine={nine} picked={picked} setPicked={setPicked}
-          tees={tees} setTees={setTees} hcOverride={hcOverride} setHcOverride={setHcOverride} onNext={() => setStep(3)} />
+          tees={tees} setTees={setTees} hcOverride={hcOverride} setHcOverride={setHcOverride}
+          onNext={() => { if (!teams || teams.flat().length !== picked.length || teams.flat().some(pid => !picked.includes(pid))) setTeams(defaultTeams(game, picked)); setStep(3); }} />
       )}
       {step === 3 && course && (
         <SetupStep game={game} course={course} holesCount={holesCount} nine={nine} picked={picked} setPicked={setPicked}
-          opts={opts} setOpts={setOpts} useHc={useHc} setUseHc={setUseHc} startHole={startHole} setStartHole={setStartHole} onStart={start} />
+          opts={opts} setOpts={setOpts} useHc={useHc} setUseHc={setUseHc} startHole={startHole} setStartHole={setStartHole} onStart={start}
+          teams={teams} setTeams={setTeams} />
       )}
     </Screen>
   );
@@ -82,22 +87,26 @@ export default function NewRound() {
 function GameStep({ game, setGame, holesCount, setHolesCount, onNext }) {
   const [rules, setRules] = useState(null);
   const g = game && GAMES[game];
-  const icons = { banker: 'bank', nassau: 'flag-pennant', skins: 'coins', wolf: 'paw-print' };
   return (
     <>
       <div className="scroll">
-        {Object.entries(GAMES).map(([key, info]) => (
-          <div key={key} className={`game-row ${game === key ? 'selected' : ''}`} role="radio" aria-checked={game === key} tabIndex={0}
-            onClick={() => setGame(key)} onKeyDown={e => (e.key === 'Enter' || e.key === ' ') && setGame(key)}>
-            <div className="game-icon"><Icon name={icons[key]} fill /></div>
-            <div className="row-main">
-              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                <div className="gn">{info.name}</div>
-                <button className="rules-chip" onClick={e => { e.stopPropagation(); setRules(key); }} aria-label={`${info.name} rules`}><Icon name="info" /> Rules</button>
+        {GAME_GROUPS.map(group => (
+          <div key={group}>
+            <div className="sec-label">{group}</div>
+            {Object.entries(GAMES).filter(([, info]) => info.group === group).map(([key, info]) => (
+              <div key={key} className={`game-row ${game === key ? 'selected' : ''}`} role="radio" aria-checked={game === key} tabIndex={0}
+                onClick={() => setGame(key)} onKeyDown={e => (e.key === 'Enter' || e.key === ' ') && setGame(key)}>
+                <div className="game-icon"><Icon name={info.icon} fill /></div>
+                <div className="row-main">
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                    <div className="gn">{info.name}</div>
+                    <button className="rules-chip" onClick={e => { e.stopPropagation(); setRules(key); }} aria-label={`${info.name} rules`}><Icon name="info" /> Rules</button>
+                  </div>
+                  <div className="gs">{info.players} · {info.blurb}</div>
+                </div>
+                <span className="gcheck"><Icon name="check-circle" fill /></span>
               </div>
-              <div className="gs">{info.players} · {info.blurb}</div>
-            </div>
-            <span className="gcheck"><Icon name="check-circle" fill /></span>
+            ))}
           </div>
         ))}
         <div className="block">
@@ -300,21 +309,18 @@ function QuickAddPlayer({ open, onClose, onAdded }) {
 
 // ---------------------------------------------------------------------------
 
-function SetupStep({ game, course, holesCount, nine, picked, setPicked, opts, setOpts, useHc, setUseHc, startHole, setStartHole, onStart }) {
+function SetupStep({ game, course, holesCount, nine, picked, setPicked, opts, setOpts, useHc, setUseHc, startHole, setStartHole, onStart, teams, setTeams }) {
   const state = useStore();
   const [pad, setPad] = useState(null); // {path, title, min, max}
+  const [holePick, setHolePick] = useState(false);
   const holes = holesInPlay(course, holesCount, nine);
   const set = (path, v) => setOpts(o => { const n = structuredClone(o); const k = path.split('.'); let t = n; for (const x of k.slice(0, -1)) t = t[x]; t[k.at(-1)] = v; return n; });
   const get = path => path.split('.').reduce((t, k) => t?.[k], opts);
-  const amount = (path, title, { min = 1, max = 500, label } = {}) => (
-    <div className="nassau-bet-row">
-      <div className="nassau-bet-lbl">{label || title}</div>
-      <button className="nassau-bet-btn" onClick={() => setPad({ path, title, min, max })}>{money(get(path))}</button>
-    </div>
-  );
   const move = (i, d) => setPicked(p => { const n = [...p]; const j = i + d; if (j < 0 || j >= n.length) return p; [n[i], n[j]] = [n[j], n[i]]; return n; });
-  const b = opts.banker;
-  const bankerRangeBad = b.min > b.max || b.defaultBet < b.min || b.defaultBet > b.max;
+  const optsBad = !!optionsProblem(game, opts);
+  const names = Object.fromEntries(picked.map(pid => [pid, state.players[pid]?.name || '?']));
+  const teamsBad = !!teamsProblem(game, teams, picked);
+  const orderLabel = { wolf: 'Tee order (wolf rotates in this order)', banker: 'Playing order', sixes: 'Playing order (sets the partner rotation)' }[game] || 'Playing order';
 
   return (
     <>
@@ -324,9 +330,16 @@ function SetupStep({ game, course, holesCount, nine, picked, setPicked, opts, se
           <div className="li-sub">{course.name}{holesCount === 9 && course.holes.length === 18 ? ` · ${nine === 'front' ? 'Front' : 'Back'} 9` : ''} · Par {holes.reduce((a, h) => a + h.par, 0)}</div>
         </div>
 
-        {(game === 'banker' || game === 'wolf') && (
+        {GAMES[game].teams && teams && (
           <>
-            <div className="sec-label">{game === 'wolf' ? 'Tee order (wolf rotates in this order)' : 'Playing order'}</div>
+            <div className="sec-label">{game === 'nassau' ? 'Sides' : 'Teams'}</div>
+            <TeamPicker game={game} picked={picked} names={names} teams={teams} setTeams={setTeams} />
+          </>
+        )}
+
+        {GAMES[game].order && (
+          <>
+            <div className="sec-label">{orderLabel}</div>
             {picked.map((pid, i) => (
               <div key={pid} className="set-row static">
                 <div className="order-num">{i + 1}</div>
@@ -335,78 +348,16 @@ function SetupStep({ game, course, holesCount, nine, picked, setPicked, opts, se
                 <button className="icon-btn sm" disabled={i === picked.length - 1} onClick={() => move(i, 1)} aria-label="Move down"><Icon name="caret-down" /></button>
               </div>
             ))}
+            {game === 'sixes' && <SixesPreview names={picked.map(pid => names[pid].split(' ')[0])} holesCount={holesCount} />}
           </>
         )}
 
-        {game === 'banker' && (
-          <>
-            <div className="sec-label">Stakes</div>
-            {amount('banker.defaultBet', 'Default bet', { min: 1, max: 999 })}
-            {amount('banker.min', 'Minimum bet', { min: 1, max: 999 })}
-            {amount('banker.max', 'Maximum bet', { min: 1, max: 999 })}
-            {bankerRangeBad && <p className="field-error" style={{ margin: '0 20px 8px' }}>Default bet has to sit between the minimum and maximum.</p>}
-            <div className="sec-label">Banker rotation</div>
-            <div className="block">
-              <Segmented className="press-mode-row" btn="pm-btn" value={b.rotation} onChange={v => set('banker.rotation', v)}
-                options={[{ value: 'rotate', label: 'Each hole' }, { value: 'nine', label: 'Each 9' }, { value: 'fixed', label: 'Fixed' }, { value: 'choice', label: 'Pick' }]} />
-              <p className="field-help">{{ rotate: 'Banker moves to the next player every hole.', nine: 'One banker per nine, in playing order.', fixed: 'The first player banks every hole.', choice: 'Choose the banker at the start of each hole.' }[b.rotation]} {picked[0] && state.players[picked[0]] ? `${state.players[picked[0]].name} banks first.` : ''}</p>
-            </div>
-            <div className="sec-label">Ties</div>
-            <div className="block">
-              <Segmented className="press-mode-row" btn="pm-btn" value={b.ties} onChange={v => set('banker.ties', v)}
-                options={[{ value: 'push', label: 'Push' }, { value: 'banker', label: 'Banker wins' }]} />
-            </div>
-          </>
-        )}
-
-        {game === 'nassau' && (
-          <>
-            <div className="sec-label">Bets</div>
-            {amount('nassau.front', holesCount === 9 ? 'First 4' : 'Front 9')}
-            {amount('nassau.back', holesCount === 9 ? 'Last 5' : 'Back 9')}
-            {amount('nassau.total', holesCount === 9 ? 'All 9' : 'Total 18')}
-            <div className="sec-label">Presses</div>
-            <div className="block">
-              <Segmented className="press-mode-row" btn="pm-btn" value={opts.nassau.pressMode} onChange={v => set('nassau.pressMode', v)}
-                options={[{ value: 'off', label: 'Off' }, { value: 'manual', label: 'Manual' }, { value: 'auto', label: 'Auto' }]} />
-              {opts.nassau.pressMode !== 'off' && (
-                <>
-                  <div className="eyebrow" style={{ margin: '14px 0 8px' }}>Can press when down by</div>
-                  <Segmented className="press-mode-row" btn="pm-btn" value={opts.nassau.threshold} onChange={v => set('nassau.threshold', v)}
-                    options={[1, 2, 3].map(n => ({ value: n, label: `${n} hole${n > 1 ? 's' : ''}` }))} />
-                </>
-              )}
-              <p className="field-help">{{ off: 'Just the three bets.', manual: 'A Press button appears when a player is eligible.', auto: 'Presses start automatically as soon as a player is eligible.' }[opts.nassau.pressMode]}</p>
-            </div>
-          </>
-        )}
-
-        {game === 'skins' && (
-          <>
-            <div className="sec-label">Skins</div>
-            {amount('skins.value', 'Per skin', { label: 'Value per skin' })}
-            <div className="toggle-row">
-              <div><div className="toggle-lbl">Carryovers</div><div className="toggle-sub">Tied holes roll the skin to the next hole</div></div>
-              <Toggle on={opts.skins.carryover} onChange={v => set('skins.carryover', v)} label="Carryovers" />
-            </div>
-          </>
-        )}
-
-        {game === 'wolf' && (
-          <>
-            <div className="sec-label">Points</div>
-            {amount('wolf.point', 'Per point', { label: 'Value per point' })}
-            <div className="block">
-              <div className="eyebrow" style={{ marginBottom: 10 }}>Lone wolf pays</div>
-              <Segmented className="press-mode-row" btn="pm-btn" value={opts.wolf.loneMultiplier} onChange={v => set('wolf.loneMultiplier', v)}
-                options={[2, 3].map(n => ({ value: n, label: `${n}×` }))} />
-            </div>
-          </>
-        )}
+        <GameOptions game={game} get={get} set={set} onAmount={(path, title, o) => setPad({ path, title, ...o })} holesCount={holesCount}
+          firstName={game === 'banker' ? state.players[picked[0]]?.name : null} />
 
         <div className="sec-label">Handicaps</div>
         <div className="toggle-row">
-          <div><div className="toggle-lbl">Use handicaps</div><div className="toggle-sub">Strokes off the low player on the hardest holes</div></div>
+          <div><div className="toggle-lbl">Use handicaps</div><div className="toggle-sub">{game === 'quota' ? 'Sets each player’s quota from their course handicap' : game === 'bbb' ? 'Not needed — points don’t depend on score' : 'Strokes off the low player on the hardest holes'}</div></div>
           <Toggle on={useHc} onChange={setUseHc} label="Use handicaps" />
         </div>
         {useHc && (
@@ -419,18 +370,35 @@ function SetupStep({ game, course, holesCount, nine, picked, setPicked, opts, se
 
         <div className="sec-label">Starting hole</div>
         <div className="block">
-          <select className="select" value={startHole ?? holes[0].no} onChange={e => setStartHole(Number(e.target.value))} aria-label="Starting hole">
-            {holes.map(h => <option key={h.no} value={h.no}>Hole {h.no} · Par {h.par}</option>)}
-          </select>
+          <button className="hole-pick-btn" onClick={() => setHolePick(true)} aria-label="Starting hole">
+            <span>Hole {startHole ?? holes[0].no} · Par {holes.find(h => h.no === (startHole ?? holes[0].no))?.par}</span><Icon name="caret-down" />
+          </button>
           <p className="field-help">Change this for a shotgun start.</p>
         </div>
       </div>
       <div className="cta-wrap">
-        <button className="full-btn" disabled={game === 'banker' && bankerRangeBad} onClick={onStart}>Tee it up <Icon name="golf" fill /></button>
+        <button className="full-btn" disabled={optsBad || teamsBad} onClick={onStart}>Tee it up <Icon name="golf" fill /></button>
       </div>
       <Numpad open={!!pad} title={pad?.title} prefix="$" initial={pad ? get(pad.path) : ''} min={pad?.min} max={pad?.max}
         onClose={() => setPad(null)} onDone={v => { set(pad.path, v); setPad(null); }} />
+      <HolePicker open={holePick} holes={holes} value={startHole ?? holes[0].no} onClose={() => setHolePick(false)} onPick={no => { setStartHole(no); setHolePick(false); }} />
     </>
+  );
+}
+
+/** Two-column bottom sheet for choosing a hole. */
+function HolePicker({ open, holes, value, onClose, onPick }) {
+  return (
+    <Sheet open={open} onClose={onClose} title="Starting hole">
+      <p className="sheet-text">Pick where the group tees off. The round runs from there and wraps around.</p>
+      <div className="hole-grid-pick" role="listbox" aria-label="Starting hole">
+        {holes.map(h => (
+          <button key={h.no} role="option" aria-selected={h.no === value} className={`hole-opt ${h.no === value ? 'on' : ''}`} onClick={() => onPick(h.no)}>
+            <strong>{h.no}</strong><span>Par {h.par}</span>
+          </button>
+        ))}
+      </div>
+    </Sheet>
   );
 }
 

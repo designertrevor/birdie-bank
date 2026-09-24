@@ -20,6 +20,18 @@ export const DEFAULT_SETTINGS = {
   nassau: { front: 5, back: 5, total: 5, pressMode: 'manual', threshold: 2 },
   skins: { value: 2, carryover: true },
   wolf: { point: 2, loneMultiplier: 2 },
+  match: { stake: 10, pressMode: 'off', threshold: 2 },
+  vegas: { point: 1, birdieFlip: true },
+  sixes: { stake: 5, mode: 'match' },
+  scramble: { stake: 5 },
+  stroke: { stake: 5, payout: 'pot' },
+  stableford: { stake: 1, payout: 'per', modified: false },
+  quota: { stake: 1, payout: 'per' },
+  nines: { point: 1 },
+  aces: { ace: 2, deuce: 1 },
+  bbb: { value: 1 },
+  dots: { value: 1, auto: true, kinds: { greenie: true, sandy: true, barkie: true, chipin: true, polie: false, arnie: false } },
+  rabbit: { stake: 5, tiesFree: true },
 };
 
 function fresh() {
@@ -44,17 +56,13 @@ function load() {
     if (!raw) return fresh();
     const data = JSON.parse(raw);
     const base = fresh();
-    // Shallow-merge so newly added keys get defaults
-    return {
-      ...base, ...data,
-      settings: {
-        ...base.settings, ...data.settings,
-        banker: { ...base.settings.banker, ...data.settings?.banker },
-        nassau: { ...base.settings.nassau, ...data.settings?.nassau },
-        skins: { ...base.settings.skins, ...data.settings?.skins },
-        wolf: { ...base.settings.wolf, ...data.settings?.wolf },
-      },
-    };
+    // Shallow-merge so newly added keys (and newly added games) get defaults
+    const settings = { ...base.settings, ...data.settings };
+    for (const [k, v] of Object.entries(base.settings)) {
+      if (v && typeof v === 'object') settings[k] = { ...v, ...data.settings?.[k] };
+    }
+    if (settings.dots) settings.dots.kinds = { ...base.settings.dots.kinds, ...data.settings?.dots?.kinds };
+    return { ...base, ...data, settings };
   } catch {
     return fresh();
   }

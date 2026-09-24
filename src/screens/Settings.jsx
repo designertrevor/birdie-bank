@@ -5,6 +5,7 @@ import { DEFAULT_SETTINGS, exportJSON, importJSON, resetAll, update, uid, useSto
 import { allCourses, coursePar, findCourse } from '../lib/courses.js';
 import { COURSES } from '../data/courses.js';
 import { GAMES } from '../lib/round.js';
+import { GameOptions } from '../components/GameOptions.jsx';
 import { money } from '../lib/golf.js';
 import { BottomNav } from '../nav.jsx';
 import { useNav } from '../lib/nav.js';
@@ -143,6 +144,12 @@ export function Defaults() {
           <div className="eyebrow" style={{ marginBottom: 10 }}>Lone wolf</div>
           <Segmented className="press-mode-row" btn="pm-btn" value={s.wolf.loneMultiplier} onChange={v => set('wolf.loneMultiplier', v)} options={[2, 3].map(n => ({ value: n, label: `${n}×` }))} />
         </div>
+        {['match', 'vegas', 'sixes', 'scramble', 'stroke', 'stableford', 'quota', 'nines', 'aces', 'bbb', 'dots', 'rabbit'].map(g => (
+          <div key={g}>
+            <div className="sec-label">{GAMES[g].name}</div>
+            <GameOptions game={g} get={get} set={set} onAmount={(path, label, o) => setPad({ path, label, ...o })} compact />
+          </div>
+        ))}
         <button className="danger-link" onClick={() => update(st => { st.settings = { ...structuredClone(DEFAULT_SETTINGS), theme: st.settings.theme }; })}><Icon name="arrow-counter-clockwise" /> Reset to defaults</button>
       </div>
       <Numpad open={!!pad} title={pad?.label} prefix="$" initial={pad ? get(pad.path) : ''} min={pad?.min} max={pad?.max}
