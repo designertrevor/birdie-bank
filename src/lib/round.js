@@ -32,7 +32,7 @@ export function parOf(holes) { return holes.reduce((a, h) => a + (h.par || 0), 0
 
 /**
  * The holes a round will play, in playing order.
- * Each: { no, courseIdx, par, hdcp, yards: {teeName: y} }
+ * Each: { no, courseIdx, par, hdcp, rank }
  */
 export function holesInPlay(course, holesCount, nine = 'front', startHole = null) {
   const n = course.holes.length;
@@ -43,9 +43,7 @@ export function holesInPlay(course, holesCount, nine = 'front', startHole = null
     const h = course.holes[idx];
     // On a 9-hole course played twice, split handicaps into odd (first pass) / even (second)
     const hdcp = n === 9 && holesCount === 18 ? (nineRank[idx] * 2 - (pass === 0 ? 1 : 0)) : h.hdcp;
-    const yards = {};
-    for (const t of course.tees || []) yards[t.name] = t.yards?.[idx] ?? null;
-    return { no, courseIdx: idx, par: h.par, hdcp, yards };
+    return { no, courseIdx: idx, par: h.par, hdcp };
   };
   if (holesCount === 18) {
     if (n === 18) list = course.holes.map((_, i) => make(i + 1, i));

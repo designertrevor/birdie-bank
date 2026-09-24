@@ -15,7 +15,6 @@ const VERSION = 1;
 
 export const DEFAULT_SETTINGS = {
   theme: 'system',   // 'system' | 'light' | 'dark'
-  units: 'yards',    // 'yards' | 'metres'
   hcPct: 100,
   banker: { defaultBet: 5, min: 1, max: 20, ties: 'push', rotation: 'rotate' },
   nassau: { front: 5, back: 5, total: 5, pressMode: 'manual', threshold: 2 },

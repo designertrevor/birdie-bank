@@ -2,7 +2,7 @@ import { useMemo, useState } from 'react';
 import { Empty, Header, Icon, Numpad, Screen, Segmented, Sheet, Steps, Toggle, useUI } from '../components/ui.jsx';
 import { RulesSheet } from '../components/Rules.jsx';
 import { getState, update, uid, useStore } from '../lib/store.js';
-import { allCourses, coursePar } from '../lib/courses.js';
+import { allCourses, coursePar, teeDotStyle } from '../lib/courses.js';
 import { GAMES, createRound, effectiveCourseHc, holesInPlay } from '../lib/round.js';
 import { money } from '../lib/golf.js';
 import { useNav } from '../lib/nav.js';
@@ -236,7 +236,7 @@ function PlayersStep({ game, course, holesCount, nine, picked, setPicked, tees, 
                           const active = (tees[p.id] || course.tees[0].name) === t.name;
                           return (
                             <button key={t.name} role="radio" aria-checked={active} className={`tee-chip ${active ? 'active' : ''}`} onClick={() => setTees({ ...tees, [p.id]: t.name })}>
-                              <span className="tee-dot" style={{ background: t.color || '#999' }} />{t.name}
+                              <span className="tee-dot" style={teeDotStyle(t)} />{t.name}{t.slope ? '' : ' · no rating'}
                             </button>
                           );
                         })}

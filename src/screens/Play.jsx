@@ -8,7 +8,6 @@ import {
 } from '../lib/round.js';
 import { money, nassauBets, scoreName, pickupGross } from '../lib/golf.js';
 import { buzz, confettiFrom } from '../lib/delight.js';
-import { distLabel, showDist } from '../lib/units.js';
 import { useNav } from '../lib/nav.js';
 import { Scorecard } from './RoundDetail.jsx';
 import { LivePill, ShareSheet } from '../components/Live.jsx';
@@ -77,9 +76,6 @@ function PlayRound({ round }) {
     }
   };
 
-  const units = useStore(s => s.settings.units);
-  const tee = round.players[0]?.tee;
-  const yards = hole.yards?.[tee] ?? Object.values(hole.yards || {}).find(y => y != null) ?? null;
 
   const saveHole = async () => {
     if (game === 'wolf' && wolf.partner === undefined) { showToast('Wolf needs to pick a partner or go lone'); return; }
@@ -173,7 +169,6 @@ function PlayRound({ round }) {
       <div className="hole-meta" onClick={() => setCard(true)} role="button" tabIndex={0} aria-label="Open scorecard">
         <div className="mc"><span className="ml">Hole</span><span className="mv">{hole.no}</span></div>
         <div className="mc"><span className="ml">Par</span><span className="mv">{hole.par}</span></div>
-        <div className="mc"><span className="ml">{distLabel(units)}</span><span className="mv">{showDist(yards, units) ?? '—'}</span></div>
         <div className="mc"><span className="ml">HDCP</span><span className="mv">{hole.hdcp ?? '—'}</span></div>
       </div>
 
