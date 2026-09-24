@@ -97,11 +97,17 @@ export function bankerFor(mode, idx, playerIds, firstBanker = 0) {
 // Nassau (2 players, match play, 18 holes)
 // ---------------------------------------------------------------------------
 
-export const LEGS = {
-  front: { start: 1, end: 9, label: 'Front 9' },
-  back: { start: 10, end: 18, label: 'Back 9' },
-  total: { start: 1, end: 18, label: 'Total' },
-};
+/**
+ * Nassau legs by playing position (1 = first hole played). 18 holes: front 9 / back 9 / total.
+ * 9 holes: first 4 / last 5 / all 9.
+ */
+export function nassauLegs(n = 18) {
+  const half = n === 18 ? 9 : Math.floor(n / 2);
+  return n === 18
+    ? { front: { start: 1, end: 9, label: 'Front 9' }, back: { start: 10, end: 18, label: 'Back 9' }, total: { start: 1, end: 18, label: 'Total' } }
+    : { front: { start: 1, end: half, label: `First ${half}` }, back: { start: half + 1, end: n, label: `Last ${n - half}` }, total: { start: 1, end: n, label: `All ${n}` } };
+}
+export const LEGS = nassauLegs(18);
 
 /** Hole winner from nets: 0, 1 or null (halved). Missing score = not played yet. */
 export function holeWinner(n0, n1) {
@@ -137,12 +143,12 @@ export function matchStatus(winners, start, end) {
  * A press runs from `start` to the end of its leg.
  * Returns bets list: original legs + presses, each with its status.
  */
-export function nassauBets(winners, presses, amounts) {
-  const bets = Object.entries(LEGS).map(([leg, l]) => ({
+export function nassauBets(winners, presses, amounts, legs = LEGS) {
+  const bets = Object.entries(legs).map(([leg, l]) => ({
     key: leg, leg, start: l.start, end: l.end, amount: amounts[leg], press: false,
   }));
   for (const p of presses) {
-    const l = LEGS[p.leg];
+    const l = legs[p.leg];
     bets.push({ key: 'p' + p.id, id: p.id, leg: p.leg, start: p.start, end: l.end, amount: p.amount ?? amounts[p.leg], press: true, by: p.by });
   }
   return bets.map(b => ({ ...b, status: matchStatus(winners, b.start, b.end) }));
@@ -152,11 +158,11 @@ export function nassauBets(winners, presses, amounts) {
  * Presses that are allowed before playing `nextHole`: the trailing player may press the
  * most recent bet on a leg when it is `threshold` or more down and holes remain in the leg.
  */
-export function pressOpportunities(winners, presses, amounts, nextHole, threshold = 2) {
-  const bets = nassauBets(winners, presses, amounts);
+export function pressOpportunities(winners, presses, amounts, nextHole, threshold = 2, legs = LEGS) {
+  const bets = nassauBets(winners, presses, amounts, legs);
   const out = [];
-  for (const leg of Object.keys(LEGS)) {
-    const l = LEGS[leg];
+  for (const leg of Object.keys(legs)) {
+    const l = legs[leg];
     if (nextHole < l.start || nextHole > l.end) continue;
     const onLeg = bets.filter(b => b.leg === leg && b.start < nextHole);
     if (!onLeg.length) continue;
@@ -170,8 +176,8 @@ export function pressOpportunities(winners, presses, amounts, nextHole, threshol
 }
 
 /** Money result for player 0 (positive = player 0 wins) plus per-bet breakdown. */
-export function nassauResult(winners, presses, amounts) {
-  const bets = nassauBets(winners, presses, amounts);
+export function nassauResult(winners, presses, amounts, legs = LEGS) {
+  const bets = nassauBets(winners, presses, amounts, legs);
   let net = 0;
   const lines = bets.map(b => {
     const s = b.status;

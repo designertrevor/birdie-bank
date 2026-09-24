@@ -20,6 +20,22 @@ const TABS = { history: History, ledger: Ledger, people: People, settings: Setti
 
 export default function App() {
   const onboarded = useStore(s => s.onboarded);
+  const theme = useStore(s => s.settings.theme);
+
+  // Appearance: follow the system unless the user picked light or dark
+  useEffect(() => {
+    const root = document.documentElement;
+    if (theme === 'light' || theme === 'dark') root.dataset.theme = theme;
+    else delete root.dataset.theme;
+    const apply = () => {
+      const meta = document.querySelector('meta[name="theme-color"]');
+      if (meta) meta.content = getComputedStyle(root).getPropertyValue('--canvas').trim() || '#fffaf0';
+    };
+    apply();
+    const mq = window.matchMedia?.('(prefers-color-scheme: dark)');
+    mq?.addEventListener?.('change', apply);
+    return () => mq?.removeEventListener?.('change', apply);
+  }, [theme]);
   const [tab, setTab] = useState('history');
   const [stack, setStack] = useState([]);
 

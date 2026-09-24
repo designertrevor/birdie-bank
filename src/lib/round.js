@@ -1,7 +1,7 @@
 // Round model: creating a round and deriving everything (strokes, nets, money) from it.
 import {
   courseHandicap, strokesOffLow, strokesOnHole, rankHoles, pickupGross,
-  settleBankerHole, bankerFor, holeWinner, nassauResult, pressOpportunities, minimalTransfers,
+  settleBankerHole, bankerFor, holeWinner, nassauResult, pressOpportunities, minimalTransfers, nassauLegs,
 } from './golf.js';
 
 export const GAMES = {
@@ -11,8 +11,8 @@ export const GAMES = {
     players: '3–8 players',
   },
   nassau: {
-    name: 'Nassau', min: 2, max: 2, holes: [18],
-    blurb: 'Front 9, back 9 and total — three bets in one',
+    name: 'Nassau', min: 2, max: 2, holes: [9, 18],
+    blurb: 'Front, back and total — three bets in one',
     players: '2 players',
   },
   skins: {
@@ -161,24 +161,31 @@ export function bankerHoleSetup(round, idx) {
 
 // --------------------------- Nassau ---------------------------------------
 
+/** Hole winners keyed by playing position (1-based) — Nassau legs follow playing order. */
 export function nassauWinners(round) {
   const [a, b] = round.players;
   const w = {};
-  for (const h of round.holes) {
+  round.holes.forEach((h, i) => {
     const r = holeWinner(netFor(round, a, h), netFor(round, b, h));
-    if (r !== undefined) w[h.no] = r;
-  }
+    if (r !== undefined) w[i + 1] = r;
+  });
   return w;
 }
+
+export function roundLegs(round) { return nassauLegs(round.holes.length); }
+
+/** Hole number played at a Nassau position. */
+export function holeAtPos(round, pos) { return round.holes[pos - 1]?.no ?? pos; }
 
 export function nassauAmounts(round) {
   const n = round.settings.nassau;
   return { front: n.front, back: n.back, total: n.total };
 }
 
+/** Press options before playing the hole at position `nextHoleNo` (1-based). */
 export function nassauPressOptions(round, nextHoleNo) {
   if (round.settings.nassau.pressMode === 'off') return [];
-  return pressOpportunities(nassauWinners(round), round.presses, nassauAmounts(round), nextHoleNo, round.settings.nassau.threshold);
+  return pressOpportunities(nassauWinners(round), round.presses, nassauAmounts(round), nextHoleNo, round.settings.nassau.threshold, roundLegs(round));
 }
 
 // --------------------------- Skins ----------------------------------------
@@ -246,7 +253,7 @@ export function roundResults(round) {
   }
 
   if (round.game === 'nassau') {
-    const res = nassauResult(nassauWinners(round), round.presses, nassauAmounts(round));
+    const res = nassauResult(nassauWinners(round), round.presses, nassauAmounts(round), roundLegs(round));
     balances[ids[0]] = res.net; balances[ids[1]] = -res.net;
     detail.lines = res.lines;
   }

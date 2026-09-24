@@ -361,9 +361,9 @@ function SetupStep({ game, course, holesCount, nine, picked, setPicked, opts, se
         {game === 'nassau' && (
           <>
             <div className="sec-label">Bets</div>
-            {amount('nassau.front', 'Front 9')}
-            {amount('nassau.back', 'Back 9')}
-            {amount('nassau.total', 'Total 18')}
+            {amount('nassau.front', holesCount === 9 ? 'First 4' : 'Front 9')}
+            {amount('nassau.back', holesCount === 9 ? 'Last 5' : 'Back 9')}
+            {amount('nassau.total', holesCount === 9 ? 'All 9' : 'Total 18')}
             <div className="sec-label">Presses</div>
             <div className="block">
               <Segmented className="press-mode-row" btn="pm-btn" value={opts.nassau.pressMode} onChange={v => set('nassau.pressMode', v)}

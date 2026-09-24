@@ -31,7 +31,7 @@ const RULES = {
     title: 'How to play Nassau',
     sub: '2 players · Three bets in one round',
     sections: [
-      ['Overview', <p key="o">Nassau is three separate match-play bets: the <strong>front 9</strong>, the <strong>back 9</strong> and the <strong>total 18</strong>.</p>],
+      ['Overview', <p key="o">Nassau is three separate match-play bets: the <strong>front 9</strong>, the <strong>back 9</strong> and the <strong>total 18</strong>. Playing nine? The bets are the <strong>first 4</strong>, the <strong>last 5</strong> and <strong>all 9</strong>.</p>],
       ['Match play', <p key="m">Each hole goes to the lower net score, or is halved on a tie. A leg is won by whoever wins more holes in it — not by total strokes.</p>],
       ['Pressing', <ul key="p">
         <li>When you’re down on a leg by the press threshold (2 holes by default) you can <strong>press</strong>.</li>

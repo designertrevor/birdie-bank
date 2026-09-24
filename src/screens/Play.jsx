@@ -3,11 +3,12 @@ import { Empty, Icon, Numpad, Screen, Sheet, useUI } from '../components/ui.jsx'
 import { RulesSheet } from '../components/Rules.jsx';
 import { getState, update, useStore } from '../lib/store.js';
 import {
-  GAMES, bankerHoleSetup, holeComplete, nassauPressOptions, nassauWinners, nassauAmounts,
+  GAMES, bankerHoleSetup, holeAtPos, holeComplete, nassauPressOptions, nassauWinners, nassauAmounts, roundLegs,
   roundResults, skinsTable, strokesFor, wolfFor,
 } from '../lib/round.js';
-import { LEGS, money, nassauBets, scoreName, pickupGross } from '../lib/golf.js';
+import { money, nassauBets, scoreName, pickupGross } from '../lib/golf.js';
 import { buzz, confettiFrom } from '../lib/delight.js';
+import { distLabel, showDist } from '../lib/units.js';
 import { useNav } from '../lib/nav.js';
 import { Scorecard } from './RoundDetail.jsx';
 
@@ -70,6 +71,7 @@ function PlayRound({ round }) {
     }
   };
 
+  const units = useStore(s => s.settings.units);
   const tee = round.players[0]?.tee;
   const yards = hole.yards?.[tee] ?? Object.values(hole.yards || {}).find(y => y != null) ?? null;
 
@@ -84,7 +86,7 @@ function PlayRound({ round }) {
       if (!isLast) r.current = idx + 1;
       // Auto presses before the next hole
       if (game === 'nassau' && r.settings.nassau.pressMode === 'auto' && !isLast) {
-        const next = r.holes[idx + 1].no;
+        const next = idx + 2; // playing position of the next hole
         for (const o of nassauPressOptions(r, next)) {
           r.pressSeq += 1;
           r.presses.push({ id: r.pressSeq, leg: o.leg, start: next, by: o.trailing, auto: true });
@@ -93,8 +95,9 @@ function PlayRound({ round }) {
     });
     if (game === 'nassau' && round.settings.nassau.pressMode === 'auto' && !isLast) {
       const r = getState().rounds[round.id];
-      const fresh = r.presses.filter(p => p.start === r.holes[idx + 1].no);
-      if (fresh.length) showToast(`Auto press: ${fresh.map(p => LEGS[p.leg].label).join(', ')}`);
+      const legs = roundLegs(r);
+      const fresh = r.presses.filter(p => p.start === idx + 2);
+      if (fresh.length) showToast(`Auto press: ${fresh.map(p => legs[p.leg].label).join(', ')}`);
     }
     if (isLast) finish();
   };
@@ -160,7 +163,7 @@ function PlayRound({ round }) {
       <div className="hole-meta" onClick={() => setCard(true)} role="button" tabIndex={0} aria-label="Open scorecard">
         <div className="mc"><span className="ml">Hole</span><span className="mv">{hole.no}</span></div>
         <div className="mc"><span className="ml">Par</span><span className="mv">{hole.par}</span></div>
-        <div className="mc"><span className="ml">Yards</span><span className="mv">{yards ?? '—'}</span></div>
+        <div className="mc"><span className="ml">{distLabel(units)}</span><span className="mv">{showDist(yards, units) ?? '—'}</span></div>
         <div className="mc"><span className="ml">HDCP</span><span className="mv">{hole.hdcp ?? '—'}</span></div>
       </div>
 
@@ -343,22 +346,25 @@ function BetExposure({ banker }) {
 function NassauPanel({ round, hole }) {
   const { showToast } = useUI();
   const winners = nassauWinners(round);
-  const bets = nassauBets(winners, round.presses, nassauAmounts(round));
+  const legsDef = roundLegs(round);
+  const LEGS = legsDef;
+  const pos = round.holes.findIndex(h => h.no === hole.no) + 1;
+  const bets = nassauBets(winners, round.presses, nassauAmounts(round), legsDef);
   const names = round.players.map(p => p.name);
   const legs = ['front', 'back', 'total'];
-  const options = round.settings.nassau.pressMode === 'manual' && !holeComplete(round, hole) ? nassauPressOptions(round, hole.no) : [];
-  const activePresses = bets.filter(b => b.press && hole.no >= b.start && hole.no <= b.end);
+  const options = round.settings.nassau.pressMode === 'manual' && !holeComplete(round, hole) ? nassauPressOptions(round, pos) : [];
+  const activePresses = bets.filter(b => b.press && pos >= b.start && pos <= b.end);
   const press = o => {
-    update(s => { const r = s.rounds[round.id]; r.pressSeq += 1; r.presses.push({ id: r.pressSeq, leg: o.leg, start: hole.no, by: o.trailing }); });
+    update(s => { const r = s.rounds[round.id]; r.pressSeq += 1; r.presses.push({ id: r.pressSeq, leg: o.leg, start: pos, by: o.trailing }); });
     showToast(`${names[o.trailing]} pressed the ${LEGS[o.leg].label.toLowerCase()}!`);
     buzz(30);
   };
   const tile = leg => {
     const b = bets.find(x => x.key === leg);
     const s = b.status;
-    const notStarted = hole.no < b.start && s.played === 0;
+    const notStarted = pos < b.start && s.played === 0;
     const val = notStarted ? '—' : s.leader === null ? 'AS' : `${names[s.leader].charAt(0).toUpperCase()} ${s.by} up`;
-    const sub = notStarted ? `Starts H${b.start}` : s.left === 0 ? 'Final' : s.closed ? 'Won' : s.dormie ? 'Dormie' : `${s.left} left`;
+    const sub = notStarted ? `Starts H${holeAtPos(round, b.start)}` : s.left === 0 ? 'Final' : s.closed ? 'Won' : s.dormie ? 'Dormie' : `${s.left} left`;
     return (
       <div key={leg} className={`ms-tile ${s.leader === 0 ? 'ahead' : s.leader === 1 ? 'behind' : ''}`}>
         <span className="ms-lbl">{LEGS[leg].label}</span><span className="ms-val">{val}</span><span className="ms-sub">{sub}</span>
@@ -372,7 +378,7 @@ function NassauPanel({ round, hole }) {
         <div className="press-bar">
           <span className="press-bar-lbl">Presses</span>
           {activePresses.map(p => (
-            <span key={p.key} className="press-chip">{LEGS[p.leg].label} from H{p.start}: {p.status.leader === null ? 'AS' : `${names[p.status.leader].charAt(0)} ${p.status.by} up`}</span>
+            <span key={p.key} className="press-chip">{LEGS[p.leg].label} from H{holeAtPos(round, p.start)}: {p.status.leader === null ? 'AS' : `${names[p.status.leader].charAt(0)} ${p.status.by} up`}</span>
           ))}
         </div>
       )}

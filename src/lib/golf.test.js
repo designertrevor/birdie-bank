@@ -175,3 +175,13 @@ test('ledger nets rounds and payments', () => {
   st = { rounds: { r1 }, settlements: [{ from: 'b', to: 'a', amount: 10 }] };
   assert.deepEqual(outstanding(st).map(o => [o.from, o.to, o.amount]), [['b', 'a', 5]]);
 });
+
+test('9-hole nassau: first 4 / last 5 / all 9 by playing order', () => {
+  const players = [{ id: 'a', name: 'A', index: 0 }, { id: 'b', name: 'B', index: 0 }];
+  const r = createRound({ id: 'r', game: 'nassau', course: COURSE, holesCount: 9, nine: 'back', players, settings: S, hcPct: 100 });
+  r.holes.forEach((h, i) => { r.scores[h.no] = i < 4 ? { a: 3, b: 4 } : { a: 5, b: 4 }; });
+  const res = roundResults(r);
+  const by = Object.fromEntries(res.detail.lines.map(l => [l.key, l.value]));
+  assert.deepEqual(by, { front: 5, back: -5, total: -5 }); // a wins 4, b wins 5
+  assert.equal(res.balances.a, -5);
+});

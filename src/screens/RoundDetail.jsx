@@ -1,8 +1,8 @@
 import { useEffect, useRef } from 'react';
 import { Empty, Header, Icon, Screen, useUI } from '../components/ui.jsx';
 import { update, useStore } from '../lib/store.js';
-import { GAMES, holeComplete, roundResults, scoreSummary, skinsTable } from '../lib/round.js';
-import { LEGS, money } from '../lib/golf.js';
+import { GAMES, holeAtPos, holeComplete, roundLegs, roundResults, scoreSummary, skinsTable } from '../lib/round.js';
+import { money } from '../lib/golf.js';
 import { confettiFrom } from '../lib/delight.js';
 import { useNav } from '../lib/nav.js';
 import { roundDate, roundPlayerName, shareRound } from '../lib/format.js';
@@ -106,6 +106,7 @@ export default function RoundDetail({ id, celebrate }) {
 function GameBreakdown({ round, res }) {
   const names = Object.fromEntries(round.players.map(p => [p.id, p.name]));
   if (round.game === 'nassau') {
+    const LEGS = roundLegs(round);
     return (
       <>
         <div className="sec-label">Bets</div>
@@ -114,8 +115,8 @@ function GameBreakdown({ round, res }) {
           const who = s.leader === null ? 'Halved' : `${round.players[s.leader].name} ${s.by} up`;
           return (
             <div key={l.key} className="leg-row">
-              <div className="leg-name">{l.press ? `Press` : LEGS[l.leg].label.replace(' 9', '')}</div>
-              <div className={`leg-winner ${s.leader === null ? 'leg-tie' : ''}`}>{l.press ? `${LEGS[l.leg].label} from H${l.start} · ` : ''}{who}</div>
+              <div className="leg-name">{l.press ? 'Press' : LEGS[l.leg].label}</div>
+              <div className={`leg-winner ${s.leader === null ? 'leg-tie' : ''}`}>{l.press ? `${LEGS[l.leg].label} from H${holeAtPos(round, l.start)} · ` : ''}{who}</div>
               <div className={`leg-amt ${l.value === 0 ? 'zero' : ''}`}>{money(Math.abs(l.value))}</div>
             </div>
           );

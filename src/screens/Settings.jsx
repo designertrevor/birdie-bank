@@ -9,6 +9,7 @@ import { money } from '../lib/golf.js';
 import { BottomNav } from '../nav.jsx';
 import { useNav } from '../lib/nav.js';
 import { formatIndex } from '../lib/format.js';
+import { distLabel, showDist, toYards } from '../lib/units.js';
 
 export default function Settings() {
   const nav = useNav();
@@ -55,6 +56,15 @@ export default function Settings() {
       <div className="scroll">
         <div className="sec-label">You</div>
         {me && row('user-circle', me.name, me.index == null ? 'No handicap index' : `Index ${formatIndex(me.index)}`, () => nav.push('playerEdit', { id: me.id }))}
+        <div className="sec-label">Appearance</div>
+        <div className="block">
+          <div className="eyebrow" style={{ marginBottom: 10 }}>Theme</div>
+          <Segmented className="press-mode-row" btn="pm-btn" value={state.settings.theme} onChange={v => update(s => { s.settings.theme = v; })}
+            options={[{ value: 'system', label: 'System' }, { value: 'light', label: 'Light' }, { value: 'dark', label: 'Dark' }]} />
+          <div className="eyebrow" style={{ margin: '14px 0 10px' }}>Distances</div>
+          <Segmented className="press-mode-row" btn="pm-btn" value={state.settings.units} onChange={v => update(s => { s.settings.units = v; })}
+            options={[{ value: 'yards', label: 'Yards' }, { value: 'metres', label: 'Metres' }]} />
+        </div>
         <div className="sec-label">Games</div>
         {row('sliders-horizontal', 'Game defaults', 'Stakes, presses, ties and handicaps', () => nav.push('defaults'))}
         {row('map-trifold', 'Courses', `${allCourses(state).length} courses · add or fix a scorecard`, () => nav.push('courses'))}
@@ -137,7 +147,7 @@ export function Defaults() {
           <div className="eyebrow" style={{ marginBottom: 10 }}>Lone wolf</div>
           <Segmented className="press-mode-row" btn="pm-btn" value={s.wolf.loneMultiplier} onChange={v => set('wolf.loneMultiplier', v)} options={[2, 3].map(n => ({ value: n, label: `${n}×` }))} />
         </div>
-        <button className="danger-link" onClick={() => update(st => { st.settings = structuredClone(DEFAULT_SETTINGS); })}><Icon name="arrow-counter-clockwise" /> Reset to defaults</button>
+        <button className="danger-link" onClick={() => update(st => { st.settings = { ...structuredClone(DEFAULT_SETTINGS), theme: st.settings.theme, units: st.settings.units }; })}><Icon name="arrow-counter-clockwise" /> Reset to defaults</button>
       </div>
       <Numpad open={!!pad} title={pad?.label} prefix="$" initial={pad ? get(pad.path) : ''} min={pad?.min} max={pad?.max}
         onClose={() => setPad(null)} onDone={v => { set(pad.path, v); setPad(null); }} />
@@ -192,6 +202,7 @@ export function CourseEdit({ id }) {
   const { ask, showToast } = useUI();
   const existing = id ? findCourse(state, id) : null;
   const builtIn = existing && !existing.custom;
+  const units = state.settings.units;
   const [c, setC] = useState(() => (existing ? structuredClone(existing) : blankCourse()));
   const [pad, setPad] = useState(null); // { kind, i, t, title, min, max, decimal }
 
@@ -231,7 +242,7 @@ export function CourseEdit({ id }) {
     setC(x => {
       const y = structuredClone(x);
       if (p.kind === 'hdcp') y.holes[p.i].hdcp = v;
-      if (p.kind === 'yards') y.tees[p.t].yards[p.i] = v;
+      if (p.kind === 'yards') { y.tees[p.t].yards = y.tees[p.t].yards || Array(n).fill(null); y.tees[p.t].yards[p.i] = toYards(v, units); }
       if (p.kind === 'rating') y.tees[p.t].rating = v;
       if (p.kind === 'slope') y.tees[p.t].slope = v;
       return y;
@@ -293,7 +304,7 @@ export function CourseEdit({ id }) {
             <div style={{ display: 'flex', gap: 8 }}>
               <button className="pill-btn" onClick={() => setPad({ kind: 'rating', t: ti, title: `${t.name} course rating`, min: 25, max: 80, decimal: true })}>Rating {t.rating ?? '—'}</button>
               <button className="pill-btn" onClick={() => setPad({ kind: 'slope', t: ti, title: `${t.name} slope`, min: 55, max: 155 })}>Slope {t.slope ?? '—'}</button>
-              <button className="pill-btn" onClick={() => setPad({ kind: 'yards', t: ti, i: 0, title: `${t.name} · Hole 1 yards`, min: 50, max: 750 })}>Yards {teeYards(t) ?? t.total ?? '—'}</button>
+              <button className="pill-btn" onClick={() => setPad({ kind: 'yards', t: ti, i: 0, title: `${t.name} · Hole 1 ${distLabel(units).toLowerCase()}`, min: 40, max: 750 })}>{distLabel(units)} {showDist(teeYards(t) ?? t.total, units) ?? '—'}</button>
             </div>
             {(t.rating == null || t.slope == null) && <p className="field-help">Without rating and slope, course handicaps fall back to each player’s index.</p>}
           </div>
@@ -309,7 +320,7 @@ export function CourseEdit({ id }) {
         <button className="full-btn" disabled={errors.length > 0} onClick={save}>{builtIn ? 'Save my corrections' : 'Save course'}</button>
       </div>
       <Numpad open={!!pad} title={pad?.title} min={pad?.min} max={pad?.max} allowDecimal={!!pad?.decimal}
-        initial={pad ? (pad.kind === 'hdcp' ? c.holes[pad.i].hdcp : pad.kind === 'yards' ? c.tees[pad.t].yards?.[pad.i] : c.tees[pad.t][pad.kind]) ?? '' : ''}
+        initial={pad ? (pad.kind === 'hdcp' ? c.holes[pad.i].hdcp : pad.kind === 'yards' ? showDist(c.tees[pad.t].yards?.[pad.i], units) : c.tees[pad.t][pad.kind]) ?? '' : ''}
         onClose={() => setPad(null)} onDone={onPad} />
     </Screen>
   );
