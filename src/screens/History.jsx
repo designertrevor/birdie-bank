@@ -6,7 +6,9 @@ import { money } from '../lib/golf.js';
 import { nameOf } from '../lib/ledger.js';
 import { BottomNav } from '../nav.jsx';
 import { useNav } from '../lib/nav.js';
-import { roundDate, seasonStats } from '../lib/format.js';
+import { meFor, roundDate, seasonStats } from '../lib/format.js';
+import { JoinSheet } from '../components/Live.jsx';
+import { syncConfigured } from '../lib/sync.js';
 
 const REDUCED = typeof window !== 'undefined' && window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
 
@@ -28,6 +30,8 @@ export default function History() {
   const nav = useNav();
   const state = useStore();
   const [filter, setFilter] = useState('all');
+  const [joinCode] = useState(() => { try { const c = sessionStorage.getItem('bb-join'); sessionStorage.removeItem('bb-join'); return c; } catch { return null; } });
+  const [joining, setJoining] = useState(!!joinCode);
   const active = state.activeRoundId && state.rounds[state.activeRoundId];
   const done = Object.values(state.rounds).filter(r => r.status === 'done').sort((a, b) => (b.finishedAt || b.createdAt) - (a.finishedAt || a.createdAt));
   const shown = done.filter(r => filter === 'all' || r.game === filter);
@@ -59,6 +63,12 @@ export default function History() {
               <div style={{ fontSize: 13, opacity: 0.85 }}>{active.holes.filter(h => holeComplete(active, h)).length} of {active.holes.length} holes · {active.players.map(p => p.name).join(', ')}</div>
             </div>
             <span className="resume-go"><Icon name="play" fill /></span>
+          </button>
+        )}
+
+        {syncConfigured && !active && (
+          <button className="add-row join-row" onClick={() => setJoining(true)}>
+            <div className="add-ci"><Icon name="broadcast" fill /></div><span className="add-lbl">Join a friend’s round</span>
           </button>
         )}
 
@@ -105,7 +115,7 @@ export default function History() {
                 <div className="sec-label">{g.label}</div>
                 {g.rounds.map((r, i) => {
                   const res = roundResults(r);
-                  const mine = res.balances[state.me];
+                  const mine = res.balances[meFor(r, state)];
                   const top = res.standings[0];
                   return (
                     <button key={r.id} className={`round-card c${i % 3}`} onClick={() => nav.push('roundDetail', { id: r.id })}>
@@ -127,6 +137,7 @@ export default function History() {
         )}
       </div>
       <BottomNav />
+      {joining && <JoinSheet open initialCode={joinCode || ''} onClose={() => setJoining(false)} />}
     </Screen>
   );
 }

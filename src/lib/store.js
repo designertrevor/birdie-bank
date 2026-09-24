@@ -2,7 +2,15 @@
 // subscribe/getSnapshot store so React can read it with useSyncExternalStore.
 import { useSyncExternalStore } from 'react';
 
-const KEY = 'birdie-bank-v1';
+// Dev only: ?profile=b gives a tab its own data, to test shared rounds as two "phones"
+function profileSuffix() {
+  if (!import.meta.env.DEV || typeof location === 'undefined') return '';
+  const q = new URLSearchParams(location.search).get('profile');
+  if (q) sessionStorage.setItem('bb-profile', q);
+  const p = sessionStorage.getItem('bb-profile');
+  return p ? `:${p}` : '';
+}
+const KEY = 'birdie-bank-v1' + profileSuffix();
 const VERSION = 1;
 
 export const DEFAULT_SETTINGS = {

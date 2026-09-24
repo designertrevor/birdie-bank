@@ -42,14 +42,24 @@ export async function shareRound(round, res, showToast) {
   catch { showToast('Couldn’t share on this device'); }
 }
 
+/** Which player in a round is "you" on this phone (joined rounds carry their own). */
+export function meFor(round, state) { return round.localMe ?? state.me; }
+
+/** Every player id that means "you" on this phone. */
+export function myIds(state) {
+  const ids = new Set(state.me ? [state.me] : []);
+  for (const r of Object.values(state.rounds)) if (r.localMe) ids.add(r.localMe);
+  return ids;
+}
+
 export function seasonStats(state, year = new Date().getFullYear()) {
-  const me = state.me;
   const rounds = Object.values(state.rounds)
-    .filter(r => r.status === 'done' && new Date(r.finishedAt || r.createdAt).getFullYear() === year && r.players.some(p => p.id === me))
+    .filter(r => r.status === 'done' && new Date(r.finishedAt || r.createdAt).getFullYear() === year && r.players.some(p => p.id === meFor(r, state)))
     .sort((a, b) => (a.finishedAt || a.createdAt) - (b.finishedAt || b.createdAt));
   let total = 0, birdies = 0, streak = 0, best = null;
   const h2h = {};
   for (const r of rounds) {
+    const me = meFor(r, state);
     const res = roundResults(r);
     const amt = res.balances[me] || 0;
     total += amt;

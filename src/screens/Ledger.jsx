@@ -3,6 +3,7 @@ import { Empty, Header, Icon, Numpad, Screen, Sheet, useUI } from '../components
 import { update, uid, useStore } from '../lib/store.js';
 import { nameOf, outstanding, venmoLink } from '../lib/ledger.js';
 import { money } from '../lib/golf.js';
+import { myIds } from '../lib/format.js';
 import { BottomNav } from '../nav.jsx';
 import { useNav } from '../lib/nav.js';
 
@@ -13,11 +14,13 @@ export default function Ledger() {
   const debts = outstanding(state);
   const [open, setOpen] = useState(null);
   const [partial, setPartial] = useState(false);
+  const mineIds = myIds(state);
+  const isMe = id => mineIds.has(id);
   const me = state.me;
-  const mine = debts.filter(d => d.from === me || d.to === me);
-  const others = debts.filter(d => d.from !== me && d.to !== me);
-  const owedToMe = mine.filter(d => d.to === me).reduce((a, d) => a + d.amount, 0);
-  const iOwe = mine.filter(d => d.from === me).reduce((a, d) => a + d.amount, 0);
+  const mine = debts.filter(d => isMe(d.from) || isMe(d.to));
+  const others = debts.filter(d => !isMe(d.from) && !isMe(d.to));
+  const owedToMe = mine.filter(d => isMe(d.to)).reduce((a, d) => a + d.amount, 0);
+  const iOwe = mine.filter(d => isMe(d.from)).reduce((a, d) => a + d.amount, 0);
   const history = [...state.settlements].sort((a, b) => b.at - a.at);
   const hasRounds = Object.values(state.rounds).some(r => r.status === 'done');
 
@@ -32,7 +35,7 @@ export default function Ledger() {
   };
 
   const row = d => {
-    const youOwe = d.from === me, owedYou = d.to === me;
+    const youOwe = isMe(d.from), owedYou = isMe(d.to);
     const label = youOwe ? `You owe ${nameOf(state, d.to)}` : owedYou ? `${nameOf(state, d.from)} owes you` : `${nameOf(state, d.from)} owes ${nameOf(state, d.to)}`;
     return (
       <button key={d.from + d.to} className="ledger-row" onClick={() => setOpen(d)}>

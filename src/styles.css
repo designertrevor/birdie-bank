@@ -673,3 +673,19 @@ button:disabled { cursor: not-allowed; }
 .change-btn { color: var(--on-pastel); }
 .ledger-summary .bl { color: var(--mute); }
 .press-chip { background: #fff; }
+
+/* Live shared scoring */
+.live-pill { display: inline-flex; align-items: center; gap: 5px; font-size: 11px; font-weight: 700; padding: 2px 8px; border-radius: 999px; background: var(--win-bg); color: var(--win); vertical-align: middle; }
+.live-pill.offline, .live-pill.ended { background: var(--loss-bg); color: var(--loss); }
+.live-pill.connecting { background: var(--surface); color: var(--mute); }
+.live-dot { width: 7px; height: 7px; border-radius: 50%; background: currentColor; animation: pulse 1.6s ease-out infinite; }
+.pill-link { border: none; background: none; padding: 0; cursor: pointer; }
+.code-card { background: var(--teal); color: #fff; border-radius: 24px; padding: 20px; text-align: center; margin-bottom: 12px; }
+.code-card .bl { color: var(--mint); }
+.code-big { font-family: var(--display); font-size: 48px; font-weight: 800; letter-spacing: .12em; margin: 4px 0; }
+.code-link { font-size: 13px; opacity: .8; word-break: break-all; }
+.code-input { width: 100%; text-align: center; font-family: var(--display); font-size: 36px; font-weight: 800; letter-spacing: .2em; text-transform: uppercase; border: none; background: var(--card); color: var(--ink); border-radius: 18px; padding: 14px; outline: none; }
+.code-input:focus { box-shadow: 0 0 0 3px var(--lav); }
+.join-row { border-style: solid; background: var(--card); }
+.join-row .add-ci { background: var(--mint); color: var(--teal); }
+.finished-banner { margin: 8px 16px 0; padding: 12px 14px; border: none; border-radius: 16px; background: var(--ochre); color: var(--on-pastel); font-weight: 700; font-size: 14px; display: flex; gap: 8px; align-items: center; justify-content: center; cursor: pointer; flex-shrink: 0; }

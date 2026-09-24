@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { UIProvider } from './components/ui.jsx';
 import { NavCtx } from './lib/nav.js';
 import { useStore } from './lib/store.js';
+import { bootSync } from './lib/sync.js';
 import Onboarding from './screens/Onboarding.jsx';
 import History from './screens/History.jsx';
 import Ledger from './screens/Ledger.jsx';
@@ -52,6 +53,16 @@ export default function App() {
   const reset = useCallback((nextTab, ...routes) => {
     if (nextTab) setTab(nextTab);
     setStack(routes.map(([name, params = {}]) => ({ name, params, key: Date.now() + Math.random() })));
+  }, []);
+
+  // Live shared rounds + ?join=CODE links
+  useEffect(() => {
+    bootSync();
+    const q = new URLSearchParams(location.search).get('join');
+    if (q) {
+      try { sessionStorage.setItem('bb-join', q); } catch { /* ignore */ }
+      history.replaceState(null, '', location.pathname);
+    }
   }, []);
 
   // Phone/browser back button pops the stack

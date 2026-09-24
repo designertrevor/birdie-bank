@@ -11,6 +11,9 @@ import { buzz, confettiFrom } from '../lib/delight.js';
 import { distLabel, showDist } from '../lib/units.js';
 import { useNav } from '../lib/nav.js';
 import { Scorecard } from './RoundDetail.jsx';
+import { LivePill, ShareSheet } from '../components/Live.jsx';
+import { syncConfigured } from '../lib/sync.js';
+import { uid } from '../lib/store.js';
 
 export default function Play({ id }) {
   const round = useStore(s => s.rounds[id]);
@@ -22,7 +25,9 @@ export default function Play({ id }) {
       </Screen>
     );
   }
-  return <PlayRound key={round.current} round={round} />;
+  // Remount when this hole changes on another phone so the fresh scores show
+  const cur = round.holes[Math.min(round.current, round.holes.length - 1)];
+  return <PlayRound key={`${round.current}:${round._remote?.[cur?.no] || 0}`} round={round} />;
 }
 
 function useWakeLock() {
@@ -57,6 +62,7 @@ function PlayRound({ round }) {
   const [rules, setRules] = useState(false);
   const [betPad, setBetPad] = useState(null);
   const [bankerPick, setBankerPick] = useState(false);
+  const [live, setLive] = useState(false);
   const numRefs = useRef({});
 
   const setScore = (pid, v) => {
@@ -88,8 +94,7 @@ function PlayRound({ round }) {
       if (game === 'nassau' && r.settings.nassau.pressMode === 'auto' && !isLast) {
         const next = idx + 2; // playing position of the next hole
         for (const o of nassauPressOptions(r, next)) {
-          r.pressSeq += 1;
-          r.presses.push({ id: r.pressSeq, leg: o.leg, start: next, by: o.trailing, auto: true });
+          r.presses.push({ id: `auto-${o.leg}-${next}`, leg: o.leg, start: next, by: o.trailing, auto: true });
         }
       }
     });
@@ -156,10 +161,15 @@ function PlayRound({ round }) {
         <button className="header-close" onClick={() => nav.pop()} aria-label="Leave round (it stays saved)"><Icon name="caret-down" /></button>
         <div className="play-title">
           <div className="play-course">{round.course.name}</div>
-          <div className="play-progress">{GAMES[game].name} · Hole {idx + 1} of {round.holes.length}</div>
+          <div className="play-progress">{GAMES[game].name} · Hole {idx + 1} of {round.holes.length} {round.shared && <button className="pill-link" onClick={() => setLive(true)}><LivePill round={round} /></button>}</div>
         </div>
         <button className="header-close" onClick={() => setMenu(true)} aria-label="Round menu"><Icon name="dots-three" /></button>
       </div>
+      {round.status === 'done' && (
+        <button className="finished-banner" onClick={() => nav.reset('history', ['roundDetail', { id: round.id }])}>
+          <Icon name="flag-checkered" fill /> The scorekeeper finished this round — see results <Icon name="arrow-right" />
+        </button>
+      )}
       <div className="hole-meta" onClick={() => setCard(true)} role="button" tabIndex={0} aria-label="Open scorecard">
         <div className="mc"><span className="ml">Hole</span><span className="mv">{hole.no}</span></div>
         <div className="mc"><span className="ml">Par</span><span className="mv">{hole.par}</span></div>
@@ -233,6 +243,11 @@ function PlayRound({ round }) {
       <Sheet open={menu} onClose={() => setMenu(false)} title="Round">
         <button className="sheet-item" onClick={() => { setMenu(false); setCard(true); }}><span><Icon name="table" /> Scorecard</span><Icon name="caret-right" /></button>
         <button className="sheet-item" onClick={() => { setMenu(false); setRules(true); }}><span><Icon name="book-open" /> {GAMES[game].name} rules</span><Icon name="caret-right" /></button>
+        {syncConfigured && (
+          <button className="sheet-item" onClick={() => { setMenu(false); setLive(true); }}>
+            <span><Icon name="broadcast" /> {round.shared ? `Live scoring · ${round.shared.code}` : 'Share live scoring'}</span><Icon name="caret-right" />
+          </button>
+        )}
         <button className="sheet-item" onClick={endEarly}><span><Icon name="flag-checkered" /> End round</span><Icon name="caret-right" /></button>
       </Sheet>
       <Sheet open={card} onClose={() => setCard(false)} title="Scorecard" className="sc-sheet">
@@ -240,6 +255,7 @@ function PlayRound({ round }) {
         <Scorecard round={round} current={hole.no} onHole={no => { setCard(false); goHole(round.holes.findIndex(h => h.no === no)); }} />
       </Sheet>
       <RulesSheet game={game} open={rules} onClose={() => setRules(false)} />
+      <ShareSheet round={round} open={live} onClose={() => setLive(false)} />
       {game === 'banker' && (
         <>
           <Sheet open={bankerPick} onClose={() => setBankerPick(false)} title={`Banker · Hole ${hole.no}`}>
@@ -355,7 +371,7 @@ function NassauPanel({ round, hole }) {
   const options = round.settings.nassau.pressMode === 'manual' && !holeComplete(round, hole) ? nassauPressOptions(round, pos) : [];
   const activePresses = bets.filter(b => b.press && pos >= b.start && pos <= b.end);
   const press = o => {
-    update(s => { const r = s.rounds[round.id]; r.pressSeq += 1; r.presses.push({ id: r.pressSeq, leg: o.leg, start: pos, by: o.trailing }); });
+    update(s => { const r = s.rounds[round.id]; r.presses.push({ id: uid('pr_'), leg: o.leg, start: pos, by: o.trailing }); });
     showToast(`${names[o.trailing]} pressed the ${LEGS[o.leg].label.toLowerCase()}!`);
     buzz(30);
   };

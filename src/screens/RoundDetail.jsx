@@ -5,7 +5,7 @@ import { GAMES, holeAtPos, holeComplete, roundLegs, roundResults, scoreSummary, 
 import { money } from '../lib/golf.js';
 import { confettiFrom } from '../lib/delight.js';
 import { useNav } from '../lib/nav.js';
-import { roundDate, roundPlayerName, shareRound } from '../lib/format.js';
+import { meFor, roundDate, roundPlayerName, shareRound } from '../lib/format.js';
 
 export default function RoundDetail({ id, celebrate }) {
   const nav = useNav();
@@ -24,7 +24,7 @@ export default function RoundDetail({ id, celebrate }) {
   const res = roundResults(round);
   const played = round.holes.filter(h => holeComplete(round, h)).length;
   const top = res.standings[0];
-  const meRow = res.standings.find(p => p.id === state.me);
+  const meRow = res.standings.find(p => p.id === meFor(round, state));
   const tie = res.standings.filter(p => p.amount === top.amount).length > 1;
   const allSquare = res.standings.every(p => p.amount === 0);
 

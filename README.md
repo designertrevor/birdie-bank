@@ -29,3 +29,18 @@ npm run build
   warning and can be corrected in-app (saved as the user's own copy).
 - `src/screens/*` — History, Ledger, Players, Settings tabs; New round wizard; Play.
 - `public/sw.js` + `manifest.webmanifest` — installable, works offline once loaded.
+
+## Shared live scoring (Supabase)
+
+Without keys the feature is hidden in production. In `npm run dev` it uses a local
+stand-in, so two tabs can act as two phones: open the second one with `?profile=b`.
+
+1. Create a free project at supabase.com.
+2. SQL Editor → run `supabase/schema.sql`.
+3. Project Settings → API: copy the Project URL and the anon (publishable) key.
+4. Vercel → Project → Settings → Environment Variables: add `VITE_SUPABASE_URL` and
+   `VITE_SUPABASE_ANON_KEY` (all environments), then redeploy.
+5. For local dev against the real server, put the same two values in `.env.local`.
+
+Rounds are shared by a 6-letter code; anyone with the code can view and score it.
+There are no accounts yet.

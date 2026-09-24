@@ -185,3 +185,22 @@ test('9-hole nassau: first 4 / last 5 / all 9 by playing order', () => {
   assert.deepEqual(by, { front: 5, back: -5, total: -5 }); // a wins 4, b wins 5
   assert.equal(res.balances.a, -5);
 });
+
+import { assemble, buildHoles, buildMeta, stable, applyHole } from './sync-model.js';
+
+test('shared round round-trips and merges per hole', () => {
+  const players = [{ id: 'a', name: 'A', index: 0 }, { id: 'b', name: 'B', index: 0 }];
+  const r = createRound({ id: 'r', game: 'nassau', course: COURSE, holesCount: 18, players, settings: S, hcPct: 100 });
+  r.scores[1] = { a: 3, b: 4 };
+  r.presses.push({ id: 'x', leg: 'front', start: 2, by: 1 });
+  const copy = assemble(buildMeta(r), buildHoles(r));
+  assert.equal(stable(buildHoles(copy)), stable(buildHoles(r)));
+  assert.equal(copy.current, 1);
+  // another phone scores hole 2 — merging it doesn't touch hole 1
+  applyHole(copy, 2, { scores: { a: 4, b: 4 }, banker: null, wolf: null, presses: [{ id: 'x', leg: 'front', start: 2, by: 1 }] });
+  assert.deepEqual(copy.scores[1], { a: 3, b: 4 });
+  assert.deepEqual(copy.scores[2], { a: 4, b: 4 });
+  assert.equal(copy.presses.length, 1);
+  assert.equal(stable({ b: 1, a: [2, { d: 1, c: 2 }] }), stable({ a: [2, { c: 2, d: 1 }], b: 1 }));
+  assert.ok(!('localMe' in buildMeta({ ...r, localMe: 'a', shared: { code: 'X' } })));
+});
