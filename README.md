@@ -1,16 +1,31 @@
-# React + Vite
+# Birdie Bank
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+Golf side-game scorekeeper for a group: Banker, Nassau, Skins and Wolf, with handicaps,
+presses, a ledger that nets debts across rounds, and settle-up links.
 
-Currently, two official plugins are available:
+Live: https://birdie-bank.vercel.app/ (auto-deploys from `main`). The original static
+prototype is kept at `/prototype.html`.
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Babel](https://babeljs.io/) (or [oxc](https://oxc.rs) when used in [rolldown-vite](https://vite.dev/guide/rolldown)) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
+## Develop
 
-## React Compiler
+```bash
+npm install
+npm run dev     # http://localhost:5173
+npm test        # game maths (node:test)
+npm run lint
+npm run build
+```
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+## How it's put together
 
-## Expanding the ESLint configuration
-
-If you are developing a production application, we recommend using TypeScript with type-aware lint rules enabled. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) for information on how to integrate TypeScript and [`typescript-eslint`](https://typescript-eslint.io) in your project.
+- `src/lib/golf.js` — pure maths: WHS course handicap, stroke allocation (incl. plus
+  handicaps), Banker settlement, Nassau match play and presses, fewest-payments settle-up.
+- `src/lib/round.js` — the round model (holes in play, strokes off the low player, nets,
+  results for each game). Everything shown is derived from saved scores.
+- `src/lib/store.js` — app state in `localStorage` (one scorekeeper per phone).
+  Backup/restore lives in Settings.
+- `src/lib/ledger.js` — outstanding debts netted across finished rounds and payments.
+- `src/data/courses.js` — bundled scorecards with sources; `verified: false` ones show a
+  warning and can be corrected in-app (saved as the user's own copy).
+- `src/screens/*` — History, Ledger, Players, Settings tabs; New round wizard; Play.
+- `public/sw.js` + `manifest.webmanifest` — installable, works offline once loaded.
