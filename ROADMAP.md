@@ -10,6 +10,7 @@ The plan for growing Birdie Bank into a $10k/mo business, and the checklist we w
 - **Step tags:** `S1` to `S5` say which step an item belongs to. Work the current step's items before later ones.
 - **New ideas:** add them to the right area with a step tag. If none fits, add a new area at the end.
 - **Gates:** don't move to the next step until the current step's gate is met. Record when it is.
+- **Build what's asked for:** big features nobody has requested wait until the feedback (area 20) shows people want them.
 
 ---
 
@@ -25,7 +26,7 @@ Last updated: 2026-09-25
 
 ## The vision: $10k/mo, about 12 to 18 months out
 
-These are illustrative targets based on typical consumer subscription apps, not a forecast. Paid creator marketing (S4 onward) is what makes it roughly a year instead of 2 to 3.
+These are illustrative targets based on typical consumer subscription apps, not a forecast. The prices and plans below are placeholders until testing shows what people will pay for (see open questions). Paid creator marketing (S4 onward) is what makes it roughly a year instead of 2 to 3.
 
 - **Money:** about $11.6k/mo before fees, about $10k after Apple, Google and Stripe fees
 - **Payers:** about 2,100
@@ -215,7 +216,7 @@ Put more money into the winning creators and copy their video formats with other
 - [ ] `S5` Printable pairings, cart signs and results sheets for events and leagues
 
 ### 11. Upgrading and paywalls
-- [ ] `S2` Decide exactly what's free and what's Pro (see open questions)
+- [ ] `S2` Test what's free and what's Pro with the S2 groups, and talk to them about price (see open questions)
 - [ ] `S2` Publish the free promise: a short list of what's free forever, shown on the pricing page and in the app. Nothing on it ever moves to Pro.
 - [ ] `S2` Paywall with a 7 to 14 day free trial at the end of organizer onboarding. Invited players never see it.
 - [ ] `S2` The free trial works on monthly and annual plans, not just annual
@@ -311,8 +312,10 @@ The goal: people open the app on days they don't play, and Saturday feels bigger
 - [ ] `S3` Countdown and a Saturday preview: who's in, the games, who gets strokes on which holes, head-to-head records ("Mike is 3 and 1 against Dave this season")
 
 **Trash talk**
-- [ ] `S3` A chat thread on each upcoming round (and each group) for trash talk
-- [ ] `S3` Reactions, plus quick jabs to pick from, with character illustrations
+Kept light on purpose. Groups already have a group text, so Birdie Bank adds to it rather than replacing it.
+- [ ] `S3` Comments and reactions on rounds, challenges and settle-ups, plus quick jabs to pick from, with character illustrations
+- [ ] `S3` Easy sharing into the group's own text thread (preview cards, results, callouts)
+- Not now: a full chat system for each round or group. It's a lot of work to do well, and nobody has asked for it. Revisit only if the feedback table shows groups want it.
 - [ ] `S3` Challenges: "Dave challenges Mike to a $20 match on Saturday." Mike accepts or declines, and it becomes a side bet in the round.
 - [ ] `S3` Callouts from the tab and stats ("Still owes $40," "Hasn't won a skin in 3 weeks"), easy to post, never mean-spirited
 
@@ -341,9 +344,11 @@ The goal: people open the app on days they don't play, and Saturday feels bigger
 
 ## Open questions
 
-- Is there a free tier for organizers after the trial (for example, one round at a time with no season tab), or is it trial then paid? Decide in S2 using what the test groups do. Whatever we pick goes on the free promise and stays free, so start with less on it rather than take things back later.
-- Does the S2 paywall test run on Stripe on the web, or wait for the App Store in S3?
-- How much chat is enough? A trash talk thread per round and group, or full group chat that replaces their group text? Start small, since most groups already have a group text.
+**Pricing and payments are unknown, and that's fine.** We'll learn what people pay for by testing and talking to groups, not by predicting. It doesn't block building anything else. Prices, plans and the free and Pro split in this file are placeholders. Things to learn along the way:
+- Is there a free tier for organizers after the trial, or is it trial then paid? The GameBook lessons lean toward a small free tier (roughly what the app does today: score a round and settle it) that never shrinks, so put less on the free promise at first rather than take things back later.
+- Does the first paywall test run on Stripe on the web or wait for the App Store? Stripe on the web is the easy start, since test groups already use the web app. Before S3, check Apple's current rules on linking out to web payments in US apps.
+- A hard paywall at the end of onboarding (Jake's playbook) or a trial with a "Keep scoring for free" option? Measure both.
+- What price, and how much annual vs monthly? Talk to the S2 groups before picking numbers.
 
 ## Decisions
 
@@ -359,9 +364,12 @@ The goal: people open the app on days they don't play, and Saturday feels bigger
 - 2026-09-25: The days between rounds get their own area (21) so people open the app during the week. Organizer onboarding ends with setting up the next round.
 - 2026-09-25: Balances can be carried over to the next round when both people agree, as an alternative to paying.
 - 2026-09-25: After reading Golf GameBook's negative reviews: no GPS (play nicely next to GPS apps instead), no ads or sponsor placements in the app, a published free promise that never shrinks, a trial on every plan, and offline-first scoring.
+- 2026-09-25: Pricing and monetization stay open until tested with real groups. They don't block building.
+- 2026-09-25: No full chat system for now. Keep trash talk to comments, reactions and sharing into the group's own text thread. Big features wait until people ask for them.
 
 ## Progress log
 
 - 2026-09-25: Roadmap created. Starting S1.
 - 2026-09-25: Reworked the steps around paid creator marketing and a spring 2027 creator test. Added area 21 (between rounds) and area 22 (creator marketing).
 - 2026-09-25: Read Golf GameBook's 1 and 2 star App Store reviews. Added "Lessons from Golf GameBook" and new items in areas 1, 5, 6, 8, 10, 11, 13, 15 and 22.
+- 2026-09-25: Finalized for now: pricing marked as something to learn by testing, full chat set aside, "build what's asked for" added to the rules.
