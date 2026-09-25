@@ -16,7 +16,7 @@ The plan for growing Birdie Bank into a $10k/mo business, and the checklist we w
 
 ## Current focus
 
-**Step 1: Foundation.** Accounts and cloud data, turning on invites in production, joining from a link, claiming your seat, and the first "Suggest something" form. Start the quick logo alongside, since it's design work Trevor does himself and doesn't block engineering. Build the cloud data offline first: a round in progress must keep working with no signal and never lose a score (see "Lessons from Golf GameBook").
+**Step 1: Foundation.** Accounts and cloud data, claiming your seat, and the first "Suggest something" form. Invites are live in production, and a join link now takes a new phone straight to picking your name. Start the quick logo alongside, since it's design work Trevor does himself and doesn't block engineering. Build the cloud data offline first: a round in progress must keep working with no signal and never lose a score (see "Lessons from Golf GameBook").
 
 **The big date:** the creator test (S4) runs February to April 2027, when golf season starts back up. Everything before it is about being ready: a product groups keep using, a smooth path from video to paying, and an App Store app.
 
@@ -154,17 +154,17 @@ Put more money into the winning creators and copy their video formats with other
 
 ### 3. Onboarding
 - [x] Three-step first run: welcome, the "friendly wagers" disclaimer, your name and handicap
-- [ ] `S1` Two paths: the organizer setting up a game, and the invited player arriving from a link (pick your name, you're in)
-- [ ] `S1` Guests play without an account, then "You won $22. Save it to your tab" leads to sign-up
+- [x] `S1` Two paths: the organizer setting up a game, and the invited player arriving from a link (pick your name, you're in) (2026-09-25)
+- [ ] `S1` (partial) Guests play without an account, then "You won $22. Save it to your tab" leads to sign-up. Guests can play from a link now; the sign-up prompt waits on accounts.
 - [ ] `S2` Organizer onboarding as a series of questions that sells as it goes: what games your group plays, how many of you, how you settle up now, who ends up doing the math
 - [ ] `S2` Onboarding ends with "Set up your next round" and inviting the group, so a new organizer gets value on day one, not on Saturday
 - [ ] `S2` The paywall and free trial at the end of organizer onboarding (see area 11)
 - [ ] `S3` Ask for notification permission at the right moment, not on first launch
 
 ### 4. Invites and joining
-- [ ] `S1` (partial) Live shared rounds with a code and link exist, but are hidden in production until Supabase is set up in Vercel
-- [ ] `S1` Turn on live sharing in production
-- [ ] `S1` Join from the web without installing anything
+- [x] `S1` Live shared rounds with a code and link (2026-09-23)
+- [x] `S1` Turn on live sharing in production (2026-09-23)
+- [x] `S1` Join from the web without installing anything (2026-09-25)
 - [ ] `S2` Each player can enter their own scores or just watch; hand the scorekeeper role to someone else
 - [ ] `S3` A link preview card for group texts (course, game, players)
 
@@ -373,3 +373,4 @@ Kept light on purpose. Groups already have a group text, so Birdie Bank adds to 
 - 2026-09-25: Reworked the steps around paid creator marketing and a spring 2027 creator test. Added area 21 (between rounds) and area 22 (creator marketing).
 - 2026-09-25: Read Golf GameBook's 1 and 2 star App Store reviews. Added "Lessons from Golf GameBook" and new items in areas 1, 5, 6, 8, 10, 11, 13, 15 and 22.
 - 2026-09-25: Finalized for now: pricing marked as something to learn by testing, full chat set aside, "build what's asked for" added to the rules.
+- 2026-09-25: Live sharing was already on in production (since 2026-09-23). A join link on a new phone now skips organizer onboarding: see the round, pick your name, you're in.

@@ -3,8 +3,10 @@ import { UIProvider } from './components/ui.jsx';
 import ErrorBoundary from './components/ErrorBoundary.jsx';
 import { NavCtx } from './lib/nav.js';
 import { useStore } from './lib/store.js';
-import { bootSync } from './lib/sync.js';
+import { bootSync, syncConfigured } from './lib/sync.js';
+import { cleanCode } from './lib/sync-model.js';
 import Onboarding from './screens/Onboarding.jsx';
+import JoinInvite from './screens/JoinInvite.jsx';
 import History from './screens/History.jsx';
 import Ledger from './screens/Ledger.jsx';
 import People, { PlayerEdit, CrewEdit } from './screens/People.jsx';
@@ -40,6 +42,11 @@ export default function App() {
   }, [theme]);
   const [tab, setTab] = useState('history');
   const [stack, setStack] = useState([]);
+  // A join link opened before onboarding skips straight to picking your name in that round
+  const [inviteCode, setInviteCode] = useState(() => {
+    if (onboarded || !syncConfigured) return null;
+    try { return cleanCode(new URLSearchParams(location.search).get('join') || sessionStorage.getItem('bb-join')) || null; } catch { return null; }
+  });
 
   const push = useCallback((name, params = {}) => {
     setStack(s => [...s, { name, params, key: Date.now() + Math.random() }]);
@@ -76,7 +83,19 @@ export default function App() {
   const nav = useMemo(() => ({ push, pop, reset, tab, setTab: t => { setTab(t); setStack([]); } }), [push, pop, reset, tab]);
 
   if (!onboarded) {
-    return <UIProvider><div className="device"><Onboarding /></div></UIProvider>;
+    const joined = (id, done) => {
+      try { sessionStorage.removeItem('bb-join'); } catch { /* ignore */ }
+      setStack([{ name: done ? 'roundDetail' : 'play', params: { id }, key: Date.now() }]);
+    };
+    const skip = () => {
+      try { sessionStorage.removeItem('bb-join'); } catch { /* ignore */ }
+      setInviteCode(null);
+    };
+    return (
+      <UIProvider>
+        <div className="device">{inviteCode ? <JoinInvite code={inviteCode} onJoined={joined} onSkip={skip} /> : <Onboarding />}</div>
+      </UIProvider>
+    );
   }
 
   const top = stack[stack.length - 1];
