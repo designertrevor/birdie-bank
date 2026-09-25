@@ -73,6 +73,8 @@ export default function Settings() {
           <span className="chevron"><Icon name="caret-right" /></span>
         </label>
         <input id="restore-file" type="file" accept="application/json,.json" hidden onChange={restore} />
+        <div className="sec-label">Help build it</div>
+        {row('chat-circle-dots', 'Suggest something', 'A game, a course, a feature or a bug', () => nav.push('suggest'))}
         <div className="sec-label">About</div>
         {row('info', 'About Birdie Bank', 'Rules, handicaps and the fine print', () => nav.push('about'))}
         <button className="danger-link" onClick={reset}><Icon name="trash" /> Erase all data</button>

@@ -14,11 +14,13 @@ import Settings, { Defaults, Courses, CourseEdit, About } from './screens/Settin
 import NewRound from './screens/NewRound.jsx';
 import Play from './screens/Play.jsx';
 import RoundDetail from './screens/RoundDetail.jsx';
+import Suggest from './screens/Suggest.jsx';
+import './lib/feedback.js'; // sends any suggestions queued while offline
 
 const SCREENS = {
   roundDetail: RoundDetail, newRound: NewRound, play: Play,
   playerEdit: PlayerEdit, crewEdit: CrewEdit,
-  defaults: Defaults, courses: Courses, courseEdit: CourseEdit, about: About,
+  defaults: Defaults, courses: Courses, courseEdit: CourseEdit, about: About, suggest: Suggest,
 };
 const TABS = { history: History, ledger: Ledger, people: People, settings: Settings };
 

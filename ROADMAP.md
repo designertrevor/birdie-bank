@@ -288,8 +288,8 @@ Put more money into the winning creators and copy their video formats with other
 - [ ] `S5` Test different screenshot sets
 
 ### 20. Feedback, roadmap and community
-- [ ] `S1` "Suggest something" in the app with four choices: a new game, a missing course, a feature, something's broken. Saves to a Supabase feedback table.
-- [ ] `S1` Each form asks for what's useful: a game's rules and how the money works; a course's name, city and optional scorecard photo; a bug's screenshot with round and device details attached automatically
+- [ ] `S1` (partial) "Suggest something" in the app with four choices: a new game, a missing course, a feature, something's broken. Saves to a Supabase feedback table. Built in Settings (2026-09-25); goes live once the feedback section of `supabase/schema.sql` is run in Supabase.
+- [ ] `S1` (partial) Each form asks for what's useful: a game's rules and how the money works; a course's name, city and optional scorecard photo; a bug's screenshot with round and device details attached automatically. Built (2026-09-25), same SQL step as above.
 - [ ] `S2` Show it in natural places: course search with no results, the end of the games list, a quick "How was it?" after a round
 - [ ] `S2` Slack community (free plan): #feedback, #game-requests, #course-requests, #bugs, #show-your-round, #general. Invite each group's organizer personally.
 - [ ] `S2` Slack to database automation: a Slack app sends feedback channel messages to Supabase, Claude sorts each one (game, course, feature, bug), merges it with matching roadmap items and pulls out details, then replies in Slack with the roadmap link. Needed because Slack's free plan hides messages after 90 days.
@@ -315,9 +315,9 @@ The goal: people open the app on days they don't play, and Saturday feels bigger
 Kept light on purpose. Groups already have a group text, so Birdie Bank adds to it rather than replacing it.
 - [ ] `S3` Comments and reactions on rounds, challenges and settle-ups, plus quick jabs to pick from, with character illustrations
 - [ ] `S3` Easy sharing into the group's own text thread (preview cards, results, callouts)
-- Not now: a full chat system for each round or group. It's a lot of work to do well, and nobody has asked for it. Revisit only if the feedback table shows groups want it.
 - [ ] `S3` Challenges: "Dave challenges Mike to a $20 match on Saturday." Mike accepts or declines, and it becomes a side bet in the round.
 - [ ] `S3` Callouts from the tab and stats ("Still owes $40," "Hasn't won a skin in 3 weeks"), easy to post, never mean-spirited
+- Not now: a full chat system for each round or group. It's a lot of work to do well, and nobody has asked for it. Revisit only if the feedback table shows groups want it.
 
 **Settling up during the week**
 - [ ] `S2` Group sees who has paid from last round (see area 7)
@@ -374,3 +374,4 @@ Kept light on purpose. Groups already have a group text, so Birdie Bank adds to 
 - 2026-09-25: Read Golf GameBook's 1 and 2 star App Store reviews. Added "Lessons from Golf GameBook" and new items in areas 1, 5, 6, 8, 10, 11, 13, 15 and 22.
 - 2026-09-25: Finalized for now: pricing marked as something to learn by testing, full chat set aside, "build what's asked for" added to the rules.
 - 2026-09-25: Live sharing was already on in production (since 2026-09-23). A join link on a new phone now skips organizer onboarding: see the round, pick your name, you're in.
+- 2026-09-25: Built "Suggest something" (Settings) with a form for each kind, photos, and an offline queue. Needs the feedback SQL run in Supabase before it's pushed.
