@@ -2,7 +2,7 @@
 import { readdirSync, readFileSync, statSync } from 'node:fs';
 import { join } from 'node:path';
 
-const ROOTS = ['index.html', 'README.md', 'CLAUDE.md', 'src', 'public', 'supabase', 'scripts'];
+const ROOTS = ['index.html', 'README.md', 'CLAUDE.md', 'ROADMAP.md', 'src', 'public', 'supabase', 'scripts'];
 const EXT = /\.(js|jsx|mjs|ts|tsx|css|html|md|json|sql|webmanifest)$/;
 const EM = String.fromCharCode(0x2014);
 
