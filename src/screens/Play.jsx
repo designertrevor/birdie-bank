@@ -195,7 +195,7 @@ function PlayRound({ round }) {
         </div>
         <button className="header-close" onClick={() => setMenu(true)} aria-label="Round menu"><Icon name="dots-three" /></button>
       </div>
-      <MoneyBar round={round} preview={preview} />
+      <MoneyBar round={round} hole={hole} preview={preview} />
       {round.status === 'done' && (
         <button className="finished-banner" onClick={() => nav.reset('history', ['roundDetail', { id: round.id }])}>
           <Icon name="flag-checkered" fill /> The scorekeeper finished this round. See results <Icon name="arrow-right" />
@@ -439,9 +439,11 @@ function BetsSheet({ round, onClose }) {
 }
 
 /** Everyone's money, pinned under the header from the first hole, updating as scores go in. */
-function MoneyBar({ round, preview }) {
-  const played = round.holes.filter(h => holeComplete(round, h)).length;
-  const pending = Object.values(preview.delta).some(Boolean);
+function MoneyBar({ round, hole, preview }) {
+  // Holes counted besides this one, so going back to a saved hole doesn't count it twice ("Thru 3 + this one" on hole 3)
+  const saved = holeComplete(round, hole);
+  const played = round.holes.filter(h => holeComplete(round, h)).length - (saved ? 1 : 0);
+  const pending = saved || Object.values(preview.delta).some(Boolean);
   const top = Math.max(...Object.values(preview.balances));
   // Pop the amounts that just changed
   const [prev, setPrev] = useState(preview.balances);
