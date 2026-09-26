@@ -11,6 +11,8 @@ function profileSuffix() {
   return p ? `:${p}` : '';
 }
 const KEY = 'birdie-bank-v1' + profileSuffix();
+/** Where the app state lives in localStorage (per dev profile). */
+export const STORE_KEY = KEY;
 const VERSION = 1;
 
 export const DEFAULT_SETTINGS = {

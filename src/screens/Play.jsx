@@ -60,13 +60,16 @@ function PlayRound({ round }) {
   const saved = round.scores[hole.no] || {};
   const draftKey = `${round.id}:${hole.no}`;
   const kept = DRAFTS.get(draftKey);
-  // Edits you made but haven't saved win over the saved score; otherwise the saved score (which may have come from another phone) wins
+  // Edits you made but haven't saved win over the saved score; otherwise the saved score (which may have come from another phone) wins.
+  // Only scores you actually changed count as edits, so a score saved on another phone isn't reset to par.
   const wasDirty = !!kept?.dirty;
+  const mine = id => wasDirty && !!kept.base && kept.draft[id] !== kept.base[id];
   const [dirty, setDirty] = useState(wasDirty);
-  const [draft, setDraft] = useState(() => Object.fromEntries(units.map(p => [p.id, (wasDirty ? kept.draft[p.id] : null) ?? saved[p.id] ?? hole.par])));
+  const [base] = useState(() => Object.fromEntries(units.map(p => [p.id, mine(p.id) ? kept.base[p.id] : saved[p.id] ?? hole.par])));
+  const [draft, setDraft] = useState(() => Object.fromEntries(units.map(p => [p.id, mine(p.id) ? kept.draft[p.id] : saved[p.id] ?? hole.par])));
   const [touched, setTouched] = useState(() => Object.fromEntries(units.map(p => [p.id, saved[p.id] != null || (wasDirty && !!kept.touched[p.id])])));
   const [marks, setMarks] = useState(() => (GAMES[game].marks ? (wasDirty && kept.marks) || structuredClone(round.marks?.[hole.no] || (game === 'bbb' ? { bingo: null, bango: null, bongo: null } : {})) : null));
-  useEffect(() => { DRAFTS.set(draftKey, { draft, touched, dirty, marks }); }, [draftKey, draft, touched, dirty, marks]);
+  useEffect(() => { DRAFTS.set(draftKey, { draft, base, touched, dirty, marks }); }, [draftKey, draft, base, touched, dirty, marks]);
   const [banker, setBanker] = useState(() => (game === 'banker' ? structuredClone(bankerHoleSetup(round, idx)) : null));
   const [phase, setPhase] = useState(() => (game === 'banker' && !holeComplete(round, hole) ? 'bets' : 'scores'));
   const [wolf, setWolf] = useState(() => (game === 'wolf' ? (round.wolf[hole.no] || { wolf: wolfFor(round, idx), partner: undefined }) : null));

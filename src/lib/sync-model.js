@@ -68,6 +68,31 @@ export function assemble(meta, holes) {
   return round;
 }
 
+const isObj = v => v !== null && typeof v === 'object' && !Array.isArray(v);
+
+/**
+ * Three-way merge of a shared record. `base` is what the server had when this phone last
+ * heard from it, `local` is this phone's copy and `remote` is the server's copy now.
+ * A side that didn't change from base takes the other side's value. When both changed,
+ * objects are merged key by key down to `depth` levels (so two phones scoring different
+ * players on the same hole both keep their scores). A true clash keeps this phone's edit,
+ * which is then sent up. When `base` is undefined (this phone never saw the server's copy,
+ * for example a round joined before this merge existed) a clash takes the server's copy.
+ */
+export function merge3(base, local, remote, depth = 1, known = base !== undefined) {
+  const b = stable(base), l = stable(local), r = stable(remote);
+  if (l === b || l === r) return remote;
+  if (r === b) return local;
+  if (depth <= 0 || !isObj(local) || !isObj(remote)) return known ? local : remote;
+  const bo = isObj(base) ? base : {};
+  const out = {};
+  for (const k of new Set([...Object.keys(bo), ...Object.keys(local), ...Object.keys(remote)])) {
+    const v = merge3(bo[k], local[k], remote[k], depth - 1, known);
+    if (v !== undefined) out[k] = v;
+  }
+  return out;
+}
+
 const ALPHABET = 'ABCDEFGHJKMNPQRSTUVWXYZ23456789';
 export function newCode(len = 6) {
   const bytes = crypto.getRandomValues(new Uint8Array(len));

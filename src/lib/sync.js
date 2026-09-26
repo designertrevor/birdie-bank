@@ -1,10 +1,11 @@
 // Live shared rounds: keeps local rounds that have `shared.code` in step with the server.
-// Local edits are pushed per hole; remote edits are merged in. Failed pushes retry.
+// Local edits are pushed per hole; remote edits are merged in. Failed pushes retry, and
+// edits made offline are kept on the phone until they reach the server.
 import { useSyncExternalStore } from 'react';
-import { getState, subscribe, update } from './store.js';
+import { STORE_KEY, getState, subscribe, update } from './store.js';
 import { localAdapter, supabaseAdapter } from './sync-adapters.js';
 import { getSupabase, supabaseConfigured } from './supabase.js';
-import { applyHole, applyMeta, assemble, buildHole, buildMeta, newCode, stable } from './sync-model.js';
+import { applyHole, applyMeta, assemble, buildHole, buildMeta, merge3, newCode, stable } from './sync-model.js';
 
 
 let adapterPromise = null;
@@ -35,39 +36,93 @@ export function useSyncStatus() {
 }
 
 // --------------------------- engine ---------------------------------------
+// Each live round remembers what the server last had for its meta and each hole ("base").
+// The base is saved on the phone, so edits made with no signal survive the app being
+// closed: on the next sync they're merged with anything that changed on other phones
+// (see merge3) and sent up, instead of being replaced by the server's older copy.
 
-const live = new Map(); // roundId -> { code, lastMeta, lastHoles: {no: json}, unsub, pending: Set }
+const live = new Map(); // roundId -> { code, lastMeta, lastHoles: {no: json}, unsub, pushing, again, connected }
 
-async function pushChanges(roundId) {
-  const entry = live.get(roundId);
+const baseKey = id => `bb-live-base:${STORE_KEY}:${id}`;
+function loadBase(id, code) {
+  try {
+    const b = JSON.parse(localStorage.getItem(baseKey(id)));
+    return b && b.code === code ? b : null;
+  } catch { return null; }
+}
+function saveBase(id, entry) {
+  try { localStorage.setItem(baseKey(id), JSON.stringify({ code: entry.code, meta: entry.lastMeta, holes: entry.lastHoles })); } catch { /* storage full */ }
+}
+function dropBase(id) {
+  try { localStorage.removeItem(baseKey(id)); } catch { /* ignore */ }
+}
+const parse = json => (json == null ? undefined : JSON.parse(json));
+
+/** Send one round's unsent changes: meta first, then holes. Resolves true when all went through. */
+async function pushOnce(roundId, entry) {
   const round = getState().rounds[roundId];
-  if (!entry || !round) return;
   const adapter = await getAdapter();
-  if (!adapter) return;
-  const tasks = [];
+  if (!round || !adapter || live.get(roundId) !== entry) return true;
   const meta = buildMeta(round);
   const metaJson = stable(meta);
-  if (metaJson !== entry.lastMeta) {
-    tasks.push(adapter.upsertMeta(entry.code, meta).then(() => { entry.lastMeta = metaJson; }));
-  }
+  const holes = [];
   round.holes.forEach((h, i) => {
     const data = buildHole(round, i);
     const json = stable(data);
-    if (json !== (entry.lastHoles[h.no] ?? stable(null))) {
-      tasks.push(adapter.upsertHole(entry.code, h.no, data).then(() => { entry.lastHoles[h.no] = json; }));
-    }
+    if (json !== (entry.lastHoles[h.no] ?? stable(null))) holes.push([h.no, data, json]);
   });
-  if (!tasks.length) return;
-  setStatus({ pending: status.pending + tasks.length });
-  const results = await Promise.allSettled(tasks);
-  const failed = results.filter(r => r.status === 'rejected');
-  setStatus({ pending: Math.max(0, status.pending - tasks.length), state: failed.length ? 'offline' : 'live', lastError: failed[0]?.reason?.message || null });
+  const metaDirty = metaJson !== entry.lastMeta;
+  if (!metaDirty && !holes.length) return true;
+  let failed = null;
+  // Meta goes first so a hole never arrives for a player the other phones don't know yet
+  if (metaDirty) {
+    try { await adapter.upsertMeta(entry.code, meta); entry.lastMeta = metaJson; } catch (e) { failed = e; }
+  }
+  if (!failed) {
+    const results = await Promise.allSettled(holes.map(([no, data, json]) => adapter.upsertHole(entry.code, no, data).then(() => { entry.lastHoles[no] = json; })));
+    failed = results.find(r => r.status === 'rejected')?.reason || null;
+  }
+  if (live.get(roundId) === entry) saveBase(roundId, entry);
+  setStatus({ state: failed ? 'offline' : 'live', lastError: failed?.message || null });
+  return !failed;
+}
+
+/**
+ * Push local edits. One push per round at a time, so two quick edits to the same hole can't
+ * reach the server out of order; edits made while a push is running go in the next one.
+ */
+async function pushChanges(roundId) {
+  const entry = live.get(roundId);
+  if (!entry) return false;
+  if (entry.pushing) { entry.again = true; return false; }
+  entry.pushing = true;
+  setStatus({ pending: status.pending + 1 });
+  let ok = false;
+  try {
+    do {
+      entry.again = false;
+      ok = await pushOnce(roundId, entry);
+    } while (ok && entry.again);
+    return ok;
+  } catch (e) {
+    setStatus({ state: 'offline', lastError: e?.message || null });
+    return false;
+  } finally {
+    entry.pushing = false;
+    setStatus({ pending: Math.max(0, status.pending - 1) });
+  }
 }
 
 function onRemote(roundId, ev) {
   const entry = live.get(roundId);
   if (!entry) return;
-  if (ev.type === 'connected') { setStatus({ state: 'live' }); return; }
+  if (ev.type === 'connected') {
+    // Realtime doesn't replay what we missed while disconnected, so catch up on a reconnect
+    if (entry.connected) resync(roundId);
+    else setStatus({ state: 'live' });
+    entry.connected = true;
+    return;
+  }
   if (ev.type === 'deleted') {
     update(s => { const r = s.rounds[roundId]; if (r?.shared) r.shared = { ...r.shared, ended: true }; });
     stop(roundId);
@@ -76,10 +131,17 @@ function onRemote(roundId, ev) {
   if (ev.type === 'meta') {
     const json = stable(ev.data);
     if (json === entry.lastMeta) return;
+    const base = parse(entry.lastMeta);
     entry.lastMeta = json;
+    saveBase(roundId, entry);
+    const round = getState().rounds[roundId];
+    if (!round) return;
+    const local = buildMeta(round);
+    const merged = merge3(base, local, ev.data, 1);
+    if (stable(merged) === stable(local)) return;
     update(s => {
       const r = s.rounds[roundId]; if (!r) return;
-      applyMeta(r, ev.data);
+      applyMeta(r, merged);
       if (r.status === 'done' && s.activeRoundId === roundId) s.activeRoundId = null;
       if (r.status === 'active' && !s.activeRoundId) s.activeRoundId = roundId;
     });
@@ -87,8 +149,17 @@ function onRemote(roundId, ev) {
   if (ev.type === 'hole') {
     const json = stable(ev.data);
     if (json === entry.lastHoles[ev.holeNo]) return;
+    const base = parse(entry.lastHoles[ev.holeNo]);
     entry.lastHoles[ev.holeNo] = json;
-    update(s => { const r = s.rounds[roundId]; if (r) applyHole(r, ev.holeNo, ev.data); });
+    saveBase(roundId, entry);
+    const round = getState().rounds[roundId];
+    const idx = round ? round.holes.findIndex(h => h.no === ev.holeNo) : -1;
+    if (idx < 0) return;
+    // Scores this phone hasn't sent yet are kept; the push that follows sends the merged hole
+    const local = buildHole(round, idx);
+    const merged = merge3(base, local, ev.data, 2);
+    if (stable(merged) === stable(local)) return;
+    update(s => { const r = s.rounds[roundId]; if (r) applyHole(r, ev.holeNo, merged); });
   }
 }
 
@@ -103,7 +174,10 @@ async function resync(roundId) {
     onRemote(roundId, { type: 'meta', data: remote.meta });
     for (const [no, data] of Object.entries(remote.holes)) onRemote(roundId, { type: 'hole', holeNo: Number(no), data });
     setStatus({ state: 'live' });
-    await pushChanges(roundId); // anything we changed while offline
+    const sent = await pushChanges(roundId); // anything we changed while offline
+    // A finished round picked back up at launch only needed its last edits sent
+    const r = getState().rounds[roundId];
+    if (sent && r?.status === 'done' && entry.finishing) stop(roundId);
   } catch (e) {
     setStatus({ state: 'offline', lastError: e.message });
   }
@@ -112,13 +186,14 @@ async function resync(roundId) {
 // Rounds that were just created on / fetched from the server: nothing to push or pull
 const freshNext = new Set();
 
-async function start(roundId, { fresh = false } = {}) {
+async function start(roundId, { fresh = false, finishing = false } = {}) {
   fresh = fresh || freshNext.delete(roundId);
   if (live.has(roundId)) return;
   const round = getState().rounds[roundId];
   if (!round?.shared?.code || round.shared.ended) return;
   // Claim the slot before awaiting so a second call can't subscribe twice
-  const entry = { code: round.shared.code, lastMeta: null, lastHoles: {}, unsub: null };
+  const saved = fresh ? null : loadBase(roundId, round.shared.code);
+  const entry = { code: round.shared.code, lastMeta: saved?.meta ?? null, lastHoles: { ...saved?.holes }, unsub: null, pushing: false, again: false, connected: false, finishing };
   live.set(roundId, entry);
   const adapter = await getAdapter();
   if (!adapter) { live.delete(roundId); return; }
@@ -126,6 +201,7 @@ async function start(roundId, { fresh = false } = {}) {
     // We just created or fetched it: everything local is already on the server
     entry.lastMeta = stable(buildMeta(round));
     round.holes.forEach((h, i) => { entry.lastHoles[h.no] = stable(buildHole(round, i)); });
+    saveBase(roundId, entry);
   }
   setStatus({ state: 'connecting' });
   entry.unsub = adapter.subscribe(entry.code, ev => onRemote(roundId, ev));
@@ -136,6 +212,7 @@ function stop(roundId) {
   const e = live.get(roundId);
   e?.unsub?.();
   live.delete(roundId);
+  dropBase(roundId);
   if (!live.size) setStatus({ state: 'idle' });
 }
 
@@ -166,7 +243,10 @@ if (typeof window !== 'undefined') {
 /** Start syncing every shared round that's still in play (call once on boot). */
 export function bootSync() {
   for (const r of Object.values(getState().rounds)) {
-    if (r.shared?.code && !r.shared.ended && r.status === 'active') start(r.id);
+    if (!r.shared?.code || r.shared.ended) continue;
+    if (r.status === 'active') start(r.id);
+    // Finished while offline and closed before it synced: send what's left
+    else if (loadBase(r.id, r.shared.code)) start(r.id, { finishing: true });
   }
 }
 
