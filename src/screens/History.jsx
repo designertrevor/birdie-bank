@@ -32,7 +32,8 @@ export default function History() {
   const [filter, setFilter] = useState('all');
   const [joinCode] = useState(() => { try { const c = sessionStorage.getItem('bb-join'); sessionStorage.removeItem('bb-join'); return c; } catch { return null; } });
   const [joining, setJoining] = useState(!!joinCode);
-  const active = state.activeRoundId && state.rounds[state.activeRoundId];
+  // Only a round that's still being played; a finished or discarded one never shows here
+  const active = state.activeRoundId && state.rounds[state.activeRoundId]?.status === 'active' ? state.rounds[state.activeRoundId] : null;
   const done = Object.values(state.rounds).filter(r => r.status === 'done').sort((a, b) => (b.finishedAt || b.createdAt) - (a.finishedAt || a.createdAt));
   const shown = done.filter(r => filter === 'all' || r.game === filter);
   const games = [...new Set(done.map(r => r.game))];
