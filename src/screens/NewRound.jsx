@@ -5,12 +5,26 @@ import { getState, update, uid, useStore } from '../lib/store.js';
 import { allCourses, coursePar, teeDotStyle } from '../lib/courses.js';
 import { GAMES, GAME_GROUPS, createRound, effectiveCourseHc, holesInPlay } from '../lib/round.js';
 import { GameOptions, SixesPreview, TeamPicker } from '../components/GameOptions.jsx';
-import { optionsProblem } from '../lib/stakes.js';
+import { optionsProblem, stakeSummary } from '../lib/stakes.js';
+import { syncConfigured } from '../lib/sync.js';
+import { ShareSheet } from '../components/Live.jsx';
 import { defaultTeams, teamsProblem } from '../lib/teams.js';
 import { useNav } from '../lib/nav.js';
 import { formatIndex, playerLabel, sortedPlayers } from '../lib/format.js';
 
 const STEPS = ['Game', 'Course', 'Players', 'Setup'];
+const QUESTIONS = ['What are you playing?', 'Where are you playing?', 'Who’s in?', 'What’s on the line?'];
+
+/** The last round this phone set up whose course and players still exist, to offer as a one-tap repeat. */
+function usualRound(state) {
+  const courses = allCourses(state);
+  const recent = Object.values(state.rounds).filter(r => !r.localMe && GAMES[r.game]).sort((a, b) => b.createdAt - a.createdAt);
+  for (const r of recent) {
+    const course = courses.find(c => c.id === r.course.id);
+    if (course && r.players.every(p => state.players[p.id])) return { round: r, course };
+  }
+  return null;
+}
 
 export default function NewRound() {
   const nav = useNav();
@@ -28,6 +42,8 @@ export default function NewRound() {
   const [useHc, setUseHc] = useState(true);
   const [startHole, setStartHole] = useState(null);
   const [teams, setTeams] = useState(null); // arrays of player ids, for team games
+  const [createdId, setCreatedId] = useState(null); // the round, once it's set up
+  const usual = useMemo(() => usualRound(state), [state]);
 
   const course = allCourses(state).find(c => c.id === courseId) || null;
 
@@ -55,8 +71,25 @@ export default function NewRound() {
       st.settings = { ...st.settings, ...settings };
       if (!st.favorites.includes(course.id)) st.favorites = [course.id, ...st.favorites].slice(0, 6);
     });
-    nav.reset('history', ['play', { id }]);
+    setCreatedId(id);
+    setStep(4);
   };
+
+  // Load last time's game, course, group and bets, then land on the bets to confirm
+  const repeatUsual = () => {
+    const r = usual.round;
+    const pids = r.players.map(p => p.id);
+    setGame(r.game); setHolesCount(r.holesCount); setCourseId(usual.course.id); setNine(r.nine || 'front');
+    setPicked(pids);
+    setTees(Object.fromEntries(r.players.filter(p => p.tee).map(p => [p.id, p.tee])));
+    setHcOverride(Object.fromEntries(r.players.filter(p => p.courseHcOverride != null).map(p => [p.id, p.courseHcOverride])));
+    setOpts(o => ({ ...o, [r.game]: structuredClone(r.settings[r.game]), hcPct: r.hcPct ?? o.hcPct }));
+    setUseHc(r.useHandicaps !== false);
+    setStartHole(null);
+    setTeams(r.teams ? r.teams.map(t => t.players) : defaultTeams(r.game, pids));
+    setStep(3);
+  };
+  const created = createdId ? state.rounds[createdId] : null;
 
   const defaultTee = course?.tees?.[0]?.name || null;
   const orderedPicked = picked;
@@ -64,9 +97,14 @@ export default function NewRound() {
 
   return (
     <Screen>
-      <Header title="New round" onBack={back} onClose={close} />
-      <Steps steps={STEPS} current={step} />
-      {step === 0 && <GameStep game={game} setGame={gm => { setGame(gm); if (!GAMES[gm].holes.includes(holesCount)) setHolesCount(GAMES[gm].holes[0]); }} holesCount={holesCount} setHolesCount={setHolesCount} onNext={() => setStep(1)} />}
+      {step < 4 ? (
+        <>
+          <Header title="New round" onBack={back} onClose={close} />
+          <Steps steps={STEPS} current={step} />
+          <h2 className="step-q d">{QUESTIONS[step]}</h2>
+        </>
+      ) : <Header title="Round ready" small onClose={() => nav.reset('history')} />}
+      {step === 0 && <GameStep usual={usual} onUsual={repeatUsual} game={game} setGame={gm => { setGame(gm); if (!GAMES[gm].holes.includes(holesCount)) setHolesCount(GAMES[gm].holes[0]); }} holesCount={holesCount} setHolesCount={setHolesCount} onNext={() => setStep(1)} />}
       {step === 1 && <CourseStep courseId={courseId} setCourseId={id => { setCourseId(id); setTees({}); setStartHole(null); }} holesCount={holesCount} nine={nine} setNine={setNine} onNext={() => setStep(2)} />}
       {step === 2 && course && (
         <PlayersStep game={g} course={course} holesCount={holesCount} nine={nine} picked={picked} setPicked={setPicked}
@@ -78,18 +116,28 @@ export default function NewRound() {
           opts={opts} setOpts={setOpts} useHc={useHc} setUseHc={setUseHc} startHole={startHole} setStartHole={setStartHole} onStart={start}
           teams={teams} setTeams={setTeams} />
       )}
+      {step === 4 && created && <ReadyStep round={created} onStart={() => nav.reset('history', ['play', { id: created.id }])} />}
     </Screen>
   );
 }
 
 // ---------------------------------------------------------------------------
 
-function GameStep({ game, setGame, holesCount, setHolesCount, onNext }) {
+function GameStep({ usual, onUsual, game, setGame, holesCount, setHolesCount, onNext }) {
   const [rules, setRules] = useState(null);
   const g = game && GAMES[game];
+  const u = usual?.round;
   return (
     <>
       <div className="scroll">
+        {u && (
+          <button className="usual-card" onClick={onUsual}>
+            <span className="eyebrow">Your usual</span>
+            <span className="uc-title d">{GAMES[u.game].name} · {usual.course.name}</span>
+            <span className="uc-sub">{u.players.map(p => p.name.split(' ')[0]).join(', ')} · {u.holesCount} holes · {stakeSummary(u.game, u.settings)}</span>
+            <span className="uc-btn"><Icon name="arrow-counter-clockwise" /> Set it up again</span>
+          </button>
+        )}
         {GAME_GROUPS.map(group => (
           <div key={group}>
             <div className="sec-label">{group}</div>
@@ -313,7 +361,9 @@ function SetupStep({ game, course, holesCount, nine, picked, setPicked, opts, se
   const state = useStore();
   const [pad, setPad] = useState(null); // {path, title, min, max}
   const [holePick, setHolePick] = useState(false);
+  const [more, setMore] = useState(false);
   const holes = holesInPlay(course, holesCount, nine);
+  const firstHole = startHole ?? holes[0].no;
   const set = (path, v) => setOpts(o => { const n = structuredClone(o); const k = path.split('.'); let t = n; for (const x of k.slice(0, -1)) t = t[x]; t[k.at(-1)] = v; return n; });
   const get = path => path.split('.').reduce((t, k) => t?.[k], opts);
   const move = (i, d) => setPicked(p => { const n = [...p]; const j = i + d; if (j < 0 || j >= n.length) return p; [n[i], n[j]] = [n[j], n[i]]; return n; });
@@ -326,8 +376,9 @@ function SetupStep({ game, course, holesCount, nine, picked, setPicked, opts, se
     <>
       <div className="scroll">
         <div className="block summary-card">
-          <div className="d" style={{ fontSize: 22, fontWeight: 800 }}>{GAMES[game].name} · {holesCount} holes</div>
-          <div className="li-sub">{course.name}{holesCount === 9 && course.holes.length === 18 ? ` · ${nine === 'front' ? 'Front' : 'Back'} 9` : ''} · Par {holes.reduce((a, h) => a + h.par, 0)}</div>
+          <div className="li-sub">{GAMES[game].name} · {holesCount} holes</div>
+          <div className="d stake-big">{stakeSummary(game, opts)}</div>
+          <div className="li-sub">{course.name}{holesCount === 9 && course.holes.length === 18 ? ` · ${nine === 'front' ? 'Front' : 'Back'} 9` : ''} · Par {holes.reduce((a, h) => a + h.par, 0)} · {picked.length} players</div>
         </div>
 
         {GAMES[game].teams && teams && (
@@ -355,6 +406,14 @@ function SetupStep({ game, course, holesCount, nine, picked, setPicked, opts, se
         <GameOptions game={game} get={get} set={set} onAmount={(path, title, o) => setPad({ path, title, ...o })} holesCount={holesCount}
           firstName={game === 'banker' ? state.players[picked[0]]?.name : null} />
 
+        <button className="set-row more-opts" onClick={() => setMore(!more)} aria-expanded={more}>
+          <div className="row-main">
+            <div className="set-name">More options</div>
+            <div className="set-sub">{useHc ? `Handicaps on · ${opts.hcPct}%` : 'Handicaps off'} · start on hole {firstHole}</div>
+          </div>
+          <span className="chevron"><Icon name={more ? 'caret-up' : 'caret-down'} /></span>
+        </button>
+        {more && <>
         <div className="sec-label">Handicaps</div>
         <div className="toggle-row">
           <div><div className="toggle-lbl">Use handicaps</div><div className="toggle-sub">{game === 'quota' ? 'Sets each player’s quota from their course handicap' : game === 'bbb' ? 'Not needed, points don’t depend on score' : 'Strokes off the low player on the hardest holes'}</div></div>
@@ -371,17 +430,51 @@ function SetupStep({ game, course, holesCount, nine, picked, setPicked, opts, se
         <div className="sec-label">Starting hole</div>
         <div className="block">
           <button className="hole-pick-btn" onClick={() => setHolePick(true)} aria-label="Starting hole">
-            <span>Hole {startHole ?? holes[0].no} · Par {holes.find(h => h.no === (startHole ?? holes[0].no))?.par}</span><Icon name="caret-down" />
+            <span>Hole {firstHole} · Par {holes.find(h => h.no === firstHole)?.par}</span><Icon name="caret-down" />
           </button>
           <p className="field-help">Change this for a shotgun start.</p>
         </div>
+        </>}
       </div>
       <div className="cta-wrap">
-        <button className="full-btn" disabled={optsBad || teamsBad} onClick={onStart}>Tee it up <Icon name="golf" fill /></button>
+        <button className="full-btn" disabled={optsBad || teamsBad} onClick={onStart}>Create round <Icon name="arrow-right" /></button>
       </div>
       <Numpad open={!!pad} title={pad?.title} prefix="$" initial={pad ? get(pad.path) : ''} min={pad?.min} max={pad?.max}
         onClose={() => setPad(null)} onDone={v => { set(pad.path, v); setPad(null); }} />
       <HolePicker open={holePick} holes={holes} value={startHole ?? holes[0].no} onClose={() => setHolePick(false)} onPick={no => { setStartHole(no); setHolePick(false); }} />
+    </>
+  );
+}
+
+// ---------------------------------------------------------------------------
+
+/** After setup: invite the group before the first tee, then start. */
+function ReadyStep({ round, onStart }) {
+  const [sharing, setSharing] = useState(false);
+  const names = (round.teams || round.players).map(p => p.name.split(' ')[0]);
+  const first = round.holes[0];
+  return (
+    <>
+      <div className="scroll">
+        <div className="ready-hero">
+          <div className="ready-check"><Icon name="check" /></div>
+          <div className="ready-title d">You’re set for {GAMES[round.game].name}</div>
+        </div>
+        <div className="block">
+          <div className="ready-row"><span>Course</span><b>{round.course.name}{round.nine ? ` · ${round.nine === 'front' ? 'Front' : 'Back'} 9` : ''}</b></div>
+          <div className="ready-row"><span>{round.teams ? 'Teams' : 'Players'}</span><b>{round.teams ? round.teams.map(t => t.name).join(' v ') : names.join(', ')}</b></div>
+          <div className="ready-row"><span>On the line</span><b>{stakeSummary(round.game, round.settings)}</b></div>
+          <div className="ready-row"><span>Handicaps</span><b>{round.useHandicaps ? `On · ${round.hcPct}%` : 'Off'}</b></div>
+        </div>
+        {syncConfigured && (
+          <p className="hint-card"><Icon name="broadcast" fill /> {round.shared ? 'The group has the link. They can follow the money live and enter scores.' : 'Send the group a link and they can follow the money live from their own phones. No download needed.'}</p>
+        )}
+      </div>
+      <div className="cta-wrap">
+        {syncConfigured && <button className={`full-btn ${round.shared ? 'outline' : ''}`} onClick={() => setSharing(true)}><Icon name="share-network" /> {round.shared ? 'Send the link again' : 'Invite the group'}</button>}
+        <button className={`full-btn ${syncConfigured && !round.shared ? 'outline' : ''}`} onClick={onStart}>Start on hole {first.no} <Icon name="arrow-right" /></button>
+      </div>
+      <ShareSheet round={round} open={sharing} onClose={() => setSharing(false)} />
     </>
   );
 }

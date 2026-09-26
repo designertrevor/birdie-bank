@@ -3,7 +3,7 @@ import { Empty, Icon, Numpad, Screen, Segmented, Sheet, useUI } from '../compone
 import { RulesSheet } from '../components/Rules.jsx';
 import { getState, update, useStore } from '../lib/store.js';
 import {
-  GAMES, bankerHoleSetup, defaultNine, holeComplete, nassauPressOptions, pressMode, resizeRound, roundLegs,
+  GAMES, bankerHoleSetup, defaultNine, holeComplete, livePreview, nassauPressOptions, pressMode, resizeRound, roundLegs,
   roundResults, scoredHolesDropped, scorers, skinsTable, strokesFor, wolfFor,
 } from '../lib/round.js';
 import { findCourse } from '../lib/courses.js';
@@ -106,6 +106,7 @@ function PlayRound({ round }) {
     if (game === 'wolf' && wolf.partner === undefined) { showToast('Wolf needs to pick a partner or go lone'); return; }
     const scores = { ...draft };
     DRAFTS.delete(draftKey);
+    showToast(holeMoneyLine(round, hole, livePreview(round, hole, { scores, banker, wolf, marks }).delta));
     update(s => {
       const r = s.rounds[round.id];
       r.scores[hole.no] = scores;
@@ -177,6 +178,11 @@ function PlayRound({ round }) {
   const goHole = i => update(s => { s.rounds[round.id].current = i; });
 
   const results = useMemo(() => roundResults(round), [round]);
+  // Money with this hole counted as it's being entered, so totals move with every tap
+  const preview = useMemo(() => {
+    const counting = phase === 'scores' && dirty && !(game === 'wolf' && wolf.partner === undefined);
+    return livePreview(round, hole, counting ? { scores: draft, banker, wolf, marks } : null);
+  }, [round, hole, phase, dirty, game, draft, banker, wolf, marks]);
 
   return (
     <Screen className="play">
@@ -188,6 +194,7 @@ function PlayRound({ round }) {
         </div>
         <button className="header-close" onClick={() => setMenu(true)} aria-label="Round menu"><Icon name="dots-three" /></button>
       </div>
+      <MoneyBar round={round} preview={preview} />
       {round.status === 'done' && (
         <button className="finished-banner" onClick={() => nav.reset('history', ['roundDetail', { id: round.id }])}>
           <Icon name="flag-checkered" fill /> The scorekeeper finished this round. See results <Icon name="arrow-right" />
@@ -255,7 +262,6 @@ function PlayRound({ round }) {
               </div>
             );
           })}
-          <RunningTotals round={round} results={results} />
         </div>
       )}
 
@@ -431,25 +437,46 @@ function BetsSheet({ round, onClose }) {
   );
 }
 
-function RunningTotals({ round, results }) {
+/** Everyone's money, pinned under the header from the first hole, updating as scores go in. */
+function MoneyBar({ round, preview }) {
   const played = round.holes.filter(h => holeComplete(round, h)).length;
-  if (!played) return null;
+  const pending = Object.values(preview.delta).some(Boolean);
+  const top = Math.max(...Object.values(preview.balances));
+  // Pop the amounts that just changed
+  const [prev, setPrev] = useState(preview.balances);
+  const [changed, setChanged] = useState([]);
+  if (prev !== preview.balances) {
+    setChanged(round.players.filter(p => prev[p.id] !== preview.balances[p.id]).map(p => p.id));
+    setPrev(preview.balances);
+  }
   return (
-    <div className="running-total">
-      <div className="rt-lbl">Running total · {played} hole{played === 1 ? '' : 's'}</div>
-      <div className="rt-items">
+    <div className="money-bar" role="status" aria-label="Money so far">
+      <div className="mb-head">
+        <span>Money</span>
+        <span>{played ? `Thru ${played} hole${played === 1 ? '' : 's'}${pending ? ' + this one' : ''}` : pending ? 'This hole' : 'Starts at $0'}</span>
+      </div>
+      <div className="mb-items" style={{ gridTemplateColumns: `repeat(${round.players.length}, minmax(0, 1fr))` }}>
         {round.players.map(p => {
-          const v = results.balances[p.id];
+          const v = preview.balances[p.id];
+          const d = preview.delta[p.id];
           return (
-            <div key={p.id} className="rt-item">
-              <div className="rt-p">{p.name}</div>
-              <div className={`rt-a ${v > 0 ? 'pos' : v < 0 ? 'neg' : ''}`}>{money(v, { sign: true })}</div>
+            <div key={p.id} className={`mb-item ${top > 0 && v === top ? 'lead' : ''}`}>
+              <div className="mb-p">{p.name.split(' ')[0]}</div>
+              <div key={changed.includes(p.id) ? v : 'same'} className={`mb-a ${v > 0 ? 'pos' : v < 0 ? 'neg' : ''} ${changed.includes(p.id) ? 'bump' : ''}`}>{money(v, { sign: true })}</div>
+              <div className="mb-d">{d ? `${money(d, { sign: true })} this hole` : '\u00a0'}</div>
             </div>
           );
         })}
       </div>
     </div>
   );
+}
+
+/** One line for the toast after saving a hole: who gained the most on it. */
+function holeMoneyLine(round, hole, delta) {
+  const best = round.players.reduce((a, p) => (delta[p.id] > (delta[a?.id] ?? 0) ? p : a), null);
+  if (!best) return `Hole ${hole.no} saved. No money changed hands`;
+  return `Hole ${hole.no}: ${best.name.split(' ')[0]} ${money(delta[best.id], { sign: true })}`;
 }
 
 // --------------------------- Banker ---------------------------------------

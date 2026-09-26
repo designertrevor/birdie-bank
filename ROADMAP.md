@@ -16,11 +16,11 @@ The plan for growing Birdie Bank into a $10k/mo business, and the checklist we w
 
 ## Current focus
 
-**Step 1: Foundation.** Accounts, cloud data, invites and "Suggest something" are built. Google sign-in is open to anyone. Left for S1: custom email (SMTP) so sign-in emails reach anyone, and the quick logo. Then play real Saturday rounds toward the gate (8+ rounds with zero hand math).
+**Step 1: Foundation.** Accounts, cloud data, invites and "Suggest something" are built. Google sign-in is open to anyone. Left for S1: custom email (SMTP) so sign-in emails reach anyone, and the quick logo. Then play real Saturday rounds toward the gate (8+ rounds with zero hand math). The live money bar, the simpler setup and the end-of-round reveal and settle-up shipped early (2026-09-26) to make those rounds smoother.
 
 **The big date:** the creator test (S4) runs February to April 2027, when golf season starts back up. Everything before it is about being ready: a product groups keep using, a smooth path from video to paying, and an App Store app.
 
-Last updated: 2026-09-25
+Last updated: 2026-09-26
 
 ---
 
@@ -170,11 +170,13 @@ Put more money into the winning creators and copy their video formats with other
 
 ### 5. Setting up and playing a round
 - [x] 16 games with the setup wizard, game defaults, crews, bets that change mid-round, 9 or 18 holes
+- [x] `S1` Money on screen from the first hole of every game, starting at $0 and moving as each score is tapped, with what the hole adds and a toast when it's saved (2026-09-26)
+- [x] `S1` Setup asks one question per step, puts the stakes up front with the rest under "More options," and ends on a "Round ready" screen to invite the group before hole 1 (2026-09-26)
 - [ ] `S2` Several games at once in one round (Nassau plus skins plus greenies)
-- [ ] `S2` "Our usual game": saved crew, games and stakes, set up in one tap
+- [ ] `S2` (partial) "Our usual game": saved crew, games and stakes, set up in one tap. "Your usual" on the first setup step repeats the last round's game, course, group and bets (2026-09-26). Still to do: save more than one, and put it behind Pro.
 - [ ] `S2` (partial) House rules for every game, the variations real groups play. Some exist (modified Stableford, skins carryovers). Go through all 16 games, and add the variations people ask for in "Suggest something."
 - [ ] `S2` Ending a round is one tap and forgiving: stopping early, a missing score or a player who left never traps the round open
-- [ ] `S2` The killer end-of-round moment: every game and press totals up in one animated moment, then the fewest payments with one-tap pay links
+- [ ] `S2` (partial) The killer end-of-round moment: every game and press totals up in one animated moment, then the fewest payments with one-tap pay links. Built (2026-09-26): totals count up from $0 with the winner landing last, then a settle-up screen with Venmo pay or request links and Mark paid, then a results card to share. Still to do: count up each game and press, not just the totals, and make the card a real image (area 17).
 - [ ] `S3` Side bets between two players inside a bigger round (proposed during the week, see area 21)
 - [ ] `S5` Several groups, one game: multiple foursomes feeding one pot and one leaderboard
 
@@ -187,6 +189,7 @@ Put more money into the winning creators and copy their video formats with other
 
 ### 7. The tab and settling up
 - [x] Debts netted across every round, recording payments (including partial ones), Venmo pay links
+- [x] `S1` Settle up right from the end of the round: Venmo pay or request links and Mark paid, without leaving for the Ledger (2026-09-26)
 - [ ] `S2` One shared tab for the group: both players see the same numbers, and a recorded payment shows up for the other person
 - [ ] `S2` The group can see who's settled up during the week
 - [ ] `S2` **Carry it over:** instead of "I paid," either person can propose rolling the balance into next week. Once the other person agrees, it's no longer pending or overdue; it stays in the running tab as an agreed carry-over.
@@ -377,3 +380,4 @@ Kept light on purpose. Groups already have a group text, so Birdie Bank adds to 
 - 2026-09-25: Built "Suggest something" (Settings) with a form for each kind, photos, and an offline queue. Needs the feedback SQL run in Supabase before it's pushed.
 - 2026-09-25: Accounts and cloud data: Google and email-link sign-in, offline-first sync of every player, crew, course, round, payment and setting, merge on first sign-in, and a "save it to your tab" prompt after rounds. Supabase SQL run; Google Cloud project "Birdie Bank" created with a web sign-in client.
 - 2026-09-25: Added a privacy policy page and published Google sign-in to production, so anyone can sign in with Google.
+- 2026-09-26: From a Mobbin review and clickable wireframes: money is now pinned on the Play screen from hole 1 and moves with every tap (it used to appear only after a hole was saved, and Banker's bets step hid it). Setup asks one question per step with "Your usual" and a "Round ready" invite screen. The end of a round is now reveal, settle up with Venmo links, then share.

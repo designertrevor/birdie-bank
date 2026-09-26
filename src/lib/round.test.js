@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { createRound, defaultNine, resizeRound, scoredHolesDropped } from './round.js';
+import { createRound, defaultNine, livePreview, resizeRound, scoredHolesDropped } from './round.js';
 
 const DEFAULT_SETTINGS = {
   hcPct: 100,
@@ -88,4 +88,17 @@ test('resize on a 9-hole course plays it twice for 18 and clears Nassau presses'
   assert.equal(out.par, 72);
   assert.deepEqual(out.presses, []);
   assert.equal(resizeRound(r, course9, 9), r); // no-op returns the same object
+});
+
+test('livePreview counts the hole being entered before it is saved', () => {
+  const r = mk(course9, 9, { useHandicaps: false });
+  r.scores[1] = { a: 4, b: 4 }; // tie, skin carries
+  const hole2 = r.holes[1];
+  const none = livePreview(r, hole2);
+  assert.deepEqual(none.balances, { a: 0, b: 0 });
+  assert.deepEqual(none.delta, { a: 0, b: 0 });
+  const p = livePreview(r, hole2, { scores: { a: 3, b: 4 } });
+  assert.deepEqual(p.balances, { a: 4, b: -4 }); // two skins at $2
+  assert.deepEqual(p.delta, { a: 4, b: -4 });
+  assert.equal(r.scores[2], undefined); // the round itself is untouched
 });

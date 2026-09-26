@@ -737,6 +737,25 @@ export function roundResults(round) {
   return { balances, standings, transfers: minimalTransfers(balances), detail };
 }
 
+/**
+ * Money while a hole is being entered: everyone's total with the hole counted, and what the hole
+ * alone adds. `pending` holds the unsaved entries for the hole ({ scores, banker, wolf, marks });
+ * leave it null to count the hole only if it's already saved.
+ */
+export function livePreview(round, hole, pending = null) {
+  const no = hole.no;
+  const put = (key, v) => (v ? { [key]: { ...(round[key] || {}), [no]: v } } : {});
+  const counted = pending
+    ? { ...round, scores: { ...round.scores, [no]: pending.scores }, ...put('banker', pending.banker), ...put('wolf', pending.wolf), ...put('marks', pending.marks) }
+    : round;
+  const without = { ...round, scores: { ...round.scores } };
+  delete without.scores[no];
+  const now = roundResults(counted).balances;
+  const before = roundResults(without).balances;
+  const delta = Object.fromEntries(Object.keys(now).map(id => [id, Math.round((now[id] - before[id]) * 100) / 100]));
+  return { balances: now, delta };
+}
+
 /** Gross totals + counts for stats. Works for a player or a scramble team id. */
 export function scoreSummary(round, pid) {
   let gross = 0, played = 0, birdies = 0, eagles = 0, pars = 0;

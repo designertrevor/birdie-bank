@@ -39,7 +39,8 @@ export function nameOf(state, id) {
   return 'Someone';
 }
 
-export function venmoLink(handle, amount, note = 'Birdie Bank') {
+/** Venmo link to pay `handle`, or with txn 'charge' to request money from them. */
+export function venmoLink(handle, amount, note = 'Birdie Bank', txn = 'pay') {
   if (!handle) return null;
-  return `https://venmo.com/${encodeURIComponent(handle)}?txn=pay&amount=${amount.toFixed(2)}&note=${encodeURIComponent(note)}`;
+  return `https://venmo.com/${encodeURIComponent(handle)}?txn=${txn}&amount=${amount.toFixed(2)}&note=${encodeURIComponent(note)}`;
 }

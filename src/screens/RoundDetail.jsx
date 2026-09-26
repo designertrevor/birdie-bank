@@ -1,14 +1,14 @@
-import { useEffect, useRef, useState } from 'react';
+import { useRef, useState } from 'react';
 import { Empty, Header, Icon, Screen, useUI } from '../components/ui.jsx';
 import { update, useStore } from '../lib/store.js';
 import { GAMES, holeAtPos, holeComplete, roundLegs, roundResults, scoreSummary, scorers, sideNames, skinsTable } from '../lib/round.js';
 import { matchLabel } from '../lib/games.js';
 import { money } from '../lib/golf.js';
-import { confettiFrom } from '../lib/delight.js';
 import { useNav } from '../lib/nav.js';
 import { meFor, roundDate, roundPlayerName, shareRound } from '../lib/format.js';
 import { accountsEnabled, useAccount } from '../lib/cloud.js';
 import { SignInSheet } from '../components/Account.jsx';
+import { Reveal, SettleUp, ShareCard } from '../components/Finale.jsx';
 
 export default function RoundDetail({ id, celebrate }) {
   const nav = useNav();
@@ -18,10 +18,8 @@ export default function RoundDetail({ id, celebrate }) {
   const hero = useRef();
   const acct = useAccount();
   const [signingIn, setSigningIn] = useState(false);
-
-  useEffect(() => {
-    if (celebrate && hero.current) setTimeout(() => confettiFrom(hero.current, 70), 250);
-  }, [celebrate]);
+  // A round that just finished plays out in beats: reveal, settle up, share. The full breakdown is one tap away.
+  const [stage, setStage] = useState(celebrate ? 'reveal' : 'detail');
 
   if (!round) {
     return <Screen><Header title="Round" onBack={nav.pop} /><Empty title="Round not found" text="It may have been deleted." /></Screen>;
@@ -54,6 +52,25 @@ export default function RoundDetail({ id, celebrate }) {
   else if (tie) { heroTitle = `${res.standings.filter(p => p.amount === top.amount).map(p => p.name).join(' & ')} tie for top`; heroAmt = money(top.amount, { sign: true }); }
   else { heroTitle = `${top.name} takes the pot`; heroAmt = money(top.amount, { sign: true }); }
 
+  const saveRow = accountsEnabled && !acct.user && round.status === 'done' && (
+    <button className="set-row" onClick={() => setSigningIn(true)}>
+      <div className="set-icon"><Icon name="cloud-arrow-up" fill /></div>
+      <div className="row-main"><div className="set-name">{meRow && meRow.amount > 0 ? `You won ${money(meRow.amount)}. Save it to your tab` : 'Save this round to your account'}</div><div className="set-sub">Free. Keeps your rounds and tab safe on any device.</div></div>
+      <span className="chevron"><Icon name="caret-right" /></span>
+    </button>
+  );
+  const done = () => nav.reset('history');
+  if (stage !== 'detail') {
+    return (
+      <Screen key={stage}>
+        {stage === 'reveal' && <Reveal round={round} res={res} onNext={() => setStage(res.transfers.length ? 'settle' : 'share')} onDetail={() => setStage('detail')} extra={saveRow && <div style={{ marginTop: 12 }}>{saveRow}</div>} />}
+        {stage === 'settle' && <SettleUp round={round} res={res} onBack={() => setStage('reveal')} onNext={() => setStage('share')} />}
+        {stage === 'share' && <ShareCard round={round} res={res} onBack={() => setStage(res.transfers.length ? 'settle' : 'reveal')} onDone={done} />}
+        {signingIn && <SignInSheet open onClose={() => setSigningIn(false)} />}
+      </Screen>
+    );
+  }
+
   return (
     <Screen>
       <Header title={celebrate ? 'Final results' : 'Round'} onBack={celebrate ? undefined : nav.pop} small
@@ -67,13 +84,7 @@ export default function RoundDetail({ id, celebrate }) {
           {meRow && meRow.id !== top.id && !allSquare && <div className="me-line">You: {money(meRow.amount, { sign: true })}</div>}
         </div>
 
-        {accountsEnabled && !acct.user && round.status === 'done' && (
-          <button className="set-row" onClick={() => setSigningIn(true)}>
-            <div className="set-icon"><Icon name="cloud-arrow-up" fill /></div>
-            <div className="row-main"><div className="set-name">{meRow && meRow.amount > 0 ? `You won ${money(meRow.amount)}. Save it to your tab` : 'Save this round to your account'}</div><div className="set-sub">Free. Keeps your rounds and tab safe on any device.</div></div>
-            <span className="chevron"><Icon name="caret-right" /></span>
-          </button>
-        )}
+        {saveRow}
 
         <div className="sec-label">Standings</div>
         {res.standings.map((p, i) => (
@@ -108,8 +119,8 @@ export default function RoundDetail({ id, celebrate }) {
       </div>
       {celebrate && (
         <div className="cta-wrap">
-          <button className="full-btn" onClick={() => nav.reset('ledger')}><Icon name="receipt" /> Settle up in the Ledger</button>
-          <button className="full-btn outline" onClick={() => nav.reset('history')}>Done</button>
+          {res.transfers.length > 0 && <button className="full-btn" onClick={() => setStage('settle')}><Icon name="receipt" /> Settle up</button>}
+          <button className="full-btn outline" onClick={done}>Done</button>
         </div>
       )}
       {signingIn && <SignInSheet open onClose={() => setSigningIn(false)} />}
