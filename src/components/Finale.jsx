@@ -7,6 +7,8 @@ import { money } from '../lib/golf.js';
 import { venmoLink } from '../lib/ledger.js';
 import { buzz, confettiFrom } from '../lib/delight.js';
 import { meFor, roundDate, roundPlayerName, shareRound } from '../lib/format.js';
+import { markRoundAsked, roundAsked } from '../lib/feedback.js';
+import { useNav } from '../lib/nav.js';
 
 /** Counts from 0 up to `target`, easing out, and holds the final value once done. */
 function useCountUp(target, { delay = 0, duration = 1100 } = {}) {
@@ -165,11 +167,58 @@ export function ShareCard({ round, res, onBack, onDone }) {
             ))}
           </div>
         </div>
+        <HowWasIt round={round} />
       </div>
       <div className="cta-wrap">
         <button className="full-btn" onClick={() => shareRound(round, res, showToast)}><Icon name="share-network" /> Send to the group chat</button>
         <button className="full-btn outline" onClick={onDone}>Done</button>
       </div>
     </>
+  );
+}
+
+// "How was it?" shows once per round: the first time it appears it's saved as asked on this phone,
+// and it stays put for the rest of this visit until answered or dismissed.
+const shownNow = new Set();
+const answered = new Set();
+const RECENT = 3 * 24 * 60 * 60 * 1000; // only ask about rounds that just finished
+
+const REACTIONS = [
+  { key: 'great', icon: 'smiley', label: 'Great', kind: 'feature', lead: 'Glad it was a good one. Anything that would make the next round even better?' },
+  { key: 'ok', icon: 'smiley-meh', label: 'Just OK', kind: 'feature', lead: 'Thanks for saying so. What would have made it better?' },
+  { key: 'off', icon: 'smiley-sad', label: 'Something was off', kind: 'bug', lead: 'Sorry about that. Tell us what went wrong and we’ll look into it.' },
+];
+
+/** A small, dismissible check-in after a round. A reaction opens the feature or bug form with the round attached. */
+export function HowWasIt({ round }) {
+  const nav = useNav();
+  const [show] = useState(() => {
+    if (!nav || round.status !== 'done' || answered.has(round.id)) return false;
+    if (Date.now() - (round.finishedAt || round.createdAt || 0) > RECENT) return false;
+    return shownNow.has(round.id) || !roundAsked(round.id);
+  });
+  const [gone, setGone] = useState(false);
+  useEffect(() => {
+    if (!show) return;
+    shownNow.add(round.id);
+    markRoundAsked(round.id);
+  }, [show, round.id]);
+  if (!show || gone) return null;
+
+  const close = () => { answered.add(round.id); setGone(true); };
+  const pick = r => {
+    close();
+    nav.push('suggest', { kind: r.kind, lead: r.lead, roundId: round.id, extra: { reaction: r.key, roundGame: GAMES[round.game]?.name || round.game } });
+  };
+  return (
+    <div className="checkin" role="group" aria-labelledby={`checkin-${round.id}`}>
+      <div className="checkin-head">
+        <span className="checkin-q" id={`checkin-${round.id}`}>How was it?</span>
+        <button className="checkin-x" onClick={close} aria-label="No thanks"><Icon name="x" /></button>
+      </div>
+      <div className="checkin-opts">
+        {REACTIONS.map(r => <button key={r.key} className="pill-btn" onClick={() => pick(r)}><Icon name={r.icon} /> {r.label}</button>)}
+      </div>
+    </div>
   );
 }

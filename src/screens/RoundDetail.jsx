@@ -8,7 +8,11 @@ import { useNav } from '../lib/nav.js';
 import { meFor, roundDate, roundPlayerName, shareRound } from '../lib/format.js';
 import { accountsEnabled, useAccount } from '../lib/cloud.js';
 import { SignInSheet } from '../components/Account.jsx';
-import { Reveal, SettleUp, ShareCard } from '../components/Finale.jsx';
+import { HowWasIt, Reveal, SettleUp, ShareCard } from '../components/Finale.jsx';
+
+// Where the finale was, so coming back from another screen (e.g. Suggest) doesn't replay the reveal.
+// Keyed by round and its finish time, so finishing the round again starts over.
+const finaleStage = new Map();
 
 export default function RoundDetail({ id, celebrate }) {
   const nav = useNav();
@@ -19,7 +23,11 @@ export default function RoundDetail({ id, celebrate }) {
   const acct = useAccount();
   const [signingIn, setSigningIn] = useState(false);
   // A round that just finished plays out in beats: reveal, settle up, share. The full breakdown is one tap away.
-  const [stage, setStage] = useState(celebrate ? 'reveal' : 'detail');
+  const [stage, setStageRaw] = useState(() => {
+    const saved = celebrate && finaleStage.get(id);
+    return saved && saved.at === round?.finishedAt ? saved.stage : celebrate ? 'reveal' : 'detail';
+  });
+  const setStage = s => { if (celebrate) finaleStage.set(id, { stage: s, at: round?.finishedAt }); setStageRaw(s); };
 
   if (!round) {
     return <Screen><Header title="Round" onBack={nav.pop} /><Empty title="Round not found" text="It may have been deleted." /></Screen>;
@@ -59,7 +67,7 @@ export default function RoundDetail({ id, celebrate }) {
       <span className="chevron"><Icon name="caret-right" /></span>
     </button>
   );
-  const done = () => nav.reset('history');
+  const done = () => { finaleStage.delete(id); nav.reset('history'); };
   if (stage !== 'detail') {
     return (
       <Screen key={stage}>
@@ -106,6 +114,8 @@ export default function RoundDetail({ id, celebrate }) {
           ))}
           {res.transfers.length > 0 && <p className="field-help" style={{ padding: '0 4px' }}>Fewest payments to square everyone up. Track them in the Ledger.</p>}
         </div>
+
+        <HowWasIt round={round} />
 
         <GameBreakdown round={round} res={res} />
 
