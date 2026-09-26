@@ -14,6 +14,8 @@ self.addEventListener('fetch', e => {
   const req = e.request;
   if (req.method !== 'GET') return;
   const url = new URL(req.url);
+  // Live data (course search) always goes to the network; the app keeps what it needs itself
+  if (url.origin === location.origin && url.pathname.startsWith('/api/')) return;
   if (req.mode === 'navigate') {
     // Only the app itself is the offline copy; plain pages like /privacy.html cache under their own path
     const key = url.pathname.endsWith('.html') ? req : '/';
