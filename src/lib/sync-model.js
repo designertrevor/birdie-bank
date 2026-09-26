@@ -1,6 +1,8 @@
 // Pure helpers for splitting a round into shareable pieces and merging them back.
 // A shared round is one "meta" record plus one record per hole, so two phones scoring
-// different holes never overwrite each other.
+// different holes never overwrite each other. Round-wide fields like `left` (players who left)
+// travel in the meta record.
+import { holeComplete } from './round.js';
 
 /** Fields that belong to one phone only and are never shared. */
 const LOCAL_ONLY = ['scores', 'banker', 'wolf', 'marks', 'presses', 'current', 'shared', 'localMe', '_remote', 'pressSeq'];
@@ -63,7 +65,7 @@ export function assemble(meta, holes) {
   const round = { ...meta, scores: {}, banker: {}, wolf: {}, marks: {}, presses: [], current: 0 };
   for (const [no, data] of Object.entries(holes || {})) applyHole(round, Number(no), data);
   round._remote = {};
-  const firstOpen = round.holes.findIndex(h => !round.scores[h.no] || round.players.some(p => round.scores[h.no][p.id] == null));
+  const firstOpen = round.holes.findIndex(h => !holeComplete(round, h));
   round.current = firstOpen < 0 ? round.holes.length - 1 : firstOpen;
   return round;
 }
