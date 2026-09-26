@@ -102,3 +102,13 @@ test('livePreview counts the hole being entered before it is saved', () => {
   assert.deepEqual(p.delta, { a: 4, b: -4 });
   assert.equal(r.scores[2], undefined); // the round itself is untouched
 });
+
+test('livePreview counts a saved hole\'s marks once, not zero times', () => {
+  const r = mk(course9, 9, { game: 'bbb', useHandicaps: false, settings: { ...DEFAULT_SETTINGS, bbb: { value: 1 } } });
+  r.scores[1] = { a: 4, b: 4 };
+  r.marks[1] = { bingo: 'a', bango: 'a', bongo: null };
+  const p = livePreview(r, r.holes[0]);
+  assert.deepEqual(p.balances, { a: 2, b: -2 });
+  assert.deepEqual(p.delta, { a: 2, b: -2 }); // was 0: the "before" round still had the marks
+  assert.deepEqual(r.marks[1], { bingo: 'a', bango: 'a', bongo: null });
+});
