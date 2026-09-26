@@ -3,7 +3,7 @@ import { BallIllo, Icon, Numpad, Screen } from '../components/ui.jsx';
 import { update, uid } from '../lib/store.js';
 import { formatIndex } from '../lib/format.js';
 import { SignInSheet } from '../components/Account.jsx';
-import { accountsEnabled } from '../lib/cloud.js';
+import { accountsEnabled, useAccount } from '../lib/cloud.js';
 
 export default function Onboarding() {
   const [step, setStep] = useState(0);
@@ -11,6 +11,16 @@ export default function Onboarding() {
   const [index, setIndex] = useState(null);
   const [pad, setPad] = useState(false);
   const [signingIn, setSigningIn] = useState(false);
+  const acct = useAccount();
+
+  // Signed in with an account that has no rounds yet: skip the welcome and prefill the name
+  const [greeted, setGreeted] = useState(null);
+  if (acct.user && acct.state === 'synced' && greeted !== acct.user.id) {
+    setGreeted(acct.user.id);
+    setSigningIn(false);
+    if (step === 0) setStep(1);
+    if (!name) setName((acct.user.name || '').split(' ')[0]);
+  }
 
   const finish = () => {
     update(s => {
@@ -51,7 +61,7 @@ export default function Onboarding() {
           <h1 className="onboard-title" style={{ fontSize: 34 }}>Friendly wagers only</h1>
           <p className="onboard-text" style={{ textAlign: 'left' }}>Birdie Bank tracks bets between friends. It never holds, sends or collects money. You settle up yourselves.</p>
           <ul className="onboard-list">
-            <li><Icon name="device-mobile" fill /> Everything is saved on this phone. One person keeps score for the group.</li>
+            <li><Icon name="device-mobile" fill /> Scores save on this phone first, so a round works with no signal. Sign in to keep them safe on any device.</li>
             <li><Icon name="scales" fill /> Handicaps use the World Handicap System, so strokes go to everyone off the best player.</li>
             <li><Icon name="warning-circle" fill /> Check that betting on golf is legal where you play.</li>
           </ul>
@@ -69,6 +79,7 @@ export default function Onboarding() {
       <div className="scroll onboard-body" style={{ textAlign: 'left', alignItems: 'stretch' }}>
         <h1 className="onboard-title" style={{ fontSize: 34 }}>Who’s keeping score?</h1>
         <p className="onboard-text" style={{ textAlign: 'left' }}>That’s you. Add your name and handicap. You can change these any time.</p>
+        {acct.user && <p className="field-help" style={{ marginTop: 0 }}>Signed in as {acct.user.email}. Your rounds will save to your account.</p>}
         <label className="field-label" htmlFor="ob-name">Your name</label>
         <input id="ob-name" className="name-input" value={name} onChange={e => setName(e.target.value)} placeholder="e.g. Trevor" autoComplete="given-name" maxLength={24} />
         <label className="field-label">Handicap index <span className="opt">optional</span></label>

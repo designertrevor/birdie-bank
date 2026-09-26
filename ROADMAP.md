@@ -16,7 +16,7 @@ The plan for growing Birdie Bank into a $10k/mo business, and the checklist we w
 
 ## Current focus
 
-**Step 1: Foundation.** Accounts and cloud data, claiming your seat, and the first "Suggest something" form. Invites are live in production, and a join link now takes a new phone straight to picking your name. Start the quick logo alongside, since it's design work Trevor does himself and doesn't block engineering. Build the cloud data offline first: a round in progress must keep working with no signal and never lose a score (see "Lessons from Golf GameBook").
+**Step 1: Foundation.** Accounts, cloud data, invites and "Suggest something" are built. Left for S1: custom email (SMTP) so sign-in emails reach anyone, a privacy policy page so Google sign-in can leave testing mode, and the quick logo. Then play real Saturday rounds toward the gate (8+ rounds with zero hand math).
 
 **The big date:** the creator test (S4) runs February to April 2027, when golf season starts back up. Everything before it is about being ready: a product groups keep using, a smooth path from video to paying, and an App Store app.
 
@@ -139,15 +139,15 @@ Put more money into the winning creators and copy their video formats with other
 
 ### 1. Accounts and cloud data
 - [ ] `S1` (partial) Data saved on the phone, with a backup file you can export in Settings
-- [ ] `S1` Sign in with Apple, Google, or a phone number or email link
-- [ ] `S1` Rounds, crews and the tab saved to the cloud and shared across devices
-- [ ] `S1` Claim your seat: a guest player becomes the real person when they sign up, and their history and tab come with them
-- [ ] `S1` Move each phone's existing local data into the account
-- [ ] `S1` Offline first: scoring keeps working with no signal, changes queue and sync when signal returns, and a score is never lost or overwritten
+- [ ] `S1` (partial) Sign in with Apple, Google, or a phone number or email link. Google and email link work (2026-09-25). Google is in testing mode (up to 100 listed test users) until a privacy policy page exists; email only reaches Supabase team members until custom SMTP is set up. Apple comes with the App Store app (S3); phone numbers are skipped for now.
+- [x] `S1` Rounds, crews and the tab saved to the cloud and shared across devices (2026-09-25)
+- [ ] `S1` (partial) Claim your seat: a guest player becomes the real person when they sign up, and their history and tab come with them. A guest who joins from a link plays as their seat in that round, and signing up saves those rounds to their account. Linking the organizer's copy of that player to the real person comes with the shared tab (S2).
+- [x] `S1` Move each phone's existing local data into the account (2026-09-25)
+- [x] `S1` Offline first: scoring keeps working with no signal, changes queue and sync when signal returns, and a score is never lost or overwritten (2026-09-25)
 - [ ] `S3` Delete your account (Apple requires it)
 
 ### 2. Profiles
-- [ ] `S1` (partial) Players have a name, handicap index and Venmo username, stored only on the phone
+- [x] `S1` Players have a name, handicap index and Venmo username, saved to your account when signed in (2026-09-25)
 - [ ] `S3` Your own profile: photo, home course, handicap, which payment apps you use
 - [ ] `S5` Profile stats: rounds, net winnings, record against each friend, favorite game
 - [ ] `S3` Privacy settings, with money hidden by default
@@ -155,7 +155,7 @@ Put more money into the winning creators and copy their video formats with other
 ### 3. Onboarding
 - [x] Three-step first run: welcome, the "friendly wagers" disclaimer, your name and handicap
 - [x] `S1` Two paths: the organizer setting up a game, and the invited player arriving from a link (pick your name, you're in) (2026-09-25)
-- [ ] `S1` (partial) Guests play without an account, then "You won $22. Save it to your tab" leads to sign-up. Guests can play from a link now; the sign-up prompt waits on accounts.
+- [x] `S1` Guests play without an account, then "You won $22. Save it to your tab" leads to sign-up (2026-09-25)
 - [ ] `S2` Organizer onboarding as a series of questions that sells as it goes: what games your group plays, how many of you, how you settle up now, who ends up doing the math
 - [ ] `S2` Onboarding ends with "Set up your next round" and inviting the group, so a new organizer gets value on day one, not on Saturday
 - [ ] `S2` The paywall and free trial at the end of organizer onboarding (see area 11)
@@ -375,3 +375,4 @@ Kept light on purpose. Groups already have a group text, so Birdie Bank adds to 
 - 2026-09-25: Finalized for now: pricing marked as something to learn by testing, full chat set aside, "build what's asked for" added to the rules.
 - 2026-09-25: Live sharing was already on in production (since 2026-09-23). A join link on a new phone now skips organizer onboarding: see the round, pick your name, you're in.
 - 2026-09-25: Built "Suggest something" (Settings) with a form for each kind, photos, and an offline queue. Needs the feedback SQL run in Supabase before it's pushed.
+- 2026-09-25: Accounts and cloud data: Google and email-link sign-in, offline-first sync of every player, crew, course, round, payment and setting, merge on first sign-in, and a "save it to your tab" prompt after rounds. Supabase SQL run; Google Cloud project "Birdie Bank" created with a web sign-in client.

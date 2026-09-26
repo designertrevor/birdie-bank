@@ -58,3 +58,10 @@ test('remapId swaps a player id everywhere, keys included', () => {
   assert.equal(s.rounds.r1.scores[1].p_acct, 4);
   assert.equal(s.settlements[0].to, 'p_acct');
 });
+
+test('a profile saved before setup finished never blanks out me', () => {
+  const s = base();
+  applyDoc(s, 'profile', 'me', { me: null, onboarded: false, settings: {}, favorites: [] });
+  assert.equal(s.me, 'p_me');
+  assert.equal(s.onboarded, true);
+});

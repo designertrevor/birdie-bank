@@ -48,7 +48,8 @@ export function applyDoc(draft, kind, id, data) {
     return;
   }
   if (kind === 'profile' && data != null) {
-    draft.me = data.me;
+    // A profile saved before setup finished never blanks out who "me" is
+    if (data.me) draft.me = data.me;
     draft.onboarded = data.onboarded || draft.onboarded;
     draft.settings = { ...draft.settings, ...data.settings };
     draft.favorites = data.favorites || [];

@@ -113,7 +113,9 @@ async function syncOnce() {
   if (rows.length) meta.cursor = rows[rows.length - 1].updated_at;
   saveMeta(meta);
 
-  // 2. Send up what changed here
+  // 2. Send up what changed here (nothing until setup is done, so a half-set-up phone can't
+  // overwrite the account)
+  if (!getState().onboarded) { setStatus({ state: 'synced', pending: 0, lastSynced: Date.now() }); return; }
   const out = outgoing(toDocs(getState()), meta.shadow);
   for (let i = 0; i < out.length; i += 200) {
     const chunk = out.slice(i, i + 200);
