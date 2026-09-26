@@ -8,7 +8,11 @@
   --pink: #ff4d8b; --teal: #1a3a3a; --lav: #b8a4ed; --peach: #ffb084;
   --ochre: #e8b94a; --mint: #a4d4c5; --coral: #ff6b5a;
   --icon: var(--teal); /* icons on cards and surfaces; mint in dark mode so they stay visible */
-  --win: #0f6b4f; --win-bg: #d6efe6; --loss: #c2362a; --loss-bg: #ffe1dc;
+  --pink-text: #c92463; /* pink words and marks on light surfaces (4.5:1); brand pink in dark mode */
+  --coral-text: #e5533f; /* coral for big numbers only (3:1 on cards) */
+  --focus: #6b4fd0; /* keyboard focus ring, 3:1 on every surface */
+  --venmo: #2b76ad; /* Venmo blue, deep enough for white text */
+  --win: #0f6b4f; --win-bg: #d6efe6; --loss: #b83226; --loss-bg: #ffe1dc;
   --on-ink: #ffffff; --on-pastel: #0a0a0a; --bkr-card: #fff6dd; --cur-cell: #ffe3ee;
   --display: "Bricolage Grotesque", Inter, system-ui, sans-serif;
   --spring: cubic-bezier(.3,1.5,.5,1);
@@ -66,7 +70,7 @@ button { font-family: inherit; }
   transition: transform .2s var(--spring);
 }
 .header-back, .header-close, .icon-btn {
-  width: 42px; height: 42px; border-radius: 50%; border: none; background: var(--surface); color: var(--ink);
+  width: 44px; height: 44px; border-radius: 50%; border: none; background: var(--surface); color: var(--ink);
   font-size: 20px; display: grid; place-items: center; cursor: pointer; flex-shrink: 0; padding: 0;
   transition: transform .2s var(--spring);
 }
@@ -269,9 +273,9 @@ a.set-row { text-decoration: none; }
 .sc-num { width: 44px; text-align: center; font-family: var(--display); font-size: 32px; font-weight: 800; color: var(--ink); flex-shrink: 0; font-variant-numeric: tabular-nums; }
 .sc-num.bump { animation: pop .3s var(--spring); }
 .sc-num.birdie { color: var(--pink); }
-.sc-num.eagle { color: var(--coral); }
+.sc-num.eagle { color: var(--coral-text); }
 .sc-lbl { font-size: 10px; text-transform: uppercase; letter-spacing: .05em; color: var(--mute); text-align: center; margin-bottom: 2px; }
-.score-tag { display: block; font-size: 11px; font-weight: 700; text-align: center; margin-top: 2px; min-height: 14px; color: var(--pink); text-transform: uppercase; letter-spacing: .06em; }
+.score-tag { display: block; font-size: 11px; font-weight: 700; text-align: center; margin-top: 2px; min-height: 14px; color: var(--pink-text); text-transform: uppercase; letter-spacing: .06em; }
 
 .player-controls { display: flex; flex-direction: column; gap: 6px; align-items: flex-end; flex-shrink: 0; }
 
@@ -356,7 +360,7 @@ a.set-row { text-decoration: none; }
   flex: 1; height: 46px; border: none; border-radius: 999px; font-family: var(--display); font-size: 17px; font-weight: 800;
   cursor: pointer; background: transparent; color: var(--mute); transition: background .2s, color .2s, transform .2s var(--spring);
 }
-.pm-btn { font-size: 15px; height: 42px; }
+.pm-btn { font-size: 15px; height: 44px; }
 .holes-btn.active, .pm-btn.active { background: var(--ink); color: var(--on-ink); }
 .holes-btn:active:not(:disabled), .pm-btn:active { transform: scale(.95); }
 
@@ -429,7 +433,7 @@ a.set-row { text-decoration: none; }
 .rules-section { font-family: var(--display); font-size: 17px; font-weight: 800; color: var(--ink); margin: 18px 0 6px; }
 .rules-body { font-size: 15px; color: var(--body); line-height: 1.55; }
 .rules-body li { margin-left: 18px; margin-bottom: 6px; }
-.rules-body li::marker { color: var(--pink); font-weight: 700; }
+.rules-body li::marker { color: var(--pink-text); font-weight: 700; }
 
 /* NASSAU MATCH STATUS */
 .match-status { display: flex; gap: 6px; margin: 0 16px 8px; flex-shrink: 0; }
@@ -446,10 +450,10 @@ a.set-row { text-decoration: none; }
 .press-bar { padding: 8px 16px; margin: 0 16px 8px; background: var(--lav); border-radius: 18px; flex-shrink: 0; display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
 .press-bar-lbl { font-size: 12px; font-weight: 600; color: rgba(0,0,0,.65); }
 .press-chip { font-size: 12px; font-weight: 700; padding: 4px 10px; background: #fff; border-radius: 999px; margin-right: 4px; }
-.press-alert { padding: 12px 12px 12px 16px; margin: 0 16px 8px; background: var(--coral); color: #fff; border-radius: 18px; flex-shrink: 0; }
+.press-alert { padding: 12px 12px 12px 16px; margin: 0 16px 8px; background: var(--coral); color: var(--on-pastel); border-radius: 18px; flex-shrink: 0; }
 .press-alert-row { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
 .press-alert-row + .press-alert-row { margin-top: 10px; }
-.press-alert-txt { font-size: 14px; font-weight: 600; color: #fff; }
+.press-alert-txt { font-size: 14px; font-weight: 600; color: var(--on-pastel); }
 .press-call-btn {
   font-size: 14px; font-weight: 700; padding: 8px 14px; border-radius: 999px; border: none; background: var(--ink); color: var(--on-ink);
   cursor: pointer; display: inline-flex; align-items: center; gap: 5px; animation: wiggle .6s ease-in-out 2;
@@ -507,7 +511,7 @@ a.set-row { text-decoration: none; }
 /* ============================================================
    APP COMPONENTS (React build)
    ============================================================ */
-:root { --mute-soft: #6f6f66; }
+:root { --mute-soft: #6a6a62; }
 button { font: inherit; color: inherit; }
 .set-row, .list-item, .ledger-row, .round-card, .sheet-item, .add-row, .resume-card { width: calc(100% - 32px); text-align: left; border: none; font: inherit; color: inherit; }
 .list-item { width: 100%; }
@@ -515,7 +519,15 @@ button { font: inherit; color: inherit; }
 .set-row.static:active, .ledger-row.static:active { transform: none; }
 .row-main { flex: 1; min-width: 0; }
 .sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
-:focus-visible { outline: 3px solid var(--lav); outline-offset: 2px; border-radius: 12px; }
+:focus-visible { outline: 3px solid var(--focus); outline-offset: 2px; border-radius: 12px; }
+/* Sheets take focus so screen readers start at their title; the sheet itself needs no ring */
+.sheet-overlay:focus-visible, .numpad-overlay:focus-visible { outline: none; }
+/* Tap targets: small controls keep their look but get an invisible hit area of at least 44 x 44 */
+.rules-chip, .pickup-btn, .pill-btn.sm, .hdcp-btn, .swatch, .tog, .icon-btn.sm, .dbl-btn, .tee-chip, .hc-chip, .team-letter, .pill-link, .press-call-btn { position: relative; }
+.rules-chip::before, .pickup-btn::before, .pill-btn.sm::before, .hdcp-btn::before, .swatch::before, .tog::before, .icon-btn.sm::before,
+.dbl-btn::before, .tee-chip::before, .hc-chip::before, .team-letter::before, .pill-link::before, .press-call-btn::before {
+  content: ''; position: absolute; left: 50%; top: 50%; width: max(100%, 44px); height: max(100%, 44px); transform: translate(-50%, -50%);
+}
 
 button:disabled { cursor: not-allowed; }
 .full-btn:disabled { background: var(--surface-strong); color: var(--mute); transform: none; }
@@ -547,7 +559,7 @@ button:disabled { cursor: not-allowed; }
 .danger-link:disabled { color: var(--mute-soft); }
 .sheet-text { padding: 0 20px 12px; color: var(--body); font-size: 15px; line-height: 1.5; }
 .sheet-item span { display: inline-flex; align-items: center; gap: 8px; }
-.sheet-item.venmo { background: #3d95ce; color: #fff; text-decoration: none; }
+.sheet-item.venmo { background: var(--venmo); color: #fff; text-decoration: none; }
 .set-icon { width: 36px; height: 36px; border-radius: 12px; background: var(--surface); display: grid; place-items: center; font-size: 18px; margin-right: 12px; flex-shrink: 0; color: var(--icon); }
 .warn-tag { display: inline-flex; align-items: center; gap: 4px; font-size: 12px; font-weight: 600; color: #8a5a00; background: #fff1c9; padding: 2px 8px; border-radius: 999px; margin-top: 6px; }
 .chip-row { display: flex; gap: 8px; flex-wrap: wrap; padding: 0 16px 10px; }
@@ -589,9 +601,9 @@ button:disabled { cursor: not-allowed; }
 .play-progress { font-size: 12px; color: var(--mute); font-weight: 600; }
 .hole-meta[role="button"] { cursor: pointer; }
 .score-row { display: flex; align-items: center; gap: 10px; padding: 14px 14px 14px 16px; }
-.stroke-dots { color: var(--pink); font-weight: 700; margin-right: 4px; }
+.stroke-dots { color: var(--pink-text); font-weight: 700; margin-right: 4px; }
 .score-name { font-weight: 700; }
-.score-name.s-2, .score-name.s-1 { color: var(--pink); }
+.score-name.s-2, .score-name.s-1 { color: var(--pink-text); }
 .score-name.s0 { color: var(--win); }
 .score-name.s1, .score-name.s2 { color: var(--mute); }
 .pickup-btn { margin-top: 6px; border: none; background: none; color: var(--mute); font-size: 12px; font-weight: 600; padding: 2px 0; cursor: pointer; display: inline-flex; align-items: center; gap: 4px; }
@@ -635,7 +647,7 @@ button:disabled { cursor: not-allowed; }
 .scorecard .tot { font-weight: 800; font-family: var(--display); }
 .sc-col-btn { border: none; background: none; font-weight: 700; font-size: 11px; width: 100%; padding: 4px 0; cursor: pointer; color: inherit; }
 .sc-mark { display: inline-grid; place-items: center; width: 24px; height: 24px; font-weight: 600; }
-.sc-mark.birdie { border-radius: 50%; box-shadow: 0 0 0 2px var(--pink); color: var(--pink); }
+.sc-mark.birdie { border-radius: 50%; box-shadow: 0 0 0 2px var(--pink-text); color: var(--pink-text); }
 .sc-mark.eagle { border-radius: 50%; background: var(--pink); color: #fff; }
 .sc-mark.bogey { box-shadow: 0 0 0 1.5px var(--mute-soft); border-radius: 4px; }
 .sc-mark.dbl { box-shadow: 0 0 0 1.5px var(--mute-soft), 0 0 0 3.5px var(--card), 0 0 0 5px var(--mute-soft); border-radius: 4px; }
@@ -665,18 +677,18 @@ button:disabled { cursor: not-allowed; }
    ============================================================ */
 :root[data-theme="dark"] {
   --canvas: #121615; --surface: #202624; --surface-strong: #2c3331; --card: #1a1f1e;
-  --ink: #f5f0e4; --body: #d5d0c3; --mute: #a8a498; --mute-soft: #969286;
+  --ink: #f5f0e4; --body: #d5d0c3; --mute: #a8a498; --mute-soft: #a09c90;
   --line: #2c3331; --line-soft: #242a28;
-  --teal: #173d3c; --icon: var(--mint); --win: #6fd3a8; --win-bg: #173a2e; --loss: #ff8a7d; --loss-bg: #3d1f1c;
+  --teal: #173d3c; --icon: var(--mint); --pink-text: var(--pink); --coral-text: var(--coral); --focus: var(--lav); --win: #6fd3a8; --win-bg: #173a2e; --loss: #ff8a7d; --loss-bg: #3d1f1c;
   --on-ink: #0a0a0a; --bkr-card: #2e2a1c; --cur-cell: #3a2030;
   color-scheme: dark;
 }
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]):not([data-theme="dark"]) {
   --canvas: #121615; --surface: #202624; --surface-strong: #2c3331; --card: #1a1f1e;
-  --ink: #f5f0e4; --body: #d5d0c3; --mute: #a8a498; --mute-soft: #969286;
+  --ink: #f5f0e4; --body: #d5d0c3; --mute: #a8a498; --mute-soft: #a09c90;
   --line: #2c3331; --line-soft: #242a28;
-  --teal: #173d3c; --icon: var(--mint); --win: #6fd3a8; --win-bg: #173a2e; --loss: #ff8a7d; --loss-bg: #3d1f1c;
+  --teal: #173d3c; --icon: var(--mint); --pink-text: var(--pink); --coral-text: var(--coral); --focus: var(--lav); --win: #6fd3a8; --win-bg: #173a2e; --loss: #ff8a7d; --loss-bg: #3d1f1c;
   --on-ink: #0a0a0a; --bkr-card: #2e2a1c; --cur-cell: #3a2030;
   color-scheme: dark;
   }
@@ -685,6 +697,8 @@ button:disabled { cursor: not-allowed; }
 .round-card, .round-card .rc-course, .round-card .rc-result, .banker-bar, .banker-bar .bn, .summary-card, .summary-card .d,
 .chip.ochre, .bkr-badge, .add-ci, .wolf-panel, .press-bar, .press-chip, .step.done, .ms-tile.ahead .ms-val,
 .change-btn { color: var(--on-pastel); }
+/* White on coral is under 3:1, so coral badges use the pastel text too */
+.settle-row:first-of-type .sr, .stand-row:first-of-type .st-num, .side-tag.b, .team-letter.t1.on { color: var(--on-pastel); }
 .ledger-summary .bl { color: var(--mute); }
 .press-chip { background: #fff; }
 
@@ -800,7 +814,7 @@ button:disabled { cursor: not-allowed; }
   display: inline-flex; align-items: center; justify-content: center; gap: 6px; cursor: pointer; text-decoration: none; transition: transform .2s var(--spring);
 }
 .pay-btn:active { transform: scale(.95); }
-.pay-btn.venmo { background: #3d95ce; color: #fff; }
+.pay-btn.venmo { background: var(--venmo); color: #fff; }
 .pay-btn { min-width: 0; padding: 0 12px; white-space: nowrap; }
 .pay-lbl { overflow: hidden; text-overflow: ellipsis; }
 .pay-btn.done { background: var(--win-bg); color: var(--win); }
