@@ -81,7 +81,7 @@ export default function Settings() {
         <div className="sec-label">Appearance</div>
         <div className="block">
           <div className="eyebrow" style={{ marginBottom: 10 }}>Theme</div>
-          <Segmented className="press-mode-row" btn="pm-btn" value={state.settings.theme} onChange={v => update(s => { s.settings.theme = v; })}
+          <Segmented label="Theme" className="press-mode-row" btn="pm-btn" value={state.settings.theme} onChange={v => update(s => { s.settings.theme = v; })}
             options={[{ value: 'system', label: 'System' }, { value: 'light', label: 'Light' }, { value: 'dark', label: 'Dark' }]} />
         </div>
         <div className="sec-label">Games</div>
@@ -132,7 +132,7 @@ export function Defaults() {
         <div className="sec-label">Handicaps</div>
         <div className="block">
           <div className="eyebrow" style={{ marginBottom: 10 }}>Strokes given off the low player</div>
-          <Segmented className="press-mode-row" btn="pm-btn" value={s.hcPct} onChange={v => set('hcPct', v)} options={[100, 90, 80].map(n => ({ value: n, label: `${n}%` }))} />
+          <Segmented label="Strokes given off the low player" className="press-mode-row" btn="pm-btn" value={s.hcPct} onChange={v => set('hcPct', v)} options={[100, 90, 80].map(n => ({ value: n, label: `${n}%` }))} />
         </div>
         <div className="sec-label">Banker</div>
         {amount('banker.defaultBet', 'Default bet')}
@@ -141,10 +141,10 @@ export function Defaults() {
         {bankerBad && <p className="field-error" style={{ margin: '0 20px 8px' }}>Default bet has to sit between the minimum and maximum.</p>}
         <div className="block">
           <div className="eyebrow" style={{ marginBottom: 10 }}>Rotation</div>
-          <Segmented className="press-mode-row" btn="pm-btn" value={s.banker.rotation} onChange={v => set('banker.rotation', v)}
+          <Segmented label="Banker rotation" className="press-mode-row" btn="pm-btn" value={s.banker.rotation} onChange={v => set('banker.rotation', v)}
             options={[{ value: 'rotate', label: 'Each hole' }, { value: 'nine', label: 'Each 9' }, { value: 'fixed', label: 'Fixed' }, { value: 'choice', label: 'Pick' }]} />
           <div className="eyebrow" style={{ margin: '14px 0 10px' }}>Ties</div>
-          <Segmented className="press-mode-row" btn="pm-btn" value={s.banker.ties} onChange={v => set('banker.ties', v)}
+          <Segmented label="Banker ties" className="press-mode-row" btn="pm-btn" value={s.banker.ties} onChange={v => set('banker.ties', v)}
             options={[{ value: 'push', label: 'Push' }, { value: 'banker', label: 'Banker wins' }]} />
         </div>
         <div className="sec-label">Nassau</div>
@@ -153,10 +153,10 @@ export function Defaults() {
         {amount('nassau.total', 'Total 18')}
         <div className="block">
           <div className="eyebrow" style={{ marginBottom: 10 }}>Presses</div>
-          <Segmented className="press-mode-row" btn="pm-btn" value={s.nassau.pressMode} onChange={v => set('nassau.pressMode', v)}
+          <Segmented label="Nassau presses" className="press-mode-row" btn="pm-btn" value={s.nassau.pressMode} onChange={v => set('nassau.pressMode', v)}
             options={[{ value: 'off', label: 'Off' }, { value: 'manual', label: 'Manual' }, { value: 'auto', label: 'Auto' }]} />
           <div className="eyebrow" style={{ margin: '14px 0 10px' }}>Down by</div>
-          <Segmented className="press-mode-row" btn="pm-btn" value={s.nassau.threshold} onChange={v => set('nassau.threshold', v)}
+          <Segmented label="Press when down by" className="press-mode-row" btn="pm-btn" value={s.nassau.threshold} onChange={v => set('nassau.threshold', v)}
             options={[1, 2, 3].map(n => ({ value: n, label: String(n) }))} />
         </div>
         <div className="sec-label">Skins</div>
@@ -169,7 +169,7 @@ export function Defaults() {
         {amount('wolf.point', 'Per point')}
         <div className="block">
           <div className="eyebrow" style={{ marginBottom: 10 }}>Lone wolf</div>
-          <Segmented className="press-mode-row" btn="pm-btn" value={s.wolf.loneMultiplier} onChange={v => set('wolf.loneMultiplier', v)} options={[2, 3].map(n => ({ value: n, label: `${n}×` }))} />
+          <Segmented label="Lone wolf" className="press-mode-row" btn="pm-btn" value={s.wolf.loneMultiplier} onChange={v => set('wolf.loneMultiplier', v)} options={[2, 3].map(n => ({ value: n, label: `${n}×` }))} />
         </div>
         {['match', 'vegas', 'sixes', 'scramble', 'stroke', 'stableford', 'quota', 'nines', 'aces', 'bbb', 'dots', 'rabbit'].map(g => (
           <div key={g}>
@@ -297,7 +297,7 @@ export function CourseEdit({ id }) {
           <label className="field-label" htmlFor="cc">City</label>
           <input id="cc" className="text-input" value={c.city || ''} onChange={e => setC({ ...c, city: e.target.value })} placeholder="City, State" />
           <label className="field-label">Holes</label>
-          <Segmented value={n} onChange={setHoles} options={[{ value: 9, label: '9' }, { value: 18, label: '18' }]} />
+          <Segmented label="Holes" value={n} onChange={setHoles} options={[{ value: 9, label: '9' }, { value: 18, label: '18' }]} />
         </div>
 
         <div className="sec-label">Par &amp; handicap · Par {coursePar(c)}</div>

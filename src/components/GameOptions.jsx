@@ -13,13 +13,13 @@ export function GameOptions({ game, get, set, onAmount, holesCount = 18, compact
   const amount = (path, title, { min = 1, max = 500, label } = {}) => (
     <div className="nassau-bet-row" key={path}>
       <div className="nassau-bet-lbl">{label || title}</div>
-      <button className="nassau-bet-btn" onClick={() => onAmount(path, title, { min, max })}>{money(get(path))}</button>
+      <button className="nassau-bet-btn" aria-label={`${label || title}: ${money(get(path))}. Change`} onClick={() => onAmount(path, title, { min, max })}>{money(get(path))}</button>
     </div>
   );
   const seg = (path, options, eyebrow, first = false) => (
     <div key={path}>
       {eyebrow && <div className="eyebrow" style={{ margin: first ? '0 0 10px' : '14px 0 8px' }}>{eyebrow}</div>}
-      <Segmented className="press-mode-row" btn="pm-btn" value={get(path)} onChange={v => set(path, v)} options={options} />
+      <Segmented label={eyebrow} className="press-mode-row" btn="pm-btn" value={get(path)} onChange={v => set(path, v)} options={options} />
     </div>
   );
   const toggle = (path, label, sub) => (
@@ -232,7 +232,7 @@ export function TeamPicker({ game, picked, names, teams, setTeams }) {
       {canChooseCount && (
         <div className="block">
           <div className="eyebrow" style={{ marginBottom: 10 }}>Number of teams</div>
-          <Segmented value={count} onChange={setCount} options={Array.from({ length: cfg.count[1] - cfg.count[0] + 1 }, (_, i) => cfg.count[0] + i).filter(n => n <= picked.length).map(n => ({ value: n, label: String(n) }))} />
+          <Segmented label="Number of teams" value={count} onChange={setCount} options={Array.from({ length: cfg.count[1] - cfg.count[0] + 1 }, (_, i) => cfg.count[0] + i).filter(n => n <= picked.length).map(n => ({ value: n, label: String(n) }))} />
         </div>
       )}
       {picked.map(pid => (

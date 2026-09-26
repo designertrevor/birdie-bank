@@ -255,8 +255,8 @@ function PlayRound({ round }) {
                 <div className="score-ctrl">
                   <button className="sc-btn" aria-label={`${p.name} one less`} disabled={v !== 'X' && v <= 1}
                     onClick={() => setScore(p.id, v === 'X' ? hole.par : Math.max(1, v - 1))}><Icon name="minus" /></button>
-                  <span ref={el => { numRefs.current[p.id] = el; }} className={`sc-num ${touched[p.id] ? '' : 'untouched'} ${v !== 'X' && v < hole.par ? 'birdie' : ''}`} aria-live="polite" aria-label={`${p.name} score`}>
-                    {v === 'X' ? 'X' : v}
+                  <span ref={el => { numRefs.current[p.id] = el; }} className={`sc-num ${touched[p.id] ? '' : 'untouched'} ${v !== 'X' && v < hole.par ? 'birdie' : ''}`} aria-live="polite" aria-atomic="true">
+                    <span className="sr-only">{p.name} </span>{v === 'X' ? <><span aria-hidden="true">X</span><span className="sr-only">picked up</span></> : v}
                   </span>
                   <button className="sc-btn" aria-label={`${p.name} one more`} disabled={v !== 'X' && v >= 15}
                     onClick={() => setScore(p.id, v === 'X' ? hole.par + 1 : Math.min(15, v + 1))}><Icon name="plus" /></button>
@@ -309,7 +309,7 @@ function PlayRound({ round }) {
         <>
           <Sheet open={bankerPick} onClose={() => setBankerPick(false)} title={`Banker · Hole ${hole.no}`}>
             {round.players.map(p => (
-              <button key={p.id} className={`sheet-item ${banker.banker === p.id ? 'selected' : ''}`}
+              <button key={p.id} className={`sheet-item ${banker.banker === p.id ? 'selected' : ''}`} aria-pressed={banker.banker === p.id}
                 onClick={() => {
                   const bets = {};
                   const def = round.settings.banker.defaultBet;
@@ -358,13 +358,13 @@ function HolesSheet({ round, onClose }) {
     <Sheet open onClose={onClose} title="Round length">
       <p className="sheet-text">Scores you’ve entered stay put. Par, handicaps and strokes are worked out again for the new length.</p>
       <div style={{ padding: '0 20px 12px' }}>
-        <Segmented value={count} onChange={setCount}
+        <Segmented label="Round length" value={count} onChange={setCount}
           options={[9, 18].map(n => ({ value: n, label: `${n} holes`, disabled: !g.holes.includes(n) }))} />
       </div>
       {changed && course && count === 9 && course.holes.length === 18 && (
         <div style={{ padding: '0 20px 12px' }}>
           <div className="eyebrow" style={{ marginBottom: 8 }}>Which nine</div>
-          <Segmented value={nine} onChange={setNine} options={[{ value: 'front', label: 'Front 9' }, { value: 'back', label: 'Back 9' }]} />
+          <Segmented label="Which nine" value={nine} onChange={setNine} options={[{ value: 'front', label: 'Front 9' }, { value: 'back', label: 'Back 9' }]} />
         </div>
       )}
       {!course && <p className="hint-card"><Icon name="info" fill /> This phone doesn’t have {round.course.name} saved, so the round length can’t be changed here.</p>}
@@ -452,8 +452,9 @@ function MoneyBar({ round, preview }) {
     setChanged(round.players.filter(p => prev[p.id] !== preview.balances[p.id]).map(p => p.id));
     setPrev(preview.balances);
   }
+  // Not a live region: it changes on every tap. The saved hole's result is announced by the toast.
   return (
-    <div className="money-bar" role="status" aria-label="Money so far">
+    <div className="money-bar" role="group" aria-label="Money so far">
       <div className="mb-head">
         <span>Money</span>
         <span>{played ? `Thru ${played} hole${played === 1 ? '' : 's'}${pending ? ' + this one' : ''}` : pending ? 'This hole' : 'Starts at $0'}</span>
