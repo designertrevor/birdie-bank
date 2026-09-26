@@ -20,6 +20,7 @@ export default function RoundDetail({ id, celebrate }) {
   const [signingIn, setSigningIn] = useState(false);
   // A round that just finished plays out in beats: reveal, settle up, share. The full breakdown is one tap away.
   const [stage, setStage] = useState(celebrate ? 'reveal' : 'detail');
+  const [revealSeen, setRevealSeen] = useState(false);
 
   if (!round) {
     return <Screen><Header title="Round" onBack={nav.pop} /><Empty title="Round not found" text="It may have been deleted." /></Screen>;
@@ -63,7 +64,7 @@ export default function RoundDetail({ id, celebrate }) {
   if (stage !== 'detail') {
     return (
       <Screen key={stage}>
-        {stage === 'reveal' && <Reveal round={round} res={res} onNext={() => setStage(res.transfers.length ? 'settle' : 'share')} onDetail={() => setStage('detail')} extra={saveRow && <div style={{ marginTop: 12 }}>{saveRow}</div>} />}
+        {stage === 'reveal' && <Reveal round={round} res={res} instant={revealSeen} onNext={() => { setRevealSeen(true); setStage(res.transfers.length ? 'settle' : 'share'); }} onDetail={() => { setRevealSeen(true); setStage('detail'); }} extra={saveRow && <div style={{ marginTop: 12 }}>{saveRow}</div>} />}
         {stage === 'settle' && <SettleUp round={round} res={res} onBack={() => setStage('reveal')} onNext={() => setStage('share')} />}
         {stage === 'share' && <ShareCard round={round} res={res} onBack={() => setStage(res.transfers.length ? 'settle' : 'reveal')} onDone={done} />}
         {signingIn && <SignInSheet open onClose={() => setSigningIn(false)} />}
