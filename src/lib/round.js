@@ -5,7 +5,7 @@ import {
 } from './golf.js';
 import {
   bestBall, sideSplit, vegasHole, sixesPairings, sixesSegments, stablefordPoints, quotaPoints, quotaFor, ninesPoints,
-  acesDeuces, pointsToMoney, settleTotals, scrambleTeamHandicap, rabbitHolder, scoreDots, DOT_KINDS,
+  acesDeuces, pointsToMoney, settleTotals, scrambleTeamHandicap, rabbitHolder, scoreDots, DOT_KINDS, roundCents,
 } from './games.js';
 
 /**
@@ -600,7 +600,8 @@ export function roundResults(round) {
   const detail = {};
   const s = round.settings;
   const add = deltas => { for (const id of ids) balances[id] += deltas[id] || 0; };
-  const round2 = () => { for (const id of ids) balances[id] = Math.round(balances[id] * 100) / 100; };
+  // Whole cents that still sum to zero, even when a pot splits three ways
+  const round2 = () => { const r = roundCents(balances); for (const id of ids) balances[id] = r[id]; };
 
   if (round.game === 'banker') {
     detail.holes = [];

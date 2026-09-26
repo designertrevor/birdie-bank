@@ -2,7 +2,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import {
   bestBall, sideSplit, matchLabel, vegasNumber, vegasHole, sixesPairings, sixesSegments, stablefordPoints, quotaPoints, quotaFor,
-  ninesPoints, acesDeuces, pointsToMoney, settleTotals, scrambleTeamHandicap, rabbitHolder, scoreDots,
+  ninesPoints, acesDeuces, pointsToMoney, settleTotals, scrambleTeamHandicap, rabbitHolder, scoreDots, roundCents,
 } from './games.js';
 import { createRound, roundResults, scorers, holeComplete, sixesMatches, vegasPreview } from './round.js';
 import { matchStatus } from './golf.js';
@@ -72,6 +72,18 @@ test('aces and deuces', () => {
 test('points to money sums to zero', () => {
   const m = pointsToMoney({ a: 60, b: 54, c: 48 }, 1);
   assert.deepEqual(m, { a: 6, b: 0, c: -6 });
+});
+
+test('rounding to cents never makes or loses a cent', () => {
+  // $20 split three ways: 6.67 + 6.67 + 6.66, and the -$20 side untouched
+  assert.deepEqual(roundCents({ a: 20 / 3, b: 20 / 3, c: 20 / 3, d: -10, e: -10 }), { a: 6.66, b: 6.67, c: 6.67, d: -10, e: -10 });
+  assert.deepEqual(roundCents({ a: 1 / 3, b: 1 / 3, c: -2 / 3 }), { a: 0.33, b: 0.33, c: -0.66 });
+  assert.deepEqual(roundCents({ a: 2.5, b: -2.5 }), { a: 2.5, b: -2.5 });
+  // A three-way tie in a pot of seven used to come out a cent over
+  const pot = settleTotals({ a: 1, b: 1, c: 1, d: 2, e: 2, f: 3, g: 4 }, { mode: 'pot', stake: 5 });
+  assert.equal(Object.values(pot).reduce((t, v) => t + Math.round(v * 100), 0), 0);
+  const pts = pointsToMoney({ a: 1, b: 0, c: 0 }, 1);
+  assert.equal(Object.values(pts).reduce((t, v) => t + Math.round(v * 100), 0), 0);
 });
 
 test('settling totals: pot and per unit', () => {
