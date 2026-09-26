@@ -14,10 +14,12 @@ export const FEEDBACK_KINDS = {
   bug: { icon: 'bug', title: 'Something’s broken', sub: 'Tell us what went wrong' },
 };
 
-/** Device and round details attached to every message, so bugs can be reproduced. */
-export function feedbackContext() {
+/** Device and round details attached to every message, so bugs can be reproduced.
+ * Uses the given round (e.g. one that just finished), else the round in progress. */
+export function feedbackContext(roundId = null) {
   const s = getState();
-  const r = s.activeRoundId && s.rounds[s.activeRoundId];
+  const id = (roundId && s.rounds[roundId] ? roundId : null) || s.activeRoundId;
+  const r = id && s.rounds[id];
   return {
     app: location.host,
     path: location.pathname,
@@ -29,7 +31,7 @@ export function feedbackContext() {
     counts: { players: Object.keys(s.players).length, rounds: Object.keys(s.rounds).length },
     round: r ? {
       id: r.id, game: r.game, gameName: GAMES[r.game]?.name, course: r.course?.name, courseId: r.course?.id,
-      holes: r.holes.length, current: r.current, players: r.players.length, shared: r.shared?.code || null,
+      holes: r.holes.length, current: r.current, players: r.players.length, shared: r.shared?.code || null, status: r.status,
     } : null,
   };
 }
@@ -44,6 +46,18 @@ export async function shrinkImage(file, max = 1400) {
   c.getContext('2d').drawImage(bmp, 0, 0, c.width, c.height);
   bmp.close?.();
   return c.toDataURL('image/jpeg', 0.82);
+}
+
+// "How was it?" after a round: asked at most once per round, remembered on this phone
+const ASKED = 'bb-round-asked';
+export function roundAsked(roundId) {
+  try { return (JSON.parse(localStorage.getItem(ASKED)) || []).includes(roundId); } catch { return false; }
+}
+export function markRoundAsked(roundId) {
+  try {
+    const ids = (JSON.parse(localStorage.getItem(ASKED)) || []).filter(x => x !== roundId);
+    localStorage.setItem(ASKED, JSON.stringify([...ids, roundId].slice(-200)));
+  } catch { /* storage unavailable */ }
 }
 
 function readQueue() { try { return JSON.parse(localStorage.getItem(QUEUE)) || []; } catch { return []; } }
@@ -89,8 +103,8 @@ export function flushFeedback() {
 }
 
 /** Queue a message and try to send it. Resolves to 'sent' or 'queued'. */
-export async function submitFeedback({ kind, body, details = {}, contact = '', image = null }) {
-  const item = { id: crypto.randomUUID(), kind, body: body.trim(), details, contact: contact.trim(), image, context: feedbackContext(), at: Date.now() };
+export async function submitFeedback({ kind, body, details = {}, contact = '', image = null, roundId = null }) {
+  const item = { id: crypto.randomUUID(), kind, body: body.trim(), details, contact: contact.trim(), image, context: feedbackContext(roundId), at: Date.now() };
   writeQueue([...readQueue(), item]);
   await flushFeedback();
   return readQueue().some(x => x.id === item.id) ? 'queued' : 'sent';

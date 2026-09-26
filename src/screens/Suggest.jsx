@@ -39,12 +39,17 @@ const FORMS = {
   },
 };
 
-export default function Suggest({ kind: initialKind = null }) {
+/**
+ * Opened from Settings with no params, or from elsewhere in the app already on a form:
+ * `kind` picks the form, `prefill` fills its fields, `lead` is a short line above the form,
+ * `extra` rides along in the details, and `roundId` attaches that round as context.
+ */
+export default function Suggest({ kind: initialKind = null, prefill = null, lead = null, extra = null, roundId = null }) {
   const nav = useNav();
   const { showToast } = useUI();
   const me = useStore(s => s.players[s.me]);
   const [kind, setKind] = useState(initialKind);
-  const [values, setValues] = useState({});
+  const [values, setValues] = useState(() => ({ ...(prefill || {}) }));
   const [contact, setContact] = useState('');
   const [image, setImage] = useState(null);
   const [busy, setBusy] = useState(false);
@@ -100,13 +105,13 @@ export default function Suggest({ kind: initialKind = null }) {
     if (missing.length) return;
     setBusy(true);
     const [main, ...rest] = form.fields;
-    const details = { from: me?.name || null };
+    const details = { from: me?.name || null, ...(extra || {}) };
     for (const f of rest) if ((values[f.key] || '').trim()) details[f.key] = values[f.key].trim();
     // For games and courses the name is short, so fold the next field into the message too
     const body = kind === 'game' ? `${values.name.trim()}\n\n${values.rules.trim()}`
       : kind === 'course' ? `${values.name.trim()}, ${values.city.trim()}`
       : values[main.key];
-    try { setSent(await submitFeedback({ kind, body, details: { ...details, [main.key]: values[main.key].trim() }, contact, image })); }
+    try { setSent(await submitFeedback({ kind, body, details: { ...details, [main.key]: values[main.key].trim() }, contact, image, roundId })); }
     catch { setSent('queued'); }
     setBusy(false);
   };
@@ -115,6 +120,7 @@ export default function Suggest({ kind: initialKind = null }) {
     <Screen>
       <Header title={FEEDBACK_KINDS[kind].title} onBack={() => (initialKind ? nav.pop() : setKind(null))} small />
       <div className="scroll">
+        {lead && <p className="hint-card"><Icon name="chat-circle-dots" fill /> {lead}</p>}
         <div className="block">
           {form.fields.map(f => {
             const err = tried && f.required && !(values[f.key] || '').trim();
@@ -143,7 +149,7 @@ export default function Suggest({ kind: initialKind = null }) {
           )}
           <label className="field-label" htmlFor="fb-contact">Email for a reply <span className="opt">optional</span></label>
           <input id="fb-contact" className="text-input" type="email" inputMode="email" autoComplete="email" value={contact} onChange={e => setContact(e.target.value)} placeholder="We’ll tell you when it ships" maxLength={120} />
-          {kind === 'bug' && <p className="field-help">Your device and current round details come along automatically, so you don’t have to explain your setup.</p>}
+          {(kind === 'bug' || roundId) && <p className="field-help">Your device and {roundId ? 'this round’s' : 'current round'} details come along automatically, so you don’t have to explain your setup.</p>}
         </div>
       </div>
       <div className="cta-wrap">

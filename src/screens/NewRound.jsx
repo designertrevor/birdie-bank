@@ -124,6 +124,7 @@ export default function NewRound() {
 // ---------------------------------------------------------------------------
 
 function GameStep({ usual, onUsual, game, setGame, holesCount, setHolesCount, onNext }) {
+  const nav = useNav();
   const [rules, setRules] = useState(null);
   const g = game && GAMES[game];
   const u = usual?.round;
@@ -157,6 +158,9 @@ function GameStep({ usual, onUsual, game, setGame, holesCount, setHolesCount, on
             ))}
           </div>
         ))}
+        <button className="quiet-row" onClick={() => nav.push('suggest', { kind: 'game' })}>
+          <Icon name="chat-circle-dots" /> <span>Don’t see your game? <u>Tell us how it’s played</u></span>
+        </button>
         <div className="block">
           <div className="eyebrow" style={{ marginBottom: 10 }}>Holes</div>
           <Segmented value={holesCount} onChange={setHolesCount}
@@ -207,7 +211,8 @@ function CourseStep({ courseId, setCourseId, holesCount, nine, setNine, onNext }
         {favs.length > 0 && <><div className="sec-label">Recent</div><div style={{ padding: '0 16px' }}>{favs.map(row)}</div></>}
         {rest.length > 0 && <><div className="sec-label">{needle ? `${rest.length} result${rest.length === 1 ? '' : 's'}` : 'All courses'}</div><div style={{ padding: '0 16px' }}>{rest.map(row)}</div></>}
         {matches.length === 0 && (
-          <Empty illo={false} title="No courses found" text={`Nothing matches “${q}”. You can add the course yourself from its scorecard.`} />
+          <Empty illo={false} title="No courses found" text={`Nothing matches “${q.trim()}”. Add it yourself from the scorecard, or ask us to add it for everyone.`}
+            action={<button className="pill-btn" onClick={() => nav.push('suggest', { kind: 'course', prefill: { name: q.trim() } })}><Icon name="paper-plane-tilt" /> Request this course</button>} />
         )}
         <button className="add-row" onClick={() => nav.push('courseEdit', {})}><div className="add-ci"><Icon name="plus" /></div><span className="add-lbl">Add a course</span></button>
         {course && holesCount === 9 && course.holes.length === 18 && (

@@ -1,0 +1,13 @@
+{
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "rewrites": [
+    {
+      "source": "/",
+      "has": [
+        { "type": "query", "key": "join", "value": "(?<code>[A-Za-z0-9]{4,8})" },
+        { "type": "header", "key": "user-agent", "value": { "re": "facebookexternalhit|Facebot|Twitterbot|WhatsApp|Slackbot|Discordbot|TelegramBot|LinkedInBot|SkypeUriPreview|Applebot|redditbot|Iframely|Embedly|Pinterest|Google-PageRenderer|Mastodon|bingbot|Googlebot" } }
+      ],
+      "destination": "/api/join?code=:code"
+    }
+  ]
+}

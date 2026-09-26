@@ -813,3 +813,18 @@ button:disabled { cursor: not-allowed; }
 .sc-big { font-size: 44px; font-weight: 800; letter-spacing: -.03em; line-height: 1; margin-top: 16px; flex: 1; }
 .sc-list { display: flex; flex-direction: column; }
 .sc-line { display: flex; justify-content: space-between; padding: 7px 0; border-top: 1px solid rgba(255,255,255,.15); font-weight: 600; font-variant-numeric: tabular-nums; }
+
+/* Quiet links to "Suggest something" from inside the main flows */
+.quiet-row { display: flex; align-items: center; gap: 8px; width: calc(100% - 32px); margin: 6px 16px 4px; padding: 12px 4px; background: none; border: none; color: var(--mute); font-size: 14px; text-align: left; cursor: pointer; }
+.quiet-row i { font-size: 16px; color: var(--icon); flex-shrink: 0; }
+.quiet-row u { text-decoration-color: var(--surface-strong); text-underline-offset: 3px; text-decoration-thickness: 2px; color: var(--ink); font-weight: 600; }
+.empty-state .pill-btn { margin-top: 6px; background: var(--surface); }
+
+/* "How was it?" after a round: small, dismissible, never in the way of Done */
+.checkin { margin: 14px 16px 10px; padding: 12px 14px 14px; border-radius: 18px; background: var(--surface); }
+.checkin-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.checkin-q { font-size: 14px; font-weight: 600; color: var(--ink); }
+.checkin-x { border: none; background: none; color: var(--mute); width: 32px; height: 32px; margin: -6px -8px -6px 0; display: grid; place-items: center; font-size: 16px; cursor: pointer; border-radius: 50%; }
+.checkin-opts { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; }
+.checkin-opts .pill-btn { background: var(--card); font-size: 13px; padding: 8px 12px; }
+.checkin-opts .pill-btn i { color: var(--icon); font-size: 16px; }
