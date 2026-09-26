@@ -28,6 +28,8 @@ export default function RoundDetail({ id, celebrate }) {
     return saved && saved.at === round?.finishedAt ? saved.stage : celebrate ? 'reveal' : 'detail';
   });
   const setStage = s => { if (celebrate) finaleStage.set(id, { stage: s, at: round?.finishedAt }); setStageRaw(s); };
+  // Coming back to the reveal (from Settle up or Suggest) shows the end state instead of replaying it
+  const [revealSeen, setRevealSeen] = useState(() => celebrate && finaleStage.get(id)?.at === round?.finishedAt);
 
   if (!round) {
     return <Screen><Header title="Round" onBack={nav.pop} /><Empty title="Round not found" text="It may have been deleted." /></Screen>;
@@ -71,7 +73,7 @@ export default function RoundDetail({ id, celebrate }) {
   if (stage !== 'detail') {
     return (
       <Screen key={stage}>
-        {stage === 'reveal' && <Reveal round={round} res={res} onNext={() => setStage(res.transfers.length ? 'settle' : 'share')} onDetail={() => setStage('detail')} extra={saveRow && <div style={{ marginTop: 12 }}>{saveRow}</div>} />}
+        {stage === 'reveal' && <Reveal round={round} res={res} instant={revealSeen} onNext={() => { setRevealSeen(true); setStage(res.transfers.length ? 'settle' : 'share'); }} onDetail={() => { setRevealSeen(true); setStage('detail'); }} extra={saveRow && <div style={{ marginTop: 12 }}>{saveRow}</div>} />}
         {stage === 'settle' && <SettleUp round={round} res={res} onBack={() => setStage('reveal')} onNext={() => setStage('share')} />}
         {stage === 'share' && <ShareCard round={round} res={res} onBack={() => setStage(res.transfers.length ? 'settle' : 'reveal')} onDone={done} />}
         {signingIn && <SignInSheet open onClose={() => setSigningIn(false)} />}

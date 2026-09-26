@@ -1,20 +1,24 @@
 // The end of a round in three beats: the money reveal, settling up, and a results card to share.
 import { useEffect, useRef, useState } from 'react';
-import { Header, Icon, useUI } from './ui.jsx';
+import { Header, Icon, Toggle, useUI } from './ui.jsx';
 import { update, uid, useStore } from '../lib/store.js';
-import { GAMES } from '../lib/round.js';
+import { GAMES, roundResults } from '../lib/round.js';
 import { money } from '../lib/golf.js';
 import { venmoLink } from '../lib/ledger.js';
 import { buzz, confettiFrom } from '../lib/delight.js';
 import { meFor, roundDate, roundPlayerName, shareRound } from '../lib/format.js';
 import { markRoundAsked, roundAsked } from '../lib/feedback.js';
 import { useNav } from '../lib/nav.js';
+import { revealSteps, revealTiming } from '../lib/reveal.js';
+import { IMAGE_H, IMAGE_W, renderShareImage, shareImageName } from '../lib/shareImage.js';
 
-/** Counts from 0 up to `target`, easing out, and holds the final value once done. */
-function useCountUp(target, { delay = 0, duration = 1100 } = {}) {
+const reducedMotion = () => !!window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
+
+/** Counts from 0 up to `target`, easing out, and holds the final value once done. `skip` jumps to the end. */
+function useCountUp(target, { delay = 0, duration = 1100, skip = false } = {}) {
   const [v, setV] = useState(0);
   useEffect(() => {
-    const still = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
+    const still = skip || reducedMotion();
     let raf, t0 = null;
     const tick = t => {
       if (t0 == null) t0 = t;
@@ -24,15 +28,15 @@ function useCountUp(target, { delay = 0, duration = 1100 } = {}) {
     };
     raf = requestAnimationFrame(tick);
     return () => cancelAnimationFrame(raf);
-  }, [target, delay, duration]);
+  }, [target, delay, duration, skip]);
   return v;
 }
 
-function CountRow({ place, name, amount, me, delay }) {
-  const v = useCountUp(amount, { delay });
+function CountRow({ place, name, amount, me, delay, duration, skip }) {
+  const v = useCountUp(amount, { delay, duration, skip });
   const done = v === amount;
   return (
-    <div className={`reveal-row ${place === 1 && amount > 0 ? 'top' : ''}`}>
+    <div className={`reveal-row ${place === 1 && amount > 0 && done ? 'top' : ''}`}>
       <div className="sr">{place}</div>
       <div className="sn">{name}{me ? ' (you)' : ''}</div>
       <div className={`reveal-amt ${done && amount > 0 ? 'pos' : done && amount < 0 ? 'neg' : ''}`}>{money(Math.round(v), { sign: true })}</div>
@@ -40,8 +44,32 @@ function CountRow({ place, name, amount, me, delay }) {
   );
 }
 
-/** Beat 1: everyone's total counts up from $0, the winner last to land. */
-export function Reveal({ round, res, onNext, onDetail, extra }) {
+function StepAmount({ amount, skip }) {
+  const v = useCountUp(amount, { duration: 380, skip });
+  return money(Math.round(v));
+}
+
+/** One bet resolving: what it was, who took it, and for how much. Laid out from the start so nothing jumps. */
+function RevealStep({ step, on, skip }) {
+  let val = '–';
+  if (step.value) val = step.value;
+  else if (step.amount != null) val = on ? <StepAmount amount={step.amount} skip={skip} /> : money(0);
+  return (
+    <div className={`rv-step ${on ? 'on' : ''} ${step.tie ? 'tie' : ''}`} aria-hidden={!on}>
+      <div className="rv-main">
+        <div className="rv-label">{step.label}</div>
+        {step.text && <div className="rv-text">{step.text}</div>}
+      </div>
+      <div className="rv-val">{val}</div>
+    </div>
+  );
+}
+
+/**
+ * Beat 1: the bets resolve one by one (legs and presses, skins, points), then everyone's
+ * total counts up from $0, the winner last to land. Tap anywhere to jump to the end.
+ */
+export function Reveal({ round, res, onNext, onDetail, extra, instant = false }) {
   const state = useStore();
   const hero = useRef();
   const me = meFor(round, state);
@@ -49,23 +77,49 @@ export function Reveal({ round, res, onNext, onDetail, extra }) {
   const tied = res.standings.filter(p => p.amount === top.amount).length > 1;
   const square = res.standings.every(p => p.amount === 0);
   const count = res.standings.length;
+  const { title: stepsTitle, steps } = revealSteps(round, res);
+  const nSteps = steps.length;
+  const t = revealTiming(nSteps, count);
+  // Coming back to this beat (or reduced motion) shows the end state straight away
+  const [skipped, setSkipped] = useState(() => instant || reducedMotion());
+  const [shown, setShown] = useState(0);
+  const [landed, setLanded] = useState(false);
+  const done = skipped || landed;
+  const visible = skipped ? nSteps : shown;
+
   useEffect(() => {
-    if (square) return;
-    const t = setTimeout(() => { confettiFrom(hero.current, 70); buzz([20, 40, 20]); }, 1400);
-    return () => clearTimeout(t);
-  }, [square]);
-  const title = square ? 'All square' : tied ? `${res.standings.filter(p => p.amount === top.amount).map(p => p.name.split(' ')[0]).join(' & ')} tie for top` : `${top.name.split(' ')[0]} takes it`;
+    if (skipped) return;
+    const timers = Array.from({ length: nSteps }, (_, i) => setTimeout(() => { setShown(i + 1); buzz(6); }, i * t.gap + 150));
+    timers.push(setTimeout(() => setLanded(true), t.landed));
+    return () => timers.forEach(clearTimeout);
+  }, [skipped, nSteps, t.gap, t.landed]);
+  useEffect(() => {
+    if (!done || square || instant) return;
+    confettiFrom(hero.current, 70);
+    buzz([20, 40, 20]);
+  }, [done, square, instant]);
+
+  const winnerTitle = square ? 'All square' : tied ? `${res.standings.filter(p => p.amount === top.amount).map(p => p.name.split(' ')[0]).join(' & ')} tie for top` : `${top.name.split(' ')[0]} takes it`;
+  const title = done || !nSteps ? winnerTitle : 'Adding it up';
   return (
     <>
       <Header title="Final results" small />
-      <div className="scroll">
+      <div className="scroll" onClick={() => { if (!done) setSkipped(true); }}>
         <div className="reveal-head" ref={hero}>
           <div className="eyebrow">{round.course.name} · {GAMES[round.game].name}</div>
-          <div className="reveal-title d">{title}</div>
+          <div className="reveal-title d" key={title}>{title}</div>
+          <div className={`rv-skip ${done ? 'gone' : ''}`} aria-hidden={done}>Tap to skip</div>
         </div>
+        {nSteps > 0 && (
+          <div className="rv-card">
+            <div className="rv-card-title">{stepsTitle}</div>
+            {steps.map((s, i) => <RevealStep key={s.key} step={s} on={i < visible} skip={skipped} />)}
+          </div>
+        )}
         {/* Losers land first, the winner last */}
         {res.standings.map((p, i) => (
-          <CountRow key={p.id} place={i + 1} name={p.name} amount={p.amount} me={p.id === me} delay={(count - 1 - i) * 180} />
+          <CountRow key={p.id} place={i + 1} name={p.name} amount={p.amount} me={p.id === me}
+            delay={t.stepsEnd + (count - 1 - i) * t.stagger} duration={t.count} skip={skipped} />
         ))}
         {extra}
       </div>
@@ -149,29 +203,79 @@ export function SettleUp({ round, res, onBack, onNext }) {
   );
 }
 
-/** Beat 3: a results card sized for the group chat. */
+/**
+ * Beat 3: a results image sized for stories and the group chat. The PNG is drawn ahead of time
+ * so the share sheet opens straight from the tap (iOS drops the share if we make it wait).
+ */
 export function ShareCard({ round, res, onBack, onDone }) {
   const { showToast } = useUI();
+  const [showAmounts, setShowAmounts] = useState(true);
+  const [img, setImg] = useState(null); // { blob, url, amounts }
   const top = res.standings[0];
+
+  useEffect(() => {
+    let alive = true;
+    renderShareImage(round, roundResults(round), { showAmounts })
+      .then(blob => { if (alive) setImg({ blob, url: URL.createObjectURL(blob), amounts: showAmounts }); })
+      .catch(() => { if (alive) setImg(null); });
+    return () => { alive = false; };
+  }, [round, showAmounts]);
+  // Free each image once a newer one replaces it
+  useEffect(() => () => { if (img) URL.revokeObjectURL(img.url); }, [img]);
+
+  const ready = img && img.amounts === showAmounts;
+  const fileName = shareImageName(round);
+  const share = async () => {
+    if (ready && typeof File !== 'undefined') {
+      const file = new File([img.blob], fileName, { type: 'image/png' });
+      if (navigator.canShare?.({ files: [file] })) {
+        try { await navigator.share({ files: [file], title: 'Birdie Bank results' }); return; }
+        catch (e) { if (e?.name === 'AbortError') return; }
+      }
+    }
+    shareRound(round, res, showToast, { amounts: showAmounts });
+  };
+  const save = () => {
+    if (!ready) return;
+    const a = document.createElement('a');
+    a.href = img.url;
+    a.download = fileName;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+  };
+
   return (
     <>
       <Header title="Share" onBack={onBack} />
       <div className="scroll">
-        <div className="share-card">
-          <div className="sc-brand">Birdie Bank</div>
-          <div className="sc-meta">{round.course.name} · {roundDate(round)} · {GAMES[round.game].name}</div>
-          <div className="sc-big d">{top.amount > 0 ? <>{top.name.split(' ')[0]}<br />{money(top.amount, { sign: true })}</> : 'All square'}</div>
-          <div className="sc-list">
-            {res.standings.map(p => (
-              <div key={p.id} className="sc-line"><span>{p.name}</span><span>{money(p.amount, { sign: true })}</span></div>
-            ))}
+        {img ? (
+          <img className="share-img" src={img.url} width={IMAGE_W} height={IMAGE_H}
+            alt={`Results card: ${round.course.name}, ${GAMES[round.game].name}. ${res.standings.map((p, i) => `${i + 1}. ${p.name}${showAmounts ? ` ${money(p.amount, { sign: true })}` : ''}`).join(', ')}`} />
+        ) : (
+          <div className="share-card">
+            <div className="sc-brand">Birdie Bank</div>
+            <div className="sc-meta">{round.course.name} · {roundDate(round)} · {GAMES[round.game].name}</div>
+            <div className="sc-big d">{top.amount > 0 ? <>{top.name.split(' ')[0]}{showAmounts && <><br />{money(top.amount, { sign: true })}</>}</> : 'All square'}</div>
+            <div className="sc-list">
+              {res.standings.map(p => (
+                <div key={p.id} className="sc-line"><span>{p.name}</span>{showAmounts && <span>{money(p.amount, { sign: true })}</span>}</div>
+              ))}
+            </div>
           </div>
+        )}
+        <div className="toggle-row share-toggle">
+          <div><div className="toggle-lbl">Show amounts</div><div className="toggle-sub">{showAmounts ? 'Dollar figures are on the image' : 'Only the order and the bets, no money'}</div></div>
+          <Toggle on={showAmounts} onChange={setShowAmounts} label="Show amounts" />
         </div>
         <HowWasIt round={round} />
       </div>
       <div className="cta-wrap">
-        <button className="full-btn" onClick={() => shareRound(round, res, showToast)}><Icon name="share-network" /> Send to the group chat</button>
-        <button className="full-btn outline" onClick={onDone}>Done</button>
+        <button className="full-btn" onClick={share}><Icon name="share-network" /> Send to the group chat</button>
+        <div className="cta-row">
+          <button className="full-btn outline" onClick={save} disabled={!ready}><Icon name="download-simple" /> Save image</button>
+          <button className="full-btn outline" onClick={onDone}>Done</button>
+        </div>
       </div>
     </>
   );
