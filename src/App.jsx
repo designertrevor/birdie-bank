@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { Suspense, lazy, useCallback, useEffect, useMemo, useState } from 'react';
 import { UIProvider } from './components/ui.jsx';
 import ErrorBoundary from './components/ErrorBoundary.jsx';
 import { NavCtx } from './lib/nav.js';
@@ -6,17 +6,51 @@ import { useStore } from './lib/store.js';
 import { bootSync, syncConfigured } from './lib/sync.js';
 import { bootCloud } from './lib/cloud.js';
 import { cleanCode } from './lib/sync-model.js';
-import Onboarding from './screens/Onboarding.jsx';
-import JoinInvite from './screens/JoinInvite.jsx';
 import History from './screens/History.jsx';
-import Ledger from './screens/Ledger.jsx';
-import People, { PlayerEdit, CrewEdit } from './screens/People.jsx';
-import Settings, { Defaults, Courses, CourseEdit, About } from './screens/Settings.jsx';
-import NewRound from './screens/NewRound.jsx';
-import Play from './screens/Play.jsx';
-import RoundDetail from './screens/RoundDetail.jsx';
-import Suggest from './screens/Suggest.jsx';
 import './lib/feedback.js'; // sends any suggestions queued while offline
+
+// Only History (the first screen) is in the main bundle; the rest load on demand. The service
+// worker saves every chunk on install, so they still open with no signal.
+const RELOADED = 'bb-chunk-reload';
+const LOADERS = [];
+function screen(load, name = 'default') {
+  LOADERS.push(load);
+  return lazy(() => load().then(m => {
+    try { sessionStorage.removeItem(RELOADED); } catch { /* ignore */ }
+    return { default: m[name] };
+  }, err => {
+    // A new deploy replaced the files this page was built with: reload once to pick them up
+    let again = false;
+    try { again = !sessionStorage.getItem(RELOADED); if (again) sessionStorage.setItem(RELOADED, '1'); } catch { /* ignore */ }
+    if (again) { location.reload(); return new Promise(() => {}); }
+    throw err;
+  }));
+}
+const onboarding = () => import('./screens/Onboarding.jsx');
+const people = () => import('./screens/People.jsx');
+const settings = () => import('./screens/Settings.jsx');
+const Onboarding = screen(onboarding);
+const JoinInvite = screen(() => import('./screens/JoinInvite.jsx'));
+const Ledger = screen(() => import('./screens/Ledger.jsx'));
+const People = screen(people);
+const PlayerEdit = screen(people, 'PlayerEdit');
+const CrewEdit = screen(people, 'CrewEdit');
+const Settings = screen(settings);
+const Defaults = screen(settings, 'Defaults');
+const Courses = screen(settings, 'Courses');
+const CourseEdit = screen(settings, 'CourseEdit');
+const About = screen(settings, 'About');
+const NewRound = screen(() => import('./screens/NewRound.jsx'));
+const Play = screen(() => import('./screens/Play.jsx'));
+const RoundDetail = screen(() => import('./screens/RoundDetail.jsx'));
+const Suggest = screen(() => import('./screens/Suggest.jsx'));
+
+/** Warm the screens once the first one is up, so tapping into one never shows a blank frame. */
+function preloadScreens() {
+  const go = () => LOADERS.forEach(l => l().catch(() => {}));
+  if ('requestIdleCallback' in window) requestIdleCallback(go, { timeout: 3000 });
+  else setTimeout(go, 1500);
+}
 
 const SCREENS = {
   roundDetail: RoundDetail, newRound: NewRound, play: Play,
@@ -70,6 +104,7 @@ export default function App() {
   useEffect(() => {
     bootCloud();
     bootSync();
+    preloadScreens();
     const q = new URLSearchParams(location.search).get('join');
     if (q) {
       try { sessionStorage.setItem('bb-join', q); } catch { /* ignore */ }
@@ -97,7 +132,11 @@ export default function App() {
     };
     return (
       <UIProvider>
-        <div className="device">{inviteCode ? <JoinInvite code={inviteCode} onJoined={joined} onSkip={skip} /> : <Onboarding />}</div>
+        <div className="device">
+          <Suspense fallback={<div className="screen active" aria-busy="true" />}>
+            {inviteCode ? <JoinInvite code={inviteCode} onJoined={joined} onSkip={skip} /> : <Onboarding />}
+          </Suspense>
+        </div>
       </UIProvider>
     );
   }
@@ -111,7 +150,9 @@ export default function App() {
       <NavCtx.Provider value={nav}>
         <div className="device">
           <ErrorBoundary onReset={() => reset('history')}>
-            {Top ? <Top key={top.key} {...top.params} /> : <TabScreen key={tab} />}
+            <Suspense fallback={<div className="screen active" aria-busy="true" />}>
+              {Top ? <Top key={top.key} {...top.params} /> : <TabScreen key={tab} />}
+            </Suspense>
           </ErrorBoundary>
         </div>
       </NavCtx.Provider>

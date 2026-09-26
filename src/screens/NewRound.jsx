@@ -165,7 +165,7 @@ function GameStep({ usual, onUsual, game, setGame, holesCount, setHolesCount, on
         </button>
         <div className="block">
           <div className="eyebrow" style={{ marginBottom: 10 }}>Holes</div>
-          <Segmented value={holesCount} onChange={setHolesCount}
+          <Segmented label="Holes" value={holesCount} onChange={setHolesCount}
             options={[9, 18].map(n => ({ value: n, label: String(n), disabled: g && !g.holes.includes(n) }))} />
           {g && g.holes.length === 1 && <p className="field-help">{g.name} is played over {g.holes[0]} holes.</p>}
         </div>
@@ -253,7 +253,7 @@ function CourseStep({ courseId, setCourseId, holesCount, nine, setNine, onNext }
         {course && holesCount === 9 && course.holes.length === 18 && (
           <div className="block">
             <div className="eyebrow" style={{ marginBottom: 10 }}>Which nine?</div>
-            <Segmented value={nine} onChange={setNine} options={[{ value: 'front', label: 'Front 9' }, { value: 'back', label: 'Back 9' }]} />
+            <Segmented label="Which nine" value={nine} onChange={setNine} options={[{ value: 'front', label: 'Front 9' }, { value: 'back', label: 'Back 9' }]} />
           </div>
         )}
         {tooShort && <p className="hint-card"><Icon name="info" fill /> {course.name} has 9 holes, so you’ll play it twice for 18.</p>}
@@ -462,7 +462,7 @@ function SetupStep({ game, course, holesCount, nine, picked, setPicked, opts, se
         {useHc && (
           <div className="block">
             <div className="eyebrow" style={{ marginBottom: 10 }}>Strokes given</div>
-            <Segmented className="press-mode-row" btn="pm-btn" value={opts.hcPct} onChange={v => set('hcPct', v)}
+            <Segmented label="Strokes given" className="press-mode-row" btn="pm-btn" value={opts.hcPct} onChange={v => set('hcPct', v)}
               options={[100, 90, 80].map(n => ({ value: n, label: `${n}%` }))} />
           </div>
         )}
