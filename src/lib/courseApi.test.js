@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { apiCourseId, cityLabel, cleanQuery, courseName, handicapsComplete, mapCourse, mapSearch } from './courseApi.js';
+import { apiCourseId, cityLabel, cleanQuery, courseName, courseSearchAvailable, getCourse, handicapsComplete, mapCourse, mapSearch, searchCourses } from './courseApi.js';
 import { courseWarning, teeDotStyle } from './courses.js';
 import { SAMPLE_COURSES, SAMPLE_SEARCH } from '../data/courseApiSamples.js';
 import handler, { parseRequest } from '../../api/courses.js';
@@ -207,4 +207,53 @@ test('proxy maps upstream failures and rejects bad input', async () => {
   assert.equal(post.res.statusCode, 405);
   const down = await call('/api/courses?q=pine', { key: 'k', upstream: () => { throw new TypeError('fetch failed'); } });
   assert.equal(down.res.statusCode, 504);
+});
+
+// ---------------------------------------------------------------------------
+// The client, against a stubbed /api/courses. Runs last: "not configured" sticks for the session.
+
+async function withFetch(fn, body) {
+  const realFetch = globalThis.fetch;
+  const urls = [];
+  globalThis.fetch = async u => { urls.push(u); return fn(u)(); };
+  try { return { out: await body(), urls }; } finally { globalThis.fetch = realFetch; }
+}
+
+test('client searches, caches, and fetches a scorecard', async () => {
+  const { out, urls } = await withFetch(u => (u.includes('?q=') ? jsonResponse(200, SAMPLE_SEARCH) : jsonResponse(200, SAMPLE_COURSES['c3dr9h2x'])), async () => {
+    const a = await searchCourses(' Pine  Hollow ');
+    const b = await searchCourses('pine hollow');
+    const c = await getCourse('C3DR9H2X');
+    return { a, b, c };
+  });
+  assert.equal(out.a.status, 'ok');
+  assert.equal(out.a.results.length, 4);
+  assert.equal(out.b.results, out.a.results);
+  assert.deepEqual(urls, ['/api/courses?q=Pine%20Hollow', '/api/courses?id=c3dr9h2x']);
+  assert.equal(out.c.id, 'gca-c3dr9h2x');
+  assert.equal((await searchCourses('pi')).results.length, 0);
+});
+
+test('client: unusable scorecards and failures throw, search errors stay quiet', async () => {
+  const { out } = await withFetch(u => (u.includes('?id=p9ncr3st') ? jsonResponse(200, SAMPLE_COURSES['p9ncr3st']) : jsonResponse(500, { error: 'boom' })), async () => ({
+    empty: await getCourse('p9ncr3st').catch(e => e.message),
+    fail: await getCourse('7k2m9qb4').catch(e => e.message),
+    bad: await getCourse('nope').catch(e => e.message),
+    search: await searchCourses('cedar'),
+  }));
+  assert.equal(out.empty, 'No usable scorecard');
+  assert.match(out.fail, /500/);
+  assert.equal(out.bad, 'Not a course id');
+  assert.deepEqual(out.search, { status: 'error', results: [] });
+  assert.equal(courseSearchAvailable(), true);
+});
+
+test('client goes quiet for the session once the server has no key', async () => {
+  const { out, urls } = await withFetch(() => jsonResponse(503, { error: 'not_configured' }), async () => [
+    await searchCourses('lakeside'),
+    await searchCourses('lakeside two'),
+  ]);
+  assert.deepEqual(out, [{ status: 'off', results: [] }, { status: 'off', results: [] }]);
+  assert.equal(urls.length, 1);
+  assert.equal(courseSearchAvailable(), false);
 });

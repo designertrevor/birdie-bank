@@ -42,3 +42,12 @@ run `supabase/schema.sql` in the SQL Editor, and put the new URL and publishable
 
 Rounds are shared by a 6-letter code; anyone with the code can view and score it.
 There are no accounts yet.
+
+## Course search (GolfCourseAPI)
+
+Searching in the course picker also asks `api/courses.js`, a Vercel function that proxies
+GolfCourseAPI with the server-side `GOLFCOURSEAPI_KEY`. Without that variable it answers
+`not_configured` and the app shows only its own courses. A picked course is saved into
+`customCourses` (with `source: 'golfcourseapi'`), so it syncs, works offline and can be
+corrected like any course you added. `npm run dev` has no `/api`; put
+`VITE_COURSE_SAMPLES=1` in `.env.local` to search a few made-up courses instead.

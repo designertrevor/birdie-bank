@@ -258,7 +258,7 @@ export function CourseEdit({ id }) {
   const save = () => {
     const cid = builtIn ? `${existing.id}-custom` : (id || uid('course_'));
     update(s => {
-      s.customCourses[cid] = { ...c, id: cid, custom: true, verified: false, replaces: builtIn ? existing.id : c.replaces, name: c.name.trim(), city: c.city.trim() };
+      s.customCourses[cid] = { ...c, id: cid, custom: true, verified: false, replaces: builtIn ? existing.id : c.replaces, name: c.name.trim(), city: c.city.trim(), ...(c.source ? { edited: true } : {}) };
       if (builtIn) s.favorites = s.favorites.map(f => (f === existing.id ? cid : f));
     });
     showToast(builtIn ? 'Saved your corrected copy' : 'Course saved');
@@ -290,6 +290,9 @@ export function CourseEdit({ id }) {
       <div className="scroll">
         {builtIn && (
           <p className="hint-card"><Icon name={existing.verified ? 'seal-check' : 'warning'} fill /> {existing.verified ? 'Par and hole handicaps are confirmed from a real scorecard.' : 'We couldn’t double-check this scorecard. Compare it with the card at the course and fix anything that’s off.'} Changes save as your own copy.</p>
+        )}
+        {existing?.source === 'golfcourseapi' && (
+          <p className="hint-card"><Icon name={existing.verified && !existing.edited ? 'seal-check' : 'warning'} fill /> {existing.edited ? 'You’ve corrected this scorecard from the course database.' : existing.verified ? 'From the course database. Par and hole handicaps looked complete, but the card at the course wins if they differ.' : 'From the course database, with some hole handicaps missing. Fill them in from the card at the course.'}</p>
         )}
         <div className="block">
           <label className="field-label" htmlFor="cn">Course name</label>

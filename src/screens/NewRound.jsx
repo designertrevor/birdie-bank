@@ -2,7 +2,9 @@ import { useMemo, useState } from 'react';
 import { Empty, Header, Icon, Numpad, Screen, Segmented, Sheet, Steps, Toggle, useUI } from '../components/ui.jsx';
 import { RulesSheet } from '../components/Rules.jsx';
 import { getState, update, uid, useStore } from '../lib/store.js';
-import { allCourses, coursePar, teeDotStyle } from '../lib/courses.js';
+import { allCourses, coursePar, courseWarning, teeDotStyle } from '../lib/courses.js';
+import { getCourse } from '../lib/courseApi.js';
+import { useCourseSearch } from '../lib/useCourseSearch.js';
 import { GAMES, GAME_GROUPS, createRound, effectiveCourseHc, holesInPlay } from '../lib/round.js';
 import { GameOptions, SixesPreview, TeamPicker } from '../components/GameOptions.jsx';
 import { optionsProblem, stakeSummary } from '../lib/stakes.js';
@@ -185,13 +187,45 @@ function CourseStep({ courseId, setCourseId, holesCount, nine, setNine, onNext }
   const rest = matches.filter(c => needle || !state.favorites.includes(c.id));
   const course = courses.find(c => c.id === courseId);
   const tooShort = course && holesCount === 18 && course.holes.length === 9;
+  // Course database results, minus any this phone already has saved
+  const { showToast } = useUI();
+  const api = useCourseSearch(q);
+  const saved = new Set(courses.map(c => c.apiId).filter(Boolean));
+  const more = api.results.filter(r => !saved.has(r.apiId));
+  const [loadingId, setLoadingId] = useState(null);
+  const pickApi = async r => {
+    if (loadingId) return;
+    setLoadingId(r.apiId);
+    try {
+      const c = await getCourse(r.apiId);
+      // Saved like a custom course: works offline, syncs to the account, and can be corrected
+      update(s => {
+        s.customCourses[c.id] = { ...c, savedAt: Date.now() };
+        s.favorites = [c.id, ...s.favorites.filter(f => f !== c.id)].slice(0, 6);
+      });
+      setCourseId(c.id);
+    } catch {
+      showToast('Couldn’t load that scorecard. You can add it yourself.');
+    } finally {
+      setLoadingId(null);
+    }
+  };
+  const apiRow = r => (
+    <button key={r.apiId} className="list-item" onClick={() => pickApi(r)} aria-busy={loadingId === r.apiId}>
+      <div className="row-main">
+        <div className="li-name">{r.name}</div>
+        <div className="li-sub">{[r.city, r.teeCount ? `${r.teeCount} tees` : null].filter(Boolean).join(' · ')}</div>
+      </div>
+      <span className="li-check add"><Icon name={loadingId === r.apiId ? 'circle-notch' : 'plus'} className={loadingId === r.apiId ? 'spin' : ''} /></span>
+    </button>
+  );
 
   const row = c => (
     <button key={c.id} className="list-item" onClick={() => setCourseId(c.id)} aria-pressed={c.id === courseId}>
       <div className="row-main">
         <div className="li-name">{c.name}</div>
         <div className="li-sub">{[c.city, `${c.holes.length} holes`, `Par ${coursePar(c)}`, `${c.tees?.length || 0} tees`].filter(Boolean).join(' · ')}</div>
-        {!c.verified && <div className="warn-tag"><Icon name="warning" fill /> {c.custom ? 'Added by you' : 'Scorecard not verified'}</div>}
+        {courseWarning(c) && <div className="warn-tag"><Icon name="warning" fill /> {courseWarning(c)}</div>}
       </div>
       <span className={`li-check ${c.id === courseId ? 'on' : 'add'}`}><Icon name={c.id === courseId ? 'check' : 'plus'} /></span>
     </button>
@@ -206,7 +240,8 @@ function CourseStep({ courseId, setCourseId, holesCount, nine, setNine, onNext }
         </div>
         {favs.length > 0 && <><div className="sec-label">Recent</div><div style={{ padding: '0 16px' }}>{favs.map(row)}</div></>}
         {rest.length > 0 && <><div className="sec-label">{needle ? `${rest.length} result${rest.length === 1 ? '' : 's'}` : 'All courses'}</div><div style={{ padding: '0 16px' }}>{rest.map(row)}</div></>}
-        {matches.length === 0 && (
+        {needle && more.length > 0 && <><div className="sec-label">More courses{api.loading ? ' · searching' : ''}</div><div style={{ padding: '0 16px' }}>{more.map(apiRow)}</div></>}
+        {matches.length === 0 && more.length === 0 && !api.loading && (
           <Empty illo={false} title="No courses found" text={`Nothing matches “${q}”. You can add the course yourself from its scorecard.`} />
         )}
         <button className="add-row" onClick={() => nav.push('courseEdit', {})}><div className="add-ci"><Icon name="plus" /></div><span className="add-lbl">Add a course</span></button>

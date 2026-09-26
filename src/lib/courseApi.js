@@ -139,13 +139,16 @@ const searchCache = new Map();
 
 // In `npm run dev` there is no /api, so VITE_COURSE_SAMPLES=1 (or localStorage
 // bb-course-samples=1) serves the made-up courses in src/data/courseApiSamples.js.
+// Written out in full so the production build drops the samples entirely (and so plain
+// Node, where import.meta.env doesn't exist, can run the tests).
+const DEV = !!(import.meta.env && import.meta.env.DEV);
 function samplesOn() {
-  const env = import.meta.env;
-  if (!env?.DEV) return false;
-  if (env.VITE_COURSE_SAMPLES === '1') return true;
+  if (!DEV) return false;
+  if (import.meta.env.VITE_COURSE_SAMPLES === '1') return true;
   try { return localStorage.getItem('bb-course-samples') === '1'; } catch { return false; }
 }
 async function samples() {
+  if (!(import.meta.env && import.meta.env.DEV)) throw new Error('Samples are dev only');
   return import('../data/courseApiSamples.js');
 }
 
