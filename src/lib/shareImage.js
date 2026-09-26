@@ -20,7 +20,12 @@ export function shareCardModel(round, res, { showAmounts = true } = {}) {
   const leaders = res.standings.filter(p => p.amount === top.amount);
   let headline, sub;
   if (square) { headline = 'All square'; sub = 'Nobody owes anybody'; }
-  else if (leaders.length > 1) { headline = leaders.map(p => first(p.name)).join(' & '); sub = showAmounts ? `${money(top.amount, { sign: true })} each` : 'tie for top'; }
+  else if (leaders.length > 1) {
+    // Partners who won together are a side, not a tie
+    const side = round.teams?.find(t => t.players.length === leaders.length && leaders.every(p => t.players.includes(p.id)));
+    headline = side ? side.name : leaders.map(p => first(p.name)).join(' & ');
+    sub = showAmounts ? `${money(top.amount, { sign: true })} each` : side ? 'take it' : 'tie for top';
+  }
   else { headline = first(top.name); sub = showAmounts ? money(top.amount, { sign: true }) : 'takes it'; }
 
   // Ranks share a place on equal money

@@ -167,7 +167,7 @@ Put more money into the winning creators and copy their video formats with other
 - [x] `S1` Turn on live sharing in production (2026-09-23)
 - [x] `S1` Join from the web without installing anything (2026-09-25)
 - [ ] `S2` Each player can enter their own scores or just watch; hand the scorekeeper role to someone else
-- [ ] `S3` A link preview card for group texts (course, game, players)
+- [x] `S3` A link preview card for group texts (course, game, players). Join links show the game, course and first names; other links show a static card (2026-09-26). Per-round previews need the Supabase env vars available to Vercel functions at runtime.
 
 ### 5. Setting up and playing a round
 - [x] 16 games with the setup wizard, game defaults, crews, bets that change mid-round, 9 or 18 holes
@@ -176,14 +176,14 @@ Put more money into the winning creators and copy their video formats with other
 - [ ] `S2` Several games at once in one round (Nassau plus skins plus greenies)
 - [ ] `S2` (partial) "Our usual game": saved crew, games and stakes, set up in one tap. "Your usual" on the first setup step repeats the last round's game, course, group and bets (2026-09-26). Still to do: save more than one, and put it behind Pro.
 - [ ] `S2` (partial) House rules for every game, the variations real groups play. Some exist (modified Stableford, skins carryovers). Go through all 16 games, and add the variations people ask for in "Suggest something."
-- [ ] `S2` Ending a round is one tap and forgiving: stopping early, a missing score or a player who left never traps the round open
-- [ ] `S2` (partial) The killer end-of-round moment: every game and press totals up in one animated moment, then the fewest payments with one-tap pay links. Built (2026-09-26): totals count up from $0 with the winner landing last, then a settle-up screen with Venmo pay or request links and Mark paid, then a results card to share. Still to do: count up each game and press, not just the totals, and make the card a real image (area 17).
+- [x] `S2` Ending a round is one tap and forgiving: stopping early, a missing score or a player who left never traps the round open. "A player left" in the round menu, holes with a missing score aren't counted (and the results say so), and finished rounds can't get stuck as active (2026-09-26)
+- [x] `S2` The killer end-of-round moment: every game and press totals up in one animated moment, then the fewest payments with one-tap pay links. Each bet resolves in turn (legs, presses, skins, biggest holes), then the totals land, then settle up with Venmo links and Mark paid, then a results image to share (2026-09-26)
 - [ ] `S3` Side bets between two players inside a bigger round (proposed during the week, see area 21)
 - [ ] `S5` Several groups, one game: multiple foursomes feeding one pot and one leaderboard
 
 ### 6. Courses
 - [ ] `S1` (partial) Three bundled courses plus custom courses you can edit
-- [ ] `S2` Search every course (GolfCourseAPI Pro was the pick after researching providers)
+- [ ] `S2` (partial) Search every course (GolfCourseAPI Pro was the pick after researching providers). Built (2026-09-26) behind a server function; switches on when `GOLFCOURSEAPI_KEY` is added in Vercel.
 - [ ] `S2` Favorite courses and courses near you
 - [ ] `S2` Fix a hole on the spot: the organizer can correct a par, stroke index or tee rating mid-round for their group, and the fix goes to the feedback table so the course gets corrected for everyone
 - [ ] `S3` "Request this course" when a search finds nothing (see area 20)
@@ -271,9 +271,9 @@ Put more money into the winning creators and copy their video formats with other
 - Note: don't let the rebrand hold up S2. Learn which moments groups care about first, then put the most illustration and motion work into those.
 
 ### 17. Brand assets you can share
-- [ ] `S1` (partial) Round results can be shared, but only as text
-- [ ] `S3` Round results image: course, game, winner, a character reaction, logo. Money hidden by default, with a switch to show it.
-- [ ] `S3` Link preview images for join and share links (iMessage, WhatsApp)
+- [x] `S1` Round results can be shared as an image or text (2026-09-26)
+- [ ] `S3` (partial) Round results image: course, game, winner, a character reaction, logo. Money hidden by default, with a switch to show it. Built (2026-09-26) without the character, with a Show amounts switch that starts on.
+- [x] `S3` Link preview images for join and share links (iMessage, WhatsApp) (2026-09-26)
 - [ ] `S3` Saturday preview card to post in the group chat (see area 21)
 - [ ] `S3` All of these made from templates in the app, with the logo and a download link
 - [ ] `S5` Profile card: handicap, season record, nemesis, favorite game
@@ -294,7 +294,7 @@ Put more money into the winning creators and copy their video formats with other
 ### 20. Feedback, roadmap and community
 - [ ] `S1` (partial) "Suggest something" in the app with four choices: a new game, a missing course, a feature, something's broken. Saves to a Supabase feedback table. Built in Settings (2026-09-25); goes live once the feedback section of `supabase/schema.sql` is run in Supabase.
 - [ ] `S1` (partial) Each form asks for what's useful: a game's rules and how the money works; a course's name, city and optional scorecard photo; a bug's screenshot with round and device details attached automatically. Built (2026-09-25), same SQL step as above.
-- [ ] `S2` Show it in natural places: course search with no results, the end of the games list, a quick "How was it?" after a round
+- [x] `S2` Show it in natural places: course search with no results, the end of the games list, a quick "How was it?" after a round (2026-09-26)
 - [ ] `S2` Needs check by kind of user: the organizer, the invited friend, the trip or member-guest organizer, the league runner, and a casual twosome. List what each needs from a round and between rounds, and which games each plays, then add what's missing to the right areas.
 - [ ] `S2` Bug and polish pass after each batch of real rounds: fix what broke, smooth anything that took extra taps or caused a question on the course
 - [ ] `S2` Slack community (free plan): #feedback, #game-requests, #course-requests, #bugs, #show-your-round, #general. Invite each group's organizer personally.
@@ -386,3 +386,4 @@ Kept light on purpose. Groups already have a group text, so Birdie Bank adds to 
 - 2026-09-25: Added a privacy policy page and published Google sign-in to production, so anyone can sign in with Google.
 - 2026-09-26: From a Mobbin review and clickable wireframes: money is now pinned on the Play screen from hole 1 and moves with every tap (it used to appear only after a hole was saved, and Banker's bets step hid it). Setup asks one question per step with "Your usual" and a "Round ready" invite screen. The end of a round is now reveal, settle up with Venmo links, then share.
 - 2026-09-26: Changed the S1 gate to sign-in for anyone plus live feedback, moved the quick logo to early S2, and added a needs check by kind of user and an ongoing bug and polish pass (area 20). Checklist: 17 of 144 done (12%), up from 5 of 141 (4%) when the roadmap started.
+- 2026-09-26 (overnight): Money math tested for all 16 games (5 bugs fixed, including cent rounding), "A player left" and forgiving round endings, per-bet reveal and a results image, feedback prompts in natural places, join link previews, course search ready for a GolfCourseAPI key, stronger offline sync and a service worker that caches the whole app, a faster first load (main bundle 407 KB to about 270 KB), and an accessibility pass. Research: needs check, rules check and copy audit, plus wireframes for the other app areas, rounds set up ahead of time, and organizer onboarding.

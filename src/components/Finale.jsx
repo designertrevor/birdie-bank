@@ -100,7 +100,11 @@ export function Reveal({ round, res, onNext, onDetail, extra, instant = false })
     buzz([20, 40, 20]);
   }, [done, square, instant]);
 
-  const winnerTitle = square ? 'All square' : tied ? `${res.standings.filter(p => p.amount === top.amount).map(p => p.name.split(' ')[0]).join(' & ')} tie for top` : `${top.name.split(' ')[0]} takes it`;
+  // Partners who won together are one winning side, not a tie
+  const leaders = res.standings.filter(p => p.amount === top.amount).map(p => p.id);
+  const side = tied && round.teams?.find(tm => tm.players.length === leaders.length && tm.players.every(pid => leaders.includes(pid)));
+  const leaderNames = res.standings.filter(p => leaders.includes(p.id)).map(p => p.name.split(' ')[0]).join(' & ');
+  const winnerTitle = square ? 'All square' : side ? `${side.name} take it` : tied ? `${leaderNames} tie for top` : `${top.name.split(' ')[0]} takes it`;
   const title = done || !nSteps ? winnerTitle : 'Adding it up';
   return (
     <>
