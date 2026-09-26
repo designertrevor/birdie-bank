@@ -16,6 +16,7 @@ import { useNav } from '../lib/nav.js';
 import { Scorecard } from './RoundDetail.jsx';
 import { LivePill, ShareSheet } from '../components/Live.jsx';
 import { syncConfigured } from '../lib/sync.js';
+import { holeMoneyLine } from '../lib/format.js';
 
 export default function Play({ id }) {
   const round = useStore(s => s.rounds[id]);
@@ -470,13 +471,6 @@ function MoneyBar({ round, preview }) {
       </div>
     </div>
   );
-}
-
-/** One line for the toast after saving a hole: who gained the most on it. */
-function holeMoneyLine(round, hole, delta) {
-  const best = round.players.reduce((a, p) => (delta[p.id] > (delta[a?.id] ?? 0) ? p : a), null);
-  if (!best) return `Hole ${hole.no} saved. No money changed hands`;
-  return `Hole ${hole.no}: ${best.name.split(' ')[0]} ${money(delta[best.id], { sign: true })}`;
 }
 
 // --------------------------- Banker ---------------------------------------
