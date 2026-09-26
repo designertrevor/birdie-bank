@@ -3,22 +3,21 @@
 import { useSyncExternalStore } from 'react';
 import { getState, subscribe, update } from './store.js';
 import { localAdapter, supabaseAdapter } from './sync-adapters.js';
+import { getSupabase, supabaseConfigured } from './supabase.js';
 import { applyHole, applyMeta, assemble, buildHole, buildMeta, newCode, stable } from './sync-model.js';
 
-const URL_ = import.meta.env.VITE_SUPABASE_URL;
-const KEY_ = import.meta.env.VITE_SUPABASE_ANON_KEY;
 
 let adapterPromise = null;
 /** The configured transport, or null when shared scoring isn't set up. */
 export function getAdapter() {
   if (!adapterPromise) {
-    if (URL_ && KEY_) adapterPromise = supabaseAdapter(URL_, KEY_);
+    if (supabaseConfigured) adapterPromise = getSupabase().then(supabaseAdapter);
     else if (import.meta.env.DEV || localStorage.getItem('bb-sync-local') === '1') adapterPromise = Promise.resolve(localAdapter());
     else adapterPromise = Promise.resolve(null);
   }
   return adapterPromise;
 }
-export const syncConfigured = !!(URL_ && KEY_) || import.meta.env.DEV || (typeof localStorage !== 'undefined' && localStorage.getItem('bb-sync-local') === '1');
+export const syncConfigured = supabaseConfigured || import.meta.env.DEV || (typeof localStorage !== 'undefined' && localStorage.getItem('bb-sync-local') === '1');
 
 // --------------------------- status (for UI) ------------------------------
 

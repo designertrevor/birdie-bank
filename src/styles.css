@@ -469,6 +469,8 @@ button { font-family: inherit; }
   padding: 10px 14px; width: 100%; outline: none; color: var(--ink);
 }
 .name-input:focus { box-shadow: 0 0 0 3px var(--lav); }
+.or-rule { display: flex; align-items: center; gap: 10px; margin: 14px 4px; color: var(--mute); font-size: 13px; font-weight: 600; }
+.or-rule::before, .or-rule::after { content: ''; flex: 1; height: 1px; background: var(--surface-strong); }
 .text-input { font: inherit; font-size: 16px; border: none; background: var(--surface); border-radius: 14px; padding: 12px 14px; width: 100%; outline: none; color: var(--ink); line-height: 1.45; }
 .text-input.area { resize: vertical; min-height: 96px; }
 .text-input::placeholder { color: var(--mute-soft); }

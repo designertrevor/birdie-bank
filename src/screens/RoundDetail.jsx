@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Empty, Header, Icon, Screen, useUI } from '../components/ui.jsx';
 import { update, useStore } from '../lib/store.js';
 import { GAMES, holeAtPos, holeComplete, roundLegs, roundResults, scoreSummary, scorers, sideNames, skinsTable } from '../lib/round.js';
@@ -7,6 +7,8 @@ import { money } from '../lib/golf.js';
 import { confettiFrom } from '../lib/delight.js';
 import { useNav } from '../lib/nav.js';
 import { meFor, roundDate, roundPlayerName, shareRound } from '../lib/format.js';
+import { accountsEnabled, useAccount } from '../lib/cloud.js';
+import { SignInSheet } from '../components/Account.jsx';
 
 export default function RoundDetail({ id, celebrate }) {
   const nav = useNav();
@@ -14,6 +16,8 @@ export default function RoundDetail({ id, celebrate }) {
   const state = useStore();
   const round = state.rounds[id];
   const hero = useRef();
+  const acct = useAccount();
+  const [signingIn, setSigningIn] = useState(false);
 
   useEffect(() => {
     if (celebrate && hero.current) setTimeout(() => confettiFrom(hero.current, 70), 250);
@@ -63,6 +67,14 @@ export default function RoundDetail({ id, celebrate }) {
           {meRow && meRow.id !== top.id && !allSquare && <div className="me-line">You: {money(meRow.amount, { sign: true })}</div>}
         </div>
 
+        {accountsEnabled && !acct.user && round.status === 'done' && (
+          <button className="set-row" onClick={() => setSigningIn(true)}>
+            <div className="set-icon"><Icon name="cloud-arrow-up" fill /></div>
+            <div className="row-main"><div className="set-name">{meRow && meRow.amount > 0 ? `You won ${money(meRow.amount)}. Save it to your tab` : 'Save this round to your account'}</div><div className="set-sub">Free. Keeps your rounds and tab safe on any device.</div></div>
+            <span className="chevron"><Icon name="caret-right" /></span>
+          </button>
+        )}
+
         <div className="sec-label">Standings</div>
         {res.standings.map((p, i) => (
           <div key={p.id} className="settle-row">
@@ -100,6 +112,7 @@ export default function RoundDetail({ id, celebrate }) {
           <button className="full-btn outline" onClick={() => nav.reset('history')}>Done</button>
         </div>
       )}
+      {signingIn && <SignInSheet open onClose={() => setSigningIn(false)} />}
     </Screen>
   );
 }

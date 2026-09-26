@@ -3,9 +3,8 @@
 // and goes out when the phone is back online.
 import { getState } from './store.js';
 import { GAMES } from './round.js';
+import { getSupabase } from './supabase.js';
 
-const URL_ = import.meta.env.VITE_SUPABASE_URL;
-const KEY_ = import.meta.env.VITE_SUPABASE_ANON_KEY;
 const QUEUE = 'bb-feedback-queue';
 
 export const FEEDBACK_KINDS = {
@@ -14,13 +13,6 @@ export const FEEDBACK_KINDS = {
   feature: { icon: 'lightbulb', title: 'A feature', sub: 'Something that would save you time' },
   bug: { icon: 'bug', title: 'Something’s broken', sub: 'Tell us what went wrong' },
 };
-
-let clientPromise = null;
-function client() {
-  if (!URL_ || !KEY_) return null;
-  if (!clientPromise) clientPromise = import('@supabase/supabase-js').then(({ createClient }) => createClient(URL_, KEY_, { auth: { persistSession: false } }));
-  return clientPromise;
-}
 
 /** Device and round details attached to every message, so bugs can be reproduced. */
 export function feedbackContext() {
@@ -58,7 +50,7 @@ function readQueue() { try { return JSON.parse(localStorage.getItem(QUEUE)) || [
 function writeQueue(q) { try { localStorage.setItem(QUEUE, JSON.stringify(q)); } catch { /* storage full */ } }
 
 async function send(item) {
-  const c = await client();
+  const c = await getSupabase();
   if (!c) {
     // No server configured (npm run dev without keys): keep a local copy so the flow can be tested
     const sent = JSON.parse(localStorage.getItem('bb-feedback-local') || '[]');

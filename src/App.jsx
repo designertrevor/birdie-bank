@@ -4,6 +4,7 @@ import ErrorBoundary from './components/ErrorBoundary.jsx';
 import { NavCtx } from './lib/nav.js';
 import { useStore } from './lib/store.js';
 import { bootSync, syncConfigured } from './lib/sync.js';
+import { bootCloud } from './lib/cloud.js';
 import { cleanCode } from './lib/sync-model.js';
 import Onboarding from './screens/Onboarding.jsx';
 import JoinInvite from './screens/JoinInvite.jsx';
@@ -67,6 +68,7 @@ export default function App() {
 
   // Live shared rounds + ?join=CODE links
   useEffect(() => {
+    bootCloud();
     bootSync();
     const q = new URLSearchParams(location.search).get('join');
     if (q) {

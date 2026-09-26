@@ -2,12 +2,15 @@ import { useState } from 'react';
 import { BallIllo, Icon, Numpad, Screen } from '../components/ui.jsx';
 import { update, uid } from '../lib/store.js';
 import { formatIndex } from '../lib/format.js';
+import { SignInSheet } from '../components/Account.jsx';
+import { accountsEnabled } from '../lib/cloud.js';
 
 export default function Onboarding() {
   const [step, setStep] = useState(0);
   const [name, setName] = useState('');
   const [index, setIndex] = useState(null);
   const [pad, setPad] = useState(false);
+  const [signingIn, setSigningIn] = useState(false);
 
   const finish = () => {
     update(s => {
@@ -31,7 +34,11 @@ export default function Onboarding() {
             ))}
           </div>
         </div>
-        <div className="cta-wrap"><button className="full-btn" onClick={() => setStep(1)}>Let’s go <Icon name="arrow-right" /></button></div>
+        <div className="cta-wrap">
+          <button className="full-btn" onClick={() => setStep(1)}>Let’s go <Icon name="arrow-right" /></button>
+          {accountsEnabled && <button className="full-btn outline" onClick={() => setSigningIn(true)}>I already have an account</button>}
+        </div>
+        {signingIn && <SignInSheet open onClose={() => setSigningIn(false)} title="Welcome back" text="Sign in and your rounds, players and tab come right back." />}
       </Screen>
     );
   }

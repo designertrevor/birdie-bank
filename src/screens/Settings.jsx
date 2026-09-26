@@ -10,12 +10,28 @@ import { money } from '../lib/golf.js';
 import { BottomNav } from '../nav.jsx';
 import { useNav } from '../lib/nav.js';
 import { formatIndex } from '../lib/format.js';
+import { SignInSheet, syncLabel } from '../components/Account.jsx';
+import { accountsEnabled, signOut, syncNow, unsyncedCount, useAccount } from '../lib/cloud.js';
 
 export default function Settings() {
   const nav = useNav();
   const state = useStore();
   const { ask, showToast } = useUI();
   const me = state.players[state.me];
+  const acct = useAccount();
+  const [signingIn, setSigningIn] = useState(false);
+
+  const logOut = async () => {
+    if (unsyncedCount() > 0) {
+      await syncNow();
+      if (unsyncedCount() > 0) {
+        await ask({ title: 'Not everything is saved yet', text: 'Some changes on this phone haven’t reached your account. Get a signal and try again, so nothing is lost.', actions: [], cancelLabel: 'OK' });
+        return;
+      }
+    }
+    if (!(await ask({ title: 'Sign out?', text: 'Everything stays saved in your account. This phone goes back to a fresh start until you sign in again.', confirmLabel: 'Sign out' }))) return;
+    await signOut();
+  };
 
   const backup = async () => {
     const blob = new Blob([exportJSON()], { type: 'application/json' });
@@ -55,6 +71,12 @@ export default function Settings() {
       <Header title="Settings" />
       <div className="scroll">
         <div className="sec-label">You</div>
+        {accountsEnabled && (acct.user ? (
+          <div className="set-row static">
+            <div className="set-icon"><Icon name={acct.state === 'offline' || acct.state === 'error' ? 'cloud-slash' : 'cloud-check'} fill /></div>
+            <div className="row-main"><div className="set-name">{acct.user.email}</div><div className="set-sub">{syncLabel(acct)}</div></div>
+          </div>
+        ) : row('cloud-arrow-up', 'Save your rounds', 'Sign in to back up and use any device', () => setSigningIn(true)))}
         {me && row('user-circle', me.name, me.index == null ? 'No handicap index' : `Index ${formatIndex(me.index)}`, () => nav.push('playerEdit', { id: me.id }))}
         <div className="sec-label">Appearance</div>
         <div className="block">
@@ -77,9 +99,12 @@ export default function Settings() {
         {row('chat-circle-dots', 'Suggest something', 'A game, a course, a feature or a bug', () => nav.push('suggest'))}
         <div className="sec-label">About</div>
         {row('info', 'About Birdie Bank', 'Rules, handicaps and the fine print', () => nav.push('about'))}
-        <button className="danger-link" onClick={reset}><Icon name="trash" /> Erase all data</button>
+        {acct.user
+          ? <button className="danger-link" onClick={logOut}><Icon name="sign-out" /> Sign out</button>
+          : <button className="danger-link" onClick={reset}><Icon name="trash" /> Erase all data</button>}
       </div>
       <BottomNav />
+      {signingIn && <SignInSheet open onClose={() => setSigningIn(false)} />}
     </Screen>
   );
 }

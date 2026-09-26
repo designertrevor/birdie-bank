@@ -6,9 +6,7 @@
 
 // --------------------------- Supabase -------------------------------------
 
-export async function supabaseAdapter(url, key) {
-  const { createClient } = await import('@supabase/supabase-js');
-  const db = createClient(url, key, { auth: { persistSession: false } });
+export function supabaseAdapter(db) {
   const check = ({ error }) => { if (error) throw error; };
   const now = () => new Date().toISOString();
   return {

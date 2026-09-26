@@ -113,3 +113,10 @@ export function importJSON(text) {
   persist();
   listeners.forEach(l => l());
 }
+
+/** Swap in a whole new state (used by cloud sync after merging an account's data). */
+export function replaceState(next) {
+  state = next;
+  persist();
+  listeners.forEach(l => l());
+}
