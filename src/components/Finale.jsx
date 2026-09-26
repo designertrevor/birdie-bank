@@ -121,9 +121,9 @@ export function Reveal({ round, res, onNext, onDetail, extra, instant = false })
             {steps.map((s, i) => <RevealStep key={s.key} step={s} on={i < visible} skip={skipped} />)}
           </div>
         )}
-        {/* Losers land first, the winner last */}
+        {/* Losers land first, the winner last. Equal money shares a place, so partners both land on top */}
         {res.standings.map((p, i) => (
-          <CountRow key={p.id} place={i + 1} name={p.name} amount={p.amount} me={p.id === me}
+          <CountRow key={p.id} place={res.standings.findIndex(q => q.amount === p.amount) + 1} name={p.name} amount={p.amount} me={p.id === me}
             delay={t.stepsEnd + (count - 1 - i) * t.stagger} duration={t.count} skip={skipped} />
         ))}
         {extra}
