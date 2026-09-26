@@ -43,6 +43,34 @@ function noteLocalChanges() {
   seen = now;
 }
 
+// --------------------------- client ----------------------------------------
+// The Supabase library is big, so it only loads for someone who is (or is becoming) signed in.
+
+/** True when this phone may be signed in or is coming back from a sign-in link. */
+function maySignedIn() {
+  if (meta) return true;
+  try {
+    if (/[?&#](code|error|access_token)=/.test(location.search + location.hash)) return true;
+    for (let i = 0; i < localStorage.length; i++) if (localStorage.key(i)?.startsWith('bb-auth')) return true;
+    return false;
+  } catch { return true; }
+}
+
+let wired = false;
+async function client() {
+  const db = await getSupabase();
+  if (db && !wired) {
+    wired = true;
+    db.auth.onAuthStateChange(event => {
+      if (event !== 'SIGNED_IN') return;
+      // Tidy the address bar after coming back from Google or an email link
+      if (/[?&](code|error)=/.test(location.search)) history.replaceState(null, '', location.pathname);
+      setTimeout(syncNow, 0); // outside the auth callback, per Supabase docs
+    });
+  }
+  return db;
+}
+
 // --------------------------- sync ------------------------------------------
 
 async function pullAll(db, since) {
@@ -59,7 +87,8 @@ async function pullAll(db, since) {
 }
 
 async function syncOnce() {
-  const db = await getSupabase();
+  if (!maySignedIn()) { setStatus({ user: null, state: 'signed-out', pending: 0 }); return; }
+  const db = await client();
   if (!db) return;
   const { data: { session } } = await db.auth.getSession();
   const user = session?.user;
@@ -155,20 +184,20 @@ export function syncNow() {
 const redirectTo = () => `${location.origin}/`;
 
 export async function signInWithGoogle() {
-  const db = await getSupabase();
+  const db = await client();
   const { error } = await db.auth.signInWithOAuth({ provider: 'google', options: { redirectTo: redirectTo() } });
   if (error) throw error;
 }
 
 /** Emails a sign-in link that also shows a 6-digit code (for installed apps, where links open in the browser). */
 export async function sendEmailCode(email) {
-  const db = await getSupabase();
+  const db = await client();
   const { error } = await db.auth.signInWithOtp({ email, options: { emailRedirectTo: redirectTo(), shouldCreateUser: true } });
   if (error) throw error;
 }
 
 export async function verifyEmailCode(email, token) {
-  const db = await getSupabase();
+  const db = await client();
   const { error } = await db.auth.verifyOtp({ email, token, type: 'email' });
   if (error) throw error;
   await syncNow();
@@ -179,7 +208,7 @@ export function unsyncedCount() { return meta ? outgoing(toDocs(getState()), met
 
 /** Sign out and give this phone a fresh start (everything stays in the account). */
 export async function signOut() {
-  const db = await getSupabase();
+  const db = await client();
   await db.auth.signOut({ scope: 'local' });
   meta = null;
   try { localStorage.removeItem(META); } catch { /* ignore */ }
@@ -206,12 +235,5 @@ export async function bootCloud() {
   window.addEventListener('online', () => syncNow());
   document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') syncNow(); });
   setInterval(() => { if (meta && document.visibilityState === 'visible') syncNow(); }, 60000);
-  const db = await getSupabase();
-  db.auth.onAuthStateChange(event => {
-    if (event !== 'SIGNED_IN') return;
-    // Tidy the address bar after coming back from Google or an email link
-    if (/[?&](code|error)=/.test(location.search)) history.replaceState(null, '', location.pathname);
-    setTimeout(syncNow, 0); // outside the auth callback, per Supabase docs
-  });
   syncNow();
 }
