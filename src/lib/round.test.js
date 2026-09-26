@@ -1,6 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { createRound, defaultNine, livePreview, resizeRound, scoredHolesDropped } from './round.js';
+import { holeMoneyLine } from './format.js';
 
 const DEFAULT_SETTINGS = {
   hcPct: 100,
@@ -101,4 +102,25 @@ test('livePreview counts the hole being entered before it is saved', () => {
   assert.deepEqual(p.balances, { a: 4, b: -4 }); // two skins at $2
   assert.deepEqual(p.delta, { a: 4, b: -4 });
   assert.equal(r.scores[2], undefined); // the round itself is untouched
+});
+
+test('livePreview counts a saved hole\'s marks once, not zero times', () => {
+  const r = mk(course9, 9, { game: 'bbb', useHandicaps: false, settings: { ...DEFAULT_SETTINGS, bbb: { value: 1 } } });
+  r.scores[1] = { a: 4, b: 4 };
+  r.marks[1] = { bingo: 'a', bango: 'a', bongo: null };
+  const p = livePreview(r, r.holes[0]);
+  assert.deepEqual(p.balances, { a: 2, b: -2 });
+  assert.deepEqual(p.delta, { a: 2, b: -2 }); // was 0: the "before" round still had the marks
+  assert.deepEqual(r.marks[1], { bingo: 'a', bango: 'a', bongo: null });
+});
+
+test('the save toast names partners who won the hole together', () => {
+  const r = mk(course9, 9, { game: 'match', teams: [['a'], ['b']] });
+  const h = r.holes[0];
+  assert.equal(holeMoneyLine(r, h, { a: 5, b: -5 }), 'Hole 1: Ann +$5');
+  assert.equal(holeMoneyLine(r, h, { a: 0, b: 0 }), 'Hole 1 saved. No money changed hands');
+  const four = [...players, { id: 'c', name: 'Cy Park' }, { id: 'd', name: 'Di' }];
+  const t = mk(course9, 9, { game: 'match', players: four, teams: [['a', 'c'], ['b', 'd']] });
+  assert.equal(holeMoneyLine(t, h, { a: 2.5, b: -2.5, c: 2.5, d: -2.5 }), 'Hole 1: Ann & Cy +$2.50');
+  assert.equal(holeMoneyLine(t, h, { a: 3, b: -2, c: 1, d: -2 }), 'Hole 1: Ann +$3');
 });

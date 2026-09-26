@@ -34,6 +34,19 @@ export function shareText(round, res, { amounts = true } = {}) {
 }
 export const roundPlayerName = (round, id) => round.players.find(p => p.id === id)?.name || '?';
 
+/**
+ * One line for the toast after saving a hole: who gained the most on it. Everyone tied for the
+ * most is named (partners win together), and a whole team is named by its team name.
+ */
+export function holeMoneyLine(round, hole, delta) {
+  const best = Math.max(0, ...round.players.map(p => delta[p.id] || 0));
+  if (!best) return `Hole ${hole.no} saved. No money changed hands`;
+  const top = round.players.filter(p => delta[p.id] === best).map(p => p.id);
+  const team = round.teams?.find(t => t.players.length === top.length && t.players.every(pid => top.includes(pid)));
+  const who = team ? team.name : top.map(pid => roundPlayerName(round, pid).split(' ')[0]).join(' & ');
+  return `Hole ${hole.no}: ${who} ${money(best, { sign: true })}`;
+}
+
 export async function shareRound(round, res, showToast, opts) {
   const text = shareText(round, res, opts);
   try {

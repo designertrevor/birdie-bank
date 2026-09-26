@@ -141,8 +141,8 @@ export function pointsToMoney(points, value) {
   if (!ids.length) return {};
   const avg = ids.reduce((a, id) => a + points[id], 0) / ids.length;
   const out = {};
-  for (const id of ids) out[id] = Math.round((points[id] - avg) * value * 100) / 100;
-  return out;
+  for (const id of ids) out[id] = (points[id] - avg) * value;
+  return roundCents(out);
 }
 
 /**
@@ -166,8 +166,27 @@ export function settleTotals(totals, { mode = 'pot', stake = 1, lowerWins = true
   const pot = stake * ids.length;
   for (const id of ids) out[id] -= stake;
   for (const id of winners) out[id] += pot / winners.length;
-  for (const id of ids) out[id] = Math.round(out[id] * 100) / 100;
-  return out;
+  return roundCents(out);
+}
+
+/**
+ * Round money to whole cents without making or losing a cent. Splitting $20 three ways gives
+ * $6.666… each; rounding each on its own hands out $20.01, and then the balances no longer sum to
+ * zero and the settle-up can't square everyone. Each amount is rounded, then the spare cent(s) come
+ * back from whoever was rounded furthest the wrong way (the first listed when it's a tie).
+ */
+export function roundCents(amounts) {
+  const ids = Object.keys(amounts);
+  const raw = ids.map(id => amounts[id] * 100);
+  const out = raw.map(v => Math.round(v));
+  let off = out.reduce((a, v) => a + v, 0) - Math.round(raw.reduce((a, v) => a + v, 0)); // > 0: too many cents handed out
+  if (off) {
+    const step = off > 0 ? -1 : 1;
+    const pull = i => (out[i] - raw[i]) * -step; // how far rounding went the way we need to undo
+    const order = ids.map((_, i) => i).sort((i, j) => pull(j) - pull(i));
+    for (let k = 0; off; k++) { out[order[k % order.length]] += step; off += step; }
+  }
+  return Object.fromEntries(ids.map((id, i) => [id, out[i] / 100 || 0]));
 }
 
 // ---------------------------------------------------------------------------

@@ -5,7 +5,7 @@ import {
 } from './golf.js';
 import {
   bestBall, sideSplit, vegasHole, sixesPairings, sixesSegments, stablefordPoints, quotaPoints, quotaFor, ninesPoints,
-  acesDeuces, pointsToMoney, settleTotals, scrambleTeamHandicap, rabbitHolder, scoreDots, DOT_KINDS,
+  acesDeuces, pointsToMoney, settleTotals, scrambleTeamHandicap, rabbitHolder, scoreDots, DOT_KINDS, roundCents,
 } from './games.js';
 
 /**
@@ -600,7 +600,8 @@ export function roundResults(round) {
   const detail = {};
   const s = round.settings;
   const add = deltas => { for (const id of ids) balances[id] += deltas[id] || 0; };
-  const round2 = () => { for (const id of ids) balances[id] = Math.round(balances[id] * 100) / 100; };
+  // Whole cents that still sum to zero, even when a pot splits three ways
+  const round2 = () => { const r = roundCents(balances); for (const id of ids) balances[id] = r[id]; };
 
   if (round.game === 'banker') {
     detail.holes = [];
@@ -748,8 +749,11 @@ export function livePreview(round, hole, pending = null) {
   const counted = pending
     ? { ...round, scores: { ...round.scores, [no]: pending.scores }, ...put('banker', pending.banker), ...put('wolf', pending.wolf), ...put('marks', pending.marks) }
     : round;
-  const without = { ...round, scores: { ...round.scores } };
+  // The round before this hole: no scores and no marks. Marks have to go too, because Bingo Bango
+  // Bongo and Dots count marks on their own, so a saved hole's marks would otherwise cancel out of the delta.
+  const without = { ...round, scores: { ...round.scores }, marks: { ...(round.marks || {}) } };
   delete without.scores[no];
+  delete without.marks[no];
   const now = roundResults(counted).balances;
   const before = roundResults(without).balances;
   const delta = Object.fromEntries(Object.keys(now).map(id => [id, Math.round((now[id] - before[id]) * 100) / 100]));
