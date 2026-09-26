@@ -16,7 +16,7 @@ The plan for growing Birdie Bank into a $10k/mo business, and the checklist we w
 
 ## Current focus
 
-**Step 1: Foundation.** Accounts, cloud data, invites and "Suggest something" are built. Left for S1: custom email (SMTP) so sign-in emails reach anyone, a privacy policy page so Google sign-in can leave testing mode, and the quick logo. Then play real Saturday rounds toward the gate (8+ rounds with zero hand math).
+**Step 1: Foundation.** Accounts, cloud data, invites and "Suggest something" are built. Google sign-in is open to anyone. Left for S1: custom email (SMTP) so sign-in emails reach anyone, and the quick logo. Then play real Saturday rounds toward the gate (8+ rounds with zero hand math).
 
 **The big date:** the creator test (S4) runs February to April 2027, when golf season starts back up. Everything before it is about being ready: a product groups keep using, a smooth path from video to paying, and an App Store app.
 
@@ -139,7 +139,7 @@ Put more money into the winning creators and copy their video formats with other
 
 ### 1. Accounts and cloud data
 - [ ] `S1` (partial) Data saved on the phone, with a backup file you can export in Settings
-- [ ] `S1` (partial) Sign in with Apple, Google, or a phone number or email link. Google and email link work (2026-09-25). Google is in testing mode (up to 100 listed test users) until a privacy policy page exists; email only reaches Supabase team members until custom SMTP is set up. Apple comes with the App Store app (S3); phone numbers are skipped for now.
+- [ ] `S1` (partial) Sign in with Apple, Google, or a phone number or email link. Google and email link work (2026-09-25), and Google sign-in is public. Email only reaches Supabase team members until custom SMTP is set up. Apple comes with the App Store app (S3); phone numbers are skipped for now.
 - [x] `S1` Rounds, crews and the tab saved to the cloud and shared across devices (2026-09-25)
 - [ ] `S1` (partial) Claim your seat: a guest player becomes the real person when they sign up, and their history and tab come with them. A guest who joins from a link plays as their seat in that round, and signing up saves those rounds to their account. Linking the organizer's copy of that player to the real person comes with the shared tab (S2).
 - [x] `S1` Move each phone's existing local data into the account (2026-09-25)
@@ -244,7 +244,7 @@ Put more money into the winning creators and copy their video formats with other
 
 ### 14. Trust and legal
 - [x] "Friendly wagers only" screen in onboarding
-- [ ] `S3` Terms of service and privacy policy
+- [ ] `S3` (partial) Terms of service and privacy policy. Privacy policy at /privacy.html (2026-09-25), still due its legal review; terms of service to come.
 - [ ] `S3` Age check (18+ at minimum, higher in some places)
 - [ ] `S3` One-time legal review of how betting is worded, before App Store review and the creator test
 
@@ -376,3 +376,4 @@ Kept light on purpose. Groups already have a group text, so Birdie Bank adds to 
 - 2026-09-25: Live sharing was already on in production (since 2026-09-23). A join link on a new phone now skips organizer onboarding: see the round, pick your name, you're in.
 - 2026-09-25: Built "Suggest something" (Settings) with a form for each kind, photos, and an offline queue. Needs the feedback SQL run in Supabase before it's pushed.
 - 2026-09-25: Accounts and cloud data: Google and email-link sign-in, offline-first sync of every player, crew, course, round, payment and setting, merge on first sign-in, and a "save it to your tab" prompt after rounds. Supabase SQL run; Google Cloud project "Birdie Bank" created with a web sign-in client.
+- 2026-09-25: Added a privacy policy page and published Google sign-in to production, so anyone can sign in with Google.
