@@ -57,7 +57,7 @@ export default function NewRound() {
 
   const start = async () => {
     const s = getState();
-    if (s.activeRoundId && s.rounds[s.activeRoundId]) {
+    if (s.activeRoundId && s.rounds[s.activeRoundId]?.status === 'active') {
       const ok = await ask({ title: 'You have a round in progress', text: 'Starting a new one ends the current round without saving results.', confirmLabel: 'Discard it and start', danger: true });
       if (!ok) return;
     }

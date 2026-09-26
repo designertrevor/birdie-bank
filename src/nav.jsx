@@ -4,7 +4,8 @@ import { useNav } from './lib/nav.js';
 
 export function BottomNav() {
   const nav = useNav();
-  const active = useStore(s => s.activeRoundId);
+  // Only a round that's still being played: never resume one that was finished or discarded
+  const active = useStore(s => (s.activeRoundId && s.rounds[s.activeRoundId]?.status === 'active' ? s.activeRoundId : null));
   const item = (t, icon, label) => (
     <button className={`nav-btn ${nav.tab === t ? 'active' : ''}`} onClick={() => nav.setTab(t)} aria-current={nav.tab === t ? 'page' : undefined}>
       <Icon name={icon} fill /><span className="nav-lbl">{label}</span>

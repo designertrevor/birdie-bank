@@ -209,12 +209,14 @@ export function scrambleTeamHandicap(courseHcs) {
 
 /**
  * Who holds the rabbit through a run of holes. rows: [{ winner: pid | null (tie) | undefined (unplayed) }].
- * With tiesFree a tied hole sets the rabbit loose. Returns { holder, history: [holder after each hole] }.
+ * With tiesFree a tied hole sets the rabbit loose. A row's optional `gone` lists players who have
+ * left; if the holder is one of them the rabbit runs loose. Returns { holder, history: [holder after each hole] }.
  */
 export function rabbitHolder(rows, tiesFree = true) {
   let holder = null;
   const history = [];
   for (const r of rows) {
+    if (holder && r.gone?.includes(holder)) holder = null;
     if (r.winner === undefined) { history.push(holder); continue; }
     if (r.winner) holder = r.winner;
     else if (tiesFree) holder = null;

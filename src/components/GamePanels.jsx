@@ -2,7 +2,7 @@
 import { Icon, useUI } from './ui.jsx';
 import { update, uid } from '../lib/store.js';
 import {
-  holeAtPos, holeComplete, nassauAmounts, nassauPressOptions, nassauWinners, pointsTable, pressMode, rabbitTable, roundLegs, sideNames, sides,
+  holeAtPos, holeComplete, nassauAmounts, nassauPressOptions, nassauWinners, playersOn, pointsTable, pressMode, rabbitTable, roundLegs, sideNames, sides,
   sixesMatches, totalsTable, vegasPreview, vegasTable,
 } from '../lib/round.js';
 import { money, nassauBets } from '../lib/golf.js';
@@ -111,8 +111,8 @@ export function SixesPanel({ round, hole }) {
           const s = m.status;
           const notStarted = pos < m.seg.start && s.played === 0;
           const lead = s.leader === null ? null : pair(m.sides[s.leader]);
-          const val = notStarted ? '–' : s.leader === null ? 'AS' : `${s.by} up`;
-          const sub = notStarted ? `H${holeAtPos(round, m.seg.start)}–${holeAtPos(round, m.seg.end)}` : s.left === 0 ? (lead ? `${lead}` : 'Halved') : s.closed ? `${lead} won` : lead ? `${lead} · ${s.left} left` : `${s.left} left`;
+          const val = m.off || notStarted ? '–' : s.leader === null ? 'AS' : `${s.by} up`;
+          const sub = m.off ? 'Off: a player left' : notStarted ?`H${holeAtPos(round, m.seg.start)}–${holeAtPos(round, m.seg.end)}` : s.left === 0 ? (lead ? `${lead}` : 'Halved') : s.closed ? `${lead} won` : lead ? `${lead} · ${s.left} left` : `${s.left} left`;
           return (
             <div key={m.index} className={`ms-tile ${m === cur ? 'cur' : ''} ${s.leader != null && s.played ? 'ahead' : ''}`}>
               <span className="ms-lbl">Match {m.index + 1}</span><span className="ms-val">{val}</span><span className="ms-sub">{sub}</span>
@@ -137,7 +137,7 @@ export function ChipsPanel({ icon, label, items, color = 'var(--lav)' }) {
 
 export function TotalsPanel({ round }) {
   const t = totalsTable(round);
-  const played = t[0]?.played || 0;
+  const played = Math.max(0, ...t.map(x => x.played));
   const lowerWins = round.game === 'stroke';
   const fmt = x => (round.game === 'stroke' ? (x.toPar === 0 ? 'E' : x.toPar > 0 ? `+${x.toPar}` : String(x.toPar)) : round.game === 'quota' ? `${x.total}/${x.quota}` : `${x.total}`);
   const sorted = [...t].sort((a, b) => (lowerWins ? a.total - b.total : (round.game === 'quota' ? b.vsQuota - a.vsQuota : b.total - a.total)));
@@ -191,14 +191,14 @@ const BBB = [
   { key: 'bongo', name: 'Bongo', help: 'First in the hole' },
 ];
 
-export function BBBPicker({ round, marks, setMarks }) {
+export function BBBPicker({ round, hole, marks, setMarks }) {
   return (
     <div className="marks-card">
       {BBB.map(b => (
         <div key={b.key} className="marks-row">
           <div className="marks-lbl"><strong>{b.name}</strong><span>{b.help}</span></div>
           <div className="chip-row" style={{ padding: 0 }} role="radiogroup" aria-label={b.name}>
-            {round.players.map(p => (
+            {playersOn(round, hole).map(p => (
               <button key={p.id} role="radio" aria-checked={marks[b.key] === p.id} className={`pill-btn sm ${marks[b.key] === p.id ? 'on' : ''}`}
                 onClick={() => { setMarks({ ...marks, [b.key]: marks[b.key] === p.id ? null : p.id }); buzz(8); }}>{firstName(p.name)}</button>
             ))}

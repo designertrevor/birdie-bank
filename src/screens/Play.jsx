@@ -3,8 +3,8 @@ import { Empty, Icon, Numpad, Screen, Segmented, Sheet, useUI } from '../compone
 import { RulesSheet } from '../components/Rules.jsx';
 import { getState, update, useStore } from '../lib/store.js';
 import {
-  GAMES, bankerHoleSetup, defaultNine, holeComplete, livePreview, nassauPressOptions, pressMode, resizeRound, roundLegs,
-  roundResults, scoredHolesDropped, scorers, skinsTable, strokesFor, wolfFor,
+  GAMES, bankerHoleSetup, canLeave, defaultNine, holeComplete, leftRule, livePreview, nassauPressOptions, playersLeft, playersOn, pressMode,
+  resizeRound, roundLegs, roundResults, scoredHolesDropped, scorers, skinsTable, strokesFor, wolfHoleSetup,
 } from '../lib/round.js';
 import { findCourse } from '../lib/courses.js';
 import { money, scoreName, pickupGross } from '../lib/golf.js';
@@ -30,7 +30,9 @@ export default function Play({ id }) {
   }
   // Remount when this hole changes on another phone so the fresh scores show
   const cur = round.holes[Math.min(round.current, round.holes.length - 1)];
-  return <PlayRound key={`${round.holesCount}:${round.current}:${round._remote?.[cur?.no] || 0}`} round={round} />;
+  // ...and when someone leaves or comes back, so the score boxes match who's playing
+  const left = Object.entries(round.left || {}).map(e => e.join('@')).sort().join(',');
+  return <PlayRound key={`${round.holesCount}:${round.current}:${round._remote?.[cur?.no] || 0}:${left}`} round={round} />;
 }
 
 function useWakeLock() {
@@ -55,7 +57,7 @@ function PlayRound({ round }) {
   const hole = round.holes[idx];
   const isLast = idx === round.holes.length - 1;
   const game = round.game;
-  const units = scorers(round); // players, or teams in a scramble
+  const units = scorers(round, hole); // players still playing, or teams in a scramble
 
   // Draft scores for this hole: saved scores, else par (shown muted until touched)
   const saved = round.scores[hole.no] || {};
@@ -70,8 +72,9 @@ function PlayRound({ round }) {
   useEffect(() => { DRAFTS.set(draftKey, { draft, touched, dirty, marks }); }, [draftKey, draft, touched, dirty, marks]);
   const [banker, setBanker] = useState(() => (game === 'banker' ? structuredClone(bankerHoleSetup(round, idx)) : null));
   const [phase, setPhase] = useState(() => (game === 'banker' && !holeComplete(round, hole) ? 'bets' : 'scores'));
-  const [wolf, setWolf] = useState(() => (game === 'wolf' ? (round.wolf[hole.no] || { wolf: wolfFor(round, idx), partner: undefined }) : null));
+  const [wolf, setWolf] = useState(() => (game === 'wolf' ? wolfHoleSetup(round, idx) : null));
   const [menu, setMenu] = useState(false);
+  const [leftSheet, setLeftSheet] = useState(false);
   const [card, setCard] = useState(false);
   const [rules, setRules] = useState(false);
   const [betPad, setBetPad] = useState(null);
@@ -105,7 +108,7 @@ function PlayRound({ round }) {
 
   const saveHole = async () => {
     if (game === 'wolf' && wolf.partner === undefined) { showToast('Wolf needs to pick a partner or go lone'); return; }
-    const scores = { ...draft };
+    const scores = Object.fromEntries(units.map(p => [p.id, draft[p.id]]));
     DRAFTS.delete(draftKey);
     showToast(holeMoneyLine(round, hole, livePreview(round, hole, { scores, banker, wolf, marks }).delta));
     update(s => {
@@ -136,9 +139,10 @@ function PlayRound({ round }) {
     const r = getState().rounds[round.id];
     const missing = r.holes.filter(h => !holeComplete(r, h));
     if (missing.length) {
+      const one = missing.length === 1;
       const go = await ask({
-        title: `${missing.length} hole${missing.length === 1 ? '' : 's'} not scored`,
-        text: `Hole${missing.length === 1 ? '' : 's'} ${missing.map(h => h.no).join(', ')} ${missing.length === 1 ? 'has' : 'have'} no scores. Finish anyway and count only the holes played?`,
+        title: `${missing.length} hole${one ? '' : 's'} not fully scored`,
+        text: `Hole${one ? '' : 's'} ${missing.map(h => h.no).join(', ')} ${one ? 'is' : 'are'} missing scores and won’t count for money. Finish anyway? You can fix scores later from the results.`,
         actions: [{ label: 'Finish round', value: 'finish' }, { label: 'Go to first missing hole', value: 'goto', secondary: true }],
       });
       if (go === 'goto') { update(s => { s.rounds[round.id].current = r.holes.indexOf(missing[0]); }); return; }
@@ -213,7 +217,7 @@ function PlayRound({ round }) {
       )}
       {(game === 'nassau' || game === 'match') && <MatchPanel round={round} hole={hole} />}
       {game === 'skins' && <SkinsPanel round={round} hole={hole} onChange={() => setBetsSheet(true)} />}
-      {game === 'wolf' && <WolfPanel round={round} wolf={wolf} setWolf={setWolf} />}
+      {game === 'wolf' && <WolfPanel round={round} hole={hole} wolf={wolf} setWolf={setWolf} />}
       {game === 'vegas' && <VegasPanel round={round} hole={hole} draft={draft} touched={touched} />}
       {game === 'sixes' && <SixesPanel round={round} hole={hole} />}
       {(game === 'stroke' || game === 'stableford' || game === 'quota') && <TotalsPanel round={round} />}
@@ -223,7 +227,7 @@ function PlayRound({ round }) {
 
       {phase === 'scores' && (
         <div className="scroll">
-          {game === 'bbb' && <BBBPicker round={round} marks={marks} setMarks={setMarksDirty} />}
+          {game === 'bbb' && <BBBPicker round={round} hole={hole} marks={marks} setMarks={setMarksDirty} />}
           {units.map(p => {
             const st = round.useHandicaps ? strokesFor(round, p, hole) : 0;
             const v = draft[p.id];
@@ -293,10 +297,14 @@ function PlayRound({ round }) {
         <button className="sheet-item" onClick={() => { setMenu(false); setHolesSheet(true); }}>
           <span><Icon name="flag-pennant" /> Round length · {round.holesCount} holes</span><Icon name="caret-right" />
         </button>
+        <button className="sheet-item" onClick={() => { setMenu(false); setLeftSheet(true); }}>
+          <span><Icon name="user-minus" /> {playersLeft(round).length ? `A player left · ${playersLeft(round).map(x => x.player.name.split(' ')[0]).join(', ')}` : 'A player left'}</span><Icon name="caret-right" />
+        </button>
         <button className="sheet-item" onClick={endEarly}><span><Icon name="flag-checkered" /> End round</span><Icon name="caret-right" /></button>
       </Sheet>
       {holesSheet && <HolesSheet round={round} onClose={() => setHolesSheet(false)} />}
       {betsSheet && <BetsSheet round={round} onClose={() => setBetsSheet(false)} />}
+      {leftSheet && <LeftSheet round={round} idx={idx} onClose={() => setLeftSheet(false)} onEnd={() => { setLeftSheet(false); endEarly(); }} />}
       <Sheet open={card} onClose={() => setCard(false)} title="Scorecard" className="sc-sheet">
         <p className="sheet-text">Tap a hole to jump to it and fix scores.</p>
         <Scorecard round={round} current={hole.no} onHole={no => { setCard(false); goHole(round.holes.findIndex(h => h.no === no)); }} />
@@ -306,12 +314,12 @@ function PlayRound({ round }) {
       {game === 'banker' && (
         <>
           <Sheet open={bankerPick} onClose={() => setBankerPick(false)} title={`Banker · Hole ${hole.no}`}>
-            {round.players.map(p => (
+            {playersOn(round, hole).map(p => (
               <button key={p.id} className={`sheet-item ${banker.banker === p.id ? 'selected' : ''}`}
                 onClick={() => {
                   const bets = {};
                   const def = round.settings.banker.defaultBet;
-                  for (const q of round.players) if (q.id !== p.id) bets[q.id] = banker.bets[q.id] ?? def;
+                  for (const q of playersOn(round, hole)) if (q.id !== p.id) bets[q.id] = banker.bets[q.id] ?? def;
                   setBanker({ ...banker, banker: p.id, bets, doubled: {}, doubleBack: false });
                   setBankerPick(false);
                 }}>
@@ -381,6 +389,93 @@ function HolesSheet({ round, onClose }) {
           {changed ? <>Switch to {count} holes <Icon name="arrow-right" /></> : `Playing ${count} holes`}
         </button>
       </div>
+    </Sheet>
+  );
+}
+
+// --------------------------- A player left ---------------------------------
+
+/**
+ * Mark a player as gone after a hole, or bring them back. Holes they played keep counting;
+ * from the next hole on they have no score box and the money is worked out without them.
+ * Mounted only while open so it starts fresh each time.
+ */
+function LeftSheet({ round, idx, onClose, onEnd }) {
+  const { showToast } = useUI();
+  const gone = playersLeft(round);
+  const staying = round.players.filter(p => round.left?.[p.id] == null);
+  const [pid, setPid] = useState(null);
+  // Default: the last hole they finished. The hole on screen if it's fully scored, else the one before
+  const [pos, setPos] = useState(() => (holeComplete(round, round.holes[idx]) ? idx + 1 : idx));
+  const first = n => n.split(' ')[0];
+  const person = round.players.find(p => p.id === pid);
+  const afterNo = pos === 0 ? 0 : round.holes[pos - 1].no;
+  const nobody = !staying.some(p => canLeave(round, p.id));
+  // Holes to pick from: up to the one on screen, or further if later holes already have scores (fixing a round)
+  const upto = Math.max(idx, round.holes.reduce((a, h, i) => (round.scores[h.no] ? i : a), -1));
+  const effect = pid ? leftRule({ ...round, left: { ...round.left, [pid]: afterNo } }, pid) : null;
+
+  const apply = () => {
+    update(s => { const r = s.rounds[round.id]; r.left = { ...(r.left || {}), [pid]: afterNo }; });
+    onClose();
+    showToast(pos === 0 ? `${first(person.name)} is out of the round` : `${first(person.name)} left after hole ${afterNo}`);
+    buzz(20);
+  };
+  const undo = p => {
+    update(s => { const r = s.rounds[round.id]; const next = { ...(r.left || {}) }; delete next[p.id]; r.left = next; });
+    const later = round.holes.filter((h, i) => i >= (gone.find(g => g.player.id === p.id)?.pos ?? 0) && holeComplete(round, h));
+    onClose();
+    showToast(later.length ? `${first(p.name)} is back. Add their scores for holes ${later.map(h => h.no).join(', ')}` : `${first(p.name)} is back`);
+  };
+
+  return (
+    <Sheet open onClose={onClose} title="A player left">
+      <p className="sheet-text">Holes they played still count. From the next hole on they have no score box, and the money is worked out among the players still playing.</p>
+      {gone.length > 0 && (
+        <>
+          <div className="eyebrow" style={{ padding: '0 20px 8px' }}>Already left</div>
+          {gone.map(g => (
+            <div key={g.player.id} className="leg-row">
+              <div className="leg-winner">{g.player.name}<div className="li-sub">{g.after === 0 ? 'Before the first hole' : `After hole ${g.after}`}</div></div>
+              <button className="pill-btn sm" onClick={() => undo(g.player)}><Icon name="arrow-counter-clockwise" /> They’re back</button>
+            </div>
+          ))}
+        </>
+      )}
+      {nobody ? (
+        <>
+          <p className="hint-card"><Icon name="info" fill /> At least two {round.game === 'scramble' ? 'teams' : 'players'} have to stay to keep the game going. To stop here, end the round: the holes played still count.</p>
+          <div className="cta-wrap"><button className="full-btn" onClick={onEnd}><Icon name="flag-checkered" /> End round</button></div>
+        </>
+      ) : (
+        <>
+          <div style={{ padding: '0 20px 12px' }}>
+            <div className="eyebrow" style={{ marginBottom: 8 }}>Who left</div>
+            <div className="chip-row" style={{ padding: 0 }} role="radiogroup" aria-label="Who left">
+              {staying.map(p => (
+                <button key={p.id} role="radio" aria-checked={pid === p.id} disabled={!canLeave(round, p.id)} className={`pill-btn ${pid === p.id ? 'on' : ''}`} onClick={() => setPid(p.id)}>{p.name}</button>
+              ))}
+            </div>
+          </div>
+          {pid && (
+            <div style={{ padding: '0 20px 12px' }}>
+              <div className="eyebrow" style={{ marginBottom: 8 }}>Last hole they finished</div>
+              <div className="chip-row" style={{ padding: 0 }} role="radiogroup" aria-label="Last hole they finished">
+                <button role="radio" aria-checked={pos === 0} className={`pill-btn ${pos === 0 ? 'on' : ''}`} onClick={() => setPos(0)}>None</button>
+                {round.holes.slice(0, upto + 1).map((h, i) => (
+                  <button key={h.no} role="radio" aria-checked={pos === i + 1} className={`pill-btn ${pos === i + 1 ? 'on' : ''}`} onClick={() => setPos(i + 1)}>{h.no}</button>
+                ))}
+              </div>
+            </div>
+          )}
+          {effect && <p className="hint-card"><Icon name="scales" fill /> {effect}</p>}
+          <div className="cta-wrap">
+            <button className="full-btn" disabled={!pid} onClick={apply}>
+              {pid ? (pos === 0 ? `${first(person.name)} didn’t play` : `${first(person.name)} left after hole ${afterNo}`) : 'Pick who left'}
+            </button>
+          </div>
+        </>
+      )}
     </Sheet>
   );
 }
@@ -466,7 +561,7 @@ function MoneyBar({ round, hole, preview }) {
             <div key={p.id} className={`mb-item ${top > 0 && v === top ? 'lead' : ''}`}>
               <div className="mb-p">{p.name.split(' ')[0]}</div>
               <div key={changed.includes(p.id) ? v : 'same'} className={`mb-a ${v > 0 ? 'pos' : v < 0 ? 'neg' : ''} ${changed.includes(p.id) ? 'bump' : ''}`}>{money(v, { sign: true })}</div>
-              <div className="mb-d">{d ? `${money(d, { sign: true })} this hole` : '\u00a0'}</div>
+              <div className="mb-d">{d ? `${money(d, { sign: true })} this hole` : round.left?.[p.id] != null ? 'Left' : '\u00a0'}</div>
             </div>
           );
         })}
@@ -477,9 +572,9 @@ function MoneyBar({ round, hole, preview }) {
 
 // --------------------------- Banker ---------------------------------------
 
-function BankerPanel({ round, banker, setBanker, phase, setPhase, onPick, onBet }) {
+function BankerPanel({ round, banker, setBanker, phase, setPhase, onPick, onBet, hole }) {
   const b = round.players.find(p => p.id === banker.banker);
-  const others = round.players.filter(p => p.id !== banker.banker);
+  const others = playersOn(round, hole).filter(p => p.id !== banker.banker);
   const anyDoubled = others.some(p => banker.doubled[p.id]);
   const canPick = round.settings.banker.rotation === 'choice' || true;
   return (
@@ -543,7 +638,7 @@ function SkinsPanel({ round, hole, onChange }) {
     <div className="banker-bar" style={{ background: 'var(--lav)' }}>
       <div>
         <div className="bl">This hole is worth</div>
-        <div className="bn"><Icon name="coins" fill /> {pot} skin{pot > 1 ? 's' : ''} · {money(pot * t.value * (round.players.length - 1))}</div>
+        <div className="bn"><Icon name="coins" fill /> {pot} skin{pot > 1 ? 's' : ''} · {money(pot * t.value * ((row?.field.length ?? round.players.length) - 1))}</div>
       </div>
       <div className="skin-counts">
         {round.players.map(p => <span key={p.id} className="press-chip">{p.name.split(' ')[0]} {counts[p.id]}</span>)}
@@ -555,9 +650,9 @@ function SkinsPanel({ round, hole, onChange }) {
 
 // --------------------------- Wolf -----------------------------------------
 
-function WolfPanel({ round, wolf, setWolf }) {
+function WolfPanel({ round, hole, wolf, setWolf }) {
   const w = round.players.find(p => p.id === wolf.wolf);
-  const others = round.players.filter(p => p.id !== wolf.wolf);
+  const others = playersOn(round, hole).filter(p => p.id !== wolf.wolf);
   const mult = round.settings.wolf.loneMultiplier;
   return (
     <div className="wolf-panel">

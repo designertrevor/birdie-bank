@@ -212,18 +212,81 @@ export function createRound({ id, game, course, holesCount, nine, startHole, pla
     presses: [],
     pressSeq: 0,
     current: 0,      // index into holes
+    left: {},        // playerId -> hole number they stopped after (0: before the first hole)
   };
   if (teams?.length) round.teams = withTeamHandicaps(round, buildTeams(teams, full), full, useHandicaps, hcPct);
   return round;
 }
 
+// --------------------------- Players who left --------------------------------
+// round.left maps a player id to the hole number they stopped after (0 means before the first hole).
+// From the next hole on they have no score box, holes are complete without them and each game's
+// money for those holes is worked out among the players still playing. Holes they played count as normal.
+
+/** Playing position (1-based) of the last hole a player played, or Infinity while they're still playing. */
+export function leftAt(round, pid) {
+  const no = round.left?.[pid];
+  if (no == null) return Infinity;
+  if (no === 0) return 0;
+  const i = round.holes.findIndex(h => h.no === no);
+  // Their hole was dropped by a change of round length: treat them as still playing rather than guess
+  return i < 0 ? Infinity : i + 1;
+}
+
+/** Playing position (1-based) of a hole in this round. */
+export function posOf(round, hole) {
+  return round.holes.findIndex(h => h.no === hole.no) + 1;
+}
+
+const anyLeft = round => !!round.left && Object.keys(round.left).length > 0;
+
+/** Whether a player is still in the round on this hole. */
+export function playsHole(round, pid, hole) {
+  if (!anyLeft(round)) return true;
+  return posOf(round, hole) <= leftAt(round, pid);
+}
+
+/** The players still in the round on a hole. */
+export function playersOn(round, hole) {
+  if (!anyLeft(round)) return round.players;
+  return round.players.filter(p => playsHole(round, p.id, hole));
+}
+
+/** Players who left, in the order they left: [{ player, after: hole number (0: before the first), pos }]. */
+export function playersLeft(round) {
+  return round.players
+    .filter(p => round.left?.[p.id] != null)
+    .map(p => ({ player: p, after: round.left[p.id], pos: leftAt(round, p.id) }))
+    .sort((a, b) => a.pos - b.pos);
+}
+
+/** Players still in at the end of the round. */
+export function playersToEnd(round) {
+  return round.players.filter(p => leftAt(round, p.id) >= round.holes.length);
+}
+
+/**
+ * Whether `pid` can be marked as leaving: at least two players (or, in a scramble, two teams)
+ * have to be left to play on.
+ */
+export function canLeave(round, pid) {
+  if (round.left?.[pid] != null) return false;
+  const staying = playersToEnd(round).filter(p => p.id !== pid).map(p => p.id);
+  if (round.game === 'scramble' && round.teams) return round.teams.filter(t => t.players.some(x => staying.includes(x))).length >= 2;
+  return staying.length >= 2;
+}
+
 /**
  * Who has a score box on each hole: the players, or the teams in a scramble.
- * Each: { id, name, plays, team?: true }.
+ * Each: { id, name, plays, team?: true }. With a hole, only those still playing it
+ * (a scramble team plays on while any of its players is still there).
  */
-export function scorers(round) {
-  if (round.game === 'scramble' && round.teams) return round.teams.map(t => ({ id: t.id, name: t.name, plays: t.plays || 0, courseHc: t.courseHc, team: true, players: t.players }));
-  return round.players;
+export function scorers(round, hole = null) {
+  if (round.game === 'scramble' && round.teams) {
+    const teams = round.teams.map(t => ({ id: t.id, name: t.name, plays: t.plays || 0, courseHc: t.courseHc, team: true, players: t.players }));
+    return hole ? teams.filter(t => t.players.some(pid => playsHole(round, pid, hole))) : teams;
+  }
+  return hole ? playersOn(round, hole) : round.players;
 }
 
 /** The two sides of a head-to-head game as arrays of player ids (teams if set, else one player each). */
@@ -323,9 +386,11 @@ export function netFor(round, player, hole) {
   return gross - strokesFor(round, player, hole);
 }
 
+/** Every scorer still playing the hole has a score. Only complete holes count for money. */
 export function holeComplete(round, hole) {
   const s = round.scores[hole.no];
-  return !!s && scorers(round).every(p => s[p.id] != null);
+  const who = scorers(round, hole);
+  return !!s && who.length > 0 && who.every(p => s[p.id] != null);
 }
 
 export function holesPlayed(round) {
@@ -339,14 +404,22 @@ const playerById = (round, pid) => round.players.find(p => p.id === pid);
 export function bankerHoleSetup(round, idx) {
   const hole = round.holes[idx];
   const existing = round.banker[hole.no];
-  if (existing) return existing;
-  const ids = round.players.map(p => p.id);
+  const all = round.players.map(p => p.id);
+  const ids = playersOn(round, hole).map(p => p.id);
+  // A setup made before someone left: drop their bet, and start fresh if they were the banker
+  if (existing && ids.includes(existing.banker)) {
+    if (ids.length === all.length) return existing;
+    return { ...existing, bets: Object.fromEntries(Object.entries(existing.bets || {}).filter(([pid]) => ids.includes(pid))) };
+  }
   const s = round.settings.banker;
   const prevHole = round.holes[idx - 1];
   const prev = prevHole && round.banker[prevHole.no];
   let banker;
-  if (s.rotation === 'choice' && prev) banker = prev.banker;
-  else banker = bankerFor(s.rotation, idx, ids, s.firstBanker || 0);
+  if (s.rotation === 'choice' && prev && ids.includes(prev.banker)) banker = prev.banker;
+  else banker = bankerFor(s.rotation, idx, all, s.firstBanker || 0);
+  // The rotation skips anyone who has left: the bank passes to the next player in the order
+  const k = all.indexOf(banker);
+  for (let n = 1; !ids.includes(banker) && n <= all.length; n++) banker = all[(k + n) % all.length];
   const bets = {};
   for (const id of ids) if (id !== banker) bets[id] = prev?.bets?.[id] ?? s.defaultBet;
   return { banker, bets, doubled: {}, doubleBack: false };
@@ -354,9 +427,14 @@ export function bankerHoleSetup(round, idx) {
 
 // --------------------------- Nassau & match play ---------------------------
 
-/** Best-ball net of a side (array of player ids) on a hole; null until everyone has scored. */
+/**
+ * Best-ball net of a side (array of player ids) on a hole; null until everyone has scored.
+ * A player who has left doesn't count: their partner's ball carries the side. A side with
+ * nobody left has no score, so the hole isn't played and the bets stand as they were.
+ */
 export function sideNet(round, side, hole) {
-  return bestBall(side.map(pid => netFor(round, playerById(round, pid), hole)));
+  const on = side.filter(pid => playsHole(round, pid, hole));
+  return bestBall(on.map(pid => netFor(round, playerById(round, pid), hole)));
 }
 
 /** Hole winners (0 | 1 | null) keyed by playing position (1-based). Legs follow playing order. */
@@ -421,20 +499,40 @@ export function skinsTable(round) {
   let pot = 1;
   const rows = [];
   for (const h of round.holes) {
-    if (!holeComplete(round, h)) { rows.push({ hole: h, winner: undefined, skins: 0, pot }); continue; }
-    const nets = round.players.map(p => [p.id, netFor(round, p, h)]);
+    // Only the players still on a hole play for it, so a carried skin won later is paid by them alone
+    const on = playersOn(round, h);
+    const field = on.map(p => p.id);
+    if (!holeComplete(round, h)) { rows.push({ hole: h, winner: undefined, skins: 0, pot, field }); continue; }
+    const nets = on.map(p => [p.id, netFor(round, p, h)]);
     const low = Math.min(...nets.map(n => n[1]));
     const lows = nets.filter(n => n[1] === low);
-    if (lows.length === 1) { rows.push({ hole: h, winner: lows[0][0], skins: pot, pot }); pot = 1; }
-    else { rows.push({ hole: h, winner: null, skins: 0, pot }); pot = carry ? pot + 1 : 1; }
+    if (lows.length === 1) { rows.push({ hole: h, winner: lows[0][0], skins: pot, pot, field }); pot = 1; }
+    else { rows.push({ hole: h, winner: null, skins: 0, pot, field }); pot = carry ? pot + 1 : 1; }
   }
   return { rows, value, unclaimed: pot > 1 ? pot - 1 : 0 };
 }
 
 // --------------------------- Wolf -----------------------------------------
 
+/**
+ * The wolf on the hole at index `idx`. If a player leaves, Wolf carries on as a threesome:
+ * the rotation runs through the players still there, and the wolf picks one of the other two
+ * as a partner or goes lone against both.
+ */
 export function wolfFor(round, idx) {
-  return round.players[idx % round.players.length].id;
+  const hole = round.holes[idx];
+  const on = hole ? playersOn(round, hole) : round.players;
+  const list = on.length ? on : round.players;
+  return list[idx % list.length].id;
+}
+
+/** The saved wolf pick for a hole if it still stands (nobody in it has left), else a fresh one. */
+export function wolfHoleSetup(round, idx) {
+  const hole = round.holes[idx];
+  const setup = round.wolf[hole.no];
+  const ids = playersOn(round, hole).map(p => p.id);
+  if (setup && ids.includes(setup.wolf) && (setup.partner == null || ids.includes(setup.partner))) return setup;
+  return { wolf: wolfFor(round, idx), partner: undefined };
 }
 
 export function wolfHoleResult(round, hole) {
@@ -442,10 +540,14 @@ export function wolfHoleResult(round, hole) {
   if (!setup || !holeComplete(round, hole)) return null;
   const P = round.settings.wolf.point;
   const mult = round.settings.wolf.loneMultiplier;
-  const ids = round.players.map(p => p.id);
-  const net = Object.fromEntries(round.players.map(p => [p.id, netFor(round, p, hole)]));
+  const on = playersOn(round, hole);
+  const ids = on.map(p => p.id);
+  // A pick that names someone who has left doesn't stand
+  if (!ids.includes(setup.wolf) || (setup.partner && !ids.includes(setup.partner))) return null;
+  const net = Object.fromEntries(on.map(p => [p.id, netFor(round, p, hole)]));
   const teamA = setup.partner ? [setup.wolf, setup.partner] : [setup.wolf];
   const teamB = ids.filter(id => !teamA.includes(id));
+  if (!teamB.length) return null;
   const best = t => Math.min(...t.map(id => net[id]));
   const a = best(teamA), b = best(teamB);
   const deltas = Object.fromEntries(ids.map(id => [id, 0]));
@@ -466,6 +568,8 @@ export function vegasTable(round) {
   const rows = [];
   for (const h of round.holes) {
     if (!holeComplete(round, h) || teams.length !== 2) { rows.push({ hole: h, played: false }); continue; }
+    // Vegas needs two full teams: once a player leaves, the holes after aren't counted
+    if (teams.some(t => t.players.some(pid => !playsHole(round, pid, h)))) { rows.push({ hole: h, played: false, short: true }); continue; }
     const nets = teams.map(t => t.players.map(pid => netFor(round, playerById(round, pid), h)));
     const gross = teams.map(t => t.players.map(pid => round.scores[h.no]?.[pid]));
     const r = vegasHole(nets, gross, h.par, { birdieFlip: round.settings.vegas.birdieFlip });
@@ -494,9 +598,13 @@ export function sixesMatches(round) {
   const ids = round.players.map(p => p.id);
   const pairs = sixesPairings(ids);
   const segs = sixesSegments(round.holes.length);
+  // If a player leaves, the match under way finishes with their partner playing alone
+  // (see sideNet), and matches that hadn't started are off: the rotation needs all four
+  const firstGone = Math.min(...ids.map(pid => leftAt(round, pid)));
   return segs.map((seg, i) => {
     const [a, b] = pairs[i];
     const winners = {};
+    if (firstGone < seg.start) return { seg, sides: [a, b], winners, status: matchStatus(winners, seg.start, seg.end), index: i, off: true };
     for (let pos = seg.start; pos <= seg.end; pos++) {
       const h = round.holes[pos - 1];
       const r = holeWinner(sideNet(round, a, h), sideNet(round, b, h));
@@ -516,18 +624,46 @@ export function sixesMatchAt(round, pos) {
 /** Per-player totals for the totals games: net strokes, Stableford points, quota points. */
 export function totalsTable(round) {
   const out = round.players.map(p => {
-    let total = 0, played = 0;
+    let total = 0, played = 0, par = 0;
     const quota = round.game === 'quota' ? quotaFor(round.useHandicaps ? p.courseHc : 0, round.holes.length) : null;
     for (const h of round.holes) {
-      if (!holeComplete(round, h)) continue;
+      if (!holeComplete(round, h) || !playsHole(round, p.id, h)) continue;
       played++;
-      if (round.game === 'stroke') total += netFor(round, p, h);
-      else if (round.game === 'stableford') total += stablefordPoints(netFor(round, p, h), h.par, round.settings.stableford.modified);
-      else if (round.game === 'quota') total += quotaPoints(grossFor(round, p, h), h.par);
+      par += h.par;
+      total += totalsHoleValue(round, p, h);
     }
-    const toPar = round.game === 'stroke' ? total - round.holes.filter(h => holeComplete(round, h)).reduce((a, h) => a + h.par, 0) : null;
-    return { id: p.id, name: p.name, total, played, quota, toPar, vsQuota: quota != null ? total - quota : null };
+    const toPar = round.game === 'stroke' ? total - par : null;
+    return { id: p.id, name: p.name, total, played, quota, toPar, vsQuota: quota != null ? total - quota : null, left: leftAt(round, p.id) < round.holes.length };
   });
+  return out;
+}
+
+/** One player's number on one hole in the totals games: net strokes, Stableford points or quota points. */
+function totalsHoleValue(round, p, h) {
+  if (round.game === 'stroke') return netFor(round, p, h);
+  if (round.game === 'stableford') return stablefordPoints(netFor(round, p, h), h.par, round.settings.stableford.modified);
+  return quotaPoints(grossFor(round, p, h), h.par);
+}
+
+/**
+ * Pairwise settling for per-stroke / per-point bets: every pair settles the difference on the
+ * holes they both played, so a player who left is square with everyone for the holes after.
+ * `value(pid, hole)` is a player's number on a counted hole; `adjust(a, b, shared)` is added to
+ * a's side of the difference (used for quota targets). Returns money by player id.
+ */
+function settlePairs(round, value, { stake, lowerWins, adjust = null }) {
+  const ids = round.players.map(p => p.id);
+  const out = Object.fromEntries(ids.map(id => [id, 0]));
+  const counted = round.holes.filter(h => holeComplete(round, h));
+  for (let i = 0; i < ids.length; i++) for (let j = i + 1; j < ids.length; j++) {
+    const a = ids[i], b = ids[j];
+    const both = counted.filter(h => playsHole(round, a, h) && playsHole(round, b, h));
+    if (!both.length) continue;
+    let diff = both.reduce((acc, h) => acc + value(a, h) - value(b, h), 0);
+    if (adjust) diff += adjust(a, b, both.length);
+    const d = diff * stake * (lowerWins ? -1 : 1); // positive = a wins
+    out[a] += d; out[b] -= d;
+  }
   return out;
 }
 
@@ -537,33 +673,36 @@ export function pointsTable(round) {
   const rows = [];
   for (const h of round.holes) {
     const s = round.settings;
+    // Rows carry `field`: the players still on the hole, who are the only ones it settles between
+    const field = playersOn(round, h).map(p => p.id);
     if (round.game === 'bbb') {
+      // Bingo bango bongo is marks only, so a missing score doesn't stop the hole counting
       const m = round.marks?.[h.no];
       if (!m) continue;
       const pts = Object.fromEntries(ids.map(id => [id, 0]));
-      for (const k of ['bingo', 'bango', 'bongo']) if (m[k] && pts[m[k]] != null) pts[m[k]] += 1;
-      rows.push({ hole: h, points: pts, label: ['bingo', 'bango', 'bongo'].filter(k => m[k]).map(k => k[0].toUpperCase()).join('') });
+      const got = ['bingo', 'bango', 'bongo'].filter(k => m[k] && field.includes(m[k]));
+      for (const k of got) pts[m[k]] += 1;
+      rows.push({ hole: h, points: pts, field, label: got.map(k => k[0].toUpperCase()).join('') });
       continue;
     }
+    // A hole with a score missing isn't counted for money
+    if (!holeComplete(round, h)) continue;
     if (round.game === 'dots') {
       const m = round.marks?.[h.no] || {};
       const pts = Object.fromEntries(ids.map(id => [id, 0]));
-      let any = false;
-      for (const p of round.players) {
-        const manual = (m[p.id] || []).filter(k => s.dots.kinds?.[k] !== false && DOT_KINDS[k]);
-        const auto = s.dots.auto ? scoreDots(round.scores[h.no]?.[p.id], h.par) : 0;
-        pts[p.id] = manual.length + auto;
-        if (pts[p.id]) any = true;
+      for (const pid of field) {
+        const manual = (m[pid] || []).filter(k => s.dots.kinds?.[k] !== false && DOT_KINDS[k]);
+        const auto = s.dots.auto ? scoreDots(round.scores[h.no]?.[pid], h.par) : 0;
+        pts[pid] = manual.length + auto;
       }
-      if (!any && !holeComplete(round, h)) continue;
-      rows.push({ hole: h, points: pts });
+      rows.push({ hole: h, points: pts, field });
       continue;
     }
-    if (!holeComplete(round, h)) continue;
-    if (round.game === 'nines') {
+    // Nines is scored for exactly three, so once a player leaves the holes after aren't counted
+    if (round.game === 'nines' && field.length === round.players.length) {
       const nets = round.players.map(p => netFor(round, p, h));
       const pts = ninesPoints(nets);
-      rows.push({ hole: h, points: Object.fromEntries(ids.map((id, i) => [id, pts[i]])) });
+      rows.push({ hole: h, points: Object.fromEntries(ids.map((id, i) => [id, pts[i]])), field });
     }
   }
   return rows;
@@ -576,17 +715,23 @@ export function rabbitTable(round) {
   const legs = nassauLegs(round.holes.length);
   const segs = round.holes.length === 18 ? [legs.front, legs.back] : [legs.total];
   const rows = round.holes.map(h => {
-    if (!holeComplete(round, h)) return { hole: h, winner: undefined };
-    const nets = round.players.map(p => [p.id, netFor(round, p, h)]);
+    // `gone`: players who left before this hole. If the rabbit's holder leaves, it runs loose
+    const on = playersOn(round, h);
+    const gone = round.players.filter(p => !on.includes(p)).map(p => p.id);
+    if (!holeComplete(round, h)) return { hole: h, winner: undefined, gone };
+    const nets = on.map(p => [p.id, netFor(round, p, h)]);
     const low = Math.min(...nets.map(n => n[1]));
     const lows = nets.filter(n => n[1] === low);
-    return { hole: h, winner: lows.length === 1 ? lows[0][0] : null };
+    return { hole: h, winner: lows.length === 1 ? lows[0][0] : null, gone };
   });
   const out = segs.map(seg => {
     const part = rows.slice(seg.start - 1, seg.end);
     const { holder, history } = rabbitHolder(part, round.settings.rabbit.tiesFree);
     const done = part.every(r => r.winner !== undefined);
-    return { seg, rows: part, holder, history, done };
+    // Only the players still there at the end of the leg pay the holder
+    const last = round.holes[seg.end - 1];
+    const payers = last ? playersOn(round, last).map(p => p.id) : round.players.map(p => p.id);
+    return { seg, rows: part, holder, history, done, payers };
   });
   return { legs: out, rows };
 }
@@ -608,8 +753,12 @@ export function roundResults(round) {
     round.holes.forEach(h => {
       const setup = round.banker[h.no];
       if (!setup || !holeComplete(round, h)) return;
-      const net = Object.fromEntries(round.players.map(p => [p.id, netFor(round, p, h)]));
-      const r = settleBankerHole(setup, net, ids, { ties: s.banker.ties });
+      // Only the players still on the hole bet on it; a saved setup whose banker has left doesn't stand
+      const on = playersOn(round, h);
+      const field = on.map(p => p.id);
+      if (!field.includes(setup.banker)) return;
+      const net = Object.fromEntries(on.map(p => [p.id, netFor(round, p, h)]));
+      const r = settleBankerHole(setup, net, field, { ties: s.banker.ties });
       add(r.deltas);
       detail.holes.push({ no: h.no, banker: setup.banker, ...r });
     });
@@ -623,11 +772,10 @@ export function roundResults(round) {
 
   if (round.game === 'skins') {
     const t = skinsTable(round);
-    const n = ids.length;
     for (const r of t.rows) {
       if (!r.winner) continue;
-      for (const id of ids) {
-        if (id === r.winner) balances[id] += r.skins * t.value * (n - 1);
+      for (const id of r.field) {
+        if (id === r.winner) balances[id] += r.skins * t.value * (r.field.length - 1);
         else balances[id] -= r.skins * t.value;
       }
     }
@@ -668,28 +816,50 @@ export function roundResults(round) {
   if (round.game === 'scramble') {
     const teams = round.teams || [];
     const played = round.holes.filter(h => holeComplete(round, h));
-    const parPlayed = played.reduce((a, h) => a + h.par, 0);
-    const totals = {};
-    for (const t of scorers(round)) totals[t.id] = played.reduce((a, h) => a + netFor(round, t, h), 0);
-    if (played.length && teams.length) {
+    // A team plays on while any of its players is still there. A team with nobody left is out
+    // of the pot (it neither pays nor wins); the teams still in play for it over the whole round.
+    const onHole = (t, h) => t.players.some(pid => playsHole(round, pid, h));
+    const inTeams = teams.filter(t => t.players.some(pid => leftAt(round, pid) >= round.holes.length));
+    const totals = {}, pars = {}, counts = {};
+    for (const t of scorers(round)) {
+      const mine = played.filter(h => onHole(t, h));
+      totals[t.id] = mine.reduce((a, h) => a + netFor(round, t, h), 0);
+      pars[t.id] = mine.reduce((a, h) => a + h.par, 0);
+      counts[t.id] = mine.length;
+    }
+    if (played.length && inTeams.length >= 2) {
       // Everyone antes the stake; the winning team's players split the pot (tied teams share it)
-      const best = Math.min(...teams.map(t => totals[t.id]));
-      const winners = teams.filter(t => totals[t.id] === best).flatMap(t => t.players);
-      const pot = s.scramble.stake * ids.length;
-      for (const id of ids) balances[id] -= s.scramble.stake;
+      const inIds = inTeams.flatMap(t => t.players);
+      const best = Math.min(...inTeams.map(t => totals[t.id]));
+      const winners = inTeams.filter(t => totals[t.id] === best).flatMap(t => t.players);
+      const pot = s.scramble.stake * inIds.length;
+      for (const id of inIds) balances[id] -= s.scramble.stake;
       for (const id of winners) balances[id] += pot / winners.length;
     }
-    detail.totals = scorers(round).map(t => ({ id: t.id, name: t.name, total: totals[t.id], toPar: totals[t.id] - parPlayed, played: played.length }));
+    detail.totals = scorers(round).map(t => ({ id: t.id, name: t.name, total: totals[t.id], toPar: totals[t.id] - pars[t.id], played: counts[t.id], left: teams.length > 0 && !inTeams.some(x => x.id === t.id) }));
   }
 
   if (round.game === 'stroke' || round.game === 'stableford' || round.game === 'quota') {
     const table = totalsTable(round);
-    const played = table[0]?.played || 0;
-    if (played) {
+    const played = Math.max(0, ...table.map(t => t.played));
+    const cfg = s[round.game];
+    const lowerWins = round.game === 'stroke';
+    if (played && cfg.payout === 'pot') {
+      // The pot is played for by those still in at the end. Anyone who left is out of it: they don't pay or win
       const key = round.game === 'quota' ? 'vsQuota' : 'total';
-      const totals = Object.fromEntries(table.map(t => [t.id, t[key]]));
-      const cfg = s[round.game];
-      add(settleTotals(totals, { mode: cfg.payout === 'pot' ? 'pot' : 'per', stake: cfg.stake, lowerWins: round.game === 'stroke' }));
+      const stay = playersToEnd(round).map(p => p.id);
+      const totals = Object.fromEntries(table.filter(t => stay.includes(t.id)).map(t => [t.id, t[key]]));
+      add(settleTotals(totals, { mode: 'pot', stake: cfg.stake, lowerWins }));
+    } else if (played) {
+      // Per stroke or point: each pair settles on the holes they both played
+      const byId = Object.fromEntries(round.players.map(p => [p.id, p]));
+      const quota = Object.fromEntries(table.map(t => [t.id, t.quota]));
+      const toEnd = pid => leftAt(round, pid) >= round.holes.length;
+      // A quota is for the whole round, so a pair where someone left compares a share of it for the holes they shared
+      const adjust = round.game === 'quota'
+        ? (a, b, shared) => -(quota[a] - quota[b]) * (toEnd(a) && toEnd(b) ? 1 : shared / round.holes.length)
+        : null;
+      add(settlePairs(round, (pid, h) => totalsHoleValue(round, byId[pid], h), { stake: cfg.stake, lowerWins, adjust }));
     }
     detail.totals = table;
   }
@@ -699,11 +869,18 @@ export function roundResults(round) {
     const pts = Object.fromEntries(ids.map(id => [id, 0]));
     for (const r of rows) for (const id of ids) pts[id] += r.points[id] || 0;
     if (round.game === 'dots') {
-      // Every dot is paid by each of the other players
-      for (const id of ids) for (const other of ids) if (other !== id) { balances[id] += pts[id] * s.dots.value; balances[other] -= pts[id] * s.dots.value; }
+      // Every dot is paid by each of the other players still on that hole
+      for (const r of rows) for (const id of r.field) for (const other of r.field) {
+        if (other === id) continue;
+        balances[id] += r.points[id] * s.dots.value; balances[other] -= r.points[id] * s.dots.value;
+      }
     } else if (round.game === 'bbb') {
-      // Every pair settles the difference in points
-      if (rows.length) add(settleTotals(pts, { mode: 'per', stake: s.bbb.value, lowerWins: false }));
+      // Every pair settles the difference in points on the holes they both played
+      for (let i = 0; i < ids.length; i++) for (let j = i + 1; j < ids.length; j++) {
+        const a = ids[i], b = ids[j];
+        const d = rows.filter(r => r.field.includes(a) && r.field.includes(b)).reduce((acc, r) => acc + r.points[a] - r.points[b], 0) * s.bbb.value;
+        balances[a] += d; balances[b] -= d;
+      }
     } else if (rows.length) add(pointsToMoney(pts, s.nines.point));
     detail.points = pts;
     detail.rows = rows;
@@ -713,7 +890,10 @@ export function roundResults(round) {
     detail.holes = [];
     for (const h of round.holes) {
       if (!holeComplete(round, h)) continue;
-      const r = acesDeuces(round.players.map(p => netFor(round, p, h)), ids, s.aces);
+      // Low and high are among the players still on the hole
+      const on = playersOn(round, h);
+      if (on.length < 2) continue;
+      const r = acesDeuces(on.map(p => netFor(round, p, h)), on.map(p => p.id), s.aces);
       add(r.deltas);
       detail.holes.push({ no: h.no, ...r });
     }
@@ -723,8 +903,8 @@ export function roundResults(round) {
     const t = rabbitTable(round);
     for (const leg of t.legs) {
       if (!leg.done || !leg.holder) continue;
-      for (const id of ids) {
-        if (id === leg.holder) balances[id] += s.rabbit.stake * (ids.length - 1);
+      for (const id of leg.payers) {
+        if (id === leg.holder) balances[id] += s.rabbit.stake * (leg.payers.length - 1);
         else balances[id] -= s.rabbit.stake;
       }
     }
@@ -736,6 +916,61 @@ export function roundResults(round) {
     .map(p => ({ ...p, amount: balances[p.id] }))
     .sort((a, b) => b.amount - a.amount);
   return { balances, standings, transfers: minimalTransfers(balances), detail };
+}
+
+/** "Mike", "Mike and Sue", "Mike, Sue and Al". */
+function nameList(names) {
+  return names.length <= 1 ? names.join('') : `${names.slice(0, -1).join(', ')} and ${names.at(-1)}`;
+}
+
+/** What leaving does to the game, in a sentence (for the results, and before marking someone as gone). */
+export function leftRule(round, pid) {
+  const g = round.game;
+  const first = n => n.split(' ')[0];
+  if (g === 'vegas') return 'Vegas needs two full teams, so the holes after that don’t count.';
+  if (g === 'nines') return 'Nines is for three, so the holes after that don’t count.';
+  if (g === 'sixes') {
+    const pos = leftAt(round, pid);
+    const between = pos === 0 || sixesSegments(round.holes.length).some(sg => sg.end === pos);
+    return between ? 'Sixes needs all four, so the matches after that are off.' : 'Their partner plays out the match under way alone, and the matches after that are off.';
+  }
+  if (g === 'wolf') return 'Wolf carries on with the players still there.';
+  if (g === 'nassau' || g === 'match' || g === 'scramble') {
+    const side = (g === 'scramble' ? round.teams || [] : sides(round).map(players => ({ players }))).find(t => t.players.includes(pid));
+    const mates = (side?.players || []).filter(x => x !== pid && leftAt(round, x) > leftAt(round, pid));
+    if (!mates.length) return g === 'scramble' ? 'Their team is out of the pot.' : 'Their side has nobody left, so the match stops there and the bets stand as they are.';
+    const names = nameList(mates.map(x => first(playerById(round, x)?.name || '')));
+    return `${names} ${mates.length === 1 ? 'carries' : 'carry'} on for the ${g === 'scramble' ? 'team' : 'side'}.`;
+  }
+  if ((g === 'stroke' || g === 'stableford' || g === 'quota') && round.settings[g]?.payout === 'pot') return 'They’re out of the pot, so they don’t pay or win it.';
+  if (g === 'stroke' || g === 'stableford' || g === 'quota') return 'They settle with each player on the holes they both played.';
+  return 'The holes after that are settled among the players still playing.';
+}
+
+/**
+ * Plain-English notes for the results: players who left and what it did to the game, and holes
+ * that weren't counted because a score is missing. [{ kind: 'left' | 'missing', text }]
+ */
+export function roundNotes(round) {
+  const notes = [];
+  const first = n => n.split(' ')[0];
+  for (const { player, after, pos } of playersLeft(round)) {
+    if (pos >= round.holes.length) continue;
+    const when = after === 0 ? 'before the first hole' : `after hole ${after}`;
+    notes.push({ kind: 'left', text: `${first(player.name)} left ${when}. ${leftRule(round, player.id)}` });
+  }
+  // Bingo bango bongo pays on marks alone, so missing scores don't matter there
+  if (round.game === 'bbb') return notes;
+  const lastScored = round.holes.reduce((a, h, i) => (Object.values(round.scores[h.no] || {}).some(v => v != null) ? i : a), -1);
+  round.holes.forEach((h, i) => {
+    if (i > lastScored || holeComplete(round, h)) return;
+    const s = round.scores[h.no] || {};
+    const missing = scorers(round, h).filter(p => s[p.id] == null);
+    if (!missing.length) return;
+    const all = missing.length === scorers(round, h).length;
+    notes.push({ kind: 'missing', text: all ? `Hole ${h.no} not counted: no scores.` : `Hole ${h.no} not counted: no score for ${nameList(missing.map(p => (p.team ? p.name : first(p.name))))}.` });
+  });
+  return notes;
 }
 
 /**
