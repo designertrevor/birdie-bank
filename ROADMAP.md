@@ -11,12 +11,13 @@ The plan for growing Birdie Bank into a $10k/mo business, and the checklist we w
 - **New ideas:** add them to the right area with a step tag. If none fits, add a new area at the end.
 - **Gates:** don't move to the next step until the current step's gate is met. Record when it is.
 - **Build what's asked for:** big features nobody has requested wait until the feedback (area 20) shows people want them.
+- **Quality is ongoing, not a gate:** bugs, a fluid experience, and the right features and games for each kind of user get attention in every step. Playing real rounds is how we find them, not something to wait on.
 
 ---
 
 ## Current focus
 
-**Step 1: Foundation.** Accounts, cloud data, invites and "Suggest something" are built. Google sign-in is open to anyone. Left for S1: custom email (SMTP) so sign-in emails reach anyone, and the quick logo. Then play real Saturday rounds toward the gate (8+ rounds with zero hand math). The live money bar, the simpler setup and the end-of-round reveal and settle-up shipped early (2026-09-26) to make those rounds smoother.
+**Step 1: Foundation, nearly done.** Accounts, cloud data, invites, the live money bar, the simpler setup and the end-of-round settle-up are built, and Google sign-in is open to anyone. Left for S1: custom email (SMTP) so sign-in emails reach anyone, and running the feedback SQL so "Suggest something" goes live. Then move straight on to S2. Real rounds keep going alongside as testing: fix bugs, smooth rough spots, and check each kind of user has what they need.
 
 **The big date:** the creator test (S4) runs February to April 2027, when golf season starts back up. Everything before it is about being ready: a product groups keep using, a smooth path from video to paying, and an App Store app.
 
@@ -110,7 +111,7 @@ Each step has a gate. Don't move on until it's met.
 
 ### S1: Foundation (now to November 2026)
 Accounts, cloud data, invites turned on in production, joining from a link, claiming your seat, the simple feedback form, a quick logo.
-- **Gate:** your Saturday group has used it for 8+ real rounds with zero math by hand.
+- **Gate:** anyone can sign in (Google or email), and "Suggest something" saves to Supabase in production. Real rounds and bug fixing carry on through S2 rather than holding it up (changed 2026-09-26; it was 8+ real rounds with zero hand math).
 - **Gate met:** not yet
 
 ### S2: Proof and the path to paying (fall and winter 2026)
@@ -260,7 +261,7 @@ Put more money into the winning creators and copy their video formats with other
 
 ### 16. Brand and identity
 - [ ] `S1` (partial) A playful color theme, Phosphor icons, no emoji, one golf ball illustration with a face (`BallIllo` in `src/components/ui.jsx`), confetti, count-ups and vibrations (`src/lib/delight.js`), a few small CSS animations
-- [ ] `S1` Quick logo and app icon (good enough to start)
+- [ ] `S2` Quick logo and app icon (good enough to start). Moved out of S1 (2026-09-26) so it doesn't hold anything up, but do it early in S2, before organizer onboarding and the paywall.
 - [ ] `S2` Final logo: symbol plus the name set in type, and an app icon that stands out on a home screen
 - [ ] `S2` Brand foundations: colors, typography, voice and tone (friendly trash talk, never casino), a short brand guide
 - [ ] `S2` Motion for the killer end-of-round moment
@@ -294,6 +295,8 @@ Put more money into the winning creators and copy their video formats with other
 - [ ] `S1` (partial) "Suggest something" in the app with four choices: a new game, a missing course, a feature, something's broken. Saves to a Supabase feedback table. Built in Settings (2026-09-25); goes live once the feedback section of `supabase/schema.sql` is run in Supabase.
 - [ ] `S1` (partial) Each form asks for what's useful: a game's rules and how the money works; a course's name, city and optional scorecard photo; a bug's screenshot with round and device details attached automatically. Built (2026-09-25), same SQL step as above.
 - [ ] `S2` Show it in natural places: course search with no results, the end of the games list, a quick "How was it?" after a round
+- [ ] `S2` Needs check by kind of user: the organizer, the invited friend, the trip or member-guest organizer, the league runner, and a casual twosome. List what each needs from a round and between rounds, and which games each plays, then add what's missing to the right areas.
+- [ ] `S2` Bug and polish pass after each batch of real rounds: fix what broke, smooth anything that took extra taps or caused a question on the course
 - [ ] `S2` Slack community (free plan): #feedback, #game-requests, #course-requests, #bugs, #show-your-round, #general. Invite each group's organizer personally.
 - [ ] `S2` Slack to database automation: a Slack app sends feedback channel messages to Supabase, Claude sorts each one (game, course, feature, bug), merges it with matching roadmap items and pulls out details, then replies in Slack with the roadmap link. Needed because Slack's free plan hides messages after 90 days.
 - [ ] `S2` Weekly feedback digest for Trevor to approve items onto the roadmap
@@ -369,6 +372,7 @@ Kept light on purpose. Groups already have a group text, so Birdie Bank adds to 
 - 2026-09-25: After reading Golf GameBook's negative reviews: no GPS (play nicely next to GPS apps instead), no ads or sponsor placements in the app, a published free promise that never shrinks, a trial on every plan, and offline-first scoring.
 - 2026-09-25: Pricing and monetization stay open until tested with real groups. They don't block building.
 - 2026-09-25: No full chat system for now. Keep trash talk to comments, reactions and sharing into the group's own text thread. Big features wait until people ask for them.
+- 2026-09-26: The S1 gate no longer waits on 8+ real rounds. Real rounds, bug fixes and polish run alongside every step instead of blocking the next one. The quick logo moves to early S2.
 
 ## Progress log
 
@@ -381,3 +385,4 @@ Kept light on purpose. Groups already have a group text, so Birdie Bank adds to 
 - 2026-09-25: Accounts and cloud data: Google and email-link sign-in, offline-first sync of every player, crew, course, round, payment and setting, merge on first sign-in, and a "save it to your tab" prompt after rounds. Supabase SQL run; Google Cloud project "Birdie Bank" created with a web sign-in client.
 - 2026-09-25: Added a privacy policy page and published Google sign-in to production, so anyone can sign in with Google.
 - 2026-09-26: From a Mobbin review and clickable wireframes: money is now pinned on the Play screen from hole 1 and moves with every tap (it used to appear only after a hole was saved, and Banker's bets step hid it). Setup asks one question per step with "Your usual" and a "Round ready" invite screen. The end of a round is now reveal, settle up with Venmo links, then share.
+- 2026-09-26: Changed the S1 gate to sign-in for anyone plus live feedback, moved the quick logo to early S2, and added a needs check by kind of user and an ongoing bug and polish pass (area 20). Checklist: 17 of 144 done (12%), up from 5 of 141 (4%) when the roadmap started.
