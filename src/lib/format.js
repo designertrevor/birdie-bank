@@ -21,10 +21,11 @@ export function roundDate(r) {
   return new Date(r.finishedAt || r.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: new Date(r.createdAt).getFullYear() === new Date().getFullYear() ? undefined : 'numeric' });
 }
 
-export function shareText(round, res) {
+/** Plain-text results. With `amounts: false` it lists the order only, no money and no settle-up. */
+export function shareText(round, res, { amounts = true } = {}) {
   const lines = [`${GAMES[round.game].name} at ${round.course.name} · ${roundDate(round)}`];
-  res.standings.forEach((p, i) => lines.push(`${i + 1}. ${p.name} ${money(p.amount, { sign: true })}`));
-  if (res.transfers.length) {
+  res.standings.forEach((p, i) => lines.push(amounts ? `${i + 1}. ${p.name} ${money(p.amount, { sign: true })}` : `${i + 1}. ${p.name}`));
+  if (amounts && res.transfers.length) {
     lines.push('', 'Settle up:');
     res.transfers.forEach(t => lines.push(`${roundPlayerName(round, t.from)} → ${roundPlayerName(round, t.to)} ${money(t.amount)}`));
   }
@@ -33,8 +34,8 @@ export function shareText(round, res) {
 }
 export const roundPlayerName = (round, id) => round.players.find(p => p.id === id)?.name || '?';
 
-export async function shareRound(round, res, showToast) {
-  const text = shareText(round, res);
+export async function shareRound(round, res, showToast, opts) {
+  const text = shareText(round, res, opts);
   try {
     if (navigator.share) { await navigator.share({ title: 'Birdie Bank results', text }); return; }
   } catch (e) { if (e?.name === 'AbortError') return; }

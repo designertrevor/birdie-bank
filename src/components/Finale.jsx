@@ -1,13 +1,14 @@
 // The end of a round in three beats: the money reveal, settling up, and a results card to share.
 import { useEffect, useRef, useState } from 'react';
-import { Header, Icon, useUI } from './ui.jsx';
+import { Header, Icon, Toggle, useUI } from './ui.jsx';
 import { update, uid, useStore } from '../lib/store.js';
-import { GAMES } from '../lib/round.js';
+import { GAMES, roundResults } from '../lib/round.js';
 import { money } from '../lib/golf.js';
 import { venmoLink } from '../lib/ledger.js';
 import { buzz, confettiFrom } from '../lib/delight.js';
 import { meFor, roundDate, roundPlayerName, shareRound } from '../lib/format.js';
 import { revealSteps, revealTiming } from '../lib/reveal.js';
+import { IMAGE_H, IMAGE_W, renderShareImage, shareImageName } from '../lib/shareImage.js';
 
 const reducedMotion = () => !!window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
 
@@ -200,28 +201,78 @@ export function SettleUp({ round, res, onBack, onNext }) {
   );
 }
 
-/** Beat 3: a results card sized for the group chat. */
+/**
+ * Beat 3: a results image sized for stories and the group chat. The PNG is drawn ahead of time
+ * so the share sheet opens straight from the tap (iOS drops the share if we make it wait).
+ */
 export function ShareCard({ round, res, onBack, onDone }) {
   const { showToast } = useUI();
+  const [showAmounts, setShowAmounts] = useState(true);
+  const [img, setImg] = useState(null); // { blob, url, amounts }
   const top = res.standings[0];
+
+  useEffect(() => {
+    let alive = true;
+    renderShareImage(round, roundResults(round), { showAmounts })
+      .then(blob => { if (alive) setImg({ blob, url: URL.createObjectURL(blob), amounts: showAmounts }); })
+      .catch(() => { if (alive) setImg(null); });
+    return () => { alive = false; };
+  }, [round, showAmounts]);
+  // Free each image once a newer one replaces it
+  useEffect(() => () => { if (img) URL.revokeObjectURL(img.url); }, [img]);
+
+  const ready = img && img.amounts === showAmounts;
+  const fileName = shareImageName(round);
+  const share = async () => {
+    if (ready && typeof File !== 'undefined') {
+      const file = new File([img.blob], fileName, { type: 'image/png' });
+      if (navigator.canShare?.({ files: [file] })) {
+        try { await navigator.share({ files: [file], title: 'Birdie Bank results' }); return; }
+        catch (e) { if (e?.name === 'AbortError') return; }
+      }
+    }
+    shareRound(round, res, showToast, { amounts: showAmounts });
+  };
+  const save = () => {
+    if (!ready) return;
+    const a = document.createElement('a');
+    a.href = img.url;
+    a.download = fileName;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+  };
+
   return (
     <>
       <Header title="Share" onBack={onBack} />
       <div className="scroll">
-        <div className="share-card">
-          <div className="sc-brand">Birdie Bank</div>
-          <div className="sc-meta">{round.course.name} · {roundDate(round)} · {GAMES[round.game].name}</div>
-          <div className="sc-big d">{top.amount > 0 ? <>{top.name.split(' ')[0]}<br />{money(top.amount, { sign: true })}</> : 'All square'}</div>
-          <div className="sc-list">
-            {res.standings.map(p => (
-              <div key={p.id} className="sc-line"><span>{p.name}</span><span>{money(p.amount, { sign: true })}</span></div>
-            ))}
+        {img ? (
+          <img className="share-img" src={img.url} width={IMAGE_W} height={IMAGE_H}
+            alt={`Results card: ${round.course.name}, ${GAMES[round.game].name}. ${res.standings.map((p, i) => `${i + 1}. ${p.name}${showAmounts ? ` ${money(p.amount, { sign: true })}` : ''}`).join(', ')}`} />
+        ) : (
+          <div className="share-card">
+            <div className="sc-brand">Birdie Bank</div>
+            <div className="sc-meta">{round.course.name} · {roundDate(round)} · {GAMES[round.game].name}</div>
+            <div className="sc-big d">{top.amount > 0 ? <>{top.name.split(' ')[0]}{showAmounts && <><br />{money(top.amount, { sign: true })}</>}</> : 'All square'}</div>
+            <div className="sc-list">
+              {res.standings.map(p => (
+                <div key={p.id} className="sc-line"><span>{p.name}</span>{showAmounts && <span>{money(p.amount, { sign: true })}</span>}</div>
+              ))}
+            </div>
           </div>
+        )}
+        <div className="toggle-row share-toggle">
+          <div><div className="toggle-lbl">Show amounts</div><div className="toggle-sub">{showAmounts ? 'Dollar figures are on the image' : 'Only the order and the bets, no money'}</div></div>
+          <Toggle on={showAmounts} onChange={setShowAmounts} label="Show amounts" />
         </div>
       </div>
       <div className="cta-wrap">
-        <button className="full-btn" onClick={() => shareRound(round, res, showToast)}><Icon name="share-network" /> Send to the group chat</button>
-        <button className="full-btn outline" onClick={onDone}>Done</button>
+        <button className="full-btn" onClick={share}><Icon name="share-network" /> Send to the group chat</button>
+        <div className="cta-row">
+          <button className="full-btn outline" onClick={save} disabled={!ready}><Icon name="download-simple" /> Save image</button>
+          <button className="full-btn outline" onClick={onDone}>Done</button>
+        </div>
       </div>
     </>
   );

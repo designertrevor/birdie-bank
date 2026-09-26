@@ -819,8 +819,15 @@ button:disabled { cursor: not-allowed; }
 .pay-btn { min-width: 0; padding: 0 12px; white-space: nowrap; }
 .pay-lbl { overflow: hidden; text-overflow: ellipsis; }
 .pay-btn.done { background: var(--win-bg); color: var(--win); }
+.share-img {
+  display: block; margin: 8px auto 0; width: min(280px, calc(100% - 32px)); height: auto; aspect-ratio: 9 / 16; border-radius: 24px;
+  box-shadow: 0 10px 30px rgba(10,10,10,.14);
+}
+.share-toggle { margin-top: 16px; }
+.cta-row { display: flex; gap: 10px; }
+.cta-row .full-btn { flex: 1; min-width: 0; }
 .share-card {
-  margin: 8px auto 0; width: min(300px, calc(100% - 32px)); aspect-ratio: 9 / 14; padding: 24px 22px; border-radius: 28px;
+  margin: 8px auto 0; width: min(280px, calc(100% - 32px)); aspect-ratio: 9 / 16; padding: 24px 22px; border-radius: 24px;
   background: var(--teal); color: #fff; display: flex; flex-direction: column; gap: 6px;
 }
 .sc-brand { font-family: var(--display); font-weight: 800; font-size: 14px; letter-spacing: .12em; text-transform: uppercase; color: var(--mint); }
