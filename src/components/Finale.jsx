@@ -33,7 +33,8 @@ function CountRow({ place, name, amount, me, delay }) {
     <div className={`reveal-row ${place === 1 && amount > 0 ? 'top' : ''}`}>
       <div className="sr">{place}</div>
       <div className="sn">{name}{me ? ' (you)' : ''}</div>
-      <div className={`reveal-amt ${done && amount > 0 ? 'pos' : done && amount < 0 ? 'neg' : ''}`}>{money(Math.round(v), { sign: true })}</div>
+      {/* Whole dollars while counting, then the exact amount: $2.50 used to land on "+$3" */}
+      <div className={`reveal-amt ${done && amount > 0 ? 'pos' : done && amount < 0 ? 'neg' : ''}`}>{money(done ? amount : Math.round(v), { sign: true })}</div>
     </div>
   );
 }
@@ -150,7 +151,8 @@ export function SettleUp({ round, res, onBack, onNext }) {
 /** Beat 3: a results card sized for the group chat. */
 export function ShareCard({ round, res, onBack, onDone }) {
   const { showToast } = useUI();
-  const top = res.standings[0];
+  // Everyone tied for the top, so a shared win isn't credited to whoever sorted first
+  const tops = res.standings.filter(p => p.amount > 0 && p.amount === res.standings[0].amount);
   return (
     <>
       <Header title="Share" onBack={onBack} />
@@ -158,7 +160,7 @@ export function ShareCard({ round, res, onBack, onDone }) {
         <div className="share-card">
           <div className="sc-brand">Birdie Bank</div>
           <div className="sc-meta">{round.course.name} · {roundDate(round)} · {GAMES[round.game].name}</div>
-          <div className="sc-big d">{top.amount > 0 ? <>{top.name.split(' ')[0]}<br />{money(top.amount, { sign: true })}</> : 'All square'}</div>
+          <div className="sc-big d">{tops.length ? <>{tops.map(p => p.name.split(' ')[0]).join(' & ')}<br />{money(tops[0].amount, { sign: true })}</> : 'All square'}</div>
           <div className="sc-list">
             {res.standings.map(p => (
               <div key={p.id} className="sc-line"><span>{p.name}</span><span>{money(p.amount, { sign: true })}</span></div>
