@@ -1,7 +1,7 @@
 import { useRef, useState } from 'react';
 import { Empty, Header, Icon, Screen, useUI } from '../components/ui.jsx';
 import { update, useStore } from '../lib/store.js';
-import { GAMES, holeAtPos, holeComplete, roundLegs, roundResults, scoreSummary, scorers, sideNames, skinsTable } from '../lib/round.js';
+import { GAMES, holeAtPos, holeComplete, playsHole, roundLegs, roundNotes, roundResults, scoreSummary, scorers, sideNames, skinsTable } from '../lib/round.js';
 import { matchLabel } from '../lib/games.js';
 import { money } from '../lib/golf.js';
 import { useNav } from '../lib/nav.js';
@@ -42,7 +42,7 @@ export default function RoundDetail({ id, celebrate }) {
   };
   const edit = async () => {
     const s = state;
-    if (s.activeRoundId && s.activeRoundId !== id) { showToast('Finish your current round first'); return; }
+    if (s.activeRoundId && s.activeRoundId !== id && s.rounds[s.activeRoundId]?.status === 'active') { showToast('Finish your current round first'); return; }
     update(st => { st.rounds[id].status = 'active'; st.activeRoundId = id; st.rounds[id].current = 0; });
     nav.reset('history', ['play', { id }]);
   };
@@ -60,10 +60,17 @@ export default function RoundDetail({ id, celebrate }) {
     </button>
   );
   const done = () => nav.reset('history');
+  // Who left and which holes didn't count, said plainly so nobody wonders where the money went
+  const notes = roundNotes(round);
+  const notesEl = notes.length > 0 && (
+    <div style={{ marginTop: 12 }}>
+      {notes.map(n => <p key={n.text} className="hint-card"><Icon name={n.kind === 'left' ? 'user-minus' : 'warning'} fill /> {n.text}</p>)}
+    </div>
+  );
   if (stage !== 'detail') {
     return (
       <Screen key={stage}>
-        {stage === 'reveal' && <Reveal round={round} res={res} onNext={() => setStage(res.transfers.length ? 'settle' : 'share')} onDetail={() => setStage('detail')} extra={saveRow && <div style={{ marginTop: 12 }}>{saveRow}</div>} />}
+        {stage === 'reveal' && <Reveal round={round} res={res} onNext={() => setStage(res.transfers.length ? 'settle' : 'share')} onDetail={() => setStage('detail')} extra={<>{notesEl}{saveRow && <div style={{ marginTop: 12 }}>{saveRow}</div>}</>} />}
         {stage === 'settle' && <SettleUp round={round} res={res} onBack={() => setStage('reveal')} onNext={() => setStage('share')} />}
         {stage === 'share' && <ShareCard round={round} res={res} onBack={() => setStage(res.transfers.length ? 'settle' : 'reveal')} onDone={done} />}
         {signingIn && <SignInSheet open onClose={() => setSigningIn(false)} />}
@@ -84,6 +91,7 @@ export default function RoundDetail({ id, celebrate }) {
           {meRow && meRow.id !== top.id && !allSquare && <div className="me-line">You: {money(meRow.amount, { sign: true })}</div>}
         </div>
 
+        {notesEl}
         {saveRow}
 
         <div className="sec-label">Standings</div>
@@ -183,7 +191,7 @@ function GameBreakdown({ round, res }) {
         <div className="sec-label">Three matches</div>
         {res.detail.matches.map(m => {
           const s = m.status;
-          const who = !s.played ? 'Not played' : s.leader === null ? (s.left === 0 ? 'Halved' : 'All square') : matchLabel(s, pair(m.sides[s.leader]));
+          const who = m.off ? 'Off: a player left' : !s.played ? 'Not played' : s.leader === null ? (s.left === 0 ? 'Halved' : 'All square') : matchLabel(s, pair(m.sides[s.leader]));
           return (
             <div key={m.index} className="leg-row">
               <div className="leg-name">{m.seg.label}</div>
@@ -211,7 +219,7 @@ function GameBreakdown({ round, res }) {
           <div key={x.id} className="leg-row">
             <div className="leg-name">{i + 1}</div>
             <div className="leg-winner">{x.name}{round.game === 'scramble' ? <span className="li-sub"> · {round.teams.find(t => t.id === x.id)?.players.map(pid => first(names[pid])).join(', ')}</span> : null}</div>
-            <div className="leg-amt">{x.played ? fmt(x) : '–'}</div>
+            <div className="leg-amt">{x.played ? fmt(x) : '–'}{x.left && x.played ? <div className="li-sub">Left after {x.played} hole{x.played === 1 ? '' : 's'}</div> : null}</div>
           </div>
         ))}
       </>
@@ -328,7 +336,9 @@ export function Scorecard({ round, current, onHole }) {
                 <td className="sticky">{p.name.split(' ')[0]}</td>
                 {out.map(h => {
                   const g = round.scores[h.no]?.[p.id];
-                  return <td key={h.no} className={`${h.no === current ? 'cur' : ''}`}>{g == null ? <span className="empty-dot">·</span> : <span className={`sc-mark ${cls(g, h.par)}`}>{g}</span>}</td>;
+                  // A player who left shows an en dash on the holes after
+                  const gone = g == null && !(p.team ? p.players.some(pid => playsHole(round, pid, h)) : playsHole(round, p.id, h));
+                  return <td key={h.no} className={`${h.no === current ? 'cur' : ''}`}>{gone ? <span className="empty-dot">–</span> : g == null ? <span className="empty-dot">·</span> : <span className={`sc-mark ${cls(g, h.par)}`}>{g}</span>}</td>;
                 })}
                 <td className="tot">{sum.played ? sum.gross : '–'}</td>
               </tr>

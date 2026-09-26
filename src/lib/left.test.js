@@ -206,7 +206,7 @@ test('a hole with a score missing is not counted, is named in the notes, and not
   r.left = { c: 2 };
   r.scores[3] = { a: 4, b: 3 };
   assert.deepEqual(roundNotes(r).map(n => n.text), [
-    'Cy left after hole 2. The holes after that were settled among the players still playing.',
+    'Cy left after hole 2. The holes after that are settled among the players still playing.',
     'Hole 2 not counted: no score for Cy.',
   ]);
   // Every game copes with a half-scored round, and the Ledger only sees clean numbers

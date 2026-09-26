@@ -922,28 +922,28 @@ function nameList(names) {
   return names.length <= 1 ? names.join('') : `${names.slice(0, -1).join(', ')} and ${names.at(-1)}`;
 }
 
-/** What happened to the game when a player left, in a sentence. */
-function leftRule(round, pid) {
+/** What leaving does to the game, in a sentence (for the results, and before marking someone as gone). */
+export function leftRule(round, pid) {
   const g = round.game;
   const first = n => n.split(' ')[0];
-  if (g === 'vegas') return 'Vegas needs two full teams, so the holes after that weren’t counted.';
-  if (g === 'nines') return 'Nines is for three, so the holes after that weren’t counted.';
+  if (g === 'vegas') return 'Vegas needs two full teams, so the holes after that don’t count.';
+  if (g === 'nines') return 'Nines is for three, so the holes after that don’t count.';
   if (g === 'sixes') {
     const pos = leftAt(round, pid);
     const between = pos === 0 || sixesSegments(round.holes.length).some(sg => sg.end === pos);
-    return between ? 'Sixes needs all four, so the matches after that were off.' : 'Their partner played out the match under way on their own, and the matches after that were off.';
+    return between ? 'Sixes needs all four, so the matches after that are off.' : 'Their partner plays out the match under way alone, and the matches after that are off.';
   }
-  if (g === 'wolf') return 'Wolf carried on with the players still there.';
+  if (g === 'wolf') return 'Wolf carries on with the players still there.';
   if (g === 'nassau' || g === 'match' || g === 'scramble') {
     const side = (g === 'scramble' ? round.teams || [] : sides(round).map(players => ({ players }))).find(t => t.players.includes(pid));
     const mates = (side?.players || []).filter(x => x !== pid && leftAt(round, x) > leftAt(round, pid));
-    if (!mates.length) return g === 'scramble' ? 'Their team is out of the pot.' : 'Their side had nobody left, so the match stopped there and the bets stand as they were.';
-    const names = mates.map(x => first(playerById(round, x)?.name || ''));
-    return g === 'scramble' ? `${nameList(names)} played on for the team.` : `${nameList(names)} played on for the side.`;
+    if (!mates.length) return g === 'scramble' ? 'Their team is out of the pot.' : 'Their side has nobody left, so the match stops there and the bets stand as they are.';
+    const names = nameList(mates.map(x => first(playerById(round, x)?.name || '')));
+    return `${names} ${mates.length === 1 ? 'carries' : 'carry'} on for the ${g === 'scramble' ? 'team' : 'side'}.`;
   }
   if ((g === 'stroke' || g === 'stableford' || g === 'quota') && round.settings[g]?.payout === 'pot') return 'They’re out of the pot, so they don’t pay or win it.';
   if (g === 'stroke' || g === 'stableford' || g === 'quota') return 'They settle with each player on the holes they both played.';
-  return 'The holes after that were settled among the players still playing.';
+  return 'The holes after that are settled among the players still playing.';
 }
 
 /**
