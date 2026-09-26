@@ -15,7 +15,9 @@ self.addEventListener('fetch', e => {
   if (req.method !== 'GET') return;
   const url = new URL(req.url);
   if (req.mode === 'navigate') {
-    e.respondWith(fetch(req).then(res => { caches.open(CACHE).then(c => c.put('/', res.clone())); return res; }).catch(() => caches.match('/')));
+    // Only the app itself is the offline copy; plain pages like /privacy.html cache under their own path
+    const key = url.pathname.endsWith('.html') ? req : '/';
+    e.respondWith(fetch(req).then(res => { const copy = res.clone(); caches.open(CACHE).then(c => c.put(key, copy)); return res; }).catch(() => caches.match(key)));
     return;
   }
   const cacheable = url.origin === location.origin || /fonts\.(googleapis|gstatic)\.com|cdn\.jsdelivr\.net/.test(url.host);

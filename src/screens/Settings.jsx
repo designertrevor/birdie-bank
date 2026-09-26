@@ -381,8 +381,13 @@ export function About() {
         <div className="sec-label">The fine print</div>
         <div className="block rules-body">
           <p>Birdie Bank is a scorekeeper for friendly games. It doesn’t hold, move or collect money, and it isn’t a gambling service. Make sure betting on golf is legal where you play.</p>
-          <p style={{ marginTop: 8 }}>Your data stays on this phone. Back it up from Settings if you switch phones.</p>
+          <p style={{ marginTop: 8 }}>Your rounds save on this phone first. Sign in to keep them in your account and use them on any device.</p>
         </div>
+        <a className="set-row" href="/privacy.html" target="_blank" rel="noopener">
+          <div className="set-icon"><Icon name="shield-check" fill /></div>
+          <div className="row-main"><div className="set-name">Privacy policy</div><div className="set-sub">What we collect and why</div></div>
+          <span className="chevron"><Icon name="arrow-square-out" /></span>
+        </a>
         <Empty illo title="Birdie Bank" text="Made for the Saturday group." />
       </div>
       <RulesSheet game={rules} open={!!rules} onClose={() => setRules(null)} />
