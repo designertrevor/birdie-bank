@@ -95,6 +95,50 @@ export function merge3(base, local, remote, depth = 1, known = base !== undefine
   return out;
 }
 
+// --------------------------- Seat requests ---------------------------------
+// "Not on the list? Add me": someone opening a join link who isn't one of the players asks the
+// scorekeeper for a seat. The request rides in the round's hole records under a negative hole
+// number, so it needs nothing new on the server, two people asking at once never overwrite
+// each other, and phones on an older version skip it (no hole has that number).
+// A request record: { request: { name, at, status: 'waiting' | 'in' | 'no', playerId? } }
+
+/** A fresh slot number for a seat request (always negative, so never a real hole). */
+export function newRequestNo() {
+  const [n] = crypto.getRandomValues(new Uint32Array(1));
+  return -1 - (n % 2000000000);
+}
+
+export const isRequestNo = no => Number(no) < 0;
+
+/** Tidy a name typed into a seat request: trimmed, single spaces, at most 24 characters. */
+export function cleanRequestName(name) {
+  return String(name || '').replace(/\s+/g, ' ').trim().slice(0, 24);
+}
+
+/** A seat request record as sent, or null when the name is empty. */
+export function buildRequest(name, at = Date.now()) {
+  const n = cleanRequestName(name);
+  return n ? { request: { name: n, at, status: 'waiting' } } : null;
+}
+
+/** The request inside a record if it's well formed, else null. */
+export function readRequest(data) {
+  const r = data?.request;
+  if (!r || typeof r !== 'object') return null;
+  const name = cleanRequestName(r.name);
+  if (!name || !['waiting', 'in', 'no'].includes(r.status)) return null;
+  return { name, at: Number(r.at) || 0, status: r.status, playerId: typeof r.playerId === 'string' ? r.playerId : null };
+}
+
+/** Requests still waiting on the scorekeeper, oldest first: [{ no, name, at }]. */
+export function waitingRequests(holes) {
+  return Object.entries(holes || {})
+    .filter(([no]) => isRequestNo(no))
+    .map(([no, data]) => ({ no: Number(no), ...readRequest(data) }))
+    .filter(r => r.status === 'waiting')
+    .sort((a, b) => a.at - b.at);
+}
+
 const ALPHABET = 'ABCDEFGHJKMNPQRSTUVWXYZ23456789';
 export function newCode(len = 6) {
   const bytes = crypto.getRandomValues(new Uint8Array(len));

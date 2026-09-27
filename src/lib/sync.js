@@ -5,7 +5,7 @@ import { useSyncExternalStore } from 'react';
 import { STORE_KEY, getState, subscribe, update } from './store.js';
 import { localAdapter, supabaseAdapter } from './sync-adapters.js';
 import { getSupabase, supabaseConfigured } from './supabase.js';
-import { applyHole, applyMeta, assemble, buildHole, buildMeta, merge3, newCode, stable } from './sync-model.js';
+import { applyHole, applyMeta, assemble, buildHole, buildMeta, buildRequest, isRequestNo, merge3, newCode, newRequestNo, readRequest, stable } from './sync-model.js';
 
 
 let adapterPromise = null;
@@ -147,6 +147,8 @@ function onRemote(roundId, ev) {
     });
   }
   if (ev.type === 'hole') {
+    // Seat requests ride under negative hole numbers (see sync-model.js)
+    if (isRequestNo(ev.holeNo)) { noteRequest(roundId, ev.holeNo, ev.data); return; }
     const json = stable(ev.data);
     if (json === entry.lastHoles[ev.holeNo]) return;
     const base = parse(entry.lastHoles[ev.holeNo]);
@@ -255,8 +257,10 @@ export function bootSync() {
 export async function shareRound(roundId) {
   const adapter = await getAdapter();
   if (!adapter) throw new Error('Shared scoring isn’t set up yet');
-  const round = getState().rounds[roundId];
   const code = newCode();
+  // Who's inviting, for the invite card ("Trevor invited you")
+  update(s => { const r = s.rounds[roundId]; const me = s.players[s.me]; if (r && me?.name) r.hostName = me.name.split(' ')[0]; });
+  const round = getState().rounds[roundId];
   const holes = {};
   round.holes.forEach((h, i) => { const d = buildHole(round, i); if (d) holes[h.no] = d; });
   await adapter.create(code, buildMeta(round), holes);
@@ -296,4 +300,97 @@ export async function stopSharing(roundId) {
 
 export function shareLink(code) {
   return `${location.origin}/?join=${code}`;
+}
+
+// --------------------------- Seat requests ---------------------------------
+// Someone who opened the link but isn't on the list asks for a seat; the scorekeeper's phone
+// shows it and answers. Kept in memory on the scorekeeper's phone: a reconnect or reopen
+// fetches the round again, which brings back any request still waiting.
+
+const requests = new Map(); // roundId -> Map(no -> { no, name, at })
+let reqVersion = 0;
+const reqListeners = new Set();
+function reqChanged() { reqVersion++; reqListeners.forEach(l => l()); }
+const subReq = l => { reqListeners.add(l); return () => reqListeners.delete(l); };
+
+function noteRequest(roundId, no, data) {
+  const r = readRequest(data);
+  const list = requests.get(roundId) || new Map();
+  const had = list.has(no);
+  if (r?.status === 'waiting') list.set(no, { no, name: r.name, at: r.at });
+  else list.delete(no);
+  requests.set(roundId, list);
+  if (had !== list.has(no) || r?.status === 'waiting') reqChanged();
+}
+
+/** Seat requests waiting on this round's scorekeeper, oldest first: [{ no, name, at }]. */
+export function useSeatRequests(roundId) {
+  useSyncExternalStore(subReq, () => reqVersion, () => reqVersion);
+  const round = getState().rounds[roundId];
+  if (!round?.shared?.host || round.shared.ended) return [];
+  return [...(requests.get(roundId)?.values() || [])].sort((a, b) => a.at - b.at);
+}
+
+/**
+ * Ask for a seat in a shared round. Returns the request's slot number to watch.
+ * Throws when it can't be sent, so the joiner can be told to ask the scorekeeper instead.
+ */
+export async function requestSeat(code, name) {
+  const adapter = await getAdapter();
+  const data = buildRequest(name);
+  if (!adapter || !data) throw new Error('Can’t send a request');
+  const no = newRequestNo();
+  await adapter.upsertHole(code, no, data);
+  return no;
+}
+
+/** Take back a seat request (the joiner changed their mind). Best effort. */
+export async function cancelSeatRequest(code, no) {
+  const adapter = await getAdapter();
+  try { await adapter?.upsertHole(code, no, null); } catch { /* it'll just go unanswered */ }
+}
+
+/**
+ * Watch a seat request for an answer. `cb` gets the request ({ status, playerId, ... }), or
+ * { status: 'gone' } when the round stopped being shared. Listens live and checks every few
+ * seconds too, in case the live connection drops. Returns a function that stops watching.
+ */
+export function watchSeatRequest(code, no, cb) {
+  let stopped = false, unsub = null, last = null;
+  const tell = r => { const j = stable(r); if (!stopped && j !== last) { last = j; cb(r); } };
+  const check = async () => {
+    try {
+      const adapter = await getAdapter();
+      const remote = await adapter?.fetch(code);
+      if (stopped) return;
+      if (!remote) tell({ status: 'gone' });
+      else { const r = readRequest(remote.holes?.[no]); if (r) tell(r); }
+    } catch { /* no signal: try again on the next tick */ }
+  };
+  getAdapter().then(adapter => {
+    if (stopped || !adapter) return;
+    unsub = adapter.subscribe(code, ev => {
+      if (ev.type === 'deleted') tell({ status: 'gone' });
+      if (ev.type === 'hole' && Number(ev.holeNo) === no) { const r = readRequest(ev.data); if (r) tell(r); }
+      if (ev.type === 'connected') check();
+    });
+  });
+  check();
+  const timer = setInterval(check, 6000);
+  return () => { stopped = true; clearInterval(timer); unsub?.(); };
+}
+
+/**
+ * Answer a seat request: `playerId` is the seat they were given, or null for "not this time".
+ * The round with the new player goes up first, so their phone finds the seat when it looks.
+ */
+export async function answerSeatRequest(roundId, no, playerId) {
+  const round = getState().rounds[roundId];
+  const req = requests.get(roundId)?.get(no);
+  const adapter = await getAdapter();
+  if (!round?.shared?.code || !adapter || !req) return;
+  if (playerId) await pushChanges(roundId);
+  await adapter.upsertHole(round.shared.code, no, { request: { name: req.name, at: req.at, status: playerId ? 'in' : 'no', ...(playerId ? { playerId } : {}) } });
+  requests.get(roundId)?.delete(no);
+  reqChanged();
 }
