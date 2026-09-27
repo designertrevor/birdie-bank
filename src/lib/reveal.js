@@ -55,24 +55,49 @@ export function revealSteps(round, res) {
 
   if (round.game === 'skins' && d.skins) {
     const n = players.length;
-    const won = {};
-    for (const r of d.skins.rows) {
-      if (!r.winner) continue;
-      won[r.winner] ??= { skins: 0, holes: [], amount: 0 };
-      won[r.winner].skins += r.skins;
-      // Each skin is worth the bet on the hole it came from, paid by the others on the winning hole
-      won[r.winner].amount += (r.worth ?? r.skins * d.skins.value) * ((r.field?.length ?? n) - 1);
-      won[r.winner].holes.push(r.hole.no);
+    let won = d.skinsWon;
+    if (!won) {
+      // Rounds scored before the skins house rules: work it out from the rows
+      won = {};
+      for (const r of d.skins.rows) {
+        if (!r.winner) continue;
+        won[r.winner] ??= { skins: 0, holes: [], amount: 0 };
+        won[r.winner].skins += r.skins;
+        // Each skin is worth the bet on the hole it came from, paid by the others on the winning hole
+        won[r.winner].amount += (r.worth ?? r.skins * d.skins.value) * ((r.field?.length ?? n) - 1);
+        won[r.winner].holes.push(r.hole.no);
+      }
     }
+    // Holes read H4, or H4 net and H4 gross when both kinds are in play
+    const holeTag = h => (typeof h === 'string' ? `H${h.slice(0, -1)} ${h.endsWith('g') ? 'gross' : 'net'}` : `H${h}`);
+    const count = v => (Number.isInteger(v) ? plural(v, 'skin') : `${Math.round(v * 10) / 10} skins`);
     const steps = players
-      .filter(p => won[p.id])
+      .filter(p => won[p.id]?.skins)
       .sort((a, b) => won[b.id].skins - won[a.id].skins)
       .map(p => ({
-        key: p.id, label: name(p.id), text: won[p.id].holes.map(h => `H${h}`).join(', '),
-        value: plural(won[p.id].skins, 'skin'), amount: won[p.id].amount,
+        key: p.id, label: name(p.id), text: won[p.id].holes.map(holeTag).join(', '),
+        value: count(won[p.id].skins), amount: won[p.id].amount,
       }));
-    if (steps.length && d.skins.unclaimed > 0) steps.push({ key: 'carry', label: 'Carried over', text: 'Nobody claimed them', value: plural(d.skins.unclaimed, 'skin'), tie: true });
+    const unclaimed = (d.skins.unclaimed || 0) + (d.skinsGross?.unclaimed || 0);
+    const end = d.skins.end || d.skinsGross?.end;
+    if (steps.length && unclaimed > 0) {
+      const text = end?.rule === 'playoff' ? 'Playoff to come' : 'Nobody claimed them';
+      steps.push({ key: 'carry', label: 'Carried over', text, value: plural(unclaimed, 'skin'), tie: true });
+    }
     return { title: 'Skins won', steps };
+  }
+
+  if (round.game === 'hammer' && d.hammer) {
+    const sn = round.teams ? sideNames(round) : sideNames(round).map(first);
+    const rows = d.hammer.filter(r => r.value > 0).map(r => {
+      const [a, b] = round.teams?.length === 2 ? round.teams.map(t => t.players) : players.slice(0, 2).map(p => [p.id]);
+      const deltas = {};
+      for (const pid of a) deltas[pid] = r.winner === 0 ? r.value : -r.value;
+      for (const pid of b) deltas[pid] = r.winner === 1 ? r.value : -r.value;
+      const how = r.conceded != null ? ', the other side folded' : r.hammers.length ? `, hammered ${r.hammers.length}×` : '';
+      return { no: r.hole.no, deltas, text: () => `${sn[r.winner]}${how}` };
+    });
+    return { title: 'Biggest holes', steps: biggestHoles(rows) };
   }
 
   if ((round.game === 'banker' || round.game === 'wolf') && d.holes) {
@@ -125,6 +150,13 @@ export function revealSteps(round, res) {
       ? { key: l.seg.label, label: l.seg.label, text: `${name(l.holder)} holds the rabbit`, amount: l.amount ?? (round.settings?.rabbit?.stake || 0) * (players.length - 1) }
       : { key: l.seg.label, label: l.seg.label, text: 'Loose at the end, no payout', tie: true }));
     return { title: 'The rabbit', steps };
+  }
+
+  if (round.game === 'snake' && d.snake) {
+    const steps = d.snake.legs.filter(l => l.played).map(l => (l.holder && l.value
+      ? { key: l.seg.label, label: d.snake.legs.length > 1 ? l.seg.label : 'The snake', text: `${name(l.holder)} holds the snake`, amount: l.value * l.others.length }
+      : { key: l.seg.label, label: d.snake.legs.length > 1 ? l.seg.label : 'The snake', text: 'Nobody three-putted', tie: true }));
+    return { title: 'The snake', steps };
   }
 
   if ((round.game === 'nines' || round.game === 'bbb' || round.game === 'dots') && d.points) {

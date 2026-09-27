@@ -24,6 +24,8 @@ const settings = (payout, sixes) => ({
   bbb: { value: 1 },
   dots: { value: 1, auto: true, kinds: { greenie: true, sandy: true, barkie: true, chipin: true, polie: false, arnie: false } },
   rabbit: { ...REV2_DEFAULTS.rabbit },
+  hammer: { stake: 5, max: 3, who: 'either' },
+  snake: { stake: 5, growth: payout === 'pot' ? 'flat' : 'double', nines: sixes === 'match' },
 });
 const course = n => ({ id: 'c', name: 'C', city: 'T', tees: [], holes: Array.from({ length: n }, (_, i) => ({ par: [4, 3, 5][i % 3], hdcp: i + 1 })) });
 // Bump every money figure in a game's settings (not thresholds or multipliers)

@@ -4,7 +4,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import {
-  GAMES, createRound, roundResults, livePreview, bankerHoleSetup, wolfFor, scorers, nassauPressOptions, strokesFor,
+  GAMES, createRound, roundResults, livePreview, bankerHoleSetup, wolfFor, scorers, nassauPressOptions, strokesFor, hammerOptions,
 } from './round.js';
 import { pickupGross } from './golf.js';
 import { DOT_KINDS } from './games.js';
@@ -28,6 +28,8 @@ const SETTINGS = {
   bbb: { value: 1 },
   dots: { value: 1, auto: true, kinds: { greenie: true, sandy: true, barkie: true, chipin: true, polie: false, arnie: false } },
   rabbit: { stake: 5, tiesFree: true },
+  hammer: { stake: 5, max: 3, who: 'either' },
+  snake: { stake: 5, growth: 'flat', nines: false },
 };
 
 // A realistic 18: pars 4-4-3-5-4-4-3-4-5 each nine, card handicaps spread across the nines
@@ -87,6 +89,8 @@ const LINEUPS = {
   bbb: { n: 4 },
   dots: { n: 4 },
   rabbit: { n: 5 },
+  hammer: { n: 4, teams: [['a', 'b'], ['c', 'd']] },
+  snake: { n: 4 },
 };
 
 /** Settings with presses on and odd stakes, so the random rounds exercise presses and cents. */
@@ -98,6 +102,8 @@ const BUSY = {
   wolf: { point: 2.5, loneMultiplier: 3 },
   stroke: { stake: 5, payout: 'per' },
   stableford: { stake: 0.5, payout: 'per', modified: true },
+  hammer: { stake: 2.5, max: 0, who: 'trailing' },
+  snake: { stake: 1.5, growth: 'grow', nines: true },
 };
 
 function newRound(game, { holesCount = 18, nine = 'front', n, teams, players, settings = SETTINGS, useHandicaps = true, course = course18, startHole = null } = {}) {
@@ -138,6 +144,22 @@ function holeExtras(round, idx, rand) {
       if (kinds.length) m[pid] = kinds;
     }
     round.marks[hole.no] = m;
+  }
+  if (round.game === 'snake') {
+    const putts = ids.filter(() => rand() < 0.15);
+    round.marks[hole.no] = { snake: putts };
+  }
+  if (round.game === 'hammer') {
+    // Hammer back and forth while it's allowed; now and then the hammered side folds
+    const mark = { hammers: [], conceded: null };
+    for (let k = 0; k < 4 && rand() < 0.4; k++) {
+      const can = hammerOptions(round, hole, mark);
+      const side = can[0] && can[1] ? (rand() < 0.5 ? 0 : 1) : can.indexOf(true);
+      if (side < 0) break;
+      mark.hammers.push(side);
+    }
+    if (mark.hammers.length && rand() < 0.3) mark.conceded = 1 - mark.hammers.at(-1);
+    round.marks[hole.no] = mark;
   }
 }
 
