@@ -20,10 +20,11 @@ export const DEFAULT_SETTINGS = {
   theme: 'system',   // 'system' | 'light' | 'dark'
   hcPct: 100,
   banker: { defaultBet: 5, min: 1, max: 20, ties: 'push', rotation: 'rotate' },
-  nassau: { front: 5, back: 5, total: 5, pressMode: 'manual', threshold: 2 },
-  skins: { value: 2, carryover: true },
+  nassau: { front: 5, back: 5, total: 5, pressMode: 'manual', threshold: 2, turnPress: false, noLastPress: false },
+  skins: { value: 2, carryover: true, kind: 'net', payout: 'per', stake: 10, lastCarry: 'void' },
   wolf: { point: 2, loneMultiplier: 2 },
   match: { stake: 10, pressMode: 'off', threshold: 2 },
+  hammer: { stake: 5, max: 3, who: 'either' },
   vegas: { point: 1, birdieFlip: true },
   sixes: { stake: 5, mode: 'match' },
   scramble: { stake: 5 },
@@ -35,6 +36,7 @@ export const DEFAULT_SETTINGS = {
   bbb: { value: 1 },
   dots: { value: 1, auto: true, kinds: { greenie: true, sandy: true, barkie: true, chipin: true, polie: false, arnie: false } },
   rabbit: { ...REV2_DEFAULTS.rabbit },
+  snake: { stake: 5, growth: 'flat', nines: false },
   rev: SETTINGS_REV,
 };
 

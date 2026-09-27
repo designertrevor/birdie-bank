@@ -158,13 +158,29 @@ export function nassauBets(winners, presses, amounts, legs = LEGS) {
 /**
  * Presses that are allowed before playing `nextHole`: the trailing player may press the
  * most recent bet on a leg when it is `threshold` or more down and holes remain in the leg.
+ * House rules (opts), both common in published Nassau rules:
+ *  • `noLast`: no press can start on a leg's last hole (the 9th or 18th), since a one-hole bet is a coin flip.
+ *  • `turn`: at the turn, the side that lost the front nine may press the back nine, however far down.
+ *    It's a new bet on the back for the back's amount (the same as doubling it).
+ * Sources, checked 2026-09-27: Stick Golf, "How to play Nassau" https://stickapp.golf/games/nassau/
+ * ("no press on the last hole" is nearly universal) and Wikipedia, "Nassau (bet)" https://en.wikipedia.org/wiki/Nassau_(bet).
+ * `only` limits the result to the regular presses ('regular') or the turn press ('turn').
  */
-export function pressOpportunities(winners, presses, amounts, nextHole, threshold = 2, legs = LEGS) {
+export function pressOpportunities(winners, presses, amounts, nextHole, threshold = 2, legs = LEGS, opts = {}) {
+  const { noLast = false, turn = false, only = null } = opts;
   const bets = nassauBets(winners, presses, amounts, legs);
   const out = [];
+  if (turn && only !== 'regular' && legs.back && legs.front && nextHole === legs.back.start) {
+    const front = bets.find(b => b.key === 'front')?.status;
+    if (front?.done && front.leader != null && !presses.some(p => p.leg === 'back' && p.start === nextHole)) {
+      out.push({ leg: 'back', trailing: 1 - front.leader, by: front.by, turn: true });
+    }
+  }
+  if (only === 'turn') return out;
   for (const leg of Object.keys(legs)) {
     const l = legs[leg];
     if (nextHole < l.start || nextHole > l.end) continue;
+    if (noLast && nextHole === l.end) continue;
     const onLeg = bets.filter(b => b.leg === leg && b.start < nextHole);
     if (!onLeg.length) continue;
     const latest = onLeg[onLeg.length - 1];

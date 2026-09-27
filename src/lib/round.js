@@ -6,6 +6,7 @@ import {
 import {
   bestBall, sideSplit, vegasHole, sixesPairings, sixesSegments, stablefordPoints, quotaPoints, quotaFor, ninesPoints,
   acesDeuces, settleTotals, scrambleTeamHandicap, rabbitHolder, scoreDots, DOT_KINDS, roundCents,
+  snakeHolder, snakeValue, hammerHole, canHammer,
 } from './games.js';
 
 /**
@@ -42,6 +43,11 @@ export const GAMES = {
     name: 'Match play', min: 2, max: 8, holes: [9, 18], teams: { count: 2 },
     blurb: 'Singles, best ball, or one against the field',
     players: '2–8 players · 1 v 1, 2 v 2, 1 v 2, 1 v 3…', icon: 'sword', group: 'Head to head',
+  },
+  hammer: {
+    name: 'Hammer', min: 2, max: 4, holes: [9, 18], teams: { count: 2, optional: true }, marks: true,
+    blurb: 'Double the hole any time. Take it or fold',
+    players: '2–4 players · 1 v 1 or 2 v 2', icon: 'hammer', group: 'Head to head',
   },
   vegas: {
     name: 'Vegas', min: 4, max: 4, holes: [9, 18], teams: { count: 2, size: 2 },
@@ -97,6 +103,11 @@ export const GAMES = {
     name: 'Rabbit', min: 2, max: 8, holes: [9, 18],
     blurb: 'Win a hole to catch the rabbit, hold it at the turn',
     players: '2–8 players', icon: 'rabbit', group: 'Points',
+  },
+  snake: {
+    name: 'Snake', min: 2, max: 8, holes: [9, 18], marks: true,
+    blurb: 'Three-putt and you hold the snake. Pass it on',
+    players: '2–8 players', icon: 'wave-sine', group: 'Points',
   },
 };
 
@@ -228,6 +239,7 @@ export function createRound({ id, game, course, holesCount, nine, startHole, pla
 /** Games whose money is one pot for the whole round: a change to the bet always covers every hole. */
 export function wholeRoundOnly(game, before, after) {
   if (game === 'scramble') return true;
+  if (game === 'skins') return before?.payout === 'pot' || after?.payout === 'pot';
   if (game === 'stroke' || game === 'stableford' || game === 'quota') return before?.payout === 'pot' || after?.payout === 'pot';
   return false;
 }
@@ -524,11 +536,17 @@ function pressSettings(round) {
   return round.game === 'match' ? round.settings.match : round.settings.nassau;
 }
 
-/** Press options before playing the hole at position `nextHoleNo` (1-based). */
+/**
+ * Press options before playing the hole at position `nextHoleNo` (1-based). With presses off,
+ * only a Nassau's press at the turn (if that house rule is on) can come up.
+ */
 export function nassauPressOptions(round, nextHoleNo) {
   const s = pressSettings(round);
-  if (!s || s.pressMode === 'off') return [];
-  return pressOpportunities(nassauWinners(round), round.presses, nassauAmounts(round), nextHoleNo, s.threshold, roundLegs(round));
+  if (!s) return [];
+  const turn = round.game === 'nassau' && !!s.turnPress;
+  if (s.pressMode === 'off' && !turn) return [];
+  return pressOpportunities(nassauWinners(round), round.presses, nassauAmounts(round), nextHoleNo, s.threshold, roundLegs(round),
+    { noLast: !!s.noLastPress, turn, only: s.pressMode === 'off' ? 'turn' : null });
 }
 export const pressMode = round => pressSettings(round)?.pressMode || 'off';
 
@@ -548,16 +566,37 @@ function spreadSides(round, balances, net) {
 }
 
 // --------------------------- Skins ----------------------------------------
+// House rules (settings.skins):
+//  • kind: 'net' (the default), 'gross', or 'both': a net skin and a gross skin on every hole, each
+//    with its own carryovers, as many clubs run them side by side.
+//  • payout: 'per' (each other player pays the skin's value, the default) or 'pot': everyone puts in
+//    `stake` (per kind), and the pot is split by skins won. No skins won means everyone gets theirs back.
+//  • lastCarry: what skins still carried after the last hole do. 'void' (nobody gets them, the default),
+//    'split' (shared by the players tied for low on the last hole) or 'playoff' (a playoff hole among
+//    them, and the scorekeeper picks the winner: round.skinsPlayoff = { net: pid, gross: pid }).
+// Sources, checked 2026-09-27: Stick Golf, "How to play Skins" https://stickapp.golf/games/skins/ (split the
+// last-hole carry among the tied players, or a playoff), Golf Games Hub, "Skins golf game rules"
+// https://www.golfgameshub.com/skins-golf-game-rules-strategy-scoring/ (gross and net, a pot split by
+// skins won) and Live Tourney, "Skins game rules" https://www.livetourney.com/blog/skins-game-rules-golf.
+
+/** The skins kinds in play: ['net'], ['gross'] or ['net', 'gross']. */
+export function skinsKinds(round) {
+  const k = round.settings.skins?.kind || 'net';
+  return k === 'both' ? ['net', 'gross'] : [k];
+}
 
 /**
- * Skins hole by hole. Each skin is worth the bet in force on the hole it came from, so a skin carried
- * into a hole after the bet went up keeps its old value. A row's `worth` is what each other player
- * pays if the hole is won outright (the carried skins plus this hole's).
+ * Skins hole by hole for one kind ('net' or 'gross'; the first kind in play by default). Each skin is
+ * worth the bet in force on the hole it came from, so a skin carried into a hole after the bet went up
+ * keeps its old value. A row's `worth` is what each other player pays if the hole is won outright (the
+ * carried skins plus this hole's). `end` says what happens to skins still carried after the last hole:
+ * { skins, worth, rule, tied, field, winner, row } or null when nothing is carried.
  */
-export function skinsTable(round) {
+export function skinsTable(round, kind = skinsKinds(round)[0]) {
   const value = round.settings.skins.value;
   let pot = 1, carried = 0;
   const rows = [];
+  let lastDone = null;
   round.holes.forEach((h, i) => {
     const s = settingsAt(round, i + 1).skins;
     const worth = carried + s.value;
@@ -565,16 +604,78 @@ export function skinsTable(round) {
     const on = playersOn(round, h);
     const field = on.map(p => p.id);
     if (!holeComplete(round, h)) { rows.push({ hole: h, winner: undefined, skins: 0, pot, worth, field }); return; }
-    const nets = on.map(p => [p.id, netFor(round, p, h)]);
+    const nets = on.map(p => [p.id, kind === 'gross' ? grossFor(round, p, h) : netFor(round, p, h)]);
     const low = Math.min(...nets.map(n => n[1]));
     const lows = nets.filter(n => n[1] === low);
     if (lows.length === 1) { rows.push({ hole: h, winner: lows[0][0], skins: pot, pot, worth, field }); pot = 1; carried = 0; }
     else {
-      rows.push({ hole: h, winner: null, skins: 0, pot, worth, field });
+      rows.push({ hole: h, winner: null, skins: 0, pot, worth, field, tied: lows.map(n => n[0]) });
       if (s.carryover) { pot += 1; carried = worth; } else { pot = 1; carried = 0; }
     }
+    lastDone = rows.at(-1);
   });
-  return { rows, value, unclaimed: pot > 1 ? pot - 1 : 0 };
+  // After the last hole, or when the round was finished early: what the skins still carried do
+  let end = null;
+  const over = holeComplete(round, round.holes.at(-1)) || round.status === 'done';
+  const cfg = round.settings.skins;
+  if (over && pot > 1 && lastDone?.winner === null) {
+    const rule = cfg.lastCarry || 'void';
+    const picked = rule === 'playoff' ? round.skinsPlayoff?.[kind] : null;
+    end = {
+      skins: lastDone.pot, worth: lastDone.worth, rule, tied: lastDone.tied, field: lastDone.field, row: lastDone,
+      winner: picked && lastDone.tied.includes(picked) ? picked : null,
+    };
+  }
+  const claimed = end && (end.rule === 'split' || end.winner);
+  return { rows, value, kind, end, unclaimed: pot > 1 && !claimed ? pot - 1 : 0 };
+}
+
+/**
+ * Money from one kind of skins. Per skin: each other player on the winning hole pays the winner its worth.
+ * Pot: everyone still in at the end puts in `stake` and the pot is shared by skins won. Returns
+ * { deltas, won: { pid: { skins, amount, holes } } } where `amount` is what the skins brought in.
+ */
+function skinsMoney(round, t) {
+  const ids = round.players.map(p => p.id);
+  const deltas = Object.fromEntries(ids.map(id => [id, 0]));
+  const won = {};
+  const credit = (pid, skins, amount, no) => {
+    won[pid] ??= { skins: 0, amount: 0, holes: [] };
+    won[pid].skins += skins; won[pid].amount += amount;
+    if (no != null && !won[pid].holes.includes(no)) won[pid].holes.push(no);
+  };
+  const cfg = round.settings.skins;
+  const end = t.end;
+  if (cfg.payout === 'pot') {
+    // Like the other pots, a player who left is out of it: they don't put in, and their skins don't count
+    const inPot = playersToEnd(round).map(p => p.id);
+    const shares = Object.fromEntries(inPot.map(id => [id, 0]));
+    for (const r of t.rows) if (r.winner && r.winner in shares) { shares[r.winner] += r.skins; credit(r.winner, r.skins, 0, r.hole.no); }
+    if (end?.rule === 'split') {
+      const tied = end.tied.filter(id => id in shares);
+      for (const id of tied) { shares[id] += end.skins / tied.length; credit(id, end.skins / tied.length, 0, end.row.hole.no); }
+    } else if (end?.winner && end.winner in shares) { shares[end.winner] += end.skins; credit(end.winner, end.skins, 0, end.row.hole.no); }
+    const total = Object.values(shares).reduce((a, v) => a + v, 0);
+    const played = t.rows.some(r => r.winner !== undefined);
+    if (played && total > 0 && inPot.length >= 2) {
+      const stake = cfg.stake ?? cfg.value;
+      const pot = stake * inPot.length;
+      for (const id of inPot) {
+        deltas[id] += pot * shares[id] / total - stake;
+        if (won[id]) won[id].amount = Math.round(pot * shares[id] / total * 100) / 100;
+      }
+    }
+    return { deltas, won };
+  }
+  const pay = (winners, payers, worth, skins, no) => {
+    // Each payer pays the worth once, shared by the winners
+    for (const id of payers) deltas[id] -= worth;
+    for (const w of winners) { deltas[w] += worth * payers.length / winners.length; credit(w, skins / winners.length, worth * payers.length / winners.length, no); }
+  };
+  for (const r of t.rows) if (r.winner) pay([r.winner], r.field.filter(id => id !== r.winner), r.worth, r.skins, r.hole.no);
+  if (end?.rule === 'split') pay(end.tied, end.field.filter(id => !end.tied.includes(id)), end.worth, end.skins, end.row.hole.no);
+  else if (end?.winner) pay([end.winner], end.field.filter(id => id !== end.winner), end.worth, end.skins, end.row.hole.no);
+  return { deltas, won };
 }
 
 // --------------------------- Wolf -----------------------------------------
@@ -822,6 +923,74 @@ export function rabbitTable(round) {
   return { legs: out, rows };
 }
 
+// --------------------------- Snake ----------------------------------------
+
+/** Three-putts on a hole, in the order they happened (players still on the hole only). */
+function snakePutts(round, h) {
+  const m = round.marks?.[h.no];
+  if (!m) return undefined;
+  const on = playersOn(round, h).map(p => p.id);
+  return (m.snake || []).filter(pid => on.includes(pid));
+}
+
+/**
+ * Snake legs: one for the round, or one per nine with "each nine" on. A leg is played for the rules
+ * and bet in force when it started. A hole counts once it's saved (its marks exist), scores or not.
+ * Like a Nassau leg, an unfinished leg pays on the holes played: whoever holds the snake now pays.
+ * A holder who leaves still pays it, to each player still there at the end of the leg.
+ */
+export function snakeTable(round) {
+  const legs = nassauLegs(round.holes.length);
+  const first = settingsAt(round, 1).snake || {};
+  const segs = first.nines && round.holes.length === 18 ? [legs.front, legs.back] : [legs.total];
+  const rows = round.holes.map(h => ({ hole: h, putts: snakePutts(round, h) }));
+  const out = segs.map(seg => {
+    const part = rows.slice(seg.start - 1, seg.end);
+    const ss = settingsAt(round, seg.start).snake || {};
+    const { holder, count, history } = snakeHolder(part);
+    const value = snakeValue(count, ss.stake || 0, ss.growth || 'flat');
+    const last = round.holes[seg.end - 1];
+    const others = (last ? playersOn(round, last) : round.players).map(p => p.id).filter(id => id !== holder);
+    const played = part.some(r => r.putts !== undefined);
+    const done = part.every(r => r.putts !== undefined);
+    return { seg, rows: part, holder, count, history, value, others, played, done, amount: holder ? value * others.length : 0, stake: ss.stake || 0, growth: ss.growth || 'flat' };
+  });
+  return { legs: out, rows };
+}
+
+// --------------------------- Hammer ---------------------------------------
+
+/**
+ * Hammer hole by hole. Each hole is a match-play hole between the two sides (best ball when there are
+ * partners) worth the base bet in force on it, doubled for every hammer that was taken. A concession
+ * settles the hole at the value before the last hammer, scores or not. A row's `net` is what each
+ * player on side 0 wins (positive) or pays, before the uneven-sides split; `behind` is the side behind
+ * going into the hole, for the "side behind throws first" rule.
+ */
+export function hammerTable(round) {
+  const [a, b] = sides(round);
+  let total = 0;
+  return round.holes.map((h, i) => {
+    const hs = settingsAt(round, i + 1).hammer || {};
+    const base = hs.stake || 0;
+    const behind = total > 0 ? 1 : total < 0 ? 0 : null;
+    const mark = round.marks?.[h.no] || {};
+    const winner = holeWinner(sideNet(round, a, h), sideNet(round, b, h));
+    const r = hammerHole(mark, winner, base);
+    const net = r.winner === 0 ? r.value : r.winner === 1 ? -r.value : 0;
+    total += net;
+    return { hole: h, pos: i + 1, base, behind, ...r, net, running: total, max: hs.max ?? 3, who: hs.who || 'either' };
+  });
+}
+
+/** Which sides may hammer on this hole right now, given the hole's marks so far: [bool, bool]. */
+export function hammerOptions(round, hole, mark) {
+  const row = hammerTable(round).find(r => r.hole.no === hole.no);
+  if (!row) return [false, false];
+  const opts = { max: row.max, who: row.who, behind: row.behind, conceded: mark?.conceded ?? null };
+  return [0, 1].map(side => canHammer(mark?.hammers || [], side, opts));
+}
+
 // --------------------------- Results --------------------------------------
 
 /** Money by player id plus game-specific detail. Works on partial rounds too. */
@@ -861,15 +1030,35 @@ export function roundResults(round) {
   }
 
   if (round.game === 'skins') {
-    const t = skinsTable(round);
-    for (const r of t.rows) {
-      if (!r.winner) continue;
-      for (const id of r.field) {
-        if (id === r.winner) balances[id] += r.worth * (r.field.length - 1);
-        else balances[id] -= r.worth;
+    detail.skinsWon = {};
+    for (const kind of skinsKinds(round)) {
+      const t = skinsTable(round, kind);
+      const m = skinsMoney(round, t);
+      add(m.deltas);
+      for (const [pid, w] of Object.entries(m.won)) {
+        const all = (detail.skinsWon[pid] ??= { skins: 0, amount: 0, holes: [] });
+        all.skins += w.skins; all.amount += w.amount;
+        all.holes.push(...w.holes.map(no => (skinsKinds(round).length > 1 ? `${no}${kind === 'gross' ? 'g' : 'n'}` : no)));
       }
+      if (kind === skinsKinds(round)[0]) detail.skins = t; else detail.skinsGross = t;
     }
-    detail.skins = t;
+    for (const w of Object.values(detail.skinsWon)) w.amount = Math.round(w.amount * 100) / 100;
+  }
+
+  if (round.game === 'hammer') {
+    const rows = hammerTable(round);
+    for (const r of rows) spreadSides(round, balances, r.net);
+    detail.hammer = rows;
+  }
+
+  if (round.game === 'snake') {
+    const t = snakeTable(round);
+    for (const leg of t.legs) {
+      if (!leg.holder || !leg.value) continue;
+      balances[leg.holder] -= leg.amount;
+      for (const id of leg.others) balances[id] += leg.value;
+    }
+    detail.snake = t;
   }
 
   if (round.game === 'wolf') {
@@ -1038,7 +1227,9 @@ export function leftRule(round, pid) {
     return between ? 'Sixes needs all four, so the matches after that are off.' : 'Their partner plays out the match under way alone, and the matches after that are off.';
   }
   if (g === 'wolf') return 'Wolf carries on with the players still there.';
-  if (g === 'nassau' || g === 'match' || g === 'scramble') {
+  if (g === 'snake') return 'If they leave holding the snake, they still pay it. The holes after that are played among the players still there.';
+  if (g === 'skins' && round.settings.skins?.payout === 'pot') return 'They’re out of the pot, so they don’t put in and their skins don’t count.';
+  if (g === 'nassau' || g === 'match' || g === 'scramble' || g === 'hammer') {
     const side = (g === 'scramble' ? round.teams || [] : sides(round).map(players => ({ players }))).find(t => t.players.includes(pid));
     const mates = (side?.players || []).filter(x => x !== pid && leftAt(round, x) > leftAt(round, pid));
     if (!mates.length) return g === 'scramble' ? 'Their team is out of the pot.' : 'Their side has nobody left, so the match stops there and the bets stand as they are.';
@@ -1062,8 +1253,8 @@ export function roundNotes(round) {
     const when = after === 0 ? 'before the first hole' : `after hole ${after}`;
     notes.push({ kind: 'left', text: `${first(player.name)} left ${when}. ${leftRule(round, player.id)}` });
   }
-  // Bingo bango bongo pays on marks alone, so missing scores don't matter there
-  if (round.game === 'bbb') return notes;
+  // Bingo bango bongo and Snake pay on marks alone, so missing scores don't matter there
+  if (round.game === 'bbb' || round.game === 'snake') return notes;
   const lastScored = round.holes.reduce((a, h, i) => (Object.values(round.scores[h.no] || {}).some(v => v != null) ? i : a), -1);
   round.holes.forEach((h, i) => {
     if (i > lastScored || holeComplete(round, h)) return;

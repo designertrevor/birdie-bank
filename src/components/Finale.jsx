@@ -47,7 +47,8 @@ function CountRow({ place, name, amount, me, delay, duration, skip }) {
 
 function StepAmount({ amount, skip }) {
   const v = useCountUp(amount, { duration: 380, skip });
-  return money(Math.round(v));
+  // Whole dollars while counting, then the exact amount (a split skin or pot share can have cents)
+  return money(v === Math.round(amount * 100) / 100 ? v : Math.round(v));
 }
 
 /** One bet resolving: what it was, who took it, and for how much. Laid out from the start so nothing jumps. */

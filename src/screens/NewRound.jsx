@@ -423,7 +423,7 @@ function SetupStep({ game, course, holesCount, nine, picked, setPicked, opts, se
 
         {GAMES[game].teams && teams && (
           <>
-            <div className="sec-label">{game === 'nassau' ? 'Sides' : 'Teams'}</div>
+            <div className="sec-label">{game === 'nassau' || game === 'hammer' ? 'Sides' : 'Teams'}</div>
             <TeamPicker game={game} picked={picked} names={names} teams={teams} setTeams={setTeams} />
           </>
         )}

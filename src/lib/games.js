@@ -257,3 +257,80 @@ export function scoreDots(gross, par) {
   if (typeof gross !== 'number') return 0;
   return gross <= par - 2 ? 2 : gross === par - 1 ? 1 : 0;
 }
+
+// ---------------------------------------------------------------------------
+// Snake
+// ---------------------------------------------------------------------------
+// Published rules: whoever three-putts takes the snake, and the next three-putt passes it on.
+// Whoever holds it at the end (or at each nine, if chosen) pays each other player the snake's value.
+// The snake can stay a fixed amount, grow by the stake with every three-putt, or double each time.
+// Sources, checked 2026-09-27:
+//  Golf Monthly, "What is the Snake game in golf?" https://www.golfmonthly.com/features/the-game/what-is-the-snake-golf-betting-game-67209
+//  The Golf News Net, "Golf games: How to play Snake" https://thegolfnewsnet.com/ryan_ballengee/2026/03/13/golf-betting-games-how-to-play-snake-rules-44859/
+//  Golf Games Hub, "How to play the Snake golf game" https://www.golfgameshub.com/snake-golf-game/ (fixed amount and doubling)
+// When two players three-putt the same hole, the last to do it takes the snake; the scorekeeper taps
+// them in the order they happened.
+
+/** What the snake is worth after `count` three-putts: fixed, growing by the stake, or doubling. */
+export function snakeValue(count, stake, growth = 'flat') {
+  if (!count) return 0;
+  if (growth === 'grow') return stake * count;
+  if (growth === 'double') return stake * 2 ** (count - 1);
+  return stake;
+}
+
+/**
+ * Who holds the snake through a run of holes. rows: [{ putts: [pid, ...] in the order they happened,
+ * or undefined for a hole not played }]. Returns { holder, count, history: [holder after each hole] }.
+ */
+export function snakeHolder(rows) {
+  let holder = null, count = 0;
+  const history = [];
+  for (const r of rows) {
+    const putts = r.putts || [];
+    if (putts.length) { holder = putts.at(-1); count += putts.length; }
+    history.push(holder);
+  }
+  return { holder, count, history };
+}
+
+// ---------------------------------------------------------------------------
+// Hammer
+// ---------------------------------------------------------------------------
+// Published rules: a hole-by-hole match for two players or two teams. At any point on a hole a side
+// can "hammer" to double the hole's value. The other side accepts and plays on at double, or concedes
+// the hole at the value before the hammer. A side can't hammer twice in a row: the other side has to
+// hammer back first. Groups agree a cap before the first tee.
+// Sources, checked 2026-09-27:
+//  Great Games for Golfers, "Hammer" https://greatgamesforgolfers.com/golf-games/hammer/ (alternation, forfeit at the old bet)
+//  Golf Games Hub, "How to play Hammer golf" https://www.golfgameshub.com/how-to-play-hammer-golf-betting-game/ (either side throws first, set a ceiling)
+//  Golf Digest, "How to play Hammer" https://www.golfdigest.com/story/how-to-play-hammer-golf-game-explained
+// House options here: the most hammers on one hole (0 means no limit), and who throws the first hammer
+// on a hole: either side, or only the side behind in the Hammer money (either when level).
+
+/**
+ * Whether `side` (0 or 1) may hammer now. `hammers` is the list of sides that have hammered this hole,
+ * in order; `behind` is the side behind before this hole (null when level).
+ */
+export function canHammer(hammers, side, { max = 3, who = 'either', behind = null, conceded = null } = {}) {
+  if (conceded != null) return false;
+  if (max && hammers.length >= max) return false;
+  if (hammers.length) return hammers.at(-1) !== side;
+  return who === 'trailing' && behind != null ? side === behind : true;
+}
+
+/**
+ * One Hammer hole. `mark` is { hammers: [side, ...], conceded: side | null }, `winner` the match-play
+ * result from the scores (0, 1, null halved, undefined not played). Returns { winner, value, hammers, conceded }:
+ * `value` is what each player on the losing side pays (before the uneven-sides split).
+ */
+export function hammerHole(mark, winner, base) {
+  const hammers = mark?.hammers || [];
+  const conceded = mark?.conceded ?? null;
+  // Conceding turns down the last hammer, so the hole goes at the value before it
+  if (conceded != null && hammers.length && hammers.at(-1) !== conceded) {
+    return { winner: 1 - conceded, value: base * 2 ** (hammers.length - 1), hammers, conceded };
+  }
+  if (winner === undefined) return { winner: undefined, value: 0, hammers, conceded: null };
+  return { winner, value: winner == null ? 0 : base * 2 ** hammers.length, hammers, conceded: null };
+}

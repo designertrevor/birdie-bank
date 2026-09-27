@@ -1,7 +1,7 @@
 import { useRef, useState } from 'react';
 import { Empty, Header, Icon, Screen, useUI } from '../components/ui.jsx';
 import { update, useStore } from '../lib/store.js';
-import { GAMES, holeAtPos, holeComplete, playsHole, roundLegs, roundNotes, roundResults, scoreSummary, scorers, sideNames, skinsTable } from '../lib/round.js';
+import { GAMES, holeAtPos, holeComplete, playsHole, roundLegs, roundNotes, roundResults, scoreSummary, scorers, sideNames, skinsKinds, skinsTable } from '../lib/round.js';
 import { matchLabel } from '../lib/games.js';
 import { money } from '../lib/golf.js';
 import { useNav } from '../lib/nav.js';
@@ -279,20 +279,88 @@ function GameBreakdown({ round, res }) {
     );
   }
   if (round.game === 'skins') {
-    const t = skinsTable(round);
-    const won = t.rows.filter(r => r.winner);
+    const kinds = skinsKinds(round);
+    const both = kinds.length > 1;
+    const pickPlayoff = (kind, pid) => update(st => {
+      const r = st.rounds[round.id];
+      r.skinsPlayoff = { ...(r.skinsPlayoff || {}), [kind]: r.skinsPlayoff?.[kind] === pid ? null : pid };
+    });
+    return kinds.map(kind => {
+      const t = skinsTable(round, kind);
+      const won = t.rows.filter(r => r.winner);
+      const end = t.end;
+      return (
+        <div key={kind}>
+          <div className="sec-label">{both ? `${kind === 'net' ? 'Net' : 'Gross'} skins` : 'Skins won'}</div>
+          {won.length === 0 && !end?.winner && end?.rule !== 'split' && <p className="hint-card"><Icon name="coins" fill /> No skins won. Every hole was tied.</p>}
+          {won.map(r => (
+            <div key={r.hole.no} className="leg-row">
+              <div className="leg-name">H{r.hole.no}</div>
+              <div className="leg-winner">{names[r.winner]}</div>
+              <div className="leg-amt">{r.skins} skin{r.skins > 1 ? 's' : ''}</div>
+            </div>
+          ))}
+          {end?.rule === 'split' && (
+            <div className="leg-row">
+              <div className="leg-name">H{end.row.hole.no}</div>
+              <div className="leg-winner">Split: {end.tied.map(pid => first(names[pid])).join(' & ')}</div>
+              <div className="leg-amt">{end.skins} skin{end.skins > 1 ? 's' : ''}</div>
+            </div>
+          )}
+          {end?.rule === 'playoff' && (
+            <div className="block">
+              <div className="eyebrow" style={{ marginBottom: 8 }}>Playoff for {end.skins} skin{end.skins > 1 ? 's' : ''}: who won it?</div>
+              <div className="chip-row" style={{ padding: 0 }} role="radiogroup" aria-label={`Playoff for ${kind} skins`}>
+                {end.tied.map(pid => (
+                  <button key={pid} role="radio" aria-checked={end.winner === pid} className={`pill-btn sm ${end.winner === pid ? 'on' : ''}`} onClick={() => pickPlayoff(kind, pid)}>{first(names[pid])}</button>
+                ))}
+              </div>
+              <p className="field-help">{end.winner ? `${first(names[end.winner])} takes the carried skins.` : 'Play a hole among the tied players, then tap who won it.'}</p>
+            </div>
+          )}
+          {t.unclaimed > 0 && end?.rule !== 'playoff' && <p className="field-help" style={{ padding: '0 20px' }}>{t.unclaimed} skin{t.unclaimed > 1 ? 's' : ''} still carried over at the end, unclaimed.</p>}
+        </div>
+      );
+    });
+  }
+  if (round.game === 'snake') {
     return (
       <>
-        <div className="sec-label">Skins won</div>
-        {won.length === 0 && <p className="hint-card"><Icon name="coins" fill /> No skins won. Every hole was tied.</p>}
-        {won.map(r => (
-          <div key={r.hole.no} className="leg-row">
-            <div className="leg-name">H{r.hole.no}</div>
-            <div className="leg-winner">{names[r.winner]}</div>
-            <div className="leg-amt">{r.skins} skin{r.skins > 1 ? 's' : ''}</div>
+        <div className="sec-label">Who had the snake</div>
+        {res.detail.snake.legs.map(l => (
+          <div key={l.seg.label} className="leg-row">
+            <div className="leg-name">{res.detail.snake.legs.length > 1 ? l.seg.label : 'Snake'}</div>
+            <div className={`leg-winner ${!l.holder ? 'leg-tie' : ''}`}>
+              {l.holder ? `${names[l.holder]} ${l.done ? 'held it at the end' : 'holds it'}` : 'Nobody three-putted'}
+              {l.count > 0 && <div className="li-sub">{l.count} three-putt{l.count === 1 ? '' : 's'} · worth {money(l.value)} a player</div>}
+            </div>
+            <div className={`leg-amt ${l.holder ? '' : 'zero'}`}>{money(l.amount)}</div>
           </div>
         ))}
-        {t.unclaimed > 0 && <p className="field-help" style={{ padding: '0 20px' }}>{t.unclaimed} skin{t.unclaimed > 1 ? 's' : ''} still carried over at the end, unclaimed.</p>}
+      </>
+    );
+  }
+  if (round.game === 'hammer') {
+    const sn = sideNames(round);
+    const rows = res.detail.hammer.filter(r => r.winner !== undefined);
+    return (
+      <>
+        <div className="sec-label">Hole by hole{round.teams ? ` · ${sn[0]} v ${sn[1]}` : ''}</div>
+        <div className="money-table-wrap">
+          <table className="sc-table money-table">
+            <thead><tr><th style={{ textAlign: 'left', paddingLeft: 12 }}>Hole</th><th>Hammers</th><th>Won by</th><th>Worth</th></tr></thead>
+            <tbody>
+              {rows.map(r => (
+                <tr key={r.hole.no}>
+                  <td>{r.hole.no}</td>
+                  <td>{r.hammers.length || '·'}{r.conceded != null ? ' · folded' : ''}</td>
+                  <td>{r.winner == null ? 'Halved' : round.teams ? sn[r.winner] : first(sn[r.winner])}</td>
+                  <td className={r.net > 0 ? 'pos' : r.net < 0 ? 'neg' : 'zero'}>{r.value ? money(r.value) : '·'}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
       </>
     );
   }

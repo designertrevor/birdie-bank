@@ -147,31 +147,19 @@ export function Defaults() {
           <Segmented label="Banker ties" className="press-mode-row" btn="pm-btn" value={s.banker.ties} onChange={v => set('banker.ties', v)}
             options={[{ value: 'push', label: 'Push' }, { value: 'banker', label: 'Banker wins' }]} />
         </div>
-        <div className="sec-label">Nassau</div>
-        {amount('nassau.front', 'Front 9')}
-        {amount('nassau.back', 'Back 9')}
-        {amount('nassau.total', 'Total 18')}
-        <div className="block">
-          <div className="eyebrow" style={{ marginBottom: 10 }}>Presses</div>
-          <Segmented label="Nassau presses" className="press-mode-row" btn="pm-btn" value={s.nassau.pressMode} onChange={v => set('nassau.pressMode', v)}
-            options={[{ value: 'off', label: 'Off' }, { value: 'manual', label: 'Manual' }, { value: 'auto', label: 'Auto' }]} />
-          <div className="eyebrow" style={{ margin: '14px 0 10px' }}>Down by</div>
-          <Segmented label="Press when down by" className="press-mode-row" btn="pm-btn" value={s.nassau.threshold} onChange={v => set('nassau.threshold', v)}
-            options={[1, 2, 3].map(n => ({ value: n, label: String(n) }))} />
-        </div>
-        <div className="sec-label">Skins</div>
-        {amount('skins.value', 'Per skin')}
-        <div className="toggle-row">
-          <div><div className="toggle-lbl">Carryovers</div><div className="toggle-sub">Tied holes roll over</div></div>
-          <Toggle on={s.skins.carryover} onChange={v => set('skins.carryover', v)} label="Carryovers" />
-        </div>
+        {['nassau', 'skins'].map(g => (
+          <div key={g}>
+            <div className="sec-label">{GAMES[g].name}</div>
+            <GameOptions game={g} get={get} set={set} onAmount={(path, label, o) => setPad({ path, label, ...o })} compact />
+          </div>
+        ))}
         <div className="sec-label">Wolf</div>
         {amount('wolf.point', 'Per point')}
         <div className="block">
           <div className="eyebrow" style={{ marginBottom: 10 }}>Lone wolf</div>
           <Segmented label="Lone wolf" className="press-mode-row" btn="pm-btn" value={s.wolf.loneMultiplier} onChange={v => set('wolf.loneMultiplier', v)} options={[2, 3].map(n => ({ value: n, label: `${n}×` }))} />
         </div>
-        {['match', 'vegas', 'sixes', 'scramble', 'stroke', 'stableford', 'quota', 'nines', 'aces', 'bbb', 'dots', 'rabbit'].map(g => (
+        {['match', 'hammer', 'vegas', 'sixes', 'scramble', 'stroke', 'stableford', 'quota', 'nines', 'aces', 'bbb', 'dots', 'rabbit', 'snake'].map(g => (
           <div key={g}>
             <div className="sec-label">{GAMES[g].name}</div>
             <GameOptions game={g} get={get} set={set} onAmount={(path, label, o) => setPad({ path, label, ...o })} compact />

@@ -16,7 +16,13 @@ export function stakeSummary(game, settings) {
   switch (game) {
     case 'banker': return `${money(s.banker.defaultBet)} default bet · ${money(s.banker.min)}–${money(s.banker.max)}`;
     case 'nassau': return `${money(s.nassau.front)} / ${money(s.nassau.back)} / ${money(s.nassau.total)}`;
-    case 'skins': return `${money(s.skins.value)} a skin${s.skins.carryover ? ' · carryovers' : ''}`;
+    case 'skins': {
+      const k = s.skins.kind === 'both' ? ' · net and gross' : s.skins.kind === 'gross' ? ' · gross' : '';
+      if (s.skins.payout === 'pot') return `${money(s.skins.stake ?? s.skins.value)} each in the pot${k}`;
+      return `${money(s.skins.value)} a skin${s.skins.carryover ? ' · carryovers' : ''}${k}`;
+    }
+    case 'hammer': return `${money(s.hammer.stake)} a hole · ${s.hammer.max ? `up to ${s.hammer.max} hammer${s.hammer.max === 1 ? '' : 's'}` : 'no limit'}`;
+    case 'snake': return `${money(s.snake.stake)} ${s.snake.growth === 'grow' ? 'a three-putt' : s.snake.growth === 'double' ? 'a snake, doubling' : 'a snake'}${s.snake.nines ? ' · each nine' : ''}`;
     case 'wolf': return `${money(s.wolf.point)} a point · lone wolf ${s.wolf.loneMultiplier}×`;
     case 'match': return `${money(s.match.stake)} a player`;
     case 'vegas': return `${money(s.vegas.point)} a point`;
