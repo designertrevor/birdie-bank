@@ -102,17 +102,17 @@ export default function JoinInvite({ code, onJoined, onSkip }) {
       <Screen className="onboard">
         <div className="scroll onboard-body">
           <BallIllo className="onboard-illo" face={!err} />
-          <h1 className="onboard-title" style={{ fontSize: 34 }}>{err ? (missing ? 'Round not found' : 'No signal') : 'Finding your round'}</h1>
+          <h1 className="onboard-title" style={{ fontSize: 34 }}>{err ? (missing ? 'Round not found' : 'No signal') : 'Finding your round…'}</h1>
           <p className="onboard-text">
             {!err && <>Code {code}</>}
-            {missing && <>Nobody is sharing a round with code {code} right now. Ask the scorekeeper for a fresh link.</>}
+            {missing && <>We can’t find round {code}. It may have finished, or the link is old. Ask the scorekeeper for a fresh one.</>}
             {err === 'offline' && <>Couldn’t reach Birdie Bank. Check your signal and try again.</>}
           </p>
         </div>
         {err && (
           <div className="cta-wrap">
             {!missing && <button className="full-btn" onClick={() => { setErr(null); setTries(t => t + 1); }}>Try again <Icon name="arrow-clockwise" /></button>}
-            <button className={`full-btn ${missing ? '' : 'outline'}`} onClick={onSkip}>Set up Birdie Bank instead</button>
+            <button className={`full-btn ${missing ? '' : 'outline'}`} onClick={onSkip}>Start my own round instead</button>
           </div>
         )}
       </Screen>
@@ -123,8 +123,8 @@ export default function JoinInvite({ code, onJoined, onSkip }) {
     return (
       <Screen className="onboard">
         <div className="scroll onboard-body join-body">
-          <h1 className="onboard-title join-h">Watch the round</h1>
-          <p className="onboard-text join-p">Follow every hole live. Add your name so the app knows who you are.</p>
+          <h1 className="onboard-title join-h">Follow along</h1>
+          <p className="onboard-text join-p">See every hole as it’s scored. Add your name so the group knows who’s watching.</p>
           <label className="field-label" htmlFor="ji-name">Your name</label>
           <input id="ji-name" className="name-input" value={name} onChange={e => setName(e.target.value)} placeholder="e.g. Trevor" autoComplete="given-name" maxLength={24} />
         </div>
@@ -203,7 +203,7 @@ export default function JoinInvite({ code, onJoined, onSkip }) {
         <div className="cta-wrap">
           {step === 'waiting' && !busy && <button className="full-btn outline" onClick={cancel}>Cancel request</button>}
           {step === 'no' && meta && <button className="full-btn" onClick={() => setStep('watch')}>Watch instead <Icon name="eye" /></button>}
-          {step !== 'waiting' && <button className="full-btn outline" onClick={onSkip}>Set up Birdie Bank instead</button>}
+          {step !== 'waiting' && <button className="full-btn outline" onClick={onSkip}>Start my own round instead</button>}
         </div>
       </Screen>
     );

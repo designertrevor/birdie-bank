@@ -88,8 +88,8 @@ export function SettleSheet({ debt, onClose }) {
             {iPay && !payee && <p className="field-help" style={{ padding: '0 20px 8px' }}>Ask {nameOf(state, debt.to).split(' ')[0]} which payment app they use and add it to their player card for a pay button here.</p>}
             {imOwed && <RequestButton payer={payer} mine={myApp} amount={debt.amount} note={note} className="sheet-item" />}
             {imOwed && <button className="sheet-item" onClick={() => remind(debt.from, debt.amount)}><span><Icon name="bell-ringing" fill /> Remind {nameOf(state, debt.from).split(' ')[0]}</span></button>}
-            <button className="sheet-item" onClick={() => record(debt.amount)}><span><Icon name="check-circle" fill /> Mark {money(debt.amount)} as paid</span></button>
-            <button className="sheet-item" onClick={() => setPartial(true)}><span><Icon name="coins" /> Record a partial payment</span></button>
+            <button className="sheet-item" onClick={() => record(debt.amount)}><span><Icon name="check-circle" fill /> Mark {money(debt.amount)} paid</span></button>
+            <button className="sheet-item" onClick={() => setPartial(true)}><span><Icon name="coins" /> They paid part of it</span></button>
           </>
         )}
       </Sheet>

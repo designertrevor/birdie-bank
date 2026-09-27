@@ -2,13 +2,13 @@ import { useState } from 'react';
 import { Empty, Header, Icon, Numpad, Screen, Segmented, Toggle, useUI } from '../components/ui.jsx';
 import { RulesSheet } from '../components/Rules.jsx';
 import { DEFAULT_SETTINGS, exportJSON, importJSON, resetAll, update, uid, useStore } from '../lib/store.js';
-import { allCourses, coursePar, findCourse } from '../lib/courses.js';
+import { allCourses, coursePar, courseTag, findCourse } from '../lib/courses.js';
 import { COURSES } from '../data/courses.js';
 import { GAMES } from '../lib/round.js';
 import { GameOptions } from '../components/GameOptions.jsx';
 import { money } from '../lib/golf.js';
 import { useNav } from '../lib/nav.js';
-import { formatIndex } from '../lib/format.js';
+import { formatIndex, hcPctLabel } from '../lib/format.js';
 import { PAY_APPS, payInfo } from '../lib/pay.js';
 import { SignInSheet, syncLabel } from '../components/Account.jsx';
 import { accountsEnabled, signOut, syncNow, unsyncedCount, useAccount } from '../lib/cloud.js';
@@ -86,7 +86,7 @@ export default function Settings() {
             options={[{ value: 'system', label: 'System' }, { value: 'light', label: 'Light' }, { value: 'dark', label: 'Dark' }]} />
         </div>
         <div className="sec-label">Games</div>
-        {row('sliders-horizontal', 'Game defaults', 'Stakes, presses, ties and handicaps', () => nav.push('defaults'))}
+        {row('sliders-horizontal', 'Game defaults', 'Your usual bets and house rules', () => nav.push('defaults'))}
         {row('map-trifold', 'Courses', `${allCourses(state).length} courses · add or fix a scorecard`, () => nav.push('courses'))}
         <div className="sec-label">Your data</div>
         {row('export', 'Back up', 'Save everything to a file', backup)}
@@ -114,6 +114,7 @@ export default function Settings() {
 export function Defaults() {
   const nav = useNav();
   const s = useStore(st => st.settings);
+  const { ask } = useUI();
   const [pad, setPad] = useState(null);
   const set = (path, v) => update(st => { const k = path.split('.'); let t = st.settings; for (const x of k.slice(0, -1)) t = t[x]; t[k.at(-1)] = v; });
   const get = path => path.split('.').reduce((t, k) => t?.[k], s);
@@ -131,8 +132,9 @@ export function Defaults() {
         <p className="hint-card">These fill in each new round. You can still change them when you set a round up.</p>
         <div className="sec-label">Handicaps</div>
         <div className="block">
-          <div className="eyebrow" style={{ marginBottom: 10 }}>Strokes given off the low player</div>
-          <Segmented label="Strokes given off the low player" className="press-mode-row" btn="pm-btn" value={s.hcPct} onChange={v => set('hcPct', v)} options={[100, 90, 80].map(n => ({ value: n, label: `${n}%` }))} />
+          <div className="eyebrow" style={{ marginBottom: 10 }}>Strokes given</div>
+          <Segmented label="Strokes given" className="press-mode-row" btn="pm-btn" value={s.hcPct} onChange={v => set('hcPct', v)} options={[100, 90, 80].map(n => ({ value: n, label: n === 100 ? 'Full' : `${n}%` }))} />
+          <p className="field-help">{hcPctLabel(s.hcPct)}, taken off the low player on the hardest holes.</p>
         </div>
         <div className="sec-label">Banker</div>
         {amount('banker.defaultBet', 'Default bet')}
@@ -165,7 +167,7 @@ export function Defaults() {
             <GameOptions game={g} get={get} set={set} onAmount={(path, label, o) => setPad({ path, label, ...o })} compact />
           </div>
         ))}
-        <button className="danger-link" onClick={() => update(st => { st.settings = { ...structuredClone(DEFAULT_SETTINGS), theme: st.settings.theme }; })}><Icon name="arrow-counter-clockwise" /> Reset to defaults</button>
+        <button className="danger-link" onClick={async () => { if (await ask({ title: 'Reset your game defaults?', text: 'Every game goes back to the standard bets and house rules. Rounds you’ve played don’t change.', confirmLabel: 'Reset' })) update(st => { st.settings = { ...structuredClone(DEFAULT_SETTINGS), theme: st.settings.theme, shareAmounts: st.settings.shareAmounts }; }); }}><Icon name="arrow-counter-clockwise" /> Reset to defaults</button>
       </div>
       <Numpad open={!!pad} title={pad?.label} prefix="$" initial={pad ? get(pad.path) : ''} min={pad?.min} max={pad?.max}
         onClose={() => setPad(null)} onDone={v => { set(pad.path, v); setPad(null); }} />
@@ -184,7 +186,7 @@ export function Courses() {
       <div className="row-main">
         <div className="set-name">{c.name}</div>
         <div className="set-sub">{[c.city, `${c.holes.length} holes`, `Par ${coursePar(c)}`].filter(Boolean).join(' · ')}</div>
-        {!c.custom && !c.verified && <div className="warn-tag"><Icon name="warning" fill /> Not verified. Check against the card</div>}
+        {courseTag(c) && <div className={`warn-tag ${courseTag(c).soft ? 'soft' : ''}`}><Icon name={courseTag(c).soft ? 'database' : 'warning'} fill /> {courseTag(c).text}</div>}
       </div>
       <span className="chevron"><Icon name="caret-right" /></span>
     </button>
@@ -238,8 +240,8 @@ export function CourseEdit({ id }) {
   const missingHdcp = hdcps.some(h => h == null);
   const errors = [];
   if (!c.name.trim()) errors.push('Add the course name');
-  if (missingHdcp) errors.push('Every hole needs a handicap');
-  if (dupHdcp.length) errors.push(`Handicap ${[...new Set(dupHdcp)].join(', ')} is used twice`);
+  if (missingHdcp) errors.push('Every hole needs its HCP number from the card');
+  if (dupHdcp.length) errors.push(`HCP ${[...new Set(dupHdcp)].join(', ')} is used on two holes`);
   if (!c.tees.length) errors.push('Add at least one tee');
   if (c.tees.some(t => !t.name.trim())) errors.push('Every tee needs a name');
 
@@ -328,7 +330,7 @@ export function CourseEdit({ id }) {
               <button className="pill-btn" onClick={() => setPad({ kind: 'rating', t: ti, title: `${t.name} course rating`, min: 25, max: 80, decimal: true })}>Rating {t.rating ?? '–'}</button>
               <button className="pill-btn" onClick={() => setPad({ kind: 'slope', t: ti, title: `${t.name} slope`, min: 55, max: 155 })}>Slope {t.slope ?? '–'}</button>
             </div>
-            {(t.rating == null || t.slope == null) && <p className="field-help">Without rating and slope, course handicaps fall back to each player’s index.</p>}
+            {(t.rating == null || t.slope == null) && <p className="field-help">No rating or slope? Players get strokes from their index instead.</p>}
           </div>
         ))}
         <button className="add-row" onClick={() => setC(x => ({ ...x, tees: [...x.tees, { name: '', color: TEE_COLORS[x.tees.length % TEE_COLORS.length], rating: null, slope: null }] }))}>
@@ -367,7 +369,7 @@ export function About() {
         <div className="sec-label">Handicaps</div>
         <div className="block rules-body">
           <p>Course handicap = index × slope ÷ 113 + (course rating − par), rounded. For 9 holes it’s half of the 18-hole figure.</p>
-          <p style={{ marginTop: 8 }}>In every game the lowest player plays off zero and everyone else gets the difference (or the percentage you choose), taken on the hardest holes first. Picked-up holes count as net double bogey.</p>
+          <p style={{ marginTop: 8 }}>In every game the lowest player plays off zero and everyone else gets the difference (or the percentage you choose), taken on the hardest holes first. Picked-up holes count as a double bogey after strokes.</p>
         </div>
         <div className="sec-label">The fine print</div>
         <div className="block rules-body">

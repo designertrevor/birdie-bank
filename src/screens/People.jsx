@@ -7,7 +7,8 @@ import { formatIndex, myIds, playerLabel, sortedPlayers } from '../lib/format.js
 import { headToHeadSummary, nameOf, outstanding, tabWith } from '../lib/ledger.js';
 import { PAY_APPS, PAY_APP_IDS, cleanHandle, handleText, payInfo, payInfoFor } from '../lib/pay.js';
 import { money } from '../lib/golf.js';
-import { BottomNav } from '../nav.jsx';
+import { AvatarButton, BottomNav } from '../nav.jsx';
+import { roundsInProgress } from '../lib/rounds.js';
 import { useNav } from '../lib/nav.js';
 
 /** Players as cards: your record and net with each person, newest friends from joined rounds too. */
@@ -29,7 +30,7 @@ export default function People() {
   const myPay = me && payInfo(me);
   return (
     <Screen>
-      <Header title="Players" />
+      <Header title="Players" right={<AvatarButton />} />
       <div className="scroll">
         {me && (
           <button className="set-row" onClick={() => nav.push('playerEdit', { id: me.id })}>
@@ -77,7 +78,7 @@ export default function People() {
           );
         })}
         {people.length < 1 && <p className="hint-card"><Icon name="lightbulb" fill /> Add the people you play with so you can pick them when you start a round.</p>}
-        <button className="add-row" onClick={() => nav.push('playerEdit', {})}><div className="add-ci"><Icon name="plus" /></div><span className="add-lbl">Add player</span></button>
+        <button className="add-row" onClick={() => nav.push('playerEdit', {})}><div className="add-ci"><Icon name="plus" /></div><span className="add-lbl">Add a player</span></button>
 
         {crews.length > 0 ? (
           <>
@@ -91,7 +92,7 @@ export default function People() {
                 <span className="chevron"><Icon name="caret-right" /></span>
               </button>
             ))}
-            <button className="text-link" onClick={() => nav.push('crewEdit', {})}><Icon name="plus" /> Add crew</button>
+            <button className="text-link" onClick={() => nav.push('crewEdit', {})}><Icon name="plus" /> Make a crew</button>
           </>
         ) : Object.keys(state.players).length > 2 && (
           <button className="text-link" onClick={() => nav.push('crewEdit', {})}>
@@ -117,7 +118,7 @@ export function PlayerEdit({ id, onSaved }) {
   const [pad, setPad] = useState(false);
   const trimmed = name.trim();
   const duplicate = Object.values(state.players).some(p => p.id !== id && p.name.toLowerCase() === trimmed.toLowerCase());
-  const inActive = id && state.activeRoundId && state.rounds[state.activeRoundId]?.players.some(p => p.id === id);
+  const inActive = id && roundsInProgress(state).some(r => r.players.some(p => p.id === id));
 
   const save = () => {
     const pid = id || uid('p_');
@@ -142,7 +143,7 @@ export function PlayerEdit({ id, onSaved }) {
   };
 
   const remove = async () => {
-    const ok = await ask({ title: `Remove ${existing.name}?`, text: 'Past rounds keep their scores. They’ll be removed from any crews.', confirmLabel: 'Remove player', danger: true });
+    const ok = await ask({ title: `Remove ${existing.name}?`, text: 'Past rounds keep their scores, and anything they owe stays on the tab. They’ll be taken out of any crews.', confirmLabel: 'Remove player', danger: true });
     if (!ok) return;
     update(s => {
       delete s.players[id];
@@ -164,7 +165,7 @@ export function PlayerEdit({ id, onSaved }) {
             <button className="amt-btn" onClick={() => setPad(true)}>{index == null ? 'Add' : formatIndex(index)}</button>
             {index != null && <button className="header-btn" onClick={() => setIndex(null)}>Clear</button>}
           </div>
-          <p className="field-help">Their usual 18-hole index. Course handicaps are worked out from this for each course and tee, and halved for 9-hole games.</p>
+          <p className="field-help">Their usual 18-hole index. Strokes are worked out from it for each course and tee.</p>
           <div className="field-label" id="pe-pay">{isMe ? 'How you get paid' : `How ${trimmed.split(' ')[0] || 'they'} ${trimmed ? 'gets' : 'get'} paid`} <span className="opt">optional</span></div>
           <div className="chip-row flush" role="group" aria-labelledby="pe-pay">
             {PAY_APP_IDS.map(app => (
@@ -182,12 +183,12 @@ export function PlayerEdit({ id, onSaved }) {
           <p className="field-help">
             {payApp === 'zelle'
               ? `Zelle has no pay link, so anyone who owes ${isMe ? 'you' : trimmed.split(' ')[0] || 'them'} sees this with a copy button.`
-              : `Pay buttons open ${isMe ? 'your' : 'their'} app with the amount filled in. Birdie Bank never holds or moves money.`}
+              : `So ${isMe ? 'people can pay you' : 'you can pay them'} in one tap. Birdie Bank never holds or moves money.`}
           </p>
         </div>
         {existing && id !== state.me && (
           <button className="danger-link" onClick={remove} disabled={inActive}>
-            <Icon name="trash" /> {inActive ? 'In the current round, can’t remove' : 'Remove player'}
+            <Icon name="trash" /> {inActive ? 'Can’t remove during a round they’re in' : 'Remove player'}
           </button>
         )}
       </div>
@@ -227,7 +228,7 @@ export function CrewEdit({ id }) {
       <div className="scroll">
         <div className="block">
           <label className="field-label" htmlFor="ce-name">Crew name</label>
-          <input id="ce-name" className="name-input" value={name} maxLength={28} onChange={e => setName(e.target.value)} placeholder="e.g. Saturday Boys" />
+          <input id="ce-name" className="name-input" value={name} maxLength={28} onChange={e => setName(e.target.value)} placeholder="e.g. Saturday group" />
         </div>
         <div className="sec-label">Who’s in it · {sel.length} selected</div>
         <div style={{ padding: '0 16px' }}>

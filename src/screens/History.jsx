@@ -142,6 +142,7 @@ export default function History() {
                 {h2h.length > 0 && (
                   <>
                     <div className="sec-label">Head to head</div>
+                    <p className="field-help pad" style={{ marginTop: -4 }}>What you won or lost against each person, bet by bet.</p>
                     <div className="h2h">
                       {h2h.map(([pid, v]) => (
                         <div key={pid} className="h2h-item">

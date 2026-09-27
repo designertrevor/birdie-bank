@@ -97,7 +97,7 @@ export default function RoundDetail({ id, celebrate }) {
   return (
     <Screen>
       <Header title={celebrate ? 'Final results' : 'Round'} onBack={celebrate ? undefined : nav.pop} small
-        right={<button className="header-btn" onClick={() => shareRound(round, res, showToast)}><Icon name="share-network" /> Share</button>} />
+        right={<button className="header-btn" onClick={() => shareRound(round, res, showToast, { amounts: !!state.settings.shareAmounts })}><Icon name="share-network" /> Share</button>} />
       <div className="scroll">
         <div className="winner-hero" ref={hero}>
           <Icon name={allSquare ? 'handshake' : 'crown'} fill className="crown" />

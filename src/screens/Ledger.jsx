@@ -8,7 +8,7 @@ import { headToHeadSummary, nameOf, outstanding } from '../lib/ledger.js';
 import { payInfoFor } from '../lib/pay.js';
 import { money } from '../lib/golf.js';
 import { myIds } from '../lib/format.js';
-import { BottomNav } from '../nav.jsx';
+import { AvatarButton, BottomNav } from '../nav.jsx';
 import { useNav } from '../lib/nav.js';
 
 const first = name => name.split(' ')[0];
@@ -43,7 +43,7 @@ export default function Ledger() {
   const hasRounds = Object.values(state.rounds).some(r => r.status === 'done');
 
   const undo = async s => {
-    if (!(await ask({ title: 'Undo this payment?', text: `${nameOf(state, s.from)} → ${nameOf(state, s.to)} ${money(s.amount)} will be owed again.`, confirmLabel: 'Undo payment' }))) return;
+    if (!(await ask({ title: 'Undo this payment?', text: `${nameOf(state, s.from)} will owe ${nameOf(state, s.to)} ${money(s.amount)} again.`, confirmLabel: 'Undo payment' }))) return;
     update(st => { st.settlements = st.settlements.filter(x => x.id !== s.id); });
   };
 
@@ -90,11 +90,11 @@ export default function Ledger() {
 
   return (
     <Screen>
-      <Header title="Tab" />
+      <Header title="Tab" right={<AvatarButton />} />
       <div className="scroll">
         {plan.length === 0 ? (
           <Empty title={hasRounds ? 'All square' : 'Nothing owed yet'}
-            text={hasRounds ? 'Everyone’s settled up. Time to go win it back.' : 'Finish a round and who owes who shows up here, netted across every round.'}
+            text={hasRounds ? 'Everyone’s settled up. Time to go win it back.' : 'Finish a round and the tab fills in. Money nets out across every round, so you pay less often.'}
             action={!hasRounds && <button className="ec" onClick={() => nav.push('newRound')}><Icon name="golf" fill /> Start a round</button>} />
         ) : (
           <>
@@ -110,7 +110,7 @@ export default function Ledger() {
             {square.length > 0 && people.length > 0 && <p className="field-help pad">All square with {listNames(square)}.</p>}
             {others.length > 0 && (
               <>
-                <div className="sec-label">{people.length ? 'Everyone else' : 'Outstanding'}</div>
+                <div className="sec-label">{people.length ? 'Everyone else' : 'Who owes who'}</div>
                 {others.map(otherRow)}
               </>
             )}
