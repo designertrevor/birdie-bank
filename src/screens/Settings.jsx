@@ -10,6 +10,7 @@ import { money } from '../lib/golf.js';
 import { BottomNav } from '../nav.jsx';
 import { useNav } from '../lib/nav.js';
 import { formatIndex } from '../lib/format.js';
+import { PAY_APPS, payInfo } from '../lib/pay.js';
 import { SignInSheet, syncLabel } from '../components/Account.jsx';
 import { accountsEnabled, signOut, syncNow, unsyncedCount, useAccount } from '../lib/cloud.js';
 
@@ -18,6 +19,7 @@ export default function Settings() {
   const state = useStore();
   const { ask, showToast } = useUI();
   const me = state.players[state.me];
+  const myPay = payInfo(me);
   const acct = useAccount();
   const [signingIn, setSigningIn] = useState(false);
 
@@ -77,7 +79,7 @@ export default function Settings() {
             <div className="row-main"><div className="set-name">{acct.user.email}</div><div className="set-sub">{syncLabel(acct)}</div></div>
           </div>
         ) : row('cloud-arrow-up', 'Save your rounds', 'Sign in to back up and use any device', () => setSigningIn(true)))}
-        {me && row('user-circle', me.name, me.index == null ? 'No handicap index' : `Index ${formatIndex(me.index)}`, () => nav.push('playerEdit', { id: me.id }))}
+        {me && row('user-circle', me.name, `${me.index == null ? 'No handicap index' : `Index ${formatIndex(me.index)}`} · ${myPay ? `Paid on ${PAY_APPS[myPay.app].name}` : 'Add how you get paid'}`, () => nav.push('playerEdit', { id: me.id }))}
         <div className="sec-label">Appearance</div>
         <div className="block">
           <div className="eyebrow" style={{ marginBottom: 10 }}>Theme</div>
