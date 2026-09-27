@@ -106,6 +106,28 @@ export function shouldShowPaywall(state, flagOn) {
   return !state.paywall?.choice;
 }
 
+/**
+ * Whether this phone's owner organizes rounds, so a Pro preview makes sense for them: they came
+ * through organizer onboarding, set up a round themselves, or planned one. Someone who only ever
+ * joined from a link (their rounds carry `localMe`) or answered an RSVP doesn't.
+ */
+export function isOrganizer(state) {
+  if (!state) return false;
+  if (state.organizer) return true;
+  if (Object.values(state.rounds || {}).some(r => !r.localMe)) return true;
+  return Object.values(state.plans || {}).some(p => p.host);
+}
+
+/** The Settings line for Pro: where this phone stands. */
+export function planStatus(state, now = Date.now()) {
+  const p = state?.paywall;
+  if (p?.choice === 'trial' && p.trialEnds > now) {
+    const days = Math.ceil((p.trialEnds - now) / DAY);
+    return `Pro trial preview · ${days} ${days === 1 ? 'day' : 'days'} left`;
+  }
+  return 'Free · see what Pro adds';
+}
+
 // --------------------------- what it shows -----------------------------------
 
 const DAY = 24 * 60 * 60 * 1000;

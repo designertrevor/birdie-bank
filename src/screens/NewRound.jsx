@@ -19,6 +19,8 @@ import { money } from '../lib/golf.js';
 import { findCourse } from '../lib/courses.js';
 import { BET_LADDER, MAX_BALLOT_GAMES, betLabel, betOf, dayChoices, isoDate, newPlan, planStart } from '../lib/plans.js';
 import { editPlan } from '../lib/plan-sync.js';
+import { shouldShowPaywall } from '../lib/paywall.js';
+import { PAYWALL_ON } from '../lib/paywall-flag.js';
 
 const STEPS = ['Game', 'Course', 'Players', 'Bets'];
 
@@ -72,7 +74,13 @@ function usualRound(state) {
   return null;
 }
 
-export default function NewRound({ rematch, fromPlan, present, ahead = false }) {
+/**
+ * `ahead`: plan it for later. `game` and `ballot`: a game already picked and other games to put
+ * up for a vote (from organizer onboarding). `onboarding`: this is the end of organizer onboarding,
+ * so finishing lands on the plan with the paywall on top (when it's on), and cancelling drops
+ * back to whatever is underneath.
+ */
+export default function NewRound({ rematch, fromPlan, present, ahead = false, game: preGame = null, ballot = [], onboarding = false }) {
   const nav = useNav();
   const { ask } = useUI();
   const state = useStore();
@@ -83,8 +91,8 @@ export default function NewRound({ rematch, fromPlan, present, ahead = false }) 
   const [date, setDate] = useState(() => nextSaturday());
   const [teeTime, setTeeTime] = useState('');
   const [invited, setInvited] = useState([]);
-  const [step, setStep] = useState(pre?.step ?? 0);
-  const [game, setGame] = useState(pre?.game ?? null);
+  const [step, setStep] = useState(pre?.step ?? (ahead && GAMES[preGame] ? 1 : 0));
+  const [game, setGame] = useState(pre?.game ?? (GAMES[preGame] ? preGame : null));
   const [holesCount, setHolesCount] = useState(pre?.holesCount ?? 18);
   const [courseId, setCourseId] = useState(pre?.courseId ?? null);
   const [nine, setNine] = useState(pre?.nine ?? 'front');
@@ -129,7 +137,8 @@ export default function NewRound({ rematch, fromPlan, present, ahead = false }) 
       st.plans[id] = plan;
       if (!st.favorites.includes(course.id)) st.favorites = [course.id, ...st.favorites].slice(0, 6);
     });
-    nav.reset('upnext', ['plan', { id }]);
+    const paywall = onboarding && shouldShowPaywall(getState(), PAYWALL_ON) ? [['paywall', { source: 'onboarding' }]] : [];
+    nav.reset('upnext', ['plan', { id }], ...paywall);
   };
 
   // A round already in progress is never touched: it stays saved and you can switch back to it
@@ -187,7 +196,7 @@ export default function NewRound({ rematch, fromPlan, present, ahead = false }) 
           nextLabel="Next: Who’s invited" top={<WhenPicker date={date} setDate={setDate} teeTime={teeTime} setTeeTime={setTeeTime} />} />
       )}
       {step === 2 && planning && course && <InviteStep invited={invited} setInvited={setInvited} onNext={() => setStep(3)} />}
-      {step === 3 && planning && course && <VoteStep game={game} opts={opts} onPlan={makePlan} />}
+      {step === 3 && planning && course && <VoteStep game={game} opts={opts} onPlan={makePlan} ballot={ballot} />}
       {step === 1 && !planning && <CourseStep courseId={courseId} setCourseId={id => { setCourseId(id); setTees({}); setStartHole(null); }} holesCount={holesCount} nine={nine} setNine={setNine} onNext={() => setStep(2)} />}
       {step === 2 && !planning && course && (
         <PlayersStep game={g} course={course} holesCount={holesCount} nine={nine} picked={picked} setPicked={setPicked}
@@ -629,10 +638,10 @@ function InviteStep({ invited, setInvited, onNext }) {
 }
 
 /** The organizer suggests a game and a bet, and picks what else the group can vote for. */
-function VoteStep({ game, opts, onPlan }) {
+function VoteStep({ game, opts, onPlan, ballot = [] }) {
   const start = betOf(game, opts) || 5;
   const [bet, setBet] = useState(start);
-  const [others, setOthers] = useState([]);
+  const [others, setOthers] = useState(() => ballot.filter(k => k !== game && GAMES[k]).slice(0, MAX_BALLOT_GAMES - 1));
   const [extraBets, setExtraBets] = useState(() => nearbyBets(start));
   const ladder = [...new Set([...BET_LADDER, start])].sort((a, b) => a - b);
   const toggleGame = k => setOthers(v => (v.includes(k) ? v.filter(x => x !== k) : v.length >= MAX_BALLOT_GAMES - 1 ? v : [...v, k]));

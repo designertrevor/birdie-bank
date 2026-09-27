@@ -1113,3 +1113,66 @@ button.who-status { cursor: pointer; min-height: 36px; }
 .plan-who { padding-left: 16px; padding-right: 16px; }
 .plan-who .step-q { padding: 20px 0 10px; }
 .plan-standalone .scroll { padding-top: 16px; }
+
+/* ============================================================
+   ORGANIZER ONBOARDING: one question a screen, payoffs, "Here's your group"
+   ============================================================ */
+.ob-top { display: flex; align-items: center; gap: 14px; padding: 12px 16px 8px; flex-shrink: 0; }
+.ob-progress { flex: 1; height: 6px; border-radius: 6px; background: var(--surface-strong); overflow: hidden; }
+.ob-progress i { display: block; height: 100%; background: var(--ink); border-radius: 6px; transition: width .35s var(--ease-out); }
+.ob-body { padding: 8px 16px 16px; display: flex; flex-direction: column; }
+.ob-body > .block { margin: 0 0 10px; }
+.ob-q { font-size: 30px; font-weight: 800; letter-spacing: -.03em; line-height: 1.1; margin: 6px 0 8px; }
+.ob-sub { font-size: 16px; color: var(--body); line-height: 1.5; margin-bottom: 16px; }
+.ob-body .eyebrow { margin-top: 8px; }
+.ob-tiles { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.ob-tile {
+  display: flex; flex-direction: column; gap: 4px; text-align: left; min-height: 104px; padding: 12px;
+  border: none; border-radius: 18px; background: var(--card); color: var(--ink); cursor: pointer;
+  box-shadow: inset 0 0 0 2px transparent; transition: transform .2s var(--spring), box-shadow .15s;
+}
+.ob-tile:active { transform: scale(.96); }
+.ob-tile.on { box-shadow: inset 0 0 0 2px var(--ink); }
+.ob-tile-top { display: flex; justify-content: space-between; align-items: center; font-size: 22px; color: var(--icon); }
+.ob-tick { color: var(--pink-text); animation: pop .35s var(--spring); }
+.ob-tile-name { font-family: var(--display); font-size: 16px; font-weight: 800; }
+.ob-tile-sub { font-size: 12px; color: var(--mute); line-height: 1.35; }
+.ob-choice { border: none; text-align: left; color: var(--ink); gap: 12px; }
+.ob-choice.on, .pw-plan.on { box-shadow: inset 0 0 0 2px var(--ink); }
+.ob-agree { border: none; text-align: left; color: var(--ink); gap: 12px; align-items: flex-start; margin-top: 16px; }
+.ob-card-head { display: flex; justify-content: space-between; align-items: center; gap: 8px; margin-bottom: 4px; }
+.ob-card-head .chip { margin: 0; }
+.ob-money { display: grid; grid-template-columns: repeat(4, 1fr); gap: 4px; margin-top: 8px; text-align: center; }
+.ob-cell { border-radius: 12px; padding: 6px 2px; }
+.ob-cell.lead { background: var(--surface); }
+.ob-amt { font-family: var(--display); font-size: 20px; font-weight: 800; font-variant-numeric: tabular-nums; }
+.ob-amt.up { color: var(--win); } .ob-amt.down { color: var(--loss); }
+.ob-fewest { display: flex; align-items: center; gap: 12px; text-align: center; }
+.ob-fewest > div { flex: 1; }
+.ob-fewest > i { font-size: 24px; color: var(--mute); }
+.ob-big { font-size: 44px; font-weight: 800; letter-spacing: -.03em; line-height: 1; font-variant-numeric: tabular-nums; }
+
+/* ============================================================
+   PAYWALL (UI only, behind a flag): trial timeline, plans, the free promise
+   ============================================================ */
+.pw-hero { display: flex; flex-direction: column; align-items: center; text-align: center; gap: 8px; padding: 28px 20px 18px; }
+.pw-badge { width: 64px; height: 64px; border-radius: 20px; background: var(--pink); color: #fff; display: grid; place-items: center; font-size: 34px; animation: pop .5s var(--spring) both; }
+.pw-title { font-size: 30px; font-weight: 800; letter-spacing: -.03em; line-height: 1.1; }
+.pw-lead { font-size: 16px; color: var(--body); }
+.pw-timeline { list-style: none; display: flex; flex-direction: column; }
+.pw-step { display: flex; gap: 12px; position: relative; padding-bottom: 16px; }
+.pw-step:last-child { padding-bottom: 0; }
+.pw-step:not(:last-child)::before { content: ""; position: absolute; left: 15px; top: 34px; bottom: 2px; width: 2px; background: var(--surface-strong); }
+.pw-dot { width: 32px; height: 32px; border-radius: 50%; background: var(--surface); color: var(--ink); display: grid; place-items: center; font-size: 16px; flex-shrink: 0; }
+.pw-step.now .pw-dot { background: var(--win); color: var(--on-ink); }
+.pw-step-title { font-family: var(--display); font-weight: 800; font-size: 16px; }
+.pw-when { font-family: Inter, system-ui, sans-serif; font-weight: 500; font-size: 13px; color: var(--mute); }
+.pw-plan { border: none; text-align: left; color: var(--ink); gap: 12px; }
+.pw-save { display: inline-block; vertical-align: 2px; margin-left: 6px; font-family: Inter, system-ui, sans-serif; font-size: 11px; font-weight: 700; padding: 2px 8px; border-radius: 999px; background: var(--pink-fill); color: #fff; }
+.pw-list { list-style: none; display: flex; flex-direction: column; gap: 10px; font-size: 15px; color: var(--body); }
+.pw-list li { display: flex; gap: 10px; align-items: flex-start; line-height: 1.4; }
+.pw-list li > i { font-size: 20px; color: var(--icon); flex-shrink: 0; }
+.pw-free { background: var(--win-bg); }
+.pw-free .pw-list { margin-top: 10px; }
+.pw-free .pw-list li > i { color: var(--win); }
+.pw-fine { font-size: 13px; color: var(--mute); text-align: center; line-height: 1.4; }

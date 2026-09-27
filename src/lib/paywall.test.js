@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {
-  PLANS, PRICES_ARE_PLACEHOLDERS, REMIND_DAY, TRIAL_DAYS, VARIANTS, annualSavings, bucket, freePromise, paywallAnswer,
+  PLANS, PRICES_ARE_PLACEHOLDERS, REMIND_DAY, TRIAL_DAYS, VARIANTS, annualSavings, bucket, freePromise, isOrganizer, paywallAnswer, planStatus,
   perMonthLabel, pickVariant, priceLabel, readFlag, shouldShowPaywall, trialTimeline, variantFor,
 } from './paywall.js';
 
@@ -78,4 +78,21 @@ test('the answer records the variant and only keeps a plan for a trial', () => {
   assert.equal(f.plan, null);
   assert.equal(f.trialEnds, null);
   assert.equal(f.source, 'onboarding');
+});
+
+test('the Pro preview is for organizers, not people who only joined', () => {
+  assert.equal(isOrganizer({ organizer: { games: [] } }), true);
+  assert.equal(isOrganizer({ rounds: { r1: { id: 'r1' } } }), true);
+  assert.equal(isOrganizer({ rounds: { r1: { id: 'r1', localMe: 'guest' } } }), false);
+  assert.equal(isOrganizer({ plans: { p1: { host: false } } }), false);
+  assert.equal(isOrganizer({ plans: { p1: { host: true } } }), true);
+  assert.equal(isOrganizer({}), false);
+});
+
+test('the Settings line shows the trial days left', () => {
+  const now = 1_000_000;
+  assert.equal(planStatus({}, now), 'Free · see what Pro adds');
+  assert.equal(planStatus({ paywall: { choice: 'trial', trialEnds: now + 3.5 * 86400000 } }, now), 'Pro trial preview · 4 days left');
+  assert.equal(planStatus({ paywall: { choice: 'trial', trialEnds: now + 3600000 } }, now), 'Pro trial preview · 1 day left');
+  assert.equal(planStatus({ paywall: { choice: 'trial', trialEnds: now - 1 } }, now), 'Free · see what Pro adds');
 });

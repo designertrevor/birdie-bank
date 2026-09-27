@@ -11,6 +11,8 @@ import { useNav } from '../lib/nav.js';
 import { formatIndex, hcPctLabel } from '../lib/format.js';
 import { PAY_APPS, payInfo } from '../lib/pay.js';
 import { SignInSheet, syncLabel } from '../components/Account.jsx';
+import { PAYWALL_ON } from '../lib/paywall-flag.js';
+import { isOrganizer, planStatus } from '../lib/paywall.js';
 import { accountsEnabled, signOut, syncNow, unsyncedCount, useAccount } from '../lib/cloud.js';
 
 export default function Settings() {
@@ -96,6 +98,10 @@ export default function Settings() {
           <span className="chevron"><Icon name="caret-right" /></span>
         </label>
         <input id="restore-file" type="file" accept="application/json,.json" hidden onChange={restore} />
+        {PAYWALL_ON && isOrganizer(state) && <>
+          <div className="sec-label">Your plan</div>
+          {row('star', 'Birdie Bank Pro', planStatus(state), () => nav.push('paywall', { source: 'settings' }))}
+        </>}
         <div className="sec-label">Help build it</div>
         {row('chat-circle-dots', 'Suggest something', 'A game, a course, a feature or a bug', () => nav.push('suggest'))}
         <div className="sec-label">About</div>

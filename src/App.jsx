@@ -50,6 +50,7 @@ const plan = () => import('./screens/Plan.jsx');
 const Plan = screen(plan);
 const RollCall = screen(plan, 'RollCall');
 const PlanLink = screen(plan, 'PlanLink');
+const Paywall = screen(() => import('./screens/Paywall.jsx'));
 
 /** A plan link (?plan=CODE, &p=WHO for one person's own) waiting to open: { code, who } or null. */
 function pendingPlanLink() {
@@ -78,7 +79,7 @@ const SCREENS = {
   roundDetail: RoundDetail, newRound: NewRound, play: Play,
   playerEdit: PlayerEdit, crewEdit: CrewEdit, person: Person,
   settings: Settings, defaults: Defaults, courses: Courses, courseEdit: CourseEdit, about: About, suggest: Suggest,
-  plan: Plan, rollCall: RollCall, planLink: PlanLink,
+  plan: Plan, rollCall: RollCall, planLink: PlanLink, paywall: Paywall,
 };
 // Settings lives behind the avatar on Up next, so it's a pushed screen rather than a tab
 const TABS = { upnext: UpNext, ledger: Ledger, history: History, people: People };
@@ -169,7 +170,7 @@ export default function App() {
           <Suspense fallback={<div className="screen active" aria-busy="true" />}>
             {inviteCode ? <JoinInvite code={inviteCode} onJoined={joined} onSkip={skip} />
               : planLinkAt ? <PlanLink code={planLinkAt.code} who={planLinkAt.who} standalone onSkip={skipPlan} />
-              : <Onboarding />}
+              : <Onboarding onDone={routes => setStack(routes.map(([name, params = {}]) => ({ name, params, key: Date.now() + Math.random() })))} />}
           </Suspense>
         </div>
       </UIProvider>
