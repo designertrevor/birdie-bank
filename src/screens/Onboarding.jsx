@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { BallIllo, Icon, Numpad, Screen } from '../components/ui.jsx';
 import { update, uid } from '../lib/store.js';
 import { formatIndex } from '../lib/format.js';
+import { GAMES } from '../lib/round.js';
 import { SignInSheet } from '../components/Account.jsx';
 import { accountsEnabled, useAccount } from '../lib/cloud.js';
 
@@ -39,7 +40,7 @@ export default function Onboarding() {
           <h1 className="onboard-title">Birdie Bank</h1>
           <p className="onboard-text">Keep score, run the side games and settle up with your group. No napkin math.</p>
           <div className="onboard-games">
-            {[['bank', 'Banker'], ['flag-pennant', 'Nassau'], ['coins', 'Skins'], ['paw-print', 'Wolf'], ['dice-five', 'Vegas'], ['sword', 'Match play'], ['star', 'Stableford'], ['dots-three-circle', '+ 9 more games']].map(([i, n]) => (
+            {[['bank', 'Banker'], ['flag-pennant', 'Nassau'], ['coins', 'Skins'], ['paw-print', 'Wolf'], ['dice-five', 'Vegas'], ['sword', 'Match play'], ['star', 'Stableford'], ['dots-three-circle', `+ ${Object.keys(GAMES).length - 7} more games`]].map(([i, n]) => (
               <span key={n} className="chip ochre"><Icon name={i} fill /> {n}</span>
             ))}
           </div>

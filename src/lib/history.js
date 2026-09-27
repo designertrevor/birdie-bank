@@ -131,15 +131,17 @@ export function netSeries(rounds, state) {
     .map(({ r, amount }) => { total = cents(total + amount); return { id: r.id, t: roundTime(r), amount, total }; });
 }
 
-/** Net with each player you had money with over these rounds (positive: you came out ahead of them). */
+/**
+ * Net with each player over these rounds (positive: you came out ahead of them). This is the honest
+ * head-to-head from roundResults().pairs, bet by bet, not who happened to pay whom in the fewest payments.
+ */
 export function headToHead(rounds, state) {
   const h2h = {};
   for (const r of rounds) {
     const me = meFor(r, state);
     if (!me) continue;
-    for (const t of roundResults(r).transfers) {
-      if (t.to === me) h2h[t.from] = cents((h2h[t.from] || 0) + t.amount);
-      if (t.from === me) h2h[t.to] = cents((h2h[t.to] || 0) - t.amount);
+    for (const [id, v] of Object.entries(roundResults(r).pairs?.[me] || {})) {
+      if (v) h2h[id] = cents((h2h[id] || 0) + v);
     }
   }
   return h2h;

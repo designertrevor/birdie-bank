@@ -101,6 +101,17 @@ test('season line: running total oldest first, only rounds you played', () => {
   assert.deepEqual(headToHead([a, b, c], state), { bo: amt(a) + amt(b) + amt(c) });
 });
 
+test('head to head for a range is honest: two skins winners are even with each other', () => {
+  const players = [...PLAYERS, { id: 'cy', name: 'Cy', index: 5, tee: 'Red' }, { id: 'di', name: 'Di', index: 5, tee: 'Red' }];
+  const r = createRound({ id: 'h', game: 'skins', course, holesCount: 9, nine: 'front', players, settings: SETTINGS, hcPct: 100, useHandicaps: false });
+  // Hole 1 to me, hole 2 to Bo, the rest tied (carried and void at the end)
+  r.holes.forEach((h, i) => { r.scores[h.no] = Object.fromEntries(players.map(p => [p.id, (i === 0 && p.id === 'me') || (i === 1 && p.id === 'bo') ? 3 : 4])); });
+  const done = { ...r, status: 'done', createdAt: NOW.getTime(), finishedAt: NOW.getTime() };
+  const h2h = headToHead([done], stateWith([done]));
+  assert.equal(h2h.bo, undefined);
+  assert.deepEqual(h2h, { cy: 2, di: 2 });
+});
+
 test('Up next: tab at a glance, last result and rounds in progress', () => {
   const a = skins('a', new Date(2026, 8, 20), { holes: 2 });
   const b = skins('b', new Date(2026, 8, 21), { winner: 'bo', holes: 1 });

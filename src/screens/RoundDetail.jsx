@@ -65,7 +65,13 @@ export default function RoundDetail({ id, celebrate }) {
 
   let heroTitle, heroAmt;
   if (allSquare) { heroTitle = 'All square'; heroAmt = '$0'; }
-  else if (tie) { heroTitle = `${res.standings.filter(p => p.amount === top.amount).map(p => p.name).join(' & ')} tie for top`; heroAmt = money(top.amount, { sign: true }); }
+  else if (tie) {
+    // Partners who won together are one winning side, not a tie (same as the reveal)
+    const leaders = res.standings.filter(p => p.amount === top.amount);
+    const side = round.teams?.find(tm => tm.players.length === leaders.length && tm.players.every(pid => leaders.some(p => p.id === pid)));
+    heroTitle = side ? `${side.name} win the day` : `${listNames(leaders.map(p => p.name.split(' ')[0]))} tie for top`;
+    heroAmt = money(top.amount, { sign: true });
+  }
   else { heroTitle = `${top.name} wins the day`; heroAmt = money(top.amount, { sign: true }); }
 
   const saveRow = accountsEnabled && !acct.user && round.status === 'done' && (
@@ -442,4 +448,9 @@ export function Scorecard({ round, current, onHole }) {
       <div className="sc-legend"><span className="sc-mark birdie">3</span> birdie <span className="sc-mark eagle">2</span> eagle <span className="sc-mark bogey">5</span> bogey <span className="sc-mark pu">X</span> picked up</div>
     </div>
   );
+}
+
+/** "Mike and Sue", "Mike, Sue and Al". */
+function listNames(names) {
+  return names.length <= 1 ? names.join('') : `${names.slice(0, -1).join(', ')} and ${names.at(-1)}`;
 }
