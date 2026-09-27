@@ -17,11 +17,13 @@ The plan for growing Birdie Bank into a $10k/mo business, and the checklist we w
 
 ## Current focus
 
-**Step 1: Foundation, nearly done.** Accounts, cloud data, invites, the live money bar, the simpler setup and the end-of-round settle-up are built, and Google sign-in is open to anyone. Left for S1: custom email (SMTP) so sign-in emails reach anyone, and running the feedback SQL (including the 2026-09-27 reactions part) so "Suggest something" and the after-round reactions go live. Then move straight on to S2. Real rounds keep going alongside as testing: fix bugs, smooth rough spots, and check each kind of user has what they need.
+**Step 1: Foundation, nearly done. Step 2 is well under way.** Accounts, cloud data, invites, the live money bar, the simpler setup and the end-of-round settle-up are built, and Google sign-in is open to anyone. Left for S1: custom email (SMTP) so sign-in emails reach anyone, and running the feedback SQL (including the 2026-09-27 reactions part) so "Suggest something" and the after-round reactions go live. Real rounds keep going alongside as testing: fix bugs, smooth rough spots, and check each kind of user has what they need.
+
+**Shipped overnight 2026-09-27 (wave 1):** the nine money rules, Snake and Hammer (18 games), skins and Nassau house rules, the Up next home tab and new nav, History by month with a chart, Run it back, the Tab by person with payment apps for everyone and honest head-to-head, Player cards, several rounds in progress, fixing a finished round without reopening it, the invite card with seat tiles and "Add me", adding a player mid-round, and the approved copy audit (the money screen is now the Tab).
+
+**Next in S2:** upcoming rounds and who's in (area 21), one shared tab for the group and carry-overs (area 7), organizer onboarding and the paywall test (areas 3 and 11), several games in one round, and the quick logo (area 16).
 
 **The big date:** the creator test (S4) runs February to April 2027, when golf season starts back up. Everything before it is about being ready: a product groups keep using, a smooth path from video to paying, and an App Store app.
-
-Tab and people (2026-09-27): the Tab (was Ledger) now shows your net with each friend with Settle up and Remind, the group settles in the fewest payments, everyone picks their own payment app, and Players are cards with your honest head-to-head.
 
 Last updated: 2026-09-27
 
@@ -175,18 +177,30 @@ Put more money into the winning creators and copy their video formats with other
 
 ### 5. Setting up and playing a round
 - [x] 16 games with the setup wizard, game defaults, crews, bets that change mid-round, 9 or 18 holes
+- [x] `S2` Rules check fixes: every money rule from the rules check built and tested (bets changed mid-round count from the next hole, unfinished legs pay on the holes played, Rabbit set free, Quota scaled to holes played, WHS allowances) (2026-09-27)
 - [x] `S2` Snake (three-putts, fixed, growing or doubling, each nine) and Hammer (double the hole, play on or fold, with a cap and who throws first), with rules, money bar and reveal: 18 games (2026-09-27)
 - [x] `S1` Money on screen from the first hole of every game, starting at $0 and moving as each score is tapped, with what the hole adds and a toast when it's saved (2026-09-26)
 - [x] `S1` Setup asks one question per step, puts the stakes up front with the rest under "More options," and ends on a "Round ready" screen to invite the group before hole 1 (2026-09-26)
 - [ ] `S2` Several games at once in one round (Nassau plus skins plus greenies)
 - [ ] `S2` (partial) "Our usual game": saved crew, games and stakes, set up in one tap. "Your usual" on the first setup step repeats the last round's game, course, group and bets (2026-09-26). Still to do: save more than one, and put it behind Pro.
+- [x] `S2` Skins house rules: net, gross or both, a pot split by skins won, and what carryovers after the last hole do (nobody, split, or a playoff) (2026-09-27)
+- [x] `S2` Nassau house rules: press at the turn, and no press on a leg's last hole (2026-09-27)
+- [ ] `S2` More house rules: Hogan and Arnie dots, and blind wolf (the wolf goes lone before anyone tees off, for more)
+- [ ] `S2` Bragging-rights mode: play any game for no money, with results, records and head-to-head in points instead of dollars
+- [ ] `S2` Only the players in a round (and the scorekeeper) can edit its scores
+- [ ] `S2` Suggested handicap % for each game (the WHS recommended allowances), shown as a hint next to the Strokes given choice
+- [ ] `S3` New games: closest to the pin and long drive pots
+- [ ] `S3` New game: team best ball, best 1 or 2 scores of 4 on each hole
+- [ ] `S3` New games: Alternate shot, Shamble and Chapman
+- [ ] `S3` New game: Ryder Cup team points across matches
+- [ ] `S5` New games: field skins across several groups, Calcutta, and rolling quota
 - [ ] `S2` (partial) House rules for every game, the variations real groups play. Some exist (modified Stableford, skins carryovers, Rabbit steal or set free and ties, 2026-09-27; skins net and gross together, skins pot split by skins won, what last-hole carryovers do, Nassau press at the turn and no press on the last hole, 2026-09-27). Go through all 18 games, and add the variations people ask for in "Suggest something."
 - [x] `S2` Ending a round is one tap and forgiving: stopping early, a missing score or a player who left never traps the round open. "A player left" in the round menu, holes with a missing score aren't counted (and the results say so), and finished rounds can't get stuck as active (2026-09-26)
 - [x] `S2` The killer end-of-round moment: every game and press totals up in one animated moment, then the fewest payments with one-tap pay links. Each bet resolves in turn (legs, presses, skins, biggest holes), then the totals land, then settle up with Venmo links and Mark paid, then a results image to share (2026-09-26)
 - [x] `S2` More than one round in progress: starting a round never deletes the one you're in, and "Rounds in progress" in the round menu switches between them. Fixing scores on a finished round keeps it counting on the tab (2026-09-27)
 - [x] `S2` "Add a player" in the round menu: their money counts from the hole they join, nobody else's strokes move, and the results say so. Games with fixed sides or an exact head count (Nassau, match play, Vegas, Sixes, Wolf, Nines, scramble) only take new players before the first score (2026-09-27)
 - [ ] `S3` Side bets between two players inside a bigger round (proposed during the week, see area 21)
-- [ ] `S5` Several groups, one game: multiple foursomes feeding one pot and one leaderboard
+- [ ] `S3` Several groups, one game: multiple foursomes feeding one pot and one leaderboard (moved up from S5, 2026-09-27)
 
 ### 6. Courses
 - [ ] `S1` (partial) Three bundled courses plus custom courses you can edit
@@ -198,13 +212,15 @@ Put more money into the winning creators and copy their video formats with other
 
 ### 7. The tab and settling up
 - [x] Debts netted across every round, recording payments (including partial ones), Venmo pay links
-- [x] `S1` Settle up right from the end of the round: Venmo pay or request links and Mark paid, without leaving for the Ledger (2026-09-26)
+- [x] `S1` Settle up right from the end of the round: Venmo pay or request links and Mark paid, without leaving for the Tab (2026-09-26)
 - [ ] `S2` One shared tab for the group: both players see the same numbers, and a recorded payment shows up for the other person
 - [ ] `S2` The group can see who's settled up during the week
 - [ ] `S2` **Carry it over:** instead of "I paid," either person can propose rolling the balance into next week. Once the other person agrees, it's no longer pending or overdue; it stays in the running tab as an agreed carry-over.
 - [x] `S2` Fewest payments for the whole group, not just pair by pair. Only ever between people who have played together; money is passed along through a mutual friend when needed (2026-09-27)
 - [x] `S2` Cash App, PayPal and Zelle alongside Venmo. Each person picks their app; pay buttons use the payee's app (Zelle shows the handle with a copy button) and only show to the person paying or owed. Handles ride along on shared rounds (2026-09-27)
 - [x] `S2` The Tab by person: your net with each friend, Settle up and Remind on every row, Venmo request links, and tap a person for the round-by-round story (2026-09-27)
+- [ ] `S3` (partial) Request links on the Tab for every app. Venmo requests are built (2026-09-27); Cash App, PayPal and Zelle have no prefilled request link, so Remind (with your pay link) covers them for now.
+- [ ] `S2` A trip tab: one tab across the rounds of a golf trip, settled once at the end
 - [ ] `S3` (partial) Gentle payment reminders ("Mike still owes $18 from Saturday"). A Remind button sends a friendly text with the amount and your pay link (2026-09-27); automatic reminders still to do.
 - [ ] `S3` A separate tab for each crew or trip, and "close the books" at season's end
 
@@ -227,6 +243,7 @@ Put more money into the winning creators and copy their video formats with other
 ### 10. Leagues and events
 - [ ] `S5` League: season, weekly schedule, sign-ups, standings, flights, league handicaps, weekly pots, dues, admin roles
 - [ ] `S5` Event or trip: multiple days and rounds, team formats (Ryder Cup style), one tab for the trip, a leaderboard view for a clubhouse TV
+- [ ] `S3` Trip formats: day-by-day team points (Ryder Cup style), rotating partners and a trip leaderboard, on top of the trip tab (area 7)
 - [ ] `S5` An organizer dashboard on the web for league and event admins
 - [ ] `S5` Printable pairings, cart signs and results sheets for events and leagues
 
@@ -308,7 +325,7 @@ Put more money into the winning creators and copy their video formats with other
 - [ ] `S1` (partial) Each form asks for what's useful: a game's rules and how the money works; a course's name, city and optional scorecard photo; a bug's screenshot with round and device details attached automatically. Built (2026-09-25), same SQL step as above.
 - [x] `S2` Show it in natural places: course search with no results, the end of the games list, a quick "How was it?" after a round (2026-09-26)
 - [x] `S2` After a round, "How was Birdie Bank today?" saves a one-tap reaction as feedback, then offers a form to say more (2026-09-27)
-- [ ] `S2` Needs check by kind of user: the organizer, the invited friend, the trip or member-guest organizer, the league runner, and a casual twosome. List what each needs from a round and between rounds, and which games each plays, then add what's missing to the right areas.
+- [x] `S2` Needs check by kind of user: the organizer, the invited friend, the trip or member-guest organizer, the league runner, and a casual twosome. Done as research (2026-09-26); the approved proposals and missing games are now in their areas (2026-09-27)
 - [ ] `S2` Bug and polish pass after each batch of real rounds: fix what broke, smooth anything that took extra taps or caused a question on the course
 - [ ] `S2` Slack community (free plan): #feedback, #game-requests, #course-requests, #bugs, #show-your-round, #general. Invite each group's organizer personally.
 - [ ] `S2` Slack to database automation: a Slack app sends feedback channel messages to Supabase, Claude sorts each one (game, course, feature, bug), merges it with matching roadmap items and pulls out details, then replies in Slack with the roadmap link. Needed because Slack's free plan hides messages after 90 days.
@@ -389,6 +406,9 @@ Kept light on purpose. Groups already have a group text, so Birdie Bank adds to 
 - 2026-09-25: No full chat system for now. Keep trash talk to comments, reactions and sharing into the group's own text thread. Big features wait until people ask for them.
 - 2026-09-26: The S1 gate no longer waits on 8+ real rounds. Real rounds, bug fixes and polish run alongside every step instead of blocking the next one. The quick logo moves to early S2.
 - 2026-09-27: Money rules. A bet changed mid-round counts from the next hole ("Whole round" is the option); a leg or match already under way keeps its bet, and a pot always covers the whole round. "Per point" stays pairwise, Nines is "every point above or below 54", and each bet shows a worked example. Stableford and Quota default to a pot. Every unfinished leg pays on the holes played. Rabbit is "set free" and ties change nothing (steal and ties-free stay as options). Quota scales to the holes played. The handicap percentage goes on each player first (WHS). The 3-person scramble allowance is 30/20/10 (WHS 2024 Appendix C). Greenie means closest to the pin, par to keep it.
+- 2026-09-27: Product. Never delete a round in progress: several can be going at once. Share images hide amounts by default and remember each person's choice. Pay buttons only show to the person paying or owed, and each person picks their own payment app (Venmo, Cash App, PayPal or Zelle; Zelle shows the handle with a copy button). A deeper pink (#d42a6b) goes behind small white text. Editing a finished round keeps it counting on the Tab. Database courses get a soft tag and start on the middle tee. Join previews keep first names. The after-round prompt is "How was Birdie Bank today?" and reactions save as feedback. The spare cent on a 3-way split is paid by the first-listed player, and the player-left rules stay.
+- 2026-09-27: Words. The money screen is the Tab everywhere. "Group" (crew only for saved lists), "bets" not "stakes", "each player puts in" not "ante", "Gets 5 strokes" not "HC 5", and one delete verb. The home tab is "Up next". Crews are secondary everywhere, and no core feature is built around them.
+- 2026-09-27: Needs check proposals approved: add a player mid-round and "Add me", honest head-to-head, request links on the Tab, Snake and Hammer, skins and Nassau house rules, bragging-rights mode, Run it back, only players edit scores, per-game handicap % suggestions, several groups in one game moved to S3, a trip tab in S2 and trip formats in S3.
 
 ## Progress log
 
@@ -409,3 +429,4 @@ Kept light on purpose. Groups already have a group text, so Birdie Bank adds to 
 - 2026-09-27: Tab and people: the Ledger screen is now the Tab, by person, with Remind, Request and a round-by-round story for each friend. Fewest payments across the whole group (only between people who've played together), payment apps for everyone (Venmo, Cash App, PayPal, Zelle) with pay buttons only for the payer or payee, Player cards, and honest head-to-head worked out bet by bet.
 - 2026-09-27 (overnight): New app shell. Up next is the home tab (round in progress, your tab at a glance, last result, plan your next round), the bottom nav is Up next, Tab, Play, History, Players, and Settings moved behind your avatar. History is grouped by month with totals, with a Season, Month or Custom range and a chart of your net. "Run it back" starts a round like a finished one.
 - 2026-09-27 (overnight): Joining from a link is now an invite card, seat tiles and a strokes check, with "Not on the list? Add me" for people the scorekeeper forgot. Scorekeepers can add a player mid-round; their money counts from the hole they join. Seat requests ride in the existing live round records, so no SQL is needed.
+- 2026-09-27 (overnight, integration): All six wave 1 streams merged into main (money rules, new games, product and copy, the Tab and Players, the app shell, joining). Head-to-head now also covers Snake, Hammer, the skins pot and bets changed mid-round; the last copy audit items are in (the Tab, Players, Settings, joining). Added the approved needs-check proposals and the missing games to their areas. Tests: 303 passing. Checklist: 42 of 174 done (24%), up from 17 of 144 (12%) on 2026-09-26.
