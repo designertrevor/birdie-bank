@@ -2,6 +2,7 @@
 // player, crew, course, round, payment, plus one "profile" for you and your settings.
 // Each document is compared by content, so only what changed gets sent.
 import { stable } from './sync-model.js';
+import { migrateSettings } from './settings.js';
 
 // Round fields that only mean something on this phone
 const ROUND_LOCAL = ['_remote'];
@@ -51,7 +52,7 @@ export function applyDoc(draft, kind, id, data) {
     // A profile saved before setup finished never blanks out who "me" is
     if (data.me) draft.me = data.me;
     draft.onboarded = data.onboarded || draft.onboarded;
-    draft.settings = { ...draft.settings, ...data.settings };
+    draft.settings = { ...draft.settings, ...migrateSettings(data.settings) };
     draft.favorites = data.favorites || [];
   }
 }

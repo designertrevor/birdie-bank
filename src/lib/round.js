@@ -5,7 +5,7 @@ import {
 } from './golf.js';
 import {
   bestBall, sideSplit, vegasHole, sixesPairings, sixesSegments, stablefordPoints, quotaPoints, quotaFor, ninesPoints,
-  acesDeuces, pointsToMoney, settleTotals, scrambleTeamHandicap, rabbitHolder, scoreDots, DOT_KINDS, roundCents,
+  acesDeuces, settleTotals, scrambleTeamHandicap, rabbitHolder, scoreDots, DOT_KINDS, roundCents,
 } from './games.js';
 
 /**
@@ -216,6 +216,60 @@ export function createRound({ id, game, course, holesCount, nine, startHole, pla
   };
   if (teams?.length) round.teams = withTeamHandicaps(round, buildTeams(teams, full), full, useHandicaps, hcPct);
   return round;
+}
+
+// --------------------------- Bets changed mid-round ---------------------------
+// A bet changed during a round applies from a given hole on (the default) or to the whole round.
+// round.settings always holds the bets for the holes still to come. round.betHistory keeps the
+// bets that earlier holes were played for: [{ upto, settings }], sorted by `upto`, each entry
+// covering the playing positions after the previous entry's `upto` up to and including its own.
+// `settings` is just the game's own block (round.settings[round.game]) at the time.
+
+/** Games whose money is one pot for the whole round: a change to the bet always covers every hole. */
+export function wholeRoundOnly(game, before, after) {
+  if (game === 'scramble') return true;
+  if (game === 'stroke' || game === 'stableford' || game === 'quota') return before?.payout === 'pot' || after?.payout === 'pot';
+  return false;
+}
+
+/** The round's settings in force on the hole at playing position `pos` (1-based). */
+export function settingsAt(round, pos) {
+  const hist = round.betHistory;
+  if (!hist?.length) return round.settings;
+  const e = hist.find(x => pos <= x.upto);
+  return e ? { ...round.settings, [round.game]: e.settings } : round.settings;
+}
+
+/**
+ * Change the game's bets in a round under way. `fromPos` is the playing position the new bets
+ * start on; holes before it keep what they were played for. Leave it null (or 1) for the whole
+ * round, which also clears any earlier changes. Returns a new round; `round` is not mutated.
+ */
+export function changeBets(round, gameSettings, fromPos = null) {
+  const game = round.game;
+  const next = { ...round, settings: { ...round.settings, [game]: structuredClone(gameSettings) } };
+  if (fromPos == null || fromPos <= 1 || wholeRoundOnly(game, round.settings[game], gameSettings)) {
+    delete next.betHistory;
+    return next;
+  }
+  const upto = fromPos - 1;
+  const kept = (round.betHistory || []).filter(x => x.upto < upto);
+  const hist = [...kept, { upto, settings: structuredClone(settingsAt(round, upto)[game]) }];
+  // Neighbouring stretches played for the same bets are one stretch
+  const same = (a, b) => JSON.stringify(a) === JSON.stringify(b);
+  const merged = [];
+  for (const e of hist) {
+    if (merged.length && same(merged.at(-1).settings, e.settings)) merged[merged.length - 1] = e;
+    else merged.push(e);
+  }
+  if (merged.length && same(merged.at(-1).settings, gameSettings)) merged.pop();
+  if (merged.length) next.betHistory = merged; else delete next.betHistory;
+  return next;
+}
+
+/** Whether any hole was played for different bets than the ones in force now. */
+export function betsChanged(round) {
+  return !!round.betHistory?.length;
 }
 
 // --------------------------- Players who left --------------------------------
@@ -458,9 +512,11 @@ export function roundLegs(round) {
 /** Hole number played at a Nassau position. */
 export function holeAtPos(round, pos) { return round.holes[pos - 1]?.no ?? pos; }
 
-export function nassauAmounts(round) {
-  if (round.game === 'match') return { match: round.settings.match.stake };
-  const n = round.settings.nassau;
+/** Leg amounts, as they stand now or (with `pos`) as they stood on the hole at that playing position. */
+export function nassauAmounts(round, pos = null) {
+  const s = pos == null ? round.settings : settingsAt(round, pos);
+  if (round.game === 'match') return { match: s.match.stake };
+  const n = s.nassau;
   return { front: n.front, back: n.back, total: n.total };
 }
 
@@ -493,22 +549,31 @@ function spreadSides(round, balances, net) {
 
 // --------------------------- Skins ----------------------------------------
 
+/**
+ * Skins hole by hole. Each skin is worth the bet in force on the hole it came from, so a skin carried
+ * into a hole after the bet went up keeps its old value. A row's `worth` is what each other player
+ * pays if the hole is won outright (the carried skins plus this hole's).
+ */
 export function skinsTable(round) {
   const value = round.settings.skins.value;
-  const carry = round.settings.skins.carryover;
-  let pot = 1;
+  let pot = 1, carried = 0;
   const rows = [];
-  for (const h of round.holes) {
+  round.holes.forEach((h, i) => {
+    const s = settingsAt(round, i + 1).skins;
+    const worth = carried + s.value;
     // Only the players still on a hole play for it, so a carried skin won later is paid by them alone
     const on = playersOn(round, h);
     const field = on.map(p => p.id);
-    if (!holeComplete(round, h)) { rows.push({ hole: h, winner: undefined, skins: 0, pot, field }); continue; }
+    if (!holeComplete(round, h)) { rows.push({ hole: h, winner: undefined, skins: 0, pot, worth, field }); return; }
     const nets = on.map(p => [p.id, netFor(round, p, h)]);
     const low = Math.min(...nets.map(n => n[1]));
     const lows = nets.filter(n => n[1] === low);
-    if (lows.length === 1) { rows.push({ hole: h, winner: lows[0][0], skins: pot, pot, field }); pot = 1; }
-    else { rows.push({ hole: h, winner: null, skins: 0, pot, field }); pot = carry ? pot + 1 : 1; }
-  }
+    if (lows.length === 1) { rows.push({ hole: h, winner: lows[0][0], skins: pot, pot, worth, field }); pot = 1; carried = 0; }
+    else {
+      rows.push({ hole: h, winner: null, skins: 0, pot, worth, field });
+      if (s.carryover) { pot += 1; carried = worth; } else { pot = 1; carried = 0; }
+    }
+  });
   return { rows, value, unclaimed: pot > 1 ? pot - 1 : 0 };
 }
 
@@ -538,8 +603,7 @@ export function wolfHoleSetup(round, idx) {
 export function wolfHoleResult(round, hole) {
   const setup = round.wolf[hole.no];
   if (!setup || !holeComplete(round, hole)) return null;
-  const P = round.settings.wolf.point;
-  const mult = round.settings.wolf.loneMultiplier;
+  const { point: P, loneMultiplier: mult } = settingsAt(round, posOf(round, hole)).wolf;
   const on = playersOn(round, hole);
   const ids = on.map(p => p.id);
   // A pick that names someone who has left doesn't stand
@@ -564,19 +628,19 @@ export function wolfHoleResult(round, hole) {
 /** Vegas hole by hole: [{ hole, numbers, diff, flipped, deltas }] for scored holes. */
 export function vegasTable(round) {
   const teams = round.teams || [];
-  const point = round.settings.vegas.point;
   const rows = [];
-  for (const h of round.holes) {
+  for (const [i, h] of round.holes.entries()) {
     if (!holeComplete(round, h) || teams.length !== 2) { rows.push({ hole: h, played: false }); continue; }
+    const { point, birdieFlip } = settingsAt(round, i + 1).vegas;
     // Vegas needs two full teams: once a player leaves, the holes after aren't counted
     if (teams.some(t => t.players.some(pid => !playsHole(round, pid, h)))) { rows.push({ hole: h, played: false, short: true }); continue; }
     const nets = teams.map(t => t.players.map(pid => netFor(round, playerById(round, pid), h)));
     const gross = teams.map(t => t.players.map(pid => round.scores[h.no]?.[pid]));
-    const r = vegasHole(nets, gross, h.par, { birdieFlip: round.settings.vegas.birdieFlip });
+    const r = vegasHole(nets, gross, h.par, { birdieFlip });
     const deltas = {};
     teams[0].players.forEach(pid => { deltas[pid] = r.diff * point; });
     teams[1].players.forEach(pid => { deltas[pid] = -r.diff * point; });
-    rows.push({ hole: h, played: true, ...r, deltas });
+    rows.push({ hole: h, played: true, ...r, point, deltas });
   }
   return rows;
 }
@@ -621,11 +685,21 @@ export function sixesMatchAt(round, pos) {
 
 // --------------------------- Points & totals --------------------------------
 
-/** Per-player totals for the totals games: net strokes, Stableford points, quota points. */
+/** A player's full-round quota target (null outside Quota). */
+function quotaOf(round, p) {
+  return round.game === 'quota' ? quotaFor(round.useHandicaps ? p.courseHc : 0, round.holes.length) : null;
+}
+
+/**
+ * Per-player totals for the totals games: net strokes, Stableford points, quota points.
+ * Quota scales to the holes played: `quota` is the full-round target, `target` the share of it for
+ * the holes this player has played (34 over 18 holes is 17 after 9), and `vsQuota` is against `target`.
+ * `target` and `vsQuota` are to one decimal for showing; the money uses the exact figures.
+ */
 export function totalsTable(round) {
   const out = round.players.map(p => {
     let total = 0, played = 0, par = 0;
-    const quota = round.game === 'quota' ? quotaFor(round.useHandicaps ? p.courseHc : 0, round.holes.length) : null;
+    const quota = quotaOf(round, p);
     for (const h of round.holes) {
       if (!holeComplete(round, h) || !playsHole(round, p.id, h)) continue;
       played++;
@@ -633,7 +707,15 @@ export function totalsTable(round) {
       total += totalsHoleValue(round, p, h);
     }
     const toPar = round.game === 'stroke' ? total - par : null;
-    return { id: p.id, name: p.name, total, played, quota, toPar, vsQuota: quota != null ? total - quota : null, left: leftAt(round, p.id) < round.holes.length };
+    const exact = quota != null ? quota * (played / round.holes.length) : null;
+    const tenth = v => Math.round(v * 10) / 10;
+    return {
+      id: p.id, name: p.name, total, played, quota, toPar,
+      target: exact != null ? tenth(exact) : null,
+      vsQuota: exact != null ? tenth(total - exact) : null,
+      vsQuotaExact: exact != null ? total - exact : null,
+      left: leftAt(round, p.id) < round.holes.length,
+    };
   });
   return out;
 }
@@ -648,20 +730,17 @@ function totalsHoleValue(round, p, h) {
 /**
  * Pairwise settling for per-stroke / per-point bets: every pair settles the difference on the
  * holes they both played, so a player who left is square with everyone for the holes after.
- * `value(pid, hole)` is a player's number on a counted hole; `adjust(a, b, shared)` is added to
- * a's side of the difference (used for quota targets). Returns money by player id.
+ * `value(pid, hole)` is a player's number on a counted hole and `stake(pos)` the bet in force at
+ * a playing position, so each hole is paid at its own bet. Returns money by player id.
  */
-function settlePairs(round, value, { stake, lowerWins, adjust = null }) {
+function settlePairs(round, value, { stake, lowerWins }) {
   const ids = round.players.map(p => p.id);
   const out = Object.fromEntries(ids.map(id => [id, 0]));
-  const counted = round.holes.filter(h => holeComplete(round, h));
+  const counted = round.holes.map((h, i) => [h, i + 1]).filter(([h]) => holeComplete(round, h));
   for (let i = 0; i < ids.length; i++) for (let j = i + 1; j < ids.length; j++) {
     const a = ids[i], b = ids[j];
-    const both = counted.filter(h => playsHole(round, a, h) && playsHole(round, b, h));
-    if (!both.length) continue;
-    let diff = both.reduce((acc, h) => acc + value(a, h) - value(b, h), 0);
-    if (adjust) diff += adjust(a, b, both.length);
-    const d = diff * stake * (lowerWins ? -1 : 1); // positive = a wins
+    const both = counted.filter(([h]) => playsHole(round, a, h) && playsHole(round, b, h));
+    const d = both.reduce((acc, [h, pos]) => acc + (value(a, h) - value(b, h)) * stake(pos), 0) * (lowerWins ? -1 : 1); // positive = a wins
     out[a] += d; out[b] -= d;
   }
   return out;
@@ -671,8 +750,8 @@ function settlePairs(round, value, { stake, lowerWins, adjust = null }) {
 export function pointsTable(round) {
   const ids = round.players.map(p => p.id);
   const rows = [];
-  for (const h of round.holes) {
-    const s = round.settings;
+  for (const [i, h] of round.holes.entries()) {
+    const s = settingsAt(round, i + 1);
     // Rows carry `field`: the players still on the hole, who are the only ones it settles between
     const field = playersOn(round, h).map(p => p.id);
     if (round.game === 'bbb') {
@@ -682,7 +761,7 @@ export function pointsTable(round) {
       const pts = Object.fromEntries(ids.map(id => [id, 0]));
       const got = ['bingo', 'bango', 'bongo'].filter(k => m[k] && field.includes(m[k]));
       for (const k of got) pts[m[k]] += 1;
-      rows.push({ hole: h, points: pts, field, label: got.map(k => k[0].toUpperCase()).join('') });
+      rows.push({ hole: h, points: pts, field, value: s.bbb.value, label: got.map(k => k[0].toUpperCase()).join('') });
       continue;
     }
     // A hole with a score missing isn't counted for money
@@ -695,14 +774,14 @@ export function pointsTable(round) {
         const auto = s.dots.auto ? scoreDots(round.scores[h.no]?.[pid], h.par) : 0;
         pts[pid] = manual.length + auto;
       }
-      rows.push({ hole: h, points: pts, field });
+      rows.push({ hole: h, points: pts, field, value: s.dots.value });
       continue;
     }
     // Nines is scored for exactly three, so once a player leaves the holes after aren't counted
     if (round.game === 'nines' && field.length === round.players.length) {
       const nets = round.players.map(p => netFor(round, p, h));
       const pts = ninesPoints(nets);
-      rows.push({ hole: h, points: Object.fromEntries(ids.map((id, i) => [id, pts[i]])), field });
+      rows.push({ hole: h, points: Object.fromEntries(ids.map((id, k) => [id, pts[k]])), field, value: s.nines.point });
     }
   }
   return rows;
@@ -726,12 +805,19 @@ export function rabbitTable(round) {
   });
   const out = segs.map(seg => {
     const part = rows.slice(seg.start - 1, seg.end);
-    const { holder, history } = rabbitHolder(part, round.settings.rabbit.tiesFree);
+    // A leg is played for the rules and bet in force when it started. Rounds from before the
+    // "set free" default have no mode and keep the old "steal" rule.
+    const rs = settingsAt(round, seg.start).rabbit;
+    const { holder, history } = rabbitHolder(part, { mode: rs.mode || 'steal', tiesFree: !!rs.tiesFree });
     const done = part.every(r => r.winner !== undefined);
+    const played = part.some(r => r.winner !== undefined);
     // Only the players still there at the end of the leg pay the holder
     const last = round.holes[seg.end - 1];
     const payers = last ? playersOn(round, last).map(p => p.id) : round.players.map(p => p.id);
-    return { seg, rows: part, holder, history, done, payers };
+    // Like a Nassau leg, an unfinished leg pays on the holes played: whoever holds the rabbit now
+    const pays = !!holder && payers.includes(holder);
+    const amount = pays ? rs.stake * (payers.length - 1) : 0;
+    return { seg, rows: part, holder, history, done, played, pays, payers, stake: rs.stake, amount };
   });
   return { legs: out, rows };
 }
@@ -758,14 +844,18 @@ export function roundResults(round) {
       const field = on.map(p => p.id);
       if (!field.includes(setup.banker)) return;
       const net = Object.fromEntries(on.map(p => [p.id, netFor(round, p, h)]));
-      const r = settleBankerHole(setup, net, field, { ties: s.banker.ties });
+      const r = settleBankerHole(setup, net, field, { ties: settingsAt(round, posOf(round, h)).banker.ties });
       add(r.deltas);
       detail.holes.push({ no: h.no, banker: setup.banker, ...r });
     });
   }
 
   if (round.game === 'nassau' || round.game === 'match') {
-    const res = nassauResult(nassauWinners(round), round.presses, nassauAmounts(round), roundLegs(round));
+    // Each bet is played for the amount in force on the hole it started: a leg under way keeps its bet
+    const legs = roundLegs(round);
+    const amounts = Object.fromEntries(Object.entries(legs).map(([k, l]) => [k, nassauAmounts(round, l.start)[k]]));
+    const presses = round.presses.map(p => ({ ...p, amount: p.amount ?? nassauAmounts(round, p.start)[p.leg] }));
+    const res = nassauResult(nassauWinners(round), presses, amounts, legs);
     spreadSides(round, balances, res.net);
     detail.lines = res.lines;
   }
@@ -775,8 +865,8 @@ export function roundResults(round) {
     for (const r of t.rows) {
       if (!r.winner) continue;
       for (const id of r.field) {
-        if (id === r.winner) balances[id] += r.skins * t.value * (r.field.length - 1);
-        else balances[id] -= r.skins * t.value;
+        if (id === r.winner) balances[id] += r.worth * (r.field.length - 1);
+        else balances[id] -= r.worth;
       }
     }
     detail.skins = t;
@@ -802,11 +892,16 @@ export function roundResults(round) {
     const matches = sixesMatches(round);
     detail.matches = matches.map(m => {
       const st = m.status;
+      // A match is played for the way it pays when it started
+      const ms = settingsAt(round, m.seg.start).sixes;
       let net = 0; // positive = side 0 wins
-      if (s.sixes.mode === 'holes') {
-        const w0 = Object.values(m.winners).filter(w => w === 0).length, w1 = Object.values(m.winners).filter(w => w === 1).length;
-        net = (w0 - w1) * s.sixes.stake;
-      } else if (st.leader != null && st.done) net = st.leader === 0 ? s.sixes.stake : -s.sixes.stake;
+      if (ms.mode === 'holes') {
+        // Every hole won is worth the bet in force on that hole
+        for (const [pos, w] of Object.entries(m.winners)) if (w != null) net += (w === 0 ? 1 : -1) * settingsAt(round, Number(pos)).sixes.stake;
+      } else if (st.leader != null) {
+        // Like Nassau, a match that isn't finished pays whoever leads it on the holes played
+        net = st.leader === 0 ? ms.stake : -ms.stake;
+      }
       for (const pid of m.sides[0]) balances[pid] += net;
       for (const pid of m.sides[1]) balances[pid] -= net;
       return { ...m, net };
@@ -846,20 +941,20 @@ export function roundResults(round) {
     const lowerWins = round.game === 'stroke';
     if (played && cfg.payout === 'pot') {
       // The pot is played for by those still in at the end. Anyone who left is out of it: they don't pay or win
-      const key = round.game === 'quota' ? 'vsQuota' : 'total';
+      const key = round.game === 'quota' ? 'vsQuotaExact' : 'total';
       const stay = playersToEnd(round).map(p => p.id);
       const totals = Object.fromEntries(table.filter(t => stay.includes(t.id)).map(t => [t.id, t[key]]));
       add(settleTotals(totals, { mode: 'pot', stake: cfg.stake, lowerWins }));
     } else if (played) {
-      // Per stroke or point: each pair settles on the holes they both played
+      // Per stroke or point: each pair settles on the holes they both played, each hole at its own bet.
+      // A quota is for the whole round, so each hole carries an even share of it: a short round, or a
+      // pair where someone left, compares the share for the holes played.
       const byId = Object.fromEntries(round.players.map(p => [p.id, p]));
-      const quota = Object.fromEntries(table.map(t => [t.id, t.quota]));
-      const toEnd = pid => leftAt(round, pid) >= round.holes.length;
-      // A quota is for the whole round, so a pair where someone left compares a share of it for the holes they shared
-      const adjust = round.game === 'quota'
-        ? (a, b, shared) => -(quota[a] - quota[b]) * (toEnd(a) && toEnd(b) ? 1 : shared / round.holes.length)
-        : null;
-      add(settlePairs(round, (pid, h) => totalsHoleValue(round, byId[pid], h), { stake: cfg.stake, lowerWins, adjust }));
+      const n = round.holes.length;
+      const value = round.game === 'quota'
+        ? (pid, h) => totalsHoleValue(round, byId[pid], h) - quotaOf(round, byId[pid]) / n
+        : (pid, h) => totalsHoleValue(round, byId[pid], h);
+      add(settlePairs(round, value, { stake: pos => settingsAt(round, pos)[round.game].stake, lowerWins }));
     }
     detail.totals = table;
   }
@@ -868,20 +963,27 @@ export function roundResults(round) {
     const rows = pointsTable(round);
     const pts = Object.fromEntries(ids.map(id => [id, 0]));
     for (const r of rows) for (const id of ids) pts[id] += r.points[id] || 0;
+    // Every row carries the bet in force on its hole
     if (round.game === 'dots') {
       // Every dot is paid by each of the other players still on that hole
       for (const r of rows) for (const id of r.field) for (const other of r.field) {
         if (other === id) continue;
-        balances[id] += r.points[id] * s.dots.value; balances[other] -= r.points[id] * s.dots.value;
+        balances[id] += r.points[id] * r.value; balances[other] -= r.points[id] * r.value;
       }
     } else if (round.game === 'bbb') {
       // Every pair settles the difference in points on the holes they both played
       for (let i = 0; i < ids.length; i++) for (let j = i + 1; j < ids.length; j++) {
         const a = ids[i], b = ids[j];
-        const d = rows.filter(r => r.field.includes(a) && r.field.includes(b)).reduce((acc, r) => acc + r.points[a] - r.points[b], 0) * s.bbb.value;
+        const d = rows.filter(r => r.field.includes(a) && r.field.includes(b)).reduce((acc, r) => acc + (r.points[a] - r.points[b]) * r.value, 0);
         balances[a] += d; balances[b] -= d;
       }
-    } else if (rows.length) add(pointsToMoney(pts, s.nines.point));
+    } else {
+      // Nines: every point above or below the average (3 a hole, 54 over 18) is worth the bet
+      for (const r of rows) {
+        const avg = ids.reduce((a, id) => a + r.points[id], 0) / ids.length;
+        for (const id of ids) balances[id] += (r.points[id] - avg) * r.value;
+      }
+    }
     detail.points = pts;
     detail.rows = rows;
   }
@@ -893,7 +995,7 @@ export function roundResults(round) {
       // Low and high are among the players still on the hole
       const on = playersOn(round, h);
       if (on.length < 2) continue;
-      const r = acesDeuces(on.map(p => netFor(round, p, h)), on.map(p => p.id), s.aces);
+      const r = acesDeuces(on.map(p => netFor(round, p, h)), on.map(p => p.id), settingsAt(round, posOf(round, h)).aces);
       add(r.deltas);
       detail.holes.push({ no: h.no, ...r });
     }
@@ -901,11 +1003,12 @@ export function roundResults(round) {
 
   if (round.game === 'rabbit') {
     const t = rabbitTable(round);
+    // Like Nassau, a leg that isn't finished pays whoever holds the rabbit on the holes played
     for (const leg of t.legs) {
-      if (!leg.done || !leg.holder) continue;
+      if (!leg.pays) continue;
       for (const id of leg.payers) {
-        if (id === leg.holder) balances[id] += s.rabbit.stake * (leg.payers.length - 1);
-        else balances[id] -= s.rabbit.stake;
+        if (id === leg.holder) balances[id] += leg.amount;
+        else balances[id] -= leg.stake;
       }
     }
     detail.rabbit = t;

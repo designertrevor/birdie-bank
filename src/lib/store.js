@@ -1,6 +1,7 @@
 // App state: a single object persisted to localStorage, exposed through a tiny
 // subscribe/getSnapshot store so React can read it with useSyncExternalStore.
 import { useSyncExternalStore } from 'react';
+import { migrateSettings, REV2_DEFAULTS, SETTINGS_REV } from './settings.js';
 
 // Dev only: ?profile=b gives a tab its own data, to test shared rounds as two "phones"
 function profileSuffix() {
@@ -27,13 +28,14 @@ export const DEFAULT_SETTINGS = {
   sixes: { stake: 5, mode: 'match' },
   scramble: { stake: 5 },
   stroke: { stake: 5, payout: 'pot' },
-  stableford: { stake: 1, payout: 'per', modified: false },
-  quota: { stake: 1, payout: 'per' },
+  stableford: { ...REV2_DEFAULTS.stableford },
+  quota: { ...REV2_DEFAULTS.quota },
   nines: { point: 1 },
   aces: { ace: 2, deuce: 1 },
   bbb: { value: 1 },
   dots: { value: 1, auto: true, kinds: { greenie: true, sandy: true, barkie: true, chipin: true, polie: false, arnie: false } },
-  rabbit: { stake: 5, tiesFree: true },
+  rabbit: { ...REV2_DEFAULTS.rabbit },
+  rev: SETTINGS_REV,
 };
 
 function fresh() {
@@ -57,6 +59,7 @@ function load() {
     const raw = localStorage.getItem(KEY);
     if (!raw) return fresh();
     const data = JSON.parse(raw);
+    if (data.settings) data.settings = migrateSettings(data.settings);
     const base = fresh();
     // Shallow-merge so newly added keys (and newly added games) get defaults
     const settings = { ...base.settings, ...data.settings };
