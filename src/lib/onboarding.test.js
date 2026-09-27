@@ -61,6 +61,7 @@ test('the first game picked is the suggestion, and the rest go on the ballot', (
 });
 
 test('settle-up math is true for the group size', () => {
+  assert.deepEqual(settleMath('2'), { people: 2, debts: 1, payments: 1 });
   assert.deepEqual(settleMath('4'), { people: 4, debts: 6, payments: 3 });
   assert.deepEqual(settleMath('8'), { people: 8, debts: 28, payments: 7 });
   assert.deepEqual(settleMath('12'), { people: 10, debts: 45, payments: 9 });

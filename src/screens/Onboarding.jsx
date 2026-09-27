@@ -187,8 +187,8 @@ export default function Onboarding({ onDone }) {
           {acct.user && <p className="field-help" style={{ marginTop: 0 }}>Signed in as {acct.user.email}. Your rounds will save to your account.</p>}
           <label className="field-label" htmlFor="ob-name">Your name</label>
           <input id="ob-name" className="name-input" value={name} onChange={e => setName(e.target.value)} placeholder="e.g. Sam" autoComplete="given-name" maxLength={24} />
-          <label className="field-label">Handicap index <span className="opt">optional</span></label>
-          <button className="amt-btn field-btn" onClick={() => setPad(true)}>{index == null ? 'Add' : formatIndex(index)}</button>
+          <label className="field-label" htmlFor="ob-index">Handicap index <span className="opt">optional</span></label>
+          <button id="ob-index" className="amt-btn field-btn" onClick={() => setPad(true)}>{index == null ? 'Add' : formatIndex(index)}</button>
           <p className="field-help">No handicap? Leave it blank. When you do use them, the best player gets no strokes and everyone else gets the difference.</p>
           <button className={`list-item ob-agree ${agreed ? 'on' : ''}`} role="checkbox" aria-checked={agreed} onClick={() => setAgreed(v => !v)}>
             <span className={`li-check ${agreed ? 'on' : ''}`}>{agreed && <Icon name="check" />}</span>
@@ -255,6 +255,8 @@ function SampleMoney({ game }) {
 /** Debts between the group against the payments that square them. */
 function FewestPayments({ size }) {
   const m = settleMath(size);
+  // Two of you: one debt, one payment, so there's nothing to show being cut down
+  if (m.debts <= m.payments) return null;
   return (
     <div className="block ob-sample ob-fewest">
       <div><div className="ob-big d">{m.debts}</div><div className="li-sub">possible debts between {m.people} of you</div></div>

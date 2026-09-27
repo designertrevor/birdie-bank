@@ -95,10 +95,11 @@ export const settleLabel = settle => ({ app: 'A payment app after', cash: 'Cash 
 /**
  * Settling up with everyone owing everyone: how many debts there can be between the group, and
  * how few payments square them. With n people, every pair can owe (n choose 2), and n - 1
- * payments always cover it. "9 or more" is shown as 10.
+ * payments always cover it. "9 or more" is shown as 10. Two of you is one debt and one payment,
+ * so there's nothing to cut down (the payoff skips the picture then).
  */
 export function settleMath(size) {
-  const n = { 2: 4, 4: 4, 8: 8, 12: 10 }[size] || 4;
+  const n = { 2: 2, 4: 4, 8: 8, 12: 10 }[size] || 4;
   return { people: n, debts: (n * (n - 1)) / 2, payments: n - 1 };
 }
 

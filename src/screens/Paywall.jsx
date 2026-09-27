@@ -2,7 +2,7 @@
 // provider is wired up yet, so both buttons just record the answer and move on. Each design is
 // a variant (see VARIANTS in lib/paywall.js); add a view to VIEWS below to test another one.
 import { useEffect, useState } from 'react';
-import { Icon, Screen, useUI } from '../components/ui.jsx';
+import { Header, Icon, Screen, useUI } from '../components/ui.jsx';
 import { getState, update } from '../lib/store.js';
 import { useNav } from '../lib/nav.js';
 import { GAMES } from '../lib/round.js';
@@ -25,23 +25,26 @@ export default function Paywall({ source = 'onboarding' }) {
   const answer = choice => {
     update(st => { st.paywall = { ...(st.paywall || {}), ...paywallAnswer({ variant, choice, plan, source }) }; });
     showToast(choice === 'trial'
-      ? `Pro trial on. We’ll remind you on day ${REMIND_DAY}.`
+      ? (PRICES_ARE_PLACEHOLDERS ? 'Pro trial preview on. Nothing is charged.' : `Pro trial on. We’ll remind you on day ${REMIND_DAY}.`)
       : 'You’re on Free. Your round still works.');
     nav.pop();
   };
 
   const View = VIEWS[variant] || VIEWS.c;
-  return <View plan={plan} setPlan={setPlan} onTrial={() => answer('trial')} onFree={() => answer('free')} freeWayOut={VARIANTS[variant]?.freeWayOut ?? true} />;
+  // From Settings it's a look at Pro, so it closes without an answer. After onboarding, "Keep scoring for free" is the way out
+  const onClose = source === 'settings' ? () => nav.pop() : null;
+  return <View plan={plan} setPlan={setPlan} onClose={onClose} onTrial={() => answer('trial')} onFree={() => answer('free')} freeWayOut={VARIANTS[variant]?.freeWayOut ?? true} />;
 }
 
 /** C: "Trial with a free way out". The trial timeline, the plans, the free promise and a full free button. */
-function TrialWithFreeWayOut({ plan, setPlan, onTrial, onFree, freeWayOut }) {
+function TrialWithFreeWayOut({ plan, setPlan, onClose, onTrial, onFree, freeWayOut }) {
   const [start] = useState(() => new Date());
   const steps = trialTimeline(start, { planned: Object.values(getState().plans || {}).some(p => p.host) });
   const save = annualSavings();
   const games = Object.keys(GAMES).length;
   return (
     <Screen className="paywall">
+      {onClose && <Header title="" onClose={onClose} />}
       <div className="scroll">
         <div className="pw-hero">
           <div className="pw-badge"><Icon name="star" fill /></div>
