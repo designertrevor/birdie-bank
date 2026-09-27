@@ -23,7 +23,7 @@ export default class ErrorBoundary extends Component {
           <div className="et" style={{ fontFamily: 'var(--display)', fontSize: 26, fontWeight: 800, marginBottom: 8 }}>Something went wrong</div>
           <div className="es" style={{ color: 'var(--mute)', marginBottom: 20 }}>Your scores and rounds are safe. Head back and carry on.</div>
           <pre style={{ fontSize: 11, color: 'var(--mute)', whiteSpace: 'pre-wrap', textAlign: 'left', marginBottom: 20 }}>{String(this.state.error?.message || this.state.error)}</pre>
-          <button className="full-btn" onClick={this.reset}>Back to History</button>
+          <button className="full-btn" onClick={this.reset}>Back to Up next</button>
         </div>
       </div>
     );

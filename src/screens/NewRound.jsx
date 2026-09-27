@@ -115,7 +115,7 @@ export default function NewRound({ rematch }) {
             <p className="hint-card"><Icon name="user-plus" fill /> {listNames(pre.missing)} {pre.missing.length === 1 ? 'isn’t' : 'aren’t'} saved on this phone yet. Add them to run it back with the whole group.</p>
           )}
         </>
-      ) : <Header title="Round ready" small onClose={() => nav.reset('history')} />}
+      ) : <Header title="Round ready" small onClose={() => nav.reset('upnext')} />}
       {step === 0 && <GameStep usual={usual} onUsual={repeatUsual} game={game} setGame={gm => { setGame(gm); if (!GAMES[gm].holes.includes(holesCount)) setHolesCount(GAMES[gm].holes[0]); }} holesCount={holesCount} setHolesCount={setHolesCount} onNext={() => setStep(1)} />}
       {step === 1 && <CourseStep courseId={courseId} setCourseId={id => { setCourseId(id); setTees({}); setStartHole(null); }} holesCount={holesCount} nine={nine} setNine={setNine} onNext={() => setStep(2)} />}
       {step === 2 && course && (
@@ -128,7 +128,7 @@ export default function NewRound({ rematch }) {
           opts={opts} setOpts={setOpts} useHc={useHc} setUseHc={setUseHc} startHole={startHole} setStartHole={setStartHole} onStart={start}
           teams={teams} setTeams={setTeams} />
       )}
-      {step === 4 && created && <ReadyStep round={created} onStart={() => nav.reset('history', ['play', { id: created.id }])} />}
+      {step === 4 && created && <ReadyStep round={created} onStart={() => nav.reset('upnext', ['play', { id: created.id }])} />}
     </Screen>
   );
 }

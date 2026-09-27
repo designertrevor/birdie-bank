@@ -54,7 +54,7 @@ export default function RoundDetail({ id, celebrate }) {
     const s = state;
     if (s.activeRoundId && s.activeRoundId !== id && s.rounds[s.activeRoundId]?.status === 'active') { showToast('Finish your current round first'); return; }
     update(st => { st.rounds[id].status = 'active'; st.activeRoundId = id; st.rounds[id].current = 0; });
-    nav.reset('history', ['play', { id }]);
+    nav.reset('upnext', ['play', { id }]);
   };
 
   let heroTitle, heroAmt;

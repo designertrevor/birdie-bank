@@ -24,7 +24,7 @@ export default function Play({ id }) {
   if (!round) {
     return (
       <Screen>
-        <Empty title="Round not found" text="It may have been discarded." action={<button className="ec" onClick={() => nav.reset('history')}>Back to History</button>} />
+        <Empty title="Round not found" text="It may have been discarded." action={<button className="ec" onClick={() => nav.reset('upnext')}>Back to Up next</button>} />
       </Screen>
     );
   }
@@ -179,7 +179,7 @@ function PlayRound({ round }) {
       const sure = await ask({ title: 'Discard for good?', text: 'Scores and bets from this round will be deleted.', confirmLabel: 'Delete round', danger: true });
       if (!sure) return;
       update(s => { delete s.rounds[round.id]; if (s.activeRoundId === round.id) s.activeRoundId = null; });
-      nav.reset('history');
+      nav.reset('upnext');
     }
   };
 
