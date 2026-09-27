@@ -540,7 +540,7 @@ function BetsSheet({ round, onClose }) {
             <p className="field-help">
               {whole
                 ? `Every hole is worked out again at the new bets, including the ${played} already played.`
-                : `The ${played} hole${played === 1 ? '' : 's'} already played keep${played === 1 ? 's' : ''} ${played === 1 ? 'its' : 'their'} bets.${legs ? ' A bet already under way, like a leg or a match, keeps its amount too.' : ''}`}
+                : `The ${played} hole${played === 1 ? '' : 's'} already played keep${played === 1 ? 's' : ''} ${played === 1 ? 'its' : 'their'} bets.${legs ? ' A bet already under way, like a leg or a match, keeps what it started with.' : ''}`}
             </p>
           </div>
         )}
