@@ -23,7 +23,9 @@ The plan for growing Birdie Bank into a $10k/mo business, and the checklist we w
 
 **Shipped overnight 2026-09-28:** upcoming rounds (area 21): plan ahead, who's in with a nudge, the group vote on the game and the bet, the RSVP link for friends, the morning text and the roll call. Run `supabase/2026-09-28-upcoming.sql` to turn on the group link.
 
-**Next in S2:** one shared tab for the group and carry-overs (area 7), organizer onboarding and the paywall test (areas 3 and 11), several games in one round, and the quick logo (area 16).
+**Shipped overnight 2026-09-28 (onboarding):** organizer onboarding: four questions one a screen with payoffs, "Here's your group", then "Set up your next round" straight into the plan flow (the first game they play is suggested, the others go on the ballot). The paywall (option C, trial with a free way out) is built as a preview behind a flag: open the app with `?paywall=on` to see it, `?paywall=off` to hide it. Placeholder prices, nothing charged.
+
+**Next in S2:** one shared tab for the group and carry-overs (area 7), real payments for the paywall test (Stripe, area 11), several games in one round, and the quick logo (area 16).
 
 **The big date:** the creator test (S4) runs February to April 2027, when golf season starts back up. Everything before it is about being ready: a product groups keep using, a smooth path from video to paying, and an App Store app.
 
@@ -164,9 +166,9 @@ Put more money into the winning creators and copy their video formats with other
 - [x] Three-step first run: welcome, the "friendly wagers" disclaimer, your name and handicap
 - [x] `S1` Two paths: the organizer setting up a game, and the invited player arriving from a link (pick your name, you're in) (2026-09-25)
 - [x] `S1` Guests play without an account, then "You won $22. Save it to your tab" leads to sign-up (2026-09-25)
-- [ ] `S2` Organizer onboarding as a series of questions that sells as it goes: what games your group plays, how many of you, how you settle up now, who ends up doing the math
-- [ ] `S2` Onboarding ends with "Set up your next round" and inviting the group, so a new organizer gets value on day one, not on Saturday
-- [ ] `S2` The paywall and free trial at the end of organizer onboarding (see area 11)
+- [x] `S2` Organizer onboarding as a series of questions that sells as it goes: what games your group plays, how many of you, how you settle up now, who ends up doing the math (2026-09-28)
+- [x] `S2` Onboarding ends with "Set up your next round" and inviting the group, so a new organizer gets value on day one, not on Saturday (2026-09-28)
+- [ ] `S2` (partial) The paywall and free trial at the end of organizer onboarding (see area 11). The screen is built (option C) and shows after planning the next round, but it's UI only and off unless the flag is on; nothing is charged yet
 - [ ] `S3` Ask for notification permission at the right moment, not on first launch
 
 ### 4. Invites and joining
@@ -251,8 +253,8 @@ Put more money into the winning creators and copy their video formats with other
 
 ### 11. Upgrading and paywalls
 - [ ] `S2` Test what's free and what's Pro with the S2 groups, and talk to them about price (see open questions)
-- [ ] `S2` Publish the free promise: a short list of what's free forever, shown on the pricing page and in the app. Nothing on it ever moves to Pro.
-- [ ] `S2` Paywall with a 7 to 14 day free trial at the end of organizer onboarding. Invited players never see it.
+- [ ] `S2` (partial) Publish the free promise: a short list of what's free forever, shown on the pricing page and in the app. Nothing on it ever moves to Pro. In the app it's on the paywall; no pricing page yet
+- [ ] `S2` (partial) Paywall with a 7 to 14 day free trial at the end of organizer onboarding. Invited players never see it. Option C (14 days, a trial timeline, both plans, "Keep scoring for free") is built as a preview behind a flag, with variants by weight ready for an A/B test; it needs real payments (Stripe) before it turns on
 - [ ] `S2` The free trial works on monthly and annual plans, not just annual
 - [ ] `S2` A Pro preview: organizers can see what the season tab and other Pro features look like before paying
 - [ ] `S3` Early payers keep their price when prices go up
@@ -412,6 +414,7 @@ Kept light on purpose. Groups already have a group text, so Birdie Bank adds to 
 - 2026-09-27: Product. Never delete a round in progress: several can be going at once. Share images hide amounts by default and remember each person's choice. Pay buttons only show to the person paying or owed, and each person picks their own payment app (Venmo, Cash App, PayPal or Zelle; Zelle shows the handle with a copy button). A deeper pink (#d42a6b) goes behind small white text. Editing a finished round keeps it counting on the Tab. Database courses get a soft tag and start on the middle tee. Join previews keep first names. The after-round prompt is "How was Birdie Bank today?" and reactions save as feedback. The spare cent on a 3-way split is paid by the first-listed player, and the player-left rules stay.
 - 2026-09-27: Words. The money screen is the Tab everywhere. "Group" (crew only for saved lists), "bets" not "stakes", "each player puts in" not "ante", "Gets 5 strokes" not "HC 5", and one delete verb. The home tab is "Up next". Crews are secondary everywhere, and no core feature is built around them.
 - 2026-09-27: Needs check proposals approved: add a player mid-round and "Add me", honest head-to-head, request links on the Tab, Snake and Hammer, skins and Nassau house rules, bragging-rights mode, Run it back, only players edit scores, per-game handicap % suggestions, several groups in one game moved to S3, a trip tab in S2 and trip formats in S3.
+- 2026-09-28: The paywall stays off for everyone until real payments exist: it's a preview behind a flag, so no one taps "Start my free trial" and expects something to happen. Onboarding ends with planning the next round, and the paywall comes after the plan (cancelling the plan still lands on it). The friendly wagers note is a checkbox on the name screen, as in the wireframe.
 
 ## Progress log
 
@@ -434,3 +437,4 @@ Kept light on purpose. Groups already have a group text, so Birdie Bank adds to 
 - 2026-09-27 (overnight): Joining from a link is now an invite card, seat tiles and a strokes check, with "Not on the list? Add me" for people the scorekeeper forgot. Scorekeepers can add a player mid-round; their money counts from the hole they join. Seat requests ride in the existing live round records, so no SQL is needed.
 - 2026-09-27 (overnight, integration): All six wave 1 streams merged into main (money rules, new games, product and copy, the Tab and Players, the app shell, joining). Head-to-head now also covers Snake, Hammer, the skins pot and bets changed mid-round; the last copy audit items are in (the Tab, Players, Settings, joining). Added the approved needs-check proposals and the missing games to their areas. Tests: 304 passing. Checklist: 42 of 174 done (24%), up from 17 of 144 (12%) on 2026-09-26.
 - 2026-09-28 (overnight): Upcoming rounds. Pick the game, then "Schedule for later" for the day, course and tee time; invite players or just send one group link. Friends answer in, maybe or out and vote on the game and the bet from an RSVP card with no install and no paywall; the organizer sees the counts, the tally and a nudge. Any member sends the morning text, and a roll call at the tee starts the voted game in one tap. New tables in `supabase/2026-09-28-upcoming.sql` (not run yet; plans stay on the organizer's phone until it is). Tests: 321 passing. Checklist: 45 of 175 done (26%).
+- 2026-09-28 (overnight): Organizer onboarding. A welcome, then what the group plays, how many, how they settle up and who does the math, one a screen, with a payoff after three answers that speaks to that answer (never assuming Venmo). Your name comes with the friendly wagers note as a checkbox. "Here's your group" leads into planning the next round with the answers filled in, and then the paywall preview: option C with a 14-day trial timeline, yearly and monthly plans (placeholder prices), the free promise and a full "Keep scoring for free" button. It's UI only behind a flag (on in local dev, `?paywall=on` anywhere), and each phone keeps one variant so an A/B test can be added later. Invited players never see onboarding or the paywall. Tests: 343 passing. Checklist: 47 of 175 done (27%).

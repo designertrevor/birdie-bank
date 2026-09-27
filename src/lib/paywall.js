@@ -133,11 +133,11 @@ export function planStatus(state, now = Date.now()) {
 const DAY = 24 * 60 * 60 * 1000;
 const fmtDay = d => d.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
 
-/** The trial, step by step: today, the reminder, and when Pro starts. */
-export function trialTimeline(start = new Date(), { days = TRIAL_DAYS, remind = REMIND_DAY } = {}) {
+/** The trial, step by step: today, the reminder, and when Pro starts. `planned`: they just planned a round. */
+export function trialTimeline(start = new Date(), { days = TRIAL_DAYS, remind = REMIND_DAY, planned = false } = {}) {
   const at = n => new Date(start.getTime() + n * DAY);
   return [
-    { key: 'today', icon: 'check', title: 'Today', when: null, text: 'Everything in Pro. Your next round is set up and the group link is ready.' },
+    { key: 'today', icon: 'check', title: 'Today', when: null, text: planned ? 'Everything in Pro. Your next round is set up and the group link is ready.' : 'Everything in Pro, starting with your next round.' },
     { key: 'remind', icon: 'bell', title: `Day ${remind}`, when: fmtDay(at(remind)), text: 'We remind you the trial is ending. No surprises.' },
     { key: 'start', icon: 'star', title: `Day ${days}`, when: fmtDay(at(days)), text: 'Pro starts, unless you cancel. Two taps.' },
   ];

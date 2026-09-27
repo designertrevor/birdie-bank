@@ -46,6 +46,7 @@ test('game lists read naturally', () => {
   assert.equal(gameList([]), 'Skins');
   assert.equal(gameList(['wolf']), 'Wolf');
   assert.equal(gameList(['wolf', 'skins']), 'Wolf and Skins');
+  assert.equal(gameList(['wolf', 'skins', 'nassau']), 'Wolf, Skins and Nassau');
   assert.equal(gameList(['wolf', 'skins', 'nassau', 'vegas']), 'Wolf, Skins and 2 more');
   assert.equal(gameList(['nope', 'match']), 'Match play');
 });

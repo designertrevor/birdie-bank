@@ -37,7 +37,7 @@ export default function Paywall({ source = 'onboarding' }) {
 /** C: "Trial with a free way out". The trial timeline, the plans, the free promise and a full free button. */
 function TrialWithFreeWayOut({ plan, setPlan, onTrial, onFree, freeWayOut }) {
   const [start] = useState(() => new Date());
-  const steps = trialTimeline(start);
+  const steps = trialTimeline(start, { planned: Object.values(getState().plans || {}).some(p => p.host) });
   const save = annualSavings();
   const games = Object.keys(GAMES).length;
   return (

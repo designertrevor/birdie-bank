@@ -119,7 +119,7 @@ export default function Onboarding({ onDone }) {
               const g = GAMES[k];
               const on = a.games.includes(k);
               return (
-                <button key={k} className={`ob-tile ${on ? 'on' : ''}`} aria-pressed={on} onClick={() => set('games', toggleGame(a.games, k))}>
+                <button key={k} className={`ob-tile ${on ? 'on' : ''}`} aria-pressed={on} onClick={() => setA(x => ({ ...x, games: toggleGame(x.games, k) }))}>
                   <span className="ob-tile-top"><Icon name={g.icon} fill />{on && <Icon name="check-circle" fill className="ob-tick" />}</span>
                   <span className="ob-tile-name">{g.name}</span>
                   <span className="ob-tile-sub">{g.blurb}</span>

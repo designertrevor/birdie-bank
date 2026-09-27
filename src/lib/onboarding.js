@@ -68,12 +68,13 @@ export function toggleGame(games = [], key) {
 
 const nameOf = k => GAMES[k]?.name || k;
 
-/** "Skins", "Skins and Wolf", "Skins, Wolf and 2 more". */
+/** "Skins", "Skins and Wolf", "Skins, Wolf and Nassau", "Skins, Wolf and 2 more". */
 export function gameList(games = []) {
   const names = games.filter(k => GAMES[k]).map(nameOf);
   if (!names.length) return 'Skins';
   if (names.length === 1) return names[0];
   if (names.length === 2) return `${names[0]} and ${names[1]}`;
+  if (names.length === 3) return `${names[0]}, ${names[1]} and ${names[2]}`;
   return `${names[0]}, ${names[1]} and ${names.length - 2} more`;
 }
 

@@ -21,6 +21,8 @@ test('the trial reminds before it ends', () => {
   assert.equal(tl[1].title, `Day ${REMIND_DAY}`);
   assert.equal(tl[1].when, 'Fri, Oct 9');
   assert.equal(tl[2].when, 'Sun, Oct 11');
+  assert.doesNotMatch(tl[0].text, /set up/);
+  assert.match(trialTimeline(new Date(), { planned: true })[0].text, /group link is ready/);
 });
 
 test('the free promise counts the games', () => {
