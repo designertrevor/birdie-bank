@@ -53,6 +53,7 @@ function fresh() {
     rounds: {},
     activeRoundId: null,
     settlements: [],
+    plans: {},         // upcoming rounds (see plans.js)
     settings: structuredClone(DEFAULT_SETTINGS),
   };
 }

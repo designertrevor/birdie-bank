@@ -9,6 +9,8 @@ import { defaultTeams, teamsProblem } from './teams.js';
 import { defaultTee } from './courses.js';
 
 export const RSVPS = ['in', 'maybe', 'out'];
+/** The organizer's own key on a plan. Not their player id, so signing in (which can change it) never loses their answer. */
+export const HOST = 'host';
 export const RSVP_LABEL = { in: 'In', maybe: 'Maybe', out: 'Out' };
 
 /** Dollar amounts the organizer can put up for a vote. */
@@ -317,6 +319,11 @@ export function nudgeText(plan, name, link, now = new Date()) {
   return [`Hey ${first(name) || 'there'}, you in for golf ${dayWords(plan, now)}? ${plan.course?.name || ''}${t ? `, ${t}` : ''}.`, 'Tap to answer:', link].filter(Boolean).join('\n');
 }
 
+/** A nudge to the whole group for the answers still missing. */
+export function nudgeAllText(plan, link, now = new Date()) {
+  return [`Still need answers for golf ${dayWords(plan, now)}. In, maybe or out? Vote on the game and the bet while you’re there:`, link].filter(Boolean).join('\n');
+}
+
 /** The morning-of text: tee time, who's in, and the group's game and bet. */
 export function morningText(plan, link, settings, now = new Date()) {
   const { game, bet } = planChoice(plan);
@@ -374,7 +381,7 @@ export function planLink(origin, code, who = null) {
  * A new plan from the setup screens. The organizer is on it and in, and their suggestion is
  * their own vote until they change it.
  */
-export function newPlan({ id, hostWho, hostName, game, holesCount, nine, date, teeTime, course, people, ballot, suggestedBet, useHc = true, now = Date.now() }) {
+export function newPlan({ id, hostWho = HOST, hostName, game, holesCount, nine, date, teeTime, course, people, ballot, suggestedBet, useHc = true, now = Date.now() }) {
   const games = [game, ...(ballot?.games || []).filter(g => g !== game && GAMES[g])].slice(0, MAX_BALLOT_GAMES);
   const bets = [...new Set([...(ballot?.bets || []), suggestedBet].filter(b => Number(b) > 0).map(Number))].sort((a, b) => a - b);
   const hostFirst = first(hostName);
