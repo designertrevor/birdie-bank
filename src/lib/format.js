@@ -9,6 +9,11 @@ export function formatIndex(i) {
   return (i < 0 ? '+' : '') + s;
 }
 
+/** Handicap allowance in words: "Full strokes", "90% of strokes". */
+export function hcPctLabel(pct) {
+  return pct == null || pct >= 100 ? 'Full strokes' : `${pct}% of strokes`;
+}
+
 export function playerLabel(p, me) {
   return p.id === me ? `${p.name} (you)` : p.name;
 }

@@ -5,6 +5,7 @@ import { GAMES, holeAtPos, holeComplete, playsHole, roundLegs, roundNotes, round
 import { matchLabel } from '../lib/games.js';
 import { money } from '../lib/golf.js';
 import { useNav } from '../lib/nav.js';
+import { leaveRound } from '../lib/rounds.js';
 import { meFor, roundDate, roundPlayerName, shareRound } from '../lib/format.js';
 import { accountsEnabled, useAccount } from '../lib/cloud.js';
 import { SignInSheet } from '../components/Account.jsx';
@@ -42,25 +43,25 @@ export default function RoundDetail({ id, celebrate }) {
   const allSquare = res.standings.every(p => p.amount === 0);
 
   const del = async () => {
-    if (!(await ask({ title: 'Delete this round?', text: 'It’ll be removed from History and the Ledger.', confirmLabel: 'Delete round', danger: true }))) return;
+    if (!(await ask({ title: 'Delete this round?', text: 'It’ll be removed from History and the tab.', confirmLabel: 'Delete round', danger: true }))) return;
     update(s => {
       delete s.rounds[id];
-      if (s.activeRoundId === id) s.activeRoundId = null;
+      leaveRound(s, id);
       s.settlements = s.settlements.filter(x => x.roundId !== id);
     });
     nav.reset('history');
   };
-  const edit = async () => {
-    const s = state;
-    if (s.activeRoundId && s.activeRoundId !== id && s.rounds[s.activeRoundId]?.status === 'active') { showToast('Finish your current round first'); return; }
-    update(st => { st.rounds[id].status = 'active'; st.activeRoundId = id; st.rounds[id].current = 0; });
+  // Fixing scores keeps the round finished, so it keeps counting on the tab while you edit.
+  // Any other round in progress is left alone.
+  const edit = () => {
+    update(st => { st.rounds[id].editing = true; st.rounds[id].current = 0; });
     nav.reset('history', ['play', { id }]);
   };
 
   let heroTitle, heroAmt;
   if (allSquare) { heroTitle = 'All square'; heroAmt = '$0'; }
   else if (tie) { heroTitle = `${res.standings.filter(p => p.amount === top.amount).map(p => p.name).join(' & ')} tie for top`; heroAmt = money(top.amount, { sign: true }); }
-  else { heroTitle = `${top.name} takes the pot`; heroAmt = money(top.amount, { sign: true }); }
+  else { heroTitle = `${top.name} wins the day`; heroAmt = money(top.amount, { sign: true }); }
 
   const saveRow = accountsEnabled && !acct.user && round.status === 'done' && (
     <button className="set-row" onClick={() => setSigningIn(true)}>
@@ -108,21 +109,21 @@ export default function RoundDetail({ id, celebrate }) {
         {res.standings.map((p, i) => (
           <div key={p.id} className="settle-row">
             <div className="sr">{i + 1}</div>
-            <div className="sn">{p.name}{p.plays ? <span className="li-sub"> · got {p.plays}</span> : null}</div>
+            <div className="sn">{p.name}{p.plays ? <span className="li-sub"> · got {p.plays} stroke{p.plays === 1 ? '' : 's'}</span> : null}</div>
             <div className={`sa ${p.amount > 0 ? 'pos' : p.amount < 0 ? 'neg' : ''}`}>{money(p.amount, { sign: true })}</div>
           </div>
         ))}
 
         <div className="sec-label">Who pays who</div>
         <div style={{ padding: '0 16px' }}>
-          {res.transfers.length === 0 && <p className="hint-card" style={{ margin: 0 }}><Icon name="handshake" fill /> Nobody owes anybody. Beers are on whoever lost the match.</p>}
+          {res.transfers.length === 0 && <p className="hint-card" style={{ margin: 0 }}><Icon name="handshake" fill /> Nobody owes anybody. First round’s on whoever three-putted last.</p>}
           {res.transfers.map(t => (
             <div key={t.from + t.to} className="pay-row">
               <span className="pf">{roundPlayerName(round, t.from)}</span><span className="pa"><Icon name="arrow-right" /></span><span className="pt">{roundPlayerName(round, t.to)}</span>
               <span className="pm">{money(t.amount)}</span>
             </div>
           ))}
-          {res.transfers.length > 0 && <p className="field-help" style={{ padding: '0 4px' }}>Fewest payments to square everyone up. Track them in the Ledger.</p>}
+          {res.transfers.length > 0 && <p className="field-help" style={{ padding: '0 4px' }}>Fewest payments to square everyone up. They’re on the tab until marked paid.</p>}
         </div>
 
         <HowWasIt round={round} />
