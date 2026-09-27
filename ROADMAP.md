@@ -201,6 +201,7 @@ Put more money into the winning creators and copy their video formats with other
 
 ### 8. History and stats
 - [x] Round history, season stats, head-to-head
+- [x] `S2` History by month: each month shows its round count and your net, one line per round, and a Season, Month or Custom range that also drives a chart of your net over time (2026-09-27)
 - [ ] `S3` Deeper stats for Pro: press win rate, results by game and by course
 - [ ] `S5` Handicap trend from your rounds, as a guide next to your official index (GameBook users ask for handicap tracking). The official index still comes from GHIN or your club.
 - [ ] `S5` Year in review ("Birdie Bank Wrapped")
@@ -311,6 +312,8 @@ Put more money into the winning creators and copy their video formats with other
 The goal: people open the app on days they don't play, and Saturday feels bigger because of it.
 
 **Setting up the next round**
+- [x] `S2` "Up next" home tab and new bottom nav (Up next, Tab, Play, History, Players, with Settings behind your avatar): a round in progress, your tab at a glance, your last result, and a prompt to plan the next round. Upcoming rounds get their own slot here (2026-09-27)
+- [x] `S2` "Run it back" on a finished round: setup opens with the same game, course, group and bets (2026-09-27)
 - [ ] `S2` Upcoming rounds: date, course, tee time, and games and stakes set during the week, not on the first tee
 - [ ] `S2` Who's in: each player answers in, out or maybe, and the organizer sees the count
 - [ ] `S2` Bets set ahead of time, so the round starts in one tap on the first tee
@@ -387,3 +390,4 @@ Kept light on purpose. Groups already have a group text, so Birdie Bank adds to 
 - 2026-09-26: From a Mobbin review and clickable wireframes: money is now pinned on the Play screen from hole 1 and moves with every tap (it used to appear only after a hole was saved, and Banker's bets step hid it). Setup asks one question per step with "Your usual" and a "Round ready" invite screen. The end of a round is now reveal, settle up with Venmo links, then share.
 - 2026-09-26: Changed the S1 gate to sign-in for anyone plus live feedback, moved the quick logo to early S2, and added a needs check by kind of user and an ongoing bug and polish pass (area 20). Checklist: 17 of 144 done (12%), up from 5 of 141 (4%) when the roadmap started.
 - 2026-09-26 (overnight): Money math tested for all 16 games (5 bugs fixed, including cent rounding), "A player left" and forgiving round endings, per-bet reveal and a results image, feedback prompts in natural places, join link previews, course search ready for a GolfCourseAPI key, stronger offline sync and a service worker that caches the whole app, a faster first load (main bundle 407 KB to about 270 KB), and an accessibility pass. Research: needs check, rules check and copy audit, plus wireframes for the other app areas, rounds set up ahead of time, and organizer onboarding.
+- 2026-09-27 (overnight): New app shell. Up next is the home tab (round in progress, your tab at a glance, last result, plan your next round), the bottom nav is Up next, Tab, Play, History, Players, and Settings moved behind your avatar. History is grouped by month with totals, with a Season, Month or Custom range and a chart of your net. "Run it back" starts a round like a finished one.
