@@ -84,14 +84,36 @@ export function GameOptions({ game, get, set, onAmount, holesCount = 18, compact
           {get('nassau.pressMode') !== 'off' && seg('nassau.threshold', [1, 2, 3].map(n => ({ value: n, label: `${n} hole${n > 1 ? 's' : ''}` })), 'Can press when down by')}
           {help({ off: 'Just the three bets.', manual: 'A Press button appears when a player is eligible.', auto: 'Presses start automatically as soon as a player is eligible.' }[get('nassau.pressMode')])}
         </div>
+        {toggle('nassau.turnPress', 'Press at the turn', `Whoever lost the ${holesCount === 9 ? 'first 4' : 'front 9'} can press the ${holesCount === 9 ? 'last 5' : 'back 9'}, however far down`)}
+        {get('nassau.pressMode') !== 'off' && toggle('nassau.noLastPress', 'No press on the last hole', holesCount === 9 ? 'Nobody can start a press on the 4th or the 9th' : 'Nobody can start a press on the 9th or the 18th')}
       </>;
-    case 'skins':
+    case 'skins': {
+      const pot = get('skins.payout') === 'pot';
+      const both = get('skins.kind') === 'both';
+      const stake = get('skins.stake') ?? get('skins.value');
       return <>
         {label('Skins')}
-        {amount('skins.value', 'Per skin', { label: 'Value per skin' })}
-        {example(`Win a skin: up ${money(get('skins.value') * others)}, ${each(get('skins.value'))}.`)}
+        {pot
+          ? amount('skins.stake', both ? 'Each player puts in, per pot' : 'Each player puts in', { label: both ? 'Each puts in, per pot' : 'Each player puts in' })
+          : amount('skins.value', 'Per skin', { label: 'Value per skin' })}
+        {example(pot
+          ? `With ${n} players the pot is ${money(stake * n)}${both ? ' for net and again for gross' : ''}. Win 2 of 8 skins and you take a quarter of it, ${money(stake * n / 4)}.`
+          : `Win a skin: up ${money(get('skins.value') * others)}, ${each(get('skins.value'))}.`)}
+        <div className="block">
+          {seg('skins.payout', [{ value: 'per', label: 'Per skin' }, { value: 'pot', label: 'Pot' }], 'Payout', true)}
+          {help(pot ? 'Everyone puts in, and the pot is split by skins won. No skins won, everyone gets theirs back.' : 'Every other player pays the winner for each skin.')}
+          {seg('skins.kind', [{ value: 'net', label: 'Net' }, { value: 'gross', label: 'Gross' }, { value: 'both', label: 'Both' }], 'Scores')}
+          {help({ net: 'Net scores, with handicap strokes.', gross: 'Gross scores, no strokes.', both: 'A net skin and a gross skin on every hole, each with its own carryovers.' }[get('skins.kind') || 'net'])}
+        </div>
         {toggle('skins.carryover', 'Carryovers', 'Tied holes roll the skin to the next hole')}
+        {get('skins.carryover') && (
+          <div className="block">
+            {seg('skins.lastCarry', [{ value: 'void', label: 'Nobody' }, { value: 'split', label: 'Split' }, { value: 'playoff', label: 'Playoff' }], 'Still carried after the last hole', true)}
+            {help({ void: 'Skins still carried after the last hole go unclaimed.', split: 'The players tied on the last hole share them.', playoff: 'The players tied on the last hole play off for them. Pick the winner on the results.' }[get('skins.lastCarry') || 'void'])}
+          </div>
+        )}
       </>;
+    }
     case 'wolf':
       return <>
         {label('Points')}
@@ -110,6 +132,21 @@ export function GameOptions({ game, get, set, onAmount, holesCount = 18, compact
         {label('Presses')}
         {presses('match')}
       </>;
+    case 'hammer': {
+      const max = get('hammer.max') ?? 3;
+      return <>
+        {label('Stakes')}
+        {amount('hammer.stake', 'Per hole', { label: 'Each hole starts at' })}
+        {example(`Win a ${money(get('hammer.stake'))} hole after one hammer and you're up ${money(get('hammer.stake') * 2)}. Fold after a hammer and you're down ${money(get('hammer.stake'))}.`)}
+        <div className="block">
+          {seg('hammer.max', [{ value: 1, label: '1' }, { value: 2, label: '2' }, { value: 3, label: '3' }, { value: 0, label: 'No limit' }], 'Most hammers on a hole', true)}
+          {help(max ? `A hole can go up to ${money(get('hammer.stake') * 2 ** max)}.` : 'Hammer back and forth as long as you like. Brave.')}
+          {seg('hammer.who', [{ value: 'either', label: 'Either side' }, { value: 'trailing', label: 'Side behind' }], 'Who throws the first hammer')}
+          {help(get('hammer.who') === 'trailing' ? 'Only the side behind can throw the first hammer on a hole (either side when it’s level). Then it goes back and forth.' : 'Either side can throw the first hammer. Then it goes back and forth: nobody hammers twice in a row.')}
+        </div>
+        {note('Each hole goes to the lower net score (best ball with partners). Hammer to double the hole. The other side plays on at double, or folds and pays what it was worth before.')}
+      </>;
+    }
     case 'vegas':
       return <>
         {label('Stakes')}
@@ -220,6 +257,24 @@ export function GameOptions({ game, get, set, onAmount, holesCount = 18, compact
         {toggle('rabbit.tiesFree', 'Ties set it loose', 'Off, a halved hole changes nothing')}
         {note(holesCount === 9 ? 'Whoever holds the rabbit after the last hole wins the stake from everyone. Stop early and whoever holds it then is paid.' : 'Whoever holds the rabbit after hole 9 and again after hole 18 wins the stake from everyone. Stop early and whoever holds it then is paid.')}
       </>;
+    case 'snake': {
+      const growth = get('snake.growth') || 'flat';
+      const v = get('snake.stake');
+      return <>
+        {label('Stakes')}
+        {amount('snake.stake', growth === 'grow' ? 'Per three-putt' : 'Snake', { label: growth === 'grow' ? 'Per three-putt' : growth === 'double' ? 'First three-putt' : 'The snake' })}
+        {example(growth === 'flat'
+          ? `Hold the snake at the end: down ${money(v * others)}, ${money(v)} to each of the other ${others}.`
+          : growth === 'grow'
+            ? `Five three-putts make it ${money(v * 5)}: hold it at the end and you pay that to each of the other ${others}.`
+            : `It doubles with every three-putt: ${[1, 2, 3, 4].map(k => money(v * 2 ** (k - 1))).join(', ')}. Hold it at the end and pay that to each player.`)}
+        <div className="block">
+          {seg('snake.growth', [{ value: 'flat', label: 'Same all round' }, { value: 'grow', label: 'Grows' }, { value: 'double', label: 'Doubles' }], 'The snake', true)}
+        </div>
+        {holesCount === 18 && toggle('snake.nines', 'Each nine', 'Settle the snake at the turn, then a fresh one for the back')}
+        {note('Three-putt and you take the snake. The next three-putt takes it off you. Whoever holds it at the end pays everyone.')}
+      </>;
+    }
     default:
       return null;
   }

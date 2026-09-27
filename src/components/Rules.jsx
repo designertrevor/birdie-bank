@@ -41,6 +41,10 @@ const RULES = {
       </ul>],
       ['Handicaps', <p key="h">The lower handicap plays off scratch; the other player gets the difference in strokes on the hardest holes.</p>],
       ['Ties', <p key="t">A leg that ends all square pays nothing.</p>],
+      ['House rules', <ul key="hr">
+        <li><strong>Press at the turn</strong>: whoever lost the front nine can press the back nine at the turn, however far down. It’s a new bet on the back for the back’s amount.</li>
+        <li><strong>No press on the last hole</strong>: nobody can start a press on the 9th or the 18th. A one-hole bet is a coin flip.</li>
+      </ul>],
     ],
   },
   skins: {
@@ -49,7 +53,9 @@ const RULES = {
     sections: [
       ['Overview', <p key="o">Each hole is worth one skin. The player with the <strong>lowest net score, alone</strong>, wins it.</p>],
       ['Carryovers', <p key="c">If two or more players tie for low, nobody wins the skin. With carryovers on, it rolls onto the next hole, so the next skin can be worth 2, 3 or more.</p>],
-      ['Paying out', <p key="p">Every other player pays the skin value to the winner for each skin won. Skins still carried over after the last hole go unclaimed.</p>],
+      ['Paying out', <p key="p">Every other player pays the skin value to the winner for each skin won. Or play for a <strong>pot</strong>: everyone puts in the same amount and the pot is split by skins won.</p>],
+      ['Net and gross', <p key="g">Play net skins, gross skins, or both at once: a net skin and a gross skin on every hole, each with its own carryovers.</p>],
+      ['After the last hole', <p key="l">Skins still carried after the last hole go unclaimed by default. Or the players tied on the last hole <strong>split</strong> them, or play them off on a <strong>playoff</strong> hole.</p>],
     ],
   },
   wolf: {
@@ -81,6 +87,23 @@ const RULES = {
       ['Money', <p key="m">Each player on the winning side wins the stake; each on the losing side pays it. With uneven sides the loner plays every opponent for the stake, so in 1 v 3 they win or lose three stakes.</p>],
       ['Closing it out', <p key="c">A match ends as soon as one side leads by more holes than remain: 3&2 means 3 up with 2 to play. <strong>Dormie</strong> means the leader can’t lose. The remaining holes still count for other games you might be tracking, but not for this bet.</p>],
       ['Presses', <p key="p">Turn presses on and a side that falls behind by the threshold can start a fresh bet for the same stake over the remaining holes.</p>],
+    ],
+  },
+  hammer: {
+    title: 'How to play Hammer',
+    sub: '2–4 players · 1 v 1 or 2 v 2 · Double or fold',
+    sections: [
+      ['Overview', <p key="o">Every hole is its own bet, won by the lower net score (the better ball with partners). Ties push.</p>],
+      ['The hammer', <ul key="h">
+        <li>At any point on a hole, a side can <strong>hammer</strong>: the hole is now worth double.</li>
+        <li>The other side either <strong>plays on</strong> at double, or <strong>folds</strong> and pays what the hole was worth before the hammer.</li>
+        <li>Nobody hammers twice in a row. Once you’re hammered, the hammer is yours to throw back.</li>
+      </ul>],
+      ['House rules', <ul key="r">
+        <li><strong>Most hammers on a hole</strong>: 1, 2, 3 or no limit. Three hammers make a $5 hole worth $40.</li>
+        <li><strong>Who throws first</strong>: either side, or only the side behind on the day (either side when it’s level).</li>
+      </ul>],
+      ['Money', <p key="m">Each player on the winning side wins the hole’s value; each on the losing side pays it.</p>],
     ],
   },
   vegas: {
@@ -212,6 +235,20 @@ const RULES = {
       ['Ties', <p key="t">A tied hole changes nothing: the holder keeps it, and a loose rabbit stays loose.</p>],
       ['House rules', <p key="h">Prefer the old way? Switch to <strong>Steal it</strong> so any outright winner takes it straight away, and turn on <strong>Ties set it loose</strong>.</p>],
       ['Paying out', <p key="p">Whoever holds the rabbit after hole 9 wins the stake from everyone, and again after hole 18. Over nine holes there’s one payout. A loose rabbit at the turn pays nobody. Stop early and whoever holds it then is paid.</p>],
+    ],
+  },
+  snake: {
+    title: 'How to play Snake',
+    sub: '2–8 players · Don’t three-putt',
+    sections: [
+      ['Overview', <p key="o">Three-putt and you take the <strong>snake</strong>. The next player to three-putt takes it off you. Whoever holds it at the end pays each other player.</p>],
+      ['Same hole', <p key="s">Two three-putts on one hole? The last one to do it takes the snake. Tap them in the order they happened.</p>],
+      ['The snake', <ul key="v">
+        <li><strong>Same all round</strong>: the snake is worth the amount you set.</li>
+        <li><strong>Grows</strong>: every three-putt adds the amount, so five three-putts make it five times as much.</li>
+        <li><strong>Doubles</strong>: every three-putt doubles it.</li>
+      </ul>],
+      ['Each nine', <p key="n">Turn it on to settle the snake at the turn and start a fresh one on the back. Stop early and whoever holds it then pays.</p>],
     ],
   },
 };

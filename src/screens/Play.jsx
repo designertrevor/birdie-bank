@@ -8,7 +8,9 @@ import {
 } from '../lib/round.js';
 import { findCourse } from '../lib/courses.js';
 import { money, scoreName, pickupGross } from '../lib/golf.js';
-import { BBBPicker, DotsRow, MatchPanel, MoneyPanel, PointsPanel, RabbitPanel, SixesPanel, TotalsPanel, VegasPanel } from '../components/GamePanels.jsx';
+import {
+  BBBPicker, DotsRow, HammerPanel, MatchPanel, MoneyPanel, PointsPanel, RabbitPanel, SixesPanel, SnakePanel, SnakePicker, TotalsPanel, VegasPanel,
+} from '../components/GamePanels.jsx';
 import { GameOptions } from '../components/GameOptions.jsx';
 import { optionsProblem, stakeSummary } from '../lib/stakes.js';
 import { buzz, confettiFrom } from '../lib/delight.js';
@@ -71,7 +73,8 @@ function PlayRound({ round }) {
   const [base] = useState(() => Object.fromEntries(units.map(p => [p.id, mine(p.id) ? kept.base[p.id] : saved[p.id] ?? hole.par])));
   const [draft, setDraft] = useState(() => Object.fromEntries(units.map(p => [p.id, mine(p.id) ? kept.draft[p.id] : saved[p.id] ?? hole.par])));
   const [touched, setTouched] = useState(() => Object.fromEntries(units.map(p => [p.id, saved[p.id] != null || (wasDirty && !!kept.touched[p.id])])));
-  const [marks, setMarks] = useState(() => (GAMES[game].marks ? (wasDirty && kept.marks) || structuredClone(round.marks?.[hole.no] || (game === 'bbb' ? { bingo: null, bango: null, bongo: null } : {})) : null));
+  const emptyMarks = { bbb: { bingo: null, bango: null, bongo: null }, snake: { snake: [] }, hammer: { hammers: [], conceded: null } }[game] || {};
+  const [marks, setMarks] = useState(() => (GAMES[game].marks ? (wasDirty && kept.marks) || structuredClone(round.marks?.[hole.no] || emptyMarks) : null));
   useEffect(() => { DRAFTS.set(draftKey, { draft, base, touched, dirty, marks }); }, [draftKey, draft, base, touched, dirty, marks]);
   const [banker, setBanker] = useState(() => (game === 'banker' ? structuredClone(bankerHoleSetup(round, idx)) : null));
   const [phase, setPhase] = useState(() => (game === 'banker' && !holeComplete(round, hole) ? 'bets' : 'scores'));
@@ -227,10 +230,13 @@ function PlayRound({ round }) {
       {(game === 'nines' || game === 'bbb' || game === 'dots') && <PointsPanel round={round} />}
       {game === 'aces' && <MoneyPanel round={round} results={results} icon="spade" label="Aces & deuces so far" />}
       {game === 'rabbit' && <RabbitPanel round={round} hole={hole} />}
+      {game === 'snake' && <SnakePanel round={round} hole={hole} marks={marks} />}
+      {game === 'hammer' && phase === 'scores' && <HammerPanel round={round} hole={hole} marks={marks} setMarks={setMarksDirty} />}
 
       {phase === 'scores' && (
         <div className="scroll">
           {game === 'bbb' && <BBBPicker round={round} hole={hole} marks={marks} setMarks={setMarksDirty} />}
+          {game === 'snake' && <SnakePicker round={round} hole={hole} marks={marks} setMarks={setMarksDirty} />}
           {units.map(p => {
             const st = round.useHandicaps ? strokesFor(round, p, hole) : 0;
             const v = draft[p.id];
@@ -523,7 +529,7 @@ function BetsSheet({ round, onClose }) {
     showToast(`Bets updated${whole ? '' : ` from hole ${fromHole.no}`} · ${stakeSummary(game, opts)}`);
     buzz(20);
   };
-  const legs = game === 'nassau' || game === 'match' || game === 'rabbit' || (game === 'sixes' && opts.sixes.mode === 'match');
+  const legs = game === 'nassau' || game === 'match' || game === 'rabbit' || game === 'snake' || (game === 'sixes' && opts.sixes.mode === 'match');
   return (
     <>
       <Sheet open={!pad} onClose={onClose} title="Bets" className="sc-sheet">

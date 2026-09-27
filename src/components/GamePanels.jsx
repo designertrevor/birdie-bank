@@ -2,8 +2,8 @@
 import { Icon, useUI } from './ui.jsx';
 import { update, uid } from '../lib/store.js';
 import {
-  holeAtPos, holeComplete, nassauAmounts, nassauPressOptions, nassauWinners, playersOn, pointsTable, pressMode, rabbitTable, roundLegs, sideNames, sides,
-  sixesMatches, totalsTable, vegasPreview, vegasTable,
+  hammerOptions, hammerTable, holeAtPos, holeComplete, nassauAmounts, nassauPressOptions, nassauWinners, playersOn, pointsTable, pressMode, rabbitTable,
+  roundLegs, sideNames, sides, sixesMatches, snakeTable, totalsTable, vegasPreview, vegasTable,
 } from '../lib/round.js';
 import { money, nassauBets } from '../lib/golf.js';
 import { DOT_KINDS, scoreDots } from '../lib/games.js';
@@ -23,7 +23,8 @@ export function MatchPanel({ round, hole }) {
   const bets = nassauBets(winners, round.presses, nassauAmounts(round), LEGS);
   const names = sideNames(round);
   const short = names.map((n, i) => (round.teams ? ['A', 'B'][i] : n.charAt(0).toUpperCase()));
-  const options = pressMode(round) === 'manual' && !holeComplete(round, hole) ? nassauPressOptions(round, pos) : [];
+  // Manual presses, and the press at the turn when presses are off (auto presses are made on saving)
+  const options = pressMode(round) !== 'auto' && !holeComplete(round, hole) ? nassauPressOptions(round, pos) : [];
   const activePresses = bets.filter(b => b.press && pos >= b.start && pos <= b.end);
   const press = o => {
     update(s => { const r = s.rounds[round.id]; r.presses.push({ id: uid('pr_'), leg: o.leg, start: pos, by: o.trailing }); });
@@ -58,7 +59,9 @@ export function MatchPanel({ round, hole }) {
         <div className="press-alert">
           {options.map(o => (
             <div key={o.leg} className="press-alert-row">
-              <span className="press-alert-txt">{names[o.trailing]} {sides(round)[o.trailing].length > 1 ? 'are' : 'is'} {o.by} down{round.game === 'nassau' ? ` on the ${LEGS[o.leg].label.toLowerCase()}` : ''}</span>
+              <span className="press-alert-txt">{o.turn
+                ? `${names[o.trailing]} lost the ${LEGS.front.label.toLowerCase()}. Press the ${LEGS.back.label.toLowerCase()}?`
+                : `${names[o.trailing]} ${sides(round)[o.trailing].length > 1 ? 'are' : 'is'} ${o.by} down${round.game === 'nassau' ? ` on the ${LEGS[o.leg].label.toLowerCase()}` : ''}`}</span>
               <button className="press-call-btn" onClick={() => press(o)}>Press <Icon name="lightning" fill /></button>
             </div>
           ))}
@@ -178,6 +181,101 @@ export function RabbitPanel({ round, hole }) {
       </div>
       <div className="skin-counts">
         {won.map(l => <span key={l.seg.label} className="press-chip">{l.seg.label}: {firstName(nameOf(round, l.holder))}</span>)}
+      </div>
+    </div>
+  );
+}
+
+// --------------------------- Snake ----------------------------------------
+
+/** Who has the snake, counting the three-putts tapped on this hole so far. */
+export function SnakePanel({ round, hole, marks }) {
+  const t = snakeTable(marks ? { ...round, marks: { ...round.marks, [hole.no]: marks } } : round);
+  const pos = round.holes.findIndex(h => h.no === hole.no) + 1;
+  const leg = t.legs.find(l => pos >= l.seg.start && pos <= l.seg.end) || t.legs[0];
+  const done = t.legs.filter(l => l.done && l !== leg && l.holder);
+  return (
+    <div className="banker-bar" style={{ background: 'var(--lav)' }}>
+      <div>
+        <div className="bl">{t.legs.length > 1 ? `${leg.seg.label} · ` : ''}{leg.count ? `${leg.count} three-putt${leg.count === 1 ? '' : 's'} · worth ${money(leg.value)}` : 'No three-putts yet'}</div>
+        <div className="bn"><Icon name="wave-sine" fill /> {leg.holder ? `${firstName(nameOf(round, leg.holder))} has the snake` : 'Nobody has the snake'}</div>
+      </div>
+      <div className="skin-counts">
+        {done.map(l => <span key={l.seg.label} className="press-chip">{l.seg.label}: {firstName(nameOf(round, l.holder))}</span>)}
+      </div>
+    </div>
+  );
+}
+
+/** Tap who three-putted, in the order it happened: the last one takes the snake. */
+export function SnakePicker({ round, hole, marks, setMarks }) {
+  const putts = marks?.snake || [];
+  const toggle = pid => {
+    setMarks({ ...marks, snake: putts.includes(pid) ? putts.filter(x => x !== pid) : [...putts, pid] });
+    buzz(8);
+  };
+  return (
+    <div className="marks-card">
+      <div className="marks-row">
+        <div className="marks-lbl"><strong>Three-putts</strong><span>{putts.length > 1 ? 'Tap in the order they happened. The last one takes the snake' : 'Tap anyone who three-putted'}</span></div>
+        <div className="chip-row" style={{ padding: 0 }}>
+          {playersOn(round, hole).map(p => {
+            const k = putts.indexOf(p.id);
+            return (
+              <button key={p.id} aria-pressed={k >= 0} className={`pill-btn sm ${k >= 0 ? 'on' : ''}`} onClick={() => toggle(p.id)}>
+                {k >= 0 && putts.length > 1 && <span aria-hidden="true">{k + 1}.</span>} {firstName(p.name)}{k >= 0 && k === putts.length - 1 ? ' · has it' : ''}
+              </button>
+            );
+          })}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// --------------------------- Hammer ---------------------------------------
+
+/** The hole's value, the hammer buttons, and folding. Marks: { hammers: [side, ...], conceded: side | null }. */
+export function HammerPanel({ round, hole, marks, setMarks }) {
+  const mark = { hammers: marks?.hammers || [], conceded: marks?.conceded ?? null };
+  const rows = hammerTable(round);
+  const row = rows.find(r => r.hole.no === hole.no);
+  const base = row?.base ?? round.settings.hammer.stake;
+  const names = sideNames(round);
+  const short = names.map(n => (round.teams ? n : firstName(n)));
+  const plural = i => sides(round)[i].length > 1;
+  const can = hammerOptions(round, hole, mark);
+  const n = mark.hammers.length;
+  const value = base * 2 ** n;
+  const pending = n > 0 && mark.conceded == null ? 1 - mark.hammers.at(-1) : null;
+  const before = rows.filter(r => r.pos < (row?.pos ?? 0)).reduce((a, r) => a + r.net, 0);
+  const put = next => { setMarks({ ...marks, ...next }); buzz(next.hammers?.length > n ? [20, 40, 20] : 12); };
+  const status = mark.conceded != null
+    ? `${short[mark.conceded]} folded. ${short[1 - mark.conceded]} win${plural(1 - mark.conceded) ? '' : 's'} ${money(base * 2 ** (n - 1))}`
+    : pending != null
+      ? `${short[1 - pending]} hammered. ${short[pending]} play${plural(pending) ? '' : 's'} on at ${money(value)} or fold${plural(pending) ? '' : 's'} at ${money(value / 2)}`
+      : n ? '' : `Either side can hammer${row?.who === 'trailing' && row.behind != null ? `, ${short[row.behind]} first` : ''}`;
+  return (
+    <div className="wolf-panel">
+      <div className="bl" style={{ marginBottom: 8, display: 'flex', justifyContent: 'space-between', gap: 8 }}>
+        <span><Icon name="hammer" fill /> This hole: <strong>{money(mark.conceded != null ? value / 2 : value)}</strong>{n ? ` · ${n} hammer${n === 1 ? '' : 's'}` : ''}</span>
+        <span>{before === 0 ? 'All square' : `${short[before > 0 ? 0 : 1]} +${money(Math.abs(before))}`}</span>
+      </div>
+      {status && <p className="bl" style={{ margin: '0 0 8px', fontWeight: 500 }} aria-live="polite">{status}</p>}
+      <div className="chip-row" style={{ padding: 0 }}>
+        {[0, 1].map(i => can[i] && (
+          <button key={i} className="pill-btn" onClick={() => put({ hammers: [...mark.hammers, i], conceded: null })}>
+            <Icon name="hammer" fill /> {short[i]} hammer{plural(i) ? '' : 's'} · {money(value * 2)}
+          </button>
+        ))}
+        {pending != null && (
+          <button className="pill-btn lone" onClick={() => put({ conceded: pending })}>{short[pending]} fold{plural(pending) ? '' : 's'}</button>
+        )}
+        {n > 0 && (
+          <button className="pill-btn sm" onClick={() => put(mark.conceded != null ? { conceded: null } : { hammers: mark.hammers.slice(0, -1) })}>
+            <Icon name="arrow-counter-clockwise" /> Undo
+          </button>
+        )}
       </div>
     </div>
   );
