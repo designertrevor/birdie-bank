@@ -166,6 +166,7 @@ Put more money into the winning creators and copy their video formats with other
 - [x] `S1` Live shared rounds with a code and link (2026-09-23)
 - [x] `S1` Turn on live sharing in production (2026-09-23)
 - [x] `S1` Join from the web without installing anything (2026-09-25)
+- [x] `S2` Joining from a link starts on an invite card (who invited you, the game, the bets, the course and who's in), then seat tiles, then your strokes, then the round. "Not on the list? Add me" sends your name to the scorekeeper, who lets you in from a note on the Play screen (2026-09-27)
 - [ ] `S2` Each player can enter their own scores or just watch; hand the scorekeeper role to someone else
 - [x] `S3` A link preview card for group texts (course, game, players). Join links show the game, course and first names; other links show a static card (2026-09-26). Per-round previews need the Supabase env vars available to Vercel functions at runtime.
 
@@ -178,6 +179,7 @@ Put more money into the winning creators and copy their video formats with other
 - [ ] `S2` (partial) House rules for every game, the variations real groups play. Some exist (modified Stableford, skins carryovers). Go through all 16 games, and add the variations people ask for in "Suggest something."
 - [x] `S2` Ending a round is one tap and forgiving: stopping early, a missing score or a player who left never traps the round open. "A player left" in the round menu, holes with a missing score aren't counted (and the results say so), and finished rounds can't get stuck as active (2026-09-26)
 - [x] `S2` The killer end-of-round moment: every game and press totals up in one animated moment, then the fewest payments with one-tap pay links. Each bet resolves in turn (legs, presses, skins, biggest holes), then the totals land, then settle up with Venmo links and Mark paid, then a results image to share (2026-09-26)
+- [x] `S2` "Add a player" in the round menu: their money counts from the hole they join, nobody else's strokes move, and the results say so. Games with fixed sides or an exact head count (Nassau, match play, Vegas, Sixes, Wolf, Nines, scramble) only take new players before the first score (2026-09-27)
 - [ ] `S3` Side bets between two players inside a bigger round (proposed during the week, see area 21)
 - [ ] `S5` Several groups, one game: multiple foursomes feeding one pot and one leaderboard
 
@@ -387,3 +389,4 @@ Kept light on purpose. Groups already have a group text, so Birdie Bank adds to 
 - 2026-09-26: From a Mobbin review and clickable wireframes: money is now pinned on the Play screen from hole 1 and moves with every tap (it used to appear only after a hole was saved, and Banker's bets step hid it). Setup asks one question per step with "Your usual" and a "Round ready" invite screen. The end of a round is now reveal, settle up with Venmo links, then share.
 - 2026-09-26: Changed the S1 gate to sign-in for anyone plus live feedback, moved the quick logo to early S2, and added a needs check by kind of user and an ongoing bug and polish pass (area 20). Checklist: 17 of 144 done (12%), up from 5 of 141 (4%) when the roadmap started.
 - 2026-09-26 (overnight): Money math tested for all 16 games (5 bugs fixed, including cent rounding), "A player left" and forgiving round endings, per-bet reveal and a results image, feedback prompts in natural places, join link previews, course search ready for a GolfCourseAPI key, stronger offline sync and a service worker that caches the whole app, a faster first load (main bundle 407 KB to about 270 KB), and an accessibility pass. Research: needs check, rules check and copy audit, plus wireframes for the other app areas, rounds set up ahead of time, and organizer onboarding.
+- 2026-09-27 (overnight): Joining from a link is now an invite card, seat tiles and a strokes check, with "Not on the list? Add me" for people the scorekeeper forgot. Scorekeepers can add a player mid-round; their money counts from the hole they join. Seat requests ride in the existing live round records, so no SQL is needed.
