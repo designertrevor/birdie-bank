@@ -137,7 +137,7 @@ const RULES = {
         <li><strong>Standard</strong>: double bogey or worse 0, bogey 1, par 2, birdie 3, eagle 4, albatross 5.</li>
         <li><strong>Modified</strong>: double bogey −3, bogey −1, par 0, birdie 2, eagle 5, albatross 8. Rewards aggression.</li>
       </ul>],
-      ['Money', <p key="m">Highest points wins. Pay per point of difference between every pair, or ante up and the top total takes the pot.</p>],
+      ['Money', <p key="m">Highest points wins. Pay per point of difference between every pair, or everyone puts in and the top total takes the pot.</p>],
     ],
   },
   quota: {

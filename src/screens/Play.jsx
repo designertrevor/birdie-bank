@@ -150,7 +150,7 @@ function PlayRound({ round }) {
   const finish = async () => {
     const r = getState().rounds[round.id];
     // Fixing a finished round: it never stopped counting, so just go back to the results
-    if (r.editing) { doneEditing(); return; }
+    if (r.editing && r.status === 'done') { doneEditing(); return; }
     const missing = r.holes.filter(h => !holeComplete(r, h));
     if (missing.length) {
       const one = missing.length === 1;

@@ -1,6 +1,6 @@
-import { useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Empty, Header, Icon, Screen, useUI } from '../components/ui.jsx';
-import { update, useStore } from '../lib/store.js';
+import { getState, update, useStore } from '../lib/store.js';
 import { GAMES, holeAtPos, holeComplete, playsHole, roundLegs, roundNotes, roundResults, scoreSummary, scorers, sideNames, skinsTable } from '../lib/round.js';
 import { matchLabel } from '../lib/games.js';
 import { money } from '../lib/golf.js';
@@ -23,6 +23,11 @@ export default function RoundDetail({ id, celebrate }) {
   const hero = useRef();
   const acct = useAccount();
   const [signingIn, setSigningIn] = useState(false);
+  // Opening the results means the fixing is over, however you got here (the tab bar, History).
+  // Only on arrival, so tapping Edit scores here doesn't undo itself on the way out.
+  useEffect(() => {
+    if (getState().rounds[id]?.editing) update(s => { delete s.rounds[id].editing; });
+  }, [id]);
   // A round that just finished plays out in beats: reveal, settle up, share. The full breakdown is one tap away.
   const [stage, setStageRaw] = useState(() => {
     const saved = celebrate && finaleStage.get(id);
@@ -54,7 +59,7 @@ export default function RoundDetail({ id, celebrate }) {
   // Fixing scores keeps the round finished, so it keeps counting on the tab while you edit.
   // Any other round in progress is left alone.
   const edit = () => {
-    update(st => { st.rounds[id].editing = true; st.rounds[id].current = 0; });
+    update(st => { const r = st.rounds[id]; if (r.status === 'done') r.editing = true; r.current = 0; });
     nav.reset('history', ['play', { id }]);
   };
 

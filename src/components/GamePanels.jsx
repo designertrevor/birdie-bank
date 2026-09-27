@@ -38,7 +38,7 @@ export function MatchPanel({ round, hole }) {
     const sub = notStarted ? `Starts H${holeAtPos(round, b.start)}` : s.left === 0 ? 'Final' : s.closed ? `Won ${s.by}&${s.left}` : s.dormie ? 'Dormie' : `${s.left} left`;
     return (
       <div key={leg} className={`ms-tile ${s.leader === 0 ? 'ahead' : s.leader === 1 ? 'behind' : ''}`}>
-        <span className="ms-lbl">{LEGS[leg].label}</span><span className="ms-val">{val}</span><span className="ms-sub">{sub}</span>
+        <span className="ms-lbl">{LEGS[leg].label}</span><span className={`ms-val ${val === 'All square' ? 'sq' : ''}`}>{val}</span><span className="ms-sub">{sub}</span>
       </div>
     );
   };
@@ -115,7 +115,7 @@ export function SixesPanel({ round, hole }) {
           const sub = m.off ? 'Off: a player left' : notStarted ?`H${holeAtPos(round, m.seg.start)}–${holeAtPos(round, m.seg.end)}` : s.left === 0 ? (lead ? `${lead}` : 'Halved') : s.closed ? `${lead} won` : lead ? `${lead} · ${s.left} left` : `${s.left} left`;
           return (
             <div key={m.index} className={`ms-tile ${m === cur ? 'cur' : ''} ${s.leader != null && s.played ? 'ahead' : ''}`}>
-              <span className="ms-lbl">Match {m.index + 1}</span><span className="ms-val">{val}</span><span className="ms-sub">{sub}</span>
+              <span className="ms-lbl">Match {m.index + 1}</span><span className={`ms-val ${val === 'All square' ? 'sq' : ''}`}>{val}</span><span className="ms-sub">{sub}</span>
             </div>
           );
         })}

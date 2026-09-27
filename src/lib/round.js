@@ -61,17 +61,17 @@ export const GAMES = {
   stroke: {
     name: 'Stroke play', min: 2, max: 8, holes: [9, 18],
     blurb: 'Lowest net total wins the pot, or pay per stroke',
-    players: '2–8 players', icon: 'list-numbers', group: 'Lowest total',
+    players: '2–8 players', icon: 'list-numbers', group: 'Full round',
   },
   stableford: {
     name: 'Stableford', min: 2, max: 8, holes: [9, 18],
     blurb: 'Points for every hole. A blow-up only costs you a zero',
-    players: '2–8 players', icon: 'star', group: 'Lowest total',
+    players: '2–8 players', icon: 'star', group: 'Full round',
   },
   quota: {
     name: 'Quota', min: 2, max: 8, holes: [9, 18],
     blurb: 'Beat your own number: 36 minus your handicap',
-    players: '2–8 players', icon: 'target', group: 'Lowest total',
+    players: '2–8 players', icon: 'target', group: 'Full round',
   },
   nines: {
     name: 'Nines', min: 3, max: 3, holes: [9, 18],
@@ -100,7 +100,7 @@ export const GAMES = {
   },
 };
 
-export const GAME_GROUPS = ['Classics', 'Head to head', 'Team', 'Lowest total', 'Points'];
+export const GAME_GROUPS = ['Classics', 'Head to head', 'Team', 'Full round', 'Points'];
 
 /** Course par for a set of holes. */
 export function parOf(holes) { return holes.reduce((a, h) => a + (h.par || 0), 0); }
