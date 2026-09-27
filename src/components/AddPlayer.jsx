@@ -108,7 +108,7 @@ export function AddPlayerSheet({ round, request = null, onClose }) {
               <div className="eyebrow" style={{ marginBottom: 8 }}>Starts on hole</div>
               <div className="chip-row" style={{ padding: 0 }} role="radiogroup" aria-label="Starts on hole">
                 {choices.map(h => (
-                  <button key={h.no} role="radio" aria-checked={fromNo === h.no} className={`pill-btn ${fromNo === h.no ? 'on' : ''}`} onClick={() => setFromNo(h.no)}>{h.no}</button>
+                  <button key={h.no} role="radio" aria-checked={fromNo === h.no} className={`pill-btn ap-hole ${fromNo === h.no ? 'on' : ''}`} onClick={() => setFromNo(h.no)}>{h.no}</button>
                 ))}
               </div>
             </div>

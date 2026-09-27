@@ -246,12 +246,12 @@ export default function JoinInvite({ code, onJoined, onSkip }) {
         <div className="scroll onboard-body join-body">
           <h1 className="onboard-title join-h">Pick your seat</h1>
           <p className="onboard-text join-p">Which one are you?</p>
-          <div className="seat-grid" role="list">
+          <div className="seat-grid">
             {meta.players.map((p, i) => {
               const team = teamOf(p.id);
               const from = meta.joined?.[p.id];
               return (
-                <button key={p.id} role="listitem" className="seat-tile" onClick={() => { setSeat(p); setStep('confirm'); }}>
+                <button key={p.id} className="seat-tile" onClick={() => { setSeat(p); setStep('confirm'); }}>
                   <Avatar name={p.name} i={i} />
                   <span className="seat-name">{p.name}</span>
                   <span className="seat-sub">
@@ -261,7 +261,7 @@ export default function JoinInvite({ code, onJoined, onSkip }) {
               );
             })}
             {!done && (
-              <button role="listitem" className="seat-tile add" onClick={() => setStep('ask')}>
+              <button className="seat-tile add" onClick={() => setStep('ask')}>
                 <span className="join-avatar add" aria-hidden="true"><Icon name="plus" /></span>
                 <span className="seat-name">Not on the list?</span>
                 <span className="seat-sub">Add me</span>

@@ -389,7 +389,10 @@ export async function answerSeatRequest(roundId, no, playerId) {
   const req = requests.get(roundId)?.get(no);
   const adapter = await getAdapter();
   if (!round?.shared?.code || !adapter || !req) return;
-  if (playerId) await pushChanges(roundId);
+  if (playerId) {
+    // A push already running returns straight away (the new player goes in the next one), so wait for ours to land
+    for (let i = 0; i < 10 && !(await pushChanges(roundId)); i++) await new Promise(res => setTimeout(res, 300));
+  }
   await adapter.upsertHole(round.shared.code, no, { request: { name: req.name, at: req.at, status: playerId ? 'in' : 'no', ...(playerId ? { playerId } : {}) } });
   requests.get(roundId)?.delete(no);
   reqChanged();
