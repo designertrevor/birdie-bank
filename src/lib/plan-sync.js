@@ -9,6 +9,7 @@ import { getSupabase, supabaseConfigured } from './supabase.js';
 import { PlansOffError, planLocalAdapter, planSupabaseAdapter } from './plan-adapters.js';
 import { newCode, stable } from './sync-model.js';
 import { RSVPS, answersFrom, cleanName, planLink, planMeta } from './plans.js';
+import { PAY_APP_IDS } from './pay.js';
 
 const localFlag = () => { try { return localStorage.getItem('bb-sync-local') === '1'; } catch { return false; } };
 
@@ -44,7 +45,9 @@ export function usePlansOff() {
 
 async function pushAnswer(adapter, code, who, a) {
   if (!a || !RSVPS.includes(a.status)) return;
-  await adapter.setRsvp(code, { who, name: cleanName(a.name) || 'Guest', status: a.status, payApp: a.payApp ?? null, payHandle: a.payHandle ?? null });
+  // The server only takes the payment apps it knows and handles up to 80 characters
+  const pay = PAY_APP_IDS.includes(a.payApp) && a.payHandle ? { payApp: a.payApp, payHandle: String(a.payHandle).slice(0, 80) } : { payApp: null, payHandle: null };
+  await adapter.setRsvp(code, { who, name: cleanName(a.name) || 'Guest', status: a.status, ...pay });
   await Promise.all([adapter.setVote(code, who, 'game', a.game ?? null), adapter.setVote(code, who, 'bet', a.bet ?? null)]);
 }
 
@@ -185,9 +188,11 @@ export function usePlanLive(id, code) {
   }, [id, code]);
 }
 
-/** Refresh every shared plan once (Up next calls this when it opens). */
+/** Refresh every shared plan once (Up next calls this when it opens). A friend's started plan keeps looking until the live round's link arrives. */
 export function refreshPlans() {
-  for (const p of Object.values(getState().plans || {})) if (p.code && p.status !== 'started') refreshPlan(p.id);
+  for (const p of Object.values(getState().plans || {})) {
+    if (p?.code && (p.status !== 'started' || (!p.host && !p.liveCode))) refreshPlan(p.id);
+  }
 }
 
 /**

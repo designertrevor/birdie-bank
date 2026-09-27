@@ -177,7 +177,7 @@ export function planStart(state, plan, present, { newId, course: courseIn } = {}
     if (!saved) {
       // A friend from the group link: reuse a saved player with the same name, else save them
       const name = String(p.name || '').trim();
-      saved = Object.values(state.players || {}).find(x => x.name.trim().toLowerCase() === name.toLowerCase());
+      saved = name ? Object.values(state.players || {}).find(x => String(x?.name || '').trim().toLowerCase() === name.toLowerCase()) : null;
       if (!saved) {
         const a = plan.answers?.[p.who] || {};
         saved = { id: newId ? newId() : `p_${p.who}`, name: name || 'Guest', index: null, createdAt: Date.now(), ...(a.payApp && a.payHandle ? { payApp: a.payApp, payHandle: a.payHandle } : {}) };
@@ -268,11 +268,12 @@ export function dayChoices(now = new Date(), n = 14) {
 
 /**
  * Plans for Up next, soonest first: still planned, or called off (so friends see that), from
- * yesterday on. Older ones drop off by themselves.
+ * yesterday on. A friend's plan that has started stays too, so they can follow the round (the
+ * organizer has the round itself). Older ones drop off by themselves.
  */
 export function upcomingPlans(state, now = new Date()) {
   return Object.values(state?.plans || {})
-    .filter(p => (p.status === 'planned' || p.status === 'off') && (daysUntil(p.date, now) ?? -99) >= -1)
+    .filter(p => p && (p.status === 'planned' || p.status === 'off' || (p.status === 'started' && !p.host)) && (daysUntil(p.date, now) ?? -99) >= -1)
     .sort((a, b) => String(a.date).localeCompare(String(b.date)) || String(a.teeTime || '').localeCompare(String(b.teeTime || '')) || (a.createdAt || 0) - (b.createdAt || 0));
 }
 
@@ -343,7 +344,9 @@ export function morningText(plan, link, settings, now = new Date()) {
 // --------------------------- sharing ----------------------------------------
 
 /** Fields that stay on this phone and never go into the shared plan. */
-const LOCAL_ONLY = ['code', 'host', 'answers', 'localMe', 'syncedAt', 'gone'];
+// `unsent` and `metaUnsent` are this phone's own retry flags; a friend's phone taking the
+// organizer's copy would resend (and so overwrite) answers that were never theirs.
+const LOCAL_ONLY = ['code', 'host', 'answers', 'localMe', 'syncedAt', 'gone', 'unsent', 'metaUnsent', 'roundId'];
 
 /** The shared part of a plan (what friends' phones read). */
 export function planMeta(plan) {

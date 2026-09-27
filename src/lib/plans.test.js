@@ -181,11 +181,34 @@ test('up next: soonest first, finished or old plans drop off', () => {
   const state = { plans: {
     a: { id: 'a', status: 'planned', date: '2026-10-03', teeTime: '09:00' },
     b: { id: 'b', status: 'planned', date: '2026-10-03', teeTime: '07:30' },
-    c: { id: 'c', status: 'started', date: '2026-09-28' },
+    c: { id: 'c', status: 'started', date: '2026-09-28', host: true },
     d: { id: 'd', status: 'planned', date: '2026-09-20' },
     e: { id: 'e', status: 'off', date: '2026-09-29' },
+    f: { id: 'f', status: 'started', date: '2026-09-28', host: false, liveCode: 'QWERTY' },
+    g: { id: 'g', status: 'started', date: '2026-09-20', host: false },
   } };
-  assert.deepEqual(upcomingPlans(state, now).map(p => p.id), ['e', 'b', 'a']);
+  // The organizer has the round itself; a friend keeps the plan to follow along
+  assert.deepEqual(upcomingPlans(state, now).map(p => p.id), ['f', 'e', 'b', 'a']);
+  assert.deepEqual(upcomingPlans({ plans: { x: null } }, now), []);
+});
+
+test('shared plan: this phone’s retry flags and its own round never go to friends', () => {
+  const p = base();
+  p.unsent = { host: true };
+  p.metaUnsent = true;
+  p.roundId = 'r_1';
+  const meta = planMeta(p);
+  assert.equal(meta.unsent, undefined);
+  assert.equal(meta.metaUnsent, undefined);
+  assert.equal(meta.roundId, undefined);
+});
+
+test('roll call: a saved player with no name does not trip up matching friends by name', () => {
+  const p = base();
+  answer(p, 'g_1', { name: 'Bo', status: 'in' });
+  const state = { me: 'me', settings: SETTINGS, players: { me: { id: 'me', name: 'Trevor' }, old: { id: 'old' } } };
+  const s = planStart(state, p, ['me', 'g_1'], { course: COURSE, newId: () => 'n1' });
+  assert.deepEqual(s.players.map(x => x.id), ['me', 'n1']);
 });
 
 test('players card: a friend’s answer to the next plan you organized', () => {

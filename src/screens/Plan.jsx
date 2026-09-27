@@ -17,6 +17,7 @@ import {
   RSVPS, RSVP_LABEL, betLabel, cleanName, countsLine, daysUntil, inviteText, morningText, nudgeAllText, nudgeText,
   planChoice, planCounts, planPeople, planStart, rollCallDefault, tally, whenLabel,
 } from '../lib/plans.js';
+import { PlansOffError } from '../lib/plan-adapters.js';
 import { answerPlan, editPlan, openPlanLink, planShareLink, removePlan, sharePlan, usePlanLive, usePlansOff } from '../lib/plan-sync.js';
 
 const first = name => String(name || '').trim().split(/\s+/)[0];
@@ -85,8 +86,9 @@ function PlanBody({ plan, standalone = false, onSkip }) {
     try {
       await sharePlan(plan.id);
       return planShareLink(getState().plans[plan.id]);
-    } catch {
-      showToast(off ? 'Group links aren’t switched on yet' : 'Couldn’t reach Birdie Bank. Check your signal');
+    } catch (e) {
+      // The first try is how this phone learns the SQL hasn't run, so ask the error, not `off`
+      showToast(e instanceof PlansOffError ? 'Group links aren’t switched on yet' : 'Couldn’t reach Birdie Bank. Check your signal');
       return null;
     } finally { setSharing(false); }
   };
@@ -287,7 +289,7 @@ function WhoAreYou({ plan, defaultName, standalone, onSkip }) {
           <>
             <h2 className="step-q d">Which one are you?</h2>
             <div className="seat-grid">
-              {plan.people.filter(p => p.id !== plan.hostWho).map(p => (
+              {(plan.people || []).filter(p => p.id !== plan.hostWho).map(p => (
                 <button key={p.id} className="seat-tile" onClick={() => pick(p.id)}>
                   <Avatar name={p.name} />
                   <span className="seat-name">{first(p.name)}</span>
@@ -329,6 +331,7 @@ export function RollCall({ id }) {
   const [present, setPresent] = useState(() => (plan ? rollCallDefault(plan) : []));
   const [walkUp, setWalkUp] = useState('');
   const [adding, setAdding] = useState(false);
+  const [starting, setStarting] = useState(false);
   if (!plan) return <Screen><Header title="Roll call" small onBack={nav.pop} /><div className="scroll"><Empty title="This plan is gone" /></div></Screen>;
   const people = planPeople(plan);
   const course = findCourse(state, plan.course?.id);
@@ -346,6 +349,9 @@ export function RollCall({ id }) {
   // Save anyone new first, so setup (or the round) can find them
   const saveNew = () => update(s => { for (const p of setup.newPlayers) s.players[p.id] = p; });
   const start = () => {
+    // One round per tee time, even on a double tap
+    if (starting || getState().plans?.[id]?.status !== 'planned') return;
+    setStarting(true);
     const rid = uid('r_');
     saveNew();
     const round = createRound({
@@ -407,7 +413,7 @@ export function RollCall({ id }) {
         )}
       </div>
       <div className="cta-wrap">
-        <button className="full-btn" disabled={!!setup.problem} onClick={start}>Tee off with {setup.players.length} <Icon name="arrow-right" /></button>
+        <button className="full-btn" disabled={!!setup.problem || starting} onClick={start}>Tee off with {setup.players.length} <Icon name="arrow-right" /></button>
         <button className="full-btn outline" onClick={toSetup}>Change the setup</button>
       </div>
     </Screen>

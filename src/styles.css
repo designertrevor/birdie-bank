@@ -528,9 +528,9 @@ button { font: inherit; color: inherit; }
 /* Sheets take focus so screen readers start at their title; the sheet itself needs no ring */
 .sheet-overlay:focus-visible, .numpad-overlay:focus-visible { outline: none; }
 /* Tap targets: small controls keep their look but get an invisible hit area of at least 44 x 44 */
-.rules-chip, .pickup-btn, .pill-btn.sm, .hdcp-btn, .swatch, .tog, .icon-btn.sm, .dbl-btn, .tee-chip, .hc-chip, .team-letter, .pill-link, .press-call-btn { position: relative; }
+.rules-chip, .pickup-btn, .pill-btn.sm, .hdcp-btn, .swatch, .tog, .icon-btn.sm, .dbl-btn, .tee-chip, .hc-chip, .team-letter, .pill-link, .press-call-btn, button.who-status { position: relative; }
 .rules-chip::before, .pickup-btn::before, .pill-btn.sm::before, .hdcp-btn::before, .swatch::before, .tog::before, .icon-btn.sm::before,
-.dbl-btn::before, .tee-chip::before, .hc-chip::before, .team-letter::before, .pill-link::before, .press-call-btn::before {
+.dbl-btn::before, .tee-chip::before, .hc-chip::before, .team-letter::before, .pill-link::before, .press-call-btn::before, button.who-status::before {
   content: ''; position: absolute; left: 50%; top: 50%; width: max(100%, 44px); height: max(100%, 44px); transform: translate(-50%, -50%);
 }
 
