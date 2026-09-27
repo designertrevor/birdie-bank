@@ -7,6 +7,7 @@ import { localAdapter, supabaseAdapter } from './sync-adapters.js';
 import { getSupabase, supabaseConfigured } from './supabase.js';
 import { leaveRound } from './rounds.js';
 import { applyHole, applyMeta, assemble, buildHole, buildMeta, merge3, newCode, stable } from './sync-model.js';
+import { payFields } from './pay.js';
 
 
 let adapterPromise = null;
@@ -285,6 +286,13 @@ export async function joinShared(code, remote, localMe) {
     if (round.status === 'active') s.activeRoundId = round.id;
   });
   await start(round.id, { fresh: true });
+  // Put your payment app on your seat (if the round doesn't have one yet), so the others can pay you
+  update(s => {
+    const r = s.rounds[round.id];
+    const seat = r?.players.find(p => p.id === localMe);
+    const mine = payFields(s.players[s.me]);
+    if (seat && mine.payHandle && !seat.payHandle) Object.assign(seat, mine);
+  });
   return round.id;
 }
 

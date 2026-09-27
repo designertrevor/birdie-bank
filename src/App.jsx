@@ -32,6 +32,7 @@ const settings = () => import('./screens/Settings.jsx');
 const Onboarding = screen(onboarding);
 const JoinInvite = screen(() => import('./screens/JoinInvite.jsx'));
 const Ledger = screen(() => import('./screens/Ledger.jsx'));
+const Person = screen(() => import('./screens/Person.jsx'));
 const People = screen(people);
 const PlayerEdit = screen(people, 'PlayerEdit');
 const CrewEdit = screen(people, 'CrewEdit');
@@ -54,7 +55,7 @@ function preloadScreens() {
 
 const SCREENS = {
   roundDetail: RoundDetail, newRound: NewRound, play: Play,
-  playerEdit: PlayerEdit, crewEdit: CrewEdit,
+  playerEdit: PlayerEdit, crewEdit: CrewEdit, person: Person,
   defaults: Defaults, courses: Courses, courseEdit: CourseEdit, about: About, suggest: Suggest,
 };
 const TABS = { history: History, ledger: Ledger, people: People, settings: Settings };

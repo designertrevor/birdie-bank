@@ -1,49 +1,103 @@
 import { useState } from 'react';
 import { Empty, Header, Icon, Numpad, Screen, useUI } from '../components/ui.jsx';
+import { Avatar, PayButton, RequestButton } from '../components/Pay.jsx';
+import { useRemind } from '../lib/useRemind.js';
 import { update, uid, useStore } from '../lib/store.js';
-import { formatIndex, playerLabel, sortedPlayers } from '../lib/format.js';
+import { formatIndex, myIds, playerLabel, sortedPlayers } from '../lib/format.js';
+import { headToHeadSummary, nameOf, outstanding, tabWith } from '../lib/ledger.js';
+import { PAY_APPS, PAY_APP_IDS, cleanHandle, handleText, payInfo, payInfoFor } from '../lib/pay.js';
+import { money } from '../lib/golf.js';
 import { BottomNav } from '../nav.jsx';
 import { useNav } from '../lib/nav.js';
 
+/** Players as cards: your record and net with each person, newest friends from joined rounds too. */
 export default function People() {
   const nav = useNav();
   const state = useStore();
-  const players = sortedPlayers(state);
+  const mine = myIds(state);
+  const h2h = headToHeadSummary(state, mine);
+  const plan = outstanding(state);
+  const remind = useRemind();
+  const me = state.me && state.players[state.me];
+  const myApp = payInfoFor(state, state.me);
+  // Everyone you've added, plus people you've only met in a joined round
+  const ids = new Set([...Object.keys(state.players), ...h2h.keys()]);
+  for (const id of mine) ids.delete(id);
+  const people = [...ids].map(id => ({ id, name: nameOf(state, id), h: h2h.get(id), p: state.players[id] }))
+    .sort((a, b) => (b.h?.rounds || 0) - (a.h?.rounds || 0) || a.name.localeCompare(b.name));
   const crews = Object.values(state.crews).sort((a, b) => a.name.localeCompare(b.name));
+  const myPay = me && payInfo(me);
   return (
     <Screen>
       <Header title="Players" />
       <div className="scroll">
-        <div className="sec-label">Players</div>
-        {players.map(p => (
-          <button key={p.id} className="set-row" onClick={() => nav.push('playerEdit', { id: p.id })}>
+        {me && (
+          <button className="set-row" onClick={() => nav.push('playerEdit', { id: me.id })}>
+            <Avatar name={me.name} />
             <div className="row-main">
-              <div className="set-name">{playerLabel(p, state.me)}</div>
-              <div className="set-sub">{p.index == null ? 'No handicap' : `Index ${formatIndex(p.index)}`}{p.venmo ? ` · @${p.venmo}` : ''}</div>
+              <div className="set-name">{playerLabel(me, state.me)}</div>
+              <div className="set-sub">{me.index == null ? 'No handicap' : `Index ${formatIndex(me.index)}`} · {myPay ? `${PAY_APPS[myPay.app].name} ${handleText(myPay)}` : 'Add how you get paid'}</div>
             </div>
             <span className="chevron"><Icon name="caret-right" /></span>
           </button>
-        ))}
-        {players.length < 2 && <p className="hint-card"><Icon name="lightbulb" fill /> Add the people you play with so you can pick them when you start a round.</p>}
+        )}
+        <div className="sec-label">Your people</div>
+        {people.map(({ id, name, h, p }) => {
+          const tab = tabWith(plan, mine, id);
+          const amount = Math.abs(tab);
+          const first = name.split(' ')[0];
+          const row = (
+            <button key={id} className={tab ? 'tab-person' : 'set-row person-row'} onClick={() => nav.push('person', { id })}>
+              <Avatar name={name} />
+              <div className="row-main">
+                <div className={tab ? 'tp-name' : 'set-name'}>{name}</div>
+                <div className={tab ? 'tp-sub' : 'set-sub'}>
+                  {h ? `${h.rounds} round${h.rounds === 1 ? '' : 's'} · won ${h.won}, lost ${h.lost}${h.even ? `, even ${h.even}` : ''}` : p?.index != null ? `Index ${formatIndex(p.index)}` : 'No rounds together yet'}
+                  {tab > 0 ? ` · owes you ${money(amount)}` : tab < 0 ? ` · you owe ${money(amount)}` : ''}
+                </div>
+              </div>
+              <div className={`pr-amt d ${h?.net > 0 ? 'pos' : h?.net < 0 ? 'neg' : ''}`}>{h ? money(h.net, { sign: true }) : '\u2013'}</div>
+              <span className="chevron"><Icon name="caret-right" /></span>
+            </button>
+          );
+          if (!tab) return row;
+          // Money on the Tab between you: Remind and Request right on the card, or pay them in their app
+          return (
+            <div key={id} className="tab-card">
+              {row}
+              <div className="pay-acts">
+                {tab > 0 ? (
+                  <>
+                    <button className="pay-btn" onClick={() => remind(id, amount)} aria-label={`Remind ${first} about ${money(amount)}`}><span className="pay-in"><Icon name="bell-ringing" fill /><span className="pay-lbl">Remind</span></span></button>
+                    <RequestButton payer={payInfoFor(state, id)} mine={myApp} amount={amount} note="Golf" />
+                  </>
+                ) : <PayButton info={payInfoFor(state, id)} amount={amount} note="Golf" />}
+              </div>
+            </div>
+          );
+        })}
+        {people.length < 1 && <p className="hint-card"><Icon name="lightbulb" fill /> Add the people you play with so you can pick them when you start a round.</p>}
         <button className="add-row" onClick={() => nav.push('playerEdit', {})}><div className="add-ci"><Icon name="plus" /></div><span className="add-lbl">Add player</span></button>
 
-        <div className="sec-label">Crews</div>
-        {crews.length === 0 && (
-          <p className="hint-card"><Icon name="users-three" fill /> A crew is a group you play with often. Pick a crew to add everyone to a round in one tap.</p>
-        )}
-        {crews.map(c => (
-          <button key={c.id} className="set-row" onClick={() => nav.push('crewEdit', { id: c.id })}>
-            <div className="row-main">
-              <div className="set-name">{c.name}</div>
-              <div className="set-sub">{c.playerIds.map(id => state.players[id]?.name).filter(Boolean).join(', ') || 'No players'}</div>
-            </div>
-            <span className="chevron"><Icon name="caret-right" /></span>
+        {crews.length > 0 ? (
+          <>
+            <div className="sec-label">Crews</div>
+            {crews.map(c => (
+              <button key={c.id} className="set-row" onClick={() => nav.push('crewEdit', { id: c.id })}>
+                <div className="row-main">
+                  <div className="set-name">{c.name}</div>
+                  <div className="set-sub">{c.playerIds.map(id => state.players[id]?.name).filter(Boolean).join(', ') || 'No players'}</div>
+                </div>
+                <span className="chevron"><Icon name="caret-right" /></span>
+              </button>
+            ))}
+            <button className="text-link" onClick={() => nav.push('crewEdit', {})}><Icon name="plus" /> Add crew</button>
+          </>
+        ) : Object.keys(state.players).length > 2 && (
+          <button className="text-link" onClick={() => nav.push('crewEdit', {})}>
+            <Icon name="users-three" fill /> Play with the same group a lot? Save them as a crew
           </button>
-        ))}
-        <button className="add-row" disabled={players.length < 2} onClick={() => nav.push('crewEdit', {})}>
-          <div className="add-ci"><Icon name="plus" /></div>
-          <span className="add-lbl">{players.length < 2 ? 'Add players first to make a crew' : 'Add crew'}</span>
-        </button>
+        )}
       </div>
       <BottomNav />
     </Screen>
@@ -57,7 +111,9 @@ export function PlayerEdit({ id, onSaved }) {
   const existing = id ? state.players[id] : null;
   const [name, setName] = useState(existing?.name || '');
   const [index, setIndex] = useState(existing?.index ?? null);
-  const [venmo, setVenmo] = useState(existing?.venmo || '');
+  const [payApp, setPayApp] = useState(payInfo(existing)?.app || null);
+  const [handle, setHandle] = useState(() => { const i = payInfo(existing); return i ? handleText(i) : ''; });
+  const isMe = !!id && id === state.me;
   const [pad, setPad] = useState(false);
   const trimmed = name.trim();
   const duplicate = Object.values(state.players).some(p => p.id !== id && p.name.toLowerCase() === trimmed.toLowerCase());
@@ -65,8 +121,21 @@ export function PlayerEdit({ id, onSaved }) {
 
   const save = () => {
     const pid = id || uid('p_');
+    const cleaned = payApp ? cleanHandle(payApp, handle) : '';
+    const pay = cleaned ? { payApp, payHandle: cleaned } : {};
     update(s => {
-      s.players[pid] = { ...(s.players[pid] || { createdAt: Date.now() }), id: pid, name: trimmed, index, venmo: venmo.replace(/^@/, '').trim() };
+      const { venmo: _old, payApp: _a, payHandle: _h, ...rest } = s.players[pid] || { createdAt: Date.now() };
+      s.players[pid] = { ...rest, id: pid, name: trimmed, index, ...pay };
+      // Rounds still being played carry it too, so friends in a shared round get the new pay button
+      const seats = pid === s.me ? new Set([pid, ...Object.values(s.rounds).map(r => r.localMe).filter(Boolean)]) : new Set([pid]);
+      for (const r of Object.values(s.rounds)) {
+        if (r.status !== 'active') continue;
+        for (const p of r.players) {
+          if (!seats.has(p.id)) continue;
+          delete p.payApp; delete p.payHandle;
+          Object.assign(p, pay);
+        }
+      }
     });
     showToast(id ? 'Player saved' : `${trimmed} added`);
     if (onSaved) onSaved(pid); else nav.pop();
@@ -96,8 +165,25 @@ export function PlayerEdit({ id, onSaved }) {
             {index != null && <button className="header-btn" onClick={() => setIndex(null)}>Clear</button>}
           </div>
           <p className="field-help">Their usual 18-hole index. Course handicaps are worked out from this for each course and tee, and halved for 9-hole games.</p>
-          <label className="field-label" htmlFor="pe-venmo">Venmo username <span className="opt">optional</span></label>
-          <input id="pe-venmo" className="text-input" value={venmo} onChange={e => setVenmo(e.target.value)} placeholder="@username" autoCapitalize="none" autoCorrect="off" />
+          <div className="field-label" id="pe-pay">{isMe ? 'How you get paid' : `How ${trimmed.split(' ')[0] || 'they'} ${trimmed ? 'gets' : 'get'} paid`} <span className="opt">optional</span></div>
+          <div className="chip-row flush" role="group" aria-labelledby="pe-pay">
+            {PAY_APP_IDS.map(app => (
+              <button key={app} type="button" className={`pill-btn ${payApp === app ? 'on' : ''}`} aria-pressed={payApp === app}
+                onClick={() => setPayApp(payApp === app ? null : app)}>{PAY_APPS[app].name}</button>
+            ))}
+          </div>
+          {payApp && (
+            <>
+              <label className="sr-only" htmlFor="pe-handle">{PAY_APPS[payApp].label}</label>
+              <input id="pe-handle" className="text-input" value={handle} onChange={e => setHandle(e.target.value)} placeholder={PAY_APPS[payApp].placeholder}
+                autoCapitalize="none" autoCorrect="off" inputMode={payApp === 'zelle' ? 'email' : 'text'} />
+            </>
+          )}
+          <p className="field-help">
+            {payApp === 'zelle'
+              ? `Zelle has no pay link, so anyone who owes ${isMe ? 'you' : trimmed.split(' ')[0] || 'them'} sees this with a copy button.`
+              : `Pay buttons open ${isMe ? 'your' : 'their'} app with the amount filled in. Birdie Bank never holds or moves money.`}
+          </p>
         </div>
         {existing && id !== state.me && (
           <button className="danger-link" onClick={remove} disabled={inActive}>

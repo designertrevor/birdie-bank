@@ -1,74 +1,120 @@
+// The Tab: your net with each friend across every round, squared in the fewest payments.
 import { useState } from 'react';
-import { Empty, Header, Icon, Numpad, Screen, Sheet, useUI } from '../components/ui.jsx';
-import { update, uid, useStore } from '../lib/store.js';
-import { nameOf, outstanding, venmoLink } from '../lib/ledger.js';
+import { Empty, Header, Icon, Screen, useUI } from '../components/ui.jsx';
+import { Avatar, PayButton, RequestButton, SettleSheet } from '../components/Pay.jsx';
+import { useRemind } from '../lib/useRemind.js';
+import { update, useStore } from '../lib/store.js';
+import { headToHeadSummary, nameOf, outstanding } from '../lib/ledger.js';
+import { payInfoFor } from '../lib/pay.js';
 import { money } from '../lib/golf.js';
 import { myIds } from '../lib/format.js';
 import { BottomNav } from '../nav.jsx';
 import { useNav } from '../lib/nav.js';
 
+const first = name => name.split(' ')[0];
+
 export default function Ledger() {
   const nav = useNav();
   const state = useStore();
-  const { showToast, ask } = useUI();
-  const debts = outstanding(state);
+  const { ask } = useUI();
+  const remind = useRemind();
+  const plan = outstanding(state);
   const [open, setOpen] = useState(null);
-  const [partial, setPartial] = useState(false);
-  const mineIds = myIds(state);
-  const isMe = id => mineIds.has(id);
-  const me = state.me;
-  const mine = debts.filter(d => isMe(d.from) || isMe(d.to));
-  const others = debts.filter(d => !isMe(d.from) && !isMe(d.to));
-  const owedToMe = mine.filter(d => isMe(d.to)).reduce((a, d) => a + d.amount, 0);
-  const iOwe = mine.filter(d => isMe(d.from)).reduce((a, d) => a + d.amount, 0);
+  const mine = myIds(state);
+  const isMe = id => mine.has(id);
+  const myApp = payInfoFor(state, state.me);
+
+  // One row per friend: what the plan has between you (a friend you pass money on for can be both ways, so it's netted)
+  const byPerson = new Map();
+  for (const t of plan) {
+    if (isMe(t.from) === isMe(t.to)) continue;
+    const other = isMe(t.from) ? t.to : t.from;
+    const cur = byPerson.get(other) || { id: other, net: 0, debts: [] };
+    cur.net = Math.round((cur.net + (isMe(t.to) ? t.amount : -t.amount)) * 100) / 100;
+    cur.debts.push(t);
+    byPerson.set(other, cur);
+  }
+  const people = [...byPerson.values()].filter(p => p.net).sort((a, b) => b.net - a.net);
+  const others = plan.filter(t => !isMe(t.from) && !isMe(t.to));
+  const overall = Math.round(people.reduce((a, p) => a + p.net, 0) * 100) / 100;
+  const h2h = headToHeadSummary(state, mine);
+  const square = [...h2h.keys()].filter(id => !byPerson.has(id)).map(id => first(nameOf(state, id)));
   const history = [...state.settlements].sort((a, b) => b.at - a.at);
   const hasRounds = Object.values(state.rounds).some(r => r.status === 'done');
 
-  const record = (d, amount) => {
-    update(s => { s.settlements.push({ id: uid('s_'), from: d.from, to: d.to, amount, at: Date.now() }); });
-    showToast(amount >= d.amount ? `${nameOf(state, d.from)} is square with ${nameOf(state, d.to)}` : `${money(amount)} recorded`);
-    setOpen(null); setPartial(false);
-  };
   const undo = async s => {
     if (!(await ask({ title: 'Undo this payment?', text: `${nameOf(state, s.from)} → ${nameOf(state, s.to)} ${money(s.amount)} will be owed again.`, confirmLabel: 'Undo payment' }))) return;
     update(st => { st.settlements = st.settlements.filter(x => x.id !== s.id); });
   };
 
-  const row = d => {
-    const youOwe = isMe(d.from), owedYou = isMe(d.to);
-    const label = youOwe ? `You owe ${nameOf(state, d.to)}` : owedYou ? `${nameOf(state, d.from)} owes you` : `${nameOf(state, d.from)} owes ${nameOf(state, d.to)}`;
+  const personRow = p => {
+    const name = nameOf(state, p.id);
+    const owesMe = p.net > 0;
+    const amount = Math.abs(p.net);
+    const n = h2h.get(p.id)?.rounds || 0;
+    const debt = p.debts.length === 1 ? p.debts[0] : owesMe
+      ? { from: p.id, to: state.me || p.debts[0].to, amount }
+      : { from: state.me || p.debts[0].from, to: p.id, amount };
     return (
-      <button key={d.from + d.to} className="ledger-row" onClick={() => setOpen(d)}>
-        <div className="lr-info">
-          <div className="lr-name">{label}</div>
-          <div className="lr-status">From {d.rounds.length} round{d.rounds.length === 1 ? '' : 's'}</div>
+      <div key={p.id} className="tab-card">
+        <button className="tab-person" onClick={() => nav.push('person', { id: p.id })} aria-label={`${name}: ${owesMe ? 'owes you' : 'you owe'} ${money(amount)}. See the story`}>
+          <Avatar name={name} />
+          <div className="row-main">
+            <div className="tp-name">{name}</div>
+            <div className="tp-sub">{owesMe ? 'Owes you' : 'You owe'}{n ? ` · ${n} round${n === 1 ? '' : 's'} together` : ''}</div>
+          </div>
+          <div className={`tp-amt ${owesMe ? 'pos' : 'neg'}`}>{money(amount)}</div>
+          <span className="chevron"><Icon name="caret-right" /></span>
+        </button>
+        <div className="pay-acts">
+          {owesMe ? (
+            <>
+              <button className="pay-btn" onClick={() => remind(p.id, amount)} aria-label={`Remind ${first(name)} about ${money(amount)}`}><span className="pay-in"><Icon name="bell-ringing" fill /><span className="pay-lbl">Remind</span></span></button>
+              <RequestButton payer={payInfoFor(state, p.id)} mine={myApp} amount={amount} note="Golf" />
+            </>
+          ) : <PayButton info={payInfoFor(state, p.id)} amount={amount} note="Golf" />}
+          <button className="pay-btn ink" onClick={() => setOpen(debt)} aria-label={`Settle up with ${first(name)}`}><span className="pay-in"><Icon name="handshake" fill /><span className="pay-lbl">Settle up</span></span></button>
         </div>
-        <div className={`lr-big ${owedYou ? 'pos' : youOwe ? 'neg' : ''}`}>{money(d.amount)}</div>
-      </button>
+      </div>
     );
   };
 
-  const payee = open && state.players[open.to];
-  const vlink = open && payee?.venmo ? venmoLink(payee.venmo, open.amount) : null;
+  const otherRow = d => (
+    <button key={d.from + d.to} className="ledger-row" onClick={() => setOpen(d)}>
+      <div className="lr-info">
+        <div className="lr-name" style={{ fontSize: 16 }}>{nameOf(state, d.from)} owes {nameOf(state, d.to)}</div>
+      </div>
+      <div className="lr-amt">{money(d.amount)}</div>
+    </button>
+  );
 
   return (
     <Screen>
-      <Header title="Ledger" />
+      <Header title="Tab" />
       <div className="scroll">
-        {debts.length === 0 ? (
+        {plan.length === 0 ? (
           <Empty title={hasRounds ? 'All square' : 'Nothing owed yet'}
-            text={hasRounds ? 'Everyone’s settled up. Time to go win it back.' : 'Finish a round and who-owes-who shows up here, netted across every round.'}
+            text={hasRounds ? 'Everyone’s settled up. Time to go win it back.' : 'Finish a round and who owes who shows up here, netted across every round.'}
             action={!hasRounds && <button className="ec" onClick={() => nav.push('newRound')}><Icon name="golf" fill /> Start a round</button>} />
         ) : (
           <>
-            {me && (mine.length > 0) && (
-              <div className="ledger-summary">
-                <div><div className="bl">Owed to you</div><div className="lr-big pos">{money(owedToMe)}</div></div>
-                <div><div className="bl">You owe</div><div className="lr-big neg">{money(iOwe)}</div></div>
+            {people.length > 0 && (
+              <div className="tab-overall">
+                <div className="eyebrow">Overall</div>
+                <div className={`tab-big d ${overall > 0 ? 'pos' : overall < 0 ? 'neg' : ''}`}>
+                  {overall > 0 ? `You’re up ${money(overall)}` : overall < 0 ? `You’re down ${money(-overall)}` : 'You’re even'}
+                </div>
               </div>
             )}
-            {mine.length > 0 && <><div className="sec-label">You</div>{mine.map(row)}</>}
-            {others.length > 0 && <><div className="sec-label">{mine.length ? 'Everyone else' : 'Outstanding'}</div>{others.map(row)}</>}
+            {people.map(personRow)}
+            {square.length > 0 && people.length > 0 && <p className="field-help pad">All square with {listNames(square)}.</p>}
+            {others.length > 0 && (
+              <>
+                <div className="sec-label">{people.length ? 'Everyone else' : 'Outstanding'}</div>
+                {others.map(otherRow)}
+              </>
+            )}
+            <p className="field-help pad">Netted across every round, then squared in the fewest payments. Nobody is asked to pay someone they haven’t played with.</p>
           </>
         )}
         {history.length > 0 && (
@@ -77,7 +123,7 @@ export default function Ledger() {
             {history.slice(0, 30).map(s => (
               <div key={s.id} className="ledger-row static">
                 <div className="lr-info">
-                  <div className="lr-name" style={{ fontSize: 16 }}>{nameOf(state, s.from)} paid {nameOf(state, s.to)}</div>
+                  <div className="lr-name" style={{ fontSize: 16 }}>{isMe(s.from) ? 'You' : nameOf(state, s.from)} paid {isMe(s.to) ? 'you' : nameOf(state, s.to)}</div>
                   <div className="lr-status">{new Date(s.at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}</div>
                 </div>
                 <div className="lr-amt" style={{ marginRight: 8 }}>{money(s.amount)}</div>
@@ -88,28 +134,12 @@ export default function Ledger() {
         )}
       </div>
       <BottomNav />
-
-      <Sheet open={!!open && !partial} onClose={() => setOpen(null)} title="Settle up">
-        {open && (
-          <>
-            <div className="block">
-              <div style={{ fontSize: 15, color: 'var(--mute)', marginBottom: 4 }}>{nameOf(state, open.from)} owes {nameOf(state, open.to)}</div>
-              <div className="d" style={{ fontSize: 44, fontWeight: 800, letterSpacing: '-.03em' }}>{money(open.amount)}</div>
-              <div style={{ fontSize: 13, color: 'var(--mute)', marginTop: 4 }}>Netted across {open.rounds.length} round{open.rounds.length === 1 ? '' : 's'}</div>
-            </div>
-            {vlink && (
-              <a className="sheet-item venmo" href={vlink} target="_blank" rel="noreferrer">
-                <span><Icon name="paper-plane-tilt" fill /> Pay @{payee.venmo} on Venmo</span><Icon name="arrow-square-out" />
-              </a>
-            )}
-            {!vlink && payee && <p className="field-help" style={{ padding: '0 20px 8px' }}>Add {payee.name}’s Venmo username in Players to get a pay link here.</p>}
-            <button className="sheet-item" onClick={() => record(open, open.amount)}><span><Icon name="check-circle" fill /> Mark {money(open.amount)} as paid</span></button>
-            <button className="sheet-item" onClick={() => setPartial(true)}><span><Icon name="coins" /> Record a partial payment</span></button>
-          </>
-        )}
-      </Sheet>
-      <Numpad open={partial} title="Amount paid" prefix="$" initial="" min={0.01} max={open?.amount} allowDecimal
-        onClose={() => setPartial(false)} onDone={v => record(open, v)} />
+      <SettleSheet debt={open} onClose={() => setOpen(null)} />
     </Screen>
   );
+}
+
+function listNames(names) {
+  if (names.length <= 1) return names.join('');
+  return `${names.slice(0, -1).join(', ')} and ${names.at(-1)}`;
 }

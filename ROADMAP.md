@@ -21,6 +21,8 @@ The plan for growing Birdie Bank into a $10k/mo business, and the checklist we w
 
 **The big date:** the creator test (S4) runs February to April 2027, when golf season starts back up. Everything before it is about being ready: a product groups keep using, a smooth path from video to paying, and an App Store app.
 
+Tab and people (2026-09-27): the Tab (was Ledger) now shows your net with each friend with Settle up and Remind, the group settles in the fewest payments, everyone picks their own payment app, and Players are cards with your honest head-to-head.
+
 Last updated: 2026-09-27
 
 ---
@@ -149,7 +151,8 @@ Put more money into the winning creators and copy their video formats with other
 
 ### 2. Profiles
 - [x] `S1` Players have a name, handicap index and Venmo username, saved to your account when signed in (2026-09-25)
-- [ ] `S3` Your own profile: photo, home course, handicap, which payment apps you use
+- [ ] `S3` (partial) Your own profile: photo, home course, handicap, which payment apps you use. Your payment app and handle (Venmo, Cash App, PayPal or Zelle) are set on your player card from Settings or Players (2026-09-27); photo and home course still to do.
+- [x] `S2` Player cards: each person shows your record and honest net with them, and opens a card with Request, Remind, Settle up and the round-by-round story. Crews sit in a small section below (2026-09-27)
 - [ ] `S5` Profile stats: rounds, net winnings, record against each friend, favorite game
 - [ ] `S3` Privacy settings, with money hidden by default
 
@@ -197,13 +200,15 @@ Put more money into the winning creators and copy their video formats with other
 - [ ] `S2` One shared tab for the group: both players see the same numbers, and a recorded payment shows up for the other person
 - [ ] `S2` The group can see who's settled up during the week
 - [ ] `S2` **Carry it over:** instead of "I paid," either person can propose rolling the balance into next week. Once the other person agrees, it's no longer pending or overdue; it stays in the running tab as an agreed carry-over.
-- [ ] `S2` Fewest payments for the whole group, not just pair by pair
-- [ ] `S2` Cash App, PayPal and Zelle alongside Venmo
-- [ ] `S3` Gentle payment reminders ("Mike still owes $18 from Saturday")
+- [x] `S2` Fewest payments for the whole group, not just pair by pair. Only ever between people who have played together; money is passed along through a mutual friend when needed (2026-09-27)
+- [x] `S2` Cash App, PayPal and Zelle alongside Venmo. Each person picks their app; pay buttons use the payee's app (Zelle shows the handle with a copy button) and only show to the person paying or owed. Handles ride along on shared rounds (2026-09-27)
+- [x] `S2` The Tab by person: your net with each friend, Settle up and Remind on every row, Venmo request links, and tap a person for the round-by-round story (2026-09-27)
+- [ ] `S3` (partial) Gentle payment reminders ("Mike still owes $18 from Saturday"). A Remind button sends a friendly text with the amount and your pay link (2026-09-27); automatic reminders still to do.
 - [ ] `S3` A separate tab for each crew or trip, and "close the books" at season's end
 
 ### 8. History and stats
 - [x] Round history, season stats, head-to-head
+- [x] `S2` Honest head-to-head: each pair's result comes from the bets and holes between them, not from who happened to pay whom (2026-09-27)
 - [ ] `S3` Deeper stats for Pro: press win rate, results by game and by course
 - [ ] `S5` Handicap trend from your rounds, as a guide next to your official index (GameBook users ask for handicap tracking). The official index still comes from GHIN or your club.
 - [ ] `S5` Year in review ("Birdie Bank Wrapped")
@@ -396,3 +401,4 @@ Kept light on purpose. Groups already have a group text, so Birdie Bank adds to 
 - 2026-09-27: Money rules #1 to #9 built with tests for each, including the rules check examples: bets change from a hole on, unfinished Rabbit legs and Sixes matches pay, Rabbit set free, Quota scales to holes played, WHS handicap allowances (per player, 3-person scramble 30/20/10), pots by default for Stableford and Quota, worked examples under every bet, and one greenie a hole on par 3s.
 - 2026-09-27: Two new games, Snake and Hammer, with rules, options, scoring on the Play screen, results and reveal. Skins house rules (net and gross together, a pot split by skins won, and void, split or playoff for carryovers after the last hole) and Nassau press house rules (press at the turn, no press on the last hole). Published rules cited in the code.
 - 2026-09-27 (overnight, product and copy): More than one round in progress (nothing is deleted to start a new one), fixing a finished round keeps it on the tab, database courses get a soft tag and the middle tee, the results image hides amounts until you turn them on, after-round reactions save as feedback, a deeper pink for small white text, and the approved copy audit applied screen by screen.
+- 2026-09-27: Tab and people: the Ledger screen is now the Tab, by person, with Remind, Request and a round-by-round story for each friend. Fewest payments across the whole group (only between people who've played together), payment apps for everyone (Venmo, Cash App, PayPal, Zelle) with pay buttons only for the payer or payee, Player cards, and honest head-to-head worked out bet by bet.

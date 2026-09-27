@@ -56,8 +56,13 @@ test('every game: bets changed mid-round still add up to zero, in whole cents', 
           if (i === Math.floor(upto / 2)) r = changeBets(r, raise(r.settings[game], 1), i + 2);
         }
         if (rnd() < 0.4) r = changeBets(r, raise(r.settings[game], 3), upto + 1);
-        const { balances } = roundResults(r);
+        const { balances, pairs } = roundResults(r);
         const cents = Object.values(balances).map(v => v * 100);
+        // Head to head still adds up to each balance after the bets change (give or take a cent a pair)
+        for (const a of ids) {
+          const sum = ids.filter(b => b !== a).reduce((acc, b) => acc + Math.round(pairs[a][b] * 100), 0);
+          assert.ok(Math.abs(sum - Math.round(balances[a] * 100)) <= ids.length, `${game} ${payout}: ${a} head to head ${sum} v ${balances[a]}`);
+        }
         assert.ok(cents.every(c => Number.isFinite(c) && Math.abs(c - Math.round(c)) < 1e-6), `${game}: ${JSON.stringify(balances)}`);
         assert.equal(Math.round(cents.reduce((a, c) => a + c, 0)) + 0, 0, `${game} ${payout}: ${JSON.stringify(balances)}`);
       }

@@ -5,6 +5,7 @@ import { BallIllo, Icon, Screen } from '../components/ui.jsx';
 import { update, uid } from '../lib/store.js';
 import { fetchShared, joinShared } from '../lib/sync.js';
 import { GAMES } from '../lib/round.js';
+import { payFields } from '../lib/pay.js';
 
 export default function JoinInvite({ code, onJoined, onSkip }) {
   const [found, setFound] = useState(null);
@@ -28,7 +29,7 @@ export default function JoinInvite({ code, onJoined, onSkip }) {
       update(s => {
         // Reuse the round's player id so this round's results are already "mine"
         const id = player?.id || uid('p_');
-        s.players[id] = { id, name: player?.name || watcherName.trim(), index: player?.index ?? null, venmo: '', createdAt: Date.now() };
+        s.players[id] = { id, name: player?.name || watcherName.trim(), index: player?.index ?? null, ...payFields(player), createdAt: Date.now() };
         s.me = id;
         s.onboarded = true;
       });
