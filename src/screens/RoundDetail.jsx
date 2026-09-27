@@ -80,7 +80,7 @@ export default function RoundDetail({ id, celebrate }) {
   const notes = roundNotes(round);
   const notesEl = notes.length > 0 && (
     <div style={{ marginTop: 12 }}>
-      {notes.map(n => <p key={n.text} className="hint-card"><Icon name={n.kind === 'left' ? 'user-minus' : 'warning'} fill /> {n.text}</p>)}
+      {notes.map(n => <p key={n.text} className="hint-card"><Icon name={n.kind === 'left' ? 'user-minus' : n.kind === 'joined' ? 'user-plus' : 'warning'} fill /> {n.text}</p>)}
     </div>
   );
   if (stage !== 'detail') {

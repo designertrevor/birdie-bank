@@ -306,15 +306,16 @@ export function posOf(round, hole) {
   return round.holes.findIndex(h => h.no === hole.no) + 1;
 }
 
-const anyLeft = round => !!round.left && Object.keys(round.left).length > 0;
+const anyLeft = round => (!!round.left && Object.keys(round.left).length > 0) || (!!round.joined && Object.keys(round.joined).length > 0);
 
-/** Whether a player is still in the round on this hole. */
+/** Whether a player is in the round on this hole: they've joined and haven't left. */
 export function playsHole(round, pid, hole) {
   if (!anyLeft(round)) return true;
-  return posOf(round, hole) <= leftAt(round, pid);
+  const pos = posOf(round, hole);
+  return pos >= joinedAt(round, pid) && pos <= leftAt(round, pid);
 }
 
-/** The players still in the round on a hole. */
+/** The players in the round on a hole. */
 export function playersOn(round, hole) {
   if (!anyLeft(round)) return round.players;
   return round.players.filter(p => playsHole(round, p.id, hole));
@@ -342,6 +343,112 @@ export function canLeave(round, pid) {
   const staying = playersToEnd(round).filter(p => p.id !== pid).map(p => p.id);
   if (round.game === 'scramble' && round.teams) return round.teams.filter(t => t.players.some(x => staying.includes(x))).length >= 2;
   return staying.length >= 2;
+}
+
+// --------------------------- Players added mid-round -------------------------
+// round.joined maps a player id to the hole number they started on. Before it they have no
+// score box and no money; from it on they play like everyone else, the same way the holes
+// after someone leaves are worked out without them. Players there from the start aren't in it.
+
+/** Games a player can be added to. Games with sides, teams or an exact head count aren't, even before the first score. */
+export const ADD_MID_ROUND = ['banker', 'skins', 'stroke', 'stableford', 'quota', 'aces', 'bbb', 'dots', 'rabbit'];
+
+/** Playing position (1-based) of the first hole a player plays: 1 unless they were added mid-round. */
+export function joinedAt(round, pid) {
+  const no = round.joined?.[pid];
+  if (no == null) return 1;
+  const i = round.holes.findIndex(h => h.no === no);
+  // Their hole was dropped by a change of round length: count them from the start rather than guess
+  return i < 0 ? 1 : i + 1;
+}
+
+/** Players added after the first hole, in the order they joined: [{ player, from: hole number, pos }]. */
+export function playersJoined(round) {
+  return round.players
+    .filter(p => joinedAt(round, p.id) > 1)
+    .map(p => ({ player: p, from: round.joined[p.id], pos: joinedAt(round, p.id) }))
+    .sort((a, b) => a.pos - b.pos);
+}
+
+/** Whether a player was in for every hole: there from the first and never left. */
+export function playsWholeRound(round, pid) {
+  return joinedAt(round, pid) <= 1 && leftAt(round, pid) >= round.holes.length;
+}
+
+/** Whether any score has been entered yet. */
+export function roundStarted(round) {
+  return round.holes.some(h => Object.values(round.scores?.[h.no] || {}).some(v => v != null));
+}
+
+/** Why nobody can be added to this round right now, or null when someone can. */
+export function addPlayerProblem(round) {
+  const g = GAMES[round.game];
+  if (round.players.length >= g.max) return `${g.name} is for ${g.max === g.min ? g.max : `up to ${g.max}`} players, and the group is full.`;
+  if (!ADD_MID_ROUND.includes(round.game)) {
+    // Sides, teams and rotations are set when the round is made, so a new player would have no side to play on
+    return roundStarted(round)
+      ? `${g.name} is set up for the players who started, so nobody can join once it’s under way.`
+      : `${g.name} is played in set sides, so a new player can’t be slotted in. Start a fresh round with everyone in it.`;
+  }
+  return null;
+}
+
+/**
+ * The first hole a new player could start on: the hole on screen if nobody has scored it yet,
+ * else the next hole with no scores. Null when every hole has scores.
+ */
+export function firstOpenHole(round) {
+  const from = Math.min(round.current || 0, round.holes.length - 1);
+  const h = round.holes.find((x, i) => i >= from && !Object.values(round.scores?.[x.no] || {}).some(v => v != null));
+  return h ? h.no : null;
+}
+
+/**
+ * Add a player to a round. `player` is { id, name, index?, courseHc? } (courseHc: the strokes
+ * base to play off; else it comes from the index). `fromNo` is the hole number they start on.
+ * Before any score is in they're simply one more player and everyone's strokes are worked out
+ * again. Once the round is under way nobody else's strokes change: the new player gets strokes
+ * against the same low player everyone else plays off. Returns a new round; `round` is untouched.
+ */
+export function addPlayerToRound(round, player, fromNo = null) {
+  const hc = player.courseHc ?? (player.index != null ? Math.round(round.holesCount === 9 ? player.index / 2 : player.index) : 0);
+  const fresh = { id: player.id, name: player.name, tee: null, index: player.index ?? null, courseHc: hc, courseHcOverride: player.courseHc ?? null, ...payFields(player) };
+  const next = { ...round, players: [...round.players], joined: { ...(round.joined || {}) } };
+  const started = roundStarted(round);
+  if (!started) {
+    const all = [...round.players, fresh];
+    const plays = round.useHandicaps ? strokesOffLow(all.map(p => p.courseHc), round.hcPct) : all.map(() => 0);
+    next.players = all.map((p, i) => ({ ...p, plays: plays[i] }));
+    return next;
+  }
+  let plays = 0;
+  if (round.useHandicaps && round.players.length) {
+    // Strokes off the same low player as before, so nobody's strokes on holes already played move
+    const all = strokesOffLow([...round.players.map(p => p.courseHc), hc], round.hcPct);
+    const low = round.players.reduce((a, p, i) => (p.plays < round.players[a].plays ? i : a), 0);
+    plays = all.at(-1) - all[low] + (round.players[low].plays || 0);
+  }
+  next.players.push({ ...fresh, plays });
+  const pos = fromNo == null ? -1 : round.holes.findIndex(h => h.no === fromNo);
+  if (pos > 0) next.joined[fresh.id] = fromNo;
+  return next;
+}
+
+/** What joining late does to the game, in a sentence (for the results and the add-a-player sheet). */
+export function joinRule(round, pid) {
+  const g = round.game;
+  const s = round.settings?.[g];
+  if ((g === 'stroke' || g === 'stableford' || g === 'quota') && s?.payout === 'pot') return 'The pot is for the players who started, so they’re not in it.';
+  if (g === 'stroke' || g === 'stableford' || g === 'quota') return 'Their money counts from there: they settle with each player on the holes they both played.';
+  if (g === 'rabbit') {
+    const legs = nassauLegs(round.holes.length);
+    const pos = joinedAt(round, pid);
+    if (round.holes.length === 18 && pos <= legs.back.start) return pos === legs.back.start ? 'They’re in the rabbit on the back nine.' : 'They sit out the front nine rabbit and are in on the back nine.';
+    return 'The rabbit was already running, so they sit it out.';
+  }
+  if (g === 'skins') return 'Their money counts from there, carried skins included.';
+  if (g === 'banker') return 'Their money counts from there: they bet against the bank and take their turn as banker.';
+  return 'Their money counts from there.';
 }
 
 /**
@@ -649,8 +756,8 @@ function skinsMoney(round, t, onPay = null) {
   const cfg = round.settings.skins;
   const end = t.end;
   if (cfg.payout === 'pot') {
-    // Like the other pots, a player who left is out of it: they don't put in, and their skins don't count
-    const inPot = playersToEnd(round).map(p => p.id);
+    // Like the other pots, a player who left or joined partway is out of it: they don't put in, and their skins don't count
+    const inPot = round.players.filter(p => playsWholeRound(round, p.id)).map(p => p.id);
     const shares = Object.fromEntries(inPot.map(id => [id, 0]));
     for (const r of t.rows) if (r.winner && r.winner in shares) { shares[r.winner] += r.skins; credit(r.winner, r.skins, 0, r.hole.no); }
     if (end?.rule === 'split') {
@@ -900,9 +1007,12 @@ export function pointsTable(round) {
 export function rabbitTable(round) {
   const legs = nassauLegs(round.holes.length);
   const segs = round.holes.length === 18 ? [legs.front, legs.back] : [legs.total];
-  const rows = round.holes.map(h => {
-    // `gone`: players who left before this hole. If the rabbit's holder leaves, it runs loose
-    const on = playersOn(round, h);
+  const rows = round.holes.map((h, i) => {
+    // `gone`: players who left before this hole. If the rabbit's holder leaves, it runs loose.
+    // Someone added partway through a leg sits that leg out and plays for the next one
+    const seg = segs.find(sg => i + 1 >= sg.start && i + 1 <= sg.end) || segs[0];
+    const start = round.holes[seg.start - 1];
+    const on = playersOn(round, h).filter(p => !start || playsHole(round, p.id, start));
     const gone = round.players.filter(p => !on.includes(p)).map(p => p.id);
     if (!holeComplete(round, h)) return { hole: h, winner: undefined, gone };
     const nets = on.map(p => [p.id, netFor(round, p, h)]);
@@ -920,7 +1030,9 @@ export function rabbitTable(round) {
     const played = part.some(r => r.winner !== undefined);
     // Only the players still there at the end of the leg pay the holder
     const last = round.holes[seg.end - 1];
-    const payers = last ? playersOn(round, last).map(p => p.id) : round.players.map(p => p.id);
+    // A player added partway through a leg sits it out and is in from the next one
+    const first = round.holes[seg.start - 1];
+    const payers = last ? playersOn(round, last).filter(p => !first || playsHole(round, p.id, first)).map(p => p.id) : round.players.map(p => p.id);
     // Like a Nassau leg, an unfinished leg pays on the holes played: whoever holds the rabbit now
     const pays = !!holder && payers.includes(holder);
     const amount = pays ? rs.stake * (payers.length - 1) : 0;
@@ -1167,9 +1279,10 @@ export function roundResults(round) {
     const cfg = s[round.game];
     const lowerWins = round.game === 'stroke';
     if (played && cfg.payout === 'pot') {
-      // The pot is played for by those still in at the end. Anyone who left is out of it: they don't pay or win
+      // The pot is played for by those in it from the first hole to the last. Anyone who left, or
+      // was added partway, is out of it: they don't pay or win
       const key = round.game === 'quota' ? 'vsQuotaExact' : 'total';
-      const stay = playersToEnd(round).map(p => p.id);
+      const stay = round.players.filter(p => playsWholeRound(round, p.id)).map(p => p.id);
       const totals = Object.fromEntries(table.filter(t => stay.includes(t.id)).map(t => [t.id, t[key]]));
       addSpread(settleTotals(totals, { mode: 'pot', stake: cfg.stake, lowerWins }));
     } else if (played) {
@@ -1305,11 +1418,15 @@ export function leftRule(round, pid) {
 
 /**
  * Plain-English notes for the results: players who left and what it did to the game, and holes
- * that weren't counted because a score is missing. [{ kind: 'left' | 'missing', text }]
+ * that weren't counted because a score is missing, and players added partway through.
+ * [{ kind: 'joined' | 'left' | 'missing', text }]
  */
 export function roundNotes(round) {
   const notes = [];
   const first = n => n.split(' ')[0];
+  for (const { player, from } of playersJoined(round)) {
+    notes.push({ kind: 'joined', text: `${first(player.name)} joined on hole ${from}. ${joinRule(round, player.id)}` });
+  }
   for (const { player, after, pos } of playersLeft(round)) {
     if (pos >= round.holes.length) continue;
     const when = after === 0 ? 'before the first hole' : `after hole ${after}`;
