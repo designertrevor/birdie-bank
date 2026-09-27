@@ -312,7 +312,7 @@ function GameBreakdown({ round, res }) {
               <div className="eyebrow" style={{ marginBottom: 8 }}>Playoff for {end.skins} skin{end.skins > 1 ? 's' : ''}: who won it?</div>
               <div className="chip-row" style={{ padding: 0 }} role="radiogroup" aria-label={`Playoff for ${kind} skins`}>
                 {end.tied.map(pid => (
-                  <button key={pid} role="radio" aria-checked={end.winner === pid} className={`pill-btn ${end.winner === pid ? 'on' : ''}`} onClick={() => pickPlayoff(kind, pid)}>{first(names[pid])}</button>
+                  <button key={pid} role="radio" aria-checked={end.winner === pid} className={`pill-btn sm ${end.winner === pid ? 'on' : ''}`} onClick={() => pickPlayoff(kind, pid)}>{first(names[pid])}</button>
                 ))}
               </div>
               <p className="field-help">{end.winner ? `${first(names[end.winner])} takes the carried skins.` : 'Play a hole among the tied players, then tap who won it.'}</p>

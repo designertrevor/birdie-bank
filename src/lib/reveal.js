@@ -1,7 +1,8 @@
 // The end-of-round reveal: turns a round's results into short, ordered steps (each bet resolving,
 // or each player's skins, points or totals) that play before everyone's money lands. Pure: no DOM.
-import { holeAtPos, roundLegs, sideNames } from './round.js';
-import { matchLabel } from './games.js';
+import { holeAtPos, roundLegs, sideNames, sides } from './round.js';
+import { matchLabel, sideSplit } from './games.js';
+import { money } from './golf.js';
 
 const first = n => (n || '').split(' ')[0];
 const plural = (n, word, many = `${word}s`) => `${n} ${n === 1 ? word : many}`;
@@ -89,11 +90,13 @@ export function revealSteps(round, res) {
 
   if (round.game === 'hammer' && d.hammer) {
     const sn = round.teams ? sideNames(round) : sideNames(round).map(first);
-    const rows = d.hammer.filter(r => r.value > 0).map(r => {
-      const [a, b] = round.teams?.length === 2 ? round.teams.map(t => t.players) : players.slice(0, 2).map(p => [p.id]);
+    const [a, b] = sides(round);
+    const rows = d.hammer.filter(r => r.value > 0 && r.winner != null).map(r => {
+      // The same split as the money: with uneven sides the lone player wins or pays for both
+      const [ea, eb] = sideSplit(r.value, a.length, b.length, r.winner);
       const deltas = {};
-      for (const pid of a) deltas[pid] = r.winner === 0 ? r.value : -r.value;
-      for (const pid of b) deltas[pid] = r.winner === 1 ? r.value : -r.value;
+      for (const pid of a) deltas[pid] = ea;
+      for (const pid of b) deltas[pid] = eb;
       const how = r.conceded != null ? ', the other side folded' : r.hammers.length ? `, hammered ${r.hammers.length}×` : '';
       return { no: r.hole.no, deltas, text: () => `${sn[r.winner]}${how}` };
     });
@@ -154,7 +157,7 @@ export function revealSteps(round, res) {
 
   if (round.game === 'snake' && d.snake) {
     const steps = d.snake.legs.filter(l => l.played).map(l => (l.holder && l.value
-      ? { key: l.seg.label, label: d.snake.legs.length > 1 ? l.seg.label : 'The snake', text: `${name(l.holder)} holds the snake`, amount: l.value * l.others.length }
+      ? { key: l.seg.label, label: d.snake.legs.length > 1 ? l.seg.label : 'The snake', text: `${name(l.holder)} ${l.done ? 'held' : 'holds'} it, so pays ${money(l.value)} a player`, amount: l.value * l.others.length }
       : { key: l.seg.label, label: d.snake.legs.length > 1 ? l.seg.label : 'The snake', text: 'Nobody three-putted', tie: true }));
     return { title: 'The snake', steps };
   }

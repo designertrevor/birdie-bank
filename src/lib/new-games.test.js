@@ -185,13 +185,48 @@ test('hammer and snake: reveal steps and bet summaries', () => {
   const s = scores(round('snake', ['a', 'b']), 3);
   s.marks[2] = { snake: ['b'] };
   const ss = revealSteps(s, roundResults(s));
-  assert.equal(ss.steps[0].text, 'Bo holds the snake');
+  assert.equal(ss.steps[0].text, 'Bo holds it, so pays $5 a player');
   assert.equal(ss.steps[0].amount, 5);
   assert.equal(stakeSummary('snake', s.settings), '$5 a snake');
 });
 
+test('hammer reveal: a lone player against two wins or pays for both, like the money', () => {
+  const h = round('hammer', ['a', 'b', 'c'], { teams: [['a'], ['b', 'c']] });
+  scores(h, 2, { 1: { a: 3 }, 2: { b: 3 } });
+  h.marks[1] = { hammers: [1], conceded: null }; // Bo & Cy hammer, Ann wins the $10 hole: Ann +$20, Bo and Cy -$10 each
+  h.marks[2] = { hammers: [0, 1], conceded: 0 }; // Ann folds the second hammer: $10 hole to Bo & Cy
+  assert.deepEqual(bal(h), { a: 0, b: 0, c: 0 });
+  const steps = revealSteps(h, roundResults(h)).steps;
+  assert.equal(steps.find(x => x.label === 'Hole 1').amount, 20);
+  assert.equal(steps.find(x => x.label === 'Hole 2').amount, 10);
+});
+
 // ---------------------------------------------------------------------------
 // Skins house rules
+
+test('skins: a round saved before the house rules plays as it did (net, per skin, carries void)', () => {
+  const r = scores(round('skins', ['a', 'b', 'c']), 9, { 1: { a: 3 }, 9: { a: 5 } });
+  r.settings.skins = { value: 2, carryover: true };
+  assert.deepEqual(bal(r), { a: 4, b: -2, c: -2 });
+  assert.equal(roundResults(r).detail.skins.unclaimed, 8); // holes 2 to 9 tied and nobody claims them
+  assert.equal(stakeSummary('skins', r.settings), '$2 a skin · carryovers');
+});
+
+test('skins: split carries and pot shares come out in whole cents that sum to zero', () => {
+  // Holes 1 to 8 tie, Di bogeys 9: Ann, Bo and Cy split the 9 carried skins, $9 a player, so Di pays $9
+  const r = scores(round('skins', ['a', 'b', 'c', 'd'], { settings: { skins: { lastCarry: 'split', value: 1 } } }), 9, { 9: { d: 5 } });
+  assert.deepEqual(bal(r), { a: 3, b: 3, c: 3, d: -9 });
+  // Pot of $10 each with three players: Ann 2 skins, Bo 1, Cy 0 of a $30 pot
+  const p = scores(round('skins', ['a', 'b', 'c'], { settings: { skins: { payout: 'pot', stake: 10 } } }), 9, { 1: { a: 3 }, 2: { b: 3 }, 3: { a: 3 } });
+  assert.deepEqual(bal(p), { a: 10, b: 0, c: -10 });
+  // $10 each with four players and three skins won one each: $40 / 3 does not split evenly
+  const q = scores(round('skins', ['a', 'b', 'c', 'd'], { settings: { skins: { payout: 'pot', stake: 10 } } }), 9, { 1: { a: 3 }, 2: { b: 3 }, 3: { c: 3 } });
+  const qb = bal(q);
+  assert.equal(zero(qb), 0);
+  for (const v of Object.values(qb)) assert.equal(Math.round(v * 100), v * 100);
+  const won = roundResults(q).detail.skinsWon;
+  for (const w of Object.values(won)) assert.equal(Math.round(w.amount * 100), w.amount * 100);
+});
 
 test('skins: gross and net together are two skins a hole', () => {
   // Handicaps on: Di (index 18) gets strokes. On hole 1 Ann makes 3 gross; Di makes 4 with a stroke (net 3) too

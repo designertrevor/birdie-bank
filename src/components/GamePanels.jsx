@@ -216,9 +216,9 @@ export function SnakePicker({ round, hole, marks, setMarks }) {
   };
   return (
     <div className="marks-card">
-      <div className="marks-row">
-        <div className="marks-lbl"><strong>Three-putts</strong><span>{putts.length > 1 ? 'Tap in the order they happened. The last one takes the snake' : 'Tap anyone who three-putted'}</span></div>
-        <div className="chip-row" style={{ padding: 0 }}>
+      <div className="marks-row" style={{ flexDirection: 'column', alignItems: 'stretch', gap: 8 }}>
+        <div className="marks-lbl" style={{ width: 'auto' }}><strong>Three-putts</strong><span>{putts.length > 1 ? 'Tap in the order they happened. The last one takes the snake' : 'Tap anyone who three-putted'}</span></div>
+        <div className="chip-row" style={{ padding: 0 }} role="group" aria-label="Three-putts">
           {playersOn(round, hole).map(p => {
             const k = putts.indexOf(p.id);
             return (
@@ -254,7 +254,7 @@ export function HammerPanel({ round, hole, marks, setMarks }) {
     ? `${short[mark.conceded]} folded. ${short[1 - mark.conceded]} win${plural(1 - mark.conceded) ? '' : 's'} ${money(base * 2 ** (n - 1))}`
     : pending != null
       ? `${short[1 - pending]} hammered. ${short[pending]} play${plural(pending) ? '' : 's'} on at ${money(value)} or fold${plural(pending) ? '' : 's'} at ${money(value / 2)}`
-      : n ? '' : `Either side can hammer${row?.who === 'trailing' && row.behind != null ? `, ${short[row.behind]} first` : ''}`;
+      : n ? '' : row?.who === 'trailing' && row.behind != null ? `${short[row.behind]} can throw the first hammer` : 'Either side can hammer';
   return (
     <div className="wolf-panel">
       <div className="bl" style={{ marginBottom: 8, display: 'flex', justifyContent: 'space-between', gap: 8 }}>
@@ -264,12 +264,12 @@ export function HammerPanel({ round, hole, marks, setMarks }) {
       {status && <p className="bl" style={{ margin: '0 0 8px', fontWeight: 500 }} aria-live="polite">{status}</p>}
       <div className="chip-row" style={{ padding: 0 }}>
         {[0, 1].map(i => can[i] && (
-          <button key={i} className="pill-btn" onClick={() => put({ hammers: [...mark.hammers, i], conceded: null })}>
+          <button key={i} className="pill-btn" style={{ minHeight: 44 }} onClick={() => put({ hammers: [...mark.hammers, i], conceded: null })}>
             <Icon name="hammer" fill /> {short[i]} hammer{plural(i) ? '' : 's'} · {money(value * 2)}
           </button>
         ))}
         {pending != null && (
-          <button className="pill-btn lone" onClick={() => put({ conceded: pending })}>{short[pending]} fold{plural(pending) ? '' : 's'}</button>
+          <button className="pill-btn lone" style={{ minHeight: 44 }} onClick={() => put({ conceded: pending })}>{short[pending]} fold{plural(pending) ? '' : 's'}</button>
         )}
         {n > 0 && (
           <button className="pill-btn sm" onClick={() => put(mark.conceded != null ? { conceded: null } : { hammers: mark.hammers.slice(0, -1) })}>

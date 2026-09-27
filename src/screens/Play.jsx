@@ -1,10 +1,10 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { Empty, Icon, Numpad, Screen, Segmented, Sheet, useUI } from '../components/ui.jsx';
 import { RulesSheet } from '../components/Rules.jsx';
-import { getState, update, useStore } from '../lib/store.js';
+import { DEFAULT_SETTINGS, getState, update, useStore } from '../lib/store.js';
 import {
   GAMES, bankerHoleSetup, canLeave, defaultNine, holeComplete, leftRule, livePreview, nassauPressOptions, playersLeft, playersOn, pressMode,
-  resizeRound, roundLegs, roundResults, scoredHolesDropped, scorers, skinsTable, strokesFor, wolfHoleSetup, changeBets, wholeRoundOnly,
+  resizeRound, roundLegs, roundResults, scoredHolesDropped, scorers, skinsKinds, skinsTable, strokesFor, wolfHoleSetup, changeBets, wholeRoundOnly,
 } from '../lib/round.js';
 import { findCourse } from '../lib/courses.js';
 import { money, scoreName, pickupGross } from '../lib/golf.js';
@@ -502,9 +502,13 @@ function BetsSheet({ round, onClose }) {
   const { showToast } = useUI();
   const game = round.game;
   // Rabbit rounds from before "set free" have no mode: they play the old steal rule
-  const current = useMemo(() => (game === 'rabbit' && !round.settings.rabbit.mode
-    ? { ...round.settings, rabbit: { ...round.settings.rabbit, mode: 'steal' } }
-    : round.settings), [game, round.settings]);
+  // Skins and Nassau rounds from before their house rules have none saved: fill in the defaults,
+  // which play the old way, so the options show a choice and a switch to a pot has an amount
+  const current = useMemo(() => {
+    if (game === 'rabbit' && !round.settings.rabbit.mode) return { ...round.settings, rabbit: { ...round.settings.rabbit, mode: 'steal' } };
+    if (game === 'skins' || game === 'nassau') return { ...round.settings, [game]: { ...DEFAULT_SETTINGS[game], ...round.settings[game] } };
+    return round.settings;
+  }, [game, round.settings]);
   const [opts, setOpts] = useState(() => structuredClone(current));
   const [pad, setPad] = useState(null); // { path, title, min, max }
   const set = (path, v) => setOpts(o => { const n = structuredClone(o); const k = path.split('.'); let t = n; for (const x of k.slice(0, -1)) t = t[x]; t[k.at(-1)] = v; return n; });
@@ -662,21 +666,29 @@ function BetExposure({ banker }) {
 // --------------------------- Skins ----------------------------------------
 
 function SkinsPanel({ round, hole, onChange }) {
-  const t = skinsTable(round);
-  const row = t.rows.find(r => r.hole.no === hole.no);
-  const won = t.rows.filter(r => r.winner);
+  const kinds = skinsKinds(round);
+  const cfg = round.settings.skins;
+  const pot = cfg.payout === 'pot';
   const counts = Object.fromEntries(round.players.map(p => [p.id, 0]));
-  won.forEach(r => { counts[r.winner] += r.skins; });
-  const pot = row?.pot ?? 1;
+  // What this hole is worth, per kind: skins, plus the money when each skin has a price
+  const worth = kinds.map(kind => {
+    const t = skinsTable(round, kind);
+    t.rows.filter(r => r.winner).forEach(r => { counts[r.winner] += r.skins; });
+    const row = t.rows.find(r => r.hole.no === hole.no);
+    const n = row?.pot ?? 1;
+    const skins = `${n} skin${n > 1 ? 's' : ''}`;
+    const tag = kinds.length > 1 ? `${kind === 'net' ? 'Net' : 'Gross'} ` : '';
+    return pot ? `${tag}${skins}` : `${tag}${skins} · ${money((row?.worth ?? t.value) * ((row?.field.length ?? round.players.length) - 1))}`;
+  });
   return (
     <div className="banker-bar" style={{ background: 'var(--lav)' }}>
       <div>
         <div className="bl">This hole is worth</div>
-        <div className="bn"><Icon name="coins" fill /> {pot} skin{pot > 1 ? 's' : ''} · {money((row?.worth ?? t.value) * ((row?.field.length ?? round.players.length) - 1))}</div>
+        <div className="bn"><Icon name="coins" fill /> {worth.join(' · ')}</div>
       </div>
       <div className="skin-counts">
-        {round.players.map(p => <span key={p.id} className="press-chip">{p.name.split(' ')[0]} {counts[p.id]}</span>)}
-        <button className="change-btn" onClick={onChange}>{money(t.value)} a skin</button>
+        {round.players.map(p => <span key={p.id} className="press-chip">{p.name.split(' ')[0]} {Math.round(counts[p.id] * 10) / 10}</span>)}
+        <button className="change-btn" onClick={onChange}>{pot ? `${money(cfg.stake ?? cfg.value)} each in` : `${money(cfg.value)} a skin`}</button>
       </div>
     </div>
   );

@@ -662,7 +662,7 @@ function skinsMoney(round, t) {
       const pot = stake * inPot.length;
       for (const id of inPot) {
         deltas[id] += pot * shares[id] / total - stake;
-        if (won[id]) won[id].amount = pot * shares[id] / total;
+        if (won[id]) won[id].amount = Math.round(pot * shares[id] / total * 100) / 100;
       }
     }
     return { deltas, won };
@@ -1042,6 +1042,7 @@ export function roundResults(round) {
       }
       if (kind === skinsKinds(round)[0]) detail.skins = t; else detail.skinsGross = t;
     }
+    for (const w of Object.values(detail.skinsWon)) w.amount = Math.round(w.amount * 100) / 100;
   }
 
   if (round.game === 'hammer') {
