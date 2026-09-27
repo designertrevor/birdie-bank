@@ -46,6 +46,26 @@ const NewRound = screen(() => import('./screens/NewRound.jsx'));
 const Play = screen(() => import('./screens/Play.jsx'));
 const RoundDetail = screen(() => import('./screens/RoundDetail.jsx'));
 const Suggest = screen(() => import('./screens/Suggest.jsx'));
+const plan = () => import('./screens/Plan.jsx');
+const Plan = screen(plan);
+const RollCall = screen(plan, 'RollCall');
+const PlanLink = screen(plan, 'PlanLink');
+
+/** A plan link (?plan=CODE, &p=WHO for one person's own) waiting to open: { code, who } or null. */
+function pendingPlanLink() {
+  try {
+    const q = new URLSearchParams(location.search);
+    const code = cleanCode(q.get('plan'));
+    if (code) {
+      const v = { code, who: q.get('p') || null };
+      sessionStorage.setItem('bb-plan', JSON.stringify(v));
+      return v;
+    }
+    const saved = JSON.parse(sessionStorage.getItem('bb-plan'));
+    return saved?.code ? { code: cleanCode(saved.code), who: saved.who || null } : null;
+  } catch { return null; }
+}
+const clearPlanLink = () => { try { sessionStorage.removeItem('bb-plan'); } catch { /* ignore */ } };
 
 /** Warm the screens once the first one is up, so tapping into one never shows a blank frame. */
 function preloadScreens() {
@@ -58,6 +78,7 @@ const SCREENS = {
   roundDetail: RoundDetail, newRound: NewRound, play: Play,
   playerEdit: PlayerEdit, crewEdit: CrewEdit, person: Person,
   settings: Settings, defaults: Defaults, courses: Courses, courseEdit: CourseEdit, about: About, suggest: Suggest,
+  plan: Plan, rollCall: RollCall, planLink: PlanLink,
 };
 // Settings lives behind the avatar on Up next, so it's a pushed screen rather than a tab
 const TABS = { upnext: UpNext, ledger: Ledger, history: History, people: People };
@@ -81,7 +102,13 @@ export default function App() {
     return () => mq?.removeEventListener?.('change', apply);
   }, [theme]);
   const [tab, setTab] = useState('upnext');
-  const [stack, setStack] = useState([]);
+  // A plan link opens straight onto the plan: for someone set up, on top of Up next
+  const [planLinkAt, setPlanLinkAt] = useState(pendingPlanLink);
+  const [stack, setStack] = useState(() => {
+    if (!onboarded || !planLinkAt) return [];
+    clearPlanLink();
+    return [{ name: 'planLink', params: planLinkAt, key: Date.now() }];
+  });
   // A join link opened before onboarding skips straight to picking your name in that round
   const [inviteCode, setInviteCode] = useState(() => {
     if (onboarded || !syncConfigured) return null;
@@ -113,6 +140,7 @@ export default function App() {
       try { sessionStorage.setItem('bb-join', q); } catch { /* ignore */ }
       history.replaceState(null, '', location.pathname);
     }
+    if (new URLSearchParams(location.search).get('plan')) history.replaceState(null, '', location.pathname);
   }, []);
 
   // Phone/browser back button pops the stack
@@ -133,11 +161,15 @@ export default function App() {
       try { sessionStorage.removeItem('bb-join'); } catch { /* ignore */ }
       setInviteCode(null);
     };
+    // A friend with a plan link answers and votes with no setup; the plan waits on their Up next if they set up later
+    const skipPlan = () => { clearPlanLink(); setPlanLinkAt(null); };
     return (
       <UIProvider>
         <div className="device">
           <Suspense fallback={<div className="screen active" aria-busy="true" />}>
-            {inviteCode ? <JoinInvite code={inviteCode} onJoined={joined} onSkip={skip} /> : <Onboarding />}
+            {inviteCode ? <JoinInvite code={inviteCode} onJoined={joined} onSkip={skip} />
+              : planLinkAt ? <PlanLink code={planLinkAt.code} who={planLinkAt.who} standalone onSkip={skipPlan} />
+              : <Onboarding />}
           </Suspense>
         </div>
       </UIProvider>

@@ -10,6 +10,10 @@ import { money } from '../lib/golf.js';
 import { AvatarButton, BottomNav } from '../nav.jsx';
 import { roundsInProgress } from '../lib/rounds.js';
 import { useNav } from '../lib/nav.js';
+import { RSVP_LABEL, dayLabel, rsvpFor } from '../lib/plans.js';
+
+/** "today", "tomorrow", "Saturday" or "Sat, Oct 10" for the RSVP tag. */
+const dayName = iso => { const d = dayLabel(iso); return d === 'Today' || d === 'Tomorrow' ? d.toLowerCase() : d; };
 
 /** Players as cards: your record and net with each person, newest friends from joined rounds too. */
 export default function People() {
@@ -47,11 +51,13 @@ export default function People() {
           const tab = tabWith(plan, mine, id);
           const amount = Math.abs(tab);
           const first = name.split(' ')[0];
+          const rsvp = rsvpFor(state, id);
           const row = (
             <button key={id} className={tab ? 'tab-person' : 'set-row person-row'} onClick={() => nav.push('person', { id })}>
               <Avatar name={name} />
               <div className="row-main">
                 <div className={tab ? 'tp-name' : 'set-name'}>{name}</div>
+                {rsvp && <div className={`rsvp-tag ${rsvp.status || 'none'}`}>{rsvp.status ? `${RSVP_LABEL[rsvp.status]} for ${dayName(rsvp.plan.date)}` : `No answer for ${dayName(rsvp.plan.date)} yet`}</div>}
                 <div className={tab ? 'tp-sub' : 'set-sub'}>
                   {h ? `${h.rounds} round${h.rounds === 1 ? '' : 's'} · won ${h.won}, lost ${h.lost}${h.even ? `, even ${h.even}` : ''}` : p?.index != null ? `Index ${formatIndex(p.index)}` : 'No rounds together yet'}
                   {tab > 0 ? ` · owes you ${money(amount)}` : tab < 0 ? ` · you owe ${money(amount)}` : ''}

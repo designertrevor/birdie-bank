@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Header, Icon, Screen } from '../components/ui.jsx';
 import { useStore } from '../lib/store.js';
 import { GAMES, holeComplete } from '../lib/round.js';
@@ -9,6 +9,8 @@ import { AvatarButton, BottomNav } from '../nav.jsx';
 import { useNav } from '../lib/nav.js';
 import { JoinSheet } from '../components/Live.jsx';
 import { syncConfigured } from '../lib/sync.js';
+import { RSVP_LABEL, countsLine, planChoice, planCounts, upcomingPlans, whenLabel } from '../lib/plans.js';
+import { refreshPlans } from '../lib/plan-sync.js';
 
 /** Home: what's next for you. A round to finish, what you owe and are owed, and how the last one went. */
 export default function UpNext() {
@@ -21,6 +23,9 @@ export default function UpNext() {
   const last = lastResult(state);
   const tab = myTab(state);
   const hasHistory = !!last;
+  const plans = upcomingPlans(state);
+  // Pick up answers and votes that came in since last time
+  useEffect(() => { refreshPlans(); }, []);
 
   return (
     <Screen>
@@ -41,8 +46,12 @@ export default function UpNext() {
           );
         })}
 
-        {/* Upcoming rounds slot: planned rounds (the plan, who's in, RSVPs) will list here, above the prompt to plan one */}
-        {live.length === 0 && <PlanNext last={last?.round} fresh={!hasHistory} />}
+        {plans.length > 0 && <div className="sec-label">Upcoming</div>}
+        {plans.map(p => <UpcomingCard key={p.id} plan={p} />)}
+        {plans.length > 0 && live.length === 0 && (
+          <button className="text-link" onClick={() => nav.push('newRound', { ahead: true })}><Icon name="calendar-plus" fill /> Plan another round</button>
+        )}
+        {live.length === 0 && plans.length === 0 && <PlanNext last={last?.round} fresh={!hasHistory} />}
 
         {syncConfigured && live.length === 0 && (
           <button className="add-row join-row" onClick={() => setJoining(true)}>
@@ -76,6 +85,27 @@ export default function UpNext() {
   );
 }
 
+/** An upcoming round: when, the group's game so far, the course and who's in. */
+function UpcomingCard({ plan }) {
+  const nav = useNav();
+  const { game } = planChoice(plan);
+  const c = planCounts(plan);
+  const me = plan.host ? plan.hostWho : plan.localMe;
+  const mine = plan.answers?.[me]?.status;
+  const off = plan.status === 'off' || plan.gone;
+  return (
+    <button className={`upcoming-card ${off ? 'off' : ''}`} onClick={() => nav.push('plan', { id: plan.id })}>
+      <div className="row-main">
+        <div className="eyebrow">{whenLabel(plan)}{off ? ' · Called off' : ''}</div>
+        <div className="uc-title d">{GAMES[game]?.name || 'Golf'} · {plan.course?.name || 'Course to be set'}</div>
+        <div className="uc-sub">{off ? `Organized by ${plan.host ? 'you' : plan.hostName || 'a friend'}` : countsLine(c)}</div>
+      </div>
+      {!off && <span className={`who-status ${mine || 'none'}`}>{mine ? `You’re ${RSVP_LABEL[mine].toLowerCase()}` : 'Answer'}</span>}
+      <span className="chevron"><Icon name="caret-right" /></span>
+    </button>
+  );
+}
+
 /** The prompt to set up the next round, with a one-tap "same again" when there's a last one. */
 function PlanNext({ last, fresh }) {
   const nav = useNav();
@@ -91,6 +121,7 @@ function PlanNext({ last, fresh }) {
         {last && GAMES[last.game] && (
           <button className="pc-btn ghost" onClick={() => nav.push('newRound', { rematch: last.id })}><Icon name="arrow-counter-clockwise" /> Run it back</button>
         )}
+        <button className="pc-btn ghost" onClick={() => nav.push('newRound', { ahead: true })}><Icon name="calendar-plus" /> Plan ahead</button>
       </div>
     </div>
   );
