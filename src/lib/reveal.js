@@ -57,8 +57,10 @@ export function revealSteps(round, res) {
     const won = {};
     for (const r of d.skins.rows) {
       if (!r.winner) continue;
-      won[r.winner] ??= { skins: 0, holes: [] };
+      won[r.winner] ??= { skins: 0, holes: [], amount: 0 };
       won[r.winner].skins += r.skins;
+      // Each skin is worth the bet on the hole it came from, paid by the others on the winning hole
+      won[r.winner].amount += (r.worth ?? r.skins * d.skins.value) * ((r.field?.length ?? n) - 1);
       won[r.winner].holes.push(r.hole.no);
     }
     const n = players.length;
@@ -67,7 +69,7 @@ export function revealSteps(round, res) {
       .sort((a, b) => won[b.id].skins - won[a.id].skins)
       .map(p => ({
         key: p.id, label: name(p.id), text: won[p.id].holes.map(h => `H${h}`).join(', '),
-        value: plural(won[p.id].skins, 'skin'), amount: won[p.id].skins * d.skins.value * (n - 1),
+        value: plural(won[p.id].skins, 'skin'), amount: won[p.id].amount,
       }));
     if (steps.length && d.skins.unclaimed > 0) steps.push({ key: 'carry', label: 'Carried over', text: 'Nobody claimed them', value: plural(d.skins.unclaimed, 'skin'), tie: true });
     return { title: 'Skins won', steps };
@@ -118,9 +120,9 @@ export function revealSteps(round, res) {
   }
 
   if (round.game === 'rabbit' && d.rabbit) {
-    const pot = (round.settings?.rabbit?.stake || 0) * (players.length - 1);
-    const steps = d.rabbit.legs.filter(l => l.done).map(l => (l.holder
-      ? { key: l.seg.label, label: l.seg.label, text: `${name(l.holder)} holds the rabbit`, amount: pot }
+    // Every leg with holes played pays, finished or not (like a Nassau leg)
+    const steps = d.rabbit.legs.filter(l => l.played ?? l.done).map(l => (l.pays ?? l.holder
+      ? { key: l.seg.label, label: l.seg.label, text: `${name(l.holder)} holds the rabbit`, amount: l.amount ?? (round.settings?.rabbit?.stake || 0) * (players.length - 1) }
       : { key: l.seg.label, label: l.seg.label, text: 'Loose at the end, no payout', tie: true }));
     return { title: 'The rabbit', steps };
   }
@@ -141,7 +143,7 @@ export function revealSteps(round, res) {
     const toPar = v => (v === 0 ? 'E' : v > 0 ? `+${v}` : String(v));
     const steps = sorted.map(x => {
       const label = round.game === 'scramble' ? x.name : first(x.name);
-      if (round.game === 'quota') return { key: x.id, label, text: `${x.total} pts, quota ${x.quota}`, value: `${toPar(x.vsQuota)}` };
+      if (round.game === 'quota') return { key: x.id, label, text: `${x.total} pts, quota ${x.target ?? x.quota}`, value: `${toPar(x.vsQuota)}` };
       if (round.game === 'stableford') return { key: x.id, label, text: '', value: plural(x.total, 'pt', 'pts') };
       return { key: x.id, label, text: `Net ${x.total}`, value: toPar(x.toPar) };
     });

@@ -169,7 +169,7 @@ export function RabbitPanel({ round, hole }) {
   const pos = round.holes.findIndex(h => h.no === hole.no) + 1;
   const leg = t.legs.find(l => pos >= l.seg.start && pos <= l.seg.end) || t.legs[0];
   const holder = leg?.holder;
-  const won = t.legs.filter(l => l.done && l.holder);
+  const won = t.legs.filter(l => l.done && l.pays);
   return (
     <div className="banker-bar" style={{ background: 'var(--lav)' }}>
       <div>
@@ -213,12 +213,18 @@ export function BBBPicker({ round, hole, marks, setMarks }) {
 
 export function DotsRow({ round, player, hole, marks, setMarks, gross }) {
   const s = round.settings.dots;
-  const kinds = Object.keys(DOT_KINDS).filter(k => s.kinds?.[k]);
+  // A greenie is a par 3 thing, unless one was already marked here before this rule
+  const kinds = Object.keys(DOT_KINDS).filter(k => s.kinds?.[k] && (k !== 'greenie' || hole.par === 3 || (marks[player.id] || []).includes(k)));
   const mine = marks[player.id] || [];
   const auto = s.auto ? scoreDots(gross, hole.par) : 0;
   const toggle = k => {
     const next = mine.includes(k) ? mine.filter(x => x !== k) : [...mine, k];
-    setMarks({ ...marks, [player.id]: next });
+    const all = { ...marks, [player.id]: next };
+    // Only the player closest to the pin gets the greenie, so marking it takes it off anyone else
+    if (k === 'greenie' && !mine.includes(k)) {
+      for (const pid of Object.keys(all)) if (pid !== player.id && Array.isArray(all[pid])) all[pid] = all[pid].filter(x => x !== 'greenie');
+    }
+    setMarks(all);
     buzz(8);
   };
   return (

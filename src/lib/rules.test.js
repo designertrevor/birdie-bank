@@ -64,7 +64,7 @@ test('#1 skins: Mike wins 2 skins at $2, the bet goes to $5 on the 10th tee, Mik
 });
 
 test('#1 skins: skins carried into the change keep their value, the new hole is at the new bet', () => {
-  // Holes 8 and 9 tie at $2 and carry; the bet goes to $5 from 10 and Mike wins 10: 2 + 2 + 5 = $9 from each
+  // Holes 1 to 9 all tie at $2 and carry; the bet goes to $5 from 10 and Mike wins hole 10
   const r = changeBets(play(mk('skins', ['t', 'm', 'd', 's']), 18, { 10: { m: 3 } }), { value: 5, carryover: true }, 10);
   // Holes 1 to 9 all tied, so nine $2 skins carry into hole 10: 9 × 2 + 5 = $23 from each of three
   assert.deepEqual(money(r), { t: -23, m: 69, d: -23, s: -23 });
@@ -121,7 +121,6 @@ test('#1 per-hole games price each hole at its own bet: stroke, wolf, vegas, nin
 
   // Aces & deuces: Al low and Cy high on holes 1 and 10; the ace goes to $4 from 10
   const ac = play(mk('aces', ['a', 'b', 'c']), 18, { 1: { a: 3, c: 5 }, 10: { a: 3, c: 5 } });
-  // Hole 1: a +4, b −2+1, c −2−2. Hole 10: a +8+1... worked per hole below
   const acm = money(changeBets(ac, { ace: 4, deuce: 1 }, 10));
   // Hole 1: a +2+2 +1 = 5, b −2 +1 = −1, c −2 −2 = −4. Hole 10: a +8 +1 = 9, b −4 +1 = −3, c −4 −2 = −6
   assert.deepEqual(acm, { a: 14, b: -4, c: -10 });
