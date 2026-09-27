@@ -28,7 +28,7 @@ export function ShareSheet({ round, open, onClose }) {
     setBusy(false);
   };
   const send = async () => {
-    const text = `Join my ${GAMES[round.game].name} round at ${round.course.name} on Birdie Bank. Code ${code}`;
+    const text = `Join my ${GAMES[round.game].name} game at ${round.course.name}. Follow the money live, no download. Code ${code}`;
     try {
       if (navigator.share) { await navigator.share({ title: 'Join my round', text, url: link }); return; }
     } catch (e) { if (e?.name === 'AbortError') return; }
@@ -47,15 +47,15 @@ export function ShareSheet({ round, open, onClose }) {
   };
 
   return (
-    <Sheet open={open} onClose={onClose} title="Live scoring">
+    <Sheet open={open} onClose={onClose} title="Invite the group">
       {!code ? (
         <div style={{ padding: '0 16px' }}>
           <p className="sheet-text" style={{ padding: '0 4px 12px' }}>Let everyone in the group follow along, or keep score from their own phone. Scores sync hole by hole.</p>
           <ul className="onboard-list" style={{ marginTop: 0, marginBottom: 14 }}>
             <li><Icon name="link" fill /> You get a code and a link to send the group.</li>
-            <li><Icon name="device-mobile" fill /> Anyone with it can view and enter scores.</li>
+            <li><Icon name="device-mobile" fill /> Anyone with it can view and enter scores, so only send it to your group.</li>
           </ul>
-          <button className="full-btn" disabled={busy} onClick={start}>{busy ? 'Starting…' : <>Share live <Icon name="broadcast" fill /></>}</button>
+          <button className="full-btn" disabled={busy} onClick={start}>{busy ? 'Starting…' : <>Get the link <Icon name="broadcast" fill /></>}</button>
         </div>
       ) : (
         <div style={{ padding: '0 16px' }}>
@@ -76,7 +76,6 @@ export function ShareSheet({ round, open, onClose }) {
 /** Enter a code → preview → pick who you are → join. */
 export function JoinSheet({ open, onClose, initialCode = '' }) {
   const nav = useNav();
-  const { showToast } = useUI();
   const state = useStore();
   const [code, setCode] = useState(cleanCode(initialCode));
   const [found, setFound] = useState(null);
@@ -96,10 +95,7 @@ export function JoinSheet({ open, onClose, initialCode = '' }) {
     const s = getState();
     const existing = Object.values(s.rounds).find(r => r.shared?.code === code);
     if (existing) { onClose(); nav.push('play', { id: existing.id }); return; }
-    if (s.activeRoundId && s.rounds[s.activeRoundId]?.status === 'active') {
-      showToast('Finish or end your current round first');
-      return;
-    }
+    // A round you're already in stays saved; switch back to it from Rounds in progress
     const id = await joinShared(code, found, me);
     onClose();
     nav.push(found.meta.status === 'done' ? 'roundDetail' : 'play', { id });
@@ -111,7 +107,7 @@ export function JoinSheet({ open, onClose, initialCode = '' }) {
       <div style={{ padding: '0 16px' }}>
         {!meta ? (
           <>
-            <p className="sheet-text" style={{ padding: '0 4px 12px' }}>Ask the scorekeeper for the 6-letter code, or open the link they sent.</p>
+            <p className="sheet-text" style={{ padding: '0 4px 12px' }}>Ask the scorekeeper for the 6-character code, or open the link they sent.</p>
             <label className="sr-only" htmlFor="join-code">Round code</label>
             <input id="join-code" className="code-input" value={code} onChange={e => { setCode(cleanCode(e.target.value)); setErr(null); }}
               placeholder="ABC123" autoCapitalize="characters" autoCorrect="off" autoComplete="off" inputMode="text" maxLength={8} />
@@ -130,7 +126,7 @@ export function JoinSheet({ open, onClose, initialCode = '' }) {
               </button>
             ))}
             <button className="sheet-cancel" style={{ width: '100%', margin: '4px 0 0' }} onClick={() => join(null)}>I’m just watching</button>
-            {state.me && <p className="field-help" style={{ textAlign: 'center' }}>Picking yourself puts this round in your history and ledger.</p>}
+            {state.me && <p className="field-help" style={{ textAlign: 'center' }}>Pick yourself and this round goes in your history and on your tab.</p>}
           </>
         )}
       </div>

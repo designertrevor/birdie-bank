@@ -29,9 +29,31 @@ export function teeDotStyle(tee) {
   return { background: tee.color || parts[0] || '#999' };
 }
 
-/** The warning under a course in lists, or null when its scorecard is trusted. */
-export function courseWarning(c) {
+/**
+ * The tag under a course in lists, or null for a bundled course whose scorecard is trusted:
+ * { text, soft }. A course from the database always says so, softly, since the group can still fix it.
+ */
+export function courseTag(c) {
+  if (c.source === 'golfcourseapi') return c.edited ? { text: 'Edited by you', soft: true } : { text: 'From course database', soft: true };
   if (c.verified) return null;
-  if (c.source === 'golfcourseapi') return c.edited ? 'Edited by you' : 'Check hole handicaps';
-  return c.custom ? 'Added by you' : 'Scorecard not verified';
+  return c.custom ? { text: 'Added by you', soft: true } : { text: 'Scorecard not checked yet', soft: false };
+}
+
+/** The tag's words alone (kept for screens that show it as plain text). */
+export function courseWarning(c) {
+  return courseTag(c)?.text || null;
+}
+
+/**
+ * The tee picked for a player until someone changes it. Database courses list every set of
+ * tees, so they start on the middle men's tee (by rating when known) rather than the tips.
+ */
+export function defaultTee(course) {
+  const tees = course?.tees || [];
+  if (!tees.length) return null;
+  if (course.source !== 'golfcourseapi') return tees[0];
+  const men = tees.filter(t => !/\(W\)$/.test(t.name));
+  const pool = men.length ? men : tees;
+  const sorted = pool.every(t => t.rating != null) ? [...pool].sort((a, b) => b.rating - a.rating) : pool;
+  return sorted[Math.floor((sorted.length - 1) / 2)];
 }

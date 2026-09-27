@@ -19,7 +19,7 @@ export function teamsProblem(game, teams, picked) {
   if (cfg.optional && picked.length <= 2) return null;
   if (!teams) return 'Split the players into teams';
   if (teams.some(t => t.length === 0)) return 'Every team needs at least one player';
-  if (cfg.size && teams.some(t => t.length !== cfg.size)) return `Teams of ${cfg.size}`;
+  if (cfg.size && teams.some(t => t.length !== cfg.size)) return `${GAMES[game].name} needs teams of ${cfg.size}`;
   if (teams.flat().length !== picked.length) return 'Put everyone on a team';
   return null;
 }

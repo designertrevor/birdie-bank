@@ -631,7 +631,7 @@ test('holeMoneyLine names everyone who won the most on the hole', () => {
   const r = flat('match', ['a', 'b', 'c', 'd'], { teams: [['a', 'b'], ['c', 'd']] });
   const hole = r.holes[0];
   assert.equal(holeMoneyLine(r, hole, { a: 10, b: 10, c: -10, d: -10 }), 'Hole 1: Ann & Bo +$10');
-  assert.equal(holeMoneyLine(r, hole, { a: 0, b: 0, c: 0, d: 0 }), 'Hole 1 saved. No money changed hands');
+  assert.equal(holeMoneyLine(r, hole, { a: 0, b: 0, c: 0, d: 0 }), 'Hole 1 saved. No money moved');
   const s = flat('skins', ['a', 'b', 'c']);
   assert.equal(holeMoneyLine(s, hole, { a: -2, b: 4, c: -2 }), 'Hole 1: Bo +$4');
   assert.equal(holeMoneyLine(s, hole, { a: 2.5, b: 2.5, c: -5 }), 'Hole 1: Ann & Bo +$2.50');

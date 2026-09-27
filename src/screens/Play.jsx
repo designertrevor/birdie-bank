@@ -19,14 +19,21 @@ import { Scorecard } from './RoundDetail.jsx';
 import { LivePill, ShareSheet } from '../components/Live.jsx';
 import { syncConfigured } from '../lib/sync.js';
 import { holeMoneyLine } from '../lib/format.js';
+import { leaveRound, roundsInProgress } from '../lib/rounds.js';
+import { RoundsInProgressSheet } from '../components/RoundsInProgress.jsx';
 
 export default function Play({ id }) {
   const round = useStore(s => s.rounds[id]);
   const nav = useNav();
+  // The round you open is the one the play button brings you back to
+  const inPlay = round?.status === 'active';
+  useEffect(() => {
+    if (inPlay && getState().activeRoundId !== id) update(s => { s.activeRoundId = id; });
+  }, [inPlay, id]);
   if (!round) {
     return (
       <Screen>
-        <Empty title="Round not found" text="It may have been discarded." action={<button className="ec" onClick={() => nav.reset('history')}>Back to History</button>} />
+        <Empty title="Round not found" text="It may have been deleted." action={<button className="ec" onClick={() => nav.reset('history')}>Back to History</button>} />
       </Screen>
     );
   }
@@ -88,6 +95,8 @@ function PlayRound({ round }) {
   const [live, setLive] = useState(false);
   const [holesSheet, setHolesSheet] = useState(false);
   const [betsSheet, setBetsSheet] = useState(false);
+  const [switching, setSwitching] = useState(false);
+  const others = useStore(s => roundsInProgress(s).filter(r => r.id !== round.id).length);
   const numRefs = useRef({});
 
   const setMarksDirty = m => { setDirty(true); setMarks(m); };
@@ -113,7 +122,7 @@ function PlayRound({ round }) {
   }, [round, idx, isLast]);
 
   const saveHole = async () => {
-    if (game === 'wolf' && wolf.partner === undefined) { showToast('Wolf needs to pick a partner or go lone'); return; }
+    if (game === 'wolf' && wolf.partner === undefined) { showToast(`Pick ${round.players.find(p => p.id === wolf.wolf)?.name.split(' ')[0] || 'the wolf'}’s partner, or go lone wolf`); return; }
     const scores = Object.fromEntries(units.map(p => [p.id, draft[p.id]]));
     DRAFTS.delete(draftKey);
     showToast(holeMoneyLine(round, hole, livePreview(round, hole, { scores, banker, wolf, marks }).delta));
@@ -136,13 +145,15 @@ function PlayRound({ round }) {
       const r = getState().rounds[round.id];
       const legs = roundLegs(r);
       const fresh = r.presses.filter(p => p.start === nextIdx + 1);
-      if (fresh.length) showToast(game === 'nassau' ? `Auto press: ${fresh.map(p => legs[p.leg].label).join(', ')}` : 'Auto press!');
+      if (fresh.length) showToast(game === 'nassau' ? `Auto press on the ${fresh.map(p => legs[p.leg].label.replace(/^[A-Z]/, c => c.toLowerCase())).join(' and ')}` : 'Auto press!');
     }
     if (isLast) finish();
   };
 
   const finish = async () => {
     const r = getState().rounds[round.id];
+    // Fixing a finished round: it never stopped counting, so just go back to the results
+    if (r.editing && r.status === 'done') { doneEditing(); return; }
     const missing = r.holes.filter(h => !holeComplete(r, h));
     if (missing.length) {
       const one = missing.length === 1;
@@ -157,9 +168,14 @@ function PlayRound({ round }) {
     update(s => {
       const rr = s.rounds[round.id];
       rr.status = 'done'; rr.finishedAt = Date.now();
-      if (s.activeRoundId === round.id) s.activeRoundId = null;
+      leaveRound(s, round.id);
     });
     nav.reset('history', ['roundDetail', { id: round.id, celebrate: true }]);
+  };
+  const doneEditing = () => {
+    setMenu(false);
+    update(s => { delete s.rounds[round.id].editing; });
+    nav.reset('history', ['roundDetail', { id: round.id }]);
   };
 
   const endEarly = async () => {
@@ -169,19 +185,19 @@ function PlayRound({ round }) {
       title: 'End this round?',
       text: played ? `${played} of ${round.holes.length} holes scored.` : 'No holes have been scored yet.',
       actions: [
-        ...(played ? [{ label: 'Finish with holes played', value: 'finish' }] : []),
-        { label: 'Discard round', value: 'discard', danger: true },
+        ...(played ? [{ label: 'Finish and count holes played', value: 'finish' }] : []),
+        { label: 'Delete round', value: 'discard', danger: true },
       ],
       cancelLabel: 'Keep playing',
     });
     if (choice === 'finish') {
-      update(s => { const rr = s.rounds[round.id]; rr.status = 'done'; rr.finishedAt = Date.now(); s.activeRoundId = null; });
+      update(s => { const rr = s.rounds[round.id]; rr.status = 'done'; rr.finishedAt = Date.now(); leaveRound(s, round.id); });
       nav.reset('history', ['roundDetail', { id: round.id, celebrate: true }]);
     }
     if (choice === 'discard') {
-      const sure = await ask({ title: 'Discard for good?', text: 'Scores and bets from this round will be deleted.', confirmLabel: 'Delete round', danger: true });
+      const sure = await ask({ title: 'Delete this round?', text: 'Scores and bets from this round will be gone for good.', confirmLabel: 'Delete round', danger: true });
       if (!sure) return;
-      update(s => { delete s.rounds[round.id]; if (s.activeRoundId === round.id) s.activeRoundId = null; });
+      update(s => { delete s.rounds[round.id]; leaveRound(s, round.id); });
       nav.reset('history');
     }
   };
@@ -206,7 +222,12 @@ function PlayRound({ round }) {
         <button className="header-close" onClick={() => setMenu(true)} aria-label="Round menu"><Icon name="dots-three" /></button>
       </div>
       <MoneyBar round={round} hole={hole} preview={preview} />
-      {round.status === 'done' && (
+      {round.editing && (
+        <button className="finished-banner" onClick={doneEditing}>
+          <Icon name="pencil-simple" fill /> Fixing scores. The tab updates as you save. Done <Icon name="arrow-right" />
+        </button>
+      )}
+      {round.status === 'done' && !round.editing && (
         <button className="finished-banner" onClick={() => nav.reset('history', ['roundDetail', { id: round.id }])}>
           <Icon name="flag-checkered" fill /> The scorekeeper finished this round. See results <Icon name="arrow-right" />
         </button>
@@ -214,7 +235,7 @@ function PlayRound({ round }) {
       <div className="hole-meta" onClick={() => setCard(true)} role="button" tabIndex={0} aria-label="Open scorecard">
         <div className="mc"><span className="ml">Hole</span><span className="mv">{hole.no}</span></div>
         <div className="mc"><span className="ml">Par</span><span className="mv">{hole.par}</span></div>
-        <div className="mc"><span className="ml">HDCP</span><span className="mv">{hole.hdcp ?? '–'}</span></div>
+        <div className="mc"><span className="ml">HCP</span><span className="mv">{hole.hdcp ?? '–'}</span></div>
       </div>
 
       {game === 'banker' && (
@@ -252,10 +273,10 @@ function PlayRound({ round }) {
                     {isWolf && <span className="bkr-badge"><Icon name="paw-print" fill /> Wolf</span>}
                     {round.teams && !p.team && <span className={`side-tag ${round.teams.findIndex(t => t.players.includes(p.id)) === 0 ? 'a' : 'b'}`}>{['A', 'B', 'C', 'D'][round.teams.findIndex(t => t.players.includes(p.id))]}</span>}
                   </div>
-                  {p.team && <div className="ps">{p.players.map(pid => round.players.find(x => x.id === pid)?.name.split(' ')[0]).join(', ')} · team HC {p.courseHc ?? 0}</div>}
+                  {p.team && <div className="ps">{p.players.map(pid => round.players.find(x => x.id === pid)?.name.split(' ')[0]).join(', ')} · team handicap {p.courseHc ?? 0}</div>}
                   <div className="ps">
-                    {st > 0 && <span className="stroke-dots" aria-label={`Gets ${st} stroke${st > 1 ? 's' : ''}`}>{'●'.repeat(st)} {st} stroke{st > 1 ? 's' : ''}</span>}
-                    {st < 0 && <span className="stroke-dots">Gives {-st} stroke</span>}
+                    {st > 0 && <span className="stroke-dots" aria-label={`Gets ${st} stroke${st > 1 ? 's' : ''}`}>{'●'.repeat(st)} Gets {st} stroke{st > 1 ? 's' : ''}</span>}
+                    {st < 0 && <span className="stroke-dots">Gives back {-st} stroke{st < -1 ? 's' : ''}</span>}
                     {game === 'banker' && !isBanker && <span> Bet {money(banker.bets[p.id] || 0)}{banker.doubled[p.id] ? (banker.doubleBack ? ' · 4×' : ' · 2×') : ''}</span>}
                     {touched[p.id] && v !== 'X' && <span className={`score-name s${Math.max(-2, Math.min(2, v - hole.par))}`}> {scoreName(v, hole.par)}</span>}
                   </div>
@@ -297,7 +318,7 @@ function PlayRound({ round }) {
         <button className="sheet-item" onClick={() => { setMenu(false); setRules(true); }}><span><Icon name="book-open" /> {GAMES[game].name} rules</span><Icon name="caret-right" /></button>
         {syncConfigured && (
           <button className="sheet-item" onClick={() => { setMenu(false); setLive(true); }}>
-            <span><Icon name="broadcast" /> {round.shared ? `Live scoring · ${round.shared.code}` : 'Share live scoring'}</span><Icon name="caret-right" />
+            <span><Icon name="broadcast" /> {round.shared ? `Live · code ${round.shared.code}` : 'Invite the group'}</span><Icon name="caret-right" />
           </button>
         )}
         <button className="sheet-item" onClick={() => { setMenu(false); setBetsSheet(true); }}>
@@ -309,8 +330,16 @@ function PlayRound({ round }) {
         <button className="sheet-item" onClick={() => { setMenu(false); setLeftSheet(true); }}>
           <span><Icon name="user-minus" /> {playersLeft(round).length ? `A player left · ${playersLeft(round).map(x => x.player.name.split(' ')[0]).join(', ')}` : 'A player left'}</span><Icon name="caret-right" />
         </button>
-        <button className="sheet-item" onClick={endEarly}><span><Icon name="flag-checkered" /> End round</span><Icon name="caret-right" /></button>
+        {round.status === 'active' && (
+          <button className="sheet-item" onClick={() => { setMenu(false); setSwitching(true); }}>
+            <span><Icon name="stack" /> {others ? `Rounds in progress · ${others + 1}` : 'Start another round'}</span><Icon name="caret-right" />
+          </button>
+        )}
+        {round.editing
+          ? <button className="sheet-item" onClick={doneEditing}><span><Icon name="check-circle" /> Done fixing scores</span><Icon name="caret-right" /></button>
+          : <button className="sheet-item" onClick={endEarly}><span><Icon name="flag-checkered" /> End round</span><Icon name="caret-right" /></button>}
       </Sheet>
+      <RoundsInProgressSheet open={switching} onClose={() => setSwitching(false)} currentId={round.id} />
       {holesSheet && <HolesSheet round={round} onClose={() => setHolesSheet(false)} />}
       {betsSheet && <BetsSheet round={round} onClose={() => setBetsSheet(false)} />}
       {leftSheet && <LeftSheet round={round} idx={idx} onClose={() => setLeftSheet(false)} onEnd={() => { setLeftSheet(false); endEarly(); }} />}
@@ -332,7 +361,7 @@ function PlayRound({ round }) {
                   setBanker({ ...banker, banker: p.id, bets, doubled: {}, doubleBack: false });
                   setBankerPick(false);
                 }}>
-                {p.name}<span style={{ fontSize: 13 }}>{p.plays ? `Gets ${p.plays}` : 'Scratch'}</span>
+                {p.name}<span style={{ fontSize: 13 }}>{p.plays ? `Gets ${p.plays} stroke${p.plays > 1 ? 's' : ''}` : 'No strokes'}</span>
               </button>
             ))}
           </Sheet>
@@ -391,11 +420,11 @@ function HolesSheet({ round, onClose }) {
         <p className="hint-card"><Icon name="scales" fill /> Strokes: {hcChanges.map(c => `${c.name} ${c.from} → ${c.to}`).join(', ')}</p>
       )}
       {preview && round.presses.length > 0 && (
-        <p className="hint-card"><Icon name="lightning" fill /> Presses are cleared. The bets change with the round length.</p>
+        <p className="hint-card"><Icon name="lightning" fill /> Presses so far will be removed, since the bets change with the length.</p>
       )}
       <div className="cta-wrap">
         <button className="full-btn" disabled={!preview} onClick={apply}>
-          {changed ? <>Switch to {count} holes <Icon name="arrow-right" /></> : `Playing ${count} holes`}
+          {changed ? <>Switch to {count} holes <Icon name="arrow-right" /></> : 'No change'}
         </button>
       </div>
     </Sheet>
@@ -589,7 +618,7 @@ function MoneyBar({ round, hole, preview }) {
     <div className="money-bar" role="group" aria-label="Money so far">
       <div className="mb-head">
         <span>Money</span>
-        <span>{played ? `Thru ${played} hole${played === 1 ? '' : 's'}${pending ? ' + this one' : ''}` : pending ? 'This hole' : 'Starts at $0'}</span>
+        <span>{played ? (pending ? `Thru ${played} + this hole` : `Thru ${played} hole${played === 1 ? '' : 's'}`) : pending ? 'This hole' : 'Everyone starts at $0'}</span>
       </div>
       <div className="mb-items" style={{ gridTemplateColumns: `repeat(${round.players.length}, minmax(0, 1fr))` }}>
         {round.players.map(p => {
@@ -629,7 +658,7 @@ function BankerPanel({ round, banker, setBanker, phase, setPhase, onPick, onBet,
           {others.map(p => (
             <div key={p.id} className="pcard">
               <div style={{ display: 'flex', alignItems: 'center', padding: '16px 16px 10px' }}>
-                <div style={{ flex: 1 }}><div className="pname">{p.name}</div><div className="ps">{p.plays ? `Gets ${p.plays} stroke${p.plays > 1 ? 's' : ''} on the round` : 'Scratch'}</div></div>
+                <div style={{ flex: 1 }}><div className="pname">{p.name}</div><div className="ps">{p.plays ? `Gets ${p.plays} stroke${p.plays > 1 ? 's' : ''} on the round` : 'No strokes'}</div></div>
                 <button className="amt-btn" onClick={() => onBet(p.id)} aria-label={`${p.name}'s bet, ${money(banker.bets[p.id])}`}>{money(banker.bets[p.id] || 0)}</button>
               </div>
               <div style={{ padding: '0 16px 16px', display: 'flex' }}>
@@ -702,7 +731,7 @@ function WolfPanel({ round, hole, wolf, setWolf }) {
   const mult = round.settings.wolf.loneMultiplier;
   return (
     <div className="wolf-panel">
-      <div className="bl" style={{ marginBottom: 8 }}><Icon name="paw-print" fill /> <strong>{w?.name}</strong> is the wolf. Pick a partner after tee shots</div>
+      <div className="bl" style={{ marginBottom: 8 }}><Icon name="paw-print" fill /> <strong>{w?.name}</strong> is the wolf. Pick a partner after the tee shots, or go it alone.</div>
       <div className="chip-row" style={{ padding: 0 }}>
         {others.map(p => (
           <button key={p.id} className={`pill-btn ${wolf.partner === p.id ? 'on' : ''}`} aria-pressed={wolf.partner === p.id}

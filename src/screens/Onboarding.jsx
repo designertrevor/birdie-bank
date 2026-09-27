@@ -37,16 +37,16 @@ export default function Onboarding() {
         <div className="scroll onboard-body">
           <BallIllo className="onboard-illo" />
           <h1 className="onboard-title">Birdie Bank</h1>
-          <p className="onboard-text">Keep score, run the side games and settle up with your crew, without the napkin math.</p>
+          <p className="onboard-text">Keep score, run the side games and settle up with your group. No napkin math.</p>
           <div className="onboard-games">
-            {[['bank', 'Banker'], ['flag-pennant', 'Nassau'], ['coins', 'Skins'], ['paw-print', 'Wolf'], ['dice-five', 'Vegas'], ['sword', 'Match play'], ['star', 'Stableford'], ['dots-three-circle', '+ 9 more']].map(([i, n]) => (
+            {[['bank', 'Banker'], ['flag-pennant', 'Nassau'], ['coins', 'Skins'], ['paw-print', 'Wolf'], ['dice-five', 'Vegas'], ['sword', 'Match play'], ['star', 'Stableford'], ['dots-three-circle', '+ 9 more games']].map(([i, n]) => (
               <span key={n} className="chip ochre"><Icon name={i} fill /> {n}</span>
             ))}
           </div>
         </div>
         <div className="cta-wrap">
           <button className="full-btn" onClick={() => setStep(1)}>Let’s go <Icon name="arrow-right" /></button>
-          {accountsEnabled && <button className="full-btn outline" onClick={() => setSigningIn(true)}>I already have an account</button>}
+          {accountsEnabled && <button className="full-btn outline" onClick={() => setSigningIn(true)}>I have an account</button>}
         </div>
         {signingIn && <SignInSheet open onClose={() => setSigningIn(false)} title="Welcome back" text="Sign in and your rounds, players and tab come right back." />}
       </Screen>
@@ -62,12 +62,12 @@ export default function Onboarding() {
           <p className="onboard-text" style={{ textAlign: 'left' }}>Birdie Bank tracks bets between friends. It never holds, sends or collects money. You settle up yourselves.</p>
           <ul className="onboard-list">
             <li><Icon name="device-mobile" fill /> Scores save on this phone first, so a round works with no signal. Sign in to keep them safe on any device.</li>
-            <li><Icon name="scales" fill /> Handicaps use the World Handicap System, so strokes go to everyone off the best player.</li>
+            <li><Icon name="scales" fill /> Handicaps are fair by default: the best player gets no strokes and everyone else gets the difference.</li>
             <li><Icon name="warning-circle" fill /> Check that betting on golf is legal where you play.</li>
           </ul>
         </div>
         <div className="cta-wrap">
-          <button className="full-btn" onClick={() => setStep(2)}>I understand <Icon name="arrow-right" /></button>
+          <button className="full-btn" onClick={() => setStep(2)}>Got it <Icon name="arrow-right" /></button>
           <button className="full-btn outline" onClick={() => setStep(0)}>Back</button>
         </div>
       </Screen>
@@ -77,14 +77,14 @@ export default function Onboarding() {
   return (
     <Screen className="onboard">
       <div className="scroll onboard-body" style={{ textAlign: 'left', alignItems: 'stretch' }}>
-        <h1 className="onboard-title" style={{ fontSize: 34 }}>Who’s keeping score?</h1>
-        <p className="onboard-text" style={{ textAlign: 'left' }}>That’s you. Add your name and handicap. You can change these any time.</p>
+        <h1 className="onboard-title" style={{ fontSize: 34 }}>What should we call you?</h1>
+        <p className="onboard-text" style={{ textAlign: 'left' }}>Add your name, and your handicap if you have one. You can change these any time.</p>
         {acct.user && <p className="field-help" style={{ marginTop: 0 }}>Signed in as {acct.user.email}. Your rounds will save to your account.</p>}
         <label className="field-label" htmlFor="ob-name">Your name</label>
-        <input id="ob-name" className="name-input" value={name} onChange={e => setName(e.target.value)} placeholder="e.g. Trevor" autoComplete="given-name" maxLength={24} />
+        <input id="ob-name" className="name-input" value={name} onChange={e => setName(e.target.value)} placeholder="e.g. Sam" autoComplete="given-name" maxLength={24} />
         <label className="field-label">Handicap index <span className="opt">optional</span></label>
         <button className="amt-btn field-btn" onClick={() => setPad(true)}>{index == null ? 'Add' : formatIndex(index)}</button>
-        <p className="field-help">Your usual 18-hole index. It’s halved automatically for 9-hole games. No handicap? Leave it blank and everyone plays straight up.</p>
+        <p className="field-help">Your 18-hole handicap index. We halve it for 9 holes. No handicap? Leave it blank.</p>
       </div>
       <div className="cta-wrap">
         <button className="full-btn" disabled={!name.trim()} onClick={finish}>Start playing <Icon name="golf" fill /></button>

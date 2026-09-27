@@ -58,9 +58,10 @@ function friendly(e) {
   const m = e?.message || '';
   if (/rate limit|too many/i.test(m)) return 'Too many tries. Wait a minute and try again.';
   if (/expired|invalid/i.test(m)) return 'That code didn’t work. Check it, or send a new one.';
-  if (/provider is not enabled/i.test(m)) return 'Google sign-in isn’t switched on yet. Use email for now.';
+  if (/provider is not enabled/i.test(m)) return 'Google sign-in didn’t work just now. Try again, or use email.';
   if (!navigator.onLine || /fetch|network/i.test(m)) return 'No signal. Try again when you’re back online.';
-  return m || 'Something went wrong. Try again.';
+  if (m) console.warn('Sign-in error:', m); // the raw server message is for us, not the golfer
+  return 'Something went wrong. Try again.';
 }
 
 /** One line about where your data lives, for Settings. */

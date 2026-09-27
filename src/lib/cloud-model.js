@@ -3,6 +3,7 @@
 // Each document is compared by content, so only what changed gets sent.
 import { stable } from './sync-model.js';
 import { migrateSettings } from './settings.js';
+import { nextActiveId } from './rounds.js';
 
 // Round fields that only mean something on this phone
 const ROUND_LOCAL = ['_remote'];
@@ -40,7 +41,7 @@ export function applyDoc(draft, kind, id, data) {
     if (data == null) delete draft[map][id];
     else if (kind === 'round') draft.rounds[id] = { ...data, _remote: draft.rounds[id]?._remote };
     else draft[map][id] = data;
-    if (kind === 'round' && data == null && draft.activeRoundId === id) draft.activeRoundId = null;
+    if (kind === 'round' && data == null && draft.activeRoundId === id) draft.activeRoundId = nextActiveId(draft, id);
     return;
   }
   if (kind === 'settlement') {

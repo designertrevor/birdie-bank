@@ -29,9 +29,9 @@ export function sideSplit(stake, size0, size1, winner) {
   return winner === 0 ? [a, -b] : [-a, b];
 }
 
-/** Match-play notation for a finished or running match: "3&2", "2 up", "1 up", "AS", "Dormie". */
+/** Match-play notation for a finished or running match: "3&2", "2 up", "1 up", "All square", "Dormie". */
 export function matchLabel(status, name) {
-  if (status.leader === null) return status.left === 0 ? 'Halved' : 'AS';
+  if (status.leader === null) return status.left === 0 ? 'Halved' : 'All square';
   const who = name ? `${name} ` : '';
   if (status.closed && status.left > 0) return `${who}${status.by}&${status.left}`;
   return `${who}${status.by} up`;

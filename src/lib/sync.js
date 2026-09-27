@@ -5,6 +5,7 @@ import { useSyncExternalStore } from 'react';
 import { STORE_KEY, getState, subscribe, update } from './store.js';
 import { localAdapter, supabaseAdapter } from './sync-adapters.js';
 import { getSupabase, supabaseConfigured } from './supabase.js';
+import { leaveRound } from './rounds.js';
 import { applyHole, applyMeta, assemble, buildHole, buildMeta, merge3, newCode, stable } from './sync-model.js';
 
 
@@ -142,7 +143,7 @@ function onRemote(roundId, ev) {
     update(s => {
       const r = s.rounds[roundId]; if (!r) return;
       applyMeta(r, merged);
-      if (r.status === 'done' && s.activeRoundId === roundId) s.activeRoundId = null;
+      if (r.status === 'done') leaveRound(s, roundId);
       if (r.status === 'active' && !s.activeRoundId) s.activeRoundId = roundId;
     });
   }
@@ -229,7 +230,8 @@ subscribe(() => {
       if (!r || !r.shared || r.shared.ended) { stop(id); continue; }
       pushChanges(id);
     }
-    for (const r of Object.values(s.rounds)) if (r.shared?.code && !r.shared.ended && r.status === 'active' && !live.has(r.id)) start(r.id);
+    // A finished round being fixed goes live again so the fixes reach the other phones
+    for (const r of Object.values(s.rounds)) if (r.shared?.code && !r.shared.ended && (r.status === 'active' || r.editing) && !live.has(r.id)) start(r.id);
   });
 });
 
