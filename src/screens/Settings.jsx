@@ -7,7 +7,6 @@ import { COURSES } from '../data/courses.js';
 import { GAMES } from '../lib/round.js';
 import { GameOptions } from '../components/GameOptions.jsx';
 import { money } from '../lib/golf.js';
-import { BottomNav } from '../nav.jsx';
 import { useNav } from '../lib/nav.js';
 import { formatIndex } from '../lib/format.js';
 import { SignInSheet, syncLabel } from '../components/Account.jsx';
@@ -68,7 +67,7 @@ export default function Settings() {
 
   return (
     <Screen>
-      <Header title="Settings" />
+      <Header title="Settings" onBack={nav.pop} />
       <div className="scroll">
         <div className="sec-label">You</div>
         {accountsEnabled && (acct.user ? (
@@ -103,7 +102,6 @@ export default function Settings() {
           ? <button className="danger-link" onClick={logOut}><Icon name="sign-out" /> Sign out</button>
           : <button className="danger-link" onClick={reset}><Icon name="trash" /> Erase all data</button>}
       </div>
-      <BottomNav />
       {signingIn && <SignInSheet open onClose={() => setSigningIn(false)} />}
     </Screen>
   );

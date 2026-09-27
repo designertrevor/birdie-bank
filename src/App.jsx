@@ -6,10 +6,10 @@ import { useStore } from './lib/store.js';
 import { bootSync, syncConfigured } from './lib/sync.js';
 import { bootCloud } from './lib/cloud.js';
 import { cleanCode } from './lib/sync-model.js';
-import History from './screens/History.jsx';
+import UpNext from './screens/UpNext.jsx';
 import './lib/feedback.js'; // sends any suggestions queued while offline
 
-// Only History (the first screen) is in the main bundle; the rest load on demand. The service
+// Only Up next (the first screen) is in the main bundle; the rest load on demand. The service
 // worker saves every chunk on install, so they still open with no signal.
 const RELOADED = 'bb-chunk-reload';
 const LOADERS = [];
@@ -31,6 +31,7 @@ const people = () => import('./screens/People.jsx');
 const settings = () => import('./screens/Settings.jsx');
 const Onboarding = screen(onboarding);
 const JoinInvite = screen(() => import('./screens/JoinInvite.jsx'));
+const History = screen(() => import('./screens/History.jsx'));
 const Ledger = screen(() => import('./screens/Ledger.jsx'));
 const People = screen(people);
 const PlayerEdit = screen(people, 'PlayerEdit');
@@ -55,9 +56,10 @@ function preloadScreens() {
 const SCREENS = {
   roundDetail: RoundDetail, newRound: NewRound, play: Play,
   playerEdit: PlayerEdit, crewEdit: CrewEdit,
-  defaults: Defaults, courses: Courses, courseEdit: CourseEdit, about: About, suggest: Suggest,
+  settings: Settings, defaults: Defaults, courses: Courses, courseEdit: CourseEdit, about: About, suggest: Suggest,
 };
-const TABS = { history: History, ledger: Ledger, people: People, settings: Settings };
+// Settings lives behind the avatar on Up next, so it's a pushed screen rather than a tab
+const TABS = { upnext: UpNext, ledger: Ledger, history: History, people: People };
 
 export default function App() {
   const onboarded = useStore(s => s.onboarded);
@@ -77,7 +79,7 @@ export default function App() {
     mq?.addEventListener?.('change', apply);
     return () => mq?.removeEventListener?.('change', apply);
   }, [theme]);
-  const [tab, setTab] = useState('history');
+  const [tab, setTab] = useState('upnext');
   const [stack, setStack] = useState([]);
   // A join link opened before onboarding skips straight to picking your name in that round
   const [inviteCode, setInviteCode] = useState(() => {
@@ -143,13 +145,13 @@ export default function App() {
 
   const top = stack[stack.length - 1];
   const Top = top ? SCREENS[top.name] : null;
-  const TabScreen = TABS[tab];
+  const TabScreen = TABS[tab] || UpNext;
 
   return (
     <UIProvider>
       <NavCtx.Provider value={nav}>
         <div className="device">
-          <ErrorBoundary onReset={() => reset('history')}>
+          <ErrorBoundary onReset={() => reset('upnext')}>
             <Suspense fallback={<div className="screen active" aria-busy="true" />}>
               {Top ? <Top key={top.key} {...top.params} /> : <TabScreen key={tab} />}
             </Suspense>
