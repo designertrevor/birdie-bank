@@ -229,7 +229,7 @@ export default function JoinInvite({ code, onJoined, onSkip }) {
               <li><Icon name={game?.icon || 'golf'} fill /> {game?.name || 'Golf'} · {stakeSummary(meta.game, meta.settings)}</li>
             </ul>
           </div>
-          {handicaps && <p className="field-help">Strokes look wrong? Tell {scorekeeper}. They can fix it on their phone.</p>}
+          {handicaps && <p className="field-help">Strokes look wrong? Tell {scorekeeper} before you tee off.</p>}
         </div>
         <div className="cta-wrap">
           {joinErr && <p className="field-error" role="alert" style={{ textAlign: 'center' }}>Couldn’t reach Birdie Bank. Check your signal and try again.</p>}

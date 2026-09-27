@@ -3,7 +3,7 @@ import { Empty, Icon, Numpad, Screen, Segmented, Sheet, useUI } from '../compone
 import { RulesSheet } from '../components/Rules.jsx';
 import { getState, update, useStore } from '../lib/store.js';
 import {
-  GAMES, bankerHoleSetup, canLeave, defaultNine, holeComplete, leftRule, livePreview, nassauPressOptions, playersLeft, playersOn, pressMode,
+  GAMES, addPlayerProblem, bankerHoleSetup, canLeave, defaultNine, holeComplete, leftRule, livePreview, nassauPressOptions, playersLeft, playersOn, playsHole, pressMode,
   resizeRound, roundLegs, roundResults, scoredHolesDropped, scorers, skinsTable, strokesFor, wolfHoleSetup,
 } from '../lib/round.js';
 import { findCourse } from '../lib/courses.js';
@@ -15,7 +15,8 @@ import { buzz, confettiFrom } from '../lib/delight.js';
 import { useNav } from '../lib/nav.js';
 import { Scorecard } from './RoundDetail.jsx';
 import { LivePill, ShareSheet } from '../components/Live.jsx';
-import { syncConfigured } from '../lib/sync.js';
+import { syncConfigured, useSeatRequests } from '../lib/sync.js';
+import { AddPlayerSheet } from '../components/AddPlayer.jsx';
 import { holeMoneyLine } from '../lib/format.js';
 
 export default function Play({ id }) {
@@ -32,7 +33,9 @@ export default function Play({ id }) {
   const cur = round.holes[Math.min(round.current, round.holes.length - 1)];
   // ...and when someone leaves or comes back, so the score boxes match who's playing
   const left = Object.entries(round.left || {}).map(e => e.join('@')).sort().join(',');
-  return <PlayRound key={`${round.holesCount}:${round.current}:${round._remote?.[cur?.no] || 0}:${left}`} round={round} />;
+  // ...or someone is added partway through
+  const joined = `${round.players.length}:${Object.entries(round.joined || {}).map(e => e.join('@')).sort().join(',')}`;
+  return <PlayRound key={`${round.holesCount}:${round.current}:${round._remote?.[cur?.no] || 0}:${left}:${joined}`} round={round} />;
 }
 
 function useWakeLock() {
@@ -85,6 +88,8 @@ function PlayRound({ round }) {
   const [live, setLive] = useState(false);
   const [holesSheet, setHolesSheet] = useState(false);
   const [betsSheet, setBetsSheet] = useState(false);
+  const [addSheet, setAddSheet] = useState(null); // true, or the seat request being answered
+  const requests = useSeatRequests(round.id);
   const numRefs = useRef({});
 
   const setMarksDirty = m => { setDirty(true); setMarks(m); };
@@ -203,6 +208,13 @@ function PlayRound({ round }) {
         <button className="header-close" onClick={() => setMenu(true)} aria-label="Round menu"><Icon name="dots-three" /></button>
       </div>
       <MoneyBar round={round} hole={hole} preview={preview} />
+      {requests[0] && round.status === 'active' && (
+        <div className="seat-req" role="status">
+          <Icon name="user-plus" fill />
+          <span className="sr-text"><strong>{requests[0].name}</strong> wants to join{requests.length > 1 ? ` (+${requests.length - 1} more)` : ''}</span>
+          <button className="pill-btn" onClick={() => setAddSheet(requests[0])}>{addPlayerProblem(round) ? 'See why' : 'Let in'}</button>
+        </div>
+      )}
       {round.status === 'done' && (
         <button className="finished-banner" onClick={() => nav.reset('history', ['roundDetail', { id: round.id }])}>
           <Icon name="flag-checkered" fill /> The scorekeeper finished this round. See results <Icon name="arrow-right" />
@@ -300,6 +312,9 @@ function PlayRound({ round }) {
         <button className="sheet-item" onClick={() => { setMenu(false); setHolesSheet(true); }}>
           <span><Icon name="flag-pennant" /> Round length · {round.holesCount} holes</span><Icon name="caret-right" />
         </button>
+        <button className="sheet-item" onClick={() => { setMenu(false); setAddSheet(true); }}>
+          <span><Icon name="user-plus" /> Add a player</span><Icon name="caret-right" />
+        </button>
         <button className="sheet-item" onClick={() => { setMenu(false); setLeftSheet(true); }}>
           <span><Icon name="user-minus" /> {playersLeft(round).length ? `A player left · ${playersLeft(round).map(x => x.player.name.split(' ')[0]).join(', ')}` : 'A player left'}</span><Icon name="caret-right" />
         </button>
@@ -307,6 +322,7 @@ function PlayRound({ round }) {
       </Sheet>
       {holesSheet && <HolesSheet round={round} onClose={() => setHolesSheet(false)} />}
       {betsSheet && <BetsSheet round={round} onClose={() => setBetsSheet(false)} />}
+      {addSheet && <AddPlayerSheet round={round} request={addSheet === true ? null : addSheet} onClose={() => setAddSheet(null)} />}
       {leftSheet && <LeftSheet round={round} idx={idx} onClose={() => setLeftSheet(false)} onEnd={() => { setLeftSheet(false); endEarly(); }} />}
       <Sheet open={card} onClose={() => setCard(false)} title="Scorecard" className="sc-sheet">
         <p className="sheet-text">Tap a hole to jump to it and fix scores.</p>
@@ -565,7 +581,7 @@ function MoneyBar({ round, hole, preview }) {
             <div key={p.id} className={`mb-item ${top > 0 && v === top ? 'lead' : ''}`}>
               <div className="mb-p">{p.name.split(' ')[0]}</div>
               <div key={changed.includes(p.id) ? v : 'same'} className={`mb-a ${v > 0 ? 'pos' : v < 0 ? 'neg' : ''} ${changed.includes(p.id) ? 'bump' : ''}`}>{money(v, { sign: true })}</div>
-              <div className="mb-d">{d ? `${money(d, { sign: true })} this hole` : round.left?.[p.id] != null ? 'Left' : '\u00a0'}</div>
+              <div className="mb-d">{d ? `${money(d, { sign: true })} this hole` : round.left?.[p.id] != null ? 'Left' : round.joined?.[p.id] != null && !playsHole(round, p.id, hole) ? `From hole ${round.joined[p.id]}` : '\u00a0'}</div>
             </div>
           );
         })}
