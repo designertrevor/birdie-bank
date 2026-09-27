@@ -88,3 +88,13 @@ export function seasonStats(state, year = new Date().getFullYear()) {
   }
   return { rounds: rounds.length, total, birdies, streak, best, h2h };
 }
+
+/** Strokes for the round in words: "Gets 5 strokes", "Gives 1 stroke", "No strokes". */
+export function strokesLabel(plays) {
+  const n = Math.abs(plays || 0);
+  if (!n) return 'No strokes';
+  return `${plays > 0 ? 'Gets' : 'Gives'} ${n} stroke${n === 1 ? '' : 's'}`;
+}
+
+/** First name, for tight spots like tiles and the money bar. */
+export const firstName = name => String(name || '').trim().split(/\s+/)[0];
