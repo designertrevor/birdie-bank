@@ -1,9 +1,8 @@
 import { Icon, Segmented, Toggle } from './ui.jsx';
 import { GAMES } from '../lib/round.js';
-import { DOT_KINDS, sixesPairings } from '../lib/games.js';
+import { DOT_KINDS, SCRAMBLE_ALLOWANCE, sixesPairings } from '../lib/games.js';
 import { money } from '../lib/golf.js';
 import { teamsProblem } from '../lib/teams.js';
-import { SCRAMBLE_ALLOWANCE } from '../lib/games.js';
 
 /**
  * Stakes and options for every game. Used by the round setup step, the Game defaults screen
@@ -59,6 +58,7 @@ export function GameOptions({ game, get, set, onAmount, holesCount = 18, compact
         {amount('banker.defaultBet', 'Default bet', { max: 999 })}
         {amount('banker.min', 'Minimum bet', { max: 999 })}
         {amount('banker.max', 'Maximum bet', { max: 999 })}
+        {example(`Beat the banker on a ${money(get('banker.defaultBet'))} bet and you're up ${money(get('banker.defaultBet'))}; lose and you're down ${money(get('banker.defaultBet'))}. The banker plays everyone.`)}
         {rangeBad && <p className="field-error" style={{ margin: '0 20px 8px' }}>Default bet has to sit between the minimum and maximum.</p>}
         {label('Banker rotation')}
         <div className="block">
@@ -77,6 +77,7 @@ export function GameOptions({ game, get, set, onAmount, holesCount = 18, compact
         {amount('nassau.front', holesCount === 9 ? 'First 4' : 'Front 9')}
         {amount('nassau.back', holesCount === 9 ? 'Last 5' : 'Back 9')}
         {amount('nassau.total', holesCount === 9 ? 'All 9' : 'Total 18')}
+        {example(`Win all three and you're up ${money((get('nassau.front') || 0) + (get('nassau.back') || 0) + (get('nassau.total') || 0))}. Halve a bet and nobody pays it.`)}
         {label('Presses')}
         <div className="block">
           {seg('nassau.pressMode', [{ value: 'off', label: 'Off' }, { value: 'manual', label: 'Manual' }, { value: 'auto', label: 'Auto' }])}
@@ -104,6 +105,7 @@ export function GameOptions({ game, get, set, onAmount, holesCount = 18, compact
       return <>
         {label('Stake')}
         {amount('match.stake', 'Stake per player', { label: 'Per player' })}
+        {example(`Win 2 v 2 and you're each up ${money(get('match.stake'))}. Lose and you're each down ${money(get('match.stake'))}.`)}
         {note('Each player on the winning side wins the stake. With uneven sides the loner plays every opponent for it, so 1 v 3 puts three stakes on the line.')}
         {label('Presses')}
         {presses('match')}
@@ -120,6 +122,9 @@ export function GameOptions({ game, get, set, onAmount, holesCount = 18, compact
       return <>
         {label('Stakes')}
         {amount('sixes.stake', 'Per match', { label: get('sixes.mode') === 'holes' ? 'Per hole won' : 'Per match' })}
+        {example(get('sixes.mode') === 'holes'
+          ? `Finish a match 2 up and you're each up ${money(get('sixes.stake') * 2)} on it.`
+          : `Win two of the three matches and lose one: you're up ${money(get('sixes.stake'))}.`)}
         <div className="block">
           {seg('sixes.mode', [{ value: 'match', label: 'Win the match' }, { value: 'holes', label: 'Per hole up' }])}
           {help(get('sixes.mode') === 'holes' ? `Each ${holesCount === 9 ? 'three' : 'six'}-hole match pays the stake for every hole a team finishes up.` : `Each ${holesCount === 9 ? 'three' : 'six'}-hole match pays the stake to each winner. Halved matches push.`)}
@@ -129,6 +134,7 @@ export function GameOptions({ game, get, set, onAmount, holesCount = 18, compact
       return <>
         {label('Stakes')}
         {amount('scramble.stake', 'Each player puts in', { label: 'Each player puts in' })}
+        {example(`With ${n} players the pot is ${money(get('scramble.stake') * n)}, and the winning team splits it.`)}
         {note(`Everyone puts in. The team with the lowest net total splits the pot; tied teams share it. Team handicaps use the WHS allowances: ${pct(SCRAMBLE_ALLOWANCE[2])}% for pairs, ${pct(SCRAMBLE_ALLOWANCE[3])}% for threes, ${pct(SCRAMBLE_ALLOWANCE[4])}% for fours.`)}
       </>;
     case 'stroke':

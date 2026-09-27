@@ -54,6 +54,7 @@ export function revealSteps(round, res) {
   }
 
   if (round.game === 'skins' && d.skins) {
+    const n = players.length;
     const won = {};
     for (const r of d.skins.rows) {
       if (!r.winner) continue;
@@ -63,7 +64,6 @@ export function revealSteps(round, res) {
       won[r.winner].amount += (r.worth ?? r.skins * d.skins.value) * ((r.field?.length ?? n) - 1);
       won[r.winner].holes.push(r.hole.no);
     }
-    const n = players.length;
     const steps = players
       .filter(p => won[p.id])
       .sort((a, b) => won[b.id].skins - won[a.id].skins)
