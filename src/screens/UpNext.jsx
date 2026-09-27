@@ -48,10 +48,8 @@ export default function UpNext() {
 
         {plans.length > 0 && <div className="sec-label">Upcoming</div>}
         {plans.map(p => <UpcomingCard key={p.id} plan={p} />)}
-        {plans.length > 0 && live.length === 0 && (
-          <button className="text-link" onClick={() => nav.push('newRound', { ahead: true })}><Icon name="calendar-plus" fill /> Plan another round</button>
-        )}
-        {live.length === 0 && plans.length === 0 && <PlanNext last={last?.round} fresh={!hasHistory} />}
+        {/* Starting a round at the course (or running the last one back) stays one tap, plans or not */}
+        {live.length === 0 && <PlanNext last={last?.round} fresh={!hasHistory} planned={plans.length > 0} />}
 
         {syncConfigured && live.length === 0 && (
           <button className="add-row join-row" onClick={() => setJoining(true)}>
@@ -93,27 +91,30 @@ function UpcomingCard({ plan }) {
   const me = plan.host ? plan.hostWho : plan.localMe;
   const mine = plan.answers?.[me]?.status;
   const off = plan.status === 'off' || plan.gone;
+  const started = plan.status === 'started' && !off;
   return (
     <button className={`upcoming-card ${off ? 'off' : ''}`} onClick={() => nav.push('plan', { id: plan.id })}>
       <div className="row-main">
-        <div className="eyebrow">{whenLabel(plan)}{off ? ' · Called off' : ''}</div>
+        <div className="eyebrow">{whenLabel(plan)}{off ? (plan.status === 'off' ? ' · Called off' : ' · Deleted') : started ? ' · The round is on' : ''}</div>
         <div className="uc-title d">{GAMES[game]?.name || 'Golf'} · {plan.course?.name || 'Course to be set'}</div>
-        <div className="uc-sub">{off ? `Organized by ${plan.host ? 'you' : plan.hostName || 'a friend'}` : countsLine(c)}</div>
+        <div className="uc-sub">{off ? `Organized by ${plan.host ? 'you' : plan.hostName || 'a friend'}` : started ? (plan.liveCode ? 'Tap to follow along' : 'Teeing off now') : countsLine(c)}</div>
       </div>
-      {!off && <span className={`who-status ${mine || 'none'}`}>{mine ? `You’re ${RSVP_LABEL[mine].toLowerCase()}` : 'Answer'}</span>}
+      {!off && !started && <span className={`who-status ${mine || 'none'}`}>{mine ? `You’re ${RSVP_LABEL[mine].toLowerCase()}` : 'Answer'}</span>}
       <span className="chevron"><Icon name="caret-right" /></span>
     </button>
   );
 }
 
 /** The prompt to set up the next round, with a one-tap "same again" when there's a last one. */
-function PlanNext({ last, fresh }) {
+function PlanNext({ last, fresh, planned = false }) {
   const nav = useNav();
   return (
     <div className="plan-card">
-      <span className="eyebrow">{fresh ? 'Welcome to the bank' : 'Nothing on the calendar'}</span>
-      <div className="pc-title d">Plan your next round</div>
-      <div className="pc-sub">{fresh
+      <span className="eyebrow">{planned ? 'Something else' : fresh ? 'Welcome to the bank' : 'Nothing on the calendar'}</span>
+      <div className="pc-title d">{planned ? 'Playing now, or another day?' : 'Plan your next round'}</div>
+      <div className="pc-sub">{planned
+        ? 'Start a round at the course in one tap, or plan another one for later.'
+        : fresh
         ? 'Pick a game, a course and your group. Birdie Bank keeps score, does the math and settles up.'
         : 'Pick the game, the course and the bets. Everyone joins from a link.'}</div>
       <div className="pc-actions">
