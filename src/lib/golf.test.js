@@ -15,6 +15,11 @@ test('course handicap (WHS)', () => {
 test('strokes off the low player', () => {
   assert.deepEqual(strokesOffLow([6, 2, 8]), [4, 0, 6]);
   assert.deepEqual(strokesOffLow([10, 20], 80), [0, 8]);
+  // Rule 8: the allowance goes on each player first, like WHS. 17 × 90% = 15.3 → 15, 4 × 90% = 3.6 → 4, so 11
+  // (scaling the difference would give 13 × 0.9 = 11.7 → 12)
+  assert.deepEqual(strokesOffLow([17, 4], 90), [11, 0]);
+  assert.deepEqual(strokesOffLow([15, 5], 90), [9, 0]);
+  assert.deepEqual(strokesOffLow([-2, 10], 100), [0, 12]); // a plus handicap is the low
 });
 
 test('stroke allocation', () => {

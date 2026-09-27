@@ -101,7 +101,7 @@ const RULES = {
       ['Pairings', <p key="p">The playing order sets the rotation: 1 & 2 v 3 & 4, then 1 & 3 v 2 & 4, then 1 & 4 v 2 & 3.</p>],
       ['Each match', <p key="m">Best ball match play: each side counts its better net score on every hole. Win more holes than the other side to win the match.</p>],
       ['Money', <ul key="$">
-        <li><strong>Win the match</strong>: each winner collects the stake from their opponent; a halved match pushes.</li>
+        <li><strong>Win the match</strong>: each winner collects the stake from their opponent; a halved match pushes. A match cut short pays whoever is ahead on the holes played.</li>
         <li><strong>Per hole up</strong>: the stake for every hole a team finishes ahead in that match.</li>
       </ul>],
     ],
@@ -112,8 +112,8 @@ const RULES = {
     sections: [
       ['Overview', <p key="o">Everyone on a team tees off, the team picks the best ball, and everyone plays from there. Repeat until it’s holed. The team writes down one score.</p>],
       ['Scoring', <p key="s">Enter one score per team on each hole. Lowest net total for the round wins.</p>],
-      ['Team handicaps', <p key="h">Each team plays off a blend of its members’ course handicaps, lowest first: 35% and 15% for pairs, 20/15/10% for threes, 25/20/15/10% for fours. Strokes are then given off the low team on the hardest holes.</p>],
-      ['Money', <p key="m">Everyone antes. The winning team’s players split the pot; tied teams share it.</p>],
+      ['Team handicaps', <p key="h">Each team plays off a blend of its members’ course handicaps, lowest first, using the WHS allowances: 35% and 15% for pairs, 30/20/10% for threes, 25/20/15/10% for fours. Strokes are then given off the low team on the hardest holes.</p>],
+      ['Money', <p key="m">Each player puts in the same amount. The winning team’s players split the pot; tied teams share it.</p>],
     ],
   },
   stroke: {
@@ -122,8 +122,8 @@ const RULES = {
     sections: [
       ['Overview', <p key="o">The classic: add up every hole. Lowest net total wins.</p>],
       ['Money', <ul key="m">
-        <li><strong>Winner takes pot</strong>: everyone antes and the low total takes it all. Ties split the pot.</li>
-        <li><strong>Per stroke</strong>: every pair of players settles the difference in their net totals.</li>
+        <li><strong>Winner takes pot</strong>: each player puts in and the low total takes it all. Ties split the pot.</li>
+        <li><strong>Per stroke</strong>: every pair of players settles the difference in their net totals, so each stroke wins the bet from every player you beat by it.</li>
       </ul>],
       ['Handicaps', <p key="h">Strokes come off the low player on the hardest holes. Picked-up holes count as net double bogey.</p>],
     ],
@@ -137,7 +137,7 @@ const RULES = {
         <li><strong>Standard</strong>: double bogey or worse 0, bogey 1, par 2, birdie 3, eagle 4, albatross 5.</li>
         <li><strong>Modified</strong>: double bogey −3, bogey −1, par 0, birdie 2, eagle 5, albatross 8. Rewards aggression.</li>
       </ul>],
-      ['Money', <p key="m">Highest points wins. Pay per point of difference between every pair, or ante up and the top total takes the pot.</p>],
+      ['Money', <p key="m">Highest points wins. By default each player puts in and the top total takes the pot. Or pay per point: every pair settles the difference, so each point wins the bet from every other player.</p>],
     ],
   },
   quota: {
@@ -146,7 +146,8 @@ const RULES = {
     sections: [
       ['Overview', <p key="o">Each player gets a <strong>quota</strong>: 36 minus their course handicap (18 minus it over nine holes). A 12 handicap needs 24 points.</p>],
       ['Points', <p key="p">Gross scores earn bogey 1, par 2, birdie 4, eagle 8. Double bogey or worse earns nothing.</p>],
-      ['Winning', <p key="w">The player who finishes furthest above their quota (or least below it) wins. Pay per point of difference, or play for a pot.</p>],
+      ['Winning', <p key="w">The player who finishes furthest above their quota (or least below it) wins. By default that takes the pot; or pay per point of difference between every pair.</p>],
+      ['Short round', <p key="s">Stop early and each quota shrinks to the holes played: a quota of 30 is 15 after nine holes.</p>],
       ['No handicaps?', <p key="h">Turn handicaps off and everyone’s quota is 36, a straight points race.</p>],
     ],
   },
@@ -160,7 +161,7 @@ const RULES = {
         <li>Two tie for high: 5-2-2.</li>
         <li>All three tie: 3-3-3.</li>
       </ul>],
-      ['Money', <p key="m">Three points a hole is par. At the end each player settles their points above or below the average at the value you set.</p>],
+      ['Money', <p key="m">Three points a hole is par, so 54 over 18 holes (27 over nine). Every point above or below that is worth the bet: finish on 60 at $1 a point and you’re up $6.</p>],
     ],
   },
   aces: {
@@ -193,7 +194,7 @@ const RULES = {
       ['Overview', <p key="o">Side bets for the little heroics. Every dot is paid to you by each of the other players.</p>],
       ['The dots', <ul key="d">
         <li><strong>Birdie</strong>: a natural birdie is a dot; an eagle is two. Counted from the scores automatically.</li>
-        <li><strong>Greenie</strong>: on the green in one on a par 3.</li>
+        <li><strong>Greenie</strong>: closest to the pin in one on a par 3, and par or better to keep it. One a hole.</li>
         <li><strong>Sandy</strong>: par or better after being in a bunker.</li>
         <li><strong>Barkie</strong>: par or better after hitting a tree.</li>
         <li><strong>Chip-in</strong>: holed from off the green.</li>
@@ -207,9 +208,10 @@ const RULES = {
     title: 'How to play Rabbit',
     sub: '2–8 players · Catch it, then hold on',
     sections: [
-      ['Overview', <p key="o">Win a hole outright (lowest net, alone) and you catch the <strong>rabbit</strong>. Someone else wins a hole outright and they take it from you.</p>],
-      ['Ties', <p key="t">By default a tied hole sets the rabbit loose. Nobody has it until the next outright win. Turn that off and the holder keeps it through ties.</p>],
-      ['Paying out', <p key="p">Whoever holds the rabbit after hole 9 wins the stake from everyone, and again after hole 18. Over nine holes there’s one payout. A loose rabbit at the turn pays nobody.</p>],
+      ['Overview', <p key="o">Win a hole outright (lowest net, alone) and you catch the <strong>rabbit</strong>. When someone else wins a hole outright they <strong>set it free</strong>, and the next outright winner catches it. You can’t steal it straight from the holder.</p>],
+      ['Ties', <p key="t">A tied hole changes nothing: the holder keeps it, and a loose rabbit stays loose.</p>],
+      ['House rules', <p key="h">Prefer the old way? Switch to <strong>Steal it</strong> so any outright winner takes it straight away, and turn on <strong>Ties set it loose</strong>.</p>],
+      ['Paying out', <p key="p">Whoever holds the rabbit after hole 9 wins the stake from everyone, and again after hole 18. Over nine holes there’s one payout. A loose rabbit at the turn pays nobody. Stop early and whoever holds it then is paid.</p>],
     ],
   },
 };

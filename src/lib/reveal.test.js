@@ -106,7 +106,7 @@ test('stableford totals, best first', () => {
   assert.deepEqual(steps.map(s => [s.label, s.value]), [['Ann', '5 pts'], ['Bo', '3 pts']]);
 });
 
-test('rabbit: only finished legs, with the holder or a loose rabbit', () => {
+test('rabbit: legs with holes played, with the holder or a loose rabbit', () => {
   const r = mk('rabbit', 3);
   play(r, Array.from({ length: 9 }, (_, i) => (i === 8 ? { a: 5, b: 3, c: 4 } : { a: 4, b: 4, c: 4 })));
   const { steps } = revealSteps(r, roundResults(r));

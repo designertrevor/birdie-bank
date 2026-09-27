@@ -2,7 +2,10 @@
 // Money conventions used across these games:
 //  • "sides": two teams (any sizes). The stake is per player; with uneven sides the total at risk is
 //    stake × the bigger side, and each side splits its share evenly. So in 1 v 3 the loner plays for 3× the stake.
-//  • "points": each player's money is (their points − the average) × value, so it always sums to zero.
+//  • "per point": every pair settles the difference in points (Bingo Bango Bongo, Dots, Stableford,
+//    Quota, per-stroke Stroke play), so each point wins the value from every other player.
+//    Nines is the one exception: each player's (points − the average) × value, "every point above
+//    or below 54" over 18 holes. Both always sum to zero.
 //  • "pot": everyone antes the stake; the best total takes it all, and ties split it.
 
 // ---------------------------------------------------------------------------
@@ -193,8 +196,15 @@ export function roundCents(amounts) {
 // Scramble
 // ---------------------------------------------------------------------------
 
-/** USGA-style scramble allowances by team size, applied low handicap first. */
-const SCRAMBLE_ALLOWANCE = { 1: [1], 2: [0.35, 0.15], 3: [0.2, 0.15, 0.1], 4: [0.25, 0.2, 0.15, 0.1] };
+/**
+ * WHS scramble allowances by team size, applied to course handicaps from the lowest up.
+ * Source: Rules of Handicapping (effective January 2024), Appendix C, table of recommended
+ * allowances: "Scramble (4 players) 25% low/20%/15%/10% high", "Scramble (3 players) 30% low/20%/10% high",
+ * "Scramble (2 players) 35% low/15% high". The 3-player row was added in the 2024 update.
+ * Checked 2026-09-27 against the R&A/USGA 2024 Rules of Handicapping PDF
+ * (https://www.golfrsa.com/wp-content/uploads/2024/01/WHS_Rules_of_Handicapping_2024.pdf, Appendix C).
+ */
+export const SCRAMBLE_ALLOWANCE = { 1: [1], 2: [0.35, 0.15], 3: [0.3, 0.2, 0.1], 4: [0.25, 0.2, 0.15, 0.1] };
 
 /** Team course handicap for a scramble from its members' course handicaps. */
 export function scrambleTeamHandicap(courseHcs) {
@@ -209,16 +219,20 @@ export function scrambleTeamHandicap(courseHcs) {
 
 /**
  * Who holds the rabbit through a run of holes. rows: [{ winner: pid | null (tie) | undefined (unplayed) }].
- * With tiesFree a tied hole sets the rabbit loose. A row's optional `gone` lists players who have
- * left; if the holder is one of them the rabbit runs loose. Returns { holder, history: [holder after each hole] }.
+ * mode 'free' (the standard): an outright winner catches a loose rabbit; someone else winning a
+ * hole outright sets it free again, and the next outright winner catches it.
+ * mode 'steal' (the old default): any outright winner takes it straight from the holder.
+ * With tiesFree a tied hole sets the rabbit loose; without it ties change nothing.
+ * A row's optional `gone` lists players who have left; if the holder is one of them the rabbit runs loose.
+ * Returns { holder, history: [holder after each hole] }.
  */
-export function rabbitHolder(rows, tiesFree = true) {
+export function rabbitHolder(rows, { mode = 'free', tiesFree = false } = {}) {
   let holder = null;
   const history = [];
   for (const r of rows) {
     if (holder && r.gone?.includes(holder)) holder = null;
     if (r.winner === undefined) { history.push(holder); continue; }
-    if (r.winner) holder = r.winner;
+    if (r.winner) holder = mode === 'steal' || !holder || holder === r.winner ? r.winner : null;
     else if (tiesFree) holder = null;
     history.push(holder);
   }
@@ -230,7 +244,7 @@ export function rabbitHolder(rows, tiesFree = true) {
 // ---------------------------------------------------------------------------
 
 export const DOT_KINDS = {
-  greenie: { name: 'Greenie', help: 'On the green in one on a par 3 (and two-putt or better)' },
+  greenie: { name: 'Greenie', help: 'Closest to the pin in one on a par 3, and par or better to keep it' },
   sandy: { name: 'Sandy', help: 'Par or better after being in a bunker' },
   barkie: { name: 'Barkie', help: 'Par or better after hitting a tree' },
   chipin: { name: 'Chip-in', help: 'Holed from off the green' },

@@ -16,13 +16,14 @@ export function courseHandicap(index, tee, par, holesPlayed = 18) {
 }
 
 /**
- * Playing handicaps off the low player: the best player plays off 0 and everyone
- * else gets the difference, scaled by `pct` (100 = full difference).
+ * Playing handicaps off the low player. As in WHS, the allowance `pct` is applied to each
+ * player's course handicap first and rounded (a playing handicap), then the best player plays
+ * off 0 and everyone else gets the difference. At 90%, 17 and 4 play off 15 and 4: 11 strokes.
  */
 export function strokesOffLow(courseHcs, pct = 100) {
-  const known = courseHcs.map(h => (h == null ? 0 : h));
-  const low = Math.min(...known);
-  return known.map(h => Math.round((h - low) * (pct / 100)));
+  const playing = courseHcs.map(h => (h == null ? 0 : Math.round(h * (pct / 100))));
+  const low = Math.min(...playing);
+  return playing.map(h => h - low);
 }
 
 /**

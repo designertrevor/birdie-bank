@@ -174,9 +174,12 @@ function GameBreakdown({ round, res }) {
   if (round.game === 'vegas') {
     const rows = res.detail.vegas.filter(r => r.played);
     const t = round.teams;
+    // After a bet change the point value differs from hole to hole, so the header names each value
+    const points = [...new Set(rows.map(r => r.point ?? round.settings.vegas.point))];
+    const perPoint = points.length > 1 ? points.map(money).join(' then ') : money(points[0] ?? round.settings.vegas.point);
     return (
       <>
-        <div className="sec-label">Hole by hole · {money(round.settings.vegas.point)} a point</div>
+        <div className="sec-label">Hole by hole · {perPoint} a point</div>
         <div className="money-table-wrap">
           <table className="sc-table money-table">
             <thead><tr><th style={{ textAlign: 'left', paddingLeft: 12 }}>Hole</th><th>{t[0].name}</th><th>{t[1].name}</th><th>Points</th></tr></thead>
@@ -218,7 +221,8 @@ function GameBreakdown({ round, res }) {
   if (round.game === 'scramble' || round.game === 'stroke' || round.game === 'stableford' || round.game === 'quota') {
     const rows = res.detail.totals;
     const fmt = x => {
-      if (round.game === 'quota') return `${x.total} pts · quota ${x.quota} · ${x.vsQuota > 0 ? '+' : ''}${x.vsQuota}`;
+      // A short round is measured against the quota for the holes played
+      if (round.game === 'quota') return `${x.total} pts · quota ${x.target ?? x.quota} · ${x.vsQuota > 0 ? '+' : ''}${x.vsQuota}`;
       if (round.game === 'stableford') return `${x.total} pts`;
       return `Net ${x.total} · ${x.toPar === 0 ? 'E' : x.toPar > 0 ? `+${x.toPar}` : x.toPar}`;
     };
@@ -267,8 +271,8 @@ function GameBreakdown({ round, res }) {
         {res.detail.rabbit.legs.map(l => (
           <div key={l.seg.label} className="leg-row">
             <div className="leg-name">{l.seg.label}</div>
-            <div className={`leg-winner ${!l.holder ? 'leg-tie' : ''}`}>{!l.done ? (l.holder ? `${names[l.holder]} holds it` : 'Loose') : l.holder ? `${names[l.holder]} held it at the end` : 'Loose at the end, no payout'}</div>
-            <div className={`leg-amt ${l.done && l.holder ? '' : 'zero'}`}>{money(round.settings.rabbit.stake * (round.players.length - 1))}</div>
+            <div className={`leg-winner ${!l.pays ? 'leg-tie' : ''}`}>{!l.done ? (l.pays ? `${names[l.holder]} holds it` : 'Loose') : l.pays ? `${names[l.holder]} held it at the end` : 'Loose at the end, no payout'}</div>
+            <div className={`leg-amt ${l.pays ? '' : 'zero'}`}>{money(l.pays ? l.amount : l.stake * (l.payers.length - 1))}</div>
           </div>
         ))}
       </>

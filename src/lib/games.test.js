@@ -96,13 +96,16 @@ test('settling totals: pot and per unit', () => {
 test('scramble team handicaps', () => {
   assert.equal(scrambleTeamHandicap([10, 20]), 7); // 3.5 + 3 = 6.5 → 7
   assert.equal(scrambleTeamHandicap([4, 8, 12, 20]), 6); // 1 + 1.6 + 1.8 + 2 = 6.4
+  // Rule 9: threes use WHS 30/20/10 (2024 Appendix C). 10, 20, 30: 3 + 4 + 3 = 10 (the old 20/15/10 gave 8)
+  assert.equal(scrambleTeamHandicap([30, 10, 20]), 10);
 });
 
 test('rabbit', () => {
-  const { holder, history } = rabbitHolder([{ winner: 'a' }, { winner: null }, { winner: 'b' }, { winner: undefined }]);
+  const steal = { mode: 'steal', tiesFree: true };
+  const { holder, history } = rabbitHolder([{ winner: 'a' }, { winner: null }, { winner: 'b' }, { winner: undefined }], steal);
   assert.equal(holder, 'b');
   assert.deepEqual(history, ['a', null, 'b', 'b']);
-  assert.equal(rabbitHolder([{ winner: 'a' }, { winner: null }], false).holder, 'a');
+  assert.equal(rabbitHolder([{ winner: 'a' }, { winner: null }], { mode: 'steal', tiesFree: false }).holder, 'a');
 });
 
 // ---------------------------------------------------------------------------
