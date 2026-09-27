@@ -937,8 +937,9 @@ export function roundResults(round) {
       const r = acesDeuces(on.map(p => netFor(round, p, h)), on.map(p => p.id), s.aces);
       add(r.deltas);
       for (const p of on) {
-        if (r.ace && p.id !== r.ace) pay(p.id, r.ace, s.aces.ace);
-        if (r.deuce && p.id !== r.deuce) pay(r.deuce, p.id, s.aces.deuce);
+        // Same defaults as acesDeuces, so rounds saved without every aces setting still pair up right
+        if (r.ace && p.id !== r.ace) pay(p.id, r.ace, s.aces?.ace ?? 2);
+        if (r.deuce && p.id !== r.deuce) pay(r.deuce, p.id, s.aces?.deuce ?? 1);
       }
       detail.holes.push({ no: h.no, ...r });
     }

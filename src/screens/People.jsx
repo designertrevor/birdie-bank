@@ -1,10 +1,11 @@
 import { useState } from 'react';
 import { Empty, Header, Icon, Numpad, Screen, useUI } from '../components/ui.jsx';
-import { Avatar } from '../components/Pay.jsx';
+import { Avatar, PayButton, RequestButton } from '../components/Pay.jsx';
+import { useRemind } from '../lib/useRemind.js';
 import { update, uid, useStore } from '../lib/store.js';
 import { formatIndex, myIds, playerLabel, sortedPlayers } from '../lib/format.js';
-import { headToHeadSummary, nameOf } from '../lib/ledger.js';
-import { PAY_APPS, PAY_APP_IDS, cleanHandle, handleText, payInfo } from '../lib/pay.js';
+import { headToHeadSummary, nameOf, outstanding, tabWith } from '../lib/ledger.js';
+import { PAY_APPS, PAY_APP_IDS, cleanHandle, handleText, payInfo, payInfoFor } from '../lib/pay.js';
 import { money } from '../lib/golf.js';
 import { BottomNav } from '../nav.jsx';
 import { useNav } from '../lib/nav.js';
@@ -15,7 +16,10 @@ export default function People() {
   const state = useStore();
   const mine = myIds(state);
   const h2h = headToHeadSummary(state, mine);
+  const plan = outstanding(state);
+  const remind = useRemind();
   const me = state.me && state.players[state.me];
+  const myApp = payInfoFor(state, state.me);
   // Everyone you've added, plus people you've only met in a joined round
   const ids = new Set([...Object.keys(state.players), ...h2h.keys()]);
   for (const id of mine) ids.delete(id);
@@ -38,19 +42,40 @@ export default function People() {
           </button>
         )}
         <div className="sec-label">Your people</div>
-        {people.map(({ id, name, h, p }) => (
-          <button key={id} className="set-row person-row" onClick={() => nav.push('person', { id })}>
-            <Avatar name={name} />
-            <div className="row-main">
-              <div className="set-name">{name}</div>
-              <div className="set-sub">
-                {h ? `${h.rounds} round${h.rounds === 1 ? '' : 's'} · won ${h.won}, lost ${h.lost}${h.even ? `, even ${h.even}` : ''}` : p?.index != null ? `Index ${formatIndex(p.index)}` : 'No rounds together yet'}
+        {people.map(({ id, name, h, p }) => {
+          const tab = tabWith(plan, mine, id);
+          const amount = Math.abs(tab);
+          const first = name.split(' ')[0];
+          const row = (
+            <button key={id} className={tab ? 'tab-person' : 'set-row person-row'} onClick={() => nav.push('person', { id })}>
+              <Avatar name={name} />
+              <div className="row-main">
+                <div className={tab ? 'tp-name' : 'set-name'}>{name}</div>
+                <div className={tab ? 'tp-sub' : 'set-sub'}>
+                  {h ? `${h.rounds} round${h.rounds === 1 ? '' : 's'} · won ${h.won}, lost ${h.lost}${h.even ? `, even ${h.even}` : ''}` : p?.index != null ? `Index ${formatIndex(p.index)}` : 'No rounds together yet'}
+                  {tab > 0 ? ` · owes you ${money(amount)}` : tab < 0 ? ` · you owe ${money(amount)}` : ''}
+                </div>
+              </div>
+              <div className={`pr-amt d ${h?.net > 0 ? 'pos' : h?.net < 0 ? 'neg' : ''}`}>{h ? money(h.net, { sign: true }) : '\u2013'}</div>
+              <span className="chevron"><Icon name="caret-right" /></span>
+            </button>
+          );
+          if (!tab) return row;
+          // Money on the Tab between you: Remind and Request right on the card, or pay them in their app
+          return (
+            <div key={id} className="tab-card">
+              {row}
+              <div className="pay-acts">
+                {tab > 0 ? (
+                  <>
+                    <button className="pay-btn" onClick={() => remind(id, amount)} aria-label={`Remind ${first} about ${money(amount)}`}><span className="pay-in"><Icon name="bell-ringing" fill /><span className="pay-lbl">Remind</span></span></button>
+                    <RequestButton payer={payInfoFor(state, id)} mine={myApp} amount={amount} note="Golf" />
+                  </>
+                ) : <PayButton info={payInfoFor(state, id)} amount={amount} note="Golf" />}
               </div>
             </div>
-            <div className={`pr-amt d ${h?.net > 0 ? 'pos' : h?.net < 0 ? 'neg' : ''}`}>{h ? money(h.net, { sign: true }) : '\u2013'}</div>
-            <span className="chevron"><Icon name="caret-right" /></span>
-          </button>
-        ))}
+          );
+        })}
         {people.length < 1 && <p className="hint-card"><Icon name="lightbulb" fill /> Add the people you play with so you can pick them when you start a round.</p>}
         <button className="add-row" onClick={() => nav.push('playerEdit', {})}><div className="add-ci"><Icon name="plus" /></div><span className="add-lbl">Add player</span></button>
 

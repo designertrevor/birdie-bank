@@ -1,7 +1,7 @@
 // The Tab: who owes whom across every finished round, less payments recorded. Pure, unit tested.
 import { roundResults } from './round.js';
 import { roundCents } from './games.js';
-import { meFor } from './format.js';
+import { meFor, myIds } from './format.js';
 
 const toCents = v => Math.round((Number(v) || 0) * 100);
 const pairKey = (a, b) => (a < b ? `${a}|${b}` : `${b}|${a}`);
@@ -87,10 +87,20 @@ function shortestPath(start, isEnd, ids, ok) {
 
 const doneRounds = state => Object.values(state.rounds || {}).filter(r => r.status === 'done');
 
+/**
+ * You can have more than one id (your own, plus the seat you took in each joined round). On the Tab
+ * they are all one person, so a payment recorded against one of them squares a debt on another.
+ */
+function canonical(state) {
+  const mine = myIds(state);
+  return id => (state.me && mine.has(id) ? state.me : id);
+}
+
 /** Everyone's running balance across finished rounds, less payments recorded. Positive = owed money. */
 export function tabBalances(state) {
   const bal = {};
-  const add = (id, v) => { bal[id] = (bal[id] || 0) + v; };
+  const who = canonical(state);
+  const add = (id, v) => { const k = who(id); bal[k] = (bal[k] || 0) + v; };
   for (const r of doneRounds(state)) {
     for (const [id, v] of Object.entries(roundResults(r).balances)) add(id, v);
   }
@@ -101,8 +111,9 @@ export function tabBalances(state) {
 /** Finished rounds each pair played together, by "a|b" key (ids sorted). */
 export function roundsTogether(state) {
   const out = new Map();
+  const who = canonical(state);
   for (const r of doneRounds(state)) {
-    const ids = r.players.map(p => p.id);
+    const ids = [...new Set(r.players.map(p => who(p.id)))];
     for (let i = 0; i < ids.length; i++) for (let j = i + 1; j < ids.length; j++) {
       const k = pairKey(ids[i], ids[j]);
       if (!out.has(k)) out.set(k, []);

@@ -912,3 +912,5 @@ button:disabled { cursor: not-allowed; }
 .chip-row.flush .pill-btn:not(.on) { background: var(--surface); }
 .pay-acts { flex-wrap: wrap; }
 .pay-btn.app-zelle { flex-basis: 100%; } /* the handle is the point, so give it the whole row */
+/* 44px tap targets for the payment app picker and quiet text links */
+.chip-row.flush .pill-btn, .text-link { min-height: 44px; }

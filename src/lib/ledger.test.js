@@ -175,3 +175,22 @@ test('rounds carry each player\'s payment app, so friends who join can pay them'
   assert.deepEqual([r.players[1].payApp, r.players[1].payHandle], ['venmo', 'bo']);
   assert.ok(!('payApp' in r.players[2]));
 });
+
+test('tab: your own id and your seat in a joined round are one person', () => {
+  // A joined round where you sat as "seat": you owe Mike 5. You pay him and record it against your own id.
+  const r1 = round('r1', 'stroke', ['seat', 'mike'], { 1: { seat: 4, mike: 3 } });
+  r1.localMe = 'seat';
+  const r2 = round('r2', 'stroke', ['me', 'chris'], {});
+  const before = { me: 'me', players: {}, rounds: { r1, r2 }, settlements: [] };
+  assert.deepEqual(outstanding(before).map(t => [t.from, t.to, t.amount]), [['me', 'mike', 5]]);
+  const after = { ...before, settlements: [{ id: 's1', from: 'me', to: 'mike', amount: 5, at: 1 }] };
+  assert.deepEqual(outstanding(after), []);
+  // Old payments recorded against the seat id count too
+  const legacy = { ...before, settlements: [{ id: 's1', from: 'seat', to: 'mike', amount: 5, at: 1 }] };
+  assert.deepEqual(outstanding(legacy), []);
+});
+
+test('tab: old saved data without settlements or rounds does not crash', () => {
+  assert.deepEqual(outstanding({ players: {}, rounds: {} }), []);
+  assert.deepEqual(tabBalances({ players: {}, rounds: {}, settlements: [] }), {});
+});

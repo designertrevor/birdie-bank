@@ -69,11 +69,11 @@ export default function Ledger() {
         <div className="pay-acts">
           {owesMe ? (
             <>
-              <button className="pay-btn" onClick={() => remind(p.id, amount)}><span className="pay-in"><Icon name="bell-ringing" fill /><span className="pay-lbl">Remind</span></span></button>
+              <button className="pay-btn" onClick={() => remind(p.id, amount)} aria-label={`Remind ${first(name)} about ${money(amount)}`}><span className="pay-in"><Icon name="bell-ringing" fill /><span className="pay-lbl">Remind</span></span></button>
               <RequestButton payer={payInfoFor(state, p.id)} mine={myApp} amount={amount} note="Golf" />
             </>
           ) : <PayButton info={payInfoFor(state, p.id)} amount={amount} note="Golf" />}
-          <button className="pay-btn ink" onClick={() => setOpen(debt)}><span className="pay-in"><Icon name="handshake" fill /><span className="pay-lbl">Settle up</span></span></button>
+          <button className="pay-btn ink" onClick={() => setOpen(debt)} aria-label={`Settle up with ${first(name)}`}><span className="pay-in"><Icon name="handshake" fill /><span className="pay-lbl">Settle up</span></span></button>
         </div>
       </div>
     );
