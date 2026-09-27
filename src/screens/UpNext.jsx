@@ -90,7 +90,7 @@ function UpcomingCard({ plan }) {
   const c = planCounts(plan);
   const me = plan.host ? plan.hostWho : plan.localMe;
   const mine = plan.answers?.[me]?.status;
-  const off = plan.status === 'off' || plan.gone;
+  const off = plan.status === 'off' || (plan.gone && plan.status !== 'started'); // a started round goes on either way
   const started = plan.status === 'started' && !off;
   return (
     <button className={`upcoming-card ${off ? 'off' : ''}`} onClick={() => nav.push('plan', { id: plan.id })}>

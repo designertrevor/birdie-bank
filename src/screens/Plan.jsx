@@ -131,7 +131,7 @@ function PlanBody({ plan, standalone = false, onSkip }) {
           <div className="ic-game"><Icon name={game?.icon || 'golf'} fill /> {game?.name || 'Golf'}</div>
           <div className="ic-course">{plan.course?.name || 'Course to be set'} · {plan.holesCount} holes{choice.bet && settings?.[choice.game] ? ` · ${betLabel(choice.game, settings, choice.bet)}` : choice.bet ? ` · ${money(choice.bet)}` : ''}</div>
           {plan.status === 'off' && <p className="ic-note"><Icon name="calendar-x" fill /> {plan.host ? 'You called this one off.' : `${host} called this one off.`}</p>}
-          {plan.gone && plan.status !== 'off' && <p className="ic-note"><Icon name="calendar-x" fill /> {host} deleted this plan.</p>}
+          {plan.gone && plan.status === 'planned' && <p className="ic-note"><Icon name="calendar-x" fill /> {host} deleted this plan.</p>}
           {plan.status === 'started' && (
             <p className="ic-note"><Icon name="flag-pennant" fill /> The round is on.{plan.liveCode ? ' Follow the money live.' : ''}</p>
           )}
