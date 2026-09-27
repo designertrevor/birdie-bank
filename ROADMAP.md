@@ -21,7 +21,7 @@ The plan for growing Birdie Bank into a $10k/mo business, and the checklist we w
 
 **The big date:** the creator test (S4) runs February to April 2027, when golf season starts back up. Everything before it is about being ready: a product groups keep using, a smooth path from video to paying, and an App Store app.
 
-Last updated: 2026-09-26
+Last updated: 2026-09-27
 
 ---
 
@@ -171,11 +171,12 @@ Put more money into the winning creators and copy their video formats with other
 
 ### 5. Setting up and playing a round
 - [x] 16 games with the setup wizard, game defaults, crews, bets that change mid-round, 9 or 18 holes
+- [x] `S2` Snake (three-putts, fixed, growing or doubling, each nine) and Hammer (double the hole, play on or fold, with a cap and who throws first), with rules, money bar and reveal: 18 games (2026-09-27)
 - [x] `S1` Money on screen from the first hole of every game, starting at $0 and moving as each score is tapped, with what the hole adds and a toast when it's saved (2026-09-26)
 - [x] `S1` Setup asks one question per step, puts the stakes up front with the rest under "More options," and ends on a "Round ready" screen to invite the group before hole 1 (2026-09-26)
 - [ ] `S2` Several games at once in one round (Nassau plus skins plus greenies)
 - [ ] `S2` (partial) "Our usual game": saved crew, games and stakes, set up in one tap. "Your usual" on the first setup step repeats the last round's game, course, group and bets (2026-09-26). Still to do: save more than one, and put it behind Pro.
-- [ ] `S2` (partial) House rules for every game, the variations real groups play. Some exist (modified Stableford, skins carryovers, Rabbit steal or set free and ties, 2026-09-27). Go through all 16 games, and add the variations people ask for in "Suggest something."
+- [ ] `S2` (partial) House rules for every game, the variations real groups play. Some exist (modified Stableford, skins carryovers, Rabbit steal or set free and ties, 2026-09-27; skins net and gross together, skins pot split by skins won, what last-hole carryovers do, Nassau press at the turn and no press on the last hole, 2026-09-27). Go through all 18 games, and add the variations people ask for in "Suggest something."
 - [x] `S2` Ending a round is one tap and forgiving: stopping early, a missing score or a player who left never traps the round open. "A player left" in the round menu, holes with a missing score aren't counted (and the results say so), and finished rounds can't get stuck as active (2026-09-26)
 - [x] `S2` The killer end-of-round moment: every game and press totals up in one animated moment, then the fewest payments with one-tap pay links. Each bet resolves in turn (legs, presses, skins, biggest holes), then the totals land, then settle up with Venmo links and Mark paid, then a results image to share (2026-09-26)
 - [ ] `S3` Side bets between two players inside a bigger round (proposed during the week, see area 21)
@@ -389,3 +390,4 @@ Kept light on purpose. Groups already have a group text, so Birdie Bank adds to 
 - 2026-09-26: Changed the S1 gate to sign-in for anyone plus live feedback, moved the quick logo to early S2, and added a needs check by kind of user and an ongoing bug and polish pass (area 20). Checklist: 17 of 144 done (12%), up from 5 of 141 (4%) when the roadmap started.
 - 2026-09-26 (overnight): Money math tested for all 16 games (5 bugs fixed, including cent rounding), "A player left" and forgiving round endings, per-bet reveal and a results image, feedback prompts in natural places, join link previews, course search ready for a GolfCourseAPI key, stronger offline sync and a service worker that caches the whole app, a faster first load (main bundle 407 KB to about 270 KB), and an accessibility pass. Research: needs check, rules check and copy audit, plus wireframes for the other app areas, rounds set up ahead of time, and organizer onboarding.
 - 2026-09-27: Money rules #1 to #9 built with tests for each, including the rules check examples: bets change from a hole on, unfinished Rabbit legs and Sixes matches pay, Rabbit set free, Quota scales to holes played, WHS handicap allowances (per player, 3-person scramble 30/20/10), pots by default for Stableford and Quota, worked examples under every bet, and one greenie a hole on par 3s.
+- 2026-09-27: Two new games, Snake and Hammer, with rules, options, scoring on the Play screen, results and reveal. Skins house rules (net and gross together, a pot split by skins won, and void, split or playoff for carryovers after the last hole) and Nassau press house rules (press at the turn, no press on the last hole). Published rules cited in the code.
