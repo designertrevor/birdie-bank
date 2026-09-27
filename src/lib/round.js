@@ -651,7 +651,7 @@ function totalsHoleValue(round, p, h) {
  * `value(pid, hole)` is a player's number on a counted hole; `adjust(a, b, shared)` is added to
  * a's side of the difference (used for quota targets). Returns money by player id.
  */
-function settlePairs(round, value, { stake, lowerWins, adjust = null }) {
+function settlePairs(round, value, { stake, lowerWins, adjust = null, onPair = null }) {
   const ids = round.players.map(p => p.id);
   const out = Object.fromEntries(ids.map(id => [id, 0]));
   const counted = round.holes.filter(h => holeComplete(round, h));
@@ -663,6 +663,7 @@ function settlePairs(round, value, { stake, lowerWins, adjust = null }) {
     if (adjust) diff += adjust(a, b, both.length);
     const d = diff * stake * (lowerWins ? -1 : 1); // positive = a wins
     out[a] += d; out[b] -= d;
+    onPair?.(a, b, d);
   }
   return out;
 }
@@ -738,13 +739,33 @@ export function rabbitTable(round) {
 
 // --------------------------- Results --------------------------------------
 
-/** Money by player id plus game-specific detail. Works on partial rounds too. */
+/**
+ * Money by player id plus game-specific detail. Works on partial rounds too.
+ * `pairs[a][b]` is the honest head-to-head: what a won from b, worked out bet by bet and hole by
+ * hole (not from the fewest-payments list, which can route money between people who never bet each other).
+ */
 export function roundResults(round) {
   const ids = round.players.map(p => p.id);
   const balances = Object.fromEntries(ids.map(id => [id, 0]));
   const detail = {};
   const s = round.settings;
   const add = deltas => { for (const id of ids) balances[id] += deltas[id] || 0; };
+  const zero = () => Object.fromEntries(ids.map(id => [id, 0]));
+  // Head to head: records who won what from whom. It never changes balances.
+  const raw = Object.fromEntries(ids.map(id => [id, {}]));
+  const pay = (from, to, amt) => {
+    if (!amt || from === to || !raw[from] || !raw[to]) return;
+    raw[to][from] = (raw[to][from] || 0) + amt;
+    raw[from][to] = (raw[from][to] || 0) - amt;
+  };
+  // One bet's money among several players: each loser pays each winner in proportion to what they won
+  const spread = deltas => {
+    const win = ids.filter(id => deltas[id] > 0), lose = ids.filter(id => deltas[id] < 0);
+    const total = win.reduce((a, id) => a + deltas[id], 0);
+    if (!total) return;
+    for (const l of lose) for (const w of win) pay(l, w, -deltas[l] * deltas[w] / total);
+  };
+  const addSpread = deltas => { add(deltas); spread(deltas); };
   // Whole cents that still sum to zero, even when a pot splits three ways
   const round2 = () => { const r = roundCents(balances); for (const id of ids) balances[id] = r[id]; };
 
@@ -760,13 +781,19 @@ export function roundResults(round) {
       const net = Object.fromEntries(on.map(p => [p.id, netFor(round, p, h)]));
       const r = settleBankerHole(setup, net, field, { ties: s.banker.ties });
       add(r.deltas);
+      for (const m of r.matchups) {
+        if (m.result === 'win') pay(setup.banker, m.pid, m.amount);
+        if (m.result === 'loss') pay(m.pid, setup.banker, m.amount);
+      }
       detail.holes.push({ no: h.no, banker: setup.banker, ...r });
     });
   }
 
   if (round.game === 'nassau' || round.game === 'match') {
     const res = nassauResult(nassauWinners(round), round.presses, nassauAmounts(round), roundLegs(round));
-    spreadSides(round, balances, res.net);
+    const d = zero();
+    spreadSides(round, d, res.net);
+    addSpread(d);
     detail.lines = res.lines;
   }
 
@@ -776,7 +803,7 @@ export function roundResults(round) {
       if (!r.winner) continue;
       for (const id of r.field) {
         if (id === r.winner) balances[id] += r.skins * t.value * (r.field.length - 1);
-        else balances[id] -= r.skins * t.value;
+        else { balances[id] -= r.skins * t.value; pay(id, r.winner, r.skins * t.value); }
       }
     }
     detail.skins = t;
@@ -787,14 +814,14 @@ export function roundResults(round) {
     for (const h of round.holes) {
       const r = wolfHoleResult(round, h);
       if (!r) continue;
-      add(r.deltas);
+      addSpread(r.deltas);
       detail.holes.push({ no: h.no, ...r });
     }
   }
 
   if (round.game === 'vegas') {
     const rows = vegasTable(round);
-    for (const r of rows) if (r.played) add(r.deltas);
+    for (const r of rows) if (r.played) addSpread(r.deltas);
     detail.vegas = rows;
   }
 
@@ -807,8 +834,10 @@ export function roundResults(round) {
         const w0 = Object.values(m.winners).filter(w => w === 0).length, w1 = Object.values(m.winners).filter(w => w === 1).length;
         net = (w0 - w1) * s.sixes.stake;
       } else if (st.leader != null && st.done) net = st.leader === 0 ? s.sixes.stake : -s.sixes.stake;
-      for (const pid of m.sides[0]) balances[pid] += net;
-      for (const pid of m.sides[1]) balances[pid] -= net;
+      const d = zero();
+      for (const pid of m.sides[0]) d[pid] += net;
+      for (const pid of m.sides[1]) d[pid] -= net;
+      addSpread(d);
       return { ...m, net };
     });
   }
@@ -833,8 +862,10 @@ export function roundResults(round) {
       const best = Math.min(...inTeams.map(t => totals[t.id]));
       const winners = inTeams.filter(t => totals[t.id] === best).flatMap(t => t.players);
       const pot = s.scramble.stake * inIds.length;
-      for (const id of inIds) balances[id] -= s.scramble.stake;
-      for (const id of winners) balances[id] += pot / winners.length;
+      const d = zero();
+      for (const id of inIds) d[id] -= s.scramble.stake;
+      for (const id of winners) d[id] += pot / winners.length;
+      addSpread(d);
     }
     detail.totals = scorers(round).map(t => ({ id: t.id, name: t.name, total: totals[t.id], toPar: totals[t.id] - pars[t.id], played: counts[t.id], left: teams.length > 0 && !inTeams.some(x => x.id === t.id) }));
   }
@@ -849,7 +880,7 @@ export function roundResults(round) {
       const key = round.game === 'quota' ? 'vsQuota' : 'total';
       const stay = playersToEnd(round).map(p => p.id);
       const totals = Object.fromEntries(table.filter(t => stay.includes(t.id)).map(t => [t.id, t[key]]));
-      add(settleTotals(totals, { mode: 'pot', stake: cfg.stake, lowerWins }));
+      addSpread(settleTotals(totals, { mode: 'pot', stake: cfg.stake, lowerWins }));
     } else if (played) {
       // Per stroke or point: each pair settles on the holes they both played
       const byId = Object.fromEntries(round.players.map(p => [p.id, p]));
@@ -859,7 +890,7 @@ export function roundResults(round) {
       const adjust = round.game === 'quota'
         ? (a, b, shared) => -(quota[a] - quota[b]) * (toEnd(a) && toEnd(b) ? 1 : shared / round.holes.length)
         : null;
-      add(settlePairs(round, (pid, h) => totalsHoleValue(round, byId[pid], h), { stake: cfg.stake, lowerWins, adjust }));
+      add(settlePairs(round, (pid, h) => totalsHoleValue(round, byId[pid], h), { stake: cfg.stake, lowerWins, adjust, onPair: (a, b, d) => pay(b, a, d) }));
     }
     detail.totals = table;
   }
@@ -873,6 +904,7 @@ export function roundResults(round) {
       for (const r of rows) for (const id of r.field) for (const other of r.field) {
         if (other === id) continue;
         balances[id] += r.points[id] * s.dots.value; balances[other] -= r.points[id] * s.dots.value;
+        pay(other, id, r.points[id] * s.dots.value);
       }
     } else if (round.game === 'bbb') {
       // Every pair settles the difference in points on the holes they both played
@@ -880,8 +912,15 @@ export function roundResults(round) {
         const a = ids[i], b = ids[j];
         const d = rows.filter(r => r.field.includes(a) && r.field.includes(b)).reduce((acc, r) => acc + r.points[a] - r.points[b], 0) * s.bbb.value;
         balances[a] += d; balances[b] -= d;
+        pay(b, a, d);
       }
-    } else if (rows.length) add(pointsToMoney(pts, s.nines.point));
+    } else if (rows.length) {
+      add(pointsToMoney(pts, s.nines.point));
+      // (points - average) x value is every pair settling its difference, split over the group
+      for (let i = 0; i < ids.length; i++) for (let j = i + 1; j < ids.length; j++) {
+        pay(ids[j], ids[i], (pts[ids[i]] - pts[ids[j]]) * s.nines.point / ids.length);
+      }
+    }
     detail.points = pts;
     detail.rows = rows;
   }
@@ -895,6 +934,10 @@ export function roundResults(round) {
       if (on.length < 2) continue;
       const r = acesDeuces(on.map(p => netFor(round, p, h)), on.map(p => p.id), s.aces);
       add(r.deltas);
+      for (const p of on) {
+        if (r.ace && p.id !== r.ace) pay(p.id, r.ace, s.aces.ace);
+        if (r.deuce && p.id !== r.deuce) pay(r.deuce, p.id, s.aces.deuce);
+      }
       detail.holes.push({ no: h.no, ...r });
     }
   }
@@ -905,7 +948,7 @@ export function roundResults(round) {
       if (!leg.done || !leg.holder) continue;
       for (const id of leg.payers) {
         if (id === leg.holder) balances[id] += s.rabbit.stake * (leg.payers.length - 1);
-        else balances[id] -= s.rabbit.stake;
+        else { balances[id] -= s.rabbit.stake; pay(id, leg.holder, s.rabbit.stake); }
       }
     }
     detail.rabbit = t;
@@ -915,7 +958,19 @@ export function roundResults(round) {
   const standings = [...round.players]
     .map(p => ({ ...p, amount: balances[p.id] }))
     .sort((a, b) => b.amount - a.amount);
-  return { balances, standings, transfers: minimalTransfers(balances), detail };
+  // Whole cents, and b's side of each pair is exactly a's the other way round
+  const pairs = Object.fromEntries(ids.map(id => [id, {}]));
+  for (let i = 0; i < ids.length; i++) for (let j = i + 1; j < ids.length; j++) {
+    const a = ids[i], b = ids[j];
+    const v = Math.round((raw[a][b] || 0) * 100) / 100 || 0;
+    pairs[a][b] = v; pairs[b][a] = -v || 0;
+  }
+  return { balances, standings, transfers: minimalTransfers(balances), detail, pairs };
+}
+
+/** Honest head-to-head for one round: what `a` won from `b` (negative when b came out ahead). */
+export function headToHead(round, a, b) {
+  return roundResults(round).pairs[a]?.[b] ?? 0;
 }
 
 /** "Mike", "Mike and Sue", "Mike, Sue and Al". */

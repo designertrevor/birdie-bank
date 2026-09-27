@@ -186,6 +186,17 @@ function checkMoney(round, label = round.game) {
   }
   for (const [id, v] of Object.entries(left)) assert.equal(v, 0, `${label}: ${id} is square after the transfers`);
   assert.ok(res.transfers.length <= Math.max(0, ids.length - 1), `${label}: at most n - 1 payments`);
+  // Head to head: every pair is two sides of one number, and a player's pairs add up to their
+  // balance (give or take the cent rounding of each pair)
+  for (const a of ids) {
+    let sum = 0;
+    for (const b of ids) {
+      if (a === b) continue;
+      assert.equal(cents(res.pairs[a][b]) + cents(res.pairs[b][a]), 0, `${label}: ${a} v ${b} is antisymmetric`);
+      sum += cents(res.pairs[a][b]);
+    }
+    assert.ok(Math.abs(sum - cents(res.balances[a])) <= ids.length, `${label}: ${a} head to head ${sum} matches balance ${res.balances[a]}`);
+  }
   return res;
 }
 

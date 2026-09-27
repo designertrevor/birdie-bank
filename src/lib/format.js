@@ -81,10 +81,8 @@ export function seasonStats(state, year = new Date().getFullYear()) {
     const s = scoreSummary(r, me);
     birdies += s.birdies + s.eagles;
     if (!best || amt > best.amount) best = { amount: amt, round: r };
-    for (const t of res.transfers) {
-      if (t.to === me) h2h[t.from] = (h2h[t.from] || 0) + t.amount;
-      if (t.from === me) h2h[t.to] = (h2h[t.to] || 0) - t.amount;
-    }
+    // Honest head-to-head from the bets themselves, not from who happened to pay whom
+    for (const [pid, v] of Object.entries(res.pairs[me] || {})) h2h[pid] = Math.round(((h2h[pid] || 0) + v) * 100) / 100;
   }
   return { rounds: rounds.length, total, birdies, streak, best, h2h };
 }
