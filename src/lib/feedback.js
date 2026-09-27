@@ -48,7 +48,7 @@ export async function shrinkImage(file, max = 1400) {
   return c.toDataURL('image/jpeg', 0.82);
 }
 
-// "How was it?" after a round: asked at most once per round, remembered on this phone
+// "How was Birdie Bank today?" after a round: asked at most once per round, remembered on this phone
 const ASKED = 'bb-round-asked';
 export function roundAsked(roundId) {
   try { return (JSON.parse(localStorage.getItem(ASKED)) || []).includes(roundId); } catch { return false; }
@@ -80,10 +80,16 @@ async function send(item) {
     if (up.error && !/exists/i.test(up.error.message)) throw up.error;
     screenshot_path = path;
   }
-  const { error } = await c.from('feedback').insert({
+  const row = {
     id: item.id, kind: item.kind, body: item.body, details: item.details, context: item.context,
     contact: item.contact || null, screenshot_path,
-  });
+  };
+  let { error } = await c.from('feedback').insert(row);
+  // 23514: a table from before 'reaction' was allowed (see schema.sql, 2026-09-27). Send it as
+  // a feature note instead, so the reaction still arrives
+  if (error?.code === '23514' && item.kind === 'reaction') {
+    ({ error } = await c.from('feedback').insert({ ...row, kind: 'feature', details: { ...row.details, sentAs: 'reaction' } }));
+  }
   if (error && error.code !== '23505') throw error; // 23505: already sent on an earlier try
 }
 
@@ -113,4 +119,9 @@ export async function submitFeedback({ kind, body, details = {}, contact = '', i
 if (typeof window !== 'undefined') {
   window.addEventListener('online', () => flushFeedback());
   if (readQueue().length) setTimeout(() => flushFeedback(), 3000);
+}
+
+/** A one-tap reaction after a round ("Great", "Just OK", "Something was off"), saved as feedback. */
+export function submitReaction({ reaction, label, details = {}, roundId = null }) {
+  return submitFeedback({ kind: 'reaction', body: label, details: { ...details, reaction }, roundId });
 }

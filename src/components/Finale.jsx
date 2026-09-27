@@ -7,7 +7,7 @@ import { money } from '../lib/golf.js';
 import { venmoLink } from '../lib/ledger.js';
 import { buzz, confettiFrom } from '../lib/delight.js';
 import { meFor, roundDate, roundPlayerName, shareRound } from '../lib/format.js';
-import { markRoundAsked, roundAsked } from '../lib/feedback.js';
+import { markRoundAsked, roundAsked, submitReaction } from '../lib/feedback.js';
 import { useNav } from '../lib/nav.js';
 import { revealSteps, revealTiming } from '../lib/reveal.js';
 import { IMAGE_H, IMAGE_W, renderShareImage, shareImageName } from '../lib/shareImage.js';
@@ -197,7 +197,7 @@ export function SettleUp({ round, res, onBack, onNext }) {
           );
         })}
         <p className="field-help pad">
-          {paidCount === n ? 'All paid. Nice and tidy.' : `${paidCount} of ${n} paid. Anything left stays on the season tab in the Ledger.`}
+          {paidCount === n ? 'All paid. Nice and tidy.' : `${paidCount} of ${n} paid. The rest stays on the tab.`}
           {missingVenmo ? ' Add Venmo usernames in Players to get pay links.' : ''}
         </p>
       </div>
@@ -214,7 +214,9 @@ export function SettleUp({ round, res, onBack, onNext }) {
  */
 export function ShareCard({ round, res, onBack, onDone }) {
   const { showToast } = useUI();
-  const [showAmounts, setShowAmounts] = useState(true);
+  // Off by default so nobody posts the money by accident; your choice is remembered
+  const showAmounts = useStore(s => !!s.settings.shareAmounts);
+  const setShowAmounts = on => update(s => { s.settings.shareAmounts = on; });
   const [img, setImg] = useState(null); // { blob, url, amounts }
   // Everyone tied for the top, so a shared win isn't credited to whoever sorted first
   const tops = res.standings.filter(p => p.amount > 0 && p.amount === res.standings[0].amount);
@@ -287,7 +289,7 @@ export function ShareCard({ round, res, onBack, onDone }) {
   );
 }
 
-// "How was it?" shows once per round: the first time it appears it's saved as asked on this phone,
+// "How was Birdie Bank today?" shows once per round: the first time it appears it's saved as asked on this phone,
 // and it stays put for the rest of this visit until answered or dismissed.
 const shownNow = new Set();
 const answered = new Set();
@@ -299,7 +301,10 @@ const REACTIONS = [
   { key: 'off', icon: 'smiley-sad', label: 'Something was off', kind: 'bug', lead: 'Sorry about that. Tell us what went wrong and we’ll look into it.' },
 ];
 
-/** A small, dismissible check-in after a round. A reaction opens the feature or bug form with the round attached. */
+/**
+ * A small, dismissible check-in after a round. One tap saves the reaction as feedback straight
+ * away (it waits on the phone with no signal), then offers a form to say more.
+ */
 export function HowWasIt({ round }) {
   const nav = useNav();
   const [show] = useState(() => {
@@ -308,6 +313,7 @@ export function HowWasIt({ round }) {
     return shownNow.has(round.id) || !roundAsked(round.id);
   });
   const [gone, setGone] = useState(false);
+  const [picked, setPicked] = useState(null);
   useEffect(() => {
     if (!show) return;
     shownNow.add(round.id);
@@ -316,18 +322,26 @@ export function HowWasIt({ round }) {
   if (!show || gone) return null;
 
   const close = () => { answered.add(round.id); setGone(true); };
+  const extra = r => ({ reaction: r.key, roundGame: GAMES[round.game]?.name || round.game });
   const pick = r => {
+    answered.add(round.id);
+    setPicked(r);
+    submitReaction({ reaction: r.key, label: r.label, details: extra(r), roundId: round.id }).catch(() => { /* stays queued */ });
+  };
+  const more = () => {
     close();
-    nav.push('suggest', { kind: r.kind, lead: r.lead, roundId: round.id, extra: { reaction: r.key, roundGame: GAMES[round.game]?.name || round.game } });
+    nav.push('suggest', { kind: picked.kind, lead: picked.lead, roundId: round.id, extra: extra(picked) });
   };
   return (
     <div className="checkin" role="group" aria-labelledby={`checkin-${round.id}`}>
       <div className="checkin-head">
-        <span className="checkin-q" id={`checkin-${round.id}`}>How was it?</span>
-        <button className="checkin-x" onClick={close} aria-label="No thanks"><Icon name="x" /></button>
+        <span className="checkin-q" id={`checkin-${round.id}`} aria-live="polite">{picked ? 'Thanks, that helps.' : 'How was Birdie Bank today?'}</span>
+        <button className="checkin-x" onClick={close} aria-label={picked ? 'Close' : 'No thanks'}><Icon name="x" /></button>
       </div>
       <div className="checkin-opts">
-        {REACTIONS.map(r => <button key={r.key} className="pill-btn" onClick={() => pick(r)}><Icon name={r.icon} /> {r.label}</button>)}
+        {picked
+          ? <button className="pill-btn" onClick={more}><Icon name="chat-circle-dots" /> Tell us more</button>
+          : REACTIONS.map(r => <button key={r.key} className="pill-btn" onClick={() => pick(r)}><Icon name={r.icon} /> {r.label}</button>)}
       </div>
     </div>
   );

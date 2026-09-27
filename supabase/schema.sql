@@ -88,3 +88,9 @@ alter table public.user_docs enable row level security;
 drop policy if exists "own docs" on public.user_docs;
 create policy "own docs" on public.user_docs for all to authenticated
   using ((select auth.uid()) = user_id) with check ((select auth.uid()) = user_id);
+
+-- Post-round reactions (added 2026-09-27). "How was Birdie Bank today?" saves a one-tap
+-- reaction (Great, Just OK, Something was off) as feedback with kind 'reaction'. Safe to run
+-- again. Until it runs, the app sends reactions as kind 'feature' with details.sentAs = 'reaction'.
+alter table public.feedback drop constraint if exists feedback_kind_check;
+alter table public.feedback add constraint feedback_kind_check check (kind in ('game', 'course', 'feature', 'bug', 'reaction'));
