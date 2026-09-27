@@ -7,6 +7,7 @@ import {
   bestBall, sideSplit, vegasHole, sixesPairings, sixesSegments, stablefordPoints, quotaPoints, quotaFor, ninesPoints,
   acesDeuces, pointsToMoney, settleTotals, scrambleTeamHandicap, rabbitHolder, scoreDots, DOT_KINDS, roundCents,
 } from './games.js';
+import { payFields } from './pay.js';
 
 /**
  * Every game the app can score. `teams` says how players are grouped in the setup step:
@@ -191,7 +192,8 @@ export function createRound({ id, game, course, holesCount, nine, startHole, pla
   const withHc = players.map(p => {
     const tee = course.tees?.find(t => t.name === p.tee) || course.tees?.[0] || null;
     const courseHc = effectiveCourseHc(p.index, tee, course, holes, holesCount, p.courseHcOverride).value;
-    return { id: p.id, name: p.name, tee: tee?.name ?? null, index: p.index ?? null, courseHc, courseHcOverride: p.courseHcOverride ?? null };
+    // Payment app and handle ride along, so friends who join the round can pay each other
+    return { id: p.id, name: p.name, tee: tee?.name ?? null, index: p.index ?? null, courseHc, courseHcOverride: p.courseHcOverride ?? null, ...payFields(p) };
   });
   const plays = useHandicaps ? strokesOffLow(withHc.map(p => p.courseHc), hcPct) : withHc.map(() => 0);
   const full = withHc.map((p, i) => ({ ...p, plays: plays[i] }));

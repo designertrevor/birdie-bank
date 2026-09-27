@@ -4,7 +4,8 @@ import { Header, Icon, Toggle, useUI } from './ui.jsx';
 import { update, uid, useStore } from '../lib/store.js';
 import { GAMES, roundResults } from '../lib/round.js';
 import { money } from '../lib/golf.js';
-import { venmoLink } from '../lib/ledger.js';
+import { payInfoFor } from '../lib/pay.js';
+import { PayButton, RequestButton } from './Pay.jsx';
 import { buzz, confettiFrom } from '../lib/delight.js';
 import { meFor, roundDate, roundPlayerName, shareRound } from '../lib/format.js';
 import { markRoundAsked, roundAsked } from '../lib/feedback.js';
@@ -136,7 +137,7 @@ export function Reveal({ round, res, onNext, onDetail, extra, instant = false })
   );
 }
 
-/** Beat 2: the fewest payments, each with a Venmo link and a way to mark it paid right here. */
+/** Beat 2: the fewest payments, a pay or request button for yours (in the payee's own app), and a way to mark each paid. */
 export function SettleUp({ round, res, onBack, onNext }) {
   const state = useStore();
   const { showToast } = useUI();
@@ -156,14 +157,9 @@ export function SettleUp({ round, res, onBack, onNext }) {
     buzz(15);
     showToast(`${name(t.from)} is square with ${name(t.to)}`);
   };
-  // You're owed: request from them. Otherwise: a link to pay whoever's owed.
-  const venmoFor = t => {
-    const payer = state.players[t.from], payee = state.players[t.to];
-    if (t.to === me && payer?.venmo) return { href: venmoLink(payer.venmo, t.amount, note, 'charge'), label: 'Venmo request', aria: `Request ${money(t.amount)} from @${payer.venmo} on Venmo` };
-    if (payee?.venmo) return { href: venmoLink(payee.venmo, t.amount, note), label: 'Pay on Venmo', aria: `Pay @${payee.venmo} ${money(t.amount)} on Venmo` };
-    return null;
-  };
-  const missingVenmo = res.transfers.some(t => !venmoFor(t));
+  // Pay buttons only for your own payments: pay in the payee's app, or request when you're owed
+  const myApp = payInfoFor(state, state.me);
+  const missingApp = res.transfers.some(t => t.from === me && !payInfoFor(state, t.to));
   const n = res.transfers.length;
 
   return (
@@ -176,7 +172,6 @@ export function SettleUp({ round, res, onBack, onNext }) {
         </div>
         {res.transfers.map(t => {
           const paid = !!paidFor(t);
-          const v = venmoFor(t);
           return (
             <div key={t.from + t.to} className={`pay-card ${paid ? 'paid' : ''}`}>
               <div className="pay-who">
@@ -186,9 +181,8 @@ export function SettleUp({ round, res, onBack, onNext }) {
                 <span className="pm">{money(t.amount)}</span>
               </div>
               <div className="pay-acts">
-                {v && !paid && (
-                  <a className="pay-btn venmo" href={v.href} target="_blank" rel="noreferrer" aria-label={v.aria}><Icon name="paper-plane-tilt" fill /><span className="pay-lbl">{v.label}</span></a>
-                )}
+                {!paid && t.from === me && <PayButton info={payInfoFor(state, t.to)} amount={t.amount} note={note} />}
+                {!paid && t.to === me && <RequestButton payer={payInfoFor(state, t.from)} mine={myApp} amount={t.amount} note={note} />}
                 <button className={`pay-btn ${paid ? 'done' : ''}`} onClick={() => toggle(t)} aria-pressed={paid}>
                   <Icon name={paid ? 'check-circle' : 'circle'} fill={paid} /> {paid ? 'Paid' : 'Mark paid'}
                 </button>
@@ -197,8 +191,8 @@ export function SettleUp({ round, res, onBack, onNext }) {
           );
         })}
         <p className="field-help pad">
-          {paidCount === n ? 'All paid. Nice and tidy.' : `${paidCount} of ${n} paid. Anything left stays on the season tab in the Ledger.`}
-          {missingVenmo ? ' Add Venmo usernames in Players to get pay links.' : ''}
+          {paidCount === n ? 'All paid. Nice and tidy.' : `${paidCount} of ${n} paid. Anything left stays on the Tab.`}
+          {missingApp ? ' Add each person’s payment app in Players to get pay buttons.' : ''}
         </p>
       </div>
       <div className="cta-wrap">

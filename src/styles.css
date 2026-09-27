@@ -867,3 +867,48 @@ button:disabled { cursor: not-allowed; }
 .checkin-opts { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; }
 .checkin-opts .pill-btn { background: var(--card); font-size: 13px; padding: 8px 12px; }
 .checkin-opts .pill-btn i { color: var(--icon); font-size: 16px; }
+
+/* TAB, PLAYER CARDS AND PAY BUTTONS */
+:root { --cashapp: #0b7a3b; --paypal: #003087; --zelle: #6d1ed4; } /* each deep enough for white text (4.5:1) */
+.app-venmo { background: var(--venmo) !important; color: #fff !important; text-decoration: none; }
+.app-cashapp { background: var(--cashapp) !important; color: #fff !important; text-decoration: none; }
+.app-paypal { background: var(--paypal) !important; color: #fff !important; text-decoration: none; }
+.app-zelle { background: var(--zelle) !important; color: #fff !important; text-decoration: none; }
+.pay-btn.ink { background: var(--ink); color: var(--on-ink); }
+.pay-in { display: inline-flex; align-items: center; gap: 6px; min-width: 0; }
+.avatar {
+  width: 40px; height: 40px; border-radius: 50%; flex-shrink: 0; display: grid; place-items: center; margin-right: 12px;
+  background: var(--surface-strong); color: var(--ink); font-family: var(--display); font-weight: 800; font-size: 17px;
+}
+.avatar.lg { width: 72px; height: 72px; font-size: 30px; margin: 0 auto; }
+.tab-overall { padding: 8px 20px 12px; }
+.tab-big { font-size: 34px; font-weight: 800; letter-spacing: -.03em; line-height: 1.1; margin-top: 2px; font-variant-numeric: tabular-nums; }
+.tab-card { margin: 0 16px 10px; padding: 12px 14px 14px; background: var(--card); border-radius: 20px; }
+.tab-person { display: flex; align-items: center; width: 100%; background: none; border: none; padding: 2px 0; text-align: left; cursor: pointer; }
+.tp-name { font-family: var(--display); font-size: 18px; font-weight: 800; color: var(--ink); }
+.tp-sub { font-size: 13px; color: var(--mute); margin-top: 1px; }
+.tp-amt { font-family: var(--display); font-size: 22px; font-weight: 800; margin: 0 6px 0 8px; font-variant-numeric: tabular-nums; }
+.tab-card .pay-acts { margin-top: 10px; }
+.pad-x { padding: 0 16px; margin: 4px 0 8px; }
+.person-hero { text-align: center; padding: 8px 20px 12px; }
+.ph-sub { font-size: 14px; color: var(--mute); margin-top: 8px; overflow-wrap: anywhere; }
+.stat-tiles { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; margin: 12px 16px 4px; }
+.stat-tiles > div { background: var(--card); border-radius: 18px; padding: 12px; min-width: 0; }
+.st-v { font-size: 22px; font-weight: 800; margin-top: 4px; font-variant-numeric: tabular-nums; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.st-s { font-size: 11px; color: var(--mute); margin-top: 1px; }
+.story-amt { font-size: 17px; font-weight: 800; color: var(--ink); margin: 0; }
+.person-row .set-name { font-family: var(--display); font-weight: 800; font-size: 17px; }
+.pr-amt { font-size: 17px; font-weight: 800; margin: 0 6px 0 8px; font-variant-numeric: tabular-nums; color: var(--mute); }
+.text-link {
+  display: flex; align-items: center; gap: 6px; margin: 4px 16px 12px; padding: 10px 4px; background: none; border: none;
+  color: var(--mute); font-size: 14px; font-weight: 600; cursor: pointer; text-align: left;
+}
+.text-link i { color: var(--icon); }
+.chip-row.flush { padding: 0 0 10px; }
+.pay-acts:has(> :nth-child(3)) .pay-btn { padding: 0 8px; }
+.pay-acts:has(> :nth-child(3)) .pay-btn i { display: none; }
+.chip-row.flush { gap: 6px; }
+.chip-row.flush .pill-btn { padding: 8px 12px; }
+.chip-row.flush .pill-btn:not(.on) { background: var(--surface); }
+.pay-acts { flex-wrap: wrap; }
+.pay-btn.app-zelle { flex-basis: 100%; } /* the handle is the point, so give it the whole row */
