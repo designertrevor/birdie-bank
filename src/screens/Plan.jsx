@@ -439,7 +439,7 @@ export function PlanLink({ code, who = null, standalone = false, onSkip }) {
     let cancelled = false;
     openPlanLink(code, who)
       .then(found => { if (cancelled) return; if (found) { setId(found); setErr(null); } else setErr('missing'); })
-      .catch(() => { if (!cancelled) setErr('offline'); });
+      .catch(e => { if (!cancelled) setErr(e instanceof PlansOffError ? 'off' : 'offline'); });
     return () => { cancelled = true; };
   }, [code, who, tries]);
 
@@ -451,16 +451,17 @@ export function PlanLink({ code, who = null, standalone = false, onSkip }) {
       </Screen>
     );
   }
-  const missing = err === 'missing';
+  const missing = err === 'missing' || err === 'off';
   return (
     <Screen className="onboard">
       {!standalone && <Header title="Upcoming round" small onBack={nav.pop} />}
       <div className="scroll onboard-body">
         <BallIllo className="onboard-illo" face={!err} />
-        <h1 className="onboard-title" style={{ fontSize: 34 }}>{err ? (missing ? 'Plan not found' : 'No signal') : 'Finding the plan…'}</h1>
+        <h1 className="onboard-title" style={{ fontSize: 34 }}>{err ? (err === 'off' ? 'Not quite ready' : missing ? 'Plan not found' : 'No signal') : 'Finding the plan…'}</h1>
         <p className="onboard-text">
           {!err && <>Code {code}</>}
-          {missing && <>We can’t find plan {code}. It may have been deleted, or the link is old. Ask for a fresh one.</>}
+          {err === 'off' && <>Group links aren’t switched on yet. Ask whoever sent it to tell you the plan instead.</>}
+          {err === 'missing' && <>We can’t find plan {code}. It may have been deleted, or the link is old. Ask for a fresh one.</>}
           {err === 'offline' && <>Couldn’t reach Birdie Bank. Check your signal and try again.</>}
         </p>
       </div>
