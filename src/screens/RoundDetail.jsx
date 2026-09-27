@@ -133,6 +133,9 @@ export default function RoundDetail({ id, celebrate }) {
         <Scorecard round={round} />
 
         <div className="detail-actions">
+          {round.status === 'done' && GAMES[round.game] && (
+            <button className="full-btn" onClick={() => nav.push('newRound', { rematch: id })}><Icon name="arrow-counter-clockwise" /> Run it back</button>
+          )}
           <button className="full-btn outline" onClick={edit}><Icon name="pencil-simple" /> Edit scores</button>
           <button className="danger-link" onClick={del}><Icon name="trash" /> Delete round</button>
         </div>
