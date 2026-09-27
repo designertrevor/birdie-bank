@@ -34,7 +34,7 @@ export default class ErrorBoundary extends Component {
             <summary style={{ cursor: 'pointer', textAlign: 'center' }}>Show details</summary>
             <pre style={{ fontSize: 11, whiteSpace: 'pre-wrap', marginTop: 8 }}>{String(this.state.error?.message || this.state.error)}</pre>
           </details>
-          <button className="full-btn" onClick={this.reset}>Back to History</button>
+          <button className="full-btn" onClick={this.reset}>Back to Up next</button>
           {this.context && <button className="full-btn outline" style={{ marginTop: 8 }} onClick={this.report}>Tell us what happened</button>}
         </div>
       </div>

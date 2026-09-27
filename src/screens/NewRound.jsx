@@ -11,11 +11,19 @@ import { optionsProblem, stakeSummary } from '../lib/stakes.js';
 import { syncConfigured } from '../lib/sync.js';
 import { ShareSheet } from '../components/Live.jsx';
 import { defaultTeams, teamsProblem } from '../lib/teams.js';
+import { rematchSetup } from '../lib/rematch.js';
 import { useNav } from '../lib/nav.js';
 import { addRound, holesScored, roundsInProgress } from '../lib/rounds.js';
 import { formatIndex, hcPctLabel, playerLabel, sortedPlayers } from '../lib/format.js';
 
 const STEPS = ['Game', 'Course', 'Players', 'Bets'];
+
+/** Setup options with an earlier round's bets and handicap percentage laid over them. */
+function withBets(opts, pre) {
+  if (!pre) return opts;
+  return { ...opts, ...(pre.bets ? { [pre.game]: structuredClone(pre.bets) } : {}), hcPct: pre.hcPct ?? opts.hcPct };
+}
+const listNames = names => (names.length < 2 ? names.join('') : `${names.slice(0, -1).join(', ')} and ${names.at(-1)}`);
 const QUESTIONS = ['What are you playing?', 'Where are you playing?', 'Who’s in?', 'What’s on the line?'];
 
 /** The last round this phone set up whose course and players still exist, to offer as a one-tap repeat. */
@@ -29,22 +37,24 @@ function usualRound(state) {
   return null;
 }
 
-export default function NewRound() {
+export default function NewRound({ rematch }) {
   const nav = useNav();
   const { ask } = useUI();
   const state = useStore();
-  const [step, setStep] = useState(0);
-  const [game, setGame] = useState(null);
-  const [holesCount, setHolesCount] = useState(18);
-  const [courseId, setCourseId] = useState(null);
-  const [nine, setNine] = useState('front');
-  const [picked, setPicked] = useState(() => (state.me ? [state.me] : []));
-  const [tees, setTees] = useState({});          // pid -> tee name
-  const [hcOverride, setHcOverride] = useState({}); // pid -> number
-  const [opts, setOpts] = useState(() => structuredClone(state.settings));
-  const [useHc, setUseHc] = useState(true);
+  // "Run it back" opens setup already filled in like an earlier round
+  const [pre] = useState(() => (rematch ? rematchSetup(getState(), getState().rounds[rematch]) : null));
+  const [step, setStep] = useState(pre?.step ?? 0);
+  const [game, setGame] = useState(pre?.game ?? null);
+  const [holesCount, setHolesCount] = useState(pre?.holesCount ?? 18);
+  const [courseId, setCourseId] = useState(pre?.courseId ?? null);
+  const [nine, setNine] = useState(pre?.nine ?? 'front');
+  const [picked, setPicked] = useState(() => pre?.picked ?? (state.me ? [state.me] : []));
+  const [tees, setTees] = useState(pre?.tees ?? {});          // pid -> tee name
+  const [hcOverride, setHcOverride] = useState(pre?.hcOverride ?? {}); // pid -> number
+  const [opts, setOpts] = useState(() => withBets(structuredClone(state.settings), pre));
+  const [useHc, setUseHc] = useState(pre?.useHc ?? true);
   const [startHole, setStartHole] = useState(null);
-  const [teams, setTeams] = useState(null); // arrays of player ids, for team games
+  const [teams, setTeams] = useState(pre?.teams ?? null); // arrays of player ids, for team games
   const [createdId, setCreatedId] = useState(null); // the round, once it's set up
   const usual = useMemo(() => usualRound(state), [state]);
 
@@ -76,16 +86,13 @@ export default function NewRound() {
 
   // Load last time's game, course, group and bets, then land on the bets to confirm
   const repeatUsual = () => {
-    const r = usual.round;
-    const pids = r.players.map(p => p.id);
-    setGame(r.game); setHolesCount(r.holesCount); setCourseId(usual.course.id); setNine(r.nine || 'front');
-    setPicked(pids);
-    setTees(Object.fromEntries(r.players.filter(p => p.tee).map(p => [p.id, p.tee])));
-    setHcOverride(Object.fromEntries(r.players.filter(p => p.courseHcOverride != null).map(p => [p.id, p.courseHcOverride])));
-    setOpts(o => ({ ...o, [r.game]: structuredClone(r.settings[r.game]), hcPct: r.hcPct ?? o.hcPct }));
-    setUseHc(r.useHandicaps !== false);
+    const p = rematchSetup(state, usual.round);
+    setGame(p.game); setHolesCount(p.holesCount); setCourseId(usual.course.id); setNine(p.nine);
+    setPicked(p.picked); setTees(p.tees); setHcOverride(p.hcOverride);
+    setOpts(o => withBets(o, p));
+    setUseHc(p.useHc);
     setStartHole(null);
-    setTeams(r.teams ? r.teams.map(t => t.players) : defaultTeams(r.game, pids));
+    setTeams(p.teams);
     setStep(3);
   };
   const created = createdId ? state.rounds[createdId] : null;
@@ -101,8 +108,11 @@ export default function NewRound() {
           <Header title="New round" onBack={back} onClose={close} />
           <Steps steps={STEPS} current={step} />
           <h2 className="step-q d">{QUESTIONS[step]}</h2>
+          {step === 2 && pre?.missing.length > 0 && (
+            <p className="hint-card"><Icon name="user-plus" fill /> {listNames(pre.missing)} {pre.missing.length === 1 ? 'isn’t' : 'aren’t'} saved on this phone yet. Add them to run it back with the whole group.</p>
+          )}
         </>
-      ) : <Header title="Round ready" small onClose={() => nav.reset('history')} />}
+      ) : <Header title="Round ready" small onClose={() => nav.reset('upnext')} />}
       {step === 0 && <GameStep usual={usual} onUsual={repeatUsual} game={game} setGame={gm => { setGame(gm); if (!GAMES[gm].holes.includes(holesCount)) setHolesCount(GAMES[gm].holes[0]); }} holesCount={holesCount} setHolesCount={setHolesCount} onNext={() => setStep(1)} />}
       {step === 1 && <CourseStep courseId={courseId} setCourseId={id => { setCourseId(id); setTees({}); setStartHole(null); }} holesCount={holesCount} nine={nine} setNine={setNine} onNext={() => setStep(2)} />}
       {step === 2 && course && (
@@ -115,7 +125,7 @@ export default function NewRound() {
           opts={opts} setOpts={setOpts} useHc={useHc} setUseHc={setUseHc} startHole={startHole} setStartHole={setStartHole} onStart={start}
           teams={teams} setTeams={setTeams} />
       )}
-      {step === 4 && created && <ReadyStep round={created} onStart={() => nav.reset('history', ['play', { id: created.id }])} />}
+      {step === 4 && created && <ReadyStep round={created} onStart={() => nav.reset('upnext', ['play', { id: created.id }])} />}
     </Screen>
   );
 }

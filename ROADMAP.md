@@ -209,6 +209,7 @@ Put more money into the winning creators and copy their video formats with other
 ### 8. History and stats
 - [x] Round history, season stats, head-to-head
 - [x] `S2` Honest head-to-head: each pair's result comes from the bets and holes between them, not from who happened to pay whom (2026-09-27)
+- [x] `S2` History by month: each month shows its round count and your net, one line per round, and a Season, Month or Custom range that also drives a chart of your net over time (2026-09-27)
 - [ ] `S3` Deeper stats for Pro: press win rate, results by game and by course
 - [ ] `S5` Handicap trend from your rounds, as a guide next to your official index (GameBook users ask for handicap tracking). The official index still comes from GHIN or your club.
 - [ ] `S5` Year in review ("Birdie Bank Wrapped")
@@ -321,6 +322,8 @@ Put more money into the winning creators and copy their video formats with other
 The goal: people open the app on days they don't play, and Saturday feels bigger because of it.
 
 **Setting up the next round**
+- [x] `S2` "Up next" home tab and new bottom nav (Up next, Tab, Play, History, Players, with Settings behind your avatar): a round in progress, your tab at a glance, your last result, and a prompt to plan the next round. Upcoming rounds get their own slot here (2026-09-27)
+- [x] `S2` "Run it back" on a finished round: setup opens with the same game, course, group and bets (2026-09-27)
 - [ ] `S2` Upcoming rounds: date, course, tee time, and games and stakes set during the week, not on the first tee
 - [ ] `S2` Who's in: each player answers in, out or maybe, and the organizer sees the count
 - [ ] `S2` Bets set ahead of time, so the round starts in one tap on the first tee
@@ -402,3 +405,4 @@ Kept light on purpose. Groups already have a group text, so Birdie Bank adds to 
 - 2026-09-27: Two new games, Snake and Hammer, with rules, options, scoring on the Play screen, results and reveal. Skins house rules (net and gross together, a pot split by skins won, and void, split or playoff for carryovers after the last hole) and Nassau press house rules (press at the turn, no press on the last hole). Published rules cited in the code.
 - 2026-09-27 (overnight, product and copy): More than one round in progress (nothing is deleted to start a new one), fixing a finished round keeps it on the tab, database courses get a soft tag and the middle tee, the results image hides amounts until you turn them on, after-round reactions save as feedback, a deeper pink for small white text, and the approved copy audit applied screen by screen.
 - 2026-09-27: Tab and people: the Ledger screen is now the Tab, by person, with Remind, Request and a round-by-round story for each friend. Fewest payments across the whole group (only between people who've played together), payment apps for everyone (Venmo, Cash App, PayPal, Zelle) with pay buttons only for the payer or payee, Player cards, and honest head-to-head worked out bet by bet.
+- 2026-09-27 (overnight): New app shell. Up next is the home tab (round in progress, your tab at a glance, last result, plan your next round), the bottom nav is Up next, Tab, Play, History, Players, and Settings moved behind your avatar. History is grouped by month with totals, with a Season, Month or Custom range and a chart of your net. "Run it back" starts a round like a finished one.

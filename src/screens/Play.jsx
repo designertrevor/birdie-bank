@@ -33,7 +33,7 @@ export default function Play({ id }) {
   if (!round) {
     return (
       <Screen>
-        <Empty title="Round not found" text="It may have been deleted." action={<button className="ec" onClick={() => nav.reset('history')}>Back to History</button>} />
+        <Empty title="Round not found" text="It may have been deleted." action={<button className="ec" onClick={() => nav.reset('upnext')}>Back to Up next</button>} />
       </Screen>
     );
   }
@@ -198,7 +198,7 @@ function PlayRound({ round }) {
       const sure = await ask({ title: 'Delete this round?', text: 'Scores and bets from this round will be gone for good.', confirmLabel: 'Delete round', danger: true });
       if (!sure) return;
       update(s => { delete s.rounds[round.id]; leaveRound(s, round.id); });
-      nav.reset('history');
+      nav.reset('upnext');
     }
   };
 

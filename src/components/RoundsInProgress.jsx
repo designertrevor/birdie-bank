@@ -13,9 +13,9 @@ export function RoundsInProgressSheet({ open, onClose, currentId = null }) {
     onClose();
     if (id === currentId) return;
     update(s => { s.activeRoundId = id; });
-    nav.reset('history', ['play', { id }]);
+    nav.reset('upnext', ['play', { id }]);
   };
-  const another = () => { onClose(); nav.reset('history', ['newRound']); };
+  const another = () => { onClose(); nav.reset('upnext', ['newRound']); };
   return (
     <Sheet open={open} onClose={onClose} title="Rounds in progress">
       <p className="sheet-text">Every round stays saved. Pick one to carry on, or start another.</p>
