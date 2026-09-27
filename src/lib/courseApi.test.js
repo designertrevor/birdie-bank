@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { apiCourseId, cityLabel, cleanQuery, courseName, courseSearchAvailable, getCourse, handicapsComplete, mapCourse, mapSearch, searchCourses } from './courseApi.js';
-import { courseWarning, teeDotStyle } from './courses.js';
+import { courseTag, courseWarning, defaultTee, teeDotStyle } from './courses.js';
 import { SAMPLE_COURSES, SAMPLE_SEARCH } from '../data/courseApiSamples.js';
 import handler, { parseRequest } from '../../api/courses.js';
 
@@ -83,7 +83,8 @@ test('mapCourse: missing handicaps and slope leave blanks and mark it unverified
   assert.deepEqual(c.holes.filter(h => h.hdcp == null).length, 3);
   assert.equal(c.holes[0].hdcp, 9);
   assert.deepEqual(c.tees[1], { name: 'White', rating: 68.4, slope: null });
-  assert.equal(courseWarning(c), 'Check hole handicaps');
+  assert.equal(courseWarning(c), 'From course database');
+  assert.equal(courseTag(c).soft, true);
   assert.equal(courseWarning({ ...c, edited: true }), 'Edited by you');
 });
 
@@ -256,4 +257,20 @@ test('client goes quiet for the session once the server has no key', async () =>
   assert.deepEqual(out, [{ status: 'off', results: [] }, { status: 'off', results: [] }]);
   assert.equal(urls.length, 1);
   assert.equal(courseSearchAvailable(), false);
+});
+
+test('courseTag: database courses get a soft tag even when complete, bundled ones need none', () => {
+  assert.deepEqual(courseTag({ source: 'golfcourseapi', verified: true }), { text: 'From course database', soft: true });
+  assert.equal(courseTag({ verified: true }), null);
+  assert.deepEqual(courseTag({ verified: false }), { text: 'Scorecard not checked yet', soft: false });
+});
+
+test('defaultTee: database courses start on the middle men\u2019s tee, bundled ones on the first', () => {
+  const t = (name, rating) => ({ name, rating, slope: 120 });
+  const api = { source: 'golfcourseapi', tees: [t('White', 69.1), t('Black', 74.2), t('Blue', 71.8), t('Red (W)', 70.5)] };
+  assert.equal(defaultTee(api).name, 'Blue');
+  assert.equal(defaultTee({ ...api, tees: [t('Blue', 71.8), t('White', 69.1)] }).name, 'Blue');
+  assert.equal(defaultTee({ ...api, tees: [t('Black', 74), t('Blue', 72), t('White', 70), t('Gold', 67)] }).name, 'Blue');
+  assert.equal(defaultTee({ tees: [t('Black', 74), t('Blue', 72), t('White', 70)] }).name, 'Black');
+  assert.equal(defaultTee({ tees: [] }), null);
 });
