@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Empty, Header, Icon, Screen, Segmented } from '../components/ui.jsx';
 import { useStore } from '../lib/store.js';
 import { GAMES } from '../lib/round.js';
@@ -7,7 +7,7 @@ import { nameOf } from '../lib/ledger.js';
 import { AvatarButton, BottomNav } from '../nav.jsx';
 import { useNav } from '../lib/nav.js';
 import {
-  defaultRange, headToHead, isLatest, monthGroups, netSeries, rangeLabel, rangeOfKind, roundsInRange, shiftRange,
+  defaultRange, headToHead, isLatest, lastResult, monthGroups, netSeries, rangeLabel, rangeOfKind, roundTime, roundsInRange, shiftRange,
 } from '../lib/history.js';
 import { RoundRow } from '../components/RoundRow.jsx';
 import { SeasonChart } from '../components/SeasonChart.jsx';
@@ -25,37 +25,64 @@ function CountUp({ value }) {
     raf = requestAnimationFrame(tick);
     return () => cancelAnimationFrame(raf);
   }, [value]);
+  // Whole dollars while it counts, then the exact amount (cents too) once it lands
+  if (v === value) return <>{money(value, { sign: true })}</>;
   const r = Math.round(v);
   return <>{(value > 0 ? '+' : value < 0 ? '−' : '') + '$' + Math.abs(r)}</>;
 }
 
-/** The range you last looked at on this phone, or this season. */
-function savedRange() {
+const isYear = n => Number.isInteger(n) && n > 1900 && n < 3000;
+/** A range read back from storage, or null when it isn't one this screen can show. */
+function validRange(r) {
+  if (!r || typeof r !== 'object') return null;
+  if (r.kind === 'season') return isYear(r.year) ? r : null;
+  if (r.kind === 'month') return isYear(r.year) && Number.isInteger(r.month) && r.month >= 0 && r.month < 12 ? r : null;
+  if (r.kind === 'custom') return typeof r.from === 'string' && typeof r.to === 'string' ? r : null;
+  return null;
+}
+
+/**
+ * The range you last looked at this visit, or this season. When this season has nothing yet
+ * (say, early January) it opens on the season of your last finished round instead.
+ */
+function startRange(state) {
   try {
-    const r = JSON.parse(sessionStorage.getItem(RANGE_KEY));
-    if (r && ['season', 'month', 'custom'].includes(r.kind)) return r;
+    const r = validRange(JSON.parse(sessionStorage.getItem(RANGE_KEY)));
+    if (r) return r;
   } catch { /* ignore */ }
-  return defaultRange();
+  const range = defaultRange();
+  if (roundsInRange(state, range).length) return range;
+  const last = lastResult(state);
+  const t = last && roundTime(last.round);
+  return t ? { kind: 'season', year: new Date(t).getFullYear() } : range;
 }
 
 export default function History() {
   const nav = useNav();
   const state = useStore();
-  const [range, setRangeRaw] = useState(savedRange);
+  const [range, setRangeRaw] = useState(() => startRange(state));
   const [filter, setFilter] = useState('all');
   const setRange = r => { setRangeRaw(r); try { sessionStorage.setItem(RANGE_KEY, JSON.stringify(r)); } catch { /* ignore */ } };
 
-  const anyDone = Object.values(state.rounds).some(r => r.status === 'done');
-  const inRange = roundsInRange(state, range);
-  const games = [...new Set(inRange.map(r => r.game))].filter(g => GAMES[g]);
-  // A game picked for another range falls back to all games
-  const game = games.includes(filter) ? filter : 'all';
-  const shown = inRange.filter(r => game === 'all' || r.game === game);
-  const groups = monthGroups(shown, state);
-  const series = netSeries(shown, state);
+  const { rounds, me } = state;
+  // Every round's money is worked out a few times over, so only redo it when the rounds or the range change
+  const { anyDone, games, game, shown, groups, series, h2h } = useMemo(() => {
+    const s = { rounds, me };
+    const inRange = roundsInRange(s, range);
+    const games = [...new Set(inRange.map(r => r.game))].filter(g => GAMES[g]);
+    // A game picked for another range falls back to all games
+    const game = games.includes(filter) ? filter : 'all';
+    const shown = inRange.filter(r => game === 'all' || r.game === game);
+    return {
+      anyDone: Object.values(rounds).some(r => r.status === 'done'),
+      games, game, shown,
+      groups: monthGroups(shown, s),
+      series: netSeries(shown, s),
+      h2h: Object.entries(headToHead(shown, s)).filter(([, v]) => v !== 0).sort((a, b) => Math.abs(b[1]) - Math.abs(a[1])).slice(0, 5),
+    };
+  }, [rounds, me, range, filter]);
   const net = series.at(-1)?.total ?? 0;
   const label = rangeLabel(range);
-  const h2h = Object.entries(headToHead(shown, state)).filter(([, v]) => v !== 0).sort((a, b) => Math.abs(b[1]) - Math.abs(a[1])).slice(0, 5);
 
   return (
     <Screen>

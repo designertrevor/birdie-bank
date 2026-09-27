@@ -53,20 +53,20 @@ export default function UpNext() {
         {hasHistory && (
           <>
             <div className="sec-label">Your tab</div>
-            <button className="tab-glance" onClick={() => nav.setTab('ledger')} aria-label={tab.people ? `Your tab: owed to you ${money(tab.owed)}, you owe ${money(tab.owe)}` : 'Your tab: all square'}>
+            <button className="tab-glance" onClick={() => nav.setTab('ledger')} aria-label={tab.people ? `Your tab: owed to you ${money(tab.owed)}, you owe ${money(tab.owe)}` : 'Your tab: you’re all square'}>
               {tab.people ? (
                 <>
                   <div><div className="bl">Owed to you</div><div className={`lr-big ${tab.owed ? 'pos' : ''}`}>{tab.owed ? money(tab.owed) : '–'}</div></div>
                   <div><div className="bl">You owe</div><div className={`lr-big ${tab.owe ? 'neg' : ''}`}>{tab.owe ? money(tab.owe) : '–'}</div></div>
                 </>
               ) : (
-                <div className="tg-square"><Icon name="handshake" fill /> <span>All square. Nobody owes anybody.</span></div>
+                <div className="tg-square"><Icon name="handshake" fill /> <span>You’re all square. Nobody owes you, you owe nobody.</span></div>
               )}
               <span className="chevron"><Icon name="caret-right" /></span>
             </button>
 
             <div className="sec-label">Last time out</div>
-            <RoundRow round={last.round} state={state} className="card" />
+            <RoundRow round={last.round} state={state} className="card" withYear />
           </>
         )}
       </div>

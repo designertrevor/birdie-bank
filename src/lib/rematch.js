@@ -27,7 +27,8 @@ export function rematchSetup(state, round) {
   // Same teams when everyone is back; otherwise a fresh split of whoever is
   const sameGroup = !missing.length && round.teams?.every(t => t.players.every(pid => picked.includes(idFor(pid))));
   const teams = sameGroup ? round.teams.map(t => t.players.map(idFor)) : defaultTeams(round.game, picked);
-  const holesCount = GAMES[round.game].holes.includes(round.holesCount) ? round.holesCount : GAMES[round.game].holes[0];
+  const allowed = GAMES[round.game].holes;
+  const holesCount = [round.holesCount, round.holes?.length].find(n => allowed.includes(n)) ?? allowed[0];
   return {
     game: round.game,
     holesCount,

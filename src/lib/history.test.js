@@ -166,3 +166,23 @@ test('Run it back: teams carry over, joined rounds map you, missing players and 
   assert.equal(rematchSetup(stateWith([gone]), gone).step, 1);
   assert.equal(rematchSetup(stateWith([]), { ...gone, game: 'nope' }), null);
 });
+
+test('old or odd saved rounds: no dates, no holesCount, you on both sides', () => {
+  // A round saved without dates sorts last instead of breaking the sort
+  const undated = { ...skins('u', new Date(2026, 8, 20)), createdAt: undefined, finishedAt: undefined };
+  const dated = skins('d', new Date(2026, 8, 21));
+  const state = stateWith([undated, dated]);
+  assert.equal(lastResult(state).round.id, 'd');
+  assert.deepEqual(roundsInRange(state, { kind: 'custom', from: '', to: '' }).map(r => r.id), ['d', 'u']);
+
+  // An older round without holesCount still runs it back at its length
+  const course18 = { ...course, id: 'c18', holes: Array.from({ length: 18 }, (_, i) => ({ par: 4, hdcp: i + 1 })) };
+  const full = { ...createRound({ id: 'f', game: 'skins', course: course18, holesCount: 18, players: PLAYERS, settings: SETTINGS, hcPct: 100 }), status: 'done' };
+  delete full.holesCount;
+  assert.equal(full.holes.length, 18);
+  assert.equal(rematchSetup(stateWith([full], { customCourses: { c18: course18 } }), full).holesCount, 18);
+
+  // Money between you here and you in a joined round isn't owed to anybody
+  const joined = { ...skins('j', new Date(2026, 8, 20), { players: [{ id: 'guest7', name: 'Trevor', index: 10 }, { id: 'me', name: 'Trevor', index: 10 }], winner: 'guest7' }), localMe: 'guest7' };
+  assert.deepEqual(myTab(stateWith([joined])), { owed: 0, owe: 0, net: 0, people: 0 });
+});

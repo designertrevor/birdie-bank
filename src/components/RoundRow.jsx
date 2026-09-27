@@ -4,11 +4,18 @@ import { roundDate } from '../lib/format.js';
 import { myNet, roundTime } from '../lib/history.js';
 import { useNav } from '../lib/nav.js';
 
+function dayLabel(t, withYear) {
+  const d = new Date(t);
+  const year = withYear && d.getFullYear() !== new Date().getFullYear() ? 'numeric' : undefined;
+  return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year });
+}
+
 /**
  * One finished round on one line: the day, the course and game, and what you made.
- * A round you only kept score for shows who came out on top instead.
+ * A round you only kept score for shows who came out on top instead. `withYear` adds the year to
+ * the day when it isn't this one (History's month headers already say it; Up next has no header).
  */
-export function RoundRow({ round, state, className = '' }) {
+export function RoundRow({ round, state, className = '', withYear = false }) {
   const nav = useNav();
   const amount = myNet(round, state);
   const top = amount == null ? roundResults(round).standings[0] : null;
@@ -17,7 +24,7 @@ export function RoundRow({ round, state, className = '' }) {
     : `${round.course.name}, ${GAMES[round.game]?.name}, ${roundDate(round)}. You ${money(amount, { sign: true })}`;
   return (
     <button className={`hist-row ${className}`} onClick={() => nav.push('roundDetail', { id: round.id })} aria-label={label}>
-      <span className="hr-day">{new Date(roundTime(round)).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}</span>
+      <span className="hr-day">{dayLabel(roundTime(round), withYear)}</span>
       <span className="hr-main">
         <span className="hr-course">{round.course.name}</span>
         <span className="hr-game">{GAMES[round.game]?.name}</span>

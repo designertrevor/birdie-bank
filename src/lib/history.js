@@ -8,7 +8,7 @@ const MONTHS = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 
 const SHORT = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
 
 /** When a round counts for History: when it finished, or when it started if it never did. */
-export const roundTime = r => r.finishedAt || r.createdAt;
+export const roundTime = r => r.finishedAt || r.createdAt || 0;
 
 /** "2026-09-27" for a local date (what a date input gives back). */
 export function isoDay(d) {
@@ -150,6 +150,7 @@ export function myTab(state) {
   const mine = myIds(state);
   let owed = 0, owe = 0, people = 0;
   for (const d of outstanding(state)) {
+    if (mine.has(d.to) && mine.has(d.from)) continue; // you and you on another phone's round
     if (mine.has(d.to)) { owed += d.amount; people++; }
     else if (mine.has(d.from)) { owe += d.amount; people++; }
   }
