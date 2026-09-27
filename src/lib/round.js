@@ -282,7 +282,7 @@ export function canLeave(round, pid) {
 // score box and no money; from it on they play like everyone else, the same way the holes
 // after someone leaves are worked out without them. Players there from the start aren't in it.
 
-/** Games a player can be added to once the round is under way. Games with fixed sides or an exact head count aren't. */
+/** Games a player can be added to. Games with sides, teams or an exact head count aren't, even before the first score. */
 export const ADD_MID_ROUND = ['banker', 'skins', 'stroke', 'stableford', 'quota', 'aces', 'bbb', 'dots', 'rabbit'];
 
 /** Playing position (1-based) of the first hole a player plays: 1 unless they were added mid-round. */
@@ -316,8 +316,11 @@ export function roundStarted(round) {
 export function addPlayerProblem(round) {
   const g = GAMES[round.game];
   if (round.players.length >= g.max) return `${g.name} is for ${g.max === g.min ? g.max : `up to ${g.max}`} players, and the group is full.`;
-  if (roundStarted(round) && !ADD_MID_ROUND.includes(round.game)) {
-    return `${g.name} is set up for the players who started, so nobody can join once it’s under way.`;
+  if (!ADD_MID_ROUND.includes(round.game)) {
+    // Sides, teams and rotations are set when the round is made, so a new player would have no side to play on
+    return roundStarted(round)
+      ? `${g.name} is set up for the players who started, so nobody can join once it’s under way.`
+      : `${g.name} is played in set sides, so a new player can’t be slotted in. Start a fresh round with everyone in it.`;
   }
   return null;
 }

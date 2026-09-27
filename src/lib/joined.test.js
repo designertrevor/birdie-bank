@@ -2,7 +2,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import {
-  createRound, roundResults, holeComplete, scorers, addPlayerToRound, addPlayerProblem, firstOpenHole, roundNotes, rabbitTable, bankerHoleSetup,
+  ADD_MID_ROUND, createRound, roundResults, holeComplete, scorers, addPlayerToRound, addPlayerProblem, firstOpenHole, roundNotes, rabbitTable, bankerHoleSetup,
 } from './round.js';
 import { assemble, buildMeta, buildHoles } from './sync-model.js';
 
@@ -33,9 +33,12 @@ const play = (r, rows) => rows.forEach((s, i) => { if (s) r.scores[r.holes[i].no
 const sum = b => Math.round(Object.values(b).reduce((x, y) => x + y, 0) * 100) / 100 + 0;
 const Zed = { id: 'z', name: 'Zed Park', index: 0 };
 
-test('nobody can join a game with fixed sides once it is under way, or a full group', () => {
+test('nobody can join a game with fixed sides, or a full group', () => {
   const nassau = mk('nassau', 2);
-  assert.equal(addPlayerProblem(nassau), null); // nothing scored yet: just one more player
+  // Even before the first score: a third player would have no side in a head-to-head game
+  assert.match(addPlayerProblem(nassau), /played in set sides/);
+  const match = mk('match', 4, { teams: [['a', 'b'], ['c', 'd']] });
+  assert.match(addPlayerProblem(match), /played in set sides/);
   play(nassau, [{ a: 4, b: 4 }]);
   assert.match(addPlayerProblem(nassau), /set up for the players who started/);
   assert.match(addPlayerProblem(mk('wolf', 4)), /group is full/);
@@ -165,4 +168,29 @@ test('a joined player survives the trip through live sharing', () => {
   const back = assemble(JSON.parse(JSON.stringify(buildMeta(x))), JSON.parse(JSON.stringify(buildHoles(x))));
   assert.deepEqual(back.joined, { z: 2 });
   assert.deepEqual(roundResults(back).balances, roundResults(x).balances);
+});
+
+test('every game that takes a late joiner still balances to zero', () => {
+  let seed = 7;
+  const rnd = () => (seed = (seed * 16807) % 2147483647) / 2147483647;
+  const course = { ...eighteen, holes: eighteen.holes.map((h, i) => hole(3 + (i % 3), i + 1)) };
+  const players = P.slice(0, 3).map((p, i) => ({ ...p, index: [3, 12, 20][i] }));
+  for (const game of ADD_MID_ROUND) for (const holesCount of [9, 18]) for (const payout of ['pot', 'per']) {
+    for (let k = 0; k < 8; k++) {
+      const settings = structuredClone(SETTINGS);
+      for (const g of ['stroke', 'stableford', 'quota']) settings[g].payout = payout;
+      let r = createRound({ id: 'r', game, course, holesCount, players, settings, hcPct: 100, useHandicaps: true });
+      const fill = (x, i) => {
+        const h = x.holes[i];
+        if (game === 'banker') x.banker[h.no] = bankerHoleSetup(x, i);
+        x.scores[h.no] = Object.fromEntries(scorers(x, h).map(p => [p.id, h.par - 2 + Math.floor(rnd() * 4)]));
+      };
+      const from = 2 + Math.floor(rnd() * (holesCount - 2));
+      for (let i = 0; i < from - 1; i++) fill(r, i);
+      assert.equal(addPlayerProblem(r), null);
+      r = addPlayerToRound(r, { id: 'z', name: 'Zed', courseHc: Math.floor(rnd() * 20) - 2 }, r.holes[from - 1].no);
+      for (let i = from - 1; i < holesCount; i++) fill(r, i);
+      assert.equal(sum(roundResults(r).balances), 0, `${game}, ${holesCount} holes, joined on ${from}`);
+    }
+  }
 });
