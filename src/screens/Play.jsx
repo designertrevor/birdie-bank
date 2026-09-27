@@ -4,7 +4,7 @@ import { RulesSheet } from '../components/Rules.jsx';
 import { getState, update, useStore } from '../lib/store.js';
 import {
   GAMES, bankerHoleSetup, canLeave, defaultNine, holeComplete, leftRule, livePreview, nassauPressOptions, playersLeft, playersOn, pressMode,
-  resizeRound, roundLegs, roundResults, scoredHolesDropped, scorers, skinsTable, strokesFor, wolfHoleSetup,
+  resizeRound, roundLegs, roundResults, scoredHolesDropped, scorers, skinsTable, strokesFor, wolfHoleSetup, changeBets, wholeRoundOnly,
 } from '../lib/round.js';
 import { findCourse } from '../lib/courses.js';
 import { money, scoreName, pickupGross } from '../lib/golf.js';
@@ -487,43 +487,67 @@ function LeftSheet({ round, idx, onClose, onEnd }) {
 
 /**
  * Change the bets in a round that's under way, so the group doesn't have to discard the round
- * when they agree a different stake on the 3rd tee. Money is always worked out from the round's
- * current settings, so a change applies to every hole, including ones already scored.
+ * when they agree a different bet on the 10th tee. By default the new bets count from the next
+ * hole to play on, and holes already played keep what they were played for; "Whole round"
+ * reprices every hole. A pot covers the whole round, so a pot's bet always changes for all of it.
  * Mounted only while open so it starts fresh each time.
  */
 function BetsSheet({ round, onClose }) {
   const { showToast } = useUI();
   const game = round.game;
-  const [opts, setOpts] = useState(() => structuredClone(round.settings));
+  // Rabbit rounds from before "set free" have no mode: they play the old steal rule
+  const current = useMemo(() => (game === 'rabbit' && !round.settings.rabbit.mode
+    ? { ...round.settings, rabbit: { ...round.settings.rabbit, mode: 'steal' } }
+    : round.settings), [game, round.settings]);
+  const [opts, setOpts] = useState(() => structuredClone(current));
   const [pad, setPad] = useState(null); // { path, title, min, max }
   const set = (path, v) => setOpts(o => { const n = structuredClone(o); const k = path.split('.'); let t = n; for (const x of k.slice(0, -1)) t = t[x]; t[k.at(-1)] = v; return n; });
   const get = path => path.split('.').reduce((t, k) => t?.[k], opts);
   const problem = optionsProblem(game, opts);
-  const changed = JSON.stringify(opts[game]) !== JSON.stringify(round.settings[game]);
+  const changed = JSON.stringify(opts[game]) !== JSON.stringify(current[game]);
   const played = round.holes.filter(h => holeComplete(round, h)).length;
+  // The next hole to play: the one after the last hole with scores in
+  const lastPlayed = round.holes.reduce((a, h, i) => (holeComplete(round, h) ? i + 1 : a), 0);
+  const fromPos = lastPlayed + 1;
+  const fromHole = round.holes[fromPos - 1];
+  const canSplit = played > 0 && !!fromHole && !wholeRoundOnly(game, current[game], opts[game]);
+  const [scope, setScope] = useState('next');
+  const whole = !canSplit || scope === 'whole';
   const apply = () => {
     update(s => {
-      const r = s.rounds[round.id];
-      r.settings = { ...r.settings, [game]: structuredClone(opts[game]) };
+      s.rounds[round.id] = changeBets(s.rounds[round.id], opts[game], whole ? null : fromPos);
       // The agreed bet is next time's default too
       s.settings = { ...s.settings, [game]: structuredClone(opts[game]) };
     });
     onClose();
-    showToast(`Bets updated · ${stakeSummary(game, opts)}`);
+    showToast(`Bets updated${whole ? '' : ` from hole ${fromHole.no}`} · ${stakeSummary(game, opts)}`);
     buzz(20);
   };
+  const legs = game === 'nassau' || game === 'match' || game === 'rabbit' || (game === 'sixes' && opts.sixes.mode === 'match');
   return (
     <>
       <Sheet open={!pad} onClose={onClose} title="Bets" className="sc-sheet">
         <p className="sheet-text">
-          {played
-            ? `Money is worked out again for the whole round, including the ${played} hole${played === 1 ? '' : 's'} already played.`
-            : 'Change what’s on the line before the first hole is scored.'}
+          {!played ? 'Change what’s on the line before the first hole is scored.'
+            : canSplit ? `${played} hole${played === 1 ? '' : 's'} played. Pick when the new bets start.`
+              : !fromHole ? 'Every hole is played, so a change covers the whole round.'
+                : 'The pot covers the whole round, so a change counts for every hole.'}
         </p>
+        {canSplit && (
+          <div className="block">
+            <Segmented label="When the new bets start" value={scope} onChange={setScope}
+              options={[{ value: 'next', label: `From hole ${fromHole.no} on` }, { value: 'whole', label: 'Whole round' }]} />
+            <p className="field-help">
+              {whole
+                ? `Every hole is worked out again at the new bets, including the ${played} already played.`
+                : `The ${played} hole${played === 1 ? '' : 's'} already played keep${played === 1 ? 's' : ''} ${played === 1 ? 'its' : 'their'} bets.${legs ? ' A bet already under way, like a leg or a match, keeps its amount too.' : ''}`}
+            </p>
+          </div>
+        )}
         <GameOptions game={game} get={get} set={set} onAmount={(path, title, o) => setPad({ path, title, ...o })} holesCount={round.holesCount}
-          firstName={game === 'banker' ? round.players[0]?.name : null} />
+          players={round.players.length} firstName={game === 'banker' ? round.players[0]?.name : null} />
         {game === 'banker' && <p className="hint-card"><Icon name="info" fill /> The default bet fills in from the next hole. Bets on this hole are set from the Bets button.</p>}
-        {(game === 'nassau' || game === 'match') && round.presses.length > 0 && <p className="hint-card"><Icon name="lightning" fill /> Presses already made pay at the new amounts too.</p>}
+        {(game === 'nassau' || game === 'match') && round.presses.length > 0 && whole && <p className="hint-card"><Icon name="lightning" fill /> Presses already made pay at the new amounts too.</p>}
         <div className="cta-wrap">
           <button className="full-btn" disabled={!changed || !!problem} onClick={apply}>
             {changed ? <>Update bets <Icon name="arrow-right" /></> : 'No changes yet'}
@@ -642,7 +666,7 @@ function SkinsPanel({ round, hole, onChange }) {
     <div className="banker-bar" style={{ background: 'var(--lav)' }}>
       <div>
         <div className="bl">This hole is worth</div>
-        <div className="bn"><Icon name="coins" fill /> {pot} skin{pot > 1 ? 's' : ''} · {money(pot * t.value * ((row?.field.length ?? round.players.length) - 1))}</div>
+        <div className="bn"><Icon name="coins" fill /> {pot} skin{pot > 1 ? 's' : ''} · {money((row?.worth ?? t.value) * ((row?.field.length ?? round.players.length) - 1))}</div>
       </div>
       <div className="skin-counts">
         {round.players.map(p => <span key={p.id} className="press-chip">{p.name.split(' ')[0]} {counts[p.id]}</span>)}
