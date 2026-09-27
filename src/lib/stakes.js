@@ -21,10 +21,10 @@ export function stakeSummary(game, settings) {
     case 'match': return `${money(s.match.stake)} a player`;
     case 'vegas': return `${money(s.vegas.point)} a point`;
     case 'sixes': return `${money(s.sixes.stake)} ${s.sixes.mode === 'holes' ? 'a hole up' : 'a match'}`;
-    case 'scramble': return `${money(s.scramble.stake)} ante`;
-    case 'stroke': return s.stroke.payout === 'pot' ? `${money(s.stroke.stake)} ante` : `${money(s.stroke.stake)} a stroke`;
-    case 'stableford': return s.stableford.payout === 'pot' ? `${money(s.stableford.stake)} ante` : `${money(s.stableford.stake)} a point`;
-    case 'quota': return s.quota.payout === 'pot' ? `${money(s.quota.stake)} ante` : `${money(s.quota.stake)} a point`;
+    case 'scramble': return `${money(s.scramble.stake)} each into the pot`;
+    case 'stroke': return s.stroke.payout === 'pot' ? `${money(s.stroke.stake)} each into the pot` : `${money(s.stroke.stake)} a stroke`;
+    case 'stableford': return s.stableford.payout === 'pot' ? `${money(s.stableford.stake)} each into the pot` : `${money(s.stableford.stake)} a point`;
+    case 'quota': return s.quota.payout === 'pot' ? `${money(s.quota.stake)} each into the pot` : `${money(s.quota.stake)} a point`;
     case 'nines': return `${money(s.nines.point)} a point`;
     case 'aces': return `${money(s.aces.ace)} ace · ${money(s.aces.deuce)} deuce`;
     case 'bbb': return `${money(s.bbb.value)} a point`;

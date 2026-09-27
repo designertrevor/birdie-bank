@@ -41,7 +41,7 @@ export const GAMES = {
   match: {
     name: 'Match play', min: 2, max: 8, holes: [9, 18], teams: { count: 2 },
     blurb: 'Singles, best ball, or one against the field',
-    players: '2–8 players · 1 v 1, 2 v 2, 1 v 2, 1 v 3…', icon: 'sword', group: 'Head to head',
+    players: '2–8 players', icon: 'sword', group: 'Head to head',
   },
   vegas: {
     name: 'Vegas', min: 4, max: 4, holes: [9, 18], teams: { count: 2, size: 2 },
@@ -50,7 +50,7 @@ export const GAMES = {
   },
   sixes: {
     name: 'Sixes', min: 4, max: 4, holes: [9, 18], order: true,
-    blurb: 'Partners rotate every six holes: Hollywood, round robin',
+    blurb: 'Partners switch every six holes. Also called Hollywood',
     players: '4 players exactly', icon: 'arrows-clockwise', group: 'Head to head',
   },
   scramble: {
@@ -61,17 +61,17 @@ export const GAMES = {
   stroke: {
     name: 'Stroke play', min: 2, max: 8, holes: [9, 18],
     blurb: 'Lowest net total wins the pot, or pay per stroke',
-    players: '2–8 players', icon: 'list-numbers', group: 'Totals',
+    players: '2–8 players', icon: 'list-numbers', group: 'Lowest total',
   },
   stableford: {
     name: 'Stableford', min: 2, max: 8, holes: [9, 18],
     blurb: 'Points for every hole. A blow-up only costs you a zero',
-    players: '2–8 players', icon: 'star', group: 'Totals',
+    players: '2–8 players', icon: 'star', group: 'Lowest total',
   },
   quota: {
     name: 'Quota', min: 2, max: 8, holes: [9, 18],
     blurb: 'Beat your own number: 36 minus your handicap',
-    players: '2–8 players', icon: 'target', group: 'Totals',
+    players: '2–8 players', icon: 'target', group: 'Lowest total',
   },
   nines: {
     name: 'Nines', min: 3, max: 3, holes: [9, 18],
@@ -100,7 +100,7 @@ export const GAMES = {
   },
 };
 
-export const GAME_GROUPS = ['Classics', 'Head to head', 'Team', 'Totals', 'Points'];
+export const GAME_GROUPS = ['Classics', 'Head to head', 'Team', 'Lowest total', 'Points'];
 
 /** Course par for a set of holes. */
 export function parOf(holes) { return holes.reduce((a, h) => a + (h.par || 0), 0); }

@@ -18,23 +18,23 @@ const RULES = {
         <li>Higher net score: you pay the banker your bet.</li>
         <li>Tie: a push by default. You can set ties to go to the banker instead.</li>
       </ul>],
-      ['Picking up', <p key="p">Tap <strong>Picked up</strong> if a player doesn’t finish. They’re scored as a net double bogey.</p>],
+      ['Picking up', <p key="p">Tap <strong>Picked up</strong> if a player doesn’t finish. They’re scored as a double bogey after strokes.</p>],
       ['Rotation', <ul key="r">
-        <li><strong>Every hole</strong>: banker moves to the next player each hole.</li>
-        <li><strong>Every 9</strong>: one banker per nine, in player order.</li>
+        <li><strong>Each hole</strong>: banker moves to the next player each hole.</li>
+        <li><strong>Each 9</strong>: one banker per nine, in player order.</li>
         <li><strong>Fixed</strong>: the same banker all round.</li>
-        <li><strong>Choose each hole</strong>: the group picks; defaults to last hole’s banker.</li>
+        <li><strong>Pick</strong>: the group picks each hole; defaults to last hole’s banker.</li>
       </ul>],
     ],
   },
   nassau: {
     title: 'How to play Nassau',
-    sub: '2 players · Three bets in one round',
+    sub: '2–4 players · Three bets in one round',
     sections: [
       ['Overview', <p key="o">Nassau is three separate match-play bets: the <strong>front 9</strong>, the <strong>back 9</strong> and the <strong>total 18</strong>. Playing nine? The bets are the <strong>first 4</strong>, the <strong>last 5</strong> and <strong>all 9</strong>.</p>],
       ['Match play', <p key="m">Each hole goes to the lower net score, or is halved on a tie. A leg is won by whoever wins more holes in it, not by total strokes.</p>],
       ['Pressing', <ul key="p">
-        <li>When you’re down on a leg by the press threshold (2 holes by default) you can <strong>press</strong>.</li>
+        <li>When you’re 2 down on a bet (or whatever your group set), you can <strong>press</strong>.</li>
         <li>A press is a new bet, for the same amount as that leg, from the next hole to the end of the leg.</li>
         <li>The original bet keeps going. Presses add on top. A press that falls behind can be pressed again.</li>
         <li><strong>Auto</strong> press mode calls presses for you as soon as a player is eligible.</li>
@@ -78,9 +78,9 @@ const RULES = {
         <li><strong>2 v 2</strong>: best ball (four-ball): each side counts its better net score on every hole.</li>
         <li><strong>1 v 2 or 1 v 3</strong>: one player against the best ball of the others.</li>
       </ul>],
-      ['Money', <p key="m">Each player on the winning side wins the stake; each on the losing side pays it. With uneven sides the loner plays every opponent for the stake, so in 1 v 3 they win or lose three stakes.</p>],
-      ['Closing it out', <p key="c">A match ends as soon as one side leads by more holes than remain: 3&2 means 3 up with 2 to play. <strong>Dormie</strong> means the leader can’t lose. The remaining holes still count for other games you might be tracking, but not for this bet.</p>],
-      ['Presses', <p key="p">Turn presses on and a side that falls behind by the threshold can start a fresh bet for the same stake over the remaining holes.</p>],
+      ['Money', <p key="m">Each player on the winning side wins the bet; each on the losing side pays it. With uneven sides the loner plays every opponent for the bet, so in 1 v 3 they win or lose three bets.</p>],
+      ['Closing it out', <p key="c">A match ends as soon as one side leads by more holes than remain: 3&2 means 3 up with 2 to play. <strong>Dormie</strong> means the leader can’t lose. The remaining holes don’t count for this bet.</p>],
+      ['Presses', <p key="p">Turn presses on and a side that falls behind by the set number of holes can start a fresh bet for the same amount over the remaining holes.</p>],
     ],
   },
   vegas: {
@@ -101,8 +101,8 @@ const RULES = {
       ['Pairings', <p key="p">The playing order sets the rotation: 1 & 2 v 3 & 4, then 1 & 3 v 2 & 4, then 1 & 4 v 2 & 3.</p>],
       ['Each match', <p key="m">Best ball match play: each side counts its better net score on every hole. Win more holes than the other side to win the match.</p>],
       ['Money', <ul key="$">
-        <li><strong>Win the match</strong>: each winner collects the stake from their opponent; a halved match pushes.</li>
-        <li><strong>Per hole up</strong>: the stake for every hole a team finishes ahead in that match.</li>
+        <li><strong>Per match</strong>: each player on the winning pair gets the bet from one player on the losing pair; a halved match pushes.</li>
+        <li><strong>Per hole</strong>: the bet for every hole a team finishes ahead in that match.</li>
       </ul>],
     ],
   },
@@ -113,7 +113,7 @@ const RULES = {
       ['Overview', <p key="o">Everyone on a team tees off, the team picks the best ball, and everyone plays from there. Repeat until it’s holed. The team writes down one score.</p>],
       ['Scoring', <p key="s">Enter one score per team on each hole. Lowest net total for the round wins.</p>],
       ['Team handicaps', <p key="h">Each team plays off a blend of its members’ course handicaps, lowest first: 35% and 15% for pairs, 20/15/10% for threes, 25/20/15/10% for fours. Strokes are then given off the low team on the hardest holes.</p>],
-      ['Money', <p key="m">Everyone antes. The winning team’s players split the pot; tied teams share it.</p>],
+      ['Money', <p key="m">Everyone puts the same amount in the pot. The winning team’s players split it; tied teams share it.</p>],
     ],
   },
   stroke: {
@@ -122,10 +122,10 @@ const RULES = {
     sections: [
       ['Overview', <p key="o">The classic: add up every hole. Lowest net total wins.</p>],
       ['Money', <ul key="m">
-        <li><strong>Winner takes pot</strong>: everyone antes and the low total takes it all. Ties split the pot.</li>
+        <li><strong>Winner takes the pot</strong>: everyone puts in; the low net total takes the pot. Ties split it.</li>
         <li><strong>Per stroke</strong>: every pair of players settles the difference in their net totals.</li>
       </ul>],
-      ['Handicaps', <p key="h">Strokes come off the low player on the hardest holes. Picked-up holes count as net double bogey.</p>],
+      ['Handicaps', <p key="h">Strokes come off the low player on the hardest holes. Picked-up holes count as a double bogey after strokes.</p>],
     ],
   },
   stableford: {
@@ -169,7 +169,7 @@ const RULES = {
     sections: [
       ['Overview', <p key="o">Every hole has a hero and a goat. The outright low net (the <strong>ace</strong>) wins from everyone. The outright high net (the <strong>deuce</strong>) pays everyone.</p>],
       ['Ties', <p key="t">A tie for low means no ace; a tie for high means no deuce. Both can happen on the same hole.</p>],
-      ['Stakes', <p key="s">Set the ace and deuce amounts separately. Aces are usually worth more.</p>],
+      ['Bets', <p key="s">Set the ace and deuce amounts separately. Aces are usually worth more.</p>],
     ],
   },
   bbb: {
@@ -209,7 +209,7 @@ const RULES = {
     sections: [
       ['Overview', <p key="o">Win a hole outright (lowest net, alone) and you catch the <strong>rabbit</strong>. Someone else wins a hole outright and they take it from you.</p>],
       ['Ties', <p key="t">By default a tied hole sets the rabbit loose. Nobody has it until the next outright win. Turn that off and the holder keeps it through ties.</p>],
-      ['Paying out', <p key="p">Whoever holds the rabbit after hole 9 wins the stake from everyone, and again after hole 18. Over nine holes there’s one payout. A loose rabbit at the turn pays nobody.</p>],
+      ['Paying out', <p key="p">Whoever holds the rabbit after hole 9 wins the bet from everyone, and again after hole 18. Over nine holes there’s one payout. A loose rabbit at the turn pays nobody.</p>],
     ],
   },
 };

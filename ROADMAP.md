@@ -17,11 +17,11 @@ The plan for growing Birdie Bank into a $10k/mo business, and the checklist we w
 
 ## Current focus
 
-**Step 1: Foundation, nearly done.** Accounts, cloud data, invites, the live money bar, the simpler setup and the end-of-round settle-up are built, and Google sign-in is open to anyone. Left for S1: custom email (SMTP) so sign-in emails reach anyone, and running the feedback SQL so "Suggest something" goes live. Then move straight on to S2. Real rounds keep going alongside as testing: fix bugs, smooth rough spots, and check each kind of user has what they need.
+**Step 1: Foundation, nearly done.** Accounts, cloud data, invites, the live money bar, the simpler setup and the end-of-round settle-up are built, and Google sign-in is open to anyone. Left for S1: custom email (SMTP) so sign-in emails reach anyone, and running the feedback SQL (including the 2026-09-27 reactions part) so "Suggest something" and the after-round reactions go live. Then move straight on to S2. Real rounds keep going alongside as testing: fix bugs, smooth rough spots, and check each kind of user has what they need.
 
 **The big date:** the creator test (S4) runs February to April 2027, when golf season starts back up. Everything before it is about being ready: a product groups keep using, a smooth path from video to paying, and an App Store app.
 
-Last updated: 2026-09-26
+Last updated: 2026-09-27
 
 ---
 
@@ -178,12 +178,14 @@ Put more money into the winning creators and copy their video formats with other
 - [ ] `S2` (partial) House rules for every game, the variations real groups play. Some exist (modified Stableford, skins carryovers). Go through all 16 games, and add the variations people ask for in "Suggest something."
 - [x] `S2` Ending a round is one tap and forgiving: stopping early, a missing score or a player who left never traps the round open. "A player left" in the round menu, holes with a missing score aren't counted (and the results say so), and finished rounds can't get stuck as active (2026-09-26)
 - [x] `S2` The killer end-of-round moment: every game and press totals up in one animated moment, then the fewest payments with one-tap pay links. Each bet resolves in turn (legs, presses, skins, biggest holes), then the totals land, then settle up with Venmo links and Mark paid, then a results image to share (2026-09-26)
+- [x] `S2` More than one round in progress: starting a round never deletes the one you're in, and "Rounds in progress" in the round menu switches between them. Fixing scores on a finished round keeps it counting on the tab (2026-09-27)
 - [ ] `S3` Side bets between two players inside a bigger round (proposed during the week, see area 21)
 - [ ] `S5` Several groups, one game: multiple foursomes feeding one pot and one leaderboard
 
 ### 6. Courses
 - [ ] `S1` (partial) Three bundled courses plus custom courses you can edit
 - [ ] `S2` (partial) Search every course (GolfCourseAPI Pro was the pick after researching providers). Built (2026-09-26) behind a server function; switches on when `GOLFCOURSEAPI_KEY` is added in Vercel.
+- [x] `S2` Courses from the database show a soft "From course database" tag instead of a warning, and players start on the middle tee (2026-09-27)
 - [ ] `S2` Favorite courses and courses near you
 - [ ] `S2` Fix a hole on the spot: the organizer can correct a par, stroke index or tee rating mid-round for their group, and the fix goes to the feedback table so the course gets corrected for everyone
 - [ ] `S3` "Request this course" when a search finds nothing (see area 20)
@@ -264,6 +266,7 @@ Put more money into the winning creators and copy their video formats with other
 - [ ] `S2` Quick logo and app icon (good enough to start). Moved out of S1 (2026-09-26) so it doesn't hold anything up, but do it early in S2, before organizer onboarding and the paywall.
 - [ ] `S2` Final logo: symbol plus the name set in type, and an app icon that stands out on a home screen
 - [ ] `S2` Brand foundations: colors, typography, voice and tone (friendly trash talk, never casino), a short brand guide
+- [x] `S2` Copy audit applied across the app: "group" (crew only for saved lists), "bets" not "stakes", "each player puts in" not "ante", "Gets 5 strokes" not "HC 5", one delete verb, and the money screen called the Tab. Deeper pink (#d42a6b) behind small white text (2026-09-27)
 - [ ] `S2` Motion for the killer end-of-round moment
 - [ ] `S3` Character and illustration set for key moments: win, loss, press, birdie, lone Wolf, all square, trash talk, empty screens, onboarding, paywalls, one per game
 - [ ] `S3` More motion: character reactions, a launch animation (Lottie or Rive)
@@ -272,7 +275,7 @@ Put more money into the winning creators and copy their video formats with other
 
 ### 17. Brand assets you can share
 - [x] `S1` Round results can be shared as an image or text (2026-09-26)
-- [ ] `S3` (partial) Round results image: course, game, winner, a character reaction, logo. Money hidden by default, with a switch to show it. Built (2026-09-26) without the character, with a Show amounts switch that starts on.
+- [ ] `S3` (partial) Round results image: course, game, winner, a character reaction, logo. Money hidden by default, with a switch to show it. Built (2026-09-26) without the character. The Show amounts switch starts off and remembers each person's choice (2026-09-27).
 - [x] `S3` Link preview images for join and share links (iMessage, WhatsApp) (2026-09-26)
 - [ ] `S3` Saturday preview card to post in the group chat (see area 21)
 - [ ] `S3` All of these made from templates in the app, with the logo and a download link
@@ -295,6 +298,7 @@ Put more money into the winning creators and copy their video formats with other
 - [ ] `S1` (partial) "Suggest something" in the app with four choices: a new game, a missing course, a feature, something's broken. Saves to a Supabase feedback table. Built in Settings (2026-09-25); goes live once the feedback section of `supabase/schema.sql` is run in Supabase.
 - [ ] `S1` (partial) Each form asks for what's useful: a game's rules and how the money works; a course's name, city and optional scorecard photo; a bug's screenshot with round and device details attached automatically. Built (2026-09-25), same SQL step as above.
 - [x] `S2` Show it in natural places: course search with no results, the end of the games list, a quick "How was it?" after a round (2026-09-26)
+- [x] `S2` After a round, "How was Birdie Bank today?" saves a one-tap reaction as feedback, then offers a form to say more (2026-09-27)
 - [ ] `S2` Needs check by kind of user: the organizer, the invited friend, the trip or member-guest organizer, the league runner, and a casual twosome. List what each needs from a round and between rounds, and which games each plays, then add what's missing to the right areas.
 - [ ] `S2` Bug and polish pass after each batch of real rounds: fix what broke, smooth anything that took extra taps or caused a question on the course
 - [ ] `S2` Slack community (free plan): #feedback, #game-requests, #course-requests, #bugs, #show-your-round, #general. Invite each group's organizer personally.
@@ -387,3 +391,4 @@ Kept light on purpose. Groups already have a group text, so Birdie Bank adds to 
 - 2026-09-26: From a Mobbin review and clickable wireframes: money is now pinned on the Play screen from hole 1 and moves with every tap (it used to appear only after a hole was saved, and Banker's bets step hid it). Setup asks one question per step with "Your usual" and a "Round ready" invite screen. The end of a round is now reveal, settle up with Venmo links, then share.
 - 2026-09-26: Changed the S1 gate to sign-in for anyone plus live feedback, moved the quick logo to early S2, and added a needs check by kind of user and an ongoing bug and polish pass (area 20). Checklist: 17 of 144 done (12%), up from 5 of 141 (4%) when the roadmap started.
 - 2026-09-26 (overnight): Money math tested for all 16 games (5 bugs fixed, including cent rounding), "A player left" and forgiving round endings, per-bet reveal and a results image, feedback prompts in natural places, join link previews, course search ready for a GolfCourseAPI key, stronger offline sync and a service worker that caches the whole app, a faster first load (main bundle 407 KB to about 270 KB), and an accessibility pass. Research: needs check, rules check and copy audit, plus wireframes for the other app areas, rounds set up ahead of time, and organizer onboarding.
+- 2026-09-27 (overnight, product and copy): More than one round in progress (nothing is deleted to start a new one), fixing a finished round keeps it on the tab, database courses get a soft tag and the middle tee, the results image hides amounts until you turn them on, after-round reactions save as feedback, a deeper pink for small white text, and the approved copy audit applied screen by screen.

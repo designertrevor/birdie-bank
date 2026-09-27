@@ -5,7 +5,7 @@ import { money } from '../lib/golf.js';
 import { teamsProblem } from '../lib/teams.js';
 
 /**
- * Stakes and options for every game. Used by the round setup step, the Game defaults screen
+ * Bets and options for every game. Used by the round setup step, the Game defaults screen
  * and the mid-round bets sheet, so they all stay in sync.
  * `get(path)` reads a setting, `set(path, v)` writes one, `onAmount(path, title, {min,max})` opens a numpad.
  */
@@ -31,12 +31,12 @@ export function GameOptions({ game, get, set, onAmount, holesCount = 18, compact
   const label = t => (compact ? null : <div className="sec-label">{t}</div>);
   const help = t => <p className="field-help">{t}</p>;
   const note = t => <p className="field-help pad">{t}</p>;
-  const payout = (path, unit) => seg(path, [{ value: 'per', label: `Per ${unit}` }, { value: 'pot', label: 'Winner takes pot' }], 'Payout');
+  const payout = (path, unit) => seg(path, [{ value: 'per', label: `Pay per ${unit}` }, { value: 'pot', label: 'Winner takes the pot' }], 'Payout');
   const presses = prefix => (
     <div className="block">
       {seg(`${prefix}.pressMode`, [{ value: 'off', label: 'Off' }, { value: 'manual', label: 'Manual' }, { value: 'auto', label: 'Auto' }])}
       {get(`${prefix}.pressMode`) !== 'off' && seg(`${prefix}.threshold`, [1, 2, 3].map(n => ({ value: n, label: `${n} hole${n > 1 ? 's' : ''}` })), 'Can press when down by')}
-      {help({ off: 'Just the one bet.', manual: 'A Press button appears when a side is eligible.', auto: 'Presses start automatically as soon as a side is eligible.' }[get(`${prefix}.pressMode`)])}
+      {help({ off: 'Just the one bet.', manual: `A Press button shows up when a side is ${get(`${prefix}.threshold`) || 2} down.`, auto: `A press starts by itself when a side is ${get(`${prefix}.threshold`) || 2} down.` }[get(`${prefix}.pressMode`)])}
     </div>
   );
 
@@ -45,11 +45,11 @@ export function GameOptions({ game, get, set, onAmount, holesCount = 18, compact
       const b = get('banker') || {};
       const rangeBad = b.min > b.max || b.defaultBet < b.min || b.defaultBet > b.max;
       return <>
-        {label('Stakes')}
+        {label('Bets')}
         {amount('banker.defaultBet', 'Default bet', { max: 999 })}
         {amount('banker.min', 'Minimum bet', { max: 999 })}
         {amount('banker.max', 'Maximum bet', { max: 999 })}
-        {rangeBad && <p className="field-error" style={{ margin: '0 20px 8px' }}>Default bet has to sit between the minimum and maximum.</p>}
+        {rangeBad && <p className="field-error" style={{ margin: '0 20px 8px' }}>Default bet needs to be between the min and max.</p>}
         {label('Banker rotation')}
         <div className="block">
           {seg('banker.rotation', [{ value: 'rotate', label: 'Each hole' }, { value: 'nine', label: 'Each 9' }, { value: 'fixed', label: 'Fixed' }, { value: 'choice', label: 'Pick' }])}
@@ -71,7 +71,7 @@ export function GameOptions({ game, get, set, onAmount, holesCount = 18, compact
         <div className="block">
           {seg('nassau.pressMode', [{ value: 'off', label: 'Off' }, { value: 'manual', label: 'Manual' }, { value: 'auto', label: 'Auto' }])}
           {get('nassau.pressMode') !== 'off' && seg('nassau.threshold', [1, 2, 3].map(n => ({ value: n, label: `${n} hole${n > 1 ? 's' : ''}` })), 'Can press when down by')}
-          {help({ off: 'Just the three bets.', manual: 'A Press button appears when a player is eligible.', auto: 'Presses start automatically as soon as a player is eligible.' }[get('nassau.pressMode')])}
+          {help({ off: 'Just the three bets.', manual: `A Press button shows up when someone is ${get('nassau.threshold') || 2} down.`, auto: `A press starts by itself when someone is ${get('nassau.threshold') || 2} down.` }[get('nassau.pressMode')])}
         </div>
       </>;
     case 'skins':
@@ -85,43 +85,43 @@ export function GameOptions({ game, get, set, onAmount, holesCount = 18, compact
         {label('Points')}
         {amount('wolf.point', 'Per point', { label: 'Value per point' })}
         <div className="block">
-          {seg('wolf.loneMultiplier', [2, 3].map(n => ({ value: n, label: `${n}×` })), 'Lone wolf pays', true)}
+          {seg('wolf.loneMultiplier', [2, 3].map(n => ({ value: n, label: `${n}×` })), 'Lone wolf pays or wins', true)}
         </div>
       </>;
     case 'match':
       return <>
-        {label('Stake')}
+        {label('Bet')}
         {amount('match.stake', 'Stake per player', { label: 'Per player' })}
-        {note('Each player on the winning side wins the stake. With uneven sides the loner plays every opponent for it, so 1 v 3 puts three stakes on the line.')}
+        {note(`Each winner gets ${money(get('match.stake'))} from the losing side. Playing 1 v 3? The loner plays each of the three for ${money(get('match.stake'))}.`)}
         {label('Presses')}
         {presses('match')}
       </>;
     case 'vegas':
       return <>
-        {label('Stakes')}
+        {label('Bets')}
         {amount('vegas.point', 'Per point', { label: 'Per point' })}
-        {toggle('vegas.birdieFlip', 'Birdies flip', 'A natural birdie flips the other team’s number (45 becomes 54)')}
-        {note('Each hole the difference between the two team numbers is paid, per player, by the losing team.')}
+        {toggle('vegas.birdieFlip', 'Birdies flip', 'A birdie flips the other team’s number (45 becomes 54)')}
+        {note('Each hole, each player on the losing team pays the point difference.')}
       </>;
     case 'sixes':
       return <>
-        {label('Stakes')}
+        {label('Bets')}
         {amount('sixes.stake', 'Per match', { label: get('sixes.mode') === 'holes' ? 'Per hole won' : 'Per match' })}
         <div className="block">
-          {seg('sixes.mode', [{ value: 'match', label: 'Win the match' }, { value: 'holes', label: 'Per hole up' }])}
-          {help(get('sixes.mode') === 'holes' ? `Each ${holesCount === 9 ? 'three' : 'six'}-hole match pays the stake for every hole a team finishes up.` : `Each ${holesCount === 9 ? 'three' : 'six'}-hole match pays the stake to each winner. Halved matches push.`)}
+          {seg('sixes.mode', [{ value: 'match', label: 'Per match' }, { value: 'holes', label: 'Per hole' }])}
+          {help(get('sixes.mode') === 'holes' ? `Each ${holesCount === 9 ? 'three' : 'six'}-hole match pays the bet for every hole a team finishes up.` : `Each ${holesCount === 9 ? 'three' : 'six'}-hole match pays the bet to each winner. Halved matches push.`)}
         </div>
       </>;
     case 'scramble':
       return <>
-        {label('Stakes')}
-        {amount('scramble.stake', 'Ante per player', { label: 'Ante per player' })}
-        {note('Everyone antes. The team with the lowest net total splits the pot; tied teams share it. Team handicaps use the usual allowances: 35% and 15% for pairs, 20/15/10% for threes, 25/20/15/10% for fours.')}
+        {label('Bets')}
+        {amount('scramble.stake', 'Each player puts in', { label: 'Each player puts in' })}
+        {note('Everyone puts in the same amount. The team with the lowest net total splits the pot; tied teams share it. Team handicaps use the usual allowances: 35% and 15% for pairs, 20/15/10% for threes, 25/20/15/10% for fours.')}
       </>;
     case 'stroke':
       return <>
-        {label('Stakes')}
-        {amount('stroke.stake', get('stroke.payout') === 'pot' ? 'Ante per player' : 'Per stroke', { label: get('stroke.payout') === 'pot' ? 'Ante per player' : 'Per stroke' })}
+        {label('Bets')}
+        {amount('stroke.stake', get('stroke.payout') === 'pot' ? 'Each player puts in' : 'Per stroke', { label: get('stroke.payout') === 'pot' ? 'Each player puts in' : 'Per stroke' })}
         <div className="block">
           {payout('stroke.payout', 'stroke')}
           {help(get('stroke.payout') === 'pot' ? 'Lowest net total takes the pot; ties split it.' : 'Every pair settles the difference in their net totals.')}
@@ -129,18 +129,18 @@ export function GameOptions({ game, get, set, onAmount, holesCount = 18, compact
       </>;
     case 'stableford':
       return <>
-        {label('Stakes')}
-        {amount('stableford.stake', get('stableford.payout') === 'pot' ? 'Ante per player' : 'Per point', { label: get('stableford.payout') === 'pot' ? 'Ante per player' : 'Per point' })}
+        {label('Bets')}
+        {amount('stableford.stake', get('stableford.payout') === 'pot' ? 'Each player puts in' : 'Per point', { label: get('stableford.payout') === 'pot' ? 'Each player puts in' : 'Per point' })}
         <div className="block">
           {payout('stableford.payout', 'point')}
           {seg('stableford.modified', [{ value: false, label: 'Standard' }, { value: true, label: 'Modified' }], 'Points')}
-          {help(get('stableford.modified') ? 'Modified: double bogey −3, bogey −1, par 0, birdie 2, eagle 5, albatross 8.' : 'Standard: double bogey 0, bogey 1, par 2, birdie 3, eagle 4, albatross 5. Net scores.')}
+          {help(get('stableford.modified') ? 'Modified: double bogey −3, bogey −1, par 0, birdie 2, eagle 5, albatross 8.' : 'Standard: double bogey 0, bogey 1, par 2, birdie 3, eagle 4, albatross 5. Uses net scores.')}
         </div>
       </>;
     case 'quota':
       return <>
-        {label('Stakes')}
-        {amount('quota.stake', get('quota.payout') === 'pot' ? 'Ante per player' : 'Per point', { label: get('quota.payout') === 'pot' ? 'Ante per player' : 'Per point' })}
+        {label('Bets')}
+        {amount('quota.stake', get('quota.payout') === 'pot' ? 'Each player puts in' : 'Per point', { label: get('quota.payout') === 'pot' ? 'Each player puts in' : 'Per point' })}
         <div className="block">
           {payout('quota.payout', 'point')}
           {help('Your quota is 36 minus your course handicap (18 minus it over nine). Gross scores earn bogey 1, par 2, birdie 4, eagle 8. Best finish against quota wins.')}
@@ -148,28 +148,28 @@ export function GameOptions({ game, get, set, onAmount, holesCount = 18, compact
       </>;
     case 'nines':
       return <>
-        {label('Stakes')}
+        {label('Bets')}
         {amount('nines.point', 'Per point', { label: 'Per point' })}
         {note('Nine points a hole: 5 for low, 3 for middle, 1 for high. Ties share the points. Each player settles their points above or below average.')}
       </>;
     case 'aces':
       return <>
-        {label('Stakes')}
-        {amount('aces.ace', 'Ace (low wins from each)', { label: 'Ace · low wins from each' })}
-        {amount('aces.deuce', 'Deuce (high pays each)', { label: 'Deuce · high pays each' })}
+        {label('Bets')}
+        {amount('aces.ace', 'Ace: low score wins from each player', { label: 'Ace: low score wins from each player' })}
+        {amount('aces.deuce', 'Deuce: high score pays each player', { label: 'Deuce: high score pays each player' })}
         {note('Only an outright low or high counts. Ties for low or high pay nothing.')}
       </>;
     case 'bbb':
       return <>
-        {label('Stakes')}
+        {label('Bets')}
         {amount('bbb.value', 'Per point', { label: 'Per point' })}
-        {note('Three points a hole: first on the green, closest once everyone is on, first in the hole. Every pair settles the difference in points. Handicaps don’t matter, so it’s a great leveller.')}
+        {note('Three points a hole: first on the green, closest once everyone is on, first in the hole. Every pair settles the difference in points. Handicaps don’t matter, so anyone can win.')}
       </>;
     case 'dots':
       return <>
-        {label('Stakes')}
+        {label('Bets')}
         {amount('dots.value', 'Per dot', { label: 'Per dot' })}
-        {toggle('dots.auto', 'Birdies count', 'A natural birdie is a dot, an eagle is two, straight from the scores')}
+        {toggle('dots.auto', 'Birdies count automatically', 'A birdie is a dot and an eagle is two, from the scores.')}
         <div className="block">
           <div className="eyebrow" style={{ marginBottom: 10 }}>Dots in play</div>
           <div className="chip-row" style={{ padding: 0 }}>
@@ -184,10 +184,10 @@ export function GameOptions({ game, get, set, onAmount, holesCount = 18, compact
       </>;
     case 'rabbit':
       return <>
-        {label('Stakes')}
+        {label('Bets')}
         {amount('rabbit.stake', 'Per rabbit', { label: 'Per rabbit' })}
         {toggle('rabbit.tiesFree', 'Ties set it loose', 'A halved hole frees the rabbit; off, the holder keeps it through ties')}
-        {note(holesCount === 9 ? 'Whoever holds the rabbit after the last hole wins the stake from everyone.' : 'Whoever holds the rabbit after hole 9 and again after hole 18 wins the stake from everyone.')}
+        {note(holesCount === 9 ? 'Whoever holds the rabbit after the last hole wins the bet from everyone.' : 'Whoever holds the rabbit after hole 9 and again after hole 18 wins the bet from everyone.')}
       </>;
     default:
       return null;

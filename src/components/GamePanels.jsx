@@ -34,7 +34,7 @@ export function MatchPanel({ round, hole }) {
     const b = bets.find(x => x.key === leg);
     const s = b.status;
     const notStarted = pos < b.start && s.played === 0;
-    const val = notStarted ? '–' : s.leader === null ? 'AS' : `${short[s.leader]} ${s.by} up`;
+    const val = notStarted ? '–' : s.leader === null ? 'All square' : `${short[s.leader]} ${s.by} up`;
     const sub = notStarted ? `Starts H${holeAtPos(round, b.start)}` : s.left === 0 ? 'Final' : s.closed ? `Won ${s.by}&${s.left}` : s.dormie ? 'Dormie' : `${s.left} left`;
     return (
       <div key={leg} className={`ms-tile ${s.leader === 0 ? 'ahead' : s.leader === 1 ? 'behind' : ''}`}>
@@ -50,7 +50,7 @@ export function MatchPanel({ round, hole }) {
         <div className="press-bar">
           <span className="press-bar-lbl">Presses</span>
           {activePresses.map(p => (
-            <span key={p.key} className="press-chip">{round.game === 'nassau' ? `${LEGS[p.leg].label} ` : ''}from H{holeAtPos(round, p.start)}: {p.status.leader === null ? 'AS' : `${short[p.status.leader]} ${p.status.by} up`}</span>
+            <span key={p.key} className="press-chip">{round.game === 'nassau' ? `${LEGS[p.leg].label} ` : ''}from H{holeAtPos(round, p.start)}: {p.status.leader === null ? 'All square' : `${short[p.status.leader]} ${p.status.by} up`}</span>
           ))}
         </div>
       )}
@@ -89,7 +89,7 @@ export function VegasPanel({ round, hole, draft, touched }) {
         ))}
       </div>
       <div className="vegas-line">
-        {pv ? (pv.diff === 0 ? 'Hole is a push' : `${pv.diff > 0 ? teams[0].name : teams[1].name} take${round.teams ? '' : 's'} ${Math.abs(pv.diff)} point${Math.abs(pv.diff) === 1 ? '' : 's'} · ${money(Math.abs(pv.diff) * point)} each`) : 'Low score first, high second: 4 and 5 make 45'}
+        {pv ? (pv.diff === 0 ? 'Push. No points this hole' : `${pv.diff > 0 ? teams[0].name : teams[1].name} take${round.teams ? '' : 's'} ${Math.abs(pv.diff)} point${Math.abs(pv.diff) === 1 ? '' : 's'} · ${money(Math.abs(pv.diff) * point)} each`) : 'Low score first, high second: 4 and 5 make 45'}
         <span className="vegas-total">{total === 0 ? 'All square' : `${total > 0 ? teams[0].name : teams[1].name} +${Math.abs(total)} · ${money(Math.abs(total) * point)}`}</span>
       </div>
     </div>
@@ -111,7 +111,7 @@ export function SixesPanel({ round, hole }) {
           const s = m.status;
           const notStarted = pos < m.seg.start && s.played === 0;
           const lead = s.leader === null ? null : pair(m.sides[s.leader]);
-          const val = m.off || notStarted ? '–' : s.leader === null ? 'AS' : `${s.by} up`;
+          const val = m.off || notStarted ? '–' : s.leader === null ? 'All square' : `${s.by} up`;
           const sub = m.off ? 'Off: a player left' : notStarted ?`H${holeAtPos(round, m.seg.start)}–${holeAtPos(round, m.seg.end)}` : s.left === 0 ? (lead ? `${lead}` : 'Halved') : s.closed ? `${lead} won` : lead ? `${lead} · ${s.left} left` : `${s.left} left`;
           return (
             <div key={m.index} className={`ms-tile ${m === cur ? 'cur' : ''} ${s.leader != null && s.played ? 'ahead' : ''}`}>
@@ -142,7 +142,7 @@ export function TotalsPanel({ round }) {
   const fmt = x => (round.game === 'stroke' ? (x.toPar === 0 ? 'E' : x.toPar > 0 ? `+${x.toPar}` : String(x.toPar)) : round.game === 'quota' ? `${x.total}/${x.quota}` : `${x.total}`);
   const sorted = [...t].sort((a, b) => (lowerWins ? a.total - b.total : (round.game === 'quota' ? b.vsQuota - a.vsQuota : b.total - a.total)));
   const label = { stroke: 'Net to par', stableford: 'Stableford points', quota: 'Points / quota' }[round.game];
-  const lead = played ? `${firstName(sorted[0].name)} leads` : 'Nobody yet';
+  const lead = played ? `${firstName(sorted[0].name)} leads` : 'Nobody’s ahead yet';
   return <ChipsPanel icon={round.game === 'stroke' ? 'list-numbers' : round.game === 'quota' ? 'target' : 'star'} label={`${label} · ${played} hole${played === 1 ? '' : 's'}`} items={sorted.map((x, i) => ({ id: x.id, name: firstName(x.name), value: fmt(x), lead: i === 0 ? lead : null }))} />;
 }
 
@@ -152,7 +152,7 @@ export function PointsPanel({ round }) {
   for (const r of rows) for (const p of round.players) pts[p.id] += r.points[p.id] || 0;
   const sorted = [...round.players].sort((a, b) => pts[b.id] - pts[a.id]);
   const label = { nines: '5-3-1 points', bbb: 'Points so far', dots: 'Dots so far' }[round.game];
-  const lead = rows.length ? (pts[sorted[0].id] === pts[sorted[1]?.id] ? 'Tied at the top' : `${firstName(sorted[0].name)} leads`) : 'Nobody yet';
+  const lead = rows.length ? (pts[sorted[0].id] === pts[sorted[1]?.id] ? 'Tied at the top' : `${firstName(sorted[0].name)} leads`) : 'Nobody’s ahead yet';
   return <ChipsPanel icon={{ nines: 'number-circle-nine', bbb: 'confetti', dots: 'medal' }[round.game]} label={label} items={sorted.map((p, i) => ({ id: p.id, name: firstName(p.name), value: pts[p.id], lead: i === 0 ? lead : null }))} />;
 }
 

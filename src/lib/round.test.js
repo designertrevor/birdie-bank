@@ -118,7 +118,7 @@ test('the save toast names partners who won the hole together', () => {
   const r = mk(course9, 9, { game: 'match', teams: [['a'], ['b']] });
   const h = r.holes[0];
   assert.equal(holeMoneyLine(r, h, { a: 5, b: -5 }), 'Hole 1: Ann +$5');
-  assert.equal(holeMoneyLine(r, h, { a: 0, b: 0 }), 'Hole 1 saved. No money changed hands');
+  assert.equal(holeMoneyLine(r, h, { a: 0, b: 0 }), 'Hole 1 saved. No money moved');
   const four = [...players, { id: 'c', name: 'Cy Park' }, { id: 'd', name: 'Di' }];
   const t = mk(course9, 9, { game: 'match', players: four, teams: [['a', 'c'], ['b', 'd']] });
   assert.equal(holeMoneyLine(t, h, { a: 2.5, b: -2.5, c: 2.5, d: -2.5 }), 'Hole 1: Ann & Cy +$2.50');

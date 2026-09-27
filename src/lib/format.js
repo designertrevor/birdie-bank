@@ -34,7 +34,7 @@ export function shareText(round, res, { amounts = true } = {}) {
     lines.push('', 'Settle up:');
     res.transfers.forEach(t => lines.push(`${roundPlayerName(round, t.from)} → ${roundPlayerName(round, t.to)} ${money(t.amount)}`));
   }
-  lines.push('', 'Tracked with Birdie Bank');
+  lines.push('', 'Scored with Birdie Bank · birdie-bank.vercel.app');
   return lines.join('\n');
 }
 export const roundPlayerName = (round, id) => round.players.find(p => p.id === id)?.name || '?';
@@ -45,7 +45,7 @@ export const roundPlayerName = (round, id) => round.players.find(p => p.id === i
  */
 export function holeMoneyLine(round, hole, delta) {
   const best = Math.max(0, ...round.players.map(p => delta[p.id] || 0));
-  if (!best) return `Hole ${hole.no} saved. No money changed hands`;
+  if (!best) return `Hole ${hole.no} saved. No money moved`;
   const top = round.players.filter(p => delta[p.id] === best).map(p => p.id);
   const team = round.teams?.find(t => t.players.length === top.length && t.players.every(pid => top.includes(pid)));
   const who = team ? team.name : top.map(pid => roundPlayerName(round, pid).split(' ')[0]).join(' & ');
@@ -58,7 +58,7 @@ export async function shareRound(round, res, showToast, opts) {
     if (navigator.share) { await navigator.share({ title: 'Birdie Bank results', text }); return; }
   } catch (e) { if (e?.name === 'AbortError') return; }
   try { await navigator.clipboard.writeText(text); showToast('Results copied. Paste them in the group chat'); }
-  catch { showToast('Couldn’t share on this device'); }
+  catch { showToast('Couldn’t open sharing on this device'); }
 }
 
 /** Which player in a round is "you" on this phone (joined rounds carry their own). */
