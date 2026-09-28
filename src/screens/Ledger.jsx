@@ -1,6 +1,7 @@
 // The Tab: your net with each friend across every round, squared in the fewest payments.
 import { useState } from 'react';
-import { Empty, Header, Icon, Screen, useUI } from '../components/ui.jsx';
+import { Empty, Header, Icon, Screen, Segmented, useUI } from '../components/ui.jsx';
+import FreePromise from '../components/FreePromise.jsx';
 import { Avatar, SettleSheet } from '../components/Pay.jsx';
 import { PersonActions, RecentPaid, SquareStrip } from '../components/TabCard.jsx';
 import { useStore } from '../lib/store.js';
@@ -11,6 +12,8 @@ import { money } from '../lib/golf.js';
 import { myIds } from '../lib/format.js';
 import { AvatarButton, BottomNav } from '../nav.jsx';
 import { useNav } from '../lib/nav.js';
+import { PAYWALL_ON } from '../lib/paywall-flag.js';
+import { isOrganizer } from '../lib/paywall.js';
 
 const first = name => name.split(' ')[0];
 
@@ -21,6 +24,9 @@ export default function Ledger() {
   useTabSync({ live: true });
   const plan = outstanding(state);
   const [open, setOpen] = useState(null);
+  const [free, setFree] = useState(false);
+  // The Season preview is Pro, so only organizers see the switch, and only while the paywall flag is on
+  const showSeason = PAYWALL_ON && isOrganizer(state);
   const mine = myIds(state);
   const isMe = id => mine.has(id);
 
@@ -108,6 +114,13 @@ export default function Ledger() {
     <Screen>
       <Header title="Tab" right={<AvatarButton />} />
       <div className="scroll">
+        {showSeason && (
+          <div className="tab-view">
+            <Segmented label="Tab view" className="press-mode-row" btn="pm-btn" value="person"
+              onChange={v => v === 'season' && nav.push('season')}
+              options={[{ value: 'person', label: 'By person' }, { value: 'season', label: <>Season<span className="pro-tag">Pro</span></> }]} />
+          </div>
+        )}
         <SquareStrip />
         {plan.length === 0 ? (
           <Empty title={hasRounds ? 'All square' : 'Nothing owed yet'}
@@ -151,9 +164,14 @@ export default function Ledger() {
             ))}
           </>
         )}
+        <div className="tab-free">
+          <span className="tf-title">The Tab is free, always</span>
+          <button className="link-btn" onClick={() => setFree(true)}>See what’s free forever</button>
+        </div>
       </div>
       <BottomNav />
       <SettleSheet debt={open} onClose={() => setOpen(null)} />
+      <FreePromise open={free} onClose={() => setFree(false)} />
     </Screen>
   );
 }
