@@ -6,7 +6,7 @@ import { matchLabel } from '../lib/games.js';
 import { money } from '../lib/golf.js';
 import { useNav } from '../lib/nav.js';
 import { leaveRound } from '../lib/rounds.js';
-import { meFor, roundDate, roundPlayerName } from '../lib/format.js';
+import { meFor, placeOf, roundDate, roundPlayerName } from '../lib/format.js';
 import { accountsEnabled, useAccount } from '../lib/cloud.js';
 import { SignInSheet } from '../components/Account.jsx';
 import { HowWasIt, Reveal, SettleUp, ShareCard } from '../components/Finale.jsx';
@@ -104,6 +104,14 @@ export default function RoundDetail({ id, celebrate }) {
     );
   }
 
+  // In a scramble the team gets the strokes, not each player
+  const strokesNote = p => {
+    const team = round.game === 'scramble' && round.teams?.find(t => t.players.includes(p.id));
+    const n = team ? team.plays || 0 : p.plays;
+    if (!n) return null;
+    return <span className="li-sub"> · {team ? 'team got' : 'got'} {n} stroke{n === 1 ? '' : 's'}</span>;
+  };
+
   return (
     <Screen>
       <Header title={celebrate ? 'Final results' : 'Round'} onBack={celebrate ? undefined : nav.pop} small
@@ -123,8 +131,8 @@ export default function RoundDetail({ id, celebrate }) {
         <div className="sec-label">Standings</div>
         {res.standings.map((p, i) => (
           <div key={p.id} className="settle-row">
-            <div className="sr">{i + 1}</div>
-            <div className="sn">{p.name}{p.plays ? <span className="li-sub"> · got {p.plays} stroke{p.plays === 1 ? '' : 's'}</span> : null}</div>
+            <div className="sr">{placeOf(res.standings, i)}</div>
+            <div className="sn">{p.name}{strokesNote(p)}</div>
             <div className={`sa ${p.amount > 0 ? 'pos' : p.amount < 0 ? 'neg' : ''}`}>{money(p.amount, { sign: true })}</div>
           </div>
         ))}
