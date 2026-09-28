@@ -235,7 +235,8 @@ function PlayRound({ round }) {
       // Auto presses before the next hole
       if (pressMode(r) === 'auto' && !isLast) {
         const next = nextIdx + 1; // playing position of the hole we're going to
-        for (const o of nassauPressOptions(r, next)) {
+        // The main game's own players: a side-only player is never on a side
+        for (const o of nassauPressOptions(gameView(r, 'main'), next)) {
           r.presses.push({ id: `auto-${o.leg}-${next}`, leg: o.leg, start: next, by: o.trailing, auto: true });
         }
       }

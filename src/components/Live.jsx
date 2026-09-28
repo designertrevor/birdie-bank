@@ -96,9 +96,12 @@ export function JoinSheet({ open, onClose, initialCode = '' }) {
     const existing = Object.values(s.rounds).find(r => r.shared?.code === code);
     if (existing) { onClose(); nav.push('play', { id: existing.id }); return; }
     // A round you're already in stays saved; switch back to it from Rounds in progress
-    const id = await joinShared(code, found, me);
+    // Start from the server's copy now, not the one found when the code was typed: taking a seat
+    // sends the round's meta back, and an old copy would undo what the scorekeeper saved since
+    const latest = (await fetchShared(code).catch(() => null)) || found;
+    const id = await joinShared(code, latest, me);
     onClose();
-    nav.push(found.meta.status === 'done' ? 'roundDetail' : 'play', { id });
+    nav.push(latest.meta.status === 'done' ? 'roundDetail' : 'play', { id });
   };
 
   const meta = found?.meta;
