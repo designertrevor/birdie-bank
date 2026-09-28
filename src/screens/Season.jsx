@@ -9,7 +9,7 @@ import { useStore } from '../lib/store.js';
 import { useNav } from '../lib/nav.js';
 import { money } from '../lib/golf.js';
 import { recordText } from '../lib/ledger.js';
-import { TRIAL_DAYS } from '../lib/paywall.js';
+import { TRIAL_DAYS, planStatus } from '../lib/paywall.js';
 import { seasonAccess } from '../lib/entitlements.js';
 import { MIN_REAL_ROUNDS, realRoundCount, sampleBoard, seasonBoard } from '../lib/season.js';
 
@@ -25,6 +25,9 @@ export default function Season() {
   const n = realRoundCount(state);
   const real = n >= MIN_REAL_ROUNDS;
   const trial = () => nav.push('paywall', { source: 'season' });
+  // Already on the trial preview: say so instead of offering (and restarting) the 14 days
+  const [now] = useState(() => Date.now());
+  const onTrial = state.paywall?.choice === 'trial' && state.paywall.trialEnds > now;
 
   if (access === 'none') {
     return (
@@ -39,16 +42,22 @@ export default function Season() {
     <Screen className="season">
       <Header title={real ? 'Season' : 'See what Pro does'} onBack={nav.pop} />
       <p className="season-sub">{real ? `Preview · built from your ${n} rounds` : `Preview · a sample group until you’ve played ${MIN_REAL_ROUNDS} rounds`}</p>
-      {real ? <RealSeason state={state} /> : <Tour onTrial={trial} onFree={() => setFree(true)} />}
+      {real ? <RealSeason state={state} /> : <Tour trialButton={<TrialButton onTrial={onTrial} status={planStatus(state, now)} onClick={trial} />} onFree={() => setFree(true)} />}
       {real && (
         <div className="cta-wrap">
-          <button className="full-btn" onClick={trial}>Try free for {TRIAL_DAYS} days <Icon name="arrow-right" /></button>
+          <TrialButton onTrial={onTrial} status={planStatus(state, now)} onClick={trial} />
           <button className="link-btn center" onClick={() => setFree(true)}>What stays free forever</button>
         </div>
       )}
       <FreePromise open={free} onClose={() => setFree(false)} />
     </Screen>
   );
+}
+
+/** "Try free for 14 days", or where the trial preview stands when it's already on. */
+function TrialButton({ onTrial, status, onClick }) {
+  if (onTrial) return <p className="field-help" role="status" style={{ textAlign: 'center' }}>{status}. Nothing is charged.</p>;
+  return <button className="full-btn" onClick={onClick}>Try free for {TRIAL_DAYS} days <Icon name="arrow-right" /></button>;
 }
 
 function RealSeason({ state }) {
@@ -92,7 +101,7 @@ const Kv = ({ k, v }) => (
 const SampleTag = () => <span className="sample-tag">Sample</span>;
 
 /** The fallback: three steps with a sample group, ending on the trial. */
-function Tour({ onTrial, onFree }) {
+function Tour({ trialButton, onFree }) {
   const state = useStore();
   const s = sampleBoard(state);
   const nm = id => s.names[id];
@@ -151,7 +160,7 @@ function Tour({ onTrial, onFree }) {
       </div>
       <div className="cta-wrap">
         {last
-          ? <button className="full-btn" onClick={onTrial}>Try free for {TRIAL_DAYS} days <Icon name="arrow-right" /></button>
+          ? trialButton
           : <button className="full-btn" onClick={() => setStep(step + 1)}>Next <Icon name="arrow-right" /></button>}
         <button className="link-btn center" onClick={onFree}>What stays free forever</button>
       </div>

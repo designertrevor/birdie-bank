@@ -118,7 +118,7 @@ export default function Ledger() {
           <div className="tab-view">
             <Segmented label="Tab view" className="press-mode-row" btn="pm-btn" value="person"
               onChange={v => v === 'season' && nav.push('season')}
-              options={[{ value: 'person', label: 'By person' }, { value: 'season', label: <>Season<span className="pro-tag">Pro</span></> }]} />
+              options={[{ value: 'person', label: 'By person' }, { value: 'season', label: <>Season<span className="pro-tag"><span className="sr-only">, </span>Pro</span></> }]} />
           </div>
         )}
         <SquareStrip />
