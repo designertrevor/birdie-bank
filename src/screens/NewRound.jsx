@@ -293,7 +293,7 @@ function CourseStep({ courseId, setCourseId, holesCount, nine, setNine, onNext, 
     }
   };
   const apiRow = r => (
-    <button key={r.apiId} className="list-item" onClick={() => pickApi(r)} aria-busy={loadingId === r.apiId}>
+    <button key={r.apiId} className="list-item" onClick={() => pickApi(r)} aria-busy={loadingId === r.apiId} aria-label={[`Add ${r.name}`, r.city, r.teeCount ? `${r.teeCount} tees` : null].filter(Boolean).join(', ')}>
       <div className="row-main">
         <div className="li-name">{r.name}</div>
         <div className="li-sub">{[r.city, r.teeCount ? `${r.teeCount} tees` : null].filter(Boolean).join(' · ')}</div>
@@ -303,7 +303,8 @@ function CourseStep({ courseId, setCourseId, holesCount, nine, setNine, onNext, 
   );
 
   const row = c => (
-    <button key={c.id} className="list-item" onClick={() => setCourseId(c.id)} aria-pressed={c.id === courseId}>
+    <button key={c.id} className="list-item" onClick={() => setCourseId(c.id)} aria-pressed={c.id === courseId}
+      aria-label={[c.name, c.city, `${c.holes.length} holes`, `par ${coursePar(c)}`, `${c.tees?.length || 0} tees`, courseTag(c)?.text].filter(Boolean).join(', ')}>
       <div className="row-main">
         <div className="li-name">{c.name}</div>
         <div className="li-sub">{[c.city, `${c.holes.length} holes`, `Par ${coursePar(c)}`, `${c.tees?.length || 0} tees`].filter(Boolean).join(' · ')}</div>
@@ -328,7 +329,7 @@ function CourseStep({ courseId, setCourseId, holesCount, nine, setNine, onNext, 
           <Empty illo={false} title={`No courses match “${q.trim()}”`} text="Add it yourself from the scorecard in a minute, or ask us to add it for everyone."
             action={<button className="pill-btn" onClick={() => nav.push('suggest', { kind: 'course', prefill: { name: q.trim() } })}><Icon name="paper-plane-tilt" /> Request this course</button>} />
         )}
-        <button className="add-row" onClick={() => nav.push('courseEdit', {})}><div className="add-ci"><Icon name="plus" /></div><span className="add-lbl">Add a course</span></button>
+        <button className="add-row" aria-label="Add a course" onClick={() => nav.push('courseEdit', {})}><span className="add-ci" aria-hidden="true"><Icon name="plus" /></span><span className="add-lbl">Add a course</span></button>
         {course && holesCount === 9 && course.holes.length === 18 && (
           <div className="block">
             <div className="eyebrow" style={{ marginBottom: 10 }}>Which nine?</div>
@@ -427,7 +428,7 @@ function PlayersStep({ game, course, holesCount, nine, picked, setPicked, tees, 
             );
           })}
         </div>
-        <button className="add-row" onClick={() => setAdding(true)}><div className="add-ci"><Icon name="plus" /></div><span className="add-lbl">Add a player</span></button>
+        <button className="add-row" aria-label="Add a player" onClick={() => setAdding(true)}><span className="add-ci" aria-hidden="true"><Icon name="plus" /></span><span className="add-lbl">Add a player</span></button>
         {picked.some(pid => state.players[pid]?.index == null) && (
           <p className="hint-card"><Icon name="info" fill /> Players with no handicap get no strokes. Tap their handicap to set one.</p>
         )}
@@ -572,6 +573,16 @@ function SetupStep({ game, course, holesCount, nine, picked, setPicked, opts, se
 // Schedule for later
 
 /** The day (next two weeks) and the tee time, above the course list. */
+/** "Saturday, October 3" (today and tomorrow say so), for a day chip's accessible name. */
+function dayName(iso) {
+  const [y, m, d] = iso.split('-').map(Number);
+  const day = new Date(y, m - 1, d);
+  const full = day.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' });
+  const today = isoDate(new Date());
+  const tmrw = isoDate(new Date(new Date().getFullYear(), new Date().getMonth(), new Date().getDate() + 1));
+  return iso === today ? `Today, ${full}` : iso === tmrw ? `Tomorrow, ${full}` : full;
+}
+
 function WhenPicker({ date, setDate, teeTime, setTeeTime }) {
   const days = useMemo(() => dayChoices(new Date(), 14), []);
   return (
@@ -579,7 +590,7 @@ function WhenPicker({ date, setDate, teeTime, setTeeTime }) {
       <div className="eyebrow" id="when-day" style={{ marginBottom: 10 }}>Day</div>
       <div className="day-strip" role="radiogroup" aria-labelledby="when-day">
         {days.map(d => (
-          <button key={d.iso} role="radio" aria-checked={d.iso === date} className={`day-chip ${d.iso === date ? 'on' : ''}`} onClick={() => setDate(d.iso)}>
+          <button key={d.iso} role="radio" aria-checked={d.iso === date} aria-label={dayName(d.iso)} className={`day-chip ${d.iso === date ? 'on' : ''}`} onClick={() => setDate(d.iso)}>
             <span className="dc-top">{d.top}</span><span className="dc-bottom">{d.bottom}</span>
           </button>
         ))}
@@ -597,15 +608,34 @@ function InviteStep({ invited, setInvited, onNext }) {
   const players = sortedPlayers(state).filter(p => p.id !== state.me);
   const toggle = pid => setInvited(v => (v.includes(pid) ? v.filter(x => x !== pid) : [...v, pid]));
   const n = invited.length;
+  // A name typed here becomes a saved player and is invited; a name already saved just gets invited
+  const [newName, setNewName] = useState('');
+  const t = newName.trim();
+  const addName = e => {
+    e.preventDefault();
+    if (!t) return;
+    const same = players.find(p => p.name.trim().toLowerCase() === t.toLowerCase());
+    const id = same?.id || uid('p_');
+    if (!same) update(s => { s.players[id] = { id, name: t, index: null, venmo: '', createdAt: Date.now() }; });
+    setInvited(v => (v.includes(id) ? v : [...v, id]));
+    setNewName('');
+  };
   return (
     <>
       <div className="scroll">
         <p className="hint-card"><Icon name="link" fill /> You’re in. Pick who to ask, or skip this and send one group link: anyone with it can answer.</p>
+        <form className="add-name-row" onSubmit={addName}>
+          <label className="field-label" htmlFor="invite-add-name">Add a name</label>
+          <div className="add-name-line">
+            <input id="invite-add-name" aria-label="Add a name" className="name-input" value={newName} onChange={e => setNewName(e.target.value)} placeholder="e.g. Dave" autoComplete="off" maxLength={24} enterKeyHint="done" />
+            <button type="submit" className="add-name-btn" disabled={!t} aria-label={t ? `Add ${t} and invite them` : 'Add this name'}><Icon name="plus" /> Add</button>
+          </div>
+        </form>
         <div style={{ padding: '0 16px' }}>
           {players.map(p => {
             const on = invited.includes(p.id);
             return (
-              <button key={p.id} className={`list-item ${on ? 'on' : ''}`} onClick={() => toggle(p.id)} aria-pressed={on}>
+              <button key={p.id} className={`list-item ${on ? 'on' : ''}`} onClick={() => toggle(p.id)} aria-pressed={on} aria-label={`Invite ${p.name}`}>
                 <div className="row-main">
                   <div className="li-name">{p.name}</div>
                   <div className="li-sub">{p.index == null ? 'No handicap index' : `Index ${formatIndex(p.index)}`}</div>
@@ -615,7 +645,7 @@ function InviteStep({ invited, setInvited, onNext }) {
             );
           })}
         </div>
-        {players.length === 0 && <p className="field-help pad">No players saved yet. Send the group link and they’ll show up as they answer.</p>}
+        {players.length === 0 && <p className="field-help pad">No players saved yet. Add their names above, or send the group link and they’ll show up as they answer.</p>}
       </div>
       <div className="cta-wrap">
         <button className="full-btn" onClick={onNext}>{n ? `Next: Vote (${n} invited)` : 'Skip, I’ll send a link'} <Icon name="arrow-right" /></button>

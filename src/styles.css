@@ -1187,3 +1187,10 @@ button.who-status { cursor: pointer; min-height: 36px; }
 .pw-free .pw-list { margin-top: 10px; }
 .pw-free .pw-list li > i { color: var(--win); }
 .pw-fine { font-size: 13px; color: var(--mute); text-align: center; line-height: 1.4; }
+
+/* Plan flow, Who: add a name that isn't saved yet */
+.add-name-row { margin: 0 16px 12px; }
+.add-name-line { display: flex; gap: 8px; align-items: stretch; }
+.add-name-line .name-input { font-size: 18px; min-height: 48px; flex: 1; min-width: 0; }
+.add-name-btn { min-height: 48px; min-width: 64px; padding: 0 16px; border: none; border-radius: 14px; background: var(--ink); color: var(--canvas); font-weight: 700; font-size: 15px; display: inline-flex; align-items: center; gap: 6px; cursor: pointer; }
+.add-name-btn:disabled { opacity: .4; cursor: default; }

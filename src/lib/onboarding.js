@@ -116,7 +116,7 @@ export function payoff(step, a = {}) {
   if (step === 'p-settle') {
     const copy = {
       app: ['A payment app after? We’ll hand everyone the button.', 'Birdie Bank cuts a round down to the fewest payments, and each one opens the app the other person uses: Venmo, Cash App, PayPal or Zelle.'],
-      cash: ['Cash works until someone’s short a twenty.', 'Birdie Bank keeps a tab all season, so “I’ll get you next week” actually happens.'],
+      cash: ['Cash works until someone’s short a twenty.', 'Birdie Bank keeps a tab all season, so “I’ll get you next time” actually happens.'],
       tab: ['Whoever keeps the tab just got a promotion.', 'Birdie Bank keeps it for them: netted across every round, and the whole group can see it.'],
       none: ['Then somebody’s keeping score in their head.', 'Birdie Bank makes it official, in a friendly way: the fewest payments, and a tab that remembers.'],
     }[a.settle] || [];
