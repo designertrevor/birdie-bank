@@ -267,18 +267,19 @@ export default function JoinInvite({ code, onJoined, onSkip, setUp = false }) {
             {meta.players.map((p, i) => {
               const team = teamOf(p.id);
               const from = meta.joined?.[p.id];
+              const facts = [handicaps ? strokesLabel(p.plays) : null, team?.name, from != null ? `From hole ${from}` : null].filter(Boolean);
               return (
-                <button key={p.id} className="seat-tile" onClick={() => { setSeat(p); setStep('confirm'); }}>
+                <button key={p.id} className="seat-tile" aria-label={[`I’m ${p.name}`, ...facts].join(', ')} onClick={() => { setSeat(p); setStep('confirm'); }}>
                   <Avatar name={p.name} i={i} />
                   <span className="seat-name">{p.name}</span>
                   <span className="seat-sub">
-                    {[handicaps ? strokesLabel(p.plays) : null, team?.name, from != null ? `From hole ${from}` : null].filter(Boolean).join(' · ') || ' '}
+                    {facts.join(' · ') || ' '}
                   </span>
                 </button>
               );
             })}
             {!done && (
-              <button className="seat-tile add" onClick={() => setStep('ask')}>
+              <button className="seat-tile add" aria-label="Not on the list? Add me" onClick={() => setStep('ask')}>
                 <span className="join-avatar add" aria-hidden="true"><Icon name="plus" /></span>
                 <span className="seat-name">Not on the list?</span>
                 <span className="seat-sub">Add me</span>
