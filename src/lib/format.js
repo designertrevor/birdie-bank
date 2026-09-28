@@ -1,6 +1,16 @@
 // Shared display helpers and derived stats (kept out of component files for fast refresh).
-import { GAMES, roundResults, scoreSummary } from './round.js';
+import { GAMES, SIDE_GAMES, roundResults, scoreSummary } from './round.js';
 import { money } from './golf.js';
+
+/**
+ * A round's games in one name: "Nassau", or "Nassau + Skins + Junk" with side games. Works on a
+ * round or a live round's meta (anything with `game` and optional `sideGames`).
+ */
+export function gameLabel(round) {
+  const main = GAMES[round?.game]?.name || '';
+  const sides = (round?.sideGames || []).map(sg => SIDE_GAMES[sg?.game]?.label).filter(Boolean);
+  return [main, ...sides].filter(Boolean).join(' + ');
+}
 
 export function formatIndex(i) {
   if (i == null) return '–';
@@ -33,7 +43,7 @@ export function placeOf(standings, i) {
 }
 
 export function shareText(round, res, { amounts = true } = {}) {
-  const lines = [`${GAMES[round.game].name} at ${round.course.name} · ${roundDate(round)}`];
+  const lines = [`${gameLabel(round)} at ${round.course.name} · ${roundDate(round)}`];
   res.standings.forEach((p, i) => lines.push(amounts ? `${placeOf(res.standings, i)}. ${p.name} ${money(p.amount, { sign: true })}` : `${placeOf(res.standings, i)}. ${p.name}`));
   if (amounts && res.transfers.length) {
     lines.push('', 'Settle up:');

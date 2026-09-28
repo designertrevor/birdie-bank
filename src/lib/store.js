@@ -38,6 +38,8 @@ export const DEFAULT_SETTINGS = {
   dots: { value: 1, auto: true, kinds: { greenie: true, sandy: true, barkie: true, chipin: true, polie: false, arnie: false } },
   rabbit: { ...REV2_DEFAULTS.rabbit },
   snake: { stake: 5, growth: 'flat', nines: false, cap: SNAKE_CAP_DEFAULT }, // cap: most doubles, 0 for none
+  // Birdie pot, a side game only: each player puts in the stake; a net eagle or better is 2 shares
+  birdies: { stake: 5, eagleShares: 2 },
   rev: SETTINGS_REV,
 };
 

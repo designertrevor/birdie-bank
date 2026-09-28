@@ -6,7 +6,7 @@ import {
 import {
   bestBall, sideSplit, vegasHole, sixesPairings, sixesSegments, stablefordPoints, quotaPoints, quotaFor, ninesPoints,
   acesDeuces, settleTotals, scrambleTeamHandicap, rabbitHolder, scoreDots, DOT_KINDS, roundCents,
-  snakeHolder, snakeValue, hammerHole, canHammer,
+  snakeHolder, snakeValue, hammerHole, canHammer, birdiePot, birdieShares,
 } from './games.js';
 import { payFields } from './pay.js';
 
@@ -1167,11 +1167,12 @@ export function hammerOptions(round, hole, mark) {
 // --------------------------- Results --------------------------------------
 
 /**
- * Money by player id plus game-specific detail. Works on partial rounds too.
+ * Money for one game by player id plus game-specific detail. Works on partial rounds too.
  * `pairs[a][b]` is the honest head-to-head: what a won from b, worked out bet by bet and hole by
  * hole (not from the fewest-payments list, which can route money between people who never bet each other).
+ * This is one game only: a round with side games adds them up in roundResults.
  */
-export function roundResults(round) {
+export function gameResults(round) {
   const ids = round.players.map(p => p.id);
   const balances = Object.fromEntries(ids.map(id => [id, 0]));
   const detail = {};
@@ -1408,6 +1409,14 @@ export function roundResults(round) {
     }
   }
 
+  if (round.game === 'birdies') {
+    // Birdie pot, a side game only (see birdiePotShares): each player in it puts in the stake
+    const t = birdiePotShares(round);
+    const bs = s.birdies || {};
+    if (t.inPot.length >= 2) addSpread(birdiePot(t.shares, bs.stake ?? 0));
+    detail.birdies = t;
+  }
+
   if (round.game === 'rabbit') {
     const t = rabbitTable(round);
     // Like Nassau, a leg that isn't finished pays whoever holds the rabbit on the holes played
@@ -1433,6 +1442,125 @@ export function roundResults(round) {
     pairs[a][b] = v; pairs[b][a] = -v || 0;
   }
   return { balances, standings, transfers: minimalTransfers(balances), detail, pairs };
+}
+
+// --------------------------- Several games at once ------------------------
+// A round has one main game (round.game, group-voted as ever) and up to two side games:
+// round.sideGames = [{ game: 'skins' | 'dots' | 'birdies', settings }]. Each side game keeps its own
+// settings, so the main game's defaults in round.settings (every game's are there) never leak in.
+// round.gamesFor = { pid: ['main', 'skins', ...] } is only set for a player who isn't in every game
+// (a late joiner). Both are absent on older rounds, whose money is exactly what it always was.
+
+/** Games that can ride along as a side game, and what they're called there. GAMES is untouched. */
+export const SIDE_GAMES = {
+  skins: { label: 'Skins', icon: 'coins' },
+  dots: { label: 'Junk', icon: 'medal' },
+  birdies: { label: 'Birdie pot', icon: 'bird' },
+};
+
+/** Most games in one round, the main game included. */
+export const MAX_GAMES = 3;
+
+/** A round's side games, dropping any this build doesn't know (an empty list on older rounds). */
+export function sideGamesOf(round) {
+  return (round?.sideGames || []).filter(sg => sg && SIDE_GAMES[sg.game] && sg.settings);
+}
+
+/** The keys of every game in a round: 'main' first, then each side game by its game key. */
+export function gameKeys(round) {
+  return ['main', ...sideGamesOf(round).map(sg => sg.game)];
+}
+
+/** What a game in the round is called: the main game's name, or the side game's label. */
+export function gameKeyLabel(round, key) {
+  return key === 'main' ? GAMES[round.game]?.name || 'Game' : SIDE_GAMES[key]?.label || key;
+}
+
+/**
+ * Side games that could still be added next to `mainGame`, given the ones already on.
+ * None with a Scramble (scores are per team, so per-player side games can't work), no Skins side
+ * game in a Skins round and no Junk side game in a Dots round.
+ */
+export function sideGameChoices(mainGame, sideGames = []) {
+  if (!mainGame || mainGame === 'scramble') return [];
+  if (sideGames.length >= MAX_GAMES - 1) return [];
+  return Object.keys(SIDE_GAMES).filter(k => !sideGames.some(sg => sg.game === k) && !(k === 'skins' && mainGame === 'skins') && !(k === 'dots' && mainGame === 'dots'));
+}
+
+/** Whether `pid` plays the game `key` in this round (everyone is in every game unless gamesFor says otherwise). */
+export function playsGame(round, pid, key) {
+  const list = round.gamesFor?.[pid];
+  return !Array.isArray(list) || list.includes(key);
+}
+
+/**
+ * One game of the round as a round of its own, for the per-game engine. 'main' is the round with
+ * only the players in the main game. A side game swaps in its own game and settings, and has no
+ * teams, presses or bet changes: betHistory only ever covers the main game, and settingsAt() would
+ * otherwise lay the main game's old bets over the side game's key.
+ */
+export function gameView(round, key) {
+  const players = round.gamesFor ? round.players.filter(p => playsGame(round, p.id, key)) : round.players;
+  if (key === 'main') return players === round.players ? round : { ...round, players };
+  const sg = sideGamesOf(round).find(x => x.game === key);
+  if (!sg) return null;
+  return { ...round, game: sg.game, settings: { ...round.settings, [sg.game]: sg.settings }, teams: null, presses: [], betHistory: undefined, players };
+}
+
+/** Birdie pot shares: { shares: { pid: n }, inPot: [pid], holes: [{ no, pid, shares }] }. */
+export function birdiePotShares(round) {
+  const eagle = round.settings.birdies?.eagleShares ?? 2;
+  // Like the other pots, a player who left or joined partway is out of it
+  const inPot = round.players.filter(p => playsWholeRound(round, p.id));
+  const shares = Object.fromEntries(inPot.map(p => [p.id, 0]));
+  const holes = [];
+  for (const h of round.holes) {
+    if (!holeComplete(round, h)) continue;
+    for (const p of inPot) {
+      if (round.scores[h.no]?.[p.id] === 'X') continue;
+      const n = birdieShares(netFor(round, p, h), h.par, eagle);
+      if (n) { shares[p.id] += n; holes.push({ no: h.no, pid: p.id, shares: n }); }
+    }
+  }
+  return { shares, inPot: inPot.map(p => p.id), holes };
+}
+
+/**
+ * Money by player id for the whole round, every game added up. With no side games it's exactly the
+ * main game's gameResults. Otherwise each game is worked out on its own (see gameView), the balances
+ * and head-to-heads are summed (a player not in a game counts 0 there), and the fewest payments
+ * square everyone across all the games at once. `detail` is the main game's, plus `detail.byGame`:
+ * { key: { label, balances, detail } } in playing order, main first.
+ */
+export function roundResults(round) {
+  const sgs = sideGamesOf(round);
+  if (!sgs.length) return gameResults(round);
+  const ids = round.players.map(p => p.id);
+  const sum = Object.fromEntries(ids.map(id => [id, 0]));
+  const rawPairs = Object.fromEntries(ids.map(id => [id, {}]));
+  const byGame = {};
+  let mainDetail = {};
+  for (const key of gameKeys(round)) {
+    const view = gameView(round, key);
+    if (!view || !view.players.length) continue;
+    const r = gameResults(view);
+    for (const id of ids) sum[id] += r.balances[id] || 0;
+    for (const a of Object.keys(r.pairs)) for (const [b, v] of Object.entries(r.pairs[a])) {
+      if (rawPairs[a]) rawPairs[a][b] = (rawPairs[a][b] || 0) + v;
+    }
+    const balances = Object.fromEntries(ids.map(id => [id, r.balances[id] || 0]));
+    byGame[key] = { label: gameKeyLabel(round, key), balances, detail: r.detail };
+    if (key === 'main') mainDetail = r.detail;
+  }
+  const balances = roundCents(sum);
+  const standings = [...round.players].map(p => ({ ...p, amount: balances[p.id] })).sort((a, b) => b.amount - a.amount);
+  const pairs = Object.fromEntries(ids.map(id => [id, {}]));
+  for (let i = 0; i < ids.length; i++) for (let j = i + 1; j < ids.length; j++) {
+    const a = ids[i], b = ids[j];
+    const v = Math.round((rawPairs[a][b] || 0) * 100) / 100 || 0;
+    pairs[a][b] = v; pairs[b][a] = -v || 0;
+  }
+  return { balances, standings, transfers: minimalTransfers(balances), detail: { ...mainDetail, byGame }, pairs };
 }
 
 /** Honest head-to-head for one round: what `a` won from `b` (negative when b came out ahead). */
