@@ -1,7 +1,8 @@
 // Link previews for join links: turns a shared round's meta into preview text and swaps it
 // into index.html's Open Graph tags. Pure, so api/join.js and the tests can both use it.
 import { GAMES } from './round.js';
-import { stakeSummary } from './stakes.js';
+import { roundStakeLines } from './stakes.js';
+import { gameLabel } from './format.js';
 
 export function escapeHtml(s) {
   return String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -19,7 +20,7 @@ function nameList(names) {
 /** Preview title and description for a shared round, or null when there's nothing to go on. */
 export function joinPreview(meta) {
   if (!meta || typeof meta !== 'object') return null;
-  const game = GAMES[meta.game]?.name || null;
+  const game = GAMES[meta.game] ? gameLabel(meta) : null;
   const course = typeof meta.course?.name === 'string' ? meta.course.name.trim() : '';
   if (!game && !course) return null;
   const what = game || 'a round';
@@ -29,7 +30,7 @@ export function joinPreview(meta) {
 
   const who = nameList((Array.isArray(meta.players) ? meta.players : []).map(p => first(p?.name)));
   let stakes = '';
-  try { stakes = meta.game && meta.settings ? stakeSummary(meta.game, meta.settings) : ''; } catch { stakes = ''; }
+  try { stakes = meta.game && meta.settings ? roundStakeLines(meta).map(l => l.line).filter(Boolean).join(' + ') : ''; } catch { stakes = ''; }
   const facts = [who, stakes, meta.holesCount ? `${meta.holesCount} holes` : ''].filter(Boolean).join(' · ');
   const tail = done ? 'See who won and who pays who on Birdie Bank.' : `Tap to follow the money live and enter scores for ${what}. No download needed.`;
   return { title, description: facts ? `${facts}. ${tail}` : tail };

@@ -2,12 +2,13 @@
 import { useEffect, useRef, useState } from 'react';
 import { Header, Icon, Toggle, useUI } from './ui.jsx';
 import { update, uid, useStore } from '../lib/store.js';
-import { GAMES, roundResults } from '../lib/round.js';
+import { roundResults } from '../lib/round.js';
 import { money } from '../lib/golf.js';
 import { payInfoFor } from '../lib/pay.js';
 import { PayButton, RequestButton } from './Pay.jsx';
 import { buzz, confettiFrom } from '../lib/delight.js';
-import { meFor, placeOf, roundDate, roundPlayerName, shareRound } from '../lib/format.js';
+import { gameLabel, meFor, placeOf, roundDate, roundPlayerName, shareRound } from '../lib/format.js';
+import { gamesLine } from '../lib/side-games.js';
 import { markRoundAsked, roundAsked, submitReaction } from '../lib/feedback.js';
 import { useNav } from '../lib/nav.js';
 import { revealSteps, revealTiming } from '../lib/reveal.js';
@@ -33,13 +34,13 @@ function useCountUp(target, { delay = 0, duration = 1100, skip = false } = {}) {
   return v;
 }
 
-function CountRow({ place, name, amount, me, delay, duration, skip }) {
+function CountRow({ place, name, amount, me, delay, duration, skip, games = '' }) {
   const v = useCountUp(amount, { delay, duration, skip });
   const done = v === amount;
   return (
     <div className={`reveal-row ${place === 1 && amount > 0 && done ? 'top' : ''}`}>
       <div className="sr">{place}</div>
-      <div className="sn">{name}{me ? ' (you)' : ''}</div>
+      <div className="sn">{name}{me ? ' (you)' : ''}{games && <span className="rv-games">{games}</span>}</div>
       {/* Whole dollars while counting, then the exact amount: $2.50 used to land on "+$3" */}
       <div className={`reveal-amt ${done && amount > 0 ? 'pos' : done && amount < 0 ? 'neg' : ''}`}>{money(done ? amount : Math.round(v), { sign: true })}</div>
     </div>
@@ -113,7 +114,7 @@ export function Reveal({ round, res, onNext, onDetail, extra, instant = false })
       <Header title="Final results" small />
       <div className="scroll" onClick={() => { if (!done) setSkipped(true); }}>
         <div className="reveal-head" ref={hero}>
-          <div className="eyebrow">{round.course.name} · {GAMES[round.game].name}</div>
+          <div className="eyebrow">{round.course.name} · {gameLabel(round)}</div>
           <div className="reveal-title d" key={title}>{title}</div>
           <div className={`rv-skip ${done ? 'gone' : ''}`} aria-hidden={done}>Tap to skip</div>
         </div>
@@ -126,7 +127,7 @@ export function Reveal({ round, res, onNext, onDetail, extra, instant = false })
         {/* Losers land first, the winner last. Equal money shares a place, so partners both land on top */}
         {res.standings.map((p, i) => (
           <CountRow key={p.id} place={placeOf(res.standings, res.standings.indexOf(p))} name={p.name} amount={p.amount} me={p.id === me}
-            delay={t.stepsEnd + (count - 1 - i) * t.stagger} duration={t.count} skip={skipped} />
+            delay={t.stepsEnd + (count - 1 - i) * t.stagger} duration={t.count} skip={skipped} games={gamesLine(res.detail?.byGame, p.id)} />
         ))}
         {extra}
       </div>
@@ -146,7 +147,7 @@ export function SettleUp({ round, res, onBack, onNext }) {
   const name = id => roundPlayerName(round, id).split(' ')[0];
   const paidFor = t => state.settlements.find(s => s.roundId === round.id && s.from === t.from && s.to === t.to);
   const paidCount = res.transfers.filter(paidFor).length;
-  const note = `${GAMES[round.game].name} at ${round.course.name}`;
+  const note = `${gameLabel(round)} at ${round.course.name}`;
 
   const toggle = t => {
     const s = paidFor(t);
@@ -253,11 +254,11 @@ export function ShareCard({ round, res, onBack, onDone, doneLabel = 'Done' }) {
       <div className="scroll">
         {img ? (
           <img className="share-img" src={img.url} width={IMAGE_W} height={IMAGE_H}
-            alt={`Results card: ${round.course.name}, ${GAMES[round.game].name}. ${res.standings.map((p, i) => `${placeOf(res.standings, i)}. ${p.name}${showAmounts ? ` ${money(p.amount, { sign: true })}` : ''}`).join(', ')}`} />
+            alt={`Results card: ${round.course.name}, ${gameLabel(round)}. ${res.standings.map((p, i) => `${placeOf(res.standings, i)}. ${p.name}${showAmounts ? ` ${money(p.amount, { sign: true })}` : ''}`).join(', ')}`} />
         ) : (
           <div className="share-card">
             <div className="sc-brand">Birdie Bank</div>
-            <div className="sc-meta">{round.course.name} · {roundDate(round)} · {GAMES[round.game].name}</div>
+            <div className="sc-meta">{round.course.name} · {roundDate(round)} · {gameLabel(round)}</div>
             <div className="sc-big d">{tops.length ? <>{tops.map(p => p.name.split(' ')[0]).join(' & ')}{showAmounts && <><br />{money(tops[0].amount, { sign: true })}</>}</> : 'All square'}</div>
             <div className="sc-list">
               {res.standings.map(p => (
@@ -316,7 +317,7 @@ export function HowWasIt({ round }) {
   if (!show || gone) return null;
 
   const close = () => { answered.add(round.id); setGone(true); };
-  const extra = r => ({ reaction: r.key, roundGame: GAMES[round.game]?.name || round.game });
+  const extra = r => ({ reaction: r.key, roundGame: gameLabel(round) || round.game });
   const pick = r => {
     answered.add(round.id);
     setPicked(r);

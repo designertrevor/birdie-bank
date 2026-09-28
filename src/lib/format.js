@@ -8,7 +8,7 @@ import { money } from './golf.js';
  */
 export function gameLabel(round) {
   const main = GAMES[round?.game]?.name || '';
-  const sides = (round?.sideGames || []).map(sg => SIDE_GAMES[sg?.game]?.label).filter(Boolean);
+  const sides = (Array.isArray(round?.sideGames) ? round.sideGames : []).map(sg => SIDE_GAMES[sg?.game]?.label).filter(Boolean);
   return [main, ...sides].filter(Boolean).join(' + ');
 }
 

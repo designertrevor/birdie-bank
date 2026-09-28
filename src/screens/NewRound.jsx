@@ -5,16 +5,17 @@ import { getState, update, uid, useStore } from '../lib/store.js';
 import { allCourses, coursePar, courseTag, defaultTee as firstTee, teeDotStyle } from '../lib/courses.js';
 import { getCourse } from '../lib/courseApi.js';
 import { useCourseSearch } from '../lib/useCourseSearch.js';
-import { GAMES, GAME_GROUPS, createRound, effectiveCourseHc, holesInPlay } from '../lib/round.js';
+import { GAMES, GAME_GROUPS, MAX_GAMES, createRound, effectiveCourseHc, holesInPlay, sideGameChoices } from '../lib/round.js';
+import { SideGamesSetup } from '../components/SideGames.jsx';
 import { GameOptions, SixesPreview, TeamPicker } from '../components/GameOptions.jsx';
-import { optionsProblem, stakeSummary } from '../lib/stakes.js';
+import { optionsProblem, roundStakeLines, stakeSummary } from '../lib/stakes.js';
 import { syncConfigured } from '../lib/sync.js';
 import { ShareSheet } from '../components/Live.jsx';
 import { defaultTeams, teamsProblem } from '../lib/teams.js';
 import { rematchSetup } from '../lib/rematch.js';
 import { useNav } from '../lib/nav.js';
 import { addRound, holesScored, roundsInProgress } from '../lib/rounds.js';
-import { formatIndex, hcPctLabel, playerLabel, sortedPlayers } from '../lib/format.js';
+import { formatIndex, gameLabel, hcPctLabel, playerLabel, sortedPlayers } from '../lib/format.js';
 import { money } from '../lib/golf.js';
 import { findCourse } from '../lib/courses.js';
 import { BET_LADDER, MAX_BALLOT_GAMES, betChoices, betLabel, betOf, betUnitLabel, dayChoices, isoDate, newPlan, planStart } from '../lib/plans.js';
@@ -101,6 +102,10 @@ export default function NewRound({ rematch, fromPlan, present, ahead = false, ga
   const [useHc, setUseHc] = useState(pre?.useHc ?? true);
   const [startHole, setStartHole] = useState(null);
   const [teams, setTeams] = useState(pre?.teams ?? null); // arrays of player ids, for team games
+  // Side games on top of the main game: [{ game, settings }] (start-now setup only, not plans)
+  const [sideGames, setSideGames] = useState(() => structuredClone(pre?.sideGames || []));
+  // Only the side games that still fit the main game (a Skins main game drops a Skins side game)
+  const sidesFor = gm => sideGames.filter(sg => sideGameChoices(gm, []).includes(sg.game)).slice(0, MAX_GAMES - 1);
   const [createdId, setCreatedId] = useState(null); // the round, once it's set up
   const usual = useMemo(() => usualRound(state), [state]);
 
@@ -147,6 +152,8 @@ export default function NewRound({ rematch, fromPlan, present, ahead = false, ga
     // Share-image choice is a personal setting, not part of a round's bets
     const { shareAmounts: _personal, ...settings } = structuredClone(opts);
     const round = createRound({ id, game, course, holesCount, nine, startHole, players, settings, hcPct: opts.hcPct, useHandicaps: useHc, teams: GAMES[game].teams ? teams : null });
+    const sides = sidesFor(game);
+    if (sides.length) round.sideGames = structuredClone(sides);
     update(st => {
       addRound(st, round);
       if (fromPlan && st.plans?.[fromPlan]) st.plans[fromPlan].roundId = id;
@@ -168,6 +175,7 @@ export default function NewRound({ rematch, fromPlan, present, ahead = false, ga
     setUseHc(p.useHc);
     setStartHole(null);
     setTeams(p.teams);
+    setSideGames(structuredClone(p.sideGames || []));
     setStep(3);
   };
   const created = createdId ? state.rounds[createdId] : null;
@@ -204,7 +212,7 @@ export default function NewRound({ rematch, fromPlan, present, ahead = false, ga
       {step === 3 && !planning && course && (
         <SetupStep game={game} course={course} holesCount={holesCount} nine={nine} picked={picked} setPicked={setPicked}
           opts={opts} setOpts={setOpts} useHc={useHc} setUseHc={setUseHc} startHole={startHole} setStartHole={setStartHole} onStart={start}
-          teams={teams} setTeams={setTeams} />
+          teams={teams} setTeams={setTeams} sideGames={sidesFor(game)} setSideGames={setSideGames} />
       )}
       {step === 4 && created && <ReadyStep round={created} onStart={() => nav.reset('upnext', ['play', { id: created.id }])} />}
     </Screen>
@@ -224,8 +232,8 @@ function GameStep({ usual, onUsual, planning, onPlan, game, setGame, holesCount,
         {u && (
           <button className="usual-card" onClick={onUsual}>
             <span className="eyebrow">Your usual</span>
-            <span className="uc-title d">{GAMES[u.game].name} · {usual.course.name}</span>
-            <span className="uc-sub">{u.players.map(p => p.name.split(' ')[0]).join(', ')} · {u.holesCount} holes · {stakeSummary(u.game, u.settings)}</span>
+            <span className="uc-title d">{gameLabel(u)} · {usual.course.name}</span>
+            <span className="uc-sub">{u.players.map(p => p.name.split(' ')[0]).join(', ')} · {u.holesCount} holes · {roundStakeLines(u).map(l => l.line).join(' + ')}</span>
             <span className="uc-btn"><Icon name="arrow-counter-clockwise" /> Set it up again</span>
           </button>
         )}
@@ -487,7 +495,7 @@ function QuickAddPlayer({ open, onClose, onAdded }) {
 
 // ---------------------------------------------------------------------------
 
-function SetupStep({ game, course, holesCount, nine, picked, setPicked, opts, setOpts, useHc, setUseHc, startHole, setStartHole, onStart, teams, setTeams }) {
+function SetupStep({ game, course, holesCount, nine, picked, setPicked, opts, setOpts, useHc, setUseHc, startHole, setStartHole, onStart, teams, setTeams, sideGames = [], setSideGames }) {
   const state = useStore();
   const [pad, setPad] = useState(null); // {path, title, min, max}
   const [holePick, setHolePick] = useState(false);
@@ -497,7 +505,7 @@ function SetupStep({ game, course, holesCount, nine, picked, setPicked, opts, se
   const set = (path, v) => setOpts(o => { const n = structuredClone(o); const k = path.split('.'); let t = n; for (const x of k.slice(0, -1)) t = t[x]; t[k.at(-1)] = v; return n; });
   const get = path => path.split('.').reduce((t, k) => t?.[k], opts);
   const move = (i, d) => setPicked(p => { const n = [...p]; const j = i + d; if (j < 0 || j >= n.length) return p; [n[i], n[j]] = [n[j], n[i]]; return n; });
-  const optsBad = !!optionsProblem(game, opts);
+  const optsBad = !!optionsProblem(game, opts) || sideGames.some(sg => optionsProblem(sg.game, { [sg.game]: sg.settings }));
   const names = Object.fromEntries(picked.map(pid => [pid, state.players[pid]?.name || '?']));
   const teamsBad = !!teamsProblem(game, teams, picked);
   const orderLabel = { wolf: 'Tee order: the wolf moves down this list', banker: 'Playing order', sixes: 'Order: sets who partners who' }[game] || 'Playing order';
@@ -506,8 +514,9 @@ function SetupStep({ game, course, holesCount, nine, picked, setPicked, opts, se
     <>
       <div className="scroll">
         <div className="block summary-card">
-          <div className="li-sub">{GAMES[game].name} · {holesCount} holes</div>
+          <div className="li-sub">{gameLabel({ game, sideGames })} · {holesCount} holes</div>
           <div className="d stake-big">{stakeSummary(game, opts)}</div>
+          {sideGames.length > 0 && <div className="li-sub">{roundStakeLines({ game, settings: opts, sideGames }).slice(1).map(l => l.line).join(' + ')}</div>}
           <div className="li-sub">{course.name}{holesCount === 9 && course.holes.length === 18 ? ` · ${nine === 'front' ? 'Front' : 'Back'} 9` : ''} · Par {holes.reduce((a, h) => a + h.par, 0)} · {picked.length} players</div>
         </div>
 
@@ -535,6 +544,8 @@ function SetupStep({ game, course, holesCount, nine, picked, setPicked, opts, se
 
         <GameOptions game={game} get={get} set={set} onAmount={(path, title, o) => setPad({ path, title, ...o })} holesCount={holesCount}
           players={picked.length || null} firstName={game === 'banker' ? state.players[picked[0]]?.name : null} />
+
+        <SideGamesSetup game={game} sideGames={sideGames} setSideGames={setSideGames} defaults={opts} players={picked.length || 4} />
 
         <button className="set-row more-opts" onClick={() => setMore(!more)} aria-expanded={more}>
           <div className="row-main">
@@ -705,16 +716,16 @@ function ReadyStep({ round, onStart }) {
       <div className="scroll">
         <div className="ready-hero">
           <div className="ready-check"><Icon name="check" /></div>
-          <div className="ready-title d">You’re set for {GAMES[round.game].name}</div>
+          <div className="ready-title d">You’re set for {gameLabel(round)}</div>
         </div>
         <div className="block">
           <div className="ready-row"><span>Course</span><b>{round.course.name}{round.nine ? ` · ${round.nine === 'front' ? 'Front' : 'Back'} 9` : ''}</b></div>
           <div className="ready-row"><span>{round.teams ? 'Teams' : 'Players'}</span><b>{round.teams ? round.teams.map(t => t.name).join(' v ') : names.join(', ')}</b></div>
-          <div className="ready-row"><span>On the line</span><b>{stakeSummary(round.game, round.settings)}</b></div>
+          <div className="ready-row"><span>On the line</span><b>{roundStakeLines(round).map(l => l.line).join(' + ')}</b></div>
           <div className="ready-row"><span>Handicaps</span><b>{round.useHandicaps ? hcPctLabel(round.hcPct) : 'Off'}</b></div>
         </div>
         {others.map(o => (
-          <p key={o.id} className="hint-card"><Icon name="pause-circle" fill /> Your {GAMES[o.game]?.name || ''} round at {o.course.name} ({holesScored(o)} of {o.holes.length} holes) is saved. Switch back any time from Rounds in progress in the round menu.</p>
+          <p key={o.id} className="hint-card"><Icon name="pause-circle" fill /> Your {gameLabel(o)} round at {o.course.name} ({holesScored(o)} of {o.holes.length} holes) is saved. Switch back any time from Rounds in progress in the round menu.</p>
         ))}
         {syncConfigured && (
           <p className="hint-card"><Icon name="broadcast" fill /> {round.shared ? 'The group has the link. They can follow the money live and enter scores.' : 'Send the group a link and they can follow the money live from their own phones. No download needed.'}</p>

@@ -1,12 +1,14 @@
 import { useEffect, useRef, useState } from 'react';
 import { Empty, Header, Icon, Screen, useUI } from '../components/ui.jsx';
 import { getState, update, useStore } from '../lib/store.js';
-import { GAMES, holeAtPos, holeComplete, playsHole, roundLegs, roundNotes, roundResults, scoreSummary, scorers, sideNames, skinsKinds, skinsTable, strokesFor, netFor } from '../lib/round.js';
+import { GAMES, gameView, holeAtPos, holeComplete, playsHole, roundLegs, roundNotes, roundResults, scoreSummary, scorers, sideNames, skinsKinds, skinsTable, strokesFor, netFor } from '../lib/round.js';
 import { matchLabel } from '../lib/games.js';
 import { money } from '../lib/golf.js';
 import { useNav } from '../lib/nav.js';
 import { leaveRound } from '../lib/rounds.js';
-import { meFor, placeOf, roundDate, roundPlayerName } from '../lib/format.js';
+import { gameLabel, meFor, placeOf, roundDate, roundPlayerName } from '../lib/format.js';
+import { gamesLine } from '../lib/side-games.js';
+import { ByGameTable } from '../components/SideGames.jsx';
 import { accountsEnabled, useAccount } from '../lib/cloud.js';
 import { SignInSheet } from '../components/Account.jsx';
 import { HowWasIt, Reveal, SettleUp, ShareCard } from '../components/Finale.jsx';
@@ -121,7 +123,7 @@ export default function RoundDetail({ id, celebrate }) {
           <Icon name={allSquare ? 'handshake' : 'crown'} fill className="crown" />
           <div className="wn">{heroTitle}</div>
           <div className="wa">{heroAmt}</div>
-          <div className="ws">{round.course.name} · {roundDate(round)} · {GAMES[round.game].name} · {played === round.holes.length ? `${played} holes` : `${played} of ${round.holes.length} holes`}</div>
+          <div className="ws">{round.course.name} · {roundDate(round)} · {gameLabel(round)} · {played === round.holes.length ? `${played} holes` : `${played} of ${round.holes.length} holes`}</div>
           {meRow && meRow.id !== top.id && !allSquare && <div className="me-line">You: {money(meRow.amount, { sign: true })}</div>}
         </div>
 
@@ -132,7 +134,7 @@ export default function RoundDetail({ id, celebrate }) {
         {res.standings.map((p, i) => (
           <div key={p.id} className="settle-row">
             <div className="sr">{placeOf(res.standings, i)}</div>
-            <div className="sn">{p.name}{strokesNote(p)}</div>
+            <div className="sn">{p.name}{strokesNote(p)}{res.detail.byGame && <span className="rv-games">{gamesLine(res.detail.byGame, p.id)}</span>}</div>
             <div className={`sa ${p.amount > 0 ? 'pos' : p.amount < 0 ? 'neg' : ''}`}>{money(p.amount, { sign: true })}</div>
           </div>
         ))}
@@ -151,7 +153,18 @@ export default function RoundDetail({ id, celebrate }) {
 
         <HowWasIt round={round} />
 
+        {res.detail.byGame && (
+          <>
+            <div className="sec-label">By game</div>
+            <ByGameTable round={round} byGame={res.detail.byGame} total={res.balances} />
+          </>
+        )}
+
         <GameBreakdown round={round} res={res} />
+        {/* Each side game's own breakdown, worked out on its own like the main game */}
+        {Object.entries(res.detail.byGame || {}).filter(([key]) => key !== 'main').map(([key, g]) => (
+          <GameBreakdown key={key} round={gameView(round, key)} res={{ detail: g.detail }} label={g.label} />
+        ))}
 
         <div className="sec-label">Scorecard</div>
         <Scorecard round={round} />
@@ -175,7 +188,7 @@ export default function RoundDetail({ id, celebrate }) {
   );
 }
 
-function GameBreakdown({ round, res }) {
+function GameBreakdown({ round, res, label = null }) {
   const names = Object.fromEntries(round.players.map(p => [p.id, p.name]));
   const first = n => (n || '').split(' ')[0];
   if (round.game === 'nassau' || round.game === 'match') {
@@ -273,7 +286,7 @@ function GameBreakdown({ round, res }) {
     const unit = round.game === 'dots' ? 'dots' : 'points';
     return (
       <>
-        <div className="sec-label">{unit === 'dots' ? 'Dots' : 'Points'} by hole</div>
+        <div className="sec-label">{label || (unit === 'dots' ? 'Dots' : 'Points')} by hole</div>
         {rows.length === 0 && <p className="hint-card"><Icon name="info" fill /> Nothing scored yet.</p>}
         {rows.length > 0 && (
           <div className="money-table-wrap">
@@ -320,7 +333,7 @@ function GameBreakdown({ round, res }) {
       const claimed = ends.some(e => e.winner || e.rule === 'split');
       return (
         <div key={kind}>
-          <div className="sec-label">{both ? `${kind === 'net' ? 'Net' : 'Gross'} skins` : 'Skins won'}</div>
+          <div className="sec-label">{both ? `${kind === 'net' ? 'Net' : 'Gross'} skins` : 'Skins won'}{label ? ' · side game' : ''}</div>
           {won.length === 0 && !claimed && <p className="hint-card"><Icon name="coins" fill /> No skins won. Every hole was tied.</p>}
           {won.map(r => (
             <div key={r.hole.no} className="leg-row">
@@ -351,6 +364,24 @@ function GameBreakdown({ round, res }) {
         </div>
       );
     });
+  }
+  if (round.game === 'birdies' && res.detail.birdies) {
+    const b = res.detail.birdies;
+    const byPlayer = round.players.filter(p => b.inPot.includes(p.id));
+    return (
+      <>
+        <div className="sec-label">{label || 'Birdie pot'}</div>
+        {b.holes.length === 0 && <p className="hint-card"><Icon name="bird" fill /> No net birdies, so nobody pays.</p>}
+        {b.holes.length > 0 && byPlayer.map(p => (
+          <div key={p.id} className="leg-row">
+            <div className="leg-name">{first(p.name)}</div>
+            <div className="leg-winner">{b.holes.filter(h => h.pid === p.id).map(h => `H${h.no}${h.shares > 1 ? ` (${h.shares})` : ''}`).join(', ') || '–'}</div>
+            <div className="leg-amt">{b.shares[p.id] || 0} share{b.shares[p.id] === 1 ? '' : 's'}</div>
+          </div>
+        ))}
+        {round.players.length > byPlayer.length && <p className="field-help" style={{ padding: '0 20px' }}>Players who joined late or left early aren’t in the pot.</p>}
+      </>
+    );
   }
   if (round.game === 'snake') {
     return (

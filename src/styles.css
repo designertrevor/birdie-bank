@@ -1187,3 +1187,16 @@ button.who-status { cursor: pointer; min-height: 36px; }
 .pw-free .pw-list { margin-top: 10px; }
 .pw-free .pw-list li > i { color: var(--win); }
 .pw-fine { font-size: 13px; color: var(--mute); text-align: center; line-height: 1.4; }
+
+/* SIDE GAMES (several games in one round) */
+.side-game .sg-head { display: flex; align-items: center; gap: 12px; }
+.side-game .sg-icon { font-size: 22px; color: var(--icon); flex-shrink: 0; }
+.side-game .toggle-row.flush { margin: 12px 0 0; padding: 12px 0 0; background: none; border-radius: 0; border-top: 1px solid var(--line); }
+.text-link-btn { display: inline-flex; align-items: center; min-height: 44px; margin-top: 4px; padding: 0 2px; background: none; border: none; color: var(--loss); font-weight: 600; font-size: 15px; cursor: pointer; }
+.set-row.add-side { width: calc(100% - 32px); border: 2px dashed var(--line); text-align: left; font: inherit; color: inherit; }
+.sheet-item.side-choice { align-items: center; gap: 12px; min-height: 64px; }
+.money-bar.mb-tap { display: block; width: calc(100% - 32px); border: none; font: inherit; color: inherit; text-align: inherit; cursor: pointer; }
+.money-bar.mb-tap:active { transform: scale(.98); }
+.by-game th.bg-game { text-align: left; padding: 12px 6px 12px 12px; font-size: 14px; font-weight: 700; text-transform: none; letter-spacing: 0; color: var(--ink); background: none; border-bottom: 1px solid var(--line); white-space: nowrap; }
+.by-game tr.bg-total th, .by-game tr.bg-total td { border-top: 2px solid var(--line); }
+.rv-games { display: block; font-size: 12px; font-weight: 500; color: var(--mute); margin-top: 2px; }

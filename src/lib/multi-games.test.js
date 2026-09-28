@@ -11,6 +11,13 @@ import { minimalTransfers } from './golf.js';
 import { REV2_DEFAULTS } from './settings.js';
 import { gameLabel, shareText } from './format.js';
 import { roundStakeLines, sideBetLine, optionsProblem } from './stakes.js';
+import { revealSteps } from './reveal.js';
+import { buildMeta, assemble } from './sync-model.js';
+import { rematchSetup } from './rematch.js';
+import { sideExample, gamesLine, nassauOpenNote } from './side-games.js';
+import { joinRule, leftRule } from './round.js';
+import { shareCardModel } from './shareImage.js';
+import { joinPreview } from './og.js';
 
 const SETTINGS = {
   hcPct: 100,
@@ -274,4 +281,93 @@ test('bet lines for every game in a round', () => {
   assert.equal(optionsProblem('birdies', { birdies: { stake: 0 } }) != null, true);
   assert.equal(optionsProblem('birdies', { birdies: { stake: 5 } }), null);
   assert.equal(gameLabel({ game: 'skins' }), 'Skins');
+});
+
+/** Nassau 2 v 2 with Skins and Junk over 9 holes: a wins hole 1, b has a greenie on 2. */
+function threeGames() {
+  const r = createRound({
+    id: 'r', game: 'nassau', course: course(9), holesCount: 9, useHandicaps: false, hcPct: 100,
+    players: ['a', 'b', 'c', 'd'].map(id => ({ id, name: `${id.toUpperCase()} Smith` })), settings: structuredClone(SETTINGS), teams: [['a', 'b'], ['c', 'd']],
+  });
+  r.sideGames = [{ game: 'skins', settings: { ...SIDE_SETTINGS.skins, lastCarry: 'void' } }, { game: 'dots', settings: { ...SIDE_SETTINGS.dots, auto: false } }];
+  r.holes.forEach(h => { r.scores[h.no] = { a: h.par, b: h.par, c: h.par, d: h.par }; });
+  r.scores[1].a = 3;
+  r.marks[2] = { b: ['greenie'] };
+  return r;
+}
+
+test('the reveal plays the main game, then one step per side game; the image and share text follow', () => {
+  const r = threeGames();
+  const res = roundResults(r);
+  const { steps } = revealSteps(r, res);
+  const side = steps.filter(x => x.key.startsWith('side-'));
+  assert.deepEqual(side.map(x => x.label), ['Skins', 'Junk']);
+  assert.equal(side[0].text, 'A won 1 skin');
+  assert.equal(side[0].amount, 6);
+  assert.equal(side[1].text, 'B had 1 dot');
+  // Old rounds keep their steps exactly
+  const old = { ...r, sideGames: undefined };
+  assert.deepEqual(revealSteps(old, roundResults(old)), revealSteps(old, gameResults(old)));
+  assert.ok(!revealSteps(old, roundResults(old)).steps.some(x => x.key.startsWith('side-')));
+  // Games in small type under each name
+  assert.equal(gamesLine(res.detail.byGame, 'a'), `Nassau ${res.detail.byGame.main.balances.a >= 0 ? '+' : '−'}$${Math.abs(res.detail.byGame.main.balances.a)} · Skins +$6 · Junk −$1`);
+  const card = shareCardModel(r, res);
+  assert.match(card.meta, /Nassau \+ Skins \+ Junk$/);
+  // With amounts off, no dollar figure appears on the card
+  assert.ok(!JSON.stringify(shareCardModel(r, res, { showAmounts: false }).bets).includes('$'));
+});
+
+test('a side game with nothing won is a push in the reveal', () => {
+  const r = threeGames();
+  r.scores[1].a = r.holes[0].par;
+  r.marks = {};
+  const side = revealSteps(r, roundResults(r)).steps.filter(x => x.key.startsWith('side-'));
+  assert.deepEqual(side.map(x => [x.text, !!x.tie]), [['No skins won', true], ['No dots', true]]);
+});
+
+test('side games ride in the live meta, and Junk dots ride with the hole', () => {
+  const r = threeGames();
+  const meta = buildMeta(r);
+  assert.deepEqual(meta.sideGames, r.sideGames);
+  const back = assemble(meta, []);
+  assert.deepEqual(back.sideGames, r.sideGames);
+  assert.equal(gameLabel(meta), 'Nassau + Skins + Junk');
+  const p = joinPreview({ ...meta, status: 'active' });
+  assert.match(p.title, /Nassau \+ Skins \+ Junk/);
+  assert.match(p.description, /\$2 a skin/);
+  // A meta with a garbled sideGames field still previews
+  assert.ok(joinPreview({ ...meta, sideGames: 'x' }).title.includes('Nassau'));
+});
+
+test('Run it back copies the side games with their own bets', () => {
+  const r = { ...threeGames(), status: 'done', course: { id: 'c9', name: 'Pebble Creek' } };
+  const c9 = { ...course(9), id: 'c9' };
+  const state = { me: 'a', players: Object.fromEntries(r.players.map(p => [p.id, { id: p.id, name: p.name }])), rounds: { r }, customCourses: { c9 } };
+  const s = rematchSetup(state, r);
+  assert.deepEqual(s.sideGames, r.sideGames);
+  assert.notEqual(s.sideGames, r.sideGames);
+  const plain = rematchSetup(state, { ...r, sideGames: undefined });
+  assert.equal('sideGames' in plain, false);
+});
+
+test('worked examples and notes read plainly', () => {
+  assert.equal(sideExample('skins', SIDE_SETTINGS.skins, 4), 'Win a hole outright, win the skin. Ties carry. Win 3 skins in a foursome and the other 3 each pay you $6.');
+  assert.equal(sideExample('dots', { value: 1, kinds: { greenie: true, sandy: true, chipin: true } }, 4), 'Greenies, sandies, chip-ins. One greenie in a foursome: the other 3 each pay you $1.');
+  assert.equal(sideExample('birdies', { stake: 5, eagleShares: 2 }, 4), 'Every net birdie takes a share of the $20 pot, and a net eagle takes 2. No birdies, nobody pays.');
+  for (const t of [sideExample('skins', SIDE_SETTINGS.skins, 3), sideExample('dots', SIDE_SETTINGS.dots, 2)]) assert.ok(!/week/i.test(t));
+  const r = threeGames();
+  r.scores = { 1: r.scores[1] };
+  assert.match(nassauOpenNote(r, roundResults(r).detail.byGame), /whoever is ahead/);
+  assert.equal(nassauOpenNote({ ...r, game: 'skins' }, roundResults(r).detail.byGame), null);
+});
+
+test('join and leave rules: unchanged without side games, a word on each side game with them', () => {
+  const r = threeGames();
+  const old = { ...r, sideGames: undefined, left: { d: 3 } };
+  const withSides = { ...r, left: { d: 3 } };
+  assert.ok(leftRule(withSides, 'd').startsWith(leftRule(old, 'd')));
+  assert.match(leftRule(withSides, 'd'), /Skins and Junk carry on among the players still there\.$/);
+  const pot = { ...r, sideGames: [{ game: 'birdies', settings: SIDE_SETTINGS.birdies }] };
+  assert.match(joinRule(pot, 'a'), /birdie pot is for the players who started/);
+  assert.equal(joinRule({ ...r, sideGames: undefined }, 'a'), joinRule(old, 'a'));
 });

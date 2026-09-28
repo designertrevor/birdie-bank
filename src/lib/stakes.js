@@ -23,7 +23,7 @@ export function sideBetLine(game, settings) {
 /** Every game's bets in a round, main first: [{ key, line }]. Side games use their own settings. */
 export function roundStakeLines(round) {
   const lines = [{ key: 'main', line: stakeSummary(round.game, round.settings) }];
-  for (const sg of round.sideGames || []) {
+  for (const sg of Array.isArray(round.sideGames) ? round.sideGames : []) {
     if (!sg?.settings) continue;
     const line = sideBetLine(sg.game, sg.settings);
     if (line) lines.push({ key: sg.game, line });

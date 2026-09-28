@@ -8,8 +8,8 @@ import { update, uid } from '../lib/store.js';
 import { cancelSeatRequest, fetchShared, joinShared, requestSeat, watchSeatRequest } from '../lib/sync.js';
 import { assemble, cleanRequestName } from '../lib/sync-model.js';
 import { GAMES, addPlayerProblem } from '../lib/round.js';
-import { stakeSummary } from '../lib/stakes.js';
-import { firstName, strokesLabel } from '../lib/format.js';
+import { roundStakeLines } from '../lib/stakes.js';
+import { firstName, gameLabel, strokesLabel } from '../lib/format.js';
 import { payFields } from '../lib/pay.js';
 
 // A seat request survives the page being closed, so reopening the link keeps waiting
@@ -227,7 +227,7 @@ export default function JoinInvite({ code, onJoined, onSkip }) {
               {handicaps && <li><Icon name="golf" fill /> {strokesLabel(seat.plays)}</li>}
               {team && <li><Icon name="users-three" fill /> {team.name}{mates.length ? ` with ${mates.join(' and ')}` : ''}</li>}
               {from != null && <li><Icon name="user-plus" fill /> Starts on hole {from}. Your money counts from there</li>}
-              <li><Icon name={game?.icon || 'golf'} fill /> {game?.name || 'Golf'} · {stakeSummary(meta.game, meta.settings)}</li>
+              <li><Icon name={game?.icon || 'golf'} fill /> {game ? gameLabel(meta) : 'Golf'} · {roundStakeLines(meta).map(l => l.line).join(' + ')}</li>
             </ul>
           </div>
           {handicaps && <p className="field-help">Strokes look wrong? Tell {scorekeeper} before you tee off.</p>}
@@ -286,10 +286,10 @@ export default function JoinInvite({ code, onJoined, onSkip }) {
           <div className="ic-from">
             {host ? <><Avatar name={host} i={3} size="sm" /> <span><strong>{host}</strong> invited you</span></> : <span>You’re invited</span>}
           </div>
-          <div className="ic-game"><Icon name={game?.icon || 'golf'} fill /> {game?.name || 'Golf'}</div>
+          <div className="ic-game"><Icon name={game?.icon || 'golf'} fill /> {game ? gameLabel(meta) : 'Golf'}</div>
           <div className="ic-course">{meta.course?.name} · {meta.holes.length} holes</div>
           <dl className="ic-facts">
-            <div><dt>Bets</dt><dd>{stakeSummary(meta.game, meta.settings) || '–'}</dd></div>
+            <div><dt>Bets</dt><dd>{roundStakeLines(meta).map(l => l.line).filter(Boolean).join(' + ') || '–'}</dd></div>
             <div>
               <dt>Who’s in</dt>
               <dd>

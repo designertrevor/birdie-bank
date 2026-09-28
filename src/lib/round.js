@@ -436,6 +436,25 @@ export function addPlayerToRound(round, player, fromNo = null) {
 
 /** What joining late does to the game, in a sentence (for the results and the add-a-player sheet). */
 export function joinRule(round, pid) {
+  return withSideRule(mainJoinRule(round, pid), round, 'joined');
+}
+
+/**
+ * The main game's rule sentence, plus a word on the side games when a round has them: the birdie
+ * pot is for the players who started (like every pot), and Skins and Junk carry on among whoever
+ * is playing. Rounds without side games get the main sentence unchanged.
+ */
+function withSideRule(text, round, kind) {
+  const sgs = sideGamesOf(round);
+  if (!sgs.length) return text;
+  const notes = [];
+  if (sgs.some(sg => sg.game === 'birdies')) notes.push(kind === 'joined' ? 'The birdie pot is for the players who started, so they’re not in it.' : 'They’re out of the birdie pot.');
+  const others = sgs.filter(sg => sg.game !== 'birdies').map(sg => SIDE_GAMES[sg.game].label);
+  if (others.length) notes.push(kind === 'joined' ? `They’re in ${others.join(' and ')} from there.` : `${others.join(' and ')} carr${others.length > 1 ? 'y' : 'ies'} on among the players still there.`);
+  return [text, ...notes].join(' ');
+}
+
+function mainJoinRule(round, pid) {
   const g = round.game;
   const s = round.settings?.[g];
   if ((g === 'stroke' || g === 'stableford' || g === 'quota') && s?.payout === 'pot') return 'The pot is for the players who started, so they’re not in it.';
@@ -1575,6 +1594,10 @@ function nameList(names) {
 
 /** What leaving does to the game, in a sentence (for the results, and before marking someone as gone). */
 export function leftRule(round, pid) {
+  return withSideRule(mainLeftRule(round, pid), round, 'left');
+}
+
+function mainLeftRule(round, pid) {
   const g = round.game;
   const first = n => n.split(' ')[0];
   if (g === 'vegas') return 'Vegas needs two full teams, so the holes after that don’t count.';
@@ -1645,10 +1668,12 @@ export function livePreview(round, hole, pending = null) {
   const without = { ...round, scores: { ...round.scores }, marks: { ...(round.marks || {}) } };
   delete without.scores[no];
   delete without.marks[no];
-  const now = roundResults(counted).balances;
+  const res = roundResults(counted);
+  const now = res.balances;
   const before = roundResults(without).balances;
   const delta = Object.fromEntries(Object.keys(now).map(id => [id, Math.round((now[id] - before[id]) * 100) / 100]));
-  return { balances: now, delta };
+  // With side games, each game's money too (for the money bar's by-game table)
+  return res.detail.byGame ? { balances: now, delta, byGame: res.detail.byGame } : { balances: now, delta };
 }
 
 /** Gross totals + counts for stats. Works for a player or a scramble team id. */

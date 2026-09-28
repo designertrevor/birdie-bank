@@ -326,7 +326,7 @@ export function BBBPicker({ round, hole, marks, setMarks }) {
 
 // --------------------------- Dots -----------------------------------------
 
-export function DotsRow({ round, player, hole, marks, setMarks, gross }) {
+export function DotsRow({ round, player, hole, marks, setMarks, gross, label = null }) {
   const s = round.settings.dots;
   // A greenie is a par 3 thing, unless one was already marked here before this rule
   const kinds = Object.keys(DOT_KINDS).filter(k => s.kinds?.[k] && (k !== 'greenie' || hole.par === 3 || (marks[player.id] || []).includes(k)));
@@ -343,7 +343,7 @@ export function DotsRow({ round, player, hole, marks, setMarks, gross }) {
     buzz(8);
   };
   return (
-    <div className="dots-row">
+    <div className="dots-row" role="group" aria-label={label || `${player.name.split(' ')[0]}’s dots`}>
       {auto > 0 && <span className="pill-btn sm auto"><Icon name="bird" fill /> {auto === 2 ? 'Eagle · 2 dots' : 'Birdie'}</span>}
       {kinds.map(k => (
         <button key={k} className={`pill-btn sm ${mine.includes(k) ? 'on' : ''}`} aria-pressed={mine.includes(k)} title={DOT_KINDS[k].help} onClick={() => toggle(k)}>{DOT_KINDS[k].name}</button>

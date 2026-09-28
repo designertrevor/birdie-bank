@@ -3,7 +3,7 @@ import { Icon, Sheet, useUI } from './ui.jsx';
 import { getState, useStore } from '../lib/store.js';
 import { fetchShared, joinShared, shareLink, shareRound, stopSharing, useSyncStatus } from '../lib/sync.js';
 import { cleanCode } from '../lib/sync-model.js';
-import { GAMES } from '../lib/round.js';
+import { gameLabel } from '../lib/format.js';
 import { useNav } from '../lib/nav.js';
 
 export function LivePill({ round }) {
@@ -28,7 +28,7 @@ export function ShareSheet({ round, open, onClose }) {
     setBusy(false);
   };
   const send = async () => {
-    const text = `Join my ${GAMES[round.game].name} game at ${round.course.name}. Follow the money live, no download. Code ${code}`;
+    const text = `Join my ${gameLabel(round)} game at ${round.course.name}. Follow the money live, no download. Code ${code}`;
     try {
       if (navigator.share) { await navigator.share({ title: 'Join my round', text, url: link }); return; }
     } catch (e) { if (e?.name === 'AbortError') return; }
@@ -117,7 +117,7 @@ export function JoinSheet({ open, onClose, initialCode = '' }) {
         ) : (
           <>
             <div className="block summary-card" style={{ margin: '0 0 12px' }}>
-              <div className="d" style={{ fontSize: 20, fontWeight: 800 }}>{GAMES[meta.game].name} · {meta.course.name}</div>
+              <div className="d" style={{ fontSize: 20, fontWeight: 800 }}>{gameLabel(meta)} · {meta.course.name}</div>
               <div className="li-sub">{meta.holes.length} holes · {meta.players.map(p => p.name).join(', ')}</div>
             </div>
             {meta.players.map(p => (
