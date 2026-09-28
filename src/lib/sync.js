@@ -143,7 +143,10 @@ function onRemote(roundId, ev) {
     if (stable(merged) === stable(local)) return;
     update(s => {
       const r = s.rounds[roundId]; if (!r) return;
+      const code = r.shareCode;
       applyMeta(r, merged);
+      // An older app's meta has no shareCode; this phone keeps its own
+      if (code && !r.shareCode) r.shareCode = code;
       if (r.status === 'done') leaveRound(s, roundId);
       if (r.status === 'active' && !s.activeRoundId) s.activeRoundId = roundId;
     });
@@ -268,7 +271,8 @@ export async function shareRound(roundId) {
   round.holes.forEach((h, i) => { const d = buildHole(round, i); if (d) holes[h.no] = d; });
   await adapter.create(code, buildMeta(round), holes);
   freshNext.add(roundId);
-  update(s => { s.rounds[roundId].shared = { code, host: true, since: Date.now() }; });
+  // shareCode stays after sharing stops, so the round's payments on the shared Tab outlive the live round
+  update(s => { s.rounds[roundId].shared = { code, host: true, since: Date.now() }; s.rounds[roundId].shareCode = code; });
   await start(roundId, { fresh: true });
   return code;
 }
@@ -283,6 +287,7 @@ export async function fetchShared(code) {
 export async function joinShared(code, remote, localMe) {
   const round = assemble(remote.meta, remote.holes);
   round.shared = { code, host: false, since: Date.now() };
+  round.shareCode = code;
   round.localMe = localMe;
   freshNext.add(round.id);
   update(s => {

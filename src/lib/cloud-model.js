@@ -12,7 +12,7 @@ const ROUND_LOCAL = ['_remote'];
 export function toDocs(state) {
   const out = {};
   const put = (kind, id, data) => { out[`${kind}:${id}`] = { kind, id, data }; };
-  put('profile', 'me', { me: state.me, onboarded: state.onboarded, settings: state.settings, favorites: state.favorites });
+  put('profile', 'me', { me: state.me, onboarded: state.onboarded, settings: state.settings, favorites: state.favorites, carries: state.carries || [] });
   for (const p of Object.values(state.players)) put('player', p.id, p);
   for (const c of Object.values(state.crews)) put('crew', c.id, c);
   for (const c of Object.values(state.customCourses)) put('course', c.id, c);
@@ -55,6 +55,8 @@ export function applyDoc(draft, kind, id, data) {
     draft.onboarded = data.onboarded || draft.onboarded;
     draft.settings = { ...draft.settings, ...migrateSettings(data.settings) };
     draft.favorites = data.favorites || [];
+    // A profile from an older app has no carries: keep this phone's rather than wiping them
+    if (Array.isArray(data.carries)) draft.carries = data.carries;
   }
 }
 

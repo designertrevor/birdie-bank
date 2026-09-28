@@ -53,6 +53,8 @@ function fresh() {
     rounds: {},
     activeRoundId: null,
     settlements: [],
+    carries: [],       // carry-overs between two people (see carry.js)
+    tabRows: {},       // this phone's copy of the shared Tab rows, for who's square (see shared-tab.js)
     plans: {},         // upcoming rounds (see plans.js)
     settings: structuredClone(DEFAULT_SETTINGS),
   };
