@@ -214,7 +214,7 @@ export default function NewRound({ rematch, fromPlan, present, ahead = false, ga
           <Steps steps={planning ? PLAN_STEPS : STEPS} current={step} />
           <h2 className="step-q d">{(planning ? PLAN_QUESTIONS : QUESTIONS)[step]}</h2>
           {step === 2 && !planning && missing.length > 0 && (
-            <p className="hint-card"><Icon name="user-plus" fill /> {listNames(missing)} {missing.length === 1 ? 'isn’t' : 'aren’t'} saved on this phone yet. Add them to run it back with the whole group.</p>
+            <p className="hint-card"><Icon name="user-plus" fill /> {listNames(missing)} {missing.length === 1 ? 'isn’t' : 'aren’t'} saved on this phone yet. Add them to play with the whole group.</p>
           )}
         </>
       ) : <Header title="Round ready" small onClose={() => nav.reset('upnext')} />}

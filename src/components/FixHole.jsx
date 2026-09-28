@@ -32,7 +32,7 @@ function SendSwitch({ on, onChange }) {
         <div className="toggle-lbl" id="fix-send">Send this fix to Birdie Bank</div>
         <div className="toggle-sub" id="fix-send-sub">So the course is right for the next group</div>
       </div>
-      <Toggle on={on} onChange={onChange} labelledBy="fix-send" describedBy="fix-send-sub" />
+      <Toggle on={on} onChange={onChange} label="Send this fix to Birdie Bank" describedBy="fix-send-sub" />
     </div>
   );
 }

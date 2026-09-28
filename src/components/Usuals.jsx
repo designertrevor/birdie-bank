@@ -24,7 +24,7 @@ function UsualRow({ usual, onPick, onMore }) {
     <div className="usual-row">
       <button className="usual-main" onClick={() => onPick(usual)} disabled={!GAMES[usual.game]}>
         <span className="ur-name">{usual.name}</span>
-        <span className="ur-sub">{[gameLabel(like), bets, course?.name || usual.courseName].filter(Boolean).join(' · ')}</span>
+        <span className="ur-sub">{[gameLabel(like), usual.holesCount === 9 ? '9 holes' : null, bets, course?.name || usual.courseName].filter(Boolean).join(' · ')}</span>
         <span className="ur-sub soft">{[names, when].filter(Boolean).join(' · ')}</span>
       </button>
       <button className="icon-btn ur-more" aria-label={`Options for ${usual.name}`} onClick={() => onMore(usual)}><Icon name="dots-three" /></button>
