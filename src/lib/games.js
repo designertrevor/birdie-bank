@@ -264,6 +264,9 @@ export function scoreDots(gross, par) {
 // Published rules: whoever three-putts takes the snake, and the next three-putt passes it on.
 // Whoever holds it at the end (or at each nine, if chosen) pays each other player the snake's value.
 // The snake can stay a fixed amount, grow by the stake with every three-putt, or double each time.
+// House rule: a doubling snake can have a cap, the most times it doubles (4 by default for new rounds,
+// so $5, 10, 20, 40, 80). Past the cap it stays at the capped amount. No cap (0 or unset) doubles forever;
+// rounds saved before the cap existed have none, so their money doesn't change.
 // Sources, checked 2026-09-27:
 //  Golf Monthly, "What is the Snake game in golf?" https://www.golfmonthly.com/features/the-game/what-is-the-snake-golf-betting-game-67209
 //  The Golf News Net, "Golf games: How to play Snake" https://thegolfnewsnet.com/ryan_ballengee/2026/03/13/golf-betting-games-how-to-play-snake-rules-44859/
@@ -271,11 +274,14 @@ export function scoreDots(gross, par) {
 // When two players three-putt the same hole, the last to do it takes the snake; the scorekeeper taps
 // them in the order they happened.
 
-/** What the snake is worth after `count` three-putts: fixed, growing by the stake, or doubling. */
-export function snakeValue(count, stake, growth = 'flat') {
+/**
+ * What the snake is worth after `count` three-putts: fixed, growing by the stake, or doubling.
+ * `cap` is the most doubles a doubling snake makes; 0 or unset means no cap.
+ */
+export function snakeValue(count, stake, growth = 'flat', cap = 0) {
   if (!count) return 0;
   if (growth === 'grow') return stake * count;
-  if (growth === 'double') return stake * 2 ** (count - 1);
+  if (growth === 'double') return stake * 2 ** (cap > 0 ? Math.min(count - 1, cap) : count - 1);
   return stake;
 }
 

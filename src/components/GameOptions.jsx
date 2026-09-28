@@ -260,6 +260,9 @@ export function GameOptions({ game, get, set, onAmount, holesCount = 18, compact
     case 'snake': {
       const growth = get('snake.growth') || 'flat';
       const v = get('snake.stake');
+      // Most doubles; 0 or unset is no cap (a round saved before the cap existed has none)
+      const cap = get('snake.cap') || 0;
+      const steps = k => Array.from({ length: k }, (_, i) => money(v * 2 ** i)).join(', ');
       return <>
         {label('Bets')}
         {amount('snake.stake', growth === 'grow' ? 'Per three-putt' : 'Snake', { label: growth === 'grow' ? 'Per three-putt' : growth === 'double' ? 'First three-putt' : 'The snake' })}
@@ -267,9 +270,17 @@ export function GameOptions({ game, get, set, onAmount, holesCount = 18, compact
           ? `Hold the snake at the end: down ${money(v * others)}, ${money(v)} to each of the other ${others}.`
           : growth === 'grow'
             ? `Five three-putts make it ${money(v * 5)}: hold it at the end and you pay that to each of the other ${others}.`
-            : `It doubles with every three-putt: ${[1, 2, 3, 4].map(k => money(v * 2 ** (k - 1))).join(', ')}. Hold it at the end and pay that to each player.`)}
+            : cap
+              ? `It doubles with every three-putt: ${steps(cap + 1)}, then it stays at ${money(v * 2 ** cap)}. Hold it at the end and pay that to each player.`
+              : `It doubles with every three-putt: ${steps(4)} and so on, with no cap. Hold it at the end and pay that to each player.`)}
         <div className="block">
           {seg('snake.growth', [{ value: 'flat', label: 'Same all round' }, { value: 'grow', label: 'Grows' }, { value: 'double', label: 'Doubles' }], 'The snake', true)}
+          {growth === 'double' && <>
+            <div className="eyebrow" style={{ margin: '14px 0 8px' }}>Most doubles</div>
+            <Segmented label="Most doubles" className="press-mode-row" btn="pm-btn" value={cap} onChange={x => set('snake.cap', x)}
+              options={[{ value: 2, label: '2' }, { value: 3, label: '3' }, { value: 4, label: '4' }, { value: 5, label: '5' }, { value: 0, label: 'No cap' }]} />
+            {help(cap ? `The snake tops out at ${money(v * 2 ** cap)}. More three-putts still pass it on, but it stops doubling.` : 'It keeps doubling as long as people keep three-putting. Brave.')}
+          </>}
         </div>
         {holesCount === 18 && toggle('snake.nines', 'Each nine', 'Settle the snake at the turn, then a fresh one for the back')}
         {note('Three-putt and you take the snake. The next three-putt takes it off you. Whoever holds it at the end pays everyone.')}

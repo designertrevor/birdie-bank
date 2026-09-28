@@ -1,7 +1,7 @@
 // App state: a single object persisted to localStorage, exposed through a tiny
 // subscribe/getSnapshot store so React can read it with useSyncExternalStore.
 import { useSyncExternalStore } from 'react';
-import { migrateSettings, REV2_DEFAULTS, SETTINGS_REV } from './settings.js';
+import { migrateSettings, REV2_DEFAULTS, SETTINGS_REV, SNAKE_CAP_DEFAULT } from './settings.js';
 
 // Dev only: ?profile=b gives a tab its own data, to test shared rounds as two "phones"
 function profileSuffix() {
@@ -37,7 +37,7 @@ export const DEFAULT_SETTINGS = {
   bbb: { value: 1 },
   dots: { value: 1, auto: true, kinds: { greenie: true, sandy: true, barkie: true, chipin: true, polie: false, arnie: false } },
   rabbit: { ...REV2_DEFAULTS.rabbit },
-  snake: { stake: 5, growth: 'flat', nines: false },
+  snake: { stake: 5, growth: 'flat', nines: false, cap: SNAKE_CAP_DEFAULT }, // cap: most doubles, 0 for none
   rev: SETTINGS_REV,
 };
 

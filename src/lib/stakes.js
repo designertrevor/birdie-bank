@@ -22,7 +22,7 @@ export function stakeSummary(game, settings) {
       return `${money(s.skins.value)} a skin${s.skins.carryover ? ' · carryovers' : ''}${k}`;
     }
     case 'hammer': return `${money(s.hammer.stake)} a hole · ${s.hammer.max ? `up to ${s.hammer.max} hammer${s.hammer.max === 1 ? '' : 's'}` : 'no limit'}`;
-    case 'snake': return `${money(s.snake.stake)} ${s.snake.growth === 'grow' ? 'a three-putt' : s.snake.growth === 'double' ? 'a snake, doubling' : 'a snake'}${s.snake.nines ? ' · each nine' : ''}`;
+    case 'snake': return `${money(s.snake.stake)} ${s.snake.growth === 'grow' ? 'a three-putt' : s.snake.growth === 'double' ? `a snake, doubling${s.snake.cap ? ` to ${money(s.snake.stake * 2 ** s.snake.cap)}` : ''}` : 'a snake'}${s.snake.nines ? ' · each nine' : ''}`;
     case 'wolf': return `${money(s.wolf.point)} a point · lone wolf ${s.wolf.loneMultiplier}×`;
     case 'match': return `${money(s.match.stake)} a player`;
     case 'vegas': return `${money(s.vegas.point)} a point`;
