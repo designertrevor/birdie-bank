@@ -146,7 +146,7 @@ export function PersonActions({ other, net, meId }) {
       )}
       {pay && <RecentPaid meId={meId} other={other} pay={pay} />}
       <AtScreen>
-        <CarrySheet open={rolling} onClose={() => setRolling(false)} owed={owed} first={first}
+        <CarrySheet open={rolling} onClose={() => setRolling(false)} owed={owed} first={first} iOwe={!owesMe}
           onAsk={reason => {
             if (askCarry({ ...owed, by: meId, reason })) showToast(`Asked ${first}`);
             setRolling(false);
@@ -157,15 +157,17 @@ export function PersonActions({ other, net, meId }) {
 }
 
 /** "Roll $15 to next time?": an optional one-tap reason, then ask. */
-function CarrySheet({ open, onClose, owed, first, onAsk }) {
+function CarrySheet({ open, onClose, owed, first, iOwe, onAsk }) {
   const [reason, setReason] = useState(null);
   if (!owed) return null;
+  // "Short till payday" only makes sense from the one who owes
+  const reasons = iOwe ? CARRY_REASONS : CARRY_REASONS.filter(r => r !== 'Short till payday');
   return (
     <Sheet open={open} onClose={() => { setReason(null); onClose(); }} title={`Roll ${money(owed.amount)} to next time?`}>
       <p className="sheet-text">{first} gets a note to agree. Until {first} does, it’s still owed like normal.</p>
       <div className="eyebrow" style={{ padding: '0 20px 8px' }}>Add a reason (optional)</div>
       <div className="chip-row">
-        {CARRY_REASONS.map(r => (
+        {reasons.map(r => (
           <button key={r} className={`pill-btn tap ${reason === r ? 'on' : ''}`} aria-pressed={reason === r} onClick={() => setReason(reason === r ? null : r)}>{r}</button>
         ))}
       </div>

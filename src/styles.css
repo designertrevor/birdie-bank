@@ -923,8 +923,8 @@ button:disabled { cursor: not-allowed; }
 }
 .text-link i { color: var(--icon); }
 .chip-row.flush { padding: 0 0 10px; }
-.pay-acts:has(> :nth-child(3)) .pay-btn { padding: 0 8px; }
-.pay-acts:has(> :nth-child(3)) .pay-btn i { display: none; }
+.pay-acts:not(.wrap):has(> :nth-child(3)) .pay-btn { padding: 0 8px; }
+.pay-acts:not(.wrap):has(> :nth-child(3)) .pay-btn i { display: none; }
 .chip-row.flush { gap: 6px; }
 .chip-row.flush .pill-btn { padding: 8px 12px; }
 .chip-row.flush .pill-btn:not(.on) { background: var(--surface); }
@@ -1194,6 +1194,8 @@ button.who-status { cursor: pointer; min-height: 36px; }
 /* SHARED TAB: person card actions, carry-overs and who's square (2026-09-29) */
 .pay-acts.wrap { flex-wrap: wrap; }
 .pay-acts.wrap > * { flex: 1 1 calc(50% - 4px); }
+/* Zelle has no pay link: its button shows the handle to copy, so it gets the whole row */
+.pay-acts.wrap > .app-zelle { flex-basis: 100%; }
 .link-btn { min-height: 44px; padding: 0 4px; border: none; background: none; color: var(--ink); font: inherit; font-size: 14px; font-weight: 700; text-decoration: underline; text-decoration-color: var(--surface-strong); text-decoration-thickness: 2px; text-underline-offset: 3px; cursor: pointer; flex-shrink: 0; }
 .recent-paid { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-top: 6px; font-size: 13px; color: var(--mute); }
 .recent-paid > span { min-width: 0; }
