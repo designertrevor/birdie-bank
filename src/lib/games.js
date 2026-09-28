@@ -340,3 +340,31 @@ export function hammerHole(mark, winner, base) {
   if (winner === undefined) return { winner: undefined, value: 0, hammers, conceded: null };
   return { winner, value: winner == null ? 0 : base * 2 ** hammers.length, hammers, conceded: null };
 }
+
+// ---------------------------------------------------------------------------
+// Birdie pot (a side game)
+// ---------------------------------------------------------------------------
+// Each player in the pot puts in the stake. Every net birdie is one share and a net eagle or better
+// is `eagleShares` (2 by default), and the pot is split by shares. With no birdies nobody pays.
+// Both rules sit in DEFAULT_SETTINGS.birdies so they are easy to change (flagged for Trevor, 2026-09-29).
+
+/** Shares one player earns for a net score on a hole: 1 for a birdie, `eagleShares` for an eagle or better. */
+export function birdieShares(net, par, eagleShares = 2) {
+  if (net == null) return 0;
+  if (net <= par - 2) return eagleShares;
+  return net === par - 1 ? 1 : 0;
+}
+
+/**
+ * Money from a birdie pot. `shares` is { pid: shares } for everyone in the pot. Everyone puts in
+ * `stake` and the pot is split by shares; no shares at all means nobody pays. Whole cents, summing to zero.
+ */
+export function birdiePot(shares, stake) {
+  const ids = Object.keys(shares);
+  const out = Object.fromEntries(ids.map(id => [id, 0]));
+  const total = ids.reduce((a, id) => a + (shares[id] || 0), 0);
+  if (!total || ids.length < 2 || !stake) return out;
+  const pot = stake * ids.length;
+  for (const id of ids) out[id] = pot * (shares[id] || 0) / total - stake;
+  return roundCents(out);
+}

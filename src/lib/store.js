@@ -38,6 +38,8 @@ export const DEFAULT_SETTINGS = {
   dots: { value: 1, auto: true, kinds: { greenie: true, sandy: true, barkie: true, chipin: true, polie: false, arnie: false } },
   rabbit: { ...REV2_DEFAULTS.rabbit },
   snake: { stake: 5, growth: 'flat', nines: false, cap: SNAKE_CAP_DEFAULT }, // cap: most doubles, 0 for none
+  // Birdie pot, a side game only: each player puts in the stake; a net eagle or better is 2 shares
+  birdies: { stake: 5, eagleShares: 2 },
   rev: SETTINGS_REV,
 };
 
@@ -54,6 +56,7 @@ function fresh() {
     activeRoundId: null,
     settlements: [],
     plans: {},         // upcoming rounds (see plans.js)
+    usuals: [],        // saved "usual" setups, at most 5 (see usuals.js); an array, so never inside settings
     settings: structuredClone(DEFAULT_SETTINGS),
   };
 }
@@ -71,7 +74,7 @@ function load() {
       if (v && typeof v === 'object') settings[k] = { ...v, ...data.settings?.[k] };
     }
     if (settings.dots) settings.dots.kinds = { ...base.settings.dots.kinds, ...data.settings?.dots?.kinds };
-    return { ...base, ...data, settings };
+    return { ...base, ...data, usuals: Array.isArray(data.usuals) ? data.usuals : [], settings };
   } catch {
     return fresh();
   }

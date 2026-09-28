@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { Header, Icon, Screen } from '../components/ui.jsx';
 import { useStore } from '../lib/store.js';
 import { GAMES, holeComplete } from '../lib/round.js';
+import { gameLabel } from '../lib/format.js';
 import { money } from '../lib/golf.js';
 import { RoundRow } from '../components/RoundRow.jsx';
 import { activeRounds, lastResult, myTab } from '../lib/history.js';
@@ -38,7 +39,7 @@ export default function UpNext() {
               <div className="resume-pulse" aria-hidden="true" />
               <div className="row-main">
                 <div className="bl" style={{ color: 'rgba(255,255,255,.8)' }}>{played ? 'Round in progress' : 'Ready to tee off'}</div>
-                <div className="d" style={{ fontSize: 20, fontWeight: 800 }}>{GAMES[r.game]?.name} · {r.course.name}</div>
+                <div className="d" style={{ fontSize: 20, fontWeight: 800 }}>{gameLabel(r)} · {r.course.name}</div>
                 <div style={{ fontSize: 13, opacity: 0.85 }}>{played} of {r.holes.length} holes · {r.players.map(p => p.name.split(' ')[0]).join(', ')}</div>
               </div>
               <span className="resume-go"><Icon name="play" fill /></span>

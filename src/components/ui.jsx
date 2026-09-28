@@ -234,8 +234,8 @@ function Confirm({ confirm, close }) {
 // eslint-disable-next-line react-refresh/only-export-components
 export function useUI() { return useContext(UICtx); }
 
-export function Toggle({ on, onChange, label, labelledBy }) {
-  return <button type="button" role="switch" aria-checked={!!on} aria-label={labelledBy ? undefined : label} aria-labelledby={labelledBy} className={`tog ${on ? 'on' : ''}`} onClick={() => onChange(!on)} />;
+export function Toggle({ on, onChange, label, labelledBy, describedBy, disabled = false }) {
+  return <button type="button" role="switch" aria-checked={!!on} aria-label={labelledBy ? undefined : label} aria-labelledby={labelledBy} aria-describedby={describedBy} disabled={disabled} className={`tog ${on ? 'on' : ''}`} onClick={() => onChange(!on)} />;
 }
 
 /** One-of-a-few picker. Arrow keys move between options like native radio buttons. */

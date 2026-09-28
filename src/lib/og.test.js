@@ -18,6 +18,9 @@ test('joinPreview: live round names the game, course and first names', () => {
   assert.equal(p.title, 'Join the Skins at Birch Creek');
   assert.match(p.description, /^Trevor, Sam and Jo · /);
   assert.match(p.description, /18 holes\. Tap to follow the money live/);
+  // One phone keeps score now, so the link invites people to follow, not to enter scores
+  assert.match(p.description, /Tap to follow the money live for Skins\. No download needed\.$/);
+  assert.ok(!p.description.includes('enter scores'));
   assert.ok(!p.description.includes('Nielsen'));
 });
 

@@ -1,9 +1,11 @@
 // Adding someone to a round that's under way, from the round menu or from a seat request
 // ("Not on the list? Add me" on a join link). Their money counts from the hole they start on.
+// With side games, the scorekeeper picks which games they're in: one start hole for all of them, and
+// a main game with set sides (Nassau, Wolf, Vegas...) never takes them, but its side games can.
 import { useMemo, useState } from 'react';
-import { Icon, Sheet, useUI } from './ui.jsx';
+import { Icon, Sheet, Toggle, useUI } from './ui.jsx';
 import { update, uid, useStore } from '../lib/store.js';
-import { addPlayerProblem, addPlayerToRound, firstOpenHole, joinRule, roundStarted } from '../lib/round.js';
+import { addPlayerProblem, addPlayerToRound, firstOpenHole, joinGames, joinRule, roundStarted, sideGamesOf } from '../lib/round.js';
 import { payFields } from '../lib/pay.js';
 import { answerSeatRequest } from '../lib/sync.js';
 import { cleanRequestName } from '../lib/sync-model.js';
@@ -32,10 +34,18 @@ export function AddPlayerSheet({ round, request = null, onClose }) {
   const cleanName = cleanRequestName(name);
   const newId = useMemo(() => uid('p_'), []);
   const player = { id: pick || newId, name: cleanName, index: person?.index ?? null, courseHc: hc, ...payFields(person) };
-  const preview = cleanName && !problem && (open != null || !started) ? addPlayerToRound(round, player, started ? fromNo : null) : null;
+  // Which games they play (rounds with side games only): each switch starts where joinGames says
+  const hasSides = sideGamesOf(round).length > 0;
+  const offers = hasSides ? joinGames(round, cleanName ? firstName(cleanName) : 'this player', started ? fromNo : null) : [];
+  const [picked, setPicked] = useState({});
+  const inGame = o => !o.disabled && (picked[o.key] ?? o.on);
+  const games = hasSides ? offers.filter(inGame).map(o => o.key) : null;
+  const noGame = hasSides && !games.length;
+  const preview = cleanName && !problem && !noGame && (open != null || !started) ? addPlayerToRound(round, player, started ? fromNo : null, games) : null;
   const added = preview?.players.at(-1);
   const pos = started && fromNo != null ? round.holes.findIndex(h => h.no === fromNo) + 1 : 1;
-  const rule = preview && pos > 1 ? joinRule(preview, player.id) : null;
+  // With side games each switch says what joining does to its game, so no extra sentence
+  const rule = preview && pos > 1 && !hasSides ? joinRule(preview, player.id) : null;
   // Holes they could start on: the ones from here on that nobody has scored yet
   const choices = round.holes.filter((h, i) => i >= Math.min(round.current || 0, round.holes.length - 1) && !Object.values(round.scores[h.no] || {}).some(v => v != null));
 
@@ -51,7 +61,7 @@ export function AddPlayerSheet({ round, request = null, onClose }) {
     update(s => {
       const r = s.rounds[round.id];
       if (!r) return;
-      Object.assign(r, addPlayerToRound(r, player, started ? fromNo : null));
+      Object.assign(r, addPlayerToRound(r, player, started ? fromNo : null, games));
       // Someone new goes in People too, like a guest added when setting up a round
       if (!s.players[player.id]) s.players[player.id] = { id: player.id, name: player.name, index: null, venmo: '', createdAt: Date.now() };
     });
@@ -112,6 +122,24 @@ export function AddPlayerSheet({ round, request = null, onClose }) {
                   <button key={h.no} role="radio" aria-checked={fromNo === h.no} className={`pill-btn ap-hole ${fromNo === h.no ? 'on' : ''}`} onClick={() => setFromNo(h.no)}>{h.no}</button>
                 ))}
               </div>
+            </div>
+          )}
+          {hasSides && (
+            <div style={{ padding: '0 20px 4px' }}>
+              <div className="eyebrow" style={{ marginBottom: 8 }} id="ap-games">Games</div>
+              <div role="group" aria-labelledby="ap-games">
+                {offers.map(o => (
+                  <div key={o.key} className="toggle-row ap-game">
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div className="pname" id={`ap-g-${o.key}`}>{o.label}</div>
+                      <div className="field-help" id={`ap-r-${o.key}`} style={{ margin: '2px 0 0' }}>{o.reason}</div>
+                    </div>
+                    <Toggle on={inGame(o)} disabled={o.disabled} labelledBy={`ap-g-${o.key}`} describedBy={`ap-r-${o.key}`}
+                      onChange={v => setPicked(x => ({ ...x, [o.key]: v }))} />
+                  </div>
+                ))}
+              </div>
+              {noGame && <p className="field-error">Pick at least one game.</p>}
             </div>
           )}
           {rule && <p className="hint-card"><Icon name="scales" fill /> {rule}</p>}

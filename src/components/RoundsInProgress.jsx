@@ -2,7 +2,7 @@
 // Every round stays saved while you're in a different one.
 import { Icon, Sheet } from './ui.jsx';
 import { update, useStore } from '../lib/store.js';
-import { GAMES } from '../lib/round.js';
+import { gameLabel } from '../lib/format.js';
 import { holesScored, roundsInProgress } from '../lib/rounds.js';
 import { useNav } from '../lib/nav.js';
 
@@ -22,7 +22,7 @@ export function RoundsInProgressSheet({ open, onClose, currentId = null }) {
       {rounds.map(r => (
         <button key={r.id} className={`sheet-item ${r.id === currentId ? 'selected' : ''}`} onClick={() => go(r.id)} aria-current={r.id === currentId || undefined}>
           <div className="row-main">
-            <div>{GAMES[r.game]?.name || 'Round'} · {r.course.name}</div>
+            <div>{gameLabel(r) || 'Round'} · {r.course.name}</div>
             <span className="set-sub" style={{ display: 'block' }}>
               {r.id === currentId ? 'Playing now · ' : ''}{holesScored(r)} of {r.holes.length} holes · {r.players.map(p => p.name.split(' ')[0]).join(', ')}
             </span>

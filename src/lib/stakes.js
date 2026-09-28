@@ -1,5 +1,6 @@
 // What's on the line in a game: a one-line summary and a sanity check on its options.
 import { money } from './golf.js';
+import { sideGamesOf } from './round.js';
 
 /** Why a game's options can't be used as they stand, or null when they're fine. */
 export function optionsProblem(game, settings) {
@@ -7,7 +8,28 @@ export function optionsProblem(game, settings) {
     const b = settings.banker || {};
     if (b.min > b.max || b.defaultBet < b.min || b.defaultBet > b.max) return 'Default bet has to sit between the minimum and maximum.';
   }
+  if (game === 'birdies' && !(settings.birdies?.stake > 0)) return 'Each player has to put something in the birdie pot.';
   return null;
+}
+
+/**
+ * The bet line for a side game in setup and the round menu: "$2 a skin", "$1 a dot",
+ * "Each player puts in $5". `settings` is the side game's own block.
+ */
+export function sideBetLine(game, settings) {
+  if (game === 'birdies') return `Each player puts in ${money(settings?.stake ?? 0)}`;
+  // The bet in its own unit ("$2 a skin"); the worked example under it covers the house rules
+  return stakeSummary(game, { [game]: settings }).split(' · ')[0];
+}
+
+/** Every game's bets in a round, main first: [{ key, line }]. Side games use their own settings. */
+export function roundStakeLines(round) {
+  const lines = [{ key: 'main', line: stakeSummary(round.game, round.settings) }];
+  for (const sg of sideGamesOf(round)) {
+    const line = sideBetLine(sg.game, sg.settings);
+    if (line) lines.push({ key: sg.game, line });
+  }
+  return lines;
 }
 
 /** One line that says what's on the line, for menus and summaries. */
@@ -36,6 +58,7 @@ export function stakeSummary(game, settings) {
     case 'bbb': return `${money(s.bbb.value)} a point`;
     case 'dots': return `${money(s.dots.value)} a dot`;
     case 'rabbit': return `${money(s.rabbit.stake)} a rabbit`;
+    case 'birdies': return `${money(s.birdies.stake)} each in the birdie pot`;
     default: return '';
   }
 }

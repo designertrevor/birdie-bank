@@ -472,6 +472,7 @@ a.set-row { text-decoration: none; }
 .tog.on { background: var(--pink); }
 .tog::after { content: ''; position: absolute; top: 4px; left: 4px; width: 26px; height: 26px; border-radius: 50%; background: #fff; box-shadow: 0 1px 3px rgba(0,0,0,.2); transition: left .3s var(--spring); }
 .tog.on::after { left: 26px; }
+.tog:disabled { opacity: .45; }
 
 /* NASSAU SETUP */
 .nassau-bet-row { display: flex; align-items: center; justify-content: space-between; padding: 12px 12px 12px 18px; margin: 0 16px 8px; background: var(--card); border-radius: 18px; border: none !important; }
@@ -1044,6 +1045,8 @@ button:disabled { cursor: not-allowed; }
 .seat-req .pill-btn { padding: 8px 14px; min-height: 44px; }
 .ap-hole { min-width: 44px; min-height: 44px; justify-content: center; }
 .seat-req .pill-btn.ghost { background: transparent; color: var(--on-pastel); box-shadow: inset 0 0 0 1.5px rgba(0,0,0,.35); }
+.seat-req.keeper-bar { background: var(--mint); }
+.sheet-item:disabled { opacity: .55; transform: none; }
 
 /* Upcoming rounds: the plan, who's in, the vote, roll call */
 .upcoming-card {
@@ -1187,3 +1190,48 @@ button.who-status { cursor: pointer; min-height: 36px; }
 .pw-free .pw-list { margin-top: 10px; }
 .pw-free .pw-list li > i { color: var(--win); }
 .pw-fine { font-size: 13px; color: var(--mute); text-align: center; line-height: 1.4; }
+
+/* SIDE GAMES (several games in one round) */
+.side-game .sg-head { display: flex; align-items: center; gap: 12px; }
+.side-game .sg-icon { font-size: 22px; color: var(--icon); flex-shrink: 0; }
+.toggle-row.ap-game { margin: 0 0 8px; padding: 12px 14px; }
+.side-game .toggle-row.flush { margin: 12px 0 0; padding: 12px 0 0; background: none; border-radius: 0; border-top: 1px solid var(--line); }
+.text-link-btn { display: inline-flex; align-items: center; min-height: 44px; margin-top: 4px; padding: 0 2px; background: none; border: none; color: var(--loss); font-weight: 600; font-size: 15px; cursor: pointer; }
+.set-row.add-side { width: calc(100% - 32px); border: 2px dashed var(--line); text-align: left; font: inherit; color: inherit; }
+.sheet-item.side-choice { align-items: center; gap: 12px; min-height: 64px; }
+.money-bar.mb-tap { display: block; width: calc(100% - 32px); border: none; font: inherit; color: inherit; text-align: inherit; cursor: pointer; }
+.money-bar.mb-tap:active { transform: scale(.98); }
+.by-game th.bg-game { text-align: left; padding: 12px 6px 12px 12px; font-size: 14px; font-weight: 700; text-transform: none; letter-spacing: 0; color: var(--ink); background: none; border-bottom: 1px solid var(--line); white-space: nowrap; }
+.by-game tr.bg-total th, .by-game tr.bg-total td { border-top: 2px solid var(--line); }
+.rv-games { display: block; font-size: 12px; font-weight: 500; color: var(--mute); margin-top: 2px; }
+
+/* Fix a hole or a tee for this round (FixHole.jsx) */
+.hole-meta { position: relative; }
+.fixed-tag {
+  position: absolute; top: -8px; left: 50%; transform: translateX(-50%); pointer-events: none;
+  padding: 2px 10px; border-radius: 999px; background: var(--mint); color: var(--teal); font-size: 11px; font-weight: 700; letter-spacing: .04em;
+}
+.sc-col-btn { position: relative; }
+.sc-fixed { display: inline-block; width: 7px; height: 7px; margin-left: 2px; border-radius: 50%; box-shadow: inset 0 0 0 1.5px currentColor; vertical-align: super; }
+.sc-fixed.inline { vertical-align: middle; margin: 0 2px 0 6px; }
+.fix-link { min-height: 44px; }
+.fix-impact p { margin: 4px 0 0; }
+.fix-impact .eyebrow { margin-bottom: 2px; }
+.tee-fix-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+
+/* Your usuals in round setup, and Save as a usual (Usuals.jsx) */
+.usual-row { display: flex; align-items: center; gap: 8px; margin: 0 16px 8px; padding: 4px 8px 4px 4px; border-radius: 20px; background: var(--card); }
+.usual-main {
+  flex: 1; min-width: 0; min-height: 56px; display: flex; flex-direction: column; align-items: flex-start; gap: 2px; padding: 10px 12px;
+  border: none; background: none; color: var(--ink); font: inherit; text-align: left; cursor: pointer; border-radius: 16px; transition: transform .2s var(--spring);
+}
+.usual-main:active { transform: scale(.97); }
+.usual-main:disabled { opacity: .5; cursor: default; }
+.ur-name { font-size: 16px; font-weight: 700; }
+.ur-sub { font-size: 13px; color: var(--body); overflow-wrap: anywhere; }
+.ur-sub.soft { color: var(--mute); }
+.ur-more { background: var(--surface); }
+.usual-save { display: flex; justify-content: center; padding: 4px 16px 12px; }
+.usual-save .pill-btn { min-height: 44px; background: var(--surface); }
+.usual-saved { display: flex; align-items: center; gap: 6px; }
+.tee-fix .eyebrow { margin-bottom: 8px; }

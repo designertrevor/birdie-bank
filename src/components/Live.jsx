@@ -3,7 +3,7 @@ import { Icon, Sheet, useUI } from './ui.jsx';
 import { getState, useStore } from '../lib/store.js';
 import { fetchShared, joinShared, shareLink, shareRound, stopSharing, useSyncStatus } from '../lib/sync.js';
 import { cleanCode } from '../lib/sync-model.js';
-import { GAMES } from '../lib/round.js';
+import { gameLabel } from '../lib/format.js';
 import { useNav } from '../lib/nav.js';
 
 export function LivePill({ round }) {
@@ -28,7 +28,7 @@ export function ShareSheet({ round, open, onClose }) {
     setBusy(false);
   };
   const send = async () => {
-    const text = `Join my ${GAMES[round.game].name} game at ${round.course.name}. Follow the money live, no download. Code ${code}`;
+    const text = `Join my ${gameLabel(round)} game at ${round.course.name}. Follow the money live, no download. Code ${code}`;
     try {
       if (navigator.share) { await navigator.share({ title: 'Join my round', text, url: link }); return; }
     } catch (e) { if (e?.name === 'AbortError') return; }
@@ -50,10 +50,10 @@ export function ShareSheet({ round, open, onClose }) {
     <Sheet open={open} onClose={onClose} title="Invite the group">
       {!code ? (
         <div style={{ padding: '0 16px' }}>
-          <p className="sheet-text" style={{ padding: '0 4px 12px' }}>Let everyone in the group follow along, or keep score from their own phone. Scores sync hole by hole.</p>
+          <p className="sheet-text" style={{ padding: '0 4px 12px' }}>Let everyone in the group follow along live. You keep score and can hand it off to a player.</p>
           <ul className="onboard-list" style={{ marginTop: 0, marginBottom: 14 }}>
             <li><Icon name="link" fill /> You get a code and a link to send the group.</li>
-            <li><Icon name="device-mobile" fill /> Anyone with it can view and enter scores, so only send it to your group.</li>
+            <li><Icon name="device-mobile" fill /> Anyone with it can follow the scores, so only send it to your group.</li>
           </ul>
           <button className="full-btn" disabled={busy} onClick={start}>{busy ? 'Starting…' : <>Get the link <Icon name="broadcast" fill /></>}</button>
         </div>
@@ -96,9 +96,12 @@ export function JoinSheet({ open, onClose, initialCode = '' }) {
     const existing = Object.values(s.rounds).find(r => r.shared?.code === code);
     if (existing) { onClose(); nav.push('play', { id: existing.id }); return; }
     // A round you're already in stays saved; switch back to it from Rounds in progress
-    const id = await joinShared(code, found, me);
+    // Start from the server's copy now, not the one found when the code was typed: taking a seat
+    // sends the round's meta back, and an old copy would undo what the scorekeeper saved since
+    const latest = (await fetchShared(code).catch(() => null)) || found;
+    const id = await joinShared(code, latest, me);
     onClose();
-    nav.push(found.meta.status === 'done' ? 'roundDetail' : 'play', { id });
+    nav.push(latest.meta.status === 'done' ? 'roundDetail' : 'play', { id });
   };
 
   const meta = found?.meta;
@@ -117,7 +120,7 @@ export function JoinSheet({ open, onClose, initialCode = '' }) {
         ) : (
           <>
             <div className="block summary-card" style={{ margin: '0 0 12px' }}>
-              <div className="d" style={{ fontSize: 20, fontWeight: 800 }}>{GAMES[meta.game].name} · {meta.course.name}</div>
+              <div className="d" style={{ fontSize: 20, fontWeight: 800 }}>{gameLabel(meta)} · {meta.course.name}</div>
               <div className="li-sub">{meta.holes.length} holes · {meta.players.map(p => p.name).join(', ')}</div>
             </div>
             {meta.players.map(p => (

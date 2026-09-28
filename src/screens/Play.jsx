@@ -5,23 +5,33 @@ import { DEFAULT_SETTINGS, getState, update, useStore } from '../lib/store.js';
 import {
   GAMES, addPlayerProblem, bankerHoleSetup, canLeave, defaultNine, holeComplete, leftRule, livePreview, nassauPressOptions, playersLeft, playersOn, playsHole, pressMode,
   resizeRound, roundLegs, roundResults, scoredHolesDropped, scorers, skinsKinds, skinsTable, strokesFor, wolfHoleSetup, changeBets, wholeRoundOnly,
+  gameView, sideGamesOf, holeFixOf,
 } from '../lib/round.js';
+import { CourseTeeSheet, FixHoleSheet } from '../components/FixHole.jsx';
+import { courseTeeLabel, keepsDraft } from '../lib/hole-fix.js';
+import { markUsualPlayed } from '../lib/usuals.js';
 import { findCourse } from '../lib/courses.js';
 import { money, netScoreName, scoreName, pickupGross } from '../lib/golf.js';
 import {
   BBBPicker, DotsRow, HammerPanel, MatchPanel, MoneyPanel, PointsPanel, RabbitPanel, ScramblePanel, SixesPanel, SnakePanel, SnakePicker, TotalsPanel, VegasPanel,
 } from '../components/GamePanels.jsx';
 import { GameOptions } from '../components/GameOptions.jsx';
-import { optionsProblem, stakeSummary } from '../lib/stakes.js';
+import { optionsProblem, roundStakeLines, stakeSummary } from '../lib/stakes.js';
 import { buzz, confettiFrom } from '../lib/delight.js';
 import { useNav } from '../lib/nav.js';
 import { Scorecard } from './RoundDetail.jsx';
 import { LivePill, ShareSheet } from '../components/Live.jsx';
 import { syncConfigured, useSeatRequests } from '../lib/sync.js';
 import { AddPlayerSheet } from '../components/AddPlayer.jsx';
-import { holeMoneyLine } from '../lib/format.js';
+import { firstName, gameLabel, holeMoneyLine } from '../lib/format.js';
 import { leaveRound, roundsInProgress } from '../lib/rounds.js';
 import { RoundsInProgressSheet } from '../components/RoundsInProgress.jsx';
+import { ByGameTable } from '../components/SideGames.jsx';
+import { nassauOpenNote } from '../lib/side-games.js';
+import {
+  KEEPER_QUIET_MS, askForCard, canEdit, canTakeCard, clearAsk, handOff, handOffChoices, hostKeeper, isKeeper, keeperMe, keeperName, keeperOf,
+  keeperSaved, openAsk, seatTaken,
+} from '../lib/keeper.js';
 
 export default function Play({ id }) {
   const round = useStore(s => s.rounds[id]);
@@ -44,7 +54,33 @@ export default function Play({ id }) {
   const left = Object.entries(round.left || {}).map(e => e.join('@')).sort().join(',');
   // ...or someone is added partway through
   const joined = `${round.players.length}:${Object.entries(round.joined || {}).map(e => e.join('@')).sort().join(',')}`;
-  return <PlayRound key={`${round.holesCount}:${round.current}:${round._remote?.[cur?.no] || 0}:${left}:${joined}`} round={round} />;
+  // ...and when this hole's par is fixed, so an untouched score starts from the new par
+  return <PlayRound key={`${round.holesCount}:${round.current}:${round._remote?.[cur?.no] || 0}:${left}:${joined}:${cur?.par}`} round={round} />;
+}
+
+// Keeper handoffs this phone has already announced ("roundId:since"), so a remount doesn't say it twice
+const HANDED = new Set();
+// When this phone last saw the keeper save a hole, by its own clock: roundId -> { lastSaveAt, seenAt }.
+// The first sighting counts as 0 (trust the keeper's clock); a save seen change after that is timed here.
+const SEEN = new Map();
+function seenSave(round) {
+  const k = keeperOf(round);
+  if (!k) return 0;
+  const prev = SEEN.get(round.id);
+  if (!prev) { SEEN.set(round.id, { lastSaveAt: k.lastSaveAt, seenAt: 0 }); return 0; }
+  if (prev.lastSaveAt !== k.lastSaveAt) { const next = { lastSaveAt: k.lastSaveAt, seenAt: Date.now() }; SEEN.set(round.id, next); return next.seenAt; }
+  return prev.seenAt;
+}
+
+/** The time now, ticking every `ms` (0: never ticks). */
+function useNow(ms) {
+  const [now, setNow] = useState(() => Date.now());
+  useEffect(() => {
+    if (!ms) return;
+    const t = setInterval(() => setNow(Date.now()), ms);
+    return () => clearInterval(t);
+  }, [ms]);
+  return now;
 }
 
 function useWakeLock() {
@@ -65,11 +101,20 @@ function PlayRound({ round }) {
   useWakeLock();
   const nav = useNav();
   const { ask, showToast } = useUI();
+  const confirmAsk = ask;
   const idx = Math.min(round.current, round.holes.length - 1);
   const hole = round.holes[idx];
   const isLast = idx === round.holes.length - 1;
   const game = round.game;
   const units = scorers(round, hole); // players still playing, or teams in a scramble
+  // The main game's own round: without anyone who's only in the side games, so they never enter a
+  // wolf rotation, the banker's bets, the Sixes pairings or a head-to-head's sides
+  const main = useMemo(() => gameView(round, 'main'), [round]);
+  // Who keeps score (shared rounds): only that phone edits, the other players read (see keeper.js)
+  const stateMe = useStore(s => s.me);
+  const me = keeperMe(round, { me: stateMe });
+  const isHost = !!round.shared?.host;
+  const editable = canEdit(round, me, isHost);
 
   // Draft scores for this hole: saved scores, else par (shown muted until touched)
   const saved = round.scores[hole.no] || {};
@@ -78,17 +123,20 @@ function PlayRound({ round }) {
   // Edits you made but haven't saved win over the saved score; otherwise the saved score (which may have come from another phone) wins.
   // Only scores you actually changed count as edits, so a score saved on another phone isn't reset to par.
   const wasDirty = !!kept?.dirty;
-  const mine = id => wasDirty && !!kept.base && kept.draft[id] !== kept.base[id];
+  // A score confirmed at par also stays when the hole's par was fixed before saving (see keepsDraft)
+  const mine = id => keepsDraft(kept, id, saved, hole.par);
   const [dirty, setDirty] = useState(wasDirty);
   const [base] = useState(() => Object.fromEntries(units.map(p => [p.id, mine(p.id) ? kept.base[p.id] : saved[p.id] ?? hole.par])));
   const [draft, setDraft] = useState(() => Object.fromEntries(units.map(p => [p.id, mine(p.id) ? kept.draft[p.id] : saved[p.id] ?? hole.par])));
   const [touched, setTouched] = useState(() => Object.fromEntries(units.map(p => [p.id, saved[p.id] != null || (wasDirty && !!kept.touched[p.id])])));
   const emptyMarks = { bbb: { bingo: null, bango: null, bongo: null }, snake: { snake: [] }, hammer: { hammers: [], conceded: null } }[game] || {};
-  const [marks, setMarks] = useState(() => (GAMES[game].marks ? (wasDirty && kept.marks) || structuredClone(round.marks?.[hole.no] || emptyMarks) : null));
+  // Junk as a side game: its dots are saved in the same marks object as the main game's marks
+  const junk = useMemo(() => (sideGamesOf(round).some(sg => sg.game === 'dots') ? gameView(round, 'dots') : null), [round]);
+  const [marks, setMarks] = useState(() => (GAMES[game].marks || junk ? (wasDirty && kept.marks) || structuredClone(round.marks?.[hole.no] || emptyMarks) : null));
   useEffect(() => { DRAFTS.set(draftKey, { draft, base, touched, dirty, marks }); }, [draftKey, draft, base, touched, dirty, marks]);
-  const [banker, setBanker] = useState(() => (game === 'banker' ? structuredClone(bankerHoleSetup(round, idx)) : null));
-  const [phase, setPhase] = useState(() => (game === 'banker' && !holeComplete(round, hole) ? 'bets' : 'scores'));
-  const [wolf, setWolf] = useState(() => (game === 'wolf' ? wolfHoleSetup(round, idx) : null));
+  const [banker, setBanker] = useState(() => (game === 'banker' ? structuredClone(bankerHoleSetup(main, idx)) : null));
+  const [phase, setPhase] = useState(() => (game === 'banker' && editable && !holeComplete(round, hole) ? 'bets' : 'scores'));
+  const [wolf, setWolf] = useState(() => (game === 'wolf' ? wolfHoleSetup(main, idx) : null));
   const [menu, setMenu] = useState(false);
   const [leftSheet, setLeftSheet] = useState(false);
   const [card, setCard] = useState(false);
@@ -101,8 +149,59 @@ function PlayRound({ round }) {
   const [switching, setSwitching] = useState(false);
   const others = useStore(s => roundsInProgress(s).filter(r => r.id !== round.id).length);
   const [addSheet, setAddSheet] = useState(null); // true, or the seat request being answered
+  const [handSheet, setHandSheet] = useState(false);
+  const [fixSheet, setFixSheet] = useState(null); // 'hole' | 'tee'
+  const localCourse = useStore(s => findCourse(s, round.course.id));
+  const holeFixed = !!holeFixOf(round, hole.no);
   const requests = useSeatRequests(round.id);
   const numRefs = useRef({});
+
+  // --- Keeping score in a shared round ---
+  const keeper = keeperOf(round);
+  const sharedLive = !!round.shared && !round.shared.ended;
+  const amKeeper = sharedLive && isKeeper(round, me, isHost);
+  const inRound = !!me && round.players.some(p => p.id === me);
+  const now = useNow(sharedLive && !!keeper && !amKeeper ? 30000 : 0);
+  const quiet = sharedLive && inRound && canTakeCard(round, me, now, seenSave(round));
+  const cardAsk = openAsk(round);
+  const holderName = keeperName(round);
+  // A round shared before keepers existed: the host phone takes the card when it opens it
+  useEffect(() => {
+    if (!round.shared?.host || round.shared.ended || round.status !== 'active' || keeperOf(round)) return;
+    update(s => { const r = s.rounds[round.id]; if (r && !keeperOf(r)) Object.assign(r, hostKeeper(), seatTaken(r, s.me)); });
+  }, [round]);
+  // Someone handed this phone the card: say so, and go to the hole they were on
+  useEffect(() => {
+    if (!amKeeper || !keeper?.since || keeper.by === me || HANDED.has(`${round.id}:${keeper.since}`)) return;
+    HANDED.add(`${round.id}:${keeper.since}`);
+    if (Date.now() - keeper.since > 30 * 60000) return;
+    const from = keeper.by ? firstName(round.players.find(p => p.id === keeper.by)?.name || '') : round.hostName ? firstName(round.hostName) : '';
+    const at = keeper.hole != null ? round.holes.findIndex(h => h.no === keeper.hole) : -1;
+    const no = at >= 0 ? keeper.hole : hole.no;
+    showToast(`${from || 'The scorekeeper'} handed you the card. You’re on hole ${no}.`);
+    if (at >= 0 && at !== idx) update(s => { s.rounds[round.id].current = at; });
+  }, [amKeeper, keeper?.since, keeper?.by, keeper?.hole, me, round, idx, hole.no, showToast]);
+  const askCard = () => { update(s => { Object.assign(s.rounds[round.id], askForCard(me)); }); showToast(`Asked ${holderName} for the card`); };
+  const takeBack = () => update(s => { Object.assign(s.rounds[round.id], clearAsk()); });
+  const takeCard = async () => {
+    const ok = await confirmAsk({
+      title: `Take the card from ${holderName}?`,
+      text: `${holderName}’s phone hasn’t saved a hole in ${Math.round(KEEPER_QUIET_MS / 60000)} minutes.`,
+      confirmLabel: 'Take the card',
+    });
+    if (!ok) return;
+    // Taken, not handed: `by` is the taker, so nobody is told they were handed it
+    update(s => { const r = s.rounds[round.id]; if (r && canTakeCard(r, me, Date.now(), seenSave(r))) Object.assign(r, handOff(me, me, Date.now(), hole.no)); });
+    showToast('You’re keeping score');
+    buzz(20);
+  };
+  const giveCard = pid => {
+    setHandSheet(false);
+    update(s => { const r = s.rounds[round.id]; if (r && isKeeper(r, me, isHost)) Object.assign(r, handOff(pid, me ?? null, Date.now(), hole.no)); });
+    const who = firstName(round.players.find(p => p.id === pid)?.name || '');
+    showToast(`${who} is keeping score now`);
+  };
+  const keepCard = () => update(s => { Object.assign(s.rounds[round.id], clearAsk()); });
 
   const setMarksDirty = m => { setDirty(true); setMarks(m); };
   const setScore = (pid, v) => {
@@ -127,6 +226,7 @@ function PlayRound({ round }) {
   }, [round, idx, isLast]);
 
   const saveHole = async () => {
+    if (!editable) return;
     if (game === 'wolf' && wolf.partner === undefined) { showToast(`Pick ${round.players.find(p => p.id === wolf.wolf)?.name.split(' ')[0] || 'the wolf'}’s partner, or go lone wolf`); return; }
     const scores = Object.fromEntries(units.map(p => [p.id, draft[p.id]]));
     DRAFTS.delete(draftKey);
@@ -138,10 +238,13 @@ function PlayRound({ round }) {
       if (game === 'wolf') r.wolf[hole.no] = wolf;
       if (marks) { if (!r.marks) r.marks = {}; r.marks[hole.no] = marks; }
       if (!isLast) r.current = nextIdx;
+      // The keeper's phone is still keeping score: nobody can take the card for another 10 minutes
+      if (isKeeper(r, me, isHost)) Object.assign(r, keeperSaved(r));
       // Auto presses before the next hole
       if (pressMode(r) === 'auto' && !isLast) {
         const next = nextIdx + 1; // playing position of the hole we're going to
-        for (const o of nassauPressOptions(r, next)) {
+        // The main game's own players: a side-only player is never on a side
+        for (const o of nassauPressOptions(gameView(r, 'main'), next)) {
           r.presses.push({ id: `auto-${o.leg}-${next}`, leg: o.leg, start: next, by: o.trailing, auto: true });
         }
       }
@@ -173,6 +276,7 @@ function PlayRound({ round }) {
     update(s => {
       const rr = s.rounds[round.id];
       rr.status = 'done'; rr.finishedAt = Date.now();
+      markUsualPlayed(s, rr, rr.finishedAt);
       leaveRound(s, round.id);
     });
     nav.reset('history', ['roundDetail', { id: round.id, celebrate: true }]);
@@ -196,7 +300,7 @@ function PlayRound({ round }) {
       cancelLabel: 'Keep playing',
     });
     if (choice === 'finish') {
-      update(s => { const rr = s.rounds[round.id]; rr.status = 'done'; rr.finishedAt = Date.now(); leaveRound(s, round.id); });
+      update(s => { const rr = s.rounds[round.id]; rr.status = 'done'; rr.finishedAt = Date.now(); markUsualPlayed(s, rr, rr.finishedAt); leaveRound(s, round.id); });
       nav.reset('history', ['roundDetail', { id: round.id, celebrate: true }]);
     }
     if (choice === 'discard') {
@@ -222,17 +326,38 @@ function PlayRound({ round }) {
         <button className="header-close" onClick={() => nav.pop()} aria-label="Leave round (it stays saved)"><Icon name="caret-down" /></button>
         <div className="play-title">
           <div className="play-course">{round.course.name}</div>
-          <div className="play-progress">{GAMES[game].name} · Hole {idx + 1} of {round.holes.length} {round.shared && <button className="pill-link" onClick={() => setLive(true)}><LivePill round={round} /></button>}</div>
+          <div className="play-progress">{gameLabel(round)} · Hole {idx + 1} of {round.holes.length} {round.shared && <button className="pill-link" onClick={() => setLive(true)}><LivePill round={round} /></button>}</div>
         </div>
         <button className="header-close" onClick={() => setMenu(true)} aria-label="Round menu"><Icon name="dots-three" /></button>
       </div>
       <MoneyBar round={round} hole={hole} preview={preview} />
-      {round.editing && (
+      {sharedLive && keeper && round.status === 'active' && !round.editing && (
+        <div className="seat-req keeper-bar" role="status">
+          <Icon name="pencil-simple" fill />
+          <span className="sr-text">{amKeeper ? 'You’re keeping score' : <><strong>{holderName}</strong> is keeping score</>}</span>
+          {amKeeper
+            ? <button className="pill-btn" onClick={() => setHandSheet(true)}>Hand off</button>
+            : inRound && (quiet
+              ? <button className="pill-btn" onClick={takeCard}>Take the card</button>
+              : cardAsk?.by === me
+                ? <button className="pill-btn ghost" onClick={takeBack}>Asked · Undo<span className="sr-only">: take back asking {holderName} for the card</span></button>
+                : <button className="pill-btn" onClick={askCard}>Ask for it</button>)}
+        </div>
+      )}
+      {amKeeper && cardAsk && round.status === 'active' && (
+        <div className="seat-req" role="status">
+          <Icon name="hand-grabbing" fill />
+          <span className="sr-text"><strong>{firstName(round.players.find(p => p.id === cardAsk.by)?.name || '')}</strong> asked for the card</span>
+          <button className="pill-btn" disabled={dirty} onClick={() => giveCard(cardAsk.by)}>Hand it over</button>
+          <button className="pill-btn ghost" onClick={keepCard}>Keep it</button>
+        </div>
+      )}
+      {round.editing && editable && (
         <button className="finished-banner" onClick={doneEditing}>
           <Icon name="pencil-simple" fill /> Fixing scores. The tab updates as you save. Done <Icon name="arrow-right" />
         </button>
       )}
-      {requests[0] && round.status === 'active' && (
+      {requests[0] && round.status === 'active' && editable && (
         <div className="seat-req" role="status">
           <Icon name="user-plus" fill />
           <span className="sr-text"><strong>{requests[0].name}</strong> wants to join{requests.length > 1 ? ` (+${requests.length - 1} more)` : ''}</span>
@@ -244,7 +369,8 @@ function PlayRound({ round }) {
           <Icon name="flag-checkered" fill /> The scorekeeper finished this round. See results <Icon name="arrow-right" />
         </button>
       )}
-      <div className="hole-meta" onClick={() => setCard(true)} role="button" tabIndex={0} aria-label="Open scorecard">
+      <div className="hole-meta" onClick={() => setCard(true)} role="button" tabIndex={0} aria-label={holeFixed ? `Open scorecard. Hole ${hole.no}’s par or HCP was fixed for this round` : 'Open scorecard'}>
+        {holeFixed && <span className="fixed-tag" aria-hidden="true">Fixed</span>}
         <div className="mc"><span className="ml">Hole</span><span className="mv">{hole.no}</span></div>
         <div className="mc"><span className="ml">Par</span><span className="mv">{hole.par}</span></div>
         <div className="mc"><span className="ml">HCP</span><span className="mv">{hole.hdcp ?? '–'}</span></div>
@@ -260,34 +386,56 @@ function PlayRound({ round }) {
       </div>
 
       {game === 'banker' && (
-        <BankerPanel round={round} banker={banker} setBanker={setBanker} phase={phase} setPhase={setPhase}
+        <BankerPanel round={main} readOnly={!editable} banker={banker} setBanker={setBanker} phase={phase} setPhase={setPhase}
           onPick={() => setBankerPick(true)} onBet={pid => setBetPad(pid)} draft={draft} hole={hole} />
       )}
-      {(game === 'nassau' || game === 'match') && <MatchPanel round={round} hole={hole} />}
-      {game === 'skins' && <SkinsPanel round={round} hole={hole} onChange={() => setBetsSheet(true)} />}
-      {game === 'wolf' && <WolfPanel round={round} hole={hole} wolf={wolf} setWolf={setWolf} />}
-      {game === 'vegas' && <VegasPanel round={round} hole={hole} draft={draft} touched={touched} />}
-      {game === 'sixes' && <SixesPanel round={round} hole={hole} />}
-      {(game === 'stroke' || game === 'stableford' || game === 'quota') && <TotalsPanel round={round} />}
-      {(game === 'nines' || game === 'bbb' || game === 'dots') && <PointsPanel round={round} />}
-      {game === 'scramble' && <ScramblePanel round={round} />}
-      {game === 'aces' && <MoneyPanel round={round} results={results} icon="spade" label="Aces & deuces so far" />}
-      {game === 'rabbit' && <RabbitPanel round={round} hole={hole} />}
-      {game === 'snake' && <SnakePanel round={round} hole={hole} marks={marks} />}
-      {game === 'hammer' && phase === 'scores' && <HammerPanel round={round} hole={hole} marks={marks} setMarks={setMarksDirty} />}
+      {(game === 'nassau' || game === 'match') && <MatchPanel round={main} hole={hole} readOnly={!editable} />}
+      {game === 'skins' && <SkinsPanel round={main} hole={hole} onChange={editable ? () => setBetsSheet(true) : null} />}
+      {game === 'wolf' && <WolfPanel round={main} hole={hole} wolf={wolf} setWolf={editable ? setWolf : null} />}
+      {game === 'vegas' && <VegasPanel round={main} hole={hole} draft={draft} touched={touched} />}
+      {game === 'sixes' && <SixesPanel round={main} hole={hole} />}
+      {(game === 'stroke' || game === 'stableford' || game === 'quota') && <TotalsPanel round={main} />}
+      {(game === 'nines' || game === 'bbb' || game === 'dots') && <PointsPanel round={main} />}
+      {game === 'scramble' && <ScramblePanel round={main} />}
+      {game === 'aces' && <MoneyPanel round={main} results={results} icon="spade" label="Aces & deuces so far" />}
+      {game === 'rabbit' && <RabbitPanel round={main} hole={hole} />}
+      {game === 'snake' && <SnakePanel round={main} hole={hole} marks={marks} />}
+      {game === 'hammer' && phase === 'scores' && <HammerPanel round={main} hole={hole} marks={marks} setMarks={setMarksDirty} readOnly={!editable} />}
 
       {phase === 'scores' && (
         <div className="scroll">
-          {game === 'bbb' && <BBBPicker round={round} hole={hole} marks={marks} setMarks={setMarksDirty} />}
-          {game === 'snake' && <SnakePicker round={round} hole={hole} marks={marks} setMarks={setMarksDirty} />}
-          {units.map(p => {
+          {!editable && sharedLive && <p className="field-help" style={{ padding: '0 20px' }}>{round.status === 'active' ? `Scores as ${holderName} saves them. Browse any hole.` : 'Only the players in this round can fix its scores.'}</p>}
+          {game === 'bbb' && editable && <BBBPicker round={main} hole={hole} marks={marks} setMarks={setMarksDirty} />}
+          {game === 'snake' && editable && <SnakePicker round={main} hole={hole} marks={marks} setMarks={setMarksDirty} />}
+          {!editable && units.map(p => {
+            const st = round.useHandicaps ? strokesFor(round, p, hole) : 0;
+            const v = saved[p.id];
+            return (
+              <div key={p.id} className="pcard score-row">
+                <div className="row-main">
+                  <div className="pname">{p.name}</div>
+                  <div className="ps">
+                    {st > 0 && <span className="stroke-dots">{'●'.repeat(st)} Gets {st} stroke{st > 1 ? 's' : ''}</span>}
+                    {v != null && v !== 'X' && <span className={`score-name s${Math.max(-2, Math.min(2, v - hole.par))}`}> {scoreName(v, hole.par)}</span>}
+                    {v === 'X' && <span> Picked up</span>}
+                  </div>
+                </div>
+                <div className="score-ctrl">
+                  <span className={`sc-num ${v == null ? 'untouched' : ''}`}>
+                    <span className="sr-only">{p.name} </span>{v == null ? <><span aria-hidden="true">–</span><span className="sr-only">no score yet</span></> : v === 'X' ? pickupGross(hole.par, st) : v}
+                  </span>
+                </div>
+              </div>
+            );
+          })}
+          {editable && units.map(p => {
             const st = round.useHandicaps ? strokesFor(round, p, hole) : 0;
             const v = draft[p.id];
             const isBanker = banker?.banker === p.id;
             const isWolf = wolf?.wolf === p.id;
             const shown = v === 'X' ? pickupGross(hole.par, st) : v;
             return (
-              <div key={p.id} className={`pcard score-row ${game === 'dots' ? 'with-dots' : ''} ${isBanker || isWolf ? 'bkr' : ''}`}>
+              <div key={p.id} className={`pcard score-row ${game === 'dots' || junk ? 'with-dots' : ''} ${isBanker || isWolf ? 'bkr' : ''}`}>
                 <div className="row-main">
                   <div className="pname" style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                     {p.name}
@@ -315,7 +463,8 @@ function PlayRound({ round }) {
                   <button className="sc-btn" aria-label={`${p.name} one more`} disabled={v !== 'X' && v >= 15}
                     onClick={() => setScore(p.id, v === 'X' ? hole.par + 1 : Math.min(15, v + 1))}><Icon name="plus" /></button>
                 </div>
-                {game === 'dots' && <DotsRow round={round} player={p} hole={hole} marks={marks} setMarks={setMarksDirty} gross={touched[p.id] ? v : null} />}
+                {game === 'dots' && main.players.some(x => x.id === p.id) && <DotsRow round={main} player={p} hole={hole} marks={marks} setMarks={setMarksDirty} gross={touched[p.id] ? v : null} />}
+                {junk && junk.players.some(x => x.id === p.id) && <DotsRow round={junk} player={p} hole={hole} marks={marks} setMarks={setMarksDirty} gross={touched[p.id] ? v : null} label={`${firstName(p.name)}’s junk`} />}
               </div>
             );
           })}
@@ -323,7 +472,12 @@ function PlayRound({ round }) {
       )}
 
       <div className="cta-wrap play-cta">
-        {phase === 'bets' ? (
+        {!editable ? (
+          <div style={{ display: 'flex', gap: 8 }}>
+            <button className="full-btn outline" style={{ width: 64, flex: 'none' }} disabled={idx === 0} onClick={() => goHole(idx - 1)} aria-label="Previous hole"><Icon name="arrow-left" /></button>
+            <button className="full-btn outline" style={{ flex: 1 }} disabled={isLast} onClick={() => goHole(idx + 1)}>{isLast ? 'Last hole' : <>Next hole <Icon name="arrow-right" /></>}</button>
+          </div>
+        ) : phase === 'bets' ? (
           <button className="full-btn" onClick={() => setPhase('scores')}>Bets are in, enter scores <Icon name="arrow-right" /></button>
         ) : (
           <div style={{ display: 'flex', gap: 8 }}>
@@ -337,17 +491,23 @@ function PlayRound({ round }) {
 
       <Sheet open={menu} onClose={() => setMenu(false)} title="Round">
         <button className="sheet-item" onClick={() => { setMenu(false); setCard(true); }}><span><Icon name="table" /> Scorecard</span><Icon name="caret-right" /></button>
+        {editable && <button className="sheet-item" onClick={() => { setMenu(false); setFixSheet('hole'); }}><span><Icon name="wrench" /> Fix this hole</span><Icon name="caret-right" /></button>}
         <button className="sheet-item" onClick={() => { setMenu(false); setRules(true); }}><span><Icon name="book-open" /> {GAMES[game].name} rules</span><Icon name="caret-right" /></button>
         {syncConfigured && (
           <button className="sheet-item" onClick={() => { setMenu(false); setLive(true); }}>
             <span><Icon name="broadcast" /> {round.shared ? `Live · code ${round.shared.code}` : 'Invite the group'}</span><Icon name="caret-right" />
           </button>
         )}
+        {/* Changing the game is for the phone keeping score (see keeper.js) */}
+        {editable && <>
         <button className="sheet-item" onClick={() => { setMenu(false); setBetsSheet(true); }}>
-          <span><Icon name="coins" /> Bets · {stakeSummary(game, round.settings)}</span><Icon name="caret-right" />
+          <span><Icon name="coins" /> Bets · {roundStakeLines(round).map(l => l.line).join(' + ')}</span><Icon name="caret-right" />
         </button>
         <button className="sheet-item" onClick={() => { setMenu(false); setHolesSheet(true); }}>
           <span><Icon name="flag-pennant" /> Round length · {round.holesCount} holes</span><Icon name="caret-right" />
+        </button>
+        <button className="sheet-item" onClick={() => { setMenu(false); setFixSheet('tee'); }}>
+          <span><Icon name="sliders-horizontal" /> Course and tee{courseTeeLabel(round, localCourse) ? ` · ${courseTeeLabel(round, localCourse)}` : ''}</span><Icon name="caret-right" />
         </button>
         <button className="sheet-item" onClick={() => { setMenu(false); setAddSheet(true); }}>
           <span><Icon name="user-plus" /> Add a player</span><Icon name="caret-right" />
@@ -355,35 +515,44 @@ function PlayRound({ round }) {
         <button className="sheet-item" onClick={() => { setMenu(false); setLeftSheet(true); }}>
           <span><Icon name="user-minus" /> {playersLeft(round).length ? `A player left · ${playersLeft(round).map(x => x.player.name.split(' ')[0]).join(', ')}` : 'A player left'}</span><Icon name="caret-right" />
         </button>
+        </>}
         {round.status === 'active' && (
           <button className="sheet-item" onClick={() => { setMenu(false); setSwitching(true); }}>
             <span><Icon name="stack" /> {others ? `Rounds in progress · ${others + 1}` : 'Start another round'}</span><Icon name="caret-right" />
           </button>
         )}
-        {round.editing
+        {editable && (round.editing
           ? <button className="sheet-item" onClick={doneEditing}><span><Icon name="check-circle" /> Done fixing scores</span><Icon name="caret-right" /></button>
-          : <button className="sheet-item" onClick={endEarly}><span><Icon name="flag-checkered" /> End round</span><Icon name="caret-right" /></button>}
+          : <button className="sheet-item" onClick={endEarly}><span><Icon name="flag-checkered" /> End round</span><Icon name="caret-right" /></button>)}
       </Sheet>
       <RoundsInProgressSheet open={switching} onClose={() => setSwitching(false)} currentId={round.id} />
       {holesSheet && <HolesSheet round={round} onClose={() => setHolesSheet(false)} />}
       {betsSheet && <BetsSheet round={round} onClose={() => setBetsSheet(false)} />}
+      {handSheet && <HandOffSheet round={round} me={me} dirty={dirty} onPick={giveCard} onClose={() => setHandSheet(false)} />}
       {addSheet && <AddPlayerSheet round={round} request={addSheet === true ? null : addSheet} onClose={() => setAddSheet(null)} />}
       {leftSheet && <LeftSheet round={round} idx={idx} onClose={() => setLeftSheet(false)} onEnd={() => { setLeftSheet(false); endEarly(); }} />}
       <Sheet open={card} onClose={() => setCard(false)} title="Scorecard" className="sc-sheet">
-        <p className="sheet-text">Tap a hole to jump to it and fix scores.</p>
+        <p className="sheet-text">{editable ? 'Tap a hole to jump to it and fix scores.' : 'Tap a hole to jump to it.'}</p>
         <Scorecard round={round} current={hole.no} onHole={no => { setCard(false); goHole(round.holes.findIndex(h => h.no === no)); }} />
+        {editable && (
+          <button className="quiet-row fix-link" onClick={() => { setCard(false); setFixSheet('hole'); }}>
+            <Icon name="wrench" /> <span><u>Wrong par or HCP?</u> Fix hole {hole.no}</span>
+          </button>
+        )}
       </Sheet>
+      {fixSheet === 'hole' && <FixHoleSheet round={round} holeNo={hole.no} me={me} onClose={() => setFixSheet(null)} />}
+      {fixSheet === 'tee' && <CourseTeeSheet round={round} me={me} onClose={() => setFixSheet(null)} />}
       <RulesSheet game={game} open={rules} onClose={() => setRules(false)} />
       <ShareSheet round={round} open={live} onClose={() => setLive(false)} />
       {game === 'banker' && (
         <>
           <Sheet open={bankerPick} onClose={() => setBankerPick(false)} title={`Banker · Hole ${hole.no}`}>
-            {playersOn(round, hole).map(p => (
+            {playersOn(main, hole).map(p => (
               <button key={p.id} className={`sheet-item ${banker.banker === p.id ? 'selected' : ''}`} aria-pressed={banker.banker === p.id}
                 onClick={() => {
                   const bets = {};
                   const def = round.settings.banker.defaultBet;
-                  for (const q of playersOn(round, hole)) if (q.id !== p.id) bets[q.id] = banker.bets[q.id] ?? def;
+                  for (const q of playersOn(main, hole)) if (q.id !== p.id) bets[q.id] = banker.bets[q.id] ?? def;
                   setBanker({ ...banker, banker: p.id, bets, doubled: {}, doubleBack: false });
                   setBankerPick(false);
                 }}>
@@ -614,6 +783,7 @@ function BetsSheet({ round, onClose }) {
         <GameOptions game={game} get={get} set={set} onAmount={(path, title, o) => setPad({ path, title, ...o })} holesCount={round.holesCount}
           players={round.players.length} firstName={game === 'banker' ? round.players[0]?.name : null} />
         {game === 'banker' && <p className="hint-card"><Icon name="info" fill /> The default bet fills in from the next hole. Bets on this hole are set from the Bets button.</p>}
+        {sideGamesOf(round).length > 0 && <p className="hint-card"><Icon name="info" fill /> These are the {GAMES[game].name} bets. Side game bets are set for the whole round.</p>}
         {(game === 'nassau' || game === 'match') && round.presses.length > 0 && whole && <p className="hint-card"><Icon name="lightning" fill /> Presses already made pay at the new amounts too.</p>}
         <div className="cta-wrap">
           <button className="full-btn" disabled={!changed || !!problem} onClick={apply}>
@@ -641,12 +811,21 @@ function MoneyBar({ round, hole, preview }) {
     setChanged(round.players.filter(p => prev[p.id] !== preview.balances[p.id]).map(p => p.id));
     setPrev(preview.balances);
   }
+  // With side games the bar is one total per person, and a tap shows each game's money
+  const byGame = preview.byGame || null;
+  const [open, setOpen] = useState(false);
+  const thru = played ? (pending ? `Thru ${played} + this hole` : `Thru ${played} hole${played === 1 ? '' : 's'}`) : pending ? 'This hole' : 'Everyone starts at $0';
+  const Box = byGame ? 'button' : 'div';
+  const boxProps = byGame
+    ? { type: 'button', className: 'money-bar mb-tap', 'aria-label': 'Money so far. Show by game', 'aria-haspopup': 'dialog', onClick: () => setOpen(true) }
+    : { className: 'money-bar', role: 'group', 'aria-label': 'Money so far' };
   // Not a live region: it changes on every tap. The saved hole's result is announced by the toast.
   return (
-    <div className="money-bar" role="group" aria-label="Money so far">
+    <>
+    <Box {...boxProps}>
       <div className="mb-head">
         <span>Money</span>
-        <span>{played ? (pending ? `Thru ${played} + this hole` : `Thru ${played} hole${played === 1 ? '' : 's'}`) : pending ? 'This hole' : 'Everyone starts at $0'}</span>
+        <span>{byGame ? `${thru} · Tap for games` : thru}</span>
       </div>
       <div className="mb-items" style={{ gridTemplateColumns: `repeat(${round.players.length}, minmax(0, 1fr))` }}>
         {round.players.map(p => {
@@ -661,13 +840,22 @@ function MoneyBar({ round, hole, preview }) {
           );
         })}
       </div>
-    </div>
+    </Box>
+    {byGame && (
+      <Sheet open={open} onClose={() => setOpen(false)} title="By game" className="sc-sheet">
+        <p className="sheet-text">Money so far ({thru.toLowerCase()}). Every game adds up into one total each.</p>
+        <ByGameTable round={round} byGame={byGame} total={preview.balances} />
+        {nassauOpenNote(round, byGame) && <p className="field-help" style={{ padding: '0 20px' }}>{nassauOpenNote(round, byGame)}</p>}
+        <div className="cta-wrap"><button className="full-btn outline" onClick={() => setOpen(false)}>Close</button></div>
+      </Sheet>
+    )}
+    </>
   );
 }
 
 // --------------------------- Banker ---------------------------------------
 
-function BankerPanel({ round, banker, setBanker, phase, setPhase, onPick, onBet, hole }) {
+function BankerPanel({ round, banker, setBanker, phase, setPhase, onPick, onBet, hole, readOnly = false }) {
   const b = round.players.find(p => p.id === banker.banker);
   const others = playersOn(round, hole).filter(p => p.id !== banker.banker);
   const anyDoubled = others.some(p => banker.doubled[p.id]);
@@ -676,7 +864,7 @@ function BankerPanel({ round, banker, setBanker, phase, setPhase, onPick, onBet,
     <>
       <div className="banker-bar">
         <div><div className="bl">Banker this hole</div><div className="bn"><Icon name="bank" fill /> {b?.name}</div></div>
-        {phase === 'bets'
+        {readOnly ? null : phase === 'bets'
           ? canPick && <button className="change-btn" onClick={onPick}>Change</button>
           : <button className="change-btn" onClick={() => setPhase('bets')}><Icon name="coins" /> Bets</button>}
       </div>
@@ -745,7 +933,7 @@ function SkinsPanel({ round, hole, onChange }) {
       </div>
       <div className="skin-counts">
         {round.players.map(p => <span key={p.id} className="press-chip">{p.name.split(' ')[0]} {Math.round(counts[p.id] * 10) / 10}</span>)}
-        <button className="change-btn" onClick={onChange}>{pot ? `${money(cfg.stake ?? cfg.value)} each in` : `${money(cfg.value)} a skin`}</button>
+        {onChange && <button className="change-btn" onClick={onChange}>{pot ? `${money(cfg.stake ?? cfg.value)} each in` : `${money(cfg.value)} a skin`}</button>}
       </div>
     </div>
   );
@@ -759,16 +947,43 @@ function WolfPanel({ round, hole, wolf, setWolf }) {
   const mult = round.settings.wolf.loneMultiplier;
   return (
     <div className="wolf-panel">
-      <div className="bl" style={{ marginBottom: 8 }}><Icon name="paw-print" fill /> <strong>{w?.name}</strong> is the wolf. Pick a partner after the tee shots, or go it alone.</div>
-      <div className="chip-row" style={{ padding: 0 }}>
+      <div className="bl" style={{ marginBottom: setWolf ? 8 : 0 }}><Icon name="paw-print" fill /> <strong>{w?.name}</strong> is the wolf.{' '}
+        {setWolf ? 'Pick a partner after the tee shots, or go it alone.'
+          : wolf.partner === undefined ? 'No partner picked yet.' : wolf.partner === null ? 'Lone wolf.' : `Partner: ${round.players.find(p => p.id === wolf.partner)?.name || '?'}.`}
+      </div>
+      {setWolf && <div className="chip-row" style={{ padding: 0 }}>
         {others.map(p => (
           <button key={p.id} className={`pill-btn ${wolf.partner === p.id ? 'on' : ''}`} aria-pressed={wolf.partner === p.id}
             onClick={() => setWolf({ ...wolf, partner: p.id })}>{p.name}</button>
         ))}
         <button className={`pill-btn lone ${wolf.partner === null ? 'on' : ''}`} aria-pressed={wolf.partner === null}
           onClick={() => setWolf({ ...wolf, partner: null })}><Icon name="paw-print" fill /> Lone wolf {mult}×</button>
-      </div>
+      </div>}
     </div>
   );
 }
 
+
+// --------------------------- Hand off the card -----------------------------
+
+/**
+ * The keeper hands the card to another player. Only players whose phone took their seat can keep
+ * score; watchers are never listed. Mounted only while open.
+ */
+function HandOffSheet({ round, me, dirty, onPick, onClose }) {
+  const choices = handOffChoices(round).filter(c => c.id !== me);
+  return (
+    <Sheet open onClose={onClose} title="Hand off the card">
+      <p className="sheet-text">Only players in this round can keep score.</p>
+      {dirty && <p className="hint-card"><Icon name="info" fill /> Save this hole first, so your scores go with the card.</p>}
+      {choices.map(c => (
+        <button key={c.id} className="sheet-item" disabled={dirty || !c.onApp} onClick={() => onPick(c.id)}
+          aria-label={c.onApp ? `Hand the card to ${c.name}` : `${c.name}, not on the app yet`}>
+          <span><Icon name="user-circle" fill /> {c.name}</span>
+          <span style={{ fontSize: 13 }}>{c.onApp ? <Icon name="caret-right" /> : 'Not on the app yet'}</span>
+        </button>
+      ))}
+      <div className="cta-wrap"><button className="full-btn outline" onClick={onClose}>Keep the card</button></div>
+    </Sheet>
+  );
+}

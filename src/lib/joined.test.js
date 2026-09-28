@@ -3,6 +3,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import {
   ADD_MID_ROUND, createRound, roundResults, holeComplete, scorers, addPlayerToRound, addPlayerProblem, firstOpenHole, roundNotes, rabbitTable, bankerHoleSetup,
+  gameView, wolfFor, skinsTable, joinGames, joinRule, leftRule, birdiePotShares, resizeRound,
 } from './round.js';
 import { assemble, buildMeta, buildHoles } from './sync-model.js';
 
@@ -317,6 +318,225 @@ test('every game that takes a late joiner still balances to zero', () => {
       r = addPlayerToRound(r, { id: 'z', name: 'Zed', courseHc: Math.floor(rnd() * 20) - 2 }, r.holes[from - 1].no);
       for (let i = from - 1; i < holesCount; i++) fill(r, i);
       assert.equal(sum(roundResults(r).balances), 0, `${game}, ${holesCount} holes, joined on ${from}`);
+    }
+  }
+});
+
+// --------------------------- Picking games when added (side games) -----------------------------
+// Decided 2026-09-29: after letting someone in, the scorekeeper picks which games they play and from
+// which hole. A player who can't join a fixed-side main game can still play the side games.
+
+const SIDE = {
+  skins: { value: 2, carryover: true, kind: 'net', payout: 'per', stake: 10, lastCarry: 'void' },
+  dots: { value: 1, auto: true, kinds: { greenie: true } },
+  birdies: { stake: 5, eagleShares: 2 },
+};
+const withSides = (r, games) => { r.sideGames = games.map(g => ({ game: g, settings: structuredClone(SIDE[g]) })); return r; };
+const pickWolves = r => r.holes.forEach((h, i) => { if (r.scores[h.no]) r.wolf[h.no] = { wolf: wolfFor(gameView(r, 'main'), i), partner: null }; });
+
+test('Wolf plus Skins: a 5th player on Skins only from hole 6 leaves the wolf money exactly as the foursome had it', () => {
+  const four = withSides(mk('wolf', 4), ['skins']);
+  // Holes 1 to 5: a tie on 4 and 5 builds a two-skin carry among the foursome
+  play(four, [{ a: 3, b: 4, c: 4, d: 4 }, { a: 4, b: 3, c: 4, d: 5 }, { a: 5, b: 4, c: 4, d: 3 }, { a: 4, b: 4, c: 5, d: 5 }, { a: 4, b: 4, c: 4, d: 4 }]);
+  four.current = 5;
+  assert.equal(addPlayerProblem(four), null); // Wolf is full, but Skins takes him
+  const five = structuredClone(addPlayerToRound(four, Zed, 6, ['skins']));
+  assert.deepEqual(five.gamesFor, { z: ['skins'] });
+  assert.deepEqual(five.joined, { z: 6 });
+  // Holes 6 to 9: Zed wins 6 outright, a wins 7, then ties
+  const late = [{ a: 4, b: 4, c: 4, d: 4, z: 3 }, { a: 3, b: 4, c: 4, d: 4, z: 4 }, { a: 4, b: 4, c: 4, d: 4, z: 4 }, { a: 5, b: 4, c: 4, d: 4, z: 4 }];
+  const lateFour = late.map(s => { const { z, ...rest } = s; void z; return rest; });
+  play(five, [null, null, null, null, null, ...late]);
+  play(four, [null, null, null, null, null, ...lateFour]);
+  pickWolves(four); pickWolves(five);
+  // The main game never sees Zed: same rotation, same wolf money
+  assert.deepEqual(gameView(five, 'main').players.map(p => p.id), ['a', 'b', 'c', 'd']);
+  five.holes.forEach((h, i) => assert.equal(wolfFor(gameView(five, 'main'), i), wolfFor(four, i)));
+  const res5 = roundResults(five), res4 = roundResults(four);
+  const wolf4 = res4.detail.byGame.main.balances;
+  assert.deepEqual({ ...res5.detail.byGame.main.balances }, { ...wolf4, z: 0 });
+  // Skins: Zed takes hole 6's skin from all four (4 x $2), then pays a $2 for hole 7, and no share of
+  // the carry from 4 and 5 either way
+  const sk = res5.detail.byGame.skins.balances;
+  assert.equal(sk.z, 6);
+  // a wins 7: its own skin plus the carry from 4 and 5. That carry is only the foursome's, so Zed
+  // pays for hole 7's own skin and nothing more
+  const skinsView = gameView(five, 'skins');
+  const row7 = skinsTable(skinsView).rows[6];
+  assert.equal(row7.winner, 'a');
+  const zedPaid = row7.parts.filter(pt => pt.payers.includes('z')).reduce((x, pt) => x + pt.worth, 0);
+  assert.equal(zedPaid, 2);
+  assert.equal(sum(res5.balances), 0);
+  // And the round's notes say what he's in
+  assert.match(roundNotes(five).find(n => n.kind === 'joined').text, /Zed joined on hole 6\. Wolf is set up for the players already in it, so they sit it out\. They play Skins from there\. Skins already carrying stay with the players who built them\./);
+});
+
+test('holeComplete of the main game ignores a side-only player\'s missing score', () => {
+  const r = withSides(mk('wolf', 4), ['skins']);
+  play(r, [{ a: 4, b: 4, c: 4, d: 4 }]);
+  const x = addPlayerToRound(r, Zed, 2, ['skins']);
+  x.scores[2] = { a: 4, b: 4, c: 4, d: 4 };
+  assert.equal(holeComplete(gameView(x, 'main'), x.holes[1]), true);
+  assert.equal(holeComplete(gameView(x, 'skins'), x.holes[1]), false);
+  assert.equal(holeComplete(x, x.holes[1]), false); // the card still wants his score
+});
+
+test('addPlayerProblem with and without side games', () => {
+  // No side games: as before
+  assert.match(addPlayerProblem(mk('nassau', 2)), /played in set sides/);
+  assert.match(addPlayerProblem(mk('wolf', 4)), /group is full/);
+  // A fixed-side main game with a side game that takes players: someone can join the side game
+  assert.equal(addPlayerProblem(withSides(mk('nassau', 2), ['dots'])), null);
+  assert.equal(addPlayerProblem(withSides(mk('vegas', 4, { teams: [['a', 'b'], ['c', 'd']] }), ['skins'])), null);
+  // Only a birdie pot, once under way: nothing takes a late joiner
+  const pot = withSides(mk('sixes', 4), ['birdies']);
+  assert.equal(addPlayerProblem(pot), null); // before the first score the pot still takes them
+  play(pot, [{ a: 4, b: 4, c: 4, d: 4 }]);
+  assert.match(addPlayerProblem(pot), /Sixes is for 4 players/);
+  // The main game's cap counts only its own players: Wolf is full at 4, side games go to 8
+  const big = withSides(mk('wolf', 4), ['skins']);
+  let r = big;
+  for (const id of ['v', 'w', 'x', 'y']) r = addPlayerToRound(r, { id, name: id.toUpperCase() }, null, ['skins']);
+  assert.equal(r.players.length, 8);
+  assert.match(addPlayerProblem(r), /up to 8 players/);
+  // A main game that takes joiners counts its own players, not the side-only ones
+  const sk = withSides(mk('stroke', 3), ['dots']);
+  const withSideOnly = addPlayerToRound(sk, Zed, null, ['dots']);
+  assert.equal(gameView(withSideOnly, 'main').players.length, 3);
+  assert.equal(addPlayerProblem(withSideOnly), null);
+});
+
+test('joinGames: one switch per game with a plain reason', () => {
+  const r = withSides(mk('wolf', 4, { course: eighteen, holesCount: 18 }), ['skins', 'dots']);
+  play(r, [{ a: 4, b: 4, c: 4, d: 4 }]);
+  const g = joinGames(r, 'Chris', 6);
+  assert.deepEqual(g.map(x => [x.key, x.on, x.disabled]), [['main', false, true], ['skins', true, false], ['dots', true, false]]);
+  assert.equal(g[0].reason, 'Wolf is set up for the players already in it, so Chris sits it out.');
+  assert.equal(g[1].reason, 'From hole 6. Skins already carrying stay with the players who built them.');
+  const b = withSides(mk('stroke', 3), ['birdies']);
+  play(b, [{ a: 4, b: 4, c: 4 }]);
+  const gb = joinGames(b, 'Chris', 4);
+  assert.deepEqual(gb.map(x => [x.key, x.on, x.disabled]), [['main', true, false], ['birdies', false, true]]);
+  assert.equal(gb[1].reason, 'The pot is for the players who started.');
+  assert.equal(gb[0].reason, 'Their money counts from there: they settle with each player on the holes they both played.');
+});
+
+test('gamesFor absent means today\'s behavior', () => {
+  const r = withSides(mk('skins', 3), ['dots']);
+  play(r, [{ a: 4, b: 5, c: 5 }]);
+  const x = addPlayerToRound(r, Zed, 3);
+  assert.equal(x.gamesFor, undefined);
+  // Picking every game is the same as not picking: nothing is written
+  const y = addPlayerToRound(r, Zed, 3, ['main', 'dots']);
+  assert.equal(y.gamesFor, undefined);
+  assert.deepEqual(roundResults(y), roundResults(x));
+  assert.equal(joinRule(x, 'z'), 'They play for the skins from there on. Skins already carrying stay with the players who built them. They’re in Junk from there.');
+});
+
+test('a Birdie pot joiner is excluded, and a side-only player never moves the main game\'s strokes', () => {
+  const r = withSides(mk('stroke', 3, { useHandicaps: true, players: [{ ...P[0], courseHcOverride: 2 }, { ...P[1], courseHcOverride: 6 }, { ...P[2], courseHcOverride: 10 }] }), ['birdies', 'skins']);
+  const before = r.players.map(p => p.plays);
+  // Before any score, added to the side games only: nobody else's strokes move
+  const x = addPlayerToRound(r, { id: 'z', name: 'Zed', courseHc: 0 }, null, ['birdies', 'skins']);
+  assert.deepEqual(x.players.slice(0, 3).map(p => p.plays), before);
+  // Late, the birdie pot leaves him out even if the list says otherwise
+  play(r, [{ a: 4, b: 4, c: 4 }]);
+  const y = addPlayerToRound(r, Zed, 2, ['birdies', 'skins']);
+  play(y, [null, { a: 4, b: 4, c: 4, z: 3 }]);
+  assert.deepEqual(birdiePotShares(gameView(y, 'birdies')).inPot, ['a', 'b', 'c']);
+  assert.equal(roundResults(y).detail.byGame.birdies.balances.z, 0);
+  assert.match(joinRule(y, 'z'), /birdie pot is for the players who started/);
+});
+
+test('a side-only player leaving leaves the main game as it was', () => {
+  const r = withSides(mk('wolf', 4), ['skins']);
+  play(r, [{ a: 4, b: 4, c: 4, d: 4 }]);
+  const x = addPlayerToRound(r, Zed, 2, ['skins']);
+  assert.match(leftRule(x, 'z'), /^Wolf carries on as it was: they weren’t in it\./);
+});
+
+test('games with an order or sides never see a side-only player: same money as without them', () => {
+  const extra = { hammer: { stake: 5, max: 3, who: 'either' }, snake: { stake: 5, growth: 'double', nines: false, cap: 4 } };
+  const cases = [['wolf'], ['banker'], ['sixes'], ['nassau'], ['vegas', [['a', 'b'], ['c', 'd']]], ['match', [['a', 'b'], ['c', 'd']]], ['hammer'], ['snake']];
+  const rows = [{ a: 3, b: 4, c: 5, d: 4 }, { a: 4, b: 3, c: 4, d: 5 }, { a: 5, b: 4, c: 3, d: 4 }, { a: 4, b: 5, c: 4, d: 3 }, { a: 4, b: 4, c: 4, d: 5 }, { a: 3, b: 5, c: 4, d: 4 }, { a: 4, b: 4, c: 3, d: 4 }, { a: 5, b: 3, c: 4, d: 4 }, { a: 4, b: 4, c: 5, d: 3 }];
+  for (const [game, teams] of cases) {
+    const base = withSides(mk(game, 4, { settings: { ...structuredClone(SETTINGS), ...extra }, ...(teams ? { teams } : {}) }), ['skins']);
+    // Zed is added before the first score, to Skins only, so he's on every hole
+    const five = structuredClone(addPlayerToRound(base, Zed, null, ['skins']));
+    const four = structuredClone(base);
+    for (const r of [four, five]) {
+      rows.forEach((s, i) => { r.scores[r.holes[i].no] = r === five ? { ...s, z: 4 } : { ...s }; });
+      const v = gameView(r, 'main');
+      r.holes.forEach((h, i) => {
+        if (game === 'wolf') r.wolf[h.no] = { wolf: wolfFor(v, i), partner: null };
+        if (game === 'banker') r.banker[h.no] = bankerHoleSetup(v, i);
+      });
+    }
+    const m4 = roundResults(four).detail.byGame.main.balances;
+    const m5 = roundResults(five).detail.byGame.main.balances;
+    assert.deepEqual(m5, { ...m4, z: 0 }, game);
+    assert.equal(sum(roundResults(five).balances), 0, game);
+  }
+});
+
+// Review 2026-09-29: changing the round length works strokes out again off the low player. A
+// side-only player must not be that low player, or the main game's strokes move under everyone.
+test('changing the round length with a side-only player: the main game\'s strokes and money are as if he were not there', () => {
+  const hcs = [{ ...P[0], courseHcOverride: 10 }, { ...P[1], courseHcOverride: 14 }];
+  const two = withSides(createRound({ id: 'r', game: 'nassau', course: eighteen, holesCount: 18, players: hcs, settings: structuredClone(SETTINGS), hcPct: 100, useHandicaps: true }), ['skins']);
+  play(two, [{ a: 4, b: 4 }]);
+  const three = addPlayerToRound(two, { id: 'z', name: 'Zed', courseHc: 2 }, 2, ['skins']);
+  const rows = Array.from({ length: 9 }, (_, i) => ({ a: 4 + (i % 2), b: 5 - (i % 3 === 0 ? 1 : 0) }));
+  const n2 = resizeRound(two, eighteen, 9), n3 = resizeRound(three, eighteen, 9);
+  play(n2, rows); play(n3, rows.map((s, i) => (i ? { ...s, z: 4 } : s)));
+  assert.deepEqual(gameView(n3, 'main').players.map(p => p.plays), n2.players.map(p => p.plays));
+  assert.deepEqual(roundResults(n3).detail.byGame.main.balances, { ...roundResults(n2).detail.byGame.main.balances, z: 0 });
+  assert.equal(sum(roundResults(n3).balances), 0);
+  // Old rounds, nobody picking games: exactly today's strokes
+  const old = resizeRound(addPlayerToRound(withSides(createRound({ id: 'r', game: 'stroke', course: eighteen, holesCount: 18, players: hcs, settings: structuredClone(SETTINGS), hcPct: 100, useHandicaps: true }), []), { id: 'z', name: 'Zed', courseHc: 2 }, null), eighteen, 9);
+  assert.deepEqual(old.players.map(p => p.plays), [4, 6, 0]);
+});
+
+// Review 2026-09-29: a side-only late joiner with pickups, a player leaving and a shorter round
+test('side-only late joiner sweep: every game stays zero-sum and the main game never sees him', () => {
+  const extra = { hammer: { stake: 5, max: 3, who: 'either' }, snake: { stake: 5, growth: 'double', nines: false, cap: 4 } };
+  const cases = [['wolf'], ['banker'], ['sixes'], ['nassau'], ['vegas', [['a', 'b'], ['c', 'd']]], ['match', [['a', 'b'], ['c', 'd']]], ['hammer'], ['snake']];
+  let seed = 7;
+  const rnd = () => { seed = (seed * 16807) % 2147483647; return seed / 2147483647; };
+  for (const [game, teams] of cases) {
+    for (const sides of [['skins'], ['dots', 'skins'], ['birdies', 'skins']]) {
+      for (let k = 0; k < 6; k++) {
+        const hcs = P.map((p, i) => ({ ...p, courseHcOverride: [4, 12, 20, 8][i] }));
+        const base = withSides(createRound({ id: 'r', game, course: eighteen, holesCount: 18, players: hcs, settings: { ...structuredClone(SETTINGS), ...extra }, hcPct: 100, useHandicaps: true, ...(teams ? { teams } : {}) }), sides);
+        const from = 3 + k;
+        const row = (i, withZ) => {
+          const s = Object.fromEntries(['a', 'b', 'c', 'd'].map(id => [id, rnd() < 0.08 ? 'X' : 3 + Math.floor(rnd() * 4)]));
+          if (withZ && i + 1 >= from) s.z = rnd() < 0.1 ? 'X' : 3 + Math.floor(rnd() * 4);
+          return s;
+        };
+        const rows = Array.from({ length: 18 }, (_, i) => row(i, true));
+        const four = structuredClone(base);
+        play(four, rows.slice(0, from - 1));
+        const five = structuredClone(addPlayerToRound(four, { id: 'z', name: 'Zed', courseHc: 0 }, from, sides));
+        rows.forEach((s, i) => { if (i + 1 >= from) { const { z, ...rest } = s; five.scores[five.holes[i].no] = s; four.scores[four.holes[i].no] = rest; void z; } });
+        if (k % 2) { four.left = { d: 12 }; five.left = { d: 12 }; for (const r of [four, five]) for (const h of r.holes) if (h.no > 12) delete r.scores[h.no].d; }
+        for (const r of [four, five]) {
+          const v = gameView(r, 'main');
+          r.holes.forEach((h, i) => {
+            if (game === 'wolf') r.wolf[h.no] = { wolf: wolfFor(v, i), partner: null };
+            if (game === 'banker') r.banker[h.no] = bankerHoleSetup(v, i);
+          });
+        }
+        for (const [x4, x5] of [[four, five], [resizeRound(four, eighteen, 9), resizeRound(five, eighteen, 9)]]) {
+          const r4 = roundResults(x4), r5 = roundResults(x5);
+          assert.deepEqual(r5.detail.byGame.main.balances, { ...r4.detail.byGame.main.balances, z: 0 }, `${game} ${sides} ${k}`);
+          assert.equal(sum(r5.balances), 0, `${game} ${sides} ${k}`);
+          for (const g of Object.values(r5.detail.byGame)) assert.equal(sum(g.balances), 0, `${game} ${g.label} ${k}`);
+          if (r5.detail.byGame.birdies) assert.equal(r5.detail.byGame.birdies.balances.z, 0);
+          // Head to heads are rounded pair by pair, so they can miss a player's total by a cent when a pot
+          // splits three ways; that is the same with or without side games (see the review notes)
+        }
+      }
     }
   }
 });

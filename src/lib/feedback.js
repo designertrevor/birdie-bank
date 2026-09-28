@@ -30,7 +30,7 @@ export function feedbackContext(roundId = null) {
     theme: s.settings.theme,
     counts: { players: Object.keys(s.players).length, rounds: Object.keys(s.rounds).length },
     round: r ? {
-      id: r.id, game: r.game, gameName: GAMES[r.game]?.name, course: r.course?.name, courseId: r.course?.id,
+      id: r.id, game: r.game, gameName: GAMES[r.game]?.name, sideGames: Array.isArray(r.sideGames) ? r.sideGames.map(sg => sg?.game) : undefined, course: r.course?.name, courseId: r.course?.id,
       holes: r.holes.length, current: r.current, players: r.players.length, shared: r.shared?.code || null, status: r.status,
     } : null,
   };

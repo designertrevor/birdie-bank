@@ -33,6 +33,35 @@ function biggestHoles(rows, max = 3) {
  * Games with nothing worth breaking down return no steps, so the totals play on their own.
  */
 export function revealSteps(round, res) {
+  const main = mainRevealSteps(round, res);
+  const byGame = res?.detail?.byGame;
+  if (!byGame) return main;
+  // Several games: the main game's steps, then one summary step per side game
+  const players = round.players || [];
+  const name = id => first(players.find(p => p.id === id)?.name) || '?';
+  const extra = Object.entries(byGame).filter(([key]) => key !== 'main').map(([key, g]) => sideStep(key, g, name, players));
+  return { title: main.steps.length ? main.title : 'The games', steps: [...main.steps, ...extra] };
+}
+
+/** One side game's reveal step: who did best in it and what it brought them, or a push. */
+function sideStep(key, g, name, players) {
+  const ids = players.map(p => p.id);
+  const best = ids.reduce((a, id) => ((g.balances[id] || 0) > (g.balances[a] || 0) ? id : a), ids[0]);
+  const amount = g.balances[best] || 0;
+  const d = g.detail || {};
+  if (amount <= 0) {
+    const text = { skins: 'No skins won', dots: 'No dots', birdies: 'No birdies, nobody pays' }[key] || 'All square';
+    return { key: `side-${key}`, label: g.label, text, tie: true };
+  }
+  let text = `${name(best)} comes out ahead`;
+  if (key === 'skins' && d.skinsWon?.[best]) text = `${name(best)} won ${plural(Math.round(d.skinsWon[best].skins * 10) / 10, 'skin')}`;
+  if (key === 'dots' && d.points) text = `${name(best)} had ${plural(d.points[best] || 0, 'dot')}`;
+  if (key === 'birdies' && d.birdies) text = `${name(best)} took ${plural(d.birdies.shares[best] || 0, 'share')} of the pot`;
+  return { key: `side-${key}`, label: g.label, text, amount };
+}
+
+/** The main game's steps (a round's only game before side games). */
+function mainRevealSteps(round, res) {
   const d = res?.detail || {};
   const players = round.players || [];
   const name = id => first(players.find(p => p.id === id)?.name) || '?';

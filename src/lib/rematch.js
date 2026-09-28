@@ -1,6 +1,6 @@
 // "Run it back": set up a new round like an earlier one (same game, course, group and bets).
 import { allCourses } from './courses.js';
-import { GAMES } from './round.js';
+import { GAMES, sideGamesOf } from './round.js';
 import { defaultTeams } from './teams.js';
 
 /**
@@ -42,6 +42,8 @@ export function rematchSetup(state, round) {
     hcPct: round.hcPct ?? null,
     useHc: round.useHandicaps !== false,
     teams,
+    // Side games come along with their own bets (absent on rounds that had none)
+    ...(sideGamesOf(round).length ? { sideGames: structuredClone(sideGamesOf(round)) } : {}),
     step: !course ? 1 : missing.length ? 2 : 3,
   };
 }

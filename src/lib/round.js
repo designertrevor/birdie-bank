@@ -6,7 +6,7 @@ import {
 import {
   bestBall, sideSplit, vegasHole, sixesPairings, sixesSegments, stablefordPoints, quotaPoints, quotaFor, ninesPoints,
   acesDeuces, settleTotals, scrambleTeamHandicap, rabbitHolder, scoreDots, DOT_KINDS, roundCents,
-  snakeHolder, snakeValue, hammerHole, canHammer,
+  snakeHolder, snakeValue, hammerHole, canHammer, birdiePot, birdieShares,
 } from './games.js';
 import { payFields } from './pay.js';
 
@@ -380,10 +380,14 @@ export function roundStarted(round) {
   return round.holes.some(h => Object.values(round.scores?.[h.no] || {}).some(v => v != null));
 }
 
-/** Why nobody can be added to this round right now, or null when someone can. */
-export function addPlayerProblem(round) {
+/** Most players in a round with side games: a side game takes up to 8, whatever the main game's cap. */
+export const MAX_SIDE_PLAYERS = 8;
+
+/** Why nobody can join the main game right now, or null when someone can. Its cap counts only its own players. */
+function mainAddProblem(round) {
   const g = GAMES[round.game];
-  if (round.players.length >= g.max) return `${g.name} is for ${g.max === g.min ? g.max : `up to ${g.max}`} players, and the group is full.`;
+  const inMain = gameView(round, 'main').players.length;
+  if (inMain >= g.max) return `${g.name} is for ${g.max === g.min ? g.max : `up to ${g.max}`} players, and the group is full.`;
   if (!ADD_MID_ROUND.includes(round.game)) {
     // Sides, teams and rotations are set when the round is made, so a new player would have no side to play on
     return roundStarted(round)
@@ -391,6 +395,63 @@ export function addPlayerProblem(round) {
       : `${g.name} is played in set sides, so a new player can’t be slotted in. Start a fresh round with everyone in it.`;
   }
   return null;
+}
+
+/**
+ * Whether a side game can take someone new. A pot (the birdie pot, or Skins played for a pot) is for
+ * the players who started, so it only takes someone new before the first hole they'd miss (`late`).
+ */
+function sideTakes(sg, late) {
+  if (sg.game === 'birdies') return !late;
+  if (sg.game === 'skins' && sg.settings?.payout === 'pot') return !late;
+  return true;
+}
+
+/**
+ * Why nobody can be added to this round right now, or null when someone can. With side games, a
+ * player who can't join the main game (set sides, or it's full) can still join a side game that takes
+ * them, up to MAX_SIDE_PLAYERS in the round.
+ */
+export function addPlayerProblem(round) {
+  const main = mainAddProblem(round);
+  if (!main) return null;
+  const sgs = sideGamesOf(round);
+  if (!sgs.length) return main;
+  if (round.players.length >= MAX_SIDE_PLAYERS) return `A round is for up to ${MAX_SIDE_PLAYERS} players, and the group is full.`;
+  const late = roundStarted(round);
+  return sgs.some(sg => sideTakes(sg, late)) ? null : main;
+}
+
+/**
+ * The games someone being added could play, one switch each: the main game first, then each side
+ * game. `first` is their first name and `fromNo` the hole they start on (null before any score).
+ * [{ key, label, on, disabled, reason }]. `on` is the switch's starting place; a disabled game is
+ * always off. Fixed-side main games (and a full one) never take a late joiner.
+ */
+export function joinGames(round, first, fromNo = null) {
+  const pos = fromNo == null ? 1 : round.holes.findIndex(h => h.no === fromNo) + 1;
+  const late = pos > 1;
+  const name = first || 'they';
+  const out = [];
+  const g = GAMES[round.game];
+  const problem = mainAddProblem(round);
+  if (problem) {
+    const full = ADD_MID_ROUND.includes(round.game) && gameView(round, 'main').players.length >= g.max;
+    out.push({ key: 'main', label: g.name, on: false, disabled: true, reason: full ? `${g.name} is for ${g.max === g.min ? g.max : `up to ${g.max}`} players, so ${name} sits it out.` : `${g.name} is set up for the players already in it, so ${name} sits it out.` });
+  } else {
+    const pid = '__new';
+    const probe = { ...round, joined: late ? { ...(round.joined || {}), [pid]: fromNo } : round.joined };
+    out.push({ key: 'main', label: g.name, on: true, disabled: false, reason: late ? mainJoinRule(probe, pid) : 'They play every hole.' });
+  }
+  for (const sg of sideGamesOf(round)) {
+    const label = SIDE_GAMES[sg.game].label;
+    if (!sideTakes(sg, late)) { out.push({ key: sg.game, label, on: false, disabled: true, reason: 'The pot is for the players who started.' }); continue; }
+    const reason = !late ? 'They play every hole.'
+      : sg.game === 'skins' ? `From hole ${fromNo}. Skins already carrying stay with the players who built them.`
+        : `From hole ${fromNo}.`;
+    out.push({ key: sg.game, label, on: true, disabled: false, reason });
+  }
+  return out;
 }
 
 /**
@@ -409,12 +470,18 @@ export function firstOpenHole(round) {
  * Before any score is in they're simply one more player and everyone's strokes are worked out
  * again. Once the round is under way nobody else's strokes change: the new player gets strokes
  * against the same low player everyone else plays off. Returns a new round; `round` is untouched.
+ * `games` lists the game keys they play (see gameKeys); leave it null for every game. When they're
+ * not in every game, round.gamesFor records theirs, and nobody else's strokes change even before the
+ * first score, so a player who's only in a side game never moves the main game's strokes.
  */
-export function addPlayerToRound(round, player, fromNo = null) {
+export function addPlayerToRound(round, player, fromNo = null, games = null) {
   const hc = player.courseHc ?? (player.index != null ? Math.round(round.holesCount === 9 ? player.index / 2 : player.index) : 0);
   const fresh = { id: player.id, name: player.name, tee: null, index: player.index ?? null, courseHc: hc, courseHcOverride: player.courseHc ?? null, ...payFields(player) };
   const next = { ...round, players: [...round.players], joined: { ...(round.joined || {}) } };
-  const started = roundStarted(round);
+  const keys = gameKeys(round);
+  const inAll = !Array.isArray(games) || keys.every(k => games.includes(k));
+  if (!inAll) next.gamesFor = { ...(round.gamesFor || {}), [fresh.id]: keys.filter(k => games.includes(k)) };
+  const started = roundStarted(round) || !inAll;
   if (!started) {
     const all = [...round.players, fresh];
     const plays = round.useHandicaps ? strokesOffLow(all.map(p => p.courseHc), round.hcPct) : all.map(() => 0);
@@ -436,6 +503,46 @@ export function addPlayerToRound(round, player, fromNo = null) {
 
 /** What joining late does to the game, in a sentence (for the results and the add-a-player sheet). */
 export function joinRule(round, pid) {
+  const list = round.gamesFor?.[pid];
+  if (Array.isArray(list) && sideGamesOf(round).length) return joinRuleByGame(round, pid, list);
+  return withSideRule(mainJoinRule(round, pid), round, 'joined');
+}
+
+/** joinRule for a player who picked their games (round.gamesFor): a line for each game. */
+function joinRuleByGame(round, pid, list) {
+  const g = GAMES[round.game];
+  const whole = playsWholeRound(round, pid);
+  const parts = [list.includes('main') ? mainJoinRule(round, pid)
+    : ADD_MID_ROUND.includes(round.game) ? `They sit out ${g.name}.` : `${g.name} is set up for the players already in it, so they sit it out.`];
+  for (const sg of sideGamesOf(round)) {
+    const inIt = list.includes(sg.game);
+    const pot = sg.game === 'birdies' ? 'birdie pot' : sg.game === 'skins' && sg.settings?.payout === 'pot' ? 'skins pot' : null;
+    const label = SIDE_GAMES[sg.game].label;
+    if (!inIt) parts.push(`They sit out ${pot ? `the ${pot}` : label}.`);
+    else if (pot && !whole) parts.push(`The ${pot} is for the players who started, so they’re not in it.`);
+    else if (pot) parts.push(`They’re in the ${pot}.`);
+    else if (sg.game === 'skins') parts.push(whole ? 'They’re in Skins.' : 'They play Skins from there. Skins already carrying stay with the players who built them.');
+    else parts.push(whole ? `They’re in ${label}.` : `They’re in ${label} from there.`);
+  }
+  return parts.join(' ');
+}
+
+/**
+ * The main game's rule sentence, plus a word on the side games when a round has them: the birdie
+ * pot is for the players who started (like every pot), and Skins and Junk carry on among whoever
+ * is playing. Rounds without side games get the main sentence unchanged.
+ */
+function withSideRule(text, round, kind) {
+  const sgs = sideGamesOf(round);
+  if (!sgs.length) return text;
+  const notes = [];
+  if (sgs.some(sg => sg.game === 'birdies')) notes.push(kind === 'joined' ? 'The birdie pot is for the players who started, so they’re not in it.' : 'They’re out of the birdie pot.');
+  const others = sgs.filter(sg => sg.game !== 'birdies').map(sg => SIDE_GAMES[sg.game].label);
+  if (others.length) notes.push(kind === 'joined' ? `They’re in ${others.join(' and ')} from there.` : `${others.join(' and ')} carr${others.length > 1 ? 'y' : 'ies'} on among the players still there.`);
+  return [text, ...notes].join(' ');
+}
+
+function mainJoinRule(round, pid) {
   const g = round.game;
   const s = round.settings?.[g];
   if ((g === 'stroke' || g === 'stableford' || g === 'quota') && s?.payout === 'pot') return 'The pot is for the players who started, so they’re not in it.';
@@ -506,23 +613,27 @@ function resizedHoles(round, course, holesCount, nine) {
   return list.map((h, i) => ({ ...h, rank: ranks[i] }));
 }
 
-export function resizeRound(round, course, holesCount, nine = 'front') {
+export function resizeRound(round, rawCourse, holesCount, nine = 'front') {
   if (holesCount === round.holesCount) return round;
+  // Fixes made during the round (a hole's par or stroke index, a tee's rating or slope) carry over
+  const course = fixedCourse(rawCourse, round);
+  // Course handicaps never move with a par fix (see fixHole), so they're worked out from the card's own pars
+  const hcCourse = teeFixedCourse(rawCourse, round);
   const holes = resizedHoles(round, course, holesCount, nine);
   const ratio = holesCount / round.holesCount;
+  const hcHoles = parFree(round, round.holes);
   const players = round.players.map(p => {
-    const tee = course.tees?.find(t => t.name === p.tee) || null;
+    const tee = hcCourse.tees?.find(t => t.name === p.tee) || null;
     // A figure set by hand (stored, or, on older rounds, one that doesn't match the formula) is scaled
-    const was = effectiveCourseHc(p.index, tee, course, round.holes, round.holesCount, null).value;
+    const was = effectiveCourseHc(p.index, tee, hcCourse, hcHoles, round.holesCount, null).value;
     const override = p.courseHcOverride ?? (was === p.courseHc ? null : p.courseHc);
     if (override != null) {
       const v = Math.round(override * ratio);
       return { ...p, courseHc: v, courseHcOverride: v };
     }
-    return { ...p, courseHc: effectiveCourseHc(p.index, tee, course, holes, holesCount, null).value, courseHcOverride: null };
+    return { ...p, courseHc: effectiveCourseHc(p.index, tee, hcCourse, parFree(round, holes), holesCount, null).value, courseHcOverride: null };
   });
-  const plays = round.useHandicaps ? strokesOffLow(players.map(p => p.courseHc), round.hcPct) : players.map(() => 0);
-  const full = players.map((p, i) => ({ ...p, plays: plays[i] }));
+  const full = withPlays(round, players);
   const curNo = round.holes[Math.min(round.current, round.holes.length - 1)]?.no;
   let current = holes.findIndex(h => h.no === curNo);
   if (current < 0) current = Math.max(0, holes.findIndex(h => !holeComplete(round, h)));
@@ -537,6 +648,178 @@ export function resizeRound(round, course, holesCount, nine = 'front') {
   };
   if (round.teams) next.teams = withTeamHandicaps(next, round.teams, full, round.useHandicaps, round.hcPct);
   return next;
+}
+
+/** Players with `plays` (strokes off the low) worked out again from their course handicaps. */
+function withPlays(round, players) {
+  let plays = round.useHandicaps ? strokesOffLow(players.map(p => p.courseHc), round.hcPct) : players.map(() => 0);
+  // A player who's only in the side games never sets the low: the main game's players play off
+  // their own low, as if the side-only player weren't there (and they play off that same low)
+  if (round.useHandicaps && round.gamesFor) {
+    const lows = plays.filter((_, i) => playsGame(round, players[i].id, 'main'));
+    const low = lows.length ? Math.min(...lows) : 0;
+    plays = plays.map(v => v - low);
+  }
+  return players.map((p, i) => ({ ...p, plays: plays[i] }));
+}
+
+// --------------------------- Fix a hole or a tee ---------------------------
+// The scorekeeper can correct a hole's par or stroke index, or a tee's rating and slope, for this
+// round only. round.holeFixes = { holeNo: { courseIdx, par?: [old, new], hdcp?: [old, new], at, by } }
+// and round.teeFixes = { teeName: { rating?: [old, new], slope?: [old, new], at, by } }. Rounds
+// without them are untouched. A resize keeps them (see fixedCourse).
+
+/** A 9-hole card played twice for 18: both passes share each course hole. */
+export function playedTwice(round) {
+  const idxs = round.holes.map(h => h.courseIdx).filter(i => i != null);
+  return new Set(idxs).size < idxs.length;
+}
+
+/** Holes with each par as it was before any fix, for course handicaps (a par fix never moves them). */
+function parFree(round, holes) {
+  const fixes = Object.values(round.holeFixes || {});
+  if (!fixes.length) return holes;
+  return holes.map(h => {
+    const f = fixes.find(x => x.courseIdx === h.courseIdx && x.par);
+    return f ? { ...h, par: f.par[0] } : h;
+  });
+}
+
+/** The course with this round's tee fixes laid over it. */
+function teeFixedCourse(course, round) {
+  const tf = round.teeFixes;
+  if (!course || !tf || !Object.keys(tf).length) return course;
+  return {
+    ...course,
+    tees: (course.tees || []).map(t => {
+      const f = tf[t.name];
+      if (!f) return t;
+      return { ...t, ...(f.rating ? { rating: f.rating[1] } : {}), ...(f.slope ? { slope: f.slope[1] } : {}) };
+    }),
+  };
+}
+
+/** The course with this round's hole and tee fixes laid over it (the same object when there are none). */
+export function fixedCourse(course, round) {
+  const base = teeFixedCourse(course, round);
+  const fixes = Object.values(round.holeFixes || {});
+  if (!base || !fixes.length) return base;
+  // A stroke index is only ever fixed on a round that isn't a 9 played twice, so it's always the card's own
+  return {
+    ...base,
+    holes: base.holes.map((h, i) => {
+      const f = fixes.filter(x => x.courseIdx === i);
+      if (!f.length) return h;
+      const par = f.find(x => x.par)?.par[1];
+      const hdcp = f.find(x => x.hdcp)?.hdcp[1];
+      return { ...h, ...(par != null ? { par } : {}), ...(hdcp != null ? { hdcp } : {}) };
+    }),
+  };
+}
+
+/** The fix recorded on a hole, or null. */
+export function holeFixOf(round, holeNo) {
+  return round.holeFixes?.[holeNo] || null;
+}
+
+/**
+ * Correct one hole's par and stroke index for this round. Par applies to every pass over that
+ * course hole (a 9-hole card played twice). A stroke index another hole already has swaps the two,
+ * as on a real card, and every hole's rank is worked out again, so strokes can move on holes
+ * already played and the money recounts. Course handicaps and strokes off the low stay as they
+ * are: a par change shifts everyone's course handicap by the same amount. Returns a new round.
+ */
+export function fixHole(round, holeNo, { par, hdcp } = {}, { at = Date.now(), by = null } = {}) {
+  const i = round.holes.findIndex(h => h.no === holeNo);
+  if (i < 0) return round;
+  const holes = round.holes.map(h => ({ ...h }));
+  const target = holes[i];
+  const fixes = { ...(round.holeFixes || {}) };
+  const note = (h, key, from, to) => {
+    const prev = fixes[h.no] || { courseIdx: h.courseIdx };
+    const orig = prev[key] ? prev[key][0] : from;
+    const next = { ...prev, at, by };
+    if (orig === to) delete next[key]; else next[key] = [orig, to];
+    if (!next.par && !next.hdcp) delete fixes[h.no]; else fixes[h.no] = next;
+  };
+  if (par != null && par !== target.par) {
+    // A hole without a courseIdx (never expected) only ever fixes itself
+    for (const h of holes) if (h === target || (target.courseIdx != null && h.courseIdx === target.courseIdx)) { note(h, 'par', h.par, par); h.par = par; }
+  }
+  if (hdcp != null && hdcp !== target.hdcp && !playedTwice(round)) {
+    const other = holes.find(h => h.no !== holeNo && h.hdcp === hdcp);
+    if (other) { note(other, 'hdcp', other.hdcp, target.hdcp); other.hdcp = target.hdcp; }
+    note(target, 'hdcp', target.hdcp, hdcp);
+    target.hdcp = hdcp;
+  }
+  const ranks = rankHoles(holes.map(h => h.hdcp));
+  const next = { ...round, holes: holes.map((h, k) => ({ ...h, rank: ranks[k] })) };
+  next.par = parOf(next.holes);
+  if (Object.keys(fixes).length) next.holeFixes = fixes; else delete next.holeFixes;
+  return next;
+}
+
+/** The hole whose stroke index `hdcp` would be swapped with `holeNo`'s, or null. */
+export function hdcpSwapWith(round, holeNo, hdcp) {
+  return round.holes.find(h => h.no !== holeNo && h.hdcp === hdcp) || null;
+}
+
+/**
+ * Correct a tee's rating and slope for this round. Course handicaps for players on that tee are
+ * worked out again (a handicap set by hand stays), then everyone's strokes off the low.
+ * `course` is this phone's copy of the course (the round only keeps tee names). Returns a new round.
+ */
+export function fixTee(round, course, teeName, { rating, slope } = {}, { at = Date.now(), by = null } = {}) {
+  const tee = course?.tees?.find(t => t.name === teeName);
+  if (!tee) return round;
+  const fixes = { ...(round.teeFixes || {}) };
+  const prev = fixes[teeName] || {};
+  const next = { ...prev, at, by };
+  for (const [key, to] of [['rating', rating], ['slope', slope]]) {
+    if (to == null) continue;
+    const orig = prev[key] ? prev[key][0] : tee[key] ?? null;
+    if (orig === to) delete next[key]; else next[key] = [orig, to];
+  }
+  if (next.rating || next.slope) fixes[teeName] = next; else delete fixes[teeName];
+  const out = { ...round };
+  if (Object.keys(fixes).length) out.teeFixes = fixes; else delete out.teeFixes;
+  const wasCourse = teeFixedCourse(course, round);
+  const hcCourse = teeFixedCourse(course, out);
+  const hcHoles = parFree(round, round.holes);
+  const players = round.players.map(p => {
+    if (p.tee !== teeName || p.courseHcOverride != null) return p;
+    // A figure that doesn't match the tee as it was was set by hand (older rounds only kept the figure): it stays
+    const was = effectiveCourseHc(p.index, wasCourse.tees.find(x => x.name === teeName), wasCourse, hcHoles, round.holesCount, null).value;
+    if (was !== p.courseHc) return p;
+    const t = hcCourse.tees.find(x => x.name === teeName);
+    return { ...p, courseHc: effectiveCourseHc(p.index, t, hcCourse, hcHoles, round.holesCount, null).value };
+  });
+  // No course handicap moved: strokes stay exactly as they are (a late joiner keeps playing off the same low)
+  if (players.every((p, i) => p.courseHc === round.players[i].courseHc)) return out;
+  out.players = withPlays(round, players);
+  if (round.teams) out.teams = withTeamHandicaps(out, round.teams, out.players, round.useHandicaps, round.hcPct);
+  return out;
+}
+
+/**
+ * Where strokes differ between two versions of a round, hole by hole:
+ * [{ id, name, holeNo, from, to }] for every player (or scramble team) and every hole.
+ */
+export function strokeChanges(before, after) {
+  const out = [];
+  const units = scorers(after);
+  for (const u of units) {
+    const was = scorers(before).find(x => x.id === u.id);
+    if (!was) continue;
+    for (const h of after.holes) {
+      const bh = before.holes.find(x => x.no === h.no);
+      if (!bh) continue;
+      const from = before.useHandicaps ? strokesFor(before, was, bh) : 0;
+      const to = after.useHandicaps ? strokesFor(after, u, h) : 0;
+      if (from !== to) out.push({ id: u.id, name: u.name, holeNo: h.no, from, to });
+    }
+  }
+  return out;
 }
 
 /** Holes with scores that would stop counting if the round were resized to `holes`. */
@@ -1167,11 +1450,12 @@ export function hammerOptions(round, hole, mark) {
 // --------------------------- Results --------------------------------------
 
 /**
- * Money by player id plus game-specific detail. Works on partial rounds too.
+ * Money for one game by player id plus game-specific detail. Works on partial rounds too.
  * `pairs[a][b]` is the honest head-to-head: what a won from b, worked out bet by bet and hole by
  * hole (not from the fewest-payments list, which can route money between people who never bet each other).
+ * This is one game only: a round with side games adds them up in roundResults.
  */
-export function roundResults(round) {
+export function gameResults(round) {
   const ids = round.players.map(p => p.id);
   const balances = Object.fromEntries(ids.map(id => [id, 0]));
   const detail = {};
@@ -1408,6 +1692,14 @@ export function roundResults(round) {
     }
   }
 
+  if (round.game === 'birdies') {
+    // Birdie pot, a side game only (see birdiePotShares): each player in it puts in the stake
+    const t = birdiePotShares(round);
+    const bs = s.birdies || {};
+    if (t.inPot.length >= 2) addSpread(birdiePot(t.shares, bs.stake ?? 0));
+    detail.birdies = t;
+  }
+
   if (round.game === 'rabbit') {
     const t = rabbitTable(round);
     // Like Nassau, a leg that isn't finished pays whoever holds the rabbit on the holes played
@@ -1435,6 +1727,139 @@ export function roundResults(round) {
   return { balances, standings, transfers: minimalTransfers(balances), detail, pairs };
 }
 
+// --------------------------- Several games at once ------------------------
+// A round has one main game (round.game, group-voted as ever) and up to two side games:
+// round.sideGames = [{ game: 'skins' | 'dots' | 'birdies', settings }]. Each side game keeps its own
+// settings, so the main game's defaults in round.settings (every game's are there) never leak in.
+// round.gamesFor = { pid: ['main', 'skins', ...] } is only set for a player who isn't in every game
+// (a late joiner). Both are absent on older rounds, whose money is exactly what it always was.
+
+/** Games that can ride along as a side game, and what they're called there. GAMES is untouched. */
+export const SIDE_GAMES = {
+  skins: { label: 'Skins', icon: 'coins' },
+  dots: { label: 'Junk', icon: 'medal' },
+  birdies: { label: 'Birdie pot', icon: 'bird' },
+};
+
+/** Most games in one round, the main game included. */
+export const MAX_GAMES = 3;
+
+/**
+ * A round's side games (an empty list on older rounds). Anything setup could never make is dropped,
+ * so a garbled or hand-edited round can't count money twice: games this build doesn't know, a game
+ * listed twice, Skins on a Skins round or Junk on a Dots round (same scores or dots paid twice), any
+ * side game on a Scramble, and anything past the MAX_GAMES cap.
+ */
+export function sideGamesOf(round) {
+  if (!round || !Array.isArray(round.sideGames) || round.game === 'scramble') return [];
+  const out = [];
+  for (const sg of round.sideGames) {
+    if (out.length >= MAX_GAMES - 1) break;
+    if (!sg || !SIDE_GAMES[sg.game] || !sg.settings || typeof sg.settings !== 'object') continue;
+    if (out.some(x => x.game === sg.game)) continue;
+    if ((sg.game === 'skins' && round.game === 'skins') || (sg.game === 'dots' && round.game === 'dots')) continue;
+    out.push(sg);
+  }
+  return out;
+}
+
+/** The keys of every game in a round: 'main' first, then each side game by its game key. */
+export function gameKeys(round) {
+  return ['main', ...sideGamesOf(round).map(sg => sg.game)];
+}
+
+/** What a game in the round is called: the main game's name, or the side game's label. */
+export function gameKeyLabel(round, key) {
+  return key === 'main' ? GAMES[round.game]?.name || 'Game' : SIDE_GAMES[key]?.label || key;
+}
+
+/**
+ * Side games that could still be added next to `mainGame`, given the ones already on.
+ * None with a Scramble (scores are per team, so per-player side games can't work), no Skins side
+ * game in a Skins round and no Junk side game in a Dots round.
+ */
+export function sideGameChoices(mainGame, sideGames = []) {
+  if (!mainGame || mainGame === 'scramble') return [];
+  if (sideGames.length >= MAX_GAMES - 1) return [];
+  return Object.keys(SIDE_GAMES).filter(k => !sideGames.some(sg => sg.game === k) && !(k === 'skins' && mainGame === 'skins') && !(k === 'dots' && mainGame === 'dots'));
+}
+
+/** Whether `pid` plays the game `key` in this round (everyone is in every game unless gamesFor says otherwise). */
+export function playsGame(round, pid, key) {
+  const list = round.gamesFor?.[pid];
+  return !Array.isArray(list) || list.includes(key);
+}
+
+/**
+ * One game of the round as a round of its own, for the per-game engine. 'main' is the round with
+ * only the players in the main game. A side game swaps in its own game and settings, and has no
+ * teams, presses or bet changes: betHistory only ever covers the main game, and settingsAt() would
+ * otherwise lay the main game's old bets over the side game's key.
+ */
+export function gameView(round, key) {
+  const players = round.gamesFor ? round.players.filter(p => playsGame(round, p.id, key)) : round.players;
+  if (key === 'main') return players === round.players ? round : { ...round, players };
+  const sg = sideGamesOf(round).find(x => x.game === key);
+  if (!sg) return null;
+  return { ...round, game: sg.game, settings: { ...round.settings, [sg.game]: sg.settings }, teams: null, presses: [], betHistory: undefined, players };
+}
+
+/** Birdie pot shares: { shares: { pid: n }, inPot: [pid], holes: [{ no, pid, shares }] }. */
+export function birdiePotShares(round) {
+  const eagle = round.settings.birdies?.eagleShares ?? 2;
+  // Like the other pots, a player who left or joined partway is out of it
+  const inPot = round.players.filter(p => playsWholeRound(round, p.id));
+  const shares = Object.fromEntries(inPot.map(p => [p.id, 0]));
+  const holes = [];
+  for (const h of round.holes) {
+    if (!holeComplete(round, h)) continue;
+    for (const p of inPot) {
+      if (round.scores[h.no]?.[p.id] === 'X') continue;
+      const n = birdieShares(netFor(round, p, h), h.par, eagle);
+      if (n) { shares[p.id] += n; holes.push({ no: h.no, pid: p.id, shares: n }); }
+    }
+  }
+  return { shares, inPot: inPot.map(p => p.id), holes };
+}
+
+/**
+ * Money by player id for the whole round, every game added up. With no side games it's exactly the
+ * main game's gameResults. Otherwise each game is worked out on its own (see gameView), the balances
+ * and head-to-heads are summed (a player not in a game counts 0 there), and the fewest payments
+ * square everyone across all the games at once. `detail` is the main game's, plus `detail.byGame`:
+ * { key: { label, balances, detail } } in playing order, main first.
+ */
+export function roundResults(round) {
+  const sgs = sideGamesOf(round);
+  if (!sgs.length) return gameResults(round);
+  const ids = round.players.map(p => p.id);
+  const sum = Object.fromEntries(ids.map(id => [id, 0]));
+  const rawPairs = Object.fromEntries(ids.map(id => [id, {}]));
+  const byGame = {};
+  let mainDetail = {};
+  for (const key of gameKeys(round)) {
+    const view = gameView(round, key);
+    if (!view || !view.players.length) continue;
+    const r = gameResults(view);
+    for (const id of ids) sum[id] += r.balances[id] || 0;
+    for (const a of Object.keys(r.pairs)) for (const [b, v] of Object.entries(r.pairs[a])) {
+      if (rawPairs[a]) rawPairs[a][b] = (rawPairs[a][b] || 0) + v;
+    }
+    const balances = Object.fromEntries(ids.map(id => [id, r.balances[id] || 0]));
+    byGame[key] = { label: gameKeyLabel(round, key), balances, detail: r.detail };
+    if (key === 'main') mainDetail = r.detail;
+  }
+  const balances = roundCents(sum);
+  const standings = [...round.players].map(p => ({ ...p, amount: balances[p.id] })).sort((a, b) => b.amount - a.amount);
+  const pairs = Object.fromEntries(ids.map(id => [id, {}]));
+  for (let i = 0; i < ids.length; i++) for (let j = i + 1; j < ids.length; j++) {
+    const a = ids[i], b = ids[j];
+    const v = Math.round((rawPairs[a][b] || 0) * 100) / 100 || 0;
+    pairs[a][b] = v; pairs[b][a] = -v || 0;
+  }
+  return { balances, standings, transfers: minimalTransfers(balances), detail: { ...mainDetail, byGame }, pairs };
+}
+
 /** Honest head-to-head for one round: what `a` won from `b` (negative when b came out ahead). */
 export function headToHead(round, a, b) {
   return roundResults(round).pairs[a]?.[b] ?? 0;
@@ -1447,6 +1872,12 @@ function nameList(names) {
 
 /** What leaving does to the game, in a sentence (for the results, and before marking someone as gone). */
 export function leftRule(round, pid) {
+  // Someone who was only in the side games leaves the main game as it was
+  if (!playsGame(round, pid, 'main')) return withSideRule(`${GAMES[round.game].name} carries on as it was: they weren’t in it.`, round, 'left');
+  return withSideRule(mainLeftRule(gameView(round, 'main'), pid), round, 'left');
+}
+
+function mainLeftRule(round, pid) {
   const g = round.game;
   const first = n => n.split(' ')[0];
   if (g === 'vegas') return 'Vegas needs two full teams, so the holes after that don’t count.';
@@ -1517,10 +1948,12 @@ export function livePreview(round, hole, pending = null) {
   const without = { ...round, scores: { ...round.scores }, marks: { ...(round.marks || {}) } };
   delete without.scores[no];
   delete without.marks[no];
-  const now = roundResults(counted).balances;
+  const res = roundResults(counted);
+  const now = res.balances;
   const before = roundResults(without).balances;
   const delta = Object.fromEntries(Object.keys(now).map(id => [id, Math.round((now[id] - before[id]) * 100) / 100]));
-  return { balances: now, delta };
+  // With side games, each game's money too (for the money bar's by-game table)
+  return res.detail.byGame ? { balances: now, delta, byGame: res.detail.byGame } : { balances: now, delta };
 }
 
 /** Gross totals + counts for stats. Works for a player or a scramble team id. */

@@ -6,9 +6,8 @@ import { useRemind } from '../lib/useRemind.js';
 import { useStore } from '../lib/store.js';
 import { nameOf, outstanding, personStory, recordText, tabWith } from '../lib/ledger.js';
 import { PAY_APPS, handleText, payInfoFor } from '../lib/pay.js';
-import { GAMES } from '../lib/round.js';
 import { money } from '../lib/golf.js';
-import { formatIndex, myIds, roundDate } from '../lib/format.js';
+import { formatIndex, gameLabel, myIds, roundDate } from '../lib/format.js';
 import { useNav } from '../lib/nav.js';
 
 export default function Person({ id }) {
@@ -79,7 +78,7 @@ export default function Person({ id }) {
         {story.items.map(it => it.kind === 'round' ? (
           <button key={it.id} className="ledger-row" onClick={() => nav.push('roundDetail', { id: it.id })}>
             <div className="lr-info">
-              <div className="lr-name" style={{ fontSize: 16 }}>{GAMES[it.round.game]?.name} · {it.round.course.name}</div>
+              <div className="lr-name" style={{ fontSize: 16 }}>{gameLabel(it.round)} · {it.round.course.name}</div>
               <div className="lr-status">{roundDate(it.round)}</div>
             </div>
             <div className={`lr-amt d story-amt ${it.amount > 0 ? 'pos' : it.amount < 0 ? 'neg' : ''}`}>{it.amount ? money(it.amount, { sign: true }) : 'Even'}</div>

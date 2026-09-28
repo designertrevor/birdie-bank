@@ -8,8 +8,8 @@ import { update, uid } from '../lib/store.js';
 import { cancelSeatRequest, fetchShared, joinShared, requestSeat, watchSeatRequest } from '../lib/sync.js';
 import { assemble, cleanRequestName } from '../lib/sync-model.js';
 import { GAMES, addPlayerProblem } from '../lib/round.js';
-import { stakeSummary } from '../lib/stakes.js';
-import { firstName, strokesLabel } from '../lib/format.js';
+import { roundStakeLines } from '../lib/stakes.js';
+import { firstName, gameLabel, strokesLabel } from '../lib/format.js';
 import { payFields } from '../lib/pay.js';
 
 // A seat request survives the page being closed, so reopening the link keeps waiting
@@ -94,7 +94,10 @@ export default function JoinInvite({ code, onJoined, onSkip }) {
   const meta = found?.meta;
   const game = meta && GAMES[meta.game];
   const host = typeof meta?.hostName === 'string' && meta.hostName.trim() ? firstName(meta.hostName) : null;
-  const scorekeeper = host || 'the scorekeeper';
+  // Seat requests go to whoever keeps score now, which may not be the organizer (see keeper.js)
+  const keeperSeat = meta?.keeper?.id && Array.isArray(meta.players) ? meta.players.find(p => p?.id === meta.keeper.id) : null;
+  const keeperFirst = typeof keeperSeat?.name === 'string' && keeperSeat.name.trim() ? firstName(keeperSeat.name) : host;
+  const scorekeeper = keeperFirst || 'the scorekeeper';
 
   if (!meta && step !== 'waiting') {
     const missing = err === 'missing';
@@ -196,7 +199,7 @@ export default function JoinInvite({ code, onJoined, onSkip }) {
           <h1 className="onboard-title join-h" aria-live="polite">{title}</h1>
           <p className="onboard-text">
             {step === 'waiting' && (busy ? 'Taking you to your seat.' : <>Asked for a seat as {pending?.name || name}. Keep this open: you’ll go straight in when {scorekeeper} says yes.</>)}
-            {step === 'no' && <>{host || 'The scorekeeper'} didn’t add you to this one. You can still follow along live.</>}
+            {step === 'no' && <>{keeperFirst || 'The scorekeeper'} didn’t add you to this one. You can still follow along live.</>}
             {step === 'gone' && <>{host || 'The scorekeeper'} stopped sharing this round.</>}
           </p>
         </div>
@@ -227,7 +230,7 @@ export default function JoinInvite({ code, onJoined, onSkip }) {
               {handicaps && <li><Icon name="golf" fill /> {strokesLabel(seat.plays)}</li>}
               {team && <li><Icon name="users-three" fill /> {team.name}{mates.length ? ` with ${mates.join(' and ')}` : ''}</li>}
               {from != null && <li><Icon name="user-plus" fill /> Starts on hole {from}. Your money counts from there</li>}
-              <li><Icon name={game?.icon || 'golf'} fill /> {game?.name || 'Golf'} · {stakeSummary(meta.game, meta.settings)}</li>
+              <li><Icon name={game?.icon || 'golf'} fill /> {game ? gameLabel(meta) : 'Golf'} · {roundStakeLines(meta).map(l => l.line).join(' + ')}</li>
             </ul>
           </div>
           {handicaps && <p className="field-help">Strokes look wrong? Tell {scorekeeper} before you tee off.</p>}
@@ -286,10 +289,10 @@ export default function JoinInvite({ code, onJoined, onSkip }) {
           <div className="ic-from">
             {host ? <><Avatar name={host} i={3} size="sm" /> <span><strong>{host}</strong> invited you</span></> : <span>You’re invited</span>}
           </div>
-          <div className="ic-game"><Icon name={game?.icon || 'golf'} fill /> {game?.name || 'Golf'}</div>
+          <div className="ic-game"><Icon name={game?.icon || 'golf'} fill /> {game ? gameLabel(meta) : 'Golf'}</div>
           <div className="ic-course">{meta.course?.name} · {meta.holes.length} holes</div>
           <dl className="ic-facts">
-            <div><dt>Bets</dt><dd>{stakeSummary(meta.game, meta.settings) || '–'}</dd></div>
+            <div><dt>Bets</dt><dd>{roundStakeLines(meta).map(l => l.line).filter(Boolean).join(' + ') || '–'}</dd></div>
             <div>
               <dt>Who’s in</dt>
               <dd>

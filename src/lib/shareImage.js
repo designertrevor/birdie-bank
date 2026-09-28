@@ -1,8 +1,7 @@
 // The results image: a story-sized PNG of the round (course, game, winner, standings, the bets)
 // drawn on a canvas in the app's fonts. shareCardModel is pure and tested; the drawing needs a DOM.
-import { GAMES } from './round.js';
 import { money } from './golf.js';
-import { roundDate } from './format.js';
+import { gameLabel, roundDate } from './format.js';
 import { revealSteps } from './reveal.js';
 
 export const IMAGE_W = 1080;
@@ -46,7 +45,7 @@ export function shareCardModel(round, res, { showAmounts = true } = {}) {
   return {
     brand: 'Birdie Bank',
     course: round.course?.name || '',
-    meta: `${roundDate(round)} · ${GAMES[round.game]?.name || ''}`,
+    meta: `${roundDate(round)} · ${gameLabel(round)}`,
     headline, sub, big: showAmounts && !square,
     standings,
     betsTitle: title,
