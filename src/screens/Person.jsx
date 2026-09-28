@@ -1,8 +1,9 @@
 // One friend: what's on the Tab between you, your record, and the round-by-round story behind it.
 import { useState } from 'react';
 import { Header, Icon, Screen } from '../components/ui.jsx';
-import { Avatar, PayButton, RequestButton, SettleSheet } from '../components/Pay.jsx';
-import { useRemind } from '../lib/useRemind.js';
+import { Avatar, SettleSheet } from '../components/Pay.jsx';
+import { PersonActions } from '../components/TabCard.jsx';
+import { useTabSync } from '../lib/tab-sync.js';
 import { useStore } from '../lib/store.js';
 import { nameOf, outstanding, personStory, recordText, tabWith } from '../lib/ledger.js';
 import { PAY_APPS, handleText, payInfoFor } from '../lib/pay.js';
@@ -13,7 +14,7 @@ import { useNav } from '../lib/nav.js';
 export default function Person({ id }) {
   const nav = useNav();
   const state = useStore();
-  const remind = useRemind();
+  useTabSync();
   const [open, setOpen] = useState(null);
   const mine = myIds(state);
   const name = nameOf(state, id);
@@ -47,16 +48,13 @@ export default function Person({ id }) {
           <div className={`tab-big d ${tab > 0 ? 'pos' : tab < 0 ? 'neg' : ''}`}>{tab ? money(amount) : 'All square'}</div>
         </div>
 
+        <div className="pad-x">
+          <PersonActions other={id} net={tab} meId={state.me || (tab > 0 ? debt.to : debt.from)} />
+        </div>
         {tab !== 0 && (
-          <div className="pay-acts pad-x">
-            {tab > 0 ? (
-              <>
-                <button className="pay-btn" onClick={() => remind(id, amount)}><span className="pay-in"><Icon name="bell-ringing" fill /><span className="pay-lbl">Remind</span></span></button>
-                <RequestButton payer={info} mine={payInfoFor(state, state.me)} amount={amount} note="Golf" />
-              </>
-            ) : <PayButton info={info} amount={amount} note="Golf" />}
-            <button className="pay-btn ink" onClick={() => setOpen(debt)}><span className="pay-in"><Icon name="handshake" fill /><span className="pay-lbl">Settle up</span></span></button>
-          </div>
+          <button className="quiet-row" onClick={() => setOpen(debt)}>
+            <Icon name="coins" /> <span>Paid part of it? <u>Settle up</u></span>
+          </button>
         )}
 
         {story.rounds > 0 && (
@@ -75,7 +73,15 @@ export default function Person({ id }) {
 
         <div className="sec-label">The story</div>
         {story.items.length === 0 && <p className="hint-card"><Icon name="flag-pennant" fill /> No finished rounds with {firstName} yet. Play one and every bet between you shows up here.</p>}
-        {story.items.map(it => it.kind === 'round' ? (
+        {story.items.map(it => it.kind === 'carry' ? (
+          <div key={it.id} className="ledger-row static">
+            <div className="lr-info">
+              <div className="lr-name" style={{ fontSize: 16 }}>Carried over · agreed {when(it.at)}</div>
+              <div className="lr-status">{it.amount > 0 ? `${firstName} owes you` : `You owe ${firstName}`}, rolls into your next round</div>
+            </div>
+            <div className="lr-amt d story-amt">{money(Math.abs(it.amount))}</div>
+          </div>
+        ) : it.kind === 'round' ? (
           <button key={it.id} className="ledger-row" onClick={() => nav.push('roundDetail', { id: it.id })}>
             <div className="lr-info">
               <div className="lr-name" style={{ fontSize: 16 }}>{gameLabel(it.round)} · {it.round.course.name}</div>

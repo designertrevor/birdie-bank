@@ -17,7 +17,11 @@ export const PLANS = {
 };
 export const DEFAULT_PLAN = 'annual';
 
-/** What Pro adds, from the roadmap's organizer model. */
+/**
+ * What Pro adds, from the roadmap's organizer model.
+ * Open for Trevor: "Your usual game in one tap" and "Planning rounds ahead" are free in the live app
+ * today. Left as is tonight; gating them later would take away something free.
+ */
 export const PRO_FEATURES = [
   { icon: 'receipt', text: 'The season tab across every round' },
   { icon: 'calendar-check', text: 'Planning rounds ahead, with who’s in and the group vote' },
@@ -32,7 +36,8 @@ export function freePromise(games) {
     'Join any round from a link',
     'Live scores and the money, hole by hole',
     `All ${games} games`,
-    'Your own settle-up',
+    'Settle up, pay links and the Tab for what’s owed',
+    'Carry-overs between two people',
     'Trash talk in your group’s rounds',
   ];
 }
@@ -109,12 +114,13 @@ export function shouldShowPaywall(state, flagOn) {
 /**
  * Whether this phone's owner organizes rounds, so a Pro preview makes sense for them: they came
  * through organizer onboarding, set up a round themselves, or planned one. Someone who only ever
- * joined from a link (their rounds carry `localMe`) or answered an RSVP doesn't.
+ * joined from a link (their rounds carry `localMe`), only watched one (`shared.host` is false) or
+ * answered an RSVP doesn't.
  */
 export function isOrganizer(state) {
   if (!state) return false;
   if (state.organizer) return true;
-  if (Object.values(state.rounds || {}).some(r => !r.localMe)) return true;
+  if (Object.values(state.rounds || {}).some(r => !r.localMe && r.shared?.host !== false)) return true;
   return Object.values(state.plans || {}).some(p => p.host);
 }
 

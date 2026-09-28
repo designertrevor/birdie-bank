@@ -1,7 +1,7 @@
 // The end of a round in three beats: the money reveal, settling up, and a results card to share.
 import { useEffect, useRef, useState } from 'react';
 import { Header, Icon, Toggle, useUI } from './ui.jsx';
-import { update, uid, useStore } from '../lib/store.js';
+import { getState, update, useStore } from '../lib/store.js';
 import { roundResults } from '../lib/round.js';
 import { money } from '../lib/golf.js';
 import { payInfoFor } from '../lib/pay.js';
@@ -10,6 +10,8 @@ import { buzz, confettiFrom } from '../lib/delight.js';
 import { gameLabel, meFor, placeOf, roundDate, roundPlayerName, shareRound } from '../lib/format.js';
 import { gamesLine } from '../lib/side-games.js';
 import { markRoundAsked, roundAsked, submitReaction } from '../lib/feedback.js';
+import { codeOf } from '../lib/shared-tab.js';
+import { markTransfer, undoPayments, useTabSync } from '../lib/tab-sync.js';
 import { useNav } from '../lib/nav.js';
 import { revealSteps, revealTiming } from '../lib/reveal.js';
 import { IMAGE_H, IMAGE_W, renderShareImage, shareImageName } from '../lib/shareImage.js';
@@ -149,15 +151,23 @@ export function SettleUp({ round, res, onBack, onNext }) {
   const paidCount = res.transfers.filter(paidFor).length;
   const note = `${gameLabel(round)} at ${round.course.name}`;
 
+  // A shared round's payments go to both phones (one row per transfer, so two marks count once)
+  const code = codeOf(round);
+  useTabSync({ live: !!code });
   const toggle = t => {
     const s = paidFor(t);
     if (s) {
-      update(st => { st.settlements = st.settlements.filter(x => x.id !== s.id); });
+      // One tap, no confirm: the toast puts it back
+      const redo = undoPayments([s]);
+      showToast(`${name(t.from)} owes ${name(t.to)} again`, { label: 'Undo', run: redo });
       return;
     }
-    update(st => { st.settlements.push({ id: uid('s_'), from: t.from, to: t.to, amount: t.amount, at: Date.now(), roundId: round.id }); });
+    markTransfer(round, t, code);
     buzz(15);
-    showToast(`${name(t.from)} is square with ${name(t.to)}`);
+    showToast(`${name(t.from)} is square with ${name(t.to)}`, { label: 'Undo', run: () => {
+      const x = getState().settlements.findLast(z => z.roundId === round.id && z.from === t.from && z.to === t.to);
+      if (x) undoPayments([x]);
+    } });
   };
   // Pay buttons only for your own payments: pay in the payee's app, or request when you're owed
   const myApp = payInfoFor(state, state.me);

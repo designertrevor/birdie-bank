@@ -1,0 +1,350 @@
+// The shared Tab: payments and carry-overs that belong to a round that was shared live, so an
+// "I paid" on one phone shows on the other. The server keeps one row per round transfer (see
+// supabase/2026-09-29-round-payments.sql); this file turns those rows into this phone's
+// settlements, carries and the round's who-is-square status. Pure, unit tested. The transport
+// is tab-sync.js.
+//
+// The Tab by person stays this phone's own math (every round on this phone, netted and
+// rerouted). The shared layer is per round transfer: a payment is tied to the round transfers
+// between the two people, oldest first, and anything the rounds don't explain stays local.
+import { roundResults } from './round.js';
+import { meFor, myIds } from './format.js';
+import { outstanding, tabWith } from './ledger.js';
+
+const DAY = 864e5;
+/** Shared rounds this recent are looked up on the server. */
+export const FETCH_DAYS = 60;
+/** The who-is-square strip follows your newest shared round from this far back. */
+export const STRIP_DAYS = 30;
+
+const cents = v => Math.round((Number(v) || 0) * 100);
+
+/** A round's live code, kept after sharing stops so its payments outlive the live round. */
+export function codeOf(round) {
+  return round?.shareCode || round?.shared?.code || null;
+}
+
+/** A full transfer paid in one go: both phones marking it land on the same row, so it counts once. */
+export const paymentId = (code, from, to, part = null) => (part ? `${code}:${from}>${to}:${part}` : `${code}:${from}>${to}`);
+/** A transfer closed by a payment that squared the pair's whole Tab (status only, no money). */
+export const nettedId = (code, from, to) => `${code}:${from}>${to}:net`;
+/** The carry-over row for one round's transfer between two people. */
+export const carryRowId = (code, from, to) => `${code}:${from}>${to}:carry`;
+/** One carry on this phone: the pair (in the direction owed) and when it was asked. */
+export const carryId = (from, to, at) => `k:${from}>${to}:${at}`;
+const rowKey = r => `${r.code}|${r.id}`;
+
+/** Every id that means you maps to one; everyone else stays as they are. */
+export function canonicalOf(state) {
+  const mine = myIds(state);
+  return id => (state.me && mine.has(id) ? state.me : id);
+}
+
+const doneRounds = state => Object.values(state.rounds || {}).filter(r => r.status === 'done');
+const finishedAt = r => r.finishedAt || r.createdAt || 0;
+/** You played this round (a watcher's copy never counts). */
+export function played(round, state) {
+  const me = meFor(round, state);
+  return !!me && round.players.some(p => p.id === me);
+}
+
+/** Finished shared rounds you played, oldest first, finished within `days`. */
+export function sharedRounds(state, { days = FETCH_DAYS, now = Date.now() } = {}) {
+  return doneRounds(state)
+    .filter(r => codeOf(r) && played(r, state) && finishedAt(r) >= now - days * DAY)
+    .sort((a, b) => finishedAt(a) - finishedAt(b));
+}
+
+/** The codes to look up on the server. */
+export function tabCodes(state, opts) {
+  return [...new Set(sharedRounds(state, opts).map(codeOf))];
+}
+
+/**
+ * Shared rounds both people played (ids as the Tab knows them), oldest first. Only rounds the
+ * other phone still looks up (FETCH_DAYS) count: a payment or ask put on an older round would
+ * never reach it, so older rounds stay on this phone like any unshared round.
+ */
+export function pairRounds(state, a, b, { days = FETCH_DAYS, now = Date.now() } = {}) {
+  const who = canonicalOf(state);
+  const A = who(a), B = who(b);
+  return sharedRounds(state, { days, now }).filter(r => {
+    const ids = new Set(r.players.map(p => who(p.id)));
+    return ids.has(A) && ids.has(B);
+  });
+}
+
+function roundsByCode(state) {
+  const out = new Map();
+  for (const r of Object.values(state.rounds || {})) {
+    const c = codeOf(r);
+    if (c && !out.has(c)) out.set(c, r);
+  }
+  return out;
+}
+
+/** Same data, same text: compares settlements and carries without caring about key order. */
+function same(a, b) {
+  const keys = new Set([...Object.keys(a || {}), ...Object.keys(b || {})]);
+  for (const k of keys) {
+    const x = a?.[k], y = b?.[k];
+    if (Array.isArray(x) || Array.isArray(y)) { if (JSON.stringify(x || []) !== JSON.stringify(y || [])) return false; }
+    else if ((x ?? null) !== (y ?? null)) return false;
+  }
+  return true;
+}
+
+/** The settlement a paid row stands for. */
+function settlementOf(row, round) {
+  return { id: row.id, from: row.from, to: row.to, amount: Number(row.amount), at: row.at, roundId: round.id, code: row.code, by: row.by || null, shared: true };
+}
+
+/**
+ * Put payment and carry rows from the server (or from this phone) onto the state. Returns a
+ * new state with `tabRows` (the rows, kept for the round status), `settlements` and `carries`.
+ * A 'paid' payment is a settlement, 'undone' removes it, 'netted' changes no money. Rows for a
+ * round this phone doesn't have are ignored. Applying the same rows twice changes nothing.
+ */
+export function applyRows(state, rows) {
+  const rounds = roundsByCode(state);
+  const cache = {};
+  for (const [k, r] of Object.entries(state.tabRows || {})) if (rounds.has(r.code)) cache[k] = r;
+  // Only rows that are new or changed here move money. A row this phone already had is not
+  // applied again, so a payment your other phone took back (and the account sync removed)
+  // doesn't come back from this phone's older copy when some other row arrives.
+  const changed = new Set();
+  for (const row of rows || []) {
+    if (!row?.code || !row.id || !rounds.has(row.code)) continue;
+    const k = rowKey(row);
+    if (cache[k] && (cache[k].updatedAt || 0) > (row.updatedAt || 0)) continue;
+    if (cache[k] && JSON.stringify(cache[k]) === JSON.stringify(row)) continue;
+    cache[k] = row;
+    changed.add(k);
+  }
+
+  // Payments: only settlements named by a row are touched, so local payments stay as they are
+  const settlements = [...(state.settlements || [])];
+  for (const k of changed) {
+    const row = cache[k];
+    if (row.kind !== 'payment') continue;
+    const i = settlements.findIndex(s => s.id === row.id);
+    if (row.status === 'paid') {
+      const s = settlementOf(row, rounds.get(row.code));
+      if (i < 0) settlements.push(s);
+      else if (!same(settlements[i], s)) settlements[i] = s;
+    } else if (row.status === 'undone' && i >= 0) settlements.splice(i, 1);
+  }
+
+  // Carries: the rows written together (same pair, same ask time) are one carry
+  const who = canonicalOf(state);
+  const groupOf = row => carryId(who(row.from), who(row.to), row.at);
+  const touched = new Set([...changed].map(k => cache[k]).filter(r => r.kind === 'carry').map(groupOf));
+  const groups = new Map();
+  for (const row of Object.values(cache)) {
+    if (row.kind !== 'carry') continue;
+    const id = groupOf(row);
+    if (!touched.has(id)) continue;
+    if (!groups.has(id)) groups.set(id, []);
+    groups.get(id).push(row);
+  }
+  const carries = [...(state.carries || [])];
+  for (const [id, list] of groups) {
+    const newest = list.reduce((a, b) => ((b.updatedAt || 0) > (a.updatedAt || 0) ? b : a));
+    const answered = newest.status === 'agreed' || newest.status === 'declined';
+    const carry = {
+      id, from: who(newest.from), to: who(newest.to),
+      amount: list.reduce((a, r) => a + cents(r.amount), 0) / 100,
+      status: newest.status, by: who(newest.by), reason: newest.reason || null, at: newest.at,
+      ...(answered ? { answeredAt: newest.updatedAt } : {}),
+      roundIds: list.map(r => rounds.get(r.code).id), codes: list.map(r => r.code),
+      updatedAt: newest.updatedAt || newest.at, shared: true,
+    };
+    const i = carries.findIndex(c => c.id === id);
+    if (i < 0) carries.push(carry);
+    else if ((carries[i].updatedAt || 0) <= carry.updatedAt && !same(carries[i], carry)) carries[i] = carry;
+  }
+  return { ...state, tabRows: cache, settlements, carries };
+}
+
+/** What has been paid on one round transfer, in cents. */
+function paidOn(state, round, code, t) {
+  // Payments marked at the end of the round before the shared Tab (roundId, no code) count too
+  const on = s => s.code === code || (!s.code && s.roundId === round.id);
+  return (state.settlements || []).filter(s => on(s) && s.from === t.from && s.to === t.to).reduce((a, s) => a + cents(s.amount), 0);
+}
+const nettedOn = (state, code, t) => state.tabRows?.[`${code}|${nettedId(code, t.from, t.to)}`]?.status === 'netted';
+
+/** Round transfers still open between two people (either direction), oldest round first. */
+export function openTransfers(state, a, b, now = Date.now()) {
+  const who = canonicalOf(state);
+  const A = who(a), B = who(b);
+  const out = [];
+  for (const r of pairRounds(state, A, B, { now })) {
+    const code = codeOf(r);
+    for (const t of roundResults(r).transfers) {
+      const f = who(t.from), to = who(t.to);
+      if (!((f === A && to === B) || (f === B && to === A))) continue;
+      if (nettedOn(state, code, t)) continue;
+      const paid = paidOn(state, r, code, t);
+      const open = cents(t.amount) - paid;
+      if (open > 0) out.push({ round: r, code, t, open, paid, forward: f === A });
+    }
+  }
+  return out;
+}
+
+const payRow = (state, round, t, id, amount, now) => ({
+  code: codeOf(round), id, kind: 'payment', from: t.from, to: t.to, amount, status: 'paid',
+  by: meFor(round, state), reason: null, at: now, updatedAt: now,
+});
+
+/**
+ * Record `from` paying `to` from the person card. The payment fills the shared round transfers
+ * between the two in the same direction, oldest first. When it squares the pair's whole Tab,
+ * every other open transfer between them (either way) is marked 'netted' for the status.
+ * Whatever the shared rounds don't explain is a local settlement with no code.
+ * Returns { rows, settlements } to send and to add.
+ */
+export function allocatePayment(state, { from, to, amount }, { now = Date.now(), makeId = () => Math.random().toString(36).slice(2, 9) } = {}) {
+  const who = canonicalOf(state);
+  const F = who(from), T = who(to);
+  const total = cents(amount);
+  let left = total;
+  const rows = [], settlements = [];
+  const open = openTransfers(state, F, T, now);
+  for (const x of open.filter(o => o.forward)) {
+    if (!left) break;
+    const fill = Math.min(left, x.open);
+    left -= fill;
+    const whole = fill === x.open && x.paid === 0 && !(state.settlements || []).some(s => s.id === paymentId(x.code, x.t.from, x.t.to));
+    // Part of a transfer is keyed by what was paid on it before, so two phones marking the same
+    // payment before they sync land on one row too (a second, later payment gets its own key)
+    const id = whole ? paymentId(x.code, x.t.from, x.t.to) : paymentId(x.code, x.t.from, x.t.to, `p${x.paid}`);
+    rows.push(payRow(state, x.round, x.t, id, fill / 100, now));
+    x.open -= fill;
+  }
+  // Squared the whole Tab between them: every transfer left between the two is done with too
+  const owed = tabWith(outstanding(state), new Set([T]), F);
+  if (owed > 0 && total >= cents(owed)) {
+    for (const x of open) {
+      if (x.open <= 0) continue;
+      rows.push({ ...payRow(state, x.round, x.t, nettedId(x.code, x.t.from, x.t.to), x.open / 100, now), status: 'netted' });
+    }
+  }
+  if (left > 0) settlements.push({ id: `s_${makeId()}`, from, to, amount: left / 100, at: now });
+  return { rows, settlements };
+}
+
+/**
+ * The most recent payment between two people: every settlement between them recorded at that
+ * moment (one tap can pay several round transfers), plus the transfers it netted.
+ * Returns { at, settlements, netted } or null.
+ */
+export function lastPayment(state, a, b) {
+  const who = canonicalOf(state);
+  const A = who(a), B = who(b);
+  const between = (x, y) => (who(x) === A && who(y) === B) || (who(x) === B && who(y) === A);
+  const list = (state.settlements || []).filter(s => between(s.from, s.to));
+  if (!list.length) return null;
+  const at = Math.max(...list.map(s => s.at || 0));
+  return {
+    at,
+    settlements: list.filter(s => (s.at || 0) === at),
+    netted: Object.values(state.tabRows || {}).filter(r => r.kind === 'payment' && r.status === 'netted' && r.at === at && between(r.from, r.to)),
+  };
+}
+
+/** The transfers these payments netted (written in the same tap, between the same people). */
+export function nettedFor(state, settlements) {
+  const who = canonicalOf(state);
+  const pair = (a, b) => [who(a), who(b)].sort().join('|');
+  const keys = new Set(settlements.map(s => `${s.at}|${pair(s.from, s.to)}`));
+  return Object.values(state.tabRows || {}).filter(r => r.kind === 'payment' && r.status === 'netted' && keys.has(`${r.at}|${pair(r.from, r.to)}`));
+}
+
+/** Rows that take a payment back (and what to remove locally for payments that were never shared). */
+export function undoRows(state, pay, { now = Date.now() } = {}) {
+  const rows = [], remove = [];
+  for (const s of pay.settlements) {
+    const row = s.code && state.tabRows?.[`${s.code}|${s.id}`];
+    if (row) rows.push({ ...row, status: 'undone', updatedAt: now });
+    else if (s.code) rows.push({ code: s.code, id: s.id, kind: 'payment', from: s.from, to: s.to, amount: s.amount, status: 'undone', by: s.by || null, reason: null, at: s.at, updatedAt: now });
+    else remove.push(s.id);
+  }
+  for (const r of pay.netted) rows.push({ ...r, status: 'undone', updatedAt: now });
+  return { rows, remove };
+}
+
+/** Everything this phone knows about one round's payments and carries, as rows. */
+export function roundRows(state, round) {
+  const code = codeOf(round);
+  const rows = code ? Object.values(state.tabRows || {}).filter(r => r.code === code) : [];
+  const ids = new Set(rows.map(r => r.id));
+  // Payments recorded on this phone before the table was there count too
+  for (const s of state.settlements || []) {
+    if (ids.has(s.id) || !(s.roundId === round.id || (code && s.code === code))) continue;
+    rows.push({ code, id: s.id, kind: 'payment', from: s.from, to: s.to, amount: s.amount, status: 'paid', at: s.at, updatedAt: s.at });
+  }
+  return rows;
+}
+
+/**
+ * Who's square in one round, from the round's own transfers and its rows:
+ * { playerId: 'square' | 'owes' | 'waiting' | 'carried' }. A transfer counts as paid only once
+ * what's been paid reaches its current amount (a fixed hole can grow it after a payment).
+ */
+export function roundStatus(round, rows) {
+  const out = Object.fromEntries(round.players.map(p => [p.id, 'square']));
+  const owes = new Set(), waits = new Set(), carried = new Set();
+  const match = (r, t) => r.from === t.from && r.to === t.to;
+  for (const t of roundResults(round).transfers) {
+    const paid = rows.filter(r => r.kind === 'payment' && r.status === 'paid' && match(r, t)).reduce((a, r) => a + cents(r.amount), 0);
+    const netted = rows.some(r => r.kind === 'payment' && r.status === 'netted' && match(r, t));
+    if (netted || paid >= cents(t.amount)) continue;
+    const isCarried = rows.some(r => r.kind === 'carry' && r.status === 'agreed' && ((r.from === t.from && r.to === t.to) || (r.from === t.to && r.to === t.from)));
+    if (isCarried) { carried.add(t.from); carried.add(t.to); }
+    else { owes.add(t.from); waits.add(t.to); }
+  }
+  for (const id of Object.keys(out)) {
+    if (owes.has(id)) out[id] = 'owes';
+    else if (waits.has(id)) out[id] = 'waiting';
+    else if (carried.has(id)) out[id] = 'carried';
+  }
+  return out;
+}
+
+/**
+ * The round the who-is-square strip follows: your newest finished shared round from the last
+ * 30 days that had at least one payment to make. { round, latest } where latest says it's your
+ * most recent finished round of all, or null.
+ */
+export function stripRound(state, { now = Date.now() } = {}) {
+  const shared = sharedRounds(state, { days: STRIP_DAYS, now }).filter(r => roundResults(r).transfers.length);
+  const round = shared.at(-1);
+  if (!round) return null;
+  const newest = doneRounds(state).filter(r => played(r, state)).sort((a, b) => finishedAt(b) - finishedAt(a))[0];
+  return { round, latest: newest?.id === round.id };
+}
+
+/** How long a card keeps the last payment's undo link. */
+export const RECENT_MS = 3 * DAY;
+
+/** The last payment between you and someone, while it's recent enough to take back. */
+export function recentPayment(state, meId, other, now = Date.now()) {
+  const pay = lastPayment(state, meId, other);
+  return pay && now - pay.at < RECENT_MS ? pay : null;
+}
+
+/** "Sep 27". */
+export const shortDate = t => new Date(t).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+
+/** "just now", "12 min ago", "today", "yesterday" or "Sep 27". */
+export function ago(at, now = Date.now()) {
+  const d = now - at;
+  if (d < 60e3) return 'just now';
+  if (d < 3600e3) return `${Math.floor(d / 60e3)} min ago`;
+  const day = t => new Date(t).toDateString();
+  if (day(at) === day(now)) return 'today';
+  if (day(at) === day(now - DAY)) return 'yesterday';
+  return shortDate(at);
+}

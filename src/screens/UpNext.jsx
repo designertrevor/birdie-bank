@@ -12,6 +12,7 @@ import { JoinSheet } from '../components/Live.jsx';
 import { syncConfigured } from '../lib/sync.js';
 import { RSVP_LABEL, countsLine, planChoice, planCounts, upcomingPlans, whenLabel } from '../lib/plans.js';
 import { refreshPlans } from '../lib/plan-sync.js';
+import { refreshTab } from '../lib/tab-sync.js';
 
 /** Home: what's next for you. A round to finish, what you owe and are owed, and how the last one went. */
 export default function UpNext() {
@@ -26,7 +27,7 @@ export default function UpNext() {
   const hasHistory = !!last;
   const plans = upcomingPlans(state);
   // Pick up answers and votes that came in since last time
-  useEffect(() => { refreshPlans(); }, []);
+  useEffect(() => { refreshPlans(); refreshTab(); }, []);
 
   return (
     <Screen>

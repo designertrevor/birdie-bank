@@ -512,6 +512,9 @@ a.set-row { text-decoration: none; }
   transition: opacity .2s, transform .35s var(--spring);
 }
 .toast.show { opacity: 1; transform: translate(-50%, 0) scale(1); }
+.toast.has-act { display: flex; align-items: center; gap: 12px; padding: 4px 6px 4px 20px; white-space: normal; width: max-content; max-width: calc(100% - 32px); font-size: 15px; }
+.toast.has-act.show { pointer-events: auto; }
+.toast-act { min-height: 44px; padding: 0 14px; border: none; border-radius: 999px; background: rgba(255,255,255,.2); color: #fff; font: inherit; font-weight: 800; cursor: pointer; flex-shrink: 0; }
 .confetti { position: fixed; pointer-events: none; z-index: 999; border-radius: 2px; }
 
 /* ============================================================
@@ -921,8 +924,8 @@ button:disabled { cursor: not-allowed; }
 }
 .text-link i { color: var(--icon); }
 .chip-row.flush { padding: 0 0 10px; }
-.pay-acts:has(> :nth-child(3)) .pay-btn { padding: 0 8px; }
-.pay-acts:has(> :nth-child(3)) .pay-btn i { display: none; }
+.pay-acts:not(.wrap):has(> :nth-child(3)) .pay-btn { padding: 0 8px; }
+.pay-acts:not(.wrap):has(> :nth-child(3)) .pay-btn i { display: none; }
 .chip-row.flush { gap: 6px; }
 .chip-row.flush .pill-btn { padding: 8px 12px; }
 .chip-row.flush .pill-btn:not(.on) { background: var(--surface); }
@@ -1235,3 +1238,74 @@ button.who-status { cursor: pointer; min-height: 36px; }
 .usual-save .pill-btn { min-height: 44px; background: var(--surface); }
 .usual-saved { display: flex; align-items: center; gap: 6px; }
 .tee-fix .eyebrow { margin-bottom: 8px; }
+
+/* SHARED TAB: person card actions, carry-overs and who's square (2026-09-29) */
+.pay-acts.wrap { flex-wrap: wrap; }
+.pay-acts.wrap > * { flex: 1 1 calc(50% - 4px); }
+/* Zelle has no pay link: its button shows the handle to copy, so it gets the whole row */
+.pay-acts.wrap > .app-zelle { flex-basis: 100%; }
+.link-btn { min-height: 44px; padding: 0 4px; border: none; background: none; color: var(--ink); font: inherit; font-size: 14px; font-weight: 700; text-decoration: underline; text-decoration-color: var(--surface-strong); text-decoration-thickness: 2px; text-underline-offset: 3px; cursor: pointer; flex-shrink: 0; }
+.recent-paid { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-top: 6px; font-size: 13px; color: var(--mute); }
+.recent-paid > span { min-width: 0; }
+.carry-note { margin-top: 10px; padding: 10px 12px; border-radius: 14px; background: var(--surface); }
+.carry-note .pay-acts { margin-top: 10px; }
+.cn-title { font-weight: 700; color: var(--ink); font-size: 15px; }
+.cn-sub { font-size: 13px; color: var(--mute); margin-top: 2px; overflow-wrap: anywhere; }
+.carry-note.declined .cn-sub { margin: 0; }
+.cn-foot { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-top: 4px; }
+.cn-tag { font-size: 12px; font-weight: 700; padding: 3px 9px; border-radius: 999px; background: var(--card); color: var(--ink); }
+.carry-note.agreed .cn-tag { background: var(--win-bg); color: var(--win); }
+.pill-btn.tap { min-height: 44px; }
+.square-card .tp-sub { color: var(--win); }
+.sq-strip { margin: 4px 16px 12px; padding: 4px 14px 12px; border-radius: 20px; background: var(--card); cursor: pointer; }
+.sq-head { display: grid; grid-template-columns: 1fr auto; grid-template-rows: auto auto; align-items: center; width: 100%; min-height: 44px; padding: 8px 0 4px; border: none; background: none; text-align: left; cursor: pointer; color: var(--ink); }
+.sq-head .eyebrow { grid-column: 1; }
+.sq-head .sq-count { grid-column: 1; font-size: 20px; font-weight: 800; }
+.sq-head .chevron { grid-column: 2; grid-row: 1 / 3; }
+.sq-people { list-style: none; display: flex; flex-wrap: wrap; gap: 10px 12px; margin: 6px 0 0; padding: 0; }
+.sq-p { display: flex; flex-direction: column; align-items: center; gap: 4px; min-width: 48px; }
+.sq-p .avatar { margin: 0; width: 36px; height: 36px; font-size: 15px; }
+.sq-word, .sq-badge { font-size: 11px; font-weight: 700; padding: 2px 8px; border-radius: 999px; background: var(--surface); color: var(--mute); }
+.sq-p.square .sq-word, .sq-row.square .sq-badge { background: var(--win-bg); color: var(--win); }
+.sq-p.owes .sq-word, .sq-row.owes .sq-badge { background: var(--loss-bg); color: var(--loss); }
+.sq-p.carried .sq-word, .sq-row.carried .sq-badge { background: var(--surface-strong); color: var(--ink); }
+.sq-list { list-style: none; margin: 0; padding: 0 16px; }
+.sq-row { display: flex; align-items: center; min-height: 52px; border-top: 1px solid var(--line-soft); }
+.sq-row:first-child { border-top: none; }
+.sq-name { flex: 1; font-weight: 700; color: var(--ink); }
+.sq-row .sq-badge { font-size: 13px; padding: 4px 10px; }
+
+/* SEASON PREVIEW (Pro) and the free promise on the Tab (2026-09-29) */
+.link-btn.center { align-self: center; }
+.tab-view { margin: 0 16px 10px; }
+.pro-tag { display: inline-block; margin-left: 6px; font-size: 10px; font-weight: 800; letter-spacing: .04em; padding: 2px 6px; border-radius: 999px; background: var(--pink-fill); color: #fff; vertical-align: 2px; }
+.pm-btn.active .pro-tag { background: var(--on-ink); color: var(--ink); }
+.tab-free { display: flex; align-items: center; justify-content: space-between; gap: 8px; flex-wrap: wrap; margin: 10px 16px 16px; padding: 6px 14px; border-radius: 20px; background: var(--win-bg); }
+.tab-free .tf-title { font-weight: 700; color: var(--ink); font-size: 14px; }
+.tab-free .link-btn { padding: 0; }
+.season-sub { padding: 0 20px 8px; font-size: 14px; color: var(--mute); margin: 0; }
+.season-banner { display: flex; align-items: flex-start; gap: 8px; margin: 4px 16px 4px; padding: 12px 14px; border-radius: 16px; background: var(--surface); color: var(--ink); font-size: 14px; line-height: 1.4; }
+.season-banner i { color: var(--pink-text); font-size: 18px; flex-shrink: 0; }
+.season-bals { list-style: none; display: flex; flex-direction: column; gap: 8px; }
+.season-bal { display: grid; grid-template-columns: minmax(56px, 88px) 1fr 1fr minmax(56px, auto); align-items: center; font-size: 14px; min-height: 24px; }
+.season-bal .sb-name { padding-right: 8px; text-align: right; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--body); }
+.season-bal.me .sb-name { font-weight: 800; color: var(--ink); }
+.sb-track { position: relative; height: 16px; }
+.sb-track.right { border-left: 2px solid var(--ink); }
+.sb-track i { position: absolute; top: 0; bottom: 0; border-radius: 4px; }
+.sb-track.left i { right: 0; background: var(--loss-bg); box-shadow: inset 0 0 0 1.5px var(--loss); }
+.sb-track.right i { left: 0; background: var(--win); }
+.sb-amt { padding-left: 8px; font-weight: 800; font-variant-numeric: tabular-nums; text-align: right; }
+.kv-block { display: flex; flex-direction: column; }
+.kv-row { display: flex; justify-content: space-between; gap: 12px; padding: 10px 0; border-bottom: 1px solid var(--line); font-size: 15px; }
+.kv-row:last-child { border-bottom: 0; }
+.kv-k { color: var(--mute); }
+.kv-v { font-weight: 700; color: var(--ink); text-align: right; font-variant-numeric: tabular-nums; }
+.sample-tag { display: inline-block; font-size: 12px; font-weight: 700; padding: 3px 10px; border-radius: 999px; border: 1.5px dashed var(--mute); color: var(--mute); }
+.tour-dots { display: flex; gap: 6px; padding: 4px 20px 8px; }
+.tour-dot { flex: 1; height: 4px; border-radius: 2px; background: var(--surface-strong); }
+.tour-dot.on { background: var(--ink); }
+.tour-head { padding: 8px 20px 12px; }
+.tour-title { font-size: 24px; font-weight: 800; margin: 8px 0 2px; color: var(--ink); }
+.tour-big { font-family: var(--display); font-size: 20px; font-weight: 800; color: var(--ink); margin-top: 4px; }
+.tour-counts { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; text-align: center; }

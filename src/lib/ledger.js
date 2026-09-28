@@ -137,8 +137,8 @@ export function outstanding(state) {
 
 /**
  * Everything between you and one person, for the round-by-round story: each finished round you
- * both played with the honest head-to-head (what you won from them, bet by bet), and each payment
- * between you. Newest first. `ids` is every id that means you.
+ * both played with the honest head-to-head (what you won from them, bet by bet), each payment
+ * between you and each agreed carry-over. Newest first. `ids` is every id that means you.
  */
 export function personStory(state, ids, other) {
   const mine = ids instanceof Set ? ids : new Set(ids);
@@ -156,6 +156,12 @@ export function personStory(state, ids, other) {
     // amount: what the payment did for your side (they paid you: +, you paid them: -)
     if (s.from === other && mine.has(s.to)) { items.push({ kind: 'payment', id: s.id, settlement: s, amount: s.amount, at: s.at || 0 }); paid += s.amount; }
     else if (mine.has(s.from) && s.to === other) { items.push({ kind: 'payment', id: s.id, settlement: s, amount: -s.amount, at: s.at || 0 }); paid -= s.amount; }
+  }
+  // Agreed carry-overs get their own line. They move no money, so net and paid stay as they are
+  for (const k of state.carries || []) {
+    if (k.status !== 'agreed') continue;
+    const theyOwe = k.from === other && mine.has(k.to), iOwe = mine.has(k.from) && k.to === other;
+    if (theyOwe || iOwe) items.push({ kind: 'carry', id: k.id, carry: k, amount: theyOwe ? k.amount : -k.amount, at: k.answeredAt || k.at || 0 });
   }
   items.sort((a, b) => b.at - a.at);
   const c = v => Math.round(v * 100) / 100 || 0;
