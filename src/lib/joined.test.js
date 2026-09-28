@@ -83,15 +83,121 @@ test('a joiner has no score box before their hole and holes stay complete withou
   assert.equal(holeComplete(x, x.holes[2]), false); // Zed plays hole 3
 });
 
-test('skins: holes before the joiner are paid without them, a carried skin won later includes them', () => {
+test('skins: holes before the joiner are paid without them, and a carry from before they joined is not theirs', () => {
   const r = mk('skins');
   play(r, [{ a: 3, b: 4, c: 4 }, { a: 4, b: 4, c: 4 }]);
   const x = addPlayerToRound(r, Zed, 3);
   x.scores[3] = { a: 5, b: 5, c: 5, z: 3 };
   const res = roundResults(x);
-  // H1: Ann 1 skin from Bo and Cy. H2 ties, carries. H3: Zed wins 2 skins from each of three
-  assert.deepEqual(res.balances, { a: 2 - 2, b: -1 - 2, c: -1 - 2, z: 6 });
+  // H1: Ann 1 skin from Bo and Cy. H2 ties, carries among the three. H3: Zed wins only the 3rd's own skin
+  assert.deepEqual(res.balances, { a: 2 - 1, b: -1 - 1, c: -1 - 1, z: 3 });
   assert.equal(sum(res.balances), 0);
+  assert.equal(res.detail.skins.rows[2].skins, 1);
+  assert.equal(res.detail.skins.rows[2].kept, 1, 'the 2nd still carries among Ann, Bo and Cy');
+});
+
+// A carry stays with the players who built it (2026-09-28)
+const pairsBalance = res => {
+  for (const [a, row] of Object.entries(res.pairs)) {
+    assert.equal(Math.round(Object.values(row).reduce((x, y) => x + y, 0) * 100) / 100 + 0, res.balances[a], `${a}'s head to head adds up to their money`);
+  }
+};
+
+test('skins carry: built before the join and won by an original player', () => {
+  const r = mk('skins');
+  play(r, [{ a: 4, b: 4, c: 4 }, { a: 4, b: 4, c: 4 }]);
+  const x = addPlayerToRound(r, Zed, 3);
+  x.scores[3] = { a: 3, b: 4, c: 4, z: 4 };
+  const res = roundResults(x);
+  // Ann takes 3 skins: the 2 carried, $2 each from Bo and Cy only, and the 3rd, $1 each from all three
+  assert.deepEqual(res.balances, { a: 4 + 3, b: -3, c: -3, z: -1 });
+  assert.equal(res.detail.skins.rows[2].skins, 3);
+  assert.equal(res.detail.skinsWon.a.amount, 7);
+  assert.equal(sum(res.balances), 0);
+  assert.equal(res.pairs.z.a, -1, 'Zed only paid Ann for the hole he played');
+  pairsBalance(res);
+  // Both kinds: the same rule on the gross skins too, so twice the money with handicaps off
+  const both = structuredClone(x);
+  both.settings.skins.kind = 'both';
+  assert.deepEqual(roundResults(both).balances, { a: 14, b: -6, c: -6, z: -2 });
+});
+
+test('skins carry: the late joiner wins their first hole and the old carry keeps going', () => {
+  const r = mk('skins');
+  play(r, [{ a: 4, b: 4, c: 4 }, { a: 4, b: 4, c: 4 }]);
+  const x = addPlayerToRound(r, Zed, 3);
+  x.scores[3] = { a: 4, b: 4, c: 4, z: 3 };
+  x.scores[4] = { a: 4, b: 3, c: 4, z: 4 };
+  const res = roundResults(x);
+  const rows = res.detail.skins.rows;
+  assert.deepEqual([rows[2].winner, rows[2].pot, rows[2].skins, rows[2].kept], ['z', 3, 1, 2]);
+  // H3: Zed $1 from each of three. H4: Bo takes the 4th ($1 from three) and the 2 carried ($2 from Ann and Cy)
+  assert.deepEqual([rows[3].winner, rows[3].skins], ['b', 3]);
+  assert.match(roundNotes(x)[0].text, /stay with the players who built them/);
+  assert.deepEqual(res.balances, { a: -1 - 1 - 2, b: -1 + 3 + 4, c: -1 - 1 - 2, z: 3 - 1 });
+  assert.equal(sum(res.balances), 0);
+  pairsBalance(res);
+});
+
+test('skins carry: a tie with the joiner in it carries for everyone, the older carry only for its builders', () => {
+  const r = mk('skins');
+  play(r, [{ a: 4, b: 4, c: 4 }]);
+  const x = addPlayerToRound(r, Zed, 2);
+  x.scores[2] = { a: 3, b: 4, c: 4, z: 3 }; // Ann and Zed tie: carries
+  x.scores[3] = { a: 4, b: 4, c: 4, z: 3 };
+  const res = roundResults(x);
+  // Zed takes the 2nd (he was in it) and the 3rd, $2 from each of three. The 1st still carries
+  assert.deepEqual(res.balances, { a: -2, b: -2, c: -2, z: 6 });
+  assert.equal(res.detail.skins.rows[2].skins, 2);
+  assert.equal(res.detail.skins.rows[2].kept, 1);
+  assert.equal(sum(res.balances), 0);
+  pairsBalance(res);
+});
+
+test('skins carry: after the last hole the old carry goes to its builders (split, playoff, void)', () => {
+  // Holes 1 to 8 tie. Zed joins on the 5th and wins the 9th outright; Ann and Bo are low of the rest
+  const make = lastCarry => {
+    const r = mk('skins');
+    r.settings.skins.lastCarry = lastCarry;
+    play(r, [1, 2, 3, 4].map(() => ({ a: 4, b: 4, c: 4 })));
+    const x = addPlayerToRound(r, Zed, 5);
+    for (let i = 5; i <= 8; i++) x.scores[i] = { a: 4, b: 4, c: 4, z: 4 };
+    x.scores[9] = { a: 4, b: 4, c: 5, z: 3 };
+    return x;
+  };
+  // Zed takes the 5th to 8th and the 9th: $5 from each of three. The 1st to 4th are left over
+  const v = roundResults(make('void'));
+  assert.deepEqual(v.balances, { a: -5, b: -5, c: -5, z: 15 });
+  assert.equal(v.detail.skins.unclaimed, 4);
+  // Split: Ann and Bo share them, $4 from Cy
+  const s = roundResults(make('split'));
+  assert.deepEqual(s.balances, { a: -3, b: -3, c: -9, z: 15 });
+  assert.equal(s.detail.skins.unclaimed, 0);
+  assert.deepEqual(s.detail.skins.end.tied, ['a', 'b']);
+  pairsBalance(s);
+  // Playoff: only Ann or Bo can win it, and the winner gets $4 from each of the other two
+  const p = make('playoff');
+  p.skinsPlayoff = { net: 'z' };
+  assert.deepEqual(roundResults(p).balances, v.balances);
+  p.skinsPlayoff = { net: 'a' };
+  assert.deepEqual(roundResults(p).balances, { a: 3, b: -9, c: -9, z: 15 });
+  for (const res of [v, s, roundResults(p)]) assert.equal(sum(res.balances), 0);
+});
+
+test('skins carry, pot: the carry from before the join counts for whoever of the builders wins it', () => {
+  const r = mk('skins');
+  r.settings.skins = { value: 1, carryover: true, payout: 'pot', stake: 10 };
+  play(r, [{ a: 4, b: 4, c: 4 }]);
+  const x = addPlayerToRound(r, Zed, 2);
+  x.scores[2] = { a: 4, b: 4, c: 4, z: 3 }; // Zed's skin: he's out of the pot, and the 1st keeps carrying
+  x.scores[3] = { a: 4, b: 3, c: 4, z: 4 }; // Bo: the 3rd and the carried 1st
+  x.scores[4] = { a: 3, b: 4, c: 4, z: 4 }; // Ann: the 4th
+  for (let i = 5; i <= 9; i++) x.scores[i] = { a: 4, b: 4, c: 4, z: 4 };
+  const res = roundResults(x);
+  // Bo 2 skins, Ann 1, of a $30 pot
+  assert.deepEqual(res.balances, { a: 0, b: 10, c: -10, z: 0 });
+  assert.equal(sum(res.balances), 0);
+  pairsBalance(res);
 });
 
 test('skins pot: the joiner is out of the pot and their skins do not count', () => {

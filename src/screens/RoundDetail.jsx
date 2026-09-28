@@ -315,11 +315,13 @@ function GameBreakdown({ round, res }) {
     return kinds.map(kind => {
       const t = skinsTable(round, kind);
       const won = t.rows.filter(r => r.winner);
-      const end = t.end;
+      // Usually one entry. With a late joiner, a carry from before they joined is claimed apart (see skinsTable)
+      const ends = t.ends || (t.end ? [t.end] : []);
+      const claimed = ends.some(e => e.winner || e.rule === 'split');
       return (
         <div key={kind}>
           <div className="sec-label">{both ? `${kind === 'net' ? 'Net' : 'Gross'} skins` : 'Skins won'}</div>
-          {won.length === 0 && !end?.winner && end?.rule !== 'split' && <p className="hint-card"><Icon name="coins" fill /> No skins won. Every hole was tied.</p>}
+          {won.length === 0 && !claimed && <p className="hint-card"><Icon name="coins" fill /> No skins won. Every hole was tied.</p>}
           {won.map(r => (
             <div key={r.hole.no} className="leg-row">
               <div className="leg-name">H{r.hole.no}</div>
@@ -327,15 +329,15 @@ function GameBreakdown({ round, res }) {
               <div className="leg-amt">{r.skins} skin{r.skins > 1 ? 's' : ''}</div>
             </div>
           ))}
-          {end?.rule === 'split' && (
-            <div className="leg-row">
+          {ends.map((end, k) => (end.rule === 'split' || (end.rule === 'playoff' && end.tied.length === 1)) && (
+            <div key={`end${k}`} className="leg-row">
               <div className="leg-name">H{end.row.hole.no}</div>
-              <div className="leg-winner">Split: {end.tied.map(pid => first(names[pid])).join(' & ')}</div>
+              <div className="leg-winner">{end.tied.length > 1 ? `Split: ${end.tied.map(pid => first(names[pid])).join(' & ')}` : `Carry to ${first(names[end.tied[0]])}`}</div>
               <div className="leg-amt">{end.skins} skin{end.skins > 1 ? 's' : ''}</div>
             </div>
-          )}
-          {end?.rule === 'playoff' && (
-            <div className="block">
+          ))}
+          {ends.map((end, k) => end.rule === 'playoff' && end.tied.length > 1 && (
+            <div key={`off${k}`} className="block">
               <div className="eyebrow" style={{ marginBottom: 8 }}>Playoff for {end.skins} skin{end.skins > 1 ? 's' : ''}: who won it?</div>
               <div className="chip-row" style={{ padding: 0 }} role="radiogroup" aria-label={`Playoff for ${kind} skins`}>
                 {end.tied.map(pid => (
@@ -344,8 +346,8 @@ function GameBreakdown({ round, res }) {
               </div>
               <p className="field-help">{end.winner ? `${first(names[end.winner])} takes the carried skins.` : 'Play a hole among the tied players, then tap who won it.'}</p>
             </div>
-          )}
-          {t.unclaimed > 0 && end?.rule !== 'playoff' && <p className="field-help" style={{ padding: '0 20px' }}>{t.unclaimed} skin{t.unclaimed > 1 ? 's' : ''} still carried over at the end, unclaimed.</p>}
+          ))}
+          {t.unclaimed > 0 && !ends.some(e => e.rule === 'playoff' && e.tied.length > 1 && !e.winner) && <p className="field-help" style={{ padding: '0 20px' }}>{t.unclaimed} skin{t.unclaimed > 1 ? 's' : ''} still carried over at the end, unclaimed.</p>}
         </div>
       );
     });
