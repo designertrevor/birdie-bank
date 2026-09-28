@@ -4,7 +4,9 @@
 // No organizer onboarding. They become "me" using their player from the shared round.
 import { useEffect, useMemo, useState } from 'react';
 import { BallIllo, Icon, Screen } from '../components/ui.jsx';
-import { update, uid } from '../lib/store.js';
+import { getState, update, uid } from '../lib/store.js';
+import { useNav } from '../lib/nav.js';
+import { afterJoin } from '../lib/join.js';
 import { cancelSeatRequest, fetchShared, joinShared, requestSeat, watchSeatRequest } from '../lib/sync.js';
 import { assemble, cleanRequestName } from '../lib/sync-model.js';
 import { GAMES, addPlayerProblem } from '../lib/round.js';
@@ -22,7 +24,17 @@ function Avatar({ name, i = 0, size = '' }) {
   return <span className={`join-avatar ${TINTS[i % TINTS.length]} ${size}`} aria-hidden="true">{firstName(name).slice(0, 1).toUpperCase() || '?'}</span>;
 }
 
-export default function JoinInvite({ code, onJoined, onSkip }) {
+/** The invite card as a pushed screen, for someone already set up (a join link, or a typed code). */
+export function JoinInviteScreen({ code }) {
+  const nav = useNav();
+  return <JoinInvite code={code} setUp onJoined={(id, done) => nav.reset('upnext', afterJoin(id, done))} onSkip={nav.pop} />;
+}
+
+/**
+ * `setUp`: this phone already has its own player (it's past onboarding), so joining keeps who
+ * "you" are and just adds the round, the way the old join sheet did.
+ */
+export default function JoinInvite({ code, onJoined, onSkip, setUp = false }) {
   const [found, setFound] = useState(null);
   const [err, setErr] = useState(null);
   const [tries, setTries] = useState(0);
@@ -47,7 +59,11 @@ export default function JoinInvite({ code, onJoined, onSkip }) {
   const join = async (player, watcherName) => {
     setBusy(true); setJoinErr(false);
     try {
-      update(s => {
+      if (setUp) {
+        // Already have this round (picked a seat before): open it rather than join twice
+        const have = Object.values(getState().rounds).find(r => r.shared?.code === code);
+        if (have) { saveSeat(code, null); onJoined(have.id, have.status === 'done'); return; }
+      } else update(s => {
         // Reuse the round's player id so this round's results are already "mine"
         const id = player?.id || uid('p_');
         s.players[id] = { id, name: player?.name || watcherName.trim(), index: player?.index ?? null, ...payFields(player), createdAt: Date.now() };
@@ -112,7 +128,7 @@ export default function JoinInvite({ code, onJoined, onSkip }) {
         {err && (
           <div className="cta-wrap">
             {!missing && <button className="full-btn" onClick={() => { setErr(null); setTries(t => t + 1); }}>Try again <Icon name="arrow-clockwise" /></button>}
-            <button className={`full-btn ${missing ? '' : 'outline'}`} onClick={onSkip}>Start my own round instead</button>
+            <button className={`full-btn ${missing ? '' : 'outline'}`} onClick={onSkip}>{setUp ? 'Back to Up next' : 'Start my own round instead'}</button>
           </div>
         )}
       </Screen>
@@ -171,7 +187,7 @@ export default function JoinInvite({ code, onJoined, onSkip }) {
         </div>
         <div className="cta-wrap">
           {problem
-            ? <button className="full-btn" onClick={() => setStep('watch')}>Watch instead <Icon name="eye" /></button>
+            ? <button className="full-btn" onClick={() => (setUp ? join(null) : setStep('watch'))}>Watch instead <Icon name="eye" /></button>
             : askErr
               ? <button className="full-btn" onClick={() => { setAskErr(false); setTries(t => t + 1); setStep('seat'); }}>They added me, check again <Icon name="arrow-clockwise" /></button>
               : <button className="full-btn" disabled={!cleanRequestName(name) || busy} onClick={send}>{busy ? 'Sending…' : <>Ask to join <Icon name="paper-plane-tilt" /></>}</button>}
@@ -202,8 +218,8 @@ export default function JoinInvite({ code, onJoined, onSkip }) {
         </div>
         <div className="cta-wrap">
           {step === 'waiting' && !busy && <button className="full-btn outline" onClick={cancel}>Cancel request</button>}
-          {step === 'no' && meta && <button className="full-btn" onClick={() => setStep('watch')}>Watch instead <Icon name="eye" /></button>}
-          {step !== 'waiting' && <button className="full-btn outline" onClick={onSkip}>Start my own round instead</button>}
+          {step === 'no' && meta && <button className="full-btn" onClick={() => (setUp ? join(null) : setStep('watch'))}>Watch instead <Icon name="eye" /></button>}
+          {step !== 'waiting' && <button className="full-btn outline" onClick={onSkip}>{setUp ? 'Back to Up next' : 'Start my own round instead'}</button>}
         </div>
       </Screen>
     );
@@ -304,7 +320,9 @@ export default function JoinInvite({ code, onJoined, onSkip }) {
       </div>
       <div className="cta-wrap">
         <button className="full-btn" onClick={() => setStep('seat')}>Pick your seat <Icon name="arrow-right" /></button>
-        <button className="full-btn outline" onClick={() => setStep('watch')}>I’m just watching</button>
+        <button className="full-btn outline" disabled={busy} onClick={() => (setUp ? join(null) : setStep('watch'))}>{busy ? 'Joining…' : 'I’m just watching'}</button>
+        {setUp && <button className="sheet-cancel" style={{ width: '100%', margin: 0 }} onClick={onSkip}>Not now</button>}
+        {setUp && joinErr && <p className="field-error" role="alert" style={{ textAlign: 'center' }}>Couldn’t reach Birdie Bank. Check your signal and try again.</p>}
       </div>
     </Screen>
   );

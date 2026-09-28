@@ -2,7 +2,8 @@ import { Suspense, lazy, useCallback, useEffect, useMemo, useState } from 'react
 import { UIProvider } from './components/ui.jsx';
 import ErrorBoundary from './components/ErrorBoundary.jsx';
 import { NavCtx } from './lib/nav.js';
-import { useStore } from './lib/store.js';
+import { getState, useStore } from './lib/store.js';
+import { joinRoute } from './lib/join.js';
 import { bootSync, syncConfigured } from './lib/sync.js';
 import { bootCloud } from './lib/cloud.js';
 import { cleanCode } from './lib/sync-model.js';
@@ -30,7 +31,9 @@ const onboarding = () => import('./screens/Onboarding.jsx');
 const people = () => import('./screens/People.jsx');
 const settings = () => import('./screens/Settings.jsx');
 const Onboarding = screen(onboarding);
-const JoinInvite = screen(() => import('./screens/JoinInvite.jsx'));
+const joinInvite = () => import('./screens/JoinInvite.jsx');
+const JoinInvite = screen(joinInvite);
+const JoinInviteScreen = screen(joinInvite, 'JoinInviteScreen');
 const History = screen(() => import('./screens/History.jsx'));
 const Ledger = screen(() => import('./screens/Ledger.jsx'));
 const Person = screen(() => import('./screens/Person.jsx'));
@@ -51,6 +54,7 @@ const Plan = screen(plan);
 const RollCall = screen(plan, 'RollCall');
 const PlanLink = screen(plan, 'PlanLink');
 const Paywall = screen(() => import('./screens/Paywall.jsx'));
+const Lately = screen(() => import('./screens/Lately.jsx'));
 
 /** A plan link (?plan=CODE, &p=WHO for one person's own) waiting to open: { code, who } or null. */
 function pendingPlanLink() {
@@ -68,6 +72,11 @@ function pendingPlanLink() {
 }
 const clearPlanLink = () => { try { sessionStorage.removeItem('bb-plan'); } catch { /* ignore */ } };
 
+/** A join link (?join=CODE) waiting to open, from the address bar or saved for this tab. */
+function pendingJoin() {
+  try { return cleanCode(new URLSearchParams(location.search).get('join') || sessionStorage.getItem('bb-join')) || null; } catch { return null; }
+}
+
 /** Warm the screens once the first one is up, so tapping into one never shows a blank frame. */
 function preloadScreens() {
   const go = () => LOADERS.forEach(l => l().catch(() => {}));
@@ -80,6 +89,7 @@ const SCREENS = {
   playerEdit: PlayerEdit, crewEdit: CrewEdit, person: Person,
   settings: Settings, defaults: Defaults, courses: Courses, courseEdit: CourseEdit, about: About, suggest: Suggest,
   plan: Plan, rollCall: RollCall, planLink: PlanLink, paywall: Paywall,
+  joinInvite: JoinInviteScreen, lately: Lately,
 };
 // Settings lives behind the avatar on Up next, so it's a pushed screen rather than a tab
 const TABS = { upnext: UpNext, ledger: Ledger, history: History, people: People };
@@ -106,14 +116,21 @@ export default function App() {
   // A plan link opens straight onto the plan: for someone set up, on top of Up next
   const [planLinkAt, setPlanLinkAt] = useState(pendingPlanLink);
   const [stack, setStack] = useState(() => {
-    if (!onboarded || !planLinkAt) return [];
-    clearPlanLink();
-    return [{ name: 'planLink', params: planLinkAt, key: Date.now() }];
+    if (!onboarded) return [];
+    if (planLinkAt) {
+      clearPlanLink();
+      return [{ name: 'planLink', params: planLinkAt, key: Date.now() }];
+    }
+    // A join link for someone already set up opens the invite card (seats, "Not on the list? Add me")
+    const code = syncConfigured ? pendingJoin() : null;
+    try { sessionStorage.removeItem('bb-join'); } catch { /* ignore */ }
+    const to = code ? joinRoute(getState(), code) : null;
+    return to ? [{ name: to[0], params: to[1], key: Date.now() }] : [];
   });
   // A join link opened before onboarding skips straight to picking your name in that round
   const [inviteCode, setInviteCode] = useState(() => {
     if (onboarded || !syncConfigured) return null;
-    try { return cleanCode(new URLSearchParams(location.search).get('join') || sessionStorage.getItem('bb-join')) || null; } catch { return null; }
+    return pendingJoin();
   });
 
   const push = useCallback((name, params = {}) => {
@@ -138,7 +155,8 @@ export default function App() {
     preloadScreens();
     const q = new URLSearchParams(location.search).get('join');
     if (q) {
-      try { sessionStorage.setItem('bb-join', q); } catch { /* ignore */ }
+      // Kept for this tab only until onboarding is past (someone set up already went to the invite card)
+      if (!getState().onboarded) { try { sessionStorage.setItem('bb-join', q); } catch { /* ignore */ } }
       history.replaceState(null, '', location.pathname);
     }
     if (new URLSearchParams(location.search).get('plan')) history.replaceState(null, '', location.pathname);

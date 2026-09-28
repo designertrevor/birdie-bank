@@ -11,19 +11,23 @@ import { JoinSheet } from '../components/Live.jsx';
 import { syncConfigured } from '../lib/sync.js';
 import { RSVP_LABEL, countsLine, planChoice, planCounts, upcomingPlans, whenLabel } from '../lib/plans.js';
 import { refreshPlans } from '../lib/plan-sync.js';
+import { latelyItems } from '../lib/lately.js';
+import { LatelyList } from '../components/LatelyList.jsx';
+
+const LATELY_ON_HOME = 3;
 
 /** Home: what's next for you. A round to finish, what you owe and are owed, and how the last one went. */
 export default function UpNext() {
   const nav = useNav();
   const state = useStore();
-  // A join link opened by someone already set up lands here and opens the join sheet
-  const [joinCode] = useState(() => { try { const c = sessionStorage.getItem('bb-join'); sessionStorage.removeItem('bb-join'); return c; } catch { return null; } });
-  const [joining, setJoining] = useState(!!joinCode);
+  // (A join link opened by someone already set up goes straight to the invite card: see App.)
+  const [joining, setJoining] = useState(false);
   const live = activeRounds(state);
   const last = lastResult(state);
   const tab = myTab(state);
   const hasHistory = !!last;
   const plans = upcomingPlans(state);
+  const lately = latelyItems(state);
   // Pick up answers and votes that came in since last time
   useEffect(() => { refreshPlans(); }, []);
 
@@ -57,6 +61,16 @@ export default function UpNext() {
           </button>
         )}
 
+        {lately.length > 0 && (
+          <>
+            <div className="sec-label">Lately</div>
+            <LatelyList items={lately.slice(0, LATELY_ON_HOME)} />
+            {lately.length > LATELY_ON_HOME && (
+              <button className="lately-all" onClick={() => nav.push('lately')}>See all {lately.length} <Icon name="caret-right" /></button>
+            )}
+          </>
+        )}
+
         {hasHistory && (
           <>
             <div className="sec-label">Your tab</div>
@@ -78,7 +92,7 @@ export default function UpNext() {
         )}
       </div>
       <BottomNav />
-      {joining && <JoinSheet open initialCode={joinCode || ''} onClose={() => setJoining(false)} />}
+      {joining && <JoinSheet open onClose={() => setJoining(false)} />}
     </Screen>
   );
 }

@@ -1,7 +1,8 @@
 import { useState } from 'react';
 import { Icon, Sheet, useUI } from './ui.jsx';
-import { getState, useStore } from '../lib/store.js';
-import { fetchShared, joinShared, shareLink, shareRound, stopSharing, useSyncStatus } from '../lib/sync.js';
+import { getState } from '../lib/store.js';
+import { joinRoute } from '../lib/join.js';
+import { fetchShared, shareLink, shareRound, stopSharing, useSyncStatus } from '../lib/sync.js';
 import { cleanCode } from '../lib/sync-model.js';
 import { GAMES } from '../lib/round.js';
 import { useNav } from '../lib/nav.js';
@@ -73,62 +74,37 @@ export function ShareSheet({ round, open, onClose }) {
   );
 }
 
-/** Enter a code → preview → pick who you are → join. */
+/**
+ * Enter a code, then on to the invite card (the same one a join link opens), where you pick
+ * your seat or ask for one. A round already on this phone just opens.
+ */
 export function JoinSheet({ open, onClose, initialCode = '' }) {
   const nav = useNav();
-  const state = useStore();
   const [code, setCode] = useState(cleanCode(initialCode));
-  const [found, setFound] = useState(null);
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState(null);
 
   const find = async () => {
     setBusy(true); setErr(null);
+    const have = joinRoute(getState(), code);
+    if (have && have[0] !== 'joinInvite') { setBusy(false); onClose(); nav.push(...have); return; }
     try {
       const remote = await fetchShared(code);
       if (!remote) setErr('No round with that code. Check it with the scorekeeper.');
-      else setFound(remote);
+      else { onClose(); nav.push('joinInvite', { code }); }
     } catch (e) { setErr(e.message || 'Couldn’t reach the server. Check your signal.'); }
     setBusy(false);
   };
-  const join = async me => {
-    const s = getState();
-    const existing = Object.values(s.rounds).find(r => r.shared?.code === code);
-    if (existing) { onClose(); nav.push('play', { id: existing.id }); return; }
-    // A round you're already in stays saved; switch back to it from Rounds in progress
-    const id = await joinShared(code, found, me);
-    onClose();
-    nav.push(found.meta.status === 'done' ? 'roundDetail' : 'play', { id });
-  };
 
-  const meta = found?.meta;
   return (
-    <Sheet open={open} onClose={onClose} title={meta ? 'Who are you?' : 'Join a round'}>
+    <Sheet open={open} onClose={onClose} title="Join a round">
       <div style={{ padding: '0 16px' }}>
-        {!meta ? (
-          <>
-            <p className="sheet-text" style={{ padding: '0 4px 12px' }}>Ask the scorekeeper for the 6-character code, or open the link they sent.</p>
-            <label className="sr-only" htmlFor="join-code">Round code</label>
-            <input id="join-code" className="code-input" value={code} onChange={e => { setCode(cleanCode(e.target.value)); setErr(null); }}
-              placeholder="ABC123" autoCapitalize="characters" autoCorrect="off" autoComplete="off" inputMode="text" maxLength={8} />
-            {err && <p className="field-error" style={{ textAlign: 'center' }}>{err}</p>}
-            <div style={{ marginTop: 14 }}><button className="full-btn" disabled={code.length !== 6 || busy} onClick={find}>{busy ? 'Finding…' : 'Find round'}</button></div>
-          </>
-        ) : (
-          <>
-            <div className="block summary-card" style={{ margin: '0 0 12px' }}>
-              <div className="d" style={{ fontSize: 20, fontWeight: 800 }}>{GAMES[meta.game].name} · {meta.course.name}</div>
-              <div className="li-sub">{meta.holes.length} holes · {meta.players.map(p => p.name).join(', ')}</div>
-            </div>
-            {meta.players.map(p => (
-              <button key={p.id} className="sheet-item" style={{ margin: '0 0 8px', width: '100%' }} onClick={() => join(p.id)}>
-                <span><Icon name="user-circle" fill /> I’m {p.name}</span><Icon name="caret-right" />
-              </button>
-            ))}
-            <button className="sheet-cancel" style={{ width: '100%', margin: '4px 0 0' }} onClick={() => join(null)}>I’m just watching</button>
-            {state.me && <p className="field-help" style={{ textAlign: 'center' }}>Pick yourself and this round goes in your history and on your tab.</p>}
-          </>
-        )}
+        <p className="sheet-text" style={{ padding: '0 4px 12px' }}>Ask the scorekeeper for the 6-character code, or open the link they sent.</p>
+        <label className="sr-only" htmlFor="join-code">Round code</label>
+        <input id="join-code" className="code-input" value={code} onChange={e => { setCode(cleanCode(e.target.value)); setErr(null); }}
+          placeholder="ABC123" autoCapitalize="characters" autoCorrect="off" autoComplete="off" inputMode="text" maxLength={8} />
+        {err && <p className="field-error" style={{ textAlign: 'center' }}>{err}</p>}
+        <div style={{ marginTop: 14 }}><button className="full-btn" disabled={code.length !== 6 || busy} onClick={find}>{busy ? 'Finding…' : 'Find round'}</button></div>
       </div>
     </Sheet>
   );
