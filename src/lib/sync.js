@@ -8,6 +8,13 @@ import { getSupabase, supabaseConfigured } from './supabase.js';
 import { leaveRound } from './rounds.js';
 import { applyHole, applyMeta, assemble, buildHole, buildMeta, buildRequest, isRequestNo, merge3, newCode, newRequestNo, readRequest, stable } from './sync-model.js';
 import { payFields } from './pay.js';
+import { canEdit, hostKeeper, isKeeper, keeperMe, keeperOf, metaToSend, seatTaken } from './keeper.js';
+
+/** Whether this phone may change a shared round (see keeper.js), and who it is in it. */
+function editorOf(round) {
+  const me = keeperMe(round, getState());
+  return { me, editor: canEdit(round, me, !!round?.shared?.host) };
+}
 
 
 let adapterPromise = null;
@@ -65,10 +72,13 @@ async function pushOnce(roundId, entry) {
   const round = getState().rounds[roundId];
   const adapter = await getAdapter();
   if (!round || !adapter || live.get(roundId) !== entry) return true;
-  const meta = buildMeta(round);
-  const metaJson = stable(meta);
+  // Only the phone keeping score sends scores and changes to the game. Any other phone sends only
+  // what it's allowed to (asking for the card, taking its seat): see metaToSend
+  const { me, editor } = editorOf(round);
+  const meta = metaToSend(parse(entry.lastMeta), buildMeta(round), { editor, me });
+  const metaJson = meta ? stable(meta) : entry.lastMeta;
   const holes = [];
-  round.holes.forEach((h, i) => {
+  if (editor) round.holes.forEach((h, i) => {
     const data = buildHole(round, i);
     const json = stable(data);
     if (json !== (entry.lastHoles[h.no] ?? stable(null))) holes.push([h.no, data, json]);
@@ -159,9 +169,10 @@ function onRemote(roundId, ev) {
     const round = getState().rounds[roundId];
     const idx = round ? round.holes.findIndex(h => h.no === ev.holeNo) : -1;
     if (idx < 0) return;
-    // Scores this phone hasn't sent yet are kept; the push that follows sends the merged hole
+    // Scores this phone hasn't sent yet are kept; the push that follows sends the merged hole.
+    // A phone that isn't keeping score has nothing of its own to keep: the keeper's copy wins
     const local = buildHole(round, idx);
-    const merged = merge3(base, local, ev.data, 2);
+    const merged = editorOf(round).editor ? merge3(base, local, ev.data, 2) : ev.data;
     if (stable(merged) === stable(local)) return;
     update(s => { const r = s.rounds[roundId]; if (r) applyHole(r, ev.holeNo, merged); });
   }
@@ -262,7 +273,14 @@ export async function shareRound(roundId) {
   if (!adapter) throw new Error('Shared scoring isn’t set up yet');
   const code = newCode();
   // Who's inviting, for the invite card ("Trevor invited you")
-  update(s => { const r = s.rounds[roundId]; const me = s.players[s.me]; if (r && me?.name) r.hostName = me.name.split(' ')[0]; });
+  update(s => {
+    const r = s.rounds[roundId]; const me = s.players[s.me];
+    if (!r) return;
+    if (me?.name) r.hostName = me.name.split(' ')[0];
+    // This phone keeps score to start with, and the organizer's seat (if they're playing) is on the app
+    if (!keeperOf(r)) Object.assign(r, hostKeeper());
+    Object.assign(r, seatTaken(r, s.me));
+  });
   const round = getState().rounds[roundId];
   const holes = {};
   round.holes.forEach((h, i) => { const d = buildHole(round, i); if (d) holes[h.no] = d; });
@@ -296,6 +314,8 @@ export async function joinShared(code, remote, localMe) {
     const seat = r?.players.find(p => p.id === localMe);
     const mine = payFields(s.players[s.me]);
     if (seat && mine.payHandle && !seat.payHandle) Object.assign(seat, mine);
+    // Your seat is on the app now, so the scorekeeper can hand you the card
+    if (seat && r.status === 'active') Object.assign(r, seatTaken(r, localMe));
   });
   return round.id;
 }
@@ -333,11 +353,17 @@ function noteRequest(roundId, no, data) {
   if (had !== list.has(no) || r?.status === 'waiting') reqChanged();
 }
 
-/** Seat requests waiting on this round's scorekeeper, oldest first: [{ no, name, at }]. */
+/**
+ * Seat requests waiting on this round's scorekeeper, oldest first: [{ no, name, at }]. They show on
+ * the phone keeping score (the host phone in a round with no keeper yet).
+ */
 export function useSeatRequests(roundId) {
   useSyncExternalStore(subReq, () => reqVersion, () => reqVersion);
   const round = getState().rounds[roundId];
-  if (!round?.shared?.host || round.shared.ended) return [];
+  if (!round?.shared || round.shared.ended) return [];
+  const host = !!round.shared.host;
+  const keeps = keeperOf(round) ? isKeeper(round, keeperMe(round, getState()), host) : host;
+  if (!keeps) return [];
   return [...(requests.get(roundId)?.values() || [])].sort((a, b) => a.at - b.at);
 }
 

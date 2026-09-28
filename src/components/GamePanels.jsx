@@ -14,7 +14,8 @@ const nameOf = (round, pid) => round.players.find(p => p.id === pid)?.name || '?
 
 // --------------------------- Nassau & match play ---------------------------
 
-export function MatchPanel({ round, hole }) {
+/** `readOnly`: a phone that isn't keeping score sees the match but can't press. */
+export function MatchPanel({ round, hole, readOnly = false }) {
   const { showToast } = useUI();
   const winners = nassauWinners(round);
   const LEGS = roundLegs(round);
@@ -24,7 +25,7 @@ export function MatchPanel({ round, hole }) {
   const names = sideNames(round);
   const short = names.map((n, i) => (round.teams ? ['A', 'B'][i] : n.charAt(0).toUpperCase()));
   // Manual presses, and the press at the turn when presses are off (auto presses are made on saving)
-  const options = pressMode(round) !== 'auto' && !holeComplete(round, hole) ? nassauPressOptions(round, pos) : [];
+  const options = !readOnly && pressMode(round) !== 'auto' && !holeComplete(round, hole) ? nassauPressOptions(round, pos) : [];
   const activePresses = bets.filter(b => b.press && pos >= b.start && pos <= b.end);
   const press = o => {
     update(s => { const r = s.rounds[round.id]; r.presses.push({ id: uid('pr_'), leg: o.leg, start: pos, by: o.trailing }); });
@@ -253,7 +254,7 @@ export function SnakePicker({ round, hole, marks, setMarks }) {
 // --------------------------- Hammer ---------------------------------------
 
 /** The hole's value, the hammer buttons, and folding. Marks: { hammers: [side, ...], conceded: side | null }. */
-export function HammerPanel({ round, hole, marks, setMarks }) {
+export function HammerPanel({ round, hole, marks, setMarks, readOnly = false }) {
   const mark = { hammers: marks?.hammers || [], conceded: marks?.conceded ?? null };
   const rows = hammerTable(round);
   const row = rows.find(r => r.hole.no === hole.no);
@@ -279,7 +280,7 @@ export function HammerPanel({ round, hole, marks, setMarks }) {
         <span>{before === 0 ? 'All square' : `${short[before > 0 ? 0 : 1]} +${money(Math.abs(before))}`}</span>
       </div>
       {status && <p className="bl" style={{ margin: '0 0 8px', fontWeight: 500 }} aria-live="polite">{status}</p>}
-      <div className="chip-row" style={{ padding: 0 }}>
+      {!readOnly && <div className="chip-row" style={{ padding: 0 }}>
         {[0, 1].map(i => can[i] && (
           <button key={i} className="pill-btn" style={{ minHeight: 44 }} onClick={() => put({ hammers: [...mark.hammers, i], conceded: null })}>
             <Icon name="hammer" fill /> {short[i]} hammer{plural(i) ? '' : 's'} · {money(value * 2)}
@@ -293,7 +294,7 @@ export function HammerPanel({ round, hole, marks, setMarks }) {
             <Icon name="arrow-counter-clockwise" /> Undo
           </button>
         )}
-      </div>
+      </div>}
     </div>
   );
 }
