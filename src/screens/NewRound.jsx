@@ -5,7 +5,7 @@ import { getState, update, uid, useStore } from '../lib/store.js';
 import { allCourses, coursePar, courseTag, defaultTee as firstTee, teeDotStyle } from '../lib/courses.js';
 import { getCourse } from '../lib/courseApi.js';
 import { useCourseSearch } from '../lib/useCourseSearch.js';
-import { GAMES, GAME_GROUPS, MAX_GAMES, createRound, effectiveCourseHc, holesInPlay, sideGameChoices } from '../lib/round.js';
+import { GAMES, GAME_GROUPS, createRound, effectiveCourseHc, holesInPlay, sideGamesOf } from '../lib/round.js';
 import { SideGamesSetup } from '../components/SideGames.jsx';
 import { GameOptions, SixesPreview, TeamPicker } from '../components/GameOptions.jsx';
 import { optionsProblem, roundStakeLines, stakeSummary } from '../lib/stakes.js';
@@ -105,7 +105,10 @@ export default function NewRound({ rematch, fromPlan, present, ahead = false, ga
   // Side games on top of the main game: [{ game, settings }] (start-now setup only, not plans)
   const [sideGames, setSideGames] = useState(() => structuredClone(pre?.sideGames || []));
   // Only the side games that still fit the main game (a Skins main game drops a Skins side game)
-  const sidesFor = gm => sideGames.filter(sg => sideGameChoices(gm, []).includes(sg.game)).slice(0, MAX_GAMES - 1);
+  const sidesFor = gm => sideGamesOf({ game: gm, sideGames });
+  // Setup edits the list it shows, so an index always points at the side game on screen (a side game
+  // hidden by a change of main game is dropped by the edit rather than changed by mistake)
+  const editSides = fn => setSideGames(list => fn(sideGamesOf({ game, sideGames: list })));
   const [createdId, setCreatedId] = useState(null); // the round, once it's set up
   const usual = useMemo(() => usualRound(state), [state]);
 
@@ -212,7 +215,7 @@ export default function NewRound({ rematch, fromPlan, present, ahead = false, ga
       {step === 3 && !planning && course && (
         <SetupStep game={game} course={course} holesCount={holesCount} nine={nine} picked={picked} setPicked={setPicked}
           opts={opts} setOpts={setOpts} useHc={useHc} setUseHc={setUseHc} startHole={startHole} setStartHole={setStartHole} onStart={start}
-          teams={teams} setTeams={setTeams} sideGames={sidesFor(game)} setSideGames={setSideGames} />
+          teams={teams} setTeams={setTeams} sideGames={sidesFor(game)} setSideGames={editSides} />
       )}
       {step === 4 && created && <ReadyStep round={created} onStart={() => nav.reset('upnext', ['play', { id: created.id }])} />}
     </Screen>
