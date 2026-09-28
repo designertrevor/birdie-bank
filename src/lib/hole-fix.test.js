@@ -2,8 +2,8 @@
 // a change of round length, and rounds without fixes are exactly as before.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { createRound, fixHole, fixTee, fixedCourse, holesInPlay, playedTwice, resizeRound, roundResults, strokeChanges, strokesFor } from './round.js';
-import { holeFixFeedback, moneyChanges, moneyLine, playsLine, strokeChangeLines, strokeImpact, teeFixFeedback } from './hole-fix.js';
+import { addPlayerToRound, createRound, fixHole, fixTee, fixedCourse, holesInPlay, playedTwice, resizeRound, roundResults, strokeChanges, strokesFor } from './round.js';
+import { holeFixFeedback, keepsDraft, moneyChanges, moneyLine, playsLine, strokeChangeLines, strokeImpact, teeFixFeedback } from './hole-fix.js';
 
 const SETTINGS = { hcPct: 100, skins: { value: 2, carryover: false } };
 // Pars 5-4-3 repeating (72), rating 72 and slope 113, so a course handicap is the index
@@ -188,4 +188,48 @@ test('feedback notes say what changed', () => {
   const tf = teeFixFeedback(r, { ...course18, custom: true }, 'White', { rating: 72, slope: 113 }, { rating: 72, slope: 120 });
   assert.equal(tf.body, 'White tees at Pebble Creek: slope 113 to 120');
   assert.equal(tf.details.source, 'added by the user');
+});
+
+test('fixTee keeps a course handicap set by hand on an older round (no courseHcOverride stored)', () => {
+  const players = [{ id: 'd', name: 'Dave Smith', index: 10, tee: 'White' }, { id: 't', name: 'Trevor N', index: 5, tee: 'White' }];
+  const r = createRound({ id: 'r', game: 'skins', course: course18, holesCount: 18, nine: 'front', players, settings: SETTINGS, hcPct: 100 });
+  // An older round: Dave's 14 was typed in by hand, but only the figure was kept
+  r.players[0] = { ...r.players[0], courseHc: 14, courseHcOverride: null, plays: 9 };
+  const f = fixTee(r, course18, 'White', { rating: 73, slope: 113 });
+  assert.equal(f.players[0].courseHc, 14);
+  assert.equal(f.players[1].courseHc, 6);
+});
+
+test('fixTee that moves no course handicap leaves strokes and money exactly as they were', () => {
+  let r = mk();
+  r.scores = { 1: { d: 4, t: 4, a: 4 }, 2: { d: 4, t: 4, a: 5 } };
+  // A plus-handicap player joins late: they play off the same low, so they give strokes back
+  r = addPlayerToRound(r, { id: 'p', name: 'Pat Q', courseHc: -3 }, 3);
+  assert.deepEqual(r.players.map(p => p.plays), [1, 0, 0, -3]);
+  r.scores[3] = { d: 3, t: 3, a: 4, p: 4 };
+  const before = roundResults(r).balances;
+  // Nobody is on Blue: fixing it changes no one's course handicap
+  const f = fixTee(r, course18, 'Blue', { rating: 75, slope: 131 });
+  assert.deepEqual(f.players, r.players);
+  assert.deepEqual(roundResults(f).balances, before);
+});
+
+test('a touched score keeps its number when the hole’s par is fixed before saving', () => {
+  const kept = { dirty: true, base: { d: 4, t: 4, a: 4 }, draft: { d: 4, t: 5, a: 4 }, touched: { d: true, t: true, a: false } };
+  // Par fixed 4 → 5: Dave's confirmed 4 and Trevor's 5 stay; Al's untouched score starts from the new par
+  assert.equal(keepsDraft(kept, 'd', {}, 5), true);
+  assert.equal(keepsDraft(kept, 't', {}, 5), true);
+  assert.equal(keepsDraft(kept, 'a', {}, 5), false);
+  // Par unchanged: a score saved on another phone still wins over a draft left at par
+  assert.equal(keepsDraft(kept, 'd', { d: 6 }, 4), false);
+  assert.equal(keepsDraft(kept, 'd', {}, 4), false);
+  assert.equal(keepsDraft(null, 'd', {}, 5), false);
+});
+
+test('a hole without a courseIdx only fixes itself', () => {
+  const r = mk();
+  r.holes = r.holes.map(({ courseIdx, ...h }) => h); // eslint-disable-line no-unused-vars
+  assert.equal(playedTwice(r), false);
+  const f = fixHole(r, 7, { par: 4 });
+  assert.deepEqual(f.holes.filter((h, i) => h.par !== r.holes[i].par).map(h => h.no), [7]);
 });

@@ -131,3 +131,15 @@ export function courseTeeLabel(round, course) {
   if (tees.length === 1 && tees[0].tee?.rating != null && tees[0].tee?.slope != null) return `${tees[0].name} · ${tees[0].tee.rating} / ${tees[0].tee.slope}`;
   return tees.map(t => t.name).join(', ');
 }
+
+/**
+ * Whether a hole's unsaved score for `id` (kept across a remount) wins over the saved score or par.
+ * A score you changed always does. One you confirmed at par also does once the hole's par has been
+ * fixed, so a 4 you meant stays a 4 (untouched scores still start from the new par). Otherwise the
+ * saved score, which may have come from another phone, wins.
+ */
+export function keepsDraft(kept, id, saved, par) {
+  if (!kept?.dirty || !kept.base) return false;
+  if (kept.draft[id] !== kept.base[id]) return true;
+  return !!kept.touched?.[id] && saved?.[id] == null && kept.base[id] !== par;
+}

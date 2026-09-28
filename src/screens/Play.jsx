@@ -8,7 +8,7 @@ import {
   gameView, sideGamesOf, holeFixOf,
 } from '../lib/round.js';
 import { CourseTeeSheet, FixHoleSheet } from '../components/FixHole.jsx';
-import { courseTeeLabel } from '../lib/hole-fix.js';
+import { courseTeeLabel, keepsDraft } from '../lib/hole-fix.js';
 import { markUsualPlayed } from '../lib/usuals.js';
 import { findCourse } from '../lib/courses.js';
 import { money, netScoreName, scoreName, pickupGross } from '../lib/golf.js';
@@ -123,7 +123,8 @@ function PlayRound({ round }) {
   // Edits you made but haven't saved win over the saved score; otherwise the saved score (which may have come from another phone) wins.
   // Only scores you actually changed count as edits, so a score saved on another phone isn't reset to par.
   const wasDirty = !!kept?.dirty;
-  const mine = id => wasDirty && !!kept.base && kept.draft[id] !== kept.base[id];
+  // A score confirmed at par also stays when the hole's par was fixed before saving (see keepsDraft)
+  const mine = id => keepsDraft(kept, id, saved, hole.par);
   const [dirty, setDirty] = useState(wasDirty);
   const [base] = useState(() => Object.fromEntries(units.map(p => [p.id, mine(p.id) ? kept.base[p.id] : saved[p.id] ?? hole.par])));
   const [draft, setDraft] = useState(() => Object.fromEntries(units.map(p => [p.id, mine(p.id) ? kept.draft[p.id] : saved[p.id] ?? hole.par])));

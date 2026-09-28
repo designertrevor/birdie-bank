@@ -671,7 +671,7 @@ function withPlays(round, players) {
 
 /** A 9-hole card played twice for 18: both passes share each course hole. */
 export function playedTwice(round) {
-  const idxs = round.holes.map(h => h.courseIdx);
+  const idxs = round.holes.map(h => h.courseIdx).filter(i => i != null);
   return new Set(idxs).size < idxs.length;
 }
 
@@ -743,7 +743,8 @@ export function fixHole(round, holeNo, { par, hdcp } = {}, { at = Date.now(), by
     if (!next.par && !next.hdcp) delete fixes[h.no]; else fixes[h.no] = next;
   };
   if (par != null && par !== target.par) {
-    for (const h of holes) if (h.courseIdx === target.courseIdx) { note(h, 'par', h.par, par); h.par = par; }
+    // A hole without a courseIdx (never expected) only ever fixes itself
+    for (const h of holes) if (h === target || (target.courseIdx != null && h.courseIdx === target.courseIdx)) { note(h, 'par', h.par, par); h.par = par; }
   }
   if (hdcp != null && hdcp !== target.hdcp && !playedTwice(round)) {
     const other = holes.find(h => h.no !== holeNo && h.hdcp === hdcp);
@@ -782,13 +783,19 @@ export function fixTee(round, course, teeName, { rating, slope } = {}, { at = Da
   if (next.rating || next.slope) fixes[teeName] = next; else delete fixes[teeName];
   const out = { ...round };
   if (Object.keys(fixes).length) out.teeFixes = fixes; else delete out.teeFixes;
+  const wasCourse = teeFixedCourse(course, round);
   const hcCourse = teeFixedCourse(course, out);
   const hcHoles = parFree(round, round.holes);
   const players = round.players.map(p => {
     if (p.tee !== teeName || p.courseHcOverride != null) return p;
+    // A figure that doesn't match the tee as it was was set by hand (older rounds only kept the figure): it stays
+    const was = effectiveCourseHc(p.index, wasCourse.tees.find(x => x.name === teeName), wasCourse, hcHoles, round.holesCount, null).value;
+    if (was !== p.courseHc) return p;
     const t = hcCourse.tees.find(x => x.name === teeName);
     return { ...p, courseHc: effectiveCourseHc(p.index, t, hcCourse, hcHoles, round.holesCount, null).value };
   });
+  // No course handicap moved: strokes stay exactly as they are (a late joiner keeps playing off the same low)
+  if (players.every((p, i) => p.courseHc === round.players[i].courseHc)) return out;
   out.players = withPlays(round, players);
   if (round.teams) out.teams = withTeamHandicaps(out, round.teams, out.players, round.useHandicaps, round.hcPct);
   return out;
