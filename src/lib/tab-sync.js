@@ -277,5 +277,9 @@ export function answerCarry(carry, type) {
   const now = Date.now();
   const next = carryReducer(carry, { type, at: now });
   if (next === carry) return;
-  commit(carryRows(s, next, { now }));
+  const rows = carryRows(s, next, { now });
+  if (rows.length) { commit(rows); return; }
+  // A carry that reached this phone through your account but not its rounds: answer it here
+  const { carried: _carried, ...plain } = next;
+  update(st => { st.carries = (st.carries || []).map(c => (c.id === next.id ? plain : c)); });
 }

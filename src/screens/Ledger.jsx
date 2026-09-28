@@ -38,7 +38,6 @@ export default function Ledger() {
   const others = plan.filter(t => !isMe(t.from) && !isMe(t.to));
   const overall = Math.round(people.reduce((a, p) => a + p.net, 0) * 100) / 100;
   const h2h = headToHeadSummary(state, mine);
-  const square = [...h2h.keys()].filter(id => !byPerson.has(id)).map(id => first(nameOf(state, id)));
   const history = [...state.settlements].sort((a, b) => b.at - a.at);
   const hasRounds = Object.values(state.rounds).some(r => r.status === 'done');
 
@@ -55,6 +54,7 @@ export default function Ledger() {
     .map(id => ({ id, pay: recentPayment(state, meId, id) }))
     .filter(x => x.pay)
     .sort((a, b) => b.pay.at - a.pay.at);
+  const squareNames = [...h2h.keys()].filter(id => !byPerson.has(id) && !recentSquare.some(x => x.id === id)).map(id => first(nameOf(state, id)));
 
   const personRow = p => {
     const name = nameOf(state, p.id);
@@ -124,7 +124,8 @@ export default function Ledger() {
               </div>
             )}
             {people.map(personRow)}
-            {square.length > 0 && people.length > 0 && <p className="field-help pad">All square with {listNames(square)}.</p>}
+            {recentSquare.map(squareCard)}
+            {squareNames.length > 0 && people.length > 0 && <p className="field-help pad">All square with {listNames(squareNames)}.</p>}
             {others.length > 0 && (
               <>
                 <div className="sec-label">{people.length ? 'Everyone else' : 'Who owes who'}</div>
@@ -134,7 +135,7 @@ export default function Ledger() {
             <p className="field-help pad">Netted across every round, then squared in the fewest payments. Nobody is asked to pay someone they haven’t played with.</p>
           </>
         )}
-        {recentSquare.map(squareCard)}
+        {plan.length === 0 && recentSquare.map(squareCard)}
         {history.length > 0 && (
           <>
             <div className="sec-label">Payments</div>

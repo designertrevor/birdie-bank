@@ -25,11 +25,13 @@ The plan for growing Birdie Bank into a $10k/mo business, and the checklist we w
 
 **Shipped overnight 2026-09-28 (onboarding):** organizer onboarding: four questions one a screen with payoffs, "Here's your group", then "Set up your next round" straight into the plan flow (the first game they play is suggested, the others go on the ballot). The paywall (option C, trial with a free way out) is built as a preview behind a flag: open the app with `?paywall=on` to see it, `?paywall=off` to hide it. Placeholder prices, nothing charged.
 
-**Next in S2:** one shared tab for the group and carry-overs (area 7), real payments for the paywall test (Stripe, area 11), several games in one round, and the quick logo (area 16).
+**Built overnight 2026-09-29 (shared Tab, branch `overnight3/shared-tab`):** one Tab on both phones for shared rounds ("I paid", "Didn't get it?", undo with one tap), the who's square strip, and "Roll to next time" carry-overs on the same person card. Run `supabase/2026-09-29-round-payments.sql` to switch it on; until then everything stays on each phone as before.
+
+**Next in S2:** finish the shared tab (linking the organizer's copy of a player to the real person, area 1), real payments for the paywall test (Stripe, area 11), several games in one round, and the quick logo (area 16).
 
 **The big date:** the creator test (S4) runs February to April 2027, when golf season starts back up. Everything before it is about being ready: a product groups keep using, a smooth path from video to paying, and an App Store app.
 
-Last updated: 2026-09-28
+Last updated: 2026-09-29
 
 ---
 
@@ -217,9 +219,9 @@ Put more money into the winning creators and copy their video formats with other
 ### 7. The tab and settling up
 - [x] Debts netted across every round, recording payments (including partial ones), Venmo pay links
 - [x] `S1` Settle up right from the end of the round: Venmo pay or request links and Mark paid, without leaving for the Tab (2026-09-26)
-- [ ] `S2` One shared tab for the group: both players see the same numbers, and a recorded payment shows up for the other person
-- [ ] `S2` The group can see who's settled up during the week
-- [ ] `S2` **Carry it over:** instead of "I paid," either person can propose rolling the balance into next week. Once the other person agrees, it's no longer pending or overdue; it stays in the running tab as an agreed carry-over.
+- [ ] `S2` (partial) One shared tab for the group: both players see the same numbers, and a recorded payment shows up for the other person. Built 2026-09-29: on a round that was shared live, "I paid" or "Mike paid me" on the person card shows on both phones, and the other side can take it back ("Didn't get it?"), one tap with an Undo toast. Needs `supabase/2026-09-29-round-payments.sql` run; until then payments stay on each phone as before. Still open: the person-card amount is each phone's own math across the rounds on that phone, so two phones can show different totals, and linking the organizer's copy of a player to the real person (area 1)
+- [ ] `S2` (partial) The group can see who's settled up between rounds. Built 2026-09-29: a strip on the Tab for your latest shared round ("Last round · Sat, Sep 26", "3 of 5 square") with Square, Owes, Waiting or Carried for each player, status only, never amounts. Goes live for the group once the round payments SQL is run
+- [ ] `S2` (partial) **Carry it over:** instead of "I paid," either person can propose rolling the balance into the next round. Once the other person agrees, it's no longer pending or overdue; it stays in the running tab as an agreed carry-over. Built 2026-09-29 on the same person card: "Roll to next time" with optional reasons, Agree or "I'd rather get paid" ("I'll just pay" when the payer answers), Take it back, "Carried over" with Remind and Request hidden, its own line in the person's story, and it rolls once the two finish another round. Only offered for pairs with a shared round, and hidden until the round payments SQL is run
 - [x] `S2` Fewest payments for the whole group, not just pair by pair. Only ever between people who have played together; money is passed along through a mutual friend when needed (2026-09-27)
 - [x] `S2` Cash App, PayPal and Zelle alongside Venmo. Each person picks their app; pay buttons use the payee's app (Zelle shows the handle with a copy button) and only show to the person paying or owed. Handles ride along on shared rounds (2026-09-27)
 - [x] `S2` The Tab by person: your net with each friend, Settle up and Remind on every row, Venmo request links, and tap a person for the round-by-round story (2026-09-27)
@@ -365,8 +367,8 @@ Kept light on purpose. Groups already have a group text, so Birdie Bank adds to 
 - Not now: a full chat system for each round or group. It's a lot of work to do well, and nobody has asked for it. Revisit only if the feedback table shows groups want it.
 
 **Settling up during the week**
-- [ ] `S2` Group sees who has paid from last round (see area 7)
-- [ ] `S2` Carry-over proposals: propose rolling a balance into next week; once the other person agrees, it's settled for now (see area 7)
+- [ ] `S2` (partial) Group sees who has paid from last round (see area 7; built 2026-09-29, waits on the round payments SQL)
+- [ ] `S2` (partial) Carry-over proposals: propose rolling a balance into the next round; once the other person agrees, it's settled for now (see area 7; built 2026-09-29, waits on the round payments SQL)
 - [ ] `S3` Monday recap: last round's results, who's paid, what carried over
 
 **Watching other rounds**
@@ -445,3 +447,4 @@ Kept light on purpose. Groups already have a group text, so Birdie Bank adds to 
 - 2026-09-28: Everything from both overnight runs is live on main, and all three SQL parts are run. Join link previews now show the round (they never had: `vercel.json` rewrites don't run for `/`, so middleware does it, and "$2 a skin" no longer breaks the text). Course search is on with a free GolfCourseAPI key. Custom SMTP waits for the app's final name and domain. Tests: 346 passing.
 - 2026-09-28: Skins and late joiners: a carry stays with the players who built it. A player added mid-round plays for every skin from the hole they join, but not for skins already carrying when they arrive; if they win a hole outright they take that hole's skin and the older carry keeps rolling among its builders. Works for net, gross, both, the pot and the last-hole rules, and the join sheet and Skins rules say so. Tests: 351 passing.
 - 2026-09-28: A doubling Snake has an optional cap, 4 doubles by default ($5 tops out at $80), with No cap as a choice; rounds played before keep their money. The planned-round ballot votes on each game's bet in its own unit ("$5 a side", "$2 a skin", "$1 a point"), and Tee off uses the amount voted for the winning game; older plans still load. Tests: 365 passing.
+- 2026-09-29 (overnight): The shared Tab and carry-overs (decisions 1 and 2). A payment on a round that was shared live is a row keyed to the round's code and its transfer, so "I paid" shows on both phones and marking the same transfer on two phones counts once; the other side can take it back with one tap. The Tab by person keeps each phone's own math; a strip shows who's square in your latest shared round, status only. "Roll to next time" asks the other person to carry what's owed into the next round; agreed carries hide Remind and Request and never change the money. New table in `supabase/2026-09-29-round-payments.sql` (not run yet). Old rounds and payments read the same money (tested). Tests: 385 passing.

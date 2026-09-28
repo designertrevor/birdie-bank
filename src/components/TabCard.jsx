@@ -1,7 +1,8 @@
 // The shared Tab's pieces: one person card's actions (Pay, I paid, Roll to next time, and the
 // carry-over states), the "Paid $15 · just now" line with its undo, and the who-is-square strip.
 // Used by the Tab and the person screen, so the card works the same in both places.
-import { useState } from 'react';
+import { useCallback, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { Icon, Sheet, useUI } from './ui.jsx';
 import { Avatar, PayButton, RequestButton } from './Pay.jsx';
 import { useStore } from '../lib/store.js';
@@ -16,6 +17,16 @@ import { CARRY_REASONS, activeCarry, canCarry } from '../lib/carry.js';
 import { answerCarry, askCarry, markPaid, undoLastPayment, usePaymentsOff } from '../lib/tab-sync.js';
 
 const firstOf = name => name.split(' ')[0];
+
+/**
+ * Sheets opened from inside the scrolling list render at the screen, so they cover it like
+ * every other sheet instead of opening inside the card.
+ */
+function AtScreen({ children }) {
+  const [target, setTarget] = useState(null);
+  const ref = useCallback(el => { if (el) setTarget(el.closest('.screen')); }, []);
+  return <><span ref={ref} hidden />{target && createPortal(children, target)}</>;
+}
 
 /** "Paid $15 on Cash App · just now", with Undo for the payer and "Didn’t get it?" for the one paid. */
 export function RecentPaid({ meId, other, pay }) {
@@ -134,11 +145,13 @@ export function PersonActions({ other, net, meId }) {
         </div>
       )}
       {pay && <RecentPaid meId={meId} other={other} pay={pay} />}
-      <CarrySheet open={rolling} onClose={() => setRolling(false)} owed={owed} first={first}
-        onAsk={reason => {
-          if (askCarry({ ...owed, by: meId, reason })) showToast(`Asked ${first}`);
-          setRolling(false);
-        }} />
+      <AtScreen>
+        <CarrySheet open={rolling} onClose={() => setRolling(false)} owed={owed} first={first}
+          onAsk={reason => {
+            if (askCarry({ ...owed, by: meId, reason })) showToast(`Asked ${first}`);
+            setRolling(false);
+          }} />
+      </AtScreen>
     </>
   );
 }
@@ -199,6 +212,7 @@ export function SquareStrip() {
           ))}
         </ul>
       </div>
+      <AtScreen>
       <Sheet open={open} onClose={() => setOpen(false)} title="Who’s square">
         <p className="sheet-text">Everyone in this round sees this list. Amounts only show to the two people involved.</p>
         <ul className="sq-list">
@@ -214,6 +228,7 @@ export function SquareStrip() {
           <button className="full-btn outline" onClick={() => setOpen(false)}>Close</button>
         </div>
       </Sheet>
+      </AtScreen>
     </>
   );
 }
