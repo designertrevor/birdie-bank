@@ -13,7 +13,7 @@ import { ShareSheet } from '../components/Live.jsx';
 import { defaultTeams, teamsProblem } from '../lib/teams.js';
 import { rematchSetup } from '../lib/rematch.js';
 import { useNav } from '../lib/nav.js';
-import { addRound, holesScored, roundsInProgress } from '../lib/rounds.js';
+import { addRound, holesScored, roundsInProgress, usualRound } from '../lib/rounds.js';
 import { formatIndex, hcPctLabel, playerLabel, sortedPlayers } from '../lib/format.js';
 import { money } from '../lib/golf.js';
 import { findCourse } from '../lib/courses.js';
@@ -59,17 +59,6 @@ function planSetup(state, planId, present) {
     bets: structuredClone(s.settings[s.game]), hcPct: s.hcPct, useHc: s.useHandicaps, teams: s.teams,
     step: !course ? 1 : picked.length < g.min || picked.length > g.max ? 2 : 3,
   };
-}
-
-/** The last round this phone set up whose course and players still exist, to offer as a one-tap repeat. */
-function usualRound(state) {
-  const courses = allCourses(state);
-  const recent = Object.values(state.rounds).filter(r => !r.localMe && GAMES[r.game]).sort((a, b) => b.createdAt - a.createdAt);
-  for (const r of recent) {
-    const course = courses.find(c => c.id === r.course.id);
-    if (course && r.players.every(p => state.players[p.id])) return { round: r, course };
-  }
-  return null;
 }
 
 /**
