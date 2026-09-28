@@ -17,11 +17,11 @@ The plan for growing Birdie Bank into a $10k/mo business, and the checklist we w
 
 ## Current focus
 
-**Step 1: Foundation, nearly done. Step 2 is well under way.** Accounts, cloud data, invites, the live money bar, the simpler setup and the end-of-round settle-up are built, and Google sign-in is open to anyone. Left for S1: custom email (SMTP) so sign-in emails reach anyone, and running the feedback SQL (including the 2026-09-27 reactions part) so "Suggest something" and the after-round reactions go live. Real rounds keep going alongside as testing: fix bugs, smooth rough spots, and check each kind of user has what they need.
+**Step 1: Foundation, nearly done. Step 2 is well under way.** Accounts, cloud data, invites, the live money bar, the simpler setup and the end-of-round settle-up are built, and Google sign-in is open to anyone. All SQL is run in Supabase (feedback, reactions and the upcoming-rounds tables, 2026-09-28), so "Suggest something", reactions and the group plan link are live. Left for S1: custom email (SMTP) so sign-in emails reach anyone, waiting on the app's final name and a domain. Real rounds keep going alongside as testing: fix bugs, smooth rough spots, and check each kind of user has what they need.
 
 **Shipped overnight 2026-09-27 (wave 1):** the nine money rules, Snake and Hammer (18 games), skins and Nassau house rules, the Up next home tab and new nav, History by month with a chart, Run it back, the Tab by person with payment apps for everyone and honest head-to-head, Player cards, several rounds in progress, fixing a finished round without reopening it, the invite card with seat tiles and "Add me", adding a player mid-round, and the approved copy audit (the money screen is now the Tab).
 
-**Shipped overnight 2026-09-28:** upcoming rounds (area 21): plan ahead, who's in with a nudge, the group vote on the game and the bet, the RSVP link for friends, the morning text and the roll call. Run `supabase/2026-09-28-upcoming.sql` to turn on the group link.
+**Shipped overnight 2026-09-28:** upcoming rounds (area 21): plan ahead, who's in with a nudge, the group vote on the game and the bet, the RSVP link for friends, the morning text and the roll call. The SQL is run, so the group link is on.
 
 **Shipped overnight 2026-09-28 (onboarding):** organizer onboarding: four questions one a screen with payoffs, "Here's your group", then "Set up your next round" straight into the plan flow (the first game they play is suggested, the others go on the ballot). The paywall (option C, trial with a free way out) is built as a preview behind a flag: open the app with `?paywall=on` to see it, `?paywall=off` to hide it. Placeholder prices, nothing charged.
 
@@ -177,7 +177,7 @@ Put more money into the winning creators and copy their video formats with other
 - [x] `S1` Join from the web without installing anything (2026-09-25)
 - [x] `S2` Joining from a link starts on an invite card (who invited you, the game, the bets, the course and who's in), then seat tiles, then your strokes, then the round. "Not on the list? Add me" sends your name to the scorekeeper, who lets you in from a note on the Play screen (2026-09-27)
 - [ ] `S2` Each player can enter their own scores or just watch; hand the scorekeeper role to someone else
-- [x] `S3` A link preview card for group texts (course, game, players). Join links show the game, course and first names; other links show a static card (2026-09-26). Per-round previews need the Supabase env vars available to Vercel functions at runtime.
+- [x] `S3` A link preview card for group texts (course, game, players). Join links show the game, course and first names; other links show a static card (2026-09-26). Per-round previews work in production since 2026-09-28: Routing Middleware sends preview bots to the function, and the function has the public Supabase values built in.
 
 ### 5. Setting up and playing a round
 - [x] 16 games with the setup wizard, game defaults, crews, bets that change mid-round, 9 or 18 holes
@@ -208,7 +208,7 @@ Put more money into the winning creators and copy their video formats with other
 
 ### 6. Courses
 - [ ] `S1` (partial) Three bundled courses plus custom courses you can edit
-- [ ] `S2` (partial) Search every course (GolfCourseAPI Pro was the pick after researching providers). Built (2026-09-26) behind a server function; switches on when `GOLFCOURSEAPI_KEY` is added in Vercel.
+- [ ] `S2` (partial) Search every course (GolfCourseAPI Pro was the pick after researching providers). Built (2026-09-26) behind a server function, and live since 2026-09-28 on the free plan (35 requests a day across everyone). Upgrade to Pro before the group uses it. Checked against the verified cards: Birch Creek and Logan River match; the database's Preston G&CC hole handicaps are swapped by nines.
 - [x] `S2` Courses from the database show a soft "From course database" tag instead of a warning, and players start on the middle tee (2026-09-27)
 - [ ] `S2` Favorite courses and courses near you
 - [ ] `S2` Fix a hole on the spot: the organizer can correct a par, stroke index or tee rating mid-round for their group, and the fix goes to the feedback table so the course gets corrected for everyone
@@ -293,6 +293,7 @@ Put more money into the winning creators and copy their video formats with other
 
 ### 16. Brand and identity
 - [ ] `S1` (partial) A playful color theme, Phosphor icons, no emoji, one golf ball illustration with a face (`BallIllo` in `src/components/ui.jsx`), confetti, count-ups and vibrations (`src/lib/delight.js`), a few small CSS animations
+- [ ] `S2` Pick the app's final name (Birdie Bank is likely a working name, 2026-09-28) and buy its domain. Custom SMTP, the quick logo and the App Store listing wait on it.
 - [ ] `S2` Quick logo and app icon (good enough to start). Moved out of S1 (2026-09-26) so it doesn't hold anything up, but do it early in S2, before organizer onboarding and the paywall.
 - [ ] `S2` Final logo: symbol plus the name set in type, and an app icon that stands out on a home screen
 - [ ] `S2` Brand foundations: colors, typography, voice and tone (friendly trash talk, never casino), a short brand guide
@@ -438,3 +439,4 @@ Kept light on purpose. Groups already have a group text, so Birdie Bank adds to 
 - 2026-09-27 (overnight, integration): All six wave 1 streams merged into main (money rules, new games, product and copy, the Tab and Players, the app shell, joining). Head-to-head now also covers Snake, Hammer, the skins pot and bets changed mid-round; the last copy audit items are in (the Tab, Players, Settings, joining). Added the approved needs-check proposals and the missing games to their areas. Tests: 304 passing. Checklist: 42 of 174 done (24%), up from 17 of 144 (12%) on 2026-09-26.
 - 2026-09-28 (overnight): Upcoming rounds. Pick the game, then "Schedule for later" for the day, course and tee time; invite players or just send one group link. Friends answer in, maybe or out and vote on the game and the bet from an RSVP card with no install and no paywall; the organizer sees the counts, the tally and a nudge. Any member sends the morning text, and a roll call at the tee starts the voted game in one tap. New tables in `supabase/2026-09-28-upcoming.sql` (not run yet; plans stay on the organizer's phone until it is). Tests: 321 passing. Checklist: 45 of 175 done (26%).
 - 2026-09-28 (overnight): Organizer onboarding. A welcome, then what the group plays, how many, how they settle up and who does the math, one a screen, with a payoff after three answers that speaks to that answer (never assuming Venmo). Your name comes with the friendly wagers note as a checkbox. "Here's your group" leads into planning the next round with the answers filled in, and then the paywall preview: option C with a 14-day trial timeline, yearly and monthly plans (placeholder prices), the free promise and a full "Keep scoring for free" button. It's UI only behind a flag (on in local dev, `?paywall=on` anywhere), and each phone keeps one variant so an A/B test can be added later. Invited players never see onboarding or the paywall. Tests: 343 passing. Checklist: 47 of 175 done (27%).
+- 2026-09-28: Everything from both overnight runs is live on main, and all three SQL parts are run. Join link previews now show the round (they never had: `vercel.json` rewrites don't run for `/`, so middleware does it, and "$2 a skin" no longer breaks the text). Course search is on with a free GolfCourseAPI key. Custom SMTP waits for the app's final name and domain. Tests: 346 passing.
