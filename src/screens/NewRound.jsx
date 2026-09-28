@@ -222,7 +222,7 @@ function GameStep({ usual, onUsual, planning, onPlan, game, setGame, holesCount,
           <div key={group}>
             <div className="sec-label">{group}</div>
             {Object.entries(GAMES).filter(([, info]) => info.group === group).map(([key, info]) => (
-              <div key={key} className={`game-row ${game === key ? 'selected' : ''}`} role="radio" aria-checked={game === key} tabIndex={0}
+              <div key={key} className={`game-row ${game === key ? 'selected' : ''}`} role="radio" aria-checked={game === key} tabIndex={0} aria-label={`${info.name}: ${info.players}, ${info.blurb}`}
                 onClick={() => setGame(key)} onKeyDown={e => (e.key === 'Enter' || e.key === ' ') && setGame(key)}>
                 <div className="game-icon"><Icon name={info.icon} fill /></div>
                 <div className="row-main">
@@ -572,7 +572,6 @@ function SetupStep({ game, course, holesCount, nine, picked, setPicked, opts, se
 // ---------------------------------------------------------------------------
 // Schedule for later
 
-/** The day (next two weeks) and the tee time, above the course list. */
 /** "Saturday, October 3" (today and tomorrow say so), for a day chip's accessible name. */
 function dayName(iso) {
   const [y, m, d] = iso.split('-').map(Number);
@@ -583,6 +582,7 @@ function dayName(iso) {
   return iso === today ? `Today, ${full}` : iso === tmrw ? `Tomorrow, ${full}` : full;
 }
 
+/** The day (next two weeks) and the tee time, above the course list. */
 function WhenPicker({ date, setDate, teeTime, setTeeTime }) {
   const days = useMemo(() => dayChoices(new Date(), 14), []);
   return (
@@ -610,10 +610,13 @@ function InviteStep({ invited, setInvited, onNext }) {
   const n = invited.length;
   // A name typed here becomes a saved player and is invited; a name already saved just gets invited
   const [newName, setNewName] = useState('');
+  const [selfNote, setSelfNote] = useState(false);
   const t = newName.trim();
   const addName = e => {
     e.preventDefault();
     if (!t) return;
+    // Your own name: you're already in, so don't save a second you
+    if (state.players[state.me]?.name.trim().toLowerCase() === t.toLowerCase()) { setNewName(''); setSelfNote(true); return; }
     const same = players.find(p => p.name.trim().toLowerCase() === t.toLowerCase());
     const id = same?.id || uid('p_');
     if (!same) update(s => { s.players[id] = { id, name: t, index: null, venmo: '', createdAt: Date.now() }; });
@@ -627,9 +630,10 @@ function InviteStep({ invited, setInvited, onNext }) {
         <form className="add-name-row" onSubmit={addName}>
           <label className="field-label" htmlFor="invite-add-name">Add a name</label>
           <div className="add-name-line">
-            <input id="invite-add-name" aria-label="Add a name" className="name-input" value={newName} onChange={e => setNewName(e.target.value)} placeholder="e.g. Dave" autoComplete="off" maxLength={24} enterKeyHint="done" />
+            <input id="invite-add-name" aria-label="Add a name" className="name-input" value={newName} onChange={e => { setNewName(e.target.value); setSelfNote(false); }} placeholder="e.g. Dave" autoComplete="off" maxLength={24} enterKeyHint="done" />
             <button type="submit" className="add-name-btn" disabled={!t} aria-label={t ? `Add ${t} and invite them` : 'Add this name'}><Icon name="plus" /> Add</button>
           </div>
+          {selfNote && <p className="field-help" role="status">That’s you, and you’re already in.</p>}
         </form>
         <div style={{ padding: '0 16px' }}>
           {players.map(p => {
