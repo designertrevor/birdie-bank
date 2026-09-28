@@ -4,7 +4,7 @@ import assert from 'node:assert/strict';
 import { createRound, roundResults } from './round.js';
 import { outstanding, tabBalances } from './ledger.js';
 import { buildMeta } from './sync-model.js';
-import { allocatePayment, applyRows, codeOf, lastPayment, paymentId, roundRows, roundStatus, stripRound, tabCodes, undoRows } from './shared-tab.js';
+import { allocatePayment, applyRows, codeOf, lastPayment, nettedFor, paymentId, roundRows, roundStatus, stripRound, tabCodes, undoRows } from './shared-tab.js';
 
 const SETTINGS = {
   hcPct: 100,
@@ -108,7 +108,7 @@ test('allocatePayment: fills the pair’s shared transfers oldest first, then ke
   ]);
   // A $3 payment: all of the older round, $1 of the newer
   const part = allocatePayment(s, { from: 'b', to: 'a', amount: 3 }, { now: NOW, makeId: () => 'p1' });
-  assert.deepEqual(part.rows.map(r => [r.id, r.amount, r.status]), [['AAAAAA:b>a', 2, 'paid'], ['BBBBBB:b>a:p1', 1, 'paid']]);
+  assert.deepEqual(part.rows.map(r => [r.id, r.amount, r.status]), [['AAAAAA:b>a', 2, 'paid'], ['BBBBBB:b>a:p0', 1, 'paid']]);
   assert.deepEqual(part.settlements, []);
   // Paying all $6 at once squares both shared rounds and leaves $2 as a plain local payment
   const all = allocatePayment(s, { from: 'b', to: 'a', amount: 6 }, { now: NOW, makeId: () => 'p2' });
@@ -128,7 +128,7 @@ test('allocatePayment: squaring the whole Tab nets the transfers going the other
   const { rows, settlements } = allocatePayment(s, { from: 'b', to: 'a', amount: 2 }, { now: NOW, makeId: () => 'n' });
   assert.deepEqual(settlements, []);
   assert.deepEqual(rows.map(r => [r.id, r.amount, r.status]), [
-    ['AAAAAA:b>a:n', 2, 'paid'],
+    ['AAAAAA:b>a:p0', 2, 'paid'],
     ['AAAAAA:b>a:net', 2, 'netted'],
     ['BBBBBB:a>b:net', 2, 'netted'],
   ]);
@@ -195,4 +195,64 @@ test('old saved data: the Tab reads exactly the same after the shared layer runs
   // A settlement with the new optional fields reads the same money as one without
   const tagged = { ...old, settlements: old.settlements.map(s => ({ ...s, code: 'AAAAAA', by: 'a', shared: true })) };
   assert.deepEqual(money(tagged), before);
+});
+
+test('old shared rounds: a payment recorded before the table (roundId, no code) counts as paid for the shared layer', () => {
+  // An old round that was shared live keeps only shared.code, and was marked paid at the end of the round
+  const old = round('r1', ['a', 'b'], oneSkin, { daysAgo: 5 });
+  old.shared = { code: 'AAAAAA', host: true, since: 0, ended: true };
+  // A newer round, never shared: B owes A $2 there
+  const s = stateOf('a', [old, round('r2', ['a', 'b'], oneSkin, { daysAgo: 1 })], {
+    settlements: [{ id: 's_old', from: 'b', to: 'a', amount: 2, at: NOW - 5 * DAY, roundId: 'r1' }],
+  });
+  const before = money(s);
+  const { rows, settlements } = allocatePayment(s, { from: 'b', to: 'a', amount: 2 }, { now: NOW, makeId: () => 'q' });
+  // The old round is already paid, so nothing may be sent against it
+  assert.deepEqual(rows.filter(r => r.status === 'paid'), []);
+  assert.deepEqual(settlements, [{ id: 's_q', from: 'b', to: 'a', amount: 2, at: NOW }]);
+  assert.deepEqual(money(applyRows(s, [])), before);
+});
+
+test('applyRows: a cached row does not bring back a settlement removed elsewhere when other rows arrive', () => {
+  const s = stateOf('a', [
+    round('r1', ['a', 'b'], oneSkin, { code: 'AAAAAA' }),
+    round('r2', ['a', 'b'], oneSkin, { code: 'BBBBBB' }),
+  ]);
+  const paid = applyRows(s, [row()]);
+  assert.equal(paid.settlements.length, 1);
+  // Your other phone took it back and the account sync removed the settlement here, before the undone row arrived
+  const synced = { ...paid, settlements: [] };
+  const next = applyRows(synced, [row({ code: 'BBBBBB', id: 'BBBBBB:b>a' })]);
+  assert.deepEqual(next.settlements.map(x => x.id), ['BBBBBB:b>a']);
+});
+
+test('undo from the payments list also takes back what that payment netted', () => {
+  const s = stateOf('a', [
+    round('r1', ['a', 'b'], { 1: { a: 3, b: 4 }, 2: { a: 3, b: 4 } }, { code: 'AAAAAA', daysAgo: 5 }),
+    round('r2', ['a', 'b'], { 1: { a: 4, b: 3 } }, { code: 'BBBBBB', daysAgo: 2 }),
+  ]);
+  const { rows } = allocatePayment(s, { from: 'b', to: 'a', amount: 2 }, { now: NOW, makeId: () => 'n' });
+  const after = applyRows(s, rows);
+  const one = after.settlements[0];
+  const back = undoRows(after, { settlements: [one], netted: nettedFor(after, [one]) }, { now: NOW + 1 });
+  const undone = applyRows(after, back.rows);
+  assert.equal(Object.values(undone.tabRows).filter(r => r.status === 'netted').length, 0);
+  for (const r of Object.values(undone.rounds)) assert.notDeepEqual(roundStatus(r, roundRows(undone, r)), { a: 'square', b: 'square' });
+});
+
+test('two phones offline: both marking the same netted payment count it once', () => {
+  // Round 1: B owes A $4. Round 2: A owes B $2. On the Tab, B owes A $2, which only part-pays round 1
+  const rounds = localMe => [
+    round('r1', ['a', 'b'], { 1: { a: 3, b: 4 }, 2: { a: 3, b: 4 } }, { code: 'AAAAAA', daysAgo: 5, localMe }),
+    round('r2', ['a', 'b'], { 1: { a: 4, b: 3 } }, { code: 'BBBBBB', daysAgo: 2, localMe }),
+  ];
+  const host = stateOf('a', rounds());
+  const mike = stateOf('zb', rounds('b'));
+  const fromHost = allocatePayment(host, { from: 'b', to: 'a', amount: 2 }, { now: NOW, makeId: () => 'h' }).rows;
+  const fromMike = allocatePayment(mike, { from: 'zb', to: 'a', amount: 2 }, { now: NOW + 3, makeId: () => 'm' }).rows;
+  for (const s of [host, mike]) {
+    const both = applyRows(applyRows(s, fromHost), fromMike);
+    assert.equal(both.settlements.length, 1);
+    assert.equal(outstanding(both).length, 0);
+  }
 });

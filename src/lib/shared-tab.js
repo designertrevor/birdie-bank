@@ -105,16 +105,23 @@ export function applyRows(state, rows) {
   const rounds = roundsByCode(state);
   const cache = {};
   for (const [k, r] of Object.entries(state.tabRows || {})) if (rounds.has(r.code)) cache[k] = r;
+  // Only rows that are new or changed here move money. A row this phone already had is not
+  // applied again, so a payment your other phone took back (and the account sync removed)
+  // doesn't come back from this phone's older copy when some other row arrives.
+  const changed = new Set();
   for (const row of rows || []) {
     if (!row?.code || !row.id || !rounds.has(row.code)) continue;
     const k = rowKey(row);
     if (cache[k] && (cache[k].updatedAt || 0) > (row.updatedAt || 0)) continue;
+    if (cache[k] && JSON.stringify(cache[k]) === JSON.stringify(row)) continue;
     cache[k] = row;
+    changed.add(k);
   }
 
   // Payments: only settlements named by a row are touched, so local payments stay as they are
   const settlements = [...(state.settlements || [])];
-  for (const row of Object.values(cache)) {
+  for (const k of changed) {
+    const row = cache[k];
     if (row.kind !== 'payment') continue;
     const i = settlements.findIndex(s => s.id === row.id);
     if (row.status === 'paid') {
@@ -126,10 +133,13 @@ export function applyRows(state, rows) {
 
   // Carries: the rows written together (same pair, same ask time) are one carry
   const who = canonicalOf(state);
+  const groupOf = row => carryId(who(row.from), who(row.to), row.at);
+  const touched = new Set([...changed].map(k => cache[k]).filter(r => r.kind === 'carry').map(groupOf));
   const groups = new Map();
   for (const row of Object.values(cache)) {
     if (row.kind !== 'carry') continue;
-    const id = carryId(who(row.from), who(row.to), row.at);
+    const id = groupOf(row);
+    if (!touched.has(id)) continue;
     if (!groups.has(id)) groups.set(id, []);
     groups.get(id).push(row);
   }
@@ -153,8 +163,10 @@ export function applyRows(state, rows) {
 }
 
 /** What has been paid on one round transfer, in cents. */
-function paidOn(state, code, t) {
-  return (state.settlements || []).filter(s => s.code === code && s.from === t.from && s.to === t.to).reduce((a, s) => a + cents(s.amount), 0);
+function paidOn(state, round, code, t) {
+  // Payments marked at the end of the round before the shared Tab (roundId, no code) count too
+  const on = s => s.code === code || (!s.code && s.roundId === round.id);
+  return (state.settlements || []).filter(s => on(s) && s.from === t.from && s.to === t.to).reduce((a, s) => a + cents(s.amount), 0);
 }
 const nettedOn = (state, code, t) => state.tabRows?.[`${code}|${nettedId(code, t.from, t.to)}`]?.status === 'netted';
 
@@ -169,7 +181,7 @@ export function openTransfers(state, a, b) {
       const f = who(t.from), to = who(t.to);
       if (!((f === A && to === B) || (f === B && to === A))) continue;
       if (nettedOn(state, code, t)) continue;
-      const paid = paidOn(state, code, t);
+      const paid = paidOn(state, r, code, t);
       const open = cents(t.amount) - paid;
       if (open > 0) out.push({ round: r, code, t, open, paid, forward: f === A });
     }
@@ -201,7 +213,9 @@ export function allocatePayment(state, { from, to, amount }, { now = Date.now(),
     const fill = Math.min(left, x.open);
     left -= fill;
     const whole = fill === x.open && x.paid === 0 && !(state.settlements || []).some(s => s.id === paymentId(x.code, x.t.from, x.t.to));
-    const id = whole ? paymentId(x.code, x.t.from, x.t.to) : paymentId(x.code, x.t.from, x.t.to, makeId());
+    // Part of a transfer is keyed by what was paid on it before, so two phones marking the same
+    // payment before they sync land on one row too (a second, later payment gets its own key)
+    const id = whole ? paymentId(x.code, x.t.from, x.t.to) : paymentId(x.code, x.t.from, x.t.to, `p${x.paid}`);
     rows.push(payRow(state, x.round, x.t, id, fill / 100, now));
     x.open -= fill;
   }
@@ -234,6 +248,14 @@ export function lastPayment(state, a, b) {
     settlements: list.filter(s => (s.at || 0) === at),
     netted: Object.values(state.tabRows || {}).filter(r => r.kind === 'payment' && r.status === 'netted' && r.at === at && between(r.from, r.to)),
   };
+}
+
+/** The transfers these payments netted (written in the same tap, between the same people). */
+export function nettedFor(state, settlements) {
+  const who = canonicalOf(state);
+  const pair = (a, b) => [who(a), who(b)].sort().join('|');
+  const keys = new Set(settlements.map(s => `${s.at}|${pair(s.from, s.to)}`));
+  return Object.values(state.tabRows || {}).filter(r => r.kind === 'payment' && r.status === 'netted' && keys.has(`${r.at}|${pair(r.from, r.to)}`));
 }
 
 /** Rows that take a payment back (and what to remove locally for payments that were never shared). */
