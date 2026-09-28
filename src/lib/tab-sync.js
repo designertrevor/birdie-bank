@@ -5,13 +5,14 @@
 // with no server at all) everything stays on this phone, as it did before: no errors, and the
 // buttons that need the other phone (Roll to next time) stay hidden.
 import { useEffect, useSyncExternalStore } from 'react';
-import { getState, uid, update } from './store.js';
+import { STORE_KEY, getState, uid, update } from './store.js';
 import { getSupabase, supabaseConfigured } from './supabase.js';
 import { isMissingTable } from './plan-adapters.js';
 import { allocatePayment, applyRows, lastPayment, nettedFor, tabCodes, undoRows } from './shared-tab.js';
 import { activeCarry, carryReducer, carryRows, carrySplit, splitCodes, splitRounds } from './carry.js';
 
-const QUEUE = 'bb-tab-queue';
+// Per dev profile (?profile=b), so two tabs acting as two phones never read each other's queue
+const QUEUE = 'bb-tab-queue' + STORE_KEY.slice('birdie-bank-v1'.length);
 const localFlag = () => { try { return localStorage.getItem('bb-sync-local') === '1'; } catch { return false; } };
 
 /** Thrown when the round_payments table isn't on the server yet. */
