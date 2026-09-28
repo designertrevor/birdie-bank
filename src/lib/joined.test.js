@@ -3,7 +3,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import {
   ADD_MID_ROUND, createRound, roundResults, holeComplete, scorers, addPlayerToRound, addPlayerProblem, firstOpenHole, roundNotes, rabbitTable, bankerHoleSetup,
-  gameView, wolfFor, skinsTable, joinGames, joinRule, leftRule, birdiePotShares,
+  gameView, wolfFor, skinsTable, joinGames, joinRule, leftRule, birdiePotShares, resizeRound,
 } from './round.js';
 import { assemble, buildMeta, buildHoles } from './sync-model.js';
 
@@ -477,4 +477,22 @@ test('games with an order or sides never see a side-only player: same money as w
     assert.deepEqual(m5, { ...m4, z: 0 }, game);
     assert.equal(sum(roundResults(five).balances), 0, game);
   }
+});
+
+// Review 2026-09-29: changing the round length works strokes out again off the low player. A
+// side-only player must not be that low player, or the main game's strokes move under everyone.
+test('changing the round length with a side-only player: the main game\'s strokes and money are as if he were not there', () => {
+  const hcs = [{ ...P[0], courseHcOverride: 10 }, { ...P[1], courseHcOverride: 14 }];
+  const two = withSides(createRound({ id: 'r', game: 'nassau', course: eighteen, holesCount: 18, players: hcs, settings: structuredClone(SETTINGS), hcPct: 100, useHandicaps: true }), ['skins']);
+  play(two, [{ a: 4, b: 4 }]);
+  const three = addPlayerToRound(two, { id: 'z', name: 'Zed', courseHc: 2 }, 2, ['skins']);
+  const rows = Array.from({ length: 9 }, (_, i) => ({ a: 4 + (i % 2), b: 5 - (i % 3 === 0 ? 1 : 0) }));
+  const n2 = resizeRound(two, eighteen, 9), n3 = resizeRound(three, eighteen, 9);
+  play(n2, rows); play(n3, rows.map((s, i) => (i ? { ...s, z: 4 } : s)));
+  assert.deepEqual(gameView(n3, 'main').players.map(p => p.plays), n2.players.map(p => p.plays));
+  assert.deepEqual(roundResults(n3).detail.byGame.main.balances, { ...roundResults(n2).detail.byGame.main.balances, z: 0 });
+  assert.equal(sum(roundResults(n3).balances), 0);
+  // Old rounds, nobody picking games: exactly today's strokes
+  const old = resizeRound(addPlayerToRound(withSides(createRound({ id: 'r', game: 'stroke', course: eighteen, holesCount: 18, players: hcs, settings: structuredClone(SETTINGS), hcPct: 100, useHandicaps: true }), []), { id: 'z', name: 'Zed', courseHc: 2 }, null), eighteen, 9);
+  assert.deepEqual(old.players.map(p => p.plays), [4, 6, 0]);
 });

@@ -628,7 +628,14 @@ export function resizeRound(round, course, holesCount, nine = 'front') {
     }
     return { ...p, courseHc: effectiveCourseHc(p.index, tee, course, holes, holesCount, null).value, courseHcOverride: null };
   });
-  const plays = round.useHandicaps ? strokesOffLow(players.map(p => p.courseHc), round.hcPct) : players.map(() => 0);
+  let plays = round.useHandicaps ? strokesOffLow(players.map(p => p.courseHc), round.hcPct) : players.map(() => 0);
+  // A player who's only in the side games never sets the low: the main game's players play off
+  // their own low, as if the side-only player weren't there (and they play off that same low)
+  if (round.useHandicaps && round.gamesFor) {
+    const lows = plays.filter((_, i) => playsGame(round, players[i].id, 'main'));
+    const low = lows.length ? Math.min(...lows) : 0;
+    plays = plays.map(v => v - low);
+  }
   const full = players.map((p, i) => ({ ...p, plays: plays[i] }));
   const curNo = round.holes[Math.min(round.current, round.holes.length - 1)]?.no;
   let current = holes.findIndex(h => h.no === curNo);
