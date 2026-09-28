@@ -1,5 +1,6 @@
 // What's on the line in a game: a one-line summary and a sanity check on its options.
 import { money } from './golf.js';
+import { sideGamesOf } from './round.js';
 
 /** Why a game's options can't be used as they stand, or null when they're fine. */
 export function optionsProblem(game, settings) {
@@ -24,8 +25,7 @@ export function sideBetLine(game, settings) {
 /** Every game's bets in a round, main first: [{ key, line }]. Side games use their own settings. */
 export function roundStakeLines(round) {
   const lines = [{ key: 'main', line: stakeSummary(round.game, round.settings) }];
-  for (const sg of Array.isArray(round.sideGames) ? round.sideGames : []) {
-    if (!sg?.settings) continue;
+  for (const sg of sideGamesOf(round)) {
     const line = sideBetLine(sg.game, sg.settings);
     if (line) lines.push({ key: sg.game, line });
   }

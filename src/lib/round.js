@@ -1480,9 +1480,23 @@ export const SIDE_GAMES = {
 /** Most games in one round, the main game included. */
 export const MAX_GAMES = 3;
 
-/** A round's side games, dropping any this build doesn't know (an empty list on older rounds). */
+/**
+ * A round's side games (an empty list on older rounds). Anything setup could never make is dropped,
+ * so a garbled or hand-edited round can't count money twice: games this build doesn't know, a game
+ * listed twice, Skins on a Skins round or Junk on a Dots round (same scores or dots paid twice), any
+ * side game on a Scramble, and anything past the MAX_GAMES cap.
+ */
 export function sideGamesOf(round) {
-  return (round?.sideGames || []).filter(sg => sg && SIDE_GAMES[sg.game] && sg.settings);
+  if (!round || !Array.isArray(round.sideGames) || round.game === 'scramble') return [];
+  const out = [];
+  for (const sg of round.sideGames) {
+    if (out.length >= MAX_GAMES - 1) break;
+    if (!sg || !SIDE_GAMES[sg.game] || !sg.settings || typeof sg.settings !== 'object') continue;
+    if (out.some(x => x.game === sg.game)) continue;
+    if ((sg.game === 'skins' && round.game === 'skins') || (sg.game === 'dots' && round.game === 'dots')) continue;
+    out.push(sg);
+  }
+  return out;
 }
 
 /** The keys of every game in a round: 'main' first, then each side game by its game key. */

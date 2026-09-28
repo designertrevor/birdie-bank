@@ -15,7 +15,7 @@ import { revealSteps } from './reveal.js';
 import { buildMeta, assemble } from './sync-model.js';
 import { rematchSetup } from './rematch.js';
 import { sideExample, gamesLine, nassauOpenNote } from './side-games.js';
-import { joinRule, leftRule, resizeRound } from './round.js';
+import { joinRule, leftRule, resizeRound, addPlayerToRound } from './round.js';
 import { shareCardModel } from './shareImage.js';
 import { joinPreview } from './og.js';
 
@@ -275,8 +275,11 @@ test('gamesFor: a player out of a game counts 0 there and is still in the others
 });
 
 test('bet lines for every game in a round', () => {
-  const r = { game: 'nassau', settings: SETTINGS, sideGames: [{ game: 'skins', settings: SIDE_SETTINGS.skins }, { game: 'dots', settings: SIDE_SETTINGS.dots }, { game: 'birdies', settings: SIDE_SETTINGS.birdies }] };
-  assert.deepEqual(roundStakeLines(r).map(l => l.line), ['$5 / $5 / $5', '$2 a skin', '$1 a dot', 'Each player puts in $5']);
+  const r = { game: 'nassau', settings: SETTINGS, sideGames: [{ game: 'skins', settings: SIDE_SETTINGS.skins }, { game: 'dots', settings: SIDE_SETTINGS.dots }] };
+  assert.deepEqual(roundStakeLines(r).map(l => l.line), ['$5 / $5 / $5', '$2 a skin', '$1 a dot']);
+  assert.deepEqual(roundStakeLines({ ...r, sideGames: [{ game: 'birdies', settings: SIDE_SETTINGS.birdies }] }).map(l => l.line), ['$5 / $5 / $5', 'Each player puts in $5']);
+  // A third side game is past the 3-game cap: it isn't counted, so it isn't listed either
+  assert.equal(roundStakeLines({ ...r, sideGames: [...r.sideGames, { game: 'birdies', settings: SIDE_SETTINGS.birdies }] }).length, 3);
   assert.equal(sideBetLine('birdies', { stake: 5 }), 'Each player puts in $5');
   assert.equal(optionsProblem('birdies', { birdies: { stake: 0 } }) != null, true);
   assert.equal(optionsProblem('birdies', { birdies: { stake: 5 } }), null);
@@ -381,4 +384,45 @@ test('changing the round length or the main bet keeps the side games as they wer
   const raised = changeBets(r, { ...r.settings.nassau, front: 10 }, 3);
   assert.deepEqual(raised.sideGames, r.sideGames);
   assert.deepEqual(roundResults(raised).detail.byGame.skins.balances, roundResults(r).detail.byGame.skins.balances);
+});
+
+test('a garbled round can never count a side game twice', () => {
+  const r = threeGames();
+  const skins = r.sideGames.find(sg => sg.game === 'skins');
+  const once = roundResults({ ...r, sideGames: [skins] }).balances;
+  // The same side game listed twice counts once
+  assert.deepEqual(roundResults({ ...r, sideGames: [skins, skins] }).balances, once);
+  assert.equal(gameLabel({ ...r, sideGames: [skins, skins] }), 'Nassau + Skins');
+  assert.equal(roundStakeLines({ ...r, sideGames: [skins, skins] }).length, 2);
+  // Junk on a Dots round would pay the same dots twice, so it's dropped
+  const dots = { ...r, game: 'dots', teams: null, presses: [], sideGames: [{ game: 'dots', settings: SIDE_SETTINGS.dots }] };
+  assert.deepEqual(roundResults(dots).balances, gameResults({ ...dots, sideGames: undefined }).balances);
+  // Nothing on a Scramble, nothing past the cap, and a non-list is no side games at all
+  assert.deepEqual(gameKeys({ ...r, game: 'scramble' }), ['main']);
+  const four = [...r.sideGames, { game: 'birdies', settings: SIDE_SETTINGS.birdies }, { game: 'birdies', settings: SIDE_SETTINGS.birdies }];
+  assert.equal(gameKeys({ ...r, sideGames: four }).length, MAX_GAMES);
+  assert.deepEqual(gameKeys({ ...r, sideGames: { game: 'skins' } }), ['main']);
+});
+
+test('late joiners, players who left, pickups and a shorter round: side games stay zero-sum', () => {
+  const rnd = seeded(42);
+  for (const game of ['skins', 'stroke', 'stableford', 'quota', 'aces', 'bbb', 'dots', 'rabbit', 'banker']) {
+    for (let k = 0; k < 12; k++) {
+      const r0 = fixture(game, rnd, { n: 3 });
+      if (!r0) continue;
+      r0.sideGames = sideGameChoices(game, []).slice(0, 2).map(g => ({ game: g, settings: structuredClone(SIDE_SETTINGS[g]) }));
+      for (const h of r0.holes) if (r0.scores[h.no] && rnd() < 0.1) r0.scores[h.no].p1 = 'X';
+      if (k % 2) r0.left = { p2: r0.holes[5 + k].no };
+      const from = r0.holes[2 + (k % 6)].no;
+      const r = addPlayerToRound(r0, { id: 'late', name: 'Late Comer', index: 12 }, from);
+      for (const h of r.holes) if (r.scores[h.no] && h.no >= from) r.scores[h.no].late = h.par - 1;
+      const res = roundResults(r);
+      assert.equal(sumCents(res.balances), 0, game);
+      if (res.detail.byGame.birdies) assert.equal(res.detail.byGame.birdies.balances.late, 0, 'a late joiner is out of the birdie pot');
+      for (const g of Object.values(res.detail.byGame)) assert.equal(sumCents(g.balances), 0, `${game} ${g.label}`);
+      const nine = resizeRound(r, course(18), 9);
+      assert.deepEqual(nine.sideGames, r.sideGames);
+      assert.equal(sumCents(roundResults(nine).balances), 0);
+    }
+  }
 });

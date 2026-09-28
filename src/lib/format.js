@@ -1,5 +1,5 @@
 // Shared display helpers and derived stats (kept out of component files for fast refresh).
-import { GAMES, SIDE_GAMES, roundResults, scoreSummary } from './round.js';
+import { GAMES, SIDE_GAMES, roundResults, scoreSummary, sideGamesOf } from './round.js';
 import { money } from './golf.js';
 
 /**
@@ -8,7 +8,7 @@ import { money } from './golf.js';
  */
 export function gameLabel(round) {
   const main = GAMES[round?.game]?.name || '';
-  const sides = (Array.isArray(round?.sideGames) ? round.sideGames : []).map(sg => SIDE_GAMES[sg?.game]?.label).filter(Boolean);
+  const sides = sideGamesOf(round).map(sg => SIDE_GAMES[sg.game].label);
   return [main, ...sides].filter(Boolean).join(' + ');
 }
 
