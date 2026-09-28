@@ -56,6 +56,7 @@ const RULES = {
       ['Paying out', <p key="p">Every other player pays the skin value to the winner for each skin won. Or play for a <strong>pot</strong>: everyone puts in the same amount and the pot is split by skins won.</p>],
       ['Net and gross', <p key="g">Play net skins, gross skins, or both at once: a net skin and a gross skin on every hole, each with its own carryovers.</p>],
       ['After the last hole', <p key="l">Skins still carried after the last hole go unclaimed by default. Or the players tied on the last hole <strong>split</strong> them, or play them off on a <strong>playoff</strong> hole.</p>],
+      ['Joining late', <p key="j">A carry stays with the players who built it. Someone added partway plays for every skin from the hole they join, but not for skins already carrying when they got there: they don’t pay into those and can’t win them. If they win a hole outright, they take that hole’s skin and the older carry keeps rolling among the players who built it. In a pot game they sit the pot out.</p>],
     ],
   },
   wolf: {

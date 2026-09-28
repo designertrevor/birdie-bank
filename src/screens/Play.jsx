@@ -735,7 +735,7 @@ function SkinsPanel({ round, hole, onChange }) {
     const n = row?.pot ?? 1;
     const skins = `${n} skin${n > 1 ? 's' : ''}`;
     const tag = kinds.length > 1 ? `${kind === 'net' ? 'Net' : 'Gross'} ` : '';
-    return pot ? `${tag}${skins}` : `${tag}${skins} · ${money((row?.worth ?? t.value) * ((row?.field.length ?? round.players.length) - 1))}`;
+    return pot ? `${tag}${skins}` : `${tag}${skins} · ${money(row?.purse ?? t.value * (round.players.length - 1))}`;
   });
   return (
     <div className="banker-bar" style={{ background: 'var(--lav)' }}>

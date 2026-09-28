@@ -446,7 +446,8 @@ export function joinRule(round, pid) {
     if (round.holes.length === 18 && pos <= legs.back.start) return pos === legs.back.start ? 'They’re in the rabbit on the back nine.' : 'They sit out the front nine rabbit and are in on the back nine.';
     return 'The rabbit was already running, so they sit it out.';
   }
-  if (g === 'skins') return 'Their money counts from there, carried skins included.';
+  if (g === 'skins' && s?.payout === 'pot') return 'The pot is for the players who started, so they’re not in it.';
+  if (g === 'skins') return 'They play for the skins from there on. Skins already carrying stay with the players who built them.';
   if (g === 'banker') return 'Their money counts from there: they bet against the bank and take their turn as banker.';
   return 'Their money counts from there.';
 }
@@ -697,52 +698,99 @@ export function skinsKinds(round) {
 /**
  * Skins hole by hole for one kind ('net' or 'gross'; the first kind in play by default). Each skin is
  * worth the bet in force on the hole it came from, so a skin carried into a hole after the bet went up
- * keeps its old value. A row's `worth` is what each other player pays if the hole is won outright (the
- * carried skins plus this hole's). `end` says what happens to skins still carried after the last hole:
- * { skins, worth, rule, tied, field, winner, row } or null when nothing is carried.
+ * keeps its old value.
+ *
+ * A carry stays with the players who built it (decided 2026-09-28). Each carried skin remembers who was
+ * on its hole, and only they can win it or pay for it. So a player added mid-round plays for the skins
+ * of the holes they play, carries built from then on included, but not for a carry built before they
+ * joined. When a hole is won outright, the winner takes that hole's skin and every carried skin they
+ * were in for; any carried skin they weren't in for keeps carrying among the players who built it.
+ * Everyone there from the first hole is in for every skin, so without late joiners this is plain skins.
+ *
+ * A row: `pot` is every skin riding on the hole (this one plus all carried), `worth` what each player in
+ * for all of them pays if the hole is won outright, `purse` what such a winner collects, `skins` how
+ * many the winner took and `parts` what they took, [{ skins, worth, payers }] (one entry per group of
+ * payers), and `kept` how many skins are still carried after it.
+ *
+ * `ends` says what happens to skins still carried after the last hole, one entry per group of players
+ * who can still claim them: { skins, worth, rule, tied, field, winner, row }. `field` is the builders
+ * still in at the end and `tied` the low scores among them on the last hole. With 'split' the tied share
+ * them (alone, they take them); with 'playoff' the picked winner takes them if they're in `tied` (alone,
+ * they take them without one). `end` is the first of them, or null when nothing is carried.
  */
 export function skinsTable(round, kind = skinsKinds(round)[0]) {
   const value = round.settings.skins.value;
-  let pot = 1, carried = 0;
+  // The carry: one { worth, field } per tied hole, `field` the players on that hole
+  let carry = [];
   const rows = [];
   let lastDone = null;
+  const scoreOf = (p, h) => (kind === 'gross' ? grossFor(round, p, h) : netFor(round, p, h));
+  // Skins bunched by a key (who pays them, or who can claim them): [{ skins, worth, ...data }]
+  const bunch = (skins, key) => {
+    const out = new Map();
+    for (const sk of skins) {
+      const k = key(sk);
+      const g = out.get(k.id) || { skins: 0, worth: 0, ...k.data };
+      g.skins += 1; g.worth += sk.worth;
+      out.set(k.id, g);
+    }
+    return [...out.values()];
+  };
   round.holes.forEach((h, i) => {
     const s = settingsAt(round, i + 1).skins;
-    const worth = carried + s.value;
     // Only the players still on a hole play for it, so a carried skin won later is paid by them alone
     const on = playersOn(round, h);
     const field = on.map(p => p.id);
-    if (!holeComplete(round, h)) { rows.push({ hole: h, winner: undefined, skins: 0, pot, worth, field }); return; }
-    const nets = on.map(p => [p.id, kind === 'gross' ? grossFor(round, p, h) : netFor(round, p, h)]);
+    const all = [...carry, { worth: s.value, field }];
+    const worth = all.reduce((a, sk) => a + sk.worth, 0);
+    const purse = all.reduce((a, sk) => a + sk.worth * Math.max(0, sk.field.filter(id => field.includes(id)).length - 1), 0);
+    const base = { hole: h, pot: all.length, worth, purse, field };
+    if (!holeComplete(round, h)) { rows.push({ ...base, winner: undefined, skins: 0, kept: carry.length }); return; }
+    const nets = on.map(p => [p.id, scoreOf(p, h)]);
     const low = Math.min(...nets.map(n => n[1]));
     const lows = nets.filter(n => n[1] === low);
-    if (lows.length === 1) { rows.push({ hole: h, winner: lows[0][0], skins: pot, pot, worth, field }); pot = 1; carried = 0; }
-    else {
-      rows.push({ hole: h, winner: null, skins: 0, pot, worth, field, tied: lows.map(n => n[0]) });
-      if (s.carryover) { pot += 1; carried = worth; } else { pot = 1; carried = 0; }
+    if (lows.length === 1) {
+      const w = lows[0][0];
+      const took = all.filter(sk => sk.field.includes(w));
+      carry = s.carryover ? carry.filter(sk => !sk.field.includes(w)) : [];
+      const parts = bunch(took, sk => {
+        const payers = sk.field.filter(id => id !== w && field.includes(id));
+        return { id: payers.join(','), data: { payers } };
+      });
+      rows.push({ ...base, winner: w, skins: took.length, parts, kept: carry.length });
+    } else {
+      carry = s.carryover ? all : [];
+      rows.push({ ...base, winner: null, skins: 0, tied: lows.map(n => n[0]), kept: carry.length });
     }
     lastDone = rows.at(-1);
   });
   // After the last hole, or when the round was finished early: what the skins still carried do
-  let end = null;
+  const ends = [];
   const over = holeComplete(round, round.holes.at(-1)) || round.status === 'done';
-  const cfg = round.settings.skins;
-  if (over && pot > 1 && lastDone?.winner === null) {
-    const rule = cfg.lastCarry || 'void';
-    const picked = rule === 'playoff' ? round.skinsPlayoff?.[kind] : null;
-    end = {
-      skins: lastDone.pot, worth: lastDone.worth, rule, tied: lastDone.tied, field: lastDone.field, row: lastDone,
-      winner: picked && lastDone.tied.includes(picked) ? picked : null,
-    };
+  if (over && carry.length && lastDone) {
+    const rule = round.settings.skins.lastCarry || 'void';
+    const h = lastDone.hole;
+    const onLast = playersOn(round, h);
+    const groups = bunch(carry, sk => {
+      const field = sk.field.filter(id => lastDone.field.includes(id));
+      return { id: field.join(','), data: { field } };
+    });
+    for (const g of groups) {
+      const nets = onLast.filter(p => g.field.includes(p.id)).map(p => [p.id, scoreOf(p, h)]);
+      const low = Math.min(...nets.map(n => n[1]));
+      const tied = nets.filter(n => n[1] === low).map(n => n[0]);
+      const picked = rule === 'playoff' ? (tied.length === 1 ? tied[0] : round.skinsPlayoff?.[kind]) : null;
+      ends.push({ ...g, rule, tied, row: lastDone, winner: picked && tied.includes(picked) ? picked : null });
+    }
   }
-  const claimed = end && (end.rule === 'split' || end.winner);
-  return { rows, value, kind, end, unclaimed: pot > 1 && !claimed ? pot - 1 : 0 };
+  const claimed = ends.filter(e => e.tied.length && (e.rule === 'split' || e.winner)).reduce((a, e) => a + e.skins, 0);
+  return { rows, value, kind, ends, end: ends[0] || null, unclaimed: carry.length - claimed };
 }
 
 /**
- * Money from one kind of skins. Per skin: each other player on the winning hole pays the winner its worth.
- * Pot: everyone still in at the end puts in `stake` and the pot is shared by skins won. Returns
- * { deltas, won: { pid: { skins, amount, holes } } } where `amount` is what the skins brought in.
+ * Money from one kind of skins. Per skin: each player in for a skin and on the winning hole pays the
+ * winner its worth. Pot: everyone still in at the end puts in `stake` and the pot is shared by skins
+ * won. Returns { deltas, won: { pid: { skins, amount, holes } } } where `amount` is what the skins brought in.
  */
 function skinsMoney(round, t, onPay = null) {
   const ids = round.players.map(p => p.id);
@@ -754,16 +802,18 @@ function skinsMoney(round, t, onPay = null) {
     if (no != null && !won[pid].holes.includes(no)) won[pid].holes.push(no);
   };
   const cfg = round.settings.skins;
-  const end = t.end;
+  const ends = t.ends || [];
   if (cfg.payout === 'pot') {
     // Like the other pots, a player who left or joined partway is out of it: they don't put in, and their skins don't count
     const inPot = round.players.filter(p => playsWholeRound(round, p.id)).map(p => p.id);
     const shares = Object.fromEntries(inPot.map(id => [id, 0]));
     for (const r of t.rows) if (r.winner && r.winner in shares) { shares[r.winner] += r.skins; credit(r.winner, r.skins, 0, r.hole.no); }
-    if (end?.rule === 'split') {
-      const tied = end.tied.filter(id => id in shares);
-      for (const id of tied) { shares[id] += end.skins / tied.length; credit(id, end.skins / tied.length, 0, end.row.hole.no); }
-    } else if (end?.winner && end.winner in shares) { shares[end.winner] += end.skins; credit(end.winner, end.skins, 0, end.row.hole.no); }
+    for (const end of ends) {
+      if (end.rule === 'split') {
+        const tied = end.tied.filter(id => id in shares);
+        for (const id of tied) { shares[id] += end.skins / tied.length; credit(id, end.skins / tied.length, 0, end.row.hole.no); }
+      } else if (end.winner && end.winner in shares) { shares[end.winner] += end.skins; credit(end.winner, end.skins, 0, end.row.hole.no); }
+    }
     const total = Object.values(shares).reduce((a, v) => a + v, 0);
     const played = t.rows.some(r => r.winner !== undefined);
     if (played && total > 0 && inPot.length >= 2) {
@@ -784,9 +834,12 @@ function skinsMoney(round, t, onPay = null) {
     }
     for (const w of winners) { deltas[w] += worth * payers.length / winners.length; credit(w, skins / winners.length, worth * payers.length / winners.length, no); }
   };
-  for (const r of t.rows) if (r.winner) pay([r.winner], r.field.filter(id => id !== r.winner), r.worth, r.skins, r.hole.no);
-  if (end?.rule === 'split') pay(end.tied, end.field.filter(id => !end.tied.includes(id)), end.worth, end.skins, end.row.hole.no);
-  else if (end?.winner) pay([end.winner], end.field.filter(id => id !== end.winner), end.worth, end.skins, end.row.hole.no);
+  // Each part of a won hole is paid by the players in for those skins
+  for (const r of t.rows) if (r.winner) for (const part of r.parts) pay([r.winner], part.payers, part.worth, part.skins, r.hole.no);
+  for (const end of ends) {
+    if (end.rule === 'split' && end.tied.length) pay(end.tied, end.field.filter(id => !end.tied.includes(id)), end.worth, end.skins, end.row.hole.no);
+    else if (end.winner) pay([end.winner], end.field.filter(id => id !== end.winner), end.worth, end.skins, end.row.hole.no);
+  }
   return { deltas, won };
 }
 
