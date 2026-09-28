@@ -3,8 +3,12 @@
 // and votes; the organizer suggests, the group decides. At the tee, a roll call confirms who
 // showed and starts the round with the voted game and bet in one tap.
 // Pure functions of plain data, so they're easy to test. No storage, no network.
+//
+// The bet vote is per game: each game on the ballot has its own amounts in its own unit ("$5 a
+// side" for Nassau, "$1 a point" for Wolf), and the bet that counts is the one voted for the game
+// that wins. Plans saved before that have one list of amounts for every game; they still work.
 import { GAMES } from './round.js';
-import { stakeSummary } from './stakes.js';
+import { stakeHeadline, stakeSummary } from './stakes.js';
 import { defaultTeams, teamsProblem } from './teams.js';
 import { defaultTee } from './courses.js';
 
@@ -58,10 +62,56 @@ export function withBet(game, settings, amount) {
   return out;
 }
 
-/** "$5 a skin", "$2 each in the pot": what a bet amount means in a game. */
+/** "$5 a skin · carryovers", "$5 a side": what a bet amount means in a game, with its house rules. */
 export function betLabel(game, settings, amount) {
   if (!GAMES[game] || !settings?.[game]) return '';
-  return stakeSummary(game, withBet(game, settings, amount));
+  const s = withBet(game, settings, amount);
+  return [stakeHeadline(game, s), ...stakeSummary(game, s).split(' · ').slice(1)].join(' · ');
+}
+
+/** "$5 a side", "$1 a point", "$2 a skin": a bet amount in the game's own unit, for the ballot. */
+export function betUnitLabel(game, settings, amount) {
+  if (!GAMES[game] || !settings?.[game]) return '';
+  return stakeHeadline(game, withBet(game, settings, amount));
+}
+
+/** The amounts to put up for a vote around a game's usual bet: a step down, the bet, a step up. */
+export function betChoices(amount) {
+  const a = Number(amount) > 0 ? Number(amount) : 5;
+  const i = BET_LADDER.findIndex(b => b >= a);
+  const at = i < 0 ? BET_LADDER.length : i;
+  const up = BET_LADDER[at] === a ? BET_LADDER[at + 1] : BET_LADDER[at];
+  return [BET_LADDER[at - 1], a, up].filter(b => b > 0);
+}
+
+/** The organizer's house rules for the games on the ballot over this phone's own, so every phone shows the same bets. */
+export function planRules(plan, settings) {
+  return { ...(settings || {}), ...(plan?.ballot?.rules || {}) };
+}
+
+/** The amounts on the ballot for one game. Older plans have one list for every game. */
+export function betsFor(plan, game) {
+  return plan?.ballot?.betsByGame?.[game] ?? plan?.ballot?.bets ?? [];
+}
+
+/** The organizer's suggested bet for one game (older plans: one amount for every game). */
+export function suggestedBetFor(plan, game) {
+  const s = plan?.suggested;
+  if (s?.bets) return s.bets[game] ?? null;
+  return s?.bet ?? null;
+}
+
+/** A bet vote as the server keeps it: "nassau:5" for one game's bet, "5" from before bets were per game. */
+export function betVoteChoice(a) {
+  if (!(Number(a?.bet) > 0)) return null;
+  return a.betGame ? `${a.betGame}:${Number(a.bet)}` : String(Number(a.bet));
+}
+
+/** { bet, betGame } from a stored bet vote (no `betGame` on an old one), or null when it can't be read. */
+export function parseBetVote(choice) {
+  const m = /^(?:([a-z]+):)?(\d+(?:\.\d+)?)$/.exec(String(choice ?? ''));
+  if (!m || !(Number(m[2]) > 0) || (m[1] && !GAMES[m[1]])) return null;
+  return { bet: Number(m[2]), ...(m[1] ? { betGame: m[1] } : {}) };
 }
 
 // --------------------------- who's in ---------------------------------------
@@ -69,7 +119,8 @@ export function betLabel(game, settings, amount) {
 /**
  * Everyone on the plan with their answer: the people invited (in the organizer's order), then
  * anyone who answered from the group link, in the order they answered.
- * [{ who, name, status: 'in' | 'maybe' | 'out' | null, game, bet, invited }]
+ * [{ who, name, status: 'in' | 'maybe' | 'out' | null, game, bet, betGame, invited }]
+ * `betGame`: the game the bet vote is for (null on a vote from before bets were per game).
  */
 export function planPeople(plan) {
   const answers = plan?.answers || {};
@@ -82,7 +133,8 @@ export function planPeople(plan) {
   return out;
 }
 function pick(a) {
-  return { status: RSVPS.includes(a?.status) ? a.status : null, game: a?.game ?? null, bet: a?.bet ?? null };
+  const bet = a?.bet ?? null;
+  return { status: RSVPS.includes(a?.status) ? a.status : null, game: a?.game ?? null, bet, betGame: bet != null ? a?.betGame ?? null : null };
 }
 
 /** Counts for the card: { in, maybe, out, waiting } (waiting: invited and no answer yet). */
@@ -112,17 +164,21 @@ const same = (kind, a, b) => (kind === 'bet' ? Number(a) === Number(b) : a === b
  * The vote on the game or the bet. Everyone who isn't out gets one vote. Most votes wins; a tie
  * goes to the organizer's suggestion if it's in the tie, else to the one listed first. With no
  * votes yet, the suggestion stands.
- * { rows: [{ choice, votes, suggested, leading }], winner, total }
+ * The bet vote is for one game: `game`, or the game the group picked when it's left out. A bet
+ * vote counts for the game it was cast for; one from before bets were per game counts for any.
+ * { rows: [{ choice, votes, suggested, leading }], winner, total, game (the bet's game) }
  */
-export function tally(plan, kind) {
-  const ballot = (kind === 'game' ? plan?.ballot?.games : plan?.ballot?.bets) || [];
-  const suggested = plan?.suggested?.[kind] ?? ballot[0] ?? null;
+export function tally(plan, kind, game = null) {
+  const betGame = kind === 'bet' ? (game ?? tally(plan, 'game').winner) : null;
+  const ballot = (kind === 'game' ? plan?.ballot?.games : betsFor(plan, betGame)) || [];
+  const suggested = (kind === 'game' ? plan?.suggested?.game : suggestedBetFor(plan, betGame)) ?? ballot[0] ?? null;
   const rows = ballot.map(choice => ({ choice, votes: 0, suggested: same(kind, choice, suggested), leading: false }));
   let total = 0;
   for (const p of planPeople(plan)) {
     if (p.status === 'out') continue;
     const v = p[kind];
     if (v == null) continue;
+    if (kind === 'bet' && p.betGame && p.betGame !== betGame) continue;
     const row = rows.find(r => same(kind, r.choice, v));
     if (!row) continue;
     row.votes++;
@@ -132,12 +188,13 @@ export function tally(plan, kind) {
   const tied = rows.filter(r => r.votes === top);
   const win = !total ? (rows.find(r => r.suggested) || rows[0]) : (tied.find(r => r.suggested) || tied[0]);
   if (win && total) win.leading = true;
-  return { rows, winner: win ? win.choice : suggested, total };
+  return { rows, winner: win ? win.choice : suggested, total, ...(kind === 'bet' ? { game: betGame } : {}) };
 }
 
-/** The game and the bet the group picked (or the suggestion, while nobody has voted). */
+/** The game the group picked and the bet voted for that game (or the suggestions, while nobody has voted). */
 export function planChoice(plan) {
-  return { game: tally(plan, 'game').winner, bet: Number(tally(plan, 'bet').winner) || null };
+  const game = tally(plan, 'game').winner;
+  return { game, bet: Number(tally(plan, 'bet', game).winner) || null };
 }
 
 // --------------------------- roll call --------------------------------------
@@ -195,7 +252,9 @@ export function planStart(state, plan, present, { newId, course: courseIn } = {}
   const ids = players.map(p => p.id);
   const teams = g?.teams ? defaultTeams(game, ids) : null;
   if (!problem && g?.teams) problem = teamsProblem(game, teams, ids);
-  const settings = bet ? withBet(game, state.settings, bet) : structuredClone(state.settings || {});
+  // The house rules the group saw on the ballot (older plans: this phone's), with the bet they picked
+  const rules = planRules(plan, state.settings);
+  const settings = bet ? withBet(game, rules, bet) : structuredClone(rules);
   delete settings.shareAmounts; // a personal setting, not part of a round's bets
   const tee = defaultTee(course)?.name ?? null;
   return {
@@ -332,7 +391,8 @@ export function morningText(plan, link, settings, now = new Date()) {
   const t = timeLabel(plan.teeTime);
   const n = daysUntil(plan.date, now);
   const lead = n === 0 ? 'Golf today!' : n === 1 ? 'Golf tomorrow!' : `Golf ${dayWords(plan, now)}!`;
-  const bets = bet && settings?.[game] ? betLabel(game, settings, bet) : '';
+  const rules = planRules(plan, settings);
+  const bets = bet && rules[game] ? betLabel(game, rules, bet) : '';
   return [
     `${lead} ${plan.course?.name || ''}${t ? `, tee time ${t}` : ''}.`.replace(' ,', ','),
     ins.length ? `In: ${listNames(ins)}.` : null,
@@ -365,7 +425,7 @@ export function answersFrom(rsvps = [], votes = []) {
   for (const v of votes) {
     if (!v?.who || !out[v.who] || v.choice == null) continue;
     if (v.kind === 'game') out[v.who].game = String(v.choice);
-    if (v.kind === 'bet' && Number(v.choice) > 0) out[v.who].bet = Number(v.choice);
+    if (v.kind === 'bet') Object.assign(out[v.who], parseBetVote(v.choice) || {});
   }
   return out;
 }
@@ -382,11 +442,23 @@ export function planLink(origin, code, who = null) {
 
 /**
  * A new plan from the setup screens. The organizer is on it and in, and their suggestion is
- * their own vote until they change it.
+ * their own vote until they change it. `ballot.bets` are the amounts for the suggested game;
+ * every other game on the ballot gets amounts around its own usual bet in `settings` (the
+ * organizer's house rules, which ride along on the plan so every phone shows the same units).
  */
-export function newPlan({ id, hostWho = HOST, hostName, game, holesCount, nine, date, teeTime, course, people, ballot, suggestedBet, useHc = true, now = Date.now() }) {
+export function newPlan({ id, hostWho = HOST, hostName, game, holesCount, nine, date, teeTime, course, people, ballot, suggestedBet, settings = null, useHc = true, now = Date.now() }) {
   const games = [game, ...(ballot?.games || []).filter(g => g !== game && GAMES[g])].slice(0, MAX_BALLOT_GAMES);
   const bets = [...new Set([...(ballot?.bets || []), suggestedBet].filter(b => Number(b) > 0).map(Number))].sort((a, b) => a - b);
+  const bet = Number(suggestedBet) || bets[0] || null;
+  const betsByGame = {};
+  const suggestedBets = {};
+  const rules = {};
+  for (const g of games) {
+    const usual = g === game ? bet : Number(betOf(g, settings)) || bet;
+    betsByGame[g] = g === game || !settings?.[g] ? bets : betChoices(usual);
+    suggestedBets[g] = usual;
+    if (settings?.[g]) rules[g] = structuredClone(settings[g]);
+  }
   const hostFirst = first(hostName);
   const others = (people || []).filter(p => p.id !== hostWho).map(p => ({ id: p.id, name: first(p.name) || 'Friend' }));
   return {
@@ -395,9 +467,10 @@ export function newPlan({ id, hostWho = HOST, hostName, game, holesCount, nine, 
     game, holesCount, nine: nine || 'front', date, teeTime: teeTime || null, useHc,
     course: course ? { id: course.id, name: course.name, city: course.city || null } : null,
     people: [{ id: hostWho, name: hostFirst || 'Me' }, ...others],
-    ballot: { games, bets },
-    suggested: { game, bet: Number(suggestedBet) || bets[0] || null },
-    answers: { [hostWho]: { name: hostFirst || 'Me', status: 'in', game, bet: Number(suggestedBet) || null, at: now } },
+    // `bets` and `bet` stay for phones on an older version, which read one list for every game
+    ballot: { games, bets, betsByGame, rules },
+    suggested: { game, bet, bets: suggestedBets },
+    answers: { [hostWho]: { name: hostFirst || 'Me', status: 'in', game, bet: Number(suggestedBet) || null, betGame: Number(suggestedBet) ? game : null, at: now } },
     code: null,
   };
 }

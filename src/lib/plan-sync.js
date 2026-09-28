@@ -8,7 +8,7 @@ import { getState, update } from './store.js';
 import { getSupabase, supabaseConfigured } from './supabase.js';
 import { PlansOffError, planLocalAdapter, planSupabaseAdapter } from './plan-adapters.js';
 import { newCode, stable } from './sync-model.js';
-import { RSVPS, answersFrom, cleanName, planLink, planMeta } from './plans.js';
+import { RSVPS, answersFrom, betVoteChoice, cleanName, planLink, planMeta } from './plans.js';
 import { PAY_APP_IDS } from './pay.js';
 
 const localFlag = () => { try { return localStorage.getItem('bb-sync-local') === '1'; } catch { return false; } };
@@ -48,7 +48,7 @@ async function pushAnswer(adapter, code, who, a) {
   // The server only takes the payment apps it knows and handles up to 80 characters
   const pay = PAY_APP_IDS.includes(a.payApp) && a.payHandle ? { payApp: a.payApp, payHandle: String(a.payHandle).slice(0, 80) } : { payApp: null, payHandle: null };
   await adapter.setRsvp(code, { who, name: cleanName(a.name) || 'Guest', status: a.status, ...pay });
-  await Promise.all([adapter.setVote(code, who, 'game', a.game ?? null), adapter.setVote(code, who, 'bet', a.bet ?? null)]);
+  await Promise.all([adapter.setVote(code, who, 'game', a.game ?? null), adapter.setVote(code, who, 'bet', betVoteChoice(a))]);
 }
 
 /**

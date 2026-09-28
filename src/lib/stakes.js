@@ -39,3 +39,13 @@ export function stakeSummary(game, settings) {
     default: return '';
   }
 }
+
+/**
+ * The bet in its own unit, without the house rules: "$2 a skin", "$1 a point", "$5 a side".
+ * The first part of the summary line, except a Nassau with the same bet on every leg reads "a side".
+ */
+export function stakeHeadline(game, settings) {
+  const n = game === 'nassau' ? settings.nassau : null;
+  if (n && n.front === n.back && n.back === n.total) return `${money(n.front)} a side`;
+  return stakeSummary(game, settings).split(' · ')[0];
+}

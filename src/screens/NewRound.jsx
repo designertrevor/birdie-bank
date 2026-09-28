@@ -17,7 +17,7 @@ import { addRound, holesScored, roundsInProgress } from '../lib/rounds.js';
 import { formatIndex, hcPctLabel, playerLabel, sortedPlayers } from '../lib/format.js';
 import { money } from '../lib/golf.js';
 import { findCourse } from '../lib/courses.js';
-import { BET_LADDER, MAX_BALLOT_GAMES, betLabel, betOf, dayChoices, isoDate, newPlan, planStart } from '../lib/plans.js';
+import { BET_LADDER, MAX_BALLOT_GAMES, betChoices, betLabel, betOf, betUnitLabel, dayChoices, isoDate, newPlan, planStart } from '../lib/plans.js';
 import { editPlan } from '../lib/plan-sync.js';
 import { shouldShowPaywall } from '../lib/paywall.js';
 import { PAYWALL_ON } from '../lib/paywall-flag.js';
@@ -42,9 +42,7 @@ function nextSaturday(now = new Date()) {
 
 /** Two amounts either side of the suggestion, for the bet vote. */
 function nearbyBets(bet) {
-  const i = BET_LADDER.findIndex(b => b >= bet);
-  const at = i < 0 ? BET_LADDER.length - 1 : i;
-  return [BET_LADDER[at - 1], BET_LADDER[at + 1]].filter(b => b && b !== bet);
+  return betChoices(bet).filter(b => b !== bet);
 }
 
 /** Setup filled in from a planned round's roll call ("Change the setup"). */
@@ -130,7 +128,7 @@ export default function NewRound({ rematch, fromPlan, present, ahead = false, ga
     const plan = newPlan({
       id, hostName: me?.name || 'Me', game, holesCount, nine, date, teeTime, course,
       people: invited.filter(pid => pid !== s.me).map(pid => s.players[pid]).filter(Boolean),
-      ballot: { games: ballotGames, bets: ballotBets }, suggestedBet, useHc: true,
+      ballot: { games: ballotGames, bets: ballotBets }, suggestedBet, settings: opts, useHc: true,
     });
     update(st => {
       if (!st.plans) st.plans = {};
@@ -667,6 +665,7 @@ function VoteStep({ game, opts, onPlan, ballot = [] }) {
             <button key={b} aria-pressed={extraBets.includes(b)} className={`pill-btn sm ${extraBets.includes(b) ? 'on' : ''}`} onClick={() => toggleBet(b)}>{money(b)}</button>
           ))}
         </div>
+        <p className="field-help pad">{GAMES[game].name} bets on the ballot: {ballotBets.map(b => betUnitLabel(game, opts, b)).join(', ')}.</p>
         <div className="sec-label">Other games to vote on <span className="opt">up to {MAX_BALLOT_GAMES - 1}</span></div>
         <div className="chip-row">
           {Object.entries(GAMES).filter(([k]) => k !== game).map(([k, g]) => {
@@ -678,6 +677,12 @@ function VoteStep({ game, opts, onPlan, ballot = [] }) {
             );
           })}
         </div>
+        {others.length > 0 && (
+          <p className="field-help pad">
+            {others.map(k => <span key={k} style={{ display: 'block' }}>{GAMES[k].name}: {betChoices(betOf(k, opts)).map(b => betUnitLabel(k, opts, b)).join(', ')}</span>)}
+            Each game gets its own bet vote, around your usual bet for it.
+          </p>
+        )}
         {others.length === 0 && extraBets.length === 0 && <p className="field-help pad">Nothing else on the ballot, so everyone just says if they’re in.</p>}
       </div>
       <div className="cta-wrap">
