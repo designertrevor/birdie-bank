@@ -4,7 +4,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import {
   KEEPER_QUIET_MS, keeperOf, keeperMe, isKeeper, canEdit, keeperName, canTakeCard, handOffChoices,
-  hostKeeper, handOff, keeperSaved, askForCard, clearAsk, openAsk, seatTaken, metaToSend,
+  hostKeeper, handOff, keeperSaved, askForCard, clearAsk, openAsk, seatTaken, metaToSend, metaToKeep,
 } from './keeper.js';
 
 const T0 = 1_800_000_000_000;
@@ -127,4 +127,21 @@ test('metaToSend: a phone not keeping score can only send the keeper, the ask, w
   assert.deepEqual(sent.onApp, { dave: 1 });
   assert.equal(metaToSend(base, local, { editor: true, me: 'dave' }), local);
   assert.equal(metaToSend(null, local, { editor: false, me: 'dave' }), null);
+});
+
+// Review 2026-09-29: a phone that isn't keeping score must end up with the keeper's game, even when
+// its own copy drifted (bets it changed while it still had the card, then lost it). Otherwise the
+// merge keeps its copy on a clash, it never sends it, and its money differs from every other phone's.
+test('metaToKeep: a phone not keeping score takes the keeper\'s game, keeping only what it may change', () => {
+  const base = { game: 'wolf', settings: { wolf: { point: 1 } }, players: [{ id: 'mike' }, { id: 'dave' }], keeper: { id: 'mike' } };
+  const local = { ...base, settings: { wolf: { point: 5 } }, cardAsk: { by: 'dave', at: 1 } };
+  const remote = { ...base, settings: { wolf: { point: 2 } }, players: [...base.players, { id: 'zed' }] };
+  const kept = metaToKeep(base, local, remote, { editor: false, me: 'dave' });
+  assert.deepEqual(kept.settings, { wolf: { point: 2 } });
+  assert.deepEqual(kept.players.map(p => p.id), ['mike', 'dave', 'zed']);
+  assert.deepEqual(kept.cardAsk, { by: 'dave', at: 1 }, 'its own ask stays');
+  // The keeper's phone merges as before: a clash keeps its own edit, which it then sends
+  assert.deepEqual(metaToKeep(base, local, remote, { editor: true, me: 'mike' }).settings, { wolf: { point: 5 } });
+  // Never heard from the server: the server's copy
+  assert.deepEqual(metaToKeep(undefined, local, remote, { editor: false, me: 'dave' }), remote);
 });

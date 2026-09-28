@@ -20,6 +20,7 @@
 // This is enforced on the phone (in the UI and in what sync.js sends), not on the server: the live
 // round tables are open by code, and an older copy of the app ignores the keeper. Locking it down on
 // the server belongs with the S3 plan lock-down.
+import { merge3 } from './sync-model.js';
 
 /** How long the keeper's phone has to go without saving a hole before another player can take the card. */
 export const KEEPER_QUIET_MS = 10 * 60 * 1000;
@@ -165,4 +166,15 @@ export function metaToSend(base, local, { editor, me }) {
     if (mine) out.players = base.players.map(p => (p.id === me ? { ...p, ...Object.fromEntries(PAY_KEYS.filter(k => k in mine).map(k => [k, mine[k]])) } : p));
   }
   return out;
+}
+
+/**
+ * The meta to keep on this phone when the server's copy (`remote`) arrives. The phone keeping score
+ * merges as ever (see merge3). Any other phone keeps only what it may change (metaToSend) and takes
+ * the rest from the server, so a copy that drifted (say, bets changed while it still had the card)
+ * can't hold on to a game no other phone is playing.
+ */
+export function metaToKeep(base, local, remote, { editor, me }) {
+  const mine = editor ? local : metaToSend(base, local, { editor, me });
+  return mine == null ? remote : merge3(base, mine, remote, 1);
 }

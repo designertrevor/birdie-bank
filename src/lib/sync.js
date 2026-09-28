@@ -8,7 +8,7 @@ import { getSupabase, supabaseConfigured } from './supabase.js';
 import { leaveRound } from './rounds.js';
 import { applyHole, applyMeta, assemble, buildHole, buildMeta, buildRequest, isRequestNo, merge3, newCode, newRequestNo, readRequest, stable } from './sync-model.js';
 import { payFields } from './pay.js';
-import { canEdit, hostKeeper, isKeeper, keeperMe, keeperOf, metaToSend, seatTaken } from './keeper.js';
+import { canEdit, hostKeeper, isKeeper, keeperMe, keeperOf, metaToKeep, metaToSend, seatTaken } from './keeper.js';
 
 /** Whether this phone may change a shared round (see keeper.js), and who it is in it. */
 function editorOf(round) {
@@ -149,7 +149,8 @@ function onRemote(roundId, ev) {
     const round = getState().rounds[roundId];
     if (!round) return;
     const local = buildMeta(round);
-    const merged = merge3(base, local, ev.data, 1);
+    // A phone that isn't keeping score keeps only what it may change (see metaToKeep)
+    const merged = metaToKeep(base, local, ev.data, editorOf(round));
     if (stable(merged) === stable(local)) return;
     update(s => {
       const r = s.rounds[roundId]; if (!r) return;
