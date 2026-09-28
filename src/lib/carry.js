@@ -71,8 +71,8 @@ export function remindable(state, pid, owed) {
 }
 
 /** A pair can roll it over only when they share a round, so the other phone can answer. */
-export function canCarry(state, a, b) {
-  return pairRounds(state, a, b).length > 0;
+export function canCarry(state, a, b, now = Date.now()) {
+  return pairRounds(state, a, b, { now }).length > 0;
 }
 
 /**
@@ -80,10 +80,10 @@ export function canCarry(state, a, b) {
  * the same way first, oldest first; when the Tab has passed the money through other people and
  * no round transfer is open that way, the whole ask sits on your newest round together.
  */
-export function carrySplit(state, from, to, amount) {
+export function carrySplit(state, from, to, amount, now = Date.now()) {
   const out = [];
   let left = cents(amount);
-  for (const x of openTransfers(state, from, to).filter(o => o.forward)) {
+  for (const x of openTransfers(state, from, to, now).filter(o => o.forward)) {
     if (!left) break;
     const part = Math.min(left, x.open);
     left -= part;
@@ -91,7 +91,7 @@ export function carrySplit(state, from, to, amount) {
   }
   if (left > 0) {
     const who = canonicalOf(state);
-    const r = out.at(-1)?.round || pairRounds(state, from, to).at(-1);
+    const r = out.at(-1)?.round || pairRounds(state, from, to, { now }).at(-1);
     if (!r) return out;
     const hit = out.find(o => o.round === r);
     if (hit) hit.cents += left;

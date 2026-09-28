@@ -61,9 +61,9 @@ test('carry: two phones, Mike asks and Trevor agrees; both see the same carry', 
   const code = 'AAAAAA';
   let trevor = stateOf('a', [round('r1', ['a', 'b'], twoSkins, { code })]);
   let mike = stateOf('zb', [round('r1', ['a', 'b'], twoSkins, { code, localMe: 'b' })]);
-  assert.equal(canCarry(mike, 'zb', 'a'), true);
+  assert.equal(canCarry(mike, 'zb', 'a', NOW), true);
   // Mike (seat b, id zb on his phone) asks to roll his $4
-  const split = carrySplit(mike, 'zb', 'a', 4);
+  const split = carrySplit(mike, 'zb', 'a', 4, NOW);
   assert.deepEqual(split.map(p => [p.from, p.to, p.cents]), [['b', 'a', 400]]);
   const ask = carryReducer(null, { type: 'ask', from: 'zb', to: 'a', amount: 4, by: 'zb', reason: CARRY_REASONS[0], at: NOW });
   const rows = carryRows(mike, ask, { now: NOW, split });
@@ -84,7 +84,7 @@ test('carry: two phones, Mike asks and Trevor agrees; both see the same carry', 
   // Still in the running balance
   assert.deepEqual(outstanding(trevor).map(t => [t.from, t.to, t.amount]), [['b', 'a', 4]]);
   // Both asking at once: the same row id, so the later ask wins
-  assert.equal(carryRows(trevor, carryReducer(null, { type: 'ask', from: 'b', to: 'a', amount: 4, by: 'a', at: NOW + 5 }), { split: carrySplit(trevor, 'b', 'a', 4) })[0].id, rows[0].id);
+  assert.equal(carryRows(trevor, carryReducer(null, { type: 'ask', from: 'b', to: 'a', amount: 4, by: 'a', at: NOW + 5 }), { split: carrySplit(trevor, 'b', 'a', 4, NOW) })[0].id, rows[0].id);
 });
 
 test('carry: capped at what’s owed now, and ends when the debt flips', () => {
@@ -124,8 +124,15 @@ test('carry: no reminders while an agreed carry covers the card', () => {
 
 test('carry: a pair with no shared round can’t roll it over (the other phone could never answer)', () => {
   const s = stateOf('a', [round('r1', ['a', 'b'], twoSkins)]);
-  assert.equal(canCarry(s, 'a', 'b'), false);
-  assert.deepEqual(carrySplit(s, 'b', 'a', 4), []);
+  assert.equal(canCarry(s, 'a', 'b', NOW), false);
+  assert.deepEqual(carrySplit(s, 'b', 'a', 4, NOW), []);
+});
+
+test('carry: a shared round older than the other phone looks back can’t take an ask (it would never arrive)', () => {
+  const s = stateOf('a', [round('r1', ['a', 'b'], twoSkins, { code: 'AAAAAA', daysAgo: 90 })]);
+  assert.equal(canCarry(s, 'a', 'b', NOW), false);
+  assert.deepEqual(carrySplit(s, 'b', 'a', 4, NOW), []);
+  assert.equal(canCarry(s, 'a', 'b', NOW - 60 * DAY), true);
 });
 
 test('carry: a profile doc keeps carries, and one from an older app doesn’t wipe them', () => {

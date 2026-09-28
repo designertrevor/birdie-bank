@@ -57,6 +57,15 @@ test('applyRows: a paid row is a settlement, applying it twice changes nothing, 
   assert.equal(applyRows(undone, [row()]).settlements.length, 0);
 });
 
+test('an old shared round the other phone no longer looks up takes no payment rows: it stays on this phone', () => {
+  const s = stateOf('a', [round('r1', ['a', 'b'], oneSkin, { code: 'AAAAAA', daysAgo: 90 })]);
+  const before = money(s);
+  const { rows, settlements } = allocatePayment(s, { from: 'b', to: 'a', amount: 2 }, { now: NOW, makeId: () => 'old' });
+  assert.deepEqual(rows, []);
+  assert.deepEqual(settlements, [{ id: 's_old', from: 'b', to: 'a', amount: 2, at: NOW }]);
+  assert.deepEqual(before, money(s));
+});
+
 test('applyRows: rows for rounds this phone doesn’t have are ignored; netted rows move no money', () => {
   const s = stateOf('a', [round('r1', ['a', 'b'], oneSkin, { code: 'AAAAAA' })]);
   const next = applyRows(s, [row({ code: 'ZZZZZZ', id: 'ZZZZZZ:b>a' }), row({ id: 'AAAAAA:b>a:net', status: 'netted' })]);

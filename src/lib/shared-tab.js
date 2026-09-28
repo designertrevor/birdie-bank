@@ -60,11 +60,15 @@ export function tabCodes(state, opts) {
   return [...new Set(sharedRounds(state, opts).map(codeOf))];
 }
 
-/** Shared rounds both people played (ids as the Tab knows them), oldest first. */
-export function pairRounds(state, a, b, opts = { days: Infinity }) {
+/**
+ * Shared rounds both people played (ids as the Tab knows them), oldest first. Only rounds the
+ * other phone still looks up (FETCH_DAYS) count: a payment or ask put on an older round would
+ * never reach it, so older rounds stay on this phone like any unshared round.
+ */
+export function pairRounds(state, a, b, { days = FETCH_DAYS, now = Date.now() } = {}) {
   const who = canonicalOf(state);
   const A = who(a), B = who(b);
-  return sharedRounds(state, opts).filter(r => {
+  return sharedRounds(state, { days, now }).filter(r => {
     const ids = new Set(r.players.map(p => who(p.id)));
     return ids.has(A) && ids.has(B);
   });
@@ -171,11 +175,11 @@ function paidOn(state, round, code, t) {
 const nettedOn = (state, code, t) => state.tabRows?.[`${code}|${nettedId(code, t.from, t.to)}`]?.status === 'netted';
 
 /** Round transfers still open between two people (either direction), oldest round first. */
-export function openTransfers(state, a, b) {
+export function openTransfers(state, a, b, now = Date.now()) {
   const who = canonicalOf(state);
   const A = who(a), B = who(b);
   const out = [];
-  for (const r of pairRounds(state, A, B)) {
+  for (const r of pairRounds(state, A, B, { now })) {
     const code = codeOf(r);
     for (const t of roundResults(r).transfers) {
       const f = who(t.from), to = who(t.to);
@@ -207,7 +211,7 @@ export function allocatePayment(state, { from, to, amount }, { now = Date.now(),
   const total = cents(amount);
   let left = total;
   const rows = [], settlements = [];
-  const open = openTransfers(state, F, T);
+  const open = openTransfers(state, F, T, now);
   for (const x of open.filter(o => o.forward)) {
     if (!left) break;
     const fill = Math.min(left, x.open);
