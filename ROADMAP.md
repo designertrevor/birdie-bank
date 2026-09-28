@@ -25,11 +25,13 @@ The plan for growing Birdie Bank into a $10k/mo business, and the checklist we w
 
 **Shipped overnight 2026-09-28 (onboarding):** organizer onboarding: four questions one a screen with payoffs, "Here's your group", then "Set up your next round" straight into the plan flow (the first game they play is suggested, the others go on the ballot). The paywall (option C, trial with a free way out) is built as a preview behind a flag: open the app with `?paywall=on` to see it, `?paywall=off` to hide it. Placeholder prices, nothing charged.
 
+**Built overnight 2026-09-29 (Lately and report fixes, on a branch):** "Lately" on Up next, join links open the invite card for people already set up, adding a name in the plan flow's Who step, accessible names across onboarding, the plan flow and the paywall, the Dormie tile says the leader can't lose, and "Your usual" never offers a round still in progress.
+
 **Next in S2:** one shared tab for the group and carry-overs (area 7), real payments for the paywall test (Stripe, area 11), several games in one round, and the quick logo (area 16).
 
 **The big date:** the creator test (S4) runs February to April 2027, when golf season starts back up. Everything before it is about being ready: a product groups keep using, a smooth path from video to paying, and an App Store app.
 
-Last updated: 2026-09-28
+Last updated: 2026-09-29
 
 ---
 
@@ -237,7 +239,7 @@ Put more money into the winning creators and copy their video formats with other
 - [ ] `S5` Year in review ("Birdie Bank Wrapped")
 
 ### 9. Social and community
-- [ ] `S3` The group's weekly feed: upcoming round, trash talk, settle-ups, last round's recap (see area 21)
+- [ ] `S3` (partial) The group's feed between rounds: upcoming round, trash talk, settle-ups, last round's recap (see area 21). "Lately" on Up next (2026-09-29) lists settle-ups, carry-overs (once the shared Tab adds them), who answered an upcoming round and round recaps from the last 30 days, with amounts only between the two people in them. Still to do: trash talk and reactions in it
 - [ ] `S3` Follow friends' rounds live, even ones you're not in (someone's Tuesday round), with reactions and comments
 - [ ] `S5` Friends list beyond your groups, suggested from people you've played with
 - [ ] `S5` Wider activity feed: big wins, birdie streaks, lone Wolf wins
@@ -445,3 +447,4 @@ Kept light on purpose. Groups already have a group text, so Birdie Bank adds to 
 - 2026-09-28: Everything from both overnight runs is live on main, and all three SQL parts are run. Join link previews now show the round (they never had: `vercel.json` rewrites don't run for `/`, so middleware does it, and "$2 a skin" no longer breaks the text). Course search is on with a free GolfCourseAPI key. Custom SMTP waits for the app's final name and domain. Tests: 346 passing.
 - 2026-09-28: Skins and late joiners: a carry stays with the players who built it. A player added mid-round plays for every skin from the hole they join, but not for skins already carrying when they arrive; if they win a hole outright they take that hole's skin and the older carry keeps rolling among its builders. Works for net, gross, both, the pot and the last-hole rules, and the join sheet and Skins rules say so. Tests: 351 passing.
 - 2026-09-28: A doubling Snake has an optional cap, 4 doubles by default ($5 tops out at $80), with No cap as a choice; rounds played before keep their money. The planned-round ballot votes on each game's bet in its own unit ("$5 a side", "$2 a skin", "$1 a point"), and Tee off uses the amount voted for the winning game; older plans still load. Tests: 365 passing.
+- 2026-09-29 (overnight, Lately and report fixes): "Lately" on Up next: settle-ups, carry-overs, answers for upcoming rounds and round recaps from the last 30 days, newest first, three on Up next and See all. An amount shows only when you are one of the two people; the round in "Last time out" is left out. Report fixes: someone already set up who opens a join link (or types a code) now gets the invite card with the seats and "Not on the list? Add me", and keeps who they are; the plan flow's Who step has an "Add a name" field, so a brand-new organizer can invite people; onboarding answers, the name field, the wagers checkbox, day and course buttons, seats and the paywall plans all have accessible names; "Here's your group" no longer repeats its button; the Dormie tile reads "Dormie · can't lose"; "Your usual" only offers finished rounds; "most weeks" and "next week" wording in onboarding now says "usually" and "next time". The two service worker console lines come from the Claude browser pane, which refuses every service worker script; a normal Chrome registers it cleanly, so nothing changed there. Tests: 381 passing. Checklist: 47 of 177 done (27%).
