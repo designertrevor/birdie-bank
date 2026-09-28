@@ -1,0 +1,25 @@
+// Everything from the last 30 days that Up next shows the first few of.
+import { Empty, Header, Screen } from '../components/ui.jsx';
+import { LatelyList } from '../components/LatelyList.jsx';
+import { useStore } from '../lib/store.js';
+import { useNav } from '../lib/nav.js';
+import { LATELY_DAYS, latelyItems } from '../lib/lately.js';
+
+export default function Lately() {
+  const nav = useNav();
+  const state = useStore();
+  const items = latelyItems(state);
+  return (
+    <Screen>
+      <Header title="Lately" onBack={nav.pop} />
+      <div className="scroll">
+        {items.length
+          ? <>
+              <p className="field-help pad" style={{ marginTop: 0 }}>The last {LATELY_DAYS} days with your group. Amounts show only when they’re yours.</p>
+              <LatelyList items={items} />
+            </>
+          : <Empty title="Quiet lately" text="Settle-ups, answers for upcoming rounds and round recaps show up here." />}
+      </div>
+    </Screen>
+  );
+}

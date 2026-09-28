@@ -19,7 +19,7 @@ import { shouldShowPaywall } from '../lib/paywall.js';
 
 const QUESTION = {
   games: { q: 'What does your group play?', sub: 'Pick all that apply. You can play any of them later.' },
-  size: { q: 'How many of you, most weeks?', options: SIZES },
+  size: { q: 'How many of you usually play?', options: SIZES },
   settle: { q: 'How do you settle up now?', options: SETTLES },
   math: { q: 'Who ends up doing the math?', options: MATHS },
 };
@@ -119,7 +119,7 @@ export default function Onboarding({ onDone }) {
               const g = GAMES[k];
               const on = a.games.includes(k);
               return (
-                <button key={k} className={`ob-tile ${on ? 'on' : ''}`} aria-pressed={on} onClick={() => setA(x => ({ ...x, games: toggleGame(x.games, k) }))}>
+                <button key={k} className={`ob-tile ${on ? 'on' : ''}`} aria-pressed={on} aria-label={`${g.name}: ${g.blurb}`} onClick={() => setA(x => ({ ...x, games: toggleGame(x.games, k) }))}>
                   <span className="ob-tile-top"><Icon name={g.icon} fill />{on && <Icon name="check-circle" fill className="ob-tick" />}</span>
                   <span className="ob-tile-name">{g.name}</span>
                   <span className="ob-tile-sub">{g.blurb}</span>
@@ -144,7 +144,7 @@ export default function Onboarding({ onDone }) {
             {q.options.map(o => {
               const on = a[step] === o.value;
               return (
-                <button key={o.value} role="radio" aria-checked={on} className={`list-item ob-choice ${on ? 'on' : ''}`} onClick={() => set(step, o.value)}>
+                <button key={o.value} role="radio" aria-checked={on} aria-label={o.sub ? `${o.label}. ${o.sub}` : o.label} className={`list-item ob-choice ${on ? 'on' : ''}`} onClick={() => set(step, o.value)}>
                   <div className="row-main">
                     <div className="li-name">{o.label}</div>
                     {o.sub && <div className="li-sub">{o.sub}</div>}
@@ -186,15 +186,15 @@ export default function Onboarding({ onDone }) {
           <h1 className="ob-q d">Last thing. What should the group call you?</h1>
           {acct.user && <p className="field-help" style={{ marginTop: 0 }}>Signed in as {acct.user.email}. Your rounds will save to your account.</p>}
           <label className="field-label" htmlFor="ob-name">Your name</label>
-          <input id="ob-name" className="name-input" value={name} onChange={e => setName(e.target.value)} placeholder="e.g. Sam" autoComplete="given-name" maxLength={24} />
+          <input id="ob-name" aria-label="Your name" className="name-input" value={name} onChange={e => setName(e.target.value)} placeholder="e.g. Sam" autoComplete="given-name" maxLength={24} />
           <label className="field-label" htmlFor="ob-index">Handicap index <span className="opt">optional</span></label>
-          <button id="ob-index" className="amt-btn field-btn" onClick={() => setPad(true)}>{index == null ? 'Add' : formatIndex(index)}</button>
+          <button id="ob-index" className="amt-btn field-btn" aria-label={index == null ? 'Handicap index, optional. Add' : `Handicap index ${formatIndex(index)}. Change`} onClick={() => setPad(true)}>{index == null ? 'Add' : formatIndex(index)}</button>
           <p className="field-help">No handicap? Leave it blank. When you do use them, the best player gets no strokes and everyone else gets the difference.</p>
-          <button className={`list-item ob-agree ${agreed ? 'on' : ''}`} role="checkbox" aria-checked={agreed} onClick={() => setAgreed(v => !v)}>
+          <button className={`list-item ob-agree ${agreed ? 'on' : ''}`} role="checkbox" aria-checked={agreed} aria-label="Friendly wagers only" aria-describedby="ob-agree-sub" onClick={() => setAgreed(v => !v)}>
             <span className={`li-check ${agreed ? 'on' : ''}`}>{agreed && <Icon name="check" />}</span>
             <div className="row-main">
               <div className="li-name">Friendly wagers only</div>
-              <div className="li-sub">Birdie Bank tracks bets between friends. It never holds, sends or collects money. Check that betting on golf is legal where you play.</div>
+              <div className="li-sub" id="ob-agree-sub">Birdie Bank tracks bets between friends. It never holds, sends or collects money. Check that betting on golf is legal where you play.</div>
             </div>
           </button>
         </div>
@@ -224,7 +224,7 @@ export default function Onboarding({ onDone }) {
         <ul className="block pw-list">
           {readyLines(a).map(t => <li key={t}><Icon name="check-circle" fill /> {t}</li>)}
         </ul>
-        <p className="ob-sub">Next, set up your next round. Pick the day and the course, suggest a game and a bet, and the group votes from one link. About 30 seconds.</p>
+        <p className="ob-sub">Pick the day and the course, suggest a game and a bet, and the group votes from one link. About 30 seconds.</p>
       </div>
       <div className="cta-wrap">
         <button className="full-btn" onClick={() => finish(true)}>Set up your next round <Icon name="arrow-right" /></button>

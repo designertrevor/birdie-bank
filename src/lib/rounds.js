@@ -1,7 +1,8 @@
 // Rounds in progress: more than one can be going at once (a paused round never gets deleted
 // to make room for a new one). `activeRoundId` is just the one you were in last, so the
 // play button knows where to take you back to.
-import { holeComplete } from './round.js';
+import { GAMES, holeComplete } from './round.js';
+import { allCourses } from './courses.js';
 
 /** Every round still being played, the one you were in last first, then newest first. */
 export function roundsInProgress(state) {
@@ -32,4 +33,21 @@ export function leaveRound(draft, id) {
 /** Holes with every score in, for "3 of 18 holes" lines. */
 export function holesScored(round) {
   return round.holes.filter(h => holeComplete(round, h)).length;
+}
+
+/**
+ * "Your usual": the last finished round this phone set up whose course and players still
+ * exist, to offer as a one-tap repeat. A round still being played (or a finished one being
+ * fixed) is never offered.
+ */
+export function usualRound(state) {
+  const courses = allCourses(state);
+  const recent = Object.values(state.rounds || {})
+    .filter(r => !r.localMe && GAMES[r.game] && r.status === 'done' && !r.editing)
+    .sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
+  for (const r of recent) {
+    const course = courses.find(c => c.id === r.course?.id);
+    if (course && r.players.every(p => state.players?.[p.id])) return { round: r, course };
+  }
+  return null;
 }
