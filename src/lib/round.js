@@ -437,7 +437,7 @@ export function joinGames(round, first, fromNo = null) {
   const problem = mainAddProblem(round);
   if (problem) {
     const full = ADD_MID_ROUND.includes(round.game) && gameView(round, 'main').players.length >= g.max;
-    out.push({ key: 'main', label: g.name, on: false, disabled: true, reason: full ? `${g.name} is for ${g.max === g.min ? g.max : `up to ${g.max}`} players, so ${name} sits it out.` : `${g.name} is played in set sides, so ${name} sits it out.` });
+    out.push({ key: 'main', label: g.name, on: false, disabled: true, reason: full ? `${g.name} is for ${g.max === g.min ? g.max : `up to ${g.max}`} players, so ${name} sits it out.` : `${g.name} is set up for the players already in it, so ${name} sits it out.` });
   } else {
     const pid = '__new';
     const probe = { ...round, joined: late ? { ...(round.joined || {}), [pid]: fromNo } : round.joined };
@@ -513,7 +513,7 @@ function joinRuleByGame(round, pid, list) {
   const g = GAMES[round.game];
   const whole = playsWholeRound(round, pid);
   const parts = [list.includes('main') ? mainJoinRule(round, pid)
-    : ADD_MID_ROUND.includes(round.game) ? `They sit out ${g.name}.` : `${g.name} is played in set sides, so they sit it out.`];
+    : ADD_MID_ROUND.includes(round.game) ? `They sit out ${g.name}.` : `${g.name} is set up for the players already in it, so they sit it out.`];
   for (const sg of sideGamesOf(round)) {
     const inIt = list.includes(sg.game);
     const pot = sg.game === 'birdies' ? 'birdie pot' : sg.game === 'skins' && sg.settings?.payout === 'pot' ? 'skins pot' : null;

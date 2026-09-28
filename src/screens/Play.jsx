@@ -331,7 +331,7 @@ function PlayRound({ round }) {
             : inRound && (quiet
               ? <button className="pill-btn" onClick={takeCard}>Take the card</button>
               : cardAsk?.by === me
-                ? <button className="pill-btn ghost" onClick={takeBack} aria-label={`You asked ${holderName} for the card. Take back the ask`}>Asked · Undo</button>
+                ? <button className="pill-btn ghost" onClick={takeBack}>Asked · Undo<span className="sr-only">: take back asking {holderName} for the card</span></button>
                 : <button className="pill-btn" onClick={askCard}>Ask for it</button>)}
         </div>
       )}

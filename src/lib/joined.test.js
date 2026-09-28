@@ -368,7 +368,7 @@ test('Wolf plus Skins: a 5th player on Skins only from hole 6 leaves the wolf mo
   assert.equal(zedPaid, 2);
   assert.equal(sum(res5.balances), 0);
   // And the round's notes say what he's in
-  assert.match(roundNotes(five).find(n => n.kind === 'joined').text, /Zed joined on hole 6\. Wolf is played in set sides, so they sit it out\. They play Skins from there\. Skins already carrying stay with the players who built them\./);
+  assert.match(roundNotes(five).find(n => n.kind === 'joined').text, /Zed joined on hole 6\. Wolf is set up for the players already in it, so they sit it out\. They play Skins from there\. Skins already carrying stay with the players who built them\./);
 });
 
 test('holeComplete of the main game ignores a side-only player\'s missing score', () => {
@@ -411,7 +411,7 @@ test('joinGames: one switch per game with a plain reason', () => {
   play(r, [{ a: 4, b: 4, c: 4, d: 4 }]);
   const g = joinGames(r, 'Chris', 6);
   assert.deepEqual(g.map(x => [x.key, x.on, x.disabled]), [['main', false, true], ['skins', true, false], ['dots', true, false]]);
-  assert.equal(g[0].reason, 'Wolf is played in set sides, so Chris sits it out.');
+  assert.equal(g[0].reason, 'Wolf is set up for the players already in it, so Chris sits it out.');
   assert.equal(g[1].reason, 'From hole 6. Skins already carrying stay with the players who built them.');
   const b = withSides(mk('stroke', 3), ['birdies']);
   play(b, [{ a: 4, b: 4, c: 4 }]);
