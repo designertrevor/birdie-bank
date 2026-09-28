@@ -9,6 +9,12 @@ import { money } from '../lib/golf.js';
 import { optionsProblem, sideBetLine } from '../lib/stakes.js';
 import { firstName } from '../lib/format.js';
 
+/** "Skins, Junk or a Birdie pot": the side games still on offer, in words. */
+const orList = xs => {
+  const t = xs.length > 1 ? `${xs.slice(0, -1).join(', ')} or ${xs.at(-1)}` : xs[0] || '';
+  return t.charAt(0).toUpperCase() + t.slice(1);
+};
+
 /** Where the bet amount lives in a side game's settings. */
 const amountKey = (game, s) => (game === 'skins' ? (s?.payout === 'pot' ? 'stake' : 'value') : game === 'dots' ? 'value' : 'stake');
 
@@ -93,7 +99,7 @@ export function SideGamesSetup({ game, sideGames, setSideGames, defaults, player
       ) : choices.length > 0 && (
         <button className="set-row add-side" onClick={() => setAdding(true)}>
           <div className="set-icon"><Icon name="plus" /></div>
-          <div className="row-main"><div className="set-name">Add a side game</div><div className="set-sub">Skins, Junk or a Birdie pot on top of {GAMES[game].name}</div></div>
+          <div className="row-main"><div className="set-name">Add a side game</div><div className="set-sub">{orList(choices.map(k => (k === 'birdies' ? 'a Birdie pot' : SIDE_GAMES[k].label)))} on top of {GAMES[game].name}</div></div>
         </button>
       )}
       <Sheet open={adding} onClose={() => setAdding(false)} title="Add a side game">
