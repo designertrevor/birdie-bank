@@ -172,7 +172,8 @@ function PlayRound({ round }) {
   }, [round]);
   // Someone handed this phone the card: say so, and go to the hole they were on
   useEffect(() => {
-    if (!amKeeper || !keeper?.since || keeper.by === me || HANDED.has(`${round.id}:${keeper.since}`)) return;
+    // The phone that started the round holds the card from sharing (id null, by null): nobody handed it over
+    if (!amKeeper || !keeper?.since || keeper.id == null || keeper.by === me || HANDED.has(`${round.id}:${keeper.since}`)) return;
     HANDED.add(`${round.id}:${keeper.since}`);
     if (Date.now() - keeper.since > 30 * 60000) return;
     const from = keeper.by ? firstName(round.players.find(p => p.id === keeper.by)?.name || '') : round.hostName ? firstName(round.hostName) : '';
@@ -180,7 +181,7 @@ function PlayRound({ round }) {
     const no = at >= 0 ? keeper.hole : hole.no;
     showToast(`${from || 'The scorekeeper'} handed you the card. You’re on hole ${no}.`);
     if (at >= 0 && at !== idx) update(s => { s.rounds[round.id].current = at; });
-  }, [amKeeper, keeper?.since, keeper?.by, keeper?.hole, me, round, idx, hole.no, showToast]);
+  }, [amKeeper, keeper?.id, keeper?.since, keeper?.by, keeper?.hole, me, round, idx, hole.no, showToast]);
   const askCard = () => { update(s => { Object.assign(s.rounds[round.id], askForCard(me)); }); showToast(`Asked ${holderName} for the card`); };
   const takeBack = () => update(s => { Object.assign(s.rounds[round.id], clearAsk()); });
   const takeCard = async () => {
