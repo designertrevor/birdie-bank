@@ -731,7 +731,7 @@ function ReadyStep({ round, onStart }) {
           <p key={o.id} className="hint-card"><Icon name="pause-circle" fill /> Your {gameLabel(o)} round at {o.course.name} ({holesScored(o)} of {o.holes.length} holes) is saved. Switch back any time from Rounds in progress in the round menu.</p>
         ))}
         {syncConfigured && (
-          <p className="hint-card"><Icon name="broadcast" fill /> {round.shared ? 'The group has the link. They can follow the money live and enter scores.' : 'Send the group a link and they can follow the money live from their own phones. No download needed.'}</p>
+          <p className="hint-card"><Icon name="broadcast" fill /> {round.shared ? 'The group has the link. They can follow the money live.' : 'Send the group a link and they can follow the money live from their own phones. No download needed.'}</p>
         )}
       </div>
       <div className="cta-wrap">

@@ -32,7 +32,7 @@ export function joinPreview(meta) {
   let stakes = '';
   try { stakes = meta.game && meta.settings ? roundStakeLines(meta).map(l => l.line).filter(Boolean).join(' + ') : ''; } catch { stakes = ''; }
   const facts = [who, stakes, meta.holesCount ? `${meta.holesCount} holes` : ''].filter(Boolean).join(' · ');
-  const tail = done ? 'See who won and who pays who on Birdie Bank.' : `Tap to follow the money live and enter scores for ${what}. No download needed.`;
+  const tail = done ? 'See who won and who pays who on Birdie Bank.' : `Tap to follow the money live for ${what}. No download needed.`;
   return { title, description: facts ? `${facts}. ${tail}` : tail };
 }
 

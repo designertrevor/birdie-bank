@@ -54,7 +54,8 @@ export function isKeeper(round, me, isHost) {
 /** Whether this phone may change the round: scores, marks, bets, players, length. */
 export function canEdit(round, me, isHost) {
   if (!round) return false;
-  if (!round.shared) return true;
+  // Not shared, or sharing stopped: this phone's copy is its own
+  if (!round.shared || round.shared.ended) return true;
   const player = isPlayer(round, me);
   // Watchers never edit. The host phone always can in a round with no keeper yet
   if (!player && !isHost) return false;

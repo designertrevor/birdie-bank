@@ -4,6 +4,7 @@ import { getState, update, useStore } from '../lib/store.js';
 import { GAMES, gameView, holeAtPos, holeComplete, playsHole, roundLegs, roundNotes, roundResults, scoreSummary, scorers, sideNames, skinsKinds, skinsTable, strokesFor, netFor } from '../lib/round.js';
 import { matchLabel } from '../lib/games.js';
 import { money } from '../lib/golf.js';
+import { canEdit, keeperMe } from '../lib/keeper.js';
 import { useNav } from '../lib/nav.js';
 import { leaveRound } from '../lib/rounds.js';
 import { gameLabel, meFor, placeOf, roundDate, roundPlayerName } from '../lib/format.js';
@@ -173,7 +174,7 @@ export default function RoundDetail({ id, celebrate }) {
           {round.status === 'done' && GAMES[round.game] && (
             <button className="full-btn" onClick={() => nav.push('newRound', { rematch: id })}><Icon name="arrow-counter-clockwise" /> Run it back</button>
           )}
-          <button className="full-btn outline" onClick={edit}><Icon name="pencil-simple" /> Edit scores</button>
+          {canEdit(round, keeperMe(round, state), !!round.shared?.host) && <button className="full-btn outline" onClick={edit}><Icon name="pencil-simple" /> Edit scores</button>}
           <button className="danger-link" onClick={del}><Icon name="trash" /> Delete round</button>
         </div>
       </div>

@@ -16,6 +16,9 @@ test('a round that isn\'t shared is always yours to edit', () => {
   assert.equal(canEdit(r, 'anyone', false), true);
   assert.equal(canEdit(r, null, false), true);
   assert.equal(keeperOf(r), null);
+  // Once sharing stops, each phone's copy is its own again
+  const ended = { ...r, keeper: { id: 'mike' }, shared: { code: 'ABC123', host: false, ended: true } };
+  assert.equal(canEdit(ended, 'dave', false), true);
 });
 
 test('legacy: a shared round with no keeper yet edits on any player phone and the host, never a watcher', () => {

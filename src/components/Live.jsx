@@ -50,10 +50,10 @@ export function ShareSheet({ round, open, onClose }) {
     <Sheet open={open} onClose={onClose} title="Invite the group">
       {!code ? (
         <div style={{ padding: '0 16px' }}>
-          <p className="sheet-text" style={{ padding: '0 4px 12px' }}>Let everyone in the group follow along, or keep score from their own phone. Scores sync hole by hole.</p>
+          <p className="sheet-text" style={{ padding: '0 4px 12px' }}>Let everyone in the group follow along live. You keep score and can hand it off to a player.</p>
           <ul className="onboard-list" style={{ marginTop: 0, marginBottom: 14 }}>
             <li><Icon name="link" fill /> You get a code and a link to send the group.</li>
-            <li><Icon name="device-mobile" fill /> Anyone with it can view and enter scores, so only send it to your group.</li>
+            <li><Icon name="device-mobile" fill /> Anyone with it can follow the scores, so only send it to your group.</li>
           </ul>
           <button className="full-btn" disabled={busy} onClick={start}>{busy ? 'Starting…' : <>Get the link <Icon name="broadcast" fill /></>}</button>
         </div>

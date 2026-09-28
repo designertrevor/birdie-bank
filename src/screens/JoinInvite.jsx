@@ -94,7 +94,10 @@ export default function JoinInvite({ code, onJoined, onSkip }) {
   const meta = found?.meta;
   const game = meta && GAMES[meta.game];
   const host = typeof meta?.hostName === 'string' && meta.hostName.trim() ? firstName(meta.hostName) : null;
-  const scorekeeper = host || 'the scorekeeper';
+  // Seat requests go to whoever keeps score now, which may not be the organizer (see keeper.js)
+  const keeperSeat = meta?.keeper?.id && Array.isArray(meta.players) ? meta.players.find(p => p?.id === meta.keeper.id) : null;
+  const keeperFirst = typeof keeperSeat?.name === 'string' && keeperSeat.name.trim() ? firstName(keeperSeat.name) : host;
+  const scorekeeper = keeperFirst || 'the scorekeeper';
 
   if (!meta && step !== 'waiting') {
     const missing = err === 'missing';
@@ -196,7 +199,7 @@ export default function JoinInvite({ code, onJoined, onSkip }) {
           <h1 className="onboard-title join-h" aria-live="polite">{title}</h1>
           <p className="onboard-text">
             {step === 'waiting' && (busy ? 'Taking you to your seat.' : <>Asked for a seat as {pending?.name || name}. Keep this open: you’ll go straight in when {scorekeeper} says yes.</>)}
-            {step === 'no' && <>{host || 'The scorekeeper'} didn’t add you to this one. You can still follow along live.</>}
+            {step === 'no' && <>{keeperFirst || 'The scorekeeper'} didn’t add you to this one. You can still follow along live.</>}
             {step === 'gone' && <>{host || 'The scorekeeper'} stopped sharing this round.</>}
           </p>
         </div>
