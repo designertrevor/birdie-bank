@@ -472,7 +472,9 @@ export function Scorecard({ round, current, onHole }) {
             <th className="sticky">Hole</th>
             {out.map(h => (
               <th key={h.no} className={h.no === current ? 'cur' : ''}>
-                {onHole ? <button className="sc-col-btn" onClick={() => onHole(h.no)} aria-label={`Go to hole ${h.no}`}>{h.no}</button> : h.no}
+                {onHole
+                  ? <button className="sc-col-btn" onClick={() => onHole(h.no)} aria-label={`Go to hole ${h.no}${round.holeFixes?.[h.no] ? ', fixed for this round' : ''}`}>{h.no}{round.holeFixes?.[h.no] && <span className="sc-fixed" aria-hidden="true" />}</button>
+                  : <>{h.no}{round.holeFixes?.[h.no] && <><span className="sc-fixed" aria-hidden="true" /><span className="sr-only">, fixed</span></>}</>}
               </th>
             ))}
             <th>Tot</th>
@@ -513,6 +515,7 @@ export function Scorecard({ round, current, onHole }) {
       <div className="sc-legend">
         <span className="sc-mark birdie">3</span> birdie <span className="sc-mark eagle">2</span> eagle <span className="sc-mark bogey">5</span> bogey <span className="sc-mark pu">X</span> picked up
         {anyStrokes && <> <span className="sc-strokes inline"><i /></span> gets a stroke</>}
+        {round.holeFixes && Object.keys(round.holeFixes).length > 0 && <> <span className="sc-fixed inline" aria-hidden="true" /> par or HCP fixed</>}
       </div>
     </div>
   );

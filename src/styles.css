@@ -1204,3 +1204,17 @@ button.who-status { cursor: pointer; min-height: 36px; }
 .by-game th.bg-game { text-align: left; padding: 12px 6px 12px 12px; font-size: 14px; font-weight: 700; text-transform: none; letter-spacing: 0; color: var(--ink); background: none; border-bottom: 1px solid var(--line); white-space: nowrap; }
 .by-game tr.bg-total th, .by-game tr.bg-total td { border-top: 2px solid var(--line); }
 .rv-games { display: block; font-size: 12px; font-weight: 500; color: var(--mute); margin-top: 2px; }
+
+/* Fix a hole or a tee for this round (FixHole.jsx) */
+.hole-meta { position: relative; }
+.fixed-tag {
+  position: absolute; top: -8px; left: 50%; transform: translateX(-50%); pointer-events: none;
+  padding: 2px 10px; border-radius: 999px; background: var(--mint); color: var(--teal); font-size: 11px; font-weight: 700; letter-spacing: .04em;
+}
+.sc-col-btn { position: relative; }
+.sc-fixed { display: inline-block; width: 6px; height: 6px; margin-left: 2px; border-radius: 50%; background: var(--pink); vertical-align: super; }
+.sc-fixed.inline { vertical-align: middle; margin: 0 2px 0 6px; }
+.fix-link { min-height: 44px; }
+.fix-impact p { margin: 4px 0 0; }
+.fix-impact .eyebrow { margin-bottom: 2px; }
+.tee-fix-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }

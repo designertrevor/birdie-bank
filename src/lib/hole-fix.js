@@ -1,6 +1,6 @@
 // Words for fixing a hole or a tee during a round (the engine is fixHole and fixTee in round.js):
 // who gains or loses a stroke, how the money recounts, and the note sent to Birdie Bank.
-import { roundResults, strokeChanges } from './round.js';
+import { fixedCourse, roundResults, strokeChanges } from './round.js';
 import { money } from './golf.js';
 
 const first = name => String(name || '').split(' ')[0];
@@ -116,4 +116,18 @@ export function playsLine(before, after) {
     .map((p, i) => ({ name: first(p.name), from: before.players[i]?.plays ?? 0, to: p.plays ?? 0 }))
     .filter(c => c.from !== c.to);
   return ch.length ? `Strokes: ${ch.map(c => `${c.name} ${c.from} → ${c.to}`).join(', ')}` : null;
+}
+
+/** The tees a round's players are on, as this phone's (fixed) course has them. */
+export function roundTees(round, course) {
+  const names = [...new Set(round.players.map(p => p.tee).filter(Boolean))];
+  const fixed = course ? fixedCourse(course, round) : null;
+  return names.map(name => ({ name, tee: fixed?.tees?.find(t => t.name === name) || null }));
+}
+
+/** "White · 69.8 / 124" for the round menu (just the tee names when there's more than one, or no course here). */
+export function courseTeeLabel(round, course) {
+  const tees = roundTees(round, course);
+  if (tees.length === 1 && tees[0].tee?.rating != null && tees[0].tee?.slope != null) return `${tees[0].name} · ${tees[0].tee.rating} / ${tees[0].tee.slope}`;
+  return tees.map(t => t.name).join(', ');
 }

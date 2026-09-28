@@ -5,8 +5,10 @@ import { DEFAULT_SETTINGS, getState, update, useStore } from '../lib/store.js';
 import {
   GAMES, addPlayerProblem, bankerHoleSetup, canLeave, defaultNine, holeComplete, leftRule, livePreview, nassauPressOptions, playersLeft, playersOn, playsHole, pressMode,
   resizeRound, roundLegs, roundResults, scoredHolesDropped, scorers, skinsKinds, skinsTable, strokesFor, wolfHoleSetup, changeBets, wholeRoundOnly,
-  gameView, sideGamesOf,
+  gameView, sideGamesOf, holeFixOf,
 } from '../lib/round.js';
+import { CourseTeeSheet, FixHoleSheet } from '../components/FixHole.jsx';
+import { courseTeeLabel } from '../lib/hole-fix.js';
 import { findCourse } from '../lib/courses.js';
 import { money, netScoreName, scoreName, pickupGross } from '../lib/golf.js';
 import {
@@ -51,7 +53,8 @@ export default function Play({ id }) {
   const left = Object.entries(round.left || {}).map(e => e.join('@')).sort().join(',');
   // ...or someone is added partway through
   const joined = `${round.players.length}:${Object.entries(round.joined || {}).map(e => e.join('@')).sort().join(',')}`;
-  return <PlayRound key={`${round.holesCount}:${round.current}:${round._remote?.[cur?.no] || 0}:${left}:${joined}`} round={round} />;
+  // ...and when this hole's par is fixed, so an untouched score starts from the new par
+  return <PlayRound key={`${round.holesCount}:${round.current}:${round._remote?.[cur?.no] || 0}:${left}:${joined}:${cur?.par}`} round={round} />;
 }
 
 // Keeper handoffs this phone has already announced ("roundId:since"), so a remount doesn't say it twice
@@ -145,6 +148,9 @@ function PlayRound({ round }) {
   const others = useStore(s => roundsInProgress(s).filter(r => r.id !== round.id).length);
   const [addSheet, setAddSheet] = useState(null); // true, or the seat request being answered
   const [handSheet, setHandSheet] = useState(false);
+  const [fixSheet, setFixSheet] = useState(null); // 'hole' | 'tee'
+  const localCourse = useStore(s => findCourse(s, round.course.id));
+  const holeFixed = !!holeFixOf(round, hole.no);
   const requests = useSeatRequests(round.id);
   const numRefs = useRef({});
 
@@ -360,7 +366,8 @@ function PlayRound({ round }) {
           <Icon name="flag-checkered" fill /> The scorekeeper finished this round. See results <Icon name="arrow-right" />
         </button>
       )}
-      <div className="hole-meta" onClick={() => setCard(true)} role="button" tabIndex={0} aria-label="Open scorecard">
+      <div className="hole-meta" onClick={() => setCard(true)} role="button" tabIndex={0} aria-label={holeFixed ? `Open scorecard. Hole ${hole.no}’s par or HCP was fixed for this round` : 'Open scorecard'}>
+        {holeFixed && <span className="fixed-tag" aria-hidden="true">Fixed</span>}
         <div className="mc"><span className="ml">Hole</span><span className="mv">{hole.no}</span></div>
         <div className="mc"><span className="ml">Par</span><span className="mv">{hole.par}</span></div>
         <div className="mc"><span className="ml">HCP</span><span className="mv">{hole.hdcp ?? '–'}</span></div>
@@ -481,6 +488,7 @@ function PlayRound({ round }) {
 
       <Sheet open={menu} onClose={() => setMenu(false)} title="Round">
         <button className="sheet-item" onClick={() => { setMenu(false); setCard(true); }}><span><Icon name="table" /> Scorecard</span><Icon name="caret-right" /></button>
+        {editable && <button className="sheet-item" onClick={() => { setMenu(false); setFixSheet('hole'); }}><span><Icon name="wrench" /> Fix this hole</span><Icon name="caret-right" /></button>}
         <button className="sheet-item" onClick={() => { setMenu(false); setRules(true); }}><span><Icon name="book-open" /> {GAMES[game].name} rules</span><Icon name="caret-right" /></button>
         {syncConfigured && (
           <button className="sheet-item" onClick={() => { setMenu(false); setLive(true); }}>
@@ -494,6 +502,9 @@ function PlayRound({ round }) {
         </button>
         <button className="sheet-item" onClick={() => { setMenu(false); setHolesSheet(true); }}>
           <span><Icon name="flag-pennant" /> Round length · {round.holesCount} holes</span><Icon name="caret-right" />
+        </button>
+        <button className="sheet-item" onClick={() => { setMenu(false); setFixSheet('tee'); }}>
+          <span><Icon name="sliders-horizontal" /> Course and tee{courseTeeLabel(round, localCourse) ? ` · ${courseTeeLabel(round, localCourse)}` : ''}</span><Icon name="caret-right" />
         </button>
         <button className="sheet-item" onClick={() => { setMenu(false); setAddSheet(true); }}>
           <span><Icon name="user-plus" /> Add a player</span><Icon name="caret-right" />
@@ -520,7 +531,14 @@ function PlayRound({ round }) {
       <Sheet open={card} onClose={() => setCard(false)} title="Scorecard" className="sc-sheet">
         <p className="sheet-text">{editable ? 'Tap a hole to jump to it and fix scores.' : 'Tap a hole to jump to it.'}</p>
         <Scorecard round={round} current={hole.no} onHole={no => { setCard(false); goHole(round.holes.findIndex(h => h.no === no)); }} />
+        {editable && (
+          <button className="quiet-row fix-link" onClick={() => { setCard(false); setFixSheet('hole'); }}>
+            <Icon name="wrench" /> <span><u>Wrong par or HCP?</u> Fix hole {hole.no}</span>
+          </button>
+        )}
       </Sheet>
+      {fixSheet === 'hole' && <FixHoleSheet round={round} holeNo={hole.no} me={me} onClose={() => setFixSheet(null)} />}
+      {fixSheet === 'tee' && <CourseTeeSheet round={round} me={me} onClose={() => setFixSheet(null)} />}
       <RulesSheet game={game} open={rules} onClose={() => setRules(false)} />
       <ShareSheet round={round} open={live} onClose={() => setLive(false)} />
       {game === 'banker' && (
