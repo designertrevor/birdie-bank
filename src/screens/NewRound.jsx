@@ -22,6 +22,8 @@ import { BET_LADDER, MAX_BALLOT_GAMES, betChoices, betLabel, betOf, betUnitLabel
 import { editPlan } from '../lib/plan-sync.js';
 import { shouldShowPaywall } from '../lib/paywall.js';
 import { PAYWALL_ON } from '../lib/paywall-flag.js';
+import { matchingUsual, setupFromUsual, usualsOf } from '../lib/usuals.js';
+import { SaveUsualButton, UsualsList } from '../components/Usuals.jsx';
 
 const STEPS = ['Game', 'Course', 'Players', 'Bets'];
 
@@ -111,6 +113,9 @@ export default function NewRound({ rematch, fromPlan, present, ahead = false, ga
   const editSides = fn => setSideGames(list => fn(sideGamesOf({ game, sideGames: list })));
   const [createdId, setCreatedId] = useState(null); // the round, once it's set up
   const usual = useMemo(() => usualRound(state), [state]);
+  // The saved usual this setup was loaded from, and anyone in it who isn't saved on this phone
+  const [usualId, setUsualId] = useState(null);
+  const [missing, setMissing] = useState(() => pre?.missing || []);
 
   const course = allCourses(state).find(c => c.id === courseId) || null;
 
@@ -157,6 +162,9 @@ export default function NewRound({ rematch, fromPlan, present, ahead = false, ga
     const round = createRound({ id, game, course, holesCount, nine, startHole, players, settings, hcPct: opts.hcPct, useHandicaps: useHc, teams: GAMES[game].teams ? teams : null });
     const sides = sidesFor(game);
     if (sides.length) round.sideGames = structuredClone(sides);
+    // Started from a saved usual (still the same game at the same course): finishing it updates "Last played"
+    const from = usualId && usualsOf(s).find(u => u.id === usualId);
+    if (from && from.game === game && from.courseId === course.id) round.usualId = usualId;
     update(st => {
       addRound(st, round);
       if (fromPlan && st.plans?.[fromPlan]) st.plans[fromPlan].roundId = id;
@@ -169,17 +177,28 @@ export default function NewRound({ rematch, fromPlan, present, ahead = false, ga
     setStep(4);
   };
 
-  // Load last time's game, course, group and bets, then land on the bets to confirm
-  const repeatUsual = () => {
-    const p = rematchSetup(state, usual.round);
-    setGame(p.game); setHolesCount(p.holesCount); setCourseId(usual.course.id); setNine(p.nine);
+  // Load a setup (last time's, or a saved usual), then land on the bets to confirm, or on
+  // whatever step still needs something (a course or a player not on this phone)
+  const loadSetup = p => {
+    setGame(p.game); setHolesCount(p.holesCount); setCourseId(p.courseId); setNine(p.nine);
     setPicked(p.picked); setTees(p.tees); setHcOverride(p.hcOverride);
     setOpts(o => withBets(o, p));
     setUseHc(p.useHc);
     setStartHole(null);
     setTeams(p.teams);
     setSideGames(structuredClone(p.sideGames || []));
-    setStep(3);
+    setMissing(p.missing || []);
+    setStep(p.step ?? 3);
+  };
+  const repeatUsual = () => {
+    loadSetup({ ...rematchSetup(state, usual.round), courseId: usual.course.id, step: 3 });
+    setUsualId(null);
+  };
+  const pickUsual = u => {
+    const p = setupFromUsual(getState(), u);
+    if (!p) return;
+    loadSetup(p);
+    setUsualId(u.id);
   };
   const created = createdId ? state.rounds[createdId] : null;
 
@@ -194,12 +213,12 @@ export default function NewRound({ rematch, fromPlan, present, ahead = false, ga
           <Header title={planning ? 'Plan a round' : 'New round'} onBack={back} onClose={close} />
           <Steps steps={planning ? PLAN_STEPS : STEPS} current={step} />
           <h2 className="step-q d">{(planning ? PLAN_QUESTIONS : QUESTIONS)[step]}</h2>
-          {step === 2 && pre?.missing.length > 0 && (
-            <p className="hint-card"><Icon name="user-plus" fill /> {listNames(pre.missing)} {pre.missing.length === 1 ? 'isn’t' : 'aren’t'} saved on this phone yet. Add them to run it back with the whole group.</p>
+          {step === 2 && !planning && missing.length > 0 && (
+            <p className="hint-card"><Icon name="user-plus" fill /> {listNames(missing)} {missing.length === 1 ? 'isn’t' : 'aren’t'} saved on this phone yet. Add them to run it back with the whole group.</p>
           )}
         </>
       ) : <Header title="Round ready" small onClose={() => nav.reset('upnext')} />}
-      {step === 0 && <GameStep usual={planning ? null : usual} onUsual={repeatUsual} planning={planning} onPlan={fromPlan ? null : () => { setMode('plan'); setStep(1); }} game={game} setGame={gm => { setGame(gm); if (!GAMES[gm].holes.includes(holesCount)) setHolesCount(GAMES[gm].holes[0]); }} holesCount={holesCount} setHolesCount={setHolesCount} onNext={() => setStep(1)} />}
+      {step === 0 && <GameStep usual={planning || (usual && matchingUsual(state, usual.round)) ? null : usual} onUsual={repeatUsual} onPickUsual={planning ? null : pickUsual} planning={planning} onPlan={fromPlan ? null : () => { setMode('plan'); setStep(1); }} game={game} setGame={gm => { setGame(gm); if (!GAMES[gm].holes.includes(holesCount)) setHolesCount(GAMES[gm].holes[0]); }} holesCount={holesCount} setHolesCount={setHolesCount} onNext={() => setStep(1)} />}
       {step === 1 && planning && (
         <CourseStep courseId={courseId} setCourseId={id => { setCourseId(id); setTees({}); setStartHole(null); }} holesCount={holesCount} nine={nine} setNine={setNine} onNext={() => setStep(2)}
           nextLabel="Next: Who’s invited" top={<WhenPicker date={date} setDate={setDate} teeTime={teeTime} setTeeTime={setTeeTime} />} />
@@ -224,7 +243,7 @@ export default function NewRound({ rematch, fromPlan, present, ahead = false, ga
 
 // ---------------------------------------------------------------------------
 
-function GameStep({ usual, onUsual, planning, onPlan, game, setGame, holesCount, setHolesCount, onNext }) {
+function GameStep({ usual, onUsual, onPickUsual, planning, onPlan, game, setGame, holesCount, setHolesCount, onNext }) {
   const nav = useNav();
   const [rules, setRules] = useState(null);
   const g = game && GAMES[game];
@@ -232,6 +251,7 @@ function GameStep({ usual, onUsual, planning, onPlan, game, setGame, holesCount,
   return (
     <>
       <div className="scroll">
+        {onPickUsual && <UsualsList onPick={onPickUsual} />}
         {u && (
           <button className="usual-card" onClick={onUsual}>
             <span className="eyebrow">Your usual</span>
@@ -730,6 +750,7 @@ function ReadyStep({ round, onStart }) {
         {others.map(o => (
           <p key={o.id} className="hint-card"><Icon name="pause-circle" fill /> Your {gameLabel(o)} round at {o.course.name} ({holesScored(o)} of {o.holes.length} holes) is saved. Switch back any time from Rounds in progress in the round menu.</p>
         ))}
+        <div className="usual-save"><SaveUsualButton round={round} className="pill-btn" /></div>
         {syncConfigured && (
           <p className="hint-card"><Icon name="broadcast" fill /> {round.shared ? 'The group has the link. They can follow the money live.' : 'Send the group a link and they can follow the money live from their own phones. No download needed.'}</p>
         )}

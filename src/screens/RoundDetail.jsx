@@ -13,6 +13,7 @@ import { ByGameTable } from '../components/SideGames.jsx';
 import { accountsEnabled, useAccount } from '../lib/cloud.js';
 import { SignInSheet } from '../components/Account.jsx';
 import { HowWasIt, Reveal, SettleUp, ShareCard } from '../components/Finale.jsx';
+import { SaveUsualButton } from '../components/Usuals.jsx';
 
 // Where the finale was, so coming back from another screen (e.g. Suggest) doesn't replay the reveal.
 // Keyed by round and its finish time, so finishing the round again starts over.
@@ -174,6 +175,7 @@ export default function RoundDetail({ id, celebrate }) {
           {round.status === 'done' && GAMES[round.game] && (
             <button className="full-btn" onClick={() => nav.push('newRound', { rematch: id })}><Icon name="arrow-counter-clockwise" /> Run it back</button>
           )}
+          {round.status === 'done' && <SaveUsualButton round={round} />}
           {canEdit(round, keeperMe(round, state), !!round.shared?.host) && <button className="full-btn outline" onClick={edit}><Icon name="pencil-simple" /> Edit scores</button>}
           <button className="danger-link" onClick={del}><Icon name="trash" /> Delete round</button>
         </div>

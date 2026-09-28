@@ -56,6 +56,7 @@ function fresh() {
     activeRoundId: null,
     settlements: [],
     plans: {},         // upcoming rounds (see plans.js)
+    usuals: [],        // saved "usual" setups, at most 5 (see usuals.js); an array, so never inside settings
     settings: structuredClone(DEFAULT_SETTINGS),
   };
 }
@@ -73,7 +74,7 @@ function load() {
       if (v && typeof v === 'object') settings[k] = { ...v, ...data.settings?.[k] };
     }
     if (settings.dots) settings.dots.kinds = { ...base.settings.dots.kinds, ...data.settings?.dots?.kinds };
-    return { ...base, ...data, settings };
+    return { ...base, ...data, usuals: Array.isArray(data.usuals) ? data.usuals : [], settings };
   } catch {
     return fresh();
   }

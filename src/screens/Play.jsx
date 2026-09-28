@@ -9,6 +9,7 @@ import {
 } from '../lib/round.js';
 import { CourseTeeSheet, FixHoleSheet } from '../components/FixHole.jsx';
 import { courseTeeLabel } from '../lib/hole-fix.js';
+import { markUsualPlayed } from '../lib/usuals.js';
 import { findCourse } from '../lib/courses.js';
 import { money, netScoreName, scoreName, pickupGross } from '../lib/golf.js';
 import {
@@ -274,6 +275,7 @@ function PlayRound({ round }) {
     update(s => {
       const rr = s.rounds[round.id];
       rr.status = 'done'; rr.finishedAt = Date.now();
+      markUsualPlayed(s, rr, rr.finishedAt);
       leaveRound(s, round.id);
     });
     nav.reset('history', ['roundDetail', { id: round.id, celebrate: true }]);
@@ -297,7 +299,7 @@ function PlayRound({ round }) {
       cancelLabel: 'Keep playing',
     });
     if (choice === 'finish') {
-      update(s => { const rr = s.rounds[round.id]; rr.status = 'done'; rr.finishedAt = Date.now(); leaveRound(s, round.id); });
+      update(s => { const rr = s.rounds[round.id]; rr.status = 'done'; rr.finishedAt = Date.now(); markUsualPlayed(s, rr, rr.finishedAt); leaveRound(s, round.id); });
       nav.reset('history', ['roundDetail', { id: round.id, celebrate: true }]);
     }
     if (choice === 'discard') {
