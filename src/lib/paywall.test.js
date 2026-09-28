@@ -4,6 +4,9 @@ import {
   PLANS, PRICES_ARE_PLACEHOLDERS, REMIND_DAY, TRIAL_DAYS, VARIANTS, annualSavings, bucket, freePromise, isOrganizer, paywallAnswer, planStatus,
   perMonthLabel, pickVariant, priceLabel, readFlag, shouldShowPaywall, trialTimeline, variantFor,
 } from './paywall.js';
+import { GAMES } from './round.js';
+
+const GAME_COUNT = Object.keys(GAMES).length;
 
 test('prices are marked as placeholders', () => {
   assert.equal(PRICES_ARE_PLACEHOLDERS, true);
@@ -28,6 +31,22 @@ test('the trial reminds before it ends', () => {
 test('the free promise counts the games', () => {
   assert.ok(freePromise(18).includes('All 18 games'));
   assert.ok(freePromise(18).includes('Join any round from a link'));
+});
+
+test('the free promise keeps the Tab and carry-overs free', () => {
+  const list = freePromise(18);
+  assert.equal(list.length, 6);
+  assert.ok(list.some(t => /the Tab/.test(t)));
+  assert.ok(list.some(t => /Carry-overs/.test(t)));
+  assert.ok(list.some(t => /Settle up/.test(t)));
+  // The Birdie pot is a side game only, so the count is whatever GAMES holds
+  assert.ok(freePromise(GAME_COUNT).includes(`All ${GAME_COUNT} games`));
+});
+
+test('an answer from the Season preview records where it came from, and nothing is charged', () => {
+  const a = paywallAnswer({ variant: 'c', choice: 'trial', plan: 'annual', source: 'season', now: 5 });
+  assert.equal(a.source, 'season');
+  assert.equal(PRICES_ARE_PLACEHOLDERS, true);
 });
 
 test('a phone lands in the same bucket every time', () => {

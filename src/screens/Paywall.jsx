@@ -31,8 +31,8 @@ export default function Paywall({ source = 'onboarding' }) {
   };
 
   const View = VIEWS[variant] || VIEWS.c;
-  // From Settings it's a look at Pro, so it closes without an answer. After onboarding, "Keep scoring for free" is the way out
-  const onClose = source === 'settings' ? () => nav.pop() : null;
+  // From Settings or the Season preview it's a look at Pro, so it closes without an answer. After onboarding, "Keep scoring for free" is the way out
+  const onClose = source !== 'onboarding' ? () => nav.pop() : null;
   return <View plan={plan} setPlan={setPlan} onClose={onClose} onTrial={() => answer('trial')} onFree={() => answer('free')} freeWayOut={VARIANTS[variant]?.freeWayOut ?? true} />;
 }
 
@@ -50,6 +50,14 @@ function TrialWithFreeWayOut({ plan, setPlan, onClose, onTrial, onFree, freeWayO
           <div className="pw-badge"><Icon name="star" fill /></div>
           <h1 className="pw-title d">Try Pro free for {TRIAL_DAYS} days</h1>
           <p className="pw-lead">That covers your next round, and the one after.</p>
+        </div>
+
+        <div className="block pw-free">
+          <div className="eyebrow">Free forever, trial or not</div>
+          <ul className="pw-list">
+            {freePromise(games).map(t => <li key={t}><Icon name="check-circle" fill /> {t}</li>)}
+          </ul>
+          <p className="li-sub" style={{ marginTop: 8 }}>Nothing on this list ever moves to Pro. Friends you invite never pay.</p>
         </div>
 
         <ol className="block pw-timeline" aria-label="How the free trial works">
@@ -84,14 +92,6 @@ function TrialWithFreeWayOut({ plan, setPlan, onClose, onTrial, onFree, freeWayO
         <ul className="block pw-list">
           {PRO_FEATURES.map(f => <li key={f.text}><Icon name={f.icon} fill /> {f.text}</li>)}
         </ul>
-
-        <div className="block pw-free">
-          <div className="eyebrow">Free forever, trial or not</div>
-          <ul className="pw-list">
-            {freePromise(games).map(t => <li key={t}><Icon name="check-circle" fill /> {t}</li>)}
-          </ul>
-          <p className="li-sub" style={{ marginTop: 8 }}>Nothing on this list ever moves to Pro. Friends you invite never pay.</p>
-        </div>
 
         {PRICES_ARE_PLACEHOLDERS && <p className="field-help pad">Preview: prices aren’t final and nothing is charged.</p>}
       </div>
