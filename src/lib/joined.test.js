@@ -496,3 +496,47 @@ test('changing the round length with a side-only player: the main game\'s stroke
   const old = resizeRound(addPlayerToRound(withSides(createRound({ id: 'r', game: 'stroke', course: eighteen, holesCount: 18, players: hcs, settings: structuredClone(SETTINGS), hcPct: 100, useHandicaps: true }), []), { id: 'z', name: 'Zed', courseHc: 2 }, null), eighteen, 9);
   assert.deepEqual(old.players.map(p => p.plays), [4, 6, 0]);
 });
+
+// Review 2026-09-29: a side-only late joiner with pickups, a player leaving and a shorter round
+test('side-only late joiner sweep: every game stays zero-sum and the main game never sees him', () => {
+  const extra = { hammer: { stake: 5, max: 3, who: 'either' }, snake: { stake: 5, growth: 'double', nines: false, cap: 4 } };
+  const cases = [['wolf'], ['banker'], ['sixes'], ['nassau'], ['vegas', [['a', 'b'], ['c', 'd']]], ['match', [['a', 'b'], ['c', 'd']]], ['hammer'], ['snake']];
+  let seed = 7;
+  const rnd = () => { seed = (seed * 16807) % 2147483647; return seed / 2147483647; };
+  for (const [game, teams] of cases) {
+    for (const sides of [['skins'], ['dots', 'skins'], ['birdies', 'skins']]) {
+      for (let k = 0; k < 6; k++) {
+        const hcs = P.map((p, i) => ({ ...p, courseHcOverride: [4, 12, 20, 8][i] }));
+        const base = withSides(createRound({ id: 'r', game, course: eighteen, holesCount: 18, players: hcs, settings: { ...structuredClone(SETTINGS), ...extra }, hcPct: 100, useHandicaps: true, ...(teams ? { teams } : {}) }), sides);
+        const from = 3 + k;
+        const row = (i, withZ) => {
+          const s = Object.fromEntries(['a', 'b', 'c', 'd'].map(id => [id, rnd() < 0.08 ? 'X' : 3 + Math.floor(rnd() * 4)]));
+          if (withZ && i + 1 >= from) s.z = rnd() < 0.1 ? 'X' : 3 + Math.floor(rnd() * 4);
+          return s;
+        };
+        const rows = Array.from({ length: 18 }, (_, i) => row(i, true));
+        const four = structuredClone(base);
+        play(four, rows.slice(0, from - 1));
+        const five = structuredClone(addPlayerToRound(four, { id: 'z', name: 'Zed', courseHc: 0 }, from, sides));
+        rows.forEach((s, i) => { if (i + 1 >= from) { const { z, ...rest } = s; five.scores[five.holes[i].no] = s; four.scores[four.holes[i].no] = rest; void z; } });
+        if (k % 2) { four.left = { d: 12 }; five.left = { d: 12 }; for (const r of [four, five]) for (const h of r.holes) if (h.no > 12) delete r.scores[h.no].d; }
+        for (const r of [four, five]) {
+          const v = gameView(r, 'main');
+          r.holes.forEach((h, i) => {
+            if (game === 'wolf') r.wolf[h.no] = { wolf: wolfFor(v, i), partner: null };
+            if (game === 'banker') r.banker[h.no] = bankerHoleSetup(v, i);
+          });
+        }
+        for (const [x4, x5] of [[four, five], [resizeRound(four, eighteen, 9), resizeRound(five, eighteen, 9)]]) {
+          const r4 = roundResults(x4), r5 = roundResults(x5);
+          assert.deepEqual(r5.detail.byGame.main.balances, { ...r4.detail.byGame.main.balances, z: 0 }, `${game} ${sides} ${k}`);
+          assert.equal(sum(r5.balances), 0, `${game} ${sides} ${k}`);
+          for (const g of Object.values(r5.detail.byGame)) assert.equal(sum(g.balances), 0, `${game} ${g.label} ${k}`);
+          if (r5.detail.byGame.birdies) assert.equal(r5.detail.byGame.birdies.balances.z, 0);
+          // Head to heads are rounded pair by pair, so they can miss a player's total by a cent when a pot
+          // splits three ways; that is the same with or without side games (see the review notes)
+        }
+      }
+    }
+  }
+});
