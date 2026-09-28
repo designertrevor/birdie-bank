@@ -561,6 +561,8 @@ function BetsSheet({ round, onClose }) {
   // which play the old way, so the options show a choice and a switch to a pot has an amount
   const current = useMemo(() => {
     if (game === 'rabbit' && !round.settings.rabbit.mode) return { ...round.settings, rabbit: { ...round.settings.rabbit, mode: 'steal' } };
+    // Snake rounds from before the cap have none saved: they play with no cap, so show No cap
+    if (game === 'snake' && round.settings.snake && round.settings.snake.cap == null) return { ...round.settings, snake: { ...round.settings.snake, cap: 0 } };
     if (game === 'skins' || game === 'nassau') return { ...round.settings, [game]: { ...DEFAULT_SETTINGS[game], ...round.settings[game] } };
     return round.settings;
   }, [game, round.settings]);

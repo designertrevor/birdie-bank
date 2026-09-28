@@ -1066,12 +1066,14 @@ export function snakeTable(round) {
     const part = rows.slice(seg.start - 1, seg.end);
     const ss = settingsAt(round, seg.start).snake || {};
     const { holder, count, history } = snakeHolder(part);
-    const value = snakeValue(count, ss.stake || 0, ss.growth || 'flat');
+    // A round saved before the cap existed has none: its snake keeps doubling, as it was played
+    const cap = ss.cap || 0;
+    const value = snakeValue(count, ss.stake || 0, ss.growth || 'flat', cap);
     const last = round.holes[seg.end - 1];
     const others = (last ? playersOn(round, last) : round.players).map(p => p.id).filter(id => id !== holder);
     const played = part.some(r => r.putts !== undefined);
     const done = part.every(r => r.putts !== undefined);
-    return { seg, rows: part, holder, count, history, value, others, played, done, amount: holder ? value * others.length : 0, stake: ss.stake || 0, growth: ss.growth || 'flat' };
+    return { seg, rows: part, holder, count, history, value, others, played, done, amount: holder ? value * others.length : 0, stake: ss.stake || 0, growth: ss.growth || 'flat', cap };
   });
   return { legs: out, rows };
 }

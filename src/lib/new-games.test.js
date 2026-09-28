@@ -10,6 +10,8 @@ import { snakeValue, snakeHolder, canHammer, hammerHole } from './games.js';
 import { pressOpportunities, nassauLegs } from './golf.js';
 import { revealSteps } from './reveal.js';
 import { stakeSummary } from './stakes.js';
+import { migrateSettings, SNAKE_CAP_DEFAULT } from './settings.js';
+import { readFileSync } from 'node:fs';
 
 const SETTINGS = {
   hcPct: 100,
@@ -89,6 +91,91 @@ test('snake: each nine is its own snake, and a doubling snake doubles', () => {
   assert.equal(t.legs.length, 2);
   assert.deepEqual(t.legs.map(l => [l.holder, l.value]), [['a', 4], ['b', 1]]);
   assert.deepEqual(bal(r), { a: -3, b: 3 });
+});
+
+// Snake cap (decided 2026-09-28): a doubling snake stops after `cap` doubles, 4 for new rounds.
+// A round saved before the cap existed has no cap setting and keeps doubling, so its money never moves.
+
+/** Three-putts on holes 1..n of a round, passed back and forth between the players in `ids`. */
+function passSnake(r, n, ids) {
+  r.holes.forEach(h => { r.marks[h.no] = { snake: [] }; });
+  for (let i = 0; i < n; i++) r.marks[r.holes[i].no] = { snake: [ids[i % ids.length]] };
+  return r;
+}
+
+test('snakeValue: a capped doubling snake stops at the cap and stays there', () => {
+  assert.deepEqual([1, 2, 3, 4, 5, 6, 7].map(k => snakeValue(k, 5, 'double', 4)), [5, 10, 20, 40, 80, 80, 80]);
+  assert.deepEqual([1, 2, 3, 4].map(k => snakeValue(k, 5, 'double', 2)), [5, 10, 20, 20]);
+  // No cap (0 or unset) keeps doubling
+  assert.equal(snakeValue(7, 5, 'double', 0), 320);
+  assert.equal(snakeValue(7, 5, 'double'), 320);
+  // The cap only touches a doubling snake
+  assert.equal(snakeValue(7, 5, 'grow', 4), 35);
+  assert.equal(snakeValue(7, 5, 'flat', 4), 5);
+});
+
+test('snake cap: reached and held, the holder pays the capped amount', () => {
+  // Seven three-putts on a $5 snake capped at 4 doubles: 5, 10, 20, 40, 80, then it stays at $80
+  const r = passSnake(scores(round('snake', ['a', 'b', 'c'], { settings: { snake: { stake: 5, growth: 'double', cap: 4 } } }), 9), 7, ['a', 'b']);
+  const t = snakeTable(r);
+  assert.equal(t.legs[0].count, 7);
+  assert.equal(t.legs[0].holder, 'a');
+  assert.equal(t.legs[0].value, 80);
+  assert.equal(t.legs[0].cap, 4);
+  assert.deepEqual(bal(r), { a: -160, b: 80, c: 80 });
+  assert.equal(zero(bal(r)), 0);
+  assert.equal(stakeSummary('snake', r.settings), '$5 a snake, doubling to $80');
+});
+
+test('snake cap: no cap keeps doubling', () => {
+  const r = passSnake(scores(round('snake', ['a', 'b'], { settings: { snake: { stake: 5, growth: 'double', cap: 0 } } }), 9), 7, ['a', 'b']);
+  assert.equal(snakeTable(r).legs[0].value, 320);
+  assert.deepEqual(bal(r), { a: -320, b: 320 });
+  assert.equal(stakeSummary('snake', r.settings), '$5 a snake, doubling');
+});
+
+test('snake cap: each nine has its own snake, each capped', () => {
+  const r = scores(round('snake', ['a', 'b'], { holes: 18, settings: { snake: { stake: 1, growth: 'double', nines: true, cap: 2 } } }), 18);
+  r.holes.forEach(h => { r.marks[h.no] = { snake: [] }; });
+  for (const no of [1, 2, 3, 4, 5]) r.marks[no] = { snake: [no % 2 ? 'a' : 'b'] }; // front: five three-putts, Ann last
+  r.marks[12] = { snake: ['b'] }; // back: one three-putt, a fresh $1 snake
+  const t = snakeTable(r);
+  // Front: $1, $2, $4, then held at $4 (2 doubles). Back starts over at $1.
+  assert.deepEqual(t.legs.map(l => [l.holder, l.count, l.value]), [['a', 5, 4], ['b', 1, 1]]);
+  assert.deepEqual(bal(r), { a: -3, b: 3 });
+});
+
+test('snake cap: a holder who leaves still pays the capped snake', () => {
+  const r = passSnake(scores(round('snake', ['a', 'b', 'c', 'd'], { settings: { snake: { stake: 5, growth: 'double', cap: 4 } } }), 9), 6, ['a', 'b', 'c', 'd']);
+  r.marks[6] = { snake: ['d'] }; // Di takes it on the 6th: the sixth three-putt, capped at $80
+  r.left = { d: 7 };
+  for (const h of r.holes.slice(7)) delete r.scores[h.no].d;
+  assert.equal(snakeTable(r).legs[0].value, 80);
+  assert.deepEqual(bal(r), { a: 80, b: 80, c: 80, d: -240 });
+});
+
+test('snake cap: new rounds default to 4 doubles', () => {
+  assert.equal(SNAKE_CAP_DEFAULT, 4);
+  // The app's game defaults start a snake with the 4-double cap
+  const store = readFileSync(new URL('./store.js', import.meta.url), 'utf8');
+  assert.match(store, /snake: \{[^}]*cap: SNAKE_CAP_DEFAULT/);
+  // Saved defaults from before the cap pick it up, so the next round starts capped
+  const saved = migrateSettings({ rev: 2, snake: { stake: 5, growth: 'double', nines: false } });
+  assert.equal(saved.snake.cap, 4);
+  const r = passSnake(scores(round('snake', ['a', 'b'], { settings: { snake: saved.snake } }), 9), 7, ['a', 'b']);
+  assert.equal(snakeTable(r).legs[0].value, 80);
+  // A cap someone picked, No cap included, is kept
+  assert.equal(migrateSettings({ rev: 2, snake: { stake: 5, growth: 'double', cap: 0 } }).snake.cap, 0);
+  assert.equal(migrateSettings({ rev: 2, snake: { stake: 5, growth: 'double', cap: 2 } }).snake.cap, 2);
+});
+
+test('snake cap: a round saved before the cap existed keeps doubling, money unchanged', () => {
+  // Saved round settings with no cap key at all
+  const r = passSnake(scores(round('snake', ['a', 'b', 'c'], { settings: { snake: { stake: 5, growth: 'double', nines: false } } }), 9), 7, ['a', 'b']);
+  assert.equal('cap' in r.settings.snake, false);
+  assert.equal(snakeTable(r).legs[0].value, 320);
+  assert.deepEqual(bal(r), { a: -640, b: 320, c: 320 });
+  assert.equal(stakeSummary('snake', r.settings), '$5 a snake, doubling');
 });
 
 test('snake: an unfinished round pays whoever holds it now, and nobody three-putting pays nothing', () => {

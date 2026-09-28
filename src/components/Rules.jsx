@@ -246,7 +246,7 @@ const RULES = {
       ['The snake', <ul key="v">
         <li><strong>Same all round</strong>: the snake is worth the amount you set.</li>
         <li><strong>Grows</strong>: every three-putt adds the amount, so five three-putts make it five times as much.</li>
-        <li><strong>Doubles</strong>: every three-putt doubles it.</li>
+        <li><strong>Doubles</strong>: every three-putt doubles it, up to a cap. The cap is 4 doubles unless you change it, so a $5 snake goes $5, $10, $20, $40, $80 and then stays at $80. Three-putts after that still pass it on. Pick <strong>No cap</strong> to let it keep doubling.</li>
       </ul>],
       ['Each nine', <p key="n">Turn it on to settle the snake at the turn and start a fresh one on the back. Stop early and whoever holds it then pays.</p>],
     ],
