@@ -380,10 +380,14 @@ export function roundStarted(round) {
   return round.holes.some(h => Object.values(round.scores?.[h.no] || {}).some(v => v != null));
 }
 
-/** Why nobody can be added to this round right now, or null when someone can. */
-export function addPlayerProblem(round) {
+/** Most players in a round with side games: a side game takes up to 8, whatever the main game's cap. */
+export const MAX_SIDE_PLAYERS = 8;
+
+/** Why nobody can join the main game right now, or null when someone can. Its cap counts only its own players. */
+function mainAddProblem(round) {
   const g = GAMES[round.game];
-  if (round.players.length >= g.max) return `${g.name} is for ${g.max === g.min ? g.max : `up to ${g.max}`} players, and the group is full.`;
+  const inMain = gameView(round, 'main').players.length;
+  if (inMain >= g.max) return `${g.name} is for ${g.max === g.min ? g.max : `up to ${g.max}`} players, and the group is full.`;
   if (!ADD_MID_ROUND.includes(round.game)) {
     // Sides, teams and rotations are set when the round is made, so a new player would have no side to play on
     return roundStarted(round)
@@ -391,6 +395,63 @@ export function addPlayerProblem(round) {
       : `${g.name} is played in set sides, so a new player can’t be slotted in. Start a fresh round with everyone in it.`;
   }
   return null;
+}
+
+/**
+ * Whether a side game can take someone new. A pot (the birdie pot, or Skins played for a pot) is for
+ * the players who started, so it only takes someone new before the first hole they'd miss (`late`).
+ */
+function sideTakes(sg, late) {
+  if (sg.game === 'birdies') return !late;
+  if (sg.game === 'skins' && sg.settings?.payout === 'pot') return !late;
+  return true;
+}
+
+/**
+ * Why nobody can be added to this round right now, or null when someone can. With side games, a
+ * player who can't join the main game (set sides, or it's full) can still join a side game that takes
+ * them, up to MAX_SIDE_PLAYERS in the round.
+ */
+export function addPlayerProblem(round) {
+  const main = mainAddProblem(round);
+  if (!main) return null;
+  const sgs = sideGamesOf(round);
+  if (!sgs.length) return main;
+  if (round.players.length >= MAX_SIDE_PLAYERS) return `A round is for up to ${MAX_SIDE_PLAYERS} players, and the group is full.`;
+  const late = roundStarted(round);
+  return sgs.some(sg => sideTakes(sg, late)) ? null : main;
+}
+
+/**
+ * The games someone being added could play, one switch each: the main game first, then each side
+ * game. `first` is their first name and `fromNo` the hole they start on (null before any score).
+ * [{ key, label, on, disabled, reason }]. `on` is the switch's starting place; a disabled game is
+ * always off. Fixed-side main games (and a full one) never take a late joiner.
+ */
+export function joinGames(round, first, fromNo = null) {
+  const pos = fromNo == null ? 1 : round.holes.findIndex(h => h.no === fromNo) + 1;
+  const late = pos > 1;
+  const name = first || 'they';
+  const out = [];
+  const g = GAMES[round.game];
+  const problem = mainAddProblem(round);
+  if (problem) {
+    const full = ADD_MID_ROUND.includes(round.game) && gameView(round, 'main').players.length >= g.max;
+    out.push({ key: 'main', label: g.name, on: false, disabled: true, reason: full ? `${g.name} is for ${g.max === g.min ? g.max : `up to ${g.max}`} players, so ${name} sits it out.` : `${g.name} is played in set sides, so ${name} sits it out.` });
+  } else {
+    const pid = '__new';
+    const probe = { ...round, joined: late ? { ...(round.joined || {}), [pid]: fromNo } : round.joined };
+    out.push({ key: 'main', label: g.name, on: true, disabled: false, reason: late ? mainJoinRule(probe, pid) : 'They play every hole.' });
+  }
+  for (const sg of sideGamesOf(round)) {
+    const label = SIDE_GAMES[sg.game].label;
+    if (!sideTakes(sg, late)) { out.push({ key: sg.game, label, on: false, disabled: true, reason: 'The pot is for the players who started.' }); continue; }
+    const reason = !late ? 'They play every hole.'
+      : sg.game === 'skins' ? `From hole ${fromNo}. Skins already carrying stay with the players who built them.`
+        : `From hole ${fromNo}.`;
+    out.push({ key: sg.game, label, on: true, disabled: false, reason });
+  }
+  return out;
 }
 
 /**
@@ -409,12 +470,18 @@ export function firstOpenHole(round) {
  * Before any score is in they're simply one more player and everyone's strokes are worked out
  * again. Once the round is under way nobody else's strokes change: the new player gets strokes
  * against the same low player everyone else plays off. Returns a new round; `round` is untouched.
+ * `games` lists the game keys they play (see gameKeys); leave it null for every game. When they're
+ * not in every game, round.gamesFor records theirs, and nobody else's strokes change even before the
+ * first score, so a player who's only in a side game never moves the main game's strokes.
  */
-export function addPlayerToRound(round, player, fromNo = null) {
+export function addPlayerToRound(round, player, fromNo = null, games = null) {
   const hc = player.courseHc ?? (player.index != null ? Math.round(round.holesCount === 9 ? player.index / 2 : player.index) : 0);
   const fresh = { id: player.id, name: player.name, tee: null, index: player.index ?? null, courseHc: hc, courseHcOverride: player.courseHc ?? null, ...payFields(player) };
   const next = { ...round, players: [...round.players], joined: { ...(round.joined || {}) } };
-  const started = roundStarted(round);
+  const keys = gameKeys(round);
+  const inAll = !Array.isArray(games) || keys.every(k => games.includes(k));
+  if (!inAll) next.gamesFor = { ...(round.gamesFor || {}), [fresh.id]: keys.filter(k => games.includes(k)) };
+  const started = roundStarted(round) || !inAll;
   if (!started) {
     const all = [...round.players, fresh];
     const plays = round.useHandicaps ? strokesOffLow(all.map(p => p.courseHc), round.hcPct) : all.map(() => 0);
@@ -436,7 +503,28 @@ export function addPlayerToRound(round, player, fromNo = null) {
 
 /** What joining late does to the game, in a sentence (for the results and the add-a-player sheet). */
 export function joinRule(round, pid) {
+  const list = round.gamesFor?.[pid];
+  if (Array.isArray(list) && sideGamesOf(round).length) return joinRuleByGame(round, pid, list);
   return withSideRule(mainJoinRule(round, pid), round, 'joined');
+}
+
+/** joinRule for a player who picked their games (round.gamesFor): a line for each game. */
+function joinRuleByGame(round, pid, list) {
+  const g = GAMES[round.game];
+  const whole = playsWholeRound(round, pid);
+  const parts = [list.includes('main') ? mainJoinRule(round, pid)
+    : ADD_MID_ROUND.includes(round.game) ? `They sit out ${g.name}.` : `${g.name} is played in set sides, so they sit it out.`];
+  for (const sg of sideGamesOf(round)) {
+    const inIt = list.includes(sg.game);
+    const pot = sg.game === 'birdies' ? 'birdie pot' : sg.game === 'skins' && sg.settings?.payout === 'pot' ? 'skins pot' : null;
+    const label = SIDE_GAMES[sg.game].label;
+    if (!inIt) parts.push(`They sit out ${pot ? `the ${pot}` : label}.`);
+    else if (pot && !whole) parts.push(`The ${pot} is for the players who started, so they’re not in it.`);
+    else if (pot) parts.push(`They’re in the ${pot}.`);
+    else if (sg.game === 'skins') parts.push(whole ? 'They’re in Skins.' : 'They play Skins from there. Skins already carrying stay with the players who built them.');
+    else parts.push(whole ? `They’re in ${label}.` : `They’re in ${label} from there.`);
+  }
+  return parts.join(' ');
 }
 
 /**
@@ -1608,7 +1696,9 @@ function nameList(names) {
 
 /** What leaving does to the game, in a sentence (for the results, and before marking someone as gone). */
 export function leftRule(round, pid) {
-  return withSideRule(mainLeftRule(round, pid), round, 'left');
+  // Someone who was only in the side games leaves the main game as it was
+  if (!playsGame(round, pid, 'main')) return withSideRule(`${GAMES[round.game].name} carries on as it was: they weren’t in it.`, round, 'left');
+  return withSideRule(mainLeftRule(gameView(round, 'main'), pid), round, 'left');
 }
 
 function mainLeftRule(round, pid) {
