@@ -8,7 +8,7 @@ import { useEffect, useSyncExternalStore } from 'react';
 import { getState, uid, update } from './store.js';
 import { getSupabase, supabaseConfigured } from './supabase.js';
 import { isMissingTable } from './plan-adapters.js';
-import { allocatePayment, applyRows, lastPayment, tabCodes, undoRows } from './shared-tab.js';
+import { allocatePayment, applyRows, lastPayment, nettedFor, tabCodes, undoRows } from './shared-tab.js';
 import { activeCarry, carryReducer, carryRows, carrySplit, splitCodes, splitRounds } from './carry.js';
 
 const QUEUE = 'bb-tab-queue';
@@ -17,6 +17,11 @@ const localFlag = () => { try { return localStorage.getItem('bb-sync-local') ===
 /** Thrown when the round_payments table isn't on the server yet. */
 export class TabOffError extends Error {
   constructor() { super('The shared Tab isn’t switched on yet'); this.name = 'TabOffError'; }
+}
+
+/** The server refused this one row for good (bad data), so retrying won't help. */
+class BadRowError extends Error {
+  constructor(cause) { super(cause?.message || 'Row refused'); this.name = 'BadRowError'; this.cause = cause; }
 }
 
 const iso = ms => new Date(ms || Date.now()).toISOString();
@@ -36,6 +41,8 @@ function supabaseTab(db) {
   const check = ({ error }) => {
     if (!error) return;
     if (isMissingTable(error)) throw new TabOffError();
+    // A row the table can never take (a check it fails): drop it rather than block the queue behind it
+    if (/^2[23]/.test(String(error.code || ''))) throw new BadRowError(error);
     throw error;
   };
   return {
@@ -129,7 +136,15 @@ export function flushTab() {
         await adapter.upsertRow(row);
         // Only drop it if nothing newer for the same row was queued meanwhile
         writeQueue(readQueue().filter(r => !(r.code === row.code && r.id === row.id && r.updatedAt === row.updatedAt)));
-      } catch (e) { noteError(e); break; }
+      } catch (e) {
+        if (e instanceof BadRowError) {
+          console.warn('Shared Tab: the server refused a row, dropping it', row.id, e.cause);
+          writeQueue(readQueue().filter(r => !(r.code === row.code && r.id === row.id && r.updatedAt === row.updatedAt)));
+          continue;
+        }
+        noteError(e);
+        break;
+      }
     }
   })().finally(() => { flushing = null; });
   return flushing;
@@ -242,8 +257,10 @@ export function markTransfer(round, t, code) {
 }
 
 /** Take back payments (one tap, no confirm: it can be put back the same way). Returns a redo function. */
-export function undoPayments(settlementsToUndo, netted = []) {
+export function undoPayments(settlementsToUndo, netted = null) {
   const s = getState();
+  // From the payments list: what that payment netted is taken back with it
+  if (!netted) netted = nettedFor(s, settlementsToUndo);
   const now = Date.now();
   const { rows, remove } = undoRows(s, { settlements: settlementsToUndo, netted }, { now });
   const gone = (s.settlements || []).filter(x => remove.includes(x.id));
