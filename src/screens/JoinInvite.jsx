@@ -42,7 +42,8 @@ export default function JoinInvite({ code, onJoined, onSkip, setUp = false }) {
   // card → seat → confirm, or watch, or ask → waiting → (in: join) | no | gone
   const [step, setStep] = useState(() => (loadSeat(code) ? 'waiting' : 'card'));
   const [seat, setSeat] = useState(null);
-  const [name, setName] = useState(() => loadSeat(code)?.name || '');
+  // Someone already set up asks for a seat under their own name (they can still change it)
+  const [name, setName] = useState(() => loadSeat(code)?.name || (setUp ? (() => { const s = getState(); return s.players?.[s.me]?.name || ''; })() : ''));
   const [askErr, setAskErr] = useState(false);
   const [joinErr, setJoinErr] = useState(false);
 

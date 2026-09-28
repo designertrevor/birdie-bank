@@ -105,3 +105,39 @@ test('lately: today’s saved data with no carries or plans still works', () => 
   const s = { me: 'me', players: {}, rounds: {}, settlements: [] };
   assert.deepEqual(latelyItems(s, NOW), []);
 });
+
+test('lately: your seat in a joined round counts as you, for payments and recaps', () => {
+  // You joined someone else's round as seat "me2" (localMe); the Tab treats it as you
+  const r = { ...skins('joined', NOW - 2 * DAY, { winner: 'sam', holes: 2 }), localMe: 'me', shared: { code: 'ABC123', host: false } };
+  const seat = { ...r, id: 'seat', localMe: 'me2', players: r.players.map(p => (p.id === 'me' ? { ...p, id: 'me2' } : p)),
+    scores: Object.fromEntries(Object.entries(r.scores).map(([h, row]) => [h, { me2: row.me, sam: row.sam, mike: row.mike }])) };
+  const s = stateWith({
+    rounds: [seat, skins('newest', NOW - DAY)],
+    settlements: [
+      { id: 'a', from: 'me2', to: 'sam', amount: 4, at: NOW - DAY, roundId: 'seat' },
+      { id: 'b', from: 'me', to: 'me2', amount: 4, at: NOW - DAY },
+    ],
+  });
+  const items = latelyItems(s, NOW);
+  assert.deepEqual(items.map(i => i.text), ['You paid Sam $4', 'Skins at Pebble Creek · Sam took it']);
+  assert.match(items[1].sub, /^You −\$4 · /);
+});
+
+test('lately: a round you only watched names the winner and shows no amount at all', () => {
+  const watched = { ...skins('w', NOW - 2 * DAY, { winner: 'sam', holes: 2 }), localMe: null,
+    players: PLAYERS.filter(p => p.id !== 'me'), scores: {} };
+  watched.holes.forEach((h, i) => { watched.scores[h.no] = { sam: 4, mike: i < 2 ? 5 : 4 }; });
+  const s = stateWith({ rounds: [watched, skins('newest', NOW - DAY)] });
+  const [recap] = latelyItems(s, NOW);
+  assert.equal(recap.text, 'Skins at Pebble Creek · Sam took it');
+  assert.doesNotMatch(`${recap.text} ${recap.sub}`, /\$/);
+});
+
+test('lately: recap amounts match the Tab for the same round (no double counting)', async () => {
+  const { myNet } = await import('./history.js');
+  const a = skins('a', NOW - 3 * DAY, { winner: 'mike', holes: 4 });
+  const s = stateWith({ rounds: [a, skins('b', NOW - DAY)] });
+  const [recap] = latelyItems(s, NOW);
+  const net = myNet(a, s);
+  assert.ok(recap.sub.startsWith(net === 0 ? 'You broke even' : `You −$${Math.abs(net)}`), recap.sub);
+});
