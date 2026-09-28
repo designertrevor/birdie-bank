@@ -38,7 +38,8 @@ export function joinPreview(meta) {
 /** Swap preview text into the Open Graph, Twitter and title tags of the built index.html. */
 export function injectMeta(html, { title, description, url }) {
   const t = escapeHtml(title), d = escapeHtml(description), u = escapeHtml(url);
-  const set = (h, attr, key, value) => h.replace(new RegExp(`(<meta ${attr}="${key}" content=")[^"]*(")`), `$1${value}$2`);
+  // Replace with functions, so a "$2 a skin" in the text isn't read as a capture group
+  const set = (h, attr, key, value) => h.replace(new RegExp(`(<meta ${attr}="${key}" content=")[^"]*(")`), (_, a, b) => a + value + b);
   let out = html;
   out = set(out, 'property', 'og:title', t);
   out = set(out, 'property', 'og:description', d);
@@ -47,6 +48,6 @@ export function injectMeta(html, { title, description, url }) {
   out = set(out, 'name', 'twitter:title', t);
   out = set(out, 'name', 'twitter:description', d);
   out = set(out, 'name', 'description', d);
-  out = out.replace(/<title>[^<]*<\/title>/, `<title>${t}</title>`);
+  out = out.replace(/<title>[^<]*<\/title>/, () => `<title>${t}</title>`);
   return out;
 }

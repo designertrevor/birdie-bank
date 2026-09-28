@@ -43,3 +43,9 @@ test('injectMeta swaps preview tags and escapes', () => {
   assert.match(out, /<title>Join the &quot;Wolf&quot; at &lt;Pine&gt;<\/title>/);
   assert.equal(escapeHtml("it's"), 'it&#39;s');
 });
+
+test('injectMeta keeps dollar amounts as written', () => {
+  const out = injectMeta(HTML, { title: 'Nassau for $1 & $2', description: '$2 a skin · $& $$ $1', url: 'https://x.test/?join=ABC123' });
+  assert.match(out, /<meta property="og:description" content="\$2 a skin · \$&amp; \$\$ \$1">/);
+  assert.match(out, /<title>Nassau for \$1 &amp; \$2<\/title>/);
+});

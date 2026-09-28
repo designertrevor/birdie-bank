@@ -6,8 +6,10 @@
 import { cleanCode } from '../src/lib/sync-model.js';
 import { injectMeta, joinPreview } from '../src/lib/og.js';
 
-const SUPABASE_URL = process.env.VITE_SUPABASE_URL || process.env.SUPABASE_URL;
-const ANON_KEY = process.env.VITE_SUPABASE_ANON_KEY || process.env.SUPABASE_ANON_KEY;
+// Vercel only hands .env.production to the build, not to functions at runtime, so fall back to
+// the same public values the app ships with.
+const SUPABASE_URL = process.env.VITE_SUPABASE_URL || process.env.SUPABASE_URL || 'https://yffribkjqvkncmypexfa.supabase.co';
+const ANON_KEY = process.env.VITE_SUPABASE_ANON_KEY || process.env.SUPABASE_ANON_KEY || 'sb_publishable_pLszQwInfvryXP7352OMyQ_rcYSVjtx';
 
 async function roundMeta(code) {
   if (!SUPABASE_URL || !ANON_KEY) return null;
