@@ -114,12 +114,13 @@ export function shouldShowPaywall(state, flagOn) {
 /**
  * Whether this phone's owner organizes rounds, so a Pro preview makes sense for them: they came
  * through organizer onboarding, set up a round themselves, or planned one. Someone who only ever
- * joined from a link (their rounds carry `localMe`) or answered an RSVP doesn't.
+ * joined from a link (their rounds carry `localMe`), only watched one (`shared.host` is false) or
+ * answered an RSVP doesn't.
  */
 export function isOrganizer(state) {
   if (!state) return false;
   if (state.organizer) return true;
-  if (Object.values(state.rounds || {}).some(r => !r.localMe)) return true;
+  if (Object.values(state.rounds || {}).some(r => !r.localMe && r.shared?.host !== false)) return true;
   return Object.values(state.plans || {}).some(p => p.host);
 }
 
