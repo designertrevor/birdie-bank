@@ -65,7 +65,7 @@ function TrialWithFreeWayOut({ plan, setPlan, onClose, onTrial, onFree, freeWayO
         </ol>
 
         <div className="sec-label" id="pw-plans">Pick a plan</div>
-        <div role="radiogroup" aria-labelledby="pw-plans" style={{ padding: '0 16px' }}>
+        <div role="radiogroup" aria-label="Pick a plan" style={{ padding: '0 16px' }}>
           {Object.values(PLANS).map(p => {
             const on = plan === p.id;
             return (

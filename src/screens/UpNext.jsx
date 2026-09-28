@@ -56,7 +56,7 @@ export default function UpNext() {
         {live.length === 0 && <PlanNext last={last?.round} fresh={!hasHistory} planned={plans.length > 0} />}
 
         {syncConfigured && live.length === 0 && (
-          <button className="add-row join-row" onClick={() => setJoining(true)}>
+          <button className="add-row join-row" aria-label="Join a friend’s round" onClick={() => setJoining(true)}>
             <div className="add-ci"><Icon name="broadcast" fill /></div><span className="add-lbl">Join a friend’s round</span>
           </button>
         )}
