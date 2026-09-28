@@ -25,11 +25,13 @@ The plan for growing Birdie Bank into a $10k/mo business, and the checklist we w
 
 **Shipped overnight 2026-09-28 (onboarding):** organizer onboarding: four questions one a screen with payoffs, "Here's your group", then "Set up your next round" straight into the plan flow (the first game they play is suggested, the others go on the ballot). The paywall (option C, trial with a free way out) is built as a preview behind a flag: open the app with `?paywall=on` to see it, `?paywall=off` to hide it. Placeholder prices, nothing charged.
 
-**Next in S2:** one shared tab for the group and carry-overs (area 7), real payments for the paywall test (Stripe, area 11), several games in one round, and the quick logo (area 16).
+**Shipped overnight 2026-09-29 (several games):** a main game plus up to two side games (Skins, Junk, Birdie pot) in one round, one money bar total with a by-game table, and one settle-up across every game.
+
+**Next in S2:** one shared tab for the group and carry-overs (area 7), real payments for the paywall test (Stripe, area 11), side games on planned rounds, and the quick logo (area 16).
 
 **The big date:** the creator test (S4) runs February to April 2027, when golf season starts back up. Everything before it is about being ready: a product groups keep using, a smooth path from video to paying, and an App Store app.
 
-Last updated: 2026-09-28
+Last updated: 2026-09-29
 
 ---
 
@@ -185,7 +187,9 @@ Put more money into the winning creators and copy their video formats with other
 - [x] `S2` Snake (three-putts, fixed, growing or doubling, each nine) and Hammer (double the hole, play on or fold, with a cap and who throws first), with rules, money bar and reveal: 18 games (2026-09-27)
 - [x] `S1` Money on screen from the first hole of every game, starting at $0 and moving as each score is tapped, with what the hole adds and a toast when it's saved (2026-09-26)
 - [x] `S1` Setup asks one question per step, puts the stakes up front with the rest under "More options," and ends on a "Round ready" screen to invite the group before hole 1 (2026-09-26)
-- [ ] `S2` Several games at once in one round (Nassau plus skins plus greenies)
+- [x] `S2` Several games at once in one round (Nassau plus skins plus greenies): a main game plus up to two side games (Skins, Junk, Birdie pot), each with its own bet and worked example; Junk chips under each player; one money bar total you tap for a by-game table; the reveal nets every game into the fewest payments. Old rounds show the same money (2026-09-29)
+- [ ] `S2` Side games on planned rounds: the ballot or the roll call can add Skins, Junk or a Birdie pot (tonight they're added only when you start a round now). Trevor to pick: ballot or roll call
+- [ ] `S2` Change a side game's bet mid-round (side game bets are set for the whole round for now)
 - [ ] `S2` (partial) "Our usual game": saved crew, games and stakes, set up in one tap. "Your usual" on the first setup step repeats the last round's game, course, group and bets (2026-09-26). Still to do: save more than one, and put it behind Pro.
 - [x] `S2` Skins house rules: net, gross or both, a pot split by skins won, and what carryovers after the last hole do (nobody, split, or a playoff) (2026-09-27)
 - [x] `S2` Nassau house rules: press at the turn, and no press on a leg's last hole (2026-09-27)
@@ -445,3 +449,4 @@ Kept light on purpose. Groups already have a group text, so Birdie Bank adds to 
 - 2026-09-28: Everything from both overnight runs is live on main, and all three SQL parts are run. Join link previews now show the round (they never had: `vercel.json` rewrites don't run for `/`, so middleware does it, and "$2 a skin" no longer breaks the text). Course search is on with a free GolfCourseAPI key. Custom SMTP waits for the app's final name and domain. Tests: 346 passing.
 - 2026-09-28: Skins and late joiners: a carry stays with the players who built it. A player added mid-round plays for every skin from the hole they join, but not for skins already carrying when they arrive; if they win a hole outright they take that hole's skin and the older carry keeps rolling among its builders. Works for net, gross, both, the pot and the last-hole rules, and the join sheet and Skins rules say so. Tests: 351 passing.
 - 2026-09-28: A doubling Snake has an optional cap, 4 doubles by default ($5 tops out at $80), with No cap as a choice; rounds played before keep their money. The planned-round ballot votes on each game's bet in its own unit ("$5 a side", "$2 a skin", "$1 a point"), and Tee off uses the amount voted for the winning game; older plans still load. Tests: 365 passing.
+- 2026-09-29 (overnight): Several games at once. After the main bet, "Add a side game" adds Skins ($2 a skin), Junk ($1 a dot, pick which dots count) or a Birdie pot (each player puts in $5, a net birdie is a share and a net eagle two), up to 3 games in a round. None with a Scramble, no Skins side game in Skins and no Junk in Dots. Junk chips sit under each player on the hole screen and save with the scores. The money bar shows one total each; tap it for a table by game. The reveal adds a step per side game and shows each person's games in small type, then the fewest payments across every game; round detail, the Tab, History, share text, the image and link previews all use the combined money. Old rounds without side games return exactly the old results (checked against the previous engine on 1,000+ random rounds). Open calls for Trevor: the Birdie pot's eagle rule and no-birdie rule, Junk birdies paying twice with a Birdie pot on, and side games on planned rounds. Tests: 383 passing. Checklist: 48 of 179 done (27%).

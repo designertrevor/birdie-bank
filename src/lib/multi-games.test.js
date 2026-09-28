@@ -15,7 +15,7 @@ import { revealSteps } from './reveal.js';
 import { buildMeta, assemble } from './sync-model.js';
 import { rematchSetup } from './rematch.js';
 import { sideExample, gamesLine, nassauOpenNote } from './side-games.js';
-import { joinRule, leftRule } from './round.js';
+import { joinRule, leftRule, resizeRound } from './round.js';
 import { shareCardModel } from './shareImage.js';
 import { joinPreview } from './og.js';
 
@@ -276,7 +276,7 @@ test('gamesFor: a player out of a game counts 0 there and is still in the others
 
 test('bet lines for every game in a round', () => {
   const r = { game: 'nassau', settings: SETTINGS, sideGames: [{ game: 'skins', settings: SIDE_SETTINGS.skins }, { game: 'dots', settings: SIDE_SETTINGS.dots }, { game: 'birdies', settings: SIDE_SETTINGS.birdies }] };
-  assert.deepEqual(roundStakeLines(r).map(l => l.line), ['$5 / $5 / $5', '$2 a skin · carryovers', '$1 a dot', 'Each player puts in $5']);
+  assert.deepEqual(roundStakeLines(r).map(l => l.line), ['$5 / $5 / $5', '$2 a skin', '$1 a dot', 'Each player puts in $5']);
   assert.equal(sideBetLine('birdies', { stake: 5 }), 'Each player puts in $5');
   assert.equal(optionsProblem('birdies', { birdies: { stake: 0 } }) != null, true);
   assert.equal(optionsProblem('birdies', { birdies: { stake: 5 } }), null);
@@ -370,4 +370,15 @@ test('join and leave rules: unchanged without side games, a word on each side ga
   const pot = { ...r, sideGames: [{ game: 'birdies', settings: SIDE_SETTINGS.birdies }] };
   assert.match(joinRule(pot, 'a'), /birdie pot is for the players who started/);
   assert.equal(joinRule({ ...r, sideGames: undefined }, 'a'), joinRule(old, 'a'));
+});
+
+test('changing the round length or the main bet keeps the side games as they were', () => {
+  const r = threeGames();
+  const c = course(18);
+  const longer = resizeRound(r, c, 18);
+  assert.deepEqual(longer.sideGames, r.sideGames);
+  assert.equal(sumCents(roundResults(longer).balances), 0);
+  const raised = changeBets(r, { ...r.settings.nassau, front: 10 }, 3);
+  assert.deepEqual(raised.sideGames, r.sideGames);
+  assert.deepEqual(roundResults(raised).detail.byGame.skins.balances, roundResults(r).detail.byGame.skins.balances);
 });

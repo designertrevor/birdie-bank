@@ -680,7 +680,7 @@ function MoneyBar({ round, hole, preview }) {
     </Box>
     {byGame && (
       <Sheet open={open} onClose={() => setOpen(false)} title="By game" className="sc-sheet">
-        <p className="sheet-text">{thru}. Every game is added up into one total each.</p>
+        <p className="sheet-text">Money so far ({thru.toLowerCase()}). Every game adds up into one total each.</p>
         <ByGameTable round={round} byGame={byGame} total={preview.balances} />
         {nassauOpenNote(round, byGame) && <p className="field-help" style={{ padding: '0 20px' }}>{nassauOpenNote(round, byGame)}</p>}
         <div className="cta-wrap"><button className="full-btn outline" onClick={() => setOpen(false)}>Close</button></div>

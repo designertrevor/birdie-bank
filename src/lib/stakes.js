@@ -17,7 +17,8 @@ export function optionsProblem(game, settings) {
  */
 export function sideBetLine(game, settings) {
   if (game === 'birdies') return `Each player puts in ${money(settings?.stake ?? 0)}`;
-  return stakeSummary(game, { [game]: settings });
+  // The bet in its own unit ("$2 a skin"); the worked example under it covers the house rules
+  return stakeSummary(game, { [game]: settings }).split(' · ')[0];
 }
 
 /** Every game's bets in a round, main first: [{ key, line }]. Side games use their own settings. */

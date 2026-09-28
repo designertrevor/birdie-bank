@@ -102,10 +102,11 @@ export function SideGamesSetup({ game, sideGames, setSideGames, defaults, player
           const s = defaults?.[k] || {};
           return (
             <button key={k} className="sheet-item side-choice" onClick={() => add(k)}>
-              <span className="row-main" style={{ textAlign: 'left' }}>
-                <span className="set-name" style={{ display: 'block' }}><Icon name={SIDE_GAMES[k].icon} /> {SIDE_GAMES[k].label} · {sideBetLine(k, s)}</span>
-                <span className="set-sub" style={{ display: 'block' }}>{sideExample(k, s, players)}</span>
-              </span>
+              <div className="set-icon"><Icon name={SIDE_GAMES[k].icon} fill /></div>
+              <div className="row-main" style={{ textAlign: 'left' }}>
+                <div className="set-name">{SIDE_GAMES[k].label} · {sideBetLine(k, s)}</div>
+                <div className="set-sub">{sideExample(k, s, players)}</div>
+              </div>
               <Icon name="plus" />
             </button>
           );
