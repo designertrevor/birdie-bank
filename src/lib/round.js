@@ -613,30 +613,27 @@ function resizedHoles(round, course, holesCount, nine) {
   return list.map((h, i) => ({ ...h, rank: ranks[i] }));
 }
 
-export function resizeRound(round, course, holesCount, nine = 'front') {
+export function resizeRound(round, rawCourse, holesCount, nine = 'front') {
   if (holesCount === round.holesCount) return round;
+  // Fixes made during the round (a hole's par or stroke index, a tee's rating or slope) carry over
+  const course = fixedCourse(rawCourse, round);
+  // Course handicaps never move with a par fix (see fixHole), so they're worked out from the card's own pars
+  const hcCourse = teeFixedCourse(rawCourse, round);
   const holes = resizedHoles(round, course, holesCount, nine);
   const ratio = holesCount / round.holesCount;
+  const hcHoles = parFree(round, round.holes);
   const players = round.players.map(p => {
-    const tee = course.tees?.find(t => t.name === p.tee) || null;
+    const tee = hcCourse.tees?.find(t => t.name === p.tee) || null;
     // A figure set by hand (stored, or, on older rounds, one that doesn't match the formula) is scaled
-    const was = effectiveCourseHc(p.index, tee, course, round.holes, round.holesCount, null).value;
+    const was = effectiveCourseHc(p.index, tee, hcCourse, hcHoles, round.holesCount, null).value;
     const override = p.courseHcOverride ?? (was === p.courseHc ? null : p.courseHc);
     if (override != null) {
       const v = Math.round(override * ratio);
       return { ...p, courseHc: v, courseHcOverride: v };
     }
-    return { ...p, courseHc: effectiveCourseHc(p.index, tee, course, holes, holesCount, null).value, courseHcOverride: null };
+    return { ...p, courseHc: effectiveCourseHc(p.index, tee, hcCourse, parFree(round, holes), holesCount, null).value, courseHcOverride: null };
   });
-  let plays = round.useHandicaps ? strokesOffLow(players.map(p => p.courseHc), round.hcPct) : players.map(() => 0);
-  // A player who's only in the side games never sets the low: the main game's players play off
-  // their own low, as if the side-only player weren't there (and they play off that same low)
-  if (round.useHandicaps && round.gamesFor) {
-    const lows = plays.filter((_, i) => playsGame(round, players[i].id, 'main'));
-    const low = lows.length ? Math.min(...lows) : 0;
-    plays = plays.map(v => v - low);
-  }
-  const full = players.map((p, i) => ({ ...p, plays: plays[i] }));
+  const full = withPlays(round, players);
   const curNo = round.holes[Math.min(round.current, round.holes.length - 1)]?.no;
   let current = holes.findIndex(h => h.no === curNo);
   if (current < 0) current = Math.max(0, holes.findIndex(h => !holeComplete(round, h)));
@@ -651,6 +648,171 @@ export function resizeRound(round, course, holesCount, nine = 'front') {
   };
   if (round.teams) next.teams = withTeamHandicaps(next, round.teams, full, round.useHandicaps, round.hcPct);
   return next;
+}
+
+/** Players with `plays` (strokes off the low) worked out again from their course handicaps. */
+function withPlays(round, players) {
+  let plays = round.useHandicaps ? strokesOffLow(players.map(p => p.courseHc), round.hcPct) : players.map(() => 0);
+  // A player who's only in the side games never sets the low: the main game's players play off
+  // their own low, as if the side-only player weren't there (and they play off that same low)
+  if (round.useHandicaps && round.gamesFor) {
+    const lows = plays.filter((_, i) => playsGame(round, players[i].id, 'main'));
+    const low = lows.length ? Math.min(...lows) : 0;
+    plays = plays.map(v => v - low);
+  }
+  return players.map((p, i) => ({ ...p, plays: plays[i] }));
+}
+
+// --------------------------- Fix a hole or a tee ---------------------------
+// The scorekeeper can correct a hole's par or stroke index, or a tee's rating and slope, for this
+// round only. round.holeFixes = { holeNo: { courseIdx, par?: [old, new], hdcp?: [old, new], at, by } }
+// and round.teeFixes = { teeName: { rating?: [old, new], slope?: [old, new], at, by } }. Rounds
+// without them are untouched. A resize keeps them (see fixedCourse).
+
+/** A 9-hole card played twice for 18: both passes share each course hole. */
+export function playedTwice(round) {
+  const idxs = round.holes.map(h => h.courseIdx);
+  return new Set(idxs).size < idxs.length;
+}
+
+/** Holes with each par as it was before any fix, for course handicaps (a par fix never moves them). */
+function parFree(round, holes) {
+  const fixes = Object.values(round.holeFixes || {});
+  if (!fixes.length) return holes;
+  return holes.map(h => {
+    const f = fixes.find(x => x.courseIdx === h.courseIdx && x.par);
+    return f ? { ...h, par: f.par[0] } : h;
+  });
+}
+
+/** The course with this round's tee fixes laid over it. */
+function teeFixedCourse(course, round) {
+  const tf = round.teeFixes;
+  if (!course || !tf || !Object.keys(tf).length) return course;
+  return {
+    ...course,
+    tees: (course.tees || []).map(t => {
+      const f = tf[t.name];
+      if (!f) return t;
+      return { ...t, ...(f.rating ? { rating: f.rating[1] } : {}), ...(f.slope ? { slope: f.slope[1] } : {}) };
+    }),
+  };
+}
+
+/** The course with this round's hole and tee fixes laid over it (the same object when there are none). */
+export function fixedCourse(course, round) {
+  const base = teeFixedCourse(course, round);
+  const fixes = Object.values(round.holeFixes || {});
+  if (!base || !fixes.length) return base;
+  // A stroke index is only ever fixed on a round that isn't a 9 played twice, so it's always the card's own
+  return {
+    ...base,
+    holes: base.holes.map((h, i) => {
+      const f = fixes.filter(x => x.courseIdx === i);
+      if (!f.length) return h;
+      const par = f.find(x => x.par)?.par[1];
+      const hdcp = f.find(x => x.hdcp)?.hdcp[1];
+      return { ...h, ...(par != null ? { par } : {}), ...(hdcp != null ? { hdcp } : {}) };
+    }),
+  };
+}
+
+/** The fix recorded on a hole, or null. */
+export function holeFixOf(round, holeNo) {
+  return round.holeFixes?.[holeNo] || null;
+}
+
+/**
+ * Correct one hole's par and stroke index for this round. Par applies to every pass over that
+ * course hole (a 9-hole card played twice). A stroke index another hole already has swaps the two,
+ * as on a real card, and every hole's rank is worked out again, so strokes can move on holes
+ * already played and the money recounts. Course handicaps and strokes off the low stay as they
+ * are: a par change shifts everyone's course handicap by the same amount. Returns a new round.
+ */
+export function fixHole(round, holeNo, { par, hdcp } = {}, { at = Date.now(), by = null } = {}) {
+  const i = round.holes.findIndex(h => h.no === holeNo);
+  if (i < 0) return round;
+  const holes = round.holes.map(h => ({ ...h }));
+  const target = holes[i];
+  const fixes = { ...(round.holeFixes || {}) };
+  const note = (h, key, from, to) => {
+    const prev = fixes[h.no] || { courseIdx: h.courseIdx };
+    const orig = prev[key] ? prev[key][0] : from;
+    const next = { ...prev, at, by };
+    if (orig === to) delete next[key]; else next[key] = [orig, to];
+    if (!next.par && !next.hdcp) delete fixes[h.no]; else fixes[h.no] = next;
+  };
+  if (par != null && par !== target.par) {
+    for (const h of holes) if (h.courseIdx === target.courseIdx) { note(h, 'par', h.par, par); h.par = par; }
+  }
+  if (hdcp != null && hdcp !== target.hdcp && !playedTwice(round)) {
+    const other = holes.find(h => h.no !== holeNo && h.hdcp === hdcp);
+    if (other) { note(other, 'hdcp', other.hdcp, target.hdcp); other.hdcp = target.hdcp; }
+    note(target, 'hdcp', target.hdcp, hdcp);
+    target.hdcp = hdcp;
+  }
+  const ranks = rankHoles(holes.map(h => h.hdcp));
+  const next = { ...round, holes: holes.map((h, k) => ({ ...h, rank: ranks[k] })) };
+  next.par = parOf(next.holes);
+  if (Object.keys(fixes).length) next.holeFixes = fixes; else delete next.holeFixes;
+  return next;
+}
+
+/** The hole whose stroke index `hdcp` would be swapped with `holeNo`'s, or null. */
+export function hdcpSwapWith(round, holeNo, hdcp) {
+  return round.holes.find(h => h.no !== holeNo && h.hdcp === hdcp) || null;
+}
+
+/**
+ * Correct a tee's rating and slope for this round. Course handicaps for players on that tee are
+ * worked out again (a handicap set by hand stays), then everyone's strokes off the low.
+ * `course` is this phone's copy of the course (the round only keeps tee names). Returns a new round.
+ */
+export function fixTee(round, course, teeName, { rating, slope } = {}, { at = Date.now(), by = null } = {}) {
+  const tee = course?.tees?.find(t => t.name === teeName);
+  if (!tee) return round;
+  const fixes = { ...(round.teeFixes || {}) };
+  const prev = fixes[teeName] || {};
+  const next = { ...prev, at, by };
+  for (const [key, to] of [['rating', rating], ['slope', slope]]) {
+    if (to == null) continue;
+    const orig = prev[key] ? prev[key][0] : tee[key] ?? null;
+    if (orig === to) delete next[key]; else next[key] = [orig, to];
+  }
+  if (next.rating || next.slope) fixes[teeName] = next; else delete fixes[teeName];
+  const out = { ...round };
+  if (Object.keys(fixes).length) out.teeFixes = fixes; else delete out.teeFixes;
+  const hcCourse = teeFixedCourse(course, out);
+  const hcHoles = parFree(round, round.holes);
+  const players = round.players.map(p => {
+    if (p.tee !== teeName || p.courseHcOverride != null) return p;
+    const t = hcCourse.tees.find(x => x.name === teeName);
+    return { ...p, courseHc: effectiveCourseHc(p.index, t, hcCourse, hcHoles, round.holesCount, null).value };
+  });
+  out.players = withPlays(round, players);
+  if (round.teams) out.teams = withTeamHandicaps(out, round.teams, out.players, round.useHandicaps, round.hcPct);
+  return out;
+}
+
+/**
+ * Where strokes differ between two versions of a round, hole by hole:
+ * [{ id, name, holeNo, from, to }] for every player (or scramble team) and every hole.
+ */
+export function strokeChanges(before, after) {
+  const out = [];
+  const units = scorers(after);
+  for (const u of units) {
+    const was = scorers(before).find(x => x.id === u.id);
+    if (!was) continue;
+    for (const h of after.holes) {
+      const bh = before.holes.find(x => x.no === h.no);
+      if (!bh) continue;
+      const from = before.useHandicaps ? strokesFor(before, was, bh) : 0;
+      const to = after.useHandicaps ? strokesFor(after, u, h) : 0;
+      if (from !== to) out.push({ id: u.id, name: u.name, holeNo: h.no, from, to });
+    }
+  }
+  return out;
 }
 
 /** Holes with scores that would stop counting if the round were resized to `holes`. */
