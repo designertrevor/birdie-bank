@@ -175,7 +175,7 @@ export default function RoundDetail({ id, celebrate }) {
           {round.status === 'done' && GAMES[round.game] && (
             <button className="full-btn" onClick={() => nav.push('newRound', { rematch: id })}><Icon name="arrow-counter-clockwise" /> Run it back</button>
           )}
-          {round.status === 'done' && <SaveUsualButton round={round} />}
+          {round.status === 'done' && !round.localMe && round.shared?.host !== false && <SaveUsualButton round={round} />}
           {canEdit(round, keeperMe(round, state), !!round.shared?.host) && <button className="full-btn outline" onClick={edit}><Icon name="pencil-simple" /> Edit scores</button>}
           <button className="danger-link" onClick={del}><Icon name="trash" /> Delete round</button>
         </div>
