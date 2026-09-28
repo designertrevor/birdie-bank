@@ -6,9 +6,9 @@ import { STORE_KEY, getState, subscribe, update } from './store.js';
 import { localAdapter, supabaseAdapter } from './sync-adapters.js';
 import { getSupabase, supabaseConfigured } from './supabase.js';
 import { leaveRound } from './rounds.js';
-import { applyHole, applyMeta, assemble, buildHole, buildMeta, buildRequest, isRequestNo, merge3, newCode, newRequestNo, readRequest, stable } from './sync-model.js';
+import { applyHole, applyMeta, assemble, buildHole, buildMeta, buildRequest, isRequestNo, newCode, newRequestNo, readRequest, stable } from './sync-model.js';
 import { payFields } from './pay.js';
-import { canEdit, hostKeeper, isKeeper, keeperMe, keeperOf, metaToKeep, metaToSend, seatTaken } from './keeper.js';
+import { canEdit, holeToKeep, hostKeeper, isKeeper, keeperMe, keeperOf, metaToKeep, metaToSend, seatTaken } from './keeper.js';
 
 /** Whether this phone may change a shared round (see keeper.js), and who it is in it. */
 function editorOf(round) {
@@ -72,13 +72,17 @@ async function pushOnce(roundId, entry) {
   const round = getState().rounds[roundId];
   const adapter = await getAdapter();
   if (!round || !adapter || live.get(roundId) !== entry) return true;
-  // Only the phone keeping score sends scores and changes to the game. Any other phone sends only
-  // what it's allowed to (asking for the card, taking its seat): see metaToSend
+  // Only the phone keeping score sends changes to the game. Any other phone sends only what it's
+  // allowed to (asking for the card, taking its seat): see metaToSend
   const { me, editor } = editorOf(round);
   const meta = metaToSend(parse(entry.lastMeta), buildMeta(round), { editor, me });
   const metaJson = meta ? stable(meta) : entry.lastMeta;
+  // Holes go up from any phone whose copy differs from the server's. On a phone that isn't keeping
+  // score that can only be holes it saved while it had the card and couldn't send yet (no signal,
+  // then it handed off): incoming holes replace everything else (see holeToKeep), so it has no other
+  // edits to send. Held back, those scores would never reach the other phones.
   const holes = [];
-  if (editor) round.holes.forEach((h, i) => {
+  round.holes.forEach((h, i) => {
     const data = buildHole(round, i);
     const json = stable(data);
     if (json !== (entry.lastHoles[h.no] ?? stable(null))) holes.push([h.no, data, json]);
@@ -171,9 +175,9 @@ function onRemote(roundId, ev) {
     const idx = round ? round.holes.findIndex(h => h.no === ev.holeNo) : -1;
     if (idx < 0) return;
     // Scores this phone hasn't sent yet are kept; the push that follows sends the merged hole.
-    // A phone that isn't keeping score has nothing of its own to keep: the keeper's copy wins
+    // On a phone that isn't keeping score the keeper's copy wins a clash (see holeToKeep)
     const local = buildHole(round, idx);
-    const merged = editorOf(round).editor ? merge3(base, local, ev.data, 2) : ev.data;
+    const merged = holeToKeep(base, local, ev.data, editorOf(round).editor);
     if (stable(merged) === stable(local)) return;
     update(s => { const r = s.rounds[roundId]; if (r) applyHole(r, ev.holeNo, merged); });
   }

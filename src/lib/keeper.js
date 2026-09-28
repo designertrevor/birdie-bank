@@ -178,3 +178,14 @@ export function metaToKeep(base, local, remote, { editor, me }) {
   const mine = editor ? local : metaToSend(base, local, { editor, me });
   return mine == null ? remote : merge3(base, mine, remote, 1);
 }
+
+/**
+ * The hole record to keep on this phone when the server's copy (`remote`) arrives. The keeper's phone
+ * merges as ever: scores it hasn't sent yet are kept, and a clash keeps its own. Any other phone takes
+ * the keeper's scores, but keeps (and then sends) scores it saved itself while it still had the card
+ * and couldn't send yet, say with no signal before handing off. The keeper's copy wins a clash.
+ * A phone that never kept score has nothing of its own, so it simply gets the keeper's copy.
+ */
+export function holeToKeep(base, local, remote, editor) {
+  return editor ? merge3(base, local, remote, 2) : merge3(base, remote, local, 2, true);
+}

@@ -4,7 +4,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import {
   KEEPER_QUIET_MS, keeperOf, keeperMe, isKeeper, canEdit, keeperName, canTakeCard, handOffChoices,
-  hostKeeper, handOff, keeperSaved, askForCard, clearAsk, openAsk, seatTaken, metaToSend, metaToKeep,
+  hostKeeper, handOff, keeperSaved, askForCard, clearAsk, openAsk, seatTaken, metaToSend, metaToKeep, holeToKeep,
 } from './keeper.js';
 
 const T0 = 1_800_000_000_000;
@@ -144,4 +144,22 @@ test('metaToKeep: a phone not keeping score takes the keeper\'s game, keeping on
   assert.deepEqual(metaToKeep(base, local, remote, { editor: true, me: 'mike' }).settings, { wolf: { point: 5 } });
   // Never heard from the server: the server's copy
   assert.deepEqual(metaToKeep(undefined, local, remote, { editor: false, me: 'dave' }), remote);
+});
+
+// Review 2026-09-29: the keeper saves holes 5 and 6 with no signal, then hands off the card. Those
+// holes haven't reached the server, and the phone is no longer keeping score. They must still go up,
+// and the new keeper's scores win where both phones scored the same player on the same hole.
+test('holeToKeep: scores saved while keeping score survive losing the card; the keeper wins a clash', () => {
+  const base = undefined; // the server never had hole 6
+  const mine = { scores: { mike: 4, dave: 5 } };
+  // Nobody else scored it: this phone's scores stay, to be sent
+  assert.deepEqual(holeToKeep(base, mine, null, false), mine);
+  // The new keeper scored Dave differently and added Trev: theirs for Dave, Mike's stays
+  const theirs = { scores: { dave: 6, trev: 4 } };
+  assert.deepEqual(holeToKeep(base, mine, theirs, false), { scores: { mike: 4, dave: 6, trev: 4 } });
+  // Nothing of its own (it matches what the server last had): the server's copy
+  const seen = { scores: { mike: 4 } };
+  assert.deepEqual(holeToKeep(seen, seen, { scores: { mike: 5 } }, false), { scores: { mike: 5 } });
+  // The keeper's own phone merges as ever: a clash keeps its own edit
+  assert.deepEqual(holeToKeep({ scores: { dave: 5 } }, { scores: { dave: 4 } }, { scores: { dave: 6 } }, true), { scores: { dave: 4 } });
 });
