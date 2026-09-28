@@ -14,8 +14,8 @@ import { addRound } from '../lib/rounds.js';
 import { payFields, sendReminder } from '../lib/pay.js';
 import { shareLink, shareRound, syncConfigured } from '../lib/sync.js';
 import {
-  RSVPS, RSVP_LABEL, betLabel, cleanName, countsLine, daysUntil, inviteText, morningText, nudgeAllText, nudgeText,
-  planChoice, planCounts, planPeople, planStart, rollCallDefault, tally, whenLabel,
+  RSVPS, RSVP_LABEL, betLabel, betUnitLabel, cleanName, countsLine, daysUntil, inviteText, morningText, nudgeAllText, nudgeText,
+  planChoice, planCounts, planPeople, planRules, planStart, rollCallDefault, tally, whenLabel,
 } from '../lib/plans.js';
 import { PlansOffError } from '../lib/plan-adapters.js';
 import { answerPlan, editPlan, openPlanLink, planShareLink, removePlan, sharePlan, usePlanLive, usePlansOff } from '../lib/plan-sync.js';
@@ -70,6 +70,9 @@ function PlanBody({ plan, standalone = false, onSkip }) {
   const choice = planChoice(plan);
   const game = GAMES[choice.game];
   const mine = plan.answers?.[me] || null;
+  // The organizer's house rules for the ballot's games, so every phone shows the same units
+  const rules = planRules(plan, settings);
+  const unit = (g, b) => betUnitLabel(g, rules, b) || money(b);
   const days = daysUntil(plan.date);
   const planned = plan.status === 'planned' && !plan.gone;
   const host = plan.hostName || 'The organizer';
@@ -117,8 +120,14 @@ function PlanBody({ plan, standalone = false, onSkip }) {
   };
 
   const gameT = tally(plan, 'game');
-  const betT = tally(plan, 'bet');
+  // The bet vote is for the game you voted for (or the group's pick), in that game's own unit
+  const betGame = mine?.game && plan.ballot?.games?.includes(mine.game) ? mine.game : choice.game;
+  const betT = tally(plan, 'bet', betGame);
+  const myBet = mine?.bet != null && (!mine.betGame || mine.betGame === betGame) ? mine.bet : null;
+  const manyGames = gameT.rows.length > 1;
   const voters = people.filter(p => p.status !== 'out' && (p.game || p.bet)).length;
+  const sugGame = plan.suggested?.game;
+  const sugBet = sugGame ? tally(plan, 'bet', sugGame).rows.find(r => r.suggested)?.choice ?? plan.suggested?.bet : null;
 
   return (
     <>
@@ -129,7 +138,7 @@ function PlanBody({ plan, standalone = false, onSkip }) {
           </div>
           <div className="eyebrow ph-when">{whenLabel(plan) || 'Date to be set'}</div>
           <div className="ic-game"><Icon name={game?.icon || 'golf'} fill /> {game?.name || 'Golf'}</div>
-          <div className="ic-course">{plan.course?.name || 'Course to be set'} · {plan.holesCount} holes{choice.bet && settings?.[choice.game] ? ` · ${betLabel(choice.game, settings, choice.bet)}` : choice.bet ? ` · ${money(choice.bet)}` : ''}</div>
+          <div className="ic-course">{plan.course?.name || 'Course to be set'} · {plan.holesCount} holes{choice.bet ? ` · ${betLabel(choice.game, rules, choice.bet) || money(choice.bet)}` : ''}</div>
           {plan.status === 'off' && <p className="ic-note"><Icon name="calendar-x" fill /> {plan.host ? 'You called this one off.' : `${host} called this one off.`}</p>}
           {plan.gone && plan.status === 'planned' && <p className="ic-note"><Icon name="calendar-x" fill /> {host} deleted this plan.</p>}
           {plan.status === 'started' && (
@@ -154,12 +163,12 @@ function PlanBody({ plan, standalone = false, onSkip }) {
               <>
                 <VoteBlock label="Your vote: the game" kind="game" t={gameT} mineValue={mine.game} onVote={v => answer({ game: v })}
                   render={g => GAMES[g]?.name || g} />
-                <VoteBlock label="Your vote: the bet" kind="bet" t={betT} mineValue={mine.bet} onVote={v => answer({ bet: v })}
-                  render={b => money(b)} />
+                <VoteBlock label={manyGames ? `Your vote: the bet for ${GAMES[betGame]?.name || 'the game'}` : 'Your vote: the bet'} kind="bet" t={betT} mineValue={myBet}
+                  onVote={v => answer({ bet: v, betGame: v == null ? null : betGame })} render={b => unit(betGame, b)} />
                 <p className="field-help pad">
                   {voters > 1
-                    ? `The group’s pick so far: ${GAMES[choice.game]?.name}${choice.bet && settings?.[choice.game] ? `, ${betLabel(choice.game, settings, choice.bet)}` : ''}.`
-                    : `${plan.host ? 'You suggested' : `${host} suggested`} ${GAMES[plan.suggested?.game]?.name || 'a game'}${plan.suggested?.bet ? ` for ${money(plan.suggested.bet)}` : ''}. The group decides; a tie goes to the suggestion.`}
+                    ? `The group’s pick so far: ${GAMES[choice.game]?.name}${choice.bet ? `, ${unit(choice.game, choice.bet)}` : ''}.`
+                    : `${plan.host ? 'You suggested' : `${host} suggested`} ${GAMES[sugGame]?.name || 'a game'}${sugBet ? ` at ${unit(sugGame, sugBet)}` : ''}. The group decides; a tie goes to the suggestion.`}
                 </p>
               </>
             )}
@@ -174,7 +183,7 @@ function PlanBody({ plan, standalone = false, onSkip }) {
               <div className="row-main">
                 <div className="set-name">{first(p.name)}{p.who === me ? ' (you)' : ''}</div>
                 {(p.game || p.bet) && p.status !== 'out' && (
-                  <div className="set-sub">Votes {[GAMES[p.game]?.name, p.bet ? money(p.bet) : null].filter(Boolean).join(', ')}</div>
+                  <div className="set-sub">Votes {[GAMES[p.game]?.name, voteBetLabel(p, unit)].filter(Boolean).join(', ')}</div>
                 )}
               </div>
               {plan.host && planned && !p.status && plan.code && (
@@ -239,6 +248,13 @@ function PlanBody({ plan, standalone = false, onSkip }) {
   );
 }
 
+/** A bet vote in its game's unit: "$5 a side", or "$1 a point in Wolf" when it's for another game than theirs. */
+function voteBetLabel(p, unit) {
+  if (!p.bet) return null;
+  if (!p.betGame) return money(p.bet); // from before bets were per game: one amount for every game
+  return `${unit(p.betGame, p.bet)}${p.betGame !== p.game ? ` in ${GAMES[p.betGame]?.name}` : ''}`;
+}
+
 /** One vote: the choices with their tally, yours marked. */
 function VoteBlock({ label, kind, t, mineValue, onVote, render }) {
   if (t.rows.length < 2) return null;
@@ -275,7 +291,10 @@ function WhoAreYou({ plan, defaultName, standalone, onSkip }) {
     answerPlan(plan.id, who, { name: cleanName(name), status: 'in' });
   };
   const host = plan.hostName || 'The organizer';
-  const game = GAMES[planChoice(plan).game];
+  const choice = planChoice(plan);
+  const game = GAMES[choice.game];
+  const settings = useStore(s => s.settings);
+  const bet = choice.bet ? betLabel(choice.game, planRules(plan, settings), choice.bet) || money(choice.bet) : '';
   return (
     <>
       <div className="scroll join-body plan-who">
@@ -283,7 +302,7 @@ function WhoAreYou({ plan, defaultName, standalone, onSkip }) {
           <div className="ic-from"><Avatar name={host} /> <span><strong>{host}</strong> is getting a game together</span></div>
           <div className="eyebrow ph-when">{whenLabel(plan)}</div>
           <div className="ic-game"><Icon name={game?.icon || 'golf'} fill /> {game?.name || 'Golf'}</div>
-          <div className="ic-course">{plan.course?.name} · {plan.holesCount} holes</div>
+          <div className="ic-course">{plan.course?.name} · {plan.holesCount} holes{bet ? ` · ${bet}` : ''}</div>
         </div>
         {!adding ? (
           <>
@@ -377,7 +396,7 @@ export function RollCall({ id }) {
       <div className="scroll">
         <div className="block summary-card">
           <div className="li-sub">{plan.course?.name} · {setup.holesCount} holes</div>
-          <div className="d stake-big">{g?.name || 'Pick a game'}{setup.bet && state.settings?.[setup.game] ? ` · ${betLabel(setup.game, state.settings, setup.bet)}` : ''}</div>
+          <div className="d stake-big">{g?.name || 'Pick a game'}{setup.bet && setup.settings?.[setup.game] ? ` · ${betLabel(setup.game, setup.settings, setup.bet)}` : ''}</div>
           <div className="li-sub">{t.total > 1 ? `The group’s pick (${t.rows.find(r => r.choice === setup.game)?.votes || 0} of ${t.total} votes)` : 'Your suggestion. Nobody else voted'}</div>
         </div>
         <h2 className="step-q d">Who showed up?</h2>

@@ -1,8 +1,9 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {
-  answersFrom, betLabel, betOf, countsLine, dayLabel, daysUntil, inviteText, morningText, newPlan, planChoice,
-  planCounts, planMeta, planPeople, planStart, playersProblem, rollCallDefault, rsvpFor, tally, timeLabel,
+  answersFrom, betChoices, betLabel, betOf, betUnitLabel, betVoteChoice, countsLine, dayLabel, daysUntil, inviteText,
+  morningText, newPlan, parseBetVote, planChoice, planCounts, planMeta, planPeople, planRules, planStart, playersProblem,
+  rollCallDefault, rsvpFor, tally, timeLabel,
   upcomingPlans, whenLabel, withBet,
 } from './plans.js';
 
@@ -27,8 +28,9 @@ const answer = (plan, who, a) => { plan.answers[who] = { name: who, at: 10, ...a
 test('a new plan has the organizer in, first names only, and their suggestion first on the ballot', () => {
   const p = base();
   assert.deepEqual(p.people.map(x => x.name), ['Trevor', 'Mike', 'Dave', 'Sam']);
-  assert.deepEqual(p.ballot, { games: ['skins', 'nassau', 'wolf'], bets: [2, 5] });
-  assert.deepEqual(p.suggested, { game: 'skins', bet: 2 });
+  assert.deepEqual(p.ballot.games, ['skins', 'nassau', 'wolf']);
+  assert.deepEqual(p.ballot.bets, [2, 5]);
+  assert.deepEqual([p.suggested.game, p.suggested.bet], ['skins', 2]);
   assert.equal(p.answers.me.status, 'in');
   assert.deepEqual(planCounts(p), { in: 1, maybe: 0, out: 0, waiting: 3 });
 });
@@ -229,4 +231,121 @@ test('texts: the invite and the morning text name the day, the course, who is in
     'Golf today! Rancho Park, tee time 8:10 AM.\nIn: Trevor, Mike and Dave.\nGame: Skins, $5 a skin · carryovers.\nhttps://x/?plan=ABCDEF');
   const early = new Date(2026, 8, 28, 9);
   assert.match(inviteText(p, 'L', early), /^Golf Saturday at 8:10 AM\? Rancho Park\.\nThinking Skins\./);
+});
+
+// --------------------------- the bet vote, per game ---------------------------
+
+const perGame = () => newPlan({
+  id: 'pl2', hostWho: 'me', hostName: 'Trevor Nielsen', game: 'skins', holesCount: 18, date: '2026-10-03', teeTime: '08:10',
+  course: COURSE, people: [{ id: 'me', name: 'Trevor' }, { id: 'mike', name: 'Mike' }, { id: 'dave', name: 'Dave' }, { id: 'sam', name: 'Sam' }],
+  ballot: { games: ['nassau', 'wolf'], bets: [1, 5] }, suggestedBet: 2, settings: SETTINGS, now: 1,
+});
+const STATE = { me: 'me', settings: SETTINGS, players: { me: { id: 'me', name: 'Trevor' }, mike: { id: 'mike', name: 'Mike' }, dave: { id: 'dave', name: 'Dave' }, sam: { id: 'sam', name: 'Sam' } } };
+
+test('bet choices: a step down, the usual bet and a step up on the ladder', () => {
+  assert.deepEqual(betChoices(5), [2, 5, 10]);
+  assert.deepEqual(betChoices(1), [1, 2]);
+  assert.deepEqual(betChoices(50), [20, 50]);
+  assert.deepEqual(betChoices(3), [2, 3, 5]);
+});
+
+test('ballot: each game has its own amounts around its usual bet, in its own unit', () => {
+  const p = perGame();
+  assert.deepEqual(p.ballot.betsByGame, { skins: [1, 2, 5], nassau: [2, 5, 10], wolf: [1, 2, 5] });
+  assert.deepEqual(p.suggested.bets, { skins: 2, nassau: 5, wolf: 2 });
+  assert.deepEqual(p.ballot.rules.nassau, SETTINGS.nassau, 'the organizer’s house rules ride along for friends');
+  assert.deepEqual(p.answers.me, { name: 'Trevor', status: 'in', game: 'skins', bet: 2, betGame: 'skins', at: 1 });
+  // A friend's phone with other house rules still shows the organizer's units
+  const rules = planRules(p, { skins: { value: 9, payout: 'pot', stake: 20 } });
+  assert.equal(betUnitLabel('nassau', rules, 5), '$5 a side');
+  assert.equal(betUnitLabel('wolf', rules, 1), '$1 a point');
+  assert.equal(betUnitLabel('skins', rules, 2), '$2 a skin');
+  assert.equal(betLabel('nassau', rules, 10), '$10 a side');
+  assert.deepEqual(tally(p, 'bet', 'nassau').rows.map(r => betUnitLabel('nassau', rules, r.choice)), ['$2 a side', '$5 a side', '$10 a side']);
+});
+
+test('tally per game: the bet is the one voted for the winning game', () => {
+  const p = perGame();
+  answer(p, 'mike', { status: 'in', game: 'nassau', bet: 10, betGame: 'nassau' });
+  answer(p, 'dave', { status: 'in', game: 'nassau', bet: 10, betGame: 'nassau' });
+  answer(p, 'sam', { status: 'in', game: 'wolf', bet: 1, betGame: 'wolf' });
+  const t = tally(p, 'bet');
+  assert.equal(t.game, 'nassau');
+  assert.equal(t.total, 2, 'votes for other games’ bets do not count');
+  assert.deepEqual(t.rows.map(r => [r.choice, r.votes]), [[2, 0], [5, 0], [10, 2]]);
+  assert.deepEqual(planChoice(p), { game: 'nassau', bet: 10 });
+  assert.equal(tally(p, 'bet', 'wolf').winner, 1);
+  assert.equal(tally(p, 'bet', 'skins').winner, 2);
+});
+
+test('tally per game: a tie goes to the organizer’s suggestion for that game', () => {
+  const p = perGame();
+  answer(p, 'mike', { status: 'in', game: 'nassau', bet: 10, betGame: 'nassau' });
+  answer(p, 'dave', { status: 'in', game: 'nassau', bet: 5, betGame: 'nassau' });
+  assert.deepEqual(planChoice(p), { game: 'nassau', bet: 5 });
+  // Nobody voted a bet for the winning game: its suggestion stands, not the skins amount
+  const q = perGame();
+  answer(q, 'mike', { status: 'in', game: 'nassau' });
+  answer(q, 'dave', { status: 'in', game: 'nassau' });
+  assert.deepEqual(planChoice(q), { game: 'nassau', bet: 5 });
+});
+
+test('tee off: starts the voted game with the amount voted for that game and the rules on the ballot', () => {
+  const p = perGame();
+  answer(p, 'mike', { status: 'in', game: 'nassau', bet: 10, betGame: 'nassau' });
+  answer(p, 'dave', { status: 'in', game: 'nassau', bet: 10, betGame: 'nassau' });
+  answer(p, 'sam', { status: 'in', game: 'wolf', bet: 1, betGame: 'wolf' });
+  const state = { ...STATE, settings: { ...SETTINGS, nassau: { ...SETTINGS.nassau, pressMode: 'auto' } } };
+  const s = planStart(state, p, ['me', 'mike', 'dave', 'sam'], { course: COURSE });
+  assert.equal(s.problem, null);
+  assert.equal(s.game, 'nassau');
+  assert.equal(s.bet, 10);
+  assert.deepEqual([s.settings.nassau.front, s.settings.nassau.back, s.settings.nassau.total], [10, 10, 10]);
+  assert.equal(s.settings.nassau.pressMode, 'manual', 'the house rules the group saw on the ballot');
+  assert.equal(s.settings.skins.value, 2);
+  assert.equal(morningText(p, 'L', SETTINGS, new Date(2026, 9, 3, 6)).split('\n')[2], 'Game: Nassau, $10 a side.');
+});
+
+test('old plans with one amount for every game still load, vote and tee off', () => {
+  // Saved before bets were per game: one list of amounts, one suggestion, votes with no game
+  const old = {
+    id: 'old', v: 1, status: 'planned', createdAt: 1, host: true, hostWho: 'me', hostName: 'Trevor',
+    game: 'skins', holesCount: 18, nine: 'front', date: '2026-10-03', teeTime: '08:10', useHc: true,
+    course: { id: 'c1', name: 'Rancho Park', city: 'LA' },
+    people: [{ id: 'me', name: 'Trevor' }, { id: 'mike', name: 'Mike' }, { id: 'dave', name: 'Dave' }],
+    ballot: { games: ['skins', 'nassau', 'wolf'], bets: [2, 5] },
+    suggested: { game: 'skins', bet: 2 },
+    answers: { me: { name: 'Trevor', status: 'in', game: 'skins', bet: 2, at: 1 } },
+    code: null,
+  };
+  assert.deepEqual(tally(old, 'bet', 'wolf').rows.map(r => r.choice), [2, 5], 'the one list serves every game');
+  answer(old, 'mike', { status: 'in', game: 'nassau', bet: 5 });
+  assert.deepEqual(planChoice(old), { game: 'skins', bet: 2 }, 'a tie still goes to the suggestion');
+  answer(old, 'dave', { status: 'in', game: 'nassau', bet: 5 });
+  assert.deepEqual(planChoice(old), { game: 'nassau', bet: 5 });
+  const s = planStart(STATE, old, ['me', 'mike', 'dave'], { course: COURSE });
+  assert.equal(s.problem, null);
+  assert.equal(s.settings.nassau.front, 5);
+  assert.equal(s.settings.nassau.pressMode, 'manual');
+  assert.match(morningText(old, 'L', SETTINGS, new Date(2026, 9, 3, 6)), /Game: Nassau, \$5 a side\./);
+  // Someone votes again on the new version: their vote now names its game, and still counts
+  answer(old, 'mike', { status: 'in', game: 'nassau', bet: 2, betGame: 'nassau' });
+  answer(old, 'dave', { status: 'in', game: 'nassau', bet: 2, betGame: 'nassau' });
+  assert.deepEqual(planChoice(old), { game: 'nassau', bet: 2 });
+});
+
+test('bet votes on the server: the game rides along, and old votes still read', () => {
+  assert.equal(betVoteChoice({ bet: 10, betGame: 'nassau' }), 'nassau:10');
+  assert.equal(betVoteChoice({ bet: 5 }), '5');
+  assert.equal(betVoteChoice({ bet: null, betGame: 'nassau' }), null);
+  assert.deepEqual(parseBetVote('nassau:10'), { bet: 10, betGame: 'nassau' });
+  assert.deepEqual(parseBetVote('5'), { bet: 5 });
+  assert.equal(parseBetVote('bogus:5'), null);
+  assert.equal(parseBetVote('nassau:0'), null);
+  assert.ok('stableford:50'.length <= 32, 'fits the server’s 32 characters');
+  const a = answersFrom(
+    [{ who: 'mike', name: 'Mike', status: 'in', at: 5 }, { who: 'dave', name: 'Dave', status: 'in', at: 6 }],
+    [{ who: 'mike', kind: 'bet', choice: 'wolf:1' }, { who: 'dave', kind: 'bet', choice: '5' }],
+  );
+  assert.deepEqual([a.mike.bet, a.mike.betGame, a.dave.bet, a.dave.betGame], [1, 'wolf', 5, undefined]);
 });
