@@ -5,13 +5,13 @@
 // Money stays between the two people in it: an amount shows only when you are one of them.
 // Anything between two other people says who, never how much.
 //
-// Hooks for what's coming: payments from the shared Tab land in state.settlements like any other
-// payment, so they show up here with no change. Carry-overs are read from state.carries, shape
-// { id, from, to, amount, at, status }, where only agreed ones (status 'agreed', or no status)
-// count. If the shared Tab keeps them somewhere else, pass them in as `carries`.
+// Payments from the shared Tab land in state.settlements like any other payment. One "I paid"
+// can fill several round transfers at once, so settlements between the same two people recorded
+// at the same moment show as one row. Carry-overs come from state.carries (see carry.js): only
+// agreed ones show, dated when they were agreed (answeredAt).
 import { GAMES, roundResults } from './round.js';
 import { money } from './golf.js';
-import { meFor, myIds } from './format.js';
+import { gameLabel, meFor, myIds } from './format.js';
 import { nameOf } from './ledger.js';
 import { dayLabel } from './plans.js';
 import { PAY_APPS } from './pay.js';
@@ -54,9 +54,16 @@ export function latelyItems(state, now = Date.now(), { carries = state?.carries,
   const name = id => first(nameOf(state, id));
   const items = [];
 
-  // Payments recorded on the Tab
+  // Payments recorded on the Tab: one tap that filled several round transfers is one payment
+  const taps = new Map();
   for (const s of state.settlements || []) {
     if (!inWindow(s.at) || !s.from || !s.to) continue;
+    const key = `${s.from}>${s.to}@${s.at}`;
+    const g = taps.get(key);
+    if (g) { g.amount = cents(g.amount + (Number(s.amount) || 0)); if (!g.roundId && s.roundId) g.roundId = s.roundId; if (!g.app && s.app) g.app = s.app; }
+    else taps.set(key, { ...s, amount: Number(s.amount) || 0 });
+  }
+  for (const s of taps.values()) {
     const fromMe = mine.has(s.from), toMe = mine.has(s.to);
     if (fromMe && toMe) continue; // you paying you across two phones
     const app = PAY_APPS[s.app]?.name;
@@ -77,7 +84,7 @@ export function latelyItems(state, now = Date.now(), { carries = state?.carries,
 
   // Carry-overs both sides agreed to (from the shared Tab, when it lands)
   for (const c of agreedCarries(carries)) {
-    const at = c.agreedAt ?? c.at;
+    const at = c.answeredAt ?? c.agreedAt ?? c.at;
     if (!inWindow(at)) continue;
     const fromMe = mine.has(c.from), toMe = mine.has(c.to);
     if (fromMe && toMe) continue;
@@ -120,7 +127,7 @@ export function latelyItems(state, now = Date.now(), { carries = state?.carries,
     const amount = played ? cents(bal[me] ?? 0) : null;
     items.push({
       id: `recap:${r.id}`, kind: 'recap', at: roundTime(r),
-      text: `${GAMES[r.game].name} at ${r.course?.name || 'the course'} · ${took}`,
+      text: `${gameLabel(r)} at ${r.course?.name || 'the course'} · ${took}`,
       sub: amount == null ? agoLabel(roundTime(r), t) : amount === 0 ? `You broke even · ${agoLabel(roundTime(r), t)}` : `You ${money(amount, { sign: true })} · ${agoLabel(roundTime(r), t)}`,
       target: ['roundDetail', { id: r.id }],
     });

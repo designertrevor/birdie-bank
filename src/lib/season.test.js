@@ -123,3 +123,18 @@ test('season access: a preview for organizers, nothing for invited-only phones',
   assert.deepEqual(seasonAccess(invited), { access: 'none' });
   assert.deepEqual(seasonAccess({}), { access: 'none' });
 });
+
+// Integration seam (2026-09-29): side-game money counts toward that side game, not the main game
+test('season: a side Skins counts toward Skins, and the season still matches roundResults', () => {
+  const r = round('rs', 'stroke', ['me', 'mike', 'sam'], { 1: { me: 3 }, 2: { me: 3 } }, { when: at(9, 20) });
+  r.sideGames = [{ game: 'skins', settings: { value: 10, carryover: true } }];
+  const rounds = [...fixture(), r];
+  const b = seasonBoard(stateWith(rounds), YEAR);
+  const expect = {};
+  for (const x of rounds) for (const [id, v] of Object.entries(roundResults(x).balances)) expect[id] = Math.round(((expect[id] || 0) + v) * 100) / 100;
+  assert.deepEqual(Object.fromEntries(b.balances.map(x => [x.id, x.net])), expect);
+  const skinsNet = [...fixture().map(x => roundResults(x).balances.me * (x.game === 'skins' ? 1 : 0)), roundResults(r).detail.byGame.skins.balances.me]
+    .reduce((a, v) => a + v, 0);
+  assert.equal(b.bestGame.name, 'Skins');
+  assert.equal(b.bestGame.net, Math.round(skinsNet * 100) / 100);
+});

@@ -28,3 +28,8 @@ test('your usual: rounds joined from someone else, or with a player gone, are sk
   const s = state({ a: round('a', { createdAt: 1 }), b: round('b', { createdAt: 2, localMe: 'p1' }), c: round('c', { createdAt: 3, players: [...players, { id: 'gone', name: 'X' }] }) });
   assert.equal(usualRound(s).round.id, 'a');
 });
+
+test('your usual: a round you only watched from a link is never offered', () => {
+  const s = state({ a: round('a', { createdAt: 1 }), w: round('w', { createdAt: 2, localMe: null, shared: { code: 'WTCH', host: false } }) });
+  assert.equal(usualRound(s).round.id, 'a');
+});

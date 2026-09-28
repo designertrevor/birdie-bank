@@ -146,7 +146,8 @@ export function personStory(state, ids, other) {
   let won = 0, lost = 0, even = 0, net = 0, paid = 0;
   for (const r of doneRounds(state)) {
     const me = meFor(r, state);
-    if (!mine.has(me) || me === other || !r.players.some(p => p.id === other)) continue;
+    // A round you only watched is not a round you played with them
+    if (!mine.has(me) || me === other || !r.players.some(p => p.id === other) || !r.players.some(p => p.id === me)) continue;
     const amount = roundResults(r).pairs[me]?.[other] ?? 0;
     if (amount > 0) won++; else if (amount < 0) lost++; else even++;
     net += amount;
@@ -177,7 +178,7 @@ export function headToHeadSummary(state, ids) {
   const out = new Map();
   for (const r of doneRounds(state)) {
     const me = meFor(r, state);
-    if (!mine.has(me)) continue;
+    if (!mine.has(me) || !r.players.some(p => p.id === me)) continue; // watched rounds aren't yours
     const pairs = roundResults(r).pairs[me] || {};
     for (const p of r.players) {
       if (p.id === me || mine.has(p.id)) continue;

@@ -540,8 +540,8 @@ function PlayRound({ round }) {
           </button>
         )}
       </Sheet>
-      {fixSheet === 'hole' && <FixHoleSheet round={round} holeNo={hole.no} me={me} onClose={() => setFixSheet(null)} />}
-      {fixSheet === 'tee' && <CourseTeeSheet round={round} me={me} onClose={() => setFixSheet(null)} />}
+      {fixSheet === 'hole' && editable && <FixHoleSheet round={round} holeNo={hole.no} me={me} onClose={() => setFixSheet(null)} />}
+      {fixSheet === 'tee' && editable && <CourseTeeSheet round={round} me={me} onClose={() => setFixSheet(null)} />}
       <RulesSheet game={game} open={rules} onClose={() => setRules(false)} />
       <ShareSheet round={round} open={live} onClose={() => setLive(false)} />
       {game === 'banker' && (

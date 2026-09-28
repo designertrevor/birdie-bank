@@ -43,7 +43,7 @@ export function holesScored(round) {
 export function usualRound(state) {
   const courses = allCourses(state);
   const recent = Object.values(state.rounds || {})
-    .filter(r => !r.localMe && GAMES[r.game] && r.status === 'done' && !r.editing)
+    .filter(r => !r.localMe && r.shared?.host !== false && GAMES[r.game] && r.status === 'done' && !r.editing) // watched rounds aren't yours to repeat
     .sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
   for (const r of recent) {
     const course = courses.find(c => c.id === r.course?.id);

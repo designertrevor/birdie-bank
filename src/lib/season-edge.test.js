@@ -4,7 +4,7 @@ import assert from 'node:assert/strict';
 import { createRound, roundResults } from './round.js';
 import { seasonBoard, seasonRounds } from './season.js';
 import { seasonStats } from './format.js';
-import { tabBalances } from './ledger.js';
+import { headToHeadSummary, personStory, tabBalances } from './ledger.js';
 
 const SETTINGS = {
   hcPct: 100,
@@ -100,4 +100,17 @@ test('a phone that only watched a round from a link is not an organizer, so it n
   // Your own round that you then shared live is still yours
   const hosted = { rounds: { h1: { id: 'h1', shared: { code: 'WXYZ', host: true }, players: [] } } };
   assert.equal(isOrganizer(hosted), true);
+});
+
+// Integration (2026-09-29): a round you only watched (localMe null, you not a player) is not in your record
+test('Players and the person story leave out rounds you only watched, with the same money', () => {
+  const watched = play('w', 'skins', ['mike', 'zed'], { when: at(8, 2), extra: { localMe: null, shared: { code: 'WTCH', host: false } } });
+  const st = stateOf([...fixture(), watched]);
+  const without = stateOf(fixture());
+  const ids = new Set(['me', 'guest7']);
+  assert.deepEqual(headToHeadSummary(st, ids).get('mike'), headToHeadSummary(without, ids).get('mike'));
+  const a = personStory(st, ids, 'mike'), b = personStory(without, ids, 'mike');
+  assert.equal(a.rounds, b.rounds);
+  assert.equal(a.net, b.net);
+  assert.ok(!a.items.some(i => i.id === 'w'));
 });

@@ -141,3 +141,43 @@ test('lately: recap amounts match the Tab for the same round (no double counting
   const net = myNet(a, s);
   assert.ok(recap.sub.startsWith(net === 0 ? 'You broke even' : `You −$${Math.abs(net)}`), recap.sub);
 });
+
+// Seams with the shared Tab, carry-overs and side games (integration, 2026-09-29)
+test('lately: one "I paid" that filled several round transfers shows as one payment', () => {
+  const at = NOW - DAY;
+  const s = stateWith({
+    rounds: [skins('r1', NOW - 5 * DAY), skins('r2', NOW - 4 * DAY), skins('last', NOW - 1 * DAY)],
+    settlements: [
+      { id: 'ABC123:me>sam', from: 'me', to: 'sam', amount: 4, at, roundId: 'r1', code: 'ABC123', shared: true },
+      { id: 'DEF456:me>sam', from: 'me', to: 'sam', amount: 2, at, roundId: 'r2', code: 'DEF456', shared: true },
+      { id: 's_left', from: 'me', to: 'sam', amount: 1, at },
+    ],
+  });
+  const pays = latelyItems(s, NOW).filter(i => i.kind === 'payment');
+  assert.deepEqual(pays.map(i => i.text), ['You paid Sam $7']);
+});
+
+test('lately: carry-overs from carry.js show once agreed, dated when they were agreed', async () => {
+  const { carryReducer } = await import('./carry.js');
+  const asked = carryReducer(null, { type: 'ask', from: 'mike', to: 'me', amount: 6, by: 'mike', at: NOW - 3 * DAY });
+  assert.equal(latelyItems(stateWith({ carries: [asked] }), NOW).length, 0, 'an open ask is not news yet');
+  const agreed = carryReducer(asked, { type: 'agree', at: NOW - 2 * DAY });
+  const items = latelyItems(stateWith({ carries: [agreed] }), NOW);
+  assert.deepEqual(items.map(i => i.text), ['You and Mike rolled $6 to next time']);
+  assert.equal(items[0].at, NOW - 2 * DAY);
+  const declined = carryReducer(asked, { type: 'decline', at: NOW - 2 * DAY });
+  assert.equal(latelyItems(stateWith({ carries: [declined] }), NOW).length, 0);
+});
+
+test('lately: a recap names every game in the round and counts side-game money', async () => {
+  const { roundResults } = await import('./round.js');
+  const r = skins('side', NOW - 3 * DAY);
+  const withSide = { ...r, sideGames: [{ game: 'birdies', settings: { stake: 5, eagleShares: 2 } }] };
+  withSide.scores = { ...r.scores, 1: { ...r.scores[1], me: 3 } }; // a birdie, so the pot pays
+  const s = stateWith({ rounds: [withSide, skins('last', NOW - DAY)] });
+  const recap = latelyItems(s, NOW).find(i => i.id === 'recap:side');
+  assert.match(recap.text, /^Skins \+ Birdie pot at Pebble Creek/);
+  const mine = Math.round(roundResults(withSide).balances.me * 100) / 100;
+  assert.notEqual(mine, Math.round(roundResults(r).balances.me * 100) / 100, 'the side game moved money');
+  assert.ok(recap.sub.startsWith(`You ${mine > 0 ? '+' : '−'}$${Math.abs(mine)}`), recap.sub);
+});
