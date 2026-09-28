@@ -36,9 +36,13 @@ export function MatchPanel({ round, hole }) {
     const s = b.status;
     const notStarted = pos < b.start && s.played === 0;
     const val = notStarted ? '–' : s.leader === null ? 'All square' : `${short[s.leader]} ${s.by} up`;
-    const sub = notStarted ? `Starts H${holeAtPos(round, b.start)}` : s.left === 0 ? 'Final' : s.closed ? `Won ${s.by}&${s.left}` : s.dormie ? 'Dormie' : `${s.left} left`;
+    const sub = notStarted ? `Starts H${holeAtPos(round, b.start)}` : s.left === 0 ? 'Final' : s.closed ? `Won ${s.by}&${s.left}` : s.dormie ? 'Dormie · can’t lose' : `${s.left} left`;
+    // Dormie: up by as many holes as are left, so the leader can't lose (a tie at worst)
+    const said = s.dormie && !s.closed && s.left > 0
+      ? `${LEGS[leg].label}: ${val}, dormie. The leader is up by as many holes as are left, so they can’t lose it.`
+      : `${LEGS[leg].label}: ${val}, ${sub}`;
     return (
-      <div key={leg} className={`ms-tile ${s.leader === 0 ? 'ahead' : s.leader === 1 ? 'behind' : ''}`}>
+      <div key={leg} role="group" aria-label={said} className={`ms-tile ${s.leader === 0 ? 'ahead' : s.leader === 1 ? 'behind' : ''}`}>
         <span className="ms-lbl">{LEGS[leg].label}</span><span className={`ms-val ${val === 'All square' ? 'sq' : ''}`}>{val}</span><span className="ms-sub">{sub}</span>
       </div>
     );

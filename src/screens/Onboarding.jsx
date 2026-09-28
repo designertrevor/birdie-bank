@@ -224,7 +224,7 @@ export default function Onboarding({ onDone }) {
         <ul className="block pw-list">
           {readyLines(a).map(t => <li key={t}><Icon name="check-circle" fill /> {t}</li>)}
         </ul>
-        <p className="ob-sub">Next, set up your next round. Pick the day and the course, suggest a game and a bet, and the group votes from one link. About 30 seconds.</p>
+        <p className="ob-sub">Pick the day and the course, suggest a game and a bet, and the group votes from one link. About 30 seconds.</p>
       </div>
       <div className="cta-wrap">
         <button className="full-btn" onClick={() => finish(true)}>Set up your next round <Icon name="arrow-right" /></button>
