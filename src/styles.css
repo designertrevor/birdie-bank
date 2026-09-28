@@ -511,6 +511,9 @@ a.set-row { text-decoration: none; }
   transition: opacity .2s, transform .35s var(--spring);
 }
 .toast.show { opacity: 1; transform: translate(-50%, 0) scale(1); }
+.toast.has-act { display: flex; align-items: center; gap: 12px; padding: 4px 6px 4px 20px; white-space: normal; width: max-content; max-width: calc(100% - 32px); font-size: 15px; }
+.toast.has-act.show { pointer-events: auto; }
+.toast-act { min-height: 44px; padding: 0 14px; border: none; border-radius: 999px; background: rgba(255,255,255,.2); color: #fff; font: inherit; font-weight: 800; cursor: pointer; flex-shrink: 0; }
 .confetti { position: fixed; pointer-events: none; z-index: 999; border-radius: 2px; }
 
 /* ============================================================
@@ -1187,3 +1190,37 @@ button.who-status { cursor: pointer; min-height: 36px; }
 .pw-free .pw-list { margin-top: 10px; }
 .pw-free .pw-list li > i { color: var(--win); }
 .pw-fine { font-size: 13px; color: var(--mute); text-align: center; line-height: 1.4; }
+
+/* SHARED TAB: person card actions, carry-overs and who's square (2026-09-29) */
+.pay-acts.wrap { flex-wrap: wrap; }
+.pay-acts.wrap > * { flex: 1 1 calc(50% - 4px); }
+.link-btn { min-height: 44px; padding: 0 4px; border: none; background: none; color: var(--ink); font: inherit; font-size: 14px; font-weight: 700; text-decoration: underline; text-decoration-color: var(--surface-strong); text-decoration-thickness: 2px; text-underline-offset: 3px; cursor: pointer; flex-shrink: 0; }
+.recent-paid { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-top: 6px; font-size: 13px; color: var(--mute); }
+.recent-paid > span { min-width: 0; }
+.carry-note { margin-top: 10px; padding: 10px 12px; border-radius: 14px; background: var(--surface); }
+.carry-note .pay-acts { margin-top: 10px; }
+.cn-title { font-weight: 700; color: var(--ink); font-size: 15px; }
+.cn-sub { font-size: 13px; color: var(--mute); margin-top: 2px; overflow-wrap: anywhere; }
+.carry-note.declined .cn-sub { margin: 0; }
+.cn-foot { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-top: 4px; }
+.cn-tag { font-size: 12px; font-weight: 700; padding: 3px 9px; border-radius: 999px; background: var(--card); color: var(--ink); }
+.carry-note.agreed .cn-tag { background: var(--win-bg); color: var(--win); }
+.pill-btn.tap { min-height: 44px; }
+.square-card .tp-sub { color: var(--win); }
+.sq-strip { margin: 4px 16px 12px; padding: 4px 14px 12px; border-radius: 20px; background: var(--card); cursor: pointer; }
+.sq-head { display: grid; grid-template-columns: 1fr auto; grid-template-rows: auto auto; align-items: center; width: 100%; min-height: 44px; padding: 8px 0 4px; border: none; background: none; text-align: left; cursor: pointer; color: var(--ink); }
+.sq-head .eyebrow { grid-column: 1; }
+.sq-head .sq-count { grid-column: 1; font-size: 20px; font-weight: 800; }
+.sq-head .chevron { grid-column: 2; grid-row: 1 / 3; }
+.sq-people { list-style: none; display: flex; flex-wrap: wrap; gap: 10px 12px; margin: 6px 0 0; padding: 0; }
+.sq-p { display: flex; flex-direction: column; align-items: center; gap: 4px; min-width: 48px; }
+.sq-p .avatar { margin: 0; width: 36px; height: 36px; font-size: 15px; }
+.sq-word, .sq-badge { font-size: 11px; font-weight: 700; padding: 2px 8px; border-radius: 999px; background: var(--surface); color: var(--mute); }
+.sq-p.square .sq-word, .sq-row.square .sq-badge { background: var(--win-bg); color: var(--win); }
+.sq-p.owes .sq-word, .sq-row.owes .sq-badge { background: var(--loss-bg); color: var(--loss); }
+.sq-p.carried .sq-word, .sq-row.carried .sq-badge { background: var(--surface-strong); color: var(--ink); }
+.sq-list { list-style: none; margin: 0; padding: 0 16px; }
+.sq-row { display: flex; align-items: center; min-height: 52px; border-top: 1px solid var(--line-soft); }
+.sq-row:first-child { border-top: none; }
+.sq-name { flex: 1; font-weight: 700; color: var(--ink); }
+.sq-row .sq-badge { font-size: 13px; padding: 4px 10px; }

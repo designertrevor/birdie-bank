@@ -1,11 +1,12 @@
 // The Tab: your net with each friend across every round, squared in the fewest payments.
 import { useState } from 'react';
 import { Empty, Header, Icon, Screen, useUI } from '../components/ui.jsx';
-import { Avatar, PayButton, RequestButton, SettleSheet } from '../components/Pay.jsx';
-import { useRemind } from '../lib/useRemind.js';
-import { update, useStore } from '../lib/store.js';
+import { Avatar, SettleSheet } from '../components/Pay.jsx';
+import { PersonActions, RecentPaid, SquareStrip } from '../components/TabCard.jsx';
+import { useStore } from '../lib/store.js';
 import { headToHeadSummary, nameOf, outstanding } from '../lib/ledger.js';
-import { payInfoFor } from '../lib/pay.js';
+import { canonicalOf, recentPayment } from '../lib/shared-tab.js';
+import { undoPayments, useTabSync } from '../lib/tab-sync.js';
 import { money } from '../lib/golf.js';
 import { myIds } from '../lib/format.js';
 import { AvatarButton, BottomNav } from '../nav.jsx';
@@ -16,13 +17,12 @@ const first = name => name.split(' ')[0];
 export default function Ledger() {
   const nav = useNav();
   const state = useStore();
-  const { ask } = useUI();
-  const remind = useRemind();
+  const { showToast } = useUI();
+  useTabSync({ live: true });
   const plan = outstanding(state);
   const [open, setOpen] = useState(null);
   const mine = myIds(state);
   const isMe = id => mine.has(id);
-  const myApp = payInfoFor(state, state.me);
 
   // One row per friend: what the plan has between you (a friend you pass money on for can be both ways, so it's netted)
   const byPerson = new Map();
@@ -42,19 +42,26 @@ export default function Ledger() {
   const history = [...state.settlements].sort((a, b) => b.at - a.at);
   const hasRounds = Object.values(state.rounds).some(r => r.status === 'done');
 
-  const undo = async s => {
-    if (!(await ask({ title: 'Undo this payment?', text: `${nameOf(state, s.from)} will owe ${nameOf(state, s.to)} ${money(s.amount)} again.`, confirmLabel: 'Undo payment' }))) return;
-    update(st => { st.settlements = st.settlements.filter(x => x.id !== s.id); });
+  // One tap, no confirm: it can be put back from the toast, and a shared payment updates both phones
+  const undo = s => {
+    const redo = undoPayments([s]);
+    showToast(`${nameOf(state, s.from).split(' ')[0]} owes ${nameOf(state, s.to).split(' ')[0]} again`, { label: 'Undo', run: redo });
   };
+  // People you squared with lately keep a card for a few days, so the last payment can be taken back
+  const who = canonicalOf(state);
+  const meId = state.me || [...mine][0] || null;
+  const recentSquare = [...new Set(state.settlements.flatMap(s => [s.from, s.to]).map(who))]
+    .filter(id => meId && !isMe(id) && !people.some(p => p.id === id))
+    .map(id => ({ id, pay: recentPayment(state, meId, id) }))
+    .filter(x => x.pay)
+    .sort((a, b) => b.pay.at - a.pay.at);
 
   const personRow = p => {
     const name = nameOf(state, p.id);
     const owesMe = p.net > 0;
     const amount = Math.abs(p.net);
     const n = h2h.get(p.id)?.rounds || 0;
-    const debt = p.debts.length === 1 ? p.debts[0] : owesMe
-      ? { from: p.id, to: state.me || p.debts[0].to, amount }
-      : { from: state.me || p.debts[0].from, to: p.id, amount };
+    const me = owesMe ? p.debts[0].to : p.debts[0].from;
     return (
       <div key={p.id} className="tab-card">
         <button className="tab-person" onClick={() => nav.push('person', { id: p.id })} aria-label={`${name}: ${owesMe ? 'owes you' : 'you owe'} ${money(amount)}. See the story`}>
@@ -66,15 +73,24 @@ export default function Ledger() {
           <div className={`tp-amt ${owesMe ? 'pos' : 'neg'}`}>{money(amount)}</div>
           <span className="chevron"><Icon name="caret-right" /></span>
         </button>
-        <div className="pay-acts">
-          {owesMe ? (
-            <>
-              <button className="pay-btn" onClick={() => remind(p.id, amount)} aria-label={`Remind ${first(name)} about ${money(amount)}`}><span className="pay-in"><Icon name="bell-ringing" fill /><span className="pay-lbl">Remind</span></span></button>
-              <RequestButton payer={payInfoFor(state, p.id)} mine={myApp} amount={amount} note="Golf" />
-            </>
-          ) : <PayButton info={payInfoFor(state, p.id)} amount={amount} note="Golf" />}
-          <button className="pay-btn ink" onClick={() => setOpen(debt)} aria-label={`Settle up with ${first(name)}`}><span className="pay-in"><Icon name="handshake" fill /><span className="pay-lbl">Settle up</span></span></button>
-        </div>
+        <PersonActions other={p.id} net={p.net} meId={state.me || me} />
+      </div>
+    );
+  };
+
+  const squareCard = ({ id, pay }) => {
+    const name = nameOf(state, id);
+    return (
+      <div key={id} className="tab-card square-card">
+        <button className="tab-person" onClick={() => nav.push('person', { id })} aria-label={`Square with ${name}. See the story`}>
+          <Avatar name={name} />
+          <div className="row-main">
+            <div className="tp-name">Square with {first(name)}</div>
+            <div className="tp-sub">All paid up</div>
+          </div>
+          <span className="chevron"><Icon name="caret-right" /></span>
+        </button>
+        <RecentPaid meId={meId} other={id} pay={pay} />
       </div>
     );
   };
@@ -92,6 +108,7 @@ export default function Ledger() {
     <Screen>
       <Header title="Tab" right={<AvatarButton />} />
       <div className="scroll">
+        <SquareStrip />
         {plan.length === 0 ? (
           <Empty title={hasRounds ? 'All square' : 'Nothing owed yet'}
             text={hasRounds ? 'Everyone’s settled up. Time to go win it back.' : 'Finish a round and the tab fills in. Money nets out across every round, so you pay less often.'}
@@ -117,6 +134,7 @@ export default function Ledger() {
             <p className="field-help pad">Netted across every round, then squared in the fewest payments. Nobody is asked to pay someone they haven’t played with.</p>
           </>
         )}
+        {recentSquare.map(squareCard)}
         {history.length > 0 && (
           <>
             <div className="sec-label">Payments</div>

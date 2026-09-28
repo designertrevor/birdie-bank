@@ -2,7 +2,8 @@
 // Pay buttons only ever show to the person paying or the person owed, and use the payee's own app.
 import { useState } from 'react';
 import { Icon, Numpad, Sheet, useUI } from './ui.jsx';
-import { update, uid, useStore } from '../lib/store.js';
+import { useStore } from '../lib/store.js';
+import { markPaid } from '../lib/tab-sync.js';
 import { money } from '../lib/golf.js';
 import { myIds } from '../lib/format.js';
 import { nameOf } from '../lib/ledger.js';
@@ -46,9 +47,9 @@ export function RequestButton({ payer, mine, amount, note, className = 'pay-btn'
   );
 }
 
-/** Record a payment on the Tab. */
-function recordPayment(from, to, amount, extra = {}) {
-  update(s => { s.settlements.push({ id: uid('s_'), from, to, amount, at: Date.now(), ...extra }); });
+/** Record a payment on the Tab: tied to the shared round transfers between the two when there are any, so both phones see it. */
+function recordPayment(from, to, amount) {
+  return markPaid({ from, to, amount });
 }
 
 /**

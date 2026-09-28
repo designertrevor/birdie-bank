@@ -196,17 +196,21 @@ export function UIProvider({ children }) {
   const [toast, setToast] = useState(null);
   const [confirm, setConfirm] = useState(null);
   const timer = useRef();
-  const showToast = useCallback((msg) => {
+  // An optional action ({ label, run }), like Undo, keeps the toast up a little longer
+  const showToast = useCallback((msg, action = null) => {
     clearTimeout(timer.current);
-    setToast({ msg, key: Date.now() });
-    timer.current = setTimeout(() => setToast(null), 2000);
+    setToast({ msg, action, key: Date.now() });
+    timer.current = setTimeout(() => setToast(null), action ? 5000 : 2000);
   }, []);
   const ask = useCallback(opts => new Promise(resolve => setConfirm({ ...opts, resolve })), []);
   const close = v => { confirm?.resolve(v); setConfirm(null); };
   return (
     <UICtx.Provider value={{ showToast, ask }}>
       {children}
-      <div className={`toast ${toast ? 'show' : ''}`} role="status" aria-live="polite">{toast?.msg}</div>
+      <div className={`toast ${toast ? 'show' : ''} ${toast?.action ? 'has-act' : ''}`} role="status" aria-live="polite">
+        {toast?.msg}
+        {toast?.action && <button className="toast-act" onClick={() => { toast.action.run(); setToast(null); }}>{toast.action.label}</button>}
+      </div>
       {confirm && <Confirm confirm={confirm} close={close} />}
     </UICtx.Provider>
   );
