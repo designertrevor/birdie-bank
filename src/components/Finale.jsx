@@ -7,7 +7,7 @@ import { money } from '../lib/golf.js';
 import { payInfoFor } from '../lib/pay.js';
 import { PayButton, RequestButton } from './Pay.jsx';
 import { buzz, confettiFrom } from '../lib/delight.js';
-import { meFor, roundDate, roundPlayerName, shareRound } from '../lib/format.js';
+import { meFor, placeOf, roundDate, roundPlayerName, shareRound } from '../lib/format.js';
 import { markRoundAsked, roundAsked, submitReaction } from '../lib/feedback.js';
 import { useNav } from '../lib/nav.js';
 import { revealSteps, revealTiming } from '../lib/reveal.js';
@@ -125,7 +125,7 @@ export function Reveal({ round, res, onNext, onDetail, extra, instant = false })
         )}
         {/* Losers land first, the winner last. Equal money shares a place, so partners both land on top */}
         {res.standings.map((p, i) => (
-          <CountRow key={p.id} place={res.standings.findIndex(q => q.amount === p.amount) + 1} name={p.name} amount={p.amount} me={p.id === me}
+          <CountRow key={p.id} place={placeOf(res.standings, res.standings.indexOf(p))} name={p.name} amount={p.amount} me={p.id === me}
             delay={t.stepsEnd + (count - 1 - i) * t.stagger} duration={t.count} skip={skipped} />
         ))}
         {extra}
@@ -207,7 +207,7 @@ export function SettleUp({ round, res, onBack, onNext }) {
  * Beat 3: a results image sized for stories and the group chat. The PNG is drawn ahead of time
  * so the share sheet opens straight from the tap (iOS drops the share if we make it wait).
  */
-export function ShareCard({ round, res, onBack, onDone }) {
+export function ShareCard({ round, res, onBack, onDone, doneLabel = 'Done' }) {
   const { showToast } = useUI();
   // Off by default so nobody posts the money by accident; your choice is remembered
   const showAmounts = useStore(s => !!s.settings.shareAmounts);
@@ -228,25 +228,24 @@ export function ShareCard({ round, res, onBack, onDone }) {
 
   const ready = img && img.amounts === showAmounts;
   const fileName = shareImageName(round);
-  const share = async () => {
-    if (ready && typeof File !== 'undefined') {
-      const file = new File([img.blob], fileName, { type: 'image/png' });
-      if (navigator.canShare?.({ files: [file] })) {
-        try { await navigator.share({ files: [file], title: 'Birdie Bank results' }); return; }
-        catch (e) { if (e?.name === 'AbortError') return; }
-      }
+  // Phones get the system share sheet (Messages, Instagram, Save Image), never a download page.
+  // Only a device that can't share files (most desktops) downloads the PNG instead.
+  const shareImage = async () => {
+    if (!ready || typeof File === 'undefined') return;
+    const file = new File([img.blob], fileName, { type: 'image/png' });
+    if (navigator.canShare?.({ files: [file] })) {
+      try { await navigator.share({ files: [file] }); } catch { /* closed the sheet */ }
+      return;
     }
-    shareRound(round, res, showToast, { amounts: showAmounts });
-  };
-  const save = () => {
-    if (!ready) return;
     const a = document.createElement('a');
     a.href = img.url;
     a.download = fileName;
     document.body.appendChild(a);
     a.click();
     a.remove();
+    showToast('Image saved to your downloads');
   };
+  const shareTextOnly = () => shareRound(round, res, showToast, { amounts: showAmounts });
 
   return (
     <>
@@ -254,7 +253,7 @@ export function ShareCard({ round, res, onBack, onDone }) {
       <div className="scroll">
         {img ? (
           <img className="share-img" src={img.url} width={IMAGE_W} height={IMAGE_H}
-            alt={`Results card: ${round.course.name}, ${GAMES[round.game].name}. ${res.standings.map((p, i) => `${i + 1}. ${p.name}${showAmounts ? ` ${money(p.amount, { sign: true })}` : ''}`).join(', ')}`} />
+            alt={`Results card: ${round.course.name}, ${GAMES[round.game].name}. ${res.standings.map((p, i) => `${placeOf(res.standings, i)}. ${p.name}${showAmounts ? ` ${money(p.amount, { sign: true })}` : ''}`).join(', ')}`} />
         ) : (
           <div className="share-card">
             <div className="sc-brand">Birdie Bank</div>
@@ -274,10 +273,10 @@ export function ShareCard({ round, res, onBack, onDone }) {
         <HowWasIt round={round} />
       </div>
       <div className="cta-wrap">
-        <button className="full-btn" onClick={share}><Icon name="share-network" /> Send to the group chat</button>
+        <button className="full-btn" onClick={shareImage} disabled={!ready}><Icon name="share-network" /> {ready ? 'Share image' : 'Making the image…'}</button>
         <div className="cta-row">
-          <button className="full-btn outline" onClick={save} disabled={!ready}><Icon name="download-simple" /> Save image</button>
-          <button className="full-btn outline" onClick={onDone}>Done</button>
+          <button className="full-btn outline" onClick={shareTextOnly}><Icon name="text-aa" /> Share as text</button>
+          <button className="full-btn outline" onClick={onDone}>{doneLabel}</button>
         </div>
       </div>
     </>

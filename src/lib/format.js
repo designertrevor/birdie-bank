@@ -27,9 +27,14 @@ export function roundDate(r) {
 }
 
 /** Plain-text results. With `amounts: false` it lists the order only, no money and no settle-up. */
+/** A standing's place: equal money shares a place (1, 1, 3, 3), same as the reveal and the image. */
+export function placeOf(standings, i) {
+  return standings.findIndex(q => q.amount === standings[i].amount) + 1;
+}
+
 export function shareText(round, res, { amounts = true } = {}) {
   const lines = [`${GAMES[round.game].name} at ${round.course.name} · ${roundDate(round)}`];
-  res.standings.forEach((p, i) => lines.push(amounts ? `${i + 1}. ${p.name} ${money(p.amount, { sign: true })}` : `${i + 1}. ${p.name}`));
+  res.standings.forEach((p, i) => lines.push(amounts ? `${placeOf(res.standings, i)}. ${p.name} ${money(p.amount, { sign: true })}` : `${placeOf(res.standings, i)}. ${p.name}`));
   if (amounts && res.transfers.length) {
     lines.push('', 'Settle up:');
     res.transfers.forEach(t => lines.push(`${roundPlayerName(round, t.from)} → ${roundPlayerName(round, t.to)} ${money(t.amount)}`));

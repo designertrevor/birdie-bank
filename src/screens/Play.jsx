@@ -7,9 +7,9 @@ import {
   resizeRound, roundLegs, roundResults, scoredHolesDropped, scorers, skinsKinds, skinsTable, strokesFor, wolfHoleSetup, changeBets, wholeRoundOnly,
 } from '../lib/round.js';
 import { findCourse } from '../lib/courses.js';
-import { money, scoreName, pickupGross } from '../lib/golf.js';
+import { money, netScoreName, scoreName, pickupGross } from '../lib/golf.js';
 import {
-  BBBPicker, DotsRow, HammerPanel, MatchPanel, MoneyPanel, PointsPanel, RabbitPanel, SixesPanel, SnakePanel, SnakePicker, TotalsPanel, VegasPanel,
+  BBBPicker, DotsRow, HammerPanel, MatchPanel, MoneyPanel, PointsPanel, RabbitPanel, ScramblePanel, SixesPanel, SnakePanel, SnakePicker, TotalsPanel, VegasPanel,
 } from '../components/GamePanels.jsx';
 import { GameOptions } from '../components/GameOptions.jsx';
 import { optionsProblem, stakeSummary } from '../lib/stakes.js';
@@ -248,6 +248,15 @@ function PlayRound({ round }) {
         <div className="mc"><span className="ml">Hole</span><span className="mv">{hole.no}</span></div>
         <div className="mc"><span className="ml">Par</span><span className="mv">{hole.par}</span></div>
         <div className="mc"><span className="ml">HCP</span><span className="mv">{hole.hdcp ?? '–'}</span></div>
+        {round.useHandicaps && (() => {
+          // Who gets a stroke here, up top, so a birdie that doesn't move the money makes sense
+          const getting = units.filter(u => strokesFor(round, u, hole) > 0).map(u => u.team ? u.name : u.name.split(' ')[0]);
+          return (
+            <div className="mc strokes-cell"><span className="ml">Strokes</span>
+              <span className="mv">{getting.length ? <><span className="stroke-dots" aria-hidden="true">●</span>{getting.join(', ')}</> : 'None'}</span>
+            </div>
+          );
+        })()}
       </div>
 
       {game === 'banker' && (
@@ -261,6 +270,7 @@ function PlayRound({ round }) {
       {game === 'sixes' && <SixesPanel round={round} hole={hole} />}
       {(game === 'stroke' || game === 'stableford' || game === 'quota') && <TotalsPanel round={round} />}
       {(game === 'nines' || game === 'bbb' || game === 'dots') && <PointsPanel round={round} />}
+      {game === 'scramble' && <ScramblePanel round={round} />}
       {game === 'aces' && <MoneyPanel round={round} results={results} icon="spade" label="Aces & deuces so far" />}
       {game === 'rabbit' && <RabbitPanel round={round} hole={hole} />}
       {game === 'snake' && <SnakePanel round={round} hole={hole} marks={marks} />}
@@ -290,7 +300,7 @@ function PlayRound({ round }) {
                     {st > 0 && <span className="stroke-dots" aria-label={`Gets ${st} stroke${st > 1 ? 's' : ''}`}>{'●'.repeat(st)} Gets {st} stroke{st > 1 ? 's' : ''}</span>}
                     {st < 0 && <span className="stroke-dots">Gives back {-st} stroke{st < -1 ? 's' : ''}</span>}
                     {game === 'banker' && !isBanker && <span> Bet {money(banker.bets[p.id] || 0)}{banker.doubled[p.id] ? (banker.doubleBack ? ' · 4×' : ' · 2×') : ''}</span>}
-                    {touched[p.id] && v !== 'X' && <span className={`score-name s${Math.max(-2, Math.min(2, v - hole.par))}`}> {scoreName(v, hole.par)}</span>}
+                    {touched[p.id] && v !== 'X' && <span className={`score-name s${Math.max(-2, Math.min(2, v - hole.par))}`}> {scoreName(v, hole.par)}{st !== 0 && `, ${netScoreName(v - st, hole.par)}`}</span>}
                   </div>
                   <button className={`pickup-btn ${v === 'X' ? 'on' : ''}`} onClick={() => setScore(p.id, v === 'X' ? hole.par : 'X')} aria-pressed={v === 'X'}>
                     <Icon name="hand-grabbing" /> {v === 'X' ? `Picked up (counts ${shown})` : 'Picked up'}

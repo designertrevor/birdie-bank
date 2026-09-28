@@ -1,12 +1,12 @@
 import { useEffect, useRef, useState } from 'react';
 import { Empty, Header, Icon, Screen, useUI } from '../components/ui.jsx';
 import { getState, update, useStore } from '../lib/store.js';
-import { GAMES, holeAtPos, holeComplete, playsHole, roundLegs, roundNotes, roundResults, scoreSummary, scorers, sideNames, skinsKinds, skinsTable } from '../lib/round.js';
+import { GAMES, holeAtPos, holeComplete, playsHole, roundLegs, roundNotes, roundResults, scoreSummary, scorers, sideNames, skinsKinds, skinsTable, strokesFor, netFor } from '../lib/round.js';
 import { matchLabel } from '../lib/games.js';
 import { money } from '../lib/golf.js';
 import { useNav } from '../lib/nav.js';
 import { leaveRound } from '../lib/rounds.js';
-import { meFor, roundDate, roundPlayerName, shareRound } from '../lib/format.js';
+import { meFor, placeOf, roundDate, roundPlayerName } from '../lib/format.js';
 import { accountsEnabled, useAccount } from '../lib/cloud.js';
 import { SignInSheet } from '../components/Account.jsx';
 import { HowWasIt, Reveal, SettleUp, ShareCard } from '../components/Finale.jsx';
@@ -17,7 +17,7 @@ const finaleStage = new Map();
 
 export default function RoundDetail({ id, celebrate }) {
   const nav = useNav();
-  const { ask, showToast } = useUI();
+  const { ask } = useUI();
   const state = useStore();
   const round = state.rounds[id];
   const hero = useRef();
@@ -36,6 +36,8 @@ export default function RoundDetail({ id, celebrate }) {
   const setStage = s => { if (celebrate) finaleStage.set(id, { stage: s, at: round?.finishedAt }); setStageRaw(s); };
   // Coming back to the reveal (from Settle up or Suggest) shows the end state instead of replaying it
   const [revealSeen, setRevealSeen] = useState(() => celebrate && finaleStage.get(id)?.at === round?.finishedAt);
+  // Share from the saved round opens the same results image, and comes back here after
+  const [shareFrom, setShareFrom] = useState(null);
 
   if (!round) {
     return <Screen><Header title="Round" onBack={nav.pop} /><Empty title="Round not found" text="It may have been deleted." /></Screen>;
@@ -94,16 +96,26 @@ export default function RoundDetail({ id, celebrate }) {
       <Screen key={stage}>
         {stage === 'reveal' && <Reveal round={round} res={res} instant={revealSeen} onNext={() => { setRevealSeen(true); setStage(res.transfers.length ? 'settle' : 'share'); }} onDetail={() => { setRevealSeen(true); setStage('detail'); }} extra={<>{notesEl}{saveRow && <div style={{ marginTop: 12 }}>{saveRow}</div>}</>} />}
         {stage === 'settle' && <SettleUp round={round} res={res} onBack={() => setStage('reveal')} onNext={() => setStage('share')} />}
-        {stage === 'share' && <ShareCard round={round} res={res} onBack={() => setStage(res.transfers.length ? 'settle' : 'reveal')} onDone={done} />}
+        {stage === 'share' && (shareFrom === 'detail'
+          ? <ShareCard round={round} res={res} onBack={() => setStage('detail')} onDone={() => setStage('detail')} doneLabel="Back to the round" />
+          : <ShareCard round={round} res={res} onBack={() => setStage(res.transfers.length ? 'settle' : 'reveal')} onDone={done} />)}
         {signingIn && <SignInSheet open onClose={() => setSigningIn(false)} />}
       </Screen>
     );
   }
 
+  // In a scramble the team gets the strokes, not each player
+  const strokesNote = p => {
+    const team = round.game === 'scramble' && round.teams?.find(t => t.players.includes(p.id));
+    const n = team ? team.plays || 0 : p.plays;
+    if (!n) return null;
+    return <span className="li-sub"> · {team ? 'team got' : 'got'} {n} stroke{n === 1 ? '' : 's'}</span>;
+  };
+
   return (
     <Screen>
       <Header title={celebrate ? 'Final results' : 'Round'} onBack={celebrate ? undefined : nav.pop} small
-        right={<button className="header-btn" onClick={() => shareRound(round, res, showToast, { amounts: !!state.settings.shareAmounts })}><Icon name="share-network" /> Share</button>} />
+        right={<button className="header-btn" onClick={() => { setShareFrom('detail'); setStage('share'); }}><Icon name="share-network" /> Share</button>} />
       <div className="scroll">
         <div className="winner-hero" ref={hero}>
           <Icon name={allSquare ? 'handshake' : 'crown'} fill className="crown" />
@@ -119,8 +131,8 @@ export default function RoundDetail({ id, celebrate }) {
         <div className="sec-label">Standings</div>
         {res.standings.map((p, i) => (
           <div key={p.id} className="settle-row">
-            <div className="sr">{i + 1}</div>
-            <div className="sn">{p.name}{p.plays ? <span className="li-sub"> · got {p.plays} stroke{p.plays === 1 ? '' : 's'}</span> : null}</div>
+            <div className="sr">{placeOf(res.standings, i)}</div>
+            <div className="sn">{p.name}{strokesNote(p)}</div>
             <div className={`sa ${p.amount > 0 ? 'pos' : p.amount < 0 ? 'neg' : ''}`}>{money(p.amount, { sign: true })}</div>
           </div>
         ))}
@@ -412,6 +424,12 @@ function GameBreakdown({ round, res }) {
 export function Scorecard({ round, current, onHole }) {
   const out = round.holes;
   const cls = (g, par) => (g === 'X' ? 'pu' : g <= par - 2 ? 'eagle' : g === par - 1 ? 'birdie' : g === par + 1 ? 'bogey' : g >= par + 2 ? 'dbl' : '');
+  const hc = !!round.useHandicaps;
+  const units = scorers(round);
+  const anyStrokes = hc && units.some(p => out.some(h => strokesFor(round, p, h) !== 0));
+  // With onHole (during play), any cell in a hole's column jumps to that hole
+  const colProps = no => (onHole ? { onClick: () => onHole(no), className: 'sc-tap' } : {});
+  const netTotal = p => out.reduce((a, h) => { const n = holeComplete(round, h) ? netFor(round, p, h) : null; return n == null ? a : a + n; }, 0);
   return (
     <div className="sc-wrap">
       <table className="sc-table scorecard">
@@ -424,28 +442,44 @@ export function Scorecard({ round, current, onHole }) {
               </th>
             ))}
             <th>Tot</th>
+            {anyStrokes && <th>Net</th>}
           </tr>
-          <tr className="par-row"><td className="sticky">Par</td>{out.map(h => <td key={h.no}>{h.par}</td>)}<td>{round.par}</td></tr>
+          <tr className="par-row"><td className="sticky">Par</td>{out.map(h => <td key={h.no} {...colProps(h.no)}>{h.par}</td>)}<td>{round.par}</td>{anyStrokes && <td />}</tr>
+          {hc && <tr className="hcp-row"><td className="sticky">HCP</td>{out.map(h => <td key={h.no} {...colProps(h.no)}>{h.hdcp ?? '–'}</td>)}<td />{anyStrokes && <td />}</tr>}
         </thead>
         <tbody>
-          {scorers(round).map(p => {
+          {units.map(p => {
             const sum = scoreSummary(round, p.id);
             return (
               <tr key={p.id}>
-                <td className="sticky">{p.name.split(' ')[0]}</td>
+                <td className="sticky">{p.team ? p.name : p.name.split(' ')[0]}</td>
                 {out.map(h => {
                   const g = round.scores[h.no]?.[p.id];
                   // A player who left shows an en dash on the holes after
                   const gone = g == null && !(p.team ? p.players.some(pid => playsHole(round, pid, h)) : playsHole(round, p.id, h));
-                  return <td key={h.no} className={`${h.no === current ? 'cur' : ''}`}>{gone ? <span className="empty-dot">–</span> : g == null ? <span className="empty-dot">·</span> : <span className={`sc-mark ${cls(g, h.par)}`}>{g}</span>}</td>;
+                  const st = hc && !gone ? strokesFor(round, p, h) : 0;
+                  const tap = colProps(h.no);
+                  return (
+                    <td key={h.no} className={`${h.no === current ? 'cur' : ''} ${tap.className || ''}`} onClick={tap.onClick}>
+                      <span className="sc-cell">
+                        {gone ? <span className="empty-dot">–</span> : g == null ? <span className="empty-dot">·</span> : <span className={`sc-mark ${cls(g, h.par)}`}>{g}</span>}
+                        {st > 0 && <span className="sc-strokes" role="img" aria-label={`Gets ${st} stroke${st > 1 ? 's' : ''}`}>{Array.from({ length: st }, (_, i) => <i key={i} />)}</span>}
+                        {st < 0 && <span className="sc-strokes give" aria-label={`Gives back ${-st} stroke${st < -1 ? 's' : ''}`}>{'–'.repeat(-st)}</span>}
+                      </span>
+                    </td>
+                  );
                 })}
                 <td className="tot">{sum.played ? sum.gross : '–'}</td>
+                {anyStrokes && <td className="tot">{sum.played ? netTotal(p) : '–'}</td>}
               </tr>
             );
           })}
         </tbody>
       </table>
-      <div className="sc-legend"><span className="sc-mark birdie">3</span> birdie <span className="sc-mark eagle">2</span> eagle <span className="sc-mark bogey">5</span> bogey <span className="sc-mark pu">X</span> picked up</div>
+      <div className="sc-legend">
+        <span className="sc-mark birdie">3</span> birdie <span className="sc-mark eagle">2</span> eagle <span className="sc-mark bogey">5</span> bogey <span className="sc-mark pu">X</span> picked up
+        {anyStrokes && <> <span className="sc-strokes inline"><i /></span> gets a stroke</>}
+      </div>
     </div>
   );
 }

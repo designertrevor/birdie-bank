@@ -209,3 +209,12 @@ test('shared round round-trips and merges per hole', () => {
   assert.equal(stable({ b: 1, a: [2, { d: 1, c: 2 }] }), stable({ a: [2, { c: 2, d: 1 }], b: 1 }));
   assert.ok(!('localMe' in buildMeta({ ...r, localMe: 'a', shared: { code: 'X' } })));
 });
+
+test('netScoreName names a net score by strokes to par', async () => {
+  const { netScoreName } = await import('./golf.js');
+  assert.equal(netScoreName(3, 4), 'net birdie');
+  assert.equal(netScoreName(1, 3), 'net eagle'); // a net 1 on a par 3 is not a hole in one
+  assert.equal(netScoreName(4, 4), 'net par');
+  assert.equal(netScoreName(8, 4), 'net +4');
+  assert.equal(netScoreName(1, 5), 'net albatross');
+});
