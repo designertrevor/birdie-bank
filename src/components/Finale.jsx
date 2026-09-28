@@ -207,7 +207,7 @@ export function SettleUp({ round, res, onBack, onNext }) {
  * Beat 3: a results image sized for stories and the group chat. The PNG is drawn ahead of time
  * so the share sheet opens straight from the tap (iOS drops the share if we make it wait).
  */
-export function ShareCard({ round, res, onBack, onDone }) {
+export function ShareCard({ round, res, onBack, onDone, doneLabel = 'Done' }) {
   const { showToast } = useUI();
   // Off by default so nobody posts the money by accident; your choice is remembered
   const showAmounts = useStore(s => !!s.settings.shareAmounts);
@@ -228,25 +228,24 @@ export function ShareCard({ round, res, onBack, onDone }) {
 
   const ready = img && img.amounts === showAmounts;
   const fileName = shareImageName(round);
-  const share = async () => {
-    if (ready && typeof File !== 'undefined') {
-      const file = new File([img.blob], fileName, { type: 'image/png' });
-      if (navigator.canShare?.({ files: [file] })) {
-        try { await navigator.share({ files: [file], title: 'Birdie Bank results' }); return; }
-        catch (e) { if (e?.name === 'AbortError') return; }
-      }
+  // Phones get the system share sheet (Messages, Instagram, Save Image), never a download page.
+  // Only a device that can't share files (most desktops) downloads the PNG instead.
+  const shareImage = async () => {
+    if (!ready || typeof File === 'undefined') return;
+    const file = new File([img.blob], fileName, { type: 'image/png' });
+    if (navigator.canShare?.({ files: [file] })) {
+      try { await navigator.share({ files: [file] }); } catch { /* closed the sheet */ }
+      return;
     }
-    shareRound(round, res, showToast, { amounts: showAmounts });
-  };
-  const save = () => {
-    if (!ready) return;
     const a = document.createElement('a');
     a.href = img.url;
     a.download = fileName;
     document.body.appendChild(a);
     a.click();
     a.remove();
+    showToast('Image saved to your downloads');
   };
+  const shareTextOnly = () => shareRound(round, res, showToast, { amounts: showAmounts });
 
   return (
     <>
@@ -274,10 +273,10 @@ export function ShareCard({ round, res, onBack, onDone }) {
         <HowWasIt round={round} />
       </div>
       <div className="cta-wrap">
-        <button className="full-btn" onClick={share}><Icon name="share-network" /> Send to the group chat</button>
+        <button className="full-btn" onClick={shareImage} disabled={!ready}><Icon name="share-network" /> {ready ? 'Share image' : 'Making the image…'}</button>
         <div className="cta-row">
-          <button className="full-btn outline" onClick={save} disabled={!ready}><Icon name="download-simple" /> Save image</button>
-          <button className="full-btn outline" onClick={onDone}>Done</button>
+          <button className="full-btn outline" onClick={shareTextOnly}><Icon name="text-aa" /> Share as text</button>
+          <button className="full-btn outline" onClick={onDone}>{doneLabel}</button>
         </div>
       </div>
     </>

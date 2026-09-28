@@ -3,7 +3,7 @@ import { Icon, useUI } from './ui.jsx';
 import { update, uid } from '../lib/store.js';
 import {
   hammerOptions, hammerTable, holeAtPos, holeComplete, nassauAmounts, nassauPressOptions, nassauWinners, playersOn, pointsTable, pressMode, rabbitTable,
-  roundLegs, sideNames, sides, sixesMatches, snakeTable, totalsTable, vegasPreview, vegasTable,
+  roundLegs, sideNames, sides, sixesMatches, snakeTable, totalsTable, vegasPreview, vegasTable, scorers, netFor, playsHole,
 } from '../lib/round.js';
 import { money, nassauBets } from '../lib/golf.js';
 import { DOT_KINDS, scoreDots } from '../lib/games.js';
@@ -147,6 +147,23 @@ export function TotalsPanel({ round }) {
   const label = { stroke: 'Net to par', stableford: 'Stableford points', quota: 'Points / quota' }[round.game];
   const lead = played ? `${firstName(sorted[0].name)} leads` : 'Nobody’s ahead yet';
   return <ChipsPanel icon={round.game === 'stroke' ? 'list-numbers' : round.game === 'quota' ? 'target' : 'star'} label={`${label} · ${played} hole${played === 1 ? '' : 's'}`} items={sorted.map((x, i) => ({ id: x.id, name: firstName(x.name), value: fmt(x), lead: i === 0 ? lead : null }))} />;
+}
+
+/**
+ * Scramble pays the whole pot to the lowest net total, so the money only moves when the lead changes.
+ * Show each team's net to par so a birdie that doesn't move the money still shows up somewhere.
+ */
+export function ScramblePanel({ round }) {
+  const teams = scorers(round).map(t => {
+    const holes = round.holes.filter(h => holeComplete(round, h) && t.players.some(pid => playsHole(round, pid, h)));
+    const toPar = holes.reduce((a, h) => a + netFor(round, t, h) - h.par, 0);
+    return { id: t.id, name: t.name, toPar, played: holes.length };
+  }).sort((a, b) => a.toPar - b.toPar);
+  const played = Math.max(0, ...teams.map(t => t.played));
+  const fmt = v => (v === 0 ? 'E' : v > 0 ? `+${v}` : String(v));
+  const gap = teams.length > 1 ? teams[1].toPar - teams[0].toPar : 0;
+  const lead = !played ? 'Nobody’s ahead yet' : gap === 0 ? 'Tied at the top' : `${teams[0].name} lead by ${gap}`;
+  return <ChipsPanel icon="list-numbers" label={`Net to par · low team wins · ${played} hole${played === 1 ? '' : 's'}`} items={teams.map((t, i) => ({ id: t.id, name: t.name, value: fmt(t.toPar), lead: i === 0 ? lead : null }))} />;
 }
 
 export function PointsPanel({ round }) {
