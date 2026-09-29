@@ -12,7 +12,7 @@
 import { roundResults } from './round.js';
 import { meFor } from './format.js';
 import { outstanding, tabWith } from './ledger.js';
-import { FETCH_DAYS, canonicalOf, cents, codeOf, doneRounds, finishedAt, nettedId, nettedOn, pairDebt, paidOn, played, sharedRounds } from './pair-debts.js';
+import { FETCH_DAYS, canonicalOf, cents, codeOf, finishedAt, nettedId, nettedOn, pairDebt, paidOn, played, sharedRounds } from './pair-debts.js';
 
 export { FETCH_DAYS, canonicalOf, codeOf, nettedId, pairDebt, played, sharedRounds };
 
@@ -327,7 +327,8 @@ export function stripRound(state, { now = Date.now() } = {}) {
   const shared = sharedRounds(state, { days: STRIP_DAYS, now }).filter(r => roundResults(r).transfers.length);
   const round = shared.at(-1);
   if (!round) return null;
-  const newest = doneRounds(state).filter(r => played(r, state)).sort((a, b) => finishedAt(b) - finishedAt(a))[0];
+  // Your newest round of any kind (a points round after it means it isn't your latest)
+  const newest = Object.values(state.rounds || {}).filter(r => r.status === 'done' && played(r, state)).sort((a, b) => finishedAt(b) - finishedAt(a))[0];
   return { round, latest: newest?.id === round.id };
 }
 

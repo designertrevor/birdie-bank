@@ -3,6 +3,7 @@
 import { GAMES } from './round.js';
 import { roundStakeLines } from './stakes.js';
 import { gameLabel } from './format.js';
+import { countsMoney, playForLine } from './play-for.js';
 
 export function escapeHtml(s) {
   return String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -31,8 +32,12 @@ export function joinPreview(meta) {
   const who = nameList((Array.isArray(meta.players) ? meta.players : []).map(p => first(p?.name)));
   let stakes = '';
   try { stakes = meta.game && meta.settings ? roundStakeLines(meta).map(l => l.line).filter(Boolean).join(' + ') : ''; } catch { stakes = ''; }
-  const facts = [who, stakes, meta.holesCount ? `${meta.holesCount} holes` : ''].filter(Boolean).join(' · ');
-  const tail = done ? 'See who won and who pays who on Birdie Bank.' : `Tap to follow the money live for ${what}. No download needed.`;
+  const facts = [who, stakes, meta.holesCount ? `${meta.holesCount} holes` : '', playForLine(meta) || ''].filter(Boolean).join(' · ');
+  // A points or reward round has no money to follow
+  const isMoney = countsMoney(meta);
+  const tail = done
+    ? (isMoney ? 'See who won and who pays who on Birdie Bank.' : 'See who won on Birdie Bank.')
+    : `Tap to follow ${isMoney ? 'the money' : 'the scores'} live for ${what}. No download needed.`;
   return { title, description: facts ? `${facts}. ${tail}` : tail };
 }
 

@@ -59,6 +59,7 @@ function fresh() {
     tabRows: {},       // this phone's copy of the shared Tab rows, for who's square (see shared-tab.js)
     plans: {},         // upcoming rounds (see plans.js)
     usuals: [],        // saved "usual" setups, at most 5 (see usuals.js); an array, so never inside settings
+    rewardsDone: {},   // reward lines marked done on this phone, "roundId:from>to" -> time (see play-for.js)
     settings: structuredClone(DEFAULT_SETTINGS),
   };
 }

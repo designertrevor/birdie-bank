@@ -2,6 +2,7 @@
 import { findCourse } from './courses.js';
 import { GAMES, sideGamesOf } from './round.js';
 import { defaultTeams } from './teams.js';
+import { storedPlayFor } from './play-for.js';
 
 /**
  * The setup screen's starting values for a round like `round`, or null if its game is gone.
@@ -44,6 +45,8 @@ export function rematchSetup(state, round) {
     teams,
     // Side games come along with their own bets (absent on rounds that had none)
     ...(sideGamesOf(round).length ? { sideGames: structuredClone(sideGamesOf(round)) } : {}),
+    // Played for points or a reward: the rematch is too (absent on money rounds)
+    ...(storedPlayFor(round.playFor) ? { playFor: storedPlayFor(round.playFor) } : {}),
     step: !course ? 1 : missing.length ? 2 : 3,
   };
 }

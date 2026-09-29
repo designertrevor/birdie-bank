@@ -17,6 +17,7 @@ import { dayLabel } from './plans.js';
 import { PAY_APPS } from './pay.js';
 import { lastResult, roundTime } from './history.js';
 import { paymentGroups } from './shared-tab.js';
+import { countsMoney, rewardOutcome, unitFmt } from './play-for.js';
 
 export const LATELY_DAYS = 30;
 const DAY = 24 * 60 * 60 * 1000;
@@ -113,7 +114,8 @@ export function latelyItems(state, now = Date.now(), { carries = state?.carries,
     }
   }
 
-  // Finished rounds: who took it, and only your own amount
+  // Finished rounds: who took it, and only your own amount (in points for a points or reward
+  // round, which is never money; a reward round says who's buying instead)
   const shown = lastResult(state)?.round?.id;
   for (const r of Object.values(state.rounds || {})) {
     if (r?.status !== 'done' || r.id === shown || !inWindow(roundTime(r)) || !GAMES[r.game]) continue;
@@ -125,10 +127,13 @@ export function latelyItems(state, now = Date.now(), { carries = state?.carries,
     const took = !who.length ? 'All square' : who.length === 1 ? `${who[0]} took it` : `${who.slice(0, -1).join(', ')} and ${who.at(-1)} split it`;
     const played = me && r.players.some(p => p.id === me);
     const amount = played ? cents(bal[me] ?? 0) : null;
+    const fmt = unitFmt(r);
+    const reward = rewardOutcome(r, roundResults(r));
+    const yours = amount == null ? null : amount === 0 ? (countsMoney(r) ? 'You broke even' : 'You were level') : `You ${fmt(amount, { sign: true })}`;
     items.push({
       id: `recap:${r.id}`, kind: 'recap', at: roundTime(r),
       text: `${gameLabel(r)} at ${r.course?.name || 'the course'} · ${took}`,
-      sub: amount == null ? agoLabel(roundTime(r), t) : amount === 0 ? `You broke even · ${agoLabel(roundTime(r), t)}` : `You ${money(amount, { sign: true })} · ${agoLabel(roundTime(r), t)}`,
+      sub: [reward ? reward.buy : yours, agoLabel(roundTime(r), t)].filter(Boolean).join(' · '),
       target: ['roundDetail', { id: r.id }],
     });
   }

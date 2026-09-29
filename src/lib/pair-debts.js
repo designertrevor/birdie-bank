@@ -6,6 +6,7 @@
 // count it. Pure, unit tested. Kept apart from ledger.js and shared-tab.js so both can use it.
 import { roundResults } from './round.js';
 import { meFor, myIds } from './format.js';
+import { countsMoney } from './play-for.js';
 
 const DAY = 864e5;
 /** Shared rounds this recent are looked up on the server. */
@@ -24,7 +25,8 @@ export function canonicalOf(state) {
   return id => (state.me && mine.has(id) ? state.me : id);
 }
 
-export const doneRounds = state => Object.values(state.rounds || {}).filter(r => r.status === 'done');
+/** Finished money rounds: a points or reward round never puts a dollar on the Tab. */
+export const doneRounds = state => Object.values(state.rounds || {}).filter(r => r.status === 'done' && countsMoney(r));
 export const finishedAt = r => r.finishedAt || r.createdAt || 0;
 
 /** You played this round (a watcher's copy never counts). */

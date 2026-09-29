@@ -1,8 +1,8 @@
 // The results image: a story-sized PNG of the round (course, game, winner, standings, the bets)
 // drawn on a canvas in the app's fonts. shareCardModel is pure and tested; the drawing needs a DOM.
-import { money } from './golf.js';
 import { gameLabel, roundDate } from './format.js';
 import { revealSteps } from './reveal.js';
+import { countsMoney, rewardOutcome, unitFmt } from './play-for.js';
 
 export const IMAGE_W = 1080;
 export const IMAGE_H = 1920;
@@ -11,14 +11,18 @@ const first = n => (n || '').split(' ')[0];
 
 /**
  * Everything the card says, as plain strings. With showAmounts off, no dollar figure appears
- * anywhere: the winner, the order and the bets still read, the money does not.
+ * anywhere: the winner, the order and the bets still read, the money does not. A points or reward
+ * round is never money, so its points always show, and a reward round says who's buying.
  */
-export function shareCardModel(round, res, { showAmounts = true } = {}) {
+export function shareCardModel(round, res, { showAmounts: moneyOn = true } = {}) {
+  const showAmounts = countsMoney(round) ? moneyOn : true;
+  const money = unitFmt(round);
+  const reward = rewardOutcome(round, res);
   const top = res.standings[0];
   const square = res.standings.every(p => p.amount === 0);
   const leaders = res.standings.filter(p => p.amount === top.amount);
   let headline, sub;
-  if (square) { headline = 'All square'; sub = 'Nobody owes anybody'; }
+  if (square) { headline = 'All square'; sub = reward ? 'Nobody’s buying' : countsMoney(round) ? 'Nobody owes anybody' : 'Bragging rights shared'; }
   else if (leaders.length > 1) {
     // Partners who won together are a side, not a tie
     const side = round.teams?.find(t => t.players.length === leaders.length && leaders.every(p => t.players.includes(p.id)));
@@ -50,7 +54,9 @@ export function shareCardModel(round, res, { showAmounts = true } = {}) {
     standings,
     betsTitle: title,
     bets,
-    footer: 'Settled with Birdie Bank',
+    // A reward round's line goes where the money would: "Sam wins lunch. Dave's buying."
+    reward: reward && !square ? reward.text : null,
+    footer: countsMoney(round) ? 'Settled with Birdie Bank' : 'Scored with Birdie Bank',
   };
 }
 
@@ -144,6 +150,13 @@ function draw(ctx, m) {
   else ctx.font = `500 64px ${DISPLAY}`;
   ctx.fillText(clip(ctx, m.sub, inner), PAD - 4, y);
   y += 90;
+  // A reward round: who wins it and who's buying
+  if (m.reward) {
+    ctx.fillStyle = C.ochre;
+    fit(ctx, m.reward, 700, BODY, 48, 32, inner);
+    ctx.fillText(clip(ctx, m.reward, inner), PAD, y);
+    y += 80;
+  }
 
   // Standings
   const footerY = H - 110;

@@ -1,6 +1,7 @@
 // Shared display helpers and derived stats (kept out of component files for fast refresh).
 import { GAMES, SIDE_GAMES, roundResults, scoreSummary, sideGamesOf } from './round.js';
 import { money } from './golf.js';
+import { countsMoney, playForOf, rewardOutcome, unitFmt } from './play-for.js';
 
 /**
  * A round's games in one name: "Nassau", or "Nassau + Skins + Junk" with side games. Works on a
@@ -36,16 +37,26 @@ export function roundDate(r) {
   return new Date(r.finishedAt || r.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: new Date(r.createdAt).getFullYear() === new Date().getFullYear() ? undefined : 'numeric' });
 }
 
-/** Plain-text results. With `amounts: false` it lists the order only, no money and no settle-up. */
 /** A standing's place: equal money shares a place (1, 1, 3, 3), same as the reveal and the image. */
 export function placeOf(standings, i) {
   return standings.findIndex(q => q.amount === standings[i].amount) + 1;
 }
 
+/**
+ * Plain-text results. With `amounts: false` a money round lists the order only, no money and no
+ * settle-up. Points are bragging rights, so a points or reward round always shows them, and a
+ * reward round adds who wins it and who's buying.
+ */
 export function shareText(round, res, { amounts = true } = {}) {
   const lines = [`${gameLabel(round)} at ${round.course.name} · ${roundDate(round)}`];
-  res.standings.forEach((p, i) => lines.push(amounts ? `${placeOf(res.standings, i)}. ${p.name} ${money(p.amount, { sign: true })}` : `${placeOf(res.standings, i)}. ${p.name}`));
-  if (amounts && res.transfers.length) {
+  const isMoney = countsMoney(round);
+  const show = amounts || !isMoney;
+  const fmt = unitFmt(round);
+  res.standings.forEach((p, i) => lines.push(show ? `${placeOf(res.standings, i)}. ${p.name} ${fmt(p.amount, { sign: true })}` : `${placeOf(res.standings, i)}. ${p.name}`));
+  const reward = rewardOutcome(round, res);
+  if (reward) lines.push('', reward.text);
+  else if (playForOf(round).kind === 'points') lines.push('', 'Played for bragging rights');
+  if (isMoney && amounts && res.transfers.length) {
     lines.push('', 'Settle up:');
     res.transfers.forEach(t => lines.push(`${roundPlayerName(round, t.from)} → ${roundPlayerName(round, t.to)} ${money(t.amount)}`));
   }
@@ -60,11 +71,11 @@ export const roundPlayerName = (round, id) => round.players.find(p => p.id === i
  */
 export function holeMoneyLine(round, hole, delta) {
   const best = Math.max(0, ...round.players.map(p => delta[p.id] || 0));
-  if (!best) return `Hole ${hole.no} saved. No money moved`;
+  if (!best) return `Hole ${hole.no} saved. ${countsMoney(round) ? 'No money' : 'No points'} moved`;
   const top = round.players.filter(p => delta[p.id] === best).map(p => p.id);
   const team = round.teams?.find(t => t.players.length === top.length && t.players.every(pid => top.includes(pid)));
   const who = team ? team.name : top.map(pid => roundPlayerName(round, pid).split(' ')[0]).join(' & ');
-  return `Hole ${hole.no}: ${who} ${money(best, { sign: true })}`;
+  return `Hole ${hole.no}: ${who} ${unitFmt(round)(best, { sign: true })}`;
 }
 
 export async function shareRound(round, res, showToast, opts) {
@@ -88,7 +99,7 @@ export function myIds(state) {
 
 export function seasonStats(state, year = new Date().getFullYear()) {
   const rounds = Object.values(state.rounds)
-    .filter(r => r.status === 'done' && new Date(r.finishedAt || r.createdAt).getFullYear() === year && r.players.some(p => p.id === meFor(r, state)))
+    .filter(r => r.status === 'done' && countsMoney(r) && new Date(r.finishedAt || r.createdAt).getFullYear() === year && r.players.some(p => p.id === meFor(r, state)))
     .sort((a, b) => (a.finishedAt || a.createdAt) - (b.finishedAt || b.createdAt));
   let total = 0, birdies = 0, streak = 0, best = null;
   const h2h = {};
