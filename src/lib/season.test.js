@@ -124,6 +124,12 @@ test('season access: a preview for organizers, nothing for invited-only phones',
   assert.deepEqual(seasonAccess({}), { access: 'none' });
 });
 
+test('season access with the paywall off: everyone gets the whole view, invited players too', () => {
+  const invited = { rounds: { j1: { id: 'j1', localMe: 'guest', players: [] } }, plans: { p1: { host: false } } };
+  assert.deepEqual(seasonAccess(invited, undefined, { gated: false }), { access: 'open' });
+  assert.deepEqual(seasonAccess(stateWith(fixture()), undefined, { gated: false }), { access: 'open' });
+});
+
 // Integration seam (2026-09-29): side-game money counts toward that side game, not the main game
 test('season: a side Skins counts toward Skins, and the season still matches roundResults', () => {
   const r = round('rs', 'stroke', ['me', 'mike', 'sam'], { 1: { me: 3 }, 2: { me: 3 } }, { when: at(9, 20) });

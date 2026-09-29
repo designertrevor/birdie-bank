@@ -31,6 +31,8 @@ The plan for growing Birdie Bank into a $10k/mo business, and the checklist we w
 
 **Follow-ups, shipped to main 2026-09-29:** the shared Tab and carry-overs count only rounds both phones have, so both phones show the same amounts; "Paid part of it?" on each Tab card; a side Skins game's house rules in one line; side games on the planned-round ballot; asking for the card with a 2-minute countdown; the free list held behind the paywall flag in production; hole fixes saved to your copy of the course for next time.
 
+**Nothing is held back until launch (2026-09-29):** testers get every feature, Pro included, with no Pro labels. The Season view on the Tab is open to everyone who has played. The free and Pro split below is the plan for launch day, not something to gate now, and early testers get Pro for life. The paywall, the free promise and the Pro preview stay built behind the flag (`?paywall=on`) for when launch gets close.
+
 **Next in S2:** linking the organizer's copy of a player to the real person (area 1), real payments for the paywall test (Stripe, area 11), and the quick logo (area 16).
 
 **The big date:** the creator test (S4) runs February to April 2027, when golf season starts back up. Everything before it is about being ready: a product groups keep using, a smooth path from video to paying, and an App Store app.
@@ -267,6 +269,12 @@ Put more money into the winning creators and copy their video formats with other
 - [ ] `S5` Printable pairings, cart signs and results sheets for events and leagues
 
 ### 11. Upgrading and paywalls
+Nothing is gated before launch (2026-09-29). Testers use everything; this area is ready for launch day.
+
+**Pro at launch (the plan, not gated today):** the season tab and Season view, planning rounds ahead (friends still RSVP and vote free), usuals, every course (search), season stats and results images, unlimited rounds at once. Keep in step with `PRO_FEATURES` in `src/lib/paywall.js`.
+
+- [ ] `S3` Early testers get Pro for life: everyone who tests with Trevor before launch keeps Pro free, forever (a lifetime flag on their account, set before the paywall turns on)
+- [ ] `S3` Decide the free and Pro split at launch, using what testers used most and what organizers say they'd pay for
 - [ ] `S2` Test what's free and what's Pro with the S2 groups, and talk to them about price (see open questions)
 - [ ] `S2` (partial) Publish the free promise: a short list of what's free forever, shown on the pricing page and in the app. Nothing on it ever moves to Pro. In the app it's at the top of the paywall and one tap away on the Tab ("The Tab is free, always", 2026-09-29), and now names the Tab and carry-overs; no pricing page yet. Held in production until Trevor says so: it only shows with the paywall preview flag (dev, `?paywall=on`) (2026-09-29)
 - [ ] `S2` (partial) Paywall with a 7 to 14 day free trial at the end of organizer onboarding. Invited players never see it. Option C (14 days, a trial timeline, both plans, "Keep scoring for free") is built as a preview behind a flag, with variants by weight ready for an A/B test; it needs real payments (Stripe) before it turns on
@@ -435,6 +443,7 @@ Kept light on purpose. Groups already have a group text, so Birdie Bank adds to 
 - 2026-09-28: The paywall stays off for everyone until real payments exist: it's a preview behind a flag, so no one taps "Start my free trial" and expects something to happen. Onboarding ends with planning the next round, and the paywall comes after the plan (cancelling the plan still lands on it). The friendly wagers note is a checkbox on the name screen, as in the wireframe.
 - 2026-09-28: Overnight 2 calls confirmed. Kept as built: legs under way keep their bet, old short rounds use the new unfinished-leg money, the Tab routes through mutual friends (Trevor to judge the wording), carried skins after the last hole go to nobody by default, the Snake and Hammer defaults, fixed-side games can't add a player mid-round, the paywall rules and the smaller calls. Changed: a skin carried from before a late joiner arrived stays with the players who built it, doubling Snake gets an optional cap (4 doubles by default), and the ballot shows each game's own unit ("$5 a side", "$1 a point").
 - 2026-09-28: Plans stay open to anyone with the code for S2, like live rounds. Tighten before the creator test.
+- 2026-09-29: Stop hiding Pro before launch. The app is only with friends and small groups, so everything is open and unlabelled; the free and Pro split happens at the official launch, and early testers get Pro for life.
 
 ## Progress log
 
@@ -466,3 +475,4 @@ Kept light on purpose. Groups already have a group text, so Birdie Bank adds to 
 - 2026-09-29: Shipped to main: the overnight run (`overnight3/next`) and the feedback fixes (`feedback/sept28`). The shared Tab and carry-overs still stay on each phone until `supabase/2026-09-29-round-payments.sql` is run.
 - 2026-09-29: `supabase/2026-09-29-round-payments.sql` is run, so "I paid", the who's square strip and carry-overs sync between phones on shared rounds. Still open on the shared Tab: each phone totals only the rounds it has, so two phones can show different amounts (the carry ask bug). Checklist: 61 of 187 done (33%).
 - 2026-09-29 (follow-ups, branch `overnight3/followups`): The carry bug: each phone netted every round it had, so Trevor's phone offered to roll $46 while Sam's only knew $28. Now what's open on rounds both phones have stays between the two people (from those rounds' own transfers, never passed on through a friend), and "I paid", "Roll to next time" and the who's square strip count only that; rounds one phone has alone still show on the Tab and are paid locally, and the card says what a roll covers. Old carries still show. "Paid part of it?" on each Tab card. A side Skins game shows its house rules in one line and opens them for the round. Side games go on the planned-round ballot with a yes or no vote each, and roll call starts with them (no SQL). Asking for the card starts a 2-minute countdown; the keeper answers Yes or No, and with no answer one tap takes it. The free-forever list is held in production behind the paywall flag. A mid-round hole fix is saved to the fixing phone's copy of the course. Merged onto main after the feedback fixes. Checklist: 63 of 187 done (34%), up from 61 of 187 (33%).
+- 2026-09-29: Nothing is held back until launch. The Season view on the Tab is open to everyone who has played a round (no Pro tag, no Preview banner, no trial button; under 2 rounds it says your season starts after 2). With `?paywall=on` it's the organizer-only Pro preview as before. "Pro at launch" is written down in area 11, with new items for lifetime Pro for early testers and deciding the split at launch.

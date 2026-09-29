@@ -26,8 +26,9 @@ export default function Ledger() {
   const plan = outstanding(state);
   const [open, setOpen] = useState(null);
   const [free, setFree] = useState(false);
-  // The Season preview is Pro, so only organizers see the switch, and only while the paywall flag is on
-  const showSeason = PAYWALL_ON && isOrganizer(state);
+  // Before launch Season is open to everyone who has played a round. With the paywall flag on it's
+  // the Pro preview again: organizers only, with the Pro tag
+  const showSeason = PAYWALL_ON ? isOrganizer(state) : Object.values(state.rounds).some(r => r.status === 'done');
   const mine = myIds(state);
   const isMe = id => mine.has(id);
 
@@ -129,7 +130,7 @@ export default function Ledger() {
           <div className="tab-view">
             <Segmented label="Tab view" className="press-mode-row" btn="pm-btn" value="person"
               onChange={v => v === 'season' && nav.push('season')}
-              options={[{ value: 'person', label: 'By person' }, { value: 'season', label: <>Season<span className="pro-tag"><span className="sr-only">, </span>Pro</span></> }]} />
+              options={[{ value: 'person', label: 'By person' }, { value: 'season', label: PAYWALL_ON ? <>Season<span className="pro-tag"><span className="sr-only">, </span>Pro</span></> : 'Season' }]} />
           </div>
         )}
         <SquareStrip />

@@ -1,6 +1,7 @@
-// Season, a Pro preview opened from the Tab: the organizer's real season from their own rounds.
-// With fewer than 2 finished rounds it's a short tour with a sample group instead. Nothing is
-// charged: "Try free for 14 days" opens the same paywall preview as onboarding.
+// Season, opened from the Tab: your real season from your own rounds.
+// Before launch it's open to everyone with no Pro labels, and under 2 rounds it says so.
+// With the paywall flag on it's the Pro preview: under 2 rounds a short tour with a sample group,
+// and "Try free for 14 days" opens the same paywall preview as onboarding. Nothing is charged.
 // History and Players keep showing your own season for free; this is a new combined view.
 import { useState } from 'react';
 import { Empty, Header, Icon, Screen } from '../components/ui.jsx';
@@ -11,6 +12,7 @@ import { money } from '../lib/golf.js';
 import { recordText } from '../lib/ledger.js';
 import { TRIAL_DAYS, planStatus } from '../lib/paywall.js';
 import { seasonAccess } from '../lib/entitlements.js';
+import { PAYWALL_ON } from '../lib/paywall-flag.js';
 import { MIN_REAL_ROUNDS, realRoundCount, sampleBoard, seasonBoard } from '../lib/season.js';
 
 const DASH = '–';
@@ -21,7 +23,7 @@ export default function Season() {
   const nav = useNav();
   const state = useStore();
   const [free, setFree] = useState(false);
-  const { access } = seasonAccess(state);
+  const { access } = seasonAccess(state, undefined, { gated: PAYWALL_ON });
   const n = realRoundCount(state);
   const real = n >= MIN_REAL_ROUNDS;
   const trial = () => nav.push('paywall', { source: 'season' });
@@ -38,11 +40,22 @@ export default function Season() {
     );
   }
 
+  if (access === 'open') {
+    return (
+      <Screen className="season">
+        <Header title="Season" onBack={nav.pop} />
+        {real
+          ? <><p className="season-sub">Built from your {n} rounds</p><RealSeason state={state} /></>
+          : <div className="scroll"><Empty title="Your season starts here" text={`Play ${MIN_REAL_ROUNDS} rounds this year and your season shows here: everyone’s totals, you against your most-played friend, your biggest day and best game.`} /></div>}
+      </Screen>
+    );
+  }
+
   return (
     <Screen className="season">
       <Header title={real ? 'Season' : 'See what Pro does'} onBack={nav.pop} />
       <p className="season-sub">{real ? `Preview · built from your ${n} rounds` : `Preview · a sample group until you’ve played ${MIN_REAL_ROUNDS} rounds`}</p>
-      {real ? <RealSeason state={state} /> : <Tour trialButton={<TrialButton onTrial={onTrial} status={planStatus(state, now)} onClick={trial} />} onFree={() => setFree(true)} />}
+      {real ? <RealSeason state={state} preview /> : <Tour trialButton={<TrialButton onTrial={onTrial} status={planStatus(state, now)} onClick={trial} />} onFree={() => setFree(true)} />}
       {real && (
         <div className="cta-wrap">
           <TrialButton onTrial={onTrial} status={planStatus(state, now)} onClick={trial} />
@@ -60,11 +73,11 @@ function TrialButton({ onTrial, status, onClick }) {
   return <button className="full-btn" onClick={onClick}>Try free for {TRIAL_DAYS} days <Icon name="arrow-right" /></button>;
 }
 
-function RealSeason({ state }) {
+function RealSeason({ state, preview = false }) {
   const b = seasonBoard(state);
   return (
     <div className="scroll">
-      <div className="season-banner" role="note"><Icon name="star" fill /> <span><b>Preview.</b> Your real rounds. Pro keeps it.</span></div>
+      {preview && <div className="season-banner" role="note"><Icon name="star" fill /> <span><b>Preview.</b> Your real rounds. Pro keeps it.</span></div>}
       <div className="sec-label">Since {shortDay(b.since)} · {b.rounds} rounds</div>
       <Balances rows={b.balances} />
       <div className="block kv-block">

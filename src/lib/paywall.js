@@ -18,9 +18,9 @@ export const PLANS = {
 export const DEFAULT_PLAN = 'annual';
 
 /**
- * What Pro adds, from the roadmap's organizer model.
- * Open for Trevor: "Your usual game in one tap" and "Planning rounds ahead" are free in the live app
- * today. Left as is tonight; gating them later would take away something free.
+ * What Pro adds at launch, from the roadmap's organizer model. Nothing is gated before launch:
+ * testers get all of it, and early testers get Pro for life (Trevor, 2026-09-29). The split is
+ * decided at launch; keep this list and "Pro at launch" in ROADMAP.md area 11 in step.
  */
 export const PRO_FEATURES = [
   { icon: 'receipt', text: 'The season tab across every round' },

@@ -1,6 +1,8 @@
 // Who can open the Season view on the Tab, and on what terms. Pure, so it's easy to test.
-// Pro entitlements don't exist yet (nothing is charged and no payment provider is wired up),
-// so for now every organizer gets the preview and everyone else gets nothing Pro at all.
+// Until launch nothing is held back: with the paywall flag off (production today) everyone who has
+// played gets the full Season view, no Pro labels. Early testers help shape the app, so they get it
+// all (Trevor, 2026-09-29). The Pro split for launch is PRO_FEATURES in paywall.js; with the flag on,
+// the gated version below (organizer preview, invited players nothing) is still here to design with.
 import { isOrganizer } from './paywall.js';
 
 /**
@@ -17,13 +19,15 @@ export function groupHasPro(rounds) {
 }
 
 /**
- * Season access for this phone:
+ * Season access for this phone. `gated` is the paywall flag: off, everyone gets 'open'.
+ * - 'open': no paywall yet, so the whole Season view with no Pro labels
  * - 'pro': this phone's owner has Pro (never tonight, see TODO below)
  * - 'group': an organizer of these rounds has Pro, so their group sees it for those rounds (never tonight)
  * - 'preview': an organizer without Pro sees a preview of their own season
  * - 'none': invited players, who never see anything Pro
  */
-export function seasonAccess(state, rounds = Object.values(state?.rounds || {})) {
+export function seasonAccess(state, rounds = Object.values(state?.rounds || {}), { gated = true } = {}) {
+  if (!gated) return { access: 'open' };
   // TODO(pro): real entitlements. Return 'pro' when state has an active paid plan (the trial preview isn't one).
   if (groupHasPro(rounds)) return { access: 'group' };
   if (isOrganizer(state)) return { access: 'preview' };
