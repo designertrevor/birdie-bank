@@ -561,8 +561,8 @@ button:disabled { cursor: not-allowed; }
 .field-label:first-child { margin-top: 0; }
 .field-label .opt { font-weight: 500; color: var(--mute-soft); }
 .field-help { font-size: 13px; color: var(--mute); margin-top: 8px; line-height: 1.45; }
-/* Setup: WHS suggested allowance under Strokes given */
-.whs-hint { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-top: 8px; }
+/* Setup: WHS suggested allowance under Strokes given. Same height with or without the Use pill, so nothing jumps when it goes */
+.whs-hint { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-top: 8px; min-height: 30px; }
 .whs-hint .field-help { margin-top: 0; }
 .whs-hint .pill-btn { flex-shrink: 0; }
 .field-error { font-size: 13px; color: var(--loss); margin-top: 8px; font-weight: 600; }

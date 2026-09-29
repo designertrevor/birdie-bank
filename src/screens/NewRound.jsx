@@ -584,7 +584,14 @@ function SetupStep({ game, course, holesCount, nine, picked, setPicked, opts, se
             {whs ? (
               <div className="whs-hint">
                 <p className="field-help">{allowanceHint(whs)}</p>
-                {(opts.hcPct ?? 100) !== whs.pct && <button className="pill-btn sm" onClick={() => set('hcPct', whs.pct)}>Use {whs.pct === 100 ? 'full strokes' : `${whs.pct}%`}</button>}
+                {(opts.hcPct ?? 100) !== whs.pct && (
+                  <button className="pill-btn sm" onClick={e => {
+                    // The pill goes away once used, so keep focus on the choice it just made
+                    const block = e.currentTarget.closest('.block');
+                    set('hcPct', whs.pct);
+                    setTimeout(() => block?.querySelector('[role="radio"][aria-checked="true"]')?.focus(), 0);
+                  }}>Use {whs.pct === 100 ? 'full strokes' : `${whs.pct}%`}</button>
+                )}
               </div>
             ) : <p className="field-help">Many groups use 90% or 80% so the better player still has a chance.</p>}
           </div>
