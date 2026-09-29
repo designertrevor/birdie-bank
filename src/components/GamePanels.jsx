@@ -3,7 +3,7 @@ import { Icon, useUI } from './ui.jsx';
 import { update, uid } from '../lib/store.js';
 import {
   hammerOptions, hammerTable, holeAtPos, holeComplete, nassauAmounts, nassauPressOptions, nassauWinners, playersOn, pointsTable, pressMode, rabbitTable,
-  roundLegs, sideNames, sides, sixesMatches, snakeTable, totalsTable, vegasPreview, vegasTable, scorers, netFor, playsHole,
+  roundLegs, sideNames, sides, sixesMatches, snakeTable, totalsTable, vegasPreview, vegasTable, scorers, netFor, playsHole, posOf, settingsAt,
 } from '../lib/round.js';
 import { money, nassauBets } from '../lib/golf.js';
 import { DOT_KINDS, scoreDots } from '../lib/games.js';
@@ -333,7 +333,8 @@ export function BBBPicker({ round, hole, marks, setMarks }) {
 // --------------------------- Dots -----------------------------------------
 
 export function DotsRow({ round, player, hole, marks, setMarks, gross, label = null }) {
-  const s = round.settings.dots;
+  // The junk in play on this hole: a hole fixed after the bet changed shows what it was played for
+  const s = settingsAt(round, posOf(round, hole)).dots;
   // A greenie is a par 3 thing, unless one was already marked here before this rule
   const kinds = Object.keys(DOT_KINDS).filter(k => s.kinds?.[k] && (k !== 'greenie' || hole.par === 3 || (marks[player.id] || []).includes(k)));
   const mine = marks[player.id] || [];

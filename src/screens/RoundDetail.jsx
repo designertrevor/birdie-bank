@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { Fragment, useEffect, useRef, useState } from 'react';
 import { Empty, Header, Icon, Screen, useUI } from '../components/ui.jsx';
 import { getState, update, useStore } from '../lib/store.js';
 import { GAMES, gameView, holeAtPos, holeComplete, playsHole, roundLegs, roundNotes, roundResults, scoreSummary, scorers, sideNames, skinsKinds, skinsTable, strokesFor, netFor } from '../lib/round.js';
@@ -9,6 +9,7 @@ import { useNav } from '../lib/nav.js';
 import { leaveRound } from '../lib/rounds.js';
 import { gameLabel, meFor, placeOf, roundDate, roundPlayerName } from '../lib/format.js';
 import { gamesLine } from '../lib/side-games.js';
+import { betStretchLine } from '../lib/stakes.js';
 import { ByGameTable } from '../components/SideGames.jsx';
 import { accountsEnabled, useAccount } from '../lib/cloud.js';
 import { SignInSheet } from '../components/Account.jsx';
@@ -165,7 +166,11 @@ export default function RoundDetail({ id, celebrate }) {
         <GameBreakdown round={round} res={res} />
         {/* Each side game's own breakdown, worked out on its own like the main game */}
         {Object.entries(res.detail.byGame || {}).filter(([key]) => key !== 'main').map(([key, g]) => (
-          <GameBreakdown key={key} round={gameView(round, key)} res={{ detail: g.detail }} label={g.label} />
+          <Fragment key={key}>
+            <GameBreakdown round={gameView(round, key)} res={{ detail: g.detail }} label={g.label} />
+            {/* A side game whose bet changed mid-round: what each stretch of holes was played for */}
+            {betStretchLine(round, key) && <p className="field-help pad">{betStretchLine(round, key)}</p>}
+          </Fragment>
         ))}
 
         <div className="sec-label">Scorecard</div>

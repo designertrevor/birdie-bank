@@ -5,7 +5,7 @@ import { DEFAULT_SETTINGS, getState, update, useStore } from '../lib/store.js';
 import {
   GAMES, addPlayerProblem, bankerHoleSetup, canLeave, defaultNine, holeComplete, leftRule, livePreview, nassauPressOptions, playersLeft, playersOn, playsHole, pressMode,
   resizeRound, roundLegs, roundResults, scoredHolesDropped, scorers, skinsKinds, skinsTable, strokesFor, wolfHoleSetup, changeBets, wholeRoundOnly,
-  gameView, sideGamesOf, holeFixOf,
+  gameView, sideGamesOf, holeFixOf, gameKeys, gameKeyLabel, settingsAt,
 } from '../lib/round.js';
 import { SIDE_GAMES, gameKeys } from '../lib/round.js';
 import { CourseTeeSheet, FixHoleSheet } from '../components/FixHole.jsx';
@@ -17,7 +17,7 @@ import {
   BBBPicker, DotsRow, HammerPanel, MatchPanel, MoneyPanel, PointsPanel, RabbitPanel, ScramblePanel, SixesPanel, SnakePanel, SnakePicker, TotalsPanel, VegasPanel,
 } from '../components/GamePanels.jsx';
 import { GameOptions } from '../components/GameOptions.jsx';
-import { optionsProblem, roundStakeLines, stakeSummary } from '../lib/stakes.js';
+import { optionsProblem, roundStakeLines, sideBetLine, stakeSummary } from '../lib/stakes.js';
 import { buzz, confettiFrom } from '../lib/delight.js';
 import { useNav } from '../lib/nav.js';
 import { Scorecard } from './RoundDetail.jsx';
@@ -28,7 +28,7 @@ import { firstName, gameLabel, holeMoneyLine } from '../lib/format.js';
 import { leaveRound, roundsInProgress } from '../lib/rounds.js';
 import { RoundsInProgressSheet } from '../components/RoundsInProgress.jsx';
 import { ByGameTable, SideGamesSetup } from '../components/SideGames.jsx';
-import { nassauOpenNote } from '../lib/side-games.js';
+import { nassauOpenNote, sideExample } from '../lib/side-games.js';
 import {
   ASK_MS, askForCard, askLeft, canEdit, canTakeCard, clearAsk, clockText, declineAsk, declinedAsk, handOff, handOffChoices, hostKeeper, isKeeper,
   keeperMe, keeperName, keeperOf, keeperSaved, openAsk, seatTaken, shouldLeaveHole, takeCard as takeCardPatch, tookFromMe,
@@ -772,15 +772,10 @@ function LeftSheet({ round, idx, onClose, onEnd }) {
 // --------------------------- Bets & stakes --------------------------------
 
 /**
- * Change the bets in a round that's under way, so the group doesn't have to discard the round
- * when they agree a different bet on the 10th tee. By default the new bets count from the next
- * hole to play on, and holes already played keep what they were played for; "Whole round"
- * reprices every hole. A pot covers the whole round, so a pot's bet always changes for all of it.
- * Mounted only while open so it starts fresh each time.
- */
-/**
  * Side games mid-round: add Skins, Junk or a Birdie pot without setting the round up again. The course,
  * players and scores stay; a new game counts every hole already scored, so the money catches up at once.
+ * Any change to a game's bets here covers the whole round, so it drops that game's earlier bet
+ * changes; the Bets sheet is where a bet changes from the next hole.
  */
 function GamesSheet({ round, onClose }) {
   const { showToast } = useUI();
@@ -790,17 +785,29 @@ function GamesSheet({ round, onClose }) {
   const changed = JSON.stringify(list) !== JSON.stringify(sideGamesOf(round));
   const played = round.holes.filter(h => holeComplete(round, h)).length;
   const save = () => {
+    const before = Object.fromEntries(sideGamesOf(round).map(sg => [sg.game, sg]));
+    // A game whose bets changed here is played for them on every hole
+    const cleared = [];
+    const out = list.map(sg => {
+      if (!sg.betHistory || JSON.stringify(before[sg.game]?.settings) === JSON.stringify(sg.settings)) return sg;
+      cleared.push(gameKeyLabel(round, sg.game));
+      const { betHistory: _, ...rest } = sg;
+      return rest;
+    });
     update(s => {
       const r = s.rounds[round.id];
-      if (list.length) r.sideGames = structuredClone(list); else delete r.sideGames;
+      if (out.length) r.sideGames = structuredClone(out); else delete r.sideGames;
     });
     onClose();
-    showToast(list.length ? `Playing ${gameLabel({ ...round, sideGames: list })}` : `Back to ${GAMES[round.game].name} only`);
+    // Say so when a bet that changed mid-round now covers every hole, since earlier holes' money moves
+    showToast(cleared.length ? `${cleared.join(' and ')} ${cleared.length === 1 ? 'bet now covers' : 'bets now cover'} the whole round`
+      : out.length ? `Playing ${gameLabel({ ...round, sideGames: out })}` : `Back to ${GAMES[round.game].name} only`);
     buzz(20);
   };
   return (
     <Sheet open onClose={onClose} title="Side games" className="sc-sheet">
       <p className="sheet-text">Same course, same players, same scores. {played ? `A new game counts the ${played} hole${played === 1 ? '' : 's'} already scored too.` : 'Every game reads the one scorecard.'}</p>
+      {played > 0 && sideGamesOf(round).length > 0 && <p className="field-help pad">Changes here cover the whole round. To change a bet from the next hole, use Bets.</p>}
       <SideGamesSetup game={round.game} sideGames={list} setSideGames={edit} defaults={round.settings} players={round.players.length} />
       <div className="cta-wrap">
         <button className="full-btn" disabled={!changed || bad} onClick={save}>{changed ? 'Save games' : 'No changes'}</button>
@@ -809,21 +816,39 @@ function GamesSheet({ round, onClose }) {
   );
 }
 
+/**
+ * Change the bets in a round that's under way, so the group doesn't have to discard the round
+ * when they agree a different bet on the 10th tee. By default the new bets count from the next
+ * hole to play on, and holes already played keep what they were played for; "Whole round"
+ * reprices every hole. A pot covers the whole round, so a pot's bet always changes for all of it.
+ * With side games on, a switcher at the top picks the game: each game's bet changes on its own.
+ */
 function BetsSheet({ round, onClose }) {
   const { showToast } = useUI();
-  const game = round.game;
+  const sides = sideGamesOf(round);
+  const [pick, setPick] = useState('main');
+  const gameKey = pick === 'main' || sides.some(sg => sg.game === pick) ? pick : 'main';
+  const side = gameKey !== 'main';
+  // A side game is edited on its own view: its settings (and bet history) in place of the main game's
+  const view = side ? gameView(round, gameKey) : round;
+  const game = view.game;
   // Rabbit rounds from before "set free" have no mode: they play the old steal rule
   // Skins and Nassau rounds from before their house rules have none saved: fill in the defaults,
   // which play the old way, so the options show a choice and a switch to a pot has an amount
   const current = useMemo(() => {
-    if (game === 'rabbit' && !round.settings.rabbit.mode) return { ...round.settings, rabbit: { ...round.settings.rabbit, mode: 'steal' } };
+    const st = view.settings;
+    if (game === 'rabbit' && !st.rabbit.mode) return { ...st, rabbit: { ...st.rabbit, mode: 'steal' } };
     // Snake rounds from before the cap have none saved: they play with no cap, so show No cap
-    if (game === 'snake' && round.settings.snake && round.settings.snake.cap == null) return { ...round.settings, snake: { ...round.settings.snake, cap: 0 } };
-    if (game === 'skins' || game === 'nassau') return { ...round.settings, [game]: { ...DEFAULT_SETTINGS[game], ...round.settings[game] } };
-    return round.settings;
-  }, [game, round.settings]);
+    if (game === 'snake' && st.snake && st.snake.cap == null) return { ...st, snake: { ...st.snake, cap: 0 } };
+    if (game === 'skins' || game === 'nassau') return { ...st, [game]: { ...DEFAULT_SETTINGS[game], ...st[game] } };
+    return st;
+  }, [game, view.settings]);
   const [opts, setOpts] = useState(() => structuredClone(current));
+  const [scope, setScope] = useState('next');
+  // Switching games starts from that game's bets (a change not yet saved is dropped)
+  const [shown, setShown] = useState(gameKey);
   const [pad, setPad] = useState(null); // { path, title, min, max }
+  if (shown !== gameKey) { setShown(gameKey); setOpts(structuredClone(current)); setScope('next'); return null; }
   const set = (path, v) => setOpts(o => { const n = structuredClone(o); const k = path.split('.'); let t = n; for (const x of k.slice(0, -1)) t = t[x]; t[k.at(-1)] = v; return n; });
   const get = path => path.split('.').reduce((t, k) => t?.[k], opts);
   const problem = optionsProblem(game, opts);
@@ -834,27 +859,52 @@ function BetsSheet({ round, onClose }) {
   const fromPos = lastPlayed + 1;
   const fromHole = round.holes[fromPos - 1];
   const canSplit = played > 0 && !!fromHole && !wholeRoundOnly(game, current[game], opts[game]);
-  const [scope, setScope] = useState('next');
   const whole = !canSplit || scope === 'whole';
+  // Why a change can't start from the next hole, when it isn't a pot: net, gross or both is read
+  // once for the round, and so is a snake split into nines
+  const pot = game === 'scramble' || game === 'birdies' || current[game]?.payout === 'pot' || opts[game]?.payout === 'pot';
+  const layout = game === 'snake' ? 'Each nine or one snake is set' : 'Net, gross or both is set';
+  const label = gameKeyLabel(round, gameKey);
   const apply = () => {
     update(s => {
-      s.rounds[round.id] = changeBets(s.rounds[round.id], opts[game], whole ? null : fromPos);
+      s.rounds[round.id] = changeBets(s.rounds[round.id], opts[game], whole ? null : fromPos, gameKey);
       // The agreed bet is next time's default too
       s.settings = { ...s.settings, [game]: structuredClone(opts[game]) };
     });
     onClose();
-    showToast(`Bets updated${whole ? '' : ` from hole ${fromHole.no}`} · ${stakeSummary(game, opts)}`);
+    showToast(side
+      ? `${label} bet updated${whole ? '' : ` from hole ${fromHole.no}`} · ${sideBetLine(game, opts[game])}`
+      : `Bets updated${whole ? '' : ` from hole ${fromHole.no}`} · ${stakeSummary(game, opts)}`);
     buzz(20);
   };
   const legs = game === 'nassau' || game === 'match' || game === 'rabbit' || game === 'snake' || (game === 'sixes' && opts.sixes.mode === 'match');
+  // A snake or rabbit is played for the bet in force when its leg started: one leg for the round, or
+  // one a nine. Say when the new bet starts counting, or that only "Whole round" changes it
+  const legStarts = game === 'snake' || game === 'rabbit'
+    ? ((game === 'snake' ? settingsAt(view, 1).snake?.nines : true) && round.holes.length === 18 ? [1, 10] : [1]) : null;
+  const nextLeg = legStarts?.find(x => x >= fromPos);
+  const legNote = !legStarts ? 'A bet already under way, like a leg or a match, keeps what it started with.'
+    : nextLeg === fromPos ? ''
+      : nextLeg ? `The ${game} under way keeps what it started with, so the new bet starts on hole ${round.holes[nextLeg - 1].no}.`
+        : `The ${game} under way keeps what it started with to the last hole. Pick Whole round to change it.`;
+  // The snake or rabbit under way runs to the last hole, so a change from the next hole would pay nothing
+  const stuck = !whole && !!legStarts && !nextLeg;
   return (
     <>
       <Sheet open={!pad} onClose={onClose} title="Bets" className="sc-sheet">
+        {sides.length > 0 && (
+          <div className="block">
+            <Segmented label="Which game" className="press-mode-row game-pick" btn="pm-btn" value={gameKey} onChange={setPick}
+              options={gameKeys(round).map(k => ({ value: k, label: gameKeyLabel(round, k) }))} />
+            <p className="field-help">Each game’s bet changes on its own.</p>
+          </div>
+        )}
         <p className="sheet-text">
           {!played ? 'Change what’s on the line before the first hole is scored.'
             : canSplit ? `${played} hole${played === 1 ? '' : 's'} played. Pick when the new bets start.`
               : !fromHole ? 'Every hole is played, so a change covers the whole round.'
-                : 'The pot covers the whole round, so a change counts for every hole.'}
+                : !pot ? `${layout} for the whole round, so a change counts for every hole.`
+                  : 'The pot covers the whole round, so a change counts for every hole.'}
         </p>
         {canSplit && (
           <div className="block">
@@ -863,18 +913,30 @@ function BetsSheet({ round, onClose }) {
             <p className="field-help">
               {whole
                 ? `Every hole is worked out again at the new bets, including the ${played} already played.`
-                : `The ${played} hole${played === 1 ? '' : 's'} already played keep${played === 1 ? 's' : ''} ${played === 1 ? 'its' : 'their'} bets.${legs ? ' A bet already under way, like a leg or a match, keeps what it started with.' : ''}`}
+                : `The ${played} hole${played === 1 ? '' : 's'} already played keep${played === 1 ? 's' : ''} ${played === 1 ? 'its' : 'their'} bets.${legs && legNote ? ` ${legNote}` : ''}`}
             </p>
           </div>
         )}
-        <GameOptions game={game} get={get} set={set} onAmount={(path, title, o) => setPad({ path, title, ...o })} holesCount={round.holesCount}
-          players={round.players.length} firstName={game === 'banker' ? round.players[0]?.name : null} />
+        {game === 'birdies' ? (
+          // The Birdie pot is a side game only, so it has no main-game options: just what each player puts in
+          <>
+            <div className="nassau-bet-row">
+              <div className="nassau-bet-lbl">Each player puts in</div>
+              <button className="nassau-bet-btn" aria-label={`Each player puts in: ${money(get('birdies.stake') ?? 0)}. Change`}
+                onClick={() => setPad({ path: 'birdies.stake', title: 'Each player puts in', min: 1, max: 500 })}>{money(get('birdies.stake') ?? 0)}</button>
+            </div>
+            <p className="field-help pad">{sideExample('birdies', opts.birdies, view.players.length)}</p>
+          </>
+        ) : (
+          <GameOptions game={game} get={get} set={set} onAmount={(path, title, o) => setPad({ path, title, ...o })} holesCount={round.holesCount}
+            players={view.players.length} firstName={game === 'banker' ? round.players[0]?.name : null} />
+        )}
         {game === 'banker' && <p className="hint-card"><Icon name="info" fill /> The default bet fills in from the next hole. Bets on this hole are set from the Bets button.</p>}
-        {sideGamesOf(round).length > 0 && <p className="hint-card"><Icon name="info" fill /> These are the {GAMES[game].name} bets. Side game bets are set for the whole round.</p>}
-        {(game === 'nassau' || game === 'match') && round.presses.length > 0 && whole && <p className="hint-card"><Icon name="lightning" fill /> Presses already made pay at the new amounts too.</p>}
+        {!side && (game === 'nassau' || game === 'match') && round.presses.length > 0 && whole && <p className="hint-card"><Icon name="lightning" fill /> Presses already made pay at the new amounts too.</p>}
+        {problem && <p className="field-error">{problem}</p>}
         <div className="cta-wrap">
-          <button className="full-btn" disabled={!changed || !!problem} onClick={apply}>
-            {changed ? <>Update bets <Icon name="arrow-right" /></> : 'No changes yet'}
+          <button className="full-btn" disabled={!changed || !!problem || stuck} onClick={apply}>
+            {!changed ? 'No changes yet' : stuck ? 'Pick Whole round to change it' : <>Update bets <Icon name="arrow-right" /></>}
           </button>
         </div>
       </Sheet>
