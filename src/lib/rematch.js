@@ -1,5 +1,5 @@
 // "Run it back": set up a new round like an earlier one (same game, course, group and bets).
-import { allCourses } from './courses.js';
+import { findCourse } from './courses.js';
 import { GAMES, sideGamesOf } from './round.js';
 import { defaultTeams } from './teams.js';
 
@@ -12,7 +12,7 @@ import { defaultTeams } from './teams.js';
  */
 export function rematchSetup(state, round) {
   if (!round || !GAMES[round.game]) return null;
-  const course = allCourses(state).find(c => c.id === round.course?.id) || null;
+  const course = findCourse(state, round.course?.id);
   const idFor = pid => (round.localMe && pid === round.localMe && state.me ? state.me : pid);
   const picked = [];
   const missing = [];

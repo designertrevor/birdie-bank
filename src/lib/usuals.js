@@ -2,7 +2,7 @@
 // set up again in one tap. They live in state.usuals (never inside settings: settings are merged
 // key by key on load and copied into every round), at most MAX_USUALS, and sync in the profile doc.
 import { rematchSetup } from './rematch.js';
-import { allCourses } from './courses.js';
+import { findCourse } from './courses.js';
 import { GAMES } from './round.js';
 import { defaultTeams } from './teams.js';
 import { stable } from './sync-model.js';
@@ -56,7 +56,7 @@ export function usualFromRound(state, round, { id, name = null, now = Date.now()
  */
 export function setupFromUsual(state, usual) {
   if (!usual || !GAMES[usual.game]) return null;
-  const course = allCourses(state).find(c => c.id === usual.courseId) || null;
+  const course = findCourse(state, usual.courseId);
   const picked = usual.players.filter(pid => state.players[pid]);
   const missing = usual.players.filter(pid => !state.players[pid]).map(pid => usual.names?.[pid] || 'A player');
   const keep = obj => Object.fromEntries(Object.entries(obj || {}).filter(([pid]) => picked.includes(pid)));

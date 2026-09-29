@@ -106,7 +106,7 @@ export default function NewRound({ rematch, fromPlan, present, ahead = false, ga
   const [usualId, setUsualId] = useState(null);
   const [missing, setMissing] = useState(() => pre?.missing || []);
 
-  const course = allCourses(state).find(c => c.id === courseId) || null;
+  const course = findCourse(state, courseId);
 
   const close = async () => {
     if (step === 0 && !game) return nav.pop();
@@ -153,7 +153,7 @@ export default function NewRound({ rematch, fromPlan, present, ahead = false, ga
     if (sides.length) round.sideGames = structuredClone(sides);
     // Started from a saved usual (still the same game at the same course): finishing it updates "Last played"
     const from = usualId && usualsOf(s).find(u => u.id === usualId);
-    if (from && from.game === game && from.courseId === course.id) round.usualId = usualId;
+    if (from && from.game === game && (from.courseId === course.id || findCourse(s, from.courseId)?.id === course.id)) round.usualId = usualId;
     update(st => {
       addRound(st, round);
       if (fromPlan && st.plans?.[fromPlan]) st.plans[fromPlan].roundId = id;

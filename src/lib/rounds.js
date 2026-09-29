@@ -2,7 +2,7 @@
 // to make room for a new one). `activeRoundId` is just the one you were in last, so the
 // play button knows where to take you back to.
 import { GAMES, holeComplete } from './round.js';
-import { allCourses } from './courses.js';
+import { findCourse } from './courses.js';
 
 /** Every round still being played, the one you were in last first, then newest first. */
 export function roundsInProgress(state) {
@@ -41,12 +41,11 @@ export function holesScored(round) {
  * fixed) is never offered.
  */
 export function usualRound(state) {
-  const courses = allCourses(state);
   const recent = Object.values(state.rounds || {})
     .filter(r => !r.localMe && r.shared?.host !== false && GAMES[r.game] && r.status === 'done' && !r.editing) // watched rounds aren't yours to repeat
     .sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
   for (const r of recent) {
-    const course = courses.find(c => c.id === r.course?.id);
+    const course = findCourse(state, r.course?.id);
     if (course && r.players.every(p => state.players?.[p.id])) return { round: r, course };
   }
   return null;
