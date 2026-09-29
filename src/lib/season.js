@@ -6,6 +6,7 @@ import { GAMES, roundResults } from './round.js';
 import { meFor, myIds } from './format.js';
 import { nameOf } from './ledger.js';
 import { roundTime } from './history.js';
+import { canonicalOf } from './pair-debts.js';
 
 /** Fewer finished rounds than this and the Season preview shows the sample group instead. */
 export const MIN_REAL_ROUNDS = 2;
@@ -37,7 +38,9 @@ export function seasonBoard(state, year = new Date().getFullYear()) {
   const rounds = seasonRounds(state, year);
   const mine = myIds(state);
   const meKey = state?.me || [...mine][0] || 'me';
-  const who = id => (mine.has(id) ? meKey : id);
+  // One friend is one row, whichever of their ids a round has (see people-links.js)
+  const canon = canonicalOf(state || {});
+  const who = id => { const k = canon(id); return mine.has(id) || mine.has(k) ? meKey : k; };
   const bal = new Map();
   const h2h = new Map();
   const games = new Map();
@@ -64,14 +67,18 @@ export function seasonBoard(state, year = new Date().getFullYear()) {
       games.set(part.name, g);
     }
     const pairs = res.pairs?.[me] || {};
+    const inRound = new Map();
     for (const p of r.players) {
-      if (mine.has(p.id)) continue;
-      const cur = h2h.get(p.id) || { id: p.id, rounds: 0, won: 0, lost: 0, even: 0, net: 0 };
-      const v = pairs[p.id] ?? 0;
+      const k = who(p.id);
+      if (k === meKey) continue;
+      inRound.set(k, (inRound.get(k) || 0) + (pairs[p.id] ?? 0));
+    }
+    for (const [k, v] of inRound) {
+      const cur = h2h.get(k) || { id: k, rounds: 0, won: 0, lost: 0, even: 0, net: 0 };
       cur.rounds++;
       if (v > 0.004) cur.won++; else if (v < -0.004) cur.lost++; else cur.even++;
       cur.net = cents(cur.net + v);
-      h2h.set(p.id, cur);
+      h2h.set(k, cur);
     }
   }
   const name = id => (id === meKey ? 'You' : nameOf(state, id));

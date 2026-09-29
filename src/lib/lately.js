@@ -16,7 +16,7 @@ import { nameOf } from './ledger.js';
 import { dayLabel } from './plans.js';
 import { PAY_APPS } from './pay.js';
 import { lastResult, roundTime } from './history.js';
-import { paymentGroups } from './shared-tab.js';
+import { canonicalOf, paymentGroups } from './shared-tab.js';
 
 export const LATELY_DAYS = 30;
 const DAY = 24 * 60 * 60 * 1000;
@@ -51,8 +51,11 @@ export function latelyItems(state, now = Date.now(), { carries = state?.carries,
   const t = typeof now === 'number' ? now : now.getTime();
   const since = t - days * DAY;
   const inWindow = at => typeof at === 'number' && at >= since && at <= t + 60000;
-  const mine = myIds(state);
-  const name = id => first(nameOf(state, id));
+  // One friend is one person, whichever of their ids a payment or round has (see people-links.js)
+  const who = canonicalOf(state);
+  const ids = myIds(state);
+  const mine = { has: id => ids.has(id) || ids.has(who(id)) };
+  const name = id => first(nameOf(state, who(id)));
   const items = [];
 
   // Payments recorded on the Tab: one tap that filled several round transfers is one payment
@@ -70,7 +73,7 @@ export function latelyItems(state, now = Date.now(), { carries = state?.carries,
     const when = agoLabel(s.at, t);
     const round = s.roundId && state.rounds?.[s.roundId] ? ['roundDetail', { id: s.roundId }] : null;
     if (toMe || fromMe) {
-      const other = toMe ? s.from : s.to;
+      const other = who(toMe ? s.from : s.to);
       items.push({
         id: `pay:${s.id}`, kind: 'payment', at: s.at,
         text: toMe ? `${name(other)} paid you ${money(s.amount)}` : `You paid ${name(other)} ${money(s.amount)}`,
@@ -88,7 +91,7 @@ export function latelyItems(state, now = Date.now(), { carries = state?.carries,
     if (!inWindow(at)) continue;
     const fromMe = mine.has(c.from), toMe = mine.has(c.to);
     if (fromMe && toMe) continue;
-    const other = fromMe ? c.to : toMe ? c.from : null;
+    const other = fromMe ? who(c.to) : toMe ? who(c.from) : null;
     items.push({
       id: `carry:${c.id}`, kind: 'carry', at,
       text: other
@@ -121,8 +124,9 @@ export function latelyItems(state, now = Date.now(), { carries = state?.carries,
     const me = meFor(r, state);
     const top = Math.max(...Object.values(bal));
     const winners = top > 0.004 ? r.players.filter(p => Math.abs(bal[p.id] - top) < 0.005) : [];
-    const who = winners.map(p => (mine.has(p.id) ? 'You' : first(p.name)));
-    const took = !who.length ? 'All square' : who.length === 1 ? `${who[0]} took it` : `${who.slice(0, -1).join(', ')} and ${who.at(-1)} split it`;
+    // A friend linked to someone else ("Same person as...") goes by the name on the card kept for them
+    const names = winners.map(p => (mine.has(p.id) ? 'You' : who(p.id) !== p.id ? name(p.id) : first(p.name)));
+    const took = !names.length ? 'All square' : names.length === 1 ? `${names[0]} took it` : `${names.slice(0, -1).join(', ')} and ${names.at(-1)} split it`;
     const played = me && r.players.some(p => p.id === me);
     const amount = played ? cents(bal[me] ?? 0) : null;
     items.push({

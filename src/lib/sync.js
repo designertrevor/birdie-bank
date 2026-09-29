@@ -9,6 +9,7 @@ import { leaveRound } from './rounds.js';
 import { applyHole, applyMeta, assemble, buildHole, buildMeta, buildRequest, isRequestNo, newCode, newRequestNo, readRequest, stable } from './sync-model.js';
 import { payFields } from './pay.js';
 import { canEdit, holeToKeep, hostKeeper, isKeeper, keeperMe, keeperOf, metaToKeep, metaToSend, seatTaken } from './keeper.js';
+import { claimSeat, mergeClaims } from './people-links.js';
 
 /** Whether this phone may change a shared round (see keeper.js), and who it is in it. */
 function editorOf(round) {
@@ -250,6 +251,11 @@ subscribe(() => {
     for (const id of live.keys()) {
       const r = s.rounds[id];
       if (!r || !r.shared || r.shared.ended) { stop(id); continue; }
+      // A guest who joined before making a profile claims their seat once they have one
+      if (r.localMe && s.me && claimSeat(r, r.localMe, s.me)) {
+        update(d => { const x = d.rounds[id]; const c = x && claimSeat(x, x.localMe, d.me); if (c) x.claims = c; });
+        continue; // the store change runs this again and pushes it
+      }
       pushChanges(id);
     }
     // A finished round being fixed goes live again so the fixes reach the other phones
@@ -271,6 +277,36 @@ export function bootSync() {
     if (r.status === 'active') start(r.id);
     // Finished while offline and closed before it synced: send what's left
     else if (loadBase(r.id, r.shared.code)) start(r.id, { finishing: true });
+  }
+  catchUpClaims();
+}
+
+/** Finished shared rounds this recent pick up seats claimed after they ended. */
+const CLAIM_DAYS = 14;
+
+/**
+ * Someone can join from the link after the round is over, when this phone isn't listening any
+ * more. Once per launch, look up the claims on recently finished shared rounds (read only, and
+ * quietly nothing with no signal) so this phone links its copy of that friend to them too.
+ */
+async function catchUpClaims() {
+  const since = Date.now() - CLAIM_DAYS * 864e5;
+  const rounds = Object.values(getState().rounds).filter(r => r.status === 'done' && r.shared?.code && !r.shared.ended && !live.has(r.id) && (r.finishedAt || 0) >= since);
+  if (!rounds.length) return;
+  const adapter = await getAdapter();
+  if (!adapter) return;
+  for (const r of rounds) {
+    try {
+      const remote = await adapter.fetch(r.shared.code);
+      const theirs = remote?.meta?.claims;
+      if (!theirs) continue;
+      update(s => {
+        const x = s.rounds[r.id];
+        if (!x) return;
+        const claims = mergeClaims(x.claims, theirs);
+        if (stable(claims) !== stable(x.claims)) x.claims = claims;
+      });
+    } catch { /* no signal: next launch */ }
   }
 }
 
@@ -326,6 +362,10 @@ export async function joinShared(code, remote, localMe) {
     if (seat && mine.payHandle && !seat.payHandle) Object.assign(seat, mine);
     // Your seat is on the app now, so the scorekeeper can hand you the card
     if (seat && r.status === 'active') Object.assign(r, seatTaken(r, localMe));
+    // The seat is you: every phone in the round links its copy of this player to you (people-links.js).
+    // A finished round counts too while its link still works. A guest with no profile yet claims later
+    const claims = seat && claimSeat(r, localMe, s.me);
+    if (claims) r.claims = claims;
   });
   return round.id;
 }

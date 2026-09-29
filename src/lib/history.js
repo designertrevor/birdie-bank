@@ -3,6 +3,7 @@
 import { roundResults } from './round.js';
 import { meFor, myIds } from './format.js';
 import { outstanding } from './ledger.js';
+import { canonicalOf } from './pair-debts.js';
 
 const MONTHS = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
 const SHORT = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
@@ -137,11 +138,16 @@ export function netSeries(rounds, state) {
  */
 export function headToHead(rounds, state) {
   const h2h = {};
+  // One friend is one line, whichever of their ids a round has (see people-links.js)
+  const who = canonicalOf(state);
+  const mine = myIds(state);
   for (const r of rounds) {
     const me = meFor(r, state);
     if (!me) continue;
     for (const [id, v] of Object.entries(roundResults(r).pairs?.[me] || {})) {
-      if (v) h2h[id] = cents((h2h[id] || 0) + v);
+      const k = who(id);
+      if (!v || mine.has(k)) continue;
+      h2h[k] = cents((h2h[k] || 0) + v);
     }
   }
   return h2h;
@@ -149,7 +155,9 @@ export function headToHead(rounds, state) {
 
 /** What you're owed and what you owe right now, across every round and payment (the Tab at a glance). */
 export function myTab(state) {
-  const mine = myIds(state);
+  const ids = myIds(state);
+  const who = canonicalOf(state);
+  const mine = { has: id => ids.has(id) || ids.has(who(id)) };
   let owed = 0, owe = 0, people = 0;
   for (const d of outstanding(state)) {
     if (mine.has(d.to) && mine.has(d.from)) continue; // you and you on another phone's round

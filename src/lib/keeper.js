@@ -26,6 +26,7 @@
 // round tables are open by code, and an older copy of the app ignores the keeper. Locking it down on
 // the server belongs with the S3 plan lock-down.
 import { merge3 } from './sync-model.js';
+import { mergeClaims } from './people-links.js';
 
 /** How long the keeper has to answer an ask before the asker can take the card. */
 export const ASK_MS = 2 * 60 * 1000;
@@ -202,7 +203,8 @@ export function seatTaken(round, pid, now = Date.now()) {
 
 // What a phone that can't edit may still send in the round's meta. Everything else it sends is
 // what the server already had, so a phone that isn't keeping score can't change the game.
-const OPEN_KEYS = ['keeper', 'cardAsk', 'onApp'];
+// `claims`: the seat each joined phone took, so everyone's copy of that friend links to them (people-links.js)
+const OPEN_KEYS = ['keeper', 'cardAsk', 'onApp', 'claims'];
 const PAY_KEYS = ['payApp', 'payHandle', 'venmo'];
 
 /**
@@ -218,6 +220,9 @@ export function metaToSend(base, local, { editor, me }) {
     if (k in local) out[k] = local[k];
     else delete out[k];
   }
+  // Claims are only ever added: a copy that hasn't caught up never takes one away
+  const claims = mergeClaims(local.claims, base.claims);
+  if (claims) out.claims = claims;
   if (me && Array.isArray(base.players) && Array.isArray(local.players)) {
     const mine = local.players.find(p => p.id === me);
     if (mine) out.players = base.players.map(p => (p.id === me ? { ...p, ...Object.fromEntries(PAY_KEYS.filter(k => k in mine).map(k => [k, mine[k]])) } : p));
@@ -233,7 +238,11 @@ export function metaToSend(base, local, { editor, me }) {
  */
 export function metaToKeep(base, local, remote, { editor, me }) {
   const mine = editor ? local : metaToSend(base, local, { editor, me });
-  return mine == null ? remote : merge3(base, mine, remote, 1);
+  const out = mine == null ? remote : merge3(base, mine, remote, 1);
+  // Two phones claiming their seats at once both keep theirs (see people-links.js)
+  if (!out || typeof out !== 'object') return out;
+  const claims = mergeClaims(mergeClaims(out.claims, remote?.claims), mine?.claims);
+  return claims ? { ...out, claims } : out;
 }
 
 /**

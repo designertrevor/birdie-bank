@@ -12,7 +12,11 @@ const ROUND_LOCAL = ['_remote'];
 export function toDocs(state) {
   const out = {};
   const put = (kind, id, data) => { out[`${kind}:${id}`] = { kind, id, data }; };
-  put('profile', 'me', { me: state.me, onboarded: state.onboarded, settings: state.settings, favorites: state.favorites, usuals: Array.isArray(state.usuals) ? state.usuals : [], carries: state.carries || [] });
+  put('profile', 'me', {
+    me: state.me, onboarded: state.onboarded, settings: state.settings, favorites: state.favorites, usuals: Array.isArray(state.usuals) ? state.usuals : [], carries: state.carries || [],
+    // Who is who: "Same person as..." links and "Not the same person" breaks (people-links.js)
+    links: state.links && typeof state.links === 'object' ? state.links : {}, unlinks: Array.isArray(state.unlinks) ? state.unlinks : [],
+  });
   for (const p of Object.values(state.players)) put('player', p.id, p);
   for (const c of Object.values(state.crews)) put('crew', c.id, c);
   for (const c of Object.values(state.customCourses)) put('course', c.id, c);
@@ -58,6 +62,9 @@ export function applyDoc(draft, kind, id, data) {
     // A profile saved by an older version has no usuals or carries: keep this phone's rather than wiping them
     if (Array.isArray(data.usuals)) draft.usuals = data.usuals;
     if (Array.isArray(data.carries)) draft.carries = data.carries;
+    // Same for links and unlinks (people-links.js): an older profile has none, so keep this phone's
+    if (data.links && typeof data.links === 'object' && !Array.isArray(data.links)) draft.links = data.links;
+    if (Array.isArray(data.unlinks)) draft.unlinks = data.unlinks;
   }
 }
 

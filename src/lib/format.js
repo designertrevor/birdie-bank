@@ -1,6 +1,7 @@
 // Shared display helpers and derived stats (kept out of component files for fast refresh).
 import { GAMES, SIDE_GAMES, roundResults, scoreSummary, sideGamesOf } from './round.js';
 import { money } from './golf.js';
+import { linksOf } from './people-links.js';
 
 /**
  * A round's games in one name: "Nassau", or "Nassau + Skins + Junk" with side games. Works on a
@@ -28,8 +29,10 @@ export function playerLabel(p, me) {
   return p.id === me ? `${p.name} (you)` : p.name;
 }
 
+/** Saved players for pickers, you first. A player merged into someone else ("Same person as...") stays out until unlinked. */
 export function sortedPlayers(state) {
-  return Object.values(state.players).sort((a, b) => (a.id === state.me ? -1 : b.id === state.me ? 1 : a.name.localeCompare(b.name)));
+  const { isAlias } = linksOf(state);
+  return Object.values(state.players).filter(p => p.id === state.me || !isAlias(p.id)).sort((a, b) => (a.id === state.me ? -1 : b.id === state.me ? 1 : a.name.localeCompare(b.name)));
 }
 
 export function roundDate(r) {
@@ -92,6 +95,9 @@ export function seasonStats(state, year = new Date().getFullYear()) {
     .sort((a, b) => (a.finishedAt || a.createdAt) - (b.finishedAt || b.createdAt));
   let total = 0, birdies = 0, streak = 0, best = null;
   const h2h = {};
+  // One friend is one line, whichever of their ids a round has (see people-links.js)
+  const { personOf } = linksOf(state);
+  const mine = myIds(state);
   for (const r of rounds) {
     const me = meFor(r, state);
     const res = roundResults(r);
@@ -102,7 +108,11 @@ export function seasonStats(state, year = new Date().getFullYear()) {
     birdies += s.birdies + s.eagles;
     if (!best || amt > best.amount) best = { amount: amt, round: r };
     // Honest head-to-head from the bets themselves, not from who happened to pay whom
-    for (const [pid, v] of Object.entries(res.pairs[me] || {})) h2h[pid] = Math.round(((h2h[pid] || 0) + v) * 100) / 100;
+    for (const [pid, v] of Object.entries(res.pairs[me] || {})) {
+      const k = personOf(pid);
+      if (mine.has(pid) || mine.has(k)) continue;
+      h2h[k] = Math.round(((h2h[k] || 0) + v) * 100) / 100;
+    }
   }
   return { rounds: rounds.length, total, birdies, streak, best, h2h };
 }

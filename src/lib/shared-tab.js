@@ -113,6 +113,16 @@ export function applyRows(state, rows) {
   const who = canonicalOf(state);
   const groupOf = row => carryId(who(row.from), who(row.to), row.at);
   const touched = new Set([...changed].map(k => cache[k]).filter(r => r.kind === 'carry').map(groupOf));
+  // One ask written before two ids were linked was saved as two carries (one per id). Now that
+  // they're one person it's one carry again, built from all its rows
+  const sharedKey = c => carryId(who(c.from), who(c.to), c.at);
+  const seen = new Map();
+  for (const c of state.carries || []) {
+    if (!c.shared) continue;
+    const k = sharedKey(c);
+    seen.set(k, (seen.get(k) || 0) + 1);
+  }
+  for (const [k, n] of seen) if (n > 1) touched.add(k);
   const groups = new Map();
   for (const row of Object.values(cache)) {
     if (row.kind !== 'carry') continue;
@@ -133,9 +143,15 @@ export function applyRows(state, rows) {
       roundIds: list.map(r => rounds.get(r.code).id), codes: list.map(r => r.code),
       updatedAt: newest.updatedAt || newest.at, shared: true,
     };
-    const i = carries.findIndex(c => c.id === id);
+    let i = carries.findIndex(c => c.id === id);
+    // A carry saved before two ids were linked has its old pair in its id: it's still the same carry
+    if (i < 0) i = carries.findIndex(c => c.shared && sharedKey(c) === id);
+    if (i >= 0) carry.id = carries[i].id;
+    // Any other copy of it (saved under the other id before the link) goes, so it's one carry
+    const extra = i < 0 ? [] : carries.filter((c, j) => j !== i && c.shared && sharedKey(c) === id);
     if (i < 0) carries.push(carry);
-    else if ((carries[i].updatedAt || 0) <= carry.updatedAt && !same(carries[i], carry)) carries[i] = carry;
+    else if (extra.length || ((carries[i].updatedAt || 0) <= carry.updatedAt && !same(carries[i], carry))) carries[i] = carry;
+    for (const c of extra) carries.splice(carries.indexOf(c), 1);
   }
   return { ...state, tabRows: cache, settlements, carries };
 }

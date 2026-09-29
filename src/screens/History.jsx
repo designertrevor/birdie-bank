@@ -64,10 +64,11 @@ export default function History() {
   const [filter, setFilter] = useState('all');
   const setRange = r => { setRangeRaw(r); try { sessionStorage.setItem(RANGE_KEY, JSON.stringify(r)); } catch { /* ignore */ } };
 
-  const { rounds, me } = state;
-  // Every round's money is worked out a few times over, so only redo it when the rounds or the range change
+  const { rounds, me, players, links, unlinks } = state;
+  // Every round's money is worked out a few times over, so only redo it when the rounds or the range change.
+  // Players, links and unlinks say who is who, so a friend with two ids is one head to head (people-links.js)
   const { anyDone, games, game, shown, groups, series, h2h } = useMemo(() => {
-    const s = { rounds, me };
+    const s = { rounds, me, players, links, unlinks };
     const inRange = roundsInRange(s, range);
     const games = [...new Set(inRange.map(r => r.game))].filter(g => GAMES[g]);
     // A game picked for another range falls back to all games
@@ -80,7 +81,7 @@ export default function History() {
       series: netSeries(shown, s),
       h2h: Object.entries(headToHead(shown, s)).filter(([, v]) => v !== 0).sort((a, b) => Math.abs(b[1]) - Math.abs(a[1])).slice(0, 5),
     };
-  }, [rounds, me, range, filter]);
+  }, [rounds, me, players, links, unlinks, range, filter]);
   const net = series.at(-1)?.total ?? 0;
   const label = rangeLabel(range);
 
