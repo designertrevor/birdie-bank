@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { afterJoin, joinRoute } from './join.js';
+import { afterJoin, joinRoute, teamLine } from './join.js';
 
 const state = { rounds: {
   a: { id: 'a', status: 'active', shared: { code: 'ABC123', host: false } },
@@ -30,4 +30,28 @@ test('join link: a bad code goes nowhere', () => {
 test('after joining: the round, or its results when finished', () => {
   assert.deepEqual(afterJoin('r1', false), ['play', { id: 'r1' }]);
   assert.deepEqual(afterJoin('r1', true), ['roundDetail', { id: 'r1' }]);
+});
+
+test('team line: an auto-named pair stands alone', () => {
+  assert.equal(teamLine('Sam & Dave', ['Dave']), 'Sam & Dave');
+});
+
+test('team line: a plain team name says who you are with', () => {
+  assert.equal(teamLine('Team A', ['Dave']), 'Team A with Dave');
+  assert.equal(teamLine('Team A', ['Dave', 'Bo']), 'Team A with Dave and Bo');
+  assert.equal(teamLine('Team A', ['Dave', 'Bo', 'Cy']), 'Team A with Dave, Bo and Cy');
+});
+
+test('team line: a renamed team missing one mate lists them all', () => {
+  assert.equal(teamLine('Dave’s Bandits', ['Dave', 'Bo']), 'Dave’s Bandits with Dave and Bo');
+});
+
+test('team line: names match whole words in any case', () => {
+  assert.equal(teamLine('sam & DAVE', ['Dave']), 'sam & DAVE');
+  assert.equal(teamLine('Davey & Sam', ['Dave']), 'Davey & Sam with Dave');
+});
+
+test('team line: no mates is just the team name', () => {
+  assert.equal(teamLine('Team A', []), 'Team A');
+  assert.equal(teamLine('Team A'), 'Team A');
 });

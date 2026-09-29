@@ -6,7 +6,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { BallIllo, Icon, Screen } from '../components/ui.jsx';
 import { getState, update, uid } from '../lib/store.js';
 import { useNav } from '../lib/nav.js';
-import { afterJoin } from '../lib/join.js';
+import { afterJoin, teamLine } from '../lib/join.js';
 import { cancelSeatRequest, fetchShared, joinShared, requestSeat, watchSeatRequest } from '../lib/sync.js';
 import { assemble, cleanRequestName } from '../lib/sync-model.js';
 import { GAMES, addPlayerProblem } from '../lib/round.js';
@@ -245,7 +245,7 @@ export default function JoinInvite({ code, onJoined, onSkip, setUp = false }) {
             <h1 className="onboard-title join-h">You’re {firstName(seat.name)}</h1>
             <ul className="join-facts">
               {handicaps && <li><Icon name="golf" fill /> {strokesLabel(seat.plays)}</li>}
-              {team && <li><Icon name="users-three" fill /> {team.name}{mates.length ? ` with ${mates.join(' and ')}` : ''}</li>}
+              {team && <li><Icon name="users-three" fill /> {teamLine(team.name, mates)}</li>}
               {from != null && <li><Icon name="user-plus" fill /> Starts on hole {from}. Your money counts from there</li>}
               <li><Icon name={game?.icon || 'golf'} fill /> {game ? gameLabel(meta) : 'Golf'} · {roundStakeLines(meta).map(l => l.line).join(' + ')}</li>
             </ul>
