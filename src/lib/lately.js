@@ -124,7 +124,8 @@ export function latelyItems(state, now = Date.now(), { carries = state?.carries,
     const me = meFor(r, state);
     const top = Math.max(...Object.values(bal));
     const winners = top > 0.004 ? r.players.filter(p => Math.abs(bal[p.id] - top) < 0.005) : [];
-    const names = winners.map(p => (mine.has(p.id) ? 'You' : first(p.name)));
+    // A friend linked to someone else ("Same person as...") goes by the name on the card kept for them
+    const names = winners.map(p => (mine.has(p.id) ? 'You' : who(p.id) !== p.id ? name(p.id) : first(p.name)));
     const took = !names.length ? 'All square' : names.length === 1 ? `${names[0]} took it` : `${names.slice(0, -1).join(', ')} and ${names.at(-1)} split it`;
     const played = me && r.players.some(p => p.id === me);
     const amount = played ? cents(bal[me] ?? 0) : null;

@@ -181,3 +181,15 @@ test('lately: a recap names every game in the round and counts side-game money',
   assert.notEqual(mine, Math.round(roundResults(r).balances.me * 100) / 100, 'the side game moved money');
   assert.ok(recap.sub.startsWith(`You ${mine > 0 ? '+' : '−'}$${Math.abs(mine)}`), recap.sub);
 });
+
+test('lately: a winner merged into another card goes by the name kept for them', () => {
+  // "Sammy" played this round under his own id; he's been merged into Sam's card
+  const r = skins('a', NOW - 3 * DAY, { winner: 'sam', holes: 3 });
+  const merged = { ...r, players: r.players.map(p => (p.id === 'sam' ? { ...p, id: 'sammy', name: 'Sammy R' } : p)),
+    scores: Object.fromEntries(Object.entries(r.scores).map(([h, row]) => [h, { me: row.me, sammy: row.sam, mike: row.mike }])) };
+  const s = stateWith({ rounds: [merged, skins('b', NOW - DAY)] });
+  s.players.sammy = { id: 'sammy', name: 'Sammy R' };
+  assert.equal(latelyItems(s, NOW)[0].text, 'Skins at Pebble Creek · Sammy took it');
+  s.links = { sammy: 'sam' };
+  assert.equal(latelyItems(s, NOW)[0].text, 'Skins at Pebble Creek · Sam took it');
+});

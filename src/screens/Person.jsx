@@ -64,9 +64,13 @@ export default function Person({ id: opened }) {
   };
   const sameSub = (x, whole = false) => {
     const ids = new Set(whole ? linksOf(state).groupOf(x) : [x]);
-    const rounds = Object.values(state.rounds).filter(r => r.players.some(p => ids.has(p.id))).length;
+    const played = Object.values(state.rounds).filter(r => r.players.some(p => ids.has(p.id)));
+    const rounds = played.length;
     const saved = state.players[x] ? 'Saved player' : null;
-    return [saved, rounds ? `${rounds} round${rounds === 1 ? '' : 's'}` : null].filter(Boolean).join(' · ') || 'No rounds yet';
+    // In the picker, the last round they played, so two cards with the same name can be told apart
+    const last = whole && played.sort((a, b) => (b.finishedAt || b.createdAt || 0) - (a.finishedAt || a.createdAt || 0))[0];
+    const lastText = last ? `${rounds === 1 ? '' : 'last '}${roundDate(last)}${last.course?.name ? ` at ${last.course.name}` : ''}` : null;
+    return [saved, rounds ? `${rounds} round${rounds === 1 ? '' : 's'}` : null, lastText].filter(Boolean).join(' · ') || 'No rounds yet';
   };
 
   return (
@@ -142,9 +146,10 @@ export default function Person({ id: opened }) {
               <div key={a.id} className="ledger-row static same-row">
                 <div className="lr-info">
                   <div className="lr-name" style={{ fontSize: 16 }}>{a.name}</div>
-                  <div className="lr-status">{a.manual ? 'You said it’s the same person' : 'Linked when they joined from a link'} · {sameSub(a.id)}</div>
+                  <div className="lr-status">{a.manual ? 'You said it’s the same person' : 'Took their seat from a round link'} · {sameSub(a.id)}</div>
                 </div>
-                <button className="link-btn" onClick={() => separate(a)}>{a.manual ? 'Undo' : 'Not the same person'}</button>
+                <button className="link-btn" onClick={() => separate(a)}
+                  aria-label={a.manual ? `Undo: ${a.name} is not ${name}` : `${a.name} is not the same person as ${name}`}>{a.manual ? 'Undo' : 'Not the same person'}</button>
               </div>
             ))}
             <button className="quiet-row" onClick={() => setMerging(true)}>
