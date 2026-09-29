@@ -274,14 +274,22 @@ export function CourseEdit({ id }) {
     const cid = builtIn ? `${existing.id}-custom` : (id || uid('course_'));
     update(s => {
       s.customCourses[cid] = { ...c, id: cid, custom: true, verified: false, replaces: builtIn ? existing.id : c.replaces, name: c.name.trim(), city: c.city.trim(), ...(c.source ? { edited: true } : {}) };
-      if (builtIn) s.favorites = s.favorites.map(f => (f === existing.id ? cid : f));
+      if (builtIn) {
+        s.favorites = s.favorites.map(f => (f === existing.id ? cid : f));
+        s.starredCourses = (s.starredCourses || []).map(f => (f === existing.id ? cid : f));
+      }
     });
     showToast(builtIn ? 'Saved your corrected copy' : 'Course saved');
     nav.pop();
   };
   const remove = async () => {
     if (!(await ask({ title: `Delete ${existing.name}?`, text: existing.replaces ? 'The built-in version comes back.' : 'Past rounds keep their scorecards.', confirmLabel: 'Delete course', danger: true }))) return;
-    update(s => { delete s.customCourses[id]; s.favorites = s.favorites.filter(f => f !== id); });
+    update(s => {
+      delete s.customCourses[id];
+      s.favorites = s.favorites.filter(f => f !== id);
+      // A starred corrected copy hands its star back to the built-in course it replaced
+      s.starredCourses = (s.starredCourses || []).map(f => (f === id ? existing.replaces || null : f)).filter(Boolean);
+    });
     nav.pop();
   };
 

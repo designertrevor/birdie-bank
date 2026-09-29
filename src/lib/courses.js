@@ -41,6 +41,71 @@ export function courseWithHoleFix(course, courseIdx, { par = null, hdcp = null }
   return { id: course.id, course: { ...course, holes, ...(course.source === 'golfcourseapi' ? { edited: true } : {}) } };
 }
 
+/**
+ * The ids of your starred courses, each turned into the course you'd play today (a corrected
+ * copy of a built-in shows in its place), with deleted courses left out.
+ */
+function starredList(state) {
+  const out = [];
+  for (const id of state.starredCourses || []) {
+    const c = findCourse(state, id);
+    if (c && !out.includes(c)) out.push(c);
+  }
+  return out;
+}
+
+/** Whether a course is starred, by its own id or the built-in one it replaced. */
+export function isStarred(state, course) {
+  return !!course && starredList(state).some(c => c.id === course.id);
+}
+
+/** The starred list after tapping the star on one course: adds it to the end, or takes it (and any old id for it) off. */
+export function toggleStarred(state, courseId) {
+  const list = state.starredCourses || [];
+  const c = findCourse(state, courseId);
+  if (!c) return list;
+  if (isStarred(state, c)) return list.filter(id => findCourse(state, id)?.id !== c.id);
+  return [...list, c.id];
+}
+
+const RECENT_MAX = 5;
+
+/**
+ * What the course picker shows. With no search: { starred, recent, all, hint }, where recent is
+ * the courses from your latest rounds (finished or in progress, newest first, at most 5, starred
+ * ones left out), topped up from courses you picked but haven't played yet (state.favorites, e.g.
+ * a round you only planned). recentLabel is "Recently played", or "Recent" once such a course
+ * is in the list. all is every other course. hint: nothing starred yet and enough
+ * courses that a star helps. With a search, only all is filled, with the matches.
+ */
+export function coursePickerSections(state, needle = '') {
+  const courses = allCourses(state);
+  const q = (needle || '').trim().toLowerCase();
+  if (q) {
+    const all = courses.filter(c => c.name.toLowerCase().includes(q) || (c.city || '').toLowerCase().includes(q));
+    return { starred: [], recent: [], recentLabel: 'Recently played', all, hint: false };
+  }
+  const starred = starredList(state);
+  const taken = new Set(starred.map(c => c.id));
+  const recent = [];
+  const add = id => {
+    const c = findCourse(state, id);
+    if (!c || taken.has(c.id) || recent.length >= RECENT_MAX) return;
+    taken.add(c.id);
+    recent.push(c);
+  };
+  Object.values(state.rounds || {})
+    .filter(r => r.status === 'done' || r.status === 'active')
+    .sort((a, b) => (b.finishedAt || b.createdAt || 0) - (a.finishedAt || a.createdAt || 0))
+    .forEach(r => add(r.course?.id ?? r.courseId));
+  const played = recent.length;
+  (state.favorites || []).forEach(add);
+  // Only say "played" when every row was: a course you only picked or planned makes it plain "Recent"
+  const recentLabel = recent.length > played ? 'Recent' : 'Recently played';
+  const all = courses.filter(c => !taken.has(c.id));
+  return { starred, recent, recentLabel, all, hint: starred.length === 0 && courses.length >= 3 };
+}
+
 export function coursePar(course) {
   return course.holes.reduce((a, h) => a + (h.par || 0), 0);
 }

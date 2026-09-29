@@ -52,7 +52,8 @@ function fresh() {
     players: {},
     crews: {},
     customCourses: {},
-    favorites: [],
+    favorites: [],     // courses picked lately, newest first (the picker's fallback for Recently played)
+    starredCourses: [], // courses you starred to keep at the top of the picker, synced in the profile
     rounds: {},
     activeRoundId: null,
     settlements: [],
