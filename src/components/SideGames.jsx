@@ -4,7 +4,8 @@ import { useState } from 'react';
 import { Icon, Numpad, Sheet, Toggle } from './ui.jsx';
 import { GAMES, MAX_GAMES, SIDE_GAMES, sideGameChoices } from '../lib/round.js';
 import { DOT_KINDS } from '../lib/games.js';
-import { sideExample } from '../lib/side-games.js';
+import { sideExample, skinsRulesLine } from '../lib/side-games.js';
+import { GameOptions } from './GameOptions.jsx';
 import { money } from '../lib/golf.js';
 import { optionsProblem, sideBetLine } from '../lib/stakes.js';
 import { firstName } from '../lib/format.js';
@@ -25,6 +26,8 @@ const amountKey = (game, s) => (game === 'skins' ? (s?.payout === 'pot' ? 'stake
 export function SideGamesSetup({ game, sideGames, setSideGames, defaults, players = 4 }) {
   const [adding, setAdding] = useState(false);
   const [pad, setPad] = useState(null); // index of the side game whose bet is being changed
+  const [rules, setRules] = useState(null); // index of the side Skins whose house rules are open
+  const [rulePad, setRulePad] = useState(null); // an amount in those rules being changed
   if (!game) return null;
   if (game === 'scramble') {
     return (
@@ -63,6 +66,11 @@ export function SideGamesSetup({ game, sideGames, setSideGames, defaults, player
               <button className="nassau-bet-btn" aria-label={`${meta.label} bet: ${money(sg.settings[key] ?? 0)}. Change`} onClick={() => setPad(i)}>{money(sg.settings[key] ?? 0)}</button>
             </div>
             <p className="field-help">{sideExample(sg.game, sg.settings, players)}</p>
+            {sg.game === 'skins' && (
+              <button className="quiet-row flush sg-rules" onClick={() => setRules(i)} aria-label={`Skins house rules: ${skinsRulesLine(sg.settings)}. Change for this round`}>
+                <Icon name="sliders-horizontal" /> <span>{skinsRulesLine(sg.settings)}</span> <Icon name="caret-right" />
+              </button>
+            )}
             {sg.game === 'skins' && (
               <div className="toggle-row flush">
                 <div><div className="toggle-lbl">Carryovers</div><div className="toggle-sub">Tied holes roll the skin to the next hole</div></div>
@@ -118,10 +126,36 @@ export function SideGamesSetup({ game, sideGames, setSideGames, defaults, player
           );
         })}
       </Sheet>
+      <SkinsRules i={rules} sideGames={sideGames} change={change} players={players} onClose={() => setRules(null)} onAmount={setRulePad} />
+      <Numpad open={rules != null && !!rulePad} title={rulePad?.title || ''} prefix="$"
+        initial={rulePad && rules != null ? sideGames[rules]?.settings[rulePad.path.split('.')[1]] : ''} min={rulePad?.min} max={rulePad?.max}
+        onClose={() => setRulePad(null)} onDone={v => { const key = rulePad.path.split('.')[1]; change(rules, s => ({ ...s, [key]: v })); setRulePad(null); }} />
       <Numpad open={pad != null && !!padGame} title={padGame ? `${SIDE_GAMES[padGame.game].label} bet` : ''} prefix="$"
         initial={padGame ? padGame.settings[amountKey(padGame.game, padGame.settings)] : ''} min={1} max={500}
         onClose={() => setPad(null)} onDone={v => { const i = pad; change(i, s => ({ ...s, [amountKey(sideGames[i].game, s)]: v })); setPad(null); }} />
     </>
+  );
+}
+
+/**
+ * A side Skins game's house rules for this round (net or gross, a skin or a pot, carryovers and
+ * the last carry), with the same options as Skins as the main game. Starts from what the side
+ * game already has, which came from the saved Skins defaults.
+ */
+function SkinsRules({ i, sideGames, change, players, onClose, onAmount }) {
+  const sg = i != null ? sideGames[i] : null;
+  if (!sg || sg.game !== 'skins') return null;
+  const key = path => path.split('.').slice(1).join('.');
+  const get = path => (path === 'skins' ? sg.settings : sg.settings[key(path)]);
+  const set = (path, v) => change(i, s => ({ ...s, [key(path)]: v }));
+  return (
+    <Sheet open onClose={onClose} title="Skins house rules">
+      <p className="sheet-text">For this round only. Your saved Skins defaults stay as they are.</p>
+      <GameOptions game="skins" get={get} set={set} onAmount={(path, title, o) => onAmount({ path, title, ...o })} players={players} compact />
+      <div className="cta-wrap">
+        <button className="full-btn" onClick={onClose}>Done</button>
+      </div>
+    </Sheet>
   );
 }
 

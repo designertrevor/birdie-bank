@@ -32,6 +32,19 @@ export function sideExample(game, settings, n = 4) {
   return '';
 }
 
+/**
+ * Skins house rules in one line, for a side game in setup: net or gross, the bet, and what
+ * happens to skins still carried after the last hole. "Net · $2 a skin · last carry unclaimed".
+ */
+export function skinsRulesLine(settings) {
+  const s = settings || {};
+  const kind = { net: 'Net', gross: 'Gross', both: 'Net and gross' }[s.kind || 'net'] || 'Net';
+  const bet = s.payout === 'pot' ? `${money(s.stake ?? s.value ?? 0)} each in the pot` : `${money(s.value ?? 0)} a skin`;
+  const last = !s.carryover ? 'no carryovers'
+    : { void: 'last carry unclaimed', split: 'last carry split', playoff: 'last carry played off' }[s.lastCarry || 'void'] || 'last carry unclaimed';
+  return `${kind} · ${bet} · ${last}`;
+}
+
 /** Each game's money for one player in small type: "Nassau +$5 · Skins +$12 · Junk $0". */
 export function gamesLine(byGame, pid) {
   if (!byGame) return '';

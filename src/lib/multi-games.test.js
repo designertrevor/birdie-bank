@@ -426,3 +426,11 @@ test('late joiners, players who left, pickups and a shorter round: side games st
     }
   }
 });
+
+test('side Skins: one line of house rules, from the settings the side game carries', async () => {
+  const { skinsRulesLine } = await import('./side-games.js');
+  assert.equal(skinsRulesLine({ value: 2, carryover: true }), 'Net · $2 a skin · last carry unclaimed');
+  assert.equal(skinsRulesLine({ value: 2, stake: 5, payout: 'pot', kind: 'gross', carryover: true, lastCarry: 'split' }), 'Gross · $5 each in the pot · last carry split');
+  assert.equal(skinsRulesLine({ value: 3, kind: 'both', carryover: true, lastCarry: 'playoff' }), 'Net and gross · $3 a skin · last carry played off');
+  assert.equal(skinsRulesLine({ value: 1, carryover: false, lastCarry: 'split' }), 'Net · $1 a skin · no carryovers');
+});
