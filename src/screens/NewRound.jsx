@@ -22,7 +22,7 @@ import { BET_LADDER, MAX_BALLOT_GAMES, betChoices, betLabel, betOf, betUnitLabel
 import { editPlan } from '../lib/plan-sync.js';
 import { shouldShowPaywall } from '../lib/paywall.js';
 import { PAYWALL_ON } from '../lib/paywall-flag.js';
-import { matchingUsual, setupFromUsual, usualsOf } from '../lib/usuals.js';
+import { matchingUsual, planFromUsual, setupFromUsual, usualsOf } from '../lib/usuals.js';
 import { SaveUsualButton, UsualsList } from '../components/Usuals.jsx';
 
 const STEPS = ['Game', 'Course', 'Players', 'Bets'];
@@ -60,6 +60,7 @@ function planSetup(state, planId, present) {
   return {
     game: s.game, holesCount: s.holesCount, courseId: course?.id ?? null, nine: s.nine, picked, missing: [], tees: {}, hcOverride: {},
     bets: structuredClone(s.settings[s.game]), hcPct: s.hcPct, useHc: s.useHandicaps, teams: s.teams, sideGames: s.sideGames,
+    usualId: plan.usualId ?? null,
     step: !course ? 1 : picked.length < g.min || picked.length > g.max ? 2 : 3,
   };
 }
@@ -103,10 +104,17 @@ export default function NewRound({ rematch, fromPlan, present, ahead = false, ga
   const [createdId, setCreatedId] = useState(null); // the round, once it's set up
   const usual = useMemo(() => usualRound(state), [state]);
   // The saved usual this setup was loaded from, and anyone in it who isn't saved on this phone
-  const [usualId, setUsualId] = useState(null);
+  const [usualId, setUsualId] = useState(() => pre?.usualId ?? null);
   const [missing, setMissing] = useState(() => pre?.missing || []);
+  // Planning from a saved usual: its side games start picked on the ballot
+  const [planSides, setPlanSides] = useState([]);
+  // A usual whose course isn't on this phone any more: its name, so the course step can say so
+  const [lostCourse, setLostCourse] = useState(null);
 
   const course = findCourse(state, courseId);
+  // Names from the usual still not saved here (adding one by the same name clears it from the hint)
+  const savedNames = new Set(Object.values(state.players || {}).map(p => String(p?.name || '').trim().toLowerCase()));
+  const stillMissing = missing.filter(n => !savedNames.has(String(n).trim().toLowerCase()));
 
   const close = async () => {
     if (step === 0 && !game) return nav.pop();
@@ -130,7 +138,9 @@ export default function NewRound({ rematch, fromPlan, present, ahead = false, ga
     const plan = newPlan({
       id, hostName: me?.name || 'Me', game, holesCount, nine, date, teeTime, course,
       people: invited.filter(pid => pid !== s.me).map(pid => s.players[pid]).filter(Boolean),
-      ballot: { games: ballotGames, bets: ballotBets, sides: ballotSides }, suggestedBet, settings: opts, useHc: true,
+      ballot: { games: ballotGames, bets: ballotBets, sides: ballotSides }, suggestedBet, settings: opts, useHc: usualId ? useHc : true,
+      // From a saved usual: its handicap percentage, and which usual (for "Last played")
+      ...(usualId ? { usualId, hcPct: opts.hcPct } : {}),
     });
     update(st => {
       if (!st.plans) st.plans = {};
@@ -182,12 +192,31 @@ export default function NewRound({ rematch, fromPlan, present, ahead = false, ga
   const repeatUsual = () => {
     loadSetup({ ...rematchSetup(state, usual.round), courseId: usual.course.id, step: 3 });
     setUsualId(null);
+    setLostCourse(null);
   };
   const pickUsual = u => {
     const p = setupFromUsual(getState(), u);
     if (!p) return;
     loadSetup(p);
     setUsualId(u.id);
+    setLostCourse(p.courseId ? null : u.courseName || null);
+  };
+  // Planning ahead from a usual: the game, bets, side games, course and group are filled in, and
+  // the game and bet still go to the group vote as the organizer's suggestion. It lands on When
+  // and Course, since the date always needs picking.
+  const planUsual = u => {
+    const p = planFromUsual(getState(), u);
+    if (!p) return;
+    setGame(p.game); setHolesCount(p.holesCount); setNine(p.nine);
+    setCourseId(p.courseId); setTees({}); setStartHole(null);
+    setInvited(p.invited);
+    setOpts(o => ({ ...o, ...structuredClone(p.opts) }));
+    setUseHc(p.useHc);
+    setPlanSides(p.sides);
+    setMissing(p.missing);
+    setUsualId(p.usualId);
+    setLostCourse(p.courseId ? null : u.courseName || null);
+    setStep(p.step);
   };
   const created = createdId ? state.rounds[createdId] : null;
 
@@ -202,18 +231,24 @@ export default function NewRound({ rematch, fromPlan, present, ahead = false, ga
           <Header title={planning ? 'Plan a round' : 'New round'} onBack={back} onClose={close} />
           <Steps steps={planning ? PLAN_STEPS : STEPS} current={step} />
           <h2 className="step-q d">{(planning ? PLAN_QUESTIONS : QUESTIONS)[step]}</h2>
-          {step === 2 && !planning && missing.length > 0 && (
-            <p className="hint-card"><Icon name="user-plus" fill /> {listNames(missing)} {missing.length === 1 ? 'isn’t' : 'aren’t'} saved on this phone yet. Add them to play with the whole group.</p>
+          {step === 1 && !course && lostCourse && (
+            <p className="hint-card"><Icon name="map-pin" fill /> {lostCourse} isn’t on this phone any more. Pick the course below, or add it again.</p>
+          )}
+          {step === 2 && planning && stillMissing.length > 0 && (
+            <p className="hint-card"><Icon name="user-plus" fill /> {listNames(stillMissing)} {stillMissing.length === 1 ? 'isn’t' : 'aren’t'} saved on this phone yet. Add {stillMissing.length === 1 ? 'their name' : 'their names'} below, or send the group link.</p>
+          )}
+          {step === 2 && !planning && stillMissing.length > 0 && (
+            <p className="hint-card"><Icon name="user-plus" fill /> {listNames(stillMissing)} {stillMissing.length === 1 ? 'isn’t' : 'aren’t'} saved on this phone yet. Add them to play with the whole group.</p>
           )}
         </>
       ) : <Header title="Round ready" small onClose={() => nav.reset('upnext')} />}
-      {step === 0 && <GameStep usual={planning || (usual && matchingUsual(state, usual.round)) ? null : usual} onUsual={repeatUsual} onPickUsual={planning ? null : pickUsual} planning={planning} onPlan={fromPlan ? null : () => { setMode('plan'); setStep(1); }} game={game} setGame={gm => { setGame(gm); if (!GAMES[gm].holes.includes(holesCount)) setHolesCount(GAMES[gm].holes[0]); }} holesCount={holesCount} setHolesCount={setHolesCount} onNext={() => setStep(1)} />}
+      {step === 0 && <GameStep usual={planning || (usual && matchingUsual(state, usual.round)) ? null : usual} onUsual={repeatUsual} onPickUsual={planning ? planUsual : pickUsual} planning={planning} onPlan={fromPlan ? null : () => { setMode('plan'); setStep(1); }} game={game} setGame={gm => { setGame(gm); if (!GAMES[gm].holes.includes(holesCount)) setHolesCount(GAMES[gm].holes[0]); }} holesCount={holesCount} setHolesCount={setHolesCount} onNext={() => setStep(1)} />}
       {step === 1 && planning && (
         <CourseStep courseId={courseId} setCourseId={id => { setCourseId(id); setTees({}); setStartHole(null); }} holesCount={holesCount} nine={nine} setNine={setNine} onNext={() => setStep(2)}
-          nextLabel="Next: Who’s invited" top={<WhenPicker date={date} setDate={setDate} teeTime={teeTime} setTeeTime={setTeeTime} />} />
+          nextLabel="Next: Who’s invited" top={<WhenPicker date={date} setDate={setDate} teeTime={teeTime} setTeeTime={setTeeTime} coursePicked={!!course} />} />
       )}
       {step === 2 && planning && course && <InviteStep invited={invited} setInvited={setInvited} onNext={() => setStep(3)} />}
-      {step === 3 && planning && course && <VoteStep game={game} opts={opts} onPlan={makePlan} ballot={ballot} />}
+      {step === 3 && planning && course && <VoteStep game={game} opts={opts} onPlan={makePlan} ballot={ballot} initialSides={planSides} />}
       {step === 1 && !planning && <CourseStep courseId={courseId} setCourseId={id => { setCourseId(id); setTees({}); setStartHole(null); }} holesCount={holesCount} nine={nine} setNine={setNine} onNext={() => setStep(2)} />}
       {step === 2 && !planning && course && (
         <PlayersStep game={g} course={course} holesCount={holesCount} nine={nine} picked={picked} setPicked={setPicked}
@@ -324,10 +359,10 @@ function CourseStep({ courseId, setCourseId, holesCount, nine, setNine, onNext, 
     }
   };
   const apiRow = r => (
-    <button key={r.apiId} className="list-item" onClick={() => pickApi(r)} aria-busy={loadingId === r.apiId} aria-label={[`Add ${r.name}`, r.city, r.teeCount ? `${r.teeCount} tees` : null].filter(Boolean).join(', ')}>
+    <button key={r.apiId} className="list-item" onClick={() => pickApi(r)} aria-busy={loadingId === r.apiId} aria-label={[`Add ${r.name}`, r.city, r.teeCount ? teeCount(r.teeCount) : null].filter(Boolean).join(', ')}>
       <div className="row-main">
         <div className="li-name">{r.name}</div>
-        <div className="li-sub">{[r.city, r.teeCount ? `${r.teeCount} tees` : null].filter(Boolean).join(' · ')}</div>
+        <div className="li-sub">{[r.city, r.teeCount ? teeCount(r.teeCount) : null].filter(Boolean).join(' · ')}</div>
       </div>
       <span className="li-check add"><Icon name={loadingId === r.apiId ? 'circle-notch' : 'plus'} className={loadingId === r.apiId ? 'spin' : ''} /></span>
     </button>
@@ -335,10 +370,10 @@ function CourseStep({ courseId, setCourseId, holesCount, nine, setNine, onNext, 
 
   const row = c => (
     <button key={c.id} className="list-item" onClick={() => setCourseId(c.id)} aria-pressed={c.id === courseId}
-      aria-label={[c.name, c.city, `${c.holes.length} holes`, `par ${coursePar(c)}`, `${c.tees?.length || 0} tees`, courseTag(c)?.text].filter(Boolean).join(', ')}>
+      aria-label={[c.name, c.city, `${c.holes.length} holes`, `par ${coursePar(c)}`, teeCount(c.tees?.length || 0), courseTag(c)?.text].filter(Boolean).join(', ')}>
       <div className="row-main">
         <div className="li-name">{c.name}</div>
-        <div className="li-sub">{[c.city, `${c.holes.length} holes`, `Par ${coursePar(c)}`, `${c.tees?.length || 0} tees`].filter(Boolean).join(' · ')}</div>
+        <div className="li-sub">{[c.city, `${c.holes.length} holes`, `Par ${coursePar(c)}`, teeCount(c.tees?.length || 0)].filter(Boolean).join(' · ')}</div>
         {courseTag(c) && <div className={`warn-tag ${courseTag(c).soft ? 'soft' : ''}`}><Icon name={courseTag(c).soft ? 'database' : 'warning'} fill /> {courseTag(c).text}</div>}
       </div>
       <span className={`li-check ${c.id === courseId ? 'on' : 'add'}`}><Icon name={c.id === courseId ? 'check' : 'plus'} /></span>
@@ -617,7 +652,10 @@ function dayName(iso) {
 }
 
 /** The day (next two weeks) and the tee time, above the course list. */
-function WhenPicker({ date, setDate, teeTime, setTeeTime }) {
+/** "1 tee", "4 tees" */
+const teeCount = n => `${n} ${n === 1 ? 'tee' : 'tees'}`;
+
+function WhenPicker({ date, setDate, teeTime, setTeeTime, coursePicked = false }) {
   const days = useMemo(() => dayChoices(new Date(), 14), []);
   return (
     <div className="block when-block">
@@ -631,7 +669,7 @@ function WhenPicker({ date, setDate, teeTime, setTeeTime }) {
       </div>
       <label className="field-label" htmlFor="when-time" style={{ marginTop: 14 }}>Tee time <span className="opt">optional</span></label>
       <input id="when-time" className="name-input time-input" type="time" value={teeTime} onChange={e => setTeeTime(e.target.value)} step={300} />
-      <p className="field-help">Then pick the course below.</p>
+      <p className="field-help">{coursePicked ? 'The course is picked below. Change it if you need to.' : 'Then pick the course below.'}</p>
     </div>
   );
 }
@@ -693,12 +731,13 @@ function InviteStep({ invited, setInvited, onNext }) {
 }
 
 /** The organizer suggests a game and a bet, and picks what else the group can vote for. */
-function VoteStep({ game, opts, onPlan, ballot = [] }) {
+function VoteStep({ game, opts, onPlan, ballot = [], initialSides = [] }) {
   const start = betOf(game, opts) || 5;
   const [bet, setBet] = useState(start);
   const [others, setOthers] = useState(() => ballot.filter(k => k !== game && GAMES[k]).slice(0, MAX_BALLOT_GAMES - 1));
   const [extraBets, setExtraBets] = useState(() => nearbyBets(start));
-  const [sides, setSides] = useState([]);
+  // Side games from a saved usual start picked (the group still says yes or no to each)
+  const [sides, setSides] = useState(() => initialSides.filter(k => SIDE_GAMES[k] && k !== game));
   const toggleSide = k => setSides(v => (v.includes(k) ? v.filter(x => x !== k) : [...v, k]));
   const ladder = [...new Set([...BET_LADDER, start])].sort((a, b) => a - b);
   const toggleGame = k => setOthers(v => (v.includes(k) ? v.filter(x => x !== k) : v.length >= MAX_BALLOT_GAMES - 1 ? v : [...v, k]));

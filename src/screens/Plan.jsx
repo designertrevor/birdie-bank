@@ -12,6 +12,7 @@ import { sideBetLine } from '../lib/stakes.js';
 import { money } from '../lib/golf.js';
 import { findCourse } from '../lib/courses.js';
 import { addRound } from '../lib/rounds.js';
+import { usualIdFor } from '../lib/usuals.js';
 import { payFields, sendReminder } from '../lib/pay.js';
 import { shareLink, shareRound, syncConfigured } from '../lib/sync.js';
 import {
@@ -416,6 +417,9 @@ export function RollCall({ id }) {
     });
     // The side games the group voted for ride along
     if (setup.sideGames.length) round.sideGames = structuredClone(setup.sideGames);
+    // Planned from a saved usual (and still its game at its course): finishing it updates "Last played"
+    const usualId = usualIdFor(getState(), plan.usualId, setup.game, course);
+    if (usualId) round.usualId = usualId;
     update(s => { addRound(s, round); });
     editPlan(id, p => { p.status = 'started'; p.roundId = rid; });
     // Friends on the plan can follow the round live from the same page
