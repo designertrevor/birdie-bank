@@ -858,6 +858,9 @@ button:disabled { cursor: not-allowed; }
 .pay-btn.venmo { background: var(--venmo); color: #fff; }
 .pay-btn { min-width: 0; padding: 0 12px; white-space: nowrap; }
 .pay-lbl { overflow: hidden; text-overflow: ellipsis; }
+/* "Roll $28 from your shared rounds to next time" wraps rather than cutting off */
+.pay-btn.roll-part { white-space: normal; height: auto; min-height: 44px; padding: 8px 14px; line-height: 1.25; text-align: left; }
+.pay-btn.roll-part .pay-lbl { overflow: visible; }
 .pay-btn.done { background: var(--win-bg); color: var(--win); }
 .share-img {
   display: block; margin: 8px auto 0; width: min(280px, calc(100% - 32px)); height: auto; aspect-ratio: 9 / 16; border-radius: 24px;
@@ -1053,6 +1056,10 @@ button:disabled { cursor: not-allowed; }
 .ap-hole { min-width: 44px; min-height: 44px; justify-content: center; }
 .seat-req .pill-btn.ghost { background: transparent; color: var(--on-pastel); box-shadow: inset 0 0 0 1.5px rgba(0,0,0,.35); }
 .seat-req.keeper-bar { background: var(--mint); }
+.seat-req .sr-sub { display: block; margin-top: 2px; font-size: 13px; opacity: .8; }
+.seat-req .link-btn.inline { min-height: 0; padding: 0; font-size: inherit; color: inherit; }
+.seat-req .sr-clock { font-variant-numeric: tabular-nums; }
+.seat-req .pill-btn.ghost:disabled { opacity: 1; }
 .sheet-item:disabled { opacity: .55; transform: none; }
 
 /* Upcoming rounds: the plan, who's in, the vote, roll call */
@@ -1202,6 +1209,13 @@ button.who-status { cursor: pointer; min-height: 36px; }
 .side-game .sg-head { display: flex; align-items: center; gap: 12px; }
 .side-game .sg-icon { font-size: 22px; color: var(--icon); flex-shrink: 0; }
 .toggle-row.ap-game { margin: 0 0 8px; padding: 12px 14px; }
+.side-vote .sv-row { display: flex; align-items: center; gap: 10px; padding: 10px 0; border-top: 1px solid var(--line); }
+.side-vote .sv-row:first-of-type { border-top: none; }
+.side-vote .sv-bet { font-weight: 500; color: var(--mute); }
+.side-vote .sv-btns { display: flex; gap: 6px; flex-shrink: 0; }
+.side-vote .sv-btns .pill-btn { min-height: 44px; min-width: 52px; justify-content: center; }
+.side-game .sg-rules { width: 100%; margin: 8px 0 0; padding: 10px 0; min-height: 44px; color: var(--ink); font-weight: 600; }
+.side-game .sg-rules > span { flex: 1; min-width: 0; }
 .side-game .toggle-row.flush { margin: 12px 0 0; padding: 12px 0 0; background: none; border-radius: 0; border-top: 1px solid var(--line); }
 .text-link-btn { display: inline-flex; align-items: center; min-height: 44px; margin-top: 4px; padding: 0 2px; background: none; border: none; color: var(--loss); font-weight: 600; font-size: 15px; cursor: pointer; }
 .set-row.add-side { width: calc(100% - 32px); border: 2px dashed var(--line); text-align: left; font: inherit; color: inherit; }
@@ -1249,6 +1263,7 @@ button.who-status { cursor: pointer; min-height: 36px; }
 /* Zelle has no pay link: its button shows the handle to copy, so it gets the whole row */
 .pay-acts.wrap > .app-zelle { flex-basis: 100%; }
 .link-btn { min-height: 44px; padding: 0 4px; border: none; background: none; color: var(--ink); font: inherit; font-size: 14px; font-weight: 700; text-decoration: underline; text-decoration-color: var(--surface-strong); text-decoration-thickness: 2px; text-underline-offset: 3px; cursor: pointer; flex-shrink: 0; }
+.tab-part { display: block; min-height: 40px; margin-top: 4px; padding: 0; font-size: 13px; font-weight: 600; color: var(--mute); }
 .recent-paid { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-top: 6px; font-size: 13px; color: var(--mute); }
 .recent-paid > span { min-width: 0; }
 .carry-note { margin-top: 10px; padding: 10px 12px; border-radius: 14px; background: var(--surface); }

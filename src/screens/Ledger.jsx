@@ -6,7 +6,8 @@ import { Avatar, SettleSheet } from '../components/Pay.jsx';
 import { PersonActions, RecentPaid, SquareStrip } from '../components/TabCard.jsx';
 import { useStore } from '../lib/store.js';
 import { headToHeadSummary, nameOf, outstanding } from '../lib/ledger.js';
-import { canonicalOf, recentPayment } from '../lib/shared-tab.js';
+import { canonicalOf, paymentGroups, recentPayment } from '../lib/shared-tab.js';
+import { sharedDebts } from '../lib/pair-debts.js';
 import { undoPayments, useTabSync } from '../lib/tab-sync.js';
 import { money } from '../lib/golf.js';
 import { myIds } from '../lib/format.js';
@@ -44,12 +45,14 @@ export default function Ledger() {
   const others = plan.filter(t => !isMe(t.from) && !isMe(t.to));
   const overall = Math.round(people.reduce((a, p) => a + p.net, 0) * 100) / 100;
   const h2h = headToHeadSummary(state, mine);
-  const history = [...state.settlements].sort((a, b) => b.at - a.at);
+  // One row per tap: a tap that paid several rounds, or went both ways, is one payment
+  const history = paymentGroups(state);
   const hasRounds = Object.values(state.rounds).some(r => r.status === 'done');
+  const hasShared = sharedDebts(state).length > 0;
 
   // One tap, no confirm: it can be put back from the toast, and a shared payment updates both phones
   const undo = s => {
-    const redo = undoPayments([s]);
+    const redo = undoPayments(s.settlements);
     showToast(`${nameOf(state, s.from).split(' ')[0]} owes ${nameOf(state, s.to).split(' ')[0]} again`, { label: 'Undo', run: redo });
   };
   // People you squared with lately keep a card for a few days, so the last payment can be taken back
@@ -61,6 +64,13 @@ export default function Ledger() {
     .filter(x => x.pay)
     .sort((a, b) => b.pay.at - a.pay.at);
   const squareNames = [...h2h.keys()].filter(id => !byPerson.has(id) && !recentSquare.some(x => x.id === id)).map(id => first(nameOf(state, id)));
+
+  // The same Settle up sheet the person screen opens for a part payment
+  const partDebt = p => {
+    const amount = Math.abs(p.net);
+    if (p.debts.length === 1) return p.debts[0];
+    return p.net > 0 ? { from: p.id, to: state.me, amount } : { from: state.me, to: p.id, amount };
+  };
 
   const personRow = p => {
     const name = nameOf(state, p.id);
@@ -80,6 +90,7 @@ export default function Ledger() {
           <span className="chevron"><Icon name="caret-right" /></span>
         </button>
         <PersonActions other={p.id} net={p.net} meId={state.me || me} />
+        <button className="link-btn tab-part" onClick={() => setOpen(partDebt(p))}>Paid part of it?</button>
       </div>
     );
   };
@@ -145,7 +156,7 @@ export default function Ledger() {
                 {others.map(otherRow)}
               </>
             )}
-            <p className="field-help pad">Netted across every round, then squared in the fewest payments. Nobody is asked to pay someone they haven’t played with.</p>
+            <p className="field-help pad">Netted across every round, then squared in the fewest payments. Nobody is asked to pay someone they haven’t played with.{hasShared ? ' Money from rounds you shared live stays between the two players, so both phones agree on it.' : ''}</p>
           </>
         )}
         {plan.length === 0 && recentSquare.map(squareCard)}
@@ -153,7 +164,7 @@ export default function Ledger() {
           <>
             <div className="sec-label">Payments</div>
             {history.slice(0, 30).map(s => (
-              <div key={s.id} className="ledger-row static">
+              <div key={s.key} className="ledger-row static">
                 <div className="lr-info">
                   <div className="lr-name" style={{ fontSize: 16 }}>{isMe(s.from) ? 'You' : nameOf(state, s.from)} paid {isMe(s.to) ? 'you' : nameOf(state, s.to)}</div>
                   <div className="lr-status">{new Date(s.at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}</div>
@@ -164,10 +175,13 @@ export default function Ledger() {
             ))}
           </>
         )}
-        <div className="tab-free">
-          <span className="tf-title">The Tab is free, always</span>
-          <button className="link-btn" onClick={() => setFree(true)}>See what’s free forever</button>
-        </div>
+        {/* The free-forever list is held until Trevor says so: only with the paywall preview flag */}
+        {PAYWALL_ON && (
+          <div className="tab-free">
+            <span className="tf-title">The Tab is free, always</span>
+            <button className="link-btn" onClick={() => setFree(true)}>See what’s free forever</button>
+          </div>
+        )}
       </div>
       <BottomNav />
       <SettleSheet debt={open} onClose={() => setOpen(null)} />

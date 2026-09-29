@@ -9,7 +9,7 @@ import { STORE_KEY, getState, uid, update } from './store.js';
 import { getSupabase, supabaseConfigured } from './supabase.js';
 import { isMissingTable } from './plan-adapters.js';
 import { allocatePayment, applyRows, lastPayment, nettedFor, tabCodes, undoRows } from './shared-tab.js';
-import { activeCarry, carryReducer, carryRows, carrySplit, splitCodes, splitRounds } from './carry.js';
+import { cardCarry, carryReducer, carryRows, carrySplit, splitCodes, splitRounds } from './carry.js';
 
 // Per dev profile (?profile=b), so two tabs acting as two phones never read each other's queue
 const QUEUE = 'bb-tab-queue' + STORE_KEY.slice('birdie-bank-v1'.length);
@@ -236,7 +236,7 @@ export function markPaid({ from, to, amount }) {
   const s = getState();
   const now = Date.now();
   const { rows, settlements } = allocatePayment(s, { from, to, amount }, { now, makeId: () => uid() });
-  const carry = activeCarry(s, from, to, { from, to, amount });
+  const carry = cardCarry(s, from, to, { from, to, amount }, now);
   if (carry?.status === 'asked') rows.push(...carryRows(s, carryReducer(carry, { type: 'withdraw', at: now }), { now }));
   commit(rows, { add: settlements });
   return { shared: !off && rows.some(r => r.kind === 'payment') };

@@ -13,7 +13,7 @@ import { money } from '../lib/golf.js';
 import { meFor } from '../lib/format.js';
 import { buzz } from '../lib/delight.js';
 import { ago, canonicalOf, recentPayment, roundRows, roundStatus, shortDate, stripRound } from '../lib/shared-tab.js';
-import { CARRY_REASONS, activeCarry, canCarry } from '../lib/carry.js';
+import { CARRY_REASONS, cardCarry, sharedOwed } from '../lib/carry.js';
 import { answerCarry, askCarry, markPaid, undoLastPayment, usePaymentsOff } from '../lib/tab-sync.js';
 
 const firstOf = name => name.split(' ')[0];
@@ -34,9 +34,10 @@ export function RecentPaid({ meId, other, pay }) {
   const { showToast } = useUI();
   const who = canonicalOf(state);
   const first = firstOf(nameOf(state, other));
-  const s0 = pay.settlements[0];
-  const iPaid = who(s0.from) === who(meId);
-  const total = pay.settlements.reduce((a, s) => a + Math.round(s.amount * 100), 0) / 100;
+  // One tap can record money both ways (the shared rounds, and the rest of the Tab), so net it
+  const mineOut = pay.settlements.reduce((a, s) => a + (who(s.from) === who(meId) ? 1 : -1) * Math.round(s.amount * 100), 0);
+  const iPaid = mineOut > 0 || (mineOut === 0 && who(pay.settlements[0].from) === who(meId));
+  const total = Math.abs(mineOut) / 100;
   const app = payInfoFor(state, iPaid ? other : meId);
   const undo = () => {
     const redo = undoLastPayment(meId, other);
@@ -67,9 +68,13 @@ export function PersonActions({ other, net, meId }) {
   const owesMe = net > 0;
   const amount = Math.abs(net);
   const owed = net ? (owesMe ? { from: other, to: meId, amount } : { from: meId, to: other, amount }) : null;
-  const carry = activeCarry(state, meId, other, owed);
+  // Rolling it over only ever covers the rounds both phones have, so both show the same amount
+  const shared = owed ? sharedOwed(state, meId, other) : null;
+  const carry = cardCarry(state, meId, other, owed);
   const iAsked = carry && who(carry.by) === who(meId);
-  const canRoll = !off && !carry && !!owed && canCarry(state, meId, other);
+  const canRoll = !off && !carry && !!owed && !!shared && who(shared.from) === who(owed.from);
+  const partOnly = !!shared && Math.round(shared.amount * 100) !== Math.round(amount * 100);
+  const rest = owed && carry && shared ? Math.round((amount - carry.carried) * 100) / 100 : 0;
   const pay = recentPayment(state, meId, other);
   const myApp = payInfoFor(state, state.me);
   const theirApp = payInfoFor(state, other);
@@ -113,6 +118,7 @@ export function PersonActions({ other, net, meId }) {
             <>
               <div className="cn-title">Carried over: {money(carry.carried)}</div>
               <div className="cn-sub">Agreed {shortDate(carry.answeredAt || carry.at)} · rolls into your next round</div>
+              {rest > 0 && <div className="cn-sub">From your shared rounds. The other {money(rest)} is still on the Tab.</div>}
               <div className="cn-foot"><span className="cn-tag">Carried over</span></div>
             </>
           )}
@@ -140,15 +146,16 @@ export function PersonActions({ other, net, meId }) {
             </>
           )}
           {canRoll && (
-            <button className="pay-btn" onClick={() => setRolling(true)}><span className="pay-in"><Icon name="arrow-u-down-right" /><span className="pay-lbl">Roll to next time</span></span></button>
+            <button className={`pay-btn ${partOnly ? 'roll-part' : ''}`} onClick={() => setRolling(true)}><span className="pay-in"><Icon name="arrow-u-down-right" /><span className="pay-lbl">{partOnly ? `Roll ${money(shared.amount)} from your shared rounds to next time` : 'Roll to next time'}</span></span></button>
           )}
         </div>
       )}
       {pay && <RecentPaid meId={meId} other={other} pay={pay} />}
       <AtScreen>
-        <CarrySheet open={rolling} onClose={() => setRolling(false)} owed={owed} first={first} iOwe={!owesMe}
+        <CarrySheet open={rolling} onClose={() => setRolling(false)} owed={shared} first={first} iOwe={!owesMe}
+          rest={partOnly ? Math.round((amount - shared.amount) * 100) / 100 : 0}
           onAsk={reason => {
-            if (askCarry({ ...owed, by: meId, reason })) showToast(`Asked ${first}`);
+            if (shared && askCarry({ ...shared, by: meId, reason })) showToast(`Asked ${first}`);
             setRolling(false);
           }} />
       </AtScreen>
@@ -157,7 +164,7 @@ export function PersonActions({ other, net, meId }) {
 }
 
 /** "Roll $15 to next time?": an optional one-tap reason, then ask. */
-function CarrySheet({ open, onClose, owed, first, iOwe, onAsk }) {
+function CarrySheet({ open, onClose, owed, first, iOwe, rest, onAsk }) {
   const [reason, setReason] = useState(null);
   if (!owed) return null;
   // "Short till payday" only makes sense from the one who owes
@@ -165,6 +172,8 @@ function CarrySheet({ open, onClose, owed, first, iOwe, onAsk }) {
   return (
     <Sheet open={open} onClose={() => { setReason(null); onClose(); }} title={`Roll ${money(owed.amount)} to next time?`}>
       <p className="sheet-text">{first} gets a note to agree. Until {first} does, it’s still owed like normal.</p>
+      {rest > 0 && <p className="sheet-text">This is what’s open from the rounds you shared live, which {first} sees too. The other {money(rest)} stays on the Tab as usual.</p>}
+      {rest < 0 && <p className="sheet-text">This is what’s open from the rounds you shared live, which {first} sees too.</p>}
       <div className="eyebrow" style={{ padding: '0 20px 8px' }}>Add a reason (optional)</div>
       <div className="chip-row">
         {reasons.map(r => (

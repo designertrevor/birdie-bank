@@ -1,10 +1,13 @@
 // The free promise as a sheet: what stays free for everyone, forever. Opened from the Tab and the Season preview.
+// Held in production until Trevor says so: it only shows with the paywall preview flag (dev, ?paywall=on).
 import { Icon, Sheet } from './ui.jsx';
+import { PAYWALL_ON } from '../lib/paywall-flag.js';
 import { GAMES } from '../lib/round.js';
 import { freePromise } from '../lib/paywall.js';
 
 export default function FreePromise({ open, onClose }) {
   const games = Object.keys(GAMES).length;
+  if (!PAYWALL_ON) return null;
   return (
     <Sheet open={open} onClose={onClose} title="Free forever, for everyone">
       <div style={{ padding: '4px 20px 20px' }}>

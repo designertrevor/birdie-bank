@@ -125,3 +125,20 @@ test('usuals sync in the profile doc, and an older profile without them keeps th
   assert.deepEqual(usualsOf({}), []);
   assert.deepEqual(usualsOf({ usuals: { bad: 1 } }), []);
 });
+
+test('review: a hole fix on a course that came with the app keeps usuals and rematches finding it', async () => {
+  const { allCourses, courseWithHoleFix } = await import('./courses.js');
+  const { rematchSetup } = await import('./rematch.js');
+  const { setupFromUsual } = await import('./usuals.js');
+  const { usualRound } = await import('./rounds.js');
+  const real = allCourses({ customCourses: {} })[0];
+  const copy = courseWithHoleFix(real, 0, { par: real.holes[0].par === 3 ? 4 : 3 }, { builtIn: true });
+  const players = { me: { id: 'me', name: 'Trevor' }, mike: { id: 'mike', name: 'Mike' } };
+  const r = { id: 'r1', game: 'skins', status: 'done', createdAt: 1, course: { id: real.id, name: real.name }, holesCount: 18, nine: 'front',
+    players: [{ id: 'me', name: 'Trevor' }, { id: 'mike', name: 'Mike' }], settings: {}, holes: [], scores: {} };
+  const state = { me: 'me', players, rounds: { r1: r }, customCourses: { [copy.id]: copy.course }, settings: {}, usuals: [] };
+  assert.equal(rematchSetup(state, r)?.courseId, copy.id);
+  assert.equal(usualRound(state)?.course.id, copy.id);
+  const usual = { id: 'u1', game: 'skins', courseId: real.id, holesCount: 18, nine: 'front', players: ['me', 'mike'], settings: {} };
+  assert.equal(setupFromUsual(state, usual)?.courseId, copy.id);
+});

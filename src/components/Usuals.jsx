@@ -3,7 +3,7 @@ import { useState } from 'react';
 import { Icon, Sheet, useUI } from './ui.jsx';
 import { getState, update, uid, useStore } from '../lib/store.js';
 import { GAMES } from '../lib/round.js';
-import { allCourses } from '../lib/courses.js';
+import { findCourse } from '../lib/courses.js';
 import { gameLabel } from '../lib/format.js';
 import { roundStakeLines } from '../lib/stakes.js';
 import {
@@ -15,7 +15,7 @@ const first = n => String(n || '').split(' ')[0];
 
 function UsualRow({ usual, onPick, onMore }) {
   const state = useStore();
-  const course = allCourses(state).find(c => c.id === usual.courseId);
+  const course = findCourse(state, usual.courseId);
   const like = usualAsRound(state, usual);
   const bets = GAMES[usual.game] ? roundStakeLines(like).map(l => l.line).join(' + ') : '';
   const names = usual.players.map(pid => first(state.players[pid]?.name || usual.names?.[pid])).filter(Boolean).join(', ');

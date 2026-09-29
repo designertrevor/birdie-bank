@@ -7,7 +7,8 @@ import { BallIllo, Empty, Header, Icon, Screen, Sheet, useUI } from '../componen
 import { Avatar } from '../components/Pay.jsx';
 import { getState, update, uid, useStore } from '../lib/store.js';
 import { useNav } from '../lib/nav.js';
-import { GAMES, createRound } from '../lib/round.js';
+import { GAMES, SIDE_GAMES, createRound } from '../lib/round.js';
+import { sideBetLine } from '../lib/stakes.js';
 import { money } from '../lib/golf.js';
 import { findCourse } from '../lib/courses.js';
 import { addRound } from '../lib/rounds.js';
@@ -15,7 +16,7 @@ import { payFields, sendReminder } from '../lib/pay.js';
 import { shareLink, shareRound, syncConfigured } from '../lib/sync.js';
 import {
   RSVPS, RSVP_LABEL, betLabel, betUnitLabel, cleanName, countsLine, daysUntil, inviteText, morningText, nudgeAllText, nudgeText,
-  planChoice, planCounts, planPeople, planRules, planStart, rollCallDefault, tally, whenLabel,
+  planChoice, planCounts, planPeople, planRules, planSides, planStart, rollCallDefault, tally, tallySides, whenLabel,
 } from '../lib/plans.js';
 import { PlansOffError } from '../lib/plan-adapters.js';
 import { answerPlan, editPlan, openPlanLink, planShareLink, removePlan, sharePlan, usePlanLive, usePlansOff } from '../lib/plan-sync.js';
@@ -126,6 +127,8 @@ function PlanBody({ plan, standalone = false, onSkip }) {
   const myBet = mine?.bet != null && (!mine.betGame || mine.betGame === betGame) ? mine.bet : null;
   const manyGames = gameT.rows.length > 1;
   const voters = people.filter(p => p.status !== 'out' && (p.game || p.bet)).length;
+  const sideT = tallySides(plan);
+  const onSides = planSides(plan, choice.game);
   const sugGame = plan.suggested?.game;
   const sugBet = sugGame ? tally(plan, 'bet', sugGame).rows.find(r => r.suggested)?.choice ?? plan.suggested?.bet : null;
 
@@ -165,9 +168,10 @@ function PlanBody({ plan, standalone = false, onSkip }) {
                   render={g => GAMES[g]?.name || g} />
                 <VoteBlock label={manyGames ? `Your vote: the bet for ${GAMES[betGame]?.name || 'the game'}` : 'Your vote: the bet'} kind="bet" t={betT} mineValue={myBet}
                   onVote={v => answer({ bet: v, betGame: v == null ? null : betGame })} render={b => unit(betGame, b)} />
+                <SideVote rows={sideT} rules={rules} mine={mine.sides || {}} onVote={(k, v) => answer({ sides: { ...(mine.sides || {}), [k]: v } })} />
                 <p className="field-help pad">
                   {voters > 1
-                    ? `The group’s pick so far: ${GAMES[choice.game]?.name}${choice.bet ? `, ${unit(choice.game, choice.bet)}` : ''}.`
+                    ? `The group’s pick so far: ${GAMES[choice.game]?.name}${choice.bet ? `, ${unit(choice.game, choice.bet)}` : ''}${onSides.length ? `, with ${onSides.map(k => SIDE_GAMES[k].label).join(' and ')}` : ''}.`
                     : `${plan.host ? 'You suggested' : `${host} suggested`} ${GAMES[sugGame]?.name || 'a game'}${sugBet ? ` at ${unit(sugGame, sugBet)}` : ''}. The group decides; a tie goes to the suggestion.`}
                 </p>
               </>
@@ -182,8 +186,8 @@ function PlanBody({ plan, standalone = false, onSkip }) {
               <Avatar name={p.name} />
               <div className="row-main">
                 <div className="set-name">{first(p.name)}{p.who === me ? ' (you)' : ''}</div>
-                {(p.game || p.bet) && p.status !== 'out' && (
-                  <div className="set-sub">Votes {[GAMES[p.game]?.name, voteBetLabel(p, unit)].filter(Boolean).join(', ')}</div>
+                {(p.game || p.bet || sideYes(plan, p).length > 0) && p.status !== 'out' && (
+                  <div className="set-sub">Votes {[GAMES[p.game]?.name, voteBetLabel(p, unit), ...sideYes(plan, p)].filter(Boolean).join(', ')}</div>
                 )}
               </div>
               {plan.host && planned && !p.status && plan.code && (
@@ -253,6 +257,39 @@ function voteBetLabel(p, unit) {
   if (!p.bet) return null;
   if (!p.betGame) return money(p.bet); // from before bets were per game: one amount for every game
   return `${unit(p.betGame, p.bet)}${p.betGame !== p.game ? ` in ${GAMES[p.betGame]?.name}` : ''}`;
+}
+
+/** The side games someone said yes to, by name ("Skins"). */
+function sideYes(plan, p) {
+  return Object.entries(p.sides || {}).filter(([k, v]) => v && plan.ballot?.sides?.includes(k)).map(([k]) => SIDE_GAMES[k]?.label).filter(Boolean);
+}
+
+/** The side game vote: yes or no to each side game on the ballot, with how the group is going. */
+function SideVote({ rows, rules, mine, onVote }) {
+  if (!rows.length) return null;
+  return (
+    <div className="block vote-block side-vote">
+      <div className="eyebrow" id="vote-sides">Your vote: side games</div>
+      {rows.map(r => {
+        const meta = SIDE_GAMES[r.side];
+        const v = mine[r.side];
+        const name = meta.label;
+        return (
+          <div key={r.side} className="sv-row">
+            <div className="row-main">
+              <div className="set-name">{name}{rules[r.side] ? <span className="sv-bet"> · {sideBetLine(r.side, rules[r.side])}</span> : null}</div>
+              <div className="set-sub">{r.yes} yes · {r.no} no · {r.on ? 'On so far' : 'Off so far'}</div>
+            </div>
+            <div className="sv-btns" role="group" aria-label={`${name}: play it?`}>
+              <button className={`pill-btn sm ${v === true ? 'on' : ''}`} aria-pressed={v === true} onClick={() => onVote(r.side, v === true ? null : true)}>Yes</button>
+              <button className={`pill-btn sm ${v === false ? 'on' : ''}`} aria-pressed={v === false} onClick={() => onVote(r.side, v === false ? null : false)}>No</button>
+            </div>
+          </div>
+        );
+      })}
+      <p className="field-help">More yes than no and it’s on. A tie keeps it on.</p>
+    </div>
+  );
 }
 
 /** One vote: the choices with their tally, yours marked. */
@@ -377,6 +414,8 @@ export function RollCall({ id }) {
       id: rid, game: setup.game, course, holesCount: setup.holesCount, nine: setup.nine, startHole: null,
       players: setup.players, settings: setup.settings, hcPct: setup.hcPct, useHandicaps: setup.useHandicaps, teams: setup.teams,
     });
+    // The side games the group voted for ride along
+    if (setup.sideGames.length) round.sideGames = structuredClone(setup.sideGames);
     update(s => { addRound(s, round); });
     editPlan(id, p => { p.status = 'started'; p.roundId = rid; });
     // Friends on the plan can follow the round live from the same page
@@ -397,6 +436,7 @@ export function RollCall({ id }) {
         <div className="block summary-card">
           <div className="li-sub">{plan.course?.name} · {setup.holesCount} holes</div>
           <div className="d stake-big">{g?.name || 'Pick a game'}{setup.bet && setup.settings?.[setup.game] ? ` · ${betLabel(setup.game, setup.settings, setup.bet)}` : ''}</div>
+          {setup.sideGames.length > 0 && <div className="li-sub">+ {setup.sideGames.map(sg => `${SIDE_GAMES[sg.game].label}, ${sideBetLine(sg.game, sg.settings)}`).join(' + ')}</div>}
           <div className="li-sub">{t.total > 1 ? `The group’s pick (${t.rows.find(r => r.choice === setup.game)?.votes || 0} of ${t.total} votes)` : 'Your suggestion. Nobody else voted'}</div>
         </div>
         <h2 className="step-q d">Who showed up?</h2>

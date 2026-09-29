@@ -4,56 +4,30 @@
 // settlements, carries and the round's who-is-square status. Pure, unit tested. The transport
 // is tab-sync.js.
 //
-// The Tab by person stays this phone's own math (every round on this phone, netted and
-// rerouted). The shared layer is per round transfer: a payment is tied to the round transfers
-// between the two people, oldest first, and anything the rounds don't explain stays local.
+// The Tab by person is this phone's own math (every round on this phone). What's open on the
+// shared rounds stays between the two people in them (pair-debts.js), so both phones agree on it;
+// the rest is netted and passed on through the group as before. The shared layer is per round
+// transfer: a payment is tied to the round transfers between the two people, oldest first, and
+// anything the shared rounds don't explain stays local.
 import { roundResults } from './round.js';
-import { meFor, myIds } from './format.js';
+import { meFor } from './format.js';
 import { outstanding, tabWith } from './ledger.js';
+import { FETCH_DAYS, canonicalOf, cents, codeOf, doneRounds, finishedAt, nettedId, nettedOn, pairDebt, paidOn, played, sharedRounds } from './pair-debts.js';
+
+export { FETCH_DAYS, canonicalOf, codeOf, nettedId, pairDebt, played, sharedRounds };
 
 const DAY = 864e5;
-/** Shared rounds this recent are looked up on the server. */
-export const FETCH_DAYS = 60;
 /** The who-is-square strip follows your newest shared round from this far back. */
 export const STRIP_DAYS = 30;
 
-const cents = v => Math.round((Number(v) || 0) * 100);
-
-/** A round's live code, kept after sharing stops so its payments outlive the live round. */
-export function codeOf(round) {
-  return round?.shareCode || round?.shared?.code || null;
-}
-
 /** A full transfer paid in one go: both phones marking it land on the same row, so it counts once. */
 export const paymentId = (code, from, to, part = null) => (part ? `${code}:${from}>${to}:${part}` : `${code}:${from}>${to}`);
-/** A transfer closed by a payment that squared the pair's whole Tab (status only, no money). */
-export const nettedId = (code, from, to) => `${code}:${from}>${to}:net`;
 /** The carry-over row for one round's transfer between two people. */
 export const carryRowId = (code, from, to) => `${code}:${from}>${to}:carry`;
 /** One carry on this phone: the pair (in the direction owed) and when it was asked. */
 export const carryId = (from, to, at) => `k:${from}>${to}:${at}`;
 const rowKey = r => `${r.code}|${r.id}`;
 
-/** Every id that means you maps to one; everyone else stays as they are. */
-export function canonicalOf(state) {
-  const mine = myIds(state);
-  return id => (state.me && mine.has(id) ? state.me : id);
-}
-
-const doneRounds = state => Object.values(state.rounds || {}).filter(r => r.status === 'done');
-const finishedAt = r => r.finishedAt || r.createdAt || 0;
-/** You played this round (a watcher's copy never counts). */
-export function played(round, state) {
-  const me = meFor(round, state);
-  return !!me && round.players.some(p => p.id === me);
-}
-
-/** Finished shared rounds you played, oldest first, finished within `days`. */
-export function sharedRounds(state, { days = FETCH_DAYS, now = Date.now() } = {}) {
-  return doneRounds(state)
-    .filter(r => codeOf(r) && played(r, state) && finishedAt(r) >= now - days * DAY)
-    .sort((a, b) => finishedAt(a) - finishedAt(b));
-}
 
 /** The codes to look up on the server. */
 export function tabCodes(state, opts) {
@@ -166,13 +140,6 @@ export function applyRows(state, rows) {
   return { ...state, tabRows: cache, settlements, carries };
 }
 
-/** What has been paid on one round transfer, in cents. */
-function paidOn(state, round, code, t) {
-  // Payments marked at the end of the round before the shared Tab (roundId, no code) count too
-  const on = s => s.code === code || (!s.code && s.roundId === round.id);
-  return (state.settlements || []).filter(s => on(s) && s.from === t.from && s.to === t.to).reduce((a, s) => a + cents(s.amount), 0);
-}
-const nettedOn = (state, code, t) => state.tabRows?.[`${code}|${nettedId(code, t.from, t.to)}`]?.status === 'netted';
 
 /** Round transfers still open between two people (either direction), oldest round first. */
 export function openTransfers(state, a, b, now = Date.now()) {
@@ -199,39 +166,54 @@ const payRow = (state, round, t, id, amount, now) => ({
 });
 
 /**
- * Record `from` paying `to` from the person card. The payment fills the shared round transfers
- * between the two in the same direction, oldest first. When it squares the pair's whole Tab,
- * every other open transfer between them (either way) is marked 'netted' for the status.
- * Whatever the shared rounds don't explain is a local settlement with no code.
- * Returns { rows, settlements } to send and to add.
+ * Record `from` paying `to` (the person card, the Settle up sheet). Only the shared rounds
+ * between the two count on the shared side, never money passed on through someone else:
+ * - A payment of the whole card (what the Tab has between them) squares their shared rounds
+ *   exactly: the shared amount is paid on its round transfers, oldest first, in whichever way
+ *   it runs, and every other open transfer between them is marked 'netted' for the status.
+ * - A part payment fills the shared transfers the same way first, and nets the rest only once
+ *   it covers the whole shared amount.
+ * Whatever the shared rounds don't explain (local-only rounds, money passed on) is a local
+ * settlement with no code, as before: it can run the other way when the shared rounds owe more
+ * than the whole card. Returns { rows, settlements } to send and to add.
  */
 export function allocatePayment(state, { from, to, amount }, { now = Date.now(), makeId = () => Math.random().toString(36).slice(2, 9) } = {}) {
   const who = canonicalOf(state);
   const F = who(from), T = who(to);
   const total = cents(amount);
-  let left = total;
+  const shared = pairDebt(state, F, T, { now }); // cents: positive when F owes T on the shared rounds
+  const card = Math.round(tabWith(outstanding(state, { now }), new Set([T]), F) * 100);
+  const whole = card > 0 && total >= card;
+  // The shared amount this payment settles, positive in the F to T direction
+  const settle = whole ? shared : shared > 0 ? Math.min(total, shared) : 0;
   const rows = [], settlements = [];
   const open = openTransfers(state, F, T, now);
-  for (const x of open.filter(o => o.forward)) {
-    if (!left) break;
-    const fill = Math.min(left, x.open);
-    left -= fill;
-    const whole = fill === x.open && x.paid === 0 && !(state.settlements || []).some(s => s.id === paymentId(x.code, x.t.from, x.t.to));
-    // Part of a transfer is keyed by what was paid on it before, so two phones marking the same
-    // payment before they sync land on one row too (a second, later payment gets its own key)
-    const id = whole ? paymentId(x.code, x.t.from, x.t.to) : paymentId(x.code, x.t.from, x.t.to, `p${x.paid}`);
-    rows.push(payRow(state, x.round, x.t, id, fill / 100, now));
-    x.open -= fill;
-  }
-  // Squared the whole Tab between them: every transfer left between the two is done with too
-  const owed = tabWith(outstanding(state), new Set([T]), F);
-  if (owed > 0 && total >= cents(owed)) {
+  const fill = (list, c) => {
+    let left = c;
+    for (const x of list) {
+      if (!left) break;
+      const part = Math.min(left, x.open);
+      left -= part;
+      const first = part === x.open && x.paid === 0 && !(state.settlements || []).some(s => s.id === paymentId(x.code, x.t.from, x.t.to));
+      // Part of a transfer is keyed by what was paid on it before, so two phones marking the same
+      // payment before they sync land on one row too (a second, later payment gets its own key)
+      const id = first ? paymentId(x.code, x.t.from, x.t.to) : paymentId(x.code, x.t.from, x.t.to, `p${x.paid}`);
+      rows.push(payRow(state, x.round, x.t, id, part / 100, now));
+      x.open -= part;
+    }
+  };
+  if (settle > 0) fill(open.filter(o => o.forward), settle);
+  if (settle < 0) fill(open.filter(o => !o.forward), -settle);
+  // The shared rounds are square now: every transfer left open between the two is done with too
+  if (open.length && settle === shared) {
     for (const x of open) {
       if (x.open <= 0) continue;
       rows.push({ ...payRow(state, x.round, x.t, nettedId(x.code, x.t.from, x.t.to), x.open / 100, now), status: 'netted' });
     }
   }
+  const left = total - settle;
   if (left > 0) settlements.push({ id: `s_${makeId()}`, from, to, amount: left / 100, at: now });
+  if (left < 0) settlements.push({ id: `s_${makeId()}`, from: to, to: from, amount: -left / 100, at: now });
   return { rows, settlements };
 }
 
@@ -252,6 +234,29 @@ export function lastPayment(state, a, b) {
     settlements: list.filter(s => (s.at || 0) === at),
     netted: Object.values(state.tabRows || {}).filter(r => r.kind === 'payment' && r.status === 'netted' && r.at === at && between(r.from, r.to)),
   };
+}
+
+/**
+ * The payments list: every settlement, one row per tap (the same two people at the same moment),
+ * newest first. One tap can pay several round transfers, or run both ways (the shared rounds one
+ * way, the rest of the Tab the other), so a row is netted: { key, at, from, to, amount, settlements }.
+ */
+export function paymentGroups(state) {
+  const who = canonicalOf(state);
+  const groups = new Map();
+  for (const s of state.settlements || []) {
+    const [a, b] = [who(s.from), who(s.to)].sort();
+    const key = `${s.at || 0}|${a}|${b}`;
+    if (!groups.has(key)) groups.set(key, { key, at: s.at || 0, a, list: [] });
+    groups.get(key).list.push(s);
+  }
+  return [...groups.values()].map(g => {
+    // Cents from `a` to the other one: the sign says which way the tap went on the whole
+    const net = g.list.reduce((c, s) => c + (who(s.from) === g.a ? 1 : -1) * cents(s.amount), 0);
+    const fromA = net > 0 || (net === 0 && who(g.list[0].from) === g.a);
+    const { from, to } = g.list.find(s => (who(s.from) === g.a) === fromA);
+    return { key: g.key, at: g.at, from, to, amount: Math.abs(net) / 100, settlements: g.list };
+  }).sort((x, y) => y.at - x.at);
 }
 
 /** The transfers these payments netted (written in the same tap, between the same people). */

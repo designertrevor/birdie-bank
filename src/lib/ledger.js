@@ -2,6 +2,7 @@
 import { roundResults } from './round.js';
 import { roundCents } from './games.js';
 import { meFor, myIds } from './format.js';
+import { sharedDebts } from './pair-debts.js';
 
 const toCents = v => Math.round((Number(v) || 0) * 100);
 const pairKey = (a, b) => (a < b ? `${a}|${b}` : `${b}|${a}`);
@@ -126,13 +127,41 @@ export function roundsTogether(state) {
 /**
  * The Tab's payment plan: the fewest payments across the whole group, only ever between people
  * who have played a round together (friends from different groups never get asked to pay each
- * other). Returns [{ from, to, amount, rounds: [roundId] }], where rounds are the finished rounds
- * the two played together.
+ * other). What's open on rounds that were shared live stays between the two people in them, as
+ * both phones see it (pair-debts.js), and only the rest is squared across the group.
+ * Returns [{ from, to, amount, rounds: [roundId] }], where rounds are the finished rounds the two
+ * played together.
  */
-export function outstanding(state) {
+export function outstanding(state, { now = Date.now() } = {}) {
   const together = roundsTogether(state);
-  const plan = fewestPayments(tabBalances(state), { canPay: (a, b) => together.has(pairKey(a, b)) });
-  return plan.map(t => ({ ...t, rounds: together.get(pairKey(t.from, t.to)) || [] }));
+  const canPay = (a, b) => together.has(pairKey(a, b));
+  const direct = sharedDebts(state, { now });
+  if (!direct.length) {
+    const plan = fewestPayments(tabBalances(state), { canPay });
+    return plan.map(t => ({ ...t, rounds: together.get(pairKey(t.from, t.to)) || [] }));
+  }
+  // Take the shared money out of the balances, square the rest, then put it back pair by pair
+  const bal = Object.fromEntries(Object.entries(tabBalances(state)).map(([id, v]) => [id, toCents(v)]));
+  const net = new Map(); // "a|b" (sorted) -> cents a owes b
+  const owe = (from, to, c) => {
+    const k = pairKey(from, to);
+    net.set(k, (net.get(k) || 0) + (from < to ? c : -c));
+  };
+  for (const d of direct) {
+    bal[d.from] = (bal[d.from] || 0) + d.cents;
+    bal[d.to] = (bal[d.to] || 0) - d.cents;
+    owe(d.from, d.to, d.cents);
+  }
+  const rest = fewestPayments(Object.fromEntries(Object.entries(bal).map(([id, c]) => [id, c / 100])), { canPay });
+  for (const t of rest) owe(t.from, t.to, toCents(t.amount));
+  const plan = [];
+  for (const [k, c] of net) {
+    if (!c) continue;
+    const [a, b] = k.split('|');
+    const [from, to] = c > 0 ? [a, b] : [b, a];
+    plan.push({ from, to, amount: Math.abs(c) / 100, rounds: together.get(k) || [] });
+  }
+  return plan.sort((a, b) => b.amount - a.amount || a.from.localeCompare(b.from));
 }
 
 /**
