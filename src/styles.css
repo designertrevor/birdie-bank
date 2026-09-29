@@ -561,6 +561,10 @@ button:disabled { cursor: not-allowed; }
 .field-label:first-child { margin-top: 0; }
 .field-label .opt { font-weight: 500; color: var(--mute-soft); }
 .field-help { font-size: 13px; color: var(--mute); margin-top: 8px; line-height: 1.45; }
+/* Setup: WHS suggested allowance under Strokes given */
+.whs-hint { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-top: 8px; }
+.whs-hint .field-help { margin-top: 0; }
+.whs-hint .pill-btn { flex-shrink: 0; }
 .field-error { font-size: 13px; color: var(--loss); margin-top: 8px; font-weight: 600; }
 .field-btn { min-width: 120px; }
 .text-input { width: 100%; border: none; background: var(--surface); border-radius: 14px; padding: 12px 14px; font-size: 16px; outline: none; color: var(--ink); }

@@ -13,6 +13,7 @@ import { syncConfigured } from '../lib/sync.js';
 import { ShareSheet } from '../components/Live.jsx';
 import { defaultTeams, teamsProblem } from '../lib/teams.js';
 import { rematchSetup } from '../lib/rematch.js';
+import { allowanceHint, strokesGivenOptions, suggestedAllowance } from '../lib/allowances.js';
 import { useNav } from '../lib/nav.js';
 import { addRound, holesScored, roundsInProgress, usualRound } from '../lib/rounds.js';
 import { formatIndex, gameLabel, hcPctLabel, playerLabel, sortedPlayers } from '../lib/format.js';
@@ -521,6 +522,7 @@ function SetupStep({ game, course, holesCount, nine, picked, setPicked, opts, se
   const optsBad = !!optionsProblem(game, opts) || sideGames.some(sg => optionsProblem(sg.game, { [sg.game]: sg.settings }));
   const names = Object.fromEntries(picked.map(pid => [pid, state.players[pid]?.name || '?']));
   const teamsBad = !!teamsProblem(game, teams, picked);
+  const whs = suggestedAllowance(game, { teams: GAMES[game].teams ? teams : null, players: picked.length });
   const orderLabel = { wolf: 'Tee order: the wolf moves down this list', banker: 'Playing order', sixes: 'Order: sets who partners who' }[game] || 'Playing order';
 
   return (
@@ -578,8 +580,13 @@ function SetupStep({ game, course, holesCount, nine, picked, setPicked, opts, se
           <div className="block">
             <div className="eyebrow" style={{ marginBottom: 10 }}>Strokes given</div>
             <Segmented label="Strokes given" className="press-mode-row" btn="pm-btn" value={opts.hcPct} onChange={v => set('hcPct', v)}
-              options={[100, 90, 80].map(n => ({ value: n, label: n === 100 ? 'Full' : `${n}%` }))} />
-            <p className="field-help">Many groups use 90% or 80% so the better player still has a chance.</p>
+              options={strokesGivenOptions(whs, opts.hcPct).map(n => ({ value: n, label: n === 100 ? 'Full' : `${n}%` }))} />
+            {whs ? (
+              <div className="whs-hint">
+                <p className="field-help">{allowanceHint(whs)}</p>
+                {(opts.hcPct ?? 100) !== whs.pct && <button className="pill-btn sm" onClick={() => set('hcPct', whs.pct)}>Use {whs.pct === 100 ? 'full strokes' : `${whs.pct}%`}</button>}
+              </div>
+            ) : <p className="field-help">Many groups use 90% or 80% so the better player still has a chance.</p>}
           </div>
         )}
         </>}
