@@ -205,3 +205,66 @@ test('both phones agree on the shared amount, and old data with no shared rounds
   const canPay = (x, y) => together.has(x < y ? `${x}|${y}` : `${y}|${x}`);
   assert.deepEqual(outstanding(plain, { now: NOW }).map(({ from, to, amount }) => ({ from, to, amount })), fewestPayments(tabBalances(plain), { canPay }));
 });
+
+test('review: a carry on the shared rounds that runs against the card does not show on it', () => {
+  // Shared: I owe Bo $4, rolled over and agreed. Only on my phone: Bo owes me $6. My card: Bo owes me $2
+  const r1 = round('r1', ['a', 'b'], twoSkins('b', 'a'), { code: 'AAAAAA', daysAgo: 3 });
+  const r2 = round('r2', ['a', 'b'], { 1: { a: 3, b: 4 }, 2: { a: 3, b: 4 }, 3: { a: 3, b: 4 } }, { daysAgo: 1 });
+  let s = stateOf('a', [r1, r2]);
+  assert.equal(card(s, 'a', 'b'), 2);
+  const owed = sharedOwed(s, 'a', 'b', NOW);
+  assert.deepEqual(owed, { from: 'a', to: 'b', amount: 4 });
+  const split = carrySplit(s, owed.from, owed.to, owed.amount, NOW);
+  const ask = carryReducer(null, { type: 'ask', ...owed, by: 'a', at: NOW - 1000, roundIds: splitRounds(split), codes: splitCodes(split) });
+  const agreed = carryReducer(ask, { type: 'agree', at: NOW - 500 });
+  s = applyRows(s, carryRows(s, agreed, { now: NOW - 500, split }));
+  // The card says Bo owes me: the carry (me to Bo) isn't what the card is about, so it doesn't hide Remind
+  assert.equal(cardCarry(s, 'a', 'b', { from: 'b', to: 'a', amount: 2 }, NOW), null);
+  // Bo's own card (just the shared round, he's owed $4) does show it
+  assert.equal(cardCarry(s, 'b', 'a', { from: 'a', to: 'b', amount: 4 }, NOW).carried, 4);
+});
+
+test('review: I paid both ways, then both phones sync: they agree about the shared rounds, and each card is right', () => {
+  // Shared: Bo owes me $4. Only on my phone: I owe Bo $2. Only on Bo's phone: Bo owes me $6
+  const shared = () => round('r1', ['a', 'b'], twoSkins('a', 'b'), { code: 'AAAAAA', daysAgo: 3 });
+  let mine = stateOf('a', [shared(), round('r2', ['a', 'b'], { 1: { b: 3, a: 4 } }, { daysAgo: 2 })]);
+  let bos = stateOf('zb', [{ ...shared(), localMe: 'b' }, { ...round('r3', ['a', 'b'], { 1: { a: 3, b: 4 }, 2: { a: 3, b: 4 }, 3: { a: 3, b: 4 } }, { daysAgo: 1 }), localMe: 'b' }]);
+  assert.equal(card(mine, 'a', 'b'), 2);
+  assert.equal(card(bos, 'zb', 'a'), -10);
+  // Bo hands me the $2 my card says, and I tap it
+  const pay = allocatePayment(mine, { from: 'b', to: 'a', amount: 2 }, { now: NOW, makeId: () => 'm' });
+  mine = applyRows({ ...mine, settlements: [...mine.settlements, ...pay.settlements] }, pay.rows);
+  bos = applyRows(bos, pay.rows);
+  // The shared round: the same on both phones
+  assert.equal(pairDebt(mine, 'a', 'b', { now: NOW }), 0);
+  assert.equal(pairDebt(bos, 'zb', 'a', { now: NOW }), 0);
+  assert.deepEqual(roundStatus(mine.rounds.r1, roundRows(mine, mine.rounds.r1)), roundStatus(bos.rounds.r1, roundRows(bos, bos.rounds.r1)));
+  // What's left is each phone's own round, which the other phone never had: square on mine, $6 on Bo's (all true)
+  assert.equal(card(mine, 'a', 'b'), 0);
+  assert.equal(card(bos, 'zb', 'a'), -6);
+  // Bo pays the $6 from his phone: nothing touches the shared round again
+  const pay2 = allocatePayment(bos, { from: 'zb', to: 'a', amount: 6 }, { now: NOW + 1, makeId: () => 'n' });
+  assert.deepEqual(pay2.rows, []);
+});
+
+test('review: the payments list shows one tap that went both ways as one payment, and undoes it whole', async () => {
+  const { paymentGroups } = await import('./shared-tab.js');
+  const r1 = round('r1', ['a', 'b'], twoSkins('a', 'b'), { code: 'AAAAAA', daysAgo: 3 });
+  const r2 = round('r2', ['a', 'b'], { 1: { b: 3, a: 4 } }, { daysAgo: 1 });
+  let s = stateOf('a', [r1, r2], { settlements: [{ id: 'old', from: 'b', to: 'a', amount: 1, at: 5 }] });
+  const { rows, settlements } = allocatePayment(s, { from: 'b', to: 'a', amount: 2 }, { now: NOW, makeId: () => 'r' });
+  s = applyRows({ ...s, settlements: [...s.settlements, ...settlements] }, rows);
+  const groups = paymentGroups(s);
+  assert.deepEqual(groups.map(g => [g.from, g.to, g.amount, g.settlements.length]), [['b', 'a', 2, 2], ['b', 'a', 1, 1]]);
+});
+
+test('review: the home feed shows a both-ways tap as one payment', async () => {
+  const { latelyItems } = await import('./lately.js');
+  const r1 = round('r1', ['a', 'b'], twoSkins('a', 'b'), { code: 'AAAAAA', daysAgo: 3 });
+  const r2 = round('r2', ['a', 'b'], { 1: { b: 3, a: 4 } }, { daysAgo: 1 });
+  let s = stateOf('a', [r1, r2]);
+  const { rows, settlements } = allocatePayment(s, { from: 'b', to: 'a', amount: 2 }, { now: NOW, makeId: () => 'r' });
+  s = applyRows({ ...s, settlements: [...s.settlements, ...settlements] }, rows);
+  const pays = latelyItems(s, NOW + 1000).filter(i => i.kind === 'payment');
+  assert.deepEqual(pays.map(p => p.text), ['B paid you $2']);
+});

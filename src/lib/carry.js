@@ -95,6 +95,10 @@ export function sharedOwed(state, a, b, now = Date.now()) {
  */
 export function cardCarry(state, a, b, owed, now = Date.now()) {
   const basis = canCarry(state, a, b, now) ? sharedOwed(state, a, b, now) : owed;
+  // A carry on the shared rounds that runs against the card (this phone's own rounds turn it
+  // around) isn't what the card is about, so it doesn't show there or hold back Remind
+  const who = canonicalOf(state);
+  if (owed && basis && who(basis.from) !== who(owed.from)) return null;
   return activeCarry(state, a, b, basis);
 }
 
