@@ -12,6 +12,7 @@ import {
 import { betChangeNote, betStretchLine, roundStakeLines } from './stakes.js';
 import { rematchSetup } from './rematch.js';
 import { revealSteps } from './reveal.js';
+import { assemble, buildMeta } from './sync-model.js';
 import { SETTINGS, SIDE_SETTINGS, oldRoundFixtures } from './side-bets.fixtures.js';
 
 const flat = n => ({ id: `f${n}`, name: 'Flat', city: 'Town', tees: [], holes: Array.from({ length: n }, (_, i) => ({ par: 4, hdcp: i + 1 })) });
@@ -262,4 +263,12 @@ test('Run it back starts side games at the bets they ended on, with no history',
   const state = { players: { t: { id: 't', name: 'T' }, m: { id: 'm', name: 'M' } }, courses: {}, me: 't', settings: SETTINGS };
   const s = rematchSetup(state, r);
   assert.deepEqual(s.sideGames, [{ game: 'skins', settings: { ...SKINS, value: 3 } }]);
+});
+
+test('a changed side bet rides in the live meta, so a friend on the round sees the same money', () => {
+  const r = changeBets(play(mk('nassau', ['t', 'm', 'd', 's'], { skins: SKINS }), 18, { 2: { m: 3 }, 12: { m: 3 } }), { ...SKINS, value: 5 }, 10, 'skins');
+  const back = assemble(buildMeta(r), []);
+  assert.deepEqual(back.sideGames, r.sideGames);
+  back.scores = r.scores;
+  assert.deepEqual(side(back, 'skins'), { t: -7, m: 21, d: -7, s: -7 });
 });

@@ -792,22 +792,10 @@ function GamesSheet({ round, onClose }) {
  * With side games on, a switcher at the top picks the game: each game's bet changes on its own.
  */
 function BetsSheet({ round, onClose }) {
-  const sides = sideGamesOf(round);
-  const [key, setKey] = useState('main');
-  const gameKey = key === 'main' || sides.some(sg => sg.game === key) ? key : 'main';
-  const switcher = sides.length > 0 && (
-    <div className="block">
-      <Segmented label="Which game" className="press-mode-row bets-games" btn="pm-btn" value={gameKey} onChange={setKey}
-        options={gameKeys(round).map(k => ({ value: k, label: gameKeyLabel(round, k) }))} />
-      <p className="field-help">Each game’s bet changes on its own.</p>
-    </div>
-  );
-  // Mounted fresh for each game, so switching starts from that game's bets
-  return <BetsEditor key={gameKey} round={round} gameKey={gameKey} onClose={onClose} switcher={switcher} />;
-}
-
-function BetsEditor({ round, gameKey, onClose, switcher }) {
   const { showToast } = useUI();
+  const sides = sideGamesOf(round);
+  const [pick, setPick] = useState('main');
+  const gameKey = pick === 'main' || sides.some(sg => sg.game === pick) ? pick : 'main';
   const side = gameKey !== 'main';
   // A side game is edited on its own view: its settings (and bet history) in place of the main game's
   const view = side ? gameView(round, gameKey) : round;
@@ -824,7 +812,11 @@ function BetsEditor({ round, gameKey, onClose, switcher }) {
     return st;
   }, [game, view.settings]);
   const [opts, setOpts] = useState(() => structuredClone(current));
+  const [scope, setScope] = useState('next');
+  // Switching games starts from that game's bets (a change not yet saved is dropped)
+  const [shown, setShown] = useState(gameKey);
   const [pad, setPad] = useState(null); // { path, title, min, max }
+  if (shown !== gameKey) { setShown(gameKey); setOpts(structuredClone(current)); setScope('next'); return null; }
   const set = (path, v) => setOpts(o => { const n = structuredClone(o); const k = path.split('.'); let t = n; for (const x of k.slice(0, -1)) t = t[x]; t[k.at(-1)] = v; return n; });
   const get = path => path.split('.').reduce((t, k) => t?.[k], opts);
   const problem = optionsProblem(game, opts);
@@ -835,7 +827,6 @@ function BetsEditor({ round, gameKey, onClose, switcher }) {
   const fromPos = lastPlayed + 1;
   const fromHole = round.holes[fromPos - 1];
   const canSplit = played > 0 && !!fromHole && !wholeRoundOnly(game, current[game], opts[game]);
-  const [scope, setScope] = useState('next');
   const whole = !canSplit || scope === 'whole';
   const label = gameKeyLabel(round, gameKey);
   const apply = () => {
@@ -863,7 +854,13 @@ function BetsEditor({ round, gameKey, onClose, switcher }) {
   return (
     <>
       <Sheet open={!pad} onClose={onClose} title="Bets" className="sc-sheet">
-        {switcher}
+        {sides.length > 0 && (
+          <div className="block">
+            <Segmented label="Which game" className="press-mode-row" btn="pm-btn" value={gameKey} onChange={setPick}
+              options={gameKeys(round).map(k => ({ value: k, label: gameKeyLabel(round, k) }))} />
+            <p className="field-help">Each game’s bet changes on its own.</p>
+          </div>
+        )}
         <p className="sheet-text">
           {!played ? 'Change what’s on the line before the first hole is scored.'
             : canSplit ? `${played} hole${played === 1 ? '' : 's'} played. Pick when the new bets start.`
