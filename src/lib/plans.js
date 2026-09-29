@@ -16,6 +16,7 @@ import { GAMES, MAX_GAMES, SIDE_GAMES, sideGameChoices } from './round.js';
 import { stakeHeadline, stakeSummary } from './stakes.js';
 import { defaultTeams, teamsProblem } from './teams.js';
 import { defaultTee } from './courses.js';
+import { inUnits, playForLine, storedPlayFor } from './play-for.js';
 
 export const RSVPS = ['in', 'maybe', 'out'];
 /** The organizer's own key on a plan. Not their player id, so signing in (which can change it) never loses their answer. */
@@ -337,6 +338,7 @@ export function planStart(state, plan, present, { newId, course: courseIn } = {}
     // A plan from a saved usual keeps the usual's handicap percentage; others use this phone's
     hcPct: plan.hcPct ?? settings.hcPct ?? 100,
     useHandicaps: plan.useHc !== false,
+    playFor: storedPlayFor(plan.playFor),
   };
 }
 
@@ -442,7 +444,7 @@ export function inviteText(plan, link, now = new Date()) {
   const t = timeLabel(plan.teeTime);
   return [
     `Golf ${dayWords(plan, now)}${t ? ` at ${t}` : ''}? ${plan.course?.name || ''}.`.replace(' .', '.'),
-    `Thinking ${GAMES[game]?.name || 'a game'}. Tap to say if you’re in and vote on the game and the bet:`,
+    `Thinking ${GAMES[game]?.name || 'a game'}${playForLine(plan) ? `, ${playForLine(plan).toLowerCase()}` : ''}. Tap to say if you’re in and vote on the game and the bet:`,
     link,
   ].filter(Boolean).join('\n');
 }
@@ -466,12 +468,13 @@ export function morningText(plan, link, settings, now = new Date()) {
   const n = daysUntil(plan.date, now);
   const lead = n === 0 ? 'Golf today!' : n === 1 ? 'Golf tomorrow!' : `Golf ${dayWords(plan, now)}!`;
   const rules = planRules(plan, settings);
-  const bets = bet && rules[game] ? betLabel(game, rules, bet) : '';
+  const bets = bet && rules[game] ? inUnits(plan, betLabel(game, rules, bet)) : '';
   const sides = planSides(plan, game);
   return [
     `${lead} ${plan.course?.name || ''}${t ? `, tee time ${t}` : ''}.`.replace(' ,', ','),
     ins.length ? `In: ${listNames(ins)}.` : null,
     GAMES[game] ? `Game: ${GAMES[game].name}${bets ? `, ${bets}` : ''}${sides.length ? `, plus ${listNames(sides.map(k => SIDE_GAMES[k].label))}` : ''}.` : null,
+    playForLine(plan) ? `${playForLine(plan)}.` : null,
     link,
   ].filter(Boolean).join('\n');
 }
@@ -524,7 +527,7 @@ export function planLink(origin, code, who = null) {
  * A plan set up from a saved usual also carries its handicap percentage (`hcPct`, used by the
  * roll call) and `usualId` (so finishing the round updates the usual's "Last played").
  */
-export function newPlan({ id, hostWho = HOST, hostName, game, holesCount, nine, date, teeTime, course, people, ballot, suggestedBet, settings = null, useHc = true, hcPct = null, usualId = null, now = Date.now() }) {
+export function newPlan({ id, hostWho = HOST, hostName, game, holesCount, nine, date, teeTime, course, people, ballot, suggestedBet, settings = null, useHc = true, hcPct = null, usualId = null, playFor = null, now = Date.now() }) {
   const games = [game, ...(ballot?.games || []).filter(g => g !== game && GAMES[g])].slice(0, MAX_BALLOT_GAMES);
   const bets = [...new Set([...(ballot?.bets || []), suggestedBet].filter(b => Number(b) > 0).map(Number))].sort((a, b) => a - b);
   const bet = Number(suggestedBet) || bets[0] || null;
@@ -548,6 +551,8 @@ export function newPlan({ id, hostWho = HOST, hostName, game, holesCount, nine, 
     game, holesCount, nine: nine || 'front', date, teeTime: teeTime || null, useHc,
     ...(Number.isFinite(hcPct) ? { hcPct } : {}),
     ...(usualId ? { usualId } : {}),
+    // Points or a reward (absent: money, as every plan before it)
+    ...(storedPlayFor(playFor) ? { playFor: storedPlayFor(playFor) } : {}),
     course: course ? { id: course.id, name: course.name, city: course.city || null } : null,
     people: [{ id: hostWho, name: hostFirst || 'Me' }, ...others],
     // `bets` and `bet` stay for phones on an older version, which read one list for every game

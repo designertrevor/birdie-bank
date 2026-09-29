@@ -16,6 +16,7 @@ export function toDocs(state) {
     me: state.me, onboarded: state.onboarded, settings: state.settings, favorites: state.favorites, usuals: Array.isArray(state.usuals) ? state.usuals : [], carries: state.carries || [],
     // Who is who: "Same person as..." links and "Not the same person" breaks (people-links.js)
     links: state.links && typeof state.links === 'object' ? state.links : {}, unlinks: Array.isArray(state.unlinks) ? state.unlinks : [],
+    rewardsDone: state.rewardsDone || {},
   });
   for (const p of Object.values(state.players)) put('player', p.id, p);
   for (const c of Object.values(state.crews)) put('crew', c.id, c);
@@ -66,6 +67,8 @@ export function applyDoc(draft, kind, id, data) {
     // Same for links and unlinks (people-links.js): an older profile has none, so keep this phone's
     if (data.links && typeof data.links === 'object' && !Array.isArray(data.links)) draft.links = data.links;
     if (Array.isArray(data.unlinks)) draft.unlinks = data.unlinks;
+    // Reward lines marked done (per phone, never money): an older profile without them keeps this phone's
+    if (data.rewardsDone && typeof data.rewardsDone === 'object' && !Array.isArray(data.rewardsDone)) draft.rewardsDone = data.rewardsDone;
   }
 }
 

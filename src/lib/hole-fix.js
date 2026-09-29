@@ -1,7 +1,7 @@
 // Words for fixing a hole or a tee during a round (the engine is fixHole and fixTee in round.js):
 // who gains or loses a stroke, how the money recounts, and the note sent to Birdie Bank.
 import { fixedCourse, roundResults, strokeChanges } from './round.js';
-import { money } from './golf.js';
+import { countsMoney, unitFmt } from './play-for.js';
 
 const first = name => String(name || '').split(' ')[0];
 
@@ -56,11 +56,15 @@ export function moneyChanges(before, after) {
     .sort((x, y) => y.delta - x.delta);
 }
 
-/** "Money recounts: Dave +$10, Trevor −$5", or null when nothing moves. */
+/**
+ * "Money recounts: Dave +$10, Trevor −$5", or null when nothing moves. A points or reward round
+ * recounts in points: "Points recount: Dave +10 pts".
+ */
 export function moneyLine(before, after) {
   const ch = moneyChanges(before, after);
   if (!ch.length) return null;
-  return `Money recounts: ${ch.map(c => `${first(c.name)} ${money(c.delta, { sign: true })}`).join(', ')}`;
+  const fmt = unitFmt(after);
+  return `${countsMoney(after) ? 'Money recounts' : 'Points recount'}: ${ch.map(c => `${first(c.name)} ${fmt(c.delta, { sign: true })}`).join(', ')}`;
 }
 
 /** The tees the round's players are on: "White", "White and Blue". */

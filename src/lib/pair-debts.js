@@ -7,6 +7,7 @@
 import { roundResults } from './round.js';
 import { meFor, myIds } from './format.js';
 import { linksOf } from './people-links.js';
+import { countsMoney } from './play-for.js';
 
 const DAY = 864e5;
 /** Shared rounds this recent are looked up on the server. */
@@ -33,7 +34,8 @@ export function canonicalOf(state) {
   };
 }
 
-export const doneRounds = state => Object.values(state.rounds || {}).filter(r => r.status === 'done');
+/** Finished money rounds: a points or reward round never puts a dollar on the Tab. */
+export const doneRounds = state => Object.values(state.rounds || {}).filter(r => r.status === 'done' && countsMoney(r));
 export const finishedAt = r => r.finishedAt || r.createdAt || 0;
 
 /** You played this round (a watcher's copy never counts). */

@@ -62,6 +62,7 @@ function fresh() {
     usuals: [],        // saved "usual" setups, at most 5 (see usuals.js); an array, so never inside settings
     links: {},         // "Same person as...": { aliasId: keptId } (see people-links.js)
     unlinks: [],       // "Not the same person": [[a, b]] pairs that stay apart (see people-links.js)
+    rewardsDone: {},   // reward lines marked done on this phone, "roundId:from>to" -> time (see play-for.js)
     settings: structuredClone(DEFAULT_SETTINGS),
   };
 }

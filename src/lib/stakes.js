@@ -1,6 +1,7 @@
 // What's on the line in a game: a one-line summary and a sanity check on its options.
 import { money } from './golf.js';
 import { betChanges, gameKeyLabel, sideGamesOf } from './round.js';
+import { inUnits, pointsLines } from './play-for.js';
 
 /** Why a game's options can't be used as they stand, or null when they're fine. */
 export function optionsProblem(game, settings) {
@@ -25,8 +26,13 @@ export function sideBetLine(game, settings) {
 /**
  * Every game's bets in a round, main first: [{ key, line }]. Side games use their own settings,
  * and a side game whose bet changed mid-round says since when: "$3 a skin from hole 10".
+ * A points or reward round reads in points ("5 pts a side"), side games included.
  */
 export function roundStakeLines(round) {
+  return pointsLines(round, moneyStakeLines(round));
+}
+
+function moneyStakeLines(round) {
   const lines = [{ key: 'main', line: stakeSummary(round.game, round.settings) }];
   for (const sg of sideGamesOf(round)) {
     const line = sideBetLine(sg.game, sg.settings);
@@ -68,7 +74,8 @@ export function betStretchLine(round, key) {
     return `${betLineFor(round, key, e.settings)} on ${holes}`;
   });
   parts.push(`${betLineFor(round, key, now)} from hole ${changes.at(-1).no}`);
-  return `${gameKeyLabel(round, key)}: ${parts.join(', ')}.`;
+  // A points or reward round reads in points, like its other bet lines
+  return inUnits(round, `${gameKeyLabel(round, key)}: ${parts.join(', ')}.`);
 }
 
 /** One line that says what's on the line, for menus and summaries. */

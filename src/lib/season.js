@@ -7,16 +7,20 @@ import { meFor, myIds } from './format.js';
 import { nameOf } from './ledger.js';
 import { roundTime } from './history.js';
 import { canonicalOf } from './pair-debts.js';
+import { countsMoney } from './play-for.js';
 
 /** Fewer finished rounds than this and the Season preview shows the sample group instead. */
 export const MIN_REAL_ROUNDS = 2;
 
 const cents = v => Math.round(v * 100) / 100 || 0;
 
-/** Finished rounds this season (calendar year) where you were a player, joined rounds included. Oldest first. */
+/**
+ * Finished money rounds this season (calendar year) where you were a player, joined rounds
+ * included. Oldest first. Points and reward rounds never count toward the season's money.
+ */
 export function seasonRounds(state, year = new Date().getFullYear()) {
   return Object.values(state?.rounds || {})
-    .filter(r => r.status === 'done' && new Date(roundTime(r)).getFullYear() === year)
+    .filter(r => r.status === 'done' && countsMoney(r) && new Date(roundTime(r)).getFullYear() === year)
     .filter(r => { const me = meFor(r, state); return !!me && r.players.some(p => p.id === me); })
     .sort((a, b) => roundTime(a) - roundTime(b));
 }

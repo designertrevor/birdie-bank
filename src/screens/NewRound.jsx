@@ -25,6 +25,8 @@ import { shouldShowPaywall } from '../lib/paywall.js';
 import { PAYWALL_ON } from '../lib/paywall-flag.js';
 import { matchingUsual, planFromUsual, setupFromUsual, usualsOf } from '../lib/usuals.js';
 import { SaveUsualButton, UsualsList } from '../components/Usuals.jsx';
+import PlayForPicker from '../components/PlayFor.jsx';
+import { countsMoney, inUnits, playForLine, playForShort } from '../lib/play-for.js';
 
 const STEPS = ['Game', 'Course', 'Players', 'Bets'];
 
@@ -62,6 +64,7 @@ function planSetup(state, planId, present) {
     game: s.game, holesCount: s.holesCount, courseId: course?.id ?? null, nine: s.nine, picked, missing: [], tees: {}, hcOverride: {},
     bets: structuredClone(s.settings[s.game]), hcPct: s.hcPct, useHc: s.useHandicaps, teams: s.teams, sideGames: s.sideGames,
     usualId: plan.usualId ?? null,
+    playFor: s.playFor,
     step: !course ? 1 : picked.length < g.min || picked.length > g.max ? 2 : 3,
   };
 }
@@ -111,6 +114,8 @@ export default function NewRound({ rematch, fromPlan, present, ahead = false, ga
   const [planSides, setPlanSides] = useState([]);
   // A usual whose course isn't on this phone any more: its name, so the course step can say so
   const [lostCourse, setLostCourse] = useState(null);
+  // What it's played for: null is money (as every round before it), else points or a reward
+  const [playFor, setPlayFor] = useState(() => pre?.playFor ?? null);
 
   const course = findCourse(state, courseId);
   // Names from the usual still not saved here (adding one by the same name clears it from the hint)
@@ -139,7 +144,7 @@ export default function NewRound({ rematch, fromPlan, present, ahead = false, ga
     const plan = newPlan({
       id, hostName: me?.name || 'Me', game, holesCount, nine, date, teeTime, course,
       people: invited.filter(pid => pid !== s.me).map(pid => s.players[pid]).filter(Boolean),
-      ballot: { games: ballotGames, bets: ballotBets, sides: ballotSides }, suggestedBet, settings: opts, useHc: usualId ? useHc : true,
+      ballot: { games: ballotGames, bets: ballotBets, sides: ballotSides }, suggestedBet, settings: opts, useHc: usualId ? useHc : true, playFor,
       // From a saved usual: its handicap percentage, and which usual (for "Last played")
       ...(usualId ? { usualId, hcPct: opts.hcPct } : {}),
     });
@@ -162,6 +167,7 @@ export default function NewRound({ rematch, fromPlan, present, ahead = false, ga
     const round = createRound({ id, game, course, holesCount, nine, startHole, players, settings, hcPct: opts.hcPct, useHandicaps: useHc, teams: GAMES[game].teams ? teams : null });
     const sides = sidesFor(game);
     if (sides.length) round.sideGames = structuredClone(sides);
+    if (playFor) round.playFor = structuredClone(playFor);
     // Started from a saved usual (still the same game at the same course): finishing it updates "Last played"
     const from = usualId && usualsOf(s).find(u => u.id === usualId);
     if (from && from.game === game && (from.courseId === course.id || findCourse(s, from.courseId)?.id === course.id)) round.usualId = usualId;
@@ -187,6 +193,7 @@ export default function NewRound({ rematch, fromPlan, present, ahead = false, ga
     setStartHole(null);
     setTeams(p.teams);
     setSideGames(structuredClone(p.sideGames || []));
+    setPlayFor(p.playFor ?? null);
     setMissing(p.missing || []);
     setStep(p.step ?? 3);
   };
@@ -214,6 +221,7 @@ export default function NewRound({ rematch, fromPlan, present, ahead = false, ga
     setOpts(o => ({ ...o, ...structuredClone(p.opts) }));
     setUseHc(p.useHc);
     setPlanSides(p.sides);
+    setPlayFor(p.playFor ?? null);
     setMissing(p.missing);
     setUsualId(p.usualId);
     setLostCourse(p.courseId ? null : u.courseName || null);
@@ -249,7 +257,7 @@ export default function NewRound({ rematch, fromPlan, present, ahead = false, ga
           nextLabel="Next: Who’s invited" top={<WhenPicker date={date} setDate={setDate} teeTime={teeTime} setTeeTime={setTeeTime} coursePicked={!!course} />} />
       )}
       {step === 2 && planning && course && <InviteStep invited={invited} setInvited={setInvited} onNext={() => setStep(3)} />}
-      {step === 3 && planning && course && <VoteStep game={game} opts={opts} onPlan={makePlan} ballot={ballot} initialSides={planSides} />}
+      {step === 3 && planning && course && <VoteStep game={game} opts={opts} onPlan={makePlan} ballot={ballot} initialSides={planSides} playFor={playFor} setPlayFor={setPlayFor} />}
       {step === 1 && !planning && <CourseStep courseId={courseId} setCourseId={id => { setCourseId(id); setTees({}); setStartHole(null); }} holesCount={holesCount} nine={nine} setNine={setNine} onNext={() => setStep(2)} />}
       {step === 2 && !planning && course && (
         <PlayersStep game={g} course={course} holesCount={holesCount} nine={nine} picked={picked} setPicked={setPicked}
@@ -259,7 +267,7 @@ export default function NewRound({ rematch, fromPlan, present, ahead = false, ga
       {step === 3 && !planning && course && (
         <SetupStep game={game} course={course} holesCount={holesCount} nine={nine} picked={picked} setPicked={setPicked}
           opts={opts} setOpts={setOpts} useHc={useHc} setUseHc={setUseHc} startHole={startHole} setStartHole={setStartHole} onStart={start}
-          teams={teams} setTeams={setTeams} sideGames={sidesFor(game)} setSideGames={editSides} />
+          teams={teams} setTeams={setTeams} sideGames={sidesFor(game)} setSideGames={editSides} playFor={playFor} setPlayFor={setPlayFor} />
       )}
       {step === 4 && created && <ReadyStep round={created} onStart={() => nav.reset('upnext', ['play', { id: created.id }])} />}
     </Screen>
@@ -544,7 +552,7 @@ function QuickAddPlayer({ open, onClose, onAdded }) {
 
 // ---------------------------------------------------------------------------
 
-function SetupStep({ game, course, holesCount, nine, picked, setPicked, opts, setOpts, useHc, setUseHc, startHole, setStartHole, onStart, teams, setTeams, sideGames = [], setSideGames }) {
+function SetupStep({ game, course, holesCount, nine, picked, setPicked, opts, setOpts, useHc, setUseHc, startHole, setStartHole, onStart, teams, setTeams, sideGames = [], setSideGames, playFor = null, setPlayFor }) {
   const state = useStore();
   const [pad, setPad] = useState(null); // {path, title, min, max}
   const [holePick, setHolePick] = useState(false);
@@ -565,10 +573,14 @@ function SetupStep({ game, course, holesCount, nine, picked, setPicked, opts, se
       <div className="scroll">
         <div className="block summary-card">
           <div className="li-sub">{gameLabel({ game, sideGames })} · {holesCount} holes</div>
-          <div className="d stake-big">{stakeSummary(game, opts)}</div>
-          {sideGames.length > 0 && <div className="li-sub">{roundStakeLines({ game, settings: opts, sideGames }).slice(1).map(l => l.line).join(' + ')}</div>}
+          <div className="d stake-big">{inUnits({ playFor }, stakeSummary(game, opts))}</div>
+          {sideGames.length > 0 && <div className="li-sub">{roundStakeLines({ game, settings: opts, sideGames, playFor }).slice(1).map(l => l.line).join(' + ')}</div>}
+          {playForLine({ playFor }) && <div className="li-sub">{playForLine({ playFor })}</div>}
           <div className="li-sub">{course.name}{holesCount === 9 && course.holes.length === 18 ? ` · ${nine === 'front' ? 'Front' : 'Back'} 9` : ''} · Par {holes.reduce((a, h) => a + h.par, 0)} · {picked.length} players</div>
         </div>
+
+        {/* Play for first, so the bets below are read the right way. Side games follow the round's choice */}
+        <PlayForPicker value={playFor} onChange={setPlayFor} />
 
         {GAMES[game].teams && teams && (
           <>
@@ -745,7 +757,7 @@ function InviteStep({ invited, setInvited, onNext }) {
 }
 
 /** The organizer suggests a game and a bet, and picks what else the group can vote for. */
-function VoteStep({ game, opts, onPlan, ballot = [], initialSides = [] }) {
+function VoteStep({ game, opts, onPlan, ballot = [], initialSides = [], playFor = null, setPlayFor }) {
   const start = betOf(game, opts) || 5;
   const [bet, setBet] = useState(start);
   const [others, setOthers] = useState(() => ballot.filter(k => k !== game && GAMES[k]).slice(0, MAX_BALLOT_GAMES - 1));
@@ -762,22 +774,25 @@ function VoteStep({ game, opts, onPlan, ballot = [], initialSides = [] }) {
       <div className="scroll">
         <div className="block summary-card">
           <div className="li-sub">You suggest</div>
-          <div className="d stake-big">{GAMES[game].name} · {betLabel(game, opts, bet)}</div>
+          <div className="d stake-big">{GAMES[game].name} · {inUnits({ playFor }, betLabel(game, opts, bet))}</div>
+          {playForLine({ playFor }) && <div className="li-sub">{playForLine({ playFor })}</div>}
           <div className="li-sub">The group votes when they answer. Most votes wins; a tie goes to your suggestion.</div>
         </div>
+        {/* Play for first, so the bet chips below read in points when it isn't money */}
+        <PlayForPicker value={playFor} onChange={setPlayFor} planning />
         <div className="sec-label">Your bet</div>
         <div className="chip-row" role="radiogroup" aria-label="Your bet">
           {ladder.map(b => (
-            <button key={b} role="radio" aria-checked={b === bet} className={`pill-btn ${b === bet ? 'on' : ''}`} onClick={() => { setBet(b); setExtraBets(v => v.filter(x => x !== b)); }}>{money(b)}</button>
+            <button key={b} role="radio" aria-checked={b === bet} className={`pill-btn ${b === bet ? 'on' : ''}`} onClick={() => { setBet(b); setExtraBets(v => v.filter(x => x !== b)); }}>{inUnits({ playFor }, money(b))}</button>
           ))}
         </div>
         <div className="sec-label">Other bets to vote on</div>
         <div className="chip-row">
           {ladder.filter(b => b !== bet).map(b => (
-            <button key={b} aria-pressed={extraBets.includes(b)} className={`pill-btn sm ${extraBets.includes(b) ? 'on' : ''}`} onClick={() => toggleBet(b)}>{money(b)}</button>
+            <button key={b} aria-pressed={extraBets.includes(b)} className={`pill-btn sm ${extraBets.includes(b) ? 'on' : ''}`} onClick={() => toggleBet(b)}>{inUnits({ playFor }, money(b))}</button>
           ))}
         </div>
-        <p className="field-help pad">{GAMES[game].name} bets on the ballot: {ballotBets.map(b => betUnitLabel(game, opts, b)).join(', ')}.</p>
+        <p className="field-help pad">{GAMES[game].name} bets on the ballot: {ballotBets.map(b => inUnits({ playFor }, betUnitLabel(game, opts, b))).join(', ')}.</p>
         <div className="sec-label">Other games to vote on <span className="opt">up to {MAX_BALLOT_GAMES - 1}</span></div>
         <div className="chip-row">
           {Object.entries(GAMES).filter(([k]) => k !== game).map(([k, g]) => {
@@ -840,6 +855,7 @@ function ReadyStep({ round, onStart }) {
           <div className="ready-row"><span>Course</span><b>{round.course.name}{round.nine ? ` · ${round.nine === 'front' ? 'Front' : 'Back'} 9` : ''}</b></div>
           <div className="ready-row"><span>{round.teams ? 'Teams' : 'Players'}</span><b>{round.teams ? round.teams.map(t => t.name).join(' v ') : names.join(', ')}</b></div>
           <div className="ready-row"><span>On the line</span><b>{roundStakeLines(round).map(l => l.line).join(' + ')}</b></div>
+          {playForLine(round) && <div className="ready-row"><span>Playing for</span><b>{playForShort(round)}</b></div>}
           <div className="ready-row"><span>Handicaps</span><b>{round.useHandicaps ? hcPctLabel(round.hcPct) : 'Off'}</b></div>
         </div>
         {others.map(o => (
@@ -847,7 +863,7 @@ function ReadyStep({ round, onStart }) {
         ))}
         <div className="usual-save"><SaveUsualButton round={round} className="pill-btn" /></div>
         {syncConfigured && (
-          <p className="hint-card"><Icon name="broadcast" fill /> {round.shared ? 'The group has the link. They can follow the money live.' : 'Send the group a link and they can follow the money live from their own phones. No download needed.'}</p>
+          <p className="hint-card"><Icon name="broadcast" fill /> {round.shared ? `The group has the link. They can follow ${countsMoney(round) ? 'the money' : 'the scores'} live.` : `Send the group a link and they can follow ${countsMoney(round) ? 'the money' : 'the scores'} live from their own phones. No download needed.`}</p>
         )}
       </div>
       <div className="cta-wrap">

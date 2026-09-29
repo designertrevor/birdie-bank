@@ -162,9 +162,10 @@ function SkinsRules({ i, sideGames, change, players, onClose, onAmount }) {
 
 /**
  * A table of each game's money: a row per game, a column per player, and a Total row. A game whose
- * bet changed mid-round says so under its name.
+ * bet changed mid-round says so under its name. `fmt` formats the amounts (points for a points or
+ * reward round).
  */
-export function ByGameTable({ round, byGame, total }) {
+export function ByGameTable({ round, byGame, total, fmt = money }) {
   const games = Object.entries(byGame);
   const cls = v => (v > 0 ? 'pos' : v < 0 ? 'neg' : 'zero');
   return (
@@ -178,12 +179,12 @@ export function ByGameTable({ round, byGame, total }) {
           {games.map(([key, g]) => (
             <tr key={key}>
               <th scope="row" className="bg-game">{g.label}{betChangeNote(round, key) && <span className="bg-note">{betChangeNote(round, key)}</span>}</th>
-              {round.players.map(p => { const v = g.balances[p.id] || 0; return <td key={p.id} className={cls(v)}>{money(v, { sign: true })}</td>; })}
+              {round.players.map(p => { const v = g.balances[p.id] || 0; return <td key={p.id} className={cls(v)}>{fmt(v, { sign: true })}</td>; })}
             </tr>
           ))}
           <tr className="bg-total">
             <th scope="row" className="bg-game">Total</th>
-            {round.players.map(p => { const v = total[p.id] || 0; return <td key={p.id} className={cls(v)}><strong>{money(v, { sign: true })}</strong></td>; })}
+            {round.players.map(p => { const v = total[p.id] || 0; return <td key={p.id} className={cls(v)}><strong>{fmt(v, { sign: true })}</strong></td>; })}
           </tr>
         </tbody>
       </table>

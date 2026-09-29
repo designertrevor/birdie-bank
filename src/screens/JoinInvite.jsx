@@ -13,6 +13,7 @@ import { GAMES, addPlayerProblem } from '../lib/round.js';
 import { roundStakeLines } from '../lib/stakes.js';
 import { firstName, gameLabel, strokesLabel } from '../lib/format.js';
 import { payFields } from '../lib/pay.js';
+import { noMoneyNote, playForLine } from '../lib/play-for.js';
 
 // A seat request survives the page being closed, so reopening the link keeps waiting
 const seatKey = code => `bb-seat:${code}`;
@@ -309,6 +310,7 @@ export default function JoinInvite({ code, onJoined, onSkip, setUp = false }) {
           </div>
           <div className="ic-game"><Icon name={game?.icon || 'golf'} fill /> {game ? gameLabel(meta) : 'Golf'}</div>
           <div className="ic-course">{meta.course?.name} · {meta.holes.length} holes</div>
+          {playForLine(meta) && <div className="ic-playfor"><Icon name={meta.playFor?.kind === 'reward' ? 'gift' : 'trophy'} fill /> {playForLine(meta)}</div>}
           <dl className="ic-facts">
             <div><dt>Bets</dt><dd>{roundStakeLines(meta).map(l => l.line).filter(Boolean).join(' + ') || '–'}</dd></div>
             <div>
@@ -321,7 +323,7 @@ export default function JoinInvite({ code, onJoined, onSkip, setUp = false }) {
           </dl>
           {done && <p className="ic-note">This round is finished. Pick your seat to see how it ended.</p>}
         </div>
-        <p className="field-help">Friendly wagers only. Birdie Bank never holds or moves money. You settle up yourselves.</p>
+        <p className="field-help">{noMoneyNote(meta) || 'Friendly wagers only. Birdie Bank never holds or moves money. You settle up yourselves.'}</p>
       </div>
       <div className="cta-wrap">
         <button className="full-btn" onClick={() => setStep('seat')}>Pick your seat <Icon name="arrow-right" /></button>

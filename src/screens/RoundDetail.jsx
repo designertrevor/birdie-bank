@@ -13,7 +13,8 @@ import { betStretchLine } from '../lib/stakes.js';
 import { ByGameTable } from '../components/SideGames.jsx';
 import { accountsEnabled, useAccount } from '../lib/cloud.js';
 import { SignInSheet } from '../components/Account.jsx';
-import { HowWasIt, Reveal, SettleUp, ShareCard } from '../components/Finale.jsx';
+import { HowWasIt, Reveal, RewardCard, SettleUp, ShareCard } from '../components/Finale.jsx';
+import { countsMoney, playForOf, unitFmt } from '../lib/play-for.js';
 import { SaveUsualButton } from '../components/Usuals.jsx';
 
 // Where the finale was, so coming back from another screen (e.g. Suggest) doesn't replay the reveal.
@@ -53,6 +54,10 @@ export default function RoundDetail({ id, celebrate }) {
   const meRow = res.standings.find(p => p.id === meFor(round, state));
   const tie = res.standings.filter(p => p.amount === top.amount).length > 1;
   const allSquare = res.standings.every(p => p.amount === 0);
+  // A points or reward round is never money: amounts read as points and there's nobody to pay
+  const fmt = unitFmt(round);
+  const isMoney = countsMoney(round);
+  const pays = isMoney && res.transfers.length > 0;
 
   const del = async () => {
     if (!(await ask({ title: 'Delete this round?', text: 'It’ll be removed from History and the tab.', confirmLabel: 'Delete round', danger: true }))) return;
@@ -71,20 +76,20 @@ export default function RoundDetail({ id, celebrate }) {
   };
 
   let heroTitle, heroAmt;
-  if (allSquare) { heroTitle = 'All square'; heroAmt = '$0'; }
+  if (allSquare) { heroTitle = 'All square'; heroAmt = fmt(0); }
   else if (tie) {
     // Partners who won together are one winning side, not a tie (same as the reveal)
     const leaders = res.standings.filter(p => p.amount === top.amount);
     const side = round.teams?.find(tm => tm.players.length === leaders.length && tm.players.every(pid => leaders.some(p => p.id === pid)));
     heroTitle = side ? `${side.name} win the day` : `${listNames(leaders.map(p => p.name.split(' ')[0]))} tie for top`;
-    heroAmt = money(top.amount, { sign: true });
+    heroAmt = fmt(top.amount, { sign: true });
   }
-  else { heroTitle = `${top.name} wins the day`; heroAmt = money(top.amount, { sign: true }); }
+  else { heroTitle = `${top.name} wins the day`; heroAmt = fmt(top.amount, { sign: true }); }
 
   const saveRow = accountsEnabled && !acct.user && round.status === 'done' && (
     <button className="set-row" onClick={() => setSigningIn(true)}>
       <div className="set-icon"><Icon name="cloud-arrow-up" fill /></div>
-      <div className="row-main"><div className="set-name">{meRow && meRow.amount > 0 ? `You won ${money(meRow.amount)}. Save it to your tab` : 'Save this round to your account'}</div><div className="set-sub">Free. Keeps your rounds and tab safe on any device.</div></div>
+      <div className="row-main"><div className="set-name">{isMoney && meRow && meRow.amount > 0 ? `You won ${money(meRow.amount)}. Save it to your tab` : 'Save this round to your account'}</div><div className="set-sub">Free. Keeps your rounds and tab safe on any device.</div></div>
       <span className="chevron"><Icon name="caret-right" /></span>
     </button>
   );
@@ -99,11 +104,11 @@ export default function RoundDetail({ id, celebrate }) {
   if (stage !== 'detail') {
     return (
       <Screen key={stage}>
-        {stage === 'reveal' && <Reveal round={round} res={res} instant={revealSeen} onNext={() => { setRevealSeen(true); setStage(res.transfers.length ? 'settle' : 'share'); }} onDetail={() => { setRevealSeen(true); setStage('detail'); }} extra={<>{notesEl}{saveRow && <div style={{ marginTop: 12 }}>{saveRow}</div>}</>} />}
+        {stage === 'reveal' && <Reveal round={round} res={res} instant={revealSeen} onNext={() => { setRevealSeen(true); setStage(pays ? 'settle' : 'share'); }} onDetail={() => { setRevealSeen(true); setStage('detail'); }} extra={<>{notesEl}{saveRow && <div style={{ marginTop: 12 }}>{saveRow}</div>}</>} />}
         {stage === 'settle' && <SettleUp round={round} res={res} onBack={() => setStage('reveal')} onNext={() => setStage('share')} />}
         {stage === 'share' && (shareFrom === 'detail'
           ? <ShareCard round={round} res={res} onBack={() => setStage('detail')} onDone={() => setStage('detail')} doneLabel="Back to the round" />
-          : <ShareCard round={round} res={res} onBack={() => setStage(res.transfers.length ? 'settle' : 'reveal')} onDone={done} />)}
+          : <ShareCard round={round} res={res} onBack={() => setStage(pays ? 'settle' : 'reveal')} onDone={done} />)}
         {signingIn && <SignInSheet open onClose={() => setSigningIn(false)} />}
       </Screen>
     );
@@ -127,7 +132,7 @@ export default function RoundDetail({ id, celebrate }) {
           <div className="wn">{heroTitle}</div>
           <div className="wa">{heroAmt}</div>
           <div className="ws">{round.course.name} · {roundDate(round)} · {gameLabel(round)} · {played === round.holes.length ? `${played} holes` : `${played} of ${round.holes.length} holes`}</div>
-          {meRow && meRow.id !== top.id && !allSquare && <div className="me-line">You: {money(meRow.amount, { sign: true })}</div>}
+          {meRow && meRow.id !== top.id && !allSquare && <div className="me-line">You: {fmt(meRow.amount, { sign: true })}</div>}
         </div>
 
         {notesEl}
@@ -137,11 +142,22 @@ export default function RoundDetail({ id, celebrate }) {
         {res.standings.map((p, i) => (
           <div key={p.id} className="settle-row">
             <div className="sr">{placeOf(res.standings, i)}</div>
-            <div className="sn">{p.name}{strokesNote(p)}{res.detail.byGame && <span className="rv-games">{gamesLine(res.detail.byGame, p.id)}</span>}</div>
-            <div className={`sa ${p.amount > 0 ? 'pos' : p.amount < 0 ? 'neg' : ''}`}>{money(p.amount, { sign: true })}</div>
+            <div className="sn">{p.name}{strokesNote(p)}{res.detail.byGame && <span className="rv-games">{gamesLine(res.detail.byGame, p.id, fmt)}</span>}</div>
+            <div className={`sa ${p.amount > 0 ? 'pos' : p.amount < 0 ? 'neg' : ''}`}>{fmt(p.amount, { sign: true })}</div>
           </div>
         ))}
 
+        {!isMoney && (
+          <>
+            <div className="sec-label">{playForOf(round).kind === 'reward' ? 'The reward' : 'Bragging rights'}</div>
+            <div style={{ padding: '0 16px' }}>
+              {playForOf(round).kind === 'reward'
+                ? <RewardCard round={round} res={res} />
+                : <p className="hint-card" style={{ margin: 0 }}><Icon name="trophy" fill /> Played for points, so nothing goes on the Tab. Just bragging rights.</p>}
+            </div>
+          </>
+        )}
+        {isMoney && <>
         <div className="sec-label">Who pays who</div>
         <div style={{ padding: '0 16px' }}>
           {res.transfers.length === 0 && <p className="hint-card" style={{ margin: 0 }}><Icon name="handshake" fill /> Nobody owes anybody. First round’s on whoever three-putted last.</p>}
@@ -153,13 +169,14 @@ export default function RoundDetail({ id, celebrate }) {
           ))}
           {res.transfers.length > 0 && <p className="field-help" style={{ padding: '0 4px' }}>Fewest payments to square everyone up. They’re on the tab until marked paid.</p>}
         </div>
+        </>}
 
         <HowWasIt round={round} />
 
         {res.detail.byGame && (
           <>
             <div className="sec-label">By game</div>
-            <ByGameTable round={round} byGame={res.detail.byGame} total={res.balances} />
+            <ByGameTable round={round} byGame={res.detail.byGame} total={res.balances} fmt={fmt} />
           </>
         )}
 
@@ -187,7 +204,7 @@ export default function RoundDetail({ id, celebrate }) {
       </div>
       {celebrate && (
         <div className="cta-wrap">
-          {res.transfers.length > 0 && <button className="full-btn" onClick={() => setStage('settle')}><Icon name="receipt" /> Settle up</button>}
+          {pays && <button className="full-btn" onClick={() => setStage('settle')}><Icon name="receipt" /> Settle up</button>}
           <button className="full-btn outline" onClick={done}>Done</button>
         </div>
       )}
@@ -197,6 +214,8 @@ export default function RoundDetail({ id, celebrate }) {
 }
 
 function GameBreakdown({ round, res, label = null }) {
+  // The bets in the round's own unit: points for a points or reward round
+  const money = unitFmt(round);
   const names = Object.fromEntries(round.players.map(p => [p.id, p.name]));
   const first = n => (n || '').split(' ')[0];
   if (round.game === 'nassau' || round.game === 'match') {

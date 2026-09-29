@@ -8,6 +8,7 @@
 // people who share rounds, a carry only ever covers those rounds (what both phones have), so the
 // amount asked, agreed and shown is the same on both.
 import { canonicalOf, carryId, carryRowId, codeOf, openTransfers, pairDebt, pairRounds } from './shared-tab.js';
+import { countsMoney } from './play-for.js';
 
 const cents = v => Math.round((Number(v) || 0) * 100);
 
@@ -35,13 +36,16 @@ export function carryReducer(carry, action) {
   }
 }
 
-/** An agreed carry is done once the two of them finish another round together after agreeing. */
+/**
+ * An agreed carry is done once the two of them finish another money round together after
+ * agreeing. A points or reward round in between has no money to net it into, so the carry stands.
+ */
 export function rolled(carry, state) {
   if (carry?.status !== 'agreed') return false;
   const who = canonicalOf(state);
   const since = carry.answeredAt || carry.at || 0;
   return Object.values(state.rounds || {}).some(r => {
-    if (r.status !== 'done' || (r.finishedAt || 0) <= since) return false;
+    if (r.status !== 'done' || !countsMoney(r) || (r.finishedAt || 0) <= since) return false;
     const ids = new Set(r.players.map(p => who(p.id)));
     return ids.has(who(carry.from)) && ids.has(who(carry.to));
   });

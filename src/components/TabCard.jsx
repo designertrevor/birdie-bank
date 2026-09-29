@@ -5,16 +5,17 @@ import { useCallback, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { Icon, Sheet, useUI } from './ui.jsx';
 import { Avatar, PayButton, RequestButton } from './Pay.jsx';
-import { useStore } from '../lib/store.js';
+import { update, useStore } from '../lib/store.js';
 import { useRemind } from '../lib/useRemind.js';
 import { nameOf } from '../lib/ledger.js';
 import { PAY_APPS, payInfoFor } from '../lib/pay.js';
 import { money } from '../lib/golf.js';
-import { meFor } from '../lib/format.js';
+import { gameLabel, meFor, myIds } from '../lib/format.js';
 import { buzz } from '../lib/delight.js';
 import { ago, canonicalOf, recentPayment, roundRows, roundStatus, shortDate, stripRound } from '../lib/shared-tab.js';
 import { CARRY_REASONS, cardCarry, sharedOwed } from '../lib/carry.js';
 import { answerCarry, askCarry, markPaid, undoLastPayment, usePaymentsOff } from '../lib/tab-sync.js';
+import { openRewards, rewardLineText } from '../lib/play-for.js';
 
 const firstOf = name => name.split(' ')[0];
 
@@ -241,5 +242,52 @@ export function SquareStrip() {
       </Sheet>
       </AtScreen>
     </>
+  );
+}
+
+/** Mark a reward done on this phone (or take it back): every share of it. Kept in the profile doc, never in cents. */
+function setRewardDone(keys, on) {
+  update(s => {
+    const next = { ...(s.rewardsDone || {}) };
+    for (const key of keys) { if (on) next[key] = Date.now(); else delete next[key]; }
+    s.rewardsDone = next;
+  });
+}
+
+/**
+ * The rewards between you and one person (all of them without `other`): "You owe Sam lunch",
+ * "Dave owes you a drink", each with a one-tap Done so it isn't forgotten. Not money: nothing
+ * here is counted in dollars or in who's square.
+ */
+export function RewardLines({ other = null }) {
+  const state = useStore();
+  const { showToast } = useUI();
+  const who = canonicalOf(state);
+  const lines = openRewards(state, { ids: myIds(state), canon: who }).filter(l => other == null || l.other === who(other));
+  if (!lines.length) return null;
+  const done = l => {
+    const keys = l.keys || [l.key];
+    setRewardDone(keys, true);
+    buzz(15);
+    showToast(l.iOwe ? 'Done. Enjoy it together' : 'Done. Enjoy it', { label: 'Undo', run: () => setRewardDone(keys, false) });
+  };
+  return (
+    <div className="reward-lines">
+      {lines.map(l => {
+        const text = rewardLineText(l, id => nameOf(state, id));
+        return (
+          <div key={l.key} className="reward-line">
+            <Icon name="gift" fill className="rl-icon" />
+            <div className="row-main">
+              <div className="rl-text">{text}</div>
+              <div className="rl-sub">{gameLabel(l.round)} · {l.round.course?.name || 'the course'} · {shortDate(l.at)}</div>
+            </div>
+            <button className="pay-btn ink rl-done" onClick={() => done(l)} aria-label={`${text}: mark it done`}>
+              <span className="pay-in"><Icon name="check-circle" fill /><span className="pay-lbl">Done</span></span>
+            </button>
+          </div>
+        );
+      })}
+    </div>
   );
 }

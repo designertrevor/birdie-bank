@@ -4,6 +4,7 @@ import { roundResults } from './round.js';
 import { meFor, myIds } from './format.js';
 import { outstanding } from './ledger.js';
 import { canonicalOf } from './pair-debts.js';
+import { countsMoney } from './play-for.js';
 
 const MONTHS = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
 const SHORT = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
@@ -95,11 +96,16 @@ export function myNet(round, state) {
   return roundResults(round).balances[me] ?? 0;
 }
 
+/** Your money in a round: null when you weren't playing, or when it wasn't played for money. */
+export function myMoney(round, state) {
+  return countsMoney(round) ? myNet(round, state) : null;
+}
+
 const cents = v => Math.round(v * 100) / 100;
 
 /**
  * Group rounds (newest first) by month: [{ key: '2026-09', label, rounds, count, net, played }].
- * `net` adds up only the rounds you played in (`played` counts them); the year shows when it isn't this one.
+ * `net` adds up only the money rounds you played in (`played` counts them); the year shows when it isn't this one.
  */
 export function monthGroups(rounds, state, now = new Date()) {
   const groups = [];
@@ -113,21 +119,21 @@ export function monthGroups(rounds, state, now = new Date()) {
     const g = groups.at(-1);
     g.rounds.push(r);
     g.count++;
-    const n = myNet(r, state);
+    const n = myMoney(r, state);
     if (n != null) { g.net = cents(g.net + n); g.played++; }
   }
   return groups;
 }
 
 /**
- * Your running total across the rounds you played in, oldest first:
+ * Your running total across the money rounds you played in, oldest first:
  * [{ id, t, amount, total }]. This is what the season chart draws.
  */
 export function netSeries(rounds, state) {
   let total = 0;
   return [...rounds]
     .sort((a, b) => roundTime(a) - roundTime(b))
-    .map(r => ({ r, amount: myNet(r, state) }))
+    .map(r => ({ r, amount: myMoney(r, state) }))
     .filter(x => x.amount != null)
     .map(({ r, amount }) => { total = cents(total + amount); return { id: r.id, t: roundTime(r), amount, total }; });
 }
@@ -135,13 +141,14 @@ export function netSeries(rounds, state) {
 /**
  * Net with each player over these rounds (positive: you came out ahead of them). This is the honest
  * head-to-head from roundResults().pairs, bet by bet, not who happened to pay whom in the fewest payments.
+ * Money rounds only.
  */
 export function headToHead(rounds, state) {
   const h2h = {};
   // One friend is one line, whichever of their ids a round has (see people-links.js)
   const who = canonicalOf(state);
   const mine = myIds(state);
-  for (const r of rounds) {
+  for (const r of rounds.filter(countsMoney)) {
     const me = meFor(r, state);
     if (!me) continue;
     for (const [id, v] of Object.entries(roundResults(r).pairs?.[me] || {})) {

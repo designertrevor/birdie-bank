@@ -4,6 +4,7 @@ import { roundCents } from './games.js';
 import { meFor } from './format.js';
 import { canonicalOf, sharedDebts } from './pair-debts.js';
 import { linksOf } from './people-links.js';
+import { countsMoney } from './play-for.js';
 
 const toCents = v => Math.round((Number(v) || 0) * 100);
 const pairKey = (a, b) => (a < b ? `${a}|${b}` : `${b}|${a}`);
@@ -88,6 +89,8 @@ function shortestPath(start, isEnd, ids, ok) {
 }
 
 const doneRounds = state => Object.values(state.rounds || {}).filter(r => r.status === 'done');
+/** Finished money rounds: points and reward rounds never add a dollar to the Tab. */
+const moneyRounds = state => doneRounds(state).filter(countsMoney);
 
 /**
  * You can have more than one id (your own, plus the seat you took in each joined round), and so can
@@ -107,18 +110,18 @@ export function tabBalances(state) {
   const bal = {};
   const who = canonical(state);
   const add = (id, v) => { const k = who(id); bal[k] = (bal[k] || 0) + v; };
-  for (const r of doneRounds(state)) {
+  for (const r of moneyRounds(state)) {
     for (const [id, v] of Object.entries(roundResults(r).balances)) add(id, v);
   }
   for (const s of state.settlements || []) { add(s.from, s.amount); add(s.to, -s.amount); }
   return bal;
 }
 
-/** Finished rounds each pair played together, by "a|b" key (ids sorted). */
+/** Finished money rounds each pair played together, by "a|b" key (ids sorted). */
 export function roundsTogether(state) {
   const out = new Map();
   const who = canonical(state);
-  for (const r of doneRounds(state)) {
+  for (const r of moneyRounds(state)) {
     const ids = [...new Set(r.players.map(p => who(p.id)))];
     for (let i = 0; i < ids.length; i++) for (let j = i + 1; j < ids.length; j++) {
       const k = pairKey(ids[i], ids[j]);
@@ -173,6 +176,8 @@ export function outstanding(state, { now = Date.now() } = {}) {
  * Everything between you and one person, for the round-by-round story: each finished round you
  * both played with the honest head-to-head (what you won from them, bet by bet), each payment
  * between you and each agreed carry-over. Newest first. `ids` is every id that means you.
+ * Points and reward rounds are in the story and the record (`money: false` on the item), but
+ * never in `net`: that is dollars only.
  */
 export function personStory(state, ids, other) {
   const mine = ids instanceof Set ? ids : new Set(ids);
@@ -191,8 +196,9 @@ export function personStory(state, ids, other) {
     const pairs = roundResults(r).pairs[me] || {};
     const amount = Math.round(them.reduce((a, id) => a + (pairs[id] ?? 0), 0) * 100) / 100;
     if (amount > 0) won++; else if (amount < 0) lost++; else even++;
-    net += amount;
-    items.push({ kind: 'round', id: r.id, round: r, amount, at: r.finishedAt || r.createdAt || 0 });
+    const isMoney = countsMoney(r);
+    if (isMoney) net += amount;
+    items.push({ kind: 'round', id: r.id, round: r, amount, money: isMoney, at: r.finishedAt || r.createdAt || 0 });
   }
   for (const s of state.settlements || []) {
     // amount: what the payment did for your side (they paid you: +, you paid them: -)
@@ -213,6 +219,7 @@ export function personStory(state, ids, other) {
 /**
  * Your honest head-to-head with everyone you've played a finished round with:
  * Map(id -> { rounds, won, lost, even, net }), where net is what you've won from them in all.
+ * Points and reward rounds count in the record, never in net (dollars only).
  */
 export function headToHeadSummary(state, ids) {
   const mine = ids instanceof Set ? ids : new Set(ids);
@@ -234,7 +241,7 @@ export function headToHeadSummary(state, ids) {
       const cur = out.get(k) || { rounds: 0, won: 0, lost: 0, even: 0, net: 0 };
       cur.rounds++;
       if (v > 0) cur.won++; else if (v < 0) cur.lost++; else cur.even++;
-      cur.net = Math.round((cur.net + v) * 100) / 100;
+      if (countsMoney(r)) cur.net = Math.round((cur.net + v) * 100) / 100;
       out.set(k, cur);
     }
   }

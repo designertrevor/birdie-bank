@@ -25,6 +25,7 @@ import { LivePill, ShareSheet } from '../components/Live.jsx';
 import { syncConfigured, useSeatRequests } from '../lib/sync.js';
 import { AddPlayerSheet } from '../components/AddPlayer.jsx';
 import { firstName, gameLabel, holeMoneyLine } from '../lib/format.js';
+import { countsMoney, inUnits, unitFmt } from '../lib/play-for.js';
 import { leaveRound, roundsInProgress } from '../lib/rounds.js';
 import { RoundsInProgressSheet } from '../components/RoundsInProgress.jsx';
 import { ByGameTable, SideGamesSetup } from '../components/SideGames.jsx';
@@ -872,9 +873,10 @@ function BetsSheet({ round, onClose }) {
       s.settings = { ...s.settings, [game]: structuredClone(opts[game]) };
     });
     onClose();
-    showToast(side
+    // A points or reward round reads in points
+    showToast(inUnits(round, side
       ? `${label} bet updated${whole ? '' : ` from hole ${fromHole.no}`} · ${sideBetLine(game, opts[game])}`
-      : `Bets updated${whole ? '' : ` from hole ${fromHole.no}`} · ${stakeSummary(game, opts)}`);
+      : `Bets updated${whole ? '' : ` from hole ${fromHole.no}`} · ${stakeSummary(game, opts)}`));
     buzz(20);
   };
   const legs = game === 'nassau' || game === 'match' || game === 'rabbit' || game === 'snake' || (game === 'sixes' && opts.sixes.mode === 'match');
@@ -963,17 +965,20 @@ function MoneyBar({ round, hole, preview }) {
   // With side games the bar is one total per person, and a tap shows each game's money
   const byGame = preview.byGame || null;
   const [open, setOpen] = useState(false);
-  const thru = played ? (pending ? `Thru ${played} + this hole` : `Thru ${played} hole${played === 1 ? '' : 's'}`) : pending ? 'This hole' : 'Everyone starts at $0';
+  // A points or reward round counts the same numbers as points (never money)
+  const fmt = unitFmt(round);
+  const word = countsMoney(round) ? 'Money' : 'Points';
+  const thru = played ? (pending ? `Thru ${played} + this hole` : `Thru ${played} hole${played === 1 ? '' : 's'}`) : pending ? 'This hole' : `Everyone starts at ${fmt(0)}`;
   const Box = byGame ? 'button' : 'div';
   const boxProps = byGame
-    ? { type: 'button', className: 'money-bar mb-tap', 'aria-label': 'Money so far. Show by game', 'aria-haspopup': 'dialog', onClick: () => setOpen(true) }
-    : { className: 'money-bar', role: 'group', 'aria-label': 'Money so far' };
+    ? { type: 'button', className: 'money-bar mb-tap', 'aria-label': `${word} so far. Show by game`, 'aria-haspopup': 'dialog', onClick: () => setOpen(true) }
+    : { className: 'money-bar', role: 'group', 'aria-label': `${word} so far` };
   // Not a live region: it changes on every tap. The saved hole's result is announced by the toast.
   return (
     <>
     <Box {...boxProps}>
       <div className="mb-head">
-        <span>Money</span>
+        <span>{word}</span>
         <span>{byGame ? `${thru} · Tap for games` : thru}</span>
       </div>
       <div className="mb-items" style={{ gridTemplateColumns: `repeat(${round.players.length}, minmax(0, 1fr))` }}>
@@ -983,8 +988,8 @@ function MoneyBar({ round, hole, preview }) {
           return (
             <div key={p.id} className={`mb-item ${top > 0 && v === top ? 'lead' : ''}`}>
               <div className="mb-p">{p.name.split(' ')[0]}</div>
-              <div key={changed.includes(p.id) ? v : 'same'} className={`mb-a ${v > 0 ? 'pos' : v < 0 ? 'neg' : ''} ${changed.includes(p.id) ? 'bump' : ''}`}>{money(v, { sign: true })}</div>
-              <div className="mb-d">{d ? `${money(d, { sign: true })} this hole` : round.left?.[p.id] != null ? 'Left' : round.joined?.[p.id] != null && !playsHole(round, p.id, hole) ? `From hole ${round.joined[p.id]}` : '\u00a0'}</div>
+              <div key={changed.includes(p.id) ? v : 'same'} className={`mb-a ${v > 0 ? 'pos' : v < 0 ? 'neg' : ''} ${changed.includes(p.id) ? 'bump' : ''}`}>{fmt(v, { sign: true })}</div>
+              <div className="mb-d">{d ? `${fmt(d, { sign: true })} this hole` : round.left?.[p.id] != null ? 'Left' : round.joined?.[p.id] != null && !playsHole(round, p.id, hole) ? `From hole ${round.joined[p.id]}` : '\u00a0'}</div>
             </div>
           );
         })}
@@ -992,8 +997,8 @@ function MoneyBar({ round, hole, preview }) {
     </Box>
     {byGame && (
       <Sheet open={open} onClose={() => setOpen(false)} title="By game" className="sc-sheet">
-        <p className="sheet-text">Money so far ({thru.toLowerCase()}). Every game adds up into one total each.</p>
-        <ByGameTable round={round} byGame={byGame} total={preview.balances} />
+        <p className="sheet-text">{word} so far ({thru.toLowerCase()}). Every game adds up into one total each.</p>
+        <ByGameTable round={round} byGame={byGame} total={preview.balances} fmt={fmt} />
         {nassauOpenNote(round, byGame) && <p className="field-help" style={{ padding: '0 20px' }}>{nassauOpenNote(round, byGame)}</p>}
         <div className="cta-wrap"><button className="full-btn outline" onClick={() => setOpen(false)}>Close</button></div>
       </Sheet>
@@ -1060,6 +1065,7 @@ function BetExposure({ banker }) {
 // --------------------------- Skins ----------------------------------------
 
 function SkinsPanel({ round, hole, onChange }) {
+  const money = unitFmt(round); // points in a points or reward round
   const kinds = skinsKinds(round);
   const cfg = round.settings.skins;
   const pot = cfg.payout === 'pot';

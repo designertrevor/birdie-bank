@@ -6,6 +6,7 @@ import { findCourse } from './courses.js';
 import { GAMES, sideGamesOf } from './round.js';
 import { defaultTeams } from './teams.js';
 import { stable } from './sync-model.js';
+import { storedPlayFor } from './play-for.js';
 
 export const MAX_USUALS = 5;
 
@@ -32,6 +33,7 @@ export function usualFromRound(state, round, { id, name = null, now = Date.now()
     name: (name || '').trim() || defaultName(round),
     game: s.game,
     ...(s.sideGames?.length ? { sideGames: s.sideGames } : {}),
+    ...(s.playFor ? { playFor: s.playFor } : {}),
     holesCount: s.holesCount,
     nine: s.nine,
     courseId: s.courseId ?? round.course?.id ?? null,
@@ -76,6 +78,7 @@ export function setupFromUsual(state, usual) {
     useHc: usual.useHc !== false,
     teams: sameGroup ? usual.teams.map(t => [...t]) : defaultTeams(usual.game, picked),
     ...(usual.sideGames?.length ? { sideGames: structuredClone(usual.sideGames) } : {}),
+    ...(storedPlayFor(usual.playFor) ? { playFor: storedPlayFor(usual.playFor) } : {}),
     step: !course ? 1 : missing.length ? 2 : 3,
   };
 }
@@ -106,6 +109,8 @@ export function planFromUsual(state, usual) {
     sides: fits.map(sg => sg.game),
     missing: s.missing,
     useHc: s.useHc,
+    // Points or a reward rides along on the plan (absent: money)
+    ...(s.playFor ? { playFor: s.playFor } : {}),
     usualId: usual.id,
     step: 1,
   };
@@ -121,11 +126,13 @@ export function usualIdFor(state, usualId, game, course) {
   return u.courseId === course.id || findCourse(state, u.courseId)?.id === course.id ? u.id : null;
 }
 
-/** What makes two usuals the same setup: game, side games, bets, course, length and players. */
+/** What makes two usuals the same setup: game, side games, bets, course, length, players and what it's played for. */
 function key(u) {
   return stable({
     game: u.game, courseId: u.courseId ?? null, holesCount: u.holesCount, nine: u.holesCount === 9 ? u.nine || 'front' : null,
     players: [...(u.players || [])].sort(), bets: u.bets ?? null, sideGames: (u.sideGames || []).map(sg => ({ game: sg.game, settings: sg.settings })),
+    // Money usuals keep the key they always had (no playFor), so saved ones still match
+    ...(storedPlayFor(u.playFor) ? { playFor: storedPlayFor(u.playFor) } : {}),
   });
 }
 
@@ -182,6 +189,6 @@ export function sortedUsuals(state) {
 /** A round-like object for a usual, so the bet lines read like a round's. */
 export function usualAsRound(state, usual) {
   const settings = { ...state.settings, ...(usual.bets ? { [usual.game]: usual.bets } : {}) };
-  return { game: usual.game, settings, ...(usual.sideGames?.length ? { sideGames: usual.sideGames } : {}) };
+  return { game: usual.game, settings, ...(usual.sideGames?.length ? { sideGames: usual.sideGames } : {}), ...(usual.playFor ? { playFor: usual.playFor } : {}) };
 }
 
