@@ -1,22 +1,29 @@
 // One friend: what's on the Tab between you, your record, and the round-by-round story behind it.
 import { useState } from 'react';
-import { Header, Icon, Screen } from '../components/ui.jsx';
+import { Header, Icon, Screen, Sheet, useUI } from '../components/ui.jsx';
 import { Avatar, SettleSheet } from '../components/Pay.jsx';
 import { PersonActions } from '../components/TabCard.jsx';
 import { useTabSync } from '../lib/tab-sync.js';
-import { useStore } from '../lib/store.js';
+import { update, useStore } from '../lib/store.js';
 import { nameOf, outstanding, personStory, recordText, tabWith } from '../lib/ledger.js';
 import { PAY_APPS, handleText, payInfoFor } from '../lib/pay.js';
 import { money } from '../lib/golf.js';
 import { formatIndex, gameLabel, myIds, roundDate } from '../lib/format.js';
 import { useNav } from '../lib/nav.js';
+import { canonicalOf } from '../lib/pair-debts.js';
+import { aliasesOf, linksOf, mergeCandidates, mergePeople, unmergePerson } from '../lib/people-links.js';
 
-export default function Person({ id }) {
+export default function Person({ id: opened }) {
   const nav = useNav();
   const state = useStore();
+  const { showToast } = useUI();
   useTabSync();
   const [open, setOpen] = useState(null);
+  const [merging, setMerging] = useState(false);
   const mine = myIds(state);
+  // Any of a friend's ids opens the one card kept for them (see people-links.js)
+  const kept = canonicalOf(state)(opened);
+  const id = kept === state.me ? opened : kept;
   const name = nameOf(state, id);
   const firstName = name.split(' ')[0];
   const player = state.players[id];
@@ -32,6 +39,34 @@ export default function Person({ id }) {
   const direct = Math.round((story.net - story.paid) * 100) / 100;
   const rerouted = Math.abs(direct - tab) >= 0.01;
   const when = t => new Date(t).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+
+  // Same person: the other ids this card also covers, and merging another player into it
+  const isMine = mine.has(id);
+  const aliases = isMine ? [] : aliasesOf(state, id, x => nameOf(state, x));
+  const candidates = merging ? mergeCandidates(state, id, mine).map(x => ({ id: x, name: nameOf(state, x) })).sort((a, b) => a.name.localeCompare(b.name)) : [];
+  const before = () => ({ links: state.links || {}, unlinks: state.unlinks || [] });
+  const restore = was => update(s => { s.links = was.links; s.unlinks = was.unlinks; });
+  const merge = other => {
+    const next = mergePeople(state, id, other.id);
+    setMerging(false);
+    if (!next) { showToast(`Couldn’t merge ${other.name}`); return; }
+    const was = before();
+    update(s => { s.links = next.links; s.unlinks = next.unlinks; });
+    showToast(`${other.name} and ${name} are one person now`, { label: 'Undo', run: () => restore(was) });
+  };
+  const separate = a => {
+    const next = unmergePerson(state, id, a.id);
+    if (!next) return;
+    const was = before();
+    update(s => { s.links = next.links; s.unlinks = next.unlinks; });
+    showToast(`${a.name} is a separate person again`, { label: 'Undo', run: () => restore(was) });
+  };
+  const sameSub = (x, whole = false) => {
+    const ids = new Set(whole ? linksOf(state).groupOf(x) : [x]);
+    const rounds = Object.values(state.rounds).filter(r => r.players.some(p => ids.has(p.id))).length;
+    const saved = state.players[x] ? 'Saved player' : null;
+    return [saved, rounds ? `${rounds} round${rounds === 1 ? '' : 's'}` : null].filter(Boolean).join(' · ') || 'No rounds yet';
+  };
 
   return (
     <Screen>
@@ -98,8 +133,40 @@ export default function Person({ id }) {
             <div className="lr-amt d story-amt">{money(Math.abs(it.amount))}</div>
           </div>
         ))}
+
+        {!isMine && (
+          <>
+            {aliases.length > 0 && <div className="sec-label">Also shows up as</div>}
+            {aliases.map(a => (
+              <div key={a.id} className="ledger-row static same-row">
+                <div className="lr-info">
+                  <div className="lr-name" style={{ fontSize: 16 }}>{a.name}</div>
+                  <div className="lr-status">{a.manual ? 'You said it’s the same person' : 'Linked when they joined from a link'} · {sameSub(a.id)}</div>
+                </div>
+                <button className="link-btn" onClick={() => separate(a)}>{a.manual ? 'Undo' : 'Not the same person'}</button>
+              </div>
+            ))}
+            <button className="quiet-row" onClick={() => setMerging(true)}>
+              <Icon name="users-three" /> <span>Two cards for {firstName}? <u>Same person as…</u></span>
+            </button>
+          </>
+        )}
       </div>
       <SettleSheet debt={open} onClose={() => setOpen(null)} />
+      <Sheet open={merging} onClose={() => setMerging(false)} title={`Same person as ${firstName}`}>
+        <p className="sheet-text">Pick the other card for {firstName}. Their rounds, payments and head to head join this card. No money changes, and you can undo it here any time.</p>
+        <div style={{ padding: '0 16px 16px' }}>
+          {candidates.length === 0 && <p className="field-help">Nobody else to merge. People who played a round with {firstName} can’t be the same person, so they aren’t listed.</p>}
+          {candidates.map(c => (
+            <button key={c.id} className="list-item" onClick={() => merge(c)}>
+              <Avatar name={c.name} />
+              <div className="row-main"><div className="li-name">{c.name}</div><div className="li-sub">{sameSub(c.id, true)}</div></div>
+              <span className="chevron"><Icon name="caret-right" /></span>
+            </button>
+          ))}
+          {candidates.length > 0 && <p className="field-help">People who played a round with {firstName} aren’t listed.</p>}
+        </div>
+      </Sheet>
     </Screen>
   );
 }

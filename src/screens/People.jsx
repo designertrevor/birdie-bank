@@ -5,6 +5,7 @@ import { useRemind } from '../lib/useRemind.js';
 import { update, uid, useStore } from '../lib/store.js';
 import { formatIndex, myIds, playerLabel, sortedPlayers } from '../lib/format.js';
 import { headToHeadSummary, nameOf, outstanding, tabWith } from '../lib/ledger.js';
+import { canonicalOf } from '../lib/pair-debts.js';
 import { PAY_APPS, PAY_APP_IDS, cleanHandle, handleText, payInfo, payInfoFor } from '../lib/pay.js';
 import { money } from '../lib/golf.js';
 import { AvatarButton, BottomNav } from '../nav.jsx';
@@ -25,9 +26,11 @@ export default function People() {
   const remind = useRemind();
   const me = state.me && state.players[state.me];
   const myApp = payInfoFor(state, state.me);
-  // Everyone you've added, plus people you've only met in a joined round
-  const ids = new Set([...Object.keys(state.players), ...h2h.keys()]);
-  for (const id of mine) ids.delete(id);
+  // Everyone you've added, plus people you've only met in a joined round. A friend with more than
+  // one id (a claimed seat, "Same person as...") is one card, under the id kept for them
+  const who = canonicalOf(state);
+  const ids = new Set([...Object.keys(state.players), ...h2h.keys()].map(who));
+  for (const id of mine) { ids.delete(id); ids.delete(who(id)); }
   const people = [...ids].map(id => ({ id, name: nameOf(state, id), h: h2h.get(id), p: state.players[id] }))
     .sort((a, b) => (b.h?.rounds || 0) - (a.h?.rounds || 0) || a.name.localeCompare(b.name));
   const crews = Object.values(state.crews).sort((a, b) => a.name.localeCompare(b.name));
