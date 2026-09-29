@@ -240,10 +240,15 @@ export function createRound({ id, game, course, holesCount, nine, startHole, pla
 // A side game keeps its own history the same way on its own entry (round.sideGames[i].betHistory),
 // so the main game's history and a side game's never mix, and rounds from before have none.
 
-/** Games whose money is one pot for the whole round: a change to the bet always covers every hole. */
+/**
+ * Changes that always cover every hole: a game whose money is one pot for the whole round, and a
+ * change to how the whole round is laid out, which can't hold for only some holes (Skins net, gross
+ * or both, which is read once for the round, and a Snake split into nines or not).
+ */
 export function wholeRoundOnly(game, before, after) {
   if (game === 'scramble' || game === 'birdies') return true;
-  if (game === 'skins') return before?.payout === 'pot' || after?.payout === 'pot';
+  if (game === 'skins') return before?.payout === 'pot' || after?.payout === 'pot' || (before?.kind || 'net') !== (after?.kind || 'net');
+  if (game === 'snake') return !!before?.nines !== !!after?.nines;
   if (game === 'stroke' || game === 'stableford' || game === 'quota') return before?.payout === 'pot' || after?.payout === 'pot';
   return false;
 }

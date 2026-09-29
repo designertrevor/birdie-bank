@@ -13,6 +13,7 @@ import { betChangeNote, betStretchLine, roundStakeLines } from './stakes.js';
 import { rematchSetup } from './rematch.js';
 import { revealSteps } from './reveal.js';
 import { assemble, buildMeta } from './sync-model.js';
+import { metaToKeep } from './keeper.js';
 import { SETTINGS, SIDE_SETTINGS, oldRoundFixtures } from './side-bets.fixtures.js';
 
 const flat = n => ({ id: `f${n}`, name: 'Flat', city: 'Town', tees: [], holes: Array.from({ length: n }, (_, i) => ({ par: 4, hdcp: i + 1 })) });
@@ -271,4 +272,105 @@ test('a changed side bet rides in the live meta, so a friend on the round sees t
   assert.deepEqual(back.sideGames, r.sideGames);
   back.scores = r.scores;
   assert.deepEqual(side(back, 'skins'), { t: -7, m: 21, d: -7, s: -7 });
+});
+
+// ----- Money review: changes that can't hold for only some holes, a per-hole oracle, sync -----
+
+test('Skins net, gross or both, and a Snake split into nines, always change for the whole round', () => {
+  assert.equal(wholeRoundOnly('skins', { kind: 'net' }, { kind: 'both' }), true);
+  assert.equal(wholeRoundOnly('skins', {}, { kind: 'net' }), false);
+  assert.equal(wholeRoundOnly('skins', { kind: 'gross', value: 2 }, { kind: 'gross', value: 3 }), false);
+  assert.equal(wholeRoundOnly('snake', { nines: false }, { nines: true }), true);
+  assert.equal(wholeRoundOnly('snake', { nines: true, stake: 2 }, { nines: true, stake: 5 }), false);
+  // a plays off 0 and b off 18 (a stroke a hole): on hole 2 they tie net, a wins gross
+  const r = mk('nassau', ['a', 'b'], { skins: { ...SKINS, kind: 'net' } });
+  r.players = r.players.map(p => ({ ...p, plays: p.id === 'b' ? 18 : 0 }));
+  r.useHandicaps = true;
+  play(r, 9, { 2: { b: 5 } });
+  const net = side(r, 'skins');
+  // Net to both "from hole 10" can't leave holes 1 to 9 net only while the gross skins are read for
+  // the whole round, so it reprices every hole, and says so by keeping no history
+  const both = changeBets(r, { ...SKINS, kind: 'both' }, 10, 'skins');
+  assert.equal(betsChanged(both, 'skins'), false);
+  assert.deepEqual(side(both, 'skins'), side(changeBets(r, { ...SKINS, kind: 'both' }, null, 'skins'), 'skins'));
+  assert.notDeepEqual(side(both, 'skins'), net);
+  // The same on Skins as the main game
+  const main = mk('skins', ['a', 'b'], {}, { settings: { ...SETTINGS, skins: { ...SKINS, kind: 'net' } } });
+  assert.equal(betsChanged(changeBets(main, { ...SKINS, kind: 'gross' }, 10)), false);
+  // A snake going to each nine from hole 10 is one layout for the whole round
+  const sn = play(mk('nassau', ['a', 'b', 'c'], { snake: { ...SIDE_SETTINGS.snake, nines: false } }), 9, {}, { 3: { snake: ['b'] } });
+  assert.equal(betsChanged(changeBets(sn, { ...SIDE_SETTINGS.snake, nines: true }, 10, 'snake'), 'snake'), false);
+});
+
+test('side bets changed at random match a hole-by-hole reckoning, and nothing else moves', () => {
+  let seed = 31;
+  const rnd = () => (seed = (seed * 16807) % 2147483647) / 2147483647;
+  const pick = a => a[Math.floor(rnd() * a.length)];
+  let oracle = 0;
+  for (let k = 0; k < 400; k++) {
+    const holes = rnd() < 0.3 ? 9 : 18;
+    const ids = ['a', 'b', 'c', 'd', 'e'].slice(0, 2 + Math.floor(rnd() * 4));
+    const sides = { dots: { ...SIDE_SETTINGS.dots, value: pick([1, 0.5, 0.25]) }, skins: { ...SKINS, value: pick([1, 2, 0.33]), carryover: rnd() < 0.5, kind: pick(['net', 'gross', 'both']) } };
+    if (rnd() < 0.5) sides.birdies = SIDE_SETTINGS.birdies;
+    let r = mk(pick(['nassau', 'stroke', 'aces']), ids, sides, { holes });
+    r.useHandicaps = rnd() < 0.5;
+    r.players = r.players.map((p, i) => ({ ...p, plays: r.useHandicaps ? i * 3 : 0 }));
+    const upto = Math.floor(rnd() * (holes + 1));
+    if (rnd() < 0.3 && upto < holes) r = addPlayerToRound(r, { id: 'x', name: 'X' }, r.holes[upto].no, rnd() < 0.5 ? ['skins', 'dots'] : null);
+    r.holes.slice(0, upto).forEach(h => {
+      r.scores[h.no] = Object.fromEntries(r.players.map(p => [p.id, h.par - 2 + Math.floor(rnd() * 4)]));
+      r.marks[h.no] = rnd() < 0.5 ? { [pick(ids)]: [pick(['greenie', 'sandy', 'barkie'])] } : {};
+    });
+    if (rnd() < 0.3 && upto > 1) r.left = { [ids[1]]: r.holes[Math.floor(rnd() * upto)].no };
+    const before = roundResults(r).detail.byGame;
+    let changed = r;
+    for (let c = 0; c < 1 + Math.floor(rnd() * 3); c++) {
+      const key = pick(['dots', 'skins', 'birdies'].filter(g => sides[g]));
+      const s = structuredClone(sgOf(changed, key).settings);
+      s[key === 'birdies' ? 'stake' : 'value'] = pick([0.5, 1, 2, 3, 7, 0.33]);
+      if (key === 'skins' && rnd() < 0.3) s.carryover = !s.carryover;
+      if (key === 'dots' && rnd() < 0.3) s.auto = !s.auto;
+      changed = changeBets(changed, s, rnd() < 0.2 ? null : 1 + Math.floor(rnd() * holes), key);
+    }
+    const res = roundResults(changed);
+    assert.equal(sumCents(res.balances), 0);
+    for (const g of Object.values(res.detail.byGame)) assert.equal(sumCents(g.balances), 0);
+    // The main game never moves, and the payments square everyone
+    assert.deepEqual(res.detail.byGame.main.balances, before.main.balances);
+    const owed = Object.fromEntries(Object.entries(res.balances).map(([id, v]) => [id, cents(v)]));
+    for (const t of res.transfers) { owed[t.from] += cents(t.amount); owed[t.to] -= cents(t.amount); }
+    assert.ok(Object.values(owed).every(v => v === 0));
+    // Junk, and Skins with no carry, are worked out a hole at a time: each hole on its own at the bet
+    // in force on it gives the same money
+    for (const key of ['dots', 'skins']) {
+      const sg = sgOf(changed, key);
+      if (key === 'skins' && [sg.settings, ...(sg.betHistory || []).map(e => e.settings)].some(s => s.carryover)) continue;
+      const view = gameView(changed, key);
+      const want = Object.fromEntries(changed.players.map(p => [p.id, 0]));
+      changed.holes.forEach((h, i) => {
+        const one = structuredClone(changed);
+        for (const o of one.holes) if (o.no !== h.no) { delete one.scores[o.no]; delete one.marks[o.no]; }
+        one.sideGames = one.sideGames.map(x => (x.game === key ? { game: key, settings: settingsAt(view, i + 1)[key] } : x));
+        const b = roundResults(one).detail.byGame[key].balances;
+        for (const id in want) want[id] += b[id] || 0;
+      });
+      for (const id in want) assert.ok(Math.abs(res.detail.byGame[key].balances[id] - want[id]) < 0.011, `${key} ${id}`);
+      oracle++;
+    }
+  }
+  assert.ok(oracle > 300);
+});
+
+test('a side bet changed on the keeper’s phone offline survives the server’s copy arriving', () => {
+  const r = play(mk('nassau', ['t', 'm', 'd'], { skins: SKINS }), 12, { 2: { m: 3 } });
+  const base = buildMeta(r);
+  const mine = buildMeta(changeBets(r, { ...SKINS, value: 5 }, 13, 'skins'));
+  // Meanwhile the server heard that d left after hole 12
+  const remote = { ...base, left: { d: 12 } };
+  const kept = metaToKeep(base, mine, remote, { editor: true, me: 't' });
+  assert.deepEqual(kept.sideGames, mine.sideGames);
+  assert.deepEqual(kept.left, { d: 12 });
+  // A phone that isn't keeping score takes the keeper's bets from the server
+  const watcher = metaToKeep(base, base, mine, { editor: false, me: 'm' });
+  assert.deepEqual(watcher.sideGames, mine.sideGames);
 });

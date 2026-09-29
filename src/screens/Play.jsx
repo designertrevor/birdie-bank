@@ -828,6 +828,10 @@ function BetsSheet({ round, onClose }) {
   const fromHole = round.holes[fromPos - 1];
   const canSplit = played > 0 && !!fromHole && !wholeRoundOnly(game, current[game], opts[game]);
   const whole = !canSplit || scope === 'whole';
+  // Why a change can't start from the next hole, when it isn't a pot: net, gross or both is read
+  // once for the round, and so is a snake split into nines
+  const pot = game === 'scramble' || game === 'birdies' || current[game]?.payout === 'pot' || opts[game]?.payout === 'pot';
+  const layout = game === 'snake' ? 'Each nine or one snake is set' : 'Net, gross or both is set';
   const label = gameKeyLabel(round, gameKey);
   const apply = () => {
     update(s => {
@@ -865,7 +869,8 @@ function BetsSheet({ round, onClose }) {
           {!played ? 'Change what’s on the line before the first hole is scored.'
             : canSplit ? `${played} hole${played === 1 ? '' : 's'} played. Pick when the new bets start.`
               : !fromHole ? 'Every hole is played, so a change covers the whole round.'
-                : 'The pot covers the whole round, so a change counts for every hole.'}
+                : !pot ? `${layout} for the whole round, so a change counts for every hole.`
+                  : 'The pot covers the whole round, so a change counts for every hole.'}
         </p>
         {canSplit && (
           <div className="block">
