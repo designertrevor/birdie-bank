@@ -4,6 +4,7 @@ import { getState } from '../lib/store.js';
 import { joinRoute } from '../lib/join.js';
 import { fetchShared, shareLink, shareRound, stopSharing, useSyncStatus } from '../lib/sync.js';
 import { cleanCode } from '../lib/sync-model.js';
+import { countsMoney } from '../lib/play-for.js';
 import { gameLabel } from '../lib/format.js';
 import { useNav } from '../lib/nav.js';
 
@@ -29,7 +30,7 @@ export function ShareSheet({ round, open, onClose }) {
     setBusy(false);
   };
   const send = async () => {
-    const text = `Join my ${gameLabel(round)} game at ${round.course.name}. Follow the money live, no download. Code ${code}`;
+    const text = `Join my ${gameLabel(round)} game at ${round.course.name}. Follow ${countsMoney(round) ? 'the money' : 'the scores'} live, no download. Code ${code}`;
     try {
       if (navigator.share) { await navigator.share({ title: 'Join my round', text, url: link }); return; }
     } catch (e) { if (e?.name === 'AbortError') return; }

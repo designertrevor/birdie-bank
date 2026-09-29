@@ -25,7 +25,7 @@ import { PAYWALL_ON } from '../lib/paywall-flag.js';
 import { matchingUsual, setupFromUsual, usualsOf } from '../lib/usuals.js';
 import { SaveUsualButton, UsualsList } from '../components/Usuals.jsx';
 import PlayForPicker from '../components/PlayFor.jsx';
-import { inUnits, playForLine, playForShort } from '../lib/play-for.js';
+import { countsMoney, inUnits, playForLine, playForShort } from '../lib/play-for.js';
 
 const STEPS = ['Game', 'Course', 'Players', 'Bets'];
 
@@ -809,7 +809,7 @@ function ReadyStep({ round, onStart }) {
         ))}
         <div className="usual-save"><SaveUsualButton round={round} className="pill-btn" /></div>
         {syncConfigured && (
-          <p className="hint-card"><Icon name="broadcast" fill /> {round.shared ? 'The group has the link. They can follow the money live.' : 'Send the group a link and they can follow the money live from their own phones. No download needed.'}</p>
+          <p className="hint-card"><Icon name="broadcast" fill /> {round.shared ? `The group has the link. They can follow ${countsMoney(round) ? 'the money' : 'the scores'} live.` : `Send the group a link and they can follow ${countsMoney(round) ? 'the money' : 'the scores'} live from their own phones. No download needed.`}</p>
         )}
       </div>
       <div className="cta-wrap">

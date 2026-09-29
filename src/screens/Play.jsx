@@ -974,6 +974,7 @@ function BetExposure({ banker }) {
 // --------------------------- Skins ----------------------------------------
 
 function SkinsPanel({ round, hole, onChange }) {
+  const money = unitFmt(round); // points in a points or reward round
   const kinds = skinsKinds(round);
   const cfg = round.settings.skins;
   const pot = cfg.payout === 'pot';

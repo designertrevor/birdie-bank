@@ -152,7 +152,7 @@ export default function RoundDetail({ id, celebrate }) {
             <div style={{ padding: '0 16px' }}>
               {playForOf(round).kind === 'reward'
                 ? <RewardCard round={round} res={res} />
-                : <p className="hint-card" style={{ margin: 0 }}><Icon name="trophy" fill /> Played for points, so nothing goes on the Tab. The bragging rights are all yours.</p>}
+                : <p className="hint-card" style={{ margin: 0 }}><Icon name="trophy" fill /> Played for points, so nothing goes on the Tab. Just bragging rights.</p>}
             </div>
           </>
         )}
