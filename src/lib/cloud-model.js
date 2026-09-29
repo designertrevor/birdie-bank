@@ -12,7 +12,7 @@ const ROUND_LOCAL = ['_remote'];
 export function toDocs(state) {
   const out = {};
   const put = (kind, id, data) => { out[`${kind}:${id}`] = { kind, id, data }; };
-  put('profile', 'me', { me: state.me, onboarded: state.onboarded, settings: state.settings, favorites: state.favorites, usuals: Array.isArray(state.usuals) ? state.usuals : [], carries: state.carries || [] });
+  put('profile', 'me', { me: state.me, onboarded: state.onboarded, settings: state.settings, favorites: state.favorites, usuals: Array.isArray(state.usuals) ? state.usuals : [], carries: state.carries || [], starredCourses: Array.isArray(state.starredCourses) ? state.starredCourses : [] });
   for (const p of Object.values(state.players)) put('player', p.id, p);
   for (const c of Object.values(state.crews)) put('crew', c.id, c);
   for (const c of Object.values(state.customCourses)) put('course', c.id, c);
@@ -58,6 +58,8 @@ export function applyDoc(draft, kind, id, data) {
     // A profile saved by an older version has no usuals or carries: keep this phone's rather than wiping them
     if (Array.isArray(data.usuals)) draft.usuals = data.usuals;
     if (Array.isArray(data.carries)) draft.carries = data.carries;
+    // Starred courses came later too: an older profile keeps this phone's stars
+    if (Array.isArray(data.starredCourses)) draft.starredCourses = data.starredCourses;
   }
 }
 

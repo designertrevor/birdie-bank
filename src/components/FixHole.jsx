@@ -66,7 +66,10 @@ export function FixHoleSheet({ round, holeNo, me = null, onClose }) {
       const saved = c && courseWithHoleFix(c, hole.courseIdx, { par, hdcp: twice ? null : hdcp }, { builtIn: !s.customCourses?.[c.id] });
       if (saved) {
         s.customCourses = { ...(s.customCourses || {}), [saved.id]: saved.course };
-        if (saved.builtInId) s.favorites = (s.favorites || []).map(f => (f === saved.builtInId ? saved.id : f));
+        if (saved.builtInId) {
+          s.favorites = (s.favorites || []).map(f => (f === saved.builtInId ? saved.id : f));
+          s.starredCourses = (s.starredCourses || []).map(f => (f === saved.builtInId ? saved.id : f));
+        }
       }
     });
     if (send) sendFix(holeFixFeedback(round, course, hole, { par: hole.par, hdcp: hole.hdcp ?? null }, { par, hdcp: twice ? hole.hdcp ?? null : hdcp }));

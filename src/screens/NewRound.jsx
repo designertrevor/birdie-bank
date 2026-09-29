@@ -2,7 +2,7 @@ import { useMemo, useState } from 'react';
 import { Empty, Header, Icon, Numpad, Screen, Segmented, Sheet, Steps, Toggle, useUI } from '../components/ui.jsx';
 import { RulesSheet } from '../components/Rules.jsx';
 import { getState, update, uid, useStore } from '../lib/store.js';
-import { allCourses, coursePar, courseTag, defaultTee as firstTee, teeDotStyle } from '../lib/courses.js';
+import { allCourses, coursePar, coursePickerSections, courseTag, defaultTee as firstTee, isStarred, teeDotStyle, toggleStarred } from '../lib/courses.js';
 import { getCourse } from '../lib/courseApi.js';
 import { useCourseSearch } from '../lib/useCourseSearch.js';
 import { GAMES, GAME_GROUPS, MAX_GAMES, SIDE_GAMES, createRound, effectiveCourseHc, holesInPlay, sideGamesOf } from '../lib/round.js';
@@ -295,9 +295,10 @@ function CourseStep({ courseId, setCourseId, holesCount, nine, setNine, onNext, 
   const [q, setQ] = useState('');
   const courses = allCourses(state);
   const needle = q.trim().toLowerCase();
-  const matches = courses.filter(c => !needle || c.name.toLowerCase().includes(needle) || (c.city || '').toLowerCase().includes(needle));
-  const favs = needle ? [] : state.favorites.map(id => courses.find(c => c.id === id)).filter(Boolean);
-  const rest = matches.filter(c => needle || !state.favorites.includes(c.id));
+  // Starred, then recently played, then the rest; a search shows only what matches
+  const { starred, recent, all: rest, hint } = coursePickerSections(state, needle);
+  const matches = needle ? rest : courses;
+  const star = c => update(s => { s.starredCourses = toggleStarred(s, c.id); });
   const course = courses.find(c => c.id === courseId);
   const tooShort = course && holesCount === 18 && course.holes.length === 9;
   // Course database results, minus any this phone already has saved
@@ -333,17 +334,24 @@ function CourseStep({ courseId, setCourseId, holesCount, nine, setNine, onNext, 
     </button>
   );
 
-  const row = c => (
-    <button key={c.id} className="list-item" onClick={() => setCourseId(c.id)} aria-pressed={c.id === courseId}
-      aria-label={[c.name, c.city, `${c.holes.length} holes`, `par ${coursePar(c)}`, `${c.tees?.length || 0} tees`, courseTag(c)?.text].filter(Boolean).join(', ')}>
-      <div className="row-main">
-        <div className="li-name">{c.name}</div>
-        <div className="li-sub">{[c.city, `${c.holes.length} holes`, `Par ${coursePar(c)}`, `${c.tees?.length || 0} tees`].filter(Boolean).join(' · ')}</div>
-        {courseTag(c) && <div className={`warn-tag ${courseTag(c).soft ? 'soft' : ''}`}><Icon name={courseTag(c).soft ? 'database' : 'warning'} fill /> {courseTag(c).text}</div>}
+  // The row picks the course; the star is its own button and never picks it
+  const row = c => {
+    const on = isStarred(state, c);
+    return (
+      <div key={c.id} className="list-item course-row" onClick={() => setCourseId(c.id)}>
+        <button className="course-pick" aria-pressed={c.id === courseId}
+          aria-label={[c.name, c.city, `${c.holes.length} holes`, `par ${coursePar(c)}`, `${c.tees?.length || 0} tees`, courseTag(c)?.text].filter(Boolean).join(', ')}>
+          <div className="li-name">{c.name}</div>
+          <div className="li-sub">{[c.city, `${c.holes.length} holes`, `Par ${coursePar(c)}`, `${c.tees?.length || 0} tees`].filter(Boolean).join(' · ')}</div>
+          {courseTag(c) && <div className={`warn-tag ${courseTag(c).soft ? 'soft' : ''}`}><Icon name={courseTag(c).soft ? 'database' : 'warning'} fill /> {courseTag(c).text}</div>}
+        </button>
+        <button className={`course-star ${on ? 'on' : ''}`} aria-pressed={on} aria-label={`Favorite ${c.name}`} onClick={e => { e.stopPropagation(); star(c); }}>
+          <Icon name="star" fill={on} />
+        </button>
+        <span className={`li-check ${c.id === courseId ? 'on' : 'add'}`} aria-hidden="true"><Icon name={c.id === courseId ? 'check' : 'plus'} /></span>
       </div>
-      <span className={`li-check ${c.id === courseId ? 'on' : 'add'}`}><Icon name={c.id === courseId ? 'check' : 'plus'} /></span>
-    </button>
-  );
+    );
+  };
 
   return (
     <>
@@ -353,7 +361,9 @@ function CourseStep({ courseId, setCourseId, holesCount, nine, setNine, onNext, 
           <label className="sr-only" htmlFor="course-q">Search courses</label>
           <input id="course-q" className="search-box" type="search" placeholder="Search courses or cities" value={q} onChange={e => setQ(e.target.value)} />
         </div>
-        {favs.length > 0 && <><div className="sec-label">Recent</div><div style={{ padding: '0 16px' }}>{favs.map(row)}</div></>}
+        {starred.length > 0 && <><div className="sec-label">Favorites</div><div style={{ padding: '0 16px' }}>{starred.map(row)}</div></>}
+        {hint && <p className="course-star-hint"><Icon name="star" /> Tap the star to keep a course at the top</p>}
+        {recent.length > 0 && <><div className="sec-label">Recently played</div><div style={{ padding: '0 16px' }}>{recent.map(row)}</div></>}
         {rest.length > 0 && <><div className="sec-label">{needle ? `${rest.length} result${rest.length === 1 ? '' : 's'}` : 'All courses'}</div><div style={{ padding: '0 16px' }}>{rest.map(row)}</div></>}
         {needle && more.length > 0 && <><div className="sec-label">More courses{api.loading ? ' · searching' : ''}</div><div style={{ padding: '0 16px' }}>{more.map(apiRow)}</div></>}
         {matches.length === 0 && more.length === 0 && !api.loading && (
