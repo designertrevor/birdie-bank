@@ -7,7 +7,7 @@ import {
   resizeRound, roundLegs, roundResults, scoredHolesDropped, scorers, skinsKinds, skinsTable, strokesFor, wolfHoleSetup, changeBets, wholeRoundOnly,
   gameView, sideGamesOf, holeFixOf, gameKeys, gameKeyLabel, settingsAt,
 } from '../lib/round.js';
-import { SIDE_GAMES, gameKeys } from '../lib/round.js';
+import { SIDE_GAMES } from '../lib/round.js';
 import { CourseTeeSheet, FixHoleSheet } from '../components/FixHole.jsx';
 import { courseTeeLabel, keepsDraft } from '../lib/hole-fix.js';
 import { markUsualPlayed } from '../lib/usuals.js';
