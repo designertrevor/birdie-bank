@@ -8,7 +8,37 @@ export function allCourses(state) {
 }
 
 export function findCourse(state, id) {
-  return allCourses(state).find(c => c.id === id) || null;
+  const list = allCourses(state);
+  // A built-in course you corrected is found by its old id too, so rounds and plans made on it still find it
+  return list.find(c => c.id === id) || list.find(c => id && c.replaces === id) || null;
+}
+
+/**
+ * A fix made to one hole mid-round, saved into this phone's copy of the course so the next round
+ * there starts right. `courseIdx` is the hole on the card; `par` and `hdcp` are the new values
+ * (null leaves one as it is). `builtIn`: the course came with the app (not in customCourses). A stroke index another hole on the card already has swaps the two,
+ * so the card never has one twice. Returns { id, course } to put in customCourses: a built-in
+ * course becomes a corrected copy that hides the original (as the course editor does), and a
+ * course from the database is marked edited. Null when there's nothing to change.
+ */
+export function courseWithHoleFix(course, courseIdx, { par = null, hdcp = null } = {}, { builtIn = false } = {}) {
+  const h = course?.holes?.[courseIdx];
+  if (!h) return null;
+  const holes = course.holes.map(x => ({ ...x }));
+  let changed = false;
+  if (par != null && par !== h.par) { holes[courseIdx].par = par; changed = true; }
+  if (hdcp != null && hdcp !== h.hdcp) {
+    const other = holes.findIndex((x, i) => i !== courseIdx && x.hdcp === hdcp);
+    if (other >= 0) holes[other].hdcp = h.hdcp ?? null;
+    holes[courseIdx].hdcp = hdcp;
+    changed = true;
+  }
+  if (!changed) return null;
+  if (builtIn) {
+    const id = `${course.id}-custom`;
+    return { id, builtInId: course.id, course: { ...course, id, holes, custom: true, verified: false, replaces: course.id } };
+  }
+  return { id: course.id, course: { ...course, holes, ...(course.source === 'golfcourseapi' ? { edited: true } : {}) } };
 }
 
 export function coursePar(course) {

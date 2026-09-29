@@ -1,10 +1,12 @@
 // Fix a hole (par and stroke index) or a tee (rating and slope) for this round, from the round
 // menu or the scorecard's "Wrong par or HCP?" link. The fix applies at once, the money recounts,
-// and by default a note goes to Birdie Bank so the course gets corrected for the next group.
+// and by default a note goes to Birdie Bank so the course gets corrected for the next group. A hole
+// fix is also saved to this phone's own copy of the course (only this phone: the one that made it),
+// so the next round there starts right.
 import { useMemo, useState } from 'react';
 import { Icon, Sheet, Toggle, useUI } from './ui.jsx';
 import { update, useStore } from '../lib/store.js';
-import { findCourse } from '../lib/courses.js';
+import { courseWithHoleFix, findCourse } from '../lib/courses.js';
 import { fixHole, fixTee, hdcpSwapWith, playedTwice } from '../lib/round.js';
 import { holeFixFeedback, moneyLine, playsLine, roundTees, strokeImpact, teeFixFeedback, teesInUse } from '../lib/hole-fix.js';
 import { submitFeedback } from '../lib/feedback.js';
@@ -59,6 +61,13 @@ export function FixHoleSheet({ round, holeNo, me = null, onClose }) {
     update(s => {
       const r = s.rounds[round.id];
       if (r) s.rounds[round.id] = fixHole(r, hole.no, { par, hdcp }, { by: me });
+      // And for next time: this phone's copy of the course (a built-in one becomes your corrected copy)
+      const c = findCourse(s, round.course.id);
+      const saved = c && courseWithHoleFix(c, hole.courseIdx, { par, hdcp: twice ? null : hdcp }, { builtIn: !s.customCourses?.[c.id] });
+      if (saved) {
+        s.customCourses = { ...(s.customCourses || {}), [saved.id]: saved.course };
+        if (saved.builtInId) s.favorites = (s.favorites || []).map(f => (f === saved.builtInId ? saved.id : f));
+      }
     });
     if (send) sendFix(holeFixFeedback(round, course, hole, { par: hole.par, hdcp: hole.hdcp ?? null }, { par, hdcp: twice ? hole.hdcp ?? null : hdcp }));
     onClose();
@@ -94,6 +103,7 @@ export function FixHoleSheet({ round, holeNo, me = null, onClose }) {
         </div>
       )}
       <SendSwitch on={send} onChange={setSend} />
+      {course && <p className="field-help pad">Also saved to {round.course.name} on this phone, so your next round there starts right.</p>}
       <div className="cta-wrap">
         <button className="full-btn" disabled={!changed} onClick={apply}>{changed ? <>Fix for this round <Icon name="check" /></> : 'No change yet'}</button>
       </div>

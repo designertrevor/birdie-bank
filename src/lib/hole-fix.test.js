@@ -233,3 +233,38 @@ test('a hole without a courseIdx only fixes itself', () => {
   const f = fixHole(r, 7, { par: 4 });
   assert.deepEqual(f.holes.filter((h, i) => h.par !== r.holes[i].par).map(h => h.no), [7]);
 });
+
+test('hole fix for next time: saved to this phone’s copy of the course, old courses unchanged', async () => {
+  const { courseWithHoleFix, findCourse, allCourses } = await import('./courses.js');
+  const card = { id: 'c9', name: 'Nine', city: 'Town', tees: [{ name: 'White' }], holes: Array.from({ length: 9 }, (_, i) => ({ par: 4, hdcp: i + 1 })) };
+  // Nothing changes: nothing to save
+  assert.equal(courseWithHoleFix(card, 2, { par: 4, hdcp: 3 }), null);
+  assert.equal(courseWithHoleFix(card, 20, { par: 5 }), null);
+  // A course saved on this phone (custom or from the database) is changed in place
+  const api = { ...card, source: 'golfcourseapi', apiId: 7, savedAt: 1 };
+  const fixed = courseWithHoleFix(api, 2, { par: 5, hdcp: 7 });
+  assert.equal(fixed.id, 'c9');
+  assert.equal(fixed.course.edited, true);
+  assert.deepEqual(fixed.course.holes.map(h => [h.par, h.hdcp]), [[4, 1], [4, 2], [5, 7], [4, 4], [4, 5], [4, 6], [4, 3], [4, 8], [4, 9]], 'stroke index 7 swaps with hole 7');
+  assert.deepEqual(api.holes[2], { par: 4, hdcp: 3 }, 'the old copy isn’t mutated');
+  // A course that came with the app becomes a corrected copy that hides the original, found by its old id too
+  const builtIn = courseWithHoleFix(card, 0, { par: 3 }, { builtIn: true });
+  assert.equal(builtIn.id, 'c9-custom');
+  assert.equal(builtIn.builtInId, 'c9');
+  assert.equal(builtIn.course.replaces, 'c9');
+  assert.equal(builtIn.course.custom, true);
+  assert.equal(builtIn.course.holes[0].par, 3);
+  // The app's own courses: a corrected copy of a real one is found by the old id
+  const state = { customCourses: {} };
+  const real = allCourses(state)[0];
+  assert.equal(findCourse(state, real.id).id, real.id);
+  const copy = courseWithHoleFix(real, 0, { par: real.holes[0].par === 3 ? 4 : 3 }, { builtIn: true });
+  state.customCourses[copy.id] = copy.course;
+  assert.equal(findCourse(state, real.id).id, copy.id);
+  assert.equal(findCourse(state, copy.id).id, copy.id);
+  assert.equal(allCourses(state).filter(c => c.id === real.id).length, 0);
+  // Courses nobody fixed read as before
+  const other = allCourses({ customCourses: {} })[1];
+  assert.deepEqual(findCourse(state, other.id), other);
+  assert.equal(findCourse(state, 'nope'), null);
+});
