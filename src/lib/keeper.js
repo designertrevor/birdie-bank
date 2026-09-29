@@ -75,6 +75,17 @@ export function canEdit(round, me, isHost) {
   return k.id === null ? !!isHost : me === k.id;
 }
 
+/**
+ * Whether this phone should leave the hole screen for the results: a shared round that finished on
+ * another phone (the keeper's). Never while fixing scores (`editing` stays on this phone), so any
+ * player can still fix a finished round, and never on the phone that finished it (`finishedHere`),
+ * which already went to its results.
+ */
+export function shouldLeaveHole(round, { finishedHere = false } = {}) {
+  if (!round?.shared || round.shared.ended) return false;
+  return round.status === 'done' && !round.editing && !finishedHere;
+}
+
 /** The keeper's first name for "Trevor is keeping score": their seat, else the organizer's name. */
 export function keeperName(round) {
   const k = keeperOf(round);
