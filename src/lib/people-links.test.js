@@ -424,3 +424,40 @@ test('state from before links existed (no links, no unlinks, junk values) works 
   assert.equal(linksOf(undefined).personOf('a'), 'a');
   assert.equal(linksOf({}).personOf('a'), 'a');
 });
+
+// ------------------------------- review fixes -----------------------------------
+
+test('money: one ask saved as two carries before the link is one carry once linked, with the whole amount', () => {
+  // Sam's phone (which already had Trevor linked) asked to roll $5 over both shared rounds at once:
+  // $3 on r1 (Trevor's copy p_sam) and $2 on r2 (Sam's own zs). Trevor's phone had no link yet
+  const at = NOW - 1000;
+  const row = (code, from, to, amount) => ({ code, id: carryRowId(code, from, to), kind: 'carry', from, to, amount, status: 'asked', by: to, reason: null, at, updatedAt: at });
+  const rows = [row('AAAAAA', 't', 'p_sam', 3), row('BBBBBB', 'q_t', 'zs', 2)];
+  const { trevor: unlinked } = world({ claims: false });
+  const before = applyRows(unlinked, rows);
+  assert.equal(before.carries.length, 2, 'two people on this phone, two carries');
+  // The claims arrive: Sam is one person, so it's one $5 carry, with nothing new from the server
+  const { trevor } = world();
+  const after = applyRows({ ...trevor, carries: before.carries, tabRows: before.tabRows }, []);
+  assert.equal(after.carries.length, 1);
+  assert.equal(after.carries[0].amount, 5);
+  assert.equal(activeCarry(after, 't', 'p_sam', { from: 't', to: 'p_sam', amount: 5 })?.carried, 5);
+  // And it stays one when the rows come again
+  const again = applyRows(after, rows.map(r => ({ ...r, updatedAt: at + 5 })));
+  assert.equal(again.carries.length, 1);
+  assert.equal(again.carries[0].amount, 5);
+  assert.deepEqual(tabBalances(again), tabBalances(trevor), 'a carry moves no money');
+});
+
+test('merge and undo: merging from a card keeps that card, even with an old link the other way', () => {
+  const s = stateOf('t', [round('r1', ['t', 'a'], [['a', 1]]), round('r2', ['t', 'b'], [['t', 1]])], {
+    players: { t: player('t', 'T'), a: player('a', 'Al', 1), b: player('b', 'Albert', 5) },
+    // b was once linked to a, and a claim-style break between them is still saved
+    links: { b: 'a' }, unlinks: [['a', 'b']],
+  });
+  assert.equal(linksOf(s).personOf('b'), 'b');
+  const m = { ...s, ...mergePeople(s, 'b', 'a') };
+  assert.equal(linksOf(m).personOf('a'), 'b', 'the card you merged from is the one kept');
+  assert.equal(linksOf(m).personOf('b'), 'b');
+  assert.deepEqual(tabBalances(m), { t: 0, b: 0 });
+});

@@ -197,6 +197,9 @@ export function mergePeople(state, keep, alias) {
   if (playedTogether(state, K, A)) return null;
   const inK = new Set(L.groupOf(K)), inA = new Set(L.groupOf(A));
   const links = { ...(isObj(state?.links) ? state.links : {}) };
+  // An old link from this card's side to the other one (left over from an undone merge) would make
+  // both sides aliases, and the card you're on might not be the one kept
+  for (const x of inK) if (inA.has(links[x])) delete links[x];
   for (const x of inA) if (x === A || state?.players?.[x]) links[x] = K;
   const unlinks = (Array.isArray(state?.unlinks) ? state.unlinks : [])
     .filter(p => !(Array.isArray(p) && ((inK.has(p[0]) && inA.has(p[1])) || (inA.has(p[0]) && inK.has(p[1])))));

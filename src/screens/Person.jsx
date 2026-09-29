@@ -41,7 +41,8 @@ export default function Person({ id: opened }) {
   const when = t => new Date(t).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
 
   // Same person: the other ids this card also covers, and merging another player into it
-  const isMine = mine.has(id);
+  // A seat you claimed from your other phone is you too, so no "Same person as..." on it
+  const isMine = mine.has(id) || kept === state.me;
   const aliases = isMine ? [] : aliasesOf(state, id, x => nameOf(state, x));
   const candidates = merging ? mergeCandidates(state, id, mine).map(x => ({ id: x, name: nameOf(state, x) })).sort((a, b) => a.name.localeCompare(b.name)) : [];
   const before = () => ({ links: state.links || {}, unlinks: state.unlinks || [] });
