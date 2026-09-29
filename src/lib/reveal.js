@@ -111,7 +111,7 @@ function mainRevealSteps(round, res) {
     const unclaimed = (d.skins.unclaimed || 0) + (d.skinsGross?.unclaimed || 0);
     const end = d.skins.end || d.skinsGross?.end;
     if (steps.length && unclaimed > 0) {
-      const text = end?.rule === 'playoff' ? 'Playoff to come' : 'Nobody claimed them';
+      const text = end?.rule === 'playoff' ? 'Playoff to come' : unclaimed === 1 ? 'Nobody claimed it' : 'Nobody claimed them';
       steps.push({ key: 'carry', label: 'Carried over', text, value: plural(unclaimed, 'skin'), tie: true });
     }
     return { title: 'Skins won', steps };

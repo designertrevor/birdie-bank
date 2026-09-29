@@ -858,6 +858,8 @@ button:disabled { cursor: not-allowed; }
 .reveal-row.top { background: var(--pink-fill); color: #fff; }
 .reveal-row.top .sn, .reveal-row.top .reveal-amt { color: #fff !important; }
 .reveal-row.top .sr { background: var(--ochre); color: var(--on-pastel); }
+/* The per-game line under a winner's name: the usual muted grey is unreadable on the pink */
+.reveal-row.top .rv-games { color: rgba(255,255,255,.82); }
 .reveal-amt { font-family: var(--display); font-size: 30px; font-weight: 800; letter-spacing: -.02em; color: var(--ink); font-variant-numeric: tabular-nums; }
 /* Reveal motion. Rows are laid out from the start: they stagger in (--i), their totals wait dimmed until
    their turn, pop when they land, and the winner's row lifts and glows. Tapping to skip (.rv-still) shows the end state. */
@@ -989,7 +991,7 @@ button:disabled { cursor: not-allowed; }
 .stat-tiles > div { background: var(--card); border-radius: 18px; padding: 12px; min-width: 0; }
 .st-v { font-size: 22px; font-weight: 800; margin-top: 4px; font-variant-numeric: tabular-nums; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .st-s { font-size: 11px; color: var(--mute); margin-top: 1px; }
-.story-amt { font-size: 17px; font-weight: 800; color: var(--ink); margin: 0; }
+.story-amt { font-size: 17px; font-weight: 800; color: var(--ink); margin: 0 0 0 12px; white-space: nowrap; }
 .person-row .set-name { font-family: var(--display); font-weight: 800; font-size: 17px; }
 .pr-amt { font-size: 17px; font-weight: 800; margin: 0 6px 0 8px; font-variant-numeric: tabular-nums; color: var(--mute); }
 .text-link {

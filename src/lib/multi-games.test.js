@@ -242,6 +242,9 @@ test('side game choices: none with Scramble, no clashes, at most 4 games', () =>
   assert.deepEqual(sideGameChoices('nassau', [{ game: 'skins' }]), ['dots', 'birdies', 'snake']);
   assert.deepEqual(sideGameChoices('nassau', [{ game: 'rabbit' }]), ['dots', 'birdies', 'snake']);
   assert.deepEqual(sideGameChoices('nassau', [{ game: 'skins' }, { game: 'dots' }, { game: 'snake' }]), []);
+  // A Birdie pot already on isn't offered a second time
+  assert.deepEqual(sideGameChoices('vegas', [{ game: 'birdies' }]), ['skins', 'dots', 'snake', 'rabbit']);
+  assert.deepEqual(sideGameChoices('vegas', [{ game: 'skins' }, { game: 'birdies' }]), ['dots', 'snake']);
   assert.equal(MAX_GAMES, 4);
   // A hand-made round can't pay Skins and Rabbit together: the second one is dropped
   assert.deepEqual(sideGamesOf({ game: 'nassau', sideGames: [{ game: 'skins', settings: {} }, { game: 'rabbit', settings: {} }] }).map(sg => sg.game), ['skins']);

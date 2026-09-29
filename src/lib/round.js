@@ -1855,12 +1855,13 @@ export function gameKeyLabel(round, key) {
 /**
  * Side games that could still be added next to `mainGame`, given the ones already on.
  * None with a Scramble (scores are per team, so per-player side games can't work), and none that
- * clash with the main game or a side game already on (see CLASH).
+ * clash with the main game or a side game already on (see CLASH). A game already on is never offered
+ * again, the Birdie pot included (it clashes with nothing, so CLASH alone would offer a second pot).
  */
 export function sideGameChoices(mainGame, sideGames = []) {
   if (!mainGame || mainGame === 'scramble') return [];
   if (sideGames.length >= MAX_GAMES - 1) return [];
-  return Object.keys(SIDE_GAMES).filter(k => !clashes(k, mainGame) && !sideGames.some(sg => clashes(k, sg.game)));
+  return Object.keys(SIDE_GAMES).filter(k => !clashes(k, mainGame) && !sideGames.some(sg => sg.game === k || clashes(k, sg.game)));
 }
 
 /** Whether `pid` plays the game `key` in this round (everyone is in every game unless gamesFor says otherwise). */

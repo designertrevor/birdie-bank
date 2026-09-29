@@ -9,6 +9,7 @@ import { GameOptions } from './GameOptions.jsx';
 import { money } from '../lib/golf.js';
 import { betChangeNote, optionsProblem, sideBetLine } from '../lib/stakes.js';
 import { firstName } from '../lib/format.js';
+import { countsMoney } from '../lib/play-for.js';
 
 /** "Skins, Junk or a Birdie pot": the side games still on offer, in words. */
 const orList = xs => {
@@ -171,7 +172,7 @@ export function ByGameTable({ round, byGame, total, fmt = money }) {
   return (
     <div className="money-table-wrap">
       <table className="sc-table money-table by-game">
-        <caption className="sr-only">Money by game</caption>
+        <caption className="sr-only">{countsMoney(round) ? 'Money' : 'Points'} by game</caption>
         <thead>
           <tr><th scope="col" style={{ textAlign: 'left', paddingLeft: 12 }}>Game</th>{round.players.map(p => <th key={p.id} scope="col">{firstName(p.name)}</th>)}</tr>
         </thead>
