@@ -174,10 +174,13 @@ export default function Ledger() {
             ))}
           </>
         )}
-        <div className="tab-free">
-          <span className="tf-title">The Tab is free, always</span>
-          <button className="link-btn" onClick={() => setFree(true)}>See what’s free forever</button>
-        </div>
+        {/* The free-forever list is held until Trevor says so: only with the paywall preview flag */}
+        {PAYWALL_ON && (
+          <div className="tab-free">
+            <span className="tf-title">The Tab is free, always</span>
+            <button className="link-btn" onClick={() => setFree(true)}>See what’s free forever</button>
+          </div>
+        )}
       </div>
       <BottomNav />
       <SettleSheet debt={open} onClose={() => setOpen(null)} />
