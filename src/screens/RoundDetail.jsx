@@ -431,7 +431,7 @@ function GameBreakdown({ round, res, label = null }) {
     const col = h => {
       if (round.game === 'banker') return first(names[h.banker]);
       if (round.game === 'aces') return [h.ace && `${first(names[h.ace])} ace`, h.deuce && `${first(names[h.deuce])} deuce`].filter(Boolean).join(' · ') || '·';
-      return round.wolf[h.no]?.partner === null ? `${first(names[round.wolf[h.no].wolf])} (${round.wolf[h.no].blind ? 'blind wolf' : 'lone'})` : first(names[round.wolf[h.no]?.wolf]);
+      return round.wolf[h.no]?.partner === null ? `${first(names[round.wolf[h.no].wolf])} (${round.wolf[h.no].blind ? 'blind' : 'lone'})` : first(names[round.wolf[h.no]?.wolf]);
     };
     return (
       <>

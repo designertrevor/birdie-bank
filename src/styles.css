@@ -509,12 +509,14 @@ a.set-row { text-decoration: none; }
 /* TOAST */
 .toast {
   position: absolute; bottom: calc(110px + env(safe-area-inset-bottom)); left: 50%; transform: translate(-50%, 16px) scale(.9);
-  background: var(--pink-fill); color: #fff; padding: 12px 20px; border-radius: 999px; font-family: var(--display); font-size: 16px;
-  font-weight: 800; white-space: nowrap; opacity: 0; pointer-events: none; z-index: 200;
+  background: var(--pink-fill); color: #fff; padding: 12px 20px; border-radius: 24px; font-family: var(--display); font-size: 16px;
+  font-weight: 800; opacity: 0; pointer-events: none; z-index: 200;
+  /* A long toast (a bets line) wraps inside the screen instead of pushing the page sideways */
+  width: max-content; max-width: calc(100% - 32px); text-align: center; text-wrap: balance;
   transition: opacity .2s, transform .35s var(--spring);
 }
 .toast.show { opacity: 1; transform: translate(-50%, 0) scale(1); }
-.toast.has-act { display: flex; align-items: center; gap: 12px; padding: 4px 6px 4px 20px; white-space: normal; width: max-content; max-width: calc(100% - 32px); font-size: 15px; }
+.toast.has-act { display: flex; align-items: center; gap: 12px; padding: 4px 6px 4px 20px; white-space: normal; text-align: left; width: max-content; max-width: calc(100% - 32px); font-size: 15px; }
 .toast.has-act.show { pointer-events: auto; }
 .toast-act { min-height: 44px; padding: 0 14px; border: none; border-radius: 999px; background: rgba(255,255,255,.2); color: #fff; font: inherit; font-weight: 800; cursor: pointer; flex-shrink: 0; }
 .confetti { position: fixed; pointer-events: none; z-index: 999; border-radius: 2px; }
@@ -654,6 +656,8 @@ button:disabled { cursor: not-allowed; }
 .detail-actions { padding: 16px 16px 0; }
 .money-table-wrap, .sc-wrap { overflow-x: auto; margin: 0 16px 10px; background: var(--card); border-radius: 18px; }
 .money-table td.pos { color: var(--win); font-weight: 700; } .money-table td.neg { color: var(--loss); font-weight: 700; } .money-table td.zero { color: var(--mute-soft); }
+/* An amount never splits its sign onto its own line; a tight table scrolls instead */
+.money-table td.pos, .money-table td.neg { white-space: nowrap; }
 .scorecard { min-width: max-content; }
 .scorecard th, .scorecard td { min-width: 30px; padding: 8px 4px; }
 .scorecard .sticky { position: sticky; left: 0; background: var(--card); text-align: left; padding-left: 12px; min-width: 64px; font-weight: 700; z-index: 1; }

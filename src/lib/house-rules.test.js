@@ -151,10 +151,10 @@ test('the reveal names a blind wolf', () => {
 });
 
 test('the bets line says blind wolf when it is on', () => {
-  assert.equal(stakeSummary('wolf', { wolf: SETTINGS.wolf }), '$2 a point · lone wolf 2× · blind 3×');
-  assert.equal(stakeSummary('wolf', { wolf: { ...SETTINGS.wolf, blindMultiplier: 4 } }), '$2 a point · lone wolf 2× · blind 4×');
-  assert.equal(stakeSummary('wolf', { wolf: OLD_WOLF }), '$2 a point · lone wolf 2×');
-  assert.equal(stakeSummary('wolf', { wolf: { ...SETTINGS.wolf, blind: false } }), '$2 a point · lone wolf 2×');
+  assert.equal(stakeSummary('wolf', { wolf: SETTINGS.wolf }), '$2 a point · lone wolf\u00a02× · blind\u00a03×');
+  assert.equal(stakeSummary('wolf', { wolf: { ...SETTINGS.wolf, blindMultiplier: 4 } }), '$2 a point · lone wolf\u00a02× · blind\u00a04×');
+  assert.equal(stakeSummary('wolf', { wolf: OLD_WOLF }), '$2 a point · lone wolf\u00a02×');
+  assert.equal(stakeSummary('wolf', { wolf: { ...SETTINGS.wolf, blind: false } }), '$2 a point · lone wolf\u00a02×');
 });
 
 test('new rounds default to blind wolf on at 3×, Hogan and Arnie off', () => {
