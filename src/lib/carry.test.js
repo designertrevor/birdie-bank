@@ -152,3 +152,17 @@ test('carry: reason chips never talk about weeks', () => {
   for (const r of CARRY_REASONS) assert.doesNotMatch(r, /week/i);
   assert.ok(CARRY_REASONS.every(r => r.length <= 60), 'fits the server’s reason column');
 });
+
+test('carry: one saved under a friend’s other id still covers them once the ids are linked', () => {
+  // A carry agreed with zb (b's own id, from b's round) before a knew it was b
+  const r1 = round('r1', ['a', 'b'], {}, { code: 'AAAAAA' });
+  const r2 = round('r2', ['zb', 'q_a'], { 1: { zb: 4, q_a: 3 }, 2: { zb: 4, q_a: 3 } }, { code: 'BBBBBB', localMe: 'q_a' });
+  const carry = carryReducer(carryReducer(null, { type: 'ask', from: 'zb', to: 'a', amount: 4, by: 'a', at: NOW }), { type: 'agree', at: NOW + 1 });
+  const before = stateOf('a', [r1, r2], { carries: [carry] });
+  const after = stateOf('a', [{ ...r1, claims: { b: 'zb' } }, r2], { carries: [carry] });
+  assert.equal(activeCarry(before, 'a', 'b', { from: 'b', to: 'a', amount: 4 }), null, 'not linked yet: b is someone else');
+  assert.equal(activeCarry(after, 'a', 'b', { from: 'b', to: 'a', amount: 4 })?.carried, 4);
+  assert.equal(remindable(after, 'b', { from: 'b', to: 'a', amount: 4 }), false, 'no nudges while it’s carried');
+  // It moves no money
+  assert.deepEqual(tabBalances(after), { a: 4, b: -4 });
+});

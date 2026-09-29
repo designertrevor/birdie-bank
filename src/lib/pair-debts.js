@@ -6,6 +6,7 @@
 // count it. Pure, unit tested. Kept apart from ledger.js and shared-tab.js so both can use it.
 import { roundResults } from './round.js';
 import { meFor, myIds } from './format.js';
+import { linksOf } from './people-links.js';
 
 const DAY = 864e5;
 /** Shared rounds this recent are looked up on the server. */
@@ -18,10 +19,18 @@ export function codeOf(round) {
   return round?.shareCode || round?.shared?.code || null;
 }
 
-/** Every id that means you maps to one; everyone else stays as they are. */
+/**
+ * The one id each person goes by on this phone: every id that means you maps to you, and a
+ * friend's other ids (a seat they claimed, a player merged with "Same person as...") map to the
+ * one kept for them (see people-links.js). Only the grouping changes, never the money.
+ */
 export function canonicalOf(state) {
   const mine = myIds(state);
-  return id => (state.me && mine.has(id) ? state.me : id);
+  const { personOf } = linksOf(state);
+  return id => {
+    const p = personOf(id);
+    return state.me && (mine.has(id) || mine.has(p)) ? state.me : p;
+  };
 }
 
 export const doneRounds = state => Object.values(state.rounds || {}).filter(r => r.status === 'done');

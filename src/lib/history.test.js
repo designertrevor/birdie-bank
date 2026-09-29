@@ -197,3 +197,17 @@ test('old or odd saved rounds: no dates, no holesCount, you on both sides', () =
   const joined = { ...skins('j', new Date(2026, 8, 20), { players: [{ id: 'guest7', name: 'Trevor', index: 10 }, { id: 'me', name: 'Trevor', index: 10 }], winner: 'guest7' }), localMe: 'guest7' };
   assert.deepEqual(myTab(stateWith([joined])), { owed: 0, owe: 0, net: 0, people: 0 });
 });
+
+test('linked ids: head to head puts a friend’s ids together, and the season total never changes', () => {
+  const bo2 = [PLAYERS[0], { id: 'zbo', name: 'Bo B.', index: 2, tee: 'Red' }];
+  const rounds = [
+    skins('r1', new Date(2026, 8, 1), { winner: 'me' }),
+    skins('r2', new Date(2026, 8, 2), { winner: 'zbo', holes: 2, players: bo2 }),
+  ];
+  const split = stateWith(rounds);
+  const linked = stateWith(rounds, { links: { zbo: 'bo' } });
+  assert.deepEqual(headToHead(rounds, split), { bo: 2, zbo: -4 });
+  assert.deepEqual(headToHead(rounds, linked), { bo: -2 });
+  assert.deepEqual(netSeries(rounds, linked), netSeries(rounds, split));
+  assert.deepEqual(myTab(linked).net, myTab(split).net);
+});

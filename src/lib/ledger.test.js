@@ -194,3 +194,26 @@ test('tab: old saved data without settlements or rounds does not crash', () => {
   assert.deepEqual(outstanding({ players: {}, rounds: {} }), []);
   assert.deepEqual(tabBalances({ players: {}, rounds: {}, settlements: [] }), {});
 });
+
+test('linked ids: one friend with two ids is one row on the Tab and one head to head, with the same money', () => {
+  const holes = w => ({ 1: { me: w === 'me' ? 3 : 4, s: w === 's' ? 3 : 4, zs: w === 'zs' ? 3 : 4 } });
+  const r1 = round('r1', 'skins', ['me', 's'], { 1: { me: 3, s: 4 } });
+  const r2 = round('r2', 'skins', ['me', 'zs'], holes('zs'));
+  const r3 = round('r3', 'skins', ['me', 'zs'], holes('zs'));
+  const split = { me: 'me', players: { me: { id: 'me', name: 'Me' }, s: { id: 's', name: 'Sam' } }, rounds: { r1, r2, r3 }, settlements: [] };
+  const linked = { ...split, links: { zs: 's' } };
+  const before = tabBalances(split), after = tabBalances(linked);
+  assert.equal(Math.round((before.s + before.zs) * 100), Math.round(after.s * 100));
+  assert.equal(after.me, before.me);
+  assert.equal(Object.values(after).reduce((a, v) => a + Math.round(v * 100), 0), 0);
+  assert.deepEqual(outstanding(linked).map(t => [t.from, t.to]), [['me', 's']]);
+  const h = headToHeadSummary(linked, new Set(['me']));
+  assert.deepEqual([...h.keys()], ['s']);
+  assert.deepEqual(h.get('s'), { rounds: 3, won: 1, lost: 2, even: 0, net: h.get('s').net });
+  assert.equal(recordText(h.get('s')), '1–2');
+  // A payment to either id squares the one person
+  const paid = { ...linked, settlements: [{ id: 'p', from: 'me', to: 'zs', amount: -after.me, at: 1 }] };
+  assert.deepEqual(outstanding(paid), []);
+  assert.equal(personStory(paid, new Set(['me']), 'zs').paid, personStory(paid, new Set(['me']), 's').paid);
+  assert.equal(tabWith(outstanding(linked), new Set(['me']), 's'), -after.s);
+});

@@ -268,3 +268,31 @@ test('review: the home feed shows a both-ways tap as one payment', async () => {
   const pays = latelyItems(s, NOW + 1000).filter(i => i.kind === 'payment');
   assert.deepEqual(pays.map(p => p.text), ['B paid you $2']);
 });
+
+test('linked ids: Sam’s own id and the player Trevor saved are one pair, the split pairs added up', () => {
+  // Trevor saved Sam as s; Sam hosted a shared round as zs where Trevor was q_t
+  const r1 = round('r1', ['t', 's'], twoSkins('t', 's'), { code: 'AAAAAA', daysAgo: 3, skin: 14 });
+  const r2 = round('r2', ['zs', 'q_t'], twoSkins('zs', 'q_t'), { code: 'BBBBBB', daysAgo: 2, skin: 5, localMe: 'q_t' });
+  const split = stateOf('t', [r1, r2]);
+  const linked = stateOf('t', [{ ...r1, claims: { s: 'zs' } }, r2]);
+  const opts = { now: NOW };
+  assert.equal(pairDebt(split, 's', 't', opts), 2800);
+  assert.equal(pairDebt(split, 't', 'zs', opts), 1000);
+  assert.equal(pairDebt(linked, 's', 't', opts), 2800 - 1000);
+  assert.equal(pairDebt(linked, 'zs', 't', opts), 1800, 'either id is Sam');
+  assert.deepEqual(sharedDebts(linked, opts), [{ from: 's', to: 't', cents: 1800 }]);
+  // Money isn't made or lost: the balances are the same, just grouped
+  const bs = tabBalances(split), bl = tabBalances(linked);
+  assert.equal(Math.round((bs.s + bs.zs) * 100), Math.round(bl.s * 100));
+  assert.equal(bl.t, bs.t);
+  assert.equal(Math.round(Object.values(bl).reduce((a, v) => a + v, 0) * 100), 0);
+});
+
+test('linked ids: Sam’s phone works out the same amount as Trevor’s', () => {
+  const r1 = round('r1', ['t', 's'], twoSkins('t', 's'), { code: 'AAAAAA', daysAgo: 3, skin: 14 });
+  const r2 = round('r2', ['zs', 'q_t'], twoSkins('zs', 'q_t'), { code: 'BBBBBB', daysAgo: 2, skin: 5 });
+  const trevor = stateOf('t', [{ ...r1, claims: { s: 'zs' } }, { ...r2, localMe: 'q_t', claims: { q_t: 't' } }]);
+  const sam = stateOf('zs', [{ ...r1, localMe: 's', claims: { s: 'zs' } }, { ...r2, claims: { q_t: 't' } }], { players: { q_t: { id: 'q_t', name: 'Trevor', createdAt: 1 } } });
+  assert.equal(pairDebt(trevor, 's', 't', { now: NOW }), pairDebt(sam, 'zs', 'q_t', { now: NOW }));
+  assert.equal(pairDebt(sam, 'zs', 't', { now: NOW }), 1800);
+});

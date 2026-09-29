@@ -1,8 +1,9 @@
 // The Tab: who owes whom across every finished round, less payments recorded. Pure, unit tested.
 import { roundResults } from './round.js';
 import { roundCents } from './games.js';
-import { meFor, myIds } from './format.js';
-import { sharedDebts } from './pair-debts.js';
+import { meFor } from './format.js';
+import { canonicalOf, sharedDebts } from './pair-debts.js';
+import { linksOf } from './people-links.js';
 
 const toCents = v => Math.round((Number(v) || 0) * 100);
 const pairKey = (a, b) => (a < b ? `${a}|${b}` : `${b}|${a}`);
@@ -89,13 +90,17 @@ function shortestPath(start, isEnd, ids, ok) {
 const doneRounds = state => Object.values(state.rounds || {}).filter(r => r.status === 'done');
 
 /**
- * You can have more than one id (your own, plus the seat you took in each joined round). On the Tab
- * they are all one person, so a payment recorded against one of them squares a debt on another.
+ * You can have more than one id (your own, plus the seat you took in each joined round), and so can
+ * a friend (the player each organizer saved, the seat they claimed). On the Tab each person is one
+ * id, so a payment recorded against one of them squares a debt on another (see people-links.js).
  */
-function canonical(state) {
-  const mine = myIds(state);
-  return id => (state.me && mine.has(id) ? state.me : id);
-}
+const canonical = canonicalOf;
+
+/** Is this id you: one of `mine`, or linked to one of them. */
+const mineOf = (state, mine) => {
+  const who = canonicalOf(state);
+  return id => mine.has(id) || mine.has(who(id));
+};
 
 /** Everyone's running balance across finished rounds, less payments recorded. Positive = owed money. */
 export function tabBalances(state) {
@@ -171,26 +176,33 @@ export function outstanding(state, { now = Date.now() } = {}) {
  */
 export function personStory(state, ids, other) {
   const mine = ids instanceof Set ? ids : new Set(ids);
+  const who = canonical(state);
+  const isMine = mineOf(state, mine);
+  // `other` is one person, whichever of their ids the card was opened with
+  const O = who(other);
+  const isThem = id => id != null && !isMine(id) && who(id) === O;
   const items = [];
   let won = 0, lost = 0, even = 0, net = 0, paid = 0;
   for (const r of doneRounds(state)) {
     const me = meFor(r, state);
     // A round you only watched is not a round you played with them
-    if (!mine.has(me) || me === other || !r.players.some(p => p.id === other) || !r.players.some(p => p.id === me)) continue;
-    const amount = roundResults(r).pairs[me]?.[other] ?? 0;
+    const them = r.players.filter(p => isThem(p.id)).map(p => p.id);
+    if (!mine.has(me) || isThem(me) || !them.length || !r.players.some(p => p.id === me)) continue;
+    const pairs = roundResults(r).pairs[me] || {};
+    const amount = Math.round(them.reduce((a, id) => a + (pairs[id] ?? 0), 0) * 100) / 100;
     if (amount > 0) won++; else if (amount < 0) lost++; else even++;
     net += amount;
     items.push({ kind: 'round', id: r.id, round: r, amount, at: r.finishedAt || r.createdAt || 0 });
   }
   for (const s of state.settlements || []) {
     // amount: what the payment did for your side (they paid you: +, you paid them: -)
-    if (s.from === other && mine.has(s.to)) { items.push({ kind: 'payment', id: s.id, settlement: s, amount: s.amount, at: s.at || 0 }); paid += s.amount; }
-    else if (mine.has(s.from) && s.to === other) { items.push({ kind: 'payment', id: s.id, settlement: s, amount: -s.amount, at: s.at || 0 }); paid -= s.amount; }
+    if (isThem(s.from) && isMine(s.to)) { items.push({ kind: 'payment', id: s.id, settlement: s, amount: s.amount, at: s.at || 0 }); paid += s.amount; }
+    else if (isMine(s.from) && isThem(s.to)) { items.push({ kind: 'payment', id: s.id, settlement: s, amount: -s.amount, at: s.at || 0 }); paid -= s.amount; }
   }
   // Agreed carry-overs get their own line. They move no money, so net and paid stay as they are
   for (const k of state.carries || []) {
     if (k.status !== 'agreed') continue;
-    const theyOwe = k.from === other && mine.has(k.to), iOwe = mine.has(k.from) && k.to === other;
+    const theyOwe = isThem(k.from) && isMine(k.to), iOwe = isMine(k.from) && isThem(k.to);
     if (theyOwe || iOwe) items.push({ kind: 'carry', id: k.id, carry: k, amount: theyOwe ? k.amount : -k.amount, at: k.answeredAt || k.at || 0 });
   }
   items.sort((a, b) => b.at - a.at);
@@ -204,19 +216,26 @@ export function personStory(state, ids, other) {
  */
 export function headToHeadSummary(state, ids) {
   const mine = ids instanceof Set ? ids : new Set(ids);
+  const who = canonical(state);
+  const isMine = mineOf(state, mine);
   const out = new Map();
   for (const r of doneRounds(state)) {
     const me = meFor(r, state);
     if (!mine.has(me) || !r.players.some(p => p.id === me)) continue; // watched rounds aren't yours
     const pairs = roundResults(r).pairs[me] || {};
+    // One person is one line, whichever id they had in this round
+    const inRound = new Map();
     for (const p of r.players) {
-      if (p.id === me || mine.has(p.id)) continue;
-      const cur = out.get(p.id) || { rounds: 0, won: 0, lost: 0, even: 0, net: 0 };
-      const v = pairs[p.id] ?? 0;
+      if (p.id === me || isMine(p.id)) continue;
+      const k = who(p.id);
+      inRound.set(k, (inRound.get(k) || 0) + (pairs[p.id] ?? 0));
+    }
+    for (const [k, v] of inRound) {
+      const cur = out.get(k) || { rounds: 0, won: 0, lost: 0, even: 0, net: 0 };
       cur.rounds++;
       if (v > 0) cur.won++; else if (v < 0) cur.lost++; else cur.even++;
       cur.net = Math.round((cur.net + v) * 100) / 100;
-      out.set(p.id, cur);
+      out.set(k, cur);
     }
   }
   return out;
@@ -243,6 +262,13 @@ export function nameOf(state, id) {
   if (state.players[id]) return state.players[id].name;
   for (const r of Object.values(state.rounds)) {
     const p = r.players.find(x => x.id === id);
+    if (p) return p.name;
+  }
+  // An id this phone only knows through a link: the name of the person it belongs to
+  const group = linksOf(state).groupOf(id).filter(x => x !== id);
+  for (const x of group) if (state.players[x]) return state.players[x].name;
+  for (const x of group) for (const r of Object.values(state.rounds)) {
+    const p = r.players.find(y => y.id === x);
     if (p) return p.name;
   }
   return 'Someone';

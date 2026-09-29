@@ -265,3 +265,21 @@ test('two phones offline: both marking the same netted payment count it once', (
     assert.equal(outstanding(both).length, 0);
   }
 });
+
+test('linked ids: a payment row names the round’s own ids, and the shared Tab squares the linked pair', () => {
+  // b hosted a round as zb where a was q_a; a saved b as b in a's own round
+  const r1 = round('r1', ['a', 'b'], oneSkin, { code: 'AAAAAA', daysAgo: 3 });
+  const r2 = round('r2', ['zb', 'q_a'], { 1: { q_a: 4, zb: 3 }, 2: { q_a: 4, zb: 3 } }, { code: 'BBBBBB', daysAgo: 2, localMe: 'q_a' });
+  const s = stateOf('a', [{ ...r1, claims: { b: 'zb' } }, { ...r2, claims: { q_a: 'a' } }]);
+  // a owes b $2 on the whole, across both rounds ($2 won, $4 lost)
+  const plan = outstanding(s, { now: NOW });
+  assert.deepEqual(plan.map(t => [t.from, t.to, t.amount]), [['a', 'b', 2]]);
+  const { rows, settlements } = allocatePayment(s, { from: 'a', to: 'b', amount: 2 }, { now: NOW });
+  for (const r of rows) {
+    const ids = r.code === 'AAAAAA' ? ['a', 'b'] : ['zb', 'q_a'];
+    assert.ok(ids.includes(r.from) && ids.includes(r.to), 'rows keep each round’s own ids');
+  }
+  const after = applyRows({ ...s, settlements: [...s.settlements, ...settlements] }, rows);
+  assert.deepEqual(outstanding(after, { now: NOW }), []);
+  assert.deepEqual(roundStatus(after.rounds.r2, roundRows(after, after.rounds.r2)), { zb: 'square', q_a: 'square' });
+});

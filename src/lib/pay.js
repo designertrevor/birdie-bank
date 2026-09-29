@@ -2,6 +2,7 @@
 // Birdie Bank never holds or moves money. These links only open the payer's own app,
 // already filled in, and nobody is assumed to use any one app.
 import { money } from './golf.js';
+import { linksOf } from './people-links.js';
 
 export const PAY_APPS = {
   venmo: { name: 'Venmo', label: 'Venmo username', placeholder: '@username' },
@@ -45,6 +46,13 @@ export function payInfoFor(state, id) {
   const rounds = Object.values(state.rounds || {}).sort((a, b) => (b.finishedAt || b.createdAt || 0) - (a.finishedAt || a.createdAt || 0));
   for (const r of rounds) {
     const info = payInfo(r.players?.find(p => p.id === id));
+    if (info) return info;
+  }
+  // A friend with more than one id: the app on any of their other ids (see people-links.js)
+  const others = linksOf(state).groupOf(id).filter(x => x !== id);
+  for (const x of others) { const own = payInfo(state.players?.[x]); if (own) return own; }
+  for (const r of rounds) for (const x of others) {
+    const info = payInfo(r.players?.find(p => p.id === x));
     if (info) return info;
   }
   return null;

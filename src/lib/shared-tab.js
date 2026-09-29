@@ -133,7 +133,10 @@ export function applyRows(state, rows) {
       roundIds: list.map(r => rounds.get(r.code).id), codes: list.map(r => r.code),
       updatedAt: newest.updatedAt || newest.at, shared: true,
     };
-    const i = carries.findIndex(c => c.id === id);
+    let i = carries.findIndex(c => c.id === id);
+    // A carry saved before two ids were linked has its old pair in its id: it's still the same carry
+    if (i < 0) i = carries.findIndex(c => c.shared && c.at === carry.at && who(c.from) === carry.from && who(c.to) === carry.to);
+    if (i >= 0) carry.id = carries[i].id;
     if (i < 0) carries.push(carry);
     else if ((carries[i].updatedAt || 0) <= carry.updatedAt && !same(carries[i], carry)) carries[i] = carry;
   }
