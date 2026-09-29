@@ -626,6 +626,8 @@ button:disabled { cursor: not-allowed; }
 .play-cta { background: var(--canvas); }
 .wolf-panel { margin: 0 16px 8px; padding: 12px 14px; background: var(--lav); border-radius: 20px; flex-shrink: 0; }
 .wolf-panel .bl { color: rgba(0,0,0,.75); font-size: 14px; }
+/* Blind wolf: the call-it-early note under the picks */
+.wolf-panel .wolf-note { color: rgba(0,0,0,.65); font-size: 13px; margin: 8px 0 0; }
 .skin-counts { display: flex; flex-wrap: wrap; gap: 4px; justify-content: flex-end; max-width: 50%; }
 
 /* History */

@@ -1032,7 +1032,7 @@ function WolfPanel({ round, hole, wolf, setWolf }) {
         {offerBlind && <button className={`pill-btn lone ${blind ? 'on' : ''}`} aria-pressed={blind}
           onClick={() => pick(null, true)}><Icon name="eye-slash" fill /> Blind wolf {blindMult}×</button>}
       </div>}
-      {setWolf && offerBlind && <p className="field-help" style={{ margin: '8px 0 0' }}>Blind wolf: call it before anyone tees off.</p>}
+      {setWolf && offerBlind && <p className="wolf-note">Blind wolf: call it before anyone tees off.</p>}
     </div>
   );
 }
