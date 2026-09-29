@@ -40,6 +40,10 @@ test('recently played is newest first, one row per course, at most 5, and counts
 test('a course picked but never played, like a planned round, tops up recently played', () => {
   const s = state({ favorites: ['logan-river', 'preston'], rounds: { r1: round('r1', 'preston', 2) } });
   assert.deepEqual(ids(coursePickerSections(s, '').recent), ['preston', 'logan-river']);
+  // Logan River was never played, so the section doesn't claim it was
+  assert.equal(coursePickerSections(s, '').recentLabel, 'Recent');
+  const playedOnly = state({ favorites: ['preston'], rounds: { r1: round('r1', 'preston', 2) } });
+  assert.equal(coursePickerSections(playedOnly, '').recentLabel, 'Recently played');
 });
 
 test('a built-in course with a fixed copy shows as the copy, starred or played', () => {

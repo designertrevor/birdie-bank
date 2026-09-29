@@ -74,7 +74,8 @@ const RECENT_MAX = 5;
  * What the course picker shows. With no search: { starred, recent, all, hint }, where recent is
  * the courses from your latest rounds (finished or in progress, newest first, at most 5, starred
  * ones left out), topped up from courses you picked but haven't played yet (state.favorites, e.g.
- * a round you only planned). all is every other course. hint: nothing starred yet and enough
+ * a round you only planned). recentLabel is "Recently played", or "Recent" once such a course
+ * is in the list. all is every other course. hint: nothing starred yet and enough
  * courses that a star helps. With a search, only all is filled, with the matches.
  */
 export function coursePickerSections(state, needle = '') {
@@ -82,7 +83,7 @@ export function coursePickerSections(state, needle = '') {
   const q = (needle || '').trim().toLowerCase();
   if (q) {
     const all = courses.filter(c => c.name.toLowerCase().includes(q) || (c.city || '').toLowerCase().includes(q));
-    return { starred: [], recent: [], all, hint: false };
+    return { starred: [], recent: [], recentLabel: 'Recently played', all, hint: false };
   }
   const starred = starredList(state);
   const taken = new Set(starred.map(c => c.id));
@@ -97,9 +98,12 @@ export function coursePickerSections(state, needle = '') {
     .filter(r => r.status === 'done' || r.status === 'active')
     .sort((a, b) => (b.finishedAt || b.createdAt || 0) - (a.finishedAt || a.createdAt || 0))
     .forEach(r => add(r.course?.id ?? r.courseId));
+  const played = recent.length;
   (state.favorites || []).forEach(add);
+  // Only say "played" when every row was: a course you only picked or planned makes it plain "Recent"
+  const recentLabel = recent.length > played ? 'Recent' : 'Recently played';
   const all = courses.filter(c => !taken.has(c.id));
-  return { starred, recent, all, hint: starred.length === 0 && courses.length >= 3 };
+  return { starred, recent, recentLabel, all, hint: starred.length === 0 && courses.length >= 3 };
 }
 
 export function coursePar(course) {

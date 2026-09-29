@@ -296,9 +296,14 @@ function CourseStep({ courseId, setCourseId, holesCount, nine, setNine, onNext, 
   const courses = allCourses(state);
   const needle = q.trim().toLowerCase();
   // Starred, then recently played, then the rest; a search shows only what matches
-  const { starred, recent, all: rest, hint } = coursePickerSections(state, needle);
+  const { starred, recent, recentLabel, all: rest, hint } = coursePickerSections(state, needle);
   const matches = needle ? rest : courses;
-  const star = c => update(s => { s.starredCourses = toggleStarred(s, c.id); });
+  // Starring moves the row to another section, so a short toast says where it went
+  const star = c => {
+    const was = isStarred(state, c);
+    update(s => { s.starredCourses = toggleStarred(s, c.id); });
+    if (!needle) showToast(was ? `${c.name} taken off Favorites` : `${c.name} added to Favorites`);
+  };
   const course = courses.find(c => c.id === courseId);
   const tooShort = course && holesCount === 18 && course.holes.length === 9;
   // Course database results, minus any this phone already has saved
@@ -363,7 +368,7 @@ function CourseStep({ courseId, setCourseId, holesCount, nine, setNine, onNext, 
         </div>
         {starred.length > 0 && <><div className="sec-label">Favorites</div><div style={{ padding: '0 16px' }}>{starred.map(row)}</div></>}
         {hint && <p className="course-star-hint"><Icon name="star" /> Tap the star to keep a course at the top</p>}
-        {recent.length > 0 && <><div className="sec-label">Recently played</div><div style={{ padding: '0 16px' }}>{recent.map(row)}</div></>}
+        {recent.length > 0 && <><div className="sec-label">{recentLabel}</div><div style={{ padding: '0 16px' }}>{recent.map(row)}</div></>}
         {rest.length > 0 && <><div className="sec-label">{needle ? `${rest.length} result${rest.length === 1 ? '' : 's'}` : 'All courses'}</div><div style={{ padding: '0 16px' }}>{rest.map(row)}</div></>}
         {needle && more.length > 0 && <><div className="sec-label">More courses{api.loading ? ' · searching' : ''}</div><div style={{ padding: '0 16px' }}>{more.map(apiRow)}</div></>}
         {matches.length === 0 && more.length === 0 && !api.loading && (
