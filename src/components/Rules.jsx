@@ -218,7 +218,7 @@ const RULES = {
     sections: [
       ['Overview', <p key="o">Side bets for the little heroics. Every dot is paid to you by each of the other players.</p>],
       ['The dots', <ul key="d">
-        <li><strong>Birdie</strong>: a natural birdie is a dot; an eagle is two. Counted from the scores automatically.</li>
+        <li><strong>Birdie</strong>: a natural birdie is a dot and an eagle is two. With <strong>Birdies count automatically</strong> on, they come straight from the scores.</li>
         <li><strong>Greenie</strong>: closest to the pin in one on a par 3, and par or better to keep it. One a hole.</li>
         <li><strong>Sandy</strong>: par or better after being in a bunker.</li>
         <li><strong>Barkie</strong>: par or better after hitting a tree.</li>
@@ -265,7 +265,7 @@ const RULES = {
       </ul>],
       ['Paying out', <p key="p">The pot is split by shares. Four players at $5 make a $20 pot. Ann makes 2 birdies and Bo makes an eagle, so that’s 4 shares at $5 each: Ann and Bo each take $10 and are up $5, and the other two are down $5. <strong>No birdies at all</strong> and nobody pays.</p>],
       ['Who’s in', <p key="w">It takes at least 2 players. A player who <strong>leaves partway</strong> or is <strong>added partway</strong> sits the pot out: they don’t put in and can’t win it.</p>],
-      ['With Junk', <p key="j">Junk’s automatic birdie dot counts <strong>natural</strong> birdies, before strokes, and the pot counts net birdies. So a natural birdie pays twice: a dot from each player and a share of the pot. A birdie that only comes from a stroke counts in the pot alone.</p>],
+      ['With Junk', <p key="j">When Junk counts birdies automatically, it counts <strong>natural</strong> birdies, before strokes, and the pot counts net birdies. So a natural birdie pays twice: a dot from each player and a share of the pot. A birdie that only comes from a stroke counts in the pot alone.</p>],
     ],
   },
 };

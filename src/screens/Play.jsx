@@ -597,7 +597,8 @@ function PlayRound({ round }) {
       {fixSheet === 'hole' && editable && <FixHoleSheet round={round} holeNo={hole.no} me={me} onClose={() => setFixSheet(null)} />}
       {fixSheet === 'tee' && editable && <CourseTeeSheet round={round} me={me} onClose={() => setFixSheet(null)} />}
       <RulesSheet game={rules.key === 'main' ? game : rules.key} open={rules.open} onClose={() => setRules(r => ({ ...r, open: false }))}
-        title={rules.key === 'dots' ? `How to play ${SIDE_GAMES.dots.label}` : undefined} />
+        title={rules.key === 'dots' ? `How to play ${SIDE_GAMES.dots.label}` : undefined}
+        sub={rules.key === 'dots' ? 'A side game · Dots, garbage, trash' : undefined} />
       <ShareSheet round={round} open={live} onClose={() => setLive(false)} />
       {game === 'banker' && (
         <>
