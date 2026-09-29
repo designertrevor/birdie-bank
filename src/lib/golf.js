@@ -62,11 +62,22 @@ export function pickupGross(par, strokes) {
  * Settle one Banker hole.
  * hole = { banker, bets: {pid: $}, doubled: {pid: bool}, doubleBack: bool }
  * net  = { pid: netScore }
- * opts = { ties: 'push' | 'banker' }
- * Returns { deltas: {pid: $}, matchups: [{pid, amount, result: 'win'|'loss'|'push'}] }
+ * opts = { ties: 'push' | 'banker', birdies: 'off' | 'gross' | 'net', gross: {pid: score or 'X'}, par }
+ * With birdies on, the winner's birdie doubles that bet and an eagle (or better) doubles it again,
+ * on top of any doubles. 'gross' counts only a real birdie; 'net' counts one after strokes.
+ * Returns { deltas: {pid: $}, matchups: [{pid, amount, mult, birdie, result: 'win'|'loss'|'push'}] }
  */
+export function birdieMultiplier(score, par) {
+  if (typeof score !== 'number' || !par) return 1;
+  const under = par - score;
+  return under >= 2 ? 4 : under === 1 ? 2 : 1;
+}
+
 export function settleBankerHole(hole, net, playerIds, opts = {}) {
   const ties = opts.ties || 'push';
+  const birdies = opts.birdies && opts.birdies !== 'off' ? opts.birdies : null;
+  // The score a birdie is judged on: the real one, or after strokes
+  const birdieOf = pid => (!birdies ? 1 : birdieMultiplier(birdies === 'net' ? net[pid] : opts.gross?.[pid], opts.par));
   const deltas = Object.fromEntries(playerIds.map(id => [id, 0]));
   const matchups = [];
   const b = hole.banker;
@@ -74,14 +85,16 @@ export function settleBankerHole(hole, net, playerIds, opts = {}) {
     if (pid === b) continue;
     const bet = hole.bets?.[pid] || 0;
     const mult = hole.doubled?.[pid] ? (hole.doubleBack ? 4 : 2) : 1;
-    const amount = bet * mult;
     let result;
     if (net[pid] < net[b]) result = 'win';
     else if (net[pid] > net[b]) result = 'loss';
     else result = ties === 'banker' ? 'loss' : 'push';
+    // Only the winner's birdie counts: a birdie that halves or loses the hole pays nothing extra
+    const birdie = result === 'win' ? birdieOf(pid) : result === 'loss' && net[pid] !== net[b] ? birdieOf(b) : 1;
+    const amount = bet * mult * birdie;
     if (result === 'win') { deltas[pid] += amount; deltas[b] -= amount; }
     if (result === 'loss') { deltas[pid] -= amount; deltas[b] += amount; }
-    matchups.push({ pid, amount, mult, result });
+    matchups.push({ pid, amount, mult, birdie, result });
   }
   return { deltas, matchups };
 }

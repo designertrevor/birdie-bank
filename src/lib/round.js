@@ -860,6 +860,32 @@ const playerById = (round, pid) => round.players.find(p => p.id === pid);
 
 // --------------------------- Banker ---------------------------------------
 
+/**
+ * "Low score banks": whoever had the lowest gross score on the hole before banks this one, among the
+ * players on this hole. A tie keeps the bank with the banker if they were in it, else the tied player
+ * next after them in the playing order. Null on the first hole, or when the hole before has no scores.
+ */
+export function lowBanker(round, idx, ids, prevBanker = null) {
+  const prevHole = round.holes[idx - 1];
+  const sc = prevHole && round.scores[prevHole.no];
+  if (!sc) return null;
+  // A pickup counts as worse than any score
+  const val = pid => (sc[pid] === 'X' ? Infinity : typeof sc[pid] === 'number' ? sc[pid] : null);
+  const scored = ids.filter(pid => val(pid) != null);
+  if (!scored.length) return null;
+  const low = Math.min(...scored.map(val));
+  const tied = scored.filter(pid => val(pid) === low);
+  if (tied.length === 1) return tied[0];
+  if (prevBanker && tied.includes(prevBanker)) return prevBanker;
+  const all = round.players.map(p => p.id);
+  const from = prevBanker ? all.indexOf(prevBanker) : -1;
+  for (let n = 1; n <= all.length; n++) {
+    const pid = all[(from + n + all.length) % all.length];
+    if (tied.includes(pid)) return pid;
+  }
+  return tied[0];
+}
+
 export function bankerHoleSetup(round, idx) {
   const hole = round.holes[idx];
   const existing = round.banker[hole.no];
@@ -875,6 +901,7 @@ export function bankerHoleSetup(round, idx) {
   const prev = prevHole && round.banker[prevHole.no];
   let banker;
   if (s.rotation === 'choice' && prev && ids.includes(prev.banker)) banker = prev.banker;
+  else if (s.rotation === 'low') banker = lowBanker(round, idx, ids, prev?.banker) ?? bankerFor('fixed', 0, all, s.firstBanker || 0);
   else banker = bankerFor(s.rotation, idx, all, s.firstBanker || 0);
   // The rotation skips anyone who has left: the bank passes to the next player in the order
   const k = all.indexOf(banker);
@@ -1490,7 +1517,8 @@ export function gameResults(round) {
       const field = on.map(p => p.id);
       if (!field.includes(setup.banker)) return;
       const net = Object.fromEntries(on.map(p => [p.id, netFor(round, p, h)]));
-      const r = settleBankerHole(setup, net, field, { ties: settingsAt(round, posOf(round, h)).banker.ties });
+      const bs = settingsAt(round, posOf(round, h)).banker;
+      const r = settleBankerHole(setup, net, field, { ties: bs.ties, birdies: bs.birdies, gross: round.scores[h.no], par: h.par });
       add(r.deltas);
       for (const m of r.matchups) {
         if (m.result === 'win') pay(setup.banker, m.pid, m.amount);
@@ -1729,7 +1757,7 @@ export function gameResults(round) {
 
 // --------------------------- Several games at once ------------------------
 // A round has one main game (round.game, group-voted as ever) and up to two side games:
-// round.sideGames = [{ game: 'skins' | 'dots' | 'birdies', settings }]. Each side game keeps its own
+// round.sideGames = [{ game: 'skins' | 'dots' | 'birdies' | 'snake' | 'rabbit', settings }]. Each side game keeps its own
 // settings, so the main game's defaults in round.settings (every game's are there) never leak in.
 // round.gamesFor = { pid: ['main', 'skins', ...] } is only set for a player who isn't in every game
 // (a late joiner). Both are absent on older rounds, whose money is exactly what it always was.
@@ -1739,16 +1767,28 @@ export const SIDE_GAMES = {
   skins: { label: 'Skins', icon: 'coins' },
   dots: { label: 'Junk', icon: 'medal' },
   birdies: { label: 'Birdie pot', icon: 'bird' },
+  snake: { label: 'Snake', icon: 'wave-sine' },
+  rabbit: { label: 'Rabbit', icon: 'rabbit' },
 };
 
 /** Most games in one round, the main game included. */
-export const MAX_GAMES = 3;
+export const MAX_GAMES = 4;
+
+/**
+ * Side games that would pay for the same thing twice next to `game` (the main game or another side
+ * game), so they're never on together: the same game twice, Skins with Rabbit (both pay for winning a
+ * hole outright; Rabbit is a one-pot skin), and Junk with Bingo Bango Bongo (the greenie and the
+ * bango both pay for being closest).
+ */
+const CLASH = { skins: ['skins', 'rabbit'], rabbit: ['rabbit', 'skins'], dots: ['dots', 'bbb'], snake: ['snake'], birdies: [] };
+function clashes(key, game) { return (CLASH[key] || []).includes(game); }
 
 /**
  * A round's side games (an empty list on older rounds). Anything setup could never make is dropped,
  * so a garbled or hand-edited round can't count money twice: games this build doesn't know, a game
- * listed twice, Skins on a Skins round or Junk on a Dots round (same scores or dots paid twice), any
- * side game on a Scramble, and anything past the MAX_GAMES cap.
+ * listed twice, Skins on a Skins round, Skins with Rabbit or Junk on a Dots round (the same thing paid
+ * twice), any side game on a Scramble, and anything past the MAX_GAMES cap. Junk next to Bingo Bango
+ * Bongo is only kept off in setup, so a round made before that rule keeps its money.
  */
 export function sideGamesOf(round) {
   if (!round || !Array.isArray(round.sideGames) || round.game === 'scramble') return [];
@@ -1756,8 +1796,8 @@ export function sideGamesOf(round) {
   for (const sg of round.sideGames) {
     if (out.length >= MAX_GAMES - 1) break;
     if (!sg || !SIDE_GAMES[sg.game] || !sg.settings || typeof sg.settings !== 'object') continue;
-    if (out.some(x => x.game === sg.game)) continue;
-    if ((sg.game === 'skins' && round.game === 'skins') || (sg.game === 'dots' && round.game === 'dots')) continue;
+    const hard = g => g !== 'bbb' && clashes(sg.game, g);
+    if (hard(round.game) || out.some(x => hard(x.game))) continue;
     out.push(sg);
   }
   return out;
@@ -1775,13 +1815,13 @@ export function gameKeyLabel(round, key) {
 
 /**
  * Side games that could still be added next to `mainGame`, given the ones already on.
- * None with a Scramble (scores are per team, so per-player side games can't work), no Skins side
- * game in a Skins round and no Junk side game in a Dots round.
+ * None with a Scramble (scores are per team, so per-player side games can't work), and none that
+ * clash with the main game or a side game already on (see CLASH).
  */
 export function sideGameChoices(mainGame, sideGames = []) {
   if (!mainGame || mainGame === 'scramble') return [];
   if (sideGames.length >= MAX_GAMES - 1) return [];
-  return Object.keys(SIDE_GAMES).filter(k => !sideGames.some(sg => sg.game === k) && !(k === 'skins' && mainGame === 'skins') && !(k === 'dots' && mainGame === 'dots'));
+  return Object.keys(SIDE_GAMES).filter(k => !clashes(k, mainGame) && !sideGames.some(sg => clashes(k, sg.game)));
 }
 
 /** Whether `pid` plays the game `key` in this round (everyone is in every game unless gamesFor says otherwise). */

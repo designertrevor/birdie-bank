@@ -26,7 +26,7 @@ import { AddPlayerSheet } from '../components/AddPlayer.jsx';
 import { firstName, gameLabel, holeMoneyLine } from '../lib/format.js';
 import { leaveRound, roundsInProgress } from '../lib/rounds.js';
 import { RoundsInProgressSheet } from '../components/RoundsInProgress.jsx';
-import { ByGameTable } from '../components/SideGames.jsx';
+import { ByGameTable, SideGamesSetup } from '../components/SideGames.jsx';
 import { nassauOpenNote } from '../lib/side-games.js';
 import {
   KEEPER_QUIET_MS, askForCard, canEdit, canTakeCard, clearAsk, handOff, handOffChoices, hostKeeper, isKeeper, keeperMe, keeperName, keeperOf,
@@ -55,7 +55,9 @@ export default function Play({ id }) {
   // ...or someone is added partway through
   const joined = `${round.players.length}:${Object.entries(round.joined || {}).map(e => e.join('@')).sort().join(',')}`;
   // ...and when this hole's par is fixed, so an untouched score starts from the new par
-  return <PlayRound key={`${round.holesCount}:${round.current}:${round._remote?.[cur?.no] || 0}:${left}:${joined}:${cur?.par}`} round={round} />;
+  // ...and when a side game is added, so Junk's dots have somewhere to go
+  const games = (round.sideGames || []).map(sg => sg.game).join('+');
+  return <PlayRound key={`${games}:${round.holesCount}:${round.current}:${round._remote?.[cur?.no] || 0}:${left}:${joined}:${cur?.par}`} round={round} />;
 }
 
 // Keeper handoffs this phone has already announced ("roundId:since"), so a remount doesn't say it twice
@@ -132,7 +134,13 @@ function PlayRound({ round }) {
   const emptyMarks = { bbb: { bingo: null, bango: null, bongo: null }, snake: { snake: [] }, hammer: { hammers: [], conceded: null } }[game] || {};
   // Junk as a side game: its dots are saved in the same marks object as the main game's marks
   const junk = useMemo(() => (sideGamesOf(round).some(sg => sg.game === 'dots') ? gameView(round, 'dots') : null), [round]);
-  const [marks, setMarks] = useState(() => (GAMES[game].marks || junk ? (wasDirty && kept.marks) || structuredClone(round.marks?.[hole.no] || emptyMarks) : null));
+  // ...and Snake as a side game: its three-putts go in there too, under `snake`
+  const snakeSide = useMemo(() => (sideGamesOf(round).some(sg => sg.game === 'snake') ? gameView(round, 'snake') : null), [round]);
+  const [marks, setMarks] = useState(() => {
+    if (!GAMES[game].marks && !junk && !snakeSide) return null;
+    const m = (wasDirty && kept.marks) || structuredClone(round.marks?.[hole.no] || emptyMarks);
+    return snakeSide && !m.snake ? { ...m, snake: [] } : m;
+  });
   useEffect(() => { DRAFTS.set(draftKey, { draft, base, touched, dirty, marks }); }, [draftKey, draft, base, touched, dirty, marks]);
   const [banker, setBanker] = useState(() => (game === 'banker' ? structuredClone(bankerHoleSetup(main, idx)) : null));
   const [phase, setPhase] = useState(() => (game === 'banker' && editable && !holeComplete(round, hole) ? 'bets' : 'scores'));
@@ -146,6 +154,7 @@ function PlayRound({ round }) {
   const [live, setLive] = useState(false);
   const [holesSheet, setHolesSheet] = useState(false);
   const [betsSheet, setBetsSheet] = useState(false);
+  const [gamesSheet, setGamesSheet] = useState(false);
   const [switching, setSwitching] = useState(false);
   const others = useStore(s => roundsInProgress(s).filter(r => r.id !== round.id).length);
   const [addSheet, setAddSheet] = useState(null); // true, or the seat request being answered
@@ -408,6 +417,7 @@ function PlayRound({ round }) {
           {!editable && sharedLive && <p className="field-help" style={{ padding: '0 20px' }}>{round.status === 'active' ? `Scores as ${holderName} saves them. Browse any hole.` : 'Only the players in this round can fix its scores.'}</p>}
           {game === 'bbb' && editable && <BBBPicker round={main} hole={hole} marks={marks} setMarks={setMarksDirty} />}
           {game === 'snake' && editable && <SnakePicker round={main} hole={hole} marks={marks} setMarks={setMarksDirty} />}
+          {snakeSide && editable && <SnakePicker round={snakeSide} hole={hole} marks={marks} setMarks={setMarksDirty} />}
           {!editable && units.map(p => {
             const st = round.useHandicaps ? strokesFor(round, p, hole) : 0;
             const v = saved[p.id];
@@ -491,30 +501,47 @@ function PlayRound({ round }) {
       </div>
 
       <Sheet open={menu} onClose={() => setMenu(false)} title="Round">
+        {/* Feedback first and loud: early on, every bug report counts */}
+        <button className="sheet-item feedback-cta" onClick={() => { setMenu(false); nav.push('suggest', { roundId: round.id }); }}>
+          <span><Icon name="megaphone" fill /> <span className="fb-words"><strong>Report a bug or send an idea</strong><small>This round’s details come along</small></span></span><Icon name="caret-right" />
+        </button>
+        <div className="menu-sec">This hole</div>
         <button className="sheet-item" onClick={() => { setMenu(false); setCard(true); }}><span><Icon name="table" /> Scorecard</span><Icon name="caret-right" /></button>
-        {editable && <button className="sheet-item" onClick={() => { setMenu(false); setFixSheet('hole'); }}><span><Icon name="wrench" /> Fix this hole</span><Icon name="caret-right" /></button>}
-        <button className="sheet-item" onClick={() => { setMenu(false); setRules(true); }}><span><Icon name="book-open" /> {GAMES[game].name} rules</span><Icon name="caret-right" /></button>
-        {syncConfigured && (
-          <button className="sheet-item" onClick={() => { setMenu(false); setLive(true); }}>
-            <span><Icon name="broadcast" /> {round.shared ? `Live · code ${round.shared.code}` : 'Invite the group'}</span><Icon name="caret-right" />
-          </button>
-        )}
+        {editable && <button className="sheet-item" onClick={() => { setMenu(false); setFixSheet('hole'); }}><span><Icon name="wrench" /> Fix par or HCP · hole {hole.no}</span><Icon name="caret-right" /></button>}
+        <div className="menu-sec">Games and bets</div>
         {/* Changing the game is for the phone keeping score (see keeper.js) */}
         {editable && <>
         <button className="sheet-item" onClick={() => { setMenu(false); setBetsSheet(true); }}>
           <span><Icon name="coins" /> Bets · {roundStakeLines(round).map(l => l.line).join(' + ')}</span><Icon name="caret-right" />
         </button>
-        <button className="sheet-item" onClick={() => { setMenu(false); setHolesSheet(true); }}>
-          <span><Icon name="flag-pennant" /> Round length · {round.holesCount} holes</span><Icon name="caret-right" />
-        </button>
-        <button className="sheet-item" onClick={() => { setMenu(false); setFixSheet('tee'); }}>
-          <span><Icon name="sliders-horizontal" /> Course and tee{courseTeeLabel(round, localCourse) ? ` · ${courseTeeLabel(round, localCourse)}` : ''}</span><Icon name="caret-right" />
-        </button>
+        {game !== 'scramble' && (
+          <button className="sheet-item" onClick={() => { setMenu(false); setGamesSheet(true); }}>
+            <span><Icon name="plus-circle" /> {sideGamesOf(round).length ? `Side games · ${sideGamesOf(round).length}` : 'Add a side game'}</span><Icon name="caret-right" />
+          </button>
+        )}
+        </>}
+        <button className="sheet-item" onClick={() => { setMenu(false); setRules(true); }}><span><Icon name="book-open" /> {GAMES[game].name} rules</span><Icon name="caret-right" /></button>
+        <div className="menu-sec">Players</div>
+        {syncConfigured && (
+          <button className="sheet-item" onClick={() => { setMenu(false); setLive(true); }}>
+            <span><Icon name="broadcast" /> {round.shared ? `Live · code ${round.shared.code}` : 'Invite the group'}</span><Icon name="caret-right" />
+          </button>
+        )}
+        {editable && <>
         <button className="sheet-item" onClick={() => { setMenu(false); setAddSheet(true); }}>
           <span><Icon name="user-plus" /> Add a player</span><Icon name="caret-right" />
         </button>
         <button className="sheet-item" onClick={() => { setMenu(false); setLeftSheet(true); }}>
           <span><Icon name="user-minus" /> {playersLeft(round).length ? `A player left · ${playersLeft(round).map(x => x.player.name.split(' ')[0]).join(', ')}` : 'A player left'}</span><Icon name="caret-right" />
+        </button>
+        </>}
+        <div className="menu-sec">Round</div>
+        {editable && <>
+        <button className="sheet-item" onClick={() => { setMenu(false); setHolesSheet(true); }}>
+          <span><Icon name="flag-pennant" /> Round length · {round.holesCount} holes</span><Icon name="caret-right" />
+        </button>
+        <button className="sheet-item" onClick={() => { setMenu(false); setFixSheet('tee'); }}>
+          <span><Icon name="sliders-horizontal" /> Course and tee{courseTeeLabel(round, localCourse) ? ` · ${courseTeeLabel(round, localCourse)}` : ''}</span><Icon name="caret-right" />
         </button>
         </>}
         {round.status === 'active' && (
@@ -526,6 +553,7 @@ function PlayRound({ round }) {
           ? <button className="sheet-item" onClick={doneEditing}><span><Icon name="check-circle" /> Done fixing scores</span><Icon name="caret-right" /></button>
           : <button className="sheet-item" onClick={endEarly}><span><Icon name="flag-checkered" /> End round</span><Icon name="caret-right" /></button>)}
       </Sheet>
+      {gamesSheet && <GamesSheet round={round} onClose={() => setGamesSheet(false)} />}
       <RoundsInProgressSheet open={switching} onClose={() => setSwitching(false)} currentId={round.id} />
       {holesSheet && <HolesSheet round={round} onClose={() => setHolesSheet(false)} />}
       {betsSheet && <BetsSheet round={round} onClose={() => setBetsSheet(false)} />}
@@ -723,6 +751,37 @@ function LeftSheet({ round, idx, onClose, onEnd }) {
  * reprices every hole. A pot covers the whole round, so a pot's bet always changes for all of it.
  * Mounted only while open so it starts fresh each time.
  */
+/**
+ * Side games mid-round: add Skins, Junk or a Birdie pot without setting the round up again. The course,
+ * players and scores stay; a new game counts every hole already scored, so the money catches up at once.
+ */
+function GamesSheet({ round, onClose }) {
+  const { showToast } = useUI();
+  const [list, setList] = useState(() => structuredClone(sideGamesOf(round)));
+  const edit = fn => setList(l => fn(sideGamesOf({ game: round.game, sideGames: l })));
+  const bad = list.some(sg => optionsProblem(sg.game, { [sg.game]: sg.settings }));
+  const changed = JSON.stringify(list) !== JSON.stringify(sideGamesOf(round));
+  const played = round.holes.filter(h => holeComplete(round, h)).length;
+  const save = () => {
+    update(s => {
+      const r = s.rounds[round.id];
+      if (list.length) r.sideGames = structuredClone(list); else delete r.sideGames;
+    });
+    onClose();
+    showToast(list.length ? `Playing ${gameLabel({ ...round, sideGames: list })}` : `Back to ${GAMES[round.game].name} only`);
+    buzz(20);
+  };
+  return (
+    <Sheet open onClose={onClose} title="Side games" className="sc-sheet">
+      <p className="sheet-text">Same course, same players, same scores. {played ? `A new game counts the ${played} hole${played === 1 ? '' : 's'} already scored too.` : 'Every game reads the one scorecard.'}</p>
+      <SideGamesSetup game={round.game} sideGames={list} setSideGames={edit} defaults={round.settings} players={round.players.length} />
+      <div className="cta-wrap">
+        <button className="full-btn" disabled={!changed || bad} onClick={save}>{changed ? 'Save games' : 'No changes'}</button>
+      </div>
+    </Sheet>
+  );
+}
+
 function BetsSheet({ round, onClose }) {
   const { showToast } = useUI();
   const game = round.game;

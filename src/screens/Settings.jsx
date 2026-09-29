@@ -73,6 +73,12 @@ export default function Settings() {
     <Screen>
       <Header title="Settings" onBack={nav.pop} />
       <div className="scroll">
+        {/* Feedback first and loud: early on, every bug report and idea counts */}
+        <button className="set-row feedback-cta" onClick={() => nav.push('suggest')}>
+          <div className="set-icon"><Icon name="megaphone" fill /></div>
+          <div className="row-main"><div className="set-name">Report a bug or send an idea</div><div className="set-sub">A game, a course, a feature or something broken</div></div>
+          <span className="chevron"><Icon name="caret-right" /></span>
+        </button>
         <div className="sec-label">You</div>
         {accountsEnabled && (acct.user ? (
           <div className="set-row static">
@@ -102,8 +108,6 @@ export default function Settings() {
           <div className="sec-label">Your plan</div>
           {row('star', 'Birdie Bank Pro', planStatus(state), () => nav.push('paywall', { source: 'settings' }))}
         </>}
-        <div className="sec-label">Help build it</div>
-        {row('chat-circle-dots', 'Suggest something', 'A game, a course, a feature or a bug', () => nav.push('suggest'))}
         <div className="sec-label">About</div>
         {row('info', 'About Birdie Bank', 'Rules, handicaps and the fine print', () => nav.push('about'))}
         {acct.user
@@ -150,10 +154,15 @@ export function Defaults() {
         <div className="block">
           <div className="eyebrow" style={{ marginBottom: 10 }}>Rotation</div>
           <Segmented label="Banker rotation" className="press-mode-row" btn="pm-btn" value={s.banker.rotation} onChange={v => set('banker.rotation', v)}
-            options={[{ value: 'rotate', label: 'Each hole' }, { value: 'nine', label: 'Each 9' }, { value: 'fixed', label: 'Fixed' }, { value: 'choice', label: 'Pick' }]} />
+            options={[{ value: 'rotate', label: 'Rotate' }, { value: 'low', label: 'Low' }, { value: 'nine', label: 'Each 9' }, { value: 'fixed', label: 'Fixed' }, { value: 'choice', label: 'Pick' }]} />
+          <p className="field-help">{{ rotate: 'The bank moves to the next player every hole.', low: 'Lowest score on the last hole banks the next. A tie stays with the banker.', nine: 'One banker per nine, in playing order.', fixed: 'The first player banks every hole.', choice: 'Choose the banker at the start of each hole.' }[s.banker.rotation]}</p>
           <div className="eyebrow" style={{ margin: '14px 0 10px' }}>Ties</div>
           <Segmented label="Banker ties" className="press-mode-row" btn="pm-btn" value={s.banker.ties} onChange={v => set('banker.ties', v)}
             options={[{ value: 'push', label: 'Push' }, { value: 'banker', label: 'Banker wins' }]} />
+          <div className="eyebrow" style={{ margin: '14px 0 10px' }}>Birdies double</div>
+          <Segmented label="Birdies double" className="press-mode-row" btn="pm-btn" value={s.banker.birdies || 'off'} onChange={v => set('banker.birdies', v)}
+            options={[{ value: 'off', label: 'Off' }, { value: 'gross', label: 'Real birdie' }, { value: 'net', label: 'Net birdie' }]} />
+          <p className="field-help">The winner’s birdie doubles the bet and an eagle doubles it again.</p>
         </div>
         {['nassau', 'skins'].map(g => (
           <div key={g}>

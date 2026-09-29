@@ -1,4 +1,4 @@
-// Side games: Skins, Junk and a Birdie pot riding along with the main game.
+// Side games: Skins, Junk, a Birdie pot, Snake and Rabbit riding along with the main game.
 // Setup rows and the add sheet, the by-game money table, and the one-line "games in small type".
 import { useState } from 'react';
 import { Icon, Numpad, Sheet, Toggle } from './ui.jsx';
@@ -16,7 +16,7 @@ const orList = xs => {
 };
 
 /** Where the bet amount lives in a side game's settings. */
-const amountKey = (game, s) => (game === 'skins' ? (s?.payout === 'pot' ? 'stake' : 'value') : game === 'dots' ? 'value' : 'stake');
+const amountKey = (game, s) => (game === 'skins' ? (s?.payout === 'pot' ? 'stake' : 'value') : game === 'dots' ? 'value' : 'stake'); // Snake, Rabbit and the Birdie pot: stake
 
 /**
  * The "Side games" part of the Bets step. `defaults` holds every game's settings (the setup's opts),

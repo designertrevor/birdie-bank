@@ -20,7 +20,7 @@ export const DEFAULT_SETTINGS = {
   theme: 'system',   // 'system' | 'light' | 'dark'
   hcPct: 100,
   shareAmounts: false, // results image shows dollar amounts (off until you turn it on, then remembered)
-  banker: { defaultBet: 5, min: 1, max: 20, ties: 'push', rotation: 'rotate' },
+  banker: { defaultBet: 5, min: 1, max: 20, ties: 'push', rotation: 'rotate', birdies: 'off' },
   nassau: { front: 5, back: 5, total: 5, pressMode: 'manual', threshold: 2, turnPress: false, noLastPress: false },
   skins: { value: 2, carryover: true, kind: 'net', payout: 'per', stake: 10, lastCarry: 'void' },
   wolf: { point: 2, loneMultiplier: 2 },

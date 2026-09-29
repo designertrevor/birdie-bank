@@ -29,6 +29,12 @@ export function sideExample(game, settings, n = 4) {
     const eagle = s.eagleShares ?? 2;
     return `Every net birdie takes a share of the ${money((s.stake || 0) * n)} pot${eagle > 1 ? `, and a net eagle takes ${eagle}` : ''}. No birdies, nobody pays.`;
   }
+  if (game === 'snake') {
+    return `Three-putt and you take the snake. Hold it at the end and you pay the other ${others} ${money(s.stake)} each${s.growth === 'flat' ? '' : ', more as it grows'}.`;
+  }
+  if (game === 'rabbit') {
+    return `Win a hole outright to catch the rabbit. Hold it after 9 (and again after 18) and the other ${others} each pay you ${money(s.stake)}.`;
+  }
   return '';
 }
 

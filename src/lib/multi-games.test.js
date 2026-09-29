@@ -3,7 +3,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import {
-  createRound, roundResults, gameResults, gameView, livePreview, changeBets, GAMES, SIDE_GAMES,
+  sideGamesOf,   createRound, roundResults, gameResults, gameView, livePreview, changeBets, GAMES, SIDE_GAMES,
   sideGameChoices, gameKeys, birdiePotShares, MAX_GAMES,
 } from './round.js';
 import { birdiePot, birdieShares } from './games.js';
@@ -229,14 +229,25 @@ test('birdie pot: shares split the pot, an eagle is two shares, no birdies means
   assert.deepEqual(roundResults(r).detail.byGame.birdies.balances, { a: 5, b: 0, c: -5 });
 });
 
-test('side game choices: none with Scramble, no doubles, at most 3 games', () => {
+test('side game choices: none with Scramble, no clashes, at most 4 games', () => {
   assert.deepEqual(sideGameChoices('scramble'), []);
-  assert.deepEqual(sideGameChoices('nassau'), ['skins', 'dots', 'birdies']);
-  assert.deepEqual(sideGameChoices('skins'), ['dots', 'birdies']);
-  assert.deepEqual(sideGameChoices('dots'), ['skins', 'birdies']);
-  assert.deepEqual(sideGameChoices('nassau', [{ game: 'skins' }]), ['dots', 'birdies']);
-  assert.deepEqual(sideGameChoices('nassau', [{ game: 'skins' }, { game: 'dots' }]), []);
-  assert.equal(MAX_GAMES, 3);
+  assert.deepEqual(sideGameChoices('nassau'), ['skins', 'dots', 'birdies', 'snake', 'rabbit']);
+  // Skins and Rabbit both pay for winning a hole outright, so only one of them
+  assert.deepEqual(sideGameChoices('skins'), ['dots', 'birdies', 'snake']);
+  assert.deepEqual(sideGameChoices('rabbit'), ['dots', 'birdies', 'snake']);
+  assert.deepEqual(sideGameChoices('dots'), ['skins', 'birdies', 'snake', 'rabbit']);
+  assert.deepEqual(sideGameChoices('snake'), ['skins', 'dots', 'birdies', 'rabbit']);
+  // Junk and Bingo Bango Bongo both pay for closest
+  assert.deepEqual(sideGameChoices('bbb'), ['skins', 'birdies', 'snake', 'rabbit']);
+  assert.deepEqual(sideGameChoices('nassau', [{ game: 'skins' }]), ['dots', 'birdies', 'snake']);
+  assert.deepEqual(sideGameChoices('nassau', [{ game: 'rabbit' }]), ['dots', 'birdies', 'snake']);
+  assert.deepEqual(sideGameChoices('nassau', [{ game: 'skins' }, { game: 'dots' }, { game: 'snake' }]), []);
+  assert.equal(MAX_GAMES, 4);
+  // A hand-made round can't pay Skins and Rabbit together: the second one is dropped
+  assert.deepEqual(sideGamesOf({ game: 'nassau', sideGames: [{ game: 'skins', settings: {} }, { game: 'rabbit', settings: {} }] }).map(sg => sg.game), ['skins']);
+  assert.deepEqual(sideGamesOf({ game: 'rabbit', sideGames: [{ game: 'skins', settings: {} }] }), []);
+  // Junk on a Bingo Bango Bongo round from before the rule keeps its money
+  assert.deepEqual(sideGamesOf({ game: 'bbb', sideGames: [{ game: 'dots', settings: {} }] }).map(sg => sg.game), ['dots']);
   // GAMES is untouched: the picker still shows 18 games
   assert.equal(Object.keys(GAMES).length, 18);
   assert.ok(Object.keys(SIDE_GAMES).every(k => k === 'birdies' || GAMES[k]));
@@ -278,8 +289,9 @@ test('bet lines for every game in a round', () => {
   const r = { game: 'nassau', settings: SETTINGS, sideGames: [{ game: 'skins', settings: SIDE_SETTINGS.skins }, { game: 'dots', settings: SIDE_SETTINGS.dots }] };
   assert.deepEqual(roundStakeLines(r).map(l => l.line), ['$5 / $5 / $5', '$2 a skin', '$1 a dot']);
   assert.deepEqual(roundStakeLines({ ...r, sideGames: [{ game: 'birdies', settings: SIDE_SETTINGS.birdies }] }).map(l => l.line), ['$5 / $5 / $5', 'Each player puts in $5']);
-  // A third side game is past the 3-game cap: it isn't counted, so it isn't listed either
-  assert.equal(roundStakeLines({ ...r, sideGames: [...r.sideGames, { game: 'birdies', settings: SIDE_SETTINGS.birdies }] }).length, 3);
+  // A fourth side game is past the 4-game cap: it isn't counted, so it isn't listed either
+  const four = [...r.sideGames, { game: 'birdies', settings: SIDE_SETTINGS.birdies }, { game: 'snake', settings: { stake: 5, growth: 'flat' } }];
+  assert.equal(roundStakeLines({ ...r, sideGames: four }).length, 4);
   assert.equal(sideBetLine('birdies', { stake: 5 }), 'Each player puts in $5');
   assert.equal(optionsProblem('birdies', { birdies: { stake: 0 } }) != null, true);
   assert.equal(optionsProblem('birdies', { birdies: { stake: 5 } }), null);
@@ -425,4 +437,19 @@ test('late joiners, players who left, pickups and a shorter round: side games st
       assert.equal(sumCents(roundResults(nine).balances), 0);
     }
   }
+});
+
+test('Snake and Rabbit as side games: their own money next to the main game', () => {
+  const r = createRound({
+    id: 'r', game: 'stroke', course: course(9), holesCount: 9, useHandicaps: false, hcPct: 100,
+    players: ['a', 'b', 'c'].map(id => ({ id, name: id })), settings: { ...structuredClone(SETTINGS), stroke: { stake: 1, payout: 'per' } },
+  });
+  r.sideGames = [{ game: 'snake', settings: { stake: 5, growth: 'flat', nines: false, cap: 0 } }, { game: 'rabbit', settings: { stake: 5, mode: 'free', tiesFree: false } }];
+  r.holes.forEach(h => { r.scores[h.no] = { a: h.par, b: h.par, c: h.par }; r.marks[h.no] = { snake: [] }; });
+  r.scores[1].a = r.holes[0].par - 1; // a catches the rabbit and holds it through 9
+  r.marks[4] = { snake: ['c'] };      // c three-putts and holds the snake
+  const res = roundResults(r);
+  assert.deepEqual(res.detail.byGame.snake.balances, { a: 5, b: 5, c: -10 });
+  assert.deepEqual(res.detail.byGame.rabbit.balances, { a: 10, b: -5, c: -5 });
+  assert.equal(sumCents(res.balances), 0);
 });

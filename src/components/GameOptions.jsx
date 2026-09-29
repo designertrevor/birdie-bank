@@ -62,12 +62,17 @@ export function GameOptions({ game, get, set, onAmount, holesCount = 18, compact
         {rangeBad && <p className="field-error" style={{ margin: '0 20px 8px' }}>Default bet needs to be between the min and max.</p>}
         {label('Banker rotation')}
         <div className="block">
-          {seg('banker.rotation', [{ value: 'rotate', label: 'Each hole' }, { value: 'nine', label: 'Each 9' }, { value: 'fixed', label: 'Fixed' }, { value: 'choice', label: 'Pick' }])}
-          {help(`${{ rotate: 'Banker moves to the next player every hole.', nine: 'One banker per nine, in playing order.', fixed: 'The first player banks every hole.', choice: 'Choose the banker at the start of each hole.' }[b.rotation]}${firstName ? ` ${firstName} banks first.` : ''}`)}
+          {seg('banker.rotation', [{ value: 'rotate', label: 'Rotate' }, { value: 'low', label: 'Low' }, { value: 'nine', label: 'Each 9' }, { value: 'fixed', label: 'Fixed' }, { value: 'choice', label: 'Pick' }])}
+          {help(`${{ rotate: 'Banker moves to the next player every hole.', low: 'Lowest score on the last hole banks the next. A tie stays with the banker.', nine: 'One banker per nine, in playing order.', fixed: 'The first player banks every hole.', choice: 'Choose the banker at the start of each hole.' }[b.rotation]}${firstName ? ` ${firstName} banks first.` : ''}`)}
         </div>
         {label('Ties')}
         <div className="block">
           {seg('banker.ties', [{ value: 'push', label: 'Push' }, { value: 'banker', label: 'Banker wins' }])}
+        </div>
+        {label('Birdies double')}
+        <div className="block">
+          {seg('banker.birdies', [{ value: 'off', label: 'Off' }, { value: 'gross', label: 'Real birdie' }, { value: 'net', label: 'Net birdie' }])}
+          {help({ off: 'A birdie pays the same as any win.', gross: 'Win with a real birdie and your bet doubles. An eagle doubles it again (4×). Strokes don’t make a birdie.', net: 'Win with a birdie after strokes and your bet doubles. A net eagle doubles it again (4×).' }[b.birdies || 'off'])}
         </div>
       </>;
     }

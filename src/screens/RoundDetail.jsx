@@ -515,9 +515,13 @@ export function Scorecard({ round, current, onHole }) {
         </tbody>
       </table>
       <div className="sc-legend">
-        <span className="sc-mark birdie">3</span> birdie <span className="sc-mark eagle">2</span> eagle <span className="sc-mark bogey">5</span> bogey <span className="sc-mark pu">X</span> picked up
-        {anyStrokes && <> <span className="sc-strokes inline"><i /></span> gets a stroke</>}
-        {round.holeFixes && Object.keys(round.holeFixes).length > 0 && <> <span className="sc-fixed inline" aria-hidden="true" /> par or HCP fixed</>}
+        {/* Each mark stays on the same line as its words */}
+        <span className="sc-key"><span className="sc-mark birdie">3</span> birdie</span>
+        <span className="sc-key"><span className="sc-mark eagle">2</span> eagle</span>
+        <span className="sc-key"><span className="sc-mark bogey">5</span> bogey</span>
+        <span className="sc-key"><span className="sc-mark pu">X</span> picked up</span>
+        {anyStrokes && <span className="sc-key"><span className="sc-strokes inline"><i /></span> gets a stroke</span>}
+        {round.holeFixes && Object.keys(round.holeFixes).length > 0 && <span className="sc-key"><span className="sc-fixed inline" aria-hidden="true" /> par or HCP fixed</span>}
       </div>
     </div>
   );

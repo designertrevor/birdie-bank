@@ -7,7 +7,7 @@ const RULES = {
     sections: [
       ['Overview', <p key="o">Each hole one player is the <strong>banker</strong>. Everyone else has their own bet against the banker. It’s a series of one-on-one matches, not a race for low score.</p>],
       ['Each hole', <ol key="e">
-        <li>The banker is set by the rotation you chose (or picked each hole).</li>
+        <li>The banker is set by the rotation you chose: each hole in order, the lowest score on the last hole (a tie stays with the banker), each nine, one fixed banker, or picked each hole.</li>
         <li>Every other player sets a bet within the round’s min and max.</li>
         <li>Any player can <strong>double</strong> their bet (2×).</li>
         <li>If anyone doubles, the banker may <strong>double back</strong>, and every doubled bet becomes 4×.</li>
@@ -17,6 +17,7 @@ const RULES = {
         <li>Lower net score than the banker: you win your bet from the banker.</li>
         <li>Higher net score: you pay the banker your bet.</li>
         <li>Tie: a push by default. You can set ties to go to the banker instead.</li>
+        <li>Birdies double (if your group turns it on): win with a birdie and that bet doubles, win with an eagle and it doubles again. Choose a real birdie or a net birdie after strokes.</li>
       </ul>],
       ['Picking up', <p key="p">Tap <strong>Picked up</strong> if a player doesn’t finish. They’re scored as a double bogey after strokes.</p>],
       ['Rotation', <ul key="r">
