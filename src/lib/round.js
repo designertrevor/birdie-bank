@@ -237,10 +237,12 @@ export function createRound({ id, game, course, holesCount, nine, startHole, pla
 // bets that earlier holes were played for: [{ upto, settings }], sorted by `upto`, each entry
 // covering the playing positions after the previous entry's `upto` up to and including its own.
 // `settings` is just the game's own block (round.settings[round.game]) at the time.
+// A side game keeps its own history the same way on its own entry (round.sideGames[i].betHistory),
+// so the main game's history and a side game's never mix, and rounds from before have none.
 
 /** Games whose money is one pot for the whole round: a change to the bet always covers every hole. */
 export function wholeRoundOnly(game, before, after) {
-  if (game === 'scramble') return true;
+  if (game === 'scramble' || game === 'birdies') return true;
   if (game === 'skins') return before?.payout === 'pot' || after?.payout === 'pot';
   if (game === 'stroke' || game === 'stableford' || game === 'quota') return before?.payout === 'pot' || after?.payout === 'pot';
   return false;
@@ -257,9 +259,12 @@ export function settingsAt(round, pos) {
 /**
  * Change the game's bets in a round under way. `fromPos` is the playing position the new bets
  * start on; holes before it keep what they were played for. Leave it null (or 1) for the whole
- * round, which also clears any earlier changes. Returns a new round; `round` is not mutated.
+ * round, which also clears any earlier changes. `key` picks the game: 'main', or a side game's key,
+ * whose settings and history live on its own round.sideGames entry. Returns a new round; `round`
+ * is not mutated.
  */
-export function changeBets(round, gameSettings, fromPos = null) {
+export function changeBets(round, gameSettings, fromPos = null, key = 'main') {
+  if (key !== 'main') return changeSideBets(round, key, gameSettings, fromPos);
   const game = round.game;
   const next = { ...round, settings: { ...round.settings, [game]: structuredClone(gameSettings) } };
   if (fromPos == null || fromPos <= 1 || wholeRoundOnly(game, round.settings[game], gameSettings)) {
@@ -281,9 +286,35 @@ export function changeBets(round, gameSettings, fromPos = null) {
   return next;
 }
 
-/** Whether any hole was played for different bets than the ones in force now. */
-export function betsChanged(round) {
-  return !!round.betHistory?.length;
+/** changeBets for a side game: the same rules, run on the side game's own settings and history. */
+function changeSideBets(round, key, gameSettings, fromPos) {
+  const i = (round.sideGames || []).findIndex(sg => sg?.game === key && sg.settings && typeof sg.settings === 'object');
+  if (i < 0) return round;
+  const sg = round.sideGames[i];
+  const alone = changeBets({ game: key, settings: { [key]: sg.settings }, betHistory: sg.betHistory }, gameSettings, fromPos);
+  const next = { ...sg, settings: alone.settings[key] };
+  if (alone.betHistory) next.betHistory = alone.betHistory; else delete next.betHistory;
+  return { ...round, sideGames: round.sideGames.map((x, k) => (k === i ? next : x)) };
+}
+
+/** A game's bet history: the main game's, or a side game's own (see changeBets). */
+function historyOf(round, key) {
+  if (key === 'main') return round.betHistory;
+  const hist = sideGamesOf(round).find(sg => sg.game === key)?.betHistory;
+  return Array.isArray(hist) ? hist : undefined;
+}
+
+/** Whether any hole of a game ('main' or a side game's key) was played for different bets than the ones in force now. */
+export function betsChanged(round, key = 'main') {
+  return !!historyOf(round, key)?.length;
+}
+
+/**
+ * The holes a game's bets changed on, in playing order: [{ pos, no }], each the first hole played
+ * for the new bets. Empty when the bets never changed.
+ */
+export function betChanges(round, key = 'main') {
+  return (historyOf(round, key) || []).map(e => ({ pos: e.upto + 1, no: round.holes?.[e.upto]?.no ?? e.upto + 1 }));
 }
 
 // --------------------------- Players who left --------------------------------
@@ -1832,16 +1863,17 @@ export function playsGame(round, pid, key) {
 
 /**
  * One game of the round as a round of its own, for the per-game engine. 'main' is the round with
- * only the players in the main game. A side game swaps in its own game and settings, and has no
- * teams, presses or bet changes: betHistory only ever covers the main game, and settingsAt() would
- * otherwise lay the main game's old bets over the side game's key.
+ * only the players in the main game. A side game swaps in its own game, settings and bet history
+ * (its own entry's betHistory, never the main game's, which settingsAt() would otherwise lay over
+ * the side game's key), and has no teams or presses. Old rounds have no side game history, so
+ * every hole reads the side game's settings as it always did.
  */
 export function gameView(round, key) {
   const players = round.gamesFor ? round.players.filter(p => playsGame(round, p.id, key)) : round.players;
   if (key === 'main') return players === round.players ? round : { ...round, players };
   const sg = sideGamesOf(round).find(x => x.game === key);
   if (!sg) return null;
-  return { ...round, game: sg.game, settings: { ...round.settings, [sg.game]: sg.settings }, teams: null, presses: [], betHistory: undefined, players };
+  return { ...round, game: sg.game, settings: { ...round.settings, [sg.game]: sg.settings }, teams: null, presses: [], betHistory: Array.isArray(sg.betHistory) ? sg.betHistory : undefined, players };
 }
 
 /** Birdie pot shares: { shares: { pid: n }, inPot: [pid], holes: [{ no, pid, shares }] }. */

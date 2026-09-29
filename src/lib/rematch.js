@@ -42,8 +42,9 @@ export function rematchSetup(state, round) {
     hcPct: round.hcPct ?? null,
     useHc: round.useHandicaps !== false,
     teams,
-    // Side games come along with their own bets (absent on rounds that had none)
-    ...(sideGamesOf(round).length ? { sideGames: structuredClone(sideGamesOf(round)) } : {}),
+    // Side games come along with their own bets (absent on rounds that had none): the bets they
+    // ended on, without the holes an earlier bet covered, like the main game's
+    ...(sideGamesOf(round).length ? { sideGames: sideGamesOf(round).map(sg => ({ game: sg.game, settings: structuredClone(sg.settings) })) } : {}),
     step: !course ? 1 : missing.length ? 2 : 3,
   };
 }

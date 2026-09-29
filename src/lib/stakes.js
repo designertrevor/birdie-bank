@@ -1,6 +1,6 @@
 // What's on the line in a game: a one-line summary and a sanity check on its options.
 import { money } from './golf.js';
-import { sideGamesOf } from './round.js';
+import { betChanges, gameKeyLabel, sideGamesOf } from './round.js';
 
 /** Why a game's options can't be used as they stand, or null when they're fine. */
 export function optionsProblem(game, settings) {
@@ -22,14 +22,53 @@ export function sideBetLine(game, settings) {
   return stakeSummary(game, { [game]: settings }).split(' · ')[0];
 }
 
-/** Every game's bets in a round, main first: [{ key, line }]. Side games use their own settings. */
+/**
+ * Every game's bets in a round, main first: [{ key, line }]. Side games use their own settings,
+ * and a side game whose bet changed mid-round says since when: "$3 a skin from hole 10".
+ */
 export function roundStakeLines(round) {
   const lines = [{ key: 'main', line: stakeSummary(round.game, round.settings) }];
   for (const sg of sideGamesOf(round)) {
     const line = sideBetLine(sg.game, sg.settings);
-    if (line) lines.push({ key: sg.game, line });
+    const from = line ? betChanges(round, sg.game).at(-1) : null;
+    if (line) lines.push({ key: sg.game, line: from ? `${line} from hole ${from.no}` : line });
   }
   return lines;
+}
+
+/** A game's bet line from its own settings block: the main game's summary, or a side game's line. */
+function betLineFor(round, key, block) {
+  return key === 'main' ? stakeSummary(round.game, { ...round.settings, [round.game]: block }) : sideBetLine(key, block);
+}
+
+/**
+ * A short note for a game whose bet changed mid-round, for the by-game table: "bet changed from
+ * hole 10", or "bet changed on holes 5 and 12". '' when it never changed.
+ */
+export function betChangeNote(round, key) {
+  const nos = betChanges(round, key).map(c => c.no);
+  if (!nos.length) return '';
+  if (nos.length === 1) return `bet changed from hole ${nos[0]}`;
+  return `bet changed on holes ${nos.slice(0, -1).join(', ')} and ${nos.at(-1)}`;
+}
+
+/**
+ * What each stretch of a game was played for, when its bet changed mid-round:
+ * "Skins: $2 a skin on holes 1–9, $3 a skin from hole 10." '' when it never changed.
+ */
+export function betStretchLine(round, key) {
+  const changes = betChanges(round, key);
+  if (!changes.length) return '';
+  const hist = key === 'main' ? round.betHistory : sideGamesOf(round).find(sg => sg.game === key)?.betHistory;
+  const now = key === 'main' ? round.settings[round.game] : sideGamesOf(round).find(sg => sg.game === key)?.settings;
+  const noAt = pos => round.holes[pos - 1]?.no ?? pos;
+  const parts = hist.map((e, i) => {
+    const start = i ? hist[i - 1].upto + 1 : 1;
+    const holes = start === e.upto ? `hole ${noAt(start)}` : `holes ${noAt(start)}–${noAt(e.upto)}`;
+    return `${betLineFor(round, key, e.settings)} on ${holes}`;
+  });
+  parts.push(`${betLineFor(round, key, now)} from hole ${changes.at(-1).no}`);
+  return `${gameKeyLabel(round, key)}: ${parts.join(', ')}.`;
 }
 
 /** One line that says what's on the line, for menus and summaries. */
