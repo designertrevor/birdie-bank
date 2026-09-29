@@ -133,7 +133,7 @@ export function latelyItems(state, now = Date.now(), { carries = state?.carries,
     items.push({
       id: `recap:${r.id}`, kind: 'recap', at: roundTime(r),
       text: `${gameLabel(r)} at ${r.course?.name || 'the course'} · ${took}`,
-      sub: [reward ? reward.buy : yours, agoLabel(roundTime(r), t)].filter(Boolean).join(' · '),
+      sub: [reward ? reward.buy.replace(/\.$/, '') : yours, agoLabel(roundTime(r), t)].filter(Boolean).join(' · '),
       target: ['roundDetail', { id: r.id }],
     });
   }

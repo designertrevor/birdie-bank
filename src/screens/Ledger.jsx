@@ -68,7 +68,7 @@ export default function Ledger() {
   // Rewards from reward rounds ("You owe Sam lunch"): on the person's card, or a card of their own
   // for someone square on money (a Square card of their own carries it). Never counted in dollars or in who's square.
   const rewardOnly = [...new Set(openRewards(state, { ids: mine, canon: who }).map(l => l.other))].filter(id => !people.some(p => p.id === id) && !recentSquare.some(x => x.id === id));
-  const squareNames = [...h2h.keys()].filter(id => !byPerson.has(id) && !recentSquare.some(x => x.id === id)).map(id => first(nameOf(state, id)));
+  const squareNames = [...h2h.keys()].filter(id => !byPerson.has(id) && !recentSquare.some(x => x.id === id) && !rewardOnly.includes(id)).map(id => first(nameOf(state, id)));
 
   // The same Settle up sheet the person screen opens for a part payment
   const partDebt = p => {
@@ -173,6 +173,7 @@ export default function Ledger() {
             )}
             {people.map(personRow)}
             {recentSquare.map(squareCard)}
+            {rewardOnly.map(rewardCard)}
             {squareNames.length > 0 && people.length > 0 && <p className="field-help pad">All square with {listNames(squareNames)}.</p>}
             {others.length > 0 && (
               <>
@@ -183,7 +184,7 @@ export default function Ledger() {
             <p className="field-help pad">Netted across every round, then squared in the fewest payments. Nobody is asked to pay someone they haven’t played with.{hasShared ? ' Money from rounds you shared live stays between the two players, so both phones agree on it.' : ''}</p>
           </>
         )}
-        {rewardOnly.map(rewardCard)}
+        {plan.length === 0 && rewardOnly.map(rewardCard)}
         {plan.length === 0 && recentSquare.map(squareCard)}
         {history.length > 0 && (
           <>

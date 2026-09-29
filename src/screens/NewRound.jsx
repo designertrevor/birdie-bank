@@ -541,6 +541,9 @@ function SetupStep({ game, course, holesCount, nine, picked, setPicked, opts, se
           <div className="li-sub">{course.name}{holesCount === 9 && course.holes.length === 18 ? ` · ${nine === 'front' ? 'Front' : 'Back'} 9` : ''} · Par {holes.reduce((a, h) => a + h.par, 0)} · {picked.length} players</div>
         </div>
 
+        {/* Play for first, so the bets below are read the right way. Side games follow the round's choice */}
+        <PlayForPicker value={playFor} onChange={setPlayFor} />
+
         {GAMES[game].teams && teams && (
           <>
             <div className="sec-label">{game === 'nassau' || game === 'hammer' ? 'Sides' : 'Teams'}</div>
@@ -567,9 +570,6 @@ function SetupStep({ game, course, holesCount, nine, picked, setPicked, opts, se
           players={picked.length || null} firstName={game === 'banker' ? state.players[picked[0]]?.name : null} />
 
         <SideGamesSetup game={game} sideGames={sideGames} setSideGames={setSideGames} defaults={opts} players={picked.length || 4} />
-
-        {/* Play for: money, points or a reward. Side games follow the round's choice */}
-        <PlayForPicker value={playFor} onChange={setPlayFor} />
 
         <button className="set-row more-opts" onClick={() => setMore(!more)} aria-expanded={more}>
           <div className="row-main">
@@ -724,6 +724,8 @@ function VoteStep({ game, opts, onPlan, ballot = [], playFor = null, setPlayFor 
           {playForLine({ playFor }) && <div className="li-sub">{playForLine({ playFor })}</div>}
           <div className="li-sub">The group votes when they answer. Most votes wins; a tie goes to your suggestion.</div>
         </div>
+        {/* Play for first, so the bet chips below read in points when it isn't money */}
+        <PlayForPicker value={playFor} onChange={setPlayFor} planning />
         <div className="sec-label">Your bet</div>
         <div className="chip-row" role="radiogroup" aria-label="Your bet">
           {ladder.map(b => (
@@ -772,8 +774,6 @@ function VoteStep({ game, opts, onPlan, ballot = [], playFor = null, setPlayFor 
           </p>
         )}
         {others.length === 0 && extraBets.length === 0 && sides.length === 0 && <p className="field-help pad">Nothing else on the ballot, so everyone just says if they’re in.</p>}
-        {/* Play for: money, points or a reward, shown to the group on the plan */}
-        <PlayForPicker value={playFor} onChange={setPlayFor} planning />
       </div>
       <div className="cta-wrap">
         <button className="full-btn" onClick={() => onPlan({ ballotGames: others, suggestedBet: bet, ballotBets, ballotSides: sides })}>Plan it <Icon name="arrow-right" /></button>

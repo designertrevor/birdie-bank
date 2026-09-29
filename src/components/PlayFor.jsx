@@ -27,9 +27,9 @@ export default function PlayForPicker({ value, onChange, planning = false }) {
     else set({ kind: k });
   };
   const help = pf.kind === 'points'
-    ? 'Bragging rights: the same bets, counted as points. Nothing goes on the Tab.'
+    ? 'Bragging rights: the bets below count as points, so $5 is 5 pts. No money changes hands.'
     : pf.kind === 'reward'
-      ? `The top of the standings wins it. ${pf.owes === 'everyone' ? 'Everyone else owes one each.' : 'Last place is buying.'} Nothing goes on the Tab.`
+      ? `Whoever wins the round gets it, and ${pf.owes === 'everyone' ? 'everyone else owes them one each' : 'last place is buying'}. No money changes hands.`
       : planning ? 'The group plays for money, and it goes on the Tab.' : 'Played for money, and it goes on the Tab.';
 
   return (

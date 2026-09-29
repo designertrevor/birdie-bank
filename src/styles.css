@@ -1295,7 +1295,8 @@ button.who-status { cursor: pointer; min-height: 36px; }
 .reward-line .rl-text { font-weight: 700; color: var(--ink); font-size: 15px; overflow-wrap: anywhere; }
 .reward-line .rl-sub { font-size: 13px; color: var(--mute); margin-top: 2px; }
 .reward-line .rl-done { flex: 0 0 auto; }
-.hr-for { font-size: 12px; font-weight: 700; padding: 2px 8px; border-radius: 999px; background: var(--ochre); color: var(--on-pastel); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; flex-shrink: 2; align-self: center; }
+.hr-end { display: flex; flex-direction: column; align-items: flex-end; flex-shrink: 0; max-width: 45%; }
+.hr-for { font-size: 12px; font-weight: 700; color: var(--mute); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100%; margin-top: 1px; }
 .square-card .tp-sub { color: var(--win); }
 .sq-strip { margin: 4px 16px 12px; padding: 4px 14px 12px; border-radius: 20px; background: var(--card); cursor: pointer; }
 .sq-head { display: grid; grid-template-columns: 1fr auto; grid-template-rows: auto auto; align-items: center; width: 100%; min-height: 44px; padding: 8px 0 4px; border: none; background: none; text-align: left; cursor: pointer; color: var(--ink); }

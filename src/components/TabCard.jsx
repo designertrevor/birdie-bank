@@ -245,11 +245,11 @@ export function SquareStrip() {
   );
 }
 
-/** Mark a reward done on this phone (or take it back). Kept in the profile doc, never in cents. */
-function setRewardDone(key, on) {
+/** Mark a reward done on this phone (or take it back): every share of it. Kept in the profile doc, never in cents. */
+function setRewardDone(keys, on) {
   update(s => {
     const next = { ...(s.rewardsDone || {}) };
-    if (on) next[key] = Date.now(); else delete next[key];
+    for (const key of keys) { if (on) next[key] = Date.now(); else delete next[key]; }
     s.rewardsDone = next;
   });
 }
@@ -266,9 +266,10 @@ export function RewardLines({ other = null }) {
   const lines = openRewards(state, { ids: myIds(state), canon: who }).filter(l => other == null || l.other === who(other));
   if (!lines.length) return null;
   const done = l => {
-    setRewardDone(l.key, true);
+    const keys = l.keys || [l.key];
+    setRewardDone(keys, true);
     buzz(15);
-    showToast(l.iOwe ? 'Done. Enjoy it together' : 'Done. Enjoy it', { label: 'Undo', run: () => setRewardDone(l.key, false) });
+    showToast(l.iOwe ? 'Done. Enjoy it together' : 'Done. Enjoy it', { label: 'Undo', run: () => setRewardDone(keys, false) });
   };
   return (
     <div className="reward-lines">

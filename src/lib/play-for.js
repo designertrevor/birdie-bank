@@ -69,6 +69,13 @@ export function playForLine(round) {
   return null;
 }
 
+/** The friendly-wagers note for a points or reward round: "No money on this one, just lunch." Null for money. */
+export function noMoneyNote(round) {
+  const pf = playForOf(round);
+  if (pf.kind === 'money') return null;
+  return `No money on this one, just ${pf.kind === 'points' ? 'bragging rights' : rewardNoun(pf.reward)}.`;
+}
+
 /** Short label for the choice: "Money", "Points", "Lunch". */
 export function playForShort(round) {
   const pf = playForOf(round);
@@ -124,7 +131,7 @@ export function rewardOutcome(round, res) {
   const w = listNames(winners.map(name));
   const win = winners.length > 1 ? `${w} share ${noun}.` : `${w} wins ${noun}.`;
   const o = listNames(owers.map(name));
-  const buy = owers.length === 1 ? `${o}’s buying.` : split ? `${o} are buying.` : `${o} each buy one.`;
+  const buy = owers.length === 1 ? `${o}’s buying.` : split ? `${o} split it.` : `${o} each buy one.`;
   return { reward: pf.reward, noun, winners, owers, lines, win, buy, text: `${win} ${buy}` };
 }
 
@@ -133,7 +140,8 @@ export const rewardKey = (roundId, from, to) => `${roundId}:${from}>${to}`;
 
 /**
  * The rewards still open between you and anyone else, from finished reward rounds you played:
- * [{ key, round, from, to, reward, noun, split, with, iOwe, other, at }], newest first. `from` owes `to`.
+ * [{ key, keys, round, from, to, reward, noun, split, with, iOwe, other, at }], newest first. `from` owes `to`,
+ * and `keys` are the Done marks the line clears (every share of a split bill owed to you).
  * A line marked Done on this phone (state.rewardsDone) is left out. `ids` is every id that means
  * you, and `canon` maps any of them to one. Never money: nothing here touches cents or balances.
  */
@@ -149,9 +157,13 @@ export function openRewards(state, { ids, canon = id => id, done = state?.reward
     for (const l of o.lines) for (const to of l.to) {
       const iOwe = mine.has(l.from), owedMe = mine.has(to);
       if (iOwe === owedMe) continue; // between two other people, or you and you
+      // A split bill is one reward: owed to you, it shows once (on the first ower's card), and
+      // Done marks every share of it, so it can't be half done.
+      if (owedMe && l.split && l.from !== o.owers[0]) continue;
       const key = rewardKey(r.id, l.from, to);
-      if (marks[key]) continue;
-      out.push({ key, round: r, from: canon(l.from), to: canon(to), reward: o.reward, noun: o.noun, split: l.split, with: l.with.map(canon), iOwe, other: canon(iOwe ? to : l.from), at: r.finishedAt || r.createdAt || 0 });
+      const keys = owedMe && l.split ? o.owers.map(f => rewardKey(r.id, f, to)) : [key];
+      if (keys.some(k => marks[k])) continue;
+      out.push({ key, keys, round: r, from: canon(l.from), to: canon(to), reward: o.reward, noun: o.noun, split: l.split, with: l.with.map(canon), iOwe, other: canon(iOwe ? to : l.from), at: r.finishedAt || r.createdAt || 0 });
     }
   }
   return out.sort((a, b) => b.at - a.at || a.key.localeCompare(b.key));

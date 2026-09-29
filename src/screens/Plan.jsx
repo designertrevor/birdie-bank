@@ -9,7 +9,7 @@ import { getState, update, uid, useStore } from '../lib/store.js';
 import { useNav } from '../lib/nav.js';
 import { GAMES, SIDE_GAMES, createRound } from '../lib/round.js';
 import { sideBetLine } from '../lib/stakes.js';
-import { inUnits, playForLine } from '../lib/play-for.js';
+import { inUnits, noMoneyNote, playForLine } from '../lib/play-for.js';
 import { money } from '../lib/golf.js';
 import { findCourse } from '../lib/courses.js';
 import { addRound } from '../lib/rounds.js';
@@ -218,7 +218,7 @@ function PlanBody({ plan, standalone = false, onSkip }) {
 
         {planned && plan.host && <button className="danger-link" onClick={callOff}><Icon name="calendar-x" /> Call it off</button>}
         {(!planned || !plan.host) && !standalone && <button className="danger-link" onClick={del}><Icon name="trash" /> Delete plan</button>}
-        {standalone && <p className="field-help pad">Friendly wagers only. Birdie Bank never holds or moves money. You settle up yourselves.</p>}
+        {standalone && <p className="field-help pad">{noMoneyNote(plan) || 'Friendly wagers only. Birdie Bank never holds or moves money. You settle up yourselves.'}</p>}
       </div>
 
       {planned && (

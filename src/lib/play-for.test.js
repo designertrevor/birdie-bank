@@ -5,7 +5,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { createRound, roundResults } from './round.js';
 import {
-  cleanReward, countsMoney, inUnits, openRewards, playForLine, playForOf, points, rewardKey, rewardLineText, rewardNoun,
+  cleanReward, countsMoney, inUnits, noMoneyNote, openRewards, playForLine, playForOf, points, rewardKey, rewardLineText, rewardNoun,
   rewardOutcome, storedPlayFor, unitFmt,
 } from './play-for.js';
 import { roundStakeLines } from './stakes.js';
@@ -126,7 +126,7 @@ test('reward: a tie at the bottom splits it', () => {
   assert.deepEqual(o.winners, ['s']);
   assert.deepEqual(o.owers.sort(), ['d', 't']);
   assert.ok(o.lines.every(l => l.split && l.with.length === 1));
-  assert.match(o.buy, /are buying\.$/);
+  assert.match(o.buy, /split it\.$/);
 });
 
 test('reward: "Everyone else" has each other player owe one', () => {
@@ -258,6 +258,16 @@ test('open rewards: yours only, marked done per phone, never between two other p
   const tie = round('w4', ['t', 's', 'd'], wins(ids, { 1: 's' }), { playFor: reward('last') }); // Sam wins, Trevor and Dave split
   const line = openRewards(stateOf('t', [tie]), { ids: new Set(['t']) })[0];
   assert.equal(rewardLineText(line, id => NAMES[id]), 'You and Dave owe Sam lunch');
+  // Owed to you, a split bill is one line (on the first ower's card), and Done clears every share
+  const split = round('w6', ids, wins(ids, { 1: 't' }), { playFor: reward('last') }); // Trevor wins, Sam and Dave split
+  const owed = openRewards(stateOf('t', [split]), { ids: new Set(['t']) });
+  assert.equal(owed.length, 1);
+  assert.equal(owed[0].keys.length, 2);
+  assert.match(rewardLineText(owed[0], id => NAMES[id]), /^(Sam and Dave|Dave and Sam) owe you lunch$/);
+  const marks = Object.fromEntries(owed[0].keys.map(k => [k, 1]));
+  assert.deepEqual(openRewards({ ...stateOf('t', [split]), rewardsDone: marks }, { ids: new Set(['t']) }), []);
+  // A mark on either share (an older phone marked one) clears the line too
+  assert.deepEqual(openRewards({ ...stateOf('t', [split]), rewardsDone: { [owed[0].keys[1]]: 1 } }, { ids: new Set(['t']) }), []);
   // A watched round is not yours
   const watched = round('w5', ['s', 'd'], wins(['s', 'd'], { 1: 's' }), { playFor: reward() });
   assert.deepEqual(openRewards(stateOf('t', [watched]), { ids: new Set(['t']) }), []);
@@ -331,4 +341,10 @@ test('a plan carries playFor to the round it starts', () => {
   const moneyPlan = newPlan({ id: 'pl2', hostWho: 'me', hostName: 'Trevor', game: 'skins', holesCount: 9, date: '2026-10-03', course: flat9, people, ballot: {}, suggestedBet: 2, now: 1 });
   assert.equal('playFor' in moneyPlan, false);
   assert.equal(planStart(s, moneyPlan, ['me', 'sam'], { course: flat9 }).playFor, null);
+});
+
+test('the friendly-wagers note says what a no-money round is played for', () => {
+  assert.equal(noMoneyNote({}), null);
+  assert.equal(noMoneyNote({ playFor: { kind: 'points' } }), 'No money on this one, just bragging rights.');
+  assert.equal(noMoneyNote({ playFor: { kind: 'reward', reward: 'A drink' } }), 'No money on this one, just a drink.');
 });

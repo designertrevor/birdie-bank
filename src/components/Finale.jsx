@@ -153,16 +153,19 @@ export function Reveal({ round, res, onNext, onDetail, extra, instant = false })
  * pay buttons: it isn't money. The Tab keeps a line on each person card until it's marked done.
  */
 export function RewardCard({ round, res }) {
+  const me = useStore(s => meFor(round, s));
   const o = rewardOutcome(round, res);
   if (!o) return null;
   const square = !o.winners.length;
+  // Only a reward you win or owe goes on this phone's Tab, so only then does the card say so
+  const mine = o.winners.includes(me) || o.owers.includes(me);
   return (
     <div className={`reward-card ${square ? 'square' : ''}`}>
       <Icon name={square ? 'handshake' : 'gift'} fill className="rc-icon" />
       <div className="rc-text">
         <div className="rc-win d">{o.win}</div>
         <div className="rc-buy">{o.buy}</div>
-        {!square && <div className="rc-note">It stays on the Tab until it’s done. No money changes hands.</div>}
+        {!square && <div className="rc-note">{mine ? 'It stays on your Tab until it’s done. ' : ''}No money changes hands.</div>}
       </div>
     </div>
   );

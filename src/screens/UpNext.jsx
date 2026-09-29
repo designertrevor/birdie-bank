@@ -2,7 +2,10 @@ import { useEffect, useState } from 'react';
 import { Header, Icon, Screen } from '../components/ui.jsx';
 import { useStore } from '../lib/store.js';
 import { GAMES, holeComplete } from '../lib/round.js';
-import { gameLabel } from '../lib/format.js';
+import { gameLabel, myIds } from '../lib/format.js';
+import { nameOf } from '../lib/ledger.js';
+import { canonicalOf } from '../lib/shared-tab.js';
+import { openRewards, rewardLineText } from '../lib/play-for.js';
 import { money } from '../lib/golf.js';
 import { RoundRow } from '../components/RoundRow.jsx';
 import { activeRounds, lastResult, myTab } from '../lib/history.js';
@@ -27,6 +30,10 @@ export default function UpNext() {
   const live = activeRounds(state);
   const last = lastResult(state);
   const tab = myTab(state);
+  // Square on money can still leave a reward to sort out ("You owe Sam lunch"), which isn't money
+  const rewards = tab.people ? [] : openRewards(state, { ids: myIds(state), canon: canonicalOf(state) });
+  const squareText = !rewards.length ? 'You’re all square. Nobody owes you, you owe nobody.'
+    : `Square on money. ${rewards.length === 1 ? `${rewardLineText(rewards[0], id => nameOf(state, id))}.` : `${rewards.length} rewards to sort out.`}`;
   const hasHistory = !!last;
   const plans = upcomingPlans(state);
   const lately = latelyItems(state);
@@ -76,14 +83,14 @@ export default function UpNext() {
         {hasHistory && (
           <>
             <div className="sec-label">Your tab</div>
-            <button className="tab-glance" onClick={() => nav.setTab('ledger')} aria-label={tab.people ? `Your tab: owed to you ${money(tab.owed)}, you owe ${money(tab.owe)}` : 'Your tab: you’re all square'}>
+            <button className="tab-glance" onClick={() => nav.setTab('ledger')} aria-label={tab.people ? `Your tab: owed to you ${money(tab.owed)}, you owe ${money(tab.owe)}` : `Your tab: ${squareText}`}>
               {tab.people ? (
                 <>
                   <div><div className="bl">Owed to you</div><div className={`lr-big ${tab.owed ? 'pos' : ''}`}>{tab.owed ? money(tab.owed) : '–'}</div></div>
                   <div><div className="bl">You owe</div><div className={`lr-big ${tab.owe ? 'neg' : ''}`}>{tab.owe ? money(tab.owe) : '–'}</div></div>
                 </>
               ) : (
-                <div className="tg-square"><Icon name="handshake" fill /> <span>You’re all square. Nobody owes you, you owe nobody.</span></div>
+                <div className="tg-square"><Icon name={rewards.length ? 'gift' : 'handshake'} fill /> <span>{squareText}</span></div>
               )}
               <span className="chevron"><Icon name="caret-right" /></span>
             </button>
