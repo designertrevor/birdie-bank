@@ -4,8 +4,10 @@
 //
 // A carry is { id, from, to, amount, status: 'asked' | 'agreed' | 'declined' | 'withdrawn', by,
 // reason?, at, answeredAt?, roundIds, codes }, where from owes to. It rides on the shared
-// round rows (one per round it covers, see shared-tab.js), so both phones see it.
-import { canonicalOf, carryId, carryRowId, codeOf, openTransfers, pairRounds } from './shared-tab.js';
+// round rows (one per round it covers, see shared-tab.js), so both phones see it. Between two
+// people who share rounds, a carry only ever covers those rounds (what both phones have), so the
+// amount asked, agreed and shown is the same on both.
+import { canonicalOf, carryId, carryRowId, codeOf, openTransfers, pairDebt, pairRounds } from './shared-tab.js';
 
 const cents = v => Math.round((Number(v) || 0) * 100);
 
@@ -67,12 +69,33 @@ export function activeCarry(state, a, b, owed) {
 /** Remind and Request stay off while an agreed carry covers the card. */
 export function remindable(state, pid, owed) {
   const who = canonicalOf(state);
-  return activeCarry(state, state.me, who(pid), owed)?.status !== 'agreed';
+  return cardCarry(state, state.me, who(pid), owed)?.status !== 'agreed';
 }
 
 /** A pair can roll it over only when they share a round, so the other phone can answer. */
 export function canCarry(state, a, b, now = Date.now()) {
   return pairRounds(state, a, b, { now }).length > 0;
+}
+
+/**
+ * What's open between two people on their shared rounds only, as { from, to, amount } (ids as
+ * the Tab knows them), or null when that's square. The same on both phones.
+ */
+export function sharedOwed(state, a, b, now = Date.now()) {
+  const c = pairDebt(state, a, b, { now });
+  if (!c) return null;
+  const who = canonicalOf(state);
+  return c > 0 ? { from: who(a), to: who(b), amount: c / 100 } : { from: who(b), to: who(a), amount: -c / 100 };
+}
+
+/**
+ * The carry on one person card. Between people who share rounds it's measured against the
+ * shared rounds only, so both phones show the same amount. A carry saved before, on a pair with
+ * no shared round left to look up, still reads against the Tab (`owed`) as it always did.
+ */
+export function cardCarry(state, a, b, owed, now = Date.now()) {
+  const basis = canCarry(state, a, b, now) ? sharedOwed(state, a, b, now) : owed;
+  return activeCarry(state, a, b, basis);
 }
 
 /**

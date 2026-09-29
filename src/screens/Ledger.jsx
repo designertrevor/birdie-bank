@@ -7,6 +7,7 @@ import { PersonActions, RecentPaid, SquareStrip } from '../components/TabCard.js
 import { useStore } from '../lib/store.js';
 import { headToHeadSummary, nameOf, outstanding } from '../lib/ledger.js';
 import { canonicalOf, recentPayment } from '../lib/shared-tab.js';
+import { sharedDebts } from '../lib/pair-debts.js';
 import { undoPayments, useTabSync } from '../lib/tab-sync.js';
 import { money } from '../lib/golf.js';
 import { myIds } from '../lib/format.js';
@@ -46,6 +47,7 @@ export default function Ledger() {
   const h2h = headToHeadSummary(state, mine);
   const history = [...state.settlements].sort((a, b) => b.at - a.at);
   const hasRounds = Object.values(state.rounds).some(r => r.status === 'done');
+  const hasShared = sharedDebts(state).length > 0;
 
   // One tap, no confirm: it can be put back from the toast, and a shared payment updates both phones
   const undo = s => {
@@ -145,7 +147,7 @@ export default function Ledger() {
                 {others.map(otherRow)}
               </>
             )}
-            <p className="field-help pad">Netted across every round, then squared in the fewest payments. Nobody is asked to pay someone they haven’t played with.</p>
+            <p className="field-help pad">Netted across every round, then squared in the fewest payments. Nobody is asked to pay someone they haven’t played with.{hasShared ? ' Money from rounds you shared live stays between the two players, so both phones agree on it.' : ''}</p>
           </>
         )}
         {plan.length === 0 && recentSquare.map(squareCard)}
