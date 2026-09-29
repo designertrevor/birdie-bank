@@ -19,6 +19,9 @@ import { SaveUsualButton } from '../components/Usuals.jsx';
 // Keyed by round and its finish time, so finishing the round again starts over.
 const finaleStage = new Map();
 
+// The finale's beats in order, so a stage change knows which way to slide
+const STAGE_ORDER = ['reveal', 'settle', 'share'];
+
 export default function RoundDetail({ id, celebrate }) {
   const nav = useNav();
   const { ask } = useUI();
@@ -37,7 +40,13 @@ export default function RoundDetail({ id, celebrate }) {
     const saved = celebrate && finaleStage.get(id);
     return saved && saved.at === round?.finishedAt ? saved.stage : celebrate ? 'reveal' : 'detail';
   });
-  const setStage = s => { if (celebrate) finaleStage.set(id, { stage: s, at: round?.finishedAt }); setStageRaw(s); };
+  // Which way the next beat slides in: on toward Share, or back toward the reveal
+  const [stageBack, setStageBack] = useState(false);
+  const setStage = s => {
+    if (celebrate) finaleStage.set(id, { stage: s, at: round?.finishedAt });
+    setStageBack(STAGE_ORDER.indexOf(s) < STAGE_ORDER.indexOf(stage));
+    setStageRaw(s);
+  };
   // Coming back to the reveal (from Settle up or Suggest) shows the end state instead of replaying it
   const [revealSeen, setRevealSeen] = useState(() => celebrate && finaleStage.get(id)?.at === round?.finishedAt);
   // Share from the saved round opens the same results image, and comes back here after
@@ -97,7 +106,7 @@ export default function RoundDetail({ id, celebrate }) {
   );
   if (stage !== 'detail') {
     return (
-      <Screen key={stage}>
+      <Screen key={stage} className={`finale-stage ${stageBack ? 'back' : ''}`}>
         {stage === 'reveal' && <Reveal round={round} res={res} instant={revealSeen} onNext={() => { setRevealSeen(true); setStage(res.transfers.length ? 'settle' : 'share'); }} onDetail={() => { setRevealSeen(true); setStage('detail'); }} extra={<>{notesEl}{saveRow && <div style={{ marginTop: 12 }}>{saveRow}</div>}</>} />}
         {stage === 'settle' && <SettleUp round={round} res={res} onBack={() => setStage('reveal')} onNext={() => setStage('share')} />}
         {stage === 'share' && (shareFrom === 'detail'
