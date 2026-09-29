@@ -125,3 +125,20 @@ test('timing keeps the whole reveal near four seconds', () => {
   }
   assert.equal(revealTiming(0, 4).stepsEnd, 0);
 });
+
+test('timing is never slower than the first cut of the reveal', () => {
+  // The 2026-09 timing, kept here so motion polish can only make the moment shorter
+  const before = (steps, n) => {
+    const gap = steps ? Math.min(420, Math.round(2000 / steps)) : 0;
+    const stepsEnd = steps ? gap * steps + 250 : 0;
+    return { gap, landed: stepsEnd + (steps ? 120 : 180) * Math.max(0, n - 1) + (steps ? 900 : 1100) };
+  };
+  for (let steps = 0; steps <= 20; steps++) {
+    for (let n = 2; n <= 8; n++) {
+      const t = revealTiming(steps, n), old = before(steps, n);
+      assert.ok(t.landed <= old.landed, `${steps} steps, ${n} players: ${t.landed}ms vs ${old.landed}ms`);
+      assert.ok(t.gap <= old.gap, `${steps} steps: gap ${t.gap}ms vs ${old.gap}ms`);
+      assert.ok(t.stepsEnd <= t.landed - t.count, 'totals start counting after the last bet');
+    }
+  }
+});

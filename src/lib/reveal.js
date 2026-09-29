@@ -225,7 +225,8 @@ export function revealTiming(stepCount, playerCount) {
   const gap = stepCount ? Math.min(420, Math.round(2000 / stepCount)) : 0;
   const stepsEnd = stepCount ? gap * stepCount + 250 : 0;
   const stagger = stepCount ? 120 : 180;
-  const count = stepCount ? 900 : 1100;
+  // A touch shorter than the first cut (900 / 1100): each total now lands with a small pop, which reads as the finish
+  const count = stepCount ? 800 : 1000;
   const landed = stepsEnd + stagger * Math.max(0, playerCount - 1) + count;
   return { gap, stepsEnd, stagger, count, landed };
 }
