@@ -364,6 +364,8 @@ a.set-row { text-decoration: none; }
   cursor: pointer; background: transparent; color: var(--mute); transition: background .2s, color .2s, transform .2s var(--spring);
 }
 .pm-btn { font-size: 15px; height: 44px; }
+/* The Bets sheet game switcher: up to four games, so a long name (Bingo Bango Bongo) takes more room and wraps */
+.game-pick .pm-btn { flex: 1 1 auto; min-width: 0; padding: 0 8px; font-size: 14px; line-height: 1.1; }
 .holes-btn.active, .pm-btn.active { background: var(--ink); color: var(--on-ink); }
 .holes-btn:active:not(:disabled), .pm-btn:active { transform: scale(.95); }
 
@@ -1226,6 +1228,8 @@ button.who-status { cursor: pointer; min-height: 36px; }
 .by-game tr.bg-total th, .by-game tr.bg-total td { border-top: 2px solid var(--line); }
 /* Side game bets changed mid-round: a small note under the game's name in the by-game table */
 .by-game th.bg-game .bg-note { display: block; margin-top: 2px; font-size: 11px; font-weight: 500; color: var(--mute); white-space: normal; }
+/* An amount never breaks its minus sign onto its own line when a note widens the game column */
+.by-game td { white-space: nowrap; }
 .rv-games { display: block; font-size: 12px; font-weight: 500; color: var(--mute); margin-top: 2px; }
 
 /* Fix a hole or a tee for this round (FixHole.jsx) */

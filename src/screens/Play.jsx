@@ -759,8 +759,10 @@ function GamesSheet({ round, onClose }) {
   const save = () => {
     const before = Object.fromEntries(sideGamesOf(round).map(sg => [sg.game, sg]));
     // A game whose bets changed here is played for them on every hole
+    const cleared = [];
     const out = list.map(sg => {
       if (!sg.betHistory || JSON.stringify(before[sg.game]?.settings) === JSON.stringify(sg.settings)) return sg;
+      cleared.push(gameKeyLabel(round, sg.game));
       const { betHistory: _, ...rest } = sg;
       return rest;
     });
@@ -769,7 +771,9 @@ function GamesSheet({ round, onClose }) {
       if (out.length) r.sideGames = structuredClone(out); else delete r.sideGames;
     });
     onClose();
-    showToast(out.length ? `Playing ${gameLabel({ ...round, sideGames: out })}` : `Back to ${GAMES[round.game].name} only`);
+    // Say so when a bet that changed mid-round now covers every hole, since earlier holes' money moves
+    showToast(cleared.length ? `${cleared.join(' and ')} ${cleared.length === 1 ? 'bet now covers' : 'bets now cover'} the whole round`
+      : out.length ? `Playing ${gameLabel({ ...round, sideGames: out })}` : `Back to ${GAMES[round.game].name} only`);
     buzz(20);
   };
   return (
@@ -855,12 +859,14 @@ function BetsSheet({ round, onClose }) {
     : nextLeg === fromPos ? ''
       : nextLeg ? `The ${game} under way keeps what it started with, so the new bet starts on hole ${round.holes[nextLeg - 1].no}.`
         : `The ${game} under way keeps what it started with to the last hole. Pick Whole round to change it.`;
+  // The snake or rabbit under way runs to the last hole, so a change from the next hole would pay nothing
+  const stuck = !whole && !!legStarts && !nextLeg;
   return (
     <>
       <Sheet open={!pad} onClose={onClose} title="Bets" className="sc-sheet">
         {sides.length > 0 && (
           <div className="block">
-            <Segmented label="Which game" className="press-mode-row" btn="pm-btn" value={gameKey} onChange={setPick}
+            <Segmented label="Which game" className="press-mode-row game-pick" btn="pm-btn" value={gameKey} onChange={setPick}
               options={gameKeys(round).map(k => ({ value: k, label: gameKeyLabel(round, k) }))} />
             <p className="field-help">Each game’s bet changes on its own.</p>
           </div>
@@ -901,8 +907,8 @@ function BetsSheet({ round, onClose }) {
         {!side && (game === 'nassau' || game === 'match') && round.presses.length > 0 && whole && <p className="hint-card"><Icon name="lightning" fill /> Presses already made pay at the new amounts too.</p>}
         {problem && <p className="field-error">{problem}</p>}
         <div className="cta-wrap">
-          <button className="full-btn" disabled={!changed || !!problem} onClick={apply}>
-            {changed ? <>Update bets <Icon name="arrow-right" /></> : 'No changes yet'}
+          <button className="full-btn" disabled={!changed || !!problem || stuck} onClick={apply}>
+            {!changed ? 'No changes yet' : stuck ? 'Pick Whole round to change it' : <>Update bets <Icon name="arrow-right" /></>}
           </button>
         </div>
       </Sheet>
