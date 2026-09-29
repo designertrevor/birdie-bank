@@ -3,7 +3,7 @@ import { useState } from 'react';
 import { Empty, Header, Icon, Screen, Segmented, useUI } from '../components/ui.jsx';
 import FreePromise from '../components/FreePromise.jsx';
 import { Avatar, SettleSheet } from '../components/Pay.jsx';
-import { PersonActions, RecentPaid, SquareStrip } from '../components/TabCard.jsx';
+import { PersonActions, RecentPaid, RewardLines, SquareStrip } from '../components/TabCard.jsx';
 import { useStore } from '../lib/store.js';
 import { headToHeadSummary, nameOf, outstanding } from '../lib/ledger.js';
 import { canonicalOf, paymentGroups, recentPayment } from '../lib/shared-tab.js';
@@ -15,6 +15,7 @@ import { AvatarButton, BottomNav } from '../nav.jsx';
 import { useNav } from '../lib/nav.js';
 import { PAYWALL_ON } from '../lib/paywall-flag.js';
 import { isOrganizer } from '../lib/paywall.js';
+import { openRewards } from '../lib/play-for.js';
 
 const first = name => name.split(' ')[0];
 
@@ -64,6 +65,9 @@ export default function Ledger() {
     .map(id => ({ id, pay: recentPayment(state, meId, id) }))
     .filter(x => x.pay)
     .sort((a, b) => b.pay.at - a.pay.at);
+  // Rewards from reward rounds ("You owe Sam lunch"): on the person's card, or a card of their own
+  // for someone square on money. Never counted in dollars or in who's square.
+  const rewardOnly = [...new Set(openRewards(state, { ids: mine, canon: who }).map(l => l.other))].filter(id => !people.some(p => p.id === id));
   const squareNames = [...h2h.keys()].filter(id => !byPerson.has(id) && !recentSquare.some(x => x.id === id)).map(id => first(nameOf(state, id)));
 
   // The same Settle up sheet the person screen opens for a part payment
@@ -92,6 +96,7 @@ export default function Ledger() {
         </button>
         <PersonActions other={p.id} net={p.net} meId={state.me || me} />
         <button className="link-btn tab-part" onClick={() => setOpen(partDebt(p))}>Paid part of it?</button>
+        <RewardLines other={p.id} />
       </div>
     );
   };
@@ -109,6 +114,23 @@ export default function Ledger() {
           <span className="chevron"><Icon name="caret-right" /></span>
         </button>
         <RecentPaid meId={meId} other={id} pay={pay} />
+      </div>
+    );
+  };
+
+  const rewardCard = id => {
+    const name = nameOf(state, id);
+    return (
+      <div key={`reward:${id}`} className="tab-card">
+        <button className="tab-person" onClick={() => nav.push('person', { id })} aria-label={`${name}. See the story`}>
+          <Avatar name={name} />
+          <div className="row-main">
+            <div className="tp-name">{name}</div>
+            <div className="tp-sub">Square on money</div>
+          </div>
+          <span className="chevron"><Icon name="caret-right" /></span>
+        </button>
+        <RewardLines other={id} />
       </div>
     );
   };
@@ -160,6 +182,7 @@ export default function Ledger() {
             <p className="field-help pad">Netted across every round, then squared in the fewest payments. Nobody is asked to pay someone they haven’t played with.{hasShared ? ' Money from rounds you shared live stays between the two players, so both phones agree on it.' : ''}</p>
           </>
         )}
+        {rewardOnly.map(rewardCard)}
         {plan.length === 0 && recentSquare.map(squareCard)}
         {history.length > 0 && (
           <>

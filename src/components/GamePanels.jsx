@@ -5,9 +5,10 @@ import {
   hammerOptions, hammerTable, holeAtPos, holeComplete, nassauAmounts, nassauPressOptions, nassauWinners, playersOn, pointsTable, pressMode, rabbitTable,
   roundLegs, sideNames, sides, sixesMatches, snakeTable, totalsTable, vegasPreview, vegasTable, scorers, netFor, playsHole,
 } from '../lib/round.js';
-import { money, nassauBets } from '../lib/golf.js';
+import { nassauBets } from '../lib/golf.js';
 import { DOT_KINDS, scoreDots } from '../lib/games.js';
 import { buzz } from '../lib/delight.js';
+import { unitFmt } from '../lib/play-for.js';
 
 const firstName = n => (n || '').split(' ')[0];
 const nameOf = (round, pid) => round.players.find(p => p.id === pid)?.name || '?';
@@ -80,6 +81,7 @@ export function MatchPanel({ round, hole, readOnly = false }) {
 // --------------------------- Vegas ----------------------------------------
 
 export function VegasPanel({ round, hole, draft, touched }) {
+  const money = unitFmt(round); // points in a points or reward round
   const rows = vegasTable(round);
   const teams = round.teams || [];
   const point = round.settings.vegas.point;
@@ -183,6 +185,7 @@ export function PointsPanel({ round }) {
 }
 
 export function MoneyPanel({ round, results, icon, label }) {
+  const money = unitFmt(round); // points in a points or reward round
   const sorted = [...round.players].sort((a, b) => results.balances[b.id] - results.balances[a.id]);
   const any = sorted.some(p => results.balances[p.id] !== 0);
   return <ChipsPanel icon={icon} label={label} items={sorted.map((p, i) => ({ id: p.id, name: firstName(p.name), value: money(results.balances[p.id], { sign: true }), lead: i === 0 ? (any ? `${firstName(p.name)} up` : 'All square') : null }))} />;
@@ -213,6 +216,7 @@ export function RabbitPanel({ round, hole }) {
 
 /** Who has the snake, counting the three-putts tapped on this hole so far. */
 export function SnakePanel({ round, hole, marks }) {
+  const money = unitFmt(round); // points in a points or reward round
   const t = snakeTable(marks ? { ...round, marks: { ...round.marks, [hole.no]: marks } } : round);
   const pos = round.holes.findIndex(h => h.no === hole.no) + 1;
   const leg = t.legs.find(l => pos >= l.seg.start && pos <= l.seg.end) || t.legs[0];
@@ -260,6 +264,7 @@ export function SnakePicker({ round, hole, marks, setMarks }) {
 
 /** The hole's value, the hammer buttons, and folding. Marks: { hammers: [side, ...], conceded: side | null }. */
 export function HammerPanel({ round, hole, marks, setMarks, readOnly = false }) {
+  const money = unitFmt(round); // points in a points or reward round
   const mark = { hammers: marks?.hammers || [], conceded: marks?.conceded ?? null };
   const rows = hammerTable(round);
   const row = rows.find(r => r.hole.no === hole.no);

@@ -15,6 +15,7 @@ import { markTransfer, undoPayments, useTabSync } from '../lib/tab-sync.js';
 import { useNav } from '../lib/nav.js';
 import { revealSteps, revealTiming } from '../lib/reveal.js';
 import { IMAGE_H, IMAGE_W, renderShareImage, shareImageName } from '../lib/shareImage.js';
+import { countsMoney, playForOf, rewardOutcome, unitFmt } from '../lib/play-for.js';
 
 const reducedMotion = () => !!window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
 
@@ -36,7 +37,7 @@ function useCountUp(target, { delay = 0, duration = 1100, skip = false } = {}) {
   return v;
 }
 
-function CountRow({ place, name, amount, me, delay, duration, skip, games = '' }) {
+function CountRow({ place, name, amount, me, delay, duration, skip, games = '', fmt = money }) {
   const v = useCountUp(amount, { delay, duration, skip });
   const done = v === amount;
   return (
@@ -44,22 +45,22 @@ function CountRow({ place, name, amount, me, delay, duration, skip, games = '' }
       <div className="sr">{place}</div>
       <div className="sn">{name}{me ? ' (you)' : ''}{games && <span className="rv-games">{games}</span>}</div>
       {/* Whole dollars while counting, then the exact amount: $2.50 used to land on "+$3" */}
-      <div className={`reveal-amt ${done && amount > 0 ? 'pos' : done && amount < 0 ? 'neg' : ''}`}>{money(done ? amount : Math.round(v), { sign: true })}</div>
+      <div className={`reveal-amt ${done && amount > 0 ? 'pos' : done && amount < 0 ? 'neg' : ''}`}>{fmt(done ? amount : Math.round(v), { sign: true })}</div>
     </div>
   );
 }
 
-function StepAmount({ amount, skip }) {
+function StepAmount({ amount, skip, fmt = money }) {
   const v = useCountUp(amount, { duration: 380, skip });
   // Whole dollars while counting, then the exact amount (a split skin or pot share can have cents)
-  return money(v === Math.round(amount * 100) / 100 ? v : Math.round(v));
+  return fmt(v === Math.round(amount * 100) / 100 ? v : Math.round(v));
 }
 
 /** One bet resolving: what it was, who took it, and for how much. Laid out from the start so nothing jumps. */
-function RevealStep({ step, on, skip }) {
+function RevealStep({ step, on, skip, fmt = money }) {
   let val = '–';
   if (step.value) val = step.value;
-  else if (step.amount != null) val = on ? <StepAmount amount={step.amount} skip={skip} /> : money(0);
+  else if (step.amount != null) val = on ? <StepAmount amount={step.amount} skip={skip} fmt={fmt} /> : fmt(0);
   return (
     <div className={`rv-step ${on ? 'on' : ''} ${step.tie ? 'tie' : ''}`} aria-hidden={!on}>
       <div className="rv-main">
@@ -84,6 +85,10 @@ export function Reveal({ round, res, onNext, onDetail, extra, instant = false })
   const square = res.standings.every(p => p.amount === 0);
   const count = res.standings.length;
   const { title: stepsTitle, steps } = revealSteps(round, res);
+  // A points or reward round counts up in points, and has nobody to pay
+  const fmt = unitFmt(round);
+  const pays = countsMoney(round) && res.transfers.length > 0;
+  const reward = playForOf(round).kind === 'reward';
   const nSteps = steps.length;
   const t = revealTiming(nSteps, count);
   // Coming back to this beat (or reduced motion) shows the end state straight away
@@ -123,21 +128,43 @@ export function Reveal({ round, res, onNext, onDetail, extra, instant = false })
         {nSteps > 0 && (
           <div className="rv-card">
             <div className="rv-card-title">{stepsTitle}</div>
-            {steps.map((s, i) => <RevealStep key={s.key} step={s} on={i < visible} skip={skipped} />)}
+            {steps.map((s, i) => <RevealStep key={s.key} step={s} on={i < visible} skip={skipped} fmt={fmt} />)}
           </div>
         )}
         {/* Losers land first, the winner last. Equal money shares a place, so partners both land on top */}
         {res.standings.map((p, i) => (
           <CountRow key={p.id} place={placeOf(res.standings, res.standings.indexOf(p))} name={p.name} amount={p.amount} me={p.id === me}
-            delay={t.stepsEnd + (count - 1 - i) * t.stagger} duration={t.count} skip={skipped} games={gamesLine(res.detail?.byGame, p.id)} />
+            delay={t.stepsEnd + (count - 1 - i) * t.stagger} duration={t.count} skip={skipped} games={gamesLine(res.detail?.byGame, p.id)} fmt={fmt} />
         ))}
+        {/* A reward round: who wins it and who's buying, where the payments would be */}
+        {reward && <div className={`rv-reward-wrap ${done ? 'on' : ''}`} aria-hidden={!done}><RewardCard round={round} res={res} /></div>}
         {extra}
       </div>
       <div className="cta-wrap">
-        <button className="full-btn" onClick={onNext}>{res.transfers.length ? <>Who pays who <Icon name="arrow-right" /></> : <>Share results <Icon name="arrow-right" /></>}</button>
+        <button className="full-btn" onClick={onNext}>{pays ? <>Who pays who <Icon name="arrow-right" /></> : <>Share results <Icon name="arrow-right" /></>}</button>
         <button className="full-btn outline" onClick={onDetail}>See the full breakdown</button>
       </div>
     </>
+  );
+}
+
+/**
+ * A reward round's result, where the payments would be: "Sam wins lunch. Dave's buying." No
+ * pay buttons: it isn't money. The Tab keeps a line on each person card until it's marked done.
+ */
+export function RewardCard({ round, res }) {
+  const o = rewardOutcome(round, res);
+  if (!o) return null;
+  const square = !o.winners.length;
+  return (
+    <div className={`reward-card ${square ? 'square' : ''}`}>
+      <Icon name={square ? 'handshake' : 'gift'} fill className="rc-icon" />
+      <div className="rc-text">
+        <div className="rc-win d">{o.win}</div>
+        <div className="rc-buy">{o.buy}</div>
+        {!square && <div className="rc-note">It stays on the Tab until it’s done. No money changes hands.</div>}
+      </div>
+    </div>
   );
 }
 
@@ -221,7 +248,12 @@ export function SettleUp({ round, res, onBack, onNext }) {
 export function ShareCard({ round, res, onBack, onDone, doneLabel = 'Done' }) {
   const { showToast } = useUI();
   // Off by default so nobody posts the money by accident; your choice is remembered
-  const showAmounts = useStore(s => !!s.settings.shareAmounts);
+  const moneyOn = useStore(s => !!s.settings.shareAmounts);
+  // Points are bragging rights, not money, so a points or reward round always shows them
+  const isMoney = countsMoney(round);
+  const showAmounts = isMoney ? moneyOn : true;
+  const fmt = unitFmt(round);
+  const reward = rewardOutcome(round, res);
   const setShowAmounts = on => update(s => { s.settings.shareAmounts = on; });
   const [img, setImg] = useState(null); // { blob, url, amounts }
   // Everyone tied for the top, so a shared win isn't credited to whoever sorted first
@@ -264,23 +296,26 @@ export function ShareCard({ round, res, onBack, onDone, doneLabel = 'Done' }) {
       <div className="scroll">
         {img ? (
           <img className="share-img" src={img.url} width={IMAGE_W} height={IMAGE_H}
-            alt={`Results card: ${round.course.name}, ${gameLabel(round)}. ${res.standings.map((p, i) => `${placeOf(res.standings, i)}. ${p.name}${showAmounts ? ` ${money(p.amount, { sign: true })}` : ''}`).join(', ')}`} />
+            alt={`Results card: ${round.course.name}, ${gameLabel(round)}. ${res.standings.map((p, i) => `${placeOf(res.standings, i)}. ${p.name}${showAmounts ? ` ${fmt(p.amount, { sign: true })}` : ''}`).join(', ')}${reward ? `. ${reward.text}` : ''}`} />
         ) : (
           <div className="share-card">
             <div className="sc-brand">Birdie Bank</div>
             <div className="sc-meta">{round.course.name} · {roundDate(round)} · {gameLabel(round)}</div>
-            <div className="sc-big d">{tops.length ? <>{tops.map(p => p.name.split(' ')[0]).join(' & ')}{showAmounts && <><br />{money(tops[0].amount, { sign: true })}</>}</> : 'All square'}</div>
+            <div className="sc-big d">{tops.length ? <>{tops.map(p => p.name.split(' ')[0]).join(' & ')}{showAmounts && <><br />{fmt(tops[0].amount, { sign: true })}</>}</> : 'All square'}</div>
+            {reward && <div className="sc-meta">{reward.text}</div>}
             <div className="sc-list">
               {res.standings.map(p => (
-                <div key={p.id} className="sc-line"><span>{p.name}</span>{showAmounts && <span>{money(p.amount, { sign: true })}</span>}</div>
+                <div key={p.id} className="sc-line"><span>{p.name}</span>{showAmounts && <span>{fmt(p.amount, { sign: true })}</span>}</div>
               ))}
             </div>
           </div>
         )}
-        <div className="toggle-row share-toggle">
-          <div><div className="toggle-lbl">Show amounts</div><div className="toggle-sub">{showAmounts ? 'Dollar figures are on the image' : 'Only the order and the bets, no money'}</div></div>
-          <Toggle on={showAmounts} onChange={setShowAmounts} label="Show amounts" />
-        </div>
+        {isMoney && (
+          <div className="toggle-row share-toggle">
+            <div><div className="toggle-lbl">Show amounts</div><div className="toggle-sub">{showAmounts ? 'Dollar figures are on the image' : 'Only the order and the bets, no money'}</div></div>
+            <Toggle on={showAmounts} onChange={setShowAmounts} label="Show amounts" />
+          </div>
+        )}
         <HowWasIt round={round} />
       </div>
       <div className="cta-wrap">

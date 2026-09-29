@@ -2,7 +2,7 @@
 import { useState } from 'react';
 import { Header, Icon, Screen } from '../components/ui.jsx';
 import { Avatar, SettleSheet } from '../components/Pay.jsx';
-import { PersonActions } from '../components/TabCard.jsx';
+import { PersonActions, RewardLines } from '../components/TabCard.jsx';
 import { useTabSync } from '../lib/tab-sync.js';
 import { useStore } from '../lib/store.js';
 import { nameOf, outstanding, personStory, recordText, tabWith } from '../lib/ledger.js';
@@ -10,6 +10,7 @@ import { PAY_APPS, handleText, payInfoFor } from '../lib/pay.js';
 import { money } from '../lib/golf.js';
 import { formatIndex, gameLabel, myIds, roundDate } from '../lib/format.js';
 import { useNav } from '../lib/nav.js';
+import { playForLine, unitFmt } from '../lib/play-for.js';
 
 export default function Person({ id }) {
   const nav = useNav();
@@ -50,6 +51,7 @@ export default function Person({ id }) {
 
         <div className="pad-x">
           <PersonActions other={id} net={tab} meId={state.me || (tab > 0 ? debt.to : debt.from)} />
+          <RewardLines other={id} />
         </div>
         {tab !== 0 && (
           <button className="quiet-row" onClick={() => setOpen(debt)}>
@@ -85,9 +87,9 @@ export default function Person({ id }) {
           <button key={it.id} className="ledger-row" onClick={() => nav.push('roundDetail', { id: it.id })}>
             <div className="lr-info">
               <div className="lr-name" style={{ fontSize: 16 }}>{gameLabel(it.round)} · {it.round.course.name}</div>
-              <div className="lr-status">{roundDate(it.round)}</div>
+              <div className="lr-status">{roundDate(it.round)}{it.money === false ? ` · ${playForLine(it.round)}` : ''}</div>
             </div>
-            <div className={`lr-amt d story-amt ${it.amount > 0 ? 'pos' : it.amount < 0 ? 'neg' : ''}`}>{it.amount ? money(it.amount, { sign: true }) : 'Even'}</div>
+            <div className={`lr-amt d story-amt ${it.amount > 0 ? 'pos' : it.amount < 0 ? 'neg' : ''}`}>{it.amount ? unitFmt(it.round)(it.amount, { sign: true }) : 'Even'}</div>
           </button>
         ) : (
           <div key={it.id} className="ledger-row static">
