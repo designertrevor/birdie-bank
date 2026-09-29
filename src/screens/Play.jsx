@@ -7,6 +7,7 @@ import {
   resizeRound, roundLegs, roundResults, scoredHolesDropped, scorers, skinsKinds, skinsTable, strokesFor, wolfHoleSetup, changeBets, wholeRoundOnly,
   gameView, sideGamesOf, holeFixOf,
 } from '../lib/round.js';
+import { SIDE_GAMES, gameKeys } from '../lib/round.js';
 import { CourseTeeSheet, FixHoleSheet } from '../components/FixHole.jsx';
 import { courseTeeLabel, keepsDraft } from '../lib/hole-fix.js';
 import { markUsualPlayed } from '../lib/usuals.js';
@@ -30,17 +31,32 @@ import { ByGameTable, SideGamesSetup } from '../components/SideGames.jsx';
 import { nassauOpenNote } from '../lib/side-games.js';
 import {
   ASK_MS, askForCard, askLeft, canEdit, canTakeCard, clearAsk, clockText, declineAsk, declinedAsk, handOff, handOffChoices, hostKeeper, isKeeper,
-  keeperMe, keeperName, keeperOf, keeperSaved, openAsk, seatTaken, takeCard as takeCardPatch, tookFromMe,
+  keeperMe, keeperName, keeperOf, keeperSaved, openAsk, seatTaken, shouldLeaveHole, takeCard as takeCardPatch, tookFromMe,
 } from '../lib/keeper.js';
 
 export default function Play({ id }) {
   const round = useStore(s => s.rounds[id]);
   const nav = useNav();
+  const { showToast } = useUI();
   // The round you open is the one the play button brings you back to
   const inPlay = round?.status === 'active';
   useEffect(() => {
     if (inPlay && getState().activeRoundId !== id) update(s => { s.activeRoundId = id; });
   }, [inPlay, id]);
+  // The keeper finished a shared round: the other phones leave the hole (it would turn editable, since
+  // any player can fix a finished round) for the same reveal, settle up and share the keeper sees.
+  // Watching it finish here plays the reveal; a round that was already done when opened just shows its results.
+  const startedActive = useRef(round?.status === 'active');
+  const leave = shouldLeaveHole(round, { finishedHere: FINISHED_HERE.has(id) });
+  useEffect(() => {
+    if (!leave) return;
+    for (const k of DRAFTS.keys()) if (k.startsWith(`${id}:`)) DRAFTS.delete(k);
+    if (startedActive.current) {
+      showToast(`${keeperName(getState().rounds[id])} finished the round`);
+      nav.reset('history', ['roundDetail', { id, celebrate: true }]);
+    } else nav.reset('history', ['roundDetail', { id }]);
+  }, [leave, id]); // eslint-disable-line react-hooks/exhaustive-deps
+  if (leave) return <Screen />;
   if (!round) {
     return (
       <Screen>
@@ -60,6 +76,8 @@ export default function Play({ id }) {
   return <PlayRound key={`${games}:${round.holesCount}:${round.current}:${round._remote?.[cur?.no] || 0}:${left}:${joined}:${cur?.par}`} round={round} />;
 }
 
+// Rounds finished (or fixed) on this phone, so it doesn't follow itself to the results a second time
+const FINISHED_HERE = new Set();
 // Keeper handoffs this phone has already announced ("roundId:since"), so a remount doesn't say it twice
 const HANDED = new Set();
 /** The time now, ticking every `ms` (0: never ticks). */
@@ -135,7 +153,8 @@ function PlayRound({ round }) {
   const [menu, setMenu] = useState(false);
   const [leftSheet, setLeftSheet] = useState(false);
   const [card, setCard] = useState(false);
-  const [rules, setRules] = useState(false);
+  // Which game's rules are open ('main' or a side game's key); the key stays while the sheet closes
+  const [rules, setRules] = useState({ key: 'main', open: false });
   const [betPad, setBetPad] = useState(null);
   const [bankerPick, setBankerPick] = useState(false);
   const [live, setLive] = useState(false);
@@ -275,6 +294,7 @@ function PlayRound({ round }) {
       if (go === 'goto') { update(s => { s.rounds[round.id].current = r.holes.indexOf(missing[0]); }); return; }
       if (go !== 'finish') return;
     }
+    FINISHED_HERE.add(round.id);
     update(s => {
       const rr = s.rounds[round.id];
       rr.status = 'done'; rr.finishedAt = Date.now();
@@ -285,6 +305,7 @@ function PlayRound({ round }) {
   };
   const doneEditing = () => {
     setMenu(false);
+    FINISHED_HERE.add(round.id);
     update(s => { delete s.rounds[round.id].editing; });
     nav.reset('history', ['roundDetail', { id: round.id }]);
   };
@@ -302,6 +323,7 @@ function PlayRound({ round }) {
       cancelLabel: 'Keep playing',
     });
     if (choice === 'finish') {
+      FINISHED_HERE.add(round.id);
       update(s => { const rr = s.rounds[round.id]; rr.status = 'done'; rr.finishedAt = Date.now(); markUsualPlayed(s, rr, rr.finishedAt); leaveRound(s, round.id); });
       nav.reset('history', ['roundDetail', { id: round.id, celebrate: true }]);
     }
@@ -519,7 +541,11 @@ function PlayRound({ round }) {
           </button>
         )}
         </>}
-        <button className="sheet-item" onClick={() => { setMenu(false); setRules(true); }}><span><Icon name="book-open" /> {GAMES[game].name} rules</span><Icon name="caret-right" /></button>
+        {gameKeys(round).map(k => (
+          <button key={k} className="sheet-item" onClick={() => { setMenu(false); setRules({ key: k, open: true }); }}>
+            <span><Icon name="book-open" /> {k === 'main' ? GAMES[game].name : SIDE_GAMES[k].label} rules</span><Icon name="caret-right" />
+          </button>
+        ))}
         <div className="menu-sec">Players</div>
         {syncConfigured && (
           <button className="sheet-item" onClick={() => { setMenu(false); setLive(true); }}>
@@ -570,7 +596,9 @@ function PlayRound({ round }) {
       </Sheet>
       {fixSheet === 'hole' && editable && <FixHoleSheet round={round} holeNo={hole.no} me={me} onClose={() => setFixSheet(null)} />}
       {fixSheet === 'tee' && editable && <CourseTeeSheet round={round} me={me} onClose={() => setFixSheet(null)} />}
-      <RulesSheet game={game} open={rules} onClose={() => setRules(false)} />
+      <RulesSheet game={rules.key === 'main' ? game : rules.key} open={rules.open} onClose={() => setRules(r => ({ ...r, open: false }))}
+        title={rules.key === 'dots' ? `How to play ${SIDE_GAMES.dots.label}` : undefined}
+        sub={rules.key === 'dots' ? 'A side game · Dots, garbage, trash' : undefined} />
       <ShareSheet round={round} open={live} onClose={() => setLive(false)} />
       {game === 'banker' && (
         <>

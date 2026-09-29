@@ -3,7 +3,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import {
-  ASK_MS, NOTE_MS, keeperOf, keeperMe, isKeeper, canEdit, keeperName, canTakeCard, handOffChoices, askLeft, clockText,
+  ASK_MS, NOTE_MS, shouldLeaveHole, keeperOf, keeperMe, isKeeper, canEdit, keeperName, canTakeCard, handOffChoices, askLeft, clockText,
   declineAsk, declinedAsk, takeCard, tookFromMe,
   hostKeeper, handOff, askForCard, clearAsk, openAsk, seatTaken, metaToSend, metaToKeep, holeToKeep,
 } from './keeper.js';
@@ -202,4 +202,16 @@ test('holeToKeep: scores saved while keeping score survive losing the card; the 
   assert.deepEqual(holeToKeep(seen, seen, { scores: { mike: 5 } }, false), { scores: { mike: 5 } });
   // The keeper's own phone merges as ever: a clash keeps its own edit
   assert.deepEqual(holeToKeep({ scores: { dave: 5 } }, { scores: { dave: 4 } }, { scores: { dave: 6 } }, true), { scores: { dave: 4 } });
+});
+
+test('keeper finishes: the other phones leave the hole for the results, unless fixing scores or it finished here', () => {
+  const done = shared({ status: 'done', ...handOff('mike', null, T0) }, false);
+  assert.equal(shouldLeaveHole(done), true);
+  assert.equal(shouldLeaveHole({ ...done, shared: { code: 'ABC123', host: true } }), true); // the organizer's phone follows too
+  assert.equal(shouldLeaveHole(done, { finishedHere: true }), false);
+  assert.equal(shouldLeaveHole({ ...done, editing: true }), false); // Edit scores on a finished round stays put
+  assert.equal(shouldLeaveHole({ ...done, status: 'active' }), false);
+  assert.equal(shouldLeaveHole({ ...done, shared: undefined }), false); // not shared: this phone finished it
+  assert.equal(shouldLeaveHole({ ...done, shared: { code: 'ABC123', ended: true } }), false);
+  assert.equal(shouldLeaveHole(null), false);
 });

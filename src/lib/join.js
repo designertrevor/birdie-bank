@@ -16,3 +16,19 @@ export function joinRoute(state, code) {
 export function afterJoin(id, done) {
   return [done ? 'roundDetail' : 'play', { id }];
 }
+
+/**
+ * The team line on the invite's confirm card. A team named after its players ("Sam & Dave")
+ * already says who you're with, so it stands alone; any other name gets "with A and B".
+ * A mate counts as named when their first name is a whole word in the team name, any case.
+ */
+export function teamLine(teamName, mateFirstNames = []) {
+  const name = teamName || '';
+  const mates = (mateFirstNames || []).filter(Boolean);
+  if (!mates.length) return name;
+  const words = new Set(name.toLowerCase().split(/[^\p{L}]+/u).filter(Boolean));
+  const named = m => m.toLowerCase().split(/[^\p{L}]+/u).filter(Boolean).every(w => words.has(w));
+  if (mates.every(named)) return name;
+  const list = mates.length === 1 ? mates[0] : `${mates.slice(0, -1).join(', ')} and ${mates[mates.length - 1]}`;
+  return `${name} with ${list}`;
+}

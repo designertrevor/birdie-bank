@@ -2,9 +2,10 @@
 // worked examples from the rules check (Mike +$12 in skins, the unfinished rabbit leg, and so on).
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { createRound, roundResults, changeBets, settingsAt, wholeRoundOnly, rabbitTable, totalsTable, betsChanged } from './round.js';
-import { rabbitHolder, scrambleTeamHandicap, roundCents, SCRAMBLE_ALLOWANCE } from './games.js';
+import { SIDE_GAMES, GAMES, createRound, roundResults, changeBets, settingsAt, wholeRoundOnly, rabbitTable, totalsTable, betsChanged } from './round.js';
+import { birdiePot, rabbitHolder, scrambleTeamHandicap, roundCents, SCRAMBLE_ALLOWANCE } from './games.js';
 import { strokesOffLow } from './golf.js';
+import { readFileSync } from 'node:fs';
 import { migrateSettings, REV2_DEFAULTS, SETTINGS_REV } from './settings.js';
 
 const SETTINGS = {
@@ -312,4 +313,16 @@ test('saved settings from before rev 2 move to the new defaults once', () => {
   const now = { ...m, quota: { stake: 1, payout: 'per' } };
   assert.equal(migrateSettings(now), now);
   assert.equal(migrateSettings(null), null);
+});
+
+// Rules.jsx is JSX, so node reads its RULES keys from the source: one `  key: {` line per game
+test('rules: every game and every side game has a rules sheet, and the Birdie pot example adds up', () => {
+  const src = readFileSync(new URL('../components/Rules.jsx', import.meta.url), 'utf8');
+  const body = src.slice(src.indexOf('const RULES = {'), src.indexOf('export function RulesSheet'));
+  const keys = new Set([...body.matchAll(/^ {2}(\w+): \{$/gm)].map(m => m[1]));
+  for (const k of Object.keys(SIDE_GAMES)) assert.ok(keys.has(k), `rules for side game ${k}`);
+  for (const k of Object.keys(GAMES)) assert.ok(keys.has(k), `rules for ${k}`);
+  // "Four players at $5: Ann 2 birdies, Bo an eagle. Ann and Bo each up $5, the other two down $5."
+  assert.deepEqual(birdiePot({ ann: 2, bo: 2, cy: 0, di: 0 }, 5), { ann: 5, bo: 5, cy: -5, di: -5 });
+  assert.deepEqual(birdiePot({ ann: 0, bo: 0, cy: 0, di: 0 }, 5), { ann: 0, bo: 0, cy: 0, di: 0 });
 });
