@@ -328,7 +328,7 @@ function PlayRound({ round }) {
         <div className="seat-req keeper-bar" role="status">
           <Icon name="pencil-simple" fill />
           <span className="sr-text">
-            {amKeeper ? 'You’re keeping score' : tookBy ? <><strong>{tookName}</strong> took the card</> : <><strong>{holderName}</strong> is keeping score</>}
+            {amKeeper ? 'You’re keeping score' : tookBy && left == null && !declined ? <><strong>{tookName}</strong> took the card</> : <><strong>{holderName}</strong> is keeping score</>}
             {!amKeeper && left > 0 && <span className="sr-sub">Asked. {holderName} can say yes or no. <button className="link-btn inline" onClick={takeBack}>Undo<span className="sr-only">: take back asking {holderName} for the card</span></button></span>}
             {!amKeeper && left == null && declined && <span className="sr-sub">{holderName} said no, so they’re keeping it.</span>}
           </span>

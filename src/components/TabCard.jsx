@@ -146,7 +146,7 @@ export function PersonActions({ other, net, meId }) {
             </>
           )}
           {canRoll && (
-            <button className="pay-btn" onClick={() => setRolling(true)}><span className="pay-in"><Icon name="arrow-u-down-right" /><span className="pay-lbl">{partOnly ? `Roll ${money(shared.amount)} from your shared rounds to next time` : 'Roll to next time'}</span></span></button>
+            <button className={`pay-btn ${partOnly ? 'roll-part' : ''}`} onClick={() => setRolling(true)}><span className="pay-in"><Icon name="arrow-u-down-right" /><span className="pay-lbl">{partOnly ? `Roll ${money(shared.amount)} from your shared rounds to next time` : 'Roll to next time'}</span></span></button>
           )}
         </div>
       )}

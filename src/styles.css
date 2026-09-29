@@ -854,6 +854,9 @@ button:disabled { cursor: not-allowed; }
 .pay-btn.venmo { background: var(--venmo); color: #fff; }
 .pay-btn { min-width: 0; padding: 0 12px; white-space: nowrap; }
 .pay-lbl { overflow: hidden; text-overflow: ellipsis; }
+/* "Roll $28 from your shared rounds to next time" wraps rather than cutting off */
+.pay-btn.roll-part { white-space: normal; height: auto; min-height: 44px; padding: 8px 14px; line-height: 1.25; text-align: left; }
+.pay-btn.roll-part .pay-lbl { overflow: visible; }
 .pay-btn.done { background: var(--win-bg); color: var(--win); }
 .share-img {
   display: block; margin: 8px auto 0; width: min(280px, calc(100% - 32px)); height: auto; aspect-ratio: 9 / 16; border-radius: 24px;
