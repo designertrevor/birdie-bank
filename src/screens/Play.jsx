@@ -1007,10 +1007,12 @@ function WolfPanel({ round, hole, wolf, setWolf }) {
   const cfg = settingsAt(round, posOf(round, hole)).wolf;
   const mult = cfg.loneMultiplier;
   const blindMult = cfg.blindMultiplier ?? 3;
-  // Blind wolf is honor system: it's offered until the hole is saved (a round from before it has no
-  // blind key, so no button), and a hole already saved blind keeps its button so it can be changed
+  // Blind wolf is honor system. It's offered whenever the rule is on for this hole (a round from before
+  // it has no blind key, so no button), including on a saved hole, so a mis-tap can be fixed. A hole
+  // saved blind keeps its button even if the rule was turned off later, and so does this pick while
+  // it's being edited (tapping a partner by mistake never loses the way back).
   const blind = !!wolf.blind && wolf.partner === null;
-  const offerBlind = blind || (!!cfg.blind && !round.wolf?.[hole.no]);
+  const offerBlind = blind || !!round.wolf?.[hole.no]?.blind || !!cfg.blind;
   // Picking a partner or plain lone wolf clears blind; the saved record only carries blind when it's on
   const pick = (partner, isBlind = false) => {
     const { blind: _was, ...rest } = wolf;

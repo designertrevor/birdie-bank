@@ -233,3 +233,67 @@ test('mergeSettings lays saved defaults over the phone’s, game by game', () =>
   // Nothing saved: the phone's as they are
   assert.deepEqual(mergeSettings(phone, undefined), phone);
 });
+
+// ---------------------------------------------------------------------------
+// Review: randomized checks (seeded, so a failure repeats)
+
+function rng(seed) {
+  let s = seed;
+  return () => { s = (s * 1103515245 + 12345) & 0x7fffffff; return s / 0x7fffffff; };
+}
+
+test('random wolf rounds: a blind hole is the lone hole at the blind multiplier, and balances sum to zero', () => {
+  const rnd = rng(42);
+  const int = (a, b) => a + Math.floor(rnd() * (b - a + 1));
+  const pickOf = a => a[Math.floor(rnd() * a.length)];
+  for (let t = 0; t < 300; t++) {
+    const n = int(3, 5);
+    const players = Array.from({ length: n }, (_, i) => ({ id: `p${i}`, name: `P${i}`, index: int(0, 18) }));
+    const point = pickOf([1, 2, 0.25, 0.35, 1.5]);
+    const loneMultiplier = pickOf([2, 3]), blindMultiplier = pickOf([3, 4, undefined]);
+    const wolf = { point, loneMultiplier, blind: true, ...(blindMultiplier ? { blindMultiplier } : {}) };
+    const r = createRound({ id: 'x', game: 'wolf', course, holesCount: 9, players, settings: { hcPct: 100, wolf }, hcPct: 100, useHandicaps: rnd() < 0.5 });
+    if (rnd() < 0.25) r.left = { [`p${n - 1}`]: int(0, 8) };
+    const played = int(1, 9);
+    r.holes.slice(0, played).forEach((h, i) => {
+      const gone = id => r.left?.[id] != null && h.no > r.left[id];
+      r.scores[h.no] = Object.fromEntries(players.filter(p => !gone(p.id)).map(p => [p.id, int(2, 7)]));
+      const on = Object.keys(r.scores[h.no]);
+      const w = on[i % on.length];
+      const lone = rnd() < 0.5;
+      r.wolf[h.no] = lone ? { wolf: w, partner: null, ...(rnd() < 0.5 ? { blind: true } : {}) } : { wolf: w, partner: pickOf(on.filter(id => id !== w)) };
+    });
+    const res = roundResults(r);
+    assert.ok(zero(res.balances) === 0, `sum ${JSON.stringify(res.balances)}`);
+    for (const h of r.holes.slice(0, played)) {
+      const setup = r.wolf[h.no];
+      const got = wolfHoleResult(r, h);
+      if (!got) continue;
+      assert.ok(zero(got.deltas) === 0);
+      if (!setup.blind) continue;
+      const plain = structuredClone(r);
+      delete plain.wolf[h.no].blind;
+      const base = wolfHoleResult(plain, h);
+      const k = (blindMultiplier ?? 3) / loneMultiplier;
+      for (const id of Object.keys(got.deltas)) assert.ok(Math.abs(got.deltas[id] - base.deltas[id] * k) < 1e-9, `hole ${h.no} ${id}`);
+    }
+  }
+});
+
+test('random old wolf rounds: new default keys on the round never move money unless blind was called', () => {
+  const rnd = rng(7);
+  const int = (a, b) => a + Math.floor(rnd() * (b - a + 1));
+  for (let t = 0; t < 200; t++) {
+    const r = scores(mk('wolf'), 9);
+    r.settings.wolf = { point: int(1, 5), loneMultiplier: 2 + int(0, 1) };
+    r.holes.forEach((h, i) => {
+      for (const p of P) r.scores[h.no][p.id] = int(3, 6);
+      const w = P[i % 4].id;
+      r.wolf[h.no] = { wolf: w, partner: rnd() < 0.4 ? null : P[(i + 1 + int(0, 2)) % 4].id === w ? null : P[(i + 1 + int(0, 2)) % 4].id };
+    });
+    const before = bal(r);
+    const n = structuredClone(r);
+    n.settings.wolf = { ...n.settings.wolf, blind: true, blindMultiplier: 4 };
+    assert.deepEqual(bal(n), before);
+  }
+});
