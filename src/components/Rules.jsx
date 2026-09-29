@@ -253,15 +253,31 @@ const RULES = {
       ['Each nine', <p key="n">Turn it on to settle the snake at the turn and start a fresh one on the back. Stop early and whoever holds it then pays.</p>],
     ],
   },
+  birdies: {
+    title: 'How to play the Birdie pot',
+    sub: 'A side game · Birdies split the pot',
+    sections: [
+      ['Overview', <p key="o">Everyone in the pot puts in the bet. At the end, the pot is split among the players who made birdies.</p>],
+      ['Shares', <ul key="s">
+        <li>Every <strong>net birdie</strong> (one under par after strokes) is one share.</li>
+        <li>A <strong>net eagle</strong> or better is two shares.</li>
+        <li>Holes with a missing score don’t count, and a pickup never earns a share.</li>
+      </ul>],
+      ['Paying out', <p key="p">The pot is split by shares. Four players at $5 make a $20 pot. Ann makes 2 birdies and Bo makes an eagle, so that’s 4 shares at $5 each: Ann and Bo each take $10 and are up $5, and the other two are down $5. <strong>No birdies at all</strong> and nobody pays.</p>],
+      ['Who’s in', <p key="w">It takes at least 2 players. A player who <strong>leaves partway</strong> or is <strong>added partway</strong> sits the pot out: they don’t put in and can’t win it.</p>],
+      ['With Junk', <p key="j">Junk’s automatic birdie dot counts <strong>natural</strong> birdies, before strokes, and the pot counts net birdies. So a natural birdie pays twice: a dot from each player and a share of the pot. A birdie that only comes from a stroke counts in the pot alone.</p>],
+    ],
+  },
 };
 
-export function RulesSheet({ game, open, onClose }) {
+/** The rules sheet for `game`. `title` and `sub` replace the game's own, as for Junk as a side game. */
+export function RulesSheet({ game, open, onClose, title, sub }) {
   const r = RULES[game];
   if (!r) return null;
   return (
-    <Sheet open={open} onClose={onClose} title={r.title} className="rules-sheet">
+    <Sheet open={open} onClose={onClose} title={title || r.title} className="rules-sheet">
       <div className="rules-content">
-        <div className="rules-sub">{r.sub}</div>
+        <div className="rules-sub">{sub || r.sub}</div>
         {r.sections.map(([h, body]) => (
           <div key={h}><div className="rules-section">{h}</div><div className="rules-body">{body}</div></div>
         ))}
