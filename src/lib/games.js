@@ -243,14 +243,27 @@ export function rabbitHolder(rows, { mode = 'free', tiesFree = false } = {}) {
 // Dots (junk)
 // ---------------------------------------------------------------------------
 
+// Arnie and Hogan, as most groups play them (sources checked 2026-09-29):
+//   Arnie (Arnold Palmer, never shy of the rough): par or better on a par 4 or 5 without ever being
+//   in the fairway. https://golfcompendium.com/2019/03/arnies-golf-bet.html (par 4s and 5s only)
+//   Hogan (Ben Hogan, the tee-to-green ball striker): par or better after hitting the fairway off the
+//   tee and the green in regulation, so par 4s and 5s too. The Hogan points game scores those same
+//   shots: https://golfcompendium.com/2020/10/how-to-play-golf-game-named-hogan.html
+//   Junk in general: https://www.golfcompendium.com/2025/10/junk-golf-game.html and
+//   https://thegolfnewsnet.com/golfnewsnetteam/2016/07/08/what-is-junk-in-golf-dots-trash-garbage-birdies-greenies-sandies-50976/
+// The chips only show on those pars (see DOT_PARS); the money counts whatever was marked.
 export const DOT_KINDS = {
   greenie: { name: 'Greenie', help: 'Closest to the pin in one on a par 3, and par or better to keep it' },
   sandy: { name: 'Sandy', help: 'Par or better after being in a bunker' },
   barkie: { name: 'Barkie', help: 'Par or better after hitting a tree' },
   chipin: { name: 'Chip-in', help: 'Holed from off the green' },
   polie: { name: 'Polie', help: 'Holed a putt longer than the flagstick' },
-  arnie: { name: 'Arnie', help: 'Par without ever touching the fairway' },
+  arnie: { name: 'Arnie', help: 'Par or better without ever being on the fairway (par 4s and 5s)' },
+  hogan: { name: 'Hogan', help: 'Par or better after hitting the fairway and the green in regulation (par 4s and 5s)' },
 };
+
+/** Dots that only happen on some pars: a greenie is a par 3 thing, an Arnie or a Hogan needs a fairway. */
+export const DOT_PARS = { greenie: [3], arnie: [4, 5], hogan: [4, 5] };
 
 /** Automatic dots from a gross score: birdie 1, eagle or better 2. */
 export function scoreDots(gross, par) {

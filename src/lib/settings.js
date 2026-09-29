@@ -35,3 +35,20 @@ export function migrateSettings(saved) {
   if (saved.snake && saved.snake.cap == null) out.snake = { ...saved.snake, cap: SNAKE_CAP_DEFAULT };
   return out;
 }
+
+const isObj = v => v && typeof v === 'object' && !Array.isArray(v);
+
+/**
+ * Lay saved game defaults over the ones on this phone, one game at a time, the way the store's load
+ * does. A key the saved copy has wins; a key it lacks (a house rule added since it was saved, like
+ * wolf.blind or dots.kinds.hogan) keeps this phone's value. Returns a new object.
+ */
+export function mergeSettings(base, saved) {
+  if (!isObj(saved)) return { ...base };
+  const out = { ...base, ...saved };
+  for (const [k, v] of Object.entries(saved)) {
+    if (isObj(v) && isObj(base?.[k])) out[k] = { ...base[k], ...v };
+  }
+  if (isObj(out.dots) && isObj(base?.dots?.kinds) && isObj(saved.dots?.kinds)) out.dots = { ...out.dots, kinds: { ...base.dots.kinds, ...saved.dots.kinds } };
+  return out;
+}

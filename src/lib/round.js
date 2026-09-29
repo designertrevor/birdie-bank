@@ -220,7 +220,7 @@ export function createRound({ id, game, course, holesCount, nine, startHole, pla
     settings: structuredClone(settings),
     scores: {},      // holeNo -> { scorerId: gross | 'X' }
     banker: {},      // holeNo -> { banker, bets, doubled, doubleBack }
-    wolf: {},        // holeNo -> { wolf, partner: pid | null (lone) }
+    wolf: {},        // holeNo -> { wolf, partner: pid | null (lone), blind?: true (lone, called before the tee shots) }
     marks: {},       // holeNo -> game-specific extras (dots, bingo bango bongo)
     presses: [],
     pressSeq: 0,
@@ -1215,7 +1215,7 @@ export function wolfHoleSetup(round, idx) {
 export function wolfHoleResult(round, hole) {
   const setup = round.wolf[hole.no];
   if (!setup || !holeComplete(round, hole)) return null;
-  const { point: P, loneMultiplier: mult } = settingsAt(round, posOf(round, hole)).wolf;
+  const { point: P, loneMultiplier: mult, blindMultiplier } = settingsAt(round, posOf(round, hole)).wolf;
   const on = playersOn(round, hole);
   const ids = on.map(p => p.id);
   // A pick that names someone who has left doesn't stand
@@ -1227,12 +1227,15 @@ export function wolfHoleResult(round, hole) {
   const best = t => Math.min(...t.map(id => net[id]));
   const a = best(teamA), b = best(teamB);
   const deltas = Object.fromEntries(ids.map(id => [id, 0]));
-  if (a === b) return { deltas, winner: null, teamA, teamB };
+  const blind = !setup.partner && setup.blind ? { blind: true } : {};
+  if (a === b) return { deltas, winner: null, teamA, teamB, ...blind };
   const winners = a < b ? teamA : teamB, losers = a < b ? teamB : teamA;
-  const unit = setup.partner ? P : P * mult;
+  // A blind wolf went lone before anyone teed off, for more (3× unless the round says 4×). Only a
+  // hole saved with blind: true pays it, so rounds from before blind wolf keep their money.
+  const unit = setup.partner ? P : P * (setup.blind ? (blindMultiplier ?? 3) : mult);
   // Every loser pays every winner one unit
   for (const w of winners) for (const l of losers) { deltas[w] += unit; deltas[l] -= unit; }
-  return { deltas, winner: a < b ? 'wolf' : 'pack', teamA, teamB };
+  return { deltas, winner: a < b ? 'wolf' : 'pack', teamA, teamB, ...blind };
 }
 
 // --------------------------- Vegas ----------------------------------------

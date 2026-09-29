@@ -138,7 +138,7 @@ function mainRevealSteps(round, res) {
       text: pid => {
         if (round.game === 'banker') return pid === h.banker ? `${name(pid)} as banker` : `${name(pid)} beats the banker`;
         const w = round.wolf?.[h.no];
-        if (w && w.partner === null && pid === w.wolf) return `${name(pid)}, lone wolf`;
+        if (w && w.partner === null && pid === w.wolf) return `${name(pid)}, ${w.blind ? 'blind' : 'lone'} wolf`;
         return pid === w?.wolf ? `${name(pid)}, the wolf` : name(pid);
       },
     }));
