@@ -1,14 +1,19 @@
 // Who keeps score in a shared round. Pure, so the tests and the sync layer can both use it.
 //
-// One phone keeps the card. round.keeper = { id, since, by, lastSaveAt, hole? } travels in the
-// round's meta, so every phone agrees on it:
+// One phone keeps the card. round.keeper = { id, since, by, lastSaveAt, hole?, from? } travels in
+// the round's meta, so every phone agrees on it:
 //  • id: the player keeping score, or null for "the phone that started the round" (which covers an
 //    organizer who keeps score without playing).
-//  • since: when they got the card. by: who handed it over (a player id, or null for the host phone).
-//  • lastSaveAt: when the keeper last saved a hole. After KEEPER_QUIET_MS with no save, any other
-//    player can take the card (with a confirm, never on its own).
+//  • since: when they got the card. by: who handed it over (a player id, or null for the host phone);
+//    a player who took the card is their own `by`.
+//  • lastSaveAt: when the keeper last saved a hole.
 //  • hole: the hole number on the handing phone at handoff, so the new keeper starts there.
-// round.cardAsk = { by, at }: a player asked the keeper for the card.
+//  • from: on a card that was taken, who had it (a player id, or null for the host phone), so their
+//    phone can say who took it.
+// round.cardAsk = { by, at, no?, noAt? }: a player asked the keeper for the card. The keeper answers
+// Yes (hands it over) or No (`no`: the ask ends and the asker sees it). With no answer after
+// ASK_MS, the asker can take the card with one tap. A player asks from their own phone and takes
+// it on the same phone, so the wait is timed by one clock.
 // round.onApp = { pid: at }: players whose phone took their seat in this round. Only they can be
 // handed the card: a player with no phone can't keep score.
 //
@@ -22,8 +27,10 @@
 // the server belongs with the S3 plan lock-down.
 import { merge3 } from './sync-model.js';
 
-/** How long the keeper's phone has to go without saving a hole before another player can take the card. */
-export const KEEPER_QUIET_MS = 10 * 60 * 1000;
+/** How long the keeper has to answer an ask before the asker can take the card. */
+export const ASK_MS = 2 * 60 * 1000;
+/** How long "Mike took the card" or "Trevor said no" stays up. */
+export const NOTE_MS = 10 * 60 * 1000;
 
 /** The keeper record, or null when the round has none (not shared, or shared before keepers existed). */
 export function keeperOf(round) {
@@ -78,19 +85,26 @@ export function keeperName(round) {
 }
 
 /**
- * Whether `me` can take the card because the keeper's phone has gone quiet: a player in the round,
- * not the keeper, the round still being played, and no hole saved for KEEPER_QUIET_MS.
- * `seenAt` is when this phone last heard of a keeper save, by its own clock: the quiet time counts
- * from whichever is later, so a keeper phone whose clock runs slow can't make the card look quiet
- * too soon. A save time in the future (a keeper clock running fast) counts as just now.
+ * How long until `me` can take the card, in ms: the time left on their ask (0 once it's up), or
+ * null with no open ask of theirs. Only a player who isn't the keeper, while the round is played.
  */
-export function canTakeCard(round, me, now = Date.now(), seenAt = 0) {
-  if (!round?.shared || round.status !== 'active' || round.editing) return false;
+export function askLeft(round, me, now = Date.now()) {
+  if (!round?.shared || round.status !== 'active' || round.editing) return null;
   const k = keeperOf(round);
-  if (!k || !isPlayer(round, me) || k.id === me) return false;
-  const last = Math.max(k.lastSaveAt || k.since || 0, seenAt || 0);
-  if (last > now) return false;
-  return now - last >= KEEPER_QUIET_MS;
+  const a = openAsk(round);
+  if (!k || !a || a.by !== me || !isPlayer(round, me) || k.id === me) return null;
+  return Math.max(0, Math.min(ASK_MS, a.at + ASK_MS - now));
+}
+
+/** Whether `me` can take the card: they asked, and the keeper didn't answer in ASK_MS. */
+export function canTakeCard(round, me, now = Date.now()) {
+  return askLeft(round, me, now) === 0;
+}
+
+/** "1:42": the time left on an ask. */
+export function clockText(ms) {
+  const s = Math.ceil(Math.max(0, ms) / 1000);
+  return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`;
 }
 
 /** Players the card can be handed to: every player, with whether their phone is on the round. */
@@ -124,17 +138,49 @@ export function askForCard(by, now = Date.now()) {
   return { cardAsk: { by, at: now } };
 }
 
-/** The keeper said "Keep it", or the asker took it back. */
+/** The asker took it back. */
 export function clearAsk() {
   return { cardAsk: null };
 }
 
-/** The ask still standing: from a player who isn't the keeper. */
+/** The keeper said No: the ask ends, and the asker's phone says so. */
+export function declineAsk(round, now = Date.now()) {
+  const a = openAsk(round);
+  return a ? { cardAsk: { ...a, no: true, noAt: now } } : {};
+}
+
+/** The ask still standing: from a player who isn't the keeper, and not answered No. */
 export function openAsk(round) {
   const a = round?.cardAsk;
   const k = keeperOf(round);
-  if (!a || !a.by || !isPlayer(round, a.by) || (k && k.id === a.by)) return null;
+  if (!a || !a.by || a.no || !isPlayer(round, a.by) || (k && k.id === a.by)) return null;
   return { by: a.by, at: Number(a.at) || 0 };
+}
+
+/** The keeper said No to `me`'s ask, lately: { at, noAt }, or null. */
+export function declinedAsk(round, me, now = Date.now()) {
+  const a = round?.cardAsk;
+  if (!a?.no || a.by !== me) return null;
+  const noAt = Number(a.noAt) || 0;
+  return now - noAt < NOTE_MS ? { at: Number(a.at) || 0, noAt } : null;
+}
+
+/** `me` takes the card after an unanswered ask. `from` is kept so the old keeper's phone can say who took it. */
+export function takeCard(round, me, now = Date.now(), hole = null) {
+  const k = keeperOf(round);
+  return { keeper: { id: me, since: now, by: me, lastSaveAt: now, ...(hole != null ? { hole } : {}), from: k ? k.id : null }, cardAsk: null };
+}
+
+/**
+ * Who took the card from this phone lately (their player id), or null. `me` and `isHost` say
+ * which phone this is: the host phone had it when `from` is null.
+ */
+export function tookFromMe(round, me, isHost, now = Date.now()) {
+  const k = round?.keeper;
+  if (!k || typeof k !== 'object' || !('from' in k) || k.by !== k.id || !k.id) return null;
+  const mine = k.from === null ? !!isHost : k.from === me;
+  if (!mine || k.id === me) return null;
+  return now - (Number(k.since) || 0) < NOTE_MS ? k.id : null;
 }
 
 /** Mark a player's phone as on the round (they took their seat). */

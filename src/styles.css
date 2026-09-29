@@ -1049,6 +1049,10 @@ button:disabled { cursor: not-allowed; }
 .ap-hole { min-width: 44px; min-height: 44px; justify-content: center; }
 .seat-req .pill-btn.ghost { background: transparent; color: var(--on-pastel); box-shadow: inset 0 0 0 1.5px rgba(0,0,0,.35); }
 .seat-req.keeper-bar { background: var(--mint); }
+.seat-req .sr-sub { display: block; margin-top: 2px; font-size: 13px; opacity: .8; }
+.seat-req .link-btn.inline { min-height: 0; padding: 0; font-size: inherit; color: inherit; }
+.seat-req .sr-clock { font-variant-numeric: tabular-nums; }
+.seat-req .pill-btn.ghost:disabled { opacity: 1; }
 .sheet-item:disabled { opacity: .55; transform: none; }
 
 /* Upcoming rounds: the plan, who's in, the vote, roll call */

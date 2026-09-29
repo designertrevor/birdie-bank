@@ -29,8 +29,8 @@ import { RoundsInProgressSheet } from '../components/RoundsInProgress.jsx';
 import { ByGameTable } from '../components/SideGames.jsx';
 import { nassauOpenNote } from '../lib/side-games.js';
 import {
-  KEEPER_QUIET_MS, askForCard, canEdit, canTakeCard, clearAsk, handOff, handOffChoices, hostKeeper, isKeeper, keeperMe, keeperName, keeperOf,
-  keeperSaved, openAsk, seatTaken,
+  ASK_MS, askForCard, askLeft, canEdit, canTakeCard, clearAsk, clockText, declineAsk, declinedAsk, handOff, handOffChoices, hostKeeper, isKeeper,
+  keeperMe, keeperName, keeperOf, keeperSaved, openAsk, seatTaken, takeCard as takeCardPatch, tookFromMe,
 } from '../lib/keeper.js';
 
 export default function Play({ id }) {
@@ -60,18 +60,6 @@ export default function Play({ id }) {
 
 // Keeper handoffs this phone has already announced ("roundId:since"), so a remount doesn't say it twice
 const HANDED = new Set();
-// When this phone last saw the keeper save a hole, by its own clock: roundId -> { lastSaveAt, seenAt }.
-// The first sighting counts as 0 (trust the keeper's clock); a save seen change after that is timed here.
-const SEEN = new Map();
-function seenSave(round) {
-  const k = keeperOf(round);
-  if (!k) return 0;
-  const prev = SEEN.get(round.id);
-  if (!prev) { SEEN.set(round.id, { lastSaveAt: k.lastSaveAt, seenAt: 0 }); return 0; }
-  if (prev.lastSaveAt !== k.lastSaveAt) { const next = { lastSaveAt: k.lastSaveAt, seenAt: Date.now() }; SEEN.set(round.id, next); return next.seenAt; }
-  return prev.seenAt;
-}
-
 /** The time now, ticking every `ms` (0: never ticks). */
 function useNow(ms) {
   const [now, setNow] = useState(() => Date.now());
@@ -101,7 +89,6 @@ function PlayRound({ round }) {
   useWakeLock();
   const nav = useNav();
   const { ask, showToast } = useUI();
-  const confirmAsk = ask;
   const idx = Math.min(round.current, round.holes.length - 1);
   const hole = round.holes[idx];
   const isLast = idx === round.holes.length - 1;
@@ -161,9 +148,13 @@ function PlayRound({ round }) {
   const sharedLive = !!round.shared && !round.shared.ended;
   const amKeeper = sharedLive && isKeeper(round, me, isHost);
   const inRound = !!me && round.players.some(p => p.id === me);
-  const now = useNow(sharedLive && !!keeper && !amKeeper ? 30000 : 0);
-  const quiet = sharedLive && inRound && canTakeCard(round, me, now, seenSave(round));
   const cardAsk = openAsk(round);
+  // A second tick while an ask is open (the countdown), else every 30 seconds for the notes
+  const now = useNow(sharedLive && keeper ? (cardAsk ? 1000 : 30000) : 0);
+  const left = sharedLive && inRound ? askLeft(round, me, now) : null;
+  const declined = sharedLive && inRound ? declinedAsk(round, me, now) : null;
+  const tookBy = sharedLive ? tookFromMe(round, me, isHost, now) : null;
+  const tookName = tookBy ? firstName(round.players.find(p => p.id === tookBy)?.name || '') : '';
   const holderName = keeperName(round);
   // A round shared before keepers existed: the host phone takes the card when it opens it
   useEffect(() => {
@@ -184,25 +175,26 @@ function PlayRound({ round }) {
   }, [amKeeper, keeper?.id, keeper?.since, keeper?.by, keeper?.hole, me, round, idx, hole.no, showToast]);
   const askCard = () => { update(s => { Object.assign(s.rounds[round.id], askForCard(me)); }); showToast(`Asked ${holderName} for the card`); };
   const takeBack = () => update(s => { Object.assign(s.rounds[round.id], clearAsk()); });
-  const takeCard = async () => {
-    const ok = await confirmAsk({
-      title: `Take the card from ${holderName}?`,
-      text: `${holderName}’s phone hasn’t saved a hole in ${Math.round(KEEPER_QUIET_MS / 60000)} minutes.`,
-      confirmLabel: 'Take the card',
-    });
-    if (!ok) return;
-    // Taken, not handed: `by` is the taker, so nobody is told they were handed it
-    update(s => { const r = s.rounds[round.id]; if (r && canTakeCard(r, me, Date.now(), seenSave(r))) Object.assign(r, handOff(me, me, Date.now(), hole.no)); });
+  // The keeper didn't answer in 2 minutes: one tap takes it. Taken, not handed: `by` is the taker,
+  // so nobody is told they were handed it, and `from` lets the old keeper's phone say who took it
+  const takeCard = () => {
+    update(s => { const r = s.rounds[round.id]; if (r && canTakeCard(r, me, Date.now())) Object.assign(r, takeCardPatch(r, me, Date.now(), hole.no)); });
     showToast('You’re keeping score');
     buzz(20);
   };
+  // The card was taken from this phone: say who took it, once
+  useEffect(() => {
+    if (!tookBy || !keeper?.since || HANDED.has(`${round.id}:took:${keeper.since}`)) return;
+    HANDED.add(`${round.id}:took:${keeper.since}`);
+    showToast(`${tookName || 'Someone'} took the card`);
+  }, [tookBy, tookName, keeper?.since, round.id, showToast]);
   const giveCard = pid => {
     setHandSheet(false);
     update(s => { const r = s.rounds[round.id]; if (r && isKeeper(r, me, isHost)) Object.assign(r, handOff(pid, me ?? null, Date.now(), hole.no)); });
     const who = firstName(round.players.find(p => p.id === pid)?.name || '');
     showToast(`${who} is keeping score now`);
   };
-  const keepCard = () => update(s => { Object.assign(s.rounds[round.id], clearAsk()); });
+  const keepCard = () => update(s => { Object.assign(s.rounds[round.id], declineAsk(s.rounds[round.id])); });
 
   const setMarksDirty = m => { setDirty(true); setMarks(m); };
   const setScore = (pid, v) => {
@@ -239,7 +231,7 @@ function PlayRound({ round }) {
       if (game === 'wolf') r.wolf[hole.no] = wolf;
       if (marks) { if (!r.marks) r.marks = {}; r.marks[hole.no] = marks; }
       if (!isLast) r.current = nextIdx;
-      // The keeper's phone is still keeping score: nobody can take the card for another 10 minutes
+      // The keeper's phone saved a hole (kept for the record of who's been scoring)
       if (isKeeper(r, me, isHost)) Object.assign(r, keeperSaved(r));
       // Auto presses before the next hole
       if (pressMode(r) === 'auto' && !isLast) {
@@ -335,22 +327,29 @@ function PlayRound({ round }) {
       {sharedLive && keeper && round.status === 'active' && !round.editing && (
         <div className="seat-req keeper-bar" role="status">
           <Icon name="pencil-simple" fill />
-          <span className="sr-text">{amKeeper ? 'You’re keeping score' : <><strong>{holderName}</strong> is keeping score</>}</span>
+          <span className="sr-text">
+            {amKeeper ? 'You’re keeping score' : tookBy ? <><strong>{tookName}</strong> took the card</> : <><strong>{holderName}</strong> is keeping score</>}
+            {!amKeeper && left > 0 && <span className="sr-sub">Asked. {holderName} can say yes or no. <button className="link-btn inline" onClick={takeBack}>Undo<span className="sr-only">: take back asking {holderName} for the card</span></button></span>}
+            {!amKeeper && left == null && declined && <span className="sr-sub">{holderName} said no, so they’re keeping it.</span>}
+          </span>
           {amKeeper
             ? <button className="pill-btn" onClick={() => setHandSheet(true)}>Hand off</button>
-            : inRound && (quiet
+            : inRound && (left === 0
               ? <button className="pill-btn" onClick={takeCard}>Take the card</button>
-              : cardAsk?.by === me
-                ? <button className="pill-btn ghost" onClick={takeBack}>Asked · Undo<span className="sr-only">: take back asking {holderName} for the card</span></button>
-                : <button className="pill-btn" onClick={askCard}>Ask for it</button>)}
+              : left > 0
+                ? <button className="pill-btn ghost" disabled aria-live="off" aria-label={`You can take the card in ${Math.ceil(left / 1000)} seconds if ${holderName} doesn’t answer`}>Take the card in <span className="sr-clock">{clockText(left)}</span></button>
+                : <button className="pill-btn" onClick={askCard}>{declined ? 'Ask again' : 'Ask for it'}</button>)}
         </div>
       )}
       {amKeeper && cardAsk && round.status === 'active' && (
         <div className="seat-req" role="status">
           <Icon name="hand-grabbing" fill />
-          <span className="sr-text"><strong>{firstName(round.players.find(p => p.id === cardAsk.by)?.name || '')}</strong> asked for the card</span>
-          <button className="pill-btn" disabled={dirty} onClick={() => giveCard(cardAsk.by)}>Hand it over</button>
-          <button className="pill-btn ghost" onClick={keepCard}>Keep it</button>
+          <span className="sr-text">
+            <strong>{firstName(round.players.find(p => p.id === cardAsk.by)?.name || '')}</strong> asked for the card. Hand it over?
+            <span className="sr-sub">With no answer, they can take it in {clockText(Math.max(0, cardAsk.at + ASK_MS - now))}.</span>
+          </span>
+          <button className="pill-btn" disabled={dirty} onClick={() => giveCard(cardAsk.by)}>Yes<span className="sr-only">, hand it over</span></button>
+          <button className="pill-btn ghost" onClick={keepCard}>No<span className="sr-only">, keep it</span></button>
         </div>
       )}
       {round.editing && editable && (

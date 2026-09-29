@@ -1,10 +1,11 @@
 // Who keeps score in a shared round: one keeper who can hand off, read-only for the others,
-// watchers never edit, and a player can take the card after 10 quiet minutes.
+// watchers never edit, and a player who asks can take the card when the keeper doesn't answer in 2 minutes.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import {
-  KEEPER_QUIET_MS, keeperOf, keeperMe, isKeeper, canEdit, keeperName, canTakeCard, handOffChoices,
-  hostKeeper, handOff, keeperSaved, askForCard, clearAsk, openAsk, seatTaken, metaToSend, metaToKeep, holeToKeep,
+  ASK_MS, NOTE_MS, keeperOf, keeperMe, isKeeper, canEdit, keeperName, canTakeCard, handOffChoices, askLeft, clockText,
+  declineAsk, declinedAsk, takeCard, tookFromMe,
+  hostKeeper, handOff, askForCard, clearAsk, openAsk, seatTaken, metaToSend, metaToKeep, holeToKeep,
 } from './keeper.js';
 
 const T0 = 1_800_000_000_000;
@@ -69,32 +70,71 @@ test('keeperMe: the host phone is the organizer; a joined phone is its seat, and
   assert.equal(keeperMe({ id: 'r', players }, state), 'mike');
 });
 
-test('take the card: only after 10 minutes with no save, only a player who isn\'t the keeper', () => {
-  const r = shared(handOff('mike', null, T0));
-  assert.equal(canTakeCard(r, 'dave', T0 + KEEPER_QUIET_MS - 1), false);
-  assert.equal(canTakeCard(r, 'dave', T0 + KEEPER_QUIET_MS), true);
-  assert.equal(canTakeCard(r, 'mike', T0 + KEEPER_QUIET_MS * 3), false); // the keeper
-  assert.equal(canTakeCard(r, 'watcher', T0 + KEEPER_QUIET_MS * 3), false);
-  // A save starts the clock again
-  const saved = { ...r, ...keeperSaved(r, T0 + 9 * 60000) };
-  assert.equal(canTakeCard(saved, 'dave', T0 + KEEPER_QUIET_MS), false);
-  assert.equal(canTakeCard(saved, 'dave', T0 + 19 * 60000), true);
+test('take the card: ask, wait 2 minutes with no answer, then one tap takes it', () => {
+  let r = shared(handOff('mike', null, T0));
+  // No ask, no taking: however long the keeper goes quiet
+  assert.equal(canTakeCard(r, 'dave', T0 + 60 * 60000), false);
+  assert.equal(askLeft(r, 'dave', T0), null);
+  r = { ...r, ...askForCard('dave', T0 + 1000) };
+  assert.equal(askLeft(r, 'dave', T0 + 1000), ASK_MS);
+  assert.equal(clockText(askLeft(r, 'dave', T0 + 1000 + 18000)), '1:42');
+  assert.equal(canTakeCard(r, 'dave', T0 + 1000 + ASK_MS - 1), false);
+  assert.equal(clockText(askLeft(r, 'dave', T0 + 1000 + ASK_MS - 1)), '0:01');
+  assert.equal(askLeft(r, 'dave', T0 + 1000 + ASK_MS), 0);
+  assert.equal(canTakeCard(r, 'dave', T0 + 1000 + ASK_MS), true);
+  // Only the asker, never the keeper, a watcher or another player
+  assert.equal(canTakeCard(r, 'trev', T0 + 1000 + ASK_MS), false);
+  assert.equal(canTakeCard(r, 'mike', T0 + 1000 + ASK_MS), false);
+  assert.equal(canTakeCard(r, 'watcher', T0 + 1000 + ASK_MS), false);
+  // A clock that went backwards still shows at most 2:00
+  assert.equal(askLeft(r, 'dave', T0), ASK_MS);
   // Not once the round is finished or being fixed, and not in a round with no keeper
-  assert.equal(canTakeCard({ ...r, status: 'done' }, 'dave', T0 + KEEPER_QUIET_MS * 3), false);
-  assert.equal(canTakeCard({ ...r, editing: true }, 'dave', T0 + KEEPER_QUIET_MS * 3), false);
-  assert.equal(canTakeCard(shared(), 'dave', T0 + KEEPER_QUIET_MS * 3), false);
+  assert.equal(canTakeCard({ ...r, status: 'done' }, 'dave', T0 + ASK_MS * 3), false);
+  assert.equal(canTakeCard({ ...r, editing: true }, 'dave', T0 + ASK_MS * 3), false);
+  assert.equal(canTakeCard(shared({ ...askForCard('dave', T0) }), 'dave', T0 + ASK_MS * 3), false);
+  // Taking it: Dave keeps score now, the ask is done, and Mike's phone says who took it
+  const took = { ...r, ...takeCard(r, 'dave', T0 + 1000 + ASK_MS, 7) };
+  assert.deepEqual(keeperOf(took), { id: 'dave', since: T0 + 1000 + ASK_MS, by: 'dave', lastSaveAt: T0 + 1000 + ASK_MS, hole: 7 });
+  assert.equal(openAsk(took), null);
+  assert.equal(tookFromMe(took, 'mike', false, T0 + ASK_MS + 5000), 'dave');
+  assert.equal(tookFromMe(took, 'trev', true, T0 + ASK_MS + 5000), null, 'the host phone didn’t have it');
+  assert.equal(tookFromMe(took, 'dave', false, T0 + ASK_MS + 5000), null);
+  assert.equal(tookFromMe(took, 'mike', false, T0 + 1000 + ASK_MS + NOTE_MS), null, 'the note goes after a while');
+  // Handed over the usual way: nobody "took" it
+  assert.equal(tookFromMe({ ...r, ...handOff('dave', 'mike', T0 + 5) }, 'mike', false, T0 + 10), null);
+  // Taken from the phone that started the round (keeper id null): that phone is told
+  const fromHost = shared({ ...hostKeeper(T0), ...askForCard('dave', T0) });
+  const took2 = { ...fromHost, ...takeCard(fromHost, 'dave', T0 + ASK_MS) };
+  assert.equal(tookFromMe(took2, 'trev', true, T0 + ASK_MS + 1), 'dave');
+  assert.equal(tookFromMe(took2, 'mike', false, T0 + ASK_MS + 1), null);
 });
 
-test('take the card: clock skew between phones', () => {
-  const r = shared(handOff('mike', null, T0));
-  // The keeper's clock runs 5 minutes fast: its save looks like it's in the future, so it counts as just now
-  const fast = { ...r, ...keeperSaved(r, T0 + 5 * 60000) };
-  assert.equal(canTakeCard(fast, 'dave', T0 + 60000), false);
-  // The keeper's clock runs 20 minutes slow: this phone heard the save a minute ago by its own clock
-  const slow = { ...r, ...keeperSaved(r, T0 - 20 * 60000) };
-  assert.equal(canTakeCard(slow, 'dave', T0 + 60000), true);
-  assert.equal(canTakeCard(slow, 'dave', T0 + 60000, T0), false);
-  assert.equal(canTakeCard(slow, 'dave', T0 + KEEPER_QUIET_MS, T0), true);
+test('take the card: the keeper says No, the ask ends and the asker sees it; asking again starts over', () => {
+  let r = shared({ ...handOff('mike', null, T0), ...askForCard('dave', T0 + 10) });
+  r = { ...r, ...declineAsk(r, T0 + 30000) };
+  assert.equal(openAsk(r), null, 'no Yes/No prompt on the keeper any more');
+  assert.equal(askLeft(r, 'dave', T0 + ASK_MS * 2), null);
+  assert.equal(canTakeCard(r, 'dave', T0 + ASK_MS * 2), false, 'a No can’t be waited out');
+  assert.deepEqual(declinedAsk(r, 'dave', T0 + 60000), { at: T0 + 10, noAt: T0 + 30000 });
+  assert.equal(declinedAsk(r, 'trev', T0 + 60000), null);
+  assert.equal(declinedAsk(r, 'dave', T0 + 30000 + NOTE_MS), null);
+  // Saying No with no ask open changes nothing
+  assert.deepEqual(declineAsk(r, T0), {});
+  // Ask again: a new two minutes
+  r = { ...r, ...askForCard('dave', T0 + 90000) };
+  assert.equal(declinedAsk(r, 'dave', T0 + 90000), null);
+  assert.equal(askLeft(r, 'dave', T0 + 90000), ASK_MS);
+  // Taking back the ask
+  assert.equal(openAsk({ ...r, ...clearAsk() }), null);
+});
+
+test('take the card: an organizer who isn’t playing can’t ask for it or take it', () => {
+  // Trevor started the round but isn't in it, and handed the card to Mike
+  const org = [{ id: 'mike', name: 'Mike Hart' }, { id: 'dave', name: 'Dave Lo' }];
+  const r = { id: 'r', status: 'active', hostName: 'Trevor', players: org, shared: { code: 'ABC123', host: true }, ...handOff('mike', null, T0), ...askForCard('trev', T0) };
+  assert.equal(openAsk(r), null);
+  assert.equal(askLeft(r, 'trev', T0 + ASK_MS), null);
+  assert.equal(canTakeCard(r, 'trev', T0 + ASK_MS * 5), false);
 });
 
 test('hand off: players on the app can take it, watchers are never listed, and an ask clears', () => {
