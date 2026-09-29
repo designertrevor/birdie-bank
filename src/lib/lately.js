@@ -16,6 +16,7 @@ import { nameOf } from './ledger.js';
 import { dayLabel } from './plans.js';
 import { PAY_APPS } from './pay.js';
 import { lastResult, roundTime } from './history.js';
+import { paymentGroups } from './shared-tab.js';
 
 export const LATELY_DAYS = 30;
 const DAY = 24 * 60 * 60 * 1000;
@@ -55,15 +56,14 @@ export function latelyItems(state, now = Date.now(), { carries = state?.carries,
   const items = [];
 
   // Payments recorded on the Tab: one tap that filled several round transfers is one payment
-  const taps = new Map();
-  for (const s of state.settlements || []) {
-    if (!inWindow(s.at) || !s.from || !s.to) continue;
-    const key = `${s.from}>${s.to}@${s.at}`;
-    const g = taps.get(key);
-    if (g) { g.amount = cents(g.amount + (Number(s.amount) || 0)); if (!g.roundId && s.roundId) g.roundId = s.roundId; if (!g.app && s.app) g.app = s.app; }
-    else taps.set(key, { ...s, amount: Number(s.amount) || 0 });
-  }
-  for (const s of taps.values()) {
+  // (or went both ways: the shared rounds one way, the rest of the Tab the other, netted)
+  const taps = paymentGroups({ ...state, settlements: (state.settlements || []).filter(s => inWindow(s.at) && s.from && s.to) })
+    .filter(g => g.amount > 0)
+    .map(g => {
+      const lead = g.settlements.find(s => s.from === g.from && s.to === g.to) || g.settlements[0];
+      return { ...lead, from: g.from, to: g.to, amount: g.amount, roundId: g.settlements.find(s => s.roundId)?.roundId || null, app: g.settlements.find(s => s.app)?.app || null };
+    });
+  for (const s of taps) {
     const fromMe = mine.has(s.from), toMe = mine.has(s.to);
     if (fromMe && toMe) continue; // you paying you across two phones
     const app = PAY_APPS[s.app]?.name;

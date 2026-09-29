@@ -6,7 +6,7 @@ import { Avatar, SettleSheet } from '../components/Pay.jsx';
 import { PersonActions, RecentPaid, SquareStrip } from '../components/TabCard.jsx';
 import { useStore } from '../lib/store.js';
 import { headToHeadSummary, nameOf, outstanding } from '../lib/ledger.js';
-import { canonicalOf, recentPayment } from '../lib/shared-tab.js';
+import { canonicalOf, paymentGroups, recentPayment } from '../lib/shared-tab.js';
 import { sharedDebts } from '../lib/pair-debts.js';
 import { undoPayments, useTabSync } from '../lib/tab-sync.js';
 import { money } from '../lib/golf.js';
@@ -45,13 +45,14 @@ export default function Ledger() {
   const others = plan.filter(t => !isMe(t.from) && !isMe(t.to));
   const overall = Math.round(people.reduce((a, p) => a + p.net, 0) * 100) / 100;
   const h2h = headToHeadSummary(state, mine);
-  const history = [...state.settlements].sort((a, b) => b.at - a.at);
+  // One row per tap: a tap that paid several rounds, or went both ways, is one payment
+  const history = paymentGroups(state);
   const hasRounds = Object.values(state.rounds).some(r => r.status === 'done');
   const hasShared = sharedDebts(state).length > 0;
 
   // One tap, no confirm: it can be put back from the toast, and a shared payment updates both phones
   const undo = s => {
-    const redo = undoPayments([s]);
+    const redo = undoPayments(s.settlements);
     showToast(`${nameOf(state, s.from).split(' ')[0]} owes ${nameOf(state, s.to).split(' ')[0]} again`, { label: 'Undo', run: redo });
   };
   // People you squared with lately keep a card for a few days, so the last payment can be taken back
@@ -163,7 +164,7 @@ export default function Ledger() {
           <>
             <div className="sec-label">Payments</div>
             {history.slice(0, 30).map(s => (
-              <div key={s.id} className="ledger-row static">
+              <div key={s.key} className="ledger-row static">
                 <div className="lr-info">
                   <div className="lr-name" style={{ fontSize: 16 }}>{isMe(s.from) ? 'You' : nameOf(state, s.from)} paid {isMe(s.to) ? 'you' : nameOf(state, s.to)}</div>
                   <div className="lr-status">{new Date(s.at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}</div>

@@ -236,6 +236,29 @@ export function lastPayment(state, a, b) {
   };
 }
 
+/**
+ * The payments list: every settlement, one row per tap (the same two people at the same moment),
+ * newest first. One tap can pay several round transfers, or run both ways (the shared rounds one
+ * way, the rest of the Tab the other), so a row is netted: { key, at, from, to, amount, settlements }.
+ */
+export function paymentGroups(state) {
+  const who = canonicalOf(state);
+  const groups = new Map();
+  for (const s of state.settlements || []) {
+    const [a, b] = [who(s.from), who(s.to)].sort();
+    const key = `${s.at || 0}|${a}|${b}`;
+    if (!groups.has(key)) groups.set(key, { key, at: s.at || 0, a, list: [] });
+    groups.get(key).list.push(s);
+  }
+  return [...groups.values()].map(g => {
+    // Cents from `a` to the other one: the sign says which way the tap went on the whole
+    const net = g.list.reduce((c, s) => c + (who(s.from) === g.a ? 1 : -1) * cents(s.amount), 0);
+    const fromA = net > 0 || (net === 0 && who(g.list[0].from) === g.a);
+    const { from, to } = g.list.find(s => (who(s.from) === g.a) === fromA);
+    return { key: g.key, at: g.at, from, to, amount: Math.abs(net) / 100, settlements: g.list };
+  }).sort((x, y) => y.at - x.at);
+}
+
 /** The transfers these payments netted (written in the same tap, between the same people). */
 export function nettedFor(state, settlements) {
   const who = canonicalOf(state);
