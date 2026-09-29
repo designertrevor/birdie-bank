@@ -7,7 +7,12 @@
 // The bet vote is per game: each game on the ballot has its own amounts in its own unit ("$5 a
 // side" for Nassau, "$1 a point" for Wolf), and the bet that counts is the one voted for the game
 // that wins. Plans saved before that have one list of amounts for every game; they still work.
-import { GAMES } from './round.js';
+//
+// Side games (Skins, Junk, a Birdie pot) can go on the ballot too: everyone says yes or no to
+// each, and the roll call starts the round with the ones the group wanted that fit the game that
+// won. The list rides in the plan (a JSON column already on the server) and each person's side
+// votes ride inside their game vote ("nassau~skins.-dots"), so no new table or column is needed.
+import { GAMES, MAX_GAMES, SIDE_GAMES, sideGameChoices } from './round.js';
 import { stakeHeadline, stakeSummary } from './stakes.js';
 import { defaultTeams, teamsProblem } from './teams.js';
 import { defaultTee } from './courses.js';
@@ -107,6 +112,37 @@ export function betVoteChoice(a) {
   return a.betGame ? `${a.betGame}:${Number(a.bet)}` : String(Number(a.bet));
 }
 
+/** The side games on a plan's ballot (none on older plans). */
+export function ballotSides(plan) {
+  return (plan?.ballot?.sides || []).filter(k => SIDE_GAMES[k]);
+}
+
+/**
+ * A game vote as the server keeps it: "nassau", or with side game votes "nassau~skins.-dots"
+ * (yes to Skins, no to Junk; "~skins" with no game vote). Null when there's nothing to keep.
+ */
+export function gameVoteChoice(a) {
+  const game = a?.game ?? null;
+  const sides = Object.entries(a?.sides || {}).filter(([k, v]) => SIDE_GAMES[k] && typeof v === 'boolean');
+  if (!sides.length) return game;
+  return `${game || ''}~${sides.map(([k, v]) => (v ? k : `-${k}`)).join('.')}`;
+}
+
+/** { game, sides? } from a stored game vote. */
+export function parseGameVote(choice) {
+  const [g, rest] = String(choice ?? '').split('~');
+  const out = { game: g || null };
+  if (rest != null) {
+    out.sides = {};
+    for (const t of rest.split('.')) {
+      const no = t.startsWith('-');
+      const k = no ? t.slice(1) : t;
+      if (SIDE_GAMES[k]) out.sides[k] = !no;
+    }
+  }
+  return out;
+}
+
 /** { bet, betGame } from a stored bet vote (no `betGame` on an old one), or null when it can't be read. */
 export function parseBetVote(choice) {
   const m = /^(?:([a-z]+):)?(\d+(?:\.\d+)?)$/.exec(String(choice ?? ''));
@@ -134,7 +170,7 @@ export function planPeople(plan) {
 }
 function pick(a) {
   const bet = a?.bet ?? null;
-  return { status: RSVPS.includes(a?.status) ? a.status : null, game: a?.game ?? null, bet, betGame: bet != null ? a?.betGame ?? null : null };
+  return { status: RSVPS.includes(a?.status) ? a.status : null, game: a?.game ?? null, bet, betGame: bet != null ? a?.betGame ?? null : null, sides: a?.sides || null };
 }
 
 /** Counts for the card: { in, maybe, out, waiting } (waiting: invited and no answer yet). */
@@ -197,6 +233,41 @@ export function planChoice(plan) {
   return { game, bet: Number(tally(plan, 'bet', game).winner) || null };
 }
 
+/**
+ * The side game vote: for each side game on the ballot, how many said yes and no (people who
+ * are out don't count). A side game is on when more say yes than no; a tie, or no votes yet,
+ * goes to the organizer, who put it on the ballot to play it.
+ * [{ side, yes, no, on }]
+ */
+export function tallySides(plan) {
+  const sides = ballotSides(plan);
+  const suggested = plan?.suggested?.sides ?? sides;
+  const rows = sides.map(side => ({ side, yes: 0, no: 0, on: false }));
+  for (const p of planPeople(plan)) {
+    if (p.status === 'out' || !p.sides) continue;
+    for (const r of rows) {
+      if (p.sides[r.side] === true) r.yes++;
+      if (p.sides[r.side] === false) r.no++;
+    }
+  }
+  for (const r of rows) r.on = r.yes > r.no || (r.yes === r.no && suggested.includes(r.side));
+  return rows;
+}
+
+/**
+ * The side games the round starts with: the ones the group wants that can ride along with
+ * `game` (no Skins on a Skins round, nothing on a Scramble), most wanted first, up to the cap.
+ */
+export function planSides(plan, game = planChoice(plan).game) {
+  const on = tallySides(plan).filter(r => r.on).sort((a, b) => (b.yes - b.no) - (a.yes - a.no));
+  const out = [];
+  for (const r of on) {
+    if (out.length >= MAX_GAMES - 1) break;
+    if (sideGameChoices(game, out.map(k => ({ game: k }))).includes(r.side)) out.push(r.side);
+  }
+  return out;
+}
+
 // --------------------------- roll call --------------------------------------
 
 /** Who starts checked at the tee: everyone who said they're in. */
@@ -257,8 +328,10 @@ export function planStart(state, plan, present, { newId, course: courseIn } = {}
   const settings = bet ? withBet(game, rules, bet) : structuredClone(rules);
   delete settings.shareAmounts; // a personal setting, not part of a round's bets
   const tee = defaultTee(course)?.name ?? null;
+  // The side games the group voted for, each with the organizer's house rules for it
+  const sideGames = planSides(plan, game).filter(k => rules[k]).map(k => ({ game: k, settings: structuredClone(rules[k]) }));
   return {
-    game, bet, course, holesCount, nine: plan.nine || 'front', teams, problem, newPlayers,
+    game, bet, course, holesCount, nine: plan.nine || 'front', teams, problem, newPlayers, sideGames,
     players: players.map(p => ({ ...p, tee })),
     settings,
     hcPct: settings.hcPct ?? 100,
@@ -393,10 +466,11 @@ export function morningText(plan, link, settings, now = new Date()) {
   const lead = n === 0 ? 'Golf today!' : n === 1 ? 'Golf tomorrow!' : `Golf ${dayWords(plan, now)}!`;
   const rules = planRules(plan, settings);
   const bets = bet && rules[game] ? betLabel(game, rules, bet) : '';
+  const sides = planSides(plan, game);
   return [
     `${lead} ${plan.course?.name || ''}${t ? `, tee time ${t}` : ''}.`.replace(' ,', ','),
     ins.length ? `In: ${listNames(ins)}.` : null,
-    GAMES[game] ? `Game: ${GAMES[game].name}${bets ? `, ${bets}` : ''}.` : null,
+    GAMES[game] ? `Game: ${GAMES[game].name}${bets ? `, ${bets}` : ''}${sides.length ? `, plus ${listNames(sides.map(k => SIDE_GAMES[k].label))}` : ''}.` : null,
     link,
   ].filter(Boolean).join('\n');
 }
@@ -424,7 +498,7 @@ export function answersFrom(rsvps = [], votes = []) {
   }
   for (const v of votes) {
     if (!v?.who || !out[v.who] || v.choice == null) continue;
-    if (v.kind === 'game') out[v.who].game = String(v.choice);
+    if (v.kind === 'game') Object.assign(out[v.who], parseGameVote(v.choice));
     if (v.kind === 'bet') Object.assign(out[v.who], parseBetVote(v.choice) || {});
   }
   return out;
@@ -453,6 +527,9 @@ export function newPlan({ id, hostWho = HOST, hostName, game, holesCount, nine, 
   const betsByGame = {};
   const suggestedBets = {};
   const rules = {};
+  // Side games to vote on, with the organizer's house rules for each
+  const sides = [...new Set(ballot?.sides || [])].filter(k => SIDE_GAMES[k]);
+  for (const k of sides) if (settings?.[k] && !rules[k]) rules[k] = structuredClone(settings[k]);
   for (const g of games) {
     const usual = g === game ? bet : Number(betOf(g, settings)) || bet;
     betsByGame[g] = g === game || !settings?.[g] ? bets : betChoices(usual);
@@ -468,9 +545,9 @@ export function newPlan({ id, hostWho = HOST, hostName, game, holesCount, nine, 
     course: course ? { id: course.id, name: course.name, city: course.city || null } : null,
     people: [{ id: hostWho, name: hostFirst || 'Me' }, ...others],
     // `bets` and `bet` stay for phones on an older version, which read one list for every game
-    ballot: { games, bets, betsByGame, rules },
-    suggested: { game, bet, bets: suggestedBets },
-    answers: { [hostWho]: { name: hostFirst || 'Me', status: 'in', game, bet: Number(suggestedBet) || null, betGame: Number(suggestedBet) ? game : null, at: now } },
+    ballot: { games, bets, betsByGame, rules, ...(sides.length ? { sides } : {}) },
+    suggested: { game, bet, bets: suggestedBets, ...(sides.length ? { sides } : {}) },
+    answers: { [hostWho]: { name: hostFirst || 'Me', status: 'in', game, bet: Number(suggestedBet) || null, betGame: Number(suggestedBet) ? game : null, ...(sides.length ? { sides: Object.fromEntries(sides.map(k => [k, true])) } : {}), at: now } },
     code: null,
   };
 }

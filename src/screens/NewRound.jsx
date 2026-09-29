@@ -5,10 +5,10 @@ import { getState, update, uid, useStore } from '../lib/store.js';
 import { allCourses, coursePar, courseTag, defaultTee as firstTee, teeDotStyle } from '../lib/courses.js';
 import { getCourse } from '../lib/courseApi.js';
 import { useCourseSearch } from '../lib/useCourseSearch.js';
-import { GAMES, GAME_GROUPS, createRound, effectiveCourseHc, holesInPlay, sideGamesOf } from '../lib/round.js';
+import { GAMES, GAME_GROUPS, MAX_GAMES, SIDE_GAMES, createRound, effectiveCourseHc, holesInPlay, sideGamesOf } from '../lib/round.js';
 import { SideGamesSetup } from '../components/SideGames.jsx';
 import { GameOptions, SixesPreview, TeamPicker } from '../components/GameOptions.jsx';
-import { optionsProblem, roundStakeLines, stakeSummary } from '../lib/stakes.js';
+import { optionsProblem, roundStakeLines, sideBetLine, stakeSummary } from '../lib/stakes.js';
 import { syncConfigured } from '../lib/sync.js';
 import { ShareSheet } from '../components/Live.jsx';
 import { defaultTeams, teamsProblem } from '../lib/teams.js';
@@ -59,7 +59,7 @@ function planSetup(state, planId, present) {
   const g = GAMES[s.game];
   return {
     game: s.game, holesCount: s.holesCount, courseId: course?.id ?? null, nine: s.nine, picked, missing: [], tees: {}, hcOverride: {},
-    bets: structuredClone(s.settings[s.game]), hcPct: s.hcPct, useHc: s.useHandicaps, teams: s.teams,
+    bets: structuredClone(s.settings[s.game]), hcPct: s.hcPct, useHc: s.useHandicaps, teams: s.teams, sideGames: s.sideGames,
     step: !course ? 1 : picked.length < g.min || picked.length > g.max ? 2 : 3,
   };
 }
@@ -123,14 +123,14 @@ export default function NewRound({ rematch, fromPlan, present, ahead = false, ga
   };
 
   // Plan it: saved on this phone, then the group gets the link from the plan's page
-  const makePlan = ({ ballotGames, suggestedBet, ballotBets }) => {
+  const makePlan = ({ ballotGames, suggestedBet, ballotBets, ballotSides = [] }) => {
     const s = getState();
     const id = uid('pl_');
     const me = s.players[s.me];
     const plan = newPlan({
       id, hostName: me?.name || 'Me', game, holesCount, nine, date, teeTime, course,
       people: invited.filter(pid => pid !== s.me).map(pid => s.players[pid]).filter(Boolean),
-      ballot: { games: ballotGames, bets: ballotBets }, suggestedBet, settings: opts, useHc: true,
+      ballot: { games: ballotGames, bets: ballotBets, sides: ballotSides }, suggestedBet, settings: opts, useHc: true,
     });
     update(st => {
       if (!st.plans) st.plans = {};
@@ -698,6 +698,8 @@ function VoteStep({ game, opts, onPlan, ballot = [] }) {
   const [bet, setBet] = useState(start);
   const [others, setOthers] = useState(() => ballot.filter(k => k !== game && GAMES[k]).slice(0, MAX_BALLOT_GAMES - 1));
   const [extraBets, setExtraBets] = useState(() => nearbyBets(start));
+  const [sides, setSides] = useState([]);
+  const toggleSide = k => setSides(v => (v.includes(k) ? v.filter(x => x !== k) : [...v, k]));
   const ladder = [...new Set([...BET_LADDER, start])].sort((a, b) => a - b);
   const toggleGame = k => setOthers(v => (v.includes(k) ? v.filter(x => x !== k) : v.length >= MAX_BALLOT_GAMES - 1 ? v : [...v, k]));
   const toggleBet = b => setExtraBets(v => (v.includes(b) ? v.filter(x => x !== b) : [...v, b]));
@@ -740,10 +742,27 @@ function VoteStep({ game, opts, onPlan, ballot = [] }) {
             Each game gets its own bet vote, around your usual bet for it.
           </p>
         )}
-        {others.length === 0 && extraBets.length === 0 && <p className="field-help pad">Nothing else on the ballot, so everyone just says if they’re in.</p>}
+        <div className="sec-label">Side games to vote on</div>
+        <div className="chip-row">
+          {Object.entries(SIDE_GAMES).map(([k, sg]) => {
+            const on = sides.includes(k);
+            return (
+              <button key={k} aria-pressed={on} className={`pill-btn sm ${on ? 'on' : ''}`} onClick={() => toggleSide(k)}>
+                <Icon name={sg.icon} fill /> {sg.label}
+              </button>
+            );
+          })}
+        </div>
+        {sides.length > 0 && (
+          <p className="field-help pad">
+            {sides.map(k => <span key={k} style={{ display: 'block' }}>{SIDE_GAMES[k].label}{opts[k] ? `: ${sideBetLine(k, opts[k])}` : ''}</span>)}
+            Everyone says yes or no to each. Roll call adds the ones the group wants{sides.length > MAX_GAMES - 1 ? `, up to ${MAX_GAMES - 1}` : ''}.
+          </p>
+        )}
+        {others.length === 0 && extraBets.length === 0 && sides.length === 0 && <p className="field-help pad">Nothing else on the ballot, so everyone just says if they’re in.</p>}
       </div>
       <div className="cta-wrap">
-        <button className="full-btn" onClick={() => onPlan({ ballotGames: others, suggestedBet: bet, ballotBets })}>Plan it <Icon name="arrow-right" /></button>
+        <button className="full-btn" onClick={() => onPlan({ ballotGames: others, suggestedBet: bet, ballotBets, ballotSides: sides })}>Plan it <Icon name="arrow-right" /></button>
       </div>
     </>
   );

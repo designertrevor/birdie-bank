@@ -23,6 +23,10 @@ const base = () => newPlan({
   course: COURSE, people: [{ id: 'me', name: 'Trevor Nielsen' }, { id: 'mike', name: 'Mike Jones' }, { id: 'dave', name: 'Dave' }, { id: 'sam', name: 'Sam' }],
   ballot: { games: ['nassau', 'wolf'], bets: [2, 5] }, suggestedBet: 2, now: 1,
 });
+const BASE_SIDES = {
+  id: 'pl2', hostWho: 'me', hostName: 'Trevor', holesCount: 18, date: '2026-10-03', teeTime: '08:10',
+  course: { id: 'c1', name: 'Pine' }, people: [{ id: 'me', name: 'Trevor' }, { id: 'mike', name: 'Mike' }, { id: 'dave', name: 'Dave' }, { id: 'sam', name: 'Sam' }], now: 1,
+};
 const answer = (plan, who, a) => { plan.answers[who] = { name: who, at: 10, ...a }; return plan; };
 
 test('a new plan has the organizer in, first names only, and their suggestion first on the ballot', () => {
@@ -348,4 +352,51 @@ test('bet votes on the server: the game rides along, and old votes still read', 
     [{ who: 'mike', kind: 'bet', choice: 'wolf:1' }, { who: 'dave', kind: 'bet', choice: '5' }],
   );
   assert.deepEqual([a.mike.bet, a.mike.betGame, a.dave.bet, a.dave.betGame], [1, 'wolf', 5, undefined]);
+});
+
+// --------------------------- side games on the ballot ---------------------------
+
+test('side games: on the ballot with the organizer’s house rules, voted yes or no, and started at roll call', async () => {
+  const { ballotSides, gameVoteChoice, parseGameVote, planSides, tallySides } = await import('./plans.js');
+  const settings = { hcPct: 100, nassau: { front: 5, back: 5, total: 5, pressMode: 'off', threshold: 2 }, skins: { value: 2, carryover: true, kind: 'gross', lastCarry: 'split' }, dots: { value: 1, kinds: { greenie: true } }, birdies: { stake: 5, eagleShares: 2 } };
+  const p = newPlan({ ...BASE_SIDES, game: 'nassau', settings, suggestedBet: 5, ballot: { games: ['skins'], bets: [5], sides: ['skins', 'dots', 'birdies'] } });
+  assert.deepEqual(ballotSides(p), ['skins', 'dots', 'birdies']);
+  assert.deepEqual(p.ballot.rules.skins, settings.skins, 'the organizer’s Skins rules ride along');
+  assert.deepEqual(p.answers.me.sides, { skins: true, dots: true, birdies: true }, 'the organizer’s own vote is the suggestion');
+  // Nobody else voted: all three are on, and the cap keeps two
+  assert.deepEqual(tallySides(p).map(r => r.on), [true, true, true]);
+  assert.equal(planSides(p).length, 2);
+  // Mike and Dave say no to Junk, Mike says no to the Birdie pot too
+  p.answers.mike = { name: 'Mike', status: 'in', sides: { dots: false, birdies: false }, at: 1 };
+  p.answers.dave = { name: 'Dave', status: 'in', sides: { dots: false, skins: true }, at: 2 };
+  p.answers.sam = { name: 'Sam', status: 'out', sides: { skins: false }, at: 3 };
+  const rows = Object.fromEntries(tallySides(p).map(r => [r.side, r]));
+  assert.deepEqual([rows.skins.yes, rows.skins.no, rows.skins.on], [2, 0, true], 'someone who is out doesn’t count');
+  assert.deepEqual([rows.dots.yes, rows.dots.no, rows.dots.on], [1, 2, false]);
+  assert.deepEqual([rows.birdies.yes, rows.birdies.no, rows.birdies.on], [1, 1, true], 'a tie keeps it on');
+  assert.deepEqual(planSides(p, 'nassau'), ['skins', 'birdies']);
+  // Skins can't ride on a Skins round
+  assert.deepEqual(planSides(p, 'skins'), ['birdies']);
+  assert.deepEqual(planSides(p, 'scramble'), []);
+  // Roll call starts with them, each with the organizer's rules
+  const course = { id: 'c1', name: 'Pine', tees: [], holes: Array.from({ length: 18 }, (_, i) => ({ par: 4, hdcp: i + 1 })) };
+  const st = { me: 'me', players: { me: { id: 'me', name: 'Trevor' }, mike: { id: 'mike', name: 'Mike' }, dave: { id: 'dave', name: 'Dave' } }, settings: {} };
+  const s = planStart(st, p, ['me', 'mike', 'dave'], { course });
+  assert.equal(s.game, 'nassau');
+  assert.deepEqual(s.sideGames, [{ game: 'skins', settings: settings.skins }, { game: 'birdies', settings: settings.birdies }]);
+  // A plan with no side games on the ballot starts with none, as before
+  const plain = newPlan({ ...BASE_SIDES, game: 'nassau', settings, suggestedBet: 5, ballot: { games: [], bets: [5] } });
+  assert.equal(plain.ballot.sides, undefined);
+  assert.deepEqual(planStart(st, plain, ['me', 'mike'], { course }).sideGames, []);
+  // Votes on the server: side votes ride inside the game vote, and fit its 32 characters
+  assert.equal(gameVoteChoice({ game: 'nassau' }), 'nassau');
+  assert.equal(gameVoteChoice({ game: null }), null);
+  assert.equal(gameVoteChoice({ game: 'nassau', sides: { skins: true, dots: false, birdies: null } }), 'nassau~skins.-dots');
+  assert.equal(gameVoteChoice({ sides: { skins: true } }), '~skins');
+  assert.ok(gameVoteChoice({ game: 'stableford', sides: { skins: false, dots: false, birdies: false } }).length <= 32);
+  assert.deepEqual(parseGameVote('nassau~skins.-dots'), { game: 'nassau', sides: { skins: true, dots: false } });
+  assert.deepEqual(parseGameVote('~skins'), { game: null, sides: { skins: true } });
+  assert.deepEqual(parseGameVote('wolf'), { game: 'wolf' });
+  const back = answersFrom([{ who: 'mike', name: 'Mike', status: 'in' }], [{ who: 'mike', kind: 'game', choice: 'wolf~-birdies' }]);
+  assert.deepEqual([back.mike.game, back.mike.sides], ['wolf', { birdies: false }]);
 });

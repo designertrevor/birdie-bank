@@ -1198,6 +1198,11 @@ button.who-status { cursor: pointer; min-height: 36px; }
 .side-game .sg-head { display: flex; align-items: center; gap: 12px; }
 .side-game .sg-icon { font-size: 22px; color: var(--icon); flex-shrink: 0; }
 .toggle-row.ap-game { margin: 0 0 8px; padding: 12px 14px; }
+.side-vote .sv-row { display: flex; align-items: center; gap: 10px; padding: 10px 0; border-top: 1px solid var(--line); }
+.side-vote .sv-row:first-of-type { border-top: none; }
+.side-vote .sv-bet { font-weight: 500; color: var(--mute); }
+.side-vote .sv-btns { display: flex; gap: 6px; flex-shrink: 0; }
+.side-vote .sv-btns .pill-btn { min-height: 44px; min-width: 52px; justify-content: center; }
 .side-game .sg-rules { width: 100%; margin: 8px 0 0; padding: 10px 0; min-height: 44px; color: var(--ink); font-weight: 600; }
 .side-game .sg-rules > span { flex: 1; min-width: 0; }
 .side-game .toggle-row.flush { margin: 12px 0 0; padding: 12px 0 0; background: none; border-radius: 0; border-top: 1px solid var(--line); }
