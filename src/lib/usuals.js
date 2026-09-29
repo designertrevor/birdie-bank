@@ -3,7 +3,7 @@
 // key by key on load and copied into every round), at most MAX_USUALS, and sync in the profile doc.
 import { rematchSetup } from './rematch.js';
 import { findCourse } from './courses.js';
-import { GAMES } from './round.js';
+import { GAMES, sideGamesOf } from './round.js';
 import { defaultTeams } from './teams.js';
 import { stable } from './sync-model.js';
 
@@ -78,6 +78,47 @@ export function setupFromUsual(state, usual) {
     ...(usual.sideGames?.length ? { sideGames: structuredClone(usual.sideGames) } : {}),
     step: !course ? 1 : missing.length ? 2 : 3,
   };
+}
+
+/**
+ * A usual as a round planned for later: what the plan-ahead setup fills in. The game and bet
+ * become the organizer's suggestion on the ballot (the group still votes), and the side games go
+ * on the ballot already picked, with the usual's house rules. `opts` is laid over the setup's
+ * settings: the main game's bets, the handicap percentage and each side game's settings, so the
+ * ballot's rules match the usual. `invited` is everyone saved on this phone except me; `missing`
+ * names the rest. `courseId` is null when the course isn't on this phone any more, so setup lands
+ * on the When and Course step with no course picked (it always lands there: the date needs
+ * picking). Null when the game is gone.
+ */
+export function planFromUsual(state, usual) {
+  const s = setupFromUsual(state, usual);
+  if (!s) return null;
+  const fits = sideGamesOf({ game: s.game, sideGames: s.sideGames || [] });
+  const opts = {
+    ...(s.bets ? { [s.game]: structuredClone(s.bets) } : {}),
+    ...(s.hcPct != null ? { hcPct: s.hcPct } : {}),
+  };
+  for (const sg of fits) opts[sg.game] = structuredClone(sg.settings);
+  return {
+    game: s.game, holesCount: s.holesCount, nine: s.nine, courseId: s.courseId,
+    invited: s.picked.filter(pid => pid !== state.me),
+    opts,
+    sides: fits.map(sg => sg.game),
+    missing: s.missing,
+    useHc: s.useHc,
+    usualId: usual.id,
+    step: 1,
+  };
+}
+
+/**
+ * The usual a round came from, for "Last played": its id when it's still saved and the round is
+ * still its game at its course (a plan's group can vote for another game), else null.
+ */
+export function usualIdFor(state, usualId, game, course) {
+  const u = usualId && usualsOf(state).find(x => x.id === usualId);
+  if (!u || u.game !== game || !course) return null;
+  return u.courseId === course.id || findCourse(state, u.courseId)?.id === course.id ? u.id : null;
 }
 
 /** What makes two usuals the same setup: game, side games, bets, course, length and players. */

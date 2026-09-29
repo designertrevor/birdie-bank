@@ -334,7 +334,8 @@ export function planStart(state, plan, present, { newId, course: courseIn } = {}
     game, bet, course, holesCount, nine: plan.nine || 'front', teams, problem, newPlayers, sideGames,
     players: players.map(p => ({ ...p, tee })),
     settings,
-    hcPct: settings.hcPct ?? 100,
+    // A plan from a saved usual keeps the usual's handicap percentage; others use this phone's
+    hcPct: plan.hcPct ?? settings.hcPct ?? 100,
     useHandicaps: plan.useHc !== false,
   };
 }
@@ -480,7 +481,8 @@ export function morningText(plan, link, settings, now = new Date()) {
 /** Fields that stay on this phone and never go into the shared plan. */
 // `unsent` and `metaUnsent` are this phone's own retry flags; a friend's phone taking the
 // organizer's copy would resend (and so overwrite) answers that were never theirs.
-const LOCAL_ONLY = ['code', 'host', 'answers', 'localMe', 'syncedAt', 'gone', 'unsent', 'metaUnsent', 'roundId'];
+// `usualId` is the organizer's own saved usual, which means nothing on a friend's phone.
+const LOCAL_ONLY = ['code', 'host', 'answers', 'localMe', 'syncedAt', 'gone', 'unsent', 'metaUnsent', 'roundId', 'usualId'];
 
 /** The shared part of a plan (what friends' phones read). */
 export function planMeta(plan) {
@@ -519,8 +521,10 @@ export function planLink(origin, code, who = null) {
  * their own vote until they change it. `ballot.bets` are the amounts for the suggested game;
  * every other game on the ballot gets amounts around its own usual bet in `settings` (the
  * organizer's house rules, which ride along on the plan so every phone shows the same units).
+ * A plan set up from a saved usual also carries its handicap percentage (`hcPct`, used by the
+ * roll call) and `usualId` (so finishing the round updates the usual's "Last played").
  */
-export function newPlan({ id, hostWho = HOST, hostName, game, holesCount, nine, date, teeTime, course, people, ballot, suggestedBet, settings = null, useHc = true, now = Date.now() }) {
+export function newPlan({ id, hostWho = HOST, hostName, game, holesCount, nine, date, teeTime, course, people, ballot, suggestedBet, settings = null, useHc = true, hcPct = null, usualId = null, now = Date.now() }) {
   const games = [game, ...(ballot?.games || []).filter(g => g !== game && GAMES[g])].slice(0, MAX_BALLOT_GAMES);
   const bets = [...new Set([...(ballot?.bets || []), suggestedBet].filter(b => Number(b) > 0).map(Number))].sort((a, b) => a - b);
   const bet = Number(suggestedBet) || bets[0] || null;
@@ -542,6 +546,8 @@ export function newPlan({ id, hostWho = HOST, hostName, game, holesCount, nine, 
     id, v: 1, status: 'planned', createdAt: now, host: true,
     hostWho, hostName: hostFirst,
     game, holesCount, nine: nine || 'front', date, teeTime: teeTime || null, useHc,
+    ...(Number.isFinite(hcPct) ? { hcPct } : {}),
+    ...(usualId ? { usualId } : {}),
     course: course ? { id: course.id, name: course.name, city: course.city || null } : null,
     people: [{ id: hostWho, name: hostFirst || 'Me' }, ...others],
     // `bets` and `bet` stay for phones on an older version, which read one list for every game
