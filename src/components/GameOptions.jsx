@@ -3,6 +3,7 @@ import { GAMES } from '../lib/round.js';
 import { DOT_KINDS, SCRAMBLE_ALLOWANCE, sixesPairings } from '../lib/games.js';
 import { money } from '../lib/golf.js';
 import { teamsProblem } from '../lib/teams.js';
+import { dotsNote } from '../lib/side-games.js';
 
 /**
  * Bets and options for every game. Used by the round setup step, the Game defaults screen
@@ -123,10 +124,18 @@ export function GameOptions({ game, get, set, onAmount, holesCount = 18, compact
       return <>
         {label('Points')}
         {amount('wolf.point', 'Per point', { label: 'Value per point' })}
-        {example(`Every loser pays every winner a point. Win with a partner: up ${money(get('wolf.point') * 2)} each. Lone wolf win: up ${money(get('wolf.point') * (get('wolf.loneMultiplier') || 2) * 3)}.`)}
+        {example(`Every loser pays every winner a point. Win with a partner: up ${money(get('wolf.point') * 2)} each. Lone wolf win: up ${money(get('wolf.point') * (get('wolf.loneMultiplier') || 2) * 3)}.${get('wolf.blind') ? ` Blind wolf win: up ${money(get('wolf.point') * (get('wolf.blindMultiplier') ?? 3) * 3)}.` : ''}`)}
         <div className="block">
           {seg('wolf.loneMultiplier', [2, 3].map(n => ({ value: n, label: `${n}×` })), 'Lone wolf pays or wins', true)}
         </div>
+        {toggle('wolf.blind', 'Blind wolf', 'The wolf can go lone before anyone tees off, for more')}
+        {get('wolf.blind') && (
+          <div className="block">
+            <div className="eyebrow" style={{ margin: '0 0 10px' }}>Blind wolf pays or wins</div>
+            {/* A round from before blind wolf has no multiplier saved, so it reads as 3× */}
+            <Segmented label="Blind wolf pays or wins" className="press-mode-row" btn="pm-btn" value={get('wolf.blindMultiplier') ?? 3} onChange={v => set('wolf.blindMultiplier', v)} options={[3, 4].map(n => ({ value: n, label: `${n}×` }))} />
+          </div>
+        )}
       </>;
     case 'match':
       return <>
@@ -242,12 +251,12 @@ export function GameOptions({ game, get, set, onAmount, holesCount = 18, compact
           <div className="eyebrow" style={{ marginBottom: 10 }}>Dots in play</div>
           <div className="chip-row" style={{ padding: 0 }}>
             {Object.entries(DOT_KINDS).map(([k, d]) => (
-              <button key={k} className={`pill-btn ${get(`dots.kinds.${k}`) ? 'on' : ''}`} aria-pressed={!!get(`dots.kinds.${k}`)} onClick={() => set(`dots.kinds.${k}`, !get(`dots.kinds.${k}`))}>
+              <button key={k} className={`pill-btn ${get(`dots.kinds.${k}`) ? 'on' : ''}`} title={d.help} aria-pressed={!!get(`dots.kinds.${k}`)} onClick={() => set(`dots.kinds.${k}`, !get(`dots.kinds.${k}`))}>
                 {get(`dots.kinds.${k}`) && <Icon name="check" />} {d.name}
               </button>
             ))}
           </div>
-          {help('Every dot is paid by each of the other players. Tap a player’s dots as they happen.')}
+          {help(`Every dot is paid by each of the other players. Tap a player’s dots as they happen.${dotsNote(get('dots.kinds')) ? ` ${dotsNote(get('dots.kinds'))}` : ''}`)}
         </div>
       </>;
     case 'rabbit':

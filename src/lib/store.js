@@ -23,7 +23,8 @@ export const DEFAULT_SETTINGS = {
   banker: { defaultBet: 5, min: 1, max: 20, ties: 'push', rotation: 'rotate', birdies: 'off' },
   nassau: { front: 5, back: 5, total: 5, pressMode: 'manual', threshold: 2, turnPress: false, noLastPress: false },
   skins: { value: 2, carryover: true, kind: 'net', payout: 'per', stake: 10, lastCarry: 'void' },
-  wolf: { point: 2, loneMultiplier: 2 },
+  // Blind wolf: the wolf can go lone before anyone tees off, for blindMultiplier (3× or 4×)
+  wolf: { point: 2, loneMultiplier: 2, blind: true, blindMultiplier: 3 },
   match: { stake: 10, pressMode: 'off', threshold: 2 },
   hammer: { stake: 5, max: 3, who: 'either' },
   vegas: { point: 1, birdieFlip: true },
@@ -35,7 +36,7 @@ export const DEFAULT_SETTINGS = {
   nines: { point: 1 },
   aces: { ace: 2, deuce: 1 },
   bbb: { value: 1 },
-  dots: { value: 1, auto: true, kinds: { greenie: true, sandy: true, barkie: true, chipin: true, polie: false, arnie: false } },
+  dots: { value: 1, auto: true, kinds: { greenie: true, sandy: true, barkie: true, chipin: true, polie: false, arnie: false, hogan: false } },
   rabbit: { ...REV2_DEFAULTS.rabbit },
   snake: { stake: 5, growth: 'flat', nines: false, cap: SNAKE_CAP_DEFAULT }, // cap: most doubles, 0 for none
   // Birdie pot, a side game only: each player puts in the stake; a net eagle or better is 2 shares

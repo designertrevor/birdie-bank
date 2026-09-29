@@ -68,11 +68,13 @@ const RULES = {
       ['Picking', <ul key="p">
         <li>Watch the tee shots, then pick one partner: it’s 2 v 2.</li>
         <li>Or go <strong>lone wolf</strong>: 1 v 3 for a bigger payout.</li>
+        <li>Or go <strong>blind wolf</strong>: call lone before anyone tees off, your own shot included, for more still. It’s a house rule you can turn off.</li>
       </ul>],
       ['Scoring', <ul key="s">
         <li>Each side counts its best net score. Low side wins the hole; ties push.</li>
         <li>2 v 2: each loser pays each winner one point.</li>
         <li>Lone wolf: the points are multiplied (2× by default), paid by or to each of the three.</li>
+        <li>Blind wolf: 3× by default (or 4×), paid by or to each of the three. At $2 a point a blind wolf who wins is up $18, and one who loses is down $18.</li>
       </ul>],
     ],
   },
@@ -224,9 +226,10 @@ const RULES = {
         <li><strong>Barkie</strong>: par or better after hitting a tree.</li>
         <li><strong>Chip-in</strong>: holed from off the green.</li>
         <li><strong>Polie</strong>: holed a putt longer than the flagstick.</li>
-        <li><strong>Arnie</strong>: a par without touching the fairway.</li>
+        <li><strong>Arnie</strong>: par or better without ever being on the fairway, after Arnold Palmer. Par 4s and 5s.</li>
+        <li><strong>Hogan</strong>: par or better after hitting the fairway and the green in regulation, after Ben Hogan. Par 4s and 5s.</li>
       </ul>],
-      ['Setup', <p key="s">Pick which dots are in play when you set up the round. Tap them on each player as they happen.</p>],
+      ['Setup', <p key="s">Pick which dots are in play when you set up the round (Arnie and Hogan start off). Tap them on each player as they happen.</p>],
     ],
   },
   rabbit: {

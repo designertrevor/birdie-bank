@@ -6,7 +6,7 @@ import {
   roundLegs, sideNames, sides, sixesMatches, snakeTable, totalsTable, vegasPreview, vegasTable, scorers, netFor, playsHole,
 } from '../lib/round.js';
 import { money, nassauBets } from '../lib/golf.js';
-import { DOT_KINDS, scoreDots } from '../lib/games.js';
+import { DOT_KINDS, DOT_PARS, scoreDots } from '../lib/games.js';
 import { buzz } from '../lib/delight.js';
 
 const firstName = n => (n || '').split(' ')[0];
@@ -334,8 +334,9 @@ export function BBBPicker({ round, hole, marks, setMarks }) {
 
 export function DotsRow({ round, player, hole, marks, setMarks, gross, label = null }) {
   const s = round.settings.dots;
-  // A greenie is a par 3 thing, unless one was already marked here before this rule
-  const kinds = Object.keys(DOT_KINDS).filter(k => s.kinds?.[k] && (k !== 'greenie' || hole.par === 3 || (marks[player.id] || []).includes(k)));
+  // A greenie is a par 3 thing and an Arnie or a Hogan needs a fairway (par 4s and 5s), unless one was
+  // already marked here. A dot missing from the round's kinds (Hogan on an older round) is off.
+  const kinds = Object.keys(DOT_KINDS).filter(k => s.kinds?.[k] && (!DOT_PARS[k] || DOT_PARS[k].includes(hole.par) || (marks[player.id] || []).includes(k)));
   const mine = marks[player.id] || [];
   const auto = s.auto ? scoreDots(gross, hole.par) : 0;
   const toggle = k => {

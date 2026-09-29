@@ -4,7 +4,7 @@ import { useState } from 'react';
 import { Icon, Numpad, Sheet, Toggle } from './ui.jsx';
 import { GAMES, MAX_GAMES, SIDE_GAMES, sideGameChoices } from '../lib/round.js';
 import { DOT_KINDS } from '../lib/games.js';
-import { sideExample, skinsRulesLine } from '../lib/side-games.js';
+import { dotsNote, sideExample, skinsRulesLine } from '../lib/side-games.js';
 import { GameOptions } from './GameOptions.jsx';
 import { money } from '../lib/golf.js';
 import { optionsProblem, sideBetLine } from '../lib/stakes.js';
@@ -84,12 +84,13 @@ export function SideGamesSetup({ game, sideGames, setSideGames, defaults, player
                   {Object.entries(DOT_KINDS).map(([k, d]) => {
                     const on = !!sg.settings.kinds?.[k];
                     return (
-                      <button key={k} className={`pill-btn ${on ? 'on' : ''}`} aria-pressed={on} onClick={() => change(i, s => ({ ...s, kinds: { ...(s.kinds || {}), [k]: !on } }))}>
+                      <button key={k} className={`pill-btn ${on ? 'on' : ''}`} aria-pressed={on} title={d.help} onClick={() => change(i, s => ({ ...s, kinds: { ...(s.kinds || {}), [k]: !on } }))}>
                         {on && <Icon name="check" />} {d.name}
                       </button>
                     );
                   })}
                 </div>
+                {dotsNote(sg.settings.kinds) && <p className="field-help">{dotsNote(sg.settings.kinds)}</p>}
                 <div className="toggle-row flush">
                   <div><div className="toggle-lbl">Birdies count automatically</div><div className="toggle-sub">A birdie is a dot and an eagle is two, from the scores</div></div>
                   <Toggle on={!!sg.settings.auto} onChange={v => change(i, s => ({ ...s, auto: v }))} label="Birdies count as junk automatically" />

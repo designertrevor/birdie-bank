@@ -3,7 +3,20 @@ import { GAMES } from './round.js';
 import { DOT_KINDS } from './games.js';
 import { money } from './golf.js';
 
-const PLURAL = { greenie: 'greenies', sandy: 'sandies', barkie: 'barkies', chipin: 'chip-ins', polie: 'polies', arnie: 'arnies' };
+const PLURAL = { greenie: 'greenies', sandy: 'sandies', barkie: 'barkies', chipin: 'chip-ins', polie: 'polies', arnie: 'arnies', hogan: 'hogans' };
+
+/**
+ * What the less familiar dots mean, for setup, when they're on: "Arnie: par or better without ever being
+ * on the fairway. Hogan: ...". Empty when neither is on.
+ */
+export function dotsNote(kinds) {
+  const words = {
+    arnie: 'Arnie: par or better without ever being on the fairway.',
+    hogan: 'Hogan: par or better after hitting the fairway and the green in regulation.',
+  };
+  const on = Object.keys(words).filter(k => kinds?.[k]);
+  return on.length ? `${on.map(k => words[k]).join(' ')} Par 4s and 5s only.` : '';
+}
 
 /** "a foursome" for 4, else "3 players". */
 const groupOf = n => (n === 4 ? 'a foursome' : n === 3 ? 'a threesome' : `${n} players`);

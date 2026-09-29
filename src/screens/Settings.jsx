@@ -176,6 +176,16 @@ export function Defaults() {
           <div className="eyebrow" style={{ marginBottom: 10 }}>Lone wolf</div>
           <Segmented label="Lone wolf" className="press-mode-row" btn="pm-btn" value={s.wolf.loneMultiplier} onChange={v => set('wolf.loneMultiplier', v)} options={[2, 3].map(n => ({ value: n, label: `${n}×` }))} />
         </div>
+        <div className="toggle-row">
+          <div><div className="toggle-lbl">Blind wolf</div><div className="toggle-sub">The wolf can go lone before anyone tees off, for more</div></div>
+          <Toggle on={!!s.wolf.blind} onChange={v => set('wolf.blind', v)} label="Blind wolf" />
+        </div>
+        {s.wolf.blind && (
+          <div className="block">
+            <div className="eyebrow" style={{ marginBottom: 10 }}>Blind wolf</div>
+            <Segmented label="Blind wolf" className="press-mode-row" btn="pm-btn" value={s.wolf.blindMultiplier ?? 3} onChange={v => set('wolf.blindMultiplier', v)} options={[3, 4].map(n => ({ value: n, label: `${n}×` }))} />
+          </div>
+        )}
         {['match', 'hammer', 'vegas', 'sixes', 'scramble', 'stroke', 'stableford', 'quota', 'nines', 'aces', 'bbb', 'dots', 'rabbit', 'snake'].map(g => (
           <div key={g}>
             <div className="sec-label">{GAMES[g].name}</div>

@@ -5,7 +5,7 @@ import { DEFAULT_SETTINGS, getState, update, useStore } from '../lib/store.js';
 import {
   GAMES, addPlayerProblem, bankerHoleSetup, canLeave, defaultNine, holeComplete, leftRule, livePreview, nassauPressOptions, playersLeft, playersOn, playsHole, pressMode,
   resizeRound, roundLegs, roundResults, scoredHolesDropped, scorers, skinsKinds, skinsTable, strokesFor, wolfHoleSetup, changeBets, wholeRoundOnly,
-  gameView, sideGamesOf, holeFixOf,
+  gameView, sideGamesOf, holeFixOf, settingsAt, posOf,
 } from '../lib/round.js';
 import { CourseTeeSheet, FixHoleSheet } from '../components/FixHole.jsx';
 import { courseTeeLabel, keepsDraft } from '../lib/hole-fix.js';
@@ -1003,21 +1003,36 @@ function SkinsPanel({ round, hole, onChange }) {
 function WolfPanel({ round, hole, wolf, setWolf }) {
   const w = round.players.find(p => p.id === wolf.wolf);
   const others = playersOn(round, hole).filter(p => p.id !== wolf.wolf);
-  const mult = round.settings.wolf.loneMultiplier;
+  // The bets in force on this hole, so a mid-round change counts from the hole it starts on
+  const cfg = settingsAt(round, posOf(round, hole)).wolf;
+  const mult = cfg.loneMultiplier;
+  const blindMult = cfg.blindMultiplier ?? 3;
+  // Blind wolf is honor system: it's offered until the hole is saved (a round from before it has no
+  // blind key, so no button), and a hole already saved blind keeps its button so it can be changed
+  const blind = !!wolf.blind && wolf.partner === null;
+  const offerBlind = blind || (!!cfg.blind && !round.wolf?.[hole.no]);
+  // Picking a partner or plain lone wolf clears blind; the saved record only carries blind when it's on
+  const pick = (partner, isBlind = false) => {
+    const { blind: _was, ...rest } = wolf;
+    setWolf(isBlind ? { ...rest, partner: null, blind: true } : { ...rest, partner });
+  };
   return (
     <div className="wolf-panel">
       <div className="bl" style={{ marginBottom: setWolf ? 8 : 0 }}><Icon name="paw-print" fill /> <strong>{w?.name}</strong> is the wolf.{' '}
         {setWolf ? 'Pick a partner after the tee shots, or go it alone.'
-          : wolf.partner === undefined ? 'No partner picked yet.' : wolf.partner === null ? 'Lone wolf.' : `Partner: ${round.players.find(p => p.id === wolf.partner)?.name || '?'}.`}
+          : wolf.partner === undefined ? 'No partner picked yet.' : blind ? 'Blind wolf.' : wolf.partner === null ? 'Lone wolf.' : `Partner: ${round.players.find(p => p.id === wolf.partner)?.name || '?'}.`}
       </div>
       {setWolf && <div className="chip-row" style={{ padding: 0 }}>
         {others.map(p => (
           <button key={p.id} className={`pill-btn ${wolf.partner === p.id ? 'on' : ''}`} aria-pressed={wolf.partner === p.id}
-            onClick={() => setWolf({ ...wolf, partner: p.id })}>{p.name}</button>
+            onClick={() => pick(p.id)}>{p.name}</button>
         ))}
-        <button className={`pill-btn lone ${wolf.partner === null ? 'on' : ''}`} aria-pressed={wolf.partner === null}
-          onClick={() => setWolf({ ...wolf, partner: null })}><Icon name="paw-print" fill /> Lone wolf {mult}×</button>
+        <button className={`pill-btn lone ${wolf.partner === null && !blind ? 'on' : ''}`} aria-pressed={wolf.partner === null && !blind}
+          onClick={() => pick(null)}><Icon name="paw-print" fill /> Lone wolf {mult}×</button>
+        {offerBlind && <button className={`pill-btn lone ${blind ? 'on' : ''}`} aria-pressed={blind}
+          onClick={() => pick(null, true)}><Icon name="eye-slash" fill /> Blind wolf {blindMult}×</button>}
       </div>}
+      {setWolf && offerBlind && <p className="field-help" style={{ margin: '8px 0 0' }}>Blind wolf: call it before anyone tees off.</p>}
     </div>
   );
 }

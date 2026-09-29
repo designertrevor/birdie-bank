@@ -2,7 +2,7 @@
 // player, crew, course, round, payment, plus one "profile" for you and your settings.
 // Each document is compared by content, so only what changed gets sent.
 import { stable } from './sync-model.js';
-import { migrateSettings } from './settings.js';
+import { mergeSettings, migrateSettings } from './settings.js';
 import { nextActiveId } from './rounds.js';
 
 // Round fields that only mean something on this phone
@@ -53,7 +53,8 @@ export function applyDoc(draft, kind, id, data) {
     // A profile saved before setup finished never blanks out who "me" is
     if (data.me) draft.me = data.me;
     draft.onboarded = data.onboarded || draft.onboarded;
-    draft.settings = { ...draft.settings, ...migrateSettings(data.settings) };
+    // Game by game, so a profile saved before a house rule was added never wipes it
+    draft.settings = mergeSettings(draft.settings, migrateSettings(data.settings));
     draft.favorites = data.favorites || [];
     // A profile saved by an older version has no usuals or carries: keep this phone's rather than wiping them
     if (Array.isArray(data.usuals)) draft.usuals = data.usuals;
