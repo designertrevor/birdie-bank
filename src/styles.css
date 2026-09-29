@@ -1245,6 +1245,7 @@ button.who-status { cursor: pointer; min-height: 36px; }
 /* Zelle has no pay link: its button shows the handle to copy, so it gets the whole row */
 .pay-acts.wrap > .app-zelle { flex-basis: 100%; }
 .link-btn { min-height: 44px; padding: 0 4px; border: none; background: none; color: var(--ink); font: inherit; font-size: 14px; font-weight: 700; text-decoration: underline; text-decoration-color: var(--surface-strong); text-decoration-thickness: 2px; text-underline-offset: 3px; cursor: pointer; flex-shrink: 0; }
+.tab-part { display: block; min-height: 40px; margin-top: 4px; padding: 0; font-size: 13px; font-weight: 600; color: var(--mute); }
 .recent-paid { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-top: 6px; font-size: 13px; color: var(--mute); }
 .recent-paid > span { min-width: 0; }
 .carry-note { margin-top: 10px; padding: 10px 12px; border-radius: 14px; background: var(--surface); }

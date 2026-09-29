@@ -64,6 +64,13 @@ export default function Ledger() {
     .sort((a, b) => b.pay.at - a.pay.at);
   const squareNames = [...h2h.keys()].filter(id => !byPerson.has(id) && !recentSquare.some(x => x.id === id)).map(id => first(nameOf(state, id)));
 
+  // The same Settle up sheet the person screen opens for a part payment
+  const partDebt = p => {
+    const amount = Math.abs(p.net);
+    if (p.debts.length === 1) return p.debts[0];
+    return p.net > 0 ? { from: p.id, to: state.me, amount } : { from: state.me, to: p.id, amount };
+  };
+
   const personRow = p => {
     const name = nameOf(state, p.id);
     const owesMe = p.net > 0;
@@ -82,6 +89,7 @@ export default function Ledger() {
           <span className="chevron"><Icon name="caret-right" /></span>
         </button>
         <PersonActions other={p.id} net={p.net} meId={state.me || me} />
+        <button className="link-btn tab-part" onClick={() => setOpen(partDebt(p))}>Paid part of it?</button>
       </div>
     );
   };
