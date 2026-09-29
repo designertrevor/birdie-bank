@@ -18,6 +18,11 @@
   --display: "Bricolage Grotesque", Inter, system-ui, sans-serif;
   --spring: cubic-bezier(.3,1.5,.5,1);
   --ease-out: cubic-bezier(.2,.8,.3,1);
+  /* Motion tokens (transitions.dev scale), used by the end-of-round reveal */
+  --duration-stagger: 40ms; --duration-micro: 80ms; --duration-quick: 150ms; --duration-fast: 250ms; --duration-slow: 400ms; --duration-very-slow: 500ms;
+  --ease-smooth-out: cubic-bezier(.22,1,.36,1); --ease-bounce: cubic-bezier(.34,1.36,.64,1);
+  --distance-micro: 4px; --distance-base: 8px; --distance-medium: 12px;
+  --blur-small: 2px;
 }
 * { box-sizing: border-box; margin: 0; padding: 0; }
 html, body { height: 100%; background: var(--canvas); overscroll-behavior: none; }
@@ -854,16 +859,39 @@ button:disabled { cursor: not-allowed; }
 .reveal-row.top .sn, .reveal-row.top .reveal-amt { color: #fff !important; }
 .reveal-row.top .sr { background: var(--ochre); color: var(--on-pastel); }
 .reveal-amt { font-family: var(--display); font-size: 30px; font-weight: 800; letter-spacing: -.02em; color: var(--ink); font-variant-numeric: tabular-nums; }
-.reveal-row { transition: background-color .25s var(--ease-out); }
-.reveal-title { animation: titleIn .35s var(--ease-out) both; }
+/* Reveal motion. Rows are laid out from the start: they stagger in (--i), their totals wait dimmed until
+   their turn, pop when they land, and the winner's row lifts and glows. Tapping to skip (.rv-still) shows the end state. */
+.reveal-title { animation: titleIn .35s var(--ease-out) both; display: grid; }
 @keyframes titleIn { from { opacity: 0; transform: translateY(6px) scale(.98); } }
+.reveal-title .rt {
+  grid-area: 1 / 1; transition: opacity var(--duration-quick) ease-in-out, transform var(--duration-fast) var(--ease-smooth-out), filter var(--duration-quick) ease-in-out;
+}
+.reveal-title .rt.out { opacity: 0; transform: translateY(var(--distance-micro)); filter: blur(var(--blur-small)); }
+.reveal-title .rt.out:first-child:not(:only-child) { transform: translateY(calc(-1 * var(--distance-micro))); }
+.screen.active .scroll > .reveal-row { animation: rowIn var(--duration-slow) var(--ease-smooth-out) both; animation-delay: calc(var(--duration-micro) + var(--i, 0) * var(--duration-stagger)); }
+@keyframes rowIn { from { opacity: 0; transform: translateY(var(--distance-medium)); } }
+.reveal-row { transition: background-color var(--duration-fast) var(--ease-out), box-shadow var(--duration-very-slow) var(--ease-smooth-out); }
+.reveal-row.top { box-shadow: 0 12px 28px -10px rgba(212,42,107,.6); }
+.screen.active .scroll > .reveal-row.top { animation: winLift var(--duration-very-slow) var(--ease-smooth-out); }
+@keyframes winLift { 40% { transform: translateY(-3px) scale(1.025); } }
+.reveal-amt { transform-origin: right center; transition: opacity var(--duration-fast) ease-in-out; }
+.reveal-amt.wait { opacity: .35; }
+.reveal-amt.landed, .rv-n.landed { animation: amtPop 320ms var(--ease-smooth-out); }
+.rv-n { display: inline-block; transform-origin: right center; }
+@keyframes amtPop { 45% { transform: scale(1.06); } }
+.rv-still .reveal-title .rt, .rv-still .rv-step, .rv-still .reveal-amt, .rv-still .rv-n,
+.screen.active .scroll.rv-still > .reveal-row, .screen.active .scroll.rv-still > .reveal-row.top { animation: none; transition: none; }
 .rv-skip { font-size: 12px; font-weight: 600; color: var(--mute-soft); margin-top: 6px; transition: opacity .3s; }
 .rv-skip.gone { opacity: 0; }
 .rv-card { margin: 0 16px 14px; padding: 6px 16px 8px; background: var(--card); border-radius: 20px; }
 .rv-card-title { font-size: 12px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; color: var(--mute); padding: 10px 0 4px; }
-.rv-step { display: flex; align-items: center; gap: 12px; padding: 9px 0; border-top: 1px solid var(--line-soft); opacity: 0; transform: translateY(6px); transition: opacity .3s var(--ease-out), transform .35s var(--spring); }
+.rv-step {
+  display: flex; align-items: center; gap: 12px; padding: 9px 0; border-top: 1px solid var(--line-soft);
+  opacity: 0; transform: translateY(var(--distance-base)); filter: blur(var(--blur-small));
+  transition: opacity var(--duration-fast) ease-in-out, filter var(--duration-fast) ease-in-out, transform var(--duration-slow) var(--ease-smooth-out);
+}
 .rv-card-title + .rv-step { border-top: none; }
-.rv-step.on { opacity: 1; transform: none; }
+.rv-step.on { opacity: 1; transform: none; filter: none; }
 .rv-main { flex: 1; min-width: 0; }
 .rv-label { font-size: 12px; font-weight: 600; color: var(--mute); }
 .rv-text { font-size: 15px; font-weight: 700; color: var(--ink); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
@@ -874,6 +902,8 @@ button:disabled { cursor: not-allowed; }
 .settle-lede p { font-size: 14px; color: var(--mute); margin-top: 4px; }
 .pay-card { margin: 0 16px 10px; padding: 14px 16px; background: var(--card); border-radius: 20px; transition: opacity .2s; }
 .pay-card.paid { opacity: .6; }
+/* Pay cards stagger in after the lede when Settle up opens */
+.screen.active .scroll > .pay-card { animation: rowIn var(--duration-slow) var(--ease-smooth-out) both; animation-delay: calc(var(--duration-micro) + var(--i, 0) * 60ms); }
 .pay-who { display: flex; align-items: center; }
 .pay-acts { display: flex; gap: 8px; margin-top: 12px; }
 .pay-btn {
@@ -891,6 +921,17 @@ button:disabled { cursor: not-allowed; }
 .share-img {
   display: block; margin: 8px auto 0; width: min(280px, calc(100% - 32px)); height: auto; aspect-ratio: 9 / 16; border-radius: 24px;
   box-shadow: 0 10px 30px rgba(10,10,10,.14);
+}
+/* The drawn image replaces its placeholder with a soft cross-blur instead of a flash */
+.screen.active .scroll > .share-img { animation: imgIn var(--duration-slow) ease-in-out both; }
+@keyframes imgIn { from { opacity: 0; filter: blur(var(--blur-small)); transform: scale(.98); } }
+/* Finale beats: reveal, settle up and share slide in on their way forward, and from the left on the way back. No exit, so nothing waits */
+.screen.active.finale-stage { animation: stageIn var(--duration-fast) var(--ease-smooth-out) both; }
+.screen.active.finale-stage.back { --stage-dx: calc(-1 * var(--distance-medium)); }
+@keyframes stageIn { from { opacity: 0; transform: translateX(var(--stage-dx, var(--distance-medium))); } }
+@media (prefers-reduced-motion: reduce) {
+  .rv-step, .reveal-title .rt.out { transform: none; filter: none; }
+  .reveal-amt.wait { opacity: 1; }
 }
 .share-toggle { margin-top: 16px; }
 .cta-row { display: flex; gap: 10px; }

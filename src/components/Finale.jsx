@@ -19,9 +19,13 @@ import { countsMoney, playForOf, rewardOutcome, unitFmt } from '../lib/play-for.
 
 const reducedMotion = () => !!window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
 
-/** Counts from 0 up to `target`, easing out, and holds the final value once done. `skip` jumps to the end. */
+/**
+ * Counts from 0 up to `target`, easing out, and holds the final value once done. `skip` jumps to the end.
+ * Also returns the phase ('wait' before the delay, 'count', then 'done') so CSS can dim, wake and pop the number.
+ */
 function useCountUp(target, { delay = 0, duration = 1100, skip = false } = {}) {
-  const [v, setV] = useState(0);
+  const [v, setV] = useState(() => (skip || reducedMotion() ? target : 0));
+  const [phase, setPhase] = useState(() => (skip || reducedMotion() ? 'done' : 'wait'));
   useEffect(() => {
     const still = skip || reducedMotion();
     let raf, t0 = null;
@@ -29,31 +33,34 @@ function useCountUp(target, { delay = 0, duration = 1100, skip = false } = {}) {
       if (t0 == null) t0 = t;
       const k = still ? 1 : Math.min(1, Math.max(0, (t - t0 - delay) / duration));
       setV(Math.round(target * (1 - Math.pow(1 - k, 3)) * 100) / 100);
+      setPhase(k >= 1 ? 'done' : t - t0 >= delay ? 'count' : 'wait');
       if (k < 1) raf = requestAnimationFrame(tick);
     };
     raf = requestAnimationFrame(tick);
     return () => cancelAnimationFrame(raf);
   }, [target, delay, duration, skip]);
-  return v;
+  return [v, phase];
 }
 
-function CountRow({ place, name, amount, me, delay, duration, skip, games = '', fmt = money }) {
-  const v = useCountUp(amount, { delay, duration, skip });
+function CountRow({ place, name, amount, me, delay, duration, skip, games = '', fmt = money, index = 0 }) {
+  const [v, phase] = useCountUp(amount, { delay, duration, skip });
   const done = v === amount;
+  // Motion hooks: --i staggers the entrance, the phase dims the number until its turn, then pops it when it lands
+  const motion = `${phase}${phase === 'done' && amount !== 0 ? ' landed' : ''}`;
   return (
-    <div className={`reveal-row ${place === 1 && amount > 0 && done ? 'top' : ''}`}>
+    <div className={`reveal-row ${place === 1 && amount > 0 && done ? 'top' : ''}`} style={{ '--i': index }}>
       <div className="sr">{place}</div>
       <div className="sn">{name}{me ? ' (you)' : ''}{games && <span className="rv-games">{games}</span>}</div>
       {/* Whole dollars while counting, then the exact amount: $2.50 used to land on "+$3" */}
-      <div className={`reveal-amt ${done && amount > 0 ? 'pos' : done && amount < 0 ? 'neg' : ''}`}>{fmt(done ? amount : Math.round(v), { sign: true })}</div>
+      <div className={`reveal-amt ${motion} ${done && amount > 0 ? 'pos' : done && amount < 0 ? 'neg' : ''}`}>{fmt(done ? amount : Math.round(v), { sign: true })}</div>
     </div>
   );
 }
 
 function StepAmount({ amount, skip, fmt = money }) {
-  const v = useCountUp(amount, { duration: 380, skip });
+  const [v, phase] = useCountUp(amount, { duration: 380, skip });
   // Whole dollars while counting, then the exact amount (a split skin or pot share can have cents)
-  return fmt(v === Math.round(amount * 100) / 100 ? v : Math.round(v));
+  return <span className={`rv-n ${phase === 'done' && amount ? 'landed' : ''}`}>{fmt(v === Math.round(amount * 100) / 100 ? v : Math.round(v))}</span>;
 }
 
 /** One bet resolving: what it was, who took it, and for how much. Laid out from the start so nothing jumps. */
@@ -116,13 +123,17 @@ export function Reveal({ round, res, onNext, onDetail, extra, instant = false })
   const leaderNames = res.standings.filter(p => leaders.includes(p.id)).map(p => p.name.split(' ')[0]).join(' & ');
   const winnerTitle = square ? 'All square' : side ? `${side.name} take it` : tied ? `${leaderNames} tie for top` : `${top.name.split(' ')[0]} takes it`;
   const title = done || !nSteps ? winnerTitle : 'Adding it up';
+  // Both titles share one grid cell and crossfade, so the swap never moves the rows below
+  const titles = nSteps ? ['Adding it up', winnerTitle] : [winnerTitle];
   return (
     <>
       <Header title="Final results" small />
-      <div className="scroll" onClick={() => { if (!done) setSkipped(true); }}>
+      <div className={`scroll rv-scroll ${skipped ? 'rv-still' : ''}`} onClick={() => { if (!done) setSkipped(true); }}>
         <div className="reveal-head" ref={hero}>
           <div className="eyebrow">{round.course.name} · {gameLabel(round)}</div>
-          <div className="reveal-title d" key={title}>{title}</div>
+          <div className="reveal-title d">
+            {titles.map(x => <span key={x} className={`rt ${x === title ? '' : 'out'}`} aria-hidden={x !== title}>{x}</span>)}
+          </div>
           <div className={`rv-skip ${done ? 'gone' : ''}`} aria-hidden={done}>Tap to skip</div>
         </div>
         {nSteps > 0 && (
@@ -134,7 +145,7 @@ export function Reveal({ round, res, onNext, onDetail, extra, instant = false })
         {/* Losers land first, the winner last. Equal money shares a place, so partners both land on top */}
         {res.standings.map((p, i) => (
           <CountRow key={p.id} place={placeOf(res.standings, res.standings.indexOf(p))} name={p.name} amount={p.amount} me={p.id === me}
-            delay={t.stepsEnd + (count - 1 - i) * t.stagger} duration={t.count} skip={skipped} games={gamesLine(res.detail?.byGame, p.id, fmt)} fmt={fmt} />
+            delay={t.stepsEnd + (count - 1 - i) * t.stagger} duration={t.count} skip={skipped} games={gamesLine(res.detail?.byGame, p.id, fmt)} fmt={fmt} index={i} />
         ))}
         {/* A reward round: who wins it and who's buying, where the payments would be */}
         {reward && <div className={`rv-reward-wrap ${done ? 'on' : ''}`} aria-hidden={!done}><RewardCard round={round} res={res} /></div>}
@@ -212,10 +223,10 @@ export function SettleUp({ round, res, onBack, onNext }) {
           <div className="d settle-count">{n} payment{n === 1 ? '' : 's'} square{n === 1 ? 's' : ''} everyone up</div>
           <p>Every bet is netted first, so nobody sends money that just comes back to them.</p>
         </div>
-        {res.transfers.map(t => {
+        {res.transfers.map((t, i) => {
           const paid = !!paidFor(t);
           return (
-            <div key={t.from + t.to} className={`pay-card ${paid ? 'paid' : ''}`}>
+            <div key={t.from + t.to} className={`pay-card ${paid ? 'paid' : ''}`} style={{ '--i': i }}>
               <div className="pay-who">
                 <span className="pf">{name(t.from)}{t.from === me ? ' (you)' : ''}</span>
                 <span className="pa"><Icon name="arrow-right" /></span>

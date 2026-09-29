@@ -252,7 +252,9 @@ function PlayRound({ round }) {
     if (game === 'wolf' && wolf.partner === undefined) { showToast(`Pick ${round.players.find(p => p.id === wolf.wolf)?.name.split(' ')[0] || 'the wolf'}’s partner, or go lone wolf`); return; }
     const scores = Object.fromEntries(units.map(p => [p.id, draft[p.id]]));
     DRAFTS.delete(draftKey);
-    showToast(holeMoneyLine(round, hole, livePreview(round, hole, { scores, banker, wolf, marks }).delta));
+    const moneyLine = holeMoneyLine(round, hole, livePreview(round, hole, { scores, banker, wolf, marks }).delta);
+    // The last hole's line would sit over the reveal's buttons, so it only shows if the round does not finish
+    if (!isLast) showToast(moneyLine);
     update(s => {
       const r = s.rounds[round.id];
       r.scores[hole.no] = scores;
@@ -277,7 +279,7 @@ function PlayRound({ round }) {
       const fresh = r.presses.filter(p => p.start === nextIdx + 1);
       if (fresh.length) showToast(game === 'nassau' ? `Auto press on the ${fresh.map(p => legs[p.leg].label.replace(/^[A-Z]/, c => c.toLowerCase())).join(' and ')}` : 'Auto press!');
     }
-    if (isLast) finish();
+    if (isLast && !(await finish())) showToast(moneyLine);
   };
 
   const finish = async () => {
@@ -303,6 +305,7 @@ function PlayRound({ round }) {
       leaveRound(s, round.id);
     });
     nav.reset('history', ['roundDetail', { id: round.id, celebrate: true }]);
+    return true;
   };
   const doneEditing = () => {
     setMenu(false);
