@@ -1224,6 +1224,8 @@ button.who-status { cursor: pointer; min-height: 36px; }
 .money-bar.mb-tap:active { transform: scale(.98); }
 .by-game th.bg-game { text-align: left; padding: 12px 6px 12px 12px; font-size: 14px; font-weight: 700; text-transform: none; letter-spacing: 0; color: var(--ink); background: none; border-bottom: 1px solid var(--line); white-space: nowrap; }
 .by-game tr.bg-total th, .by-game tr.bg-total td { border-top: 2px solid var(--line); }
+/* Side game bets changed mid-round: a small note under the game's name in the by-game table */
+.by-game th.bg-game .bg-note { display: block; margin-top: 2px; font-size: 11px; font-weight: 500; color: var(--mute); white-space: normal; }
 .rv-games { display: block; font-size: 12px; font-weight: 500; color: var(--mute); margin-top: 2px; }
 
 /* Fix a hole or a tee for this round (FixHole.jsx) */

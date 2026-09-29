@@ -7,7 +7,7 @@ import { DOT_KINDS } from '../lib/games.js';
 import { sideExample, skinsRulesLine } from '../lib/side-games.js';
 import { GameOptions } from './GameOptions.jsx';
 import { money } from '../lib/golf.js';
-import { optionsProblem, sideBetLine } from '../lib/stakes.js';
+import { betChangeNote, optionsProblem, sideBetLine } from '../lib/stakes.js';
 import { firstName } from '../lib/format.js';
 
 /** "Skins, Junk or a Birdie pot": the side games still on offer, in words. */
@@ -159,7 +159,10 @@ function SkinsRules({ i, sideGames, change, players, onClose, onAmount }) {
   );
 }
 
-/** A table of each game's money: a row per game, a column per player, and a Total row. */
+/**
+ * A table of each game's money: a row per game, a column per player, and a Total row. A game whose
+ * bet changed mid-round says so under its name.
+ */
 export function ByGameTable({ round, byGame, total }) {
   const games = Object.entries(byGame);
   const cls = v => (v > 0 ? 'pos' : v < 0 ? 'neg' : 'zero');
@@ -173,7 +176,7 @@ export function ByGameTable({ round, byGame, total }) {
         <tbody>
           {games.map(([key, g]) => (
             <tr key={key}>
-              <th scope="row" className="bg-game">{g.label}</th>
+              <th scope="row" className="bg-game">{g.label}{betChangeNote(round, key) && <span className="bg-note">{betChangeNote(round, key)}</span>}</th>
               {round.players.map(p => { const v = g.balances[p.id] || 0; return <td key={p.id} className={cls(v)}>{money(v, { sign: true })}</td>; })}
             </tr>
           ))}
