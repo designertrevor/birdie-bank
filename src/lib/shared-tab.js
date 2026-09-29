@@ -10,6 +10,7 @@
 // transfer: a payment is tied to the round transfers between the two people, oldest first, and
 // anything the shared rounds don't explain stays local.
 import { roundResults } from './round.js';
+import { countsMoney } from './play-for.js';
 import { meFor } from './format.js';
 import { outstanding, tabWith } from './ledger.js';
 import { FETCH_DAYS, canonicalOf, cents, codeOf, finishedAt, nettedId, nettedOn, pairDebt, paidOn, played, sharedRounds } from './pair-debts.js';
@@ -48,9 +49,14 @@ export function pairRounds(state, a, b, { days = FETCH_DAYS, now = Date.now() } 
   });
 }
 
+/**
+ * Money rounds by share code. A points or reward round never takes a payment row, so a row a
+ * phone on an older version put on one (it can't tell it isn't money) never moves a dollar here.
+ */
 function roundsByCode(state) {
   const out = new Map();
   for (const r of Object.values(state.rounds || {})) {
+    if (!countsMoney(r)) continue;
     const c = codeOf(r);
     if (c && !out.has(c)) out.set(c, r);
   }

@@ -66,8 +66,8 @@ export default function Ledger() {
     .filter(x => x.pay)
     .sort((a, b) => b.pay.at - a.pay.at);
   // Rewards from reward rounds ("You owe Sam lunch"): on the person's card, or a card of their own
-  // for someone square on money. Never counted in dollars or in who's square.
-  const rewardOnly = [...new Set(openRewards(state, { ids: mine, canon: who }).map(l => l.other))].filter(id => !people.some(p => p.id === id));
+  // for someone square on money (a Square card of their own carries it). Never counted in dollars or in who's square.
+  const rewardOnly = [...new Set(openRewards(state, { ids: mine, canon: who }).map(l => l.other))].filter(id => !people.some(p => p.id === id) && !recentSquare.some(x => x.id === id));
   const squareNames = [...h2h.keys()].filter(id => !byPerson.has(id) && !recentSquare.some(x => x.id === id)).map(id => first(nameOf(state, id)));
 
   // The same Settle up sheet the person screen opens for a part payment
@@ -114,6 +114,7 @@ export default function Ledger() {
           <span className="chevron"><Icon name="caret-right" /></span>
         </button>
         <RecentPaid meId={meId} other={id} pay={pay} />
+        <RewardLines other={id} />
       </div>
     );
   };

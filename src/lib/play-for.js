@@ -100,12 +100,14 @@ function listNames(names) {
  * { winners: [ids], owers: [ids], lines: [{ from, to: [ids], split, with: [ids] }], text, win, buy }.
  * The top of the standings wins (a tie at the top shares it). Last place owes it (a tie at the
  * bottom splits it: `split`, and `with` names the others paying), or with owes 'everyone' each other player owes one. Everyone
- * level is all square and nobody's buying. Null when the round isn't played for a reward.
+ * level is all square and nobody's buying. A player who left before the first hole is left out.
+ * Null when the round isn't played for a reward.
  */
 export function rewardOutcome(round, res) {
   const pf = playForOf(round);
   if (pf.kind !== 'reward') return null;
-  const standings = res?.standings || [];
+  // Someone who left before the first hole never played, so they can't win it or owe it
+  const standings = (res?.standings || []).filter(p => round.left?.[p.id] !== 0);
   const noun = rewardNoun(pf.reward);
   const name = id => firstOf(standings.find(p => p.id === id)?.name ?? round.players?.find(p => p.id === id)?.name);
   const amounts = standings.map(p => Number(p.amount) || 0);

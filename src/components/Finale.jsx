@@ -134,7 +134,7 @@ export function Reveal({ round, res, onNext, onDetail, extra, instant = false })
         {/* Losers land first, the winner last. Equal money shares a place, so partners both land on top */}
         {res.standings.map((p, i) => (
           <CountRow key={p.id} place={placeOf(res.standings, res.standings.indexOf(p))} name={p.name} amount={p.amount} me={p.id === me}
-            delay={t.stepsEnd + (count - 1 - i) * t.stagger} duration={t.count} skip={skipped} games={gamesLine(res.detail?.byGame, p.id)} fmt={fmt} />
+            delay={t.stepsEnd + (count - 1 - i) * t.stagger} duration={t.count} skip={skipped} games={gamesLine(res.detail?.byGame, p.id, fmt)} fmt={fmt} />
         ))}
         {/* A reward round: who wins it and who's buying, where the payments would be */}
         {reward && <div className={`rv-reward-wrap ${done ? 'on' : ''}`} aria-hidden={!done}><RewardCard round={round} res={res} /></div>}

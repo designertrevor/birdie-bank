@@ -141,7 +141,7 @@ export default function RoundDetail({ id, celebrate }) {
         {res.standings.map((p, i) => (
           <div key={p.id} className="settle-row">
             <div className="sr">{placeOf(res.standings, i)}</div>
-            <div className="sn">{p.name}{strokesNote(p)}{res.detail.byGame && <span className="rv-games">{gamesLine(res.detail.byGame, p.id)}</span>}</div>
+            <div className="sn">{p.name}{strokesNote(p)}{res.detail.byGame && <span className="rv-games">{gamesLine(res.detail.byGame, p.id, fmt)}</span>}</div>
             <div className={`sa ${p.amount > 0 ? 'pos' : p.amount < 0 ? 'neg' : ''}`}>{fmt(p.amount, { sign: true })}</div>
           </div>
         ))}
