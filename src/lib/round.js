@@ -1041,6 +1041,14 @@ function spreadSides(round, balances, net) {
 //  • lastCarry: what skins still carried after the last hole do. 'void' (nobody gets them, the default),
 //    'split' (shared by the players tied for low on the last hole) or 'playoff' (a playoff hole among
 //    them, and the scorekeeper picks the winner: round.skinsPlayoff = { net: pid, gross: pid }).
+//  • canadian: Canadian skins. When the low net score on a hole is a birdie or better and it's tied, a
+//    natural birdie (or better, with no help from a stroke) beats a net one: the lowest gross among
+//    the tied players who made it without strokes wins, if that's one player. Net skins only.
+//  • validate: a skin only counts if its winner makes net par or better on the next hole. If they
+//    don't, the skins they took go back into the carry and ride on that next hole (with carryovers
+//    off they're gone). The last hole's skin, and the skin on the last hole played in a round
+//    finished early, need no check. A winner who left before the next hole keeps theirs.
+// Both are off unless turned on, so rounds from before read exactly as they always did.
 // Sources, checked 2026-09-27: Stick Golf, "How to play Skins" https://stickapp.golf/games/skins/ (split the
 // last-hole carry among the tied players, or a playoff), Golf Games Hub, "Skins golf game rules"
 // https://www.golfgameshub.com/skins-golf-game-rules-strategy-scoring/ (gross and net, a pot split by
@@ -1093,11 +1101,23 @@ export function skinsTable(round, kind = skinsKinds(round)[0]) {
     }
     return [...out.values()];
   };
+  // A skin waiting on its winner's next hole (validate): { row, took, carryover, at }
+  let pending = null;
   round.holes.forEach((h, i) => {
     const s = settingsAt(round, i + 1).skins;
     // Only the players still on a hole play for it, so a carried skin won later is paid by them alone
     const on = playersOn(round, h);
     const field = on.map(p => p.id);
+    // The last skin won needs its winner's net par or better here, or it goes back into the carry
+    if (pending?.at === i && holeComplete(round, h)) {
+      const { row, took } = pending;
+      const w = on.find(p => p.id === row.winner);
+      if (w && netFor(round, w, h) > h.par) {
+        Object.assign(row, { winner: null, lost: row.winner, skins: 0, parts: [], pending: false, kept: row.kept + (pending.carryover ? took.length : 0) });
+        if (pending.carryover) carry = [...carry, ...took];
+      } else row.pending = false;
+    }
+    if (pending?.at <= i) pending = null;
     const all = [...carry, { worth: s.value, field }];
     const worth = all.reduce((a, sk) => a + sk.worth, 0);
     const purse = all.reduce((a, sk) => a + sk.worth * Math.max(0, sk.field.filter(id => field.includes(id)).length - 1), 0);
@@ -1105,7 +1125,14 @@ export function skinsTable(round, kind = skinsKinds(round)[0]) {
     if (!holeComplete(round, h)) { rows.push({ ...base, winner: undefined, skins: 0, kept: carry.length }); return; }
     const nets = on.map(p => [p.id, scoreOf(p, h)]);
     const low = Math.min(...nets.map(n => n[1]));
-    const lows = nets.filter(n => n[1] === low);
+    let lows = nets.filter(n => n[1] === low);
+    // Canadian skins: a natural birdie beats a net one
+    let canadian = false;
+    if (lows.length > 1 && s.canadian && kind === 'net' && low <= h.par - 1) {
+      const naturals = lows.map(n => [n[0], grossFor(round, on.find(p => p.id === n[0]), h)]).filter(n => n[1] <= h.par - 1);
+      const best = naturals.filter(n => n[1] === Math.min(...naturals.map(x => x[1])));
+      if (best.length === 1) { lows = best; canadian = true; }
+    }
     if (lows.length === 1) {
       const w = lows[0][0];
       const took = all.filter(sk => sk.field.includes(w));
@@ -1114,7 +1141,11 @@ export function skinsTable(round, kind = skinsKinds(round)[0]) {
         const payers = sk.field.filter(id => id !== w && field.includes(id));
         return { id: payers.join(','), data: { payers } };
       });
-      rows.push({ ...base, winner: w, skins: took.length, parts, kept: carry.length });
+      const row = { ...base, winner: w, skins: took.length, parts, kept: carry.length };
+      if (canadian) row.canadian = true;
+      // Validate: it's not theirs until the next hole says so (the last hole's skin needs no check)
+      if (s.validate && i < round.holes.length - 1) { row.pending = true; pending = { row, took, carryover: !!s.carryover, at: i + 1 }; }
+      rows.push(row);
     } else {
       carry = s.carryover ? all : [];
       rows.push({ ...base, winner: null, skins: 0, tied: lows.map(n => n[0]), kept: carry.length });
@@ -1124,6 +1155,8 @@ export function skinsTable(round, kind = skinsKinds(round)[0]) {
   // After the last hole, or when the round was finished early: what the skins still carried do
   const ends = [];
   const over = holeComplete(round, round.holes.at(-1)) || round.status === 'done';
+  // A round finished before a skin's next hole was scored: the skin stands
+  if (over) for (const r of rows) if (r.pending) r.pending = false;
   if (over && carry.length && lastDone) {
     const rule = round.settings.skins.lastCarry || 'void';
     const h = lastDone.hole;
@@ -1164,7 +1197,7 @@ function skinsMoney(round, t, onPay = null) {
     // Like the other pots, a player who left or joined partway is out of it: they don't put in, and their skins don't count
     const inPot = round.players.filter(p => playsWholeRound(round, p.id)).map(p => p.id);
     const shares = Object.fromEntries(inPot.map(id => [id, 0]));
-    for (const r of t.rows) if (r.winner && r.winner in shares) { shares[r.winner] += r.skins; credit(r.winner, r.skins, 0, r.hole.no); }
+    for (const r of t.rows) if (r.winner && !r.pending && r.winner in shares) { shares[r.winner] += r.skins; credit(r.winner, r.skins, 0, r.hole.no); }
     for (const end of ends) {
       if (end.rule === 'split') {
         const tied = end.tied.filter(id => id in shares);
@@ -1192,7 +1225,7 @@ function skinsMoney(round, t, onPay = null) {
     for (const w of winners) { deltas[w] += worth * payers.length / winners.length; credit(w, skins / winners.length, worth * payers.length / winners.length, no); }
   };
   // Each part of a won hole is paid by the players in for those skins
-  for (const r of t.rows) if (r.winner) for (const part of r.parts) pay([r.winner], part.payers, part.worth, part.skins, r.hole.no);
+  for (const r of t.rows) if (r.winner && !r.pending) for (const part of r.parts) pay([r.winner], part.payers, part.worth, part.skins, r.hole.no);
   for (const end of ends) {
     if (end.rule === 'split' && end.tied.length) pay(end.tied, end.field.filter(id => !end.tied.includes(id)), end.worth, end.skins, end.row.hole.no);
     else if (end.winner) pay([end.winner], end.field.filter(id => id !== end.winner), end.worth, end.skins, end.row.hole.no);

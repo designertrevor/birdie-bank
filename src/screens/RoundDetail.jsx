@@ -375,8 +375,16 @@ function GameBreakdown({ round, res, label = null }) {
           {won.map(r => (
             <div key={r.hole.no} className="leg-row">
               <div className="leg-name">H{r.hole.no}</div>
-              <div className="leg-winner">{names[r.winner]}</div>
+              <div className="leg-winner">{names[r.winner]}{r.canadian ? ' · natural birdie' : ''}{r.pending ? ' · to hold on the next hole' : ''}</div>
               <div className="leg-amt">{r.skins} skin{r.skins > 1 ? 's' : ''}</div>
+            </div>
+          ))}
+          {/* Validate skins: a skin its winner didn't hold went back into the carry */}
+          {t.rows.filter(r => r.lost).map(r => (
+            <div key={`lost${r.hole.no}`} className="leg-row">
+              <div className="leg-name">H{r.hole.no}</div>
+              <div className="leg-winner">{first(names[r.lost])} didn’t hold it</div>
+              <div className="leg-amt">back in</div>
             </div>
           ))}
           {ends.map((end, k) => (end.rule === 'split' || (end.rule === 'playoff' && end.tied.length === 1)) && (

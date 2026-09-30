@@ -33,6 +33,8 @@ import { leaveRound, roundsInProgress } from '../lib/rounds.js';
 import { RoundsInProgressSheet } from '../components/RoundsInProgress.jsx';
 import { ByGameTable, SideGamesSetup } from '../components/SideGames.jsx';
 import { RoundMoments } from '../components/Moments.jsx';
+import { FirstTeeSheet } from '../components/FirstTee.jsx';
+import { isLocked, lockAgreement, noteChanges, showFirstTee } from '../lib/agreed.js';
 import { nassauOpenNote, sideExample } from '../lib/side-games.js';
 import {
   ASK_MS, askForCard, askLeft, canEdit, canTakeCard, clearAsk, clockText, declineAsk, declinedAsk, handOff, handOffChoices, hostKeeper, isKeeper,
@@ -123,6 +125,8 @@ function useWakeLock() {
 
 // Unsaved scores per hole ("roundId:holeNo"), kept while moving between holes so nothing typed is lost
 const DRAFTS = new Map();
+// Rounds whose locked-in rules card this phone has closed (a phone that isn't keeping score sees it until then)
+const AGREED_SEEN = new Set();
 
 function PlayRound({ round }) {
   useWakeLock();
@@ -190,6 +194,35 @@ function PlayRound({ round }) {
   const holeFixed = !!holeFixOf(round, hole.no);
   const requests = useSeatRequests(round.id);
   const numRefs = useRef({});
+
+  // --- The first-tee rules card (see agreed.js) ---
+  // 'lock' on the keeper's phone before hole 1; 'view' is "What we agreed" from the menu
+  const [agreedSheet, setAgreedSheet] = useState(null);
+  const firstTee = editable && showFirstTee(round);
+  // A phone that isn't keeping score sees the card when it's locked in, until it's closed or hole 1 is scored
+  const [, seenCard] = useState(0);
+  const watchCard = !editable && isLocked(round) && !holeComplete(round, round.holes[0]) && !AGREED_SEEN.has(round.id);
+  // After locking, any change to what was agreed is listed against the hole (the keeper's phone writes it)
+  useEffect(() => {
+    if (!editable) return;
+    const next = noteChanges(round);
+    if (next) update(s => { const r = s.rounds[round.id]; if (r) r.agreed = next; });
+  }, [round, editable]);
+  const lockIn = calls => {
+    update(s => {
+      const r = s.rounds[round.id];
+      if (r) r.agreed = lockAgreement(r, calls, me ?? null);
+      s.firstTee = calls; // next round's card starts from the same calls
+    });
+    setAgreedSheet(null);
+    showToast('Locked in. It’s in the round menu if anyone asks.');
+    buzz(20);
+  };
+  const skipCard = () => {
+    update(s => { const r = s.rounds[round.id]; if (r && !r.agreed) r.agreed = { skipped: Date.now() }; });
+    setAgreedSheet(null);
+  };
+  const setCalls = calls => update(s => { const r = s.rounds[round.id]; if (r?.agreed?.at) Object.assign(r.agreed, calls); });
 
   // --- Keeping score in a shared round ---
   const keeper = keeperOf(round);
@@ -567,6 +600,11 @@ function PlayRound({ round }) {
           </button>
         )}
         </>}
+        {(isLocked(round) || editable) && (
+          <button className="sheet-item" onClick={() => { setMenu(false); setAgreedSheet(isLocked(round) ? 'view' : 'lock'); }}>
+            <span><Icon name="handshake" /> {isLocked(round) ? `What we agreed${round.agreed.changes?.length ? ` · ${round.agreed.changes.length} change${round.agreed.changes.length > 1 ? 's' : ''}` : ''}` : 'First-tee rules card'}</span><Icon name="caret-right" />
+          </button>
+        )}
         {gameKeys(round).map(k => (
           <button key={k} className="sheet-item" onClick={() => { setMenu(false); setRules({ key: k, open: true }); }}>
             <span><Icon name="book-open" /> {k === 'main' ? GAMES[game].name : SIDE_GAMES[k].label} rules</span><Icon name="caret-right" />
@@ -626,6 +664,13 @@ function PlayRound({ round }) {
         title={rules.key === 'dots' ? `How to play ${SIDE_GAMES.dots.label}` : undefined}
         sub={rules.key === 'dots' ? 'A side game · Dots, garbage, trash' : undefined} strokes={strokesRulesLines(round, rules.key)} />
       <ShareSheet round={round} open={live} onClose={() => setLive(false)} />
+      {(firstTee || agreedSheet === 'lock') && (
+        <FirstTeeSheet key="lock" round={round} open mode="lock" canEdit initial={getState().firstTee} onLock={lockIn} onSkip={skipCard} />
+      )}
+      {(agreedSheet === 'view' || watchCard) && (
+        <FirstTeeSheet key="view" round={round} open mode="view" canEdit={editable} me={me} onCalls={setCalls}
+          onClose={() => { setAgreedSheet(null); AGREED_SEEN.add(round.id); seenCard(n => n + 1); }} />
+      )}
       {game === 'banker' && (
         <>
           <Sheet open={bankerPick} onClose={() => setBankerPick(false)} title={`Banker · Hole ${hole.no}`}>

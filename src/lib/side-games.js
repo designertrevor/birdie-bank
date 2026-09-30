@@ -61,7 +61,8 @@ export function skinsRulesLine(settings) {
   const bet = s.payout === 'pot' ? `${money(s.stake ?? s.value ?? 0)} each in the pot` : `${money(s.value ?? 0)} a skin`;
   const last = !s.carryover ? 'no carryovers'
     : { void: 'last carry unclaimed', split: 'last carry split', playoff: 'last carry played off' }[s.lastCarry || 'void'] || 'last carry unclaimed';
-  return `${kind} · ${bet} · ${last}`;
+  const fair = [s.canadian && s.kind !== 'gross' && 'Canadian', s.validate && 'validated'].filter(Boolean);
+  return [kind, bet, last, ...fair].join(' · ');
 }
 
 /** Each game's money for one player in small type: "Nassau +$5 · Skins +$12 · Junk $0". */
