@@ -4,7 +4,7 @@ import { Header, Icon, Screen, Sheet, useUI } from '../components/ui.jsx';
 import { Avatar, SettleSheet } from '../components/Pay.jsx';
 import { PersonActions, RewardLines } from '../components/TabCard.jsx';
 import { useTabSync } from '../lib/tab-sync.js';
-import { update, useStore } from '../lib/store.js';
+import { uid, update, useStore } from '../lib/store.js';
 import { nameOf, outstanding, personStory, tabWith } from '../lib/ledger.js';
 import { PAY_APPS, handleText, payInfoFor } from '../lib/pay.js';
 import { money } from '../lib/golf.js';
@@ -12,6 +12,7 @@ import { formatIndex, gameLabel, myIds, roundDate } from '../lib/format.js';
 import { useNav } from '../lib/nav.js';
 import { canonicalOf } from '../lib/pair-debts.js';
 import { aliasesOf, linksOf, mergeCandidates, mergePeople, unmergePerson } from '../lib/people-links.js';
+import { paymentsAfterSplit } from '../lib/unmerge-payments.js';
 import { playForLine, unitFmt } from '../lib/play-for.js';
 import { nemesis, rivalry } from '../lib/rivalry.js';
 import { RivalryCard } from '../components/Rivalry.jsx';
@@ -52,6 +53,12 @@ export default function Person({ id: opened }) {
   const aliases = isMine ? [] : aliasesOf(state, id, x => nameOf(state, x));
   const candidates = merging ? mergeCandidates(state, id, mine).map(x => ({ id: x, name: nameOf(state, x) })).sort((a, b) => a.name.localeCompare(b.name)) : [];
   const before = () => ({ links: state.links || {}, unlinks: state.unlinks || [] });
+  // Two cards apart again: a payment recorded while they were one follows the card it belongs to
+  const apart = (s, next, keep, alias) => {
+    const moved = paymentsAfterSplit(s, next, keep, alias, { makeId: () => uid() });
+    s.links = next.links; s.unlinks = next.unlinks;
+    if (moved) s.settlements = moved;
+  };
   const restore = was => update(s => { s.links = was.links; s.unlinks = was.unlinks; });
   const merge = other => {
     const next = mergePeople(state, id, other.id);
@@ -59,13 +66,13 @@ export default function Person({ id: opened }) {
     if (!next) { showToast(`Couldn’t merge ${other.name}`); return; }
     const was = before();
     update(s => { s.links = next.links; s.unlinks = next.unlinks; });
-    showToast(`${other.name} and ${name} are one person now`, { label: 'Undo', run: () => restore(was) });
+    showToast(`${other.name} and ${name} are one person now`, { label: 'Undo', run: () => update(s => apart(s, was, id, other.id)) });
   };
   const separate = a => {
     const next = unmergePerson(state, id, a.id);
     if (!next) return;
     const was = before();
-    update(s => { s.links = next.links; s.unlinks = next.unlinks; });
+    update(s => apart(s, next, id, a.id));
     showToast(`${a.name} is a separate person again`, { label: 'Undo', run: () => restore(was) });
   };
   const sameSub = (x, whole = false) => {

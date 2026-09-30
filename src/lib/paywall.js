@@ -87,8 +87,9 @@ export function variantFor(state, key, variants = VARIANTS) {
 // --------------------------- who sees it -------------------------------------
 
 /**
- * The flag. Off unless turned on: `VITE_PAYWALL=on` at build time, on in local dev, and
- * `?paywall=on` or `?paywall=off` in the address bar overrides both on that phone (remembered).
+ * The flag. Off unless turned on: `VITE_PAYWALL=on` at build time, or `?paywall=on` in the
+ * address bar on that phone (remembered; `?paywall=off` turns it back off). Local dev follows
+ * production, so the paywall doesn't show there until you ask for it.
  * Returns { on, remember } where `remember` is the override to save, if the URL set one.
  */
 export function readFlag({ env = {}, search = '', saved = null } = {}) {
@@ -98,7 +99,7 @@ export function readFlag({ env = {}, search = '', saved = null } = {}) {
   const v = String(env.VITE_PAYWALL ?? '').toLowerCase();
   if (v === 'on' || v === '1' || v === 'true') return { on: true, remember: null };
   if (v === 'off' || v === '0' || v === 'false') return { on: false, remember: null };
-  return { on: !!env.DEV, remember: null };
+  return { on: false, remember: null };
 }
 
 /**

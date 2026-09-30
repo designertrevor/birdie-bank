@@ -37,7 +37,10 @@ function useCountUp(target, { delay = 0, duration = 1100, skip = false } = {}) {
       if (k < 1) raf = requestAnimationFrame(tick);
     };
     raf = requestAnimationFrame(tick);
-    return () => cancelAnimationFrame(raf);
+    // No animation frames (a phone in low-power mode, a tab in the background, a screenshot tool):
+    // land on the real amount anyway, so a bet that reads "1 up" never sits at $0
+    const land = setTimeout(() => { cancelAnimationFrame(raf); setV(target); setPhase('done'); }, delay + duration + 400);
+    return () => { cancelAnimationFrame(raf); clearTimeout(land); };
   }, [target, delay, duration, skip]);
   return [v, phase];
 }
