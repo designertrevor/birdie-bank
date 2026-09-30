@@ -1,10 +1,13 @@
 // Bundled courses. Par, hole handicaps and men's tee ratings/slopes confirmed from the user's scorecards (Sep 2026).
+// Coordinates (lat, lon) are from OpenStreetMap (Sep 2026), for Courses near me.
 // Yardages are intentionally left out. Birdie Bank tracks games, not distances.
 export const COURSES = [
   {
     "id": "birch-creek",
     "name": "Birch Creek GC",
     "city": "Smithfield, UT",
+    "lat": 41.836,
+    "lon": -111.8138,
     "holes": [
       {
         "par": 5,
@@ -115,6 +118,8 @@ export const COURSES = [
     "id": "logan-river",
     "name": "Logan River GC",
     "city": "Logan, UT",
+    "lat": 41.7112,
+    "lon": -111.847,
     "holes": [
       {
         "par": 5,
@@ -255,6 +260,8 @@ export const COURSES = [
     "id": "preston",
     "name": "Preston G&CC",
     "city": "Preston, ID",
+    "lat": 42.1154,
+    "lon": -111.8604,
     "holes": [
       {
         "par": 4,
