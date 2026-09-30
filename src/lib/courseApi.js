@@ -45,7 +45,14 @@ export function cityLabel(loc) {
   return '';
 }
 
-/** Search results: [{ apiId, id, name, city, teeCount }]. */
+/** { lat, lon } from an API location when both are there (API v1.1.0 and later), else {}. */
+export function coordsOf(loc) {
+  const lat = loc?.latitude;
+  const lon = loc?.longitude;
+  return Number.isFinite(lat) && Number.isFinite(lon) && Math.abs(lat) <= 90 && Math.abs(lon) <= 180 ? { lat, lon } : {};
+}
+
+/** Search results: [{ apiId, id, name, city, teeCount, lat?, lon? }]. */
 export function mapSearch(json) {
   const list = Array.isArray(json?.courses) ? json.courses : [];
   return list
@@ -53,7 +60,7 @@ export function mapSearch(json) {
     .map(c => {
       const apiId = String(c.id).toLowerCase();
       const teeCount = Object.values(c.tees || {}).reduce((a, n) => a + (Number.isFinite(n) ? n : 0), 0);
-      return { apiId, id: apiCourseId(apiId), name: courseName(c.club_name, c.course_name) || 'Unnamed course', city: cityLabel(c.location), teeCount };
+      return { apiId, id: apiCourseId(apiId), name: courseName(c.club_name, c.course_name) || 'Unnamed course', city: cityLabel(c.location), teeCount, ...coordsOf(c.location) };
     });
 }
 
@@ -124,6 +131,7 @@ export function mapCourse(json) {
     source: SOURCE,
     name: courseName(c.club_name, c.course_name) || 'Unnamed course',
     city: cityLabel(c.location),
+    ...coordsOf(c.location),
     holes,
     tees,
     custom: true,

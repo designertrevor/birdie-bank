@@ -32,8 +32,10 @@ test('cityLabel uses city and state, or reads them from the address', () => {
 test('mapSearch keeps valid ids and counts tees', () => {
   const res = mapSearch(SAMPLE_SEARCH);
   assert.equal(res.length, 4);
-  assert.deepEqual(res[0], { apiId: '7k2m9qb4', id: 'gca-7k2m9qb4', name: 'Pine Hollow Golf Club', city: 'Logan, UT', teeCount: 5 });
+  assert.deepEqual(res[0], { apiId: '7k2m9qb4', id: 'gca-7k2m9qb4', name: 'Pine Hollow Golf Club', city: 'Logan, UT', teeCount: 5, lat: 41.7355, lon: -111.8344 });
   assert.equal(res[1].city, 'Heber City, UT');
+  // Coordinates only when the API sent both
+  assert.equal('lat' in res[2], false);
   assert.equal(res[3].name, 'Pine Hollow Golf Club (Executive Course)');
   // Old numeric ids and junk are dropped; upper case ids are accepted
   assert.deepEqual(mapSearch({ courses: [{ id: 12345 }, null, { id: '7K2M9QB4', club_name: 'X' }] }).map(c => c.apiId), ['7k2m9qb4']);

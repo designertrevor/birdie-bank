@@ -1526,3 +1526,13 @@ button.lately-row:active { background: var(--surface); }
 @keyframes mwTrophy { 0% { transform: scale(0) rotate(-30deg); } 60% { transform: scale(1.12) rotate(6deg); } 100% { transform: scale(1) rotate(0); } }
 @keyframes mwScore { 0% { transform: scale(.4); opacity: 0; } 60% { transform: scale(1.1); opacity: 1; } 100% { transform: scale(1); } }
 @media (prefers-reduced-motion: reduce) { .mw-rays { display: none; } }
+
+/* Overnight 5: courses near you in the course picker */
+.near-ask { padding: 4px 16px 6px; }
+.near-btn { background: var(--surface); }
+.near-btn i { color: var(--pink); }
+.near-btn:disabled { opacity: .8; }
+.near-btn:disabled i { color: var(--mute); }
+.near-foot { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin: 2px 16px 4px; font-size: 13px; color: var(--mute); min-height: 32px; }
+.near-again { border: none; background: none; font: inherit; font-weight: 600; color: var(--ink); display: inline-flex; align-items: center; gap: 5px; padding: 6px 0; margin-left: auto; cursor: pointer; }
+.near-again:disabled { color: var(--mute); }

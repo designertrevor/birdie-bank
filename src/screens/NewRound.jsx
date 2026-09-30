@@ -5,6 +5,9 @@ import { getState, update, uid, useStore } from '../lib/store.js';
 import { allCourses, coursePar, coursePickerSections, courseTag, defaultTee as firstTee, isStarred, teeDotStyle, toggleStarred } from '../lib/courses.js';
 import { getCourse } from '../lib/courseApi.js';
 import { useCourseSearch } from '../lib/useCourseSearch.js';
+import { useNearbyCourses } from '../lib/useNearbyCourses.js';
+import { mergeNear, milesLabel } from '../lib/nearby.js';
+import NearYou from '../components/NearYou.jsx';
 import { GAMES, GAME_GROUPS, MAX_GAMES, SIDE_GAMES, createRound, effectiveCourseHc, holesInPlay, sideGamesOf } from '../lib/round.js';
 import { SideGamesSetup } from '../components/SideGames.jsx';
 import { GameOptions, SixesPreview, TeamPicker } from '../components/GameOptions.jsx';
@@ -377,7 +380,16 @@ function CourseStep({ courseId, setCourseId, holesCount, nine, setNine, onNext, 
   const courses = allCourses(state);
   const needle = q.trim().toLowerCase();
   // Starred, then recently played, then the rest; a search shows only what matches
-  const { starred, recent, recentLabel, all: rest, hint } = coursePickerSections(state, needle);
+  const sections = coursePickerSections(state, needle);
+  const { starred, recentLabel, hint } = sections;
+  // Near you sits under Favorites: saved courses show as usual rows, new ones as "add" rows.
+  // A course only shows once, so near ones leave Recent and All courses.
+  const near = useNearbyCourses();
+  const starredIds = new Set(starred.map(c => c.id));
+  const nearRows = needle || !near.pos ? [] : mergeNear(near.courses, courses, near.pos).filter(x => !x.c || !starredIds.has(x.c.id));
+  const nearMiles = new Map(nearRows.filter(x => x.c).map(x => [x.c.id, x.miles]));
+  const recent = sections.recent.filter(c => !nearMiles.has(c.id));
+  const rest = needle ? sections.all : sections.all.filter(c => !nearMiles.has(c.id));
   const matches = needle ? rest : courses;
   // Starring moves the row to another section, so a short toast says where it went
   const star = c => {
@@ -411,10 +423,10 @@ function CourseStep({ courseId, setCourseId, holesCount, nine, setNine, onNext, 
     }
   };
   const apiRow = r => (
-    <button key={r.apiId} className="list-item" onClick={() => pickApi(r)} aria-busy={loadingId === r.apiId} aria-label={[`Add ${r.name}`, r.city, r.teeCount ? teeCount(r.teeCount) : null].filter(Boolean).join(', ')}>
+    <button key={r.apiId} className="list-item" onClick={() => pickApi(r)} aria-busy={loadingId === r.apiId} aria-label={[`Add ${r.name}`, r.miles != null ? `${milesLabel(r.miles)} away` : null, r.city, r.teeCount ? teeCount(r.teeCount) : null].filter(Boolean).join(', ')}>
       <div className="row-main">
         <div className="li-name">{r.name}</div>
-        <div className="li-sub">{[r.city, r.teeCount ? teeCount(r.teeCount) : null].filter(Boolean).join(' · ')}</div>
+        <div className="li-sub">{[r.miles != null ? milesLabel(r.miles) : null, r.city, r.teeCount ? teeCount(r.teeCount) : null].filter(Boolean).join(' · ')}</div>
       </div>
       <span className="li-check add"><Icon name={loadingId === r.apiId ? 'circle-notch' : 'plus'} className={loadingId === r.apiId ? 'spin' : ''} /></span>
     </button>
@@ -427,9 +439,9 @@ function CourseStep({ courseId, setCourseId, holesCount, nine, setNine, onNext, 
     return (
       <div key={c.id} className={`list-item pick course-row ${picked ? 'on' : ''}`} onClick={() => setCourseId(picked ? null : c.id)}>
         <button className="course-pick" aria-pressed={picked}
-          aria-label={[c.name, c.city, `${c.holes.length} holes`, `par ${coursePar(c)}`, teeCount(c.tees?.length || 0), courseTag(c)?.text].filter(Boolean).join(', ')}>
+          aria-label={[c.name, nearMiles.has(c.id) ? `${milesLabel(nearMiles.get(c.id))} away` : null, c.city, `${c.holes.length} holes`, `par ${coursePar(c)}`, teeCount(c.tees?.length || 0), courseTag(c)?.text].filter(Boolean).join(', ')}>
           <div className="li-name">{c.name}</div>
-          <div className="li-sub">{[c.city, `${c.holes.length} holes`, `Par ${coursePar(c)}`, teeCount(c.tees?.length || 0)].filter(Boolean).join(' · ')}</div>
+          <div className="li-sub">{[nearMiles.has(c.id) ? milesLabel(nearMiles.get(c.id)) : null, c.city, `${c.holes.length} holes`, `Par ${coursePar(c)}`, teeCount(c.tees?.length || 0)].filter(Boolean).join(' · ')}</div>
           {courseTag(c) && <div className={`warn-tag ${courseTag(c).soft ? 'soft' : ''}`}><Icon name={courseTag(c).soft ? 'database' : 'warning'} fill /> {courseTag(c).text}</div>}
         </button>
         <button className={`course-star ${on ? 'on' : ''}`} aria-pressed={on} aria-label={`Favorite ${c.name}`} onClick={e => { e.stopPropagation(); star(c); }}>
@@ -450,6 +462,7 @@ function CourseStep({ courseId, setCourseId, holesCount, nine, setNine, onNext, 
         </div>
         {starred.length > 0 && <><div className="sec-label">Favorites</div><div style={{ padding: '0 16px' }}>{starred.map(row)}</div></>}
         {hint && <p className="course-star-hint"><Icon name="star" /> Tap the star to keep a course at the top</p>}
+        {!needle && <NearYou near={near} count={nearRows.length}>{nearRows.map(x => (x.c ? row(x.c) : apiRow({ ...x.r, miles: x.miles })))}</NearYou>}
         {recent.length > 0 && <><div className="sec-label">{recentLabel}</div><div style={{ padding: '0 16px' }}>{recent.map(row)}</div></>}
         {rest.length > 0 && <><div className="sec-label">{needle ? `${rest.length} result${rest.length === 1 ? '' : 's'}` : 'All courses'}</div><div style={{ padding: '0 16px' }}>{rest.map(row)}</div></>}
         {needle && more.length > 0 && <><div className="sec-label">More courses{api.loading ? ' · searching' : ''}</div><div style={{ padding: '0 16px' }}>{more.map(apiRow)}</div></>}
