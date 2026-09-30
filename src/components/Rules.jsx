@@ -242,6 +242,23 @@ const RULES = {
       ['Paying out', <p key="p">Whoever holds the rabbit after hole 9 wins the bet from everyone, and again after hole 18. Over nine holes there’s one payout. A loose rabbit at the turn pays nobody. Stop early and whoever holds it then is paid.</p>],
     ],
   },
+  birdies: {
+    title: 'How to play the Birdie pot',
+    sub: '2–8 players · A side game · Birdies split the pot',
+    sections: [
+      ['Overview', <p key="o">Everyone puts the same amount in the pot before the round. At the end, the pot is split among the players who made birdies.</p>],
+      ['Shares', <ul key="s">
+        <li>Every <strong>net birdie</strong> is one share of the pot.</li>
+        <li>A <strong>net eagle</strong> or better is two shares, unless your group changes it.</li>
+        <li>The pot is split by shares, so two birdies take twice as much as one.</li>
+      </ul>],
+      ['Paying out', <p key="p">The pot is split by shares. Four players at $5 make a $20 pot. Ann makes 2 birdies and Bo makes an eagle, so that’s 4 shares at $5 each: Ann and Bo each take $10 and are up $5, and the other two are down $5.</p>],
+      ['No birdies', <p key="n">If nobody makes a birdie, everyone gets their money back and nobody pays.</p>],
+      ['Scoring', <p key="c">Nothing to tap: birdies are counted from the scores after handicap strokes. A player who picks up on a hole can’t birdie it.</p>],
+      ['Joining late', <p key="j">The pot is for the players who started. Anyone added partway, or who leaves early, sits it out.</p>],
+      ['With Junk', <p key="k">When Junk counts birdies automatically, it counts <strong>natural</strong> birdies, before strokes, and the pot counts net birdies. So a natural birdie pays twice: a dot from each player and a share of the pot. A birdie that only comes from a stroke counts in the pot alone.</p>],
+    ],
+  },
   snake: {
     title: 'How to play Snake',
     sub: '2–8 players · Don’t three-putt',
@@ -254,21 +271,6 @@ const RULES = {
         <li><strong>Doubles</strong>: every three-putt doubles it, up to a cap. The cap is 4 doubles unless you change it, so a $5 snake goes $5, $10, $20, $40, $80 and then stays at $80. Three-putts after that still pass it on. Pick <strong>No cap</strong> to let it keep doubling.</li>
       </ul>],
       ['Each nine', <p key="n">Turn it on to settle the snake at the turn and start a fresh one on the back. Stop early and whoever holds it then pays.</p>],
-    ],
-  },
-  birdies: {
-    title: 'How to play the Birdie pot',
-    sub: 'A side game · Birdies split the pot',
-    sections: [
-      ['Overview', <p key="o">Everyone in the pot puts in the bet. At the end, the pot is split among the players who made birdies.</p>],
-      ['Shares', <ul key="s">
-        <li>Every <strong>net birdie</strong> (one under par after strokes) is one share.</li>
-        <li>A <strong>net eagle</strong> or better is two shares.</li>
-        <li>Holes with a missing score don’t count, and a pickup never earns a share.</li>
-      </ul>],
-      ['Paying out', <p key="p">The pot is split by shares. Four players at $5 make a $20 pot. Ann makes 2 birdies and Bo makes an eagle, so that’s 4 shares at $5 each: Ann and Bo each take $10 and are up $5, and the other two are down $5. <strong>No birdies at all</strong> and nobody pays.</p>],
-      ['Who’s in', <p key="w">It takes at least 2 players. A player who <strong>leaves partway</strong> or is <strong>added partway</strong> sits the pot out: they don’t put in and can’t win it.</p>],
-      ['With Junk', <p key="j">When Junk counts birdies automatically, it counts <strong>natural</strong> birdies, before strokes, and the pot counts net birdies. So a natural birdie pays twice: a dot from each player and a share of the pot. A birdie that only comes from a stroke counts in the pot alone.</p>],
     ],
   },
 };

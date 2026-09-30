@@ -51,7 +51,8 @@ export default function PlanScreen({ id }) {
   }
   return (
     <Screen>
-      <Header title={plan.host ? 'Your round' : 'Upcoming round'} small onBack={nav.pop} />
+      <Header title={plan.host ? 'Your round' : 'Upcoming round'} small onBack={nav.pop}
+        right={plan.host && plan.status === 'planned' && !plan.gone ? <button className="pill-btn sm" onClick={() => nav.push('newRound', { edit: plan.id })}><Icon name="pencil-simple" /> Edit</button> : null} />
       <PlanBody plan={plan} />
     </Screen>
   );
@@ -217,6 +218,7 @@ function PlanBody({ plan, standalone = false, onSkip }) {
           <p className="field-help pad">Tap a name to mark someone who told you in person. Friends answer from the link, no download needed.</p>
         )}
 
+        {planned && plan.host && <button className="text-link" onClick={() => nav.push('newRound', { edit: plan.id })}><Icon name="pencil-simple" /> Change the day, time, course or holes</button>}
         {planned && plan.host && <button className="danger-link" onClick={callOff}><Icon name="calendar-x" /> Call it off</button>}
         {(!planned || !plan.host) && !standalone && <button className="danger-link" onClick={del}><Icon name="trash" /> Delete plan</button>}
         {standalone && <p className="field-help pad">{noMoneyNote(plan) || 'Friendly wagers only. Birdie Bank never holds or moves money. You settle up yourselves.'}</p>}

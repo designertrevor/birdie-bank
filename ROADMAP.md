@@ -33,13 +33,15 @@ The plan for growing Birdie Bank into a $10k/mo business, and the checklist we w
 
 **Nothing is held back until launch (2026-09-29):** testers get every feature, Pro included, with no Pro labels. The Season view on the Tab is open to everyone who has played. The free and Pro split below is the plan for launch day, not something to gate now, and early testers get Pro for life. The paywall, the free promise and the Pro preview stay built behind the flag (`?paywall=on`) for when launch gets close.
 
+**Fixed 2026-09-30 (from Trevor):** planning a round now asks 9 or 18 holes on the When step, and the organizer can edit a plan's day, tee time, course or holes instead of deleting it and starting over.
+
 **Built overnight 2026-09-30 on `overnight4/next` (preview branch, not on main yet):** one friend is one person across their player ids (seat claims from the join link and "Same person as..." on a Player card); side game bets change mid-round from the Bets sheet; saved usuals fill in a planned round; the WHS handicap % hint on Strokes given; blind wolf and a Hogan dot; play for Points or a reward (lunch, a drink or your own); favorite and recently played courses; motion for the end-of-round reveal; and three fixes (the invite card's team name, every phone goes to Final results when the keeper finishes, and a rules page for each game in the round menu). All open to everyone, nothing labelled Pro. No new SQL.
 
 **Next in S2:** courses near you (area 6), real payments for the paywall test (Stripe, area 11), and the quick logo (area 16).
 
 **The big date:** the creator test (S4) runs February to April 2027, when golf season starts back up. Everything before it is about being ready: a product groups keep using, a smooth path from video to paying, and an App Store app.
 
-Last updated: 2026-09-30 (overnight 4)
+Last updated: 2026-09-30 (overnight 5)
 
 ---
 
@@ -171,6 +173,7 @@ Put more money into the winning creators and copy their video formats with other
 - [x] `S2` Player cards: each person shows your record and honest net with them, and opens a card with Request, Remind, Settle up and the round-by-round story. Crews sit in a small section below (2026-09-27)
 - [ ] `S5` Profile stats: rounds, net winnings, record against each friend, favorite game
 - [ ] `S3` Privacy settings, with money hidden by default
+- [ ] `S3` Avatars: a library of illustrated avatars to pick from, in the app's own style, or upload any photo you like. Shown on player cards, seat tiles, the Tab and share cards (from Trevor, 2026-09-30)
 
 ### 3. Onboarding
 - [x] Three-step first run: welcome, the "friendly wagers" disclaimer, your name and handicap
@@ -223,7 +226,11 @@ Put more money into the winning creators and copy their video formats with other
 - [x] `S2` "Add a player" in the round menu: their money counts from the hole they join, nobody else's strokes move, and the results say so. Games with fixed sides or an exact head count (Nassau, match play, Vegas, Sixes, Wolf, Nines, scramble, Hammer, Snake) never take a new player, not even before the first score (2026-09-27)
 - [x] `S2` Adding a player picks their games: after letting someone in, the scorekeeper switches each game on or off with a reason under it, one start hole for all of them. A late joiner can play the side games when the main game has set sides or is full (up to 8 in the round), sits out a pot that started without them, and never joins a wolf rotation, banker's bets, Sixes pairings or a match's sides (2026-09-29)
 - [ ] `S3` Side bets between two players inside a bigger round (proposed during the week, see area 21)
-- [ ] `S3` Several groups, one game: multiple foursomes feeding one pot and one leaderboard (moved up from S5, 2026-09-27)
+- [ ] `S3` Several groups, one game ("the Big Game", a Pro headliner idea, see area 11): a weekly game of 8 to 20 players across several foursomes feeding one pot and one leaderboard, team formats, side bets between any members, strokes worked out for each match, a live board for every group and one settle-up. A GolfWRX group says its bets take 90 minutes to figure each week, and only pricey club software does it today (moved up from S5, 2026-09-27; widened 2026-09-30)
+- [ ] `S3` Allowances by format, free for everyone: a handicap percentage for each game (for example 85% in four-ball, full in singles), set once for the round or the whole trip (from the Reddit research, 2026-09-30)
+- [ ] `S3` Half-pops, free: a stroke counts as half, as an option for skins and matches, so big handicap gaps stay fair
+- [ ] `S3` Skins fairness options, free: Canadian skins (a natural birdie beats a net birdie) and validating a skin with a net par on the next hole
+- [ ] `S3` First-tee rules card, free: strokes, allowances, gimmes, mulligans and presses agreed and locked before hole 1, so nobody argues about them on 18 (Reddit: trips that argue on day one "argued about it all weekend")
 
 ### 6. Courses
 - [ ] `S1` (partial) Three bundled courses plus custom courses you can edit
@@ -232,6 +239,7 @@ Put more money into the winning creators and copy their video formats with other
 - [ ] `S2` (partial) Favorite courses and courses near you. Built (2026-09-30): a star on every course keeps it at the top under Favorites (synced with the profile), then "Recently played" (up to 5), then All courses. Courses near you still to do.
 - [x] `S2` Fix a hole on the spot: the organizer can correct a par, stroke index or tee rating mid-round for their group, and the fix goes to the feedback table so the course gets corrected for everyone. "Fix this hole" in the round menu and "Wrong par or HCP?" under the scorecard (the Hole/Par/HCP strip still opens the scorecard), "Course and tee" for rating and slope, a plain line on whose strokes move, the money recounts, and a Fixed tag (2026-09-29). A par or stroke index fix is also saved to the fixing phone's own copy of the course, so the next round there starts right (2026-09-29)
 - [ ] `S3` "Request this course" when a search finds nothing (see area 20)
+- [ ] `S5` Share reviewed hole fixes with every group, so our course data ends up better than the API's (data a new app can't copy)
 
 ### 7. The tab and settling up
 - [x] Debts netted across every round, recording payments (including partial ones), Venmo pay links
@@ -246,6 +254,9 @@ Put more money into the winning creators and copy their video formats with other
 - [ ] `S2` A trip tab: one tab across the rounds of a golf trip, settled once at the end
 - [ ] `S3` (partial) Gentle payment reminders ("Mike still owes $18 from Saturday"). A Remind button sends a friendly text with the amount and your pay link (2026-09-27); automatic reminders still to do.
 - [ ] `S3` A separate tab for each crew or trip, and "close the books" at season's end
+- [ ] `S3` Trip expenses on the same Tab as the bets: gas, dinner, the house, split any way, and one settle-up for everything at the end. Trip organizers juggle Squabbit, Splitwise and Venmo today (from the Reddit research, 2026-09-30)
+- [ ] `S3` Split Pro on the Tab: when an organizer buys Pro, offer to split its cost across the group ("$12.50 each for your foursome"). The purchase stays the organizer's own
+- [ ] `S5` The Bank collects for you (Pro idea): friendly automatic nudges for what's still owed, so nobody has to be the one asking for $20
 
 ### 8. History and stats
 - [x] Round history, season stats, head-to-head
@@ -253,7 +264,10 @@ Put more money into the winning creators and copy their video formats with other
 - [x] `S2` History by month: each month shows its round count and your net, one line per round, and a Season, Month or Custom range that also drives a chart of your net over time (2026-09-27)
 - [ ] `S3` Deeper stats for Pro: press win rate, results by game and by course
 - [ ] `S5` Handicap trend from your rounds, as a guide next to your official index (GameBook users ask for handicap tracking). The official index still comes from GHIN or your club.
-- [ ] `S5` Year in review ("Birdie Bank Wrapped")
+- [ ] `S5` Year in review ("Birdie Bank Wrapped"): a free card everyone can share, with the deeper season story for Pro (Strava got backlash for gating the whole recap)
+- [ ] `S3` Rivalry cards: for every pair, all-time money won or lost, record, current streak, biggest win and "your nemesis" (the Record Book, a Pro headliner idea)
+- [ ] `S3` The Record Book limit: free groups see their last 10 or so rounds, and older ones are hidden, never deleted, so Pro brings everything back (the UDisc model; one Redditor keeps 18Birdies Premium for his 160 logged rounds)
+- [ ] `S5` Group champions and a hall of fame: each season's winner, biggest wins and records, the group's own history
 
 ### 9. Social and community
 - [ ] `S3` (partial) The group's feed between rounds: upcoming round, trash talk, settle-ups, last round's recap (see area 21). "Lately" on Up next (2026-09-29) lists settle-ups, agreed carry-overs, shared-Tab payments, who answered an upcoming round and round recaps from the last 30 days, with amounts only between the two people in them. Still to do: trash talk and reactions in it
@@ -261,11 +275,14 @@ Put more money into the winning creators and copy their video formats with other
 - [ ] `S5` Friends list beyond your groups, suggested from people you've played with
 - [ ] `S5` Wider activity feed: big wins, birdie streaks, lone Wolf wins
 - [ ] `S5` A money list for each crew's season
+- [ ] `S5` A reputation that travels with you: "pays within a day, 142 rounds settled", "plays to his handicap". Only earned from real rounds, so a new app can't copy it
+- [ ] `S5` Find a game: join an open spot in a vetted money game, at home or when traveling, using that reputation (strangers betting is "insane" on Reddit today because there's no trust)
 - Design rule: dollar amounts are private by default. Feeds show results and bragging rights; only people in the round or the group see the money.
 
 ### 10. Leagues and events
 - [ ] `S5` League: season, weekly schedule, sign-ups, standings, flights, league handicaps, weekly pots, dues, admin roles
-- [ ] `S5` Event or trip: multiple days and rounds, team formats (Ryder Cup style), one tab for the trip, a leaderboard view for a clubhouse TV
+- [ ] `S5` Event or trip: multiple days and rounds, team formats (Ryder Cup style), one tab for the trip's bets and expenses, a leaderboard view for a clubhouse TV
+- [ ] `S3` Trip Mode set up in minutes (a Pro headliner idea): templates for a Ryder Cup of 8, 12, 16 or 24, a live captains' draft or handicap flights (A, B, C, D) to pick teams, each day's games ready to go, allowances agreed before anyone leaves. Squabbit's weak spot is that setup is all on you
 - [ ] `S3` Trip formats: day-by-day team points (Ryder Cup style), rotating partners and a trip leaderboard, on top of the trip tab (area 7)
 - [ ] `S5` An organizer dashboard on the web for league and event admins
 - [ ] `S5` Printable pairings, cart signs and results sheets for events and leagues
@@ -275,24 +292,31 @@ Nothing is gated before launch (2026-09-29). Testers use everything; this area i
 
 **Pro at launch (the plan, not gated today):** the season tab and Season view, planning rounds ahead (friends still RSVP and vote free), usuals, every course (search), season stats and results images, unlimited rounds at once. Keep in step with `PRO_FEATURES` in `src/lib/paywall.js`.
 
+**Pro headliner ideas from the 2026-09-29 research (not decided):** features an organizer can't give up after a trial, like a Tesla FSD trial. Trip Mode with trip expenses on the same Tab (area 10, 7), the Record Book of all-time history and rivalries (area 8), the Big Game across several foursomes (area 5), and splitting Pro on the Tab (area 7). Games, rules and fairness tools stay free: Squabbit, WhyGolf and 18Birdies give games away, and Yahoo Fantasy dropped its paid rule formats.
+
 - [ ] `S3` Early testers get Pro for life: everyone who tests with Trevor before launch keeps Pro free, forever (a lifetime flag on their account, set before the paywall turns on)
 - [ ] `S3` Decide the free and Pro split at launch, using what testers used most and what organizers say they'd pay for
 - [ ] `S2` Test what's free and what's Pro with the S2 groups, and talk to them about price (see open questions)
 - [ ] `S2` (partial) Publish the free promise: a short list of what's free forever, shown on the pricing page and in the app. Nothing on it ever moves to Pro. In the app it's at the top of the paywall and one tap away on the Tab ("The Tab is free, always", 2026-09-29), and now names the Tab and carry-overs; no pricing page yet. Held in production until Trevor says so: it only shows with the paywall preview flag (dev, `?paywall=on`) (2026-09-29)
-- [ ] `S2` (partial) Paywall with a 7 to 14 day free trial at the end of organizer onboarding. Invited players never see it. Option C (14 days, a trial timeline, both plans, "Keep scoring for free") is built as a preview behind a flag, with variants by weight ready for an A/B test; it needs real payments (Stripe) before it turns on
+- [ ] `S2` (partial) Paywall with a free trial (test 14 days against "30 days or 3 rounds, whichever is later": 17 to 32 day trials convert best in RevenueCat's data, and golf is played weekly at most) at the end of organizer onboarding. Invited players never see it. Option C (14 days, a trial timeline, both plans, "Keep scoring for free") is built as a preview behind a flag, with variants by weight ready for an A/B test; it needs real payments (Stripe) before it turns on
 - [ ] `S2` The free trial works on monthly and annual plans, not just annual
 - [ ] `S2` (partial) A Pro preview: organizers can see what the season tab and other Pro features look like before paying. Built 2026-09-29 behind the paywall flag: "By person | Season (Pro)" on the Tab for organizers opens their real season from their own rounds with a Preview banner and "Try free for 14 days"; under 2 finished rounds it's a 3-step tour with a sample group. Still to do: previews of the other Pro features, and real entitlements (so an organizer's group sees their season)
 - [ ] `S3` Early payers keep their price when prices go up
 - [ ] `S2` Stripe on the web for the test groups, with promo codes
 - [ ] `S3` App Store and Google Play purchases through RevenueCat, including restore purchases
 - [ ] `S3` Account screen: manage the plan, receipts, cancel
-- [ ] `S5` Event Pass (one time) and League billing
+- [ ] `S3` Trip Pass: a one-time purchase for a trip ($19.99 to $29.99, a placeholder), which the group can split on the Tab. Moved up from S5 (was "Event Pass"), since trip organizers show the most pain (2026-09-30)
+- [ ] `S5` League billing
+- [ ] `S2` Test price with the S2 groups: $29.99 against $49.99 a year. Casual side-game payers on Reddit accept $10 to $24 and turn down "another app that costs $50/yr"; TheGrint's $60 feels like "nothing" because it includes the official handicap
+- [ ] `S3` Paywall rules: the trial unlocks everything (Kodiak's trial still gated side bets), a visible timeline and reminder, never a pop-up during a round (18Birdies' pop-ups are called "infuriating"), never a surprise charge
+- [ ] `S3` The cancel screen shows the group its own numbers ("12 rounds, 4 rivalries, $640 settled"), the way Strava's does
 - [ ] `S5` Free plans for club captains
 
 ### 12. Notifications
 - [ ] `S3` Push: invited to a round, who's in for Saturday, new trash talk, round finished with your result, someone paid you, a carry-over to approve
 - [ ] `S3` Email: receipts and a welcome email
 - [ ] `S4` The spring comeback email ("Your crew's first round of the season?")
+- [ ] `S3` Live Activity on the lock screen: your money and the hole during a round (18Birdies users praise theirs)
 - Note: during the week, notifications should feel like the group chat, not the app nagging. Group them, and let each person turn them down.
 
 ### 13. Distribution
@@ -326,6 +350,7 @@ Nothing is gated before launch (2026-09-29). Testers use everything; this area i
 - [x] `S2` Motion for the killer end-of-round moment: bets rise in as they resolve, totals count up and pop, the winner's row lifts with a pink glow, the title crossfades, and Reveal, Settle up and Share slide in. Tap to skip and reduced motion show the finished screen at once, and the reveal runs a little faster than before (2026-09-30)
 - [ ] `S3` Character and illustration set for key moments: win, loss, press, birdie, lone Wolf, all square, trash talk, empty screens, onboarding, paywalls, one per game
 - [ ] `S3` More motion: character reactions, a launch animation (Lottie or Rive)
+- [ ] `S3` A theme for every game: a custom illustration in place of each game's icon, and a look carried into the round (money bar, big hole moments), the end-of-round reveal and the share card (from Trevor, 2026-09-30)
 - [ ] `S5` Optional sounds for big moments, off by default
 - Note: don't let the rebrand hold up S2. Learn which moments groups care about first, then put the most illustration and motion work into those.
 
@@ -343,6 +368,7 @@ Nothing is gated before launch (2026-09-29). Testers use everything; this area i
 - [ ] `S3` 16 game rule pages ("How to play Wolf") with a "Play this now" button
 - [ ] `S3` Branded web pages behind join and share links for people without the app
 - [ ] `S5` Press kit
+- [ ] `S5` A page for pro shops, leagues and trip operators (see area 23)
 
 ### 19. App Store presence
 - [ ] `S3` 6 to 8 screenshot slides per store: headline copy, device frames, characters, one idea per slide. Lead with the killer end-of-round moment.
@@ -377,6 +403,7 @@ The goal: people open the app on days they don't play, and Saturday feels bigger
 - [x] `S2` Upcoming rounds: date, course, tee time, and games and stakes set during the week, not on the first tee. Pick the game, then "Schedule for later"; they show on Up next. Needs `supabase/2026-09-28-upcoming.sql` run for the group link; until then plans live on the organizer's phone (2026-09-28)
 - [x] `S2` Who's in: each player answers in, out or maybe, and the organizer sees the count, with a nudge for anyone who hasn't answered. Friends answer from one group link (or their own link) with an RSVP card, no install and no paywall, and vote on the game and the bet; the organizer suggests, the group decides, and the tally shows. Player cards show a friend's answer. Any member can send the morning text (share sheet or text) (2026-09-28)
 - [x] `S2` Bets set ahead of time, so the round starts in one tap on the first tee: roll call confirms who showed (walk-ups too), then "Tee off" starts the voted game and bet and shares it live with the plan (2026-09-28)
+- [x] `S2` Edit an upcoming round: the organizer changes the day, tee time, course or holes from "Edit" on the plan, and everyone with the link sees the change. Planning also asks 9 or 18 holes on the When step (it was hidden below the game list, and skipped when planning from onboarding) (2026-09-30)
 - [ ] `S3` Lock down plans before the creator test: only the organizer changes a plan and each person changes only their own answer (anyone with the code can for now, 2026-09-28)
 - [ ] `S3` Push reminders for upcoming rounds (the morning text is a share for now)
 - [ ] `S3` Tee time reminder: "Book your tee time, Saturday fills up by Wednesday," with a link to the course's booking page and a reminder day the organizer picks
@@ -411,6 +438,20 @@ Kept light on purpose. Groups already have a group text, so Birdie Bank adds to 
 - [ ] `S5` Use the reuse rights to run the best videos as paid ads (for example TikTok Spark Ads)
 - [ ] `S5` Monthly retainers with the best creators
 
+### 23. Partners and the real world
+Code is cheap now, so anyone can build a scoring app. What a weekend coder can't copy is people, places, money and history: relationships with courses, leagues and resorts, an official handicap license, and years of each group's records (Trevor, 2026-09-29). Build the app and grow users first, then pull these in.
+
+- [ ] `S2` Talk to the head pros at Birch Creek, Logan River and Preston: how they run their weekly game (dogfight, skins, men's league), what they hate about it, and whether they'd switch
+- [ ] `S3` Official handicaps: apply to GHIN or a state golf association for access to post scores and pull each player's index (TheGrint's real advantage is its license)
+- [ ] `S4` Pro shop house game pilot: sign-ups, entry fees, live skins across every group, payouts as pro shop credit (how courses already pay out)
+- [ ] `S4` Run a men's league's season in the app with one local league
+- [ ] `S5` A dashboard for courses and leagues
+- [ ] `S5` Book tee times in the app, through GolfNow or tee sheet partners
+- [ ] `S5` Stay-and-play trip packages with resorts, with Trip Mode built in
+- [ ] `S5` Engraved trophies and plaques for each group's season champion, shipped every year
+- [ ] `S5` A Birdie Bank season series that ends at a real yearly event, and partnerships with big amateur tournaments
+- [ ] `Later` Real pots held in the app (trip pots, season dues) after a legal review, starting with brand-sponsored pots ("Titleist pays $50 for every eagle")
+
 ---
 
 ## Open questions
@@ -420,6 +461,8 @@ Kept light on purpose. Groups already have a group text, so Birdie Bank adds to 
 - Does the first paywall test run on Stripe on the web or wait for the App Store? Stripe on the web is the easy start, since test groups already use the web app. Before S3, check Apple's current rules on linking out to web payments in US apps.
 - A hard paywall at the end of onboarding (Jake's playbook) or a trial with a "Keep scoring for free" option? Measure both.
 - What price, and how much annual vs monthly? Talk to the S2 groups before picking numbers.
+- Is a Trip Pass the first thing most organizers buy, with the yearly plan after a great trip?
+- Does splitting Pro on the Tab make $49.99 feel like $12, or should the price just be lower?
 
 ## Decisions
 
@@ -478,4 +521,6 @@ Kept light on purpose. Groups already have a group text, so Birdie Bank adds to 
 - 2026-09-29: `supabase/2026-09-29-round-payments.sql` is run, so "I paid", the who's square strip and carry-overs sync between phones on shared rounds. Still open on the shared Tab: each phone totals only the rounds it has, so two phones can show different amounts (the carry ask bug). Checklist: 61 of 187 done (33%).
 - 2026-09-29 (follow-ups, branch `overnight3/followups`): The carry bug: each phone netted every round it had, so Trevor's phone offered to roll $46 while Sam's only knew $28. Now what's open on rounds both phones have stays between the two people (from those rounds' own transfers, never passed on through a friend), and "I paid", "Roll to next time" and the who's square strip count only that; rounds one phone has alone still show on the Tab and are paid locally, and the card says what a roll covers. Old carries still show. "Paid part of it?" on each Tab card. A side Skins game shows its house rules in one line and opens them for the round. Side games go on the planned-round ballot with a yes or no vote each, and roll call starts with them (no SQL). Asking for the card starts a 2-minute countdown; the keeper answers Yes or No, and with no answer one tap takes it. The free-forever list is held in production behind the paywall flag. A mid-round hole fix is saved to the fixing phone's copy of the course. Merged onto main after the feedback fixes. Checklist: 63 of 187 done (34%), up from 61 of 187 (33%).
 - 2026-09-29: Nothing is held back until launch. The Season view on the Tab is open to everyone who has played a round (no Pro tag, no Preview banner, no trial button; under 2 rounds it says your season starts after 2). With `?paywall=on` it's the organizer-only Pro preview as before. "Pro at launch" is written down in area 11, with new items for lifetime Pro for early testers and deciding the split at launch.
+- 2026-09-30: From Trevor: planning a round asks 9 or 18 holes on the When step (the choice was at the bottom of the game list, and missing when planning from onboarding), and "Edit" on a plan changes the day, tee time, course or holes, sent to everyone with the link.
+- 2026-09-30: Research on premium features and the long game (golf forums, 19 r/golf threads, apps from other hobbies) added to the checklist: free fairness tools (allowances by format, half-pops, Canadian skins, a first-tee rules card), the Big Game, trip expenses on the Tab, splitting Pro on the Tab, rivalry cards and the Record Book limit, reputation and find a game, Trip Mode templates, a Trip Pass moved up to S3, a price test, paywall rules, a Live Activity, and a new area 23 for partners (pro shops, men's leagues, GHIN, tee times, resorts, trophies, a season series). From Trevor: an avatar library with photo upload, and a theme for every game carried into the round and the share card. Pro headliner ideas noted in area 11, not decided. Checklist: 64 of 222 done (29%), up from 64 of 190.
 - 2026-09-30 (overnight, branch `overnight4/next`): Nine step branches merged: fixes (invite card team name, keeper finish sends every phone to Final results, a rules page per game in the round menu including a new Birdie pot page), one person across several player ids (seat claims, "Same person as...", "Not the same person" and Undo; each round's money unchanged), side game bets changed mid-round, usuals when planning ahead, the WHS handicap % hint, blind wolf and Hogan, play for Points or a reward (Trevor's idea: lunch, a drink or a custom reward for the winner), favorite and recently played courses, and reveal motion. Old rounds give the same money, and balances still sum to zero. No SQL. Tests: 655 passing. Checklist: 71 of 189 done (38%), up from 63 of 189 (33%).
