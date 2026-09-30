@@ -57,14 +57,22 @@ export function vegasFlipped(a, b) {
 /**
  * One Vegas hole. nets/gross are [teamA:[n,n], teamB:[n,n]].
  * A team that makes a natural birdie or better flips the other team's number (unless both did).
- * Returns { numbers: [a, b], diff (positive = A wins), flipped: [bool, bool] }.
+ * House rule `birdieDouble` (off unless the round says so): a birdie made by one team alone doubles
+ * the hole's points, and an eagle triples them, whoever wins the hole. Both teams birdie, no change.
+ * Sources, checked 2026-09-30: Swing by Swing, "How to play the golf gambling game Vegas"
+ * https://golf.swingbyswing.com/lifestyle/how-to-play-the-golf-gambling-game-vegas/ ("lone birdies
+ * double the point value, eagles triple") and 18Birdies https://help.18birdies.com/article/58-vegas
+ * Returns { numbers: [a, b], diff (positive = A wins), flipped: [bool, bool], mult }.
  */
-export function vegasHole(nets, gross, par, { birdieFlip = true } = {}) {
-  const birdie = t => gross[t].some(g => typeof g === 'number' && g <= par - 1);
+export function vegasHole(nets, gross, par, { birdieFlip = true, birdieDouble = false } = {}) {
+  const best = t => Math.min(...gross[t].map(g => (typeof g === 'number' ? g : Infinity)));
+  const birdie = t => best(t) <= par - 1;
   const bA = birdieFlip && birdie(0), bB = birdieFlip && birdie(1);
   const flipped = [bB && !bA, bA && !bB];
   const numbers = [0, 1].map(t => (flipped[t] ? vegasFlipped(...nets[t]) : vegasNumber(...nets[t])));
-  return { numbers, diff: numbers[1] - numbers[0], flipped };
+  let mult = 1;
+  if (birdieDouble && birdie(0) !== birdie(1)) mult = best(birdie(0) ? 0 : 1) <= par - 2 ? 3 : 2;
+  return { numbers, diff: (numbers[1] - numbers[0]) * mult, flipped, mult };
 }
 
 // ---------------------------------------------------------------------------
@@ -109,12 +117,16 @@ export function quotaFor(courseHc, holes = 18) {
  * Nines (5-3-1): nine points a hole for three players. Low gets 5, middle 3, high 1; ties share:
  * all tied 3-3-3, two low tied 4-4-1, two high tied 5-2-2.
  */
-export function ninesPoints(nets) {
+export function ninesPoints(nets, { sweep = false } = {}) {
   const [a, b, c] = nets;
   const sorted = [...nets].sort((x, y) => x - y);
   const [lo, mid, hi] = sorted;
   let table;
-  if (lo === hi) table = { [lo]: 3 };
+  // House rule "sweep" (off unless the round says so): win the hole by two or more and take all nine.
+  // Source, checked 2026-09-30: The Golf News Net, "How to play Nines or 5-3-1"
+  // https://thegolfnewsnet.com/ryan_ballengee/2026/03/13/golf-betting-games-how-to-play-nines-5-3-1-rules-44877/
+  if (sweep && mid - lo >= 2) table = { [lo]: 9, [mid]: 0, [hi]: 0 };
+  else if (lo === hi) table = { [lo]: 3 };
   else if (lo === mid) table = { [lo]: 4, [hi]: 1 };
   else if (mid === hi) table = { [lo]: 5, [hi]: 2 };
   else table = { [lo]: 5, [mid]: 3, [hi]: 1 };
