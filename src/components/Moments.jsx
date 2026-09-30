@@ -1,34 +1,43 @@
-// Big moments during a head-to-head match: a banner for a lead change, all square, dormie or a nine won,
-// and a full screen for a match won before the last hole. The maths is in lib/moments.js.
+// Big moments during a round: a banner when a skin is won (bigger for a long carry), a lone or blind
+// wolf, a big Vegas swing, the money lead changing hands, a Match play or Nassau lead change, all
+// square, dormie or a nine won, and a full screen for a match won before the last hole. One per hole
+// at most. The maths is in lib/moments.js.
 import { useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { Icon } from './ui.jsx';
-import { gameView, nassauWinners, nassauAmounts, roundLegs, sides, sideNames, sideGamesOf, holeComplete } from '../lib/round.js';
-import { nassauBets } from '../lib/golf.js';
-import { matchMoment } from '../lib/moments.js';
+import { donePositions, finalMoment, firstShowing, freshHole, roundMoment } from '../lib/moments.js';
 import { buzz, confetti, confettiFrom } from '../lib/delight.js';
 
-const ICON = { won: 'trophy', halved: 'handshake', change: 'arrows-left-right', dormie: 'lock-simple', square: 'scales', lead: 'arrow-circle-up' };
+const ICON = {
+  won: 'trophy', halved: 'handshake', change: 'arrows-left-right', dormie: 'lock-simple', square: 'scales', lead: 'arrow-circle-up',
+  skin: 'coins', bigskin: 'coins', lonewolf: 'paw-print', blindwolf: 'paw-print', wolfdown: 'paw-print', swing: 'dice-five',
+  money: 'crown-simple', final: 'flag-checkered',
+};
+// The ones that throw confetti and buzz twice; the rest get a single buzz and the pop
+const CHEER = new Set(['won', 'change', 'bigskin', 'lonewolf', 'blindwolf', 'swing', 'money', 'final']);
 const BANNER_MS = 3200;
+// Holes this phone has already shown a moment for ("roundId:pos"), so undoing and rescoring a hole,
+// or leaving the round and coming back, never shows it twice
+const SHOWN = new Set();
+const reduced = () => window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
 
 /**
- * Watches the match and shows the moment for each newly scored hole, on every phone (the keeper's and
- * the ones following along). Only a single new hole counts: a burst of holes arriving at once, a fixed
- * score on an earlier hole, or the last hole (the end-of-round reveal takes over) shows nothing.
- * `onFinish` ends the round from the match-won screen (the keeper only).
+ * Watches the round and shows the moment for each newly scored hole, on every phone (the keeper's and
+ * the ones following along). Only a single new hole counts (see freshHole): a burst of holes arriving
+ * at once, a fixed score on an earlier hole, or the last hole (the end-of-round reveal takes over)
+ * shows nothing. `onFinish` ends the round from the match-won screen (the keeper only).
  */
-export function MatchMoments({ round, onFinish }) {
-  const match = round.game === 'match' || round.game === 'nassau';
-  const main = match ? gameView(round, 'main') : null;
-  const winners = main ? nassauWinners(main) : null;
+export function RoundMoments({ round, onFinish }) {
+  const done = donePositions(round);
   const [moment, setMoment] = useState(null);
-  // The match as last shown: when a hole's result arrives, work out its moment (set during render, like MoneyBar)
-  const key = winners ? JSON.stringify(winners) : '';
+  // The holes as last seen: when a new one is in, work out its moment (set during render, like MoneyBar)
+  const key = done.join(',');
   const [seen, setSeen] = useState(key);
   if (seen !== key) {
     setSeen(key);
-    const m = winners && newMoment(round, main, seen ? JSON.parse(seen) : {}, winners);
-    if (m) setMoment(m);
+    const fresh = freshHole(round, seen ? seen.split(',').map(Number) : [], done);
+    const m = fresh && (fresh.final ? { ...finalMoment(round), level: 'medium', id: `${fresh.pos}:final` } : roundMoment(round, fresh.pos));
+    if (m && firstShowing(SHOWN, round.id, fresh.pos)) setMoment(m);
   }
 
   if (!moment) return null;
@@ -38,38 +47,20 @@ export function MatchMoments({ round, onFinish }) {
     : <MomentBanner key={moment.id} moment={moment} onClose={close} />;
 }
 
-function newMoment(round, main, before, winners) {
-  const fresh = Object.keys(winners).map(Number).filter(p => before[p] === undefined);
-  if (fresh.length !== 1 || round.status !== 'active' || round.editing) return null;
-  const pos = fresh[0];
-  // Only the newest hole in play: filling in a skipped earlier hole is a fix, not a moment
-  if (pos === round.holes.length || Object.keys(winners).some(p => Number(p) > pos)) return null;
-  const m = matchMoment(winners, pos, roundLegs(main), {
-    names: sideNames(round).map(n => (round.teams ? n : n.split(' ')[0])),
-    plural: sides(main).map(s => !!round.teams && s.length > 1),
-    holeNo: round.holes[pos - 1]?.no ?? pos,
-  });
-  if (!m) return null;
-  // What's still in play after the match is won: presses and side games keep going
-  if (m.level === 'big') {
-    const bets = nassauBets(winners, main.presses || [], nassauAmounts(main), roundLegs(main));
-    m.more = bets.some(b => !b.status.done) || sideGamesOf(round).length > 0;
-    m.left = round.holes.filter(h => !holeComplete(round, h)).length;
-  }
-  return { ...m, id: `${pos}:${m.kind}:${m.leg}` };
-}
-
 /** A card that drops in under the header, cheers a little and leaves on its own. Tap to dismiss. */
 function MomentBanner({ moment, onClose }) {
   const ref = useRef(null);
   const [out, setOut] = useState(false);
   useEffect(() => {
     // Confetti for a win or a lead change; the rest get a buzz and the pop
-    if (moment.kind === 'won' || moment.kind === 'change') confettiFrom(ref.current?.querySelector('.mo-ic'), 28);
-    buzz(moment.kind === 'won' || moment.kind === 'change' ? [20, 40, 20] : 15);
-    const t = setTimeout(() => setOut(true), BANNER_MS);
+    const cheer = CHEER.has(moment.kind);
+    if (cheer) confettiFrom(ref.current?.querySelector('.mo-ic'), moment.kind === 'bigskin' ? 48 : 28);
+    buzz(cheer ? [20, 40, 20] : 15);
+    const t = setTimeout(() => setOut(true), moment.kind === 'bigskin' || moment.kind === 'final' ? BANNER_MS + 1000 : BANNER_MS);
     return () => clearTimeout(t);
   }, [moment]);
+  // With reduced motion there's no exit animation to wait for, so it just goes
+  useEffect(() => { if (out && reduced()) onClose(); }, [out, onClose]);
   return (
     <button ref={ref} type="button" className={`moment-banner k-${moment.kind} ${out ? 'out' : ''}`} onClick={() => setOut(true)}
       onAnimationEnd={e => { if (out && e.target === e.currentTarget) onClose(); }} role="status" aria-live="polite">
