@@ -19,12 +19,20 @@ export function Screen({ children, className = '' }) {
   return <div className={`screen active ${className}`}>{children}</div>;
 }
 
-export function Steps({ steps, current }) {
+/**
+ * The setup step bar. Steps before the current one are green with a check.
+ * `canGo(i)` and `onGo(i)` make a step tappable.
+ */
+export function Steps({ steps, current, canGo, onGo }) {
   return (
     <div className="step-bar" aria-label={`Step ${current + 1} of ${steps.length}`}>
-      {steps.map((s, i) => (
-        <div key={s} className={`step ${i < current ? 'done' : ''} ${i === current ? 'active' : ''}`}>{s}</div>
-      ))}
+      {steps.map((s, i) => {
+        const cls = `step ${i < current ? 'done' : ''} ${i === current ? 'active' : ''}`;
+        const label = <>{i < current && <Icon name="check" className="step-check" />}{s}</>;
+        return i !== current && onGo && canGo?.(i)
+          ? <button key={s} type="button" className={`${cls} tappable`} onClick={() => onGo(i)} aria-label={`Go to ${s}`}>{label}</button>
+          : <div key={s} className={cls} aria-current={i === current ? 'step' : undefined}>{label}</div>;
+      })}
     </div>
   );
 }

@@ -124,6 +124,10 @@ button { font-family: inherit; }
   flex: 1; padding: 8px 4px; text-align: center; font-size: 12px; font-weight: 600;
   color: var(--mute-soft); background: var(--surface); border-radius: 999px;
 }
+.step { display: flex; align-items: center; justify-content: center; gap: 3px; border: 0; font-family: inherit; }
+.step.tappable { cursor: pointer; transition: transform .12s ease; }
+.step.tappable:active { transform: scale(.96); }
+.step-check { font-size: 11px; }
 .step.done { background: var(--mint); color: var(--teal); }
 .step.active { background: var(--ink); color: var(--on-ink); }
 

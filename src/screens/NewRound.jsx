@@ -83,7 +83,10 @@ export default function NewRound({ rematch, fromPlan, present, edit = null, ahea
   const [date, setDate] = useState(() => editing?.date || nextSaturday());
   const [teeTime, setTeeTime] = useState(editing?.teeTime || '');
   const [invited, setInvited] = useState([]);
-  const [step, setStep] = useState(pre?.step ?? (ahead && GAMES[preGame] ? 1 : 0));
+  const [step, showStep] = useState(pre?.step ?? (ahead && GAMES[preGame] ? 1 : 0));
+  // The furthest step reached, so a tap on the step bar can go forward again after going back
+  const [reached, setReached] = useState(() => pre?.step ?? (ahead && GAMES[preGame] ? 1 : 0));
+  const setStep = n => { showStep(n); setReached(r => Math.max(r, n)); };
   const [game, setGame] = useState(pre?.game ?? (GAMES[preGame] ? preGame : null));
   const [holesCount, setHolesCount] = useState(pre?.holesCount ?? (GAMES[preGame]?.holes.includes(18) === false ? GAMES[preGame].holes[0] : 18));
   const [courseId, setCourseId] = useState(pre?.courseId ?? null);
@@ -121,8 +124,25 @@ export default function NewRound({ rematch, fromPlan, present, edit = null, ahea
   };
   const back = () => {
     if (step === 0 || editing) return close();
-    if (planning && step === 1 && !ahead) setMode('round');
-    setStep(step - 1);
+    goTo(step - 1);
+  };
+  // Players to Bets: new or changed players get fresh teams
+  const toBets = () => {
+    if (!teams || teams.flat().length !== picked.length || teams.flat().some(pid => !picked.includes(pid))) setTeams(defaultTeams(game, picked));
+    setStep(3);
+  };
+  // Step bar taps: any earlier step, or a later one already reached whose earlier steps are still filled in
+  const canGo = i => {
+    if (i <= step) return true;
+    if (i > reached || !game || !course) return false;
+    if (planning) return true;
+    return i < 3 || (picked.length >= GAMES[game].min && picked.length <= GAMES[game].max);
+  };
+  const goTo = i => {
+    if (!canGo(i)) return;
+    if (planning && i === 0 && !ahead) { setMode('round'); setReached(0); }
+    if (!planning && i === 3) return toBets();
+    setStep(i);
   };
 
   // Plan it: saved on this phone, then the group gets the link from the plan's page
@@ -217,14 +237,14 @@ export default function NewRound({ rematch, fromPlan, present, edit = null, ahea
       {step < 4 ? (
         <>
           <Header title={editing ? 'Edit plan' : planning ? 'Plan a round' : 'New round'} onBack={back} onClose={editing ? null : close} />
-          {!editing && <Steps steps={planning ? PLAN_STEPS : STEPS} current={step} />}
+          {!editing && <Steps steps={planning ? PLAN_STEPS : STEPS} current={step} canGo={canGo} onGo={goTo} />}
           <h2 className="step-q d">{(planning ? PLAN_QUESTIONS : QUESTIONS)[step]}</h2>
           {step === 2 && !planning && missing.length > 0 && (
             <p className="hint-card"><Icon name="user-plus" fill /> {listNames(missing)} {missing.length === 1 ? 'isn’t' : 'aren’t'} saved on this phone yet. Add them to play with the whole group.</p>
           )}
         </>
       ) : <Header title="Round ready" small onClose={() => nav.reset('upnext')} />}
-      {step === 0 && <GameStep usual={planning || (usual && matchingUsual(state, usual.round)) ? null : usual} onUsual={repeatUsual} onPickUsual={planning ? null : pickUsual} planning={planning} onPlan={fromPlan ? null : () => { setMode('plan'); setStep(1); }} game={game} setGame={gm => { setGame(gm); if (gm && !GAMES[gm].holes.includes(holesCount)) setHolesCount(GAMES[gm].holes[0]); }} holesCount={holesCount} setHolesCount={setHolesCount} onNext={() => setStep(1)} />}
+      {step === 0 && <GameStep usual={planning || (usual && matchingUsual(state, usual.round)) ? null : usual} onUsual={repeatUsual} onPickUsual={planning ? null : pickUsual} planning={planning} onPlan={fromPlan ? null : () => { setMode('plan'); setReached(0); setStep(1); }} game={game} setGame={gm => { setGame(gm); if (gm && !GAMES[gm].holes.includes(holesCount)) setHolesCount(GAMES[gm].holes[0]); }} holesCount={holesCount} setHolesCount={setHolesCount} onNext={() => setStep(1)} />}
       {step === 1 && planning && (
         <CourseStep courseId={courseId} setCourseId={id => { setCourseId(id); setTees({}); setStartHole(null); }} holesCount={holesCount} nine={nine} setNine={setNine} onNext={editing ? savePlan : () => setStep(2)}
           nextLabel={editing ? 'Save changes' : 'Next: Who’s invited'} nextIcon={editing ? 'check' : 'arrow-right'}
@@ -240,7 +260,7 @@ export default function NewRound({ rematch, fromPlan, present, edit = null, ahea
       {step === 2 && !planning && course && (
         <PlayersStep game={g} course={course} holesCount={holesCount} nine={nine} picked={picked} setPicked={setPicked}
           tees={tees} setTees={setTees} hcOverride={hcOverride} setHcOverride={setHcOverride}
-          onNext={() => { if (!teams || teams.flat().length !== picked.length || teams.flat().some(pid => !picked.includes(pid))) setTeams(defaultTeams(game, picked)); setStep(3); }} />
+          onNext={toBets} />
       )}
       {step === 3 && !planning && course && (
         <SetupStep game={game} course={course} holesCount={holesCount} nine={nine} picked={picked} setPicked={setPicked}
