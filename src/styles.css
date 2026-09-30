@@ -199,23 +199,19 @@ a.set-row { text-decoration: none; }
 .game-row {
   display: flex; align-items: center; justify-content: space-between; padding: 18px; margin: 0 16px 10px;
   background: var(--card); border-radius: 22px; cursor: pointer; position: relative;
-  transition: transform .25s var(--spring), background .2s;
+  transition: transform .25s var(--spring), background .2s, box-shadow .2s;
 }
-.game-row.selected { background: var(--pink-fill); color: #fff; }
+.game-row.selected { box-shadow: inset 0 0 0 2px var(--pink-fill); }
 .game-row.locked { background: var(--surface); cursor: default; }
 .game-row.locked .gn, .game-row.locked .gs { opacity: .55; }
 .game-row:active:not(.locked) { transform: scale(.97); }
 .gn { font-family: var(--display); font-size: 22px; font-weight: 800; color: inherit; letter-spacing: -.01em; }
 .gs { font-size: 13px; color: var(--mute); margin-top: 3px; }
-.game-row.selected .gs { color: rgba(255,255,255,.85); }
-.gcheck { font-size: 28px; }
-.game-row:not(.selected) .gcheck { display: none; }
-.game-row.selected .gcheck { animation: pop .35s var(--spring); }
+.game-row .li-check { margin-left: 12px; }
 .rules-chip {
   font-size: 12px; font-weight: 600; border: none; border-radius: 999px; padding: 4px 10px; cursor: pointer; flex-shrink: 0;
   background: var(--surface); color: var(--ink); display: inline-flex; align-items: center; gap: 4px;
 }
-.game-row.selected .rules-chip { background: rgba(255,255,255,.25); color: #fff; }
 .lock-tag {
   font-size: 12px; font-weight: 600; padding: 6px 10px; border-radius: 999px; background: var(--ink); color: var(--on-ink);
   display: inline-flex; align-items: center; gap: 4px;
@@ -581,7 +577,6 @@ button:disabled { cursor: not-allowed; }
 .pill-btn:disabled { opacity: .45; transform: none; }
 .pill-btn.lone.on { background: var(--pink-fill); }
 .game-icon { width: 44px; height: 44px; border-radius: 14px; background: var(--surface); display: grid; place-items: center; font-size: 22px; margin-right: 14px; flex-shrink: 0; }
-.game-row.selected .game-icon { background: rgba(255,255,255,.22); color: #fff; }
 .summary-card { background: var(--ochre); }
 .summary-card .li-sub { color: rgba(0,0,0,.65); }
 .order-num { width: 28px; height: 28px; border-radius: 50%; background: var(--surface); display: grid; place-items: center; font-weight: 800; font-family: var(--display); margin-right: 12px; flex-shrink: 0; }
@@ -592,6 +587,10 @@ button:disabled { cursor: not-allowed; }
 .player-pick:active { transform: none; }
 .pick-main { display: flex; align-items: center; width: 100%; background: none; border: none; padding: 14px 16px; text-align: left; cursor: pointer; }
 .pick-extra { padding: 0 16px 14px; display: flex; flex-direction: column; gap: 10px; align-items: flex-start; }
+
+/* Setup picks get a pink ring when chosen, like the game rows */
+.list-item.pick { transition: transform .2s var(--spring), box-shadow .2s; }
+.list-item.pick.on { box-shadow: inset 0 0 0 2px var(--pink-fill); }
 .tee-dot { width: 10px; height: 10px; border-radius: 50%; display: inline-block; margin-right: 6px; box-shadow: inset 0 0 0 1px rgba(0,0,0,.2); }
 .hc-chip { border: none; background: var(--surface); border-radius: 999px; padding: 6px 12px; font-size: 13px; color: var(--body); cursor: pointer; display: inline-flex; align-items: center; gap: 6px; }
 .hc-chip strong { color: var(--ink); font-family: var(--display); font-size: 15px; }

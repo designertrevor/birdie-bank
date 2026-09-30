@@ -207,7 +207,7 @@ export default function NewRound({ rematch, fromPlan, present, ahead = false, ga
           )}
         </>
       ) : <Header title="Round ready" small onClose={() => nav.reset('upnext')} />}
-      {step === 0 && <GameStep usual={planning || (usual && matchingUsual(state, usual.round)) ? null : usual} onUsual={repeatUsual} onPickUsual={planning ? null : pickUsual} planning={planning} onPlan={fromPlan ? null : () => { setMode('plan'); setStep(1); }} game={game} setGame={gm => { setGame(gm); if (!GAMES[gm].holes.includes(holesCount)) setHolesCount(GAMES[gm].holes[0]); }} holesCount={holesCount} setHolesCount={setHolesCount} onNext={() => setStep(1)} />}
+      {step === 0 && <GameStep usual={planning || (usual && matchingUsual(state, usual.round)) ? null : usual} onUsual={repeatUsual} onPickUsual={planning ? null : pickUsual} planning={planning} onPlan={fromPlan ? null : () => { setMode('plan'); setStep(1); }} game={game} setGame={gm => { setGame(gm); if (gm && !GAMES[gm].holes.includes(holesCount)) setHolesCount(GAMES[gm].holes[0]); }} holesCount={holesCount} setHolesCount={setHolesCount} onNext={() => setStep(1)} />}
       {step === 1 && planning && (
         <CourseStep courseId={courseId} setCourseId={id => { setCourseId(id); setTees({}); setStartHole(null); }} holesCount={holesCount} nine={nine} setNine={setNine} onNext={() => setStep(2)}
           nextLabel="Next: Who’s invited" top={<WhenPicker date={date} setDate={setDate} teeTime={teeTime} setTeeTime={setTeeTime} />} />
@@ -254,7 +254,7 @@ function GameStep({ usual, onUsual, onPickUsual, planning, onPlan, game, setGame
             <div className="sec-label">{group}</div>
             {Object.entries(GAMES).filter(([, info]) => info.group === group).map(([key, info]) => (
               <div key={key} className={`game-row ${game === key ? 'selected' : ''}`} role="radio" aria-checked={game === key} tabIndex={0} aria-label={`${info.name}: ${info.players}, ${info.blurb}`}
-                onClick={() => setGame(key)} onKeyDown={e => (e.key === 'Enter' || e.key === ' ') && setGame(key)}>
+                onClick={() => setGame(game === key ? null : key)} onKeyDown={e => (e.key === 'Enter' || e.key === ' ') && setGame(game === key ? null : key)}>
                 <div className="game-icon"><Icon name={info.icon} fill /></div>
                 <div className="row-main">
                   <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
@@ -263,7 +263,7 @@ function GameStep({ usual, onUsual, onPickUsual, planning, onPlan, game, setGame
                   </div>
                   <div className="gs">{info.players} · {info.blurb}</div>
                 </div>
-                <span className="gcheck"><Icon name="check-circle" fill /></span>
+                <span className={`li-check ${game === key ? 'on' : ''}`} aria-hidden="true">{game === key && <Icon name="check" />}</span>
               </div>
             ))}
           </div>
@@ -334,14 +334,14 @@ function CourseStep({ courseId, setCourseId, holesCount, nine, setNine, onNext, 
   );
 
   const row = c => (
-    <button key={c.id} className="list-item" onClick={() => setCourseId(c.id)} aria-pressed={c.id === courseId}
+    <button key={c.id} className={`list-item pick ${c.id === courseId ? 'on' : ''}`} onClick={() => setCourseId(c.id === courseId ? null : c.id)} aria-pressed={c.id === courseId}
       aria-label={[c.name, c.city, `${c.holes.length} holes`, `par ${coursePar(c)}`, `${c.tees?.length || 0} tees`, courseTag(c)?.text].filter(Boolean).join(', ')}>
       <div className="row-main">
         <div className="li-name">{c.name}</div>
         <div className="li-sub">{[c.city, `${c.holes.length} holes`, `Par ${coursePar(c)}`, `${c.tees?.length || 0} tees`].filter(Boolean).join(' · ')}</div>
         {courseTag(c) && <div className={`warn-tag ${courseTag(c).soft ? 'soft' : ''}`}><Icon name={courseTag(c).soft ? 'database' : 'warning'} fill /> {courseTag(c).text}</div>}
       </div>
-      <span className={`li-check ${c.id === courseId ? 'on' : 'add'}`}><Icon name={c.id === courseId ? 'check' : 'plus'} /></span>
+      <span className={`li-check ${c.id === courseId ? 'on' : ''}`}>{c.id === courseId && <Icon name="check" />}</span>
     </button>
   );
 
@@ -428,7 +428,7 @@ function PlayersStep({ game, course, holesCount, nine, picked, setPicked, tees, 
             const hc = on ? courseHc(p.id) : null;
             const hcNote = hc && { set: ' · edited', index: ' · from index', none: ' · none', whs: '' }[hc.source];
             return (
-              <div key={p.id} className={`list-item player-pick ${on ? 'on' : ''}`}>
+              <div key={p.id} className={`list-item pick player-pick ${on ? 'on' : ''}`}>
                 <button className="pick-main" onClick={() => toggle(p.id)} aria-pressed={on}>
                   <div className="row-main">
                     <div className="li-name">{playerLabel(p, state.me)}</div>
@@ -673,7 +673,7 @@ function InviteStep({ invited, setInvited, onNext }) {
           {players.map(p => {
             const on = invited.includes(p.id);
             return (
-              <button key={p.id} className={`list-item ${on ? 'on' : ''}`} onClick={() => toggle(p.id)} aria-pressed={on} aria-label={`Invite ${p.name}`}>
+              <button key={p.id} className={`list-item pick ${on ? 'on' : ''}`} onClick={() => toggle(p.id)} aria-pressed={on} aria-label={`Invite ${p.name}`}>
                 <div className="row-main">
                   <div className="li-name">{p.name}</div>
                   <div className="li-sub">{p.index == null ? 'No handicap index' : `Index ${formatIndex(p.index)}`}</div>
