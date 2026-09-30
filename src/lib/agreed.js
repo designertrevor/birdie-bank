@@ -13,7 +13,7 @@
 import { GAMES, gameKeyLabel, gameKeys, holesPlayed, sideGamesOf } from './round.js';
 import { sideBetLine, stakeSummary } from './stakes.js';
 import { inUnits } from './play-for.js';
-import { gamePct, halfStrokesOn } from './allowances.js';
+import { gamePct, halfStrokesOn, playsAtPct } from './allowances.js';
 import { houseRulesLine } from './house-rules.js';
 
 export const GIMMES = [
@@ -29,7 +29,7 @@ export const MULLIGANS = [
 const textOf = (list, v) => (list.find(o => o.value === v) || list[0]).text;
 
 const firstName = n => String(n || '').trim().split(/\s+/)[0] || 'Someone';
-const strokesText = n => (!n ? 'scratch' : `${n} stroke${Math.abs(n) === 1 ? '' : 's'}`);
+const strokesText = (n, half = false) => (!n ? 'scratch' : `${n} ${half ? 'half ' : ''}stroke${Math.abs(n) === 1 ? '' : 's'}`);
 
 /**
  * A game's house rules, on or off: [{ id, text, on }]. The card lists the ones that are on; a change
@@ -97,12 +97,18 @@ export function agreementItems(round, choices = round.agreed) {
   if (!round.useHandicaps) items.push({ id: 'strokes', group: 'strokes', label: 'Strokes', text: 'None, it’s gross' });
   else {
     if ((round.hcPct ?? 100) !== 100) items.push({ id: 'hcPct', group: 'strokes', label: 'Handicaps', text: `${round.hcPct}% of each` });
-    // A side game at its own %, and half strokes, are agreed up front like the rest
+    const half = halfStrokesOn(round);
+    for (const p of round.players) items.push({ id: `strokes:${p.id}`, group: 'strokes', label: firstName(p.name), text: strokesText(p.plays, half) });
+    // A side game at its own %, and half strokes, are agreed up front like the rest, after each
+    // player's strokes in the main game
     for (const sg of round.sideGames || []) {
-      if (sg && gamePct(round, sg.game) !== gamePct(round)) items.push({ id: `hcPct:${sg.game}`, group: 'strokes', label: gameKeyLabel(round, sg.game), text: `${gamePct(round, sg.game)}% of each` });
+      if (!sg || gamePct(round, sg.game) === gamePct(round)) continue;
+      // "80%: Bo 7, Dan 12", each player's strokes in that game, so nobody works them out on the tee
+      const pct = gamePct(round, sg.game);
+      const gets = playsAtPct(round.players, pct, round.joined).filter(p => p.plays).map(p => `${firstName(p.name)} ${p.plays}`);
+      items.push({ id: `hcPct:${sg.game}`, group: 'strokes', label: gameKeyLabel(round, sg.game), text: gets.length ? `${pct}%: ${gets.join(', ')}` : `${pct}%, nobody gets strokes` });
     }
-    if (halfStrokesOn(round)) items.push({ id: 'half', group: 'strokes', label: 'Half strokes', text: 'Each stroke counts as half' });
-    for (const p of round.players) items.push({ id: `strokes:${p.id}`, group: 'strokes', label: firstName(p.name), text: strokesText(p.plays) });
+    if (half) items.push({ id: 'half', group: 'strokes', label: 'Half strokes', text: 'Each stroke counts as half' });
   }
   for (const key of gameKeys(round)) {
     const block = blockOf(round, key);

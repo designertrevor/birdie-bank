@@ -134,5 +134,8 @@ test('merge: the rules card lists the newer house rules, a side game at its own 
   r.sideGames = [{ game: 'skins', hcPct: 80, settings: structuredClone(SETTINGS.skins) }];
   const more = byId(agreementItems(r));
   assert.equal(more.half.text, 'Each stroke counts as half');
-  assert.equal(more['hcPct:skins'].text, '80% of each');
+  assert.equal(more['hcPct:skins'].text, '80%, nobody gets strokes');
+  // Each player's strokes in the side game, at its own %
+  r.players = r.players.map((p, i) => ({ ...p, courseHc: [0, 10, 15][i], plays: [0, 10, 15][i] }));
+  assert.equal(byId(agreementItems(r))['hcPct:skins'].text, '80%: Bo 8, Cy 12');
 });
