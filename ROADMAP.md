@@ -33,11 +33,13 @@ The plan for growing Birdie Bank into a $10k/mo business, and the checklist we w
 
 **Nothing is held back until launch (2026-09-29):** testers get every feature, Pro included, with no Pro labels. The Season view on the Tab is open to everyone who has played. The free and Pro split below is the plan for launch day, not something to gate now, and early testers get Pro for life. The paywall, the free promise and the Pro preview stay built behind the flag (`?paywall=on`) for when launch gets close.
 
+**Fixed 2026-09-30 (from Trevor):** planning a round now asks 9 or 18 holes on the When step, and the organizer can edit a plan's day, tee time, course or holes instead of deleting it and starting over.
+
 **Next in S2:** linking the organizer's copy of a player to the real person (area 1), real payments for the paywall test (Stripe, area 11), and the quick logo (area 16).
 
 **The big date:** the creator test (S4) runs February to April 2027, when golf season starts back up. Everything before it is about being ready: a product groups keep using, a smooth path from video to paying, and an App Store app.
 
-Last updated: 2026-09-29 (follow-ups)
+Last updated: 2026-09-30 (edit a plan, 9 or 18 holes)
 
 ---
 
@@ -375,6 +377,7 @@ The goal: people open the app on days they don't play, and Saturday feels bigger
 - [x] `S2` Upcoming rounds: date, course, tee time, and games and stakes set during the week, not on the first tee. Pick the game, then "Schedule for later"; they show on Up next. Needs `supabase/2026-09-28-upcoming.sql` run for the group link; until then plans live on the organizer's phone (2026-09-28)
 - [x] `S2` Who's in: each player answers in, out or maybe, and the organizer sees the count, with a nudge for anyone who hasn't answered. Friends answer from one group link (or their own link) with an RSVP card, no install and no paywall, and vote on the game and the bet; the organizer suggests, the group decides, and the tally shows. Player cards show a friend's answer. Any member can send the morning text (share sheet or text) (2026-09-28)
 - [x] `S2` Bets set ahead of time, so the round starts in one tap on the first tee: roll call confirms who showed (walk-ups too), then "Tee off" starts the voted game and bet and shares it live with the plan (2026-09-28)
+- [x] `S2` Edit an upcoming round: the organizer changes the day, tee time, course or holes from "Edit" on the plan, and everyone with the link sees the change. Planning also asks 9 or 18 holes on the When step (it was hidden below the game list, and skipped when planning from onboarding) (2026-09-30)
 - [ ] `S3` Lock down plans before the creator test: only the organizer changes a plan and each person changes only their own answer (anyone with the code can for now, 2026-09-28)
 - [ ] `S3` Push reminders for upcoming rounds (the morning text is a share for now)
 - [ ] `S3` Tee time reminder: "Book your tee time, Saturday fills up by Wednesday," with a link to the course's booking page and a reminder day the organizer picks
@@ -476,3 +479,4 @@ Kept light on purpose. Groups already have a group text, so Birdie Bank adds to 
 - 2026-09-29: `supabase/2026-09-29-round-payments.sql` is run, so "I paid", the who's square strip and carry-overs sync between phones on shared rounds. Still open on the shared Tab: each phone totals only the rounds it has, so two phones can show different amounts (the carry ask bug). Checklist: 61 of 187 done (33%).
 - 2026-09-29 (follow-ups, branch `overnight3/followups`): The carry bug: each phone netted every round it had, so Trevor's phone offered to roll $46 while Sam's only knew $28. Now what's open on rounds both phones have stays between the two people (from those rounds' own transfers, never passed on through a friend), and "I paid", "Roll to next time" and the who's square strip count only that; rounds one phone has alone still show on the Tab and are paid locally, and the card says what a roll covers. Old carries still show. "Paid part of it?" on each Tab card. A side Skins game shows its house rules in one line and opens them for the round. Side games go on the planned-round ballot with a yes or no vote each, and roll call starts with them (no SQL). Asking for the card starts a 2-minute countdown; the keeper answers Yes or No, and with no answer one tap takes it. The free-forever list is held in production behind the paywall flag. A mid-round hole fix is saved to the fixing phone's copy of the course. Merged onto main after the feedback fixes. Checklist: 63 of 187 done (34%), up from 61 of 187 (33%).
 - 2026-09-29: Nothing is held back until launch. The Season view on the Tab is open to everyone who has played a round (no Pro tag, no Preview banner, no trial button; under 2 rounds it says your season starts after 2). With `?paywall=on` it's the organizer-only Pro preview as before. "Pro at launch" is written down in area 11, with new items for lifetime Pro for early testers and deciding the split at launch.
+- 2026-09-30: From Trevor: planning a round asks 9 or 18 holes on the When step (the choice was at the bottom of the game list, and missing when planning from onboarding), and "Edit" on a plan changes the day, tee time, course or holes, sent to everyone with the link.

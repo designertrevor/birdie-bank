@@ -65,25 +65,27 @@ function planSetup(state, planId, present) {
 }
 
 /**
+ * `edit`: change a planned round's day, tee time, course or holes (only the When step shows).
  * `ahead`: plan it for later. `game` and `ballot`: a game already picked and other games to put
  * up for a vote (from organizer onboarding). `onboarding`: this is the end of organizer onboarding,
  * so finishing lands on the plan with the paywall on top (when it's on), and cancelling drops
  * back to whatever is underneath.
  */
-export default function NewRound({ rematch, fromPlan, present, ahead = false, game: preGame = null, ballot = [], onboarding = false }) {
+export default function NewRound({ rematch, fromPlan, present, edit = null, ahead = false, game: preGame = null, ballot = [], onboarding = false }) {
   const nav = useNav();
-  const { ask } = useUI();
+  const { ask, showToast } = useUI();
   const state = useStore();
   // "Run it back" opens setup already filled in like an earlier round
-  const [pre] = useState(() => (rematch ? rematchSetup(getState(), getState().rounds[rematch]) : fromPlan ? planSetup(getState(), fromPlan, present) : null));
-  const [mode, setMode] = useState(ahead ? 'plan' : 'round'); // 'plan': schedule for later
+  const [editing] = useState(() => (edit ? getState().plans?.[edit] || null : null));
+  const [pre] = useState(() => (editing ? { game: editing.game, holesCount: editing.holesCount, courseId: findCourse(getState(), editing.course?.id)?.id ?? null, nine: editing.nine, step: 1 } : rematch ? rematchSetup(getState(), getState().rounds[rematch]) : fromPlan ? planSetup(getState(), fromPlan, present) : null));
+  const [mode, setMode] = useState(ahead || editing ? 'plan' : 'round'); // 'plan': schedule for later
   const planning = mode === 'plan';
-  const [date, setDate] = useState(() => nextSaturday());
-  const [teeTime, setTeeTime] = useState('');
+  const [date, setDate] = useState(() => editing?.date || nextSaturday());
+  const [teeTime, setTeeTime] = useState(editing?.teeTime || '');
   const [invited, setInvited] = useState([]);
   const [step, setStep] = useState(pre?.step ?? (ahead && GAMES[preGame] ? 1 : 0));
   const [game, setGame] = useState(pre?.game ?? (GAMES[preGame] ? preGame : null));
-  const [holesCount, setHolesCount] = useState(pre?.holesCount ?? 18);
+  const [holesCount, setHolesCount] = useState(pre?.holesCount ?? (GAMES[preGame]?.holes.includes(18) === false ? GAMES[preGame].holes[0] : 18));
   const [courseId, setCourseId] = useState(pre?.courseId ?? null);
   const [nine, setNine] = useState(pre?.nine ?? 'front');
   const [picked, setPicked] = useState(() => pre?.picked ?? (state.me ? [state.me] : []));
@@ -109,6 +111,7 @@ export default function NewRound({ rematch, fromPlan, present, ahead = false, ga
   const course = findCourse(state, courseId);
 
   const close = async () => {
+    if (editing) return nav.pop();
     if (step === 0 && !game) return nav.pop();
     if (planning) {
       if (await ask({ title: 'Cancel this plan?', text: 'Nothing gets sent until you finish.', confirmLabel: 'Cancel plan', cancelLabel: 'Keep planning', danger: true })) nav.pop();
@@ -117,7 +120,7 @@ export default function NewRound({ rematch, fromPlan, present, ahead = false, ga
     if (await ask({ title: 'Cancel this round?', text: 'Your setup won’t be saved.', confirmLabel: 'Cancel round', cancelLabel: 'Keep setting up', danger: true })) nav.pop();
   };
   const back = () => {
-    if (step === 0) return close();
+    if (step === 0 || editing) return close();
     if (planning && step === 1 && !ahead) setMode('round');
     setStep(step - 1);
   };
@@ -139,6 +142,20 @@ export default function NewRound({ rematch, fromPlan, present, ahead = false, ga
     });
     const paywall = onboarding && shouldShowPaywall(getState(), PAYWALL_ON) ? [['paywall', { source: 'onboarding' }]] : [];
     nav.reset('upnext', ['plan', { id }], ...paywall);
+  };
+
+  // Save the changed day, time, course or holes on the plan; a shared plan sends them to the group
+  const savePlan = () => {
+    editPlan(editing.id, p => {
+      p.date = date;
+      p.teeTime = teeTime || null;
+      p.holesCount = holesCount;
+      p.nine = nine || 'front';
+      p.course = { id: course.id, name: course.name, city: course.city || null };
+    });
+    update(st => { if (!st.favorites.includes(course.id)) st.favorites = [course.id, ...st.favorites].slice(0, 6); });
+    showToast(editing.code ? 'Plan updated. Everyone with the link sees the change.' : 'Plan updated');
+    nav.pop();
   };
 
   // A round already in progress is never touched: it stays saved and you can switch back to it
@@ -199,8 +216,8 @@ export default function NewRound({ rematch, fromPlan, present, ahead = false, ga
     <Screen>
       {step < 4 ? (
         <>
-          <Header title={planning ? 'Plan a round' : 'New round'} onBack={back} onClose={close} />
-          <Steps steps={planning ? PLAN_STEPS : STEPS} current={step} />
+          <Header title={editing ? 'Edit plan' : planning ? 'Plan a round' : 'New round'} onBack={back} onClose={editing ? null : close} />
+          {!editing && <Steps steps={planning ? PLAN_STEPS : STEPS} current={step} />}
           <h2 className="step-q d">{(planning ? PLAN_QUESTIONS : QUESTIONS)[step]}</h2>
           {step === 2 && !planning && missing.length > 0 && (
             <p className="hint-card"><Icon name="user-plus" fill /> {listNames(missing)} {missing.length === 1 ? 'isn’t' : 'aren’t'} saved on this phone yet. Add them to play with the whole group.</p>
@@ -209,8 +226,13 @@ export default function NewRound({ rematch, fromPlan, present, ahead = false, ga
       ) : <Header title="Round ready" small onClose={() => nav.reset('upnext')} />}
       {step === 0 && <GameStep usual={planning || (usual && matchingUsual(state, usual.round)) ? null : usual} onUsual={repeatUsual} onPickUsual={planning ? null : pickUsual} planning={planning} onPlan={fromPlan ? null : () => { setMode('plan'); setStep(1); }} game={game} setGame={gm => { setGame(gm); if (!GAMES[gm].holes.includes(holesCount)) setHolesCount(GAMES[gm].holes[0]); }} holesCount={holesCount} setHolesCount={setHolesCount} onNext={() => setStep(1)} />}
       {step === 1 && planning && (
-        <CourseStep courseId={courseId} setCourseId={id => { setCourseId(id); setTees({}); setStartHole(null); }} holesCount={holesCount} nine={nine} setNine={setNine} onNext={() => setStep(2)}
-          nextLabel="Next: Who’s invited" top={<WhenPicker date={date} setDate={setDate} teeTime={teeTime} setTeeTime={setTeeTime} />} />
+        <CourseStep courseId={courseId} setCourseId={id => { setCourseId(id); setTees({}); setStartHole(null); }} holesCount={holesCount} nine={nine} setNine={setNine} onNext={editing ? savePlan : () => setStep(2)}
+          nextLabel={editing ? 'Save changes' : 'Next: Who’s invited'} nextIcon={editing ? 'check' : 'arrow-right'}
+          top={<>
+            <WhenPicker date={date} setDate={setDate} teeTime={teeTime} setTeeTime={setTeeTime} />
+            <HolesPicker game={g} holesCount={holesCount} setHolesCount={setHolesCount} />
+            <p className="field-help pad">Then pick the course below.</p>
+          </>} />
       )}
       {step === 2 && planning && course && <InviteStep invited={invited} setInvited={setInvited} onNext={() => setStep(3)} />}
       {step === 3 && planning && course && <VoteStep game={game} opts={opts} onPlan={makePlan} ballot={ballot} />}
@@ -271,12 +293,7 @@ function GameStep({ usual, onUsual, onPickUsual, planning, onPlan, game, setGame
         <button className="quiet-row" onClick={() => nav.push('suggest', { kind: 'game' })}>
           <Icon name="chat-circle-dots" /> <span>Don’t see your game? <u>Tell us how it’s played</u></span>
         </button>
-        <div className="block">
-          <div className="eyebrow" style={{ marginBottom: 10 }}>Holes</div>
-          <Segmented label="Holes" value={holesCount} onChange={setHolesCount}
-            options={[9, 18].map(n => ({ value: n, label: String(n), disabled: g && !g.holes.includes(n) }))} />
-          {g && g.holes.length === 1 && <p className="field-help">{g.name} is played over {g.holes[0]} holes.</p>}
-        </div>
+        {!planning && <HolesPicker game={g} holesCount={holesCount} setHolesCount={setHolesCount} />}
       </div>
       <div className="cta-wrap">
         <button className="full-btn" disabled={!game} onClick={onNext}>{game ? <>{planning ? 'Next: When' : 'Next: Course'} <Icon name="arrow-right" /></> : 'Pick a game'}</button>
@@ -289,7 +306,7 @@ function GameStep({ usual, onUsual, onPickUsual, planning, onPlan, game, setGame
 
 // ---------------------------------------------------------------------------
 
-function CourseStep({ courseId, setCourseId, holesCount, nine, setNine, onNext, top = null, nextLabel = 'Next: Players' }) {
+function CourseStep({ courseId, setCourseId, holesCount, nine, setNine, onNext, top = null, nextLabel = 'Next: Players', nextIcon = 'arrow-right' }) {
   const nav = useNav();
   const state = useStore();
   const [q, setQ] = useState('');
@@ -370,7 +387,7 @@ function CourseStep({ courseId, setCourseId, holesCount, nine, setNine, onNext, 
         {tooShort && <p className="hint-card"><Icon name="info" fill /> {course.name} has 9 holes, so you’ll play it twice for 18.</p>}
       </div>
       <div className="cta-wrap">
-        <button className="full-btn" disabled={!course} onClick={onNext}>{course ? <>{nextLabel} <Icon name="arrow-right" /></> : 'Pick a course'}</button>
+        <button className="full-btn" disabled={!course} onClick={onNext}>{course ? <>{nextLabel} <Icon name={nextIcon} /></> : 'Pick a course'}</button>
       </div>
     </>
   );
@@ -617,8 +634,28 @@ function dayName(iso) {
 }
 
 /** The day (next two weeks) and the tee time, above the course list. */
+/** 9 or 18 holes, with the lengths the game can't be played over switched off. */
+function HolesPicker({ game, holesCount, setHolesCount }) {
+  return (
+    <div className="block">
+      <div className="eyebrow" style={{ marginBottom: 10 }}>Holes</div>
+      <Segmented label="Holes" value={holesCount} onChange={setHolesCount}
+        options={[9, 18].map(n => ({ value: n, label: String(n), disabled: game && !game.holes.includes(n) }))} />
+      {game && game.holes.length === 1 && <p className="field-help">{game.name} is played over {game.holes[0]} holes.</p>}
+    </div>
+  );
+}
+
 function WhenPicker({ date, setDate, teeTime, setTeeTime }) {
-  const days = useMemo(() => dayChoices(new Date(), 14), []);
+  // An edited plan keeps its day in the strip even when it's further out than two weeks
+  const days = useMemo(() => {
+    const list = dayChoices(new Date(), 14);
+    if (!date || list.some(d => d.iso === date)) return list;
+    const [y, m, d] = date.split('-').map(Number);
+    const day = new Date(y, m - 1, d);
+    const extra = { ...dayChoices(day, 1)[0], top: day.toLocaleDateString('en-US', { weekday: 'short' }) };
+    return date < list[0].iso ? [extra, ...list] : [...list, extra];
+  }, [date]);
   return (
     <div className="block when-block">
       <div className="eyebrow" id="when-day" style={{ marginBottom: 10 }}>Day</div>
@@ -631,7 +668,6 @@ function WhenPicker({ date, setDate, teeTime, setTeeTime }) {
       </div>
       <label className="field-label" htmlFor="when-time" style={{ marginTop: 14 }}>Tee time <span className="opt">optional</span></label>
       <input id="when-time" className="name-input time-input" type="time" value={teeTime} onChange={e => setTeeTime(e.target.value)} step={300} />
-      <p className="field-help">Then pick the course below.</p>
     </div>
   );
 }
