@@ -67,3 +67,95 @@ export function strokesGivenOptions(s, current = null) {
   if (typeof current === 'number' && current > 0 && current <= 100) out.add(current);
   return [...out].sort((a, b) => b - a);
 }
+
+// --------------------------- Allowances by game ---------------------------
+// A round has one Strokes given % (round.hcPct) and, with side games, each side game can play off its
+// own (round.sideGames[i].hcPct), for example 85% in the Skins and full strokes in the singles match.
+// A side game with no hcPct of its own plays off the round's, which is every round made before this.
+
+/** The % of strokes a game in the round plays off: 'main' or a side game's key. */
+export function gamePct(round, key = 'main') {
+  const base = round?.hcPct ?? 100;
+  if (key === 'main') return base;
+  const own = (round?.sideGames || []).find(sg => sg?.game === key)?.hcPct;
+  return typeof own === 'number' && own > 0 && own <= 100 ? own : base;
+}
+
+/** Whether any side game plays off a different % from the main game. */
+export function pctsDiffer(round) {
+  return (round?.sideGames || []).some(sg => sg && gamePct(round, sg.game) !== gamePct(round));
+}
+
+/**
+ * Players' `plays` worked out again at another %, for a side game with its own allowance. Strokes
+ * are off the same player the round plays off (the lowest `plays` among players who were there from
+ * the start), so a late joiner is placed exactly as addPlayerToRound places them. With nobody late
+ * this is strokesOffLow at `pct`. Returns new player objects; the ones passed in are untouched.
+ */
+export function playsAtPct(players, pct, joined = {}) {
+  if (!players.length) return players;
+  const playing = players.map(p => Math.round((p.courseHc ?? 0) * (pct / 100)));
+  let ref = -1;
+  players.forEach((p, i) => {
+    if (joined?.[p.id] != null) return;
+    if (ref < 0 || (p.plays ?? 0) < (players[ref].plays ?? 0)) ref = i;
+  });
+  const low = ref < 0 ? Math.min(...playing) : playing[ref];
+  return players.map((p, i) => ({ ...p, plays: playing[i] - low }));
+}
+
+// --------------------------- Half strokes ---------------------------------
+// Half-pops: with round.halfStrokes on, each handicap stroke counts as half a shot in the games
+// decided hole by hole (a 5 with a stroke is a net 4½), so a big handicap gap doesn't win every hole
+// the high player gets a pop on. Ties stay ties when both nets are equal, and nothing about the money
+// changes except who wins each hole. Other games in the same round keep full strokes.
+
+/** Games where half strokes apply: the matches and the skins-style "win the hole outright" games. */
+export const HALF_STROKE_GAMES = ['match', 'nassau', 'hammer', 'sixes', 'skins', 'rabbit'];
+
+/** Whether a round (or one game's view of it, see gameView) counts each stroke as half. */
+export function halfStrokesOn(round) {
+  return !!round?.halfStrokes && HALF_STROKE_GAMES.includes(round.game);
+}
+
+/** Whether the round has a game half strokes can apply to (main or side), so setup can offer the toggle. */
+export function halfStrokesOffered(game, sideGames = []) {
+  return HALF_STROKE_GAMES.includes(game) || sideGames.some(sg => HALF_STROKE_GAMES.includes(sg?.game));
+}
+
+/** A net score or total for show: 4, 4½, ½, −1½. Whole numbers as they are. */
+export function netText(n) {
+  if (n == null || !Number.isFinite(n)) return '–';
+  if (Number.isInteger(n)) return String(n);
+  const whole = Math.trunc(n);
+  const sign = n < 0 ? '−' : '';
+  return `${sign}${whole === 0 ? '' : Math.abs(whole)}½`;
+}
+
+/** "1 stroke", "3 strokes", or with half strokes "1 half stroke", "3 half strokes". */
+export function strokesWords(n, half = false) {
+  return `${n} ${half ? 'half ' : ''}stroke${n === 1 ? '' : 's'}`;
+}
+
+/** The rules line for half strokes. */
+export const HALF_STROKES_RULE = 'Half strokes: each handicap stroke counts as half a shot, so a 5 with a stroke is a net 4½. It beats a 5 and loses to a 4. Used in the matches and skins, where a full stroke can decide too many holes.';
+
+/** "full strokes" or "85% of strokes". */
+export const pctWords = pct => (pct == null || pct >= 100 ? 'full strokes' : `${pct}% of strokes`);
+
+/**
+ * The round's own strokes lines for a game's rules sheet (`key` is 'main' or a side game's key):
+ * its % when games play off different ones, and the half strokes rule when it applies. Empty when
+ * handicaps are off or there's nothing beyond the usual.
+ */
+export function strokesRulesLines(round, key = 'main') {
+  if (!round?.useHandicaps) return [];
+  const game = key === 'main' ? round.game : key;
+  const out = [];
+  if (pctsDiffer(round)) out.push(`This game plays off ${pctWords(gamePct(round, key))} this round.`);
+  if (round.halfStrokes && HALF_STROKE_GAMES.includes(game)) out.push(HALF_STROKES_RULE);
+  return out;
+}
+
+/** Side games that count handicap strokes, so they can have their own Strokes given %. */
+export const STROKE_SIDE_GAMES = ['skins', 'rabbit', 'birdies'];

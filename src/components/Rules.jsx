@@ -275,8 +275,11 @@ const RULES = {
   },
 };
 
-/** The rules sheet for `game`. `title` and `sub` replace the game's own, as for Junk as a side game. */
-export function RulesSheet({ game, open, onClose, title, sub }) {
+/**
+ * The rules sheet for `game`. `title` and `sub` replace the game's own, as for Junk as a side game.
+ * `strokes` are this round's strokes lines (see strokesRulesLines), shown last under "Strokes this round".
+ */
+export function RulesSheet({ game, open, onClose, title, sub, strokes = [] }) {
   const r = RULES[game];
   if (!r) return null;
   return (
@@ -286,6 +289,9 @@ export function RulesSheet({ game, open, onClose, title, sub }) {
         {r.sections.map(([h, body]) => (
           <div key={h}><div className="rules-section">{h}</div><div className="rules-body">{body}</div></div>
         ))}
+        {strokes.length > 0 && (
+          <div><div className="rules-section">Strokes this round</div><div className="rules-body">{strokes.map(l => <p key={l}>{l}</p>)}</div></div>
+        )}
       </div>
       <div style={{ padding: '0 16px' }}><button className="full-btn" onClick={onClose}>Got it</button></div>
     </Sheet>

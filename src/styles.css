@@ -1526,3 +1526,8 @@ button.lately-row:active { background: var(--surface); }
 @keyframes mwTrophy { 0% { transform: scale(0) rotate(-30deg); } 60% { transform: scale(1.12) rotate(6deg); } 100% { transform: scale(1) rotate(0); } }
 @keyframes mwScore { 0% { transform: scale(.4); opacity: 0; } 60% { transform: scale(1.1); opacity: 1; } 100% { transform: scale(1); } }
 @media (prefers-reduced-motion: reduce) { .mw-rays { display: none; } }
+
+/* Overnight 5, strokes: Strokes given by game and Half strokes in setup */
+.strokes-setup .pct-game + .pct-game { margin-top: 14px; padding-top: 14px; border-top: 1px solid var(--surface); }
+.strokes-setup .pct-game-name { font-size: 14px; font-weight: 700; color: var(--ink); margin-bottom: 8px; }
+.strokes-setup .pct-split-btn { color: var(--ink); text-decoration: underline; text-decoration-color: var(--surface-strong); text-underline-offset: 3px; text-decoration-thickness: 2px; }

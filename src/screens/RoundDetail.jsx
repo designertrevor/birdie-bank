@@ -1,7 +1,8 @@
 import { Fragment, useEffect, useRef, useState } from 'react';
 import { Empty, Header, Icon, Screen, useUI } from '../components/ui.jsx';
 import { getState, update, useStore } from '../lib/store.js';
-import { GAMES, gameView, holeAtPos, holeComplete, playsHole, roundLegs, roundNotes, roundResults, scoreSummary, scorers, sideNames, skinsKinds, skinsTable, strokesFor, netFor } from '../lib/round.js';
+import { GAMES, gameView, holeAtPos, holeComplete, playsHole, roundLegs, roundNotes, roundResults, scoreSummary, scorers, sideNames, skinsKinds, skinsTable, popsFor, netFor } from '../lib/round.js';
+import { halfStrokesOn, netText, strokesWords } from '../lib/allowances.js';
 import { matchLabel } from '../lib/games.js';
 import { money } from '../lib/golf.js';
 import { canEdit, keeperMe } from '../lib/keeper.js';
@@ -128,7 +129,7 @@ export default function RoundDetail({ id, celebrate }) {
     const team = round.game === 'scramble' && round.teams?.find(t => t.players.includes(p.id));
     const n = team ? team.plays || 0 : p.plays;
     if (!n) return null;
-    return <span className="li-sub"> · {team ? 'team got' : 'got'} {n} stroke{n === 1 ? '' : 's'}</span>;
+    return <span className="li-sub"> · {team ? 'team got' : 'got'} {strokesWords(n, halfStrokesOn(round))}</span>;
   };
 
   return (
@@ -495,7 +496,9 @@ export function Scorecard({ round, current, onHole }) {
   const cls = (g, par) => (g === 'X' ? 'pu' : g <= par - 2 ? 'eagle' : g === par - 1 ? 'birdie' : g === par + 1 ? 'bogey' : g >= par + 2 ? 'dbl' : '');
   const hc = !!round.useHandicaps;
   const units = scorers(round);
-  const anyStrokes = hc && units.some(p => out.some(h => strokesFor(round, p, h) !== 0));
+  const anyStrokes = hc && units.some(p => out.some(h => popsFor(round, p, h) !== 0));
+  // With half strokes each dot counts half, and the net total can end in ½
+  const half = halfStrokesOn(round);
   // With onHole (during play), any cell in a hole's column jumps to that hole
   const colProps = no => (onHole ? { onClick: () => onHole(no), className: 'sc-tap' } : {});
   const netTotal = p => out.reduce((a, h) => { const n = holeComplete(round, h) ? netFor(round, p, h) : null; return n == null ? a : a + n; }, 0);
@@ -528,20 +531,20 @@ export function Scorecard({ round, current, onHole }) {
                   const g = round.scores[h.no]?.[p.id];
                   // A player who left shows an en dash on the holes after
                   const gone = g == null && !(p.team ? p.players.some(pid => playsHole(round, pid, h)) : playsHole(round, p.id, h));
-                  const st = hc && !gone ? strokesFor(round, p, h) : 0;
+                  const st = hc && !gone ? popsFor(round, p, h) : 0;
                   const tap = colProps(h.no);
                   return (
                     <td key={h.no} className={`${h.no === current ? 'cur' : ''} ${tap.className || ''}`} onClick={tap.onClick}>
                       <span className="sc-cell">
                         {gone ? <span className="empty-dot">–</span> : g == null ? <span className="empty-dot">·</span> : <span className={`sc-mark ${cls(g, h.par)}`}>{g}</span>}
-                        {st > 0 && <span className="sc-strokes" role="img" aria-label={`Gets ${st} stroke${st > 1 ? 's' : ''}`}>{Array.from({ length: st }, (_, i) => <i key={i} />)}</span>}
-                        {st < 0 && <span className="sc-strokes give" aria-label={`Gives back ${-st} stroke${st < -1 ? 's' : ''}`}>{'–'.repeat(-st)}</span>}
+                        {st > 0 && <span className="sc-strokes" role="img" aria-label={`Gets ${strokesWords(st, half)}`}>{Array.from({ length: st }, (_, i) => <i key={i} />)}</span>}
+                        {st < 0 && <span className="sc-strokes give" aria-label={`Gives back ${strokesWords(-st, half)}`}>{'–'.repeat(-st)}</span>}
                       </span>
                     </td>
                   );
                 })}
                 <td className="tot">{sum.played ? sum.gross : '–'}</td>
-                {anyStrokes && <td className="tot">{sum.played ? netTotal(p) : '–'}</td>}
+                {anyStrokes && <td className="tot">{sum.played ? netText(netTotal(p)) : '–'}</td>}
               </tr>
             );
           })}
@@ -553,7 +556,7 @@ export function Scorecard({ round, current, onHole }) {
         <span className="sc-key"><span className="sc-mark eagle">2</span> eagle</span>
         <span className="sc-key"><span className="sc-mark bogey">5</span> bogey</span>
         <span className="sc-key"><span className="sc-mark pu">X</span> picked up</span>
-        {anyStrokes && <span className="sc-key"><span className="sc-strokes inline"><i /></span> gets a stroke</span>}
+        {anyStrokes && <span className="sc-key"><span className="sc-strokes inline"><i /></span> {half ? 'half stroke' : 'gets a stroke'}</span>}
         {round.holeFixes && Object.keys(round.holeFixes).length > 0 && <span className="sc-key"><span className="sc-fixed inline" aria-hidden="true" /> par or HCP fixed</span>}
       </div>
     </div>
