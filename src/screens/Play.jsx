@@ -299,8 +299,9 @@ function PlayRound({ round }) {
 
   const finish = async () => {
     const r = getState().rounds[round.id];
-    // Fixing a finished round: it never stopped counting, so just go back to the results
-    if (r.editing && r.status === 'done') { doneEditing(); return; }
+    // Fixing a finished round: it never stopped counting, so just go back to the results (and, like
+    // finishing, no "Hole 18 saved" toast over them)
+    if (r.editing && r.status === 'done') { doneEditing(); return true; }
     const missing = r.holes.filter(h => !holeComplete(r, h));
     if (missing.length) {
       const one = missing.length === 1;
