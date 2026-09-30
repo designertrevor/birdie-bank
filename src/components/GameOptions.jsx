@@ -145,8 +145,13 @@ export function GameOptions({ game, get, set, onAmount, holesCount = 18, compact
       return <>
         {label('Bet')}
         {amount('match.stake', 'Stake per player', { label: 'Per player' })}
-        {example(`Win 2 v 2 and you're each up ${money(get('match.stake'))}. Lose and you're each down ${money(get('match.stake'))}.`)}
-        {note(`Each winner gets ${money(get('match.stake'))} from the losing side. Playing 1 v 3? The loner plays each of the three for ${money(get('match.stake'))}.`)}
+        {/* Two players is a plain singles match; the 2 v 2 and 1 v 3 lines are for three or more */}
+        {n === 2
+          ? example(`Win the match and you're up ${money(get('match.stake'))}. Lose it and you're down ${money(get('match.stake'))}.`)
+          : <>
+            {example(`Win 2 v 2 and you're each up ${money(get('match.stake'))}. Lose and you're each down ${money(get('match.stake'))}.`)}
+            {note(`Each winner gets ${money(get('match.stake'))} from the losing side. Playing 1 v 3? The loner plays each of the three for ${money(get('match.stake'))}.`)}
+          </>}
         {label('Presses')}
         {presses('match')}
       </>;
