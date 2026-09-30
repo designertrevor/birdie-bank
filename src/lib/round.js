@@ -1277,13 +1277,16 @@ export function wolfHoleResult(round, hole) {
  * hole that was won. A hole with no result yet (not played, no pick) doesn't break the run.
  */
 export function wolfCarryBefore(round, hole) {
+  // Switched off for this hole (a bet change): whatever was riding is dropped, like Sixes and Aces
+  if (!settingsAt(round, posOf(round, hole)).wolf?.carry) return 0;
   let carried = 0;
   for (const h of round.holes) {
     if (h.no === hole.no) break;
     const r = wolfHoleBase(round, h);
     if (!r) continue;
-    if (r.winner != null) carried = 0;
-    else if (settingsAt(round, posOf(round, h)).wolf.carry) carried++;
+    // A tie played with the rule off (switched off, then on again) drops the run too
+    if (r.winner != null || !settingsAt(round, posOf(round, h)).wolf.carry) carried = 0;
+    else carried++;
   }
   return carried;
 }
@@ -1729,8 +1732,9 @@ export function gameResults(round) {
       const ms = settingsAt(round, m.seg.start).sixes;
       let net = 0; // positive = side 0 wins
       const carried = carry;
-      if (ms.mode !== 'holes' && ms.carry && !m.off && st.leader == null && st.left === 0) carry += ms.stake;
-      else if (ms.mode === 'holes' || m.off || st.leader != null) carry = 0;
+      // A match played with the rule off (switched off mid-round) drops the carry, halved or not
+      if (ms.mode === 'holes' || !ms.carry || m.off || st.leader != null) carry = 0;
+      else if (st.left === 0) carry += ms.stake;
       if (ms.mode === 'holes') {
         // Every hole won is worth the bet in force on that hole
         for (const [pos, w] of Object.entries(m.winners)) if (w != null) net += (w === 0 ? 1 : -1) * settingsAt(round, Number(pos)).sixes.stake;
@@ -1851,7 +1855,8 @@ export function gameResults(round) {
       if (on.length < 2) continue;
       const as = settingsAt(round, posOf(round, h)).aces;
       // Same defaults as acesDeuces, so rounds saved without every aces setting still pair up right
-      const ace = (as?.ace ?? 2) + aceCarry, deuce = (as?.deuce ?? 1) + deuceCarry;
+      // A carry only rides into a hole still played with the rule on; switched off, it's dropped
+      const ace = (as?.ace ?? 2) + (as?.carry ? aceCarry : 0), deuce = (as?.deuce ?? 1) + (as?.carry ? deuceCarry : 0);
       const r = acesDeuces(on.map(p => netFor(round, p, h)), on.map(p => p.id), { ace, deuce });
       add(r.deltas);
       for (const p of on) {
