@@ -1,7 +1,8 @@
 import { useState } from 'react';
 import { Empty, Header, Icon, Numpad, Screen, Segmented, Toggle, useUI } from '../components/ui.jsx';
 import { RulesSheet } from '../components/Rules.jsx';
-import { DEFAULT_SETTINGS, exportJSON, importJSON, resetAll, update, uid, useStore } from '../lib/store.js';
+import { DEFAULT_SETTINGS, freshState, getState, replaceState, resetAll, update, uid, useStore } from '../lib/store.js';
+import { addedText, backupFileName, backupText, mergeBackup, parseBackup, replaceFromBackup, summaryText } from '../lib/backup.js';
 import { allCourses, coursePar, courseTag, findCourse } from '../lib/courses.js';
 import { COURSES } from '../data/courses.js';
 import { GAMES } from '../lib/round.js';
@@ -37,8 +38,8 @@ export default function Settings() {
   };
 
   const backup = async () => {
-    const blob = new Blob([exportJSON()], { type: 'application/json' });
-    const name = `birdie-bank-${new Date().toISOString().slice(0, 10)}.json`;
+    const name = backupFileName();
+    const blob = new Blob([backupText(getState())], { type: 'application/json' });
     const f = new File([blob], name, { type: 'application/json' });
     try {
       if (navigator.canShare?.({ files: [f] })) { await navigator.share({ files: [f], title: 'Birdie Bank backup' }); return; }
@@ -52,9 +53,30 @@ export default function Settings() {
     const f = e.target.files?.[0];
     e.target.value = '';
     if (!f) return;
-    if (!(await ask({ title: 'Restore this backup?', text: 'Everything on this phone will be replaced with the backup.', confirmLabel: 'Restore', danger: true }))) return;
-    try { importJSON(await f.text()); showToast('Backup restored'); }
-    catch { showToast('That file isn’t a Birdie Bank backup'); }
+    let got;
+    try { got = parseBackup(await f.text()); } catch { got = { ok: false, error: 'Couldn’t open that file. Try saving it to your phone again.' }; }
+    if (!got.ok) { await ask({ title: 'Can’t restore that file', text: got.error, actions: [], cancelLabel: 'OK' }); return; }
+    const made = got.createdAt ? ` Saved ${new Date(got.createdAt).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })}.` : '';
+    const how = await ask({
+      title: 'Restore this backup?',
+      text: `It has ${summaryText(got.counts)}.${made} Adding what’s missing keeps everything on this phone as it is.`,
+      actions: [{ label: 'Add what’s missing', value: 'merge' }, { label: 'Replace everything', value: 'replace', secondary: true }],
+    });
+    if (how === 'merge') {
+      const { state: next, added } = mergeBackup(getState(), got.data);
+      replaceState(next);
+      const n = addedText(added);
+      showToast(n ? `Added ${n}` : 'You already had everything in that backup');
+    } else if (how === 'replace') {
+      const ok = await ask({
+        title: 'Replace everything?',
+        text: `Everything on this phone${acct.user ? ' and in your account' : ''} becomes the backup. Rounds, players and payments that aren’t in the file are deleted, and you can’t undo it.`,
+        confirmLabel: 'Replace everything', danger: true,
+      });
+      if (!ok) return;
+      replaceState(replaceFromBackup(freshState(), got.data));
+      showToast('Backup restored');
+    }
   };
   const reset = async () => {
     if (!(await ask({ title: 'Erase everything?', text: 'All players, crews, rounds and payments on this phone will be deleted. Make a backup first if you might want them.', confirmLabel: 'Erase all data', danger: true }))) return;
@@ -97,10 +119,10 @@ export default function Settings() {
         {row('sliders-horizontal', 'Game defaults', 'Your usual bets and house rules', () => nav.push('defaults'))}
         {row('map-trifold', 'Courses', `${allCourses(state).length} courses · add or fix a scorecard`, () => nav.push('courses'))}
         <div className="sec-label">Your data</div>
-        {row('export', 'Back up', 'Save everything to a file', backup)}
+        {row('export', 'Back up your data', 'Save rounds, players, courses and payments to a file', backup)}
         <label className="set-row" htmlFor="restore-file" role="button" tabIndex={0}>
           <div className="set-icon"><Icon name="download-simple" fill /></div>
-          <div className="row-main"><div className="set-name">Restore from backup</div><div className="set-sub">Replace this phone’s data with a backup file</div></div>
+          <div className="row-main"><div className="set-name">Restore from a backup</div><div className="set-sub">Add what’s missing, or replace everything</div></div>
           <span className="chevron"><Icon name="caret-right" /></span>
         </label>
         <input id="restore-file" type="file" accept="application/json,.json" hidden onChange={restore} />

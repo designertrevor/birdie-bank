@@ -121,17 +121,8 @@ export function resetAll() {
   listeners.forEach(l => l());
 }
 
-export function exportJSON() {
-  return JSON.stringify(state, null, 2);
-}
-
-export function importJSON(text) {
-  const data = JSON.parse(text);
-  if (!data || typeof data !== 'object' || !data.players) throw new Error('Not a Birdie Bank backup');
-  state = { ...fresh(), ...data };
-  persist();
-  listeners.forEach(l => l());
-}
+/** A brand new state, for restoring a backup over (see backup.js). */
+export function freshState() { return fresh(); }
 
 /** Swap in a whole new state (used by cloud sync after merging an account's data). */
 export function replaceState(next) {
