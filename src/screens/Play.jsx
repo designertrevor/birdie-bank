@@ -29,6 +29,7 @@ import { countsMoney, inUnits, unitFmt } from '../lib/play-for.js';
 import { leaveRound, roundsInProgress } from '../lib/rounds.js';
 import { RoundsInProgressSheet } from '../components/RoundsInProgress.jsx';
 import { ByGameTable, SideGamesSetup } from '../components/SideGames.jsx';
+import { MatchMoments } from '../components/Moments.jsx';
 import { nassauOpenNote, sideExample } from '../lib/side-games.js';
 import {
   ASK_MS, askForCard, askLeft, canEdit, canTakeCard, clearAsk, clockText, declineAsk, declinedAsk, handOff, handOffChoices, hostKeeper, isKeeper,
@@ -74,7 +75,21 @@ export default function Play({ id }) {
   // ...and when this hole's par is fixed, so an untouched score starts from the new par
   // ...and when a side game is added, so Junk's dots have somewhere to go
   const games = (round.sideGames || []).map(sg => sg.game).join('+');
-  return <PlayRound key={`${games}:${round.holesCount}:${round.current}:${round._remote?.[cur?.no] || 0}:${left}:${joined}:${cur?.par}`} round={round} />;
+  // A match won before the last hole: the keeper can end the round there (the holes played count)
+  const finishHere = () => {
+    FINISHED_HERE.add(id);
+    for (const k of DRAFTS.keys()) if (k.startsWith(`${id}:`)) DRAFTS.delete(k);
+    update(s => { const rr = s.rounds[id]; rr.status = 'done'; rr.finishedAt = Date.now(); markUsualPlayed(s, rr, rr.finishedAt); leaveRound(s, id); });
+    nav.reset('history', ['roundDetail', { id, celebrate: true }]);
+  };
+  const keeps = canEdit(round, keeperMe(round, { me: getState().me }), !!round.shared?.host);
+  return (
+    <>
+      <PlayRound key={`${games}:${round.holesCount}:${round.current}:${round._remote?.[cur?.no] || 0}:${left}:${joined}:${cur?.par}`} round={round} />
+      {/* Outside the hole, which remounts on every save, so it sees the hole that was just scored */}
+      <MatchMoments round={round} onFinish={keeps ? finishHere : null} />
+    </>
+  );
 }
 
 // Rounds finished (or fixed) on this phone, so it doesn't follow itself to the results a second time

@@ -1,4 +1,5 @@
 // Per-game panels shown above the score rows while playing.
+import { useEffect, useState } from 'react';
 import { Icon, useUI } from './ui.jsx';
 import { update, uid } from '../lib/store.js';
 import {
@@ -16,6 +17,8 @@ const nameOf = (round, pid) => round.players.find(p => p.id === pid)?.name || '?
 // --------------------------- Nassau & match play ---------------------------
 
 /** `readOnly`: a phone that isn't keeping score sees the match but can't press. */
+// Each round's match scores as last shown, so a tile can pop when the score moves
+const TILE_SEEN = new Map();
 export function MatchPanel({ round, hole, readOnly = false }) {
   const { showToast } = useUI();
   const winners = nassauWinners(round);
@@ -24,7 +27,12 @@ export function MatchPanel({ round, hole, readOnly = false }) {
   const pos = round.holes.findIndex(h => h.no === hole.no) + 1;
   const bets = nassauBets(winners, round.presses, nassauAmounts(round), LEGS);
   const names = sideNames(round);
-  const short = names.map((n, i) => (round.teams ? ['A', 'B'][i] : n.charAt(0).toUpperCase()));
+  // One match fills the row, so it says the leader's name; Nassau's three tiles use a letter
+  const short = names.map((n, i) => (round.teams ? ['A', 'B'][i] : round.game === 'match' ? n.split(' ')[0] : n.charAt(0).toUpperCase()));
+  // Pop a tile when its score moved since this phone last showed it (the hole screen remounts on every save)
+  const vals = legs.map(leg => { const s = bets.find(x => x.key === leg).status; return `${s.leader}:${s.by}`; });
+  const [popped] = useState(() => { const was = TILE_SEEN.get(round.id); return was ? legs.filter((leg, i) => was[i] !== vals[i]) : []; });
+  useEffect(() => { TILE_SEEN.set(round.id, vals); });
   // Manual presses, and the press at the turn when presses are off (auto presses are made on saving)
   const options = !readOnly && pressMode(round) !== 'auto' && !holeComplete(round, hole) ? nassauPressOptions(round, pos) : [];
   const activePresses = bets.filter(b => b.press && pos >= b.start && pos <= b.end);
@@ -45,8 +53,8 @@ export function MatchPanel({ round, hole, readOnly = false }) {
       ? `${LEGS[leg].label}: ${spoken}, dormie. ${names[s.leader]} is up by as many holes as are left, so ${names[s.leader]} can’t lose it.`
       : `${LEGS[leg].label}: ${spoken}, ${sub}`;
     return (
-      <div key={leg} role="group" aria-label={said} className={`ms-tile ${s.leader === 0 ? 'ahead' : s.leader === 1 ? 'behind' : ''}`}>
-        <span className="ms-lbl">{LEGS[leg].label}</span><span className={`ms-val ${val === 'All square' ? 'sq' : ''}`}>{val}</span><span className="ms-sub">{sub}</span>
+      <div key={leg} role="group" aria-label={said} className={`ms-tile ${s.leader === 0 ? 'ahead' : s.leader === 1 ? 'behind' : ''} ${legs.length === 1 ? 'solo' : ''}`}>
+        <span className="ms-lbl">{LEGS[leg].label}</span><span key={popped.includes(leg) ? val : 'same'} className={`ms-val ${val === 'All square' ? 'sq' : ''} ${popped.includes(leg) ? 'moved' : ''}`}>{val}</span><span className="ms-sub">{sub}</span>
       </div>
     );
   };
