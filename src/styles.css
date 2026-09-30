@@ -1526,3 +1526,16 @@ button.lately-row:active { background: var(--surface); }
 @keyframes mwTrophy { 0% { transform: scale(0) rotate(-30deg); } 60% { transform: scale(1.12) rotate(6deg); } 100% { transform: scale(1) rotate(0); } }
 @keyframes mwScore { 0% { transform: scale(.4); opacity: 0; } 60% { transform: scale(1.1); opacity: 1; } 100% { transform: scale(1); } }
 @media (prefers-reduced-motion: reduce) { .mw-rays { display: none; } }
+
+/* ROUND MOMENTS (overnight 5): the banner's colors for skins, wolf, Vegas, the money lead and the
+   last hole. A skin that ends a long carry gets a gold card, a bigger icon and a second bounce. */
+.moment-banner.k-skin { background: var(--mint); }
+.moment-banner.k-bigskin, .moment-banner.k-final { background: var(--ochre); }
+.moment-banner.k-lonewolf, .moment-banner.k-blindwolf { background: var(--lav); }
+.moment-banner.k-swing { background: var(--peach); }
+.moment-banner.k-wolfdown { background: var(--surface-strong); color: var(--ink); }
+.moment-banner.k-money { background: var(--pink-fill); color: #fff; }
+.moment-banner.k-money .mo-ic { background: rgba(255,255,255,.2); }
+.moment-banner.k-bigskin .mo-ic { width: 52px; height: 52px; font-size: 30px; animation: moIc .7s .15s var(--ease-bounce) both, moBump .5s 1s var(--ease-bounce) both; }
+.moment-banner.k-bigskin .mo-title { font-size: 22px; }
+@keyframes moBump { 50% { transform: scale(1.18); } }

@@ -29,7 +29,7 @@ import { countsMoney, inUnits, unitFmt } from '../lib/play-for.js';
 import { leaveRound, roundsInProgress } from '../lib/rounds.js';
 import { RoundsInProgressSheet } from '../components/RoundsInProgress.jsx';
 import { ByGameTable, SideGamesSetup } from '../components/SideGames.jsx';
-import { MatchMoments } from '../components/Moments.jsx';
+import { RoundMoments } from '../components/Moments.jsx';
 import { nassauOpenNote, sideExample } from '../lib/side-games.js';
 import {
   ASK_MS, askForCard, askLeft, canEdit, canTakeCard, clearAsk, clockText, declineAsk, declinedAsk, handOff, handOffChoices, hostKeeper, isKeeper,
@@ -87,7 +87,7 @@ export default function Play({ id }) {
     <>
       <PlayRound key={`${games}:${round.holesCount}:${round.current}:${round._remote?.[cur?.no] || 0}:${left}:${joined}:${cur?.par}`} round={round} />
       {/* Outside the hole, which remounts on every save, so it sees the hole that was just scored */}
-      <MatchMoments round={round} onFinish={keeps ? finishHere : null} />
+      <RoundMoments round={round} onFinish={keeps ? finishHere : null} />
     </>
   );
 }
