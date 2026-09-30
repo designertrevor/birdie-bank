@@ -71,7 +71,7 @@ const DAMAGED = 'This backup looks damaged, so nothing was changed. Try another 
 
 /** Check a state's shape; returns an error message or null. */
 function checkData(data) {
-  if (!isObj(data) || !isObj(data.players)) return 'That file isn’t a Birdie Bank backup. Pick a file that starts with birdie-bank-backup.';
+  if (!isObj(data) || !isObj(data.players)) return 'That file isn’t a Birdie Bank backup. Pick the file you saved with Back up your data.';
   for (const k of MAPS) if (data[k] != null && !isObj(data[k])) return DAMAGED;
   for (const k of LISTS) if (data[k] != null && !Array.isArray(data[k])) return DAMAGED;
   for (const k of ['players', 'crews', 'customCourses', 'rounds', 'plans']) {
@@ -90,8 +90,8 @@ function checkData(data) {
  */
 export function parseBackup(text) {
   let file;
-  try { file = JSON.parse(text); } catch { return { ok: false, error: 'That file isn’t a Birdie Bank backup. Pick a file that starts with birdie-bank-backup.' }; }
-  if (!isObj(file)) return { ok: false, error: 'That file isn’t a Birdie Bank backup. Pick a file that starts with birdie-bank-backup.' };
+  try { file = JSON.parse(text); } catch { return { ok: false, error: 'That file isn’t a Birdie Bank backup. Pick the file you saved with Back up your data.' }; }
+  if (!isObj(file)) return { ok: false, error: 'That file isn’t a Birdie Bank backup. Pick the file you saved with Back up your data.' };
   let data = file;
   let createdAt = null;
   const legacy = file.format !== BACKUP_FORMAT;
