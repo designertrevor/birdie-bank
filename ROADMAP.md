@@ -161,7 +161,7 @@ Put more money into the winning creators and copy their video formats with other
 ## The checklist by area
 
 ### 1. Accounts and cloud data
-- [ ] `S1` (partial) Data saved on the phone, with a backup file you can export in Settings
+- [x] `S1` Data saved on the phone, with a backup file you can export in Settings. Built 2026-09-30 (overnight 5): "Back up your data" saves one versioned file; "Restore from a backup" adds what's missing or replaces everything
 - [ ] `S1` (partial) Sign in with Apple, Google, or a phone number or email link. Google and email link work (2026-09-25), and Google sign-in is public. Email only reaches Supabase team members until custom SMTP is set up. Apple comes with the App Store app (S3); phone numbers are skipped for now.
 - [x] `S1` Rounds, crews and the tab saved to the cloud and shared across devices (2026-09-25)
 - [x] `S1` Claim your seat: a guest player becomes the real person when they sign up, and their history and tab come with them. A guest who joins from a link plays as their seat in that round, and signing up saves those rounds to their account. The organizer's copy of that player is linked to the real person too (2026-09-30): taking a seat from the link records a claim, every phone in the round links its copy to that person, and "Same person as..." on a Player card merges two cards by hand, with "Not the same person" and Undo. The Tab, History, head to head, Season, Lately and Players treat linked ids as one person, and each round's money never changes. No SQL needed.
@@ -214,7 +214,7 @@ Put more money into the winning creators and copy their video formats with other
 - [x] `S2` More house rules: blind wolf ("Blind wolf 3x" before anyone tees off, 3x or 4x, on by default and can be switched off), a Hogan dot (off by default) and clearer Arnie wording, both only on par 4s and 5s. Old rounds give the same money (2026-09-30)
 - [x] `S2` Bragging-rights mode: play any game for Points (bets count as points, nothing goes on the Tab), with results, records and head-to-head counting it and dollar totals leaving it out (2026-09-30)
 - [x] `S2` Play for a reward: lunch, a drink or a custom reward for the winner. Last place buys by default (a tie splits it), or everyone else owes one; the Tab shows "Dave owes you lunch" with Done and Undo, never in dollars (2026-09-30)
-- [ ] `S2` (partial) Only the players in a round (and the scorekeeper) can edit its scores. Built on the phone (2026-09-29): only the keeper's phone edits a round in progress and sends scores, watchers never edit, and any player can still fix a finished round. Still to do: enforce it on the server (live rounds are open by code, and an older copy of the app ignores the keeper), with the S3 lock-down.
+- [ ] `S2` (partial) Only the players in a round (and the scorekeeper) can edit its scores. Built on the phone (2026-09-29): only the keeper's phone edits a round in progress and sends scores, watchers never edit, and any player can still fix a finished round. Server lock written (2026-09-30, overnight 5): `supabase/2026-09-30-keeper-lock.sql`, to run in Supabase once the app ships; until then it's open as before.
 - [x] `S2` Suggested handicap % for each game (the WHS recommended allowances), shown as a hint next to the Strokes given choice, with a one-tap pill and a 95% button for stroke play and Stableford (2026-09-30)
 - [ ] `S3` New games: closest to the pin and long drive pots
 - [ ] `S3` New game: team best ball, best 1 or 2 scores of 4 on each hole
