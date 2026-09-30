@@ -1526,3 +1526,7 @@ button.lately-row:active { background: var(--surface); }
 @keyframes mwTrophy { 0% { transform: scale(0) rotate(-30deg); } 60% { transform: scale(1.12) rotate(6deg); } 100% { transform: scale(1) rotate(0); } }
 @keyframes mwScore { 0% { transform: scale(.4); opacity: 0; } 60% { transform: scale(1.1); opacity: 1; } 100% { transform: scale(1); } }
 @media (prefers-reduced-motion: reduce) { .mw-rays { display: none; } }
+
+/* House rules for every game (overnight 5): scramble drive counts */
+.drives-n { font-size: 11px; opacity: 0.7; margin-left: 2px; font-variant-numeric: tabular-nums; }
+.marks-lbl span.drives-tight { color: var(--coral-text); font-weight: 600; }
