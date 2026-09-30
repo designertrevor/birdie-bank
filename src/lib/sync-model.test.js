@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { applyMeta, assemble, buildMeta, buildRequest, cleanRequestName, isRequestNo, merge3, newRequestNo, readRequest, stable, waitingRequests } from './sync-model.js';
+import { applyHole, applyMeta, assemble, buildMeta, buildRequest, cleanRequestName, firstOpenIdx, followKeeper, isRequestNo, merge3, newRequestNo, readRequest, stable, waitingRequests } from './sync-model.js';
 
 test('merge3 takes the remote copy when this phone has no unsent edit', () => {
   const base = { scores: { a: 4 } };
@@ -69,4 +69,28 @@ test('a round with seat requests in its hole records assembles as if they were n
   const round = assemble(meta, holes);
   assert.deepEqual(round.scores, {});
   assert.deepEqual(round.presses, []);
+});
+
+test('a phone watching the hole being played follows the keeper on; one looking back stays put', () => {
+  const holes = [1, 2, 3, 4].map(no => ({ no, par: 4, rank: no }));
+  const meta = { id: 'r', holes, players: [{ id: 'a', name: 'Ann', plays: 0 }, { id: 'b', name: 'Bo', plays: 0 }], game: 'skins', settings: {} };
+  const round = assemble(meta, { 1: { scores: { a: 4, b: 5 } } });
+  assert.equal(round.current, 1);
+  // Hole 2 comes in while this phone is on it: on to hole 3
+  let at = round.current, open = firstOpenIdx(round);
+  applyHole(round, 2, { scores: { a: 3, b: 4 } });
+  followKeeper(round, at, open);
+  assert.equal(round.current, 2);
+  // Went back to look at hole 1: a fix there, or hole 3 coming in, leaves it on hole 1
+  round.current = 0;
+  at = round.current; open = firstOpenIdx(round);
+  applyHole(round, 3, { scores: { a: 4, b: 4 } });
+  followKeeper(round, at, open);
+  assert.equal(round.current, 0);
+  // Half a hole in (one score) doesn't move it
+  round.current = 3;
+  at = round.current; open = firstOpenIdx(round);
+  applyHole(round, 4, { scores: { a: 4 } });
+  followKeeper(round, at, open);
+  assert.equal(round.current, 3);
 });

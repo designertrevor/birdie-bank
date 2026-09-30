@@ -6,7 +6,7 @@ import { STORE_KEY, getState, subscribe, update } from './store.js';
 import { localAdapter, supabaseAdapter } from './sync-adapters.js';
 import { getSupabase, supabaseConfigured } from './supabase.js';
 import { leaveRound } from './rounds.js';
-import { applyHole, applyMeta, assemble, buildHole, buildMeta, buildRequest, isRequestNo, newCode, newRequestNo, readRequest, stable } from './sync-model.js';
+import { applyHole, applyMeta, assemble, buildHole, buildMeta, buildRequest, firstOpenIdx, followKeeper, isRequestNo, newCode, newRequestNo, readRequest, stable } from './sync-model.js';
 import { payFields } from './pay.js';
 import { canEdit, holeToKeep, hostKeeper, isKeeper, keeperMe, keeperOf, metaToKeep, metaToSend, registerDevice, seatTaken } from './keeper.js';
 import { deviceReady, myDevice } from './device.js';
@@ -185,7 +185,14 @@ function onRemote(roundId, ev) {
     const local = buildHole(round, idx);
     const merged = holeToKeep(base, local, ev.data, editorOf(round).editor);
     if (stable(merged) === stable(local)) return;
-    update(s => { const r = s.rounds[roundId]; if (r) applyHole(r, ev.holeNo, merged); });
+    const { editor } = editorOf(round);
+    update(s => {
+      const r = s.rounds[roundId]; if (!r) return;
+      const wasAt = r.current, wasOpen = firstOpenIdx(r);
+      applyHole(r, ev.holeNo, merged);
+      // A phone that's only watching moves on with the keeper (see followKeeper)
+      if (!editor) followKeeper(r, wasAt, wasOpen);
+    });
   }
 }
 

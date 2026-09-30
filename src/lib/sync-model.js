@@ -54,6 +54,21 @@ export function applyHole(round, holeNo, data) {
   round._remote = { ...(round._remote || {}), [holeNo]: ((round._remote || {})[holeNo] || 0) + 1 };
 }
 
+/** The first hole still to be scored, or -1 when every hole is in. */
+export const firstOpenIdx = round => round.holes.findIndex(h => !holeComplete(round, h));
+
+/**
+ * A phone that isn't keeping score follows the keeper: when it was on the hole being played (the
+ * first one still open) and that hole comes in, it moves on to the next open hole, as the keeper's
+ * phone does after saving. A phone that went back to look at an earlier hole stays where it is.
+ * `wasAt` is round.current before the hole was applied, `wasOpen` the first open hole then (mutates).
+ */
+export function followKeeper(round, wasAt, wasOpen) {
+  if (wasOpen < 0 || wasAt !== wasOpen) return;
+  const open = firstOpenIdx(round);
+  if (open > wasAt) round.current = open;
+}
+
 /** Apply remote meta onto a local round, keeping this phone's own fields (mutates). */
 export function applyMeta(round, meta) {
   for (const k of Object.keys(buildMeta(round))) if (!(k in meta)) delete round[k];
@@ -65,7 +80,7 @@ export function assemble(meta, holes) {
   const round = { ...meta, scores: {}, banker: {}, wolf: {}, marks: {}, presses: [], current: 0 };
   for (const [no, data] of Object.entries(holes || {})) applyHole(round, Number(no), data);
   round._remote = {};
-  const firstOpen = round.holes.findIndex(h => !holeComplete(round, h));
+  const firstOpen = firstOpenIdx(round);
   round.current = firstOpen < 0 ? round.holes.length - 1 : firstOpen;
   return round;
 }
