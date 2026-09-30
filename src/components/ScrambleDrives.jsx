@@ -21,11 +21,12 @@ export function ScrambleDrivesPicker({ round, hole, marks, setMarks }) {
   };
   return (
     <div className="marks-card">
+      <div className="drives-head">Whose drive? {need} each over the round</div>
       {teams.map(t => {
         const owed = t.players.filter(p => p.short > 0);
-        const sub = !owed.length ? 'Everyone’s in'
+        const sub = !owed.length ? `${need} each: done`
           : t.tight ? `Must use ${owed.map(p => firstName(p.name)).join(' & ')}`
-            : `${owed.map(p => `${firstName(p.name)} ${p.short}`).join(', ')} to go`;
+            : `${owed.map(p => `${firstName(p.name)} ${p.short}`).join(', ')} more`;
         return (
           <div key={t.id} className="marks-row">
             <div className="marks-lbl"><strong>{t.name}</strong><span className={t.tight ? 'drives-tight' : undefined}>{sub}</span></div>
@@ -33,7 +34,7 @@ export function ScrambleDrivesPicker({ round, hole, marks, setMarks }) {
               {t.players.filter(p => playsHole(round, p.id, hole)).map(p => (
                 <button key={p.id} role="radio" aria-checked={picked[t.id] === p.id} disabled={!setMarks}
                   className={`pill-btn sm ${picked[t.id] === p.id ? 'on' : ''}`} onClick={() => pick(t.id, p.id)}>
-                  {firstName(p.name)} <span className="drives-n">{p.drives}/{need}</span>
+                  {firstName(p.name)} <span className="drives-n">{p.drives}</span>
                 </button>
               ))}
             </div>

@@ -186,6 +186,10 @@ export function Defaults() {
             <Segmented label="Blind wolf" className="press-mode-row" btn="pm-btn" value={s.wolf.blindMultiplier ?? 3} onChange={v => set('wolf.blindMultiplier', v)} options={[3, 4].map(n => ({ value: n, label: `${n}×` }))} />
           </div>
         )}
+        <div className="toggle-row">
+          <div><div className="toggle-lbl">Ties carry</div><div className="toggle-sub">A tied hole’s points ride on to the next hole that’s won</div></div>
+          <Toggle on={!!s.wolf.carry} onChange={v => set('wolf.carry', v)} label="Ties carry" />
+        </div>
         {['match', 'hammer', 'vegas', 'sixes', 'scramble', 'stroke', 'stableford', 'quota', 'nines', 'aces', 'bbb', 'dots', 'rabbit', 'snake'].map(g => (
           <div key={g}>
             <div className="sec-label">{GAMES[g].name}</div>
