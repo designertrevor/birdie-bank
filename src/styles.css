@@ -1559,7 +1559,7 @@ button.lately-row:active { background: var(--surface); }
 .moment-banner.k-bigskin, .moment-banner.k-final { background: var(--ochre); }
 .moment-banner.k-lonewolf, .moment-banner.k-blindwolf { background: var(--lav); }
 .moment-banner.k-swing { background: var(--peach); }
-.moment-banner.k-wolfdown { background: var(--surface-strong); color: var(--ink); }
+.moment-banner.k-wolfdown, .moment-banner.k-skinlost { background: var(--surface-strong); color: var(--ink); }
 .moment-banner.k-money { background: var(--pink-fill); color: #fff; }
 .moment-banner.k-money .mo-ic { background: rgba(255,255,255,.2); }
 .moment-banner.k-bigskin .mo-ic { width: 52px; height: 52px; font-size: 30px; animation: moIc .7s .15s var(--ease-bounce) both, moBump .5s 1s var(--ease-bounce) both; }

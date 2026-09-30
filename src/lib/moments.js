@@ -53,7 +53,7 @@ export function matchMoment(winners, pos, legs, { names, plural = [false, false]
   if (kind === 'halved') return { ...base, level: 'medium', title: `The ${leg} is halved`, text: 'All square at the end, so nobody wins it' };
   if (kind === 'change') return { ...base, level: 'medium', title: 'Lead change', text: `${who} ${plural[after.leader] ? 'go' : 'goes'} ${up}${on}` };
   if (kind === 'dormie') return { ...base, level: 'medium', title: 'Dormie', text: `${who} ${plural[after.leader] ? 'are' : 'is'} ${up} with ${after.left} to play${on}. ${other} ${plural[1 - after.leader] ? 'have' : 'has'} to win every hole.` };
-  if (kind === 'square') return { ...base, level: 'medium', title: 'All square', text: `${names[winners[pos]]} win${s(winners[pos])} ${holeNo} to square it${on}` };
+  if (kind === 'square') return { ...base, level: 'medium', title: 'All square', text: `${names[winners[pos]]} win${s(winners[pos])} hole ${holeNo} to square it${on}` };
   return { ...base, level: 'medium', title: `${who} take${s(after.leader)} the lead`, text: `${up}${on}` };
 }
 
@@ -82,7 +82,7 @@ function momentKind(winners, pos, l, before, after) {
 export const PRIORITY = {
   won: 100, final: 95, bigskin: 90, blindwolf: 85, lonewolf: 80, swing: 75, wolfdown: 70,
   // The match moments keep their own order (RANK above) among themselves
-  nine: 65, halved: 60, change: 55, dormie: 50, square: 45, money: 40, lead: 35, skin: 20,
+  nine: 65, halved: 60, change: 55, dormie: 50, square: 45, money: 40, lead: 35, skinlost: 30, skin: 20,
 };
 /** A carry this long (skins carried into the hole) makes the skin a bigger moment. */
 export const BIG_CARRY = 3;
@@ -169,15 +169,22 @@ export function moneyMoment(round, pos) {
   return { kind: 'money', hero: after.key, title: `${after.name} take${after.plural ? '' : 's'} the lead`, text };
 }
 
-/** A skin won on the hole at `pos`, in the main game or a side Skins game. The biggest if there are two kinds. */
+/**
+ * A skin won on the hole at `pos`, in the main game or a side Skins game. The biggest if there are two
+ * kinds. With Validate skins, a skin just won says what keeps it, and a skin that didn't hold on this
+ * hole (its winner missed net par) is a moment of its own when nobody wins the hole.
+ */
 export function skinsMoment(round, pos) {
-  let best = null;
+  let best = null, lost = null;
   for (const key of gameKeys(round)) {
     const view = gameView(round, key);
     if (!view || view.game !== 'skins' || !view.settings.skins) continue;
     const kinds = skinsKinds(view);
     for (const kind of kinds) {
-      const row = skinsTable(view, kind).rows[pos - 1];
+      const rows = skinsTable(view, kind).rows;
+      const row = rows[pos - 1];
+      const prev = rows[pos - 2];
+      if (prev?.lost && (!lost || prev.lostSkins > lost.skins)) lost = { who: prev.lost, skins: prev.lostSkins || 1, kind, kinds };
       if (!row?.winner) continue;
       if (best && best.skins >= row.skins) continue;
       const pot = view.settings.skins.payout === 'pot';
@@ -185,15 +192,23 @@ export function skinsMoment(round, pos) {
       best = { row, kind, kinds, pot, amount, skins: row.skins };
     }
   }
-  if (!best) return null;
+  const nameOf = id => first(round.players.find(p => p.id === id)?.name);
+  if (!best) {
+    if (!lost) return null;
+    const of = lost.kinds.length > 1 ? `${lost.kind} ` : '';
+    const text = lost.skins === 1 ? `No net par, so the ${of}skin goes back in the carry` : `No net par, so ${lost.skins} ${of}skins go back in the carry`;
+    return { kind: 'skinlost', hero: null, title: `${nameOf(lost.who)} didn’t hold it`, text };
+  }
   const { row, kind, kinds, pot, amount, skins } = best;
-  const who = first(round.players.find(p => p.id === row.winner)?.name);
+  const who = nameOf(row.winner);
   const of = kinds.length > 1 ? `${kind} ` : '';
   const carried = skins - 1;
   const title = skins === 1 ? `${who} wins the ${of}skin` : `${who} takes ${skins} ${of}skins`;
   const worth = pot ? `${skins} ${skins === 1 ? 'share' : 'shares'} of the pot` : fmtOf(round)(amount);
-  const text = carried >= BIG_CARRY ? `${worth}. That ends a ${carried}-hole carry` : worth;
-  return { kind: carried >= BIG_CARRY ? 'bigskin' : 'skin', hero: row.winner, title, text };
+  const next = round.holes[pos]?.no;
+  const keep = row.pending && next != null ? `. Net par on ${next} keeps ${skins === 1 ? 'it' : 'them'}` : '';
+  const text = carried >= BIG_CARRY ? `${worth}. That ends a ${carried}-hole carry${keep}` : `${worth}${keep}`;
+  return { kind: carried >= BIG_CARRY ? 'bigskin' : 'skin', hero: row.winner, title, text, ...(keep ? { keep } : {}) };
 }
 
 /** A lone or blind wolf on the hole at `pos`: one that wins, or one the pack gets. */
@@ -272,7 +287,9 @@ export function roundMoment(round, pos) {
   let lead = moneyMoment(round, pos);
   const same = lead && found.find(m => m.hero && m.hero === lead.hero);
   if (same) {
-    Object.assign(same, { text: `${same.text}, and the lead`, boost: PRIORITY.money });
+    // "$15, and the lead. Net par on 14 keeps it": what keeps a validated skin stays last
+    const body = same.keep ? same.text.slice(0, -same.keep.length) : same.text;
+    Object.assign(same, { text: `${body}, and the lead${same.keep || ''}`, boost: PRIORITY.money });
     lead = null;
   }
   const top = pickMoment([...found, lead]);

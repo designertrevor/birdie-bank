@@ -10,7 +10,7 @@ import { buzz, confetti, confettiFrom } from '../lib/delight.js';
 
 const ICON = {
   won: 'trophy', halved: 'handshake', change: 'arrows-left-right', dormie: 'lock-simple', square: 'scales', lead: 'arrow-circle-up',
-  skin: 'coins', bigskin: 'coins', lonewolf: 'paw-print', blindwolf: 'paw-print', wolfdown: 'paw-print', swing: 'dice-five',
+  skin: 'coins', bigskin: 'coins', skinlost: 'arrow-u-up-left', lonewolf: 'paw-print', blindwolf: 'paw-print', wolfdown: 'paw-print', swing: 'dice-five',
   money: 'crown-simple', final: 'flag-checkered',
 };
 // The ones that throw confetti and buzz twice; the rest get a single buzz and the pop

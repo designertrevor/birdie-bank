@@ -1113,7 +1113,7 @@ export function skinsTable(round, kind = skinsKinds(round)[0]) {
       const { row, took } = pending;
       const w = on.find(p => p.id === row.winner);
       if (w && netFor(round, w, h) > h.par) {
-        Object.assign(row, { winner: null, lost: row.winner, skins: 0, parts: [], pending: false, kept: row.kept + (pending.carryover ? took.length : 0) });
+        Object.assign(row, { winner: null, lost: row.winner, lostSkins: took.length, skins: 0, parts: [], pending: false, kept: row.kept + (pending.carryover ? took.length : 0) });
         if (pending.carryover) carry = [...carry, ...took];
       } else row.pending = false;
     }

@@ -22,7 +22,7 @@ test('taking the lead from all square, and extending it is quiet', () => {
 test('all square after trailing, then a lead change', () => {
   const sq = matchMoment(w([0, 1]), 2, MATCH, { names, holeNo: 2 });
   assert.equal(sq.kind, 'square');
-  assert.equal(sq.text, 'Dave wins 2 to square it');
+  assert.equal(sq.text, 'Dave wins hole 2 to square it');
   const ch = matchMoment(w([0, 1, null, 1]), 4, MATCH, { names });
   assert.equal(ch.kind, 'change');
   assert.equal(ch.title, 'Lead change');
@@ -79,7 +79,7 @@ test('Nassau: a lead change on the back that squares the total picks the bigger 
   const m = matchMoment(w([...nine, 1]), 10, NASSAU, { names, holeNo: 10 });
   assert.equal(m.kind, 'square');
   assert.equal(m.leg, 'total');
-  assert.equal(m.text, 'Dave wins 10 to square it on the total');
+  assert.equal(m.text, 'Dave wins hole 10 to square it on the total');
 });
 
 test('no moment for a hole not scored yet', () => {
@@ -276,4 +276,32 @@ test('money lead in Stroke play, and Match play still gets its own moments', () 
   const ch = roundMoment(mp, 3);
   assert.equal(ch.title, 'Lead change');
   assert.equal(ch.text, 'Bo goes 1 up');
+});
+
+test('validate skins: a skin just won says what keeps it, and one that does not hold is its own moment', () => {
+  const v = { settings: { skins: { validate: true } } };
+  const won = roundMoment(play(mk('skins', v), [{}, {}, {}, { b: 3 }]), 4);
+  assert.equal(won.kind, 'bigskin');
+  assert.equal(won.text, '$24. That ends a 3-hole carry. Net par on 5 keeps them');
+  assert.equal(roundMoment(play(mk('skins', v), [{ b: 3 }]), 1).text, '$6. Net par on 2 keeps it');
+  // Bo makes 5 on the 5th and nobody wins it: his 4 skins go back in the carry
+  const lost = roundMoment(play(mk('skins', v), [{}, {}, {}, { b: 3 }, { b: 5 }]), 5);
+  assert.equal(lost.kind, 'skinlost');
+  assert.equal(lost.title, 'Bo didn’t hold it');
+  assert.equal(lost.text, 'No net par, so 4 skins go back in the carry');
+  // Someone winning the hole they rode on is the bigger news: Cy takes all 5
+  const taken = roundMoment(play(mk('skins', v), [{}, {}, {}, { b: 3 }, { b: 5, c: 3 }]), 5);
+  assert.equal(taken.title, 'Cy takes 5 skins');
+  // Without Validate nothing changes
+  assert.equal(roundMoment(play(mk('skins'), [{ b: 3 }]), 1).text, '$6');
+});
+
+test('validate skins: taking the money lead with the skin reads before what keeps it', () => {
+  // Stroke play for $5 a stroke with a side Skins game: Bo's birdie on 2 wins him the skin and puts
+  // him ahead on the strokes, so the lead is his now while the skin waits on hole 3
+  const side = [{ game: 'skins', settings: { ...SETTINGS.skins, validate: true } }];
+  const r = play(mk('stroke', { ids: 'ab', sideGames: side, settings: { stroke: { payout: 'per', stake: 5 } } }), [{ a: 3 }, { b: 2 }]);
+  const m = roundMoment(r, 2);
+  assert.equal(m.title, 'Bo wins the skin');
+  assert.equal(m.text, '$2, and the lead. Net par on 3 keeps it');
 });
