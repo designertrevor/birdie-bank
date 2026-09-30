@@ -50,6 +50,7 @@
   </ul>
   <p><strong>Your account, if you sign in.</strong> Your email address. If you sign in with Google, we also receive your name and profile picture from Google. We don't receive your Google password or anything else from your Google account.</p>
   <p><strong>Suggestions and bug reports.</strong> What you write, any photo you attach (like a scorecard or screenshot), an optional email for a reply, and details that help us fix problems: your device type and browser, screen size, and the round you had open.</p>
+  <p><strong>Your location, only if you ask.</strong> When you tap "Courses near me," your phone asks whether to share your location. If you allow it, the app sends your position to BigDataCloud to find the nearest town, then searches our course database for that town. Your position isn't sent to our servers or saved to your account. The courses found, and your position to about 100 yards, stay on your device for a day so the app doesn't have to look again.</p>
   <p><strong>Technical data.</strong> Like any website, our hosting providers receive your IP address and basic request information when the app loads.</p>
 
   <h2>Where it's stored</h2>
@@ -70,6 +71,8 @@
     <li><strong>Supabase</strong> hosts our database, sign-in and file storage, in the United States.</li>
     <li><strong>Vercel</strong> hosts the app.</li>
     <li><strong>Google</strong> handles "Continue with Google" sign-in, if you use it.</li>
+    <li><strong>BigDataCloud</strong> turns your position into a town name when you tap "Courses near me," and receives your IP address with it.</li>
+    <li><strong>GolfCourseAPI</strong> provides course scorecards. Searches reach it through our server, so it doesn't receive your IP address or location, only the course or town name searched.</li>
     <li><strong>Google Fonts and jsDelivr</strong> serve the app's fonts and icons, so they receive your IP address when the app loads.</li>
   </ul>
   <p>Payment links open Venmo or other payment apps directly. Birdie Bank doesn't send them your information, and what you do there is covered by their own privacy policies.</p>
