@@ -290,7 +290,7 @@ export function RulesSheet({ game, open, onClose, title, sub, strokes = [] }) {
           <div key={h}><div className="rules-section">{h}</div><div className="rules-body">{body}</div></div>
         ))}
         {strokes.length > 0 && (
-          <div><div className="rules-section">Strokes this round</div><div className="rules-body">{strokes.map(l => <p key={l}>{l}</p>)}</div></div>
+          <div><div className="rules-section">Strokes this round</div><div className="rules-body">{strokes.map(l => <p key={l} className="strokes-line">{l}</p>)}</div></div>
         )}
       </div>
       <div style={{ padding: '0 16px' }}><button className="full-btn" onClick={onClose}>Got it</button></div>
