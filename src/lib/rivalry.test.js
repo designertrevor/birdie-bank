@@ -215,7 +215,7 @@ test('nemesis line: steady for the same record, first name only, no em dashes', 
   const seen = new Set();
   for (let i = 0; i < 40; i++) {
     const l = nemesisLine(`p${i}`, 'Bo Diddley', i);
-    assert.ok(l.includes('Bo') && !l.includes('Diddley') && !l.includes('{n}') && !l.includes('—'));
+    assert.ok(l.includes('Bo') && !l.includes('Diddley') && !l.includes('{n}') && !l.includes(String.fromCharCode(0x2014)));
     seen.add(l);
   }
   assert.ok(seen.size > 1, 'the lines vary');
