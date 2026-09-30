@@ -12,6 +12,8 @@ import { AvatarButton, BottomNav } from '../nav.jsx';
 import { roundsInProgress } from '../lib/rounds.js';
 import { useNav } from '../lib/nav.js';
 import { RSVP_LABEL, dayLabel, rsvpFor } from '../lib/plans.js';
+import { nemesis } from '../lib/rivalry.js';
+import { NemesisCard } from '../components/Rivalry.jsx';
 
 /** "today", "tomorrow", "Saturday" or "Sat, Oct 10" for the RSVP tag. */
 const dayName = iso => { const d = dayLabel(iso); return d === 'Today' || d === 'Tomorrow' ? d.toLowerCase() : d; };
@@ -49,6 +51,7 @@ export default function People() {
             <span className="chevron"><Icon name="caret-right" /></span>
           </button>
         )}
+        <NemesisCard n={nemesis(state, mine)} />
         <div className="sec-label">Your people</div>
         {people.map(({ id, name, h, p }) => {
           const tab = tabWith(plan, mine, id);
