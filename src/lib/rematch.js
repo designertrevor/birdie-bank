@@ -45,7 +45,10 @@ export function rematchSetup(state, round) {
     teams,
     // Side games come along with their own bets (absent on rounds that had none): the bets they
     // ended on, without the holes an earlier bet covered, like the main game's
-    ...(sideGamesOf(round).length ? { sideGames: sideGamesOf(round).map(sg => ({ game: sg.game, settings: structuredClone(sg.settings) })) } : {}),
+    // A side game's own Strokes given % comes along too (allowances.js)
+    ...(sideGamesOf(round).length ? { sideGames: sideGamesOf(round).map(sg => ({ game: sg.game, settings: structuredClone(sg.settings), ...(sg.hcPct != null ? { hcPct: sg.hcPct } : {}) })) } : {}),
+    // Half strokes: the rematch plays them too (absent when the round didn't)
+    ...(round.halfStrokes ? { halfStrokes: true } : {}),
     // Played for points or a reward: the rematch is too (absent on money rounds)
     ...(storedPlayFor(round.playFor) ? { playFor: storedPlayFor(round.playFor) } : {}),
     step: !course ? 1 : missing.length ? 2 : 3,

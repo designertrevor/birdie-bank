@@ -16,7 +16,8 @@ import { syncConfigured } from '../lib/sync.js';
 import { ShareSheet } from '../components/Live.jsx';
 import { defaultTeams, teamsProblem } from '../lib/teams.js';
 import { rematchSetup } from '../lib/rematch.js';
-import { allowanceHint, strokesGivenOptions, suggestedAllowance } from '../lib/allowances.js';
+import { halfStrokesOffered, pctsDiffer } from '../lib/allowances.js';
+import { StrokesSetup } from '../components/StrokesSetup.jsx';
 import { useNav } from '../lib/nav.js';
 import { addRound, holesScored, roundsInProgress, usualRound } from '../lib/rounds.js';
 import { formatIndex, gameLabel, hcPctLabel, playerLabel, sortedPlayers } from '../lib/format.js';
@@ -36,7 +37,7 @@ const STEPS = ['Game', 'Course', 'Players', 'Bets'];
 /** Setup options with an earlier round's bets and handicap percentage laid over them. */
 function withBets(opts, pre) {
   if (!pre) return opts;
-  return { ...opts, ...(pre.bets ? { [pre.game]: structuredClone(pre.bets) } : {}), hcPct: pre.hcPct ?? opts.hcPct };
+  return { ...opts, ...(pre.bets ? { [pre.game]: structuredClone(pre.bets) } : {}), hcPct: pre.hcPct ?? opts.hcPct, halfStrokes: !!pre.halfStrokes };
 }
 const listNames = names => (names.length < 2 ? names.join('') : `${names.slice(0, -1).join(', ')} and ${names.at(-1)}`);
 const QUESTIONS = ['What are you playing?', 'Where are you playing?', 'Who’s in?', 'What’s on the line?'];
@@ -203,9 +204,11 @@ export default function NewRound({ rematch, fromPlan, present, edit = null, ahea
     const id = uid('r_');
     const players = orderedPicked.map(pid => ({ ...s.players[pid], tee: tees[pid] || defaultTee, courseHcOverride: hcOverride[pid] }));
     // Share-image choice is a personal setting, not part of a round's bets
-    const { shareAmounts: _personal, ...settings } = structuredClone(opts);
-    const round = createRound({ id, game, course, holesCount, nine, startHole, players, settings, hcPct: opts.hcPct, useHandicaps: useHc, teams: GAMES[game].teams ? teams : null });
+    // Half strokes are this round's choice, never next time's default
+    const { shareAmounts: _personal, halfStrokes: _half, ...settings } = structuredClone(opts);
     const sides = sidesFor(game);
+    const halfStrokes = !!opts.halfStrokes && halfStrokesOffered(game, sides);
+    const round = createRound({ id, game, course, holesCount, nine, startHole, players, settings, hcPct: opts.hcPct, useHandicaps: useHc, teams: GAMES[game].teams ? teams : null, halfStrokes });
     if (sides.length) round.sideGames = structuredClone(sides);
     if (playFor) round.playFor = structuredClone(playFor);
     // Started from a saved usual (still the same game at the same course): finishing it updates "Last played"
@@ -631,7 +634,6 @@ function SetupStep({ game, course, holesCount, nine, picked, setPicked, opts, se
   const optsBad = !!optionsProblem(game, opts) || sideGames.some(sg => optionsProblem(sg.game, { [sg.game]: sg.settings }));
   const names = Object.fromEntries(picked.map(pid => [pid, state.players[pid]?.name || '?']));
   const teamsBad = !!teamsProblem(game, teams, picked);
-  const whs = suggestedAllowance(game, { teams: GAMES[game].teams ? teams : null, players: picked.length });
   const orderLabel = { wolf: 'Tee order: the wolf moves down this list', banker: 'Playing order', sixes: 'Order: sets who partners who' }[game] || 'Playing order';
 
   return (
@@ -678,7 +680,7 @@ function SetupStep({ game, course, holesCount, nine, picked, setPicked, opts, se
         <button className="set-row more-opts" onClick={() => setMore(!more)} aria-expanded={more}>
           <div className="row-main">
             <div className="set-name">More options</div>
-            <div className="set-sub">{game === 'bbb' ? '' : useHc ? `Handicaps on (${hcPctLabel(opts.hcPct).toLowerCase()}) · ` : 'Handicaps off · '}Start on hole {firstHole}</div>
+            <div className="set-sub">{game === 'bbb' ? '' : useHc ? `Handicaps on (${pctsDiffer({ hcPct: opts.hcPct, sideGames }) ? 'set by game' : hcPctLabel(opts.hcPct).toLowerCase()}${opts.halfStrokes && halfStrokesOffered(game, sideGames) ? ', half strokes' : ''}) · ` : 'Handicaps off · '}Start on hole {firstHole}</div>
           </div>
           <span className="chevron"><Icon name={more ? 'caret-up' : 'caret-down'} /></span>
         </button>
@@ -689,26 +691,7 @@ function SetupStep({ game, course, holesCount, nine, picked, setPicked, opts, se
           <div><div className="toggle-lbl">Use handicaps</div><div className="toggle-sub">{game === 'quota' ? 'Sets each player’s quota from their course handicap' : 'Better players give strokes to the others on the hardest holes'}</div></div>
           <Toggle on={useHc} onChange={setUseHc} label="Use handicaps" />
         </div>
-        {useHc && (
-          <div className="block">
-            <div className="eyebrow" style={{ marginBottom: 10 }}>Strokes given</div>
-            <Segmented label="Strokes given" className="press-mode-row" btn="pm-btn" value={opts.hcPct} onChange={v => set('hcPct', v)}
-              options={strokesGivenOptions(whs, opts.hcPct).map(n => ({ value: n, label: n === 100 ? 'Full' : `${n}%` }))} />
-            {whs ? (
-              <div className="whs-hint">
-                <p className="field-help">{allowanceHint(whs)}</p>
-                {(opts.hcPct ?? 100) !== whs.pct && (
-                  <button className="pill-btn sm" onClick={e => {
-                    // The pill goes away once used, so keep focus on the choice it just made
-                    const block = e.currentTarget.closest('.block');
-                    set('hcPct', whs.pct);
-                    setTimeout(() => block?.querySelector('[role="radio"][aria-checked="true"]')?.focus(), 0);
-                  }}>Use {whs.pct === 100 ? 'full strokes' : `${whs.pct}%`}</button>
-                )}
-              </div>
-            ) : <p className="field-help">Many groups use 90% or 80% so the better player still has a chance.</p>}
-          </div>
-        )}
+        {useHc && <StrokesSetup game={game} teams={teams} players={picked.length} opts={opts} set={set} sideGames={sideGames} setSideGames={setSideGames} />}
         </>}
 
         <div className="sec-label">Starting hole</div>
@@ -941,7 +924,7 @@ function ReadyStep({ round, onStart }) {
           <div className="ready-row"><span>{round.teams ? 'Teams' : 'Players'}</span><b>{round.teams ? round.teams.map(t => t.name).join(' v ') : names.join(', ')}</b></div>
           <div className="ready-row"><span>On the line</span><b>{roundStakeLines(round).map(l => l.line).join(' + ')}</b></div>
           {playForLine(round) && <div className="ready-row"><span>Playing for</span><b>{playForShort(round)}</b></div>}
-          <div className="ready-row"><span>Handicaps</span><b>{round.useHandicaps ? hcPctLabel(round.hcPct) : 'Off'}</b></div>
+          <div className="ready-row"><span>Handicaps</span><b>{round.useHandicaps ? `${pctsDiffer(round) ? 'Set by game' : hcPctLabel(round.hcPct)}${round.halfStrokes ? ', half strokes' : ''}` : 'Off'}</b></div>
         </div>
         {others.map(o => (
           <p key={o.id} className="hint-card"><Icon name="pause-circle" fill /> Your {gameLabel(o)} round at {o.course.name} ({holesScored(o)} of {o.holes.length} holes) is saved. Switch back any time from Rounds in progress in the round menu.</p>

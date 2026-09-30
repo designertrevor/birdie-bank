@@ -261,6 +261,8 @@ export function scoreName(gross, par) {
 /** "net birdie" for a net score: named by strokes to par only (a net 1 isn't a hole in one). */
 const NET_NAMES = { '-2': 'eagle', '-1': 'birdie', 0: 'par', 1: 'bogey', 2: 'double' };
 export function netScoreName(net, par) {
+  // With half strokes (allowances.js) a net can land between names: "net 4½"
+  if (!Number.isInteger(net)) return `net ${Math.floor(net) || ''}½`;
   const d = net - par;
   return 'net ' + (NET_NAMES[d] || (d < 0 ? 'albatross' : `+${d}`));
 }

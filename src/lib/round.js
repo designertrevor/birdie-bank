@@ -9,6 +9,7 @@ import {
   snakeHolder, snakeValue, hammerHole, canHammer, birdiePot, birdieShares,
 } from './games.js';
 import { payFields } from './pay.js';
+import { gamePct, halfStrokesOn, playsAtPct } from './allowances.js';
 
 /**
  * Every game the app can score. `teams` says how players are grouped in the setup step:
@@ -197,7 +198,7 @@ function withTeamHandicaps(round, teams, players, useHandicaps, hcPct) {
 }
 
 /** Build a new round object from wizard selections. `teams` is an array of arrays of player ids. */
-export function createRound({ id, game, course, holesCount, nine, startHole, players, settings, hcPct, useHandicaps = true, teams = null }) {
+export function createRound({ id, game, course, holesCount, nine, startHole, players, settings, hcPct, useHandicaps = true, teams = null, halfStrokes = false }) {
   const holes = holesInPlay(course, holesCount, nine, startHole);
   const par = parOf(holes);
   const withHc = players.map(p => {
@@ -228,6 +229,8 @@ export function createRound({ id, game, course, holesCount, nine, startHole, pla
     left: {},        // playerId -> hole number they stopped after (0: before the first hole)
   };
   if (teams?.length) round.teams = withTeamHandicaps(round, buildTeams(teams, full), full, useHandicaps, hcPct);
+  // Half strokes (allowances.js) only when chosen, so a round without them looks as it always did
+  if (halfStrokes && useHandicaps) round.halfStrokes = true;
   return round;
 }
 
@@ -850,8 +853,8 @@ export function strokeChanges(before, after) {
     for (const h of after.holes) {
       const bh = before.holes.find(x => x.no === h.no);
       if (!bh) continue;
-      const from = before.useHandicaps ? strokesFor(before, was, bh) : 0;
-      const to = after.useHandicaps ? strokesFor(after, u, h) : 0;
+      const from = before.useHandicaps ? popsFor(before, was, bh) : 0;
+      const to = after.useHandicaps ? popsFor(after, u, h) : 0;
       if (from !== to) out.push({ id: u.id, name: u.name, holeNo: h.no, from, to });
     }
   }
@@ -863,7 +866,14 @@ export function scoredHolesDropped(round, holes) {
   return round.holes.filter(h => !holes.some(n => n.no === h.no) && Object.values(round.scores[h.no] || {}).some(v => v != null));
 }
 
+/** Strokes a player (or scramble team) gets on a hole, as counted: halves with half strokes on (see allowances.js). */
 export function strokesFor(round, player, hole) {
+  const st = popsFor(round, player, hole);
+  return halfStrokesOn(round) ? st / 2 : st;
+}
+
+/** Whole strokes (pops) on a hole, for the dots on the card and a pickup's gross, half strokes or not. */
+export function popsFor(round, player, hole) {
   return strokesOnHole(player.plays, hole.rank, round.holes.length);
 }
 
@@ -871,7 +881,8 @@ export function strokesFor(round, player, hole) {
 export function grossFor(round, player, hole) {
   const g = round.scores[hole.no]?.[player.id];
   if (g == null) return null;
-  return g === 'X' ? pickupGross(hole.par, strokesFor(round, player, hole)) : g;
+  // A pickup's gross is whole on the card: par + 2 + its pops (with half strokes, a touch over net double)
+  return g === 'X' ? pickupGross(hole.par, popsFor(round, player, hole)) : g;
 }
 
 /** Effective gross (pickups → net double bogey) and net for a scorer on a hole. */
@@ -1264,7 +1275,7 @@ export function vegasTable(round) {
 export function vegasPreview(round, hole, draft) {
   const teams = round.teams || [];
   if (teams.length !== 2 || teams.some(t => t.players.some(pid => draft[pid] == null))) return null;
-  const eff = pid => { const p = playerById(round, pid); const st = strokesFor(round, p, hole); const g = draft[pid]; return (g === 'X' ? pickupGross(hole.par, st) : g) - st; };
+  const eff = pid => { const p = playerById(round, pid); const st = strokesFor(round, p, hole); const g = draft[pid]; return (g === 'X' ? pickupGross(hole.par, popsFor(round, p, hole)) : g) - st; };
   const nets = teams.map(t => t.players.map(eff));
   const gross = teams.map(t => t.players.map(pid => draft[pid]));
   return vegasHole(nets, gross, hole.par, { birdieFlip: round.settings.vegas.birdieFlip });
@@ -1882,7 +1893,13 @@ export function gameView(round, key) {
   if (key === 'main') return players === round.players ? round : { ...round, players };
   const sg = sideGamesOf(round).find(x => x.game === key);
   if (!sg) return null;
-  return { ...round, game: sg.game, settings: { ...round.settings, [sg.game]: sg.settings }, teams: null, presses: [], betHistory: Array.isArray(sg.betHistory) ? sg.betHistory : undefined, players };
+  // A side game with its own Strokes given % plays off it (see allowances.js); else everyone's strokes are the round's
+  const pct = gamePct(round, key);
+  const own = round.useHandicaps && pct !== gamePct(round);
+  return {
+    ...round, game: sg.game, settings: { ...round.settings, [sg.game]: sg.settings }, teams: null, presses: [], betHistory: Array.isArray(sg.betHistory) ? sg.betHistory : undefined,
+    players: own ? playsAtPct(players, pct, round.joined) : players, ...(own ? { hcPct: pct } : {}),
+  };
 }
 
 /** Birdie pot shares: { shares: { pid: n }, inPot: [pid], holes: [{ no, pid, shares }] }. */
@@ -2045,7 +2062,7 @@ export function scoreSummary(round, pid) {
   for (const h of round.holes) {
     const g = round.scores[h.no]?.[pid];
     if (g == null) continue;
-    const eff = g === 'X' ? pickupGross(h.par, strokesFor(round, p, h)) : g;
+    const eff = g === 'X' ? pickupGross(h.par, popsFor(round, p, h)) : g;
     gross += eff; played++;
     if (g !== 'X') {
       if (eff - h.par <= -2) eagles++;

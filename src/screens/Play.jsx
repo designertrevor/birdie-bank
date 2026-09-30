@@ -4,7 +4,7 @@ import { RulesSheet } from '../components/Rules.jsx';
 import { DEFAULT_SETTINGS, getState, update, useStore } from '../lib/store.js';
 import {
   GAMES, addPlayerProblem, bankerHoleSetup, canLeave, defaultNine, holeComplete, leftRule, livePreview, nassauPressOptions, playersLeft, playersOn, playsHole, pressMode,
-  resizeRound, roundLegs, roundResults, scoredHolesDropped, scorers, skinsKinds, skinsTable, strokesFor, wolfHoleSetup, changeBets, wholeRoundOnly,
+  resizeRound, roundLegs, roundResults, scoredHolesDropped, scorers, skinsKinds, skinsTable, strokesFor, popsFor, wolfHoleSetup, changeBets, wholeRoundOnly,
   gameView, sideGamesOf, holeFixOf, gameKeys, gameKeyLabel, settingsAt, posOf,
 } from '../lib/round.js';
 import { SIDE_GAMES } from '../lib/round.js';
@@ -13,6 +13,7 @@ import { courseTeeLabel, keepsDraft } from '../lib/hole-fix.js';
 import { markUsualPlayed } from '../lib/usuals.js';
 import { findCourse } from '../lib/courses.js';
 import { money, netScoreName, scoreName, pickupGross } from '../lib/golf.js';
+import { halfStrokesOn, strokesRulesLines, strokesWords } from '../lib/allowances.js';
 import {
   BBBPicker, DotsRow, HammerPanel, MatchPanel, MoneyPanel, PointsPanel, RabbitPanel, ScramblePanel, SixesPanel, SnakePanel, SnakePicker, TotalsPanel, VegasPanel,
 } from '../components/GamePanels.jsx';
@@ -459,14 +460,15 @@ function PlayRound({ round }) {
           {game === 'snake' && editable && <SnakePicker round={main} hole={hole} marks={marks} setMarks={setMarksDirty} />}
           {snakeSide && editable && <SnakePicker round={snakeSide} hole={hole} marks={marks} setMarks={setMarksDirty} />}
           {!editable && units.map(p => {
-            const st = round.useHandicaps ? strokesFor(round, p, hole) : 0;
+            // Whole pops for the dots; with half strokes each counts as half (strokesWords says so)
+            const st = round.useHandicaps ? popsFor(round, p, hole) : 0;
             const v = saved[p.id];
             return (
               <div key={p.id} className="pcard score-row">
                 <div className="row-main">
                   <div className="pname">{p.name}</div>
                   <div className="ps">
-                    {st > 0 && <span className="stroke-dots">{'●'.repeat(st)} Gets {st} stroke{st > 1 ? 's' : ''}</span>}
+                    {st > 0 && <span className="stroke-dots">{'●'.repeat(st)} Gets {strokesWords(st, halfStrokesOn(round))}</span>}
                     {v != null && v !== 'X' && <span className={`score-name s${Math.max(-2, Math.min(2, v - hole.par))}`}> {scoreName(v, hole.par)}</span>}
                     {v === 'X' && <span> Picked up</span>}
                   </div>
@@ -480,7 +482,8 @@ function PlayRound({ round }) {
             );
           })}
           {editable && units.map(p => {
-            const st = round.useHandicaps ? strokesFor(round, p, hole) : 0;
+            const st = round.useHandicaps ? popsFor(round, p, hole) : 0;
+            const counted = round.useHandicaps ? strokesFor(round, p, hole) : 0;
             const v = draft[p.id];
             const isBanker = banker?.banker === p.id;
             const isWolf = wolf?.wolf === p.id;
@@ -496,10 +499,10 @@ function PlayRound({ round }) {
                   </div>
                   {p.team && <div className="ps">{p.players.map(pid => round.players.find(x => x.id === pid)?.name.split(' ')[0]).join(', ')} · team handicap {p.courseHc ?? 0}</div>}
                   <div className="ps">
-                    {st > 0 && <span className="stroke-dots" aria-label={`Gets ${st} stroke${st > 1 ? 's' : ''}`}>{'●'.repeat(st)} Gets {st} stroke{st > 1 ? 's' : ''}</span>}
-                    {st < 0 && <span className="stroke-dots">Gives back {-st} stroke{st < -1 ? 's' : ''}</span>}
+                    {st > 0 && <span className="stroke-dots" aria-label={`Gets ${strokesWords(st, halfStrokesOn(round))}`}>{'●'.repeat(st)} Gets {strokesWords(st, halfStrokesOn(round))}</span>}
+                    {st < 0 && <span className="stroke-dots">Gives back {strokesWords(-st, halfStrokesOn(round))}</span>}
                     {game === 'banker' && !isBanker && <span> Bet {money(banker.bets[p.id] || 0)}{banker.doubled[p.id] ? (banker.doubleBack ? ' · 4×' : ' · 2×') : ''}</span>}
-                    {touched[p.id] && v !== 'X' && <span className={`score-name s${Math.max(-2, Math.min(2, v - hole.par))}`}> {scoreName(v, hole.par)}{st !== 0 && `, ${netScoreName(v - st, hole.par)}`}</span>}
+                    {touched[p.id] && v !== 'X' && <span className={`score-name s${Math.max(-2, Math.min(2, v - hole.par))}`}> {scoreName(v, hole.par)}{counted !== 0 && `, ${netScoreName(v - counted, hole.par)}`}</span>}
                   </div>
                   <button className={`pickup-btn ${v === 'X' ? 'on' : ''}`} onClick={() => setScore(p.id, v === 'X' ? hole.par : 'X')} aria-pressed={v === 'X'}>
                     <Icon name="hand-grabbing" /> {v === 'X' ? `Picked up (counts ${shown})` : 'Picked up'}
@@ -617,7 +620,7 @@ function PlayRound({ round }) {
       {fixSheet === 'tee' && editable && <CourseTeeSheet round={round} me={me} onClose={() => setFixSheet(null)} />}
       <RulesSheet game={rules.key === 'main' ? game : rules.key} open={rules.open} onClose={() => setRules(r => ({ ...r, open: false }))}
         title={rules.key === 'dots' ? `How to play ${SIDE_GAMES.dots.label}` : undefined}
-        sub={rules.key === 'dots' ? 'A side game · Dots, garbage, trash' : undefined} />
+        sub={rules.key === 'dots' ? 'A side game · Dots, garbage, trash' : undefined} strokes={strokesRulesLines(round, rules.key)} />
       <ShareSheet round={round} open={live} onClose={() => setLive(false)} />
       {game === 'banker' && (
         <>

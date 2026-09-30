@@ -1575,3 +1575,9 @@ button.lately-row:active { background: var(--surface); }
 .near-foot { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin: 2px 16px 4px; font-size: 13px; color: var(--mute); min-height: 32px; }
 .near-again { border: none; background: none; font: inherit; font-weight: 600; color: var(--ink); display: inline-flex; align-items: center; gap: 5px; padding: 6px 0; margin-left: auto; cursor: pointer; }
 .near-again:disabled { color: var(--mute); }
+
+/* Overnight 5, strokes: Strokes given by game and Half strokes in setup */
+.strokes-setup .pct-game + .pct-game { margin-top: 14px; padding-top: 14px; border-top: 1px solid var(--surface); }
+.strokes-setup .pct-game-name { font-size: 14px; font-weight: 700; color: var(--ink); margin-bottom: 8px; }
+.strokes-setup .pct-split-btn { color: var(--ink); text-decoration: underline; text-decoration-color: var(--surface-strong); text-underline-offset: 3px; text-decoration-thickness: 2px; }
+.rules-body .strokes-line + .strokes-line { margin-top: 8px; }
