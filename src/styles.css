@@ -1581,3 +1581,9 @@ button.lately-row:active { background: var(--surface); }
 .strokes-setup .pct-game-name { font-size: 14px; font-weight: 700; color: var(--ink); margin-bottom: 8px; }
 .strokes-setup .pct-split-btn { color: var(--ink); text-decoration: underline; text-decoration-color: var(--surface-strong); text-underline-offset: 3px; text-decoration-thickness: 2px; }
 .rules-body .strokes-line + .strokes-line { margin-top: 8px; }
+
+/* House rules for every game (overnight 5): scramble drive counts */
+.drives-n { font-size: 11px; opacity: 0.7; margin-left: 2px; font-variant-numeric: tabular-nums; }
+.marks-lbl span.drives-tight { color: var(--coral-text); font-weight: 600; }
+.drives-head { padding: 10px 0 2px; font-size: 12px; color: var(--mute); }
+.drives-head + .marks-row { border-top: none; }

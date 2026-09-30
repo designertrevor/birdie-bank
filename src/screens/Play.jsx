@@ -5,7 +5,7 @@ import { DEFAULT_SETTINGS, getState, update, useStore } from '../lib/store.js';
 import {
   GAMES, addPlayerProblem, bankerHoleSetup, canLeave, defaultNine, holeComplete, leftRule, livePreview, nassauPressOptions, playersLeft, playersOn, playsHole, pressMode,
   resizeRound, roundLegs, roundResults, scoredHolesDropped, scorers, skinsKinds, skinsTable, strokesFor, popsFor, wolfHoleSetup, changeBets, wholeRoundOnly,
-  gameView, sideGamesOf, holeFixOf, gameKeys, gameKeyLabel, settingsAt, posOf,
+  gameView, sideGamesOf, holeFixOf, gameKeys, gameKeyLabel, settingsAt, wolfCarryBefore, posOf,
 } from '../lib/round.js';
 import { SIDE_GAMES } from '../lib/round.js';
 import { CourseTeeSheet, FixHoleSheet } from '../components/FixHole.jsx';
@@ -18,6 +18,8 @@ import {
   BBBPicker, DotsRow, HammerPanel, MatchPanel, MoneyPanel, PointsPanel, RabbitPanel, ScramblePanel, SixesPanel, SnakePanel, SnakePicker, TotalsPanel, VegasPanel,
 } from '../components/GamePanels.jsx';
 import { GameOptions } from '../components/GameOptions.jsx';
+import { ScrambleDrivesPicker } from '../components/ScrambleDrives.jsx';
+import { drivesNeeded } from '../lib/scramble-drives.js';
 import { optionsProblem, roundStakeLines, sideBetLine, stakeSummary } from '../lib/stakes.js';
 import { buzz, confettiFrom } from '../lib/delight.js';
 import { useNav } from '../lib/nav.js';
@@ -159,7 +161,8 @@ function PlayRound({ round }) {
   // ...and Snake as a side game: its three-putts go in there too, under `snake`
   const snakeSide = useMemo(() => (sideGamesOf(round).some(sg => sg.game === 'snake') ? gameView(round, 'snake') : null), [round]);
   const [marks, setMarks] = useState(() => {
-    if (!GAMES[game].marks && !junk && !snakeSide) return null;
+    // A scramble playing for minimum drives saves whose drive each team used in the marks too
+    if (!GAMES[game].marks && !junk && !snakeSide && !drivesNeeded(round)) return null;
     const m = (wasDirty && kept.marks) || structuredClone(round.marks?.[hole.no] || emptyMarks);
     return snakeSide && !m.snake ? { ...m, snake: [] } : m;
   });
@@ -457,6 +460,7 @@ function PlayRound({ round }) {
         <div className="scroll">
           {!editable && sharedLive && <p className="field-help" style={{ padding: '0 20px' }}>{round.status === 'active' ? `Scores as ${holderName} saves them. Browse any hole.` : 'Only the players in this round can fix its scores.'}</p>}
           {game === 'bbb' && editable && <BBBPicker round={main} hole={hole} marks={marks} setMarks={setMarksDirty} />}
+          {game === 'scramble' && <ScrambleDrivesPicker round={main} hole={hole} marks={marks} setMarks={editable ? setMarksDirty : null} />}
           {game === 'snake' && editable && <SnakePicker round={main} hole={hole} marks={marks} setMarks={setMarksDirty} />}
           {snakeSide && editable && <SnakePicker round={snakeSide} hole={hole} marks={marks} setMarks={setMarksDirty} />}
           {!editable && units.map(p => {
@@ -1124,6 +1128,8 @@ function WolfPanel({ round, hole, wolf, setWolf }) {
   const cfg = settingsAt(round, posOf(round, hole)).wolf;
   const mult = cfg.loneMultiplier;
   const blindMult = cfg.blindMultiplier ?? 3;
+  // Ties carry: tied holes since the last one won ride on this hole
+  const carried = wolfCarryBefore(round, hole);
   // Blind wolf is honor system. It's offered whenever the rule is on for this hole (a round from before
   // it has no blind key, so no button), including on a saved hole, so a mis-tap can be fixed. A hole
   // saved blind keeps its button even if the rule was turned off later, and so does this pick while
@@ -1152,6 +1158,7 @@ function WolfPanel({ round, hole, wolf, setWolf }) {
           onClick={() => pick(null, true)}><Icon name="eye-slash" fill /> Blind wolf {blindMult}×</button>}
       </div>}
       {setWolf && offerBlind && <p className="wolf-note">Blind wolf: call it before anyone tees off.</p>}
+      {carried > 0 && <p className="wolf-note">{carried === 1 ? 'A tied hole is' : `${carried} tied holes are`} riding on this one: it pays {carried + 1}×.</p>}
     </div>
   );
 }

@@ -2,6 +2,7 @@
 import { money } from './golf.js';
 import { betChanges, gameKeyLabel, sideGamesOf } from './round.js';
 import { inUnits, pointsLines } from './play-for.js';
+import { houseRulesLine } from './house-rules.js';
 
 /** Why a game's options can't be used as they stand, or null when they're fine. */
 export function optionsProblem(game, settings) {
@@ -80,6 +81,12 @@ export function betStretchLine(round, key) {
 
 /** One line that says what's on the line, for menus and summaries. */
 export function stakeSummary(game, settings) {
+  const rules = houseRulesLine(game, settings?.[game]);
+  const base = baseSummary(game, settings);
+  return rules ? `${base} · ${rules}` : base;
+}
+
+function baseSummary(game, settings) {
   const s = settings;
   switch (game) {
     case 'banker': return `${money(s.banker.defaultBet)} default bet · ${money(s.banker.min)}–${money(s.banker.max)}`;

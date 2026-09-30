@@ -76,6 +76,7 @@ const RULES = {
         <li>Lone wolf: the points are multiplied (2× by default), paid by or to each of the three.</li>
         <li>Blind wolf: 3× by default (or 4×), paid by or to each of the three. At $2 a point a blind wolf who wins is up $18, and one who loses is down $18.</li>
       </ul>],
+      ['House rules', <p key="hr"><strong>Ties carry</strong> (off unless you turn it on): a tied hole’s points ride on to the next hole that’s won. Two ties in a row and the next hole pays 3×. Ties still carried after the last hole go to nobody.</p>],
     ],
   },
   match: {
@@ -117,6 +118,7 @@ const RULES = {
       ['Overview', <p key="o">Partners’ net scores are put side by side to make a number: the lower score first. A 4 and a 5 make <strong>45</strong>; a 3 and a 6 make 36. A score of 10 or more goes first, so a 4 and a 10 make 104.</p>],
       ['Each hole', <p key="e">The team with the lower number wins the difference in points. 45 against 56 is 11 points. Every point is worth the amount you set, paid by each player on the losing team.</p>],
       ['Birdie flip', <p key="b">With the flip on, a natural birdie (or better) flips the other team’s number so the high score goes first: 45 becomes <strong>54</strong>. If both teams birdie, nothing flips.</p>],
+      ['Birdies double', <p key="d">A house rule, off unless you turn it on: when one team alone makes a real birdie, the hole’s points double. A lone eagle triples them. With the flip that’s a big swing: 34 against a flipped 54 is 40 points.</p>],
       ['Handicaps', <p key="h">Strokes come off the low player, so net scores make the numbers. Turn handicaps off to play gross.</p>],
     ],
   },
@@ -131,6 +133,7 @@ const RULES = {
         <li><strong>Per match</strong>: each player on the winning pair gets the bet from one player on the losing pair; a halved match pushes. A match cut short pays whoever is ahead on the holes played.</li>
         <li><strong>Per hole</strong>: the bet for every hole a team finishes ahead in that match.</li>
       </ul>],
+      ['House rules', <p key="hr"><strong>Halved matches carry</strong> (per match, off unless you turn it on): a match that ends all square adds its bet to the next one, so that match is worth double. Halve the last match and nobody gets it.</p>],
     ],
   },
   scramble: {
@@ -141,6 +144,7 @@ const RULES = {
       ['Scoring', <p key="s">Enter one score per team on each hole. Lowest net total for the round wins.</p>],
       ['Team handicaps', <p key="h">Each team plays off a blend of its members’ course handicaps, lowest first, using the WHS allowances: 35% and 15% for pairs, 30/20/10% for threes, 25/20/15/10% for fours. Strokes are then given off the low team on the hardest holes.</p>],
       ['Money', <p key="m">Everyone puts the same amount in the pot. The winning team’s players split it; tied teams share it.</p>],
+      ['Minimum drives', <p key="d">A house rule, off unless you pick it: every player’s drive has to be used at least 2, 3 or 4 times. Tap whose drive the team took on each hole and the app keeps count, and warns you when the rest have to be someone’s.</p>],
     ],
   },
   stroke: {
@@ -153,6 +157,7 @@ const RULES = {
         <li><strong>Per stroke</strong>: every pair of players settles the difference in their net totals, so each stroke wins the bet from every player you beat by it.</li>
       </ul>],
       ['Handicaps', <p key="h">Strokes come off the low player on the hardest holes. Picked-up holes count as a double bogey after strokes.</p>],
+      ['Net double bogey max', <p key="c">A house rule, off unless you turn it on: no hole counts for more than a net double bogey, the same cap your handicap uses. Take a 9 on a par 4 and it counts as a 6 (or a 7 if you get a stroke there).</p>],
     ],
   },
   stableford: {
@@ -188,6 +193,7 @@ const RULES = {
         <li>Two tie for high: 5-2-2.</li>
         <li>All three tie: 3-3-3.</li>
       </ul>],
+      ['Win by 2 takes all 9', <p key="s">A house rule, off unless you turn it on: beat both of the others by two strokes or more and you take all nine points, 9-0-0.</p>],
       ['Money', <p key="m">Three points a hole is par, so 54 over 18 holes (27 over nine). Every point above or below that is worth the bet: finish on 60 at $1 a point and you’re up $6.</p>],
     ],
   },
@@ -197,6 +203,7 @@ const RULES = {
     sections: [
       ['Overview', <p key="o">Every hole has a hero and a goat. The outright low net (the <strong>ace</strong>) wins from everyone. The outright high net (the <strong>deuce</strong>) pays everyone.</p>],
       ['Ties', <p key="t">A tie for low means no ace; a tie for high means no deuce. Both can happen on the same hole.</p>],
+      ['Ties carry', <p key="c">A house rule, off unless you turn it on: a tie for low adds that hole’s ace to the next outright low, and a tie for high adds its deuce to the next outright high. Still carried after the last hole, nobody gets it.</p>],
       ['Bets', <p key="s">Set the ace and deuce amounts separately. Aces are usually worth more.</p>],
     ],
   },
@@ -212,6 +219,7 @@ const RULES = {
       </ul>],
       ['Order matters', <p key="r">Play strictly by who’s away, or the points don’t mean much. Tap each point as it happens; leave it blank if nobody earned it.</p>],
       ['Money', <p key="m">Every pair of players settles the difference in their points at the value you set.</p>],
+      ['Sweep doubles', <p key="s">A house rule, off unless you turn it on: take all three points on one hole and they count six.</p>],
     ],
   },
   dots: {

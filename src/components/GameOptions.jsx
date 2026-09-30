@@ -136,6 +136,7 @@ export function GameOptions({ game, get, set, onAmount, holesCount = 18, compact
             <Segmented label="Blind wolf pays or wins" className="press-mode-row" btn="pm-btn" value={get('wolf.blindMultiplier') ?? 3} onChange={v => set('wolf.blindMultiplier', v)} options={[3, 4].map(n => ({ value: n, label: `${n}×` }))} />
           </div>
         )}
+        {toggle('wolf.carry', 'Ties carry', 'A tied hole’s points ride on to the next hole that’s won')}
       </>;
     case 'match':
       return <>
@@ -167,6 +168,7 @@ export function GameOptions({ game, get, set, onAmount, holesCount = 18, compact
         {amount('vegas.point', 'Per point', { label: 'Per point' })}
         {example(`Win a hole 45 to 47: up ${money(get('vegas.point') * 2)} each.`)}
         {toggle('vegas.birdieFlip', 'Birdies flip', 'A birdie flips the other team’s number (45 becomes 54)')}
+        {toggle('vegas.birdieDouble', 'Birdies double', 'One team alone makes a real birdie? The hole’s points double. An eagle triples them')}
         {note('Each hole, each player on the losing team pays the point difference.')}
       </>;
     case 'sixes':
@@ -178,14 +180,19 @@ export function GameOptions({ game, get, set, onAmount, holesCount = 18, compact
           : `Win two of the three matches and lose one: you're up ${money(get('sixes.stake'))}.`)}
         <div className="block">
           {seg('sixes.mode', [{ value: 'match', label: 'Per match' }, { value: 'holes', label: 'Per hole' }])}
-          {help(get('sixes.mode') === 'holes' ? `Each ${holesCount === 9 ? 'three' : 'six'}-hole match pays the bet for every hole a team finishes up.` : `Each ${holesCount === 9 ? 'three' : 'six'}-hole match pays the bet to each winner. Halved matches push.`)}
+          {help(get('sixes.mode') === 'holes' ? `Each ${holesCount === 9 ? 'three' : 'six'}-hole match pays the bet for every hole a team finishes up.` : `Each ${holesCount === 9 ? 'three' : 'six'}-hole match pays the bet to each winner. ${get('sixes.carry') ? 'A halved match carries its bet into the next one.' : 'Halved matches push.'}`)}
         </div>
+        {get('sixes.mode') !== 'holes' && toggle('sixes.carry', 'Halved matches carry', `A halved match adds its bet to the next one. Halve the last one and nobody gets it`)}
       </>;
     case 'scramble':
       return <>
         {label('Bets')}
         {amount('scramble.stake', 'Each player puts in', { label: 'Each player puts in' })}
         {example(`With ${n} players the pot is ${money(get('scramble.stake') * n)}, and the winning team splits it.`)}
+        <div className="block">
+          {seg('scramble.drives', [{ value: 0, label: 'Off' }, { value: 2, label: '2' }, { value: 3, label: '3' }, { value: 4, label: '4' }], 'Minimum drives each', true)}
+          {help(get('scramble.drives') ? `Every player’s drive gets used at least ${get('scramble.drives')} times. Tap whose drive you took on each hole and we’ll keep count.` : 'Use whichever drive you like, every hole. Even if it’s always the big hitter’s.')}
+        </div>
         {note(`Everyone puts in the same amount. The team with the lowest net total splits the pot; tied teams share it. Team handicaps use the WHS allowances: ${pct(SCRAMBLE_ALLOWANCE[2])}% for pairs, ${pct(SCRAMBLE_ALLOWANCE[3])}% for threes, ${pct(SCRAMBLE_ALLOWANCE[4])}% for fours.`)}
       </>;
     case 'stroke':
@@ -197,6 +204,7 @@ export function GameOptions({ game, get, set, onAmount, holesCount = 18, compact
           {payout('stroke.payout', 'stroke')}
           {help(get('stroke.payout') === 'pot' ? 'Lowest net total takes the pot; ties split it.' : 'Every pair settles the difference in their net totals.')}
         </div>
+        {toggle('stroke.cap', 'Net double bogey max', 'The most a hole can cost you, like for your handicap. A blow-up hole won’t sink your day')}
       </>;
     case 'stableford':
       return <>
@@ -224,6 +232,7 @@ export function GameOptions({ game, get, set, onAmount, holesCount = 18, compact
         {label('Bets')}
         {amount('nines.point', 'Per point', { label: 'Per point' })}
         {example(`Every point above or below ${holesCount === 9 ? 27 : 54} is worth ${money(get('nines.point'))}: finish on ${(holesCount === 9 ? 27 : 54) + 6} and you're up ${money(get('nines.point') * 6)}.`)}
+        {toggle('nines.sweep', 'Win by 2 takes all 9', 'Beat both by two strokes or more and the hole is 9-0-0')}
         {note('Nine points a hole: 5 for low, 3 for middle, 1 for high. Ties share the points.')}
       </>;
     case 'aces':
@@ -232,13 +241,15 @@ export function GameOptions({ game, get, set, onAmount, holesCount = 18, compact
         {amount('aces.ace', 'Ace: low score wins from each player', { label: 'Ace: low score wins from each player' })}
         {amount('aces.deuce', 'Deuce: high score pays each player', { label: 'Deuce: high score pays each player' })}
         {example(`Outright low: up ${money(get('aces.ace') * others)}. Outright high: down ${money(get('aces.deuce') * others)}.`)}
-        {note('Only an outright low or high counts. Ties for low or high pay nothing.')}
+        {toggle('aces.carry', 'Ties carry', 'A tie for low adds the ace to the next hole, a tie for high adds the deuce')}
+        {note(get('aces.carry') ? 'Only an outright low or high counts. A tie carries it to the next hole; still carried after the last hole, nobody gets it.' : 'Only an outright low or high counts. Ties for low or high pay nothing.')}
       </>;
     case 'bbb':
       return <>
         {label('Bets')}
         {amount('bbb.value', 'Per point', { label: 'Per point' })}
         {example(`Each point wins ${money(get('bbb.value'))} from every other player: take one and you're up ${money(get('bbb.value') * others)}.`)}
+        {toggle('bbb.sweep', 'Sweep doubles', 'Take all three points on a hole and they count six')}
         {note('Three points a hole: first on the green, closest once everyone is on, first in the hole. Every pair settles the difference in points. Handicaps don’t matter, so anyone can win.')}
       </>;
     case 'dots':

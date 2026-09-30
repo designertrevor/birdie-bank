@@ -23,19 +23,21 @@ export const DEFAULT_SETTINGS = {
   banker: { defaultBet: 5, min: 1, max: 20, ties: 'push', rotation: 'rotate', birdies: 'off' },
   nassau: { front: 5, back: 5, total: 5, pressMode: 'manual', threshold: 2, turnPress: false, noLastPress: false },
   skins: { value: 2, carryover: true, kind: 'net', payout: 'per', stake: 10, lastCarry: 'void' },
-  // Blind wolf: the wolf can go lone before anyone tees off, for blindMultiplier (3× or 4×)
-  wolf: { point: 2, loneMultiplier: 2, blind: true, blindMultiplier: 3 },
+  // Blind wolf: the wolf can go lone before anyone tees off, for blindMultiplier (3× or 4×).
+  // House rules added 2026-09-30 all start off, so rounds and defaults from before play the same:
+  // wolf and aces ties carry, Vegas birdies double, Sixes halved matches carry (see round.js)
+  wolf: { point: 2, loneMultiplier: 2, blind: true, blindMultiplier: 3 }, // carry (ties carry) is off when unset
   match: { stake: 10, pressMode: 'off', threshold: 2 },
   hammer: { stake: 5, max: 3, who: 'either' },
-  vegas: { point: 1, birdieFlip: true },
-  sixes: { stake: 5, mode: 'match' },
-  scramble: { stake: 5 },
-  stroke: { stake: 5, payout: 'pot' },
+  vegas: { point: 1, birdieFlip: true, birdieDouble: false },
+  sixes: { stake: 5, mode: 'match', carry: false },
+  scramble: { stake: 5, drives: 0 }, // drives: the minimum each player's drive is used, 0 for none
+  stroke: { stake: 5, payout: 'pot', cap: false }, // cap: net double bogey is the most a hole costs
   stableford: { ...REV2_DEFAULTS.stableford },
   quota: { ...REV2_DEFAULTS.quota },
-  nines: { point: 1 },
-  aces: { ace: 2, deuce: 1 },
-  bbb: { value: 1 },
+  nines: { point: 1, sweep: false }, // sweep: win a hole by 2 and take all nine
+  aces: { ace: 2, deuce: 1, carry: false },
+  bbb: { value: 1, sweep: false }, // sweep: all three points on a hole count double
   dots: { value: 1, auto: true, kinds: { greenie: true, sandy: true, barkie: true, chipin: true, polie: false, arnie: false, hogan: false } },
   rabbit: { ...REV2_DEFAULTS.rabbit },
   snake: { stake: 5, growth: 'flat', nines: false, cap: SNAKE_CAP_DEFAULT }, // cap: most doubles, 0 for none

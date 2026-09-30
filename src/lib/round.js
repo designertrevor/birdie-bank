@@ -1223,7 +1223,39 @@ export function wolfHoleSetup(round, idx) {
   return { wolf: wolfFor(round, idx), partner: undefined };
 }
 
+/**
+ * One wolf hole's money. With the "ties carry" house rule (wolf.carry, off unless the round says so),
+ * a tied hole's points ride on to the next hole that's won: that hole pays its unit once for itself
+ * and once more for every tied hole carried in (see wolfCarryBefore). Ties still carried after the
+ * last hole go unclaimed. A round saved before the rule has no `carry`, so its money doesn't change.
+ */
 export function wolfHoleResult(round, hole) {
+  const r = wolfHoleBase(round, hole);
+  if (!r) return null;
+  if (r.winner == null) return settingsAt(round, posOf(round, hole)).wolf.carry ? { ...r, carries: true } : r;
+  const carried = wolfCarryBefore(round, hole);
+  if (!carried) return r;
+  const deltas = Object.fromEntries(Object.entries(r.deltas).map(([id, v]) => [id, v * (carried + 1)]));
+  return { ...r, deltas, carried };
+}
+
+/**
+ * Tied holes carried into `hole` under "ties carry": the run of ties with the rule on since the last
+ * hole that was won. A hole with no result yet (not played, no pick) doesn't break the run.
+ */
+export function wolfCarryBefore(round, hole) {
+  let carried = 0;
+  for (const h of round.holes) {
+    if (h.no === hole.no) break;
+    const r = wolfHoleBase(round, h);
+    if (!r) continue;
+    if (r.winner != null) carried = 0;
+    else if (settingsAt(round, posOf(round, h)).wolf.carry) carried++;
+  }
+  return carried;
+}
+
+function wolfHoleBase(round, hole) {
   const setup = round.wolf[hole.no];
   if (!setup || !holeComplete(round, hole)) return null;
   const { point: P, loneMultiplier: mult, blindMultiplier } = settingsAt(round, posOf(round, hole)).wolf;
@@ -1257,12 +1289,12 @@ export function vegasTable(round) {
   const rows = [];
   for (const [i, h] of round.holes.entries()) {
     if (!holeComplete(round, h) || teams.length !== 2) { rows.push({ hole: h, played: false }); continue; }
-    const { point, birdieFlip } = settingsAt(round, i + 1).vegas;
+    const { point, birdieFlip, birdieDouble } = settingsAt(round, i + 1).vegas;
     // Vegas needs two full teams: once a player leaves, the holes after aren't counted
     if (teams.some(t => t.players.some(pid => !playsHole(round, pid, h)))) { rows.push({ hole: h, played: false, short: true }); continue; }
     const nets = teams.map(t => t.players.map(pid => netFor(round, playerById(round, pid), h)));
     const gross = teams.map(t => t.players.map(pid => round.scores[h.no]?.[pid]));
-    const r = vegasHole(nets, gross, h.par, { birdieFlip });
+    const r = vegasHole(nets, gross, h.par, { birdieFlip, birdieDouble: !!birdieDouble });
     const deltas = {};
     teams[0].players.forEach(pid => { deltas[pid] = r.diff * point; });
     teams[1].players.forEach(pid => { deltas[pid] = -r.diff * point; });
@@ -1278,7 +1310,8 @@ export function vegasPreview(round, hole, draft) {
   const eff = pid => { const p = playerById(round, pid); const st = strokesFor(round, p, hole); const g = draft[pid]; return (g === 'X' ? pickupGross(hole.par, popsFor(round, p, hole)) : g) - st; };
   const nets = teams.map(t => t.players.map(eff));
   const gross = teams.map(t => t.players.map(pid => draft[pid]));
-  return vegasHole(nets, gross, hole.par, { birdieFlip: round.settings.vegas.birdieFlip });
+  const vs = settingsAt(round, posOf(round, hole)).vegas;
+  return vegasHole(nets, gross, hole.par, { birdieFlip: vs.birdieFlip, birdieDouble: !!vs.birdieDouble });
 }
 
 // --------------------------- Sixes ----------------------------------------
@@ -1348,7 +1381,13 @@ export function totalsTable(round) {
 
 /** One player's number on one hole in the totals games: net strokes, Stableford points or quota points. */
 function totalsHoleValue(round, p, h) {
-  if (round.game === 'stroke') return netFor(round, p, h);
+  if (round.game === 'stroke') {
+    // House rule: net double bogey is the most a hole can cost (stroke.cap, off unless the round says
+    // so), the World Handicap System's maximum hole score. Source, checked 2026-09-30: USGA Rules of
+    // Handicapping 3.1 https://www.usga.org/handicapping/roh/Content/rules/3%201b%20After%20a%20Handicap%20Index%20Has%20Been%20Established.htm
+    const net = netFor(round, p, h);
+    return settingsAt(round, posOf(round, h)).stroke?.cap ? Math.min(net, h.par + 2) : net;
+  }
   if (round.game === 'stableford') return stablefordPoints(netFor(round, p, h), h.par, round.settings.stableford.modified);
   return quotaPoints(grossFor(round, p, h), h.par);
 }
@@ -1388,7 +1427,12 @@ export function pointsTable(round) {
       const pts = Object.fromEntries(ids.map(id => [id, 0]));
       const got = ['bingo', 'bango', 'bongo'].filter(k => m[k] && field.includes(m[k]));
       for (const k of got) pts[m[k]] += 1;
-      rows.push({ hole: h, points: pts, field, value: s.bbb.value, label: got.map(k => k[0].toUpperCase()).join('') });
+      // House rule "sweep doubles" (bbb.sweep, off unless the round says so): all three to one player is 6.
+      // Source, checked 2026-09-30: Golf Monthly, "What is Bingo Bango Bongo?"
+      // https://golfmonthly.com/features/the-game/what-is-bingo-bango-bongo-67061
+      const swept = s.bbb.sweep && got.length === 3 && m.bingo === m.bango && m.bango === m.bongo;
+      if (swept) pts[m.bingo] = 6;
+      rows.push({ hole: h, points: pts, field, value: s.bbb.value, label: got.map(k => k[0].toUpperCase()).join('') + (swept ? ' ×2' : ''), ...(swept ? { swept: true } : {}) });
       continue;
     }
     // A hole with a score missing isn't counted for money
@@ -1407,7 +1451,7 @@ export function pointsTable(round) {
     // Nines is scored for exactly three, so once a player leaves the holes after aren't counted
     if (round.game === 'nines' && field.length === round.players.length) {
       const nets = round.players.map(p => netFor(round, p, h));
-      const pts = ninesPoints(nets);
+      const pts = ninesPoints(nets, { sweep: !!s.nines.sweep });
       rows.push({ hole: h, points: Object.fromEntries(ids.map((id, k) => [id, pts[k]])), field, value: s.nines.point });
     }
   }
@@ -1642,23 +1686,31 @@ export function gameResults(round) {
 
   if (round.game === 'sixes') {
     const matches = sixesMatches(round);
+    // House rule "halved matches carry" (sixes.carry, per match only, off unless the round says so):
+    // a match that finishes all square adds its bet to the next match. A carry still there after the
+    // last match, or into a match that's off, goes unclaimed.
+    let carry = 0;
     detail.matches = matches.map(m => {
       const st = m.status;
       // A match is played for the way it pays when it started
       const ms = settingsAt(round, m.seg.start).sixes;
       let net = 0; // positive = side 0 wins
+      const carried = carry;
+      if (ms.mode !== 'holes' && ms.carry && !m.off && st.leader == null && st.left === 0) carry += ms.stake;
+      else if (ms.mode === 'holes' || m.off || st.leader != null) carry = 0;
       if (ms.mode === 'holes') {
         // Every hole won is worth the bet in force on that hole
         for (const [pos, w] of Object.entries(m.winners)) if (w != null) net += (w === 0 ? 1 : -1) * settingsAt(round, Number(pos)).sixes.stake;
       } else if (st.leader != null) {
         // Like Nassau, a match that isn't finished pays whoever leads it on the holes played
-        net = st.leader === 0 ? ms.stake : -ms.stake;
+        const bet = ms.stake + (ms.carry ? carried : 0);
+        net = st.leader === 0 ? bet : -bet;
       }
       const d = zero();
       for (const pid of m.sides[0]) d[pid] += net;
       for (const pid of m.sides[1]) d[pid] -= net;
       addSpread(d);
-      return { ...m, net };
+      return { ...m, net, ...(carried && ms.carry && ms.mode !== 'holes' ? { carried } : {}) };
     });
   }
 
@@ -1753,20 +1805,30 @@ export function gameResults(round) {
 
   if (round.game === 'aces') {
     detail.holes = [];
+    // House rule "ties carry" (aces.carry, off unless the round says so): a hole with no outright low
+    // adds its ace to the next outright low, and a hole with no outright high adds its deuce to the
+    // next outright high. Carries still there after the last hole go unclaimed.
+    // Source, checked 2026-09-30: Golf Compendium, "Acey Ducey (or Aces and Deuces)"
+    // https://golfcompendium.com/2019/02/golf-game-acey-ducey.html ("carryovers are at the group's option")
+    let aceCarry = 0, deuceCarry = 0;
     for (const h of round.holes) {
       if (!holeComplete(round, h)) continue;
       // Low and high are among the players still on the hole
       const on = playersOn(round, h);
       if (on.length < 2) continue;
       const as = settingsAt(round, posOf(round, h)).aces;
-      const r = acesDeuces(on.map(p => netFor(round, p, h)), on.map(p => p.id), as);
+      // Same defaults as acesDeuces, so rounds saved without every aces setting still pair up right
+      const ace = (as?.ace ?? 2) + aceCarry, deuce = (as?.deuce ?? 1) + deuceCarry;
+      const r = acesDeuces(on.map(p => netFor(round, p, h)), on.map(p => p.id), { ace, deuce });
       add(r.deltas);
       for (const p of on) {
-        // Same defaults as acesDeuces, so rounds saved without every aces setting still pair up right
-        if (r.ace && p.id !== r.ace) pay(p.id, r.ace, as?.ace ?? 2);
-        if (r.deuce && p.id !== r.deuce) pay(r.deuce, p.id, as?.deuce ?? 1);
+        if (r.ace && p.id !== r.ace) pay(p.id, r.ace, ace);
+        if (r.deuce && p.id !== r.deuce) pay(r.deuce, p.id, deuce);
       }
-      detail.holes.push({ no: h.no, ...r });
+      const carried = as?.carry && (aceCarry || deuceCarry) ? { aceCarried: r.ace ? aceCarry : 0, deuceCarried: r.deuce ? deuceCarry : 0 } : {};
+      aceCarry = as?.carry && !r.ace ? ace : 0;
+      deuceCarry = as?.carry && !r.deuce ? deuce : 0;
+      detail.holes.push({ no: h.no, ...r, ...carried });
     }
   }
 
