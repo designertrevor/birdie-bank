@@ -214,6 +214,12 @@ test('a house rule carry switched off from a hole drops what was riding: Wolf', 
   const off = changeBets(r0, { ...r0.settings.wolf, carry: false }, 2);
   assert.equal(wolfCarryBefore(off, off.holes[1]), 0);
   assert.deepEqual(roundResults(off).balances, { a: 4, b: 4, c: -4, d: -4 });
+  // Off for a tie on 2 and on again from 3: the tie on 1 is gone, the tie on 2 was played without it
+  const r1 = card(mk('wolf', ['a', 'b', 'c', 'd'], { wolf: { point: 2, loneMultiplier: 2, carry: true } }, { hc: false }), { 1: [4, 4, 4, 4], 2: [4, 4, 4, 4], 3: [3, 4, 4, 4] });
+  r1.wolf = { 1: { wolf: 'a', partner: 'b' }, 2: { wolf: 'b', partner: 'a' }, 3: { wolf: 'c', partner: 'a' } };
+  const onOffOn = changeBets(changeBets(r1, { ...r1.settings.wolf, carry: false }, 2), { ...r1.settings.wolf, carry: true }, 3);
+  assert.equal(wolfCarryBefore(onOffOn, onOffOn.holes[2]), 0);
+  assert.equal(wolfCarryBefore(r1, r1.holes[2]), 2);
 });
 
 test('a house rule carry switched off from a hole drops what was riding: Aces & Deuces', () => {

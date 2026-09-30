@@ -1284,8 +1284,9 @@ export function wolfCarryBefore(round, hole) {
     if (h.no === hole.no) break;
     const r = wolfHoleBase(round, h);
     if (!r) continue;
-    if (r.winner != null) carried = 0;
-    else if (settingsAt(round, posOf(round, h)).wolf.carry) carried++;
+    // A tie played with the rule off (switched off, then on again) drops the run too
+    if (r.winner != null || !settingsAt(round, posOf(round, h)).wolf.carry) carried = 0;
+    else carried++;
   }
   return carried;
 }
