@@ -294,11 +294,11 @@ test('gamesFor: a player out of a game counts 0 there and is still in the others
 test('bet lines for every game in a round', () => {
   const r = { game: 'nassau', settings: SETTINGS, sideGames: [{ game: 'skins', settings: SIDE_SETTINGS.skins }, { game: 'dots', settings: SIDE_SETTINGS.dots }] };
   assert.deepEqual(roundStakeLines(r).map(l => l.line), ['$5 / $5 / $5', '$2 a skin', '$1 a dot']);
-  assert.deepEqual(roundStakeLines({ ...r, sideGames: [{ game: 'birdies', settings: SIDE_SETTINGS.birdies }] }).map(l => l.line), ['$5 / $5 / $5', 'Each player puts in $5']);
+  assert.deepEqual(roundStakeLines({ ...r, sideGames: [{ game: 'birdies', settings: SIDE_SETTINGS.birdies }] }).map(l => l.line), ['$5 / $5 / $5', '$5 each in the birdie pot']);
   // A fourth side game is past the 4-game cap: it isn't counted, so it isn't listed either
   const four = [...r.sideGames, { game: 'birdies', settings: SIDE_SETTINGS.birdies }, { game: 'snake', settings: { stake: 5, growth: 'flat' } }];
   assert.equal(roundStakeLines({ ...r, sideGames: four }).length, 4);
-  assert.equal(sideBetLine('birdies', { stake: 5 }), 'Each player puts in $5');
+  assert.equal(sideBetLine('birdies', { stake: 5 }), '$5 each in the birdie pot');
   assert.equal(optionsProblem('birdies', { birdies: { stake: 0 } }) != null, true);
   assert.equal(optionsProblem('birdies', { birdies: { stake: 5 } }), null);
   assert.equal(gameLabel({ game: 'skins' }), 'Skins');

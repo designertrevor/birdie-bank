@@ -72,7 +72,8 @@ test('variants are picked by weight and stay put', () => {
 
 test('the flag is off by default, on in dev, and the address bar wins', () => {
   assert.deepEqual(readFlag({}), { on: false, remember: null });
-  assert.equal(readFlag({ env: { DEV: true } }).on, true);
+  assert.equal(readFlag({ env: { DEV: true } }).on, false, 'local dev follows production: off');
+  assert.equal(readFlag({ env: { DEV: true }, search: '?paywall=on' }).on, true);
   assert.equal(readFlag({ env: { VITE_PAYWALL: 'on' } }).on, true);
   assert.equal(readFlag({ env: { DEV: true, VITE_PAYWALL: 'off' } }).on, false);
   assert.deepEqual(readFlag({ search: '?paywall=on' }), { on: true, remember: 'on' });

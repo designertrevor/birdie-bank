@@ -15,10 +15,10 @@ export function optionsProblem(game, settings) {
 
 /**
  * The bet line for a side game in setup and the round menu: "$2 a skin", "$1 a dot",
- * "Each player puts in $5". `settings` is the side game's own block.
+ * "$5 each in the birdie pot". `settings` is the side game's own block.
  */
 export function sideBetLine(game, settings) {
-  if (game === 'birdies') return `Each player puts in ${money(settings?.stake ?? 0)}`;
+  if (game === 'birdies') return `${money(settings?.stake ?? 0)} each in the birdie pot`;
   // The bet in its own unit ("$2 a skin"); the worked example under it covers the house rules
   return stakeSummary(game, { [game]: settings }).split(' · ')[0];
 }
