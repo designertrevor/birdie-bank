@@ -239,6 +239,21 @@ const RULES = {
       ['Paying out', <p key="p">Whoever holds the rabbit after hole 9 wins the bet from everyone, and again after hole 18. Over nine holes there’s one payout. A loose rabbit at the turn pays nobody. Stop early and whoever holds it then is paid.</p>],
     ],
   },
+  birdies: {
+    title: 'How to play the Birdie pot',
+    sub: '2–8 players · A side game · Birdies split the pot',
+    sections: [
+      ['Overview', <p key="o">Everyone puts the same amount in the pot before the round. At the end, the pot is split among the players who made birdies.</p>],
+      ['Shares', <ul key="s">
+        <li>Every <strong>net birdie</strong> is one share of the pot.</li>
+        <li>A <strong>net eagle</strong> or better is two shares, unless your group changes it.</li>
+        <li>The pot is split by shares, so two birdies take twice as much as one.</li>
+      </ul>],
+      ['No birdies', <p key="n">If nobody makes a birdie, everyone gets their money back and nobody pays.</p>],
+      ['Scoring', <p key="c">Nothing to tap: birdies are counted from the scores after handicap strokes. A player who picks up on a hole can’t birdie it.</p>],
+      ['Joining late', <p key="j">The pot is for the players who started. Anyone added partway, or who leaves early, sits it out.</p>],
+    ],
+  },
   snake: {
     title: 'How to play Snake',
     sub: '2–8 players · Don’t three-putt',

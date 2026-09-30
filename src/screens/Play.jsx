@@ -5,7 +5,7 @@ import { DEFAULT_SETTINGS, getState, update, useStore } from '../lib/store.js';
 import {
   GAMES, addPlayerProblem, bankerHoleSetup, canLeave, defaultNine, holeComplete, leftRule, livePreview, nassauPressOptions, playersLeft, playersOn, playsHole, pressMode,
   resizeRound, roundLegs, roundResults, scoredHolesDropped, scorers, skinsKinds, skinsTable, strokesFor, wolfHoleSetup, changeBets, wholeRoundOnly,
-  gameView, sideGamesOf, holeFixOf,
+  gameView, sideGamesOf, holeFixOf, SIDE_GAMES,
 } from '../lib/round.js';
 import { CourseTeeSheet, FixHoleSheet } from '../components/FixHole.jsx';
 import { courseTeeLabel, keepsDraft } from '../lib/hole-fix.js';
@@ -135,7 +135,7 @@ function PlayRound({ round }) {
   const [menu, setMenu] = useState(false);
   const [leftSheet, setLeftSheet] = useState(false);
   const [card, setCard] = useState(false);
-  const [rules, setRules] = useState(false);
+  const [rules, setRules] = useState(null); // the game whose rules are open: the main game or a side game
   const [betPad, setBetPad] = useState(null);
   const [bankerPick, setBankerPick] = useState(false);
   const [live, setLive] = useState(false);
@@ -519,7 +519,10 @@ function PlayRound({ round }) {
           </button>
         )}
         </>}
-        <button className="sheet-item" onClick={() => { setMenu(false); setRules(true); }}><span><Icon name="book-open" /> {GAMES[game].name} rules</span><Icon name="caret-right" /></button>
+        <button className="sheet-item" onClick={() => { setMenu(false); setRules(game); }}><span><Icon name="book-open" /> {GAMES[game].name} rules</span><Icon name="caret-right" /></button>
+        {sideGamesOf(round).map(sg => (
+          <button key={sg.game} className="sheet-item" onClick={() => { setMenu(false); setRules(sg.game); }}><span><Icon name="book-open" /> {SIDE_GAMES[sg.game].label} rules</span><Icon name="caret-right" /></button>
+        ))}
         <div className="menu-sec">Players</div>
         {syncConfigured && (
           <button className="sheet-item" onClick={() => { setMenu(false); setLive(true); }}>
@@ -570,7 +573,7 @@ function PlayRound({ round }) {
       </Sheet>
       {fixSheet === 'hole' && editable && <FixHoleSheet round={round} holeNo={hole.no} me={me} onClose={() => setFixSheet(null)} />}
       {fixSheet === 'tee' && editable && <CourseTeeSheet round={round} me={me} onClose={() => setFixSheet(null)} />}
-      <RulesSheet game={game} open={rules} onClose={() => setRules(false)} />
+      <RulesSheet game={rules} open={!!rules} onClose={() => setRules(null)} />
       <ShareSheet round={round} open={live} onClose={() => setLive(false)} />
       {game === 'banker' && (
         <>
