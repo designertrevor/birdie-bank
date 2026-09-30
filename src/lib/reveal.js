@@ -17,13 +17,15 @@ function matchWho(s, names) {
 function biggestHoles(rows, max = 3) {
   const best = rows.map((r, i) => {
     const [pid, amt] = Object.entries(r.deltas).reduce((a, e) => (e[1] > a[1] ? e : a), [null, 0]);
-    return { r, i, pid, amt };
+    // Everyone who won that much on the hole (partners, or the pack against a wolf)
+    const tops = Object.entries(r.deltas).filter(e => Math.abs(e[1] - amt) < 0.005).map(e => e[0]);
+    return { r, i, pid, amt, tops };
   }).filter(x => x.pid && x.amt > 0);
   return best
     .sort((a, b) => b.amt - a.amt || a.i - b.i)
     .slice(0, max)
     .sort((a, b) => a.i - b.i)
-    .map(x => ({ key: `h${x.r.no}`, label: `Hole ${x.r.no}`, text: x.r.text(x.pid), amount: x.amt }));
+    .map(x => ({ key: `h${x.r.no}`, label: `Hole ${x.r.no}`, text: x.r.text(x.pid, x.tops), amount: x.amt }));
 }
 
 /**
@@ -135,11 +137,14 @@ function mainRevealSteps(round, res) {
   if ((round.game === 'banker' || round.game === 'wolf') && d.holes) {
     const rows = d.holes.map(h => ({
       no: h.no, deltas: h.deltas,
-      text: pid => {
-        if (round.game === 'banker') return pid === h.banker ? `${name(pid)} as banker` : `${name(pid)} beats the banker`;
+      text: (pid, tops = [pid]) => {
+        const names = tops.map(name).join(' & ');
+        if (round.game === 'banker') return pid === h.banker ? `${name(pid)} as banker` : `${names} beat${tops.length > 1 ? '' : 's'} the banker`;
         const w = round.wolf?.[h.no];
         if (w && w.partner === null && pid === w.wolf) return `${name(pid)}, ${w.blind ? 'blind' : 'lone'} wolf`;
-        return pid === w?.wolf ? `${name(pid)}, the wolf` : name(pid);
+        // The pack beating a lone or blind wolf, or a wolf and partner winning together
+        if (w && w.partner === null && !tops.includes(w.wolf)) return `The pack beats ${name(w.wolf)}`;
+        return tops.length > 1 ? names : pid === w?.wolf ? `${name(pid)}, the wolf` : names;
       },
     }));
     return { title: 'Biggest holes', steps: biggestHoles(rows) };

@@ -139,3 +139,16 @@ test('merge: the rules card lists the newer house rules, a side game at its own 
   r.players = r.players.map((p, i) => ({ ...p, courseHc: [0, 10, 15][i], plays: [0, 10, 15][i] }));
   assert.equal(byId(agreementItems(r))['hcPct:skins'].text, '80%: Bo 8, Cy 12');
 });
+
+test('a scramble card lists each team’s strokes, not each player’s', () => {
+  const four = [...P, { id: 'd', name: 'Di Moss', index: 0 }];
+  const r = createRound({ id: 's', game: 'scramble', course, holesCount: 9, players: four, teams: [['a', 'b'], ['c', 'd']],
+    settings: { scramble: { stake: 5, payout: 'pot', drives: 3 } }, hcPct: 100, useHandicaps: true });
+  r.teams[1].plays = 2;
+  const it = byId(agreementItems(r));
+  const strokes = agreementItems(r).filter(x => x.group === 'strokes');
+  assert.equal(strokes.length, 2);
+  assert.equal(it[`strokes:${r.teams[0].id}`].text, 'scratch');
+  assert.equal(it[`strokes:${r.teams[1].id}`].text, '2 strokes');
+  assert.equal(it[`strokes:${r.teams[1].id}`].label, r.teams[1].name);
+});

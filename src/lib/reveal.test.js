@@ -142,3 +142,15 @@ test('timing is never slower than the first cut of the reveal', () => {
     }
   }
 });
+
+test('wolf: a biggest hole names everyone who won it, the pack or both partners', () => {
+  const four = [...players, { id: 'd', name: 'Di Moss', index: 0 }];
+  const r = createRound({ id: 'w', game: 'wolf', course: course9, holesCount: 9, players: four,
+    settings: { wolf: { point: 2, loneMultiplier: 2, blind: true, blindMultiplier: 3 } }, hcPct: 100, useHandicaps: false });
+  // Hole 1: Ann goes lone and the pack beats her. Hole 2: Bo and Cy win together
+  play(r, [{ a: 5, b: 4, c: 4, d: 4 }, { a: 5, b: 3, c: 4, d: 5 }]);
+  r.wolf = { 1: { wolf: 'a', partner: null }, 2: { wolf: 'b', partner: 'c' } };
+  const { steps } = revealSteps(r, roundResults(r));
+  assert.deepEqual(steps.map(s => s.text), ['The pack beats Ann', 'Bo & Cy']);
+  assert.deepEqual(steps.map(s => s.amount), [4, 4]);
+});

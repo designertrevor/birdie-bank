@@ -10,7 +10,7 @@
 //   { skipped }  the card was skipped (the time). It can still be locked in from the round menu.
 // It lives in the round's meta, so it syncs to every phone in a shared round. Only the phone keeping
 // score locks it or records changes (see keeper.js).
-import { GAMES, gameKeyLabel, gameKeys, holesPlayed, sideGamesOf } from './round.js';
+import { GAMES, gameKeyLabel, gameKeys, holesPlayed, scorers, sideGamesOf } from './round.js';
 import { sideBetLine, stakeSummary } from './stakes.js';
 import { inUnits } from './play-for.js';
 import { gamePct, halfStrokesOn, playsAtPct } from './allowances.js';
@@ -98,7 +98,12 @@ export function agreementItems(round, choices = round.agreed) {
   else {
     if ((round.hcPct ?? 100) !== 100) items.push({ id: 'hcPct', group: 'strokes', label: 'Handicaps', text: `${round.hcPct}% of each` });
     const half = halfStrokesOn(round);
-    for (const p of round.players) items.push({ id: `strokes:${p.id}`, group: 'strokes', label: firstName(p.name), text: strokesText(p.plays, half) });
+    // A scramble plays off each team's handicap, so the card lists the teams' strokes
+    if (round.game === 'scramble' && round.teams) {
+      for (const t of scorers(round)) items.push({ id: `strokes:${t.id}`, group: 'strokes', label: t.name, text: strokesText(t.plays) });
+    } else {
+      for (const p of round.players) items.push({ id: `strokes:${p.id}`, group: 'strokes', label: firstName(p.name), text: strokesText(p.plays, half) });
+    }
     // A side game at its own %, and half strokes, are agreed up front like the rest, after each
     // player's strokes in the main game
     for (const sg of round.sideGames || []) {

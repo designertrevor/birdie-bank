@@ -29,15 +29,16 @@ export function sideBetLine(game, settings) {
  * and a side game whose bet changed mid-round says since when: "$3 a skin from hole 10".
  * A points or reward round reads in points ("5 pts a side"), side games included.
  */
-export function roundStakeLines(round) {
-  return pointsLines(round, moneyStakeLines(round));
+export function roundStakeLines(round, { since = true } = {}) {
+  return pointsLines(round, moneyStakeLines(round, since));
 }
 
-function moneyStakeLines(round) {
+// `since` false leaves off "from hole 10", for a round set up again with the bets it ended on
+function moneyStakeLines(round, since = true) {
   const lines = [{ key: 'main', line: stakeSummary(round.game, round.settings) }];
   for (const sg of sideGamesOf(round)) {
     const line = sideBetLine(sg.game, sg.settings);
-    const from = line ? betChanges(round, sg.game).at(-1) : null;
+    const from = line && since ? betChanges(round, sg.game).at(-1) : null;
     if (line) lines.push({ key: sg.game, line: from ? `${line} from hole ${from.no}` : line });
   }
   return lines;

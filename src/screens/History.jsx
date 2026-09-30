@@ -23,7 +23,9 @@ function CountUp({ value }) {
     let raf;
     const tick = t => { const p = Math.min(1, (t - t0) / 900); setV(value * (1 - Math.pow(1 - p, 3))); if (p < 1) raf = requestAnimationFrame(tick); };
     raf = requestAnimationFrame(tick);
-    return () => cancelAnimationFrame(raf);
+    // No animation frames (low-power mode, a tab in the background): land on the real amount anyway
+    const land = setTimeout(() => { cancelAnimationFrame(raf); setV(value); }, 1300);
+    return () => { cancelAnimationFrame(raf); clearTimeout(land); };
   }, [value]);
   // Whole dollars while it counts, then the exact amount (cents too) once it lands
   if (v === value) return <>{money(value, { sign: true })}</>;

@@ -40,7 +40,7 @@ export function FirstTeeSheet({ round, open, mode = 'view', canEdit = false, me 
     <Sheet open onClose={locking ? onSkip : onClose} title={locking ? 'First tee' : 'What we agreed'}>
       <div className="ft-card">
         <p className="ft-lede">
-          {locking ? 'Settle it here, so nobody argues about it on 18.'
+          {locking ? `Settle it here, so nobody argues about it on ${round.holes.at(-1)?.no ?? 18}.`
             : isLocked(round) ? `${lockedBy(round, me)} ${round.agreed.hole ? `on hole ${round.agreed.hole}` : 'on the first tee'}. Anything changed since is listed with its hole.` : 'Not locked in yet.'}
         </p>
         {!locking && isLocked(round) && (

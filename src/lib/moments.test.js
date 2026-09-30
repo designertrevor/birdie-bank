@@ -179,6 +179,9 @@ test('Vegas: a big swing on one hole, with or without a birdie flip', () => {
   assert.equal(flip.text, 'A birdie flips it. Ann & Bo win it 34 to 65, $31 each');
   const plain = roundMoment(play(mk('vegas', { teams, settings: { vegas: { birdieFlip: false } } }), [{ a: 3, c: 5, d: 6 }]), 1);
   assert.equal(plain.text, 'Ann & Bo win it 34 to 56, $22 each');
+  // Birdies double: the same hole pays twice, and says why
+  const doubled = roundMoment(play(mk('vegas', { teams, settings: { vegas: { birdieDouble: true } } }), [{ a: 3, c: 5, d: 6 }]), 1);
+  assert.equal(doubled.text, 'A birdie flips it. Ann & Bo win it 34 to 65, doubled for the birdie: $62 each');
   // 44 against 45 is an ordinary hole
   assert.equal(roundMoment(play(mk('vegas', { teams }), [{ d: 5 }]), 1), null);
 });

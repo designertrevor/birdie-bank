@@ -239,9 +239,11 @@ export function vegasMoment(round, pos) {
   const team = round.teams[w];
   const each = fmtOf(round)(Math.abs(row.diff) * row.point);
   const flip = row.flipped[1 - w] ? 'A birdie flips it. ' : '';
+  // Birdies double (house rule): say why the hole paid 2× or 3×
+  const mult = row.mult === 3 ? ', tripled for the eagle:' : row.mult === 2 ? ', doubled for the birdie:' : ',';
   return {
     kind: 'swing', hero: team.players.slice().sort().join(','), title: 'Big Vegas swing',
-    text: `${flip}${team.name} win it ${row.numbers[w]} to ${row.numbers[1 - w]}, ${each} each`,
+    text: `${flip}${team.name} win it ${row.numbers[w]} to ${row.numbers[1 - w]}${mult} ${each} each`,
   };
 }
 

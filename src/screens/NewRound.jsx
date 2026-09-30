@@ -337,7 +337,7 @@ function GameStep({ usual, onUsual, onPickUsual, planning, onPlan, game, setGame
           <button className="usual-card" onClick={onUsual}>
             <span className="eyebrow">Your usual</span>
             <span className="uc-title d">{gameLabel(u)} · {usual.course.name}</span>
-            <span className="uc-sub">{u.players.map(p => p.name.split(' ')[0]).join(', ')} · {u.holesCount} holes · {roundStakeLines(u).map(l => l.line).join(' + ')}</span>
+            <span className="uc-sub">{u.players.map(p => p.name.split(' ')[0]).join(', ')} · {u.holesCount} holes · {roundStakeLines(u, { since: false }).map(l => l.line).join(' + ')}</span>
             <span className="uc-btn"><Icon name="arrow-counter-clockwise" /> Set it up again</span>
           </button>
         )}
