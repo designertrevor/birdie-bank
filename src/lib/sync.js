@@ -8,7 +8,8 @@ import { getSupabase, supabaseConfigured } from './supabase.js';
 import { leaveRound } from './rounds.js';
 import { applyHole, applyMeta, assemble, buildHole, buildMeta, buildRequest, isRequestNo, newCode, newRequestNo, readRequest, stable } from './sync-model.js';
 import { payFields } from './pay.js';
-import { canEdit, holeToKeep, hostKeeper, isKeeper, keeperMe, keeperOf, metaToKeep, metaToSend, seatTaken } from './keeper.js';
+import { canEdit, holeToKeep, hostKeeper, isKeeper, keeperMe, keeperOf, metaToKeep, metaToSend, registerDevice, seatTaken } from './keeper.js';
+import { deviceReady, myDevice } from './device.js';
 import { claimSeat, mergeClaims } from './people-links.js';
 
 /** Whether this phone may change a shared round (see keeper.js), and who it is in it. */
@@ -22,8 +23,9 @@ let adapterPromise = null;
 /** The configured transport, or null when shared scoring isn't set up. */
 export function getAdapter() {
   if (!adapterPromise) {
-    if (supabaseConfigured) adapterPromise = getSupabase().then(supabaseAdapter);
-    else if (import.meta.env.DEV || localStorage.getItem('bb-sync-local') === '1') adapterPromise = Promise.resolve(localAdapter());
+    // This phone's device hash is ready before anything is sent, so the server's lock knows it (device.js)
+    if (supabaseConfigured) adapterPromise = deviceReady().then(getSupabase).then(supabaseAdapter);
+    else if (import.meta.env.DEV || localStorage.getItem('bb-sync-local') === '1') adapterPromise = deviceReady().then(() => localAdapter(myDevice));
     else adapterPromise = Promise.resolve(null);
   }
   return adapterPromise;
@@ -240,6 +242,10 @@ function stop(roundId) {
   if (!live.size) setStatus({ state: 'idle' });
 }
 
+// Rounds this phone has put its device on this session: once each, so a server that won't take it
+// (say, an older copy of the lock) can't start a back-and-forth
+const registered = new Set();
+
 // Push local edits on every store change; start/stop as rounds come and go
 let scheduled = false;
 subscribe(() => {
@@ -256,6 +262,12 @@ subscribe(() => {
         update(d => { const x = d.rounds[id]; const c = x && claimSeat(x, x.localMe, d.me); if (c) x.claims = c; });
         continue; // the store change runs this again and pushes it
       }
+      // Put this phone on the round for the server's keeper lock (a round shared before it, or a seat
+      // taken on an older copy of the app)
+      const dev = myDevice();
+      const reg = dev && !registered.has(id) && registerDevice(r, keeperMe(r, s), dev, !!r.shared.host);
+      if (dev) registered.add(id);
+      if (reg) { update(d => { if (d.rounds[id]) Object.assign(d.rounds[id], reg); }); continue; }
       pushChanges(id);
     }
     // A finished round being fixed goes live again so the fixes reach the other phones
@@ -324,6 +336,12 @@ export async function shareRound(roundId) {
     // This phone keeps score to start with, and the organizer's seat (if they're playing) is on the app
     if (!keeperOf(r)) Object.assign(r, hostKeeper());
     Object.assign(r, seatTaken(r, s.me));
+    // This phone is the host phone, and the organizer's seat if they're playing (keeper-lock.js)
+    const dev = myDevice();
+    if (dev) {
+      r.hostDev = dev;
+      if (r.players.some(p => p.id === s.me)) r.devs = { ...r.devs, [s.me]: dev };
+    }
   });
   const round = getState().rounds[roundId];
   const holes = {};
@@ -362,6 +380,8 @@ export async function joinShared(code, remote, localMe) {
     if (seat && mine.payHandle && !seat.payHandle) Object.assign(seat, mine);
     // Your seat is on the app now, so the scorekeeper can hand you the card
     if (seat && r.status === 'active') Object.assign(r, seatTaken(r, localMe));
+    // And the server knows this phone is that seat, so it can keep score or fix it later (keeper-lock.js)
+    if (seat && myDevice()) r.devs = { ...r.devs, [localMe]: myDevice() };
     // The seat is you: every phone in the round links its copy of this player to you (people-links.js).
     // A finished round counts too while its link still works. A guest with no profile yet claims later
     const claims = seat && claimSeat(r, localMe, s.me);

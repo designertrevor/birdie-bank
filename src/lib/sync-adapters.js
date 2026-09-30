@@ -3,6 +3,7 @@
 //   fetch(code) -> { meta, holes: {holeNo: data} } | null
 //   subscribe(code, cb) -> unsubscribe   (cb gets {type:'meta'|'hole'|'deleted', ...})
 //   remove(code)
+import { holeAllowed, lockTrack, lockedMeta, removeAllowed } from './keeper-lock.js';
 
 // --------------------------- Supabase -------------------------------------
 
@@ -50,30 +51,54 @@ export function supabaseAdapter(db) {
 
 // --------------------------- Local (dev/testing) ---------------------------
 // Uses localStorage + BroadcastChannel so two tabs on one computer behave like two phones.
+// It plays the server's keeper lock too (keeper-lock.js), with `device()` as the writer, the way
+// Supabase does once supabase/2026-09-30-keeper-lock.sql is run. localStorage bb-lock-off = 1 turns
+// it off, to try the app as it is before the SQL is run.
 
-export function localAdapter() {
+export function localAdapter(device = () => null) {
   const bc = typeof BroadcastChannel !== 'undefined' ? new BroadcastChannel('bb-live') : null;
   const key = code => `bb-live:${code}`;
   const load = code => { try { return JSON.parse(localStorage.getItem(key(code))); } catch { return null; } };
   const save = (code, v) => localStorage.setItem(key(code), JSON.stringify(v));
+  const lockOn = () => { try { return localStorage.getItem('bb-lock-off') !== '1'; } catch { return true; } };
+  // Supabase's realtime tells the writer too; BroadcastChannel doesn't, so this tab's own listeners hear it here
+  const mine = new Set();
+  const tell = msg => { bc?.postMessage(msg); mine.forEach(h => h({ data: msg })); };
   return {
     kind: 'local',
-    async create(code, meta, holes) { save(code, { meta, holes }); },
+    async create(code, meta, holes) {
+      const kept = lockOn() ? lockedMeta(null, meta, device()) : meta;
+      save(code, { meta: kept, holes, lock: lockTrack(null, kept) });
+    },
     async upsertMeta(code, meta) {
       const v = load(code); if (!v) throw new Error('Round not found');
-      v.meta = meta; save(code, v); bc?.postMessage({ code, type: 'meta', data: meta });
+      if (!lockOn()) { v.meta = meta; save(code, v); bc?.postMessage({ code, type: 'meta', data: meta }); return; }
+      const kept = lockedMeta(v.meta, meta, device(), { askSeenAt: v.lock?.askSeenAt || 0 });
+      v.lock = lockTrack(v.meta, kept, v.lock);
+      v.meta = kept; save(code, v);
+      tell({ code, type: 'meta', data: kept });
     },
     async upsertHole(code, holeNo, data) {
       const v = load(code); if (!v) throw new Error('Round not found');
+      if (lockOn() && !holeAllowed(v.meta, holeNo, device(), v.lock?.prevDev)) {
+        // Left as the server has it, and this phone hears the server's copy back
+        if (holeNo in v.holes) tell({ code, type: 'hole', holeNo, data: v.holes[holeNo] });
+        return;
+      }
       v.holes[holeNo] = data; save(code, v); bc?.postMessage({ code, type: 'hole', holeNo, data });
     },
-    async fetch(code) { return load(code); },
+    async fetch(code) { const v = load(code); return v && { meta: v.meta, holes: v.holes }; },
     subscribe(code, cb) {
       const h = e => { if (e.data?.code === code) cb(e.data); };
       bc?.addEventListener('message', h);
+      mine.add(h);
       setTimeout(() => cb({ type: 'connected' }), 0);
-      return () => bc?.removeEventListener('message', h);
+      return () => { bc?.removeEventListener('message', h); mine.delete(h); };
     },
-    async remove(code) { localStorage.removeItem(key(code)); bc?.postMessage({ code, type: 'deleted' }); },
+    async remove(code) {
+      const v = load(code);
+      if (lockOn() && v && !removeAllowed(v.meta, device())) return;
+      localStorage.removeItem(key(code)); bc?.postMessage({ code, type: 'deleted' });
+    },
   };
 }

@@ -175,7 +175,7 @@ test('bad files are turned away with a friendly message', () => {
     const got = parseBackup(text);
     assert.equal(got.ok, false, text.slice(0, 60));
     assert.match(got.error, /backup/i);
-    assert.doesNotMatch(got.error, /[—]|undefined|JSON|Error/);
+    assert.doesNotMatch(got.error, /\u2014|undefined|JSON|Error/);
   }
 });
 
