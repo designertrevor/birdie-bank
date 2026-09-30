@@ -120,7 +120,7 @@ export function GameOptions({ game, get, set, onAmount, holesCount = 18, compact
         )}
         {/* Fairness options (2026-09-30), off unless turned on */}
         {get('skins.kind') !== 'gross' && toggle('skins.canadian', 'Canadian skins', 'A natural birdie beats a net birdie on the same hole')}
-        {toggle('skins.validate', 'Validate skins', `Win a skin, then make net par or better on the next hole to keep it. Miss, and it goes back ${get('skins.carryover') ? 'into the carry' : 'unclaimed'}. The last hole needs no check.`)}
+        {toggle('skins.validate', 'Validate skins', `Keep a skin only with net par or better on the next hole. Miss, and it goes back ${get('skins.carryover') ? 'into the carry' : 'unclaimed'}.`)}
       </>;
     }
     case 'wolf':

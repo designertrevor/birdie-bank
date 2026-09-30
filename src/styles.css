@@ -1526,3 +1526,23 @@ button.lately-row:active { background: var(--surface); }
 @keyframes mwTrophy { 0% { transform: scale(0) rotate(-30deg); } 60% { transform: scale(1.12) rotate(6deg); } 100% { transform: scale(1) rotate(0); } }
 @keyframes mwScore { 0% { transform: scale(.4); opacity: 0; } 60% { transform: scale(1.1); opacity: 1; } 100% { transform: scale(1); } }
 @media (prefers-reduced-motion: reduce) { .mw-rays { display: none; } }
+
+/* ---------- First-tee rules card and What we agreed (overnight 5, rules card) ---------- */
+.ft-card { padding: 0 20px 4px; }
+.ft-lede { color: var(--body); font-size: 15px; line-height: 1.45; margin: 0 0 14px; }
+.ft-sec { padding: 12px 0; border-top: 1px solid var(--line-soft); }
+.ft-h { font-size: 12px; font-weight: 800; letter-spacing: .06em; text-transform: uppercase; color: var(--mute); margin-bottom: 8px; }
+.ft-chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.ft-chip { background: var(--surface); color: var(--ink); border-radius: 999px; padding: 6px 12px; font-size: 14px; font-variant-numeric: tabular-nums; }
+.ft-chip strong { font-weight: 700; }
+.ft-row { display: flex; justify-content: space-between; gap: 12px; padding: 4px 0; font-size: 15px; }
+.ft-k { color: var(--mute); flex: none; }
+.ft-v { color: var(--ink); font-weight: 600; text-align: right; font-variant-numeric: tabular-nums; }
+.ft-line { color: var(--ink); font-size: 15px; }
+.ft-list { margin: 0; padding-left: 18px; color: var(--ink); font-size: 15px; line-height: 1.45; }
+.ft-list li + li { margin-top: 4px; }
+.ft-changes li::marker { color: var(--pink-text); }
+.ft-call + .ft-call { margin-top: 12px; }
+.ft-seg .pm-btn { flex: 1 1 0; min-width: 0; padding: 0 6px; font-size: 14px; line-height: 1.1; }
+.ft-skip { display: block; width: 100%; min-height: 44px; margin-top: 6px; background: none; border: none; color: var(--mute); font-weight: 600; font-size: 15px; cursor: pointer; }
+.ft-since { border-top: none; padding-top: 0; }
