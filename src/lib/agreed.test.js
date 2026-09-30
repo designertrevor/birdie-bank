@@ -119,3 +119,20 @@ test('locked in on the first tee has no hole; locked in later says which', () =>
   r.current = 2;
   assert.equal(lockAgreement(r).hole, 3);
 });
+
+test('merge: the rules card lists the newer house rules, a side game at its own % and half strokes', () => {
+  const four = [...P, { id: 'd', name: 'Di Poe', index: 0 }];
+  const vegas = createRound({ id: 'v', game: 'vegas', course, holesCount: 9, players: four, teams: [['a', 'b'], ['c', 'd']],
+    settings: { vegas: { point: 1, birdieFlip: true, birdieDouble: true } }, hcPct: 100, useHandicaps: true });
+  const items = agreementItems(vegas);
+  assert.equal(byId(items)['rule:main:birdieDouble'].on, true);
+  assert.equal(byId(items)['rule:main:birdieDouble'].text, 'Birdies double, eagles triple');
+  assert.ok(!byId(items)['bet:main'].text.includes('birdies double'));
+
+  const r = mk('nassau');
+  r.halfStrokes = true;
+  r.sideGames = [{ game: 'skins', hcPct: 80, settings: structuredClone(SETTINGS.skins) }];
+  const more = byId(agreementItems(r));
+  assert.equal(more.half.text, 'Each stroke counts as half');
+  assert.equal(more['hcPct:skins'].text, '80% of each');
+});

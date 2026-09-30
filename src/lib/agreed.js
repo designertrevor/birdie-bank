@@ -13,6 +13,8 @@
 import { GAMES, gameKeyLabel, gameKeys, holesPlayed, sideGamesOf } from './round.js';
 import { sideBetLine, stakeSummary } from './stakes.js';
 import { inUnits } from './play-for.js';
+import { gamePct, halfStrokesOn } from './allowances.js';
+import { houseRulesLine } from './house-rules.js';
 
 export const GIMMES = [
   { value: 'none', label: 'None', text: 'None. Everything gets putted out.' },
@@ -56,9 +58,16 @@ export function houseRulesFor(game, s) {
     case 'wolf': return [
       r('lone', `Lone wolf ${s.loneMultiplier ?? 2}×`, true),
       r('blind', `Blind wolf ${s.blindMultiplier ?? 3}×`, s.blind),
+      r('carry', 'Tied holes carry to the next one won', s.carry),
     ];
     case 'hammer': return [r('who', 'Only the side behind throws the first hammer', s.who === 'trailing')];
-    case 'vegas': return [r('birdieFlip', 'Birdie flip', s.birdieFlip)];
+    case 'vegas': return [r('birdieFlip', 'Birdie flip', s.birdieFlip), r('birdieDouble', 'Birdies double, eagles triple', s.birdieDouble)];
+    case 'sixes': return [r('carry', 'A halved match carries to the next', s.carry && s.mode !== 'holes')];
+    case 'scramble': return [r('drives', `${s.drives} drives each`, s.drives)];
+    case 'stroke': return [r('cap', 'Net double bogey max', s.cap)];
+    case 'nines': return [r('sweep', 'Win a hole by 2 and take all 9', s.sweep)];
+    case 'aces': return [r('carry', 'Ties carry', s.carry)];
+    case 'bbb': return [r('sweep', 'All three on one hole count double', s.sweep)];
     case 'dots': return [r('auto', 'Birdies count as junk', s.auto)];
     case 'snake': return [r('nines', 'A snake for each nine', s.nines)];
     default: return [];
@@ -88,6 +97,11 @@ export function agreementItems(round, choices = round.agreed) {
   if (!round.useHandicaps) items.push({ id: 'strokes', group: 'strokes', label: 'Strokes', text: 'None, it’s gross' });
   else {
     if ((round.hcPct ?? 100) !== 100) items.push({ id: 'hcPct', group: 'strokes', label: 'Handicaps', text: `${round.hcPct}% of each` });
+    // A side game at its own %, and half strokes, are agreed up front like the rest
+    for (const sg of round.sideGames || []) {
+      if (sg && gamePct(round, sg.game) !== gamePct(round)) items.push({ id: `hcPct:${sg.game}`, group: 'strokes', label: gameKeyLabel(round, sg.game), text: `${gamePct(round, sg.game)}% of each` });
+    }
+    if (halfStrokesOn(round)) items.push({ id: 'half', group: 'strokes', label: 'Half strokes', text: 'Each stroke counts as half' });
     for (const p of round.players) items.push({ id: `strokes:${p.id}`, group: 'strokes', label: firstName(p.name), text: strokesText(p.plays) });
   }
   for (const key of gameKeys(round)) {
@@ -96,7 +110,9 @@ export function agreementItems(round, choices = round.agreed) {
     const label = gameKeyLabel(round, key);
     // Skins and Wolf keep their house rules out of the bet line, since they're listed as rules below
     const full = key === 'main' ? stakeSummary(game, round.settings) : sideBetLine(game, block);
-    const bet = game === 'skins' || game === 'wolf' ? full.split(' · ')[0] : full;
+    // The newer house rules' tags come off the bet line too, since they're listed as rules
+    const tags = houseRulesLine(game, block);
+    const bet = game === 'skins' || game === 'wolf' ? full.split(' · ')[0] : tags && full.endsWith(` · ${tags}`) ? full.slice(0, -(tags.length + 3)) : full;
     items.push({ id: `bet:${key}`, group: 'bets', label, text: inUnits(round, bet) });
     for (const h of houseRulesFor(game, block)) items.push({ id: `rule:${key}:${h.id}`, group: 'rules', label, text: h.text, on: h.on });
   }
