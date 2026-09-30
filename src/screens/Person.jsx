@@ -5,7 +5,7 @@ import { Avatar, SettleSheet } from '../components/Pay.jsx';
 import { PersonActions, RewardLines } from '../components/TabCard.jsx';
 import { useTabSync } from '../lib/tab-sync.js';
 import { update, useStore } from '../lib/store.js';
-import { nameOf, outstanding, personStory, recordText, tabWith } from '../lib/ledger.js';
+import { nameOf, outstanding, personStory, tabWith } from '../lib/ledger.js';
 import { PAY_APPS, handleText, payInfoFor } from '../lib/pay.js';
 import { money } from '../lib/golf.js';
 import { formatIndex, gameLabel, myIds, roundDate } from '../lib/format.js';
@@ -13,6 +13,8 @@ import { useNav } from '../lib/nav.js';
 import { canonicalOf } from '../lib/pair-debts.js';
 import { aliasesOf, linksOf, mergeCandidates, mergePeople, unmergePerson } from '../lib/people-links.js';
 import { playForLine, unitFmt } from '../lib/play-for.js';
+import { nemesis, rivalry } from '../lib/rivalry.js';
+import { RivalryCard } from '../components/Rivalry.jsx';
 
 export default function Person({ id: opened }) {
   const nav = useNav();
@@ -32,6 +34,9 @@ export default function Person({ id: opened }) {
   const plan = outstanding(state);
   const tab = tabWith(plan, mine, id);
   const story = personStory(state, mine, id);
+  // You against them, all time, from the same story (the Record Book)
+  const rv = rivalry(state, mine, id);
+  const nem = nemesis(state, mine);
   const amount = Math.abs(tab);
   const between = plan.filter(t => (t.from === id && mine.has(t.to)) || (t.to === id && mine.has(t.from)));
   const debt = between.length === 1 ? between[0]
@@ -99,13 +104,7 @@ export default function Person({ id: opened }) {
           </button>
         )}
 
-        {story.rounds > 0 && (
-          <div className="stat-tiles">
-            <div><div className="eyebrow">Rounds</div><div className="st-v d">{story.rounds}</div></div>
-            <div><div className="eyebrow">Record</div><div className="st-v d">{recordText(story)}</div><div className="st-s">won, lost{story.even ? ', even' : ''}</div></div>
-            <div><div className="eyebrow">Head to head</div><div className={`st-v d ${story.net > 0 ? 'pos' : story.net < 0 ? 'neg' : ''}`}>{money(story.net, { sign: true })}</div></div>
-          </div>
-        )}
+        <RivalryCard rv={rv} name={name} isNemesis={!isMine && nem?.id === id} />
         {rerouted && story.rounds > 0 && (
           <p className="field-help pad">
             Just between you two, {direct > 0 ? `${firstName} owes you ${money(direct)}` : direct < 0 ? `you owe ${firstName} ${money(-direct)}` : 'you’re square'}.
