@@ -118,6 +118,9 @@ export function GameOptions({ game, get, set, onAmount, holesCount = 18, compact
             {help({ void: 'Skins still carried after the last hole go unclaimed.', split: 'The players tied on the last hole share them.', playoff: 'The players tied on the last hole play off for them. Pick the winner on the results.' }[get('skins.lastCarry') || 'void'])}
           </div>
         )}
+        {/* Fairness options (2026-09-30), off unless turned on */}
+        {get('skins.kind') !== 'gross' && toggle('skins.canadian', 'Canadian skins', 'A natural birdie beats a net birdie on the same hole')}
+        {toggle('skins.validate', 'Validate skins', `Win a skin, then make net par or better on the next hole to keep it. Miss, and it goes back ${get('skins.carryover') ? 'into the carry' : 'unclaimed'}. The last hole needs no check.`)}
       </>;
     }
     case 'wolf':

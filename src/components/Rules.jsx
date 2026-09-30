@@ -57,6 +57,10 @@ const RULES = {
       ['Paying out', <p key="p">Every other player pays the skin value to the winner for each skin won. Or play for a <strong>pot</strong>: everyone puts in the same amount and the pot is split by skins won.</p>],
       ['Net and gross', <p key="g">Play net skins, gross skins, or both at once: a net skin and a gross skin on every hole, each with its own carryovers.</p>],
       ['After the last hole', <p key="l">Skins still carried after the last hole go unclaimed by default. Or the players tied on the last hole <strong>split</strong> them, or play them off on a <strong>playoff</strong> hole.</p>],
+      ['House rules', <ul key="hr">
+        <li><strong>Canadian skins</strong>: when the low net score is a birdie and it’s tied, a natural birdie (made without a stroke) beats a net one. Two natural birdies still tie. Net skins only.</li>
+        <li><strong>Validate skins</strong>: win a skin, then make net par or better on the next hole to keep it. Miss, and the skins you took go back into the carry and ride on that hole. The last hole’s skin needs no check, and neither does the last hole played in a round ended early.</li>
+      </ul>],
       ['Joining late', <p key="j">A carry stays with the players who built it. Someone added partway plays for every skin from the hole they join, but not for skins already carrying when they got there: they don’t pay into those and can’t win them. If they win a hole outright, they take that hole’s skin and the older carry keeps rolling among the players who built it. In a pot game they sit the pot out.</p>],
     ],
   },
