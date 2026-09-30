@@ -1780,7 +1780,7 @@ export const MAX_GAMES = 4;
  * hole outright; Rabbit is a one-pot skin), and Junk with Bingo Bango Bongo (the greenie and the
  * bango both pay for being closest).
  */
-const CLASH = { skins: ['skins', 'rabbit'], rabbit: ['rabbit', 'skins'], dots: ['dots', 'bbb'], snake: ['snake'], birdies: [] };
+const CLASH = { skins: ['skins', 'rabbit'], rabbit: ['rabbit', 'skins'], dots: ['dots', 'bbb'], snake: ['snake'], birdies: ['birdies'] };
 function clashes(key, game) { return (CLASH[key] || []).includes(game); }
 
 /**
