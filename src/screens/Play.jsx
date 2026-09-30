@@ -4,11 +4,12 @@ import { RulesSheet } from '../components/Rules.jsx';
 import { DEFAULT_SETTINGS, getState, update, useStore } from '../lib/store.js';
 import {
   GAMES, addPlayerProblem, bankerHoleSetup, canLeave, defaultNine, holeComplete, leftRule, livePreview, nassauPressOptions, playersLeft, playersOn, playsHole, pressMode,
-  resizeRound, roundLegs, roundResults, scoredHolesDropped, scorers, skinsKinds, skinsTable, strokesFor, popsFor, wolfHoleSetup, changeBets, wholeRoundOnly,
+  noHandicap, resizeRound, roundLegs, roundResults, scoredHolesDropped, scorers, skinsKinds, skinsTable, strokesFor, popsFor, wolfHoleSetup, changeBets, wholeRoundOnly,
   gameView, sideGamesOf, holeFixOf, gameKeys, gameKeyLabel, settingsAt, wolfCarryBefore, posOf,
 } from '../lib/round.js';
 import { SIDE_GAMES } from '../lib/round.js';
 import { CourseTeeSheet, FixHoleSheet } from '../components/FixHole.jsx';
+import { HandicapsSheet } from '../components/HandicapsSheet.jsx';
 import { courseTeeLabel, keepsDraft } from '../lib/hole-fix.js';
 import { markUsualPlayed } from '../lib/usuals.js';
 import { findCourse } from '../lib/courses.js';
@@ -189,7 +190,7 @@ function PlayRound({ round }) {
   const others = useStore(s => roundsInProgress(s).filter(r => r.id !== round.id).length);
   const [addSheet, setAddSheet] = useState(null); // true, or the seat request being answered
   const [handSheet, setHandSheet] = useState(false);
-  const [fixSheet, setFixSheet] = useState(null); // 'hole' | 'tee'
+  const [fixSheet, setFixSheet] = useState(null); // 'hole' | 'tee' | 'hc'
   const localCourse = useStore(s => findCourse(s, round.course.id));
   const holeFixed = !!holeFixOf(round, hole.no);
   const requests = useSeatRequests(round.id);
@@ -595,6 +596,11 @@ function PlayRound({ round }) {
         <button className="sheet-item" onClick={() => { setMenu(false); setBetsSheet(true); }}>
           <span><Icon name="coins" /> Bets · {roundStakeLines(round).map(l => l.line).join(' + ')}</span><Icon name="caret-right" />
         </button>
+        {game !== 'bbb' && (
+          <button className="sheet-item" onClick={() => { setMenu(false); setFixSheet('hc'); }}>
+            <span><Icon name="scales" /> Handicaps · {round.useHandicaps === false ? 'Off' : noHandicap(round).length ? `On, ${noHandicap(round).length} with none` : 'On'}</span><Icon name="caret-right" />
+          </button>
+        )}
         {game !== 'scramble' && (
           <button className="sheet-item" onClick={() => { setMenu(false); setGamesSheet(true); }}>
             <span><Icon name="plus-circle" /> {sideGamesOf(round).length ? `Side games · ${sideGamesOf(round).length}` : 'Add a side game'}</span><Icon name="caret-right" />
@@ -661,6 +667,7 @@ function PlayRound({ round }) {
       </Sheet>
       {fixSheet === 'hole' && editable && <FixHoleSheet round={round} holeNo={hole.no} me={me} onClose={() => setFixSheet(null)} />}
       {fixSheet === 'tee' && editable && <CourseTeeSheet round={round} me={me} onClose={() => setFixSheet(null)} />}
+      {fixSheet === 'hc' && editable && <HandicapsSheet round={round} onClose={() => setFixSheet(null)} />}
       <RulesSheet game={rules.key === 'main' ? game : rules.key} open={rules.open} onClose={() => setRules(r => ({ ...r, open: false }))}
         title={rules.key === 'dots' ? `How to play ${SIDE_GAMES.dots.label}` : undefined}
         sub={rules.key === 'dots' ? 'A side game · Dots, garbage, trash' : undefined} strokes={strokesRulesLines(round, rules.key)} />
@@ -1088,7 +1095,8 @@ function BankerPanel({ round, banker, setBanker, phase, setPhase, onPick, onBet,
   return (
     <>
       <div className="banker-bar">
-        <div><div className="bl">Banker this hole</div><div className="bn"><Icon name="bank" fill /> {b?.name}</div></div>
+        <div className="bb-who"><div className="bl">Banker this hole</div><div className="bn"><Icon name="bank" fill /> <span className="bn-name">{b?.name}</span></div></div>
+        <div className="bb-line" aria-live="polite"><div className="bl">On the line</div><div className="bn">{money(onTheLine(banker))}</div></div>
         {readOnly ? null : phase === 'bets'
           ? canPick && <button className="change-btn" onClick={onPick}>Change</button>
           : <button className="change-btn" onClick={() => setPhase('bets')}><Icon name="coins" /> Bets</button>}
@@ -1100,8 +1108,10 @@ function BankerPanel({ round, banker, setBanker, phase, setPhase, onPick, onBet,
             <div key={p.id} className="pcard">
               <div style={{ display: 'flex', alignItems: 'center', padding: '16px 16px 10px' }}>
                 <div style={{ flex: 1 }}><div className="pname">{p.name}</div><div className="ps">{p.plays ? `Gets ${p.plays} stroke${p.plays > 1 ? 's' : ''} on the round` : 'No strokes'}</div></div>
-                <button className="amt-btn" onClick={() => onBet(p.id)} aria-label={`${p.name}'s bet, ${money(banker.bets[p.id])}`}>{money(banker.bets[p.id] || 0)}</button>
+                <div className="bet-now" aria-hidden="true">{money(banker.bets[p.id] || 0)}</div>
               </div>
+              <BetChips name={p.name} value={banker.bets[p.id] || 0} min={round.settings.banker.min} max={round.settings.banker.max}
+                onPick={v => setBanker({ ...banker, bets: { ...banker.bets, [p.id]: v } })} onMore={() => onBet(p.id)} />
               <div style={{ padding: '0 16px 16px', display: 'flex' }}>
                 <button className={`dbl-btn ${banker.doubled[p.id] ? 'on' : ''}`} style={{ flex: 1, height: 52, fontSize: 17 }} aria-pressed={!!banker.doubled[p.id]}
                   onClick={() => {
@@ -1121,16 +1131,31 @@ function BankerPanel({ round, banker, setBanker, phase, setPhase, onPick, onBet,
               <Icon name="lightning" fill /> {anyDoubled ? (banker.doubleBack ? 'Doubled back · 4×' : 'Double back to 4×') : 'Unlocks when someone doubles'}
             </button>
           </div>
-          <BetExposure round={round} banker={banker} />
         </div>
       )}
     </>
   );
 }
 
-function BetExposure({ banker }) {
-  const total = Object.entries(banker.bets).reduce((a, [pid, v]) => a + v * (banker.doubled[pid] ? (banker.doubleBack ? 4 : 2) : 1), 0);
-  return <p className="hint-card"><Icon name="scales" fill /> Banker has {money(total)} riding on this hole.</p>;
+/** What the banker has riding on the hole: every bet, at 2× or 4× where it's doubled. */
+function onTheLine(banker) {
+  return Object.entries(banker?.bets || {}).reduce((a, [pid, v]) => a + (v || 0) * (banker.doubled?.[pid] ? (banker.doubleBack ? 4 : 2) : 1), 0);
+}
+
+/** $1 to $10 in two rows (inside the game's min and max), then + for any other amount on the keypad. */
+function BetChips({ name, value, min = 1, max = 10, onPick, onMore }) {
+  const chips = Array.from({ length: 10 }, (_, i) => i + 1).filter(v => v >= (min || 1) && v <= (max || 10));
+  const other = !chips.includes(value);
+  return (
+    <div className="bet-chips" role="radiogroup" aria-label={`${name}'s bet`}>
+      {chips.map(v => (
+        <button key={v} role="radio" aria-checked={value === v} className={`bet-chip ${value === v ? 'on' : ''}`} onClick={() => { onPick(v); buzz(8); }}>${v}</button>
+      ))}
+      <button className={`bet-chip more ${other ? 'on' : ''}`} onClick={onMore} aria-label={other ? `${name}'s bet, ${money(value)}. Other amount` : 'Other amount'}>
+        {other ? money(value) : <Icon name="plus" />}
+      </button>
+    </div>
+  );
 }
 
 // --------------------------- Skins ----------------------------------------
