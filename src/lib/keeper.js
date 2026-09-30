@@ -22,11 +22,13 @@
 // every player's phone edits it as before, until the host phone opens it and writes one. A finished
 // round being fixed keeps today's rule: any player's phone (or the host's) can fix it.
 //
-// This is enforced on the phone (in the UI and in what sync.js sends), not on the server: the live
-// round tables are open by code, and an older copy of the app ignores the keeper. Locking it down on
-// the server belongs with the S3 plan lock-down.
+// This is enforced on the phone (in the UI and in what sync.js sends), and on the server once
+// supabase/2026-09-30-keeper-lock.sql is run: each phone's device key (device.js) is checked against
+// round.hostDev (the phone that shared it) and round.devs ({ seat: device }, the phone that took each
+// seat). See keeper-lock.js for the server's rules.
 import { merge3 } from './sync-model.js';
 import { mergeClaims } from './people-links.js';
+import { mergeDevs } from './keeper-lock.js';
 
 /** How long the keeper has to answer an ask before the asker can take the card. */
 export const ASK_MS = 2 * 60 * 1000;
@@ -203,7 +205,8 @@ export function seatTaken(round, pid, now = Date.now()) {
 
 // What a phone that can't edit may still send in the round's meta. Everything else it sends is
 // what the server already had, so a phone that isn't keeping score can't change the game.
-// `claims`: the seat each joined phone took, so everyone's copy of that friend links to them (people-links.js)
+// `claims`: the seat each joined phone took, so everyone's copy of that friend links to them (people-links.js).
+// `devs` and `hostDev` (which phone is which, for the server's lock) are merged on their own below.
 const OPEN_KEYS = ['keeper', 'cardAsk', 'onApp', 'claims'];
 const PAY_KEYS = ['payApp', 'payHandle', 'venmo'];
 
@@ -223,6 +226,11 @@ export function metaToSend(base, local, { editor, me }) {
   // Claims are only ever added: a copy that hasn't caught up never takes one away
   const claims = mergeClaims(local.claims, base.claims);
   if (claims) out.claims = claims;
+  // Which phone is which: the server's list plus this phone's own seat, and the host phone once set
+  const devs = mergeDevs(base.devs, local.devs, me);
+  if (devs) out.devs = devs;
+  const hostDev = base.hostDev ?? local.hostDev;
+  if (hostDev) out.hostDev = hostDev;
   if (me && Array.isArray(base.players) && Array.isArray(local.players)) {
     const mine = local.players.find(p => p.id === me);
     if (mine) out.players = base.players.map(p => (p.id === me ? { ...p, ...Object.fromEntries(PAY_KEYS.filter(k => k in mine).map(k => [k, mine[k]])) } : p));
@@ -242,7 +250,23 @@ export function metaToKeep(base, local, remote, { editor, me }) {
   // Two phones claiming their seats at once both keep theirs (see people-links.js)
   if (!out || typeof out !== 'object') return out;
   const claims = mergeClaims(mergeClaims(out.claims, remote?.claims), mine?.claims);
-  return claims ? { ...out, claims } : out;
+  // Device entries are only ever added (the server keeps them all), so take the server's plus our own seat
+  const devs = mergeDevs({ ...out.devs, ...remote?.devs }, mine?.devs, me);
+  const hostDev = remote?.hostDev ?? out.hostDev;
+  return { ...out, ...(claims ? { claims } : {}), ...(devs ? { devs } : {}), ...(hostDev ? { hostDev } : {}) };
+}
+
+/**
+ * Put this phone's device on the round, for the server's lock: the host phone as hostDev, and the
+ * phone's seat in devs. Only fills what's missing, so two phones for one seat never trade places.
+ * Returns a patch for the round, or null when there's nothing to add.
+ */
+export function registerDevice(round, seat, dev, isHost) {
+  if (!dev || !round) return null;
+  const patch = {};
+  if (isHost && !round.hostDev) patch.hostDev = dev;
+  if (isPlayer(round, seat) && !round.devs?.[seat]) patch.devs = { ...round.devs, [seat]: dev };
+  return Object.keys(patch).length ? patch : null;
 }
 
 /**
