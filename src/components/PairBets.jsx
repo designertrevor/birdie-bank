@@ -153,7 +153,8 @@ function BetRow({ round, bet, result = null, onTap = null }) {
   const Box = onTap ? 'button' : 'div';
   const meta = BET_KINDS[bet.kind];
   const sub = [betStakeText(bet, fmt), ...betLine(round, bet, fmt).split(' · ').slice(2)].join(' · ');
-  const status = result ? `${betStatusText(round, result)} · ${betMoneyText(round, result, fmt)}` : null;
+  // Nothing won yet says so once ("All square"), never "All square · Square"
+  const status = result ? `${betStatusText(round, result)}${result.amount ? ` · ${betMoneyText(round, result, fmt)}` : ''}` : null;
   return (
     <Box className={`set-row pb-row ${onTap ? '' : 'static'}`} {...(onTap ? { onClick: onTap, 'aria-label': `${betName(bet)}, ${betPeople(round, bet)}: ${sub}${status ? `. ${status}` : ''}. Change` } : {})}>
       <div className="set-icon"><Icon name={meta.icon} fill /></div>
@@ -217,9 +218,11 @@ export function PairBetsSheet({ round, editable, onClose }) {
   };
   const remove = () => {
     const was = structuredClone(round.bets || []);
+    // Undo puts back what was agreed too, so What we agreed doesn't list it dropped and added again
+    const agreedWas = round.agreed ? structuredClone(round.agreed) : null;
     write(r => removeBet(r, bet.id));
     setEditing(null);
-    showToast('Side bet taken off', { label: 'Undo', run: () => write(r => ({ ...r, bets: was })) });
+    showToast('Side bet taken off', { label: 'Undo', run: () => write(r => ({ ...r, bets: was, ...(agreedWas ? { agreed: agreedWas } : {}) })) });
   };
   return (
     <>
