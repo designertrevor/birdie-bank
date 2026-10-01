@@ -17,6 +17,8 @@ import { SignInSheet } from '../components/Account.jsx';
 import { HowWasIt, Reveal, RewardCard, SettleUp, ShareCard } from '../components/Finale.jsx';
 import { countsMoney, playForOf, unitFmt } from '../lib/play-for.js';
 import { SaveUsualButton } from '../components/Usuals.jsx';
+import { BetsBreakdown } from '../components/PairBets.jsx';
+import { RoundWhereFrom } from '../components/WhereFrom.jsx';
 
 // Where the finale was, so coming back from another screen (e.g. Suggest) doesn't replay the reveal.
 // Keyed by round and its finish time, so finishing the round again starts over.
@@ -192,13 +194,16 @@ export default function RoundDetail({ id, celebrate }) {
 
         <GameBreakdown round={round} res={res} />
         {/* Each side game's own breakdown, worked out on its own like the main game */}
-        {Object.entries(res.detail.byGame || {}).filter(([key]) => key !== 'main').map(([key, g]) => (
+        {Object.entries(res.detail.byGame || {}).filter(([key]) => key !== 'main' && key !== 'bets').map(([key, g]) => (
           <Fragment key={key}>
             <GameBreakdown round={gameView(round, key)} res={{ detail: g.detail }} label={g.label} />
             {/* A side game whose bet changed mid-round: what each stretch of holes was played for */}
             {betStretchLine(round, key) && <p className="field-help pad">{betStretchLine(round, key)}</p>}
           </Fragment>
         ))}
+
+        <BetsBreakdown round={round} g={res.detail.byGame?.bets} />
+        <RoundWhereFrom round={round} res={res} />
 
         <div className="sec-label">Scorecard</div>
         <Scorecard round={round} />

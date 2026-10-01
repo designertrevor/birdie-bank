@@ -7,7 +7,7 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { createRound, gameResults, livePreview, roundResults, BETS_LABEL } from './round.js';
 import {
-  addBet, betLine, betResult, betStatusText, betStrokes, betsMoney, betsOf, betsToTap, changeBet, cleanBet, ctpHoles, removeBet, setBetWinner, suggestedStrokes,
+  addBet, betLine, betMoneyText, betResult, nextPos, betStatusText, betStrokes, betsMoney, betsOf, betsToTap, changeBet, cleanBet, ctpHoles, removeBet, setBetWinner, suggestedStrokes,
 } from './pair-bets.js';
 import { breakdownLine, breakdownWith, pairBreakdown } from './where-from.js';
 import { oldRounds } from './overnight5-money.fixtures.js';
@@ -194,6 +194,11 @@ test('side bets feed the by-game table, the totals, the head to head and the few
   for (const id of Object.keys(owed)) assert.equal(owed[id], cents(res.balances[id]));
   // The games line, the reveal and the live preview carry them
   assert.equal(gamesLine(res.detail.byGame, 'p'), `Banker ${money(main.balances.p, { sign: true })} · Side bets +$8`);
+  assert.equal(gamesLine(res.detail.byGame, 't'), `Banker ${money(main.balances.t, { sign: true })}`, 'no bet, no side bets in the line');
+  assert.equal(betMoneyText(r, res.detail.byGame.bets.detail.bets[0], money), 'Preston +$10');
+  assert.equal(betMoneyText(r, { ...res.detail.byGame.bets.detail.bets[0], amount: -4 }, money), 'Tyler +$4');
+  assert.equal(nextPos(r), 9, 'every hole is in: the last one');
+  assert.equal(nextPos(banker({ upto: 4 })), 5);
   const steps = revealSteps(r, res).steps;
   assert.ok(steps.some(s => s.key === 'bet-match-py' && s.label === 'Match · Preston v Tyler' && s.amount === 10));
   assert.ok(steps.some(s => s.key === 'bet-ctp-zp' && s.amount === 2));

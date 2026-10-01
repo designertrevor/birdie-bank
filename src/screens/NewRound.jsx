@@ -10,6 +10,8 @@ import { mergeNear, milesLabel } from '../lib/nearby.js';
 import NearYou from '../components/NearYou.jsx';
 import { GAMES, GAME_GROUPS, MAX_GAMES, SIDE_GAMES, createRound, effectiveCourseHc, holesInPlay, sideGamesOf } from '../lib/round.js';
 import { SideGamesSetup } from '../components/SideGames.jsx';
+import { PairBetsSetup } from '../components/PairBets.jsx';
+import { betsOf, cleanBet } from '../lib/pair-bets.js';
 import { GameOptions, SixesPreview, TeamPicker } from '../components/GameOptions.jsx';
 import { optionsProblem, roundStakeLines, sideBetLine, stakeSummary } from '../lib/stakes.js';
 import { syncConfigured } from '../lib/sync.js';
@@ -133,6 +135,8 @@ export default function NewRound({ rematch, fromPlan, present, edit = null, ahea
   const [lostCourse, setLostCourse] = useState(null);
   // What it's played for: null is money (as every round before it), else points or a reward
   const [playFor, setPlayFor] = useState(() => pre?.playFor ?? null);
+  // Two-player side bets (pair-bets.js): this round's only, so Run it back and usuals never bring them back
+  const [pairBets, setPairBets] = useState([]);
 
   const course = findCourse(state, courseId);
   // Names from the usual still not saved here (adding one by the same name clears it from the hint)
@@ -235,6 +239,9 @@ export default function NewRound({ rematch, fromPlan, present, edit = null, ahea
     const round = createRound({ id, game, course, holesCount, nine, startHole, players, settings, hcPct: opts.hcPct, useHandicaps: useHc && !(noHc.length && noHc.length === orderedPicked.length), teams: GAMES[game].teams ? teams : null, halfStrokes });
     if (sides.length) round.sideGames = structuredClone(sides);
     if (playFor) round.playFor = structuredClone(playFor);
+    // Side bets whose two players are both still in the round (setup's list can outlive a change of players)
+    const bets = betsOf({ ...round, bets: pairBets }).map(b => cleanBet(round, b));
+    if (bets.length) round.bets = bets;
     // Started from a saved usual (still the same game at the same course): finishing it updates "Last played"
     const from = usualId && usualsOf(s).find(u => u.id === usualId);
     if (from && from.game === game && (from.courseId === course.id || findCourse(s, from.courseId)?.id === course.id)) round.usualId = usualId;
@@ -349,7 +356,8 @@ export default function NewRound({ rematch, fromPlan, present, edit = null, ahea
       {step === 3 && !planning && course && (
         <SetupStep game={game} course={course} holesCount={holesCount} nine={nine} picked={picked} setPicked={setPicked}
           opts={opts} setOpts={setOpts} useHc={useHc} setUseHc={setUseHc} startHole={startHole} setStartHole={setStartHole} onStart={start} onLater={fromPlan ? null : () => later()}
-          teams={teams} setTeams={setTeams} sideGames={sidesFor(game)} setSideGames={editSides} playFor={playFor} setPlayFor={setPlayFor} />
+          teams={teams} setTeams={setTeams} sideGames={sidesFor(game)} setSideGames={editSides} playFor={playFor} setPlayFor={setPlayFor}
+          tees={tees} hcOverride={hcOverride} defaultTee={defaultTee} pairBets={pairBets} setPairBets={setPairBets} />
       )}
       {step === 4 && created && <ReadyStep round={created} onStart={() => nav.reset('upnext', ['play', { id: created.id }])} onLater={fromPlan || created.shared ? null : () => later(created.id)} />}
     </Screen>
@@ -667,7 +675,8 @@ function QuickAddPlayer({ open, onClose, onAdded }) {
 
 // ---------------------------------------------------------------------------
 
-function SetupStep({ game, course, holesCount, nine, picked, setPicked, opts, setOpts, useHc, setUseHc, startHole, setStartHole, onStart, onLater = null, teams, setTeams, sideGames = [], setSideGames, playFor = null, setPlayFor }) {
+function SetupStep({ game, course, holesCount, nine, picked, setPicked, opts, setOpts, useHc, setUseHc, startHole, setStartHole, onStart, onLater = null, teams, setTeams, sideGames = [], setSideGames, playFor = null, setPlayFor,
+  tees = {}, hcOverride = {}, defaultTee = null, pairBets = [], setPairBets }) {
   const state = useStore();
   const [pad, setPad] = useState(null); // {path, title, min, max}
   const [holePick, setHolePick] = useState(false);
@@ -680,6 +689,17 @@ function SetupStep({ game, course, holesCount, nine, picked, setPicked, opts, se
   const optsBad = !!optionsProblem(game, opts) || sideGames.some(sg => optionsProblem(sg.game, { [sg.game]: sg.settings }));
   const names = Object.fromEntries(picked.map(pid => [pid, state.players[pid]?.name || '?']));
   const teamsBad = !!teamsProblem(game, teams, picked);
+  // A round-shaped draft for the side bets: the players picked (with course handicaps, for the
+  // strokes it suggests) and the holes in play
+  const betRound = useMemo(() => {
+    const inPlay = holesInPlay(course, holesCount, nine, startHole);
+    const players = picked.map(pid => {
+      const p = state.players[pid] || {};
+      const tee = course.tees?.find(t => t.name === (tees[pid] || defaultTee)) || course.tees?.[0] || null;
+      return { id: pid, name: p.name || '?', index: p.index ?? null, courseHcOverride: hcOverride[pid] ?? null, courseHc: effectiveCourseHc(p.index, tee, course, inPlay, holesCount, hcOverride[pid]).value };
+    });
+    return { game, players, holes: inPlay, playFor };
+  }, [course, holesCount, nine, startHole, picked, state.players, tees, defaultTee, hcOverride, game, playFor]);
   const orderLabel = { wolf: 'Tee order: the wolf moves down this list', banker: 'Playing order', sixes: 'Order: sets who partners who' }[game] || 'Playing order';
 
   return (
@@ -722,6 +742,8 @@ function SetupStep({ game, course, holesCount, nine, picked, setPicked, opts, se
           players={picked.length || null} firstName={game === 'banker' ? state.players[picked[0]]?.name : null} inPoints={!countsMoney({ playFor })} />
 
         <SideGamesSetup game={game} sideGames={sideGames} setSideGames={setSideGames} defaults={opts} players={picked.length || 4} playFor={playFor} />
+
+        {setPairBets && <PairBetsSetup round={betRound} bets={pairBets} setBets={setPairBets} />}
 
         <button className="set-row more-opts" onClick={() => setMore(!more)} aria-expanded={more}>
           <div className="row-main">

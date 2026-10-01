@@ -310,6 +310,12 @@ export function betsToTap(round, hole) {
   });
 }
 
+/** The next hole to play, as a playing position: the one after the last hole with every score in. */
+export function nextPos(round) {
+  const last = round.holes.reduce((a, h, i) => (holeComplete(round, h) ? i + 1 : a), 0);
+  return Math.min(round.holes.length, last + 1);
+}
+
 /**
  * Strokes the two would give each other from the round's handicaps, as a starting point:
  * { to, count } (the higher handicap gets the difference), or null when either has no handicap or
@@ -360,6 +366,13 @@ export function betStrokesText(round, bet) {
   if (!st.to) return '';
   const n = Object.values(st.by).reduce((x, k) => x + k, 0);
   return `${first(round.players.find(p => p.id === st.to)?.name)} gets ${n} stroke${n === 1 ? '' : 's'}`;
+}
+
+/** "Preston +$10", "Tyler +$4", or "Square": who's ahead in a bet and by how much, with `fmt` for the unit. */
+export function betMoneyText(round, r, fmt) {
+  if (!r.amount) return 'Square';
+  const [a, b] = r.sides;
+  return `${first(round.players.find(p => p.id === (r.amount > 0 ? a : b))?.name)} ${fmt(Math.abs(r.amount), { sign: true })}`;
 }
 
 /** One line for a bet: "Preston v Tyler · $10 match · Holes 10–18 · Tyler gets 3 strokes". */

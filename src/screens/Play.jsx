@@ -33,6 +33,8 @@ import { countsMoney, inUnits, padUnit, unitFmt } from '../lib/play-for.js';
 import { leaveRound, roundsInProgress } from '../lib/rounds.js';
 import { RoundsInProgressSheet } from '../components/RoundsInProgress.jsx';
 import { ByGameTable, SideGamesSetup } from '../components/SideGames.jsx';
+import { HoleBets, PairBetsSheet } from '../components/PairBets.jsx';
+import { betsOf } from '../lib/pair-bets.js';
 import { RoundMoments } from '../components/Moments.jsx';
 import { FirstTeeSheet } from '../components/FirstTee.jsx';
 import { isLocked, lockAgreement, noteChanges, showFirstTee } from '../lib/agreed.js';
@@ -186,6 +188,7 @@ function PlayRound({ round }) {
   const [holesSheet, setHolesSheet] = useState(false);
   const [betsSheet, setBetsSheet] = useState(false);
   const [gamesSheet, setGamesSheet] = useState(false);
+  const [pairSheet, setPairSheet] = useState(false);
   const [switching, setSwitching] = useState(false);
   const others = useStore(s => roundsInProgress(s).filter(r => r.id !== round.id).length);
   const [addSheet, setAddSheet] = useState(null); // true, or the seat request being answered
@@ -497,6 +500,7 @@ function PlayRound({ round }) {
       {phase === 'scores' && (
         <div className="scroll">
           {!editable && sharedLive && <p className="field-help" style={{ padding: '0 20px' }}>{round.status === 'active' ? `Scores as ${holderName} saves them. Browse any hole.` : 'Only the players in this round can fix its scores.'}</p>}
+          <HoleBets round={round} hole={hole} editable={editable} />
           {game === 'bbb' && editable && <BBBPicker round={main} hole={hole} marks={marks} setMarks={setMarksDirty} />}
           {game === 'scramble' && <ScrambleDrivesPicker round={main} hole={hole} marks={marks} setMarks={editable ? setMarksDirty : null} />}
           {game === 'snake' && editable && <SnakePicker round={main} hole={hole} marks={marks} setMarks={setMarksDirty} />}
@@ -610,6 +614,12 @@ function PlayRound({ round }) {
           </button>
         )}
         </>}
+        {/* Two-player side bets: everyone sees them, the phone keeping score adds and changes them */}
+        {(editable || betsOf(round).length > 0) && (
+          <button className="sheet-item" onClick={() => { setMenu(false); setPairSheet(true); }}>
+            <span><Icon name="hand-coins" /> {betsOf(round).length ? `Side bets · ${betsOf(round).length}` : 'Side bets'}</span><Icon name="caret-right" />
+          </button>
+        )}
         {(isLocked(round) || editable) && (
           <button className="sheet-item" onClick={() => { setMenu(false); setAgreedSheet(isLocked(round) ? 'view' : 'lock'); }}>
             <span><Icon name="handshake" /> {isLocked(round) ? `What we agreed${round.agreed.changes?.length ? ` · ${round.agreed.changes.length} change${round.agreed.changes.length > 1 ? 's' : ''}` : ''}` : 'First-tee rules card'}</span><Icon name="caret-right" />
@@ -653,6 +663,7 @@ function PlayRound({ round }) {
           : <button className="sheet-item" onClick={endEarly}><span><Icon name="flag-checkered" /> End round</span><Icon name="caret-right" /></button>)}
       </Sheet>
       {gamesSheet && <GamesSheet round={round} onClose={() => setGamesSheet(false)} />}
+      {pairSheet && <PairBetsSheet round={round} editable={editable} onClose={() => setPairSheet(false)} />}
       <RoundsInProgressSheet open={switching} onClose={() => setSwitching(false)} currentId={round.id} />
       {holesSheet && <HolesSheet round={round} onClose={() => setHolesSheet(false)} />}
       {betsSheet && <BetsSheet round={round} onClose={() => setBetsSheet(false)} />}
