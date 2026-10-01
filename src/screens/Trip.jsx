@@ -181,7 +181,7 @@ function Standings({ st, state, label, me }) {
         ))}
       </div>
       {st.live.map(r => <LiveRow key={r.id} round={r} />)}
-      <p className="field-help pad">Finished rounds only{total > 1 ? `, all ${total} of them` : ''}. Adds up to $0 across everyone on the trip.</p>
+      <p className="field-help pad">Finished rounds on this phone{total > 1 ? `, all ${total} of them` : ''}. Adds up to $0 across everyone on the trip. Someone who missed a round sees only the rounds they played, but what each pair owes is the same on both phones.</p>
     </>
   );
 }
