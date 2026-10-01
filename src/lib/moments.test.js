@@ -516,3 +516,23 @@ test('every hole of seeded Sixes, Banker and Hammer rounds makes at most one mom
     }
   }
 });
+
+test('Sixes, every hole pays: one hole reads as a hole, a split with no holes won says so, and one hole is no sweep', () => {
+  const hs = { sixes: { stake: 5, mode: 'holes' } };
+  const one = roundMoment(play(mk('sixes', { holes: 18, settings: hs }), [AB, {}, {}, {}, {}, {}]), 6);
+  assert.equal(one.kind, 'sixwon');
+  assert.equal(one.text, '1 hole to 0: $5 each');
+  const split = roundMoment(play(mk('sixes', { holes: 18, settings: hs }), [AB, CD, {}, {}, {}, {}]), 6);
+  assert.equal(split.text, '1 hole each, so nobody wins it');
+  const none = roundMoment(play(mk('sixes', { holes: 18, settings: hs }), [{}, {}, {}, {}, {}, {}]), 6);
+  assert.equal(none.text, 'Every hole halved, so nobody wins it');
+  const sweep = roundMoment(play(mk('sixes', { holes: 18, settings: hs }), [AB, AB, {}, {}, {}, {}]), 6);
+  assert.equal(sweep.kind, 'sixsweep');
+  assert.equal(sweep.text, 'Won 2 holes and lost none: $10 each');
+});
+
+test('Sixes over 9 holes: a halved three carries into the next three', () => {
+  const m = roundMoment(play(mk('sixes', { settings: { sixes: { stake: 5, mode: 'match', carry: true } } }), [AB, CD, {}]), 3);
+  assert.equal(m.title, 'The first three is halved');
+  assert.equal(m.text, '$5 carries into the next three');
+});

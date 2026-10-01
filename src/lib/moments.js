@@ -303,16 +303,18 @@ export function sixesMoment(round, pos) {
   // A match is decided once it can't be caught; with every hole paying, only when its last hole is in
   if (holesMode ? after.left > 0 : before.done || !after.done) return null;
   const len = m.seg.end - m.seg.start + 1;
-  const label = `${['first', 'middle', 'last'][i]} ${len === 6 ? 'six' : WORDS[len]?.toLowerCase() || len}`;
+  const noun = len === 6 ? 'six' : WORDS[len]?.toLowerCase() || 'match';
+  const label = `${['first', 'middle', 'last'][i]} ${noun}`;
+  const holes = n => `${n} hole${n === 1 ? '' : 's'}`;
   const fmt = fmtOf(round);
   const detail = gameResults(main).detail.matches[i];
   // Holes each side won in this match
   const won = [0, 1].map(side => Object.values(m.winners).filter(w => w === side).length);
   if (after.leader == null || (holesMode && !detail.net)) {
-    if (holesMode) return { kind: 'sixhalved', title: `The ${label} is split`, text: `${won[0]} holes each, so nobody wins it` };
+    if (holesMode) return { kind: 'sixhalved', title: `The ${label} is split`, text: won[0] ? `${holes(won[0])} each, so nobody wins it` : 'Every hole halved, so nobody wins it' };
     const next = matches[i + 1];
     if (ms.carry && next && !next.off) {
-      return { kind: 'sixhalved', title: `The ${label} is halved`, text: `${fmt(ms.stake + (detail.carried || 0))} carries into the next ${len === 6 ? 'six' : 'match'}` };
+      return { kind: 'sixhalved', title: `The ${label} is halved`, text: `${fmt(ms.stake + (detail.carried || 0))} carries into the next ${noun}` };
     }
     return { kind: 'sixhalved', title: `The ${label} is halved`, text: 'All square at the end, so nobody wins it' };
   }
@@ -322,9 +324,10 @@ export function sixesMoment(round, pos) {
   const each = `${fmt(Math.abs(detail.net))} each`;
   const lost = won[1 - w];
   if (holesMode) {
-    return lost === 0
+    // A sweep needs two holes or more, as in a match: one hole won and the rest halved is too thin
+    return lost === 0 && won[w] >= 2
       ? { kind: 'sixsweep', heroes, title: `${who} sweep the ${label}`, text: `Won ${won[w]} holes and lost none: ${each}` }
-      : { kind: 'sixwon', heroes, title: `${who} take the ${label}`, text: `${won[w]} holes to ${lost}: ${each}` };
+      : { kind: 'sixwon', heroes, title: `${who} take the ${label}`, text: `${holes(won[w])} to ${lost}: ${each}` };
   }
   // Three for three: one player won every match, each with a different partner
   const triple = i === 2 && heroes.find(pid => matches.every(x => x.status.done && x.status.leader != null && x.sides[x.status.leader].includes(pid)));
