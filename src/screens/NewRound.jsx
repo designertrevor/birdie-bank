@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { lazy, Suspense, useMemo, useState } from 'react';
 import { Empty, Header, Icon, Numpad, Screen, Segmented, Sheet, Steps, Toggle, useUI } from '../components/ui.jsx';
 import { RulesSheet } from '../components/Rules.jsx';
 import { getState, update, uid, useStore } from '../lib/store.js';
@@ -8,6 +8,7 @@ import { useCourseSearch } from '../lib/useCourseSearch.js';
 import { useNearbyCourses } from '../lib/useNearbyCourses.js';
 import { mergeNear, milesLabel } from '../lib/nearby.js';
 import NearYou from '../components/NearYou.jsx';
+import RequestCourse from '../components/RequestCourse.jsx';
 import { GAMES, GAME_GROUPS, MAX_GAMES, SIDE_GAMES, createRound, effectiveCourseHc, holesInPlay, sideGamesOf } from '../lib/round.js';
 import { SideGamesSetup } from '../components/SideGames.jsx';
 import { GameOptions, SixesPreview, TeamPicker } from '../components/GameOptions.jsx';
@@ -410,8 +411,11 @@ function GameStep({ usual, onUsual, onPickUsual, planning, onPlan, game, setGame
 
 // ---------------------------------------------------------------------------
 
+// The course editor opens over setup instead of as its own screen, so the game, holes and anything
+// else already picked stay put (only the top screen is mounted). Loaded with Settings on first use.
+const CourseEdit = lazy(() => import('./Settings.jsx').then(m => ({ default: m.CourseEdit })));
+
 function CourseStep({ courseId, setCourseId, holesCount, nine, setNine, onNext, top = null, nextLabel = 'Next: Players', nextIcon = 'arrow-right' }) {
-  const nav = useNav();
   const state = useStore();
   const [q, setQ] = useState('');
   const courses = allCourses(state);
@@ -435,6 +439,8 @@ function CourseStep({ courseId, setCourseId, holesCount, nine, setNine, onNext, 
     if (!needle) showToast(was ? `${c.name} taken off Favorites` : `${c.name} added to Favorites`);
   };
   const course = courses.find(c => c.id === courseId);
+  // The course editor over this step: {} for a blank course, or { name, city } from a search
+  const [editor, setEditor] = useState(null);
   const tooShort = course && holesCount === 18 && course.holes.length === 9;
   // Course database results, minus any this phone already has saved
   const { showToast } = useUI();
@@ -503,11 +509,8 @@ function CourseStep({ courseId, setCourseId, holesCount, nine, setNine, onNext, 
         {recent.length > 0 && <><div className="sec-label">{recentLabel}</div><div style={{ padding: '0 16px' }}>{recent.map(row)}</div></>}
         {rest.length > 0 && <><div className="sec-label">{needle ? `${rest.length} result${rest.length === 1 ? '' : 's'}` : 'All courses'}</div><div style={{ padding: '0 16px' }}>{rest.map(row)}</div></>}
         {needle && more.length > 0 && <><div className="sec-label">More courses{api.loading ? ' · searching' : ''}</div><div style={{ padding: '0 16px' }}>{more.map(apiRow)}</div></>}
-        {matches.length === 0 && more.length === 0 && !api.loading && (
-          <Empty illo={false} title={`No courses match “${q.trim()}”`} text="Add it yourself from the scorecard in a minute, or ask us to add it for everyone."
-            action={<button className="pill-btn" onClick={() => nav.push('suggest', { kind: 'course', prefill: { name: q.trim() } })}><Icon name="paper-plane-tilt" /> Request this course</button>} />
-        )}
-        <button className="add-row" aria-label="Add a course" onClick={() => nav.push('courseEdit', {})}><span className="add-ci" aria-hidden="true"><Icon name="plus" /></span><span className="add-lbl">Add a course</span></button>
+        {matches.length === 0 && more.length === 0 && !api.loading && <RequestCourse query={q} onAddYourself={setEditor} />}
+        <button className="add-row" aria-label="Add a course" onClick={() => setEditor({})}><span className="add-ci" aria-hidden="true"><Icon name="plus" /></span><span className="add-lbl">Add a course</span></button>
         {course && holesCount === 9 && course.holes.length === 18 && (
           <div className="block">
             <div className="eyebrow" style={{ marginBottom: 10 }}>Which nine?</div>
@@ -519,6 +522,15 @@ function CourseStep({ courseId, setCourseId, holesCount, nine, setNine, onNext, 
       <div className="cta-wrap">
         <button className="full-btn" disabled={!course} onClick={onNext}>{course ? <>{nextLabel} <Icon name={nextIcon} /></> : 'Pick a course'}</button>
       </div>
+      {editor && (
+        <Suspense fallback={<div className="screen active" aria-busy="true" />}>
+          <CourseEdit prefill={editor} onDone={id => {
+            setEditor(null);
+            // A saved course is picked for this round straight away
+            if (id) { setCourseId(id); setQ(''); }
+          }} />
+        </Suspense>
+      )}
     </>
   );
 }
