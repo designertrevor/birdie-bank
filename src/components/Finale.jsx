@@ -107,6 +107,26 @@ export function Reveal({ round, res, onNext, onDetail, extra, instant = false })
   const [landed, setLanded] = useState(false);
   const done = skipped || landed;
   const visible = skipped ? nSteps : shown;
+  // Every bet has resolved: the card tightens (see .rv-card.compact), so the totals land on one screen
+  const resolved = nSteps > 0 && visible >= nSteps;
+  const scroller = useRef();
+  useEffect(() => {
+    if (!(resolved || done) || instant) return;
+    // A long card or long names can still push the last total off a phone screen: bring it up, and
+    // again when the totals land (an exact amount like +$33.34 is wider, so a row can grow)
+    const id = setTimeout(() => {
+      const el = scroller.current;
+      const rows = el?.querySelectorAll('.reveal-row');
+      const last = rows?.[rows.length - 1];
+      if (!last) return;
+      // The buttons float over the bottom of the scroll, so the screen ends where they start
+      const cta = el.parentElement?.querySelector('.cta-wrap');
+      const bottom = Math.min(el.getBoundingClientRect().bottom, cta ? cta.getBoundingClientRect().top : Infinity);
+      const over = last.getBoundingClientRect().bottom - bottom + 12;
+      if (over > 0) el.scrollBy({ top: over, behavior: reducedMotion() ? 'auto' : 'smooth' });
+    }, done ? 500 : 120); // after the last total's landing pop
+    return () => clearTimeout(id);
+  }, [resolved, done, instant]);
 
   useEffect(() => {
     if (skipped) return;
@@ -134,7 +154,7 @@ export function Reveal({ round, res, onNext, onDetail, extra, instant = false })
   return (
     <>
       <Header title="Final results" small />
-      <div className={`scroll rv-scroll ${skipped ? 'rv-still' : ''}`} onClick={() => { if (!done) setSkipped(true); }}>
+      <div ref={scroller} className={`scroll rv-scroll ${skipped ? 'rv-still' : ''}`} onClick={() => { if (!done) setSkipped(true); }}>
         <div className="reveal-head" ref={hero}>
           <div className="eyebrow">{round.course.name} · {gameLabel(round)}</div>
           <div className="reveal-title d">
@@ -143,8 +163,7 @@ export function Reveal({ round, res, onNext, onDetail, extra, instant = false })
           <div className={`rv-skip ${done ? 'gone' : ''}`} aria-hidden={done}>Tap to skip</div>
         </div>
         {nSteps > 0 && (
-          // Once every bet has resolved the card tightens up, so all the totals land on one phone screen
-          <div className={`rv-card ${visible >= nSteps ? 'compact' : ''}`}>
+          <div className={`rv-card ${resolved ? 'compact' : ''}`}>
             <div className="rv-card-title">{stepsTitle}</div>
             {steps.map((s, i) => <RevealStep key={s.key} step={s} on={i < visible} skip={skipped} fmt={fmt} />)}
           </div>

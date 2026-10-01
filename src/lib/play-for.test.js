@@ -98,8 +98,10 @@ test('points are the engine numbers one for one, and bet lines read in points', 
 
 test('setup keypads read in points for a points or reward round, dollars for money', () => {
   assert.deepEqual(padUnit({}), { prefix: '$', suffix: '' });
-  assert.deepEqual(padUnit({ playFor: { kind: 'points' } }), { prefix: '', suffix: ' pts' });
-  assert.deepEqual(padUnit({ playFor: { kind: 'reward', reward: 'Lunch' } }), { prefix: '', suffix: ' pts' });
+  const pts = padUnit({ playFor: { kind: 'points' } });
+  assert.equal(pts.prefix, '');
+  assert.deepEqual([1, 5, 10].map(pts.suffix), [' pt', ' pts', ' pts']);
+  assert.equal(padUnit({ playFor: { kind: 'reward', reward: 'Lunch' } }).suffix(2), ' pts');
   // Worked examples and side game lines swap every amount
   assert.equal(inUnits({ playFor: { kind: 'points' } }, 'Win a skin: up $6, $2 from each of the other 3.'), 'Win a skin: up 6 pts, 2 pts from each of the other 3.');
 });

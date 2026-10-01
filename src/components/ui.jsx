@@ -137,7 +137,10 @@ export function Numpad(props) {
   return <NumpadInner {...props} />;
 }
 
-/** `quick`: amounts shown above the keys that pick in one tap (an amount outside min and max is left out). */
+/**
+ * `quick`: amounts shown above the keys that pick in one tap (an amount outside min and max is left out).
+ * `suffix` is a string, or a function of the amount ("1 pt", "5 pts").
+ */
 function NumpadInner({ title, prefix = '', suffix = '', initial = '', min, max, allowDecimal = false, allowNegative = false, quick = null, onDone, onClose }) {
   const init = String(initial ?? '');
   const [v, setV] = useState(init.replace('-', ''));
@@ -157,6 +160,7 @@ function NumpadInner({ title, prefix = '', suffix = '', initial = '', min, max, 
   const tooHigh = num != null && max != null && num > max;
   const invalid = num == null || Number.isNaN(num) || tooLow || tooHigh;
   const shown = v === '' ? '–' : (neg ? '+' : '') + v;
+  const sfx = n => (typeof suffix === 'function' ? suffix(n) : suffix);
   const ref = useDialog(true, onClose);
   return (
     <div ref={ref} tabIndex={-1} className="numpad-overlay open" onClick={e => e.target === e.currentTarget && onClose()} role="dialog" aria-modal="true" aria-label={title}>
@@ -165,15 +169,15 @@ function NumpadInner({ title, prefix = '', suffix = '', initial = '', min, max, 
           <div>
             <div className="numpad-title">{title}</div>
             <div className={`np-hint ${tooLow || tooHigh ? 'err' : ''}`} role="status">
-              {tooLow ? `Minimum is ${prefix}${min}${suffix}` : tooHigh ? `Maximum is ${prefix}${max}${suffix}` : allowNegative ? 'Use ± for a plus handicap' : ' '}
+              {tooLow ? `Minimum is ${prefix}${min}${sfx(min)}` : tooHigh ? `Maximum is ${prefix}${max}${sfx(max)}` : allowNegative ? 'Use ± for a plus handicap' : ' '}
             </div>
           </div>
-          <div className="numpad-value" aria-live="polite" aria-atomic="true">{prefix}{shown}{suffix}</div>
+          <div className="numpad-value" aria-live="polite" aria-atomic="true">{prefix}{shown}{sfx(num ?? 0)}</div>
         </div>
         {quick?.length > 0 && (
           <div className="np-quick" role="group" aria-label="Quick picks">
             {quick.filter(q => (min == null || q >= min) && (max == null || q <= max)).map(q => (
-              <button key={q} className={`np-quick-btn ${String(q) === init ? 'on' : ''}`} onClick={() => onDone(q)}>{prefix}{q}{suffix}</button>
+              <button key={q} className={`np-quick-btn ${String(q) === init ? 'on' : ''}`} onClick={() => onDone(q)}>{prefix}{q}{sfx(q)}</button>
             ))}
           </div>
         )}

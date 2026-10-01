@@ -72,13 +72,13 @@ const RULES = {
       ['Picking', <ul key="p">
         <li>Watch the tee shots, then pick one partner: it’s 2 v 2.</li>
         <li>Or go <strong>lone wolf</strong>: 1 v 3 for a bigger payout.</li>
-        <li>Or go <strong>blind wolf</strong>: call lone before anyone tees off, your own shot included, for more still. It’s a house rule you can turn off.</li>
+        <li>Or go <strong>blind wolf</strong>: call lone before anyone tees off, your own shot included, for more still. It’s a house rule, off unless you turn it on.</li>
       </ul>],
       ['Scoring', <ul key="s">
         <li>Each side counts its best net score. Low side wins the hole; ties push.</li>
         <li>2 v 2: each loser pays each winner one point.</li>
         <li>Lone wolf: the points are multiplied (2× by default), paid by or to each of the three.</li>
-        <li>Blind wolf: 3× by default (or 4×), paid by or to each of the three. At $2 a point a blind wolf who wins is up $18, and one who loses is down $18.</li>
+        <li>Blind wolf: always more than a lone wolf, one or two more (lone 2× makes blind 3× or 4×), paid by or to each of the three. At $2 a point and blind 3×, a blind wolf who wins is up $18, and one who loses is down $18.</li>
       </ul>],
       ['House rules', <p key="hr"><strong>Ties carry</strong> (off unless you turn it on): a tied hole’s points ride on to the next hole that’s won. Two ties in a row and the next hole pays 3×. Ties still carried after the last hole go to nobody.</p>],
     ],
