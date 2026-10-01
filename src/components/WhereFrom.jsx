@@ -41,6 +41,13 @@ export function RoundWhereFrom({ round, res }) {
   if (!rows.length) return null;
   const who = (a, b) => (a === me ? `${first(roundPlayerName(round, b))} and you` : `${first(roundPlayerName(round, a))} and ${first(roundPlayerName(round, b))}`);
   const bd = open ? pairBreakdown(round, open.a, open.b, res) : null;
+  // For screen readers, in words: "Preston pays you $15", "you pay Preston $15", "square"
+  const owesLine = (a, b, total) => {
+    if (!total) return 'square';
+    const nm = id => (id === me ? 'you' : first(roundPlayerName(round, id)));
+    const [payer, payee] = total > 0 ? [b, a] : [a, b];
+    return `${nm(payer)} ${payer === me ? 'pay' : 'pays'} ${nm(payee)} ${fmt(Math.abs(total))}`;
+  };
   return (
     <>
       <div className="sec-label">Where it comes from</div>
@@ -49,7 +56,7 @@ export function RoundWhereFrom({ round, res }) {
         const name = roundPlayerName(round, b);
         return (
           <button key={`${a}>${b}`} className="set-row wf-row" onClick={() => setOpen({ a, b })}
-            aria-label={`${who(a, b)}: ${fmt(x.total, { sign: true })}${a === me ? ' to you' : ` to ${first(roundPlayerName(round, a))}`}. ${breakdownLine(x.items, fmt)}. See where it comes from`}>
+            aria-label={`${who(a, b)}: ${owesLine(a, b, x.total)}. ${breakdownLine(x.items, fmt)}. See where it comes from`}>
             <Avatar id={b} name={name} />
             <div className="row-main">
               <div className="set-name">{who(a, b)}</div>
