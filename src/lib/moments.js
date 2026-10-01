@@ -155,14 +155,17 @@ function through(round, pos) {
   return r;
 }
 
-/** The money lead changed hands on the hole at `pos`: "Ann takes the lead, up $12". */
+/**
+ * The money lead changed hands on the hole at `pos`, or someone took the round's first lead:
+ * "Ann takes the lead, up $12". Keeping your own lead (or retaking it after going level) is quiet.
+ */
 export function moneyMoment(round, pos) {
   const after = moneyLeader(round, roundResults(round).balances);
   if (!after) return null;
   // Who led last before this hole: straight before it, or before the round went level at the top
   let last = null;
   for (let p = pos - 1; p >= 1 && !last; p--) last = moneyLeader(round, roundResults(through(round, p)).balances);
-  if (!last || last.key === after.key) return null;
+  if (last?.key === after.key) return null;
   const pf = playForOf(round);
   const up = `Up ${fmtOf(round)(after.amount)}`;
   const text = pf.kind === 'reward' ? `${up}, in line for ${rewardNoun(pf.reward)}` : `${up} on the round`;

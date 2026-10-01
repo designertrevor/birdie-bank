@@ -116,12 +116,13 @@ test('skins: a skin won, and a carry of 3 or more ended is the bigger moment', (
   const one = roundMoment(play(mk('skins'), [{ b: 3 }]), 1);
   assert.equal(one.kind, 'skin');
   assert.equal(one.title, 'Bo wins the skin');
-  assert.equal(one.text, '$6'); // $2 from each of the other three
+  // $2 from each of the other three, and the round's first lead on the same banner
+  assert.equal(one.text, '$6, and the lead');
   // Holes 1 to 3 tied, Bo wins 4: the 3 carried skins and hole 4's, $24
   const big = roundMoment(play(mk('skins'), [{}, {}, {}, { b: 3 }]), 4);
   assert.equal(big.kind, 'bigskin');
   assert.equal(big.title, 'Bo takes 4 skins');
-  assert.equal(big.text, '$24. That ends a 3-hole carry');
+  assert.equal(big.text, '$24. That ends a 3-hole carry, and the lead');
   // A carry of 2 is a plain skin moment
   assert.equal(roundMoment(play(mk('skins'), [{}, {}, { b: 3 }]), 3).kind, 'skin');
   // A tied hole makes no moment
@@ -141,11 +142,11 @@ test('skins as a side game, and a points round reads in points', () => {
   const m = roundMoment(play(mk('stroke', { sideGames: side }), [{ c: 3 }]), 1);
   assert.equal(m.title, 'Cy wins the skin');
   const pts = roundMoment(play(mk('skins', { playFor: { kind: 'points' } }), [{}, {}, {}, { b: 3 }]), 4);
-  assert.equal(pts.text, '24 pts. That ends a 3-hole carry');
+  assert.equal(pts.text, '24 pts. That ends a 3-hole carry, and the lead');
   assert.doesNotMatch(pts.text, /\$/);
   // The pot payout counts shares, not dollars
   const pot = roundMoment(play(mk('skins', { settings: { skins: { payout: 'pot' } } }), [{ b: 3 }]), 1);
-  assert.equal(pot.text, '1 share of the pot');
+  assert.equal(pot.text, '1 share of the pot, and the lead');
 });
 
 test('wolf: a lone wolf or a blind wolf that wins, and one the pack gets', () => {
@@ -154,10 +155,10 @@ test('wolf: a lone wolf or a blind wolf that wins, and one the pack gets', () =>
   const win = roundMoment(play(lone, [{ a: 3 }]), 1);
   assert.equal(win.kind, 'lonewolf');
   assert.equal(win.title, 'Lone wolf wins');
-  assert.equal(win.text, 'Ann takes $12 off the pack'); // $2 x2 from each of three
+  assert.equal(win.text, 'Ann takes $12 off the pack, and the lead'); // $2 x2 from each of three
   const blind = mk('wolf');
   blind.wolf[1] = { wolf: 'a', partner: null, blind: true };
-  assert.equal(roundMoment(play(blind, [{ a: 3 }]), 1).text, 'Ann went blind and takes $18 off the pack');
+  assert.equal(roundMoment(play(blind, [{ a: 3 }]), 1).text, 'Ann went blind and takes $18 off the pack, and the lead');
   const lost = mk('wolf');
   lost.wolf[1] = { wolf: 'a', partner: null };
   const down = roundMoment(play(lost, [{ d: 3 }]), 1);
@@ -176,21 +177,26 @@ test('Vegas: a big swing on one hole, with or without a birdie flip', () => {
   const flip = roundMoment(play(mk('vegas', { teams }), [{ a: 3, c: 5, d: 6 }]), 1);
   assert.equal(flip.kind, 'swing');
   assert.equal(flip.title, 'Big Vegas swing');
-  assert.equal(flip.text, 'A birdie flips it. Ann & Bo win it 34 to 65, $31 each');
+  assert.equal(flip.text, 'A birdie flips it. Ann & Bo win it 34 to 65, $31 each, and the lead');
   const plain = roundMoment(play(mk('vegas', { teams, settings: { vegas: { birdieFlip: false } } }), [{ a: 3, c: 5, d: 6 }]), 1);
-  assert.equal(plain.text, 'Ann & Bo win it 34 to 56, $22 each');
+  assert.equal(plain.text, 'Ann & Bo win it 34 to 56, $22 each, and the lead');
   // Birdies double: the same hole pays twice, and says why
   const doubled = roundMoment(play(mk('vegas', { teams, settings: { vegas: { birdieDouble: true } } }), [{ a: 3, c: 5, d: 6 }]), 1);
-  assert.equal(doubled.text, 'A birdie flips it. Ann & Bo win it 34 to 65, doubled for the birdie: $62 each');
-  // 44 against 45 is an ordinary hole
-  assert.equal(roundMoment(play(mk('vegas', { teams }), [{ d: 5 }]), 1), null);
+  assert.equal(doubled.text, 'A birdie flips it. Ann & Bo win it 34 to 65, doubled for the birdie: $62 each, and the lead');
+  // 44 against 45 is an ordinary hole: only the round's first lead
+  assert.equal(roundMoment(play(mk('vegas', { teams }), [{ d: 5 }]), 1).kind, 'money');
+  assert.equal(roundMoment(play(mk('vegas', { teams }), [{ d: 5 }, { d: 5 }]), 2), null);
 });
 
-test('money lead: changing hands in any game, not the first lead', () => {
+test('money lead: the first lead of the round, and the lead changing hands in any game', () => {
   // Nine point, three players: Ann wins 1, Bo wins 2 and 3
   const r = mk('nines', { ids: 'abc' });
   play(r, [{ a: 3 }]);
-  assert.equal(roundMoment(r, 1), null); // the first lead of the round is quiet
+  // The first lead of the round gets a banner too
+  const first = roundMoment(r, 1);
+  assert.equal(first.kind, 'money');
+  assert.equal(first.title, 'Ann takes the lead');
+  assert.match(first.text, /^Up \$\d+ on the round$/);
   play(r, [{ a: 3 }, { b: 3 }]);
   assert.equal(roundMoment(r, 2), null); // Ann and Bo level: nobody leads
   play(r, [{ a: 3 }, { b: 3 }, { b: 3 }]);
@@ -285,6 +291,7 @@ test('validate skins: a skin just won says what keeps it, and one that does not 
   const v = { settings: { skins: { validate: true } } };
   const won = roundMoment(play(mk('skins', v), [{}, {}, {}, { b: 3 }]), 4);
   assert.equal(won.kind, 'bigskin');
+  // A validated skin isn't in the money until it holds, so it isn't the lead yet either
   assert.equal(won.text, '$24. That ends a 3-hole carry. Net par on 5 keeps them');
   assert.equal(roundMoment(play(mk('skins', v), [{ b: 3 }]), 1).text, '$6. Net par on 2 keeps it');
   // Bo makes 5 on the 5th and nobody wins it: his 4 skins go back in the carry
@@ -296,7 +303,7 @@ test('validate skins: a skin just won says what keeps it, and one that does not 
   const taken = roundMoment(play(mk('skins', v), [{}, {}, {}, { b: 3 }, { b: 5, c: 3 }]), 5);
   assert.equal(taken.title, 'Cy takes 5 skins');
   // Without Validate nothing changes
-  assert.equal(roundMoment(play(mk('skins'), [{ b: 3 }]), 1).text, '$6');
+  assert.equal(roundMoment(play(mk('skins'), [{ b: 3 }]), 1).text, '$6, and the lead');
 });
 
 test('validate skins: taking the money lead with the skin reads before what keeps it', () => {
