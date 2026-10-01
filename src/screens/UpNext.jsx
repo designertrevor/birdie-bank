@@ -18,6 +18,8 @@ import { refreshPlans } from '../lib/plan-sync.js';
 import { refreshTab } from '../lib/tab-sync.js';
 import { latelyItems } from '../lib/lately.js';
 import { LatelyList } from '../components/LatelyList.jsx';
+import { updateSafe } from '../lib/app-update.js';
+import { applyUpdate, useUpdateReady } from '../lib/sw-update.js';
 
 const LATELY_ON_HOME = 3;
 
@@ -37,6 +39,8 @@ export default function UpNext() {
   const hasHistory = !!last;
   const plans = upcomingPlans(state);
   const lately = latelyItems(state);
+  // A new version only shows up here once no round is going on, so a tap never cuts into one
+  const updateReady = useUpdateReady() && updateSafe(state);
   // Pick up answers and votes that came in since last time
   useEffect(() => { refreshPlans(); refreshTab(); }, []);
 
@@ -44,6 +48,12 @@ export default function UpNext() {
     <Screen>
       <Header title="Up next" right={<AvatarButton />} />
       <div className="scroll">
+        {updateReady && (
+          <button className="update-note" onClick={applyUpdate}>
+            <Icon name="arrow-clockwise" />
+            <span className="row-main"><b>Update ready</b> <span className="un-sub">Tap to refresh</span></span>
+          </button>
+        )}
         {live.map(r => {
           const played = r.holes.filter(h => holeComplete(r, h)).length;
           return (
