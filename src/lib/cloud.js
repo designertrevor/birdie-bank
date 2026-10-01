@@ -18,6 +18,9 @@ function setStatus(patch) { snap = { ...snap, ...patch }; listeners.forEach(l =>
 const sub = l => { listeners.add(l); return () => listeners.delete(l); };
 /** { user, state: 'signed-out'|'syncing'|'synced'|'offline'|'error', pending, lastSynced, error } */
 export function useAccount() { return useSyncExternalStore(sub, () => snap, () => snap); }
+/** The same status outside React: the current one, and a listener for changes (returns unsubscribe). */
+export function accountNow() { return snap; }
+export function onAccount(l) { return sub(l); }
 
 // --------------------------- bookkeeping ----------------------------------
 // meta: { uid, cursor, shadow: {key: hash the server has}, changedAt: {key: ms} }

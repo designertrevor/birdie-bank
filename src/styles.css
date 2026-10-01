@@ -1646,3 +1646,7 @@ button.lately-row:active { background: var(--surface); }
 .rv-card.compact .rv-label { flex: none; font-size: 12px; }
 .rv-card.compact .rv-text { flex: 1; min-width: 0; font-size: 13px; }
 .rv-card.compact .rv-val { font-size: 14px; }
+
+/* ---------- Delete your account (overnight 6, profile foundation data) ---------- */
+/* Sits under Sign out: the same red, a step quieter, so the two never read as one choice */
+.danger-link.delete-account { margin: 0 auto 24px; font-size: 14px; font-weight: 500; }

@@ -6,6 +6,7 @@ import { getState, useStore } from './lib/store.js';
 import { joinRoute } from './lib/join.js';
 import { bootSync, syncConfigured } from './lib/sync.js';
 import { bootCloud } from './lib/cloud.js';
+import { bootProfiles } from './lib/profiles.js';
 import { cleanCode } from './lib/sync-model.js';
 import UpNext from './screens/UpNext.jsx';
 import './lib/feedback.js'; // sends any suggestions queued while offline
@@ -152,6 +153,7 @@ export default function App() {
   // Live shared rounds + ?join=CODE links
   useEffect(() => {
     bootCloud();
+    bootProfiles();
     bootSync();
     preloadScreens();
     const q = new URLSearchParams(location.search).get('join');

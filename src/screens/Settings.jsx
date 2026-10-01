@@ -12,6 +12,7 @@ import { useNav } from '../lib/nav.js';
 import { formatIndex, hcPctLabel } from '../lib/format.js';
 import { PAY_APPS, payInfo } from '../lib/pay.js';
 import { SignInSheet, syncLabel } from '../components/Account.jsx';
+import { DeleteAccountButton } from '../components/DeleteAccount.jsx';
 import { PAYWALL_ON } from '../lib/paywall-flag.js';
 import { isOrganizer, planStatus } from '../lib/paywall.js';
 import { accountsEnabled, signOut, syncNow, unsyncedCount, useAccount } from '../lib/cloud.js';
@@ -135,6 +136,7 @@ export default function Settings() {
         {acct.user
           ? <button className="danger-link" onClick={logOut}><Icon name="sign-out" /> Sign out</button>
           : <button className="danger-link" onClick={reset}><Icon name="trash" /> Erase all data</button>}
+        {acct.user && <DeleteAccountButton />}
       </div>
       {signingIn && <SignInSheet open onClose={() => setSigningIn(false)} />}
     </Screen>
