@@ -2233,6 +2233,14 @@ export function livePreview(round, hole, pending = null) {
   const without = { ...round, scores: { ...round.scores }, marks: { ...(round.marks || {}) } };
   delete without.scores[no];
   delete without.marks[no];
+  // ...and a side bet's winner tapped on this hole (closest to the pin, a custom bet), which pays on the hole too
+  if (Array.isArray(round.bets)) {
+    without.bets = round.bets.map(b => {
+      if (b?.kind === 'ctp' && b.winners && no in b.winners) { const winners = { ...b.winners }; delete winners[no]; return { ...b, winners }; }
+      if (b?.kind === 'custom' && b.winner != null && b.at === no) { const { winner: _w, at: _a, ...rest } = b; return rest; }
+      return b;
+    });
+  }
   const res = roundResults(counted);
   const now = res.balances;
   const before = roundResults(without).balances;

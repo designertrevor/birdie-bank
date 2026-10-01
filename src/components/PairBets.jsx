@@ -10,7 +10,7 @@ import {
   betStakeText, betStatusText, betsMoney, betsOf, betsToTap, changeBet, cleanBet, cleanBetLabel, ctpHoles, nextPos, removeBet, setBetWinner, suggestedStrokes,
 } from '../lib/pair-bets.js';
 import { buzz } from '../lib/delight.js';
-import { countsMoney, inUnits, padUnit, unitFmt } from '../lib/play-for.js';
+import { countsMoney, inUnits, noMoneyNote, padUnit, unitFmt } from '../lib/play-for.js';
 
 const first = n => String(n || '').trim().split(/\s+/)[0] || '?';
 const nameIn = (round, id) => first(round.players.find(p => p.id === id)?.name);
@@ -66,6 +66,8 @@ export function BetEditor({ round, bet = null, fromPos = 1, onSave, onRemove = n
     <>
       <Sheet open={!pad} onClose={onClose} title={editing ? 'Change side bet' : 'Add a side bet'}>
         <p className="sheet-text">Just between two players. {needsScores(kind) ? 'Strokes here count only in this bet, never in the group’s games.' : 'It rides along with the round’s games.'}</p>
+        {/* A points or reward round: side bets count in points with everything else, so nothing goes on the Tab */}
+        {!countsMoney(round) && <p className="field-help pad">{noMoneyNote(round)} Side bets count in points, like the games.</p>}
         <div className="pb-edit">
           <div className="field-label" id="pb-kind">What’s the bet</div>
           <div className="chip-row flush" role="radiogroup" aria-labelledby="pb-kind">
@@ -316,7 +318,7 @@ export function BetsBreakdown({ round, g }) {
           <div className={`pb-amt ${r.amount ? 'pos' : ''}`}>{betMoneyText(round, r, fmt)}</div>
         </div>
       ))}
-      {!countsMoney(round) && <p className="field-help pad">Side bets count in points too, like the rest of this round.</p>}
+      {!countsMoney(round) && <p className="field-help pad">{noMoneyNote(round)} Side bets count in points, like the games.</p>}
     </>
   );
 }

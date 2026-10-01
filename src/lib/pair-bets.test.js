@@ -18,6 +18,7 @@ import { tabBalances, personStory } from './ledger.js';
 import { gamesLine } from './side-games.js';
 import { money } from './golf.js';
 import { points } from './play-for.js';
+import { agreementItems, lockAgreement, noteChanges } from './agreed.js';
 
 const SNAPSHOT = JSON.parse(readFileSync(new URL('./overnight5-money.snapshot.json', import.meta.url), 'utf8'));
 const cents = v => Math.round(v * 100) || 0;
@@ -204,6 +205,11 @@ test('side bets feed the by-game table, the totals, the head to head and the few
   assert.ok(steps.some(s => s.key === 'bet-ctp-zp' && s.amount === 2));
   const live = livePreview(r, r.holes[8]);
   assert.deepEqual(live.byGame.bets.balances, res.detail.byGame.bets.balances);
+  // What hole 3 adds includes Zach's closest to the pin there
+  const on3 = livePreview(r, r.holes[2]);
+  const bare = livePreview(removeBet(r, 'ctp-zp'), r.holes[2]);
+  assert.equal(cents(on3.delta.z), cents(bare.delta.z + 2));
+  assert.equal(cents(on3.delta.p), cents(bare.delta.p - 2));
 });
 
 test('points rounds count side bets in points, the same numbers', () => {
@@ -364,4 +370,23 @@ test('where it comes from across rounds on the Tab: one person whatever their id
   // The season counts side bets on a line of their own
   const season = seasonBoard({ ...state, rounds: { r1: { ...one, finishedAt: Date.UTC(2026, 5, 1) } } }, 2026);
   assert.equal(season.rounds, 1);
+});
+
+test('the rules card lists side bets, notes one added or changed mid-round, and never a tapped winner', () => {
+  const r0 = withBets(banker({ holes: 18, upto: 0 }), bet('ctp', ['p', 'z'], 2));
+  const items = agreementItems(r0).filter(x => x.id.startsWith('bet:pair:'));
+  assert.deepEqual(items.map(x => [x.label, x.text]), [['Closest to the pin, Preston v Zach', '$2 a par 3']]);
+  let r = { ...r0, agreed: lockAgreement(r0, {}, 't', 1) };
+  // Played to hole 9, then a match from hole 10, then a closest-to-the-pin tap
+  r = { ...r, ...banker({ holes: 18, upto: 9 }), bets: r.bets, agreed: r.agreed };
+  r = withBets(r, bet('match', ['p', 'y'], 10, { holes: [10, 18] }));
+  const a1 = noteChanges(r, 2);
+  assert.deepEqual(a1.changes.map(c => c.text), ['Match, Preston v Tyler added: $10 match · From hole 10']);
+  r = { ...r, agreed: a1 };
+  r = setBetWinner(r, 'ctp-pz', 3, 'p');
+  assert.equal(noteChanges(r, 3), null);
+  r = changeBet(r, 'match-py', { ...r.bets[1], stake: 20 });
+  assert.equal(noteChanges(r, 4).changes.at(-1).text, 'Match, Preston v Tyler raised to $20 match');
+  // Points rounds read in points
+  assert.equal(agreementItems({ ...r0, playFor: { kind: 'points' } }).find(x => x.id.startsWith('bet:pair:')).text, '2 pts a par 3');
 });
