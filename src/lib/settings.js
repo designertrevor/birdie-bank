@@ -1,7 +1,7 @@
 // Saved game defaults across versions. Pure, so the store and cloud sync can share it (and tests can load it).
 
 /** The current version of the saved game defaults. */
-export const SETTINGS_REV = 3;
+export const SETTINGS_REV = 4;
 
 /** Defaults that changed in rev 2 (2026-09-27). */
 export const REV2_DEFAULTS = {
@@ -21,7 +21,9 @@ export const SNAKE_CAP_DEFAULT = 4;
  * defaults to "set free" with ties changing nothing. Stableford and Quota move only while they still
  * sit on the old defaults ($1 a point); a stake someone picked is kept. Nobody could pick "set free"
  * before rev 2, so Rabbit's rules always move. Rev 3: a doubling snake gets a cap of 4 doubles (nobody
- * could pick a cap before). Returns a new object; settings at the current rev come back as they are.
+ * could pick a cap before). Rev 4 (2026-09-30): blind wolf is one or two more than a lone wolf
+ * (blindPlus) instead of 3× or 4×, and starts off: still on the old default (on at 3×), it goes off.
+ * Returns a new object; settings at the current rev come back as they are.
  */
 export function migrateSettings(saved) {
   const rev = saved?.rev || 1;
@@ -33,6 +35,13 @@ export function migrateSettings(saved) {
     if (saved.rabbit) out.rabbit = { ...saved.rabbit, mode: 'free', tiesFree: false };
   }
   if (saved.snake && saved.snake.cap == null) out.snake = { ...saved.snake, cap: SNAKE_CAP_DEFAULT };
+  if (rev < 4 && saved.wolf && saved.wolf.blindPlus == null) {
+    const { blindMultiplier: bm, ...wolf } = saved.wolf;
+    const lone = wolf.loneMultiplier || 2;
+    wolf.blindPlus = Math.min(2, Math.max(1, (bm ?? 3) - lone));
+    if (wolf.blind && (bm ?? 3) === 3) wolf.blind = false;
+    out.wolf = wolf;
+  }
   return out;
 }
 

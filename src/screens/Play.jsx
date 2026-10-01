@@ -4,7 +4,7 @@ import { RulesSheet } from '../components/Rules.jsx';
 import { DEFAULT_SETTINGS, getState, update, useStore } from '../lib/store.js';
 import {
   GAMES, addPlayerProblem, bankerHoleSetup, canLeave, defaultNine, holeComplete, leftRule, livePreview, nassauPressOptions, playersLeft, playersOn, playsHole, pressMode,
-  betPresets, noHandicap, resizeRound, roundLegs, roundResults, scoredHolesDropped, scorers, skinsKinds, skinsTable, strokesFor, popsFor, wolfHoleSetup, changeBets, wholeRoundOnly,
+  betPresets, blindMultiplierOf, noHandicap, resizeRound, roundLegs, roundResults, scoredHolesDropped, scorers, skinsKinds, skinsTable, strokesFor, popsFor, wolfHoleSetup, changeBets, wholeRoundOnly,
   gameView, sideGamesOf, holeFixOf, gameKeys, gameKeyLabel, settingsAt, wolfCarryBefore, posOf,
 } from '../lib/round.js';
 import { SIDE_GAMES } from '../lib/round.js';
@@ -1200,7 +1200,7 @@ function WolfPanel({ round, hole, wolf, setWolf }) {
   // The bets in force on this hole, so a mid-round change counts from the hole it starts on
   const cfg = settingsAt(round, posOf(round, hole)).wolf;
   const mult = cfg.loneMultiplier;
-  const blindMult = cfg.blindMultiplier ?? 3;
+  const blindMult = blindMultiplierOf(cfg);
   // Ties carry: tied holes since the last one won ride on this hole
   const carried = wolfCarryBefore(round, hole);
   // Blind wolf is honor system. It's offered whenever the rule is on for this hole (a round from before

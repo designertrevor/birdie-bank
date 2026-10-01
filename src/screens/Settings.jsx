@@ -5,7 +5,7 @@ import { DEFAULT_SETTINGS, freshState, getState, replaceState, resetAll, update,
 import { addedText, backupFileName, backupText, mergeBackup, parseBackup, replaceFromBackup, summaryText } from '../lib/backup.js';
 import { allCourses, coursePar, courseTag, findCourse } from '../lib/courses.js';
 import { COURSES } from '../data/courses.js';
-import { GAMES } from '../lib/round.js';
+import { GAMES, blindMultiplierOf } from '../lib/round.js';
 import { GameOptions } from '../components/GameOptions.jsx';
 import { money } from '../lib/golf.js';
 import { useNav } from '../lib/nav.js';
@@ -205,7 +205,7 @@ export function Defaults() {
         {s.wolf.blind && (
           <div className="block">
             <div className="eyebrow" style={{ marginBottom: 10 }}>Blind wolf</div>
-            <Segmented label="Blind wolf" className="press-mode-row" btn="pm-btn" value={s.wolf.blindMultiplier ?? 3} onChange={v => set('wolf.blindMultiplier', v)} options={[3, 4].map(n => ({ value: n, label: `${n}×` }))} />
+            <Segmented label="Blind wolf" className="press-mode-row" btn="pm-btn" value={blindMultiplierOf(s.wolf) - (s.wolf.loneMultiplier || 2)} onChange={v => set('wolf.blindPlus', v)} options={[1, 2].map(n => ({ value: n, label: `${(s.wolf.loneMultiplier || 2) + n}×` }))} />
           </div>
         )}
         <div className="toggle-row">

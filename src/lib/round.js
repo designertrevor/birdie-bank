@@ -1354,10 +1354,21 @@ export function wolfCarryBefore(round, hole) {
   return carried;
 }
 
+/**
+ * What a blind wolf pays or wins, as a multiple of the point. From 2026-09-30 it's always more than a
+ * lone wolf: blindPlus (1 or 2) on top of the lone multiplier, so lone 2× gives blind 3× or 4×.
+ * A round saved before that keeps its own blindMultiplier (3× when it has none), so its money stands.
+ */
+export function blindMultiplierOf(w) {
+  if (w?.blindPlus != null) return (w.loneMultiplier || 2) + w.blindPlus;
+  return w?.blindMultiplier ?? 3;
+}
+
 function wolfHoleBase(round, hole) {
   const setup = round.wolf[hole.no];
   if (!setup || !holeComplete(round, hole)) return null;
-  const { point: P, loneMultiplier: mult, blindMultiplier } = settingsAt(round, posOf(round, hole)).wolf;
+  const cfg = settingsAt(round, posOf(round, hole)).wolf;
+  const { point: P, loneMultiplier: mult } = cfg;
   const on = playersOn(round, hole);
   const ids = on.map(p => p.id);
   // A pick that names someone who has left doesn't stand
@@ -1372,9 +1383,9 @@ function wolfHoleBase(round, hole) {
   const blind = !setup.partner && setup.blind ? { blind: true } : {};
   if (a === b) return { deltas, winner: null, teamA, teamB, ...blind };
   const winners = a < b ? teamA : teamB, losers = a < b ? teamB : teamA;
-  // A blind wolf went lone before anyone teed off, for more (3× unless the round says 4×). Only a
-  // hole saved with blind: true pays it, so rounds from before blind wolf keep their money.
-  const unit = setup.partner ? P : P * (setup.blind ? (blindMultiplier ?? 3) : mult);
+  // A blind wolf went lone before anyone teed off, for more (see blindMultiplierOf). Only a hole
+  // saved with blind: true pays it, so rounds from before blind wolf keep their money.
+  const unit = setup.partner ? P : P * (setup.blind ? blindMultiplierOf(cfg) : mult);
   // Every loser pays every winner one unit
   for (const w of winners) for (const l of losers) { deltas[w] += unit; deltas[l] -= unit; }
   return { deltas, winner: a < b ? 'wolf' : 'pack', teamA, teamB, ...blind };

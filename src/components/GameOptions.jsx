@@ -1,5 +1,5 @@
 import { Icon, Segmented, Toggle } from './ui.jsx';
-import { GAMES } from '../lib/round.js';
+import { GAMES, blindMultiplierOf } from '../lib/round.js';
 import { DOT_KINDS, SCRAMBLE_ALLOWANCE, sixesPairings } from '../lib/games.js';
 import { money } from '../lib/golf.js';
 import { teamsProblem } from '../lib/teams.js';
@@ -127,7 +127,7 @@ export function GameOptions({ game, get, set, onAmount, holesCount = 18, compact
       return <>
         {label('Points')}
         {amount('wolf.point', 'Per point', { label: 'Value per point' })}
-        {example(`Every loser pays every winner a point. Win with a partner: up ${money(get('wolf.point') * 2)} each. Lone wolf win: up ${money(get('wolf.point') * (get('wolf.loneMultiplier') || 2) * 3)}.${get('wolf.blind') ? ` Blind wolf win: up ${money(get('wolf.point') * (get('wolf.blindMultiplier') ?? 3) * 3)}.` : ''}`)}
+        {example(`Every loser pays every winner a point. Win with a partner: up ${money(get('wolf.point') * 2)} each. Lone wolf win: up ${money(get('wolf.point') * (get('wolf.loneMultiplier') || 2) * 3)}.${get('wolf.blind') ? ` Blind wolf win: up ${money(get('wolf.point') * blindMultiplierOf(get('wolf')) * 3)}.` : ''}`)}
         <div className="block">
           {seg('wolf.loneMultiplier', [2, 3].map(n => ({ value: n, label: `${n}×` })), 'Lone wolf pays or wins', true)}
         </div>
@@ -135,8 +135,8 @@ export function GameOptions({ game, get, set, onAmount, holesCount = 18, compact
         {get('wolf.blind') && (
           <div className="block">
             <div className="eyebrow" style={{ margin: '0 0 10px' }}>Blind wolf pays or wins</div>
-            {/* A round from before blind wolf has no multiplier saved, so it reads as 3× */}
-            <Segmented label="Blind wolf pays or wins" className="press-mode-row" btn="pm-btn" value={get('wolf.blindMultiplier') ?? 3} onChange={v => set('wolf.blindMultiplier', v)} options={[3, 4].map(n => ({ value: n, label: `${n}×` }))} />
+            {/* Always one or two more than a lone wolf. A round from before that shows its own multiple */}
+            <Segmented label="Blind wolf pays or wins" className="press-mode-row" btn="pm-btn" value={blindMultiplierOf(get('wolf')) - (get('wolf.loneMultiplier') || 2)} onChange={v => set('wolf.blindPlus', v)} options={[1, 2].map(n => ({ value: n, label: `${(get('wolf.loneMultiplier') || 2) + n}×` }))} />
           </div>
         )}
         {toggle('wolf.carry', 'Ties carry', 'A tied hole’s points ride on to the next hole that’s won')}

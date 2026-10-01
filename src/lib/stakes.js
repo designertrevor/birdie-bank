@@ -1,6 +1,6 @@
 // What's on the line in a game: a one-line summary and a sanity check on its options.
 import { money } from './golf.js';
-import { betChanges, gameKeyLabel, sideGamesOf } from './round.js';
+import { betChanges, blindMultiplierOf, gameKeyLabel, sideGamesOf } from './round.js';
 import { inUnits, pointsLines } from './play-for.js';
 import { houseRulesLine } from './house-rules.js';
 
@@ -100,7 +100,7 @@ function baseSummary(game, settings) {
     case 'hammer': return `${money(s.hammer.stake)} a hole · ${s.hammer.max ? `up to ${s.hammer.max} hammer${s.hammer.max === 1 ? '' : 's'}` : 'no limit'}`;
     case 'snake': return `${money(s.snake.stake)} ${s.snake.growth === 'grow' ? 'a three-putt' : s.snake.growth === 'double' ? `a snake, doubling${s.snake.cap ? ` to ${money(s.snake.stake * 2 ** s.snake.cap)}` : ''}` : 'a snake'}${s.snake.nines ? ' · each nine' : ''}`;
     // A no-break space keeps "blind 3×" together when the line wraps on a phone
-    case 'wolf': return `${money(s.wolf.point)} a point · lone wolf\u00a0${s.wolf.loneMultiplier}×${s.wolf.blind ? ` · blind\u00a0${s.wolf.blindMultiplier ?? 3}×` : ''}`;
+    case 'wolf': return `${money(s.wolf.point)} a point · lone wolf\u00a0${s.wolf.loneMultiplier}×${s.wolf.blind ? ` · blind\u00a0${blindMultiplierOf(s.wolf)}×` : ''}`;
     case 'match': return `${money(s.match.stake)} a player`;
     case 'vegas': return `${money(s.vegas.point)} a point`;
     case 'sixes': return `${money(s.sixes.stake)} ${s.sixes.mode === 'holes' ? 'a hole up' : 'a match'}`;

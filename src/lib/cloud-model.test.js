@@ -76,7 +76,7 @@ test('a profile saved before a house rule was added keeps the phone’s new keys
   };
   // An older profile: no blind wolf keys, no Hogan, but its own bets
   applyDoc(s, 'profile', 'me', { me: 'p_me', onboarded: true, favorites: [], settings: {
-    rev: 3, theme: 'light', wolf: { point: 5, loneMultiplier: 3 }, dots: { value: 2, auto: false, kinds: { greenie: false, arnie: true } },
+    rev: 4, theme: 'light', wolf: { point: 5, loneMultiplier: 3 }, dots: { value: 2, auto: false, kinds: { greenie: false, arnie: true } },
   } });
   assert.equal(s.settings.theme, 'light');
   assert.deepEqual(s.settings.wolf, { point: 5, loneMultiplier: 3, blind: true, blindMultiplier: 3 });
@@ -84,7 +84,12 @@ test('a profile saved before a house rule was added keeps the phone’s new keys
   // A game the profile doesn't mention stays as it was on this phone
   assert.deepEqual(s.settings.skins, { value: 2, carryover: true });
   // A newer profile's own choice wins over the phone's
-  applyDoc(s, 'profile', 'me', { me: 'p_me', onboarded: true, favorites: [], settings: { rev: 3, wolf: { point: 5, loneMultiplier: 3, blind: false, blindMultiplier: 4 } } });
+  applyDoc(s, 'profile', 'me', { me: 'p_me', onboarded: true, favorites: [], settings: { rev: 4, wolf: { point: 5, loneMultiplier: 3, blind: false, blindPlus: 2 } } });
   assert.equal(s.settings.wolf.blind, false);
-  assert.equal(s.settings.wolf.blindMultiplier, 4);
+  assert.equal(s.settings.wolf.blindPlus, 2);
+  // A profile from before blindPlus moves to it as it lands
+  applyDoc(s, 'profile', 'me', { me: 'p_me', onboarded: true, favorites: [], settings: { rev: 3, wolf: { point: 5, loneMultiplier: 3, blind: true, blindMultiplier: 4 } } });
+  assert.equal(s.settings.wolf.blind, true);
+  assert.equal(s.settings.wolf.blindPlus, 1);
+  assert.equal(s.settings.wolf.blindMultiplier, 3, 'the phone’s old key stays, and blindPlus wins over it');
 });

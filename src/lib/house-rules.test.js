@@ -2,11 +2,11 @@
 // flat nine (par 4s, handicaps off), so every number can be checked on a napkin.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { createRound, roundResults, livePreview, changeBets, wolfHoleResult } from './round.js';
+import { blindMultiplierOf, createRound, roundResults, livePreview, changeBets, wolfHoleResult } from './round.js';
 import { DOT_KINDS, DOT_PARS } from './games.js';
 import { stakeSummary } from './stakes.js';
 import { dotsNote, sideExample } from './side-games.js';
-import { mergeSettings } from './settings.js';
+import { mergeSettings, migrateSettings, SETTINGS_REV } from './settings.js';
 import { revealSteps } from './reveal.js';
 import { readFileSync } from 'node:fs';
 
@@ -55,6 +55,43 @@ test('blind wolf at 4×', () => {
   // Hole 1: Ann wins 8 from each (+24). Hole 2: Bo loses 8 to each (-24).
   assert.deepEqual(bal(r), { a: 24 + 8, b: -8 - 24, c: -8 + 8, d: -8 + 8 });
   assert.equal(zero(bal(r)), 0);
+});
+
+test('blind wolf is always more than lone: one or two on top of the lone multiplier', () => {
+  const at = (lone, plus) => blindMultiplierOf({ loneMultiplier: lone, blindPlus: plus });
+  assert.deepEqual([at(2, 1), at(2, 2), at(3, 1), at(3, 2)], [3, 4, 4, 5]);
+  // Lone 3×, blind +2: Ann wins 2 × 5 = 10 from each of the three (+30)
+  const r = scores(mk('wolf', { wolf: { loneMultiplier: 3, blindPlus: 2 } }), 1, { 1: { a: 3 } });
+  r.wolf = { 1: { wolf: 'a', partner: null, blind: true } };
+  assert.deepEqual(bal(r), { a: 30, b: -10, c: -10, d: -10 });
+  // blindPlus wins over a stale blindMultiplier (the round's settings are spread over the defaults)
+  assert.equal(blindMultiplierOf({ loneMultiplier: 3, blindMultiplier: 3, blindPlus: 1 }), 4);
+});
+
+test('rounds saved before blindPlus keep exactly the money they had', () => {
+  // Saved as blind 3× and 4×, including lone 3× with blind 3× (not more than lone, as it was then)
+  for (const [lone, bm, each] of [[2, 3, 6], [2, 4, 8], [3, 3, 6], [3, 4, 8], [2, undefined, 6]]) {
+    const r = scores(mk('wolf', { wolf: { loneMultiplier: lone, blindMultiplier: bm } }), 1, { 1: { a: 3 } });
+    if (bm === undefined) delete r.settings.wolf.blindMultiplier;
+    assert.equal(r.settings.wolf.blindPlus, undefined);
+    r.wolf = { 1: { wolf: 'a', partner: null, blind: true } };
+    assert.deepEqual(bal(r), { a: 3 * each, b: -each, c: -each, d: -each }, `lone ${lone}×, blind ${bm}×`);
+  }
+});
+
+test('saved wolf defaults move to blindPlus once, and blind on at the old 3× default goes off', () => {
+  const m = migrateSettings({ rev: 3, wolf: { point: 2, loneMultiplier: 2, blind: true, blindMultiplier: 3 } });
+  assert.equal(m.rev, SETTINGS_REV);
+  assert.deepEqual(m.wolf, { point: 2, loneMultiplier: 2, blind: false, blindPlus: 1 });
+  // Someone who picked 4× keeps blind on, as lone + 2
+  assert.deepEqual(migrateSettings({ rev: 3, wolf: { point: 5, loneMultiplier: 2, blind: true, blindMultiplier: 4 } }).wolf,
+    { point: 5, loneMultiplier: 2, blind: true, blindPlus: 2 });
+  // Lone 3× with blind 4× is lone + 1; blind 3× (not more than lone) becomes lone + 1 too
+  assert.equal(migrateSettings({ rev: 3, wolf: { loneMultiplier: 3, blind: true, blindMultiplier: 4 } }).wolf.blindPlus, 1);
+  assert.equal(migrateSettings({ rev: 3, wolf: { loneMultiplier: 3, blind: false, blindMultiplier: 3 } }).wolf.blindPlus, 1);
+  // Already on rev 4: left alone
+  const now = { rev: SETTINGS_REV, wolf: { loneMultiplier: 2, blind: true, blindPlus: 1 } };
+  assert.equal(migrateSettings(now), now);
 });
 
 test('a round saved with blind on but no multiplier reads as 3×', () => {
@@ -157,10 +194,10 @@ test('the bets line says blind wolf when it is on', () => {
   assert.equal(stakeSummary('wolf', { wolf: { ...SETTINGS.wolf, blind: false } }), '$2 a point · lone wolf\u00a02×');
 });
 
-test('new rounds default to blind wolf on at 3×, Hogan and Arnie off', () => {
+test('new rounds default to blind wolf off (one more than lone when on), Hogan and Arnie off', () => {
   // store.js needs the browser, so read its defaults as text
   const src = readFileSync(new URL('./store.js', import.meta.url), 'utf8');
-  assert.match(src, /wolf: \{ point: 2, loneMultiplier: 2, blind: true, blindMultiplier: 3 \}/);
+  assert.match(src, /wolf: \{ point: 2, loneMultiplier: 2, blind: false, blindPlus: 1 \}/);
   assert.match(src, /arnie: false, hogan: false \}/);
 });
 

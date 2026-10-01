@@ -23,10 +23,11 @@ export const DEFAULT_SETTINGS = {
   banker: { defaultBet: 5, min: 1, max: 20, ties: 'push', rotation: 'rotate', birdies: 'off' },
   nassau: { front: 5, back: 5, total: 5, pressMode: 'manual', threshold: 2, turnPress: false, noLastPress: false },
   skins: { value: 2, carryover: true, kind: 'net', payout: 'per', stake: 10, lastCarry: 'void' },
-  // Blind wolf: the wolf can go lone before anyone tees off, for blindMultiplier (3× or 4×).
+  // Blind wolf (off for a new setup): the wolf can go lone before anyone tees off, for one or two
+  // more than a lone wolf (blindPlus, see blindMultiplierOf in round.js).
   // House rules added 2026-09-30 all start off, so rounds and defaults from before play the same:
   // wolf and aces ties carry, Vegas birdies double, Sixes halved matches carry (see round.js)
-  wolf: { point: 2, loneMultiplier: 2, blind: true, blindMultiplier: 3 }, // carry (ties carry) is off when unset
+  wolf: { point: 2, loneMultiplier: 2, blind: false, blindPlus: 1 }, // carry (ties carry) is off when unset
   match: { stake: 10, pressMode: 'off', threshold: 2 },
   hammer: { stake: 5, max: 3, who: 'either' },
   vegas: { point: 1, birdieFlip: true, birdieDouble: false },

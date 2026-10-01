@@ -10,7 +10,7 @@
 //   { skipped }  the card was skipped (the time). It can still be locked in from the round menu.
 // It lives in the round's meta, so it syncs to every phone in a shared round. Only the phone keeping
 // score locks it or records changes (see keeper.js).
-import { GAMES, gameKeyLabel, gameKeys, holesPlayed, scorers, sideGamesOf } from './round.js';
+import { GAMES, blindMultiplierOf, gameKeyLabel, gameKeys, holesPlayed, scorers, sideGamesOf } from './round.js';
 import { sideBetLine, stakeSummary } from './stakes.js';
 import { inUnits } from './play-for.js';
 import { gamePct, halfStrokesOn, playsAtPct } from './allowances.js';
@@ -57,7 +57,7 @@ export function houseRulesFor(game, s) {
     ];
     case 'wolf': return [
       r('lone', `Lone wolf ${s.loneMultiplier ?? 2}×`, true),
-      r('blind', `Blind wolf ${s.blindMultiplier ?? 3}×`, s.blind),
+      r('blind', `Blind wolf ${blindMultiplierOf(s)}×`, s.blind),
       r('carry', 'Tied holes carry to the next one won', s.carry),
     ];
     case 'hammer': return [r('who', 'Only the side behind throws the first hammer', s.who === 'trailing')];
