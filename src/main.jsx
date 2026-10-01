@@ -2,6 +2,7 @@ import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
 import './styles.css';
 import App from './App.jsx';
+import { registerServiceWorker } from './lib/sw-update.js';
 
 createRoot(document.getElementById('root')).render(
   <StrictMode>
@@ -9,6 +10,5 @@ createRoot(document.getElementById('root')).render(
   </StrictMode>,
 );
 
-if ('serviceWorker' in navigator && import.meta.env.PROD) {
-  window.addEventListener('load', () => navigator.serviceWorker.register('/sw.js').catch(() => {}));
-}
+// A new version waits while a round is going on, then applies at launch or from Up next
+if (import.meta.env.PROD) registerServiceWorker();
