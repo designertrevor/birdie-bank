@@ -11,7 +11,8 @@
 --    same person and nobody has to merge anyone by hand. Rows are only ever written by
 --    link_my_players(), from what the server can see: your own player id (your profile in
 --    user_docs), the seats your saved rounds say you played as, and the seats you claimed in live
---    rounds. The first account to link a player id keeps it.
+--    rounds. The first account to link a player id keeps it, and a seat you no longer hold (you
+--    switched seats, or deleted that round) comes off your account on the next run.
 --  • avatars: a storage bucket for profile photos (256px JPEGs), one folder per account. Only you
 --    can add, change or remove files in your folder; anyone with a photo's link can see it, the
 --    same as a photo in a group chat.
@@ -24,6 +25,7 @@
 --
 -- To undo: drop function public.delete_my_account(boolean); drop function public.people_profiles(text[]);
 --          drop function public.link_my_players(); drop function public.profile_visible_to_me(uuid);
+--          drop function public.profile_round_ids(jsonb);
 --          drop table public.account_players; drop table public.profiles;
 
 -- --------------------------- profiles --------------------------------------
@@ -98,12 +100,15 @@ create or replace function public.profile_visible_to_me(owner uuid) returns bool
   ), false)
 $$;
 
--- Link the signed-in account's player ids, from what the server can see. Returns every player id
--- the account has (including ones linked before).
+-- Link the signed-in account's player ids, from what the server can see now. Returns every player
+-- id the account has. Each run starts from the evidence again: a seat you no longer hold (you
+-- took the wrong one and switched, or deleted that round) comes off your account, so a mis-tap
+-- never joins a friend to you for good. Ids another account linked first stay theirs.
 create or replace function public.link_my_players() returns setof text language plpgsql security definer set search_path = '' as $$
 declare
   me uuid := auth.uid();
   my_player text;
+  ids text[];
 begin
   if me is null then raise exception 'Sign in first' using errcode = '28000'; end if;
   select d.data ->> 'me' into my_player from public.user_docs d
@@ -111,8 +116,7 @@ begin
   if my_player is null or length(my_player) not between 1 and 64 then
     select p.player_id into my_player from public.profiles p where p.user_id = me;
   end if;
-  insert into public.account_players (player_id, user_id)
-  select distinct x.id, me from (
+  select coalesce(array_agg(distinct x.id), '{}'::text[]) into ids from (
     -- You
     select my_player as id where my_player is not null
     -- The seat you played as in each round saved in your account
@@ -124,7 +128,10 @@ begin
       where my_player is not null and c.value = to_jsonb(my_player) and length(c.key) between 1 and 64
         and c.key in (select public.profile_round_ids(r.meta -> 'players'))
   ) x
-  where x.id is not null
+  where x.id is not null;
+  delete from public.account_players a where a.user_id = me and not (a.player_id = any (ids));
+  insert into public.account_players (player_id, user_id)
+  select u.id, me from unnest(ids) as u(id)
   on conflict (player_id) do nothing;
   return query select a.player_id from public.account_players a where a.user_id = me;
 end $$;

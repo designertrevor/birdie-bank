@@ -43,8 +43,9 @@ export function accountGroups(state) {
 
 /**
  * Every link on this phone, in the order they're applied: your own ids first (always), then the
- * manual links, then ids on the same account, then round claims, oldest round first.
- * [{ a, b, kind: 'me' | 'manual' | 'account' | 'claim', roundId? }]
+ * manual links, then round claims, oldest round first, then ids on the same account (the server's
+ * word comes after what this phone saw in the rounds, so a wrong link on the server never beats a
+ * claim from the same round). [{ a, b, kind: 'me' | 'manual' | 'claim' | 'account', roundId? }]
  * Links broken by an unlink are left out (yours never are).
  */
 export function linkEdges(state) {
@@ -55,10 +56,13 @@ export function linkEdges(state) {
   const mine = new Set(me ? [me] : []);
   for (const r of rounds) if (r.localMe) mine.add(r.localMe);
   const accounts = accountGroups(state);
-  // Every id on your own account is you too
-  const myAccount = me && isObj(state?.accountOf) ? state.accountOf[me] : null;
-  if (myAccount) for (const id of accounts.get(myAccount) || []) mine.add(id);
   if (me) for (const id of [...mine].sort()) if (id !== me) edges.push({ a: id, b: me, kind: 'me' });
+  // Every id on your own account is you too. These come from the server, so unlike the ids above
+  // they never join you to a seat in a round you already played in (that would be two seats for
+  // you in one round, and the round's money would land on you twice)
+  const myAccount = me && isObj(state?.accountOf) ? state.accountOf[me] : null;
+  const myAccountIds = myAccount ? (accounts.get(myAccount) || []).filter(id => !mine.has(id)) : [];
+  for (const id of myAccountIds) mine.add(id);
   const links = isObj(state?.links) ? state.links : {};
   for (const alias of Object.keys(links).sort()) {
     const kept = links[alias];
@@ -72,14 +76,6 @@ export function linkEdges(state) {
     if (typeof kept !== 'string' || !kept || kept === id || links[id] === kept || broken.has(pairKey(id, kept))) continue;
     edges.push({ a: id, b: kept, kind: 'manual' });
   }
-  // Ids on the same account: each one joins the first, unless "Not the same person" broke that pair
-  for (const [acct, ids] of [...accounts].sort(([x], [y]) => x.localeCompare(y))) {
-    if (acct === myAccount) continue;
-    for (const id of ids.slice(1)) {
-      if (broken.has(pairKey(ids[0], id))) continue;
-      edges.push({ a: id, b: ids[0], kind: 'account' });
-    }
-  }
   const sorted = [...rounds].sort((x, y) => roundTime(x) - roundTime(y) || String(x.id).localeCompare(String(y.id)));
   for (const r of sorted) {
     if (!isObj(r.claims)) continue;
@@ -91,6 +87,15 @@ export function linkEdges(state) {
       if (mine.has(seat) && who !== me) continue;
       if (mine.has(who) && who !== me) continue;
       edges.push({ a: seat, b: who, kind: 'claim', roundId: r.id });
+    }
+  }
+  for (const id of myAccountIds) if (id !== me) edges.push({ a: id, b: me, kind: 'account' });
+  // Ids on the same account: each one joins the first, unless "Not the same person" broke that pair
+  for (const [acct, ids] of [...accounts].sort(([x], [y]) => x.localeCompare(y))) {
+    if (acct === myAccount) continue;
+    for (const id of ids.slice(1)) {
+      if (broken.has(pairKey(ids[0], id))) continue;
+      edges.push({ a: id, b: ids[0], kind: 'account' });
     }
   }
   return edges;

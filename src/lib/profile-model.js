@@ -202,8 +202,10 @@ export function fromRow(row) {
  * Put the server's answer from people_profiles() into a state draft (mutates): which account each
  * player id is (state.accountOf) and the profiles you may see (state.profiles). `asked` is every id
  * that was asked about, `myAccount` the signed-in account.
- * An id the server no longer links is left as the phone last knew it, so people who were one
- * person stay one person (a deleted account keeps its rounds together). A profile the server no
+ * An id the server no longer links is left as the phone last knew it when its whole account is
+ * gone, so people who were one person stay one person (a deleted account keeps its rounds
+ * together); when the account is still there, that one id was taken off it and is unlinked here
+ * too. A profile the server no
  * longer shows (a deleted account, or one you haven't played with) is dropped.
  */
 export function applyPeople(draft, rows, { asked = [], myAccount = null } = {}) {
@@ -221,6 +223,15 @@ export function applyPeople(draft, rows, { asked = [], myAccount = null } = {}) 
     const next = fromRow(row);
     const cur = draft.profiles[row.user_id];
     if (!cur || JSON.stringify(cur) !== JSON.stringify(next)) draft.profiles[row.user_id] = next;
+  }
+  // An id the server stopped linking while its account still came back for another id was taken
+  // off that account (a seat someone switched away from): it goes back to being its own person.
+  // When none of an account's ids come back, the account is gone, and its ids stay together.
+  const back = new Set();
+  for (const row of Array.isArray(rows) ? rows : []) if (row && typeof row.user_id === 'string' && typeof row.player_id === 'string') back.add(row.user_id);
+  for (const id of asked) {
+    const acct = draft.accountOf[id];
+    if (acct && !seen.has(id) && back.has(acct) && id !== draft.me) delete draft.accountOf[id];
   }
   // Accounts asked about this time that came back with nothing to show
   const askedAccounts = new Set(asked.map(id => draft.accountOf[id]).filter(Boolean));

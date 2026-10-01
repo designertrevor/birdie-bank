@@ -118,6 +118,31 @@ test('accounts: no accountOf (the SQL not run, or an older phone) links exactly 
   assert.deepEqual(tabBalances(noKey), tabBalances(plain));
 });
 
+test('accounts: a wrong seat on your own account never gives you two seats in one round', () => {
+  // Bob took Dave's seat by mistake, then the right one. If the server still has Dave's seat on
+  // Bob's account, Bob's phone must not count both seats as Bob: the round's money would land twice.
+  const r = round('r6', ['host', 'z_bob', 'a_dave'], [['a_dave', 1], ['z_bob', 2], ['a_dave', 3]], { localMe: 'z_bob' });
+  const plain = stateOf('bobMe', [r], { players: { bobMe: player('bobMe', 'Bob') } });
+  const wrong = stateOf('bobMe', [r], { players: { bobMe: player('bobMe', 'Bob') }, accountOf: { bobMe: 'acct-bob', z_bob: 'acct-bob', a_dave: 'acct-bob' } });
+  const L = linksOf(wrong);
+  assert.equal(L.personOf('z_bob'), 'bobMe', 'the seat you took is you');
+  assert.notEqual(L.personOf('a_dave'), 'bobMe', 'Dave’s seat stays Dave');
+  assert.deepEqual(tabBalances(wrong), tabBalances(plain), 'the Tab is the same as with no account links');
+  assert.equal(profileStats(wrong).money.net, profileStats(plain).money.net);
+});
+
+test('accounts: a claim from the round beats a wrong account link on the organizer’s phone', () => {
+  // Trevor's phone saw Bob claim z_bob. The server wrongly also has Dave's seat a_dave on Bob's
+  // account, and a_dave sorts first. Bob stays Bob and Dave stays Dave.
+  const r = round('r5', ['t', 'z_bob', 'a_dave'], [['z_bob', 1], ['a_dave', 2], ['a_dave', 3]], { claims: { z_bob: 'bobMe' } });
+  const plain = stateOf('t', [r], { players: { t: player('t', 'Trevor'), z_bob: player('z_bob', 'Bob', 2), a_dave: player('a_dave', 'Dave', 3) } });
+  const wrong = { ...plain, accountOf: { bobMe: 'acct-bob', z_bob: 'acct-bob', a_dave: 'acct-bob' } };
+  const L = linksOf(wrong);
+  assert.equal(L.personOf('bobMe'), 'z_bob', 'Bob’s own id joins the seat he claimed');
+  assert.equal(L.personOf('a_dave'), 'a_dave', 'Dave isn’t folded into Bob');
+  assert.deepEqual(tabBalances(wrong), tabBalances(plain));
+});
+
 // ------------------------------- the server's answer ---------------------------
 
 test('applyPeople: links ids to accounts, keeps profiles you may see, drops ones you may not', () => {
@@ -137,6 +162,15 @@ test('applyPeople: links ids to accounts, keeps profiles you may see, drops ones
   assert.equal(d.profiles['acct-gone'], undefined, 'an account that’s gone loses its profile');
   assert.equal(d.profiles['acct-t'], undefined, 'yours isn’t cached as someone else’s');
   assert.equal(linksOf(d).personOf('p_sam2'), 'p_sam');
+});
+
+test('applyPeople: a seat taken off an account that’s still there is unlinked; a gone account stays together', () => {
+  const d = organizer({ accountOf: { p_sam: 'acct-sam', p_sam2: 'acct-sam', p_ann: 'acct-gone' } });
+  applyPeople(d, [{ player_id: 'p_sam', user_id: 'acct-sam', visible: true, display_name: 'Sam' }], { asked: ['p_sam', 'p_sam2', 'p_ann', 't'], myAccount: 'acct-t' });
+  assert.equal(d.accountOf.p_sam, 'acct-sam');
+  assert.equal(d.accountOf.p_sam2, undefined, 'Sam switched off that seat, so it’s its own person again');
+  assert.equal(d.accountOf.p_ann, 'acct-gone', 'none of that account came back: it was deleted, so its ids keep their link');
+  assert.notEqual(linksOf(d).personOf('p_sam2'), linksOf(d).personOf('p_sam'));
 });
 
 test('applyPeople: your own id always maps to your account', () => {

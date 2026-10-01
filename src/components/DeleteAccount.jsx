@@ -22,7 +22,7 @@ export function DeleteAccountButton() {
   const run = async () => {
     const go = await ask({
       title: 'Delete your account?',
-      text: 'This deletes your profile, your photo and everything saved in your account: rounds, players, courses and payments, on every phone you’re signed in on. Friends keep their own copies of rounds you played together, with your name and every amount. Back up your data first if you might want it.',
+      text: 'This deletes your profile, your photo and everything saved in your account: rounds, players, courses and payments. This phone starts fresh, and other phones signed in to this account stop saving to it. Friends keep their own copies of rounds you played together, with your name and every amount. Back up your data first if you might want it.',
       confirmLabel: 'Continue', danger: true,
     });
     if (!go) return;

@@ -353,16 +353,16 @@ export function bootProfiles() {
 // --------------------------- delete your account ---------------------------
 
 /**
- * Everything this app keeps in the browser for this phone, gone, except the round data key (signing
- * out already started it fresh) and the device key (it isn't yours, it's the phone's).
+ * What this phone kept for the deleted account, gone: the profile bookkeeping and the saved copies
+ * of shared rounds (signing out already started the round data fresh). Only this phone's own keys:
+ * the device key, unsent suggestions, unsent Tab marks and another dev profile's data stay.
  */
 function clearPhoneKeys() {
   try {
-    const drop = [];
+    const drop = [LOCAL];
     for (let i = 0; i < localStorage.length; i++) {
       const k = localStorage.key(i);
-      if (!k || k === STORE_KEY || k.startsWith('bb-device')) continue;
-      if (k.startsWith('bb-') || k === LOCAL) drop.push(k);
+      if (k && k.startsWith(`bb-live-base:${STORE_KEY}:`)) drop.push(k);
     }
     drop.forEach(k => localStorage.removeItem(k));
   } catch { /* storage blocked */ }
