@@ -215,7 +215,8 @@ export function applyPeople(draft, rows, { asked = [], myAccount = null } = {}) 
     if (!row || typeof row.player_id !== 'string' || typeof row.user_id !== 'string') continue;
     seen.add(row.player_id);
     if (draft.accountOf[row.player_id] !== row.user_id) draft.accountOf[row.player_id] = row.user_id;
-    if (row.user_id === myAccount || !row.visible) continue;
+    // One account comes back once for each of its ids, with the same profile: the first one counts
+    if (row.user_id === myAccount || !row.visible || shown.has(row.user_id)) continue;
     shown.add(row.user_id);
     const next = fromRow(row);
     const cur = draft.profiles[row.user_id];
@@ -276,6 +277,22 @@ export function isNotSetUp(error) {
   if (['42P01', '42883', 'PGRST202', 'PGRST204', 'PGRST205'].includes(code)) return true;
   if (Number(error.statusCode ?? error.status) === 404 && /bucket/i.test(error.message || '')) return true;
   return /does not exist|schema cache|could not find the function|bucket not found/i.test(error.message || '');
+}
+
+/**
+ * Where the server stands after a failed call: 'off' (the SQL hasn't been run), 'offline' (no
+ * signal) or 'error' (anything else, tried again later).
+ */
+export function serverStateAfter(error, online = true) {
+  if (isNotSetUp(error)) return 'off';
+  if (!online || /fetch|network|load failed/i.test(error?.message || '')) return 'offline';
+  return 'error';
+}
+
+/** Ask a server that said "not set up" at `offAt` again on a load at `now`: after half an hour. */
+export const RETRY_OFF_MS = 30 * 60e3;
+export function retryOnLoad(offAt, now = Date.now()) {
+  return !offAt || now - offAt >= RETRY_OFF_MS;
 }
 
 /** The square to crop from a w x h image so it fills a circle: { sx, sy, size }. */

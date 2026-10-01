@@ -26,9 +26,12 @@
 //                             before the SQL: it uploads on its own later). Rejects only for a file
 //                             that isn't a picture.
 //   removePhoto()             back to no avatar (removes your photos from the server too)
-//   refreshProfiles()         ask the server again now (it also runs on its own)
-//   deleteAccount()           see DeleteAccount.jsx: { ok: true } or { ok: false, reason:
-//                             'unavailable' | 'offline' | 'signed-out' | 'error' }
+//   refreshProfiles({ retry }) ask the server now (it also runs on its own: on start, on sign-in,
+//                             after a seat is claimed, when the app comes back, every 5 minutes);
+//                             retry: true asks even a server that said "not set up"
+//   deleteAccountReady()      'ready' | 'unavailable' (SQL not run) | 'offline' | 'signed-out' | 'error'
+//   deleteAccount()           see DeleteAccount.jsx: { ok: true } or { ok: false, reason } with the
+//                             reasons above. Nothing changes unless the server can do all of it.
 //
 // Re-exported from profile-model.js for screens: PRIVACY_KEYS, PRIVACY_LEVELS, PRIVACY_DEFAULTS,
 // profileFor, profileOf, profileStats.
@@ -39,14 +42,14 @@ import { accountNow, onAccount, signOut } from './cloud.js';
 import { stable } from './sync-model.js';
 import {
   PRIVACY_DEFAULTS, PRIVACY_KEYS, PRIVACY_LEVELS, applyPeople, cropSquare, isNotSetUp, knownPlayerIds,
-  normalizeAvatar, normalizeHomeCourse, normalizePrivacy, profileFor, profileOf, profileStats, toRow,
+  normalizeAvatar, normalizeHomeCourse, normalizePrivacy, profileFor, profileOf, profileStats, retryOnLoad,
+  serverStateAfter, toRow,
 } from './profile-model.js';
 
 export { PRIVACY_DEFAULTS, PRIVACY_KEYS, PRIVACY_LEVELS, profileFor, profileOf, profileStats };
 
 const BUCKET = 'avatars';
 const PHOTO_PX = 256;
-const RETRY_OFF = 30 * 60e3; // after "not set up", ask again on a load at least this much later
 const MIN_GAP = 60e3; // at most one round trip a minute unless something changed here
 const LOCAL = `profile-sync:${STORE_KEY}`; // { offAt, pushed: { [uid]: hash } }
 
@@ -68,7 +71,7 @@ export function useProfileServer() {
   return useSyncExternalStore(l => { listeners.add(l); return () => listeners.delete(l); }, () => server, () => server);
 }
 
-const offline = e => (typeof navigator !== 'undefined' && !navigator.onLine) || /fetch|network|load failed/i.test(e?.message || '');
+const online = () => typeof navigator === 'undefined' || navigator.onLine !== false;
 const signedInUser = () => accountNow().user?.id || null;
 
 function noteOff() {
@@ -77,9 +80,10 @@ function noteOff() {
   setServer('off');
 }
 function noteError(e) {
-  if (isNotSetUp(e)) { noteOff(); return; }
-  setServer(offline(e) ? 'offline' : 'error');
-  if (!offline(e)) console.warn('Profiles:', e?.message || e);
+  const now = serverStateAfter(e, online());
+  if (now === 'off') { noteOff(); return; }
+  setServer(now);
+  if (now === 'error') console.warn('Profiles:', e?.message || e);
 }
 /** Throws the error from a Supabase reply. */
 function check(res) { if (res?.error) throw res.error; return res?.data; }
@@ -313,15 +317,18 @@ export function bootProfiles() {
   if (booted || typeof window === 'undefined') return;
   booted = true;
   // A server that said "not set up" only a little while ago isn't asked again on this load
-  const retry = !(local.offAt && Date.now() - local.offAt < RETRY_OFF);
+  const retry = retryOnLoad(local.offAt);
   if (!retry) server = 'off';
   let user = signedInUser();
+  let first = true;
   onAccount(() => {
     const now = signedInUser();
     if (now === user) return;
     user = now;
-    if (now) refreshProfiles({ retry: true });
+    // The account showing up as the app starts follows the load rule; signing in later always asks
+    if (now) refreshProfiles({ retry: first ? retry : true });
     else setServer('signed-out');
+    first = false;
   });
   // A seat taken, a round arriving with claims, or a new "me": link again shortly
   let rounds = getState().rounds, me = getState().me;
@@ -340,7 +347,7 @@ export function bootProfiles() {
   document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') refreshProfiles({ soon: true }); });
   window.addEventListener('online', () => refreshProfiles({ soon: true }));
   setInterval(() => { if (document.visibilityState === 'visible') refreshProfiles({ soon: true }); }, 5 * 60e3);
-  if (user) refreshProfiles({ retry });
+  if (user) { first = false; refreshProfiles({ retry }); }
 }
 
 // --------------------------- delete your account ---------------------------
@@ -365,15 +372,15 @@ function clearPhoneKeys() {
 /** Whether "Delete your account" can run: 'ready', or the reason it can't. */
 export async function deleteAccountReady() {
   if (!signedInUser()) return 'signed-out';
-  if (typeof navigator !== 'undefined' && !navigator.onLine) return 'offline';
+  if (!online()) return 'offline';
   try {
     const db = await getSupabase();
     if (!db) return 'unavailable';
     check(await db.rpc('delete_my_account', { p_check: true }));
     return 'ready';
   } catch (e) {
-    if (isNotSetUp(e)) return 'unavailable';
-    return offline(e) ? 'offline' : 'error';
+    const now = serverStateAfter(e, online());
+    return now === 'off' ? 'unavailable' : now;
   }
 }
 
@@ -392,7 +399,8 @@ export async function deleteAccount() {
     if (paths.length) await db.storage.from(BUCKET).remove(paths).catch(() => {});
     check(await db.rpc('delete_my_account'));
   } catch (e) {
-    return { ok: false, reason: isNotSetUp(e) ? 'unavailable' : offline(e) ? 'offline' : 'error' };
+    const now = serverStateAfter(e, online());
+    return { ok: false, reason: now === 'off' ? 'unavailable' : now };
   }
   clearTimeout(timer);
   try { await signOut(); } catch { resetAll(); /* the account is gone either way */ }
