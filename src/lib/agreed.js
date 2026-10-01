@@ -15,6 +15,8 @@ import { sideBetLine, stakeSummary } from './stakes.js';
 import { inUnits } from './play-for.js';
 import { gamePct, halfStrokesOn, playsAtPct } from './allowances.js';
 import { houseRulesLine } from './house-rules.js';
+import { betHolesText, betName, betPeople, betStakeText, betStrokesText, betsOf } from './pair-bets.js';
+import { money } from './golf.js';
 
 export const GIMMES = [
   { value: 'none', label: 'None', text: 'None. Everything gets putted out.' },
@@ -126,6 +128,11 @@ export function agreementItems(round, choices = round.agreed) {
     const bet = game === 'skins' || game === 'wolf' ? full.split(' · ')[0] : tags && full.endsWith(` · ${tags}`) ? full.slice(0, -(tags.length + 3)) : full;
     items.push({ id: `bet:${key}`, group: 'bets', label, text: inUnits(round, bet) });
     for (const h of houseRulesFor(game, block)) items.push({ id: `rule:${key}:${h.id}`, group: 'rules', label, text: h.text, on: h.on });
+  }
+  // Side bets between two players are agreed like the games' bets; a tapped winner isn't a change
+  for (const b of betsOf(round)) {
+    const text = [betStakeText(b, money), betHolesText(round, b), betStrokesText(round, b)].filter(Boolean).join(' · ');
+    items.push({ id: `bet:pair:${b.id}`, group: 'bets', label: `${betName(b)}, ${betPeople(round, b)}`, text: inUnits(round, text) });
   }
   const presses = pressesText(round);
   if (presses) items.push({ id: 'presses', group: 'calls', label: 'Presses', text: presses });

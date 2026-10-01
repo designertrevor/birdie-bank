@@ -4,6 +4,7 @@ import { Empty, Header, Icon, Screen, Segmented, useUI } from '../components/ui.
 import FreePromise from '../components/FreePromise.jsx';
 import { Avatar, SettleSheet } from '../components/Pay.jsx';
 import { PersonActions, RecentPaid, RewardLines, SquareStrip } from '../components/TabCard.jsx';
+import { TabWhereFrom } from '../components/WhereFrom.jsx';
 import { useStore } from '../lib/store.js';
 import { headToHeadSummary, nameOf, outstanding } from '../lib/ledger.js';
 import { canonicalOf, paymentGroups, recentPayment } from '../lib/shared-tab.js';
@@ -95,7 +96,10 @@ export default function Ledger() {
           <span className="chevron"><Icon name="caret-right" /></span>
         </button>
         <PersonActions other={p.id} net={p.net} meId={state.me || me} />
-        <button className="link-btn tab-part" onClick={() => setOpen(partDebt(p))}>Paid part of it?</button>
+        <div className="tab-links">
+          <button className="link-btn tab-part" onClick={() => setOpen(partDebt(p))}>Paid part of it?</button>
+          <TabWhereFrom other={p.id} />
+        </div>
         <RewardLines other={p.id} />
       </div>
     );

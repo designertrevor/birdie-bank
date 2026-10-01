@@ -68,7 +68,9 @@ export function skinsRulesLine(settings) {
 /** Each game's money for one player in small type: "Nassau +$5 · Skins +$12 · Junk $0". */
 export function gamesLine(byGame, pid, fmt = money) {
   if (!byGame) return '';
-  return Object.values(byGame).map(g => `${g.label} ${fmt(g.balances[pid] || 0, { sign: true })}`).join(' · ');
+  // Side bets between two players only show for someone with a bet
+  const has = ([key, g]) => key !== 'bets' || (g.detail?.bets || []).some(b => b.sides.includes(pid));
+  return Object.entries(byGame).filter(has).map(([, g]) => `${g.label} ${fmt(g.balances[pid] || 0, { sign: true })}`).join(' · ');
 }
 
 /**

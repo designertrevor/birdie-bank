@@ -10,6 +10,7 @@ import {
 } from './games.js';
 import { payFields } from './pay.js';
 import { gamePct, halfStrokesOn, playsAtPct } from './allowances.js';
+import { betsMoney, betsOf } from './pair-bets.js';
 
 /**
  * Every game the app can score. `teams` says how players are grouped in the setup step:
@@ -2094,16 +2095,21 @@ export function birdiePotShares(round) {
   return { shares, inPot: inPot.map(p => p.id), holes };
 }
 
+/** What the side bets between two players are called in the by-game table (see pair-bets.js). */
+export const BETS_LABEL = 'Side bets';
+
 /**
- * Money by player id for the whole round, every game added up. With no side games it's exactly the
- * main game's gameResults. Otherwise each game is worked out on its own (see gameView), the balances
- * and head-to-heads are summed (a player not in a game counts 0 there), and the fewest payments
- * square everyone across all the games at once. `detail` is the main game's, plus `detail.byGame`:
- * { key: { label, balances, detail } } in playing order, main first.
+ * Money by player id for the whole round, every game added up. With no side games and no side bets
+ * it's exactly the main game's gameResults. Otherwise each game is worked out on its own (see
+ * gameView), the balances and head-to-heads are summed (a player not in a game counts 0 there), and
+ * the fewest payments square everyone across all the games at once. `detail` is the main game's,
+ * plus `detail.byGame`: { key: { label, balances, pairs, detail } } in playing order, main first,
+ * and the two-player side bets last under `bets` ({ detail: { bets: [betResult] } }, see pair-bets.js).
  */
 export function roundResults(round) {
   const sgs = sideGamesOf(round);
-  if (!sgs.length) return gameResults(round);
+  const bets = betsOf(round);
+  if (!sgs.length && !bets.length) return gameResults(round);
   const ids = round.players.map(p => p.id);
   const sum = Object.fromEntries(ids.map(id => [id, 0]));
   const rawPairs = Object.fromEntries(ids.map(id => [id, {}]));
@@ -2118,8 +2124,15 @@ export function roundResults(round) {
       if (rawPairs[a]) rawPairs[a][b] = (rawPairs[a][b] || 0) + v;
     }
     const balances = Object.fromEntries(ids.map(id => [id, r.balances[id] || 0]));
-    byGame[key] = { label: gameKeyLabel(round, key), balances, detail: r.detail };
+    byGame[key] = { label: gameKeyLabel(round, key), balances, pairs: r.pairs, detail: r.detail };
     if (key === 'main') mainDetail = r.detail;
+  }
+  // Each side bet between two players, worked out on its own two-player view of the round
+  if (bets.length) {
+    const b = betsMoney(round);
+    for (const id of ids) sum[id] += b.balances[id] || 0;
+    for (const a of Object.keys(b.pairs)) for (const [o, v] of Object.entries(b.pairs[a])) rawPairs[a][o] = (rawPairs[a][o] || 0) + v;
+    byGame.bets = { label: BETS_LABEL, balances: b.balances, pairs: b.pairs, detail: { bets: b.list } };
   }
   const balances = roundCents(sum);
   const standings = [...round.players].map(p => ({ ...p, amount: balances[p.id] })).sort((a, b) => b.amount - a.amount);
@@ -2220,6 +2233,14 @@ export function livePreview(round, hole, pending = null) {
   const without = { ...round, scores: { ...round.scores }, marks: { ...(round.marks || {}) } };
   delete without.scores[no];
   delete without.marks[no];
+  // ...and a side bet's winner tapped on this hole (closest to the pin, a custom bet), which pays on the hole too
+  if (Array.isArray(round.bets)) {
+    without.bets = round.bets.map(b => {
+      if (b?.kind === 'ctp' && b.winners && no in b.winners) { const winners = { ...b.winners }; delete winners[no]; return { ...b, winners }; }
+      if (b?.kind === 'custom' && b.winner != null && b.at === no) { const { winner: _w, at: _a, ...rest } = b; return rest; }
+      return b;
+    });
+  }
   const res = roundResults(counted);
   const now = res.balances;
   const before = roundResults(without).balances;

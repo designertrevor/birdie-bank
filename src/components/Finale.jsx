@@ -16,6 +16,7 @@ import { useNav } from '../lib/nav.js';
 import { revealSteps, revealTiming } from '../lib/reveal.js';
 import { IMAGE_H, IMAGE_W, renderShareImage, shareImageName } from '../lib/shareImage.js';
 import { countsMoney, playForOf, rewardOutcome, unitFmt } from '../lib/play-for.js';
+import { RoundWhereFrom } from './WhereFrom.jsx';
 
 const reducedMotion = () => !!window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
 
@@ -273,6 +274,8 @@ export function SettleUp({ round, res, onBack, onNext }) {
           {paidCount === n ? 'All paid. Nice and tidy.' : `${paidCount} of ${n} paid. Anything left stays on the Tab.`}
           {missingApp ? ' Add each person’s payment app in Players to get pay buttons.' : ''}
         </p>
+        {/* Tap a person to see what's between you, game by game and side bet by side bet */}
+        <RoundWhereFrom round={round} res={res} />
       </div>
       <div className="cta-wrap">
         <button className="full-btn" onClick={onNext}>Share results <Icon name="arrow-right" /></button>

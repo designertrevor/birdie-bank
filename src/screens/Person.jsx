@@ -3,6 +3,7 @@ import { useState } from 'react';
 import { Header, Icon, Screen, Sheet, useUI } from '../components/ui.jsx';
 import { Avatar, SettleSheet } from '../components/Pay.jsx';
 import { PersonActions, RewardLines } from '../components/TabCard.jsx';
+import { TabWhereFrom } from '../components/WhereFrom.jsx';
 import { useTabSync } from '../lib/tab-sync.js';
 import { uid, update, useStore } from '../lib/store.js';
 import { nameOf, outstanding, personStory, tabWith } from '../lib/ledger.js';
@@ -104,6 +105,7 @@ export default function Person({ id: opened }) {
         <div className="pad-x">
           <PersonActions other={id} net={tab} meId={state.me || (tab > 0 ? debt.to : debt.from)} />
           <RewardLines other={id} />
+          {story.rounds > 0 && <TabWhereFrom other={id} />}
         </div>
         {tab !== 0 && (
           <button className="quiet-row" onClick={() => setOpen(debt)}>

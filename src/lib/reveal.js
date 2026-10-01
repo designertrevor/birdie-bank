@@ -3,6 +3,7 @@
 import { holeAtPos, roundLegs, sideNames, sides } from './round.js';
 import { matchLabel, sideSplit } from './games.js';
 import { money } from './golf.js';
+import { betPeople, betStatusText } from './pair-bets.js';
 
 const first = n => (n || '').split(' ')[0];
 const plural = (n, word, many = `${word}s`) => `${n} ${n === 1 ? word : many}`;
@@ -41,8 +42,16 @@ export function revealSteps(round, res) {
   // Several games: the main game's steps, then one summary step per side game
   const players = round.players || [];
   const name = id => first(players.find(p => p.id === id)?.name) || '?';
-  const extra = Object.entries(byGame).filter(([key]) => key !== 'main').map(([key, g]) => sideStep(key, g, name, players));
+  const extra = Object.entries(byGame).filter(([key]) => key !== 'main')
+    .flatMap(([key, g]) => (key === 'bets' ? (g.detail?.bets || []).map(b => betStep(round, b)) : [sideStep(key, g, name, players)]));
   return { title: main.steps.length ? main.title : 'The games', steps: [...main.steps, ...extra] };
+}
+
+/** One side bet between two players: "Match · Preston v Tyler", where it stands, and what it paid. */
+function betStep(round, r) {
+  const label = `${r.label} · ${betPeople(round, r.bet)}`;
+  const text = betStatusText(round, r);
+  return r.amount ? { key: `bet-${r.id}`, label, text, amount: Math.abs(r.amount) } : { key: `bet-${r.id}`, label, text, tie: true };
 }
 
 /** One side game's reveal step: who did best in it and what it brought them, or a push. */
