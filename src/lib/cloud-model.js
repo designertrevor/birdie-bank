@@ -18,6 +18,8 @@ export function toDocs(state) {
     links: state.links && typeof state.links === 'object' ? state.links : {}, unlinks: Array.isArray(state.unlinks) ? state.unlinks : [],
     rewardsDone: state.rewardsDone || {},
     starredCourses: Array.isArray(state.starredCourses) ? state.starredCourses : [],
+    // Golf trips (trips.js): name, dates and "done playing". Their rounds carry the trip themselves
+    trips: state.trips && typeof state.trips === 'object' && !Array.isArray(state.trips) ? state.trips : {},
   });
   for (const p of Object.values(state.players)) put('player', p.id, p);
   for (const c of Object.values(state.crews)) put('crew', c.id, c);
@@ -72,6 +74,8 @@ export function applyDoc(draft, kind, id, data) {
     if (data.rewardsDone && typeof data.rewardsDone === 'object' && !Array.isArray(data.rewardsDone)) draft.rewardsDone = data.rewardsDone;
     // Starred courses came later too: an older profile keeps this phone's stars
     if (Array.isArray(data.starredCourses)) draft.starredCourses = data.starredCourses;
+    // Trips came later still: an older profile keeps this phone's
+    if (data.trips && typeof data.trips === 'object' && !Array.isArray(data.trips)) draft.trips = data.trips;
   }
 }
 

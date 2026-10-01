@@ -13,7 +13,8 @@ import { roundResults } from './round.js';
 import { countsMoney } from './play-for.js';
 import { meFor } from './format.js';
 import { outstanding, tabWith } from './ledger.js';
-import { FETCH_DAYS, canonicalOf, cents, codeOf, finishedAt, nettedId, nettedOn, pairDebt, paidOn, played, sharedRounds } from './pair-debts.js';
+import { FETCH_DAYS, canonicalOf, cents, codeOf, finishedAt, lockedRounds, nettedId, nettedOn, pairDebt, paidOn, played, sharedRounds } from './pair-debts.js';
+import { isTripPayment } from './trip-pay.js';
 
 export { FETCH_DAYS, canonicalOf, codeOf, nettedId, pairDebt, played, sharedRounds };
 
@@ -43,7 +44,8 @@ export function tabCodes(state, opts) {
 export function pairRounds(state, a, b, { days = FETCH_DAYS, now = Date.now() } = {}) {
   const who = canonicalOf(state);
   const A = who(a), B = who(b);
-  return sharedRounds(state, { days, now }).filter(r => {
+  // A trip being settled as one squares its rounds itself, so they're not between the two any more
+  return lockedRounds(state, { days, now }).filter(r => {
     const ids = new Set(r.players.map(p => who(p.id)));
     return ids.has(A) && ids.has(B);
   });
@@ -305,11 +307,12 @@ export function undoRows(state, pay, { now = Date.now() } = {}) {
 /** Everything this phone knows about one round's payments and carries, as rows. */
 export function roundRows(state, round) {
   const code = codeOf(round);
-  const rows = code ? Object.values(state.tabRows || {}).filter(r => r.code === code) : [];
+  // A trip payment on this round's code squares the trip, not this round's transfers
+  const rows = code ? Object.values(state.tabRows || {}).filter(r => r.code === code && !isTripPayment(r)) : [];
   const ids = new Set(rows.map(r => r.id));
   // Payments recorded on this phone before the table was there count too
   for (const s of state.settlements || []) {
-    if (ids.has(s.id) || !(s.roundId === round.id || (code && s.code === code))) continue;
+    if (ids.has(s.id) || isTripPayment(s) || !(s.roundId === round.id || (code && s.code === code))) continue;
     rows.push({ code, id: s.id, kind: 'payment', from: s.from, to: s.to, amount: s.amount, status: 'paid', at: s.at, updatedAt: s.at });
   }
   return rows;
@@ -346,7 +349,7 @@ export function roundStatus(round, rows) {
  * most recent finished round of all, or null.
  */
 export function stripRound(state, { now = Date.now() } = {}) {
-  const shared = sharedRounds(state, { days: STRIP_DAYS, now }).filter(r => roundResults(r).transfers.length);
+  const shared = lockedRounds(state, { days: STRIP_DAYS, now }).filter(r => roundResults(r).transfers.length);
   const round = shared.at(-1);
   if (!round) return null;
   // Your newest round of any kind (a points round after it means it isn't your latest)

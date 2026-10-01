@@ -8,6 +8,7 @@ import { roundResults } from './round.js';
 import { meFor, myIds } from './format.js';
 import { linksOf } from './people-links.js';
 import { countsMoney } from './play-for.js';
+import { inSettlingTrip, isTripPayment, settlingTrips } from './trip-pay.js';
 
 const DAY = 864e5;
 /** Shared rounds this recent are looked up on the server. */
@@ -51,13 +52,26 @@ export function sharedRounds(state, { days = FETCH_DAYS, now = Date.now() } = {}
     .sort((a, b) => finishedAt(a) - finishedAt(b));
 }
 
+/**
+ * The shared rounds whose money the Tab keeps between the two people in them. A trip's rounds
+ * leave once the trip is being settled as one (trip-pay.js): the trip squares them in the fewest
+ * payments across everyone on it. Their codes are still looked up (tabCodes), so the trip's
+ * payments reach every phone.
+ */
+export function lockedRounds(state, opts) {
+  const settling = settlingTrips(state);
+  const rounds = sharedRounds(state, opts);
+  return settling.size ? rounds.filter(r => !inSettlingTrip(r, settling)) : rounds;
+}
+
 /** A transfer closed by a payment that squared the pair's shared rounds (status only, no money). */
 export const nettedId = (code, from, to) => `${code}:${from}>${to}:net`;
 
 /** What has been paid on one round transfer, in cents. */
 export function paidOn(state, round, code, t) {
   // Payments marked at the end of the round before the shared Tab (roundId, no code) count too
-  const on = s => s.code === code || (!s.code && s.roundId === round.id);
+  // A trip payment rides on one of the trip's rounds but squares the trip, never one transfer
+  const on = s => !isTripPayment(s) && (s.code === code || (!s.code && s.roundId === round.id));
   return (state.settlements || []).filter(s => on(s) && s.from === t.from && s.to === t.to).reduce((a, s) => a + cents(s.amount), 0);
 }
 export const nettedOn = (state, code, t) => state.tabRows?.[`${code}|${nettedId(code, t.from, t.to)}`]?.status === 'netted';
@@ -69,7 +83,7 @@ export const nettedOn = (state, code, t) => state.tabRows?.[`${code}|${nettedId(
 export function sharedDebts(state, { now = Date.now() } = {}) {
   const who = canonicalOf(state);
   const net = new Map(); // "a|b" (sorted) -> cents a owes b
-  for (const r of sharedRounds(state, { now })) {
+  for (const r of lockedRounds(state, { now })) {
     const code = codeOf(r);
     for (const t of roundResults(r).transfers) {
       const f = who(t.from), to = who(t.to);
