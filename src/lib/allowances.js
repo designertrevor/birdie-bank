@@ -51,10 +51,10 @@ export function suggestedAllowance(game, { teams = null, players = null } = {}) 
   }
 }
 
-/** The hint line: "WHS suggests 95% for stroke play", or "full strokes" at 100%. */
+/** The hint line: "Handicap rules suggest 95% for stroke play", or "full strokes" at 100%. */
 export function allowanceHint(s) {
   if (!s) return '';
-  return `WHS suggests ${s.pct === 100 ? 'full strokes' : `${s.pct}%`} for ${s.format}`;
+  return `Handicap rules suggest ${s.pct === 100 ? 'full strokes' : `${s.pct}%`} for ${s.format}`;
 }
 
 /**

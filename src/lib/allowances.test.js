@@ -41,9 +41,9 @@ test('the WHS Appendix C (2024) values', () => {
 });
 
 test('hint wording', () => {
-  assert.equal(allowanceHint(suggestedAllowance('stroke')), 'WHS suggests 95% for stroke play');
-  assert.equal(allowanceHint(suggestedAllowance('match', { teams: [['a'], ['b']] })), 'WHS suggests full strokes for singles match play');
-  assert.equal(allowanceHint(suggestedAllowance('sixes')), 'WHS suggests 90% for best ball match play');
+  assert.equal(allowanceHint(suggestedAllowance('stroke')), 'Handicap rules suggest 95% for stroke play');
+  assert.equal(allowanceHint(suggestedAllowance('match', { teams: [['a'], ['b']] })), 'Handicap rules suggest full strokes for singles match play');
+  assert.equal(allowanceHint(suggestedAllowance('sixes')), 'Handicap rules suggest 90% for best ball match play');
   assert.equal(allowanceHint(null), '');
 });
 
