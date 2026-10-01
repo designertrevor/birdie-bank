@@ -8,12 +8,14 @@ import { useStore } from '../lib/store.js';
 import { nameOf, outstanding, personStory, recordText, tabWith } from '../lib/ledger.js';
 import { PAY_APPS, handleText, payInfoFor } from '../lib/pay.js';
 import { money } from '../lib/golf.js';
-import { formatIndex, gameLabel, myIds, roundDate } from '../lib/format.js';
+import { formatIndex, gameLabel, keptId, myIds, roundDate } from '../lib/format.js';
 import { useNav } from '../lib/nav.js';
 
-export default function Person({ id }) {
+export default function Person({ id: opened }) {
   const nav = useNav();
   const state = useStore();
+  // A merged duplicate opens as the player it was merged into
+  const id = keptId(state, opened);
   useTabSync();
   const [open, setOpen] = useState(null);
   const mine = myIds(state);
@@ -36,7 +38,7 @@ export default function Person({ id }) {
   return (
     <Screen>
       <Header title={name} onBack={nav.pop}
-        right={player && <button className="header-btn" onClick={() => nav.push('playerEdit', { id })}>Edit</button>} />
+        right={id !== state.me && <button className="header-btn" onClick={() => nav.push('playerEdit', { id })}>Edit</button>} />
       <div className="scroll">
         <div className="person-hero">
           <Avatar name={name} size="lg" />

@@ -29,7 +29,7 @@ export function playerLabel(p, me) {
 }
 
 export function sortedPlayers(state) {
-  return Object.values(state.players).sort((a, b) => (a.id === state.me ? -1 : b.id === state.me ? 1 : a.name.localeCompare(b.name)));
+  return Object.values(state.players).filter(p => !p.mergedInto).sort((a, b) => (a.id === state.me ? -1 : b.id === state.me ? 1 : a.name.localeCompare(b.name)));
 }
 
 export function roundDate(r) {
@@ -79,6 +79,16 @@ export async function shareRound(round, res, showToast, opts) {
 /** Which player in a round is "you" on this phone (joined rounds carry their own). */
 export function meFor(round, state) { return round.localMe ?? state.me; }
 
+/**
+ * The player an id stands for once duplicates are merged: a player merged into another one
+ * (`mergedInto`, set from Players) follows the chain to the one that's kept.
+ */
+export function keptId(state, id) {
+  let x = id;
+  for (let i = 0; i < 8 && state.players?.[x]?.mergedInto; i++) x = state.players[x].mergedInto;
+  return x;
+}
+
 /** Every player id that means "you" on this phone. */
 export function myIds(state) {
   const ids = new Set(state.me ? [state.me] : []);
@@ -102,7 +112,7 @@ export function seasonStats(state, year = new Date().getFullYear()) {
     birdies += s.birdies + s.eagles;
     if (!best || amt > best.amount) best = { amount: amt, round: r };
     // Honest head-to-head from the bets themselves, not from who happened to pay whom
-    for (const [pid, v] of Object.entries(res.pairs[me] || {})) h2h[pid] = Math.round(((h2h[pid] || 0) + v) * 100) / 100;
+    for (const [raw, v] of Object.entries(res.pairs[me] || {})) { const pid = keptId(state, raw); h2h[pid] = Math.round(((h2h[pid] || 0) + v) * 100) / 100; }
   }
   return { rounds: rounds.length, total, birdies, streak, best, h2h };
 }

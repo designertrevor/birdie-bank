@@ -5,7 +5,7 @@
 // through a third person), and "I paid", "Roll to next time" and the who's-square strip all
 // count it. Pure, unit tested. Kept apart from ledger.js and shared-tab.js so both can use it.
 import { roundResults } from './round.js';
-import { meFor, myIds } from './format.js';
+import { keptId, meFor, myIds } from './format.js';
 
 const DAY = 864e5;
 /** Shared rounds this recent are looked up on the server. */
@@ -18,10 +18,13 @@ export function codeOf(round) {
   return round?.shareCode || round?.shared?.code || null;
 }
 
-/** Every id that means you maps to one; everyone else stays as they are. */
+/** Every id that means you maps to one, and a merged player to the one that's kept. */
 export function canonicalOf(state) {
   const mine = myIds(state);
-  return id => (state.me && mine.has(id) ? state.me : id);
+  return id => {
+    const k = keptId(state, id);
+    return state.me && mine.has(k) ? state.me : k;
+  };
 }
 
 export const doneRounds = state => Object.values(state.rounds || {}).filter(r => r.status === 'done');

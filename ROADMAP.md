@@ -37,11 +37,13 @@ The plan for growing Birdie Bank into a $10k/mo business, and the checklist we w
 
 **Fixed 2026-09-30 (from Trevor):** "Schedule for later" now sits at the end of setup too (Bets step, Round ready, and End round before any holes are scored), carrying the game, course, bets, side games and players into a plan the group can open from the link.
 
+**Fixed 2026-09-30 (from Trevor):** duplicate players (two Adams, two Daltons) can be merged from the player's edit screen, with Undo, and people from joined rounds can be edited.
+
 **Next in S2:** linking the organizer's copy of a player to the real person (area 1), real payments for the paywall test (Stripe, area 11), and the quick logo (area 16).
 
 **The big date:** the creator test (S4) runs February to April 2027, when golf season starts back up. Everything before it is about being ready: a product groups keep using, a smooth path from video to paying, and an App Store app.
 
-Last updated: 2026-09-30 (schedule for later at the end of setup)
+Last updated: 2026-09-30 (merge duplicate players)
 
 ---
 
@@ -171,6 +173,8 @@ Put more money into the winning creators and copy their video formats with other
 - [x] `S1` Players have a name, handicap index and Venmo username, saved to your account when signed in (2026-09-25)
 - [ ] `S3` (partial) Your own profile: photo, home course, handicap, which payment apps you use. Your payment app and handle (Venmo, Cash App, PayPal or Zelle) are set on your player card from Settings or Players (2026-09-27); photo and home course still to do.
 - [x] `S2` Player cards: each person shows your record and honest net with them, and opens a card with Request, Remind, Settle up and the round-by-round story. Crews sit in a small section below (2026-09-27)
+- [x] `S2` Merge duplicate players: "Same person as someone else? Merge" on a player's edit screen folds a second copy (a saved duplicate, or the copy from a round you joined) into the one you keep. Rounds are never rewritten, the record, the Tab and payments add up under one name, the kept player picks up a missing handicap or payment app, and "Merged in · Undo" splits them again. People from joined rounds can now be edited too (from Trevor, 2026-09-30)
+- [ ] `S2` When a player signs up, offer to merge their account into the organizer's copy of them, using the same merge (see "Claim your seat" in area 1). Test rounds stay out because they're deleted from History, not merged
 - [ ] `S5` Profile stats: rounds, net winnings, record against each friend, favorite game
 - [ ] `S3` Privacy settings, with money hidden by default
 - [ ] `S3` Avatars: a library of illustrated avatars to pick from, in the app's own style, or upload any photo you like. Shown on player cards, seat tiles, the Tab and share cards (from Trevor, 2026-09-30)
@@ -526,3 +530,4 @@ Code is cheap now, so anyone can build a scoring app. What a weekend coder can't
 - 2026-09-30: From Trevor: planning a round asks 9 or 18 holes on the When step (the choice was at the bottom of the game list, and missing when planning from onboarding), and "Edit" on a plan changes the day, tee time, course or holes, sent to everyone with the link.
 - 2026-09-30: Research on premium features and the long game (golf forums, 19 r/golf threads, apps from other hobbies) added to the checklist: free fairness tools (allowances by format, half-pops, Canadian skins, a first-tee rules card), the Big Game, trip expenses on the Tab, splitting Pro on the Tab, rivalry cards and the Record Book limit, reputation and find a game, Trip Mode templates, a Trip Pass moved up to S3, a price test, paywall rules, a Live Activity, and a new area 23 for partners (pro shops, men's leagues, GHIN, tee times, resorts, trophies, a season series). From Trevor: an avatar library with photo upload, and a theme for every game carried into the round and the share card. Pro headliner ideas noted in area 11, not decided. Checklist: 64 of 222 done (29%), up from 64 of 190.
 - 2026-09-30: From Trevor: he set up a whole round for a future day and only then remembered planning ahead, so the only way out was to cancel it. "Schedule for later" now shows on the Bets step, on Round ready, and in End round for a round with no holes scored; the setup carries into the plan (players invited, bets suggested, side games on the ballot) and a round already made is replaced by the plan. Follow-up added: plans keep teams, order, tees and handicap overrides. Checklist: 65 of 224 done (29%), up from 64 of 222.
+- 2026-09-30: From Trevor: the Players tab had two Adams and two Daltons, one he added and one from rounds started on a friend's phone, and the joined copies couldn't be edited. Merge is a pointer on the duplicate (`mergedInto`), so rounds and shared Tab rows are untouched and it syncs with the account; every place the Tab and records work out who's who follows it. Test rounds are still cleared by deleting them from History. Tests: 527 passing. Checklist: 66 of 226 done (29%).
