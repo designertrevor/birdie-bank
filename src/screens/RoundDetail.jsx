@@ -18,6 +18,7 @@ import { HowWasIt, Reveal, RewardCard, SettleUp, ShareCard } from '../components
 import { countsMoney, playForOf, unitFmt } from '../lib/play-for.js';
 import { SaveUsualButton } from '../components/Usuals.jsx';
 import { DrivesShortfall } from '../components/ScrambleDrives.jsx';
+import { strokeKey } from '../lib/stroke-key.js';
 
 // Where the finale was, so coming back from another screen (e.g. Suggest) doesn't replay the reveal.
 // Keyed by round and its finish time, so finishing the round again starts over.
@@ -509,6 +510,8 @@ export function Scorecard({ round, current, onHole }) {
   const anyStrokes = hc && units.some(p => out.some(h => popsFor(round, p, h) !== 0));
   // With half strokes each dot counts half, and the net total can end in ½
   const half = halfStrokesOn(round);
+  // The dots are the main game's; a side game with its own % or half strokes gets its own key line
+  const key = hc ? strokeKey(round) : { dots: '', lines: [] };
   // With onHole (during play), any cell in a hole's column jumps to that hole
   const colProps = no => (onHole ? { onClick: () => onHole(no), className: 'sc-tap' } : {});
   const netTotal = p => out.reduce((a, h) => { const n = holeComplete(round, h) ? netFor(round, p, h) : null; return n == null ? a : a + n; }, 0);
@@ -569,6 +572,12 @@ export function Scorecard({ round, current, onHole }) {
         {anyStrokes && <span className="sc-key"><span className="sc-strokes inline"><i /></span> {half ? 'half stroke' : 'gets a stroke'}</span>}
         {round.holeFixes && Object.keys(round.holeFixes).length > 0 && <span className="sc-key"><span className="sc-fixed inline" aria-hidden="true" /> par or HCP fixed</span>}
       </div>
+      {key.lines.length > 0 && (
+        <div className="sc-stroke-key">
+          <span>{key.dots}.</span>
+          {key.lines.map(l => <span key={l.key}>{l.text}.</span>)}
+        </div>
+      )}
     </div>
   );
 }

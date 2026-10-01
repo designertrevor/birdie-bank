@@ -1669,3 +1669,7 @@ button.lately-row:active { background: var(--surface); }
 /* ---- Overnight 6, small fixes: scramble drives shortfall flag ---- */
 .drives-short { margin: 6px 20px 0; font-size: 12px; line-height: 1.4; color: var(--mute); display: flex; gap: 6px; align-items: baseline; }
 .drives-short .ph-golf { color: var(--coral-text); flex: none; }
+
+/* ---- Overnight 6, small fixes: stroke key when a side game counts strokes differently ---- */
+.sc-stroke-key { display: flex; flex-direction: column; gap: 2px; padding: 6px 4px 0; font-size: 11px; line-height: 1.4; color: var(--mute); }
+.stroke-note { color: var(--mute); }
