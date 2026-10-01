@@ -18,6 +18,7 @@ import { FETCH_DAYS, canonicalOf, codeOf, finishedAt } from './pair-debts.js';
 import { tripOfPayment } from './trip-pay.js';
 import { daysUntil, isoDate } from './plans.js';
 import { meFor } from './format.js';
+import { money } from './golf.js';
 
 const DAY = 864e5;
 /** How a trip is scored. Only money for now; trip formats (team points, a leaderboard) can join later. */
@@ -345,4 +346,47 @@ export function tripPayRoute(state, tripId, from, to, { now = Date.now() } = {})
     if (f && t) return { code: codeOf(r), from: f.id, to: t.id, by: meFor(r, state), roundId: r.id };
   }
   return null;
+}
+
+const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+const WEEKDAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+const parts = iso => String(iso || '').split('-').map(Number);
+
+/** "Oct 16 to 18", "Oct 30 to Nov 2" or "Oct 16" for a one-day trip. */
+export function tripDates(trip) {
+  const [y1, m1, d1] = parts(trip?.start), [y2, m2, d2] = parts(trip?.end);
+  if (!y1 || !m1 || !d1) return '';
+  const a = `${MONTHS[m1 - 1]} ${d1}`;
+  if (!y2 || (y1 === y2 && m1 === m2 && d1 === d2)) return a;
+  return m1 === m2 && y1 === y2 ? `${a} to ${d2}` : `${a} to ${MONTHS[m2 - 1]} ${d2}`;
+}
+
+/**
+ * The trip's days at a glance for Up next: one chip a round, oldest first, from its rounds and
+ * planned rounds: [{ key, label, state: 'done' | 'now' | 'planned' }]. A day with two rounds says
+ * which is morning and which is afternoon ("Sat AM", "Sat PM").
+ */
+export function tripChips(status) {
+  const items = [
+    ...status.done.map(r => ({ key: r.id, at: r.createdAt || finishedAt(r), state: 'done' })),
+    ...status.live.map(r => ({ key: r.id, at: r.createdAt || Date.now(), state: 'now' })),
+    ...status.planned.map(p => {
+      const [y, m, d] = parts(p.date);
+      const [h, min] = String(p.teeTime || '09:00').split(':').map(Number);
+      return { key: p.id, at: new Date(y, m - 1, d, h || 9, min || 0).getTime(), state: 'planned' };
+    }),
+  ].sort((a, b) => a.at - b.at);
+  const dayKey = t => dayOf(t);
+  const perDay = new Map();
+  for (const x of items) perDay.set(dayKey(x.at), (perDay.get(dayKey(x.at)) || 0) + 1);
+  return items.map(x => {
+    const d = new Date(x.at);
+    const half = perDay.get(dayKey(x.at)) > 1 ? (d.getHours() < 12 ? ' AM' : ' PM') : '';
+    return { key: x.key, label: `${WEEKDAYS[d.getDay()]}${half}`, state: x.state };
+  });
+}
+
+/** "You’re up $12", "You’re down $5" or "You’re even". */
+export function upDown(v) {
+  return v > 0 ? `You’re up ${money(v)}` : v < 0 ? `You’re down ${money(-v)}` : 'You’re even';
 }

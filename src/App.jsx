@@ -56,6 +56,9 @@ const PlanLink = screen(plan, 'PlanLink');
 const Paywall = screen(() => import('./screens/Paywall.jsx'));
 const Season = screen(() => import('./screens/Season.jsx'));
 const Lately = screen(() => import('./screens/Lately.jsx'));
+const trip = () => import('./screens/Trip.jsx');
+const Trip = screen(trip);
+const TripSettle = screen(trip, 'TripSettle');
 
 /** A plan link (?plan=CODE, &p=WHO for one person's own) waiting to open: { code, who } or null. */
 function pendingPlanLink() {
@@ -90,7 +93,7 @@ const SCREENS = {
   playerEdit: PlayerEdit, crewEdit: CrewEdit, person: Person,
   settings: Settings, defaults: Defaults, courses: Courses, courseEdit: CourseEdit, about: About, suggest: Suggest,
   plan: Plan, rollCall: RollCall, planLink: PlanLink, paywall: Paywall, season: Season,
-  joinInvite: JoinInviteScreen, lately: Lately,
+  joinInvite: JoinInviteScreen, lately: Lately, trip: Trip, tripSettle: TripSettle,
 };
 // Settings lives behind the avatar on Up next, so it's a pushed screen rather than a tab
 const TABS = { upnext: UpNext, ledger: Ledger, history: History, people: People };

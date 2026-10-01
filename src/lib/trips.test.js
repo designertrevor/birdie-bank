@@ -9,7 +9,7 @@ import { applyRows, roundRows, roundStatus } from './shared-tab.js';
 import { isTripPayment, settlingTrips, tripOfPayment, tripPaymentId } from './trip-pay.js';
 import {
   countsByDefault, currentTrips, myTripNet, newTrip, partPlan, roundsInDates, tripByGame, tripDay, tripOnDay, tripPayRoute,
-  tripPeople, tripRounds, tripStamp, tripStatus, tripsOf, cleanTripName,
+  tripPeople, tripRounds, tripStamp, tripStatus, tripsOf, cleanTripName, tripChips, tripDates, upDown,
 } from './trips.js';
 import { applyDoc, toDocs } from './cloud-model.js';
 
@@ -367,4 +367,18 @@ test('the account profile carries trips, and an older profile keeps this phone�
   applyDoc(draft, 'profile', 'me', { me: 't', onboarded: true, favorites: [], settings: {}, trips: {} });
   assert.deepEqual(draft.trips, {});
   assert.equal(total({ a: 1, b: -1 }), 0);
+});
+
+test('the words: dates, the days at a glance and where you stand', () => {
+  assert.equal(tripDates(TRIP), 'Oct 16 to 18');
+  assert.equal(tripDates({ start: '2026-10-30', end: '2026-11-02' }), 'Oct 30 to Nov 2');
+  assert.equal(tripDates({ start: '2026-10-30', end: '2026-10-30' }), 'Oct 30');
+  const rounds = bandon();
+  const live = round('r4', FOUR, {}, { at: OCT(18, 12), status: 'active' });
+  const plan = { id: 'pl1', status: 'planned', date: '2026-10-18', teeTime: '15:00', trip: tripStamp(TRIP), createdAt: OCT(15) };
+  const st = tripStatus(stateOf('t', [...rounds.slice(0, 3), live], { plans: { pl1: plan } }), 't_bandon', { now: OCT(18, 10) });
+  assert.deepEqual(tripChips(st).map(c => `${c.label}:${c.state}`), ['Fri:done', 'Sat AM:done', 'Sat PM:done', 'Sun AM:now', 'Sun PM:planned']);
+  assert.equal(upDown(12), 'You’re up $12');
+  assert.equal(upDown(-5.5), 'You’re down $5.50');
+  assert.equal(upDown(0), 'You’re even');
 });
