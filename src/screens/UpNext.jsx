@@ -18,6 +18,8 @@ import { refreshPlans } from '../lib/plan-sync.js';
 import { refreshTab } from '../lib/tab-sync.js';
 import { latelyItems } from '../lib/lately.js';
 import { LatelyList } from '../components/LatelyList.jsx';
+import { TripSheet, TripUpNext } from '../components/Trips.jsx';
+import { currentTrips } from '../lib/trips.js';
 
 const LATELY_ON_HOME = 3;
 
@@ -35,7 +37,10 @@ export default function UpNext() {
   const squareText = !rewards.length ? 'You’re all square. Nobody owes you, you owe nobody.'
     : `Square on money. ${rewards.length === 1 ? `${rewardLineText(rewards[0], id => nameOf(state, id))}.` : `${rewards.length} rewards to sort out.`}`;
   const hasHistory = !!last;
-  const plans = upcomingPlans(state);
+  // A trip on now leads with where you stand, its planned rounds grouped under it
+  const trips = currentTrips(state);
+  const onTrip = new Set(trips.flatMap(t => t.planned.map(p => p.id)));
+  const plans = upcomingPlans(state).filter(p => !onTrip.has(p.id));
   const lately = latelyItems(state);
   // Pick up answers and votes that came in since last time
   useEffect(() => { refreshPlans(); refreshTab(); }, []);
@@ -59,10 +64,12 @@ export default function UpNext() {
           );
         })}
 
+        {trips.map(t => <TripUpNext key={t.trip.id} status={t} renderPlan={p => <UpcomingCard key={p.id} plan={p} />} />)}
+
         {plans.length > 0 && <div className="sec-label">Upcoming</div>}
         {plans.map(p => <UpcomingCard key={p.id} plan={p} />)}
         {/* Starting a round at the course (or running the last one back) stays one tap, plans or not */}
-        {live.length === 0 && <PlanNext last={last?.round} fresh={!hasHistory} planned={plans.length > 0} />}
+        {live.length === 0 && <PlanNext last={last?.round} fresh={!hasHistory} planned={plans.length > 0 || trips.length > 0} trip={trips.length === 0} />}
 
         {syncConfigured && live.length === 0 && (
           <button className="add-row join-row" aria-label="Join a friend’s round" onClick={() => setJoining(true)}>
@@ -129,8 +136,9 @@ function UpcomingCard({ plan }) {
 }
 
 /** The prompt to set up the next round, with a one-tap "same again" when there's a last one. */
-function PlanNext({ last, fresh, planned = false }) {
+function PlanNext({ last, fresh, planned = false, trip = false }) {
   const nav = useNav();
+  const [tripping, setTripping] = useState(false);
   return (
     <div className="plan-card">
       <span className="eyebrow">{planned ? 'Something else' : fresh ? 'Welcome to the bank' : 'Nothing on the calendar'}</span>
@@ -146,7 +154,9 @@ function PlanNext({ last, fresh, planned = false }) {
           <button className="pc-btn ghost" onClick={() => nav.push('newRound', { rematch: last.id })}><Icon name="arrow-counter-clockwise" /> Run it back</button>
         )}
         <button className="pc-btn ghost" onClick={() => nav.push('newRound', { ahead: true })}><Icon name="calendar-plus" /> Plan ahead</button>
+        {trip && <button className="pc-btn ghost" onClick={() => setTripping(true)}><Icon name="suitcase-rolling" /> Start a trip</button>}
       </div>
+      <TripSheet open={tripping} onClose={() => setTripping(false)} onDone={t => { setTripping(false); nav.push('trip', { id: t.id }); }} />
     </div>
   );
 }

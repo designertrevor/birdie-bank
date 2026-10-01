@@ -15,6 +15,7 @@ import { ByGameTable } from '../components/SideGames.jsx';
 import { accountsEnabled, useAccount } from '../lib/cloud.js';
 import { SignInSheet } from '../components/Account.jsx';
 import { HowWasIt, Reveal, RewardCard, SettleUp, ShareCard } from '../components/Finale.jsx';
+import { TripRoundNote } from '../components/Trips.jsx';
 import { countsMoney, playForOf, unitFmt } from '../lib/play-for.js';
 import { SaveUsualButton } from '../components/Usuals.jsx';
 
@@ -68,6 +69,8 @@ export default function RoundDetail({ id, celebrate }) {
   const fmt = unitFmt(round);
   const isMoney = countsMoney(round);
   const pays = isMoney && res.transfers.length > 0;
+  // A trip round has no settle up of its own: the trip is settled once, after its last round
+  const ownSettle = pays && !round.trip?.id;
 
   const del = async () => {
     if (!(await ask({ title: 'Delete this round?', text: 'It’ll be removed from History and the tab.', confirmLabel: 'Delete round', danger: true }))) return;
@@ -114,11 +117,11 @@ export default function RoundDetail({ id, celebrate }) {
   if (stage !== 'detail') {
     return (
       <Screen key={stage} className={`finale-stage ${stageBack ? 'back' : ''}`}>
-        {stage === 'reveal' && <Reveal round={round} res={res} instant={revealSeen} onNext={() => { setRevealSeen(true); setStage(pays ? 'settle' : 'share'); }} onDetail={() => { setRevealSeen(true); setStage('detail'); }} extra={<>{notesEl}{saveRow && <div style={{ marginTop: 12 }}>{saveRow}</div>}</>} />}
+        {stage === 'reveal' && <Reveal round={round} res={res} instant={revealSeen} onNext={() => { setRevealSeen(true); setStage(ownSettle ? 'settle' : 'share'); }} onDetail={() => { setRevealSeen(true); setStage('detail'); }} extra={<>{round.trip?.id && <div style={{ marginTop: 12 }}><TripRoundNote round={round} /></div>}{notesEl}{saveRow && <div style={{ marginTop: 12 }}>{saveRow}</div>}</>} />}
         {stage === 'settle' && <SettleUp round={round} res={res} onBack={() => setStage('reveal')} onNext={() => setStage('share')} />}
         {stage === 'share' && (shareFrom === 'detail'
           ? <ShareCard round={round} res={res} onBack={() => setStage('detail')} onDone={() => setStage('detail')} doneLabel="Back to the round" />
-          : <ShareCard round={round} res={res} onBack={() => setStage(pays ? 'settle' : 'reveal')} onDone={done} />)}
+          : <ShareCard round={round} res={res} onBack={() => setStage(ownSettle ? 'settle' : 'reveal')} onDone={done} />)}
         {signingIn && <SignInSheet open onClose={() => setSigningIn(false)} />}
       </Screen>
     );
@@ -145,6 +148,7 @@ export default function RoundDetail({ id, celebrate }) {
           {meRow && meRow.id !== top.id && !allSquare && <div className="me-line">You: {fmt(meRow.amount, { sign: true })}</div>}
         </div>
 
+        {round.trip?.id && <TripRoundNote round={round} />}
         {notesEl}
         {saveRow}
 
@@ -177,7 +181,9 @@ export default function RoundDetail({ id, celebrate }) {
               <span className="pm">{money(t.amount)}</span>
             </div>
           ))}
-          {res.transfers.length > 0 && <p className="field-help" style={{ padding: '0 4px' }}>Fewest payments to square everyone up. They’re on the tab until marked paid.</p>}
+          {res.transfers.length > 0 && <p className="field-help" style={{ padding: '0 4px' }}>{round.trip?.id
+            ? `Fewest payments for this round alone. It’s on the trip, so it’s settled once with the trip’s other rounds, and it’s on the tab until then.`
+            : 'Fewest payments to square everyone up. They’re on the tab until marked paid.'}</p>}
         </div>
         </>}
 
@@ -214,7 +220,7 @@ export default function RoundDetail({ id, celebrate }) {
       </div>
       {celebrate && (
         <div className="cta-wrap">
-          {pays && <button className="full-btn" onClick={() => setStage('settle')}><Icon name="receipt" /> Settle up</button>}
+          {ownSettle && <button className="full-btn" onClick={() => setStage('settle')}><Icon name="receipt" /> Settle up</button>}
           <button className="full-btn outline" onClick={done}>Done</button>
         </div>
       )}

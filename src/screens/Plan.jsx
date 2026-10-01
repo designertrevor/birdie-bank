@@ -17,10 +17,12 @@ import { usualIdFor } from '../lib/usuals.js';
 import { payFields, sendReminder } from '../lib/pay.js';
 import { shareLink, shareRound, syncConfigured } from '../lib/sync.js';
 import {
-  RSVPS, RSVP_LABEL, betLabel, betUnitLabel, cleanName, countsLine, daysUntil, inviteText, morningText, nudgeAllText, nudgeText,
+  RSVPS, RSVP_LABEL, betLabel, betUnitLabel, cleanName, countsLine, daysUntil, inviteText, isoDate, morningText, nudgeAllText, nudgeText,
   planChoice, planCounts, planPeople, planRules, planSides, planStart, rollCallDefault, tally, tallySides, whenLabel,
 } from '../lib/plans.js';
 import { PlansOffError } from '../lib/plan-adapters.js';
+import { CountForTrip } from '../components/Trips.jsx';
+import { tripOf, tripOnDay, tripStamp } from '../lib/trips.js';
 import { answerPlan, editPlan, openPlanLink, planShareLink, removePlan, sharePlan, usePlanLive, usePlansOff } from '../lib/plan-sync.js';
 
 const first = name => String(name || '').trim().split(/\s+/)[0];
@@ -53,6 +55,7 @@ export default function PlanScreen({ id }) {
     <Screen>
       <Header title={plan.host ? 'Your round' : 'Upcoming round'} small onBack={nav.pop}
         right={plan.host && plan.status === 'planned' && !plan.gone ? <button className="pill-btn sm" onClick={() => nav.push('newRound', { edit: plan.id })}><Icon name="pencil-simple" /> Edit</button> : null} />
+      {plan.trip?.id && <button className="trip-line" onClick={() => nav.push('trip', { id: plan.trip.id })}><Icon name="suitcase-rolling" /> Part of {plan.trip.name} <Icon name="caret-right" /></button>}
       <PlanBody plan={plan} />
     </Screen>
   );
@@ -395,6 +398,7 @@ export function RollCall({ id }) {
   const [walkUp, setWalkUp] = useState('');
   const [adding, setAdding] = useState(false);
   const [starting, setStarting] = useState(false);
+  const [countTrip, setCountTrip] = useState(true);
   if (!plan) return <Screen><Header title="Roll call" small onBack={nav.pop} /><div className="scroll"><Empty title="This plan is gone" /></div></Screen>;
   const people = planPeople(plan);
   const course = findCourse(state, plan.course?.id);
@@ -402,6 +406,10 @@ export function RollCall({ id }) {
   const g = GAMES[setup.game];
   const t = tally(plan, 'game');
   const toggle = who => setPresent(p => (p.includes(who) ? p.filter(x => x !== who) : [...p, who]));
+  // A round planned for a trip counts for it; one that wasn't asks when a trip is on today
+  const planTrip = plan.trip ? tripOf(state, plan.trip.id) || plan.trip : null;
+  const tripToday = planTrip ? null : tripOnDay(state, isoDate());
+  const tripPick = planTrip || (tripToday && countTrip ? tripToday : null);
   const addWalkUp = () => {
     const who = uid('w_');
     answerPlan(id, who, { name: cleanName(walkUp), status: 'in' });
@@ -428,6 +436,8 @@ export function RollCall({ id }) {
     if (usualId) round.usualId = usualId;
     // Played for points or a reward, as planned (money plans have none)
     if (setup.playFor) round.playFor = structuredClone(setup.playFor);
+    // Planned for a trip (or teeing off while one is on, and counted): the stamp rides in the round
+    if (tripPick) round.trip = tripStamp(tripPick);
     update(s => { addRound(s, round); });
     editPlan(id, p => { p.status = 'started'; p.roundId = rid; });
     // Friends on the plan can follow the round live from the same page
@@ -485,6 +495,8 @@ export function RollCall({ id }) {
         )}
       </div>
       <div className="cta-wrap">
+        {planTrip ? <p className="field-help trip-counts"><Icon name="suitcase-rolling" /> Counts for {planTrip.name}</p>
+          : <CountForTrip trip={tripToday} on={countTrip} onChange={setCountTrip} />}
         <button className="full-btn" disabled={!!setup.problem || starting} onClick={start}>Tee off with {setup.players.length} <Icon name="arrow-right" /></button>
         <button className="full-btn outline" onClick={toSetup}>Change the setup</button>
       </div>
