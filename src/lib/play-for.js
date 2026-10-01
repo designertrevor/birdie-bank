@@ -55,6 +55,11 @@ export function unitFmt(round) {
   return countsMoney(round) ? money : points;
 }
 
+/** A keypad's unit for a round's bets: "$5" for money, "5 pts" for a points or reward round. */
+export function padUnit(round) {
+  return countsMoney(round) ? { prefix: '$', suffix: '' } : { prefix: '', suffix: ' pts' };
+}
+
 /** The reward as it reads in a sentence: "lunch", "a drink", "a round of beers", but "IPA" stays. */
 export function rewardNoun(reward) {
   const r = cleanReward(reward) || REWARDS[0];

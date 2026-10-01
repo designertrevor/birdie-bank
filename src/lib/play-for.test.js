@@ -5,7 +5,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { createRound, roundResults } from './round.js';
 import {
-  cleanReward, countsMoney, inUnits, noMoneyNote, openRewards, playForLine, playForOf, points, rewardKey, rewardLineText, rewardNoun,
+  cleanReward, countsMoney, inUnits, noMoneyNote, padUnit, openRewards, playForLine, playForOf, points, rewardKey, rewardLineText, rewardNoun,
   rewardOutcome, storedPlayFor, unitFmt,
 } from './play-for.js';
 import { roundStakeLines } from './stakes.js';
@@ -94,6 +94,14 @@ test('points are the engine numbers one for one, and bet lines read in points', 
   assert.deepEqual(roundStakeLines(withSide).map(l => l.line), ['5 pts / 5 pts / 5 pts', '1 pt a skin']);
   assert.equal(inUnits({ playFor: { kind: 'points' } }, '$5 a side'), '5 pts a side');
   assert.equal(inUnits({}, '$5 a side'), '$5 a side');
+});
+
+test('setup keypads read in points for a points or reward round, dollars for money', () => {
+  assert.deepEqual(padUnit({}), { prefix: '$', suffix: '' });
+  assert.deepEqual(padUnit({ playFor: { kind: 'points' } }), { prefix: '', suffix: ' pts' });
+  assert.deepEqual(padUnit({ playFor: { kind: 'reward', reward: 'Lunch' } }), { prefix: '', suffix: ' pts' });
+  // Worked examples and side game lines swap every amount
+  assert.equal(inUnits({ playFor: { kind: 'points' } }, 'Win a skin: up $6, $2 from each of the other 3.'), 'Win a skin: up 6 pts, 2 pts from each of the other 3.');
 });
 
 // ---------------------------------------------------------------------------

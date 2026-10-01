@@ -1,7 +1,8 @@
 import { Icon, Segmented, Toggle } from './ui.jsx';
 import { GAMES, blindMultiplierOf } from '../lib/round.js';
 import { DOT_KINDS, SCRAMBLE_ALLOWANCE, sixesPairings } from '../lib/games.js';
-import { money } from '../lib/golf.js';
+import { money as dollars } from '../lib/golf.js';
+import { points } from '../lib/play-for.js';
 import { teamsProblem } from '../lib/teams.js';
 import { dotsNote } from '../lib/side-games.js';
 
@@ -10,8 +11,10 @@ import { dotsNote } from '../lib/side-games.js';
  * and the mid-round bets sheet, so they all stay in sync.
  * `get(path)` reads a setting, `set(path, v)` writes one, `onAmount(path, title, {min,max})` opens a numpad.
  * `players` is how many are playing, for the worked example under each bet (a foursome when unknown).
+ * `inPoints`: a points or reward round, so every bet and example reads in points ("5 pts").
  */
-export function GameOptions({ game, get, set, onAmount, holesCount = 18, compact = false, firstName = null, players = null }) {
+export function GameOptions({ game, get, set, onAmount, holesCount = 18, compact = false, firstName = null, players = null, inPoints = false }) {
+  const money = inPoints ? points : dollars;
   const n = players || Math.min(Math.max(4, GAMES[game]?.min || 2), GAMES[game]?.max || 4);
   const others = n - 1;
   const each = v => `${money(v)} from each of the other ${others}`;

@@ -29,7 +29,7 @@ import { LivePill, ShareSheet } from '../components/Live.jsx';
 import { syncConfigured, useSeatRequests } from '../lib/sync.js';
 import { AddPlayerSheet } from '../components/AddPlayer.jsx';
 import { firstName, gameLabel, holeMoneyLine } from '../lib/format.js';
-import { countsMoney, inUnits, unitFmt } from '../lib/play-for.js';
+import { countsMoney, inUnits, padUnit, unitFmt } from '../lib/play-for.js';
 import { leaveRound, roundsInProgress } from '../lib/rounds.js';
 import { RoundsInProgressSheet } from '../components/RoundsInProgress.jsx';
 import { ByGameTable, SideGamesSetup } from '../components/SideGames.jsx';
@@ -698,7 +698,7 @@ function PlayRound({ round }) {
               </button>
             ))}
           </Sheet>
-          <Numpad open={!!betPad} title={`${round.players.find(p => p.id === betPad)?.name}'s bet`} prefix="$"
+          <Numpad open={!!betPad} title={`${round.players.find(p => p.id === betPad)?.name}'s bet`} {...padUnit(round)}
             initial={betPad ? banker.bets[betPad] : ''} min={round.settings.banker.min} max={round.settings.banker.max}
             quick={[1, 2, 3, 4, 5, 6, 7, 8, 9, 10]}
             onClose={() => setBetPad(null)} onDone={v => { setBanker({ ...banker, bets: { ...banker.bets, [betPad]: v } }); setBetPad(null); }} />
@@ -891,7 +891,7 @@ function GamesSheet({ round, onClose }) {
     <Sheet open onClose={onClose} title="Side games" className="sc-sheet">
       <p className="sheet-text">Same course, same players, same scores. {played ? `A new game counts the ${played} hole${played === 1 ? '' : 's'} already scored too.` : 'Every game reads the one scorecard.'}</p>
       {played > 0 && sideGamesOf(round).length > 0 && <p className="field-help pad">Changes here cover the whole round. To change a bet from the next hole, use Bets.</p>}
-      <SideGamesSetup game={round.game} sideGames={list} setSideGames={edit} defaults={round.settings} players={round.players.length} />
+      <SideGamesSetup game={round.game} sideGames={list} setSideGames={edit} defaults={round.settings} players={round.players.length} playFor={round.playFor} />
       <div className="cta-wrap">
         <button className="full-btn" disabled={!changed || bad} onClick={save}>{changed ? 'Save games' : 'No changes'}</button>
       </div>
@@ -1005,14 +1005,14 @@ function BetsSheet({ round, onClose }) {
           <>
             <div className="nassau-bet-row">
               <div className="nassau-bet-lbl">Each player puts in</div>
-              <button className="nassau-bet-btn" aria-label={`Each player puts in: ${money(get('birdies.stake') ?? 0)}. Change`}
-                onClick={() => setPad({ path: 'birdies.stake', title: 'Each player puts in', min: 1, max: 500 })}>{money(get('birdies.stake') ?? 0)}</button>
+              <button className="nassau-bet-btn" aria-label={`Each player puts in: ${unitFmt(round)(get('birdies.stake') ?? 0)}. Change`}
+                onClick={() => setPad({ path: 'birdies.stake', title: 'Each player puts in', min: 1, max: 500 })}>{unitFmt(round)(get('birdies.stake') ?? 0)}</button>
             </div>
-            <p className="field-help pad">{sideExample('birdies', opts.birdies, view.players.length)}</p>
+            <p className="field-help pad">{inUnits(round, sideExample('birdies', opts.birdies, view.players.length))}</p>
           </>
         ) : (
           <GameOptions game={game} get={get} set={set} onAmount={(path, title, o) => setPad({ path, title, ...o })} holesCount={round.holesCount}
-            players={view.players.length} firstName={game === 'banker' ? round.players[0]?.name : null} />
+            players={view.players.length} firstName={game === 'banker' ? round.players[0]?.name : null} inPoints={!countsMoney(round)} />
         )}
         {game === 'banker' && <p className="hint-card"><Icon name="info" fill /> The default bet fills in from the next hole. Bets on this hole are set from the Bets button.</p>}
         {!side && (game === 'nassau' || game === 'match') && round.presses.length > 0 && whole && <p className="hint-card"><Icon name="lightning" fill /> Presses already made pay at the new amounts too.</p>}
@@ -1023,7 +1023,7 @@ function BetsSheet({ round, onClose }) {
           </button>
         </div>
       </Sheet>
-      <Numpad open={!!pad} title={pad?.title} prefix="$" initial={pad ? get(pad.path) : ''} min={pad?.min} max={pad?.max}
+      <Numpad open={!!pad} title={pad?.title} {...padUnit(round)} initial={pad ? get(pad.path) : ''} min={pad?.min} max={pad?.max}
         onClose={() => setPad(null)} onDone={v => { set(pad.path, v); setPad(null); }} />
     </>
   );
@@ -1091,6 +1091,7 @@ function MoneyBar({ round, hole, preview }) {
 // --------------------------- Banker ---------------------------------------
 
 function BankerPanel({ round, banker, setBanker, phase, setPhase, onPick, onBet, hole, readOnly = false }) {
+  const money = unitFmt(round); // points in a points or reward round
   const b = round.players.find(p => p.id === banker.banker);
   const others = playersOn(round, hole).filter(p => p.id !== banker.banker);
   const anyDoubled = others.some(p => banker.doubled[p.id]);
@@ -1113,7 +1114,7 @@ function BankerPanel({ round, banker, setBanker, phase, setPhase, onPick, onBet,
                 <div style={{ flex: 1 }}><div className="pname">{p.name}</div><div className="ps">{p.plays ? `Gets ${p.plays} stroke${p.plays > 1 ? 's' : ''} on the round` : 'No strokes'}</div></div>
                 <div className="bet-now" aria-hidden="true">{money(banker.bets[p.id] || 0)}</div>
               </div>
-              <BetChips name={p.name} value={banker.bets[p.id] || 0} presets={betPresets(round.settings.banker.min, round.settings.banker.max, round.settings.banker.defaultBet)}
+              <BetChips name={p.name} value={banker.bets[p.id] || 0} fmt={money} presets={betPresets(round.settings.banker.min, round.settings.banker.max, round.settings.banker.defaultBet)}
                 onPick={v => setBanker({ ...banker, bets: { ...banker.bets, [p.id]: v } })} onMore={() => onBet(p.id)} />
               <div style={{ padding: '0 16px 16px', display: 'flex' }}>
                 <button className={`dbl-btn ${banker.doubled[p.id] ? 'on' : ''}`} style={{ flex: 1, height: 52, fontSize: 17 }} aria-pressed={!!banker.doubled[p.id]}
@@ -1146,15 +1147,15 @@ function onTheLine(banker) {
 }
 
 /** Four common amounts at a tap, then Other for the keypad (which has $1 to $10 at a tap too). */
-function BetChips({ name, value, presets, onPick, onMore }) {
+function BetChips({ name, value, presets, onPick, onMore, fmt = money }) {
   const other = !presets.includes(value);
   return (
     <div className="bet-chips" role="radiogroup" aria-label={`${name}'s bet`}>
       {presets.map(v => (
-        <button key={v} role="radio" aria-checked={value === v} className={`bet-chip ${value === v ? 'on' : ''}`} onClick={() => { onPick(v); buzz(8); }}>${v}</button>
+        <button key={v} role="radio" aria-checked={value === v} className={`bet-chip ${value === v ? 'on' : ''}`} onClick={() => { onPick(v); buzz(8); }}>{fmt(v)}</button>
       ))}
-      <button className={`bet-chip more ${other ? 'on' : ''}`} onClick={onMore} aria-label={other ? `${name}'s bet, ${money(value)}. Other amount` : 'Other amount'}>
-        {other ? money(value) : 'Other'}
+      <button className={`bet-chip more ${other ? 'on' : ''}`} onClick={onMore} aria-label={other ? `${name}'s bet, ${fmt(value)}. Other amount` : 'Other amount'}>
+        {other ? fmt(value) : 'Other'}
       </button>
     </div>
   );

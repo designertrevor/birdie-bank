@@ -10,7 +10,7 @@ import { GameOptions } from './GameOptions.jsx';
 import { money } from '../lib/golf.js';
 import { betChangeNote, optionsProblem, sideBetLine } from '../lib/stakes.js';
 import { firstName } from '../lib/format.js';
-import { countsMoney } from '../lib/play-for.js';
+import { countsMoney, inUnits, padUnit, unitFmt } from '../lib/play-for.js';
 
 /** "Skins, Junk or a Birdie pot": the side games still on offer, in words. */
 const orList = xs => {
@@ -23,9 +23,13 @@ const amountKey = (game, s) => (game === 'skins' ? (s?.payout === 'pot' ? 'stake
 
 /**
  * The "Side games" part of the Bets step. `defaults` holds every game's settings (the setup's opts),
- * so a new side game starts from the group's usual Skins or Dots bets.
+ * so a new side game starts from the group's usual Skins or Dots bets. `playFor` is the round's
+ * (points and reward rounds read in points).
  */
-export function SideGamesSetup({ game, sideGames, setSideGames, defaults, players = 4 }) {
+export function SideGamesSetup({ game, sideGames, setSideGames, defaults, players = 4, playFor = null }) {
+  const fmt = unitFmt({ playFor });
+  const u = t => inUnits({ playFor }, t);
+  const unit = padUnit({ playFor });
   const [adding, setAdding] = useState(false);
   const [pad, setPad] = useState(null); // index of the side game whose bet is being changed
   const [rules, setRules] = useState(null); // index of the side Skins whose house rules are open
@@ -66,14 +70,14 @@ export function SideGamesSetup({ game, sideGames, setSideGames, defaults, player
                 <div className="sg-name"><span className="set-name">{meta.label}</span>
                   <button className="rules-chip" onClick={() => setHowTo(sg.game)} aria-label={`How to play ${meta.label}`}><Icon name="info" /> Rules</button>
                 </div>
-                <div className="set-sub">{sideBetLine(sg.game, sg.settings)}</div>
+                <div className="set-sub">{u(sideBetLine(sg.game, sg.settings))}</div>
               </div>
-              <button className="nassau-bet-btn" aria-label={`${meta.label} bet: ${money(sg.settings[key] ?? 0)}. Change`} onClick={() => setPad(i)}>{money(sg.settings[key] ?? 0)}</button>
+              <button className="nassau-bet-btn" aria-label={`${meta.label} bet: ${fmt(sg.settings[key] ?? 0)}. Change`} onClick={() => setPad(i)}>{fmt(sg.settings[key] ?? 0)}</button>
             </div>
-            <p className="field-help">{sideExample(sg.game, sg.settings, players)}</p>
+            <p className="field-help">{u(sideExample(sg.game, sg.settings, players))}</p>
             {sg.game === 'skins' && (
-              <button className="quiet-row flush sg-rules" onClick={() => setRules(i)} aria-label={`Skins house rules: ${skinsRulesLine(sg.settings)}. Change for this round`}>
-                <Icon name="sliders-horizontal" /> <span>{skinsRulesLine(sg.settings)}</span> <Icon name="caret-right" />
+              <button className="quiet-row flush sg-rules" onClick={() => setRules(i)} aria-label={`Skins house rules: ${u(skinsRulesLine(sg.settings))}. Change for this round`}>
+                <Icon name="sliders-horizontal" /> <span>{u(skinsRulesLine(sg.settings))}</span> <Icon name="caret-right" />
               </button>
             )}
             {sg.game === 'skins' && (
@@ -117,16 +121,16 @@ export function SideGamesSetup({ game, sideGames, setSideGames, defaults, player
         </button>
       )}
       <Sheet open={adding} onClose={() => setAdding(false)} title="Add a side game">
-        <p className="sheet-text">Each side game has its own bet. The money adds up into one total each.</p>
+        <p className="sheet-text">Each side game has its own bet. {countsMoney({ playFor }) ? 'The money adds up' : 'The points add up'} into one total each.</p>
         {choices.map(k => {
           const s = defaults?.[k] || {};
           return (
             <div key={k} className="side-choice-wrap">
-              <button className="sheet-item side-choice" onClick={() => add(k)} aria-label={`Add ${SIDE_GAMES[k].label}, ${sideBetLine(k, s)}`}>
+              <button className="sheet-item side-choice" onClick={() => add(k)} aria-label={`Add ${SIDE_GAMES[k].label}, ${u(sideBetLine(k, s))}`}>
                 <div className="set-icon"><Icon name={SIDE_GAMES[k].icon} fill /></div>
                 <div className="row-main" style={{ textAlign: 'left' }}>
-                  <div className="set-name">{SIDE_GAMES[k].label} · {sideBetLine(k, s)}</div>
-                  <div className="set-sub">{sideExample(k, s, players)}</div>
+                  <div className="set-name">{SIDE_GAMES[k].label} · {u(sideBetLine(k, s))}</div>
+                  <div className="set-sub">{u(sideExample(k, s, players))}</div>
                 </div>
                 <Icon name="plus" />
               </button>
@@ -136,11 +140,11 @@ export function SideGamesSetup({ game, sideGames, setSideGames, defaults, player
         })}
       </Sheet>
       <RulesSheet game={howTo} open={!!howTo} onClose={() => setHowTo(null)} />
-      <SkinsRules i={rules} sideGames={sideGames} change={change} players={players} onClose={() => setRules(null)} onAmount={setRulePad} />
-      <Numpad open={rules != null && !!rulePad} title={rulePad?.title || ''} prefix="$"
+      <SkinsRules i={rules} sideGames={sideGames} change={change} players={players} inPoints={!countsMoney({ playFor })} onClose={() => setRules(null)} onAmount={setRulePad} />
+      <Numpad open={rules != null && !!rulePad} title={rulePad?.title || ''} {...unit}
         initial={rulePad && rules != null ? sideGames[rules]?.settings[rulePad.path.split('.')[1]] : ''} min={rulePad?.min} max={rulePad?.max}
         onClose={() => setRulePad(null)} onDone={v => { const key = rulePad.path.split('.')[1]; change(rules, s => ({ ...s, [key]: v })); setRulePad(null); }} />
-      <Numpad open={pad != null && !!padGame} title={padGame ? `${SIDE_GAMES[padGame.game].label} bet` : ''} prefix="$"
+      <Numpad open={pad != null && !!padGame} title={padGame ? `${SIDE_GAMES[padGame.game].label} bet` : ''} {...unit}
         initial={padGame ? padGame.settings[amountKey(padGame.game, padGame.settings)] : ''} min={1} max={500}
         onClose={() => setPad(null)} onDone={v => { const i = pad; change(i, s => ({ ...s, [amountKey(sideGames[i].game, s)]: v })); setPad(null); }} />
     </>
@@ -152,7 +156,7 @@ export function SideGamesSetup({ game, sideGames, setSideGames, defaults, player
  * the last carry), with the same options as Skins as the main game. Starts from what the side
  * game already has, which came from the saved Skins defaults.
  */
-function SkinsRules({ i, sideGames, change, players, onClose, onAmount }) {
+function SkinsRules({ i, sideGames, change, players, inPoints, onClose, onAmount }) {
   const sg = i != null ? sideGames[i] : null;
   if (!sg || sg.game !== 'skins') return null;
   const key = path => path.split('.').slice(1).join('.');
@@ -161,7 +165,7 @@ function SkinsRules({ i, sideGames, change, players, onClose, onAmount }) {
   return (
     <Sheet open onClose={onClose} title="Skins house rules">
       <p className="sheet-text">For this round only. Your saved Skins defaults stay as they are.</p>
-      <GameOptions game="skins" get={get} set={set} onAmount={(path, title, o) => onAmount({ path, title, ...o })} players={players} compact />
+      <GameOptions game="skins" get={get} set={set} onAmount={(path, title, o) => onAmount({ path, title, ...o })} players={players} inPoints={inPoints} compact />
       <div className="cta-wrap">
         <button className="full-btn" onClick={onClose}>Done</button>
       </div>

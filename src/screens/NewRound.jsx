@@ -30,7 +30,7 @@ import { PAYWALL_ON } from '../lib/paywall-flag.js';
 import { matchingUsual, planFromUsual, setupFromUsual, usualsOf } from '../lib/usuals.js';
 import { SaveUsualButton, UsualsList } from '../components/Usuals.jsx';
 import PlayForPicker from '../components/PlayFor.jsx';
-import { countsMoney, inUnits, playForLine, playForShort } from '../lib/play-for.js';
+import { countsMoney, inUnits, padUnit, playForLine, playForShort } from '../lib/play-for.js';
 
 const STEPS = ['Game', 'Course', 'Players', 'Bets'];
 
@@ -719,9 +719,9 @@ function SetupStep({ game, course, holesCount, nine, picked, setPicked, opts, se
         )}
 
         <GameOptions game={game} get={get} set={set} onAmount={(path, title, o) => setPad({ path, title, ...o })} holesCount={holesCount}
-          players={picked.length || null} firstName={game === 'banker' ? state.players[picked[0]]?.name : null} />
+          players={picked.length || null} firstName={game === 'banker' ? state.players[picked[0]]?.name : null} inPoints={!countsMoney({ playFor })} />
 
-        <SideGamesSetup game={game} sideGames={sideGames} setSideGames={setSideGames} defaults={opts} players={picked.length || 4} />
+        <SideGamesSetup game={game} sideGames={sideGames} setSideGames={setSideGames} defaults={opts} players={picked.length || 4} playFor={playFor} />
 
         <button className="set-row more-opts" onClick={() => setMore(!more)} aria-expanded={more}>
           <div className="row-main">
@@ -753,7 +753,7 @@ function SetupStep({ game, course, holesCount, nine, picked, setPicked, opts, se
         <button className="full-btn" disabled={optsBad || teamsBad} onClick={onStart}>Create round <Icon name="arrow-right" /></button>
         {onLater && <button className="full-btn outline" disabled={optsBad} onClick={onLater}><Icon name="calendar-plus" /> Schedule for later</button>}
       </div>
-      <Numpad open={!!pad} title={pad?.title} prefix="$" initial={pad ? get(pad.path) : ''} min={pad?.min} max={pad?.max}
+      <Numpad open={!!pad} title={pad?.title} {...padUnit({ playFor })} initial={pad ? get(pad.path) : ''} min={pad?.min} max={pad?.max}
         onClose={() => setPad(null)} onDone={v => { set(pad.path, v); setPad(null); }} />
       <HolePicker open={holePick} holes={holes} value={startHole ?? holes[0].no} onClose={() => setHolePick(false)} onPick={no => { setStartHole(no); setHolePick(false); }} />
     </>

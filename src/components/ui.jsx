@@ -165,7 +165,7 @@ function NumpadInner({ title, prefix = '', suffix = '', initial = '', min, max, 
           <div>
             <div className="numpad-title">{title}</div>
             <div className={`np-hint ${tooLow || tooHigh ? 'err' : ''}`} role="status">
-              {tooLow ? `Minimum is ${prefix}${min}` : tooHigh ? `Maximum is ${prefix}${max}` : allowNegative ? 'Use ± for a plus handicap' : ' '}
+              {tooLow ? `Minimum is ${prefix}${min}${suffix}` : tooHigh ? `Maximum is ${prefix}${max}${suffix}` : allowNegative ? 'Use ± for a plus handicap' : ' '}
             </div>
           </div>
           <div className="numpad-value" aria-live="polite" aria-atomic="true">{prefix}{shown}{suffix}</div>
