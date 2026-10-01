@@ -1635,3 +1635,14 @@ button.lately-row:active { background: var(--surface); }
 .ft-seg .pm-btn { flex: 1 1 0; min-width: 0; padding: 0 6px; font-size: 14px; line-height: 1.1; }
 .ft-skip { display: block; width: 100%; min-height: 44px; margin-top: 6px; background: none; border: none; color: var(--mute); font-weight: 600; font-size: 15px; cursor: pointer; }
 .ft-since { border-top: none; padding-top: 0; }
+
+/* ---------- Reveal: the bets card tightens once it has resolved (ship/trial, Trevor's review) ---------- */
+/* One line a bet, smaller type, so four players' totals land on screen at 375x812 while filming */
+.rv-card { transition: padding var(--duration-slow) var(--ease-smooth-out); }
+.rv-card.compact { padding: 2px 14px 4px; }
+.rv-card.compact .rv-card-title { padding: 8px 0 2px; font-size: 11px; }
+.rv-card.compact .rv-step { padding: 5px 0; gap: 10px; }
+.rv-card.compact .rv-main { display: flex; align-items: baseline; gap: 8px; }
+.rv-card.compact .rv-label { flex: none; font-size: 12px; }
+.rv-card.compact .rv-text { flex: 1; min-width: 0; font-size: 14px; }
+.rv-card.compact .rv-val { font-size: 16px; }

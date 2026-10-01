@@ -124,7 +124,10 @@ export function Reveal({ round, res, onNext, onDetail, extra, instant = false })
   const leaders = res.standings.filter(p => p.amount === top.amount).map(p => p.id);
   const side = tied && round.teams?.find(tm => tm.players.length === leaders.length && tm.players.every(pid => leaders.includes(pid)));
   const leaderNames = res.standings.filter(p => leaders.includes(p.id)).map(p => p.name.split(' ')[0]).join(' & ');
-  const winnerTitle = square ? 'All square' : side ? `${side.name} take it` : tied ? `${leaderNames} tie for top` : `${top.name.split(' ')[0]} takes it`;
+  // A reward round says what's won: "Ann wins lunch", "Ann and Bo share a drink"
+  const prize = reward ? rewardOutcome(round, res) : null;
+  const winnerTitle = prize?.winners.length ? prize.win.replace(/\.$/, '')
+    : square ? 'All square' : side ? `${side.name} take it` : tied ? `${leaderNames} tie for top` : `${top.name.split(' ')[0]} takes it`;
   const title = done || !nSteps ? winnerTitle : 'Adding it up';
   // Both titles share one grid cell and crossfade, so the swap never moves the rows below
   const titles = nSteps ? ['Adding it up', winnerTitle] : [winnerTitle];
@@ -140,7 +143,8 @@ export function Reveal({ round, res, onNext, onDetail, extra, instant = false })
           <div className={`rv-skip ${done ? 'gone' : ''}`} aria-hidden={done}>Tap to skip</div>
         </div>
         {nSteps > 0 && (
-          <div className="rv-card">
+          // Once every bet has resolved the card tightens up, so all the totals land on one phone screen
+          <div className={`rv-card ${visible >= nSteps ? 'compact' : ''}`}>
             <div className="rv-card-title">{stepsTitle}</div>
             {steps.map((s, i) => <RevealStep key={s.key} step={s} on={i < visible} skip={skipped} fmt={fmt} />)}
           </div>
