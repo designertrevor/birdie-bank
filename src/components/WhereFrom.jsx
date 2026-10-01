@@ -7,7 +7,7 @@ import { Icon, Sheet } from './ui.jsx';
 import { Avatar } from './Pay.jsx';
 import { useStore } from '../lib/store.js';
 import { meFor, myIds, roundPlayerName } from '../lib/format.js';
-import { nameOf } from '../lib/ledger.js';
+import { nameOf, outstanding, tabWith } from '../lib/ledger.js';
 import { money } from '../lib/golf.js';
 import { shortDate } from '../lib/shared-tab.js';
 import { breakdownLine, breakdownWith, pairBreakdown } from '../lib/where-from.js';
@@ -94,6 +94,9 @@ export function TabWhereFrom({ other }) {
   const ref = useCallback(el => { if (el) setTarget(el.closest('.screen')); }, []);
   const f = first(nameOf(state, other));
   const w = open ? breakdownWith(state, myIds(state), other) : null;
+  // The Tab's own amount with them (positive when they pay you). Net less every payment between you
+  // can be wrong: a payment can square money passed on for someone else, or a whole trip
+  const onTab = open ? tabWith(outstanding(state), myIds(state), other) : 0;
   return (
     <>
       <span ref={ref} hidden />
@@ -107,8 +110,8 @@ export function TabWhereFrom({ other }) {
                 : <p className="hint-card"><Icon name="handshake" fill /> All square on every game.</p>}
               <div className="wf-sum"><span>From your rounds</span><strong className={cls(w.net)}>{money(w.net, { sign: true })}</strong></div>
               {w.paid !== 0 && <div className="wf-sum sub"><span>{w.paid > 0 ? `${f} paid you` : `You paid ${f}`}</span><strong>{money(-w.paid, { sign: true })}</strong></div>}
-              {w.paid !== 0 && <div className="wf-sum"><span>Still between you</span><strong className={cls(w.open)}>{money(w.open, { sign: true })}</strong></div>}
-              <p className="field-help pad">The Tab squares everyone in the fewest payments, so the amount on {f}’s card can differ from this.</p>
+              <div className="wf-sum"><span>{onTab > 0 ? `${f} pays you now` : onTab < 0 ? `You pay ${f} now` : 'On the Tab now'}</span><strong className={cls(onTab)}>{onTab ? money(Math.abs(onTab)) : 'Square'}</strong></div>
+              <p className="field-help pad">The Tab squares everyone in the fewest payments, so what you pay each other now can differ from what you won or lost with {f}.</p>
               {w.rounds.length > 0 && <div className="sec-label">Round by round</div>}
               {w.rounds.map(x => (
                 <div key={x.round.id} className="wf-round">
