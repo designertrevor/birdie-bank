@@ -17,6 +17,9 @@ import { useNav } from '../lib/nav.js';
 import { PAYWALL_ON } from '../lib/paywall-flag.js';
 import { isOrganizer } from '../lib/paywall.js';
 import { openRewards } from '../lib/play-for.js';
+import { StartTripLink, TripTabCard } from '../components/Trips.jsx';
+import { currentTrips, tripsOf } from '../lib/trips.js';
+import { tripOfPayment } from '../lib/trip-pay.js';
 
 const first = name => name.split(' ')[0];
 
@@ -52,6 +55,10 @@ export default function Ledger() {
   const history = paymentGroups(state);
   const hasRounds = Object.values(state.rounds).some(r => r.status === 'done');
   const hasShared = sharedDebts(state).length > 0;
+  // Trips on now (or just settled): a card each on top. Their money is already in each total below
+  const trips = currentTrips(state);
+  const tripNames = tripsOf(state);
+  const tripOf = s => s.settlements.map(tripOfPayment).find(Boolean);
 
   // One tap, no confirm: it can be put back from the toast, and a shared payment updates both phones
   const undo = s => {
@@ -161,6 +168,8 @@ export default function Ledger() {
           </div>
         )}
         <SquareStrip />
+        {trips.map(t => <TripTabCard key={t.trip.id} status={t} />)}
+        {trips.some(t => t.money.length > 0) && plan.length > 0 && <p className="field-help pad trip-folded">Trip money is in each person’s total below.</p>}
         {plan.length === 0 ? (
           <Empty title={hasRounds ? 'All square' : 'Nothing owed yet'}
             text={hasRounds ? 'Everyone’s settled up. Time to go win it back.' : 'Finish a round and the tab fills in. Money nets out across every round, so you pay less often.'}
@@ -197,7 +206,7 @@ export default function Ledger() {
               <div key={s.key} className="ledger-row static">
                 <div className="lr-info">
                   <div className="lr-name" style={{ fontSize: 16 }}>{isMe(s.from) ? 'You' : nameOf(state, s.from)} paid {isMe(s.to) ? 'you' : nameOf(state, s.to)}</div>
-                  <div className="lr-status">{new Date(s.at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}</div>
+                  <div className="lr-status">{new Date(s.at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}{tripNames.get(tripOf(s))?.name ? ` · ${tripNames.get(tripOf(s)).name}` : ''}</div>
                 </div>
                 <div className="lr-amt" style={{ marginRight: 8 }}>{money(s.amount)}</div>
                 <button className="icon-btn sm" onClick={() => undo(s)} aria-label="Undo payment"><Icon name="arrow-counter-clockwise" /></button>
@@ -205,6 +214,7 @@ export default function Ledger() {
             ))}
           </>
         )}
+        {trips.length === 0 && <StartTripLink onMade={t => nav.push('trip', { id: t.id })} />}
         {/* The free-forever list is held until Trevor says so: only with the paywall preview flag */}
         {PAYWALL_ON && (
           <div className="tab-free">

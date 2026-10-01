@@ -10,6 +10,8 @@ import { getSupabase, supabaseConfigured } from './supabase.js';
 import { isMissingTable } from './plan-adapters.js';
 import { allocatePayment, applyRows, lastPayment, nettedFor, tabCodes, undoRows } from './shared-tab.js';
 import { cardCarry, carryReducer, carryRows, carrySplit, splitCodes, splitRounds } from './carry.js';
+import { tripPaymentId } from './trip-pay.js';
+import { tripPayRoute } from './trips.js';
 
 // Per dev profile (?profile=b), so two tabs acting as two phones never read each other's queue
 const QUEUE = 'bb-tab-queue' + STORE_KEY.slice('birdie-bank-v1'.length);
@@ -255,6 +257,24 @@ export function markTransfer(round, t, code) {
   const by = round.localMe ?? s.me;
   commit([{ code, id: taken ? `${id}:${uid()}` : id, kind: 'payment', from: t.from, to: t.to, amount: t.amount, status: 'paid', by, reason: null, at: now, updatedAt: now }]);
   return { shared: !off };
+}
+
+/**
+ * Record one payment from "Settle the trip". It goes on the newest of the trip's shared rounds
+ * that both people played, so their phones (and everyone else in that round) see it; with no such
+ * round it stays on this phone and your account. Returns { shared, id }.
+ */
+export function markTripPayment({ tripId, from, to, amount }) {
+  const s = getState();
+  const now = Date.now();
+  const id = tripPaymentId(tripId, from, to, now);
+  const route = tripPayRoute(s, tripId, from, to, { now });
+  if (!route) {
+    take([], { add: [{ id, from, to, amount, at: now }] });
+    return { shared: false, id };
+  }
+  commit([{ code: route.code, id, kind: 'payment', from: route.from, to: route.to, amount, status: 'paid', by: route.by, reason: null, at: now, updatedAt: now }]);
+  return { shared: !off, id };
 }
 
 /** Take back payments (one tap, no confirm: it can be put back the same way). Returns a redo function. */

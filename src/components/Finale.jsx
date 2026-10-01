@@ -98,7 +98,8 @@ export function Reveal({ round, res, onNext, onDetail, extra, instant = false })
   const { title: stepsTitle, steps } = revealSteps(round, res);
   // A points or reward round counts up in points, and has nobody to pay
   const fmt = unitFmt(round);
-  const pays = countsMoney(round) && res.transfers.length > 0;
+  // A trip round has no settle up of its own (the trip is settled once), so the next beat is Share
+  const pays = countsMoney(round) && res.transfers.length > 0 && !round.trip?.id;
   const reward = playForOf(round).kind === 'reward';
   const nSteps = steps.length;
   const t = revealTiming(nSteps, count);

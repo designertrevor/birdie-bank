@@ -1741,3 +1741,83 @@ button.lately-row:active { background: var(--surface); }
 .wf-rhead strong { font-variant-numeric: tabular-nums; white-space: nowrap; }
 .wf-rline { margin-top: 4px; font-size: 13px; color: var(--mute); line-height: 1.4; }
 .tab-links { display: flex; flex-wrap: wrap; gap: 4px 16px; }
+/* ---------- Trip tab (Overnight 6): the trip card on the Tab and Up next, its page, Settle the trip ---------- */
+/* A trip wears a pink outline wherever it shows, so it reads as one thing across the app */
+.trip-card {
+  display: flex; align-items: center; gap: 10px; width: calc(100% - 32px); margin: 0 16px 10px; padding: 14px 12px 14px 16px;
+  border: 2px solid var(--pink); border-radius: 22px; background: var(--card); font: inherit; color: inherit; text-align: left; cursor: pointer;
+  transition: transform .2s var(--spring);
+}
+button.trip-card:active { transform: scale(.97); }
+.trip-card .eyebrow { color: var(--pink-text); }
+.trip-card.note { border-width: 1.5px; padding: 12px 12px 12px 16px; }
+.trip-card.wrap-up { display: block; cursor: default; padding: 16px; }
+.trip-card.on-tab { margin-top: 2px; }
+.trip-name { font-size: 20px; font-weight: 800; letter-spacing: -.01em; color: var(--ink); margin-top: 2px; line-height: 1.2; }
+.trip-sub { font-size: 13px; color: var(--mute); margin-top: 4px; line-height: 1.4; font-variant-numeric: tabular-nums; }
+.trip-sub.strong { color: var(--pink-text); font-weight: 700; display: inline-flex; align-items: center; gap: 4px; }
+.trip-amt-col { text-align: right; flex-shrink: 0; }
+.trip-amt { font-size: 20px; font-weight: 800; font-variant-numeric: tabular-nums; color: var(--ink); }
+.trip-amt-sub { font-size: 12px; color: var(--mute); }
+.trip-days { display: flex; gap: 6px; margin-top: 10px; flex-wrap: wrap; }
+.trip-day { flex: 1 1 0; min-width: 44px; text-align: center; font-size: 12px; font-weight: 700; padding: 6px 4px; border-radius: 10px; background: var(--surface); color: var(--mute); white-space: nowrap; }
+.trip-day.done { background: var(--surface-strong); color: var(--ink); }
+.trip-day.now { background: var(--pink-fill); color: #fff; }
+.trip-stand { margin-top: 10px; }
+.ts-row { display: flex; align-items: center; gap: 10px; padding: 7px 0; border-top: 1px solid var(--line-soft); font-variant-numeric: tabular-nums; }
+.ts-row:first-child { border-top: none; }
+.ts-rank { width: 16px; font-size: 13px; color: var(--mute); }
+.ts-name { flex: 1; min-width: 0; font-weight: 700; color: var(--ink); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.ts-amt { font-family: var(--display); font-weight: 800; font-size: 17px; color: var(--ink); }
+.trip-card .pay-acts { margin-top: 12px; }
+.trip-hero { padding: 0 20px 12px; }
+.eyebrow.pink { color: var(--pink-text); }
+.trip-hero .trip-sub { margin-top: 6px; }
+/* "Count it for the trip?" sits above the start button */
+.trip-count { display: flex; align-items: center; gap: 12px; padding: 12px 14px; background: var(--card); border-radius: 18px; box-shadow: inset 0 0 0 2px var(--pink); }
+.trip-count .toggle-lbl { font-size: 15px; }
+.trip-counts { display: flex; align-items: center; gap: 6px; margin: 0; padding: 0 4px; color: var(--pink-text); font-weight: 600; }
+.trip-line { display: flex; align-items: center; gap: 6px; margin: 0 16px 6px; padding: 10px 14px; border: none; border-radius: 14px; background: var(--surface); color: var(--ink); font: inherit; font-size: 14px; font-weight: 600; cursor: pointer; flex-shrink: 0; text-align: left; }
+.trip-line i:first-child { color: var(--pink-text); }
+.trip-line i:last-child { margin-left: auto; color: var(--mute); }
+.trip-form { margin: 0 16px 16px; padding: 4px 0 0; background: none; }
+.trip-form-days { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 10px; }
+.trip-form-days .text-input { min-width: 0; }
+/* The standings: one row a person, best first */
+.trip-table { margin: 0 16px 10px; padding: 4px 14px; background: var(--card); border-radius: 20px; }
+.trip-row { display: flex; align-items: center; gap: 10px; padding: 10px 0; border-top: 1px solid var(--line-soft); font-variant-numeric: tabular-nums; }
+.trip-row:first-child { border-top: none; }
+.trip-row .avatar { margin: 0; }
+.tr-rank { width: 16px; flex-shrink: 0; font-size: 13px; color: var(--mute); }
+.tr-main { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+.tr-name { font-weight: 700; font-size: 16px; color: var(--ink); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.tr-sub { font-size: 12px; color: var(--mute); }
+.tr-amt { font-family: var(--display); font-weight: 800; font-size: 18px; color: var(--ink); white-space: nowrap; }
+.trip-row.me .tr-name { color: var(--pink-text); }
+.ledger-row.trip-live { background: var(--surface); }
+.text-link.danger, .text-link.danger i { color: var(--loss); }
+.full-btn.pink { background: var(--pink-fill); color: #fff; }
+.trip-li { display: inline-flex; flex-direction: column; align-items: flex-start; gap: 1px; text-align: left; }
+.trip-li-name { font-size: 15px; font-weight: 700; }
+.trip-li-sub { font-size: 12px; font-weight: 500; color: var(--mute); }
+.trip-li-amt { font-family: var(--display); font-weight: 800; font-variant-numeric: tabular-nums; }
+/* Money by game: scrolls sideways inside its card when there are many games, never the page */
+.trip-games-wrap { padding: 6px 10px; overflow-x: auto; }
+.trip-games { width: 100%; border-collapse: collapse; font-size: 14px; font-variant-numeric: tabular-nums; }
+.trip-games th { font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: .06em; color: var(--mute); text-align: right; padding: 8px 6px; white-space: nowrap; }
+.trip-games th[scope="row"] { text-align: left; font-size: 14px; font-weight: 700; text-transform: none; letter-spacing: 0; color: var(--ink); }
+.trip-games td { text-align: right; padding: 9px 6px; border-top: 1px solid var(--line-soft); font-weight: 600; color: var(--ink); white-space: nowrap; }
+.trip-games tbody th { border-top: 1px solid var(--line-soft); }
+.trip-games td.none { color: var(--mute-soft); }
+.trip-games td.tot { font-weight: 800; }
+/* Settle the trip */
+.trip-pay-name { flex: 1; min-width: 0; margin-left: 10px; font-family: var(--display); font-weight: 800; font-size: 17px; color: var(--ink); }
+.pay-who .avatar { margin: 0; }
+.trip-pay-sub { font-size: 13px; color: var(--mute); margin-top: 4px; }
+.ledger-row.trip-other { align-items: center; }
+.trip-square { text-align: center; padding: 18px 16px; }
+.trip-faces { display: flex; justify-content: center; flex-wrap: wrap; gap: 14px; margin-top: 12px; }
+.tf-face { display: flex; flex-direction: column; align-items: center; gap: 4px; }
+.tf-face .avatar { margin: 0; }
+.tf-tag { font-size: 12px; font-weight: 700; color: var(--win); background: var(--win-bg); padding: 2px 8px; border-radius: 999px; }
+.trip-folded { margin-top: -2px; }

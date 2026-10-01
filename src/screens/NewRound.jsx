@@ -34,6 +34,8 @@ import { matchingUsual, planFromUsual, setupFromUsual, usualsOf } from '../lib/u
 import { SaveUsualButton, UsualsList } from '../components/Usuals.jsx';
 import PlayForPicker from '../components/PlayFor.jsx';
 import { countsMoney, inUnits, padUnit, playForLine, playForShort } from '../lib/play-for.js';
+import { CountForTrip, StartTripLink } from '../components/Trips.jsx';
+import { countsByDefault, tripOf, tripOnDay, tripPlanDay, tripStamp } from '../lib/trips.js';
 
 const STEPS = ['Game', 'Course', 'Players', 'Bets'];
 
@@ -82,9 +84,10 @@ function planSetup(state, planId, present) {
  * up for a vote (from organizer onboarding). `onboarding`: this is the end of organizer onboarding,
  * so finishing lands on the plan with the paywall on top (when it's on), and cancelling drops
  * back to whatever is underneath. `reschedule`: a round set up but not played yet, turned into a
- * plan with the same setup (the round goes once the plan is made).
+ * plan with the same setup (the round goes once the plan is made). `trip`: started from a trip's
+ * page, so it counts for that trip.
  */
-export default function NewRound({ rematch, fromPlan, present, edit = null, ahead = false, game: preGame = null, ballot = [], onboarding = false, reschedule = null }) {
+export default function NewRound({ rematch, fromPlan, present, edit = null, ahead = false, game: preGame = null, ballot = [], onboarding = false, reschedule = null, trip: tripId = null }) {
   const nav = useNav();
   const { ask, showToast } = useUI();
   const state = useStore();
@@ -98,7 +101,8 @@ export default function NewRound({ rematch, fromPlan, present, edit = null, ahea
   // A round already set up that the plan takes the place of
   const [replaces, setReplaces] = useState(reschedule && pre ? reschedule : null);
   const planning = mode === 'plan';
-  const [date, setDate] = useState(() => editing?.date || nextSaturday());
+  // Planned from a trip's page: a day of the trip, not next Saturday
+  const [date, setDate] = useState(() => editing?.date || (tripId && tripPlanDay(tripOf(getState(), tripId))) || nextSaturday());
   const [teeTime, setTeeTime] = useState(editing?.teeTime || '');
   const [invited, setInvited] = useState(() => (reschedule && pre ? pre.picked.filter(pid => pid !== getState().me) : []));
   const [step, showStep] = useState(pre?.step ?? (ahead && GAMES[preGame] ? 1 : 0));
@@ -140,6 +144,15 @@ export default function NewRound({ rematch, fromPlan, present, edit = null, ahea
   const [pairBets, setPairBets] = useState([]);
 
   const course = findCourse(state, courseId);
+  // "Count it for the trip?": a trip on the round's day (or the trip it was started from). Yes by
+  // default when trip people are in it; the plan's own trip when it came from a planned round
+  const fromPlanTrip = fromPlan ? state.plans?.[fromPlan]?.trip : null;
+  const tripOn = tripId ? tripOf(state, tripId) : fromPlanTrip ? tripOf(state, fromPlanTrip.id) : tripOnDay(state, planning ? date : isoDate());
+  const [countTrip, setCountTrip] = useState(null); // null until changed: the default
+  const countOn = countTrip ?? (!!tripOn && (!!tripId || !!fromPlanTrip || countsByDefault(state, tripOn.id, planning ? [state.me, ...invited] : picked)));
+  const tripPick = tripOn && countOn ? tripOn : null;
+  const tripRow = tripOn && !editing ? <CountForTrip trip={tripOn} on={countOn} onChange={setCountTrip} /> : null;
+  const tripLink = !tripOn && !editing && !fromPlan ? <StartTripLink /> : null;
   // Names from the usual still not saved here (adding one by the same name clears it from the hint)
   const savedNames = new Set(Object.values(state.players || {}).map(p => String(p?.name || '').trim().toLowerCase()));
   const stillMissing = missing.filter(n => !savedNames.has(String(n).trim().toLowerCase()));
@@ -196,6 +209,8 @@ export default function NewRound({ rematch, fromPlan, present, edit = null, ahea
         sidePcts: Object.fromEntries(sidesFor(game).filter(sg => sg.hcPct != null).map(sg => [sg.game, sg.hcPct])),
       } : {}),
     });
+    // Planned for a trip: it groups under the trip on everyone's Up next
+    if (tripPick) plan.trip = tripStamp(tripPick);
     update(st => {
       if (!st.plans) st.plans = {};
       st.plans[id] = plan;
@@ -249,6 +264,8 @@ export default function NewRound({ rematch, fromPlan, present, edit = null, ahea
     // Side bets whose two players are both still in the round (setup's list can outlive a change of players)
     const bets = betsOf({ ...round, bets: pairBets }).map(b => cleanBet(round, b));
     if (bets.length) round.bets = bets;
+    // Counted for the trip: the stamp rides in the round to every phone in it (trips.js)
+    if (tripPick) round.trip = tripStamp(tripPick);
     // Started from a saved usual (still the same game at the same course): finishing it updates "Last played"
     const from = usualId && usualsOf(s).find(u => u.id === usualId);
     if (from && from.game === game && (from.courseId === course.id || findCourse(s, from.courseId)?.id === course.id)) round.usualId = usualId;
@@ -354,7 +371,7 @@ export default function NewRound({ rematch, fromPlan, present, edit = null, ahea
           </>} />
       )}
       {step === 2 && planning && course && <InviteStep invited={invited} setInvited={setInvited} onNext={() => setStep(3)} />}
-      {step === 3 && planning && course && <VoteStep game={game} opts={opts} onPlan={makePlan} ballot={ballot} initialSides={planSides.length ? planSides : sidesFor(game).map(sg => sg.game)} playFor={playFor} setPlayFor={setPlayFor} />}
+      {step === 3 && planning && course && <VoteStep game={game} opts={opts} onPlan={makePlan} ballot={ballot} initialSides={planSides.length ? planSides : sidesFor(game).map(sg => sg.game)} playFor={playFor} setPlayFor={setPlayFor} tripRow={tripRow} />}
       {step === 1 && !planning && <CourseStep courseId={courseId} setCourseId={id => { setCourseId(id); setTees({}); setStartHole(null); }} holesCount={holesCount} nine={nine} setNine={setNine} onNext={() => setStep(2)} />}
       {step === 2 && !planning && course && (
         <PlayersStep game={g} course={course} holesCount={holesCount} nine={nine} picked={picked} setPicked={setPicked}
@@ -365,7 +382,8 @@ export default function NewRound({ rematch, fromPlan, present, edit = null, ahea
         <SetupStep game={game} course={course} holesCount={holesCount} nine={nine} picked={picked} setPicked={setPicked}
           opts={opts} setOpts={setOpts} useHc={useHc} setUseHc={setUseHc} startHole={startHole} setStartHole={setStartHole} onStart={start} onLater={fromPlan ? null : () => later()}
           teams={teams} setTeams={setTeams} sideGames={sidesFor(game)} setSideGames={editSides} playFor={playFor} setPlayFor={setPlayFor}
-          tees={tees} hcOverride={hcOverride} defaultTee={defaultTee} pairBets={pairBets} setPairBets={setPairBets} />
+          tees={tees} hcOverride={hcOverride} defaultTee={defaultTee} pairBets={pairBets} setPairBets={setPairBets}
+          tripRow={tripRow} tripLink={tripLink} />
       )}
       {step === 4 && created && <ReadyStep round={created} onStart={() => nav.reset('upnext', ['play', { id: created.id }])} onLater={fromPlan || created.shared ? null : () => later(created.id)} />}
     </Screen>
@@ -695,7 +713,7 @@ function QuickAddPlayer({ open, onClose, onAdded }) {
 // ---------------------------------------------------------------------------
 
 function SetupStep({ game, course, holesCount, nine, picked, setPicked, opts, setOpts, useHc, setUseHc, startHole, setStartHole, onStart, onLater = null, teams, setTeams, sideGames = [], setSideGames, playFor = null, setPlayFor,
-  tees = {}, hcOverride = {}, defaultTee = null, pairBets = [], setPairBets }) {
+  tees = {}, hcOverride = {}, defaultTee = null, pairBets = [], setPairBets, tripRow = null, tripLink = null }) {
   const state = useStore();
   const [pad, setPad] = useState(null); // {path, title, min, max}
   const [holePick, setHolePick] = useState(false);
@@ -789,8 +807,10 @@ function SetupStep({ game, course, holesCount, nine, picked, setPicked, opts, se
           <p className="field-help">Starting somewhere else? Change the first hole.</p>
         </div>
         </>}
+        {tripLink}
       </div>
       <div className="cta-wrap">
+        {tripRow}
         <button className="full-btn" disabled={optsBad || teamsBad} onClick={onStart}>Create round <Icon name="arrow-right" /></button>
         {onLater && <button className="full-btn outline" disabled={optsBad} onClick={onLater}><Icon name="calendar-plus" /> Schedule for later</button>}
       </div>
@@ -913,7 +933,7 @@ function InviteStep({ invited, setInvited, onNext }) {
 }
 
 /** The organizer suggests a game and a bet, and picks what else the group can vote for. */
-function VoteStep({ game, opts, onPlan, ballot = [], initialSides = [], playFor = null, setPlayFor }) {
+function VoteStep({ game, opts, onPlan, ballot = [], initialSides = [], playFor = null, setPlayFor, tripRow = null }) {
   const start = betOf(game, opts) || 5;
   const [bet, setBet] = useState(start);
   const [others, setOthers] = useState(() => ballot.filter(k => k !== game && GAMES[k]).slice(0, MAX_BALLOT_GAMES - 1));
@@ -986,6 +1006,7 @@ function VoteStep({ game, opts, onPlan, ballot = [], initialSides = [], playFor 
         {others.length === 0 && extraBets.length === 0 && sides.length === 0 && <p className="field-help pad">Nothing else on the ballot, so everyone just says if they’re in.</p>}
       </div>
       <div className="cta-wrap">
+        {tripRow}
         <button className="full-btn" onClick={() => onPlan({ ballotGames: others, suggestedBet: bet, ballotBets, ballotSides: sides })}>Plan it <Icon name="arrow-right" /></button>
       </div>
     </>
