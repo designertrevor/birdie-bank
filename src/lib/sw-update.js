@@ -3,7 +3,7 @@
 // takes over on its own (see public/sw.js), so a phone mid-round keeps the version it started on.
 import { useSyncExternalStore } from 'react';
 import { getState } from './store.js';
-import { updateAction, updateSafe } from './app-update.js';
+import { openedFromLink, updateAction, updateSafe } from './app-update.js';
 
 // Matches the message public/sw.js listens for
 const APPLY = 'apply-update';
@@ -17,6 +17,8 @@ let ready = false;
 let asked = false;
 let touched = false;
 let lastCheck = 0;
+// Read when this file first runs, before the app tidies ?join=, ?plan= or a sign-in code out of the address bar
+const fromLink = openedFromLink(location.search, location.hash);
 const listeners = new Set();
 
 const launching = () => !touched && performance.now() < LAUNCH_MS;
@@ -30,7 +32,7 @@ function setReady(v) {
 /** A new version is waiting: take it now if that's safe at launch, otherwise let Up next offer it. */
 function found() {
   if (!reg?.waiting) return;
-  const action = updateAction({ waiting: true, safe: updateSafe(getState()), launching: launching() });
+  const action = updateAction({ waiting: true, safe: updateSafe(getState()), launching: launching(), fromLink });
   if (action === 'apply') applyUpdate();
   else setReady(true);
 }

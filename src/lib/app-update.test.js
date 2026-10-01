@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { roundHoldsUpdate, updateAction, updateSafe } from './app-update.js';
+import { openedFromLink, roundHoldsUpdate, updateAction, updateSafe } from './app-update.js';
 
 const rounds = (...list) => ({ rounds: Object.fromEntries(list.map((r, i) => [`r${i}`, { id: `r${i}`, ...r }])) });
 
@@ -41,4 +41,14 @@ test('with no round going, it applies at launch and is offered otherwise', () =>
 test('nothing to do when no new version is waiting', () => {
   assert.equal(updateAction({ waiting: false, safe: true, launching: true }), 'wait');
   assert.equal(updateAction({ waiting: false, safe: true }), 'wait');
+});
+
+test('opened from a join, plan or sign-in link, it never reloads at launch (the link would be lost)', () => {
+  assert.equal(updateAction({ waiting: true, safe: true, launching: true, fromLink: true }), 'offer');
+  assert.equal(openedFromLink('?join=ABCD', ''), true);
+  assert.equal(openedFromLink('?plan=WXYZ&p=2', ''), true);
+  assert.equal(openedFromLink('?code=abc', ''), true);
+  assert.equal(openedFromLink('', '#access_token=abc'), true);
+  assert.equal(openedFromLink('', ''), false);
+  assert.equal(openedFromLink('?', '#'), false);
 });

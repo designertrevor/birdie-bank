@@ -15,11 +15,20 @@ export function updateSafe(state) {
 }
 
 /**
+ * True when the app was opened from a link (a join or plan invite, a sign-in link). The app tidies
+ * those out of the address bar as soon as it reads them, so a reload at launch would lose them.
+ */
+export function openedFromLink(search = '', hash = '') {
+  return search.length > 1 || hash.length > 1;
+}
+
+/**
  * What to do about a new version: 'apply' (swap now and reload), 'offer' (show the note on Up next),
  * or 'wait' (say nothing until no round is going on). `launching` is true only while the app is
  * just opening and the person hasn't touched anything yet, so a reload then loses nothing.
+ * `fromLink` (see openedFromLink) never reloads at launch: the note on Up next offers it instead.
  */
-export function updateAction({ waiting, safe, launching = false }) {
+export function updateAction({ waiting, safe, launching = false, fromLink = false }) {
   if (!waiting || !safe) return 'wait';
-  return launching ? 'apply' : 'offer';
+  return launching && !fromLink ? 'apply' : 'offer';
 }
