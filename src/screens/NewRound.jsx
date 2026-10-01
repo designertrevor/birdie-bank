@@ -67,7 +67,7 @@ function planSetup(state, planId, present) {
   const g = GAMES[s.game];
   return {
     game: s.game, holesCount: s.holesCount, courseId: course?.id ?? null, nine: s.nine, picked, missing: [], tees: {}, hcOverride: {},
-    bets: structuredClone(s.settings[s.game]), hcPct: s.hcPct, useHc: s.useHandicaps, teams: s.teams, sideGames: s.sideGames,
+    bets: structuredClone(s.settings[s.game]), hcPct: s.hcPct, useHc: s.useHandicaps, teams: s.teams, sideGames: s.sideGames, halfStrokes: s.halfStrokes,
     usualId: plan.usualId ?? null,
     playFor: s.playFor,
     step: !course ? 1 : picked.length < g.min || picked.length > g.max ? 2 : 3,
@@ -185,6 +185,12 @@ export default function NewRound({ rematch, fromPlan, present, edit = null, ahea
       ballot: { games: ballotGames, bets: ballotBets, sides: ballotSides }, suggestedBet, settings, useHc: usualId || replaces ? useHc : false, playFor,
       // From a saved usual: its handicap percentage, and which usual (for "Last played")
       ...(usualId ? { usualId, hcPct: opts.hcPct } : {}),
+      // From a usual or a rescheduled round: its handicap %, half strokes and each side game's own Strokes given %
+      ...(usualId || replaces ? {
+        hcPct: opts.hcPct,
+        halfStrokes: !!opts.halfStrokes,
+        sidePcts: Object.fromEntries(sidesFor(game).filter(sg => sg.hcPct != null).map(sg => [sg.game, sg.hcPct])),
+      } : {}),
     });
     update(st => {
       if (!st.plans) st.plans = {};
@@ -296,9 +302,10 @@ export default function NewRound({ rematch, fromPlan, present, edit = null, ahea
     setGame(p.game); setHolesCount(p.holesCount); setNine(p.nine);
     setCourseId(p.courseId); setTees({}); setStartHole(null);
     setInvited(p.invited);
-    setOpts(o => ({ ...o, ...structuredClone(p.opts) }));
+    setOpts(o => ({ ...o, halfStrokes: false, ...structuredClone(p.opts) }));
     setUseHc(p.useHc);
     setPlanSides(p.sides);
+    setSideGames(structuredClone(p.sideGames || []));
     setPlayFor(p.playFor ?? null);
     setMissing(p.missing);
     setUsualId(p.usualId);

@@ -17,6 +17,7 @@ import { stakeHeadline, stakeSummary } from './stakes.js';
 import { defaultTeams, teamsProblem } from './teams.js';
 import { defaultTee } from './courses.js';
 import { inUnits, playForLine, storedPlayFor } from './play-for.js';
+import { halfStrokesOffered } from './allowances.js';
 
 export const RSVPS = ['in', 'maybe', 'out'];
 /** The organizer's own key on a plan. Not their player id, so signing in (which can change it) never loses their answer. */
@@ -330,7 +331,8 @@ export function planStart(state, plan, present, { newId, course: courseIn } = {}
   delete settings.shareAmounts; // a personal setting, not part of a round's bets
   const tee = defaultTee(course)?.name ?? null;
   // The side games the group voted for, each with the organizer's house rules for it
-  const sideGames = planSides(plan, game).filter(k => rules[k]).map(k => ({ game: k, settings: structuredClone(rules[k]) }));
+  // A side game's own Strokes given % comes along when the plan carries one (from a usual or a rescheduled round)
+  const sideGames = planSides(plan, game).filter(k => rules[k]).map(k => ({ game: k, settings: structuredClone(rules[k]), ...(validPct(plan.sidePcts?.[k]) ? { hcPct: plan.sidePcts[k] } : {}) }));
   return {
     game, bet, course, holesCount, nine: plan.nine || 'front', teams, problem, newPlayers, sideGames,
     players: players.map(p => ({ ...p, tee })),
@@ -338,9 +340,13 @@ export function planStart(state, plan, present, { newId, course: courseIn } = {}
     // A plan from a saved usual keeps the usual's handicap percentage; others use this phone's
     hcPct: plan.hcPct ?? settings.hcPct ?? 100,
     useHandicaps: plan.useHc !== false,
+    // Half strokes as planned, when the game the group picked (or a side game) can use them
+    halfStrokes: !!plan.halfStrokes && halfStrokesOffered(game, sideGames),
     playFor: storedPlayFor(plan.playFor),
   };
 }
+
+const validPct = n => typeof n === 'number' && n > 0 && n <= 100;
 
 // --------------------------- dates ------------------------------------------
 
@@ -514,6 +520,12 @@ export function cleanName(name) {
   return String(name || '').replace(/\s+/g, ' ').trim().slice(0, 24);
 }
 
+/** Side games' own Strokes given %s worth keeping on a plan: only valid ones, for side games on the ballot. Null for none. */
+function planPcts(pcts, sides) {
+  const out = Object.fromEntries(Object.entries(pcts || {}).filter(([k, v]) => sides.includes(k) && validPct(v)));
+  return Object.keys(out).length ? out : null;
+}
+
 /** The link friends open: the whole group, or one person's own (so it knows who they are). */
 export function planLink(origin, code, who = null) {
   return `${origin}/?plan=${code}${who ? `&p=${encodeURIComponent(who)}` : ''}`;
@@ -525,9 +537,10 @@ export function planLink(origin, code, who = null) {
  * every other game on the ballot gets amounts around its own usual bet in `settings` (the
  * organizer's house rules, which ride along on the plan so every phone shows the same units).
  * A plan set up from a saved usual also carries its handicap percentage (`hcPct`, used by the
- * roll call) and `usualId` (so finishing the round updates the usual's "Last played").
+ * roll call) and `usualId` (so finishing the round updates the usual's "Last played"). It and a
+ * rescheduled round also carry half strokes (`halfStrokes`) and side games' own %s (`sidePcts`).
  */
-export function newPlan({ id, hostWho = HOST, hostName, game, holesCount, nine, date, teeTime, course, people, ballot, suggestedBet, settings = null, useHc = true, hcPct = null, usualId = null, playFor = null, now = Date.now() }) {
+export function newPlan({ id, hostWho = HOST, hostName, game, holesCount, nine, date, teeTime, course, people, ballot, suggestedBet, settings = null, useHc = true, hcPct = null, halfStrokes = false, sidePcts = null, usualId = null, playFor = null, now = Date.now() }) {
   const games = [game, ...(ballot?.games || []).filter(g => g !== game && GAMES[g])].slice(0, MAX_BALLOT_GAMES);
   const bets = [...new Set([...(ballot?.bets || []), suggestedBet].filter(b => Number(b) > 0).map(Number))].sort((a, b) => a - b);
   const bet = Number(suggestedBet) || bets[0] || null;
@@ -550,6 +563,9 @@ export function newPlan({ id, hostWho = HOST, hostName, game, holesCount, nine, 
     hostWho, hostName: hostFirst,
     game, holesCount, nine: nine || 'front', date, teeTime: teeTime || null, useHc,
     ...(Number.isFinite(hcPct) ? { hcPct } : {}),
+    // Half strokes and side games' own %s, from a usual or a rescheduled round (absent: as every plan before them)
+    ...(halfStrokes ? { halfStrokes: true } : {}),
+    ...(planPcts(sidePcts, sides) ? { sidePcts: planPcts(sidePcts, sides) } : {}),
     ...(usualId ? { usualId } : {}),
     // Points or a reward (absent: money, as every plan before it)
     ...(storedPlayFor(playFor) ? { playFor: storedPlayFor(playFor) } : {}),
