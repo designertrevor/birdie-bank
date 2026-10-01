@@ -16,6 +16,8 @@ import { paymentsAfterSplit } from '../lib/unmerge-payments.js';
 import { playForLine, unitFmt } from '../lib/play-for.js';
 import { nemesis, rivalry } from '../lib/rivalry.js';
 import { RivalryCard } from '../components/Rivalry.jsx';
+import { usePersonProfile } from '../lib/profiles.js';
+import { friendView, sinceText } from '../lib/profile-view.js';
 
 export default function Person({ id: opened }) {
   const nav = useNav();
@@ -32,6 +34,9 @@ export default function Person({ id: opened }) {
   const firstName = name.split(' ')[0];
   const player = state.players[id];
   const info = payInfoFor(state, id);
+  // Their own profile, once a seat of theirs is linked to their account: only what they let people
+  // they've played with see (profile-view.js)
+  const fv = friendView(usePersonProfile(id), player);
   const plan = outstanding(state);
   const tab = tabWith(plan, mine, id);
   const story = personStory(state, mine, id);
@@ -92,11 +97,12 @@ export default function Person({ id: opened }) {
         right={id !== state.me && <button className="header-btn" onClick={() => nav.push('playerEdit', { id })}>Edit</button>} />
       <div className="scroll">
         <div className="person-hero">
-          <Avatar name={name} size="lg" />
+          <Avatar id={id} name={name} size="lg" />
           <div className="ph-sub">
             {info ? `${PAY_APPS[info.app].name} ${handleText(info)}` : 'No payment app yet'}
-            {player?.index != null ? ` · Index ${formatIndex(player.index)}` : ''}
+            {player?.index != null ? ` · Index ${formatIndex(player.index)}` : fv?.index != null ? ` · Index ${formatIndex(fv.index)}` : ''}
           </div>
+          {fv?.homeCourse && <div className="ph-sub pf-home-line"><Icon name="flag-pennant" fill /> Home course: {fv.homeCourse.name}</div>}
           <div className="eyebrow" style={{ marginTop: 14 }}>{tab > 0 ? `${firstName} owes you` : tab < 0 ? `You owe ${firstName}` : 'On the Tab'}</div>
           <div className={`tab-big d ${tab > 0 ? 'pos' : tab < 0 ? 'neg' : ''}`}>{tab ? money(amount) : 'All square'}</div>
         </div>
@@ -117,6 +123,22 @@ export default function Person({ id: opened }) {
             Just between you two, {direct > 0 ? `${firstName} owes you ${money(direct)}` : direct < 0 ? `you owe ${firstName} ${money(-direct)}` : 'you’re square'}.
             The Tab squares the whole group in the fewest payments, so some money is passed on through people you both play with.
           </p>
+        )}
+
+        {fv?.tiles.length > 0 && (
+          <>
+            <div className="sec-label">{firstName}’s profile</div>
+            <div className="pf-tiles">
+              {fv.tiles.map(t => (
+                <div key={t.key} className={`pf-tile ${t.key === 'net' || t.key === 'best' ? 'money' : ''}`}>
+                  <div className="eyebrow">{t.label}</div>
+                  <div className={`pf-v d ${t.tone || ''}`}>{t.value}</div>
+                  {t.sub && <div className="st-s">{t.sub}</div>}
+                </div>
+              ))}
+            </div>
+            <p className="field-help pad">{[sinceText(fv.since), `All of ${firstName}’s rounds, not just yours together.`].filter(Boolean).join(' · ')}</p>
+          </>
         )}
 
         <div className="sec-label">The story</div>
@@ -173,7 +195,7 @@ export default function Person({ id: opened }) {
           {candidates.length === 0 && <p className="field-help">Nobody else to merge. People who played a round with {firstName} can’t be the same person, so they aren’t listed.</p>}
           {candidates.map(c => (
             <button key={c.id} className="list-item" onClick={() => merge(c)}>
-              <Avatar name={c.name} />
+              <Avatar id={c.id} name={c.name} />
               <div className="row-main"><div className="li-name">{c.name}</div><div className="li-sub">{sameSub(c.id, true)}</div></div>
               <span className="chevron"><Icon name="caret-right" /></span>
             </button>
