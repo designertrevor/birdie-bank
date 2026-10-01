@@ -4,7 +4,7 @@ import { RulesSheet } from '../components/Rules.jsx';
 import { DEFAULT_SETTINGS, getState, update, useStore } from '../lib/store.js';
 import {
   GAMES, addPlayerProblem, bankerHoleSetup, canLeave, defaultNine, holeComplete, leftRule, livePreview, nassauPressOptions, playersLeft, playersOn, playsHole, pressMode,
-  noHandicap, resizeRound, roundLegs, roundResults, scoredHolesDropped, scorers, skinsKinds, skinsTable, strokesFor, popsFor, wolfHoleSetup, changeBets, wholeRoundOnly,
+  betPresets, noHandicap, resizeRound, roundLegs, roundResults, scoredHolesDropped, scorers, skinsKinds, skinsTable, strokesFor, popsFor, wolfHoleSetup, changeBets, wholeRoundOnly,
   gameView, sideGamesOf, holeFixOf, gameKeys, gameKeyLabel, settingsAt, wolfCarryBefore, posOf,
 } from '../lib/round.js';
 import { SIDE_GAMES } from '../lib/round.js';
@@ -697,6 +697,7 @@ function PlayRound({ round }) {
           </Sheet>
           <Numpad open={!!betPad} title={`${round.players.find(p => p.id === betPad)?.name}'s bet`} prefix="$"
             initial={betPad ? banker.bets[betPad] : ''} min={round.settings.banker.min} max={round.settings.banker.max}
+            quick={[1, 2, 3, 4, 5, 6, 7, 8, 9, 10]}
             onClose={() => setBetPad(null)} onDone={v => { setBanker({ ...banker, bets: { ...banker.bets, [betPad]: v } }); setBetPad(null); }} />
         </>
       )}
@@ -1110,7 +1111,7 @@ function BankerPanel({ round, banker, setBanker, phase, setPhase, onPick, onBet,
                 <div style={{ flex: 1 }}><div className="pname">{p.name}</div><div className="ps">{p.plays ? `Gets ${p.plays} stroke${p.plays > 1 ? 's' : ''} on the round` : 'No strokes'}</div></div>
                 <div className="bet-now" aria-hidden="true">{money(banker.bets[p.id] || 0)}</div>
               </div>
-              <BetChips name={p.name} value={banker.bets[p.id] || 0} min={round.settings.banker.min} max={round.settings.banker.max}
+              <BetChips name={p.name} value={banker.bets[p.id] || 0} presets={betPresets(round.settings.banker.min, round.settings.banker.max, round.settings.banker.defaultBet)}
                 onPick={v => setBanker({ ...banker, bets: { ...banker.bets, [p.id]: v } })} onMore={() => onBet(p.id)} />
               <div style={{ padding: '0 16px 16px', display: 'flex' }}>
                 <button className={`dbl-btn ${banker.doubled[p.id] ? 'on' : ''}`} style={{ flex: 1, height: 52, fontSize: 17 }} aria-pressed={!!banker.doubled[p.id]}
@@ -1142,17 +1143,16 @@ function onTheLine(banker) {
   return Object.entries(banker?.bets || {}).reduce((a, [pid, v]) => a + (v || 0) * (banker.doubled?.[pid] ? (banker.doubleBack ? 4 : 2) : 1), 0);
 }
 
-/** $1 to $10 in two rows (inside the game's min and max), then + for any other amount on the keypad. */
-function BetChips({ name, value, min = 1, max = 10, onPick, onMore }) {
-  const chips = Array.from({ length: 10 }, (_, i) => i + 1).filter(v => v >= (min || 1) && v <= (max || 10));
-  const other = !chips.includes(value);
+/** Four common amounts at a tap, then Other for the keypad (which has $1 to $10 at a tap too). */
+function BetChips({ name, value, presets, onPick, onMore }) {
+  const other = !presets.includes(value);
   return (
     <div className="bet-chips" role="radiogroup" aria-label={`${name}'s bet`}>
-      {chips.map(v => (
+      {presets.map(v => (
         <button key={v} role="radio" aria-checked={value === v} className={`bet-chip ${value === v ? 'on' : ''}`} onClick={() => { onPick(v); buzz(8); }}>${v}</button>
       ))}
       <button className={`bet-chip more ${other ? 'on' : ''}`} onClick={onMore} aria-label={other ? `${name}'s bet, ${money(value)}. Other amount` : 'Other amount'}>
-        {other ? money(value) : <Icon name="plus" />}
+        {other ? money(value) : 'Other'}
       </button>
     </div>
   );

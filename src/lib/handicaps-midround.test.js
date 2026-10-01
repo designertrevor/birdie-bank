@@ -89,3 +89,12 @@ test('Banker bets carry over from the last hole each player bet on, last hole\'s
   assert.equal(h3.banker, 'y');
   assert.deepEqual(h3.bets, { t: 7, p: 3, z: 2 });
 });
+
+test('four bet chips inside min and max, with the default bet among them', async () => {
+  const { betPresets } = await import('./round.js');
+  assert.deepEqual(betPresets(1, 20, 5), [1, 2, 5, 10]);
+  assert.deepEqual(betPresets(1, 20, 3), [1, 2, 3, 5]);
+  assert.deepEqual(betPresets(5, 100, 20), [5, 10, 15, 20]);
+  assert.deepEqual(betPresets(1, 4, 2), [1, 2]);
+  assert.deepEqual(betPresets(3, 4, 3), [3]);
+});

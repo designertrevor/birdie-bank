@@ -137,7 +137,8 @@ export function Numpad(props) {
   return <NumpadInner {...props} />;
 }
 
-function NumpadInner({ title, prefix = '', suffix = '', initial = '', min, max, allowDecimal = false, allowNegative = false, onDone, onClose }) {
+/** `quick`: amounts shown above the keys that pick in one tap (an amount outside min and max is left out). */
+function NumpadInner({ title, prefix = '', suffix = '', initial = '', min, max, allowDecimal = false, allowNegative = false, quick = null, onDone, onClose }) {
   const init = String(initial ?? '');
   const [v, setV] = useState(init.replace('-', ''));
   const [neg, setNeg] = useState(init.startsWith('-'));
@@ -169,6 +170,13 @@ function NumpadInner({ title, prefix = '', suffix = '', initial = '', min, max, 
           </div>
           <div className="numpad-value" aria-live="polite" aria-atomic="true">{prefix}{shown}{suffix}</div>
         </div>
+        {quick?.length > 0 && (
+          <div className="np-quick" role="group" aria-label="Quick picks">
+            {quick.filter(q => (min == null || q >= min) && (max == null || q <= max)).map(q => (
+              <button key={q} className={`np-quick-btn ${String(q) === init ? 'on' : ''}`} onClick={() => onDone(q)}>{prefix}{q}{suffix}</button>
+            ))}
+          </div>
+        )}
         <div className="numpad-grid">
           {['1', '2', '3', '4', '5', '6', '7', '8', '9'].map(k => <button key={k} className="np-btn" onClick={() => press(k)}>{k}</button>)}
           {allowNegative

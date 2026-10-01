@@ -975,6 +975,18 @@ export function lowBanker(round, idx, ids, prevBanker = null) {
   return tied[0];
 }
 
+// Amounts groups actually bet, smallest first. Four of them show as chips (the game's default bet is
+// always one), the way tip and donation screens offer three or four amounts and "Other"
+const BET_LADDER = [1, 2, 5, 10, 15, 20, 25, 50, 100];
+/** The four Banker bet chips inside the game's min and max, the default bet always among them. */
+export function betPresets(min = 1, max = 20, def = null) {
+  const lo = min || 1, hi = max || Infinity;
+  let picks = BET_LADDER.filter(v => v >= lo && v <= hi).slice(0, 4);
+  if (!picks.length) picks = [lo];
+  if (def != null && def >= lo && def <= hi && !picks.includes(def)) picks = [...picks.slice(0, 3), def].sort((a, b) => a - b);
+  return picks;
+}
+
 export function bankerHoleSetup(round, idx) {
   const hole = round.holes[idx];
   const existing = round.banker[hole.no];
