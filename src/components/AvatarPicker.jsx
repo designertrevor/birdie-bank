@@ -1,4 +1,4 @@
-// Picking your avatar: a Ball buddy on a backdrop, a photo, or your initials on a colour. Opened from
+// Picking your avatar: a Ball buddy on a backdrop, a photo, or your initials on a color. Opened from
 // your profile. Every path ends on the same save, and friends see it on seats, the Tab and results.
 import { useEffect, useRef, useState } from 'react';
 import { Icon, Segmented, Sheet, useUI } from './ui.jsx';
@@ -10,7 +10,7 @@ import { useAccount } from '../lib/cloud.js';
 
 const BACKDROP_NAMES = { mint: 'Mint', peach: 'Peach', lav: 'Lavender', ochre: 'Gold', pink: 'Pink', coral: 'Coral', blush: 'Blush', teal: 'Teal' };
 
-/** The backdrop colours as a row of swatches. */
+/** The backdrop colors as a row of swatches. */
 function Backdrops({ value, onChange, label }) {
   return (
     <div className="av-swatches" role="radiogroup" aria-label={label}>
@@ -43,7 +43,7 @@ function PickerBody({ onClose }) {
   const name = me.name || 'You';
   const draft = tab === 'buddy' ? buddy : tab === 'initials' ? initials : cur?.kind === 'photo' ? cur : null;
   const model = tab === 'photo' && photo
-    ? { kind: 'photo', url: photo.url, text: initialsOf(name, 2), bg: 'lav' }
+    ? { kind: 'photo', url: photo.url, text: initialsOf(name, 2), bg: 'lav', preview: true }
     : avatarModel(draft, { name, key: me.playerId, letters: 2 });
 
   const pickBuddy = id => setBuddy(b => buddyAvatar(id, bgTouched ? b.bg : buddyOf(id).bg));
@@ -121,11 +121,16 @@ function PickerBody({ onClose }) {
       )}
       {tab === 'initials' && (
         <div className="av-pane">
-          <div className="eyebrow av-eyebrow">Letters</div>
-          <Segmented label="Letters" className="press-mode-row" btn="pm-btn" value={initials.letters} onChange={n => setInitials(i => ({ ...i, letters: n }))}
-            options={[1, 2].map(n => ({ value: n, label: initialsOf(name, n) }))} />
-          <div className="eyebrow av-eyebrow">Colour</div>
-          <Backdrops label="Colour" value={initials.bg} onChange={bg => setInitials(i => ({ ...i, bg }))} />
+          {/* A one-word name has one initial, so there's nothing to choose */}
+          {initialsOf(name, 2) !== initialsOf(name, 1) && (
+            <>
+              <div className="eyebrow av-eyebrow">Letters</div>
+              <Segmented label="Letters" className="press-mode-row" btn="pm-btn" value={initials.letters} onChange={n => setInitials(i => ({ ...i, letters: n }))}
+                options={[1, 2].map(n => ({ value: n, label: initialsOf(name, n) }))} />
+            </>
+          )}
+          <div className="eyebrow av-eyebrow">Color</div>
+          <Backdrops label="Color" value={initials.bg} onChange={bg => setInitials(i => ({ ...i, bg }))} />
         </div>
       )}
       {err && <p className="field-error" role="alert" style={{ margin: '0 20px 8px' }}>{err}</p>}

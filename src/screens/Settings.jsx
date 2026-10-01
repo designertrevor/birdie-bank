@@ -399,7 +399,7 @@ export function CourseEdit({ id, prefill = null, onDone = null }) {
               <button className="icon-btn sm" aria-label="Remove tee" disabled={c.tees.length === 1}
                 onClick={() => setC(x => ({ ...x, tees: x.tees.filter((_, k) => k !== ti) }))}><Icon name="trash" /></button>
             </div>
-            <div className="color-row" role="radiogroup" aria-label="Tee colour">
+            <div className="color-row" role="radiogroup" aria-label="Tee color">
               {TEE_COLORS.map(col => (
                 <button key={col} role="radio" aria-checked={t.color === col} aria-label={col} className={`swatch ${t.color === col ? 'on' : ''}`} style={{ background: col }}
                   onClick={() => setC(x => { const y = structuredClone(x); y.tees[ti].color = col; return y; })} />

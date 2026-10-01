@@ -10,8 +10,10 @@ import { BuddyArt } from './BuddyArt.jsx';
 /** The circle for a model from avatarModel(). */
 export function AvatarArt({ model, size = '', base = 'avatar', className = '' }) {
   const [brokenUrl, setBrokenUrl] = useState(null);
-  // A link from outside the app's own photo bucket is never fetched (see photoAllowed)
-  const broken = model.kind === 'photo' && (brokenUrl === model.url || !photoAllowed(model.url, supabaseUrl));
+  // A link from outside the app's own photo bucket is never fetched (see photoAllowed). The picker's
+  // preview of a picture picked on this phone is a blob: link this page made, so it can show
+  const local = model.preview && /^blob:/.test(String(model.url || ''));
+  const broken = model.kind === 'photo' && (brokenUrl === model.url || !(local || photoAllowed(model.url, supabaseUrl)));
   const cls = `${base} ${size} ${className}`.trim();
   if (model.kind === 'photo' && !broken) {
     return <span className={`${cls} av-photo`} aria-hidden="true"><img src={model.url} alt="" loading="lazy" decoding="async" referrerPolicy="no-referrer" onError={() => setBrokenUrl(model.url)} /></span>;
