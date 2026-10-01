@@ -463,7 +463,8 @@ export function tripDates(trip) {
 /**
  * The trip's days at a glance for Up next: one chip a round, oldest first, from its rounds and
  * planned rounds: [{ key, label, state: 'done' | 'now' | 'planned' }]. A day with two rounds says
- * which is morning and which is afternoon ("Sat AM", "Sat PM").
+ * which is morning and which is afternoon ("Sat AM", "Sat PM"), or numbers them ("Sat 1", "Sat 2")
+ * when both are in the same half of the day.
  */
 export function tripChips(status) {
   const items = [
@@ -475,13 +476,16 @@ export function tripChips(status) {
       return { key: p.id, at: new Date(y, m - 1, d, h || 9, min || 0).getTime(), state: 'planned' };
     }),
   ].sort((a, b) => a.at - b.at);
-  const dayKey = t => dayOf(t);
+  const half = t => (new Date(t).getHours() < 12 ? 'AM' : 'PM');
   const perDay = new Map();
-  for (const x of items) perDay.set(dayKey(x.at), (perDay.get(dayKey(x.at)) || 0) + 1);
+  for (const x of items) perDay.set(dayOf(x.at), [...(perDay.get(dayOf(x.at)) || []), x]);
   return items.map(x => {
     const d = new Date(x.at);
-    const half = perDay.get(dayKey(x.at)) > 1 ? (d.getHours() < 12 ? ' AM' : ' PM') : '';
-    return { key: x.key, label: `${WEEKDAYS[d.getDay()]}${half}`, state: x.state };
+    const same = perDay.get(dayOf(x.at));
+    // Two rounds in one morning can't both be "AM": number the day's rounds instead
+    const halves = same.map(y => half(y.at));
+    const tag = same.length < 2 ? '' : new Set(halves).size === same.length ? ` ${half(x.at)}` : ` ${same.indexOf(x) + 1}`;
+    return { key: x.key, label: `${WEEKDAYS[d.getDay()]}${tag}`, state: x.state };
   });
 }
 

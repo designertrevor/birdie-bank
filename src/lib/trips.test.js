@@ -454,6 +454,10 @@ test('the words: dates, the days at a glance and where you stand', () => {
   const plan = { id: 'pl1', status: 'planned', date: '2026-10-18', teeTime: '15:00', trip: tripStamp(TRIP), createdAt: OCT(15) };
   const st = tripStatus(stateOf('t', [...rounds.slice(0, 3), live], { plans: { pl1: plan } }), 't_bandon', { now: OCT(18, 10) });
   assert.deepEqual(tripChips(st).map(c => `${c.label}:${c.state}`), ['Fri:done', 'Sat AM:done', 'Sat PM:done', 'Sun AM:now', 'Sun PM:planned']);
+  // Two rounds the same morning are numbered, never "Thu AM" twice
+  const twice = { done: [round('m1', FOUR, {}, { at: OCT(16, 8) }), round('m2', FOUR, {}, { at: OCT(16, 11) })], live: [], planned: [] };
+  twice.done.forEach((r, i) => { r.createdAt = OCT(16, 6 + i * 3); });
+  assert.deepEqual(tripChips(twice).map(c => c.label), ['Fri 1', 'Fri 2']);
   assert.equal(upDown(12), 'You’re up $12');
   assert.equal(upDown(-5.5), 'You’re down $5.50');
   assert.equal(upDown(0), 'You’re even');

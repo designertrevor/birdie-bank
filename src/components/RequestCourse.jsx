@@ -60,8 +60,10 @@ export default function RequestCourse({ query, onAddYourself, roundId = null }) 
     setImage(null);
   };
 
+  // Asked for before: the editor starts from the name the card shows, not this search's spelling
+  const fillName = shown?.entry?.name || name;
   const addYourself = (
-    <button className="full-btn outline rc-btn" onClick={() => onAddYourself({ name, city: city.trim() })}>
+    <button className="full-btn outline rc-btn" onClick={() => onAddYourself({ name: fillName, city: city.trim() })}>
       <Icon name="pencil-simple" /> Add it yourself for now
     </button>
   );
