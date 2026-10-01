@@ -3,7 +3,7 @@
 // its own Strokes given % (sideGames[i].hcPct) or with half strokes where the main game has full ones
 // counts something else, so these say what that side game counts, without a second set of dots.
 import { gameKeyLabel, gameView, playsHole, popsFor, sideGamesOf } from './round.js';
-import { gamePct, halfStrokesOn, pctWords } from './allowances.js';
+import { STROKE_SIDE_GAMES, gamePct, halfStrokesOn, pctWords } from './allowances.js';
 
 const firstName = n => (n || '').split(' ')[0];
 
@@ -13,12 +13,13 @@ export function otherStrokeGames(round) {
   const mainHalf = halfStrokesOn(round);
   const out = [];
   for (const sg of sideGamesOf(round)) {
+    // A side game that doesn't count strokes at all (Snake, Junk) has nothing to say
+    if (!STROKE_SIDE_GAMES.includes(sg.game)) continue;
     const view = gameView(round, sg.game);
     if (!view) continue;
     const half = halfStrokesOn(view);
     const pct = gamePct(round, sg.game);
     const pctDiff = pct !== gamePct(round);
-    // A side game that doesn't count strokes at all (Snake) has nothing to say
     if (!pctDiff && half === mainHalf) continue;
     if (!view.players.some(p => round.holes.some(h => popsFor(view, p, h) !== 0))) continue;
     out.push({ key: sg.game, label: gameKeyLabel(round, sg.game), pct: pctDiff ? pct : null, half: half !== mainHalf ? half : null, view });

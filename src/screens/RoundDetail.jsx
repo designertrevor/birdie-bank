@@ -317,7 +317,7 @@ function GameBreakdown({ round, res, label = null }) {
             <div className="leg-amt">{x.played ? fmt(x) : '–'}{x.left && x.played ? <div className="li-sub">Left after {x.played} hole{x.played === 1 ? '' : 's'}</div> : null}</div>
           </div>
         ))}
-        {round.game === 'scramble' && <DrivesShortfall round={round} done />}
+        {round.game === 'scramble' && <DrivesShortfall round={round} done={round.status === 'done'} />}
       </>
     );
   }

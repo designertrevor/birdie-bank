@@ -63,3 +63,16 @@ test('stroke key never changes the money', () => {
   strokeKey(r); holeStrokeNotes(r, r.players[1], hole(r, 3));
   assert.equal(JSON.stringify(roundResults(r).balances), before);
 });
+
+test('stroke key: side games that never count strokes (Snake, Junk) say nothing', () => {
+  // Half strokes on a Nassau: Snake and Junk aren't half-stroke games, but they don't count strokes at all
+  for (const g of ['snake', 'dots']) {
+    const r = mk('nassau', { a: 0, b: 4 }, { half: true, sides: { [g]: {} } });
+    assert.deepEqual(otherStrokeGames(r), []);
+    assert.deepEqual(strokeKey(r), { dots: '', lines: [] });
+    assert.deepEqual(holeStrokeNotes(r, r.players[1], hole(r, 1)), []);
+  }
+  // Next to them, a Skins on its own % still gets its line
+  const r = mk('nassau', { a: 0, b: 10 }, { half: true, sides: { snake: {}, skins: { hcPct: 80 } } });
+  assert.deepEqual(otherStrokeGames(r).map(g => g.key), ['skins']);
+});
