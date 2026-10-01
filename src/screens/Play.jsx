@@ -950,9 +950,8 @@ function BetsSheet({ round, onClose }) {
   const label = gameKeyLabel(round, gameKey);
   const apply = () => {
     update(s => {
+      // A bet changed mid-round stays with this round: next time's defaults are the ones setup saved
       s.rounds[round.id] = changeBets(s.rounds[round.id], opts[game], whole ? null : fromPos, gameKey);
-      // The agreed bet is next time's default too
-      s.settings = { ...s.settings, [game]: structuredClone(opts[game]) };
     });
     onClose();
     // A points or reward round reads in points
