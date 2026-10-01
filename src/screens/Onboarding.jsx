@@ -9,6 +9,8 @@ import { formatIndex } from '../lib/format.js';
 import { money } from '../lib/golf.js';
 import { GAMES } from '../lib/round.js';
 import { SignInSheet } from '../components/Account.jsx';
+import { BuddyArt } from '../components/BuddyArt.jsx';
+import { BUDDIES, buddyAvatar } from '../lib/avatars.js';
 import { accountsEnabled, useAccount } from '../lib/cloud.js';
 import {
   MATHS, ONBOARD_GAMES, SETTLES, SIZES, answered, ballotGames, gameList, nextStep, organizerRecord, payoff, prevStep,
@@ -33,6 +35,7 @@ export default function Onboarding({ onDone }) {
   const [a, setA] = useState({ games: [], size: null, settle: null, math: null });
   const [name, setName] = useState('');
   const [index, setIndex] = useState(null);
+  const [buddy, setBuddy] = useState(null); // a Ball buddy to start with (your profile has the rest)
   const [agreed, setAgreed] = useState(false);
   const [pad, setPad] = useState(false);
   const [signingIn, setSigningIn] = useState(false);
@@ -65,6 +68,7 @@ export default function Onboarding({ onDone }) {
       const id = uid('p_');
       s.players[id] = { id, name: name.trim(), index, venmo: '', createdAt: Date.now() };
       s.me = id;
+      if (buddy) s.profile = { ...(s.profile || {}), avatar: buddyAvatar(buddy), updatedAt: Date.now() };
       s.organizer = organizer;
       s.onboarded = true;
     });
@@ -190,6 +194,16 @@ export default function Onboarding({ onDone }) {
           <label className="field-label" htmlFor="ob-index">Handicap index <span className="opt">optional</span></label>
           <button id="ob-index" className="amt-btn field-btn" aria-label={index == null ? 'Handicap index, optional. Add' : `Handicap index ${formatIndex(index)}. Change`} onClick={() => setPad(true)}>{index == null ? 'Add' : formatIndex(index)}</button>
           <p className="field-help">No handicap? Leave it blank. When you do use them, the best player gets no strokes and everyone else gets the difference.</p>
+          <div className="field-label" id="ob-buddy">Pick a Ball buddy <span className="opt">optional</span></div>
+          <div className="av-grid ob-buddies" role="radiogroup" aria-labelledby="ob-buddy">
+            {BUDDIES.slice(0, 8).map(b => (
+              <button key={b.id} type="button" role="radio" aria-checked={buddy === b.id} aria-label={b.name} className={`av-pick sm ${buddy === b.id ? 'on' : ''}`} onClick={() => setBuddy(buddy === b.id ? null : b.id)}>
+                <span className="avatar av-buddy av-tile"><BuddyArt id={b.id} bg={b.bg} /></span>
+                {buddy === b.id && <span className="av-check" aria-hidden="true"><Icon name="check" /></span>}
+              </button>
+            ))}
+          </div>
+          <p className="field-help">Friends see it on seats and the Tab. Add a photo or pick another any time from your profile.</p>
           <button className={`list-item ob-agree ${agreed ? 'on' : ''}`} role="checkbox" aria-checked={agreed} aria-label="Friendly wagers only" aria-describedby="ob-agree-sub" onClick={() => setAgreed(v => !v)}>
             <span className={`li-check ${agreed ? 'on' : ''}`}>{agreed && <Icon name="check" />}</span>
             <div className="row-main">

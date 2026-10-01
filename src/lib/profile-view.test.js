@@ -47,8 +47,9 @@ test('privacy: money is hidden by default, and the screen says only you see it',
   assert.equal(whoSees({}, 'stats'), 'People you’ve played with');
   assert.equal(whoSees({ money: 'played' }, 'money'), 'People you’ve played with');
   assert.match(privacySummary({}), /Your money is only for you/);
-  assert.doesNotMatch(privacySummary({}), /your money,/);
-  assert.match(privacySummary({ money: 'played' }), /your money/);
+  assert.doesNotMatch(privacySummary({}), /money,/);
+  assert.match(privacySummary({ money: 'played' }), /money/);
+  assert.equal(privacySummary({}), 'People you’ve played with see your name, avatar, record, handicap and home course. Your money is only for you.');
   assert.equal(privacySummary({ money: 'hidden', stats: 'hidden', handicap: 'hidden', homeCourse: 'hidden' }), 'Everything on your profile is only for you.');
 });
 
@@ -111,7 +112,7 @@ test('stats: rounds, record, favorite game, best round and net, from the rounds 
   const stats = profileStats(s);
   const tiles = statTiles(stats, { mine: true, privacy: {} });
   assert.equal(tile(tiles, 'rounds').value, '3');
-  assert.equal(tile(tiles, 'record').value, '1-2', 'won one, lost two (the points round counts in the record)');
+  assert.equal(tile(tiles, 'record').value, '1\u20132', 'won one, lost two (the points round counts in the record)');
   assert.equal(tile(tiles, 'game').value, 'Skins');
   assert.equal(tile(tiles, 'best').value, '+$10');
   // Net is the money rounds only, and matches the rounds' own results exactly
@@ -123,7 +124,7 @@ test('stats: rounds, record, favorite game, best round and net, from the rounds 
 });
 
 test('stats: nothing played shows nothing, and no money rounds reads as a dash', () => {
-  assert.deepEqual(statTiles(profileStats(stateOf([])), { mine: true }).map(t => t.value), ['0', '0-0', '–', '–', '–']);
+  assert.deepEqual(statTiles(profileStats(stateOf([])), { mine: true }).map(t => t.value), ['0', '0\u20130', '–', '–', '–']);
   const pts = stateOf([round('p1', ['t', 'ann'], [['t', 1]], { playFor: { kind: 'points' } })]);
   const tiles = statTiles(profileStats(pts), { mine: true });
   assert.equal(tile(tiles, 'net').value, '–', 'a points round is never money');
@@ -133,8 +134,8 @@ test('stats: nothing played shows nothing, and no money rounds reads as a dash',
 });
 
 test('stats: the words around them', () => {
-  assert.equal(recordText({ won: 4, lost: 2, even: 1 }), '4-2-1');
-  assert.equal(recordText({ won: 4, lost: 2, even: 0 }), '4-2');
+  assert.equal(recordText({ won: 4, lost: 2, even: 1 }), '4\u20132\u20131');
+  assert.equal(recordText({ won: 4, lost: 2, even: 0 }), '4\u20132');
   assert.equal(recordText(null), '–');
   assert.equal(sinceText(Date.UTC(2026, 8, 15)), 'Playing since Sep 2026');
   assert.equal(sinceText(null), null);

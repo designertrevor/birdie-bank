@@ -71,8 +71,8 @@ function PickerBody({ onClose }) {
       } finally { setBusy(false); }
       return;
     }
-    // Leaving a photo for a buddy or initials takes the photo off your account too
-    if (cur?.kind === 'photo') await removePhoto();
+    // Leaving a photo for a buddy or initials takes the photo off your account too (in the background)
+    if (cur?.kind === 'photo') removePhoto().catch(() => {});
     setAvatar(tab === 'buddy' ? buddy : initials);
     showToast('Avatar saved');
     onClose();

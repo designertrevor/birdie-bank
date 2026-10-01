@@ -35,17 +35,17 @@ export function privacySummary(privacy) {
   const p = normalizePrivacy(privacy);
   const seen = PRIVACY_KEYS.filter(k => p[k] === 'played');
   if (!seen.length) return 'Everything on your profile is only for you.';
-  const words = { money: 'your money', stats: 'your record', handicap: 'your handicap', homeCourse: 'your home course' };
-  const list = seen.map(k => words[k]);
-  const joined = list.length === 1 ? list[0] : `${list.slice(0, -1).join(', ')} and ${list.at(-1)}`;
-  return `People you’ve played with see your name, avatar, ${joined}.${p.money === 'hidden' ? ' Your money is only for you.' : ''}`;
+  const words = { money: 'money', stats: 'record', handicap: 'handicap', homeCourse: 'home course' };
+  const list = ['name', 'avatar', ...seen.map(k => words[k])];
+  const joined = `${list.slice(0, -1).join(', ')} and ${list.at(-1)}`;
+  return `People you’ve played with see your ${joined}.${p.money === 'hidden' ? ' Your money is only for you.' : ''}`;
 }
 
-/** "12-8-3" for won, lost, even (even left off when there's none). */
+/** "12–8–3" for won, lost, even (even left off when there's none), like the rivalry card's score. */
 export function recordText(record) {
   if (!isObj(record)) return EMPTY;
   const w = num(record.won) || 0, l = num(record.lost) || 0, e = num(record.even) || 0;
-  return e ? `${w}-${l}-${e}` : `${w}-${l}`;
+  return (e ? [w, l, e] : [w, l]).join(EMPTY);
 }
 
 /** The favorite game's name, from a stats object (a known game, or the name it was sent with). */
@@ -66,7 +66,7 @@ export function statTiles(stats, { mine = false, privacy = null } = {}) {
   // A friend whose record is hidden sends no stats at all; an empty object shows nothing
   if (rounds == null) return [];
   const statsHidden = mine && !shows(privacy, 'stats');
-  tiles.push({ key: 'rounds', label: rounds === 1 ? 'Round' : 'Rounds', value: String(rounds), onlyYou: statsHidden });
+  tiles.push({ key: 'rounds', label: 'Rounds', value: String(rounds), onlyYou: statsHidden });
   tiles.push({ key: 'record', label: 'Record', value: recordText(stats.record), sub: isObj(stats.record) && stats.record.even ? 'won, lost, even' : 'won, lost', onlyYou: statsHidden });
   const fav = favoriteName(stats.favoriteGame);
   tiles.push({ key: 'game', label: 'Favorite game', value: fav || EMPTY, onlyYou: statsHidden });

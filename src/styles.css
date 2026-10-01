@@ -1756,3 +1756,6 @@ button.lately-row:active { background: var(--surface); }
 .av-actions { padding: 8px 16px 4px; }
 .sec-label.flush { padding: 14px 4px 6px; }
 .home-clear { display: block; margin: 12px auto 0; }
+/* Onboarding: a first Ball buddy under your name */
+.ob-buddies { padding: 4px 0 2px; }
+.av-pick.sm, .av-pick.sm .av-tile { width: 56px; height: 56px; }
