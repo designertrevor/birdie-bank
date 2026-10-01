@@ -18,6 +18,8 @@ export function toDocs(state) {
     links: state.links && typeof state.links === 'object' ? state.links : {}, unlinks: Array.isArray(state.unlinks) ? state.unlinks : [],
     rewardsDone: state.rewardsDone || {},
     starredCourses: Array.isArray(state.starredCourses) ? state.starredCourses : [],
+    // Your avatar, home course and privacy settings (profile-model.js), so every phone you sign in on has them
+    profile: state.profile && typeof state.profile === 'object' && !Array.isArray(state.profile) ? state.profile : {},
   });
   for (const p of Object.values(state.players)) put('player', p.id, p);
   for (const c of Object.values(state.crews)) put('crew', c.id, c);
@@ -72,6 +74,8 @@ export function applyDoc(draft, kind, id, data) {
     if (data.rewardsDone && typeof data.rewardsDone === 'object' && !Array.isArray(data.rewardsDone)) draft.rewardsDone = data.rewardsDone;
     // Starred courses came later too: an older profile keeps this phone's stars
     if (Array.isArray(data.starredCourses)) draft.starredCourses = data.starredCourses;
+    // Your own profile came later too: an older profile keeps this phone's
+    if (data.profile && typeof data.profile === 'object' && !Array.isArray(data.profile)) draft.profile = data.profile;
   }
 }
 

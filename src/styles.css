@@ -1690,3 +1690,7 @@ button.lately-row:active { background: var(--surface); }
 .moment-banner.k-hammerback .mo-title { font-size: 22px; }
 .moment-banner.k-hammer .mo-ic i, .moment-banner.k-hammerback .mo-ic i { animation: moSwing .6s .35s var(--ease-bounce) both; transform-origin: 70% 70%; }
 @keyframes moSwing { 0% { transform: rotate(0); } 40% { transform: rotate(-35deg); } 70% { transform: rotate(12deg); } 100% { transform: rotate(0); } }
+
+/* ---------- Delete your account (overnight 6, profile foundation data) ---------- */
+/* Sits under Sign out: the same red, a step quieter, so the two never read as one choice */
+.danger-link.delete-account { margin: 0 auto 24px; font-size: 14px; font-weight: 500; }
