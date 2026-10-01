@@ -72,7 +72,7 @@ export function NemesisCard({ n }) {
   if (!n) return null;
   return (
     <button className="nemesis-card" onClick={() => nav.push('person', { id: n.id })}>
-      <Avatar name={n.name} />
+      <Avatar id={n.id} name={n.name} />
       <div className="row-main">
         <div className="eyebrow nm-eyebrow"><Icon name="skull" fill /> Your nemesis</div>
         <div className="set-name">{n.name}</div>

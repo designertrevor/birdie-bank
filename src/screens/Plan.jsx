@@ -191,7 +191,7 @@ function PlanBody({ plan, standalone = false, onSkip }) {
         <div className="who-list">
           {people.map(p => (
             <div key={p.who} className="who-row">
-              <Avatar name={p.name} />
+              <Avatar id={p.who} name={p.name} />
               <div className="row-main">
                 <div className="set-name">{first(p.name)}{p.who === me ? ' (you)' : ''}</div>
                 {(p.game || p.bet || sideYes(plan, p).length > 0) && p.status !== 'out' && (
@@ -357,7 +357,7 @@ function WhoAreYou({ plan, defaultName, standalone, onSkip }) {
             <div className="seat-grid">
               {(plan.people || []).filter(p => p.id !== plan.hostWho).map(p => (
                 <button key={p.id} className="seat-tile" onClick={() => pick(p.id)}>
-                  <Avatar name={p.name} />
+                  <Avatar id={p.id} name={p.name} />
                   <span className="seat-name">{first(p.name)}</span>
                   <span className="seat-sub">{taken.has(p.id) ? RSVP_LABEL[plan.answers[p.id].status] || ' ' : ' '}</span>
                 </button>

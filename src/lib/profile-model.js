@@ -4,6 +4,7 @@
 //
 // Your profile is your player card (name, handicap index, how you get paid) plus state.profile:
 //   avatar      null | { kind: 'buddy', id, ...extra } | { kind: 'photo', url, path?, pending? }
+//               | { kind: 'initials', bg?, letters? } (see avatars.js)
 //               (a photo still on this phone only has a data: url and pending: true)
 //   homeCourse  null | { id, name, place? }
 //   privacy     { money, stats, handicap, homeCourse }: each 'played' (people you've played with
@@ -48,6 +49,14 @@ export function normalizeAvatar(a) {
   if (a.kind === 'buddy') {
     const id = text(a.id, 40);
     return id ? { ...a, kind: 'buddy', id } : null;
+  }
+  if (a.kind === 'initials') {
+    // Initials on a colour you picked (avatars.js): the letters come from your name
+    const out = { kind: 'initials' };
+    const bg = text(a.bg, 20);
+    if (bg) out.bg = bg;
+    if (a.letters === 1 || a.letters === 2) out.letters = a.letters;
+    return out;
   }
   if (a.kind === 'photo') {
     const url = typeof a.url === 'string' ? a.url : '';

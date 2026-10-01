@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { Icon } from './components/ui.jsx';
+import { Avatar } from './components/Avatar.jsx';
 import { RoundsInProgressSheet } from './components/RoundsInProgress.jsx';
 import { roundsInProgress } from './lib/rounds.js';
 import { useStore } from './lib/store.js';
@@ -32,21 +33,14 @@ export function BottomNav() {
   );
 }
 
-/** Initials for the avatar: "Trevor Nielsen" is TN, "Bo" is B. */
-function initials(name) {
-  const parts = String(name || '').trim().split(/\s+/).filter(Boolean);
-  if (!parts.length) return '';
-  return (parts[0][0] + (parts.length > 1 ? parts.at(-1)[0] : '')).toUpperCase();
-}
-
-/** Your initials at the top right of a main tab. Opens Settings. */
+/** Your avatar at the top right of a main tab: your buddy, your photo, or your initials. Opens Settings. */
 export function AvatarButton() {
   const nav = useNav();
+  const me = useStore(s => s.me);
   const name = useStore(s => s.players[s.me]?.name);
-  const mark = initials(name);
   return (
     <button className="avatar-btn" onClick={() => nav.push('settings')} aria-label="Settings">
-      {mark ? <span aria-hidden="true">{mark}</span> : <Icon name="gear-six" fill />}
+      {name ? <Avatar id={me} name={name} letters={2} className="av-in-btn" /> : <Icon name="gear-six" fill />}
     </button>
   );
 }

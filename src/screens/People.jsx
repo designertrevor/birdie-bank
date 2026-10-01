@@ -7,7 +7,8 @@ import { firstName, formatIndex, myIds, playerLabel, sortedPlayers } from '../li
 import { mergePlayer, mergedInto, unmergePlayer } from '../lib/merge.js';
 import { headToHeadSummary, nameOf, outstanding, tabWith } from '../lib/ledger.js';
 import { canonicalOf } from '../lib/pair-debts.js';
-import { PAY_APPS, PAY_APP_IDS, cleanHandle, handleText, payInfo, payInfoFor } from '../lib/pay.js';
+import { PAY_APPS, PAY_APP_IDS, handleText, payInfo, payInfoFor } from '../lib/pay.js';
+import { savePlayerCard } from '../lib/player-save.js';
 import { money } from '../lib/golf.js';
 import { AvatarButton, BottomNav } from '../nav.jsx';
 import { roundsInProgress } from '../lib/rounds.js';
@@ -43,8 +44,8 @@ export default function People() {
       <Header title="Players" right={<AvatarButton />} />
       <div className="scroll">
         {me && (
-          <button className="set-row" onClick={() => nav.push('playerEdit', { id: me.id })}>
-            <Avatar name={me.name} />
+          <button className="set-row" onClick={() => nav.push('profile')}>
+            <Avatar id={me.id} name={me.name} />
             <div className="row-main">
               <div className="set-name">{playerLabel(me, state.me)}</div>
               <div className="set-sub">{me.index == null ? 'No handicap' : `Index ${formatIndex(me.index)}`} · {myPay ? `${PAY_APPS[myPay.app].name} ${handleText(myPay)}` : 'Add how you get paid'}</div>
@@ -61,7 +62,7 @@ export default function People() {
           const rsvp = rsvpFor(state, id);
           const row = (
             <button key={id} className={tab ? 'tab-person' : 'set-row person-row'} onClick={() => nav.push('person', { id })}>
-              <Avatar name={name} />
+              <Avatar id={id} name={name} />
               <div className="row-main">
                 <div className={tab ? 'tp-name' : 'set-name'}>{name}</div>
                 {rsvp && <div className={`rsvp-tag ${rsvp.status || 'none'}`}>{rsvp.status ? `${RSVP_LABEL[rsvp.status]} for ${dayName(rsvp.plan.date)}` : `No answer for ${dayName(rsvp.plan.date)} yet`}</div>}
@@ -147,22 +148,7 @@ export function PlayerEdit({ id, onSaved }) {
 
   const save = () => {
     const pid = id || uid('p_');
-    const cleaned = payApp ? cleanHandle(payApp, handle) : '';
-    const pay = cleaned ? { payApp, payHandle: cleaned } : {};
-    update(s => {
-      const { venmo: _old, payApp: _a, payHandle: _h, ...rest } = s.players[pid] || { createdAt: Date.now() };
-      s.players[pid] = { ...rest, id: pid, name: trimmed, index, ...pay };
-      // Rounds still being played carry it too, so friends in a shared round get the new pay button
-      const seats = pid === s.me ? new Set([pid, ...Object.values(s.rounds).map(r => r.localMe).filter(Boolean)]) : new Set([pid]);
-      for (const r of Object.values(s.rounds)) {
-        if (r.status !== 'active') continue;
-        for (const p of r.players) {
-          if (!seats.has(p.id)) continue;
-          delete p.payApp; delete p.payHandle;
-          Object.assign(p, pay);
-        }
-      }
-    });
+    update(s => savePlayerCard(s, pid, { name: trimmed, index, payApp, handle }));
     showToast(id ? 'Player saved' : `${trimmed} added`);
     if (onSaved) onSaved(pid); else nav.pop();
   };
@@ -268,7 +254,7 @@ export function PlayerEdit({ id, onSaved }) {
         <p className="field-help" style={{ margin: '0 20px 8px' }}>Pick the player to keep. Everything with {existing?.name} adds up under them.</p>
         {candidates.map(c => (
           <button key={c.id} className="list-item" onClick={() => merge(c)}>
-            <Avatar name={c.name} />
+            <Avatar id={c.id} name={c.name} />
             <div className="row-main">
               <div className="li-name">{c.name}</div>
               <div className="li-sub">{c.rounds ? `${c.rounds} round${c.rounds === 1 ? '' : 's'} together` : 'No rounds together yet'}{c.pay ? ` · ${PAY_APPS[c.pay.app].name} ${handleText(c.pay)}` : ''}{c.saved ? '' : ' · from a round you joined'}</div>

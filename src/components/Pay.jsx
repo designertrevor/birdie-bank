@@ -10,10 +10,8 @@ import { nameOf } from '../lib/ledger.js';
 import { PAY_APPS, copyText, handleText, payInfoFor, payLabel, payLink, requestLink } from '../lib/pay.js';
 import { useRemind } from '../lib/useRemind.js';
 
-/** A friend's initial in a circle. */
-export function Avatar({ name, size = '' }) {
-  return <span className={`avatar ${size}`} aria-hidden="true">{(name || '?').trim()[0]?.toUpperCase() || '?'}</span>;
-}
+/** A friend's avatar (see Avatar.jsx): kept here too, where the Tab and player cards import it. */
+export { Avatar } from './Avatar.jsx';
 
 /** Pay someone through their app. Zelle has no pay link, so it shows their handle and copies it. */
 export function PayButton({ info, amount, note, className = 'pay-btn', children }) {

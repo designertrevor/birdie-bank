@@ -50,6 +50,7 @@ const NewRound = screen(() => import('./screens/NewRound.jsx'));
 const Play = screen(() => import('./screens/Play.jsx'));
 const RoundDetail = screen(() => import('./screens/RoundDetail.jsx'));
 const Suggest = screen(() => import('./screens/Suggest.jsx'));
+const Profile = screen(() => import('./screens/Profile.jsx'));
 const plan = () => import('./screens/Plan.jsx');
 const Plan = screen(plan);
 const RollCall = screen(plan, 'RollCall');
@@ -95,6 +96,7 @@ const SCREENS = {
   settings: Settings, defaults: Defaults, courses: Courses, courseEdit: CourseEdit, about: About, suggest: Suggest,
   plan: Plan, rollCall: RollCall, planLink: PlanLink, paywall: Paywall, season: Season,
   joinInvite: JoinInviteScreen, lately: Lately, trip: Trip, tripSettle: TripSettle,
+  profile: Profile,
 };
 // Settings lives behind the avatar on Up next, so it's a pushed screen rather than a tab
 const TABS = { upnext: UpNext, ledger: Ledger, history: History, people: People };

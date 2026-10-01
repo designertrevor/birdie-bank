@@ -16,6 +16,7 @@ import { ago, canonicalOf, recentPayment, roundRows, roundStatus, shortDate, str
 import { CARRY_REASONS, cardCarry, sharedOwed } from '../lib/carry.js';
 import { answerCarry, askCarry, markPaid, undoLastPayment, usePaymentsOff } from '../lib/tab-sync.js';
 import { openRewards, rewardLineText } from '../lib/play-for.js';
+import { useGroupAvatars } from '../lib/useAvatars.js';
 
 const firstOf = name => name.split(' ')[0];
 
@@ -199,6 +200,7 @@ export function SquareStrip() {
   const state = useStore();
   const [open, setOpen] = useState(false);
   const pick = stripRound(state);
+  const faces = useGroupAvatars(pick?.round.players);
   if (!pick) return null;
   const { round, latest } = pick;
   const status = roundStatus(round, roundRows(state, round));
@@ -218,7 +220,7 @@ export function SquareStrip() {
         <ul className="sq-people">
           {people.map(p => (
             <li key={p.id} className={`sq-p ${p.st}`} aria-label={`${p.name}: ${STATUS_WORD[p.st].toLowerCase()}`}>
-              <Avatar name={p.name} />
+              <Avatar model={faces.get(p.id)} />
               <span className="sq-word" aria-hidden="true">{STATUS_WORD[p.st]}</span>
             </li>
           ))}
@@ -230,7 +232,7 @@ export function SquareStrip() {
         <ul className="sq-list">
           {people.map(p => (
             <li key={p.id} className={`sq-row ${p.st}`}>
-              <Avatar name={p.name} />
+              <Avatar model={faces.get(p.id)} />
               <span className="sq-name">{p.name}</span>
               <span className="sq-badge">{STATUS_WORD[p.st]}</span>
             </li>
