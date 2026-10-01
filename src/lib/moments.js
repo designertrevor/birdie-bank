@@ -278,6 +278,8 @@ export function matchRoundMoment(round, pos) {
 
 /** A Banker hole that moves this many default bets for the banker is a big one. */
 export const BANKER_BIG = 4;
+/** The fewest bets on a Banker hole for a sweep (the banker beats them all) or a bust (loses to them all). */
+export const SWEEP_BETS = 3;
 const pairName = (round, ids) => ids.map(id => first(round.players.find(p => p.id === id)?.name)).join(' & ');
 const WORDS = ['', 'One', 'Two', 'Three', 'Four', 'Five', 'Six'];
 
@@ -356,11 +358,12 @@ export function bankerMoment(round, pos) {
   const take = h.deltas[bank] || 0;
   const birdies = bets.filter(x => x.birdie > 1 && x.result !== 'push');
   const bankBirdie = birdies.filter(x => x.result === 'loss');
-  if (bets.length >= 2 && bets.every(x => x.result === 'loss')) {
+  // Beating (or losing to) everyone needs at least SWEEP_BETS bets: with two it happens too often to cheer
+  if (bets.length >= SWEEP_BETS && bets.every(x => x.result === 'loss')) {
     const how = bankBirdie.length ? `, and a birdie doubles it: ${fmt(take)}` : `: ${fmt(take)}`;
     return { kind: 'banksweep', hero: bank, title: `${bk} sweeps the table`, text: `Beat all ${bets.length} as banker${how}` };
   }
-  if (bets.length >= 2 && bets.every(x => x.result === 'win')) {
+  if (bets.length >= SWEEP_BETS && bets.every(x => x.result === 'win')) {
     return { kind: 'bankbust', hero: null, title: 'The table beats the bank', text: `All ${bets.length} beat ${bk}, who pays out ${fmt(-take)}` };
   }
   if (birdies.length) {

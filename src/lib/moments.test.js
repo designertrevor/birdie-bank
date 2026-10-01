@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import { matchMoment, roundMoment, freshHole, firstShowing, pickMoment, finalMoment, donePositions, moneyMoment } from './moments.js';
 import { createRound, roundResults } from './round.js';
 import { nassauLegs } from './golf.js';
+import { oldRounds } from './overnight5-money.fixtures.js';
 
 const MATCH = { match: { start: 1, end: 18, label: 'Match' } };
 const NASSAU = nassauLegs(18);
@@ -411,6 +412,10 @@ test('Banker: the banker sweeps the table, and the table beats the bank', () => 
   // Beating two of three is an ordinary hole
   const plain = roundMoment(banker([{ banker: 'a', bets: bets() }], [{ a: 4, b: 3, c: 5, d: 5 }]), 1);
   assert.notEqual(plain?.kind, 'banksweep');
+  // With only two bets on the hole, beating both is too common to cheer
+  const three = mk('banker', { ids: 'abc', settings: BANKER });
+  three.banker[three.holes[0].no] = { banker: 'a', bets: { b: 5, c: 5 }, doubled: {}, doubleBack: false };
+  assert.equal(roundMoment(play(three, [{ a: 3 }]), 1).kind, 'money');
 });
 
 test('Banker: a birdie double, an eagle, and the banker’s own birdie', () => {
@@ -496,4 +501,18 @@ test('Sixes, Banker and Hammer moments never change the money', () => {
   roundMoment(r, 1);
   assert.equal(JSON.stringify(roundResults(r).balances), before);
   assert.deepEqual(roundResults(r).balances, { a: 15, b: -5, c: -5, d: -5 });
+});
+
+test('every hole of seeded Sixes, Banker and Hammer rounds makes at most one moment, and never throws', () => {
+  const rounds = oldRounds(160).map(x => x.round).filter(r => ['sixes', 'banker', 'hammer'].includes(r.game));
+  assert.ok(rounds.length > 10);
+  for (const r of rounds) {
+    for (const pos of donePositions(r)) {
+      const m = roundMoment(r, pos);
+      if (!m) continue;
+      assert.equal(typeof m.title, 'string');
+      assert.equal(typeof m.text, 'string');
+      assert.doesNotMatch(`${m.title} ${m.text}`, /undefined|NaN|null/);
+    }
+  }
 });
