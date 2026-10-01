@@ -138,7 +138,7 @@ export default function Trip({ id, view: firstView = 'standings' }) {
         <p className="field-help pad">Their payments for the rounds so far, in the fewest payments. Everyone else settles after the last round.</p>
         {st.standings.map(p => (
           <button key={p.id} className="sheet-item" onClick={() => { setLeaving(false); nav.push('tripSettle', { id, who: p.id }); }}>
-            <span><Avatar name={nameOf(state, p.id)} /> {p.id === me ? 'Settle my part' : `Settle ${short(p.id)}’s part`}</span>
+            <span><Avatar id={p.id} name={nameOf(state, p.id)} /> {p.id === me ? 'Settle my part' : `Settle ${short(p.id)}’s part`}</span>
             <span className={`trip-li-amt ${sign(p.amount)}`}>{money(p.amount, { sign: true })}</span>
           </button>
         ))}
@@ -171,7 +171,7 @@ function Standings({ st, state, label, me }) {
         {st.standings.map((p, i) => (
           <div key={p.id} className={`trip-row ${p.id === me ? 'me' : ''}`}>
             <span className="tr-rank">{placeOf(st.standings, i)}</span>
-            <Avatar name={nameOf(state, p.id)} />
+            <Avatar id={p.id} name={nameOf(state, p.id)} />
             <span className="tr-main">
               <span className="tr-name">{label(p.id)}</span>
               {p.rounds < st.done.length && <span className="tr-sub">{p.rounds} of {st.done.length} rounds</span>}
@@ -335,7 +335,7 @@ export function TripSettle({ id, who = null }) {
           return (
             <div key={t.from + t.to} className="pay-card" style={{ '--i': i }}>
               <div className="pay-who">
-                <Avatar name={nameOf(state, other)} />
+                <Avatar id={other} name={nameOf(state, other)} />
                 <span className="trip-pay-name">{iPay ? `You pay ${short(other)}` : `${short(other)} pays you`}</span>
                 <span className="pm">{money(t.amount)}</span>
               </div>

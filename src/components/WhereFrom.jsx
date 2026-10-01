@@ -50,7 +50,7 @@ export function RoundWhereFrom({ round, res }) {
         return (
           <button key={`${a}>${b}`} className="set-row wf-row" onClick={() => setOpen({ a, b })}
             aria-label={`${who(a, b)}: ${fmt(x.total, { sign: true })}${a === me ? ' to you' : ` to ${first(roundPlayerName(round, a))}`}. ${breakdownLine(x.items, fmt)}. See where it comes from`}>
-            <Avatar name={name} />
+            <Avatar id={b} name={name} />
             <div className="row-main">
               <div className="set-name">{who(a, b)}</div>
               <div className="set-sub">{breakdownLine(x.items, fmt)}</div>

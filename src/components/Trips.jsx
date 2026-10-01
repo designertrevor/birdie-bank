@@ -276,7 +276,7 @@ export function SquareFaces({ ids, state, me }) {
     <div className="trip-faces">
       {ids.map(id => (
         <div key={id} className="tf-face">
-          <Avatar name={id === me ? (nameOf(state, id) || 'You') : nameOf(state, id)} />
+          <Avatar id={id} name={id === me ? (nameOf(state, id) || 'You') : nameOf(state, id)} />
           <span className="tf-tag">{id === me ? 'You' : first(nameOf(state, id))}</span>
         </div>
       ))}
