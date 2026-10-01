@@ -1,7 +1,7 @@
 // The Tab: who owes whom across every finished round, less payments recorded. Pure, unit tested.
 import { roundResults } from './round.js';
 import { roundCents } from './games.js';
-import { meFor } from './format.js';
+import { keptId, meFor } from './format.js';
 import { canonicalOf, sharedDebts } from './pair-debts.js';
 import { linksOf } from './people-links.js';
 import { countsMoney } from './play-for.js';
@@ -266,7 +266,10 @@ export function tabWith(plan, ids, other) {
 
 /** Player name lookup that also covers people who were removed but still appear in rounds. */
 export function nameOf(state, id) {
-  if (state.players[id]) return state.players[id].name;
+  // A duplicate merged from its edit screen goes by the kept player's name; other linked ids keep their own
+  const own = state.players[id];
+  if (own?.mergedInto) return state.players[keptId(state, id)]?.name || own.name;
+  if (own) return own.name;
   for (const r of Object.values(state.rounds)) {
     const p = r.players.find(x => x.id === id);
     if (p) return p.name;

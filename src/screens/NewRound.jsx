@@ -19,7 +19,7 @@ import { rematchSetup } from '../lib/rematch.js';
 import { halfStrokesOffered, pctsDiffer } from '../lib/allowances.js';
 import { StrokesSetup } from '../components/StrokesSetup.jsx';
 import { useNav } from '../lib/nav.js';
-import { addRound, holesScored, roundsInProgress, usualRound } from '../lib/rounds.js';
+import { addRound, holesScored, leaveRound, roundsInProgress, usualRound } from '../lib/rounds.js';
 import { formatIndex, gameLabel, hcPctLabel, playerLabel, sortedPlayers } from '../lib/format.js';
 import { money } from '../lib/golf.js';
 import { findCourse } from '../lib/courses.js';
@@ -78,23 +78,29 @@ function planSetup(state, planId, present) {
  * `ahead`: plan it for later. `game` and `ballot`: a game already picked and other games to put
  * up for a vote (from organizer onboarding). `onboarding`: this is the end of organizer onboarding,
  * so finishing lands on the plan with the paywall on top (when it's on), and cancelling drops
- * back to whatever is underneath.
+ * back to whatever is underneath. `reschedule`: a round set up but not played yet, turned into a
+ * plan with the same setup (the round goes once the plan is made).
  */
-export default function NewRound({ rematch, fromPlan, present, edit = null, ahead = false, game: preGame = null, ballot = [], onboarding = false }) {
+export default function NewRound({ rematch, fromPlan, present, edit = null, ahead = false, game: preGame = null, ballot = [], onboarding = false, reschedule = null }) {
   const nav = useNav();
   const { ask, showToast } = useUI();
   const state = useStore();
   // "Run it back" opens setup already filled in like an earlier round
   const [editing] = useState(() => (edit ? getState().plans?.[edit] || null : null));
-  const [pre] = useState(() => (editing ? { game: editing.game, holesCount: editing.holesCount, courseId: findCourse(getState(), editing.course?.id)?.id ?? null, nine: editing.nine, step: 1 } : rematch ? rematchSetup(getState(), getState().rounds[rematch]) : fromPlan ? planSetup(getState(), fromPlan, present) : null));
-  const [mode, setMode] = useState(ahead || editing ? 'plan' : 'round'); // 'plan': schedule for later
+  const [pre] = useState(() => (editing ? { game: editing.game, holesCount: editing.holesCount, courseId: findCourse(getState(), editing.course?.id)?.id ?? null, nine: editing.nine, step: 1 }
+    : rematch ? rematchSetup(getState(), getState().rounds[rematch])
+      : reschedule ? (p => p && { ...p, step: p.courseId ? 1 : 0 })(rematchSetup(getState(), getState().rounds[reschedule]))
+        : fromPlan ? planSetup(getState(), fromPlan, present) : null));
+  const [mode, setMode] = useState(ahead || editing || (reschedule && pre) ? 'plan' : 'round'); // 'plan': schedule for later
+  // A round already set up that the plan takes the place of
+  const [replaces, setReplaces] = useState(reschedule && pre ? reschedule : null);
   const planning = mode === 'plan';
   const [date, setDate] = useState(() => editing?.date || nextSaturday());
   const [teeTime, setTeeTime] = useState(editing?.teeTime || '');
-  const [invited, setInvited] = useState([]);
+  const [invited, setInvited] = useState(() => (reschedule && pre ? pre.picked.filter(pid => pid !== getState().me) : []));
   const [step, showStep] = useState(pre?.step ?? (ahead && GAMES[preGame] ? 1 : 0));
   // The furthest step reached, so a tap on the step bar can go forward again after going back
-  const [reached, setReached] = useState(() => pre?.step ?? (ahead && GAMES[preGame] ? 1 : 0));
+  const [reached, setReached] = useState(() => (reschedule && pre?.step ? 3 : pre?.step ?? (ahead && GAMES[preGame] ? 1 : 0)));
   const setStep = n => { showStep(n); setReached(r => Math.max(r, n)); };
   const [game, setGame] = useState(pre?.game ?? (GAMES[preGame] ? preGame : null));
   const [holesCount, setHolesCount] = useState(pre?.holesCount ?? (GAMES[preGame]?.holes.includes(18) === false ? GAMES[preGame].holes[0] : 18));
@@ -160,7 +166,7 @@ export default function NewRound({ rematch, fromPlan, present, edit = null, ahea
   };
   const goTo = i => {
     if (!canGo(i)) return;
-    if (planning && i === 0 && !ahead) { setMode('round'); setReached(0); }
+    if (planning && i === 0 && !ahead && !replaces) { setMode('round'); setReached(0); }
     if (!planning && i === 3) return toBets();
     setStep(i);
   };
@@ -170,10 +176,12 @@ export default function NewRound({ rematch, fromPlan, present, edit = null, ahea
     const s = getState();
     const id = uid('pl_');
     const me = s.players[s.me];
+    // Side games set up on the Bets step go on the ballot with the house rules picked there
+    const settings = { ...opts, ...Object.fromEntries(sidesFor(game).map(sg => [sg.game, structuredClone(sg.settings)])) };
     const plan = newPlan({
       id, hostName: me?.name || 'Me', game, holesCount, nine, date, teeTime, course,
       people: invited.filter(pid => pid !== s.me).map(pid => s.players[pid]).filter(Boolean),
-      ballot: { games: ballotGames, bets: ballotBets, sides: ballotSides }, suggestedBet, settings: opts, useHc: usualId ? useHc : false, playFor,
+      ballot: { games: ballotGames, bets: ballotBets, sides: ballotSides }, suggestedBet, settings, useHc: usualId || replaces ? useHc : false, playFor,
       // From a saved usual: its handicap percentage, and which usual (for "Last played")
       ...(usualId ? { usualId, hcPct: opts.hcPct } : {}),
     });
@@ -181,6 +189,7 @@ export default function NewRound({ rematch, fromPlan, present, edit = null, ahea
       if (!st.plans) st.plans = {};
       st.plans[id] = plan;
       if (!st.favorites.includes(course.id)) st.favorites = [course.id, ...st.favorites].slice(0, 6);
+      if (replaces && st.rounds[replaces]) { delete st.rounds[replaces]; leaveRound(st, replaces); }
     });
     const paywall = onboarding && shouldShowPaywall(getState(), PAYWALL_ON) ? [['paywall', { source: 'onboarding' }]] : [];
     nav.reset('upnext', ['plan', { id }], ...paywall);
@@ -239,6 +248,16 @@ export default function NewRound({ rematch, fromPlan, present, edit = null, ahea
     if (fromPlan) editPlan(fromPlan, p => { p.status = 'started'; p.roundId = id; });
     setCreatedId(id);
     setStep(4);
+  };
+
+  // "Schedule for later" from the Bets step or the Ready step: the same setup becomes a plan, with
+  // everyone picked already invited. From the Ready step the round just made goes once the plan is.
+  const later = (replaceId = null) => {
+    setInvited(picked.filter(pid => pid !== getState().me));
+    setReplaces(replaceId);
+    setMode('plan');
+    setReached(3);
+    showStep(1);
   };
 
   // Load a setup (last time's, or a saved usual), then land on the bets to confirm, or on
@@ -320,7 +339,7 @@ export default function NewRound({ rematch, fromPlan, present, edit = null, ahea
           </>} />
       )}
       {step === 2 && planning && course && <InviteStep invited={invited} setInvited={setInvited} onNext={() => setStep(3)} />}
-      {step === 3 && planning && course && <VoteStep game={game} opts={opts} onPlan={makePlan} ballot={ballot} initialSides={planSides} playFor={playFor} setPlayFor={setPlayFor} />}
+      {step === 3 && planning && course && <VoteStep game={game} opts={opts} onPlan={makePlan} ballot={ballot} initialSides={planSides.length ? planSides : sidesFor(game).map(sg => sg.game)} playFor={playFor} setPlayFor={setPlayFor} />}
       {step === 1 && !planning && <CourseStep courseId={courseId} setCourseId={id => { setCourseId(id); setTees({}); setStartHole(null); }} holesCount={holesCount} nine={nine} setNine={setNine} onNext={() => setStep(2)} />}
       {step === 2 && !planning && course && (
         <PlayersStep game={g} course={course} holesCount={holesCount} nine={nine} picked={picked} setPicked={setPicked}
@@ -329,10 +348,10 @@ export default function NewRound({ rematch, fromPlan, present, edit = null, ahea
       )}
       {step === 3 && !planning && course && (
         <SetupStep game={game} course={course} holesCount={holesCount} nine={nine} picked={picked} setPicked={setPicked}
-          opts={opts} setOpts={setOpts} useHc={useHc} setUseHc={setUseHc} startHole={startHole} setStartHole={setStartHole} onStart={start}
+          opts={opts} setOpts={setOpts} useHc={useHc} setUseHc={setUseHc} startHole={startHole} setStartHole={setStartHole} onStart={start} onLater={fromPlan ? null : () => later()}
           teams={teams} setTeams={setTeams} sideGames={sidesFor(game)} setSideGames={editSides} playFor={playFor} setPlayFor={setPlayFor} />
       )}
-      {step === 4 && created && <ReadyStep round={created} onStart={() => nav.reset('upnext', ['play', { id: created.id }])} />}
+      {step === 4 && created && <ReadyStep round={created} onStart={() => nav.reset('upnext', ['play', { id: created.id }])} onLater={fromPlan || created.shared ? null : () => later(created.id)} />}
     </Screen>
   );
 }
@@ -648,7 +667,7 @@ function QuickAddPlayer({ open, onClose, onAdded }) {
 
 // ---------------------------------------------------------------------------
 
-function SetupStep({ game, course, holesCount, nine, picked, setPicked, opts, setOpts, useHc, setUseHc, startHole, setStartHole, onStart, teams, setTeams, sideGames = [], setSideGames, playFor = null, setPlayFor }) {
+function SetupStep({ game, course, holesCount, nine, picked, setPicked, opts, setOpts, useHc, setUseHc, startHole, setStartHole, onStart, onLater = null, teams, setTeams, sideGames = [], setSideGames, playFor = null, setPlayFor }) {
   const state = useStore();
   const [pad, setPad] = useState(null); // {path, title, min, max}
   const [holePick, setHolePick] = useState(false);
@@ -732,6 +751,7 @@ function SetupStep({ game, course, holesCount, nine, picked, setPicked, opts, se
       </div>
       <div className="cta-wrap">
         <button className="full-btn" disabled={optsBad || teamsBad} onClick={onStart}>Create round <Icon name="arrow-right" /></button>
+        {onLater && <button className="full-btn outline" disabled={optsBad} onClick={onLater}><Icon name="calendar-plus" /> Schedule for later</button>}
       </div>
       <Numpad open={!!pad} title={pad?.title} prefix="$" initial={pad ? get(pad.path) : ''} min={pad?.min} max={pad?.max}
         onClose={() => setPad(null)} onDone={v => { set(pad.path, v); setPad(null); }} />
@@ -934,7 +954,7 @@ function VoteStep({ game, opts, onPlan, ballot = [], initialSides = [], playFor 
 // ---------------------------------------------------------------------------
 
 /** After setup: invite the group before the first tee, then start. */
-function ReadyStep({ round, onStart }) {
+function ReadyStep({ round, onStart, onLater }) {
   const [sharing, setSharing] = useState(false);
   const others = useStore(roundsInProgress).filter(r => r.id !== round.id);
   const names = (round.teams || round.players).map(p => p.name.split(' ')[0]);
@@ -964,6 +984,7 @@ function ReadyStep({ round, onStart }) {
       <div className="cta-wrap">
         {syncConfigured && <button className={`full-btn ${round.shared ? 'outline' : ''}`} onClick={() => setSharing(true)}><Icon name="share-network" /> {round.shared ? 'Send the link again' : 'Invite the group'}</button>}
         <button className={`full-btn ${syncConfigured && !round.shared ? 'outline' : ''}`} onClick={onStart}>Tee off on hole {first.no} <Icon name="arrow-right" /></button>
+        {onLater && <button className="text-link" onClick={onLater}><Icon name="calendar-plus" /> Not playing today? Schedule for later</button>}
       </div>
       <ShareSheet round={round} open={sharing} onClose={() => setSharing(false)} />
     </>

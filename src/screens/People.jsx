@@ -1,9 +1,10 @@
 import { useState } from 'react';
-import { Empty, Header, Icon, Numpad, Screen, useUI } from '../components/ui.jsx';
+import { Empty, Header, Icon, Numpad, Screen, Sheet, useUI } from '../components/ui.jsx';
 import { Avatar, PayButton, RequestButton } from '../components/Pay.jsx';
 import { useRemind } from '../lib/useRemind.js';
 import { update, uid, useStore } from '../lib/store.js';
-import { formatIndex, myIds, playerLabel, sortedPlayers } from '../lib/format.js';
+import { firstName, formatIndex, myIds, playerLabel, sortedPlayers } from '../lib/format.js';
+import { mergePlayer, mergedInto, unmergePlayer } from '../lib/merge.js';
 import { headToHeadSummary, nameOf, outstanding, tabWith } from '../lib/ledger.js';
 import { canonicalOf } from '../lib/pair-debts.js';
 import { PAY_APPS, PAY_APP_IDS, cleanHandle, handleText, payInfo, payInfoFor } from '../lib/pay.js';
@@ -121,7 +122,9 @@ export function PlayerEdit({ id, onSaved }) {
   const nav = useNav();
   const { ask, showToast } = useUI();
   const state = useStore();
-  const existing = id ? state.players[id] : null;
+  // Someone you only met in a joined round has no saved player yet; saving gives them one
+  const existing = id ? state.players[id] || { id, name: nameOf(state, id), joined: true } : null;
+  const [merging, setMerging] = useState(false);
   const [name, setName] = useState(existing?.name || '');
   const [index, setIndex] = useState(existing?.index ?? null);
   const [payApp, setPayApp] = useState(payInfo(existing)?.app || null);
@@ -129,7 +132,17 @@ export function PlayerEdit({ id, onSaved }) {
   const isMe = !!id && id === state.me;
   const [pad, setPad] = useState(false);
   const trimmed = name.trim();
-  const duplicate = Object.values(state.players).some(p => p.id !== id && p.name.toLowerCase() === trimmed.toLowerCase());
+  const duplicate = Object.values(state.players).some(p => p.id !== id && !p.mergedInto && p.name.toLowerCase() === trimmed.toLowerCase());
+  const mine = myIds(state);
+  const h2h = headToHeadSummary(state, mine);
+  const roundsWith = (id && h2h.get(id)?.rounds) || 0;
+  const merged = id ? mergedInto(state, id) : [];
+  // Everyone this player could be: saved players and people from joined rounds, same first name first
+  const first = firstName(existing?.name).toLowerCase();
+  const candidates = [...new Set([...Object.values(state.players).filter(p => !p.mergedInto).map(p => p.id), ...h2h.keys()])]
+    .filter(x => x !== id && !mine.has(x))
+    .map(x => ({ id: x, name: nameOf(state, x), rounds: h2h.get(x)?.rounds || 0, saved: !!state.players[x], pay: payInfoFor(state, x) }))
+    .sort((a, b) => (firstName(b.name).toLowerCase() === first) - (firstName(a.name).toLowerCase() === first) || a.name.localeCompare(b.name));
   const inActive = id && roundsInProgress(state).some(r => r.players.some(p => p.id === id));
 
   const save = () => {
@@ -154,8 +167,33 @@ export function PlayerEdit({ id, onSaved }) {
     if (onSaved) onSaved(pid); else nav.pop();
   };
 
+  const merge = async target => {
+    setMerging(false);
+    const same = target.name.toLowerCase() === existing.name.toLowerCase();
+    const ok = await ask({
+      title: same ? `Merge the two ${target.name}s?` : `Merge into ${target.name}?`,
+      text: `${same ? 'Their' : `${existing.name}’s`} rounds, record and anything on the Tab add up under ${same ? `one ${target.name}` : target.name}. No rounds change, and you can undo it from ${target.name}’s card.`,
+      confirmLabel: 'Merge',
+    });
+    if (!ok) return;
+    update(s => {
+      if (!s.players[target.id]) s.players[target.id] = { id: target.id, name: target.name, createdAt: Date.now() };
+      mergePlayer(s, id, target.id, { name: existing.name });
+    });
+    showToast(`Merged into ${target.name}`);
+    nav.pop();
+  };
+
+  const unmerge = p => {
+    update(s => unmergePlayer(s, p.id));
+    showToast(`${p.name} is separate again`);
+  };
+
   const remove = async () => {
-    const ok = await ask({ title: `Remove ${existing.name}?`, text: 'Past rounds keep their scores, and anything they owe stays on the tab. They’ll be taken out of any crews.', confirmLabel: 'Remove player', danger: true });
+    const text = roundsWith
+      ? `They played ${roundsWith} round${roundsWith === 1 ? '' : 's'} with you, so they’ll still show in Players while ${roundsWith === 1 ? 'that round is' : 'those rounds are'} in History. To clear out test rounds, delete them from History. If this is a second copy of someone, merge them instead.`
+      : 'Past rounds keep their scores, and anything they owe stays on the tab. They’ll be taken out of any crews.';
+    const ok = await ask({ title: `Remove ${existing.name}?`, text, confirmLabel: 'Remove player', danger: true });
     if (!ok) return;
     update(s => {
       delete s.players[id];
@@ -171,7 +209,7 @@ export function PlayerEdit({ id, onSaved }) {
         <div className="block">
           <label className="field-label" htmlFor="pe-name">Name</label>
           <input id="pe-name" className="name-input" value={name} maxLength={24} onChange={e => setName(e.target.value)} placeholder="Name" autoFocus={!existing} />
-          {duplicate && <p className="field-error">Someone already has that name. Add an initial so scorecards stay clear.</p>}
+          {duplicate && <p className="field-error">Someone already has that name. Add an initial so scorecards stay clear, or merge them below if it’s the same person.</p>}
           <label className="field-label">Handicap index <span className="opt">optional</span></label>
           <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
             <button className="amt-btn" onClick={() => setPad(true)}>{index == null ? 'Add' : formatIndex(index)}</button>
@@ -198,7 +236,26 @@ export function PlayerEdit({ id, onSaved }) {
               : `So ${isMe ? 'people can pay you' : 'you can pay them'} in one tap. Birdie Bank never holds or moves money.`}
           </p>
         </div>
-        {existing && id !== state.me && (
+        {merged.length > 0 && (
+          <>
+            <div className="sec-label">Merged in</div>
+            {merged.map(p => (
+              <div key={p.id} className="set-row static">
+                <div className="row-main">
+                  <div className="set-name">{p.name}</div>
+                  <div className="set-sub">{p.stub ? 'From a round you joined' : 'A saved player'}</div>
+                </div>
+                <button className="header-btn" onClick={() => unmerge(p)}>Undo</button>
+              </div>
+            ))}
+          </>
+        )}
+        {existing && id !== state.me && candidates.length > 0 && (
+          <button className="quiet-row" onClick={() => setMerging(true)}>
+            <Icon name="git-merge" /> <span>Same person as someone else? <u>Merge</u></span>
+          </button>
+        )}
+        {existing && !existing.joined && id !== state.me && (
           <button className="danger-link" onClick={remove} disabled={inActive}>
             <Icon name="trash" /> {inActive ? 'Can’t remove during a round they’re in' : 'Remove player'}
           </button>
@@ -207,6 +264,18 @@ export function PlayerEdit({ id, onSaved }) {
       <div className="cta-wrap">
         <button className="full-btn" disabled={!trimmed || duplicate} onClick={save}>{existing ? 'Save' : 'Add player'}</button>
       </div>
+      <Sheet open={merging} onClose={() => setMerging(false)} title={`Who is ${existing?.name || 'this'}?`}>
+        <p className="field-help" style={{ margin: '0 20px 8px' }}>Pick the player to keep. Everything with {existing?.name} adds up under them.</p>
+        {candidates.map(c => (
+          <button key={c.id} className="list-item" onClick={() => merge(c)}>
+            <Avatar name={c.name} />
+            <div className="row-main">
+              <div className="li-name">{c.name}</div>
+              <div className="li-sub">{c.rounds ? `${c.rounds} round${c.rounds === 1 ? '' : 's'} together` : 'No rounds together yet'}{c.pay ? ` · ${PAY_APPS[c.pay.app].name} ${handleText(c.pay)}` : ''}{c.saved ? '' : ' · from a round you joined'}</div>
+            </div>
+          </button>
+        ))}
+      </Sheet>
       <Numpad open={pad} title="Handicap index" initial={index ?? ''} allowDecimal allowNegative min={-10} max={54}
         onClose={() => setPad(false)} onDone={v => { setIndex(v); setPad(false); }} />
     </Screen>

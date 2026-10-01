@@ -93,6 +93,14 @@ export async function shareRound(round, res, showToast, opts) {
 /** Which player in a round is "you" on this phone (joined rounds carry their own). */
 export function meFor(round, state) { return round.localMe ?? state.me; }
 
+/**
+ * The player an id stands for once duplicates are merged, whether from a player's edit screen
+ * (`mergedInto`) or "Same person as..." and seat claims: the id kept for that person (see people-links.js).
+ */
+export function keptId(state, id) {
+  return linksOf(state).personOf(id);
+}
+
 /** Every player id that means "you" on this phone. */
 export function myIds(state) {
   const ids = new Set(state.me ? [state.me] : []);

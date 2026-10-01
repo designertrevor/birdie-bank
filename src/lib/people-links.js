@@ -44,6 +44,13 @@ export function linkEdges(state) {
     if (typeof kept !== 'string' || !kept || kept === alias || broken.has(pairKey(alias, kept))) continue;
     edges.push({ a: alias, b: kept, kind: 'manual' });
   }
+  // A duplicate merged from its edit screen (player.mergedInto) is the same kind of link
+  const players = isObj(state?.players) ? state.players : {};
+  for (const id of Object.keys(players).sort()) {
+    const kept = players[id]?.mergedInto;
+    if (typeof kept !== 'string' || !kept || kept === id || links[id] === kept || broken.has(pairKey(id, kept))) continue;
+    edges.push({ a: id, b: kept, kind: 'manual' });
+  }
   const sorted = [...rounds].sort((x, y) => roundTime(x) - roundTime(y) || String(x.id).localeCompare(String(y.id)));
   for (const r of sorted) {
     if (!isObj(r.claims)) continue;
@@ -112,7 +119,7 @@ export function linksOf(state) {
     if (!members.has(root)) members.set(root, []);
     members.get(root).push(id);
   }
-  const alias = id => Object.prototype.hasOwnProperty.call(links, id) && applied.some(e => e.kind === 'manual' && e.a === id);
+  const alias = id => (Object.prototype.hasOwnProperty.call(links, id) || !!players[id]?.mergedInto) && applied.some(e => e.kind === 'manual' && e.a === id);
   const rank = id => [
     id === me ? 0 : 1,
     players[id] && !alias(id) ? 0 : 1,

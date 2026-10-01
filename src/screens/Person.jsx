@@ -89,7 +89,7 @@ export default function Person({ id: opened }) {
   return (
     <Screen>
       <Header title={name} onBack={nav.pop}
-        right={player && <button className="header-btn" onClick={() => nav.push('playerEdit', { id })}>Edit</button>} />
+        right={id !== state.me && <button className="header-btn" onClick={() => nav.push('playerEdit', { id })}>Edit</button>} />
       <div className="scroll">
         <div className="person-hero">
           <Avatar name={name} size="lg" />
