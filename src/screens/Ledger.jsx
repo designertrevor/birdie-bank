@@ -86,7 +86,7 @@ export default function Ledger() {
     return (
       <div key={p.id} className="tab-card">
         <button className="tab-person" onClick={() => nav.push('person', { id: p.id })} aria-label={`${name}: ${owesMe ? 'owes you' : 'you owe'} ${money(amount)}. See the story`}>
-          <Avatar name={name} />
+          <Avatar id={p.id} name={name} />
           <div className="row-main">
             <div className="tp-name">{name}</div>
             <div className="tp-sub">{owesMe ? 'Owes you' : 'You owe'}{n ? ` · ${n} round${n === 1 ? '' : 's'} together` : ''}</div>
@@ -106,7 +106,7 @@ export default function Ledger() {
     return (
       <div key={id} className="tab-card square-card">
         <button className="tab-person" onClick={() => nav.push('person', { id })} aria-label={`Square with ${name}. See the story`}>
-          <Avatar name={name} />
+          <Avatar id={id} name={name} />
           <div className="row-main">
             <div className="tp-name">Square with {first(name)}</div>
             <div className="tp-sub">All paid up</div>
@@ -124,7 +124,7 @@ export default function Ledger() {
     return (
       <div key={`reward:${id}`} className="tab-card">
         <button className="tab-person" onClick={() => nav.push('person', { id })} aria-label={`${name}. See the story`}>
-          <Avatar name={name} />
+          <Avatar id={id} name={name} />
           <div className="row-main">
             <div className="tp-name">{name}</div>
             <div className="tp-sub">Square on money</div>

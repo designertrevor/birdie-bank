@@ -6,6 +6,8 @@ import { roundResults } from '../lib/round.js';
 import { money } from '../lib/golf.js';
 import { payInfoFor } from '../lib/pay.js';
 import { PayButton, RequestButton } from './Pay.jsx';
+import { AvatarArt } from './Avatar.jsx';
+import { useGroupAvatars } from '../lib/useAvatars.js';
 import { buzz, confettiFrom } from '../lib/delight.js';
 import { gameLabel, meFor, placeOf, roundDate, roundPlayerName, shareRound } from '../lib/format.js';
 import { gamesLine } from '../lib/side-games.js';
@@ -45,7 +47,7 @@ function useCountUp(target, { delay = 0, duration = 1100, skip = false } = {}) {
   return [v, phase];
 }
 
-function CountRow({ place, name, amount, me, delay, duration, skip, games = '', fmt = money, index = 0 }) {
+function CountRow({ place, name, face, amount, me, delay, duration, skip, games = '', fmt = money, index = 0 }) {
   const [v, phase] = useCountUp(amount, { delay, duration, skip });
   const done = v === amount;
   // Motion hooks: --i staggers the entrance, the phase dims the number until its turn, then pops it when it lands
@@ -53,6 +55,7 @@ function CountRow({ place, name, amount, me, delay, duration, skip, games = '', 
   return (
     <div className={`reveal-row ${place === 1 && amount > 0 && done ? 'top' : ''}`} style={{ '--i': index }}>
       <div className="sr">{place}</div>
+      {face && <AvatarArt model={face} size="sm" className="rv-av" />}
       <div className="sn">{name}{me ? ' (you)' : ''}{games && <span className="rv-games">{games}</span>}</div>
       {/* Whole dollars while counting, then the exact amount: $2.50 used to land on "+$3" */}
       <div className={`reveal-amt ${motion} ${done && amount > 0 ? 'pos' : done && amount < 0 ? 'neg' : ''}`}>{fmt(done ? amount : Math.round(v), { sign: true })}</div>
@@ -90,6 +93,7 @@ export function Reveal({ round, res, onNext, onDetail, extra, instant = false })
   const state = useStore();
   const hero = useRef();
   const me = meFor(round, state);
+  const faces = useGroupAvatars(round.players);
   const top = res.standings[0];
   const tied = res.standings.filter(p => p.amount === top.amount).length > 1;
   const square = res.standings.every(p => p.amount === 0);
@@ -170,7 +174,7 @@ export function Reveal({ round, res, onNext, onDetail, extra, instant = false })
         )}
         {/* Losers land first, the winner last. Equal money shares a place, so partners both land on top */}
         {res.standings.map((p, i) => (
-          <CountRow key={p.id} place={placeOf(res.standings, res.standings.indexOf(p))} name={p.name} amount={p.amount} me={p.id === me}
+          <CountRow key={p.id} place={placeOf(res.standings, res.standings.indexOf(p))} name={p.name} face={faces.get(p.id)} amount={p.amount} me={p.id === me}
             delay={t.stepsEnd + (count - 1 - i) * t.stagger} duration={t.count} skip={skipped} games={gamesLine(res.detail?.byGame, p.id, fmt)} fmt={fmt} index={i} />
         ))}
         {/* A reward round: who wins it and who's buying, where the payments would be */}

@@ -55,6 +55,14 @@ export function payInfoFor(state, id) {
     const info = payInfo(r.players?.find(p => p.id === x));
     if (info) return info;
   }
+  // Nothing on this phone: the app on their own profile, once a seat of theirs is linked to their
+  // account (profiles.js). It only fills a gap: an app saved here is never swapped out
+  const accountOf = state.accountOf && typeof state.accountOf === 'object' ? state.accountOf : {};
+  for (const x of [id, ...others]) {
+    const prof = accountOf[x] && state.profiles?.[accountOf[x]];
+    const info = prof && payInfo({ payApp: prof.payApp, payHandle: prof.payHandle });
+    if (info) return info;
+  }
   return null;
 }
 

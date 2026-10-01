@@ -1694,3 +1694,65 @@ button.lately-row:active { background: var(--surface); }
 /* ---------- Delete your account (overnight 6, profile foundation data) ---------- */
 /* Sits under Sign out: the same red, a step quieter, so the two never read as one choice */
 .danger-link.delete-account { margin: 0 auto 24px; font-size: 14px; font-weight: 500; }
+
+/* ---------- Profile screens: Ball buddies avatars, your profile, privacy (overnight 6, profile-screens) ---------- */
+/* The avatar circle is the same everywhere; a buddy or a photo fills it, initials sit on their own colour */
+:root { --av-ring: rgba(10,10,10,.06); }
+:root[data-theme="dark"] { --av-ring: rgba(255,255,255,.14); }
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]):not([data-theme="dark"]) { --av-ring: rgba(255,255,255,.14); } }
+.avatar.av-buddy, .avatar.av-photo, .join-avatar.av-buddy, .join-avatar.av-photo { overflow: hidden; padding: 0; }
+.avatar.av-buddy, .avatar.av-photo { box-shadow: 0 0 0 1.5px var(--av-ring); background: var(--surface); }
+.av-buddy > svg, .av-photo > img { display: block; width: 100%; height: 100%; }
+.av-photo > img { object-fit: cover; }
+.avatar.sm { width: 30px; height: 30px; font-size: 14px; }
+.avatar.xl { width: 96px; height: 96px; font-size: 40px; margin: 0 auto; }
+.avatar-btn .av-in-btn { width: 44px; height: 44px; margin: 0; font-size: 16px; letter-spacing: -.01em; box-shadow: none; }
+.avatar-btn:has(.av-in-btn) { background: none; }
+.sq-p .avatar.av-buddy, .sq-p .avatar.av-photo { margin: 0; width: 36px; height: 36px; }
+/* The reveal: a small avatar between the place and the name */
+.reveal-row .rv-av { margin: 0; width: 32px; height: 32px; font-size: 14px; }
+.reveal-row.top .rv-av { box-shadow: 0 0 0 2px rgba(255,255,255,.7); }
+
+/* Your profile */
+.profile-hero { text-align: center; padding: 8px 20px 14px; }
+.pf-avatar { position: relative; display: inline-block; padding: 0; border: none; background: none; border-radius: 50%; cursor: pointer; transition: transform .2s var(--spring); }
+.pf-avatar:active { transform: scale(.95); }
+.pf-edit { position: absolute; right: -2px; bottom: -2px; width: 32px; height: 32px; border-radius: 50%; display: grid; place-items: center; background: var(--ink); color: var(--on-ink); font-size: 15px; box-shadow: 0 0 0 3px var(--canvas); }
+.pf-name { font-size: 28px; font-weight: 800; letter-spacing: -.02em; color: var(--ink); margin-top: 10px; overflow-wrap: anywhere; }
+.pf-where { display: inline-flex; align-items: center; gap: 6px; margin-top: 10px; padding: 6px 12px; border-radius: 999px; background: var(--surface); color: var(--mute); font-size: 13px; }
+.pf-where i { color: var(--icon); }
+.pf-tiles { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 8px; margin: 4px 16px 4px; }
+.pf-tile { grid-column: span 2; min-width: 0; padding: 12px; border-radius: 18px; background: var(--card); }
+.pf-tile.money { grid-column: span 3; }
+.pf-v { margin-top: 4px; font-size: 22px; font-weight: 800; color: var(--ink); font-variant-numeric: tabular-nums; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.pf-tile:nth-child(3) .pf-v { font-size: 16px; line-height: 1.2; white-space: normal; overflow-wrap: anywhere; }
+.pf-only { display: flex; align-items: center; gap: 4px; margin-top: 2px; font-size: 11px; color: var(--mute); }
+.pf-only i { font-size: 11px; }
+.pf-home { display: flex; align-items: center; gap: 10px; width: 100%; min-height: 48px; padding: 10px 12px; border: none; border-radius: 14px; background: var(--surface); color: var(--ink); font: inherit; text-align: left; cursor: pointer; }
+.pf-home > i:first-child { color: var(--icon); font-size: 18px; }
+.pf-home > i:last-child { color: var(--mute); }
+.pf-home .row-main b { display: block; font-weight: 700; font-size: 15px; }
+.pf-home .row-main span { display: block; font-size: 13px; color: var(--mute); }
+.pf-home-line { display: flex; align-items: center; justify-content: center; gap: 6px; margin-top: 4px; }
+.pf-home-line i { color: var(--icon); }
+.set-row.pf-row .avatar { margin-right: 12px; }
+
+/* The avatar picker */
+.av-preview { text-align: center; padding: 4px 20px 12px; }
+.av-preview .avatar { margin: 0 auto 8px; }
+.av-pane { padding: 4px 16px 8px; }
+.av-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 14px 8px; justify-items: center; padding: 8px 0 4px; }
+.av-pick { position: relative; width: 64px; height: 64px; padding: 0; border: none; border-radius: 50%; background: none; cursor: pointer; transition: transform .2s var(--spring); }
+.av-pick:active { transform: scale(.92); }
+.av-pick .av-tile { width: 64px; height: 64px; margin: 0; }
+.av-pick.on .av-tile { box-shadow: 0 0 0 3px var(--canvas), 0 0 0 6px var(--pink); }
+.av-check { position: absolute; right: -6px; bottom: -6px; width: 22px; height: 22px; border-radius: 50%; display: grid; place-items: center; background: var(--pink-fill); color: #fff; font-size: 12px; box-shadow: 0 0 0 2px var(--canvas); }
+.av-eyebrow { margin: 14px 0 8px; text-align: center; }
+.av-swatches { display: grid; grid-template-columns: repeat(8, minmax(0, 1fr)); gap: 6px; justify-items: center; padding: 4px 0 8px; }
+.av-swatch { width: 100%; max-width: 40px; aspect-ratio: 1; border: none; border-radius: 50%; cursor: pointer; box-shadow: inset 0 0 0 1px rgba(0,0,0,.12); }
+.av-swatch.on { box-shadow: 0 0 0 3px var(--canvas), 0 0 0 5px var(--ink); }
+.av-file { display: flex; align-items: center; justify-content: center; gap: 8px; cursor: pointer; }
+.av-remove { display: block; margin: 4px auto 0; }
+.av-actions { padding: 8px 16px 4px; }
+.sec-label.flush { padding: 14px 4px 6px; }
+.home-clear { display: block; margin: 12px auto 0; }

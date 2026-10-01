@@ -4,6 +4,8 @@
 // No organizer onboarding. They become "me" using their player from the shared round.
 import { useEffect, useMemo, useState } from 'react';
 import { BallIllo, Icon, Screen } from '../components/ui.jsx';
+import { Avatar } from '../components/Avatar.jsx';
+import { useGroupAvatars } from '../lib/useAvatars.js';
 import { getState, update, uid } from '../lib/store.js';
 import { useNav } from '../lib/nav.js';
 import { afterJoin, teamLine } from '../lib/join.js';
@@ -20,10 +22,6 @@ const seatKey = code => `bb-seat:${code}`;
 function loadSeat(code) { try { return JSON.parse(localStorage.getItem(seatKey(code))) || null; } catch { return null; } }
 function saveSeat(code, v) { try { if (v) localStorage.setItem(seatKey(code), JSON.stringify(v)); else localStorage.removeItem(seatKey(code)); } catch { /* storage blocked */ } }
 
-const TINTS = ['lav', 'peach', 'mint', 'ochre'];
-function Avatar({ name, i = 0, size = '' }) {
-  return <span className={`join-avatar ${TINTS[i % TINTS.length]} ${size}`} aria-hidden="true">{firstName(name).slice(0, 1).toUpperCase() || '?'}</span>;
-}
 
 /** The invite card as a pushed screen, for someone already set up (a join link, or a typed code). */
 export function JoinInviteScreen({ code }) {
@@ -110,6 +108,8 @@ export default function JoinInvite({ code, onJoined, onSkip, setUp = false }) {
   }, [code, pendingNo]);
 
   const meta = found?.meta;
+  // Everyone's avatar on the seats: the one their profile has, or the one the round carried (avatars.js)
+  const faces = useGroupAvatars(meta?.players);
   const game = meta && GAMES[meta.game];
   const host = typeof meta?.hostName === 'string' && meta.hostName.trim() ? firstName(meta.hostName) : null;
   // Seat requests go to whoever keeps score now, which may not be the organizer (see keeper.js)
@@ -242,7 +242,7 @@ export default function JoinInvite({ code, onJoined, onSkip, setUp = false }) {
       <Screen className="onboard">
         <div className="scroll onboard-body join-body">
           <div className="join-confirm">
-            <Avatar name={seat.name} i={Math.max(0, meta.players.findIndex(p => p.id === seat.id))} size="lg" />
+            <Avatar base="join-avatar" model={faces.get(seat.id)} name={seat.name} size="lg" />
             <h1 className="onboard-title join-h">You’re {firstName(seat.name)}</h1>
             <ul className="join-facts">
               {handicaps && <li><Icon name="golf" fill /> {strokesLabel(seat.plays)}</li>}
@@ -269,13 +269,13 @@ export default function JoinInvite({ code, onJoined, onSkip, setUp = false }) {
           <h1 className="onboard-title join-h">Pick your seat</h1>
           <p className="onboard-text join-p">Which one are you?</p>
           <div className="seat-grid">
-            {meta.players.map((p, i) => {
+            {meta.players.map(p => {
               const team = teamOf(p.id);
               const from = meta.joined?.[p.id];
               const facts = [handicaps ? strokesLabel(p.plays) : null, team?.name, from != null ? `From hole ${from}` : null].filter(Boolean);
               return (
                 <button key={p.id} className="seat-tile" aria-label={[`I’m ${p.name}`, ...facts].join(', ')} onClick={() => { setSeat(p); setStep('confirm'); }}>
-                  <Avatar name={p.name} i={i} />
+                  <Avatar base="join-avatar" model={faces.get(p.id)} name={p.name} />
                   <span className="seat-name">{p.name}</span>
                   <span className="seat-sub">
                     {facts.join(' · ') || ' '}
@@ -301,12 +301,14 @@ export default function JoinInvite({ code, onJoined, onSkip, setUp = false }) {
 
   // The invite card
   const names = meta.players.map(p => firstName(p.name));
+  // The host's own seat, when they're playing, so their avatar is the one they picked
+  const hostSeat = host ? meta.players.find(p => firstName(p.name) === host) : null;
   return (
     <Screen className="onboard">
       <div className="scroll onboard-body join-body">
         <div className="invite-card">
           <div className="ic-from">
-            {host ? <><Avatar name={host} i={3} size="sm" /> <span><strong>{host}</strong> invited you</span></> : <span>You’re invited</span>}
+            {host ? <><Avatar base="join-avatar" model={faces.get(hostSeat?.id)} name={host} size="sm" /> <span><strong>{host}</strong> invited you</span></> : <span>You’re invited</span>}
           </div>
           <div className="ic-game"><Icon name={game?.icon || 'golf'} fill /> {game ? gameLabel(meta) : 'Golf'}</div>
           <div className="ic-course">{meta.course?.name} · {meta.holes.length} holes</div>
@@ -316,7 +318,7 @@ export default function JoinInvite({ code, onJoined, onSkip, setUp = false }) {
             <div>
               <dt>Who’s in</dt>
               <dd>
-                <span className="ic-stack">{meta.players.slice(0, 6).map((p, i) => <Avatar key={p.id} name={p.name} i={i} size="sm" />)}</span>
+                <span className="ic-stack">{meta.players.slice(0, 6).map(p => <Avatar key={p.id} base="join-avatar" model={faces.get(p.id)} name={p.name} size="sm" />)}</span>
                 <span>{names.length <= 3 ? names.join(', ') : `${names.slice(0, 3).join(', ')} +${names.length - 3}`}</span>
               </dd>
             </div>

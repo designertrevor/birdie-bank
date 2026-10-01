@@ -3,6 +3,7 @@
 // play button knows where to take you back to.
 import { GAMES, holeComplete } from './round.js';
 import { findCourse } from './courses.js';
+import { stampAvatars } from './avatars.js';
 
 /** Every round still being played, the one you were in last first, then newest first. */
 export function roundsInProgress(state) {
@@ -19,6 +20,8 @@ export function nextActiveId(state, leavingId) {
 
 /** Add a new round and make it the current one. Rounds already in progress stay as they are (mutates a draft). */
 export function addRound(draft, round) {
+  // Everyone's avatar rides along, so a friend opening the round link sees them on the seats
+  stampAvatars(draft, round);
   draft.rounds[round.id] = round;
   if (round.status === 'active') draft.activeRoundId = round.id;
 }
