@@ -8,7 +8,7 @@
 // Every place that adds up dollars (the Tab, head to head, History, Season, Lately) keeps only
 // the rounds where countsMoney() is true. Pure, unit tested.
 import { money } from './golf.js';
-import { roundResults } from './round.js';
+import { leftAt, roundResults } from './round.js';
 
 /** The rewards to pick from; anything else is typed in. */
 export const REWARDS = ['Lunch', 'A drink'];
@@ -107,7 +107,8 @@ function listNames(names) {
  * { winners: [ids], owers: [ids], lines: [{ from, to: [ids], split, with: [ids] }], text, win, buy }.
  * The top of the standings wins (a tie at the top shares it). Last place owes it (a tie at the
  * bottom splits it: `split`, and `with` names the others paying), or with owes 'everyone' each other player owes one. Everyone
- * level is all square and nobody's buying. A player who left before the first hole is left out.
+ * level is all square and nobody's buying. A player who left before the first hole is left out,
+ * and anyone who left early can still top it but never owes it.
  * Null when the round isn't played for a reward.
  */
 export function rewardOutcome(round, res) {
@@ -123,15 +124,19 @@ export function rewardOutcome(round, res) {
     return { reward: pf.reward, noun, winners: [], owers: [], lines: [], win: 'All square.', buy: 'Nobody’s buying.', text: 'All square. Nobody’s buying.' };
   }
   const winners = standings.filter(p => top - p.amount < EPS).map(p => p.id);
+  // Someone who left early didn't finish, so they're left out of buying: last place is the lowest
+  // of the players who finished and didn't win it
+  const buyers = standings.filter(p => !winners.includes(p.id) && leftAt(round, p.id) >= (round.holes?.length || 0));
+  const low = Math.min(...buyers.map(p => Number(p.amount) || 0));
   const owers = pf.owes === 'everyone'
-    ? standings.filter(p => !winners.includes(p.id)).map(p => p.id)
-    : standings.filter(p => p.amount - bottom < EPS).map(p => p.id);
+    ? buyers.map(p => p.id)
+    : buyers.filter(p => p.amount - low < EPS).map(p => p.id);
   const split = pf.owes !== 'everyone' && owers.length > 1;
   const lines = owers.map(from => ({ from, to: [...winners], split, with: split ? owers.filter(x => x !== from) : [] }));
   const w = listNames(winners.map(name));
   const win = winners.length > 1 ? `${w} share ${noun}.` : `${w} wins ${noun}.`;
   const o = listNames(owers.map(name));
-  const buy = owers.length === 1 ? `${o}’s buying.` : split ? `${o} split it.` : `${o} each buy one.`;
+  const buy = !owers.length ? 'Nobody’s buying.' : owers.length === 1 ? `${o}’s buying.` : split ? `${o} split it.` : `${o} each buy one.`;
   return { reward: pf.reward, noun, winners, owers, lines, win, buy, text: `${win} ${buy}` };
 }
 

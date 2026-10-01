@@ -4,7 +4,7 @@
 // rounds mixed in.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { createRound, roundResults } from './round.js';
+import { createRound, leftAt, roundResults } from './round.js';
 import { countsMoney, rewardOutcome } from './play-for.js';
 import { headToHeadSummary, outstanding, tabBalances, tabWith } from './ledger.js';
 import { sharedDebts } from './pair-debts.js';
@@ -185,10 +185,14 @@ test('sweep: every reward outcome is well formed', () => {
       assert.ok(o.winners.every(id => !o.owers.includes(id)), 'nobody wins and owes');
       assert.ok([...o.winners, ...o.owers].every(id => inIt.includes(id)), 'only players who played');
       if (!level) {
-        const top = Math.max(...vals), bottom = Math.min(...vals);
+        const top = Math.max(...vals);
         assert.ok(o.winners.every(id => Math.abs(amt[id] - top) < 0.005));
-        if (r.playFor.owes === 'last') assert.deepEqual([...o.owers].sort(), inIt.filter(id => Math.abs(amt[id] - bottom) < 0.005).sort());
-        else assert.deepEqual([...o.owers].sort(), inIt.filter(id => !o.winners.includes(id)).sort());
+        // Anyone who left early is left out of buying
+        const buyers = inIt.filter(id => !o.winners.includes(id) && leftAt(r, id) >= r.holes.length);
+        const low = Math.min(...buyers.map(id => amt[id]));
+        if (r.playFor.owes === 'last') assert.deepEqual([...o.owers].sort(), buyers.filter(id => Math.abs(amt[id] - low) < 0.005).sort());
+        else assert.deepEqual([...o.owers].sort(), [...buyers].sort());
+        assert.ok(o.owers.every(id => leftAt(r, id) >= r.holes.length), 'nobody who left early owes it');
         assert.equal(o.lines.length, o.owers.length);
       }
     }

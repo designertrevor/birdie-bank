@@ -137,6 +137,23 @@ test('reward: "Everyone else" has each other player owe one', () => {
   assert.match(o.text, /^Sam wins a drink\. .* each buy one\.$/);
 });
 
+test('reward: a player who left early never ends up buying', () => {
+  // Dave is last but leaves after hole 3, so Trevor (last of the players who finished) buys
+  const r = round('lv', ['t', 's', 'd'], wins(['t', 's', 'd'], { 1: 's', 2: 's', 3: 't' }), { playFor: reward() });
+  r.left = { d: 3 };
+  const o = rewardOutcome(r, roundResults(r));
+  assert.deepEqual(o.winners, ['s']);
+  assert.deepEqual(o.owers, ['t']);
+  assert.equal(o.text, 'Sam wins lunch. Trevor’s buying.');
+  // "Everyone else" leaves him out too
+  r.playFor = reward('everyone');
+  assert.deepEqual(rewardOutcome(r, roundResults(r)).owers, ['t']);
+  // Two players and the loser left: nobody's buying, the winner still wins it
+  const two = round('lv2', ['t', 's'], wins(['t', 's'], { 1: 's' }), { playFor: reward() });
+  two.left = { t: 2 };
+  assert.equal(rewardOutcome(two, roundResults(two)).text, 'Sam wins lunch. Nobody’s buying.');
+});
+
 test('reward: all square means nobody is buying', () => {
   const o = outcome(['t', 's', 'd'], {}, reward());
   assert.deepEqual([o.winners, o.owers, o.lines], [[], [], []]);
