@@ -67,6 +67,9 @@ function fresh() {
     links: {},         // "Same person as...": { aliasId: keptId } (see people-links.js)
     unlinks: [],       // "Not the same person": [[a, b]] pairs that stay apart (see people-links.js)
     rewardsDone: {},   // reward lines marked done on this phone, "roundId:from>to" -> time (see play-for.js)
+    profile: {},       // your own profile beyond your player card: avatar, home course, privacy (see profile-model.js)
+    accountOf: {},     // which account each player id is, from the server: { playerId: accountId } (see profiles.js)
+    profiles: {},      // profiles of people you've played with, by account: { accountId: profile } (see profiles.js)
     settings: structuredClone(DEFAULT_SETTINGS),
   };
 }
