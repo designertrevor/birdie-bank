@@ -7,7 +7,7 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { createRound, gameResults, livePreview, roundResults, BETS_LABEL } from './round.js';
 import {
-  addBet, betLine, betMoneyText, betResult, nextPos, betStatusText, betStrokes, betsMoney, betsOf, betsToTap, changeBet, cleanBet, ctpHoles, removeBet, setBetWinner, suggestedStrokes,
+  addBet, betLine, betMoneyText, betResult, nextPos, betStatusText, betStrokes, betsMoney, betsOf, betsToTap, changeBet, cleanBet, ctpHoles, nineRange, removeBet, setBetWinner, suggestedStrokes,
 } from './pair-bets.js';
 import { breakdownLine, breakdownWith, pairBreakdown } from './where-from.js';
 import { oldRounds } from './overnight5-money.fixtures.js';
@@ -389,4 +389,45 @@ test('the rules card lists side bets, notes one added or changed mid-round, and 
   assert.equal(noteChanges(r, 4).changes.at(-1).text, 'Match, Preston v Tyler raised to $20 match');
   // Points rounds read in points
   assert.equal(agreementItems({ ...r0, playFor: { kind: 'points' } }).find(x => x.id.startsWith('bet:pair:')).text, '2 pts a par 3');
+});
+
+test('changing a bet to the whole round or to no strokes takes the old holes and strokes off', () => {
+  let r = withBets(banker({ holes: 18 }), bet('match', ['p', 'y'], 10, { holes: [4, 18], strokes: { to: 'y', count: 2 } }));
+  // The editor hands over the whole bet as it is now: a whole-round bet with no strokes has neither field
+  const edited = cleanBet(r, { ...r.bets[0], holes: [1, 18], strokes: undefined });
+  assert.equal('holes' in edited, false);
+  r = changeBet(r, 'match-py', edited);
+  assert.equal('holes' in r.bets[0], false, 'back to the whole round');
+  assert.equal('strokes' in r.bets[0], false, 'no strokes any more');
+  assert.equal(betLine(r, r.bets[0], money), 'Preston v Tyler · $10 match');
+  // A custom bet changed to a match drops its name and its winner
+  let c = withBets(banker(), bet('custom', ['p', 'y'], 5, { label: 'Longest drive' }));
+  c = setBetWinner(c, 'custom-py', 2, 'p');
+  c = changeBet(c, 'custom-py', cleanBet(c, { id: 'custom-py', kind: 'match', sides: ['p', 'y'], stake: 5 }));
+  assert.deepEqual(c.bets[0], { id: 'custom-py', kind: 'match', sides: ['p', 'y'], stake: 5 });
+});
+
+test('the front and back nine follow hole numbers, so a round that starts on 10 has its front nine second', () => {
+  const r = banker({ holes: 18, upto: 0 });
+  assert.deepEqual(nineRange(r, 'front'), [1, 9]);
+  assert.deepEqual(nineRange(r, 'back'), [10, 18]);
+  const from10 = { ...r, holes: [...r.holes.slice(9), ...r.holes.slice(0, 9)] };
+  assert.deepEqual(nineRange(from10, 'front'), [10, 18]);
+  assert.deepEqual(nineRange(from10, 'back'), [1, 9]);
+  const b = cleanBet(from10, bet('match', ['p', 'y'], 5, { holes: nineRange(from10, 'front') }));
+  assert.equal(betLine(from10, b, money), 'Preston v Tyler · $5 match · From hole 1');
+  assert.equal(nineRange(banker(), 'back'), null, 'a nine-hole round on the front has no back nine');
+});
+
+test('the season counts side bets as a game only in rounds you had a bet in', () => {
+  const at = Date.UTC(2026, 5, 1);
+  const theirs = { ...withBets(banker({ special: { 2: { p: 3 } } }), bet('hole', ['p', 'y'], 5)), id: 'a', status: 'done', finishedAt: at };
+  const mine = { ...withBets(banker({ special: { 2: { t: 3 } } }), bet('hole', ['t', 'y'], 5)), id: 'b', status: 'done', finishedAt: at + 1 };
+  const state = { me: 't', players: { t: { name: 'Trevor N' } }, rounds: { a: theirs }, settlements: [] };
+  assert.equal(seasonBoard(state, 2026).bestGame?.name === BETS_LABEL, false);
+  const both = seasonBoard({ ...state, rounds: { a: theirs, b: mine } }, 2026);
+  assert.equal(both.rounds, 2);
+  // Trevor won hole 2 off Tyler in round b: $5 in side bets, from the one round he had a bet in
+  const sideNet = roundResults(mine).detail.byGame.bets.balances.t;
+  assert.equal(sideNet, 5);
 });

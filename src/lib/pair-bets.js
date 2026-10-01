@@ -89,6 +89,18 @@ export function betRange(round, bet) {
 /** Whether a bet covers every hole of the round. */
 export const wholeRound = (round, bet) => { const [f, t] = betRange(round, bet); return f === 1 && t === round.holes.length; };
 
+/**
+ * The playing positions [from, to] of a nine by hole number ('front' is holes 1 to 9, 'back' 10 to
+ * 18), or null when the round doesn't play all nine in a row. A round that starts on 10 plays the
+ * back nine first, so its front nine is positions 10 to 18.
+ */
+export function nineRange(round, which) {
+  const lo = which === 'front' ? 1 : 10;
+  const pos = round.holes.map((h, i) => (h.no >= lo && h.no <= lo + 8 ? i + 1 : null)).filter(Boolean);
+  if (pos.length !== 9 || pos[8] - pos[0] !== 8) return null;
+  return [pos[0], pos[8]];
+}
+
 /** A bet's holes in playing order: [{ hole, pos }]. */
 export function betHoles(round, bet) {
   const [from, to] = betRange(round, bet);
@@ -244,8 +256,10 @@ export function addBet(round, raw) {
 }
 
 /**
- * The round with a bet changed. A winner already tapped stays (a closest-to-the-pin hole outside
- * the new holes just stops counting), unless the players in it changed, which starts it fresh.
+ * The round with a bet changed. `raw` is the whole bet as it should be now (the editor's), so a
+ * field it leaves out is gone: back to the whole round, or no strokes. A winner already tapped stays
+ * (a closest-to-the-pin hole outside the new holes just stops counting), unless the players in it
+ * or its kind changed, which starts it fresh.
  */
 export function changeBet(round, id, raw) {
   const list = Array.isArray(round.bets) ? round.bets : [];
@@ -255,7 +269,7 @@ export function changeBet(round, id, raw) {
       if (b.id !== id) return b;
       const samePeople = b.sides.every(s => raw.sides.includes(s));
       const keep = samePeople && b.kind === raw.kind ? { winners: b.winners, winner: b.winner, at: b.at } : {};
-      return cleanBet(round, { ...b, ...keep, ...raw, id, winners: keep.winners, winner: keep.winner, at: keep.at });
+      return cleanBet(round, { ...raw, id, winners: keep.winners, winner: keep.winner, at: keep.at });
     }),
   };
 }

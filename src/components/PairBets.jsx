@@ -7,7 +7,7 @@ import { update } from '../lib/store.js';
 import { holeComplete } from '../lib/round.js';
 import {
   BET_KINDS, BET_LABEL_MAX, MAX_BETS, MAX_BET_STROKES, BET_MAX, addBet, betKindsFor, betLine, betMoneyText, betName, betPeople, betRange, betResult,
-  betStakeText, betStatusText, betsMoney, betsOf, betsToTap, changeBet, cleanBet, cleanBetLabel, ctpHoles, nextPos, removeBet, setBetWinner, suggestedStrokes,
+  betStakeText, betStatusText, betsMoney, betsOf, betsToTap, changeBet, cleanBet, cleanBetLabel, ctpHoles, nextPos, nineRange, removeBet, setBetWinner, suggestedStrokes,
 } from '../lib/pair-bets.js';
 import { buzz } from '../lib/delight.js';
 import { countsMoney, inUnits, noMoneyNote, padUnit, unitFmt } from '../lib/play-for.js';
@@ -52,9 +52,10 @@ export function BetEditor({ round, bet = null, fromPos = 1, onSave, onRemove = n
   const noOf = pos => round.holes[pos - 1]?.no ?? pos;
   const options = [{ ...range(1, n), label: 'Whole round' }];
   if (fromPos > 1 && fromPos <= n) options.push({ ...range(fromPos, n), label: `From hole ${noOf(fromPos)}` });
-  if (n === 18) {
-    if (fromPos <= 9) options.push({ ...range(1, 9), label: 'Front 9' });
-    options.push({ ...range(10, 18), label: 'Back 9' });
+  // Each nine by hole number (a round that starts on 10 plays the back nine first), once it's not all played
+  for (const [which, label] of [['front', 'Front 9'], ['back', 'Back 9']]) {
+    const r = n === 18 ? nineRange(round, which) : null;
+    if (r && r[1] >= fromPos && !options.some(o => o.value === `${r[0]}-${r[1]}`)) options.push({ ...range(r[0], r[1]), label });
   }
   const cur = `${holes[0]}-${holes[1]}`;
   if (!options.some(o => o.value === cur)) options.push({ ...range(holes[0], holes[1]), label: holes[0] === holes[1] ? `Hole ${noOf(holes[0])}` : `Holes ${noOf(holes[0])}–${noOf(holes[1])}` });

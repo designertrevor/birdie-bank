@@ -62,7 +62,10 @@ export function seasonBoard(state, year = new Date().getFullYear()) {
     }
     // Each game in the round counts on its own line: a side Skins adds to Skins, not to the main game
     const parts = res.detail?.byGame
-      ? Object.entries(res.detail.byGame).map(([key, v]) => ({ game: key === 'main' ? r.game : key, name: v.label, net: v.balances?.[me] || 0 }))
+      ? Object.entries(res.detail.byGame)
+        // Side bets between two players only count for a round you had one in
+        .filter(([key, v]) => key !== 'bets' || (v.detail?.bets || []).some(b => b.sides.includes(me)))
+        .map(([key, v]) => ({ game: key === 'main' ? r.game : key, name: v.label, net: v.balances?.[me] || 0 }))
       : [{ game: r.game, name: GAMES[r.game]?.name || r.game, net: mineNet }];
     for (const part of parts) {
       const g = games.get(part.name) || { game: part.game, name: part.name, net: 0, rounds: 0 };
