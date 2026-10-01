@@ -1665,3 +1665,7 @@ button.lately-row:active { background: var(--surface); }
 .rc-card > .rc-btn { margin-top: 14px; }
 .rc-btn:disabled { opacity: .5; transform: none; }
 .rc-done-icon { font-size: 34px; line-height: 1; color: var(--win); margin-bottom: 8px; }
+
+/* ---- Overnight 6, small fixes: scramble drives shortfall flag ---- */
+.drives-short { margin: 6px 20px 0; font-size: 12px; line-height: 1.4; color: var(--mute); display: flex; gap: 6px; align-items: baseline; }
+.drives-short .ph-golf { color: var(--coral-text); flex: none; }

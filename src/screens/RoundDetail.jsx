@@ -17,6 +17,7 @@ import { SignInSheet } from '../components/Account.jsx';
 import { HowWasIt, Reveal, RewardCard, SettleUp, ShareCard } from '../components/Finale.jsx';
 import { countsMoney, playForOf, unitFmt } from '../lib/play-for.js';
 import { SaveUsualButton } from '../components/Usuals.jsx';
+import { DrivesShortfall } from '../components/ScrambleDrives.jsx';
 
 // Where the finale was, so coming back from another screen (e.g. Suggest) doesn't replay the reveal.
 // Keyed by round and its finish time, so finishing the round again starts over.
@@ -315,6 +316,7 @@ function GameBreakdown({ round, res, label = null }) {
             <div className="leg-amt">{x.played ? fmt(x) : '–'}{x.left && x.played ? <div className="li-sub">Left after {x.played} hole{x.played === 1 ? '' : 's'}</div> : null}</div>
           </div>
         ))}
+        {round.game === 'scramble' && <DrivesShortfall round={round} done />}
       </>
     );
   }

@@ -19,7 +19,7 @@ import {
   BBBPicker, DotsRow, HammerPanel, MatchPanel, MoneyPanel, PointsPanel, RabbitPanel, ScramblePanel, SixesPanel, SnakePanel, SnakePicker, TotalsPanel, VegasPanel,
 } from '../components/GamePanels.jsx';
 import { GameOptions } from '../components/GameOptions.jsx';
-import { ScrambleDrivesPicker } from '../components/ScrambleDrives.jsx';
+import { DrivesShortfall, ScrambleDrivesPicker } from '../components/ScrambleDrives.jsx';
 import { drivesNeeded } from '../lib/scramble-drives.js';
 import { optionsProblem, roundStakeLines, sideBetLine, stakeSummary } from '../lib/stakes.js';
 import { buzz, confettiFrom } from '../lib/delight.js';
@@ -489,6 +489,7 @@ function PlayRound({ round }) {
       {(game === 'stroke' || game === 'stableford' || game === 'quota') && <TotalsPanel round={main} />}
       {(game === 'nines' || game === 'bbb' || game === 'dots') && <PointsPanel round={main} />}
       {game === 'scramble' && <ScramblePanel round={main} />}
+      {game === 'scramble' && <DrivesShortfall round={main} />}
       {game === 'aces' && <MoneyPanel round={main} results={results} icon="spade" label="Aces & deuces so far" />}
       {game === 'rabbit' && <RabbitPanel round={main} hole={hole} />}
       {game === 'snake' && <SnakePanel round={main} hole={hole} marks={marks} />}
