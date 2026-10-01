@@ -35,23 +35,19 @@ The plan for growing Birdie Bank into a $10k/mo business, and the checklist we w
 
 **Fixed 2026-09-30 (from Trevor):** planning a round now asks 9 or 18 holes on the When step, and the organizer can edit a plan's day, tee time, course or holes instead of deleting it and starting over.
 
-**Built overnight 2026-09-30 on `overnight4/next` (preview branch, not on main yet):** one friend is one person across their player ids (seat claims from the join link and "Same person as..." on a Player card); side game bets change mid-round from the Bets sheet; saved usuals fill in a planned round; the WHS handicap % hint on Strokes given; blind wolf and a Hogan dot; play for Points or a reward (lunch, a drink or your own); favorite and recently played courses; motion for the end-of-round reveal; and three fixes (the invite card's team name, every phone goes to Final results when the keeper finishes, and a rules page for each game in the round menu). All open to everyone, nothing labelled Pro. No new SQL.
-
-**Built 2026-09-29 on `overnight4/moments` (on top of `overnight4/next`, not on main yet):** big moments during a match, from Trevor's second full round: banners for a lead change, all square and dormie, and a full "Match over" screen when a match is won early.
-
-**From Trevor's Banker round (2026-09-30), on `feedback/sept30` on top of overnight 5:** handicaps are a choice on the Players step (off for a new setup) with a warning before anyone plays as scratch, a Handicaps sheet in the round menu that works every hole out again, $1 to $10 bet chips, and "On the line" at the top of the Banker screen. Next from the same round: teams, order and play for mid-round, then two-player side bets with their own strokes and a by-source breakdown in the settle-up.
-
 **Fixed 2026-09-30 (from Trevor):** "Schedule for later" now sits at the end of setup too (Bets step, Round ready, and End round before any holes are scored), carrying the game, course, bets, side games and players into a plan the group can open from the link.
-
-**Trevor's review of overnight 4 and 5 (2026-09-30, on `ship/trial`):** reward rounds leave anyone who left early out of buying and the reveal says "Ann wins lunch"; a bet changed mid-round stays with that round; blind wolf is off for a new setup and always one or two more than lone; points rounds read in points all through setup and on the Banker chips; "Handicap rules suggest 95%"; the bets card tightens on the reveal so every total lands on screen; the round's first lead gets a banner; Recently played skips rounds you only watched.
 
 **Fixed 2026-09-30 (from Trevor):** duplicate players (two Adams, two Daltons) can be merged from the player's edit screen, with Undo, and people from joined rounds can be edited.
 
-**Next in S2:** courses near you (area 6), real payments for the paywall test (Stripe, area 11), and the quick logo (area 16).
+**Shipped to main 2026-09-30 (overnights 4 and 5, Trevor's Banker round, and his review answers, `ea35f1a`):** one friend is one person (seat claims, "Same person as...", and merging duplicates from the edit screen all run on one linking system); side bets change mid-round; play for Money, Points or a reward (lunch, a drink, your own); usuals fill in planned rounds; the handicap % hint and a % for each game; half strokes; blind wolf (off by default, always more than lone) and a Hogan dot; house rules for every game but Quota; Canadian and validated skins; the first-tee rules card with "What we agreed"; big moments in every game; favorite courses and Courses near me; rivalry cards and "Your nemesis"; a backup file in Settings; handicaps as a choice that can change mid-round; Banker bet chips; and what's on the line kept at the top. The keeper lock SQL is run (2026-09-30), so only the scorekeeper's phone changes a live round. All open to everyone, nothing labelled Pro.
+
+**In progress elsewhere:** two-player side bets with player-to-player strokes and a settle-up breakdown by source (Trevor's Banker round, item 5), in another thread on top of main.
+
+**Next in S2:** the trip tab from Trevor's wireframe picks (a card on the Tab plus the trip's rounds grouped on Up next, trip money folded into each person's total, room left for trip formats), Ball buddies avatars (direction A), moments for Sixes, Banker and Hammer, real payments for the paywall test (Stripe, area 11), talks with the three head pros (area 23), and the quick logo once the name is picked (area 16).
 
 **The big date:** the creator test (S4) runs February to April 2027, when golf season starts back up. Everything before it is about being ready: a product groups keep using, a smooth path from video to paying, and an App Store app.
 
-Last updated: 2026-09-30 (overnight 4 and 5 shipped with the Banker round fixes)
+Last updated: 2026-09-30 (overnights 4 and 5 shipped, keeper lock run)
 
 ---
 
