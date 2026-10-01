@@ -1,7 +1,8 @@
 // Big moments during a round: a banner when a skin is won (bigger for a long carry), a lone or blind
-// wolf, a big Vegas swing, the money lead changing hands, a Match play or Nassau lead change, all
-// square, dormie or a nine won, and a full screen for a match won before the last hole. One per hole
-// at most. The maths is in lib/moments.js.
+// wolf, a big Vegas swing, a Sixes match won or swept, a Banker sweep or birdie double, a Hammer back
+// or fold, the money lead changing hands, a Match play or Nassau lead change, all square, dormie or a
+// nine won, and a full screen for a match won before the last hole. One per hole at most. The maths
+// is in lib/moments.js.
 import { useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { Icon } from './ui.jsx';
@@ -12,9 +13,17 @@ const ICON = {
   won: 'trophy', halved: 'handshake', change: 'arrows-left-right', dormie: 'lock-simple', square: 'scales', lead: 'arrow-circle-up',
   skin: 'coins', bigskin: 'coins', skinlost: 'arrow-u-up-left', lonewolf: 'paw-print', blindwolf: 'paw-print', wolfdown: 'paw-print', swing: 'dice-five',
   money: 'crown-simple', final: 'flag-checkered',
+  sixwon: 'arrows-clockwise', sixsweep: 'broom', sixtriple: 'medal', sixhalved: 'handshake',
+  banksweep: 'bank', bankbust: 'piggy-bank', bankbirdie: 'bird', bankbig: 'bank',
+  hammer: 'hammer', hammerback: 'hammer', fold: 'hand-palm',
 };
 // The ones that throw confetti and buzz twice; the rest get a single buzz and the pop
-const CHEER = new Set(['won', 'change', 'bigskin', 'lonewolf', 'blindwolf', 'swing', 'money', 'final']);
+const CHEER = new Set([
+  'won', 'change', 'bigskin', 'lonewolf', 'blindwolf', 'swing', 'money', 'final',
+  'sixwon', 'sixsweep', 'sixtriple', 'banksweep', 'bankbirdie', 'bankbig', 'hammer', 'hammerback',
+]);
+// The biggest ones stay up a second longer and throw more confetti
+const BIG = new Set(['bigskin', 'final', 'sixsweep', 'sixtriple', 'banksweep', 'hammerback']);
 const BANNER_MS = 3200;
 // Holes this phone has already shown a moment for ("roundId:pos"), so undoing and rescoring a hole,
 // or leaving the round and coming back, never shows it twice
@@ -54,9 +63,9 @@ function MomentBanner({ moment, onClose }) {
   useEffect(() => {
     // Confetti for a win or a lead change; the rest get a buzz and the pop
     const cheer = CHEER.has(moment.kind);
-    if (cheer) confettiFrom(ref.current?.querySelector('.mo-ic'), moment.kind === 'bigskin' ? 48 : 28);
+    if (cheer) confettiFrom(ref.current?.querySelector('.mo-ic'), BIG.has(moment.kind) && moment.kind !== 'final' ? 48 : 28);
     buzz(cheer ? [20, 40, 20] : 15);
-    const t = setTimeout(() => setOut(true), moment.kind === 'bigskin' || moment.kind === 'final' ? BANNER_MS + 1000 : BANNER_MS);
+    const t = setTimeout(() => setOut(true), BIG.has(moment.kind) ? BANNER_MS + 1000 : BANNER_MS);
     return () => clearTimeout(t);
   }, [moment]);
   // With reduced motion there's no exit animation to wait for, so it just goes

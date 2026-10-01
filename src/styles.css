@@ -1673,3 +1673,20 @@ button.lately-row:active { background: var(--surface); }
 /* ---- Overnight 6, small fixes: stroke key when a side game counts strokes differently ---- */
 .sc-stroke-key { display: flex; flex-direction: column; gap: 2px; padding: 6px 4px 0; font-size: 11px; line-height: 1.4; color: var(--mute); }
 .stroke-note { color: var(--mute); }
+
+/* MOMENTS FOR SIXES, BANKER AND HAMMER (overnight 6): a six won is mint, a sweep or three for three
+   gold with the big-skin bounce, a banker sweep gold, a birdie double peach, a hammer lavender, a
+   hammer back pink, a fold, a busted bank and a halved six quiet. Pastel cards keep dark text. */
+.moment-banner.k-sixwon { background: var(--mint); }
+.moment-banner.k-sixsweep, .moment-banner.k-sixtriple, .moment-banner.k-banksweep { background: var(--ochre); }
+.moment-banner.k-bankbirdie, .moment-banner.k-bankbig { background: var(--peach); }
+.moment-banner.k-hammer { background: var(--lav); }
+.moment-banner.k-hammerback { background: var(--pink-fill); color: #fff; }
+.moment-banner.k-hammerback .mo-ic { background: rgba(255,255,255,.2); }
+.moment-banner.k-fold, .moment-banner.k-bankbust, .moment-banner.k-sixhalved { background: var(--surface-strong); color: var(--ink); }
+.moment-banner.k-sixsweep .mo-ic, .moment-banner.k-sixtriple .mo-ic, .moment-banner.k-banksweep .mo-ic,
+.moment-banner.k-hammerback .mo-ic { width: 52px; height: 52px; font-size: 30px; animation: moIc .7s .15s var(--ease-bounce) both, moBump .5s 1s var(--ease-bounce) both; }
+.moment-banner.k-sixsweep .mo-title, .moment-banner.k-sixtriple .mo-title, .moment-banner.k-banksweep .mo-title,
+.moment-banner.k-hammerback .mo-title { font-size: 22px; }
+.moment-banner.k-hammer .mo-ic i, .moment-banner.k-hammerback .mo-ic i { animation: moSwing .6s .35s var(--ease-bounce) both; transform-origin: 70% 70%; }
+@keyframes moSwing { 0% { transform: rotate(0); } 40% { transform: rotate(-35deg); } 70% { transform: rotate(12deg); } 100% { transform: rotate(0); } }

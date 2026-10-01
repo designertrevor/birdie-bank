@@ -1,9 +1,10 @@
 // Big moments in a head-to-head match (Match play and Nassau): the lead changes, it's all square,
 // dormie, a nine is won, the match is won early. Pure: no DOM. Unit tested in moments.test.js.
 import { matchStatus, nassauBets } from './golf.js';
+import { sideSplit } from './games.js';
 import {
-  gameKeys, gameView, holeComplete, nassauAmounts, nassauWinners, roundLegs, roundResults, sideGamesOf, sideNames, sides,
-  skinsKinds, skinsTable, vegasTable, wolfHoleResult,
+  gameKeys, gameResults, gameView, hammerTable, holeComplete, nassauAmounts, nassauWinners, roundLegs, roundResults, settingsAt,
+  sideGamesOf, sideNames, sides, sixesMatches, skinsKinds, skinsTable, vegasTable, wolfHoleResult,
 } from './round.js';
 import { playForOf, rewardNoun, rewardOutcome, unitFmt } from './play-for.js';
 
@@ -80,9 +81,10 @@ function momentKind(winners, pos, l, before, after) {
 
 /** Most exciting first. A whole match won takes the full screen; everything else is a banner. */
 export const PRIORITY = {
-  won: 100, final: 95, bigskin: 90, blindwolf: 85, lonewolf: 80, swing: 75, wolfdown: 70,
+  won: 100, final: 95, sixtriple: 92, bigskin: 90, sixsweep: 88, blindwolf: 85, hammerback: 84, banksweep: 82, lonewolf: 80,
+  sixwon: 78, bankbust: 76, swing: 75, bankbirdie: 74, bankbig: 72, wolfdown: 70, fold: 68,
   // The match moments keep their own order (RANK above) among themselves
-  nine: 65, halved: 60, change: 55, dormie: 50, square: 45, money: 40, lead: 35, skinlost: 30, skin: 20,
+  nine: 65, hammer: 62, halved: 60, sixhalved: 58, change: 55, dormie: 50, square: 45, money: 40, lead: 35, skinlost: 30, skin: 20,
 };
 /** A carry this long (skins carried into the hole) makes the skin a bigger moment. */
 export const BIG_CARRY = 3;
@@ -270,6 +272,163 @@ export function matchRoundMoment(round, pos) {
   return m;
 }
 
+// ---------------------------------------------------------------------------
+// Sixes, Banker and Hammer (overnight 6). Each reads the money straight from gameResults() or the
+// game's own table, so a banner never shows an amount the Tab doesn't.
+
+/** A Banker hole that moves this many default bets for the banker is a big one. */
+export const BANKER_BIG = 4;
+/** The fewest bets on a Banker hole for a sweep (the banker beats them all) or a bust (loses to them all). */
+export const SWEEP_BETS = 3;
+const pairName = (round, ids) => ids.map(id => first(round.players.find(p => p.id === id)?.name)).join(' & ');
+const WORDS = ['', 'One', 'Two', 'Three', 'Four', 'Five', 'Six'];
+
+/**
+ * Sixes: one of the six-hole matches is won (with holes to spare, or swept without losing a hole), a
+ * player wins all three with three partners, or a match is halved (and its bet carries, with the house
+ * rule). Over 9 holes the matches are three holes each, so they read as "threes". With "every hole
+ * pays", a match only counts when its last hole is in. `heroes` is the winning pair.
+ */
+export function sixesMoment(round, pos) {
+  const main = gameView(round, 'main');
+  if (main.game !== 'sixes' || main.players.length !== 4) return null;
+  const matches = sixesMatches(main);
+  const i = matches.findIndex(m => pos >= m.seg.start && pos <= m.seg.end);
+  const m = matches[i];
+  if (!m || m.off || m.winners[pos] === undefined) return null;
+  const ms = settingsAt(main, m.seg.start).sixes;
+  const holesMode = ms.mode === 'holes';
+  const before = matchStatus({ ...m.winners, [pos]: undefined }, m.seg.start, m.seg.end);
+  const after = m.status;
+  // A match is decided once it can't be caught; with every hole paying, only when its last hole is in
+  if (holesMode ? after.left > 0 : before.done || !after.done) return null;
+  const len = m.seg.end - m.seg.start + 1;
+  const noun = len === 6 ? 'six' : WORDS[len]?.toLowerCase() || 'match';
+  const label = `${['first', 'middle', 'last'][i]} ${noun}`;
+  const holes = n => `${n} hole${n === 1 ? '' : 's'}`;
+  const fmt = fmtOf(round);
+  const detail = gameResults(main).detail.matches[i];
+  // Holes each side won in this match
+  const won = [0, 1].map(side => Object.values(m.winners).filter(w => w === side).length);
+  if (after.leader == null || (holesMode && !detail.net)) {
+    if (holesMode) return { kind: 'sixhalved', title: `The ${label} is split`, text: won[0] ? `${holes(won[0])} each, so nobody wins it` : 'Every hole halved, so nobody wins it' };
+    const next = matches[i + 1];
+    if (ms.carry && next && !next.off) {
+      return { kind: 'sixhalved', title: `The ${label} is halved`, text: `${fmt(ms.stake + (detail.carried || 0))} carries into the next ${noun}` };
+    }
+    return { kind: 'sixhalved', title: `The ${label} is halved`, text: 'All square at the end, so nobody wins it' };
+  }
+  const w = after.leader;
+  const heroes = m.sides[w];
+  const who = pairName(round, heroes);
+  const each = `${fmt(Math.abs(detail.net))} each`;
+  const lost = won[1 - w];
+  if (holesMode) {
+    // A sweep needs two holes or more, as in a match: one hole won and the rest halved is too thin
+    return lost === 0 && won[w] >= 2
+      ? { kind: 'sixsweep', heroes, title: `${who} sweep the ${label}`, text: `Won ${won[w]} holes and lost none: ${each}` }
+      : { kind: 'sixwon', heroes, title: `${who} take the ${label}`, text: `${holes(won[w])} to ${lost}: ${each}` };
+  }
+  // Three for three: one player won every match, each with a different partner
+  const triple = i === 2 && heroes.find(pid => matches.every(x => x.status.done && x.status.leader != null && x.sides[x.status.leader].includes(pid)));
+  if (triple) {
+    return { kind: 'sixtriple', heroes: [triple], hero: triple, title: `${first(round.players.find(p => p.id === triple)?.name)} goes 3 for 3`, text: `Won every match with every partner. ${each} on this one` };
+  }
+  const score = after.left > 0 ? `${after.by}&${after.left}` : `${after.by} up`;
+  const carry = detail.carried ? ` with the ${fmt(detail.carried)} carry` : '';
+  if (lost === 0 && after.by >= 2) {
+    return { kind: 'sixsweep', heroes, title: `${who} sweep the ${label}`, text: `${score} and ${pairName(round, m.sides[1 - w])} never won a hole: ${each}${carry}` };
+  }
+  const spare = after.left > 0 ? ` with ${after.left} to spare` : '';
+  return { kind: 'sixwon', heroes, title: `${who} win the ${label}${spare}`, text: `${score}: ${each}${carry}` };
+}
+
+/**
+ * Banker: the banker beats every bet on the hole (or loses every one), a birdie or eagle doubles a bet
+ * that lands, or the hole moves BANKER_BIG default bets or more for the banker, in that order. The
+ * amounts are the game's own results for the hole.
+ */
+export function bankerMoment(round, pos) {
+  const main = gameView(round, 'main');
+  const hole = round.holes[pos - 1];
+  if (main.game !== 'banker' || !hole) return null;
+  const h = gameResults(main).detail.holes.find(x => x.no === hole.no);
+  if (!h) return null;
+  const nameOf = id => first(round.players.find(p => p.id === id)?.name);
+  const fmt = fmtOf(round);
+  const bank = h.banker, bk = nameOf(bank);
+  const bets = h.matchups;
+  const take = h.deltas[bank] || 0;
+  const birdies = bets.filter(x => x.birdie > 1 && x.result !== 'push');
+  const bankBirdie = birdies.filter(x => x.result === 'loss');
+  // Beating (or losing to) everyone needs at least SWEEP_BETS bets: with two it happens too often to cheer
+  if (bets.length >= SWEEP_BETS && bets.every(x => x.result === 'loss')) {
+    const how = bankBirdie.length ? `, and a birdie doubles it: ${fmt(take)}` : `: ${fmt(take)}`;
+    return { kind: 'banksweep', hero: bank, title: `${bk} sweeps the table`, text: `Beat all ${bets.length} as banker${how}` };
+  }
+  if (bets.length >= SWEEP_BETS && bets.every(x => x.result === 'win')) {
+    return { kind: 'bankbust', hero: null, title: 'The table beats the bank', text: `All ${bets.length} beat ${bk}, who pays out ${fmt(-take)}` };
+  }
+  if (birdies.length) {
+    // The banker's own birdie doubles every bet it beats; else the biggest player birdie
+    const eagle = (bankBirdie.length ? bankBirdie : birdies).some(x => x.birdie >= 4);
+    const word = eagle ? 'eagle doubles it twice' : 'birdie doubles it';
+    const title = eagle ? 'Eagle double' : 'Birdie double';
+    if (bankBirdie.length) {
+      const amt = bankBirdie.reduce((a, x) => a + x.amount, 0);
+      const off = bankBirdie.length === 1 ? nameOf(bankBirdie[0].pid) : `${bankBirdie.length} players`;
+      return { kind: 'bankbirdie', hero: bank, title, text: `${bk}’s ${word}: ${fmt(amt)} off ${off}` };
+    }
+    const top = birdies.reduce((a, x) => (x.amount > a.amount ? x : a));
+    return { kind: 'bankbirdie', hero: top.pid, title, text: `${nameOf(top.pid)}’s ${word}: ${fmt(top.amount)} off ${bk}` };
+  }
+  const base = settingsAt(main, pos).banker?.defaultBet || 0;
+  if (!(base > 0) || Math.abs(take) < BANKER_BIG * base - EPS) return null;
+  const dbl = bets.some(x => x.mult > 1) ? ' with the doubles' : '';
+  return take > 0
+    ? { kind: 'bankbig', hero: bank, title: 'Big banker hole', text: `${bk} banks ${fmt(take)}${dbl}` }
+    : { kind: 'bankbig', hero: null, title: 'Big banker hole', text: `${bk} pays out ${fmt(-take)} as banker${dbl}` };
+}
+
+/**
+ * Hammer: a hammer back (two or more on one hole, played out), a fold (the hole goes at the value before
+ * the last hammer), or a single hammer taken and won. A halved hole with one hammer is quiet.
+ * Amounts are what each player on the winning side takes, with the uneven-sides split.
+ */
+export function hammerMoment(round, pos) {
+  const main = gameView(round, 'main');
+  if (main.game !== 'hammer') return null;
+  const row = hammerTable(main)[pos - 1];
+  const n = row?.hammers.length || 0;
+  if (!row || !n || row.winner === undefined) return null;
+  const sd = sides(main);
+  const team = !!main.teams;
+  const names = sideNames(main).map(x => (team ? x : first(x)));
+  const s = i => (team && sd[i].length > 1 ? '' : 's');
+  const heroOf = i => sd[i].slice().sort().join(',');
+  const fmt = fmtOf(round);
+  const amtFor = (i, value) => {
+    const [a, b] = sideSplit(value, sd[0].length, sd[1].length, i);
+    return `${fmt(Math.abs(i === 0 ? a : b))}${sd[i].length > 1 ? ' each' : ''}`;
+  };
+  if (row.conceded != null) {
+    const f = row.conceded, t = 1 - f;
+    return { kind: 'fold', hero: heroOf(t), title: `${names[f]} fold${s(f)}`, text: `${names[t]} take${s(t)} the hole for ${amtFor(t, row.value)}, half what it was playing for` };
+  }
+  const w = row.winner;
+  if (n >= 2) {
+    const title = n === 2 ? 'Hammer back' : `${WORDS[n] || n} hammers`;
+    const how = n === 2 ? `${names[row.hammers[0]]} hammered, ${names[row.hammers[1]]} hammered back` : 'Hammered back and forth';
+    const end = w == null ? 'and it’s halved' : `and ${names[w]} win${s(w)} it: ${amtFor(w, row.value)}`;
+    return { kind: 'hammerback', hero: w == null ? null : heroOf(w), boost: n >= 3 ? PRIORITY.sixsweep : 0, title, text: `${how}, ${end}` };
+  }
+  if (w == null) return null;
+  const thrower = row.hammers[0];
+  return w === thrower
+    ? { kind: 'hammer', hero: heroOf(w), title: 'The hammer lands', text: `${names[w]} hammered and win${s(w)} it: ${amtFor(w, row.value)}` }
+    : { kind: 'hammer', hero: heroOf(w), title: 'Hammer taken', text: `${names[w]} took the hammer and win${s(w)} it: ${amtFor(w, row.value)}` };
+}
+
 /** Every hole scored: who won the round, for when it doesn't finish on its own (a skipped hole filled in last). */
 export function finalMoment(round) {
   const res = roundResults(round);
@@ -288,13 +447,21 @@ export function finalMoment(round) {
  * Returns { kind, title, text, level, id, ... } (`level` 'big' only for a whole match won early).
  */
 export function roundMoment(round, pos) {
-  const found = [matchRoundMoment(round, pos), skinsMoment(round, pos), wolfMoment(round, pos), vegasMoment(round, pos)].filter(Boolean);
+  const found = [
+    matchRoundMoment(round, pos), skinsMoment(round, pos), wolfMoment(round, pos), vegasMoment(round, pos),
+    sixesMoment(round, pos), bankerMoment(round, pos), hammerMoment(round, pos),
+  ].filter(Boolean);
   let lead = moneyMoment(round, pos);
   const same = lead && found.find(m => m.hero && m.hero === lead.hero);
+  // A Sixes pair: one of the two takes the round's lead with the match ("$5 each. Ann takes the lead")
+  const pair = lead && !same && found.find(m => m.heroes?.includes(lead.hero));
   if (same) {
     // "$15, and the lead. Net par on 14 keeps it": what keeps a validated skin stays last
     const body = same.keep ? same.text.slice(0, -same.keep.length) : same.text;
-    Object.assign(same, { text: `${body}, and the lead${same.keep || ''}`, boost: PRIORITY.money });
+    Object.assign(same, { text: `${body}, and the lead${same.keep || ''}`, boost: Math.max(same.boost || 0, PRIORITY.money) });
+    lead = null;
+  } else if (pair) {
+    Object.assign(pair, { text: `${pair.text}. ${lead.title}`, boost: Math.max(pair.boost || 0, PRIORITY.money) });
     lead = null;
   }
   const top = pickMoment([...found, lead]);

@@ -1,8 +1,9 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { matchMoment, roundMoment, freshHole, firstShowing, pickMoment, finalMoment, donePositions, moneyMoment } from './moments.js';
-import { createRound } from './round.js';
+import { createRound, roundResults } from './round.js';
 import { nassauLegs } from './golf.js';
+import { oldRounds } from './overnight5-money.fixtures.js';
 
 const MATCH = { match: { start: 1, end: 18, label: 'Match' } };
 const NASSAU = nassauLegs(18);
@@ -314,4 +315,224 @@ test('validate skins: taking the money lead with the skin reads before what keep
   const m = roundMoment(r, 2);
   assert.equal(m.title, 'Bo wins the skin');
   assert.equal(m.text, '$2, and the lead. Net par on 3 keeps it');
+});
+
+// ---------------------------------------------------------------------------
+// Sixes, Banker and Hammer (overnight 6)
+
+const SIXES = { sixes: { stake: 5, mode: 'match' } };
+const BANKER = { banker: { defaultBet: 5, min: 1, max: 20, ties: 'push', rotation: 'rotate', birdies: 'off' } };
+const HAMMER = { hammer: { stake: 5, max: 3, who: 'either' } };
+// Sixes pairings: Ann & Bo v Cy & Di on 1 to 6, Ann & Cy v Bo & Di on 7 to 12, Ann & Di v Bo & Cy on 13 to 18
+const AB = { a: 3 }, CD = { c: 3 };
+
+test('Sixes: a match won with holes to spare, and one won on its last hole', () => {
+  // Ann & Bo win four of the first five, Cy & Di one: 3&1 on the 5th
+  const early = roundMoment(play(mk('sixes', { holes: 18, settings: SIXES }), [AB, AB, CD, AB, AB]), 5);
+  assert.equal(early.kind, 'sixwon');
+  assert.equal(early.title, 'Ann & Bo win the first six with 1 to spare');
+  assert.equal(early.text, '3&1: $5 each');
+  // Won on the 6th, 1 up
+  const late = roundMoment(play(mk('sixes', { holes: 18, settings: SIXES }), [AB, CD, AB, {}, {}, {}]), 6);
+  assert.equal(late.kind, 'sixwon');
+  assert.equal(late.title, 'Ann & Bo win the first six');
+  assert.equal(late.text, '1 up: $5 each');
+  // Once it's decided, the rest of the six is quiet
+  assert.equal(roundMoment(play(mk('sixes', { holes: 18, settings: SIXES }), [AB, AB, CD, AB, AB, AB]), 6), null);
+});
+
+test('Sixes: a sweep, a halved six, and the carry', () => {
+  const sweep = roundMoment(play(mk('sixes', { holes: 18, settings: SIXES }), [AB, AB, AB, AB]), 4);
+  assert.equal(sweep.kind, 'sixsweep');
+  assert.equal(sweep.title, 'Ann & Bo sweep the first six');
+  assert.equal(sweep.text, '4&2 and Cy & Di never won a hole: $5 each');
+  const halved = roundMoment(play(mk('sixes', { holes: 18, settings: SIXES }), [AB, CD, {}, {}, {}, {}]), 6);
+  assert.equal(halved.kind, 'sixhalved');
+  assert.equal(halved.text, 'All square at the end, so nobody wins it');
+  const carry = roundMoment(play(mk('sixes', { holes: 18, settings: { sixes: { stake: 5, mode: 'match', carry: true } } }), [AB, CD, {}, {}, {}, {}]), 6);
+  assert.equal(carry.text, '$5 carries into the next six');
+  // The next six is played for both bets, and the banner says so
+  const ac = { a: 3 };
+  const next = roundMoment(play(mk('sixes', { holes: 18, settings: { sixes: { stake: 5, mode: 'match', carry: true } } }), [AB, CD, {}, {}, {}, {}, ac, {}, {}, {}, {}, {}]), 12);
+  assert.equal(next.title, 'Ann & Cy win the middle six');
+  assert.equal(next.text, '1 up: $10 each with the $5 carry');
+});
+
+test('Sixes: three for three, nine-hole threes, every hole pays, and points', () => {
+  // Ann wins every match: 1 up in each, the third closed 2&1 on the 17th
+  const holes = [AB, {}, {}, {}, {}, {}, AB, {}, {}, {}, {}, {}, AB, AB, {}, {}, {}];
+  const t = roundMoment(play(mk('sixes', { holes: 18, settings: SIXES }), holes), 17);
+  assert.equal(t.kind, 'sixtriple');
+  assert.equal(t.title, 'Ann goes 3 for 3');
+  assert.equal(t.text, 'Won every match with every partner. $5 each on this one');
+  // Over 9 holes the matches are threes
+  const nine = roundMoment(play(mk('sixes', { settings: SIXES }), [AB, AB]), 2);
+  assert.equal(nine.title, 'Ann & Bo sweep the first three');
+  assert.equal(roundMoment(play(mk('sixes', { settings: SIXES }), [AB, CD, AB]), 3).title, 'Ann & Bo win the first three');
+  // Every hole pays: the match counts once its last hole is in
+  const hs = { sixes: { stake: 5, mode: 'holes' } };
+  const r = mk('sixes', { holes: 18, settings: hs });
+  assert.equal(roundMoment(play(r, [AB, AB, AB, AB]), 4), null); // 4 up isn't over: holes 5 and 6 still pay
+  const m = roundMoment(play(mk('sixes', { holes: 18, settings: hs }), [AB, AB, CD, AB, {}, {}]), 6);
+  assert.equal(m.title, 'Ann & Bo take the first six');
+  assert.equal(m.text, '3 holes to 1: $10 each');
+  const pts = roundMoment(play(mk('sixes', { holes: 18, settings: SIXES, playFor: { kind: 'points' } }), [AB, CD, AB, {}, {}, {}]), 6);
+  assert.equal(pts.text, '1 up: 5 pts each');
+  assert.doesNotMatch(pts.text, /\$/);
+});
+
+test('Sixes: the pair takes the round lead with the match on one banner', () => {
+  // Ann & Bo win the first six, so they're level at the top and nobody leads alone
+  const m = roundMoment(play(mk('sixes', { holes: 18, settings: SIXES }), [AB, CD, AB, {}, {}, {}]), 6);
+  assert.equal(m.text, '1 up: $5 each');
+  // Ann & Cy halve 7 to 11 and win the middle six on the 12th: Ann is up $10 alone, and the banner says so
+  const r = play(mk('sixes', { holes: 18, settings: SIXES }), [AB, CD, AB, {}, {}, {}, {}, {}, {}, {}, {}, { a: 3 }]);
+  const lead = roundMoment(r, 12);
+  assert.equal(lead.title, 'Ann & Cy win the middle six');
+  assert.equal(lead.text, '1 up: $5 each. Ann takes the lead');
+});
+
+/** A Banker round with the setup for each hole: { banker, bets, doubled }. */
+function banker(setups, scores, opts = {}) {
+  const r = mk('banker', { settings: { banker: { ...BANKER.banker, ...opts } }, ...(opts.playFor ? { playFor: opts.playFor } : {}) });
+  setups.forEach((s, i) => { r.banker[r.holes[i].no] = { doubled: {}, doubleBack: false, ...s }; });
+  return play(r, scores);
+}
+const bets = (v = 5) => ({ a: v, b: v, c: v, d: v });
+
+test('Banker: the banker sweeps the table, and the table beats the bank', () => {
+  const sw = roundMoment(banker([{ banker: 'a', bets: bets() }], [{ a: 3 }]), 1);
+  assert.equal(sw.kind, 'banksweep');
+  assert.equal(sw.title, 'Ann sweeps the table');
+  assert.equal(sw.text, 'Beat all 3 as banker: $15, and the lead');
+  const bust = roundMoment(banker([{ banker: 'a', bets: bets() }], [{ a: 5 }]), 1);
+  assert.equal(bust.kind, 'bankbust');
+  assert.equal(bust.title, 'The table beats the bank');
+  assert.equal(bust.text, 'All 3 beat Ann, who pays out $15');
+  // Beating two of three is an ordinary hole
+  const plain = roundMoment(banker([{ banker: 'a', bets: bets() }], [{ a: 4, b: 3, c: 5, d: 5 }]), 1);
+  assert.notEqual(plain?.kind, 'banksweep');
+  // With only two bets on the hole, beating both is too common to cheer
+  const three = mk('banker', { ids: 'abc', settings: BANKER });
+  three.banker[three.holes[0].no] = { banker: 'a', bets: { b: 5, c: 5 }, doubled: {}, doubleBack: false };
+  assert.equal(roundMoment(play(three, [{ a: 3 }]), 1).kind, 'money');
+});
+
+test('Banker: a birdie double, an eagle, and the banker’s own birdie', () => {
+  const opts = { birdies: 'gross' };
+  // Bo birdies against Ann the banker; Cy and Di push
+  const bo = roundMoment(banker([{ banker: 'a', bets: bets() }], [{ b: 3 }], opts), 1);
+  assert.equal(bo.kind, 'bankbirdie');
+  assert.equal(bo.title, 'Birdie double');
+  assert.equal(bo.text, 'Bo’s birdie doubles it: $10 off Ann, and the lead');
+  const eagle = roundMoment(banker([{ banker: 'a', bets: bets() }], [{ b: 2 }], opts), 1);
+  assert.equal(eagle.title, 'Eagle double');
+  assert.equal(eagle.text, 'Bo’s eagle doubles it twice: $20 off Ann, and the lead');
+  // Ann the banker birdies and beats two; Di's par halves
+  const bank = roundMoment(banker([{ banker: 'a', bets: bets() }], [{ a: 3, b: 5, c: 5, d: 3 }], opts), 1);
+  assert.equal(bank.text, 'Ann’s birdie doubles it: $20 off 2 players, and the lead');
+  // Birdies off: the same hole is no birdie moment
+  assert.notEqual(roundMoment(banker([{ banker: 'a', bets: bets() }], [{ b: 3 }]), 1)?.kind, 'bankbirdie');
+});
+
+test('Banker: a big hole, and in points', () => {
+  // Bo and Cy double their $10 bets; Bo wins, Cy loses, Di pushes: Ann nets 0, so no big hole
+  const even = roundMoment(banker([{ banker: 'a', bets: bets(10), doubled: { b: true, c: true } }], [{ b: 3, c: 5 }]), 1);
+  assert.notEqual(even?.kind, 'bankbig');
+  // Bo and Cy double $10 and both lose, Di pushes: Ann banks $40, 8 default bets
+  const big = roundMoment(banker([{ banker: 'a', bets: bets(10), doubled: { b: true, c: true } }], [{ b: 5, c: 5 }]), 1);
+  assert.equal(big.kind, 'bankbig');
+  assert.equal(big.text, 'Ann banks $40 with the doubles, and the lead');
+  const pts = roundMoment(banker([{ banker: 'a', bets: bets(10), doubled: { b: true, c: true } }], [{ b: 5, c: 5 }], { playFor: { kind: 'points' } }), 1);
+  assert.equal(pts.text, 'Ann banks 40 pts with the doubles, and the lead');
+});
+
+/** A Hammer round with marks for each hole: { hammers, conceded }. */
+function hammer(marks, scores, { teams = null, playFor = null } = {}) {
+  const r = mk('hammer', { ids: teams ? 'abcd' : 'ab', settings: HAMMER, teams, playFor });
+  marks.forEach((m, i) => { if (m) r.marks[r.holes[i].no] = { conceded: null, ...m }; });
+  return play(r, scores);
+}
+
+test('Hammer: a hammer that lands, one taken and beaten, and a halved one is quiet', () => {
+  const lands = roundMoment(hammer([{ hammers: [0] }], [{ a: 3 }]), 1);
+  assert.equal(lands.kind, 'hammer');
+  assert.equal(lands.title, 'The hammer lands');
+  assert.equal(lands.text, 'Ann hammered and wins it: $10, and the lead');
+  const taken = roundMoment(hammer([{ hammers: [0] }], [{ b: 3 }]), 1);
+  assert.equal(taken.title, 'Hammer taken');
+  assert.equal(taken.text, 'Bo took the hammer and wins it: $10, and the lead');
+  assert.equal(roundMoment(hammer([{ hammers: [0] }], [{}]), 1), null);
+  // No hammer: an ordinary hole (only the round's first lead)
+  assert.equal(roundMoment(hammer([null], [{ a: 3 }]), 1).kind, 'money');
+});
+
+test('Hammer: a hammer back, three hammers, and a fold', () => {
+  const back = roundMoment(hammer([{ hammers: [0, 1] }], [{ b: 3 }]), 1);
+  assert.equal(back.kind, 'hammerback');
+  assert.equal(back.title, 'Hammer back');
+  assert.equal(back.text, 'Ann hammered, Bo hammered back, and Bo wins it: $20, and the lead');
+  const halved = roundMoment(hammer([{ hammers: [0, 1] }], [{}]), 1);
+  assert.equal(halved.text, 'Ann hammered, Bo hammered back, and it’s halved');
+  const three = roundMoment(hammer([{ hammers: [0, 1, 0] }], [{ a: 3 }]), 1);
+  assert.equal(three.title, 'Three hammers');
+  assert.equal(three.text, 'Hammered back and forth, and Ann wins it: $40, and the lead');
+  // Bo hammers, Ann folds: Bo takes the hole at $5, whatever the scores say
+  const fold = roundMoment(hammer([{ hammers: [0, 1], conceded: 0 }], [{ a: 3 }]), 1);
+  assert.equal(fold.kind, 'fold');
+  assert.equal(fold.title, 'Ann folds');
+  assert.equal(fold.text, 'Bo takes the hole for $10, half what it was playing for, and the lead');
+});
+
+test('Hammer: teams read as plural and each, and points rounds read in points', () => {
+  const teams = [['a', 'b'], ['c', 'd']];
+  const m = roundMoment(hammer([{ hammers: [1] }], [{ c: 3 }], { teams }), 1);
+  assert.equal(m.text, 'Cy & Di hammered and win it: $10 each, and the lead');
+  const fold = roundMoment(hammer([{ hammers: [1], conceded: 0 }], [{}], { teams }), 1);
+  assert.equal(fold.title, 'Ann & Bo fold');
+  assert.equal(fold.text, 'Cy & Di take the hole for $5 each, half what it was playing for, and the lead');
+  const pts = roundMoment(hammer([{ hammers: [0] }], [{ a: 3 }], { playFor: { kind: 'points' } }), 1);
+  assert.equal(pts.text, 'Ann hammered and wins it: 10 pts, and the lead');
+});
+
+test('Sixes, Banker and Hammer moments never change the money', () => {
+  const r = banker([{ banker: 'a', bets: bets() }], [{ a: 3 }]);
+  const before = JSON.stringify(roundResults(r).balances);
+  roundMoment(r, 1);
+  assert.equal(JSON.stringify(roundResults(r).balances), before);
+  assert.deepEqual(roundResults(r).balances, { a: 15, b: -5, c: -5, d: -5 });
+});
+
+test('every hole of seeded Sixes, Banker and Hammer rounds makes at most one moment, and never throws', () => {
+  const rounds = oldRounds(160).map(x => x.round).filter(r => ['sixes', 'banker', 'hammer'].includes(r.game));
+  assert.ok(rounds.length > 10);
+  for (const r of rounds) {
+    for (const pos of donePositions(r)) {
+      const m = roundMoment(r, pos);
+      if (!m) continue;
+      assert.equal(typeof m.title, 'string');
+      assert.equal(typeof m.text, 'string');
+      assert.doesNotMatch(`${m.title} ${m.text}`, /undefined|NaN|null/);
+    }
+  }
+});
+
+test('Sixes, every hole pays: one hole reads as a hole, a split with no holes won says so, and one hole is no sweep', () => {
+  const hs = { sixes: { stake: 5, mode: 'holes' } };
+  const one = roundMoment(play(mk('sixes', { holes: 18, settings: hs }), [AB, {}, {}, {}, {}, {}]), 6);
+  assert.equal(one.kind, 'sixwon');
+  assert.equal(one.text, '1 hole to 0: $5 each');
+  const split = roundMoment(play(mk('sixes', { holes: 18, settings: hs }), [AB, CD, {}, {}, {}, {}]), 6);
+  assert.equal(split.text, '1 hole each, so nobody wins it');
+  const none = roundMoment(play(mk('sixes', { holes: 18, settings: hs }), [{}, {}, {}, {}, {}, {}]), 6);
+  assert.equal(none.text, 'Every hole halved, so nobody wins it');
+  const sweep = roundMoment(play(mk('sixes', { holes: 18, settings: hs }), [AB, AB, {}, {}, {}, {}]), 6);
+  assert.equal(sweep.kind, 'sixsweep');
+  assert.equal(sweep.text, 'Won 2 holes and lost none: $10 each');
+});
+
+test('Sixes over 9 holes: a halved three carries into the next three', () => {
+  const m = roundMoment(play(mk('sixes', { settings: { sixes: { stake: 5, mode: 'match', carry: true } } }), [AB, CD, {}]), 3);
+  assert.equal(m.title, 'The first three is halved');
+  assert.equal(m.text, '$5 carries into the next three');
 });
