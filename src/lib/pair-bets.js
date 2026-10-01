@@ -331,16 +331,35 @@ export function nextPos(round) {
 }
 
 /**
+ * Setup's side bets after a change to the holes played (`shape`: 9 or 18, which nine, the course,
+ * the first tee). Bets keep their holes by playing position, so a bet made for other holes goes back
+ * to the whole round rather than shrinking (a Back 9 bet on a round cut to 9 holes would be decided
+ * on hole 9 alone). Each bet carries the shape it was made for; one without a shape is left alone.
+ */
+export function fitSetupBets(list, shape) {
+  return (list || []).map(b => {
+    if (!Array.isArray(b?.holes) || b.shape == null || b.shape === shape) return b;
+    const { holes: _HOLES, ...rest } = b;
+    return { ...rest, shape };
+  });
+}
+
+/**
  * Strokes the two would give each other from the round's handicaps, as a starting point:
  * { to, count } (the higher handicap gets the difference), or null when either has no handicap or
- * they're the same.
+ * they're the same. The difference is at the round's handicap % and, for a bet on some of the
+ * holes (`bet`), only that share of it: a Back 9 bet gets about half.
  */
-export function suggestedStrokes(round, a, b) {
+export function suggestedStrokes(round, a, b, bet = null) {
   const pa = round.players.find(p => p.id === a), pb = round.players.find(p => p.id === b);
   if (!pa || !pb) return null;
   const known = p => p.index != null || p.courseHcOverride != null;
   if (!known(pa) || !known(pb)) return null;
-  const d = Math.round((pa.courseHc ?? 0) - (pb.courseHc ?? 0));
+  const n = round.holes?.length || 18;
+  const [f, t] = bet ? betRange(round, bet) : [1, n];
+  const share = (t - f + 1) / n;
+  const pct = (round.hcPct ?? 100) / 100;
+  const d = Math.round(((pa.courseHc ?? 0) - (pb.courseHc ?? 0)) * pct * share);
   if (!d) return null;
   return { to: d > 0 ? a : b, count: Math.min(MAX_BET_STROKES, Math.abs(d)) };
 }

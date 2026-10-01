@@ -7,7 +7,7 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { createRound, gameResults, livePreview, roundResults, BETS_LABEL } from './round.js';
 import {
-  addBet, betLine, betMoneyText, betResult, nextPos, betStatusText, betStrokes, betsMoney, betsOf, betsToTap, changeBet, cleanBet, ctpHoles, nineRange, removeBet, setBetWinner, suggestedStrokes,
+  addBet, betLine, betMoneyText, betResult, nextPos, betStatusText, betStrokes, betsMoney, betsOf, betsToTap, changeBet, cleanBet, ctpHoles, nineRange, removeBet, setBetWinner, suggestedStrokes, fitSetupBets,
 } from './pair-bets.js';
 import { breakdownLine, breakdownWith, pairBreakdown } from './where-from.js';
 import { oldRounds } from './overnight5-money.fixtures.js';
@@ -268,6 +268,15 @@ test('suggested strokes come from the two course handicaps', () => {
   assert.equal(suggestedStrokes(banker(), 'p', 'y'), null, 'no handicaps, no suggestion');
 });
 
+test('suggested strokes follow the bet’s holes and the round’s handicap %', () => {
+  const r = { ...banker({ hc: true, idx: { t: 5, p: 4, y: 16, z: 10 } }), holes: Array.from({ length: 18 }, (_, i) => ({ no: i + 1, par: 4, hdcp: i + 1 })) };
+  const p = r.players.find(x => x.id === 'p'), y = r.players.find(x => x.id === 'y');
+  p.courseHc = 4; y.courseHc = 16;
+  assert.equal(suggestedStrokes(r, 'p', 'y').count, 12, 'the whole round: the full difference');
+  assert.equal(suggestedStrokes(r, 'p', 'y', { holes: [10, 18] }).count, 6, 'a Back 9 bet: half of it, never 12 over nine holes');
+  assert.equal(suggestedStrokes({ ...r, hcPct: 80 }, 'p', 'y', { holes: [10, 18] }).count, 5, 'at the round’s 80%');
+});
+
 test('side bets ride in the live round record and come back the same', () => {
   let r = withBets(banker({ special: { 2: { p: 3 } } }), bet('match', ['p', 'y'], 10, { strokes: { to: 'y', count: 2 } }), bet('ctp', ['p', 'z'], 2));
   r = setBetWinner(r, 'ctp-pz', 3, 'z');
@@ -430,4 +439,15 @@ test('the season counts side bets as a game only in rounds you had a bet in', ()
   // Trevor won hole 2 off Tyler in round b: $5 in side bets, from the one round he had a bet in
   const sideNet = roundResults(mine).detail.byGame.bets.balances.t;
   assert.equal(sideNet, 5);
+});
+
+test('a setup bet on the Back 9 goes back to the whole round when the round is cut to 9 holes', () => {
+  const back = { id: 'b1', kind: 'match', sides: ['p', 'y'], stake: 10, holes: [10, 18], shape: '18|front|c1|' };
+  // Before: a 9-hole round clamps it to hole 9 alone
+  const nine = { holes: Array.from({ length: 9 }, (_, i) => ({ no: i + 1, par: 4, hdcp: i + 1 })) };
+  const [fit] = fitSetupBets([back], '9|front|c1|');
+  assert.equal(fit.holes, undefined, 'the whole round, never one hole');
+  assert.equal(cleanBet(nine, fit).holes, undefined);
+  // Same holes: the bet keeps its nine
+  assert.deepEqual(fitSetupBets([back], '18|front|c1|')[0].holes, [10, 18]);
 });

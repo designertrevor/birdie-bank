@@ -12,7 +12,7 @@ import RequestCourse from '../components/RequestCourse.jsx';
 import { GAMES, GAME_GROUPS, MAX_GAMES, SIDE_GAMES, createRound, effectiveCourseHc, holesInPlay, sideGamesOf } from '../lib/round.js';
 import { SideGamesSetup } from '../components/SideGames.jsx';
 import { PairBetsSetup } from '../components/PairBets.jsx';
-import { betsOf, cleanBet } from '../lib/pair-bets.js';
+import { betsOf, cleanBet, fitSetupBets } from '../lib/pair-bets.js';
 import { GameOptions, SixesPreview, TeamPicker } from '../components/GameOptions.jsx';
 import { optionsProblem, roundStakeLines, sideBetLine, stakeSummary } from '../lib/stakes.js';
 import { syncConfigured } from '../lib/sync.js';
@@ -142,6 +142,10 @@ export default function NewRound({ rematch, fromPlan, present, edit = null, ahea
   const [playFor, setPlayFor] = useState(() => pre?.playFor ?? null);
   // Two-player side bets (pair-bets.js): this round's only, so Run it back and usuals never bring them back
   const [pairBets, setPairBets] = useState([]);
+  // A change to the holes played puts a bet on some of the holes back on the whole round (fitSetupBets)
+  const betShape = `${holesCount}|${nine}|${courseId ?? ''}|${startHole ?? ''}`;
+  const setupBets = fitSetupBets(pairBets, betShape);
+  const editBets = fn => setPairBets(l => fn(fitSetupBets(l, betShape)).map(b => ({ ...b, shape: betShape })));
 
   const course = findCourse(state, courseId);
   // "Count it for the trip?": a trip on the round's day (or the trip it was started from). Yes by
@@ -262,7 +266,7 @@ export default function NewRound({ rematch, fromPlan, present, edit = null, ahea
     if (sides.length) round.sideGames = structuredClone(sides);
     if (playFor) round.playFor = structuredClone(playFor);
     // Side bets whose two players are both still in the round (setup's list can outlive a change of players)
-    const bets = betsOf({ ...round, bets: pairBets }).map(b => cleanBet(round, b));
+    const bets = betsOf({ ...round, bets: setupBets }).map(b => cleanBet(round, b));
     if (bets.length) round.bets = bets;
     // Counted for the trip: the stamp rides in the round to every phone in it (trips.js)
     if (tripPick) round.trip = tripStamp(tripPick);
@@ -382,7 +386,7 @@ export default function NewRound({ rematch, fromPlan, present, edit = null, ahea
         <SetupStep game={game} course={course} holesCount={holesCount} nine={nine} picked={picked} setPicked={setPicked}
           opts={opts} setOpts={setOpts} useHc={useHc} setUseHc={setUseHc} startHole={startHole} setStartHole={setStartHole} onStart={start} onLater={fromPlan ? null : () => later()}
           teams={teams} setTeams={setTeams} sideGames={sidesFor(game)} setSideGames={editSides} playFor={playFor} setPlayFor={setPlayFor}
-          tees={tees} hcOverride={hcOverride} defaultTee={defaultTee} pairBets={pairBets} setPairBets={setPairBets}
+          tees={tees} hcOverride={hcOverride} defaultTee={defaultTee} pairBets={setupBets} setPairBets={editBets}
           tripRow={tripRow} tripLink={tripLink} />
       )}
       {step === 4 && created && <ReadyStep round={created} onStart={() => nav.reset('upnext', ['play', { id: created.id }])} onLater={fromPlan || created.shared ? null : () => later(created.id)} />}

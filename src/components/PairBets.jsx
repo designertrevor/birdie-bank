@@ -45,7 +45,7 @@ export function BetEditor({ round, bet = null, fromPos = 1, onSave, onRemove = n
   const clean = ready ? cleanBet(round, draft) : null;
   const noPar3 = kind === 'ctp' && ready && !ctpHoles(round, clean).length;
   const noLabel = kind === 'custom' && !cleanBetLabel(label);
-  const suggest = ready && needsScores(kind) ? suggestedStrokes(round, sides[0], sides[1]) : null;
+  const suggest = ready && needsScores(kind) ? suggestedStrokes(round, sides[0], sides[1], clean) : null;
 
   // Holes: the whole round, from the next hole on (once holes are played), each nine, or what the bet already has
   const range = (f, t) => ({ value: `${f}-${t}`, f, t });
