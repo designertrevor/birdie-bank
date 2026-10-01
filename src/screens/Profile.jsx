@@ -12,7 +12,7 @@ import { formatIndex } from '../lib/format.js';
 import { PAY_APPS, PAY_APP_IDS, handleText, payInfo } from '../lib/pay.js';
 import { savePlayerCard } from '../lib/player-save.js';
 import { avatarLabel } from '../lib/avatars.js';
-import { setHomeCourse, setPrivacy, useMyProfile, useMyStats, useProfileServer } from '../lib/profiles.js';
+import { refreshProfiles, setHomeCourse, setPrivacy, useMyProfile, useMyStats, useProfileServer } from '../lib/profiles.js';
 import { PRIVACY_ROWS, privacySummary, profileSubline, sinceText, statTiles } from '../lib/profile-view.js';
 import { accountsEnabled, useAccount } from '../lib/cloud.js';
 
@@ -57,6 +57,9 @@ export default function Profile() {
   const dirty = trimmed !== card.name || (index ?? null) !== (card.index ?? null) || (payApp || null) !== (was?.app || null) || (payApp && handle.trim() !== (was ? handleText(was) : ''));
   const save = () => {
     update(s => savePlayerCard(s, card.id, { name: trimmed, index, payApp, handle }));
+    // Your name, handicap and payment app are on your account's profile too: send them now, not
+    // at the next five-minute check (quiet when signed out, offline or before the SQL is run)
+    refreshProfiles();
     showToast('Profile saved');
   };
   const pickHome = c => {

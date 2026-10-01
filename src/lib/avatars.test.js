@@ -8,7 +8,7 @@ import { payInfoFor } from './pay.js';
 import { normalizeAvatar } from './profile-model.js';
 import {
   BACKDROPS, BUDDIES, FALLBACK_TINTS, avatarFor, avatarLabel, avatarModel, buddyAvatar, initialsAvatar,
-  initialsOf, noTwins, personKey, shareableAvatar, stampAvatars, tintFor,
+  initialsOf, noTwins, personKey, photoAllowed, shareableAvatar, stampAvatars, tintFor,
 } from './avatars.js';
 
 const flat9 = { id: 'f9', name: 'Flat Nine', city: 'Town', tees: [], holes: Array.from({ length: 9 }, (_, i) => ({ par: 4, hdcp: i + 1 })) };
@@ -175,6 +175,36 @@ test('rounds: an old round with no avatars plays and pays exactly as before', ()
   stampAvatars(stateOf(), r);
   assert.deepEqual(roundResults(r).balances, before);
   assert.ok(r.players.every(p => !('avatar' in p)));
+});
+
+test('rounds: the avatar known now replaces one copied in with the player, and a lookup on the draft never goes stale', () => {
+  const s = stateOf({ profile: { avatar: buddyAvatar('crown') } });
+  // A setup copied from an older round brings the avatar Trevor had then, and a photo still on a phone
+  const old = createRound({ id: 'r10', game: 'skins', course: flat9, holesCount: 9, players: ['t', 'sam', 'ann'].map(id => ({ id, name: id, index: 0 })), settings: { hcPct: 100, skins: { value: 5, carryover: true } }, hcPct: 100, useHandicaps: false });
+  const was = { t: buddyAvatar('visor'), sam: PENDING, ann: buddyAvatar('beanie') };
+  for (const p of old.players) p.avatar = was[p.id];
+  const draft = structuredClone(s);
+  addRound(draft, old);
+  const r = draft.rounds.r10;
+  assert.deepEqual(r.players.find(p => p.id === 't').avatar, buddyAvatar('crown'), 'your avatar now, not the old one');
+  assert.equal('avatar' in r.players.find(p => p.id === 'sam'), false, 'a photo still on a phone never rides along');
+  assert.deepEqual(r.players.find(p => p.id === 'ann').avatar, buddyAvatar('beanie'), 'nothing newer known: the one she came with stays');
+  // The draft becomes the next state (store.js update): what the new round carries shows on it
+  assert.deepEqual(avatarFor(draft, 'ann'), buddyAvatar('beanie'));
+});
+
+test('photos: only a picture made on a phone or one in the app’s own photo bucket is ever drawn', () => {
+  const host = 'https://x.supabase.co';
+  assert.equal(photoAllowed(PHOTO.url, host), true);
+  assert.equal(photoAllowed(PHOTO.url, `${host}/`), true, 'a trailing slash on the project URL is fine');
+  assert.equal(photoAllowed(PENDING.url, host), true);
+  assert.equal(photoAllowed('https://tracker.example/pixel.jpg', host), false, 'a link to anywhere else is never fetched');
+  assert.equal(photoAllowed('https://x.supabase.co/storage/v1/object/public/other/1.jpg', host), false, 'only the avatars bucket');
+  assert.equal(photoAllowed('https://x.supabase.co.evil.example/storage/v1/object/public/avatars/1.jpg', host), false);
+  assert.equal(photoAllowed('http://x.supabase.co/storage/v1/object/public/avatars/1.jpg', host), false);
+  assert.equal(photoAllowed('data:text/html;base64,AAAA', host), false);
+  assert.equal(photoAllowed(null, host), false);
+  assert.equal(photoAllowed('https://anywhere.example/a.jpg'), true, 'no project set up (tests, local dev): any https link');
 });
 
 // ------------------------------- pay app from a profile ---------------------

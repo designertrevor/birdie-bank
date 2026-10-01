@@ -301,8 +301,12 @@ export default function JoinInvite({ code, onJoined, onSkip, setUp = false }) {
 
   // The invite card
   const names = meta.players.map(p => firstName(p.name));
-  // The host's own seat, when they're playing, so their avatar is the one they picked
-  const hostSeat = host ? meta.players.find(p => firstName(p.name) === host) : null;
+  // The host's own seat, when they're playing, so their avatar is the one they picked: the seat on
+  // the host phone (keeper-lock.js devs; none when the organizer isn't playing). A round shared
+  // before phones were tracked falls back to the seat with the host's first name
+  const hostSeat = meta.hostDev
+    ? meta.players.find(p => meta.devs?.[p.id] === meta.hostDev)
+    : host ? meta.players.find(p => firstName(p.name) === host) : null;
   return (
     <Screen className="onboard">
       <div className="scroll onboard-body join-body">

@@ -102,6 +102,20 @@ export function avatarLabel(avatar) {
   return 'Initials';
 }
 
+/**
+ * Whether a photo link may be drawn: a picture made on this phone (a data: link), or a photo in the
+ * app's own avatars bucket. A round or a profile row can carry any text, so a link to anywhere
+ * else (a tracking pixel, someone's server) shows as initials and is never fetched. `host` is the
+ * Supabase project URL; with none set (tests, local dev without keys) any https link is allowed.
+ */
+export function photoAllowed(url, host = null) {
+  if (typeof url !== 'string') return false;
+  if (/^data:image\/(jpeg|png|webp);base64,/.test(url)) return true;
+  if (!/^https:\/\//.test(url)) return false;
+  if (!host) return true;
+  return url.startsWith(`${String(host).replace(/\/+$/, '')}/storage/v1/object/public/avatars/`);
+}
+
 /** An avatar safe to put in a round other phones will read: no photo that only lives on this phone. */
 export function shareableAvatar(avatar) {
   const a = normalizeAvatar(avatar);
@@ -193,10 +207,14 @@ export function noTwins(models) {
  * avatars that can leave the phone; nothing else about a player changes.
  */
 export function stampAvatars(state, round) {
+  // Worked out fresh, never from the cache: `state` is usually a draft that becomes the next state
+  // once this round is in it, and a cache kept on it would miss the round
+  const L = state ? linksOf(state) : null;
   for (const p of round?.players || []) {
-    if (!p?.id || p.avatar) continue;
-    const a = shareableAvatar(avatarFor(state, p.id));
-    if (a) p.avatar = a;
+    if (!p?.id) continue;
+    // The avatar this phone knows now wins over one copied in with the player (an older round's)
+    const a = (L && shareableAvatar(findAvatar(state, L, p.id))) || shareableAvatar(p.avatar);
+    if (a) p.avatar = a; else delete p.avatar;
   }
   return round;
 }

@@ -3,16 +3,18 @@
 // pastel. Other people's come from their profile once their seat is linked to their account.
 import { useState } from 'react';
 import { useStore } from '../lib/store.js';
-import { avatarFor, avatarModel, backdropOf, personKey } from '../lib/avatars.js';
+import { avatarFor, avatarModel, backdropOf, personKey, photoAllowed } from '../lib/avatars.js';
+import { supabaseUrl } from '../lib/supabase.js';
 import { BuddyArt } from './BuddyArt.jsx';
 
 /** The circle for a model from avatarModel(). */
 export function AvatarArt({ model, size = '', base = 'avatar', className = '' }) {
   const [brokenUrl, setBrokenUrl] = useState(null);
-  const broken = model.kind === 'photo' && brokenUrl === model.url;
+  // A link from outside the app's own photo bucket is never fetched (see photoAllowed)
+  const broken = model.kind === 'photo' && (brokenUrl === model.url || !photoAllowed(model.url, supabaseUrl));
   const cls = `${base} ${size} ${className}`.trim();
   if (model.kind === 'photo' && !broken) {
-    return <span className={`${cls} av-photo`} aria-hidden="true"><img src={model.url} alt="" loading="lazy" decoding="async" onError={() => setBrokenUrl(model.url)} /></span>;
+    return <span className={`${cls} av-photo`} aria-hidden="true"><img src={model.url} alt="" loading="lazy" decoding="async" referrerPolicy="no-referrer" onError={() => setBrokenUrl(model.url)} /></span>;
   }
   if (model.kind === 'buddy') {
     return <span className={`${cls} av-buddy`} aria-hidden="true"><BuddyArt id={model.buddy} bg={model.bg} /></span>;

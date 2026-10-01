@@ -1702,6 +1702,8 @@ button.lately-row:active { background: var(--surface); }
 @media (prefers-color-scheme: dark) { :root:not([data-theme="light"]):not([data-theme="dark"]) { --av-ring: rgba(255,255,255,.14); } }
 .avatar.av-buddy, .avatar.av-photo, .join-avatar.av-buddy, .join-avatar.av-photo { overflow: hidden; padding: 0; }
 .avatar.av-buddy, .avatar.av-photo { box-shadow: 0 0 0 1.5px var(--av-ring); background: var(--surface); }
+/* Initials get the same ring, so the teal colour still has an edge on dark cards */
+.avatar.av-initials:not(.av-in-btn) { box-shadow: 0 0 0 1.5px var(--av-ring); }
 .av-buddy > svg, .av-photo > img { display: block; width: 100%; height: 100%; }
 .av-photo > img { object-fit: cover; }
 .avatar.sm { width: 30px; height: 30px; font-size: 14px; }

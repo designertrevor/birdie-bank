@@ -4,6 +4,8 @@ const URL_ = import.meta.env.VITE_SUPABASE_URL;
 const KEY_ = import.meta.env.VITE_SUPABASE_ANON_KEY;
 
 export const supabaseConfigured = !!(URL_ && KEY_);
+/** The project URL, for telling the app's own storage links apart (avatars.js photoAllowed). */
+export const supabaseUrl = supabaseConfigured ? URL_ : null;
 
 let clientPromise = null;
 /** Resolves to the client, or null when no Supabase keys are set (npm run dev without .env.local). */
