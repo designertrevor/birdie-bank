@@ -1646,3 +1646,11 @@ button.lately-row:active { background: var(--surface); }
 .rv-card.compact .rv-label { flex: none; font-size: 12px; }
 .rv-card.compact .rv-text { flex: 1; min-width: 0; font-size: 13px; }
 .rv-card.compact .rv-val { font-size: 14px; }
+
+/* ---------- Never force an update mid-round: the "Update ready" note on Up next (overnight 6) ---------- */
+/* Only shows with no round going on; one quiet line, not a banner */
+.update-note { display: flex; align-items: center; gap: 10px; width: calc(100% - 32px); min-height: 44px; margin: 8px 16px 0; padding: 10px 14px; border: none; border-radius: 14px; background: var(--surface); color: var(--ink); font: inherit; font-size: 14px; text-align: left; cursor: pointer; }
+.update-note:active { transform: scale(.98); }
+.update-note .ph-bold { color: var(--icon); font-size: 18px; flex-shrink: 0; }
+.update-note b { font-weight: 700; }
+.update-note .un-sub { color: var(--mute); }

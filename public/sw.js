@@ -5,6 +5,9 @@
 // - The app page: network first, but fall back to the saved copy after a few seconds, so
 //   one bar of signal on the course doesn't leave a blank screen.
 // - Everything else: cache first (built files are content hashed; fonts and icons are versioned).
+// - Updates: a new version installs in the background and then waits. It never takes over by
+//   itself, so a phone mid-round keeps the version it started on. The app sends 'apply-update'
+//   when no round is going on (src/lib/app-update.js), or it takes over once every tab is closed.
 // The build (vite.config.js) replaces the PRECACHE block below with the real file list.
 const PRECACHE = /* bb-precache */ { version: 'dev', app: ['/', '/manifest.webmanifest', '/icon.svg', '/apple-touch-icon.png'], external: [] } /* /bb-precache */;
 const APP = `birdie-bank-app-${PRECACHE.version}`;
@@ -41,8 +44,12 @@ self.addEventListener('install', e => {
     // Fonts and icons are nice to have: never fail the install over them
     const runtime = await caches.open(RUNTIME);
     await Promise.all(PRECACHE.external.map(href => runtime.match(href, { ignoreVary: true }).then(hit => hit || cacheStylesheet(runtime, href)).catch(() => {})));
-    await self.skipWaiting();
   })());
+});
+
+// The app says it's safe to swap (no round going on); it reloads once this worker takes over
+self.addEventListener('message', e => {
+  if (e.data?.type === 'apply-update') self.skipWaiting();
 });
 
 self.addEventListener('activate', e => {
