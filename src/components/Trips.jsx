@@ -12,7 +12,8 @@ import { nameOf } from '../lib/ledger.js';
 import { placeOf } from '../lib/format.js';
 import { dayLabel, isoDate, timeLabel } from '../lib/plans.js';
 import { canonicalOf } from '../lib/pair-debts.js';
-import { TRIP_FORMATS, myTripNet, tripChips, tripDates, tripStatus, upDown } from '../lib/trips.js';
+import { TRIP_FORMATS, myTripNet, startsLine, tripChips, tripDates, tripStatus, upDown } from '../lib/trips.js';
+import { countsMoney, playForOf } from '../lib/play-for.js';
 import { editTrip, makeTrip } from '../lib/trip-store.js';
 
 const first = name => String(name || '').trim().split(/\s+/)[0];
@@ -54,9 +55,10 @@ export function TripTabCard({ status: st }) {
   const state = useStore();
   const net = myTripNet(state, st);
   const n = st.plan.length;
-  const sub = st.phase === 'ready' ? `${n} payment${n === 1 ? '' : 's'} square${n === 1 ? 's' : ''} the trip · ${st.paid.length} paid so far`
+  const sub = st.phase === 'soon' ? startsLine(st.trip.start)
+    : st.pointsOnly ? `${roundsLine(st.done.length)}${st.phase === 'on' ? ' so far' : ''} · played for points`
+    : st.phase === 'ready' ? `${n} payment${n === 1 ? '' : 's'} square${n === 1 ? 's' : ''} the trip · ${st.paid.length} paid so far`
     : st.phase === 'square' ? `${roundsLine(st.done.length)} · settled`
-    : st.phase === 'soon' ? 'Starts ' + dayLabel(st.trip.start)
     : `${roundsLine(st.done.length)} so far · settle after the last round`;
   const played = st.standings.some(p => p.id === canonicalOf(state)(state.me));
   return (
@@ -97,9 +99,9 @@ export function TripUpNext({ status: st, renderPlan }) {
   const state = useStore();
   const line = st.money.length ? standingLine(state, st) : null;
   const next = st.planned[0];
-  const title = st.phase === 'soon' ? (st.trip.start === isoDate() ? 'Starts today' : `Starts ${dayLabel(st.trip.start)}`)
+  const title = st.phase === 'soon' ? startsLine(st.trip.start)
     : st.phase === 'ready' ? (line ? `That’s the trip. ${line.replace('You’re ', 'You finished ')}` : 'That’s the trip')
-    : st.phase === 'square' ? 'All square on the trip'
+    : st.phase === 'square' ? (st.pointsOnly ? 'That’s the trip' : 'All square on the trip')
     : line || `${roundsLine(st.done.length)} played`;
   return (
     <>
@@ -133,7 +135,7 @@ export function TripRoundNote({ round }) {
   const label = id => (id === me ? 'You' : first(nameOf(state, id)));
   const open = () => nav.push('trip', { id: st.trip.id });
   const last = (st.phase === 'ready' || st.phase === 'square') && st.done.at(-1)?.id === round.id;
-  if (last && st.money.length) {
+  if (last && st.money.length && countsMoney(round)) {
     return (
       <div className="trip-card wrap-up">
         <div className="eyebrow">That’s the trip</div>
@@ -162,8 +164,11 @@ export function TripRoundNote({ round }) {
       <div className="row-main">
         <div className="eyebrow">Counts for {st.trip.name}</div>
         <div className="trip-sub">
-          {played && st.money.length ? `${upDown(net)} on the trip. ` : ''}
-          {st.phase === 'ready' ? 'Settle the trip is open.' : st.phase === 'square' ? 'The trip is settled.' : 'Nothing’s paid until the trip is done, then it’s settled once.'}
+          {/* A points or reward round's results never show a dollar, even the trip's */}
+          {played && st.money.length && countsMoney(round) ? `${upDown(net)} on the trip. ` : ''}
+          {playForOf(round).kind === 'reward' ? 'Played for a reward, so it adds nothing to the trip’s money.'
+            : !countsMoney(round) ? (st.pointsOnly ? 'It’s in the trip’s points standings.' : 'Played for points, so it adds nothing to the trip’s money.')
+            : st.phase === 'ready' ? 'Settle the trip is open.' : st.phase === 'square' ? 'The trip is settled.' : 'Nothing’s paid until the trip is done, then it’s settled once.'}
         </div>
       </div>
       <span className="chevron"><Icon name="caret-right" /></span>

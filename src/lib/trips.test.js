@@ -8,10 +8,11 @@ import { sharedDebts } from './pair-debts.js';
 import { applyRows, roundRows, roundStatus } from './shared-tab.js';
 import { isTripPayment, settlingTrips, tripOfPayment, tripPaymentId } from './trip-pay.js';
 import {
-  countsByDefault, currentTrips, myTripNet, newTrip, partPlan, roundsInDates, tripByGame, tripDay, tripOnDay, tripPayRoute,
+  canRecount, countsByDefault, currentTrips, startsLine, tripPlanDay, myTripNet, newTrip, partPlan, roundsInDates, tripByGame, tripDay, tripOnDay, tripPayRoute,
   tripPeople, tripRounds, tripStamp, tripStatus, tripsOf, cleanTripName, tripChips, tripDates, upDown,
 } from './trips.js';
 import { applyDoc, toDocs } from './cloud-model.js';
+import { mergeBackup, replaceFromBackup } from './backup.js';
 
 const flat9 = { id: 'f9', name: 'Flat Nine', city: 'Town', tees: [], holes: Array.from({ length: 9 }, (_, i) => ({ par: 4, hdcp: i + 1 })) };
 /** Noon (local time) on a day in October 2026. */
@@ -148,6 +149,8 @@ test('points rounds on a trip never add a dollar; an all-points trip has points 
   assert.equal(sp.standings.length, 0);
   assert.ok(sp.points.t > 0);
   assert.equal(sp.plan.length, 0);
+  assert.equal(sp.pointsOnly, true, 'an all-points trip reads in points, with nothing to pay');
+  assert.equal(st.pointsOnly, false);
 });
 
 // ---------------------------------------------------------------------------
@@ -381,4 +384,49 @@ test('the words: dates, the days at a glance and where you stand', () => {
   assert.equal(upDown(12), 'You’re up $12');
   assert.equal(upDown(-5.5), 'You’re down $5.50');
   assert.equal(upDown(0), 'You’re even');
+});
+
+// ---------------------------------------------------------------------------
+// Review fixes
+
+test('which rounds count: a finished round shared live keeps the trip it was set up with, so every phone agrees', () => {
+  const [r1] = bandon();
+  const s = stateOf('t', [r1]);
+  assert.equal(canRecount(s, r1), true, 'a round only this phone has can go on or off');
+  const shared = { ...r1, shareCode: 'AAAAAA', shared: { code: 'AAAAAA', host: true } };
+  assert.equal(canRecount(s, shared), false, 'finished and shared: friends would never hear about the change');
+  // Being played live: only the phone keeping the card, whose copy goes to every phone
+  const live = { ...shared, status: 'active', keeper: { id: 't', since: 1 } };
+  assert.equal(canRecount(s, live), true);
+  const friend = { ...live, shared: { code: 'AAAAAA', host: false }, localMe: 's' };
+  assert.equal(canRecount(stateOf('s', [friend]), friend), false, 'a friend’s copy takes the keeper’s, so a change there would not stick');
+  // Sharing stopped on a round still being played: friends keep their copy
+  assert.equal(canRecount(s, { ...live, shared: { code: 'AAAAAA', host: true, ended: true } }), false);
+});
+
+test('a round planned from the trip’s page lands on a day of the trip', () => {
+  assert.equal(tripPlanDay(TRIP, '2026-10-01'), '2026-10-16', 'before the trip: its first day');
+  assert.equal(tripPlanDay(TRIP, '2026-10-17'), '2026-10-17', 'during it: today');
+  assert.equal(tripPlanDay(TRIP, '2026-10-20'), null, 'after it: the usual default');
+  assert.equal(tripPlanDay(null), null);
+});
+
+test('“Starts today”, never “Starts Today”', () => {
+  const now = new Date(2026, 9, 14, 9);
+  assert.equal(startsLine('2026-10-14', now), 'Starts today');
+  assert.equal(startsLine('2026-10-15', now), 'Starts tomorrow');
+  assert.equal(startsLine('2026-10-16', now), 'Starts Friday');
+  assert.equal(startsLine('2026-11-20', now), 'Starts Fri, Nov 20');
+});
+
+test('a backup brings trips back, whichever way it is restored', () => {
+  const data = { ...stateOf('t', bandon()), trips: { t_bandon: { ...TRIP, endedAt: OCT(18, 13) } } };
+  const fresh = { ...stateOf('t', []), trips: {}, settings: {}, favorites: [], starredCourses: [], unlinks: [] };
+  const { state: merged } = mergeBackup(fresh, data);
+  assert.equal(merged.trips.t_bandon.endedAt, OCT(18, 13), '“Done playing” comes back with the record');
+  // A trip already on the phone keeps this phone's copy
+  const { state: kept } = mergeBackup({ ...fresh, trips: { t_bandon: { ...TRIP, name: 'Mine' } } }, data);
+  assert.equal(kept.trips.t_bandon.name, 'Mine');
+  assert.equal(replaceFromBackup(fresh, data).trips.t_bandon.name, 'Bandon 2026');
+  assert.deepEqual(replaceFromBackup(fresh, { ...data, trips: undefined }).trips, {});
 });

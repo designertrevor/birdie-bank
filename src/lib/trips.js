@@ -16,8 +16,9 @@ import { countsMoney, playForOf } from './play-for.js';
 import { fewestPayments } from './ledger.js';
 import { FETCH_DAYS, canonicalOf, codeOf, finishedAt } from './pair-debts.js';
 import { tripOfPayment } from './trip-pay.js';
-import { daysUntil, isoDate } from './plans.js';
+import { dayLabel, daysUntil, isoDate } from './plans.js';
 import { meFor } from './format.js';
+import { canEdit, keeperMe } from './keeper.js';
 import { money } from './golf.js';
 
 const DAY = 864e5;
@@ -232,6 +233,8 @@ export function tripStatus(state, id, { now = Date.now() } = {}) {
   return {
     trip, phase, rounds, done, live, planned, money, people, standings, plan, paid,
     points: money.length ? null : pointsOf(state, rounds),
+    // Played only for points so far: nothing to pay, and never a dollar
+    pointsOnly: !money.length && pointsDone(rounds).length > 0,
     perRound: money.reduce((a, r) => a + roundResults(r).transfers.length, 0),
     lastDone, squareAt: phase === 'square' ? Math.max(lastPaid, lastDone) : null,
     ...tripDay(trip, today),
@@ -289,6 +292,35 @@ export function countsByDefault(state, tripId, playerIds = []) {
   const others = [...new Set(playerIds.map(who))].filter(id => id !== me);
   if (!people.size || !others.length) return true;
   return others.some(id => people.has(id));
+}
+
+/**
+ * Whether this phone can count a round for a trip, or take it off, and every phone in it agrees:
+ * a round only this phone has, or one being played live that this phone keeps the card for (the
+ * stamp rides in the live round). A finished round that was shared live keeps what it was set up
+ * with: friends' copies don't hear about a change any more, so their standings and the Tab's
+ * pair-by-pair money would stop matching this phone's.
+ */
+export function canRecount(state, round) {
+  if (!codeOf(round)) return true;
+  if (round.status !== 'active' || !round.shared || round.shared.ended) return false;
+  return canEdit(round, keeperMe(round, state), !!round.shared.host);
+}
+
+/**
+ * The day a round planned for the trip starts on: today while the trip is on, its first day
+ * before then, null once its dates are over.
+ */
+export function tripPlanDay(trip, today = isoDate()) {
+  if (!trip?.start) return null;
+  if (today < trip.start) return trip.start;
+  return !trip.end || today <= trip.end ? today : null;
+}
+
+/** "Starts today", "Starts tomorrow", "Starts Friday" or "Starts Fri, Oct 16". */
+export function startsLine(start, now = new Date()) {
+  const d = dayLabel(start, now);
+  return d ? `Starts ${d === 'Today' || d === 'Tomorrow' ? d.toLowerCase() : d}` : 'Coming up';
 }
 
 /**

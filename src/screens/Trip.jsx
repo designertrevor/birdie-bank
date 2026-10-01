@@ -19,7 +19,7 @@ import { points } from '../lib/play-for.js';
 import { whenLabel } from '../lib/plans.js';
 import { buzz } from '../lib/delight.js';
 import { markTripPayment, undoPayments, usePaymentsOff, useTabSync } from '../lib/tab-sync.js';
-import { TRIP_FORMATS, myTripNet, partPlan, roundsInDates, tripByGame, tripDates, tripStatus, upDown } from '../lib/trips.js';
+import { TRIP_FORMATS, canRecount, myTripNet, partPlan, roundsInDates, tripByGame, tripDates, tripRounds, tripStatus, upDown } from '../lib/trips.js';
 import { deleteTrip, endTrip, setRoundTrip } from '../lib/trip-store.js';
 
 const first = name => String(name || '').trim().split(/\s+/)[0];
@@ -52,6 +52,10 @@ export default function Trip({ id, view: firstView = 'standings' }) {
   const net = myTripNet(state, st);
   const myPoints = st.points?.[me] ?? null;
   const settling = st.paid.length > 0;
+  // A round shared live keeps the trip it was set up with on everyone's phone, so a trip with one
+  // can't be deleted here (friends' phones would keep it, and its payments would land on a trip
+  // this phone no longer has)
+  const deletable = !settling && !trip.derived && tripRounds(state, id).every(r => canRecount(state, r));
 
   const eyebrow = st.phase === 'soon' ? `Starts ${tripDates(trip)}`
     : st.phase === 'ready' ? 'That’s the trip'
@@ -60,7 +64,8 @@ export default function Trip({ id, view: firstView = 'standings' }) {
   const big = st.money.length && played ? upDown(net)
     : myPoints != null ? `You’re on ${points(myPoints, { sign: true })}`
     : st.phase === 'soon' ? 'Nothing played yet' : st.done.length ? 'No money on it yet' : 'Nothing played yet';
-  const hint = st.phase === 'ready' ? `${st.plan.length} payment${st.plan.length === 1 ? '' : 's'} square${st.plan.length === 1 ? 's' : ''} the whole trip. Trip money is already in each person’s total on the Tab, so this squares the Tab too.`
+  const hint = st.pointsOnly ? 'Played for points, so there’s nothing to pay. Everyone on the trip sees the standings.'
+    : st.phase === 'ready' ? `${st.plan.length} payment${st.plan.length === 1 ? '' : 's'} square${st.plan.length === 1 ? 's' : ''} the whole trip. Trip money is already in each person’s total on the Tab, so this squares the Tab too.`
     : st.phase === 'square' ? 'Everyone’s square on the trip.'
     : st.phase === 'soon' ? `Rounds you start from ${tripDates(trip)} ask to count for the trip. Plan them now so everyone can answer.`
     : 'Nothing’s paid yet. Settle the trip opens after the last round, once for the whole trip. Trip money is already in each person’s total on the Tab.';
@@ -115,7 +120,7 @@ export default function Trip({ id, view: firstView = 'standings' }) {
         {view === 'games' && <Games st={st} state={state} label={label} />}
 
         <p className="field-help pad">{TRIP_FORMATS[trip.format]?.name || TRIP_FORMATS.money.name}. Each round keeps its own games and bets. Someone who plays only some rounds is on the trip for those rounds.</p>
-        {!settling && !trip.derived && <button className="text-link danger" onClick={del}><Icon name="trash" /> Delete the trip</button>}
+        {deletable && <button className="text-link danger" onClick={del}><Icon name="trash" /> Delete the trip</button>}
       </div>
       <div className="cta-wrap">
         {st.phase === 'ready' && <button className="full-btn pink" onClick={() => nav.push('tripSettle', { id })}>Settle the trip <Icon name="arrow-right" /></button>}
@@ -237,17 +242,19 @@ function CountSheet({ open, onClose, st }) {
   const locked = st.paid.length > 0;
   return (
     <Sheet open={open} onClose={onClose} title="Which rounds count?">
-      <p className="field-help pad">Rounds from {tripDates(st.trip)} on this phone. A round on the trip goes in the standings and settles with the trip.{locked ? ' Payments have been made for the trip, so its rounds stay on it.' : ''}</p>
+      <p className="field-help pad">Rounds from {tripDates(st.trip)} on this phone. A round on the trip goes in the standings and settles with the trip. A finished round that was shared live stays as it was set up, so everyone’s phone agrees.{locked ? ' Payments have been made for the trip, so its rounds stay on it.' : ''}</p>
       {list.length === 0 && <p className="field-help pad">No rounds in these dates yet.</p>}
       {list.map(r => {
         const on = r.trip?.id === st.trip.id;
+        // A finished round shared live stays as it was set up, so every phone in it agrees
+        const fixed = !canRecount(state, r);
         return (
-          <button key={r.id} className="sheet-item" disabled={on && locked} aria-pressed={on} onClick={() => setRoundTrip(r.id, on ? null : st.trip)}>
+          <button key={r.id} className="sheet-item" disabled={(on && locked) || fixed} aria-pressed={on} onClick={() => setRoundTrip(r.id, on ? null : st.trip)}>
             <span>
               <Icon name={on ? 'check-square' : 'square'} fill={on} />
               <span className="trip-li">
                 <span className="trip-li-name">{r.course.name} · {gameLabel(r)}</span>
-                <span className="trip-li-sub">{new Date(r.createdAt).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })}{r.status === 'active' ? ' · being played' : ''}</span>
+                <span className="trip-li-sub">{new Date(r.createdAt).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })}{r.status === 'active' ? ' · being played' : ''}{fixed ? ` · shared live, so it stays ${on ? 'on' : 'off'} the trip` : ''}</span>
               </span>
             </span>
           </button>

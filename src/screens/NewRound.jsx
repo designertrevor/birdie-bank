@@ -32,7 +32,7 @@ import { SaveUsualButton, UsualsList } from '../components/Usuals.jsx';
 import PlayForPicker from '../components/PlayFor.jsx';
 import { countsMoney, inUnits, padUnit, playForLine, playForShort } from '../lib/play-for.js';
 import { CountForTrip, StartTripLink } from '../components/Trips.jsx';
-import { countsByDefault, tripOf, tripOnDay, tripStamp } from '../lib/trips.js';
+import { countsByDefault, tripOf, tripOnDay, tripPlanDay, tripStamp } from '../lib/trips.js';
 
 const STEPS = ['Game', 'Course', 'Players', 'Bets'];
 
@@ -98,7 +98,8 @@ export default function NewRound({ rematch, fromPlan, present, edit = null, ahea
   // A round already set up that the plan takes the place of
   const [replaces, setReplaces] = useState(reschedule && pre ? reschedule : null);
   const planning = mode === 'plan';
-  const [date, setDate] = useState(() => editing?.date || nextSaturday());
+  // Planned from a trip's page: a day of the trip, not next Saturday
+  const [date, setDate] = useState(() => editing?.date || (tripId && tripPlanDay(tripOf(getState(), tripId))) || nextSaturday());
   const [teeTime, setTeeTime] = useState(editing?.teeTime || '');
   const [invited, setInvited] = useState(() => (reschedule && pre ? pre.picked.filter(pid => pid !== getState().me) : []));
   const [step, showStep] = useState(pre?.step ?? (ahead && GAMES[preGame] ? 1 : 0));

@@ -11,7 +11,8 @@ export const BACKUP_FORMAT = 'birdie-bank-backup';
 export const BACKUP_VERSION = 1;
 
 // Collections kept as { id: thing }
-const MAPS = ['players', 'crews', 'customCourses', 'rounds', 'plans', 'tabRows', 'links', 'rewardsDone'];
+// Golf trips too (trips.js): their rounds carry the trip, the record keeps its dates and "done playing"
+const MAPS = ['players', 'crews', 'customCourses', 'rounds', 'plans', 'tabRows', 'links', 'rewardsDone', 'trips'];
 // Collections kept as [thing with an id]
 const LISTS = ['settlements', 'carries', 'usuals'];
 
