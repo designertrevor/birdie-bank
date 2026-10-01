@@ -101,3 +101,21 @@ test('starred courses ride in the profile, and an older profile keeps the phone 
   applyDoc(other, 'profile', 'me', { ...doc, starredCourses: [] });
   assert.deepEqual(other.starredCourses, []);
 });
+
+test('recently played skips rounds you only watched', () => {
+  const players = ids => ids.map(id => ({ id, name: id }));
+  const s = state({
+    me: 'me',
+    rounds: {
+      // Watched on this phone: your seat isn't in it
+      w: { ...round('w', 'preston', 1), players: players(['ann', 'bo']) },
+      // Played, and joined from a link as Cy (the seat this phone took)
+      p: { ...round('p', 'logan-river', 2), players: players(['me', 'ann']) },
+      j: { ...round('j', 'birch-creek', 3), players: players(['cy', 'ann']), localMe: 'cy' },
+    },
+  });
+  const sec = coursePickerSections(s, '');
+  assert.deepEqual(ids(sec.recent), ['logan-river', 'birch-creek']);
+  assert.equal(sec.recentLabel, 'Recently played');
+  assert.ok(ids(sec.all).includes('preston'));
+});

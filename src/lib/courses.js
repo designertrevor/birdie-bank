@@ -73,7 +73,7 @@ const RECENT_MAX = 5;
 /**
  * What the course picker shows. With no search: { starred, recent, all, hint }, where recent is
  * the courses from your latest rounds (finished or in progress, newest first, at most 5, starred
- * ones left out), topped up from courses you picked but haven't played yet (state.favorites, e.g.
+ * ones left out, and never a round you only watched), topped up from courses you picked but haven't played yet (state.favorites, e.g.
  * a round you only planned). recentLabel is "Recently played", or "Recent" once such a course
  * is in the list. all is every other course. hint: nothing starred yet and enough
  * courses that a star helps. With a search, only all is filled, with the matches.
@@ -94,8 +94,13 @@ export function coursePickerSections(state, needle = '') {
     taken.add(c.id);
     recent.push(c);
   };
+  // A round you only watched (your seat isn't in it) isn't a course you played
+  const watched = r => {
+    const me = r.localMe ?? state.me;
+    return me != null && Array.isArray(r.players) && !r.players.some(p => p.id === me);
+  };
   Object.values(state.rounds || {})
-    .filter(r => r.status === 'done' || r.status === 'active')
+    .filter(r => (r.status === 'done' || r.status === 'active') && !watched(r))
     .sort((a, b) => (b.finishedAt || b.createdAt || 0) - (a.finishedAt || a.createdAt || 0))
     .forEach(r => add(r.course?.id ?? r.courseId));
   const played = recent.length;
