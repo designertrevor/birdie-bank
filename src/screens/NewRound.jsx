@@ -104,7 +104,9 @@ export default function NewRound({ rematch, fromPlan, present, edit = null, ahea
   const [tees, setTees] = useState(pre?.tees ?? {});          // pid -> tee name
   const [hcOverride, setHcOverride] = useState(pre?.hcOverride ?? {}); // pid -> number
   const [opts, setOpts] = useState(() => withBets(structuredClone(state.settings), pre));
-  const [useHc, setUseHc] = useState(pre?.useHc ?? true);
+  // Off for a brand new setup: a missing handicap must never quietly play as scratch. Run it back,
+  // a usual or a plan keeps the group's own choice
+  const [useHc, setUseHc] = useState(pre?.useHc ?? false);
   const [startHole, setStartHole] = useState(null);
   const [teams, setTeams] = useState(pre?.teams ?? null); // arrays of player ids, for team games
   // Side games on top of the main game: [{ game, settings }] (start-now setup only, not plans)
@@ -171,7 +173,7 @@ export default function NewRound({ rematch, fromPlan, present, edit = null, ahea
     const plan = newPlan({
       id, hostName: me?.name || 'Me', game, holesCount, nine, date, teeTime, course,
       people: invited.filter(pid => pid !== s.me).map(pid => s.players[pid]).filter(Boolean),
-      ballot: { games: ballotGames, bets: ballotBets, sides: ballotSides }, suggestedBet, settings: opts, useHc: usualId ? useHc : true, playFor,
+      ballot: { games: ballotGames, bets: ballotBets, sides: ballotSides }, suggestedBet, settings: opts, useHc: usualId ? useHc : false, playFor,
       // From a saved usual: its handicap percentage, and which usual (for "Last played")
       ...(usualId ? { usualId, hcPct: opts.hcPct } : {}),
     });
@@ -199,8 +201,21 @@ export default function NewRound({ rematch, fromPlan, present, edit = null, ahea
   };
 
   // A round already in progress is never touched: it stays saved and you can switch back to it
-  const start = () => {
+  const start = async () => {
     const s = getState();
+    const noHc = useHc && game !== 'bbb' ? orderedPicked.filter(pid => s.players[pid]?.index == null && hcOverride[pid] == null) : [];
+    if (noHc.length) {
+      const names = noHc.map(pid => s.players[pid]?.name || '?');
+      const all = noHc.length === orderedPicked.length;
+      const ok = await ask({
+        title: all ? 'Nobody has a handicap' : `${listNames(names)} ${noHc.length === 1 ? 'has' : 'have'} no handicap`,
+        text: all ? 'Everyone plays as scratch (0), so nobody gets strokes. Add handicaps, or play without them.'
+          : `They’d play as scratch (0), so everyone else gets strokes from them. Add ${noHc.length === 1 ? 'a handicap' : 'handicaps'}?`,
+        confirmLabel: all ? 'Play without handicaps' : 'Play them as scratch', cancelLabel: 'Add handicaps',
+      });
+      if (!ok) return setStep(2);
+      if (all) setUseHc(false);
+    }
     const id = uid('r_');
     const players = orderedPicked.map(pid => ({ ...s.players[pid], tee: tees[pid] || defaultTee, courseHcOverride: hcOverride[pid] }));
     // Share-image choice is a personal setting, not part of a round's bets
@@ -208,7 +223,7 @@ export default function NewRound({ rematch, fromPlan, present, edit = null, ahea
     const { shareAmounts: _personal, halfStrokes: _half, ...settings } = structuredClone(opts);
     const sides = sidesFor(game);
     const halfStrokes = !!opts.halfStrokes && halfStrokesOffered(game, sides);
-    const round = createRound({ id, game, course, holesCount, nine, startHole, players, settings, hcPct: opts.hcPct, useHandicaps: useHc, teams: GAMES[game].teams ? teams : null, halfStrokes });
+    const round = createRound({ id, game, course, holesCount, nine, startHole, players, settings, hcPct: opts.hcPct, useHandicaps: useHc && !(noHc.length && noHc.length === orderedPicked.length), teams: GAMES[game].teams ? teams : null, halfStrokes });
     if (sides.length) round.sideGames = structuredClone(sides);
     if (playFor) round.playFor = structuredClone(playFor);
     // Started from a saved usual (still the same game at the same course): finishing it updates "Last played"
@@ -310,7 +325,7 @@ export default function NewRound({ rematch, fromPlan, present, edit = null, ahea
       {step === 2 && !planning && course && (
         <PlayersStep game={g} course={course} holesCount={holesCount} nine={nine} picked={picked} setPicked={setPicked}
           tees={tees} setTees={setTees} hcOverride={hcOverride} setHcOverride={setHcOverride}
-          onNext={toBets} />
+          useHc={useHc} setUseHc={setUseHc} noHandicaps={game === 'bbb'} onNext={toBets} />
       )}
       {step === 3 && !planning && course && (
         <SetupStep game={game} course={course} holesCount={holesCount} nine={nine} picked={picked} setPicked={setPicked}
@@ -491,7 +506,7 @@ function CourseStep({ courseId, setCourseId, holesCount, nine, setNine, onNext, 
 
 // ---------------------------------------------------------------------------
 
-function PlayersStep({ game, course, holesCount, nine, picked, setPicked, tees, setTees, hcOverride, setHcOverride, onNext }) {
+function PlayersStep({ game, course, holesCount, nine, picked, setPicked, tees, setTees, hcOverride, setHcOverride, useHc, setUseHc, noHandicaps = false, onNext }) {
   const state = useStore();
   const { showToast } = useUI();
   const players = sortedPlayers(state);
@@ -517,11 +532,13 @@ function PlayersStep({ game, course, holesCount, nine, picked, setPicked, tees, 
     ? `Add ${game.min - count} more player${game.min - count === 1 ? '' : 's'}`
     : count > game.max ? `Remove ${count - game.max} player${count - game.max === 1 ? '' : 's'}` : null;
 
-  const courseHc = pid => {
+  const showHc = useHc && !noHandicaps;
+  const noHc = showHc ? picked.filter(pid => courseHc(pid).source === 'none') : [];
+  function courseHc(pid) {
     const p = state.players[pid];
     const tee = course.tees?.find(t => t.name === (tees[pid] || firstTee(course)?.name));
     return effectiveCourseHc(p.index, tee, course, holes, holesCount, hcOverride[pid]);
-  };
+  }
 
   return (
     <>
@@ -534,12 +551,20 @@ function PlayersStep({ game, course, holesCount, nine, picked, setPicked, tees, 
             </div>
           </>
         )}
+        {!noHandicaps && (
+          <div className="block hc-choice">
+            <div className="eyebrow" id="hc-q" style={{ marginBottom: 10 }}>Play with handicaps?</div>
+            <Segmented label="Play with handicaps" value={useHc ? 'on' : 'off'} onChange={v => setUseHc(v === 'on')}
+              options={[{ value: 'off', label: 'No, play even' }, { value: 'on', label: 'Yes' }]} />
+            <p className="field-help">{useHc ? 'Better players give strokes on the hardest holes. Check each handicap below.' : 'Everyone plays straight up, no strokes.'}</p>
+          </div>
+        )}
         <div className="sec-label">Players · {count} picked ({game.min === game.max ? game.min : `${game.min}–${game.max}`})</div>
         <div style={{ padding: '0 16px' }}>
           {players.map(p => {
             const on = picked.includes(p.id);
             const hc = on ? courseHc(p.id) : null;
-            const hcNote = hc && { set: ' · edited', index: ' · from index', none: ' · none', whs: '' }[hc.source];
+            const hcNote = hc && { set: ' · edited', index: ' · from index', none: ' · none, plays as 0', whs: '' }[hc.source];
             return (
               <div key={p.id} className={`list-item pick player-pick ${on ? 'on' : ''}`}>
                 <button className="pick-main" onClick={() => toggle(p.id)} aria-pressed={on}>
@@ -563,9 +588,9 @@ function PlayersStep({ game, course, holesCount, nine, picked, setPicked, tees, 
                         })}
                       </div>
                     )}
-                    <button className="hc-chip" onClick={() => setHcFor(p.id)}>
+                    {showHc && <button className={`hc-chip ${hc.source === 'none' ? 'missing' : ''}`} onClick={() => setHcFor(p.id)}>
                       {holesCount === 9 ? '9-hole handicap' : 'Course handicap'} <strong>{hc.value < 0 ? `+${-hc.value}` : hc.value}</strong>{hcNote} <Icon name="pencil-simple" />
-                    </button>
+                    </button>}
                   </div>
                 )}
               </div>
@@ -573,8 +598,10 @@ function PlayersStep({ game, course, holesCount, nine, picked, setPicked, tees, 
           })}
         </div>
         <button className="add-row" aria-label="Add a player" onClick={() => setAdding(true)}><span className="add-ci" aria-hidden="true"><Icon name="plus" /></span><span className="add-lbl">Add a player</span></button>
-        {picked.some(pid => state.players[pid]?.index == null) && (
-          <p className="hint-card"><Icon name="info" fill /> Players with no handicap get no strokes. Tap their handicap to set one.</p>
+        {noHc.length > 0 && (
+          <p className="hint-card warn"><Icon name="warning" fill /> {noHc.length === picked.length
+            ? 'Nobody has a handicap yet, so nobody gets strokes. Tap a course handicap to set it.'
+            : `${listNames(noHc.map(pid => state.players[pid]?.name || '?'))} ${noHc.length === 1 ? 'has' : 'have'} no handicap, so they play as scratch (0) and everyone else gets strokes from them. Tap a course handicap to set it.`}</p>
         )}
       </div>
       <div className="cta-wrap">

@@ -841,6 +841,48 @@ export function fixTee(round, course, teeName, { rating, slope } = {}, { at = Da
 }
 
 /**
+ * Change handicaps on a round under way: on or off, the Strokes given % (the round's and each side
+ * game's, `sidePcts`: { key: pct | null }), half strokes, and each player's tee or course handicap
+ * (`players`: { pid: { tee?, courseHc? } }, where a courseHc of null goes back to the one worked out
+ * from their index). Every hole, the ones already played included, is worked out again with the new
+ * strokes. `course` is this phone's copy of the course (null when it isn't saved here: a tee change
+ * then keeps the handicap as it was). Returns a new round; `round` is not mutated.
+ */
+export function changeHandicaps(round, course, { useHandicaps = round.useHandicaps !== false, hcPct = round.hcPct, halfStrokes = !!round.halfStrokes, sidePcts = {}, players: edits = {} } = {}) {
+  const out = { ...round, useHandicaps, hcPct };
+  if (halfStrokes && useHandicaps) out.halfStrokes = true; else delete out.halfStrokes;
+  if (Array.isArray(round.sideGames) && Object.keys(sidePcts).length) {
+    out.sideGames = round.sideGames.map(sg => {
+      if (!sg || !(sg.game in sidePcts)) return sg;
+      const { hcPct: _own, ...rest } = sg;
+      return sidePcts[sg.game] == null ? rest : { ...rest, hcPct: sidePcts[sg.game] };
+    });
+  }
+  const hcCourse = teeFixedCourse(course, round);
+  const hcHoles = parFree(round, round.holes);
+  const players = round.players.map(p => {
+    const e = edits[p.id];
+    if (!e) return p;
+    const tee = e.tee !== undefined ? e.tee : p.tee;
+    const override = 'courseHc' in e ? e.courseHc : p.courseHcOverride ?? null;
+    let courseHc = override ?? p.courseHc;
+    if (override == null && hcCourse) {
+      const t = hcCourse.tees?.find(x => x.name === tee) || null;
+      courseHc = effectiveCourseHc(p.index, t, hcCourse, hcHoles, round.holesCount, null).value;
+    }
+    return { ...p, tee, courseHcOverride: override ?? null, courseHc };
+  });
+  out.players = withPlays(out, players);
+  if (round.teams) out.teams = withTeamHandicaps(out, round.teams, out.players, useHandicaps, hcPct);
+  return out;
+}
+
+/** Players in a round with no handicap at all (no index, none set by hand), who play off 0. */
+export function noHandicap(round) {
+  return round.players.filter(p => p.index == null && p.courseHcOverride == null);
+}
+
+/**
  * Where strokes differ between two versions of a round, hole by hole:
  * [{ id, name, holeNo, from, to }] for every player (or scramble team) and every hole.
  */
@@ -933,6 +975,18 @@ export function lowBanker(round, idx, ids, prevBanker = null) {
   return tied[0];
 }
 
+// Amounts groups actually bet, smallest first. Four of them show as chips (the game's default bet is
+// always one), the way tip and donation screens offer three or four amounts and "Other"
+const BET_LADDER = [1, 2, 5, 10, 15, 20, 25, 50, 100];
+/** The four Banker bet chips inside the game's min and max, the default bet always among them. */
+export function betPresets(min = 1, max = 20, def = null) {
+  const lo = min || 1, hi = max || Infinity;
+  let picks = BET_LADDER.filter(v => v >= lo && v <= hi).slice(0, 4);
+  if (!picks.length) picks = [lo];
+  if (def != null && def >= lo && def <= hi && !picks.includes(def)) picks = [...picks.slice(0, 3), def].sort((a, b) => a - b);
+  return picks;
+}
+
 export function bankerHoleSetup(round, idx) {
   const hole = round.holes[idx];
   const existing = round.banker[hole.no];
@@ -953,8 +1007,17 @@ export function bankerHoleSetup(round, idx) {
   // The rotation skips anyone who has left: the bank passes to the next player in the order
   const k = all.indexOf(banker);
   for (let n = 1; !ids.includes(banker) && n <= all.length; n++) banker = all[(k + n) % all.length];
+  // Each player's bet carries over from the last hole they bet on (last hole's banker didn't bet
+  // on it, so theirs comes from the hole before), else the default
+  const lastBet = id => {
+    for (let i = idx - 1; i >= 0; i--) {
+      const v = round.banker[round.holes[i].no]?.bets?.[id];
+      if (v != null) return v;
+    }
+    return s.defaultBet;
+  };
   const bets = {};
-  for (const id of ids) if (id !== banker) bets[id] = prev?.bets?.[id] ?? s.defaultBet;
+  for (const id of ids) if (id !== banker) bets[id] = lastBet(id);
   return { banker, bets, doubled: {}, doubleBack: false };
 }
 
