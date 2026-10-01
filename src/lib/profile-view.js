@@ -33,12 +33,15 @@ export function whoSees(privacy, key) {
 /** One line for the privacy section: what people you've played with can see. */
 export function privacySummary(privacy) {
   const p = normalizePrivacy(privacy);
-  const seen = PRIVACY_KEYS.filter(k => p[k] === 'played');
+  // Money goes out with your record (shareableStats), so a hidden record keeps it in too
+  const moneyOut = p.money === 'played' && p.stats === 'played';
+  const seen = PRIVACY_KEYS.filter(k => p[k] === 'played' && (k !== 'money' || moneyOut));
   if (!seen.length) return 'Everything on your profile is only for you.';
   const words = { money: 'money', stats: 'record', handicap: 'handicap', homeCourse: 'home course' };
   const list = ['name', 'avatar', ...seen.map(k => words[k])];
   const joined = `${list.slice(0, -1).join(', ')} and ${list.at(-1)}`;
-  return `People you’ve played with see your ${joined}.${p.money === 'hidden' ? ' Your money is only for you.' : ''}`;
+  const tail = p.money === 'hidden' ? ' Your money is only for you.' : !moneyOut ? ' Your money shows only with your record, so it’s only for you too.' : '';
+  return `People you’ve played with see your ${joined}.${tail}`;
 }
 
 /** "12–8–3" for won, lost, even (even left off when there's none), like the rivalry card's score. */
@@ -73,7 +76,8 @@ export function statTiles(stats, { mine = false, privacy = null } = {}) {
   // Someone else's money is only in their stats when they chose to show it
   const m = isObj(stats.money) ? stats.money : null;
   if (m) {
-    const moneyHidden = mine && !shows(privacy, 'money');
+    // Money goes out with your record, so it's yours alone while either is hidden
+    const moneyHidden = mine && (!shows(privacy, 'money') || !shows(privacy, 'stats'));
     const best = num(m.best);
     const net = num(m.net);
     const played = num(m.rounds) || 0;

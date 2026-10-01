@@ -141,7 +141,9 @@ export default function Profile() {
           <div className="eyebrow" id="pf-money" style={{ marginBottom: 10 }}>Who sees your money</div>
           <Segmented label="Who sees your money" className="press-mode-row ft-seg" btn="pm-btn" value={moneyLevel} onChange={v => setPrivacy('money', v)}
             options={[{ value: 'hidden', label: 'Only you' }, { value: 'played', label: 'People you’ve played with' }]} />
-          <p className="field-help">{moneyLevel === 'hidden' ? 'Your net and best round stay on your phone. Nobody else sees them.' : 'People you’ve played a round with see your net and your best round.'} What you owe each other always shows on the Tab, to the two of you.</p>
+          <p className="field-help">{moneyLevel === 'hidden' ? 'Your net and best round stay on your phone. Nobody else sees them.'
+            : me.privacy.stats !== 'played' ? 'Your net and best round go out with your record, which is hidden, so nobody else sees them yet.'
+            : 'People you’ve played a round with see your net and your best round.'} What you owe each other always shows on the Tab, to the two of you.</p>
         </div>
         {PRIVACY_ROWS.filter(r => r.key !== 'money').map(r => (
           <div key={r.key} className="toggle-row">
