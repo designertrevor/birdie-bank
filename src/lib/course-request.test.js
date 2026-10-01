@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {
   canRequestCourse, cleanCourseName, courseRequestKey, courseRequestPayload, findCourseRequest,
-  readCourseRequests, rememberCourseRequest, requestCourse,
+  courseRequestView, readCourseRequests, rememberCourseRequest, requestCourse,
 } from './course-request.js';
 
 const KEY = 'bb-course-requests:test';
@@ -114,4 +114,29 @@ test('the memory keeps the newest 100 courses', () => {
   const after = readCourseRequests(storage, KEY);
   assert.equal(after.length, 100);
   assert.equal(after[after.length - 1].at, 200);
+});
+
+test('the card shows the send result, then the phone memory, and the already card always has its entry', async () => {
+  const storage = memory();
+  const name = 'Zzyzx Links';
+  assert.equal(courseRequestView({ name, earlier: findCourseRequest(storage, KEY, name) }), null);
+  // A second tap that loses the race resolves to 'already' from this card's own send: it still
+  // carries the entry, so the card can say when it was asked (this used to read a missing value)
+  let release;
+  const submit = () => new Promise(r => { release = () => r('sent'); });
+  const first = requestCourse({ storage, storageKey: KEY, submit, name, now: 1000 });
+  const second = await requestCourse({ storage, storageKey: KEY, submit, name, now: 1001 });
+  assert.equal(second.status, 'already');
+  const raced = courseRequestView({ done: second, name, earlier: findCourseRequest(storage, KEY, name) });
+  assert.equal(raced.status, 'already');
+  assert.deepEqual(raced.entry, { key: 'zzyzx', name, at: 1000 });
+  release();
+  const sent = await first;
+  assert.equal(courseRequestView({ done: sent, name, earlier: findCourseRequest(storage, KEY, name) }).status, 'sent');
+  // Typed differently later: the phone memory answers, not this card's send
+  const later = courseRequestView({ done: sent, name: 'zzyzx links golf course', earlier: findCourseRequest(storage, KEY, 'zzyzx links golf course') });
+  assert.equal(later.status, 'already');
+  assert.equal(later.entry.at, 1000);
+  // A different course starts over with the form
+  assert.equal(courseRequestView({ done: sent, name: 'Fox Hollow', earlier: findCourseRequest(storage, KEY, 'Fox Hollow') }), null);
 });

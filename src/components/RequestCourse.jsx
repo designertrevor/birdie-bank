@@ -3,11 +3,11 @@
 // suggestion. It goes through the feedback queue, so no signal just means it sends later, and
 // the same phone never asks for the same course twice. "Add it yourself for now" opens the
 // course editor with the name filled in, so the round isn't held up waiting on us.
-import { useId, useState } from 'react';
+import { useId, useRef, useState } from 'react';
 import { Icon, useUI } from './ui.jsx';
 import { getState, STORE_KEY } from '../lib/store.js';
 import { shrinkImage, submitFeedback } from '../lib/feedback.js';
-import { canRequestCourse, cleanCourseName, findCourseRequest, requestCourse } from '../lib/course-request.js';
+import { canRequestCourse, cleanCourseName, courseRequestView, findCourseRequest, requestCourse } from '../lib/course-request.js';
 
 // One list per dev profile, so ?profile=b acts like a second phone
 const REQUESTS_KEY = `bb-course-requests:${STORE_KEY}`;
@@ -31,10 +31,11 @@ export default function RequestCourse({ query, onAddYourself, roundId = null }) 
   const [city, setCity] = useState('');
   const [image, setImage] = useState(null);
   const [busy, setBusy] = useState(false);
+  // Set straight away on tap, so a second tap before the re-render can't start another send
+  const sending = useRef(false);
   // What this card just sent: { status, entry }. A different search starts over
   const [done, setDone] = useState(null);
-  const shown = done && done.entry.name === name ? done : null;
-  const earlier = shown ? null : findCourseRequest(storage, REQUESTS_KEY, name);
+  const shown = courseRequestView({ done, name, earlier: findCourseRequest(storage, REQUESTS_KEY, name) });
   const sendable = canRequestCourse(name);
 
   const pickPhoto = async e => {
@@ -45,7 +46,8 @@ export default function RequestCourse({ query, onAddYourself, roundId = null }) 
   };
 
   const send = async () => {
-    if (busy || !sendable) return;
+    if (sending.current || !sendable) return;
+    sending.current = true;
     setBusy(true);
     const me = getState().players[getState().me];
     const res = await requestCourse({
@@ -53,6 +55,7 @@ export default function RequestCourse({ query, onAddYourself, roundId = null }) 
       name, city, query, from: me?.name || null, image, roundId,
     });
     setDone(res);
+    sending.current = false;
     setBusy(false);
     setImage(null);
   };
@@ -63,11 +66,11 @@ export default function RequestCourse({ query, onAddYourself, roundId = null }) 
     </button>
   );
 
-  if (shown || earlier) {
-    const status = shown ? shown.status : 'already';
+  if (shown) {
+    const { status, entry } = shown;
     const text = status === 'sent' ? `We’ll add ${name} for everyone. No need to wait on us: add it yourself for now and play today.`
       : status === 'queued' ? 'No signal right now, so your request is saved on this phone and sends by itself when you’re back online.'
-        : `You asked for ${earlier.name} ${askedOn(earlier.at)}, so it’s already on our list. Add it yourself for now if you’re playing it soon.`;
+        : `You asked for ${entry.name} ${askedOn(entry.at)}, so it’s already on our list. Add it yourself for now if you’re playing it soon.`;
     return (
       <div className="block rc-card" role="status">
         <div className="rc-done-icon" aria-hidden="true"><Icon name="check-circle" fill /></div>

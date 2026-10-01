@@ -72,6 +72,18 @@ export function rememberCourseRequest(storage, storageKey, name, at = Date.now()
 }
 
 /**
+ * Which card to show for the name in the search box. `done` is what this card last sent
+ * ({ status, entry }), kept while the search still reads the same, and `earlier` the phone's earlier request for this name, if any.
+ * Resolves to null (the request form) or { status: 'sent' | 'queued' | 'already', entry }, and
+ * always carries the entry, so the "already" card has a name and a date even when it came from
+ * this card's own send (a second tap that lost the race to the first).
+ */
+export function courseRequestView({ done = null, name, earlier = null }) {
+  if (done && done.entry && done.entry.name === cleanCourseName(name)) return done;
+  return earlier ? { status: 'already', entry: earlier } : null;
+}
+
+/**
  * Send a request once per phone per course. `submit` is submitFeedback (or a stand-in in tests).
  * Resolves to { status: 'sent' | 'queued' | 'already', entry }. A name already requested here
  * is never sent again; a failed send still counts, since the feedback queue keeps it.
