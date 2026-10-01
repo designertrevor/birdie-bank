@@ -297,6 +297,8 @@ function PlayRound({ round }) {
       text: played ? `${played} of ${round.holes.length} holes scored.` : 'No holes have been scored yet.',
       actions: [
         ...(played ? [{ label: 'Finish and count holes played', value: 'finish' }] : []),
+        // Not teed off yet on a round you set up: keep the setup as a plan for another day
+        ...(!played && !round.localMe && round.shared?.host !== false ? [{ label: 'Schedule for later instead', value: 'later' }] : []),
         { label: 'Delete round', value: 'discard', danger: true },
       ],
       cancelLabel: 'Keep playing',
@@ -305,6 +307,7 @@ function PlayRound({ round }) {
       update(s => { const rr = s.rounds[round.id]; rr.status = 'done'; rr.finishedAt = Date.now(); markUsualPlayed(s, rr, rr.finishedAt); leaveRound(s, round.id); });
       nav.reset('history', ['roundDetail', { id: round.id, celebrate: true }]);
     }
+    if (choice === 'later') nav.push('newRound', { reschedule: round.id });
     if (choice === 'discard') {
       const sure = await ask({ title: 'Delete this round?', text: 'Scores and bets from this round will be gone for good.', confirmLabel: 'Delete round', danger: true });
       if (!sure) return;

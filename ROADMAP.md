@@ -35,11 +35,13 @@ The plan for growing Birdie Bank into a $10k/mo business, and the checklist we w
 
 **Fixed 2026-09-30 (from Trevor):** planning a round now asks 9 or 18 holes on the When step, and the organizer can edit a plan's day, tee time, course or holes instead of deleting it and starting over.
 
+**Fixed 2026-09-30 (from Trevor):** "Schedule for later" now sits at the end of setup too (Bets step, Round ready, and End round before any holes are scored), carrying the game, course, bets, side games and players into a plan the group can open from the link.
+
 **Next in S2:** linking the organizer's copy of a player to the real person (area 1), real payments for the paywall test (Stripe, area 11), and the quick logo (area 16).
 
 **The big date:** the creator test (S4) runs February to April 2027, when golf season starts back up. Everything before it is about being ready: a product groups keep using, a smooth path from video to paying, and an App Store app.
 
-Last updated: 2026-09-30 (edit a plan, 9 or 18 holes)
+Last updated: 2026-09-30 (schedule for later at the end of setup)
 
 ---
 
@@ -340,7 +342,7 @@ Nothing is gated before launch (2026-09-29). Testers use everything; this area i
 
 ### 16. Brand and identity
 - [ ] `S1` (partial) A playful color theme, Phosphor icons, no emoji, one golf ball illustration with a face (`BallIllo` in `src/components/ui.jsx`), confetti, count-ups and vibrations (`src/lib/delight.js`), a few small CSS animations
-- [ ] `S2` Pick the app's final name (Birdie Bank is likely a working name, 2026-09-28) and buy its domain. Custom SMTP, the quick logo and the App Store listing wait on it.
+- [ ] `S2` Pick the app's final name as part of the branding exercise, and buy its domain. Birdie Bank was always a placeholder, and another app already ships under it (birdiebank.app, on iOS and Android with tournaments and leagues, found 2026-09-30). Check the App Store, Google Play, USPTO and domains before choosing. Custom SMTP, the quick logo and the App Store listing wait on it.
 - [ ] `S2` Quick logo and app icon (good enough to start). Moved out of S1 (2026-09-26) so it doesn't hold anything up, but do it early in S2, before organizer onboarding and the paywall.
 - [ ] `S2` Final logo: symbol plus the name set in type, and an app icon that stands out on a home screen
 - [ ] `S2` Brand foundations: colors, typography, voice and tone (friendly trash talk, never casino), a short brand guide
@@ -402,6 +404,8 @@ The goal: people open the app on days they don't play, and Saturday feels bigger
 - [x] `S2` Who's in: each player answers in, out or maybe, and the organizer sees the count, with a nudge for anyone who hasn't answered. Friends answer from one group link (or their own link) with an RSVP card, no install and no paywall, and vote on the game and the bet; the organizer suggests, the group decides, and the tally shows. Player cards show a friend's answer. Any member can send the morning text (share sheet or text) (2026-09-28)
 - [x] `S2` Bets set ahead of time, so the round starts in one tap on the first tee: roll call confirms who showed (walk-ups too), then "Tee off" starts the voted game and bet and shares it live with the plan (2026-09-28)
 - [x] `S2` Edit an upcoming round: the organizer changes the day, tee time, course or holes from "Edit" on the plan, and everyone with the link sees the change. Planning also asks 9 or 18 holes on the When step (it was hidden below the game list, and skipped when planning from onboarding) (2026-09-30)
+- [x] `S2` "Schedule for later" at the end of setup, not just on the first step: on the Bets step, on "Round ready" ("Not playing today?"), and from End round on a round with no holes scored. The game, course, holes, bets and side games carry into the plan and everyone picked is invited, so the organizer can build the round, send the group link, and let the group look it over and vote instead of passing screenshots around. A round already made becomes the plan (2026-09-30)
+- [ ] `S3` A plan keeps the rest of the setup made before it was scheduled (teams, playing order, tees, handicap overrides, starting hole), so roll call starts it exactly as built. For now roll call uses fresh teams and the default tee
 - [ ] `S3` Lock down plans before the creator test: only the organizer changes a plan and each person changes only their own answer (anyone with the code can for now, 2026-09-28)
 - [ ] `S3` Push reminders for upcoming rounds (the morning text is a share for now)
 - [ ] `S3` Tee time reminder: "Book your tee time, Saturday fills up by Wednesday," with a link to the course's booking page and a reminder day the organizer picks
@@ -521,3 +525,4 @@ Code is cheap now, so anyone can build a scoring app. What a weekend coder can't
 - 2026-09-29: Nothing is held back until launch. The Season view on the Tab is open to everyone who has played a round (no Pro tag, no Preview banner, no trial button; under 2 rounds it says your season starts after 2). With `?paywall=on` it's the organizer-only Pro preview as before. "Pro at launch" is written down in area 11, with new items for lifetime Pro for early testers and deciding the split at launch.
 - 2026-09-30: From Trevor: planning a round asks 9 or 18 holes on the When step (the choice was at the bottom of the game list, and missing when planning from onboarding), and "Edit" on a plan changes the day, tee time, course or holes, sent to everyone with the link.
 - 2026-09-30: Research on premium features and the long game (golf forums, 19 r/golf threads, apps from other hobbies) added to the checklist: free fairness tools (allowances by format, half-pops, Canadian skins, a first-tee rules card), the Big Game, trip expenses on the Tab, splitting Pro on the Tab, rivalry cards and the Record Book limit, reputation and find a game, Trip Mode templates, a Trip Pass moved up to S3, a price test, paywall rules, a Live Activity, and a new area 23 for partners (pro shops, men's leagues, GHIN, tee times, resorts, trophies, a season series). From Trevor: an avatar library with photo upload, and a theme for every game carried into the round and the share card. Pro headliner ideas noted in area 11, not decided. Checklist: 64 of 222 done (29%), up from 64 of 190.
+- 2026-09-30: From Trevor: he set up a whole round for a future day and only then remembered planning ahead, so the only way out was to cancel it. "Schedule for later" now shows on the Bets step, on Round ready, and in End round for a round with no holes scored; the setup carries into the plan (players invited, bets suggested, side games on the ballot) and a round already made is replaced by the plan. Follow-up added: plans keep teams, order, tees and handicap overrides. Checklist: 65 of 224 done (29%), up from 64 of 222.
