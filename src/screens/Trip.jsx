@@ -1,7 +1,7 @@
 // A trip: everyone's standings across its rounds, the rounds themselves, and money by game; then
 // Settle the trip, once, right after the last round (or someone's part, for a friend leaving
-// early). Trip money is already in each person's total on the Tab, so settling here squares the
-// Tab too. See trips.js for how it's all worked out.
+// early). Trip money is already in each person's total on the Tab, so paying here pays the Tab
+// too. See trips.js for how it's all worked out.
 import { useState } from 'react';
 import { Empty, Header, Icon, Screen, Segmented, Sheet, useUI } from '../components/ui.jsx';
 import { Avatar, PayButton, RequestButton } from '../components/Pay.jsx';
@@ -51,7 +51,7 @@ export default function Trip({ id, view: firstView = 'standings' }) {
   const played = st.standings.some(p => p.id === me);
   const net = myTripNet(state, st);
   const myPoints = st.points?.[me] ?? null;
-  const settling = st.paid.length > 0;
+  const settling = st.settling.length > 0;
   // A round shared live keeps the trip it was set up with on everyone's phone, so a trip with one
   // can't be deleted here (friends' phones would keep it, and its payments would land on a trip
   // this phone no longer has)
@@ -65,7 +65,7 @@ export default function Trip({ id, view: firstView = 'standings' }) {
     : myPoints != null ? `You’re on ${points(myPoints, { sign: true })}`
     : st.phase === 'soon' ? 'Nothing played yet' : st.done.length ? 'No money on it yet' : 'Nothing played yet';
   const hint = st.pointsOnly ? 'Played for points, so there’s nothing to pay. Everyone on the trip sees the standings.'
-    : st.phase === 'ready' ? `${st.plan.length} payment${st.plan.length === 1 ? '' : 's'} square${st.plan.length === 1 ? 's' : ''} the whole trip. Trip money is already in each person’s total on the Tab, so this squares the Tab too.`
+    : st.phase === 'ready' ? `${st.plan.length} payment${st.plan.length === 1 ? '' : 's'} square${st.plan.length === 1 ? 's' : ''} the whole trip. Trip money is already in each person’s total on the Tab, so paying here pays the Tab too.`
     : st.phase === 'square' ? 'Everyone’s square on the trip.'
     : st.phase === 'soon' ? `Rounds you start from ${tripDates(trip)} ask to count for the trip. Plan them now so everyone can answer.`
     : 'Nothing’s paid yet. Settle the trip opens after the last round, once for the whole trip. Trip money is already in each person’s total on the Tab.';
@@ -124,7 +124,7 @@ export default function Trip({ id, view: firstView = 'standings' }) {
       </div>
       <div className="cta-wrap">
         {st.phase === 'ready' && <button className="full-btn pink" onClick={() => nav.push('tripSettle', { id })}>Settle the trip <Icon name="arrow-right" /></button>}
-        {st.phase === 'square' && settling && <button className="full-btn outline" onClick={() => nav.push('tripSettle', { id })}>See the trip’s payments</button>}
+        {st.phase === 'square' && st.payments.length > 0 && <button className="full-btn outline" onClick={() => nav.push('tripSettle', { id })}>See the trip’s payments</button>}
         {(st.phase === 'on' || st.phase === 'soon') && st.money.length > 0 && (
           <>
             <button className="full-btn outline" onClick={() => setLeaving(true)}><Icon name="sign-out" /> Leaving early? Settle a part</button>
@@ -135,7 +135,7 @@ export default function Trip({ id, view: firstView = 'standings' }) {
       <TripSheet open={editing} trip={trip} onClose={() => setEditing(false)} onDone={() => setEditing(false)} />
       <CountSheet open={counting} onClose={() => setCounting(false)} st={st} />
       <Sheet open={leaving} onClose={() => setLeaving(false)} title="Who’s leaving?">
-        <p className="field-help pad">Their payments for the rounds so far, in the fewest payments. Everyone else settles after the last round.</p>
+        <p className="field-help pad">Their payments for the rounds so far. Everyone else settles after the last round.</p>
         {st.standings.map(p => (
           <button key={p.id} className="sheet-item" onClick={() => { setLeaving(false); nav.push('tripSettle', { id, who: p.id }); }}>
             <span><Avatar id={p.id} name={nameOf(state, p.id)} /> {p.id === me ? 'Settle my part' : `Settle ${short(p.id)}’s part`}</span>
@@ -239,7 +239,7 @@ function CountSheet({ open, onClose, st }) {
   const state = useStore();
   const list = open ? roundsInDates(state, st.trip) : [];
   // Once payments have been made from Settle the trip, its rounds stay on it, so the money stays squared
-  const locked = st.paid.length > 0;
+  const locked = st.settling.length > 0;
   return (
     <Sheet open={open} onClose={onClose} title="Which rounds count?">
       <p className="field-help pad">Rounds from {tripDates(st.trip)} on this phone. A round on the trip goes in the standings and settles with the trip. A finished round that was shared live stays as it was set up, so everyone’s phone agrees.{locked ? ' Payments have been made for the trip, so its rounds stay on it.' : ''}</p>
@@ -266,8 +266,9 @@ function CountSheet({ open, onClose, st }) {
 }
 
 /**
- * Settle the trip: the fewest payments over just the trip's rounds, each with the payee's app,
- * marked paid here. `who`: just that person's part, for someone leaving early.
+ * Settle the trip: what's left over just the trip's rounds (each pair's net on the shared rounds,
+ * the fewest payments for the rest), each with the payee's app, marked paid here. `who`: just
+ * that person's part, for someone leaving early.
  */
 export function TripSettle({ id, who = null }) {
   const nav = useNav();
@@ -284,26 +285,26 @@ export function TripSettle({ id, who = null }) {
   const plan = who ? partPlan(st.plan, who) : st.plan;
   const mineLines = plan.filter(t => t.from === me || t.to === me);
   const others = plan.filter(t => t.from !== me && t.to !== me);
-  const paid = st.paid.filter(s => !who || canonicalOf(state)(s.from) === who || canonicalOf(state)(s.to) === who)
-    .sort((a, b) => (b.at || 0) - (a.at || 0));
+  const paid = st.payments.filter(g => !who || g.from === who || g.to === who);
   const n = plan.length;
   const note = trip.name;
   const myApp = payInfoFor(state, state.me);
 
   const mark = t => {
-    const { shared, id: sid } = markTripPayment({ tripId: id, from: t.from, to: t.to, amount: t.amount });
+    const { shared, at } = markTripPayment({ tripId: id, from: t.from, to: t.to, part: !!who });
     buzz(15);
     const iPaid = t.from === me, gotIt = t.to === me;
     const text = iPaid ? `You paid ${short(t.to)}` : gotIt ? `${short(t.from)} paid you` : `${short(t.from)} paid ${short(t.to)}`;
-    showToast(shared ? `${text}. Everyone in the round sees it.` : text, { label: 'Undo', run: () => {
-      const s = getState().settlements.find(x => x.id === sid);
-      if (s) undoPayments([s]);
+    showToast(shared ? `${text}. Everyone in the rounds sees it.` : text, { label: 'Undo', run: () => {
+      const kept = canonicalOf(getState());
+      const pair = [t.from, t.to].sort().join();
+      const list = getState().settlements.filter(x => x.at === at && [kept(x.from), kept(x.to)].sort().join() === pair);
+      if (list.length) undoPayments(list);
     } });
   };
-  const undo = s => {
-    const f = canonicalOf(state)(s.from), t = canonicalOf(state)(s.to);
-    const redo = undoPayments([s]);
-    showToast(`${short(f)} ${f === me ? 'owe' : 'owes'} ${t === me ? 'you' : short(t)} again`, { label: 'Undo', run: redo });
+  const undo = g => {
+    const redo = undoPayments(g.settlements);
+    showToast(`${short(g.from)} ${g.from === me ? 'owe' : 'owes'} ${g.to === me ? 'you' : short(g.to)} again`, { label: 'Undo', run: redo });
   };
 
   const title = who ? (who === me ? 'Settle your part' : `Settle ${short(who)}’s part`) : `Settle ${trip.name}`;
@@ -368,23 +369,20 @@ export function TripSettle({ id, who = null }) {
         {paid.length > 0 && (
           <>
             <div className="sec-label">Paid</div>
-            {paid.map(s => {
-              const f = canonicalOf(state)(s.from), t = canonicalOf(state)(s.to);
-              return (
-                <div key={s.id} className="ledger-row static">
-                  <div className="lr-info">
-                    <div className="lr-name" style={{ fontSize: 16 }}>{label(f)} paid {t === me ? 'you' : label(t)}</div>
-                    <div className="lr-status">{new Date(s.at).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })}</div>
-                  </div>
-                  <div className="lr-amt" style={{ marginRight: 8 }}>{money(s.amount)}</div>
-                  <button className="icon-btn sm" onClick={() => undo(s)} aria-label="Undo payment"><Icon name="arrow-counter-clockwise" /></button>
+            {paid.map(g => (
+              <div key={g.key} className="ledger-row static">
+                <div className="lr-info">
+                  <div className="lr-name" style={{ fontSize: 16 }}>{label(g.from)} paid {g.to === me ? 'you' : label(g.to)}</div>
+                  <div className="lr-status">{new Date(g.at).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })}</div>
                 </div>
-              );
-            })}
+                <div className="lr-amt" style={{ marginRight: 8 }}>{money(g.amount)}</div>
+                <button className="icon-btn sm" onClick={() => undo(g)} aria-label="Undo payment"><Icon name="arrow-counter-clockwise" /></button>
+              </div>
+            ))}
           </>
         )}
 
-        <p className="field-help pad">Nobody pays someone they didn’t play with on the trip. Money from before the trip stays on the Tab as it is.{off ? '' : ' A payment marked here shows on the phones of everyone in the round it’s tied to.'}</p>
+        <p className="field-help pad">Nobody pays someone they didn’t play with on the trip. Rounds shared live settle between the two people in them, so every phone agrees. Money from before the trip stays on the Tab as it is.{off ? '' : ' A payment marked here shows on the phones of everyone in the rounds it’s tied to.'}</p>
       </div>
     </Screen>
   );

@@ -44,7 +44,6 @@ export function tabCodes(state, opts) {
 export function pairRounds(state, a, b, { days = FETCH_DAYS, now = Date.now() } = {}) {
   const who = canonicalOf(state);
   const A = who(a), B = who(b);
-  // A trip being settled as one squares its rounds itself, so they're not between the two any more
   return lockedRounds(state, { days, now }).filter(r => {
     const ids = new Set(r.players.map(p => who(p.id)));
     return ids.has(A) && ids.has(B);
@@ -78,7 +77,10 @@ function same(a, b) {
 
 /** The settlement a paid row stands for. */
 function settlementOf(row, round) {
-  return { id: row.id, from: row.from, to: row.to, amount: Number(row.amount), at: row.at, roundId: round.id, code: row.code, by: row.by || null, shared: true };
+  const s = { id: row.id, from: row.from, to: row.to, amount: Number(row.amount), at: row.at, roundId: round.id, code: row.code, by: row.by || null, shared: true };
+  // Made from "Settle the trip" (trip-pay.js): the trip knows it's being settled on every phone
+  if (row.reason) s.reason = row.reason;
+  return s;
 }
 
 /**
@@ -165,12 +167,16 @@ export function applyRows(state, rows) {
 }
 
 
-/** Round transfers still open between two people (either direction), oldest round first. */
-export function openTransfers(state, a, b, now = Date.now()) {
+/**
+ * Round transfers still open between two people (either direction), oldest round first. `only`
+ * (a Set of round ids) keeps it to some of their rounds, a trip's.
+ */
+export function openTransfers(state, a, b, now = Date.now(), only = null) {
   const who = canonicalOf(state);
   const A = who(a), B = who(b);
   const out = [];
   for (const r of pairRounds(state, A, B, { now })) {
+    if (only && !only.has(r.id)) continue;
     const code = codeOf(r);
     for (const t of roundResults(r).transfers) {
       const f = who(t.from), to = who(t.to);
@@ -188,6 +194,50 @@ const payRow = (state, round, t, id, amount, now) => ({
   code: codeOf(round), id, kind: 'payment', from: t.from, to: t.to, amount, status: 'paid',
   by: meFor(round, state), reason: null, at: now, updatedAt: now,
 });
+
+/**
+ * Rows that pay `settle` cents (positive in the open list's forward direction) on round transfers,
+ * oldest first. With `square`, every transfer left open between the two is marked 'netted' too.
+ */
+function fillRows(state, open, settle, square, rows, now) {
+  const fill = (list, c) => {
+    let left = c;
+    for (const x of list) {
+      if (!left) break;
+      const part = Math.min(left, x.open);
+      left -= part;
+      const first = part === x.open && x.paid === 0 && !(state.settlements || []).some(s => s.id === paymentId(x.code, x.t.from, x.t.to));
+      // Part of a transfer is keyed by what was paid on it before, so two phones marking the same
+      // payment before they sync land on one row too (a second, later payment gets its own key)
+      const id = first ? paymentId(x.code, x.t.from, x.t.to) : paymentId(x.code, x.t.from, x.t.to, `p${x.paid}`);
+      rows.push(payRow(state, x.round, x.t, id, part / 100, now));
+      x.open -= part;
+    }
+  };
+  if (settle > 0) fill(open.filter(o => o.forward), settle);
+  if (settle < 0) fill(open.filter(o => !o.forward), -settle);
+  // The rounds are square now: every transfer left open between the two is done with too
+  if (open.length && square) {
+    for (const x of open) {
+      if (x.open <= 0) continue;
+      rows.push({ ...payRow(state, x.round, x.t, nettedId(x.code, x.t.from, x.t.to), x.open / 100, now), status: 'netted' });
+    }
+  }
+  return rows;
+}
+
+/**
+ * Rows that square what's open between two people on some of their shared rounds (a trip's,
+ * `roundIds`), the way a whole-card payment does: the net is paid on its round transfers, oldest
+ * first, and the rest are marked 'netted'. Both phones of the pair hold these rounds, so both see
+ * the pair square. `reason` tags the rows (trip-pay.js). Returns { rows, cents }: cents is the net
+ * `from` paid `to` (negative the other way).
+ */
+export function squareRows(state, from, to, roundIds, { now = Date.now(), reason = null } = {}) {
+  const open = openTransfers(state, from, to, now, roundIds);
+  const net = open.reduce((c, x) => c + (x.forward ? x.open : -x.open), 0);
+  return { rows: fillRows(state, open, net, true, [], now).map(r => ({ ...r, reason })), cents: net };
+}
 
 /**
  * Record `from` paying `to` (the person card, the Settle up sheet). Only the shared rounds
@@ -212,29 +262,7 @@ export function allocatePayment(state, { from, to, amount }, { now = Date.now(),
   const settle = whole ? shared : shared > 0 ? Math.min(total, shared) : 0;
   const rows = [], settlements = [];
   const open = openTransfers(state, F, T, now);
-  const fill = (list, c) => {
-    let left = c;
-    for (const x of list) {
-      if (!left) break;
-      const part = Math.min(left, x.open);
-      left -= part;
-      const first = part === x.open && x.paid === 0 && !(state.settlements || []).some(s => s.id === paymentId(x.code, x.t.from, x.t.to));
-      // Part of a transfer is keyed by what was paid on it before, so two phones marking the same
-      // payment before they sync land on one row too (a second, later payment gets its own key)
-      const id = first ? paymentId(x.code, x.t.from, x.t.to) : paymentId(x.code, x.t.from, x.t.to, `p${x.paid}`);
-      rows.push(payRow(state, x.round, x.t, id, part / 100, now));
-      x.open -= part;
-    }
-  };
-  if (settle > 0) fill(open.filter(o => o.forward), settle);
-  if (settle < 0) fill(open.filter(o => !o.forward), -settle);
-  // The shared rounds are square now: every transfer left open between the two is done with too
-  if (open.length && settle === shared) {
-    for (const x of open) {
-      if (x.open <= 0) continue;
-      rows.push({ ...payRow(state, x.round, x.t, nettedId(x.code, x.t.from, x.t.to), x.open / 100, now), status: 'netted' });
-    }
-  }
+  fillRows(state, open, settle, settle === shared, rows, now);
   const left = total - settle;
   if (left > 0) settlements.push({ id: `s_${makeId()}`, from, to, amount: left / 100, at: now });
   if (left < 0) settlements.push({ id: `s_${makeId()}`, from: to, to: from, amount: -left / 100, at: now });

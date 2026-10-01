@@ -1,7 +1,8 @@
-// Payments made from "Settle the trip" (see trips.js). Their id names the trip, so every phone that
-// gets one (from its round's payment rows, or the account sync) knows it's trip money, with no new
-// column on the server: "trip:<tripId>:<from>><to>:<when>". No imports, so the Tab's own files
-// (pair-debts.js, shared-tab.js) can use it without a loop.
+// Payments made from "Settle the trip" for the trip's rounds that only this phone has (see trips.js).
+// Their id names the trip, so the account sync knows it's trip money, with no new column:
+// "trip:<tripId>:<from>><to>:<when>". The trip's shared rounds are paid on their own round
+// transfers instead, like any Tab payment, so both phones of every pair see it. No imports, so the
+// Tab's own files (pair-debts.js, shared-tab.js) can use it without a loop.
 
 const PREFIX = 'trip:';
 
@@ -21,20 +22,17 @@ export function tripOfPayment(s) {
 export const isTripPayment = s => tripOfPayment(s) != null;
 
 /**
- * Trips being settled as one: some payment from "Settle the trip" is on this phone. From then on
- * the trip's rounds are squared across the whole trip in the fewest payments, so the Tab stops
- * keeping their shared-round money between the two people in each (pair-debts.js).
+ * A payment row's reason when it was made from "Settle the trip": the whole trip once it's over,
+ * or someone's part when they leave early (`part`). It rides on the trip's shared round transfers,
+ * so every phone in that round knows the trip is being settled.
  */
-export function settlingTrips(state) {
-  const out = new Set();
-  for (const s of state?.settlements || []) {
-    const t = tripOfPayment(s);
-    if (t) out.add(t);
-  }
-  return out;
-}
+export const tripReason = (tripId, part = false) => `${part ? 'trip-part' : 'trip'}:${tripId}`;
 
-/** A round of a trip that's being settled as one. */
-export function inSettlingTrip(round, settling) {
-  return !!round?.trip?.id && settling.has(round.trip.id);
+/** What a payment says about the trip it settled: { id, part }, or null for any other payment. */
+export function tripSettleOf(s) {
+  const r = String(s?.reason || '');
+  const m = /^(trip|trip-part):(.+)$/.exec(r);
+  if (m) return { id: m[2], part: m[1] === 'trip-part' };
+  const id = tripOfPayment(s);
+  return id ? { id, part: !!s.tripPart } : null;
 }

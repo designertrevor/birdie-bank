@@ -57,7 +57,7 @@ export function TripTabCard({ status: st }) {
   const n = st.plan.length;
   const sub = st.phase === 'soon' ? startsLine(st.trip.start)
     : st.pointsOnly ? `${roundsLine(st.done.length)}${st.phase === 'on' ? ' so far' : ''} · played for points`
-    : st.phase === 'ready' ? `${n} payment${n === 1 ? '' : 's'} square${n === 1 ? 's' : ''} the trip · ${st.paid.length} paid so far`
+    : st.phase === 'ready' ? `${n} payment${n === 1 ? '' : 's'} square${n === 1 ? 's' : ''} the trip · ${st.payments.length} paid so far`
     : st.phase === 'square' ? `${roundsLine(st.done.length)} · settled`
     : `${roundsLine(st.done.length)} so far · settle after the last round`;
   const played = st.standings.some(p => p.id === canonicalOf(state)(state.me));

@@ -19,7 +19,7 @@ import { isOrganizer } from '../lib/paywall.js';
 import { openRewards } from '../lib/play-for.js';
 import { StartTripLink, TripTabCard } from '../components/Trips.jsx';
 import { currentTrips, tripsOf } from '../lib/trips.js';
-import { tripOfPayment } from '../lib/trip-pay.js';
+import { tripSettleOf } from '../lib/trip-pay.js';
 
 const first = name => name.split(' ')[0];
 
@@ -58,7 +58,7 @@ export default function Ledger() {
   // Trips on now (or just settled): a card each on top. Their money is already in each total below
   const trips = currentTrips(state);
   const tripNames = tripsOf(state);
-  const tripOf = s => s.settlements.map(tripOfPayment).find(Boolean);
+  const tripOf = s => s.settlements.map(x => tripSettleOf(x)?.id).find(Boolean);
 
   // One tap, no confirm: it can be put back from the toast, and a shared payment updates both phones
   const undo = s => {

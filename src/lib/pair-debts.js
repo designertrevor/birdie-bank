@@ -8,7 +8,7 @@ import { roundResults } from './round.js';
 import { meFor, myIds } from './format.js';
 import { linksOf } from './people-links.js';
 import { countsMoney } from './play-for.js';
-import { inSettlingTrip, isTripPayment, settlingTrips } from './trip-pay.js';
+import { isTripPayment } from './trip-pay.js';
 
 const DAY = 864e5;
 /** Shared rounds this recent are looked up on the server. */
@@ -53,15 +53,13 @@ export function sharedRounds(state, { days = FETCH_DAYS, now = Date.now() } = {}
 }
 
 /**
- * The shared rounds whose money the Tab keeps between the two people in them. A trip's rounds
- * leave once the trip is being settled as one (trip-pay.js): the trip squares them in the fewest
- * payments across everyone on it. Their codes are still looked up (tabCodes), so the trip's
- * payments reach every phone.
+ * The shared rounds whose money the Tab keeps between the two people in them. A trip's rounds stay
+ * here too: every phone of a pair has the rounds both of them played, but a phone that missed one
+ * of the trip's rounds can't see the whole trip, so squaring a trip across everyone on it would
+ * leave two phones disagreeing (trips.js settles shared trip rounds pair by pair for that reason).
  */
 export function lockedRounds(state, opts) {
-  const settling = settlingTrips(state);
-  const rounds = sharedRounds(state, opts);
-  return settling.size ? rounds.filter(r => !inSettlingTrip(r, settling)) : rounds;
+  return sharedRounds(state, opts);
 }
 
 /** A transfer closed by a payment that squared the pair's shared rounds (status only, no money). */
@@ -70,20 +68,25 @@ export const nettedId = (code, from, to) => `${code}:${from}>${to}:net`;
 /** What has been paid on one round transfer, in cents. */
 export function paidOn(state, round, code, t) {
   // Payments marked at the end of the round before the shared Tab (roundId, no code) count too
-  // A trip payment rides on one of the trip's rounds but squares the trip, never one transfer
+  // A payment from "Settle the trip" with a trip id pays the trip's rounds this phone alone has, never one transfer
   const on = s => !isTripPayment(s) && (s.code === code || (!s.code && s.roundId === round.id));
   return (state.settlements || []).filter(s => on(s) && s.from === t.from && s.to === t.to).reduce((a, s) => a + cents(s.amount), 0);
 }
 export const nettedOn = (state, code, t) => state.tabRows?.[`${code}|${nettedId(code, t.from, t.to)}`]?.status === 'netted';
 
-/**
- * Every open transfer on your shared rounds, by pair (ids as the Tab knows them), netted both
- * ways: [{ from, to, cents }], where `from` owes `to`. Nothing is passed on through anyone else.
- */
+/** Every open transfer on your shared rounds, by pair (ids as the Tab knows them), netted both ways. */
 export function sharedDebts(state, { now = Date.now() } = {}) {
+  return openByPair(state, lockedRounds(state, { now }));
+}
+
+/**
+ * What's open on the given shared rounds' transfers, by pair, netted both ways:
+ * [{ from, to, cents }], where `from` owes `to`. Nothing is passed on through anyone else.
+ */
+export function openByPair(state, rounds) {
   const who = canonicalOf(state);
   const net = new Map(); // "a|b" (sorted) -> cents a owes b
-  for (const r of lockedRounds(state, { now })) {
+  for (const r of rounds) {
     const code = codeOf(r);
     for (const t of roundResults(r).transfers) {
       const f = who(t.from), to = who(t.to);

@@ -1,7 +1,12 @@
 // Trips: a few rounds played together over some days (a golf trip). Everyone on the trip sees the
 // standings. Trip money is in each person's total on the Tab like any other round (folded in, not
-// held apart), and the trip is settled once, right after its last round, in the fewest payments
-// over just the trip's rounds. Someone leaving early can settle their part first.
+// held apart), and the trip is settled once, right after its last round, over just the trip's
+// rounds. Someone leaving early can settle their part first.
+//
+// Rounds shared live settle pair by pair, the way the Tab keeps them: each pair nets what's
+// between the two of them across the trip, never passed on through a third person. Both phones of
+// a pair hold the rounds both played, so they always agree, even when one of them missed a round
+// (that phone can't see the whole trip). Rounds only this phone has settle in the fewest payments.
 //
 // Each round on a trip carries a stamp, `round.trip = { id, name, start, end, format }`, so it
 // rides in the live round to every phone. Everything else (the trip's rounds, who's on it, the
@@ -14,10 +19,10 @@
 import { GAMES, roundResults } from './round.js';
 import { countsMoney, playForOf } from './play-for.js';
 import { fewestPayments } from './ledger.js';
-import { FETCH_DAYS, canonicalOf, codeOf, finishedAt } from './pair-debts.js';
-import { tripOfPayment } from './trip-pay.js';
+import { canonicalOf, codeOf, finishedAt, openByPair, sharedRounds } from './pair-debts.js';
+import { tripOfPayment, tripPaymentId, tripReason, tripSettleOf } from './trip-pay.js';
+import { squareRows } from './shared-tab.js';
 import { dayLabel, daysUntil, isoDate } from './plans.js';
-import { meFor } from './format.js';
 import { canEdit, keeperMe } from './keeper.js';
 import { money } from './golf.js';
 
@@ -145,27 +150,41 @@ function pointsOf(state, rounds) {
 }
 
 /**
- * The payments that count toward the trip, and what's left to pay on it, in cents:
- * - every payment made from "Settle the trip" for this trip (its id says so, trip-pay.js),
- * - every payment tied to one of the trip's rounds (the round's own settle up, or the shared Tab
- *   rows for that round),
- * - and a payment on the Tab between two people who played the trip together, made once the trip
- *   started and tied to no round, up to what the trip still has the payer owing and the payee
- *   owed. Trip money is in each person's total on the Tab, so paying that total pays the trip too,
- *   and the trip never asks for it again.
+ * The trip's finished money rounds whose money stays between the two people in them: the shared
+ * rounds the Tab keeps pair by pair (pair-debts.js).
  */
-function paymentsOf(state, id, rounds, together, bal) {
+export function tripPairRounds(state, id, { now = Date.now() } = {}) {
+  const locked = new Set(sharedRounds(state, { now }).map(r => r.id));
+  return moneyDone(tripRounds(state, id)).filter(r => locked.has(r.id));
+}
+
+/**
+ * The payments that count toward the trip, and what's left to pay on the rounds only this phone
+ * has (`local`), in cents:
+ * - payments from "Settle the trip" for those rounds (their id names the trip, trip-pay.js),
+ * - every payment tied to one of the trip's rounds (the round's own settle up, or the shared Tab
+ *   rows for that round). The shared rounds' ones (`onPairs`) are already paid on their round
+ *   transfers, so they only count toward the pairs.
+ * - and a payment on the Tab between two people who played the trip together, made once the trip
+ *   started and tied to no round, up to what the local rounds still have the payer owing and the
+ *   payee owed. Trip money is in each person's total on the Tab, so paying that total pays the
+ *   trip too, and the trip never asks for it again.
+ */
+function paymentsOf(state, id, rounds, local, together, bal) {
   const who = canonicalOf(state);
-  const roundIds = new Set(rounds.map(r => r.id));
-  const codes = new Set(rounds.map(codeOf).filter(Boolean));
+  const localIds = new Set(local.map(r => r.id));
+  const localCodes = new Set(local.map(codeOf).filter(Boolean));
+  const allIds = new Set(rounds.map(r => r.id));
+  const allCodes = new Set(rounds.map(codeOf).filter(Boolean));
   const startAt = rounds.length ? Math.min(...rounds.map(r => r.createdAt || finishedAt(r))) : Infinity;
   const left = { ...bal };
   const pay = (f, t, c) => { left[f] = (left[f] || 0) + c; left[t] = (left[t] || 0) - c; };
-  const trip = [], onRounds = [], loose = [];
+  const trip = [], onRounds = [], onPairs = [], loose = [];
   for (const s of state.settlements || []) {
     const t = tripOfPayment(s);
     if (t) { if (t === id) trip.push(s); continue; }
-    if (roundIds.has(s.roundId) || (s.code && codes.has(s.code))) { onRounds.push(s); continue; }
+    if (localIds.has(s.roundId) || (s.code && localCodes.has(s.code))) { onRounds.push(s); continue; }
+    if (allIds.has(s.roundId) || (s.code && allCodes.has(s.code))) { onPairs.push(s); continue; }
     if (s.roundId || s.code) continue; // another round's payment
     if ((s.at || 0) >= startAt && together.has(pairKey(who(s.from), who(s.to)))) loose.push(s);
   }
@@ -178,7 +197,45 @@ function paymentsOf(state, id, rounds, together, bal) {
     pay(f, t, c);
     counted.push({ settlement: s, cents: c });
   }
-  return { trip, onRounds, counted, left };
+  return { trip, onRounds, onPairs, counted, left };
+}
+
+/**
+ * The plan: each pair's net on the shared rounds, then the fewest payments for the rest, one line
+ * per pair and way: [{ from, to, amount, shared, local }], with each part in cents.
+ */
+function mergePlan(pairs, local) {
+  const lines = new Map();
+  const add = (from, to, part, c) => {
+    const k = `${from}>${to}`;
+    const line = lines.get(k) || { from, to, amount: 0, shared: 0, local: 0 };
+    line[part] += c;
+    line.amount = (line.shared + line.local) / 100;
+    lines.set(k, line);
+  };
+  for (const d of pairs) add(d.from, d.to, 'shared', d.cents);
+  for (const t of local) add(t.from, t.to, 'local', cents(t.amount));
+  return [...lines.values()];
+}
+
+/**
+ * The trip's payments, one a tap (the same two people at the same moment, since one tap can pay
+ * several round transfers), newest first: [{ key, at, from, to, amount, settlements }].
+ */
+export function tripPaymentGroups(state, list) {
+  const who = canonicalOf(state);
+  const groups = new Map();
+  for (const s of list) {
+    const [a, b] = [who(s.from), who(s.to)].sort();
+    const key = `${s.at || 0}|${a}|${b}`;
+    const g = groups.get(key) || { key, at: s.at || 0, a, b, net: 0, settlements: [] };
+    g.net += who(s.from) === a ? cents(s.amount) : -cents(s.amount);
+    g.settlements.push(s);
+    groups.set(key, g);
+  }
+  return [...groups.values()].filter(g => g.net)
+    .map(g => ({ key: g.key, at: g.at, from: g.net > 0 ? g.a : g.b, to: g.net > 0 ? g.b : g.a, amount: Math.abs(g.net) / 100, settlements: g.settlements }))
+    .sort((x, y) => y.at - x.at);
 }
 
 /** "Day 2 of 3" numbers for a day (YYYY-MM-DD): { day, days }, day null outside the trip. */
@@ -196,12 +253,15 @@ export function tripDay(trip, today) {
  *   'ready' (the last round is in and there's money to settle), 'square' (settled, or nothing to
  *   pay) or 'empty' (the dates went by with no rounds).
  * - standings: [{ id, amount, rounds }] best first, everyone who played a finished money round.
- * - plan: the fewest payments left over just the trip's rounds, [{ from, to, amount }].
- * - paid: payments made from "Settle the trip"; perRound: how many payments the rounds one by one
- *   would have taken.
+ * - plan: what's left over just the trip's rounds, [{ from, to, amount, shared, local }]: each
+ *   pair's net on the shared rounds (both their phones agree on it) and the fewest payments for
+ *   the rounds only this phone has.
+ * - paid: every payment that counts for the trip; payments: the same, one a tap; perRound: how
+ *   many payments the rounds one by one would have taken.
  * The trip opens to settle right after its last round: no round still being played, no planned
  * round still to come on this phone, and either the last day has come and a round finished that
- * day, the last day has gone, or someone said they're done playing (`endedAt`).
+ * day, the last day has gone, someone said they're done playing (`endedAt`, on the organizer's
+ * phone), or someone settled the whole trip (`closed`, which every phone in a round hears about).
  */
 export function tripStatus(state, id, { now = Date.now() } = {}) {
   const trip = tripOf(state, id);
@@ -214,24 +274,32 @@ export function tripStatus(state, id, { now = Date.now() } = {}) {
   const money = moneyDone(rounds);
   const people = tripPeople(state, id);
   const together = togetherOf(state, rounds);
+  const pairRounds = tripPairRounds(state, id, { now });
+  const local = rounds.filter(r => !pairRounds.includes(r));
   const bal = balanceCents(state, rounds);
-  const { trip: paid, counted, onRounds, left } = paymentsOf(state, id, rounds, together, bal);
-  const plan = fewestPayments(Object.fromEntries(Object.entries(left).map(([k, c]) => [k, c / 100])), { canPay: (a, b) => together.has(pairKey(a, b)) });
+  const { trip: tripPaid, onRounds, onPairs, counted, left } = paymentsOf(state, id, rounds, local, together, balanceCents(state, local));
+  const rest = fewestPayments(Object.fromEntries(Object.entries(left).map(([k, c]) => [k, c / 100])), { canPay: (a, b) => together.has(pairKey(a, b)) });
+  const plan = mergePlan(openByPair(state, pairRounds), rest);
+  const paid = [...tripPaid, ...onRounds, ...onPairs, ...counted.map(x => x.settlement)];
+  // Payments made from "Settle the trip" (trip-pay.js): `settling` locks the trip's rounds on it
+  const settling = paid.filter(s => tripSettleOf(s)?.id === id);
+  const closed = settling.some(s => !tripSettleOf(s).part);
 
   const lastDone = done.length ? Math.max(...done.map(finishedAt)) : 0;
-  const over = !!trip.endedAt || (!!trip.end && (today > trip.end || (today === trip.end && done.some(r => dayOf(finishedAt(r)) === today))));
+  const over = !!trip.endedAt || closed || (!!trip.end && (today > trip.end || (today === trip.end && done.some(r => dayOf(finishedAt(r)) === today))));
   const quiet = !live.length && !planned.length;
   let phase;
   if (!done.length && !live.length) phase = trip.start && today < trip.start ? 'soon' : over ? 'empty' : planned.length ? 'soon' : 'on';
   else if (quiet && over && done.length) phase = plan.length ? 'ready' : 'square';
   else phase = 'on';
-  const lastPaid = Math.max(0, ...paid.map(s => s.at || 0), ...counted.map(x => x.settlement.at || 0), ...onRounds.map(s => s.at || 0));
+  const lastPaid = Math.max(0, ...paid.map(s => s.at || 0));
   const who = canonicalOf(state);
   const standings = [...people.entries()].filter(([pid]) => money.some(r => r.players.some(p => who(p.id) === pid)))
     .map(([pid, v]) => ({ id: pid, amount: (bal[pid] || 0) / 100, rounds: v.rounds }))
     .sort((a, b) => b.amount - a.amount || a.id.localeCompare(b.id));
   return {
-    trip, phase, rounds, done, live, planned, money, people, standings, plan, paid,
+    trip, phase, rounds, done, live, planned, money, people, standings, plan, paid, settling, closed, pairRounds,
+    payments: tripPaymentGroups(state, paid),
     points: money.length ? null : pointsOf(state, rounds),
     // Played only for points so far: nothing to pay, and never a dollar
     pointsOnly: !money.length && pointsDone(rounds).length > 0,
@@ -239,6 +307,22 @@ export function tripStatus(state, id, { now = Date.now() } = {}) {
     lastDone, squareAt: phase === 'square' ? Math.max(lastPaid, lastDone) : null,
     ...tripDay(trip, today),
   };
+}
+
+/**
+ * One line of "Settle the trip" paid (`part`: someone leaving early settles their part). The shared
+ * rounds' part squares the pair on the trip's round transfers, as rows every phone in those rounds
+ * gets, so both phones of the pair agree; the part from rounds only this phone has is a payment
+ * here (its id names the trip). Returns { rows, settlements }, empty when the line is gone.
+ */
+export function tripPayment(state, tripId, from, to, { now = Date.now(), part = false } = {}) {
+  const st = tripStatus(state, tripId, { now });
+  const line = st?.plan.find(t => t.from === from && t.to === to);
+  if (!line) return { rows: [], settlements: [] };
+  const ids = new Set(st.pairRounds.map(r => r.id));
+  const rows = line.shared ? squareRows(state, from, to, ids, { now, reason: tripReason(tripId, part) }).rows : [];
+  const settlements = line.local ? [{ id: tripPaymentId(tripId, from, to, now), from, to, amount: line.local / 100, at: now, ...(part ? { tripPart: true } : {}) }] : [];
+  return { rows, settlements };
 }
 
 /** Your net on the trip so far (you are `state.me` to the trip). */
@@ -272,11 +356,13 @@ export function currentTrips(state, { now = Date.now() } = {}) {
 }
 
 /**
- * The trip a round on `day` (YYYY-MM-DD) could count for: one whose dates take that day, your own
- * trip first, then the newest. Null when no trip is on.
+ * The trip a round on `day` (YYYY-MM-DD) could count for: one whose dates take that day and that's
+ * still being played, your own trip first, then the newest. Null when no trip is on.
  */
 export function tripOnDay(state, day) {
-  const list = [...tripsOf(state).values()].filter(t => t.start && t.end && t.start <= day && day <= t.end);
+  // A trip someone said they're done playing, or that's been settled as a whole, takes no more rounds
+  const open = t => !t.endedAt && !tripStatus(state, t.id)?.closed;
+  const list = [...tripsOf(state).values()].filter(t => t.start && t.end && t.start <= day && day <= t.end && open(t));
   list.sort((a, b) => Number(a.derived) - Number(b.derived) || (b.createdAt || 0) - (a.createdAt || 0));
   return list[0] || null;
 }
@@ -359,25 +445,6 @@ export function tripByGame(state, id) {
     }
   }
   return { columns, rows };
-}
-
-/**
- * Where a payment from "Settle the trip" goes on the server: the newest of the trip's rounds that
- * was shared live, that both people played, and that their phones still look up, with each
- * person's id in that round. Its payment rows reach both phones (and everyone else in that round).
- * Null when there's no such round: the payment then stays on this phone and your account.
- */
-export function tripPayRoute(state, tripId, from, to, { now = Date.now() } = {}) {
-  const who = canonicalOf(state);
-  const F = who(from), T = who(to);
-  const rounds = tripRounds(state, tripId)
-    .filter(r => r.status === 'done' && countsMoney(r) && codeOf(r) && finishedAt(r) >= now - FETCH_DAYS * DAY)
-    .sort((a, b) => finishedAt(b) - finishedAt(a));
-  for (const r of rounds) {
-    const f = r.players.find(p => who(p.id) === F), t = r.players.find(p => who(p.id) === T);
-    if (f && t) return { code: codeOf(r), from: f.id, to: t.id, by: meFor(r, state), roundId: r.id };
-  }
-  return null;
 }
 
 const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];

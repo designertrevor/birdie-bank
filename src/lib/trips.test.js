@@ -3,12 +3,12 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { createRound, roundResults } from './round.js';
-import { outstanding, tabBalances } from './ledger.js';
+import { outstanding, tabBalances, tabWith } from './ledger.js';
 import { sharedDebts } from './pair-debts.js';
-import { applyRows, roundRows, roundStatus } from './shared-tab.js';
-import { isTripPayment, settlingTrips, tripOfPayment, tripPaymentId } from './trip-pay.js';
+import { allocatePayment, applyRows } from './shared-tab.js';
+import { tripPaymentId, tripSettleOf } from './trip-pay.js';
 import {
-  canRecount, countsByDefault, currentTrips, startsLine, tripPlanDay, myTripNet, newTrip, partPlan, roundsInDates, tripByGame, tripDay, tripOnDay, tripPayRoute,
+  canRecount, countsByDefault, currentTrips, startsLine, tripPlanDay, myTripNet, newTrip, partPlan, roundsInDates, tripByGame, tripDay, tripOnDay, tripPayment,
   tripPeople, tripRounds, tripStamp, tripStatus, tripsOf, cleanTripName, tripChips, tripDates, upDown,
 } from './trips.js';
 import { applyDoc, toDocs } from './cloud-model.js';
@@ -64,6 +64,15 @@ function byHand(rounds) {
   return out;
 }
 /** Record every line of a plan as a payment from "Settle the trip", the way the Settle screen does on a phone with no shared round. */
+/** Pay every line of a plan from "Settle the trip" on this phone, rows and all. */
+function payLines(s, plan, now, part = false) {
+  let out = s;
+  for (const line of plan) {
+    const { rows, settlements } = tripPayment(out, 't_bandon', line.from, line.to, { now, part });
+    out = applyRows({ ...out, settlements: [...out.settlements, ...settlements] }, rows);
+  }
+  return out;
+}
 const payAll = (s, plan, at = OCT(18, 14)) => ({ ...s, settlements: [...s.settlements, ...plan.map((t, i) => ({ id: tripPaymentId(TRIP.id, t.from, t.to, at + i), from: t.from, to: t.to, amount: t.amount, at: at + i }))] });
 
 // ---------------------------------------------------------------------------
@@ -169,14 +178,14 @@ test('the Tab’s totals and plan are exactly the same with or without the trip'
 
 test('old rounds keep their money: a trip payment never touches rounds that aren’t on the trip', () => {
   const home = round('h1', ['t', 'j'], wins(['t', 'j'], [1, 't'], [2, 't']), { at: OCT(10), trip: null, code: 'HHHHHH' });
-  const base = stateOf('t', [home, ...bandon({ codes: true })]);
-  const now = OCT(18, 13);
-  const before = sharedDebts(base, { now }).filter(d => [d.from, d.to].includes('j'));
-  const st = tripStatus(base, 't_bandon', { now });
-  const paid = payAll(base, st.plan.slice(0, 1));
-  assert.deepEqual(sharedDebts(paid, { now }).filter(d => [d.from, d.to].includes('j')), before, 'Jess and Trevor’s home round stays between them');
-  assert.ok(settlingTrips(paid).has('t_bandon'));
-  assert.equal(settlingTrips(base).size, 0);
+  for (const codes of [false, true]) {
+    const base = stateOf('t', [home, ...bandon({ codes })]);
+    const now = OCT(18, 13);
+    const before = sharedDebts(base, { now }).filter(d => [d.from, d.to].includes('j'));
+    const paid = payLines(base, tripStatus(base, 't_bandon', { now }).plan, now);
+    assert.deepEqual(sharedDebts(paid, { now }).filter(d => [d.from, d.to].includes('j')), before, 'Jess and Trevor’s home round stays between them');
+    assert.equal(tripStatus(paid, 't_bandon', { now }).plan.length, 0);
+  }
 });
 
 test('settling the trip squares it in the fewest payments, and the Tab with it', () => {
@@ -195,49 +204,101 @@ test('settling the trip squares it in the fewest payments, and the Tab with it',
   assert.ok(Object.values(tabBalances(done)).every(v => Math.abs(v) < 0.005));
 });
 
-test('rounds shared live: once the trip is being settled, its money is squared across the trip, not pair by pair', () => {
+test('rounds shared live: the trip settles pair by pair, the way the Tab keeps them', () => {
   const s = stateOf('t', bandon({ codes: true }));
   const now = OCT(18, 13);
-  // Before anyone pays, the Tab keeps each shared round's money between the two people, as always
-  assert.ok(sharedDebts(s, { now }).length > 0);
   const st = tripStatus(s, 't_bandon', { now });
-  const half = payAll(s, st.plan.slice(0, 1));
-  // After the first trip payment, the trip's rounds leave the pair-by-pair layer...
-  assert.equal(sharedDebts(half, { now }).length, 0);
-  // ...and the Tab's plan is what's left of the trip: no money going round in circles
-  const tab = outstanding(half, { now });
-  const rest = tripStatus(half, 't_bandon', { now }).plan;
-  assert.equal(tab.reduce((a, t) => a + cents(t.amount), 0), rest.reduce((a, t) => a + cents(t.amount), 0));
-  const all = payAll(s, st.plan);
+  // The plan is the Tab's own pair-by-pair money on the trip's rounds
+  const pairs = sharedDebts(s, { now }).map(d => `${d.from}>${d.to} ${d.cents}`).sort();
+  assert.deepEqual(st.plan.map(t => `${t.from}>${t.to} ${cents(t.amount)}`).sort(), pairs);
+  assert.ok(st.plan.every(t => t.local === 0));
+  // One line paid: the Tab still keeps the rest between the two people in each round
+  const half = payLines(s, st.plan.slice(0, 1), now);
+  assert.equal(sharedDebts(half, { now }).length, pairs.length - 1);
+  const all = payLines(s, st.plan, now);
+  assert.equal(sharedDebts(all, { now }).length, 0);
   assert.equal(outstanding(all, { now }).length, 0);
+  assert.equal(tripStatus(all, 't_bandon', { now }).phase, 'square');
 });
 
-test('a trip payment row reaches the other phone as a trip payment, never as paying one round', () => {
-  const trevor = stateOf('t', bandon({ codes: true }));
+// The money review's case: c skipped the second round, so c's phone never has it
+function partialTrip() {
+  const ids = ['t', 'a', 'b', 'c'];
+  const r1 = round('p1', ids, wins(ids, [1, 'a'], [2, 'a'], [3, 'c'], [4, 'c']), { at: OCT(16, 15), code: 'AAAAAA', skin: 5 });
+  const r2 = round('p2', ['t', 'a', 'b'], wins(['t', 'a', 'b'], [1, 'b'], [2, 'b'], [3, 'b'], [4, 'b']), { at: OCT(17, 15), code: 'BBBBBB', skin: 5 });
+  const on = (me, rounds) => stateOf(`z${me}`, rounds.map(r => ({ ...r, localMe: me })));
+  return {
+    t: stateOf('t', [r1, r2], { trips: { t_bandon: TRIP } }),
+    a: on('a', [r1, r2]), b: on('b', [r1, r2]), c: on('c', [r1]),
+  };
+}
+/** What a phone says `x` owes `y` on the Tab, in cents (ids as the rounds have them). */
+const owes = (s, x, y) => {
+  const id = v => (v === s.me.slice(1) ? s.me : v);
+  return cents(tabWith(outstanding(s, { now: OCT(18, 13) }), new Set([id(y)]), id(x)));
+};
+/** Send rows to every phone that has their round, the way the server does. */
+const deliver = (phones, rows) => { for (const k of Object.keys(phones)) phones[k] = applyRows(phones[k], rows); };
+
+test('a partial player: both phones of every pair agree on the trip, before and after paying', () => {
+  const phones = partialTrip();
   const now = OCT(18, 13);
-  const st = tripStatus(trevor, 't_bandon', { now });
-  const line = st.plan[0];
-  const route = tripPayRoute(trevor, 't_bandon', line.from, line.to, { now });
-  assert.equal(route.code, 'DDDDDD', 'the newest shared round both played');
-  const row = { code: route.code, id: tripPaymentId('t_bandon', line.from, line.to, now), kind: 'payment', from: route.from, to: route.to, amount: line.amount, status: 'paid', by: 't', reason: null, at: now, updatedAt: now };
-  // Mike's phone has the same rounds (he's m there too)
-  const mike = applyRows(stateOf('m', bandon({ codes: true })), [row]);
-  const s = mike.settlements.find(x => x.id === row.id);
-  assert.ok(s && isTripPayment(s));
-  assert.equal(tripOfPayment(s), 't_bandon');
-  // It squares the trip on his phone too
-  assert.equal(tripStatus(mike, 't_bandon', { now }).plan.length, st.plan.length - 1);
-  // The round's own who's-square status ignores it
-  const r4 = mike.rounds.r4;
-  assert.deepEqual(roundStatus(r4, roundRows(mike, r4)), roundStatus(r4, roundRows(stateOf('m', bandon({ codes: true })), r4)));
+  const agree = () => {
+    for (const [x, y] of [['b', 'c'], ['t', 'c'], ['a', 'c'], ['t', 'b'], ['a', 'b'], ['t', 'a']]) {
+      const holders = Object.keys(phones).filter(k => [x, y].includes(k));
+      const seen = holders.map(k => owes(phones[k], x, y));
+      assert.equal(new Set(seen).size, 1, `${x} and ${y}’s phones agree (${seen})`);
+    }
+  };
+  agree();
+  // c's part of the plan is the same on c's phone and Trevor's
+  const part = (k, who) => partPlan(tripStatus(phones[k], 't_bandon', { now }).plan, who).map(t => `${t.from}>${t.to} ${t.amount}`).sort();
+  assert.deepEqual(part('c', 'zc').map(x => x.replaceAll('zc', 'c')), part('t', 'c'));
+  // Trevor marks every line of the trip paid on his phone; the rows reach everyone in those rounds
+  for (const line of tripStatus(phones.t, 't_bandon', { now }).plan) {
+    const { rows, settlements } = tripPayment(phones.t, 't_bandon', line.from, line.to, { now });
+    assert.equal(settlements.length, 0, 'shared rounds only: nothing stays on Trevor’s phone');
+    phones.t = { ...phones.t, settlements: [...phones.t.settlements, ...settlements] };
+    deliver(phones, rows);
+  }
+  agree();
+  for (const k of Object.keys(phones)) {
+    assert.equal(outstanding(phones[k], { now }).length, 0, `${k}’s Tab is square`);
+    const st = tripStatus(phones[k], 't_bandon', { now });
+    assert.equal(st.plan.length, 0);
+    assert.ok(st.closed, `${k}’s phone hears the trip was settled`);
+    assert.equal(st.phase, 'square');
+  }
 });
 
-test('a round only one of them played is never the route; with no shared round it stays on this phone', () => {
-  const s = stateOf('t', bandon({ codes: true }));
-  // Dave missed r3 (CCCCCC), so a Dave payment goes on r4
-  assert.equal(tripPayRoute(s, 't_bandon', 'd', 't', { now: OCT(18, 13) }).code, 'DDDDDD');
-  const noCodes = stateOf('t', bandon());
-  assert.equal(tripPayRoute(noCodes, 't_bandon', 'd', 't', { now: OCT(18, 13) }), null);
+test('a Tab payment while the trip is being settled still reaches the other phone', () => {
+  const phones = partialTrip();
+  const now = OCT(18, 13);
+  // One trip line is paid first (the case where the old code stopped writing rows)
+  const line = tripStatus(phones.t, 't_bandon', { now }).plan.find(t => t.from !== 't' && t.to !== 't');
+  deliver(phones, tripPayment(phones.t, 't_bandon', line.from, line.to, { now }).rows);
+  // Then Trevor pays Andy from Andy's card on the Tab
+  const due = owes(phones.t, 't', 'a');
+  assert.ok(due > 0);
+  const { rows, settlements } = allocatePayment(phones.t, { from: 't', to: 'a', amount: due / 100 }, { now: now + 1000 });
+  assert.ok(rows.some(r => r.status === 'paid'), 'it goes on the rounds, not just this phone');
+  assert.equal(settlements.length, 0);
+  deliver(phones, rows);
+  assert.equal(owes(phones.t, 't', 'a'), 0);
+  assert.equal(owes(phones.a, 't', 'a'), 0, 'Andy’s phone sees Trevor’s payment');
+});
+
+test('a payment from Settle the trip says so on every phone, and a leaver’s part never closes the trip', () => {
+  const phones = partialTrip();
+  const now = OCT(17, 16);
+  const st = tripStatus(phones.t, 't_bandon', { now });
+  const line = partPlan(st.plan, 'c')[0];
+  const { rows } = tripPayment(phones.t, 't_bandon', line.from, line.to, { now, part: true });
+  deliver(phones, rows);
+  const s = phones.c.settlements.find(x => x.reason);
+  assert.deepEqual(tripSettleOf(s), { id: 't_bandon', part: true });
+  assert.ok(!tripStatus(phones.c, 't_bandon', { now }).closed);
+  assert.equal(tripOnDay(phones.t, '2026-10-17')?.id, 't_bandon', 'the trip still takes rounds');
 });
 
 // ---------------------------------------------------------------------------
@@ -335,6 +396,18 @@ test('“Count it for the trip?”: the trip on that day, yes by default when tr
   assert.equal(countsByDefault(s, 't_bandon', ['t']), true);
   // A brand new trip with no rounds yet: yes
   assert.equal(countsByDefault(stateOf('t', [], { trips: { t_bandon: TRIP } }), 't_bandon', ['t', 'j']), true);
+});
+
+test('a trip that’s done playing, or settled as a whole, takes no more rounds on any phone', () => {
+  const ended = stateOf('t', bandon(), { trips: { t_bandon: { ...TRIP, endedAt: OCT(17, 18) } } });
+  assert.equal(tripOnDay(ended, '2026-10-17'), null, 'Done playing on the organizer’s phone');
+  // A friend's phone doesn't have the organizer's record, but hears the whole-trip payments
+  const phones = partialTrip();
+  const now = OCT(17, 18);
+  assert.equal(tripOnDay(phones.b, '2026-10-17')?.id, 't_bandon');
+  for (const line of tripStatus(phones.t, 't_bandon', { now }).plan) deliver(phones, tripPayment(phones.t, 't_bandon', line.from, line.to, { now }).rows);
+  assert.equal(tripOnDay(phones.b, '2026-10-17'), null);
+  assert.equal(tripStatus(phones.b, 't_bandon', { now }).phase, 'square', 'and its card says the trip is square, not still being played');
 });
 
 test('rounds in the trip’s dates can be added, and a round on another trip stays there', () => {

@@ -10,8 +10,7 @@ import { getSupabase, supabaseConfigured } from './supabase.js';
 import { isMissingTable } from './plan-adapters.js';
 import { allocatePayment, applyRows, lastPayment, nettedFor, tabCodes, undoRows } from './shared-tab.js';
 import { cardCarry, carryReducer, carryRows, carrySplit, splitCodes, splitRounds } from './carry.js';
-import { tripPaymentId } from './trip-pay.js';
-import { tripPayRoute } from './trips.js';
+import { tripPayment } from './trips.js';
 
 // Per dev profile (?profile=b), so two tabs acting as two phones never read each other's queue
 const QUEUE = 'bb-tab-queue' + STORE_KEY.slice('birdie-bank-v1'.length);
@@ -260,21 +259,16 @@ export function markTransfer(round, t, code) {
 }
 
 /**
- * Record one payment from "Settle the trip". It goes on the newest of the trip's shared rounds
- * that both people played, so their phones (and everyone else in that round) see it; with no such
- * round it stays on this phone and your account. Returns { shared, id }.
+ * Record one line of "Settle the trip" paid (`part`: someone leaving early settles their part).
+ * The shared rounds' part squares the pair on the trip's round transfers, so both phones (and
+ * everyone else in those rounds) see it and agree; the part from rounds only this phone has is a
+ * payment on this phone and your account. Returns { shared, at }.
  */
-export function markTripPayment({ tripId, from, to, amount }) {
-  const s = getState();
+export function markTripPayment({ tripId, from, to, part = false }) {
   const now = Date.now();
-  const id = tripPaymentId(tripId, from, to, now);
-  const route = tripPayRoute(s, tripId, from, to, { now });
-  if (!route) {
-    take([], { add: [{ id, from, to, amount, at: now }] });
-    return { shared: false, id };
-  }
-  commit([{ code: route.code, id, kind: 'payment', from: route.from, to: route.to, amount, status: 'paid', by: route.by, reason: null, at: now, updatedAt: now }]);
-  return { shared: !off, id };
+  const { rows, settlements } = tripPayment(getState(), tripId, from, to, { now, part });
+  commit(rows, { add: settlements });
+  return { shared: !off && rows.some(r => r.status === 'paid'), at: now };
 }
 
 /** Take back payments (one tap, no confirm: it can be put back the same way). Returns a redo function. */
