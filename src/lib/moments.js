@@ -380,6 +380,13 @@ export function bankerMoment(round, pos) {
       return { kind: 'bankbirdie', hero: bank, title, text: `${bk}’s ${word}: ${fmt(amt)} off ${off}` };
     }
     const top = birdies.reduce((a, x) => (x.amount > a.amount ? x : a));
+    if (birdies.length > 1) {
+      // Two or more beat the bank with a birdie: name them all, with what they take together
+      const names = birdies.map(x => nameOf(x.pid));
+      const list = `${names.slice(0, -1).join(', ')} and ${names.at(-1)}`;
+      const amt = birdies.reduce((a, x) => a + x.amount, 0);
+      return { kind: 'bankbirdie', hero: top.pid, title, text: `${list} ${eagle ? 'birdie or better' : 'birdie'}: ${fmt(amt)} off ${bk}` };
+    }
     return { kind: 'bankbirdie', hero: top.pid, title, text: `${nameOf(top.pid)}’s ${word}: ${fmt(top.amount)} off ${bk}` };
   }
   const base = settingsAt(main, pos).banker?.defaultBet || 0;

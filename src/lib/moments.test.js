@@ -431,6 +431,10 @@ test('Banker: a birdie double, an eagle, and the banker’s own birdie', () => {
   // Ann the banker birdies and beats two; Di's par halves
   const bank = roundMoment(banker([{ banker: 'a', bets: bets() }], [{ a: 3, b: 5, c: 5, d: 3 }], opts), 1);
   assert.equal(bank.text, 'Ann’s birdie doubles it: $20 off 2 players, and the lead');
+  // Bo and Cy both birdie against Ann: both named, with what they take together
+  const two = roundMoment(banker([{ banker: 'a', bets: bets() }], [{ b: 3, c: 3 }], opts), 1);
+  assert.equal(two.kind, 'bankbirdie');
+  assert.match(two.text, /^Bo and Cy birdie: \$20 off Ann/);
   // Birdies off: the same hole is no birdie moment
   assert.notEqual(roundMoment(banker([{ banker: 'a', bets: bets() }], [{ b: 3 }]), 1)?.kind, 'bankbirdie');
 });
