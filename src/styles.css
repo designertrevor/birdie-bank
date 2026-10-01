@@ -1654,3 +1654,14 @@ button.lately-row:active { background: var(--surface); }
 .update-note .ph-bold { color: var(--icon); font-size: 18px; flex-shrink: 0; }
 .update-note b { font-weight: 700; }
 .update-note .un-sub { color: var(--mute); }
+
+/* ---------- Request this course: the card when course search finds nothing (overnight 6, request-course) ---------- */
+.rc-card { margin-top: 6px; }
+.rc-title { font-family: var(--display); font-size: 22px; font-weight: 800; color: var(--ink); letter-spacing: -.02em; }
+.rc-text { margin-top: 6px; font-size: 15px; line-height: 1.45; color: var(--body); }
+.rc-card .field-label:first-of-type { margin-top: 12px; }
+.rc-actions { display: flex; flex-direction: column; gap: 8px; margin-top: 16px; }
+.rc-btn { height: 50px; font-size: 16px; }
+.rc-card > .rc-btn { margin-top: 14px; }
+.rc-btn:disabled { opacity: .5; transform: none; }
+.rc-done-icon { font-size: 34px; line-height: 1; color: var(--win); margin-bottom: 8px; }

@@ -272,13 +272,20 @@ function blankCourse(n = 18) {
   };
 }
 
-export function CourseEdit({ id }) {
+/**
+ * Add or edit a course. `prefill` ({ name, city }) starts a new course with what was already typed.
+ * `onDone` opens it in place (from round setup, so the setup underneath is kept): it gets the saved
+ * course's id, or null when they go back without saving. Without it the screen pops itself.
+ */
+export function CourseEdit({ id, prefill = null, onDone = null }) {
   const nav = useNav();
   const state = useStore();
   const { ask, showToast } = useUI();
   const existing = id ? findCourse(state, id) : null;
   const builtIn = existing && !existing.custom;
-  const [c, setC] = useState(() => (existing ? structuredClone(existing) : blankCourse()));
+  const [c, setC] = useState(() => (existing ? structuredClone(existing)
+    : { ...blankCourse(), name: String(prefill?.name || '').trim(), city: String(prefill?.city || '').trim() }));
+  const leave = savedId => (onDone ? onDone(savedId) : nav.pop());
   const [pad, setPad] = useState(null); // { kind, i, t, title, min, max, decimal }
 
   const n = c.holes.length;
@@ -306,7 +313,7 @@ export function CourseEdit({ id }) {
       }
     });
     showToast(builtIn ? 'Saved your corrected copy' : 'Course saved');
-    nav.pop();
+    leave(cid);
   };
   const remove = async () => {
     if (!(await ask({ title: `Delete ${existing.name}?`, text: existing.replaces ? 'The built-in version comes back.' : 'Past rounds keep their scorecards.', confirmLabel: 'Delete course', danger: true }))) return;
@@ -316,7 +323,7 @@ export function CourseEdit({ id }) {
       // A starred corrected copy hands its star back to the built-in course it replaced
       s.starredCourses = (s.starredCourses || []).map(f => (f === id ? existing.replaces || null : f)).filter(Boolean);
     });
-    nav.pop();
+    leave(null);
   };
 
   const onPad = v => {
@@ -335,7 +342,7 @@ export function CourseEdit({ id }) {
 
   return (
     <Screen>
-      <Header title={builtIn ? 'Course details' : existing ? 'Edit course' : 'Add a course'} onBack={nav.pop} />
+      <Header title={builtIn ? 'Course details' : existing ? 'Edit course' : 'Add a course'} onBack={() => leave(null)} />
       <div className="scroll">
         {builtIn && (
           <p className="hint-card"><Icon name={existing.verified ? 'seal-check' : 'warning'} fill /> {existing.verified ? 'Par and hole handicaps are confirmed from a real scorecard.' : 'We couldn’t double-check this scorecard. Compare it with the card at the course and fix anything that’s off.'} Changes save as your own copy.</p>
