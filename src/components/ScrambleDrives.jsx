@@ -1,6 +1,7 @@
 // Scramble house rule "minimum drives": tap whose drive each team used on the hole, with the count so far.
 import { playsHole } from '../lib/round.js';
-import { drivesNeeded, scrambleDrives } from '../lib/scramble-drives.js';
+import { drivesNeeded, drivesShortfall, scrambleDrives, shortfallText } from '../lib/scramble-drives.js';
+import { Icon } from './ui.jsx';
 import { buzz } from '../lib/delight.js';
 
 const firstName = n => (n || '').split(' ')[0];
@@ -25,6 +26,7 @@ export function ScrambleDrivesPicker({ round, hole, marks, setMarks }) {
       {teams.map(t => {
         const owed = t.players.filter(p => p.short > 0);
         const sub = !owed.length ? `${need} each: done`
+          : !t.left ? `${owed.map(p => `${firstName(p.name)} ${p.short}`).join(', ')} short`
           : t.tight ? `Must use ${owed.map(p => firstName(p.name)).join(' & ')}`
             : `${owed.map(p => `${firstName(p.name)} ${p.short}`).join(', ')} more`;
         return (
@@ -43,4 +45,23 @@ export function ScrambleDrivesPicker({ round, hole, marks, setMarks }) {
       })}
     </div>
   );
+}
+
+/** A quiet line on the Play screen once a shortfall is worth flagging. It never blocks scoring. */
+export function DrivesShortfall({ round, done = false }) {
+  const short = drivesShortfall(round, { soon: !done });
+  // Nothing tagged all round means the rule wasn't used, so the results stay quiet
+  if (!short.length || (done && scrambleDrives(round).every(t => t.players.every(p => !p.drives)))) return null;
+  const gaps = done ? untagged(round) : 0;
+  return (
+    <p className="drives-short" role="status">
+      <Icon name="golf" />
+      <span>{short.map(s => shortfallText(s, { done })).join('. ')}.{done && gaps > 0 && ` ${gaps} hole${gaps === 1 ? ' wasn’t' : 's weren’t'} tagged.`}</span>
+    </p>
+  );
+}
+
+// Holes some team never tagged a drive on, for the results note
+function untagged(round) {
+  return Math.max(0, ...scrambleDrives(round).map(t => t.left));
 }

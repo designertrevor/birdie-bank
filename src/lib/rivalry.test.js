@@ -220,3 +220,39 @@ test('nemesis line: steady for the same record, first name only, no em dashes', 
   }
   assert.ok(seen.size > 1, 'the lines vary');
 });
+
+test('the nemesis counts money rounds only; the rivalry record still counts points and reward rounds', () => {
+  const ids = ['me', 'b'];
+  const rounds = [
+    round('r1', ids, win('b', ids), { t: 100 }), // lost $2
+    round('r2', ids, win('b', ids), { t: 200, playFor: { kind: 'points' } }), // lost on points
+    round('r3', ids, win('b', ids), { t: 300, playFor: { kind: 'reward', reward: 'lunch' } }), // lost lunch
+    round('r4', ids, win('me', ids), { t: 400, playFor: { kind: 'points' } }), // won on points
+  ];
+  const s = state(rounds);
+  const n = nemesis(s, ME);
+  assert.equal(n.id, 'b');
+  assert.equal(n.net, -2);
+  assert.deepEqual([n.rounds, n.won, n.lost, n.even], [1, 0, 1, 0]);
+  // The record keeps every round
+  const rv = rivalry(s, ME, 'b');
+  assert.deepEqual([rv.rounds, rv.won, rv.lost], [4, 1, 3]);
+  assert.equal(headToHeadSummary(s, ME).get('b').rounds, 4);
+  assert.equal(headToHeadSummary(s, ME, { moneyOnly: true }).get('b').rounds, 1);
+  // Only points rounds against someone: never a nemesis
+  assert.equal(nemesis(state([round('p1', ids, win('b', ids), { playFor: { kind: 'points' } })]), ME), null);
+});
+
+test('the nemesis tie-break looks at money rounds, not points rounds', () => {
+  // Down $2 to both; Cy has two extra points rounds, Bo one more money round: Bo wins the tie
+  const rounds = [
+    round('r1', ['me', 'b'], { 1: { me: 4, b: 3 }, 2: { me: 4, b: 3 } }, { t: 100 }), // -4
+    round('r2', ['me', 'b'], { 1: { me: 3, b: 4 } }, { t: 150 }), // +2: Bo -2 over 2 money rounds
+    round('r3', ['me', 'c'], win('c', ['me', 'c']), { t: 200 }), // -2 over 1 money round
+    round('r4', ['me', 'c'], win('c', ['me', 'c']), { t: 300, playFor: { kind: 'points' } }),
+    round('r5', ['me', 'c'], win('c', ['me', 'c']), { t: 400, playFor: { kind: 'points' } }),
+  ];
+  const n = nemesis(state(rounds), ME);
+  assert.equal(n.id, 'b');
+  assert.equal(n.rounds, 2);
+});

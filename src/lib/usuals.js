@@ -45,6 +45,8 @@ export function usualFromRound(state, round, { id, name = null, now = Date.now()
     bets: s.bets,
     hcPct: s.hcPct,
     useHc: s.useHc,
+    // Half strokes ride along (absent: full strokes, as every usual saved before them)
+    ...(s.halfStrokes ? { halfStrokes: true } : {}),
     teams: GAMES[s.game]?.teams ? s.teams : null,
     createdAt: now,
     lastPlayedAt: round.status === 'done' ? (round.finishedAt || round.createdAt || now) : null,
@@ -76,6 +78,7 @@ export function setupFromUsual(state, usual) {
     bets: usual.bets ? structuredClone(usual.bets) : null,
     hcPct: usual.hcPct ?? null,
     useHc: usual.useHc !== false,
+    ...(usual.halfStrokes ? { halfStrokes: true } : {}),
     teams: sameGroup ? usual.teams.map(t => [...t]) : defaultTeams(usual.game, picked),
     ...(usual.sideGames?.length ? { sideGames: structuredClone(usual.sideGames) } : {}),
     ...(storedPlayFor(usual.playFor) ? { playFor: storedPlayFor(usual.playFor) } : {}),
@@ -100,6 +103,7 @@ export function planFromUsual(state, usual) {
   const opts = {
     ...(s.bets ? { [s.game]: structuredClone(s.bets) } : {}),
     ...(s.hcPct != null ? { hcPct: s.hcPct } : {}),
+    ...(s.halfStrokes ? { halfStrokes: true } : {}),
   };
   for (const sg of fits) opts[sg.game] = structuredClone(sg.settings);
   return {
@@ -107,6 +111,8 @@ export function planFromUsual(state, usual) {
     invited: s.picked.filter(pid => pid !== state.me),
     opts,
     sides: fits.map(sg => sg.game),
+    // The side games as saved, with any Strokes given % of their own (the plan keeps those too)
+    sideGames: structuredClone(fits),
     missing: s.missing,
     useHc: s.useHc,
     // Points or a reward rides along on the plan (absent: money)
@@ -130,7 +136,10 @@ export function usualIdFor(state, usualId, game, course) {
 function key(u) {
   return stable({
     game: u.game, courseId: u.courseId ?? null, holesCount: u.holesCount, nine: u.holesCount === 9 ? u.nine || 'front' : null,
-    players: [...(u.players || [])].sort(), bets: u.bets ?? null, sideGames: (u.sideGames || []).map(sg => ({ game: sg.game, settings: sg.settings })),
+    players: [...(u.players || [])].sort(), bets: u.bets ?? null,
+    // A side game's own % and half strokes only join the key when set, so usuals saved before them still match
+    sideGames: (u.sideGames || []).map(sg => ({ game: sg.game, settings: sg.settings, ...(sg.hcPct != null ? { hcPct: sg.hcPct } : {}) })),
+    ...(u.halfStrokes ? { halfStrokes: true } : {}),
     // Money usuals keep the key they always had (no playFor), so saved ones still match
     ...(storedPlayFor(u.playFor) ? { playFor: storedPlayFor(u.playFor) } : {}),
   });

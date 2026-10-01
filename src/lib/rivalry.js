@@ -109,11 +109,13 @@ export function nemesisLine(id, name, rounds = 0) {
  * Your nemesis: the friend you've lost the most money to, all time, from the same head to head
  * the Players list shows. { id, name, net, rounds, won, lost, even, line } or null when you're
  * not down on anyone. A tie goes to more rounds together, then more losses, then the name.
+ * It's about money, so every count is money rounds only: "down $12 over 3 rounds" never counts
+ * a points or reward round (the rivalry card's record still does).
  */
 export function nemesis(state, ids) {
   const mine = ids instanceof Set ? ids : new Set(ids);
   let pick = null;
-  for (const [id, h] of headToHeadSummary(state, mine)) {
+  for (const [id, h] of headToHeadSummary(state, mine, { moneyOnly: true })) {
     if (!(h.net <= -0.01)) continue;
     const cand = { id, name: nameOf(state, id), ...h };
     if (!pick || cand.net < pick.net

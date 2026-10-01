@@ -19,7 +19,8 @@ import {
   BBBPicker, DotsRow, HammerPanel, MatchPanel, MoneyPanel, PointsPanel, RabbitPanel, ScramblePanel, SixesPanel, SnakePanel, SnakePicker, TotalsPanel, VegasPanel,
 } from '../components/GamePanels.jsx';
 import { GameOptions } from '../components/GameOptions.jsx';
-import { ScrambleDrivesPicker } from '../components/ScrambleDrives.jsx';
+import { DrivesShortfall, ScrambleDrivesPicker } from '../components/ScrambleDrives.jsx';
+import { holeStrokeNotes, holeStrokeNoteText } from '../lib/stroke-key.js';
 import { drivesNeeded } from '../lib/scramble-drives.js';
 import { optionsProblem, roundStakeLines, sideBetLine, stakeSummary } from '../lib/stakes.js';
 import { buzz, confettiFrom } from '../lib/delight.js';
@@ -489,6 +490,7 @@ function PlayRound({ round }) {
       {(game === 'stroke' || game === 'stableford' || game === 'quota') && <TotalsPanel round={main} />}
       {(game === 'nines' || game === 'bbb' || game === 'dots') && <PointsPanel round={main} />}
       {game === 'scramble' && <ScramblePanel round={main} />}
+      {game === 'scramble' && <DrivesShortfall round={main} />}
       {game === 'aces' && <MoneyPanel round={main} results={results} icon="spade" label="Aces & deuces so far" />}
       {game === 'rabbit' && <RabbitPanel round={main} hole={hole} />}
       {game === 'snake' && <SnakePanel round={main} hole={hole} marks={marks} />}
@@ -511,6 +513,7 @@ function PlayRound({ round }) {
                   <div className="pname">{p.name}</div>
                   <div className="ps">
                     {st > 0 && <span className="stroke-dots">{'●'.repeat(st)} Gets {strokesWords(st, halfStrokesOn(round))}</span>}
+                    {holeStrokeNotes(round, p, hole).map(x => <span key={x.key} className="stroke-note"> · {holeStrokeNoteText(x)}</span>)}
                     {v != null && v !== 'X' && <span className={`score-name s${Math.max(-2, Math.min(2, v - hole.par))}`}> {scoreName(v, hole.par)}</span>}
                     {v === 'X' && <span> Picked up</span>}
                   </div>
@@ -543,6 +546,7 @@ function PlayRound({ round }) {
                   <div className="ps">
                     {st > 0 && <span className="stroke-dots" aria-label={`Gets ${strokesWords(st, halfStrokesOn(round))}`}>{'●'.repeat(st)} Gets {strokesWords(st, halfStrokesOn(round))}</span>}
                     {st < 0 && <span className="stroke-dots">Gives back {strokesWords(-st, halfStrokesOn(round))}</span>}
+                    {holeStrokeNotes(round, p, hole).map(x => <span key={x.key} className="stroke-note"> · {holeStrokeNoteText(x)}</span>)}
                     {game === 'banker' && !isBanker && <span> Bet {money(banker.bets[p.id] || 0)}{banker.doubled[p.id] ? (banker.doubleBack ? ' · 4×' : ' · 2×') : ''}</span>}
                     {touched[p.id] && v !== 'X' && <span className={`score-name s${Math.max(-2, Math.min(2, v - hole.par))}`}> {scoreName(v, hole.par)}{counted !== 0 && `, ${netScoreName(v - counted, hole.par)}`}</span>}
                   </div>

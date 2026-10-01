@@ -419,7 +419,7 @@ export function RollCall({ id }) {
     saveNew();
     const round = createRound({
       id: rid, game: setup.game, course, holesCount: setup.holesCount, nine: setup.nine, startHole: null,
-      players: setup.players, settings: setup.settings, hcPct: setup.hcPct, useHandicaps: setup.useHandicaps, teams: setup.teams,
+      players: setup.players, settings: setup.settings, hcPct: setup.hcPct, useHandicaps: setup.useHandicaps, teams: setup.teams, halfStrokes: setup.halfStrokes,
     });
     // The side games the group voted for ride along
     if (setup.sideGames.length) round.sideGames = structuredClone(setup.sideGames);

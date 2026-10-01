@@ -219,9 +219,10 @@ export function personStory(state, ids, other) {
 /**
  * Your honest head-to-head with everyone you've played a finished round with:
  * Map(id -> { rounds, won, lost, even, net }), where net is what you've won from them in all.
- * Points and reward rounds count in the record, never in net (dollars only).
+ * Points and reward rounds count in the record, never in net (dollars only). With `moneyOnly`
+ * they're left out of the record too, for counts that are about dollars (the nemesis card).
  */
-export function headToHeadSummary(state, ids) {
+export function headToHeadSummary(state, ids, { moneyOnly = false } = {}) {
   const mine = ids instanceof Set ? ids : new Set(ids);
   const who = canonical(state);
   const isMine = mineOf(state, mine);
@@ -229,6 +230,7 @@ export function headToHeadSummary(state, ids) {
   for (const r of doneRounds(state)) {
     const me = meFor(r, state);
     if (!mine.has(me) || !r.players.some(p => p.id === me)) continue; // watched rounds aren't yours
+    if (moneyOnly && !countsMoney(r)) continue;
     const pairs = roundResults(r).pairs[me] || {};
     // One person is one line, whichever id they had in this round
     const inRound = new Map();

@@ -30,10 +30,42 @@ export function scrambleDrives(round) {
       if (pid in count) count[pid]++;
       else left++;
     }
-    // Only the players still in the round owe drives
-    const still = t.players.filter(pid => round.holes.some(h => playsHole(round, pid, h) && !round.marks?.[h.no]?.drives?.[t.id]));
+    // Only the players still in the round owe drives: someone who left early is off the hook.
+    // Once every hole is tagged, the players who played the team's last hole still count, so the results can flag a shortfall.
+    const last = [...round.holes].reverse().find(h => t.players.some(pid => playsHole(round, pid, h)));
+    const still = t.players.filter(pid => round.holes.some(h => playsHole(round, pid, h) && !round.marks?.[h.no]?.drives?.[t.id])
+      || (!left && last && playsHole(round, pid, last)));
     const players = t.players.map(pid => ({ id: pid, name: names[pid], drives: count[pid], short: still.includes(pid) ? Math.max(0, need - count[pid]) : 0 }));
     const owed = players.reduce((a, p) => a + p.short, 0);
-    return { id: t.id, name: t.name, left, players, tight: owed > 0 && owed >= left };
+    return { id: t.id, name: t.name, left, players, tight: owed > 0 && left > 0 && owed >= left };
   });
+}
+
+const firstName = n => (n || '').split(' ')[0];
+const plural = (n, word) => `${n} ${word}${n === 1 ? '' : 's'}`;
+
+/**
+ * Who is still short of the minimum: [{ id, name, team, short, left, tight }], one row per player.
+ * `left` is the team's holes still to tag. A quiet flag only: nothing here blocks scoring or moves money.
+ * With `soon`, only rows worth flagging mid-round: the team is in its last third of holes, or it is tight.
+ */
+export function drivesShortfall(round, { soon = false } = {}) {
+  const teams = scrambleDrives(round);
+  const third = Math.max(3, Math.ceil((round?.holes?.length || 18) / 3));
+  const out = [];
+  for (const t of teams) {
+    if (soon && !(t.tight || t.left <= third)) continue;
+    for (const p of t.players) if (p.short > 0) out.push({ id: p.id, name: p.name, team: t.name, short: p.short, left: t.left, tight: t.tight });
+  }
+  return out;
+}
+
+/**
+ * "Ann needs 2 more drives with 4 holes left" mid-round, or "Ann came up 2 drives short" once nothing is left
+ * or the round is done (`done`).
+ */
+export function shortfallText(s, { done = false } = {}) {
+  return s.left > 0 && !done
+    ? `${firstName(s.name)} needs ${s.short} more drive${s.short === 1 ? '' : 's'} with ${plural(s.left, 'hole')} left`
+    : `${firstName(s.name)} came up ${plural(s.short, 'drive')} short`;
 }
