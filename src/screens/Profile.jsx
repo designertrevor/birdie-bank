@@ -27,7 +27,7 @@ function whereLine(user, server) {
 
 export default function Profile() {
   const nav = useNav();
-  const { showToast } = useUI();
+  const { ask, showToast } = useUI();
   const state = useStore();
   const acct = useAccount();
   const server = useProfileServer();
@@ -62,6 +62,11 @@ export default function Profile() {
     refreshProfiles();
     showToast('Profile saved');
   };
+  // Back with changes not saved: ask, rather than lose them or save a half-typed name
+  const back = async () => {
+    if (dirty && !(await ask({ title: 'Discard changes?', text: 'Your name, handicap and payment app go back to what’s saved.', confirmLabel: 'Discard', cancelLabel: 'Keep editing', danger: true }))) return;
+    nav.pop();
+  };
   const pickHome = c => {
     setHome(false);
     setHomeCourse(c);
@@ -74,7 +79,7 @@ export default function Profile() {
 
   return (
     <Screen>
-      <Header title="Your profile" onBack={nav.pop} />
+      <Header title="Your profile" onBack={back} />
       <div className="scroll">
         <div className="profile-hero">
           <button className="pf-avatar" onClick={() => setPicking(true)} aria-label={`Your avatar: ${avatarLabel(me.avatar)}. Change it`}>
