@@ -17,7 +17,7 @@
 // phone, so an ask that comes back again (its answer never got through) changes nothing the second
 // time: a replayed add can't bring back a bet taken off since, and a replayed change can't undo a
 // later edit. Pure, unit tested.
-import { MAX_BETS, addBet, betsOf, changeBet, cleanBet, removeBet, setBetWinner } from './pair-bets.js';
+import { GONE_MAX, MAX_BETS, addBet, betsOf, changeBet, cleanBet, removeBet, setBetWinner } from './pair-bets.js';
 
 /** How many applied asks a round remembers. */
 export const DONE_MAX = 60;
@@ -103,6 +103,8 @@ export function applyBetAsk(round, ask) {
 function applyOnce(round, ask) {
   const has = (round.bets || []).some(b => b?.id === ask.id);
   if (ask.op === 'add') return has || (round.betsGone || []).includes(ask.id) ? round : addBet(round, { ...ask.bet, id: ask.id });
+  // A remove heard before its add still marks the bet taken off, so the add can't bring it back later
+  if (ask.op === 'remove' && !has) return { ...round, betsGone: [...(round.betsGone || []).filter(x => x !== ask.id), ask.id].slice(-GONE_MAX) };
   if (!has) return round;
   if (ask.op === 'change') return changeBet(round, ask.id, { ...ask.bet, id: ask.id });
   if (ask.op === 'remove') return removeBet(round, ask.id);
