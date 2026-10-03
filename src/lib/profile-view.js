@@ -25,22 +25,46 @@ export const PRIVACY_ROWS = [
   { key: 'homeCourse', title: 'Your home course', help: 'Where you usually play.' },
 ];
 
-/** Who sees one part of your profile, in words: "Only you" or "People you’ve played with". */
+/** Who sees one part of your profile, in words: "Only you", "People you’ve played with" or "Everyone". */
 export function whoSees(privacy, key) {
+  const level = normalizePrivacy(privacy)[key];
+  if (level === 'everyone') return 'Everyone';
   return shows(privacy, key) ? 'People you’ve played with' : 'Only you';
+}
+
+/** The choices for who sees your money, in the order the profile screen shows them. */
+export const MONEY_CHOICES = [
+  { value: 'hidden', label: 'Only you' },
+  { value: 'played', label: 'People you’ve played with' },
+  { value: 'everyone', label: 'Everyone' },
+];
+
+/**
+ * The line under "Who sees your money", honest about who that is today: profiles only open for
+ * people who share a round with you, so "Everyone" reaches the same people as "People you’ve
+ * played with" until profiles can be opened more widely, and then it reaches them too.
+ */
+export function moneyHelp(privacy) {
+  const p = normalizePrivacy(privacy);
+  if (p.money === 'hidden') return 'Your net and best round stay on your phone. Nobody else sees them.';
+  if (p.stats !== 'played') return 'Your net and best round go out with your record, which is hidden, so nobody else sees them yet.';
+  if (p.money === 'everyone') return 'Anyone who opens your profile sees your net and your best round. For now that’s people who’ve been in a round with you. When people you haven’t played with can open profiles, they’ll see it too.';
+  return 'People you’ve played a round with see your net and your best round.';
 }
 
 /** One line for the privacy section: what people you've played with can see. */
 export function privacySummary(privacy) {
   const p = normalizePrivacy(privacy);
   // Money goes out with your record (shareableStats), so a hidden record keeps it in too
-  const moneyOut = p.money === 'played' && p.stats === 'played';
-  const seen = PRIVACY_KEYS.filter(k => p[k] === 'played' && (k !== 'money' || moneyOut));
+  const moneyOut = p.money !== 'hidden' && p.stats === 'played';
+  // Money open to everyone gets its own sentence, so it isn't listed as only for people you've played with
+  const seen = PRIVACY_KEYS.filter(k => p[k] !== 'hidden' && (k !== 'money' || (moneyOut && p.money === 'played')));
   if (!seen.length) return 'Everything on your profile is only for you.';
   const words = { money: 'money', stats: 'record', handicap: 'handicap', homeCourse: 'home course' };
   const list = ['name', 'avatar', ...seen.map(k => words[k])];
   const joined = `${list.slice(0, -1).join(', ')} and ${list.at(-1)}`;
-  const tail = p.money === 'hidden' ? ' Your money is only for you.' : !moneyOut ? ' Your money shows only with your record, so it’s only for you too.' : '';
+  const tail = p.money === 'hidden' ? ' Your money is only for you.' : !moneyOut ? ' Your money shows only with your record, so it’s only for you too.'
+    : p.money === 'everyone' ? ' Your money is open to anyone who opens your profile.' : '';
   return `People you’ve played with see your ${joined}.${tail}`;
 }
 

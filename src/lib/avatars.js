@@ -1,5 +1,5 @@
-// Avatars: the Ball buddies (the golf ball from the empty states, in a hat, on a backdrop), a photo,
-// or initials on a pastel. Pure, so the picker, every list and the tests share one set of rules.
+// Avatars: the Ball buddies (the golf ball from the empty states, in a hat, on a backdrop) and the
+// critters shelf (birdie, eagle, goose and friends), a photo, or initials on a pastel. Pure, so the picker, every list and the tests share one set of rules.
 //
 // An avatar as it's saved (state.profile.avatar, a friend's profile, a round player's `avatar`):
 //   { kind: 'buddy', id, bg }        a Ball buddy (BUDDIES) on a backdrop (BACKDROPS)
@@ -25,7 +25,17 @@ export const BACKDROPS = [
 const BACKDROP = Object.fromEntries(BACKDROPS.map(b => [b.id, b]));
 export const backdropOf = id => BACKDROP[id] || BACKDROP.mint;
 
-/** The Ball buddies, in the order the picker shows them, each with the backdrop it starts on. */
+/** The picker's shelves, in order: the Ball buddies (the ball in a hat) and the critters. */
+export const SHELVES = [
+  { id: 'buddies', name: 'Ball buddies' },
+  { id: 'critters', name: 'Critters' },
+];
+
+/**
+ * The Ball buddies and critters, in the order the picker shows them, each with the backdrop it
+ * starts on and its shelf. All saved as { kind: 'buddy', id, bg }, so an older app that doesn't
+ * know a new one shows initials on its backdrop.
+ */
 export const BUDDIES = [
   { id: 'bucket', name: 'Bucket hat', bg: 'mint' },
   { id: 'visor', name: 'Visor', bg: 'peach' },
@@ -39,9 +49,23 @@ export const BUDDIES = [
   { id: 'straw', name: 'Straw hat', bg: 'mint' },
   { id: 'bandana', name: 'Bandana', bg: 'ochre' },
   { id: 'crown', name: 'Crown', bg: 'teal' },
-];
+  { id: 'tam', name: 'Tam o’ shanter', bg: 'peach' },
+  { id: 'earmuffs', name: 'Earmuffs', bg: 'mint' },
+  { id: 'partyhat', name: 'Party hat', bg: 'lav' },
+  { id: 'halo', name: 'Halo', bg: 'blush' },
+  { id: 'birdie', name: 'Birdie', bg: 'mint', shelf: 'critters' },
+  { id: 'eagle', name: 'Eagle', bg: 'teal', shelf: 'critters' },
+  { id: 'goose', name: 'Goose', bg: 'lav', shelf: 'critters' },
+  { id: 'gopher', name: 'Gopher', bg: 'blush', shelf: 'critters' },
+  { id: 'flamingo', name: 'Flamingo', bg: 'ochre', shelf: 'critters' },
+  { id: 'frog', name: 'Hazard frog', bg: 'peach', shelf: 'critters' },
+  { id: 'tiger', name: 'Tiger headcover', bg: 'pink', shelf: 'critters' },
+  { id: 'flag', name: 'Pin flag', bg: 'mint', shelf: 'critters' },
+].map(b => ({ shelf: 'buddies', ...b }));
 const BUDDY = Object.fromEntries(BUDDIES.map(b => [b.id, b]));
 export const buddyOf = id => BUDDY[id] || null;
+/** The buddies on one shelf, in picker order. */
+export const shelfOf = shelf => BUDDIES.filter(b => b.shelf === shelf);
 
 /** The pastels a person with no avatar gets, picked from who they are so it stays the same. */
 export const FALLBACK_TINTS = ['lav', 'peach', 'mint', 'ochre'];
@@ -98,7 +122,7 @@ export function avatarModel(avatar, { name = '', key = '', letters = 1 } = {}) {
 export function avatarLabel(avatar) {
   const a = normalizeAvatar(avatar);
   if (a?.kind === 'photo') return 'Your photo';
-  if (a?.kind === 'buddy') return buddyOf(a.id)?.name || 'A Ball buddy';
+  if (a?.kind === 'buddy') return buddyOf(a.id)?.name || 'A character';
   return 'Initials';
 }
 

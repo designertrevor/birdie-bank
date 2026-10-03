@@ -8,7 +8,9 @@
 //               (a photo still on this phone only has a data: url and pending: true)
 //   homeCourse  null | { id, name, place? }
 //   privacy     { money, stats, handicap, homeCourse }: each 'played' (people you've played with
-//               see it) or 'hidden' (only you). Money is hidden until you choose to show it.
+//               see it) or 'hidden' (only you). Money can also be 'everyone' (anyone who opens your
+//               profile; today profiles only open for people who share a round with you, so it reads
+//               the same as 'played' until profiles open wider). Money is hidden until you choose.
 //   updatedAt   ms, when you last changed any of it
 // People you've played with are cached on the phone by account (state.profiles), and which
 // account each player id is in state.accountOf, which people-links.js uses so two player records
@@ -25,8 +27,15 @@ const text = (v, max) => (typeof v === 'string' ? v.trim().slice(0, max) : '');
 
 /** What each privacy setting covers, in the order a settings screen lists them. */
 export const PRIVACY_KEYS = ['money', 'stats', 'handicap', 'homeCourse'];
-/** Who sees each part: 'played' is people you've played a round with, 'hidden' is only you. */
-export const PRIVACY_LEVELS = ['played', 'hidden'];
+/**
+ * Who sees each part: 'played' is people you've played a round with, 'hidden' is only you, and
+ * 'everyone' (money only) is anyone who opens your profile, including people you haven't played
+ * with once profiles can be opened that way.
+ */
+export const PRIVACY_LEVELS = ['played', 'hidden', 'everyone'];
+/** The levels each part can take: only money has 'everyone'. */
+const LEVELS_FOR = { money: ['hidden', 'played', 'everyone'], stats: ['played', 'hidden'], handicap: ['played', 'hidden'], homeCourse: ['played', 'hidden'] };
+export const levelsFor = key => LEVELS_FOR[key] || [];
 /** Money hidden, everything else seen by people you've played with. */
 export const PRIVACY_DEFAULTS = Object.freeze({ money: 'hidden', stats: 'played', handicap: 'played', homeCourse: 'played' });
 
@@ -34,13 +43,13 @@ export const PRIVACY_DEFAULTS = Object.freeze({ money: 'hidden', stats: 'played'
 export function normalizePrivacy(p) {
   const src = isObj(p) ? p : {};
   const out = {};
-  for (const k of PRIVACY_KEYS) out[k] = PRIVACY_LEVELS.includes(src[k]) ? src[k] : PRIVACY_DEFAULTS[k];
+  for (const k of PRIVACY_KEYS) out[k] = levelsFor(k).includes(src[k]) ? src[k] : PRIVACY_DEFAULTS[k];
   return out;
 }
 
-/** Whether people you've played with see this part of your profile. */
+/** Whether anyone else sees this part of your profile ('played' or 'everyone'). */
 export function shows(privacy, key) {
-  return normalizePrivacy(privacy)[key] === 'played';
+  return normalizePrivacy(privacy)[key] !== 'hidden';
 }
 
 /** A clean avatar, or null when it isn't one. Extra fields on a buddy (its colors, say) are kept. */

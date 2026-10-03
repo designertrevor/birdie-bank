@@ -209,10 +209,10 @@ test('photos: only a picture made on a phone or one in the app’s own photo buc
 
 // ------------------------------- pay app from a profile ---------------------
 
-test('pay: a friend’s own profile fills in a missing payment app, and never replaces a saved one', () => {
+test('pay: a friend’s own profile fills in a missing payment app, and wins over a saved one', () => {
   const s = stateOf({ accountOf: { sam: 'acct-sam' }, profiles: { 'acct-sam': { payApp: 'venmo', payHandle: 'sam-golf' } } });
   assert.deepEqual(payInfoFor(s, 'sam'), { app: 'venmo', handle: 'sam-golf' });
   const saved = { ...s, players: { ...s.players, sam: { id: 'sam', name: 'Sam', payApp: 'cashapp', payHandle: 'samcash' } } };
-  assert.deepEqual(payInfoFor(saved, 'sam'), { app: 'cashapp', handle: 'samcash' }, 'what you saved wins');
+  assert.deepEqual(payInfoFor(saved, 'sam'), { app: 'venmo', handle: 'sam-golf' }, 'their own profile wins (Trevor’s call, 2026-10-03)');
   assert.equal(payInfoFor(stateOf(), 'sam'), null);
 });

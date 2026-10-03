@@ -205,7 +205,7 @@ test('knownPlayerIds: saved players, round players and claimers, sorted', () => 
 
 test('privacy: money is hidden by default, everything else is seen by people you played with', () => {
   assert.deepEqual(normalizePrivacy(undefined), { money: 'hidden', stats: 'played', handicap: 'played', homeCourse: 'played' });
-  assert.deepEqual(normalizePrivacy({ money: 'everyone', stats: 'hidden', junk: 1 }), { ...PRIVACY_DEFAULTS, stats: 'hidden' }, 'unknown levels fall back');
+  assert.deepEqual(normalizePrivacy({ money: 'anyone', stats: 'everyone', junk: 1 }), PRIVACY_DEFAULTS, 'unknown levels fall back (everyone is for money only)');
   assert.equal(shows({}, 'money'), false);
   assert.equal(shows({ money: 'played' }, 'money'), true);
   assert.equal(profileOf(organizer()).privacy.money, 'hidden', 'a profile nobody has touched hides money');
