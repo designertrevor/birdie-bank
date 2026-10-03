@@ -19,7 +19,7 @@
 //   setAvatar(avatar)         a Ball buddy: { kind: 'buddy', id, ...anything the picker needs }, or null
 //   setHomeCourse(course)     { id, name, place? } or null
 //   setPrivacy(key, level)    key in PRIVACY_KEYS ('money' | 'stats' | 'handicap' | 'homeCourse'),
-//                             level 'played' | 'hidden'. Money starts hidden.
+//                             level 'played' | 'hidden', or 'everyone' for money. Money starts hidden.
 //   saveProfile(patch)        any of { avatar, homeCourse, privacy } at once
 //   uploadPhoto(file)         resizes to 256px and saves it as your avatar. Resolves
 //                             { ok, where: 'account' | 'phone', avatar } ('phone' when signed out or
@@ -33,7 +33,7 @@
 //   deleteAccount()           see DeleteAccount.jsx: { ok: true } or { ok: false, reason } with the
 //                             reasons above. Nothing changes unless the server can do all of it.
 //
-// Re-exported from profile-model.js for screens: PRIVACY_KEYS, PRIVACY_LEVELS, PRIVACY_DEFAULTS,
+// Re-exported from profile-model.js for screens: PRIVACY_KEYS, PRIVACY_LEVELS, PRIVACY_DEFAULTS, levelsFor,
 // profileFor, profileOf, profileStats.
 import { useMemo, useSyncExternalStore } from 'react';
 import { STORE_KEY, getState, resetAll, subscribe, update, useStore } from './store.js';
@@ -41,12 +41,12 @@ import { getSupabase } from './supabase.js';
 import { accountNow, onAccount, signOut } from './cloud.js';
 import { stable } from './sync-model.js';
 import {
-  PRIVACY_DEFAULTS, PRIVACY_KEYS, PRIVACY_LEVELS, applyPeople, cropSquare, isNotSetUp, knownPlayerIds,
+  PRIVACY_DEFAULTS, PRIVACY_KEYS, PRIVACY_LEVELS, applyPeople, cropSquare, isNotSetUp, knownPlayerIds, levelsFor,
   normalizeAvatar, normalizeHomeCourse, normalizePrivacy, profileFor, profileOf, profileStats, retryOnLoad,
   serverStateAfter, toRow,
 } from './profile-model.js';
 
-export { PRIVACY_DEFAULTS, PRIVACY_KEYS, PRIVACY_LEVELS, profileFor, profileOf, profileStats };
+export { PRIVACY_DEFAULTS, PRIVACY_KEYS, PRIVACY_LEVELS, levelsFor, profileFor, profileOf, profileStats };
 
 const BUCKET = 'avatars';
 const PHOTO_PX = 256;
@@ -109,7 +109,7 @@ export function saveProfile(patch = {}) {
 export const setAvatar = avatar => saveProfile({ avatar });
 export const setHomeCourse = homeCourse => saveProfile({ homeCourse });
 export function setPrivacy(key, level) {
-  if (!PRIVACY_KEYS.includes(key) || !PRIVACY_LEVELS.includes(level)) return;
+  if (!PRIVACY_KEYS.includes(key) || !levelsFor(key).includes(level)) return;
   saveProfile({ privacy: { [key]: level } });
 }
 
