@@ -9,7 +9,8 @@
 // the rest is netted and passed on through the group as before. The shared layer is per round
 // transfer: a payment is tied to the round transfers between the two people, oldest first, and
 // anything the shared rounds don't explain stays local.
-import { onTab, tabResults } from './play-for.js';
+import { countsMoney, onTab, tabResults } from './play-for.js';
+import { betsOf, isCashBet } from './pair-bets.js';
 import { meFor } from './format.js';
 import { outstanding, tabWith } from './ledger.js';
 import { FETCH_DAYS, canonicalOf, cents, codeOf, finishedAt, lockedRounds, nettedId, nettedOn, pairDebt, paidOn, played, sharedRounds } from './pair-debts.js';
@@ -37,7 +38,8 @@ export function tabCodes(state, opts) {
 }
 
 /**
- * Shared rounds both people played (ids as the Tab knows them), oldest first. Only rounds the
+ * Shared rounds both people played (ids as the Tab knows them), oldest first: money rounds, and
+ * reward rounds where the two of them had a side bet for money together. Only rounds the
  * other phone still looks up (FETCH_DAYS) count: a payment or ask put on an older round would
  * never reach it, so older rounds stay on this phone like any unshared round.
  */
@@ -46,7 +48,10 @@ export function pairRounds(state, a, b, { days = FETCH_DAYS, now = Date.now() } 
   const A = who(a), B = who(b);
   return lockedRounds(state, { days, now }).filter(r => {
     const ids = new Set(r.players.map(p => who(p.id)));
-    return ids.has(A) && ids.has(B);
+    if (!ids.has(A) || !ids.has(B)) return false;
+    // A reward round is between the two of them only when they had a side bet for money together:
+    // one between two other people puts nothing between these two
+    return countsMoney(r) || betsOf(r).some(x => isCashBet(r, x) && x.sides.some(s => who(s) === A) && x.sides.some(s => who(s) === B));
   });
 }
 

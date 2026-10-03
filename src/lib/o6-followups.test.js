@@ -9,7 +9,8 @@ import { tabResults } from './play-for.js';
 import { newTrip, tripStamp, tripStatus, tripPayment } from './trips.js';
 import { outstanding, tabBalances } from './ledger.js';
 import { buildPlan, planState } from './trip-plan.js';
-import { allocatePayment, applyRows } from './shared-tab.js';
+import { allocatePayment, applyRows, pairRounds } from './shared-tab.js';
+import { canCarry, cardCarry, carryReducer } from './carry.js';
 
 const flat9 = { id: 'f9', name: 'Flat Nine', city: 'Town', tees: [], holes: Array.from({ length: 9 }, (_, i) => ({ par: 4, hdcp: i + 1 })) };
 const OCT = (day, hour = 12) => new Date(2026, 9, day, hour).getTime();
@@ -171,4 +172,29 @@ test('changing an old reward round’s bet without a playFor keeps it points, ne
   const m = cashBet(round('m', ids, {}, { playFor: LUNCH, trip: null }), 'x', ['a', 'b'], 5, 'a');
   assert.equal(betsOf(changeBet(m, 'x', { ...raw, id: 'x' }))[0].playFor, 'money');
   assert.equal(betsOf(changeBet(r, 'old', { ...raw, playFor: 'money' }))[0].playFor, 'money');
+});
+
+// ---------------------------------------------------------------------------------------------
+// Money finding 4: a carry two people agreed on stays when a shared lunch round has a money side bet
+// between two other people
+
+test('an agreed carry stays when a shared reward round’s money bet is between two other people', () => {
+  const ids = ['t', 'a', 'b'];
+  // A money round only this phone has: a owes t $6
+  const q1 = round('q1', ids, wins(ids, [1, 't'], [2, 't'], [3, 'b']), { at: NOW - 2 * 864e5, trip: null });
+  const lunch = round('q2', ids, wins(ids, [1, 'a'], [4, 't']), { at: NOW - 864e5, code: 'BBBBBB', playFor: LUNCH, trip: null });
+  const ab = cashBet(lunch, 'cb', ['a', 'b'], 5, 'a');
+  const s = stateOf('t', [q1, ab]);
+  const owed = outstanding(s, { now: NOW }).find(x => x.from === 'a' && x.to === 't');
+  assert.equal(owed.amount, 6);
+  const carry = carryReducer(carryReducer(null, { type: 'ask', from: 'a', to: 't', amount: 6, by: 'a', at: NOW - 500 }), { type: 'agree', at: NOW - 400 });
+  // Before the fix the lunch round counted as t and a's shared round, so the carry read 0 there and vanished
+  assert.equal(pairRounds(s, 'a', 't', { now: NOW }).length, 0);
+  assert.equal(canCarry(s, 'a', 't', NOW), false);
+  assert.equal(cardCarry({ ...s, carries: [carry] }, 't', 'a', owed, NOW)?.carried, 6);
+  // a and b had a money bet together, so the lunch round is theirs
+  assert.deepEqual(pairRounds(s, 'a', 'b', { now: NOW }).map(r => r.id), ['q2']);
+  // With a money bet between t and a too, it's t and a's shared round as well
+  const ta = cashBet(ab, 'ct', ['t', 'a'], 2, 't');
+  assert.deepEqual(pairRounds(stateOf('t', [q1, ta]), 'a', 't', { now: NOW }).map(r => r.id), ['q2']);
 });
