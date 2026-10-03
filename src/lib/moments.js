@@ -171,7 +171,7 @@ export function moneyMoment(round, pos) {
   const pf = playForOf(round);
   const up = `Up ${fmtOf(round)(after.amount)}`;
   const text = pf.kind === 'reward' ? `${up}, in line for ${rewardNoun(pf.reward)}` : `${up} on the round`;
-  return { kind: 'money', hero: after.key, title: `${after.name} take${after.plural ? '' : 's'} the lead`, text };
+  return { kind: 'money', hero: after.key, name: after.name, title: `${after.name} take${after.plural ? '' : 's'} the lead`, text };
 }
 
 /**
@@ -460,7 +460,8 @@ export function roundMoment(round, pos) {
   ].filter(Boolean);
   let lead = moneyMoment(round, pos);
   const same = lead && found.find(m => m.hero && m.hero === lead.hero);
-  // A Sixes pair: one of the two takes the round's lead with the match ("$5 each. Ann takes the lead")
+  // A Sixes pair: one of the two takes the round's lead with the match. Same ", and the lead" as a skin or
+  // a wolf, naming which of the pair leads, since the round's lead is one player ("$5 each, and the lead for Ann")
   const pair = lead && !same && found.find(m => m.heroes?.includes(lead.hero));
   if (same) {
     // "$15, and the lead. Net par on 14 keeps it": what keeps a validated skin stays last
@@ -468,7 +469,7 @@ export function roundMoment(round, pos) {
     Object.assign(same, { text: `${body}, and the lead${same.keep || ''}`, boost: Math.max(same.boost || 0, PRIORITY.money) });
     lead = null;
   } else if (pair) {
-    Object.assign(pair, { text: `${pair.text}. ${lead.title}`, boost: Math.max(pair.boost || 0, PRIORITY.money) });
+    Object.assign(pair, { text: `${pair.text}, and the lead for ${lead.name}`, boost: Math.max(pair.boost || 0, PRIORITY.money) });
     lead = null;
   }
   const top = pickMoment([...found, lead]);

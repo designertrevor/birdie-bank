@@ -389,7 +389,9 @@ test('Sixes: the pair takes the round lead with the match on one banner', () => 
   const r = play(mk('sixes', { holes: 18, settings: SIXES }), [AB, CD, AB, {}, {}, {}, {}, {}, {}, {}, {}, { a: 3 }]);
   const lead = roundMoment(r, 12);
   assert.equal(lead.title, 'Ann & Cy win the middle six');
-  assert.equal(lead.text, '1 up: $5 each. Ann takes the lead');
+  assert.equal(lead.text, '1 up: $5 each, and the lead for Ann');
+  // No game's banner adds the lead as a second sentence any more
+  assert.doesNotMatch(lead.text, /\. \S+ takes? the lead/);
 });
 
 /** A Banker round with the setup for each hole: { banker, bets, doubled }. */

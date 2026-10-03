@@ -1888,3 +1888,13 @@ button.trip-card:active { transform: scale(.97); }
 /* Onboarding: a first Ball buddy under your name */
 .ob-buddies { padding: 4px 0 2px; }
 .av-pick.sm, .av-pick.sm .av-tile { width: 56px; height: 56px; }
+
+/* Scorecard to par (o6f small): each player's running +3, E or −1 under the name, net too with strokes.
+   Under par takes the birdie color, even the ink, over the mute, all theme tokens so light and dark both work. */
+.scorecard tbody .sticky { line-height: 1.15; white-space: nowrap; }
+.sc-name { display: block; }
+.sc-topar { display: flex; align-items: baseline; gap: 6px; margin-top: 2px; font-size: 11px; font-weight: 800; font-variant-numeric: tabular-nums; }
+.sc-par.under { color: var(--pink-text); }
+.sc-par.even { color: var(--ink); }
+.sc-par.over { color: var(--mute); }
+.sc-par.net { font-weight: 600; }

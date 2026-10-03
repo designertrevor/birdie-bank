@@ -1,4 +1,4 @@
-import { Suspense, lazy, useCallback, useEffect, useMemo, useState } from 'react';
+import { Suspense, lazy, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { UIProvider } from './components/ui.jsx';
 import ErrorBoundary from './components/ErrorBoundary.jsx';
 import { NavCtx } from './lib/nav.js';
@@ -170,14 +170,39 @@ export default function App() {
     if (new URLSearchParams(location.search).get('plan')) history.replaceState(null, '', location.pathname);
   }, []);
 
-  // Phone/browser back button pops the stack
+  // Overlays opened in place over a screen (the course editor over round setup): the phone's back
+  // closes the top one first. `layer(onClose)` adds a history entry and returns the in-app close,
+  // which drops that entry again without popping the screen underneath.
+  const layers = useRef([]);
+  const layer = useCallback(onClose => {
+    const entry = { onClose, done: false };
+    layers.current.push(entry);
+    let pushed = false;
+    try { history.pushState({ bb: true, layer: true }, ''); pushed = true; } catch { /* ignore */ }
+    return () => {
+      if (entry.done) return;
+      entry.done = true;
+      // popstate then finds this entry done and leaves the screen be
+      if (pushed && history.state?.layer) history.back();
+      else layers.current = layers.current.filter(e => e !== entry);
+    };
+  }, []);
+
+  // Phone/browser back button closes the top overlay, or pops the stack
   useEffect(() => {
-    const onPop = () => setStack(s => s.slice(0, -1));
+    const onPop = () => {
+      // An overlay already closed in the app: this is its entry going, so the screen stays
+      const gone = layers.current.findIndex(e => e.done);
+      if (gone >= 0) { layers.current.splice(gone, 1); return; }
+      const top = layers.current.pop();
+      if (top) { top.done = true; top.onClose(); return; }
+      setStack(s => s.slice(0, -1));
+    };
     window.addEventListener('popstate', onPop);
     return () => window.removeEventListener('popstate', onPop);
   }, []);
 
-  const nav = useMemo(() => ({ push, pop, reset, tab, setTab: t => { setTab(t); setStack([]); } }), [push, pop, reset, tab]);
+  const nav = useMemo(() => ({ push, pop, reset, layer, tab, setTab: t => { setTab(t); setStack([]); } }), [push, pop, reset, layer, tab]);
 
   if (!onboarded) {
     const joined = (id, done) => {
