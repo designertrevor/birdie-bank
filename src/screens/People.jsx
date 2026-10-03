@@ -7,7 +7,8 @@ import { firstName, formatIndex, myIds, playerLabel, sortedPlayers } from '../li
 import { mergePlayer, mergedInto, unmergePlayer } from '../lib/merge.js';
 import { headToHeadSummary, nameOf, outstanding, tabWith } from '../lib/ledger.js';
 import { canonicalOf } from '../lib/pair-debts.js';
-import { PAY_APPS, PAY_APP_IDS, handleText, payInfo, payInfoFor } from '../lib/pay.js';
+import { PAY_APPS, PAY_APP_IDS, handleText, payInfo, payInfoFor, profilePayInfo } from '../lib/pay.js';
+import { theirName } from '../lib/their-profile.js';
 import { savePlayerCard } from '../lib/player-save.js';
 import { money } from '../lib/golf.js';
 import { AvatarButton, BottomNav } from '../nav.jsx';
@@ -145,6 +146,10 @@ export function PlayerEdit({ id, onSaved }) {
     .map(x => ({ id: x, name: nameOf(state, x), rounds: h2h.get(x)?.rounds || 0, saved: !!state.players[x], pay: payInfoFor(state, x) }))
     .sort((a, b) => (firstName(b.name).toLowerCase() === first) - (firstName(a.name).toLowerCase() === first) || a.name.localeCompare(b.name));
   const inActive = id && roundsInProgress(state).some(r => r.players.some(p => p.id === id));
+  // Their own profile's name and app win over what you save here; yours is used when theirs has none
+  const profName = id && !isMe ? theirName(state, id) : null;
+  const profPay = id && !isMe ? profilePayInfo(state, id) : null;
+  const who = firstName(profName || existing?.name) || 'They';
 
   const save = () => {
     const pid = id || uid('p_');
@@ -195,6 +200,7 @@ export function PlayerEdit({ id, onSaved }) {
         <div className="block">
           <label className="field-label" htmlFor="pe-name">Name</label>
           <input id="pe-name" className="name-input" value={name} maxLength={24} onChange={e => setName(e.target.value)} placeholder="Name" autoFocus={!existing} />
+          {profName && profName !== trimmed && <p className="field-help">{who}’s own profile says “{profName}”, so that’s the name you see everywhere. The name here is used if they ever take theirs off.</p>}
           {duplicate && <p className="field-error">Someone already has that name. Add an initial so scorecards stay clear, or merge them below if it’s the same person.</p>}
           <label className="field-label">Handicap index <span className="opt">optional</span></label>
           <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
@@ -216,6 +222,7 @@ export function PlayerEdit({ id, onSaved }) {
                 autoCapitalize="none" autoCorrect="off" inputMode={payApp === 'zelle' ? 'email' : 'text'} />
             </>
           )}
+          {profPay && <p className="field-help">{who}’s own profile says {PAY_APPS[profPay.app].name} {handleText(profPay)}, so Pay buttons use that. What you pick here is used only if their profile has none.</p>}
           <p className="field-help">
             {payApp === 'zelle'
               ? `Zelle has no pay link, so anyone who owes ${isMe ? 'you' : trimmed.split(' ')[0] || 'them'} sees this with a copy button.`

@@ -2,6 +2,7 @@
 import { roundResults } from './round.js';
 import { roundCents } from './games.js';
 import { keptId, meFor } from './format.js';
+import { theirName } from './their-profile.js';
 import { canonicalOf, sharedDebts } from './pair-debts.js';
 import { linksOf } from './people-links.js';
 import { countsMoney } from './play-for.js';
@@ -268,6 +269,9 @@ export function tabWith(plan, ids, other) {
 
 /** Player name lookup that also covers people who were removed but still appear in rounds. */
 export function nameOf(state, id) {
+  // A friend's own profile name wins over what this phone saved for them (their-profile.js)
+  const theirs = theirName(state, id);
+  if (theirs) return theirs;
   // A duplicate merged from its edit screen goes by the kept player's name; other linked ids keep their own
   const own = state.players[id];
   if (own?.mergedInto) return state.players[keptId(state, id)]?.name || own.name;

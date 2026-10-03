@@ -3,6 +3,7 @@
 // already filled in, and nobody is assumed to use any one app.
 import { money } from './golf.js';
 import { linksOf } from './people-links.js';
+import { theirProfile } from './their-profile.js';
 
 export const PAY_APPS = {
   venmo: { name: 'Venmo', label: 'Venmo username', placeholder: '@username' },
@@ -37,10 +38,23 @@ export function payFields(p) {
 }
 
 /**
- * How someone gets paid: their own player record first, then the newest round that carries it
- * (friends met through a joined round only exist there).
+ * How someone gets paid: the app on their own profile first, once a seat of theirs is linked to
+ * their account (their-profile.js), since they know best. Then what this phone has: their own
+ * player record, then the newest round that carries it (friends met through a joined round only
+ * exist there), then the same for any of their other ids (see people-links.js).
  */
 export function payInfoFor(state, id) {
+  return profilePayInfo(state, id) || savedPayInfo(state, id);
+}
+
+/** The app on a friend's own profile ({ app, handle }), or null when their profile has none (or it's you). */
+export function profilePayInfo(state, id) {
+  const prof = theirProfile(state, id);
+  return (prof && payInfo({ payApp: prof.payApp, payHandle: prof.payHandle })) || null;
+}
+
+/** How someone gets paid from what this phone saved and the rounds it has, leaving out their profile. */
+export function savedPayInfo(state, id) {
   const own = payInfo(state.players?.[id]);
   if (own) return own;
   const rounds = Object.values(state.rounds || {}).sort((a, b) => (b.finishedAt || b.createdAt || 0) - (a.finishedAt || a.createdAt || 0));
@@ -48,19 +62,10 @@ export function payInfoFor(state, id) {
     const info = payInfo(r.players?.find(p => p.id === id));
     if (info) return info;
   }
-  // A friend with more than one id: the app on any of their other ids (see people-links.js)
   const others = linksOf(state).groupOf(id).filter(x => x !== id);
   for (const x of others) { const own = payInfo(state.players?.[x]); if (own) return own; }
   for (const r of rounds) for (const x of others) {
     const info = payInfo(r.players?.find(p => p.id === x));
-    if (info) return info;
-  }
-  // Nothing on this phone: the app on their own profile, once a seat of theirs is linked to their
-  // account (profiles.js). It only fills a gap: an app saved here is never swapped out
-  const accountOf = state.accountOf && typeof state.accountOf === 'object' ? state.accountOf : {};
-  for (const x of [id, ...others]) {
-    const prof = accountOf[x] && state.profiles?.[accountOf[x]];
-    const info = prof && payInfo({ payApp: prof.payApp, payHandle: prof.payHandle });
     if (info) return info;
   }
   return null;
