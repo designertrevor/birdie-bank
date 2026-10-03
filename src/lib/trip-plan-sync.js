@@ -43,8 +43,9 @@ function supabasePlans(db) {
 }
 
 // Dev and testing: localStorage, so two tabs (one with ?profile=b) act as two phones
+const LOCAL_KEY = 'bb-trip-plans';
 function localPlans() {
-  const KEY = 'bb-trip-plans';
+  const KEY = LOCAL_KEY;
   const load = () => { try { return JSON.parse(localStorage.getItem(KEY)) || {}; } catch { return {}; } };
   return {
     async fetch(ids) { const all = load(); return ids.map(id => all[id]).filter(Boolean); },
@@ -79,8 +80,11 @@ function tripIds(s) {
   return [...ids];
 }
 
-/** Keep a plan on this phone, newer versions only. The first one you see isn't "Updated". */
-function keep(plans) {
+/**
+ * Keep a plan on this phone, newer versions only. The first one you see isn't "Updated", and nor is
+ * one this phone just published (`seen`): the organizer has already seen what they published.
+ */
+function keep(plans, { seen = false } = {}) {
   const s = getState();
   const next = {};
   for (const raw of plans) {
@@ -95,7 +99,7 @@ function keep(plans) {
   update(st => {
     st.tripPlans = { ...(st.tripPlans || {}), ...next };
     st.tripPlanSeen = st.tripPlanSeen || {};
-    for (const p of Object.values(next)) if (st.tripPlanSeen[p.tripId] == null) st.tripPlanSeen[p.tripId] = p.version;
+    for (const p of Object.values(next)) if (seen || st.tripPlanSeen[p.tripId] == null) st.tripPlanSeen[p.tripId] = p.version;
   });
 }
 
@@ -115,7 +119,7 @@ async function publishMine(adapter) {
     const codes = [...new Set(tripRounds(s, trip.id).map(codeOf).filter(Boolean))];
     try {
       await adapter.publish(next, codes);
-      keep([next]);
+      keep([next], { seen: true });
     } catch (e) { note(e); if (off) return; }
   }
 }
@@ -151,7 +155,7 @@ export async function publishDeleted(tripId) {
   const codes = [...new Set(tripRounds(s, tripId).map(codeOf).filter(Boolean))];
   try {
     await adapter.publish(plan, codes);
-    keep([plan]);
+    keep([plan], { seen: true });
     return true;
   } catch (e) { note(e); return false; }
 }
@@ -171,13 +175,17 @@ export function useTripPlans() {
     const soon = () => { clearTimeout(timer); timer = setTimeout(() => refreshPlans(), 250); };
     const wake = () => { if (document.visibilityState === 'visible') soon(); };
     const every = setInterval(() => { if (document.visibilityState === 'visible') refreshPlans(); }, 60e3);
+    // Dev's two tabs: the other "phone" published to localStorage, so read it now (the server has no such event; the minute does it)
+    const stored = e => { if (e.key === LOCAL_KEY) soon(); };
     document.addEventListener('visibilitychange', wake);
     window.addEventListener('online', soon);
+    window.addEventListener('storage', stored);
     return () => {
       clearTimeout(timer);
       clearInterval(every);
       document.removeEventListener('visibilitychange', wake);
       window.removeEventListener('online', soon);
+      window.removeEventListener('storage', stored);
     };
   }, [sig]);
 }
