@@ -16,7 +16,7 @@ import { accountsEnabled, useAccount } from '../lib/cloud.js';
 import { SignInSheet } from '../components/Account.jsx';
 import { HowWasIt, Reveal, RewardCard, SettleUp, ShareCard } from '../components/Finale.jsx';
 import { TripRoundNote } from '../components/Trips.jsx';
-import { countsMoney, playForOf, unitFmt } from '../lib/play-for.js';
+import { countsMoney, playForOf, tabResults, unitFmt } from '../lib/play-for.js';
 import { SaveUsualButton } from '../components/Usuals.jsx';
 import { DrivesShortfall } from '../components/ScrambleDrives.jsx';
 import { strokeKey } from '../lib/stroke-key.js';
@@ -72,7 +72,9 @@ export default function RoundDetail({ id, celebrate }) {
   // A points or reward round is never money: amounts read as points and there's nobody to pay
   const fmt = unitFmt(round);
   const isMoney = countsMoney(round);
-  const pays = isMoney && res.transfers.length > 0;
+  // What goes on the Tab: the whole round, or a reward round's side bets for money alone (in dollars)
+  const tab = tabResults(round, res);
+  const pays = tab.transfers.length > 0;
   // A trip round has no settle up of its own: the trip is settled once, after its last round
   const ownSettle = pays && !round.trip?.id;
 
@@ -122,7 +124,7 @@ export default function RoundDetail({ id, celebrate }) {
     return (
       <Screen key={stage} className={`finale-stage ${stageBack ? 'back' : ''}`}>
         {stage === 'reveal' && <Reveal round={round} res={res} instant={revealSeen} onNext={() => { setRevealSeen(true); setStage(ownSettle ? 'settle' : 'share'); }} onDetail={() => { setRevealSeen(true); setStage('detail'); }} extra={<>{round.trip?.id && <div style={{ marginTop: 12 }}><TripRoundNote round={round} /></div>}{notesEl}{saveRow && <div style={{ marginTop: 12 }}>{saveRow}</div>}</>} />}
-        {stage === 'settle' && <SettleUp round={round} res={res} onBack={() => setStage('reveal')} onNext={() => setStage('share')} />}
+        {stage === 'settle' && <SettleUp round={round} res={tab} onBack={() => setStage('reveal')} onNext={() => setStage('share')} />}
         {stage === 'share' && (shareFrom === 'detail'
           ? <ShareCard round={round} res={res} onBack={() => setStage('detail')} onDone={() => setStage('detail')} doneLabel="Back to the round" />
           : <ShareCard round={round} res={res} onBack={() => setStage(ownSettle ? 'settle' : 'reveal')} onDone={done} />)}
@@ -175,6 +177,20 @@ export default function RoundDetail({ id, celebrate }) {
             </div>
           </>
         )}
+        {/* A reward round's side bets for money: dollars on the Tab, apart from the reward's points */}
+        {!isMoney && res.cash && <>
+        <div className="sec-label">Side bets for money</div>
+        <div style={{ padding: '0 16px' }}>
+          {tab.transfers.length === 0 && <p className="hint-card" style={{ margin: 0 }}><Icon name="handshake" fill /> The money bets came out square. Nothing goes on the Tab.</p>}
+          {tab.transfers.map(t => (
+            <div key={t.from + t.to} className="pay-row">
+              <span className="pf">{roundPlayerName(round, t.from)}</span><span className="pa"><Icon name="arrow-right" /></span><span className="pt">{roundPlayerName(round, t.to)}</span>
+              <span className="pm">{money(t.amount)}</span>
+            </div>
+          ))}
+          {tab.transfers.length > 0 && <p className="field-help" style={{ padding: '0 4px' }}>Only the side bets played for money. They’re on the Tab until marked paid; the points above decide the reward.</p>}
+        </div>
+        </>}
         {isMoney && <>
         <div className="sec-label">Who pays who</div>
         <div style={{ padding: '0 16px' }}>
@@ -199,6 +215,14 @@ export default function RoundDetail({ id, celebrate }) {
             <ByGameTable round={round} byGame={res.detail.byGame} total={res.balances} fmt={fmt} />
           </>
         )}
+        {/* A reward round's side bets for money get their own table, in dollars, never added to the points */}
+        {res.cash && (
+          <>
+            {!res.detail.byGame && <div className="sec-label">By game</div>}
+            <p className="field-help pad">{res.detail.byGame ? 'Above in points. ' : ''}Side bets for money, in dollars:</p>
+            <ByGameTable round={round} byGame={{ cash: { label: res.cash.label, balances: res.cash.balances } }} total={res.cash.balances} fmt={money} caption="Side bets for money" />
+          </>
+        )}
 
         <GameBreakdown round={round} res={res} />
         {/* Each side game's own breakdown, worked out on its own like the main game */}
@@ -210,8 +234,10 @@ export default function RoundDetail({ id, celebrate }) {
           </Fragment>
         ))}
 
-        <BetsBreakdown round={round} g={res.detail.byGame?.bets} />
+        <BetsBreakdown round={round} res={res} />
         <RoundWhereFrom round={round} res={res} />
+        {/* ...and for a reward round's side bets for money, what's between each pair in dollars */}
+        {!isMoney && res.cash && <RoundWhereFrom round={round} res={tab} fmt={money} title="Where the money comes from" />}
 
         <div className="sec-label">Scorecard</div>
         <Scorecard round={round} />

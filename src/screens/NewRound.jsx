@@ -739,8 +739,9 @@ function SetupStep({ game, course, holesCount, nine, picked, setPicked, opts, se
       const tee = course.tees?.find(t => t.name === (tees[pid] || defaultTee)) || course.tees?.[0] || null;
       return { id: pid, name: p.name || '?', index: p.index ?? null, courseHcOverride: hcOverride[pid] ?? null, courseHc: effectiveCourseHc(p.index, tee, course, inPlay, holesCount, hcOverride[pid]).value };
     });
-    return { game, players, holes: inPlay, playFor };
-  }, [course, holesCount, nine, startHole, picked, state.players, tees, defaultTee, hcOverride, game, playFor]);
+    // A scramble's teams (arrays of player ids here), so a match or per-hole bet goes between players on different teams
+    return { game, players, holes: inPlay, playFor, ...(game === 'scramble' && teams ? { teams } : {}) };
+  }, [course, holesCount, nine, startHole, picked, state.players, tees, defaultTee, hcOverride, game, playFor, teams]);
   const orderLabel = { wolf: 'Tee order: the wolf moves down this list', banker: 'Playing order', sixes: 'Order: sets who partners who' }[game] || 'Playing order';
 
   return (

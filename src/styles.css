@@ -1888,3 +1888,10 @@ button.trip-card:active { transform: scale(.97); }
 /* Onboarding: a first Ball buddy under your name */
 .ob-buddies { padding: 4px 0 2px; }
 .av-pick.sm, .av-pick.sm .av-tile { width: 56px; height: 56px; }
+
+/* o6f side bets: either player changes a bet, money or points on a reward round, the reprice note */
+.mb-cash { padding: 6px 8px 0; font-size: 11px; font-weight: 600; color: var(--mute); text-align: center; font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
+.reward-card.cash-card { margin-top: 10px; background: var(--surface); color: var(--ink); }
+.pb-status.pb-wait { color: var(--mute); }
+.pb-reprice { margin: 4px 16px 4px; }
+.pb-waiting .link-btn, .pb-refused .link-btn { font-size: inherit; }

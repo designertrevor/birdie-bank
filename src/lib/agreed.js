@@ -15,7 +15,7 @@ import { sideBetLine, stakeSummary } from './stakes.js';
 import { inUnits } from './play-for.js';
 import { gamePct, halfStrokesOn, playsAtPct } from './allowances.js';
 import { houseRulesLine } from './house-rules.js';
-import { betHolesText, betName, betPeople, betStakeText, betStrokesText, betsOf } from './pair-bets.js';
+import { betHolesText, betName, betPeople, betStakeText, betStrokesText, betsOf, isCashBet } from './pair-bets.js';
 import { money } from './golf.js';
 
 export const GIMMES = [
@@ -129,10 +129,12 @@ export function agreementItems(round, choices = round.agreed) {
     items.push({ id: `bet:${key}`, group: 'bets', label, text: inUnits(round, bet) });
     for (const h of houseRulesFor(game, block)) items.push({ id: `rule:${key}:${h.id}`, group: 'rules', label, text: h.text, on: h.on });
   }
-  // Side bets between two players are agreed like the games' bets; a tapped winner isn't a change
+  // Side bets between two players are agreed like the games' bets; a tapped winner isn't a change.
+  // On a reward round a bet played for money stays in dollars and says so
   for (const b of betsOf(round)) {
-    const text = [betStakeText(b, money), betHolesText(round, b), betStrokesText(round, b)].filter(Boolean).join(' · ');
-    items.push({ id: `bet:pair:${b.id}`, group: 'bets', label: `${betName(b)}, ${betPeople(round, b)}`, text: inUnits(round, text) });
+    const cash = isCashBet(round, b);
+    const text = [betStakeText(b, money), betHolesText(round, b), betStrokesText(round, b), cash ? 'For money' : ''].filter(Boolean).join(' · ');
+    items.push({ id: `bet:pair:${b.id}`, group: 'bets', label: `${betName(b)}, ${betPeople(round, b)}`, text: cash ? text : inUnits(round, text) });
   }
   const presses = pressesText(round);
   if (presses) items.push({ id: 'presses', group: 'calls', label: 'Presses', text: presses });
@@ -188,7 +190,9 @@ export function changeText(before, after) {
   if (after.id.startsWith('bet:')) {
     const [a, b] = [before.text.split(' · '), after.text.split(' · ')];
     const [x, y] = [amountOf(a[0]), amountOf(b[0])];
-    if (x != null && y != null && x !== y && a.slice(1).join() === b.slice(1).join()) return `${after.label} ${y > x ? 'raised' : 'lowered'} to ${b[0]}`;
+    // A side bet between two is always worked out from its first hole, so a new amount reprices all of it
+    const whole = after.id.startsWith('bet:pair:') ? ', every hole of the bet' : '';
+    if (x != null && y != null && x !== y && a.slice(1).join() === b.slice(1).join()) return `${after.label} ${y > x ? 'raised' : 'lowered'} to ${b[0]}${whole}`;
     return `${after.label} now ${after.text}`;
   }
   if (after.id.startsWith('strokes:')) return `${after.label} now gets ${after.text === 'scratch' ? 'no strokes' : after.text}`;

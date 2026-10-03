@@ -4,10 +4,9 @@
 // out the same amount. The Tab keeps this money between the two of them (never passed on
 // through a third person), and "I paid", "Roll to next time" and the who's-square strip all
 // count it. Pure, unit tested. Kept apart from ledger.js and shared-tab.js so both can use it.
-import { roundResults } from './round.js';
 import { meFor, myIds } from './format.js';
 import { linksOf } from './people-links.js';
-import { countsMoney } from './play-for.js';
+import { onTab, tabResults } from './play-for.js';
 import { isTripPayment } from './trip-pay.js';
 
 const DAY = 864e5;
@@ -35,8 +34,8 @@ export function canonicalOf(state) {
   };
 }
 
-/** Finished money rounds: a points or reward round never puts a dollar on the Tab. */
-export const doneRounds = state => Object.values(state.rounds || {}).filter(r => r.status === 'done' && countsMoney(r));
+/** Finished rounds with money on the Tab: money rounds, and reward rounds' side bets for money (see tabResults). */
+export const doneRounds = state => Object.values(state.rounds || {}).filter(r => r.status === 'done' && onTab(r));
 export const finishedAt = r => r.finishedAt || r.createdAt || 0;
 
 /** You played this round (a watcher's copy never counts). */
@@ -88,7 +87,7 @@ export function openByPair(state, rounds) {
   const net = new Map(); // "a|b" (sorted) -> cents a owes b
   for (const r of rounds) {
     const code = codeOf(r);
-    for (const t of roundResults(r).transfers) {
+    for (const t of tabResults(r).transfers) {
       const f = who(t.from), to = who(t.to);
       if (f === to || nettedOn(state, code, t)) continue;
       const open = cents(t.amount) - paidOn(state, r, code, t);

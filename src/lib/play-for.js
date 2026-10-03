@@ -6,9 +6,11 @@
 // Absent means money, so every old round returns exactly the same money. The game math never
 // changes: a points or reward round plays the same bets, and a $5 bet is simply 5 points.
 // Every place that adds up dollars (the Tab, head to head, History, Season, Lately) keeps only
-// the rounds where countsMoney() is true. Pure, unit tested.
+// the rounds where countsMoney() is true. The one exception: a reward round's side bets played for
+// money (pair-bets.js), which the Tab counts through onTab() and tabResults(). Pure, unit tested.
 import { money } from './golf.js';
-import { leftAt, roundResults } from './round.js';
+import { BETS_LABEL, leftAt, roundResults } from './round.js';
+import { betsOf, isCashBet } from './pair-bets.js';
 
 /** The rewards to pick from; anything else is typed in. */
 export const REWARDS = ['Lunch', 'A drink'];
@@ -40,6 +42,36 @@ export function storedPlayFor(p) {
 
 /** Only money rounds put dollars on the Tab, in head to head, History, Season and Lately. */
 export const countsMoney = round => playForOf(round).kind === 'money';
+
+/**
+ * Whether a finished round puts anything on the Tab: a money round, or a reward round with a side bet
+ * played for money.
+ */
+export const onTab = round => countsMoney(round) || (playForOf(round).kind === 'reward' && betsOf(round).some(b => isCashBet(round, b)));
+
+/**
+ * What a round puts on the Tab, shaped like roundResults(): a money round's whole result; a reward
+ * round's side bets for money alone (their balances, head to head and fewest payments, with the bets
+ * under detail.byGame.bets so Where it comes from lists them); nothing at all for anything else.
+ */
+export function tabResults(round, res = roundResults(round)) {
+  if (countsMoney(round)) return res;
+  const c = res?.cash;
+  const ids = (round?.players || []).map(p => p.id);
+  if (!c) {
+    const zero = Object.fromEntries(ids.map(id => [id, 0]));
+    return { balances: zero, standings: (round?.players || []).map(p => ({ ...p, amount: 0 })), transfers: [], pairs: Object.fromEntries(ids.map(id => [id, {}])), detail: { byGame: {} } };
+  }
+  return {
+    balances: c.balances, standings: c.standings, transfers: c.transfers, pairs: c.pairs,
+    detail: { byGame: { bets: { label: BETS_LABEL, balances: c.balances, pairs: c.pairs, detail: { bets: c.list } } } },
+  };
+}
+
+/** The formatter for one side bet's amounts: money for a reward round's bet played for money, else the round's. */
+export function betFmt(round, bet) {
+  return isCashBet(round, bet) ? money : unitFmt(round);
+}
 
 /** "12 pts", "+3 pts", "−1 pt": a round's numbers as points, one for each dollar the bets would make. */
 export function points(v, { sign = false } = {}) {

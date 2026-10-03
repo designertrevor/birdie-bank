@@ -219,7 +219,7 @@ test('points rounds count side bets in points, the same numbers', () => {
   assert.equal(betLine(r, r.bets[0], points), 'Preston v Tyler · 2 pts a hole');
 });
 
-test('a scramble keeps closest to the pin and custom bets, never a match or per-hole bet', () => {
+test('a scramble whose teams aren’t known keeps closest to the pin and custom bets, never a match or per-hole bet', () => {
   const r = { players: [{ id: 'a' }, { id: 'b' }], game: 'scramble', holes: [], bets: [bet('match', ['a', 'b'], 5), bet('ctp', ['a', 'b'], 5), bet('custom', ['a', 'b'], 5)] };
   assert.deepEqual(betsOf(r).map(b => b.kind), ['ctp', 'custom']);
 });
@@ -395,7 +395,8 @@ test('the rules card lists side bets, notes one added or changed mid-round, and 
   r = setBetWinner(r, 'ctp-pz', 3, 'p');
   assert.equal(noteChanges(r, 3), null);
   r = changeBet(r, 'match-py', { ...r.bets[1], stake: 20 });
-  assert.equal(noteChanges(r, 4).changes.at(-1).text, 'Match, Preston v Tyler raised to $20 match');
+  // A new amount reprices the whole bet (Trevor's call, 2026-10-03), and the log says so
+  assert.equal(noteChanges(r, 4).changes.at(-1).text, 'Match, Preston v Tyler raised to $20 match, every hole of the bet');
   // Points rounds read in points
   assert.equal(agreementItems({ ...r0, playFor: { kind: 'points' } }).find(x => x.id.startsWith('bet:pair:')).text, '2 pts a par 3');
 });

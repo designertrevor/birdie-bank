@@ -9,6 +9,7 @@
 // amount asked, agreed and shown is the same on both.
 import { canonicalOf, carryId, carryRowId, codeOf, openTransfers, pairDebt, pairRounds } from './shared-tab.js';
 import { countsMoney } from './play-for.js';
+import { betsOf, isCashBet } from './pair-bets.js';
 
 const cents = v => Math.round((Number(v) || 0) * 100);
 
@@ -45,9 +46,13 @@ export function rolled(carry, state) {
   const who = canonicalOf(state);
   const since = carry.answeredAt || carry.at || 0;
   return Object.values(state.rounds || {}).some(r => {
-    if (r.status !== 'done' || !countsMoney(r) || (r.finishedAt || 0) <= since) return false;
+    if (r.status !== 'done' || (r.finishedAt || 0) <= since) return false;
     const ids = new Set(r.players.map(p => who(p.id)));
-    return ids.has(who(carry.from)) && ids.has(who(carry.to));
+    if (!ids.has(who(carry.from)) || !ids.has(who(carry.to))) return false;
+    if (countsMoney(r)) return true;
+    // A reward round nets it only when the two of them had a side bet for money together
+    const two = new Set([who(carry.from), who(carry.to)]);
+    return betsOf(r).some(b => isCashBet(r, b) && b.sides.every(s => two.has(who(s))));
   });
 }
 

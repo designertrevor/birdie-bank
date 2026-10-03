@@ -10,7 +10,7 @@ import {
 } from './games.js';
 import { payFields } from './pay.js';
 import { gamePct, halfStrokesOn, playsAtPct } from './allowances.js';
-import { betsMoney, betsOf } from './pair-bets.js';
+import { betsMoney, betsOf, isCashBet } from './pair-bets.js';
 
 /**
  * Every game the app can score. `teams` says how players are grouped in the setup step:
@@ -2097,6 +2097,28 @@ export function birdiePotShares(round) {
 
 /** What the side bets between two players are called in the by-game table (see pair-bets.js). */
 export const BETS_LABEL = 'Side bets';
+/** What a reward round's side bets played for money are called, apart from the reward's points. */
+export const CASH_LABEL = 'Side bets for money';
+
+/**
+ * A reward round's side bets played for money, worked out apart from everything else (they go on
+ * the Tab in dollars; the reward is decided on the games and the points bets):
+ * { label, balances, pairs, transfers, standings, list }, or null when there are none.
+ */
+function cashResults(round, cash) {
+  if (!cash.length) return null;
+  const ids = round.players.map(p => p.id);
+  const b = betsMoney(round, cash);
+  const balances = roundCents(b.balances);
+  const pairs = Object.fromEntries(ids.map(id => [id, {}]));
+  for (let i = 0; i < ids.length; i++) for (let j = i + 1; j < ids.length; j++) {
+    const v = Math.round((b.pairs[ids[i]]?.[ids[j]] || 0) * 100) / 100 || 0;
+    pairs[ids[i]][ids[j]] = v; pairs[ids[j]][ids[i]] = -v || 0;
+  }
+  const standings = [...round.players].map(p => ({ ...p, amount: balances[p.id] })).sort((x, y) => y.amount - x.amount);
+  return { label: CASH_LABEL, balances, pairs, transfers: minimalTransfers(balances), standings, list: b.list };
+}
+const withCash = (res, cash) => (cash ? { ...res, cash } : res);
 
 /**
  * Money by player id for the whole round, every game added up. With no side games and no side bets
@@ -2105,11 +2127,17 @@ export const BETS_LABEL = 'Side bets';
  * the fewest payments square everyone across all the games at once. `detail` is the main game's,
  * plus `detail.byGame`: { key: { label, balances, pairs, detail } } in playing order, main first,
  * and the two-player side bets last under `bets` ({ detail: { bets: [betResult] } }, see pair-bets.js).
+ * A reward round's side bets played for money are left out of all that and come back on their own
+ * as `cash` (see cashResults), only when there are some.
  */
 export function roundResults(round) {
   const sgs = sideGamesOf(round);
-  const bets = betsOf(round);
-  if (!sgs.length && !bets.length) return gameResults(round);
+  const all = betsOf(round);
+  // A reward round's money bets stay out of the totals (they're dollars, the totals are points): see cashResults
+  const cashBets = all.filter(b => isCashBet(round, b));
+  const bets = cashBets.length ? all.filter(b => !isCashBet(round, b)) : all;
+  const cash = cashResults(round, cashBets);
+  if (!sgs.length && !bets.length) return withCash(gameResults(round), cash);
   const ids = round.players.map(p => p.id);
   const sum = Object.fromEntries(ids.map(id => [id, 0]));
   const rawPairs = Object.fromEntries(ids.map(id => [id, {}]));
@@ -2129,7 +2157,7 @@ export function roundResults(round) {
   }
   // Each side bet between two players, worked out on its own two-player view of the round
   if (bets.length) {
-    const b = betsMoney(round);
+    const b = betsMoney(round, bets);
     for (const id of ids) sum[id] += b.balances[id] || 0;
     for (const a of Object.keys(b.pairs)) for (const [o, v] of Object.entries(b.pairs[a])) rawPairs[a][o] = (rawPairs[a][o] || 0) + v;
     byGame.bets = { label: BETS_LABEL, balances: b.balances, pairs: b.pairs, detail: { bets: b.list } };
@@ -2142,7 +2170,7 @@ export function roundResults(round) {
     const v = Math.round((rawPairs[a][b] || 0) * 100) / 100 || 0;
     pairs[a][b] = v; pairs[b][a] = -v || 0;
   }
-  return { balances, standings, transfers: minimalTransfers(balances), detail: { ...mainDetail, byGame }, pairs };
+  return withCash({ balances, standings, transfers: minimalTransfers(balances), detail: { ...mainDetail, byGame }, pairs }, cash);
 }
 
 /** Honest head-to-head for one round: what `a` won from `b` (negative when b came out ahead). */
@@ -2243,10 +2271,17 @@ export function livePreview(round, hole, pending = null) {
   }
   const res = roundResults(counted);
   const now = res.balances;
-  const before = roundResults(without).balances;
+  const was = roundResults(without);
+  const before = was.balances;
   const delta = Object.fromEntries(Object.keys(now).map(id => [id, Math.round((now[id] - before[id]) * 100) / 100]));
   // With side games, each game's money too (for the money bar's by-game table)
-  return res.detail.byGame ? { balances: now, delta, byGame: res.detail.byGame } : { balances: now, delta };
+  const out = res.detail.byGame ? { balances: now, delta, byGame: res.detail.byGame } : { balances: now, delta };
+  // A reward round's side bets for money, in dollars on their own (see cashResults)
+  if (res.cash) {
+    const b0 = was.cash?.balances || {};
+    out.cash = { ...res.cash, delta: Object.fromEntries(Object.keys(res.cash.balances).map(id => [id, Math.round((res.cash.balances[id] - (b0[id] || 0)) * 100) / 100])) };
+  }
+  return out;
 }
 
 /** Gross totals + counts for stats. Works for a player or a scramble team id. */

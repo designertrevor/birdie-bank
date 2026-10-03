@@ -30,10 +30,12 @@ function Item({ x, fmt }) {
  * "Where it comes from" for one round: a row for each other player (yours with them, from your side),
  * or for each payment when you only watched. Tapping a row opens the breakdown.
  */
-export function RoundWhereFrom({ round, res }) {
+export function RoundWhereFrom({ round, res, fmt: fmtIn = null, title = 'Where it comes from' }) {
   const me = useStore(s => meFor(round, s));
   const [open, setOpen] = useState(null); // { a, b }
-  const fmt = unitFmt(round);
+  // A reward round reads in points, but its side bets for money come here in dollars (`fmt`, `res` from tabResults)
+  const fmt = fmtIn || unitFmt(round);
+  const isMoney = countsMoney(round) || fmt === money;
   const mine = round.players.some(p => p.id === me);
   const rows = mine
     ? round.players.filter(p => p.id !== me).map(p => ({ a: me, b: p.id }))
@@ -50,7 +52,7 @@ export function RoundWhereFrom({ round, res }) {
   };
   return (
     <>
-      <div className="sec-label">Where it comes from</div>
+      <div className="sec-label">{title}</div>
       {rows.map(({ a, b }) => {
         const x = pairBreakdown(round, a, b, res);
         const name = roundPlayerName(round, b);
@@ -73,7 +75,7 @@ export function RoundWhereFrom({ round, res }) {
             <p className="sheet-text">{open.a === me ? 'What you won or lost with them' : `What ${first(roundPlayerName(round, open.a))} won or lost with ${first(roundPlayerName(round, open.b))}`}, game by game and bet by bet.</p>
             <ul className="wf-list">{bd.items.map(x => <Item key={x.key} x={x} fmt={fmt} />)}</ul>
             <div className="wf-sum"><span>Between {open.a === me ? 'you two' : 'them'}</span><strong className={cls(bd.total)}>{fmt(bd.total, { sign: true })}</strong></div>
-            {countsMoney(round) && <p className="field-help pad">The payments square everyone in as few as possible, so who pays whom can differ from this.</p>}
+            {isMoney && <p className="field-help pad">The payments square everyone in as few as possible, so who pays whom can differ from this.</p>}
           </>
         )}
         <div className="cta-wrap"><button className="full-btn outline" onClick={() => setOpen(null)}>Close</button></div>

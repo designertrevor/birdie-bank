@@ -8,8 +8,9 @@
 // - kind 'match': match play between the two over the holes, net of their own strokes. The stake goes
 //   to whoever is ahead (while it's being played, to whoever is ahead right now, like a Nassau leg).
 // - kind 'hole': the stake for every hole one of them wins outright, net of their strokes. Ties push.
-// - kind 'ctp': closest to the pin, the stake on every par 3 in the holes. The scorekeeper taps the
-//   winner on the hole: winners = { holeNo: pid } (a hole with nobody tapped pays nothing).
+// - kind 'ctp': closest to the pin, the stake on every par 3 in the holes. The scorekeeper (or either
+//   of the two, see bet-asks.js) taps the winner on the hole: winners = { holeNo: pid } (a hole with
+//   nobody tapped pays nothing).
 // - kind 'custom': anything else ("Longest drive on 7", a label typed in), tapped once: winner = pid,
 //   at = the hole it was tapped on.
 // - holes: playing positions [from, to] (1-based, both counted); absent means the whole round.
@@ -17,6 +18,11 @@
 //   count strokes go on the hardest holes of the bet's own holes by HCP (`on` absent or 'hdcp'),
 //   or one on each hole number listed in `on`. Without strokes the bet is played gross: the round's
 //   handicaps never count between the two, so the bet is exactly what the two of them agreed.
+// - playFor: on a round played for a reward, 'money' (on the Tab, in dollars) or 'points' (counts
+//   toward the reward with the games). Absent means points, which is how reward rounds counted every
+//   bet before the choice existed, so those rounds keep their numbers. Money and points rounds ignore it.
+// - A scramble's match and per-hole bets are between players on different teams, played on their
+//   teams' scores (teammates share one score, so they can only have closest to the pin or custom).
 // Rounds without bets have none, so their money is exactly what it always was. Pure, unit tested.
 import { holeWinner, matchStatus, pickupGross, rankHoles, strokesOnHole } from './golf.js';
 import { matchLabel } from './games.js';
@@ -40,24 +46,71 @@ export const MAX_BETS = 12;
 const isObj = v => v !== null && typeof v === 'object' && !Array.isArray(v);
 const c2 = v => Math.round(v * 100) / 100 || 0;
 const first = n => String(n || '').trim().split(/\s+/)[0] || '?';
-/** Match and per-hole bets need each player's own score, which a scramble doesn't have. */
+/** Match and per-hole bets are played on scores (a scramble's are by team). */
 const needsScores = kind => kind === 'match' || kind === 'hole';
+
+/** Why two teammates in a scramble can't have a match or per-hole bet, in one line for the editor. */
+export const SAME_TEAM_REASON = 'Teammates share one score, so between them it’s closest to the pin or your own bet.';
+
+/**
+ * The team a player is on in a scramble: the team's id (round.teams is [{ id, players }], or setup's
+ * arrays of player ids, which go by their place), or null when it isn't a scramble or they aren't on one.
+ */
+export function teamOf(round, pid) {
+  if (round?.game !== 'scramble' || !Array.isArray(round.teams)) return null;
+  const i = round.teams.findIndex(t => (Array.isArray(t) ? t : t?.players || []).includes(pid));
+  if (i < 0) return null;
+  const t = round.teams[i];
+  return Array.isArray(t) || t.id == null ? `#${i}` : t.id;
+}
+
+/**
+ * Whether a kind of bet can be played between two players: always, except a match or per-hole bet
+ * in a scramble, which needs the two on different teams (it's played on their teams' scores).
+ */
+export function kindFits(round, kind, sides) {
+  if (round?.game !== 'scramble' || !needsScores(kind)) return true;
+  const [a, b] = sides || [];
+  const ta = teamOf(round, a), tb = teamOf(round, b);
+  return ta != null && tb != null && ta !== tb;
+}
+
+/** Whose score counts for a player in a bet: their own, or in a scramble their team's. */
+const scoreKey = (round, pid) => (round.game === 'scramble' ? teamOf(round, pid) : pid);
+
+/**
+ * What a bet is played for, 'money' or 'points': everything on a money round is money and on a
+ * points round points; on a reward round each bet says (absent is points, see the top of this file).
+ */
+export function betPlayFor(round, bet) {
+  const kind = round?.playFor?.kind;
+  if (kind === 'points') return 'points';
+  if (kind === 'reward') return bet?.playFor === 'money' ? 'money' : 'points';
+  return 'money';
+}
+
+/** A bet played for money on a reward round: its money goes on the Tab, apart from the reward's points. */
+export const isCashBet = (round, bet) => round?.playFor?.kind === 'reward' && bet?.playFor === 'money';
 
 /** A custom bet's name, tidied: single spaces, trimmed, at most BET_LABEL_MAX characters. */
 export function cleanBetLabel(s) {
   return String(s ?? '').replace(/\s+/g, ' ').trim().slice(0, BET_LABEL_MAX).trim();
 }
 
-/** Which kinds of side bet a round can take: a scramble only has closest to the pin and custom. */
-export function betKindsFor(game) {
-  return game === 'scramble' ? BET_KIND_ORDER.filter(k => !needsScores(k)) : BET_KIND_ORDER;
+/**
+ * Which kinds of side bet a round can take: every kind (a scramble's match and per-hole bets need the
+ * two on different teams, see kindFits).
+ */
+export function betKindsFor() {
+  return BET_KIND_ORDER;
 }
 
 /**
  * A round's side bets that can be worked out, in the order they were made. Anything setup could
  * never make is left out, so a garbled or hand-edited round can't move money: an unknown kind, a
  * side who isn't in the round, a player betting with themself, a stake that isn't a positive
- * number, the same id twice, and a match or per-hole bet on a scramble (scores are by team).
+ * number, the same id twice, and a match or per-hole bet between two teammates in a scramble
+ * (they share one score).
  */
 export function betsOf(round) {
   if (!round || !Array.isArray(round.bets) || !Array.isArray(round.players)) return [];
@@ -70,7 +123,7 @@ export function betsOf(round) {
     const [a, c] = b.sides;
     if (a === c || !ids.has(a) || !ids.has(c)) continue;
     if (!(typeof b.stake === 'number' && Number.isFinite(b.stake) && b.stake > 0)) continue;
-    if (round.game === 'scramble' && needsScores(b.kind)) continue;
+    if (!kindFits(round, b.kind, b.sides)) continue;
     seen.add(b.id);
     out.push(b);
   }
@@ -138,9 +191,12 @@ export function strokesCount(round, bet) {
   return Object.values(betStrokes(round, bet).by).reduce((a, n) => a + n, 0);
 }
 
-/** One player's score in a bet on a hole, net of the bet's own strokes (a pickup is net double bogey), or null. */
+/**
+ * One player's score in a bet on a hole, net of the bet's own strokes (a pickup is net double bogey),
+ * or null. In a scramble it's their team's score.
+ */
 function betNet(round, st, pid, hole) {
-  const g = round.scores?.[hole.no]?.[pid];
+  const g = round.scores?.[hole.no]?.[scoreKey(round, pid)];
   if (g == null) return null;
   const k = st.to === pid ? st.by[hole.no] || 0 : 0;
   return (g === 'X' ? pickupGross(hole.par, k) : g) - k;
@@ -200,15 +256,15 @@ export function betResult(round, bet) {
 }
 
 /**
- * Every side bet in the round, worked out: { balances, pairs, list }. `balances` has every player
- * (0 for anyone without a bet), `pairs[a][b]` what a won from b across their bets, and `list` each
- * bet's betResult in the order they were made.
+ * Every side bet in the round (or the ones in `bets`, from betsOf), worked out: { balances, pairs, list }.
+ * `balances` has every player (0 for anyone without a bet), `pairs[a][b]` what a won from b across
+ * their bets, and `list` each bet's betResult in the order they were made.
  */
-export function betsMoney(round) {
+export function betsMoney(round, bets = betsOf(round)) {
   const ids = round.players.map(p => p.id);
   const balances = Object.fromEntries(ids.map(id => [id, 0]));
   const pairs = Object.fromEntries(ids.map(id => [id, {}]));
-  const list = betsOf(round).map(bet => betResult(round, bet));
+  const list = bets.map(bet => betResult(round, bet));
   for (const r of list) {
     const [a, b] = r.sides;
     balances[a] = c2(balances[a] + r.amount);
@@ -228,10 +284,14 @@ export function newBetId() {
 
 /**
  * A bet as it's saved: only the fields its kind uses, the stake a positive amount, the holes inside
- * the round (absent for the whole round), strokes only when there are any, and a custom bet's name tidied.
+ * the round (absent for the whole round), strokes only when there are any, and a custom bet's name
+ * tidied. On a reward round it says what it's played for: points when it says so, else money (the
+ * default for a new bet, decided 2026-10-03). Old reward rounds' bets are never cleaned again, so
+ * theirs stay points.
  */
 export function cleanBet(round, raw) {
   const bet = { id: raw.id || newBetId(), kind: raw.kind, sides: [...raw.sides], stake: Math.min(BET_MAX, Math.max(0, Number(raw.stake) || 0)) };
+  if (round?.playFor?.kind === 'reward') bet.playFor = raw.playFor === 'points' ? 'points' : 'money';
   const n = round?.holes?.length || 18;
   if (Array.isArray(raw.holes)) {
     const [f, t] = betRange({ holes: { length: n } }, raw);
@@ -351,6 +411,8 @@ export function fitSetupBets(list, shape) {
  * holes (`bet`), only that share of it: a Back 9 bet gets about half.
  */
 export function suggestedStrokes(round, a, b, bet = null) {
+  // A scramble plays off the teams' handicaps, so there's nothing between two players to suggest
+  if (round.game === 'scramble') return null;
   const pa = round.players.find(p => p.id === a), pb = round.players.find(p => p.id === b);
   if (!pa || !pb) return null;
   const known = p => p.index != null || p.courseHcOverride != null;
@@ -440,4 +502,35 @@ export function betStatusText(round, r) {
   }
   if (r.bet.winner === a || r.bet.winner === b) return `${name(r.bet.winner)} won`;
   return 'Not decided yet';
+}
+
+/**
+ * What saving a change to a bet does to the holes already played, for the editor. A bet is always
+ * worked out from its first hole, so a new amount reprices every hole of it, the ones already played
+ * too (Trevor's call, 2026-10-03): "This changes every hole of the bet, so Preston’s $6 becomes $12."
+ * Null for a new bet, a bet with nothing decided yet, or a change that moves nothing. `fmtOf(bet)`
+ * formats a bet's amounts (a reward round's bet can be money or points).
+ */
+export function repriceText(round, before, after, fmtOf) {
+  if (!before || !after || after.sides?.length !== 2) return null;
+  const rb = betResult(round, before);
+  if (rb.open) return null;
+  const ra = betResult(round, after);
+  const fb = fmtOf(before), fa = fmtOf(after);
+  const name = id => first(round.players.find(p => p.id === id)?.name);
+  const lead = r => (r.amount > 0 ? r.sides[0] : r.amount < 0 ? r.sides[1] : null);
+  const was = lead(rb), is = lead(ra);
+  const whole = before.kind === 'custom' && after.kind === 'custom' ? 'This changes the whole bet' : 'This changes every hole of the bet';
+  if (was === is && Math.abs(rb.amount) === Math.abs(ra.amount) && fb === fa) {
+    return before.stake === after.stake ? null : `${whole}, the holes already played too.`;
+  }
+  const x = was ? `${name(was)}’s ${fb(Math.abs(rb.amount))}` : 'all square';
+  const y = !is ? 'all square' : is === was ? fa(Math.abs(ra.amount)) : `${name(is)}’s ${fa(Math.abs(ra.amount))}`;
+  return `${whole}, so ${x} becomes ${y}.`;
+}
+
+/** "Preston v Tyler, $5 match": a bet in a few words for the invite card. `fmt` formats its amount. */
+export function betInviteLine(round, bet, fmt) {
+  const holes = betHolesText(round, bet);
+  return `${betPeople(round, bet)}, ${betStakeText(bet, fmt)}${bet.kind === 'custom' ? ` on ${betName(bet).toLowerCase() === 'side bet' ? 'a side bet' : betName(bet)}` : ''}${holes ? `, ${holes.charAt(0).toLowerCase()}${holes.slice(1)}` : ''}`;
 }

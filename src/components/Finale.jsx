@@ -71,7 +71,9 @@ function StepAmount({ amount, skip, fmt = money }) {
 }
 
 /** One bet resolving: what it was, who took it, and for how much. Laid out from the start so nothing jumps. */
-function RevealStep({ step, on, skip, fmt = money }) {
+function RevealStep({ step, on, skip, fmt: roundFmt = money }) {
+  // A reward round's side bet for money reads in dollars among the points
+  const fmt = step.money ? money : roundFmt;
   let val = '–';
   if (step.value) val = step.value;
   else if (step.amount != null) val = on ? <StepAmount amount={step.amount} skip={skip} fmt={fmt} /> : fmt(0);
@@ -103,7 +105,8 @@ export function Reveal({ round, res, onNext, onDetail, extra, instant = false })
   // A points or reward round counts up in points, and has nobody to pay
   const fmt = unitFmt(round);
   // A trip round has no settle up of its own (the trip is settled once), so the next beat is Share
-  const pays = countsMoney(round) && res.transfers.length > 0 && !round.trip?.id;
+  // A reward round's side bets for money have payments of their own
+  const pays = (countsMoney(round) ? res.transfers.length > 0 : !!res.cash?.transfers.length) && !round.trip?.id;
   const reward = playForOf(round).kind === 'reward';
   const nSteps = steps.length;
   const t = revealTiming(nSteps, count);
@@ -180,7 +183,7 @@ export function Reveal({ round, res, onNext, onDetail, extra, instant = false })
             delay={t.stepsEnd + (count - 1 - i) * t.stagger} duration={t.count} skip={skipped} games={gamesLine(res.detail?.byGame, p.id, fmt)} fmt={fmt} index={i} />
         ))}
         {/* A reward round: who wins it and who's buying, where the payments would be */}
-        {reward && <div className={`rv-reward-wrap ${done ? 'on' : ''}`} aria-hidden={!done}><RewardCard round={round} res={res} /></div>}
+        {reward && <div className={`rv-reward-wrap ${done ? 'on' : ''}`} aria-hidden={!done}><RewardCard round={round} res={res} />{res.cash && <CashCard round={round} res={res} />}</div>}
         {extra}
       </div>
       <div className="cta-wrap">
@@ -209,6 +212,27 @@ export function RewardCard({ round, res }) {
         <div className="rc-win d">{o.win}</div>
         <div className="rc-buy">{o.buy}</div>
         {!square && <div className="rc-note">{mine ? 'It stays on your Tab until it’s done. ' : ''}No money changes hands.</div>}
+      </div>
+    </div>
+  );
+}
+
+/**
+ * A reward round's side bets played for money, under the reward: who pays whom in dollars. They go
+ * on the Tab; the points above decide the reward.
+ */
+export function CashCard({ round, res }) {
+  const c = res?.cash;
+  if (!c) return null;
+  const name = id => roundPlayerName(round, id).split(' ')[0];
+  const lines = c.transfers.map(t => `${name(t.from)} pays ${name(t.to)} ${money(t.amount)}`);
+  return (
+    <div className={`reward-card cash-card ${lines.length ? '' : 'square'}`}>
+      <Icon name="hand-coins" fill className="rc-icon" />
+      <div className="rc-text">
+        <div className="rc-win d">Side bets for money</div>
+        <div className="rc-buy">{lines.length ? `${lines.join('. ')}.` : 'All square. Nobody pays.'}</div>
+        <div className="rc-note">{lines.length ? 'In dollars, on the Tab. The points decide the reward.' : 'The points decide the reward.'}</div>
       </div>
     </div>
   );
@@ -280,7 +304,8 @@ export function SettleUp({ round, res, onBack, onNext }) {
           {missingApp ? ' Add each person’s payment app in Players to get pay buttons.' : ''}
         </p>
         {/* Tap a person to see what's between you, game by game and side bet by side bet */}
-        <RoundWhereFrom round={round} res={res} />
+        {/* A reward round settles only its side bets for money here, so they read in dollars */}
+        <RoundWhereFrom round={round} res={res} fmt={countsMoney(round) ? null : money} />
       </div>
       <div className="cta-wrap">
         <button className="full-btn" onClick={onNext}>Share results <Icon name="arrow-right" /></button>

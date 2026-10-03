@@ -9,8 +9,7 @@
 // the rest is netted and passed on through the group as before. The shared layer is per round
 // transfer: a payment is tied to the round transfers between the two people, oldest first, and
 // anything the shared rounds don't explain stays local.
-import { roundResults } from './round.js';
-import { countsMoney } from './play-for.js';
+import { onTab, tabResults } from './play-for.js';
 import { meFor } from './format.js';
 import { outstanding, tabWith } from './ledger.js';
 import { FETCH_DAYS, canonicalOf, cents, codeOf, finishedAt, lockedRounds, nettedId, nettedOn, pairDebt, paidOn, played, sharedRounds } from './pair-debts.js';
@@ -57,7 +56,7 @@ export function pairRounds(state, a, b, { days = FETCH_DAYS, now = Date.now() } 
 function roundsByCode(state) {
   const out = new Map();
   for (const r of Object.values(state.rounds || {})) {
-    if (!countsMoney(r)) continue;
+    if (!onTab(r)) continue;
     const c = codeOf(r);
     if (c && !out.has(c)) out.set(c, r);
   }
@@ -178,7 +177,7 @@ export function openTransfers(state, a, b, now = Date.now(), only = null) {
   for (const r of pairRounds(state, A, B, { now })) {
     if (only && !only.has(r.id)) continue;
     const code = codeOf(r);
-    for (const t of roundResults(r).transfers) {
+    for (const t of tabResults(r).transfers) {
       const f = who(t.from), to = who(t.to);
       if (!((f === A && to === B) || (f === B && to === A))) continue;
       if (nettedOn(state, code, t)) continue;
@@ -355,7 +354,7 @@ export function roundStatus(round, rows) {
   const out = Object.fromEntries(round.players.map(p => [p.id, 'square']));
   const owes = new Set(), waits = new Set(), carried = new Set();
   const match = (r, t) => r.from === t.from && r.to === t.to;
-  for (const t of roundResults(round).transfers) {
+  for (const t of tabResults(round).transfers) {
     const paid = rows.filter(r => r.kind === 'payment' && r.status === 'paid' && match(r, t)).reduce((a, r) => a + cents(r.amount), 0);
     const netted = rows.some(r => r.kind === 'payment' && r.status === 'netted' && match(r, t));
     if (netted || paid >= cents(t.amount)) continue;
@@ -377,7 +376,7 @@ export function roundStatus(round, rows) {
  * most recent finished round of all, or null.
  */
 export function stripRound(state, { now = Date.now() } = {}) {
-  const shared = lockedRounds(state, { days: STRIP_DAYS, now }).filter(r => roundResults(r).transfers.length);
+  const shared = lockedRounds(state, { days: STRIP_DAYS, now }).filter(r => tabResults(r).transfers.length);
   const round = shared.at(-1);
   if (!round) return null;
   // Your newest round of any kind (a points round after it means it isn't your latest)

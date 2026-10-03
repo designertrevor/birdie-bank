@@ -157,7 +157,7 @@ export default function Person({ id: opened }) {
           <button key={it.id} className="ledger-row" onClick={() => nav.push('roundDetail', { id: it.id })}>
             <div className="lr-info">
               <div className="lr-name" style={{ fontSize: 16 }}>{gameLabel(it.round)} · {it.round.course.name}</div>
-              <div className="lr-status">{roundDate(it.round)}{it.money === false ? ` · ${playForLine(it.round)}` : ''}</div>
+              <div className="lr-status">{roundDate(it.round)}{it.money === false ? ` · ${playForLine(it.round)}` : ''}{it.cash != null ? ` · Side bets for money ${it.cash ? money(it.cash, { sign: true }) : 'square'}` : ''}</div>
             </div>
             <div className={`lr-amt d story-amt ${it.amount > 0 ? 'pos' : it.amount < 0 ? 'neg' : ''}`}>{it.amount ? unitFmt(it.round)(it.amount, { sign: true }) : 'Even'}</div>
           </button>
