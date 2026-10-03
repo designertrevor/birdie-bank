@@ -8,7 +8,7 @@ import { applyBetAsk, buildBetAsk } from './bet-asks.js';
 import { tabResults } from './play-for.js';
 import { newTrip, tripStamp, tripStatus, tripPayment } from './trips.js';
 import { outstanding, tabBalances } from './ledger.js';
-import { buildPlan, planState } from './trip-plan.js';
+import { buildPlan, planRows, planState } from './trip-plan.js';
 import { allocatePayment, applyRows, pairRounds } from './shared-tab.js';
 import { canCarry, cardCarry, carryReducer } from './carry.js';
 
@@ -197,4 +197,52 @@ test('an agreed carry stays when a shared reward round’s money bet is between 
   // With a money bet between t and a too, it's t and a's shared round as well
   const ta = cashBet(ab, 'ct', ['t', 'a'], 2, 't');
   assert.deepEqual(pairRounds(stateOf('t', [q1, ta]), 'a', 't', { now: NOW }).map(r => r.id), ['q2']);
+});
+
+// ---------------------------------------------------------------------------------------------
+// QA Q1: the tester's two-phone trip. Tab totals equal each person's net across the rounds, before
+// and after a payment on the trip's plan
+
+const ANN_TRIP = newTrip({ id: 'tp', name: 'Bandon', start: '2026-10-16', end: '2026-10-18', by: 'ann', now: OCT(1) });
+function qaTrip() {
+  const ids = ['ann', 'bob', 'cal', 'dee'];
+  const opt = (at, code, extra = {}) => ({ at, code, trip: ANN_TRIP, ...extra });
+  // A money round: Ann +45, Cal +15, Dee −15, Bob −45 ($7.50 skins)
+  const r1 = round('r1', ids, wins(ids, [1, 'ann'], [2, 'ann'], [3, 'ann'], [4, 'cal'], [5, 'cal'], [6, 'dee']), opt(OCT(16, 15), 'CODE01', { skin: 7.5 }));
+  // Lunch, with a $5 side bet for money Cal pays Ann (the points decide lunch)
+  let r2 = round('r2', ids, wins(ids, [1, 'dee'], [2, 'bob']), opt(OCT(17, 11), 'CODE02', { playFor: LUNCH }));
+  r2 = cashBet(r2, 'cb', ['ann', 'cal'], 5, 'ann');
+  // A 9-hole Skins money round: Bob +28, Ann −4, Cal −12, Dee −12 ($2 skins)
+  const r3 = round('r3', ids, wins(ids, [1, 'bob'], [2, 'bob'], [3, 'bob'], [4, 'bob'], [5, 'bob'], [6, 'ann']), opt(OCT(17, 17), 'CODE03'));
+  return [r1, r2, r3];
+}
+
+test('QA trip: with the plan published, every phone’s Tab total is that person’s net, before and after a trip payment', () => {
+  const rounds = qaTrip();
+  assert.deepEqual(roundResults(rounds[0]).balances, { ann: 45, bob: -45, cal: 15, dee: -15 });
+  assert.deepEqual(roundResults(rounds[2]).balances, { ann: -4, bob: 28, cal: -12, dee: -12 });
+  const net = { ann: 46, bob: -17, cal: -2, dee: -27 };
+  const organizer = stateOf('ann', rounds, { trips: { tp: { ...ANN_TRIP, endedAt: NOW - HOUR } } });
+  const plan = buildPlan(organizer, 'tp', { now: NOW, endedAt: NOW - HOUR });
+  assert.equal(plan.rounds.length, 3);
+  const phone = me => (me === 'ann' ? { ...organizer, tripPlans: { tp: plan } } : { ...stateOf(me, rounds), tripPlans: { tp: plan } });
+  const total = (s, me) => perPerson(outstanding(s, { now: NOW }))[me] || 0;
+  for (const me of Object.keys(net)) {
+    const s = phone(me);
+    assert.equal(planState(s, 'tp', { now: NOW }).status, 'live', me);
+    // Before the fix Ann showed up $56 and Dee was asked for $33
+    assert.equal(total(s, me), net[me], `${me}'s Tab`);
+    assert.equal(tripStatus(s, 'tp', { now: NOW }).standings.find(x => x.id === me).amount, net[me], `${me}'s trip`);
+  }
+  // Ann marks $4 from Bob paid on the trip's plan (the line between them, whichever way it goes)
+  const line = plan.lines.find(l => [l.from, l.to].includes('ann') && [l.from, l.to].includes('bob'));
+  const [payer, payee] = [line.from, line.to];
+  const rows = planRows(phone('ann'), payer, payee, { amount: 400, now: NOW, trip: 'tp' }).rows;
+  assert.equal(rows.length, 1);
+  for (const me of Object.keys(net)) {
+    const s = applyRows(phone(me), rows);
+    const want = net[me] + (me === payer ? 4 : me === payee ? -4 : 0);
+    assert.equal(planState(s, 'tp', { now: NOW }).status, 'live', me);
+    assert.equal(total(s, me), want, `${me}'s Tab after the payment`);
+  }
 });
