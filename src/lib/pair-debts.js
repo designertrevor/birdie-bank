@@ -9,6 +9,7 @@ import { meFor, myIds } from './format.js';
 import { linksOf } from './people-links.js';
 import { countsMoney } from './play-for.js';
 import { isTripPayment } from './trip-pay.js';
+import { coveredRounds } from './trip-plan.js';
 
 const DAY = 864e5;
 /** Shared rounds this recent are looked up on the server. */
@@ -56,10 +57,14 @@ export function sharedRounds(state, { days = FETCH_DAYS, now = Date.now() } = {}
  * The shared rounds whose money the Tab keeps between the two people in them. A trip's rounds stay
  * here too: every phone of a pair has the rounds both of them played, but a phone that missed one
  * of the trip's rounds can't see the whole trip, so squaring a trip across everyone on it would
- * leave two phones disagreeing (trips.js settles shared trip rounds pair by pair for that reason).
+ * leave two phones disagreeing. Only the organizer's published plan can (trip-plan.js): the rounds
+ * a plan that checks out on this phone covers settle on the plan instead, the same on every phone.
  */
 export function lockedRounds(state, opts) {
-  return sharedRounds(state, opts);
+  const list = sharedRounds(state, opts);
+  if (!state.tripPlans) return list;
+  const covered = coveredRounds(state, { now: opts?.now });
+  return covered.size ? list.filter(r => !covered.has(r.id)) : list;
 }
 
 /** A transfer closed by a payment that squared the pair's shared rounds (status only, no money). */

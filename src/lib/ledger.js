@@ -5,6 +5,7 @@ import { keptId, meFor } from './format.js';
 import { canonicalOf, sharedDebts } from './pair-debts.js';
 import { linksOf } from './people-links.js';
 import { countsMoney } from './play-for.js';
+import { planDebts } from './trip-plan.js';
 
 const toCents = v => Math.round((Number(v) || 0) * 100);
 const pairKey = (a, b) => (a < b ? `${a}|${b}` : `${b}|${a}`);
@@ -144,12 +145,16 @@ export function outstanding(state, { now = Date.now() } = {}) {
   const together = roundsTogether(state);
   const canPay = (a, b) => together.has(pairKey(a, b));
   const direct = sharedDebts(state, { now });
-  if (!direct.length) {
+  // A trip's published plan (trip-plan.js): its rounds and their payments come out of the
+  // balances, and each pair's open money on the plan goes in as it is, the same on every phone
+  const trip = planDebts(state, { now });
+  const onPlan = trip.rounds.length > 0;
+  if (!direct.length && !onPlan) {
     const plan = fewestPayments(tabBalances(state), { canPay });
     return plan.map(t => ({ ...t, rounds: together.get(pairKey(t.from, t.to)) || [] }));
   }
   // Take the shared money out of the balances, square the rest, then put it back pair by pair
-  const bal = Object.fromEntries(Object.entries(tabBalances(state)).map(([id, v]) => [id, toCents(v)]));
+  const bal = onPlan ? planBalances(state, trip) : Object.fromEntries(Object.entries(tabBalances(state)).map(([id, v]) => [id, toCents(v)]));
   const net = new Map(); // "a|b" (sorted) -> cents a owes b
   const owe = (from, to, c) => {
     const k = pairKey(from, to);
@@ -162,6 +167,7 @@ export function outstanding(state, { now = Date.now() } = {}) {
   }
   const rest = fewestPayments(Object.fromEntries(Object.entries(bal).map(([id, c]) => [id, c / 100])), { canPay });
   for (const t of rest) owe(t.from, t.to, toCents(t.amount));
+  for (const d of trip.open) owe(d.from, d.to, d.cents);
   const plan = [];
   for (const [k, c] of net) {
     if (!c) continue;
@@ -170,6 +176,24 @@ export function outstanding(state, { now = Date.now() } = {}) {
     plan.push({ from, to, amount: Math.abs(c) / 100, rounds: together.get(k) || [] });
   }
   return plan.sort((a, b) => b.amount - a.amount || a.from.localeCompare(b.from));
+}
+
+/** Everyone's balance in cents, leaving out the rounds and payments a trip's live plan settles. */
+function planBalances(state, trip) {
+  const skipRounds = new Set(trip.rounds.map(r => r.id));
+  const skipPays = new Set(trip.settlements);
+  const bal = {};
+  const who = canonical(state);
+  const add = (id, c) => { const k = who(id); bal[k] = (bal[k] || 0) + c; };
+  for (const r of moneyRounds(state)) {
+    if (skipRounds.has(r.id)) continue;
+    for (const [id, v] of Object.entries(roundResults(r).balances)) add(id, toCents(v));
+  }
+  for (const s of state.settlements || []) {
+    if (skipPays.has(s)) continue;
+    add(s.from, toCents(s.amount)); add(s.to, -toCents(s.amount));
+  }
+  return bal;
 }
 
 /**

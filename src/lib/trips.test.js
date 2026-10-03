@@ -371,14 +371,15 @@ test('leaving early: someone settles just their part, and the rest settle after 
   assert.ok(Object.values(tabBalances(all)).every(v => Math.abs(v) < 0.005));
 });
 
-test('current trips: shown while on, ready or just square; gone a few days after', () => {
+test('current trips: shown while on, ready or square, and still there until you hide it', () => {
   const s = stateOf('t', bandon(), { trips: { t_bandon: TRIP } });
   assert.deepEqual(currentTrips(s, { now: OCT(17, 13) }).map(x => x.phase), ['on']);
   assert.deepEqual(currentTrips(s, { now: OCT(18, 13) }).map(x => x.phase), ['ready']);
   const st = tripStatus(s, 't_bandon', { now: OCT(18, 13) });
   const paid = payAll(s, st.plan);
   assert.deepEqual(currentTrips(paid, { now: OCT(19) }).map(x => x.phase), ['square']);
-  assert.deepEqual(currentTrips(paid, { now: OCT(25) }), []);
+  assert.deepEqual(currentTrips(paid, { now: OCT(25) }).map(x => x.phase), ['square'], 'no timer');
+  assert.deepEqual(currentTrips({ ...paid, tripHidden: { t_bandon: OCT(19) } }, { now: OCT(25) }), []);
   // A trip only known from a friend's stamps, with nothing planned, isn't pushed at you before it starts
   const friend = stateOf('m', []);
   assert.deepEqual(currentTrips(friend, { now: OCT(10) }), []);
