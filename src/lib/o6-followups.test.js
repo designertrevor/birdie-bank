@@ -4,7 +4,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { createRound, roundResults } from './round.js';
 import { addBet, betsOf, changeBet, setBetWinner } from './pair-bets.js';
-import { applyBetAsk, buildBetAsk } from './bet-asks.js';
+import { applyBetAsk, askSettled, betAskProblem, buildBetAsk } from './bet-asks.js';
 import { tabResults } from './play-for.js';
 import { newTrip, tripStamp, tripStatus, tripPayment } from './trips.js';
 import { outstanding, tabBalances } from './ledger.js';
@@ -245,4 +245,30 @@ test('QA trip: with the plan published, every phone’s Tab total is that person
     assert.equal(planState(s, 'tp', { now: NOW }).status, 'live', me);
     assert.equal(total(s, me), want, `${me}'s Tab after the payment`);
   }
+});
+
+// ---------------------------------------------------------------------------------------------
+// Money finding 6: an ask that comes back again changes nothing the second time
+
+test('a replayed side bet ask can’t bring back a bet taken off or undo a later change', () => {
+  const ids = ['t', 'a', 'b'];
+  let r = round('q', ids, wins(ids, [1, 'a'], [3, 'b']), { playFor: LUNCH, trip: null });
+  r.status = 'active';
+  const apply = (round, ask) => (betAskProblem(round, ask) ? round : applyBetAsk(round, ask));
+  const add = buildBetAsk({ by: 'a', op: 'add', id: 'B1', bet: { kind: 'hole', sides: ['a', 'b'], stake: 3, playFor: 'money' } }, 1).betAsk;
+  const change = buildBetAsk({ by: 'b', op: 'change', id: 'B1', bet: { kind: 'hole', sides: ['a', 'b'], stake: 6, playFor: 'money' } }, 2).betAsk;
+  const remove = buildBetAsk({ by: 'a', op: 'remove', id: 'B1' }, 3).betAsk;
+  // The add's answer never got through, so the keeper's phone hears it again after the remove
+  let done = [add, change, remove].reduce(apply, r);
+  assert.equal(betsOf(done).length, 0);
+  done = apply(done, add);
+  assert.equal(betsOf(done).length, 0, 'the removed bet stays gone');
+  assert.equal(askSettled(done, add), true);
+  // A change applied once, then the keeper edits the bet; the same change heard again does nothing
+  let k = [add, change].reduce(apply, r);
+  k = changeBet(k, 'B1', { ...betsOf(k)[0], stake: 9 });
+  assert.equal(betsOf(apply(k, change))[0].stake, 9, 'the later edit stands');
+  // And the keeper taking a bet off directly keeps an add heard again from bringing it back
+  const gone = apply(apply(r, add), { ...remove, at: 4, by: 'b' });
+  assert.equal(betsOf(apply({ ...gone, betAsksDone: [] }, add)).length, 0);
 });

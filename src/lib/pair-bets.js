@@ -337,11 +337,19 @@ export function changeBet(round, id, raw) {
   };
 }
 
-/** The round without a bet. */
+/** How many taken-off bet ids a round remembers (see removeBet). */
+export const GONE_MAX = 40;
+
+/**
+ * The round without a bet. A bet that was there is remembered as taken off (`round.betsGone`, its
+ * id), so an ask to add it that arrives again later (bet-asks.js) can't bring it back.
+ */
 export function removeBet(round, id) {
-  const list = (Array.isArray(round.bets) ? round.bets : []).filter(b => b.id !== id);
+  const was = Array.isArray(round.bets) ? round.bets : [];
+  const list = was.filter(b => b.id !== id);
   const next = { ...round, bets: list };
   if (!list.length) delete next.bets;
+  if (list.length !== was.length) next.betsGone = [...(round.betsGone || []).filter(x => x !== id), id].slice(-GONE_MAX);
   return next;
 }
 

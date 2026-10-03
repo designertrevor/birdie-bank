@@ -12,8 +12,19 @@
 //   closest-to-the-pin or custom winner; pid null clears it).
 // - status: 'waiting', then 'done' once the keeper's phone applied it, or 'no' with `why`.
 // The sender keeps its asks in round.betAsks (this phone only, never shared): [{ no, ask, status, why? }].
-// Pure, unit tested.
+// The keeper's phone remembers each ask it applied in the round (`round.betAsksDone`, their keys, see
+// askKey) and each bet taken off (`round.betsGone`, pair-bets.js), and both ride in the round to every
+// phone, so an ask that comes back again (its answer never got through) changes nothing the second
+// time: a replayed add can't bring back a bet taken off since, and a replayed change can't undo a
+// later edit. Pure, unit tested.
 import { MAX_BETS, addBet, betsOf, changeBet, cleanBet, removeBet, setBetWinner } from './pair-bets.js';
+
+/** How many applied asks a round remembers. */
+export const DONE_MAX = 60;
+/** One ask, the same on every phone: who sent it, when, what and which bet. */
+export const askKey = ask => `${ask.by}:${ask.at}:${ask.op}:${ask.id}`;
+/** The keeper's phone already applied this ask (it's in the round). */
+export const askApplied = (round, ask) => (Array.isArray(round?.betAsksDone) ? round.betAsksDone : []).includes(askKey(ask));
 import { stable } from './sync-model.js';
 
 export const ASK_OPS = ['add', 'change', 'remove', 'winner'];
@@ -52,12 +63,14 @@ export function readBetAsk(data) {
  */
 export function betAskProblem(round, ask) {
   if (!round || round.status === 'done') return 'The round is finished';
+  if (askApplied(round, ask)) return null; // applied before: it's done, and applying it again changes nothing
   if (!round.players?.some(p => p.id === ask.by)) return 'Only players in the round can change a side bet';
   const had = (Array.isArray(round.bets) ? round.bets : []).find(b => b?.id === ask.id);
   const valid = had && betsOf(round).some(b => b.id === ask.id);
   const inIt = b => Array.isArray(b?.sides) && b.sides.includes(ask.by);
   if (ask.op === 'add') {
     if (had) return null; // already added: sending it twice adds it once
+    if ((round.betsGone || []).includes(ask.id)) return 'That bet was taken off';
     if (!inIt(ask.bet)) return 'You can only add a bet you’re in';
     if ((round.bets || []).length >= MAX_BETS) return 'This round has all the side bets it can take';
     if (!betsOf({ ...round, bets: [cleanBet(round, ask.bet)] }).length) return 'That bet doesn’t fit this round';
@@ -77,10 +90,19 @@ export function betAskProblem(round, ask) {
   return null;
 }
 
-/** The round with an ask applied (a new round; `round` is not changed). Applying one twice changes nothing more. */
+/**
+ * The round with an ask applied (a new round; `round` is not changed), remembered as applied.
+ * Applying one twice, even after later changes, changes nothing more.
+ */
 export function applyBetAsk(round, ask) {
+  if (askApplied(round, ask)) return round;
+  const next = applyOnce(round, ask);
+  return { ...next, betAsksDone: [...(round.betAsksDone || []), askKey(ask)].slice(-DONE_MAX) };
+}
+
+function applyOnce(round, ask) {
   const has = (round.bets || []).some(b => b?.id === ask.id);
-  if (ask.op === 'add') return has ? round : addBet(round, { ...ask.bet, id: ask.id });
+  if (ask.op === 'add') return has || (round.betsGone || []).includes(ask.id) ? round : addBet(round, { ...ask.bet, id: ask.id });
   if (!has) return round;
   if (ask.op === 'change') return changeBet(round, ask.id, { ...ask.bet, id: ask.id });
   if (ask.op === 'remove') return removeBet(round, ask.id);
@@ -92,12 +114,13 @@ export function applyBetAsk(round, ask) {
  * came back), so the sender can stop waiting even if the answer itself never arrives.
  */
 export function askSettled(round, ask) {
+  if (askApplied(round, ask)) return true;
   const b = (round?.bets || []).find(x => x?.id === ask.id);
   if (ask.op === 'remove') return !b;
   if (!b) return false;
   if (ask.op === 'add') return true;
   if (ask.op === 'change') {
-    const want = applyBetAsk({ ...round, bets: [b] }, ask).bets[0];
+    const want = applyOnce({ ...round, bets: [b] }, ask).bets[0];
     return stable(want) === stable(b);
   }
   if (b.kind === 'ctp') return (b.winners?.[ask.hole] ?? null) === ask.pid;
