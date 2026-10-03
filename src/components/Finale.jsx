@@ -211,7 +211,7 @@ export function RewardCard({ round, res }) {
       <div className="rc-text">
         <div className="rc-win d">{o.win}</div>
         <div className="rc-buy">{o.buy}</div>
-        {!square && <div className="rc-note">{mine ? 'It stays on your Tab until it’s done. ' : ''}No money changes hands.</div>}
+        {!square && <div className="rc-note">{mine ? 'It stays on your Tab until it’s done. ' : ''}{res?.cash ? 'The reward isn’t money. The side bets for money are below.' : 'No money changes hands.'}</div>}
       </div>
     </div>
   );

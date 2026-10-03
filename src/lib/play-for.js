@@ -106,10 +106,22 @@ export function playForLine(round) {
   return null;
 }
 
-/** The friendly-wagers note for a points or reward round: "No money on this one, just lunch." Null for money. */
+/** How many side bets for money a reward round has. */
+export const cashBetCount = round => betsOf(round).filter(b => isCashBet(round, b)).length;
+
+/**
+ * The friendly-wagers note for a points or reward round: "No money on this one, just lunch." A
+ * reward round with side bets for money says so: "Lunch on the games, plus a side bet for money on
+ * the Tab." Null for money.
+ */
 export function noMoneyNote(round) {
   const pf = playForOf(round);
   if (pf.kind === 'money') return null;
+  const n = pf.kind === 'reward' ? cashBetCount(round) : 0;
+  if (n) {
+    const noun = rewardNoun(pf.reward);
+    return `${noun[0].toUpperCase()}${noun.slice(1)} on the games, plus ${n === 1 ? 'a side bet' : `${n} side bets`} for money on the Tab.`;
+  }
   return `No money on this one, just ${pf.kind === 'points' ? 'bragging rights' : rewardNoun(pf.reward)}.`;
 }
 

@@ -29,7 +29,7 @@ export default function PlayForPicker({ value, onChange, planning = false }) {
   const help = pf.kind === 'points'
     ? 'Bragging rights: the bets below count as points, so $5 is 5 pts. No money changes hands.'
     : pf.kind === 'reward'
-      ? `Whoever wins the round gets it, and ${pf.owes === 'everyone' ? 'everyone else owes them one each' : 'last place is buying'}. No money changes hands.`
+      ? `Whoever wins the round gets it, and ${pf.owes === 'everyone' ? 'everyone else owes them one each' : 'last place is buying'}. No money changes hands, unless you play a side bet for money.`
       : planning ? 'The group plays for money, and it goes on the Tab.' : 'Played for money, and it goes on the Tab.';
 
   return (

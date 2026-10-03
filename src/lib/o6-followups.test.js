@@ -5,7 +5,7 @@ import assert from 'node:assert/strict';
 import { createRound, roundResults } from './round.js';
 import { addBet, betsOf, changeBet, setBetWinner } from './pair-bets.js';
 import { applyBetAsk, askSettled, betAskProblem, buildBetAsk } from './bet-asks.js';
-import { tabResults } from './play-for.js';
+import { noMoneyNote, tabResults } from './play-for.js';
 import { newTrip, tripStamp, tripStatus, tripPayment } from './trips.js';
 import { headToHeadSummary, outstanding, personStory, tabBalances } from './ledger.js';
 import { nemesis } from './rivalry.js';
@@ -327,4 +327,22 @@ test('a trip’s points standings are null unless it was played for points', () 
   assert.equal(lunchOnly.standings.length, 0);
   const pts = tripStatus(stateOf('t', [round('p', ids, wins(ids, [1, 'a']), { playFor: { kind: 'points' } })], { trips: { tp: going } }), 'tp', { now: NOW });
   assert.equal(pts.points.a, 4);
+});
+
+// ---------------------------------------------------------------------------------------------
+// QA Q3: a reward round with side bets for money doesn't say there's no money on it
+
+test('a reward round’s note admits its side bets for money', () => {
+  const ids = ['t', 'a', 'b'];
+  const r = round('q', ids, {}, { playFor: LUNCH, trip: null });
+  assert.equal(noMoneyNote(r), 'No money on this one, just lunch.');
+  const one = cashBet(r, 'x', ['a', 'b'], 5, 'a');
+  assert.equal(noMoneyNote(one), 'Lunch on the games, plus a side bet for money on the Tab.');
+  const two = cashBet(one, 'y', ['t', 'b'], 3, 't');
+  assert.equal(noMoneyNote(two), 'Lunch on the games, plus 2 side bets for money on the Tab.');
+  const drink = { ...one, playFor: { kind: 'reward', reward: 'A drink', owes: 'last' } };
+  assert.equal(noMoneyNote(drink), 'A drink on the games, plus a side bet for money on the Tab.');
+  // A points bet on a reward round is still no money
+  const pts = setBetWinner(addBet(r, { id: 'p', kind: 'custom', sides: ['a', 'b'], stake: 5, playFor: 'points' }), 'p', 1, 'a');
+  assert.equal(noMoneyNote(pts), 'No money on this one, just lunch.');
 });
