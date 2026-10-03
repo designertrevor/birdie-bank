@@ -319,7 +319,7 @@ export function addBet(round, raw) {
  * The round with a bet changed. `raw` is the whole bet as it should be now (the editor's), so a
  * field it leaves out is gone: back to the whole round, or no strokes. A winner already tapped stays
  * (a closest-to-the-pin hole outside the new holes just stops counting), unless the players in it
- * or its kind changed, which starts it fresh.
+ * or its kind changed, which starts it fresh. Without a `playFor` it keeps the bet's own.
  */
 export function changeBet(round, id, raw) {
   const list = Array.isArray(round.bets) ? round.bets : [];
@@ -329,7 +329,10 @@ export function changeBet(round, id, raw) {
       if (b.id !== id) return b;
       const samePeople = b.sides.every(s => raw.sides.includes(s));
       const keep = samePeople && b.kind === raw.kind ? { winners: b.winners, winner: b.winner, at: b.at } : {};
-      return cleanBet(round, { ...raw, id, winners: keep.winners, winner: keep.winner, at: keep.at });
+      // A change that doesn't say what the bet is played for keeps what it was (an old reward
+      // round's bet with none is points), so it never turns into money by being edited
+      const playFor = raw.playFor ?? b.playFor ?? 'points';
+      return cleanBet(round, { ...raw, id, playFor, winners: keep.winners, winner: keep.winner, at: keep.at });
     }),
   };
 }

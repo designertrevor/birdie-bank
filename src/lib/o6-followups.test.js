@@ -3,7 +3,8 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { createRound, roundResults } from './round.js';
-import { addBet, setBetWinner } from './pair-bets.js';
+import { addBet, betsOf, changeBet, setBetWinner } from './pair-bets.js';
+import { applyBetAsk, buildBetAsk } from './bet-asks.js';
 import { tabResults } from './play-for.js';
 import { newTrip, tripStamp, tripStatus, tripPayment } from './trips.js';
 import { outstanding, tabBalances } from './ledger.js';
@@ -148,4 +149,26 @@ test('with the trip’s plan published, the Tab, the trip and Settle the trip ag
   const done = settleTrip(s1, 'tp');
   assert.deepEqual(outstanding(done, { now: NOW }), []);
   assert.equal(tripStatus(done, 'tp', { now: NOW }).plan.length, 0);
+});
+
+// ---------------------------------------------------------------------------------------------
+// Note: changing a bet without saying what it's played for keeps what it was
+
+test('changing an old reward round’s bet without a playFor keeps it points, never money', () => {
+  const ids = ['t', 'a', 'b'];
+  let r = round('q', ids, wins(ids, [1, 'a']), { playFor: LUNCH, trip: null });
+  // An old saved bet: no playFor, which is points
+  r = { ...r, bets: [{ id: 'old', kind: 'custom', sides: ['a', 'b'], stake: 5, label: 'Side bet', winner: 'a', at: 1 }] };
+  assert.equal(roundResults(r).cash, undefined);
+  const raw = { id: 'old', kind: 'custom', sides: ['a', 'b'], stake: 8, label: 'Side bet' };
+  const changed = changeBet(r, 'old', raw);
+  assert.equal(betsOf(changed)[0].playFor, 'points');
+  assert.equal(roundResults(changed).cash, undefined);
+  // The same through a change asked from the other player's phone
+  const ask = buildBetAsk({ by: 'b', op: 'change', id: 'old', bet: raw }, 2).betAsk;
+  assert.equal(roundResults(applyBetAsk(r, ask)).cash, undefined);
+  // A money bet changed without saying stays money, and saying so still switches it
+  const m = cashBet(round('m', ids, {}, { playFor: LUNCH, trip: null }), 'x', ['a', 'b'], 5, 'a');
+  assert.equal(betsOf(changeBet(m, 'x', { ...raw, id: 'x' }))[0].playFor, 'money');
+  assert.equal(betsOf(changeBet(r, 'old', { ...raw, playFor: 'money' }))[0].playFor, 'money');
 });
