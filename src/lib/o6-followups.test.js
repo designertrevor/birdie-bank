@@ -60,17 +60,20 @@ function perPerson(plan) {
   return out;
 }
 
-/** The reviewer's trip: Q1 a $2 skins money round, Q2 lunch with a $5 money side bet a beats b. */
-function lunchTrip() {
+/** The reviewer's trip: Q1 a $2 skins money round on it, then lunch with a $5 money side bet a beats b. */
+function lunchTrip({ lunchOnTrip = true } = {}) {
   const ids = ['t', 'a', 'b'];
   const q1 = round('q1', ids, wins(ids, [1, 't'], [2, 't'], [3, 'b']), { at: OCT(16, 15), code: 'AAAAAA' });
-  let q2 = round('q2', ids, wins(ids, [1, 'a'], [2, 'a'], [3, 'a'], [4, 't']), { at: OCT(17, 15), code: 'BBBBBB', playFor: LUNCH });
+  let q2 = round('q2', ids, wins(ids, [1, 'a'], [2, 'a'], [3, 'a'], [4, 't']), lunchOnTrip
+    ? { at: OCT(17, 15), code: 'BBBBBB', playFor: LUNCH }
+    : { at: OCT(17, 15), playFor: LUNCH, trip: null });
   q2 = cashBet(q2, 'cb', ['a', 'b'], 5, 'a');
   return stateOf('t', [q1, q2], { trips: { tp: TRIP } });
 }
 
 test('a live trip plan keeps a reward round’s points off the Tab: the plan matches the Tab without it', () => {
-  const s0 = lunchTrip();
+  // The lunch round off the trip and only on this phone: its money is in the balances the plan leaves
+  const s0 = lunchTrip({ lunchOnTrip: false });
   assert.deepEqual(roundResults(s0.rounds.q2).balances, { t: -2, a: 10, b: -8 }); // points
   assert.deepEqual(lines(outstanding(s0, { now: NOW })), ['a>t 6', 'b>a 5']);
   const plan = buildPlan(s0, 'tp', { now: NOW });
@@ -79,4 +82,70 @@ test('a live trip plan keeps a reward round’s points off the Tab: the plan mat
   // Before the fix the points went in as dollars: b>a 8, a>t 4
   assert.deepEqual(lines(outstanding(s1, { now: NOW })), ['a>t 6', 'b>a 5']);
   assert.deepEqual(perPerson(outstanding(s1, { now: NOW })), tabBalances(s1));
+});
+
+// ---------------------------------------------------------------------------------------------
+// Money findings 2 and 3 (decided: a reward round's side bets for money are in the trip, like the
+// Tab): the standings, the trip's plan and Settle the trip all count them, in dollars
+
+/** Pay the Tab between two people the way the person card does, rows and all. */
+function payTab(state, from, to, amount) {
+  const pay = allocatePayment(state, { from, to, amount }, { now: NOW });
+  const s = applyRows(state, pay.rows);
+  return { ...s, settlements: [...s.settlements, ...pay.settlements] };
+}
+/** Settle every line of the trip, the way Settle the trip does. */
+function settleTrip(state, id) {
+  let s = state;
+  for (const line of tripStatus(s, id, { now: NOW }).plan) {
+    const p = tripPayment(s, id, line.from, line.to, { now: NOW });
+    s = applyRows(s, p.rows);
+    s = { ...s, settlements: [...s.settlements, ...p.settlements] };
+  }
+  return s;
+}
+const tripLines = st => st.plan.map(t => `${t.from}>${t.to} ${t.amount}`).sort();
+
+test('a trip counts a reward round’s side bets for money: standings and plan match the Tab', () => {
+  const s0 = lunchTrip();
+  const st = tripStatus(s0, 'tp', { now: NOW });
+  // Before: t +6, a -6, b 0 (the $5 lunch bet left out of the trip but on the Tab)
+  assert.deepEqual(st.standings.map(x => [x.id, x.amount]), [['t', 6], ['a', -1], ['b', -5]]);
+  assert.deepEqual(Object.fromEntries(st.standings.map(x => [x.id, x.amount])), tabBalances(s0));
+  // Pair by pair until there's a plan: each pair's money stays between them, as on the Tab
+  assert.deepEqual(tripLines(st), ['a>t 6', 'b>a 5']);
+  assert.deepEqual(tripLines(st), lines(outstanding(s0, { now: NOW })));
+  assert.equal(st.perRound, 2);
+});
+
+test('paying a reward round’s side bet on the Tab never invents a trip line nobody owes', () => {
+  const s = payTab(lunchTrip(), 'b', 'a', 5);
+  const st = tripStatus(s, 'tp', { now: NOW });
+  // Before the fix the trip asked a to pay b $5
+  assert.deepEqual(tripLines(st), ['a>t 6']);
+  assert.deepEqual(lines(outstanding(s, { now: NOW })), ['a>t 6']);
+});
+
+test('with the trip’s plan published, the Tab, the trip and Settle the trip agree, and settling squares everyone', () => {
+  const s0 = lunchTrip();
+  const plan = buildPlan(s0, 'tp', { now: NOW });
+  // The plan covers the lunch round too, in dollars
+  assert.equal(plan.rounds.length, 2);
+  const s1 = { ...s0, tripPlans: { tp: plan } };
+  assert.equal(planState(s1, 'tp', { now: NOW }).status, 'live');
+  const st = tripStatus(s1, 'tp', { now: NOW });
+  const want = { t: 6, a: -1, b: -5 };
+  assert.deepEqual(perPerson(st.plan), want);
+  assert.deepEqual(perPerson(outstanding(s1, { now: NOW })), want);
+  assert.deepEqual(tripLines(st), lines(outstanding(s1, { now: NOW })));
+  // a's and b's phones see the same plan, and their own lines match
+  for (const me of ['a', 'b']) {
+    const sp = { ...stateOf(me, Object.values(s0.rounds)), tripPlans: { tp: plan } };
+    assert.equal(planState(sp, 'tp', { now: NOW }).status, 'live', me);
+    const mine = l => l.filter(x => x.includes(me));
+    assert.deepEqual(mine(lines(outstanding(sp, { now: NOW }))), mine(lines(outstanding(s1, { now: NOW }))), me);
+  }
+  const done = settleTrip(s1, 'tp');
+  assert.deepEqual(outstanding(done, { now: NOW }), []);
+  assert.equal(tripStatus(done, 'tp', { now: NOW }).plan.length, 0);
 });

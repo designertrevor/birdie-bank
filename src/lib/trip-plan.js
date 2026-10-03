@@ -19,8 +19,7 @@
 // open lines take their place. Otherwise it's 'stale' (the organizer's phone republishes) and the
 // phone stays pair by pair, exactly as before there were plans. A trip round shared live that the
 // plan doesn't cover yet stays pair by pair until it does. Pure, unit tested.
-import { roundResults } from './round.js';
-import { countsMoney } from './play-for.js';
+import { onTab, tabResults } from './play-for.js';
 import { fewestPayments } from './ledger.js';
 import { FETCH_DAYS, canonicalOf, codeOf, played } from './pair-debts.js';
 import { tripOfPayment } from './trip-pay.js';
@@ -46,7 +45,8 @@ export const isPlanPayment = s => planPaymentTrip(s) != null;
 
 /** A short mark of a round's money (its transfers), so a fixed score makes the plan out of date. */
 export function roundMark(round) {
-  const text = roundResults(round).transfers.map(t => `${t.from}>${t.to}:${cents(t.amount)}`).sort().join('|');
+  // What the round puts on the Tab: a money round's own transfers, a reward round's side bets for money
+  const text = tabResults(round).transfers.map(t => `${t.from}>${t.to}:${cents(t.amount)}`).sort().join('|');
   let h = 0x811c9dc5;
   for (let i = 0; i < text.length; i++) { h ^= text.charCodeAt(i); h = Math.imul(h, 0x01000193) >>> 0; }
   return `${h.toString(36)}.${text.length.toString(36)}`;
@@ -79,7 +79,7 @@ export function samePlan(a, b) {
 /** The trip's finished money rounds shared live that this phone played, within the Tab's window. */
 function tripShared(state, tripId, now) {
   return Object.values(state.rounds || {})
-    .filter(r => r?.trip?.id === tripId && r.status === 'done' && countsMoney(r) && codeOf(r) && played(r, state)
+    .filter(r => r?.trip?.id === tripId && r.status === 'done' && onTab(r) && codeOf(r) && played(r, state)
       && (r.finishedAt || r.createdAt || 0) >= now - FETCH_DAYS * DAY)
     .sort((a, b) => (a.finishedAt || a.createdAt || 0) - (b.finishedAt || b.createdAt || 0));
 }
@@ -96,7 +96,7 @@ export function buildPlan(state, tripId, { now = Date.now(), version = 1, endedA
   const codes = new Set(rounds.map(codeOf));
   const bal = {};
   const add = (id, c) => { bal[id] = (bal[id] || 0) + c; };
-  for (const r of rounds) for (const [pid, v] of Object.entries(roundResults(r).balances)) add(who(pid), cents(v));
+  for (const r of rounds) for (const [pid, v] of Object.entries(tabResults(r).balances)) add(who(pid), cents(v));
   const netted = [];
   for (const s of state.settlements || []) {
     if (!s.code || !codes.has(s.code)) continue;
@@ -175,7 +175,7 @@ function check(state, tripId, now) {
   const byCode = new Map();
   for (const r of Object.values(state.rounds || {})) {
     const c = codeOf(r);
-    if (c && codes.has(c) && r.status === 'done' && countsMoney(r) && !byCode.has(c)) byCode.set(c, r);
+    if (c && codes.has(c) && r.status === 'done' && onTab(r) && !byCode.has(c)) byCode.set(c, r);
   }
   // Every covered round this phone has: on the trip, and its money as the plan saw it
   for (const { code, mark } of plan.rounds) {
@@ -211,7 +211,7 @@ function check(state, tripId, now) {
   }
   // Your own lines are exactly what the covered rounds and their payments have you owing or owed
   let left = 0, owed = 0;
-  for (const r of byCode.values()) for (const [pid, v] of Object.entries(roundResults(r).balances)) if (who(pid) === me) left += cents(v);
+  for (const r of byCode.values()) for (const [pid, v] of Object.entries(tabResults(r).balances)) if (who(pid) === me) left += cents(v);
   for (const s of settlements) {
     if (post.includes(s)) continue;
     if (who(s.from) === me) left += cents(s.amount);

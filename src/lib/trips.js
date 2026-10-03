@@ -23,7 +23,7 @@
 //
 // Someone who only plays some rounds is on the trip for those rounds only. Pure, unit tested.
 import { GAMES, roundResults } from './round.js';
-import { countsMoney, playForOf } from './play-for.js';
+import { onTab, playForOf, tabResults } from './play-for.js';
 import { fewestPayments } from './ledger.js';
 import { canonicalOf, codeOf, finishedAt, openByPair, sharedRounds } from './pair-debts.js';
 import { tripOfPayment, tripPaymentId, tripReason, tripSettleOf } from './trip-pay.js';
@@ -127,7 +127,11 @@ export function tripPlans(state, id, now = new Date()) {
     .sort((a, b) => String(a.date).localeCompare(String(b.date)) || String(a.teeTime || '').localeCompare(String(b.teeTime || '')));
 }
 
-const moneyDone = rounds => rounds.filter(r => r.status === 'done' && countsMoney(r));
+/**
+ * The trip's finished rounds with money on the Tab: money rounds, and reward rounds' side bets for
+ * money (in dollars, never the round's points, see tabResults), so trip money is what the Tab has.
+ */
+const moneyDone = rounds => rounds.filter(r => r.status === 'done' && onTab(r));
 const pointsDone = rounds => rounds.filter(r => r.status === 'done' && playForOf(r).kind === 'points');
 
 /**
@@ -160,12 +164,12 @@ function togetherOf(state, rounds) {
   return out;
 }
 
-/** Each person's net across the trip's finished money rounds, in cents. */
+/** Each person's net across the trip's finished money rounds (and reward rounds' side bets for money), in cents. */
 function balanceCents(state, rounds) {
   const who = canonicalOf(state);
   const bal = {};
   for (const r of moneyDone(rounds)) {
-    for (const [pid, v] of Object.entries(roundResults(r).balances)) {
+    for (const [pid, v] of Object.entries(tabResults(r).balances)) {
       const k = who(pid);
       bal[k] = (bal[k] || 0) + cents(v);
     }
@@ -358,7 +362,7 @@ export function tripStatus(state, id, { now = Date.now() } = {}) {
     points: money.length ? null : pointsOf(state, rounds),
     // Played only for points so far: nothing to pay, and never a dollar
     pointsOnly: !money.length && pointsDone(rounds).length > 0,
-    perRound: money.reduce((a, r) => a + roundResults(r).transfers.length, 0),
+    perRound: money.reduce((a, r) => a + tabResults(r).transfers.length, 0),
     lastDone, squareAt: phase === 'square' ? Math.max(lastPaid, lastDone) : null,
     ...tripDay(trip, today),
   };
@@ -505,7 +509,7 @@ export function tripByGame(state, id) {
   const columns = [];
   const rows = new Map();
   for (const r of moneyDone(tripRounds(state, id))) {
-    const res = roundResults(r);
+    const res = tabResults(r);
     const games = res.detail?.byGame && Object.keys(res.detail.byGame).length
       ? Object.values(res.detail.byGame).map(g => ({ label: g.label, balances: g.balances }))
       : [{ label: GAMES[r.game]?.name || 'Game', balances: res.balances }];
