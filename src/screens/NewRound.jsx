@@ -1,4 +1,4 @@
-import { lazy, Suspense, useMemo, useState } from 'react';
+import { lazy, Suspense, useEffect, useMemo, useRef, useState } from 'react';
 import { Empty, Header, Icon, Numpad, Screen, Segmented, Sheet, Steps, Toggle, useUI } from '../components/ui.jsx';
 import { RulesSheet } from '../components/Rules.jsx';
 import { getState, update, uid, useStore } from '../lib/store.js';
@@ -22,6 +22,7 @@ import { rematchSetup } from '../lib/rematch.js';
 import { halfStrokesOffered, pctsDiffer } from '../lib/allowances.js';
 import { StrokesSetup } from '../components/StrokesSetup.jsx';
 import { useNav } from '../lib/nav.js';
+import { nowMs, setupBack } from '../lib/setup-back.js';
 import { addRound, holesScored, leaveRound, roundsInProgress, usualRound } from '../lib/rounds.js';
 import { formatIndex, gameLabel, hcPctLabel, playerLabel, sortedPlayers } from '../lib/format.js';
 import { money } from '../lib/golf.js';
@@ -109,6 +110,23 @@ export default function NewRound({ rematch, fromPlan, present, edit = null, ahea
   // The furthest step reached, so a tap on the step bar can go forward again after going back
   const [reached, setReached] = useState(() => (reschedule && pre?.step ? 3 : pre?.step ?? (ahead && GAMES[preGame] ? 1 : 0)));
   const setStep = n => { showStep(n); setReached(r => Math.max(r, n)); };
+  // The course editor over the course step: {} for a blank course, or { name, city } from a search.
+  // Held here, not in the course step, so setup's Back knows it's open (see setup-back.js).
+  const [editor, showEditor] = useState(null);
+  const editorClose = useRef(null); // drops the editor's history entry, so the phone's back closes it first
+  const editorClosedAt = useRef(-Infinity);
+  const openEditor = prefill => {
+    showEditor(prefill);
+    editorClose.current = nav.layer ? nav.layer(() => { editorClose.current = null; editorClosedAt.current = nowMs(); showEditor(null); }) : null;
+  };
+  const closeEditor = () => {
+    editorClose.current?.();
+    editorClose.current = null;
+    editorClosedAt.current = nowMs();
+    showEditor(null);
+  };
+  // Leaving setup with the editor still open (an error, say) doesn't leave its history entry behind
+  useEffect(() => () => editorClose.current?.(), []);
   const [game, setGame] = useState(pre?.game ?? (GAMES[preGame] ? preGame : null));
   const [holesCount, setHolesCount] = useState(pre?.holesCount ?? (GAMES[preGame]?.holes.includes(18) === false ? GAMES[preGame].holes[0] : 18));
   const [courseId, setCourseId] = useState(pre?.courseId ?? null);
@@ -171,8 +189,10 @@ export default function NewRound({ rematch, fromPlan, present, edit = null, ahea
     if (await ask({ title: 'Cancel this round?', text: 'Your setup won’t be saved.', confirmLabel: 'Cancel round', cancelLabel: 'Keep setting up', danger: true })) nav.pop();
   };
   const back = () => {
-    if (step === 0 || editing) return close();
-    goTo(step - 1);
+    const b = setupBack({ step, editing: !!editing, editorOpen: !!editor, closedAt: editorClosedAt.current });
+    if (b.to === 'editor') return closeEditor();
+    if (b.to === 'close') return close();
+    if (b.to === 'step') goTo(b.step);
   };
   // Players to Bets: new or changed players get fresh teams
   const toBets = () => {
@@ -366,7 +386,7 @@ export default function NewRound({ rematch, fromPlan, present, edit = null, ahea
       ) : <Header title="Round ready" small onClose={() => nav.reset('upnext')} />}
       {step === 0 && <GameStep usual={planning || (usual && matchingUsual(state, usual.round)) ? null : usual} onUsual={repeatUsual} onPickUsual={planning ? planUsual : pickUsual} planning={planning} onPlan={fromPlan ? null : () => { setMode('plan'); setReached(0); setStep(1); }} game={game} setGame={gm => { setGame(gm); if (gm && !GAMES[gm].holes.includes(holesCount)) setHolesCount(GAMES[gm].holes[0]); }} holesCount={holesCount} setHolesCount={setHolesCount} onNext={() => setStep(1)} />}
       {step === 1 && planning && (
-        <CourseStep courseId={courseId} setCourseId={id => { setCourseId(id); setTees({}); setStartHole(null); }} holesCount={holesCount} nine={nine} setNine={setNine} onNext={editing ? savePlan : () => setStep(2)}
+        <CourseStep editor={editor} openEditor={openEditor} closeEditor={closeEditor} courseId={courseId} setCourseId={id => { setCourseId(id); setTees({}); setStartHole(null); }} holesCount={holesCount} nine={nine} setNine={setNine} onNext={editing ? savePlan : () => setStep(2)}
           nextLabel={editing ? 'Save changes' : 'Next: Who’s invited'} nextIcon={editing ? 'check' : 'arrow-right'}
           top={<>
             <WhenPicker date={date} setDate={setDate} teeTime={teeTime} setTeeTime={setTeeTime} />
@@ -376,7 +396,7 @@ export default function NewRound({ rematch, fromPlan, present, edit = null, ahea
       )}
       {step === 2 && planning && course && <InviteStep invited={invited} setInvited={setInvited} onNext={() => setStep(3)} />}
       {step === 3 && planning && course && <VoteStep game={game} opts={opts} onPlan={makePlan} ballot={ballot} initialSides={planSides.length ? planSides : sidesFor(game).map(sg => sg.game)} playFor={playFor} setPlayFor={setPlayFor} tripRow={tripRow} />}
-      {step === 1 && !planning && <CourseStep courseId={courseId} setCourseId={id => { setCourseId(id); setTees({}); setStartHole(null); }} holesCount={holesCount} nine={nine} setNine={setNine} onNext={() => setStep(2)} />}
+      {step === 1 && !planning && <CourseStep editor={editor} openEditor={openEditor} closeEditor={closeEditor} courseId={courseId} setCourseId={id => { setCourseId(id); setTees({}); setStartHole(null); }} holesCount={holesCount} nine={nine} setNine={setNine} onNext={() => setStep(2)} />}
       {step === 2 && !planning && course && (
         <PlayersStep game={g} course={course} holesCount={holesCount} nine={nine} picked={picked} setPicked={setPicked}
           tees={tees} setTees={setTees} hcOverride={hcOverride} setHcOverride={setHcOverride}
@@ -452,7 +472,7 @@ function GameStep({ usual, onUsual, onPickUsual, planning, onPlan, game, setGame
 // else already picked stay put (only the top screen is mounted). Loaded with Settings on first use.
 const CourseEdit = lazy(() => import('./Settings.jsx').then(m => ({ default: m.CourseEdit })));
 
-function CourseStep({ courseId, setCourseId, holesCount, nine, setNine, onNext, top = null, nextLabel = 'Next: Players', nextIcon = 'arrow-right' }) {
+function CourseStep({ editor, openEditor, closeEditor, courseId, setCourseId, holesCount, nine, setNine, onNext, top = null, nextLabel = 'Next: Players', nextIcon = 'arrow-right' }) {
   const state = useStore();
   const [q, setQ] = useState('');
   const courses = allCourses(state);
@@ -476,8 +496,6 @@ function CourseStep({ courseId, setCourseId, holesCount, nine, setNine, onNext, 
     if (!needle) showToast(was ? `${c.name} taken off Favorites` : `${c.name} added to Favorites`);
   };
   const course = courses.find(c => c.id === courseId);
-  // The course editor over this step: {} for a blank course, or { name, city } from a search
-  const [editor, setEditor] = useState(null);
   const tooShort = course && holesCount === 18 && course.holes.length === 9;
   // Course database results, minus any this phone already has saved
   const { showToast } = useUI();
@@ -546,8 +564,8 @@ function CourseStep({ courseId, setCourseId, holesCount, nine, setNine, onNext, 
         {recent.length > 0 && <><div className="sec-label">{recentLabel}</div><div style={{ padding: '0 16px' }}>{recent.map(row)}</div></>}
         {rest.length > 0 && <><div className="sec-label">{needle ? `${rest.length} result${rest.length === 1 ? '' : 's'}` : 'All courses'}</div><div style={{ padding: '0 16px' }}>{rest.map(row)}</div></>}
         {needle && more.length > 0 && <><div className="sec-label">More courses{api.loading ? ' · searching' : ''}</div><div style={{ padding: '0 16px' }}>{more.map(apiRow)}</div></>}
-        {matches.length === 0 && more.length === 0 && !api.loading && <RequestCourse query={q} onAddYourself={setEditor} />}
-        <button className="add-row" aria-label="Add a course" onClick={() => setEditor({})}><span className="add-ci" aria-hidden="true"><Icon name="plus" /></span><span className="add-lbl">Add a course</span></button>
+        {matches.length === 0 && more.length === 0 && !api.loading && <RequestCourse query={q} onAddYourself={openEditor} />}
+        <button className="add-row" aria-label="Add a course" onClick={() => openEditor({})}><span className="add-ci" aria-hidden="true"><Icon name="plus" /></span><span className="add-lbl">Add a course</span></button>
         {course && holesCount === 9 && course.holes.length === 18 && (
           <div className="block">
             <div className="eyebrow" style={{ marginBottom: 10 }}>Which nine?</div>
@@ -562,7 +580,7 @@ function CourseStep({ courseId, setCourseId, holesCount, nine, setNine, onNext, 
       {editor && (
         <Suspense fallback={<div className="screen active" aria-busy="true" />}>
           <CourseEdit prefill={editor} onDone={id => {
-            setEditor(null);
+            closeEditor();
             // A saved course is picked for this round straight away
             if (id) { setCourseId(id); setQ(''); }
           }} />
