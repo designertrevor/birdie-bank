@@ -10,6 +10,7 @@ import { newTrip, tripStamp, tripStatus, tripPayment } from './trips.js';
 import { headToHeadSummary, outstanding, personStory, tabBalances } from './ledger.js';
 import { nemesis } from './rivalry.js';
 import { profileStats } from './profile-model.js';
+import { avatarFor, avatarModel, avatarName } from './avatars.js';
 import { buildPlan, planRows, planState } from './trip-plan.js';
 import { allocatePayment, applyRows, pairRounds } from './shared-tab.js';
 import { canCarry, cardCarry, carryReducer } from './carry.js';
@@ -345,4 +346,16 @@ test('a reward round’s note admits its side bets for money', () => {
   // A points bet on a reward round is still no money
   const pts = setBetWinner(addBet(r, { id: 'p', kind: 'custom', sides: ['a', 'b'], stake: 5, playFor: 'points' }), 'p', 1, 'a');
   assert.equal(noMoneyNote(pts), 'No money on this one, just lunch.');
+});
+
+// ---------------------------------------------------------------------------------------------
+// QA Q8: a friend's avatar initials follow the name shown (their profile's), not the one saved
+
+test('avatar initials follow a friend’s profile name', () => {
+  const s = { me: 't', players: { t: { id: 't', name: 'Trevor' }, b: { id: 'b', name: 'B' } }, rounds: {}, accountOf: { b: 'acct-b' }, profiles: { 'acct-b': { name: 'Bobby Jones' } } };
+  assert.equal(avatarName(s, 'b', 'B'), 'Bobby Jones');
+  assert.equal(avatarModel(avatarFor(s, 'b'), { name: avatarName(s, 'b', 'B'), letters: 2 }).text, 'BJ');
+  // No profile name: the one given; and never yours from a profile
+  assert.equal(avatarName({ ...s, profiles: {} }, 'b', 'B'), 'B');
+  assert.equal(avatarName(s, 't', 'Trevor'), 'Trevor');
 });

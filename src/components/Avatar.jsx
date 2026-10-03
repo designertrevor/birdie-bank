@@ -3,7 +3,7 @@
 // pastel. Other people's come from their profile once their seat is linked to their account.
 import { useState } from 'react';
 import { useStore } from '../lib/store.js';
-import { avatarFor, avatarModel, backdropOf, personKey, photoAllowed } from '../lib/avatars.js';
+import { avatarFor, avatarModel, avatarName, backdropOf, personKey, photoAllowed } from '../lib/avatars.js';
 import { supabaseUrl } from '../lib/supabase.js';
 import { BuddyArt } from './BuddyArt.jsx';
 
@@ -33,6 +33,6 @@ export function AvatarArt({ model, size = '', base = 'avatar', className = '' })
  */
 export function Avatar({ id = null, name = '', size = '', seat = null, model = null, letters = 1, base = 'avatar', className = '' }) {
   const state = useStore();
-  const m = model || avatarModel(avatarFor(state, id, seat), { name, key: personKey(state, id) || name, letters });
+  const m = model || avatarModel(avatarFor(state, id, seat), { name: avatarName(state, id, name), key: personKey(state, id) || name, letters });
   return <AvatarArt model={m} size={size} base={base} className={className} />;
 }

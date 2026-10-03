@@ -9,6 +9,7 @@
 // What a screen draws (avatarModel): { kind: 'photo', url, text, bg } | { kind: 'buddy', buddy, bg } |
 // { kind: 'initials', text, bg }. The order is photo, then a buddy, then initials.
 import { linksOf } from './people-links.js';
+import { theirName } from './their-profile.js';
 import { normalizeAvatar } from './profile-model.js';
 
 /** The backdrops, in the order the picker shows them. `ink` is the text colour that reads on it. */
@@ -150,6 +151,11 @@ export function shareableAvatar(avatar) {
 // --------------------------- whose avatar ----------------------------------
 
 const cache = new WeakMap(); // state -> { L, byId: Map }
+
+/** The name an avatar's initials come from: a friend's own profile name wins (as it does in nameOf), else the one given. */
+export function avatarName(state, id, name = '') {
+  return (state && id && theirName(state, id)) || name;
+}
 
 /**
  * The avatar a person picked, by any of their player ids, or null: yours from your profile; a friend's
