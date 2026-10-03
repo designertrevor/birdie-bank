@@ -576,6 +576,8 @@ button:disabled { cursor: not-allowed; }
 .full-btn:disabled { background: var(--surface-strong); color: var(--mute); transform: none; }
 .full-btn.outline:disabled { background: var(--surface); color: var(--mute-soft); }
 .full-btn.danger { background: var(--loss); }
+/* The app's own surface, never the browser's button gray (dark in dark mode) */
+.add-row { background: var(--surface); }
 .add-row:disabled { opacity: .6; transform: none; }
 .add-row:disabled .add-ci { background: var(--surface-strong); }
 .dbl-btn:disabled { background: var(--surface); color: var(--mute-soft); }
