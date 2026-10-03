@@ -9,7 +9,7 @@ import { getState, update } from './store.js';
 import { getSupabase, supabaseConfigured } from './supabase.js';
 import { isMissingTable } from './plan-adapters.js';
 import { codeOf } from './pair-debts.js';
-import { buildPlan, cleanPlan, planState, samePlan } from './trip-plan.js';
+import { cleanPlan, duePlan } from './trip-plan.js';
 import { isOrganizer, tripRounds, tripsOf } from './trips.js';
 import { refreshTab } from './tab-sync.js';
 
@@ -110,13 +110,8 @@ async function publishMine(adapter) {
   const s = getState();
   for (const trip of tripsOf(s).values()) {
     if (!isOrganizer(s, trip)) continue;
-    const cur = cleanPlan(s.tripPlans?.[trip.id]);
-    if (cur?.deleted) continue;
-    const ps = planState(s, trip.id);
-    const ended = trip.endedAt || null;
-    if (cur && ps.status === 'live' && !ps.pending.length && (cur.endedAt || null) === ended) continue;
-    const next = buildPlan(s, trip.id, { version: (cur?.version || 0) + 1, endedAt: ended, byName: myName(s) });
-    if (!next || (cur && samePlan(cur, next))) continue;
+    const next = duePlan(s, trip, { byName: myName(s) });
+    if (!next) continue;
     const codes = [...new Set(tripRounds(s, trip.id).map(codeOf).filter(Boolean))];
     try {
       await adapter.publish(next, codes);

@@ -127,6 +127,21 @@ export function buildPlan(state, tripId, { now = Date.now(), version = 1, endedA
   };
 }
 
+/**
+ * On the organizer's phone: the plan to publish now, or null when the one out there still holds
+ * (it checks out here, covers every trip round shared live, and says the same about "done
+ * playing"). A new plan is the next version.
+ */
+export function duePlan(state, trip, { now = Date.now(), byName = null } = {}) {
+  const cur = cleanPlan(state.tripPlans?.[trip.id]);
+  if (cur?.deleted) return null;
+  const ps = planState(state, trip.id, { now });
+  const ended = trip.endedAt || null;
+  if (cur && ps.status === 'live' && !ps.pending.length && (cur.endedAt || null) === ended) return null;
+  const next = buildPlan(state, trip.id, { now, version: (cur?.version || 0) + 1, endedAt: ended, byName });
+  return !next || (cur && samePlan(cur, next)) ? null : next;
+}
+
 const cache = new WeakMap();
 
 /**
@@ -253,8 +268,9 @@ export function planDebts(state, { now = Date.now() } = {}) {
 /**
  * Rows that pay a plan's open money between two people (ids as this phone knows them): `amount`
  * cents from `from` to `to`, or all of it either way (`amount` null, a whole card or Settle the
- * trip). `trip` keeps it to one trip's plan. Each row goes on its line's round, so both phones get it. Returns { rows, cents }: cents
- * is what `from` paid `to` on the plan (negative when the plan had `to` owing `from`).
+ * trip). `trip` keeps it to one trip's plan. Each row goes on its line's round, so both phones
+ * get it. Returns { rows, cents }: cents is what `from` paid `to` on the plan (negative when the
+ * plan had `to` owing `from`).
  */
 export function planRows(state, from, to, { amount = null, now = Date.now(), reason = null, trip = null } = {}) {
   const who = canonicalOf(state);

@@ -8,7 +8,7 @@ import { fewestPayments, outstanding, tabBalances, tabWith } from './ledger.js';
 import { paidOn, sharedDebts, codeOf } from './pair-debts.js';
 import { allocatePayment, applyRows } from './shared-tab.js';
 import { isTripPayment, tripOfPayment, tripSettleOf } from './trip-pay.js';
-import { buildPlan, cleanPlan, coveredRounds, isPlanPayment, planPaymentId, planState, roundMark, samePlan } from './trip-plan.js';
+import { buildPlan, cleanPlan, coveredRounds, duePlan, isPlanPayment, planPaymentId, planState, roundMark, samePlan } from './trip-plan.js';
 import {
   canDeleteTrip, countsByDefault, currentTrips, isOrganizer, newTrip, partPlan, tripGoing, tripHidden, tripOnDay, tripPayment, tripStamp, tripStatus, tripsOf,
 } from './trips.js';
@@ -379,4 +379,34 @@ test('the trip card stays on the Tab and Up next until you hide it', () => {
   const draft = { trips: {} };
   applyDoc(draft, 'profile', 'me', toDocs({ ...hidden, players: {}, crews: {}, customCourses: {}, settings: {} })['profile:me'].data);
   assert.deepEqual(draft.tripHidden, { t_bandon: NOW });
+});
+
+test('the organizer’s phone republishes only when the plan out there stops holding, and phones say “Updated”', () => {
+  const [r1, r2, r3] = rounds5();
+  const phones = phonesOf([r1, r2]);
+  const trip = tripsOf(phones.t).get('t_bandon');
+  const v1 = duePlan(phones.t, trip, { now: NOW, byName: 'Trevor' });
+  assert.equal(v1.version, 1);
+  assert.equal(v1.byName, 'Trevor');
+  publish(phones, v1);
+  phones.a = { ...phones.a, tripPlanSeen: { t_bandon: 1 } };
+  assert.equal(duePlan(phones.t, trip, { now: NOW }), null, 'it still holds');
+  assert.equal(tripStatus(phones.a, 't_bandon', { now: NOW }).published.updated, false);
+  // A plan payment doesn't need a new version
+  const l = v1.lines[0];
+  deliver(phones, tripPayment(phones[l.from], 't_bandon', idOn(phones[l.from], l.from), idOn(phones[l.from], l.to), { now: NOW }).rows);
+  assert.equal(duePlan(phones.t, trip, { now: NOW }), null);
+  // A new round does
+  for (const k of ['t', 'a', 'b', 'c']) phones[k] = { ...phones[k], rounds: { ...phones[k].rounds, q3: k === 't' ? r3 : { ...r3, localMe: k } } };
+  const v2 = duePlan(phones.t, trip, { now: NOW });
+  assert.equal(v2.version, 2);
+  publish(phones, v2);
+  const st = tripStatus(phones.a, 't_bandon', { now: NOW });
+  assert.equal(st.published.status, 'live');
+  assert.equal(st.published.updated, true, 'Andy saw version 1, so version 2 says Updated');
+  assert.equal(st.published.version, 2);
+  // "Done playing" goes out in the next version
+  assert.equal(duePlan(phones.t, { ...trip, endedAt: NOW }, { now: NOW }).endedAt, NOW);
+  // A deleted trip is never republished
+  assert.equal(duePlan({ ...phones.t, tripPlans: { t_bandon: { tripId: 't_bandon', version: 3, deleted: true } } }, trip, { now: NOW }), null);
 });

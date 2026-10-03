@@ -1888,3 +1888,26 @@ button.trip-card:active { transform: scale(.97); }
 /* Onboarding: a first Ball buddy under your name */
 .ob-buddies { padding: 4px 0 2px; }
 .av-pick.sm, .av-pick.sm .av-tile { width: 56px; height: 56px; }
+
+/* ---------- Trip follow-ups (o6f trip): the card's hide x, "Updated", who's going ---------- */
+/* The x sits in the card's top corner, outside the card's own button so each is one tap */
+:root { --trip-tag-bg: #ffe3ee; }
+:root[data-theme="dark"] { --trip-tag-bg: #3a2030; }
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]):not([data-theme="dark"]) { --trip-tag-bg: #3a2030; } }
+.trip-card-wrap { position: relative; }
+.trip-card-wrap > .trip-card { padding-right: 40px; }
+.trip-hide {
+  position: absolute; top: 6px; right: 22px; width: 32px; height: 32px; display: grid; place-items: center;
+  border: none; border-radius: 50%; background: none; color: var(--mute); font: inherit; font-size: 15px; cursor: pointer;
+}
+.trip-hide::before { content: ''; position: absolute; inset: -6px; }
+.trip-hide:active { transform: scale(.88); background: var(--surface); }
+.trip-card-wrap > .trip-card .chevron { margin-top: 22px; }
+.trip-updated {
+  display: inline-block; margin-left: 4px; padding: 1px 8px; border-radius: 999px; vertical-align: 1px;
+  background: var(--trip-tag-bg); color: var(--pink-text); font-size: 11px; font-weight: 700; letter-spacing: .02em; text-transform: none;
+}
+.trip-form .step-bar { margin: 0 0 12px; }
+.trip-who { display: flex; flex-direction: column; gap: 6px; margin-top: 8px; }
+.trip-who .sheet-item { width: 100%; margin: 0; }
+.trip-who .avatar { margin: 0; }
