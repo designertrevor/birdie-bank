@@ -502,7 +502,7 @@ function PlayRound({ round }) {
       {phase === 'scores' && (
         <div className="scroll">
           {!editable && sharedLive && <p className="field-help" style={{ padding: '0 20px' }}>{round.status === 'active' ? `Scores as ${holderName} saves them. Browse any hole.` : 'Only the players in this round can fix its scores.'}</p>}
-          <HoleBets round={round} hole={hole} editable={editable} />
+          <HoleBets round={round} hole={hole} editable={editable} me={me} />
           {game === 'bbb' && editable && <BBBPicker round={main} hole={hole} marks={marks} setMarks={setMarksDirty} />}
           {game === 'scramble' && <ScrambleDrivesPicker round={main} hole={hole} marks={marks} setMarks={editable ? setMarksDirty : null} />}
           {game === 'snake' && editable && <SnakePicker round={main} hole={hole} marks={marks} setMarks={setMarksDirty} />}
@@ -618,8 +618,8 @@ function PlayRound({ round }) {
           </button>
         )}
         </>}
-        {/* Two-player side bets: everyone sees them, the phone keeping score adds and changes them */}
-        {(editable || betsOf(round).length > 0) && (
+        {/* Two-player side bets: everyone sees them; the phone keeping score, or either player in a bet, changes them */}
+        {(editable || betsOf(round).length > 0 || round.players.some(p => p.id === me)) && (
           <button className="sheet-item" onClick={() => { setMenu(false); setPairSheet(true); }}>
             <span><Icon name="hand-coins" /> {betsOf(round).length ? `Side bets · ${betsOf(round).length}` : 'Side bets'}</span><Icon name="caret-right" />
           </button>
@@ -667,7 +667,7 @@ function PlayRound({ round }) {
           : <button className="sheet-item" onClick={endEarly}><span><Icon name="flag-checkered" /> End round</span><Icon name="caret-right" /></button>)}
       </Sheet>
       {gamesSheet && <GamesSheet round={round} onClose={() => setGamesSheet(false)} />}
-      {pairSheet && <PairBetsSheet round={round} editable={editable} onClose={() => setPairSheet(false)} />}
+      {pairSheet && <PairBetsSheet round={round} editable={editable} me={me} onClose={() => setPairSheet(false)} />}
       <RoundsInProgressSheet open={switching} onClose={() => setSwitching(false)} currentId={round.id} />
       {holesSheet && <HolesSheet round={round} onClose={() => setHolesSheet(false)} />}
       {betsSheet && <BetsSheet round={round} onClose={() => setBetsSheet(false)} />}
@@ -1060,6 +1060,9 @@ function MoneyBar({ round, hole, preview }) {
   }
   // With side games the bar is one total per person, and a tap shows each game's money
   const byGame = preview.byGame || null;
+  // A reward round's side bets for money: dollars of their own, apart from the points (see roundResults' `cash`)
+  const cash = preview.cash || null;
+  const cashLine = cash && round.players.filter(p => cash.balances[p.id]).map(p => `${p.name.split(' ')[0]} ${money(cash.balances[p.id], { sign: true })}`).join(', ');
   const [open, setOpen] = useState(false);
   // A points or reward round counts the same numbers as points (never money)
   const fmt = unitFmt(round);
@@ -1090,11 +1093,18 @@ function MoneyBar({ round, hole, preview }) {
           );
         })}
       </div>
+      {cash && <div className="mb-cash">Side bets for money · {cashLine || 'All square'}</div>}
     </Box>
     {byGame && (
       <Sheet open={open} onClose={() => setOpen(false)} title="By game" className="sc-sheet">
         <p className="sheet-text">{word} so far ({thru.toLowerCase()}). Every game adds up into one total each.</p>
         <ByGameTable round={round} byGame={byGame} total={preview.balances} fmt={fmt} />
+        {cash && (
+          <>
+            <p className="sheet-text">Side bets for money, in dollars. They go on the Tab and stay out of the points.</p>
+            <ByGameTable round={round} byGame={{ cash: { label: cash.label, balances: cash.balances } }} total={cash.balances} fmt={money} caption="Side bets for money" />
+          </>
+        )}
         {nassauOpenNote(round, byGame) && <p className="field-help" style={{ padding: '0 20px' }}>{nassauOpenNote(round, byGame)}</p>}
         <div className="cta-wrap"><button className="full-btn outline" onClick={() => setOpen(false)}>Close</button></div>
       </Sheet>

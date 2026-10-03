@@ -7,7 +7,7 @@
 import { gameKeyLabel, roundResults } from './round.js';
 import { meFor } from './format.js';
 import { canonicalOf } from './pair-debts.js';
-import { countsMoney } from './play-for.js';
+import { onTab, tabResults } from './play-for.js';
 
 const toCents = v => Math.round((Number(v) || 0) * 100);
 
@@ -53,7 +53,8 @@ const mineOf = (state, mine) => {
 
 /**
  * Where everything between you and one person comes from, across every finished money round you
- * both played (points and reward rounds aren't money, so they're left out):
+ * both played (points and reward rounds aren't money, so they're left out, but for a reward round's
+ * side bets played for money):
  * { rounds: [{ round, at, total, items }], totals: [{ group, label, amount }], net, paid, open }.
  * `rounds` is newest first, each with its pairBreakdown from your side; `totals` adds each game
  * and kind of bet up across the rounds (biggest first, square ones left out); `net` is what you
@@ -70,12 +71,13 @@ export function breakdownWith(state, ids, other) {
   const totals = new Map();
   let net = 0, paid = 0;
   for (const r of Object.values(state.rounds || {})) {
-    if (r.status !== 'done' || !countsMoney(r)) continue;
+    if (r.status !== 'done' || !onTab(r)) continue;
     const me = meFor(r, state);
     if (!mine.has(me) || isThem(me) || !r.players.some(p => p.id === me)) continue;
     const them = r.players.filter(p => isThem(p.id)).map(p => p.id);
     if (!them.length) continue;
-    const res = roundResults(r);
+    // A reward round counts only its side bets for money here (see tabResults)
+    const res = tabResults(r);
     // Two players in one round are never one person, but if a round has them twice, both count
     const parts = them.map(id => pairBreakdown(r, me, id, res));
     const items = parts.flatMap(x => x.items);

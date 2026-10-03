@@ -8,7 +8,7 @@ import { Avatar } from '../components/Avatar.jsx';
 import { useGroupAvatars } from '../lib/useAvatars.js';
 import { getState, update, uid } from '../lib/store.js';
 import { useNav } from '../lib/nav.js';
-import { afterJoin, teamLine } from '../lib/join.js';
+import { afterJoin, inviteBetLines, teamLine } from '../lib/join.js';
 import { cancelSeatRequest, fetchShared, joinShared, requestSeat, watchSeatRequest } from '../lib/sync.js';
 import { assemble, cleanRequestName } from '../lib/sync-model.js';
 import { GAMES, addPlayerProblem } from '../lib/round.js';
@@ -249,6 +249,8 @@ export default function JoinInvite({ code, onJoined, onSkip, setUp = false }) {
               {team && <li><Icon name="users-three" fill /> {teamLine(team.name, mates)}</li>}
               {from != null && <li><Icon name="user-plus" fill /> Starts on hole {from}. Your money counts from there</li>}
               <li><Icon name={game?.icon || 'golf'} fill /> {game ? gameLabel(meta) : 'Golf'} · {roundStakeLines(meta).map(l => l.line).join(' + ')}</li>
+              {/* Your own side bets, so nobody walks onto the tee not knowing they have one */}
+              {inviteBetLines(meta, seat.id).map(l => <li key={l}><Icon name="hand-coins" fill /> Side bet: {l}</li>)}
             </ul>
           </div>
           {handicaps && <p className="field-help">Strokes look wrong? Tell {scorekeeper} before you tee off.</p>}
@@ -319,6 +321,7 @@ export default function JoinInvite({ code, onJoined, onSkip, setUp = false }) {
           {playForLine(meta) && <div className="ic-playfor"><Icon name={meta.playFor?.kind === 'reward' ? 'gift' : 'trophy'} fill /> {playForLine(meta)}</div>}
           <dl className="ic-facts">
             <div><dt>Bets</dt><dd>{roundStakeLines(meta).map(l => l.line).filter(Boolean).join(' + ') || '–'}</dd></div>
+            {inviteBetLines(meta).length > 0 && <div><dt>Side bets</dt><dd>{inviteBetLines(meta).join('; ')}</dd></div>}
             <div>
               <dt>Who’s in</dt>
               <dd>

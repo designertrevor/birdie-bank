@@ -178,13 +178,13 @@ function SkinsRules({ i, sideGames, change, players, inPoints, onClose, onAmount
  * bet changed mid-round says so under its name. `fmt` formats the amounts (points for a points or
  * reward round).
  */
-export function ByGameTable({ round, byGame, total, fmt = money }) {
+export function ByGameTable({ round, byGame, total, fmt = money, caption = null }) {
   const games = Object.entries(byGame);
   const cls = v => (v > 0 ? 'pos' : v < 0 ? 'neg' : 'zero');
   return (
     <div className="money-table-wrap">
       <table className="sc-table money-table by-game">
-        <caption className="sr-only">{countsMoney(round) ? 'Money' : 'Points'} by game</caption>
+        <caption className="sr-only">{caption || `${countsMoney(round) ? 'Money' : 'Points'} by game`}</caption>
         <thead>
           <tr><th scope="col" style={{ textAlign: 'left', paddingLeft: 12 }}>Game</th>{round.players.map(p => <th key={p.id} scope="col">{firstName(p.name)}</th>)}</tr>
         </thead>

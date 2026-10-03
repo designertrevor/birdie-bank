@@ -1,33 +1,47 @@
 // Side bets between two players (pair-bets.js): the setup list and the round menu's sheet, the
 // editor for one bet, the taps on a hole (closest to the pin, a custom bet's winner) and the
-// results breakdown. Everyone in the round sees the bets; only the phone keeping score changes them.
+// results breakdown. Everyone in the round sees the bets. The phone keeping score changes any of
+// them; either player in a bet changes it from their own phone, which asks the keeper's phone to put
+// it in (bet-asks.js) and shows it as waiting until it lands.
 import { useState } from 'react';
 import { Icon, Numpad, Segmented, Sheet, useUI } from './ui.jsx';
 import { update } from '../lib/store.js';
 import { holeComplete } from '../lib/round.js';
 import {
-  BET_KINDS, BET_LABEL_MAX, MAX_BETS, MAX_BET_STROKES, BET_MAX, addBet, betKindsFor, betLine, betMoneyText, betName, betPeople, betRange, betResult,
-  betStakeText, betStatusText, betsMoney, betsOf, betsToTap, changeBet, cleanBet, cleanBetLabel, ctpHoles, nextPos, nineRange, removeBet, setBetWinner, suggestedStrokes,
+  BET_KINDS, BET_LABEL_MAX, MAX_BETS, MAX_BET_STROKES, BET_MAX, SAME_TEAM_REASON, addBet, betKindsFor, betLine, betMoneyText, betName, betPeople, betPlayFor, betRange, betResult,
+  betStakeText, betStatusText, betsMoney, betsOf, betsToTap, changeBet, cleanBet, cleanBetLabel, ctpHoles, isCashBet, kindFits, nextPos, nineRange, removeBet, repriceText, setBetWinner, suggestedStrokes,
 } from '../lib/pair-bets.js';
+import { pendingIds, refusedAsks, waitingAsks, withAsks } from '../lib/bet-asks.js';
+import { dropBetAsk, sendBetAsk } from '../lib/sync.js';
+import { keeperName } from '../lib/keeper.js';
 import { buzz } from '../lib/delight.js';
-import { countsMoney, inUnits, noMoneyNote, padUnit, unitFmt } from '../lib/play-for.js';
+import { money } from '../lib/golf.js';
+import { betFmt, countsMoney, inUnits, noMoneyNote, padUnit, playForOf, rewardNoun, unitFmt } from '../lib/play-for.js';
 
 const first = n => String(n || '').trim().split(/\s+/)[0] || '?';
 const nameIn = (round, id) => first(round.players.find(p => p.id === id)?.name);
 const QUICK = [1, 2, 5, 10, 20];
 const needsScores = kind => kind === 'match' || kind === 'hole';
+const isPlayer = (round, id) => !!id && round.players.some(p => p.id === id);
+const MONEY_UNIT = { prefix: '$', suffix: '' };
 
 /**
  * One bet, made or changed. `round` is the round (or, in setup, a round-shaped draft with its
  * players and holes); `fromPos` the hole a new bet starts from by default (the next hole to play).
+ * `me`: a player who isn't keeping score, who can only make or change a bet they're in, so they stay
+ * picked. `waitOn`: whose phone a change from here waits on, for the button.
  */
-export function BetEditor({ round, bet = null, fromPos = 1, onSave, onRemove = null, onClose }) {
-  const fmt = unitFmt(round);
-  const unit = padUnit(round);
-  const kinds = betKindsFor(round.game);
+export function BetEditor({ round, bet = null, fromPos = 1, onSave, onRemove = null, onClose, me = null, waitOn = null }) {
+  const reward = playForOf(round).kind === 'reward';
+  const kinds = betKindsFor();
   const n = round.holes.length;
   const [kind, setKind] = useState(bet?.kind && kinds.includes(bet.kind) ? bet.kind : kinds[0]);
-  const [sides, setSides] = useState(() => (bet?.sides ? [...bet.sides] : []));
+  const [sides, setSides] = useState(() => (bet?.sides ? [...bet.sides] : me ? [me] : []));
+  // A reward round: each bet is played for money (on the Tab) or points (toward the reward). New ones start on money
+  const [playFor, setPlayFor] = useState(() => (bet ? betPlayFor(round, bet) : 'money'));
+  const cash = reward && playFor === 'money';
+  const fmt = cash ? money : unitFmt(round);
+  const unit = cash ? MONEY_UNIT : padUnit(round);
   const [stake, setStake] = useState(bet?.stake ?? 5);
   const [label, setLabel] = useState(bet?.label ?? '');
   const [holes, setHoles] = useState(() => (bet ? betRange(round, bet) : [fromPos > 1 && fromPos <= n ? fromPos : 1, n]));
@@ -35,16 +49,24 @@ export function BetEditor({ round, bet = null, fromPos = 1, onSave, onRemove = n
   const [pad, setPad] = useState(false);
 
   const pick = id => setSides(s => {
+    // A player changing their own bet stays in it
+    if (id === me && s.includes(id)) return s;
     if (s.includes(id)) return s.filter(x => x !== id);
-    return s.length < 2 ? [...s, id] : [s[0], id];
+    if (s.length < 2) return [...s, id];
+    return me && s.includes(me) ? [me, id] : [s[0], id];
   });
   // Strokes only ever go to one of the two in the bet
   const st = strokes && sides.includes(strokes.to) ? strokes : null;
-  const draft = { ...(bet || {}), kind, sides, stake, holes, label, strokes: needsScores(kind) && st ? st : undefined };
+  const draft = { ...(bet || {}), kind, sides, stake, holes, label, strokes: needsScores(kind) && st ? st : undefined, playFor };
   const ready = sides.length === 2;
   const clean = ready ? cleanBet(round, draft) : null;
   const noPar3 = kind === 'ctp' && ready && !ctpHoles(round, clean).length;
   const noLabel = kind === 'custom' && !cleanBetLabel(label);
+  // A scramble: two teammates share one score, so a match or per-hole bet needs players on different teams
+  const teammates = ready && round.game === 'scramble' && !kindFits(round, 'match', sides);
+  const badKind = ready && !kindFits(round, kind, sides);
+  // Changing a bet reprices all of it, the holes already played too: say what that does before saving
+  const reprice = bet && clean && !badKind ? repriceText(round, bet, clean, b => betFmt(round, b)) : null;
   const suggest = ready && needsScores(kind) ? suggestedStrokes(round, sides[0], sides[1], clean) : null;
 
   // Holes: the whole round, from the next hole on (once holes are played), each nine, or what the bet already has
@@ -61,15 +83,25 @@ export function BetEditor({ round, bet = null, fromPos = 1, onSave, onRemove = n
   if (!options.some(o => o.value === cur)) options.push({ ...range(holes[0], holes[1]), label: holes[0] === holes[1] ? `Hole ${noOf(holes[0])}` : `Holes ${noOf(holes[0])}–${noOf(holes[1])}` });
   const holesN = holes[1] - holes[0] + 1;
 
-  const save = () => { if (clean && !noPar3 && !noLabel) onSave(clean); };
+  const save = () => { if (clean && !noPar3 && !noLabel && !badKind) onSave(clean); };
   const editing = !!bet;
   return (
     <>
       <Sheet open={!pad} onClose={onClose} title={editing ? 'Change side bet' : 'Add a side bet'}>
         <p className="sheet-text">Just between two players. {needsScores(kind) ? 'Strokes here count only in this bet, never in the group’s games.' : 'It rides along with the round’s games.'}</p>
-        {/* A points or reward round: side bets count in points with everything else, so nothing goes on the Tab */}
-        {!countsMoney(round) && <p className="field-help pad">{noMoneyNote(round)} Side bets count in points, like the games.</p>}
+        {/* A points round: side bets count in points with everything else, so nothing goes on the Tab */}
+        {!countsMoney(round) && !reward && <p className="field-help pad">{noMoneyNote(round)} Side bets count in points, like the games.</p>}
         <div className="pb-edit">
+          {reward && (
+            <>
+              <div className="field-label" id="pb-for">Play this bet for</div>
+              <Segmented label="Play this bet for" className="press-mode-row game-pick" btn="pm-btn" value={playFor} onChange={setPlayFor}
+                options={[{ value: 'money', label: 'Money' }, { value: 'points', label: 'Points' }]} />
+              <p className="field-help pb-help">{cash
+                ? `Money goes on the Tab between the two of you. ${rewardNoun(playForOf(round).reward).replace(/^./, c => c.toUpperCase())} is still decided on the games.`
+                : `It counts in points toward ${rewardNoun(playForOf(round).reward)}, like the games. Nothing goes on the Tab.`}</p>
+            </>
+          )}
           <div className="field-label" id="pb-kind">What’s the bet</div>
           <div className="chip-row flush" role="radiogroup" aria-labelledby="pb-kind">
             {kinds.map(k => (
@@ -78,7 +110,9 @@ export function BetEditor({ round, bet = null, fromPos = 1, onSave, onRemove = n
               </button>
             ))}
           </div>
-          <p className="field-help pb-help">{inUnits(round, BET_KINDS[kind].help)}</p>
+          <p className="field-help pb-help">{cash ? BET_KINDS[kind].help : inUnits(round, BET_KINDS[kind].help)}</p>
+          {round.game === 'scramble' && needsScores(kind) && !teammates && <p className="field-help pb-help">Played on their teams’ scores.</p>}
+          {teammates && <p className={badKind ? 'field-error' : 'field-help pb-help'}>{SAME_TEAM_REASON}</p>}
 
           {kind === 'custom' && (
             <>
@@ -92,7 +126,7 @@ export function BetEditor({ round, bet = null, fromPos = 1, onSave, onRemove = n
           <div className="chip-row flush" role="group" aria-labelledby="pb-who">
             {round.players.map(p => {
               const on = sides.includes(p.id);
-              return <button key={p.id} aria-pressed={on} className={`pill-btn ${on ? 'on' : ''}`} onClick={() => pick(p.id)}>{on && <Icon name="check" />} {p.name}</button>;
+              return <button key={p.id} aria-pressed={on} disabled={p.id === me && on} className={`pill-btn ${on ? 'on' : ''}`} onClick={() => pick(p.id)}>{on && <Icon name="check" />} {p.name}{p.id === me ? ' (you)' : ''}</button>;
             })}
           </div>
 
@@ -133,10 +167,12 @@ export function BetEditor({ round, bet = null, fromPos = 1, onSave, onRemove = n
             </>
           )}
         </div>
-        {clean && <p className="field-help pad pb-sum">{betLine(round, clean, fmt)}</p>}
+        {clean && <p className="field-help pad pb-sum">{betLine(round, clean, fmt)}{cash ? ' · For money' : ''}</p>}
+        {reprice && <p className="hint-card pb-reprice" role="status"><Icon name="info" fill /> {reprice}</p>}
+        {waitOn && ready && <p className="field-help pad">It goes in when {waitOn}’s phone gets it. They keep score.</p>}
         <div className="cta-wrap">
-          <button className="full-btn" disabled={!ready || noPar3 || noLabel} onClick={save}>
-            {!ready ? 'Pick two players' : noLabel ? 'Give it a name' : editing ? 'Save bet' : 'Add the bet'}
+          <button className="full-btn" disabled={!ready || noPar3 || noLabel || badKind} onClick={save}>
+            {!ready ? (me ? 'Pick who it’s with' : 'Pick two players') : noLabel ? 'Give it a name' : badKind ? 'Pick players on different teams' : editing ? 'Save bet' : 'Add the bet'}
           </button>
           {onRemove && <button className="danger-link" onClick={onRemove}><Icon name="trash" /> Remove this bet</button>}
         </div>
@@ -147,21 +183,22 @@ export function BetEditor({ round, bet = null, fromPos = 1, onSave, onRemove = n
   );
 }
 
-/** One bet in a list: what it is, who's in it, and (in a round) where it stands. */
-function BetRow({ round, bet, result = null, onTap = null }) {
-  const fmt = unitFmt(round);
+/** One bet in a list: what it is, who's in it, and (in a round) where it stands. `waiting`: whose phone a change waits on. */
+function BetRow({ round, bet, result = null, onTap = null, waiting = null }) {
+  const fmt = betFmt(round, bet);
   const Box = onTap ? 'button' : 'div';
   const meta = BET_KINDS[bet.kind];
-  const sub = [betStakeText(bet, fmt), ...betLine(round, bet, fmt).split(' · ').slice(2)].join(' · ');
+  const reward = playForOf(round).kind === 'reward';
+  const sub = [betStakeText(bet, fmt), ...betLine(round, bet, fmt).split(' · ').slice(2), reward ? (isCashBet(round, bet) ? 'For money' : 'For points') : ''].filter(Boolean).join(' · ');
   // Nothing won yet says so once ("All square"), never "All square · Square"
-  const status = result ? `${betStatusText(round, result)}${result.amount ? ` · ${betMoneyText(round, result, fmt)}` : ''}` : null;
+  const status = waiting ? `Waiting on ${waiting}’s phone` : result ? `${betStatusText(round, result)}${result.amount ? ` · ${betMoneyText(round, result, fmt)}` : ''}` : null;
   return (
     <Box className={`set-row pb-row ${onTap ? '' : 'static'}`} {...(onTap ? { onClick: onTap, 'aria-label': `${betName(bet)}, ${betPeople(round, bet)}: ${sub}${status ? `. ${status}` : ''}. Change` } : {})}>
       <div className="set-icon"><Icon name={meta.icon} fill /></div>
       <div className="row-main">
         <div className="set-name">{betName(bet)} · {betPeople(round, bet)}</div>
         <div className="set-sub">{sub}</div>
-        {status && <div className="set-sub pb-status">{status}</div>}
+        {status && <div className={`set-sub pb-status ${waiting ? 'pb-wait' : ''}`}>{status}</div>}
       </div>
       {onTap && <span className="chevron"><Icon name="caret-right" /></span>}
     </Box>
@@ -199,50 +236,85 @@ export function PairBetsSetup({ round, bets, setBets }) {
 
 /**
  * "Side bets" from the round menu: every bet in the round and where it stands. The phone keeping
- * score can add one (from the next hole on, or the whole round), change it or take it off.
+ * score can add one (from the next hole on, or the whole round), change it or take it off. Any other
+ * player (`me`) can add one they're in and change or take off their own: it goes to the keeper's
+ * phone, which puts it in by itself, and shows here as waiting until then.
  */
-export function PairBetsSheet({ round, editable, onClose }) {
+export function PairBetsSheet({ round, editable, me = null, onClose }) {
   const { showToast } = useUI();
   const [editing, setEditing] = useState(null);
-  const { list } = betsMoney(round);
-  const from = nextPos(round);
-  const played = round.holes.filter(h => holeComplete(round, h)).length;
-  const bet = editing && editing !== 'new' ? betsOf(round).find(b => b.id === editing) : null;
-  const fmt = unitFmt(round);
+  // This phone's changes still on their way to the keeper's phone show straight away, marked as waiting
+  const view = editable ? round : withAsks(round);
+  const pending = editable ? new Set() : pendingIds(round);
+  const { list } = betsMoney(view);
+  const from = nextPos(view);
+  const played = view.holes.filter(h => holeComplete(view, h)).length;
+  const bet = editing && editing !== 'new' ? betsOf(view).find(b => b.id === editing) : null;
+  const player = isPlayer(round, me);
+  const keeper = keeperName(round);
+  const canChange = b => editable || (player && b.sides.includes(me));
+  const canAdd = editable || player;
+  const waitingN = editable ? 0 : waitingAsks(round).length;
+  const refused = editable ? [] : refusedAsks(round);
   const write = fn => update(s => { const r = s.rounds[round.id]; if (r) s.rounds[round.id] = fn(r); });
+  // A player who isn't keeping score asks the keeper's phone (see bet-asks.js)
+  const ask = async (fields, done) => {
+    try {
+      await sendBetAsk(round.id, { by: me, ...fields });
+      showToast(`Sent to ${keeper}’s phone. ${done}`);
+      buzz(20);
+    } catch {
+      showToast(`Couldn’t send it. Check your signal, or ask ${keeper} to make the change.`);
+    }
+  };
   const save = b => {
-    write(r => (bet ? changeBet(r, bet.id, b) : addBet(r, b)));
+    const fmt = betFmt(round, b);
     setEditing(null);
-    showToast(inUnits(round, bet ? `Side bet updated · ${betLine(round, b, fmt)}` : `Side bet on · ${betLine(round, b, fmt)}`));
+    if (!editable) { ask({ op: bet ? 'change' : 'add', id: b.id, bet: b }, 'It goes in when their phone gets it.'); return; }
+    write(r => (bet ? changeBet(r, bet.id, b) : addBet(r, b)));
+    showToast(bet ? `Side bet updated · ${betLine(round, b, fmt)}` : `Side bet on · ${betLine(round, b, fmt)}`);
     buzz(20);
   };
   const remove = () => {
+    setEditing(null);
+    if (!editable) { ask({ op: 'remove', id: bet.id }, 'It comes off when their phone gets it.'); return; }
     const was = structuredClone(round.bets || []);
     // Undo puts back what was agreed too, so What we agreed doesn't list it dropped and added again
     const agreedWas = round.agreed ? structuredClone(round.agreed) : null;
     write(r => removeBet(r, bet.id));
-    setEditing(null);
     showToast('Side bet taken off', { label: 'Undo', run: () => write(r => ({ ...r, bets: was, ...(agreedWas ? { agreed: agreedWas } : {}) })) });
   };
+  const takeBack = () => { for (const x of waitingAsks(round)) dropBetAsk(round.id, x.no); };
   return (
     <>
       <Sheet open={!editing} onClose={onClose} title="Side bets" className="sc-sheet">
         <p className="sheet-text">
           Bets between two players, on top of the round’s games. {played ? 'A new one counts from the next hole unless you pick the whole round.' : 'Their strokes count only in their bet.'}
-          {!editable ? ' The scorekeeper adds and changes them.' : ''}
+          {!editable && player ? ` Add one with anyone, or change yours. ${keeper}’s phone puts it in, since they keep score.` : !editable ? ' The two players in a bet and the scorekeeper change it.' : ''}
         </p>
-        {!list.length && <p className="hint-card"><Icon name="hand-coins" fill /> No side bets yet.{editable ? ' Two players can add their own match, a bet a hole, closest to the pin or anything else.' : ''}</p>}
-        {list.map(r => <BetRow key={r.id} round={round} bet={r.bet} result={r} onTap={editable ? () => setEditing(r.id) : null} />)}
-        {editable && list.length < MAX_BETS && (
+        {refused.map(x => (
+          <p key={x.no} className="hint-card pb-refused" role="status">
+            <Icon name="warning" fill /> <span>{keeper}’s phone didn’t make that change{x.why ? `: ${x.why.replace(/^./, c => c.toLowerCase())}` : ''}. <button className="link-btn inline" onClick={() => dropBetAsk(round.id, x.no)}>OK</button></span>
+          </p>
+        ))}
+        {waitingN > 0 && (
+          <p className="hint-card pb-waiting" role="status">
+            <Icon name="hourglass-medium" fill /> <span>{waitingN === 1 ? 'A change is' : `${waitingN} changes are`} waiting on {keeper}’s phone. It goes in as soon as their phone hears it. <button className="link-btn inline" onClick={takeBack}>Take it back</button></span>
+          </p>
+        )}
+        {!list.length && <p className="hint-card"><Icon name="hand-coins" fill /> No side bets yet.{canAdd ? ' Two players can add their own match, a bet a hole, closest to the pin or anything else.' : ''}</p>}
+        {list.map(r => <BetRow key={r.id} round={view} bet={r.bet} result={r} waiting={pending.has(r.id) ? keeper : null} onTap={canChange(r.bet) ? () => setEditing(r.id) : null} />)}
+        {canAdd && list.length < MAX_BETS && (
           <button className="set-row add-side" onClick={() => setEditing('new')}>
             <div className="set-icon"><Icon name="plus" /></div>
-            <div className="row-main"><div className="set-name">Add a side bet</div><div className="set-sub">{played ? `From hole ${round.holes[from - 1]?.no ?? from} on, or the whole round` : 'For the whole round, or some of it'}</div></div>
+            <div className="row-main"><div className="set-name">Add a side bet</div><div className="set-sub">{played ? `From hole ${view.holes[from - 1]?.no ?? from} on, or the whole round` : 'For the whole round, or some of it'}</div></div>
           </button>
         )}
         <div className="cta-wrap"><button className="full-btn outline" onClick={onClose}>Done</button></div>
       </Sheet>
       {editing && (
-        <BetEditor round={round} bet={bet} fromPos={played ? from : 1} onClose={() => setEditing(null)} onSave={save} onRemove={bet ? remove : null} />
+        <BetEditor round={view} bet={bet} fromPos={played ? from : 1} onClose={() => setEditing(null)} onSave={save} onRemove={bet ? remove : null}
+          me={editable ? null : me} waitOn={editable ? null : keeper} />
       )}
     </>
   );
@@ -252,7 +324,12 @@ export function PairBetsSheet({ round, editable, onClose }) {
  * The side bets on the hole being played: the scorekeeper taps who was closest on a par 3 or who
  * won a custom bet, and everyone sees each match or per-hole bet that covers this hole.
  */
-export function HoleBets({ round, hole, editable }) {
+export function HoleBets({ round: saved, hole, editable, me = null }) {
+  const { showToast } = useUI();
+  // A tap from a player who isn't keeping score shows straight away, marked as waiting (see bet-asks.js)
+  const round = editable ? saved : withAsks(saved);
+  const pending = editable ? new Set() : pendingIds(saved);
+  const keeper = keeperName(saved);
   const tap = betsToTap(round, hole);
   const pos = round.holes.findIndex(h => h.no === hole.no) + 1;
   const running = betsOf(round).filter(b => {
@@ -261,16 +338,19 @@ export function HoleBets({ round, hole, editable }) {
     return pos >= f && pos <= t;
   });
   if (!tap.length && !running.length) return null;
-  const fmt = unitFmt(round);
-  const set = (b, pid) => {
-    update(s => { const r = s.rounds[round.id]; if (r) s.rounds[round.id] = setBetWinner(r, b.id, hole.no, pid); });
+  const canTap = b => editable || (isPlayer(round, me) && b.sides.includes(me));
+  const set = async (b, pid) => {
     buzz(10);
+    if (editable) { update(s => { const r = s.rounds[round.id]; if (r) s.rounds[round.id] = setBetWinner(r, b.id, hole.no, pid); }); return; }
+    try { await sendBetAsk(round.id, { by: me, op: 'winner', id: b.id, hole: hole.no, pid }); }
+    catch { showToast(`Couldn’t send it. Check your signal, or ask ${keeper} to tap it.`); }
   };
   return (
     <div className="block hole-bets" role="group" aria-label="Side bets on this hole">
       <div className="eyebrow">Side bets</div>
       {running.map(b => {
         const r = betResult(round, b);
+        const fmt = betFmt(round, b);
         return (
           <div key={b.id} className="hb-line">
             <span className="hb-what">{betName(b)} · {betPeople(round, b)}</span>
@@ -280,11 +360,12 @@ export function HoleBets({ round, hole, editable }) {
       })}
       {tap.map(b => {
         const won = b.kind === 'ctp' ? b.winners?.[hole.no] ?? null : b.winner ?? null;
+        const fmt = betFmt(round, b);
         const q = b.kind === 'ctp' ? `Closest to the pin · ${fmt(b.stake)}` : `${betName(b)} · ${fmt(b.stake)}`;
         return (
           <div key={b.id} className="hb-tap">
-            <div className="hb-q">{q}<span className="hb-who">{betPeople(round, b)}</span></div>
-            {editable ? (
+            <div className="hb-q">{q}<span className="hb-who">{betPeople(round, b)}{pending.has(b.id) ? ` · Waiting on ${keeper}’s phone` : ''}</span></div>
+            {canTap(b) ? (
               <div className="chip-row flush" role="radiogroup" aria-label={`${q}: who ${b.kind === 'ctp' ? 'was closest' : 'won'}`}>
                 {b.sides.map(id => (
                   <button key={id} role="radio" aria-checked={won === id} className={`pill-btn ${won === id ? 'on' : ''}`} onClick={() => set(b, won === id ? null : id)}>
@@ -305,24 +386,36 @@ export function HoleBets({ round, hole, editable }) {
   );
 }
 
-/** Each side bet's result, for the round's full breakdown. `g` is roundResults().detail.byGame.bets. */
-export function BetsBreakdown({ round, g }) {
-  const fmt = unitFmt(round);
-  if (!g?.detail?.bets?.length) return null;
+/**
+ * Each side bet's result, for the round's full breakdown. `res` is roundResults(): the bets counted
+ * with the games are in detail.byGame.bets, and a reward round's bets for money in `cash`.
+ */
+export function BetsBreakdown({ round, res }) {
+  const counted = res?.detail?.byGame?.bets?.detail?.bets || [];
+  const cash = res?.cash?.list || [];
+  if (!counted.length && !cash.length) return null;
+  const reward = playForOf(round).kind === 'reward';
+  const row = r => {
+    const fmt = betFmt(round, r.bet);
+    return (
+      <div key={r.id} className="set-row static pb-row">
+        <div className="set-icon"><Icon name={BET_KINDS[r.kind].icon} fill /></div>
+        <div className="row-main">
+          <div className="set-name">{r.label} · {betPeople(round, r.bet)}</div>
+          <div className="set-sub">{betStakeText(r.bet, fmt)} · {betStatusText(round, r)}{reward ? (isCashBet(round, r.bet) ? ' · For money' : ' · For points') : ''}</div>
+        </div>
+        <div className={`pb-amt ${r.amount ? 'pos' : ''}`}>{betMoneyText(round, r, fmt)}</div>
+      </div>
+    );
+  };
   return (
     <>
       <div className="sec-label">Side bets</div>
-      {g.detail.bets.map(r => (
-        <div key={r.id} className="set-row static pb-row">
-          <div className="set-icon"><Icon name={BET_KINDS[r.kind].icon} fill /></div>
-          <div className="row-main">
-            <div className="set-name">{r.label} · {betPeople(round, r.bet)}</div>
-            <div className="set-sub">{betStakeText(r.bet, fmt)} · {betStatusText(round, r)}</div>
-          </div>
-          <div className={`pb-amt ${r.amount ? 'pos' : ''}`}>{betMoneyText(round, r, fmt)}</div>
-        </div>
-      ))}
-      {!countsMoney(round) && <p className="field-help pad">{noMoneyNote(round)} Side bets count in points, like the games.</p>}
+      {counted.map(row)}
+      {cash.map(row)}
+      {!countsMoney(round) && (reward && cash.length
+        ? <p className="field-help pad">{counted.length ? `The points bets count toward ${rewardNoun(playForOf(round).reward)} with the games. ` : ''}The money bets go on the Tab, in dollars, apart from the points.</p>
+        : <p className="field-help pad">{noMoneyNote(round)} Side bets count in points, like the games.</p>)}
     </>
   );
 }

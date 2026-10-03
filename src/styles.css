@@ -1903,3 +1903,10 @@ button.trip-card:active { transform: scale(.97); }
 .av-shelves { justify-content: center; padding: 4px 0 2px; }
 .av-shelf-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--pink-fill); display: inline-block; }
 .pf-money-seg .pm-btn { font-size: 13px; padding: 0 4px; }
+
+/* o6f side bets: either player changes a bet, money or points on a reward round, the reprice note */
+.mb-cash { padding: 6px 8px 0; font-size: 11px; font-weight: 600; color: var(--mute); text-align: center; font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
+.reward-card.cash-card { margin-top: 10px; background: var(--surface); color: var(--ink); }
+.pb-status.pb-wait { color: var(--mute); }
+.pb-reprice { margin: 4px 16px 4px; }
+.pb-waiting .link-btn, .pb-refused .link-btn { font-size: inherit; }

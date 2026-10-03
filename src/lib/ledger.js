@@ -5,9 +5,12 @@ import { keptId, meFor } from './format.js';
 import { theirName } from './their-profile.js';
 import { canonicalOf, sharedDebts } from './pair-debts.js';
 import { linksOf } from './people-links.js';
-import { countsMoney } from './play-for.js';
+import { countsMoney, onTab, tabResults } from './play-for.js';
+import { betsOf, isCashBet } from './pair-bets.js';
 
 const toCents = v => Math.round((Number(v) || 0) * 100);
+/** Whether two players had a side bet for money together in a reward round. */
+const hasCashWith = (r, a, b) => betsOf(r).some(x => isCashBet(r, x) && x.sides.includes(a) && x.sides.includes(b));
 const pairKey = (a, b) => (a < b ? `${a}|${b}` : `${b}|${a}`);
 
 /**
@@ -90,8 +93,8 @@ function shortestPath(start, isEnd, ids, ok) {
 }
 
 const doneRounds = state => Object.values(state.rounds || {}).filter(r => r.status === 'done');
-/** Finished money rounds: points and reward rounds never add a dollar to the Tab. */
-const moneyRounds = state => doneRounds(state).filter(countsMoney);
+/** Finished rounds with money on the Tab: points and reward rounds add none, but for a reward round's side bets for money. */
+const moneyRounds = state => doneRounds(state).filter(onTab);
 
 /**
  * You can have more than one id (your own, plus the seat you took in each joined round), and so can
@@ -112,7 +115,7 @@ export function tabBalances(state) {
   const who = canonical(state);
   const add = (id, v) => { const k = who(id); bal[k] = (bal[k] || 0) + v; };
   for (const r of moneyRounds(state)) {
-    for (const [id, v] of Object.entries(roundResults(r).balances)) add(id, v);
+    for (const [id, v] of Object.entries(tabResults(r).balances)) add(id, v);
   }
   for (const s of state.settlements || []) { add(s.from, s.amount); add(s.to, -s.amount); }
   return bal;
@@ -199,7 +202,11 @@ export function personStory(state, ids, other) {
     if (amount > 0) won++; else if (amount < 0) lost++; else even++;
     const isMoney = countsMoney(r);
     if (isMoney) net += amount;
-    items.push({ kind: 'round', id: r.id, round: r, amount, money: isMoney, at: r.finishedAt || r.createdAt || 0 });
+    // A reward round's side bets for money between you two: dollars on the Tab, apart from the points
+    const cashPairs = !isMoney && onTab(r) ? tabResults(r).pairs[me] || {} : null;
+    const cash = cashPairs ? Math.round(them.reduce((a, id) => a + (cashPairs[id] ?? 0), 0) * 100) / 100 || 0 : 0;
+    net += cash;
+    items.push({ kind: 'round', id: r.id, round: r, amount, money: isMoney, ...(cashPairs && them.some(id => hasCashWith(r, me, id)) ? { cash } : {}), at: r.finishedAt || r.createdAt || 0 });
   }
   for (const s of state.settlements || []) {
     // amount: what the payment did for your side (they paid you: +, you paid them: -)
@@ -233,18 +240,23 @@ export function headToHeadSummary(state, ids, { moneyOnly = false } = {}) {
     if (!mine.has(me) || !r.players.some(p => p.id === me)) continue; // watched rounds aren't yours
     if (moneyOnly && !countsMoney(r)) continue;
     const pairs = roundResults(r).pairs[me] || {};
+    // A reward round's side bets for money count in net, in dollars (the record stays the round's points)
+    const cashPairs = !countsMoney(r) && onTab(r) ? tabResults(r).pairs[me] || {} : null;
+    const inCash = new Map();
     // One person is one line, whichever id they had in this round
     const inRound = new Map();
     for (const p of r.players) {
       if (p.id === me || isMine(p.id)) continue;
       const k = who(p.id);
       inRound.set(k, (inRound.get(k) || 0) + (pairs[p.id] ?? 0));
+      if (cashPairs) inCash.set(k, (inCash.get(k) || 0) + (cashPairs[p.id] ?? 0));
     }
     for (const [k, v] of inRound) {
       const cur = out.get(k) || { rounds: 0, won: 0, lost: 0, even: 0, net: 0 };
       cur.rounds++;
       if (v > 0) cur.won++; else if (v < 0) cur.lost++; else cur.even++;
       if (countsMoney(r)) cur.net = Math.round((cur.net + v) * 100) / 100;
+      else if (inCash.get(k)) cur.net = Math.round((cur.net + inCash.get(k)) * 100) / 100;
       out.set(k, cur);
     }
   }

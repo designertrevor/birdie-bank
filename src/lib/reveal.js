@@ -31,11 +31,20 @@ function biggestHoles(rows, max = 3) {
 
 /**
  * Ordered reveal steps for a finished (or partial) round.
- * Returns { title, steps } where each step is { key, label, text, amount?, value?, tie? }:
+ * Returns { title, steps } where each step is { key, label, text, amount?, value?, tie?, money? }:
  * `amount` is money to count up, `value` is a plain label (skins, points), `tie` marks a push.
- * Games with nothing worth breaking down return no steps, so the totals play on their own.
+ * `money` marks a reward round's side bet played for money, whose amount reads in dollars while
+ * the rest read in points. Games with nothing worth breaking down return no steps, so the totals
+ * play on their own.
  */
 export function revealSteps(round, res) {
+  const out = gameSteps(round, res);
+  // A reward round's side bets for money come last, in dollars (see roundResults' `cash`)
+  const cash = (res?.cash?.list || []).map(b => ({ ...betStep(round, b), label: `${b.label} · ${betPeople(round, b.bet)} · For money`, money: true }));
+  return cash.length ? { title: out.steps.length ? out.title : 'The bets', steps: [...out.steps, ...cash] } : out;
+}
+
+function gameSteps(round, res) {
   const main = mainRevealSteps(round, res);
   const byGame = res?.detail?.byGame;
   if (!byGame) return main;

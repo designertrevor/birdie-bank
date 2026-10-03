@@ -4,8 +4,11 @@
 // travel in the meta record.
 import { holeComplete } from './round.js';
 
-/** Fields that belong to one phone only and are never shared. `editing`: this phone is fixing a finished round's scores. */
-const LOCAL_ONLY = ['scores', 'banker', 'wolf', 'marks', 'presses', 'current', 'shared', 'localMe', '_remote', 'pressSeq', 'editing'];
+/**
+ * Fields that belong to one phone only and are never shared. `editing`: this phone is fixing a finished
+ * round's scores. `betAsks`: side bet changes this phone sent the keeper and is waiting on (bet-asks.js).
+ */
+const LOCAL_ONLY = ['scores', 'banker', 'wolf', 'marks', 'presses', 'current', 'shared', 'localMe', '_remote', 'pressSeq', 'editing', 'betAsks'];
 
 /** JSON with sorted keys so equal data always compares equal. */
 export function stable(v) {

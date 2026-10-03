@@ -11,6 +11,7 @@ import { payFields } from './pay.js';
 import { canEdit, holeToKeep, hostKeeper, isKeeper, keeperMe, keeperOf, metaToKeep, metaToSend, registerDevice, seatTaken } from './keeper.js';
 import { deviceReady, myDevice } from './device.js';
 import { claimSeat, mergeClaims } from './people-links.js';
+import { applyBetAsk, betAskProblem, buildBetAsk, keepAsks, readBetAsk } from './bet-asks.js';
 
 /** Whether this phone may change a shared round (see keeper.js), and who it is in it. */
 function editorOf(round) {
@@ -165,9 +166,13 @@ function onRemote(roundId, ev) {
       applyMeta(r, merged);
       // An older app's meta has no shareCode; this phone keeps its own
       if (code && !r.shareCode) r.shareCode = code;
+      // Side bet changes this phone asked for that the round now shows are done (see bet-asks.js)
+      if (r.betAsks) { const kept = keepAsks(r); if (kept.length) r.betAsks = kept; else delete r.betAsks; }
       if (r.status === 'done') leaveRound(s, roundId);
       if (r.status === 'active' && !s.activeRoundId) s.activeRoundId = roundId;
     });
+    // This phone may have just been handed the card, with side bet asks still waiting on it
+    applyBetAsks(roundId);
   }
   if (ev.type === 'hole') {
     // Seat requests ride under negative hole numbers (see sync-model.js)
@@ -421,6 +426,11 @@ function reqChanged() { reqVersion++; reqListeners.forEach(l => l()); }
 const subReq = l => { reqListeners.add(l); return () => reqListeners.delete(l); };
 
 function noteRequest(roundId, no, data) {
+  // A side bet change from another phone rides the same way (see bet-asks.js)
+  const ask = readBetAsk(data);
+  if (ask) { noteBetAsk(roundId, no, ask); return; }
+  // ...and one taken back is gone from the slot
+  if (data == null) betAsks.get(roundId)?.delete(no);
   const r = readRequest(data);
   const list = requests.get(roundId) || new Map();
   const had = list.has(no);
@@ -509,4 +519,85 @@ export async function answerSeatRequest(roundId, no, playerId) {
   await adapter.upsertHole(round.shared.code, no, { request: { name: req.name, at: req.at, status: playerId ? 'in' : 'no', ...(playerId ? { playerId } : {}) } });
   requests.get(roundId)?.delete(no);
   reqChanged();
+}
+
+// --------------------------- Side bet asks ---------------------------------
+// Either player in a side bet can change it from their own phone (bet-asks.js). Their phone sends an
+// ask under a negative hole number; the phone keeping score applies it by itself when it comes from
+// one of the two players, sends the round, then marks the ask done (or says why not).
+
+const betAsks = new Map(); // roundId -> Map(no -> ask), the asks still waiting, as every phone hears them
+const applying = new Set(); // "roundId:no" being applied on this phone
+
+function noteBetAsk(roundId, no, ask) {
+  const list = betAsks.get(roundId) || new Map();
+  if (ask.status === 'waiting') list.set(no, ask); else list.delete(no);
+  betAsks.set(roundId, list);
+  // The phone that sent it: an answer ends the wait, and a no says why
+  const mine = getState().rounds[roundId]?.betAsks?.find(x => x.no === no);
+  if (mine && mine.status === 'waiting' && ask.status !== 'waiting') {
+    update(s => {
+      const r = s.rounds[roundId]; if (!r?.betAsks) return;
+      r.betAsks = r.betAsks.flatMap(x => (x.no !== no ? [x] : ask.status === 'no' ? [{ ...x, status: 'no', why: ask.why || null }] : []));
+      if (!r.betAsks.length) delete r.betAsks;
+    });
+  }
+  applyBetAsks(roundId);
+}
+
+/** On the phone keeping score: apply every side bet ask still waiting, oldest first, then answer each. */
+async function applyBetAsks(roundId) {
+  const list = betAsks.get(roundId);
+  const round = getState().rounds[roundId];
+  if (!list?.size || !round?.shared?.code || round.shared.ended) return;
+  // Only the keeper's phone applies them; in a round with no keeper every player edits directly
+  if (!keeperOf(round) || !isKeeper(round, keeperMe(round, getState()), !!round.shared.host)) return;
+  const adapter = await getAdapter();
+  if (!adapter) return;
+  for (const [no, ask] of [...list].sort((a, b) => a[1].at - b[1].at)) {
+    const key = `${roundId}:${no}`;
+    if (applying.has(key)) continue;
+    applying.add(key);
+    try {
+      const why = betAskProblem(getState().rounds[roundId], ask);
+      if (!why) update(s => { const r = s.rounds[roundId]; if (r) s.rounds[roundId] = applyBetAsk(r, ask); });
+      // The round goes up first, so the sender's phone sees the bet when it hears the answer
+      if (!why) for (let i = 0; i < 10 && !(await pushChanges(roundId)); i++) await new Promise(res => setTimeout(res, 300));
+      await adapter.upsertHole(round.shared.code, no, { betAsk: { ...ask, status: why ? 'no' : 'done', ...(why ? { why } : {}) } });
+      list.delete(no);
+    } catch { /* no signal: it's still on the server, so the next reconnect brings it back */ } finally {
+      applying.delete(key);
+    }
+  }
+}
+
+/**
+ * Ask the phone keeping score to make a side bet change (see bet-asks.js): `fields` is
+ * { by, op, id, bet?, hole?, pid? }. Waits on this phone (round.betAsks) until the keeper's phone
+ * answers. Throws when it can't be sent, so the sender can be told.
+ */
+export async function sendBetAsk(roundId, fields) {
+  const round = getState().rounds[roundId];
+  const adapter = await getAdapter();
+  const data = buildBetAsk(fields);
+  if (!round?.shared?.code || !adapter || !data) throw new Error('Can’t send it');
+  const no = newRequestNo();
+  update(s => { const r = s.rounds[roundId]; if (r) r.betAsks = [...(r.betAsks || []), { no, ask: data.betAsk, status: 'waiting' }]; });
+  try {
+    await adapter.upsertHole(round.shared.code, no, data);
+  } catch (e) {
+    update(s => { const r = s.rounds[roundId]; if (!r?.betAsks) return; r.betAsks = r.betAsks.filter(x => x.no !== no); if (!r.betAsks.length) delete r.betAsks; });
+    throw e;
+  }
+  return no;
+}
+
+/** Take back a side bet ask still waiting, or put away one the keeper's phone said no to. */
+export async function dropBetAsk(roundId, no) {
+  const round = getState().rounds[roundId];
+  const was = round?.betAsks?.find(x => x.no === no);
+  update(s => { const r = s.rounds[roundId]; if (!r?.betAsks) return; r.betAsks = r.betAsks.filter(x => x.no !== no); if (!r.betAsks.length) delete r.betAsks; });
+  if (was?.status !== 'waiting' || !round?.shared?.code) return;
+  const adapter = await getAdapter();
+  try { await adapter?.upsertHole(round.shared.code, no, null); } catch { /* it may still be applied */ }
 }
