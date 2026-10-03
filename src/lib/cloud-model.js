@@ -22,6 +22,8 @@ export function toDocs(state) {
     profile: state.profile && typeof state.profile === 'object' && !Array.isArray(state.profile) ? state.profile : {},
     // Golf trips (trips.js): name, dates and "done playing". Their rounds carry the trip themselves
     trips: state.trips && typeof state.trips === 'object' && !Array.isArray(state.trips) ? state.trips : {},
+    // Trips you hid from your Tab and Up next (trips.js tripHidden)
+    tripHidden: state.tripHidden && typeof state.tripHidden === 'object' && !Array.isArray(state.tripHidden) ? state.tripHidden : {},
   });
   for (const p of Object.values(state.players)) put('player', p.id, p);
   for (const c of Object.values(state.crews)) put('crew', c.id, c);
@@ -80,6 +82,8 @@ export function applyDoc(draft, kind, id, data) {
     if (data.profile && typeof data.profile === 'object' && !Array.isArray(data.profile)) draft.profile = data.profile;
     // Trips came later still: an older profile keeps this phone's
     if (data.trips && typeof data.trips === 'object' && !Array.isArray(data.trips)) draft.trips = data.trips;
+    // And hidden trips later again
+    if (data.tripHidden && typeof data.tripHidden === 'object' && !Array.isArray(data.tripHidden)) draft.tripHidden = data.tripHidden;
   }
 }
 

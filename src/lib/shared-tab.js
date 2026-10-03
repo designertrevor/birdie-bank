@@ -14,6 +14,7 @@ import { meFor } from './format.js';
 import { outstanding, tabWith } from './ledger.js';
 import { FETCH_DAYS, canonicalOf, cents, codeOf, finishedAt, lockedRounds, nettedId, nettedOn, pairDebt, paidOn, played, sharedRounds } from './pair-debts.js';
 import { isTripPayment } from './trip-pay.js';
+import { planRows } from './trip-plan.js';
 
 export { FETCH_DAYS, canonicalOf, codeOf, nettedId, pairDebt, played, sharedRounds };
 
@@ -246,6 +247,8 @@ export function squareRows(state, from, to, roundIds, { now = Date.now(), reason
  *   it runs, and every other open transfer between them is marked 'netted' for the status.
  * - A part payment fills the shared transfers the same way first, and nets the rest only once
  *   it covers the whole shared amount.
+ * - Then a trip's published plan between the two (trip-plan.js): all of it with the whole card,
+ *   or what a part payment has left over, on the plan's own rows so both phones see it.
  * Whatever the shared rounds don't explain (local-only rounds, money passed on) is a local
  * settlement with no code, as before: it can run the other way when the shared rounds owe more
  * than the whole card. Returns { rows, settlements } to send and to add.
@@ -262,7 +265,10 @@ export function allocatePayment(state, { from, to, amount }, { now = Date.now(),
   const rows = [], settlements = [];
   const open = openTransfers(state, F, T, now);
   fillRows(state, open, settle, settle === shared, rows, now);
-  const left = total - settle;
+  // Then what a trip's published plan has between them (trip-plan.js), on the plan's own rows
+  const onPlan = planRows(state, F, T, { amount: whole ? null : Math.max(0, total - settle), now });
+  rows.push(...onPlan.rows);
+  const left = total - settle - onPlan.cents;
   if (left > 0) settlements.push({ id: `s_${makeId()}`, from, to, amount: left / 100, at: now });
   if (left < 0) settlements.push({ id: `s_${makeId()}`, from: to, to: from, amount: -left / 100, at: now });
   return { rows, settlements };

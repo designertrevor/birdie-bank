@@ -1,8 +1,10 @@
 // A trip: everyone's standings across its rounds, the rounds themselves, and money by game; then
 // Settle the trip, once, right after the last round (or someone's part, for a friend leaving
-// early). Trip money is already in each person's total on the Tab, so paying here pays the Tab
-// too. See trips.js for how it's all worked out.
-import { useState } from 'react';
+// early), from the one plan the organizer's phone publishes so every phone shows the same
+// payments. Trip money is already in each person's total on the Tab, so paying here pays the Tab
+// too. Only the organizer edits, deletes or says "Done playing"; anyone can hide the trip from
+// their own Tab and Up next. See trips.js and trip-plan.js for how it's all worked out.
+import { useEffect, useState } from 'react';
 import { Empty, Header, Icon, Screen, Segmented, Sheet, useUI } from '../components/ui.jsx';
 import { Avatar, PayButton, RequestButton } from '../components/Pay.jsx';
 import { RoundRow } from '../components/RoundRow.jsx';
@@ -19,11 +21,20 @@ import { points } from '../lib/play-for.js';
 import { whenLabel } from '../lib/plans.js';
 import { buzz } from '../lib/delight.js';
 import { markTripPayment, undoPayments, usePaymentsOff, useTabSync } from '../lib/tab-sync.js';
-import { TRIP_FORMATS, canRecount, myTripNet, partPlan, roundsInDates, tripByGame, tripDates, tripRounds, tripStatus, upDown } from '../lib/trips.js';
-import { deleteTrip, endTrip, setRoundTrip } from '../lib/trip-store.js';
+import { TRIP_FORMATS, canDeleteTrip, canRecount, myTripNet, partPlan, roundsInDates, tripByGame, tripDates, tripHidden, tripStatus, upDown } from '../lib/trips.js';
+import { deleteTrip, endTrip, hideTrip, seenTripPlan, setRoundTrip } from '../lib/trip-store.js';
+import { plansOn, useTripPlans } from '../lib/trip-plan-sync.js';
 
 const first = name => String(name || '').trim().split(/\s+/)[0];
 const sign = v => (v > 0 ? 'pos' : v < 0 ? 'neg' : '');
+
+/** Once you've looked, the trip's payments stop saying "Updated" (when you leave the screen). */
+function useSeenPlan(id, version) {
+  useEffect(() => () => seenTripPlan(id, version), [id, version]);
+}
+
+/** Whose phone the trip's payments come from, for the words: "Sam’s phone", or "the organizer’s phone". */
+const theirPhone = st => (st.organizer ? 'your phone' : st.published.byName ? `${st.published.byName}’s phone` : 'the organizer’s phone');
 
 /** Who "you" are to the trip, and a name for anyone on it. */
 function useWho(state) {
@@ -36,14 +47,16 @@ export default function Trip({ id, view: firstView = 'standings' }) {
   const nav = useNav();
   const state = useStore();
   const { ask, showToast } = useUI();
-  // Payments from Settle the trip ride on the trip's shared rounds: keep them fresh
+  // Payments from Settle the trip ride on the trip's shared rounds, and its plan on the server: keep them fresh
   useTabSync({ live: true });
+  useTripPlans();
   const [view, setView] = useState(firstView);
   const [editing, setEditing] = useState(false);
   const [counting, setCounting] = useState(false);
   const [leaving, setLeaving] = useState(false);
   const st = tripStatus(state, id);
   const { me, label, short } = useWho(state);
+  useSeenPlan(id, st?.published.version || 0);
   if (!st) {
     return <Screen><Header title="Trip" small onBack={nav.pop} /><div className="scroll"><Empty title="This trip is gone" text="Its rounds and their money are still in History and on the Tab." /></div></Screen>;
   }
@@ -51,11 +64,10 @@ export default function Trip({ id, view: firstView = 'standings' }) {
   const played = st.standings.some(p => p.id === me);
   const net = myTripNet(state, st);
   const myPoints = st.points?.[me] ?? null;
-  const settling = st.settling.length > 0;
-  // A round shared live keeps the trip it was set up with on everyone's phone, so a trip with one
-  // can't be deleted here (friends' phones would keep it, and its payments would land on a trip
-  // this phone no longer has)
-  const deletable = !settling && !trip.derived && tripRounds(state, id).every(r => canRecount(state, r));
+  // Only the organizer deletes, and only before any trip money is paid. A finished round shared
+  // live keeps the trip on friends' phones, so that needs trip plans on the server to tell them
+  const del_ = canDeleteTrip(state, st, { plansOn: plansOn() });
+  const hidden = tripHidden(state, id);
 
   const eyebrow = st.phase === 'soon' ? `Starts ${tripDates(trip)}`
     : st.phase === 'ready' ? 'That’s the trip'
@@ -65,27 +77,32 @@ export default function Trip({ id, view: firstView = 'standings' }) {
     : myPoints != null ? `You’re on ${points(myPoints, { sign: true })}`
     : st.phase === 'soon' ? 'Nothing played yet' : st.done.length ? 'No money on it yet' : 'Nothing played yet';
   const hint = st.pointsOnly ? 'Played for points, so there’s nothing to pay. Everyone on the trip sees the standings.'
-    : st.phase === 'ready' ? `${st.plan.length} payment${st.plan.length === 1 ? '' : 's'} square${st.plan.length === 1 ? 's' : ''} the whole trip. Trip money is already in each person’s total on the Tab, so paying here pays the Tab too.`
+    : st.published.status === 'stale' && st.money.length ? `A round or a score changed, so the trip’s payments are being worked out again on ${theirPhone(st)}. Until then the Tab keeps the trip’s money pair by pair.`
+    : st.phase === 'ready' ? `${st.plan.length} payment${st.plan.length === 1 ? '' : 's'} square${st.plan.length === 1 ? 's' : ''} the whole trip${st.published.status === 'live' ? ', the same on every phone' : ''}. Trip money is already in each person’s total on the Tab, so paying here pays the Tab too.`
     : st.phase === 'square' ? 'Everyone’s square on the trip.'
     : st.phase === 'soon' ? `Rounds you start from ${tripDates(trip)} ask to count for the trip. Plan them now so everyone can answer.`
     : 'Nothing’s paid yet. Settle the trip opens after the last round, once for the whole trip. Trip money is already in each person’s total on the Tab.';
 
   const del = async () => {
-    if (!(await ask({ title: `Delete ${trip.name}?`, text: 'Its rounds stay in History and their money stays on the Tab. They just stop being a trip.', confirmLabel: 'Delete the trip', danger: true }))) return;
-    deleteTrip(id);
-    nav.pop();
+    if (!(await ask({ title: `Delete ${trip.name}?`, text: `Its rounds stay in History and their money stays on the Tab. They just stop being a trip${del_.everywhere ? ', on everyone’s phone' : ''}.`, confirmLabel: 'Delete the trip', danger: true }))) return;
+    if (await deleteTrip(id, { everywhere: del_.everywhere })) nav.pop();
+    else showToast('Couldn’t reach the other phones. Try again with signal.');
   };
   const doneNow = () => {
     endTrip(id);
     showToast('Settle the trip is open');
   };
+  const hide = () => {
+    hideTrip(id, !hidden);
+    showToast(hidden ? 'Back on your Tab and Up next' : `${trip.name} is off your Tab and Up next. Your rounds and money stay as they are.`);
+  };
 
   return (
     <Screen>
-      <Header title={trip.name} small onBack={nav.pop} right={<button className="header-btn" onClick={() => setEditing(true)}><Icon name="pencil-simple" /> Edit</button>} />
+      <Header title={trip.name} small onBack={nav.pop} right={st.organizer ? <button className="header-btn" onClick={() => setEditing(true)}><Icon name="pencil-simple" /> Edit</button> : null} />
       <div className="scroll">
         <div className="trip-hero">
-          <div className="eyebrow pink">{eyebrow}</div>
+          <div className="eyebrow pink">{eyebrow}{st.published.updated && <> <span className="trip-updated">Updated</span></>}</div>
           <div className={`tab-big d ${st.money.length && played ? sign(net) : ''}`}>{big}</div>
           <div className="trip-sub">{[tripDates(trip), trip.where].filter(Boolean).join(' · ')}</div>
           <TripDays status={st} />
@@ -120,7 +137,11 @@ export default function Trip({ id, view: firstView = 'standings' }) {
         {view === 'games' && <Games st={st} state={state} label={label} />}
 
         <p className="field-help pad">{TRIP_FORMATS[trip.format]?.name || TRIP_FORMATS.money.name}. Each round keeps its own games and bets. Someone who plays only some rounds is on the trip for those rounds.</p>
-        {deletable && <button className="text-link danger" onClick={del}><Icon name="trash" /> Delete the trip</button>}
+        {/* Only the organizer deletes; everyone else can hide it from their own Tab and Up next */}
+        {del_.ok && <button className="text-link danger" onClick={del}><Icon name="trash" /> Delete the trip</button>}
+        {st.organizer && !del_.ok && <p className="field-help pad">Trip money has been paid, so the trip stays. You can still edit its name and dates.</p>}
+        {(!st.organizer || hidden) && <button className="text-link" onClick={hide}><Icon name={hidden ? 'eye' : 'eye-slash'} /> {hidden ? 'Show it on your Tab and Up next' : 'Hide this trip'}</button>}
+        {!st.organizer && !hidden && <p className="field-help pad">Hiding takes it off your own Tab and Up next. Your rounds and money stay as they are.</p>}
       </div>
       <div className="cta-wrap">
         {st.phase === 'ready' && <button className="full-btn pink" onClick={() => nav.push('tripSettle', { id })}>Settle the trip <Icon name="arrow-right" /></button>}
@@ -128,11 +149,13 @@ export default function Trip({ id, view: firstView = 'standings' }) {
         {(st.phase === 'on' || st.phase === 'soon') && st.money.length > 0 && (
           <>
             <button className="full-btn outline" onClick={() => setLeaving(true)}><Icon name="sign-out" /> Leaving early? Settle a part</button>
-            {!st.live.length && <button className="link-btn center" onClick={doneNow}>Done playing? Settle the trip now</button>}
+            {/* The organizer's call: it rides in the trip's plan, so every phone opens Settle the trip together */}
+            {st.organizer && !st.live.length && <button className="link-btn center" onClick={doneNow}>Done playing? Settle the trip now</button>}
           </>
         )}
+        {st.organizer && st.phase === 'ready' && trip.endedAt && !st.settling.length && <button className="link-btn center" onClick={() => endTrip(id, false)}>Still playing? Reopen the trip</button>}
       </div>
-      <TripSheet open={editing} trip={trip} onClose={() => setEditing(false)} onDone={() => setEditing(false)} />
+      {st.organizer && <TripSheet open={editing} trip={trip} onClose={() => setEditing(false)} onDone={() => setEditing(false)} />}
       <CountSheet open={counting} onClose={() => setCounting(false)} st={st} />
       <Sheet open={leaving} onClose={() => setLeaving(false)} title="Who’s leaving?">
         <p className="field-help pad">Their payments for the rounds so far. Everyone else settles after the last round.</p>
@@ -163,6 +186,24 @@ function Standings({ st, state, label, me }) {
       </div>
     ) : null;
   }
+  if (!st.standings.length && st.going.length > 1) {
+    // Who's going, before anyone has played: everyone even
+    return (
+      <>
+        <div className="trip-table">
+          {st.going.map(id => (
+            <div key={id} className={`trip-row ${id === me ? 'me' : ''}`}>
+              <span className="tr-rank">–</span>
+              <Avatar id={id} name={nameOf(state, id)} />
+              <span className="tr-main"><span className="tr-name">{label(id)}</span></span>
+              <span className="tr-amt">–</span>
+            </div>
+          ))}
+        </div>
+        <p className="field-help pad">Who’s going. The standings fill in as soon as a round is finished, and anyone who plays a round for the trip joins them.</p>
+      </>
+    );
+  }
   if (!st.standings.length) return <p className="field-help pad">The standings fill in as soon as a round is finished.</p>;
   const total = st.done.filter(r => st.money.includes(r)).length;
   return (
@@ -181,7 +222,7 @@ function Standings({ st, state, label, me }) {
         ))}
       </div>
       {st.live.map(r => <LiveRow key={r.id} round={r} />)}
-      <p className="field-help pad">Finished rounds on this phone{total > 1 ? `, all ${total} of them` : ''}. Adds up to $0 across everyone on the trip. Someone who missed a round sees only the rounds they played, but what each pair owes is the same on both phones.</p>
+      <p className="field-help pad">Finished rounds on this phone{total > 1 ? `, all ${total} of them` : ''}. Adds up to $0 across everyone on the trip. Someone who missed a round sees only the rounds they played, but the payments are the same on every phone.</p>
     </>
   );
 }
@@ -266,18 +307,22 @@ function CountSheet({ open, onClose, st }) {
 }
 
 /**
- * Settle the trip: what's left over just the trip's rounds (each pair's net on the shared rounds,
- * the fewest payments for the rest), each with the payee's app, marked paid here. `who`: just
- * that person's part, for someone leaving early.
+ * Settle the trip: what's left over just the trip's rounds (the published plan's fewest payments,
+ * the same on every phone; before there is one, each pair's net on the shared rounds and the
+ * fewest payments for the rest), each with the payee's app, marked paid here. `who`: just that
+ * person's part, for someone leaving early. While the plan is being worked out again (a round
+ * added, a score fixed) nothing can be marked, so no phone pays what the next version changes.
  */
 export function TripSettle({ id, who = null }) {
   const nav = useNav();
   const state = useStore();
   const { showToast } = useUI();
   useTabSync({ live: true });
+  useTripPlans();
   const off = usePaymentsOff();
   const st = tripStatus(state, id);
   const { me, label, short } = useWho(state);
+  useSeenPlan(id, st?.published.version || 0);
   if (!st) {
     return <Screen><Header title="Settle the trip" small onBack={nav.pop} /><div className="scroll"><Empty title="This trip is gone" /></div></Screen>;
   }
@@ -309,17 +354,19 @@ export function TripSettle({ id, who = null }) {
 
   const title = who ? (who === me ? 'Settle your part' : `Settle ${short(who)}’s part`) : `Settle ${trip.name}`;
   const people = st.standings.map(p => p.id);
+  const updating = st.published.status === 'stale' && n > 0;
   return (
     <Screen>
       <Header title={title} small onBack={nav.pop} />
       <div className="scroll">
         {n > 0 ? (
           <div className="settle-lede">
-            <div className="eyebrow">{who ? 'Leaving early' : 'Whole trip'}</div>
+            <div className="eyebrow">{who ? 'Leaving early' : 'Whole trip'}{st.published.updated && <> <span className="trip-updated">Updated</span></>}</div>
             <div className="d settle-count">{n} payment{n === 1 ? '' : 's'}</div>
             <p>{who
               ? `Just ${who === me ? 'your' : `${short(who)}’s`} payments for the rounds so far. Everyone else settles after the last round.`
-              : st.perRound > n ? `Round by round it would have been ${st.perRound}.` : 'Every round is netted first, so nobody sends money that just comes back to them.'}</p>
+              : st.perRound > n ? `Round by round it would have been ${st.perRound}.` : 'Every round is netted first, so nobody sends money that just comes back to them.'}
+              {st.published.updated ? ' A round or a score changed since you last looked, so these are the new payments.' : ''}</p>
           </div>
         ) : (
           <div className="block trip-square">
@@ -329,7 +376,11 @@ export function TripSettle({ id, who = null }) {
           </div>
         )}
 
-        {mineLines.map((t, i) => {
+        {updating && (
+          <p className="hint-card"><Icon name="arrows-clockwise" /> A round or a score changed, so the trip’s payments are being worked out again on {theirPhone(st)}. They show here as soon as they’re ready, the same on every phone. Nothing can be marked paid until then.</p>
+        )}
+
+        {!updating && mineLines.map((t, i) => {
           const iPay = t.from === me;
           const other = iPay ? t.to : t.from;
           const app = payInfoFor(state, iPay ? other : state.me);
@@ -350,7 +401,7 @@ export function TripSettle({ id, who = null }) {
           );
         })}
 
-        {others.length > 0 && (
+        {!updating && others.length > 0 && (
           <>
             <div className="sec-label">{mineLines.length ? 'Everyone else' : 'Who pays who'}</div>
             {others.map(t => (
@@ -382,7 +433,9 @@ export function TripSettle({ id, who = null }) {
           </>
         )}
 
-        <p className="field-help pad">Nobody pays someone they didn’t play with on the trip. Rounds shared live settle between the two people in them, so every phone agrees. Money from before the trip stays on the Tab as it is.{off ? '' : ' A payment marked here shows on the phones of everyone in the rounds it’s tied to.'}</p>
+        <p className="field-help pad">Nobody pays someone they didn’t play with on the trip. {st.published.status === 'live'
+          ? `One plan for the whole trip, worked out on ${theirPhone(st)}, so every phone shows the same payments.`
+          : 'Rounds shared live settle between the two people in them, so every phone agrees.'} Money from before the trip stays on the Tab as it is.{off ? '' : ' A payment marked here shows on the phones of everyone in the rounds it’s tied to.'}</p>
       </div>
     </Screen>
   );

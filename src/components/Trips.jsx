@@ -3,18 +3,18 @@
 // trip?" in setup, and the sheet that starts or edits a trip.
 import { useCallback, useState } from 'react';
 import { createPortal } from 'react-dom';
-import { Icon, Sheet, Toggle, useUI } from './ui.jsx';
+import { Icon, Sheet, Steps, Toggle, useUI } from './ui.jsx';
 import { Avatar } from './Pay.jsx';
 import { useStore } from '../lib/store.js';
 import { useNav } from '../lib/nav.js';
 import { money } from '../lib/golf.js';
 import { nameOf } from '../lib/ledger.js';
-import { placeOf } from '../lib/format.js';
+import { placeOf, sortedPlayers } from '../lib/format.js';
 import { dayLabel, isoDate, timeLabel } from '../lib/plans.js';
 import { canonicalOf } from '../lib/pair-debts.js';
 import { TRIP_FORMATS, myTripNet, startsLine, tripChips, tripDates, tripStatus, upDown } from '../lib/trips.js';
 import { countsMoney, playForOf } from '../lib/play-for.js';
-import { editTrip, makeTrip } from '../lib/trip-store.js';
+import { editTrip, hideTrip, makeTrip } from '../lib/trip-store.js';
 
 const first = name => String(name || '').trim().split(/\s+/)[0];
 
@@ -46,6 +46,23 @@ function tripEyebrow(st) {
 
 const roundsLine = n => `${n} round${n === 1 ? '' : 's'}`;
 
+/** "Updated" by the eyebrow, when the trip's payments changed since you last looked (trip-plan.js). */
+const Updated = ({ st }) => (st.published?.updated ? <span className="trip-updated">Updated</span> : null);
+
+/**
+ * A trip card stays on the Tab and Up next until you hide it: the small x, with an undo. It's only
+ * off this phone's Tab and Up next; the rounds and their money stay as they are.
+ */
+function HideX({ st }) {
+  const { showToast } = useUI();
+  const hide = e => {
+    e.stopPropagation();
+    hideTrip(st.trip.id);
+    showToast(`${st.trip.name} is hidden. Its rounds and money stay as they are.`, { label: 'Undo', run: () => hideTrip(st.trip.id, false) });
+  };
+  return <button className="trip-hide" onClick={hide} aria-label={`Hide ${st.trip.name}`}><Icon name="x" /></button>;
+}
+
 /**
  * The trip's card on the Tab. Trip money is already in each person's total below it; the card is
  * the trip's own view of it, one tap from the standings and Settle the trip.
@@ -56,26 +73,30 @@ export function TripTabCard({ status: st }) {
   const net = myTripNet(state, st);
   const n = st.plan.length;
   const sub = st.phase === 'soon' ? startsLine(st.trip.start)
+    : st.phase === 'empty' ? 'No rounds were counted for it'
     : st.pointsOnly ? `${roundsLine(st.done.length)}${st.phase === 'on' ? ' so far' : ''} · played for points`
     : st.phase === 'ready' ? `${n} payment${n === 1 ? '' : 's'} square${n === 1 ? 's' : ''} the trip · ${st.payments.length} paid so far`
     : st.phase === 'square' ? `${roundsLine(st.done.length)} · settled`
     : `${roundsLine(st.done.length)} so far · settle after the last round`;
   const played = st.standings.some(p => p.id === canonicalOf(state)(state.me));
   return (
-    <button className="trip-card on-tab" onClick={() => nav.push('trip', { id: st.trip.id })} aria-label={`${st.trip.name}. ${sub}${played && st.money.length ? `. ${upDown(net)}` : ''}. See the trip`}>
-      <div className="row-main">
-        <div className="eyebrow">{tripEyebrow(st)}</div>
-        <div className="trip-name d">{st.trip.name}</div>
-        <div className="trip-sub">{sub}</div>
-      </div>
-      {played && st.money.length > 0 && (
-        <div className="trip-amt-col">
-          <div className={`trip-amt d ${net > 0 ? 'pos' : net < 0 ? 'neg' : ''}`}>{money(net, { sign: true })}</div>
-          <div className="trip-amt-sub">{st.phase === 'square' ? (net > 0 ? 'won' : net < 0 ? 'lost' : 'even') : 'so far'}</div>
+    <div className="trip-card-wrap">
+      <button className="trip-card on-tab" onClick={() => nav.push('trip', { id: st.trip.id })} aria-label={`${st.trip.name}. ${sub}${played && st.money.length ? `. ${upDown(net)}` : ''}. See the trip`}>
+        <div className="row-main">
+          <div className="eyebrow">{tripEyebrow(st)} <Updated st={st} /></div>
+          <div className="trip-name d">{st.trip.name}</div>
+          <div className="trip-sub">{sub}</div>
         </div>
-      )}
-      <span className="chevron"><Icon name="caret-right" /></span>
-    </button>
+        {played && st.money.length > 0 && (
+          <div className="trip-amt-col">
+            <div className={`trip-amt d ${net > 0 ? 'pos' : net < 0 ? 'neg' : ''}`}>{money(net, { sign: true })}</div>
+            <div className="trip-amt-sub">{st.phase === 'square' ? (net > 0 ? 'won' : net < 0 ? 'lost' : 'even') : 'so far'}</div>
+          </div>
+        )}
+        <span className="chevron"><Icon name="caret-right" /></span>
+      </button>
+      <HideX st={st} />
+    </div>
   );
 }
 
@@ -102,20 +123,24 @@ export function TripUpNext({ status: st, renderPlan }) {
   const title = st.phase === 'soon' ? startsLine(st.trip.start)
     : st.phase === 'ready' ? (line ? `That’s the trip. ${line.replace('You’re ', 'You finished ')}` : 'That’s the trip')
     : st.phase === 'square' ? (st.pointsOnly ? 'That’s the trip' : 'All square on the trip')
+    : st.phase === 'empty' ? 'No rounds were counted for it'
     : line || `${roundsLine(st.done.length)} played`;
   return (
     <>
       <div className="sec-label">Your trip</div>
-      <button className="trip-card" onClick={() => nav.push('trip', { id: st.trip.id })} aria-label={`${st.trip.name}. ${title}. See the trip`}>
-        <div className="row-main">
-          <div className="eyebrow">{st.trip.name}{st.day ? ` · Day ${st.day} of ${st.days}` : ` · ${tripDates(st.trip)}`}</div>
-          <div className="trip-name d">{title}</div>
-          <TripDays status={st} />
-          {next && <div className="trip-sub">Next: {dayLabel(next.date)}{next.teeTime ? ` ${timeLabel(next.teeTime)}` : ''} · {next.course?.name || 'Course to be set'}</div>}
-          {st.phase === 'ready' && <div className="trip-sub strong">Settle the trip <Icon name="arrow-right" /></div>}
-        </div>
-        <span className="chevron"><Icon name="caret-right" /></span>
-      </button>
+      <div className="trip-card-wrap">
+        <button className="trip-card" onClick={() => nav.push('trip', { id: st.trip.id })} aria-label={`${st.trip.name}. ${title}. See the trip`}>
+          <div className="row-main">
+            <div className="eyebrow">{st.trip.name}{st.day ? ` · Day ${st.day} of ${st.days}` : ` · ${tripDates(st.trip)}`} <Updated st={st} /></div>
+            <div className="trip-name d">{title}</div>
+            <TripDays status={st} />
+            {next && <div className="trip-sub">Next: {dayLabel(next.date)}{next.teeTime ? ` ${timeLabel(next.teeTime)}` : ''} · {next.course?.name || 'Course to be set'}</div>}
+            {st.phase === 'ready' && <div className="trip-sub strong">Settle the trip <Icon name="arrow-right" /></div>}
+          </div>
+          <span className="chevron"><Icon name="caret-right" /></span>
+        </button>
+        <HideX st={st} />
+      </div>
       {st.planned.map(renderPlan)}
     </>
   );
@@ -207,8 +232,9 @@ const plusDays = (iso, n) => {
 };
 
 /**
- * Start a trip, or edit one (`trip`): its name, first and last day, and where (optional). Rounds
- * started in those dates ask to count for it. `onDone(trip)` after saving.
+ * Start a trip, or edit one (`trip`): its name, first and last day and where (optional), then
+ * who's going (optional, picked from Players). Rounds started in those dates ask to count for it.
+ * `onDone(trip)` after saving.
  */
 export function TripSheet({ open, onClose, onDone, trip = null }) {
   return (
@@ -230,43 +256,76 @@ function AtScreen({ children }) {
 function TripForm({ trip, onDone }) {
   const { showToast } = useUI();
   const today = isoDate();
+  const [step, setStep] = useState(0);
   const [name, setName] = useState(trip?.name || '');
   const [start, setStart] = useState(trip?.start || today);
   const [end, setEnd] = useState(trip?.end || plusDays(trip?.start || today, 2));
   const [where, setWhere] = useState(trip?.where || '');
+  const [people, setPeople] = useState(() => trip?.people || []);
   const ok = name.trim().length > 0 && /^\d{4}-\d{2}-\d{2}$/.test(start) && /^\d{4}-\d{2}-\d{2}$/.test(end);
   const save = () => {
     if (!ok) return;
     const last = end < start ? start : end;
     if (trip) {
-      editTrip(trip.id, { name: name.trim().slice(0, 32), start, end: last, where: where.trim().slice(0, 32) || null });
+      editTrip(trip.id, { name: name.trim().slice(0, 32), start, end: last, where: where.trim().slice(0, 32) || null, people });
       showToast('Trip updated');
       onDone?.(trip);
       return;
     }
-    const t = makeTrip({ name, start, end: last, where });
+    const t = makeTrip({ name, start, end: last, where, people });
     showToast(`${t.name} is on`);
     onDone?.(t);
   };
   return (
     <div className="block trip-form">
-      <label className="field-label" htmlFor="trip-name">Name</label>
-      <input id="trip-name" className="text-input" value={name} onChange={e => setName(e.target.value)} maxLength={32} placeholder="Bandon 2026" autoFocus={!trip} />
-      <div className="trip-form-days">
-        <div>
-          <label className="field-label" htmlFor="trip-start">First day</label>
-          <input id="trip-start" className="text-input" type="date" value={start} onChange={e => { setStart(e.target.value); if (end < e.target.value) setEnd(e.target.value); }} />
-        </div>
-        <div>
-          <label className="field-label" htmlFor="trip-end">Last day</label>
-          <input id="trip-end" className="text-input" type="date" value={end} min={start} onChange={e => setEnd(e.target.value)} />
-        </div>
-      </div>
-      <label className="field-label" htmlFor="trip-where">Where <span className="opt">(optional)</span></label>
-      <input id="trip-where" className="text-input" value={where} onChange={e => setWhere(e.target.value)} maxLength={32} placeholder="Bandon Dunes Resort" />
-      <p className="field-help">{TRIP_FORMATS.money.name}: each round keeps its own games and bets, everyone on the trip sees the standings, and it’s settled once, right after the last round. Rounds started in these dates ask to count for it.</p>
-      <button className="full-btn" style={{ marginTop: 14 }} disabled={!ok} onClick={save}>{trip ? 'Save changes' : 'Start the trip'} <Icon name={trip ? 'check' : 'arrow-right'} /></button>
+      <Steps steps={['Trip', 'Who’s going']} current={step} canGo={i => i === 0 || ok} onGo={setStep} />
+      {step === 0 ? (
+        <>
+          <label className="field-label" htmlFor="trip-name">Name</label>
+          <input id="trip-name" className="text-input" value={name} onChange={e => setName(e.target.value)} maxLength={32} placeholder="Bandon 2026" autoFocus={!trip} />
+          <div className="trip-form-days">
+            <div>
+              <label className="field-label" htmlFor="trip-start">First day</label>
+              <input id="trip-start" className="text-input" type="date" value={start} onChange={e => { setStart(e.target.value); if (end < e.target.value) setEnd(e.target.value); }} />
+            </div>
+            <div>
+              <label className="field-label" htmlFor="trip-end">Last day</label>
+              <input id="trip-end" className="text-input" type="date" value={end} min={start} onChange={e => setEnd(e.target.value)} />
+            </div>
+          </div>
+          <label className="field-label" htmlFor="trip-where">Where <span className="opt">(optional)</span></label>
+          <input id="trip-where" className="text-input" value={where} onChange={e => setWhere(e.target.value)} maxLength={32} placeholder="Bandon Dunes Resort" />
+          <p className="field-help">{TRIP_FORMATS.money.name}: each round keeps its own games and bets, everyone on the trip sees the standings, and it’s settled once, in the fewest payments, right after the last round. Rounds started in these dates ask to count for it.</p>
+          <button className="full-btn" style={{ marginTop: 14 }} disabled={!ok} onClick={() => setStep(1)}>Next <Icon name="arrow-right" /></button>
+        </>
+      ) : (
+        <>
+          <WhoGoing picked={people} onChange={setPeople} />
+          <button className="full-btn" style={{ marginTop: 14 }} disabled={!ok} onClick={save}>{trip ? 'Save changes' : 'Start the trip'} <Icon name={trip ? 'check' : 'arrow-right'} /></button>
+        </>
+      )}
     </div>
+  );
+}
+
+/** "Who's going?": your players, ticked or not. Optional: anyone who plays a trip round is on it anyway. */
+function WhoGoing({ picked, onChange }) {
+  const state = useStore();
+  const list = sortedPlayers(state).filter(p => p.id !== state.me);
+  const on = new Set(picked);
+  const flip = id => onChange(on.has(id) ? picked.filter(x => x !== id) : [...picked, id]);
+  return (
+    <>
+      <p className="field-help">Optional. Picked friends show in the standings before anyone plays, and rounds with them in it count for the trip by default. Anyone who plays a round for the trip is on it too.</p>
+      {list.length === 0 && <p className="field-help">Add friends on Players to pick them here, or skip this: whoever plays a trip round is on the trip.</p>}
+      <div className="trip-who">
+        {list.map(p => (
+          <button key={p.id} type="button" className="sheet-item" aria-pressed={on.has(p.id)} onClick={() => flip(p.id)}>
+            <span><Icon name={on.has(p.id) ? 'check-square' : 'square'} fill={on.has(p.id)} /><Avatar id={p.id} name={p.name} /> {p.name}</span>
+          </button>
+        ))}
+      </div>
+    </>
   );
 }
 

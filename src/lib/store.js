@@ -63,7 +63,10 @@ function fresh() {
     carries: [],       // carry-overs between two people (see carry.js)
     tabRows: {},       // this phone's copy of the shared Tab rows, for who's square (see shared-tab.js)
     plans: {},         // upcoming rounds (see plans.js)
-    trips: {},         // golf trips this phone made: name, dates, "done playing" (see trips.js)
+    trips: {},         // golf trips this phone made: name, dates, who's going, "done playing" (see trips.js)
+    tripHidden: {},    // trips you hid from the Tab and Up next: { tripId: when }, synced in the profile
+    tripPlans: {},     // the organizer's published plan for each trip, from the server (see trip-plan.js)
+    tripPlanSeen: {},  // the plan version you last saw for each trip, for "Updated" (this phone only)
     usuals: [],        // saved "usual" setups, at most 5 (see usuals.js); an array, so never inside settings
     links: {},         // "Same person as...": { aliasId: keptId } (see people-links.js)
     unlinks: [],       // "Not the same person": [[a, b]] pairs that stay apart (see people-links.js)
