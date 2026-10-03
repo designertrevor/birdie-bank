@@ -20,7 +20,7 @@ import { countsMoney, playForOf, tabResults, unitFmt } from '../lib/play-for.js'
 import { SaveUsualButton } from '../components/Usuals.jsx';
 import { DrivesShortfall } from '../components/ScrambleDrives.jsx';
 import { strokeKey } from '../lib/stroke-key.js';
-import { toParOf, toParText, toParTone, toParWords } from '../lib/to-par.js';
+import { getsStrokes, toParOf, toParText, toParTone, toParWords } from '../lib/to-par.js';
 import { BetsBreakdown } from '../components/PairBets.jsx';
 import { RoundWhereFrom } from '../components/WhereFrom.jsx';
 
@@ -579,15 +579,17 @@ export function Scorecard({ round, current, onHole }) {
         <tbody>
           {units.map(p => {
             const sum = scoreSummary(round, p.id);
-            const par = toParOf(round, p, { withNet: anyStrokes });
+            // Net under the name only for someone who gets strokes: "E net E" says nothing
+            const showNet = anyStrokes && getsStrokes(round, p);
+            const par = toParOf(round, p, { withNet: showNet });
             return (
               <tr key={p.id}>
                 <td className="sticky">
                   <span className="sc-name">{p.team ? p.name : p.name.split(' ')[0]}</span>
                   {par.played > 0 && (
                     <span className="sc-topar">
-                      <span className={`sc-par ${toParTone(par.gross)}`} aria-label={anyStrokes ? `Gross ${toParWords(par.gross)}` : toParWords(par.gross)}>{toParText(par.gross)}</span>
-                      {anyStrokes && <span className={`sc-par net ${toParTone(par.net)}`} aria-label={`Net ${toParWords(par.net)}`}>net {toParText(par.net)}</span>}
+                      <span className={`sc-par ${toParTone(par.gross)}`} aria-label={showNet ? `Gross ${toParWords(par.gross)}` : toParWords(par.gross)}>{toParText(par.gross)}</span>
+                      {showNet && <span className={`sc-par net ${toParTone(par.net)}`} aria-label={`Net ${toParWords(par.net)}`}>net {toParText(par.net)}</span>}
                     </span>
                   )}
                 </td>

@@ -2,7 +2,7 @@
 // player has a score on count, so a hole not played yet (or after they left) changes nothing.
 // A pickup counts as the card shows it (net double bogey). Net uses the main game's strokes,
 // the same ones as the dots on the card, so it can end in ½ with half strokes on.
-import { grossFor, netFor } from './round.js';
+import { grossFor, netFor, popsFor } from './round.js';
 
 /** { played, gross, net } to par for a scorer (a player, or a scramble team). `net` only when `withNet`. */
 export function toParOf(round, scorer, { withNet = false } = {}) {
@@ -15,6 +15,11 @@ export function toParOf(round, scorer, { withNet = false } = {}) {
     if (withNet) net += netFor(round, scorer, h) - h.par;
   }
   return { played, gross, net: withNet ? net : null };
+}
+
+/** Whether a scorer gets (or gives) a stroke anywhere in the round: only then is their net worth showing. */
+export function getsStrokes(round, scorer) {
+  return round.holes.some(h => popsFor(round, scorer, h) !== 0);
 }
 
 /** "+3", "E", "−1", "+1½", "−½". The minus is a real minus sign, like net totals elsewhere. */

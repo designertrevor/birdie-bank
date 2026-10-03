@@ -2,7 +2,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { createRound } from './round.js';
-import { toParOf, toParText, toParTone, toParWords } from './to-par.js';
+import { getsStrokes, toParOf, toParText, toParTone, toParWords } from './to-par.js';
 
 const course = {
   id: 'c9', name: 'Nine', city: 'Town',
@@ -51,4 +51,13 @@ test('net to par takes off the strokes on the holes played; a pickup counts as n
   // Bo gets none, so his net is his gross
   const bo = toParOf(r, who(r, 'b'), { withNet: true });
   assert.equal(bo.net, bo.gross);
+});
+
+test('net shows only for a player who gets strokes (QA: "Cal E net E")', () => {
+  const r = mk({ useHandicaps: true });
+  // Ann's 10 gets strokes off Bo's 0; Bo gets none, so his card shows gross alone
+  assert.equal(getsStrokes(r, who(r, 'a')), true);
+  assert.equal(getsStrokes(r, who(r, 'b')), false);
+  const gross = mk({ useHandicaps: false });
+  assert.equal(getsStrokes(gross, who(gross, 'a')), false);
 });
