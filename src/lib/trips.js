@@ -365,6 +365,10 @@ export function tripStatus(state, id, { now = Date.now() } = {}) {
     // Played only for points so far: nothing to pay, and never a dollar
     pointsOnly: !money.length && pointsDone(rounds).length > 0,
     perRound: money.reduce((a, r) => a + tabResults(r).transfers.length, 0),
+    // With a plan live: trip rounds with money it leaves out though they finished before it was
+    // published, so the organizer's phone doesn't have them (they didn't play) and the players in
+    // them settle those between themselves. A round finished later is waiting for the next version.
+    between: live_ ? pairRounds.filter(r => live_.pending.includes(r.id) && finishedAt(r) < (live_.plan?.at || 0) && tabResults(r).transfers.length) : [],
     lastDone, squareAt: phase === 'square' ? Math.max(lastPaid, lastDone) : null,
     ...tripDay(trip, today),
   };

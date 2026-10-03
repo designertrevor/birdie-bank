@@ -317,6 +317,9 @@ function CountSheet({ open, onClose, st }) {
  * person's part, for someone leaving early. While the plan is being worked out again (a round
  * added, a score fixed) nothing can be marked, so no phone pays what the next version changes.
  */
+/** "Ann and Bob", "Ann, Bob and Cal". */
+const listNames = names => (names.length < 2 ? names.join('') : `${names.slice(0, -1).join(', ')} and ${names.at(-1)}`);
+
 export function TripSettle({ id, who = null }) {
   const nav = useNav();
   const state = useStore();
@@ -421,6 +424,18 @@ export function TripSettle({ id, who = null }) {
               </div>
             ))}
           </>
+        )}
+
+        {!who && !updating && st.between.map(r => {
+          const kept = canonicalOf(state);
+          const names = [...new Set(r.players.map(p => kept(p.id)))].map(short);
+          const day = new Date(r.finishedAt || r.createdAt).toLocaleDateString('en-US', { weekday: 'short' });
+          return (
+            <p key={r.id} className="hint-card"><Icon name="users" /> {listNames(names)} settle {day}’s round between {names.includes('You') ? 'yourselves' : 'themselves'}, since it isn’t on {theirPhone(st)}.{n > 0 ? ' Its payments are in the list above.' : ''}</p>
+          );
+        })}
+        {!who && st.organizer && st.published.status === 'live' && (
+          <p className="field-help pad">Rounds you didn’t play aren’t on your phone, so the people in them settle those between themselves.</p>
         )}
 
         {paid.length > 0 && (

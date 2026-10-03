@@ -410,3 +410,16 @@ test('the organizer’s phone republishes only when the plan out there stops hol
   // A deleted trip is never republished
   assert.equal(duePlan({ ...phones.t, tripPlans: { t_bandon: { tripId: 't_bandon', version: 3, deleted: true } } }, trip, { now: NOW }), null);
 });
+
+test('a trip round the organizer didn’t play stays between its players, and their Settle the trip says so', () => {
+  const ab = ['a', 'b'];
+  const q4 = round('q4', ab, wins(ab, [1, 'a'], [2, 'a']), { at: OCT(18, 9), code: 'DDDDDD', skin: 5 });
+  const phones = phonesOf([...rounds5(), q4]);
+  publish(phones, buildPlan(phones.t, 't_bandon', { now: NOW }));
+  const onA = tripStatus(phones.a, 't_bandon', { now: NOW });
+  assert.equal(planState(phones.a, 't_bandon', { now: NOW }).status, 'live');
+  assert.deepEqual(onA.between.map(r => r.id), ['q4']);
+  assert.ok(onA.plan.some(t => t.amount > 0), 'its money is still in a’s payments');
+  assert.deepEqual(tripStatus(phones.t, 't_bandon', { now: NOW }).between, [], 'the organizer’s phone doesn’t have it');
+  assert.deepEqual(tripStatus(phones.c, 't_bandon', { now: NOW }).between, [], 'nor does anyone who didn’t play it');
+});
