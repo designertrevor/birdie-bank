@@ -2102,7 +2102,8 @@ export const CASH_LABEL = 'Side bets for money';
 
 /**
  * A reward round's side bets played for money, worked out apart from everything else (they go on
- * the Tab in dollars; the reward is decided on the games and the points bets):
+ * the Tab in dollars; the reward is decided on the games and the points bets). Its transfers are
+ * pair by pair, between the two players of each bet:
  * { label, balances, pairs, transfers, standings, list }, or null when there are none.
  */
 function cashResults(round, cash) {
@@ -2116,7 +2117,16 @@ function cashResults(round, cash) {
     pairs[ids[i]][ids[j]] = v; pairs[ids[j]][ids[i]] = -v || 0;
   }
   const standings = [...round.players].map(p => ({ ...p, amount: balances[p.id] })).sort((x, y) => y.amount - x.amount);
-  return { label: CASH_LABEL, balances, pairs, transfers: minimalTransfers(balances), standings, list: b.list };
+  // Each bet is between its two players, so the money goes between them too: one payment a pair,
+  // never netted through someone who wasn't in the bet (the editor says "between the two of you")
+  const transfers = [];
+  for (let i = 0; i < ids.length; i++) for (let j = i + 1; j < ids.length; j++) {
+    const v = pairs[ids[i]][ids[j]];
+    if (v > 0) transfers.push({ from: ids[j], to: ids[i], amount: v });
+    else if (v < 0) transfers.push({ from: ids[i], to: ids[j], amount: -v });
+  }
+  transfers.sort((x, y) => y.amount - x.amount);
+  return { label: CASH_LABEL, balances, pairs, transfers, standings, list: b.list };
 }
 const withCash = (res, cash) => (cash ? { ...res, cash } : res);
 
