@@ -5,7 +5,10 @@ import assert from 'node:assert/strict';
 import { createRound, roundResults } from './round.js';
 import { addBet, setBetWinner } from './pair-bets.js';
 import { tabResults } from './play-for.js';
-import { newTrip, tripStamp } from './trips.js';
+import { newTrip, tripStamp, tripStatus, tripPayment } from './trips.js';
+import { outstanding, tabBalances } from './ledger.js';
+import { buildPlan, planState } from './trip-plan.js';
+import { allocatePayment, applyRows } from './shared-tab.js';
 
 const flat9 = { id: 'f9', name: 'Flat Nine', city: 'Town', tees: [], holes: Array.from({ length: 9 }, (_, i) => ({ par: 4, hdcp: i + 1 })) };
 const OCT = (day, hour = 12) => new Date(2026, 9, day, hour).getTime();
@@ -43,4 +46,37 @@ test('a reward round’s money side bets pay pair by pair, never through someone
   assert.deepEqual(c.balances, { t: -5, a: 5, b: 0 });
   assert.deepEqual(c.transfers.map(x => `${x.from}>${x.to} ${x.amount}`).sort(), ['b>a 5', 't>b 5']);
   assert.deepEqual(tabResults(r).transfers, c.transfers);
+});
+
+// ---------------------------------------------------------------------------------------------
+// Money finding 1: once a trip plan is live, the Tab counts a reward round's side bets in dollars,
+// never its points
+
+const lines = plan => plan.map(t => `${t.from}>${t.to} ${t.amount}`).sort();
+/** Each person's total on the Tab's plan: what they're owed less what they owe. */
+function perPerson(plan) {
+  const out = {};
+  for (const t of plan) { out[t.to] = Math.round(((out[t.to] || 0) + t.amount) * 100) / 100; out[t.from] = Math.round(((out[t.from] || 0) - t.amount) * 100) / 100; }
+  return out;
+}
+
+/** The reviewer's trip: Q1 a $2 skins money round, Q2 lunch with a $5 money side bet a beats b. */
+function lunchTrip() {
+  const ids = ['t', 'a', 'b'];
+  const q1 = round('q1', ids, wins(ids, [1, 't'], [2, 't'], [3, 'b']), { at: OCT(16, 15), code: 'AAAAAA' });
+  let q2 = round('q2', ids, wins(ids, [1, 'a'], [2, 'a'], [3, 'a'], [4, 't']), { at: OCT(17, 15), code: 'BBBBBB', playFor: LUNCH });
+  q2 = cashBet(q2, 'cb', ['a', 'b'], 5, 'a');
+  return stateOf('t', [q1, q2], { trips: { tp: TRIP } });
+}
+
+test('a live trip plan keeps a reward round’s points off the Tab: the plan matches the Tab without it', () => {
+  const s0 = lunchTrip();
+  assert.deepEqual(roundResults(s0.rounds.q2).balances, { t: -2, a: 10, b: -8 }); // points
+  assert.deepEqual(lines(outstanding(s0, { now: NOW })), ['a>t 6', 'b>a 5']);
+  const plan = buildPlan(s0, 'tp', { now: NOW });
+  const s1 = { ...s0, tripPlans: { tp: plan } };
+  assert.equal(planState(s1, 'tp', { now: NOW }).status, 'live');
+  // Before the fix the points went in as dollars: b>a 8, a>t 4
+  assert.deepEqual(lines(outstanding(s1, { now: NOW })), ['a>t 6', 'b>a 5']);
+  assert.deepEqual(perPerson(outstanding(s1, { now: NOW })), tabBalances(s1));
 });

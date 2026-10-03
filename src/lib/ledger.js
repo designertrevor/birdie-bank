@@ -191,7 +191,8 @@ function planBalances(state, trip) {
   const add = (id, c) => { const k = who(id); bal[k] = (bal[k] || 0) + c; };
   for (const r of moneyRounds(state)) {
     if (skipRounds.has(r.id)) continue;
-    for (const [id, v] of Object.entries(roundResults(r).balances)) add(id, toCents(v));
+    // A reward round's side bets for money in dollars, never its points
+    for (const [id, v] of Object.entries(tabResults(r).balances)) add(id, toCents(v));
   }
   for (const s of state.settlements || []) {
     if (skipPays.has(s)) continue;
