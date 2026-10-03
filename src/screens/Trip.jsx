@@ -336,6 +336,8 @@ export function TripSettle({ id, who = null }) {
   const others = plan.filter(t => t.from !== me && t.to !== me);
   const paid = st.payments.filter(g => !who || g.from === who || g.to === who);
   const n = plan.length;
+  // Like with like: the payments the trip takes in all (still to pay and paid) against round by round
+  const all = n + paid.length;
   const note = trip.name;
   const myApp = payInfoFor(state, state.me);
 
@@ -366,10 +368,10 @@ export function TripSettle({ id, who = null }) {
         {n > 0 ? (
           <div className="settle-lede">
             <div className="eyebrow">{who ? 'Leaving early' : 'Whole trip'}{st.published.updated && <> <span className="trip-updated">Updated</span></>}</div>
-            <div className="d settle-count">{n} payment{n === 1 ? '' : 's'}</div>
+            <div className="d settle-count">{all} payment{all === 1 ? '' : 's'}{paid.length ? `, ${paid.length} paid` : ''}</div>
             <p>{who
               ? `Just ${who === me ? 'your' : `${short(who)}’s`} payments for the rounds so far. Everyone else settles after the last round.`
-              : st.perRound > n ? `Round by round it would have been ${st.perRound}.` : 'Every round is netted first, so nobody sends money that just comes back to them.'}
+              : st.perRound > all ? `Round by round it would have been ${st.perRound}.` : 'Every round is netted first, so nobody sends money that just comes back to them.'}
               {st.published.updated ? ' A round or a score changed since you last looked, so these are the new payments.' : ''}</p>
           </div>
         ) : (
