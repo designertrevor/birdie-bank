@@ -1,10 +1,11 @@
-// Picking your avatar: a Ball buddy on a backdrop, a photo, or your initials on a color. Opened from
+// Picking your avatar: a Ball buddy or a critter on a backdrop (two shelves), a photo, or your
+// initials on a color. Opened from
 // your profile. Every path ends on the same save, and friends see it on seats, the Tab and results.
 import { useEffect, useRef, useState } from 'react';
 import { Icon, Segmented, Sheet, useUI } from './ui.jsx';
 import { AvatarArt } from './Avatar.jsx';
 import { BuddyArt } from './BuddyArt.jsx';
-import { BACKDROPS, BUDDIES, avatarModel, buddyAvatar, buddyOf, initialsAvatar, initialsOf } from '../lib/avatars.js';
+import { BACKDROPS, BUDDIES, SHELVES, avatarModel, buddyAvatar, buddyOf, initialsAvatar, initialsOf, shelfOf } from '../lib/avatars.js';
 import { removePhoto, setAvatar, uploadPhoto, useMyProfile } from '../lib/profiles.js';
 import { useAccount } from '../lib/cloud.js';
 
@@ -31,6 +32,8 @@ function PickerBody({ onClose }) {
   // The buddy and the initials keep their own picks while you flip between tabs
   const [buddy, setBuddy] = useState(() => (cur?.kind === 'buddy' && buddyOf(cur.id) ? buddyAvatar(cur.id, cur.bg) : buddyAvatar(BUDDIES[0].id)));
   const [bgTouched, setBgTouched] = useState(cur?.kind === 'buddy');
+  // The shelf showing: the one your buddy is on, Ball buddies to start
+  const [shelf, setShelf] = useState(() => buddyOf(cur?.kind === 'buddy' ? cur.id : null)?.shelf || SHELVES[0].id);
   const [initials, setInitials] = useState(() => (cur?.kind === 'initials' ? initialsAvatar(cur.bg, cur.letters) : initialsAvatar('lav', 2)));
   const [photo, setPhoto] = useState(null); // { file, url } a picture picked here, not saved yet
   const [busy, setBusy] = useState(false);
@@ -92,12 +95,19 @@ function PickerBody({ onClose }) {
       </div>
       <div style={{ padding: '0 16px 8px' }}>
         <Segmented label="Kind of avatar" className="press-mode-row" btn="pm-btn" value={tab} onChange={v => { setTab(v); setErr(null); }}
-          options={[{ value: 'buddy', label: 'Ball buddies' }, { value: 'photo', label: 'Photo' }, { value: 'initials', label: 'Initials' }]} />
+          options={[{ value: 'buddy', label: 'Characters' }, { value: 'photo', label: 'Photo' }, { value: 'initials', label: 'Initials' }]} />
       </div>
       {tab === 'buddy' && (
         <div className="av-pane">
-          <div className="av-grid" role="radiogroup" aria-label="Ball buddies">
-            {BUDDIES.map(b => {
+          <div className="chip-row flush av-shelves" role="group" aria-label="Shelf">
+            {SHELVES.map(x => (
+              <button key={x.id} type="button" className={`pill-btn sm ${shelf === x.id ? 'on' : ''}`} aria-pressed={shelf === x.id} onClick={() => setShelf(x.id)}>
+                {x.name}{buddyOf(buddy.id)?.shelf === x.id && shelf !== x.id ? <><span className="av-shelf-dot" aria-hidden="true" /><span className="sr-only">, your pick is here</span></> : null}
+              </button>
+            ))}
+          </div>
+          <div className="av-grid" role="radiogroup" aria-label={SHELVES.find(x => x.id === shelf)?.name}>
+            {shelfOf(shelf).map(b => {
               const on = buddy.id === b.id;
               return (
                 <button key={b.id} type="button" role="radio" aria-checked={on} aria-label={b.name} className={`av-pick ${on ? 'on' : ''}`} onClick={() => pickBuddy(b.id)}>

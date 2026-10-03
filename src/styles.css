@@ -1888,3 +1888,8 @@ button.trip-card:active { transform: scale(.97); }
 /* Onboarding: a first Ball buddy under your name */
 .ob-buddies { padding: 4px 0 2px; }
 .av-pick.sm, .av-pick.sm .av-tile { width: 56px; height: 56px; }
+
+/* ---------- Profile follow-ups: avatar shelves (critters), money privacy with Everyone (overnight 6 follow-ups, profiles) ---------- */
+.av-shelves { justify-content: center; padding: 4px 0 2px; }
+.av-shelf-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--pink-fill); display: inline-block; }
+.pf-money-seg .pm-btn { font-size: 13px; padding: 0 4px; }

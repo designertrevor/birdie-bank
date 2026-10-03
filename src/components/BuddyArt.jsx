@@ -1,5 +1,5 @@
 // The Ball buddies: the golf ball from the empty states, each in its own hat with its own face,
-// on a backdrop. Drawn on a 64 by 64 square; the avatar circle around it does the clipping.
+// on a backdrop, and the critters shelf (birdie, eagle, goose and friends) in the same palette. Drawn on a 64 by 64 square; the avatar circle around it does the clipping.
 // The list and the names live in lib/avatars.js.
 import { backdropOf } from '../lib/avatars.js';
 
@@ -130,16 +130,144 @@ const ART = {
       <path d="M27 46 Q32 49.5 37 45" {...round} />
     </>
   ),
+  // More hats (overnight 6 follow-ups)
+  tam: () => (
+    <>
+      <circle cx="32" cy="10.5" r="4.6" fill="#ff4d8b" />
+      <path d="M10 25 Q11 13 32 12.5 Q53 13 54 25 Q50 29.5 32 28.5 Q14 29.5 10 25Z" fill="#1a3a3a" />
+      <path d="M15 27 Q32 24.5 49 27 L49 31.5 Q32 29 15 31.5Z" fill="#e8b94a" />
+      <g stroke="#ff4d8b" strokeWidth="1.3"><path d="M21 26 V30.5" /><path d="M28 25.3 V29.8" /><path d="M36 25.3 V29.8" /><path d="M43 26 V30.5" /></g>
+      <path d="M15 29.2 Q32 26.8 49 29.2" stroke="#1a3a3a" strokeWidth="1" fill="none" />
+      <Eyes /><Cheeks /><Smile />
+    </>
+  ),
+  earmuffs: () => (
+    <>
+      <path d="M13.5 33 Q14 13.5 32 13.5 Q50 13.5 50.5 33" stroke="#1a3a3a" strokeWidth="3.4" fill="none" strokeLinecap="round" />
+      <circle cx="13" cy="35.5" r="6.4" fill="#ff4d8b" /><circle cx="51" cy="35.5" r="6.4" fill="#ff4d8b" />
+      <circle cx="13" cy="35.5" r="3" fill="#ffd6e5" /><circle cx="51" cy="35.5" r="3" fill="#ffd6e5" />
+      <Eyes /><Cheeks />
+      <ellipse cx="32" cy="46.5" rx="2.6" ry="3" fill={INK} />
+    </>
+  ),
+  partyhat: () => (
+    <>
+      <path d="M22 23 L32 4 L42 23 Q32 26 22 23Z" fill="#e8b94a" />
+      <g fill="#ff4d8b"><circle cx="30" cy="12" r="1.5" /><circle cx="34.5" cy="17" r="1.5" /><circle cx="27.5" cy="19.5" r="1.5" /><circle cx="37.5" cy="21.5" r="1.3" /></g>
+      <circle cx="32" cy="4.5" r="3.3" fill="#ff4d8b" />
+      <Eyes /><Cheeks /><Grin />
+    </>
+  ),
+  halo: () => (
+    <>
+      <ellipse cx="32" cy="9.5" rx="12" ry="3.6" fill="none" stroke="#e8b94a" strokeWidth="3" />
+      <g {...round}><path d="M22.5 39 Q25.5 41.5 28.5 39" /><path d="M35.5 39 Q38.5 41.5 41.5 39" /></g>
+      <Cheeks /><Smile />
+    </>
+  ),
 };
 
-/** One Ball buddy on its backdrop, as an SVG that fills its box. */
+/**
+ * The critters shelf: golf in-jokes in the same palette and 64 by 64 square, drawn on the backdrop
+ * without the ball (the birdie, the eagle, the goose that owns the 7th green, and friends).
+ */
+const CRITTERS = {
+  birdie: () => (
+    <>
+      <path d="M30 21 Q27 12 33 13 Q31 16.5 35 19Z" fill="#d42a6b" />
+      <circle cx="32" cy="37" r="18" fill="#ff4d8b" />
+      <ellipse cx="32" cy="44" rx="10.5" ry="8.5" fill="#ffd6e5" />
+      <path d="M14.5 38 Q10 47 20 47Z" fill="#d42a6b" /><path d="M49.5 38 Q54 47 44 47Z" fill="#d42a6b" />
+      <g fill={INK}><circle cx="26.5" cy="33" r="2.5" /><circle cx="37.5" cy="33" r="2.5" /></g>
+      <path d="M28.5 37 L35.5 37 L32 41.5Z" fill="#e8b94a" />
+    </>
+  ),
+  eagle: () => (
+    <>
+      <path d="M6 64 Q10 43 32 43 Q54 43 58 64Z" fill="#7a4a2a" />
+      <circle cx="32" cy="30" r="15" fill={BALL} />
+      <g stroke={INK} strokeWidth="2.6" strokeLinecap="round"><path d="M22 24.5 L29.5 27.5" /><path d="M42 24.5 L34.5 27.5" /></g>
+      <g fill={INK}><circle cx="27" cy="31" r="2.3" /><circle cx="37" cy="31" r="2.3" /></g>
+      <path d="M26.5 35 Q32 32.5 37.5 35 Q38 42 32 45.5 Q33 40.5 30 39.5 Q27 38.5 26.5 35Z" fill="#e8b94a" />
+    </>
+  ),
+  goose: () => (
+    <>
+      <ellipse cx="28" cy="64" rx="22" ry="11" fill="#8a6a4a" />
+      <path d="M28 58 L29 32" stroke="#2a2a2a" strokeWidth="9" strokeLinecap="round" />
+      <ellipse cx="32" cy="25" rx="10" ry="8.5" fill="#2a2a2a" />
+      <path d="M40 22 L52 25.5 L40 29Z" fill="#2a2a2a" />
+      <path d="M24 26 Q28 35 35 30 Q30 30.5 27.5 24Z" fill={BALL} />
+      <circle cx="35.5" cy="22" r="2.6" fill={BALL} /><circle cx="36" cy="22.3" r="1.3" fill={INK} />
+      <path d="M31.5 17.5 L39 20" stroke={BALL} strokeWidth="2" strokeLinecap="round" />
+    </>
+  ),
+  gopher: () => (
+    <>
+      <ellipse cx="32" cy="56" rx="22" ry="7" fill="#1a3a3a" />
+      <circle cx="19.5" cy="25" r="4.8" fill="#a8764a" /><circle cx="44.5" cy="25" r="4.8" fill="#a8764a" />
+      <circle cx="19.5" cy="25" r="2.2" fill="#ffb084" /><circle cx="44.5" cy="25" r="2.2" fill="#ffb084" />
+      <path d="M15 57 Q13 23 32 22 Q51 23 49 57Z" fill="#a8764a" />
+      <ellipse cx="32" cy="41" rx="8.5" ry="6.5" fill="#e8c9a0" />
+      <ellipse cx="32" cy="37.5" rx="2.8" ry="2" fill={INK} />
+      <rect x="29.3" y="42.5" width="5.4" height="5.5" rx="1.2" fill="#fff" stroke={INK} strokeWidth="1.2" />
+      <path d="M32 42.5 V48" stroke={INK} strokeWidth="1" />
+      <g fill={INK}><circle cx="25.5" cy="32" r="2.3" /><circle cx="38.5" cy="32" r="2.3" /></g>
+      <path d="M8 56 Q32 63 56 56 L56 64 L8 64Z" fill="#7fb8a6" />
+    </>
+  ),
+  flamingo: () => (
+    <>
+      <ellipse cx="22" cy="64" rx="18" ry="11" fill="#ff4d8b" />
+      <path d="M27 60 Q23 46 32 40 Q41 34 34 25" stroke="#ff4d8b" strokeWidth="7.5" fill="none" strokeLinecap="round" />
+      <circle cx="33" cy="21" r="8.5" fill="#ff4d8b" />
+      <path d="M38 19 Q48 19 46.5 30 Q44 25 38 25.5Z" fill={BALL} />
+      <path d="M45.3 25.8 Q46.8 28 46.5 30 Q44.4 28.4 43.6 26.9Z" fill={INK} />
+      <circle cx="34.5" cy="19" r="2" fill={INK} />
+    </>
+  ),
+  frog: () => (
+    <>
+      <ellipse cx="32" cy="42" rx="23" ry="16" fill="#5fae7a" />
+      <circle cx="20.5" cy="28" r="7.5" fill="#5fae7a" /><circle cx="43.5" cy="28" r="7.5" fill="#5fae7a" />
+      <circle cx="20.5" cy="27.5" r="4.8" fill={BALL} /><circle cx="43.5" cy="27.5" r="4.8" fill={BALL} />
+      <g fill={INK}><circle cx="21.5" cy="28" r="2.4" /><circle cx="42.5" cy="28" r="2.4" /></g>
+      <path d="M18 43 Q32 53 46 43" {...round} />
+      <g fill="#ff4d8b" opacity=".45"><circle cx="15" cy="41" r="3" /><circle cx="49" cy="41" r="3" /></g>
+    </>
+  ),
+  tiger: () => (
+    <>
+      <circle cx="17" cy="21" r="6.5" fill="#e8b94a" /><circle cx="47" cy="21" r="6.5" fill="#e8b94a" />
+      <circle cx="17" cy="21" r="3" fill="#ffd6e5" /><circle cx="47" cy="21" r="3" fill="#ffd6e5" />
+      <circle cx="32" cy="35" r="18.5" fill="#e8b94a" />
+      <circle cx="32" cy="14" r="4.5" fill={BALL} />
+      <g stroke="#1a3a3a" strokeWidth="2.6" strokeLinecap="round"><path d="M32 18 V24" /><path d="M25.5 19 L27.5 24" /><path d="M38.5 19 L36.5 24" /><path d="M13.8 34 L19 35" /><path d="M14.5 40 L19.5 40" /><path d="M50.2 34 L45 35" /><path d="M49.5 40 L44.5 40" /></g>
+      <ellipse cx="32" cy="43" rx="9.5" ry="7" fill={BALL} />
+      <path d="M28.8 39 L35.2 39 L32 42.2Z" fill="#d42a6b" />
+      <g fill={INK}><circle cx="25" cy="32" r="2.4" /><circle cx="39" cy="32" r="2.4" /></g>
+    </>
+  ),
+  flag: () => (
+    <>
+      <ellipse cx="32" cy="59" rx="28" ry="9" fill="#7fb8a6" />
+      <ellipse cx="29" cy="55" rx="6.5" ry="2.2" fill="#1a3a3a" />
+      <rect x="27.5" y="10" width="3" height="45" rx="1.5" fill="#1a3a3a" />
+      <path d="M30.5 10.5 L51 18.5 L30.5 26.5Z" fill="#ff4d8b" />
+      <g fill={INK}><circle cx="37" cy="17.5" r="1.6" /><circle cx="42" cy="18.5" r="1.6" /></g>
+      <circle cx="41" cy="53" r="3.8" fill={BALL} stroke="rgba(10,10,10,.2)" strokeWidth="1" />
+    </>
+  ),
+};
+
+/** One Ball buddy (or critter) on its backdrop, as an SVG that fills its box. */
 export function BuddyArt({ id, bg, className = '' }) {
+  const Critter = CRITTERS[id];
   const Hat = ART[id] || ART.bucket;
   return (
     <svg className={`buddy-art ${className}`} viewBox="0 0 64 64" aria-hidden="true" focusable="false">
       <rect width="64" height="64" fill={backdropOf(bg).hex} />
-      <Ball />
-      <Hat />
+      {Critter ? <Critter /> : <><Ball /><Hat /></>}
     </svg>
   );
 }
