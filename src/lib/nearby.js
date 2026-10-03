@@ -18,7 +18,10 @@ export const GEOCODER = 'https://api.bigdatacloud.net/data/reverse-geocode-clien
 export const GRID = 0.1; // degrees: about 7 miles north to south, 5 east to west in the US
 export const RADIUS_MI = 30;
 export const NEAR_MAX = 8;
-export const MAX_SEARCHES = 5; // course searches per lookup: the town, other names for the spot, nearby course towns
+// Course searches per lookup: the town, other names for the spot, nearby course towns.
+// Held at 2 (it was 5) while GolfCourseAPI is on the free tier, so one tap of "Courses near me"
+// can't spend much of the day's quota. Raise this one number once the course API is upgraded.
+export const MAX_SEARCHES = 2;
 export const DAY_MS = 24 * 60 * 60 * 1000;
 export const CACHE_KEY = 'bb-near-courses';
 const CACHE_KEEP = 5; // spots remembered, for a golfer who plays in a few towns
@@ -162,7 +165,7 @@ export function writeCache(storage, cache) {
  * `deps`: { storage, now, geocode(lat, lon) -> json, search(query) -> { status, results } }.
  * Resolves { status: 'ok' | 'off' | 'error', place, courses, cached }. Only an abort rejects.
  */
-export async function findNearby(pos, { storage, now = Date.now(), geocode, search }) {
+export async function findNearby(pos, { storage, now = Date.now(), geocode, search, max = MAX_SEARCHES }) {
   const key = spotKey(pos?.lat, pos?.lon);
   if (!key) return { status: 'error', place: null, courses: [], cached: false };
   const cache = readCache(storage);
@@ -181,7 +184,7 @@ export async function findNearby(pos, { storage, now = Date.now(), geocode, sear
   if (!place) return { status: 'error', place: null, courses: [], cached: false };
 
   const terms = searchTerms(json);
-  const r = await searchAround(pos, terms.length ? terms : [place.town], search);
+  const r = await searchAround(pos, terms.length ? terms : [place.town], search, max);
   if (r.status !== 'ok') return { status: r.status, place, courses: [], cached: false };
   // Keep only what's in range, trimmed to what the picker needs, so the cache stays small
   const results = nearbyFrom(r.results, pos, { radius: RADIUS_MI + 10, max: 20 })
@@ -194,11 +197,11 @@ export async function findNearby(pos, { storage, now = Date.now(), geocode, sear
 
 /**
  * Course searches for the spot's place names, then for the towns of the in-range courses found,
- * nearest first, until MAX_SEARCHES. Resolves { status, results } with every result found. The
+ * nearest first, until `max` searches (MAX_SEARCHES unless a test asks for more). Resolves { status, results } with every result found. The
  * first search decides the status: when it fails (or search is off) nothing more is tried; a
  * later failure just adds nothing.
  */
-export async function searchAround(pos, terms, search) {
+export async function searchAround(pos, terms, search, max = MAX_SEARCHES) {
   const done = new Set();
   const all = [];
   const run = async q => {
@@ -213,7 +216,7 @@ export async function searchAround(pos, terms, search) {
   const wave = list => {
     const picked = [];
     for (const q of list) {
-      if (done.size + picked.length >= MAX_SEARCHES) break;
+      if (done.size + picked.length >= max) break;
       if (q && !done.has(q.toLowerCase()) && !picked.some(x => x.toLowerCase() === q.toLowerCase())) picked.push(q);
     }
     return Promise.all(picked.map(run));

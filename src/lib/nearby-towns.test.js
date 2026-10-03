@@ -39,28 +39,44 @@ test('searchTerms: the town, then the county without "County", never the state o
   assert.deepEqual(searchTerms({ city: 'Logan', localityInfo: { administrative: [{ name: '84321', adminLevel: 10 }, { name: 'Ab', adminLevel: 9 }] } }), ['Logan']);
 });
 
+// These run with room for 5 searches (the cap before the free-tier hold), so they still test the town walk
+const ROOM = 5;
+
 test('searchAround follows the towns of the courses it finds, and stops at the cap', async () => {
   const m = mockSearch();
-  const r = await searchAround(HERE, searchTerms(GEO), m.search);
+  const r = await searchAround(HERE, searchTerms(GEO), m.search, ROOM);
   assert.equal(r.status, 'ok');
   // Logan, Cache, then the in-range course towns nearest first: North Logan (0.05) and Hyde Park (0.08)
   assert.deepEqual(m.queries, ['Logan', 'Cache', 'North Logan', 'Hyde Park']);
-  assert.ok(m.queries.length <= MAX_SEARCHES);
+  assert.ok(m.queries.length <= ROOM);
   const many = { ...GEO, localityInfo: { administrative: ['Aaa', 'Bbb', 'Ccc', 'Ddd', 'Eee', 'Fff'].map((name, i) => ({ name, adminLevel: 9 - i / 10 })) } };
   const m2 = mockSearch();
-  await searchAround(HERE, searchTerms(many), m2.search);
-  assert.equal(m2.queries.length, MAX_SEARCHES);
+  await searchAround(HERE, searchTerms(many), m2.search, ROOM);
+  assert.equal(m2.queries.length, ROOM);
+});
+
+test('the cap per lookup is 2 until the course API is upgraded, and findNearby keeps to it', async () => {
+  assert.equal(MAX_SEARCHES, 2);
+  const m = mockSearch();
+  await searchAround(HERE, searchTerms(GEO), m.search);
+  assert.deepEqual(m.queries, ['Logan', 'Cache']);
+  const m2 = mockSearch();
+  const r = await findNearby(HERE, { storage: memStorage(), now: 1, geocode: async () => GEO, search: m2.search });
+  assert.equal(r.status, 'ok');
+  assert.deepEqual(m2.queries, ['Logan', 'Cache']);
+  // Logan and Cache find these three; the towns of the courses wait for a higher cap
+  assert.deepEqual(r.courses.map(x => x.name), ['Logan River GC', 'Logan Golf & CC', 'Cache Valley Links']);
 });
 
 test('findNearby: courses not named for the town show up, once each, closest first', async () => {
   const m = mockSearch();
-  const r = await findNearby(HERE, { storage: memStorage(), now: 1, geocode: async () => GEO, search: m.search });
+  const r = await findNearby(HERE, { storage: memStorage(), now: 1, geocode: async () => GEO, search: m.search, max: ROOM });
   assert.equal(r.status, 'ok');
   assert.deepEqual(r.place, { town: 'Logan', region: 'UT' });
   // Logan River (found twice) once; Hyde Park, NY is 2,000 miles off and dropped
   assert.deepEqual(r.courses.map(x => x.name), ['Logan River GC', 'North Logan Par 3', 'Logan Golf & CC', 'Cache Valley Links', 'Hyde Park Muni']);
   // The day's answer is cached: no more searches
-  const again = await findNearby(HERE, { storage: memStorage(), now: 2, geocode: async () => GEO, search: m.search });
+  const again = await findNearby(HERE, { storage: memStorage(), now: 2, geocode: async () => GEO, search: m.search, max: ROOM });
   assert.equal(again.courses.length, 5);
 });
 
@@ -69,7 +85,7 @@ test('findNearby: the town search decides off or error; a later failure only add
   assert.equal((await findNearby(HERE, { storage: memStorage(), now: 1, geocode: async () => GEO, search: off.search })).status, 'off');
   assert.deepEqual(off.queries, ['Logan']);
   const flaky = mockSearch({ Cache: 'error' });
-  const r = await findNearby(HERE, { storage: memStorage(), now: 1, geocode: async () => GEO, search: flaky.search });
+  const r = await findNearby(HERE, { storage: memStorage(), now: 1, geocode: async () => GEO, search: flaky.search, max: ROOM });
   assert.equal(r.status, 'ok');
   assert.deepEqual(r.courses.map(x => x.apiId), ['aaaaaaaa', 'dddddddd', 'bbbbbbbb']);
 });
