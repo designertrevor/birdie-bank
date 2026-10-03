@@ -20,6 +20,7 @@ import { countsMoney, playForOf, unitFmt } from '../lib/play-for.js';
 import { SaveUsualButton } from '../components/Usuals.jsx';
 import { DrivesShortfall } from '../components/ScrambleDrives.jsx';
 import { strokeKey } from '../lib/stroke-key.js';
+import { toParOf, toParText, toParTone, toParWords } from '../lib/to-par.js';
 import { BetsBreakdown } from '../components/PairBets.jsx';
 import { RoundWhereFrom } from '../components/WhereFrom.jsx';
 
@@ -512,7 +513,11 @@ function GameBreakdown({ round, res, label = null }) {
   return null;
 }
 
-/** Gross scorecard, one column per hole. onHole makes columns tappable. */
+/**
+ * Gross scorecard, one column per hole. onHole makes columns tappable. Under each name, the
+ * player's running to par (+3, E, −1) on the holes they've scored, and net too when anyone gets
+ * strokes, so it shows without scrolling the card sideways.
+ */
 export function Scorecard({ round, current, onHole }) {
   const out = round.holes;
   const cls = (g, par) => (g === 'X' ? 'pu' : g <= par - 2 ? 'eagle' : g === par - 1 ? 'birdie' : g === par + 1 ? 'bogey' : g >= par + 2 ? 'dbl' : '');
@@ -548,9 +553,18 @@ export function Scorecard({ round, current, onHole }) {
         <tbody>
           {units.map(p => {
             const sum = scoreSummary(round, p.id);
+            const par = toParOf(round, p, { withNet: anyStrokes });
             return (
               <tr key={p.id}>
-                <td className="sticky">{p.team ? p.name : p.name.split(' ')[0]}</td>
+                <td className="sticky">
+                  <span className="sc-name">{p.team ? p.name : p.name.split(' ')[0]}</span>
+                  {par.played > 0 && (
+                    <span className="sc-topar">
+                      <span className={`sc-par ${toParTone(par.gross)}`} aria-label={anyStrokes ? `Gross ${toParWords(par.gross)}` : toParWords(par.gross)}>{toParText(par.gross)}</span>
+                      {anyStrokes && <span className={`sc-par net ${toParTone(par.net)}`} aria-label={`Net ${toParWords(par.net)}`}>net {toParText(par.net)}</span>}
+                    </span>
+                  )}
+                </td>
                 {out.map(h => {
                   const g = round.scores[h.no]?.[p.id];
                   // A player who left shows an en dash on the holes after
