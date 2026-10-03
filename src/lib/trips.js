@@ -359,7 +359,9 @@ export function tripStatus(state, id, { now = Date.now() } = {}) {
     trip, phase, rounds, done, live, planned, money, people, standings, plan, paid, settling, closed, pairRounds, published, endedAt,
     going: tripGoing(state, trip), organizer: isOrganizer(state, trip),
     payments: tripPaymentGroups(state, paid),
-    points: money.length ? null : pointsOf(state, rounds),
+    // Points standings only for a trip played for points (null otherwise, so a trip with nothing in
+    // it yet, or played only for rewards, shows Who's going or says so)
+    points: !money.length && pointsDone(rounds).length ? pointsOf(state, rounds) : null,
     // Played only for points so far: nothing to pay, and never a dollar
     pointsOnly: !money.length && pointsDone(rounds).length > 0,
     perRound: money.reduce((a, r) => a + tabResults(r).transfers.length, 0),

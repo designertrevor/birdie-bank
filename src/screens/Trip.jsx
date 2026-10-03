@@ -186,6 +186,10 @@ function Standings({ st, state, label, me }) {
       </div>
     ) : null;
   }
+  if (!st.standings.length && st.done.length) {
+    // Played only for rewards so far: nothing in dollars or points to add up
+    return <p className="field-help pad">Played for rewards so far, so there’s no money to add up. Each round’s results say who’s buying.</p>;
+  }
   if (!st.standings.length && st.going.length > 1) {
     // Who's going, before anyone has played: everyone even
     return (

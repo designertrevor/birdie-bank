@@ -311,3 +311,20 @@ test('the profile’s All time net counts a reward round’s side bets for money
   assert.equal(st.money.net, -6);
   assert.equal(st.money.rounds, 2);
 });
+
+// ---------------------------------------------------------------------------------------------
+// QA Q2: a trip with no points rounds has no points standings, so Who's going and a reward-only
+// trip's note can show
+
+test('a trip’s points standings are null unless it was played for points', () => {
+  const going = { ...TRIP, people: ['a', 'b'] };
+  const none = tripStatus(stateOf('t', [], { trips: { tp: going } }), 'tp', { now: OCT(10) });
+  assert.equal(none.points, null); // before: {}, which hid Who's going
+  assert.deepEqual(none.going, ['t', 'a', 'b']);
+  const ids = ['t', 'a', 'b'];
+  const lunchOnly = tripStatus(stateOf('t', [round('l', ids, wins(ids, [1, 'a']), { playFor: LUNCH })], { trips: { tp: going } }), 'tp', { now: NOW });
+  assert.equal(lunchOnly.points, null);
+  assert.equal(lunchOnly.standings.length, 0);
+  const pts = tripStatus(stateOf('t', [round('p', ids, wins(ids, [1, 'a']), { playFor: { kind: 'points' } })], { trips: { tp: going } }), 'tp', { now: NOW });
+  assert.equal(pts.points.a, 4);
+});
