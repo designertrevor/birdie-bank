@@ -13,7 +13,7 @@ import { placeOf, sortedPlayers } from '../lib/format.js';
 import { dayLabel, isoDate, timeLabel } from '../lib/plans.js';
 import { canonicalOf } from '../lib/pair-debts.js';
 import { TRIP_FORMATS, myTripNet, startsLine, tripChips, tripDates, tripStatus, upDown } from '../lib/trips.js';
-import { countsMoney, playForOf } from '../lib/play-for.js';
+import { countsMoney, onTab, playForOf } from '../lib/play-for.js';
 import { editTrip, hideTrip, makeTrip } from '../lib/trip-store.js';
 
 const first = name => String(name || '').trim().split(/\s+/)[0];
@@ -160,7 +160,7 @@ export function TripRoundNote({ round }) {
   const label = id => (id === me ? 'You' : first(nameOf(state, id)));
   const open = () => nav.push('trip', { id: st.trip.id });
   const last = (st.phase === 'ready' || st.phase === 'square') && st.done.at(-1)?.id === round.id;
-  if (last && st.money.length && countsMoney(round)) {
+  if (last && st.money.length && onTab(round)) {
     return (
       <div className="trip-card wrap-up">
         <div className="eyebrow">That’s the trip</div>
@@ -189,9 +189,9 @@ export function TripRoundNote({ round }) {
       <div className="row-main">
         <div className="eyebrow">Counts for {st.trip.name}</div>
         <div className="trip-sub">
-          {/* A points or reward round's results never show a dollar, even the trip's */}
-          {played && st.money.length && countsMoney(round) ? `${upDown(net)} on the trip. ` : ''}
-          {playForOf(round).kind === 'reward' ? 'Played for a reward, so it adds nothing to the trip’s money.'
+          {/* A points or reward round's results never show a dollar, even the trip's, but for a reward round's side bets for money */}
+          {played && st.money.length && onTab(round) ? `${upDown(net)} on the trip. ` : ''}
+          {playForOf(round).kind === 'reward' ? (onTab(round) ? 'Its side bets for money count in the trip’s money. The reward doesn’t.' : 'Played for a reward, so it adds nothing to the trip’s money.')
             : !countsMoney(round) ? (st.pointsOnly ? 'It’s in the trip’s points standings.' : 'Played for points, so it adds nothing to the trip’s money.')
             : st.phase === 'ready' ? 'Settle the trip is open.' : st.phase === 'square' ? 'The trip is settled.' : 'Nothing’s paid until the trip is done, then it’s settled once.'}
         </div>

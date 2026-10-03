@@ -7,7 +7,9 @@ import { addBet, betsOf, changeBet, setBetWinner } from './pair-bets.js';
 import { applyBetAsk, askSettled, betAskProblem, buildBetAsk } from './bet-asks.js';
 import { tabResults } from './play-for.js';
 import { newTrip, tripStamp, tripStatus, tripPayment } from './trips.js';
-import { outstanding, tabBalances } from './ledger.js';
+import { headToHeadSummary, outstanding, personStory, tabBalances } from './ledger.js';
+import { nemesis } from './rivalry.js';
+import { profileStats } from './profile-model.js';
 import { buildPlan, planRows, planState } from './trip-plan.js';
 import { allocatePayment, applyRows, pairRounds } from './shared-tab.js';
 import { canCarry, cardCarry, carryReducer } from './carry.js';
@@ -271,4 +273,41 @@ test('a replayed side bet ask can’t bring back a bet taken off or undo a later
   // And the keeper taking a bet off directly keeps an add heard again from bringing it back
   const gone = apply(apply(r, add), { ...remove, at: 4, by: 'b' });
   assert.equal(betsOf(apply({ ...gone, betAsksDone: [] }, add)).length, 0);
+});
+
+// ---------------------------------------------------------------------------------------------
+// Note and QA Q11: the nemesis card and the profile's All time count a reward round's side bets for
+// money like the Tab and the person card do
+
+function cashLunch() {
+  const ids = ['t', 'a', 'b'];
+  // A money round t wins $2 from each; lunch, where a beats t $10 on a side bet for money
+  const q1 = round('q1', ids, wins(ids, [1, 't']), { at: OCT(10), trip: null });
+  let q2 = round('q2', ids, wins(ids, [1, 'b'], [2, 'b']), { at: OCT(11), playFor: LUNCH, trip: null });
+  q2 = cashBet(q2, 'cb', ['a', 't'], 10, 'a');
+  return stateOf('t', [q1, q2]);
+}
+
+test('the nemesis head to head counts a reward round’s side bets for money, only with who you bet', () => {
+  const s = cashLunch();
+  const me = new Set(['t']);
+  const story = personStory(s, me, 'a');
+  assert.equal(story.net, -8);
+  const h = headToHeadSummary(s, me, { moneyOnly: true });
+  // Before: only the money round, so t looked $2 up on a and a was never the nemesis
+  assert.equal(h.get('a').net, story.net);
+  assert.deepEqual([h.get('a').rounds, h.get('a').won, h.get('a').lost], [2, 1, 1]);
+  // b had no money bet with t at lunch: just the money round
+  assert.deepEqual([h.get('b').rounds, h.get('b').net], [1, 2]);
+  assert.equal(nemesis(s, me)?.id, 'a');
+  assert.equal(nemesis(s, me).net, -8);
+});
+
+test('the profile’s All time net counts a reward round’s side bets for money, as the Tab does', () => {
+  const s = cashLunch();
+  const st = profileStats(s, ['t']);
+  // Before: $4, the money round alone
+  assert.equal(st.money.net, tabBalances(s).t);
+  assert.equal(st.money.net, -6);
+  assert.equal(st.money.rounds, 2);
 });

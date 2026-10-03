@@ -252,8 +252,10 @@ export function personStory(state, ids, other) {
 /**
  * Your honest head-to-head with everyone you've played a finished round with:
  * Map(id -> { rounds, won, lost, even, net }), where net is what you've won from them in all.
- * Points and reward rounds count in the record, never in net (dollars only). With `moneyOnly`
- * they're left out of the record too, for counts that are about dollars (the nemesis card).
+ * Points and reward rounds count in the record, never in net (dollars only), but for a reward
+ * round's side bets for money, which are in net like they are on the Tab. With `moneyOnly` the
+ * record is about dollars too (the nemesis card): money rounds, and a reward round only with the
+ * people you had a side bet for money with, won or lost on those bets.
  */
 export function headToHeadSummary(state, ids, { moneyOnly = false } = {}) {
   const mine = ids instanceof Set ? ids : new Set(ids);
@@ -263,7 +265,7 @@ export function headToHeadSummary(state, ids, { moneyOnly = false } = {}) {
   for (const r of doneRounds(state)) {
     const me = meFor(r, state);
     if (!mine.has(me) || !r.players.some(p => p.id === me)) continue; // watched rounds aren't yours
-    if (moneyOnly && !countsMoney(r)) continue;
+    if (moneyOnly && !onTab(r)) continue;
     const pairs = roundResults(r).pairs[me] || {};
     // A reward round's side bets for money count in net, in dollars (the record stays the round's points)
     const cashPairs = !countsMoney(r) && onTab(r) ? tabResults(r).pairs[me] || {} : null;
@@ -272,8 +274,11 @@ export function headToHeadSummary(state, ids, { moneyOnly = false } = {}) {
     const inRound = new Map();
     for (const p of r.players) {
       if (p.id === me || isMine(p.id)) continue;
+      // Dollars only: a reward round is between you and the people you had a side bet for money with
+      const cashOnly = moneyOnly && cashPairs;
+      if (cashOnly && !hasCashWith(r, me, p.id)) continue;
       const k = who(p.id);
-      inRound.set(k, (inRound.get(k) || 0) + (pairs[p.id] ?? 0));
+      inRound.set(k, (inRound.get(k) || 0) + ((cashOnly ? cashPairs : pairs)[p.id] ?? 0));
       if (cashPairs) inCash.set(k, (inCash.get(k) || 0) + (cashPairs[p.id] ?? 0));
     }
     for (const [k, v] of inRound) {

@@ -16,7 +16,7 @@
 // account each player id is in state.accountOf, which people-links.js uses so two player records
 // on one account are one person.
 import { GAMES, roundResults } from './round.js';
-import { countsMoney } from './play-for.js';
+import { countsMoney, onTab, tabResults } from './play-for.js';
 import { linksOf } from './people-links.js';
 import { meFor } from './format.js';
 import { payInfo } from './pay.js';
@@ -95,7 +95,8 @@ export function normalizeHomeCourse(c) {
  * { rounds, friends, record: { won, lost, even }, favoriteGame: { id, name, rounds } | null,
  *   since: ms | null, lastPlayed: ms | null, money: { net, best, rounds } }
  * Won, lost and even are by the round's own result (points and reward rounds count too); money adds
- * up only rounds played for money, in dollars. Rounds you watched don't count.
+ * up the rounds played for money and reward rounds' side bets for money (the Tab's dollars). Rounds
+ * you watched don't count.
  */
 export function profileStats(state, ids = null) {
   const L = linksOf(state);
@@ -124,10 +125,12 @@ export function profileStats(state, ids = null) {
     if (at && (since == null || at < since)) since = at;
     if (at && (lastPlayed == null || at > lastPlayed)) lastPlayed = at;
     if (amt > 0) record.won++; else if (amt < 0) record.lost++; else record.even++;
-    if (countsMoney(r)) {
+    // Dollars: a money round's net, or a reward round's side bets for money, as the Tab has them
+    const cash = countsMoney(r) ? amt : onTab(r) ? tabResults(r).balances[seat] || 0 : null;
+    if (cash != null) {
       moneyRounds++;
-      net = cents(net + amt);
-      if (best == null || amt > best) best = cents(amt);
+      net = cents(net + cash);
+      if (best == null || cash > best) best = cents(cash);
     }
     for (const p of r.players) if (p.id !== seat && !mine.has(p.id)) friends.add(L.personOf(p.id));
     if (GAMES[r.game]) {
