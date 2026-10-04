@@ -2386,3 +2386,9 @@ button.ch-main:active { transform: scale(.98); }
 .cup-round-pts { flex-shrink: 0; font-family: var(--display); font-weight: 800; font-size: 17px; color: var(--mute); font-variant-numeric: tabular-nums; white-space: nowrap; }
 .cup-round-pts .t0 { color: var(--cup-a); }
 .cup-round-pts .t1 { color: var(--cup-b); }
+
+/* ---- Overnight 7 review fixes ---- */
+/* The small label on a pastel bar ("This hole is worth" on the Skins panel): 4.3:1 at .6, so a bit darker for 4.5:1 */
+.banker-bar .bl { color: rgba(0,0,0,.7); }
+/* Add a course: each par button's tap area is 44px wide as well as tall */
+.par-pick button::before { left: 50%; right: auto; width: 44px; transform: translate(-50%, -50%); }
