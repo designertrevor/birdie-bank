@@ -171,7 +171,7 @@ function mainRevealSteps(round, res) {
       const deltas = {};
       for (const pid of a) deltas[pid] = ea;
       for (const pid of b) deltas[pid] = eb;
-      const how = r.conceded != null ? ', the other side folded' : r.hammers.length ? `, hammered ${r.hammers.length}×` : '';
+      const how = (r.conceded != null ? ', the other side folded' : r.hammers.length ? `, hammered ${r.hammers.length}×` : '') + (r.birdie ? ', doubled for the birdie' : '');
       return { no: r.hole.no, deltas, text: () => `${sn[r.winner]}${how}` };
     });
     return { title: 'Biggest holes', steps: biggestHoles(rows) };

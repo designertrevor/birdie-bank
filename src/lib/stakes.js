@@ -38,7 +38,7 @@ export function roundStakeLines(round, { since = true } = {}) {
 
 // `since` false leaves off "from hole 10", for a round set up again with the bets it ended on
 function moneyStakeLines(round, since = true) {
-  const lines = [{ key: 'main', line: stakeSummary(round.game, round.settings) }];
+  const lines = [{ key: 'main', line: stakeSummary(round.game, round.settings, round.holes?.length ?? 18) }];
   for (const sg of sideGamesOf(round)) {
     const line = sideBetLine(sg.game, sg.settings);
     const from = line && since ? betChanges(round, sg.game).at(-1) : null;
@@ -49,7 +49,7 @@ function moneyStakeLines(round, since = true) {
 
 /** A game's bet line from its own settings block: the main game's summary, or a side game's line. */
 function betLineFor(round, key, block) {
-  return key === 'main' ? stakeSummary(round.game, { ...round.settings, [round.game]: block }) : sideBetLine(key, block);
+  return key === 'main' ? stakeSummary(round.game, { ...round.settings, [round.game]: block }, round.holes?.length ?? 18) : sideBetLine(key, block);
 }
 
 /**
@@ -83,9 +83,9 @@ export function betStretchLine(round, key) {
   return inUnits(round, `${gameKeyLabel(round, key)}: ${parts.join(', ')}.`);
 }
 
-/** One line that says what's on the line, for menus and summaries. */
-export function stakeSummary(game, settings) {
-  const rules = houseRulesLine(game, settings?.[game]);
+/** One line that says what's on the line, for menus and summaries. `holes`: the round's length (see houseRulesLine). */
+export function stakeSummary(game, settings, holes = 18) {
+  const rules = houseRulesLine(game, settings?.[game], holes);
   const base = baseSummary(game, settings);
   return rules ? `${base} · ${rules}` : base;
 }

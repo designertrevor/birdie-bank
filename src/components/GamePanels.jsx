@@ -5,7 +5,7 @@ import { update, uid } from '../lib/store.js';
 import {
   hammerOptions, hammerTable, holeAtPos, holeComplete, nassauAmounts, nassauPressOptions, nassauWinners, playersOn, pointsTable, pressMode, rabbitTable,
   roundLegs, sideNames, sides, sixesMatches, snakeTable, totalsTable, vegasPreview, vegasTable, scorers, netFor, playsHole, posOf, settingsAt, teamTable,
-  POT_NONE, potHoles, potTable,
+  POT_NONE, potHoles, potTable, greenieCarryBefore,
 } from '../lib/round.js';
 import { nassauBets } from '../lib/golf.js';
 import { DOT_KINDS, DOT_PARS, scoreDots } from '../lib/games.js';
@@ -162,7 +162,7 @@ export function VegasPanel({ round, hole, draft, touched }) {
           <div key={t.id} className={`vegas-team ${(i === 0 ? total : -total) > 0 ? 'ahead' : (i === 0 ? total : -total) < 0 ? 'behind' : ''}`}>
             <span className="ms-lbl"><span className={`side-tag ${i === 0 ? 'a' : 'b'}`}>{['A', 'B'][i]}</span> {t.name}</span>
             <span className="ms-val">{pv ? pv.numbers[i] : '–'}</span>
-            <span className="ms-sub">{pv?.flipped[i] ? 'Flipped by a birdie' : pv ? 'This hole' : 'Enter scores'}</span>
+            <span className="ms-sub">{pv?.flipped[i] ? 'Flipped by a birdie' : pv?.high?.[i] ? 'No par: high number first' : pv ? 'This hole' : 'Enter scores'}</span>
           </div>
         ))}
       </div>
@@ -304,8 +304,17 @@ export function SnakePanel({ round, hole, marks }) {
 /** Tap who three-putted, in the order it happened: the last one takes the snake. */
 export function SnakePicker({ round, hole, marks, setMarks }) {
   const putts = marks?.snake || [];
+  // "Four-putts count twice" (house rule): a tapped player can be marked as a four-putt too
+  const ss = settingsAt(round, posOf(round, hole)).snake || {};
+  const can4 = !!ss.fourPutt && (ss.growth || 'flat') !== 'flat';
+  const fours = (marks?.snake4 || []).filter(pid => putts.includes(pid));
   const toggle = pid => {
-    setMarks({ ...marks, snake: putts.includes(pid) ? putts.filter(x => x !== pid) : [...putts, pid] });
+    const out = putts.includes(pid);
+    setMarks({ ...marks, snake: out ? putts.filter(x => x !== pid) : [...putts, pid], ...(out && marks?.snake4 ? { snake4: marks.snake4.filter(x => x !== pid) } : {}) });
+    buzz(8);
+  };
+  const toggle4 = pid => {
+    setMarks({ ...marks, snake4: fours.includes(pid) ? fours.filter(x => x !== pid) : [...fours, pid] });
     buzz(8);
   };
   return (
@@ -316,9 +325,14 @@ export function SnakePicker({ round, hole, marks, setMarks }) {
           {playersOn(round, hole).map(p => {
             const k = putts.indexOf(p.id);
             return (
-              <button key={p.id} aria-pressed={k >= 0} className={`pill-btn sm ${k >= 0 ? 'on' : ''}`} onClick={() => toggle(p.id)}>
-                {k >= 0 && putts.length > 1 && <span aria-hidden="true">{k + 1}.</span>} {firstName(p.name)}{k >= 0 && k === putts.length - 1 ? ' · has it' : ''}
-              </button>
+              <span key={p.id} className="snake4-pair">
+                <button aria-pressed={k >= 0} className={`pill-btn sm ${k >= 0 ? 'on' : ''}`} onClick={() => toggle(p.id)}>
+                  {k >= 0 && putts.length > 1 && <span aria-hidden="true">{k + 1}.</span>} {firstName(p.name)}{k >= 0 && k === putts.length - 1 ? ' · has it' : ''}
+                </button>
+                {can4 && k >= 0 && (
+                  <button aria-pressed={fours.includes(p.id)} aria-label={`${firstName(p.name)} four-putted`} className={`pill-btn sm ${fours.includes(p.id) ? 'on' : ''}`} onClick={() => toggle4(p.id)}>4-putt</button>
+                )}
+              </span>
             );
           })}
         </div>
@@ -342,6 +356,8 @@ export function HammerPanel({ round, hole, marks, setMarks, readOnly = false }) 
   const can = hammerOptions(round, hole, mark);
   const n = mark.hammers.length;
   const value = base * 2 ** n;
+  // Birdie hammer (a house rule): the amount here is before the scores, so say a winning birdie doubles it
+  const birdieRule = !!settingsAt(round, posOf(round, hole)).hammer?.birdie;
   const pending = n > 0 && mark.conceded == null ? 1 - mark.hammers.at(-1) : null;
   const before = rows.filter(r => r.pos < (row?.pos ?? 0)).reduce((a, r) => a + r.net, 0);
   const put = next => { setMarks({ ...marks, ...next }); buzz(next.hammers?.length > n ? [20, 40, 20] : 12); };
@@ -353,7 +369,7 @@ export function HammerPanel({ round, hole, marks, setMarks, readOnly = false }) 
   return (
     <div className="wolf-panel">
       <div className="bl" style={{ marginBottom: 8, display: 'flex', justifyContent: 'space-between', gap: 8 }}>
-        <span><Icon name="hammer" fill /> This hole: <strong>{money(mark.conceded != null ? value / 2 : value)}</strong>{n ? ` · ${n} hammer${n === 1 ? '' : 's'}` : ''}</span>
+        <span><Icon name="hammer" fill /> This hole: <strong>{money(mark.conceded != null ? value / 2 : value)}</strong>{n ? ` · ${n} hammer${n === 1 ? '' : 's'}` : ''}{birdieRule && mark.conceded == null ? ' · a winning birdie doubles it' : ''}</span>
         <span>{before === 0 ? 'All square' : `${short[before > 0 ? 0 : 1]} +${money(Math.abs(before))}`}</span>
       </div>
       {status && <p className="bl" style={{ margin: '0 0 8px', fontWeight: 500 }} aria-live="polite">{status}</p>}
@@ -385,9 +401,16 @@ const BBB = [
 ];
 
 export function BBBPicker({ round, hole, marks, setMarks }) {
+  // "Bongo is low net" (house rule): the third point comes from the scores, so there's nothing to tap
+  const netBongo = !!settingsAt(round, posOf(round, hole)).bbb?.netBongo;
   return (
     <div className="marks-card">
-      {BBB.map(b => (
+      {netBongo && (
+        <div className="marks-row">
+          <div className="marks-lbl"><strong>Bongo</strong><span>Lowest net score, from the scores. A tie, nobody gets it</span></div>
+        </div>
+      )}
+      {BBB.filter(b => !(netBongo && b.key === 'bongo')).map(b => (
         <div key={b.key} className="marks-row">
           <div className="marks-lbl"><strong>{b.name}</strong><span>{b.help}</span></div>
           <div className="chip-row" style={{ padding: 0 }} role="radiogroup" aria-label={b.name}>
@@ -412,6 +435,8 @@ export function DotsRow({ round, player, hole, marks, setMarks, gross, label = n
   const kinds = Object.keys(DOT_KINDS).filter(k => s.kinds?.[k] && (!DOT_PARS[k] || DOT_PARS[k].includes(hole.par) || (marks[player.id] || []).includes(k)));
   const mine = marks[player.id] || [];
   const auto = s.auto ? scoreDots(gross, hole.par) : 0;
+  // "Greenies carry" (house rule): greenies missed on earlier par 3s ride on this one
+  const riding = greenieCarryBefore(round, hole);
   const toggle = k => {
     const next = mine.includes(k) ? mine.filter(x => x !== k) : [...mine, k];
     const all = { ...marks, [player.id]: next };
@@ -426,7 +451,7 @@ export function DotsRow({ round, player, hole, marks, setMarks, gross, label = n
     <div className="dots-row" role="group" aria-label={label || `${player.name.split(' ')[0]}’s dots`}>
       {auto > 0 && <span className="pill-btn sm auto"><Icon name="bird" fill /> {auto === 2 ? 'Eagle · 2 dots' : 'Birdie'}</span>}
       {kinds.map(k => (
-        <button key={k} className={`pill-btn sm ${mine.includes(k) ? 'on' : ''}`} aria-pressed={mine.includes(k)} title={DOT_KINDS[k].help} onClick={() => toggle(k)}>{DOT_KINDS[k].name}</button>
+        <button key={k} className={`pill-btn sm ${mine.includes(k) ? 'on' : ''}`} aria-pressed={mine.includes(k)} title={DOT_KINDS[k].help} onClick={() => toggle(k)}>{DOT_KINDS[k].name}{k === 'greenie' && riding ? ` ×${riding + 1}` : ''}</button>
       ))}
     </div>
   );

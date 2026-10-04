@@ -22,30 +22,31 @@ export const DEFAULT_SETTINGS = {
   shareAmounts: false, // results image shows dollar amounts (off until you turn it on, then remembered)
   betPrompt: true,     // "Any side bets on this hole?" on the Play screen (see bet-prompt.js); personal, never a round's
   callouts: true,      // callouts for the group text on Up next (see callouts.js); off from the card or Settings
-  banker: { defaultBet: 5, min: 1, max: 20, ties: 'push', rotation: 'rotate', birdies: 'off' },
-  nassau: { front: 5, back: 5, total: 5, pressMode: 'manual', threshold: 2, turnPress: false, noLastPress: false },
-  skins: { value: 2, carryover: true, kind: 'net', payout: 'per', stake: 10, lastCarry: 'void' },
+  banker: { defaultBet: 5, min: 1, max: 20, ties: 'push', rotation: 'rotate', birdies: 'off', par3Triple: false },
+  nassau: { front: 5, back: 5, total: 5, pressMode: 'manual', threshold: 2, turnPress: false, noLastPress: false, teamScore: 'best' },
+  skins: { value: 2, carryover: true, kind: 'net', payout: 'per', stake: 10, lastCarry: 'void', backDouble: false },
   // Blind wolf (off for a new setup): the wolf can go lone before anyone tees off, for one or two
   // more than a lone wolf (blindPlus, see blindMultiplierOf in round.js).
+  // House rules added 2026-10-03 (one more per game, and three for Quota) start off too; see house-rules.js.
   // House rules added 2026-09-30 all start off, so rounds and defaults from before play the same:
   // wolf and aces ties carry, Vegas birdies double, Sixes halved matches carry (see round.js)
-  wolf: { point: 2, loneMultiplier: 2, blind: false, blindPlus: 1 }, // carry (ties carry) is off when unset
-  match: { stake: 10, pressMode: 'off', threshold: 2 },
-  hammer: { stake: 5, max: 3, who: 'either' },
-  vegas: { point: 1, birdieFlip: true, birdieDouble: false },
-  sixes: { stake: 5, mode: 'match', carry: false },
-  scramble: { stake: 5, drives: 0 }, // drives: the minimum each player's drive is used, 0 for none
+  wolf: { point: 2, loneMultiplier: 2, blind: false, blindPlus: 1 }, // carry (ties carry) and lastWolf are off when unset
+  match: { stake: 10, pressMode: 'off', threshold: 2, teamScore: 'best' },
+  hammer: { stake: 5, max: 3, who: 'either', birdie: false },
+  vegas: { point: 1, birdieFlip: true, birdieDouble: false, daytona: false },
+  sixes: { stake: 5, mode: 'match', carry: false, teamScore: 'best' },
+  scramble: { stake: 5, drives: 0, second: false }, // drives: the minimum each player's drive is used, 0 for none
   // The team games (2026-10-03, see TEAM_DEFAULTS in settings.js and round.js)
   ...structuredClone(TEAM_DEFAULTS),
-  stroke: { stake: 5, payout: 'pot', cap: false }, // cap: net double bogey is the most a hole costs
-  stableford: { ...REV2_DEFAULTS.stableford },
-  quota: { ...REV2_DEFAULTS.quota },
-  nines: { point: 1, sweep: false }, // sweep: win a hole by 2 and take all nine
+  stroke: { stake: 5, payout: 'pot', cap: false, nassau: false }, // cap: net double bogey is the most a hole costs
+  stableford: { ...REV2_DEFAULTS.stableford, nassau: false },
+  quota: { ...REV2_DEFAULTS.quota, nassau: false, minus: false, split: 'top' },
+  nines: { point: 1, sweep: false, birdie: false }, // sweep: win a hole by 2 and take all nine; birdie: 7-1-1
   aces: { ace: 2, deuce: 1, carry: false },
-  bbb: { value: 1, sweep: false }, // sweep: all three points on a hole count double
-  dots: { value: 1, auto: true, kinds: { greenie: true, sandy: true, barkie: true, chipin: true, polie: false, arnie: false, hogan: false } },
-  rabbit: { ...REV2_DEFAULTS.rabbit },
-  snake: { stake: 5, growth: 'flat', nines: false, cap: SNAKE_CAP_DEFAULT }, // cap: most doubles, 0 for none
+  bbb: { value: 1, sweep: false, netBongo: false }, // sweep: all three points on a hole count double
+  dots: { value: 1, auto: true, greenieCarry: false, kinds: { greenie: true, sandy: true, barkie: true, chipin: true, polie: false, arnie: false, hogan: false } },
+  rabbit: { ...REV2_DEFAULTS.rabbit, sixes: false },
+  snake: { stake: 5, growth: 'flat', nines: false, cap: SNAKE_CAP_DEFAULT, fourPutt: false }, // cap: most doubles, 0 for none
   // Birdie pot, a side game only: each player puts in the stake; a net eagle or better is 2 shares
   birdies: { stake: 5, eagleShares: 2 },
   // Closest to the pin and long drive pots, side games only: each player puts in the stake, and a

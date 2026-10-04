@@ -2285,3 +2285,7 @@ button.ch-main:active { transform: scale(.98); }
 /* Four views on the Trip page: a step smaller so "Standings" and "Expenses" fit side by side at 375px */
 .trip-views .pm-btn { min-width: 0; padding: 0 2px; font-size: 14px; }
 .link-btn.exp-all { display: block; margin: 8px 4px 0 auto; }
+
+/* ---- House rules sweep (overnight 7, quota) ---- */
+/* Snake: a tapped three-putt and its 4-putt chip stay together when the row wraps */
+.snake4-pair { display: inline-flex; gap: 6px; }

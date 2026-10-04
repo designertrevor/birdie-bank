@@ -30,7 +30,7 @@ const offerName = k => ({ birdies: 'a Birdie pot', ctp: 'a closest to the pin po
  * so a new side game starts from the group's usual Skins or Dots bets. `playFor` is the round's
  * (points and reward rounds read in points).
  */
-export function SideGamesSetup({ game, sideGames, setSideGames, defaults, players = 4, playFor = null, holes = null }) {
+export function SideGamesSetup({ game, sideGames, setSideGames, defaults, players = 4, playFor = null, holes = null, holesCount = holes?.length ?? 18 }) {
   const fmt = unitFmt({ playFor });
   const u = t => inUnits({ playFor }, t);
   const unit = padUnit({ playFor });
@@ -173,7 +173,7 @@ export function SideGamesSetup({ game, sideGames, setSideGames, defaults, player
         <DriveHoles settings={sideGames[driveAt].settings} holes={holes} onClose={() => setPicking(false)}
           onChange={nos => change(driveAt, st => ({ ...st, holes: nos }))} />
       )}
-      <SkinsRules i={rules} sideGames={sideGames} change={change} players={players} inPoints={!countsMoney({ playFor })} onClose={() => setRules(null)} onAmount={setRulePad} />
+      <SkinsRules i={rules} sideGames={sideGames} change={change} players={players} holesCount={holesCount} inPoints={!countsMoney({ playFor })} onClose={() => setRules(null)} onAmount={setRulePad} />
       <Numpad open={rules != null && !!rulePad} title={rulePad?.title || ''} {...unit}
         initial={rulePad && rules != null ? sideGames[rules]?.settings[rulePad.path.split('.')[1]] : ''} min={rulePad?.min} max={rulePad?.max}
         onClose={() => setRulePad(null)} onDone={v => { const key = rulePad.path.split('.')[1]; change(rules, s => ({ ...s, [key]: v })); setRulePad(null); }} />
@@ -222,7 +222,7 @@ function DriveHoles({ settings, holes, onChange, onClose }) {
  * the last carry), with the same options as Skins as the main game. Starts from what the side
  * game already has, which came from the saved Skins defaults.
  */
-function SkinsRules({ i, sideGames, change, players, inPoints, onClose, onAmount }) {
+function SkinsRules({ i, sideGames, change, players, holesCount, inPoints, onClose, onAmount }) {
   const sg = i != null ? sideGames[i] : null;
   if (!sg || sg.game !== 'skins') return null;
   const key = path => path.split('.').slice(1).join('.');
@@ -231,7 +231,7 @@ function SkinsRules({ i, sideGames, change, players, inPoints, onClose, onAmount
   return (
     <Sheet open onClose={onClose} title="Skins house rules">
       <p className="sheet-text">For this round only. Your saved Skins defaults stay as they are.</p>
-      <GameOptions game="skins" get={get} set={set} onAmount={(path, title, o) => onAmount({ path, title, ...o })} players={players} inPoints={inPoints} compact />
+      <GameOptions game="skins" get={get} set={set} onAmount={(path, title, o) => onAmount({ path, title, ...o })} players={players} holesCount={holesCount} inPoints={inPoints} compact />
       <div className="cta-wrap">
         <button className="full-btn" onClick={onClose}>Done</button>
       </div>
