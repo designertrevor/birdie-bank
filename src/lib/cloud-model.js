@@ -24,6 +24,8 @@ export function toDocs(state) {
     trips: state.trips && typeof state.trips === 'object' && !Array.isArray(state.trips) ? state.trips : {},
     // Trips you hid from your Tab and Up next (trips.js tripHidden)
     tripHidden: state.tripHidden && typeof state.tripHidden === 'object' && !Array.isArray(state.tripHidden) ? state.tripHidden : {},
+    // Stake payments you marked on a team points trip (cup.js), kept off the Tab
+    cupPaid: state.cupPaid && typeof state.cupPaid === 'object' && !Array.isArray(state.cupPaid) ? state.cupPaid : {},
   });
   for (const p of Object.values(state.players)) put('player', p.id, p);
   for (const c of Object.values(state.crews)) put('crew', c.id, c);
@@ -84,6 +86,8 @@ export function applyDoc(draft, kind, id, data) {
     if (data.trips && typeof data.trips === 'object' && !Array.isArray(data.trips)) draft.trips = data.trips;
     // And hidden trips later again
     if (data.tripHidden && typeof data.tripHidden === 'object' && !Array.isArray(data.tripHidden)) draft.tripHidden = data.tripHidden;
+    // And the stake marks of team points trips later still
+    if (data.cupPaid && typeof data.cupPaid === 'object' && !Array.isArray(data.cupPaid)) draft.cupPaid = data.cupPaid;
   }
 }
 
