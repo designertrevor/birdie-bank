@@ -48,6 +48,7 @@ import { isPlanPayment, planRows, planState } from './trip-plan.js';
 import { expensePairDebts, expensePairs, expenseTotals, placeable, placedOn, tripExpenses, tripMoney, tripPays } from './trip-expenses.js';
 import { CUP_FORMAT, cleanCup, closeEntry, cupEntries, cupLeaderboard, cupOf, cupScore, stakeLines, stakeLink, stakeMarks, stakeOpen, stakeSeats, teamOf } from './cup.js';
 import { cupStake } from './cup-stake.js';
+import { cleanFlights } from './flights.js';
 
 const DAY = 864e5;
 /**
@@ -70,7 +71,7 @@ export function cleanTripName(s) {
 }
 
 /** A new trip. `start` and `end` are days (YYYY-MM-DD); the last day is never before the first. */
-export function newTrip({ id, name, start, end, where = null, by = null, people = [], format = TRIP_FORMAT, cup = null, now = Date.now() }) {
+export function newTrip({ id, name, start, end, where = null, by = null, people = [], format = TRIP_FORMAT, cup = null, flights = null, now = Date.now() }) {
   const first = start || dayOf(now);
   const last = end && end >= first ? end : first;
   const trip = {
@@ -78,6 +79,8 @@ export function newTrip({ id, name, start, end, where = null, by = null, people 
     format: TRIP_FORMATS[format] ? format : TRIP_FORMAT, by, people: cleanPeople(people, by), createdAt: now, updatedAt: now,
   };
   if (trip.format === CUP_FORMAT) trip.cup = cleanCup(cup);
+  // Handicap flights (flights.js), only when picked, so a trip without them looks as it always did
+  if (cleanFlights(flights)) trip.flights = cleanFlights(flights);
   return trip;
 }
 
@@ -117,6 +120,7 @@ export function tripHidden(state, id) {
 export function tripStamp(trip) {
   const stamp = { id: trip.id, name: cleanTripName(trip.name) || 'Golf trip', start: trip.start || null, end: trip.end || null, format: trip.format || TRIP_FORMAT };
   if (stamp.format === CUP_FORMAT) stamp.cup = cleanCup(trip.cup);
+  if (cleanFlights(trip.flights)) stamp.flights = cleanFlights(trip.flights);
   return stamp;
 }
 

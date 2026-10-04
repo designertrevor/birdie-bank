@@ -23,7 +23,8 @@ export function setRoundCup(roundId, cup) {
   const s = getState();
   const r = s.rounds[roundId];
   if (!r || !canRecount(s, r)) return false;
-  const clean = cleanRoundCup({ ...r, cup });
+  // A change of who plays whom keeps what the round's matches are worth (a Trip Mode schedule's)
+  const clean = cleanRoundCup({ ...r, cup: cup && !('worth' in cup) && r.cup?.worth ? { ...cup, worth: r.cup.worth } : cup });
   update(st => {
     if (clean) st.rounds[roundId].cup = clean;
     else delete st.rounds[roundId].cup;

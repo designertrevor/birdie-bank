@@ -26,6 +26,8 @@ import { keptLine, roundBets } from '../lib/plan-setup.js';
 import { tripOf, tripOnDay, tripStamp } from '../lib/trips.js';
 import { toGoLabel, weekdayOf } from '../lib/preview.js';
 import { startingCup } from '../lib/cup-store.js';
+import { cleanRoundCup } from '../lib/cup.js';
+import { planCupFor } from '../lib/trip-templates.js';
 import { PLAN_LOCKED, answerPlan, editPlan, openPlanLink, planShareLink, removePlan, sharePlan, usePlanLive, usePlansOff } from '../lib/plan-sync.js';
 import { TalkSection } from '../components/Talk.jsx';
 import { planTalk, planThread } from '../lib/talk.js';
@@ -491,8 +493,10 @@ export function RollCall({ id }) {
     if (usualId) round.usualId = usualId;
     // Planned for a trip (or teeing off while one is on, and counted): the stamp rides in the round
     if (tripPick) round.trip = tripStamp(tripPick);
-    // A team points trip: its matches from the trip's teams (they can be changed from the trip's page)
-    const cup = tripPick ? startingCup(getState(), round, tripPick) : null;
+    // A team points trip: the matches the trip's schedule planned for this group when they still fit
+    // who showed up (trip-templates.js), else from the trip's teams (they can be changed from the trip's page)
+    const planned = tripPick ? cleanRoundCup({ ...round, cup: planCupFor(plan, round.players) }) : null;
+    const cup = tripPick ? planned || startingCup(getState(), round, tripPick) : null;
     if (cup) round.cup = cup;
     // Agreed challenges go in as side bets, once each
     const { round: withCh, used } = withChallenges(getState(), round, { planId: id, idOf: setup.idOf });

@@ -39,6 +39,7 @@ import { countsMoney, inUnits, padUnit, playForLine, playForShort } from '../lib
 import { CountForTrip, StartTripLink } from '../components/Trips.jsx';
 import { CupRoundSetup } from '../components/Cup.jsx';
 import { startingCup } from '../lib/cup-store.js';
+import { planCupFor } from '../lib/trip-templates.js';
 import { FOURSOMES_GAME, cleanRoundCup, cupCounts, cupOf } from '../lib/cup.js';
 import { countsByDefault, tripOf, tripOnDay, tripPlanDay, tripStamp } from '../lib/trips.js';
 import { challengeIdOfBet, challengesForRound, movedFromFor } from '../lib/challenges.js';
@@ -215,7 +216,9 @@ export default function NewRound({ rematch, fromPlan, present, edit = null, ahea
   const tripCup = !planning && tripPick ? cupOf(tripPick) : null;
   // Foursomes (an Alternate shot round): the match is the round's two teams, so its partners are the teams
   const foursomes = !!tripCup && game === FOURSOMES_GAME;
-  const cupStart = tripCup ? startingCup(state, { game, players: cupPlayers }, tripPick) : null;
+  // From a round the trip's schedule planned (trip-templates.js): its group's matches, while they fit
+  const planCup = tripCup && fromPlan ? planCupFor(state.plans?.[fromPlan], cupPlayers) : null;
+  const cupStart = tripCup ? planCup || startingCup(state, { game, players: cupPlayers }, tripPick) : null;
   const cupPairs = c => (c && c.sides.every(x => x.length === 2) && c.sides.flat().length === picked.length && c.sides.flat().every(pid => picked.includes(pid)) ? c.sides.map(x => [...x]) : null);
   const roundCup = !tripCup ? null
     : foursomes ? (teams ? cleanRoundCup({ game, players: cupPlayers, teams: teams.map(t => ({ players: t })), cup: cupStart || { kind: 'foursomes', sides: [[], []] } }) : cupStart) || { kind: 'foursomes', sides: [[], []] }

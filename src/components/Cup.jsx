@@ -336,7 +336,7 @@ export function CupMatchesSheet({ open, onClose, names, players, value, onSave, 
         {live && <p className="field-help">The matches recount from the scores so far, on every phone in the round.</p>}
       </div>
       <div className="cta-wrap">
-        <button className="full-btn" onClick={() => onSave(draft)}>Save the matches</button>
+        <button className="full-btn" onClick={() => onSave(value?.worth ? { ...draft, worth: value.worth } : draft)}>Save the matches</button>
         {onReset && <button className="link-btn center" onClick={onReset}>Start over from the teams</button>}
       </div>
     </Sheet>
