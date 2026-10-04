@@ -299,7 +299,8 @@ function unitFits(ch, round) {
  * The agreed challenges that go into a round about to start, as side bets: [{ ch, bet }].
  * `planId`: the plan it's starting from (its own challenges come in by the roll call's `idOf`).
  * Challenges from Player cards come in whenever both people are in the round, except a money one
- * on a points round or a points one on a money round (unitFits). Never one already in the round or
+ * on a points round or a points one on a money round (unitFits), or a front or back nine one in a
+ * round that doesn't play that nine (a 9-hole round of the other nine). Never one already in the round or
  * taken off it, a match or per-hole bet between two teammates in a scramble, or past MAX_BETS.
  */
 export function challengesForRound(state, round, { planId = null, idOf = null, now = Date.now(), me = state?.me } = {}) {
@@ -312,6 +313,9 @@ export function challengesForRound(state, round, { planId = null, idOf = null, n
     if (have.has(betIdOf(ch))) continue;
     if (ch.plan && (!planId || planOf(state, ch)?.id !== planId)) continue;
     if (!unitFits(ch, round)) continue;
+    // A front or back nine challenge waits for a round that plays that nine: in a 9-hole round of the
+    // other nine it would be a bet on holes nobody agreed to
+    if ((ch.holes === 'front' || ch.holes === 'back') && !nineRange(round, ch.holes)) continue;
     const pair = challengePair(state, ch, round, { idOf: ch.plan ? idOf : null, me });
     if (!pair || !kindFits(round, ch.kind, pair)) continue;
     out.push({ ch, bet: challengeBet(ch, round, pair) });

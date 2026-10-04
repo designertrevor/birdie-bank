@@ -538,3 +538,23 @@ test('cleanChallenge leaves out one with holes it could never have been made for
   assert.equal(cleanChallenge(noHoles), null);
   for (const h of ['all', 'front', 'back']) assert.ok(cleanChallenge(base({ holes: h })));
 });
+
+test('a front or back nine challenge waits for a round that plays that nine, never the other nine as the whole round', () => {
+  const state = { me: 'dave', players: {}, challenges: { c1: { ...played(base({ holes: 'back', stake: 15 }), { side: 'to', move: 'accept' }), mine: 'from', made: true } } };
+  const ids = ['dave', 'mike'], names = ['Dave', 'Mike'];
+  const nine = (which, o = {}) => { const r = createRound({ id: 'r1', game: 'skins', course: COURSE, holesCount: 9, nine: which, startHole: null, players: ids.map((id, i) => ({ id, name: names[i], index: null })), settings: SETTINGS, hcPct: 100, useHandicaps: false }); return Object.assign(r, o); };
+  // The front nine: the back nine match waits
+  assert.equal(challengesForRound(state, nine('front'), { now: NOW }).length, 0);
+  // The back nine: it goes in, on the whole round (holes 10 to 18)
+  const r9 = nine('back');
+  const back = challengesForRound(state, r9, { now: NOW });
+  assert.equal(back.length, 1);
+  assert.deepEqual(r9.holes.map(h => h.no), [10, 11, 12, 13, 14, 15, 16, 17, 18]);
+  assert.ok(back[0].bet.holes == null || String(back[0].bet.holes) === '1,9');
+  // 18 holes: holes 10 to 18
+  assert.deepEqual(challengesForRound(state, round({ ids, names }), { now: NOW })[0].bet.holes, [10, 18]);
+  // A front nine one goes into a front nine round
+  const front = { ...state, challenges: { c1: { ...state.challenges.c1, holes: 'front' } } };
+  assert.equal(challengesForRound(front, nine('front'), { now: NOW }).length, 1);
+  assert.equal(challengesForRound(front, nine('back'), { now: NOW }).length, 0);
+});
