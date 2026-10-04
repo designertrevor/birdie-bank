@@ -8,7 +8,7 @@ import { Avatar } from '../components/Pay.jsx';
 import { useStore } from '../lib/store.js';
 import { useNav } from '../lib/nav.js';
 import { sendReminder } from '../lib/pay.js';
-import { planPreview, previewCardModel, previewImageName, previewText, recordSentence, strokesLine } from '../lib/preview.js';
+import { pairBetLine, planPreview, previewCardModel, previewImageName, previewText, recordSentence, strokesLine } from '../lib/preview.js';
 import { renderPreviewCard } from '../lib/preview-image.js';
 import { IMAGE_H, IMAGE_W } from '../lib/shareImage.js';
 import { planShareLink, usePlanLive } from '../lib/plan-sync.js';
@@ -74,7 +74,10 @@ export default function PreviewScreen({ id, fromPlan = false }) {
             <div key={s.key} className="pv-line"><Icon name="plus-circle" fill /><span className="row-main"><b>{s.label}</b>{s.bet ? <span className="set-sub"> {s.bet}</span> : null}</span></div>
           ))}
           {pv.playFor && <div className="pv-line"><Icon name={plan.playFor?.kind === 'reward' ? 'gift' : 'trophy'} fill /><span className="row-main">{pv.playFor}</span></div>}
-          <p className="field-help">The group’s pick so far. Side bets and agreed challenges between two players go in at the tee.</p>
+          {pv.pairBets.map(x => (
+            <div key={x.key} className="pv-line"><Icon name={x.source === 'challenge' ? 'sword' : 'handshake'} fill /><span className="row-main">{pairBetLine(x)}</span></div>
+          ))}
+          <p className="field-help">{pv.pairBets.length ? 'The group’s pick so far. Each side bet goes in at the tee when both of them show.' : 'The group’s pick so far. Side bets and agreed challenges between two players go in at the tee.'}</p>
         </div>
 
         <div className="sec-label">Strokes</div>

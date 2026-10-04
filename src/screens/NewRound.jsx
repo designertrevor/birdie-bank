@@ -41,7 +41,7 @@ import { CupRoundSetup } from '../components/Cup.jsx';
 import { startingCup } from '../lib/cup-store.js';
 import { cleanRoundCup, cupCounts, cupOf } from '../lib/cup.js';
 import { countsByDefault, tripOf, tripOnDay, tripPlanDay, tripStamp } from '../lib/trips.js';
-import { challengeIdOfBet, challengesForRound } from '../lib/challenges.js';
+import { challengeIdOfBet, challengesForRound, movedFromFor } from '../lib/challenges.js';
 import { challengesBack, markChallengesOn } from '../lib/challenge-sync.js';
 
 const STEPS = ['Game', 'Course', 'Players', 'Bets'];
@@ -288,6 +288,9 @@ export default function NewRound({ rematch, fromPlan, present, edit = null, ahea
     });
     // Planned for a trip: it groups under the trip on everyone's Up next
     if (tripPick) plan.trip = tripStamp(tripPick);
+    // A round from a plan, kept for another day: the plan's challenges move to this one (challenges.js)
+    const oldPlan = replaces ? Object.values(s.plans || {}).find(p => p?.host && p.roundId === replaces) : null;
+    if (oldPlan) { const moved = movedFromFor(oldPlan, plan); if (moved.length) plan.movedFrom = moved; }
     // The round it replaces never got played: its challenges are agreed again for the next round together
     if (replaces) challengesBack(getState().rounds[replaces]);
     update(st => {

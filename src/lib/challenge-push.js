@@ -5,7 +5,7 @@
 // - A move made while the challenge is on its way is marked unsent and goes up on the next refresh,
 //   instead of being lost.
 // `deps`: { getState, update, adapter, newCode }.
-import { planOf } from './challenges.js';
+import { challengeToSend, planOf } from './challenges.js';
 
 // Fields that stay on this phone: which side it is, whether it was made here, and the retry flags
 const LOCAL_ONLY = ['code', 'pendingCode', 'mine', 'made', 'unsent', 'unsentMoves', 'syncedAt', 'moves'];
@@ -29,7 +29,8 @@ export function planCodeOf(state, ch) {
 export async function pushChallenge({ getState, update, adapter, newCode }, id) {
   const ch = getState().challenges?.[id];
   if (!ch || !adapter) return false;
-  const planCode = planCodeOf(getState(), ch);
+  // Under the plan it was made for, or the one its round moved to when that one was never shared
+  const { planCode, ch: sending } = challengeToSend(getState(), ch);
   if (planCode === undefined) return false; // its plan goes up first
   let code = ch.code || ch.pendingCode;
   if (!code) {
@@ -37,15 +38,19 @@ export async function pushChallenge({ getState, update, adapter, newCode }, id) 
     update(s => { const c = s.challenges?.[id]; if (c && !c.code && !c.pendingCode) c.pendingCode = fresh; });
     code = getState().challenges?.[id]?.pendingCode || fresh;
   }
-  const meta = challengeMeta({ ...ch, plan: ch.plan ? { ...ch.plan, code: planCode } : null });
+  const meta = challengeMeta({ ...sending, plan: sending.plan ? { ...sending.plan, code: planCode } : null });
   await adapter.create(code, planCode, meta);
+  // Moves go up under the plan it's for now, so everyone looking at that plan hears them
+  const movesCode = planCodeOf(getState(), ch) ?? planCode;
   const sent = new Set();
-  for (const m of ch.moves || []) { await adapter.addMove(code, planCode, m); sent.add(m.id); }
+  for (const m of ch.moves || []) { await adapter.addMove(code, movesCode, m); sent.add(m.id); }
   update(s => {
     const c = s.challenges?.[id];
     if (!c) return;
     c.code = code;
     delete c.pendingCode;
+    // Sent as it reads on the plan it moved to: this phone keeps the same, so it reads the same here
+    if (sending !== ch) { c.from = sending.from; c.to = sending.to; if (sending.setBy) c.setBy = sending.setBy; c.plan = { ...sending.plan }; }
     if (c.plan) c.plan.code = planCode;
     delete c.unsent;
     const rest = (c.moves || []).filter(m => !sent.has(m.id));

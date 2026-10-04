@@ -10,7 +10,7 @@ import { getState, update, uid } from './store.js';
 import { getSupabase, supabaseConfigured } from './supabase.js';
 import { ChallengesOffError, challengeLocalAdapter, challengeSupabaseAdapter } from './challenge-adapters.js';
 import { newCode } from './sync-model.js';
-import { challengeLife, challengeLink, challengesToGiveBack, cleanChallenge, mergeMoves, withMove } from './challenges.js';
+import { challengeLife, challengeLink, challengesToGiveBack, cleanChallenge, mergeMoves, moveIdFor, withMove } from './challenges.js';
 import { challengeMeta, planCodeOf, pushChallenge as pushChallengeWith, pushMoves } from './challenge-push.js';
 
 const localFlag = () => { try { return localStorage.getItem('bb-sync-local') === '1'; } catch { return false; } };
@@ -55,20 +55,22 @@ const pushChallenge = async id => pushChallengeWith(deps(await getChallengeAdapt
 export async function makeChallenge(ch) {
   update(s => {
     if (!s.challenges) s.challenges = {};
-    s.challenges[ch.id] = { ...ch, mine: 'from', made: true, code: null, unsent: true };
+    // One set up between two others is neither side's on this phone: it puts their answers in
+    s.challenges[ch.id] = { ...ch, mine: ch.setBy ? null : 'from', made: true, code: null, unsent: true };
   });
   try { await pushChallenge(ch.id); } catch (e) { noteError(e); }
   return { id: ch.id, code: getState().challenges?.[ch.id]?.code ?? null };
 }
 
 /**
- * Make a move on a challenge ({ side, move, stake?, roundId? }): saved here straight away (when it
- * fits where the challenge stands) and sent. Resolves true when it was made, false when it didn't fit.
+ * Make a move on a challenge ({ side, move, stake?, roundId?, proxy? }): saved here straight away
+ * (when it fits where the challenge stands) and sent. `proxy`: an answer put in for someone by the
+ * organizer or scorekeeper (challenges.js PROXY). Resolves true when it was made, false when it didn't fit.
  */
-export async function moveChallenge(id, move) {
+export async function moveChallenge(id, { proxy = false, ...move }) {
   const ch = getState().challenges?.[id];
   if (!ch) return false;
-  const m = { id: uid('m'), at: Date.now(), ...move };
+  const m = { id: moveIdFor(uid('m'), proxy), at: Date.now(), ...move };
   const next = withMove(ch, m);
   if (!next) return false;
   const made = next.moves.at(-1);
@@ -143,6 +145,11 @@ export async function refreshChallenges() {
     for (const plan of Object.values(state.plans || {})) {
       if (!plan?.code || plan.gone || plan.status === 'off') continue;
       for (const r of await adapter.fetchForPlan(plan.code)) applyRemote(r.code, r, plan.id);
+      // A round kept for another day: the challenges made for the plans it came from moved with it
+      for (const e of Array.isArray(plan.movedFrom) ? plan.movedFrom : []) {
+        if (!e?.code || e.code === plan.code) continue;
+        for (const r of await adapter.fetchForPlan(e.code)) applyRemote(r.code, r, state.plans?.[e.id]?.code === e.code ? e.id : null);
+      }
     }
     // Player card challenges still going (one that's over never changes again)
     for (const ch of Object.values(getState().challenges || {})) {
@@ -192,10 +199,16 @@ export async function openChallengeLink(code) {
     const plan = meta.plan?.code ? Object.values(getState().plans || {}).find(p => p?.code === meta.plan.code) : null;
     update(s => {
       if (!s.challenges) s.challenges = {};
-      s.challenges[meta.id] = { ...challengeMeta(meta), plan: meta.plan ? { ...meta.plan, id: plan?.id ?? null } : null, code, moves: mergeMoves([], remote.moves), mine: meta.plan ? null : 'to', made: false, syncedAt: Date.now() };
+      // One set up between two others: which of the two you are is picked on its page
+      s.challenges[meta.id] = { ...challengeMeta(meta), plan: meta.plan ? { ...meta.plan, id: plan?.id ?? null } : null, code, moves: mergeMoves([], remote.moves), mine: meta.plan || meta.setBy ? null : 'to', made: false, syncedAt: Date.now() };
     });
   } else applyRemote(code, remote);
   return meta.id;
+}
+
+/** Say which of the two you are, on a challenge someone set up between you and someone else (from its link). */
+export function pickChallengeSide(id, side) {
+  update(s => { const c = s.challenges?.[id]; if (c && !c.made && !c.plan && c.setBy && (side === 'from' || side === 'to')) c.mine = side; });
 }
 
 /** The link for a challenge on the server, or null while it's on this phone only. */

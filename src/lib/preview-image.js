@@ -104,6 +104,13 @@ function draw(ctx, m) {
   lines(m.inLine, `700 44px ${BODY}`, C.ink, 58, 3);
   if (m.maybeLine) lines(m.maybeLine, `600 36px ${BODY}`, C.soft, 50, 2);
 
+  // Two-player side bets and agreed challenges: "Dave v Mike, $20 match"
+  if (m.pairBets?.length && room(160)) {
+    section('Side bets');
+    for (const l of m.pairBets.slice(0, 3)) if (!lines(l, `600 36px ${BODY}`, C.ink, 50, 1)) break;
+    if (m.pairBets.length > 3 && room(50)) lines(`and ${m.pairBets.length - 3} more`, `600 30px ${BODY}`, C.soft, 44, 1);
+  }
+
   // Strokes: who gets them and on which holes
   if ((m.strokes.length || m.strokesNote) && room(200)) {
     section('Strokes');
