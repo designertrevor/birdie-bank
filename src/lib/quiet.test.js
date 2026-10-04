@@ -19,7 +19,7 @@ const sources = [...files(join(root, 'src')), join(root, 'index.html'), join(roo
   .map(p => ({ p: p.slice(root.length), text: readFileSync(p, 'utf8') }));
 
 test('nothing in the app plays sound or opens an audio session', () => {
-  const loud = /new Audio\b|AudioContext|<audio\b|<video\b|speechSynthesis|SpeechSynthesis|mediaSession|\.play\(\)|getUserMedia/;
+  const loud = /new Audio\b|AudioContext|<audio\b|<video\b|createElement\(\s*['"`](audio|video)|HTML(Audio|Video|Media)Element|speechSynthesis|SpeechSynthesis|mediaSession|\.play\(\)|getUserMedia/;
   const found = sources.filter(s => loud.test(s.text)).map(s => s.p);
   assert.deepEqual(found, []);
 });

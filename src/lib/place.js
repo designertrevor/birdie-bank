@@ -14,7 +14,8 @@ const MAX_STACK = 12;
 // and "open Add an expense" from Up next. Coming back shows the screen as it was left instead.
 const ONE_SHOT = { roundDetail: ['celebrate'], trip: ['add'] };
 
-// Screens whose `id` names something on this phone. One that's gone since isn't brought back.
+// Screens whose `id` (or the plan they edit or start) names something on this phone. One that's
+// gone since isn't brought back.
 const NEEDS = {
   play: (s, id) => s.rounds?.[id]?.status === 'active',
   roundDetail: (s, id) => !!s.rounds?.[id],
@@ -22,6 +23,8 @@ const NEEDS = {
   rollCall: (s, id) => !!s.plans?.[id],
   preview: (s, id) => !!s.plans?.[id],
   challenge: (s, id) => !!s.challenges?.[id],
+  // Editing a plan, or the round setup a plan's roll call started: not once that plan is gone
+  newRound: (s, _id, p) => [p.edit, p.fromPlan].every(pid => !pid || !!s.plans?.[pid]),
 };
 
 /** True for a plain JSON value (what survives a save): no functions, Sets or class instances. */
@@ -69,7 +72,7 @@ export function readPlace(saved, state, { now = Date.now(), screens = [], tabs =
       const params = { ...(e.params || {}) };
       for (const k of ONE_SHOT[e.name] || []) delete params[k];
       const need = NEEDS[e.name];
-      if (need && !need(state, params.id)) break;
+      if (need && !need(state, params.id, params)) break;
       stack.push({ name: e.name, params, key: e.key });
     }
   }

@@ -85,6 +85,15 @@ test('a round finished or deleted since is not brought back: the stack stops und
   assert.deepEqual(readPlace(planGone, state, opts).stack, []);
 });
 
+test('setup editing a plan, or started from one, is not brought back once that plan is gone', () => {
+  const at = params => roundTrip({ tab: 'upnext', stack: [{ name: 'newRound', params, key: 1 }] });
+  assert.equal(readPlace(at({ edit: 'p1' }), state, opts).stack.length, 1);
+  assert.equal(readPlace(at({ fromPlan: 'p1', present: ['me'] }), state, opts).stack.length, 1);
+  assert.equal(readPlace(at({ ahead: true }), state, opts).stack.length, 1);
+  assert.deepEqual(readPlace(at({ edit: 'p9' }), state, opts).stack, []);
+  assert.deepEqual(readPlace(at({ fromPlan: 'p9', present: ['me'] }), state, opts).stack, []);
+});
+
 test('the reveal and "open Add an expense" are not played again on the way back', () => {
   const saved = roundTrip({ tab: 'history', stack: [
     { name: 'roundDetail', params: { id: 'r2', celebrate: true }, key: 1 },
