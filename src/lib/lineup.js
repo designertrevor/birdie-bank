@@ -11,13 +11,16 @@
 //  • A Scramble's teams: only before the first score, since each team has played its own ball.
 //  • Banker and Wolf order: from the next hole on. Each hole played keeps the banker or wolf it had,
 //    so no money moves. The order reads from the next hole: the first name banks (or is the wolf)
-//    on it, the second on the hole after, and so on round.
+//    on it, the second on the hole after, and so on round. It's kept as `round.orders` (see
+//    round.js turnOrder) with the hole it counts from, so the players stay in their places: their
+//    order breaks a tie in the cents, and a cent mustn't move. A hole already set up (its banker's
+//    bets in, or the wolf picked) keeps its banker or wolf too, so the new order starts after it.
 //  • Sixes partners: the whole round. The three matches are one rotation where everyone partners
 //    everyone once, so they're set together.
 //  • Who throws the first hammer: the whole round. It only decides who may hammer, never the money.
 //  • Play for (money, points or a reward): the whole round. A round is played for one thing.
 // Nothing here runs unless someone changes a setting, so old rounds keep their money.
-import { GAMES, bankerHoleSetup, gameView, holeComplete, isTeamGame, nassauPressOptions, oneBall, playersOn, roundResults, roundStarted, settingsAt, teamsFor, wolfFor } from './round.js';
+import { GAMES, bankerHoleSetup, gameView, holeComplete, isTeamGame, nassauPressOptions, oneBall, playersOn, roundResults, roundStarted, settingsAt, teamsFor, turnOrder, wolfFor } from './round.js';
 import { teamsProblem } from './teams.js';
 import { betsOf, kindFits } from './pair-bets.js';
 import { playForOf, points, rewardOutcome, storedPlayFor, tabResults } from './play-for.js';
@@ -83,8 +86,25 @@ function bankOffset(main, idx) {
 const wolfList = (main, idx) => {
   const hole = main.holes[idx];
   const on = hole ? playersOn(main, hole) : main.players;
-  return (on.length ? on : main.players).map(p => p.id);
+  const ids = (on.length ? on : main.players).map(p => p.id);
+  return turnOrder(main, idx).filter(id => ids.includes(id));
 };
+
+/**
+ * Where a new Banker or Wolf order starts: the next hole to play, or the first one after it that
+ * isn't set up yet. A hole with its banker saved (the bets are in) or its wolf picked keeps them,
+ * so it isn't where the new order starts. -1 when every hole is in.
+ */
+function orderStart(round) {
+  const idx = nextOpenIdx(round);
+  if (idx < 0 || (round.game !== 'banker' && round.game !== 'wolf')) return idx;
+  const saved = round.game === 'banker' ? round.banker : round.wolf;
+  for (let i = idx; i < round.holes.length; i++) {
+    const h = round.holes[i];
+    if (!holeComplete(round, h) && !saved?.[h.no]) return i;
+  }
+  return -1;
+}
 
 /**
  * The order as the sheet shows it: { idx, ids }. `idx` is the next hole to play (-1 when every hole
@@ -94,9 +114,9 @@ const wolfList = (main, idx) => {
  */
 export function orderNow(round) {
   const main = gameView(round, 'main');
-  const idx = nextOpenIdx(round);
+  const idx = orderStart(round);
   const at = Math.max(0, idx);
-  const all = main.players.map(p => p.id);
+  const all = turnOrder(main, at);
   if (round.game === 'wolf') {
     const on = wolfList(main, at);
     return { idx, ids: rotate(on, at % on.length) };
@@ -120,8 +140,8 @@ export function changeOrder(round, ids) {
   if (!Array.isArray(ids) || ids.length !== now.ids.length || !now.ids.every(id => ids.includes(id))) return round;
   if (sameList(ids, now.ids)) return round;
   const main = gameView(round, 'main');
-  const all = main.players.map(p => p.id);
   const at = Math.max(0, now.idx);
+  const all = turnOrder(main, at);
   let order;
   if (round.game === 'sixes') order = [...ids];
   else if (round.game === 'wolf') {
@@ -141,6 +161,8 @@ export function changeOrder(round, ids) {
     order = placed;
   }
   if (sameList(order, all)) return round;
+  // Banker and Wolf: the order from this hole on, the players where they are
+  if (round.game !== 'sixes') return { ...round, orders: [...(round.orders || []).filter(o => (o?.from ?? 0) < at), { from: at, ids: order }] };
   const byId = new Map(round.players.map(p => [p.id, p]));
   const players = [...order.map(id => byId.get(id)), ...round.players.filter(p => !order.includes(p.id))];
   return { ...round, players };
@@ -183,8 +205,10 @@ export function orderText(round) {
     const segs = sixesSegments(round.holes.length);
     return sixesPairings(all).map(([a, b], i) => `${round.holes[segs[i].start - 1]?.no ?? segs[i].start}–${round.holes[segs[i].end - 1]?.no ?? segs[i].end} ${a.map(id => namesOf(round, [id])).join(' & ')} v ${b.map(id => namesOf(round, [id])).join(' & ')}`).join('; ');
   }
-  if (round.game === 'banker') return namesOf(round, rotate(all, bankOffset(main, 0) % all.length));
-  return namesOf(round, all);
+  // The order as it was played from the first hole: a change mid-round is listed under what changed
+  const from1 = turnOrder(main, 0);
+  if (round.game === 'banker') return namesOf(round, rotate(from1, bankOffset(main, 0) % from1.length));
+  return namesOf(round, round.game === 'wolf' ? from1 : all);
 }
 
 // --------------------------- Teams and sides -------------------------------

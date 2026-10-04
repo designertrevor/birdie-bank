@@ -51,7 +51,7 @@ export function LineupSheet({ round, onClose }) {
   const after = build(round);
   const same = after === round;
   const money = same ? null : moneyLine(round, after);
-  const orderChanged = kind === 'order' && after.players !== round.players;
+  const orderChanged = kind === 'order' && after !== round;
   const runs = fromNext ? orderRuns(after).slice(0, 4) : [];
   const banker = main.settings.banker || {};
   const rotates = game === 'wolf' || (game === 'banker' && banker.rotation !== 'low' && banker.rotation !== 'choice');
@@ -65,7 +65,7 @@ export function LineupSheet({ round, onClose }) {
       if (!r) return;
       const next = build(r);
       // The Banker and Wolf order is listed on the rules card with the hole it starts from
-      if (fromNext && next.players !== r.players && nextNo != null) {
+      if (fromNext && next !== r && nextNo != null) {
         const agreed = logChange(next, `${label} from hole ${nextNo}: ${ids.map(first).join(', ')}`, nextNo);
         if (agreed) next.agreed = agreed;
       }

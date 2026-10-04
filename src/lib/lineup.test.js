@@ -162,6 +162,63 @@ test('a banker who has left stays out of the order, and the order set reads from
   assert.equal(changeOrder(r, ['a', 'b', 'c']), r);
 });
 
+test('after a new banker order the card still reads the order played from the first hole', () => {
+  const r = bankerRound();
+  assert.equal(orderText(r), 'Ann, Bo, Cy, Dan');
+  const after = changeOrder(r, ['c', 'd', 'a', 'b']);
+  // Holes 1 to 3 were banked by Ann, Bo and Cy, so that's still what was agreed on the first tee
+  assert.equal(orderText(after), 'Ann, Bo, Cy, Dan');
+  assert.equal(lineupMenuText(after), 'Banker order · Cy, Dan, Ann, Bo');
+  // The players keep their places; the order rides with the hole it counts from
+  assert.deepEqual(after.players.map(p => p.id), ['a', 'b', 'c', 'd']);
+  assert.deepEqual(after.orders.map(o => o.from), [3]);
+  // A second change from a later hole keeps the first one for the holes before it
+  const later = play(structuredClone(after), 5, () => ({ a: 4, b: 4, c: 4, d: 4 }));
+  for (let i = 3; i < 5; i++) later.banker[later.holes[i].no] = bankerHoleSetup(later, i);
+  const again = changeOrder(later, ['b', 'a', 'c', 'd']);
+  assert.deepEqual([0, 1, 2, 3, 4, 5].map(i => bankerHoleSetup(gameView(again, 'main'), i).banker), ['a', 'b', 'c', 'c', 'd', 'b']);
+  assert.deepEqual(again.orders.map(o => o.from), [3, 5]);
+  assert.equal(orderText(again), 'Ann, Bo, Cy, Dan');
+  const wolf = changeOrder(wolfRound(), ['d', 'c', 'a', 'b']);
+  assert.equal(orderText(wolf), 'Ann, Bo, Cy, Dan');
+});
+
+test('a hole already set up keeps its banker, so the new order starts on the hole after it', () => {
+  const r = bankerRound();
+  // Hole 4's bets are in (Dan banks it) but a score is missing
+  r.banker[r.holes[3].no] = bankerHoleSetup(r, 3);
+  r.scores[r.holes[3].no] = { a: 4, b: 4, c: 4 };
+  const now = orderNow(r);
+  assert.equal(now.idx, 4);
+  // Hole 5 is Ann's in the rotation, so the order reads from her
+  assert.deepEqual(now.ids, ['a', 'b', 'c', 'd']);
+  const after = changeOrder(r, ['c', 'a', 'b', 'd']);
+  const main = gameView(after, 'main');
+  assert.equal(bankerHoleSetup(main, 3).banker, 'd');
+  assert.deepEqual([4, 5, 6].map(i => bankerHoleSetup(main, i).banker), ['c', 'a', 'b']);
+  assert.deepEqual(orderRuns(after).slice(0, 2), [{ from: 4, to: 4, id: 'd' }, { from: 5, to: 5, id: 'c' }]);
+});
+
+test('a new Banker or Wolf order never moves a cent, even a split pot’s odd one', () => {
+  const seeded = seed => () => (seed = (seed * 16807) % 2147483647) / 2147483647;
+  const rnd = seeded(9);
+  const shuffle = a => { const b = [...a]; for (let i = b.length - 1; i > 0; i--) { const j = Math.floor(rnd() * (i + 1)); [b[i], b[j]] = [b[j], b[i]]; } return b; };
+  let n = 0;
+  for (const { name, round } of oldRounds(3000, 5)) {
+    if ((round.game !== 'banker' && round.game !== 'wolf') || round.status === 'done') continue;
+    const now = orderNow(round);
+    if (now.idx < 0) continue;
+    const after = changeOrder(round, shuffle(now.ids));
+    if (after === round) continue;
+    n++;
+    assert.deepEqual(bal(after), bal(round), name);
+    // Whoever is first banks (or is the wolf on) the hole the sheet says
+    const main = gameView(after, 'main');
+    assert.equal(round.game === 'wolf' ? wolfFor(main, now.idx) : bankerHoleSetup(main, now.idx).banker, orderNow(after).ids[0], name);
+  }
+  assert.ok(n > 200);
+});
+
 // ---------------------------------------------------------------------------
 // Sixes partners: the whole round
 
@@ -525,7 +582,7 @@ test('the Banker and Wolf order is listed by the sheet, with the hole it starts 
   const noted = noteChanges(r, 2);
   assert.deepEqual(noted?.changes ?? [], []);
   // ...because the sheet lists it
-  const logged = logChange({ ...r, agreed: noted }, 'Banker order from hole 4: Bo, Dan, Ann, Cy', 4, 3);
+  const logged = logChange({ ...r, agreed: noted || r.agreed }, 'Banker order from hole 4: Bo, Dan, Ann, Cy', 4, 3);
   assert.deepEqual(logged.changes, [{ hole: 4, text: 'Banker order from hole 4: Bo, Dan, Ann, Cy', at: 3 }]);
   // Nothing locked in, nothing listed
   assert.equal(logChange(mk('banker'), 'x', 1), null);

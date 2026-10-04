@@ -1025,6 +1025,29 @@ export function holesPlayed(round) {
 
 const playerById = (round, pid) => round.players.find(p => p.id === pid);
 
+/**
+ * The Banker and Wolf playing order on the hole at `idx`: the players in the order they take turns.
+ * A change made mid-round (lineup.js changeOrder) is kept in `round.orders`, [{ from, ids }] with
+ * `from` the hole index it counts from, so the holes before it keep the order they were played in
+ * and the players stay where they are (their order breaks a tie in the cents). Anyone not in a saved
+ * order comes after the rest. A round with no `orders` plays in the players' order, as before.
+ */
+export function turnOrder(round, idx = 0) {
+  const ids = round.players.map(p => p.id);
+  let order = null;
+  for (const o of Array.isArray(round.orders) ? round.orders : []) if (o && Array.isArray(o.ids) && (o.from ?? 0) <= idx) order = o.ids;
+  if (!order) return ids;
+  const kept = order.filter((id, i) => ids.includes(id) && order.indexOf(id) === i);
+  return [...kept, ...ids.filter(id => !kept.includes(id))];
+}
+
+/** Players (objects) in the playing order on the hole at `idx`. */
+const inTurn = (round, list, idx) => {
+  if (!Array.isArray(round.orders) || !round.orders.length) return list;
+  const order = turnOrder(round, idx);
+  return [...list].sort((a, b) => order.indexOf(a.id) - order.indexOf(b.id));
+};
+
 // --------------------------- Banker ---------------------------------------
 
 /**
@@ -1044,7 +1067,7 @@ export function lowBanker(round, idx, ids, prevBanker = null) {
   const tied = scored.filter(pid => val(pid) === low);
   if (tied.length === 1) return tied[0];
   if (prevBanker && tied.includes(prevBanker)) return prevBanker;
-  const all = round.players.map(p => p.id);
+  const all = turnOrder(round, idx);
   const from = prevBanker ? all.indexOf(prevBanker) : -1;
   for (let n = 1; n <= all.length; n++) {
     const pid = all[(from + n + all.length) % all.length];
@@ -1074,7 +1097,7 @@ export function bankerPress(round, hole) {
 export function bankerHoleSetup(round, idx) {
   const hole = round.holes[idx];
   const existing = round.banker[hole.no];
-  const all = round.players.map(p => p.id);
+  const all = turnOrder(round, idx);
   const ids = playersOn(round, hole).map(p => p.id);
   // A setup made before someone left: drop their bet, and start fresh if they were the banker
   if (existing && ids.includes(existing.banker)) {
@@ -1427,7 +1450,7 @@ function skinsMoney(round, t, onPay = null) {
 export function wolfFor(round, idx) {
   const hole = round.holes[idx];
   const on = hole ? playersOn(round, hole) : round.players;
-  const list = on.length ? on : round.players;
+  const list = inTurn(round, on.length ? on : round.players, idx);
   const turn = list[idx % list.length].id;
   // House rule "last place is wolf on 17 and 18" (wolf.lastWolf, 18 holes, off unless the round says
   // so, added 2026-10-03): whoever is furthest down in the wolf money so far is the wolf on the last
