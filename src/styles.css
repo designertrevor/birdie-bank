@@ -2392,3 +2392,9 @@ button.ch-main:active { transform: scale(.98); }
 .banker-bar .bl { color: rgba(0,0,0,.7); }
 /* Add a course: each par button's tap area is 44px wide as well as tall */
 .par-pick button::before { left: 50%; right: auto; width: 44px; transform: translate(-50%, -50%); }
+
+/* ---------- One profile privacy setting, a friend's deeper stats (o7a privacy) ---------- */
+.pf-friend-more { margin-top: 8px; }
+.pf-friend-more .pf-more-head { padding-top: 14px; padding-bottom: 2px; }
+.pf-friend-more .kv-k { min-width: 0; overflow-wrap: anywhere; }
+.pf-friend-more .kv-v { flex: none; font-variant-numeric: tabular-nums; text-align: right; }

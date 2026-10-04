@@ -1,7 +1,8 @@
 // Your stats: results and net by game and by course, how your presses went, skins won and your
 // biggest wins, over any time range (the same control as History, plus All time). Opened from your
-// profile, from History (on the range you were looking at) and from Season. Only you see it: it's
-// worked out on this phone from your own rounds and never sent anywhere.
+// profile, from History (on the range you were looking at) and from Season. It's worked out on this
+// phone from your own rounds; the all-time records (no money) go with your profile under its
+// privacy setting (profile-model.js publicDeep), and the dollars here stay on this phone.
 import { useMemo, useState } from 'react';
 import { Empty, Header, Icon, Screen } from '../components/ui.jsx';
 import { RangeBar } from '../components/RangeBar.jsx';
@@ -10,6 +11,8 @@ import { useNav } from '../lib/nav.js';
 import { money } from '../lib/golf.js';
 import { points } from '../lib/play-for.js';
 import { rangeLabel, roundsInRange } from '../lib/history.js';
+import { useMyProfile } from '../lib/profiles.js';
+import { statsShareLine } from '../lib/profile-view.js';
 import { deepStats, lineAmount, lineSub, pressCount, pressText, skinsText, winRate } from '../lib/deep-stats.js';
 
 const RANGE_KEY = 'bb-stats-range';
@@ -41,6 +44,7 @@ function startRange(given) {
 export default function Stats({ range: given = null }) {
   const nav = useNav();
   const state = useStore();
+  const { privacy } = useMyProfile();
   const [range, setRangeRaw] = useState(() => startRange(given));
   const setRange = r => { setRangeRaw(r); try { sessionStorage.setItem(RANGE_KEY, JSON.stringify(r)); } catch { /* ignore */ } };
   const { rounds, me, players, links, unlinks, accountOf } = state;
@@ -120,7 +124,7 @@ export default function Stats({ range: given = null }) {
               </>
             )}
 
-            <p className="field-help pad stats-foot"><Icon name="lock-simple" fill /> Only you see this. {moneyNote(st)}</p>
+            <p className="field-help pad stats-foot"><Icon name={privacy.profile === 'hidden' ? 'lock-simple' : 'users-three'} fill /> {statsShareLine(privacy)} {moneyNote(st)}</p>
           </>
         )}
       </div>

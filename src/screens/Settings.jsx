@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Empty, Header, Icon, Numpad, Screen, Segmented, Toggle, useUI } from '../components/ui.jsx';
 import { RulesSheet } from '../components/Rules.jsx';
 import { Avatar } from '../components/Avatar.jsx';
+import { ProfilePrivacy } from '../components/ProfilePrivacy.jsx';
 import { DEFAULT_SETTINGS, freshState, getState, replaceState, resetAll, update, uid, useStore } from '../lib/store.js';
 import { addedText, backupFileName, backupText, mergeBackup, parseBackup, replaceFromBackup, summaryText } from '../lib/backup.js';
 import { allCourses, coursePar, courseTag, findCourse } from '../lib/courses.js';
@@ -116,10 +117,16 @@ export default function Settings() {
             <div className="row-main">
               <div className="set-name">{me.name}</div>
               <div className="set-sub">{`${me.index == null ? 'No handicap index' : `Index ${formatIndex(me.index)}`} · ${myPay ? `Paid on ${PAY_APPS[myPay.app].name}` : 'Add how you get paid'}`}</div>
-              <div className="set-sub">Your profile: avatar, home course and privacy</div>
+              <div className="set-sub">Your profile: avatar, home course and stats</div>
             </div>
             <span className="chevron"><Icon name="caret-right" /></span>
           </button>
+        )}
+        {me && (
+          <>
+            <div className="sec-label">Privacy</div>
+            <ProfilePrivacy id="set-pv" />
+          </>
         )}
         <div className="sec-label">Appearance</div>
         <div className="block">

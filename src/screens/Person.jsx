@@ -44,7 +44,7 @@ export default function Person({ id: opened }) {
   const player = state.players[id];
   const info = payInfoFor(state, id);
   // Their own profile, once a seat of theirs is linked to their account: only what they let people
-  // they've played with see (profile-view.js)
+  // their privacy setting lets you see (profile-view.js): record, stats by game and course, presses, skins
   const fv = friendView(usePersonProfile(id), player);
   const plan = outstanding(state);
   const tab = tabWith(plan, mine, id);
@@ -181,6 +181,15 @@ export default function Person({ id: opened }) {
                 </div>
               ))}
             </div>
+            {fv.more && (
+              <div className="block kv-block pf-more pf-friend-more">
+                {fv.more.rows.map(r => <div key={r.key} className="kv-row"><span className="kv-k">{r.label}</span><span className="kv-v">{r.value}</span></div>)}
+                {fv.more.games.length > 0 && <div className="eyebrow pf-more-head">By game</div>}
+                {fv.more.games.map(g => <div key={g.key} className="kv-row"><span className="kv-k">{g.name}</span><span className="kv-v">{g.sub}</span></div>)}
+                {fv.more.courses.length > 0 && <div className="eyebrow pf-more-head">By course</div>}
+                {fv.more.courses.map(c => <div key={c.key} className="kv-row"><span className="kv-k">{c.name}</span><span className="kv-v">{c.sub}</span></div>)}
+              </div>
+            )}
             <p className="field-help pad">{[sinceText(fv.since), `All of ${firstName}’s rounds, not just yours together.`].filter(Boolean).join(' · ')}</p>
           </>
         )}

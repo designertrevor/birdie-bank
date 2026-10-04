@@ -9,10 +9,9 @@ import { nameOf, outstanding, tabBalances } from './ledger.js';
 import { payInfoFor, profilePayInfo, savedPayInfo } from './pay.js';
 import { theirName, theirProfile } from './their-profile.js';
 import {
-  PRIVACY_DEFAULTS, applyPeople, fromRow, levelsFor, normalizeAvatar, normalizePrivacy, profileOf, profileStats,
-  shareableStats, shows, toRow,
+  applyPeople, fromRow, moneyShown, normalizeAvatar, normalizePrivacy, profileOf, profileStats, shareableStats, toRow,
 } from './profile-model.js';
-import { MONEY_CHOICES, friendView, moneyHelp, privacySummary, statTiles, whoSees } from './profile-view.js';
+import { friendView, moneyHelp, privacySummary, statTiles, whoSees } from './profile-view.js';
 import { BACKDROPS, BUDDIES, SHELVES, avatarLabel, avatarModel, buddyAvatar, noTwins, shelfOf } from './avatars.js';
 
 const flat9 = { id: 'f9', name: 'Flat Nine', city: 'Town', tees: [], holes: Array.from({ length: 9 }, (_, i) => ({ par: 4, hdcp: i + 1 })) };
@@ -91,41 +90,38 @@ test('critters: an app that doesn’t know one yet shows initials on its backdro
 
 // ------------------------------- privacy: Everyone ---------------------------
 
-test('everyone: a money choice only, money still hidden by default', () => {
-  assert.deepEqual(levelsFor('money'), ['hidden', 'played', 'everyone']);
-  assert.deepEqual(levelsFor('stats'), ['played', 'hidden']);
-  assert.deepEqual(MONEY_CHOICES.map(c => c.value), levelsFor('money'), 'the screen offers exactly the money levels');
-  assert.equal(MONEY_CHOICES[0].label, 'Only you');
-  assert.equal(normalizePrivacy({}).money, 'hidden');
-  assert.equal(normalizePrivacy({ money: 'everyone' }).money, 'everyone');
-  assert.equal(normalizePrivacy({ handicap: 'everyone' }).handicap, 'played', 'everyone isn’t a level for the other parts');
-  assert.equal(shows({ money: 'everyone' }, 'money'), true);
-  assert.equal(shows({ money: 'hidden' }, 'money'), false);
-  assert.deepEqual(PRIVACY_DEFAULTS, { money: 'hidden', stats: 'played', handicap: 'played', homeCourse: 'played' });
+// Money's 'everyone' from Overnight 6 is now the profile-wide setting (o7a privacy): these hold
+// what a profile saved with it reads as today.
+test('everyone: money saved as everyone becomes Show my money on a played-with profile', () => {
+  const p = normalizePrivacy({ money: 'everyone' });
+  assert.equal(p.profile, 'played', 'the rest of the profile doesn’t widen');
+  assert.equal(p.showMoney, true);
+  assert.equal(p.money, 'played', 'the older key now says played, the same people today');
+  assert.equal(normalizePrivacy({}).showMoney, false, 'money still hidden by default');
+  assert.equal(normalizePrivacy({ profile: 'everyone', showMoney: true }).money, 'everyone', 'Everyone with money on keeps the older key at everyone');
 });
 
-test('everyone: money goes out with your stats; hidden stats still keep it in; hidden money never leaves', () => {
+test('everyone: money goes out with your profile; only you keeps it in; hidden money never leaves', () => {
   const s = phone();
   const stats = profileStats(s);
-  const row = toRow(profileOf({ ...s, profile: { privacy: { money: 'everyone' } } }), 'acct-t', stats);
+  const row = toRow(profileOf({ ...s, profile: { privacy: { profile: 'everyone', showMoney: true } } }), 'acct-t', stats);
   assert.equal(row.privacy.money, 'everyone');
+  assert.equal(row.privacy.profile, 'everyone');
   assert.deepEqual(row.stats.money, stats.money);
-  assert.deepEqual(shareableStats(stats, { money: 'everyone', stats: 'hidden' }), {});
+  assert.deepEqual(shareableStats(stats, { profile: 'hidden', showMoney: true }), {});
   assert.equal(toRow(profileOf(s), 'acct-t', stats).stats.money, undefined, 'the default still keeps money on the phone');
 });
 
 test('everyone: the words say who that is today, honestly', () => {
-  assert.equal(whoSees({ money: 'everyone' }, 'money'), 'Everyone');
-  assert.equal(whoSees({ money: 'played' }, 'money'), 'People you’ve played with');
-  assert.equal(whoSees({}, 'money'), 'Only you');
-  assert.match(moneyHelp({ money: 'everyone' }), /Anyone who opens your profile/);
-  assert.match(moneyHelp({ money: 'everyone' }), /For now that’s people who’ve been in a round with you/);
-  assert.match(moneyHelp({ money: 'everyone', stats: 'hidden' }), /nobody else sees them yet/);
+  assert.equal(whoSees({ profile: 'everyone' }), 'Everyone');
+  assert.equal(whoSees({}), 'People you’ve played with');
+  assert.equal(whoSees({ profile: 'hidden' }), 'Only you');
+  assert.match(moneyHelp({ profile: 'everyone', showMoney: true }), /Anyone who opens your profile/);
   assert.match(moneyHelp({}), /Nobody else sees them/);
-  assert.equal(privacySummary({ money: 'everyone' }), 'People you’ve played with see your name, avatar, record, handicap and home course. Your money is open to anyone who opens your profile.');
-  assert.match(privacySummary({ money: 'everyone', stats: 'hidden' }), /only for you too/);
-  const tiles = statTiles(profileStats(phone()), { mine: true, privacy: { money: 'everyone' } });
+  assert.equal(moneyShown({ profile: 'hidden', showMoney: true }), false);
+  const tiles = statTiles(profileStats(phone()), { mine: true, privacy: { profile: 'everyone', showMoney: true } });
   assert.equal(tiles.find(t => t.key === 'net').onlyYou, false, 'your own money isn’t marked Only you');
+  assert.match(privacySummary({ profile: 'everyone', showMoney: true }), /^Anyone who opens your profile sees/);
 });
 
 test('everyone: an old server leaves money out, and the app shows a friend without it', () => {

@@ -7,10 +7,9 @@
 //               | { kind: 'initials', bg?, letters? } (see avatars.js)
 //               (a photo still on this phone only has a data: url and pending: true)
 //   homeCourse  null | { id, name, place? }
-//   privacy     { money, stats, handicap, homeCourse }: each 'played' (people you've played with
-//               see it) or 'hidden' (only you). Money can also be 'everyone' (anyone who opens your
-//               profile; today profiles only open for people who share a round with you, so it reads
-//               the same as 'played' until profiles open wider). Money is hidden until you choose.
+//   privacy     { profile, showMoney, ...older keys }: who can see your profile ('everyone',
+//               'played' or 'hidden') and whether your money shows with it (off until you choose).
+//               See normalizePrivacy below.
 //   updatedAt   ms, when you last changed any of it
 // People you've played with are cached on the phone by account (state.profiles), and which
 // account each player id is in state.accountOf, which people-links.js uses so two player records
@@ -25,31 +24,86 @@ const isObj = v => v !== null && typeof v === 'object' && !Array.isArray(v);
 const cents = v => Math.round(v * 100) / 100;
 const text = (v, max) => (typeof v === 'string' ? v.trim().slice(0, max) : '');
 
-/** What each privacy setting covers, in the order a settings screen lists them. */
-export const PRIVACY_KEYS = ['money', 'stats', 'handicap', 'homeCourse'];
 /**
- * Who sees each part: 'played' is people you've played a round with, 'hidden' is only you, and
- * 'everyone' (money only) is anyone who opens your profile, including people you haven't played
- * with once profiles can be opened that way.
+ * Who can see your profile, one setting for all of it (Trevor, Overnight 7): 'everyone' (anyone who
+ * opens your profile; today profiles only open for people who share a round with you, so it reaches
+ * the same people as 'played' until profiles open wider), 'played' (people you've played a round
+ * with, the default) or 'hidden' (only you). It covers your record, stats, handicap and home course.
+ * Your name and avatar always show to people in your rounds (they need to know who you are), and
+ * how you get paid shows so they can pay you.
  */
-export const PRIVACY_LEVELS = ['played', 'hidden', 'everyone'];
-/** The levels each part can take: only money has 'everyone'. */
-const LEVELS_FOR = { money: ['hidden', 'played', 'everyone'], stats: ['played', 'hidden'], handicap: ['played', 'hidden'], homeCourse: ['played', 'hidden'] };
-export const levelsFor = key => LEVELS_FOR[key] || [];
-/** Money hidden, everything else seen by people you've played with. */
-export const PRIVACY_DEFAULTS = Object.freeze({ money: 'hidden', stats: 'played', handicap: 'played', homeCourse: 'played' });
+export const PROFILE_LEVELS = ['everyone', 'played', 'hidden'];
+/**
+ * The privacy object: { profile, showMoney } is the setting. showMoney (off until you turn it on)
+ * adds your net and best round, and only counts when the profile isn't 'hidden'.
+ * The four older keys (money, stats, handicap, homeCourse, each 'played' | 'hidden', money also
+ * 'everyone') ride along, worked out from the setting, so a server that hasn't run
+ * 2026-10-05-profile-privacy.sql and a phone on an older version apply exactly the same thing.
+ */
+export const LEGACY_KEYS = ['money', 'stats', 'handicap', 'homeCourse'];
+const LEGACY_LEVELS = { money: ['hidden', 'played', 'everyone'], stats: ['played', 'hidden'], handicap: ['played', 'hidden'], homeCourse: ['played', 'hidden'] };
+const LEGACY_DEFAULTS = { money: 'hidden', stats: 'played', handicap: 'played', homeCourse: 'played' };
+/** People you've played with see your profile; money stays with you. */
+export const PRIVACY_DEFAULTS = Object.freeze({ profile: 'played', showMoney: false, ...LEGACY_DEFAULTS });
 
-/** A privacy object with every key set: anything missing or unknown falls back to the default. */
-export function normalizePrivacy(p) {
+/**
+ * The single setting from privacy saved before it existed (the four per-item choices):
+ *  • any of record, handicap or home course hidden: 'hidden' (Only you). One setting can't keep
+ *    one part hidden and another shown, so it never shows something you chose to hide.
+ *  • otherwise 'played', with showMoney on when money was 'played' or 'everyone'. Money that was
+ *    open to 'everyone' doesn't widen the rest of the profile to everyone: it reaches the same
+ *    people today either way, and you can pick Everyone yourself.
+ */
+export function fromLegacy(p) {
   const src = isObj(p) ? p : {};
-  const out = {};
-  for (const k of PRIVACY_KEYS) out[k] = levelsFor(k).includes(src[k]) ? src[k] : PRIVACY_DEFAULTS[k];
-  return out;
+  const old = {};
+  for (const k of LEGACY_KEYS) old[k] = LEGACY_LEVELS[k].includes(src[k]) ? src[k] : LEGACY_DEFAULTS[k];
+  const hidden = ['stats', 'handicap', 'homeCourse'].some(k => old[k] === 'hidden');
+  return { profile: hidden ? 'hidden' : 'played', showMoney: old.money !== 'hidden' };
 }
 
-/** Whether anyone else sees this part of your profile ('played' or 'everyone'). */
-export function shows(privacy, key) {
-  return normalizePrivacy(privacy)[key] !== 'hidden';
+/** The older per-item keys that say the same thing as the setting. */
+export function legacyOf(profile, showMoney) {
+  if (profile === 'hidden') return { money: 'hidden', stats: 'hidden', handicap: 'hidden', homeCourse: 'hidden' };
+  return { money: showMoney ? (profile === 'everyone' ? 'everyone' : 'played') : 'hidden', stats: 'played', handicap: 'played', homeCourse: 'played' };
+}
+
+/**
+ * A privacy object with every key set: { profile, showMoney, money, stats, handicap, homeCourse }.
+ * Saved privacy with a profile level keeps it; older privacy without one is mapped (fromLegacy).
+ */
+export function normalizePrivacy(p) {
+  const src = isObj(p) ? p : {};
+  const set = PROFILE_LEVELS.includes(src.profile) ? { profile: src.profile, showMoney: src.showMoney === true } : fromLegacy(src);
+  return { ...set, ...legacyOf(set.profile, set.showMoney) };
+}
+
+/** Whether people other than you see your profile (record, stats, handicap, home course). */
+export function profileShown(privacy) {
+  return normalizePrivacy(privacy).profile !== 'hidden';
+}
+
+/** Whether people other than you see your money (the switch is on and the profile isn't only you). */
+export function moneyShown(privacy) {
+  const p = normalizePrivacy(privacy);
+  return p.profile !== 'hidden' && p.showMoney;
+}
+
+/**
+ * What people_profiles() (supabase/2026-10-05-profile-privacy.sql) hands someone you've played with
+ * from a saved privacy row, as it reads it: { handicap, homeCourse, stats, money }. A row with a
+ * profile level follows the one setting; an older row without one keeps the per-item rule it had
+ * (2026-10-03-privacy-everyone.sql), so a phone that hasn't updated works as before. The SQL and
+ * this are kept the same, and the tests hold this one to it.
+ */
+export function serverParts(saved) {
+  const p = isObj(saved) ? saved : {};
+  if (PROFILE_LEVELS.includes(p.profile)) {
+    const shown = p.profile !== 'hidden';
+    return { handicap: shown, homeCourse: shown, stats: shown, money: shown && p.showMoney === true };
+  }
+  const stats = (p.stats ?? 'played') !== 'hidden';
+  return { handicap: (p.handicap ?? 'played') !== 'hidden', homeCourse: (p.homeCourse ?? 'played') !== 'hidden', stats, money: stats && ['played', 'everyone'].includes(p.money) };
 }
 
 /** A clean avatar, or null when it isn't one. Extra fields on a buddy (its colors, say) are kept. */
@@ -171,31 +225,73 @@ export function profileOf(state) {
   };
 }
 
+/** How many game and course lines a profile sends: the ones you've played most. */
+export const SHARED_LINES = 8;
+const count = v => (typeof v === 'number' && Number.isFinite(v) && v >= 0 ? Math.round(v * 100) / 100 : 0);
+const rec3 = r => ({ won: count(r?.won), lost: count(r?.lost), even: count(r?.even) });
+const pressRec = r => ({ won: count(r?.won), lost: count(r?.lost), halved: count(r?.halved) });
+
 /**
- * Stats as they go to the server: with money left out unless you chose to show it, and nothing at
- * all when stats are hidden. Hidden money never leaves the phone.
+ * The deeper stats people may see (deep-stats.js deepStats, or this same shape again), with no
+ * money in them: your press record, skins won, and won, lost and even by game and by course.
+ * Dollars, points, biggest wins and round ids are never in it. Null when there's nothing to send.
+ * { presses: { rounds, made, against }, skins: { rounds, won, best }, games: [{ key, name, rounds, record }],
+ *   courses: [{ name, place, rounds, record }] }
+ */
+export function publicDeep(deep) {
+  if (!isObj(deep)) return null;
+  const lines = (list, course) => (Array.isArray(list) ? list : []).filter(l => isObj(l) && count(l.rounds) > 0).slice(0, SHARED_LINES).map(l => {
+    const out = course ? { name: text(l.name, 80) || 'No course' } : { key: text(l.key, 40), name: text(l.name, 40) };
+    if (course && text(l.place, 80)) out.place = text(l.place, 80);
+    out.rounds = count(l.rounds);
+    out.record = rec3(l.record);
+    return out;
+  });
+  const pr = isObj(deep.presses) ? deep.presses : {};
+  const sk = isObj(deep.skins) ? deep.skins : {};
+  const best = typeof sk.best === 'number' ? sk.best : isObj(sk.best) ? sk.best.skins : null;
+  const out = {
+    presses: { rounds: count(pr.rounds), made: pressRec(pr.made), against: pressRec(pr.against) },
+    skins: { rounds: count(sk.rounds), won: count(sk.won), best: best == null ? null : count(best) },
+    games: lines(deep.games, false),
+    courses: lines(deep.courses, true),
+  };
+  if (!out.presses.rounds && !out.skins.rounds && !out.games.length && !out.courses.length) return null;
+  return out;
+}
+
+/**
+ * Stats as they go to the server: nothing at all when your profile is only you; otherwise your
+ * record and the deeper stats with no money in them (publicDeep), plus your net and best round only
+ * when Show my money is on. Hidden money never leaves the phone.
  */
 export function shareableStats(stats, privacy) {
-  if (!stats || !shows(privacy, 'stats')) return {};
-  const { money, ...rest } = stats;
-  return shows(privacy, 'money') ? { ...rest, money } : rest;
+  if (!stats || !profileShown(privacy)) return {};
+  const { money, deep, ...rest } = stats;
+  const out = { ...rest };
+  const d = publicDeep(deep);
+  if (d) out.deep = d;
+  if (moneyShown(privacy) && money) out.money = money;
+  return out;
 }
 
 /**
  * The profiles row for an account (null when there's no name to show yet). A photo still waiting
- * on this phone goes up as no avatar until it's uploaded.
+ * on this phone goes up as no avatar until it's uploaded. A profile that's only you sends no
+ * handicap, home course or stats at all (your phone and your account's saved data keep them).
  */
 export function toRow(profile, userId, stats = null) {
   const name = text(profile?.name, 40);
   if (!userId || !name) return null;
   const avatar = normalizeAvatar(profile.avatar);
-  const index = typeof profile.index === 'number' && profile.index >= -10 && profile.index <= 54 ? Math.round(profile.index * 10) / 10 : null;
+  const shown = profileShown(profile.privacy);
+  const index = shown && typeof profile.index === 'number' && profile.index >= -10 && profile.index <= 54 ? Math.round(profile.index * 10) / 10 : null;
   return {
     user_id: userId,
     player_id: profile.playerId ? String(profile.playerId).slice(0, 64) : null,
     display_name: name,
     handicap_index: index,
-    home_course: normalizeHomeCourse(profile.homeCourse),
+    home_course: shown ? normalizeHomeCourse(profile.homeCourse) : null,
     avatar: avatar && !avatar.pending ? avatar : null,
     pay_app: profile.payApp || null,
     pay_handle: profile.payApp && profile.payHandle ? String(profile.payHandle).slice(0, 80) : null,

@@ -11,7 +11,7 @@ import { mergeBackup } from './backup.js';
 import {
   PRIVACY_DEFAULTS, applyPeople, cropSquare, fromRow, isNotSetUp, knownPlayerIds, normalizeAvatar,
   normalizeHomeCourse, normalizePrivacy, profileFor, profileOf, profileStats, retryOnLoad, RETRY_OFF_MS,
-  serverStateAfter, shareableStats, shows, toRow,
+  serverStateAfter, shareableStats, moneyShown, toRow,
 } from './profile-model.js';
 
 const flat9 = { id: 'f9', name: 'Flat Nine', city: 'Town', tees: [], holes: Array.from({ length: 9 }, (_, i) => ({ par: 4, hdcp: i + 1 })) };
@@ -203,24 +203,24 @@ test('knownPlayerIds: saved players, round players and claimers, sorted', () => 
 
 // ------------------------------- privacy ---------------------------------------
 
-test('privacy: money is hidden by default, everything else is seen by people you played with', () => {
-  assert.deepEqual(normalizePrivacy(undefined), { money: 'hidden', stats: 'played', handicap: 'played', homeCourse: 'played' });
-  assert.deepEqual(normalizePrivacy({ money: 'anyone', stats: 'everyone', junk: 1 }), PRIVACY_DEFAULTS, 'unknown levels fall back (everyone is for money only)');
-  assert.equal(shows({}, 'money'), false);
-  assert.equal(shows({ money: 'played' }, 'money'), true);
-  assert.equal(profileOf(organizer()).privacy.money, 'hidden', 'a profile nobody has touched hides money');
+test('privacy: money is hidden by default, the profile is seen by people you played with', () => {
+  assert.deepEqual(normalizePrivacy(undefined), { profile: 'played', showMoney: false, money: 'hidden', stats: 'played', handicap: 'played', homeCourse: 'played' });
+  assert.deepEqual(normalizePrivacy({ money: 'anyone', stats: 'everyone', junk: 1 }), PRIVACY_DEFAULTS, 'unknown levels fall back (everyone was for money only)');
+  assert.equal(moneyShown({}), false);
+  assert.equal(moneyShown({ profile: 'played', showMoney: true }), true);
+  assert.equal(profileOf(organizer()).privacy.showMoney, false, 'a profile nobody has touched hides money');
 });
 
-test('privacy: hidden money never goes to the server; stats hidden sends none', () => {
+test('privacy: hidden money never goes to the server; a profile that is only you sends no stats', () => {
   const s = organizer();
   const stats = profileStats(s);
   const row = toRow(profileOf(s), 'acct-t', stats);
   assert.equal(row.stats.money, undefined, 'money stays on the phone by default');
   assert.equal(row.stats.rounds, 3);
   assert.deepEqual(row.privacy, PRIVACY_DEFAULTS);
-  const shown = toRow(profileOf({ ...s, profile: { privacy: { money: 'played' } } }), 'acct-t', stats);
+  const shown = toRow(profileOf({ ...s, profile: { privacy: { profile: 'played', showMoney: true } } }), 'acct-t', stats);
   assert.deepEqual(shown.stats.money, stats.money);
-  assert.deepEqual(shareableStats(stats, { stats: 'hidden', money: 'played' }), {}, 'hidden stats hide money too');
+  assert.deepEqual(shareableStats(stats, { profile: 'hidden', showMoney: true }), {}, 'only you hides money too');
 });
 
 test('toRow: no row without a name or account; a photo still on the phone goes up as no avatar', () => {
@@ -297,7 +297,7 @@ test('fallback: a server that said "not set up" is asked again on a later load, 
 });
 
 test('fallback: your profile rides in your account’s saved data, and an older profile keeps the phone’s', () => {
-  const s = organizer({ profile: { avatar: { kind: 'buddy', id: 'b1' }, privacy: { money: 'played' }, updatedAt: 5 } });
+  const s = organizer({ profile: { avatar: { kind: 'buddy', id: 'b1' }, privacy: { profile: 'played', showMoney: true }, updatedAt: 5 } });
   const doc = toDocs(s)['profile:me'].data;
   assert.deepEqual(doc.profile, s.profile);
   const other = organizer();
