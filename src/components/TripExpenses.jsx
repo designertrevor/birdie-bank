@@ -54,8 +54,10 @@ function useNames(st, me) {
  * expense newest first, and everyone's whole trip all in.
  */
 export function TripExpensesView({ st, me, adding = false, onAdded }) {
-  const [editing, setEditing] = useKept('expenses:open', adding ? 'new' : null); // 'new', or the expense being looked at
-  const close = () => { setEditing(null); onAdded?.(); };
+  // 'new', or the id of the expense being looked at (kept by id, so it comes back as it is now)
+  const [openId, setOpenId] = useKept('expenses:open', adding ? 'new' : null);
+  const editing = openId === 'new' ? 'new' : st.expenses.find(x => x.id === openId) || null;
+  const close = () => { setOpenId(null); onAdded?.(); };
   const { full, short } = useNames(st, me);
   const mine = st.spending.get(me);
   const offNote = st.expenses.some(x => x.by === me) && !expensesOn();
@@ -71,13 +73,13 @@ export function TripExpensesView({ st, me, adding = false, onAdded }) {
           </div>
         </div>
       )}
-      <button className="add-row" onClick={() => setEditing('new')}>
+      <button className="add-row" onClick={() => setOpenId('new')}>
         <div className="add-ci"><Icon name="receipt" /></div><span className="add-lbl">Add an expense</span>
       </button>
       {st.expenses.length === 0 && (
         <p className="field-help pad">Gas, dinner, the house: add what someone paid for the group and how to split it. It’s in everyone’s total on the Tab right away, and it settles with the rounds, once, at the end.</p>
       )}
-      {st.expenses.map(x => <ExpenseRow key={x.id} x={x} me={me} short={short} onOpen={() => setEditing(x)} />)}
+      {st.expenses.map(x => <ExpenseRow key={x.id} x={x} me={me} short={short} onOpen={() => setOpenId(x.id)} />)}
       {st.expenses.length > 0 && <AllIn st={st} me={me} short={short} />}
       {offNote && <p className="hint-card"><Icon name="cloud-slash" /> Expenses you add stay on your phone and your account for now, so friends don’t see them on theirs yet. They still count here and on your Tab.</p>}
       {st.expenses.length > 0 && <p className="field-help pad">Anyone on the trip can add one. Only the person who added an expense changes or deletes it. Settle the trip squares the expenses and the rounds together, in the fewest payments.</p>}
