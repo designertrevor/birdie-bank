@@ -259,9 +259,19 @@ function paymentsOf(state, id, rounds, local, together, bal, spent = []) {
   }
   for (const s of [...trip, ...onRounds]) pay(who(s.from), who(s.to), cents(s.amount));
   const counted = [];
+  // What the trip's own rounds have each one paying another (2026-10-04): a payment from the Tab
+  // between two people counts for the trip up to that too, so paying a Tab line that nets the
+  // shared rounds against the rest (the Tab pays one part back the other way) squares the trip
+  const due = new Map();
+  const dueOf = () => {
+    due.clear();
+    const rest = fewestPayments(Object.fromEntries(Object.entries(left).map(([k, c]) => [k, c / 100])), { canPay: (a, b) => together.has(pairKey(a, b)) });
+    for (const t of rest) due.set(`${t.from}>${t.to}`, cents(t.amount));
+  };
   for (const s of loose.sort((a, b) => (a.at || 0) - (b.at || 0))) {
     const f = who(s.from), t = who(s.to);
-    const c = Math.min(cents(s.amount), Math.max(0, -(left[f] || 0)), Math.max(0, left[t] || 0));
+    let c = Math.min(cents(s.amount), Math.max(0, -(left[f] || 0)), Math.max(0, left[t] || 0));
+    if (c < cents(s.amount)) { dueOf(); c = Math.max(c, Math.min(cents(s.amount), due.get(`${f}>${t}`) || 0)); }
     if (c <= 0) continue;
     pay(f, t, c);
     counted.push({ settlement: s, cents: c });
