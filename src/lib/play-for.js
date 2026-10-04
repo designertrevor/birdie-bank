@@ -97,9 +97,10 @@ export function betFmt(round, bet) {
 
 /** "12 pts", "+3 pts", "−1 pt": a round's numbers as points, one for each dollar the bets would make. */
 export function points(v, { sign = false } = {}) {
-  const n = Number(v) || 0;
+  // Points are for bragging rights: a pot's share split across holes reads "+16.9 pts", never "+16.92"
+  const n = Math.round((Number(v) || 0) * 10) / 10;
   const abs = Math.abs(n);
-  const s = Number.isInteger(abs) ? String(abs) : String(Math.round(abs * 100) / 100);
+  const s = String(abs);
   const pre = n < 0 ? '−' : sign && n > 0 ? '+' : '';
   return `${pre}${s} ${abs === 1 ? 'pt' : 'pts'}`;
 }

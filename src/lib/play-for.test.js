@@ -84,6 +84,10 @@ test('points are the engine numbers one for one, and bet lines read in points', 
   assert.equal(points(-3, { sign: true }), '−3 pts');
   assert.equal(points(2.5, { sign: true }), '+2.5 pts');
   assert.equal(points(0, { sign: true }), '0 pts');
+  // A pot's share split across holes: one decimal at most
+  assert.equal(points(16.92, { sign: true }), '+16.9 pts');
+  assert.equal(points(-12.09, { sign: true }), '−12.1 pts');
+  assert.equal(points(-0.04, { sign: true }), '0 pts');
   assert.equal(unitFmt({})(5, { sign: true }), '+$5');
   assert.equal(unitFmt({ playFor: { kind: 'points' } })(5, { sign: true }), '+5 pts');
   const nassau = { game: 'nassau', settings: { nassau: { front: 5, back: 5, total: 5 } } };
