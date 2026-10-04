@@ -447,3 +447,11 @@ test('a group’s round read while it was still being played is read again days 
   assert.deepEqual(startDay({ start: '2026-10-10', end: '2026-10-10' }, '2026-10-17'), { start: '2026-10-17', end: '2026-10-17' });
   assert.deepEqual(startDay({ start: '2026-10-17', end: '2026-10-17' }, '2026-10-17'), {});
 });
+
+test('an organizer who isn’t playing has no money in the game, never “You broke even”', () => {
+  const bs = bigStatus(phonesOf().a, 't_big');
+  assert.equal(myBigMoney(bs, id => id === 'someone-else'), null);
+  assert.equal(myBigMoney(bs, id => id === 'g'), 86);
+  // In it and exactly square: $0, not nothing
+  assert.equal(myBigMoney({ ...bs, results: { ...bs.results, balances: { ...bs.results.balances, a: 0 } } }, id => id === 'a'), 0);
+});

@@ -42,7 +42,8 @@ export default function BigGameSetup({ id = null, from = null }) {
   const [reached, setReached] = useState(base ? STEPS.length - 1 : 0);
   const setStep = n => { showStep(n); setReached(r => Math.max(r, n)); };
   const [name, setName] = useState(base?.name || BIG_NAME);
-  const [day, setDay] = useState(was?.start || isoDate());
+  // Next time's game starts a week on from the last one (when that's a day the picker shows)
+  const [day, setDay] = useState(() => was?.start || weekOn(again?.start) || isoDate());
   const [holesCount, setHolesCount] = useState(base?.setup?.holesCount || 18);
   const [nine, setNine] = useState(base?.setup?.nine || 'front');
   const [courseId, setCourseId] = useState(base?.setup?.courseId || null);
@@ -173,6 +174,17 @@ export default function BigGameSetup({ id = null, from = null }) {
       )}
     </Screen>
   );
+}
+
+/** A week on from a day (YYYY-MM-DD), when that's today or one of the next two weeks the day picker shows, else null. */
+function weekOn(day) {
+  if (!day) return null;
+  const d = new Date(`${day}T12:00:00`);
+  d.setDate(d.getDate() + 7);
+  const iso = isoDate(d);
+  const last = new Date();
+  last.setDate(last.getDate() + 13);
+  return iso >= isoDate() && iso <= isoDate(last) ? iso : null;
 }
 
 /** Last time's game as the start of next time's: the people, groups and formats, nothing about the rounds or the bets. */

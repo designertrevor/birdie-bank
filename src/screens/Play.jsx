@@ -1156,12 +1156,12 @@ function BetsSheet({ round, onClose }) {
   );
 }
 
-/** Everyone's money, pinned under the header from the first hole, updating as scores go in. */
 /** A round with money of its own: a game with a bet, side games or side bets (a Big Game's group round starts with none). */
 function ownMoney(round) {
   return (round.sideGames?.length || 0) > 0 || betsOf(round).length > 0 || round.game !== 'stroke' || (round.settings?.stroke?.stake || 0) > 0;
 }
 
+/** Everyone's money, pinned under the header from the first hole, updating as scores go in. */
 function MoneyBar({ round, hole, preview }) {
   // Holes counted besides this one, so going back to a saved hole doesn't count it twice ("Thru 3 + this one" on hole 3)
   const saved = holeComplete(round, hole);

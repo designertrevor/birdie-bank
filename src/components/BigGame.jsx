@@ -14,6 +14,7 @@ import { BIG_BET_KINDS, BIG_MAX_STAKE, POT_KINDS, SKINS_KINDS, betStrokesFor, bi
 import { bigWho, myBigMoney, myPlaceLine, toParText } from '../lib/big-view.js';
 import { bigStatus } from '../lib/big-money.js';
 import { saveBigBet } from '../lib/big-store.js';
+import { useBigSync } from '../lib/big-sync.js';
 import { newBetId } from '../lib/pair-bets.js';
 
 const sign = v => (v > 0 ? 'pos' : v < 0 ? 'neg' : '');
@@ -123,6 +124,8 @@ export function BigRoundNote({ round }) {
   const nav = useNav();
   const state = useStore();
   const bs = round?.trip?.id ? bigStatus(state, round.trip.id) : null;
+  // The results open right after the last hole: the other groups keep coming in while they wait here
+  useBigSync({ live: !!bs && !bs.final });
   if (!bs) return null;
   const { isMe } = bigWho(state, bs.big);
   const mine = myBigMoney(bs, isMe);

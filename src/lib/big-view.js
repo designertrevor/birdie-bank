@@ -25,9 +25,9 @@ export function myPlaceLine(bs, isMe) {
   return `You’re ${place} of ${n}, ${bs.big.pot.kind === 'stableford' ? `${row.points} points` : toParText(row.toPar)}`;
 }
 
-/** Your money from the game once it's decided, in dollars, or null. */
+/** Your money from the game once it's decided, in dollars, or null (not decided, or you're not playing in it). */
 export function myBigMoney(bs, isMe) {
-  if (!bs?.final) return null;
+  if (!bs?.final || !Object.keys(bs.big.people).some(isMe)) return null;
   let c = 0;
   for (const [id, v] of Object.entries(bs.results.balances)) if (isMe(id)) c += v;
   return c / 100;
