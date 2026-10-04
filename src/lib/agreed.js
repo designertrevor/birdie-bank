@@ -73,10 +73,11 @@ export function houseRulesFor(game, s) {
     case 'bbb': return [r('sweep', 'All three on one hole count double', s.sweep)];
     case 'dots': return [r('auto', 'Birdies count as junk', s.auto)];
     case 'snake': return [r('nines', 'A snake for each nine', s.nines)];
-    // Closest to the pin and long drive pots: what a hole nobody wins does, said either way
+    // Closest to the pin and long drive pots: what a hole nobody wins does. One rule, always on, so a
+    // switch from carries to split after locking in reads as one change
     case 'ctp': case 'drive': {
       const hole = game === 'ctp' ? 'A par 3' : 'A long drive hole';
-      return [r('carry', `${hole} nobody wins carries to the next`, s.unclaimed !== 'split'), r('split', `${hole} nobody wins is split across the ones won`, s.unclaimed === 'split')];
+      return [r('unclaimed', s.unclaimed === 'split' ? `${hole} nobody wins is split across the ones won` : `${hole} nobody wins carries to the next`, true)];
     }
     default: return [];
   }

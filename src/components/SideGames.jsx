@@ -5,7 +5,7 @@ import { Icon, Numpad, Segmented, Sheet, Toggle } from './ui.jsx';
 import { RulesSheet } from './Rules.jsx';
 import { GAMES, MAX_GAMES, POT_GAMES, SIDE_GAMES, potHoles, potHolesDefault, sideGameChoices } from '../lib/round.js';
 import { DOT_KINDS } from '../lib/games.js';
-import { dotsNote, potHolesLine, sideExample, skinsRulesLine } from '../lib/side-games.js';
+import { asPlayedWith, dotsNote, potHolesLine, sideExample, skinsRulesLine } from '../lib/side-games.js';
 import { DEFAULT_SETTINGS } from '../lib/store.js';
 import { GameOptions } from './GameOptions.jsx';
 import { money } from '../lib/golf.js';
@@ -83,7 +83,7 @@ export function SideGamesSetup({ game, sideGames, setSideGames, defaults, player
               </div>
               <button className="nassau-bet-btn" aria-label={`${meta.label} bet: ${fmt(sg.settings[key] ?? 0)}. Change`} onClick={() => setPad(i)}>{fmt(sg.settings[key] ?? 0)}</button>
             </div>
-            <p className="field-help">{u(sideExample(sg.game, sg.settings, players, holes))}</p>
+            <p className="field-help">{u(sideExample(sg.game, asPlayedWith(sg.game, sg.settings, sideGames), players, holes))}</p>
             {POT_GAMES.includes(sg.game) && (
               <>
                 {sg.game === 'drive' && holes?.length ? (
@@ -159,7 +159,7 @@ export function SideGamesSetup({ game, sideGames, setSideGames, defaults, player
                 <div className="set-icon"><Icon name={SIDE_GAMES[k].icon} fill /></div>
                 <div className="row-main" style={{ textAlign: 'left' }}>
                   <div className="set-name">{SIDE_GAMES[k].label} · {u(sideBetLine(k, s))}</div>
-                  <div className="set-sub">{u(sideExample(k, s, players, holes))}</div>
+                  <div className="set-sub">{u(sideExample(k, asPlayedWith(k, s, sideGames), players, holes))}</div>
                 </div>
                 <Icon name="plus" />
               </button>

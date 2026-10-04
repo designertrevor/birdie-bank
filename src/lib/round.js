@@ -2181,6 +2181,19 @@ export function potWinner(round, key, no) {
 }
 
 /**
+ * A hole's marks as the scoring screen saves them: every pot played on `hole` with nobody tapped is
+ * saved as nobody's (POT_NONE), so the hole counts and carries. `marks` may be null (a round whose
+ * games keep no marks, or a pot added while the hole was open); it comes back as it was when no pot
+ * is played on the hole or every one already has a winner or nobody.
+ */
+export function potMarksFor(round, hole, marks) {
+  const open = sideGamesOf(round).filter(sg => POT_GAMES.includes(sg.game) && marks?.[sg.game] == null
+    && potHoles(gameView(round, sg.game), sg.game).some(h => h.no === hole.no));
+  if (!open.length) return marks;
+  return { ...(marks || {}), ...Object.fromEntries(open.map(sg => [sg.game, POT_NONE])) };
+}
+
+/**
  * A pot worked out on the game view `round` (round.game is the pot's key):
  * { key, inPot, stake, pot, worth, unclaimed, holes: [{ no, par, winner, reached, value, carried, paid }],
  *   won: { pid: { holes: [no], amount } }, paidOut, handedBack, deltas }.

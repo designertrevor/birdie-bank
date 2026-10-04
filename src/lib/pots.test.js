@@ -4,12 +4,12 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import {
   createRound, roundResults, gameView, potTable, potHoles, potHolesDefault, sideGameChoices, sideGamesOf, livePreview,
-  joinGames, joinRule, leftRule, addPlayerToRound, wholeRoundOnly, changeBets, greeniesInPot, gameResults, POT_NONE,
+  joinGames, joinRule, leftRule, addPlayerToRound, wholeRoundOnly, changeBets, greeniesInPot, gameResults, POT_NONE, potMarksFor,
 } from './round.js';
 import { optionsProblem, roundStakeLines, sideBetLine } from './stakes.js';
-import { potHolesLine, potUnclaimedLine, sideExample, gamesLine } from './side-games.js';
+import { asPlayedWith, potCatchUpNotes, potHolesLine, potUnclaimedLine, sideExample, gamesLine } from './side-games.js';
 import { revealSteps } from './reveal.js';
-import { agreementItems } from './agreed.js';
+import { agreementItems, lockAgreement, noteChanges } from './agreed.js';
 import { pairBreakdown } from './where-from.js';
 import { gameLabel } from './format.js';
 import { minimalTransfers } from './golf.js';
@@ -243,10 +243,10 @@ test('a pot always covers the whole round: a bet change reprices every hole', ()
 });
 
 test('the words: bet lines, worked examples, reveal steps and the first-tee card', () => {
-  assert.equal(sideBetLine('ctp', { stake: 5 }), '$5 each in the pot');
-  assert.equal(sideBetLine('drive', { stake: 2 }), '$2 each in the pot');
+  assert.equal(sideBetLine('ctp', { stake: 5 }), '$5 each in the closest to the pin pot');
+  assert.equal(sideBetLine('drive', { stake: 2 }), '$2 each in the long drive pot');
   const r = make({ upto: 18, pots: [{ game: 'ctp', settings: { stake: 5 } }, { game: 'drive', settings: { stake: 5, unclaimed: 'split', holes: [18] } }] });
-  assert.deepEqual(roundStakeLines(r).slice(1), [{ key: 'ctp', line: '$5 each in the pot' }, { key: 'drive', line: '$5 each in the pot' }]);
+  assert.deepEqual(roundStakeLines(r).slice(1), [{ key: 'ctp', line: '$5 each in the closest to the pin pot' }, { key: 'drive', line: '$5 each in the long drive pot' }]);
   assert.equal(sideExample('ctp', { stake: 5 }, 4, r.holes), 'Each player puts in $5, so the pot is $20. Closest to the pin on each par 3 takes $3.33, one of 6 shares. A par 3 nobody wins carries to the next one. Still carried after the last, it goes back to everyone.');
   assert.equal(sideExample('drive', { stake: 5, holes: [18] }, 4, r.holes), 'Each player puts in $5, so the pot is $20. The longest drive in the fairway on each long drive hole takes the whole pot. A long drive hole nobody wins carries to the next one. Still carried after the last, it goes back to everyone.');
   // Before a course is picked it can't count the holes
@@ -259,13 +259,13 @@ test('the words: bet lines, worked examples, reveal steps and the first-tee card
   assert.equal(steps.find(s => s.key === 'side-drive').text, 'Cnn had the long drive on hole 18');
   assert.equal(steps.find(s => s.key === 'side-drive').amount, 15);
   const card = agreementItems(r);
-  assert.ok(card.some(x => x.id === 'rule:ctp:carry' && x.on && x.text === 'A par 3 nobody wins carries to the next'));
-  assert.ok(card.some(x => x.id === 'rule:drive:split' && x.on));
+  assert.ok(card.some(x => x.id === 'rule:ctp:unclaimed' && x.on && x.text === 'A par 3 nobody wins carries to the next'));
+  assert.ok(card.some(x => x.id === 'rule:drive:unclaimed' && x.on && x.text === 'A long drive hole nobody wins is split across the ones won'));
   assert.ok(card.some(x => x.id === 'rule:ctp:holes' && x.text === 'Every par 3 (6 of them)'));
   assert.ok(card.some(x => x.id === 'rule:drive:holes' && x.text === 'Hole 18'));
   // A points round reads in points
   const pts = { ...r, playFor: { kind: 'points' } };
-  assert.deepEqual(roundStakeLines(pts).slice(1).map(l => l.line), ['5 pts each in the pot', '5 pts each in the pot']);
+  assert.deepEqual(roundStakeLines(pts).slice(1).map(l => l.line), ['5 pts each in the closest to the pin pot', '5 pts each in the long drive pot']);
 });
 
 test('old rounds keep their money: a pot key in a hole’s marks moves nothing, and a pot only adds its own money', () => {
@@ -287,4 +287,63 @@ test('old rounds keep their money: a pot key in a hole’s marks moves nothing, 
     const pot = gameResults(gameView(plus, 'drive')).balances;
     for (const p of round.players) assert.equal(cents(after.balances[p.id]), cents(before.balances[p.id]) + cents(pot[p.id] || 0), `${name}: total for ${p.id}`);
   }
+});
+
+test('a pot hole saves as nobody’s when nothing is tapped, even with no other marks or a pot added while the hole was open', () => {
+  const r = make({ upto: 1, pots: [{ game: 'ctp', settings: { stake: 5 } }, { game: 'drive', settings: { stake: 5 } }] });
+  const [h1, h2, h3] = r.holes;
+  // Hole 1 is no pot hole: the marks come back as they were, null included
+  assert.equal(potMarksFor(r, h1, null), null);
+  const same = { a: ['sandy'] };
+  assert.equal(potMarksFor(r, h1, same), same);
+  // A par 3 with no marks yet (Stroke play keeps none): saved as nobody's, so it counts and carries
+  assert.deepEqual(potMarksFor(r, h2, null), { ctp: POT_NONE });
+  // A winner already tapped stays, and the kept draft isn't changed
+  const tapped = { ctp: 'b' };
+  assert.deepEqual(potMarksFor(r, h2, tapped), { ctp: 'b' });
+  assert.equal(potMarksFor(r, h2, tapped), tapped);
+  const junk = { a: ['sandy'] };
+  assert.deepEqual(potMarksFor(r, h3, junk), { a: ['sandy'], drive: POT_NONE });
+  assert.deepEqual(junk, { a: ['sandy'] });
+  // Saved that way, the next par 3 is played for two shares
+  r.marks[2] = potMarksFor(r, h2, null);
+  const t = potTable(gameView(r, 'ctp'));
+  assert.ok(t.holes.find(h => h.no === 2).reached);
+  // No pot in the round: nothing added anywhere
+  const plain = make({ pots: [] });
+  assert.equal(potMarksFor(plain, plain.holes[1], null), null);
+});
+
+test('a pot added partway says which of its holes already played count once tapped', () => {
+  const r = make({ upto: 9, pots: [] });
+  const add = [{ game: 'ctp', settings: { stake: 5 } }, { game: 'drive', settings: { stake: 5, holes: [9] } }];
+  assert.deepEqual(potCatchUpNotes(r, add), [
+    'Holes 2, 5 and 8 are already played. Closest to the pin counts them once you go back and tap who was closest.',
+    'Hole 9 is already played. Long drive counts it once you go back and tap who hit it longest.',
+  ]);
+  // Once tapped, or when the pot was already on, or before any pot hole is played: nothing to say
+  r.marks[2] = { ctp: 'a' }; r.marks[5] = { ctp: POT_NONE };
+  assert.deepEqual(potCatchUpNotes(r, add.slice(0, 1)), ['Hole 8 is already played. Closest to the pin counts it once you go back and tap who was closest.']);
+  assert.deepEqual(potCatchUpNotes({ ...r, sideGames: add }, add), []);
+  assert.deepEqual(potCatchUpNotes(make({ upto: 1, pots: [] }), add), []);
+  assert.deepEqual(potCatchUpNotes(r, [{ game: 'skins', settings: {} }]), []);
+});
+
+test('switching a pot from carries to split after locking in reads as one change', () => {
+  const r = make({ upto: 0 });
+  r.status = 'active';
+  r.agreed = lockAgreement(r, {}, null, 1);
+  r.sideGames[0].settings.unclaimed = 'split';
+  const next = noteChanges(r, 2);
+  assert.deepEqual(next.changes.map(c => c.text), ['Closest to the pin: A par 3 nobody wins is split across the ones won']);
+});
+
+test('Junk’s worked example next to a closest to the pin pot doesn’t promise a greenie', () => {
+  const dots = { value: 1, kinds: { greenie: true, sandy: true } };
+  assert.match(sideExample('dots', dots, 4), /One greenie in a foursome/);
+  const played = asPlayedWith('dots', dots, [{ game: 'dots' }, { game: 'ctp' }]);
+  assert.equal(sideExample('dots', played, 4), 'Sandies. One sandy in a foursome: the other 3 each pay you $1.');
+  assert.equal(dots.kinds.greenie, true);
+  assert.equal(asPlayedWith('dots', dots, [{ game: 'drive' }]), dots);
+  assert.equal(asPlayedWith('skins', { value: 2 }, [{ game: 'ctp' }]).value, 2);
 });

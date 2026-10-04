@@ -1,5 +1,5 @@
 // Side games in words: worked examples, the by-game line and the Nassau note. Pure, so tests can load it.
-import { GAMES, potHoles, potHolesDefault } from './round.js';
+import { GAMES, POT_GAMES, SIDE_GAMES, holeComplete, potHoles, potHolesDefault, sideGamesOf } from './round.js';
 import { DOT_KINDS } from './games.js';
 import { money } from './golf.js';
 
@@ -44,6 +44,35 @@ export function potHolesLine(game, settings, holes = null) {
   if (potHolesDefault({ holes }, game, settings)) return `Every par ${list[0].par >= 5 ? 5 : 4}${count}`;
   const w = holesWords(list.map(h => h.no));
   return w[0].toUpperCase() + w.slice(1);
+}
+
+/**
+ * Adding a closest to the pin or long drive pot partway: a pot hole already played counts only once
+ * the keeper goes back and taps who won it, so say which (one line per pot new in `list`, the side
+ * games about to be saved). Empty when no pot is new or none of its holes is played yet.
+ */
+export function potCatchUpNotes(round, list) {
+  const had = new Set(sideGamesOf(round).map(sg => sg.game));
+  const out = [];
+  for (const sg of list) {
+    if (!POT_GAMES.includes(sg.game) || had.has(sg.game)) continue;
+    const nos = potHoles(round, sg.game, sg.settings).filter(h => holeComplete(round, h) && round.marks?.[h.no]?.[sg.game] == null).map(h => h.no);
+    if (!nos.length) continue;
+    const where = holesWords(nos);
+    const who = sg.game === 'ctp' ? 'was closest' : 'hit it longest';
+    out.push(`${where[0].toUpperCase()}${where.slice(1)} ${nos.length === 1 ? 'is' : 'are'} already played. ${SIDE_GAMES[sg.game].label} counts ${nos.length === 1 ? 'it' : 'them'} once you go back and tap who ${who}.`);
+  }
+  return out;
+}
+
+/**
+ * A side game's settings as the round plays them next to `sideGames`: Junk next to a closest to the
+ * pin pot plays without greenies (the pot pays for being closest, see gameView), so its worked example
+ * shouldn't promise one. Anything else comes back as it is.
+ */
+export function asPlayedWith(game, settings, sideGames = []) {
+  if (game !== 'dots' || !settings?.kinds?.greenie || !sideGames.some(sg => sg.game === 'ctp')) return settings;
+  return { ...settings, kinds: { ...settings.kinds, greenie: false } };
 }
 
 /** What happens to a pot hole nobody wins, in a sentence, for a closest to the pin or long drive pot. */

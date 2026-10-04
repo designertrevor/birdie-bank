@@ -7,7 +7,7 @@ import {
   betPresets, blindMultiplierOf, noHandicap, resizeRound, roundLegs, roundResults, scoredHolesDropped, scorers, skinsKinds, skinsTable, strokesFor, popsFor, wolfHoleSetup, changeBets, wholeRoundOnly,
   gameView, sideGamesOf, holeFixOf, gameKeys, gameKeyLabel, settingsAt, wolfCarryBefore, posOf,
 } from '../lib/round.js';
-import { POT_GAMES, POT_NONE, SIDE_GAMES, potHoles } from '../lib/round.js';
+import { POT_GAMES, SIDE_GAMES, potHoles, potMarksFor } from '../lib/round.js';
 import { CourseTeeSheet, FixHoleSheet } from '../components/FixHole.jsx';
 import { HandicapsSheet } from '../components/HandicapsSheet.jsx';
 import { courseTeeLabel, keepsDraft } from '../lib/hole-fix.js';
@@ -39,7 +39,7 @@ import { betsOf } from '../lib/pair-bets.js';
 import { RoundMoments } from '../components/Moments.jsx';
 import { FirstTeeSheet } from '../components/FirstTee.jsx';
 import { isLocked, lockAgreement, noteChanges, showFirstTee } from '../lib/agreed.js';
-import { nassauOpenNote, sideExample } from '../lib/side-games.js';
+import { nassauOpenNote, potCatchUpNotes, sideExample } from '../lib/side-games.js';
 import {
   ASK_MS, askForCard, askLeft, canEdit, canTakeCard, clearAsk, clockText, declineAsk, declinedAsk, handOff, handOffChoices, hostKeeper, isKeeper,
   keeperMe, keeperName, keeperOf, keeperSaved, openAsk, seatTaken, shouldLeaveHole, takeCard as takeCardPatch, tookFromMe,
@@ -174,10 +174,8 @@ function PlayRound({ round }) {
   const [marks, setMarks] = useState(() => {
     // A scramble playing for minimum drives saves whose drive each team used in the marks too
     if (!GAMES[game].marks && !junk && !snakeSide && !potHere && !drivesNeeded(round)) return null;
-    const m0 = (wasDirty && kept.marks) || structuredClone(round.marks?.[hole.no] || emptyMarks);
     // A pot hole saved with nobody tapped is saved as nobody's, so it counts (and carries) like one tapped
-    const none = Object.fromEntries(pots.filter(v => m0[v.game] == null && potHoles(v, v.game).some(h => h.no === hole.no)).map(v => [v.game, POT_NONE]));
-    const m = { ...m0, ...none };
+    const m = potMarksFor(round, hole, (wasDirty && kept.marks) || structuredClone(round.marks?.[hole.no] || emptyMarks));
     return snakeSide && !m.snake ? { ...m, snake: [] } : m;
   });
   useEffect(() => { DRAFTS.set(draftKey, { draft, base, touched, dirty, marks }); }, [draftKey, draft, base, touched, dirty, marks]);
@@ -314,8 +312,10 @@ function PlayRound({ round }) {
     if (!editable) return;
     if (game === 'wolf' && wolf.partner === undefined) { showToast(`Pick ${round.players.find(p => p.id === wolf.wolf)?.name.split(' ')[0] || 'the wolf'}’s partner, or go lone wolf`); return; }
     const scores = Object.fromEntries(units.map(p => [p.id, draft[p.id]]));
+    // ...and a pot added while this hole was open still saves the hole as nobody's when nobody's tapped
+    const holeMarks = potMarksFor(round, hole, marks);
     DRAFTS.delete(draftKey);
-    const moneyLine = holeMoneyLine(round, hole, livePreview(round, hole, { scores, banker, wolf, marks }).delta);
+    const moneyLine = holeMoneyLine(round, hole, livePreview(round, hole, { scores, banker, wolf, marks: holeMarks }).delta);
     // The last hole's line would sit over the reveal's buttons, so it only shows if the round does not finish
     if (!isLast) showToast(moneyLine);
     update(s => {
@@ -323,7 +323,7 @@ function PlayRound({ round }) {
       r.scores[hole.no] = scores;
       if (game === 'banker') r.banker[hole.no] = banker;
       if (game === 'wolf') r.wolf[hole.no] = wolf;
-      if (marks) { if (!r.marks) r.marks = {}; r.marks[hole.no] = marks; }
+      if (holeMarks) { if (!r.marks) r.marks = {}; r.marks[hole.no] = holeMarks; }
       if (!isLast) r.current = nextIdx;
       // The keeper's phone saved a hole (kept for the record of who's been scoring)
       if (isKeeper(r, me, isHost)) Object.assign(r, keeperSaved(r));
@@ -412,7 +412,7 @@ function PlayRound({ round }) {
   // Money with this hole counted as it's being entered, so totals move with every tap
   const preview = useMemo(() => {
     const counting = phase === 'scores' && dirty && !(game === 'wolf' && wolf.partner === undefined);
-    return livePreview(round, hole, counting ? { scores: draft, banker, wolf, marks } : null);
+    return livePreview(round, hole, counting ? { scores: draft, banker, wolf, marks: potMarksFor(round, hole, marks) } : null);
   }, [round, hole, phase, dirty, game, draft, banker, wolf, marks]);
 
   return (
@@ -914,6 +914,8 @@ function GamesSheet({ round, onClose }) {
       <p className="sheet-text">Same course, same players, same scores. {played ? `A new game counts the ${played} hole${played === 1 ? '' : 's'} already scored too.` : 'Every game reads the one scorecard.'}</p>
       {played > 0 && sideGamesOf(round).length > 0 && <p className="field-help pad">Changes here cover the whole round. To change a bet from the next hole, use Bets.</p>}
       <SideGamesSetup game={round.game} sideGames={list} setSideGames={edit} defaults={round.settings} players={round.players.length} playFor={round.playFor} holes={round.holes} />
+      {/* A pot added partway: its holes already played count once the winner is tapped */}
+      {potCatchUpNotes(round, list).map(t => <p key={t} className="field-help pad">{t}</p>)}
       <div className="cta-wrap">
         <button className="full-btn" disabled={!changed || bad} onClick={save}>{changed ? 'Save games' : 'No changes'}</button>
       </div>
