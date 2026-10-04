@@ -13,7 +13,7 @@ import { countsMoney, onTab, tabResults } from './play-for.js';
 import { betsOf, isCashBet } from './pair-bets.js';
 import { meFor } from './format.js';
 import { expenseDebts, nameOf, outstanding, tabWith } from './ledger.js';
-import { allTripPays, newPayment } from './trip-expenses.js';
+import { allTripPays, expensePayId, newPayment } from './trip-expenses.js';
 import { FETCH_DAYS, canonicalOf, cents, codeOf, finishedAt, lockedRounds, nettedId, nettedOn, pairDebt, paidOn, played, sharedRounds } from './pair-debts.js';
 import { isTripPayment } from './trip-pay.js';
 import { planRows } from './trip-plan.js';
@@ -277,7 +277,7 @@ export function allocatePayment(state, { from, to, amount }, { now = Date.now(),
   // Then what a trip's published plan has between them (trip-plan.js), on the plan's own rows
   const onPlan = planRows(state, F, T, { amount: whole ? null : Math.max(0, total - settle), now });
   rows.push(...onPlan.rows);
-  const spent = expensePayments(state, F, T, { amount: whole ? null : Math.max(0, total - settle - onPlan.cents), now, makeId });
+  const spent = expensePayments(state, F, T, { amount: whole ? null : Math.max(0, total - settle - onPlan.cents), now });
   const left = total - settle - onPlan.cents - spent.cents;
   if (left > 0) settlements.push({ id: `s_${makeId()}`, from, to, amount: left / 100, at: now });
   if (left < 0) settlements.push({ id: `s_${makeId()}`, from: to, to: from, amount: -left / 100, at: now });
@@ -290,7 +290,7 @@ export function allocatePayment(state, { from, to, amount }, { now = Date.now(),
  * card or Settle the trip). `trip` keeps it to one trip. Returns { expenses, cents }: cents is what
  * `from` paid `to` (negative when the expenses had `to` owing `from`).
  */
-export function expensePayments(state, from, to, { amount = null, now = Date.now(), makeId = () => Math.random().toString(36).slice(2, 9), trip = null, reason = null } = {}) {
+export function expensePayments(state, from, to, { amount = null, now = Date.now(), trip = null, reason = null } = {}) {
   const who = canonicalOf(state);
   const F = who(from), T = who(to);
   const net = new Map(); // tripId -> cents F owes T
@@ -304,7 +304,8 @@ export function expensePayments(state, from, to, { amount = null, now = Date.now
     const pay = amount == null ? c : c > 0 ? Math.max(0, Math.min(c, amount - paid)) : 0;
     if (!pay) continue;
     const [pf, pt] = pay > 0 ? [F, T] : [T, F];
-    const x = newPayment(state, { id: `x_${makeId()}`, tripId, from: pf, to: pt, amount: Math.abs(pay), fromName: nameOf(state, pf), toName: nameOf(state, pt), reason, now });
+    // One id for the same payment on both phones, so marking it on each before they sync pays it once
+    const x = newPayment(state, { id: expensePayId(state, tripId, pf, pt, Math.abs(pay)), tripId, from: pf, to: pt, amount: Math.abs(pay), fromName: nameOf(state, pf), toName: nameOf(state, pt), reason, now });
     if (!x) continue;
     expenses.push(x);
     paid += pay;

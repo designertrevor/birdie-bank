@@ -494,7 +494,7 @@ export function cupStatus(state, trip, people = tripPeople(state, trip.id), { ov
  * only this phone has is a payment here (its id names the trip). Returns { rows, settlements,
  * expenses }, empty when the line is gone.
  */
-export function tripPayment(state, tripId, from, to, { now = Date.now(), part = false, makeId } = {}) {
+export function tripPayment(state, tripId, from, to, { now = Date.now(), part = false } = {}) {
   const st = tripStatus(state, tripId, { now });
   const line = st?.plan.find(t => t.from === from && t.to === to);
   // Someone only the trip's expenses know (a round this phone doesn't have) is marked paid on a
@@ -505,7 +505,7 @@ export function tripPayment(state, tripId, from, to, { now = Date.now(), part = 
   const rows = line.shared ? squareRows(state, from, to, ids, { now, reason }).rows : [];
   if (line.plan) rows.push(...planRows(state, from, to, { now, trip: tripId, reason }).rows);
   // Each part squares in whichever way it runs, so the line as a whole is paid
-  const expenses = line.expense ? expensePayments(state, from, to, { now, trip: tripId, reason, ...(makeId ? { makeId } : {}) }).expenses : [];
+  const expenses = line.expense ? expensePayments(state, from, to, { now, trip: tripId, reason }).expenses : [];
   const [lf, lt] = line.local > 0 ? [from, to] : [to, from];
   const settlements = line.local ? [{ id: tripPaymentId(tripId, lf, lt, now), from: lf, to: lt, amount: Math.abs(line.local) / 100, at: now, ...(part ? { tripPart: true } : {}) }] : [];
   return { rows, settlements, expenses };

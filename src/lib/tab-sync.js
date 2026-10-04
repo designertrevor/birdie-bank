@@ -11,7 +11,7 @@ import { isMissingTable } from './plan-adapters.js';
 import { allocatePayment, applyRows, lastPayment, nettedFor, tabCodes, undoRows } from './shared-tab.js';
 import { cardCarry, carryReducer, carryRows, carrySplit, splitCodes, splitRounds } from './carry.js';
 import { tripPayment } from './trips.js';
-import { canEditExpense, cleanExpense, mergeExpenses, newPayment } from './trip-expenses.js';
+import { mergeExpenses, newPayment, resolveExpense } from './trip-expenses.js';
 import { expensesOn, refreshExpenses } from './trip-expense-sync.js';
 
 // Per dev profile (?profile=b), so two tabs acting as two phones never read each other's queue
@@ -280,7 +280,7 @@ export function markTransfer(round, t, code) {
  */
 export function markTripPayment({ tripId, from, to, part = false }) {
   const now = Date.now();
-  const { rows, settlements, expenses } = tripPayment(getState(), tripId, from, to, { now, part, makeId: () => uid() });
+  const { rows, settlements, expenses } = tripPayment(getState(), tripId, from, to, { now, part });
   commit(rows, { add: settlements });
   keepExpenses(expenses);
   return { shared: (!off && rows.some(r => r.status === 'paid')) || (expenses.length > 0 && expensesOn()), at: now };
@@ -295,20 +295,19 @@ export function undoPayments(settlementsToUndo, netted = null) {
   const { rows, remove, spent } = undoRows(s, { settlements: settlementsToUndo, netted }, { now });
   const gone = (s.settlements || []).filter(x => remove.includes(x.id));
   commit(rows, { remove });
-  // Payments for trip expenses: this phone's own one is deleted; someone else's is undone by one
-  // of this phone's that takes it back, so every phone on the trip hears it either way
-  const back = spent.map(x => {
-    const own = cleanExpense(s.tripExpenses?.[x.id]);
-    if (own && canEditExpense(s, own)) return { put: own, gone: { id: own.id, tripId: own.tripId, by: own.by, deleted: true, at: own.at, updatedAt: Math.max(now, own.updatedAt + 1) } };
-    const undo = newPayment(s, { id: `x_${uid()}`, tripId: x.tripId, from: x.to, to: x.from, amount: Math.round(x.amount * 100), undoes: x.id, now });
-    return undo ? { put: { id: undo.id, tripId: undo.tripId, by: undo.by, deleted: true, at: undo.at, updatedAt: now + 1 }, gone: undo } : null;
-  }).filter(Boolean);
-  keepExpenses(back.map(b => b.gone));
+  // Payments for trip expenses are taken back with one of this phone's that `undoes` it, and put
+  // back with one that undoes that, whoever marked the payment: the latest tap on any phone wins
+  // (trip-expenses.js), and both phones of a pair may hold the payment under one id
+  const back = spent.map(x => newPayment(s, { id: `x_${uid()}`, tripId: x.tripId, from: x.to, to: x.from, amount: Math.round(x.amount * 100), undoes: x.id, now })).filter(Boolean);
+  keepExpenses(back);
   return () => {
-    const later = Date.now();
+    const later = Math.max(Date.now(), now + 1);
     commit(rows.map(r => ({ ...r, status: r.id.endsWith(':net') ? 'netted' : 'paid', updatedAt: later })), { add: gone });
-    // Put back: your own payment again, or your undo deleted
-    keepExpenses(back.map(b => ({ ...b.put, updatedAt: Math.max(later, (b.gone.updatedAt || 0) + 1) })));
+    const s2 = getState();
+    keepExpenses(back.map(u => {
+      const x = resolveExpense(s2, u);
+      return newPayment(s2, { id: `x_${uid()}`, tripId: u.tripId, from: x.parts[0].id, to: x.payer, amount: x.cents, undoes: u.id, now: later });
+    }).filter(Boolean));
   };
 }
 

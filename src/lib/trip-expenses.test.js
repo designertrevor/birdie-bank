@@ -721,3 +721,61 @@ test('a phone without someone’s round still counts them as one person, and lea
   share(phones, ...res.expenses);
   for (const k of ['t', 'f', 'g']) assert.deepEqual(lines(phones[k]), [], `square on ${k}’s phone`);
 });
+
+test('the payer and the payee marking the same expense payment before their phones sync pay it once', () => {
+  const phones = lunchPair();
+  const now = OCT(19, 9);
+  assert.equal(owes(phones.a, 'a', 't', now), 5000);
+  const fromA = tripPayment(phones.a, 't_bandon', 'za', 't', { now: now + 1000 });
+  const fromT = tripPayment(phones.t, 't_bandon', 'a', 't', { now: now + 2000 });
+  assert.equal(fromA.expenses.length, 1);
+  assert.equal(fromA.expenses[0].id, fromT.expenses[0].id, 'one id for the one payment');
+  share(phones, ...fromA.expenses, ...fromT.expenses);
+  for (const k of ['t', 'a']) {
+    assert.equal(owes(phones[k], 'a', 't', now + 3000), 0, `square on ${k}’s phone`);
+    assert.equal(allTripPays(phones[k]).length, 1);
+  }
+  // The server keeps Andy's (it went up first): Trevor's phone doesn't send its own over it
+  const rows = [{ expense: fromA.expenses[0], codes: ['LLLLLL'] }];
+  const sent = expensesToSend(phones.t, rows, new Map([['t_bandon', new Set(['LLLLLL'])]])).map(x => x.expense.id);
+  assert.equal(sent.includes(fromA.expenses[0].id), false);
+  // Taken back from either phone, it's back on both
+  const undo = newPayment(phones.t, { id: 'u1', tripId: 't_bandon', from: 't', to: 'a', amount: 5000, undoes: fromA.expenses[0].id, now: now + 4000 });
+  share(phones, undo);
+  for (const k of ['t', 'a']) assert.equal(owes(phones[k], 'a', 't', now + 5000), 5000, k);
+  // Marked again: a new id, so the old undo doesn't take it back
+  const again = tripPayment(phones.a, 't_bandon', 'za', 't', { now: now + 6000 });
+  assert.notEqual(again.expenses[0].id, fromA.expenses[0].id);
+  share(phones, ...again.expenses);
+  for (const k of ['t', 'a']) assert.equal(owes(phones[k], 'a', 't', now + 7000), 0, k);
+});
+
+test('taking a payment for expenses back and putting it back: the latest tap wins on every phone', () => {
+  const phones = lunchPair();
+  const now = OCT(19, 9);
+  const p = tripPayment(phones.a, 't_bandon', 'za', 't', { now }).expenses[0];
+  share(phones, p);
+  const undo = (k, id, from, to, at, of = p.id) => newPayment(phones[k], { id, tripId: 't_bandon', from, to, amount: 5000, undoes: of, now: at });
+  const standing = () => ['t', 'a'].map(k => owes(phones[k], 'a', 't', now + 99e3));
+  // Both phones take it back: it's taken back once
+  const ut = undo('t', 'ut', 't', 'a', now + 1000), ua = undo('a', 'ua', 't', 'za', now + 2000);
+  share(phones, ut, ua);
+  assert.deepEqual(standing(), [5000, 5000]);
+  // Trevor puts his back later: the latest tap says it's paid, though Andy's undo is still there
+  share(phones, undo('t', 'utt', 'a', 't', now + 3000, 'ut'));
+  assert.deepEqual(standing(), [0, 0]);
+  // Andy taps Undo again later still
+  share(phones, undo('a', 'ua2', 't', 'za', now + 4000));
+  assert.deepEqual(standing(), [5000, 5000]);
+  // Andy undid, Trevor said he didn't get it, then Andy put his back: it's paid
+  const two = lunchPair();
+  const q = tripPayment(two.a, 't_bandon', 'za', 't', { now }).expenses[0];
+  share(two, q);
+  const u = (k, id, at, of) => newPayment(two[k], { id, tripId: 't_bandon', from: 't', to: k === 't' ? 'a' : 'za', amount: 5000, undoes: of, now: at });
+  share(two, u('a', 'a1', now + 1000, q.id), u('t', 't1', now + 2000, q.id), u('a', 'a2', now + 3000, 'a1'));
+  for (const k of ['t', 'a']) assert.equal(owes(two[k], 'a', 't', now + 99e3), 0, k);
+  // In whatever order the phones hear them
+  const three = lunchPair();
+  share(three, u('a', 'a2', now + 3000, 'a1'), u('t', 't1', now + 2000, q.id), q, u('a', 'a1', now + 1000, q.id));
+  for (const k of ['t', 'a']) assert.equal(owes(three[k], 'a', 't', now + 99e3), 0, k);
+});

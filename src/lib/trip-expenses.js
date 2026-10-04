@@ -24,9 +24,10 @@
 // expense too, a payment: { ..., kind: 'payment', what: 'Payment', split: 'amounts', payer: whoever
 // paid, people: [whoever got it, part: the amount], reason? }. It goes up and comes back like any
 // expense, so it reaches every phone that has the trip's expenses, and its money squares the
-// expenses between the two of them on every phone. Its adder takes it back by deleting it; anyone
-// else takes it back with one that `undoes` it (the same money back the other way), which counts
-// only while the payment it undoes is there. Those expenses stay between the two people in them,
+// expenses between the two of them on every phone. Its id comes from what it pays (expensePayId),
+// so the payer and the payee marking it on both phones before they sync pay it once. Anyone takes
+// it back with a record that `undoes` it and puts it back with one that undoes that: the latest
+// tap wins, on every phone (undoneIds). Those expenses stay between the two people in them,
 // pair by pair, the same on every phone (ledger.js expenseDebts). Payments never show as expenses.
 import { canonicalOf, codeOf } from './pair-debts.js';
 
@@ -349,9 +350,32 @@ export function rawTripExpenses(state, tripId) {
 }
 
 /**
+ * The payments taken back, from a trip's records (deleted ones left out). A record that `undoes`
+ * a payment takes it back, one that undoes that puts it back, and so on: the latest of them (by
+ * when it was tapped) says whether the payment stands, whichever phones they came from. A record
+ * whose payment (or the record it undoes) isn't here moves nothing.
+ */
+function undoneIds(raw) {
+  const byId = new Map(raw.filter(e => e.kind === 'payment').map(e => [e.id, e]));
+  const latest = new Map(); // payment id -> { at, depth, id }
+  for (const e of byId.values()) {
+    let x = e, depth = 0;
+    const seen = new Set();
+    while (x?.undoes && !seen.has(x.id)) { seen.add(x.id); x = byId.get(x.undoes); depth++; }
+    if (!x || x.undoes) continue; // its payment isn't here (or a loop)
+    const cur = latest.get(x.id);
+    const mine = { at: e.at || 0, depth, id: e.id };
+    if (!cur || mine.at > cur.at || (mine.at === cur.at && (mine.depth > cur.depth || (mine.depth === cur.depth && mine.id > cur.id)))) latest.set(x.id, mine);
+  }
+  const out = new Set();
+  for (const [id, l] of latest) if (l.depth % 2) out.add(id);
+  return out;
+}
+
+/**
  * Everything with money a trip has on this phone (resolveExpense), newest first: its expenses and
- * the payments for them (`pay: true`), deleted ones left out. A payment that `undoes` another counts
- * only while that one is here, and only the first to undo it (by time) when two phones did at once.
+ * the payments for them still standing (`pay: true`), deleted ones and the records that take a
+ * payment back or put it back (undoneIds) left out.
  */
 export function tripMoney(state, tripId) {
   if (!state.tripExpenses) return [];
@@ -360,14 +384,9 @@ export function tripMoney(state, tripId) {
   const who = canonicalOf(state);
   const codes = byCode(state);
   const raw = tripKnown(state, tripId) ? (idx.byTrip.get(tripId) || []).filter(e => !e.deleted) : [];
-  const pays = new Set(raw.filter(e => e.kind === 'payment' && !e.undoes).map(e => e.id));
-  const undone = new Set();
-  const list = [...raw].sort((a, b) => (a.at || 0) - (b.at || 0) || a.id.localeCompare(b.id)).filter(e => {
-    if (e.kind !== 'payment' || !e.undoes) return true;
-    if (!pays.has(e.undoes) || undone.has(e.undoes)) return false;
-    undone.add(e.undoes);
-    return true;
-  }).map(e => resolveExpense(state, e, { who, codes }))
+  const off = undoneIds(raw);
+  const list = raw.filter(e => e.kind !== 'payment' || (!e.undoes && !off.has(e.id)))
+    .map(e => resolveExpense(state, e, { who, codes }))
     .sort((a, b) => (b.at || 0) - (a.at || 0) || a.id.localeCompare(b.id));
   idx.money.set(tripId, list);
   return list;
@@ -389,9 +408,7 @@ export function tripExpenses(state, tripId) {
  * and the trip list them with the rest. `expense` is the payment as tripMoney has it.
  */
 export function tripPays(state, tripId) {
-  const list = tripMoney(state, tripId);
-  const undone = new Set(list.filter(x => x.undoes).map(x => x.undoes));
-  return list.filter(x => x.pay && !x.undoes && !undone.has(x.id)).map(x => ({
+  return tripMoney(state, tripId).filter(x => x.pay).map(x => ({
     id: x.id, from: x.payer, to: x.parts[0].id, amount: x.cents / 100, at: x.at || 0, by: x.by, tripId: x.tripId,
     ...(x.reason ? { reason: x.reason } : {}), expensePay: true, expense: x,
   }));
@@ -453,6 +470,37 @@ export function newPayment(state, { id, tripId, from, to, amount, fromName = '',
     payer: payPerson(state, tripId, from, fromName, to), people: [{ ...payPerson(state, tripId, to, toName, from), part: amount / 100 }],
     by: who(state.me), at: now, updatedAt: now, ...(reason ? { reason } : {}), ...(undoes ? { undoes } : {}),
   });
+}
+
+/**
+ * The id for a payment of the expenses between `from` and `to` on a trip (ids as this phone knows
+ * them): the same on both their phones when both mark it before they sync, so the two taps are one
+ * payment, like a round transfer's row. It comes from the trip, the expenses between the two (each
+ * one's id, version and where the two are in it), the payments already between them and the
+ * amount, and never one this phone already has (a payment taken back keeps its id).
+ */
+export function expensePayId(state, tripId, from, to, amount) {
+  const who = codesWho(state);
+  const at = p => personOn(state, p, who);
+  const parts = [];
+  for (const e of rawTripExpenses(state, tripId)) {
+    if (e.deleted || e.undoes) continue;
+    const list = [e.payer, ...e.people].map(at);
+    const f = list.flatMap((id, i) => (id === from ? [i] : [])), t = list.flatMap((id, i) => (id === to ? [i] : []));
+    if (!f.length || !t.length) continue;
+    parts.push(e.kind === 'payment' ? `p${e.id}` : `${e.id}.${e.updatedAt}:${f.join(',')}>${t.join(',')}`);
+  }
+  const text = [tripId, amount, ...parts.sort()].join('|');
+  let h1 = 0x811c9dc5, h2 = 0x01000193;
+  for (let i = 0; i < text.length; i++) {
+    const c = text.charCodeAt(i);
+    h1 = Math.imul(h1 ^ c, 0x01000193) >>> 0;
+    h2 = Math.imul(h2 ^ c, 0x5bd1e995) >>> 0;
+  }
+  const base = `xp_${h1.toString(36)}${h2.toString(36)}`;
+  let id = base;
+  for (let n = 2; state.tripExpenses?.[id]; n++) id = `${base}_${n}`;
+  return id;
 }
 
 /** Add expenses' balances into `bal` ({ id: cents }), mutating it. */
@@ -577,6 +625,8 @@ export function expensesToSend(state, rows, tripCodes) {
     const codes = [...tripCodes.get(e.tripId)].slice(0, 100);
     const have = there.get(e.id);
     const theirs = have ? cleanExpense(have.expense) : null;
+    // Both phones of a pair marked the same payment (one id): the server keeps the first one up
+    if (theirs?.by && e.by && theirs.by !== e.by) continue;
     const newCodes = !have || codes.some(c => !(have.codes || []).includes(c));
     if (theirs && theirs.updatedAt >= e.updatedAt && !newCodes) continue;
     out.push({ expense: e, codes });
