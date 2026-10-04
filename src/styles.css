@@ -1935,3 +1935,10 @@ button.trip-card:active { transform: scale(.97); }
 .trip-who { display: flex; flex-direction: column; gap: 6px; margin-top: 8px; }
 .trip-who .sheet-item { width: 100%; margin: 0; }
 .trip-who .avatar { margin: 0; }
+
+/* ---- Mid-round lineup (o7 midround): who banks or is the wolf on the holes still to play ---- */
+.lineup-runs { padding-top: 4px; }
+.lineup-run { display: flex; align-items: center; gap: 8px; padding: 8px 0; font-size: 14px; border-top: 1px solid var(--surface); }
+.lineup-run:first-child { border-top: none; }
+.lineup-run.more { color: var(--mute); font-size: 13px; }
+.lineup-holes { color: var(--mute); font-size: 12px; font-weight: 600; width: 92px; flex-shrink: 0; font-variant-numeric: tabular-nums; }

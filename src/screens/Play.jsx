@@ -10,6 +10,9 @@ import {
 import { SIDE_GAMES } from '../lib/round.js';
 import { CourseTeeSheet, FixHoleSheet } from '../components/FixHole.jsx';
 import { HandicapsSheet } from '../components/HandicapsSheet.jsx';
+import { LineupSheet } from '../components/LineupSheet.jsx';
+import { PlayForSheet } from '../components/PlayForSheet.jsx';
+import { lineupKind, lineupMenuText } from '../lib/lineup.js';
 import { courseTeeLabel, keepsDraft } from '../lib/hole-fix.js';
 import { markUsualPlayed } from '../lib/usuals.js';
 import { findCourse } from '../lib/courses.js';
@@ -30,7 +33,7 @@ import { LivePill, ShareSheet } from '../components/Live.jsx';
 import { syncConfigured, useSeatRequests } from '../lib/sync.js';
 import { AddPlayerSheet } from '../components/AddPlayer.jsx';
 import { firstName, gameLabel, holeMoneyLine } from '../lib/format.js';
-import { countsMoney, inUnits, padUnit, unitFmt } from '../lib/play-for.js';
+import { countsMoney, inUnits, padUnit, playForShort, unitFmt } from '../lib/play-for.js';
 import { leaveRound, roundsInProgress } from '../lib/rounds.js';
 import { RoundsInProgressSheet } from '../components/RoundsInProgress.jsx';
 import { ByGameTable, SideGamesSetup } from '../components/SideGames.jsx';
@@ -84,6 +87,8 @@ export default function Play({ id }) {
   // ...and when this hole's par is fixed, so an untouched score starts from the new par
   // ...and when a side game is added, so Junk's dots have somewhere to go
   const games = (round.sideGames || []).map(sg => sg.game).join('+');
+  // ...and when the playing order or the sides change, so this hole's banker or wolf follows them
+  const lineup = `${round.players.map(p => p.id).join('.')}|${(round.teams || []).map(t => t.players.join('.')).join('/')}`;
   // A match won before the last hole: the keeper can end the round there (the holes played count)
   const finishHere = () => {
     FINISHED_HERE.add(id);
@@ -94,7 +99,7 @@ export default function Play({ id }) {
   const keeps = canEdit(round, keeperMe(round, { me: getState().me }), !!round.shared?.host);
   return (
     <>
-      <PlayRound key={`${games}:${round.holesCount}:${round.current}:${round._remote?.[cur?.no] || 0}:${left}:${joined}:${cur?.par}`} round={round} />
+      <PlayRound key={`${games}:${lineup}:${round.holesCount}:${round.current}:${round._remote?.[cur?.no] || 0}:${left}:${joined}:${cur?.par}`} round={round} />
       {/* Outside the hole, which remounts on every save, so it sees the hole that was just scored */}
       <RoundMoments round={round} onFinish={keeps ? finishHere : null} />
     </>
@@ -194,7 +199,7 @@ function PlayRound({ round }) {
   const others = useStore(s => roundsInProgress(s).filter(r => r.id !== round.id).length);
   const [addSheet, setAddSheet] = useState(null); // true, or the seat request being answered
   const [handSheet, setHandSheet] = useState(false);
-  const [fixSheet, setFixSheet] = useState(null); // 'hole' | 'tee' | 'hc'
+  const [fixSheet, setFixSheet] = useState(null); // 'hole' | 'tee' | 'hc' | 'lineup' | 'playFor'
   const localCourse = useStore(s => findCourse(s, round.course.id));
   const holeFixed = !!holeFixOf(round, hole.no);
   const requests = useSeatRequests(round.id);
@@ -612,6 +617,12 @@ function PlayRound({ round }) {
             <span><Icon name="scales" /> Handicaps · {round.useHandicaps === false ? 'Off' : noHandicap(round).length ? `On, ${noHandicap(round).length} with none` : 'On'}</span><Icon name="caret-right" />
           </button>
         )}
+        {/* What it's played for changes while the round is going on, not when fixing a finished one */}
+        {round.status === 'active' && !round.editing && (
+          <button className="sheet-item" onClick={() => { setMenu(false); setFixSheet('playFor'); }}>
+            <span><Icon name="trophy" /> Play for · {playForShort(round)}</span><Icon name="caret-right" />
+          </button>
+        )}
         {game !== 'scramble' && (
           <button className="sheet-item" onClick={() => { setMenu(false); setGamesSheet(true); }}>
             <span><Icon name="plus-circle" /> {sideGamesOf(round).length ? `Side games · ${sideGamesOf(round).length}` : 'Add a side game'}</span><Icon name="caret-right" />
@@ -647,6 +658,12 @@ function PlayRound({ round }) {
         <button className="sheet-item" onClick={() => { setMenu(false); setLeftSheet(true); }}>
           <span><Icon name="user-minus" /> {playersLeft(round).length ? `A player left · ${playersLeft(round).map(x => x.player.name.split(' ')[0]).join(', ')}` : 'A player left'}</span><Icon name="caret-right" />
         </button>
+        {/* Sides or teams, the playing order, and who throws the first hammer (see lineup.js) */}
+        {(lineupKind(round) || game === 'hammer') && (
+          <button className="sheet-item" onClick={() => { setMenu(false); setFixSheet('lineup'); }}>
+            <span><Icon name={lineupKind(round) === 'order' ? 'list-numbers' : game === 'hammer' && !lineupKind(round) ? 'hammer' : 'users-three'} /> {lineupMenuText(round)}</span><Icon name="caret-right" />
+          </button>
+        )}
         </>}
         <div className="menu-sec">Round</div>
         {editable && <>
@@ -686,6 +703,8 @@ function PlayRound({ round }) {
       {fixSheet === 'hole' && editable && <FixHoleSheet round={round} holeNo={hole.no} me={me} onClose={() => setFixSheet(null)} />}
       {fixSheet === 'tee' && editable && <CourseTeeSheet round={round} me={me} onClose={() => setFixSheet(null)} />}
       {fixSheet === 'hc' && editable && <HandicapsSheet round={round} onClose={() => setFixSheet(null)} />}
+      {fixSheet === 'lineup' && editable && <LineupSheet round={round} onClose={() => setFixSheet(null)} />}
+      {fixSheet === 'playFor' && editable && <PlayForSheet round={round} onClose={() => setFixSheet(null)} />}
       <RulesSheet game={rules.key === 'main' ? game : rules.key} open={rules.open} onClose={() => setRules(r => ({ ...r, open: false }))}
         title={rules.key === 'dots' ? `How to play ${SIDE_GAMES.dots.label}` : undefined}
         sub={rules.key === 'dots' ? 'A side game · Dots, garbage, trash' : undefined} strokes={strokesRulesLines(round, rules.key)} />

@@ -47,6 +47,18 @@ export function lineupLabel(round) {
   return game === 'nassau' || game === 'hammer' || game === 'match' ? 'Sides' : 'Teams';
 }
 
+/**
+ * What the round menu row says: "Sides · Ann & Bo v Cy & Dan", "Banker order · Dan, Ann, Bo, Cy"
+ * (from the next hole), "Sixes partners", or for a Hammer match of two "Who throws the first hammer".
+ */
+export function lineupMenuText(round) {
+  const kind = lineupKind(round);
+  if (kind === 'teams') return `${lineupLabel(round)} · ${sidesText(round)}`;
+  if (round.game === 'sixes') return 'Sixes partners';
+  if (kind === 'order') return `${lineupLabel(round)} · ${namesOf(round, orderNow(round).ids)}`;
+  return 'Who throws the first hammer';
+}
+
 /** Index of the next hole to play: the first one without every score in, or -1 when every hole is. */
 export function nextOpenIdx(round) {
   return round.holes.findIndex(h => !holeComplete(round, h));
@@ -145,7 +157,7 @@ export function orderRuns(round) {
   return runs.map(({ from, to, id }) => ({ from, to, id }));
 }
 
-/** "Ann, Bob, Cy and Dan" style list of first names, joined with commas. */
+/** First names in order, with commas: "Ann, Bo, Cy, Dan". */
 const namesOf = (round, ids) => ids.map(id => first(round.players.find(p => p.id === id)?.name)).join(', ');
 
 /**
