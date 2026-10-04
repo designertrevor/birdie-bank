@@ -24,7 +24,7 @@ import { PlansOffError } from '../lib/plan-adapters.js';
 import { CountForTrip } from '../components/Trips.jsx';
 import { keptLine, roundBets } from '../lib/plan-setup.js';
 import { tripOf, tripOnDay, tripStamp } from '../lib/trips.js';
-import { answerPlan, editPlan, openPlanLink, planShareLink, removePlan, sharePlan, usePlanLive, usePlansOff } from '../lib/plan-sync.js';
+import { PLAN_LOCKED, answerPlan, editPlan, openPlanLink, planShareLink, removePlan, sharePlan, usePlanLive, usePlansOff } from '../lib/plan-sync.js';
 
 const first = name => String(name || '').trim().split(/\s+/)[0];
 const listNames = n => (n.length < 2 ? n.join('') : `${n.slice(0, -1).join(', ')} and ${n.at(-1)}`);
@@ -92,7 +92,8 @@ function PlanBody({ plan, standalone = false, onSkip }) {
   // Once the plan lock is on, an answer someone made from their own phone is theirs (plan-lock.js)
   const taken = (r, name, mineToo) => {
     if (r !== 'taken') return;
-    if (mineToo && plan.host) showToast('This plan was shared from another phone, so your changes stay here');
+    // The organizer on a phone that didn't share it (a backup restored on a new phone): the server keeps its answer
+    if (mineToo && plan.host) showToast('This plan was shared from another phone, so only that phone can change your answer');
     else if (mineToo) {
       showToast(`${first(name)} already answered from another phone, so only that phone can change it. Pick who you are again`);
       update(s => { const p = s.plans?.[plan.id]; if (p) p.localMe = null; });
@@ -129,7 +130,7 @@ function PlanBody({ plan, standalone = false, onSkip }) {
   const morning = () => send(morningText(plan, link, settings), 'Text copied. Paste it in your group text');
   const callOff = async () => {
     if (!(await ask({ title: 'Call it off?', text: 'Everyone with the link sees it’s off. Nobody’s tab changes.', confirmLabel: 'Call it off', cancelLabel: 'Keep it on', danger: true }))) return;
-    editPlan(plan.id, p => { p.status = 'off'; });
+    editPlan(plan.id, p => { p.status = 'off'; }).then(r => { if (r === 'taken') showToast(PLAN_LOCKED); });
   };
   const del = async () => {
     const text = plan.host ? 'It comes off Up next here and for the group.' : 'It comes off your Up next. The plan stays on for everyone else.';
@@ -408,6 +409,7 @@ function WhoAreYou({ plan, defaultName, standalone, onSkip }) {
 /** At the tee: confirm who showed, then start with the voted game and bet in one tap. */
 export function RollCall({ id }) {
   const nav = useNav();
+  const { showToast } = useUI();
   const state = useStore();
   const plan = state.plans?.[id];
   const [present, setPresent] = useState(() => (plan ? rollCallDefault(plan) : []));
@@ -458,7 +460,7 @@ export function RollCall({ id }) {
     // Planned for a trip (or teeing off while one is on, and counted): the stamp rides in the round
     if (tripPick) round.trip = tripStamp(tripPick);
     update(s => { addRound(s, round); });
-    editPlan(id, p => { p.status = 'started'; p.roundId = rid; });
+    editPlan(id, p => { p.status = 'started'; p.roundId = rid; }).then(r => { if (r === 'taken') showToast(PLAN_LOCKED); });
     // Friends on the plan can follow the round live from the same page
     if (plan.code && syncConfigured) {
       shareRound(rid).then(code => editPlan(id, p => { p.liveCode = code; })).catch(() => { /* the round still starts; share it from the round menu */ });

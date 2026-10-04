@@ -22,9 +22,10 @@ const notHere = names => `${listNames(names)} ${names.length === 1 ? 'isn’t' :
 /**
  * What a plan keeps from setup, or null when there's nothing to keep. `order` is the players
  * picked, in the order setup had them (the organizer included); everything else is keyed by
- * those ids. `bets` are setup's two-player side bets as they were on the Bets step.
+ * those ids. `bets` are setup's two-player side bets as they were on the Bets step. `me` is the
+ * organizer's own id then, so the roll call still knows them if signing in gives them another.
  */
-export function setupForPlan({ game, courseId = null, holesCount, nine = 'front', order = [], teams = null, tees = {}, hcOverride = {}, startHole = null, bets = [] }) {
+export function setupForPlan({ game, courseId = null, holesCount, nine = 'front', me = null, order = [], teams = null, tees = {}, hcOverride = {}, startHole = null, bets = [] }) {
   if (!GAMES[game]) return null;
   const ids = [...new Set((order || []).filter(isStr))];
   if (!ids.length) return null;
@@ -39,12 +40,42 @@ export function setupForPlan({ game, courseId = null, holesCount, nine = 'front'
     .map(b => { const { shape: _SHAPE, ...rest } = b; return structuredClone(rest); });
   return {
     game, courseId, holesCount, nine: nine || 'front',
+    ...(isStr(me) && ids.includes(me) ? { me } : {}),
     order: ids,
     ...(split ? { teams: split } : {}),
     ...(Object.keys(t).length ? { tees: t } : {}),
     ...(Object.keys(hc).length ? { hcOverride: hc } : {}),
     ...(Number.isInteger(startHole) ? { startHole } : {}),
     ...(sideBets.length ? { bets: sideBets } : {}),
+  };
+}
+
+/**
+ * The setup with each id that isn't here moved to the id here that's the same person (`sameAs`):
+ * the organizer's new id after signing in, or a friend linked to another id since. Without it
+ * they'd read as someone who didn't come plus someone new, and lose their place, team and tee.
+ */
+function matchIds(setup, ids, sameAs) {
+  const map = new Map();
+  const free = ids.filter(id => !setup.order.includes(id));
+  for (const a of setup.order.filter(id => !ids.includes(id))) {
+    const b = free.find(x => ![...map.values()].includes(x) && sameAs(a, x));
+    if (b) map.set(a, b);
+  }
+  if (!map.size) return setup;
+  const to = id => map.get(id) ?? id;
+  const keyed = obj => (isObj(obj) ? Object.fromEntries(Object.entries(obj).map(([k, v]) => [to(k), v])) : obj);
+  return {
+    ...setup,
+    order: setup.order.map(to),
+    teams: Array.isArray(setup.teams) ? setup.teams.map(t => (Array.isArray(t) ? t.map(to) : t)) : setup.teams,
+    tees: keyed(setup.tees),
+    hcOverride: keyed(setup.hcOverride),
+    bets: Array.isArray(setup.bets) ? setup.bets.map(b => (!isObj(b) ? b : {
+      ...b,
+      ...(Array.isArray(b.sides) ? { sides: b.sides.map(to) } : {}),
+      ...(isObj(b.strokes) && b.strokes.to ? { strokes: { ...b.strokes, to: to(b.strokes.to) } } : {}),
+    })) : setup.bets,
   };
 }
 
@@ -72,16 +103,18 @@ function keptTeams(game, setTeams, ids) {
  * the plan's order; `course`, `holesCount` and `nine` are the round's (the organizer can change
  * them on the plan after scheduling); `game` is the game the group picked. `nameOf(id)` names a
  * player who didn't come. `fresh(ids)` makes a fresh team split (teams.js defaultTeams).
+ * `sameAs(a, b)`: whether setup's id `a` and the id `b` here are one person (people-links.js).
  * Returns { players (ordered, with tee and courseHcOverride), teams, startHole, bets, kept, changes }:
  * `kept` names what carried over, for the roll call's summary, and `changes` is one line per thing
  * that was dropped.
  */
-export function applySetup(setup, { game, course, holesCount, nine = 'front', players, nameOf = () => null, fresh = () => null }) {
+export function applySetup(setup, { game, course, holesCount, nine = 'front', players, nameOf = () => null, fresh = () => null, sameAs = null }) {
   const ids = players.map(p => p.id);
   const fallbackTee = defaultTee(course)?.name ?? null;
   if (!isObj(setup) || !Array.isArray(setup.order)) {
     return { players: players.map(p => ({ ...p, tee: fallbackTee })), teams: fresh(ids), startHole: null, bets: [], kept: [], changes: [] };
   }
+  if (sameAs) setup = matchIds(setup, ids, sameAs);
   const name = id => first(nameOf(id));
   const absent = setup.order.filter(id => !ids.includes(id));
   const joined = ids.filter(id => !setup.order.includes(id));

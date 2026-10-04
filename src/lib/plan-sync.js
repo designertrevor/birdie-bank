@@ -101,7 +101,24 @@ export async function sharePlan(id) {
   return code;
 }
 
-/** Change the plan on the organizer's phone and send it to the group (mutates a draft in `fn`). */
+/** What a screen says when the server kept a plan as it was because this isn't the phone that shared it. */
+export const PLAN_LOCKED = 'This plan was shared from another phone, so changes made here stay on this phone';
+
+/**
+ * Send the organizer's plan to the server. True when it went up (or there's nothing on the server
+ * to change any more), 'taken' when the server kept its own copy because this isn't the phone (or
+ * account) that shared it: a backup restored on a new phone, say, before signing in.
+ */
+async function pushMeta(adapter, plan) {
+  if ((await adapter.updateMeta(plan.code, planMeta(plan))) !== false) return true;
+  return (await adapter.fetch(plan.code)) ? 'taken' : true;
+}
+
+/**
+ * Change the plan on the organizer's phone and send it to the group (mutates a draft in `fn`).
+ * Resolves true when sent, false when it couldn't be (it goes up on the next refresh), and
+ * 'taken' when the server keeps its own copy (PLAN_LOCKED): the change stays on this phone.
+ */
 export async function editPlan(id, fn) {
   update(s => {
     const p = s.plans?.[id];
@@ -113,9 +130,9 @@ export async function editPlan(id, fn) {
   if (!plan?.code || !plan.host) return true;
   try {
     const adapter = await getPlanAdapter();
-    await adapter?.updateMeta(plan.code, planMeta(plan));
+    const sent = adapter ? await pushMeta(adapter, plan) : true;
     update(s => { const p = s.plans?.[id]; if (p) delete p.metaUnsent; });
-    return true;
+    return sent;
   } catch (e) { noteError(e); return false; }
 }
 
@@ -156,7 +173,8 @@ export async function refreshPlan(id) {
     const adapter = await getPlanAdapter();
     if (!adapter) return;
     if (plan.host && plan.metaUnsent) {
-      await adapter.updateMeta(plan.code, planMeta(plan));
+      // Kept by the server (not the phone that shared it): no use sending it again
+      await pushMeta(adapter, plan);
       update(s => { const p = s.plans?.[id]; if (p) delete p.metaUnsent; });
     }
     for (const who of Object.keys(plan.unsent || {})) {

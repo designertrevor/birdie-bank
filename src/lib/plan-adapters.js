@@ -1,6 +1,7 @@
 // Transport for upcoming rounds (planned rounds, RSVPs and votes). Two implementations with the
 // same shape, like the live round adapters:
-//   create(code, meta)   updateMeta(code, meta)   remove(code)
+//   create(code, meta)   remove(code)
+//   updateMeta(code, meta) -> false when the server kept the plan as it was (not the organizer's phone)
 //   fetch(code) -> { meta, rsvps: [{ who, name, status, payApp, payHandle, at, self }], votes: [{ who, kind, choice }] } | null
 //   setRsvp(code, { who, name, status, payApp, payHandle }) -> false when the server kept someone else's answer
 //   setVote(code, who, kind, choice | null)
@@ -37,7 +38,10 @@ export function planSupabaseAdapter(db) {
       check(await db.from('planned_rounds').insert({ code, meta, updated_at: now() }));
     },
     async updateMeta(code, meta) {
-      check(await db.from('planned_rounds').update({ meta, updated_at: now() }).eq('code', code));
+      const r = await db.from('planned_rounds').update({ meta, updated_at: now() }).eq('code', code).select('code');
+      check(r);
+      // The lock leaves a plan that isn't this phone's (or account's) as it is, so no row comes back
+      return !Array.isArray(r.data) || r.data.length > 0;
     },
     async fetch(code) {
       const r = await db.from('planned_rounds').select('meta').eq('code', code).maybeSingle();
@@ -108,8 +112,9 @@ export function planLocalAdapter(device = () => null) {
     async create(code, meta) { save(code, { meta, rsvps: {}, votes: {}, host: lockOn() ? hostOf(writer()) : null, owners: {} }); },
     async updateMeta(code, meta) {
       const v = must(code);
-      if (lockOn()) { const r = planWrite(v.host, writer()); if (!r.ok) return; v.host = r.host; }
+      if (lockOn()) { const r = planWrite(v.host, writer()); if (!r.ok) return false; v.host = r.host; }
       v.meta = meta; save(code, v);
+      return true;
     },
     async fetch(code) {
       const v = load(code);

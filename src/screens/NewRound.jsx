@@ -29,7 +29,7 @@ import { money } from '../lib/golf.js';
 import { findCourse } from '../lib/courses.js';
 import { BET_LADDER, MAX_BALLOT_GAMES, betChoices, betLabel, betOf, betUnitLabel, dayChoices, isoDate, newPlan, planStart } from '../lib/plans.js';
 import { rescheduleSetup, setupForPlan } from '../lib/plan-setup.js';
-import { editPlan } from '../lib/plan-sync.js';
+import { PLAN_LOCKED, editPlan } from '../lib/plan-sync.js';
 import { shouldShowPaywall } from '../lib/paywall.js';
 import { PAYWALL_ON } from '../lib/paywall-flag.js';
 import { matchingUsual, planFromUsual, setupFromUsual, usualsOf } from '../lib/usuals.js';
@@ -167,7 +167,9 @@ export default function NewRound({ rematch, fromPlan, present, edit = null, ahea
   const [playFor, setPlayFor] = useState(() => pre?.playFor ?? null);
   // Two-player side bets (pair-bets.js): this round's only, so Run it back and usuals never bring them back
   // (a round rescheduled or a plan's roll call keeps the ones it was set up with)
-  const [pairBets, setPairBets] = useState(() => structuredClone(pre?.pairBets || []));
+  // Stamped with the holes they start on, so changing the course or holes later puts a bet on some
+  // of the holes back on the whole round, like one made here (fitSetupBets)
+  const [pairBets, setPairBets] = useState(() => structuredClone(pre?.pairBets || []).map(b => ({ ...b, shape: `${holesCount}|${nine}|${courseId ?? ''}|${startHole ?? ''}` })));
   // A change to the holes played puts a bet on some of the holes back on the whole round (fitSetupBets)
   const betShape = `${holesCount}|${nine}|${courseId ?? ''}|${startHole ?? ''}`;
   const setupBets = fitSetupBets(pairBets, betShape);
@@ -244,7 +246,7 @@ export default function NewRound({ rematch, fromPlan, present, edit = null, ahea
         hcPct: opts.hcPct,
         halfStrokes: !!opts.halfStrokes,
         sidePcts: Object.fromEntries(sidesFor(game).filter(sg => sg.hcPct != null).map(sg => [sg.game, sg.hcPct])),
-        setup: setupForPlan({ game, courseId: course.id, holesCount, nine, order, teams, tees, hcOverride, startHole, bets: setupBets }),
+        setup: setupForPlan({ game, courseId: course.id, holesCount, nine, me: s.me, order, teams, tees, hcOverride, startHole, bets: setupBets }),
       } : {}),
     });
     // Planned for a trip: it groups under the trip on everyone's Up next
@@ -267,7 +269,7 @@ export default function NewRound({ rematch, fromPlan, present, edit = null, ahea
       p.holesCount = holesCount;
       p.nine = nine || 'front';
       p.course = { id: course.id, name: course.name, city: course.city || null };
-    });
+    }).then(r => { if (r === 'taken') showToast(PLAN_LOCKED); });
     update(st => { if (!st.favorites.includes(course.id)) st.favorites = [course.id, ...st.favorites].slice(0, 6); });
     showToast(editing.code ? 'Plan updated. Everyone with the link sees the change.' : 'Plan updated');
     nav.pop();
@@ -366,6 +368,8 @@ export default function NewRound({ rematch, fromPlan, present, edit = null, ahea
     setCourseId(p.courseId); setStartHole(null);
     // The usual's order, teams, tees and handicap edits ride along to the roll call (plan-setup.js)
     setPicked(p.order); setTees(p.tees); setHcOverride(p.hcOverride); setTeams(p.teams);
+    // Usuals never bring side bets back, so none made before picking it ride along on the plan
+    setPairBets([]);
     setInvited(p.invited);
     setOpts(o => ({ ...o, halfStrokes: false, ...structuredClone(p.opts) }));
     setUseHc(p.useHc);

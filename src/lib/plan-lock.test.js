@@ -3,7 +3,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { answerWrite, hostOf, planWrite } from './plan-lock.js';
-import { planLocalAdapter } from './plan-adapters.js';
+import { planLocalAdapter, planSupabaseAdapter } from './plan-adapters.js';
 import { answersFrom, newPlan, planMeta, planPeople } from './plans.js';
 
 const ORG = { dev: 'd-org', user: null };
@@ -114,7 +114,7 @@ test('two phones on the dev transport: the friend can’t change the plan or som
   assert.equal(await a.setRsvp('ABC123', { who: 'dave', name: 'Dave', status: 'in' }), true);
   await a.setVote('ABC123', 'dave', 'game', 'nassau');
   // He can't change the plan, the organizer's own answer, or delete the plan
-  await a.updateMeta('ABC123', { ...meta, status: 'off' });
+  assert.equal(await a.updateMeta('ABC123', { ...meta, status: 'off' }), false);
   assert.equal(await a.setRsvp('ABC123', { who: 'host', name: 'Trevor', status: 'out' }), false);
   await a.remove('ABC123');
   let r = await a.fetch('ABC123');
@@ -141,7 +141,7 @@ test('two phones on the dev transport: the friend can’t change the plan or som
   const p = { ...plan(), answers };
   assert.deepEqual(planPeople(p).map(x => [x.who, x.self]), [['host', false], ['dave', true], ['sam', true]]);
   // The organizer changes the plan and can delete it
-  await a.updateMeta('ABC123', { ...meta, status: 'off' });
+  assert.equal(await a.updateMeta('ABC123', { ...meta, status: 'off' }), true);
   assert.equal((await a.fetch('ABC123')).meta.status, 'off');
   await a.remove('ABC123');
   assert.equal(await a.fetch('ABC123'), null);
@@ -154,7 +154,7 @@ test('with the lock off (as before the SQL runs), every write goes through', () 
   await a.create('XYZ789', planMeta(plan()));
   dev = 'd-dave';
   assert.equal(await a.setRsvp('XYZ789', { who: 'host', name: 'Trevor', status: 'out' }), true);
-  await a.updateMeta('XYZ789', { ...planMeta(plan()), status: 'off' });
+  assert.equal(await a.updateMeta('XYZ789', { ...planMeta(plan()), status: 'off' }), true);
   const r = await a.fetch('XYZ789');
   assert.equal(r.meta.status, 'off');
   assert.equal(r.rsvps[0].self, false);
@@ -163,4 +163,21 @@ test('with the lock off (as before the SQL runs), every write goes through', () 
 test('answers from the server before the lock (no by_self) read as before', () => {
   const a = answersFrom([{ who: 'dave', name: 'Dave', status: 'in', at: 1 }], []);
   assert.deepEqual(a, { dave: { name: 'Dave', status: 'in', at: 1 } });
+});
+
+// A stand-in for the Supabase client: each call resolves to the rows the server sent back
+function fakeDb(rows) {
+  const q = { eq: () => q, select: () => Promise.resolve({ data: rows, error: null }) };
+  return { from: () => ({ update: () => q, upsert: () => q }) };
+}
+
+test('on Supabase, a plan or answer the lock kept as it was reads as refused; before the SQL, every write is kept', async () => {
+  // The lock returns no row for a write it left alone
+  const locked = planSupabaseAdapter(fakeDb([]));
+  assert.equal(await locked.updateMeta('ABC123', {}), false);
+  assert.equal(await locked.setRsvp('ABC123', { who: 'dave', name: 'Dave', status: 'in' }), false);
+  // The row comes back when the write went through (always, before the plan lock SQL has run)
+  const open = planSupabaseAdapter(fakeDb([{ code: 'ABC123', who: 'dave' }]));
+  assert.equal(await open.updateMeta('ABC123', {}), true);
+  assert.equal(await open.setRsvp('ABC123', { who: 'dave', name: 'Dave', status: 'in' }), true);
 });

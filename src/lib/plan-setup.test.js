@@ -265,3 +265,39 @@ test('a usual planned ahead carries its order, teams, tees and handicap edits', 
   assert.deepEqual(s.teams, [['sam', 'dave'], ['me', 'mike']]);
   assert.deepEqual(s.changes, []);
 });
+
+test('the organizer signed in since and goes by another id: roll call still starts it as built', () => {
+  const st = state({ me: 'me2' });
+  st.players.me2 = { ...st.players.me, id: 'me2' };
+  delete st.players.me;
+  const s = planStart(st, plan({ setup: { ...SETUP, me: 'me' } }), ALL, { course: COURSE });
+  assert.equal(s.problem, null);
+  assert.deepEqual(s.players.map(p => p.id), ['sam', 'me2', 'dave', 'mike']);
+  assert.deepEqual(s.teams, [['sam', 'dave'], ['me2', 'mike']]);
+  assert.equal(s.players.find(p => p.id === 'me2').tee, 'White');
+  assert.deepEqual(s.bets.map(b => b.sides), [['me2', 'dave']]);
+  assert.deepEqual(s.changes, []);
+});
+
+test('an id in the setup that is the same person as someone here moves to them; anyone else is still new', () => {
+  const players = [{ id: 'me', name: 'Trevor' }, { id: 'dave2', name: 'Dave' }, { id: 'sam', name: 'Sam' }, { id: 'mike', name: 'Mike' }];
+  const s = applySetup(setupForPlan(SETUP), {
+    game: 'nassau', course: COURSE, holesCount: 18, players, nameOf: id => id,
+    sameAs: (a, b) => a === 'dave' && b === 'dave2',
+  });
+  assert.deepEqual(s.players.map(p => p.id), ['sam', 'me', 'dave2', 'mike']);
+  assert.equal(s.players.find(p => p.id === 'dave2').tee, 'Blue');
+  assert.equal(s.players.find(p => p.id === 'dave2').courseHcOverride, 18);
+  assert.deepEqual(s.teams, [['sam', 'dave2'], ['me', 'mike']]);
+  assert.deepEqual(s.bets.map(b => b.sides), [['me', 'dave2']]);
+  assert.deepEqual(s.changes, []);
+  // Not the same person: Dave didn't come and the new player goes last
+  const t = applySetup(setupForPlan(SETUP), { game: 'nassau', course: COURSE, holesCount: 18, players, nameOf: id => id, sameAs: () => false });
+  assert.deepEqual(t.players.map(p => p.id), ['sam', 'me', 'mike', 'dave2']);
+  assert.ok(t.changes.some(c => /side bet is off/.test(c)));
+});
+
+test('the setup notes the organizer’s own id only when they’re in it', () => {
+  assert.equal(setupForPlan({ ...SETUP, me: 'me' }).me, 'me');
+  assert.equal(setupForPlan({ ...SETUP, me: 'ghost' }).me, undefined);
+});

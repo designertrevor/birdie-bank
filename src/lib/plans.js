@@ -18,6 +18,7 @@ import { defaultTeams, teamsProblem } from './teams.js';
 import { inUnits, playForLine, storedPlayFor } from './play-for.js';
 import { halfStrokesOffered } from './allowances.js';
 import { applySetup } from './plan-setup.js';
+import { linksOf } from './people-links.js';
 
 export const RSVPS = ['in', 'maybe', 'out'];
 /** The organizer's own key on a plan. Not their player id, so signing in (which can change it) never loses their answer. */
@@ -325,11 +326,16 @@ export function planStart(state, plan, present, { newId, course: courseIn } = {}
   const holesCount = g && g.holes.includes(plan.holesCount) ? plan.holesCount : g?.holes[0] ?? 18;
   const nine = plan.nine || 'front';
   // The setup made before it was scheduled (plan-setup.js): order, teams, tees, handicap edits,
-  // the starting hole and side bets, minus what no longer fits. Plans without one start fresh
+  // the starting hole and side bets, minus what no longer fits. Plans without one start fresh.
+  // An id in it that isn't here may be someone who is, by another id: the organizer after signing
+  // in, or a friend linked since (people-links.js)
+  let links = null;
+  const personOf = pid => (links ??= linksOf(state)).personOf(pid);
   const built = applySetup(plan.setup, {
     game, course, holesCount, nine, players,
     nameOf: pid => state.players?.[pid]?.name,
     fresh: list => (g?.teams ? defaultTeams(game, list) : null),
+    sameAs: (a, b) => (a === plan.setup?.me && b === state.me) || personOf(a) === personOf(b),
   });
   const ids = built.players.map(p => p.id);
   const teams = g?.teams ? built.teams : null;
