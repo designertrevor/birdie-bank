@@ -1,4 +1,5 @@
-// Playful feedback: confetti, count-ups, haptics. All respect reduced motion.
+// Playful feedback: confetti, count-ups, haptics. All respect reduced motion, and all of it is
+// silent: no sounds, nothing that takes the phone's audio, so the player's music or podcast keeps playing.
 const CLAY = ['#ff4d8b', '#e8b94a', '#b8a4ed', '#a4d4c5', '#ffb084', '#ff6b5a'];
 const reduce = () => window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
 
@@ -24,6 +25,26 @@ export function confettiFrom(el, n) {
   confetti(r.left + r.width / 2, r.top + r.height / 2, n);
 }
 
+// A buzz only answers a tap: within this long of the player's own touch or key press
+export const BUZZ_AFTER_INPUT_MS = 1000;
+let lastInput = -Infinity;
+if (typeof addEventListener === 'function') {
+  const touched = () => { lastInput = performance.now(); };
+  ['pointerdown', 'keydown'].forEach(t => addEventListener(t, touched, { capture: true, passive: true }));
+}
+
+/** Whether a buzz may go now: right after the player's own tap, with the app on screen. */
+export function buzzOk({ now, lastInput: at, hidden = false }) {
+  return !hidden && now - at >= 0 && now - at <= BUZZ_AFTER_INPUT_MS;
+}
+
+/**
+ * A short vibration for a tap. Never on its own: a moment that comes in from another phone, or a
+ * timer, stays still, so the phone only buzzes in the player's hand when they did something.
+ */
 export function buzz(ms = 10) {
-  try { navigator.vibrate?.(ms); } catch { /* unsupported */ }
+  try {
+    if (!buzzOk({ now: performance.now(), lastInput, hidden: document.visibilityState === 'hidden' })) return;
+    navigator.vibrate?.(ms);
+  } catch { /* unsupported */ }
 }
