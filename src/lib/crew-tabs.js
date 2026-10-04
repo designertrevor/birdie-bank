@@ -212,16 +212,32 @@ export function tabsOf(state, { now = Date.now() } = {}) {
   function payLoose(s) {
     const f = who(s.from), t = who(s.to);
     let left = cents(s.amount) - (countedBy.get(s.id) || 0);
-    for (const tab of order) {
-      if (left <= 0) break;
-      const c = Math.min(left, Math.max(0, -(tab.bal[f] || 0)), Math.max(0, tab.bal[t] || 0));
-      if (c <= 0) continue;
-      pay(tab.bal, f, t, c);
-      left -= c;
-    }
-    if (left > 0) pay(otherRun, f, t, left);
     const bals = [...order.map(x => x.bal), otherRun];
     const owing = (bal, a, b) => Math.min(Math.max(0, -(bal[a] || 0)), Math.max(0, bal[b] || 0));
+    for (const bal of bals) {
+      if (left <= 0) break;
+      const c = Math.min(left, owing(bal, f, t));
+      if (c <= 0) continue;
+      pay(bal, f, t, c);
+      left -= c;
+    }
+    // Everyone passes money on through the group, so a payment can stand for what the payer owes
+    // someone on one tab and what that someone owes the payee on another
+    for (const p of bals) {
+      for (const m of Object.keys(p).sort()) {
+        if (left <= 0 || m === f || m === t) continue;
+        for (const q of bals) {
+          if (left <= 0) break;
+          if (q === p) continue;
+          const c = Math.min(left, owing(p, f, m), owing(q, m, t));
+          if (c <= 0) continue;
+          pay(p, f, m, c);
+          pay(q, m, t, c);
+          left -= c;
+        }
+      }
+    }
+    if (left > 0) pay(otherRun, f, t, left);
     for (const p of bals) {
       for (const q of bals) {
         if (p === q) continue;

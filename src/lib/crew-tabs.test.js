@@ -233,3 +233,21 @@ test('a payment from Everyone nets one tab against another between the two peopl
   assert.ok(!outstanding(s, { now: NOW + 1 }).some(l => [l.from, l.to].sort().join() === 'a,t'), 'square on Everyone');
   for (const t of all.tabs) assert.deepEqual(t.lines, [], `square on ${t.name}`);
 });
+
+test('a payment Everyone passed on through someone pays the tabs it stands for, so settling all of Everyone squares every tab', () => {
+  // t owes a $6 on the crew's round; on another round a owes t $2 and c owes t $2. Everyone passes c's $2 straight to a
+  const crew = skins('r1', ['t', 'a'], [[1, 'a'], [2, 'a'], [3, 'a']], { at: OCT(3) });
+  const other = skins('r2', ['t', 'a', 'c'], [[1, 't']], { at: OCT(5) });
+  let s = base([crew, other]);
+  let n = 0;
+  for (let i = 0; i < 4; i++) {
+    // You pay your line first, then c pays a
+    const line = outstanding(s, { now: NOW + i }).sort((x, y) => (y.from === 't') - (x.from === 't'))[0];
+    if (!line) break;
+    s = { ...s, settlements: [...s.settlements, { id: `e${n++}`, from: line.from, to: line.to, amount: line.amount, at: NOW + i }] };
+  }
+  assert.deepEqual(outstanding(s, { now: NOW + 10 }), [], 'square on Everyone');
+  const all = tabsOf(s, { now: NOW + 10 });
+  assert.deepEqual(summed(all), {});
+  for (const t of all.tabs) assert.deepEqual(t.lines, [], `square on ${t.name}`);
+});
