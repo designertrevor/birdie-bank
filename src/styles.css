@@ -1935,3 +1935,13 @@ button.trip-card:active { transform: scale(.97); }
 .trip-who { display: flex; flex-direction: column; gap: 6px; margin-top: 8px; }
 .trip-who .sheet-item { width: 100%; margin: 0; }
 .trip-who .avatar { margin: 0; }
+
+/* ---------- o7 polish: add rows, copy and theme fixes ---------- */
+/* The add rows ("Add a course", "Add a player", "Join a friend's round") keep their dashed edge: the
+   button reset above (border: none) had wiped it. The dash is a step darker than --surface-strong so
+   it still reads on the row's own surface fill, in both themes. Join a friend's round stays solid. */
+:root { --add-dash: #d3cbb4; }
+:root[data-theme="dark"] { --add-dash: #3f4845; }
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]):not([data-theme="dark"]) { --add-dash: #3f4845; } }
+.add-row { border: 2px dashed var(--add-dash); }
+.add-row.join-row { border-style: solid; }
