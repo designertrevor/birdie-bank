@@ -1,7 +1,7 @@
 // App state: a single object persisted to localStorage, exposed through a tiny
 // subscribe/getSnapshot store so React can read it with useSyncExternalStore.
 import { useSyncExternalStore } from 'react';
-import { migrateSettings, REV2_DEFAULTS, SETTINGS_REV, SNAKE_CAP_DEFAULT } from './settings.js';
+import { migrateSettings, REV2_DEFAULTS, SETTINGS_REV, SNAKE_CAP_DEFAULT, TEAM_DEFAULTS } from './settings.js';
 
 // Dev only: ?profile=b gives a tab its own data, to test shared rounds as two "phones"
 function profileSuffix() {
@@ -33,6 +33,8 @@ export const DEFAULT_SETTINGS = {
   vegas: { point: 1, birdieFlip: true, birdieDouble: false },
   sixes: { stake: 5, mode: 'match', carry: false },
   scramble: { stake: 5, drives: 0 }, // drives: the minimum each player's drive is used, 0 for none
+  // The team games (2026-10-03, see TEAM_DEFAULTS in settings.js and round.js)
+  ...structuredClone(TEAM_DEFAULTS),
   stroke: { stake: 5, payout: 'pot', cap: false }, // cap: net double bogey is the most a hole costs
   stableford: { ...REV2_DEFAULTS.stableford },
   quota: { ...REV2_DEFAULTS.quota },

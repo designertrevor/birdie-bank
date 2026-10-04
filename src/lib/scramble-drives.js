@@ -1,4 +1,4 @@
-// Scramble house rule: a minimum number of drives each player's tee shot has to be used.
+// Scramble (and Shamble, 2026-10-03) house rule: a minimum number of drives each player's tee shot has to be used.
 // No money moves on it; it keeps a team honest so the long hitter doesn't hit every tee shot.
 // round.settings.scramble.drives is the minimum (0 or unset: off, today's default). The scorekeeper taps
 // whose drive the team used on each hole; it's saved in the hole's marks as { drives: { teamId: pid } }.
@@ -7,9 +7,12 @@
 //  FAU Golf Classic rules https://business.fau.edu/golf-classic/classic-rules/index.php (3 tee shots per player)
 import { playsHole } from './round.js';
 
+/** Games that can play for minimum drives: a scramble, and a shamble (which starts from the team's pick of drive). */
+export const DRIVE_GAMES = ['scramble', 'shamble'];
+
 /** The minimum drives each player needs, or 0 when the rule is off. */
 export function drivesNeeded(round) {
-  return round?.game === 'scramble' ? Number(round.settings?.scramble?.drives) || 0 : 0;
+  return DRIVE_GAMES.includes(round?.game) ? Number(round.settings?.[round.game]?.drives) || 0 : 0;
 }
 
 /**

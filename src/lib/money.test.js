@@ -4,8 +4,9 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import {
-  GAMES, createRound, roundResults, livePreview, bankerHoleSetup, wolfFor, scorers, nassauPressOptions, strokesFor, hammerOptions,
+  GAMES, createRound, roundResults, livePreview, bankerHoleSetup, wolfFor, scorers, nassauPressOptions, strokesFor, hammerOptions, TEAM_GAMES,
 } from './round.js';
+import { TEAM_DEFAULTS } from './settings.js';
 import { pickupGross } from './golf.js';
 import { DOT_KINDS } from './games.js';
 import { holeMoneyLine } from './format.js';
@@ -30,6 +31,8 @@ const SETTINGS = {
   rabbit: { stake: 5, tiesFree: true },
   hammer: { stake: 5, max: 3, who: 'either' },
   snake: { stake: 5, growth: 'flat', nines: false },
+  // The team games (2026-10-03): a $5 Nassau played as a match, as setup starts them
+  ...TEAM_DEFAULTS,
 };
 
 // A realistic 18: pars 4-4-3-5-4-4-3-4-5 each nine, card handicaps spread across the nines
@@ -91,6 +94,10 @@ const LINEUPS = {
   rabbit: { n: 5 },
   hammer: { n: 4, teams: [['a', 'b'], ['c', 'd']] },
   snake: { n: 4 },
+  bestball: { n: 6, teams: [['a', 'b', 'c'], ['d', 'e', 'f']] },
+  shamble: { n: 4, teams: [['a', 'b'], ['c', 'd']] },
+  altshot: { n: 4, teams: [['a', 'b'], ['c', 'd']] },
+  chapman: { n: 4, teams: [['a', 'b'], ['c', 'd']] },
 };
 
 /** Settings with presses on and odd stakes, so the random rounds exercise presses and cents. */
@@ -104,6 +111,11 @@ const BUSY = {
   stableford: { stake: 0.5, payout: 'per', modified: true },
   hammer: { stake: 2.5, max: 0, who: 'trailing' },
   snake: { stake: 1.5, growth: 'grow', nines: true },
+  // Each team game another way: best two with auto presses, per hole, stroke play, one match with presses
+  bestball: { ...TEAM_DEFAULTS.bestball, count: 2, pressMode: 'auto', total: 7.5 },
+  shamble: { ...TEAM_DEFAULTS.shamble, format: 'hole', perHole: 1.5 },
+  altshot: { ...TEAM_DEFAULTS.altshot, scoring: 'stroke', front: 2.5 },
+  chapman: { ...TEAM_DEFAULTS.chapman, format: 'total', stake: 7.5, pressMode: 'auto' },
 };
 
 function newRound(game, { holesCount = 18, nine = 'front', n, teams, players, settings = SETTINGS, useHandicaps = true, course = course18, startHole = null } = {}) {
@@ -179,7 +191,7 @@ function play(round, rand, upto = round.holes.length) {
     round.scores[hole.no] = Object.fromEntries(scorers(round).map(s => [s.id, grossScore(rand, hole.par)]));
     round.current = Math.min(idx + 1, round.holes.length - 1);
     const next = idx + 2;
-    if ((round.game === 'nassau' || round.game === 'match') && next <= round.holes.length) {
+    if ((round.game === 'nassau' || round.game === 'match' || TEAM_GAMES.includes(round.game)) && next <= round.holes.length) {
       for (const o of nassauPressOptions(round, next)) round.presses.push({ id: `auto-${o.leg}-${next}`, leg: o.leg, start: next, by: o.trailing, auto: true });
     }
   }

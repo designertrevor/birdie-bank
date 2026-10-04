@@ -254,8 +254,8 @@ test('side game choices: none with Scramble, no clashes, at most 4 games', () =>
   assert.deepEqual(sideGamesOf({ game: 'rabbit', sideGames: [{ game: 'skins', settings: {} }] }), []);
   // Junk on a Bingo Bango Bongo round from before the rule keeps its money
   assert.deepEqual(sideGamesOf({ game: 'bbb', sideGames: [{ game: 'dots', settings: {} }] }).map(sg => sg.game), ['dots']);
-  // GAMES is untouched: the picker still shows 18 games
-  assert.equal(Object.keys(GAMES).length, 18);
+  // GAMES is untouched by side games: the picker shows 22 games (the four team games came 2026-10-03)
+  assert.equal(Object.keys(GAMES).length, 22);
   assert.ok(Object.keys(SIDE_GAMES).every(k => k === 'birdies' || GAMES[k]));
 });
 

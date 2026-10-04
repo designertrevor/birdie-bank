@@ -21,6 +21,11 @@ export function teamsProblem(game, teams, picked) {
   if (teams.some(t => t.length === 0)) return 'Every team needs at least one player';
   if (cfg.size && teams.some(t => t.length !== cfg.size)) return `${GAMES[game].name} needs teams of ${cfg.size}`;
   if (teams.flat().length !== picked.length) return 'Put everyone on a team';
+  // Best ball and Shamble: two teams the same size, 2 v 2 up to 4 v 4
+  if (cfg.even && teams.some(t => t.length !== teams[0].length)) {
+    return picked.length % 2 ? `${GAMES[game].name} needs two teams the same size, so it takes 4, 6 or 8 players` : `${GAMES[game].name} needs two teams the same size`;
+  }
+  if (cfg.sizes && teams.some(t => t.length < cfg.sizes[0] || t.length > cfg.sizes[1])) return `${GAMES[game].name} needs teams of ${cfg.sizes[0]} to ${cfg.sizes[1]}`;
   return null;
 }
 

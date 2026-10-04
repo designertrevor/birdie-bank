@@ -8,6 +8,9 @@ import {
   GAMES, ADD_MID_ROUND, createRound, addPlayerToRound, changeBets, sideGameChoices, nassauPressOptions, canLeave,
 } from './round.js';
 
+/** Games added after the snapshot was taken, left out of the seeded rounds. */
+const ADDED_SINCE = ['bestball', 'shamble', 'altshot', 'chapman'];
+
 export const OLD_SETTINGS = {
   hcPct: 100,
   banker: { defaultBet: 5, min: 1, max: 20, ties: 'push', rotation: 'rotate', birdies: 'off' },
@@ -49,7 +52,9 @@ const raise = (s, by) => Object.fromEntries(Object.entries(s).map(([k, v]) => [k
 export function oldRounds(count = 160, seed = 2026) {
   const rnd = seeded(seed);
   const pick = a => a[Math.floor(rnd() * a.length)];
-  const games = Object.keys(GAMES);
+  // The games there were when the snapshot was taken, so games added since (the team games, 2026-10-03)
+  // don't shift the seeded rounds: these rounds have to stay exactly the ones the snapshot holds
+  const games = Object.keys(GAMES).filter(g => !ADDED_SINCE.includes(g));
   const out = [];
   for (let k = 0; k < count; k++) {
     const game = games[k % games.length];
