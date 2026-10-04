@@ -76,6 +76,12 @@ test('recap: who took it and your own result, in the round’s unit', () => {
   assert.equal(rl.headline, 'Sam wins lunch');
   assert.match(rl.yours, /buying\.$|split it\.$/);
   assert.equal(rl.paid, null);
+  // You win it, or you're the one buying: "You", never your own name
+  const won = currentRecap(stateWith([skins('l2', YESTERDAY, FOUR, { 1: { me: 3 }, 2: { me: 3 } }, { playFor: { kind: 'reward', reward: 'Lunch', owes: 'last' } })]), NOW);
+  assert.equal(won.headline, 'You win lunch');
+  const lost = currentRecap(stateWith([skins('l3', YESTERDAY, ['me', 'sam'], SAM_DAY, { playFor: { kind: 'reward', reward: 'Lunch', owes: 'last' } })]), NOW);
+  assert.equal(lost.headline, 'Sam wins lunch');
+  assert.equal(lost.yours, 'You’re buying.');
   // Everyone level
   const level = currentRecap(stateWith([skins('e1', YESTERDAY, FOUR)]), NOW);
   assert.equal(level.headline, 'All square');
@@ -125,16 +131,20 @@ test('recap: a payment on the round marks it paid; the rest stay open', () => {
   assert.equal(rh.paid.square, 0);
 });
 
-test('recap: squared up on the Tab since (no round on the payment) counts as square', () => {
+test('recap: paid on the Tab since (no round on the payment) counts as paid; netted counts as square', () => {
   const r = skins('r1', YESTERDAY, ['me', 'sam'], { 1: { sam: 3 }, 2: { sam: 3 } });
   const s = stateWith([r], { settlements: [{ id: 's1', from: 'me', to: 'sam', amount: 4, at: NOW - 3600e3 }] });
   const rc = currentRecap(s, NOW);
   assert.deepEqual(rc.paid.people.map(p => p.status), ['square', 'square']);
-  assert.deepEqual(rc.paid.mine.map(l => l.text), ['You and Sam are square']);
+  assert.deepEqual(rc.paid.mine.map(l => l.text), ['You paid Sam $4']);
+  // A payment from before the round finished isn't a payment on it, but paid ahead the Tab has you square
+  const early = stateWith([r], { settlements: [{ id: 's1', from: 'me', to: 'sam', amount: 4, at: YESTERDAY - DAY }] });
+  assert.deepEqual(recapTransfers(early, r, { now: NOW }).map(t => t.status), ['square']);
   // An older round the other way nets it on the Tab: square too, nobody is chased for it
   const older = skins('r0', YESTERDAY - 3 * DAY, ['me', 'sam'], { 1: { me: 3 }, 2: { me: 3 } });
   const net = currentRecap(stateWith([older, r]), NOW);
   assert.deepEqual(net.paid.people.map(p => p.status), ['square', 'square']);
+  assert.deepEqual(net.paid.mine.map(l => l.text), ['Your $4 to Sam is squared on the Tab']);
 });
 
 test('recap: someone who owes you shows on your line with what the Tab has', () => {
@@ -217,16 +227,50 @@ test('recap: reading a round never changes it or any money', () => {
   assert.deepEqual(outstanding(s, { now: NOW }), tab);
 });
 
-test('recap: money the Tab squared through other rounds is square, not chased twice', () => {
-  // Mike took two skins off everyone before; yesterday Sam took one. Overall Sam is level and only
-  // you owe (Mike), so yesterday's $2 to Sam is square, and you still owe Mike on the Tab
+test('recap: money the Tab routes elsewhere is still owed by the payer, and never everyone square', () => {
+  // Mike took two skins off everyone before; yesterday Sam took one. Overall Sam is level, Mike is
+  // up, and you owe Mike everything you lost, yesterday's $2 included: you haven't paid it, so it's
+  // never square for you, though Sam isn't waiting on anyone and Mike (who owes nobody) is square
   const before = skins('r0', YESTERDAY - 3 * DAY, ['me', 'sam', 'mike'], { 1: { mike: 3 }, 2: { mike: 3 } });
   const last = skins('r1', YESTERDAY, ['me', 'sam', 'mike'], { 1: { sam: 3 } });
   const s = stateWith([before, last]);
   const rc = currentRecap(s, NOW);
-  assert.deepEqual(rc.paid.people.map(p => [p.name, p.status]), [['You', 'square'], ['Sam', 'square'], ['Mike', 'square']]);
-  assert.equal(rc.paid.allSquare, true);
-  assert.deepEqual(rc.paid.mine.map(l => l.text), ['You and Sam are square']);
+  assert.deepEqual(rc.paid.people.map(p => [p.name, p.status]), [['You', 'owes'], ['Sam', 'square'], ['Mike', 'square']]);
+  assert.equal(rc.paid.allSquare, false);
+  assert.equal(rc.paid.square, 2);
+  assert.deepEqual(rc.paid.mine.map(l => l.text), ['You still owe $2 from this round. The Tab has who to pay']);
+});
+
+test('recap: the payee owing someone else never squares what you owe them', () => {
+  // Sam owes Dave $20 from before; yesterday you lost $4 to Sam. Nobody owes Sam on the Tab now
+  // (his win goes to what he owes Dave), but you still owe that $4: the Tab has you paying Dave
+  const before = skins('r0', YESTERDAY - 3 * DAY, ['sam', 'dave'], { 1: { dave: 3 }, 2: { dave: 3 }, 3: { dave: 3 }, 4: { dave: 3 }, 5: { dave: 3 }, 6: { dave: 3 }, 7: { dave: 3 }, 8: { dave: 3 }, 9: { dave: 3 } });
+  // A level round all three played, so the Tab can have you pay Dave
+  const level = skins('rx', YESTERDAY - 2 * DAY, ['me', 'sam', 'dave']);
+  const last = skins('r1', YESTERDAY, ['me', 'sam'], { 1: { sam: 3 }, 2: { sam: 3 } });
+  const s = stateWith([before, level, last]);
+  const plan = outstanding(s, { now: NOW });
+  assert.ok(!plan.some(d => d.to === 'sam'), 'nobody owes Sam on the Tab');
+  assert.ok(plan.some(d => d.from === 'me'), 'you still pay someone');
+  const [t] = recapTransfers(s, last, { now: NOW });
+  assert.deepEqual([t.status, t.left, t.payeeDone], ['open', 400, true]);
+  const rc = currentRecap(s, NOW);
+  assert.deepEqual(rc.paid.people.map(p => [p.name, p.status]), [['You', 'owes'], ['Sam', 'square']]);
+  assert.deepEqual(rc.paid.mine.map(l => l.text), ['You still owe $4 from this round. The Tab has who to pay']);
+  // Seen from Sam's phone, it's square for him: nothing is coming to him, so he isn't told it is
+  const sams = { ...s, me: 'sam' };
+  const theirs = currentRecap(sams, NOW);
+  assert.deepEqual(theirs.paid.mine.map(l => [l.text, l.status]), [['Trevor’s $4 to you is squared on the Tab', 'square']]);
+});
+
+test('recap: a shared round is kept between the two of you, so the pair alone says if it’s open', () => {
+  const r = skins('r1', YESTERDAY, ['me', 'sam'], { 1: { sam: 3 }, 2: { sam: 3 } }, { shareCode: 'ABCDEF', shared: { code: 'ABCDEF' } });
+  const rc = currentRecap(stateWith([r]), NOW);
+  assert.deepEqual(rc.paid.mine.map(l => l.text), ['You owe Sam $4']);
+  // An older shared round the other way squares the pair
+  const older = skins('r0', YESTERDAY - 3 * DAY, ['me', 'sam'], { 1: { me: 3 }, 2: { me: 3 } }, { shareCode: 'GHIJKL', shared: { code: 'GHIJKL' } });
+  const net = currentRecap(stateWith([older, r]), NOW);
+  assert.deepEqual(net.paid.people.map(p => p.status), ['square', 'square']);
 });
 
 test('recap: still owed but routed through someone else on the Tab says so, without a name', () => {

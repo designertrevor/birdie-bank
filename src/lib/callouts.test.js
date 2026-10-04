@@ -136,6 +136,9 @@ test('callouts: everyone square from the last round, status only', () => {
   const sq = calloutCandidates(s, NOW).find(c => c.kind === 'square');
   assert.equal(sq.text, 'Everyone’s square from Pebble Creek. Clean books.');
   assert.equal(calloutCandidates(stateWith([r]), NOW).some(c => c.kind === 'square'), false);
+  // Money the Tab routes to someone else is still owed: never "everyone's square" to the group
+  const before = round('r0', 4, ['me', 'sam', 'mike'], { 1: { mike: 3 }, 2: { mike: 3 } });
+  assert.equal(calloutCandidates(stateWith([before, r]), NOW).some(c => c.kind === 'square'), false);
 });
 
 test('callouts: the off switch, and nothing once your last round is old news', () => {

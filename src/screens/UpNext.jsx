@@ -48,9 +48,10 @@ export default function UpNext() {
   const trips = currentTrips(state);
   const onTrip = new Set(trips.flatMap(t => t.planned.map(p => p.id)));
   const plans = upcomingPlans(state).filter(p => !onTrip.has(p.id));
-  const lately = latelyItems(state);
   // The day after a round: its recap, then a few lines for the group text (see recap.js, callouts.js)
   const recap = useMemo(() => currentRecap(state), [state]);
+  // The recap's round isn't in Lately too (Lately skips the newest finished round, which can be one you only watched)
+  const lately = latelyItems(state).filter(i => i.id !== `recap:${recap?.id}`);
   const lines = useMemo(() => callouts(state), [state]);
   // A new version only shows up here once no round is going on, so a tap never cuts into one
   const updateReady = useUpdateReady() && updateSafe(state);
