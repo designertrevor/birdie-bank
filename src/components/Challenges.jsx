@@ -1,7 +1,8 @@
 // Challenges (challenges.js): the sheet that makes one, the card that shows one with its Accept,
 // Counter and Decline buttons, and the lists on Up next, a planned round and a Player card. Copy
 // stays friendly: a no is "passed this time", never anything worse.
-import { useState } from 'react';
+import { useCallback, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { Icon, Numpad, Segmented, Sheet, useUI } from './ui.jsx';
 import { getState, uid, useStore } from '../lib/store.js';
 import { useNav } from '../lib/nav.js';
@@ -251,11 +252,21 @@ function AnswerRow({ ch, side, marking }) {
         {canMove(ch, side, 'counter', null, null, marking) && <button className="pill-btn" onClick={() => setCountering(true)}><Icon name="arrows-left-right" /> {marking ? `${who} says…` : 'Counter'}</button>}
         {canMove(ch, side, 'decline', null, null, marking) && <button className="pill-btn" onClick={moves.decline}>{marking ? 'Passed' : 'Decline'}</button>}
       </div>
-      <Numpad open={countering} title={marking ? `${who}’s amount, not ${challengeFmt(ch)(s.stake)}` : `Your amount, not ${challengeFmt(ch)(s.stake)}`} {...unitPad(ch.unit)} initial={s.stake} min={1} max={BET_MAX}
+      <AtScreen><Numpad open={countering} title={marking ? `${who}’s amount, not ${challengeFmt(ch)(s.stake)}` : `Your amount, not ${challengeFmt(ch)(s.stake)}`} {...unitPad(ch.unit)} initial={s.stake} min={1} max={BET_MAX}
         quick={CHALLENGE_STAKES.filter(v => v !== s.stake)}
-        onClose={() => setCountering(false)} onDone={v => { setCountering(false); moves.counter(v); }} />
+        onClose={() => setCountering(false)} onDone={v => { setCountering(false); moves.counter(v); }} /></AtScreen>
     </>
   );
+}
+
+/**
+ * The number pad opened from a card renders at the screen, a full-width bottom sheet like every
+ * other one, never cut off inside the card (its rounded corners hide what spills out).
+ */
+function AtScreen({ children }) {
+  const [target, setTarget] = useState(null);
+  const ref = useCallback(el => { if (el) setTarget(el.closest('.screen') || document.body); }, []);
+  return <><span ref={ref} hidden />{target && createPortal(children, target)}</>;
 }
 
 /** Whether `side` can answer (accept, counter or decline) now, as their own answer or put in for them. */
