@@ -228,7 +228,7 @@ function ExpenseForm({ expense, st, me, full, short, onDone }) {
   };
 
   const status = !total ? null
-    : split === 'equal' ? (people.length ? `Split ${people.length} way${people.length === 1 ? '' : 's'}${people.length > 1 && total % people.length ? ', the odd cents to whoever paid' : ''}` : 'Tick who it’s for')
+    : split === 'equal' ? (people.length ? `Split ${people.length} way${people.length === 1 ? '' : 's'}${people.length > 1 && total % people.length === 1 && inSplit.has(payer) ? ', and whoever paid takes the odd cent' : ''}` : 'Tick who it’s for')
     : split === 'shares' ? (people.length ? `${people.reduce((a, p) => a + p.part, 0)} shares in all` : 'Give someone a share')
     : left > 0 ? `${dollars(left)} left to split` : left < 0 ? `${dollars(-left)} more than the total` : 'Adds up';
 
@@ -304,6 +304,11 @@ function ExpenseForm({ expense, st, me, full, short, onDone }) {
           );
         })}
       </ul>
+      {split === 'equal' && pool.length > 2 && (
+        <button type="button" className="link-btn exp-all" onClick={() => setInSplit(new Set(people.length === pool.length ? [] : pool))}>
+          {people.length === pool.length ? 'Untick everyone' : 'Tick everyone'}
+        </button>
+      )}
       {status && <p className={`exp-status ${split === 'amounts' ? (left ? 'off' : 'ok') : ''}`} role="status">{split === 'amounts' && !left ? <Icon name="check-circle" fill /> : null} {status}</p>}
 
       {others.length > 0 && (more ? (

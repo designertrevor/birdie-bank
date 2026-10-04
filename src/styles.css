@@ -1984,3 +1984,4 @@ button.trip-card:active { transform: scale(.97); }
 .exp-view-top { display: flex; align-items: center; gap: 12px; }
 /* Four views on the Trip page: a step smaller so "Standings" and "Expenses" fit side by side at 375px */
 .trip-views .pm-btn { min-width: 0; padding: 0 2px; font-size: 14px; }
+.link-btn.exp-all { display: block; margin: 8px 4px 0 auto; }

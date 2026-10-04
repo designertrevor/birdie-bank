@@ -1,9 +1,10 @@
 // A trip: everyone's standings across its rounds, the rounds themselves, money by game and the
 // trip's expenses (gas, dinner, the house); then Settle the trip, once, right after the last round
 // (or someone's part, for a friend leaving early), for the rounds and the expenses together, from
-// the one plan the organizer's phone publishes so every phone shows the same payments. Trip money is already in each person's total on the Tab, so paying here pays the Tab
-// too. Only the organizer edits, deletes or says "Done playing"; anyone can hide the trip from
-// their own Tab and Up next. See trips.js and trip-plan.js for how it's all worked out.
+// the one plan the organizer's phone publishes so every phone shows the same payments. Trip money
+// is already in each person's total on the Tab, so paying here pays the Tab too. Only the
+// organizer edits, deletes or says "Done playing"; anyone can hide the trip from their own Tab and
+// Up next. See trips.js, trip-plan.js and trip-expenses.js for how it's all worked out.
 import { useEffect, useState } from 'react';
 import { Empty, Header, Icon, Screen, Segmented, Sheet, useUI } from '../components/ui.jsx';
 import { Avatar, PayButton, RequestButton } from '../components/Pay.jsx';
@@ -155,7 +156,7 @@ export default function Trip({ id, view: firstView = 'standings' }) {
         <p className="field-help pad">{TRIP_FORMATS[trip.format]?.name || TRIP_FORMATS.money.name}. Each round keeps its own games and bets. Someone who plays only some rounds is on the trip for those rounds.</p>
         {/* Only the organizer deletes; everyone else can hide it from their own Tab and Up next */}
         {del_.ok && <button className="text-link danger" onClick={del}><Icon name="trash" /> Delete the trip</button>}
-        {st.organizer && !del_.ok && <p className="field-help pad">Trip money has been paid, so the trip stays. You can still edit its name and dates.</p>}
+        {st.organizer && !del_.ok && <p className="field-help pad">{!st.paid.length && st.expenses.length ? 'The trip has expenses, so it stays. Once they’re deleted under Expenses, the trip can be too.' : 'Trip money has been paid, so the trip stays.'} You can still edit its name and dates.</p>}
         {(!st.organizer || hidden) && <button className="text-link" onClick={hide}><Icon name={hidden ? 'eye' : 'eye-slash'} /> {hidden ? 'Show it on your Tab and Up next' : 'Hide this trip'}</button>}
         {!st.organizer && !hidden && <p className="field-help pad">Hiding takes it off your own Tab and Up next. Your rounds and money stay as they are.</p>}
       </div>
