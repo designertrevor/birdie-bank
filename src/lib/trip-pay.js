@@ -47,6 +47,8 @@ export const tripReason = (tripId, part = false) => `${part ? 'trip-part' : 'tri
 /** What a payment says about the trip it settled: { id, part }, or null for any other payment. */
 export function tripSettleOf(s) {
   const r = String(s?.reason || '');
+  // A plan line paid from the Tab pays the trip's money but settles nothing (shared-tab.js)
+  if (r.startsWith('trip-tab:')) return null;
   const m = /^(trip|trip-part):(.+)$/.exec(r);
   if (m) return { id: m[2], part: m[1] === 'trip-part' };
   const id = tripOfPayment(s);

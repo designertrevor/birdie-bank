@@ -291,7 +291,8 @@ export function allocatePayment(state, { from, to, amount }, { now = Date.now(),
   const open = openTransfers(state, F, T, now);
   fillRows(state, open, settle, settle === shared, rows, now);
   // Then what a trip's published plan has between them (trip-plan.js), on the plan's own rows
-  const onPlan = planRows(state, F, T, { amount: whole ? null : Math.max(0, total - settle), now });
+  // Paid from the Tab, so the rows settle nothing (trip-pay.js tripSettleOf): the trip stays open
+  const onPlan = planRows(state, F, T, { amount: whole ? null : Math.max(0, total - settle), now, fromTab: true });
   rows.push(...onPlan.rows);
   const spent = expensePayments(state, F, T, { amount: whole ? null : Math.max(0, total - settle - onPlan.cents), now });
   let left = total - settle - onPlan.cents - spent.cents;

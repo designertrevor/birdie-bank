@@ -63,3 +63,11 @@ test('a whole Tab card paid mid-trip pays the trip part but never settles the tr
   assert.equal(cupTiming(s1, TRIP, { now }).over, false);
   assert.deepEqual(outstanding(s1, { now }), []);
 });
+
+test('a plan line paid from the Tab pays the trip money but never settles the trip', async () => {
+  const { tripSettleOf, tripOfPayment } = await import('./trip-pay.js');
+  const row = { id: 'trip:tp:plan:a>t:abc', kind: 'payment', from: 'a', to: 't', amount: 4, reason: 'trip-tab:tp' };
+  assert.equal(tripSettleOf(row), null);
+  assert.equal(tripOfPayment(row), 'tp');
+  assert.deepEqual(tripSettleOf({ ...row, reason: 'trip:tp' }), { id: 'tp', part: false });
+});
