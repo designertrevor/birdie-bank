@@ -6,7 +6,11 @@
 // own matches (`round.cup = { kind, sides: [[ids], [ids]] }`, side 0 always the first team):
 // four-ball (best ball of two against two) or singles, paired off in the order each side lists its
 // players. A match is worked out hole by hole from the round's own scores and strokes, whatever
-// game the round is playing, so the round keeps its own games and bets as they are.
+// game the round is playing, so the round keeps its own games and bets as they are. A round played
+// as Alternate shot is a foursomes match instead (2026-10-04): partners take turns on one ball, so
+// the match is the round's two teams, each hole the team's one net score (round.js teamHoleScore,
+// off the team's foursomes handicap). Its partners come from the trip's teams and rotate like
+// four-ball, and the round's teams are the pairs.
 // A win is 1 point, a halved match half a point each. Matches count once their round is done; a
 // match closed out early ends there ("3&2"), and one the round never finished goes to whoever led
 // on the holes played, the way an unfinished Nassau bet pays. The team score adds up every match
@@ -17,21 +21,29 @@
 // has run, a phone counts the matches of the rounds it has.
 //
 // The optional stake is on the team result: each player on the losing team pays it, and the
-// winners split the pot evenly. It folds into each person's trip total once the trip is over, and
-// it's paid from Settle the trip in a few payments worked out from the teams, so every phone on
-// the trip lists the same payments. It's kept off the Tab (the Tab is round by round), with its
-// own "I paid" marks (`state.cupPaid`, shared through cup-sync.js too). A halved cup pays nothing.
+// winners split the pot evenly, in a few payments worked out from the teams, so every phone on the
+// trip lists the same payments. A halved cup pays nothing. Once the cup is decided the stake is trip
+// money like the rest (cup-stake.js, 2026-10-04): it's in each person's trip total, their balance on
+// the Tab, Settle the trip and the published plan, and paying it from either squares it on every
+// phone. Before then it had its own "I paid" marks (`state.cupPaid`, shared through cup-sync.js);
+// those still count, so a stake marked paid stays paid, and a line with someone this phone can't
+// place (a teammate from another group it never played with) is still marked paid that way.
 // Pure, unit tested.
 import { holeWinner } from './golf.js';
-import { oneBall, sideNet } from './round.js';
+import { oneBall, sideNet, teamHoleScore } from './round.js';
 import { canonicalOf, codeOf } from './pair-debts.js';
 import { stable } from './sync-model.js';
 
 export const CUP_FORMAT = 'cup';
 export const CUP_KINDS = {
   fourball: { name: 'Four-ball', blurb: 'Best ball of two against two', size: 2 },
+  foursomes: { name: 'Foursomes', blurb: 'Partners take turns hitting one ball, two against two', size: 2 },
   singles: { name: 'Singles', blurb: 'One against one', size: 1 },
 };
+/** The game a foursomes match is played as: one ball a pair, taking turns (round.js). */
+export const FOURSOMES_GAME = 'altshot';
+/** The kinds of match a round playing `game` can have: foursomes for Alternate shot, else four-ball or singles. */
+export const cupKindsFor = game => (game === FOURSOMES_GAME ? ['foursomes'] : ['fourball', 'singles']);
 export const TEAM_NAMES = ['Blue', 'Red'];
 /** The most a person can put on the cup, in dollars. */
 export const MAX_STAKE = 500;
@@ -145,8 +157,8 @@ export function teamOf(state, cup, player) {
   return hits.length === 1 ? hits[0] : null;
 }
 
-/** Four-ball when both sides have two or more, else singles. */
-export const defaultKind = sides => (sides[0].length >= 2 && sides[1].length >= 2 ? 'fourball' : 'singles');
+/** Four-ball when both sides have two or more, else singles (foursomes for an Alternate shot round). */
+export const defaultKind = (sides, game = null) => (game === FOURSOMES_GAME ? 'foursomes' : sides[0].length >= 2 && sides[1].length >= 2 ? 'fourball' : 'singles');
 
 /** A list turned `k` places: [a, b, c] by 1 is [b, c, a]. */
 const turned = (list, k) => (list.length ? list.map((_, i) => list[(i + k) % list.length]) : list);
@@ -156,10 +168,11 @@ const turned = (list, k) => (list.length ? list.map((_, i) => list[(i + k) % lis
  * team's order, and anyone on neither team on the side with fewer so far (so a friend who wasn't
  * picked still plays). `players`: the round's [{ id, name }]. `kind` null picks four-ball or singles.
  * Partners and opponents rotate from round to round: `rotate` is how many of the trip's rounds
- * came before, and each one turns the order (both sides in four-ball, so partners change; the
- * second side in singles, so opponents do).
+ * came before, and each one turns the order (both sides in four-ball and foursomes, so partners
+ * change; the second side in singles, so opponents do). `game`: the round's game, so an Alternate
+ * shot round starts as foursomes.
  */
-export function defaultRoundCup(state, trip, players, kind = null, { rotate = 0 } = {}) {
+export function defaultRoundCup(state, trip, players, kind = null, { rotate = 0, game = null } = {}) {
   const cup = cupOf(trip);
   if (!cup) return null;
   const sides = [[], []];
@@ -173,25 +186,45 @@ export function defaultRoundCup(state, trip, players, kind = null, { rotate = 0 
   const known = players.map(p => ({ p, t: teamOf(state, cup, p) }));
   for (const t of [0, 1]) sides[t] = known.filter(x => x.t === t).map(x => x.p).sort((a, b) => order(a) - order(b)).map(p => p.id);
   for (const { p, t } of known) if (t == null) sides[sides[0].length <= sides[1].length ? 0 : 1].push(p.id);
-  const k = kind && CUP_KINDS[kind] ? kind : defaultKind(sides);
+  const k = kind && cupKindsFor(game).includes(kind) ? kind : defaultKind(sides, game);
   const n = Math.max(0, Math.floor(rotate) || 0);
-  return { kind: k, sides: k === 'fourball' ? sides.map(s => turned(s, n)) : [sides[0], turned(sides[1], n)] };
+  // Foursomes rotates like four-ball: both sides turn, so partners change
+  return { kind: k, sides: k === 'singles' ? [sides[0], turned(sides[1], n)] : sides.map(s => turned(s, n)) };
 }
 
 /**
- * Whether a round's game can count for the cup: matches use each player's own scores, so a game
- * played with one ball a team (a scramble, alternate shot, Chapman: round.js ONE_BALL_GAMES) can't.
+ * Whether a round's game can count for the cup: four-ball and singles use each player's own scores,
+ * so a scramble or Chapman (one ball a team, round.js ONE_BALL_GAMES) can't. Alternate shot can, as
+ * foursomes: its two teams are the match.
  */
-export const cupCounts = game => !oneBall(game);
+export const cupCounts = game => !oneBall(game) || game === FOURSOMES_GAME;
 
-/** A round's cup as it was saved, tidied to the round's own players, or null (always for a one-ball game). */
+/** The round's two teams of two (Alternate shot), as arrays of player ids, or null. */
+const pairsOf = round => {
+  const t = round?.teams;
+  if (!Array.isArray(t) || t.length !== 2 || !t.every(x => Array.isArray(x?.players) && x.players.length === 2)) return null;
+  return t.map(x => [...x.players]);
+};
+
+/**
+ * A round's cup as it was saved, tidied to the round's own players, or null (always for a scramble or
+ * Chapman). An Alternate shot round's sides are its two teams, the one most of the saved first side is
+ * on first, so a partner swap mid-round moves the match with it.
+ */
 export function cleanRoundCup(round) {
   const c = round?.cup;
   if (!isObj(c) || !Array.isArray(c.sides) || !cupCounts(round.game)) return null;
   const ids = new Set((round.players || []).map(p => p.id));
   const seen = new Set();
-  const sides = [0, 1].map(i => (Array.isArray(c.sides[i]) ? c.sides[i] : []).filter(id => ids.has(id) && !seen.has(id) && seen.add(id)));
-  return { kind: CUP_KINDS[c.kind] ? c.kind : defaultKind(sides), sides };
+  const saved = [0, 1].map(i => (Array.isArray(c.sides[i]) ? c.sides[i] : []).filter(id => ids.has(id) && !seen.has(id) && seen.add(id)));
+  if (round.game === FOURSOMES_GAME) {
+    const pairs = pairsOf(round);
+    if (!pairs) return null;
+    const on = (pair, side) => pair.filter(id => saved[side].includes(id)).length;
+    const flip = on(pairs[1], 0) + on(pairs[0], 1) > on(pairs[0], 0) + on(pairs[1], 1);
+    return { kind: 'foursomes', sides: flip ? [pairs[1], pairs[0]] : pairs };
+  }
+  return { kind: CUP_KINDS[c.kind] && c.kind !== 'foursomes' ? c.kind : defaultKind(saved), sides: saved };
 }
 
 /**
@@ -203,8 +236,9 @@ export function pairMatches(cup) {
   if (!cup) return { matches: [], out: [] };
   const [a, b] = cup.sides.map(s => [...s]);
   const matches = [];
-  if (cup.kind === 'fourball') while (a.length >= 2 && b.length >= 2) matches.push({ kind: 'fourball', sides: [a.splice(0, 2), b.splice(0, 2)] });
-  while (a.length && b.length) matches.push({ kind: 'singles', sides: [a.splice(0, 1), b.splice(0, 1)] });
+  if (cup.kind === 'fourball' || cup.kind === 'foursomes') while (a.length >= 2 && b.length >= 2) matches.push({ kind: cup.kind, sides: [a.splice(0, 2), b.splice(0, 2)] });
+  // Foursomes is one ball a pair, so nobody left over can play singles
+  if (cup.kind !== 'foursomes') while (a.length && b.length) matches.push({ kind: 'singles', sides: [a.splice(0, 1), b.splice(0, 1)] });
   return { matches, out: [...a, ...b] };
 }
 
@@ -215,8 +249,20 @@ function resultLabel({ by, left, closed, done }) {
 }
 
 /**
+ * A side's number on a hole: its best net (four-ball, singles), or for foursomes the net score of the
+ * round team that is exactly that pair (null when no team is, or the team can't play the hole).
+ */
+function sideScore(round, match, s, hole) {
+  if (match.kind !== 'foursomes') return sideNet(round, match.sides[s], hole);
+  const pair = match.sides[s];
+  const i = (round.teams || []).findIndex(t => t.players?.length === pair.length && pair.every(id => t.players.includes(id)));
+  return i < 0 ? null : teamHoleScore(round, i, hole).score;
+}
+
+/**
  * One match, hole by hole in playing order, from the round's net scores (best ball for four-ball;
- * a player who left is carried by their partner, as in match play). Stops when it's closed out.
+ * a player who left is carried by their partner, as in match play; the pair's one ball for
+ * foursomes). Stops when it's closed out.
  * { thru, leader (0 | 1 | null), by, left, closed, done, winner (0 | 1 | null when halved or not done),
  *   points ([a, b] once done, else null), label }. A done match with no hole played is `void`.
  */
@@ -225,7 +271,7 @@ export function matchResult(round, match) {
   let up = 0, thru = 0, left = total, closed = false;
   for (let i = 0; i < total; i++) {
     const h = round.holes[i];
-    const w = holeWinner(sideNet(round, match.sides[0], h), sideNet(round, match.sides[1], h));
+    const w = holeWinner(sideScore(round, match, 0, h), sideScore(round, match, 1, h));
     if (w === undefined) continue;
     thru++;
     if (w === 0) up++;

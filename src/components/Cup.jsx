@@ -1,6 +1,7 @@
 // A team points trip's pieces (cup.js): the scoreboard, every match, the leaderboard, picking the
 // teams (a captains' draft on one phone, or balanced by handicap), a round's matches in setup, and
-// the stake on Settle the trip. The trip's page and cards put them together (Trip.jsx, Trips.jsx).
+// the stake on Settle the trip (trip money on the Tab once decided, cup-stake.js). The trip's page
+// and cards put them together (Trip.jsx, Trips.jsx).
 import { useState } from 'react';
 import { Icon, Segmented, Sheet, useUI } from './ui.jsx';
 import { Avatar, PayButton } from './Pay.jsx';
@@ -10,7 +11,7 @@ import { nameOf } from '../lib/ledger.js';
 import { canonicalOf } from '../lib/pair-debts.js';
 import { payInfoFor } from '../lib/pay.js';
 import { buzz } from '../lib/delight.js';
-import { CUP_KINDS, MAX_STAKE, balanceTeams, cleanStake, cupCounts, cupHeadline, cupPoints, moveTo, pairMatches, pickingTeam, teamHandicaps } from '../lib/cup.js';
+import { CUP_KINDS, FOURSOMES_GAME, MAX_STAKE, balanceTeams, cleanStake, cupCounts, cupHeadline, cupKindsFor, cupPoints, moveTo, pairMatches, pickingTeam, teamHandicaps } from '../lib/cup.js';
 import { canRecount } from '../lib/trips.js';
 import { GAMES } from '../lib/round.js';
 import { markStake, resetRoundCup, setRoundCup, undoStake } from '../lib/cup-store.js';
@@ -62,13 +63,14 @@ export function CupMatches({ cup }) {
   const state = useStore();
   const [editing, setEditing] = useState(null);
   const entries = [...cup.entries].reverse().filter(e => e.matches.length);
-  if (!entries.length) return <p className="field-help pad">No matches yet. Each round counted for the trip pairs off its players by team: four-ball for two against two, or singles.</p>;
+  if (!entries.length) return <p className="field-help pad">No matches yet. Each round counted for the trip pairs off its players by team: four-ball for two against two, or singles. An Alternate shot round is foursomes, partners taking turns on one ball.</p>;
   const nameIn = (e, id) => first(e.players.find(p => p.id === id)?.name);
   return (
     <>
       {entries.map(e => {
         const round = e.local ? state.rounds[e.roundId] : null;
-        const canChange = round && canRecount(state, round);
+        // Foursomes is the round's own teams: they change on the card's lineup, not here
+        const canChange = round && round.game !== FOURSOMES_GAME && canRecount(state, round);
         const day = e.day ? new Date(`${e.day}T12:00:00`).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' }) : '';
         // The round's own points, day by day
         const pts = e.matches.reduce((acc, m) => (m.result.points ? [acc[0] + m.result.points[0], acc[1] + m.result.points[1]] : acc), [0, 0]);
@@ -229,7 +231,7 @@ export function TeamsPicker({ people, value, onChange }) {
         <span className="cup-stake-unit">a person</span>
       </div>
       <p className="field-help">{cup.stake > 0
-        ? `Everyone on the losing team pays ${money(cup.stake)}, and the winners split it. It goes in each person’s trip total once the trip is over and is paid on Settle the trip. A halved cup pays nothing.`
+        ? `Everyone on the losing team pays ${money(cup.stake)}, and the winners split it. Once the trip is over it’s trip money like the rest: in each person’s total, on the Tab and in Settle the trip. A halved cup pays nothing.`
         : `Leave it at $0 to play for the cup alone, up to ${money(MAX_STAKE)}. Each round’s own bets work as they always do.`}</p>
     </div>
   );
@@ -253,16 +255,18 @@ export function CupRoundSetup({ trip, players, value, names, game, onChange }) {
   if (!trip || !value) return null;
   if (!cupCounts(game)) return <p className="field-help cup-setup-note"><Icon name="trophy" /> {GAMES[game]?.name || 'This game'} is played with one ball a team, so it doesn’t count for the cup. Its own bets still go on the trip.</p>;
   const { lines, out } = matchLines(players, value);
+  // Foursomes is the round's two teams: Change sets the partners for both
+  const pairs = game === FOURSOMES_GAME;
   return (
     <div className="cup-setup">
       <div className="row-main">
         <div className="toggle-lbl">Cup matches</div>
         {lines.length ? lines.map((l, i) => <div key={i} className="toggle-sub">{CUP_KINDS[l.kind].name}: {l.text}</div>)
-          : <div className="toggle-sub">Both teams need a player here for a match</div>}
+          : <div className="toggle-sub">{pairs ? 'Foursomes needs two partners from each team' : 'Both teams need a player here for a match'}</div>}
         {out.length > 0 && <div className="toggle-sub">{out.join(' and ')} sit{out.length === 1 ? 's' : ''} this one out</div>}
       </div>
       <button type="button" className="pill-btn sm" onClick={() => setOpen(true)}>Change</button>
-      {open && <CupMatchesSheet open onClose={() => setOpen(false)} names={names} players={players} value={value} onSave={c => { onChange(c); setOpen(false); }} />}
+      {open && <CupMatchesSheet open onClose={() => setOpen(false)} names={names} players={players} value={value} game={game} onSave={c => { onChange(c); setOpen(false); }} />}
     </div>
   );
 }
@@ -272,8 +276,9 @@ export function CupRoundSetup({ trip, players, value, names, game, onChange }) {
  * they're paired off in (first with first). `live`: the round is being played, so it says the
  * matches recount from the scores so far.
  */
-export function CupMatchesSheet({ open, onClose, names, players, value, onSave, onReset = null, live = false }) {
-  const [draft, setDraft] = useState(() => ({ kind: value?.kind || 'fourball', sides: [[...(value?.sides?.[0] || [])], [...(value?.sides?.[1] || [])]] }));
+export function CupMatchesSheet({ open, onClose, names, players, value, onSave, onReset = null, live = false, game = null }) {
+  const kinds = cupKindsFor(game);
+  const [draft, setDraft] = useState(() => ({ kind: kinds.includes(value?.kind) ? value.kind : kinds[0], sides: [[...(value?.sides?.[0] || [])], [...(value?.sides?.[1] || [])]] }));
   const placed = new Set(draft.sides.flat());
   const free = players.filter(p => !placed.has(p.id));
   const name = id => players.find(p => p.id === id)?.name || 'Player';
@@ -287,9 +292,13 @@ export function CupMatchesSheet({ open, onClose, names, players, value, onSave, 
   return (
     <Sheet open={open} onClose={onClose} title="Cup matches">
       <div className="block cup-sheet">
-        <Segmented label="Match format" className="press-mode-row" btn="pm-btn" value={draft.kind} onChange={kind => setDraft(d => ({ ...d, kind }))}
-          options={Object.entries(CUP_KINDS).map(([k, v]) => ({ value: k, label: v.name }))} />
-        <p className="field-help">{CUP_KINDS[draft.kind].blurb}, worked out from each player’s own scores and strokes. Players are paired off in order, first with first.</p>
+        {kinds.length > 1 && (
+          <Segmented label="Match format" className="press-mode-row" btn="pm-btn" value={draft.kind} onChange={kind => setDraft(d => ({ ...d, kind }))}
+            options={kinds.map(k => ({ value: k, label: CUP_KINDS[k].name }))} />
+        )}
+        <p className="field-help">{draft.kind === 'foursomes'
+          ? `${CUP_KINDS.foursomes.name}: ${CUP_KINDS.foursomes.blurb.toLowerCase()}, worked out from each pair’s one ball and its team strokes. The first two on each team are the round’s partners.`
+          : `${CUP_KINDS[draft.kind].blurb}, worked out from each player’s own scores and strokes. Players are paired off in order, first with first.`}</p>
         <div className="cup-cols">
           {[0, 1].map(t => (
             <div key={t} className={`cup-col t${t}`}>
@@ -354,8 +363,10 @@ export function CupRoundNote({ cup, round }) {
 // --------------------------- the stake ---------------------------
 
 /**
- * The stake's payments on Settle the trip: yours first with your payee's app, then everyone
- * else's, each marked paid here and seen on every phone on the trip. Kept off the Tab.
+ * The stake on Settle the trip. Once decided it's trip money (cup-stake.js): the lines this phone
+ * can place are in the trip's payments above and on the Tab, so here it just says so. A line with
+ * someone it can't place (a teammate from another group) is marked paid here, yours first with
+ * your payee's app, and every phone on the trip sees it. So do the marks made before.
  */
 export function StakeLines({ st }) {
   const state = useStore();
@@ -364,7 +375,8 @@ export function StakeLines({ st }) {
   if (!cup?.stakeOn) return null;
   const me = canonicalOf(state)(state.me);
   const label = (id, name) => (id === me ? 'You' : first(id ? nameOf(state, id) : name));
-  const open = cup.lines.filter(l => l.open > 0);
+  const open = cup.lines.filter(l => l.open > 0 && !l.onTab);
+  const onTab = cup.lines.some(l => l.open > 0 && l.onTab);
   const mine = open.filter(l => l.fromId === me || l.toId === me);
   const others = open.filter(l => l.fromId !== me && l.toId !== me);
   const mark = l => {
@@ -378,7 +390,7 @@ export function StakeLines({ st }) {
   return (
     <>
       <div className="sec-label">The cup</div>
-      <p className="field-help pad">{winners} won the cup, so each player on {cup.names[1 - cup.winner]} pays {money(cup.def.stake)} and {winners} split it. Paid here, not on the Tab.</p>
+      <p className="field-help pad">{winners} won the cup, so each player on {cup.names[1 - cup.winner]} pays {money(cup.def.stake)} and {winners} split it.{onTab ? ' It’s in the payments above and on the Tab, with the rest of the trip.' : ''}{open.length ? ` ${open.length === 1 ? 'One payment is' : `${open.length} payments are`} with someone this phone hasn’t played with, so ${open.length === 1 ? 'it’s' : 'they’re'} marked paid here.` : ''}</p>
       {mine.map(l => {
         const iPay = l.fromId === me;
         const otherId = iPay ? l.toId : l.fromId;
@@ -407,7 +419,7 @@ export function StakeLines({ st }) {
           <button className="pill-btn sm" onClick={() => mark(l)}>Mark paid</button>
         </div>
       ))}
-      {!open.length && <p className="field-help pad">The cup stake is all paid.</p>}
+      {!open.length && !onTab && <p className="field-help pad">The cup stake is all paid.</p>}
       {cup.marks.length > 0 && <StakePaid st={st} label={label} me={me} />}
     </>
   );

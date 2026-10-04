@@ -9,6 +9,7 @@ import { countsMoney, onTab, tabResults } from './play-for.js';
 import { betsOf, isCashBet } from './pair-bets.js';
 import { planDebts } from './trip-plan.js';
 import { allExpenses, allTripMoney, allTripPays, expensePairDebts, expensePairs, expensesBetween, tripMoney } from './trip-expenses.js';
+import { allStakeMoney, stakeBetween, stakeMoney } from './cup-stake.js';
 
 const toCents = v => Math.round((Number(v) || 0) * 100);
 /** Whether two players had a side bet for money together in a reward round. */
@@ -112,17 +113,17 @@ const mineOf = (state, mine) => {
 };
 
 /**
- * Everyone's running balance across finished rounds and trip expenses (trip-expenses.js), less
- * payments recorded. Positive = owed money.
+ * Everyone's running balance across finished rounds, trip expenses (trip-expenses.js) and a team
+ * points trip's decided stake (cup-stake.js), less payments recorded. Positive = owed money.
  */
-export function tabBalances(state) {
+export function tabBalances(state, { now = Date.now() } = {}) {
   const bal = {};
   const who = canonical(state);
   const add = (id, v) => { const k = who(id); bal[k] = (bal[k] || 0) + v; };
   for (const r of moneyRounds(state)) {
     for (const [id, v] of Object.entries(tabResults(r).balances)) add(id, v);
   }
-  for (const x of allTripMoney(state)) for (const [id, c] of Object.entries(x.balances)) add(id, c / 100);
+  for (const x of [...allTripMoney(state), ...allStakeMoney(state, { now })]) for (const [id, c] of Object.entries(x.balances)) add(id, c / 100);
   for (const s of state.settlements || []) { add(s.from, s.amount); add(s.to, -s.amount); }
   return bal;
 }
@@ -132,12 +133,15 @@ export function tabBalances(state) {
  * (trip-plan.js), pair by pair and trip by trip, less the payments for them (trip-expenses.js):
  * [{ tripId, from, to, cents }], `from` owing `to`. Every phone that has the trip's expenses has
  * the same between each two people, so both phones of a pair agree on it, the way they do on the
- * rounds shared live. `trip` keeps it to one trip.
+ * rounds shared live. A team points trip's decided stake is in it the same way (cup-stake.js): each
+ * phone works it out from the teams and the matches, and the payments for it are payments for trip
+ * money. `trip` keeps it to one trip.
  */
 export function expenseDebts(state, { now = Date.now(), trip = null } = {}) {
-  if (!state.tripExpenses) return [];
+  const stake = trip ? stakeMoney(state, trip, { now }) : allStakeMoney(state, { now });
+  if (!state.tripExpenses && !stake.length) return [];
   const covered = new Set(planDebts(state, { now }).expenses);
-  const list = (trip ? tripMoney(state, trip) : allTripMoney(state)).filter(x => !covered.has(x.id));
+  const list = [...(trip ? tripMoney(state, trip) : allTripMoney(state)), ...stake].filter(x => !covered.has(x.id));
   const byTrip = new Map();
   for (const x of list) { if (!byTrip.has(x.tripId)) byTrip.set(x.tripId, []); byTrip.get(x.tripId).push(x); }
   const out = [];
@@ -186,11 +190,11 @@ export function outstanding(state, { now = Date.now() } = {}) {
   // Trip expenses the plan doesn't cover, and the payments for them: pair by pair
   const owedSpent = expenseDebts(state, { now });
   if (!direct.length && !onPlan && !owedSpent.length) {
-    const plan = fewestPayments(tabBalances(state), { canPay });
+    const plan = fewestPayments(tabBalances(state, { now }), { canPay });
     return plan.map(t => ({ ...t, rounds: together.get(pairKey(t.from, t.to)) || [] }));
   }
   // Take the shared money out of the balances, square the rest, then put it back pair by pair
-  const bal = onPlan ? planBalances(state, trip) : Object.fromEntries(Object.entries(tabBalances(state)).map(([id, v]) => [id, toCents(v)]));
+  const bal = onPlan ? planBalances(state, trip, now) : Object.fromEntries(Object.entries(tabBalances(state, { now })).map(([id, v]) => [id, toCents(v)]));
   const net = new Map(); // "a|b" (sorted) -> cents a owes b
   const owe = (from, to, c) => {
     const k = pairKey(from, to);
@@ -215,7 +219,7 @@ export function outstanding(state, { now = Date.now() } = {}) {
 }
 
 /** Everyone's balance in cents, leaving out the rounds, expenses and payments a trip's live plan settles. */
-function planBalances(state, trip) {
+function planBalances(state, trip, now = Date.now()) {
   const skipRounds = new Set(trip.rounds.map(r => r.id));
   const skipPays = new Set(trip.settlements);
   const skipSpent = new Set(trip.expenses || []);
@@ -227,7 +231,7 @@ function planBalances(state, trip) {
     // A reward round's side bets for money in dollars, never its points
     for (const [id, v] of Object.entries(tabResults(r).balances)) add(id, toCents(v));
   }
-  for (const x of allTripMoney(state)) {
+  for (const x of [...allTripMoney(state), ...allStakeMoney(state, { now })]) {
     if (skipSpent.has(x.id)) continue;
     for (const [id, c] of Object.entries(x.balances)) add(id, c);
   }
@@ -247,7 +251,7 @@ function planBalances(state, trip) {
  * never in `net`: that is dollars only. Trip expenses aren't golf, so they're never in `net` (the
  * head to head) either: `spent` is what they put between you, positive when they owe you.
  */
-export function personStory(state, ids, other) {
+export function personStory(state, ids, other, { now = Date.now() } = {}) {
   const mine = ids instanceof Set ? ids : new Set(ids);
   const who = canonical(state);
   const isMine = mineOf(state, mine);
@@ -278,9 +282,10 @@ export function personStory(state, ids, other) {
     if (isThem(s.from) && isMine(s.to)) { items.push({ kind: 'payment', id: s.id, settlement: s, amount: s.amount, at: s.at || 0 }); paid += s.amount; }
     else if (isMine(s.from) && isThem(s.to)) { items.push({ kind: 'payment', id: s.id, settlement: s, amount: -s.amount, at: s.at || 0 }); paid -= s.amount; }
   }
-  // Trip expenses: what one of you paid for the other (trip-expenses.js)
+  // Trip expenses: what one of you paid for the other (trip-expenses.js), and a decided cup stake
+  // between you (cup-stake.js), which is trip money the same way (`expense.stake`)
   let spent = 0;
-  for (const x of expensesBetween(state, isMine, isThem)) {
+  for (const x of [...expensesBetween(state, isMine, isThem), ...stakeBetween(state, isMine, isThem, { now })]) {
     items.push({ kind: 'expense', id: x.expense.id, expense: x.expense, amount: x.amount / 100, at: x.at });
     spent += x.amount;
   }

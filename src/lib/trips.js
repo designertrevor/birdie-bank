@@ -31,8 +31,10 @@
 //
 // A trip can instead be played for team points, Ryder Cup style (`format: 'cup'`, cup.js): two
 // teams, each round's matches worth points, a team score and a leaderboard, and an optional stake
-// on the team result that folds into each person's trip total once the trip is over. The rounds'
-// own money works exactly as on a money trip. Pure, unit tested.
+// on the team result that folds into each person's trip total once the trip is over. Once decided
+// the stake is trip money like the expenses (cup-stake.js): on the Tab, in Settle the trip and the
+// published plan, paid like the rest. The rounds' own money works exactly as on a money trip. Pure,
+// unit tested.
 import { GAMES, roundResults } from './round.js';
 import { onTab, playForOf, tabResults } from './play-for.js';
 import { expenseDebts, fewestPayments, nameOf } from './ledger.js';
@@ -45,6 +47,7 @@ import { money } from './golf.js';
 import { isPlanPayment, planRows, planState } from './trip-plan.js';
 import { expensePairs, expenseTotals, placeable, tripExpenses, tripPays } from './trip-expenses.js';
 import { CUP_FORMAT, cleanCup, closeEntry, cupEntries, cupLeaderboard, cupOf, cupScore, stakeLines, stakeMarks, stakeOpen, teamOf } from './cup.js';
+import { cupStake } from './cup-stake.js';
 
 const DAY = 864e5;
 /**
@@ -372,6 +375,7 @@ export function tripStatus(state, id, { now = Date.now() } = {}) {
   const expenses = tripExpenses(state, id);
   const spentIn = live_?.expenses || new Set();
   for (const k of expensePairs(expenses.filter(x => !spentIn.has(x.id)))) together.add(k);
+  // The trip's expenses and its decided cup stake (cup-stake.js), pair by pair where no plan covers them
   const owedSpent = expenseDebts(state, { now, trip: id });
   const { trip: tripPaid, onPlan, onRounds, onPairs, counted, left } = paymentsOf(state, id, rounds, local, together, balanceCents(state, local), expenses);
   const rest = fewestPayments(Object.fromEntries(Object.entries(left).map(([k, c]) => [k, c / 100])), { canPay: (a, b) => together.has(pairKey(a, b)) });
@@ -386,11 +390,12 @@ export function tripStatus(state, id, { now = Date.now() } = {}) {
   const over = !!endedAt || closed || (!!trip.end && (today > trip.end || (today === trip.end && done.some(r => dayOf(finishedAt(r)) === today))));
   const quiet = !live.length && !planned.length;
   const who = canonicalOf(state);
-  // A team points trip: the matches, the team score, and the stake once the trip is over (cup.js)
+  // A team points trip: the matches, the team score, and the stake once the trip is over (cup.js).
   // Its last day gone by, or ended by the organizer: another group's round the server still has as
-  // being played counts as it stood (cup.js closeEntry)
-  const cup = cupStatus(state, trip, people, { over: over && quiet, close: !!endedAt || (!!trip.end && today > trip.end) });
-  const stakeLeft = cup ? cup.lines.filter(l => l.open > 0) : [];
+  // being played counts as it stood (cup.js closeEntry). The Tab decides it the same way (cup-stake.js)
+  const cup = cupStake(state, id, { now });
+  // The stake's lines on the Tab are in the plan (owedSpent); the rest are marked paid on the trip
+  const stakeLeft = cup ? cup.lines.filter(l => l.open > 0 && !l.onTab) : [];
   let phase;
   if (!done.length && !live.length && !expenses.length) phase = trip.start && today < trip.start ? 'soon' : over ? 'empty' : planned.length ? 'soon' : 'on';
   // Only expenses so far (the house paid ahead, or a trip rained out): they settle like rounds
@@ -446,9 +451,10 @@ export function tripStatus(state, id, { now = Date.now() } = {}) {
  * phone's and, from the server, other groups'), the score and the leaderboard. Once the trip is
  * over (`over`: its last round in, nothing still being played or planned) with no match still
  * going, the cup is decided: the team with more points wins, and a stake pays out in `lines`
- * ([{ key, from, to, amount, fromName, toName, open, paid, marks, fromId, toId }], with fromId and
- * toId as this phone knows them, null for someone it doesn't). `stakeBy`: each person's stake, by
- * the id this phone knows them by.
+ * ([{ key, from, to, amount, fromName, toName, open, paid, marks, fromId, toId, onTab }], with fromId
+ * and toId as this phone knows them, null for someone it doesn't, and `open` and `paid` from the
+ * stake's "I paid" marks). A line with both people known here (`onTab`) is trip money on the Tab and
+ * in Settle the trip (cup-stake.js). `stakeBy`: each person's stake, by the id this phone knows them by.
  */
 export function cupStatus(state, trip, people = tripPeople(state, trip.id), { over = false, close = false } = {}) {
   const def = cupOf(trip);
@@ -471,7 +477,11 @@ export function cupStatus(state, trip, people = tripPeople(state, trip.id), { ov
     return names.get(String(p.name || '').trim().toLowerCase()) || null;
   };
   const marks = stakeMarks(state, trip.id);
-  const lines = stakeOpen(final ? stakeLines(def, winner) : [], marks).map(l => ({ ...l, fromId: localOf({ id: l.from, name: l.fromName }), toId: localOf({ id: l.to, name: l.toName }) }));
+  const lines = stakeOpen(final ? stakeLines(def, winner) : [], marks).map(l => {
+    const fromId = localOf({ id: l.from, name: l.fromName }), toId = localOf({ id: l.to, name: l.toName });
+    // On the Tab when this phone can place both people (cup-stake.js); else marked paid on the trip
+    return { ...l, fromId, toId, onTab: !!fromId && !!toId && fromId !== toId };
+  });
   const stakeBy = {};
   for (const l of lines) {
     if (l.fromId) stakeBy[l.fromId] = Math.round(((stakeBy[l.fromId] || 0) - l.amount) * 100) / 100;
