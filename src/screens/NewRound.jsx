@@ -395,7 +395,7 @@ export default function NewRound({ rematch, fromPlan, present, edit = null, ahea
           </>} />
       )}
       {step === 2 && planning && course && <InviteStep invited={invited} setInvited={setInvited} onNext={() => setStep(3)} />}
-      {step === 3 && planning && course && <VoteStep game={game} opts={opts} onPlan={makePlan} ballot={ballot} initialSides={planSides.length ? planSides : sidesFor(game).map(sg => sg.game)} playFor={playFor} setPlayFor={setPlayFor} tripRow={tripRow} />}
+      {step === 3 && planning && course && <VoteStep game={game} holesCount={holesCount} opts={opts} onPlan={makePlan} ballot={ballot} initialSides={planSides.length ? planSides : sidesFor(game).map(sg => sg.game)} playFor={playFor} setPlayFor={setPlayFor} tripRow={tripRow} />}
       {step === 1 && !planning && <CourseStep editor={editor} openEditor={openEditor} closeEditor={closeEditor} courseId={courseId} setCourseId={id => { setCourseId(id); setTees({}); setStartHole(null); }} holesCount={holesCount} nine={nine} setNine={setNine} onNext={() => setStep(2)} />}
       {step === 2 && !planning && course && (
         <PlayersStep game={g} course={course} holesCount={holesCount} nine={nine} picked={picked} setPicked={setPicked}
@@ -956,7 +956,7 @@ function InviteStep({ invited, setInvited, onNext }) {
 }
 
 /** The organizer suggests a game and a bet, and picks what else the group can vote for. */
-function VoteStep({ game, opts, onPlan, ballot = [], initialSides = [], playFor = null, setPlayFor, tripRow = null }) {
+function VoteStep({ game, holesCount = 18, opts, onPlan, ballot = [], initialSides = [], playFor = null, setPlayFor, tripRow = null }) {
   const start = betOf(game, opts) || 5;
   const [bet, setBet] = useState(start);
   const [others, setOthers] = useState(() => ballot.filter(k => k !== game && GAMES[k]).slice(0, MAX_BALLOT_GAMES - 1));
@@ -973,7 +973,7 @@ function VoteStep({ game, opts, onPlan, ballot = [], initialSides = [], playFor 
       <div className="scroll">
         <div className="block summary-card">
           <div className="li-sub">You suggest</div>
-          <div className="d stake-big">{GAMES[game].name} · {inUnits({ playFor }, betLabel(game, opts, bet))}</div>
+          <div className="d stake-big">{GAMES[game].name} · {inUnits({ playFor }, betLabel(game, opts, bet, holesCount))}</div>
           {playForLine({ playFor }) && <div className="li-sub">{playForLine({ playFor })}</div>}
           <div className="li-sub">The group votes when they answer. Most votes wins; a tie goes to your suggestion.</div>
         </div>

@@ -69,11 +69,14 @@ export function withBet(game, settings, amount) {
   return out;
 }
 
-/** "$5 a skin · carryovers", "$5 a side": what a bet amount means in a game, with its house rules. */
-export function betLabel(game, settings, amount) {
+/**
+ * "$5 a skin · carryovers", "$5 a side": what a bet amount means in a game, with its house rules.
+ * `holes` is the plan's length: the rules that only play over 18 holes say nothing over nine.
+ */
+export function betLabel(game, settings, amount, holes = 18) {
   if (!GAMES[game] || !settings?.[game]) return '';
   const s = withBet(game, settings, amount);
-  return [stakeHeadline(game, s), ...stakeSummary(game, s).split(' · ').slice(1)].join(' · ');
+  return [stakeHeadline(game, s), ...stakeSummary(game, s, holes).split(' · ').slice(1)].join(' · ');
 }
 
 /** "$5 a side", "$1 a point", "$2 a skin": a bet amount in the game's own unit, for the ballot. */
@@ -474,7 +477,7 @@ export function morningText(plan, link, settings, now = new Date()) {
   const n = daysUntil(plan.date, now);
   const lead = n === 0 ? 'Golf today!' : n === 1 ? 'Golf tomorrow!' : `Golf ${dayWords(plan, now)}!`;
   const rules = planRules(plan, settings);
-  const bets = bet && rules[game] ? inUnits(plan, betLabel(game, rules, bet)) : '';
+  const bets = bet && rules[game] ? inUnits(plan, betLabel(game, rules, bet, plan.holesCount ?? 18)) : '';
   const sides = planSides(plan, game);
   return [
     `${lead} ${plan.course?.name || ''}${t ? `, tee time ${t}` : ''}.`.replace(' ,', ','),
