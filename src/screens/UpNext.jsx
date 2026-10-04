@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Header, Icon, Screen } from '../components/ui.jsx';
 import { useStore } from '../lib/store.js';
 import { GAMES, holeComplete } from '../lib/round.js';
@@ -23,6 +23,9 @@ import { applyUpdate, useUpdateReady } from '../lib/sw-update.js';
 import { TripSheet, TripUpNext } from '../components/Trips.jsx';
 import { currentTrips } from '../lib/trips.js';
 import { useTripPlans } from '../lib/trip-plan-sync.js';
+import { currentRecap } from '../lib/recap.js';
+import { callouts } from '../lib/callouts.js';
+import { CalloutsCard, RecapCard } from '../components/Recap.jsx';
 
 const LATELY_ON_HOME = 3;
 
@@ -46,6 +49,9 @@ export default function UpNext() {
   const onTrip = new Set(trips.flatMap(t => t.planned.map(p => p.id)));
   const plans = upcomingPlans(state).filter(p => !onTrip.has(p.id));
   const lately = latelyItems(state);
+  // The day after a round: its recap, then a few lines for the group text (see recap.js, callouts.js)
+  const recap = useMemo(() => currentRecap(state), [state]);
+  const lines = useMemo(() => callouts(state), [state]);
   // A new version only shows up here once no round is going on, so a tap never cuts into one
   const updateReady = useUpdateReady() && updateSafe(state);
   // Pick up answers and votes that came in since last time
@@ -61,6 +67,13 @@ export default function UpNext() {
             <span className="row-main"><b>Update ready</b> <span className="un-sub">Tap to refresh</span></span>
           </button>
         )}
+        {recap && (
+          <>
+            <div className="sec-label">The recap</div>
+            <RecapCard recap={recap} />
+          </>
+        )}
+
         {live.map(r => {
           const played = r.holes.filter(h => holeComplete(r, h)).length;
           return (
@@ -89,6 +102,13 @@ export default function UpNext() {
           </button>
         )}
 
+        {lines.length > 0 && (
+          <>
+            <div className="sec-label">For the group text</div>
+            <CalloutsCard items={lines} />
+          </>
+        )}
+
         {lately.length > 0 && (
           <>
             <div className="sec-label">Lately</div>
@@ -114,8 +134,13 @@ export default function UpNext() {
               <span className="chevron"><Icon name="caret-right" /></span>
             </button>
 
-            <div className="sec-label">Last time out</div>
-            <RoundRow round={last.round} state={state} className="card" withYear />
+            {/* The recap already shows the last round, so it isn't there twice */}
+            {recap?.id !== last.round.id && (
+              <>
+                <div className="sec-label">Last time out</div>
+                <RoundRow round={last.round} state={state} className="card" withYear />
+              </>
+            )}
           </>
         )}
       </div>

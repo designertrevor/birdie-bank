@@ -1935,3 +1935,55 @@ button.trip-card:active { transform: scale(.97); }
 .trip-who { display: flex; flex-direction: column; gap: 6px; margin-top: 8px; }
 .trip-who .sheet-item { width: 100%; margin: 0; }
 .trip-who .avatar { margin: 0; }
+
+/* ---------- Monday recap and callouts (overnight 7, recap): the day-after recap card and the group text lines on Up next ---------- */
+/* The recap: a card like the rest of Up next, its x in the corner outside the head's own button */
+.recap-card { position: relative; margin: 4px 16px 12px; padding: 4px 16px 14px; border-radius: 24px; background: var(--card); }
+.recap-x {
+  position: absolute; top: 8px; right: 8px; width: 36px; height: 36px; display: grid; place-items: center;
+  border: none; border-radius: 50%; background: none; color: var(--mute); font: inherit; font-size: 15px; cursor: pointer;
+}
+.recap-x::before { content: ''; position: absolute; inset: -4px; }
+.recap-x:active { transform: scale(.88); background: var(--surface); }
+.recap-head {
+  display: flex; flex-direction: column; align-items: flex-start; gap: 2px; width: 100%; min-height: 44px; padding: 12px 36px 6px 0;
+  border: none; background: none; font: inherit; color: var(--ink); text-align: left; cursor: pointer;
+}
+.recap-head .eyebrow { color: var(--pink-text); }
+.recap-title { font-size: 24px; font-weight: 800; letter-spacing: -.02em; line-height: 1.15; }
+.recap-yours { font-size: 15px; font-weight: 600; color: var(--body); font-variant-numeric: tabular-nums; }
+.recap-moments { list-style: none; margin: 8px 0 0; padding: 0; display: flex; flex-direction: column; gap: 8px; }
+.recap-moments li { display: flex; align-items: flex-start; gap: 10px; }
+.recap-mi { width: 28px; height: 28px; flex-shrink: 0; border-radius: 50%; display: grid; place-items: center; font-size: 15px; background: var(--ochre); color: var(--on-pastel); }
+.recap-mt { display: flex; flex-direction: column; min-width: 0; font-size: 14px; line-height: 1.35; color: var(--body); }
+.recap-mt b { color: var(--ink); font-size: 15px; }
+.recap-block { margin-top: 12px; padding-top: 12px; border-top: 1px solid var(--line-soft); }
+.recap-bh { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; }
+.recap-bh .bl { color: var(--mute); }
+.recap-count { font-size: 15px; font-weight: 800; color: var(--ink); }
+.recap-mine { list-style: none; margin: 10px 0 0; padding: 0; display: flex; flex-direction: column; gap: 4px; }
+.recap-mine li { font-size: 14px; font-weight: 600; color: var(--ink); font-variant-numeric: tabular-nums; padding-left: 14px; position: relative; }
+.recap-mine li::before { content: ''; position: absolute; left: 0; top: .5em; width: 6px; height: 6px; border-radius: 50%; background: var(--win); }
+.recap-mine li.open::before { background: var(--loss); }
+.recap-mine li.carried::before { background: var(--lav); }
+.recap-note { margin-top: 8px; font-size: 12px; color: var(--mute); }
+.recap-actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 14px; }
+.recap-btn {
+  display: inline-flex; align-items: center; gap: 6px; min-height: 44px; padding: 10px 16px; border-radius: 999px; border: none;
+  background: var(--surface); color: var(--ink); font: inherit; font-weight: 700; font-size: 14px; cursor: pointer; transition: transform .2s var(--spring);
+}
+.recap-btn i { color: var(--icon); }
+.recap-btn:active { transform: scale(.95); }
+
+/* Callouts: one line a row, the whole row is the share button */
+.callouts { margin: 0 16px 12px; }
+.callout-list { list-style: none; margin: 0; padding: 4px 0; background: var(--card); border-radius: 20px; }
+.callout-list li + li .callout-row { border-top: 1px solid var(--line-soft); }
+.callout-row {
+  display: flex; align-items: center; gap: 12px; width: 100%; min-height: 56px; padding: 12px 16px;
+  border: none; background: none; font: inherit; color: var(--ink); text-align: left; cursor: pointer;
+}
+.callout-row:active { background: var(--surface); }
+.callout-text { flex: 1; min-width: 0; font-size: 15px; font-weight: 600; line-height: 1.35; }
+.callout-go { width: 36px; height: 36px; flex-shrink: 0; border-radius: 50%; display: grid; place-items: center; background: var(--mint); color: var(--on-pastel); font-size: 17px; }
+.callout-off { display: block; min-height: 44px; margin: 2px auto 0; padding: 10px 14px; border: none; background: none; font: inherit; font-size: 13px; font-weight: 600; color: var(--mute); cursor: pointer; }
