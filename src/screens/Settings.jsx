@@ -127,6 +127,11 @@ export default function Settings() {
           <Segmented label="Theme" className="press-mode-row" btn="pm-btn" value={state.settings.theme} onChange={v => update(s => { s.settings.theme = v; })}
             options={[{ value: 'system', label: 'System' }, { value: 'light', label: 'Light' }, { value: 'dark', label: 'Dark' }]} />
         </div>
+        <div className="sec-label">Up next</div>
+        <div className="toggle-row">
+          <div><div className="toggle-lbl" id="callouts-lbl">Callouts</div><div className="toggle-sub" id="callouts-sub">A few friendly lines from the Tab and your stats, one tap to post in the group text</div></div>
+          <Toggle on={state.settings.callouts !== false} onChange={v => update(s => { s.settings.callouts = v; })} labelledBy="callouts-lbl" describedBy="callouts-sub" />
+        </div>
         <div className="sec-label">Games</div>
         {row('sliders-horizontal', 'Game defaults', 'Your usual bets and house rules', () => nav.push('defaults'))}
         {row('map-trifold', 'Courses', `${allCourses(state).length} courses · add or fix a scorecard`, () => nav.push('courses'))}
@@ -235,7 +240,7 @@ export function Defaults() {
             <GameOptions game={g} get={get} set={set} onAmount={(path, label, o) => setPad({ path, label, ...o })} compact />
           </div>
         ))}
-        <button className="danger-link" onClick={async () => { if (await ask({ title: 'Reset your game defaults?', text: 'Every game goes back to the standard bets and house rules. Rounds you’ve played don’t change.', confirmLabel: 'Reset' })) update(st => { st.settings = { ...structuredClone(DEFAULT_SETTINGS), theme: st.settings.theme, shareAmounts: st.settings.shareAmounts, betPrompt: st.settings.betPrompt }; }); }}><Icon name="arrow-counter-clockwise" /> Reset to defaults</button>
+        <button className="danger-link" onClick={async () => { if (await ask({ title: 'Reset your game defaults?', text: 'Every game goes back to the standard bets and house rules. Rounds you’ve played don’t change.', confirmLabel: 'Reset' })) update(st => { st.settings = { ...structuredClone(DEFAULT_SETTINGS), theme: st.settings.theme, shareAmounts: st.settings.shareAmounts, betPrompt: st.settings.betPrompt, callouts: st.settings.callouts }; }); }}><Icon name="arrow-counter-clockwise" /> Reset to defaults</button>
       </div>
       <Numpad open={!!pad} title={pad?.label} prefix="$" initial={pad ? get(pad.path) : ''} min={pad?.min} max={pad?.max}
         onClose={() => setPad(null)} onDone={v => { set(pad.path, v); setPad(null); }} />

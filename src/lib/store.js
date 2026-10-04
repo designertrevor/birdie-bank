@@ -21,6 +21,7 @@ export const DEFAULT_SETTINGS = {
   hcPct: 100,
   shareAmounts: false, // results image shows dollar amounts (off until you turn it on, then remembered)
   betPrompt: true,     // "Any side bets on this hole?" on the Play screen (see bet-prompt.js); personal, never a round's
+  callouts: true,      // callouts for the group text on Up next (see callouts.js); off from the card or Settings
   banker: { defaultBet: 5, min: 1, max: 20, ties: 'push', rotation: 'rotate', birdies: 'off' },
   nassau: { front: 5, back: 5, total: 5, pressMode: 'manual', threshold: 2, turnPress: false, noLastPress: false },
   skins: { value: 2, carryover: true, kind: 'net', payout: 'per', stake: 10, lastCarry: 'void' },
@@ -72,6 +73,7 @@ function fresh() {
     links: {},         // "Same person as...": { aliasId: keptId } (see people-links.js)
     unlinks: [],       // "Not the same person": [[a, b]] pairs that stay apart (see people-links.js)
     rewardsDone: {},   // reward lines marked done on this phone, "roundId:from>to" -> time (see play-for.js)
+    recapSeen: {},     // day-after recaps put away on this phone: { roundId: when } (see recap.js)
     profile: {},       // your own profile beyond your player card: avatar, home course, privacy (see profile-model.js)
     accountOf: {},     // which account each player id is, from the server: { playerId: accountId } (see profiles.js)
     profiles: {},      // profiles of people you've played with, by account: { accountId: profile } (see profiles.js)
