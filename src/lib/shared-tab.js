@@ -331,7 +331,9 @@ export function expensePayments(state, from, to, { amount = null, now = Date.now
     const [pf, pt] = pay > 0 ? [F, T] : [T, F];
     // One id for the same payment on both phones, so marking it on each before they sync pays it once
     // With the cup stake's people as its lines name them (cup-stake.js), so their phones place them by those seats
-    const x = newPayment(state, { id: expensePayId(state, tripId, pf, pt, Math.abs(pay)), tripId, from: pf, to: pt, amount: Math.abs(pay), fromName: nameOf(state, pf), toName: nameOf(state, pt), reason, now, also: stakeRaw(state, tripId, { now }) });
+    // The decided stake lines name the two of them too, so the id is theirs alone, never another pair's
+    const also = stakeRaw(state, tripId, { now });
+    const x = newPayment(state, { id: expensePayId(state, tripId, pf, pt, Math.abs(pay), also), tripId, from: pf, to: pt, amount: Math.abs(pay), fromName: nameOf(state, pf), toName: nameOf(state, pt), reason, now, also });
     if (!x) continue;
     expenses.push(x);
     paid += pay;
