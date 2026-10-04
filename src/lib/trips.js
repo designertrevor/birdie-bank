@@ -48,6 +48,8 @@ import { isPlanPayment, planRows, planState } from './trip-plan.js';
 import { expensePairDebts, expensePairs, expenseTotals, placeable, placedOn, tripExpenses, tripMoney, tripPays } from './trip-expenses.js';
 import { CUP_FORMAT, cleanCup, closeEntry, cupEntries, cupLeaderboard, cupOf, cupScore, stakeLines, stakeLink, stakeMarks, stakeOpen, stakeSeats, teamOf } from './cup.js';
 import { cupStake } from './cup-stake.js';
+import { BIG_FORMAT, cleanBig, defaultBig } from './big-game.js';
+import { bigBy, bigStatus } from './big-money.js';
 
 const DAY = 864e5;
 /**
@@ -57,6 +59,8 @@ const DAY = 864e5;
 export const TRIP_FORMATS = {
   money: { name: 'Money across every round', blurb: 'Each round keeps its own games and bets, and the trip is settled once at the end.' },
   [CUP_FORMAT]: { name: 'Team points, Ryder Cup style', blurb: 'Two teams play matches for points: 1 a win, ½ a halved match. Each round keeps its own games and bets too.' },
+  // A day of several groups playing one game (big-game.js). Set up on its own, never picked for a trip
+  [BIG_FORMAT]: { name: 'The Big Game', blurb: 'Several groups, one pot and one leaderboard, settled once when every group is in.' },
 };
 export const TRIP_FORMAT = 'money';
 
@@ -70,7 +74,7 @@ export function cleanTripName(s) {
 }
 
 /** A new trip. `start` and `end` are days (YYYY-MM-DD); the last day is never before the first. */
-export function newTrip({ id, name, start, end, where = null, by = null, people = [], format = TRIP_FORMAT, cup = null, now = Date.now() }) {
+export function newTrip({ id, name, start, end, where = null, by = null, people = [], format = TRIP_FORMAT, cup = null, big = null, now = Date.now() }) {
   const first = start || dayOf(now);
   const last = end && end >= first ? end : first;
   const trip = {
@@ -78,6 +82,7 @@ export function newTrip({ id, name, start, end, where = null, by = null, people 
     format: TRIP_FORMATS[format] ? format : TRIP_FORMAT, by, people: cleanPeople(people, by), createdAt: now, updatedAt: now,
   };
   if (trip.format === CUP_FORMAT) trip.cup = cleanCup(cup);
+  if (trip.format === BIG_FORMAT) trip.big = cleanBig(big) || defaultBig();
   return trip;
 }
 
@@ -117,6 +122,8 @@ export function tripHidden(state, id) {
 export function tripStamp(trip) {
   const stamp = { id: trip.id, name: cleanTripName(trip.name) || 'Golf trip', start: trip.start || null, end: trip.end || null, format: trip.format || TRIP_FORMAT };
   if (stamp.format === CUP_FORMAT) stamp.cup = cleanCup(trip.cup);
+  // A Big Game carries the whole game, so every phone in one of its rounds knows every group (big-game.js)
+  if (stamp.format === BIG_FORMAT) { const big = cleanBig(trip.big); if (big) stamp.big = big; }
   return stamp;
 }
 
@@ -404,6 +411,9 @@ export function tripStatus(state, id, { now = Date.now() } = {}) {
   // Its last day gone by, or ended by the organizer: another group's round the server still has as
   // being played counts as it stood (cup.js closeEntry). The Tab decides it the same way (cup-stake.js)
   const cup = cupStake(state, id, { now });
+  // A Big Game: its money once every group is in (big-money.js), in each person's total like the stake
+  const bigSt = trip.format === BIG_FORMAT ? bigStatus(state, id) : null;
+  const bigVals = bigSt?.final ? bigBy(state, id) : null;
   // The stake's lines on the Tab are in the plan (owedSpent); the rest are marked paid on the trip
   const stakeLeft = cup ? cup.lines.filter(l => l.open > 0 && !l.onTab) : [];
   let phase;
@@ -412,6 +422,8 @@ export function tripStatus(state, id, { now = Date.now() } = {}) {
   else if (!done.length && !live.length) phase = quiet && over ? (plan.length ? 'ready' : 'square') : trip.start && today < trip.start ? 'soon' : 'on';
   else if (quiet && over && done.length) phase = plan.length || stakeLeft.length ? 'ready' : 'square';
   else phase = 'on';
+  // A Big Game is played until every group is in on this phone: only then is there money to settle
+  if (bigSt && !bigSt.final && (phase === 'ready' || phase === 'square')) phase = 'on';
   const lastPaid = Math.max(0, ...paid.map(s => s.at || 0), ...(cup ? cup.marks.map(m => m.at) : []));
   const standings = [...people.entries()].filter(([pid]) => money.some(r => r.players.some(p => who(p.id) === pid)))
     .map(([pid, v]) => ({ id: pid, amount: (bal[pid] || 0) / 100, rounds: v.rounds }));
@@ -421,6 +433,13 @@ export function tripStatus(state, id, { now = Date.now() } = {}) {
       const row = standings.find(p => p.id === pid);
       if (row) { row.amount = Math.round((row.amount + v) * 100) / 100; row.stake = v; }
       else standings.push({ id: pid, amount: v, rounds: people.get(pid)?.rounds || 0, stake: v });
+    }
+  }
+  if (bigVals) {
+    for (const [pid, v] of Object.entries(bigVals)) {
+      const row = standings.find(p => p.id === pid);
+      if (row) { row.amount = Math.round((row.amount + v) * 100) / 100; row.big = v; }
+      else standings.push({ id: pid, amount: v, rounds: people.get(pid)?.rounds || 0, big: v });
     }
   }
   standings.sort((a, b) => b.amount - a.amount || a.id.localeCompare(b.id));
@@ -435,10 +454,10 @@ export function tripStatus(state, id, { now = Date.now() } = {}) {
     updated: !!live_ && seen != null && seen < ps.plan.version, pending: live_?.pending.length || 0,
   };
   return {
-    trip, phase, rounds, done, live, planned, money, people, standings, plan, paid, settling, closed, pairRounds, published, endedAt, cup,
+    trip, phase, rounds, done, live, planned, money, people, standings, plan, paid, settling, closed, pairRounds, published, endedAt, cup, big: bigSt,
     expenses, spent: expenses.reduce((a, x) => a + x.cents, 0) / 100, spending, totals,
     // Money to show: the rounds' own, or the cup's stake once it's decided
-    hasMoney: money.length > 0 || !!cup?.stakeOn,
+    hasMoney: money.length > 0 || !!cup?.stakeOn || !!bigVals,
     going: tripGoing(state, trip), organizer: isOrganizer(state, trip),
     payments: tripPaymentGroups(state, paid),
     // Points standings only for a trip played for points (null otherwise, so a trip with nothing in
@@ -604,7 +623,8 @@ export function tripOnDay(state, day) {
   // A trip someone said they're done playing, or that's been settled as a whole, takes no more
   // rounds, and nor does one you hid
   const open = t => !tripHidden(state, t.id) && !tripStatus(state, t.id)?.endedAt && !tripStatus(state, t.id)?.closed;
-  const list = [...tripsOf(state).values()].filter(t => t.start && t.end && t.start <= day && day <= t.end && open(t));
+  // A Big Game's rounds are its groups' own, made with the game, so no other round counts for it
+  const list = [...tripsOf(state).values()].filter(t => t.format !== BIG_FORMAT && t.start && t.end && t.start <= day && day <= t.end && open(t));
   list.sort((a, b) => Number(a.derived) - Number(b.derived) || (b.createdAt || 0) - (a.createdAt || 0));
   return list[0] || null;
 }

@@ -10,6 +10,7 @@ import { canonicalOf } from './pair-debts.js';
 import { onTab, tabResults } from './play-for.js';
 import { allTripPays, expensesBetween } from './trip-expenses.js';
 import { stakeBetween } from './cup-stake.js';
+import { bigBetween } from './big-money.js';
 
 const toCents = v => Math.round((Number(v) || 0) * 100);
 
@@ -103,7 +104,7 @@ export function breakdownWith(state, ids, other, { now = Date.now() } = {}) {
   const list = [...totals.values()].filter(t => toCents(t.amount)).sort((x, y) => Math.abs(y.amount) - Math.abs(x.amount) || x.label.localeCompare(y.label));
   // Trip expenses one of you paid for the other, and a decided cup stake between you (cup-stake.js):
   // not a round's golf, so on their own lines
-  const expenses = [...expensesBetween(state, isMine, isThem), ...stakeBetween(state, isMine, isThem, { now })].sort((a, b) => b.at - a.at).map(x => ({ ...x, amount: x.amount / 100 }));
+  const expenses = [...expensesBetween(state, isMine, isThem), ...stakeBetween(state, isMine, isThem, { now }), ...bigBetween(state, isMine, isThem)].sort((a, b) => b.at - a.at).map(x => ({ ...x, amount: x.amount / 100 }));
   const spent = expenses.reduce((a, x) => a + toCents(x.amount), 0);
   return { rounds, totals: list, net: net / 100, paid: paid / 100, open: (net + spent - paid) / 100, expenses, spent: spent / 100 };
 }
