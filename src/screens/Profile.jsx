@@ -18,7 +18,6 @@ import { accountsEnabled, useAccount } from '../lib/cloud.js';
 import { money } from '../lib/golf.js';
 import { bestOf, bestText, deepStats, pressText, skinsText, winRate } from '../lib/deep-stats.js';
 
-
 /** Where your profile is, in one quiet line under your name. */
 function whereLine(user, server) {
   if (!accountsEnabled) return 'Saved on this phone';
@@ -116,7 +115,7 @@ export default function Profile() {
                   <div className="kv-row"><span className="kv-k">Best course</span><span className="kv-v">{bestText(bestOf(deep.courses), money)}</span></div>
                   {deep.presses.rounds > 0 && <div className="kv-row"><span className="kv-k">Your presses</span><span className="kv-v">{pressText(deep.presses.made)}{winRate(deep.presses.made) == null ? '' : ` · ${winRate(deep.presses.made)}%`}</span></div>}
                   {deep.skins.rounds > 0 && <div className="kv-row"><span className="kv-k">Skins won</span><span className="kv-v">{skinsText(deep.skins.won)}</span></div>}
-                  <button className="pf-home stats-open" onClick={() => nav.push('stats')}>
+                  <button className="pf-home stats-open" onClick={() => nav.push('stats', { range: { kind: 'all' } })}>
                     <Icon name="chart-bar" fill />
                     <span className="row-main"><b>See all your stats</b><span>By game and course, presses, skins and biggest wins. Only you see them.</span></span>
                     <Icon name="caret-right" />

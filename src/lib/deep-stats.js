@@ -97,7 +97,8 @@ export function gameParts(round, seat, res = roundResults(round)) {
 /**
  * Your presses in a Nassau or match play round: { made, against } as won, lost and halved. A press
  * is yours when your side called it (or it went on for your side automatically); "against" is a
- * press the other side called on you. A press still level when the round ended is halved.
+ * press the other side called on you. A press still level when the round ended is halved; one
+ * whose holes were never played (the round finished before it started) isn't counted at all.
  */
 export function pressesIn(round, seat, res = roundResults(round)) {
   const out = { made: { won: 0, lost: 0, halved: 0 }, against: { won: 0, lost: 0, halved: 0 } };
@@ -108,7 +109,8 @@ export function pressesIn(round, seat, res = roundResults(round)) {
   if (mySide < 0) return out;
   const lines = res.detail?.lines || res.detail?.byGame?.main?.detail?.lines || [];
   for (const l of lines) {
-    if (!l.press) continue;
+    // A press none of whose holes were played (the round ended first) never had a result
+    if (!l.press || !l.status?.played) continue;
     const rec = l.by === mySide ? out.made : out.against;
     const leader = l.status?.leader;
     if (leader == null) rec.halved++;

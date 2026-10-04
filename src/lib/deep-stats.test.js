@@ -73,6 +73,18 @@ test('press win rate: your presses and presses against you, by your side in the 
   assert.deepEqual(pressesIn(skinsA(), 'me').made, { won: 0, lost: 0, halved: 0 });
 });
 
+test('a press whose holes were never played is not counted, so it never drags the win rate', () => {
+  // Finished after 7 holes: the press on 8 never started. The press on 3 is won as in nassauA.
+  const r = nassauA();
+  r.presses.push({ id: 3, leg: 'back', start: 8, by: 0 });
+  delete r.scores[8]; delete r.scores[9];
+  const money = roundResults(r).balances.me;
+  assert.deepEqual(pressesIn(r, 'me').made, { won: 1, lost: 0, halved: 0 });
+  assert.equal(winRate(deepStats(stateOf([r])).presses.made), 100);
+  // Reading the presses never changes the round's money
+  assert.equal(roundResults(r).balances.me, money);
+});
+
 test('a team Nassau: your side is your team', () => {
   const r = round('t1', 'nassau', ['me', 'mike', 'sam', 'dave'], { 1: { sam: 3 }, 2: { dave: 3 }, 3: { me: 3 }, 4: { mike: 3 } }, {
     extra: { teams: [{ name: 'Us', players: ['sam', 'dave'] }, { name: 'Them', players: ['me', 'mike'] }], presses: [{ id: 1, leg: 'front', start: 3, by: 1 }] },
