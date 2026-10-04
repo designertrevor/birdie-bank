@@ -1961,7 +1961,7 @@ button.trip-card:active { transform: scale(.97); }
 .checkin-x { position: relative; }
 .checkin-x::before { content: ''; position: absolute; inset: -6px; }
 .tab-part { min-height: 44px; }
-.hole-grid { grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); }
+.hole-grid { grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); }
 .par-pick button { width: 42px; height: 36px; position: relative; }
 .par-pick button::before { content: ''; position: absolute; left: 0; right: 0; top: 50%; height: 44px; transform: translateY(-50%); }
 /* Vegas: the winning team's name sat in --mute on mint, unreadable in dark mode */

@@ -129,3 +129,24 @@ test('a points round’s snake reveal says what the holder pays in points, never
   assert.match(text(mk({ kind: 'points' })), /pays 5 pts a player/);
   assert.ok(!/\$/.test(text(mk({ kind: 'points' }))));
 });
+
+test('Season’s totals count a friend’s lunch money bet the same whether or not you had one of your own', () => {
+  // q1 money: t +$4, a −$2, b −$2. Lunch q2: a beats b $7 for money; in one version t also loses $10 to a
+  const q1 = round('q1', IDS, wins(IDS, [1, 't']), { at: OCT(10) });
+  const lunch = round('q2', IDS, wins(IDS, [1, 'b']), { at: OCT(11), playFor: LUNCH });
+  const theirs = cashBet(structuredClone(lunch), 'ab', ['a', 'b'], 7, 'a');
+  const both = cashBet(structuredClone(theirs), 'ta', ['t', 'a'], 10, 'a');
+  const rows = s => Object.fromEntries(seasonBoard(s, 2026).balances.map(x => [x.id, x.net]));
+  // Only their bet: the round adds to their totals, while your season is still the money round alone
+  const only = stateOf('t', [q1, theirs]);
+  assert.deepEqual(rows(only), { a: 5, b: -9, t: 4 });
+  assert.deepEqual(seasonRounds(only, 2026).map(r => r.id), ['q1']);
+  assert.equal(seasonBoard(only, 2026).rival.rounds, 1);
+  // With your bet too: their $7 is counted exactly once more, never twice, and yours joins it
+  const s = stateOf('t', [q1, both]);
+  assert.deepEqual(rows(s), { a: 15, b: -9, t: -6 });
+  assert.equal(Object.values(rows(s)).reduce((x, y) => x + y, 0), 0);
+  // A lunch round with no money bets at all, and a points round, add nothing
+  const none = stateOf('t', [q1, lunch, round('q3', IDS, wins(IDS, [1, 'a']), { at: OCT(12), playFor: { kind: 'points' } })]);
+  assert.deepEqual(rows(none), { t: 4, a: -2, b: -2 });
+});
