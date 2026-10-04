@@ -9,6 +9,7 @@ import { applyDoc, toDocs } from './cloud-model.js';
 import { crewKey, netsOf, tabOf, tabsOf } from './crew-tabs.js';
 import { ALL, ROLL_REASON, bookScopeName, booksOf, closeBooks, closePreview, defaultBookName, lineKey, myBookNet, openRounds, rolledIn, seasonTotals } from './books.js';
 import { NOW, OCT, base, skins } from './crew-tabs.fixtures.js';
+import { withClosedBooks } from './history.js';
 
 const SAT = crewKey('sat');
 let n = 0;
@@ -136,4 +137,14 @@ test('closed seasons ride in your profile, and an older profile without them kee
   delete older.books;
   applyDoc(draft, 'profile', 'me', older);
   assert.deepEqual(draft.books, withBook.books);
+});
+
+test('History puts a closed season in among the month’s rounds, where it closed', () => {
+  const r1 = skins('r1', ['t', 'a'], [[1, 't']], { at: OCT(3) });
+  const r2 = skins('r2', ['t', 'a'], [[1, 'a']], { at: OCT(12) });
+  const book = { id: 'b1', closedAt: OCT(8), name: '2026 season' };
+  const items = withClosedBooks([r2, r1], [book, { id: 'b2', closedAt: OCT(40), name: 'later' }], '2026-10');
+  assert.deepEqual(items.map(x => x.round?.id || x.book.id), ['r2', 'b1', 'r1']);
+  assert.deepEqual(withClosedBooks([r2, r1], [book], '2026-10', { kind: 'custom', from: '2026-10-10', to: '2026-10-31' }).map(x => x.round?.id || x.book.id), ['r2', 'r1'], 'outside the range on show');
+  assert.deepEqual(withClosedBooks([r1], [{ id: 'b3', closedAt: OCT(1), name: 'x' }], '2026-10').map(x => x.round?.id || x.book.id), ['r1', 'b3']);
 });

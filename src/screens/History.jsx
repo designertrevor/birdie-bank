@@ -8,8 +8,10 @@ import { nameOf } from '../lib/ledger.js';
 import { AvatarButton, BottomNav } from '../nav.jsx';
 import { useNav } from '../lib/nav.js';
 import {
-  defaultRange, headToHead, lastResult, monthGroups, netSeries, rangeLabel, roundTime, roundsInRange, statsLinkLabel,
+  defaultRange, headToHead, lastResult, monthGroups, netSeries, rangeLabel, roundTime, roundsInRange, statsLinkLabel, withClosedBooks,
 } from '../lib/history.js';
+import { BooksClosedRow, ClosedSeasons } from '../components/CrewTabs.jsx';
+import { booksOf } from '../lib/books.js';
 import { RoundRow } from '../components/RoundRow.jsx';
 import { SeasonChart } from '../components/SeasonChart.jsx';
 
@@ -86,6 +88,8 @@ export default function History() {
     };
   }, [rounds, me, players, links, unlinks, range, filter]);
   const net = series.at(-1)?.total ?? 0;
+  // Seasons whose books closed (books.js): a list of their own, and a marker where each closed
+  const books = booksOf(state);
   const label = rangeLabel(range);
 
   return (
@@ -131,6 +135,8 @@ export default function History() {
                   <Icon name="chart-bar" fill /> <span className="row-main">{statsLinkLabel(range)}<span className="sl-sub">By game and course, presses, skins and biggest wins</span></span> <Icon name="caret-right" />
                 </button>
 
+                <ClosedSeasons />
+
                 {h2h.length > 0 && (
                   <>
                     <div className="sec-label">Head to head</div>
@@ -156,7 +162,9 @@ export default function History() {
                       </span>
                     </div>
                     <div className="month-rows">
-                      {g.rounds.map(r => <RoundRow key={r.id} round={r} state={state} />)}
+                      {withClosedBooks(g.rounds, books, g.key, range).map(x => (x.book
+                        ? <BooksClosedRow key={x.book.id} book={x.book} />
+                        : <RoundRow key={x.round.id} round={x.round} state={state} />))}
                     </div>
                   </section>
                 ))}

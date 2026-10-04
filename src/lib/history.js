@@ -186,6 +186,27 @@ export function headToHead(rounds, state) {
   return h2h;
 }
 
+/**
+ * One month's rounds (newest first, from monthGroups) with the seasons whose books closed in that
+ * month (books.js) in among them by time: [{ round } | { book }], newest first. `key` is the
+ * month's '2026-09'; `range` keeps out a book that closed outside the range on show.
+ */
+export function withClosedBooks(rounds, books, key, range = { kind: 'all' }) {
+  const [start, end] = rangeBounds(range);
+  const monthOf = t => { const d = new Date(t); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`; };
+  const marks = (books || []).filter(b => b?.closedAt && monthOf(b.closedAt) === key && b.closedAt >= start && b.closedAt < end)
+    .sort((a, b) => b.closedAt - a.closedAt);
+  const out = [];
+  let i = 0;
+  for (const r of rounds) {
+    // A season closed after this round finished goes above it: the newest first
+    while (i < marks.length && marks[i].closedAt >= roundTime(r)) out.push({ book: marks[i++] });
+    out.push({ round: r });
+  }
+  while (i < marks.length) out.push({ book: marks[i++] });
+  return out;
+}
+
 /** What you're owed and what you owe right now, across every round and payment (the Tab at a glance). */
 export function myTab(state) {
   const ids = myIds(state);
