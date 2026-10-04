@@ -147,8 +147,15 @@ test('History puts a closed season in among the month’s rounds, where it close
   const r1 = skins('r1', ['t', 'a'], [[1, 't']], { at: OCT(3) });
   const r2 = skins('r2', ['t', 'a'], [[1, 'a']], { at: OCT(12) });
   const book = { id: 'b1', closedAt: OCT(8), name: '2026 season' };
-  const items = withClosedBooks([r2, r1], [book, { id: 'b2', closedAt: OCT(40), name: 'later' }], '2026-10');
+  const items = withClosedBooks([r2, r1], [book, { id: 'b2', closedAt: OCT(40), name: 'later' }], '2026-10', { kind: 'all' }, ['2026-11', '2026-10']);
   assert.deepEqual(items.map(x => x.round?.id || x.book.id), ['r2', 'b1', 'r1']);
   assert.deepEqual(withClosedBooks([r2, r1], [book], '2026-10', { kind: 'custom', from: '2026-10-10', to: '2026-10-31' }).map(x => x.round?.id || x.book.id), ['r2', 'r1'], 'outside the range on show');
   assert.deepEqual(withClosedBooks([r1], [{ id: 'b3', closedAt: OCT(1), name: 'x' }], '2026-10').map(x => x.round?.id || x.book.id), ['r1', 'b3']);
+  // Closed in November with no November rounds on show: at the top of October, the newest month before it
+  const nov = { id: 'b4', closedAt: new Date(2026, 10, 3).getTime(), name: 'fall' };
+  assert.deepEqual(withClosedBooks([r2, r1], [nov], '2026-10', { kind: 'all' }, ['2026-10', '2026-09']).map(x => x.round?.id || x.book.id), ['b4', 'r2', 'r1']);
+  assert.deepEqual(withClosedBooks([r1], [nov], '2026-09', { kind: 'all' }, ['2026-10', '2026-09']).map(x => x.round?.id || x.book.id), ['r1'], 'only once');
+  // Closed before every month on show: at the bottom of the oldest
+  const aug = { id: 'b5', closedAt: new Date(2026, 7, 3).getTime(), name: 'summer' };
+  assert.deepEqual(withClosedBooks([r1], [aug], '2026-09', { kind: 'all' }, ['2026-10', '2026-09']).map(x => x.round?.id || x.book.id), ['r1', 'b5']);
 });

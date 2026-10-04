@@ -189,12 +189,20 @@ export function headToHead(rounds, state) {
 /**
  * One month's rounds (newest first, from monthGroups) with the seasons whose books closed in that
  * month (books.js) in among them by time: [{ round } | { book }], newest first. `key` is the
- * month's '2026-09'; `range` keeps out a book that closed outside the range on show.
+ * month's '2026-09'; `range` keeps out a book that closed outside the range on show. `keys` are
+ * every month on show, newest first: a book that closed in a month with no rounds on show (books
+ * often close after the last round) goes at the top of the newest month before it, or at the
+ * bottom of the oldest month when it closed before all of them, so it's never lost.
  */
-export function withClosedBooks(rounds, books, key, range = { kind: 'all' }) {
+export function withClosedBooks(rounds, books, key, range = { kind: 'all' }, keys = [key]) {
   const [start, end] = rangeBounds(range);
   const monthOf = t => { const d = new Date(t); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`; };
-  const marks = (books || []).filter(b => b?.closedAt && monthOf(b.closedAt) === key && b.closedAt >= start && b.closedAt < end)
+  const homeOf = t => {
+    const m = monthOf(t);
+    if (keys.includes(m)) return m;
+    return keys.find(k => k < m) || keys.at(-1);
+  };
+  const marks = (books || []).filter(b => b?.closedAt && b.closedAt >= start && b.closedAt < end && homeOf(b.closedAt) === key)
     .sort((a, b) => b.closedAt - a.closedAt);
   const out = [];
   let i = 0;

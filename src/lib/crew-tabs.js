@@ -7,16 +7,18 @@
 //
 // Payments: one tied to a round (its code, or its round id) belongs to that round's tab; one made
 // from a crew's tab names the crew (`tab: 'crew:<id>'`); a trip's are the ones Settle the trip counts
-// (trips.js tripStatus). A payment from Everyone tied to nothing pays the crews' tabs, the crew with
-// the oldest round first, up to what the payer owes and the payee is owed there, once the trips have
-// counted theirs. Other rounds is what's left of Everyone with the trips and crews taken out, so the
-// tabs always add up to it.
+// (trips.js tripStatus). A payment from Everyone tied to nothing pays the crews' tabs as they stood
+// when it was made, the crew with the oldest round first, up to what the payer owes and the payee
+// is owed there, once the trips have counted theirs; and since it paid the two people's net, a tab
+// with one owing the other and a tab the other way round are netted against each other (a payment
+// that squared rounds shared live does the same with its netted rows). Other rounds is what's left
+// of Everyone with the trips and crews taken out, so the tabs always add up to it.
 //
 // Crews are saved lists on your phone, so a crew's tab is yours alone. The money in it is the same
 // money the Tab has, and paying from it squares the rounds shared live on the shared Tab's own rows
 // (shared-tab.js squareRows), so a friend's phone sees the payment on its Tab too. Pure, unit tested.
 import { fewestPayments, outstanding } from './ledger.js';
-import { canonicalOf, codeOf, finishedAt, lockedRounds, openByPair } from './pair-debts.js';
+import { canonicalOf, codeOf, finishedAt, lockedRounds, nettedId, nettedOn, openByPair, paidOn } from './pair-debts.js';
 import { onTab, tabResults } from './play-for.js';
 import { tripOfPayment } from './trip-pay.js';
 import { tripStatus, tripsOf } from './trips.js';
@@ -159,30 +161,55 @@ export function tabsOf(state, { now = Date.now() } = {}) {
     tripTabs.push({ key: tripKey(id), kind: 'trip', id, name: st.trip.name, rounds: st.money, lines, balances: netsOf(lines), status: st, ...span(st.money) });
   }
 
-  // Crews: their rounds, less the payments for them
+  // Crews: their rounds, less the payments for them, taken in the order they happened (rounds by
+  // when they finished, payments by when they were made), so a payment only ever pays rounds that
+  // were played before it
   const crewTabs = crews.map(c => {
     const rounds = byKey.get(crewKey(c.id)) || [];
-    const bal = {};
-    for (const r of rounds) for (const [id, v] of Object.entries(tabResults(r).balances)) bal[who(id)] = (bal[who(id)] || 0) + cents(v);
-    return { key: crewKey(c.id), kind: 'crew', id: c.id, name: c.name, members: c.members, rounds, bal, ...span(rounds) };
+    return { key: crewKey(c.id), kind: 'crew', id: c.id, name: c.name, members: c.members, rounds, bal: {}, ...span(rounds) };
   });
   const crewBy = new Map(crewTabs.map(t => [t.key, t]));
+  // Other rounds as they stood at each moment, only to see what a payment from Everyone nets
+  // across (its own balances at the end are what's left of Everyone, below)
+  const otherRun = {};
+  const balOf = key => (key === OTHER ? otherRun : crewBy.get(key)?.bal || null);
   const pay = (bal, f, t, c) => { bal[f] = (bal[f] || 0) + c; bal[t] = (bal[t] || 0) - c; };
-  const loose = [];
+  const events = [];
+  for (const [key, rounds] of byKey) {
+    const bal = balOf(key);
+    if (!bal) continue; // a trip's rounds are the trip's
+    for (const r of rounds) {
+      events.push({ at: finishedAt(r), n: 0, id: r.id, run: () => { for (const [id, v] of Object.entries(tabResults(r).balances)) bal[who(id)] = (bal[who(id)] || 0) + cents(v); } });
+      // A payment that squared two people's rounds shared live marks the rest of their open
+      // transfers netted (shared-tab.js): those rounds' money went against each other, so on this
+      // round's tab the netted part counts as paid, and the tabs it netted against even it out
+      const code = codeOf(r);
+      if (!code) continue;
+      for (const t of tabResults(r).transfers) {
+        if (!nettedOn(state, code, t)) continue;
+        const open = cents(t.amount) - paidOn(state, r, code, t);
+        const row = state.tabRows[`${code}|${nettedId(code, t.from, t.to)}`];
+        if (open > 0) events.push({ at: row.at || 0, n: 1, id: row.id, run: () => pay(bal, who(t.from), who(t.to), open) });
+      }
+    }
+  }
   for (const s of state.settlements || []) {
     if (tripOfPayment(s)) continue; // Settle the trip's, counted on the trip
     let key;
-    if (s.tab) key = s.tab;
-    else if (s.code) key = codeKey.get(s.code) || null;
-    else if (s.roundId) key = roundKey.get(s.roundId) || null;
-    else { loose.push(s); continue; }
-    const tab = key && crewBy.get(key);
-    if (tab) pay(tab.bal, who(s.from), who(s.to), cents(s.amount));
+    if (s.tab) key = crewBy.has(s.tab) ? s.tab : OTHER;
+    else if (s.code) key = codeKey.get(s.code) || OTHER;
+    else if (s.roundId) key = roundKey.get(s.roundId) || OTHER;
+    else { events.push({ at: s.at || 0, n: 1, id: String(s.id), run: () => payLoose(s) }); continue; }
+    const bal = balOf(key);
+    if (bal) events.push({ at: s.at || 0, n: 1, id: String(s.id), run: () => pay(bal, who(s.from), who(s.to), cents(s.amount)) });
   }
   // A payment from Everyone tied to nothing: what the trips didn't count pays the crews' tabs,
   // the crew with the oldest round first, as far as each has the payer owing and the payee owed
-  const order = crewTabs.filter(t => t.rounds.length).sort((a, b) => a.since - b.since || a.key.localeCompare(b.key));
-  for (const s of loose.sort((a, b) => (a.at || 0) - (b.at || 0) || String(a.id).localeCompare(String(b.id)))) {
+  // then, and the rest is Other rounds'. Paying on Everyone pays the two people's net across all
+  // their rounds, so where one tab has the payer owing the payee and another the other way round,
+  // the two are netted against each other, the way Everyone did
+  const order = [...crewTabs].sort((a, b) => (a.since ?? Infinity) - (b.since ?? Infinity) || a.key.localeCompare(b.key));
+  function payLoose(s) {
     const f = who(s.from), t = who(s.to);
     let left = cents(s.amount) - (countedBy.get(s.id) || 0);
     for (const tab of order) {
@@ -192,7 +219,21 @@ export function tabsOf(state, { now = Date.now() } = {}) {
       pay(tab.bal, f, t, c);
       left -= c;
     }
+    if (left > 0) pay(otherRun, f, t, left);
+    const bals = [...order.map(x => x.bal), otherRun];
+    const owing = (bal, a, b) => Math.min(Math.max(0, -(bal[a] || 0)), Math.max(0, bal[b] || 0));
+    for (const p of bals) {
+      for (const q of bals) {
+        if (p === q) continue;
+        const c = Math.min(owing(p, f, t), owing(q, t, f));
+        if (c <= 0) continue;
+        pay(p, f, t, c);
+        pay(q, t, f, c);
+      }
+    }
   }
+  events.sort((a, b) => a.at - b.at || a.n - b.n || a.id.localeCompare(b.id));
+  for (const e of events) e.run();
   const locked = new Set(lockedRounds(state, { now }).map(r => r.id));
   const crewOut = crewTabs.map(({ bal, ...t }) => {
     const lines = planOf(state, bal, t.rounds.filter(r => locked.has(r.id)), togetherIn(state, t.rounds));

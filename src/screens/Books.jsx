@@ -94,7 +94,9 @@ export function CloseBooks({ scope = ALL }) {
         })}
       </div>
       <div className="cta-wrap">
-        <button className="full-btn" onClick={close}>Close the {title} <Icon name="arrow-right" /></button>
+        {/* Nothing played and nothing owed since the last close: there's no season to keep */}
+        <button className="full-btn" onClick={close} disabled={!prev.rounds.length && !prev.lines.length}>Close the {title} <Icon name="arrow-right" /></button>
+        {!prev.rounds.length && !prev.lines.length && <p className="field-help" style={{ textAlign: 'center' }}>Play a round for money and there’s a season to close.</p>}
         {prev.lines.length > 0 && <p className="field-help" style={{ textAlign: 'center' }} role="status">{paidN ? `${paidN} paid` : ''}{paidN && rolledN ? ', ' : ''}{rolledN ? `${rolledN} rolled to next season` : ''}</p>}
       </div>
     </Screen>

@@ -90,6 +90,7 @@ export default function History() {
   const net = series.at(-1)?.total ?? 0;
   // Seasons whose books closed (books.js): a list of their own, and a marker where each closed
   const books = booksOf(state);
+  const groupKeys = groups.map(g => g.key);
   const label = rangeLabel(range);
 
   return (
@@ -162,7 +163,7 @@ export default function History() {
                       </span>
                     </div>
                     <div className="month-rows">
-                      {withClosedBooks(g.rounds, books, g.key, range).map(x => (x.book
+                      {withClosedBooks(g.rounds, books, g.key, range, groupKeys).map(x => (x.book
                         ? <BooksClosedRow key={x.book.id} book={x.book} />
                         : <RoundRow key={x.round.id} round={x.round} state={state} />))}
                     </div>

@@ -189,3 +189,47 @@ test('settling every crew and trip on its own leaves Everyone with just Other ro
   assert.deepEqual(tabBy(end, OTHER).balances, otherBefore, 'Other rounds untouched');
   assert.deepEqual(end.everyone.balances, otherBefore, 'Everyone is just Other rounds now');
 });
+
+test('a payment from Everyone made before a crew round pays the older round, never the crew’s', () => {
+  const old = skins('r1', ['t', 'a', 'c'], [[1, 'a'], [2, 'a'], [3, 'a']], { at: OCT(1) });
+  const crew = skins('r2', ['t', 'a'], [[1, 'a']], { at: OCT(5) });
+  const s = base([old, crew], { settlements: [{ id: 's1', from: 't', to: 'a', amount: 6, at: OCT(2) }] });
+  const all = tabsOf(s, { now: NOW });
+  assert.deepEqual(summed(all), all.everyone.balances);
+  assert.deepEqual(tabBy(all, crewKey('sat')).lines.map(l => [l.from, l.to, l.amount]), [['t', 'a', 2]], 'the crew’s round, played after, is still owed');
+  assert.deepEqual(tabBy(all, OTHER).lines.map(l => [l.from, l.to, l.amount]), [['c', 'a', 6]], 'what t paid squared the older round');
+});
+
+test('paying the whole card on Everyone squares two people on every tab when their rounds shared live ran opposite ways', () => {
+  // t owes a $6 on the crew's round, a owes t $2 on another round: Everyone has t owing a $4
+  const crew = skins('r1', ['t', 'a'], [[1, 'a'], [2, 'a'], [3, 'a']], { at: OCT(3), code: 'CRW002' });
+  const other = skins('r2', ['t', 'a', 'c'], [[1, 't']], { at: OCT(5), code: 'OTH002' });
+  let s = base([crew, other]);
+  const card = outstanding(s, { now: NOW }).find(l => l.from === 't' && l.to === 'a');
+  assert.equal(card.amount, 4);
+  const res = allocatePayment(s, { from: 't', to: 'a', amount: card.amount }, { now: NOW, makeId: () => 'p1' });
+  s = applyRows({ ...s, settlements: [...s.settlements, ...res.settlements] }, res.rows);
+  const all = tabsOf(s, { now: NOW + 1 });
+  assert.deepEqual(summed(all), all.everyone.balances);
+  const between = (t, a, b) => t.lines.filter(l => [l.from, l.to].sort().join() === [a, b].sort().join());
+  assert.deepEqual(between(tabBy(all, crewKey('sat')), 't', 'a'), [], 'the crew’s tab is square too, so nobody pays the $2 twice');
+  assert.deepEqual(between(tabBy(all, OTHER), 't', 'a'), []);
+  assert.deepEqual(tabBy(all, OTHER).lines.map(l => [l.from, l.to, l.amount]), [['c', 't', 2]]);
+});
+
+test('a payment from Everyone nets one tab against another between the two people, with no round shared', () => {
+  // Two crews: t owes a $8 on one, a owes t $6 on the other (b breaks even); t pays the $2 Everyone has
+  const crews = { duo: { id: 'duo', name: 'Duo', playerIds: ['a'] }, sat: { id: 'sat', name: 'Saturday crew', playerIds: ['a', 'b'] } };
+  const one = skins('r1', ['t', 'a'], [[1, 'a'], [2, 'a'], [3, 'a'], [4, 'a']], { at: OCT(3) });
+  const two = skins('r2', ['t', 'a', 'b'], [[1, 't'], [2, 't'], [3, 'b']], { at: OCT(5) });
+  let s = base([one, two], { crews });
+  const before = tabsOf(s, { now: NOW });
+  assert.deepEqual(tabBy(before, crewKey('duo')).lines.map(l => [l.from, l.to, l.amount]), [['t', 'a', 8]]);
+  assert.deepEqual(tabBy(before, crewKey('sat')).lines.map(l => [l.from, l.to, l.amount]), [['a', 't', 6]]);
+  const card = outstanding(s, { now: NOW }).find(l => l.from === 't' && l.to === 'a');
+  s = { ...s, settlements: [{ id: 's1', from: 't', to: 'a', amount: card.amount, at: NOW }] };
+  const all = tabsOf(s, { now: NOW + 1 });
+  assert.deepEqual(summed(all), all.everyone.balances);
+  assert.ok(!outstanding(s, { now: NOW + 1 }).some(l => [l.from, l.to].sort().join() === 'a,t'), 'square on Everyone');
+  for (const t of all.tabs) assert.deepEqual(t.lines, [], `square on ${t.name}`);
+});
