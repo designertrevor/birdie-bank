@@ -356,6 +356,20 @@ function GameBreakdown({ round, res, label = null }) {
           </div>
         ))}
         {round.game === 'scramble' && <DrivesShortfall round={round} done={round.status === 'done'} />}
+        {res.detail.pots && <>
+          {/* Front, back and total (a house rule): what each pot paid, and to whom */}
+          <div className="sec-label">Front, back and total</div>
+          {res.detail.pots.map(p => {
+            const won = Object.entries(p.deltas).filter(([, v]) => v > 0).sort((a, b) => b[1] - a[1]);
+            return (
+              <div key={p.key} className="leg-row">
+                <div className="leg-name">{p.key === 'total' ? (round.holes.length === 18 ? '18' : 'All') : p.label}</div>
+                <div className={`leg-winner ${won.length ? '' : 'leg-tie'}`}>{won.length ? won.map(([pid]) => first(names[pid])).join(', ') : 'Square, money back'}</div>
+                <div className={`leg-amt ${won.length ? '' : 'zero'}`}>{money(won.reduce((a, [, v]) => a + v, 0))}</div>
+              </div>
+            );
+          })}
+        </>}
       </>
     );
   }

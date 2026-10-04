@@ -1607,6 +1607,24 @@ function settlePairs(round, value, { stake, lowerWins, onPair = null }) {
 }
 
 /** Points per hole per player for nines, aces (as money), bingo bango bongo and dots. */
+/**
+ * Dots, "greenies carry": how many greenies ride on `hole`'s greenie, from the par 3s played before it
+ * with nobody getting one (0 with the rule off, or when `hole` isn't a par 3). Same count as pointsTable.
+ */
+export function greenieCarryBefore(round, hole) {
+  let carry = 0;
+  for (const [i, h] of round.holes.entries()) {
+    if (h.no === hole.no) break;
+    const ds = settingsAt(round, i + 1).dots;
+    if (h.par !== 3 || !ds?.greenieCarry || ds.kinds?.greenie === false || !holeComplete(round, h)) continue;
+    const field = playersOn(round, h).map(p => p.id);
+    const got = field.filter(pid => (round.marks?.[h.no]?.[pid] || []).includes('greenie'));
+    carry = got.length === 1 ? 0 : got.length ? carry : carry + 1;
+  }
+  const ds = settingsAt(round, posOf(round, hole)).dots;
+  return hole.par === 3 && ds?.greenieCarry ? carry : 0;
+}
+
 /** The player with the outright lowest net score on `hole` among `field`, or null (a tie, or not scored). */
 export function bbbLowNet(round, hole, field) {
   if (!holeComplete(round, hole)) return null;

@@ -4,7 +4,7 @@ import { Icon, useUI } from './ui.jsx';
 import { update, uid } from '../lib/store.js';
 import {
   hammerOptions, hammerTable, holeAtPos, holeComplete, nassauAmounts, nassauPressOptions, nassauWinners, playersOn, pointsTable, pressMode, rabbitTable,
-  roundLegs, sideNames, sides, sixesMatches, snakeTable, totalsTable, vegasPreview, vegasTable, scorers, netFor, playsHole, posOf, settingsAt,
+  roundLegs, sideNames, sides, sixesMatches, snakeTable, totalsTable, vegasPreview, vegasTable, scorers, netFor, playsHole, posOf, settingsAt, greenieCarryBefore,
 } from '../lib/round.js';
 import { nassauBets } from '../lib/golf.js';
 import { DOT_KINDS, DOT_PARS, scoreDots } from '../lib/games.js';
@@ -245,8 +245,17 @@ export function SnakePanel({ round, hole, marks }) {
 /** Tap who three-putted, in the order it happened: the last one takes the snake. */
 export function SnakePicker({ round, hole, marks, setMarks }) {
   const putts = marks?.snake || [];
+  // "Four-putts count twice" (house rule): a tapped player can be marked as a four-putt too
+  const ss = settingsAt(round, posOf(round, hole)).snake || {};
+  const can4 = !!ss.fourPutt && (ss.growth || 'flat') !== 'flat';
+  const fours = (marks?.snake4 || []).filter(pid => putts.includes(pid));
   const toggle = pid => {
-    setMarks({ ...marks, snake: putts.includes(pid) ? putts.filter(x => x !== pid) : [...putts, pid] });
+    const out = putts.includes(pid);
+    setMarks({ ...marks, snake: out ? putts.filter(x => x !== pid) : [...putts, pid], ...(out && marks?.snake4 ? { snake4: marks.snake4.filter(x => x !== pid) } : {}) });
+    buzz(8);
+  };
+  const toggle4 = pid => {
+    setMarks({ ...marks, snake4: fours.includes(pid) ? fours.filter(x => x !== pid) : [...fours, pid] });
     buzz(8);
   };
   return (
@@ -257,9 +266,14 @@ export function SnakePicker({ round, hole, marks, setMarks }) {
           {playersOn(round, hole).map(p => {
             const k = putts.indexOf(p.id);
             return (
-              <button key={p.id} aria-pressed={k >= 0} className={`pill-btn sm ${k >= 0 ? 'on' : ''}`} onClick={() => toggle(p.id)}>
-                {k >= 0 && putts.length > 1 && <span aria-hidden="true">{k + 1}.</span>} {firstName(p.name)}{k >= 0 && k === putts.length - 1 ? ' · has it' : ''}
-              </button>
+              <span key={p.id} className="snake4-pair">
+                <button aria-pressed={k >= 0} className={`pill-btn sm ${k >= 0 ? 'on' : ''}`} onClick={() => toggle(p.id)}>
+                  {k >= 0 && putts.length > 1 && <span aria-hidden="true">{k + 1}.</span>} {firstName(p.name)}{k >= 0 && k === putts.length - 1 ? ' · has it' : ''}
+                </button>
+                {can4 && k >= 0 && (
+                  <button aria-pressed={fours.includes(p.id)} aria-label={`${firstName(p.name)} four-putted`} className={`pill-btn sm ${fours.includes(p.id) ? 'on' : ''}`} onClick={() => toggle4(p.id)}>4-putt</button>
+                )}
+              </span>
             );
           })}
         </div>
@@ -326,9 +340,16 @@ const BBB = [
 ];
 
 export function BBBPicker({ round, hole, marks, setMarks }) {
+  // "Bongo is low net" (house rule): the third point comes from the scores, so there's nothing to tap
+  const netBongo = !!settingsAt(round, posOf(round, hole)).bbb?.netBongo;
   return (
     <div className="marks-card">
-      {BBB.map(b => (
+      {netBongo && (
+        <div className="marks-row">
+          <div className="marks-lbl"><strong>Bongo</strong><span>Lowest net score, from the scores. A tie, nobody gets it</span></div>
+        </div>
+      )}
+      {BBB.filter(b => !(netBongo && b.key === 'bongo')).map(b => (
         <div key={b.key} className="marks-row">
           <div className="marks-lbl"><strong>{b.name}</strong><span>{b.help}</span></div>
           <div className="chip-row" style={{ padding: 0 }} role="radiogroup" aria-label={b.name}>
@@ -353,6 +374,8 @@ export function DotsRow({ round, player, hole, marks, setMarks, gross, label = n
   const kinds = Object.keys(DOT_KINDS).filter(k => s.kinds?.[k] && (!DOT_PARS[k] || DOT_PARS[k].includes(hole.par) || (marks[player.id] || []).includes(k)));
   const mine = marks[player.id] || [];
   const auto = s.auto ? scoreDots(gross, hole.par) : 0;
+  // "Greenies carry" (house rule): greenies missed on earlier par 3s ride on this one
+  const riding = greenieCarryBefore(round, hole);
   const toggle = k => {
     const next = mine.includes(k) ? mine.filter(x => x !== k) : [...mine, k];
     const all = { ...marks, [player.id]: next };
@@ -367,7 +390,7 @@ export function DotsRow({ round, player, hole, marks, setMarks, gross, label = n
     <div className="dots-row" role="group" aria-label={label || `${player.name.split(' ')[0]}’s dots`}>
       {auto > 0 && <span className="pill-btn sm auto"><Icon name="bird" fill /> {auto === 2 ? 'Eagle · 2 dots' : 'Birdie'}</span>}
       {kinds.map(k => (
-        <button key={k} className={`pill-btn sm ${mine.includes(k) ? 'on' : ''}`} aria-pressed={mine.includes(k)} title={DOT_KINDS[k].help} onClick={() => toggle(k)}>{DOT_KINDS[k].name}</button>
+        <button key={k} className={`pill-btn sm ${mine.includes(k) ? 'on' : ''}`} aria-pressed={mine.includes(k)} title={DOT_KINDS[k].help} onClick={() => toggle(k)}>{DOT_KINDS[k].name}{k === 'greenie' && riding ? ` ×${riding + 1}` : ''}</button>
       ))}
     </div>
   );

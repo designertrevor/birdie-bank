@@ -1260,6 +1260,7 @@ function WolfPanel({ round, hole, wolf, setWolf }) {
       </div>}
       {setWolf && offerBlind && <p className="wolf-note">Blind wolf: call it before anyone tees off.</p>}
       {carried > 0 && <p className="wolf-note">{carried === 1 ? 'A tied hole is' : `${carried} tied holes are`} riding on this one: it pays {carried + 1}×.</p>}
+      {cfg.lastWolf && round.holes.length === 18 && posOf(round, hole) >= 17 && <p className="wolf-note">Last place is the wolf on the last two holes, to catch up.</p>}
     </div>
   );
 }

@@ -5,10 +5,10 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
-import { createRound, roundResults, wolfFor, wholeRoundOnly, rabbitTable, totalsPots, bankerPress, sidesNets, sides } from './round.js';
+import { createRound, roundResults, wolfFor, wholeRoundOnly, rabbitTable, totalsPots, bankerPress, sidesNets, sides, greenieCarryBefore } from './round.js';
 import { quotaPoints, vegasHole, ninesPoints, settleTotals, snakeHolder } from './games.js';
 import { houseRulesLine } from './house-rules.js';
-import { houseRulesFor } from './agreed.js';
+import { houseRulesFor, agreementItems } from './agreed.js';
 import { stakeSummary } from './stakes.js';
 
 // The game defaults as a new round gets them (store.js can't load outside the browser)
@@ -403,6 +403,17 @@ test('dots greenies carry: a par 3 with no greenie makes the next one worth two'
   assert.deepEqual(d.on, { a: -2, b: 4, c: -2 });
 });
 
+test('greenieCarryBefore: what the play screen shows riding on a par 3', () => {
+  const r = scores(mk('dots', ['a', 'b', 'c'], { holes: 18, set: { greenieCarry: true } }), 11);
+  assert.equal(greenieCarryBefore(r, r.holes[11]), 1);
+  assert.equal(greenieCarryBefore(r, r.holes[2]), 0);
+  assert.equal(greenieCarryBefore(r, r.holes[10]), 0);
+  r.marks = { 3: { a: ['greenie'] } };
+  assert.equal(greenieCarryBefore(r, r.holes[11]), 0);
+  const off = scores(mk('dots', ['a', 'b', 'c'], { holes: 18 }), 11);
+  assert.equal(greenieCarryBefore(off, off.holes[11]), 0);
+});
+
 // ---------------------------------------------------------------------------
 // Rabbit: three rabbits
 
@@ -449,4 +460,12 @@ test('the bet line names each rule that is on', () => {
   assert.equal(houseRulesLine('snake', { ...s.snake, fourPutt: true }), '');
   assert.equal(houseRulesLine('snake', { ...s.snake, fourPutt: true, growth: 'double' }), 'four-putts count twice');
   assert.equal(houseRulesLine('wolf', { ...s.wolf, lastWolf: true }), 'last place is wolf on 17 and 18');
+});
+
+test('the first-tee card lists the new rules that are on, and only those', () => {
+  const r = mk('quota', ['a', 'b'], { holes: 18, set: { minus: true, nassau: true } });
+  const rules = agreementItems(r, {}).filter(i => i.group === 'rules');
+  assert.deepEqual(rules.filter(i => i.on).map(i => i.text), ['Double bogey or worse is −1', 'Front, back and total: a pot each, nines against half quota']);
+  const bet = agreementItems(r, {}).find(i => i.id === 'bet:main');
+  assert.doesNotMatch(bet.text, /front, back/);
 });
