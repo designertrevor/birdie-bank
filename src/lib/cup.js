@@ -514,6 +514,49 @@ export function stakeBalances(cup, winner) {
   return out;
 }
 
+/**
+ * Where each person on the trip's teams sat in the trip's cup rounds shared live (2026-10-04), from
+ * what every phone on the trip has alike (the teams, and each round's matches, its own or from the
+ * server), so the answer is the same on every phone: Map(team id -> Map(round code -> seat id)). A
+ * seat is theirs when it has their id, or else their name when exactly one seat in that round and
+ * exactly one person on the teams go by it. Rounds not shared live (no code) are left out: a
+ * friend's phone never has them.
+ */
+export function stakeSeats(cup, entries) {
+  const out = new Map();
+  if (!cup) return out;
+  const people = [...cup.teams[0], ...cup.teams[1]];
+  const named = new Map();
+  for (const p of people) { const n = lower(p.name); named.set(n, (named.get(n) || 0) + 1); }
+  for (const p of people) out.set(p.id, new Map());
+  for (const e of entries) {
+    if (!isStr(e.key) || e.key.startsWith('L')) continue;
+    for (const p of people) {
+      let seat = e.players.find(x => x.id === p.id)?.id || null;
+      const n = lower(p.name);
+      if (!seat && n && named.get(n) === 1) {
+        const hits = e.players.filter(x => lower(x.name) === n);
+        if (hits.length === 1 && !people.some(q => q.id === hits[0].id)) seat = hits[0].id;
+      }
+      if (seat) out.get(p.id).set(e.key, seat);
+    }
+  }
+  return out;
+}
+
+/**
+ * The round that puts a stake line on the Tab: the first cup round shared live both of its people
+ * sat in, as { code, from, to } (their seats), or null when they never played one together. Only
+ * then can both their phones tell who's who in a payment between them (by those seats), so a line
+ * is on the Tab, or marked paid on the trip, the same way on every phone.
+ */
+export function stakeLink(seats, from, to) {
+  const a = seats.get(from), b = seats.get(to);
+  if (!a || !b) return null;
+  for (const [code, seat] of a) if (b.has(code) && b.get(code) !== seat) return { code, from: seat, to: b.get(code) };
+  return null;
+}
+
 /** The id of a stake payment marked on this phone. */
 export const stakePaymentId = (tripId, key, at) => `cup:${tripId}:${key}:${Number(at || 0).toString(36)}`;
 

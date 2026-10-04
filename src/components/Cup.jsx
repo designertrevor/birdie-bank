@@ -363,10 +363,11 @@ export function CupRoundNote({ cup, round }) {
 // --------------------------- the stake ---------------------------
 
 /**
- * The stake on Settle the trip. Once decided it's trip money (cup-stake.js): the lines this phone
- * can place are in the trip's payments above and on the Tab, so here it just says so. A line with
- * someone it can't place (a teammate from another group) is marked paid here, yours first with
- * your payee's app, and every phone on the trip sees it. So do the marks made before.
+ * The stake on Settle the trip. Once decided it's trip money (cup-stake.js): a line between two
+ * people who played a cup round shared live together is in the trip's payments above and on the
+ * Tab, on every phone, so here it just says so. A line between two who never did is marked paid
+ * here, on every phone alike, yours first with your payee's app, and every phone on the trip sees
+ * it. So do the marks made before.
  */
 export function StakeLines({ st }) {
   const state = useStore();
@@ -390,7 +391,7 @@ export function StakeLines({ st }) {
   return (
     <>
       <div className="sec-label">The cup</div>
-      <p className="field-help pad">{winners} won the cup, so each player on {cup.names[1 - cup.winner]} pays {money(cup.def.stake)} and {winners} split it.{onTab ? ' It’s in the payments above and on the Tab, with the rest of the trip.' : ''}{open.length ? ` ${open.length === 1 ? 'One payment is' : `${open.length} payments are`} with someone this phone hasn’t played with, so ${open.length === 1 ? 'it’s' : 'they’re'} marked paid here.` : ''}</p>
+      <p className="field-help pad">{winners} won the cup, so each player on {cup.names[1 - cup.winner]} pays {money(cup.def.stake)} and {winners} split it.{onTab ? ' It’s in the payments above and on the Tab, with the rest of the trip.' : ''}{open.length ? ` ${open.length === 1 ? 'One payment is' : `${open.length} payments are`} between two people who haven’t played a round together on the trip, so ${open.length === 1 ? 'it’s' : 'they’re'} marked paid here.` : ''}</p>
       {mine.map(l => {
         const iPay = l.fromId === me;
         const otherId = iPay ? l.toId : l.fromId;

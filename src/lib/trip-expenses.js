@@ -223,6 +223,14 @@ function aliasesOf(state, who, codes) {
  * rest of the trip's expenses place them (aliasesOf), else by the id.
  */
 export function personOn(state, p, { who = canonicalOf(state), codes = byCode(state) } = {}) {
+  return placedOn(state, p, { who, codes }) ?? who(p.id);
+}
+
+/**
+ * Who a person in an expense is on this phone when it can tell (personOn): by a seat in a round
+ * it has, or as the trip's expenses place them, else null.
+ */
+export function placedOn(state, p, { who = canonicalOf(state), codes = byCode(state) } = {}) {
   for (const ref of p.refs || []) {
     const seat = seatOn(ref, codes);
     if (seat) return who(seat);
@@ -231,7 +239,7 @@ export function personOn(state, p, { who = canonicalOf(state), codes = byCode(st
     const id = aliasesOf(state, who, codes).get(p.id);
     if (id) return id;
   }
-  return who(p.id);
+  return null;
 }
 
 /**
@@ -267,13 +275,15 @@ export function personFor(state, tripId, id, name = '') {
  * in the payment the way it does in those expenses (a phone that knows you only by a seat in
  * someone else's round reads you by that seat, never by this phone's own id for you).
  */
-function payPerson(state, tripId, id, name, other) {
+function payPerson(state, tripId, id, name, other, also = []) {
   const who = codesWho(state);
   const k = who.who(id), o = who.who(other);
   const base = personFor(state, tripId, k, name);
   const refs = [...base.refs];
   const ids = new Map();
-  for (const e of rawTripExpenses(state, tripId)) {
+  // The trip's expenses, and the decided cup stake's lines (`also`, cup-stake.js: each line's two
+  // people as an expense writes them, with their seats in the trip's cup rounds)
+  for (const e of [...rawTripExpenses(state, tripId), ...also]) {
     if (e.deleted) continue;
     const list = [e.payer, ...e.people];
     const between = list.some(p => personOn(state, p, who) === o);
@@ -463,11 +473,11 @@ export function expensePairDebts(list) {
  * A payment for trip expenses, written on this phone: `from` paid `to` `amount` cents (ids as this
  * phone knows them, with their names). `undoes` takes back someone else's payment.
  */
-export function newPayment(state, { id, tripId, from, to, amount, fromName = '', toName = '', reason = null, undoes = null, now = Date.now() }) {
+export function newPayment(state, { id, tripId, from, to, amount, fromName = '', toName = '', reason = null, undoes = null, now = Date.now(), also = [] }) {
   const who = canonicalOf(state);
   return cleanExpense({
     id, tripId, kind: 'payment', amount: amount / 100, split: 'amounts',
-    payer: payPerson(state, tripId, from, fromName, to), people: [{ ...payPerson(state, tripId, to, toName, from), part: amount / 100 }],
+    payer: payPerson(state, tripId, from, fromName, to, also), people: [{ ...payPerson(state, tripId, to, toName, from, also), part: amount / 100 }],
     by: who(state.me), at: now, updatedAt: now, ...(reason ? { reason } : {}), ...(undoes ? { undoes } : {}),
   });
 }

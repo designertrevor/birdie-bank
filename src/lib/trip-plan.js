@@ -105,6 +105,8 @@ function tripShared(state, tripId, now) {
  * The rest stay with the Tab.
  */
 function plannable(list, rounds, who) {
+  // A stake line marked paid in part stays pair by pair (cup-stake.js `marked`)
+  list = list.filter(x => !x.marked);
   if (!list.length) return [];
   const up = new Map();
   const top = id => { let x = id; while (up.get(x) !== x) x = up.get(x); return x; };

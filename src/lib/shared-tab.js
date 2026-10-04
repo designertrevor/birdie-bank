@@ -17,6 +17,7 @@ import { allTripPays, expensePayId, newPayment } from './trip-expenses.js';
 import { FETCH_DAYS, canonicalOf, cents, codeOf, finishedAt, lockedRounds, nettedId, nettedOn, pairDebt, paidOn, played, sharedRounds } from './pair-debts.js';
 import { isTripPayment } from './trip-pay.js';
 import { planRows } from './trip-plan.js';
+import { stakeRaw } from './cup-stake.js';
 
 export { FETCH_DAYS, canonicalOf, codeOf, nettedId, pairDebt, played, sharedRounds };
 
@@ -305,7 +306,8 @@ export function expensePayments(state, from, to, { amount = null, now = Date.now
     if (!pay) continue;
     const [pf, pt] = pay > 0 ? [F, T] : [T, F];
     // One id for the same payment on both phones, so marking it on each before they sync pays it once
-    const x = newPayment(state, { id: expensePayId(state, tripId, pf, pt, Math.abs(pay)), tripId, from: pf, to: pt, amount: Math.abs(pay), fromName: nameOf(state, pf), toName: nameOf(state, pt), reason, now });
+    // With the cup stake's people as its lines name them (cup-stake.js), so their phones place them by those seats
+    const x = newPayment(state, { id: expensePayId(state, tripId, pf, pt, Math.abs(pay)), tripId, from: pf, to: pt, amount: Math.abs(pay), fromName: nameOf(state, pf), toName: nameOf(state, pt), reason, now, also: stakeRaw(state, tripId, { now }) });
     if (!x) continue;
     expenses.push(x);
     paid += pay;
