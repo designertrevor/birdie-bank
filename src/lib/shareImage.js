@@ -14,7 +14,7 @@ const first = n => (n || '').split(' ')[0];
  * anywhere: the winner, the order and the bets still read, the money does not. A points or reward
  * round is never money, so its points always show, and a reward round says who's buying.
  */
-export function shareCardModel(round, res, { showAmounts: moneyOn = true } = {}) {
+export function shareCardModel(round, res, { showAmounts: moneyOn = true, link = null } = {}) {
   const showAmounts = countsMoney(round) ? moneyOn : true;
   const money = unitFmt(round);
   const reward = rewardOutcome(round, res);
@@ -56,8 +56,20 @@ export function shareCardModel(round, res, { showAmounts: moneyOn = true } = {})
     bets,
     // A reward round's line goes where the money would: "Sam wins lunch. Dave's buying."
     reward: reward && !square ? reward.text : null,
-    footer: countsMoney(round) ? 'Settled with Birdie Bank' : 'Scored with Birdie Bank',
+    // The short link back to the round, when there is one to print
+    footer: link ? String(link).replace(/^https?:\/\//, '').replace(/\/$/, '') : countsMoney(round) ? 'Settled with Birdie Bank' : 'Scored with Birdie Bank',
   };
+}
+
+/**
+ * The image's alt text, from the same model as the image, so an amount hidden on the card is
+ * hidden here too: "Results card: Pebble Beach, Sep 26 · Nassau. Ann +$15. 1. Ann Lee +$15, 2. Bo Diaz."
+ */
+export function resultsAlt(m) {
+  const order = m.standings.map(p => `${p.place}. ${p.name}${p.amount ? ` ${p.amount}` : ''}`).join(', ');
+  const bets = m.bets.filter(b => b.text).map(b => `${b.label} ${b.text}${b.value && b.value !== '–' ? ` ${b.value}` : ''}`).join('; ');
+  return [`Results card: ${[m.course, m.meta].filter(Boolean).join(', ')}`, `${m.headline} ${m.sub}`, m.reward, order, bets ? `${m.betsTitle}: ${bets}` : '']
+    .filter(Boolean).join('. ');
 }
 
 /** A file name for the image: birdie-bank-pebble-beach-2026-09-26.png */
@@ -236,13 +248,18 @@ function draw(ctx, m) {
 }
 
 /** Draw the results card and return it as a PNG blob. */
-export async function renderShareImage(round, res, opts = {}) {
+export function renderShareImage(round, res, opts = {}) {
+  return renderResultsCard(shareCardModel(round, res, opts));
+}
+
+/** Draw a ready results card model (shareCardModel) and return it as a PNG blob. */
+export async function renderResultsCard(model) {
   await fontsReady();
   const canvas = document.createElement('canvas');
   canvas.width = IMAGE_W;
   canvas.height = IMAGE_H;
   const ctx = canvas.getContext('2d');
   if (!ctx) throw new Error('Canvas unavailable');
-  draw(ctx, shareCardModel(round, res, opts));
+  draw(ctx, model);
   return new Promise((resolve, reject) => canvas.toBlob(b => (b ? resolve(b) : reject(new Error('Could not make the image'))), 'image/png'));
 }

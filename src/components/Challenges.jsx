@@ -14,6 +14,9 @@ import {
 import { challengeShareLink, challengesOff, forgetChallenge, makeChallenge, moveChallenge, useChallengesOff } from '../lib/challenge-sync.js';
 import { planShareLink } from '../lib/plan-sync.js';
 import { sendReminder } from '../lib/pay.js';
+import { shareAmountsOn } from '../lib/share.js';
+import { challengeGroupText } from '../lib/share-cards.js';
+import { useShareText } from '../lib/useShare.js';
 import { dayLabel, planPeople } from '../lib/plans.js';
 
 const first = n => String(n || '').trim().split(/\s+/)[0] || 'them';
@@ -39,6 +42,16 @@ function linkFor(state, ch, toSide = null) {
   if (!ch.plan) return challengeShareLink(ch);
   const plan = planOf(state, ch);
   return plan?.code ? planShareLink(plan, ch[toSide || other(sideOf(state, ch) || 'from')].who) : null;
+}
+
+/**
+ * The link for the group: the plan's group link. A challenge's own link answers for one of the two,
+ * so it never goes to the whole group; one for the next round together goes with no link.
+ */
+function groupLinkFor(state, ch) {
+  if (!ch?.plan) return null;
+  const plan = planOf(state, ch);
+  return plan?.code ? planShareLink(plan) : null;
 }
 
 /**
@@ -403,6 +416,7 @@ export function PersonChallenges({ id, name, list, plans = [] }) {
 export function ChallengeExtras({ ch, onGone }) {
   const state = useStore();
   const send = useSend();
+  const shareText = useShareText();
   const side = sideOf(state, ch);
   const s = challengeState(ch);
   const life = challengeLife(state, ch);
@@ -421,6 +435,10 @@ export function ChallengeExtras({ ch, onGone }) {
         const l = linkFor(state, ch, x);
         return l ? <button key={x} className="text-link" onClick={() => send(challengeSetUpText(ch, l, x), `Copied. Paste it to ${first(ch[x].name)}`)}><Icon name="paper-plane-right" /> Send it to {first(ch[x].name)}</button> : null;
       })}
+      {/* For the group text: who challenged whom, with the stake only when Show amounts is on */}
+      {(live || s.status === 'on') && s.status !== 'declined' && s.status !== 'off' && (
+        <button className="text-link" onClick={() => shareText(challengeGroupText(ch, { showAmounts: shareAmountsOn(state) }), { url: groupLinkFor(state, ch), what: 'Challenge' })}><Icon name="share-network" /> Share with the group</button>
+      )}
       {live && side && canMove(ch, side, 'withdraw') && <button className="danger-link" onClick={moves.withdraw}><Icon name="x-circle" /> Call it off</button>}
       {live && setter && !side && canMove(ch, 'keeper', 'withdraw') && <button className="danger-link" onClick={moves.withdraw}><Icon name="x-circle" /> Call it off</button>}
       {/* A planned round's challenge comes back with its plan, so it goes when the plan does */}

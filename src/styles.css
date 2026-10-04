@@ -2447,3 +2447,7 @@ button.ch-main:active { transform: scale(.98); }
 .tb-done { margin-top: 2px; }
 .tb-booked { display: flex; align-items: flex-start; gap: 10px; }
 .tb-booked > i { font-size: 22px; color: var(--win); margin-top: 2px; }
+
+/* ---------- Easy sharing: one share screen for every card (o8 sharing) ---------- */
+/* Show amounts held back because someone on the card keeps their money private */
+.toggle-sub.share-held { color: var(--ink); font-weight: 600; }

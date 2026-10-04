@@ -58,6 +58,7 @@ const PlanLink = screen(plan, 'PlanLink');
 const Preview = screen(() => import('./screens/Preview.jsx'));
 const challenge = () => import('./screens/Challenge.jsx');
 const Challenge = screen(challenge);
+const Share = screen(() => import('./screens/Share.jsx'));
 const ChallengeLink = screen(challenge, 'ChallengeLink');
 const Paywall = screen(() => import('./screens/Paywall.jsx'));
 const Season = screen(() => import('./screens/Season.jsx'));
@@ -112,7 +113,7 @@ const SCREENS = {
   plan: Plan, rollCall: RollCall, planLink: PlanLink, preview: Preview, paywall: Paywall, season: Season,
   challenge: Challenge, challengeLink: ChallengeLink,
   joinInvite: JoinInviteScreen, lately: Lately, trip: Trip, tripSettle: TripSettle,
-  profile: Profile, stats: Stats,
+  profile: Profile, stats: Stats, share: Share,
 };
 // Settings lives behind the avatar on Up next, so it's a pushed screen rather than a tab
 const TABS = { upnext: UpNext, ledger: Ledger, history: History, people: People };

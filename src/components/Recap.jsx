@@ -1,10 +1,11 @@
 // The day-after recap card and the callouts card on Up next (see lib/recap.js and lib/callouts.js).
 import { Icon, useUI } from './ui.jsx';
 import { Avatar } from './Pay.jsx';
-import { update } from '../lib/store.js';
+import { update, useStore } from '../lib/store.js';
 import { useNav } from '../lib/nav.js';
-import { sendReminder } from '../lib/pay.js';
+import { useShareText } from '../lib/useShare.js';
 import { useGroupAvatars } from '../lib/useAvatars.js';
+import { roundLink } from '../lib/share.js';
 
 const STATUS_WORD = { square: 'Square', owes: 'Owes', waiting: 'Waiting', carried: 'Carried' };
 const MOMENT_ICON = { won: 'trophy', final: 'trophy', bigskin: 'fire', skin: 'coins', lonewolf: 'paw-print', blindwolf: 'paw-print', wolfdown: 'paw-print', hammer: 'hammer', hammerback: 'hammer', swing: 'arrows-down-up' };
@@ -76,18 +77,24 @@ export function RecapCard({ recap }) {
       <div className="recap-actions">
         <button className="recap-btn" onClick={open}><Icon name="flag-pennant" /> See the round</button>
         {paid && !paid.allSquare && <button className="recap-btn" onClick={() => nav.setTab('ledger')}><Icon name="hand-coins" /> Open the Tab</button>}
+        <button className="recap-btn" onClick={() => nav.push('share', { kind: 'recap', id: recap.id })}><Icon name="share-network" /> Share</button>
       </div>
     </section>
   );
 }
 
-/** Callouts: a few lines for the group text, each one tap to post. */
+/**
+ * Callouts: a few lines for the group text, each one tap to post. A line about a round that was
+ * shared live links back to it; the rest go as they are (a bare link to the app adds nothing).
+ */
 export function CalloutsCard({ items }) {
   const { showToast } = useUI();
-  const share = async text => {
-    const how = await sendReminder(text);
-    if (how === 'copied') showToast('Copied. Paste it in the group text');
-    else if (how === 'failed') showToast('Couldn’t open sharing on this device');
+  const rounds = useStore(s => s.rounds);
+  const shareText = useShareText();
+  const share = c => {
+    const r = c.roundId ? rounds[c.roundId] : null;
+    const code = r?.shareCode || r?.shared?.code;
+    return shareText(c.text, { url: code ? roundLink(r) : null, copied: 'Copied. Paste it in the group text' });
   };
   const off = () => {
     update(s => { s.settings.callouts = false; });
@@ -98,7 +105,7 @@ export function CalloutsCard({ items }) {
       <ul className="callout-list">
         {items.map(c => (
           <li key={c.id}>
-            <button className="callout-row" onClick={() => share(c.text)} aria-label={`Share: ${c.text}`}>
+            <button className="callout-row" onClick={() => share(c)} aria-label={`Share: ${c.text}`}>
               <span className="callout-text">{c.text}</span>
               <span className="callout-go" aria-hidden="true"><Icon name="share-network" /></span>
             </button>

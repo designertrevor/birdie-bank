@@ -1,7 +1,7 @@
 // The end of a round in three beats: the money reveal, settling up, and a results card to share.
 import { useEffect, useRef, useState } from 'react';
-import { Header, Icon, Toggle, useUI } from './ui.jsx';
-import { getState, update, useStore } from '../lib/store.js';
+import { Header, Icon, useUI } from './ui.jsx';
+import { getState, useStore } from '../lib/store.js';
 import { roundResults } from '../lib/round.js';
 import { money } from '../lib/golf.js';
 import { payInfoFor } from '../lib/pay.js';
@@ -9,14 +9,16 @@ import { PayButton, RequestButton } from './Pay.jsx';
 import { AvatarArt } from './Avatar.jsx';
 import { useGroupAvatars } from '../lib/useAvatars.js';
 import { buzz, confettiFrom } from '../lib/delight.js';
-import { gameLabel, meFor, placeOf, roundDate, roundPlayerName, shareRound } from '../lib/format.js';
+import { gameLabel, meFor, placeOf, roundDate, roundPlayerName, shareText } from '../lib/format.js';
 import { gamesLine } from '../lib/side-games.js';
 import { markRoundAsked, roundAsked, submitReaction } from '../lib/feedback.js';
 import { codeOf } from '../lib/shared-tab.js';
 import { markTransfer, undoPayments, useTabSync } from '../lib/tab-sync.js';
 import { useNav } from '../lib/nav.js';
 import { revealSteps, revealTiming } from '../lib/reveal.js';
-import { IMAGE_H, IMAGE_W, renderShareImage, shareImageName } from '../lib/shareImage.js';
+import { renderResultsCard, resultsAlt, shareCardModel, shareImageName } from '../lib/shareImage.js';
+import { roundLink } from '../lib/share.js';
+import { ShareView } from './ShareSheet.jsx';
 import { countsMoney, playForOf, rewardOutcome, unitFmt } from '../lib/play-for.js';
 import { RoundWhereFrom } from './WhereFrom.jsx';
 
@@ -315,90 +317,44 @@ export function SettleUp({ round, res, onBack, onNext }) {
 }
 
 /**
- * Beat 3: a results image sized for stories and the group chat. The PNG is drawn ahead of time
- * so the share sheet opens straight from the tap (iOS drops the share if we make it wait).
+ * Beat 3: a results image sized for stories and the group chat (ShareSheet.jsx ShareView): the PNG
+ * is drawn ahead of time so the share sheet opens straight from the tap, amounts start hidden and
+ * your choice is remembered, and nobody's money shows if they keep it private (share.js).
  */
 export function ShareCard({ round, res, onBack, onDone, doneLabel = 'Done' }) {
-  const { showToast } = useUI();
-  // Off by default so nobody posts the money by accident; your choice is remembered
-  const moneyOn = useStore(s => !!s.settings.shareAmounts);
-  // Points are bragging rights, not money, so a points or reward round always shows them
-  const isMoney = countsMoney(round);
-  const showAmounts = isMoney ? moneyOn : true;
+  const link = roundLink(round);
+  const make = show => {
+    const model = shareCardModel(round, roundResults(round), { showAmounts: show, link });
+    return { model, alt: resultsAlt(model), text: shareText(round, res, { amounts: show }) };
+  };
+  return (
+    <ShareView title="Share" onBack={onBack} onDone={onDone} doneLabel={doneLabel} make={make} render={renderResultsCard}
+      fileName={shareImageName(round)} link={link} what="Results" money={countsMoney(round)} people={round.players}
+      onText="Dollar figures are on the image" offText="Only the order and the bets, no money"
+      standIn={(m, show) => <ResultsStandIn round={round} res={res} show={show} />}>
+      <HowWasIt round={round} />
+    </ShareView>
+  );
+}
+
+/** The results card in plain boxes while the image is being drawn. */
+function ResultsStandIn({ round, res, show }) {
   const fmt = unitFmt(round);
   const reward = rewardOutcome(round, res);
-  const setShowAmounts = on => update(s => { s.settings.shareAmounts = on; });
-  const [img, setImg] = useState(null); // { blob, url, amounts }
   // Everyone tied for the top, so a shared win isn't credited to whoever sorted first
   const tops = res.standings.filter(p => p.amount > 0 && p.amount === res.standings[0].amount);
-
-  useEffect(() => {
-    let alive = true;
-    renderShareImage(round, roundResults(round), { showAmounts })
-      .then(blob => { if (alive) setImg({ blob, url: URL.createObjectURL(blob), amounts: showAmounts }); })
-      .catch(() => { if (alive) setImg(null); });
-    return () => { alive = false; };
-  }, [round, showAmounts]);
-  // Free each image once a newer one replaces it
-  useEffect(() => () => { if (img) URL.revokeObjectURL(img.url); }, [img]);
-
-  const ready = img && img.amounts === showAmounts;
-  const fileName = shareImageName(round);
-  // Phones get the system share sheet (Messages, Instagram, Save Image), never a download page.
-  // Only a device that can't share files (most desktops) downloads the PNG instead.
-  const shareImage = async () => {
-    if (!ready || typeof File === 'undefined') return;
-    const file = new File([img.blob], fileName, { type: 'image/png' });
-    if (navigator.canShare?.({ files: [file] })) {
-      try { await navigator.share({ files: [file] }); } catch { /* closed the sheet */ }
-      return;
-    }
-    const a = document.createElement('a');
-    a.href = img.url;
-    a.download = fileName;
-    document.body.appendChild(a);
-    a.click();
-    a.remove();
-    showToast('Image saved to your downloads');
-  };
-  const shareTextOnly = () => shareRound(round, res, showToast, { amounts: showAmounts });
-
   return (
-    <>
-      <Header title="Share" onBack={onBack} />
-      <div className="scroll">
-        {img ? (
-          <img className="share-img" src={img.url} width={IMAGE_W} height={IMAGE_H}
-            alt={`Results card: ${round.course.name}, ${gameLabel(round)}. ${res.standings.map((p, i) => `${placeOf(res.standings, i)}. ${p.name}${showAmounts ? ` ${fmt(p.amount, { sign: true })}` : ''}`).join(', ')}${reward ? `. ${reward.text}` : ''}`} />
-        ) : (
-          <div className="share-card">
-            <div className="sc-brand">Birdie Bank</div>
-            <div className="sc-meta">{round.course.name} · {roundDate(round)} · {gameLabel(round)}</div>
-            <div className="sc-big d">{tops.length ? <>{tops.map(p => p.name.split(' ')[0]).join(' & ')}{showAmounts && <><br />{fmt(tops[0].amount, { sign: true })}</>}</> : 'All square'}</div>
-            {reward && <div className="sc-meta">{reward.text}</div>}
-            <div className="sc-list">
-              {res.standings.map(p => (
-                <div key={p.id} className="sc-line"><span>{p.name}</span>{showAmounts && <span>{fmt(p.amount, { sign: true })}</span>}</div>
-              ))}
-            </div>
-          </div>
-        )}
-        {isMoney && (
-          <div className="toggle-row share-toggle">
-            <div><div className="toggle-lbl">Show amounts</div><div className="toggle-sub">{showAmounts ? 'Dollar figures are on the image' : 'Only the order and the bets, no money'}</div></div>
-            <Toggle on={showAmounts} onChange={setShowAmounts} label="Show amounts" />
-          </div>
-        )}
-        <HowWasIt round={round} />
+    <div className="share-card">
+      <div className="sc-brand">Birdie Bank</div>
+      <div className="sc-meta">{round.course.name} · {roundDate(round)} · {gameLabel(round)}</div>
+      <div className="sc-big d">{tops.length ? <>{tops.map(p => p.name.split(' ')[0]).join(' & ')}{show && <><br />{fmt(tops[0].amount, { sign: true })}</>}</> : 'All square'}</div>
+      {reward && <div className="sc-meta">{reward.text}</div>}
+      <div className="sc-list">
+        {res.standings.map(p => (
+          <div key={p.id} className="sc-line"><span>{p.name}</span>{show && <span>{fmt(p.amount, { sign: true })}</span>}</div>
+        ))}
       </div>
-      <div className="cta-wrap">
-        <button className="full-btn" onClick={shareImage} disabled={!ready}><Icon name="share-network" /> {ready ? 'Share image' : 'Making the image…'}</button>
-        <div className="cta-row">
-          <button className="full-btn outline" onClick={shareTextOnly}><Icon name="text-aa" /> Share as text</button>
-          <button className="full-btn outline" onClick={onDone}>{doneLabel}</button>
-        </div>
-      </div>
-    </>
+    </div>
   );
 }
 
