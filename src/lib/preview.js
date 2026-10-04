@@ -4,13 +4,15 @@
 // ("Mike is 3 and 1 against Dave this season"). Pure functions of plain data, unit tested.
 //
 // Strokes are worked out exactly as the roll call will start the round (plans.js planStart, then
-// createRound): the same tee, the same Strokes given %, strokes off the low player, ranked over the
-// holes being played. So what the preview says is what the dots on the card will say.
+// createRound): the same tees and handicap edits from the plan's setup, the same Strokes given %,
+// strokes off the low player, ranked over the holes being played. So what the preview says is what the dots on the card will say.
 // Records use the same round-by-round head to head as the rivalry card and the Players list
 // (roundResults pairs, people-links for who is the same person). Points and reward rounds count in
 // the record, never in dollars; dollars come only from rounds that put money on the Tab.
 import { GAMES, SIDE_GAMES, createRound, oneBall, popsFor, roundResults } from './round.js';
-import { defaultTee, findCourse } from './courses.js';
+import { findCourse } from './courses.js';
+import { applySetup } from './plan-setup.js';
+import { linksOf } from './people-links.js';
 import { betLabel, betUnitLabel, daysUntil, dayLabel, planChoice, planPeople, planRules, planSides, timeLabel } from './plans.js';
 import { sideBetLine } from './stakes.js';
 import { countsMoney, inUnits, onTab, playForLine, playForOf, tabResults } from './play-for.js';
@@ -165,17 +167,31 @@ export function previewStrokes(state, plan, { settings = state?.settings } = {})
   if (!course?.holes?.length) return { ...base, status: 'noCourse' };
   if (people.length < 2) return { ...base, status: 'few' };
   const holesCount = holesFor(game, plan);
-  const tee = defaultTee(course)?.name ?? null;
+  const nine = plan.nine || 'front';
   // The same % the roll call starts with: a usual's own, else the house rules' (planStart)
   const rules = planRules(plan, settings);
   const pct = plan.hcPct ?? rules.hcPct ?? 100;
-  const players = people.map(p => ({ id: p.player?.id ?? p.who, name: p.name, index: p.player?.index ?? null, tee }));
-  const round = createRound({ id: 'preview', game, course, holesCount, nine: plan.nine || 'front', startHole: null, players, settings: {}, hcPct: pct, useHandicaps: true });
-  const rows = round.players.map((rp, i) => ({
-    who: people[i].who, name: people[i].name, me: people[i].me,
-    index: rp.index, noIndex: rp.index == null, plays: rp.plays,
-    strokes: round.holes.map(h => ({ no: h.no, n: popsFor(round, rp, h) })).filter(x => x.n > 0),
-  }));
+  const byId = new Map(people.map(p => [p.player?.id ?? p.who, p]));
+  const saved = [...byId].map(([id, p]) => ({ id, name: p.name, index: p.player?.index ?? null }));
+  // The setup made before it was scheduled (plan-setup.js), laid over who's in as planStart does:
+  // each player's tee, handicap edits and the starting hole. It stays on the organizer's phone, so
+  // a friend's plan has none and everyone plays the course's usual tee
+  let links = null;
+  const personOf = pid => (links ??= linksOf(state)).personOf(pid);
+  const built = applySetup(plan.setup, {
+    game, course, holesCount, nine, players: saved,
+    sameAs: (a, b) => (a === plan.setup?.me && b === state?.me) || personOf(a) === personOf(b),
+  });
+  const round = createRound({ id: 'preview', game, course, holesCount, nine, startHole: built.startHole, players: built.players, settings: {}, hcPct: pct, useHandicaps: true });
+  const rows = round.players.map(rp => {
+    const p = byId.get(rp.id);
+    return {
+      who: p.who, name: p.name, me: p.me,
+      // A handicap edit from setup counts as a handicap: only someone with neither plays off 0
+      index: rp.index, noIndex: rp.index == null && rp.courseHcOverride == null, plays: rp.plays,
+      strokes: round.holes.map(h => ({ no: h.no, n: popsFor(round, rp, h) })).filter(x => x.n > 0),
+    };
+  });
   rows.sort((a, b) => b.plays - a.plays);
   // The side games the round starts with, as planStart picks them (only those with house rules)
   const sides = planSides(plan, game).filter(k => rules[k]);

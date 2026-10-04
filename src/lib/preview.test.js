@@ -7,6 +7,7 @@ import {
 import { newPlan, planStart } from './plans.js';
 import { createRound, popsFor } from './round.js';
 import { headToHeadSummary } from './ledger.js';
+import { setupForPlan } from './plan-setup.js';
 
 const SETTINGS = {
   hcPct: 100,
@@ -421,4 +422,39 @@ test('records carry the saved players\' ids for their avatars', () => {
   match(s, 'mike', 'dave', 'mike');
   const r = previewRecords(s, allIn(plan()), { now: NOW })[0];
   assert.deepEqual([r.aId, r.bId], ['mike', 'dave']);
+});
+
+test('strokes: a plan with a setup gives the tees, handicap edits and starting hole the roll call will', () => {
+  // Two tees: White plays shorter, so a course handicap there is lower
+  const course = { ...COURSE, tees: [{ name: 'Blue', rating: 72, slope: 113 }, { name: 'White', rating: 69, slope: 113 }] };
+  const s = { ...baseState(), customCourses: { c1: course } };
+  const p = allIn(plan());
+  p.course = course;
+  // Built before it was scheduled: Dave on the White tee, a handicap edit for Mike, a start on 10
+  p.setup = setupForPlan({ game: 'skins', courseId: 'c1', holesCount: 18, me: 'me', order: ['me', 'mike', 'dave'], tees: { dave: 'White' }, hcOverride: { mike: 12 }, startHole: 10 });
+  const st = previewStrokes(s, p);
+  const setup = planStart(s, p, ['host', 'mike', 'dave'], { course });
+  const round = createRound({ id: 'x', game: setup.game, course, holesCount: setup.holesCount, nine: setup.nine, startHole: setup.startHole, players: setup.players, settings: setup.settings, hcPct: setup.hcPct, useHandicaps: true });
+  assert.equal(setup.startHole, 10);
+  assert.deepEqual(st.holes.map(h => h.no), round.holes.map(h => h.no));
+  assert.equal(st.holes[0].no, 10);
+  for (const rp of round.players) {
+    const row = st.rows.find(r => r.name === rp.name.split(' ')[0]);
+    assert.equal(row.plays, rp.plays, rp.name);
+    assert.deepEqual(row.strokes.map(x => x.no).sort((a, b) => a - b), round.holes.filter(h => popsFor(round, rp, h) > 0).map(h => h.no).sort((a, b) => a - b));
+  }
+  // 12 as edited off Trevor's 2 is 10; Dave's 20 from the White tee is 17, so 15
+  assert.deepEqual(st.rows.map(r => [r.name, r.plays]), [['Dave', 15], ['Mike', 10], ['Trevor', 0]]);
+  // Without the setup it is the plain preview: everyone on Blue, Mike off his index
+  delete p.setup;
+  assert.deepEqual(previewStrokes(s, p).rows.map(r => [r.name, r.plays]), [['Dave', 18], ['Mike', 7], ['Trevor', 0]]);
+});
+
+test('strokes: a handicap edit counts as a handicap, so that player is not told they play off 0', () => {
+  const s = baseState();
+  const p = say(say(plan(), 'mike', 'in'), 'sam', 'in');
+  p.setup = setupForPlan({ game: 'skins', courseId: 'c1', holesCount: 18, me: 'me', order: ['me', 'mike', 'sam'], hcOverride: { sam: 14 } });
+  const sam = previewStrokes(s, p).rows.find(r => r.name === 'Sam');
+  assert.equal(sam.noIndex, false);
+  assert.equal(sam.plays, 12);
 });
