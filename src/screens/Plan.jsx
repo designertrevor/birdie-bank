@@ -161,10 +161,10 @@ function PlanBody({ plan, standalone = false, onSkip }) {
           )}
         </div>
 
-        {planned && !standalone && (
+        {planned && !standalone && (days ?? 0) >= 0 && (
           <button className="uc-preview pv-entry" onClick={() => nav.push('preview', { id: plan.id, fromPlan: true })}>
             <Icon name="binoculars" fill />
-            <span className="row-main"><b>{weekdayOf(plan) ? `${weekdayOf(plan)} preview` : 'The preview'}</b>{toGoLabel(plan) ? <span className="uc-pv-sub"> · {toGoLabel(plan)}</span> : null}<span className="uc-pv-sub block">Who gets strokes where, head to head, and a card for the group text</span></span>
+            <span className="row-main"><b>{weekdayOf(plan) ? `${weekdayOf(plan)} preview` : 'The preview'}</b>{toGoLabel(plan) ? <span className="uc-pv-sub"> · {toGoLabel(plan)}</span> : null}<span className="uc-pv-sub uc-pv-line">Who gets strokes where, head to head, and a card for the group text</span></span>
             <Icon name="caret-right" />
           </button>
         )}

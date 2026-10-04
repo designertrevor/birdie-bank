@@ -8,8 +8,8 @@ import { Avatar } from '../components/Pay.jsx';
 import { useStore } from '../lib/store.js';
 import { useNav } from '../lib/nav.js';
 import { sendReminder } from '../lib/pay.js';
-import { planPreview, previewImageName, previewText, recordSentence, strokesLine } from '../lib/preview.js';
-import { renderPreviewImage } from '../lib/preview-image.js';
+import { planPreview, previewCardModel, previewImageName, previewText, recordSentence, strokesLine } from '../lib/preview.js';
+import { renderPreviewCard } from '../lib/preview-image.js';
 import { IMAGE_H, IMAGE_W } from '../lib/shareImage.js';
 import { planShareLink, usePlanLive } from '../lib/plan-sync.js';
 import { pctWords } from '../lib/allowances.js';
@@ -174,7 +174,7 @@ function Records({ pv }) {
     <div className="who-list pv-recs">
       {pv.records.map(r => (
         <div key={`${r.a}|${r.b}`} className="who-row">
-          <span className="pv-pair" aria-hidden="true"><Avatar id={r.a} name={r.aName} /><Avatar id={r.b} name={r.bName} /></span>
+          <span className="pv-pair" aria-hidden="true"><Avatar id={r.aId} name={r.aName} /><Avatar id={r.bId} name={r.bName} /></span>
           <div className="row-main">
             <div className="set-name">{recordSentence(r.rec, r.aName, r.bName, { scope: r.scope, aIsYou: r.aMe, bIsYou: r.bMe })}</div>
             <div className="set-sub">{r.rec.rounds} round{r.rec.rounds === 1 ? '' : 's'} together{r.scope === 'season' ? ' this season' : ''}</div>
@@ -194,17 +194,20 @@ function PreviewShare({ plan, pv, onBack }) {
   // Off every time it opens, so nobody posts the bets by accident
   const [moneyOn, setMoneyOn] = useState(false);
   const showAmounts = pv.money ? moneyOn : true;
-  const [img, setImg] = useState(null); // { blob, url, amounts }
+  const [img, setImg] = useState(null); // { blob, url, key }
+  // The preview is worked out again each minute and on every answer, so the image is drawn again
+  // only when what it says changes (not every minute while the sheet sits open)
+  const cardKey = useMemo(() => JSON.stringify(previewCardModel(pv, { showAmounts })), [pv, showAmounts]);
   useEffect(() => {
     let alive = true;
-    renderPreviewImage(pv, { showAmounts })
-      .then(blob => { if (alive) setImg({ blob, url: URL.createObjectURL(blob), amounts: showAmounts }); })
+    renderPreviewCard(JSON.parse(cardKey))
+      .then(blob => { if (alive) setImg({ blob, url: URL.createObjectURL(blob), key: cardKey }); })
       .catch(() => { if (alive) setImg(null); });
     return () => { alive = false; };
-  }, [pv, showAmounts]);
+  }, [cardKey]);
   useEffect(() => () => { if (img) URL.revokeObjectURL(img.url); }, [img]);
 
-  const ready = img && img.amounts === showAmounts;
+  const ready = img && img.key === cardKey;
   const fileName = previewImageName(plan);
   const shareImage = async () => {
     if (!ready || typeof File === 'undefined') return;

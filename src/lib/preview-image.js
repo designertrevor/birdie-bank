@@ -147,13 +147,18 @@ function draw(ctx, m) {
 }
 
 /** Draw the preview card for a plan's preview (planPreview) and return it as a PNG blob. */
-export async function renderPreviewImage(preview, opts = {}) {
+export function renderPreviewImage(preview, opts = {}) {
+  return renderPreviewCard(previewCardModel(preview, opts));
+}
+
+/** Draw a ready card model (previewCardModel) and return it as a PNG blob. */
+export async function renderPreviewCard(model) {
   await fontsReady();
   const canvas = document.createElement('canvas');
   canvas.width = IMAGE_W;
   canvas.height = IMAGE_H;
   const ctx = canvas.getContext('2d');
   if (!ctx) throw new Error('Canvas unavailable');
-  draw(ctx, previewCardModel(preview, opts));
+  draw(ctx, model);
   return new Promise((resolve, reject) => canvas.toBlob(b => (b ? resolve(b) : reject(new Error('Could not make the image'))), 'image/png'));
 }

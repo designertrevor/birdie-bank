@@ -13,7 +13,7 @@ import { AvatarButton, BottomNav } from '../nav.jsx';
 import { useNav } from '../lib/nav.js';
 import { JoinSheet } from '../components/Live.jsx';
 import { syncConfigured } from '../lib/sync.js';
-import { RSVP_LABEL, countsLine, planChoice, planCounts, upcomingPlans, whenLabel } from '../lib/plans.js';
+import { RSVP_LABEL, countsLine, daysUntil, planChoice, planCounts, upcomingPlans, whenLabel } from '../lib/plans.js';
 import { refreshPlans } from '../lib/plan-sync.js';
 import { countdownLine, weekdayOf } from '../lib/preview.js';
 import { refreshTab } from '../lib/tab-sync.js';
@@ -138,7 +138,8 @@ function UpcomingCard({ plan }) {
   const mine = plan.answers?.[me]?.status;
   const off = plan.status === 'off' || (plan.gone && plan.status !== 'started'); // a started round goes on either way
   const started = plan.status === 'started' && !off;
-  const ahead = !off && !started;
+  // Still to come: a plan from yesterday that never started has nothing left to count down to
+  const ahead = !off && !started && (daysUntil(plan.date) ?? 0) >= 0;
   const card = (
     <button className={`upcoming-card ${off ? 'off' : ''} ${ahead ? 'has-preview' : ''}`} onClick={() => nav.push('plan', { id: plan.id })}>
       <div className="row-main">

@@ -18,11 +18,12 @@ import { canonicalOf } from './pair-debts.js';
 import { keptId } from './format.js';
 import { roundTime } from './history.js';
 import { money } from './golf.js';
-import { HALF_STROKE_GAMES, STROKE_SIDE_GAMES, pctWords } from './allowances.js';
+import { STROKE_SIDE_GAMES, halfStrokesOffered, pctWords } from './allowances.js';
 
 const first = name => String(name || '').trim().split(/\s+/)[0];
 const listNames = n => (n.length < 2 ? n.join('') : `${n.slice(0, -1).join(', ')} and ${n.at(-1)}`);
 const c = v => Math.round(v * 100) / 100 || 0;
+const validPct = n => typeof n === 'number' && n > 0 && n <= 100;
 const DAYS = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
 /** Games scored without handicaps at all, so nobody gets strokes. */
 const NO_STROKES = ['bbb'];
@@ -92,16 +93,23 @@ export function countdownLine(plan, now = new Date()) {
 
 /**
  * The saved player on this phone a person on the plan stands for, or null. You are your own
- * player card; the organizer's phone knows its invited friends by id; anyone else is found by
- * name: the same full name, or else the only saved player with that first name.
+ * player card. On the organizer's phone it is exactly the player the roll call will start the
+ * round with (planStart): an invited friend by id, anyone from the group link by the same full
+ * name, and nobody otherwise (the roll call saves them new, with no handicap). On a friend's phone
+ * the plan's ids are the organizer's, so people are found by name: the same full name, or else
+ * the only saved player with that first name.
  */
 export function savedPlayerFor(state, plan, p) {
   const players = state?.players || {};
   const isMe = plan?.host ? p.who === plan.hostWho : p.who === plan?.localMe;
   if (isMe) return players[state.me] || null;
   const direct = players[p.who];
-  if (direct) return players[keptId(state, p.who)] || direct;
   const name = String(p.name || '').trim().toLowerCase();
+  if (plan?.host) {
+    if (direct) return direct;
+    return name ? Object.values(players).find(x => String(x?.name || '').trim().toLowerCase() === name) || null : null;
+  }
+  if (direct) return players[keptId(state, p.who)] || direct;
   if (!name) return null;
   const pool = Object.values(players).filter(x => x && x.id !== state.me && !x.mergedInto);
   const exact = pool.find(x => String(x.name || '').trim().toLowerCase() === name);
@@ -158,8 +166,9 @@ export function previewStrokes(state, plan, { settings = state?.settings } = {})
   if (people.length < 2) return { ...base, status: 'few' };
   const holesCount = holesFor(game, plan);
   const tee = defaultTee(course)?.name ?? null;
-  // The same % the roll call starts with: a usual's own, else this phone's
-  const pct = plan.hcPct ?? settings?.hcPct ?? 100;
+  // The same % the roll call starts with: a usual's own, else the house rules' (planStart)
+  const rules = planRules(plan, settings);
+  const pct = plan.hcPct ?? rules.hcPct ?? 100;
   const players = people.map(p => ({ id: p.player?.id ?? p.who, name: p.name, index: p.player?.index ?? null, tee }));
   const round = createRound({ id: 'preview', game, course, holesCount, nine: plan.nine || 'front', startHole: null, players, settings: {}, hcPct: pct, useHandicaps: true });
   const rows = round.players.map((rp, i) => ({
@@ -168,10 +177,11 @@ export function previewStrokes(state, plan, { settings = state?.settings } = {})
     strokes: round.holes.map(h => ({ no: h.no, n: popsFor(round, rp, h) })).filter(x => x.n > 0),
   }));
   rows.sort((a, b) => b.plays - a.plays);
-  const sides = planSides(plan, game);
-  const half = !!plan.halfStrokes && (HALF_STROKE_GAMES.includes(game) || sides.some(k => HALF_STROKE_GAMES.includes(k)));
+  // The side games the round starts with, as planStart picks them (only those with house rules)
+  const sides = planSides(plan, game).filter(k => rules[k]);
+  const half = !!plan.halfStrokes && halfStrokesOffered(game, sides.map(k => ({ game: k })));
   const notes = sides
-    .filter(k => STROKE_SIDE_GAMES.includes(k) && typeof plan.sidePcts?.[k] === 'number' && plan.sidePcts[k] !== pct)
+    .filter(k => STROKE_SIDE_GAMES.includes(k) && validPct(plan.sidePcts?.[k]) && plan.sidePcts[k] !== pct)
     .map(k => `${SIDE_GAMES[k].label} plays off ${pctWords(plan.sidePcts[k])}`);
   return {
     status: plan.useHc === false ? 'off' : 'on',
@@ -284,7 +294,8 @@ export function recordSentence(rec, nameA, nameB, { scope = null, amounts = fals
 
 /**
  * The records between the people who are in, most rounds together first:
- * [{ a, b, aName, bName, aMe, bMe, scope: 'season' | 'all', rec }]. This season's record when
+ * [{ a, b, aId, bId, aName, bName, aMe, bMe, scope: 'season' | 'all', rec }] (a and b are the plan's
+ * ids, aId and bId the saved players, for their avatars). This season's record when
  * they've played this season, else all time. Pairs that never played together are left out.
  */
 export function previewRecords(state, plan, { now = new Date() } = {}) {
@@ -301,7 +312,7 @@ export function previewRecords(state, plan, { now = new Date() } = {}) {
     // Said from the side that leads, so the sentence reads "Mike is 3 and 1 against Dave"
     const flip = rec.lost > rec.won || (rec.won === rec.lost && pb.me && !pa.me);
     const [x, y, rx] = flip ? [pb, pa, { ...rec, won: rec.lost, lost: rec.won, net: -rec.net || 0 }] : [pa, pb, rec];
-    out.push({ a: x.who, b: y.who, aName: x.name, bName: y.name, aMe: x.me, bMe: y.me, scope, rec: rx });
+    out.push({ a: x.who, b: y.who, aId: x.player.id, bId: y.player.id, aName: x.name, bName: y.name, aMe: x.me, bMe: y.me, scope, rec: rx });
   }
   out.sort((p, q) => q.rec.rounds - p.rec.rounds || Math.abs(q.rec.won - q.rec.lost) - Math.abs(p.rec.won - p.rec.lost) || p.aName.localeCompare(q.aName));
   return out;
@@ -322,7 +333,8 @@ export function planPreview(state, plan, { now = new Date(), settings = state?.s
   const rules = planRules(plan, settings);
   const people = planPeople(plan);
   const isMoney = playForOf(plan).kind === 'money';
-  const sides = planSides(plan, game).map(k => ({ key: k, label: SIDE_GAMES[k].label, bet: rules[k] ? inUnits(plan, sideBetLine(k, rules[k])) : '' }));
+  // The side games the round will start with: planStart leaves out any without house rules
+  const sides = planSides(plan, game).filter(k => rules[k]).map(k => ({ key: k, label: SIDE_GAMES[k].label, bet: inUnits(plan, sideBetLine(k, rules[k])) }));
   const named = s => people.filter(p => p.status === s).map(p => first(p.name) || 'Guest');
   return {
     when: [dayLabel(plan.date, now), timeLabel(plan.teeTime)].filter(Boolean).join(' · '),
@@ -407,7 +419,7 @@ export function previewText(pv, { showAmounts = false, link = null } = {}) {
   const strokes = m.strokes.map(s => `${s.name} gets ${s.count}: ${s.holes}`);
   const sides = pv.sides.map(s => (amounts && s.bet ? `${s.label} (${s.bet})` : s.label));
   return [
-    `${m.toGo ? `${m.toGo}. ` : ''}${pv.course}, ${pv.when}.`,
+    `${m.toGo ? `${m.toGo}. ` : ''}${[pv.course, pv.when].filter(Boolean).join(', ')}.`,
     `Game: ${pv.gameName}${amounts && pv.bet ? `, ${pv.bet}` : ''}${sides.length ? `, plus ${listNames(sides)}` : ''}.`,
     m.playFor ? `${m.playFor}.` : null,
     `${m.inLine}.${m.maybeLine ? ` ${m.maybeLine}.` : ''}`,

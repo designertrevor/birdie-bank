@@ -1949,7 +1949,7 @@ button.trip-card:active { transform: scale(.97); }
 .uc-preview > i:first-child { color: var(--pink-text); font-size: 18px; flex-shrink: 0; }
 .uc-preview > i:last-child { color: var(--mute-soft); font-size: 18px; flex-shrink: 0; }
 .uc-pv-sub { color: var(--mute); font-size: 13px; }
-.uc-pv-sub.block { display: block; margin-top: 2px; }
+.uc-pv-line { display: block; margin-top: 2px; }
 .pv-entry { width: calc(100% - 32px); margin: 6px 16px 4px; border-top: none; border-radius: 18px; background: var(--card); }
 /* The preview page */
 .pv-hero { display: flex; align-items: center; gap: 14px; margin: 4px 16px 4px; padding: 18px; border-radius: 28px; background: var(--card); box-shadow: 0 1px 0 var(--line); }

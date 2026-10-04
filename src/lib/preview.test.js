@@ -6,6 +6,7 @@ import {
 } from './preview.js';
 import { newPlan, planStart } from './plans.js';
 import { createRound, popsFor } from './round.js';
+import { headToHeadSummary } from './ledger.js';
 
 const SETTINGS = {
   hcPct: 100,
@@ -352,4 +353,70 @@ test('the preview reads the state and never changes it', () => {
 
 test('the image file name', () => {
   assert.equal(previewImageName({ course: { name: 'Rancho Park' }, date: '2026-10-03' }), 'preview-rancho-park-2026-10-03.png');
+});
+
+// --------------------------- review fixes -----------------------------------
+
+test('people: on the organizer\'s phone a link answer matches only as the roll call will (full name), so strokes agree', () => {
+  const s = baseState();
+  // "Mike" answered from the group link; the saved player is "Mike Jones", so the roll call saves a new Mike
+  const p = say(plan(), 'dave', 'in');
+  p.answers.g_mike = { name: 'Mike', status: 'in', at: 9 };
+  const people = previewPeople(s, p);
+  assert.equal(people.find(x => x.who === 'g_mike').player, null);
+  const st = previewStrokes(s, p);
+  const setup = planStart(s, p, ['host', 'dave', 'g_mike'], { course: COURSE, newId: () => 'new_mike' });
+  const round = createRound({ id: 'x', game: setup.game, course: COURSE, holesCount: setup.holesCount, nine: setup.nine, startHole: null, players: setup.players, settings: setup.settings, hcPct: setup.hcPct, useHandicaps: true });
+  for (const rp of round.players) assert.equal(st.rows.find(r => r.name === rp.name.split(' ')[0]).plays, rp.plays, rp.name);
+  assert.equal(st.rows.find(r => r.name === 'Mike').noIndex, true);
+  // The same answer with the full name is the saved Mike
+  p.answers.g_mike.name = 'Mike Jones';
+  assert.equal(previewPeople(s, p).find(x => x.who === 'g_mike').player.id, 'mike');
+});
+
+test('strokes: a side game % the roll call ignores is not mentioned, and half strokes follow halfStrokesOffered', () => {
+  const st = previewStrokes(baseState(), allIn(plan({ sides: ['birdies'], sidePcts: { birdies: 0 } })));
+  assert.deepEqual(st.notes, []);
+  // Half strokes on Stroke play with only Junk alongside: no match or skins to use them
+  const stroke = previewStrokes(baseState(), allIn(plan({ game: 'stroke', halfStrokes: true, sides: ['dots'] })));
+  assert.equal(stroke.half, false);
+});
+
+test('records: the same head to head as the Players list, lunch rounds\' money side bets in dollars from tabResults', () => {
+  const s = baseState();
+  match(s, 'me', 'mike', 'me', { stake: 10 });
+  match(s, 'me', 'mike', 'mike', { playFor: { kind: 'points' } });
+  // A lunch round Mike wins on the games, with a $2 a hole side bet for money he also wins
+  const lunch = match(s, 'me', 'mike', 'mike', { playFor: { kind: 'reward', reward: 'Lunch' } });
+  lunch.bets = [{ id: 'b1', kind: 'hole', sides: ['me', 'mike'], stake: 2, playFor: 'money' }];
+  // A lunch round with nothing for money, halved
+  match(s, 'me', 'mike', null, { playFor: { kind: 'reward', reward: 'Lunch' } });
+  const mine = pairRecords(s, ['me', 'mike'], { now: NOW }).get('me|mike').all;
+  const players = headToHeadSummary(s, new Set(['me'])).get('mike');
+  assert.deepEqual([mine.rounds, mine.won, mine.lost, mine.even, mine.net], [players.rounds, players.won, players.lost, players.even, players.net]);
+  assert.deepEqual([mine.rounds, mine.won, mine.lost, mine.even, mine.net, mine.moneyRounds], [4, 1, 2, 1, 8, 2]);
+});
+
+test('the image: a lunch plan shows no dollars, with or without the switch', () => {
+  const s = baseState();
+  match(s, 'mike', 'dave', 'mike', { stake: 10 });
+  const pv = planPreview(s, allIn(plan({ playFor: { kind: 'reward', reward: 'Lunch' } })), { now: NOW });
+  for (const showAmounts of [false, true]) {
+    assert.doesNotMatch(JSON.stringify(previewCardModel(pv, { showAmounts })), /\$/);
+    assert.doesNotMatch(previewText(pv, { showAmounts }), /\$/);
+  }
+});
+
+test('the text: a plan with no date yet reads cleanly', () => {
+  const p = allIn(plan());
+  p.date = null;
+  const t = previewText(planPreview(baseState(), p, { now: NOW }));
+  assert.equal(t.split('\n')[0], 'Rancho Park, 8:10 AM.');
+});
+
+test('records carry the saved players\' ids for their avatars', () => {
+  const s = baseState();
+  match(s, 'mike', 'dave', 'mike');
+  const r = previewRecords(s, allIn(plan()), { now: NOW })[0];
+  assert.deepEqual([r.aId, r.bId], ['mike', 'dave']);
 });
