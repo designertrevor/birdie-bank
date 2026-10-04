@@ -22,6 +22,7 @@ import { rematchSetup } from '../lib/rematch.js';
 import { halfStrokesOffered, pctsDiffer } from '../lib/allowances.js';
 import { StrokesSetup } from '../components/StrokesSetup.jsx';
 import { useNav } from '../lib/nav.js';
+import { useKept } from '../lib/kept.js';
 import { nowMs, setupBack } from '../lib/setup-back.js';
 import { addRound, holesScored, leaveRound, roundsInProgress, usualRound } from '../lib/rounds.js';
 import { formatIndex, gameLabel, hcPctLabel, playerLabel, sortedPlayers } from '../lib/format.js';
@@ -111,19 +112,19 @@ export default function NewRound({ rematch, fromPlan, present, edit = null, ahea
     : rematch ? rematchSetup(getState(), getState().rounds[rematch])
       : reschedule ? rescheduleSetup(getState(), getState().rounds[reschedule])
         : fromPlan ? planSetup(getState(), fromPlan, present) : null));
-  const [mode, setMode] = useState(ahead || editing || (reschedule && pre) ? 'plan' : 'round'); // 'plan': schedule for later
+  const [mode, setMode] = useKept('setup:mode', ahead || editing || (reschedule && pre) ? 'plan' : 'round'); // 'plan': schedule for later
   // A round already set up that the plan takes the place of
-  const [replaces, setReplaces] = useState(reschedule && pre ? reschedule : null);
+  const [replaces, setReplaces] = useKept('setup:replaces', reschedule && pre ? reschedule : null);
   // Scheduled from the Bets step or Round ready: the setup was built first, so the plan keeps it
-  const [built, setBuilt] = useState(false);
+  const [built, setBuilt] = useKept('setup:built', false);
   const planning = mode === 'plan';
   // Planned from a trip's page: a day of the trip, not next Saturday
-  const [date, setDate] = useState(() => editing?.date || (tripId && tripPlanDay(tripOf(getState(), tripId))) || nextSaturday());
-  const [teeTime, setTeeTime] = useState(editing?.teeTime || '');
-  const [invited, setInvited] = useState(() => (reschedule && pre ? pre.picked.filter(pid => pid !== getState().me) : []));
-  const [step, showStep] = useState(pre?.step ?? (ahead && GAMES[preGame] ? 1 : 0));
+  const [date, setDate] = useKept('setup:date', () => editing?.date || (tripId && tripPlanDay(tripOf(getState(), tripId))) || nextSaturday());
+  const [teeTime, setTeeTime] = useKept('setup:teeTime', editing?.teeTime || '');
+  const [invited, setInvited] = useKept('setup:invited', () => (reschedule && pre ? pre.picked.filter(pid => pid !== getState().me) : []));
+  const [step, showStep] = useKept('setup:step', pre?.step ?? (ahead && GAMES[preGame] ? 1 : 0));
   // The furthest step reached, so a tap on the step bar can go forward again after going back
-  const [reached, setReached] = useState(() => (reschedule && pre?.step ? 3 : pre?.step ?? (ahead && GAMES[preGame] ? 1 : 0)));
+  const [reached, setReached] = useKept('setup:reached', () => (reschedule && pre?.step ? 3 : pre?.step ?? (ahead && GAMES[preGame] ? 1 : 0)));
   const setStep = n => { showStep(n); setReached(r => Math.max(r, n)); };
   // The course editor over the course step: {} for a blank course, or { name, city } from a search.
   // Held here, not in the course step, so setup's Back knows it's open (see setup-back.js).
@@ -142,48 +143,48 @@ export default function NewRound({ rematch, fromPlan, present, edit = null, ahea
   };
   // Leaving setup with the editor still open (an error, say) doesn't leave its history entry behind
   useEffect(() => () => editorClose.current?.(), []);
-  const [game, setGame] = useState(pre?.game ?? (GAMES[preGame] ? preGame : null));
-  const [holesCount, setHolesCount] = useState(pre?.holesCount ?? (GAMES[preGame]?.holes.includes(18) === false ? GAMES[preGame].holes[0] : 18));
-  const [courseId, setCourseId] = useState(pre?.courseId ?? null);
-  const [nine, setNine] = useState(pre?.nine ?? 'front');
-  const [picked, setPicked] = useState(() => pre?.picked ?? (state.me ? [state.me] : []));
-  const [tees, setTees] = useState(pre?.tees ?? {});          // pid -> tee name
-  const [hcOverride, setHcOverride] = useState(pre?.hcOverride ?? {}); // pid -> number
-  const [opts, setOpts] = useState(() => withBets(structuredClone(state.settings), pre));
+  const [game, setGame] = useKept('setup:game', pre?.game ?? (GAMES[preGame] ? preGame : null));
+  const [holesCount, setHolesCount] = useKept('setup:holesCount', pre?.holesCount ?? (GAMES[preGame]?.holes.includes(18) === false ? GAMES[preGame].holes[0] : 18));
+  const [courseId, setCourseId] = useKept('setup:courseId', pre?.courseId ?? null);
+  const [nine, setNine] = useKept('setup:nine', pre?.nine ?? 'front');
+  const [picked, setPicked] = useKept('setup:picked', () => pre?.picked ?? (state.me ? [state.me] : []));
+  const [tees, setTees] = useKept('setup:tees', pre?.tees ?? {});          // pid -> tee name
+  const [hcOverride, setHcOverride] = useKept('setup:hcOverride', pre?.hcOverride ?? {}); // pid -> number
+  const [opts, setOpts] = useKept('setup:opts', () => withBets(structuredClone(state.settings), pre));
   // Off for a brand new setup: a missing handicap must never quietly play as scratch. Run it back,
   // a usual or a plan keeps the group's own choice
-  const [useHc, setUseHc] = useState(pre?.useHc ?? false);
-  const [startHole, setStartHole] = useState(pre?.startHole ?? null);
-  const [teams, setTeams] = useState(pre?.teams ?? null); // arrays of player ids, for team games
+  const [useHc, setUseHc] = useKept('setup:useHc', pre?.useHc ?? false);
+  const [startHole, setStartHole] = useKept('setup:startHole', pre?.startHole ?? null);
+  const [teams, setTeams] = useKept('setup:teams', pre?.teams ?? null); // arrays of player ids, for team games
   // Side games on top of the main game: [{ game, settings }] (start-now setup only, not plans)
-  const [sideGames, setSideGames] = useState(() => structuredClone(pre?.sideGames || []));
+  const [sideGames, setSideGames] = useKept('setup:sideGames', () => structuredClone(pre?.sideGames || []));
   // Only the side games that still fit the main game (a Skins main game drops a Skins side game)
   const sidesFor = gm => sideGamesOf({ game: gm, sideGames });
   // Setup edits the list it shows, so an index always points at the side game on screen (a side game
   // hidden by a change of main game is dropped by the edit rather than changed by mistake)
   const editSides = fn => setSideGames(list => fn(sideGamesOf({ game, sideGames: list })));
-  const [createdId, setCreatedId] = useState(null); // the round, once it's set up
+  const [createdId, setCreatedId] = useKept('setup:createdId', null); // the round, once it's set up
   const usual = useMemo(() => usualRound(state), [state]);
   // The saved usual this setup was loaded from, and anyone in it who isn't saved on this phone
-  const [usualId, setUsualId] = useState(() => pre?.usualId ?? null);
-  const [missing, setMissing] = useState(() => pre?.missing || []);
+  const [usualId, setUsualId] = useKept('setup:usualId', () => pre?.usualId ?? null);
+  const [missing, setMissing] = useKept('setup:missing', () => pre?.missing || []);
   // Planning from a saved usual: its side games start picked on the ballot
-  const [planSides, setPlanSides] = useState([]);
+  const [planSides, setPlanSides] = useKept('setup:planSides', []);
   // A usual whose course isn't on this phone any more: its name, so the course step can say so
-  const [lostCourse, setLostCourse] = useState(null);
+  const [lostCourse, setLostCourse] = useKept('setup:lostCourse', null);
   // What it's played for: null is money (as every round before it), else points or a reward
-  const [playFor, setPlayFor] = useState(() => pre?.playFor ?? null);
+  const [playFor, setPlayFor] = useKept('setup:playFor', () => pre?.playFor ?? null);
   // Two-player side bets (pair-bets.js): this round's only, so Run it back and usuals never bring them back
   // (a round rescheduled or a plan's roll call keeps the ones it was set up with)
   // Stamped with the holes they start on, so changing the course or holes later puts a bet on some
   // of the holes back on the whole round, like one made here (fitSetupBets)
-  const [pairBets, setPairBets] = useState(() => structuredClone(pre?.pairBets || []).map(b => ({ ...b, shape: `${holesCount}|${nine}|${courseId ?? ''}|${startHole ?? ''}` })));
+  const [pairBets, setPairBets] = useKept('setup:pairBets', () => structuredClone(pre?.pairBets || []).map(b => ({ ...b, shape: `${holesCount}|${nine}|${courseId ?? ''}|${startHole ?? ''}` })));
   // A change to the holes played puts a bet on some of the holes back on the whole round (fitSetupBets)
   const betShape = `${holesCount}|${nine}|${courseId ?? ''}|${startHole ?? ''}`;
   const setupBets = fitSetupBets(pairBets, betShape);
   // Agreed challenges between two players picked (challenges.js) show up as side bets of their own.
   // One taken off here stays off for this round only; it's still on for the next round together
-  const [chOff, setChOff] = useState([]);
+  const [chOff, setChOff] = useKept('setup:chOff', []);
   const challengeBets = (() => {
     const c = findCourse(state, courseId);
     if (planning || !c || !GAMES[game] || !Object.keys(state.challenges || {}).length) return [];
@@ -206,11 +207,11 @@ export default function NewRound({ rematch, fromPlan, present, edit = null, ahea
   // default when trip people are in it; the plan's own trip when it came from a planned round
   const fromPlanTrip = fromPlan ? state.plans?.[fromPlan]?.trip : null;
   const tripOn = tripId ? tripOf(state, tripId) : fromPlanTrip ? tripOf(state, fromPlanTrip.id) : tripOnDay(state, planning ? date : isoDate());
-  const [countTrip, setCountTrip] = useState(null); // null until changed: the default
+  const [countTrip, setCountTrip] = useKept('setup:countTrip', null); // null until changed: the default
   const countOn = countTrip ?? (!!tripOn && (!!tripId || !!fromPlanTrip || countsByDefault(state, tripOn.id, planning ? [state.me, ...invited] : picked)));
   const tripPick = tripOn && countOn ? tripOn : null;
   // A team points trip: the round's matches from the trip's teams, changeable here (cup.js)
-  const [cupPick, setCupPick] = useState(null); // { sig, cup } once changed
+  const [cupPick, setCupPick] = useKept('setup:cupPick', null); // { sig, cup } once changed
   const cupPlayers = picked.map(pid => state.players[pid]).filter(Boolean).map(p => ({ id: p.id, name: p.name }));
   const cupSig = `${game}|${picked.join(',')}|${tripPick?.id || ''}`;
   const tripCup = !planning && tripPick ? cupOf(tripPick) : null;

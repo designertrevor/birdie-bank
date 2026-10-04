@@ -7,6 +7,7 @@ import { money } from '../lib/golf.js';
 import { nameOf } from '../lib/ledger.js';
 import { AvatarButton, BottomNav } from '../nav.jsx';
 import { useNav } from '../lib/nav.js';
+import { useKept } from '../lib/kept.js';
 import {
   defaultRange, headToHead, lastResult, monthGroups, netSeries, rangeLabel, roundTime, roundsInRange, statsLinkLabel,
 } from '../lib/history.js';
@@ -64,7 +65,7 @@ export default function History() {
   const nav = useNav();
   const state = useStore();
   const [range, setRangeRaw] = useState(() => startRange(state));
-  const [filter, setFilter] = useState('all');
+  const [filter, setFilter] = useKept('history:filter', 'all');
   const setRange = r => { setRangeRaw(r); try { sessionStorage.setItem(RANGE_KEY, JSON.stringify(r)); } catch { /* ignore */ } };
 
   const { rounds, me, players, links, unlinks } = state;

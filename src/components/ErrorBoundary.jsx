@@ -1,5 +1,6 @@
 import { Component } from 'react';
 import { NavCtx } from '../lib/nav.js';
+import { forgetPlace } from '../lib/kept.js';
 
 /**
  * Last line of defence: if a screen throws, show a way back instead of a blank page.
@@ -12,7 +13,11 @@ export default class ErrorBoundary extends Component {
     this.state = { error: null };
   }
   static getDerivedStateFromError(error) { return { error }; }
-  componentDidCatch(error, info) { console.error('Birdie Bank crashed:', error, info?.componentStack); }
+  componentDidCatch(error, info) {
+    console.error('Birdie Bank crashed:', error, info?.componentStack);
+    // Never come back to a screen that just crashed: the next launch starts on Up next
+    forgetPlace();
+  }
   reset = () => {
     this.setState({ error: null });
     this.props.onReset?.();

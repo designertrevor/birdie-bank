@@ -28,6 +28,7 @@ import { DRIVE_GAMES, drivesNeeded } from '../lib/scramble-drives.js';
 import { optionsProblem, roundStakeLines, sideBetLine, stakeSummary } from '../lib/stakes.js';
 import { buzz, confettiFrom } from '../lib/delight.js';
 import { useNav } from '../lib/nav.js';
+import { dropKept, keptMap, useKept, useKeptScope } from '../lib/kept.js';
 import { Scorecard } from './RoundDetail.jsx';
 import { LivePill, ShareSheet } from '../components/Live.jsx';
 import { syncConfigured, useSeatRequests } from '../lib/sync.js';
@@ -101,9 +102,10 @@ export default function Play({ id }) {
     nav.reset('history', ['roundDetail', { id, celebrate: true }]);
   };
   const keeps = canEdit(round, keeperMe(round, { me: getState().me }), !!round.shared?.host);
+  const mount = `${games}:${lineup}:${round.holesCount}:${round.current}:${round._remote?.[cur?.no] || 0}:${left}:${joined}:${cur?.par}`;
   return (
     <>
-      <PlayRound key={`${games}:${lineup}:${round.holesCount}:${round.current}:${round._remote?.[cur?.no] || 0}:${left}:${joined}:${cur?.par}`} round={round} momentUp={momentUp} />
+      <PlayRound key={mount} mount={mount} round={round} momentUp={momentUp} />
       {/* Outside the hole, which remounts on every save, so it sees the hole that was just scored */}
       <RoundMoments round={round} onFinish={keeps ? finishHere : null} onShowing={setMomentUp} />
     </>
@@ -136,13 +138,19 @@ function useWakeLock() {
   }, []);
 }
 
-// Unsaved scores per hole ("roundId:holeNo"), kept while moving between holes so nothing typed is lost
-const DRAFTS = new Map();
+// Unsaved scores per hole ("roundId:holeNo"), kept while moving between holes so nothing typed is
+// lost, and saved with your place so switching to another app (or the phone reloading) keeps them too
+const DRAFTS = keptMap('drafts');
 // Rounds whose locked-in rules card this phone has closed (a phone that isn't keeping score sees it until then)
 const AGREED_SEEN = new Set();
 
-function PlayRound({ round, momentUp = false }) {
+function PlayRound({ round, mount, momentUp = false }) {
   useWakeLock();
+  // What's open on this hole comes back after a reload (the hole remounts on every save, which closes it)
+  const scope = useKeptScope();
+  const at = `hole:${mount}:`;
+  useEffect(() => { if (scope != null) dropKept(scope, 'hole:', at); }, [scope, at]);
+  const useHole = (name, initial) => useKept(at + name, initial);
   const nav = useNav();
   const { ask, showToast } = useUI();
   const idx = Math.min(round.current, round.holes.length - 1);
@@ -190,28 +198,28 @@ function PlayRound({ round, momentUp = false }) {
     return snakeSide && !m.snake ? { ...m, snake: [] } : m;
   });
   useEffect(() => { DRAFTS.set(draftKey, { draft, base, touched, dirty, marks }); }, [draftKey, draft, base, touched, dirty, marks]);
-  const [banker, setBanker] = useState(() => (game === 'banker' ? structuredClone(bankerHoleSetup(main, idx)) : null));
-  const [phase, setPhase] = useState(() => (game === 'banker' && editable && !holeComplete(round, hole) ? 'bets' : 'scores'));
-  const [wolf, setWolf] = useState(() => (game === 'wolf' ? wolfHoleSetup(main, idx) : null));
-  const [menu, setMenu] = useState(false);
-  const [leftSheet, setLeftSheet] = useState(false);
-  const [card, setCard] = useState(false);
+  const [banker, setBanker] = useHole('banker', () => (game === 'banker' ? structuredClone(bankerHoleSetup(main, idx)) : null));
+  const [phase, setPhase] = useHole('phase', () => (game === 'banker' && editable && !holeComplete(round, hole) ? 'bets' : 'scores'));
+  const [wolf, setWolf] = useHole('wolf', () => (game === 'wolf' ? wolfHoleSetup(main, idx) : null));
+  const [menu, setMenu] = useHole('menu', false);
+  const [leftSheet, setLeftSheet] = useHole('leftSheet', false);
+  const [card, setCard] = useHole('card', false);
   // Which game's rules are open ('main' or a side game's key); the key stays while the sheet closes
-  const [rules, setRules] = useState({ key: 'main', open: false });
-  const [betPad, setBetPad] = useState(null);
-  const [bankerPick, setBankerPick] = useState(false);
-  const [live, setLive] = useState(false);
-  const [holesSheet, setHolesSheet] = useState(false);
-  const [betsSheet, setBetsSheet] = useState(false);
-  const [gamesSheet, setGamesSheet] = useState(false);
-  const [pairSheet, setPairSheet] = useState(false);
+  const [rules, setRules] = useHole('rules', { key: 'main', open: false });
+  const [betPad, setBetPad] = useHole('betPad', null);
+  const [bankerPick, setBankerPick] = useHole('bankerPick', false);
+  const [live, setLive] = useHole('live', false);
+  const [holesSheet, setHolesSheet] = useHole('holesSheet', false);
+  const [betsSheet, setBetsSheet] = useHole('betsSheet', false);
+  const [gamesSheet, setGamesSheet] = useHole('gamesSheet', false);
+  const [pairSheet, setPairSheet] = useHole('pairSheet', false);
   // A new side bet started from the "Any side bets?" card: { kind, holes }
-  const [pairStart, setPairStart] = useState(null);
-  const [switching, setSwitching] = useState(false);
+  const [pairStart, setPairStart] = useHole('pairStart', null);
+  const [switching, setSwitching] = useHole('switching', false);
   const others = useStore(s => roundsInProgress(s).filter(r => r.id !== round.id).length);
   const [addSheet, setAddSheet] = useState(null); // true, or the seat request being answered
-  const [handSheet, setHandSheet] = useState(false);
-  const [fixSheet, setFixSheet] = useState(null); // 'hole' | 'tee' | 'hc' | 'lineup' | 'playFor'
+  const [handSheet, setHandSheet] = useHole('handSheet', false);
+  const [fixSheet, setFixSheet] = useHole('fixSheet', null); // 'hole' | 'tee' | 'hc' | 'lineup' | 'playFor'
   const localCourse = useStore(s => findCourse(s, round.course.id));
   const holeFixed = !!holeFixOf(round, hole.no);
   const requests = useSeatRequests(round.id);
@@ -219,7 +227,7 @@ function PlayRound({ round, momentUp = false }) {
 
   // --- The first-tee rules card (see agreed.js) ---
   // 'lock' on the keeper's phone before hole 1; 'view' is "What we agreed" from the menu
-  const [agreedSheet, setAgreedSheet] = useState(null);
+  const [agreedSheet, setAgreedSheet] = useHole('agreedSheet', null);
   const firstTee = editable && showFirstTee(round);
   // A phone that isn't keeping score sees the card when it's locked in, until it's closed or hole 1 is scored
   const [, seenCard] = useState(0);

@@ -7,6 +7,7 @@ import { BallIllo, Empty, Header, Icon, Screen, Sheet, useUI } from '../componen
 import { Avatar } from '../components/Pay.jsx';
 import { getState, update, uid, useStore } from '../lib/store.js';
 import { useNav } from '../lib/nav.js';
+import { useKept } from '../lib/kept.js';
 import { GAMES, SIDE_GAMES, createRound, holesInPlay } from '../lib/round.js';
 import { sideBetLine } from '../lib/stakes.js';
 import { inUnits, noMoneyNote, playForLine } from '../lib/play-for.js';
@@ -443,11 +444,11 @@ export function RollCall({ id }) {
   const { showToast } = useUI();
   const state = useStore();
   const plan = state.plans?.[id];
-  const [present, setPresent] = useState(() => (plan ? rollCallDefault(plan) : []));
-  const [walkUp, setWalkUp] = useState('');
+  const [present, setPresent] = useKept('rollCall:present', () => (plan ? rollCallDefault(plan) : []));
+  const [walkUp, setWalkUp] = useKept('rollCall:walkUp', '');
   const [adding, setAdding] = useState(false);
   const [starting, setStarting] = useState(false);
-  const [countTrip, setCountTrip] = useState(true);
+  const [countTrip, setCountTrip] = useKept('rollCall:countTrip', true);
   // The latest answers to the plan's challenges, so the agreed ones go in at the tee
   useChallengesLive({ planCode: plan?.code });
   if (!plan) return <Screen><Header title="Roll call" small onBack={nav.pop} /><div className="scroll"><Empty title="This plan is gone" text="It was deleted from this phone. Your other rounds are on Up next." action={<button className="ec" onClick={nav.pop}>Go back</button>} /></div></Screen>;

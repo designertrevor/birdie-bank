@@ -4,6 +4,8 @@ const URL_ = import.meta.env.VITE_SUPABASE_URL;
 const KEY_ = import.meta.env.VITE_SUPABASE_ANON_KEY;
 
 export const supabaseConfigured = !!(URL_ && KEY_);
+/** Live shared rounds are on: Supabase keys, a dev build, or the local test switch (see sync.js). */
+export const syncConfigured = supabaseConfigured || !!import.meta.env.DEV || (typeof localStorage !== 'undefined' && localStorage.getItem('bb-sync-local') === '1');
 /** The project URL, for telling the app's own storage links apart (avatars.js photoAllowed). */
 export const supabaseUrl = supabaseConfigured ? URL_ : null;
 

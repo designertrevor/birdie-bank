@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { Suspense, lazy, useState } from 'react';
 import { Header, Icon, Screen } from '../components/ui.jsx';
 import { useStore } from '../lib/store.js';
 import { GAMES, holeComplete } from '../lib/round.js';
@@ -11,38 +11,38 @@ import { RoundRow } from '../components/RoundRow.jsx';
 import { activeRounds, lastResult, myTab } from '../lib/history.js';
 import { AvatarButton, BottomNav } from '../nav.jsx';
 import { useNav } from '../lib/nav.js';
-import { JoinSheet } from '../components/Live.jsx';
-import { syncConfigured } from '../lib/sync.js';
+import { syncConfigured } from '../lib/supabase.js';
 import { RSVP_LABEL, countsLine, dayLabel, daysUntil, planChoice, planCounts, upcomingPlans, whenLabel } from '../lib/plans.js';
-import { refreshPlans } from '../lib/plan-sync.js';
-import { countdownLine, weekdayOf } from '../lib/preview.js';
-import { refreshTab } from '../lib/tab-sync.js';
-import { latelyItems } from '../lib/lately.js';
-import { recentTalkKeys, withTalk } from '../lib/talk.js';
-import { useTalkSync } from '../lib/talk-sync.js';
-import { LatelyList } from '../components/LatelyList.jsx';
+import { countdownLine, weekdayOf } from '../lib/countdown.js';
 import { updateSafe } from '../lib/app-update.js';
 import { applyUpdate, useUpdateReady } from '../lib/sw-update.js';
-import { TripSheet, TripUpNext } from '../components/Trips.jsx';
 import { currentTrips } from '../lib/trips.js';
-import { useTripPlans } from '../lib/trip-plan-sync.js';
-import { currentRecap } from '../lib/recap.js';
-import { callouts } from '../lib/callouts.js';
-import { CalloutsCard, RecapCard } from '../components/Recap.jsx';
-import { ChallengesUpNext } from '../components/Challenges.jsx';
-import { myChallenges } from '../lib/challenges.js';
-import { refreshChallenges } from '../lib/challenge-sync.js';
-import { useCupSync } from '../lib/cup-sync.js';
-import { RemindersUpNext } from '../components/Reminders.jsx';
+import { recapRound } from '../lib/recap-round.js';
 
-const LATELY_ON_HOME = 3;
+// Up next paints first with what's always on it: rounds going on, plans, the Tab. The rest loads
+// right after (its files are saved for offline like every other), each part in its own boundary so
+// the cards above never wait or blank: the recap, challenges, reminders, callouts, Lately and trips.
+const more = () => import('../components/UpNextMore.jsx');
+const trips = () => import('../components/Trips.jsx');
+// A part that can't load (no signal before the app was ever saved offline) is left off, never the whole screen
+const part = (load, name) => lazy(() => load().then(m => ({ default: m[name] }), () => ({ default: () => null })));
+const RecapSection = part(more, 'RecapSection');
+const ChallengesSection = part(more, 'ChallengesSection');
+const CalloutsSection = part(more, 'CalloutsSection');
+const LatelySection = part(more, 'LatelySection');
+const UpNextSync = part(more, 'UpNextSync');
+const TripUpNext = part(trips, 'TripUpNext');
+const TripSheet = part(trips, 'TripSheet');
+const JoinSheet = part(() => import('../components/Live.jsx'), 'JoinSheet');
+const RemindersUpNext = part(() => import('../components/Reminders.jsx'), 'RemindersUpNext');
+// Start fetching straight away, alongside the first paint, rather than when React gets to them
+if (typeof window !== 'undefined') more().catch(() => {});
+const Later = ({ children }) => <Suspense fallback={null}>{children}</Suspense>;
 
 /** Home: what's next for you. A round to finish, what you owe and are owed, and how the last one went. */
 export default function UpNext() {
   const nav = useNav();
   const state = useStore();
-  useTripPlans();
-  useCupSync();
   // (A join link opened by someone already set up goes straight to the invite card: see App.)
   const [joining, setJoining] = useState(false);
   const live = activeRounds(state);
@@ -54,21 +54,15 @@ export default function UpNext() {
     : `Square on money. ${rewards.length === 1 ? `${rewardLineText(rewards[0], id => nameOf(state, id))}.` : `${rewards.length} rewards to sort out.`}`;
   const hasHistory = !!last;
   // A trip on now leads with where you stand, its planned rounds grouped under it
-  const trips = currentTrips(state);
-  const onTrip = new Set(trips.flatMap(t => t.planned.map(p => p.id)));
+  const onNow = currentTrips(state);
+  const onTrip = new Set(onNow.flatMap(t => t.planned.map(p => p.id)));
   const plans = upcomingPlans(state).filter(p => !onTrip.has(p.id));
-  // The day after a round: its recap, then a few lines for the group text (see recap.js, callouts.js)
-  const recap = useMemo(() => currentRecap(state), [state]);
-  // The recap's round isn't in Lately too (Lately skips the newest finished round, which can be one you only watched)
-  const lately = withTalk(latelyItems(state).filter(i => i.id !== `recap:${recap?.id}`), state);
-  const lines = useMemo(() => callouts(state), [state]);
-  useTalkSync(recentTalkKeys(state));
-  // Challenges you're in that are still going: your call first
-  const challenges = myChallenges(state);
+  // The day after a round: its recap, then a few lines for the group text (see recap.js, callouts.js).
+  // Only which round it's about is worked out here; the card loads with the rest (UpNextMore.jsx)
+  const recapId = recapRound(state)?.id ?? null;
+  const anyChallenges = Object.keys(state.challenges || {}).length > 0;
   // A new version only shows up here once no round is going on, so a tap never cuts into one
   const updateReady = useUpdateReady() && updateSafe(state);
-  // Pick up answers and votes that came in since last time
-  useEffect(() => { refreshPlans(); refreshTab(); refreshChallenges(); }, []);
 
   return (
     <Screen>
@@ -80,12 +74,7 @@ export default function UpNext() {
             <span className="row-main"><b>Update ready</b> <span className="un-sub">Tap to refresh</span></span>
           </button>
         )}
-        {recap && (
-          <>
-            <div className="sec-label">The recap</div>
-            <RecapCard recap={recap} />
-          </>
-        )}
+        {recapId && <Later><RecapSection /></Later>}
 
         {live.map(r => {
           const played = r.holes.filter(h => holeComplete(r, h)).length;
@@ -102,16 +91,16 @@ export default function UpNext() {
           );
         })}
 
-        {trips.map(t => <TripUpNext key={t.trip.id} status={t} renderPlan={p => <UpcomingCard key={p.id} plan={p} />} />)}
+        {onNow.length > 0 && <Later>{onNow.map(t => <TripUpNext key={t.trip.id} status={t} renderPlan={p => <UpcomingCard key={p.id} plan={p} />} />)}</Later>}
 
         {/* A tee time to book and friendly payment reminders: there's no push yet, so these are the reminders */}
-        <RemindersUpNext />
+        <Later><RemindersUpNext /></Later>
 
         {plans.length > 0 && <div className="sec-label">Upcoming</div>}
         {plans.map(p => <UpcomingCard key={p.id} plan={p} />)}
-        <ChallengesUpNext list={challenges} />
+        {anyChallenges && <Later><ChallengesSection /></Later>}
         {/* Starting a round at the course (or running the last one back) stays one tap, plans or not */}
-        {live.length === 0 && <PlanNext last={last?.round} fresh={!hasHistory} planned={plans.length > 0 || trips.length > 0} trip={trips.length === 0} />}
+        {live.length === 0 && <PlanNext last={last?.round} fresh={!hasHistory} planned={plans.length > 0 || onNow.length > 0} trip={onNow.length === 0} />}
 
         {syncConfigured && live.length === 0 && (
           <button className="add-row join-row" aria-label="Join a friend’s round" onClick={() => setJoining(true)}>
@@ -119,22 +108,8 @@ export default function UpNext() {
           </button>
         )}
 
-        {lines.length > 0 && (
-          <>
-            <div className="sec-label">For the group text</div>
-            <CalloutsCard items={lines} />
-          </>
-        )}
-
-        {lately.length > 0 && (
-          <>
-            <div className="sec-label">Lately</div>
-            <LatelyList items={lately.slice(0, LATELY_ON_HOME)} />
-            {lately.length > LATELY_ON_HOME && (
-              <button className="lately-all" onClick={() => nav.push('lately')}>See all {lately.length} <Icon name="caret-right" /></button>
-            )}
-          </>
-        )}
+        <Later><CalloutsSection /></Later>
+        <Later><LatelySection recapId={recapId} /></Later>
 
         {hasHistory && (
           <>
@@ -152,7 +127,7 @@ export default function UpNext() {
             </button>
 
             {/* The recap already shows the last round, so it isn't there twice */}
-            {recap?.id !== last.round.id && (
+            {recapId !== last.round.id && (
               <>
                 <div className="sec-label">Last time out</div>
                 <RoundRow round={last.round} state={state} className="card" withYear />
@@ -162,7 +137,9 @@ export default function UpNext() {
         )}
       </div>
       <BottomNav />
-      {joining && <JoinSheet open onClose={() => setJoining(false)} />}
+      {/* Picks up answers, votes, payments and trip news that came in since last time */}
+      <Later><UpNextSync /></Later>
+      {joining && <Later><JoinSheet open onClose={() => setJoining(false)} /></Later>}
     </Screen>
   );
 }
@@ -229,7 +206,7 @@ function PlanNext({ last, fresh, planned = false, trip = false }) {
         <button className="pc-btn ghost" onClick={() => nav.push('newRound', { ahead: true })}><Icon name="calendar-plus" /> Plan ahead</button>
         {trip && <button className="pc-btn ghost" onClick={() => setTripping(true)}><Icon name="suitcase-rolling" /> Start a trip</button>}
       </div>
-      <TripSheet open={tripping} onClose={() => setTripping(false)} onDone={t => { setTripping(false); nav.push('trip', { id: t.id }); }} />
+      {tripping && <Later><TripSheet open onClose={() => setTripping(false)} onDone={t => { setTripping(false); nav.push('trip', { id: t.id }); }} /></Later>}
     </div>
   );
 }

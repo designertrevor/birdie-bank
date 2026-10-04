@@ -10,7 +10,7 @@
 // { kind: 'initials', text, bg }. The order is photo, then a buddy, then initials.
 import { linksOf } from './people-links.js';
 import { theirName } from './their-profile.js';
-import { normalizeAvatar } from './profile-model.js';
+import { normalizeAvatar } from './avatar-model.js';
 
 /** The backdrops, in the order the picker shows them. `ink` is the text colour that reads on it. */
 export const BACKDROPS = [
