@@ -109,8 +109,9 @@ function ExpenseRow({ x, me, short, onOpen }) {
  * squares). Before any round has money on it: what each person paid, their share, and both together.
  */
 function AllIn({ st, me, short }) {
-  const golf = st.money.length > 0;
-  const cols = golf ? ['Rounds', 'Expenses', 'All in'] : ['Paid', 'Share', 'All in'];
+  // A decided cup stake is in each person's golf total (trips.js standings), so the column says so
+  const golf = st.money.length > 0 || !!st.cup?.stakeOn;
+  const cols = golf ? [st.cup?.stakeOn ? 'Rounds and cup' : 'Rounds', 'Expenses', 'All in'] : ['Paid', 'Share', 'All in'];
   return (
     <>
       <div className="sec-label">Everyone, all in</div>
@@ -132,7 +133,7 @@ function AllIn({ st, me, short }) {
           </tbody>
         </table>
       </div>
-      <p className="field-help pad">{golf ? 'The rounds on this phone and every expense. ' : ''}Plus is what the trip owes them, minus what they owe. It all adds up to $0.</p>
+      <p className="field-help pad">{golf ? `The rounds on this phone${st.cup?.stakeOn ? ', the cup stake' : ''} and every expense. ` : ''}Plus is what the trip owes them, minus what they owe. It all adds up to $0.</p>
     </>
   );
 }

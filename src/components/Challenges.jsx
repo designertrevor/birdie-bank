@@ -53,6 +53,7 @@ export function ChallengeMaker({ open, onClose, from, people, whens, holesCount 
   const send = useSend();
   const [toWho, setToWho] = useState(people.length === 1 ? people[0].who : null);
   const [aWho, setAWho] = useState(null); // who plays them, when it's not you (null: you)
+  const [aName, setAName] = useState('');
   const [whenKey, setWhenKey] = useState(whens[0]?.key);
   const [kind, setKind] = useState('match');
   const [stake, setStake] = useState(10);
@@ -118,7 +119,7 @@ export function ChallengeMaker({ open, onClose, from, people, whens, holesCount 
       <Sheet open={!pad} onClose={onClose} title={title}>
         <p className="sheet-text">
           {setter
-            ? `A side bet between ${names}, set up by you. Mark what they say when they tell you, or they answer from their own phone, and once both are in it goes into the round.`
+            ? `${to ? `A side bet between ${first(a.name)} and ${first(to.name)}` : `A side bet for ${first(a.name)} and whoever you pick`}, set up by you. Mark what they say when they tell you, or they answer from their own phone, and once both are in it goes into the round.`
             : `A side bet between the two of you. ${fixed ? first(fixed.name) : 'They'} can accept, pass or name their own amount, and once it’s agreed it goes into the round.`}
         </p>
         <div className="pb-edit">
@@ -127,7 +128,7 @@ export function ChallengeMaker({ open, onClose, from, people, whens, holesCount 
               <div className="field-label" id="ch-a">{fixed ? `Who’s playing ${first(fixed.name)}` : 'Who'}</div>
               <div className="chip-row flush" role="radiogroup" aria-labelledby="ch-a">
                 {chip(me, a.who === me.who, () => setAWho(null), 'You')}
-                {pool.map(p => chip(p, a.who === p.who, setAWho))}
+                {pool.map(p => chip(p, a.who === p.who, w => { setAWho(w); setAName(p.name); }))}
               </div>
             </>
           )}
@@ -147,6 +148,7 @@ export function ChallengeMaker({ open, onClose, from, people, whens, holesCount 
                   <button key={w.key} role="radio" aria-checked={when.key === w.key} className={`pill-btn ${when.key === w.key ? 'on' : ''}`} onClick={() => setWhenKey(w.key)}>{w.label}</button>
                 ))}
               </div>
+              {setUp && aWho && a.who !== aWho && <p className="field-help pb-help">{first(aName)} isn’t on that round, so it’s you{fixed ? ` against ${first(fixed.name)}` : ''}. Pick someone else under Who, or another round.</p>}
             </>
           )}
           <div className="field-label" id="ch-kind">What’s the bet</div>
@@ -157,7 +159,7 @@ export function ChallengeMaker({ open, onClose, from, people, whens, holesCount 
               </button>
             ))}
           </div>
-          <p className="field-help pb-help">{BET_KINDS[kind].help}</p>
+          <p className="field-help pb-help">{setter ? othersHelp(BET_KINDS[kind].help) : BET_KINDS[kind].help}</p>
           {kind === 'custom' && (
             <>
               <label className="field-label" htmlFor="ch-label">Call it</label>
@@ -258,6 +260,9 @@ function AnswerRow({ ch, side, marking }) {
     </>
   );
 }
+
+/** A side bet kind's help for one set up between two others: "the two of them", "one of them". */
+const othersHelp = text => text.replace('the two of you', 'the two of them').replace('one of you', 'one of them').replace('the bet is yours', 'the bet is theirs');
 
 /**
  * The number pad opened from a card renders at the screen, a full-width bottom sheet like every

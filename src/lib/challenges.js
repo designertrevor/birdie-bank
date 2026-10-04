@@ -784,6 +784,14 @@ export function challengeLately(state, since, until) {
       if (m.move === 'decline') text = yours ? (ch.setBy ? `${who} passed on ${yourAsk} this time` : `${who} passed on your ${yourAsk} this time`) : `${who} passed on ${ofIt}`;
       if (m.move === 'counter') text = yours ? `${who} came back with ${challengeFmt(ch)(m.stake)}` : `${who} came back on ${ofIt}`;
       if (m.move === 'withdraw') text = yours ? `${who} called off ${m.side === 'to' && !ch.setBy ? 'your' : 'the'} challenge` : `${who} called off a challenge with ${theirs}`;
+      // Put in by the organizer or the scorekeeper, not from their own phone: say who put it in
+      if (text && proxy) text = m.move === 'accept' ? `${by} marked ${who} in ${yours ? `for ${challengeAsk(ch, after.stake)}` : `on ${ofIt}`}`
+        : m.move === 'decline' ? `${by} marked that ${who} passed${yours ? ' this time' : ` on ${ofIt}`}`
+          : m.move === 'counter' ? (yours ? `${by} marked ${who} down for ${challengeFmt(ch)(m.stake)}` : `${by} marked ${who} coming back on ${ofIt}`)
+            : text;
+      // The same news twice (an answer put in, then the same one from their own phone): once, the latest
+      const dup = out.findIndex(x => x.target[1].id === ch.id && x.text === text);
+      if (text && dup >= 0) out.splice(dup, 1);
       if (text) out.push({ id: `chm:${ch.id}:${m.id}`, kind: 'challenge', at: m.at, target, text });
     }
   }

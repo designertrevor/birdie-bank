@@ -396,7 +396,7 @@ export function StakeLines({ st }) {
   return (
     <>
       <div className="sec-label">The cup</div>
-      <p className="field-help pad">{winners} won the cup, so each player on {cup.names[1 - cup.winner]} pays {money(cup.def.stake)} and {winners} split it.{onTab ? ' It’s in the payments above and on the Tab, with the rest of the trip.' : ''}{open.length ? ` ${open.length === 1 ? 'One payment is' : `${open.length} payments are`} between two people who haven’t played a round together on the trip, so ${open.length === 1 ? 'it’s' : 'they’re'} marked paid here.` : ''}</p>
+      <p className="field-help pad">{winners} won the cup, so each player on {cup.names[1 - cup.winner]} pays {money(cup.def.stake)} and {winners} splits it.{onTab ? ' It’s in the payments above and on the Tab, with the rest of the trip.' : ''}{open.length ? ` ${open.length === 1 ? 'One payment is' : `${open.length} payments are`} between two people who haven’t played a round together on the trip, so ${open.length === 1 ? 'it’s' : 'they’re'} marked paid here.` : ''}</p>
       {mine.map(l => {
         const iPay = l.fromId === me;
         const otherId = iPay ? l.toId : l.fromId;

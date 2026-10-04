@@ -144,6 +144,8 @@ export function TripUpNext({ status: st, renderPlan }) {
   const cupOn = st.cup && (st.cup.score.done > 0 || st.cup.score.live.length > 0);
   const title = st.phase === 'soon' ? startsLine(st.trip.start)
     : cupOn && (st.phase === 'on' || !line) ? cupHeadline(st.cup)
+    // Decided: the cup first, then where your money finished, so a place never reads as the cup's
+    : cupOn && st.phase === 'ready' ? `${cupHeadline(st.cup)}. On the money, ${line.replace('You’re ', 'you finished ')}`
     : st.phase === 'ready' ? (line ? `That’s the trip. ${line.replace('You’re ', 'You finished ')}` : 'That’s the trip')
     : st.phase === 'square' ? (st.pointsOnly ? 'That’s the trip' : 'All square on the trip')
     : st.phase === 'empty' ? 'No rounds were counted for it'

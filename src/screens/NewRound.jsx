@@ -253,8 +253,10 @@ export default function NewRound({ rematch, fromPlan, present, edit = null, ahea
   const toBets = () => {
     const cfg = GAMES[game]?.teams;
     const wrongCount = !!cfg && !!teams && (Array.isArray(cfg.count) ? teams.length < cfg.count[0] || teams.length > cfg.count[1] : teams.length !== cfg.count);
-    // Foursomes on a team points trip: the partners start from the trip's teams, rotated (cup.js)
-    if (!teams || wrongCount || teams.flat().length !== picked.length || teams.flat().some(pid => !picked.includes(pid))) setTeams((foursomes && cupPairs(cupStart)) || defaultTeams(game, picked));
+    // On a team points trip: the partners start from the trip's teams, rotated (cup.js), for
+    // foursomes and for any game played two against two (a 2 v 2 Nassau)
+    const twoTeams = !!cfg && (Array.isArray(cfg.count) ? cfg.count[0] <= 2 && cfg.count[1] >= 2 : cfg.count === 2);
+    if (!teams || wrongCount || teams.flat().length !== picked.length || teams.flat().some(pid => !picked.includes(pid))) setTeams(((foursomes || (tripCup && twoTeams)) && cupPairs(cupStart)) || defaultTeams(game, picked));
     setStep(3);
   };
   // Step bar taps: any earlier step, or a later one already reached whose earlier steps are still filled in

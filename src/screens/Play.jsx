@@ -596,7 +596,7 @@ function PlayRound({ round, momentUp = false }) {
                     {round.teams && !p.team && <span className={`side-tag ${round.teams.findIndex(t => t.players.includes(p.id)) === 0 ? 'a' : 'b'}`}>{['A', 'B', 'C', 'D'][round.teams.findIndex(t => t.players.includes(p.id))]}</span>}
                     {counts && <span className="counts-tag">Counts</span>}
                   </div>
-                  {p.team && <div className="ps">{p.players.map(pid => round.players.find(x => x.id === pid)?.name.split(' ')[0]).join(', ')} · team handicap {p.courseHc ?? 0}</div>}
+                  {p.team && <div className="ps">{p.players.map(pid => round.players.find(x => x.id === pid)?.name.split(' ')[0]).join(', ')}{round.useHandicaps ? ` · team handicap ${p.courseHc ?? 0}` : ''}</div>}
                   <div className="ps">
                     {st > 0 && <span className="stroke-dots" aria-label={`Gets ${strokesWords(st, halfStrokesOn(round))}`}>{'●'.repeat(st)} Gets {strokesWords(st, halfStrokesOn(round))}</span>}
                     {st < 0 && <span className="stroke-dots">Gives back {strokesWords(-st, halfStrokesOn(round))}</span>}
