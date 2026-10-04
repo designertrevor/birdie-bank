@@ -4,14 +4,15 @@
 // An id is linked only from what the server saw for itself, never from the account's own saved data
 // (a profile's player id or a saved round's localMe are that phone's own word):
 //  1. A seat this phone took in a live round: devs[seat] is this phone's device hash (only that
-//     phone can ever put it there, once) and the round's claims give the seat to you now.
+//     phone can put its own hash there) and the round's claims give the seat to you now. Any phone
+//     with the link can take a seat that isn't the keeper's, so this never moves another account's link.
 //  2. Your own player id when this phone holds it as a seat in a live round (devs[your id]).
 //  3. Your own player id when nobody else could know it: no other account's saved rounds have it,
 //     and no live round has it as a seat that isn't this phone's.
 // 1 and 2 also need a sealed round (its host phone on it from the start) and the seat in that
 // round's group: everyone else who saved a round with that id also saved one shared from the same
-// host phone. Links made before the rule (no `dev`) stay, unless another account brings evidence
-// 1 or 2 for the id. A seat linked from a round that still exists comes off when the round's claims
+// host phone. The first account to link an id keeps it (links made before the rule, with no `dev`,
+// included): nothing here moves an id from one account to another. A seat linked from a round that still exists comes off when the round's claims
 // no longer give it to you (you switched seats); links only change from the phone that made them.
 
 const isStr = v => typeof v === 'string' && v.length > 0 && v.length <= 64;
@@ -77,11 +78,11 @@ export function linkMyPlayers({ me, device = null, myPlayer = null, liveRounds =
       return !r || r.meta?.claims?.[l.playerId] === input.myPlayer;
     });
   }
-  // The server's evidence: new, or over a link made before from someone's own word
+  // The server's evidence: a new link, or one of yours brought up to date. Another account's stays theirs
   for (const s of strong) {
     const cur = out.find(l => l.playerId === s.id);
     if (!cur) out.push({ playerId: s.id, user: me, dev: device, roundCode: s.code });
-    else if (cur.dev == null || cur.user === me) Object.assign(cur, { user: me, dev: device, roundCode: s.code });
+    else if (cur.user === me) Object.assign(cur, { dev: device, roundCode: s.code });
   }
   if (ownOk) {
     const cur = out.find(l => l.playerId === input.myPlayer);

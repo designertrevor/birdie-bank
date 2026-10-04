@@ -105,23 +105,40 @@ test('signing in on another phone never removes what the first phone linked', ()
   assert.deepEqual(laptop.mine.sort(), ['d_me', 'p_dave']);
 });
 
-test('links made before the new rule stay, unless the phone that took the seat shows up for another account', () => {
+test('links made before the new rule stay with their account, and no seat moves a link to another account', () => {
   const before = [
-    { playerId: 'p_sam', user: 'mal', dev: null, roundCode: null }, // linked from Mallory's own word
+    { playerId: 'p_sam', user: 'mal', dev: null, roundCode: null }, // linked before the rule
     { playerId: 'old_seat', user: 'dave', dev: null, roundCode: null },
   ];
   // Dave's run keeps his old link and Mallory's
   const r = linkMyPlayers({ me: 'dave', device: DAVE_PHONE, myPlayer: 'd_me', liveRounds: [], saved: SAVED, links: before });
   assert.ok(r.mine.includes('old_seat'));
   assert.ok(r.links.some(l => l.playerId === 'p_sam' && l.user === 'mal'));
-  // Sam takes his seat on his own phone: the id moves to Sam's account
+  // Sam takes his seat on his own phone: Mallory linked it first, so it stays hers (as before the rule)
   const live = [round('R2', { devs: { t_me: TREVOR_PHONE, p_sam: 'dev-sam' }, claims: { p_sam: 's_me' } })];
   const sam = linkMyPlayers({ me: 'sam', device: 'dev-sam', myPlayer: 's_me', liveRounds: live, saved: SAVED, links: r.links });
-  assert.ok(sam.mine.includes('p_sam'));
-  assert.equal(sam.links.find(l => l.playerId === 'p_sam').user, 'sam');
-  // But a link made under the new rule is never taken: the first account keeps it
-  const mal = linkMyPlayers({ me: 'mal', device: 'dev-sam', myPlayer: 's_me', liveRounds: live, saved: SAVED, links: sam.links });
+  assert.ok(!sam.mine.includes('p_sam'));
+  assert.equal(sam.links.find(l => l.playerId === 'p_sam').user, 'mal');
+  // A seat nobody had yet links to whoever takes it first
+  const fresh = linkMyPlayers({ me: 'sam', device: 'dev-sam', myPlayer: 's_me', liveRounds: live, saved: SAVED, links: [] });
+  assert.ok(fresh.mine.includes('p_sam'));
+  // Then anyone in the group with the link who takes that seat on their phone gets nothing
+  const stolen = [round('R3', { devs: { t_me: TREVOR_PHONE, p_sam: MAL_PHONE }, claims: { p_sam: 'm_me' } })];
+  const mal = linkMyPlayers({ me: 'mal', device: MAL_PHONE, myPlayer: 'm_me', liveRounds: stolen, saved: SAVED, links: fresh.links });
+  assert.ok(!mal.mine.includes('p_sam'));
   assert.equal(mal.links.find(l => l.playerId === 'p_sam').user, 'sam');
+});
+
+test('a friend’s link made before the new rule can’t be taken by someone in the group taking their seat', () => {
+  // Dave linked p_dave before the rule. Mallory has the live link and takes Dave's seat on her phone
+  const before = [{ playerId: 'p_dave', user: 'dave', dev: null, roundCode: null }];
+  const live = [round('R4', { devs: { t_me: TREVOR_PHONE, p_dave: MAL_PHONE }, claims: { p_dave: 'm_me' } })];
+  const mal = linkMyPlayers({ me: 'mal', device: MAL_PHONE, myPlayer: 'm_me', liveRounds: live, saved: SAVED, links: before });
+  assert.ok(!mal.mine.includes('p_dave'));
+  assert.equal(mal.links.find(l => l.playerId === 'p_dave').user, 'dave');
+  // Dave's own phone brings his old link up to date
+  const dave = linkMyPlayers({ me: 'dave', device: DAVE_PHONE, myPlayer: 'd_me', liveRounds: [round('R1')], saved: SAVED, links: before });
+  assert.deepEqual(dave.links.find(l => l.playerId === 'p_dave'), { playerId: 'p_dave', user: 'dave', dev: DAVE_PHONE, roundCode: 'R1' });
 });
 
 test('on the phone: your own id still reads as you while the server hasn’t linked it yet', async () => {
