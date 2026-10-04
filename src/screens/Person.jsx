@@ -19,12 +19,17 @@ import { nemesis, rivalry } from '../lib/rivalry.js';
 import { RivalryCard } from '../components/Rivalry.jsx';
 import { usePersonProfile } from '../lib/profiles.js';
 import { friendView, sinceText } from '../lib/profile-view.js';
+import { personTalk, recentTalkKeys } from '../lib/talk.js';
+import { useTalkSync } from '../lib/talk-sync.js';
+import { TalkCount } from '../components/TalkCount.jsx';
+import { agoLabel } from '../lib/lately.js';
 
 export default function Person({ id: opened }) {
   const nav = useNav();
   const state = useStore();
   const { showToast } = useUI();
   useTabSync();
+  useTalkSync(recentTalkKeys(state));
   const [open, setOpen] = useState(null);
   const [merging, setMerging] = useState(false);
   const mine = myIds(state);
@@ -44,6 +49,8 @@ export default function Person({ id: opened }) {
   // You against them, all time, from the same story (the Record Book)
   const rv = rivalry(state, mine, id);
   const nem = nemesis(state, mine);
+  // What the two of you said in rounds together, newest first (talk.js)
+  const talk = kept === state.me ? [] : personTalk(state, id);
   const amount = Math.abs(tab);
   const between = plan.filter(t => (t.from === id && mine.has(t.to)) || (t.to === id && mine.has(t.from)));
   const debt = between.length === 1 ? between[0]
@@ -120,6 +127,29 @@ export default function Person({ id: opened }) {
         )}
 
         <RivalryCard rv={rv} name={name} isNemesis={!isMine && nem?.id === id} />
+        {talk.length > 0 && (
+          <>
+            <div className="sec-label">Trash talk</div>
+            <ul className="talk-list person-talk" role="list">
+              {talk.map(t => (
+                <li key={t.id}>
+                  <button className="talk-item as-row" onClick={() => nav.push(...t.target)}>
+                    <span className="ti-main">
+                      <span className="ti-head">
+                        <span className="ti-name">{t.name}</span>
+                        {t.jab && <span className="ti-jab"><Icon name="lightning" fill /> Jab</span>}
+                        <span className="ti-when">{agoLabel(t.at)}</span>
+                      </span>
+                      <span className="ti-body">{t.body}</span>
+                      <span className="ti-on">{gameLabel(t.round)} · {t.round.course?.name}</span>
+                    </span>
+                    <span className="chevron" aria-hidden="true"><Icon name="caret-right" /></span>
+                  </button>
+                </li>
+              ))}
+            </ul>
+          </>
+        )}
         {rerouted && story.rounds > 0 && (
           <p className="field-help pad">
             Just between you two, {direct > 0 ? `${firstName} owes you ${money(direct)}` : direct < 0 ? `you owe ${firstName} ${money(-direct)}` : 'you’re square'}.
@@ -158,6 +188,7 @@ export default function Person({ id: opened }) {
             <div className="lr-info">
               <div className="lr-name" style={{ fontSize: 16 }}>{gameLabel(it.round)} · {it.round.course.name}</div>
               <div className="lr-status">{roundDate(it.round)}{it.money === false ? ` · ${playForLine(it.round)}` : ''}{it.cash != null ? ` · Side bets for money ${it.cash ? money(it.cash, { sign: true }) : 'square'}` : ''}</div>
+              <TalkCount rows={state.talk?.[`round:${it.round.id}`]} />
             </div>
             <div className={`lr-amt d story-amt ${it.amount > 0 ? 'pos' : it.amount < 0 ? 'neg' : ''}`}>{it.amount ? unitFmt(it.round)(it.amount, { sign: true }) : 'Even'}</div>
           </button>

@@ -1935,3 +1935,65 @@ button.trip-card:active { transform: scale(.97); }
 .trip-who { display: flex; flex-direction: column; gap: 6px; margin-top: 8px; }
 .trip-who .sheet-item { width: 100%; margin: 0; }
 .trip-who .avatar { margin: 0; }
+
+/* COMMENTS AND REACTIONS (overnight 7, comments): trash talk on a finished round, its settle-up
+   lines and side bets, and on a plan. Reactions are pills with a count, yours filled in. */
+.talk-card { margin: 0 16px 6px; padding: 12px; background: var(--card); border-radius: 20px; }
+.talk-reacts { display: flex; gap: 8px; flex-wrap: wrap; }
+.talk-react {
+  display: inline-flex; align-items: center; justify-content: center; gap: 5px; min-width: 52px; min-height: 44px; padding: 0 12px;
+  border: none; border-radius: 999px; background: var(--surface); color: var(--ink); font: inherit; font-size: 15px; font-weight: 700;
+  cursor: pointer; transition: transform var(--duration-fast) var(--spring), background var(--duration-quick);
+}
+.talk-react:active { transform: scale(.9); }
+.talk-react.on { background: var(--pick-tint); box-shadow: inset 0 0 0 2px var(--pink-text); }
+.talk-react.static { cursor: default; }
+.talk-react.static:active { transform: none; }
+.talk-react .tr-emoji { font-size: 20px; line-height: 1; }
+.talk-react .tr-n { font-variant-numeric: tabular-nums; font-size: 14px; }
+.talk-react.sm { min-width: 0; min-height: 36px; padding: 0 10px; font-size: 14px; position: relative; }
+.talk-react.sm::before { content: ''; position: absolute; inset: -4px 0; } /* a 44px tap target on a 36px pill */
+.talk-react.sm i { font-size: 17px; color: var(--icon); }
+.talk-react.add { gap: 1px; }
+.talk-react.add .tr-plus { font-size: 11px; }
+.talk-list { list-style: none; margin: 10px 0 0; padding: 0; display: flex; flex-direction: column; gap: 10px; }
+.talk-item { display: flex; align-items: flex-start; gap: 0; }
+.talk-item .avatar.sm { margin-right: 10px; margin-top: 2px; }
+.ti-main { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+.ti-head { display: flex; align-items: baseline; gap: 8px; flex-wrap: wrap; }
+.ti-name { font-weight: 700; font-size: 14px; color: var(--ink); }
+.ti-when { font-size: 12px; color: var(--mute); }
+.ti-jab { display: inline-flex; align-items: center; gap: 3px; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .06em; color: var(--pink-text); }
+.ti-body { margin: 2px 0 0; font-size: 15px; line-height: 1.4; color: var(--body); overflow-wrap: anywhere; }
+.ti-on { font-size: 12px; color: var(--mute); margin-top: 3px; }
+.talk-item.mine .ti-body { color: var(--ink); }
+.ti-del { margin-left: 6px; color: var(--mute); }
+.talk-empty { margin: 10px 2px 0; font-size: 14px; color: var(--mute); }
+.talk-jabs { display: flex; gap: 8px; overflow-x: auto; margin: 12px -12px 0; padding: 0 12px 2px; scrollbar-width: none; overscroll-behavior-x: contain; }
+.talk-jabs::-webkit-scrollbar { display: none; }
+.talk-jab { flex-shrink: 0; min-height: 44px; white-space: nowrap; }
+.talk-compose { display: flex; gap: 8px; align-items: center; margin-top: 10px; }
+.talk-compose .text-input { flex: 1; min-width: 0; min-height: 44px; }
+.talk-send { background: var(--ink); color: var(--on-ink); }
+.talk-send:disabled { background: var(--surface); color: var(--mute-soft); cursor: default; }
+/* Under a settle-up line or a side bet */
+.talk-pay { margin-bottom: 8px; }
+.talk-pay .pay-row { margin-bottom: 0; }
+.talk-bar { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; padding: 6px 4px 2px; }
+.talk-bet .talk-bar { padding: 0 16px 10px; }
+.talk-tray { display: flex; gap: 6px; flex-basis: 100%; padding: 6px; border-radius: 999px; background: var(--card); box-shadow: 0 4px 16px rgba(0,0,0,.08); animation: rise var(--duration-fast) var(--ease-smooth-out) both; }
+.talk-tray .talk-react { min-width: 44px; padding: 0 8px; font-size: 20px; }
+.talk-sheet { padding: 4px 16px 4px; }
+.talk-sheet .talk-jabs { margin: 12px -16px 0; padding: 0 16px 2px; }
+/* A round's talk in a few characters, on a row in a list */
+.talk-count { display: inline-flex; gap: 8px; font-size: 12px; font-weight: 600; color: var(--mute); flex-shrink: 0; margin-top: 2px; }
+.talk-count span { display: inline-flex; align-items: center; gap: 3px; }
+.talk-count i { font-size: 13px; color: var(--icon); }
+.hr-main .talk-count { margin-top: 0; }
+.lately-main .talk-count { margin-top: 3px; }
+.lately-ic.pink { background: var(--pink); }
+/* The player card: what the two of you said lately */
+.person-talk { margin: 0 16px 6px; padding: 4px 0; gap: 0; background: var(--card); border-radius: 20px; }
+.person-talk li + li .talk-item { border-top: 1px solid var(--line-soft); }
+.talk-item.as-row { width: 100%; align-items: center; gap: 8px; padding: 12px 16px; border: none; background: none; font: inherit; color: inherit; text-align: left; cursor: pointer; }
+.talk-item.as-row:active { background: var(--surface); }

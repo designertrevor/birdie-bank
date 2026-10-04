@@ -15,9 +15,10 @@ import { GAMES } from './round.js';
 import { gameLabel, meFor, myIds } from './format.js';
 import { canonicalOf } from './pair-debts.js';
 import { nameOf } from './ledger.js';
-import { dayLabel } from './plans.js';
+import { dayLabel, planPeople } from './plans.js';
 import { roundTime } from './history.js';
 import { agoLabel, LATELY_DAYS } from './lately.js';
+export { countsLine, roundTalkCounts, talkCounts } from './talk-counts.js';
 
 const DAY = 864e5;
 /** The longest comment, the same as the server's check. */
@@ -182,20 +183,6 @@ export function commentsOn(rows = {}, on = null) {
     .sort((a, b) => a.at - b.at || String(a.id).localeCompare(String(b.id)));
 }
 
-/** How much talk a thread has: { comments, reactions } (reactions counts each person's emoji once). */
-export function talkCounts(rows = {}, on = null) {
-  const list = Object.values(rows).filter(x => live(x) && (on == null || x.on === on));
-  return { comments: list.filter(x => x.kind === 'comment').length, reactions: list.filter(x => x.kind === 'reaction').length };
-}
-
-/** "3 comments", "1 comment · 4 reactions", or null when it's quiet. */
-export function countsLine({ comments = 0, reactions = 0 } = {}) {
-  const parts = [];
-  if (comments) parts.push(`${comments} comment${comments === 1 ? '' : 's'}`);
-  if (reactions) parts.push(`${reactions} reaction${reactions === 1 ? '' : 's'}`);
-  return parts.length ? parts.join(' · ') : null;
-}
-
 /** Who you are in a round's talk: your seat, or null when you only watched it. */
 export function talkWho(round, state) {
   const me = round ? meFor(round, state) : null;
@@ -276,7 +263,7 @@ export function latelyTalk(state, now = Date.now(), { days = LATELY_DAYS } = {})
     add(planThread(p), state.talk[planThread(p)], {
       title: [day ? `Plan for ${day}` : 'Upcoming round', p.course?.name].filter(Boolean).join(' at '),
       target: ['plan', { id: p.id }], me: planWho(p),
-      seatName: id => (p.people || []).find(x => x.id === id)?.name || p.answers?.[id]?.name || null,
+      seatName: planTalk(p).seatName,
     });
   }
   return items.sort((a, b) => b.at - a.at || String(a.id).localeCompare(String(b.id)));
@@ -307,17 +294,26 @@ export function personTalk(state, other, { limit = 3 } = {}) {
   return out.sort((a, b) => b.at - a.at).slice(0, limit);
 }
 
-/** How much talk a round has, for a small count on its row. */
-export function roundTalkCounts(state, round) {
-  return talkCounts(state.talk?.[roundThread(round)] || {});
-}
-
-/** Threads with talk this phone looks up: finished shared rounds from the last `days` days, and plans. */
-export function recentThreads(state, { days = LATELY_DAYS, now = Date.now() } = {}) {
+/** The threads this phone looks up for Lately and the player cards: rounds you played lately, and plans you're on. */
+export function recentTalkKeys(state, { days = LATELY_DAYS, now = Date.now() } = {}) {
   const since = now - days * DAY;
   const rounds = Object.values(state.rounds || {}).filter(r => r?.status === 'done' && roundTime(r) >= since && talkWho(r, state));
   const plans = Object.values(state.plans || {}).filter(p => p && p.status === 'planned' && planWho(p));
-  return { rounds, plans };
+  return [...rounds.map(roundThread), ...plans.map(planThread)];
+}
+
+/** Who you are and how names read in a round's talk (for the talk on screen). */
+export function roundTalk(round, state) {
+  const who = talkWho(round, state);
+  const seatName = id => round.players.find(p => p.id === id)?.name || null;
+  return { key: roundThread(round), who, myName: who ? firstOf(seatName(who)) : null, seatName, kind: 'round' };
+}
+/** The same for a plan's talk. */
+export function planTalk(plan) {
+  const who = planWho(plan);
+  const people = planPeople(plan);
+  const seatName = id => people.find(p => p.who === id)?.name || (id === plan.hostWho ? plan.hostName : null) || null;
+  return { key: planThread(plan), who, myName: who ? firstOf(seatName(who)) : null, seatName, kind: 'plan' };
 }
 
 /** Lately with the talk mixed in, newest first. */

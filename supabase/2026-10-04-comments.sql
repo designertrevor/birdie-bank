@@ -49,7 +49,7 @@ create table if not exists public.comments (
   updated_at timestamptz not null default now(),
   primary key (scope, code, id),
   constraint comments_reaction_has_emoji check (kind <> 'reaction' or emoji is not null),
-  constraint comments_comment_has_words check (kind <> 'comment' or deleted or length(btrim(body)) >= 1)
+  constraint comments_comment_has_words check (kind <> 'comment' or deleted or coalesce(length(btrim(body)), 0) >= 1)
 );
 
 -- Who has been let in, and the seats they had then. Only the functions below read or write it.
@@ -108,7 +108,7 @@ begin
     if not exists (select 1 from public.comment_members c where c.scope = 'plan' and c.code = p_code and c.member = any (keys)) then return null; end if;
     return public.comment_plan_seats(p_code);
   end if;
-  if p_scope <> 'round' then return null; end if;
+  if p_scope is distinct from 'round' then return null; end if;
   select r.meta into m from public.live_rounds r where r.code = p_code;
   if found then
     s := public.comment_round_seats(m, w, me);

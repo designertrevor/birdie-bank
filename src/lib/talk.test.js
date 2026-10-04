@@ -68,7 +68,7 @@ test('talk: jabs fit what they are about, and every key is unique', () => {
   for (const j of Object.values(JABS).flat()) {
     assert.ok(j.key.length <= 32, 'fits the server column');
     assert.ok(j.text.length <= MAX_BODY);
-    assert.ok(!j.text.includes('—'));
+    assert.ok(!j.text.includes(String.fromCharCode(0x2014)));
   }
 });
 

@@ -6,25 +6,9 @@ import { Avatar } from './Avatar.jsx';
 import { useStore } from '../lib/store.js';
 import { canonicalOf } from '../lib/pair-debts.js';
 import { agoLabel } from '../lib/lately.js';
-import { planPeople } from '../lib/plans.js';
-import { MAX_BODY, REACTIONS, commentsOn, jabsFor, planThread, planWho, reactionsOn, roundThread, talkCounts, talkName, talkWho } from '../lib/talk.js';
+import { MAX_BODY, REACTIONS, commentsOn, jabsFor, reactionsOn, talkName } from '../lib/talk.js';
+import { talkCounts } from '../lib/talk-counts.js';
 import { postComment, react, takeBack, useTalkReach } from '../lib/talk-sync.js';
-
-const firstOf = name => String(name || '').trim().split(/\s+/)[0] || null;
-
-/** Who you are and how names read in a round's talk. */
-export function roundTalk(round, state) {
-  const who = talkWho(round, state);
-  const seatName = id => round.players.find(p => p.id === id)?.name || null;
-  return { key: roundThread(round), who, myName: who ? firstOf(seatName(who)) : null, seatName, kind: 'round' };
-}
-/** The same for a plan's talk. */
-export function planTalk(plan) {
-  const who = planWho(plan);
-  const people = planPeople(plan);
-  const seatName = id => people.find(p => p.who === id)?.name || (id === plan.hostWho ? plan.hostName : null) || null;
-  return { key: planThread(plan), who, myName: who ? firstOf(seatName(who)) : null, seatName, kind: 'plan' };
-}
 
 /** The line under the talk that says who sees it. */
 function ReachNote({ ctx, reach }) {
@@ -193,18 +177,5 @@ export function TalkBar({ ctx, on, title }) {
         <ReachNote ctx={ctx} reach={reach} />
       </Sheet>
     </div>
-  );
-}
-
-/** "💬 3 · 🔥 2": a round's talk in a few characters, for a row in a list. */
-export function TalkCount({ rows }) {
-  const { comments, reactions } = talkCounts(rows || {});
-  if (!comments && !reactions) return null;
-  const label = [comments ? `${comments} comment${comments === 1 ? '' : 's'}` : null, reactions ? `${reactions} reaction${reactions === 1 ? '' : 's'}` : null].filter(Boolean).join(', ');
-  return (
-    <span className="talk-count" aria-label={label}>
-      {comments > 0 && <span><Icon name="chat-circle" fill /> {comments}</span>}
-      {reactions > 0 && <span><Icon name="smiley" fill /> {reactions}</span>}
-    </span>
   );
 }
