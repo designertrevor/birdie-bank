@@ -29,6 +29,7 @@ export function defaultRange(now = new Date()) {
 
 /** Switch the control to a kind, keeping the period you were looking at where it makes sense. */
 export function rangeOfKind(kind, from, now = new Date()) {
+  if (kind === 'all') return { kind };
   const year = from.year ?? now.getFullYear();
   if (kind === 'season') return { kind, year };
   if (kind === 'month') {
@@ -43,6 +44,7 @@ export function rangeOfKind(kind, from, now = new Date()) {
 
 /** [start, end) in ms for a range. A custom range includes both of its days. */
 export function rangeBounds(range) {
+  if (range.kind === 'all') return [-Infinity, Infinity];
   if (range.kind === 'season') return [new Date(range.year, 0, 1).getTime(), new Date(range.year + 1, 0, 1).getTime()];
   if (range.kind === 'month') return [new Date(range.year, range.month, 1).getTime(), new Date(range.year, range.month + 1, 1).getTime()];
   let a = parseDay(range.from), b = parseDay(range.to);
@@ -52,7 +54,7 @@ export function rangeBounds(range) {
   return [a ? a.getTime() : -Infinity, end];
 }
 
-/** Step a season or month range back (-1) or forward (+1). Custom ranges don't step. */
+/** Step a season or month range back (-1) or forward (+1). Custom and All time ranges don't step. */
 export function shiftRange(range, dir) {
   if (range.kind === 'season') return { ...range, year: range.year + dir };
   if (range.kind === 'month') {
@@ -62,15 +64,16 @@ export function shiftRange(range, dir) {
   return range;
 }
 
-/** Whether stepping forward would only show the future. */
+/** Whether stepping forward would only show the future (All time and custom ranges never step). */
 export function isLatest(range, now = new Date()) {
   if (range.kind === 'season') return range.year >= now.getFullYear();
   if (range.kind === 'month') return range.year > now.getFullYear() || (range.year === now.getFullYear() && range.month >= now.getMonth());
   return true;
 }
 
-/** "2026 season", "September 2026", "Sep 1 to Sep 27". */
+/** "2026 season", "September 2026", "Sep 1 to Sep 27", "All time". */
 export function rangeLabel(range, now = new Date()) {
+  if (range.kind === 'all') return 'All time';
   if (range.kind === 'season') return `${range.year} season`;
   if (range.kind === 'month') return `${MONTHS[range.month]} ${range.year}`;
   const a = parseDay(range.from), b = parseDay(range.to);
