@@ -43,7 +43,7 @@ function supabaseCup(db) {
 }
 
 // Dev and testing: localStorage, so two tabs (one with ?profile=b) act as two phones
-const LOCAL_KEY = 'bb-trip-cup';
+export const LOCAL_KEY = 'bb-trip-cup';
 function localCup() {
   const load = () => { try { return JSON.parse(localStorage.getItem(LOCAL_KEY)) || {}; } catch { return {}; } };
   return {
@@ -75,6 +75,44 @@ const note = e => {
   if (e instanceof CupOffError) off = true;
   else console.warn('Trip matches:', e?.message || e);
 };
+
+/** Whether the trip_cup table is known to be missing (or there's no server), for this session. */
+export const cupOff = () => off;
+
+/**
+ * Every row the server lets this phone read for one trip, as { key: data }, for a captains' draft
+ * (draft-sync.js) on a phone that may not know the trip yet. Null when the table isn't there.
+ */
+export async function cupRows(tripId) {
+  if (off) return null;
+  const adapter = await getAdapter();
+  if (!adapter) return null;
+  await deviceReady();
+  try {
+    const rows = await adapter.fetch([tripId]);
+    return Object.fromEntries(rows.filter(r => r.data && typeof r.data === 'object').map(r => [r.key, r.data]));
+  } catch (e) {
+    note(e);
+    if (e instanceof CupOffError) return null;
+    throw e;
+  }
+}
+
+/** Post one row for a trip (a draft's). False when the table isn't there; throws with no signal. */
+export async function postCupRow(tripId, key, data) {
+  if (off) return false;
+  const adapter = await getAdapter();
+  if (!adapter) return false;
+  await deviceReady();
+  try {
+    await adapter.publish(tripId, key, data);
+    return true;
+  } catch (e) {
+    note(e);
+    if (e instanceof CupOffError) return false;
+    throw e;
+  }
+}
 
 /** Team points trips this phone knows. */
 const cupTrips = s => [...tripsOf(s).values()].filter(t => t.format === CUP_FORMAT);

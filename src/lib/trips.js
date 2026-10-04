@@ -48,6 +48,7 @@ import { isPlanPayment, planRows, planState } from './trip-plan.js';
 import { expensePairDebts, expensePairs, expenseTotals, placeable, placedOn, tripExpenses, tripMoney, tripPays } from './trip-expenses.js';
 import { CUP_FORMAT, cleanCup, closeEntry, cupEntries, cupLeaderboard, cupOf, cupScore, stakeLines, stakeLink, stakeMarks, stakeOpen, stakeSeats, teamOf } from './cup.js';
 import { cupStake } from './cup-stake.js';
+import { cleanFlights } from './flights.js';
 
 const DAY = 864e5;
 /**
@@ -70,7 +71,7 @@ export function cleanTripName(s) {
 }
 
 /** A new trip. `start` and `end` are days (YYYY-MM-DD); the last day is never before the first. */
-export function newTrip({ id, name, start, end, where = null, by = null, people = [], format = TRIP_FORMAT, cup = null, now = Date.now() }) {
+export function newTrip({ id, name, start, end, where = null, by = null, people = [], format = TRIP_FORMAT, cup = null, flights = null, now = Date.now() }) {
   const first = start || dayOf(now);
   const last = end && end >= first ? end : first;
   const trip = {
@@ -78,6 +79,8 @@ export function newTrip({ id, name, start, end, where = null, by = null, people 
     format: TRIP_FORMATS[format] ? format : TRIP_FORMAT, by, people: cleanPeople(people, by), createdAt: now, updatedAt: now,
   };
   if (trip.format === CUP_FORMAT) trip.cup = cleanCup(cup);
+  // Handicap flights (flights.js), only when picked, so a trip without them looks as it always did
+  if (cleanFlights(flights)) trip.flights = cleanFlights(flights);
   return trip;
 }
 
@@ -117,6 +120,7 @@ export function tripHidden(state, id) {
 export function tripStamp(trip) {
   const stamp = { id: trip.id, name: cleanTripName(trip.name) || 'Golf trip', start: trip.start || null, end: trip.end || null, format: trip.format || TRIP_FORMAT };
   if (stamp.format === CUP_FORMAT) stamp.cup = cleanCup(trip.cup);
+  if (cleanFlights(trip.flights)) stamp.flights = cleanFlights(trip.flights);
   return stamp;
 }
 
@@ -750,15 +754,29 @@ export function tripDates(trip) {
  * when both are in the same half of the day.
  */
 export function tripChips(status) {
-  const items = [
-    ...status.done.map(r => ({ key: r.id, at: r.createdAt || finishedAt(r), state: 'done' })),
-    ...status.live.map(r => ({ key: r.id, at: r.createdAt || Date.now(), state: 'now' })),
+  // A Trip Mode schedule's session (trip-templates.js) is one chip for all its groups: its rounds
+  // and plans carry `session`; done once every group is, now while any is being played or some are in
+  const sessionKey = x => (x?.session?.trip && x.session.day ? `s:${x.session.day}.${x.session.session}` : null);
+  const raw = [
+    ...status.done.map(r => ({ key: r.id, at: r.createdAt || finishedAt(r), state: 'done', group: sessionKey(r) })),
+    ...status.live.map(r => ({ key: r.id, at: r.createdAt || Date.now(), state: 'now', group: sessionKey(r) })),
     ...status.planned.map(p => {
       const [y, m, d] = parts(p.date);
       const [h, min] = String(p.teeTime || '09:00').split(':').map(Number);
-      return { key: p.id, at: new Date(y, m - 1, d, h || 9, min || 0).getTime(), state: 'planned' };
+      return { key: p.id, at: new Date(y, m - 1, d, h || 9, min || 0).getTime(), state: 'planned', group: sessionKey(p) };
     }),
-  ].sort((a, b) => a.at - b.at);
+  ];
+  const groups = new Map();
+  const items = [];
+  for (const x of raw) {
+    if (!x.group) { items.push(x); continue; }
+    const g = groups.get(x.group);
+    if (!g) { const y = { ...x, states: new Set([x.state]) }; groups.set(x.group, y); items.push(y); continue; }
+    g.at = Math.min(g.at, x.at);
+    g.states.add(x.state);
+  }
+  for (const g of groups.values()) g.state = g.states.has('now') || g.states.size > 1 ? 'now' : [...g.states][0];
+  items.sort((a, b) => a.at - b.at);
   const half = t => (new Date(t).getHours() < 12 ? 'AM' : 'PM');
   const perDay = new Map();
   for (const x of items) perDay.set(dayOf(x.at), [...(perDay.get(dayOf(x.at)) || []), x]);

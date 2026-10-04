@@ -7,6 +7,7 @@ import { joinRoute } from './lib/join.js';
 import { syncConfigured } from './lib/supabase.js';
 import { cleanCode } from './lib/sync-model.js';
 import { KeptScope, notePlace, startPlace } from './lib/kept.js';
+import { cleanTripId } from './lib/draft.js';
 import UpNext from './screens/UpNext.jsx';
 
 // Only Up next (the first screen) is in the main bundle; the rest load on demand. The service
@@ -70,6 +71,9 @@ const TripSettle = screen(trip, 'TripSettle');
 const books = () => import('./screens/Books.jsx');
 const CloseBooks = screen(books, 'CloseBooks');
 const Book = screen(books, 'Book');
+const draft = () => import('./screens/Draft.jsx');
+const Draft = screen(draft);
+const DraftLink = screen(draft, 'DraftLink');
 
 /** A plan link (?plan=CODE, &p=WHO for one person's own) waiting to open: { code, who } or null. */
 function pendingPlanLink() {
@@ -95,14 +99,30 @@ function pendingChallengeLink() {
     return cleanCode(sessionStorage.getItem('pending-challenge')) || null;
   } catch { return null; }
 }
-/** A plan, challenge or join link opened the app: it goes first, ahead of where you were. */
+/** A plan, challenge, draft or join link opened the app: it goes first, ahead of where you were. */
 function linkWaiting() {
   try {
     const q = new URLSearchParams(location.search);
-    return !!(q.get('plan') || q.get('challenge') || q.get('join') || sessionStorage.getItem('bb-plan') || sessionStorage.getItem('pending-challenge') || sessionStorage.getItem('bb-join'));
+    return !!(q.get('plan') || q.get('challenge') || q.get('join') || q.get('draft') || sessionStorage.getItem('bb-plan') || sessionStorage.getItem('pending-challenge') || sessionStorage.getItem('bb-join') || sessionStorage.getItem('pending-draft'));
   } catch { return false; }
 }
 const clearChallengeLink = () => { try { sessionStorage.removeItem('pending-challenge'); } catch { /* ignore */ } };
+
+/** A captain's draft link (?draft=TRIP&c=0|1) waiting to open: { tripId, seat }, or null. Kept for this tab until it opens. */
+function pendingDraftLink() {
+  try {
+    const q = new URLSearchParams(location.search);
+    const tripId = cleanTripId(q.get('draft'));
+    if (tripId) {
+      const v = { tripId, seat: q.get('c') === '1' ? 1 : 0 };
+      sessionStorage.setItem('pending-draft', JSON.stringify(v));
+      return v;
+    }
+    const saved = JSON.parse(sessionStorage.getItem('pending-draft'));
+    return cleanTripId(saved?.tripId) ? { tripId: saved.tripId, seat: saved.seat === 1 ? 1 : 0 } : null;
+  } catch { return null; }
+}
+const clearDraftLink = () => { try { sessionStorage.removeItem('pending-draft'); } catch { /* ignore */ } };
 
 /** A join link (?join=CODE) waiting to open, from the address bar or saved for this tab. */
 function pendingJoin() {
@@ -122,7 +142,7 @@ const SCREENS = {
   settings: Settings, defaults: Defaults, courses: Courses, courseEdit: CourseEdit, about: About, suggest: Suggest,
   plan: Plan, rollCall: RollCall, planLink: PlanLink, preview: Preview, paywall: Paywall, season: Season,
   challenge: Challenge, challengeLink: ChallengeLink,
-  joinInvite: JoinInviteScreen, lately: Lately, trip: Trip, tripSettle: TripSettle,
+  joinInvite: JoinInviteScreen, lately: Lately, trip: Trip, tripSettle: TripSettle, draft: Draft, draftLink: DraftLink,
   friends: Friends, friendRound: FriendRound,
   profile: Profile, stats: Stats, share: Share, closeBooks: CloseBooks, book: Book,
 };
@@ -159,6 +179,8 @@ export default function App() {
   const [planLinkAt, setPlanLinkAt] = useState(pendingPlanLink);
   // A challenge link too: someone set up gets it on top of Up next, anyone else answers it as it is
   const [challengeAt, setChallengeAt] = useState(pendingChallengeLink);
+  // A captain's draft link: on top of Up next for someone set up, on its own for anyone else
+  const [draftAt, setDraftAt] = useState(pendingDraftLink);
   const [stack, setStack] = useState(() => {
     if (!onboarded) return [];
     if (planLinkAt) {
@@ -168,6 +190,10 @@ export default function App() {
     if (challengeAt) {
       clearChallengeLink();
       return [{ name: 'challengeLink', params: { code: challengeAt }, key: Date.now() }];
+    }
+    if (draftAt) {
+      clearDraftLink();
+      return [{ name: 'draftLink', params: draftAt, key: Date.now() }];
     }
     // A join link for someone already set up opens the invite card (seats, "Not on the list? Add me")
     const code = syncConfigured ? pendingJoin() : null;
@@ -225,6 +251,7 @@ export default function App() {
     }
     if (new URLSearchParams(location.search).get('plan')) history.replaceState(null, '', location.pathname);
     if (new URLSearchParams(location.search).get('challenge')) history.replaceState(null, '', location.pathname);
+    if (new URLSearchParams(location.search).get('draft')) history.replaceState(null, '', location.pathname);
   }, []);
 
   // Overlays opened in place over a screen (the course editor over round setup): the phone's back
@@ -273,6 +300,7 @@ export default function App() {
     // A friend with a plan link answers and votes with no setup; the plan waits on their Up next if they set up later
     const skipPlan = () => { clearPlanLink(); setPlanLinkAt(null); };
     const skipChallenge = () => { clearChallengeLink(); setChallengeAt(null); };
+    const skipDraft = () => { clearDraftLink(); setDraftAt(null); };
     return (
       <UIProvider>
         <div className="device">
@@ -280,6 +308,7 @@ export default function App() {
             {inviteCode ? <JoinInvite code={inviteCode} onJoined={joined} onSkip={skip} />
               : planLinkAt ? <PlanLink code={planLinkAt.code} who={planLinkAt.who} standalone onSkip={skipPlan} />
               : challengeAt ? <ChallengeLink code={challengeAt} standalone onSkip={skipChallenge} />
+              : draftAt ? <DraftLink tripId={draftAt.tripId} seat={draftAt.seat} standalone onSkip={skipDraft} />
               : <Onboarding onDone={routes => setStack(routes.map(([name, params = {}]) => ({ name, params, key: Date.now() + Math.random() })))} />}
           </Suspense>
         </div>

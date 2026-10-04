@@ -11,7 +11,9 @@
 // the match is the round's two teams, each hole the team's one net score (round.js teamHoleScore,
 // off the team's foursomes handicap). Its partners come from the trip's teams and rotate like
 // four-ball, and the round's teams are the pairs.
-// A win is 1 point, a halved match half a point each. Matches count once their round is done; a
+// A win is 1 point, a halved match half a point each, unless the round's matches are worth more
+// (`round.cup.worth`, from a Trip Mode schedule, trip-templates.js: a singles day worth 2 a match, say;
+// a round without it is worth 1, as every round before it). Matches count once their round is done; a
 // match closed out early ends there ("3&2"), and one the round never finished goes to whoever led
 // on the holes played, the way an unfinished Nassau bet pays. The team score adds up every match
 // on the trip, and the leaderboard gives each player the points of the matches they played in.
@@ -33,6 +35,8 @@ import { holeWinner } from './golf.js';
 import { oneBall, sideNet, teamHoleScore } from './round.js';
 import { canonicalOf, codeOf } from './pair-debts.js';
 import { stable } from './sync-model.js';
+import { courseNetOf } from './to-par.js';
+import { isDraftKey } from './draft.js';
 
 export const CUP_FORMAT = 'cup';
 export const CUP_KINDS = {
@@ -47,6 +51,12 @@ export const cupKindsFor = game => (game === FOURSOMES_GAME ? ['foursomes'] : ['
 export const TEAM_NAMES = ['Blue', 'Red'];
 /** The most a person can put on the cup, in dollars. */
 export const MAX_STAKE = 500;
+/** What a match can be worth in points (a win; a halved match is half of it). 1 unless a schedule says more. */
+export const WORTHS = [1, 2, 3];
+/** A match's worth as saved, or 1. */
+export const cleanWorth = v => (WORTHS.includes(Number(v)) ? Number(v) : 1);
+/** `worth` on a round's cup or an entry, only when it isn't 1, so a round without one looks as it always did. */
+const worthPart = v => (cleanWorth(v) !== 1 ? { worth: cleanWorth(v) } : {});
 
 const isObj = v => !!v && typeof v === 'object' && !Array.isArray(v);
 const isStr = v => typeof v === 'string' && v.length > 0;
@@ -84,7 +94,9 @@ export function cleanStake(v) {
 
 /**
  * A trip's cup as the organizer set it: { names, teams: [[{ id, name }], [...]], captains, stake,
- * pick: 'draft' | 'balance' | 'hand' }. Anyone on both teams stays on the first.
+ * pick: 'draft' | 'balance' | 'flights' | 'hand' }. Anyone on both teams stays on the first. Set up in
+ * Trip Mode (trip-templates.js) it also has `schedule` (the days and their sessions) and `draft` (a
+ * captains' draft: { live, order, first }); a cup without them has neither key, as before.
  */
 export function cleanCup(raw) {
   const c = isObj(raw) ? raw : {};
@@ -98,8 +110,27 @@ export function cleanCup(raw) {
     const id = Array.isArray(c.captains) ? c.captains[i] : null;
     return isStr(id) && teams[i].some(p => p.id === id) ? id : null;
   });
-  const pick = ['draft', 'balance', 'hand'].includes(c.pick) ? c.pick : 'hand';
-  return { names, teams, captains, stake: cleanStake(c.stake), pick };
+  const pick = ['draft', 'balance', 'flights', 'hand'].includes(c.pick) ? c.pick : 'hand';
+  const schedule = isObj(c.schedule) ? cleanSchedule(c.schedule) : null;
+  const draft = isObj(c.draft) ? { live: c.draft.live === true, order: c.draft.order === 'turns' ? 'turns' : 'snake', first: c.draft.first === 1 ? 1 : 0 } : null;
+  return { names, teams, captains, stake: cleanStake(c.stake), pick, ...(schedule ? { schedule } : {}), ...(draft ? { draft } : {}) };
+}
+
+/** Kinds of session a Trip Mode schedule can have (trip-templates.js). */
+const SESSION_KINDS = ['fourball', 'foursomes', 'singles'];
+/**
+ * A Trip Mode schedule (trip-templates.js) tidied: { size, days: [{ course, sessions: [{ kind, worth, pct }] }] },
+ * at most 5 days of 1 or 2 sessions, `pct` each session's handicap allowance. Null when it has no session.
+ */
+export function cleanSchedule(raw) {
+  if (!isObj(raw)) return null;
+  const days = (Array.isArray(raw.days) ? raw.days : []).filter(isObj).slice(0, 5).map(d => ({
+    course: isObj(d.course) && isStr(d.course.id) ? { id: d.course.id.slice(0, 80), name: String(d.course.name || '').slice(0, 60) || 'Course' } : null,
+    sessions: (Array.isArray(d.sessions) ? d.sessions : []).filter(x => isObj(x) && SESSION_KINDS.includes(x.kind)).slice(0, 2)
+      .map(x => ({ kind: x.kind, worth: cleanWorth(x.worth), pct: Number.isInteger(x.pct) && x.pct >= 50 && x.pct <= 100 ? x.pct : 100 })),
+  })).filter(d => d.sessions.length);
+  if (!days.length) return null;
+  return { size: Number.isInteger(raw.size) && raw.size >= 4 && raw.size <= 24 ? raw.size : null, days };
 }
 
 // --------------------------- picking the teams ---------------------------
@@ -224,9 +255,9 @@ export function cleanRoundCup(round) {
     const flip = on(pairs[1], 0) + on(pairs[0], 1) > on(pairs[0], 0) + on(pairs[1], 1);
     const sides = flip ? [pairs[1], pairs[0]] : pairs;
     // A pair with someone from each trip team can't win a point for either (2026-10-04): no match
-    return { kind: 'foursomes', sides, ...(mixedPairs(round, sides) ? { mixed: true } : {}) };
+    return { kind: 'foursomes', sides, ...worthPart(c.worth), ...(mixedPairs(round, sides) ? { mixed: true } : {}) };
   }
-  return { kind: CUP_KINDS[c.kind] && c.kind !== 'foursomes' ? c.kind : defaultKind(saved), sides: saved };
+  return { kind: CUP_KINDS[c.kind] && c.kind !== 'foursomes' ? c.kind : defaultKind(saved), sides: saved, ...worthPart(c.worth) };
 }
 
 /**
@@ -312,10 +343,15 @@ export function matchResult(round, match) {
   return out;
 }
 
-/** A round's matches with their results: [{ kind, sides, result }], and who sits out. */
+/** A result's points at a match's worth: [1, 0] at 2 is [2, 0]. */
+const scaled = (points, worth) => (points && worth !== 1 ? points.map(p => p * worth) : points);
+
+/** A round's matches with their results: [{ kind, sides, result }], and who sits out. Points are at the round's worth. */
 export function roundCupResults(round) {
-  const { matches, out } = pairMatches(cleanRoundCup(round));
-  return { matches: matches.map(m => ({ ...m, result: matchResult(round, m) })), out };
+  const cup = cleanRoundCup(round);
+  const worth = cleanWorth(cup?.worth);
+  const { matches, out } = pairMatches(cup);
+  return { matches: matches.map(m => { const result = matchResult(round, m); return { ...m, result: { ...result, points: scaled(result.points, worth) } }; }), out, worth };
 }
 
 // --------------------------- the whole trip ---------------------------
@@ -331,22 +367,30 @@ const dayOf = t => {
 
 /**
  * What a round puts on the cup, the same shape on every phone (and what goes to the server):
- * { key, status, at, day, course, holes, players: [{ id, name, team, acct }], matches: [{ kind, sides, result }] }.
+ * { key, status, at, day, course, holes, players: [{ id, name, team, acct, net, played }], matches: [{ kind, sides, result }] }.
+ * `net` and `played` (each player's net to par over the holes they have a score on) feed the trip's
+ * flighted net leaderboard on other groups' phones (flights.js); a one-ball team's players have none.
  */
 export function cupEntry(state, round) {
   const cup = cleanRoundCup(round);
   if (!cup) return null;
-  const { matches } = roundCupResults(round);
+  const { matches, worth } = roundCupResults(round);
   const team = id => (cup.sides[0].includes(id) ? 0 : cup.sides[1].includes(id) ? 1 : null);
   const acct = isObj(state?.accountOf) ? state.accountOf : {};
   return {
     key: cupKey(round), status: round.status === 'done' ? 'done' : 'active', at: round.createdAt || 0, day: dayOf(round.createdAt),
     course: round.course?.name || null, holes: round.holes.length,
-    players: round.players.map(p => ({ id: p.id, name: p.name, team: team(p.id), ...(isStr(acct[p.id]) ? { acct: acct[p.id] } : {}) })),
+    players: round.players.map(p => ({ id: p.id, name: p.name, team: team(p.id), ...(isStr(acct[p.id]) ? { acct: acct[p.id] } : {}), ...netPart(round, p) })),
     matches: matches.map(m => ({ kind: m.kind, sides: m.sides, result: pick(m.result) })),
+    ...worthPart(worth),
     // Foursomes pairs that mix the teams: no match, and the cup view says why
     ...(cup.mixed ? { mixed: true } : {}),
   };
+}
+/** A player's net to par for the entry off their full course handicap (flights.js), when they have a score: { net, played }. */
+function netPart(round, p) {
+  const t = courseNetOf(round, p);
+  return t.played ? { net: t.net, played: t.played } : {};
 }
 const pick = r => ({ thru: r.thru, leader: r.leader, by: r.by, left: r.left, closed: r.closed, done: r.done, winner: r.winner, points: r.points, label: r.label, ...(r.void ? { void: true } : {}) });
 
@@ -354,10 +398,14 @@ const pick = r => ({ thru: r.thru, leader: r.leader, by: r.by, left: r.left, clo
 export function cleanEntry(raw) {
   if (!isObj(raw) || !isStr(raw.key) || !Array.isArray(raw.players) || !Array.isArray(raw.matches)) return null;
   const players = raw.players.filter(p => isObj(p) && isStr(p.id)).slice(0, 8)
-    .map(p => ({ id: p.id, name: String(p.name || '').slice(0, 40) || 'Player', team: p.team === 0 || p.team === 1 ? p.team : null, ...(isStr(p.acct) ? { acct: p.acct } : {}) }));
+    .map(p => ({
+      id: p.id, name: String(p.name || '').slice(0, 40) || 'Player', team: p.team === 0 || p.team === 1 ? p.team : null, ...(isStr(p.acct) ? { acct: p.acct } : {}),
+      ...(Number.isFinite(p.net) && Number.isInteger(p.played) && p.played > 0 && p.played <= 18 ? { net: Math.round(p.net * 2) / 2, played: p.played } : {}),
+    }));
   const ids = new Set(players.map(p => p.id));
   const side = s => (Array.isArray(s) ? s.filter(id => ids.has(id)).slice(0, 2) : []);
   const num = (v, max = 99) => Math.max(0, Math.min(max, Math.round(Number(v) || 0)));
+  const worth = cleanWorth(raw.worth);
   const matches = raw.matches.filter(isObj).slice(0, 8).map(m => {
     const r = isObj(m.result) ? m.result : {};
     const done = !!r.done && !r.void;
@@ -366,7 +414,7 @@ export function cleanEntry(raw) {
       kind: CUP_KINDS[m.kind] ? m.kind : 'singles', sides: [side(m.sides?.[0]), side(m.sides?.[1])],
       result: {
         thru: num(r.thru), leader: r.leader === 0 || r.leader === 1 ? r.leader : null, by: num(r.by), left: num(r.left), closed: !!r.closed,
-        done: !!r.done, winner, points: done ? (winner === 0 ? [1, 0] : winner === 1 ? [0, 1] : [0.5, 0.5]) : null,
+        done: !!r.done, winner, points: done ? scaled(winner === 0 ? [1, 0] : winner === 1 ? [0, 1] : [0.5, 0.5], worth) : null,
         label: String(r.label || '').slice(0, 20), ...(r.void ? { void: true } : {}),
       },
     };
@@ -374,7 +422,7 @@ export function cleanEntry(raw) {
   return {
     key: raw.key.slice(0, 64), status: raw.status === 'done' ? 'done' : 'active', at: Number(raw.at) || 0,
     day: /^\d{4}-\d{2}-\d{2}$/.test(raw.day) ? raw.day : null, course: isStr(raw.course) ? raw.course.slice(0, 60) : null,
-    holes: num(raw.holes, 18), players, matches, ...(raw.mixed === true && !matches.length ? { mixed: true } : {}),
+    holes: num(raw.holes, 18), players, matches, ...worthPart(worth), ...(raw.mixed === true && !matches.length ? { mixed: true } : {}),
   };
 }
 
@@ -392,7 +440,8 @@ export function cupEntries(state, tripId) {
   }
   const remote = isObj(state.cupRemote?.[tripId]) ? state.cupRemote[tripId] : {};
   for (const [key, raw] of Object.entries(remote)) {
-    if (key.startsWith('P') || out.has(key)) continue;
+    // A captains' draft rides the same table (draft.js): never a round's matches
+    if (key.startsWith('P') || isDraftKey(key) || out.has(key)) continue;
     // A round this phone has that isn't on the cup here (taken off the trip, or a one-ball game) stays
     // off, and so does the copy a round posted under its own id before it was shared live (it goes by its code now)
     if (Object.values(state.rounds || {}).some(r => `L${r.id}` === key || cupKey(r) === key)) continue;
@@ -415,7 +464,7 @@ export function closeEntry(e) {
     if (r.points || r.void) return m;
     if (!r.thru) return { ...m, result: { ...r, done: true, winner: null, points: null, void: true, label: 'Not played' } };
     const winner = r.leader === 0 || r.leader === 1 ? r.leader : null;
-    const points = winner === 0 ? [1, 0] : winner === 1 ? [0, 1] : [0.5, 0.5];
+    const points = scaled(winner === 0 ? [1, 0] : winner === 1 ? [0, 1] : [0.5, 0.5], cleanWorth(e.worth));
     return { ...m, result: { ...r, done: true, winner, points, label: resultLabel({ by: winner == null ? 0 : r.by, left: 0, closed: false, done: true }) } };
   });
   return { ...e, status: 'done', matches };
@@ -551,7 +600,7 @@ export function stakeSeats(cup, entries) {
   for (const p of people) { const n = lower(p.name); named.set(n, (named.get(n) || 0) + 1); }
   for (const p of people) out.set(p.id, new Map());
   for (const e of entries) {
-    if (!isStr(e.key) || e.key.startsWith('L')) continue;
+    if (!isStr(e.key) || e.key.startsWith('L')) continue; // includes a draft's rows (draft.js)
     for (const p of people) {
       let seat = e.players.find(x => x.id === p.id)?.id || null;
       const n = lower(p.name);
@@ -660,7 +709,7 @@ export function cupPosts(s, trip, remote = {}, me = null) {
     if (mine || !remote[key] || progress(e) > progress(remote[key])) out.set(key, data);
   }
   // A round only this phone had, deleted here: it stops counting on every phone
-  for (const key of Object.keys(remote)) if (key.startsWith('L') && !claimed.has(key) && !out.has(key) && posted(key)) out.set(key, { gone: true });
+  for (const key of Object.keys(remote)) if (key.startsWith('L') && !isDraftKey(key) && !claimed.has(key) && !out.has(key) && posted(key)) out.set(key, { gone: true });
   const pays = Array.isArray(s.cupPaid?.[trip.id]) ? s.cupPaid[trip.id] : [];
   if (me && (pays.length || remote[me])) {
     const data = { byName: myName(s), pays };

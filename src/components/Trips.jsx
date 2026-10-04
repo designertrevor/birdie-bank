@@ -6,7 +6,7 @@ import { createPortal } from 'react-dom';
 import { Icon, Segmented, Sheet, Steps, Toggle, useUI } from './ui.jsx';
 import { Avatar } from './Pay.jsx';
 import { CupLine, CupRoundNote, TeamsPicker } from './Cup.jsx';
-import { useStore } from '../lib/store.js';
+import { getState, uid, update, useStore } from '../lib/store.js';
 import { useNav } from '../lib/nav.js';
 import { money } from '../lib/golf.js';
 import { nameOf } from '../lib/ledger.js';
@@ -15,8 +15,12 @@ import { dayLabel, isoDate, timeLabel } from '../lib/plans.js';
 import { canonicalOf } from '../lib/pair-debts.js';
 import { TRIP_FORMATS, myTripAllIn, myTripNet, startsLine, tripChips, tripDates, tripStatus, upDown } from '../lib/trips.js';
 import { countsMoney, onTab, playForOf } from '../lib/play-for.js';
-import { editTrip, hideTrip, makeTrip } from '../lib/trip-store.js';
+import { editTrip, hideTrip, makeScheduledRounds, makeTrip } from '../lib/trip-store.js';
 import { CUP_FORMAT, balanceTeams, cleanCup, cupHeadline } from '../lib/cup.js';
+import { TEMPLATE_SIZES, plansByDay, ryderTemplate, scheduleProblem, scheduledPlans } from '../lib/trip-templates.js';
+import { FLIGHT_NAMES, flightsOf } from '../lib/flights.js';
+import { startDraft } from '../lib/draft-sync.js';
+import { ScheduleEditor, TemplatePick } from './TripMode.jsx';
 
 const first = name => String(name || '').trim().split(/\s+/)[0];
 
@@ -173,7 +177,35 @@ export function TripUpNext({ status: st, renderPlan }) {
           <Icon name="receipt" /> {st.expenses.length ? `Trip expenses · ${money(st.spent)} so far` : 'Paid for something? Add an expense'} <Icon name="caret-right" />
         </button>
       )}
-      {st.planned.map(renderPlan)}
+      <TripPlanned st={st} renderPlan={renderPlan} />
+    </>
+  );
+}
+
+/**
+ * The trip's planned rounds under its card: the next day with any, session by session (a Trip Mode
+ * schedule's groups under their session's name), and a line to the rest on the trip's page, so a
+ * weekend of 18 rounds doesn't fill Up next.
+ */
+function TripPlanned({ st, renderPlan }) {
+  const nav = useNav();
+  const days = plansByDay(st.planned);
+  if (!days.length) return null;
+  const [next, ...later] = days;
+  const more = later.reduce((n, d) => n + d.sessions.reduce((m, x) => m + x.plans.length, 0), 0);
+  return (
+    <>
+      {next.sessions.map(sess => (
+        <div key={sess.key} className="tm-upnext-session">
+          {sess.label && <div className="tm-upnext-label">{dayLabel(next.date)} · {sess.label}{sess.worth > 1 ? ` · ${sess.worth} points a match` : ''}</div>}
+          {sess.plans.map(renderPlan)}
+        </div>
+      ))}
+      {more > 0 && (
+        <button className="trip-line" onClick={() => nav.push('trip', { id: st.trip.id, view: 'rounds' })}>
+          <Icon name="calendar" /> {more} more round{more === 1 ? '' : 's'} planned after {dayLabel(next.date)} <Icon name="caret-right" />
+        </button>
+      )}
     </>
   );
 }
@@ -292,6 +324,7 @@ export function AtScreen({ children }) {
 
 function TripForm({ trip, onDone }) {
   const { showToast } = useUI();
+  const nav = useNav();
   const state = useStore();
   const today = isoDate();
   const [step, setStep] = useState(0);
@@ -302,6 +335,10 @@ function TripForm({ trip, onDone }) {
   const [people, setPeople] = useState(() => trip?.people || []);
   const [format, setFormat] = useState(trip?.format || 'money');
   const [cup, setCup] = useState(() => cleanCup(trip?.cup));
+  // Trip Mode (trip-templates.js): a Ryder Cup weekend's size, and the schedule it starts from
+  const [template, setTemplate] = useState(() => trip?.cup?.schedule?.size || null);
+  const [schedule, setSchedule] = useState(() => cleanCup(trip?.cup).schedule || null);
+  const [flightsOn, setFlightsOn] = useState(() => !!trip?.flights);
   const ok = name.trim().length > 0 && /^\d{4}-\d{2}-\d{2}$/.test(start) && /^\d{4}-\d{2}-\d{2}$/.test(end);
   const isCup = format === CUP_FORMAT;
   // Who can be on a team: you and who's going, as this phone has them
@@ -311,7 +348,29 @@ function TripForm({ trip, onDone }) {
   // Someone taken off Who's going comes off their team too
   const teams = cup.teams.map(t => t.filter(p => going.has(p.id)));
   const cupNow = { ...cup, teams, captains: cup.captains.map(c => (going.has(c) ? c : null)) };
-  const teamsOk = teams[0].length > 0 && teams[1].length > 0;
+  // A live draft (draft.js) starts with just the captains: the rest is picked on their phones
+  // Editing: only while that draft is still going (just the captains on the teams); after it, the teams are the trip's like any
+  const liveOk = !trip || (!!trip.cup?.draft?.live && cleanCup(trip.cup).teams.flat().length <= 2);
+  const live = cupNow.pick === 'draft' && cupNow.draft?.live && liveOk;
+  const teamsOk = live ? !!(cupNow.captains[0] && cupNow.captains[1]) : teams[0].length > 0 && teams[1].length > 0;
+  const sched = isCup ? schedule : null;
+  const perTeam = Math.max(1, Math.floor(pool.length / 2));
+  const schedProblem = sched && !live ? scheduleProblem(sched, teams.map(t => t.map(p => p.id))) : null;
+  const pickTemplate = size => {
+    setTemplate(size);
+    if (!size) { setSchedule(null); return; }
+    const t = ryderTemplate(size);
+    setSchedule(t);
+    setFormat(CUP_FORMAT);
+    setEnd(plusDays(start, t.days.length - 1));
+    if (!name.trim()) setName('Ryder Cup weekend');
+  };
+  const onSchedule = next => {
+    setSchedule(next);
+    // The trip runs at least as long as its schedule
+    const last = plusDays(start, next.days.length - 1);
+    if (end < last) setEnd(last);
+  };
   const toTeams = () => {
     // First time on Teams: balanced by handicap to start from
     if (!cup.teams.flat().length) setCup(c => ({ ...c, pick: 'balance', teams: balanceTeams(pool) }));
@@ -320,29 +379,61 @@ function TripForm({ trip, onDone }) {
   const save = () => {
     if (!ok || (isCup && !teamsOk)) return;
     const last = end < start ? start : end;
-    const cupOut = isCup || trip?.cup ? cleanCup(cupNow) : null;
+    const cupOut = isCup || trip?.cup ? cleanCup({ ...cupNow, ...(sched ? { schedule: sched } : { schedule: null }) }) : null;
+    // Handicap flights (flights.js) are set now, from everyone's index today
+    // (an edit keeps them as they were while the same people are going, so a changed index moves nobody)
+    const sameFlights = trip?.flights && JSON.stringify(trip.flights.flat().map(p => p.id).sort()) === JSON.stringify(pool.map(p => p.id).sort());
+    const flights = !flightsOn || pool.length < 2 ? null : sameFlights ? trip.flights : flightsOf(pool).map(f => f.map(p => ({ id: p.id, name: p.name })));
     if (trip) {
-      editTrip(trip.id, { name: name.trim().slice(0, 32), start, end: last, where: where.trim().slice(0, 32) || null, people, format, ...(cupOut ? { cup: cupOut } : {}) });
-      showToast('Trip updated');
+      const before = trip.cup ? JSON.stringify([cleanCup(trip.cup).teams, cleanCup(trip.cup).schedule]) : '';
+      editTrip(trip.id, { name: name.trim().slice(0, 32), start, end: last, where: where.trim().slice(0, 32) || null, people, format, flights, ...(cupOut ? { cup: cupOut } : {}) });
+      // The teams or the schedule changed: the schedule's rounds not shared yet are planned again
+      const after = cupOut ? JSON.stringify([cupOut.teams, cupOut.schedule || null]) : '';
+      const r = cupOut?.schedule && before !== after && scheduledPlans(getState(), trip.id).length ? makeScheduledRounds(trip.id, { redo: true }) : null;
+      showToast(r && !r.problem ? `Trip updated. ${r.made} round${r.made === 1 ? '' : 's'} planned again from the teams.` : 'Trip updated');
       onDone?.(trip);
       return;
     }
-    const t = makeTrip({ name, start, end: last, where, people, format, cup: cupOut });
-    showToast(`${t.name} is on`);
+    const t = makeTrip({ name, start, end: last, where, people, format, cup: cupOut, flights });
+    if (live) {
+      startDraft(t.id, { order: cupOut.draft?.order, first: cupOut.draft?.first, here: cupOut.captains.map(c => c === state.me) });
+      showToast(`${t.name} is on. Send each captain their link`);
+      onDone?.(t);
+      nav.push('draft', { id: t.id });
+      return;
+    }
+    const r = cupOut?.schedule ? makeScheduledRounds(t.id) : null;
+    showToast(r?.made ? `${t.name} is on. ${r.made} round${r.made === 1 ? ' is' : 's are'} planned, day by day, with their matches` : `${t.name} is on`);
     onDone?.(t);
   };
-  const steps = isCup ? ['Trip', 'Who’s going', 'Teams'] : ['Trip', 'Who’s going'];
+  const steps = isCup ? ['Trip', 'Who’s going', 'Teams', ...(sched ? ['Schedule'] : [])] : ['Trip', 'Who’s going'];
+  // A step that went away (the schedule taken out, or the format changed) lands on the last one left
+  const at = Math.min(step, steps.length - 1);
+  const saveBtn = (
+    <button className="full-btn" style={{ marginTop: 14 }} disabled={!ok || (isCup && !teamsOk)} onClick={save}>{trip ? 'Save changes' : live ? 'Start the trip and the draft' : 'Start the trip'} <Icon name={trip ? 'check' : 'arrow-right'} /></button>
+  );
   return (
     <div className="block trip-form">
-      <Steps steps={steps} current={step} canGo={i => i === 0 || (ok && (i < 2 || pool.length >= 2))} onGo={i => (i === 2 ? toTeams() : setStep(i))} />
-      {step === 0 && (
+      <Steps steps={steps} current={at} canGo={i => i === 0 || (ok && (i < 2 || (pool.length >= 2 && (i < 3 || teamsOk))))} onGo={i => (i === 2 && at < 2 ? toTeams() : setStep(i))} />
+      {at === 0 && (
         <>
+          {!trip && (
+            <>
+              <div className="field-label">Start from a template</div>
+              <TemplatePick value={template} onPick={pickTemplate} />
+            </>
+          )}
           <label className="field-label" htmlFor="trip-name">Name</label>
-          <input id="trip-name" className="text-input" value={name} onChange={e => setName(e.target.value)} maxLength={32} placeholder="Bandon 2026" autoFocus={!trip} />
+          <input id="trip-name" className="text-input" value={name} onChange={e => setName(e.target.value)} maxLength={32} placeholder="Bandon 2026" autoFocus={!trip && !template} />
           <div className="trip-form-days">
             <div>
               <label className="field-label" htmlFor="trip-start">First day</label>
-              <input id="trip-start" className="text-input" type="date" value={start} onChange={e => { setStart(e.target.value); if (end < e.target.value) setEnd(e.target.value); }} />
+              <input id="trip-start" className="text-input" type="date" value={start} onChange={e => {
+                const v = e.target.value;
+                setStart(v);
+                const need = sched ? plusDays(v, sched.days.length - 1) : v;
+                if (end < need) setEnd(need);
+              }} />
             </div>
             <div>
               <label className="field-label" htmlFor="trip-end">Last day</label>
@@ -351,52 +442,106 @@ function TripForm({ trip, onDone }) {
           </div>
           <label className="field-label" htmlFor="trip-where">Where <span className="opt">optional</span></label>
           <input id="trip-where" className="text-input" value={where} onChange={e => setWhere(e.target.value)} maxLength={32} placeholder="Bandon Dunes Resort" />
-          <div className="field-label">How it’s played</div>
-          <Segmented label="How the trip is played" className="press-mode-row" btn="pm-btn" value={format} onChange={setFormat}
-            options={[{ value: 'money', label: 'Money' }, { value: CUP_FORMAT, label: 'Team points' }]} />
-          <p className="field-help">{isCup
-            ? `${TRIP_FORMATS[CUP_FORMAT].name}: two teams play matches in every round, 1 point a win and ½ a halved match, with a team score and a leaderboard. Each round keeps its own games and bets, and it’s all settled once, right after the last round.`
-            : `${TRIP_FORMATS.money.name}: each round keeps its own games and bets, everyone on the trip sees the standings, and it’s settled once, in the fewest payments, right after the last round.`} Rounds started in these dates ask to count for it.</p>
+          {!template && (
+            <>
+              <div className="field-label">How it’s played</div>
+              <Segmented label="How the trip is played" className="press-mode-row" btn="pm-btn" value={format} onChange={setFormat}
+                options={[{ value: 'money', label: 'Money' }, { value: CUP_FORMAT, label: 'Team points' }]} />
+            </>
+          )}
+          <p className="field-help">{template
+            ? `A Ryder Cup weekend for ${template}: two teams of ${template / 2}, ${sched.days.length} days of four-ball, foursomes and singles, 1 point a match. You pick the teams next, then change the schedule if you like, and every round is planned with its matches. Each round keeps its own bets too.`
+            : isCup
+              ? `${TRIP_FORMATS[CUP_FORMAT].name}: two teams play matches in every round, 1 point a win and ½ a halved match, with a team score and a leaderboard. Each round keeps its own games and bets, and it’s all settled once, right after the last round.`
+              : `${TRIP_FORMATS.money.name}: each round keeps its own games and bets, everyone on the trip sees the standings, and it’s settled once, in the fewest payments, right after the last round.`} Rounds started in these dates ask to count for it.</p>
           <button className="full-btn" style={{ marginTop: 14 }} disabled={!ok} onClick={() => setStep(1)}>Next <Icon name="arrow-right" /></button>
         </>
       )}
-      {step === 1 && (
+      {at === 1 && (
         <>
-          <WhoGoing picked={people} onChange={setPeople} />
+          {template && (
+            <p className={`hint-card tm-count ${pool.length === template ? 'ok' : ''}`} role="status">
+              <Icon name={pool.length === template ? 'check-circle' : 'users-three'} fill /> {pool.length === template ? `All ${template} picked, you included.` : `The template is for ${template}: you and ${template - 1} friends. You have ${pool.length} so far.`}{pool.length !== template && pool.length >= 2 ? ' Any even number works: the schedule fits the teams you pick.' : ''}
+            </p>
+          )}
+          <WhoGoing picked={people} onChange={setPeople} quickAdd={!!template || isCup} />
+          <div className="trip-count tm-flights">
+            <div className="row-main">
+              <div className="toggle-lbl" id="trip-flights-lbl">Handicap flights</div>
+              <div className="toggle-sub">{flightsOn ? `Everyone sorted into ${FLIGHT_NAMES.slice(0, flightsOf(pool).length).join(', ')} by index today, with a net leaderboard for each flight on the trip.` : 'A, B, C and D by handicap index, each with its own net leaderboard, so everyone has someone to beat.'}</div>
+            </div>
+            <Toggle on={flightsOn} onChange={setFlightsOn} labelledBy="trip-flights-lbl" />
+          </div>
           {isCup
             ? <button className="full-btn" style={{ marginTop: 14 }} disabled={!ok || pool.length < 2} onClick={toTeams}>Next: the teams <Icon name="arrow-right" /></button>
             : <button className="full-btn" style={{ marginTop: 14 }} disabled={!ok} onClick={save}>{trip ? 'Save changes' : 'Start the trip'} <Icon name={trip ? 'check' : 'arrow-right'} /></button>}
           {isCup && pool.length < 2 && <p className="field-help">Pick at least one friend to make two teams.</p>}
         </>
       )}
-      {step === 2 && isCup && (
+      {at === 2 && isCup && (
         <>
-          <TeamsPicker people={pool} value={cupNow} onChange={setCup} />
-          <button className="full-btn" style={{ marginTop: 14 }} disabled={!ok || !teamsOk} onClick={save}>{trip ? 'Save changes' : 'Start the trip'} <Icon name={trip ? 'check' : 'arrow-right'} /></button>
-          {!teamsOk && <p className="field-help">Each team needs at least one player.</p>}
+          <TeamsPicker people={pool} value={cupNow} onChange={setCup} live={liveOk} />
+          {sched
+            ? <button className="full-btn" style={{ marginTop: 14 }} disabled={!ok || !teamsOk} onClick={() => setStep(3)}>Next: the schedule <Icon name="arrow-right" /></button>
+            : saveBtn}
+          {!teamsOk && <p className="field-help">{live ? 'Pick both captains.' : 'Each team needs at least one player.'}</p>}
+          {isCup && !sched && !trip && <button type="button" className="link-btn" onClick={() => { setSchedule(ryderTemplate(TEMPLATE_SIZES.includes(pool.length) ? pool.length : 8)); }}><Icon name="calendar-plus" /> Plan every round from a schedule</button>}
+        </>
+      )}
+      {at === 3 && sched && (
+        <>
+          <ScheduleEditor schedule={sched} onChange={onSchedule} perTeam={live ? perTeam : Math.max(teams[0].length, teams[1].length) || perTeam} start={start} />
+          {schedProblem && <p className="hint-card warn" role="status"><Icon name="warning" fill /> {schedProblem} The trip still starts, and you can plan the rounds from its page once the teams work.</p>}
+          {live && <p className="field-help">Every round is planned with its matches as soon as the draft is done.</p>}
+          {saveBtn}
+          {!trip && <button type="button" className="link-btn center" onClick={() => { setSchedule(null); setTemplate(null); setStep(2); }}>No schedule: plan the rounds yourself</button>}
         </>
       )}
     </div>
   );
 }
 
-/** "Who's going?": your players, ticked or not. Optional: anyone who plays a trip round is on it anyway. */
-function WhoGoing({ picked, onChange }) {
+/**
+ * "Who's going?": your players, ticked or not. Optional: anyone who plays a trip round is on it anyway.
+ * `quickAdd`: a name box to add someone new to your players and tick them, for a big trip.
+ */
+function WhoGoing({ picked, onChange, quickAdd = false }) {
   const state = useStore();
+  const [newName, setNewName] = useState('');
   const list = sortedPlayers(state).filter(p => p.id !== state.me);
   const on = new Set(picked);
   const flip = id => onChange(on.has(id) ? picked.filter(x => x !== id) : [...picked, id]);
+  const add = () => {
+    const n = newName.replace(/\s+/g, ' ').trim().slice(0, 24);
+    if (!n) return;
+    // Your own name: you're going already, so don't save a second you
+    if (String(state.players?.[state.me]?.name || '').trim().toLowerCase() === n.toLowerCase()) { setNewName(''); return; }
+    const same = list.find(p => p.name.trim().toLowerCase() === n.toLowerCase());
+    const id = same?.id || uid('p_');
+    if (!same) update(s => { s.players[id] = { id, name: n, index: null, venmo: '', createdAt: Date.now() }; });
+    if (!on.has(id)) onChange([...picked, id]);
+    setNewName('');
+  };
   return (
     <>
       <p className="field-help">Optional. Picked friends show in the standings before anyone plays, and rounds with them in it count for the trip by default. Anyone who plays a round for the trip is on it too.</p>
-      {list.length === 0 && <p className="field-help">Add friends on Players to pick them here, or skip this: whoever plays a trip round is on the trip.</p>}
+      {list.length === 0 && !quickAdd && <p className="field-help">Add friends on Players to pick them here, or skip this: whoever plays a trip round is on the trip.</p>}
       <div className="trip-who">
         {list.map(p => (
           <button key={p.id} type="button" className="sheet-item" aria-pressed={on.has(p.id)} onClick={() => flip(p.id)}>
             <span><Icon name={on.has(p.id) ? 'check-square' : 'square'} fill={on.has(p.id)} /><Avatar id={p.id} name={p.name} /> {p.name}</span>
+            {p.index != null && <span className="tm-who-hc">{p.index}</span>}
           </button>
         ))}
       </div>
+      {quickAdd && (
+        <form className="tm-add" onSubmit={e => { e.preventDefault(); add(); }}>
+          <label className="sr-only" htmlFor="trip-add-name">Add someone new</label>
+          <input id="trip-add-name" className="text-input" value={newName} onChange={e => setNewName(e.target.value)} maxLength={24} placeholder="Add someone new" autoComplete="off" />
+          <button type="submit" className="pill-btn" disabled={!newName.trim()}><Icon name="plus" /> Add</button>
+        </form>
+      )}
+      {quickAdd && <p className="field-help">Someone new is saved to your players with no handicap. Add their index on Players to balance the teams by it.</p>}
     </>
   );
 }

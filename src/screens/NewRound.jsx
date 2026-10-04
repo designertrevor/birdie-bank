@@ -41,6 +41,7 @@ import { countsMoney, inUnits, padUnit, playForLine, playForShort } from '../lib
 import { CountForTrip, StartTripLink } from '../components/Trips.jsx';
 import { CupRoundSetup } from '../components/Cup.jsx';
 import { startingCup } from '../lib/cup-store.js';
+import { planCupFor, scheduledCupFor, withSessionWorth } from '../lib/trip-templates.js';
 import { FOURSOMES_GAME, cleanRoundCup, cupCounts, cupOf } from '../lib/cup.js';
 import { countsByDefault, tripOf, tripOnDay, tripPlanDay, tripStamp } from '../lib/trips.js';
 import { challengeIdOfBet, challengesForRound, movedFromFor } from '../lib/challenges.js';
@@ -217,7 +218,12 @@ export default function NewRound({ rematch, fromPlan, present, edit = null, ahea
   const tripCup = !planning && tripPick ? cupOf(tripPick) : null;
   // Foursomes (an Alternate shot round): the match is the round's two teams, so its partners are the teams
   const foursomes = !!tripCup && game === FOURSOMES_GAME;
-  const cupStart = tripCup ? startingCup(state, { game, players: cupPlayers }, tripPick) : null;
+  // From a round the trip's schedule planned (trip-templates.js): its group's matches, while they fit
+  const planCup = tripCup && fromPlan ? planCupFor(state.plans?.[fromPlan], cupPlayers) : null;
+  const fromSession = fromPlan ? state.plans?.[fromPlan]?.session || null : null;
+  // Else a group of the trip's schedule today, from the trip's teams (a friend's group teeing off on their own phone)
+  const schedHit = tripCup && !planCup && !(fromSession?.trip === tripPick.id) ? scheduledCupFor(state, tripPick, cupPlayers, { date: isoDate(), game, hour: new Date().getHours() }) : null;
+  const cupStart = tripCup ? planCup || schedHit?.cup || withSessionWorth(startingCup(state, { game, players: cupPlayers }, tripPick), fromSession, tripPick.id) : null;
   const cupPairs = c => (c && c.sides.every(x => x.length === 2) && c.sides.flat().length === picked.length && c.sides.flat().every(pid => picked.includes(pid)) ? c.sides.map(x => [...x]) : null);
   const roundCup = !tripCup ? null
     : foursomes ? (teams ? cleanRoundCup({ game, players: cupPlayers, teams: teams.map(t => ({ players: t })), cup: cupStart || { kind: 'foursomes', sides: [[], []] } }) : cupStart) || { kind: 'foursomes', sides: [[], []] }
@@ -372,9 +378,13 @@ export default function NewRound({ rematch, fromPlan, present, edit = null, ahea
     // Its matches for a team points trip, as set up here (a scramble or Chapman has none: one ball a
     // team; alternate shot is foursomes between its two teams)
     if (tripCup && roundCup && cupCounts(game)) {
-      const c = cleanRoundCup({ game, players: round.players, teams: round.teams, cup: roundCup });
+      const c = cleanRoundCup({ game, players: round.players, teams: round.teams, cup: withSessionWorth(roundCup, (fromSession?.trip === tripPick.id ? fromSession : schedHit?.session) || null, tripPick.id) });
       if (c) round.cup = c;
     }
+    // A round the trip's schedule planned keeps its place in it (trip-templates.js)
+    const planSession = fromPlan ? s.plans?.[fromPlan]?.session : null;
+    if (tripPick && planSession?.trip === tripPick.id) round.session = structuredClone(planSession);
+    else if (tripPick && schedHit && round.cup) round.session = structuredClone(schedHit.session);
     // Started from a saved usual (still the same game at the same course): finishing it updates "Last played"
     const from = usualId && usualsOf(s).find(u => u.id === usualId);
     if (from && from.game === game && (from.courseId === course.id || findCourse(s, from.courseId)?.id === course.id)) round.usualId = usualId;

@@ -2527,3 +2527,83 @@ button.ch-main:active { transform: scale(.98); }
 .seat-req.gallery-bar:active { transform: scale(.98); }
 .seat-req.gallery-bar .gb-line { overflow: hidden; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow-wrap: anywhere; }
 .seat-req.gallery-bar > i { font-size: 20px; flex-shrink: 0; }
+
+/* ---------- Trip Mode: templates, the schedule, flights and the live captains' draft (o8 tripmode) ---------- */
+/* Start from a template, in the trip sheet */
+.tm-templates { display: flex; flex-direction: column; gap: 6px; margin-bottom: 4px; }
+.tm-template { display: flex; align-items: center; gap: 12px; width: 100%; min-height: 56px; padding: 10px 14px; border: none; border-radius: 16px; background: var(--surface); color: var(--ink); font: inherit; text-align: left; cursor: pointer; transition: transform .2s var(--spring), box-shadow .15s; }
+.tm-template:active { transform: scale(.98); }
+.tm-template.on { box-shadow: inset 0 0 0 2px var(--ink); background: var(--card); }
+.tm-template > i { margin-left: auto; font-size: 20px; color: var(--ink); flex-shrink: 0; }
+.tm-t-size { width: 40px; height: 40px; flex-shrink: 0; display: grid; place-items: center; border-radius: 12px; background: linear-gradient(135deg, var(--cup-a-bg) 50%, var(--cup-b-bg) 50%); font-weight: 800; font-size: 17px; color: var(--ink); font-variant-numeric: tabular-nums; }
+.tm-t-main { display: flex; flex-direction: column; min-width: 0; }
+.tm-t-name { font-weight: 700; font-size: 15px; }
+.tm-t-sub { font-size: 13px; color: var(--mute); overflow-wrap: anywhere; }
+.tm-template.scratch { min-height: 48px; }
+.tm-count { margin: 0 0 8px; }
+.tm-count.ok > i { color: var(--win); }
+.tm-who-hc { font-size: 13px; color: var(--mute); font-variant-numeric: tabular-nums; flex-shrink: 0; }
+.tm-add { display: flex; gap: 8px; align-items: center; margin-top: 8px; }
+.tm-add .text-input { flex: 1; min-width: 0; }
+.tm-add .pill-btn { flex-shrink: 0; min-height: 44px; background: var(--surface); }
+.tm-add .pill-btn:disabled { opacity: .5; }
+.tm-flights { margin-top: 12px; }
+.tm-draft-opts { display: flex; flex-direction: column; gap: 8px; margin-top: 8px; }
+.tm-draft-opts .field-help { margin-top: 0; }
+.tm-flight-tag { display: grid; place-items: center; min-width: 20px; height: 20px; padding: 0 4px; border-radius: 6px; background: var(--surface); color: var(--body); font-size: 11px; font-weight: 800; flex-shrink: 0; }
+/* The schedule */
+.tm-schedule { display: flex; flex-direction: column; }
+.tm-total { display: flex; flex-direction: column; gap: 2px; padding: 4px 2px 10px; }
+.tm-total .d { font-size: 20px; font-weight: 800; color: var(--ink); text-wrap: balance; }
+.tm-total-sub { font-size: 13px; color: var(--mute); }
+.tm-day { margin: 0 0 10px; padding: 14px; background: var(--surface); }
+.tm-day .select { background: var(--card); }
+.tm-day-head { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; }
+.tm-day-name { font-weight: 800; font-size: 16px; color: var(--ink); }
+.tm-day-date { font-size: 13px; color: var(--mute); text-align: right; overflow-wrap: anywhere; min-width: 0; }
+.tm-session { margin-top: 12px; padding-top: 12px; border-top: 1px solid var(--line); display: flex; flex-direction: column; gap: 8px; }
+.tm-session-head { display: flex; align-items: center; gap: 8px; }
+.tm-session-name { font-weight: 700; font-size: 15px; color: var(--ink); }
+.tm-session-n { margin-left: auto; font-size: 12px; color: var(--mute); font-variant-numeric: tabular-nums; white-space: nowrap; }
+.tm-session-head .icon-btn { flex-shrink: 0; }
+.tm-session .press-mode-row { background: var(--card); }
+.tm-session .pm-btn { flex: 1 1 0; min-width: 0; padding: 0 4px; font-size: 13px; line-height: 1.1; }
+.tm-session-opts { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 8px; }
+.tm-opt { display: flex; flex-direction: column; gap: 4px; min-width: 0; font-size: 12px; font-weight: 600; color: var(--mute); }
+.select.sm { padding: 10px 12px; font-size: 15px; background: var(--card); min-height: 44px; }
+.tm-day .link-btn { margin-top: 10px; display: inline-flex; align-items: center; gap: 6px; }
+/* On the trip's page */
+.tm-sched-card .tm-total { padding-top: 0; }
+.tm-sched-day { padding: 10px 0; border-top: 1px solid var(--line-soft); }
+.tm-sched-row { display: flex; align-items: baseline; gap: 10px; padding: 4px 0 0; font-size: 14px; color: var(--body); }
+.tm-sched-sub { margin-left: auto; font-size: 13px; color: var(--mute); text-align: right; font-variant-numeric: tabular-nums; }
+.tm-sched-acts { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; }
+.tm-sched-acts .full-btn { margin: 0; }
+.tm-sched-acts .pill-btn { background: var(--surface); min-height: 44px; }
+.tm-draft-card { display: flex; align-items: center; gap: 12px; width: calc(100% - 32px); border: none; text-align: left; font: inherit; color: var(--ink); cursor: pointer; box-shadow: inset 0 0 0 2px var(--ink); }
+.tm-draft-card .row-main { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.tm-draft-title { font-size: 19px; font-weight: 800; text-wrap: balance; }
+.tm-draft-sub { display: flex; flex-wrap: wrap; gap: 4px 12px; font-size: 13px; color: var(--mute); }
+.tm-draft-sub > span { display: inline-flex; align-items: center; gap: 5px; }
+.tm-net { font-variant-numeric: tabular-nums; }
+.tm-net.under { color: var(--pink-text); }
+.tm-net.over { color: var(--mute); }
+/* Up next: a trip's next day of planned rounds, session by session */
+.tm-upnext-label { padding: 6px 20px 4px; font-size: 12px; font-weight: 700; letter-spacing: .04em; text-transform: uppercase; color: var(--mute); }
+/* The draft screen */
+.tm-draft-head { text-align: center; }
+.tm-draft-head.t0 { box-shadow: inset 0 0 0 2px var(--cup-a); }
+.tm-draft-head.t1 { box-shadow: inset 0 0 0 2px var(--cup-b); }
+.tm-draft-big { margin-top: 4px; font-size: 24px; font-weight: 800; color: var(--ink); text-wrap: balance; }
+.tm-draft-head .tm-draft-sub { justify-content: center; margin-top: 4px; }
+.tm-draft-sub.warn { color: var(--body); }
+.tm-draft-cols { margin: 0 16px 6px; }
+.cup-chip.static-row { cursor: default; }
+.cup-chip.static-row:active { transform: none; }
+.tm-draft-pool { margin: 0 16px; }
+.tm-draft-pool .cup-chip:disabled { cursor: default; opacity: .85; }
+.tm-draft-pool .cup-chip:disabled:active { transform: none; }
+.tm-captain { gap: 8px; }
+.tm-captain .lr-name { display: flex; align-items: center; gap: 6px; }
+.tm-captain .pill-btn { flex-shrink: 0; background: var(--surface); min-height: 40px; }
+.tm-day-course { margin-top: 6px; background: var(--surface); }

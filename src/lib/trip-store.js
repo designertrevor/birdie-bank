@@ -4,18 +4,19 @@
 // expense (anyone adds one; only its adder changes or deletes it). The math is in trips.js and
 // trip-expenses.js.
 import { getState, uid, update } from './store.js';
-import { editPlan } from './plan-sync.js';
+import { editPlan, removePlan } from './plan-sync.js';
 import { nameOf } from './ledger.js';
 import { TRIP_FORMATS, cleanPeople, cupOnEdit, isOrganizer, newTrip, tripOf, tripStamp } from './trips.js';
 import { canEditExpense, cleanExpense, cleanWhat, personFor } from './trip-expenses.js';
 import { publishDeleted, refreshPlans } from './trip-plan-sync.js';
-import { CUP_FORMAT, cleanCup } from './cup.js';
+import { CUP_FORMAT, cleanCup, cupOf } from './cup.js';
 import { startingCup } from './cup-store.js';
+import { scheduleProblem, scheduleWork, scheduledPlan, scheduledPlans } from './trip-templates.js';
 
 /** Make a trip and keep it on this phone (it syncs with your account). Returns it. */
-export function makeTrip({ name, start, end, where, people = [], format, cup = null }) {
+export function makeTrip({ name, start, end, where, people = [], format, cup = null, flights = null }) {
   const s = getState();
-  const trip = newTrip({ id: uid('t_'), name, start, end, where, by: s.me, people, format, cup });
+  const trip = newTrip({ id: uid('t_'), name, start, end, where, by: s.me, people, format, cup, flights });
   update(st => { st.trips = { ...(st.trips || {}), [trip.id]: trip }; });
   return trip;
 }
@@ -174,4 +175,58 @@ export function restoreExpense(expense) {
   update(st => { st.tripExpenses = { ...(st.tripExpenses || {}), [e.id]: e }; });
   refreshPlans();
   return e;
+}
+
+/**
+ * Trip Mode (trip-templates.js): plan every round of the trip's schedule from its teams, one a
+ * group, each with its matches and the group marked in, so each day's rounds are on Up next ready to
+ * start. The organizer only. `redo`: the teams or the schedule changed, so the schedule's rounds not
+ * shared yet are planned again; shared ones (friends have their link) stay as they are, and a group
+ * that's started or played is never planned again (trip-templates.js scheduleWork). Returns
+ * { made, kept, problem }: how many were planned, how many shared ones were kept, or why none could be.
+ */
+export function makeScheduledRounds(tripId, { redo = false, now = Date.now() } = {}) {
+  const s = getState();
+  const trip = tripOf(s, tripId);
+  const cup = cupOf(trip);
+  if (!trip || !cup?.schedule || !isOrganizer(s, trip)) return { made: 0, kept: 0, problem: 'No schedule' };
+  const teams = cup.teams.map(t => t.map(p => p.id));
+  const problem = scheduleProblem(cup.schedule, teams);
+  if (problem) return { made: 0, kept: 0, problem };
+  const { rounds, remove, kept } = scheduleWork(s, tripId, cup.schedule, teams, { redo, start: trip.start });
+  for (const id of remove) removePlan(id);
+  const stamp = tripStamp(trip);
+  const plans = rounds
+    .map((r, i) => scheduledPlan(r, { id: uid('pl_'), tripId, me: s.me, players: s.players, settings: s.settings, stamp, now: now + i }));
+  update(st => {
+    st.plans = { ...(st.plans || {}) };
+    for (const p of plans) st.plans[p.id] = p;
+    // The schedule's days now end the trip, if it ran shorter
+    const t = st.trips?.[tripId];
+    const last = plans.reduce((m, p) => (p.date > m ? p.date : m), t?.end || '');
+    if (t && last && last > t.end) st.trips[tripId] = { ...t, end: last, updatedAt: Date.now() };
+  });
+  return { made: plans.length, kept, problem: null };
+}
+
+/**
+ * Set a day's course on the trip's schedule (the organizer only): the day's planned rounds not
+ * started yet move to it too, so one pick sets every group's course. `course` null clears it.
+ */
+export function setDayCourse(tripId, day, course) {
+  const s = getState();
+  const trip = tripOf(s, tripId);
+  const cup = cupOf(trip);
+  if (!cup?.schedule || !isOrganizer(s, trip) || !cup.schedule.days[day]) return 0;
+  const c = course ? { id: course.id, name: course.name } : null;
+  const schedule = { ...cup.schedule, days: cup.schedule.days.map((d, i) => (i === day ? { ...d, course: c } : d)) };
+  editTrip(tripId, { cup: { ...cup, schedule } });
+  const plans = scheduledPlans(getState(), tripId).filter(p => p.session.day === day + 1);
+  for (const p of plans) {
+    editPlan(p.id, x => {
+      x.course = course ? { id: course.id, name: course.name, city: course.city || null } : null;
+      if (x.setup) x.setup.courseId = course?.id || null;
+    });
+  }
+  return plans.length;
 }
