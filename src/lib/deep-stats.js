@@ -45,7 +45,19 @@ export function seatIn(round, state, mine = myIdSet(state)) {
 /** What a game is called on a stats line: the main game's name, or the side game's label. */
 function gameName(key) {
   if (key === 'bets') return BETS_LABEL;
+  // A side game that goes by another name than the main game with its key (Junk, played as Dots)
+  if (key.startsWith('side:')) return SIDE_GAMES[key.slice(5)]?.label || key.slice(5);
   return GAMES[key]?.name || SIDE_GAMES[key]?.label || key;
+}
+
+/**
+ * A stats line's key for a game in a round: the main game's key, or a side game's. A side game
+ * that has a main game's key under another name (Junk is the side game of Dots) gets a line of
+ * its own, so it's never listed as the main game. Skins is Skins either way, so it's one line.
+ */
+function partKey(round, key) {
+  if (key === 'main') return round.game;
+  return GAMES[key] && SIDE_GAMES[key] && GAMES[key].name !== SIDE_GAMES[key].label ? `side:${key}` : key;
 }
 
 /** Whether your seat had a side bet in the round (only then does the side bets line count it). */
@@ -80,7 +92,7 @@ export function gameParts(round, seat, res = roundResults(round)) {
         if (!inBets(round, seat, b => !isCashBet(round, b))) continue;
       } else if (!playsGame(round, seat, key)) continue;
       const v = g.balances?.[seat] || 0;
-      const game = key === 'main' ? round.game : key;
+      const game = key === 'bets' ? key : partKey(round, key);
       parts.push({ key: game, dollars: money ? cents(v) : null, points: money ? null : cents(v) });
     }
   }

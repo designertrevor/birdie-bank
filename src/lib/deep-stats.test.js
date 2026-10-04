@@ -325,3 +325,17 @@ test('a reward round’s win says what it was played for', () => {
   assert.deepEqual({ lunch: w.lunch, reward: w.reward, amount: w.amount }, { lunch: true, reward: 'a drink', amount: 10 });
   assert.equal(deepStats(stateOf([skinsA()])).biggest[0].reward, null);
 });
+
+test('Junk played as a side game is its own line called Junk, never the main game Dots', () => {
+  // A Nassau with Junk on the side (you make a birdie for a dot), and a round of Dots as the main game
+  const junk = round('j1', 'nassau', ['me', 'mike'], { 1: { me: 3 } }, { extra: { sideGames: [{ game: 'dots', settings: { value: 1, auto: true, kinds: {} } }] } });
+  const dots = round('d1', 'dots', ['me', 'mike'], { 2: { me: 3 } }, { when: at(9, 6), extra: { settings: { ...structuredClone(SET), dots: { value: 1, auto: true, kinds: {} } } } });
+  const st = deepStats(stateOf([junk, dots]));
+  const g = Object.fromEntries(st.games.map(l => [l.key, l]));
+  assert.deepEqual(Object.keys(g).sort(), ['dots', 'nassau', 'side:dots']);
+  assert.equal(g['side:dots'].name, 'Junk');
+  assert.equal(g['side:dots'].rounds, 1);
+  assert.equal(g['side:dots'].dollars.net, roundResults(junk).detail.byGame.dots.balances.me);
+  assert.equal(g.dots.name, 'Dots');
+  assert.equal(g.dots.rounds, 1);
+});
