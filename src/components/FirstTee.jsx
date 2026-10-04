@@ -4,7 +4,8 @@ import { gameKeys } from '../lib/round.js';
 import { GIMMES, MULLIGANS, agreementItems, changeLine, isLocked, lockedBy } from '../lib/agreed.js';
 
 /**
- * The first-tee rules card, one screen: each player's strokes, the bets, the house rules that are on,
+ * The first-tee rules card, one screen: each player's strokes, what it's played for, the sides or the
+ * playing order, the bets, the house rules that are on,
  * and the group's calls on gimmes and mulligans (recorded, never scored), plus presses as set.
  * `mode` 'lock' is the keeper's card before hole 1 ("Lock it in", or skip it); 'view' is "What we
  * agreed" from the round menu, with every change since listed against its hole. `canEdit` lets the
@@ -59,7 +60,8 @@ export function FirstTeeSheet({ round, open, mode = 'view', canEdit = false, me 
         </div>
         <div className="ft-sec">
           <div className="ft-h">Bets</div>
-          {group('bets').map(x => (
+          {/* What it's played for and the sides or order come first: they're how the bets read */}
+          {[...group('lineup'), ...group('bets')].map(x => (
             <div key={x.id} className="ft-row"><span className="ft-k">{x.label}</span><span className="ft-v">{x.text}</span></div>
           ))}
         </div>

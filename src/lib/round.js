@@ -198,6 +198,11 @@ function withTeamHandicaps(round, teams, players, useHandicaps, hcPct) {
   return teams.map((t, i) => ({ ...t, courseHc: hcs[i], plays: plays[i] }));
 }
 
+/** A round's teams rebuilt from arrays of player ids, with a Scramble's team handicaps worked out again (lineup.js). */
+export function teamsFor(round, groups) {
+  return withTeamHandicaps(round, buildTeams(groups, round.players), round.players, round.useHandicaps !== false, round.hcPct);
+}
+
 /** Build a new round object from wizard selections. `teams` is an array of arrays of player ids. */
 export function createRound({ id, game, course, holesCount, nine, startHole, players, settings, hcPct, useHandicaps = true, teams = null, halfStrokes = false }) {
   const holes = holesInPlay(course, holesCount, nine, startHole);
