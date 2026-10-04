@@ -15,9 +15,10 @@
 import { GAMES, MAX_GAMES, SIDE_GAMES, sideGameChoices } from './round.js';
 import { stakeHeadline, stakeSummary } from './stakes.js';
 import { defaultTeams, teamsProblem } from './teams.js';
-import { defaultTee } from './courses.js';
 import { inUnits, playForLine, storedPlayFor } from './play-for.js';
 import { halfStrokesOffered } from './allowances.js';
+import { applySetup } from './plan-setup.js';
+import { linksOf } from './people-links.js';
 
 export const RSVPS = ['in', 'maybe', 'out'];
 /** The organizer's own key on a plan. Not their player id, so signing in (which can change it) never loses their answer. */
@@ -157,8 +158,9 @@ export function parseBetVote(choice) {
 /**
  * Everyone on the plan with their answer: the people invited (in the organizer's order), then
  * anyone who answered from the group link, in the order they answered.
- * [{ who, name, status: 'in' | 'maybe' | 'out' | null, game, bet, betGame, invited }]
+ * [{ who, name, status: 'in' | 'maybe' | 'out' | null, game, bet, betGame, invited, self }]
  * `betGame`: the game the bet vote is for (null on a vote from before bets were per game).
+ * `self`: they answered from their own phone, so only they change it (the organizer can't mark it).
  */
 export function planPeople(plan) {
   const answers = plan?.answers || {};
@@ -172,7 +174,7 @@ export function planPeople(plan) {
 }
 function pick(a) {
   const bet = a?.bet ?? null;
-  return { status: RSVPS.includes(a?.status) ? a.status : null, game: a?.game ?? null, bet, betGame: bet != null ? a?.betGame ?? null : null, sides: a?.sides || null };
+  return { status: RSVPS.includes(a?.status) ? a.status : null, game: a?.game ?? null, bet, betGame: bet != null ? a?.betGame ?? null : null, sides: a?.sides || null, self: a?.self === true };
 }
 
 /** Counts for the card: { in, maybe, out, waiting } (waiting: invited and no answer yet). */
@@ -326,21 +328,35 @@ export function planStart(state, plan, present, { newId, course: courseIn } = {}
   else if (!course) problem = 'That course isn’t saved on this phone';
   else problem = playersProblem(game, players.length);
   const holesCount = g && g.holes.includes(plan.holesCount) ? plan.holesCount : g?.holes[0] ?? 18;
-  const ids = players.map(p => p.id);
-  const teams = g?.teams ? defaultTeams(game, ids) : null;
+  const nine = plan.nine || 'front';
+  // The setup made before it was scheduled (plan-setup.js): order, teams, tees, handicap edits,
+  // the starting hole and side bets, minus what no longer fits. Plans without one start fresh.
+  // An id in it that isn't here may be someone who is, by another id: the organizer after signing
+  // in, or a friend linked since (people-links.js)
+  let links = null;
+  const personOf = pid => (links ??= linksOf(state)).personOf(pid);
+  const built = applySetup(plan.setup, {
+    game, course, holesCount, nine, players,
+    nameOf: pid => state.players?.[pid]?.name,
+    fresh: list => (g?.teams ? defaultTeams(game, list) : null),
+    sameAs: (a, b) => (a === plan.setup?.me && b === state.me) || personOf(a) === personOf(b),
+  });
+  const ids = built.players.map(p => p.id);
+  const teams = g?.teams ? built.teams : null;
   if (!problem && g?.teams) problem = teamsProblem(game, teams, ids);
   // The house rules the group saw on the ballot (older plans: this phone's), with the bet they picked
   const rules = planRules(plan, state.settings);
   const settings = bet ? withBet(game, rules, bet) : structuredClone(rules);
   delete settings.shareAmounts; // a personal setting, not part of a round's bets
   delete settings.betPrompt; // so is the side bet card
-  const tee = defaultTee(course)?.name ?? null;
   // The side games the group voted for, each with the organizer's house rules for it
   // A side game's own Strokes given % comes along when the plan carries one (from a usual or a rescheduled round)
   const sideGames = planSides(plan, game).filter(k => rules[k]).map(k => ({ game: k, settings: structuredClone(rules[k]), ...(validPct(plan.sidePcts?.[k]) ? { hcPct: plan.sidePcts[k] } : {}) }));
   return {
-    game, bet, course, holesCount, nine: plan.nine || 'front', teams, problem, newPlayers, sideGames, idOf,
-    players: players.map(p => ({ ...p, tee })),
+    game, bet, course, holesCount, nine, teams, problem, newPlayers, sideGames, idOf,
+    players: built.players,
+    // From the setup: where it starts, the side bets, and what carried over or was dropped
+    startHole: built.startHole, bets: built.bets, kept: built.kept, changes: built.changes,
     settings,
     // A plan from a saved usual keeps the usual's handicap percentage; others use this phone's
     hcPct: plan.hcPct ?? settings.hcPct ?? 100,
@@ -495,8 +511,9 @@ export function morningText(plan, link, settings, now = new Date()) {
 /** Fields that stay on this phone and never go into the shared plan. */
 // `unsent` and `metaUnsent` are this phone's own retry flags; a friend's phone taking the
 // organizer's copy would resend (and so overwrite) answers that were never theirs.
-// `usualId` is the organizer's own saved usual, which means nothing on a friend's phone.
-const LOCAL_ONLY = ['code', 'host', 'answers', 'localMe', 'syncedAt', 'gone', 'unsent', 'metaUnsent', 'roundId', 'usualId'];
+// `usualId` is the organizer's own saved usual, which means nothing on a friend's phone, and
+// `setup` (plan-setup.js) is keyed by the organizer's own player ids and holds handicap edits.
+const LOCAL_ONLY = ['code', 'host', 'answers', 'localMe', 'syncedAt', 'gone', 'unsent', 'metaUnsent', 'roundId', 'usualId', 'setup'];
 
 /** The shared part of a plan (what friends' phones read). */
 export function planMeta(plan) {
@@ -505,12 +522,15 @@ export function planMeta(plan) {
   return meta;
 }
 
-/** Answers keyed by who, from the RSVP and vote rows the server keeps. */
+/**
+ * Answers keyed by who, from the RSVP and vote rows the server keeps. `self`: they answered from
+ * their own phone, so once the plan lock is on only they can change it (plan-lock.js).
+ */
 export function answersFrom(rsvps = [], votes = []) {
   const out = {};
   for (const r of rsvps) {
     if (!r?.who || !RSVPS.includes(r.status)) continue;
-    out[r.who] = { name: r.name, status: r.status, at: r.at || 0, ...(r.payApp && r.payHandle ? { payApp: r.payApp, payHandle: r.payHandle } : {}) };
+    out[r.who] = { name: r.name, status: r.status, at: r.at || 0, ...(r.payApp && r.payHandle ? { payApp: r.payApp, payHandle: r.payHandle } : {}), ...(r.self ? { self: true } : {}) };
   }
   for (const v of votes) {
     if (!v?.who || !out[v.who] || v.choice == null) continue;
@@ -543,9 +563,10 @@ export function planLink(origin, code, who = null) {
  * organizer's house rules, which ride along on the plan so every phone shows the same units).
  * A plan set up from a saved usual also carries its handicap percentage (`hcPct`, used by the
  * roll call) and `usualId` (so finishing the round updates the usual's "Last played"). It and a
- * rescheduled round also carry half strokes (`halfStrokes`) and side games' own %s (`sidePcts`).
+ * rescheduled round also carry half strokes (`halfStrokes`) and side games' own %s (`sidePcts`),
+ * and `setup`: the order, teams, tees, handicap edits, starting hole and side bets (plan-setup.js).
  */
-export function newPlan({ id, hostWho = HOST, hostName, game, holesCount, nine, date, teeTime, course, people, ballot, suggestedBet, settings = null, useHc = true, hcPct = null, halfStrokes = false, sidePcts = null, usualId = null, playFor = null, now = Date.now() }) {
+export function newPlan({ id, hostWho = HOST, hostName, game, holesCount, nine, date, teeTime, course, people, ballot, suggestedBet, settings = null, useHc = true, hcPct = null, halfStrokes = false, sidePcts = null, usualId = null, playFor = null, setup = null, now = Date.now() }) {
   const games = [game, ...(ballot?.games || []).filter(g => g !== game && GAMES[g])].slice(0, MAX_BALLOT_GAMES);
   const bets = [...new Set([...(ballot?.bets || []), suggestedBet].filter(b => Number(b) > 0).map(Number))].sort((a, b) => a - b);
   const bet = Number(suggestedBet) || bets[0] || null;
@@ -574,6 +595,8 @@ export function newPlan({ id, hostWho = HOST, hostName, game, holesCount, nine, 
     ...(usualId ? { usualId } : {}),
     // Points or a reward (absent: money, as every plan before it)
     ...(storedPlayFor(playFor) ? { playFor: storedPlayFor(playFor) } : {}),
+    // The setup made before it was scheduled (plan-setup.js), for the roll call; absent on a plan made from scratch
+    ...(setup ? { setup: structuredClone(setup) } : {}),
     course: course ? { id: course.id, name: course.name, city: course.city || null } : null,
     people: [{ id: hostWho, name: hostFirst || 'Me' }, ...others],
     // `bets` and `bet` stay for phones on an older version, which read one list for every game

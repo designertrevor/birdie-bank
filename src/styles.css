@@ -2187,3 +2187,10 @@ button.ch-main:active { transform: scale(.98); }
 .ch-page { padding-top: 4px; }
 .ch-illo { display: block; width: 96px; height: 96px; margin: 8px auto 12px; }
 .ch-setup-note { margin-top: 4px; }
+
+/* ---------- o7 plans: roll call's "Changed since you set it up", answers that are someone's own ---------- */
+.plan-changes > div { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.plan-changes strong { font-weight: 700; }
+.plan-changes span { overflow-wrap: anywhere; }
+.seat-tile.taken { cursor: default; opacity: .55; }
+.seat-tile.taken:active { transform: none; }
