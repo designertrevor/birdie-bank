@@ -95,15 +95,68 @@ export function betFmt(round, bet) {
   return isCashBet(round, bet) ? money : unitFmt(round);
 }
 
+/**
+ * A number of points to the nearest whole point, halves away from zero, so +2.5 and −2.5 read +3
+ * and −3 and still cancel out. For the screen only: every total adds up the exact values.
+ */
+export function wholePoints(v) {
+  const n = Number(v) || 0;
+  const w = Math.sign(n) * Math.round(Math.abs(n));
+  return w === 0 ? 0 : w;
+}
+
 /** "12 pts", "+3 pts", "−1 pt": a round's numbers as points, one for each dollar the bets would make. */
 export function points(v, { sign = false } = {}) {
-  // Points are for bragging rights: a pot's share split across holes reads "+16.9 pts", never "+16.92"
-  const n = Math.round((Number(v) || 0) * 10) / 10;
+  // Points are for bragging rights, so they read in whole points: a pot's share split across holes
+  // (16.92) reads "+17 pts". The exact value stays underneath, in every total.
+  const n = wholePoints(v);
   const abs = Math.abs(n);
-  const s = String(abs);
   const pre = n < 0 ? '−' : sign && n > 0 ? '+' : '';
-  return `${pre}${s} ${abs === 1 ? 'pt' : 'pts'}`;
+  return `${pre}${abs} ${abs === 1 ? 'pt' : 'pts'}`;
 }
+
+/**
+ * Whole points for parts of one total that add up to the total as it's shown: each part to its
+ * nearest whole point, then the fewest parts nudged by one (those closest to the other side of a
+ * half) until they add up to wholePoints(total). `total` defaults to the parts' exact sum. Ties
+ * nudge the earlier part. 5.4 and 5.4 (10.8) show 6 and 5, not 5 and 5 under an 11.
+ */
+export function wholeParts(parts, total = parts.reduce((a, v) => a + (Number(v) || 0), 0)) {
+  const exact = parts.map(v => Number(v) || 0);
+  const out = exact.map(wholePoints);
+  let diff = wholePoints(total) - out.reduce((a, v) => a + v, 0);
+  const step = Math.sign(diff);
+  while (diff !== 0) {
+    // The part that moves the least for a one point nudge in this direction
+    let best = -1, cost = Infinity;
+    exact.forEach((v, i) => { const c = Math.abs(out[i] + step - v); if (c < cost - 1e-9) { cost = c; best = i; } });
+    out[best] += step;
+    diff -= step;
+  }
+  return out.map(v => (v === 0 ? 0 : v));
+}
+
+/**
+ * A by-game table's points as they're shown (see ByGameTable and gamesLine): { key: { pid: whole } },
+ * each player's games adding up to their own whole total. `ids` are the players; `total` their exact
+ * totals (defaults to the sum of their games).
+ */
+export function wholeByGame(byGame, ids, total = null) {
+  const keys = Object.keys(byGame || {});
+  const out = Object.fromEntries(keys.map(k => [k, {}]));
+  for (const id of ids) {
+    const parts = keys.map(k => byGame[k]?.balances?.[id] || 0);
+    const whole = total && total[id] != null ? wholeParts(parts, total[id]) : wholeParts(parts);
+    keys.forEach((k, i) => { out[k][id] = whole[i]; });
+  }
+  return out;
+}
+
+/**
+ * The change on one hole as it's shown in whole points: the whole total after it less the whole
+ * total before, so the hole's number and the running total always agree on screen.
+ */
+export const wholeDelta = (after, delta) => wholePoints(after) - wholePoints((Number(after) || 0) - (Number(delta) || 0));
 
 /** The formatter for a round's amounts: money() for money rounds, points() for the rest. */
 export function unitFmt(round) {

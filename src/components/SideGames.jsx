@@ -11,7 +11,7 @@ import { GameOptions } from './GameOptions.jsx';
 import { money } from '../lib/golf.js';
 import { betChangeNote, optionsProblem, sideBetLine } from '../lib/stakes.js';
 import { firstName } from '../lib/format.js';
-import { countsMoney, inUnits, padUnit, unitFmt } from '../lib/play-for.js';
+import { countsMoney, inUnits, padUnit, points, unitFmt, wholeByGame, wholePoints } from '../lib/play-for.js';
 
 /** "Skins, Junk or a Birdie pot": the side games still on offer, in words. */
 const orList = xs => {
@@ -246,6 +246,8 @@ function SkinsRules({ i, sideGames, change, players, holesCount, inPoints, onClo
  */
 export function ByGameTable({ round, byGame, total, fmt = money, caption = null }) {
   const games = Object.entries(byGame);
+  // In points, whole points that add up down each player's column to the Total row
+  const whole = fmt === points ? wholeByGame(byGame, round.players.map(p => p.id), total) : null;
   const cls = v => (v > 0 ? 'pos' : v < 0 ? 'neg' : 'zero');
   return (
     <div className="money-table-wrap">
@@ -258,12 +260,12 @@ export function ByGameTable({ round, byGame, total, fmt = money, caption = null 
           {games.map(([key, g]) => (
             <tr key={key}>
               <th scope="row" className="bg-game">{g.label}{betChangeNote(round, key) && <span className="bg-note">{betChangeNote(round, key)}</span>}</th>
-              {round.players.map(p => { const v = g.balances[p.id] || 0; return <td key={p.id} className={cls(v)}>{fmt(v, { sign: true })}</td>; })}
+              {round.players.map(p => { const v = whole ? whole[key][p.id] : g.balances[p.id] || 0; return <td key={p.id} className={cls(v)}>{fmt(v, { sign: true })}</td>; })}
             </tr>
           ))}
           <tr className="bg-total">
             <th scope="row" className="bg-game">Total</th>
-            {round.players.map(p => { const v = total[p.id] || 0; return <td key={p.id} className={cls(v)}><strong>{fmt(v, { sign: true })}</strong></td>; })}
+            {round.players.map(p => { const v = whole ? wholePoints(total[p.id]) : total[p.id] || 0; return <td key={p.id} className={cls(v)}><strong>{fmt(v, { sign: true })}</strong></td>; })}
           </tr>
         </tbody>
       </table>
