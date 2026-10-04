@@ -1,6 +1,8 @@
 // Upcoming rounds on the server: the organizer's phone shares a plan under a 6-letter code,
 // friends answer and vote from the group link, and everyone's phone picks up the latest when
-// it looks. Each person only ever writes their own answer, so nothing needs merging.
+// it looks. Each person only ever writes their own answer, so nothing needs merging. Once
+// supabase/2026-10-04-plan-lock.sql has run, the server holds everyone to that (plan-lock.js):
+// only the organizer changes the plan, and an answer made from someone's own phone is theirs.
 // Until the upcoming rounds SQL has run (or with no server at all), plans stay on the
 // organizer's phone: they mark who's in themselves, and the group link stays hidden.
 import { useEffect, useSyncExternalStore } from 'react';
@@ -10,6 +12,7 @@ import { PlansOffError, planLocalAdapter, planSupabaseAdapter } from './plan-ada
 import { newCode, stable } from './sync-model.js';
 import { RSVPS, answersFrom, betVoteChoice, cleanName, gameVoteChoice, planLink, planMeta } from './plans.js';
 import { PAY_APP_IDS } from './pay.js';
+import { deviceReady, myDevice } from './device.js';
 
 const localFlag = () => { try { return localStorage.getItem('bb-sync-local') === '1'; } catch { return false; } };
 
@@ -18,7 +21,7 @@ let adapterPromise = null;
 export function getPlanAdapter() {
   if (!adapterPromise) {
     if (supabaseConfigured) adapterPromise = getSupabase().then(db => (db ? planSupabaseAdapter(db) : null));
-    else if (import.meta.env.DEV || localFlag()) adapterPromise = Promise.resolve(planLocalAdapter());
+    else if (import.meta.env.DEV || localFlag()) adapterPromise = deviceReady().then(() => planLocalAdapter(myDevice));
     else adapterPromise = Promise.resolve(null);
   }
   return adapterPromise;
@@ -43,17 +46,22 @@ export function usePlansOff() {
 
 // --------------------------- answers --------------------------------------
 
+/** Send one answer and its votes. Resolves false when the server kept someone else's answer instead. */
 async function pushAnswer(adapter, code, who, a) {
-  if (!a || !RSVPS.includes(a.status)) return;
+  if (!a || !RSVPS.includes(a.status)) return true;
   // The server only takes the payment apps it knows and handles up to 80 characters
   const pay = PAY_APP_IDS.includes(a.payApp) && a.payHandle ? { payApp: a.payApp, payHandle: String(a.payHandle).slice(0, 80) } : { payApp: null, payHandle: null };
-  await adapter.setRsvp(code, { who, name: cleanName(a.name) || 'Guest', status: a.status, ...pay });
+  const kept = await adapter.setRsvp(code, { who, name: cleanName(a.name) || 'Guest', status: a.status, ...pay });
+  if (kept === false) return false;
   await Promise.all([adapter.setVote(code, who, 'game', gameVoteChoice(a)), adapter.setVote(code, who, 'bet', betVoteChoice(a))]);
+  return true;
 }
 
 /**
  * Save `who`'s answer and votes on this phone and, when the plan is shared, on the server.
- * An answer that can't be sent is kept and goes up on the next refresh. Resolves true when sent.
+ * An answer that can't be sent is kept and goes up on the next refresh. Resolves true when sent,
+ * false when it couldn't be (it goes up later), and 'taken' when the answer is someone else's
+ * (they answered from their own phone): this phone then takes the server's copy back.
  */
 export async function answerPlan(id, who, patch) {
   update(s => {
@@ -67,8 +75,9 @@ export async function answerPlan(id, who, patch) {
   try {
     const adapter = await getPlanAdapter();
     if (!adapter) return false;
-    await pushAnswer(adapter, plan.code, who, plan.answers[who]);
+    const kept = await pushAnswer(adapter, plan.code, who, plan.answers[who]);
     update(s => { const p = s.plans?.[id]; if (p?.unsent) delete p.unsent[who]; });
+    if (!kept) { await refreshPlan(id); return 'taken'; }
     return true;
   } catch (e) { noteError(e); return false; }
 }
