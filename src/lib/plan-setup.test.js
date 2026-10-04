@@ -301,3 +301,11 @@ test('the setup notes the organizer’s own id only when they’re in it', () =>
   assert.equal(setupForPlan({ ...SETUP, me: 'me' }).me, 'me');
   assert.equal(setupForPlan({ ...SETUP, me: 'ghost' }).me, undefined);
 });
+
+test('only two came to a round set up with sides: the sides are off, and the card says so', () => {
+  const s = planStart(state(), plan(), ['host', 'mike'], { course: COURSE });
+  assert.equal(s.problem, null);
+  assert.ok(s.changes.includes('The sides are off: Trevor and Mike play each other.'), s.changes.join(' / '));
+  assert.ok(s.changes.includes('Trevor and Dave’s side bet is off: Dave isn’t here.'));
+  assert.ok(!s.kept.includes('sides'));
+});

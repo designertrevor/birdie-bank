@@ -179,6 +179,9 @@ export function applySetup(setup, { game, course, holesCount, nine = 'front', pl
         const reasons = setup.game !== game ? [`the group picked ${g.name}`]
           : [absent.length ? notHere(absent.map(name)) : null, joined.length ? `${listNames(joined.map(id => first(byId.get(id).name)))} joined` : null].filter(Boolean);
         changes.push(`Teams start fresh${reasons.length ? `: ${reasons.join(' and ')}` : ''}.`);
+      } else if (Array.isArray(setup.teams) && setup.teams.length && optionalTwo && ids.length === 2) {
+        // Sides set up for more, and only two here: they play each other, and the card says so
+        changes.push(`The sides are off: ${listNames(ids.map(id => first(byId.get(id).name)))} play each other.`);
       }
     }
   }
