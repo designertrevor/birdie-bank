@@ -6,7 +6,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { bankerHoleSetup, createRound, gameView, nassauPressOptions, roundResults, settingsAt, sixesMatches, wolfFor, changeBets } from './round.js';
 import {
-  changeHammerWho, changeOrder, changePlayFor, changeTeams, lineupKind, lineupLabel, nextOpenIdx, orderNow, orderRuns, orderText,
+  changeHammerWho, changeOrder, changePlayFor, changeTeams, lineupKind, lineupLabel, lineupMenuText, nextOpenIdx, orderNow, orderRuns, orderText,
   playForText, replayAutoPresses, sidesText, standingLine, tabLine, teamGroups, teamsChangeProblem, teamsLocked,
 } from './lineup.js';
 import { moneyLine } from './hole-fix.js';
@@ -142,6 +142,24 @@ test('a wolf who has left stays out of the order', () => {
   const main = gameView(after, 'main');
   assert.deepEqual([2, 3, 4].map(i => wolfFor(main, i)), ['b', 'c', 'a']);
   assert.ok(after.players.some(p => p.id === 'd'));
+});
+
+test('a banker who has left stays out of the order, and the order set reads from the next hole', () => {
+  const r = bankerRound();
+  r.left = { d: 3 };
+  // Hole 4 would be Dan's, but he has gone, so the bank passes to Ann and Dan isn't listed
+  assert.deepEqual(orderNow(r).ids, ['a', 'b', 'c']);
+  assert.equal(lineupMenuText(r), 'Banker order · Ann, Bo, Cy');
+  const after = changeOrder(r, ['b', 'a', 'c']);
+  const main = gameView(after, 'main');
+  assert.deepEqual([3, 4, 5].map(i => bankerHoleSetup(main, i).banker), ['b', 'a', 'c']);
+  assert.deepEqual(orderRuns(after)[0], { from: 4, to: 4, id: 'b' });
+  assert.deepEqual(orderNow(after).ids, ['b', 'a', 'c']);
+  assert.ok(after.players.some(p => p.id === 'd'));
+  // The holes played keep their banker and money
+  assert.deepEqual(bal(after), bal(r));
+  // The same three in the same order is no change
+  assert.equal(changeOrder(r, ['a', 'b', 'c']), r);
 });
 
 // ---------------------------------------------------------------------------
@@ -297,6 +315,33 @@ test('who throws the first hammer changes for every hole, and the bets played ke
   assert.equal(settingsAt(after, 5).hammer.stake, 10);
   assert.equal(changeHammerWho(after, 'trailing'), after);
   assert.equal(changeHammerWho(r, 'nobody'), r);
+});
+
+test('a Hammer round with no first hammer rule plays it as either side, so picking that is no change', () => {
+  let r = mk('hammer', { teams: [['a', 'b'], ['c', 'd']] });
+  r = changeBets(r, { ...r.settings.hammer, stake: 10 }, 5);
+  delete r.settings.hammer.who;
+  for (const e of r.betHistory) delete e.settings.who;
+  assert.equal(changeHammerWho(r, 'either'), r);
+  assert.equal(changeHammerWho(r, 'trailing').settings.hammer.who, 'trailing');
+});
+
+test('Best ball sides: auto presses are worked out again for the new sides, and money follows', () => {
+  const r = mk('bestball', { teams: [['a', 'c'], ['b', 'd']], settings: { bestball: { ...structuredClone(TEAM_DEFAULTS.bestball), pressMode: 'auto' } } });
+  // Ann and Cy make 3 against 5 for five holes, so Bo and Dan press the front and the total
+  for (let i = 0; i < 5; i++) {
+    r.scores[r.holes[i].no] = { a: 3, b: 5, c: 3, d: 5 };
+    for (const o of nassauPressOptions(gameView(r, 'main'), i + 2)) r.presses.push({ id: `auto-${o.leg}-${i + 2}`, leg: o.leg, start: i + 2, by: o.trailing, auto: true });
+  }
+  assert.ok(r.presses.length > 0);
+  // Ann & Bo v Cy & Dan: every hole was halved, so no press ever came up
+  const after = changeTeams(r, [['a', 'b'], ['c', 'd']]);
+  assert.deepEqual(after.presses, []);
+  // Ann & Bo win the next four: the front and the total pay $5 each, with no presses on top
+  for (let i = 5; i < 9; i++) { after.scores[after.holes[i].no] = { a: 3, b: 5, c: 4, d: 5 }; r.scores[r.holes[i].no] = { a: 3, b: 5, c: 4, d: 5 }; }
+  const stale = { ...after, presses: r.presses };
+  assert.ok(bal(stale).a > bal(after).a, 'a press the old sides made would pay on the new ones');
+  assert.equal(bal(after).a, 10);
 });
 
 test('a Scramble’s teams change only before the first score, with team strokes worked out again', () => {
