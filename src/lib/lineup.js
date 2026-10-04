@@ -3,7 +3,7 @@
 // PlayForSheet.jsx; this file is pure and unit tested.
 //
 // When each change counts:
-//  • Teams or sides (Match play, Nassau, Hammer, Vegas): the whole round. These games are played
+//  • Teams or sides (Match play, Nassau, Hammer, Vegas, Best ball, Shamble): the whole round. These games are played
 //    between set sides, so the reason to change them partway is nearly always that they were set
 //    wrong. Every hole is worked out again with the new sides. Auto presses are worked out again too,
 //    hole by hole as they'd have come up; a press someone called, and a hammer someone threw, stay
@@ -17,7 +17,7 @@
 //  • Who throws the first hammer: the whole round. It only decides who may hammer, never the money.
 //  • Play for (money, points or a reward): the whole round. A round is played for one thing.
 // Nothing here runs unless someone changes a setting, so old rounds keep their money.
-import { GAMES, bankerHoleSetup, gameView, holeComplete, nassauPressOptions, oneBall, playersOn, roundResults, roundStarted, settingsAt, teamsFor, wolfFor } from './round.js';
+import { GAMES, bankerHoleSetup, gameView, holeComplete, isTeamGame, nassauPressOptions, oneBall, playersOn, roundResults, roundStarted, settingsAt, teamsFor, wolfFor } from './round.js';
 import { teamsProblem } from './teams.js';
 import { betsOf, kindFits } from './pair-bets.js';
 import { playForOf, points, rewardOutcome, storedPlayFor, tabResults } from './play-for.js';
@@ -79,7 +79,7 @@ function bankOffset(main, idx) {
   return firstBanker + idx;
 }
 
-/** The wolf rotation on the hole at `idx`: the players on it, in order. */
+/** The players on the hole at `idx`, in order: the wolf rotation, and who can bank it. */
 const wolfList = (main, idx) => {
   const hole = main.holes[idx];
   const on = hole ? playersOn(main, hole) : main.players;
@@ -90,7 +90,7 @@ const wolfList = (main, idx) => {
  * The order as the sheet shows it: { idx, ids }. `idx` is the next hole to play (-1 when every hole
  * is in) and `ids` the main game's players from that hole on: the first banks (or is the wolf) on
  * it, the second on the hole after, and so on. Sixes is the order as set up, which sets the partners.
- * A wolf rotation leaves out anyone who has left.
+ * The banker and wolf orders leave out anyone who has left: the bank passes over them.
  */
 export function orderNow(round) {
   const main = gameView(round, 'main');
@@ -101,7 +101,10 @@ export function orderNow(round) {
     const on = wolfList(main, at);
     return { idx, ids: rotate(on, at % on.length) };
   }
-  if (round.game === 'banker') return { idx, ids: rotate(all, bankOffset(main, at) % all.length) };
+  if (round.game === 'banker') {
+    const on = wolfList(main, at);
+    return { idx, ids: rotate(all, bankOffset(main, at) % all.length).filter(id => on.includes(id)) };
+  }
   return { idx, ids: all };
 }
 
@@ -121,13 +124,21 @@ export function changeOrder(round, ids) {
   const at = Math.max(0, now.idx);
   let order;
   if (round.game === 'sixes') order = [...ids];
-  else {
+  else if (round.game === 'wolf') {
     const n = ids.length;
-    const off = round.game === 'wolf' ? at % n : bankOffset(main, at) % n;
     const placed = new Array(n);
-    ids.forEach((id, j) => { placed[(off + j) % n] = id; });
+    ids.forEach((id, j) => { placed[(at % n + j) % n] = id; });
     // A wolf who has left isn't in the rotation: they go after the others
     order = [...placed, ...all.filter(id => !placed.includes(id))];
+  } else {
+    // The banker rotation runs through everyone, passing over anyone who has left, so they take the
+    // places after the players still here: the order still reads from the next hole as set
+    const n = all.length;
+    const off = bankOffset(main, at) % n;
+    const gone = rotate(all, off).filter(id => !ids.includes(id));
+    const placed = new Array(n);
+    [...ids, ...gone].forEach((id, j) => { placed[(off + j) % n] = id; });
+    order = placed;
   }
   if (sameList(order, all)) return round;
   const byId = new Map(round.players.map(p => [p.id, p]));
@@ -211,6 +222,9 @@ export function teamsChangeProblem(round, groups) {
   return null;
 }
 
+/** Games whose sides press: Match play, Nassau, and the team games played as a match (Best ball and the rest). */
+export const pressesOn = game => game === 'nassau' || game === 'match' || isTeamGame(game);
+
 /**
  * Auto presses worked out again from the first hole for the round's sides, as they would have come
  * up hole by hole: each from the holes played before it and the presses already on. Presses called
@@ -219,7 +233,7 @@ export function teamsChangeProblem(round, groups) {
  * gets no auto presses, even when they're on now.
  */
 export function replayAutoPresses(round) {
-  if (round.game !== 'nassau' && round.game !== 'match') return round;
+  if (!pressesOn(round.game)) return round;
   const main = gameView(round, 'main');
   const before = k => settingsAt(main, k - 1);
   const autoBefore = k => before(k)[round.game]?.pressMode === 'auto';
@@ -266,6 +280,9 @@ export function changeTeams(round, groups) {
 /** Who throws the first hammer ('either' or 'trailing') for every hole, past bets kept as they were. */
 export function changeHammerWho(round, who) {
   if (round.game !== 'hammer' || (who !== 'either' && who !== 'trailing')) return round;
+  // A round with no rule set plays it as 'either', so choosing that again is no change
+  const whoOf = s => s?.who || 'either';
+  if (whoOf(round.settings.hammer) === who && (round.betHistory || []).every(e => whoOf(e.settings) === who)) return round;
   const out = { ...round, settings: { ...round.settings, hammer: { ...round.settings.hammer, who } } };
   if (Array.isArray(round.betHistory)) out.betHistory = round.betHistory.map(e => ({ ...e, settings: { ...e.settings, who } }));
   return JSON.stringify(out) === JSON.stringify(round) ? round : out;

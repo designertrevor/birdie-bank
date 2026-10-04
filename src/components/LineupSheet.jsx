@@ -11,8 +11,9 @@ import { update } from '../lib/store.js';
 import { gameView, pressMode } from '../lib/round.js';
 import { teamsProblem } from '../lib/teams.js';
 import {
-  changeHammerWho, changeOrder, changeTeams, lineupKind, lineupLabel, orderNow, orderRuns, teamGroups, teamsChangeProblem, teamsLocked,
+  changeHammerWho, changeOrder, changeTeams, lineupKind, lineupLabel, orderNow, orderRuns, pressesOn, teamGroups, teamsChangeProblem, teamsLocked,
 } from '../lib/lineup.js';
+import { countsMoney } from '../lib/play-for.js';
 import { moneyLine } from '../lib/hole-fix.js';
 import { logChange } from '../lib/agreed.js';
 import { buzz } from '../lib/delight.js';
@@ -90,7 +91,7 @@ export function LineupSheet({ round, onClose }) {
               : `From hole ${nextNo} on. The banker is picked at each hole, and the order is how the card lists everyone. Holes already played keep their banker.`;
   // Only said when there's something to say: a round with no presses, or no hammer thrown, has none to move
   const presses = round.presses || [];
-  const pressNote = (game === 'nassau' || game === 'match') && kind === 'teams' && !locked && (presses.length || pressMode(round) === 'auto')
+  const pressNote = pressesOn(game) && kind === 'teams' && !locked && (presses.length || pressMode(round) === 'auto')
     ? (presses.some(p => !p.auto) ? 'Auto presses are worked out again for the new sides. A press someone called stays with its side.' : 'Auto presses are worked out again for the new sides.')
     : game === 'hammer' && kind === 'teams' && Object.values(round.marks || {}).some(m => m?.hammers?.length) ? 'Hammers already thrown stay with their side of the card, the first or the second.' : null;
 
@@ -145,7 +146,7 @@ export function LineupSheet({ round, onClose }) {
           <Icon name="scales" fill />
           <div>
             <div className="eyebrow">What this changes</div>
-            <p><strong>{money || (fromNext ? `No money moves: the holes played keep their ${game === 'banker' ? 'banker' : 'wolf'}.` : 'No money moves.')}</strong></p>
+            <p><strong>{money || `${countsMoney(round) ? 'No money moves' : 'No points move'}${fromNext ? `: the holes played keep their ${game === 'banker' ? 'banker' : 'wolf'}.` : '.'}`}</strong></p>
           </div>
         </div>
       )}

@@ -44,7 +44,7 @@ export function PlayForSheet({ round, onClose }) {
 
   return (
     <Sheet open onClose={onClose} title="Play for" className="sc-sheet">
-      <p className="sheet-text">A change here counts for the whole round, holes already played too. The bets stay as they are: a $5 bet is worth 5 pts.</p>
+      <p className="sheet-text">A change here counts for the whole round, holes already played too. The bets stay as they are: {was.kind === 'money' ? 'a $5 bet is worth 5 pts.' : '5 pts is worth $5 played for money.'}</p>
       <PlayForPicker value={value} onChange={setValue} />
       {askCash && (
         <div className="toggle-row">
