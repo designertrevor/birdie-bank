@@ -5,7 +5,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { createRound } from './round.js';
-import { newPlan } from './plans.js';
+import { movedLocalMe, newPlan, planMeta, upcomingPlans } from './plans.js';
 import {
   canMove, challengeLife, challengeNextText, challengeState, challengeView, challengesForRound, lateAnswers, mergeMoves, moveIdFor, movedKeys, newChallenge, proxyNote, withMove,
 } from './challenges.js';
@@ -100,4 +100,21 @@ test('a planned round’s challenge given back when its round is deleted shows a
   assert.match(challengeNextText(state, ch, NOW), /deleted before it was played/);
   const r2 = createRound({ id: 'r2', game: 'skins', course: COURSE, holesCount: 18, players: [{ id: 'me', name: 'Trevor' }, { id: 'pmike', name: 'Mike' }], settings: SET });
   assert.deepEqual(challengesForRound(state, r2, { now: NOW }).map(x => x.bet.players || x.bet.sides), [['me', 'pmike']]);
+});
+
+test('a round kept for another day: a friend’s old plan says where it went, the new one takes its place, and the friend stays who they were', () => {
+  const mk = (id, date, people) => newPlan({ id, hostName: 'Trevor', game: 'skins', holesCount: 18, date, teeTime: '08:00', course: COURSE, people, ballot: { games: [], bets: [5] }, suggestedBet: 5, settings: SET, now: NOW });
+  // Mike's phone: the old plan (he's mike on it), started, and moved to Saturday
+  const old = { ...mk('pl_PLAN01', '2026-10-04', [{ id: 'mike', name: 'Mike' }]), code: 'PLAN01', host: false, localMe: 'mike', status: 'started', movedTo: { id: 'pl2', code: 'PLAN02', date: '2026-10-10' } };
+  let ch = newChallenge({ id: 'c1', from: { who: old.hostWho, name: 'Trevor' }, to: { who: 'mike', name: 'Mike' }, kind: 'match', stake: 20, plan: { id: 'pl1', code: 'PLAN01', date: '2026-10-04' }, now: NOW - DAY });
+  ch = withMove(ch, { id: 'acc', side: 'to', move: 'accept', at: NOW - 3600e3 });
+  let state = { me: 'x', players: {}, plans: { [old.id]: old }, challenges: { c1: ch } };
+  assert.deepEqual(upcomingPlans(state, new Date(NOW)).map(p => p.id), ['pl_PLAN01'], 'still shown, as moved');
+  assert.equal(challengeLife(state, ch, NOW), 'live', 'never Missed the round');
+  // The new plan as it comes from its link: Mike's key carried over by the move
+  const meta = planMeta({ ...mk('pl2', '2026-10-10', [{ id: 'p_mike', name: 'Mike' }]), movedFrom: [{ id: 'pl1', code: 'PLAN01', keys: { mike: 'p_mike' } }], rollIds: { mike: 'p_mike' } });
+  assert.equal('rollIds' in meta, false, 'the roll call’s ids stay on the organizer’s phone');
+  assert.equal(movedLocalMe(state, meta), 'p_mike');
+  state = { ...state, plans: { ...state.plans, pl2: { ...meta, code: 'PLAN02', host: false, localMe: 'p_mike' } } };
+  assert.deepEqual(upcomingPlans(state, new Date(NOW)).map(p => p.id), ['pl2'], 'the new plan takes its place');
 });

@@ -18,7 +18,7 @@ import { payFields, sendReminder } from '../lib/pay.js';
 import { shareLink, shareRound, syncConfigured } from '../lib/sync.js';
 import {
   RSVPS, RSVP_LABEL, betLabel, betUnitLabel, cleanName, countsLine, daysUntil, inviteText, isoDate, morningText, nudgeAllText, nudgeText,
-  planChoice, planCounts, planPeople, planRules, planSides, planStart, rollCallDefault, tally, tallySides, whenLabel,
+  dayLabel, movedPlanOf, planChoice, planCounts, planPeople, planRules, planSides, planStart, rollCallDefault, tally, tallySides, whenLabel,
 } from '../lib/plans.js';
 import { PlansOffError } from '../lib/plan-adapters.js';
 import { CountForTrip } from '../components/Trips.jsx';
@@ -177,10 +177,11 @@ function PlanBody({ plan, standalone = false, onSkip }) {
           {playForLine(plan) && <div className="ic-playfor"><Icon name={plan.playFor?.kind === 'reward' ? 'gift' : 'trophy'} fill /> {playForLine(plan)}</div>}
           {plan.status === 'off' && <p className="ic-note"><Icon name="calendar-x" fill /> {plan.host ? 'You called this one off.' : `${host} called this one off.`}</p>}
           {plan.gone && plan.status === 'planned' && <p className="ic-note"><Icon name="calendar-x" fill /> {host} deleted this plan.</p>}
-          {plan.status === 'started' && (
+          {plan.movedTo && <MovedNote plan={plan} host={host} />}
+          {plan.status === 'started' && !plan.movedTo && (
             <p className="ic-note"><Icon name="flag-pennant" fill /> The round is on.{plan.liveCode ? ' Follow the money live.' : ''}</p>
           )}
-          {plan.status === 'started' && plan.liveCode && (
+          {plan.status === 'started' && !plan.movedTo && plan.liveCode && (
             <a className="pill-btn ph-follow" href={shareLink(plan.liveCode)}><Icon name="broadcast" fill /> Follow along</a>
           )}
         </div>
@@ -622,5 +623,26 @@ export function PlanLink({ code, who = null, standalone = false, onSkip }) {
         </div>
       )}
     </Screen>
+  );
+}
+
+/** A round kept for another day: where it went, and the new plan (opened from its link when this phone doesn't have it yet). */
+function MovedNote({ plan, host }) {
+  const nav = useNav();
+  const { showToast } = useUI();
+  const state = useStore();
+  const to = plan.movedTo;
+  const next = movedPlanOf(state, plan);
+  const open = async () => {
+    try {
+      const id = next?.id || (to.code ? await openPlanLink(to.code) : null);
+      if (id) nav.push('plan', { id }); else showToast('The new plan isn’t out yet');
+    } catch { showToast('No signal. Try again in a moment'); }
+  };
+  return (
+    <>
+      <p className="ic-note"><Icon name="calendar-check" fill /> {plan.host ? 'You moved' : `${host} moved`} this round to {to.date ? dayLabel(to.date) : 'another day'}.</p>
+      {(next || to.code) && <button className="pill-btn ph-follow" onClick={open}><Icon name="caret-right" /> The new plan</button>}
+    </>
   );
 }

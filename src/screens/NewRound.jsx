@@ -302,6 +302,8 @@ export default function NewRound({ rematch, fromPlan, present, edit = null, ahea
     // A round from a plan, kept for another day: the plan's challenges move to this one (challenges.js)
     const oldPlan = replaces ? Object.values(s.plans || {}).find(p => p?.host && p.roundId === replaces) : null;
     if (oldPlan) { const moved = movedFromFor(oldPlan, plan); if (moved.length) plan.movedFrom = moved; }
+    // The old plan says where it went, so friends' phones stop showing it as on (plan-sync.js adds the link once there is one)
+    if (oldPlan) editPlan(oldPlan.id, p => { p.movedTo = { id, code: null, date }; });
     // The round it replaces never got played: its challenges are agreed again for the next round together
     if (replaces) challengesBack(getState().rounds[replaces]);
     update(st => {

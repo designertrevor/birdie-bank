@@ -383,6 +383,8 @@ export function challengeLife(state, ch, now = Date.now()) {
     // Its round was deleted before it was played: agreed again for the next round together
     const back = offPlan(state, ch);
     if (back) return now - back > ACCEPTED_DAYS * DAY ? 'expired' : 'live';
+    // Its round moved to another day, the new plan not on this phone yet: it waits, never Missed
+    if (plan.movedTo) { const d = daysUntil(plan.movedTo.date, new Date(now)); return d != null && d < 0 ? 'missed' : 'live'; }
     if (plan.status === 'started') return 'missed';
     const days = daysUntil(plan.date, new Date(now));
     return days != null && days < 0 ? 'missed' : 'live';
