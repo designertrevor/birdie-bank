@@ -10,7 +10,7 @@ import { getState, update } from './store.js';
 import { getSupabase, supabaseConfigured } from './supabase.js';
 import { isMissingTable } from './plan-adapters.js';
 import { codeOf } from './pair-debts.js';
-import { expensesToSend, mergeExpenses } from './trip-expenses.js';
+import { cleanExpense, expensesToSend, mergeExpenses, restampExpenses } from './trip-expenses.js';
 import { tripsOf } from './trips.js';
 
 const localFlag = () => { try { return localStorage.getItem('bb-sync-local') === '1'; } catch { return false; } };
@@ -90,6 +90,15 @@ function tripCodes(s) {
   return out;
 }
 
+// Each expense as the server last had it (id -> updatedAt), from what it sent and what this phone
+// sent it, this session. The organizer's published plan only covers expenses the server holds as
+// this phone has them, so every phone on the trip can count the same ones (before the SQL runs, or
+// while one is still on its way up, it stays out of the plan and settles with the rest of the Tab)
+const onServer = new Map();
+const heard = e => { const x = cleanExpense(e); if (x) onServer.set(x.id, x.updatedAt); };
+/** Whether the server holds this expense as it is here, so the trip's published plan can cover it. */
+export const serverHas = e => !!e && onServer.get(e.id) === e.updatedAt;
+
 /** Keep the server's copies on this phone, the newer of each. */
 function keep(list) {
   const s = getState();
@@ -117,10 +126,14 @@ export function refreshExpenses() {
     if (!ids.length) return;
     try {
       const rows = await adapter.fetch(ids);
+      for (const x of rows) heard(x.expense);
       keep(rows.map(x => x.expense));
+      // Your own expenses get the seats of trip rounds shared since they were saved, so friends' phones know who's in them
+      const again = restampExpenses(getState());
+      if (again.length) update(st => { st.tripExpenses = mergeExpenses(st.tripExpenses || {}, again); });
       for (const { expense: e, codes } of expensesToSend(getState(), rows, trips)) {
         if (refused.has(`${e.id}|${e.updatedAt}`)) continue;
-        try { await adapter.save(e, codes); } catch (err) {
+        try { await adapter.save(e, codes); heard(e); } catch (err) {
           if (err instanceof RefusedError) { refused.add(`${e.id}|${e.updatedAt}`); console.warn('Trip expenses: the server refused one', e.id, err.cause); continue; }
           throw err;
         }

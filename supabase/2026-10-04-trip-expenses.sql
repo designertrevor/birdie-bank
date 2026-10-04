@@ -24,16 +24,16 @@
 --          drop function public.bb_trip_member(text);
 
 create table if not exists public.trip_expenses (
+  -- One row per expense, whatever its trip: an expense id can't be filed under a second trip
+  id text primary key check (length(id) between 1 and 64),
   trip_id text not null check (length(trip_id) between 1 and 64),
-  id text not null check (length(id) between 1 and 64),
   codes text[] not null default '{}' check (public.bb_codes_ok(codes)),
   expense jsonb not null check (jsonb_typeof(expense) = 'object' and length(expense::text) < 20000),
   owner_dev text,
   owner_uid uuid,
   readers text[] not null default '{}',
   created_at timestamptz not null default now(),
-  updated_at timestamptz not null default now(),
-  primary key (trip_id, id)
+  updated_at timestamptz not null default now()
 );
 
 create index if not exists trip_expenses_trip on public.trip_expenses (trip_id);
@@ -105,8 +105,12 @@ drop policy if exists "trip people read" on public.trip_expenses;
 drop policy if exists "trip people add" on public.trip_expenses;
 drop policy if exists "adder changes" on public.trip_expenses;
 drop policy if exists "adder removes" on public.trip_expenses;
+-- The row's own adder and readers first: a row being added isn't in the table yet when the upsert
+-- checks it can read it back, so bb_trip_member alone would turn away the trip's first expense
 create policy "trip people read" on public.trip_expenses for select to anon, authenticated
-  using (public.bb_trip_member(trip_id));
+  using ((public.bb_writer() is not null and (public.bb_writer() = owner_dev or public.bb_writer() = any(readers)))
+    or (owner_uid is not null and owner_uid = auth.uid())
+    or public.bb_trip_member(trip_id));
 create policy "trip people add" on public.trip_expenses for insert to anon, authenticated
   with check (public.bb_writer() is not null);
 create policy "adder changes" on public.trip_expenses for update to anon, authenticated

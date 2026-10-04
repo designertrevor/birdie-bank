@@ -271,10 +271,38 @@ export function mergeExpenses(cur = {}, incoming = []) {
     const e = cleanExpense(raw);
     if (!e) continue;
     const have = cur[e.id] ? cleanExpense(cur[e.id]) : null;
+    // An expense never moves trip or changes hands: a copy that says otherwise isn't this one
+    if (have && (have.tripId !== e.tripId || (have.by && e.by && have.by !== e.by))) continue;
     if (have && (have.updatedAt > e.updatedAt || (have.updatedAt === e.updatedAt && (have.deleted || !e.deleted)))) continue;
     if (have && JSON.stringify(have) === JSON.stringify(e)) continue;
     if (out === cur) out = { ...cur };
     out[e.id] = e;
+  }
+  return out;
+}
+
+/**
+ * Your own expenses that need writing again because the trip has rounds shared live this phone
+ * didn't have when they were saved: each person gets their seat in those rounds (refs), so the
+ * phones that know them only by a seat (a friend who joined someone else's round) can tell who
+ * they are. Returns the expenses to keep, newer (updatedAt `now`), or [] when none need it. An
+ * expense added before any round was shared (the house paid ahead) gets its seats this way.
+ */
+export function restampExpenses(state, { now = Date.now() } = {}) {
+  const out = [];
+  for (const raw of Object.values(state.tripExpenses || {})) {
+    const e = cleanExpense(raw);
+    if (!e || e.deleted || !canEditExpense(state, { by: e.by }) || !tripKnown(state, e.tripId)) continue;
+    let changed = false;
+    const again = p => {
+      const fresh = personFor(state, e.tripId, p.id).refs;
+      if (!fresh.some(r => !p.refs.includes(r))) return p;
+      changed = true;
+      return { ...p, refs: [...fresh, ...p.refs.filter(r => !fresh.includes(r))].slice(0, 8) };
+    };
+    const payer = again(e.payer);
+    const people = e.people.map(again);
+    if (changed) out.push({ ...e, payer, people, updatedAt: Math.max(now, e.updatedAt + 1) });
   }
   return out;
 }

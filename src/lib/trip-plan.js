@@ -117,7 +117,7 @@ function plannable(state, tripId, rounds, who) {
  * expenses they link up, less every payment already made on them, only ever between two people who
  * played one of them together. Null when there's nothing to cover, or the money doesn't add up to the cent.
  */
-export function buildPlan(state, tripId, { now = Date.now(), version = 1, endedAt = null, byName = null } = {}) {
+export function buildPlan(state, tripId, { now = Date.now(), version = 1, endedAt = null, byName = null, covers = () => true } = {}) {
   const who = canonicalOf(state);
   const rounds = tripShared(state, tripId, now);
   if (!rounds.length) return null;
@@ -125,7 +125,8 @@ export function buildPlan(state, tripId, { now = Date.now(), version = 1, endedA
   const bal = {};
   const add = (id, c) => { bal[id] = (bal[id] || 0) + c; };
   for (const r of rounds) for (const [pid, v] of Object.entries(tabResults(r).balances)) add(who(pid), cents(v));
-  const spent = plannable(state, tripId, rounds, who);
+  // Only expenses every phone can have: `covers` says the server holds it as this phone does
+  const spent = plannable(state, tripId, rounds, who).filter(x => covers(x.raw));
   for (const x of spent) for (const [id, c] of Object.entries(x.balances)) add(id, c);
   const netted = [];
   for (const s of state.settlements || []) {
@@ -169,13 +170,13 @@ export function buildPlan(state, tripId, { now = Date.now(), version = 1, endedA
  * (it checks out here, covers every trip round shared live, and says the same about "done
  * playing"). A new plan is the next version.
  */
-export function duePlan(state, trip, { now = Date.now(), byName = null } = {}) {
+export function duePlan(state, trip, { now = Date.now(), byName = null, covers } = {}) {
   const cur = cleanPlan(state.tripPlans?.[trip.id]);
   if (cur?.deleted) return null;
   const ps = planState(state, trip.id, { now });
   const ended = trip.endedAt || null;
   if (cur && ps.status === 'live' && !ps.pending.length && !ps.pendingExpenses.length && (cur.endedAt || null) === ended) return null;
-  const next = buildPlan(state, trip.id, { now, version: (cur?.version || 0) + 1, endedAt: ended, byName });
+  const next = buildPlan(state, trip.id, { now, version: (cur?.version || 0) + 1, endedAt: ended, byName, ...(covers ? { covers } : {}) });
   return !next || (cur && samePlan(cur, next)) ? null : next;
 }
 

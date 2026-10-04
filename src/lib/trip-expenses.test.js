@@ -10,7 +10,7 @@ import { applyRows } from './shared-tab.js';
 import { buildPlan, cleanPlan, duePlan, planState, samePlan } from './trip-plan.js';
 import { canDeleteTrip, myTripAllIn, newTrip, partPlan, tripPayment, tripStamp, tripStatus, tripsOf, currentTrips } from './trips.js';
 import {
-  allExpenses, cleanExpense, expenseMark, expensesToSend, expenseTotals, mergeExpenses, parseAmount, personFor, resolveExpense, shareCents, splitLine, tripExpenses,
+  allExpenses, cleanExpense, expenseMark, expensesToSend, expenseTotals, mergeExpenses, parseAmount, personFor, resolveExpense, restampExpenses, shareCents, splitLine, tripExpenses,
 } from './trip-expenses.js';
 import { applyDoc, toDocs } from './cloud-model.js';
 import { makeBackup, mergeBackup, parseBackup } from './backup.js';
@@ -432,4 +432,67 @@ test('someone leaving early settles their part of the expenses too', () => {
   for (const t of eve) deliver(phones, tripPayment(phones.e, 't_bandon', t.from, t.to, { now: sat + 1000, part: true }).rows);
   assert.equal(partPlan(tripStatus(phones.e, 't_bandon', { now: sat + 2000 }).plan, 'ze').length, 0, 'Eve is square');
   agree(phones);
+});
+
+// ---------------------------------------------------------------------------
+// Review fixes
+
+test('the plan leaves out an expense the server doesn’t have yet, so friends’ phones keep the plan', () => {
+  const phones = phonesOf(rounds5());
+  const plain = Object.fromEntries(Object.entries(phones).map(([k, s]) => [k, myTotal(s)]));
+  // Trevor adds dinner with Andy and Bob, but it hasn't reached the server (the SQL hasn't run, or no signal)
+  const dinner = expense(phones.t, { id: 'x1', payer: 't', people: ['t', 'a', 'b'], amount: 90 });
+  phones.t = { ...phones.t, tripExpenses: { x1: dinner } };
+  // Counting it anyway would leave Andy's and Bob's phones out of date with nothing to bring them back
+  const eager = buildPlan(phones.t, 't_bandon', { now: NOW });
+  assert.deepEqual(eager.expenses.map(x => x.id), ['x1']);
+  assert.equal(planState({ ...phones.a, tripPlans: { t_bandon: eager } }, 't_bandon', { now: NOW }).status, 'stale');
+  const trip = tripsOf(phones.t).get('t_bandon');
+  const plan = duePlan(phones.t, trip, { now: NOW, covers: () => false });
+  assert.equal(plan.expenses, undefined, 'only what the server has');
+  publish(phones, plan);
+  for (const [k, s] of Object.entries(phones)) assert.equal(planState(s, 't_bandon', { now: NOW }).status, 'live', `${k}’s phone takes the plan`);
+  assert.deepEqual(planState(phones.t, 't_bandon', { now: NOW }).pendingExpenses, ['x1'], 'the dinner settles with the rest of Trevor’s Tab');
+  assert.equal(myTotal(phones.t), plain.t + 6000);
+  for (const k of ['a', 'b', 'c', 'e']) assert.equal(myTotal(phones[k]), plain[k], `${k}’s phone is just the golf for now`);
+  assert.equal(duePlan(phones.t, trip, { now: NOW, covers: () => false }), null, 'no churn while it waits');
+  // Once the server has it, the next version covers it and every phone agrees again
+  share(phones, dinner);
+  const v2 = duePlan(phones.t, trip, { now: NOW, covers: e => e.id === 'x1' });
+  assert.deepEqual(v2.expenses.map(x => x.id), ['x1']);
+  publish(phones, v2);
+  for (const [k, s] of Object.entries(phones)) assert.equal(planState(s, 't_bandon', { now: NOW }).status, 'live', k);
+  agree(phones);
+});
+
+test('an expense added before any round was shared gets its seats later, so friends’ phones know who paid', () => {
+  const phones = phonesOf(rounds5());
+  // Bob paid the house ahead, before any round: his phone had no seats to write him in with
+  const early = stateOf('zb', [], { trips: { t_bandon: TRIP } });
+  const house = expense(early, { id: 'h', payer: 'zb', people: ['zb', 't'], amount: 500, what: 'The house', at: OCT(10) });
+  assert.deepEqual(house.payer.refs, []);
+  phones.b = { ...phones.b, tripExpenses: { h: house } };
+  share(phones, house);
+  assert.equal(tripExpenses(phones.t, 't_bandon')[0].payer, 'zb', 'Trevor’s phone can’t tell it’s Bob');
+  // Now Bob's phone has the trip's rounds: it writes him in with his seats, newer, once
+  const again = restampExpenses(phones.b, { now: NOW });
+  assert.equal(again.length, 1);
+  assert.ok(again[0].updatedAt > house.updatedAt);
+  assert.ok(again[0].payer.refs.includes('AAAAAA:b'));
+  assert.ok(again[0].people[1].refs.includes('AAAAAA:t'), 'and Trevor with his');
+  share(phones, ...again);
+  assert.deepEqual(restampExpenses(phones.b, { now: NOW + 1 }), [], 'nothing more to write');
+  assert.deepEqual(restampExpenses(phones.t, { now: NOW }), [], 'only the adder writes it again');
+  assert.equal(tripExpenses(phones.t, 't_bandon')[0].payer, 'b', 'Trevor’s phone knows it’s Bob now');
+  assert.equal(owes(phones.t, 't', 'b') - owes(phonesOf(rounds5()).t, 't', 'b'), 25000);
+  agree(phones);
+});
+
+test('a copy of an expense under another trip or another adder doesn’t replace it', () => {
+  const s = stateOf('t', rounds5(), { trips: { t_bandon: TRIP } });
+  const dinner = expense(s, { id: 'x1', payer: 't', people: ['t', 'a'], amount: 80 });
+  const cur = { x1: dinner };
+  assert.equal(mergeExpenses(cur, [{ ...dinner, tripId: 't_other', updatedAt: dinner.updatedAt + 5 }]), cur);
+  assert.equal(mergeExpenses(cur, [{ ...dinner, by: 'zx', amount: 1, updatedAt: dinner.updatedAt + 5 }]), cur);
+  assert.equal(mergeExpenses(cur, [{ ...dinner, amount: 90, updatedAt: dinner.updatedAt + 5 }]).x1.amount, 90, 'a newer copy of the same one still does');
 });

@@ -14,7 +14,7 @@ import { codeOf } from './pair-debts.js';
 import { cleanPlan, duePlan } from './trip-plan.js';
 import { isOrganizer, tripRounds, tripsOf } from './trips.js';
 import { refreshTab } from './tab-sync.js';
-import { EXPENSES_KEY, expensesOn, refreshExpenses } from './trip-expense-sync.js';
+import { EXPENSES_KEY, expensesOn, refreshExpenses, serverHas } from './trip-expense-sync.js';
 
 const localFlag = () => { try { return localStorage.getItem('bb-sync-local') === '1'; } catch { return false; } };
 
@@ -117,7 +117,8 @@ async function publishMine(adapter) {
   const s = getState();
   for (const trip of tripsOf(s).values()) {
     if (!isOrganizer(s, trip)) continue;
-    const next = duePlan(s, trip, { byName: myName(s) });
+    // The plan covers only expenses the server has as this phone does, so friends' phones have them too
+    const next = duePlan(s, trip, { byName: myName(s), covers: serverHas });
     if (!next) continue;
     const codes = [...new Set(tripRounds(s, trip.id).map(codeOf).filter(Boolean))];
     try {
