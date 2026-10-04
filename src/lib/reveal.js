@@ -95,11 +95,23 @@ function sideStep(key, g, name, players) {
   if (key === 'skins' && d.skinsWon?.[best]) text = `${name(best)} won ${plural(Math.round(d.skinsWon[best].skins * 10) / 10, 'skin')}`;
   if (key === 'dots' && d.points) text = `${name(best)} had ${plural(d.points[best] || 0, 'dot')}`;
   if (key === 'birdies' && d.birdies) text = `${name(best)} took ${plural(d.birdies.shares[best] || 0, 'share')} of the pot`;
-  // Closest to the pin and long drive: who took the most of the pot, and on which holes
+  // Closest to the pin and long drive: who took the most of the pot, and on which holes. Won by
+  // more than one: each of them and their holes, in the order they were played
   if ((key === 'ctp' || key === 'drive') && d.pot?.won?.[best]) {
-    const nos = d.pot.won[best].holes;
-    const where = `${nos.length === 1 ? 'hole' : 'holes'} ${nos.length > 1 ? `${nos.slice(0, -1).join(', ')} and ${nos.at(-1)}` : nos[0]}`;
-    text = key === 'ctp' ? `${name(best)} was closest on ${where}` : `${name(best)} had the long drive on ${where}`;
+    const andList = xs => (xs.length > 1 ? `${xs.slice(0, -1).join(', ')} and ${xs.at(-1)}` : String(xs[0]));
+    const holesOf = nos => `${nos.length === 1 ? 'hole' : 'holes'} ${andList(nos)}`;
+    const won = Object.entries(d.pot.won).filter(([, w]) => w?.holes?.length);
+    if (won.length > 1) {
+      const order = Array.isArray(d.pot.holes) && d.pot.holes.length ? d.pot.holes.map(h => h?.no ?? h) : null;
+      const at = no => (order ? order.indexOf(no) : no);
+      won.sort((a, b) => at(a[1].holes[0]) - at(b[1].holes[0]));
+      const each = won.map(([id, w], i) => `${name(id)} on ${i === 0 ? holesOf(w.holes) : andList(w.holes)}`);
+      // "Sam on hole 3, Dave on 7 and Trevor on 11"; with a comma before the last when a name has two holes
+      text = each.some(x => x.includes(' and ')) ? `${each.slice(0, -1).join(', ')}, and ${each.at(-1)}` : andList(each);
+    } else {
+      const nos = d.pot.won[best].holes;
+      text = key === 'ctp' ? `${name(best)} was closest on ${holesOf(nos)}` : `${name(best)} had the long drive on ${holesOf(nos)}`;
+    }
   }
   return { key: `side-${key}`, label: g.label, text, amount };
 }

@@ -255,7 +255,8 @@ test('the words: bet lines, worked examples, reveal steps and the first-tee card
   tap(r, 'ctp', { 2: 'b', 8: 'b', 11: 'a' });
   tap(r, 'drive', { 18: 'c' });
   const steps = revealSteps(r, roundResults(r)).steps;
-  assert.equal(steps.find(s => s.key === 'side-ctp').text, 'Bnn was closest on holes 2 and 8');
+  // Won by two: each of them, and their holes
+  assert.equal(steps.find(s => s.key === 'side-ctp').text, 'Bnn on holes 2 and 8, and Ann on 11');
   assert.equal(steps.find(s => s.key === 'side-drive').text, 'Cnn had the long drive on hole 18');
   assert.equal(steps.find(s => s.key === 'side-drive').amount, 15);
   const card = agreementItems(r);
@@ -374,4 +375,15 @@ test('review: long drive holes picked partway say which of the new ones are alre
   // Nothing new, or only holes not played yet: nothing to say
   assert.deepEqual(potCatchUpNotes(r, r.sideGames), []);
   assert.deepEqual(potCatchUpNotes(r, [{ game: 'drive', settings: { stake: 5, holes: [3, 12] } }]), []);
+});
+
+test('the reveal names everyone who won a closest to the pin hole, in the order they were played', () => {
+  const r = make({ upto: 18, pots: [{ game: 'ctp', settings: { stake: 5, unclaimed: 'split' } }] });
+  tap(r, 'ctp', { 2: 'c', 8: 'b', 11: 'a' });
+  const step = revealSteps(r, roundResults(r)).steps.find(s => s.key === 'side-ctp');
+  assert.equal(step.text, 'Cnn on hole 2, Bnn on 8 and Ann on 11');
+  // One winner says it as before
+  const one = make({ upto: 18 });
+  tap(one, 'ctp', { 5: 'd' });
+  assert.equal(revealSteps(one, roundResults(one)).steps.find(s => s.key === 'side-ctp').text, 'Dnn was closest on hole 5');
 });
