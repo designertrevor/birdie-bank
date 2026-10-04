@@ -26,7 +26,11 @@ function ordinal(n) {
   return `${n}${s}`;
 }
 
-/** Where you stand on the trip in a few words: "You’re 2nd, up $12". */
+/**
+ * Where you stand on the trip in a few words: "You’re 2nd, up $12". When you're in its expenses,
+ * the money is your whole trip, all in, as the trip itself and the Tab's trip card say it: "You’re
+ * 2nd. All in, you’re owed $62.66".
+ */
 function standingLine(state, st) {
   const me = canonicalOf(state)(state.me);
   const i = st.standings.findIndex(p => p.id === me);
@@ -34,9 +38,14 @@ function standingLine(state, st) {
   const v = st.standings[i].amount;
   const place = placeOf(st.standings, i);
   const tied = st.standings.filter(p => p.amount === v).length > 1;
+  const where = `You’re ${tied ? 'tied for ' : ''}${ordinal(place)}`;
+  if (st.spending.has(me)) return `${where}. All in, ${allInText(myTripAllIn(state, st))}`;
   const upOrDown = v > 0 ? `up ${money(v)}` : v < 0 ? `down ${money(-v)}` : 'even';
-  return `You’re ${tied ? 'tied for ' : ''}${ordinal(place)}, ${upOrDown}`;
+  return `${where}, ${upOrDown}`;
 }
+
+/** Your whole trip, all in, mid-sentence: "you’re owed $40", "you owe $12" or "you’re square". */
+const allInText = v => (v > 0 ? `you’re owed ${money(v)}` : v < 0 ? `you owe ${money(-v)}` : 'you’re square');
 
 /** The eyebrow over a trip: where it's at. */
 function tripEyebrow(st) {
@@ -207,6 +216,8 @@ export function TripRoundNote({ round }) {
   }
   const net = myTripNet(state, st);
   const played = st.standings.some(p => p.id === me);
+  // In the trip's expenses: your whole trip, all in, as the trip and the Tab say it
+  const allIn = st.spending.has(me) ? myTripAllIn(state, st) : null;
   return (
     <button className="trip-card note" onClick={open} aria-label={`Counts for ${st.trip.name}. See the trip`}>
       <div className="row-main">
@@ -214,7 +225,7 @@ export function TripRoundNote({ round }) {
         {cupNote}
         <div className="trip-sub">
           {/* A points or reward round's results never show a dollar, even the trip's, but for a reward round's side bets for money */}
-          {played && st.money.length && onTab(round) ? `${upDown(net)} on the trip. ` : ''}
+          {played && st.money.length && onTab(round) ? (allIn != null ? `All in, ${allInText(allIn)} on the trip. ` : `${upDown(net)} on the trip. `) : ''}
           {playForOf(round).kind === 'reward' ? (onTab(round) ? 'Its side bets for money count in the trip’s money. The reward doesn’t.' : 'Played for a reward, so it adds nothing to the trip’s money.')
             : !countsMoney(round) ? (st.pointsOnly ? 'It’s in the trip’s points standings.' : 'Played for points, so it adds nothing to the trip’s money.')
             : st.phase === 'ready' ? 'Settle the trip is open.' : st.phase === 'square' ? 'The trip is settled.' : 'Nothing’s paid until the trip is done, then it’s settled once.'}
