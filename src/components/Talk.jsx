@@ -10,8 +10,9 @@ import { MAX_BODY, commentsOn, jabsFor, reactionsFor, reactionsOn, talkName } fr
 import { talkCounts } from '../lib/talk-counts.js';
 import { postComment, react, takeBack, useTalkReach } from '../lib/talk-sync.js';
 
-/** The line under the talk that says who sees it. */
-function ReachNote({ ctx, reach }) {
+/** The line under the talk that says who sees it. `on`: what it's about ('round', a settle-up line, a side bet). */
+function ReachNote({ ctx, reach, on = null }) {
+  if (ctx.kind === 'follow') return <FollowReachNote ctx={ctx} reach={reach} />;
   if (!ctx.who) return <p className="field-help pad">{ctx.kind === 'plan' ? 'Pick who you are on the plan to join in.' : 'You watched this one, so the talk is the players’.'}</p>;
   if (!reach.can) return <p className="field-help pad">Only the players’ phones can join in on this round.</p>;
   // A round never shared (or a plan with no link) is on this phone whether comments are on or not
@@ -27,7 +28,17 @@ function ReachNote({ ctx, reach }) {
       : 'Only on this phone: the shared round doesn’t know this phone, so the others can’t see it.'}</p>;
   }
   if (reach.off) return <p className="field-help pad">Saved on this phone. The others see it once comments are switched on.</p>;
+  // Friends watching from their feed see the talk on the round itself, never a settle-up's or a side bet's
+  if (ctx.kind !== 'plan' && on === 'round') return <p className="field-help pad">Everyone in the round sees it, and friends watching it. Keep it friendly.</p>;
   return <p className="field-help pad">Everyone in the {ctx.kind === 'plan' ? 'plan' : 'round'} sees it. Keep it friendly.</p>;
+}
+
+/** The same line for a friend's round you watch from the Friends feed. */
+function FollowReachNote({ ctx, reach }) {
+  if (!ctx.who) return <p className="field-help pad">Set up your profile to join in.</p>;
+  if (reach.off) return <p className="field-help pad">Saved on this phone. The players see it once friends’ rounds are switched on.</p>;
+  if (reach.closed || !reach.shared) return <p className="field-help pad">Only on this phone for now: the players can’t see it.</p>;
+  return <p className="field-help pad">The players and friends watching see it. Keep it friendly.</p>;
 }
 
 /** All five reactions, each with its count, one tap to add yours or take it back. */
@@ -102,7 +113,7 @@ function Composer({ ctx, on }) {
   return (
     <>
       <div className="talk-jabs" role="group" aria-label="Quick jabs">
-        {jabsFor(on, { money: moneyOf(ctx, on) }).map(j => <button key={j.key} type="button" className="pill-btn sm talk-jab" onClick={() => jab(j)}>{j.text}</button>)}
+        {jabsFor(on, { money: moneyOf(ctx, on), set: ctx.jabs || null }).map(j => <button key={j.key} type="button" className="pill-btn sm talk-jab" onClick={() => jab(j)}>{j.text}</button>)}
       </div>
       <form className="talk-compose" onSubmit={send}>
         <label className="sr-only" htmlFor={`talk-${ctx.key}-${on}`}>Add a comment</label>
@@ -138,7 +149,7 @@ export function TalkSection({ ctx, on, title = 'Trash talk' }) {
         {quiet && canTalk && <p className="talk-empty">Nobody’s said anything yet. Pick a jab or write your own.</p>}
         {canTalk && <Composer ctx={ctx} on={on} />}
       </div>
-      <ReachNote ctx={ctx} reach={reach} />
+      <ReachNote ctx={ctx} reach={reach} on={on} />
     </section>
   );
 }
@@ -187,7 +198,7 @@ export function TalkBar({ ctx, on, title }) {
           {!comments && canTalk && <p className="talk-empty">Nothing yet. Pick a jab or write your own.</p>}
           {canTalk && <Composer ctx={ctx} on={on} />}
         </div>
-        <ReachNote ctx={ctx} reach={reach} />
+        <ReachNote ctx={ctx} reach={reach} on={on} />
       </Sheet>
     </div>
   );

@@ -6,6 +6,9 @@
 // offline. A round that was never shared, or a plan with no group link yet, keeps its talk on
 // this phone; a plan's goes up once it gets its link. Until the SQL has run (or with no server
 // at all), everything stays on this phone quietly.
+// A friend's round you watch from the Friends feed (thread 'follow:<code>') talks on that round's
+// own thread, joined with follow_round() (supabase/2026-10-06-friend-feed.sql), which lets a friend
+// watching in on the round itself only. Before that SQL is run, it stays on this phone.
 import { useEffect, useSyncExternalStore } from 'react';
 import { getState, uid, update } from './store.js';
 import { getSupabase, supabaseConfigured } from './supabase.js';
@@ -13,7 +16,7 @@ import { isMissingTable } from './plan-adapters.js';
 import { deviceReady, myDevice } from './device.js';
 import { accountNow } from './cloud.js';
 import { codeOf } from './pair-debts.js';
-import { mergeRows, newComment, removedRow, talkFromDb, talkReach, talkToDb, toggleReaction, unsentRows } from './talk.js';
+import { mergeRows, newComment, removedRow, talkFromDb, talkReach, talkSeatKey, talkToDb, toggleReaction, unsentRows } from './talk.js';
 
 const localFlag = () => { try { return localStorage.getItem('bb-sync-local') === '1'; } catch { return false; } };
 
@@ -21,13 +24,18 @@ const localFlag = () => { try { return localStorage.getItem('bb-sync-local') ===
 export class TalkOffError extends Error {
   constructor() { super('Comments aren’t switched on yet'); this.name = 'TalkOffError'; }
 }
+/** Thrown when following a friend's round isn't on the server yet. */
+class FollowOffError extends Error {
+  constructor() { super('Following friends’ rounds isn’t switched on yet'); this.name = 'FollowOffError'; }
+}
 /** The server refused this one row for good (bad data, or not yours to write). */
 class BadRowError extends Error {
   constructor(cause) { super(cause?.message || 'Row refused'); this.name = 'BadRowError'; this.cause = cause; }
 }
 
 // --------------------------- transport ---------------------------------------
-//   join(scope, code) -> seats | null   fetchRows(scope, codes) -> db rows   upsertRow(dbRow)
+//   join(scope, code) -> seats | null   follow(code) -> seats | null   fetchRows(scope, codes) -> db rows
+//   upsertRow(dbRow)
 
 function supabaseTalk(db) {
   const check = ({ error }) => {
@@ -41,6 +49,12 @@ function supabaseTalk(db) {
     kind: 'supabase',
     async join(scope, code) {
       const r = await db.rpc('join_comments', { p_scope: scope, p_code: code });
+      check(r);
+      return Array.isArray(r.data) ? r.data : null;
+    },
+    async follow(code) {
+      const r = await db.rpc('follow_round', { p_code: code });
+      if (r.error && (isMissingTable(r.error) || r.error.code === 'PGRST202' || r.error.code === '42883')) throw new FollowOffError();
       check(r);
       return Array.isArray(r.data) ? r.data : null;
     },
@@ -61,6 +75,7 @@ function localTalk() {
   return {
     kind: 'local',
     async join() { return ['*']; },
+    async follow() { return ['*']; },
     async fetchRows(scope, codes) { return Object.values(load()).filter(r => r.scope === scope && codes.includes(r.code)); },
     async upsertRow(row) {
       const all = load();
@@ -84,6 +99,8 @@ const hasServer = supabaseConfigured || import.meta.env.DEV || (typeof localStor
 
 // "Off": no server, or no comments table yet. Learned on the first try, for this session
 let off = !hasServer;
+// Following friends' rounds isn't on the server yet (2026-10-06-friend-feed.sql), for this session
+let followOff = false;
 // Who you may speak as in each thread's talk on the server: `${scope}:${code}` -> seats | null
 const seats = new Map();
 let version = 0;
@@ -95,15 +112,31 @@ function noteError(e) {
 }
 
 /**
- * Where a thread's talk goes: { scope, code } once it can reach the others, else { scope, code: null }.
- * Thread keys are 'round:<roundId>' and 'plan:<planId>' (talk.js).
+ * Where a thread's talk goes: { scope, code, via? } once it can reach the others, else { scope, code: null }.
+ * Thread keys are 'round:<roundId>' and 'plan:<planId>' (talk.js), and 'follow:<code>' for a
+ * friend's round you watch (via 'follow': its talk is the round's, joined as a friend watching).
  */
 export function threadTarget(state, key) {
   const [kind, ...rest] = String(key).split(':');
   const id = rest.join(':');
   if (kind === 'round') return { scope: 'round', code: codeOf(state.rounds?.[id]) };
   if (kind === 'plan') return { scope: 'plan', code: state.plans?.[id]?.code || null };
+  if (kind === 'follow') return { scope: 'round', code: /^[A-Z0-9]{6}$/.test(id) ? id : null, via: 'follow' };
   return { scope: null, code: null };
+}
+// Who you may speak as is kept per way in: a player's seats, or a friend watching (per account)
+const seatKey = t => talkSeatKey(t, accountNow().user?.id || null);
+
+/** Let this phone in on a thread: as a player (join_comments), or as a friend watching (follow_round). */
+async function joinThread(adapter, t) {
+  if (t.via !== 'follow') return adapter.join(t.scope, t.code);
+  // Only an account can follow a friend's round; signed out, the talk stays on this phone
+  if (followOff || (adapter.kind === 'supabase' && !accountNow().user?.id)) return null;
+  try { return await adapter.follow(t.code); } catch (e) {
+    if (!(e instanceof FollowOffError)) throw e;
+    followOff = true;
+    return null;
+  }
 }
 
 /**
@@ -115,7 +148,7 @@ export function threadTarget(state, key) {
 export function useTalkReach(key) {
   useSyncExternalStore(sub, () => version, () => version);
   const t = threadTarget(getState(), key);
-  return talkReach({ off, code: t.code, seats: t.code ? seats.get(`${t.scope}:${t.code}`) : undefined });
+  return talkReach({ off: off || (t.via === 'follow' && followOff), code: t.code, seats: t.code ? seats.get(seatKey(t)) : undefined });
 }
 
 // --------------------------- sending ------------------------------------------
@@ -149,9 +182,9 @@ async function flushOnce() {
     const waiting = unsentRows(rows);
     if (!t.code || !waiting.length) continue;
     // Join first (a plan's talk takes rows only from phones that have), once a session
-    const k = `${t.scope}:${t.code}`;
+    const k = seatKey(t);
     if (!seats.has(k)) {
-      try { seats.set(k, await adapter.join(t.scope, t.code)); changed(); } catch (e) { noteError(e); return false; }
+      try { seats.set(k, await joinThread(adapter, t)); changed(); } catch (e) { noteError(e); return false; }
     }
     if (seats.get(k) === null) continue; // not in it: nothing would be taken
     for (const row of waiting) {
@@ -186,32 +219,30 @@ export async function refreshTalk(keys) {
     if (!adapter) return;
     await deviceReady();
     const s = getState();
-    const byCode = new Map(); // `${scope}:${code}` -> thread keys
+    const byCode = new Map(); // seatKey -> { t, keys }
     for (const key of keys) {
       const t = threadTarget(s, key);
       if (!t.code) continue;
-      const k = `${t.scope}:${t.code}`;
-      byCode.set(k, [...(byCode.get(k) || []), key]);
+      const k = seatKey(t);
+      byCode.set(k, { t, keys: [...(byCode.get(k)?.keys || []), key] });
     }
     if (!byCode.size) return;
-    for (const k of byCode.keys()) {
+    for (const [k, { t }] of byCode) {
       if (seats.has(k)) continue;
-      const [scope, code] = k.split(':');
-      seats.set(k, await adapter.join(scope, code));
+      seats.set(k, await joinThread(adapter, t));
       changed();
     }
     await flushTalk();
     const who = { device: myDevice(), user: accountNow().user?.id || null };
     for (const scope of ['round', 'plan']) {
-      const codes = [...byCode.keys()].filter(k => k.startsWith(`${scope}:`) && seats.get(k) !== null).map(k => k.split(':')[1]);
+      const codes = [...new Set([...byCode].filter(([k, { t }]) => t.scope === scope && seats.get(k) != null).map(([, { t }]) => t.code))];
       if (!codes.length) continue;
       const rows = await adapter.fetchRows(scope, codes);
       const now = getState();
       const next = {};
-      for (const [k, list] of byCode) {
-        if (!k.startsWith(`${scope}:`)) continue;
-        const code = k.split(':')[1];
-        const mine = rows.filter(x => x.code === code).map(x => talkFromDb(x, who));
+      for (const [k, { t, keys: list }] of byCode) {
+        if (t.scope !== scope || seats.get(k) == null) continue;
+        const mine = rows.filter(x => x.code === t.code).map(x => talkFromDb(x, who));
         for (const key of list) {
           const merged = mergeRows(now.talk?.[key] || {}, mine);
           if (merged !== (now.talk?.[key] || {})) next[key] = merged;

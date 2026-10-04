@@ -13,6 +13,9 @@
 //  • Once a phone or account has been let in (join_comments), it stays in, with the seats it had,
 //    so the talk outlives the live round (sharing stopped, or the 30-day tidy-up).
 //  • Each person changes or deletes only their own rows: the phone or account that wrote them.
+//  • A friend watching from the Friends feed (supabase/2026-10-06-friend-feed.sql) also reads and
+//    writes the talk on the round itself, never a settle-up line's or a side bet's, as their own
+//    ids: friend-feed.js followSeatsFor and followerMayWrite are those rules.
 
 const str = v => (typeof v === 'string' && v.length > 0 ? v : null);
 const obj = v => (v && typeof v === 'object' && !Array.isArray(v) ? v : {});

@@ -35,6 +35,7 @@ const TripUpNext = part(trips, 'TripUpNext');
 const TripSheet = part(trips, 'TripSheet');
 const JoinSheet = part(() => import('../components/Live.jsx'), 'JoinSheet');
 const RemindersUpNext = part(() => import('../components/Reminders.jsx'), 'RemindersUpNext');
+const FriendsUpNext = part(() => import('../components/FriendsFeed.jsx'), 'FriendsUpNext');
 // Start fetching straight away, alongside the first paint, rather than when React gets to them
 if (typeof window !== 'undefined') more().catch(() => {});
 const Later = ({ children }) => <Suspense fallback={null}>{children}</Suspense>;
@@ -107,6 +108,9 @@ export default function UpNext() {
             <div className="add-ci"><Icon name="broadcast" fill /></div><span className="add-lbl">Join a friend’s round</span>
           </button>
         )}
+
+        {/* Friends' rounds you're not in, live, and the way into the group feed (friend-feed.js) */}
+        <Later><FriendsUpNext show={hasHistory || plans.length > 0 || onNow.length > 0} /></Later>
 
         <Later><CalloutsSection /></Later>
         <Later><LatelySection recapId={recapId} /></Later>
