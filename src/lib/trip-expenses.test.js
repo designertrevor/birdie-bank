@@ -664,3 +664,13 @@ test('Settle the trip nets each pair to one line, and paying it squares the pair
   for (const k of ['t', 'a']) assert.equal(owes(phones[k], 'a', 't', NOW + 2000), 0, k);
   assert.ok(!tripStatus(phones.t, 't_bandon', { now: NOW + 2000 }).plan.some(l => [l.from, l.to].includes('a')));
 });
+
+test('a stale copy later in the same batch never brings back a deleted expense', () => {
+  const t = stateOf('t', [round('q1', ['t', 'a'], {}, { code: 'AAAAAA' })], { trips: { t_bandon: TRIP } });
+  const e = cleanExpense({ id: 'x1', tripId: 't_bandon', what: 'Dinner', amount: 40, split: 'equal', payer: personFor(t, 't_bandon', 't'), people: ['t', 'a'].map(id => ({ ...personFor(t, 't_bandon', id), part: null })), by: 't', at: 1, updatedAt: 1 });
+  const gone = { id: 'x1', tripId: 't_bandon', by: 't', deleted: true, at: 1, updatedAt: 5 };
+  assert.equal(mergeExpenses({}, [e, gone, e]).x1.deleted, true);
+  assert.equal(mergeExpenses({}, [gone, e]).x1.deleted, true);
+  // A newer copy later in the batch still wins
+  assert.equal(mergeExpenses({}, [e, { ...e, amount: 50, updatedAt: 9 }]).x1.amount, 50);
+});

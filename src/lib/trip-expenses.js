@@ -422,7 +422,8 @@ export function mergeExpenses(cur = {}, incoming = []) {
   for (const raw of incoming) {
     const e = cleanExpense(raw);
     if (!e) continue;
-    const have = cur[e.id] ? cleanExpense(cur[e.id]) : null;
+    // Against what this batch has kept so far, so a stale copy later in it can't undo a newer one
+    const have = out[e.id] ? cleanExpense(out[e.id]) : null;
     // An expense never moves trip or changes hands: a copy that says otherwise isn't this one
     if (have && (have.tripId !== e.tripId || (have.by && e.by && have.by !== e.by))) continue;
     if (have && (have.updatedAt > e.updatedAt || (have.updatedAt === e.updatedAt && (have.deleted || !e.deleted)))) continue;
