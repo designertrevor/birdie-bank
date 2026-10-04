@@ -351,5 +351,10 @@ export function nameOf(state, id) {
     const p = r.players.find(y => y.id === x);
     if (p) return p.name;
   }
+  // Someone only a trip expense knows (a friend's friend who doesn't golf): the name it came with
+  if (state.tripExpenses) {
+    const k = linksOf(state).personOf(id);
+    for (const x of allExpenses(state)) { const n = x.names[id] || x.names[k]; if (n) return n; }
+  }
   return 'Someone';
 }

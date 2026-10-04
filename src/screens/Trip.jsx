@@ -47,7 +47,14 @@ function useWho(state) {
   return { me, label: id => (id === me ? 'You' : nameOf(state, id)), short: id => (id === me ? 'You' : first(nameOf(state, id))) };
 }
 
-/** `view`: which part opens first ('standings', 'rounds', 'games' or 'expenses'); `add` opens Add an expense. */
+// The taps from Up next whose Add an expense sheet has been and gone, so coming back to the trip
+// (from a round, say) doesn't open it again
+const addsDone = new Set();
+
+/**
+ * `view`: which part opens first ('standings', 'rounds', 'games' or 'expenses'); `add` (the tap's
+ * time) opens Add an expense, once.
+ */
 export default function Trip({ id, view: firstView = 'standings', add = false }) {
   const nav = useNav();
   const state = useStore();
@@ -60,7 +67,7 @@ export default function Trip({ id, view: firstView = 'standings', add = false })
   const [counting, setCounting] = useState(false);
   const [leaving, setLeaving] = useState(false);
   // Opened to add an expense (from Up next): only the first time the Expenses view shows
-  const [adding, setAdding] = useState(add);
+  const [adding, setAdding] = useState(() => !!add && !addsDone.has(add));
   const st = tripStatus(state, id);
   const { me, label, short } = useWho(state);
   useSeenPlan(id, st?.published.version || 0);
@@ -83,13 +90,16 @@ export default function Trip({ id, view: firstView = 'standings', add = false })
     : st.phase === 'ready' ? 'That’s the trip'
     : st.phase === 'square' ? 'All square'
     : `${st.day ? `Day ${st.day} of ${st.days} · ` : ''}${st.done.length} round${st.done.length === 1 ? '' : 's'} done`;
+  // A trip played for points keeps its points up top, with the expenses' dollars under them
   const big = st.money.length && played ? upDown(net)
-    : inExpenses ? owedLine(allIn)
     : myPoints != null ? `You’re on ${points(myPoints, { sign: true })}`
+    : inExpenses ? owedLine(allIn)
     : st.phase === 'soon' ? 'Nothing played yet' : st.done.length ? 'No money on it yet' : 'Nothing played yet';
-  const bigSign = st.money.length && played ? sign(net) : inExpenses ? sign(allIn) : '';
-  // With expenses too, the whole trip under the rounds' money
-  const allInLine = st.money.length && played && inExpenses ? `All in with expenses, ${owedLine(allIn).replace(/^You/, 'you')}` : null;
+  const bigSign = st.money.length && played ? sign(net) : myPoints != null ? '' : inExpenses ? sign(allIn) : '';
+  // With expenses too, the whole trip under the rounds' money (or the expenses under the points)
+  const allInLine = !inExpenses ? null
+    : st.money.length && played ? `All in with expenses, ${owedLine(allIn).replace(/^You/, 'you')}`
+    : myPoints != null ? `For the expenses, ${owedLine(allIn).replace(/^You/, 'you')}` : null;
   const settles = st.expenses.length ? 'the rounds and the expenses' : 'the whole trip';
   const askExpenses = !st.expenses.length ? ' Add gas, dinner and the house under Expenses and they settle with it.' : '';
   const hint = st.pointsOnly ? 'Played for points, so there’s nothing to pay. Everyone on the trip sees the standings.'
@@ -153,7 +163,7 @@ export default function Trip({ id, view: firstView = 'standings', add = false })
           </>
         )}
         {view === 'games' && <Games st={st} state={state} label={label} />}
-        {view === 'expenses' && <TripExpensesView st={st} me={me} adding={adding} onAdded={() => setAdding(false)} />}
+        {view === 'expenses' && <TripExpensesView st={st} me={me} adding={adding} onAdded={() => { if (add) addsDone.add(add); setAdding(false); }} />}
 
         <p className="field-help pad">{TRIP_FORMATS[trip.format]?.name || TRIP_FORMATS.money.name}. Each round keeps its own games and bets. Someone who plays only some rounds is on the trip for those rounds.</p>
         {/* Only the organizer deletes; everyone else can hide it from their own Tab and Up next */}

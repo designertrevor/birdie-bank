@@ -173,9 +173,12 @@ export function resolveExpense(state, e, opts = {}) {
   for (const x of parts) balances[x.id] = (balances[x.id] || 0) - x.cents;
   const names = {};
   for (const p of [e.payer, ...e.people]) if (p.name) names[at(p)] = p.name;
+  // Whoever added it, by their own entry in it when they're in it (its seats), so a friend's phone
+  // that knows them only by a seat can still say who it was
+  const adder = e.by ? [e.payer, ...e.people].find(p => p.id === e.by) : null;
   return {
     id: e.id, tripId: e.tripId, what: e.what, amount: e.amount, cents: toCents(e.amount), split: e.split,
-    payer, parts, balances, names, by: e.by ? who(e.by) : null, at: e.at, updatedAt: e.updatedAt, raw: e,
+    payer, parts, balances, names, by: adder ? at(adder) : e.by ? who(e.by) : null, at: e.at, updatedAt: e.updatedAt, raw: e,
   };
 }
 
