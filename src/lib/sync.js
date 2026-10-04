@@ -31,7 +31,8 @@ export function getAdapter() {
   }
   return adapterPromise;
 }
-export const syncConfigured = supabaseConfigured || import.meta.env.DEV || (typeof localStorage !== 'undefined' && localStorage.getItem('bb-sync-local') === '1');
+// Defined next to the client, so screens can ask without loading live sync
+export { syncConfigured } from './supabase.js';
 
 // --------------------------- status (for UI) ------------------------------
 

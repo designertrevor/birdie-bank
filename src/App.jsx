@@ -4,13 +4,10 @@ import ErrorBoundary from './components/ErrorBoundary.jsx';
 import { NavCtx } from './lib/nav.js';
 import { getState, useStore } from './lib/store.js';
 import { joinRoute } from './lib/join.js';
-import { bootSync, syncConfigured } from './lib/sync.js';
-import { bootCloud } from './lib/cloud.js';
-import { bootProfiles } from './lib/profiles.js';
+import { syncConfigured } from './lib/supabase.js';
 import { cleanCode } from './lib/sync-model.js';
 import { KeptScope, notePlace, startPlace } from './lib/kept.js';
 import UpNext from './screens/UpNext.jsx';
-import './lib/feedback.js'; // sends any suggestions queued while offline
 
 // Only Up next (the first screen) is in the main bundle; the rest load on demand. The service
 // worker saves every chunk on install, so they still open with no signal.
@@ -204,9 +201,14 @@ export default function App() {
 
   // Live shared rounds + ?join=CODE links
   useEffect(() => {
-    bootCloud();
-    bootProfiles();
-    bootSync();
+    // Accounts, profiles and live sync start right after the first paint, in the same order as
+    // always; feedback.js sends any suggestions queued while offline
+    Promise.all([import('./lib/cloud.js'), import('./lib/profiles.js'), import('./lib/sync.js')]).then(([cloud, profiles, sync]) => {
+      cloud.bootCloud();
+      profiles.bootProfiles();
+      sync.bootSync();
+    }).catch(() => {});
+    import('./lib/feedback.js').catch(() => {});
     preloadScreens();
     const q = new URLSearchParams(location.search).get('join');
     if (q) {

@@ -6,6 +6,32 @@ import { join, relative } from 'node:path'
 
 // Files the service worker should not save for offline use
 const SKIP = /(^|\/)(sw\.js|prototype\.html)$|\.map$/;
+// The JS the first screen (Up next) waits for: the entry and what it imports up front. Main was
+// 481 kB before overnight 8 split the later parts of Up next out; a build over it says so.
+const FIRST_SCREEN_BUDGET = 481_000;
+
+/** After a build, say how much JS the first screen loads, and warn when it's over budget. */
+function firstScreen() {
+  return {
+    name: 'bb-first-screen',
+    apply: 'build',
+    writeBundle({ dir }, bundle) {
+      const entry = Object.values(bundle).find(c => c.type === 'chunk' && c.isEntry);
+      if (!entry) return;
+      const seen = new Set();
+      const walk = name => {
+        if (seen.has(name) || !bundle[name]) return;
+        seen.add(name);
+        bundle[name].imports?.forEach(walk);
+      };
+      walk(entry.fileName);
+      const bytes = [...seen].reduce((a, n) => a + statSync(join(dir, n)).size, 0);
+      const kb = (bytes / 1000).toFixed(2);
+      if (bytes > FIRST_SCREEN_BUDGET) this.warn(`First screen JS is ${kb} kB, over its ${FIRST_SCREEN_BUDGET / 1000} kB budget. Load what isn't on Up next's first paint with import().`);
+      else console.log(`First screen JS: ${kb} kB of ${FIRST_SCREEN_BUDGET / 1000} kB`);
+    },
+  };
+}
 
 /**
  * After a build, write the list of built files (and the font and icon stylesheets that
@@ -46,5 +72,5 @@ function precache() {
 
 // https://vite.dev/config/
 export default defineConfig({
-  plugins: [react(), precache()],
+  plugins: [react(), precache(), firstScreen()],
 })

@@ -2,6 +2,7 @@
 // - Install: save the whole built app (every JS/CSS chunk, icons, the page itself) plus the
 //   Google Fonts and Phosphor icon stylesheets and their font files, so the app works with
 //   no signal from the first launch after it was opened once, including screens not yet seen.
+//   Chunks the last version already saved are copied over rather than downloaded again.
 // - The app page: network first, but fall back to the saved copy after a few seconds, so
 //   one bar of signal on the course doesn't leave a blank screen.
 // - Everything else: cache first (built files are content hashed; fonts and icons are versioned).
@@ -40,7 +41,21 @@ async function cacheStylesheet(cache, href) {
 self.addEventListener('install', e => {
   e.waitUntil((async () => {
     const app = await caches.open(APP);
-    await app.addAll(PRECACHE.app.map(u => new Request(u, { cache: 'reload' })));
+    // Built files under /assets/ are named by their content, so one the last version already saved
+    // is the same file: copy it over instead of downloading it again (an update on one bar of
+    // signal only fetches what changed). Anything that can't be saved fails the install, as before.
+    const older = (await caches.keys()).filter(k => k.startsWith('birdie-bank-app-') && k !== APP);
+    await Promise.all(PRECACHE.app.map(async u => {
+      if (u.startsWith('/assets/')) {
+        for (const k of older) {
+          const hit = await (await caches.open(k)).match(u);
+          if (hit) return app.put(u, hit);
+        }
+      }
+      const res = await fetch(new Request(u, { cache: 'reload' }));
+      if (!res.ok) throw new Error(`Could not save ${u} (${res.status})`);
+      return app.put(u, res);
+    }));
     // Fonts and icons are nice to have: never fail the install over them
     const runtime = await caches.open(RUNTIME);
     await Promise.all(PRECACHE.external.map(href => runtime.match(href, { ignoreVary: true }).then(hit => hit || cacheStylesheet(runtime, href)).catch(() => {})));
