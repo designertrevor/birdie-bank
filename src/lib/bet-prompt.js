@@ -4,8 +4,9 @@
 // 18-hole round, the turn (a match for the second nine). One tap opens the side bet editor filled in,
 // one tap puts it away for the round, and "Don't ask again" turns it off (a switch in Settings too).
 // It never asks on a phone that's only watching, while a moment banner shows, on a hole already
-// scored or being scored, or when nobody this phone can make a bet for could have that kind of bet
-// (two teammates in a scramble share one score, so they can't have a match). Pure, unit tested.
+// scored or being scored, at a par 3 when the group plays a closest to the pin pot, or when nobody
+// this phone can make a bet for could have that kind of bet (two teammates in a scramble share one
+// score, so they can't have a match). Pure, unit tested.
 import { holeComplete, playersOn } from './round.js';
 import { MAX_BETS, betRange, betsOf, kindFits, nextPos, nineRange } from './pair-bets.js';
 import { withAsks } from './bet-asks.js';
@@ -65,7 +66,7 @@ export function spotDraft(round, spot) {
 /** The card's words for a spot: { title, text }. */
 export function spotCopy(round, spot) {
   const kind = spotKind(spot.why);
-  if (kind === 'ctp') return { title: 'Closest to the pin?', text: 'A par 3. Two of you can bet on who lands it closest.' };
+  if (kind === 'ctp') return { title: 'Closest to the pin?', text: 'A par 3. Two of you can bet on who lands it closest, here and on the par 3s after.' };
   if (spot.why === 'turn') return { title: `A side bet for the ${nineName(round, spot.pos) ?? 'last'} nine?`, text: 'A fresh match for the last nine holes, just between two of you.' };
   return { title: 'Any side bets this round?', text: 'Two of you can play your own match on top of the game.' };
 }
@@ -85,7 +86,8 @@ function covered(round, kind, pos, who) {
  * The card to show on the hole at playing position `pos`, or null. `me` is this phone's player (or
  * null); `editable` whether this phone keeps score. `on` is the Settings switch; `seen` this phone's
  * record for the round ({ skip, done: [pos] }, see markPrompt); `moment` whether a moment banner is up;
- * `scoring` whether scores are being typed on this hole.
+ * `scoring` whether scores are being typed on this hole (the Play screen keeps a card that's already up
+ * while scores go in, so the rows never jump under a finger).
  * Returns { pos, why, kind, holes, title, text }.
  */
 export function betPromptFor(round, pos, { me = null, editable = false, on = true, seen = null, moment = false, scoring = false } = {}) {
@@ -103,6 +105,8 @@ export function betPromptFor(round, pos, { me = null, editable = false, on = tru
   const view = editable ? round : withAsks(round);
   if (betsOf(view).length >= MAX_BETS) return null;
   const kind = spotKind(spot.why);
+  // The whole group already plays a closest to the pin pot (a side game), so they've found it
+  if (kind === 'ctp' && (Array.isArray(round.sideGames) ? round.sideGames : []).some(sg => sg?.game === 'ctp')) return null;
   // A player who isn't keeping score can only make a bet they're in
   const mine = !editable ? me : null;
   if (covered(view, kind, pos, mine)) return null;
