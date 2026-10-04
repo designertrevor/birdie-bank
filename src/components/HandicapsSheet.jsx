@@ -72,7 +72,7 @@ export function HandicapsSheet({ round, onClose }) {
                     </div>
                     <div className="pick-extra">
                       {course?.tees?.length > 1 && (
-                        <div className="tee-chips" role="radiogroup" aria-label={`${p.name}'s tee`}>
+                        <div className="tee-chips" role="radiogroup" aria-label={`${p.name}’s tee`}>
                           {course.tees.map(t => (
                             <button key={t.name} role="radio" aria-checked={p.tee === t.name} className={`tee-chip ${p.tee === t.name ? 'active' : ''}`} onClick={() => edit(p.id, { tee: t.name })}>
                               <span className="tee-dot" style={teeDotStyle(t)} />{t.name}
@@ -113,7 +113,7 @@ export function HandicapsSheet({ round, onClose }) {
           <button className="full-btn" disabled={same} onClick={apply}>{same ? 'No change yet' : <>Save for the whole round <Icon name="check" /></>}</button>
         </div>
       </Sheet>
-      <Numpad open={!!padFor} title={`${padPlayer?.name}'s ${round.holesCount === 9 ? '9-hole ' : ''}course handicap`} initial={padPlayer ? padPlayer.courseHc ?? '' : ''}
+      <Numpad open={!!padFor} title={`${padPlayer?.name}’s ${round.holesCount === 9 ? '9-hole ' : ''}course handicap`} initial={padPlayer ? padPlayer.courseHc ?? '' : ''}
         allowNegative min={-10} max={60} onClose={() => setPadFor(null)} onDone={v => { edit(padFor, { courseHc: v }); setPadFor(null); }} />
     </>
   );

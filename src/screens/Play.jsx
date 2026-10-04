@@ -780,7 +780,7 @@ function PlayRound({ round, momentUp = false }) {
               </button>
             ))}
           </Sheet>
-          <Numpad open={!!betPad} title={`${round.players.find(p => p.id === betPad)?.name}'s bet`} {...padUnit(round)}
+          <Numpad open={!!betPad} title={`${round.players.find(p => p.id === betPad)?.name}’s bet`} {...padUnit(round)}
             initial={betPad ? banker.bets[betPad] : ''} min={round.settings.banker.min} max={round.settings.banker.max}
             quick={[1, 2, 3, 4, 5, 6, 7, 8, 9, 10]}
             onClose={() => setBetPad(null)} onDone={v => { setBanker({ ...banker, bets: { ...banker.bets, [betPad]: v } }); setBetPad(null); }} />
@@ -1280,11 +1280,11 @@ function onTheLine(banker, f = 2) {
 function BetChips({ name, value, presets, onPick, onMore, fmt = money }) {
   const other = !presets.includes(value);
   return (
-    <div className="bet-chips" role="radiogroup" aria-label={`${name}'s bet`}>
+    <div className="bet-chips" role="radiogroup" aria-label={`${name}’s bet`}>
       {presets.map(v => (
         <button key={v} role="radio" aria-checked={value === v} className={`bet-chip ${value === v ? 'on' : ''}`} onClick={() => { onPick(v); buzz(8); }}>{fmt(v)}</button>
       ))}
-      <button className={`bet-chip more ${other ? 'on' : ''}`} onClick={onMore} aria-label={other ? `${name}'s bet, ${fmt(value)}. Other amount` : 'Other amount'}>
+      <button className={`bet-chip more ${other ? 'on' : ''}`} onClick={onMore} aria-label={other ? `${name}’s bet, ${fmt(value)}. Other amount` : 'Other amount'}>
         {other ? fmt(value) : 'Other'}
       </button>
     </div>

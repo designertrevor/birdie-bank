@@ -731,7 +731,7 @@ function PlayersStep({ game, course, holesCount, nine, picked, setPicked, tees, 
                 {on && (
                   <div className="pick-extra">
                     {course.tees?.length > 0 && (
-                      <div className="tee-chips" role="radiogroup" aria-label={`${p.name}'s tee`}>
+                      <div className="tee-chips" role="radiogroup" aria-label={`${p.name}’s tee`}>
                         {course.tees.map(t => {
                           const active = (tees[p.id] || firstTee(course).name) === t.name;
                           return (
@@ -762,7 +762,7 @@ function PlayersStep({ game, course, holesCount, nine, picked, setPicked, tees, 
         <button className="full-btn" disabled={!valid} onClick={onNext}>{valid ? <>Next: Bets <Icon name="arrow-right" /></> : needText}</button>
       </div>
       <QuickAddPlayer open={adding} onClose={() => setAdding(false)} onAdded={pid => { setAdding(false); if (picked.length < game.max) setPicked([...picked, pid]); }} />
-      <Numpad open={!!hcFor} title={`${state.players[hcFor]?.name}'s ${holesCount === 9 ? '9-hole ' : ''}course handicap`} initial={hcFor ? courseHc(hcFor).value : ''} allowNegative min={-10} max={60}
+      <Numpad open={!!hcFor} title={`${state.players[hcFor]?.name}’s ${holesCount === 9 ? '9-hole ' : ''}course handicap`} initial={hcFor ? courseHc(hcFor).value : ''} allowNegative min={-10} max={60}
         onClose={() => setHcFor(null)} onDone={v => { setHcOverride({ ...hcOverride, [hcFor]: v }); setHcFor(null); }} />
     </>
   );

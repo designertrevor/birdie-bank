@@ -457,7 +457,7 @@ export function TeamPicker({ game, picked, names, teams, setTeams }) {
       {picked.map(pid => (
         <div key={pid} className="set-row static team-row">
           <div className="row-main set-name">{names[pid]}</div>
-          <div className="team-letters" role="radiogroup" aria-label={`${names[pid]}'s team`}>
+          <div className="team-letters" role="radiogroup" aria-label={`${names[pid]}’s team`}>
             {teams.map((_, i) => (
               <button key={i} role="radio" aria-checked={teamOf(pid) === i} className={`team-letter t${i} ${teamOf(pid) === i ? 'on' : ''}`} onClick={() => move(pid, i)}>{LETTERS[i]}</button>
             ))}
