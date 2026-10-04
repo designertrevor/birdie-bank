@@ -23,6 +23,7 @@ import {
 import { PlansOffError } from '../lib/plan-adapters.js';
 import { CountForTrip } from '../components/Trips.jsx';
 import { tripOf, tripOnDay, tripStamp } from '../lib/trips.js';
+import { toGoLabel, weekdayOf } from '../lib/preview.js';
 import { answerPlan, editPlan, openPlanLink, planShareLink, removePlan, sharePlan, usePlanLive, usePlansOff } from '../lib/plan-sync.js';
 
 const first = name => String(name || '').trim().split(/\s+/)[0];
@@ -159,6 +160,14 @@ function PlanBody({ plan, standalone = false, onSkip }) {
             <a className="pill-btn ph-follow" href={shareLink(plan.liveCode)}><Icon name="broadcast" fill /> Follow along</a>
           )}
         </div>
+
+        {planned && !standalone && (days ?? 0) >= 0 && (
+          <button className="uc-preview pv-entry" onClick={() => nav.push('preview', { id: plan.id, fromPlan: true })}>
+            <Icon name="binoculars" fill />
+            <span className="row-main"><b>{weekdayOf(plan) ? `${weekdayOf(plan)} preview` : 'The preview'}</b>{toGoLabel(plan) ? <span className="uc-pv-sub"> · {toGoLabel(plan)}</span> : null}<span className="uc-pv-sub uc-pv-line">Who gets strokes where, head to head, and a card for the group text</span></span>
+            <Icon name="caret-right" />
+          </button>
+        )}
 
         {planned && (
           <>

@@ -69,18 +69,19 @@ export function shareImageName(round) {
 }
 
 // ---------------------------------------------------------------------------
-// Drawing (browser only)
+// Drawing (browser only). The colours, fonts and text helpers are shared with the preview image
+// (preview-image.js), so the two cards look like a set.
 // ---------------------------------------------------------------------------
 
-const C = {
+export const C = {
   bg: '#1a3a3a', ink: '#ffffff', soft: 'rgba(255,255,255,.72)', faint: 'rgba(255,255,255,.14)',
   mint: '#a4d4c5', pink: '#ff4d8b', ochre: '#e8b94a', peach: '#ffb084', onPastel: '#0a0a0a',
 };
-const DISPLAY = '"Bricolage Grotesque", Inter, system-ui, sans-serif';
-const BODY = 'Inter, system-ui, sans-serif';
+export const DISPLAY = '"Bricolage Grotesque", Inter, system-ui, sans-serif';
+export const BODY = 'Inter, system-ui, sans-serif';
 
 /** Make sure the web fonts are in before drawing, or the canvas falls back to system fonts. */
-async function fontsReady() {
+export async function fontsReady() {
   if (typeof document === 'undefined' || !document.fonts) return;
   const want = [`800 100px ${DISPLAY}`, `500 100px ${DISPLAY}`, `600 40px ${BODY}`, `700 40px ${BODY}`];
   const timeout = new Promise(r => setTimeout(r, 2500));
@@ -89,7 +90,7 @@ async function fontsReady() {
 }
 
 /** Largest size (down to `min`) at which text fits in `maxW`. */
-function fit(ctx, text, weight, family, max, min, maxW) {
+export function fit(ctx, text, weight, family, max, min, maxW) {
   let size = max;
   for (; size > min; size -= 4) {
     ctx.font = `${weight} ${size}px ${family}`;
@@ -100,7 +101,7 @@ function fit(ctx, text, weight, family, max, min, maxW) {
 }
 
 /** Trim text with an ellipsis so it fits `maxW` in the current font. */
-function clip(ctx, text, maxW) {
+export function clip(ctx, text, maxW) {
   if (ctx.measureText(text).width <= maxW) return text;
   let t = text;
   while (t.length > 1 && ctx.measureText(`${t}…`).width > maxW) t = t.slice(0, -1);
@@ -108,7 +109,7 @@ function clip(ctx, text, maxW) {
 }
 
 /** Letter-spaced text (canvas letterSpacing is not everywhere yet). */
-function spaced(ctx, text, x, y, spacing) {
+export function spaced(ctx, text, x, y, spacing) {
   let cx = x;
   for (const ch of text) { ctx.fillText(ch, cx, y); cx += ctx.measureText(ch).width + spacing; }
 }
