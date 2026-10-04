@@ -24,7 +24,7 @@ import { whenLabel } from '../lib/plans.js';
 import { buzz } from '../lib/delight.js';
 import { allTripPays } from '../lib/trip-expenses.js';
 import { markTripPayment, undoPayments, usePaymentsOff, useTabSync } from '../lib/tab-sync.js';
-import { TRIP_FORMATS, canDeleteTrip, canRecount, myTripAllIn, myTripNet, partPlan, roundsInDates, tripByGame, tripDates, tripHidden, tripStatus, upDown } from '../lib/trips.js';
+import { TRIP_FORMATS, canDeleteTrip, canMarkLine, canRecount, myTripAllIn, myTripNet, partPlan, roundsInDates, tripByGame, tripDates, tripHidden, tripStatus, upDown } from '../lib/trips.js';
 import { deleteTrip, endTrip, hideTrip, seenTripPlan, setRoundTrip } from '../lib/trip-store.js';
 import { plansOn, useTripPlans } from '../lib/trip-plan-sync.js';
 import { CupBoard, CupMatches, CupScore, StakeLines } from '../components/Cup.jsx';
@@ -489,9 +489,12 @@ export function TripSettle({ id, who = null }) {
                   {PAY_APPS[payInfoFor(state, t.to)?.app] && <div className="lr-status">{first(nameOf(state, t.to))} picked {PAY_APPS[payInfoFor(state, t.to).app].name}</div>}
                 </div>
                 <div className="lr-amt" style={{ marginRight: 8 }}>{money(t.amount)}</div>
-                <button className="pill-btn sm" onClick={() => mark(t)}>Mark paid</button>
+                {canMarkLine(state, t) && <button className="pill-btn sm" onClick={() => mark(t)}>Mark paid</button>}
               </div>
             ))}
+            {others.some(t => !canMarkLine(state, t)) && (
+              <p className="field-help pad">Some of these people are only in the trip’s expenses on your phone, so they mark their payments on their own phones.</p>
+            )}
           </>
         )}
 

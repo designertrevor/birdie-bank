@@ -8,7 +8,7 @@ import { headToHeadSummary, nameOf, outstanding, personStory, tabBalances, tabWi
 import { breakdownWith } from './where-from.js';
 import { allocatePayment, applyRows, lastPayment, paymentGroups, undoRows } from './shared-tab.js';
 import { buildPlan, cleanPlan, duePlan, planState, samePlan } from './trip-plan.js';
-import { canDeleteTrip, myTripAllIn, newTrip, partPlan, tripPayment, tripStamp, tripStatus, tripsOf, currentTrips } from './trips.js';
+import { canDeleteTrip, canMarkLine, myTripAllIn, newTrip, partPlan, tripPayment, tripStamp, tripStatus, tripsOf, currentTrips } from './trips.js';
 import {
   allExpenses, allTripPays, canEditExpense, cleanExpense, expenseMark, newPayment, expensesToSend, expenseTotals, mergeExpenses, parseAmount, personFor, resolveExpense, restampExpenses, shareCents, splitLine, tripExpenses,
 } from './trip-expenses.js';
@@ -690,4 +690,34 @@ test('an expense the plan can never take doesn’t republish the plan after ever
   // An expense the plan can take still brings the next version
   share(phones, expense(phones.t, { id: 'x3', payer: 't', people: ['t', 'a'], amount: 20, at: OCT(16, 22) }));
   assert.equal(duePlan(phones.t, TRIP, { now: NOW + 2 })?.version, 2);
+});
+
+test('a phone without someone’s round still counts them as one person, and leaves marking their payments to phones that have it', () => {
+  const r1 = round('q1', ['t', 'a', 'b'], {}, { code: 'AAAAAA' });
+  const r2 = round('q2', ['d', 'f', 'g'], {}, { code: 'BBBBBB' });
+  const phones = {
+    t: stateOf('t', [r1], { trips: { t_bandon: TRIP } }),
+    f: stateOf('zf', [{ ...r2, localMe: 'f' }], { trips: { t_bandon: TRIP } }),
+    g: stateOf('zg', [{ ...r2, localMe: 'g' }], { trips: { t_bandon: TRIP } }),
+  };
+  // Fay's phone writes her by its own id, Gus's by her seat: the same seat in both
+  share(phones,
+    expense(phones.f, { id: 'x1', payer: 'zf', people: ['zf', 'g'], amount: 80, at: OCT(16, 19) }),
+    expense(phones.g, { id: 'x2', payer: 'zg', people: ['f', 'zg'], amount: 30, at: OCT(17, 8) }));
+  const lines = s => tripStatus(s, 't_bandon', { now: OCT(19, 9) }).plan.map(l => `${l.from}>${l.to} ${l.amount}`);
+  assert.deepEqual(lines(phones.f), ['g>zf 25']);
+  assert.deepEqual(lines(phones.g), ['zg>f 25']);
+  assert.deepEqual(lines(phones.t), ['g>f 25'], 'one line on the organizer’s phone too, never two that don’t square');
+  const totals = tripStatus(phones.t, 't_bandon', { now: OCT(19, 9) }).totals;
+  assert.equal(totals.find(x => x.id === 'f').amount, 25);
+  assert.equal(totals.find(x => x.id === 'g').amount, -25);
+  // Trevor's phone can't place Fay or Gus, so it doesn't mark their payment
+  const line = tripStatus(phones.t, 't_bandon', { now: OCT(19, 9) }).plan[0];
+  assert.equal(canMarkLine(phones.t, line), false);
+  assert.deepEqual(tripPayment(phones.t, 't_bandon', 'g', 'f', { now: OCT(19, 9) }).expenses, []);
+  // Gus's phone can
+  const res = tripPayment(phones.g, 't_bandon', 'zg', 'f', { now: OCT(19, 9) });
+  assert.equal(res.expenses.length, 1);
+  share(phones, ...res.expenses);
+  for (const k of ['t', 'f', 'g']) assert.deepEqual(lines(phones[k]), [], `square on ${k}’s phone`);
 });

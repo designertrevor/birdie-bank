@@ -154,15 +154,92 @@ function byCode(state) {
   return out;
 }
 
-/** Who a person in an expense is on this phone: by a seat in a round this phone has, else by the id. */
+/** The seat a ref names in a round this phone has, or null. */
+function seatOn(ref, codes) {
+  const i = ref.indexOf(':');
+  const r = codes.get(ref.slice(0, i));
+  const seat = ref.slice(i + 1);
+  return r?.players?.some(x => x.id === seat) ? seat : null;
+}
+
+/** Everyone this phone knows by an id of its own: you, your players, and every seat in its rounds. */
+function knownIds(state, who) {
+  const out = new Set();
+  if (state.me) out.add(who(state.me));
+  for (const id of Object.keys(state.players || {})) out.add(who(id));
+  for (const r of Object.values(state.rounds || {})) for (const x of r?.players || []) out.add(who(x.id));
+  return out;
+}
+
+/**
+ * Who each person in this phone's expenses is when none of their seats are on this phone (a round
+ * it doesn't have): every entry that shares a seat with another (CODE:seat), or an id, is the same
+ * person, whichever phone wrote it (their own phone writes them by its own id, a friend's by their
+ * seat). Map(raw id -> id here): the one person this phone knows in the group, else one id for the
+ * whole group so they're never two people. A group that reaches two people this phone knows (bad
+ * data) is left to each entry's own id.
+ */
+function aliasesOf(state, who, codes) {
+  const idx = indexOf(state);
+  if (idx.alias) return idx.alias;
+  const up = new Map();
+  const top = k => { let x = k; while (up.get(x) !== x) x = up.get(x); return x; };
+  const join = (a, b) => { for (const k of [a, b]) if (!up.has(k)) up.set(k, k); const [x, y] = [top(a), top(b)]; if (x !== y) up.set(x, y); };
+  for (const list of idx.byTrip.values()) for (const e of list) {
+    if (e.deleted) continue;
+    for (const p of [e.payer, ...e.people]) {
+      join(`i:${p.id}`, `i:${p.id}`);
+      for (const ref of p.refs) { join(`i:${p.id}`, `r:${ref}`); join(`r:${ref}`, `i:${ref.slice(ref.indexOf(':') + 1)}`); }
+    }
+  }
+  const known = knownIds(state, who);
+  const groups = new Map(); // top -> { ids, here }
+  for (const k of up.keys()) {
+    const g = top(k);
+    if (!groups.has(g)) groups.set(g, { ids: [], here: new Set() });
+    const x = groups.get(g);
+    if (k.startsWith('i:')) {
+      const id = k.slice(2);
+      x.ids.push(id);
+      if (known.has(who(id))) x.here.add(who(id));
+    } else {
+      const seat = seatOn(k.slice(2), codes);
+      if (seat) x.here.add(who(seat));
+    }
+  }
+  const out = new Map();
+  for (const { ids, here } of groups.values()) {
+    if (here.size > 1) continue;
+    const id = here.size ? [...here][0] : who([...ids].sort()[0]);
+    for (const x of ids) out.set(x, id);
+  }
+  idx.alias = out;
+  return out;
+}
+
+/**
+ * Who a person in an expense is on this phone: by a seat in a round this phone has, else as the
+ * rest of the trip's expenses place them (aliasesOf), else by the id.
+ */
 export function personOn(state, p, { who = canonicalOf(state), codes = byCode(state) } = {}) {
   for (const ref of p.refs || []) {
-    const i = ref.indexOf(':');
-    const r = codes.get(ref.slice(0, i));
-    const seat = ref.slice(i + 1);
-    if (r?.players?.some(x => x.id === seat)) return who(seat);
+    const seat = seatOn(ref, codes);
+    if (seat) return who(seat);
+  }
+  if (state.tripExpenses) {
+    const id = aliasesOf(state, who, codes).get(p.id);
+    if (id) return id;
   }
   return who(p.id);
+}
+
+/**
+ * Whether this phone can place someone (an id as it knows them): you, one of your players, or a
+ * seat in one of its rounds. A payment between two people is only marked on a phone that can
+ * place both, so it never reaches their phones as someone else.
+ */
+export function placeable(state, id) {
+  return knownIds(state, canonicalOf(state)).has(id);
 }
 
 /**
@@ -260,7 +337,7 @@ function indexOf(state) {
     if (!byTrip.has(e.tripId)) byTrip.set(e.tripId, []);
     byTrip.get(e.tripId).push(e);
   }
-  hit = { byTrip, resolved: new Map(), money: new Map(), all: null, allMoney: null };
+  hit = { byTrip, resolved: new Map(), money: new Map(), all: null, allMoney: null, alias: null };
   cache.set(state, hit);
   return hit;
 }

@@ -43,7 +43,7 @@ import { dayLabel, daysUntil, isoDate } from './plans.js';
 import { canEdit, keeperMe } from './keeper.js';
 import { money } from './golf.js';
 import { isPlanPayment, planRows, planState } from './trip-plan.js';
-import { expensePairs, expenseTotals, tripExpenses, tripPays } from './trip-expenses.js';
+import { expensePairs, expenseTotals, placeable, tripExpenses, tripPays } from './trip-expenses.js';
 import { CUP_FORMAT, cleanCup, closeEntry, cupEntries, cupLeaderboard, cupOf, cupScore, stakeLines, stakeMarks, stakeOpen, teamOf } from './cup.js';
 
 const DAY = 864e5;
@@ -497,7 +497,9 @@ export function cupStatus(state, trip, people = tripPeople(state, trip.id), { ov
 export function tripPayment(state, tripId, from, to, { now = Date.now(), part = false, makeId } = {}) {
   const st = tripStatus(state, tripId, { now });
   const line = st?.plan.find(t => t.from === from && t.to === to);
-  if (!line) return { rows: [], settlements: [], expenses: [] };
+  // Someone only the trip's expenses know (a round this phone doesn't have) is marked paid on a
+  // phone that has them, so the payment never reaches their phones as someone else
+  if (!line || !canMarkLine(state, line)) return { rows: [], settlements: [], expenses: [] };
   const ids = new Set(st.pairRounds.map(r => r.id));
   const reason = tripReason(tripId, part);
   const rows = line.shared ? squareRows(state, from, to, ids, { now, reason }).rows : [];
@@ -507,6 +509,15 @@ export function tripPayment(state, tripId, from, to, { now = Date.now(), part = 
   const [lf, lt] = line.local > 0 ? [from, to] : [to, from];
   const settlements = line.local ? [{ id: tripPaymentId(tripId, lf, lt, now), from: lf, to: lt, amount: Math.abs(line.local) / 100, at: now, ...(part ? { tripPart: true } : {}) }] : [];
   return { rows, settlements, expenses };
+}
+
+/**
+ * Whether this phone can mark a line of Settle the trip paid: it's yours, or it can place both
+ * people in it (someone only the trip's expenses know marks theirs on a phone that has them).
+ */
+export function canMarkLine(state, line) {
+  const me = canonicalOf(state)(state.me);
+  return line.from === me || line.to === me || (placeable(state, line.from) && placeable(state, line.to));
 }
 
 /** Your net on the trip's rounds so far (you are `state.me` to the trip). */
