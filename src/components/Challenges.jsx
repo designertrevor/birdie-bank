@@ -10,7 +10,7 @@ import {
   CHALLENGE_KINDS, CHALLENGE_STAKES, HOLES_LABEL, canMove, challengeFmt, challengeHeadline, challengeInviteText, challengeLife, challengeLine, challengeProblem,
   challengeState, challengeStatusText, challengeTone, newChallenge, planChallenges, planOf, sideOf,
 } from '../lib/challenges.js';
-import { challengeShareLink, forgetChallenge, makeChallenge, moveChallenge, useChallengesOff } from '../lib/challenge-sync.js';
+import { challengeShareLink, challengesOff, forgetChallenge, makeChallenge, moveChallenge, useChallengesOff } from '../lib/challenge-sync.js';
 import { planShareLink } from '../lib/plan-sync.js';
 import { sendReminder } from '../lib/pay.js';
 import { dayLabel, planPeople } from '../lib/plans.js';
@@ -73,14 +73,18 @@ export function ChallengeMaker({ open, onClose, from, people, whens, holesCount 
     const { code } = await makeChallenge(ch);
     setSending(false);
     onClose();
-    // A friend's copy of a plan only reaches the organizer through the server
-    if (!code && plan && !plan.host) {
+    // A friend's copy of a plan only reaches the organizer through the server: with challenges not
+    // switched on it can't, so it isn't kept. One that just didn't get through (no signal) is kept
+    // and goes up on the next refresh.
+    if (!code && plan && !plan.host && challengesOff()) {
       forgetChallenge(ch.id);
       showToast(`Challenges aren’t switched on for the group yet. Tell ${first(plan.hostName)} and it can go in as a side bet at the tee.`);
       return;
     }
     const link = linkFor(getState(), getState().challenges?.[ch.id]);
     if (link) send(challengeInviteText(getState().challenges[ch.id], link, 'from'), `Challenge copied. Paste it to ${first(to.name)}`);
+    else if (plan && !plan.code && !challengesOff()) showToast('Challenge saved. It goes to the group with the plan’s link.');
+    else if (!challengesOff()) showToast(`Challenge saved. Once you’re back online, send it to ${first(to.name)} from its page.`);
     else showToast(`Challenge saved. Mark ${first(to.name)}’s answer when they tell you.`);
   };
 

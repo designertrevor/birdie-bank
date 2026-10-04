@@ -4,7 +4,8 @@
 --
 -- "Dave challenges Mike to a $20 match on Saturday." One row per challenge (what was offered, who
 -- to, and the plan it's for when there is one) and one row per answer on it: accept, decline,
--- counter with a new amount, called off, or put into a round. The app plays the answers back in
+-- counter with a new amount, called off, put into a round, or given back when that round goes
+-- before it's played (deleted, or kept for another day). The app plays the answers back in
 -- order, so the rows only ever get added: nobody can change or take back what someone else said.
 -- Like planned rounds, anyone with a challenge's 6-letter code (or its plan's code) can read it and
 -- answer, signed in or not, so a friend answers from a text with no install and no account.
@@ -28,7 +29,7 @@ create table if not exists public.challenge_moves (
   plan_code text check (plan_code is null or plan_code ~ '^[A-Z0-9]{6}$'),
   id text not null check (length(id) between 1 and 32),
   side text not null check (side in ('from', 'to', 'keeper')),
-  move text not null check (move in ('accept', 'decline', 'counter', 'withdraw', 'on')),
+  move text not null,
   stake numeric check (stake is null or (stake > 0 and stake <= 500)),
   round_id text check (round_id is null or length(round_id) between 1 and 64),
   at bigint not null,
@@ -36,6 +37,10 @@ create table if not exists public.challenge_moves (
   primary key (code, id)
 );
 create index if not exists challenge_moves_plan_code on public.challenge_moves (plan_code);
+-- The answers there can be (set again each run, so a later list replaces an earlier one)
+alter table public.challenge_moves drop constraint if exists challenge_moves_move_check;
+alter table public.challenge_moves add constraint challenge_moves_move_check
+  check (move in ('accept', 'decline', 'counter', 'withdraw', 'on', 'back'));
 
 -- Read and add only: no update, no delete
 revoke update, delete on public.challenges, public.challenge_moves from anon, authenticated;
