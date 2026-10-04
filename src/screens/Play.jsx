@@ -174,9 +174,10 @@ function PlayRound({ round }) {
   const [marks, setMarks] = useState(() => {
     // A scramble playing for minimum drives saves whose drive each team used in the marks too
     if (!GAMES[game].marks && !junk && !snakeSide && !potHere && !drivesNeeded(round)) return null;
-    const m = (wasDirty && kept.marks) || structuredClone(round.marks?.[hole.no] || emptyMarks);
+    const m0 = (wasDirty && kept.marks) || structuredClone(round.marks?.[hole.no] || emptyMarks);
     // A pot hole saved with nobody tapped is saved as nobody's, so it counts (and carries) like one tapped
-    for (const v of pots) if (m[v.game] == null && potHoles(v, v.game).some(h => h.no === hole.no)) m[v.game] = POT_NONE;
+    const none = Object.fromEntries(pots.filter(v => m0[v.game] == null && potHoles(v, v.game).some(h => h.no === hole.no)).map(v => [v.game, POT_NONE]));
+    const m = { ...m0, ...none };
     return snakeSide && !m.snake ? { ...m, snake: [] } : m;
   });
   useEffect(() => { DRAFTS.set(draftKey, { draft, base, touched, dirty, marks }); }, [draftKey, draft, base, touched, dirty, marks]);
