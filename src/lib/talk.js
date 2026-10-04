@@ -1,0 +1,391 @@
+// Trash talk: reactions and comments on a finished round, its settle-ups and its side bets
+// between two players (the head-to-head challenges), and on an upcoming round, plus quick jabs
+// to pick from. Pure, unit tested. The transport is talk-sync.js; the server's rules are
+// supabase/2026-10-04-comments.sql, and talk-access.js is the same rules in JavaScript.
+//
+// Each round or plan is one thread on this phone: state.talk[threadKey] = { rowId: row }, where
+// a row is one comment, or one person's reaction with one emoji:
+//   { id, on, kind: 'comment' | 'reaction', who, name, body, jab, emoji, at, updatedAt, deleted, mine, sent }
+// `on` says what it's about: 'round', 'plan', 'pay:from>to' (a settle-up line) or 'bet:id' (a side
+// bet between two). `who` is the author's seat in that round (or their id on the plan), the same
+// on every phone in it. `mine`: written from this phone (or your account), so you can take it
+// back. `sent`: the updatedAt the server has, so a row with sent !== updatedAt still has to go up.
+// Nothing here ever touches money.
+import { GAMES } from './round.js';
+import { gameLabel, meFor, myIds } from './format.js';
+import { canonicalOf } from './pair-debts.js';
+import { nameOf } from './ledger.js';
+import { dayLabel, planPeople } from './plans.js';
+import { countsMoney, playForOf } from './play-for.js';
+import { betsOf, isCashBet } from './pair-bets.js';
+import { roundTime } from './history.js';
+import { agoLabel, LATELY_DAYS } from './lately.js';
+export { countsLine, roundTalkCounts, talkCounts } from './talk-counts.js';
+
+const DAY = 864e5;
+/** The longest comment, the same as the server's check. */
+export const MAX_BODY = 280;
+
+/** The reactions, in the order they show. `key` is what the server stores. */
+export const REACTIONS = [
+  { key: 'clap', emoji: '👏', label: 'Nice one' },
+  { key: 'fire', emoji: '🔥', label: 'On fire' },
+  { key: 'laugh', emoji: '😂', label: 'Too funny' },
+  { key: 'yikes', emoji: '😬', label: 'Yikes' },
+  { key: 'money', emoji: '💸', label: 'Pay up', money: true },
+];
+const REACTION_BY_KEY = Object.fromEntries(REACTIONS.map(r => [r.key, r]));
+export const emojiOf = key => REACTION_BY_KEY[key]?.emoji || '';
+
+/**
+ * Quick jabs, one list for each kind of thing. Friendly ribbing between friends, never about
+ * anyone's looks, money troubles or anything off the course. A jab marked `money` talks about
+ * money, so it shows only on a thing played for money (never on a points or lunch round).
+ */
+export const JABS = {
+  round: [
+    { key: 'putt', text: 'Nice putt, finally' },
+    { key: 'chip', text: 'Who taught you to chip?' },
+    { key: 'lesson', text: 'Put your winnings toward a lesson', money: true },
+    { key: 'gimme', text: 'That was not a gimme' },
+    { key: 'bounce', text: 'Lucky bounce. Still counts' },
+    { key: 'rematch', text: 'I want a rematch' },
+    { key: 'carried', text: 'Thanks for carrying me, partner' },
+    { key: 'sameTime', text: 'Same time next time?' },
+  ],
+  settle: [
+    { key: 'business', text: 'Pleasure doing business' },
+    { key: 'finally', text: 'Paid in full. Finally' },
+    { key: 'spend', text: 'Don’t spend it all at once' },
+    { key: 'back', text: 'I’ll win it back next time' },
+    { key: 'receipt', text: 'Framing this one' },
+  ],
+  bet: [
+    { key: 'easy', text: 'Easiest money all day', money: true },
+    { key: 'double', text: 'Double or nothing?' },
+    { key: 'strokes', text: 'I want more strokes next time' },
+    { key: 'called', text: 'Called it on the first tee' },
+  ],
+  plan: [
+    { key: 'agame', text: 'Bringing my A game' },
+    { key: 'practice', text: 'Hope you’ve been practicing' },
+    { key: 'wallet', text: 'Bring your wallet', money: true },
+    { key: 'firstRound', text: 'Loser buys the first round' },
+    { key: 'teeTime', text: 'Don’t be late for the tee time' },
+  ],
+};
+const JAB_BY_KEY = Object.fromEntries(Object.values(JABS).flat().map(j => [j.key, j]));
+
+/** What a target is: 'round', 'settle', 'bet' or 'plan'. */
+export function contextOf(on) {
+  const s = String(on || '');
+  if (s.startsWith('pay:')) return 'settle';
+  if (s.startsWith('bet:')) return 'bet';
+  if (s === 'plan') return 'plan';
+  return 'round';
+}
+/**
+ * The reactions to offer on a target: all five on a thing played for money, and no "Pay up" on a
+ * points or lunch round (the same rule as the jabs). One someone already picked still shows.
+ */
+export function reactionsFor({ money = true, picked = [] } = {}) {
+  const have = new Set(picked);
+  return REACTIONS.filter(r => money || !r.money || have.has(r.key));
+}
+/** The jabs that fit a target. `money`: whether that thing is played for money (see moneyOn). */
+export function jabsFor(on, { money = true } = {}) {
+  const list = JABS[contextOf(on)] || JABS.round;
+  return money ? list : list.filter(j => !j.money);
+}
+
+/**
+ * Whether a target in a round is played for money: a settle-up line always is (it's on the Tab),
+ * a side bet when the round is for money or it's a lunch round's bet for money, and the round
+ * itself when it counts money. A points or reward round reads in points or the reward.
+ */
+export function moneyOn(round, on) {
+  const c = contextOf(on);
+  if (c === 'settle') return true;
+  if (c === 'bet') {
+    const bet = betsOf(round).find(b => b.id === String(on).slice(4));
+    return !!bet && (countsMoney(round) || isCashBet(round, bet));
+  }
+  return countsMoney(round);
+}
+
+// --------------------------- threads and targets ---------------------------
+
+export const roundThread = round => `round:${round.id}`;
+export const planThread = plan => `plan:${plan.id}`;
+/** A settle-up line of a round: one transfer, from `from` to `to`. */
+export const payTarget = (from, to) => `pay:${from}>${to}`;
+/** A side bet between two players. */
+export const betTarget = id => `bet:${id}`;
+export const reactionRowId = (on, who, key) => `r:${on}:${who}:${key}`;
+
+// Cut to n characters without splitting an emoji in two (half of one is a character the server refuses)
+const cut = (s, n) => s.slice(0, n).replace(/[\uD800-\uDBFF]$/, '');
+/** Tidy a comment: single spaces, no blank lines, at most MAX_BODY characters. */
+export function cleanBody(text) {
+  return cut(String(text || '').replace(/[\r\n]+/g, ' ').replace(/\s+/g, ' ').trim(), MAX_BODY).trim();
+}
+const cleanName = name => cut(String(name || '').replace(/\s+/g, ' ').trim(), 40).trim() || null;
+
+/** A new comment, or null when there's nothing to say. A jab keeps its key so it reads as one. */
+export function newComment({ id, on, who, name, body, jab = null, now = Date.now() }) {
+  const known = jab && JAB_BY_KEY[jab];
+  const text = cleanBody(known ? known.text : body);
+  if (!text || !who || !on || !id) return null;
+  return { id, on, kind: 'comment', who, name: cleanName(name), body: text, jab: known ? jab : null, emoji: null, at: now, updatedAt: now, deleted: false, mine: true };
+}
+
+/**
+ * Tap a reaction: on if you hadn't, off if you had. Returns the row to save (an off reaction stays
+ * as a row marked deleted, so the other phones hear it went).
+ */
+export function toggleReaction(rows, { on, who, name, emoji, now = Date.now() }) {
+  if (!REACTION_BY_KEY[emoji] || !who || !on) return null;
+  const id = reactionRowId(on, who, emoji);
+  const had = rows?.[id];
+  // A new tap is a new try: a copy the server refused before goes up again
+  if (had) return { ...had, deleted: !had.deleted, name: cleanName(name) || had.name, updatedAt: Math.max(now, (had.updatedAt || 0) + 1), mine: true, refused: false };
+  return { id, on, kind: 'reaction', who, name: cleanName(name), body: null, jab: null, emoji, at: now, updatedAt: now, deleted: false, mine: true };
+}
+
+/** Take a comment back. Its words go with it; the row stays so the other phones hear it went. */
+export function removedRow(row, now = Date.now()) {
+  return { ...row, deleted: true, body: row.kind === 'comment' ? '' : row.body, jab: null, updatedAt: Math.max(now, (row.updatedAt || 0) + 1) };
+}
+
+/** A row from the server or another phone is one this app can show. */
+export function validRow(r) {
+  if (!r || typeof r !== 'object' || !r.id || !r.on || !r.who) return false;
+  if (r.kind === 'reaction') return !!REACTION_BY_KEY[r.emoji];
+  if (r.kind === 'comment') return r.deleted || !!cleanBody(r.body);
+  return false;
+}
+
+/**
+ * Put rows from the server into a thread: the newer edit of each row wins. A row of yours that
+ * hasn't gone up yet stays as it is unless the server's copy is newer still.
+ */
+export function mergeRows(local = {}, incoming = []) {
+  const out = { ...local };
+  let changed = false;
+  for (const r of incoming) {
+    if (!validRow(r)) continue;
+    const had = out[r.id];
+    if (had) {
+      const waiting = had.mine && had.sent !== had.updatedAt;
+      if ((r.updatedAt || 0) < (had.updatedAt || 0) || (waiting && (r.updatedAt || 0) === (had.updatedAt || 0))) continue;
+      const next = { ...had, ...r, mine: had.mine || r.mine, sent: r.updatedAt };
+      if (JSON.stringify(next) === JSON.stringify(had)) continue;
+      out[r.id] = next;
+    } else {
+      out[r.id] = { ...r, sent: r.updatedAt };
+    }
+    changed = true;
+  }
+  return changed ? out : local;
+}
+
+/**
+ * Who sees a thread's talk, from what this phone knows: { can, linked, shared, closed, off }.
+ * `code`: the round's share code or the plan's link code (null when it never had one); `off`: no
+ * server or no comments table yet; `seats`: what the server said when this phone joined (undefined
+ * until it has, null when it said this phone isn't in it). A player always gets to talk: when the
+ * server can't place this phone (the live round is gone and it never joined, or a new phone the
+ * round doesn't know), the talk stays on this phone (`closed`) instead of the section vanishing.
+ */
+export function talkReach({ off = false, code = null, seats } = {}) {
+  const linked = !!code;
+  if (off || !linked) return { can: true, linked, shared: false, closed: false, off: !!off };
+  if (seats === null) return { can: true, linked, shared: false, closed: true, off: false };
+  return { can: true, linked, shared: true, closed: false, off: false };
+}
+
+/** Rows of yours the server doesn't have yet (a row it refused for good is left out). */
+export const unsentRows = (rows = {}) => Object.values(rows).filter(r => r.mine && !r.refused && r.sent !== r.updatedAt);
+
+// --------------------------- views ------------------------------------------
+
+const live = r => r && !r.deleted;
+
+/**
+ * Reactions on one target: [{ key, emoji, label, count, mine, who }] in REACTIONS order, only the
+ * ones someone picked. One friend is one person (canonical ids), so their two seats count once.
+ */
+export function reactionsOn(rows = {}, on, { me = null, canon = x => x } = {}) {
+  const meId = me ? canon(me) : null;
+  return REACTIONS.map(r => {
+    const who = [...new Set(Object.values(rows).filter(x => live(x) && x.kind === 'reaction' && x.on === on && x.emoji === r.key).map(x => canon(x.who)))];
+    return { ...r, count: who.length, mine: meId != null && who.includes(meId), who };
+  }).filter(r => r.count > 0);
+}
+
+/** Comments on one target (or on everything when `on` is null), oldest first. */
+export function commentsOn(rows = {}, on = null) {
+  return Object.values(rows)
+    .filter(x => live(x) && x.kind === 'comment' && (on == null || x.on === on))
+    .sort((a, b) => a.at - b.at || String(a.id).localeCompare(String(b.id)));
+}
+
+/** Who you are in a round's talk: your seat, or null when you only watched it. */
+export function talkWho(round, state) {
+  const me = round ? meFor(round, state) : null;
+  return me && round.players.some(p => p.id === me) ? me : null;
+}
+/** Who you are on a plan's talk (the organizer's own id on it, or the seat you picked from the link). */
+export const planWho = plan => (plan ? (plan.host ? plan.hostWho : plan.localMe) || null : null);
+
+const firstOf = name => String(name || '').trim().split(/\s+/)[0] || 'Someone';
+
+/**
+ * The name to show for a row: "You" for you, the name this phone keeps for the person (one
+ * friend is one person, see people-links.js), else the name they wrote it under.
+ */
+export function talkName(state, row, { me = null, seatName = null } = {}) {
+  const ids = myIds(state);
+  if ((me && row.who === me) || ids.has(row.who)) return 'You';
+  const kept = canonicalOf(state)(row.who);
+  if (kept === state.me) return 'You';
+  // A friend linked to another card goes by that card's name; otherwise the seat's own name
+  const known = kept !== row.who ? nameOf(state, kept) : seatName?.(row.who);
+  return firstOf(known && known !== '?' ? known : row.name);
+}
+
+/** A round's name in one short line: "Skins at Pebble Creek". */
+export const roundLine = r => `${gameLabel(r)} at ${r.course?.name || 'the course'}`;
+const quote = (s, max = 80) => {
+  const t = cleanBody(s);
+  return `“${t.length > max ? `${t.slice(0, max - 1).trimEnd()}…` : t}”`;
+};
+
+/**
+ * Lately items for the talk: in each thread, the newest comment by someone else (with how many
+ * more), and who else reacted. [{ id, kind: 'talk' | 'react', at, text, sub, target }]
+ */
+export function latelyTalk(state, now = Date.now(), { days = LATELY_DAYS } = {}) {
+  const t = typeof now === 'number' ? now : now.getTime();
+  const since = t - days * DAY;
+  const inWindow = at => typeof at === 'number' && at >= since && at <= t + 60000;
+  const ids = myIds(state);
+  const canon = canonicalOf(state);
+  const notMe = row => !row.mine && !ids.has(row.who) && canon(row.who) !== state.me;
+  const items = [];
+  const add = (key, rows, { title, target, seatName, me }) => {
+    const list = Object.values(rows || {}).filter(r => live(r) && notMe(r) && r.who !== me && inWindow(r.updatedAt ?? r.at));
+    const comments = list.filter(r => r.kind === 'comment').sort((a, b) => b.at - a.at);
+    if (comments.length) {
+      const c = comments[0];
+      const more = comments.length - 1;
+      items.push({
+        id: `talk:${key}`, kind: 'talk', at: c.at,
+        text: `${talkName(state, c, { me, seatName })}: ${quote(c.body)}`,
+        sub: [title, more ? `${more} more` : null, agoLabel(c.at, t)].filter(Boolean).join(' · '),
+        target,
+      });
+    }
+    const reacts = list.filter(r => r.kind === 'reaction').sort((a, b) => b.updatedAt - a.updatedAt);
+    if (reacts.length) {
+      const names = [...new Set(reacts.map(r => talkName(state, r, { me, seatName })))];
+      const emojis = [...new Set(reacts.map(r => emojiOf(r.emoji)))].join('');
+      const who = names.length <= 2 ? names.join(' and ') : `${names[0]}, ${names[1]} and ${names.length - 2} more`;
+      const at = reacts[0].updatedAt ?? reacts[0].at;
+      items.push({ id: `react:${key}`, kind: 'react', at, text: `${who} reacted ${emojis}`, sub: [title, agoLabel(at, t)].join(' · '), target });
+    }
+  };
+  for (const r of Object.values(state.rounds || {})) {
+    if (r?.status !== 'done' || !GAMES[r.game]) continue;
+    const key = roundThread(r);
+    if (!state.talk?.[key]) continue;
+    add(key, state.talk[key], {
+      title: roundLine(r), target: ['roundDetail', { id: r.id }], me: talkWho(r, state),
+      seatName: id => r.players.find(p => p.id === id)?.name || null,
+    });
+  }
+  for (const p of Object.values(state.plans || {})) {
+    // A plan called off (or taken down) has no talk on its page any more, so none here either
+    if (!p || p.status === 'off' || p.gone || !state.talk?.[planThread(p)]) continue;
+    const day = dayLabel(p.date, new Date(t)).replace(/^(Today|Tomorrow)$/, w => w.toLowerCase());
+    add(planThread(p), state.talk[planThread(p)], {
+      title: [day ? `Plan for ${day}` : 'Upcoming round', p.course?.name].filter(Boolean).join(' at '),
+      target: ['plan', { id: p.id }], me: planWho(p),
+      seatName: planTalk(p).seatName,
+    });
+  }
+  return items.sort((a, b) => b.at - a.at || String(a.id).localeCompare(String(b.id)));
+}
+
+/**
+ * The talk between you and a friend, for their card: comments either of you made in rounds you
+ * both played, newest first. [{ id, at, name, body, jab, round, target }]
+ */
+export function personTalk(state, other, { limit = 3 } = {}) {
+  const canon = canonicalOf(state);
+  const them = canon(other);
+  const out = [];
+  for (const r of Object.values(state.rounds || {})) {
+    const rows = r?.status === 'done' && state.talk?.[roundThread(r)];
+    if (!rows) continue;
+    const me = talkWho(r, state);
+    if (!me || !r.players.some(p => canon(p.id) === them)) continue;
+    for (const c of commentsOn(rows)) {
+      const by = canon(c.who);
+      if (by !== them && by !== state.me && c.who !== me) continue;
+      out.push({
+        id: `${r.id}:${c.id}`, at: c.at, body: c.body, jab: c.jab, round: r, target: ['roundDetail', { id: r.id }],
+        name: talkName(state, c, { me, seatName: id => r.players.find(p => p.id === id)?.name || null }),
+      });
+    }
+  }
+  return out.sort((a, b) => b.at - a.at).slice(0, limit);
+}
+
+/** The threads this phone looks up for Lately and the player cards: rounds you played lately, and plans you're on. */
+export function recentTalkKeys(state, { days = LATELY_DAYS, now = Date.now() } = {}) {
+  const since = now - days * DAY;
+  const rounds = Object.values(state.rounds || {}).filter(r => r?.status === 'done' && roundTime(r) >= since && talkWho(r, state));
+  const plans = Object.values(state.plans || {}).filter(p => p && p.status === 'planned' && planWho(p));
+  return [...rounds.map(roundThread), ...plans.map(planThread)];
+}
+
+/** Who you are and how names read in a round's talk (for the talk on screen). */
+export function roundTalk(round, state) {
+  const who = talkWho(round, state);
+  const seatName = id => round.players.find(p => p.id === id)?.name || null;
+  return { key: roundThread(round), who, myName: who ? firstOf(seatName(who)) : null, seatName, kind: 'round', moneyOn: on => moneyOn(round, on) };
+}
+/** The same for a plan's talk. */
+export function planTalk(plan) {
+  const who = planWho(plan);
+  const people = planPeople(plan);
+  const seatName = id => people.find(p => p.who === id)?.name || (id === plan.hostWho ? plan.hostName : null) || null;
+  const money = playForOf(plan).kind === 'money';
+  return { key: planThread(plan), who, myName: who ? firstOf(seatName(who)) : null, seatName, kind: 'plan', moneyOn: () => money };
+}
+
+/** Lately with the talk mixed in, newest first. */
+export function withTalk(items, state, now = Date.now()) {
+  return [...items, ...latelyTalk(state, now)].sort((a, b) => b.at - a.at || String(a.id).localeCompare(String(b.id)));
+}
+
+// --------------------------- server rows --------------------------------------
+
+const iso = ms => new Date(ms || Date.now()).toISOString();
+/** A row as the comments table keeps it. Who wrote it is the server's to fill in, never sent. */
+export function talkToDb(scope, code, r) {
+  return {
+    scope, code, id: r.id, target: r.on, kind: r.kind, who: r.who, name: r.name || null,
+    body: r.kind === 'comment' ? cleanBody(r.body) : null, jab: r.jab || null, emoji: r.kind === 'reaction' ? r.emoji : null,
+    deleted: !!r.deleted, created_at: iso(r.at), updated_at: iso(r.updatedAt),
+  };
+}
+/** A row from the comments table, for this phone (`device`: its hash; `user`: the signed-in account). */
+export function talkFromDb(x, { device = null, user = null } = {}) {
+  return {
+    id: x.id, on: x.target, kind: x.kind, who: x.who, name: x.name || null, body: x.body ?? null, jab: x.jab || null,
+    emoji: x.emoji || null, deleted: !!x.deleted, at: Date.parse(x.created_at) || 0, updatedAt: Date.parse(x.updated_at) || 0,
+    mine: !!((device && x.author_dev === device) || (user && x.author_user === user)),
+  };
+}

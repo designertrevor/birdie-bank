@@ -11,14 +11,18 @@ export const BACKUP_FORMAT = 'birdie-bank-backup';
 export const BACKUP_VERSION = 1;
 
 // Collections kept as { id: thing }
-// Golf trips too (trips.js): their rounds carry the trip, the record keeps its dates and "done playing"
-// And their expenses (trip-expenses.js), deleted ones as a stub
-const MAPS = ['players', 'crews', 'customCourses', 'rounds', 'plans', 'tabRows', 'links', 'rewardsDone', 'accountOf', 'trips', 'tripHidden', 'tripExpenses'];
+// Golf trips too (trips.js): their rounds carry the trip, the record keeps its dates and "done playing";
+// and a team points trip's stake marks (cup.js), by trip
+// Challenges (challenges.js) too, so one agreed before a backup still goes into the round after it
+// And trip expenses (trip-expenses.js), deleted ones as a stub
+const MAPS = ['players', 'crews', 'customCourses', 'rounds', 'plans', 'challenges', 'tabRows', 'links', 'rewardsDone', 'accountOf', 'trips', 'tripHidden', 'tripExpenses', 'cupPaid'];
 // Collections kept as [thing with an id]
 const LISTS = ['settlements', 'carries', 'usuals'];
 
 const isObj = v => !!v && typeof v === 'object' && !Array.isArray(v);
 const pad2 = n => String(n).padStart(2, '0');
+// The trash talk (talk.js) is kept as { thread: rows } too, so a round added back brings its talk
+MAPS.push('talk');
 
 /** birdie-bank-backup-2026-09-30.json, in the phone's own date. */
 export function backupFileName(date = new Date()) {

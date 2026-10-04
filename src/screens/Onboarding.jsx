@@ -80,7 +80,7 @@ export default function Onboarding({ onDone }) {
         <div className="scroll onboard-body">
           <BallIllo className="onboard-illo" />
           <h1 className="onboard-title">Birdie Bank</h1>
-          <p className="onboard-text">The bank for your golf game. Play any game, settle every bet, keep the tab all season.</p>
+          <p className="onboard-text">The bank for your golf game. Play any game, settle every bet, keep the Tab all season.</p>
           <div className="onboard-games">
             {[['bank', 'Banker'], ['flag-pennant', 'Nassau'], ['coins', 'Skins'], ['paw-print', 'Wolf'], ['dice-five', 'Vegas'], ['sword', 'Match play'], ['star', 'Stableford'], ['dots-three-circle', `+ ${Object.keys(GAMES).length - 7} more games`]].map(([i, n]) => (
               <span key={n} className="chip ochre"><Icon name={i} fill /> {n}</span>
@@ -92,7 +92,7 @@ export default function Onboarding({ onDone }) {
           {accountsEnabled && <button className="full-btn outline" onClick={() => setSigningIn(true)}>I have an account</button>}
           <p className="pw-fine">Got a link from a friend? Open it and you’re in, no setup.</p>
         </div>
-        {signingIn && <SignInSheet open onClose={() => setSigningIn(false)} title="Welcome back" text="Sign in and your rounds, players and tab come right back." />}
+        {signingIn && <SignInSheet open onClose={() => setSigningIn(false)} title="Welcome back" text="Sign in and your rounds, players and the Tab come right back." />}
       </Screen>
     );
   }

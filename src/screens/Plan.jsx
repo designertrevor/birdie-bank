@@ -7,7 +7,7 @@ import { BallIllo, Empty, Header, Icon, Screen, Sheet, useUI } from '../componen
 import { Avatar } from '../components/Pay.jsx';
 import { getState, update, uid, useStore } from '../lib/store.js';
 import { useNav } from '../lib/nav.js';
-import { GAMES, SIDE_GAMES, createRound } from '../lib/round.js';
+import { GAMES, SIDE_GAMES, createRound, holesInPlay } from '../lib/round.js';
 import { sideBetLine } from '../lib/stakes.js';
 import { inUnits, noMoneyNote, playForLine } from '../lib/play-for.js';
 import { money } from '../lib/golf.js';
@@ -22,8 +22,18 @@ import {
 } from '../lib/plans.js';
 import { PlansOffError } from '../lib/plan-adapters.js';
 import { CountForTrip } from '../components/Trips.jsx';
+import { keptLine, roundBets } from '../lib/plan-setup.js';
 import { tripOf, tripOnDay, tripStamp } from '../lib/trips.js';
-import { answerPlan, editPlan, openPlanLink, planShareLink, removePlan, sharePlan, usePlanLive, usePlansOff } from '../lib/plan-sync.js';
+import { toGoLabel, weekdayOf } from '../lib/preview.js';
+import { startingCup } from '../lib/cup-store.js';
+import { PLAN_LOCKED, answerPlan, editPlan, openPlanLink, planShareLink, removePlan, sharePlan, usePlanLive, usePlansOff } from '../lib/plan-sync.js';
+import { TalkSection } from '../components/Talk.jsx';
+import { planTalk, planThread } from '../lib/talk.js';
+import { useTalkSync } from '../lib/talk-sync.js';
+import { PlanChallenges } from '../components/Challenges.jsx';
+import { challengeIdOfBet, challengeWhat, withChallenges } from '../lib/challenges.js';
+import { markChallengesOn, useChallengesLive } from '../lib/challenge-sync.js';
+import { betPeople } from '../lib/pair-bets.js';
 
 const first = name => String(name || '').trim().split(/\s+/)[0];
 const listNames = n => (n.length < 2 ? n.join('') : `${n.slice(0, -1).join(', ')} and ${n.at(-1)}`);
@@ -69,6 +79,10 @@ function PlanBody({ plan, standalone = false, onSkip }) {
   const myPlayer = useStore(s => s.players?.[s.me]);
   const off = usePlansOff();
   const send = useSend();
+  // The plan's trash talk: look now, and every so often while it's open
+  useTalkSync([planThread(plan)], { live: true });
+  // Challenges on this plan come and go live while it's on screen
+  useChallengesLive({ planCode: plan.code });
   const [marking, setMarking] = useState(null); // the organizer marking someone's answer
   const [sharing, setSharing] = useState(false);
   const me = plan.host ? plan.hostWho : plan.localMe;
@@ -87,7 +101,18 @@ function PlanBody({ plan, standalone = false, onSkip }) {
 
   if (!plan.host && !me && planned) return <WhoAreYou plan={plan} defaultName={myPlayer?.name || ''} standalone={standalone} onSkip={onSkip} />;
 
-  const answer = patch => answerPlan(plan.id, me, { name: mine?.name || people.find(p => p.who === me)?.name || myPlayer?.name || 'Guest', ...payFields(myPlayer), ...patch });
+  const myName = mine?.name || people.find(p => p.who === me)?.name || myPlayer?.name || 'Guest';
+  // Once the plan lock is on, an answer someone made from their own phone is theirs (plan-lock.js)
+  const taken = (r, name, mineToo) => {
+    if (r !== 'taken') return;
+    // The organizer on a phone that didn't share it (a backup restored on a new phone): the server keeps its answer
+    if (mineToo && plan.host) showToast('This plan was shared from another phone, so only that phone can change your answer');
+    else if (mineToo) {
+      showToast(`${first(name)} already answered from another phone, so only that phone can change it. Pick who you are again`);
+      update(s => { const p = s.plans?.[plan.id]; if (p) p.localMe = null; });
+    } else showToast(`${first(name)} answered from their own phone, so it’s theirs to change`);
+  };
+  const answer = patch => answerPlan(plan.id, me, { name: myName, ...payFields(myPlayer), ...patch }).then(r => taken(r, myName, true));
   const link = planShareLink(plan);
 
   // The group link: share the plan first if it hasn't been yet
@@ -117,8 +142,8 @@ function PlanBody({ plan, standalone = false, onSkip }) {
   };
   const morning = () => send(morningText(plan, link, settings), 'Text copied. Paste it in your group text');
   const callOff = async () => {
-    if (!(await ask({ title: 'Call it off?', text: 'Everyone with the link sees it’s off. Nobody’s tab changes.', confirmLabel: 'Call it off', cancelLabel: 'Keep it on', danger: true }))) return;
-    editPlan(plan.id, p => { p.status = 'off'; });
+    if (!(await ask({ title: 'Call it off?', text: 'Everyone with the link sees it’s off. Nothing on the Tab changes.', confirmLabel: 'Call it off', cancelLabel: 'Keep it on', danger: true }))) return;
+    editPlan(plan.id, p => { p.status = 'off'; }).then(r => { if (r === 'taken') showToast(PLAN_LOCKED); });
   };
   const del = async () => {
     const text = plan.host ? 'It comes off Up next here and for the group.' : 'It comes off your Up next. The plan stays on for everyone else.';
@@ -160,6 +185,14 @@ function PlanBody({ plan, standalone = false, onSkip }) {
           )}
         </div>
 
+        {planned && !standalone && (days ?? 0) >= 0 && (
+          <button className="uc-preview pv-entry" onClick={() => nav.push('preview', { id: plan.id, fromPlan: true })}>
+            <Icon name="binoculars" fill />
+            <span className="row-main"><b>{weekdayOf(plan) ? `${weekdayOf(plan)} preview` : 'The preview'}</b>{toGoLabel(plan) ? <span className="uc-pv-sub"> · {toGoLabel(plan)}</span> : null}<span className="uc-pv-sub uc-pv-line">Who gets strokes where, head to head, and a card for the group text</span></span>
+            <Icon name="caret-right" />
+          </button>
+        )}
+
         {planned && (
           <>
             <div className="sec-label">Are you in?</div>
@@ -187,6 +220,8 @@ function PlanBody({ plan, standalone = false, onSkip }) {
           </>
         )}
 
+        <PlanChallenges plan={plan} myName={myPlayer?.name} />
+
         <div className="sec-label">Who’s in · {countsLine(counts)}</div>
         <div className="who-list">
           {people.map(p => (
@@ -201,12 +236,12 @@ function PlanBody({ plan, standalone = false, onSkip }) {
               {plan.host && planned && !p.status && plan.code && (
                 <button className="pill-btn sm" onClick={() => nudgeOne(p)} aria-label={`Nudge ${first(p.name)}`}><Icon name="bell-ringing" /> Nudge</button>
               )}
-              {plan.host && planned && p.who !== me ? (
+              {plan.host && planned && p.who !== me && !p.self ? (
                 <button className={`who-status ${p.status || 'none'}`} onClick={() => setMarking(p)} aria-label={`${first(p.name)}: ${p.status ? RSVP_LABEL[p.status] : 'No answer yet'}. Change`}>
                   {p.status ? RSVP_LABEL[p.status] : 'No answer'}
                 </button>
               ) : (
-                <span className={`who-status ${p.status || 'none'}`}>{p.status ? RSVP_LABEL[p.status] : 'No answer'}</span>
+                <span className={`who-status ${p.status || 'none'}`} aria-label={plan.host && p.self ? `${first(p.name)}: ${RSVP_LABEL[p.status] || 'No answer'}, answered from their own phone` : undefined}>{p.status ? RSVP_LABEL[p.status] : 'No answer'}</span>
               )}
             </div>
           ))}
@@ -218,8 +253,10 @@ function PlanBody({ plan, standalone = false, onSkip }) {
           <p className="hint-card"><Icon name="info" fill /> Group links aren’t switched on yet, so this plan lives on your phone. Tap a name to mark who’s in.</p>
         )}
         {plan.host && planned && plan.code && (
-          <p className="field-help pad">Tap a name to mark someone who told you in person. Friends answer from the link, no download needed.</p>
+          <p className="field-help pad">Tap a name to mark someone who told you in person. Friends answer from the link, no download needed, and once they do it’s theirs to change.</p>
         )}
+
+        {plan.status !== 'off' && !plan.gone && <TalkSection ctx={planTalk(plan)} on="plan" />}
 
         {planned && plan.host && <button className="text-link" onClick={() => nav.push('newRound', { edit: plan.id })}><Icon name="pencil-simple" /> Change the day, time, course or holes</button>}
         {planned && plan.host && <button className="danger-link" onClick={callOff}><Icon name="calendar-x" /> Call it off</button>}
@@ -251,7 +288,7 @@ function PlanBody({ plan, standalone = false, onSkip }) {
         <p className="sheet-text">For someone who told you in person. They can still change it from the link.</p>
         <div className="rsvp-row sheet-pad">
           {marking && RSVPS.map(s => (
-            <button key={s} className={`rsvp-btn ${s} ${marking.status === s ? 'on' : ''}`} onClick={() => { answerPlan(plan.id, marking.who, { name: marking.name, status: s }); setMarking(null); }}>
+            <button key={s} className={`rsvp-btn ${s} ${marking.status === s ? 'on' : ''}`} onClick={() => { const m = marking; answerPlan(plan.id, m.who, { name: m.name, status: s }).then(r => taken(r, m.name, false)); setMarking(null); }}>
               <Icon name={STATUS_ICON[s]} fill /> {RSVP_LABEL[s]}
             </button>
           ))}
@@ -355,13 +392,18 @@ function WhoAreYou({ plan, defaultName, standalone, onSkip }) {
           <>
             <h2 className="step-q d">Which one are you?</h2>
             <div className="seat-grid">
-              {(plan.people || []).filter(p => p.id !== plan.hostWho).map(p => (
-                <button key={p.id} className="seat-tile" onClick={() => pick(p.id)}>
-                  <Avatar id={p.id} name={p.name} />
-                  <span className="seat-name">{first(p.name)}</span>
-                  <span className="seat-sub">{taken.has(p.id) ? RSVP_LABEL[plan.answers[p.id].status] || ' ' : ' '}</span>
-                </button>
-              ))}
+              {(plan.people || []).filter(p => p.id !== plan.hostWho).map(p => {
+                // Answered from their own phone: only that phone changes it, so it can't be picked here
+                const theirs = plan.answers?.[p.id]?.self === true;
+                return (
+                  <button key={p.id} className={`seat-tile ${theirs ? 'taken' : ''}`} disabled={theirs} onClick={() => pick(p.id)}
+                    aria-label={theirs ? `${first(p.name)}, already answered from their own phone` : undefined}>
+                    <Avatar id={p.id} name={p.name} />
+                    <span className="seat-name">{first(p.name)}</span>
+                    <span className="seat-sub">{theirs ? 'Answered' : taken.has(p.id) ? RSVP_LABEL[plan.answers[p.id].status] || ' ' : ' '}</span>
+                  </button>
+                );
+              })}
               <button className="seat-tile add" onClick={() => setAdding(true)}>
                 <span className="avatar"><Icon name="plus" /></span>
                 <span className="seat-name">Not on the list?</span>
@@ -392,6 +434,7 @@ function WhoAreYou({ plan, defaultName, standalone, onSkip }) {
 /** At the tee: confirm who showed, then start with the voted game and bet in one tap. */
 export function RollCall({ id }) {
   const nav = useNav();
+  const { showToast } = useUI();
   const state = useStore();
   const plan = state.plans?.[id];
   const [present, setPresent] = useState(() => (plan ? rollCallDefault(plan) : []));
@@ -399,11 +442,17 @@ export function RollCall({ id }) {
   const [adding, setAdding] = useState(false);
   const [starting, setStarting] = useState(false);
   const [countTrip, setCountTrip] = useState(true);
+  // The latest answers to the plan's challenges, so the agreed ones go in at the tee
+  useChallengesLive({ planCode: plan?.code });
   if (!plan) return <Screen><Header title="Roll call" small onBack={nav.pop} /><div className="scroll"><Empty title="This plan is gone" /></div></Screen>;
   const people = planPeople(plan);
   const course = findCourse(state, plan.course?.id);
   const setup = planStart(state, plan, present, { newId: () => uid('p_'), course });
   const g = GAMES[setup.game];
+  // Agreed challenges between two people who showed go in as side bets (challenges.js)
+  const draft = course && g ? { game: setup.game, players: setup.players, holes: holesInPlay(course, setup.holesCount, setup.nine), playFor: setup.playFor, teams: setup.teams } : null;
+  const challengeIn = draft ? withChallenges(state, draft, { planId: id, idOf: setup.idOf }) : { round: null, used: [] };
+  const challengeBets = (challengeIn.round?.bets || []).map(b => ({ bet: b, ch: state.challenges?.[challengeIdOfBet(b.id)] })).filter(x => x.ch);
   const t = tally(plan, 'game');
   const toggle = who => setPresent(p => (p.includes(who) ? p.filter(x => x !== who) : [...p, who]));
   // A round planned for a trip counts for it; one that wasn't asks when a trip is on today
@@ -426,20 +475,29 @@ export function RollCall({ id }) {
     const rid = uid('r_');
     saveNew();
     const round = createRound({
-      id: rid, game: setup.game, course, holesCount: setup.holesCount, nine: setup.nine, startHole: null,
+      id: rid, game: setup.game, course, holesCount: setup.holesCount, nine: setup.nine, startHole: setup.startHole,
       players: setup.players, settings: setup.settings, hcPct: setup.hcPct, useHandicaps: setup.useHandicaps, teams: setup.teams, halfStrokes: setup.halfStrokes,
     });
     // The side games the group voted for ride along
     if (setup.sideGames.length) round.sideGames = structuredClone(setup.sideGames);
+    // Played for points or a reward, as planned (money plans have none)
+    if (setup.playFor) round.playFor = structuredClone(setup.playFor);
+    // Two-player side bets set up before it was scheduled, between two people who both came
+    const bets = roundBets(round, setup.bets);
+    if (bets.length) round.bets = bets;
     // Planned from a saved usual (and still its game at its course): finishing it updates "Last played"
     const usualId = usualIdFor(getState(), plan.usualId, setup.game, course);
     if (usualId) round.usualId = usualId;
-    // Played for points or a reward, as planned (money plans have none)
-    if (setup.playFor) round.playFor = structuredClone(setup.playFor);
     // Planned for a trip (or teeing off while one is on, and counted): the stamp rides in the round
     if (tripPick) round.trip = tripStamp(tripPick);
-    update(s => { addRound(s, round); });
-    editPlan(id, p => { p.status = 'started'; p.roundId = rid; });
+    // A team points trip: its matches from the trip's teams (they can be changed from the trip's page)
+    const cup = tripPick ? startingCup(getState(), round, tripPick) : null;
+    if (cup) round.cup = cup;
+    // Agreed challenges go in as side bets, once each
+    const { round: withCh, used } = withChallenges(getState(), round, { planId: id, idOf: setup.idOf });
+    update(s => { addRound(s, withCh); });
+    markChallengesOn(used, rid);
+    editPlan(id, p => { p.status = 'started'; p.roundId = rid; }).then(r => { if (r === 'taken') showToast(PLAN_LOCKED); });
     // Friends on the plan can follow the round live from the same page
     if (plan.code && syncConfigured) {
       shareRound(rid).then(code => editPlan(id, p => { p.liveCode = code; })).catch(() => { /* the round still starts; share it from the round menu */ });
@@ -460,6 +518,7 @@ export function RollCall({ id }) {
           <div className="d stake-big">{g?.name || 'Pick a game'}{setup.bet && setup.settings?.[setup.game] ? ` · ${inUnits(plan, betLabel(setup.game, setup.settings, setup.bet))}` : ''}</div>
           {setup.sideGames.length > 0 && <div className="li-sub">+ {setup.sideGames.map(sg => `${SIDE_GAMES[sg.game].label}, ${inUnits(plan, sideBetLine(sg.game, sg.settings))}`).join(' + ')}</div>}
           {playForLine(plan) && <div className="li-sub">{playForLine(plan)}</div>}
+          {challengeBets.map(({ bet, ch }) => <div key={bet.id} className="li-sub">+ Challenge: {betPeople(challengeIn.round, bet)}, {challengeWhat(ch)}</div>)}
           <div className="li-sub">{t.total > 1 ? `The group’s pick (${t.rows.find(r => r.choice === setup.game)?.votes || 0} of ${t.total} votes)` : 'Your suggestion. Nobody else voted'}</div>
         </div>
         <h2 className="step-q d">Who showed up?</h2>
@@ -488,6 +547,13 @@ export function RollCall({ id }) {
           </div>
         ) : (
           <button className="add-row" onClick={() => setAdding(true)}><div className="add-ci"><Icon name="plus" /></div><span className="add-lbl">Someone else showed up</span></button>
+        )}
+        {!setup.problem && keptLine(setup.kept) && <p className="hint-card"><Icon name="check-circle" fill /> {keptLine(setup.kept)}</p>}
+        {!setup.problem && setup.changes.length > 0 && (
+          <div className="hint-card warn plan-changes" role="status">
+            <Icon name="info" fill />
+            <div><strong>Changed since you set it up</strong>{setup.changes.map(c => <span key={c}>{c}</span>)}</div>
+          </div>
         )}
         {setup.problem && <p className="hint-card" role="status"><Icon name="warning" fill /> {setup.problem} Change the setup to pick another game or fix the course.</p>}
         {setup.newPlayers.length > 0 && !setup.problem && (

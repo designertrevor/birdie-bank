@@ -11,6 +11,7 @@ import { canonicalOf, paymentGroups, recentPayment } from '../lib/shared-tab.js'
 import { sharedDebts } from '../lib/pair-debts.js';
 import { undoPayments, useTabSync } from '../lib/tab-sync.js';
 import { useTripPlans } from '../lib/trip-plan-sync.js';
+import { useCupSync } from '../lib/cup-sync.js';
 import { money } from '../lib/golf.js';
 import { myIds } from '../lib/format.js';
 import { AvatarButton, BottomNav } from '../nav.jsx';
@@ -31,6 +32,7 @@ export default function Ledger() {
   useTabSync({ live: true });
   // A trip's published plan sets what each pair on it owes (trip-plan.js)
   useTripPlans();
+  useCupSync();
   const plan = outstanding(state);
   const [open, setOpen] = useState(null);
   const [free, setFree] = useState(false);
@@ -175,7 +177,7 @@ export default function Ledger() {
         {trips.some(t => t.money.length > 0) && plan.length > 0 && <p className="field-help pad trip-folded">Trip money is in each person’s total below.</p>}
         {plan.length === 0 ? (
           <Empty title={hasRounds ? 'All square' : 'Nothing owed yet'}
-            text={hasRounds ? 'Everyone’s settled up. Time to go win it back.' : 'Finish a round and the tab fills in. Money nets out across every round, so you pay less often.'}
+            text={hasRounds ? 'Everyone’s settled up. Time to go win it back.' : 'Finish a round and the Tab fills in. Money nets out across every round, so you pay less often.'}
             action={!hasRounds && <button className="ec" onClick={() => nav.push('newRound')}><Icon name="golf" fill /> Start a round</button>} />
         ) : (
           <>

@@ -1,16 +1,23 @@
-// The "Lately" rows: payments, carry-overs, answers and round recaps (see lib/lately.js).
+// The "Lately" rows: payments, carry-overs, answers, challenges and round recaps (see lib/lately.js),
+// and the trash talk on rounds and plans (lib/talk.js).
 import { Icon } from './ui.jsx';
+import { TalkCount } from './TalkCount.jsx';
 import { useNav } from '../lib/nav.js';
+import { useStore } from '../lib/store.js';
 
 const LOOK = {
   payment: { icon: 'hand-coins', tint: 'mint' },
   carry: { icon: 'arrow-bend-up-right', tint: 'lav' },
   rsvp: { icon: 'calendar-check', tint: 'peach' },
+  challenge: { icon: 'sword', tint: 'lav' },
   recap: { icon: 'flag-pennant', tint: 'ochre' },
+  talk: { icon: 'chat-circle-dots', tint: 'pink' },
+  react: { icon: 'smiley', tint: 'lav' },
 };
 
 export function LatelyList({ items }) {
   const nav = useNav();
+  const talk = useStore(s => s.talk);
   return (
     <ul className="lately-list" role="list">
       {items.map(it => {
@@ -21,6 +28,7 @@ export function LatelyList({ items }) {
             <span className="lately-main">
               <span className="lately-text">{it.text}</span>
               {it.sub && <span className="lately-sub">{it.sub}</span>}
+              {it.kind === 'recap' && <TalkCount rows={talk?.[`round:${it.target?.[1]?.id}`]} />}
             </span>
             {it.target && <span className="chevron" aria-hidden="true"><Icon name="caret-right" /></span>}
           </>

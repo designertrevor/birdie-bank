@@ -3,7 +3,7 @@
 import { matchStatus, nassauBets } from './golf.js';
 import { sideSplit } from './games.js';
 import {
-  gameKeys, gameResults, gameView, hammerTable, holeComplete, nassauAmounts, nassauWinners, roundLegs, roundResults, settingsAt,
+  gameKeys, gameResults, gameView, hammerTable, holeComplete, matchScored, nassauAmounts, nassauWinners, roundLegs, roundResults, settingsAt,
   sideGamesOf, sideNames, sides, sixesMatches, skinsKinds, skinsTable, vegasTable, wolfHoleResult,
 } from './round.js';
 import { playForOf, rewardNoun, rewardOutcome, unitFmt } from './play-for.js';
@@ -255,7 +255,8 @@ export function vegasMoment(round, pos) {
 /** Match play and Nassau: matchMoment() for the hole at `pos`, with the round's names and what's still in play. */
 export function matchRoundMoment(round, pos) {
   const main = gameView(round, 'main');
-  if (main.game !== 'match' && main.game !== 'nassau') return null;
+  // Nassau, Match play, and a team game played as a match (holes won)
+  if (!matchScored(main)) return null;
   const winners = nassauWinners(main);
   const m = matchMoment(winners, pos, roundLegs(main), {
     names: sideNames(round).map(n => (round.teams ? n : first(n))),

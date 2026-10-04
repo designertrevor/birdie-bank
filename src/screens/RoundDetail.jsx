@@ -1,7 +1,7 @@
 import { Fragment, useEffect, useRef, useState } from 'react';
 import { Empty, Header, Icon, Screen, useUI } from '../components/ui.jsx';
 import { getState, update, useStore } from '../lib/store.js';
-import { GAMES, gameView, holeAtPos, holeComplete, playsHole, roundLegs, roundNotes, roundResults, scoreSummary, scorers, sideNames, skinsKinds, skinsTable, popsFor, netFor } from '../lib/round.js';
+import { GAMES, gameView, holeAtPos, holeComplete, isTeamGame, matchScored, oneBall, teamTable, playsHole, roundLegs, roundNotes, roundResults, scoreSummary, scorers, sideNames, skinsKinds, skinsTable, popsFor, netFor } from '../lib/round.js';
 import { halfStrokesOn, netText, strokesWords } from '../lib/allowances.js';
 import { matchLabel } from '../lib/games.js';
 import { money } from '../lib/golf.js';
@@ -22,7 +22,11 @@ import { DrivesShortfall } from '../components/ScrambleDrives.jsx';
 import { strokeKey } from '../lib/stroke-key.js';
 import { getsStrokes, toParOf, toParText, toParTone, toParWords } from '../lib/to-par.js';
 import { BetsBreakdown } from '../components/PairBets.jsx';
+import { betPeople } from '../lib/pair-bets.js';
 import { RoundWhereFrom } from '../components/WhereFrom.jsx';
+import { TalkBar, TalkSection } from '../components/Talk.jsx';
+import { betTarget, payTarget, roundTalk, roundThread } from '../lib/talk.js';
+import { useTalkSync } from '../lib/talk-sync.js';
 
 // Where the finale was, so coming back from another screen (e.g. Suggest) doesn't replay the reveal.
 // Keyed by round and its finish time, so finishing the round again starts over.
@@ -39,6 +43,8 @@ export default function RoundDetail({ id, celebrate }) {
   const hero = useRef();
   const acct = useAccount();
   const [signingIn, setSigningIn] = useState(false);
+  // The round's trash talk: look now, and every so often while it's open
+  useTalkSync(round?.status === 'done' ? [roundThread(round)] : [], { live: true });
   // Opening the results means the fixing is over, however you got here (the tab bar, History).
   // Only on arrival, so tapping Edit scores here doesn't undo itself on the way out.
   useEffect(() => {
@@ -78,11 +84,15 @@ export default function RoundDetail({ id, celebrate }) {
   const pays = tab.transfers.length > 0;
   // A trip round has no settle up of its own: the trip is settled once, after its last round
   const ownSettle = pays && !round.trip?.id;
+  // Trash talk on a finished round, its settle-up lines and its side bets (talk.js)
+  const talk = round.status === 'done' ? roundTalk(round, state) : null;
+  const payTitle = t => `${roundPlayerName(round, t.from).split(' ')[0]} pays ${roundPlayerName(round, t.to).split(' ')[0]}`;
 
   const del = async () => {
-    if (!(await ask({ title: 'Delete this round?', text: 'It’ll be removed from History and the tab.', confirmLabel: 'Delete round', danger: true }))) return;
+    if (!(await ask({ title: 'Delete this round?', text: 'It’ll be removed from History and the Tab.', confirmLabel: 'Delete round', danger: true }))) return;
     update(s => {
       delete s.rounds[id];
+      if (s.talk) delete s.talk[`round:${id}`];
       leaveRound(s, id);
       s.settlements = s.settlements.filter(x => x.roundId !== id);
     });
@@ -109,7 +119,7 @@ export default function RoundDetail({ id, celebrate }) {
   const saveRow = accountsEnabled && !acct.user && round.status === 'done' && (
     <button className="set-row" onClick={() => setSigningIn(true)}>
       <div className="set-icon"><Icon name="cloud-arrow-up" fill /></div>
-      <div className="row-main"><div className="set-name">{isMoney && meRow && meRow.amount > 0 ? `You won ${money(meRow.amount)}. Save it to your tab` : 'Save this round to your account'}</div><div className="set-sub">Free. Keeps your rounds and tab safe on any device.</div></div>
+      <div className="row-main"><div className="set-name">{isMoney && meRow && meRow.amount > 0 ? `You won ${money(meRow.amount)}. Save it to your Tab` : 'Save this round to your account'}</div><div className="set-sub">Free. Keeps your rounds and the Tab safe on any device.</div></div>
       <span className="chevron"><Icon name="caret-right" /></span>
     </button>
   );
@@ -134,9 +144,9 @@ export default function RoundDetail({ id, celebrate }) {
     );
   }
 
-  // In a scramble the team gets the strokes, not each player
+  // In a one-ball game (scramble, alternate shot, Chapman) the team gets the strokes, not each player
   const strokesNote = p => {
-    const team = round.game === 'scramble' && round.teams?.find(t => t.players.includes(p.id));
+    const team = oneBall(round.game) && round.teams?.find(t => t.players.includes(p.id));
     const n = team ? team.plays || 0 : p.plays;
     if (!n) return null;
     return <span className="li-sub"> · {team ? 'team got' : 'got'} {strokesWords(n, halfStrokesOn(round))}</span>;
@@ -184,9 +194,12 @@ export default function RoundDetail({ id, celebrate }) {
         <div style={{ padding: '0 16px' }}>
           {tab.transfers.length === 0 && <p className="hint-card" style={{ margin: 0 }}><Icon name="handshake" fill /> The money bets came out square. Nothing goes on the Tab.</p>}
           {tab.transfers.map(t => (
-            <div key={t.from + t.to} className="pay-row">
-              <span className="pf">{roundPlayerName(round, t.from)}</span><span className="pa"><Icon name="arrow-right" /></span><span className="pt">{roundPlayerName(round, t.to)}</span>
-              <span className="pm">{money(t.amount)}</span>
+            <div key={t.from + t.to} className="talk-pay">
+              <div className="pay-row">
+                <span className="pf">{roundPlayerName(round, t.from)}</span><span className="pa"><Icon name="arrow-right" /></span><span className="pt">{roundPlayerName(round, t.to)}</span>
+                <span className="pm">{money(t.amount)}</span>
+              </div>
+              {talk && <TalkBar ctx={talk} on={payTarget(t.from, t.to)} title={payTitle(t)} />}
             </div>
           ))}
           {tab.transfers.length > 0 && <p className="field-help" style={{ padding: '0 4px' }}>Only the side bets played for money. They’re on the Tab until marked paid; the points above decide the reward.</p>}
@@ -197,16 +210,21 @@ export default function RoundDetail({ id, celebrate }) {
         <div style={{ padding: '0 16px' }}>
           {res.transfers.length === 0 && <p className="hint-card" style={{ margin: 0 }}><Icon name="handshake" fill /> Nobody owes anybody. First round’s on whoever three-putted last.</p>}
           {res.transfers.map(t => (
-            <div key={t.from + t.to} className="pay-row">
-              <span className="pf">{roundPlayerName(round, t.from)}</span><span className="pa"><Icon name="arrow-right" /></span><span className="pt">{roundPlayerName(round, t.to)}</span>
-              <span className="pm">{money(t.amount)}</span>
+            <div key={t.from + t.to} className="talk-pay">
+              <div className="pay-row">
+                <span className="pf">{roundPlayerName(round, t.from)}</span><span className="pa"><Icon name="arrow-right" /></span><span className="pt">{roundPlayerName(round, t.to)}</span>
+                <span className="pm">{money(t.amount)}</span>
+              </div>
+              {talk && <TalkBar ctx={talk} on={payTarget(t.from, t.to)} title={payTitle(t)} />}
             </div>
           ))}
           {res.transfers.length > 0 && <p className="field-help" style={{ padding: '0 4px' }}>{round.trip?.id
-            ? `Fewest payments for this round alone. It’s on the trip, so it’s settled once with the trip’s other rounds, and it’s on the tab until then.`
-            : 'Fewest payments to square everyone up. They’re on the tab until marked paid.'}</p>}
+            ? `Fewest payments for this round alone. It’s on the trip, so it’s settled once with the trip’s other rounds, and it’s on the Tab until then.`
+            : 'Fewest payments to square everyone up. They’re on the Tab until marked paid.'}</p>}
         </div>
         </>}
+
+        {talk && <TalkSection ctx={talk} on="round" />}
 
         <HowWasIt round={round} />
 
@@ -235,7 +253,8 @@ export default function RoundDetail({ id, celebrate }) {
           </Fragment>
         ))}
 
-        <BetsBreakdown round={round} res={res} />
+        <BetsBreakdown round={round} res={res}
+          talk={talk ? r => <TalkBar ctx={talk} on={betTarget(r.id)} title={`${r.label} · ${betPeople(round, r.bet)}`} /> : null} />
         <RoundWhereFrom round={round} res={res} />
         {/* ...and for a reward round's side bets for money, what's between each pair in dollars */}
         {!isMoney && res.cash && <RoundWhereFrom round={round} res={tab} fmt={money} title="Where the money comes from" />}
@@ -268,9 +287,11 @@ function GameBreakdown({ round, res, label = null }) {
   const money = unitFmt(round);
   const names = Object.fromEntries(round.players.map(p => [p.id, p.name]));
   const first = n => (n || '').split(' ')[0];
-  if (round.game === 'nassau' || round.game === 'match') {
+  // Nassau, Match play, and a team game played as a match
+  if (matchScored(round) && res.detail.lines) {
     const LEGS = roundLegs(round);
     const sn = sideNames(round);
+    const multi = Object.keys(LEGS).length > 1;
     return (
       <>
         <div className="sec-label">Bets{round.teams ? ` · ${sn[0]} v ${sn[1]}` : ''}</div>
@@ -280,11 +301,40 @@ function GameBreakdown({ round, res, label = null }) {
           return (
             <div key={l.key} className="leg-row">
               <div className="leg-name">{l.press ? 'Press' : LEGS[l.leg].label}</div>
-              <div className={`leg-winner ${s.leader === null ? 'leg-tie' : ''}`}>{l.press ? `${round.game === 'nassau' ? `${LEGS[l.leg].label} ` : ''}from H${holeAtPos(round, l.start)} · ` : ''}{who}</div>
+              <div className={`leg-winner ${s.leader === null ? 'leg-tie' : ''}`}>{l.press ? `${multi ? `${LEGS[l.leg].label} ` : ''}from H${holeAtPos(round, l.start)} · ` : ''}{who}</div>
               <div className={`leg-amt ${l.value === 0 ? 'zero' : ''}`}>{money(Math.abs(l.value))}</div>
             </div>
           );
         })}
+        {round.game === 'shamble' && <DrivesShortfall round={round} done={round.status === 'done'} />}
+      </>
+    );
+  }
+  // A team game played as stroke play (each leg to the lower team total) or per hole (holes won)
+  if (isTeamGame(round.game) && res.detail.lines) {
+    const sn = sideNames(round);
+    return (
+      <>
+        <div className="sec-label">Bets · {sn[0]} v {sn[1]}</div>
+        {res.detail.lines.map(l => {
+          let who;
+          if (l.key === 'holes') {
+            const [a, b] = l.won;
+            who = !l.played ? 'Not played' : a === b ? `${a} hole${a === 1 ? '' : 's'} each` : `${sn[a > b ? 0 : 1]} won ${Math.max(a, b)} to ${Math.min(a, b)}`;
+          } else {
+            const s = l.status;
+            const [a, b] = s.totals;
+            who = !s.played ? 'Not played' : s.leader === null ? `Tied on ${a}` : `${sn[s.leader]} by ${s.by}, ${Math.min(a, b)} to ${Math.max(a, b)}`;
+          }
+          return (
+            <div key={l.key} className="leg-row">
+              <div className="leg-name">{l.label}</div>
+              <div className={`leg-winner ${l.value === 0 ? 'leg-tie' : ''}`}>{who}</div>
+              <div className={`leg-amt ${l.value === 0 ? 'zero' : ''}`}>{money(Math.abs(l.value))}</div>
+            </div>
+          );
+        })}
+        {round.game === 'shamble' && <DrivesShortfall round={round} done={round.status === 'done'} />}
       </>
     );
   }
@@ -304,15 +354,20 @@ function GameBreakdown({ round, res, label = null }) {
               {rows.map(r => (
                 <tr key={r.hole.no}>
                   <td>{r.hole.no}</td>
-                  <td className={r.flipped[0] ? 'neg' : ''}>{r.numbers[0]}{r.flipped[0] ? ' ↺' : ''}</td>
-                  <td className={r.flipped[1] ? 'neg' : ''}>{r.numbers[1]}{r.flipped[1] ? ' ↺' : ''}</td>
+                  {[0, 1].map(k => {
+                    // ↺ a birdie flip, or Daytona (a house rule): no par or better, so the high number went first
+                    const turned = r.flipped[k] || r.high?.[k];
+                    return <td key={k} className={turned ? 'neg' : ''}>{r.numbers[k]}{turned ? ' ↺' : ''}</td>;
+                  })}
                   <td className={r.diff > 0 ? 'pos' : r.diff < 0 ? 'neg' : 'zero'}>{r.diff === 0 ? '·' : `${r.diff > 0 ? t[0].name : t[1].name} +${Math.abs(r.diff)}`}</td>
                 </tr>
               ))}
             </tbody>
           </table>
         </div>
-        {rows.some(r => r.flipped.some(Boolean)) && <p className="field-help" style={{ padding: '0 20px' }}>↺ number flipped by the other team’s birdie.</p>}
+        {rows.some(r => r.flipped.some(Boolean) || r.high?.some(Boolean)) && <p className="field-help" style={{ padding: '0 20px' }}>{rows.some(r => r.high?.some(Boolean))
+          ? (rows.some(r => r.flipped.some(Boolean)) ? '↺ high number first: flipped by the other team’s birdie, or no par or better (Daytona).' : '↺ high number first: no par or better (Daytona).')
+          : '↺ number flipped by the other team’s birdie.'}</p>}
       </>
     );
   }
@@ -356,6 +411,20 @@ function GameBreakdown({ round, res, label = null }) {
           </div>
         ))}
         {round.game === 'scramble' && <DrivesShortfall round={round} done={round.status === 'done'} />}
+        {res.detail.pots && <>
+          {/* Front, back and total (a house rule): what each pot paid, and to whom */}
+          <div className="sec-label">Front, back and total</div>
+          {res.detail.pots.map(p => {
+            const won = Object.entries(p.deltas).filter(([, v]) => v > 0).sort((a, b) => b[1] - a[1]);
+            return (
+              <div key={p.key} className="leg-row">
+                <div className="leg-name">{p.key === 'total' ? (round.holes.length === 18 ? '18' : 'All') : p.label}</div>
+                <div className={`leg-winner ${won.length ? '' : 'leg-tie'}`}>{won.length ? won.map(([pid]) => first(names[pid])).join(', ') : 'All square'}</div>
+                <div className={`leg-amt ${won.length ? '' : 'zero'}`}>{money(won.reduce((a, [, v]) => a + v, 0))}</div>
+              </div>
+            );
+          })}
+        </>}
       </>
     );
   }
@@ -469,6 +538,32 @@ function GameBreakdown({ round, res, label = null }) {
       </>
     );
   }
+  if ((round.game === 'ctp' || round.game === 'drive') && res.detail.pot) {
+    // Closest to the pin and long drive: each pot hole, who won it and what it paid
+    const t = res.detail.pot;
+    const what = round.game === 'ctp' ? 'par 3' : 'long drive hole';
+    const cents = v => money(Math.round(v * 100) / 100);
+    return (
+      <>
+        <div className="sec-label">{label || (round.game === 'ctp' ? 'Closest to the pin' : 'Long drive')}</div>
+        {t.holes.length === 0 && <p className="hint-card"><Icon name="flag" fill /> {round.game === 'ctp' ? 'No par 3s in this round' : 'No long drive holes in this round'}, so nobody pays.</p>}
+        {t.holes.map(h => {
+          const who = h.winner && h.winner !== 'none' ? first(names[h.winner]) : null;
+          const state = !h.reached ? 'Not counted' : who || (t.unclaimed === 'split' ? 'Nobody, split across the rest' : 'Nobody, carried');
+          return (
+            <div key={h.no} className="leg-row">
+              <div className="leg-name">Hole {h.no}</div>
+              <div className={`leg-winner ${who ? '' : 'leg-tie'}`}>{state}</div>
+              <div className="leg-amt">{who ? cents(h.paid) : '–'}</div>
+            </div>
+          );
+        })}
+        {t.holes.length > 0 && t.paidOut === 0 && <p className="field-help" style={{ padding: '0 20px' }}>Nobody won a {what}, so nobody pays.</p>}
+        {t.paidOut > 0 && t.handedBack > 0 && <p className="field-help" style={{ padding: '0 20px' }}>{cents(t.handedBack)} still carried after the last {what} goes back to everyone.</p>}
+        {round.players.length > t.inPot.length && <p className="field-help" style={{ padding: '0 20px' }}>Players who joined late or left early aren’t in the pot.</p>}
+      </>
+    );
+  }
   if (round.game === 'snake') {
     return (
       <>
@@ -499,7 +594,7 @@ function GameBreakdown({ round, res, label = null }) {
               {rows.map(r => (
                 <tr key={r.hole.no}>
                   <td>{r.hole.no}</td>
-                  <td>{r.hammers.length || '·'}{r.conceded != null ? ' · folded' : ''}</td>
+                  <td>{r.hammers.length || '·'}{r.conceded != null ? ' · folded' : ''}{r.birdie ? ' · birdie' : ''}</td>
                   <td>{r.winner == null ? 'Halved' : round.teams ? sn[r.winner] : first(sn[r.winner])}</td>
                   <td className={r.net > 0 ? 'pos' : r.net < 0 ? 'neg' : 'zero'}>{r.value ? money(r.value) : '·'}</td>
                 </tr>
@@ -557,6 +652,9 @@ export function Scorecard({ round, current, onHole }) {
   // With onHole (during play), any cell in a hole's column jumps to that hole
   const colProps = no => (onHole ? { onClick: () => onHole(no), className: 'sc-tap' } : {});
   const netTotal = p => out.reduce((a, h) => { const n = holeComplete(round, h) ? netFor(round, p, h) : null; return n == null ? a : a + n; }, 0);
+  // Best ball and Shamble: a row per team with its score on each hole, and the scores that made it underlined
+  const tt = isTeamGame(round.game) && !oneBall(round.game) && round.teams?.length === 2 ? teamTable(round) : null;
+  const countedOn = (k, pid) => !!tt && tt.rows[k].counted.some(list => list.includes(pid));
   return (
     <div className="sc-wrap">
       <table className="sc-table scorecard">
@@ -593,16 +691,17 @@ export function Scorecard({ round, current, onHole }) {
                     </span>
                   )}
                 </td>
-                {out.map(h => {
+                {out.map((h, k) => {
                   const g = round.scores[h.no]?.[p.id];
                   // A player who left shows an en dash on the holes after
-                  const gone = g == null && !(p.team ? p.players.some(pid => playsHole(round, pid, h)) : playsHole(round, p.id, h));
+                  // (an alternate shot or Chapman team needs both partners there, see scorers)
+                  const gone = g == null && !(p.team ? scorers(round, h).some(u => u.id === p.id) : playsHole(round, p.id, h));
                   const st = hc && !gone ? popsFor(round, p, h) : 0;
                   const tap = colProps(h.no);
                   return (
                     <td key={h.no} className={`${h.no === current ? 'cur' : ''} ${tap.className || ''}`} onClick={tap.onClick}>
                       <span className="sc-cell">
-                        {gone ? <span className="empty-dot">–</span> : g == null ? <span className="empty-dot">·</span> : <span className={`sc-mark ${cls(g, h.par)}`}>{g}</span>}
+                        {gone ? <span className="empty-dot">–</span> : g == null ? <span className="empty-dot">·</span> : <span className={`sc-mark ${cls(g, h.par)} ${countedOn(k, p.id) ? 'sc-counts' : ''}`}>{g}</span>}
                         {st > 0 && <span className="sc-strokes" role="img" aria-label={`Gets ${strokesWords(st, half)}`}>{Array.from({ length: st }, (_, i) => <i key={i} />)}</span>}
                         {st < 0 && <span className="sc-strokes give" aria-label={`Gives back ${strokesWords(-st, half)}`}>{'–'.repeat(-st)}</span>}
                       </span>
@@ -611,6 +710,29 @@ export function Scorecard({ round, current, onHole }) {
                 })}
                 <td className="tot">{sum.played ? sum.gross : '–'}</td>
                 {anyStrokes && <td className="tot">{sum.played ? netText(netTotal(p)) : '–'}</td>}
+              </tr>
+            );
+          })}
+          {tt && round.teams.map((t, i) => {
+            const played = tt.rows.filter(r => r.scores[i] != null);
+            return (
+              <tr key={t.id} className="sc-team-row">
+                <td className="sticky">
+                  <span className="sc-name">{t.name}</span>
+                  <span className="sc-topar"><span className="sc-par">{tt.count === 2 ? 'best two' : 'best ball'}{hc ? ', net' : ''}</span></span>
+                </td>
+                {out.map((h, k) => {
+                  const v = tt.rows[k].scores[i];
+                  const tap = colProps(h.no);
+                  return (
+                    <td key={h.no} className={`${h.no === current ? 'cur' : ''} ${tap.className || ''}`} onClick={tap.onClick}>
+                      <span className="sc-cell">{v == null ? <span className="empty-dot">·</span> : <span className="sc-mark">{netText(v)}</span>}</span>
+                    </td>
+                  );
+                })}
+                {/* The team scores are net with handicaps on, so with strokes given they add up in the Net column */}
+                <td className="tot">{anyStrokes ? '' : played.length ? netText(played.reduce((a, r) => a + r.scores[i], 0)) : '–'}</td>
+                {anyStrokes && <td className="tot">{played.length ? netText(played.reduce((a, r) => a + r.scores[i], 0)) : '–'}</td>}
               </tr>
             );
           })}

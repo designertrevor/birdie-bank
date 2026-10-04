@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Header, Icon, Screen } from '../components/ui.jsx';
 import { useStore } from '../lib/store.js';
 import { GAMES, holeComplete } from '../lib/round.js';
@@ -13,16 +13,26 @@ import { AvatarButton, BottomNav } from '../nav.jsx';
 import { useNav } from '../lib/nav.js';
 import { JoinSheet } from '../components/Live.jsx';
 import { syncConfigured } from '../lib/sync.js';
-import { RSVP_LABEL, countsLine, planChoice, planCounts, upcomingPlans, whenLabel } from '../lib/plans.js';
+import { RSVP_LABEL, countsLine, daysUntil, planChoice, planCounts, upcomingPlans, whenLabel } from '../lib/plans.js';
 import { refreshPlans } from '../lib/plan-sync.js';
+import { countdownLine, weekdayOf } from '../lib/preview.js';
 import { refreshTab } from '../lib/tab-sync.js';
 import { latelyItems } from '../lib/lately.js';
+import { recentTalkKeys, withTalk } from '../lib/talk.js';
+import { useTalkSync } from '../lib/talk-sync.js';
 import { LatelyList } from '../components/LatelyList.jsx';
 import { updateSafe } from '../lib/app-update.js';
 import { applyUpdate, useUpdateReady } from '../lib/sw-update.js';
 import { TripSheet, TripUpNext } from '../components/Trips.jsx';
 import { currentTrips } from '../lib/trips.js';
 import { useTripPlans } from '../lib/trip-plan-sync.js';
+import { currentRecap } from '../lib/recap.js';
+import { callouts } from '../lib/callouts.js';
+import { CalloutsCard, RecapCard } from '../components/Recap.jsx';
+import { ChallengesUpNext } from '../components/Challenges.jsx';
+import { myChallenges } from '../lib/challenges.js';
+import { refreshChallenges } from '../lib/challenge-sync.js';
+import { useCupSync } from '../lib/cup-sync.js';
 
 const LATELY_ON_HOME = 3;
 
@@ -31,6 +41,7 @@ export default function UpNext() {
   const nav = useNav();
   const state = useStore();
   useTripPlans();
+  useCupSync();
   // (A join link opened by someone already set up goes straight to the invite card: see App.)
   const [joining, setJoining] = useState(false);
   const live = activeRounds(state);
@@ -45,11 +56,18 @@ export default function UpNext() {
   const trips = currentTrips(state);
   const onTrip = new Set(trips.flatMap(t => t.planned.map(p => p.id)));
   const plans = upcomingPlans(state).filter(p => !onTrip.has(p.id));
-  const lately = latelyItems(state);
+  // The day after a round: its recap, then a few lines for the group text (see recap.js, callouts.js)
+  const recap = useMemo(() => currentRecap(state), [state]);
+  // The recap's round isn't in Lately too (Lately skips the newest finished round, which can be one you only watched)
+  const lately = withTalk(latelyItems(state).filter(i => i.id !== `recap:${recap?.id}`), state);
+  const lines = useMemo(() => callouts(state), [state]);
+  useTalkSync(recentTalkKeys(state));
+  // Challenges you're in that are still going: your call first
+  const challenges = myChallenges(state);
   // A new version only shows up here once no round is going on, so a tap never cuts into one
   const updateReady = useUpdateReady() && updateSafe(state);
   // Pick up answers and votes that came in since last time
-  useEffect(() => { refreshPlans(); refreshTab(); }, []);
+  useEffect(() => { refreshPlans(); refreshTab(); refreshChallenges(); }, []);
 
   return (
     <Screen>
@@ -61,6 +79,13 @@ export default function UpNext() {
             <span className="row-main"><b>Update ready</b> <span className="un-sub">Tap to refresh</span></span>
           </button>
         )}
+        {recap && (
+          <>
+            <div className="sec-label">The recap</div>
+            <RecapCard recap={recap} />
+          </>
+        )}
+
         {live.map(r => {
           const played = r.holes.filter(h => holeComplete(r, h)).length;
           return (
@@ -80,6 +105,7 @@ export default function UpNext() {
 
         {plans.length > 0 && <div className="sec-label">Upcoming</div>}
         {plans.map(p => <UpcomingCard key={p.id} plan={p} />)}
+        <ChallengesUpNext list={challenges} />
         {/* Starting a round at the course (or running the last one back) stays one tap, plans or not */}
         {live.length === 0 && <PlanNext last={last?.round} fresh={!hasHistory} planned={plans.length > 0 || trips.length > 0} trip={trips.length === 0} />}
 
@@ -87,6 +113,13 @@ export default function UpNext() {
           <button className="add-row join-row" aria-label="Join a friend’s round" onClick={() => setJoining(true)}>
             <div className="add-ci"><Icon name="broadcast" fill /></div><span className="add-lbl">Join a friend’s round</span>
           </button>
+        )}
+
+        {lines.length > 0 && (
+          <>
+            <div className="sec-label">For the group text</div>
+            <CalloutsCard items={lines} />
+          </>
         )}
 
         {lately.length > 0 && (
@@ -101,8 +134,8 @@ export default function UpNext() {
 
         {hasHistory && (
           <>
-            <div className="sec-label">Your tab</div>
-            <button className="tab-glance" onClick={() => nav.setTab('ledger')} aria-label={tab.people ? `Your tab: owed to you ${money(tab.owed)}, you owe ${money(tab.owe)}` : `Your tab: ${squareText}`}>
+            <div className="sec-label">The Tab</div>
+            <button className="tab-glance" onClick={() => nav.setTab('ledger')} aria-label={tab.people ? `The Tab: owed to you ${money(tab.owed)}, you owe ${money(tab.owe)}` : `The Tab: ${squareText}`}>
               {tab.people ? (
                 <>
                   <div><div className="bl">Owed to you</div><div className={`lr-big ${tab.owed ? 'pos' : ''}`}>{tab.owed ? money(tab.owed) : '–'}</div></div>
@@ -114,8 +147,13 @@ export default function UpNext() {
               <span className="chevron"><Icon name="caret-right" /></span>
             </button>
 
-            <div className="sec-label">Last time out</div>
-            <RoundRow round={last.round} state={state} className="card" withYear />
+            {/* The recap already shows the last round, so it isn't there twice */}
+            {recap?.id !== last.round.id && (
+              <>
+                <div className="sec-label">Last time out</div>
+                <RoundRow round={last.round} state={state} className="card" withYear />
+              </>
+            )}
           </>
         )}
       </div>
@@ -125,7 +163,10 @@ export default function UpNext() {
   );
 }
 
-/** An upcoming round: when, the group's game so far, the course and who's in. */
+/**
+ * An upcoming round: the countdown ("Saturday, 2 days"), the group's game so far, the course and
+ * who's in. A round still on opens its preview from the strip under it.
+ */
 function UpcomingCard({ plan }) {
   const nav = useNav();
   const { game } = planChoice(plan);
@@ -134,16 +175,30 @@ function UpcomingCard({ plan }) {
   const mine = plan.answers?.[me]?.status;
   const off = plan.status === 'off' || (plan.gone && plan.status !== 'started'); // a started round goes on either way
   const started = plan.status === 'started' && !off;
-  return (
-    <button className={`upcoming-card ${off ? 'off' : ''}`} onClick={() => nav.push('plan', { id: plan.id })}>
+  // Still to come: a plan from yesterday that never started has nothing left to count down to
+  const ahead = !off && !started && (daysUntil(plan.date) ?? 0) >= 0;
+  const card = (
+    <button className={`upcoming-card ${off ? 'off' : ''} ${ahead ? 'has-preview' : ''}`} onClick={() => nav.push('plan', { id: plan.id })}>
       <div className="row-main">
-        <div className="eyebrow">{whenLabel(plan)}{off ? (plan.status === 'off' ? ' · Called off' : ' · Deleted') : started ? ' · The round is on' : ''}</div>
+        <div className="eyebrow">{ahead ? countdownLine(plan) : whenLabel(plan)}{off ? (plan.status === 'off' ? ' · Called off' : ' · Deleted') : started ? ' · The round is on' : ''}</div>
         <div className="uc-title d">{GAMES[game]?.name || 'Golf'} · {plan.course?.name || 'Course to be set'}</div>
         <div className="uc-sub">{off ? `Organized by ${plan.host ? 'you' : plan.hostName || 'a friend'}` : started ? (plan.liveCode ? 'Tap to follow along' : 'Teeing off now') : countsLine(c)}</div>
       </div>
       {!off && !started && <span className={`who-status ${mine || 'none'}`}>{mine ? `You’re ${RSVP_LABEL[mine].toLowerCase()}` : 'Answer'}</span>}
       <span className="chevron"><Icon name="caret-right" /></span>
     </button>
+  );
+  if (!ahead) return card;
+  const day = weekdayOf(plan);
+  return (
+    <div className="uc-wrap">
+      {card}
+      <button className="uc-preview" onClick={() => nav.push('preview', { id: plan.id })}>
+        <Icon name="binoculars" fill />
+        <span className="row-main"><b>{day ? `${day} preview` : 'The preview'}</b> <span className="uc-pv-sub">Strokes, head to head, a card for the group</span></span>
+        <Icon name="caret-right" />
+      </button>
+    </div>
   );
 }
 
@@ -153,7 +208,7 @@ function PlanNext({ last, fresh, planned = false, trip = false }) {
   const [tripping, setTripping] = useState(false);
   return (
     <div className="plan-card">
-      <span className="eyebrow">{planned ? 'Something else' : fresh ? 'Welcome to the bank' : 'Nothing on the calendar'}</span>
+      <span className="eyebrow">{planned ? 'Something else' : fresh ? 'Welcome to the first tee' : 'Nothing on the calendar'}</span>
       <div className="pc-title d">{planned ? 'Playing now, or another day?' : 'Plan your next round'}</div>
       <div className="pc-sub">{planned
         ? 'Start a round at the course in one tap, or plan another one for later.'

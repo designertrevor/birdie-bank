@@ -64,15 +64,21 @@ export function vegasFlipped(a, b) {
  * double the point value, eagles triple") and 18Birdies https://help.18birdies.com/article/58-vegas
  * Returns { numbers: [a, b], diff (positive = A wins), flipped: [bool, bool], mult }.
  */
-export function vegasHole(nets, gross, par, { birdieFlip = true, birdieDouble = false } = {}) {
+export function vegasHole(nets, gross, par, { birdieFlip = true, birdieDouble = false, daytona = false } = {}) {
   const best = t => Math.min(...gross[t].map(g => (typeof g === 'number' ? g : Infinity)));
   const birdie = t => best(t) <= par - 1;
   const bA = birdieFlip && birdie(0), bB = birdieFlip && birdie(1);
+  // House rule "Daytona" (daytona, off unless the round says so, added 2026-10-03): a team with no real
+  // par or better on the hole puts its high number first, so a bogey hole costs more. Judged on real
+  // scores, like the birdie flip. Sources, checked 2026-10-03: Golf Compendium, "The Daytona golf
+  // betting game explained" https://golfcompendium.com/2020/10/the-daytona-golf-betting-game-explained.html
+  // and GOLF.com https://golf.com/news/golf-gambling-betting-game-las-vegas-daytona/
+  const high = [0, 1].map(t => daytona && !(best(t) <= par));
   const flipped = [bB && !bA, bA && !bB];
-  const numbers = [0, 1].map(t => (flipped[t] ? vegasFlipped(...nets[t]) : vegasNumber(...nets[t])));
+  const numbers = [0, 1].map(t => (flipped[t] || high[t] ? vegasFlipped(...nets[t]) : vegasNumber(...nets[t])));
   let mult = 1;
   if (birdieDouble && birdie(0) !== birdie(1)) mult = best(birdie(0) ? 0 : 1) <= par - 2 ? 3 : 2;
-  return { numbers, diff: (numbers[1] - numbers[0]) * mult, flipped, mult };
+  return { numbers, diff: (numbers[1] - numbers[0]) * mult, flipped, mult, ...(daytona ? { high } : {}) };
 }
 
 // ---------------------------------------------------------------------------
@@ -102,10 +108,16 @@ export function stablefordPoints(net, par, modified = false) {
   return d >= 2 ? 0 : d === 1 ? 1 : d === 0 ? 2 : d === -1 ? 3 : d === -2 ? 4 : 5;
 }
 
-/** Quota (Chicago) points from a gross score: bogey 1, par 2, birdie 4, eagle 8, better 16. */
-export function quotaPoints(gross, par) {
+/**
+ * Quota (Chicago) points from a gross score: bogey 1, par 2, birdie 4, eagle 8, better 16.
+ * House rule `minus` (off unless the round says so, added 2026-10-03): double bogey or worse is −1
+ * instead of 0, so a blow-up hole costs you. Source, checked 2026-10-03: Live Tourney, "Quota game in
+ * golf" https://www.livetourney.com/blog/quota-game-in-golf ("penalizing double bogeys with -1 point").
+ */
+export function quotaPoints(gross, par, { minus = false } = {}) {
   const d = gross - par;
-  return d >= 2 ? 0 : d === 1 ? 1 : d === 0 ? 2 : d === -1 ? 4 : d === -2 ? 8 : 16;
+  if (d >= 2) return minus ? -1 : 0;
+  return d === 1 ? 1 : d === 0 ? 2 : d === -1 ? 4 : d === -2 ? 8 : 16;
 }
 
 /** Quota target: 36 less the course handicap over 18 holes, 18 less it over 9. */
@@ -117,7 +129,7 @@ export function quotaFor(courseHc, holes = 18) {
  * Nines (5-3-1): nine points a hole for three players. Low gets 5, middle 3, high 1; ties share:
  * all tied 3-3-3, two low tied 4-4-1, two high tied 5-2-2.
  */
-export function ninesPoints(nets, { sweep = false } = {}) {
+export function ninesPoints(nets, { sweep = false, birdies = null } = {}) {
   const [a, b, c] = nets;
   const sorted = [...nets].sort((x, y) => x - y);
   const [lo, mid, hi] = sorted;
@@ -125,7 +137,13 @@ export function ninesPoints(nets, { sweep = false } = {}) {
   // House rule "sweep" (off unless the round says so): win the hole by two or more and take all nine.
   // Source, checked 2026-09-30: The Golf News Net, "How to play Nines or 5-3-1"
   // https://thegolfnewsnet.com/ryan_ballengee/2026/03/13/golf-betting-games-how-to-play-nines-5-3-1-rules-44877/
+  // House rule "birdie bonus" (`birdies`, which players made a real birdie or better; off unless the
+  // round says so, added 2026-10-03): win the hole outright with a birdie and it's 7-1-1. A sweep still
+  // takes all nine. Same source: "First place wins with birdie or better - 7 pts, second and third
+  // place - 1 pt".
+  const winner = lo < mid ? nets.indexOf(lo) : -1;
   if (sweep && mid - lo >= 2) table = { [lo]: 9, [mid]: 0, [hi]: 0 };
+  else if (birdies && winner >= 0 && birdies[winner]) table = { [lo]: 7, [mid]: 1, [hi]: 1 };
   else if (lo === hi) table = { [lo]: 3 };
   else if (lo === mid) table = { [lo]: 4, [hi]: 1 };
   else if (mid === hi) table = { [lo]: 5, [hi]: 2 };
@@ -163,8 +181,16 @@ export function pointsToMoney(points, value) {
 /**
  * Settle a set of totals. mode 'pot': everyone antes `stake`, best total takes it (ties split).
  * mode 'per': every pair settles the difference × stake. lowerWins picks the direction.
+ * `over` (a pot, higher wins, totals measured against a target like Quota's): everyone above zero
+ * shares the pot in proportion to how far above they are. Nobody above zero, and the best takes it
+ * as usual. Source, checked 2026-10-03: Golf Genius, "Tournament scored points and purse options"
+ * https://docs.golfgenius.com/en/articles/10778633-tournament-scored-points-and-purse-options
+ * ("paid out depending on their points over Quota in relation to all of the points over Quota").
  */
-export function settleTotals(totals, { mode = 'pot', stake = 1, lowerWins = true } = {}) {
+export function settleTotals(totals, { mode = 'pot', stake = 1, lowerWins = true, over = false } = {}) {
+  // Sharing by points over, totals are tidied to a millionth first: a quota taken over part of a round
+  // leaves float dust, and dust must neither put someone over nor break a real tie (review, 2026-10-03)
+  if (over) totals = Object.fromEntries(Object.entries(totals).map(([id, v]) => [id, v == null ? v : Math.round(v * 1e6) / 1e6]));
   const ids = Object.keys(totals).filter(id => totals[id] != null);
   const out = Object.fromEntries(Object.keys(totals).map(id => [id, 0]));
   if (ids.length < 2) return out;
@@ -176,9 +202,16 @@ export function settleTotals(totals, { mode = 'pot', stake = 1, lowerWins = true
     }
     return out;
   }
+  const pot = stake * ids.length;
+  const above = over && !lowerWins ? ids.filter(id => totals[id] > 0) : [];
+  if (above.length) {
+    const sum = above.reduce((a, id) => a + totals[id], 0);
+    for (const id of ids) out[id] -= stake;
+    for (const id of above) out[id] += pot * totals[id] / sum;
+    return roundCents(out);
+  }
   const best = lowerWins ? Math.min(...ids.map(id => totals[id])) : Math.max(...ids.map(id => totals[id]));
   const winners = ids.filter(id => totals[id] === best);
-  const pot = stake * ids.length;
   for (const id of ids) out[id] -= stake;
   for (const id of winners) out[id] += pot / winners.length;
   return roundCents(out);
@@ -319,7 +352,8 @@ export function snakeHolder(rows) {
   const history = [];
   for (const r of rows) {
     const putts = r.putts || [];
-    if (putts.length) { holder = putts.at(-1); count += putts.length; }
+    // A four-putt (r.fours, under that house rule) adds one more on top of its three-putt
+    if (putts.length) { holder = putts.at(-1); count += putts.length + (r.fours?.length || 0); }
     history.push(holder);
   }
   return { holder, count, history };
@@ -392,4 +426,52 @@ export function birdiePot(shares, stake) {
   const pot = stake * ids.length;
   for (const id of ids) out[id] = pot * (shares[id] || 0) / total - stake;
   return roundCents(out);
+}
+
+// ---------------------------------------------------------------------------
+// Team games: Best ball, Shamble, Alternate shot and Chapman
+// ---------------------------------------------------------------------------
+// Published rules, checked 2026-10-03:
+//  Best ball (four-ball, or "best 1 of 4" / "best 2 of 4" with bigger teams): everyone plays their own
+//   ball and the team's best score (or best two added up) on each hole is the team's score.
+//   Rules of Golf, Rule 23 (Four-Ball) https://www.randa.org/rog/the-rules-of-golf/rule-23
+//  Shamble: everyone tees off, the team picks the best drive, then each player plays their own ball in
+//   from there and the best ball counts. Golf Workout Program, "A simple guide to playing the shamble"
+//   https://golfworkoutprogram.com/golf-shamble/
+//  Alternate shot (foursomes): two partners play one ball, taking turns, and one partner tees off on the
+//   odd holes and the other on the even ones. Rules of Golf, Rule 22 (Foursomes, also known as
+//   alternate shot) https://www.randa.org/rog/the-rules-of-golf/rule-22
+//  Chapman (Pinehurst): both partners drive, swap balls for the second shot, pick one ball and play it
+//   in by alternate shot. USGA, "Chapman or Pinehurst (60% low handicap + 40% high handicap)"
+//   https://www.usga.org/handicapping/roh/Content/rules/Committee%20Content/USGA/LG_R7h4.htm
+// Handicap allowances: Rules of Handicapping (effective January 2024), Appendix C: "Foursomes 50% of
+// combined team handicap", "Pinehurst/Chapman 60% low / 40% high", "Best 1 of 4 stroke play 75%",
+// "Best 2 of 4 stroke play 85%" (same PDF as SCRAMBLE_ALLOWANCE above, checked again 2026-10-03).
+// In match play the side with the lower team handicap plays off zero and the other gets the difference.
+
+/** Alternate shot (foursomes): the team plays off half its players' course handicaps added up. */
+export const FOURSOMES_ALLOWANCE = 0.5;
+
+/** Chapman (Pinehurst): 60% of the lower course handicap plus 40% of the higher. */
+export const CHAPMAN_ALLOWANCE = [0.6, 0.4];
+
+/** Team course handicap for alternate shot: 50% of the partners' course handicaps added up, rounded. */
+export function foursomesTeamHandicap(courseHcs) {
+  return Math.round(courseHcs.reduce((a, h) => a + (h ?? 0), 0) * FOURSOMES_ALLOWANCE);
+}
+
+/** Team course handicap for Chapman: 60% of the low course handicap plus 40% of the high one, rounded. */
+export function chapmanTeamHandicap(courseHcs) {
+  const [lo = 0, hi = lo] = courseHcs.map(h => h ?? 0).sort((a, b) => a - b);
+  return Math.round(lo * CHAPMAN_ALLOWANCE[0] + hi * CHAPMAN_ALLOWANCE[1]);
+}
+
+/**
+ * A team's score on a hole from its players' scores: the best `count` added up (best ball is the
+ * best one; "best 2 of 4" adds the best two). Null while a score is missing, or when the team has
+ * fewer players on the hole than `count`.
+ */
+export function bestOf(scores, count = 1) {
+  if (!scores.length || scores.length < count || scores.some(n => n == null)) return null;
+  return [...scores].sort((a, b) => a - b).slice(0, count).reduce((a, n) => a + n, 0);
 }

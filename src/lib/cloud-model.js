@@ -27,6 +27,8 @@ export function toDocs(state) {
     tripHidden: state.tripHidden && typeof state.tripHidden === 'object' && !Array.isArray(state.tripHidden) ? state.tripHidden : {},
     // Trip expenses (trip-expenses.js), yours and the ones friends' phones sent, deleted ones as a stub
     tripExpenses: state.tripExpenses && typeof state.tripExpenses === 'object' && !Array.isArray(state.tripExpenses) ? state.tripExpenses : {},
+    // Stake payments you marked on a team points trip (cup.js), kept off the Tab
+    cupPaid: state.cupPaid && typeof state.cupPaid === 'object' && !Array.isArray(state.cupPaid) ? state.cupPaid : {},
   });
   for (const p of Object.values(state.players)) put('player', p.id, p);
   for (const c of Object.values(state.crews)) put('crew', c.id, c);
@@ -92,6 +94,8 @@ export function applyDoc(draft, kind, id, data) {
     if (data.tripExpenses && typeof data.tripExpenses === 'object' && !Array.isArray(data.tripExpenses)) {
       draft.tripExpenses = mergeExpenses(draft.tripExpenses || {}, Object.values(data.tripExpenses));
     }
+    // And the stake marks of team points trips later still
+    if (data.cupPaid && typeof data.cupPaid === 'object' && !Array.isArray(data.cupPaid)) draft.cupPaid = data.cupPaid;
   }
 }
 

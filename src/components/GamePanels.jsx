@@ -4,7 +4,8 @@ import { Icon, useUI } from './ui.jsx';
 import { update, uid } from '../lib/store.js';
 import {
   hammerOptions, hammerTable, holeAtPos, holeComplete, nassauAmounts, nassauPressOptions, nassauWinners, playersOn, pointsTable, pressMode, rabbitTable,
-  roundLegs, sideNames, sides, sixesMatches, snakeTable, totalsTable, vegasPreview, vegasTable, scorers, netFor, playsHole, posOf, settingsAt,
+  roundLegs, sideNames, sides, sixesMatches, snakeTable, totalsTable, vegasPreview, vegasTable, scorers, netFor, playsHole, posOf, settingsAt, teamTable,
+  POT_NONE, potHoles, potTable, greenieCarryBefore,
 } from '../lib/round.js';
 import { nassauBets } from '../lib/golf.js';
 import { DOT_KINDS, DOT_PARS, scoreDots } from '../lib/games.js';
@@ -24,6 +25,8 @@ export function MatchPanel({ round, hole, readOnly = false }) {
   const winners = nassauWinners(round);
   const LEGS = roundLegs(round);
   const legs = Object.keys(LEGS);
+  // Three legs (a Nassau, or a team game bet like one) name the leg in presses and toasts
+  const multi = legs.length > 1;
   const pos = round.holes.findIndex(h => h.no === hole.no) + 1;
   const bets = nassauBets(winners, round.presses, nassauAmounts(round), LEGS);
   const names = sideNames(round);
@@ -38,7 +41,7 @@ export function MatchPanel({ round, hole, readOnly = false }) {
   const activePresses = bets.filter(b => b.press && pos >= b.start && pos <= b.end);
   const press = o => {
     update(s => { const r = s.rounds[round.id]; r.presses.push({ id: uid('pr_'), leg: o.leg, start: pos, by: o.trailing }); });
-    showToast(`${names[o.trailing]} pressed${round.game === 'nassau' ? ` the ${LEGS[o.leg].label.toLowerCase()}` : ''}!`);
+    showToast(`${names[o.trailing]} pressed${multi ? ` the ${LEGS[o.leg].label.toLowerCase()}` : ''}!`);
     buzz(30);
   };
   const tile = leg => {
@@ -66,7 +69,7 @@ export function MatchPanel({ round, hole, readOnly = false }) {
         <div className="press-bar">
           <span className="press-bar-lbl">Presses</span>
           {activePresses.map(p => (
-            <span key={p.key} className="press-chip">{round.game === 'nassau' ? `${LEGS[p.leg].label} ` : ''}from H{holeAtPos(round, p.start)}: {p.status.leader === null ? 'All square' : `${short[p.status.leader]} ${p.status.by} up`}</span>
+            <span key={p.key} className="press-chip">{multi ? `${LEGS[p.leg].label} ` : ''}from H{holeAtPos(round, p.start)}: {p.status.leader === null ? 'All square' : `${short[p.status.leader]} ${p.status.by} up`}</span>
           ))}
         </div>
       )}
@@ -76,12 +79,68 @@ export function MatchPanel({ round, hole, readOnly = false }) {
             <div key={o.leg} className="press-alert-row">
               <span className="press-alert-txt">{o.turn
                 ? `${names[o.trailing]} lost the ${LEGS.front.label.toLowerCase()}. Press the ${LEGS.back.label.toLowerCase()}?`
-                : `${names[o.trailing]} ${sides(round)[o.trailing].length > 1 ? 'are' : 'is'} ${o.by} down${round.game === 'nassau' ? ` on the ${LEGS[o.leg].label.toLowerCase()}` : ''}`}</span>
+                : `${names[o.trailing]} ${sides(round)[o.trailing].length > 1 ? 'are' : 'is'} ${o.by} down${multi ? ` on the ${LEGS[o.leg].label.toLowerCase()}` : ''}`}</span>
               <button className="press-call-btn" onClick={() => press(o)}>Press <Icon name="lightning" fill /></button>
             </div>
           ))}
         </div>
       )}
+    </>
+  );
+}
+
+// --------------------------- Team games ------------------------------------
+
+/**
+ * A team game played as stroke play (a tile a leg: who's ahead and each team to par) or per hole (holes
+ * won by each team and what it's worth). Played as a match it uses MatchPanel, presses and all.
+ */
+export function TeamPanel({ round, hole }) {
+  const money = unitFmt(round); // points in a points or reward round
+  const t = teamTable(round);
+  const names = sideNames(round);
+  const pos = posOf(round, hole);
+  const sideLine = <div className="sides-line"><span className="side-tag a">A</span> {names[0]} <span className="sides-v">v</span> <span className="side-tag b">B</span> {names[1]}</div>;
+  if (t.format === 'hole') {
+    const line = t.lines[0];
+    const each = Math.abs(line.value);
+    return (
+      <div className="vegas-panel">
+        <div className="vegas-teams">
+          {[0, 1].map(i => (
+            <div key={i} className={`vegas-team ${line.won[i] > line.won[1 - i] ? 'ahead' : line.won[i] < line.won[1 - i] ? 'behind' : ''}`}>
+              <div className="ms-lbl"><span className={`side-tag ${i ? 'b' : 'a'}`}>{i ? 'B' : 'A'}</span> {names[i]}</div>
+              <div className="ms-val">{line.won[i]}</div>
+            </div>
+          ))}
+        </div>
+        <div className="vegas-line">
+          <span>Holes won · {money(settingsAt(round, pos)[round.game]?.perHole ?? line.amount)} a hole</span>
+          <span className="vegas-total">{!line.value ? 'All square' : `${names[line.value > 0 ? 0 : 1]} up ${money(each)} each`}</span>
+        </div>
+      </div>
+    );
+  }
+  // Stroke play: each leg's team totals, to par on the holes both teams have played
+  const fmt = v => (v === 0 ? 'E' : v > 0 ? `+${v}` : `−${-v}`);
+  const tile = l => {
+    const s = l.status;
+    const part = t.rows.filter(r => r.pos >= l.start && r.pos <= l.end && r.winner !== undefined);
+    const par = part.reduce((a, r) => a + r.hole.par * t.count, 0);
+    const notStarted = pos < l.start && !s.played;
+    const val = notStarted ? '–' : s.leader === null ? (s.played ? 'Level' : '–') : `${s.leader ? 'B' : 'A'} by ${s.by}`;
+    const sub = notStarted ? `Starts H${holeAtPos(round, l.start)}` : s.played ? `A ${fmt(s.totals[0] - par)} · B ${fmt(s.totals[1] - par)}${s.left === 0 ? ' · Final' : ''}` : 'No holes yet';
+    const said = `${l.label}: ${notStarted ? 'not started' : s.leader === null ? 'level' : `${names[s.leader]} ahead by ${s.by}`}. ${sub}`;
+    return (
+      <div key={l.key} role="group" aria-label={said} className={`ms-tile ${s.leader === 0 ? 'ahead' : s.leader === 1 ? 'behind' : ''} ${t.lines.length === 1 ? 'solo' : ''}`}>
+        <span className="ms-lbl">{l.label}</span><span className={`ms-val ${val === 'Level' ? 'sq' : ''}`}>{val}</span><span className="ms-sub">{sub}</span>
+      </div>
+    );
+  };
+  return (
+    <>
+      {sideLine}
+      <div className="match-status">{t.lines.map(tile)}</div>
     </>
   );
 }
@@ -103,7 +162,7 @@ export function VegasPanel({ round, hole, draft, touched }) {
           <div key={t.id} className={`vegas-team ${(i === 0 ? total : -total) > 0 ? 'ahead' : (i === 0 ? total : -total) < 0 ? 'behind' : ''}`}>
             <span className="ms-lbl"><span className={`side-tag ${i === 0 ? 'a' : 'b'}`}>{['A', 'B'][i]}</span> {t.name}</span>
             <span className="ms-val">{pv ? pv.numbers[i] : '–'}</span>
-            <span className="ms-sub">{pv?.flipped[i] ? 'Flipped by a birdie' : pv ? 'This hole' : 'Enter scores'}</span>
+            <span className="ms-sub">{pv?.flipped[i] ? 'Flipped by a birdie' : pv?.high?.[i] ? 'No par: high number first' : pv ? 'This hole' : 'Enter scores'}</span>
           </div>
         ))}
       </div>
@@ -245,8 +304,17 @@ export function SnakePanel({ round, hole, marks }) {
 /** Tap who three-putted, in the order it happened: the last one takes the snake. */
 export function SnakePicker({ round, hole, marks, setMarks }) {
   const putts = marks?.snake || [];
+  // "Four-putts count twice" (house rule): a tapped player can be marked as a four-putt too
+  const ss = settingsAt(round, posOf(round, hole)).snake || {};
+  const can4 = !!ss.fourPutt && (ss.growth || 'flat') !== 'flat';
+  const fours = (marks?.snake4 || []).filter(pid => putts.includes(pid));
   const toggle = pid => {
-    setMarks({ ...marks, snake: putts.includes(pid) ? putts.filter(x => x !== pid) : [...putts, pid] });
+    const out = putts.includes(pid);
+    setMarks({ ...marks, snake: out ? putts.filter(x => x !== pid) : [...putts, pid], ...(out && marks?.snake4 ? { snake4: marks.snake4.filter(x => x !== pid) } : {}) });
+    buzz(8);
+  };
+  const toggle4 = pid => {
+    setMarks({ ...marks, snake4: fours.includes(pid) ? fours.filter(x => x !== pid) : [...fours, pid] });
     buzz(8);
   };
   return (
@@ -257,9 +325,14 @@ export function SnakePicker({ round, hole, marks, setMarks }) {
           {playersOn(round, hole).map(p => {
             const k = putts.indexOf(p.id);
             return (
-              <button key={p.id} aria-pressed={k >= 0} className={`pill-btn sm ${k >= 0 ? 'on' : ''}`} onClick={() => toggle(p.id)}>
-                {k >= 0 && putts.length > 1 && <span aria-hidden="true">{k + 1}.</span>} {firstName(p.name)}{k >= 0 && k === putts.length - 1 ? ' · has it' : ''}
-              </button>
+              <span key={p.id} className="snake4-pair">
+                <button aria-pressed={k >= 0} className={`pill-btn sm ${k >= 0 ? 'on' : ''}`} onClick={() => toggle(p.id)}>
+                  {k >= 0 && putts.length > 1 && <span aria-hidden="true">{k + 1}.</span>} {firstName(p.name)}{k >= 0 && k === putts.length - 1 ? ' · has it' : ''}
+                </button>
+                {can4 && k >= 0 && (
+                  <button aria-pressed={fours.includes(p.id)} aria-label={`${firstName(p.name)} four-putted`} className={`pill-btn sm ${fours.includes(p.id) ? 'on' : ''}`} onClick={() => toggle4(p.id)}>4-putt</button>
+                )}
+              </span>
             );
           })}
         </div>
@@ -283,6 +356,8 @@ export function HammerPanel({ round, hole, marks, setMarks, readOnly = false }) 
   const can = hammerOptions(round, hole, mark);
   const n = mark.hammers.length;
   const value = base * 2 ** n;
+  // Birdie hammer (a house rule): the amount here is before the scores, so say a winning birdie doubles it
+  const birdieRule = !!settingsAt(round, posOf(round, hole)).hammer?.birdie;
   const pending = n > 0 && mark.conceded == null ? 1 - mark.hammers.at(-1) : null;
   const before = rows.filter(r => r.pos < (row?.pos ?? 0)).reduce((a, r) => a + r.net, 0);
   const put = next => { setMarks({ ...marks, ...next }); buzz(next.hammers?.length > n ? [20, 40, 20] : 12); };
@@ -294,7 +369,7 @@ export function HammerPanel({ round, hole, marks, setMarks, readOnly = false }) 
   return (
     <div className="wolf-panel">
       <div className="bl" style={{ marginBottom: 8, display: 'flex', justifyContent: 'space-between', gap: 8 }}>
-        <span><Icon name="hammer" fill /> This hole: <strong>{money(mark.conceded != null ? value / 2 : value)}</strong>{n ? ` · ${n} hammer${n === 1 ? '' : 's'}` : ''}</span>
+        <span><Icon name="hammer" fill /> This hole: <strong>{money(mark.conceded != null ? value / 2 : value)}</strong>{n ? ` · ${n} hammer${n === 1 ? '' : 's'}` : ''}{birdieRule && mark.conceded == null ? ' · a winning birdie doubles it' : ''}</span>
         <span>{before === 0 ? 'All square' : `${short[before > 0 ? 0 : 1]} +${money(Math.abs(before))}`}</span>
       </div>
       {status && <p className="bl" style={{ margin: '0 0 8px', fontWeight: 500 }} aria-live="polite">{status}</p>}
@@ -326,9 +401,16 @@ const BBB = [
 ];
 
 export function BBBPicker({ round, hole, marks, setMarks }) {
+  // "Bongo is low net" (house rule): the third point comes from the scores, so there's nothing to tap
+  const netBongo = !!settingsAt(round, posOf(round, hole)).bbb?.netBongo;
   return (
     <div className="marks-card">
-      {BBB.map(b => (
+      {netBongo && (
+        <div className="marks-row">
+          <div className="marks-lbl"><strong>Bongo</strong><span>Lowest net score, from the scores. A tie, nobody gets it</span></div>
+        </div>
+      )}
+      {BBB.filter(b => !(netBongo && b.key === 'bongo')).map(b => (
         <div key={b.key} className="marks-row">
           <div className="marks-lbl"><strong>{b.name}</strong><span>{b.help}</span></div>
           <div className="chip-row" style={{ padding: 0 }} role="radiogroup" aria-label={b.name}>
@@ -353,6 +435,8 @@ export function DotsRow({ round, player, hole, marks, setMarks, gross, label = n
   const kinds = Object.keys(DOT_KINDS).filter(k => s.kinds?.[k] && (!DOT_PARS[k] || DOT_PARS[k].includes(hole.par) || (marks[player.id] || []).includes(k)));
   const mine = marks[player.id] || [];
   const auto = s.auto ? scoreDots(gross, hole.par) : 0;
+  // "Greenies carry" (house rule): greenies missed on earlier par 3s ride on this one
+  const riding = greenieCarryBefore(round, hole);
   const toggle = k => {
     const next = mine.includes(k) ? mine.filter(x => x !== k) : [...mine, k];
     const all = { ...marks, [player.id]: next };
@@ -367,8 +451,63 @@ export function DotsRow({ round, player, hole, marks, setMarks, gross, label = n
     <div className="dots-row" role="group" aria-label={label || `${player.name.split(' ')[0]}’s dots`}>
       {auto > 0 && <span className="pill-btn sm auto"><Icon name="bird" fill /> {auto === 2 ? 'Eagle · 2 dots' : 'Birdie'}</span>}
       {kinds.map(k => (
-        <button key={k} className={`pill-btn sm ${mine.includes(k) ? 'on' : ''}`} aria-pressed={mine.includes(k)} title={DOT_KINDS[k].help} onClick={() => toggle(k)}>{DOT_KINDS[k].name}</button>
+        <button key={k} className={`pill-btn sm ${mine.includes(k) ? 'on' : ''}`} aria-pressed={mine.includes(k)} title={DOT_KINDS[k].help} onClick={() => toggle(k)}>{DOT_KINDS[k].name}{k === 'greenie' && riding ? ` ×${riding + 1}` : ''}</button>
       ))}
+    </div>
+  );
+}
+
+// --------------------------- Closest to the pin and long drive pots -------
+
+/**
+ * Who won the pot on this hole, for each closest to the pin or long drive pot played on it. `pots`
+ * are the pots' game views (see gameView). The winner is saved in the hole's marks under the pot's key
+ * (a player id, or 'none'); a hole saved with nothing tapped counts as nobody's, so Nobody shows
+ * picked until someone is tapped. A phone that isn't keeping score sees who won (`readOnly`).
+ */
+export function PotPicker({ pots, hole, marks, setMarks, readOnly = false }) {
+  const here = pots.filter(v => potHoles(v, v.game).some(h => h.no === hole.no));
+  if (!here.length) return null;
+  return (
+    <div className="marks-card pot-card" role="group" aria-label="Pots on this hole">
+      {here.map(v => {
+        const key = v.game;
+        const fmt = unitFmt(v);
+        const t = potTable(v, key);
+        // What this hole is played for: its share plus anything carried to it
+        const row = potTable({ ...v, marks: { ...(v.marks || {}), [hole.no]: { ...(marks || {}), [key]: POT_NONE } } }, key).holes.find(h => h.no === hole.no);
+        const split = t.unclaimed === 'split';
+        const worth = split ? t.worth : row?.value ?? t.worth;
+        const title = key === 'ctp' ? 'Closest to the pin' : 'Long drive';
+        const sub = t.inPot.length < 2 ? 'Needs two players in the pot'
+          : `${fmt(Math.round(worth * 100) / 100)}${split ? ' share' : ' on this hole'}${!split && row?.carried ? `, ${fmt(Math.round(row.carried * 100) / 100)} carried` : ''}`;
+        const won = marks?.[key] ?? null;
+        const players = v.players.filter(p => t.inPot.includes(p.id));
+        const label = `${title}: who ${key === 'ctp' ? 'was closest' : 'hit it longest'}`;
+        if (readOnly) {
+          const who = won && won !== POT_NONE ? players.find(p => p.id === won) : null;
+          return (
+            <div key={key} className="marks-row pot-row">
+              <div className="marks-lbl pot-lbl"><strong>{title}</strong><span>{sub}</span></div>
+              <div className="hb-state">{who ? `${firstName(who.name)} ${key === 'ctp' ? 'was closest' : 'hit it longest'}` : won === POT_NONE ? 'Nobody won it' : 'Not tapped yet'}</div>
+            </div>
+          );
+        }
+        const pick = pid => { setMarks({ ...(marks || {}), [key]: pid }); buzz(8); };
+        return (
+          <div key={key} className="marks-row pot-row">
+            <div className="marks-lbl pot-lbl"><strong>{title}</strong><span>{sub}</span></div>
+            <div className="chip-row" style={{ padding: 0 }} role="radiogroup" aria-label={label}>
+              {players.map(p => (
+                <button key={p.id} role="radio" aria-checked={won === p.id} className={`pill-btn sm ${won === p.id ? 'on' : ''}`} onClick={() => pick(won === p.id ? POT_NONE : p.id)}>
+                  {won === p.id && <Icon name="check" />} {firstName(p.name)}
+                </button>
+              ))}
+              <button role="radio" aria-checked={!won || won === POT_NONE} className={`pill-btn sm ${!won || won === POT_NONE ? 'on' : ''}`} onClick={() => pick(POT_NONE)}>Nobody</button>
+            </div>
+          </div>
+        );
+      })}
     </div>
   );
 }

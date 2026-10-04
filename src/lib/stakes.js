@@ -1,6 +1,6 @@
 // What's on the line in a game: a one-line summary and a sanity check on its options.
 import { money } from './golf.js';
-import { betChanges, blindMultiplierOf, gameKeyLabel, sideGamesOf } from './round.js';
+import { POT_NAMES, TEAM_GAMES, betChanges, blindMultiplierOf, gameKeyLabel, sideGamesOf } from './round.js';
 import { inUnits, pointsLines } from './play-for.js';
 import { houseRulesLine } from './house-rules.js';
 
@@ -11,6 +11,7 @@ export function optionsProblem(game, settings) {
     if (b.min > b.max || b.defaultBet < b.min || b.defaultBet > b.max) return 'Default bet has to sit between the minimum and maximum.';
   }
   if (game === 'birdies' && !(settings.birdies?.stake > 0)) return 'Each player has to put something in the birdie pot.';
+  if ((game === 'ctp' || game === 'drive') && !(settings[game]?.stake > 0)) return 'Each player has to put something in the pot.';
   return null;
 }
 
@@ -20,6 +21,8 @@ export function optionsProblem(game, settings) {
  */
 export function sideBetLine(game, settings) {
   if (game === 'birdies') return `${money(settings?.stake ?? 0)} each in the birdie pot`;
+  // Named, so a round with a pot as its main game and both side pots doesn't read "each in the pot" three times
+  if (game === 'ctp' || game === 'drive') return `${money(settings?.stake ?? 0)} each in the ${POT_NAMES[game]}`;
   // The bet in its own unit ("$2 a skin"); the worked example under it covers the house rules
   return stakeSummary(game, { [game]: settings }).split(' · ')[0];
 }
@@ -35,7 +38,7 @@ export function roundStakeLines(round, { since = true } = {}) {
 
 // `since` false leaves off "from hole 10", for a round set up again with the bets it ended on
 function moneyStakeLines(round, since = true) {
-  const lines = [{ key: 'main', line: stakeSummary(round.game, round.settings) }];
+  const lines = [{ key: 'main', line: stakeSummary(round.game, round.settings, round.holes?.length ?? 18) }];
   for (const sg of sideGamesOf(round)) {
     const line = sideBetLine(sg.game, sg.settings);
     const from = line && since ? betChanges(round, sg.game).at(-1) : null;
@@ -46,7 +49,7 @@ function moneyStakeLines(round, since = true) {
 
 /** A game's bet line from its own settings block: the main game's summary, or a side game's line. */
 function betLineFor(round, key, block) {
-  return key === 'main' ? stakeSummary(round.game, { ...round.settings, [round.game]: block }) : sideBetLine(key, block);
+  return key === 'main' ? stakeSummary(round.game, { ...round.settings, [round.game]: block }, round.holes?.length ?? 18) : sideBetLine(key, block);
 }
 
 /**
@@ -80,9 +83,9 @@ export function betStretchLine(round, key) {
   return inUnits(round, `${gameKeyLabel(round, key)}: ${parts.join(', ')}.`);
 }
 
-/** One line that says what's on the line, for menus and summaries. */
-export function stakeSummary(game, settings) {
-  const rules = houseRulesLine(game, settings?.[game]);
+/** One line that says what's on the line, for menus and summaries. `holes`: the round's length (see houseRulesLine). */
+export function stakeSummary(game, settings, holes = 18) {
+  const rules = houseRulesLine(game, settings?.[game], holes);
   const base = baseSummary(game, settings);
   return rules ? `${base} · ${rules}` : base;
 }
@@ -114,8 +117,18 @@ function baseSummary(game, settings) {
     case 'dots': return `${money(s.dots.value)} a dot`;
     case 'rabbit': return `${money(s.rabbit.stake)} a rabbit`;
     case 'birdies': return `${money(s.birdies.stake)} each in the birdie pot`;
+    case 'bestball': case 'shamble': case 'altshot': case 'chapman': return teamSummary(s[game]);
+    case 'ctp': case 'drive': return `${money(s[game].stake)} each in the ${POT_NAMES[game]}`;
     default: return '';
   }
+}
+
+/** A team game's bets: "$5 / $5 / $5", "$10 a player · stroke play" or "$2 a hole" (see round.js). */
+function teamSummary(t = {}) {
+  if (t.format === 'hole') return `${money(t.perHole ?? 0)} a hole`;
+  const stroke = t.scoring === 'stroke' ? ' · stroke play' : '';
+  if (t.format === 'total') return `${money(t.stake ?? 0)} a player${stroke}`;
+  return `${money(t.front ?? 0)} / ${money(t.back ?? 0)} / ${money(t.total ?? 0)}${stroke}`;
 }
 
 /**
@@ -123,7 +136,8 @@ function baseSummary(game, settings) {
  * The first part of the summary line, except a Nassau with the same bet on every leg reads "a side".
  */
 export function stakeHeadline(game, settings) {
-  const n = game === 'nassau' ? settings.nassau : null;
+  // A team game bet as a Nassau reads the same way
+  const n = game === 'nassau' ? settings.nassau : TEAM_GAMES.includes(game) && (settings[game]?.format ?? 'nassau') === 'nassau' ? settings[game] : null;
   if (n && n.front === n.back && n.back === n.total) return `${money(n.front)} a side`;
   return stakeSummary(game, settings).split(' · ')[0];
 }

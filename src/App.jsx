@@ -55,8 +55,13 @@ const plan = () => import('./screens/Plan.jsx');
 const Plan = screen(plan);
 const RollCall = screen(plan, 'RollCall');
 const PlanLink = screen(plan, 'PlanLink');
+const Preview = screen(() => import('./screens/Preview.jsx'));
+const challenge = () => import('./screens/Challenge.jsx');
+const Challenge = screen(challenge);
+const ChallengeLink = screen(challenge, 'ChallengeLink');
 const Paywall = screen(() => import('./screens/Paywall.jsx'));
 const Season = screen(() => import('./screens/Season.jsx'));
+const Stats = screen(() => import('./screens/Stats.jsx'));
 const Lately = screen(() => import('./screens/Lately.jsx'));
 const trip = () => import('./screens/Trip.jsx');
 const Trip = screen(trip);
@@ -78,6 +83,16 @@ function pendingPlanLink() {
 }
 const clearPlanLink = () => { try { sessionStorage.removeItem('bb-plan'); } catch { /* ignore */ } };
 
+/** A challenge link (?challenge=CODE) waiting to open: its code, or null. Kept for this tab until it opens. */
+function pendingChallengeLink() {
+  try {
+    const code = cleanCode(new URLSearchParams(location.search).get('challenge'));
+    if (code) { sessionStorage.setItem('pending-challenge', code); return code; }
+    return cleanCode(sessionStorage.getItem('pending-challenge')) || null;
+  } catch { return null; }
+}
+const clearChallengeLink = () => { try { sessionStorage.removeItem('pending-challenge'); } catch { /* ignore */ } };
+
 /** A join link (?join=CODE) waiting to open, from the address bar or saved for this tab. */
 function pendingJoin() {
   try { return cleanCode(new URLSearchParams(location.search).get('join') || sessionStorage.getItem('bb-join')) || null; } catch { return null; }
@@ -94,9 +109,10 @@ const SCREENS = {
   roundDetail: RoundDetail, newRound: NewRound, play: Play,
   playerEdit: PlayerEdit, crewEdit: CrewEdit, person: Person,
   settings: Settings, defaults: Defaults, courses: Courses, courseEdit: CourseEdit, about: About, suggest: Suggest,
-  plan: Plan, rollCall: RollCall, planLink: PlanLink, paywall: Paywall, season: Season,
+  plan: Plan, rollCall: RollCall, planLink: PlanLink, preview: Preview, paywall: Paywall, season: Season,
+  challenge: Challenge, challengeLink: ChallengeLink,
   joinInvite: JoinInviteScreen, lately: Lately, trip: Trip, tripSettle: TripSettle,
-  profile: Profile,
+  profile: Profile, stats: Stats,
 };
 // Settings lives behind the avatar on Up next, so it's a pushed screen rather than a tab
 const TABS = { upnext: UpNext, ledger: Ledger, history: History, people: People };
@@ -122,11 +138,17 @@ export default function App() {
   const [tab, setTab] = useState('upnext');
   // A plan link opens straight onto the plan: for someone set up, on top of Up next
   const [planLinkAt, setPlanLinkAt] = useState(pendingPlanLink);
+  // A challenge link too: someone set up gets it on top of Up next, anyone else answers it as it is
+  const [challengeAt, setChallengeAt] = useState(pendingChallengeLink);
   const [stack, setStack] = useState(() => {
     if (!onboarded) return [];
     if (planLinkAt) {
       clearPlanLink();
       return [{ name: 'planLink', params: planLinkAt, key: Date.now() }];
+    }
+    if (challengeAt) {
+      clearChallengeLink();
+      return [{ name: 'challengeLink', params: { code: challengeAt }, key: Date.now() }];
     }
     // A join link for someone already set up opens the invite card (seats, "Not on the list? Add me")
     const code = syncConfigured ? pendingJoin() : null;
@@ -168,6 +190,7 @@ export default function App() {
       history.replaceState(null, '', location.pathname);
     }
     if (new URLSearchParams(location.search).get('plan')) history.replaceState(null, '', location.pathname);
+    if (new URLSearchParams(location.search).get('challenge')) history.replaceState(null, '', location.pathname);
   }, []);
 
   // Overlays opened in place over a screen (the course editor over round setup): the phone's back
@@ -215,12 +238,14 @@ export default function App() {
     };
     // A friend with a plan link answers and votes with no setup; the plan waits on their Up next if they set up later
     const skipPlan = () => { clearPlanLink(); setPlanLinkAt(null); };
+    const skipChallenge = () => { clearChallengeLink(); setChallengeAt(null); };
     return (
       <UIProvider>
         <div className="device">
           <Suspense fallback={<div className="screen active" aria-busy="true" />}>
             {inviteCode ? <JoinInvite code={inviteCode} onJoined={joined} onSkip={skip} />
               : planLinkAt ? <PlanLink code={planLinkAt.code} who={planLinkAt.who} standalone onSkip={skipPlan} />
+              : challengeAt ? <ChallengeLink code={challengeAt} standalone onSkip={skipChallenge} />
               : <Onboarding onDone={routes => setStack(routes.map(([name, params = {}]) => ({ name, params, key: Date.now() + Math.random() })))} />}
           </Suspense>
         </div>

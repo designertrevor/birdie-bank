@@ -1,8 +1,8 @@
 // The end-of-round reveal: turns a round's results into short, ordered steps (each bet resolving,
 // or each player's skins, points or totals) that play before everyone's money lands. Pure: no DOM.
-import { holeAtPos, roundLegs, sideNames, sides } from './round.js';
+import { holeAtPos, isTeamGame, matchScored, roundLegs, sideNames, sides } from './round.js';
 import { matchLabel, sideSplit } from './games.js';
-import { money } from './golf.js';
+import { unitFmt } from './play-for.js';
 import { betPeople, betStatusText } from './pair-bets.js';
 
 const first = n => (n || '').split(' ')[0];
@@ -70,13 +70,19 @@ function sideStep(key, g, name, players) {
   const amount = g.balances[best] || 0;
   const d = g.detail || {};
   if (amount <= 0) {
-    const text = { skins: 'No skins won', dots: 'No dots', birdies: 'No birdies, nobody pays' }[key] || 'All square';
+    const text = { skins: 'No skins won', dots: 'No dots', birdies: 'No birdies, nobody pays', ctp: 'Nobody won a par 3, nobody pays', drive: 'No long drive won, nobody pays' }[key] || 'All square';
     return { key: `side-${key}`, label: g.label, text, tie: true };
   }
   let text = `${name(best)} comes out ahead`;
   if (key === 'skins' && d.skinsWon?.[best]) text = `${name(best)} won ${plural(Math.round(d.skinsWon[best].skins * 10) / 10, 'skin')}`;
   if (key === 'dots' && d.points) text = `${name(best)} had ${plural(d.points[best] || 0, 'dot')}`;
   if (key === 'birdies' && d.birdies) text = `${name(best)} took ${plural(d.birdies.shares[best] || 0, 'share')} of the pot`;
+  // Closest to the pin and long drive: who took the most of the pot, and on which holes
+  if ((key === 'ctp' || key === 'drive') && d.pot?.won?.[best]) {
+    const nos = d.pot.won[best].holes;
+    const where = `${nos.length === 1 ? 'hole' : 'holes'} ${nos.length > 1 ? `${nos.slice(0, -1).join(', ')} and ${nos.at(-1)}` : nos[0]}`;
+    text = key === 'ctp' ? `${name(best)} was closest on ${where}` : `${name(best)} had the long drive on ${where}`;
+  }
   return { key: `side-${key}`, label: g.label, text, amount };
 }
 
@@ -86,21 +92,40 @@ function mainRevealSteps(round, res) {
   const players = round.players || [];
   const name = id => first(players.find(p => p.id === id)?.name) || '?';
 
-  if ((round.game === 'nassau' || round.game === 'match') && d.lines) {
+  // Nassau, Match play, and a team game played as a match: each leg and press in turn
+  if (matchScored(round) && d.lines) {
     const LEGS = roundLegs(round);
+    const legs3 = Object.keys(LEGS).length > 1;
     const sn = round.teams ? sideNames(round) : sideNames(round).map(first);
     const lines = d.lines.filter(l => l.status.played > 0);
     const steps = lines.map(l => {
       const s = l.status;
       const legLabel = LEGS[l.leg]?.label || l.leg;
       const label = l.press
-        ? `${round.game === 'nassau' ? `${legLabel} press` : 'Press'} from H${holeAtPos(round, l.start)}`
+        ? `${legs3 ? `${legLabel} press` : 'Press'} from H${holeAtPos(round, l.start)}`
         : legLabel;
       return s.leader === null
         ? { key: l.key, label, text: matchWho(s, sn), tie: true }
         : { key: l.key, label, text: matchWho(s, sn), amount: Math.abs(l.value) };
     });
-    return { title: round.game === 'match' && !lines.some(l => l.press) ? 'The match' : 'The bets', steps };
+    return { title: !legs3 && !lines.some(l => l.press) ? 'The match' : 'The bets', steps };
+  }
+
+  // A team game as stroke play (each leg to the lower team total) or per hole (holes won)
+  if (isTeamGame(round.game) && d.lines) {
+    const sn = sideNames(round);
+    const steps = d.lines.filter(l => (l.status?.played ?? l.played) > 0).map(l => {
+      if (l.key === 'holes') {
+        const [a, b] = l.won;
+        const text = a === b ? `${plural(a, 'hole')} each` : `${sn[a > b ? 0 : 1]} won ${Math.max(a, b)} to ${Math.min(a, b)}`;
+        return l.value ? { key: l.key, label: 'Holes won', text, amount: Math.abs(l.value) } : { key: l.key, label: 'Holes won', text, tie: true };
+      }
+      const s = l.status;
+      const [a, b] = s.totals;
+      const text = s.leader === null ? `Tied on ${a}` : `${sn[s.leader]} by ${plural(s.by, 'stroke')}, ${Math.min(a, b)} to ${Math.max(a, b)}`;
+      return s.leader === null ? { key: l.key, label: l.label, text, tie: true } : { key: l.key, label: l.label, text, amount: Math.abs(l.value) };
+    });
+    return { title: steps.length > 1 || d.lines[0]?.key === 'holes' ? 'The bets' : 'The match', steps };
   }
 
   if (round.game === 'skins' && d.skins) {
@@ -146,7 +171,7 @@ function mainRevealSteps(round, res) {
       const deltas = {};
       for (const pid of a) deltas[pid] = ea;
       for (const pid of b) deltas[pid] = eb;
-      const how = r.conceded != null ? ', the other side folded' : r.hammers.length ? `, hammered ${r.hammers.length}×` : '';
+      const how = (r.conceded != null ? ', the other side folded' : r.hammers.length ? `, hammered ${r.hammers.length}×` : '') + (r.birdie ? ', doubled for the birdie' : '');
       return { no: r.hole.no, deltas, text: () => `${sn[r.winner]}${how}` };
     });
     return { title: 'Biggest holes', steps: biggestHoles(rows) };
@@ -209,7 +234,7 @@ function mainRevealSteps(round, res) {
 
   if (round.game === 'snake' && d.snake) {
     const steps = d.snake.legs.filter(l => l.played).map(l => (l.holder && l.value
-      ? { key: l.seg.label, label: d.snake.legs.length > 1 ? l.seg.label : 'The snake', text: `${name(l.holder)} ${l.done ? 'held' : 'holds'} it, so pays ${money(l.value)} a player`, amount: l.value * l.others.length }
+      ? { key: l.seg.label, label: d.snake.legs.length > 1 ? l.seg.label : 'The snake', text: `${name(l.holder)} ${l.done ? 'held' : 'holds'} it, so pays ${unitFmt(round)(l.value)} a player`, amount: l.value * l.others.length }
       : { key: l.seg.label, label: d.snake.legs.length > 1 ? l.seg.label : 'The snake', text: 'Nobody three-putted', tie: true }));
     return { title: 'The snake', steps };
   }

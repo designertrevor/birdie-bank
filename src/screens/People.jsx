@@ -183,7 +183,7 @@ export function PlayerEdit({ id, onSaved }) {
   const remove = async () => {
     const text = roundsWith
       ? `They played ${roundsWith} round${roundsWith === 1 ? '' : 's'} with you, so they’ll still show in Players while ${roundsWith === 1 ? 'that round is' : 'those rounds are'} in History. To clear out test rounds, delete them from History. If this is a second copy of someone, merge them instead.`
-      : 'Past rounds keep their scores, and anything they owe stays on the tab. They’ll be taken out of any crews.';
+      : 'Past rounds keep their scores, and anything they owe stays on the Tab. They’ll be taken out of any crews.';
     const ok = await ask({ title: `Remove ${existing.name}?`, text, confirmLabel: 'Remove player', danger: true });
     if (!ok) return;
     update(s => {

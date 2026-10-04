@@ -14,7 +14,7 @@ import { betsOf, isCashBet } from './pair-bets.js';
 const cents = v => Math.round((Number(v) || 0) * 100);
 
 /** One-tap reasons for asking. Never about weeks: groups don't all play every week. */
-export const CARRY_REASONS = ['We’ll net it next round', 'Short till payday', 'Cash when we next play'];
+export const CARRY_REASONS = ['We’ll net it next time', 'Short till payday', 'Cash when we next play'];
 
 /** The carry's next state. Answers only apply to an open ask; anything else is ignored. */
 export function carryReducer(carry, action) {

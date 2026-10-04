@@ -6,7 +6,7 @@ import {
 import {
   bestBall, sideSplit, vegasHole, sixesPairings, sixesSegments, stablefordPoints, quotaPoints, quotaFor, ninesPoints,
   acesDeuces, settleTotals, scrambleTeamHandicap, rabbitHolder, scoreDots, DOT_KINDS, roundCents,
-  snakeHolder, snakeValue, hammerHole, canHammer, birdiePot, birdieShares,
+  snakeHolder, snakeValue, hammerHole, canHammer, birdiePot, birdieShares, bestOf, foursomesTeamHandicap, chapmanTeamHandicap,
 } from './games.js';
 import { payFields } from './pay.js';
 import { gamePct, halfStrokesOn, playsAtPct } from './allowances.js';
@@ -18,6 +18,7 @@ import { betsMoney, betsOf, isCashBet } from './pair-bets.js';
  *   { count: 2 }: two sides of any size, e.g. 1 v 1, 2 v 2, 1 v 3 (match play)
  *   { count: 2, optional: true }: two sides only when more than two play (Nassau)
  *   { count: [2, 4] }: two to four teams (scramble)
+ *   { count: 2, even: true, sizes: [2, 4] }: two teams the same size, 2 v 2 up to 4 v 4 (best ball, shamble)
  * `order` means the playing order matters (banker rotation, wolf, sixes pairings).
  * `marks` means the scorekeeper records things other than scores on each hole.
  */
@@ -67,6 +68,27 @@ export const GAMES = {
     blurb: 'One ball per team, best shot every time',
     players: '2–8 players · 2–4 teams', icon: 'users-four', group: 'Team',
   },
+  // The team games (see TEAM_GAMES below). Rules and sources are in games.js
+  bestball: {
+    name: 'Best ball', min: 4, max: 8, holes: [9, 18], teams: { count: 2, even: true, sizes: [2, 4] },
+    blurb: 'Two teams, and the best score on each hole counts',
+    players: '4–8 players · 2 v 2 up to 4 v 4', icon: 'users-three', group: 'Team',
+  },
+  shamble: {
+    name: 'Shamble', min: 4, max: 8, holes: [9, 18], teams: { count: 2, even: true, sizes: [2, 4] },
+    blurb: 'Play from the best drive, then everyone plays their own ball',
+    players: '4–8 players · 2 v 2 up to 4 v 4', icon: 'golf', group: 'Team',
+  },
+  altshot: {
+    name: 'Alternate shot', min: 4, max: 4, holes: [9, 18], teams: { count: 2, size: 2 },
+    blurb: 'Partners take turns hitting one ball. Also called foursomes',
+    players: '4 players · 2 v 2', icon: 'arrows-left-right', group: 'Team',
+  },
+  chapman: {
+    name: 'Chapman', min: 4, max: 4, holes: [9, 18], teams: { count: 2, size: 2 },
+    blurb: 'Both drive, swap balls, keep one and alternate in',
+    players: '4 players · 2 v 2', icon: 'swap', group: 'Team',
+  },
   stroke: {
     name: 'Stroke play', min: 2, max: 8, holes: [9, 18],
     blurb: 'Lowest net total wins the pot, or pay per stroke',
@@ -115,6 +137,27 @@ export const GAMES = {
 };
 
 export const GAME_GROUPS = ['Classics', 'Head to head', 'Team', 'Full round', 'Points'];
+
+// --------------------------- Team games: the shape -----------------------------
+// Best ball, Shamble, Alternate shot and Chapman (2026-10-03): two teams and one team score a hole.
+// Best ball and Shamble are scored player by player and the team takes its best ball (or its best two
+// added up, with teams of three or four); Alternate shot and Chapman play one ball a team, so they're
+// scored by team like a scramble. All four bet the same ways (settings[game], see teamTable):
+//  • format: 'nassau' (front, back and total, the default), 'total' (one bet on the round, `stake`)
+//    or 'hole' (every hole won pays `perHole`)
+//  • scoring: 'match' (holes won, the default) or 'stroke' (the lower team total), for 'nassau' and 'total'
+//  • count: balls that count a hole, 1 or 2 (Best ball and Shamble; 2 only with teams of three or four)
+//  • presses (pressMode, threshold, turnPress, noLastPress) as in Nassau, with match scoring only
+//  • drives: Shamble's minimum drives each, the scramble house rule (see scramble-drives.js)
+// Net or gross is the round's Use handicaps switch. The money is per player, like a Nassau with sides.
+
+/** The team games, all played two teams against each other and bet the same ways. */
+export const TEAM_GAMES = ['bestball', 'shamble', 'altshot', 'chapman'];
+export const isTeamGame = game => TEAM_GAMES.includes(game);
+
+/** Games played with one ball a team, so the card has a score box per team, not per player. */
+export const ONE_BALL_GAMES = ['scramble', 'altshot', 'chapman'];
+export const oneBall = game => ONE_BALL_GAMES.includes(game);
 
 /** Course par for a set of holes. */
 export function parOf(holes) { return holes.reduce((a, h) => a + (h.par || 0), 0); }
@@ -190,12 +233,24 @@ export function buildTeams(groups, players) {
   });
 }
 
-/** Scramble teams play off one handicap built from their members', then strokes off the low team. */
+/** A one-ball team's course handicap from its players': the WHS allowance for the game (see games.js). */
+function teamHandicapOf(game, courseHcs) {
+  if (game === 'altshot') return foursomesTeamHandicap(courseHcs);
+  if (game === 'chapman') return chapmanTeamHandicap(courseHcs);
+  return scrambleTeamHandicap(courseHcs);
+}
+
+/** One-ball teams (scramble, alternate shot, Chapman) play off one handicap built from their members', then strokes off the low team. */
 function withTeamHandicaps(round, teams, players, useHandicaps, hcPct) {
-  if (round.game !== 'scramble') return teams;
-  const hcs = teams.map(t => scrambleTeamHandicap(t.players.map(pid => players.find(p => p.id === pid)?.courseHc ?? 0)));
+  if (!oneBall(round.game)) return teams;
+  const hcs = teams.map(t => teamHandicapOf(round.game, t.players.map(pid => players.find(p => p.id === pid)?.courseHc ?? 0)));
   const plays = useHandicaps ? strokesOffLow(hcs, hcPct) : hcs.map(() => 0);
   return teams.map((t, i) => ({ ...t, courseHc: hcs[i], plays: plays[i] }));
+}
+
+/** A round's teams rebuilt from arrays of player ids, with a Scramble's team handicaps worked out again (lineup.js). */
+export function teamsFor(round, groups) {
+  return withTeamHandicaps(round, buildTeams(groups, round.players), round.players, round.useHandicaps !== false, round.hcPct);
 }
 
 /** Build a new round object from wizard selections. `teams` is an array of arrays of player ids. */
@@ -230,6 +285,8 @@ export function createRound({ id, game, course, holesCount, nine, startHole, pla
     left: {},        // playerId -> hole number they stopped after (0: before the first hole)
   };
   if (teams?.length) round.teams = withTeamHandicaps(round, buildTeams(teams, full), full, useHandicaps, hcPct);
+  // Best two only counts with teams of three or four: a round with pairs says best ball, as it's played
+  if ((game === 'bestball' || game === 'shamble') && round.settings[game]?.count === 2 && round.teams && teamBestCount(round) === 1) round.settings[game].count = 1;
   // Half strokes (allowances.js) only when chosen, so a round without them looks as it always did
   if (halfStrokes && useHandicaps) round.halfStrokes = true;
   return round;
@@ -250,9 +307,12 @@ export function createRound({ id, game, course, holesCount, nine, startHole, pla
  * or both, which is read once for the round, and a Snake split into nines or not).
  */
 export function wholeRoundOnly(game, before, after) {
-  if (game === 'scramble' || game === 'birdies') return true;
+  if (game === 'scramble' || game === 'birdies' || POT_GAMES.includes(game)) return true;
+  // A team game's layout (Nassau, one bet or per hole, match or stroke, balls that count) is for the whole round
+  if (isTeamGame(game)) return ['format', 'scoring', 'count'].some(k => (before?.[k] ?? null) !== (after?.[k] ?? null));
   if (game === 'skins') return before?.payout === 'pot' || after?.payout === 'pot' || (before?.kind || 'net') !== (after?.kind || 'net');
   if (game === 'snake') return !!before?.nines !== !!after?.nines;
+  if (game === 'rabbit') return !!before?.sixes !== !!after?.sixes;
   if (game === 'stroke' || game === 'stableford' || game === 'quota') return before?.payout === 'pot' || after?.payout === 'pot';
   return false;
 }
@@ -276,6 +336,9 @@ export function changeBets(round, gameSettings, fromPos = null, key = 'main') {
   if (key !== 'main') return changeSideBets(round, key, gameSettings, fromPos);
   const game = round.game;
   const next = { ...round, settings: { ...round.settings, [game]: structuredClone(gameSettings) } };
+  // A team game played another way (a Nassau to one bet, match to stroke play) has other legs, so
+  // presses made on the old ones don't stand
+  if (isTeamGame(game) && wholeRoundOnly(game, round.settings[game], gameSettings) && round.presses?.length) next.presses = [];
   if (fromPos == null || fromPos <= 1 || wholeRoundOnly(game, round.settings[game], gameSettings)) {
     delete next.betHistory;
     return next;
@@ -376,12 +439,17 @@ export function playersToEnd(round) {
 
 /**
  * Whether `pid` can be marked as leaving: at least two players (or, in a scramble, two teams)
- * have to be left to play on.
+ * have to be left to play on. In alternate shot and Chapman one team also has to still have both partners.
  */
 export function canLeave(round, pid) {
   if (round.left?.[pid] != null) return false;
   const staying = playersToEnd(round).filter(p => p.id !== pid).map(p => p.id);
-  if (round.game === 'scramble' && round.teams) return round.teams.filter(t => t.players.some(x => staying.includes(x))).length >= 2;
+  if (oneBall(round.game) && round.teams) {
+    // Alternate shot and Chapman take turns, so a team needs both partners to have a score box: keep at
+    // least one team whole, or the holes after would have nobody to score them
+    if (round.game !== 'scramble' && !round.teams.some(t => t.players.every(x => staying.includes(x)))) return false;
+    return round.teams.filter(t => t.players.some(x => staying.includes(x))).length >= 2;
+  }
   return staying.length >= 2;
 }
 
@@ -442,7 +510,7 @@ function mainAddProblem(round) {
  * the players who started, so it only takes someone new before the first hole they'd miss (`late`).
  */
 function sideTakes(sg, late) {
-  if (sg.game === 'birdies') return !late;
+  if (sg.game === 'birdies' || POT_GAMES.includes(sg.game)) return !late;
   if (sg.game === 'skins' && sg.settings?.payout === 'pot') return !late;
   return true;
 }
@@ -556,7 +624,7 @@ function joinRuleByGame(round, pid, list) {
     : ADD_MID_ROUND.includes(round.game) ? `They sit out ${g.name}.` : `${g.name} is set up for the players already in it, so they sit it out.`];
   for (const sg of sideGamesOf(round)) {
     const inIt = list.includes(sg.game);
-    const pot = sg.game === 'birdies' ? 'birdie pot' : sg.game === 'skins' && sg.settings?.payout === 'pot' ? 'skins pot' : null;
+    const pot = POT_NAMES[sg.game] || (sg.game === 'skins' && sg.settings?.payout === 'pot' ? 'skins pot' : null);
     const label = SIDE_GAMES[sg.game].label;
     if (!inIt) parts.push(`They sit out ${pot ? `the ${pot}` : label}.`);
     else if (pot && !whole) parts.push(`The ${pot} is for the players who started, so they’re not in it.`);
@@ -576,8 +644,13 @@ function withSideRule(text, round, kind) {
   const sgs = sideGamesOf(round);
   if (!sgs.length) return text;
   const notes = [];
-  if (sgs.some(sg => sg.game === 'birdies')) notes.push(kind === 'joined' ? 'The birdie pot is for the players who started, so they’re not in it.' : 'They’re out of the birdie pot.');
-  const others = sgs.filter(sg => sg.game !== 'birdies').map(sg => SIDE_GAMES[sg.game].label);
+  // The birdie, closest to the pin and long drive pots: one sentence for them all
+  const pots = sgs.filter(sg => POT_NAMES[sg.game]).map(sg => POT_NAMES[sg.game]);
+  if (pots.length) {
+    const what = pots.length === 1 ? `The ${pots[0]} is` : `The ${nameList(pots)} are`;
+    notes.push(kind === 'joined' ? `${what} for the players who started, so they’re not in ${pots.length === 1 ? 'it' : 'them'}.` : `They’re out of the ${nameList(pots)}.`);
+  }
+  const others = sgs.filter(sg => !POT_NAMES[sg.game]).map(sg => SIDE_GAMES[sg.game].label);
   if (others.length) notes.push(kind === 'joined' ? `They’re in ${others.join(' and ')} from there.` : `${others.join(' and ')} carr${others.length > 1 ? 'y' : 'ies'} on among the players still there.`);
   return [text, ...notes].join(' ');
 }
@@ -600,14 +673,18 @@ function mainJoinRule(round, pid) {
 }
 
 /**
- * Who has a score box on each hole: the players, or the teams in a scramble.
- * Each: { id, name, plays, team?: true }. With a hole, only those still playing it
- * (a scramble team plays on while any of its players is still there).
+ * Who has a score box on each hole: the players, or the teams in a one-ball game (a scramble,
+ * alternate shot, Chapman). Each: { id, name, plays, team?: true }. With a hole, only those still
+ * playing it (a scramble team plays on while any of its players is still there; an alternate shot or
+ * Chapman team needs both).
  */
 export function scorers(round, hole = null) {
-  if (round.game === 'scramble' && round.teams) {
+  if (oneBall(round.game) && round.teams) {
     const teams = round.teams.map(t => ({ id: t.id, name: t.name, plays: t.plays || 0, courseHc: t.courseHc, team: true, players: t.players }));
-    return hole ? teams.filter(t => t.players.some(pid => playsHole(round, pid, hole))) : teams;
+    if (!hole) return teams;
+    // Alternate shot and Chapman take turns, so a team needs both partners there to play a hole
+    if (round.game !== 'scramble') return teams.filter(t => t.players.every(pid => playsHole(round, pid, hole)));
+    return teams.filter(t => t.players.some(pid => playsHole(round, pid, hole)));
   }
   return hole ? playersOn(round, hole) : round.players;
 }
@@ -988,6 +1065,12 @@ export function betPresets(min = 1, max = 20, def = null) {
   return picks;
 }
 
+/** What a Banker press multiplies a bet by on `hole`: 2, or 3 on a par 3 with "par 3 presses triple". */
+export function bankerPress(round, hole) {
+  const bs = settingsAt(round, posOf(round, hole)).banker;
+  return bs?.par3Triple && hole?.par === 3 ? 3 : 2;
+}
+
 export function bankerHoleSetup(round, idx) {
   const hole = round.holes[idx];
   const existing = round.banker[hole.no];
@@ -1034,12 +1117,34 @@ export function sideNet(round, side, hole) {
   return bestBall(on.map(pid => netFor(round, playerById(round, pid), hole)));
 }
 
+/**
+ * Both sides' numbers on a hole for a two-side game (`key`: 'nassau', 'match' or 'sixes'): best ball,
+ * or with the "both balls count" house rule (teamScore 'total', off unless the round says so, added
+ * 2026-10-03) the two partners' nets added up. Both balls only counts when each side has two players
+ * on the hole; a side that's lost a partner, or a 1 v 2, plays best ball that hole.
+ * Source, checked 2026-10-03: 18Birdies, "Nassau" https://help.18birdies.com/article/27-nassau (team
+ * scoring "Use the best score" or "Add the scores from all players").
+ */
+export function sidesNets(round, a, b, hole, key = round.game) {
+  const both = settingsAt(round, posOf(round, hole))[key]?.teamScore === 'total';
+  if (both) {
+    const onA = a.filter(pid => playsHole(round, pid, hole)), onB = b.filter(pid => playsHole(round, pid, hole));
+    if (onA.length === 2 && onB.length === 2) {
+      const sum = on => { const n = on.map(pid => netFor(round, playerById(round, pid), hole)); return n.some(x => x == null) ? null : n[0] + n[1]; };
+      return [sum(onA), sum(onB)];
+    }
+  }
+  return [sideNet(round, a, hole), sideNet(round, b, hole)];
+}
+
 /** Hole winners (0 | 1 | null) keyed by playing position (1-based). Legs follow playing order. */
 export function nassauWinners(round) {
+  // A team game played as a match goes on its teams' scores (best ball, or one ball a team)
+  if (isTeamGame(round.game)) return teamWinners(round);
   const [a, b] = sides(round);
   const w = {};
   round.holes.forEach((h, i) => {
-    const r = holeWinner(sideNet(round, a, h), sideNet(round, b, h));
+    const r = holeWinner(...sidesNets(round, a, b, h));
     if (r !== undefined) w[i + 1] = r;
   });
   return w;
@@ -1049,6 +1154,9 @@ export const matchWinners = nassauWinners;
 /** The legs bets run over: three for Nassau, one for match play. */
 export function roundLegs(round) {
   if (round.game === 'match') return { match: { start: 1, end: round.holes.length, label: 'Match' } };
+  if (isTeamGame(round.game) && teamFormatOf(round).format === 'total') {
+    return { match: { start: 1, end: round.holes.length, label: teamFormatOf(round).scoring === 'stroke' ? 'Total' : 'Match' } };
+  }
   return nassauLegs(round.holes.length);
 }
 
@@ -1059,11 +1167,17 @@ export function holeAtPos(round, pos) { return round.holes[pos - 1]?.no ?? pos; 
 export function nassauAmounts(round, pos = null) {
   const s = pos == null ? round.settings : settingsAt(round, pos);
   if (round.game === 'match') return { match: s.match.stake };
+  if (isTeamGame(round.game)) {
+    const t = s[round.game] || {};
+    return teamFormatOf(round).format === 'total' ? { match: t.stake } : { front: t.front, back: t.back, total: t.total };
+  }
   const n = s.nassau;
   return { front: n.front, back: n.back, total: n.total };
 }
 
 function pressSettings(round) {
+  // A team game presses only when it's played as a match (not stroke play, not per hole)
+  if (isTeamGame(round.game)) return matchScored(round) ? round.settings[round.game] : null;
   return round.game === 'match' ? round.settings.match : round.settings.nassau;
 }
 
@@ -1074,7 +1188,7 @@ function pressSettings(round) {
 export function nassauPressOptions(round, nextHoleNo) {
   const s = pressSettings(round);
   if (!s) return [];
-  const turn = round.game === 'nassau' && !!s.turnPress;
+  const turn = (round.game === 'nassau' || (isTeamGame(round.game) && teamFormatOf(round).format === 'nassau')) && !!s.turnPress;
   if (s.pressMode === 'off' && !turn) return [];
   return pressOpportunities(nassauWinners(round), round.presses, nassauAmounts(round), nextHoleNo, s.threshold, roundLegs(round),
     { noLast: !!s.noLastPress, turn, only: s.pressMode === 'off' ? 'turn' : null });
@@ -1182,7 +1296,13 @@ export function skinsTable(round, kind = skinsKinds(round)[0]) {
       } else row.pending = false;
     }
     if (pending?.at <= i) pending = null;
-    const all = [...carry, { worth: s.value, field }];
+    // House rule "back nine doubles" (backDouble, per skin over 18 holes, off unless the round says so,
+    // added 2026-10-03): a skin from holes 10 to 18 is worth twice the bet. A front-nine skin carried
+    // onto the back keeps its front value. Source, checked 2026-10-03: Golf Digest, "How to play Skins"
+    // https://www.golfdigest.com/story/how-to-play-skins-golf-betting-games-explained (doubling the
+    // value per skin on the back nine) and Stix https://stix.golf/blogs/rough-thoughts/how-to-play-skins-in-golf
+    const back = s.backDouble && s.payout !== 'pot' && round.holes.length === 18 && i >= 9;
+    const all = [...carry, { worth: s.value * (back ? 2 : 1), field }];
     const worth = all.reduce((a, sk) => a + sk.worth, 0);
     const purse = all.reduce((a, sk) => a + sk.worth * Math.max(0, sk.field.filter(id => field.includes(id)).length - 1), 0);
     const base = { hole: h, pot: all.length, worth, purse, field };
@@ -1308,7 +1428,24 @@ export function wolfFor(round, idx) {
   const hole = round.holes[idx];
   const on = hole ? playersOn(round, hole) : round.players;
   const list = on.length ? on : round.players;
-  return list[idx % list.length].id;
+  const turn = list[idx % list.length].id;
+  // House rule "last place is wolf on 17 and 18" (wolf.lastWolf, 18 holes, off unless the round says
+  // so, added 2026-10-03): whoever is furthest down in the wolf money so far is the wolf on the last
+  // two holes. A tie keeps the usual turn if they're in it, else the first of them in playing order.
+  // Source, checked 2026-10-03: 18Birdies, "Wolf golf betting game"
+  // https://help.18birdies.com/article/480-wolf-golf-betting-game-how-to-play-and-win ("The final two
+  // holes are reserved for the golfer in last place to be the Wolf").
+  if (round.holes.length === 18 && idx >= 16 && settingsAt(round, idx + 1).wolf?.lastWolf) {
+    const money = Object.fromEntries(list.map(p => [p.id, 0]));
+    for (const h of round.holes.slice(0, idx)) {
+      const r = wolfHoleResult(round, h);
+      if (r) for (const [id, v] of Object.entries(r.deltas)) if (id in money) money[id] += v;
+    }
+    const low = Math.min(...Object.values(money));
+    const last = list.filter(p => Math.abs(money[p.id] - low) < 1e-9).map(p => p.id);
+    return last.includes(turn) ? turn : last[0];
+  }
+  return turn;
 }
 
 /** The saved wolf pick for a hole if it still stands (nobody in it has left), else a fresh one. */
@@ -1400,12 +1537,12 @@ export function vegasTable(round) {
   const rows = [];
   for (const [i, h] of round.holes.entries()) {
     if (!holeComplete(round, h) || teams.length !== 2) { rows.push({ hole: h, played: false }); continue; }
-    const { point, birdieFlip, birdieDouble } = settingsAt(round, i + 1).vegas;
+    const { point, birdieFlip, birdieDouble, daytona } = settingsAt(round, i + 1).vegas;
     // Vegas needs two full teams: once a player leaves, the holes after aren't counted
     if (teams.some(t => t.players.some(pid => !playsHole(round, pid, h)))) { rows.push({ hole: h, played: false, short: true }); continue; }
     const nets = teams.map(t => t.players.map(pid => netFor(round, playerById(round, pid), h)));
     const gross = teams.map(t => t.players.map(pid => round.scores[h.no]?.[pid]));
-    const r = vegasHole(nets, gross, h.par, { birdieFlip, birdieDouble: !!birdieDouble });
+    const r = vegasHole(nets, gross, h.par, { birdieFlip, birdieDouble: !!birdieDouble, daytona: !!daytona });
     const deltas = {};
     teams[0].players.forEach(pid => { deltas[pid] = r.diff * point; });
     teams[1].players.forEach(pid => { deltas[pid] = -r.diff * point; });
@@ -1422,7 +1559,7 @@ export function vegasPreview(round, hole, draft) {
   const nets = teams.map(t => t.players.map(eff));
   const gross = teams.map(t => t.players.map(pid => draft[pid]));
   const vs = settingsAt(round, posOf(round, hole)).vegas;
-  return vegasHole(nets, gross, hole.par, { birdieFlip: vs.birdieFlip, birdieDouble: !!vs.birdieDouble });
+  return vegasHole(nets, gross, hole.par, { birdieFlip: vs.birdieFlip, birdieDouble: !!vs.birdieDouble, daytona: !!vs.daytona });
 }
 
 // --------------------------- Sixes ----------------------------------------
@@ -1441,7 +1578,7 @@ export function sixesMatches(round) {
     if (firstGone < seg.start) return { seg, sides: [a, b], winners, status: matchStatus(winners, seg.start, seg.end), index: i, off: true };
     for (let pos = seg.start; pos <= seg.end; pos++) {
       const h = round.holes[pos - 1];
-      const r = holeWinner(sideNet(round, a, h), sideNet(round, b, h));
+      const r = holeWinner(...sidesNets(round, a, b, h, 'sixes'));
       if (r !== undefined) winners[pos] = r;
     }
     return { seg, sides: [a, b], winners, status: matchStatus(winners, seg.start, seg.end), index: i };
@@ -1500,7 +1637,45 @@ function totalsHoleValue(round, p, h) {
     return settingsAt(round, posOf(round, h)).stroke?.cap ? Math.min(net, h.par + 2) : net;
   }
   if (round.game === 'stableford') return stablefordPoints(netFor(round, p, h), h.par, round.settings.stableford.modified);
-  return quotaPoints(grossFor(round, p, h), h.par);
+  return quotaPoints(grossFor(round, p, h), h.par, { minus: !!settingsAt(round, posOf(round, h)).quota?.minus });
+}
+
+/**
+ * The pots a totals game (Stroke play, Stableford, Quota) is played for, among the players `stay`.
+ * One pot for the round, unless the "front, back and total" house rule is on (`nassau`, 18 holes, off
+ * unless the round says so, added 2026-10-03): then the front nine, the back nine and the 18 are a pot
+ * each, each at the stake, like a Nassau. A nine is measured on its own holes; in Quota that's against
+ * half the quota. A nine with no hole played yet has no pot. Each pot: { key, label, totals }.
+ * Source, checked 2026-10-03: Golf Genius, "Tournament scored points and purse options"
+ * https://docs.golfgenius.com/en/articles/10778633-tournament-scored-points-and-purse-options (Nassau
+ * payouts to the front 9, back 9 and overall winners).
+ */
+export function totalsPots(round, stay, table = totalsTable(round)) {
+  const key = round.game === 'quota' ? 'vsQuotaExact' : 'total';
+  const whole = { key: 'total', label: 'Total', totals: Object.fromEntries(table.filter(t => stay.includes(t.id)).map(t => [t.id, t[key]])) };
+  const cfg = round.settings[round.game] || {};
+  const n = round.holes.length;
+  if (!cfg.nassau || n !== 18 || cfg.payout !== 'pot') return [whole];
+  const byId = Object.fromEntries(round.players.map(p => [p.id, p]));
+  const legs = nassauLegs(n);
+  // Points less the quota for the holes, taken once, then tidied to a millionth: adding up a ninth of a
+  // quota hole by hole leaves float dust (2.0000000000000004), and that broke ties two players really
+  // had, giving one of them the whole pot (found in review, 2026-10-03)
+  const tidy = v => Math.round(v * 1e6) / 1e6;
+  const nine = leg => {
+    const holes = round.holes.slice(leg.start - 1, leg.end).filter(h => holeComplete(round, h));
+    if (!holes.length) return null;
+    const value = pid => holes.reduce((a, h) => a + totalsHoleValue(round, byId[pid], h), 0)
+      - (round.game === 'quota' ? quotaOf(round, byId[pid]) * holes.length / n : 0);
+    return Object.fromEntries(stay.map(pid => [pid, tidy(value(pid))]));
+  };
+  const out = [];
+  for (const k of ['front', 'back']) {
+    const totals = nine(legs[k]);
+    if (totals) out.push({ key: k, label: legs[k].label, totals });
+  }
+  out.push({ ...whole, totals: Object.fromEntries(Object.entries(whole.totals).map(([id, v]) => [id, v == null ? v : tidy(v)])) });
+  return out;
 }
 
 /**
@@ -1524,17 +1699,54 @@ function settlePairs(round, value, { stake, lowerWins, onPair = null }) {
 }
 
 /** Points per hole per player for nines, aces (as money), bingo bango bongo and dots. */
+/**
+ * Dots, "greenies carry": how many greenies ride on `hole`'s greenie, from the par 3s played before it
+ * with nobody getting one (0 with the rule off, or when `hole` isn't a par 3). Same count as pointsTable.
+ */
+export function greenieCarryBefore(round, hole) {
+  let carry = 0;
+  for (const [i, h] of round.holes.entries()) {
+    if (h.no === hole.no) break;
+    const ds = settingsAt(round, i + 1).dots;
+    if (h.par !== 3 || !ds?.greenieCarry || ds.kinds?.greenie === false || !holeComplete(round, h)) continue;
+    const field = playersOn(round, h).map(p => p.id);
+    const got = field.filter(pid => (round.marks?.[h.no]?.[pid] || []).includes('greenie'));
+    carry = got.length === 1 ? 0 : got.length ? carry : carry + 1;
+  }
+  const ds = settingsAt(round, posOf(round, hole)).dots;
+  return hole.par === 3 && ds?.greenieCarry ? carry : 0;
+}
+
+/** The player with the outright lowest net score on `hole` among `field`, or null (a tie, or not scored). */
+export function bbbLowNet(round, hole, field) {
+  if (!holeComplete(round, hole)) return null;
+  const nets = field.map(id => [id, netFor(round, playerById(round, id), hole)]).filter(n => n[1] != null);
+  if (nets.length < 2) return null;
+  const low = Math.min(...nets.map(n => n[1]));
+  const lows = nets.filter(n => n[1] === low);
+  return lows.length === 1 ? lows[0][0] : null;
+}
+
 export function pointsTable(round) {
   const ids = round.players.map(p => p.id);
   const rows = [];
+  let greenieCarry = 0; // Dots: greenies carried to the next par 3 (see below)
   for (const [i, h] of round.holes.entries()) {
     const s = settingsAt(round, i + 1);
     // Rows carry `field`: the players still on the hole, who are the only ones it settles between
     const field = playersOn(round, h).map(p => p.id);
     if (round.game === 'bbb') {
       // Bingo bango bongo is marks only, so a missing score doesn't stop the hole counting
-      const m = round.marks?.[h.no];
-      if (!m) continue;
+      // House rule "Bongo is low net" (bbb.netBongo, off unless the round says so, added 2026-10-03):
+      // the third point goes to the outright lowest net score on the hole instead of first in, so
+      // handicaps count. A tie for low, or a score missing, and nobody gets it. Source, checked
+      // 2026-10-03: 18Birdies, "Bingo Bango Bongo" https://help.18birdies.com/article/476-bingo-bango-bongo
+      // (the handicap version: "The golfer with the lowest net score on the hole")
+      const netBongo = !!s.bbb.netBongo;
+      const marked = round.marks?.[h.no];
+      if (!marked && !(netBongo && holeComplete(round, h))) continue;
+      const m = { ...(marked || {}) };
+      if (netBongo) m.bongo = bbbLowNet(round, h, field);
       const pts = Object.fromEntries(ids.map(id => [id, 0]));
       const got = ['bingo', 'bango', 'bongo'].filter(k => m[k] && field.includes(m[k]));
       for (const k of got) pts[m[k]] += 1;
@@ -1556,13 +1768,26 @@ export function pointsTable(round) {
         const auto = s.dots.auto ? scoreDots(round.scores[h.no]?.[pid], h.par) : 0;
         pts[pid] = manual.length + auto;
       }
-      rows.push({ hole: h, points: pts, field, value: s.dots.value });
+      // House rule "greenies carry" (dots.greenieCarry, off unless the round says so, added 2026-10-03):
+      // a par 3 with no greenie adds one to the next par 3's greenie, so it's worth two dots, then three.
+      // Still carried after the last par 3, nobody gets it. Source, checked 2026-10-03: CaddieHQ, "How to
+      // play Greenies" https://www.caddiehq.com/resources/how-to-play-greenies-in-golf ("the next par 3
+      // becomes a double Greenie")
+      let carried = 0;
+      if (h.par === 3 && s.dots.greenieCarry && s.dots.kinds?.greenie !== false) {
+        const got = field.filter(pid => (m[pid] || []).includes('greenie'));
+        if (got.length === 1 && greenieCarry) { pts[got[0]] += greenieCarry; carried = greenieCarry; }
+        // Two greenies on one par 3 (it shouldn't happen) leave the carry where it was
+        greenieCarry = got.length === 1 ? 0 : got.length ? greenieCarry : greenieCarry + 1;
+      }
+      rows.push({ hole: h, points: pts, field, value: s.dots.value, ...(carried ? { greenieCarried: carried } : {}) });
       continue;
     }
     // Nines is scored for exactly three, so once a player leaves the holes after aren't counted
     if (round.game === 'nines' && field.length === round.players.length) {
       const nets = round.players.map(p => netFor(round, p, h));
-      const pts = ninesPoints(nets, { sweep: !!s.nines.sweep });
+      const birdies = s.nines.birdie ? round.players.map(p => { const g = round.scores[h.no]?.[p.id]; return typeof g === 'number' && g <= h.par - 1; }) : null;
+      const pts = ninesPoints(nets, { sweep: !!s.nines.sweep, birdies });
       rows.push({ hole: h, points: Object.fromEntries(ids.map((id, k) => [id, pts[k]])), field, value: s.nines.point });
     }
   }
@@ -1574,7 +1799,14 @@ export function pointsTable(round) {
 /** Rabbit legs: for each nine, the rows and who holds it at the end. */
 export function rabbitTable(round) {
   const legs = nassauLegs(round.holes.length);
-  const segs = round.holes.length === 18 ? [legs.front, legs.back] : [legs.total];
+  // House rule "three rabbits" (rabbit.sixes, 18 holes, off unless the round says so, added 2026-10-03):
+  // a rabbit every six holes instead of each nine. It lays out the whole round, so it's read once.
+  // Source, checked 2026-10-03: Golf Digest, "How to play Rabbit"
+  // https://www.golfdigest.com/story/how-to-play-rabbit-golf-games-explained (6-hole Rabbits, three
+  // over 18 holes, "a greater possibility for more than one winner")
+  const six = (a, b) => ({ start: a, end: b, label: `Holes ${a}–${b}` });
+  const segs = round.holes.length !== 18 ? [legs.total]
+    : round.settings.rabbit?.sixes ? [six(1, 6), six(7, 12), six(13, 18)] : [legs.front, legs.back];
   const rows = round.holes.map((h, i) => {
     // `gone`: players who left before this hole. If the rabbit's holder leaves, it runs loose.
     // Someone added partway through a leg sits that leg out and plays for the next one
@@ -1629,7 +1861,16 @@ export function snakeTable(round) {
   const legs = nassauLegs(round.holes.length);
   const first = settingsAt(round, 1).snake || {};
   const segs = first.nines && round.holes.length === 18 ? [legs.front, legs.back] : [legs.total];
-  const rows = round.holes.map(h => ({ hole: h, putts: snakePutts(round, h) }));
+  // House rule "four-putts count twice" (snake.fourPutt, off unless the round says so, added 2026-10-03):
+  // a four-putt (marks.snake4) takes the snake like a three-putt and grows it by two, so it only
+  // matters when the snake grows or doubles. Source, checked 2026-10-03: The Golf News Net, "How to
+  // play Snake" https://thegolfnewsnet.com/ryan_ballengee/2024/01/29/golf-betting-games-how-to-play-snake-rules-44859
+  // (a four-putt "worth double the stake, immediately adding two units to the pot")
+  const rows = round.holes.map((h, i) => {
+    const putts = snakePutts(round, h);
+    const fours = putts && settingsAt(round, i + 1).snake?.fourPutt ? (round.marks[h.no].snake4 || []).filter(pid => putts.includes(pid)) : [];
+    return { hole: h, putts, ...(fours.length ? { fours } : {}) };
+  });
   const out = segs.map(seg => {
     const part = rows.slice(seg.start - 1, seg.end);
     const ss = settingsAt(round, seg.start).snake || {};
@@ -1664,7 +1905,16 @@ export function hammerTable(round) {
     const behind = total > 0 ? 1 : total < 0 ? 0 : null;
     const mark = round.marks?.[h.no] || {};
     const winner = holeWinner(sideNet(round, a, h), sideNet(round, b, h));
-    const r = hammerHole(mark, winner, base);
+    let r = hammerHole(mark, winner, base);
+    // House rule "birdie hammer" (hammer.birdie, off unless the round says so, added 2026-10-03): win
+    // the hole with a real birdie or better and that's one more hammer, so it pays double. A hole that
+    // was folded isn't won on the score, so it doesn't count. Source, checked 2026-10-03: CaddieHQ,
+    // "How to play Hammer" https://www.caddiehq.com/resources/how-to-play-hammer-in-golf ("Birdie Hammer")
+    if (hs.birdie && r.conceded == null && r.winner != null) {
+      const side = (r.winner === 0 ? a : b).filter(pid => playsHole(round, pid, h));
+      const best = Math.min(...side.map(pid => round.scores[h.no]?.[pid]).map(g => (typeof g === 'number' ? g : Infinity)));
+      if (best <= h.par - 1) r = { ...r, value: r.value * 2, birdie: true };
+    }
     const net = r.winner === 0 ? r.value : r.winner === 1 ? -r.value : 0;
     total += net;
     return { hole: h, pos: i + 1, base, behind, ...r, net, running: total, max: hs.max ?? 3, who: hs.who || 'either' };
@@ -1677,6 +1927,136 @@ export function hammerOptions(round, hole, mark) {
   if (!row) return [false, false];
   const opts = { max: row.max, who: row.who, behind: row.behind, conceded: mark?.conceded ?? null };
   return [0, 1].map(side => canHammer(mark?.hammers || [], side, opts));
+}
+
+
+// --------------------------- Team games -----------------------------------
+// Best ball, Shamble, Alternate shot and Chapman (the shape is at the top of this file, the rules and
+// their sources in games.js). Each hole the two teams' scores are compared: a best ball team's is its
+// best net (or best two added up), a one-ball team's is its one net score. Played as a match, the bets
+// are Nassau's legs (or one match) with presses; played as stroke play, each leg goes to the lower team
+// total over its holes; per hole, every hole won pays the bet in force on it. Like a Nassau leg, a leg
+// that isn't finished pays whoever leads it on the holes played.
+
+/** Balls that count for a team on each hole: 2 for Best ball or Shamble set to best two with teams of three or four, else 1. */
+export function teamBestCount(round) {
+  if (round.game !== 'bestball' && round.game !== 'shamble') return 1;
+  const teams = round.teams || [];
+  return round.settings?.[round.game]?.count === 2 && teams.length === 2 && teams.every(t => t.players.length >= 3) ? 2 : 1;
+}
+
+/** A team game's layout for the round: { format, scoring, count } (see the top of this file). */
+export function teamFormatOf(round) {
+  const s = round.settings?.[round.game] || {};
+  const format = ['nassau', 'total', 'hole'].includes(s.format) ? s.format : 'nassau';
+  const scoring = format !== 'hole' && s.scoring === 'stroke' ? 'stroke' : 'match';
+  return { format, scoring, count: teamBestCount(round) };
+}
+
+/** Whether a game is played as a match on holes won: Nassau, Match play, or a team game played that way. */
+export function matchScored(round) {
+  if (round.game === 'nassau' || round.game === 'match') return true;
+  if (!isTeamGame(round.game)) return false;
+  const f = teamFormatOf(round);
+  return f.format !== 'hole' && f.scoring === 'match';
+}
+
+/**
+ * Team `i`'s score on a hole: { score, counted }. `counted` is the players whose balls made it (best ball
+ * only; a tie for a counting ball shows them all). The score is null while a score is missing, when a
+ * best ball team has fewer players on the hole than balls that count, or when a one-ball team is
+ * missing a partner, and then the hole isn't played between the teams.
+ */
+export function teamHoleScore(round, i, hole, count = teamBestCount(round)) {
+  const t = round.teams?.[i];
+  if (!t) return { score: null, counted: [] };
+  if (oneBall(round.game)) {
+    const unit = scorers(round, hole).find(u => u.id === t.id);
+    return { score: unit ? netFor(round, unit, hole) : null, counted: [] };
+  }
+  const nets = t.players.filter(pid => playsHole(round, pid, hole)).map(pid => [pid, netFor(round, playerById(round, pid), hole)]);
+  const score = bestOf(nets.map(n => n[1]), count);
+  if (score == null) return { score: null, counted: [] };
+  const cut = nets.map(n => n[1]).sort((a, b) => a - b)[count - 1];
+  return { score, counted: nets.filter(n => n[1] <= cut).map(n => n[0]) };
+}
+
+/**
+ * The players whose scores count for their team on a hole, both teams, for the "Counts" tag on the
+ * score rows: Best ball and Shamble only. `scores` stands in for the hole's saved scores (the draft
+ * being entered); a team still missing a score shows nobody yet.
+ */
+export function teamCounting(round, hole, scores = null) {
+  if (!isTeamGame(round.game) || oneBall(round.game) || round.teams?.length !== 2) return [];
+  const r = scores ? { ...round, scores: { ...round.scores, [hole.no]: scores } } : round;
+  return [0, 1].flatMap(i => teamHoleScore(r, i, hole).counted);
+}
+
+/** Hole winners between the two teams (0 | 1 | null halved), keyed by playing position. */
+export function teamWinners(round) {
+  const w = {};
+  const count = teamBestCount(round);
+  round.holes.forEach((h, i) => {
+    const r = holeWinner(teamHoleScore(round, 0, h, count).score, teamHoleScore(round, 1, h, count).score);
+    if (r !== undefined) w[i + 1] = r;
+  });
+  return w;
+}
+
+/**
+ * A team game hole by hole and bet by bet: { format, scoring, count, rows, lines, net }.
+ * rows: [{ hole, pos, scores: [a, b], counted: [[pid], [pid]], winner, value? }].
+ * lines: one per bet. Match scoring gives Nassau's lines ({ key, leg, start, end, amount, press, status,
+ * value }); stroke scoring the same with `stroke: true` and `status.totals`; per hole one line,
+ * { key: 'holes', won: [a, b], played, value }. `value` and `net` are what each player on team A wins
+ * (negative: pays), before the split between the sides.
+ */
+export function teamTable(round) {
+  const f = teamFormatOf(round);
+  const game = round.game;
+  const n = round.holes.length;
+  const rows = round.holes.map((h, i) => {
+    const a = teamHoleScore(round, 0, h, f.count), b = teamHoleScore(round, 1, h, f.count);
+    return { hole: h, pos: i + 1, scores: [a.score, b.score], counted: [a.counted, b.counted], winner: holeWinner(a.score, b.score) };
+  });
+  let lines;
+  if (f.format === 'hole') {
+    // Every hole won is worth the bet in force on that hole; a halved hole pays nothing
+    const won = [0, 0];
+    let played = 0, value = 0;
+    for (const r of rows) {
+      if (r.winner === undefined) continue;
+      played++;
+      if (r.winner == null) continue;
+      const bet = settingsAt(round, r.pos)[game]?.perHole ?? 0;
+      won[r.winner]++;
+      r.value = r.winner === 0 ? bet : -bet;
+      value += r.value;
+    }
+    lines = [{ key: 'holes', leg: 'holes', label: 'Holes won', start: 1, end: n, amount: round.settings[game]?.perHole ?? 0, won, played, left: n - played, value }];
+  } else {
+    // Each bet is played for the amount in force on the hole it started, like Nassau
+    const legs = roundLegs(round);
+    const amounts = Object.fromEntries(Object.entries(legs).map(([k, l]) => [k, nassauAmounts(round, l.start)[k]]));
+    if (f.scoring === 'match') {
+      const winners = Object.fromEntries(rows.filter(r => r.winner !== undefined).map(r => [r.pos, r.winner]));
+      // Only presses on this layout's legs (changeBets clears the others when the layout changes)
+      const presses = (round.presses || []).filter(p => legs[p.leg]).map(p => ({ ...p, amount: p.amount ?? nassauAmounts(round, p.start)[p.leg] }));
+      lines = nassauResult(winners, presses, amounts, legs).lines;
+    } else {
+      // Stroke play: the lower team total over the leg's holes both teams have played
+      lines = Object.entries(legs).map(([key, l]) => {
+        const part = rows.filter(r => r.pos >= l.start && r.pos <= l.end && r.winner !== undefined);
+        const totals = [0, 1].map(k => part.reduce((a, r) => a + r.scores[k], 0));
+        const diff = totals[1] - totals[0]; // positive: team A is lower
+        const left = l.end - l.start + 1 - part.length;
+        const status = { leader: !part.length || !diff ? null : diff > 0 ? 0 : 1, by: Math.abs(diff), played: part.length, left, done: left === 0, totals };
+        const value = status.leader == null ? 0 : status.leader === 0 ? amounts[key] : -amounts[key];
+        return { key, leg: key, label: l.label, start: l.start, end: l.end, amount: amounts[key], press: false, stroke: true, status, value };
+      });
+    }
+  }
+  return { ...f, rows, lines, net: lines.reduce((a, l) => a + l.value, 0) };
 }
 
 // --------------------------- Results --------------------------------------
@@ -1723,7 +2103,7 @@ export function gameResults(round) {
       if (!field.includes(setup.banker)) return;
       const net = Object.fromEntries(on.map(p => [p.id, netFor(round, p, h)]));
       const bs = settingsAt(round, posOf(round, h)).banker;
-      const r = settleBankerHole(setup, net, field, { ties: bs.ties, birdies: bs.birdies, gross: round.scores[h.no], par: h.par });
+      const r = settleBankerHole(setup, net, field, { ties: bs.ties, birdies: bs.birdies, gross: round.scores[h.no], par: h.par, par3Triple: !!bs.par3Triple });
       add(r.deltas);
       for (const m of r.matchups) {
         if (m.result === 'win') pay(setup.banker, m.pid, m.amount);
@@ -1761,6 +2141,16 @@ export function gameResults(round) {
       if (kind === skinsKinds(round)[0]) detail.skins = t; else detail.skinsGross = t;
     }
     for (const w of Object.values(detail.skinsWon)) w.amount = Math.round(w.amount * 100) / 100;
+  }
+
+  if (isTeamGame(round.game)) {
+    // Each player on the winning team wins the bet from the other team (see spreadSides)
+    const t = teamTable(round);
+    const d = zero();
+    spreadSides(round, d, t.net);
+    addSpread(d);
+    detail.team = t;
+    detail.lines = t.lines;
   }
 
   if (round.game === 'hammer') {
@@ -1845,9 +2235,21 @@ export function gameResults(round) {
       const inIds = inTeams.flatMap(t => t.players);
       const best = Math.min(...inTeams.map(t => totals[t.id]));
       const winners = inTeams.filter(t => totals[t.id] === best).flatMap(t => t.players);
-      const pot = s.scramble.stake * inIds.length;
+      let pot = s.scramble.stake * inIds.length;
       const d = zero();
       for (const id of inIds) d[id] -= s.scramble.stake;
+      // House rule "second gets its money back" (scramble.second, three or more teams, off unless the
+      // round says so, added 2026-10-03): the team alone in second takes back what it put in, and the
+      // winners split the rest. A tie for first or for second leaves it winner takes all. Source,
+      // checked 2026-10-03: National Club Golfer, "The best golf betting games in the US"
+      // https://nationalclubgolfer.com/articles/the-best-golf-betting-games-in-the-us-gamble-with-friends-on-the-course/
+      // (the scramble pot "is split between the top two teams")
+      if (s.scramble.second && inTeams.length >= 3 && inTeams.filter(t => totals[t.id] === best).length === 1) {
+        const rest = inTeams.filter(t => totals[t.id] !== best);
+        const next = Math.min(...rest.map(t => totals[t.id]));
+        const seconds = rest.filter(t => totals[t.id] === next);
+        if (seconds.length === 1) for (const id of seconds[0].players) { d[id] += s.scramble.stake; pot -= s.scramble.stake; }
+      }
       for (const id of winners) d[id] += pot / winners.length;
       addSpread(d);
     }
@@ -1862,10 +2264,17 @@ export function gameResults(round) {
     if (played && cfg.payout === 'pot') {
       // The pot is played for by those in it from the first hole to the last. Anyone who left, or
       // was added partway, is out of it: they don't pay or win
-      const key = round.game === 'quota' ? 'vsQuotaExact' : 'total';
       const stay = round.players.filter(p => playsWholeRound(round, p.id)).map(p => p.id);
-      const totals = Object.fromEntries(table.filter(t => stay.includes(t.id)).map(t => [t.id, t[key]]));
-      addSpread(settleTotals(totals, { mode: 'pot', stake: cfg.stake, lowerWins }));
+      // House rule (Quota, `split: 'over'`, off unless the round says so, added 2026-10-03): everyone
+      // over their quota shares each pot by how far over they are (see settleTotals)
+      const over = round.game === 'quota' && cfg.split === 'over';
+      const pots = totalsPots(round, stay, table);
+      for (const p of pots) {
+        p.deltas = settleTotals(p.totals, { mode: 'pot', stake: cfg.stake, lowerWins, over });
+        addSpread(p.deltas);
+      }
+      // Front, back and total: what each pot paid, for the results
+      if (pots.length > 1) detail.pots = pots;
     } else if (played) {
       // Per stroke or point: each pair settles on the holes they both played, each hole at its own bet.
       // A quota is for the whole round, so each hole carries an even share of it: a short round, or a
@@ -1953,6 +2362,13 @@ export function gameResults(round) {
     detail.birdies = t;
   }
 
+  if (POT_GAMES.includes(round.game)) {
+    // Closest to the pin or long drive, a side game only (see potTable): the winner on each pot hole takes its share
+    const t = potTable(round, round.game);
+    addSpread(t.deltas);
+    detail.pot = t;
+  }
+
   if (round.game === 'rabbit') {
     const t = rabbitTable(round);
     // Like Nassau, a leg that isn't finished pays whoever holds the rabbit on the holes played
@@ -1994,6 +2410,8 @@ export const SIDE_GAMES = {
   birdies: { label: 'Birdie pot', icon: 'bird' },
   snake: { label: 'Snake', icon: 'wave-sine' },
   rabbit: { label: 'Rabbit', icon: 'rabbit' },
+  ctp: { label: 'Closest to the pin', icon: 'crosshair' },
+  drive: { label: 'Long drive', icon: 'golf' },
 };
 
 /** Most games in one round, the main game included. */
@@ -2005,24 +2423,33 @@ export const MAX_GAMES = 4;
  * hole outright; Rabbit is a one-pot skin), and Junk with Bingo Bango Bongo (the greenie and the
  * bango both pay for being closest).
  */
-const CLASH = { skins: ['skins', 'rabbit'], rabbit: ['rabbit', 'skins'], dots: ['dots', 'bbb'], snake: ['snake'], birdies: ['birdies'] };
+const CLASH = { skins: ['skins', 'rabbit'], rabbit: ['rabbit', 'skins'], dots: ['dots', 'bbb'], snake: ['snake'], birdies: ['birdies'], ctp: ['ctp', 'bbb'], drive: ['drive'] };
 function clashes(key, game) { return (CLASH[key] || []).includes(game); }
+/**
+ * A closest to the pin pot pays for the same shot as a greenie, so it never rides on a Dots round,
+ * whose greenies are the main game's. Next to Junk as a side game both stay on, and the pot is
+ * what pays for being closest: Junk's greenies are off (see gameView).
+ */
+const MAIN_CLASH = { ctp: ['dots'] };
+const mainClashes = (key, game) => clashes(key, game) || (MAIN_CLASH[key] || []).includes(game);
 
 /**
  * A round's side games (an empty list on older rounds). Anything setup could never make is dropped,
  * so a garbled or hand-edited round can't count money twice: games this build doesn't know, a game
  * listed twice, Skins on a Skins round, Skins with Rabbit or Junk on a Dots round (the same thing paid
- * twice), any side game on a Scramble, and anything past the MAX_GAMES cap. Junk next to Bingo Bango
+ * twice), any side game on a one-ball game (Scramble, Alternate shot, Chapman), and anything past the MAX_GAMES cap. Junk next to Bingo Bango
  * Bongo is only kept off in setup, so a round made before that rule keeps its money.
  */
 export function sideGamesOf(round) {
-  if (!round || !Array.isArray(round.sideGames) || round.game === 'scramble') return [];
+  if (!round || !Array.isArray(round.sideGames) || oneBall(round.game)) return [];
   const out = [];
   for (const sg of round.sideGames) {
     if (out.length >= MAX_GAMES - 1) break;
     if (!sg || !SIDE_GAMES[sg.game] || !sg.settings || typeof sg.settings !== 'object') continue;
     const hard = g => g !== 'bbb' && clashes(sg.game, g);
-    if (hard(round.game) || out.some(x => hard(x.game))) continue;
+    // Rounds before the pots never had one, so a pot next to Bingo Bango Bongo or Dots is dropped outright
+    const potClash = POT_GAMES.includes(sg.game) && mainClashes(sg.game, round.game);
+    if (potClash || hard(round.game) || out.some(x => hard(x.game))) continue;
     out.push(sg);
   }
   return out;
@@ -2040,14 +2467,14 @@ export function gameKeyLabel(round, key) {
 
 /**
  * Side games that could still be added next to `mainGame`, given the ones already on.
- * None with a Scramble (scores are per team, so per-player side games can't work), and none that
+ * None with a one-ball game (a Scramble, Alternate shot or Chapman: scores are per team, so per-player side games can't work), and none that
  * clash with the main game or a side game already on (see CLASH). A game already on is never offered
  * again, the Birdie pot included (it clashes with nothing, so CLASH alone would offer a second pot).
  */
 export function sideGameChoices(mainGame, sideGames = []) {
-  if (!mainGame || mainGame === 'scramble') return [];
+  if (!mainGame || oneBall(mainGame)) return [];
   if (sideGames.length >= MAX_GAMES - 1) return [];
-  return Object.keys(SIDE_GAMES).filter(k => !clashes(k, mainGame) && !sideGames.some(sg => sg.game === k || clashes(k, sg.game)));
+  return Object.keys(SIDE_GAMES).filter(k => !mainClashes(k, mainGame) && !sideGames.some(sg => sg.game === k || clashes(k, sg.game)));
 }
 
 /** Whether `pid` plays the game `key` in this round (everyone is in every game unless gamesFor says otherwise). */
@@ -2071,10 +2498,27 @@ export function gameView(round, key) {
   // A side game with its own Strokes given % plays off it (see allowances.js); else everyone's strokes are the round's
   const pct = gamePct(round, key);
   const own = round.useHandicaps && pct !== gamePct(round);
+  // With a closest to the pin pot on, Junk's greenies are off: the pot pays for being closest (see MAIN_CLASH)
+  const noGreenie = sg.game === 'dots' && sideGamesOf(round).some(x => x.game === 'ctp');
+  const settings = noGreenie ? withoutGreenie(sg.settings) : sg.settings;
+  const betHistory = !Array.isArray(sg.betHistory) ? undefined : noGreenie ? sg.betHistory.map(e => ({ ...e, settings: withoutGreenie(e.settings) })) : sg.betHistory;
   return {
-    ...round, game: sg.game, settings: { ...round.settings, [sg.game]: sg.settings }, teams: null, presses: [], betHistory: Array.isArray(sg.betHistory) ? sg.betHistory : undefined,
+    ...round, game: sg.game, settings: { ...round.settings, [sg.game]: settings }, teams: null, presses: [], betHistory,
     players: own ? playsAtPct(players, pct, round.joined) : players, ...(own ? { hcPct: pct } : {}),
   };
+}
+
+/** Junk's settings with the greenie off. */
+function withoutGreenie(dots) {
+  // Junk counts a dot unless its kind is `false` (see pointsTable), so a greenie missing from the kinds is on too
+  if (!dots || dots.kinds?.greenie === false) return dots;
+  return { ...dots, kinds: { ...(dots.kinds || {}), greenie: false } };
+}
+
+/** Whether Junk's greenies are off in this round because a closest to the pin pot pays for them. */
+export function greeniesInPot(round) {
+  const sgs = sideGamesOf(round);
+  return sgs.some(x => x.game === 'ctp') && sgs.some(x => x.game === 'dots');
 }
 
 /** Birdie pot shares: { shares: { pid: n }, inPot: [pid], holes: [{ no, pid, shares }] }. */
@@ -2093,6 +2537,116 @@ export function birdiePotShares(round) {
     }
   }
   return { shares, inPot: inPot.map(p => p.id), holes };
+}
+
+// --------------------------- Closest to the pin and long drive pots ------
+// Side games only. Everyone in the pot puts in the stake, and the pot is shared out across the pot's
+// holes: every par 3 for closest to the pin, the chosen holes for long drive (every par 5 until the
+// group picks, else every par 4). The keeper taps the winner on each pot hole, kept with the hole's
+// marks as `marks[no].ctp` or `marks[no].drive`: a player id, or 'none' when nobody won it (nobody on
+// the green, say). A hole nobody won carries its share to the next pot hole, or (house rule `unclaimed:
+// 'split'`) its share is split across the holes that were won. Only holes reached count: a pot hole
+// saved with a winner or 'none' (the scoring screen saves 'none' when nobody is tapped). So a round
+// stopped early, or a pot under way, pays for the holes played; a pot added partway counts the pot
+// holes already played once the keeper goes back and taps them (never as a pile of carries); and a
+// share still carried at the end goes back to everyone (nobody pays it).
+
+/** The side games that are a pot of this kind. */
+export const POT_GAMES = ['ctp', 'drive'];
+/** What each pot is called in a sentence ("They’re out of the birdie pot"), the birdie pot too. */
+export const POT_NAMES = { birdies: 'birdie pot', ctp: 'closest to the pin pot', drive: 'long drive pot' };
+/** What tapping "nobody" saves for a pot hole nobody won. */
+export const POT_NONE = 'none';
+
+/**
+ * The holes a pot is played on, in playing order. `round` is any round (or the pot's game view);
+ * `settings` the pot's own. Long drive's `holes` are hole numbers; a number this round doesn't play is
+ * skipped, and none left (or none picked) means the default: every par 5, else every par 4.
+ */
+export function potHoles(round, key, settings = round.settings?.[key]) {
+  const holes = round.holes || [];
+  if (key === 'ctp') return holes.filter(h => h.par === 3);
+  const picked = Array.isArray(settings?.holes) ? holes.filter(h => settings.holes.includes(h.no)) : [];
+  if (picked.length) return picked;
+  const fives = holes.filter(h => h.par >= 5);
+  return fives.length ? fives : holes.filter(h => h.par === 4);
+}
+
+/** Whether long drive is on the default holes (none picked, or none this round plays). */
+export function potHolesDefault(round, key, settings = round.settings?.[key]) {
+  if (key === 'ctp') return true;
+  const picked = Array.isArray(settings?.holes) ? (round.holes || []).filter(h => settings.holes.includes(h.no)) : [];
+  return !picked.length;
+}
+
+/** Who won a pot hole from its marks: a player id, POT_NONE, or undefined when not tapped yet. */
+export function potWinner(round, key, no) {
+  const v = round.marks?.[no]?.[key];
+  return v == null ? undefined : v;
+}
+
+/**
+ * A hole's marks as the scoring screen saves them: every pot played on `hole` with nobody tapped is
+ * saved as nobody's (POT_NONE), so the hole counts and carries. `marks` may be null (a round whose
+ * games keep no marks, or a pot added while the hole was open); it comes back as it was when no pot
+ * is played on the hole or every one already has a winner or nobody.
+ */
+export function potMarksFor(round, hole, marks) {
+  const open = sideGamesOf(round).filter(sg => POT_GAMES.includes(sg.game) && marks?.[sg.game] == null
+    && potHoles(gameView(round, sg.game), sg.game).some(h => h.no === hole.no));
+  if (!open.length) return marks;
+  return { ...(marks || {}), ...Object.fromEntries(open.map(sg => [sg.game, POT_NONE])) };
+}
+
+/**
+ * A pot worked out on the game view `round` (round.game is the pot's key):
+ * { key, inPot, stake, pot, worth, unclaimed, holes: [{ no, par, winner, reached, value, carried, paid }],
+ *   won: { pid: { holes: [no], amount } }, paidOut, handedBack, deltas }.
+ * `worth` is one hole's share; `value` what a reached hole was played for (its share plus any carry, or
+ * with split, the pot shared out across the holes won), `paid` what its winner took. `deltas` is each
+ * player's money: what they won less their part of everything paid out. Nobody's money moves until a
+ * pot hole is won, and with fewer than two in the pot or no pot holes nothing does.
+ */
+export function potTable(round, key = round.game) {
+  const s = round.settings?.[key] || {};
+  const stake = s.stake ?? 0;
+  const unclaimed = s.unclaimed === 'split' ? 'split' : 'carry';
+  // Like the other pots, a player who left or joined partway is out of it
+  const inPot = round.players.filter(p => playsWholeRound(round, p.id)).map(p => p.id);
+  const list = potHoles(round, key, s);
+  const n = inPot.length;
+  const worth = list.length && n ? (stake * n) / list.length : 0;
+  const won = Object.fromEntries(inPot.map(id => [id, { holes: [], amount: 0 }]));
+  const holes = list.map(h => {
+    const w = potWinner(round, key, h.no);
+    // A winner who isn't in the pot (they left, or joined late) can't take it: nobody won it
+    const winner = w === undefined ? undefined : inPot.includes(w) ? w : POT_NONE;
+    return { no: h.no, par: h.par, winner, reached: winner !== undefined, value: 0, carried: 0, paid: 0 };
+  });
+  const reached = holes.filter(h => h.reached);
+  const wins = reached.filter(h => h.winner !== POT_NONE);
+  let handedBack = 0;
+  if (n >= 2 && stake > 0) {
+    if (unclaimed === 'split') {
+      // The holes reached are shared out across the ones won
+      const each = wins.length ? (worth * reached.length) / wins.length : 0;
+      for (const h of wins) { h.value = each; h.paid = each; }
+      if (!wins.length) handedBack = worth * reached.length;
+    } else {
+      let carry = 0;
+      for (const h of reached) {
+        h.carried = carry;
+        h.value = worth + carry;
+        if (h.winner !== POT_NONE) { h.paid = h.value; carry = 0; } else carry = h.value;
+      }
+      handedBack = carry;
+    }
+  }
+  for (const h of wins) if (h.paid) { won[h.winner].holes.push(h.no); won[h.winner].amount += h.paid; }
+  const paidOut = wins.reduce((a, h) => a + h.paid, 0);
+  const deltas = Object.fromEntries(round.players.map(p => [p.id, 0]));
+  if (paidOut > 0) for (const id of inPot) deltas[id] = won[id].amount - paidOut / n;
+  return { key, inPot, stake, pot: stake * n, worth, unclaimed, holes, won, paidOut, handedBack, deltas: roundCents(deltas) };
 }
 
 /** What the side bets between two players are called in the by-game table (see pair-bets.js). */
@@ -2213,6 +2767,15 @@ function mainLeftRule(round, pid) {
   if (g === 'wolf') return 'Wolf carries on with the players still there.';
   if (g === 'snake') return 'If they leave holding the snake, they still pay it. The holes after that are played among the players still there.';
   if (g === 'skins' && round.settings.skins?.payout === 'pot') return 'They’re out of the pot, so they don’t put in and their skins don’t count.';
+  if (g === 'altshot' || g === 'chapman') return `${GAMES[g].name} needs both partners, so their team’s holes after that don’t count and the bets stand as they are.`;
+  if (g === 'bestball' || g === 'shamble') {
+    const side = (round.teams || []).find(t => t.players.includes(pid));
+    const mates = (side?.players || []).filter(x => x !== pid && leftAt(round, x) > leftAt(round, pid));
+    const need = teamBestCount(round);
+    if (!mates.length) return 'Their team has nobody left, so the match stops there and the bets stand as they are.';
+    if (mates.length < need) return `Their team can’t make ${need} scores a hole now, so the holes after that don’t count and the bets stand as they are.`;
+    return `${nameList(mates.map(x => first(playerById(round, x)?.name || '')))} ${mates.length === 1 ? 'carries' : 'carry'} on for the team.`;
+  }
   if (g === 'nassau' || g === 'match' || g === 'scramble' || g === 'hammer') {
     const side = (g === 'scramble' ? round.teams || [] : sides(round).map(players => ({ players }))).find(t => t.players.includes(pid));
     const mates = (side?.players || []).filter(x => x !== pid && leftAt(round, x) > leftAt(round, pid));

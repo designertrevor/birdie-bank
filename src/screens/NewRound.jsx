@@ -9,7 +9,7 @@ import { useNearbyCourses } from '../lib/useNearbyCourses.js';
 import { mergeNear, milesLabel } from '../lib/nearby.js';
 import NearYou from '../components/NearYou.jsx';
 import RequestCourse from '../components/RequestCourse.jsx';
-import { GAMES, GAME_GROUPS, MAX_GAMES, SIDE_GAMES, createRound, effectiveCourseHc, holesInPlay, sideGamesOf } from '../lib/round.js';
+import { GAMES, GAME_GROUPS, MAX_GAMES, SIDE_GAMES, createRound, effectiveCourseHc, holesInPlay, oneBall, sideGamesOf } from '../lib/round.js';
 import { SideGamesSetup } from '../components/SideGames.jsx';
 import { PairBetsSetup } from '../components/PairBets.jsx';
 import { betsOf, cleanBet, fitSetupBets } from '../lib/pair-bets.js';
@@ -28,7 +28,8 @@ import { formatIndex, gameLabel, hcPctLabel, playerLabel, sortedPlayers } from '
 import { money } from '../lib/golf.js';
 import { findCourse } from '../lib/courses.js';
 import { BET_LADDER, MAX_BALLOT_GAMES, betChoices, betLabel, betOf, betUnitLabel, dayChoices, isoDate, newPlan, planStart } from '../lib/plans.js';
-import { editPlan } from '../lib/plan-sync.js';
+import { rescheduleSetup, setupForPlan } from '../lib/plan-setup.js';
+import { PLAN_LOCKED, editPlan } from '../lib/plan-sync.js';
 import { shouldShowPaywall } from '../lib/paywall.js';
 import { PAYWALL_ON } from '../lib/paywall-flag.js';
 import { matchingUsual, planFromUsual, setupFromUsual, usualsOf } from '../lib/usuals.js';
@@ -36,7 +37,12 @@ import { SaveUsualButton, UsualsList } from '../components/Usuals.jsx';
 import PlayForPicker from '../components/PlayFor.jsx';
 import { countsMoney, inUnits, padUnit, playForLine, playForShort } from '../lib/play-for.js';
 import { CountForTrip, StartTripLink } from '../components/Trips.jsx';
+import { CupRoundSetup } from '../components/Cup.jsx';
+import { startingCup } from '../lib/cup-store.js';
+import { cleanRoundCup, cupOf } from '../lib/cup.js';
 import { countsByDefault, tripOf, tripOnDay, tripPlanDay, tripStamp } from '../lib/trips.js';
+import { challengeIdOfBet, challengesForRound } from '../lib/challenges.js';
+import { challengesBack, markChallengesOn } from '../lib/challenge-sync.js';
 
 const STEPS = ['Game', 'Course', 'Players', 'Bets'];
 
@@ -70,11 +76,17 @@ function planSetup(state, planId, present) {
   if (!GAMES[s.game]) return null;
   const picked = s.players.map(p => p.id).filter(id => state.players[id]);
   const g = GAMES[s.game];
+  // The tees, handicap edits, starting hole and side bets the plan kept from its setup (plan-setup.js)
+  const tees = Object.fromEntries(s.players.filter(p => p.tee).map(p => [p.id, p.tee]));
+  const hcOverride = Object.fromEntries(s.players.filter(p => p.courseHcOverride != null).map(p => [p.id, p.courseHcOverride]));
   return {
-    game: s.game, holesCount: s.holesCount, courseId: course?.id ?? null, nine: s.nine, picked, missing: [], tees: {}, hcOverride: {},
+    game: s.game, holesCount: s.holesCount, courseId: course?.id ?? null, nine: s.nine, picked, missing: [], tees, hcOverride,
     bets: structuredClone(s.settings[s.game]), hcPct: s.hcPct, useHc: s.useHandicaps, teams: s.teams, sideGames: s.sideGames, halfStrokes: s.halfStrokes,
+    startHole: s.startHole, pairBets: s.bets,
     usualId: plan.usualId ?? null,
     playFor: s.playFor,
+    // Who each person on the plan is here, so the plan's agreed challenges come in as side bets
+    idOf: s.idOf,
     step: !course ? 1 : picked.length < g.min || picked.length > g.max ? 2 : 3,
   };
 }
@@ -96,11 +108,13 @@ export default function NewRound({ rematch, fromPlan, present, edit = null, ahea
   const [editing] = useState(() => (edit ? getState().plans?.[edit] || null : null));
   const [pre] = useState(() => (editing ? { game: editing.game, holesCount: editing.holesCount, courseId: findCourse(getState(), editing.course?.id)?.id ?? null, nine: editing.nine, step: 1 }
     : rematch ? rematchSetup(getState(), getState().rounds[rematch])
-      : reschedule ? (p => p && { ...p, step: p.courseId ? 1 : 0 })(rematchSetup(getState(), getState().rounds[reschedule]))
+      : reschedule ? rescheduleSetup(getState(), getState().rounds[reschedule])
         : fromPlan ? planSetup(getState(), fromPlan, present) : null));
   const [mode, setMode] = useState(ahead || editing || (reschedule && pre) ? 'plan' : 'round'); // 'plan': schedule for later
   // A round already set up that the plan takes the place of
   const [replaces, setReplaces] = useState(reschedule && pre ? reschedule : null);
+  // Scheduled from the Bets step or Round ready: the setup was built first, so the plan keeps it
+  const [built, setBuilt] = useState(false);
   const planning = mode === 'plan';
   // Planned from a trip's page: a day of the trip, not next Saturday
   const [date, setDate] = useState(() => editing?.date || (tripId && tripPlanDay(tripOf(getState(), tripId))) || nextSaturday());
@@ -138,7 +152,7 @@ export default function NewRound({ rematch, fromPlan, present, edit = null, ahea
   // Off for a brand new setup: a missing handicap must never quietly play as scratch. Run it back,
   // a usual or a plan keeps the group's own choice
   const [useHc, setUseHc] = useState(pre?.useHc ?? false);
-  const [startHole, setStartHole] = useState(null);
+  const [startHole, setStartHole] = useState(pre?.startHole ?? null);
   const [teams, setTeams] = useState(pre?.teams ?? null); // arrays of player ids, for team games
   // Side games on top of the main game: [{ game, settings }] (start-now setup only, not plans)
   const [sideGames, setSideGames] = useState(() => structuredClone(pre?.sideGames || []));
@@ -159,11 +173,32 @@ export default function NewRound({ rematch, fromPlan, present, edit = null, ahea
   // What it's played for: null is money (as every round before it), else points or a reward
   const [playFor, setPlayFor] = useState(() => pre?.playFor ?? null);
   // Two-player side bets (pair-bets.js): this round's only, so Run it back and usuals never bring them back
-  const [pairBets, setPairBets] = useState([]);
+  // (a round rescheduled or a plan's roll call keeps the ones it was set up with)
+  // Stamped with the holes they start on, so changing the course or holes later puts a bet on some
+  // of the holes back on the whole round, like one made here (fitSetupBets)
+  const [pairBets, setPairBets] = useState(() => structuredClone(pre?.pairBets || []).map(b => ({ ...b, shape: `${holesCount}|${nine}|${courseId ?? ''}|${startHole ?? ''}` })));
   // A change to the holes played puts a bet on some of the holes back on the whole round (fitSetupBets)
   const betShape = `${holesCount}|${nine}|${courseId ?? ''}|${startHole ?? ''}`;
   const setupBets = fitSetupBets(pairBets, betShape);
-  const editBets = fn => setPairBets(l => fn(fitSetupBets(l, betShape)).map(b => ({ ...b, shape: betShape })));
+  // Agreed challenges between two players picked (challenges.js) show up as side bets of their own.
+  // One taken off here stays off for this round only; it's still on for the next round together
+  const [chOff, setChOff] = useState([]);
+  const challengeBets = (() => {
+    const c = findCourse(state, courseId);
+    if (planning || !c || !GAMES[game] || !Object.keys(state.challenges || {}).length) return [];
+    const draft = {
+      game, holes: holesInPlay(c, holesCount, nine, startHole), playFor, bets: setupBets, betsGone: chOff,
+      players: picked.map(pid => ({ id: pid, name: state.players[pid]?.name || '?' })), ...(oneBall(game) && teams ? { teams } : {}),
+    };
+    return challengesForRound(state, draft, { planId: fromPlan || null, idOf: pre?.idOf || null }).map(f => f.bet);
+  })();
+  const shownBets = [...setupBets, ...challengeBets];
+  const editBets = fn => {
+    const next = fn(shownBets);
+    const gone = shownBets.filter(b => challengeIdOfBet(b.id) && !next.some(x => x.id === b.id)).map(b => b.id);
+    if (gone.length) setChOff(l => [...l, ...gone]);
+    setPairBets(next.map(b => ({ ...b, shape: betShape })));
+  };
 
   const course = findCourse(state, courseId);
   // "Count it for the trip?": a trip on the round's day (or the trip it was started from). Yes by
@@ -173,7 +208,16 @@ export default function NewRound({ rematch, fromPlan, present, edit = null, ahea
   const [countTrip, setCountTrip] = useState(null); // null until changed: the default
   const countOn = countTrip ?? (!!tripOn && (!!tripId || !!fromPlanTrip || countsByDefault(state, tripOn.id, planning ? [state.me, ...invited] : picked)));
   const tripPick = tripOn && countOn ? tripOn : null;
-  const tripRow = tripOn && !editing ? <CountForTrip trip={tripOn} on={countOn} onChange={setCountTrip} /> : null;
+  // A team points trip: the round's matches from the trip's teams, changeable here (cup.js)
+  const [cupPick, setCupPick] = useState(null); // { sig, cup } once changed
+  const cupPlayers = picked.map(pid => state.players[pid]).filter(Boolean).map(p => ({ id: p.id, name: p.name }));
+  const cupSig = `${game}|${picked.join(',')}|${tripPick?.id || ''}`;
+  const tripCup = !planning && tripPick ? cupOf(tripPick) : null;
+  const roundCup = !tripCup ? null
+    : cupPick?.sig === cupSig ? cleanRoundCup({ players: cupPlayers, cup: cupPick.cup })
+    : startingCup(state, { game, players: cupPlayers }, tripPick) || (game === 'scramble' ? { kind: 'singles', sides: [[], []] } : null);
+  const cupRow = tripCup ? <CupRoundSetup trip={tripPick} players={cupPlayers} value={roundCup} names={tripCup.names} game={game} onChange={c => setCupPick({ sig: cupSig, cup: c })} /> : null;
+  const tripRow = tripOn && !editing ? <><CountForTrip trip={tripOn} on={countOn} onChange={setCountTrip} />{cupRow}</> : null;
   const tripLink = !tripOn && !editing && !fromPlan ? <StartTripLink /> : null;
   // Names from the usual still not saved here (adding one by the same name clears it from the hint)
   const savedNames = new Set(Object.values(state.players || {}).map(p => String(p?.name || '').trim().toLowerCase()));
@@ -194,9 +238,12 @@ export default function NewRound({ rematch, fromPlan, present, edit = null, ahea
     if (b.to === 'close') return close();
     if (b.to === 'step') goTo(b.step);
   };
-  // Players to Bets: new or changed players get fresh teams
+  // Players to Bets: new or changed players get fresh teams, and so does a game that takes another
+  // number of teams (three scramble teams, then a switch to Best ball)
   const toBets = () => {
-    if (!teams || teams.flat().length !== picked.length || teams.flat().some(pid => !picked.includes(pid))) setTeams(defaultTeams(game, picked));
+    const cfg = GAMES[game]?.teams;
+    const wrongCount = !!cfg && !!teams && (Array.isArray(cfg.count) ? teams.length < cfg.count[0] || teams.length > cfg.count[1] : teams.length !== cfg.count);
+    if (!teams || wrongCount || teams.flat().length !== picked.length || teams.flat().some(pid => !picked.includes(pid))) setTeams(defaultTeams(game, picked));
     setStep(3);
   };
   // Step bar taps: any earlier step, or a later one already reached whose earlier steps are still filled in
@@ -220,21 +267,29 @@ export default function NewRound({ rematch, fromPlan, present, edit = null, ahea
     const me = s.players[s.me];
     // Side games set up on the Bets step go on the ballot with the house rules picked there
     const settings = { ...opts, ...Object.fromEntries(sidesFor(game).map(sg => [sg.game, structuredClone(sg.settings)])) };
+    // Set up before it was scheduled (a usual, a round not played yet, or the Bets step): the plan keeps that setup
+    const fromSetup = !!(usualId || replaces || built);
+    const people = invited.filter(pid => pid !== s.me).map(pid => s.players[pid]).filter(Boolean);
+    const group = [s.me, ...people.map(p => p.id)].filter(Boolean);
+    const order = [...picked.filter(pid => group.includes(pid)), ...group.filter(pid => !picked.includes(pid))];
     const plan = newPlan({
-      id, hostName: me?.name || 'Me', game, holesCount, nine, date, teeTime, course,
-      people: invited.filter(pid => pid !== s.me).map(pid => s.players[pid]).filter(Boolean),
-      ballot: { games: ballotGames, bets: ballotBets, sides: ballotSides }, suggestedBet, settings, useHc: usualId || replaces ? useHc : false, playFor,
+      id, hostName: me?.name || 'Me', game, holesCount, nine, date, teeTime, course, people,
+      ballot: { games: ballotGames, bets: ballotBets, sides: ballotSides }, suggestedBet, settings, useHc: fromSetup ? useHc : false, playFor,
       // From a saved usual: its handicap percentage, and which usual (for "Last played")
       ...(usualId ? { usualId, hcPct: opts.hcPct } : {}),
-      // From a usual or a rescheduled round: its handicap %, half strokes and each side game's own Strokes given %
-      ...(usualId || replaces ? {
+      // Set up first: its handicap %, half strokes, each side game's own Strokes given %, and the
+      // order, teams, tees, handicap edits, starting hole and side bets for the roll call
+      ...(fromSetup ? {
         hcPct: opts.hcPct,
         halfStrokes: !!opts.halfStrokes,
         sidePcts: Object.fromEntries(sidesFor(game).filter(sg => sg.hcPct != null).map(sg => [sg.game, sg.hcPct])),
+        setup: setupForPlan({ game, courseId: course.id, holesCount, nine, me: s.me, order, teams, tees, hcOverride, startHole, bets: setupBets }),
       } : {}),
     });
     // Planned for a trip: it groups under the trip on everyone's Up next
     if (tripPick) plan.trip = tripStamp(tripPick);
+    // The round it replaces never got played: its challenges are agreed again for the next round together
+    if (replaces) challengesBack(getState().rounds[replaces]);
     update(st => {
       if (!st.plans) st.plans = {};
       st.plans[id] = plan;
@@ -253,7 +308,7 @@ export default function NewRound({ rematch, fromPlan, present, edit = null, ahea
       p.holesCount = holesCount;
       p.nine = nine || 'front';
       p.course = { id: course.id, name: course.name, city: course.city || null };
-    });
+    }).then(r => { if (r === 'taken') showToast(PLAN_LOCKED); });
     update(st => { if (!st.favorites.includes(course.id)) st.favorites = [course.id, ...st.favorites].slice(0, 6); });
     showToast(editing.code ? 'Plan updated. Everyone with the link sees the change.' : 'Plan updated');
     nav.pop();
@@ -277,19 +332,26 @@ export default function NewRound({ rematch, fromPlan, present, edit = null, ahea
     }
     const id = uid('r_');
     const players = orderedPicked.map(pid => ({ ...s.players[pid], tee: tees[pid] || defaultTee, courseHcOverride: hcOverride[pid] }));
-    // Share-image choice is a personal setting, not part of a round's bets
+    // Share-image choice and the side bet card are personal settings, not part of a round's bets
     // Half strokes are this round's choice, never next time's default
-    const { shareAmounts: _personal, halfStrokes: _half, ...settings } = structuredClone(opts);
+    const { shareAmounts: _personal, betPrompt: _prompt, halfStrokes: _half, ...settings } = structuredClone(opts);
     const sides = sidesFor(game);
     const halfStrokes = !!opts.halfStrokes && halfStrokesOffered(game, sides);
     const round = createRound({ id, game, course, holesCount, nine, startHole, players, settings, hcPct: opts.hcPct, useHandicaps: useHc && !(noHc.length && noHc.length === orderedPicked.length), teams: GAMES[game].teams ? teams : null, halfStrokes });
     if (sides.length) round.sideGames = structuredClone(sides);
     if (playFor) round.playFor = structuredClone(playFor);
-    // Side bets whose two players are both still in the round (setup's list can outlive a change of players)
-    const bets = betsOf({ ...round, bets: setupBets }).map(b => cleanBet(round, b));
+    // Side bets whose two players are both still in the round (setup's list can outlive a change of players),
+    // agreed challenges among them
+    const bets = betsOf({ ...round, bets: shownBets }).map(b => cleanBet(round, b));
     if (bets.length) round.bets = bets;
+    const challengesIn = bets.map(b => challengeIdOfBet(b.id)).filter(Boolean);
     // Counted for the trip: the stamp rides in the round to every phone in it (trips.js)
     if (tripPick) round.trip = tripStamp(tripPick);
+    // Its matches for a team points trip, as set up here (a scramble has none: one ball a team)
+    if (tripCup && roundCup && game !== 'scramble') {
+      const c = cleanRoundCup({ players: round.players, cup: roundCup });
+      if (c) round.cup = c;
+    }
     // Started from a saved usual (still the same game at the same course): finishing it updates "Last played"
     const from = usualId && usualsOf(s).find(u => u.id === usualId);
     if (from && from.game === game && (from.courseId === course.id || findCourse(s, from.courseId)?.id === course.id)) round.usualId = usualId;
@@ -301,6 +363,7 @@ export default function NewRound({ rematch, fromPlan, present, edit = null, ahea
       if (!st.favorites.includes(course.id)) st.favorites = [course.id, ...st.favorites].slice(0, 6);
     });
     if (fromPlan) editPlan(fromPlan, p => { p.status = 'started'; p.roundId = id; });
+    markChallengesOn(challengesIn, id);
     setCreatedId(id);
     setStep(4);
   };
@@ -310,6 +373,7 @@ export default function NewRound({ rematch, fromPlan, present, edit = null, ahea
   const later = (replaceId = null) => {
     setInvited(picked.filter(pid => pid !== getState().me));
     setReplaces(replaceId);
+    setBuilt(true);
     setMode('plan');
     setReached(3);
     showStep(1);
@@ -348,7 +412,11 @@ export default function NewRound({ rematch, fromPlan, present, edit = null, ahea
     const p = planFromUsual(getState(), u);
     if (!p) return;
     setGame(p.game); setHolesCount(p.holesCount); setNine(p.nine);
-    setCourseId(p.courseId); setTees({}); setStartHole(null);
+    setCourseId(p.courseId); setStartHole(null);
+    // The usual's order, teams, tees and handicap edits ride along to the roll call (plan-setup.js)
+    setPicked(p.order); setTees(p.tees); setHcOverride(p.hcOverride); setTeams(p.teams);
+    // Usuals never bring side bets back, so none made before picking it ride along on the plan
+    setPairBets([]);
     setInvited(p.invited);
     setOpts(o => ({ ...o, halfStrokes: false, ...structuredClone(p.opts) }));
     setUseHc(p.useHc);
@@ -384,7 +452,7 @@ export default function NewRound({ rematch, fromPlan, present, edit = null, ahea
           )}
         </>
       ) : <Header title="Round ready" small onClose={() => nav.reset('upnext')} />}
-      {step === 0 && <GameStep usual={planning || (usual && matchingUsual(state, usual.round)) ? null : usual} onUsual={repeatUsual} onPickUsual={planning ? planUsual : pickUsual} planning={planning} onPlan={fromPlan ? null : () => { setMode('plan'); setReached(0); setStep(1); }} game={game} setGame={gm => { setGame(gm); if (gm && !GAMES[gm].holes.includes(holesCount)) setHolesCount(GAMES[gm].holes[0]); }} holesCount={holesCount} setHolesCount={setHolesCount} onNext={() => setStep(1)} />}
+      {step === 0 && <GameStep usual={planning || (usual && matchingUsual(state, usual.round)) ? null : usual} onUsual={repeatUsual} onPickUsual={planning ? planUsual : pickUsual} planning={planning} onPlan={fromPlan ? null : () => { setMode('plan'); setBuilt(false); setReached(0); setStep(1); }} game={game} setGame={gm => { setGame(gm); if (gm && !GAMES[gm].holes.includes(holesCount)) setHolesCount(GAMES[gm].holes[0]); }} holesCount={holesCount} setHolesCount={setHolesCount} onNext={() => setStep(1)} />}
       {step === 1 && planning && (
         <CourseStep editor={editor} openEditor={openEditor} closeEditor={closeEditor} courseId={courseId} setCourseId={id => { setCourseId(id); setTees({}); setStartHole(null); }} holesCount={holesCount} nine={nine} setNine={setNine} onNext={editing ? savePlan : () => setStep(2)}
           nextLabel={editing ? 'Save changes' : 'Next: Who’s invited'} nextIcon={editing ? 'check' : 'arrow-right'}
@@ -406,7 +474,7 @@ export default function NewRound({ rematch, fromPlan, present, edit = null, ahea
         <SetupStep game={game} course={course} holesCount={holesCount} nine={nine} picked={picked} setPicked={setPicked}
           opts={opts} setOpts={setOpts} useHc={useHc} setUseHc={setUseHc} startHole={startHole} setStartHole={setStartHole} onStart={start} onLater={fromPlan ? null : () => later()}
           teams={teams} setTeams={setTeams} sideGames={sidesFor(game)} setSideGames={editSides} playFor={playFor} setPlayFor={setPlayFor}
-          tees={tees} hcOverride={hcOverride} defaultTee={defaultTee} pairBets={setupBets} setPairBets={editBets}
+          tees={tees} hcOverride={hcOverride} defaultTee={defaultTee} pairBets={shownBets} setPairBets={editBets}
           tripRow={tripRow} tripLink={tripLink} />
       )}
       {step === 4 && created && <ReadyStep round={created} onStart={() => nav.reset('upnext', ['play', { id: created.id }])} onLater={fromPlan || created.shared ? null : () => later(created.id)} />}
@@ -734,6 +802,16 @@ function QuickAddPlayer({ open, onClose, onAdded }) {
 
 // ---------------------------------------------------------------------------
 
+/** "Dave and Mike’s challenge is in as a side bet." for the challenges setup brought in. */
+function challengeNote(round, bets) {
+  const name = id => (round.players.find(p => p.id === id)?.name || '?').split(' ')[0];
+  const pairs = bets.filter(b => challengeIdOfBet(b.id) && b.sides.every(id => round.players.some(p => p.id === id))).map(b => `${name(b.sides[0])} and ${name(b.sides[1])}’s`);
+  if (!pairs.length) return '';
+  const who = pairs.length === 1 ? pairs[0] : `${pairs.slice(0, -1).join(', ')} and ${pairs.at(-1)}`;
+  return pairs.length === 1 ? `${who} challenge is in as a side bet. Tap it to change it, or take it off for today.`
+    : `${who} challenges are in as side bets. Tap one to change it, or take it off for today.`;
+}
+
 function SetupStep({ game, course, holesCount, nine, picked, setPicked, opts, setOpts, useHc, setUseHc, startHole, setStartHole, onStart, onLater = null, teams, setTeams, sideGames = [], setSideGames, playFor = null, setPlayFor,
   tees = {}, hcOverride = {}, defaultTee = null, pairBets = [], setPairBets, tripRow = null, tripLink = null }) {
   const state = useStore();
@@ -757,9 +835,13 @@ function SetupStep({ game, course, holesCount, nine, picked, setPicked, opts, se
       const tee = course.tees?.find(t => t.name === (tees[pid] || defaultTee)) || course.tees?.[0] || null;
       return { id: pid, name: p.name || '?', index: p.index ?? null, courseHcOverride: hcOverride[pid] ?? null, courseHc: effectiveCourseHc(p.index, tee, course, inPlay, holesCount, hcOverride[pid]).value };
     });
-    // A scramble's teams (arrays of player ids here), so a match or per-hole bet goes between players on different teams
-    return { game, players, holes: inPlay, playFor, ...(game === 'scramble' && teams ? { teams } : {}) };
+    // A one-ball game's teams (arrays of player ids here), so a match or per-hole bet goes between players on different teams
+    return { game, players, holes: inPlay, playFor, ...(oneBall(game) && teams ? { teams } : {}) };
   }, [course, holesCount, nine, startHole, picked, state.players, tees, defaultTee, hcOverride, game, playFor, teams]);
+  // Best two only counts with teams of three or four (createRound sets a pairs round back to best ball),
+  // so the bet line up top says how it will be played
+  const shownOpts = (game === 'bestball' || game === 'shamble') && opts[game]?.count === 2 && teams?.length && Math.min(...teams.map(t => t.length)) < 3
+    ? { ...opts, [game]: { ...opts[game], count: 1 } } : opts;
   const orderLabel = { wolf: 'Tee order: the wolf moves down this list', banker: 'Playing order', sixes: 'Order: sets who partners who' }[game] || 'Playing order';
 
   return (
@@ -767,8 +849,8 @@ function SetupStep({ game, course, holesCount, nine, picked, setPicked, opts, se
       <div className="scroll">
         <div className="block summary-card">
           <div className="li-sub">{gameLabel({ game, sideGames })} · {holesCount} holes</div>
-          <div className="d stake-big">{inUnits({ playFor }, stakeSummary(game, opts))}</div>
-          {sideGames.length > 0 && <div className="li-sub">{roundStakeLines({ game, settings: opts, sideGames, playFor }).slice(1).map(l => l.line).join(' + ')}</div>}
+          <div className="d stake-big">{inUnits({ playFor }, stakeSummary(game, shownOpts, holesCount))}</div>
+          {sideGames.length > 0 && <div className="li-sub">{roundStakeLines({ game, settings: shownOpts, sideGames, playFor }).slice(1).map(l => l.line).join(' + ')}</div>}
           {playForLine({ playFor }) && <div className="li-sub">{playForLine({ playFor })}</div>}
           <div className="li-sub">{course.name}{holesCount === 9 && course.holes.length === 18 ? ` · ${nine === 'front' ? 'Front' : 'Back'} 9` : ''} · Par {holes.reduce((a, h) => a + h.par, 0)} · {picked.length} players</div>
         </div>
@@ -779,6 +861,7 @@ function SetupStep({ game, course, holesCount, nine, picked, setPicked, opts, se
         {GAMES[game].teams && teams && (
           <>
             <div className="sec-label">{game === 'nassau' || game === 'hammer' ? 'Sides' : 'Teams'}</div>
+            {GAMES[game].teams.even && <p className="field-help" style={{ padding: '0 20px' }}>Two teams the same size: 2 v 2, 3 v 3 or 4 v 4.</p>}
             <TeamPicker game={game} picked={picked} names={names} teams={teams} setTeams={setTeams} />
           </>
         )}
@@ -799,10 +882,14 @@ function SetupStep({ game, course, holesCount, nine, picked, setPicked, opts, se
         )}
 
         <GameOptions game={game} get={get} set={set} onAmount={(path, title, o) => setPad({ path, title, ...o })} holesCount={holesCount}
-          players={picked.length || null} firstName={game === 'banker' ? state.players[picked[0]]?.name : null} inPoints={!countsMoney({ playFor })} />
+          players={picked.length || null} firstName={game === 'banker' ? state.players[picked[0]]?.name : null} inPoints={!countsMoney({ playFor })}
+          teamSize={teams?.length ? Math.min(...teams.map(t => t.length)) : null} />
 
-        <SideGamesSetup game={game} sideGames={sideGames} setSideGames={setSideGames} defaults={opts} players={picked.length || 4} playFor={playFor} />
+        <SideGamesSetup game={game} sideGames={sideGames} setSideGames={setSideGames} defaults={opts} players={picked.length || 4} playFor={playFor} holes={holes} holesCount={holesCount} />
 
+        {setPairBets && pairBets.some(b => challengeIdOfBet(b.id)) && (
+          <p className="hint-card ch-setup-note"><Icon name="sword" fill /> {challengeNote(betRound, pairBets)}</p>
+        )}
         {setPairBets && <PairBetsSetup round={betRound} bets={pairBets} setBets={setPairBets} />}
 
         <button className="set-row more-opts" onClick={() => setMore(!more)} aria-expanded={more}>

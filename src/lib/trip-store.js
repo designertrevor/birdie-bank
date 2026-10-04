@@ -6,14 +6,16 @@
 import { getState, uid, update } from './store.js';
 import { editPlan } from './plan-sync.js';
 import { nameOf } from './ledger.js';
-import { cleanPeople, isOrganizer, newTrip, tripOf, tripStamp } from './trips.js';
+import { TRIP_FORMATS, canRecount, cleanPeople, isOrganizer, newTrip, tripOf, tripStamp } from './trips.js';
 import { canEditExpense, cleanExpense, cleanWhat, personFor } from './trip-expenses.js';
 import { publishDeleted, refreshPlans } from './trip-plan-sync.js';
+import { CUP_FORMAT, cleanCup } from './cup.js';
+import { startingCup } from './cup-store.js';
 
 /** Make a trip and keep it on this phone (it syncs with your account). Returns it. */
-export function makeTrip({ name, start, end, where, people = [] }) {
+export function makeTrip({ name, start, end, where, people = [], format, cup = null }) {
   const s = getState();
-  const trip = newTrip({ id: uid('t_'), name, start, end, where, by: s.me, people });
+  const trip = newTrip({ id: uid('t_'), name, start, end, where, by: s.me, people, format, cup });
   update(st => { st.trips = { ...(st.trips || {}), [trip.id]: trip }; });
   return trip;
 }
@@ -38,10 +40,22 @@ export function editTrip(id, patch) {
   const trip = { ...base, ...patch, updatedAt: Date.now() };
   if (patch.people) trip.people = cleanPeople(patch.people, trip.by);
   if (trip.end < trip.start) trip.end = trip.start;
+  if (!TRIP_FORMATS[trip.format]) trip.format = base.format;
+  // A team points trip keeps its teams; switched back to money, they're kept for switching again
+  if (trip.cup || trip.format === CUP_FORMAT) trip.cup = cleanCup(trip.cup);
   const stamp = tripStamp(trip);
+  const cupNow = trip.format === CUP_FORMAT;
   update(st => {
     st.trips = { ...(st.trips || {}), [id]: trip };
-    for (const r of Object.values(st.rounds)) if (r.trip?.id === id) r.trip = stamp;
+    for (const r of Object.values(st.rounds)) {
+      if (r.trip?.id !== id) continue;
+      r.trip = stamp;
+      // Now played for team points: a round this phone can still change for everyone gets its matches
+      if (cupNow && !r.cup && canRecount(st, r)) {
+        const c = startingCup(st, r, trip);
+        if (c) r.cup = c;
+      }
+    }
   });
   // Only the organizer's plans: a friend's copy follows the organizer's
   for (const p of Object.values(getState().plans || {})) if (p.host && p.trip?.id === id) editPlan(p.id, x => { x.trip = stamp; });
@@ -67,8 +81,15 @@ export function setRoundTrip(roundId, trip) {
   update(st => {
     const r = st.rounds[roundId];
     if (!r) return;
-    if (trip) r.trip = tripStamp(trip);
-    else delete r.trip;
+    if (trip) {
+      r.trip = tripStamp(trip);
+      // On a team points trip it gets its matches from the teams, unless it already has some
+      const c = !r.cup && trip.format === CUP_FORMAT ? startingCup(st, r, trip) : null;
+      if (c) r.cup = c;
+    } else {
+      delete r.trip;
+      delete r.cup;
+    }
   });
 }
 
@@ -85,7 +106,7 @@ export async function deleteTrip(id, { everywhere = false } = {}) {
   if (everywhere && !(await publishDeleted(id))) return false;
   update(st => {
     if (st.trips) delete st.trips[id];
-    for (const r of Object.values(st.rounds)) if (r.trip?.id === id) delete r.trip;
+    for (const r of Object.values(st.rounds)) if (r.trip?.id === id) { delete r.trip; delete r.cup; }
   });
   for (const p of Object.values(getState().plans || {})) if (p.host && p.trip?.id === id) editPlan(p.id, x => { delete x.trip; });
   return true;

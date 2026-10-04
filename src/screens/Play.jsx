@@ -5,23 +5,26 @@ import { DEFAULT_SETTINGS, getState, update, useStore } from '../lib/store.js';
 import {
   GAMES, addPlayerProblem, bankerHoleSetup, canLeave, defaultNine, holeComplete, leftRule, livePreview, nassauPressOptions, playersLeft, playersOn, playsHole, pressMode,
   betPresets, blindMultiplierOf, noHandicap, resizeRound, roundLegs, roundResults, scoredHolesDropped, scorers, skinsKinds, skinsTable, strokesFor, popsFor, wolfHoleSetup, changeBets, wholeRoundOnly,
-  gameView, sideGamesOf, holeFixOf, gameKeys, gameKeyLabel, settingsAt, wolfCarryBefore, posOf,
+  gameView, sideGamesOf, holeFixOf, gameKeys, gameKeyLabel, settingsAt, wolfCarryBefore, posOf, isTeamGame, matchScored, oneBall, teamCounting,
 } from '../lib/round.js';
-import { SIDE_GAMES } from '../lib/round.js';
+import { POT_GAMES, SIDE_GAMES, bankerPress, potHoles, potMarksFor } from '../lib/round.js';
 import { CourseTeeSheet, FixHoleSheet } from '../components/FixHole.jsx';
 import { HandicapsSheet } from '../components/HandicapsSheet.jsx';
+import { LineupSheet } from '../components/LineupSheet.jsx';
+import { PlayForSheet } from '../components/PlayForSheet.jsx';
+import { lineupKind, lineupMenuText } from '../lib/lineup.js';
 import { courseTeeLabel, keepsDraft } from '../lib/hole-fix.js';
 import { markUsualPlayed } from '../lib/usuals.js';
 import { findCourse } from '../lib/courses.js';
 import { money, netScoreName, scoreName, pickupGross } from '../lib/golf.js';
 import { halfStrokesOn, strokesRulesLines, strokesWords } from '../lib/allowances.js';
 import {
-  BBBPicker, DotsRow, HammerPanel, MatchPanel, MoneyPanel, PointsPanel, RabbitPanel, ScramblePanel, SixesPanel, SnakePanel, SnakePicker, TotalsPanel, VegasPanel,
+  BBBPicker, DotsRow, HammerPanel, MatchPanel, MoneyPanel, PointsPanel, PotPicker, RabbitPanel, ScramblePanel, SixesPanel, SnakePanel, SnakePicker, TeamPanel, TotalsPanel, VegasPanel,
 } from '../components/GamePanels.jsx';
 import { GameOptions } from '../components/GameOptions.jsx';
 import { DrivesShortfall, ScrambleDrivesPicker } from '../components/ScrambleDrives.jsx';
 import { holeStrokeNotes, holeStrokeNoteText } from '../lib/stroke-key.js';
-import { drivesNeeded } from '../lib/scramble-drives.js';
+import { DRIVE_GAMES, drivesNeeded } from '../lib/scramble-drives.js';
 import { optionsProblem, roundStakeLines, sideBetLine, stakeSummary } from '../lib/stakes.js';
 import { buzz, confettiFrom } from '../lib/delight.js';
 import { useNav } from '../lib/nav.js';
@@ -30,16 +33,18 @@ import { LivePill, ShareSheet } from '../components/Live.jsx';
 import { syncConfigured, useSeatRequests } from '../lib/sync.js';
 import { AddPlayerSheet } from '../components/AddPlayer.jsx';
 import { firstName, gameLabel, holeMoneyLine } from '../lib/format.js';
-import { countsMoney, inUnits, padUnit, unitFmt } from '../lib/play-for.js';
+import { countsMoney, inUnits, onTab, padUnit, playForShort, unitFmt } from '../lib/play-for.js';
 import { leaveRound, roundsInProgress } from '../lib/rounds.js';
 import { RoundsInProgressSheet } from '../components/RoundsInProgress.jsx';
 import { ByGameTable, SideGamesSetup } from '../components/SideGames.jsx';
 import { HoleBets, PairBetsSheet } from '../components/PairBets.jsx';
 import { betsOf } from '../lib/pair-bets.js';
+import { betPromptFor, markPrompt } from '../lib/bet-prompt.js';
 import { RoundMoments } from '../components/Moments.jsx';
+import { challengesBack } from '../lib/challenge-sync.js';
 import { FirstTeeSheet } from '../components/FirstTee.jsx';
 import { isLocked, lockAgreement, noteChanges, showFirstTee } from '../lib/agreed.js';
-import { nassauOpenNote, sideExample } from '../lib/side-games.js';
+import { nassauOpenNote, potCatchUpNotes, sideExample } from '../lib/side-games.js';
 import {
   ASK_MS, askForCard, askLeft, canEdit, canTakeCard, clearAsk, clockText, declineAsk, declinedAsk, handOff, handOffChoices, hostKeeper, isKeeper,
   keeperMe, keeperName, keeperOf, keeperSaved, openAsk, seatTaken, shouldLeaveHole, takeCard as takeCardPatch, tookFromMe,
@@ -49,6 +54,8 @@ export default function Play({ id }) {
   const round = useStore(s => s.rounds[id]);
   const nav = useNav();
   const { showToast } = useUI();
+  // Whether a moment banner is up, so the "Any side bets?" card waits for it (it outlives the hole's remount)
+  const [momentUp, setMomentUp] = useState(false);
   // The round you open is the one the play button brings you back to
   const inPlay = round?.status === 'active';
   useEffect(() => {
@@ -84,6 +91,8 @@ export default function Play({ id }) {
   // ...and when this hole's par is fixed, so an untouched score starts from the new par
   // ...and when a side game is added, so Junk's dots have somewhere to go
   const games = (round.sideGames || []).map(sg => sg.game).join('+');
+  // ...and when the playing order or the sides change, so this hole's banker or wolf follows them
+  const lineup = `${round.players.map(p => p.id).join('.')}|${(round.teams || []).map(t => t.players.join('.')).join('/')}`;
   // A match won before the last hole: the keeper can end the round there (the holes played count)
   const finishHere = () => {
     FINISHED_HERE.add(id);
@@ -94,9 +103,9 @@ export default function Play({ id }) {
   const keeps = canEdit(round, keeperMe(round, { me: getState().me }), !!round.shared?.host);
   return (
     <>
-      <PlayRound key={`${games}:${round.holesCount}:${round.current}:${round._remote?.[cur?.no] || 0}:${left}:${joined}:${cur?.par}`} round={round} />
+      <PlayRound key={`${games}:${lineup}:${round.holesCount}:${round.current}:${round._remote?.[cur?.no] || 0}:${left}:${joined}:${cur?.par}`} round={round} momentUp={momentUp} />
       {/* Outside the hole, which remounts on every save, so it sees the hole that was just scored */}
-      <RoundMoments round={round} onFinish={keeps ? finishHere : null} />
+      <RoundMoments round={round} onFinish={keeps ? finishHere : null} onShowing={setMomentUp} />
     </>
   );
 }
@@ -132,7 +141,7 @@ const DRAFTS = new Map();
 // Rounds whose locked-in rules card this phone has closed (a phone that isn't keeping score sees it until then)
 const AGREED_SEEN = new Set();
 
-function PlayRound({ round }) {
+function PlayRound({ round, momentUp = false }) {
   useWakeLock();
   const nav = useNav();
   const { ask, showToast } = useUI();
@@ -140,7 +149,7 @@ function PlayRound({ round }) {
   const hole = round.holes[idx];
   const isLast = idx === round.holes.length - 1;
   const game = round.game;
-  const units = scorers(round, hole); // players still playing, or teams in a scramble
+  const units = scorers(round, hole); // players still playing, or teams in a one-ball game (scramble, alternate shot, Chapman)
   // The main game's own round: without anyone who's only in the side games, so they never enter a
   // wolf rotation, the banker's bets, the Sixes pairings or a head-to-head's sides
   const main = useMemo(() => gameView(round, 'main'), [round]);
@@ -163,15 +172,21 @@ function PlayRound({ round }) {
   const [base] = useState(() => Object.fromEntries(units.map(p => [p.id, mine(p.id) ? kept.base[p.id] : saved[p.id] ?? hole.par])));
   const [draft, setDraft] = useState(() => Object.fromEntries(units.map(p => [p.id, mine(p.id) ? kept.draft[p.id] : saved[p.id] ?? hole.par])));
   const [touched, setTouched] = useState(() => Object.fromEntries(units.map(p => [p.id, saved[p.id] != null || (wasDirty && !!kept.touched[p.id])])));
+  // Best ball and Shamble: whose scores count for each team on this hole (only scores entered, while entering)
+  const counting = editable ? teamCounting(main, hole, Object.fromEntries(units.filter(u => touched[u.id]).map(u => [u.id, draft[u.id]]))) : teamCounting(main, hole);
   const emptyMarks = { bbb: { bingo: null, bango: null, bongo: null }, snake: { snake: [] }, hammer: { hammers: [], conceded: null } }[game] || {};
   // Junk as a side game: its dots are saved in the same marks object as the main game's marks
   const junk = useMemo(() => (sideGamesOf(round).some(sg => sg.game === 'dots') ? gameView(round, 'dots') : null), [round]);
   // ...and Snake as a side game: its three-putts go in there too, under `snake`
   const snakeSide = useMemo(() => (sideGamesOf(round).some(sg => sg.game === 'snake') ? gameView(round, 'snake') : null), [round]);
+  // ...and the closest to the pin and long drive pots: who won each pot hole goes in there, under `ctp` or `drive`
+  const pots = useMemo(() => sideGamesOf(round).filter(sg => POT_GAMES.includes(sg.game)).map(sg => gameView(round, sg.game)), [round]);
+  const potHere = pots.some(v => potHoles(v, v.game).some(h => h.no === hole.no));
   const [marks, setMarks] = useState(() => {
     // A scramble playing for minimum drives saves whose drive each team used in the marks too
-    if (!GAMES[game].marks && !junk && !snakeSide && !drivesNeeded(round)) return null;
-    const m = (wasDirty && kept.marks) || structuredClone(round.marks?.[hole.no] || emptyMarks);
+    if (!GAMES[game].marks && !junk && !snakeSide && !potHere && !drivesNeeded(round)) return null;
+    // A pot hole saved with nobody tapped is saved as nobody's, so it counts (and carries) like one tapped
+    const m = potMarksFor(round, hole, (wasDirty && kept.marks) || structuredClone(round.marks?.[hole.no] || emptyMarks));
     return snakeSide && !m.snake ? { ...m, snake: [] } : m;
   });
   useEffect(() => { DRAFTS.set(draftKey, { draft, base, touched, dirty, marks }); }, [draftKey, draft, base, touched, dirty, marks]);
@@ -190,11 +205,13 @@ function PlayRound({ round }) {
   const [betsSheet, setBetsSheet] = useState(false);
   const [gamesSheet, setGamesSheet] = useState(false);
   const [pairSheet, setPairSheet] = useState(false);
+  // A new side bet started from the "Any side bets?" card: { kind, holes }
+  const [pairStart, setPairStart] = useState(null);
   const [switching, setSwitching] = useState(false);
   const others = useStore(s => roundsInProgress(s).filter(r => r.id !== round.id).length);
   const [addSheet, setAddSheet] = useState(null); // true, or the seat request being answered
   const [handSheet, setHandSheet] = useState(false);
-  const [fixSheet, setFixSheet] = useState(null); // 'hole' | 'tee' | 'hc'
+  const [fixSheet, setFixSheet] = useState(null); // 'hole' | 'tee' | 'hc' | 'lineup' | 'playFor'
   const localCourse = useStore(s => findCourse(s, round.course.id));
   const holeFixed = !!holeFixOf(round, hole.no);
   const requests = useSeatRequests(round.id);
@@ -228,6 +245,29 @@ function PlayRound({ round }) {
     setAgreedSheet(null);
   };
   const setCalls = calls => update(s => { const r = s.rounds[round.id]; if (r?.agreed?.at) Object.assign(r.agreed, calls); });
+
+  // --- "Any side bets on this hole?" (see bet-prompt.js) ---
+  const promptOn = useStore(s => s.settings.betPrompt !== false);
+  const promptSeen = useStore(s => s.betPrompts?.[round.id] || null);
+  // Never over the first-tee card, which comes first on hole 1
+  const cardUp = firstTee || watchCard || !!agreedSheet;
+  // It only comes up before a score on the hole is touched, but once up it stays while scores go in,
+  // so the score rows never jump up under a finger (the hole remounts on save, which starts this over)
+  const [promptShown, setPromptShown] = useState(false);
+  const betPrompt = betPromptFor(round, idx + 1, { me, editable, on: promptOn, seen: promptSeen, moment: momentUp || cardUp, scoring: dirty && !promptShown });
+  if (betPrompt && !promptShown) setPromptShown(true);
+  const promptAdd = () => {
+    update(s => markPrompt(s, round.id, { pos: betPrompt.pos }));
+    setPairStart({ kind: betPrompt.kind, holes: betPrompt.holes });
+  };
+  const promptSkip = () => {
+    update(s => markPrompt(s, round.id, { skip: true }));
+    showToast('No more side bet asks this round');
+  };
+  const promptOff = () => {
+    update(s => { s.settings.betPrompt = false; });
+    showToast('Side bet asks are off. Turn them on again in Settings.', { label: 'Undo', run: () => update(s => { s.settings.betPrompt = true; }) });
+  };
 
   // --- Keeping score in a shared round ---
   const keeper = keeperOf(round);
@@ -308,8 +348,10 @@ function PlayRound({ round }) {
     if (!editable) return;
     if (game === 'wolf' && wolf.partner === undefined) { showToast(`Pick ${round.players.find(p => p.id === wolf.wolf)?.name.split(' ')[0] || 'the wolf'}’s partner, or go lone wolf`); return; }
     const scores = Object.fromEntries(units.map(p => [p.id, draft[p.id]]));
+    // ...and a pot added while this hole was open still saves the hole as nobody's when nobody's tapped
+    const holeMarks = potMarksFor(round, hole, marks);
     DRAFTS.delete(draftKey);
-    const moneyLine = holeMoneyLine(round, hole, livePreview(round, hole, { scores, banker, wolf, marks }).delta);
+    const moneyLine = holeMoneyLine(round, hole, livePreview(round, hole, { scores, banker, wolf, marks: holeMarks }).delta);
     // The last hole's line would sit over the reveal's buttons, so it only shows if the round does not finish
     if (!isLast) showToast(moneyLine);
     update(s => {
@@ -317,7 +359,7 @@ function PlayRound({ round }) {
       r.scores[hole.no] = scores;
       if (game === 'banker') r.banker[hole.no] = banker;
       if (game === 'wolf') r.wolf[hole.no] = wolf;
-      if (marks) { if (!r.marks) r.marks = {}; r.marks[hole.no] = marks; }
+      if (holeMarks) { if (!r.marks) r.marks = {}; r.marks[hole.no] = holeMarks; }
       if (!isLast) r.current = nextIdx;
       // The keeper's phone saved a hole (kept for the record of who's been scoring)
       if (isKeeper(r, me, isHost)) Object.assign(r, keeperSaved(r));
@@ -334,7 +376,7 @@ function PlayRound({ round }) {
       const r = getState().rounds[round.id];
       const legs = roundLegs(r);
       const fresh = r.presses.filter(p => p.start === nextIdx + 1);
-      if (fresh.length) showToast(game === 'nassau' ? `Auto press on the ${fresh.map(p => legs[p.leg].label.replace(/^[A-Z]/, c => c.toLowerCase())).join(' and ')}` : 'Auto press!');
+      if (fresh.length) showToast(Object.keys(legs).length > 1 ? `Auto press on the ${fresh.map(p => legs[p.leg].label.replace(/^[A-Z]/, c => c.toLowerCase())).join(' and ')}` : 'Auto press!');
     }
     if (isLast && !(await finish())) showToast(moneyLine);
   };
@@ -349,7 +391,7 @@ function PlayRound({ round }) {
       const one = missing.length === 1;
       const go = await ask({
         title: `${missing.length} hole${one ? '' : 's'} not fully scored`,
-        text: `Hole${one ? '' : 's'} ${missing.map(h => h.no).join(', ')} ${one ? 'is' : 'are'} missing scores and won’t count for money. Finish anyway? You can fix scores later from the results.`,
+        text: `Hole${one ? '' : 's'} ${missing.map(h => h.no).join(', ')} ${one ? 'is' : 'are'} missing scores and won’t count for ${countsMoney(round) ? 'money' : 'points'}. Finish anyway? You can fix scores later from the results.`,
         actions: [{ label: 'Finish round', value: 'finish' }, { label: 'Go to first missing hole', value: 'goto', secondary: true }],
       });
       if (go === 'goto') { update(s => { s.rounds[round.id].current = r.holes.indexOf(missing[0]); }); return; }
@@ -395,6 +437,8 @@ function PlayRound({ round }) {
     if (choice === 'discard') {
       const sure = await ask({ title: 'Delete this round?', text: 'Scores and bets from this round will be gone for good.', confirmLabel: 'Delete round', danger: true });
       if (!sure) return;
+      // A challenge that went into it is agreed again for the next round together
+      challengesBack(getState().rounds[round.id]);
       update(s => { delete s.rounds[round.id]; leaveRound(s, round.id); });
       nav.reset('upnext');
     }
@@ -406,7 +450,7 @@ function PlayRound({ round }) {
   // Money with this hole counted as it's being entered, so totals move with every tap
   const preview = useMemo(() => {
     const counting = phase === 'scores' && dirty && !(game === 'wolf' && wolf.partner === undefined);
-    return livePreview(round, hole, counting ? { scores: draft, banker, wolf, marks } : null);
+    return livePreview(round, hole, counting ? { scores: draft, banker, wolf, marks: potMarksFor(round, hole, marks) } : null);
   }, [round, hole, phase, dirty, game, draft, banker, wolf, marks]);
 
   return (
@@ -450,7 +494,7 @@ function PlayRound({ round }) {
       )}
       {round.editing && editable && (
         <button className="finished-banner" onClick={doneEditing}>
-          <Icon name="pencil-simple" fill /> Fixing scores. The tab updates as you save. Done <Icon name="arrow-right" />
+          <Icon name="pencil-simple" fill /> Fixing scores. {onTab(round) ? 'The Tab updates' : 'The points update'} as you save. Done <Icon name="arrow-right" />
         </button>
       )}
       {requests[0] && round.status === 'active' && editable && (
@@ -485,7 +529,8 @@ function PlayRound({ round }) {
         <BankerPanel round={main} readOnly={!editable} banker={banker} setBanker={setBanker} phase={phase} setPhase={setPhase}
           onPick={() => setBankerPick(true)} onBet={pid => setBetPad(pid)} draft={draft} hole={hole} />
       )}
-      {(game === 'nassau' || game === 'match') && <MatchPanel round={main} hole={hole} readOnly={!editable} />}
+      {matchScored(main) && <MatchPanel round={main} hole={hole} readOnly={!editable} />}
+      {isTeamGame(game) && !matchScored(main) && <TeamPanel round={main} hole={hole} />}
       {game === 'skins' && <SkinsPanel round={main} hole={hole} onChange={editable ? () => setBetsSheet(true) : null} />}
       {game === 'wolf' && <WolfPanel round={main} hole={hole} wolf={wolf} setWolf={editable ? setWolf : null} />}
       {game === 'vegas' && <VegasPanel round={main} hole={hole} draft={draft} touched={touched} />}
@@ -493,7 +538,7 @@ function PlayRound({ round }) {
       {(game === 'stroke' || game === 'stableford' || game === 'quota') && <TotalsPanel round={main} />}
       {(game === 'nines' || game === 'bbb' || game === 'dots') && <PointsPanel round={main} />}
       {game === 'scramble' && <ScramblePanel round={main} />}
-      {game === 'scramble' && <DrivesShortfall round={main} />}
+      {DRIVE_GAMES.includes(game) && <DrivesShortfall round={main} />}
       {game === 'aces' && <MoneyPanel round={main} results={results} icon="spade" label="Aces & deuces so far" />}
       {game === 'rabbit' && <RabbitPanel round={main} hole={hole} />}
       {game === 'snake' && <SnakePanel round={main} hole={hole} marks={marks} />}
@@ -502,11 +547,13 @@ function PlayRound({ round }) {
       {phase === 'scores' && (
         <div className="scroll">
           {!editable && sharedLive && <p className="field-help" style={{ padding: '0 20px' }}>{round.status === 'active' ? `Scores as ${holderName} saves them. Browse any hole.` : 'Only the players in this round can fix its scores.'}</p>}
+          {betPrompt && <BetPromptCard prompt={betPrompt} onAdd={promptAdd} onSkip={promptSkip} onOff={promptOff} />}
           <HoleBets round={round} hole={hole} editable={editable} me={me} />
           {game === 'bbb' && editable && <BBBPicker round={main} hole={hole} marks={marks} setMarks={setMarksDirty} />}
-          {game === 'scramble' && <ScrambleDrivesPicker round={main} hole={hole} marks={marks} setMarks={editable ? setMarksDirty : null} />}
+          {DRIVE_GAMES.includes(game) && <ScrambleDrivesPicker round={main} hole={hole} marks={marks} setMarks={editable ? setMarksDirty : null} />}
           {game === 'snake' && editable && <SnakePicker round={main} hole={hole} marks={marks} setMarks={setMarksDirty} />}
           {snakeSide && editable && <SnakePicker round={snakeSide} hole={hole} marks={marks} setMarks={setMarksDirty} />}
+          {potHere && <PotPicker pots={pots} hole={hole} marks={editable ? marks : round.marks?.[hole.no]} setMarks={setMarksDirty} readOnly={!editable} />}
           {!editable && units.map(p => {
             // Whole pops for the dots; with half strokes each counts as half (strokesWords says so)
             const st = round.useHandicaps ? popsFor(round, p, hole) : 0;
@@ -514,7 +561,7 @@ function PlayRound({ round }) {
             return (
               <div key={p.id} className="pcard score-row">
                 <div className="row-main">
-                  <div className="pname">{p.name}</div>
+                  <div className="pname">{p.name}{counting.includes(p.id) && <span className="counts-tag">Counts</span>}</div>
                   <div className="ps">
                     {st > 0 && <span className="stroke-dots">{'●'.repeat(st)} Gets {strokesWords(st, halfStrokesOn(round))}</span>}
                     {holeStrokeNotes(round, p, hole).map(x => <span key={x.key} className="stroke-note"> · {holeStrokeNoteText(x)}</span>)}
@@ -532,6 +579,8 @@ function PlayRound({ round }) {
           })}
           {editable && units.map(p => {
             const st = round.useHandicaps ? popsFor(round, p, hole) : 0;
+            // Best ball and Shamble: whose score counts for the team, once the team's scores are all in
+            const counts = counting.includes(p.id);
             const counted = round.useHandicaps ? strokesFor(round, p, hole) : 0;
             const v = draft[p.id];
             const isBanker = banker?.banker === p.id;
@@ -545,13 +594,14 @@ function PlayRound({ round }) {
                     {isBanker && <span className="bkr-badge"><Icon name="bank" fill /> Banker</span>}
                     {isWolf && <span className="bkr-badge"><Icon name="paw-print" fill /> Wolf</span>}
                     {round.teams && !p.team && <span className={`side-tag ${round.teams.findIndex(t => t.players.includes(p.id)) === 0 ? 'a' : 'b'}`}>{['A', 'B', 'C', 'D'][round.teams.findIndex(t => t.players.includes(p.id))]}</span>}
+                    {counts && <span className="counts-tag">Counts</span>}
                   </div>
                   {p.team && <div className="ps">{p.players.map(pid => round.players.find(x => x.id === pid)?.name.split(' ')[0]).join(', ')} · team handicap {p.courseHc ?? 0}</div>}
                   <div className="ps">
                     {st > 0 && <span className="stroke-dots" aria-label={`Gets ${strokesWords(st, halfStrokesOn(round))}`}>{'●'.repeat(st)} Gets {strokesWords(st, halfStrokesOn(round))}</span>}
                     {st < 0 && <span className="stroke-dots">Gives back {strokesWords(-st, halfStrokesOn(round))}</span>}
                     {holeStrokeNotes(round, p, hole).map(x => <span key={x.key} className="stroke-note"> · {holeStrokeNoteText(x)}</span>)}
-                    {game === 'banker' && !isBanker && <span> Bet {money(banker.bets[p.id] || 0)}{banker.doubled[p.id] ? (banker.doubleBack ? ' · 4×' : ' · 2×') : ''}</span>}
+                    {game === 'banker' && !isBanker && <span> Bet {unitFmt(round)(banker.bets[p.id] || 0)}{banker.doubled[p.id] ? ` · ${bankerPress(round, hole) ** (banker.doubleBack ? 2 : 1)}×` : ''}</span>}
                     {touched[p.id] && v !== 'X' && <span className={`score-name s${Math.max(-2, Math.min(2, v - hole.par))}`}> {scoreName(v, hole.par)}{counted !== 0 && `, ${netScoreName(v - counted, hole.par)}`}</span>}
                   </div>
                   <button className={`pickup-btn ${v === 'X' ? 'on' : ''}`} onClick={() => setScore(p.id, v === 'X' ? hole.par : 'X')} aria-pressed={v === 'X'}>
@@ -612,7 +662,13 @@ function PlayRound({ round }) {
             <span><Icon name="scales" /> Handicaps · {round.useHandicaps === false ? 'Off' : noHandicap(round).length ? `On, ${noHandicap(round).length} with none` : 'On'}</span><Icon name="caret-right" />
           </button>
         )}
-        {game !== 'scramble' && (
+        {/* What it's played for changes while the round is going on, not when fixing a finished one */}
+        {round.status === 'active' && !round.editing && (
+          <button className="sheet-item" onClick={() => { setMenu(false); setFixSheet('playFor'); }}>
+            <span><Icon name="trophy" /> Play for · {playForShort(round)}</span><Icon name="caret-right" />
+          </button>
+        )}
+        {!oneBall(game) && (
           <button className="sheet-item" onClick={() => { setMenu(false); setGamesSheet(true); }}>
             <span><Icon name="plus-circle" /> {sideGamesOf(round).length ? `Side games · ${sideGamesOf(round).length}` : 'Add a side game'}</span><Icon name="caret-right" />
           </button>
@@ -647,6 +703,12 @@ function PlayRound({ round }) {
         <button className="sheet-item" onClick={() => { setMenu(false); setLeftSheet(true); }}>
           <span><Icon name="user-minus" /> {playersLeft(round).length ? `A player left · ${playersLeft(round).map(x => x.player.name.split(' ')[0]).join(', ')}` : 'A player left'}</span><Icon name="caret-right" />
         </button>
+        {/* Sides or teams, the playing order, and who throws the first hammer (see lineup.js) */}
+        {(lineupKind(round) || game === 'hammer') && (
+          <button className="sheet-item" onClick={() => { setMenu(false); setFixSheet('lineup'); }}>
+            <span><Icon name={lineupKind(round) === 'order' ? 'list-numbers' : game === 'hammer' && !lineupKind(round) ? 'hammer' : 'users-three'} /> {lineupMenuText(round)}</span><Icon name="caret-right" />
+          </button>
+        )}
         </>}
         <div className="menu-sec">Round</div>
         {editable && <>
@@ -667,7 +729,10 @@ function PlayRound({ round }) {
           : <button className="sheet-item" onClick={endEarly}><span><Icon name="flag-checkered" /> End round</span><Icon name="caret-right" /></button>)}
       </Sheet>
       {gamesSheet && <GamesSheet round={round} onClose={() => setGamesSheet(false)} />}
-      {pairSheet && <PairBetsSheet round={round} editable={editable} me={me} onClose={() => setPairSheet(false)} />}
+      {(pairSheet || pairStart) && (
+        <PairBetsSheet key={pairStart ? 'start' : 'menu'} round={round} editable={editable} me={me} start={pairStart}
+          onClose={() => { setPairSheet(false); setPairStart(null); }} />
+      )}
       <RoundsInProgressSheet open={switching} onClose={() => setSwitching(false)} currentId={round.id} />
       {holesSheet && <HolesSheet round={round} onClose={() => setHolesSheet(false)} />}
       {betsSheet && <BetsSheet round={round} onClose={() => setBetsSheet(false)} />}
@@ -686,6 +751,8 @@ function PlayRound({ round }) {
       {fixSheet === 'hole' && editable && <FixHoleSheet round={round} holeNo={hole.no} me={me} onClose={() => setFixSheet(null)} />}
       {fixSheet === 'tee' && editable && <CourseTeeSheet round={round} me={me} onClose={() => setFixSheet(null)} />}
       {fixSheet === 'hc' && editable && <HandicapsSheet round={round} onClose={() => setFixSheet(null)} />}
+      {fixSheet === 'lineup' && editable && <LineupSheet round={round} onClose={() => setFixSheet(null)} />}
+      {fixSheet === 'playFor' && editable && <PlayForSheet round={round} onClose={() => setFixSheet(null)} />}
       <RulesSheet game={rules.key === 'main' ? game : rules.key} open={rules.open} onClose={() => setRules(r => ({ ...r, open: false }))}
         title={rules.key === 'dots' ? `How to play ${SIDE_GAMES.dots.label}` : undefined}
         sub={rules.key === 'dots' ? 'A side game · Dots, garbage, trash' : undefined} strokes={strokesRulesLines(round, rules.key)} />
@@ -720,6 +787,29 @@ function PlayRound({ round }) {
         </>
       )}
     </Screen>
+  );
+}
+
+// --------------------------- Any side bets? -------------------------------
+
+/**
+ * The "Any side bets on this hole?" card (bet-prompt.js): what it suggests, one tap to add it (the
+ * side bet editor opens filled in), one to put it away for the round, and a way to turn it off.
+ */
+function BetPromptCard({ prompt, onAdd, onSkip, onOff }) {
+  return (
+    <div className="bet-prompt" role="group" aria-labelledby="bp-title">
+      <div className="bp-ic" aria-hidden="true"><Icon name={prompt.kind === 'ctp' ? 'target' : 'hand-coins'} fill /></div>
+      <div className="bp-main">
+        <div className="bp-title" id="bp-title">{prompt.title}</div>
+        <div className="bp-text">{prompt.text}</div>
+        <div className="bp-actions">
+          <button className="pill-btn on" onClick={onAdd}><Icon name="plus" /> Add a side bet</button>
+          <button className="pill-btn ghost" onClick={onSkip}>Not this round</button>
+        </div>
+        <button className="link-btn bp-off" onClick={onOff}>Don’t ask again</button>
+      </div>
+    </div>
   );
 }
 
@@ -831,7 +921,9 @@ function LeftSheet({ round, idx, onClose, onEnd }) {
       )}
       {nobody ? (
         <>
-          <p className="hint-card"><Icon name="info" fill /> At least two {round.game === 'scramble' ? 'teams' : 'players'} have to stay to keep the game going. To stop here, end the round: the holes played still count.</p>
+          <p className="hint-card"><Icon name="info" fill /> {round.game === 'altshot' || round.game === 'chapman'
+            ? `${GAMES[round.game].name} needs a team with both partners still playing to keep the game going.`
+            : `At least two ${oneBall(round.game) ? 'teams' : 'players'} have to stay to keep the game going.`} To stop here, end the round: the holes played still count.</p>
           <div className="cta-wrap"><button className="full-btn" onClick={onEnd}><Icon name="flag-checkered" /> End round</button></div>
         </>
       ) : (
@@ -906,7 +998,9 @@ function GamesSheet({ round, onClose }) {
     <Sheet open onClose={onClose} title="Side games" className="sc-sheet">
       <p className="sheet-text">Same course, same players, same scores. {played ? `A new game counts the ${played} hole${played === 1 ? '' : 's'} already scored too.` : 'Every game reads the one scorecard.'}</p>
       {played > 0 && sideGamesOf(round).length > 0 && <p className="field-help pad">Changes here cover the whole round. To change a bet from the next hole, use Bets.</p>}
-      <SideGamesSetup game={round.game} sideGames={list} setSideGames={edit} defaults={round.settings} players={round.players.length} playFor={round.playFor} />
+      <SideGamesSetup game={round.game} sideGames={list} setSideGames={edit} defaults={round.settings} players={round.players.length} playFor={round.playFor} holes={round.holes} holesCount={round.holes.length} />
+      {/* A pot added partway: its holes already played count once the winner is tapped */}
+      {potCatchUpNotes(round, list).map(t => <p key={t} className="field-help pad">{t}</p>)}
       <div className="cta-wrap">
         <button className="full-btn" disabled={!changed || bad} onClick={save}>{changed ? 'Save games' : 'No changes'}</button>
       </div>
@@ -960,8 +1054,8 @@ function BetsSheet({ round, onClose }) {
   const whole = !canSplit || scope === 'whole';
   // Why a change can't start from the next hole, when it isn't a pot: net, gross or both is read
   // once for the round, and so is a snake split into nines
-  const pot = game === 'scramble' || game === 'birdies' || current[game]?.payout === 'pot' || opts[game]?.payout === 'pot';
-  const layout = game === 'snake' ? 'Each nine or one snake is set' : 'Net, gross or both is set';
+  const pot = game === 'scramble' || game === 'birdies' || POT_GAMES.includes(game) || current[game]?.payout === 'pot' || opts[game]?.payout === 'pot';
+  const layout = game === 'snake' ? 'Each nine or one snake is set' : isTeamGame(game) ? 'How the game is played (the bets, the scoring, the scores that count) is set' : 'Net, gross or both is set';
   const label = gameKeyLabel(round, gameKey);
   const apply = () => {
     update(s => {
@@ -972,14 +1066,18 @@ function BetsSheet({ round, onClose }) {
     // A points or reward round reads in points
     showToast(inUnits(round, side
       ? `${label} bet updated${whole ? '' : ` from hole ${fromHole.no}`} · ${sideBetLine(game, opts[game])}`
-      : `Bets updated${whole ? '' : ` from hole ${fromHole.no}`} · ${stakeSummary(game, opts)}`));
+      : `Bets updated${whole ? '' : ` from hole ${fromHole.no}`} · ${stakeSummary(game, opts, round.holes.length)}`));
     buzz(20);
   };
-  const legs = game === 'nassau' || game === 'match' || game === 'rabbit' || game === 'snake' || (game === 'sixes' && opts.sixes.mode === 'match');
+  const legs = game === 'nassau' || game === 'match' || game === 'rabbit' || game === 'snake' || (game === 'sixes' && opts.sixes.mode === 'match')
+    || (isTeamGame(game) && opts[game]?.format !== 'hole');
   // A snake or rabbit is played for the bet in force when its leg started: one leg for the round, or
-  // one a nine. Say when the new bet starts counting, or that only "Whole round" changes it
+  // one a nine (or with "three rabbits", one every six holes). Say when the new bet starts counting, or
+  // that only "Whole round" changes it
   const legStarts = game === 'snake' || game === 'rabbit'
-    ? ((game === 'snake' ? settingsAt(view, 1).snake?.nines : true) && round.holes.length === 18 ? [1, 10] : [1]) : null;
+    ? (round.holes.length !== 18 ? [1]
+      : game === 'rabbit' && settingsAt(view, 1).rabbit?.sixes ? [1, 7, 13]
+        : (game === 'snake' ? settingsAt(view, 1).snake?.nines : true) ? [1, 10] : [1]) : null;
   const nextLeg = legStarts?.find(x => x >= fromPos);
   const legNote = !legStarts ? 'A bet already under way, like a leg or a match, keeps what it started with.'
     : nextLeg === fromPos ? ''
@@ -1015,22 +1113,27 @@ function BetsSheet({ round, onClose }) {
             </p>
           </div>
         )}
-        {game === 'birdies' ? (
-          // The Birdie pot is a side game only, so it has no main-game options: just what each player puts in
+        {game === 'birdies' || POT_GAMES.includes(game) ? (
+          // The Birdie, closest to the pin and long drive pots are side games only, so they have no
+          // main-game options: just what each player puts in (the rest is under Side games)
           <>
             <div className="nassau-bet-row">
               <div className="nassau-bet-lbl">Each player puts in</div>
-              <button className="nassau-bet-btn" aria-label={`Each player puts in: ${unitFmt(round)(get('birdies.stake') ?? 0)}. Change`}
-                onClick={() => setPad({ path: 'birdies.stake', title: 'Each player puts in', min: 1, max: 500 })}>{unitFmt(round)(get('birdies.stake') ?? 0)}</button>
+              <button className="nassau-bet-btn" aria-label={`Each player puts in: ${unitFmt(round)(get(`${game}.stake`) ?? 0)}. Change`}
+                onClick={() => setPad({ path: `${game}.stake`, title: 'Each player puts in', min: 1, max: 500 })}>{unitFmt(round)(get(`${game}.stake`) ?? 0)}</button>
             </div>
-            <p className="field-help pad">{inUnits(round, sideExample('birdies', opts.birdies, view.players.length))}</p>
+            <p className="field-help pad">{inUnits(round, sideExample(game, opts[game], view.players.length, round.holes))}</p>
           </>
         ) : (
           <GameOptions game={game} get={get} set={set} onAmount={(path, title, o) => setPad({ path, title, ...o })} holesCount={round.holesCount}
-            players={view.players.length} firstName={game === 'banker' ? round.players[0]?.name : null} inPoints={!countsMoney(round)} />
+            players={view.players.length} firstName={game === 'banker' ? round.players[0]?.name : null} inPoints={!countsMoney(round)}
+            teamSize={!side && round.teams?.length ? Math.min(...round.teams.map(t => t.players.length)) : null} />
         )}
         {game === 'banker' && <p className="hint-card"><Icon name="info" fill /> The default bet fills in from the next hole. Bets on this hole are set from the Bets button.</p>}
-        {!side && (game === 'nassau' || game === 'match') && round.presses.length > 0 && whole && <p className="hint-card"><Icon name="lightning" fill /> Presses already made pay at the new amounts too.</p>}
+        {/* A team game played another way (changeBets clears the presses on the old legs) */}
+        {!side && matchScored(round) && round.presses.length > 0 && whole && (isTeamGame(game) && wholeRoundOnly(game, current[game], opts[game])
+          ? <p className="hint-card"><Icon name="lightning" fill /> The presses made so far go, since the bets are played another way.</p>
+          : <p className="hint-card"><Icon name="lightning" fill /> Presses already made pay at the new amounts too.</p>)}
         {problem && <p className="field-error">{problem}</p>}
         <div className="cta-wrap">
           <button className="full-btn" disabled={!changed || !!problem || stuck} onClick={apply}>
@@ -1120,12 +1223,14 @@ function BankerPanel({ round, banker, setBanker, phase, setPhase, onPick, onBet,
   const b = round.players.find(p => p.id === banker.banker);
   const others = playersOn(round, hole).filter(p => p.id !== banker.banker);
   const anyDoubled = others.some(p => banker.doubled[p.id]);
+  // A press doubles a bet, or triples it on a par 3 with that house rule on
+  const f = bankerPress(round, hole);
   const canPick = round.settings.banker.rotation === 'choice' || true;
   return (
     <>
       <div className="banker-bar">
         <div className="bb-who"><div className="bl">Banker this hole</div><div className="bn"><Icon name="bank" fill /> <span className="bn-name">{b?.name}</span></div></div>
-        <div className="bb-line" aria-live="polite"><div className="bl">On the line</div><div className="bn">{money(onTheLine(banker))}</div></div>
+        <div className="bb-line" aria-live="polite"><div className="bl">On the line</div><div className="bn">{money(onTheLine(banker, f))}</div></div>
         {readOnly ? null : phase === 'bets'
           ? canPick && <button className="change-btn" onClick={onPick}>Change</button>
           : <button className="change-btn" onClick={() => setPhase('bets')}><Icon name="coins" /> Bets</button>}
@@ -1148,16 +1253,16 @@ function BankerPanel({ round, banker, setBanker, phase, setPhase, onPick, onBet,
                     const still = others.some(o => doubled[o.id]);
                     setBanker({ ...banker, doubled, doubleBack: still ? banker.doubleBack : false });
                   }}>
-                  <Icon name="lightning" fill /> {banker.doubled[p.id] ? `Doubled · ${money(banker.bets[p.id] * (banker.doubleBack ? 4 : 2))}` : 'Double it'}
+                  <Icon name="lightning" fill /> {banker.doubled[p.id] ? `${f === 3 ? 'Tripled' : 'Doubled'} · ${money(banker.bets[p.id] * (banker.doubleBack ? f * f : f))}` : f === 3 ? 'Triple it' : 'Double it'}
                 </button>
               </div>
             </div>
           ))}
           <div className="block" style={{ background: 'var(--surface)' }}>
-            <div className="eyebrow" style={{ marginBottom: 10 }}>{b?.name} can double back</div>
+            <div className="eyebrow" style={{ marginBottom: 10 }}>{b?.name} can {f === 3 ? 'triple' : 'double'} back</div>
             <button className={`dbl-btn ${banker.doubleBack ? 'on' : ''}`} style={{ width: '100%', height: 52, fontSize: 17 }} disabled={!anyDoubled} aria-pressed={banker.doubleBack}
               onClick={() => setBanker({ ...banker, doubleBack: !banker.doubleBack })}>
-              <Icon name="lightning" fill /> {anyDoubled ? (banker.doubleBack ? 'Doubled back · 4×' : 'Double back to 4×') : 'Unlocks when someone doubles'}
+              <Icon name="lightning" fill /> {anyDoubled ? (banker.doubleBack ? `${f === 3 ? 'Tripled' : 'Doubled'} back · ${f * f}×` : `${f === 3 ? 'Triple' : 'Double'} back to ${f * f}×`) : `Unlocks when someone ${f === 3 ? 'triples' : 'doubles'}`}
             </button>
           </div>
         </div>
@@ -1166,9 +1271,9 @@ function BankerPanel({ round, banker, setBanker, phase, setPhase, onPick, onBet,
   );
 }
 
-/** What the banker has riding on the hole: every bet, at 2× or 4× where it's doubled. */
-function onTheLine(banker) {
-  return Object.entries(banker?.bets || {}).reduce((a, [pid, v]) => a + (v || 0) * (banker.doubled?.[pid] ? (banker.doubleBack ? 4 : 2) : 1), 0);
+/** What the banker has riding on the hole: every bet, at 2× or 4× where it's doubled (3× or 9× on a par 3 that triples). */
+function onTheLine(banker, f = 2) {
+  return Object.entries(banker?.bets || {}).reduce((a, [pid, v]) => a + (v || 0) * (banker.doubled?.[pid] ? (banker.doubleBack ? f * f : f) : 1), 0);
 }
 
 /** Four common amounts at a tap, then Other for the keypad (which has $1 to $10 at a tap too). */
@@ -1258,6 +1363,7 @@ function WolfPanel({ round, hole, wolf, setWolf }) {
       </div>}
       {setWolf && offerBlind && <p className="wolf-note">Blind wolf: call it before anyone tees off.</p>}
       {carried > 0 && <p className="wolf-note">{carried === 1 ? 'A tied hole is' : `${carried} tied holes are`} riding on this one: it pays {carried + 1}×.</p>}
+      {cfg.lastWolf && round.holes.length === 18 && posOf(round, hole) >= 17 && <p className="wolf-note">Last place is the wolf on the last two holes, to catch up.</p>}
     </div>
   );
 }

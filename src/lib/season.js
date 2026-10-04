@@ -7,7 +7,7 @@ import { meFor, myIds } from './format.js';
 import { nameOf } from './ledger.js';
 import { roundTime } from './history.js';
 import { canonicalOf } from './pair-debts.js';
-import { countsMoney } from './play-for.js';
+import { countsMoney, hasCashBet, onTab, tabResults } from './play-for.js';
 
 /** Fewer finished rounds than this and the Season preview shows the sample group instead. */
 export const MIN_REAL_ROUNDS = 2;
@@ -15,12 +15,22 @@ export const MIN_REAL_ROUNDS = 2;
 const cents = v => Math.round(v * 100) / 100 || 0;
 
 /**
- * Finished money rounds this season (calendar year) where you were a player, joined rounds
- * included. Oldest first. Points and reward rounds never count toward the season's money.
+ * Finished rounds this season (calendar year) with money of yours on the Tab, joined rounds
+ * included: money rounds, and reward rounds where you had a side bet for money (only those bets
+ * count, see tabResultsFor). Oldest first. Points rounds never count toward the season's money.
  */
 export function seasonRounds(state, year = new Date().getFullYear()) {
+  return playedOnTab(state, year).filter(r => countsMoney(r) || hasCashBet(r, meFor(r, state)));
+}
+
+/**
+ * Finished rounds this season you played in that put anything on the Tab, oldest first: seasonRounds,
+ * plus reward rounds where only other players had a side bet for money. Everyone's totals add up
+ * these, so a friend's money bet in a lunch round you played counts whether or not you had one too.
+ */
+function playedOnTab(state, year) {
   return Object.values(state?.rounds || {})
-    .filter(r => r.status === 'done' && countsMoney(r) && new Date(roundTime(r)).getFullYear() === year)
+    .filter(r => r.status === 'done' && onTab(r) && new Date(roundTime(r)).getFullYear() === year)
     .filter(r => { const me = meFor(r, state); return !!me && r.players.some(p => p.id === me); })
     .sort((a, b) => roundTime(a) - roundTime(b));
 }
@@ -32,7 +42,7 @@ export function realRoundCount(state, year = new Date().getFullYear()) {
 
 /**
  * Your season, from your own finished rounds this year:
- * - balances: [{ id, name, net, me }] everyone's total across those rounds, biggest first. You are one row.
+ * - balances: [{ id, name, net, me }] everyone's Tab dollars across the rounds you played (playedOnTab), biggest first. You are one row.
  * - rival: you against the friend you played most ({ id, name, rounds, won, lost, even, net }), or null.
  * - biggestDay: your best round ({ id, course, amount, at }), or null when you haven't won one.
  * - bestGame: the game you won most at ({ game, name, net, rounds }), or null.
@@ -49,13 +59,16 @@ export function seasonBoard(state, year = new Date().getFullYear()) {
   const h2h = new Map();
   const games = new Map();
   let biggestDay = null;
-  for (const r of rounds) {
+  for (const r of playedOnTab(state, year)) {
     const me = meFor(r, state);
-    const res = roundResults(r);
+    // A money round's whole result; a reward round's side bets for money alone (the Tab's dollars)
+    const res = tabResults(r, roundResults(r));
     for (const [id, v] of Object.entries(res.balances)) {
       const k = who(id);
       bal.set(k, cents((bal.get(k) || 0) + v));
     }
+    // The rest is yours: a reward round counts only when you had a side bet for money in it
+    if (!countsMoney(r) && !hasCashBet(r, me)) continue;
     const mineNet = res.balances[me] || 0;
     if (mineNet > 0 && (!biggestDay || mineNet > biggestDay.amount)) {
       biggestDay = { id: r.id, course: r.course?.name || '', amount: cents(mineNet), at: roundTime(r) };
@@ -75,9 +88,11 @@ export function seasonBoard(state, year = new Date().getFullYear()) {
     }
     const pairs = res.pairs?.[me] || {};
     const inRound = new Map();
+    // A reward round is a round together only with the players you had a side bet for money with
+    const betWith = countsMoney(r) ? null : new Set((res.detail.byGame.bets?.detail?.bets || []).filter(b => b.sides?.includes(me)).flatMap(b => b.sides));
     for (const p of r.players) {
       const k = who(p.id);
-      if (k === meKey) continue;
+      if (k === meKey || (betWith && !betWith.has(p.id))) continue;
       inRound.set(k, (inRound.get(k) || 0) + (pairs[p.id] ?? 0));
     }
     for (const [k, v] of inRound) {

@@ -3,8 +3,8 @@
 // no crash, balances add up to zero and every amount is whole cents.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { createRound, roundResults, changeBets, GAMES } from './round.js';
-import { REV2_DEFAULTS } from './settings.js';
+import { createRound, roundResults, changeBets, GAMES, TEAM_GAMES, ONE_BALL_GAMES } from './round.js';
+import { REV2_DEFAULTS, TEAM_DEFAULTS } from './settings.js';
 
 const settings = (payout, sixes) => ({
   hcPct: 100,
@@ -26,6 +26,8 @@ const settings = (payout, sixes) => ({
   rabbit: { ...REV2_DEFAULTS.rabbit },
   hammer: { stake: 5, max: 3, who: 'either' },
   snake: { stake: 5, growth: payout === 'pot' ? 'flat' : 'double', nines: sixes === 'match' },
+  // The team games: a Nassau match on one pass, per hole on the other
+  ...Object.fromEntries(Object.entries(TEAM_DEFAULTS).map(([k, v]) => [k, payout === 'pot' ? v : { ...v, format: 'hole' }])),
 });
 const course = n => ({ id: 'c', name: 'C', city: 'T', tees: [], holes: Array.from({ length: n }, (_, i) => ({ par: [4, 3, 5][i % 3], hdcp: i + 1 })) });
 // Bump every money figure in a game's settings (not thresholds or multipliers)
@@ -40,7 +42,7 @@ test('every game: bets changed mid-round still add up to zero, in whole cents', 
       for (let k = 0; k < 25; k++) {
         const n = Math.max(g.min || 2, Math.min(g.max || 4, 2 + Math.floor(rnd() * 4)));
         const ids = Array.from({ length: n }, (_, i) => `p${i}`);
-        const needsTeams = game === 'scramble' || game === 'vegas' || game === 'match';
+        const needsTeams = game === 'scramble' || game === 'vegas' || game === 'match' || TEAM_GAMES.includes(game);
         if (needsTeams && n % 2) continue;
         const teams = needsTeams || (g.teams && n === 4) ? [ids.slice(0, n / 2), ids.slice(n / 2)] : null;
         const holes = rnd() < 0.5 ? 9 : 18;
@@ -48,7 +50,7 @@ test('every game: bets changed mid-round still add up to zero, in whole cents', 
           id: 'r', game, course: course(holes), holesCount: holes, players: ids.map((id, i) => ({ id, name: id, index: i * 5 })),
           settings: settings(payout, sixes), hcPct: 90, useHandicaps: true, teams,
         });
-        const scorers = game === 'scramble' ? r.teams.map(t => t.id) : ids;
+        const scorers = ONE_BALL_GAMES.includes(game) ? r.teams.map(t => t.id) : ids;
         const upto = 1 + Math.floor(rnd() * holes);
         for (let i = 0; i < upto; i++) {
           const h = r.holes[i];

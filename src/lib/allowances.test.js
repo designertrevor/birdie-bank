@@ -11,9 +11,12 @@ test('every game has an answer, and only the WHS formats get one', () => {
     stroke: 95, stableford: 95, sixes: 90,
     banker: null, skins: null, wolf: null, vegas: null, quota: null, nines: null, aces: null,
     bbb: null, dots: null, rabbit: null, snake: null, scramble: null,
+    // Alternate shot and Chapman have their team allowances built in, like Scramble
+    altshot: null, chapman: null,
   };
   for (const game of Object.keys(GAMES)) {
-    if (['match', 'nassau', 'hammer'].includes(game)) continue;
+    // Best ball and Shamble go by their teams (team-games.test.js)
+    if (['match', 'nassau', 'hammer', 'bestball', 'shamble'].includes(game)) continue;
     assert.ok(game in want, `${game} is covered`);
     assert.equal(pct(game, { teams: null, players: 4 }), want[game], game);
   }
@@ -37,7 +40,7 @@ test('match, Nassau and Hammer: singles get full strokes, best ball gets 90%', (
 
 test('the WHS Appendix C (2024) values', () => {
   assert.deepEqual(Object.fromEntries(Object.entries(WHS_ALLOWANCE).map(([k, v]) => [k, v.pct])),
-    { stroke: 95, stableford: 95, singlesMatch: 100, fourBallMatch: 90, fourBallStroke: 85 });
+    { stroke: 95, stableford: 95, singlesMatch: 100, fourBallMatch: 90, fourBallStroke: 85, best1of4: 75, best2of4: 85 });
 });
 
 test('hint wording', () => {

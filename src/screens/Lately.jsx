@@ -4,11 +4,14 @@ import { LatelyList } from '../components/LatelyList.jsx';
 import { useStore } from '../lib/store.js';
 import { useNav } from '../lib/nav.js';
 import { LATELY_DAYS, latelyItems } from '../lib/lately.js';
+import { recentTalkKeys, withTalk } from '../lib/talk.js';
+import { useTalkSync } from '../lib/talk-sync.js';
 
 export default function Lately() {
   const nav = useNav();
   const state = useStore();
-  const items = latelyItems(state);
+  useTalkSync(recentTalkKeys(state));
+  const items = withTalk(latelyItems(state), state);
   return (
     <Screen>
       <Header title="Lately" onBack={nav.pop} />
@@ -18,7 +21,7 @@ export default function Lately() {
               <p className="field-help pad" style={{ marginTop: 0 }}>The last {LATELY_DAYS} days with your group. Amounts show only when they’re yours.</p>
               <LatelyList items={items} />
             </>
-          : <Empty title="Quiet lately" text="Settle-ups, answers for upcoming rounds and round recaps show up here." />}
+          : <Empty title="Quiet lately" text="Settle-ups, challenges, answers for upcoming rounds, round recaps and trash talk show up here." />}
       </div>
     </Screen>
   );

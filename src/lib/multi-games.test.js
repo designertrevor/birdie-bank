@@ -231,32 +231,33 @@ test('birdie pot: shares split the pot, an eagle is two shares, no birdies means
 
 test('side game choices: none with Scramble, no clashes, at most 4 games', () => {
   assert.deepEqual(sideGameChoices('scramble'), []);
-  assert.deepEqual(sideGameChoices('nassau'), ['skins', 'dots', 'birdies', 'snake', 'rabbit']);
+  assert.deepEqual(sideGameChoices('nassau'), ['skins', 'dots', 'birdies', 'snake', 'rabbit', 'ctp', 'drive']);
   // Skins and Rabbit both pay for winning a hole outright, so only one of them
-  assert.deepEqual(sideGameChoices('skins'), ['dots', 'birdies', 'snake']);
-  assert.deepEqual(sideGameChoices('rabbit'), ['dots', 'birdies', 'snake']);
-  assert.deepEqual(sideGameChoices('dots'), ['skins', 'birdies', 'snake', 'rabbit']);
-  assert.deepEqual(sideGameChoices('snake'), ['skins', 'dots', 'birdies', 'rabbit']);
+  assert.deepEqual(sideGameChoices('skins'), ['dots', 'birdies', 'snake', 'ctp', 'drive']);
+  assert.deepEqual(sideGameChoices('rabbit'), ['dots', 'birdies', 'snake', 'ctp', 'drive']);
+  assert.deepEqual(sideGameChoices('dots'), ['skins', 'birdies', 'snake', 'rabbit', 'drive']);
+  assert.deepEqual(sideGameChoices('snake'), ['skins', 'dots', 'birdies', 'rabbit', 'ctp', 'drive']);
   // Junk and Bingo Bango Bongo both pay for closest
-  assert.deepEqual(sideGameChoices('bbb'), ['skins', 'birdies', 'snake', 'rabbit']);
-  assert.deepEqual(sideGameChoices('nassau', [{ game: 'skins' }]), ['dots', 'birdies', 'snake']);
-  assert.deepEqual(sideGameChoices('nassau', [{ game: 'rabbit' }]), ['dots', 'birdies', 'snake']);
+  assert.deepEqual(sideGameChoices('bbb'), ['skins', 'birdies', 'snake', 'rabbit', 'drive']);
+  assert.deepEqual(sideGameChoices('nassau', [{ game: 'skins' }]), ['dots', 'birdies', 'snake', 'ctp', 'drive']);
+  assert.deepEqual(sideGameChoices('nassau', [{ game: 'rabbit' }]), ['dots', 'birdies', 'snake', 'ctp', 'drive']);
   // One Birdie pot a round, like every other side game
-  assert.deepEqual(sideGameChoices('nassau', [{ game: 'birdies' }]), ['skins', 'dots', 'snake', 'rabbit']);
+  assert.deepEqual(sideGameChoices('nassau', [{ game: 'birdies' }]), ['skins', 'dots', 'snake', 'rabbit', 'ctp', 'drive']);
   assert.deepEqual(sideGamesOf({ game: 'nassau', sideGames: [{ game: 'birdies', settings: {} }, { game: 'birdies', settings: {} }] }).map(sg => sg.game), ['birdies']);
   assert.deepEqual(sideGameChoices('nassau', [{ game: 'skins' }, { game: 'dots' }, { game: 'snake' }]), []);
   // A Birdie pot already on isn't offered a second time
-  assert.deepEqual(sideGameChoices('vegas', [{ game: 'birdies' }]), ['skins', 'dots', 'snake', 'rabbit']);
-  assert.deepEqual(sideGameChoices('vegas', [{ game: 'skins' }, { game: 'birdies' }]), ['dots', 'snake']);
+  assert.deepEqual(sideGameChoices('vegas', [{ game: 'birdies' }]), ['skins', 'dots', 'snake', 'rabbit', 'ctp', 'drive']);
+  assert.deepEqual(sideGameChoices('vegas', [{ game: 'skins' }, { game: 'birdies' }]), ['dots', 'snake', 'ctp', 'drive']);
   assert.equal(MAX_GAMES, 4);
   // A hand-made round can't pay Skins and Rabbit together: the second one is dropped
   assert.deepEqual(sideGamesOf({ game: 'nassau', sideGames: [{ game: 'skins', settings: {} }, { game: 'rabbit', settings: {} }] }).map(sg => sg.game), ['skins']);
   assert.deepEqual(sideGamesOf({ game: 'rabbit', sideGames: [{ game: 'skins', settings: {} }] }), []);
   // Junk on a Bingo Bango Bongo round from before the rule keeps its money
   assert.deepEqual(sideGamesOf({ game: 'bbb', sideGames: [{ game: 'dots', settings: {} }] }).map(sg => sg.game), ['dots']);
-  // GAMES is untouched: the picker still shows 18 games
-  assert.equal(Object.keys(GAMES).length, 18);
-  assert.ok(Object.keys(SIDE_GAMES).every(k => k === 'birdies' || GAMES[k]));
+  // GAMES is untouched by side games: the picker shows 22 games (the four team games came 2026-10-03)
+  assert.equal(Object.keys(GAMES).length, 22);
+  // Side-game-only pots: the birdie, closest to the pin and long drive pots
+  assert.ok(Object.keys(SIDE_GAMES).every(k => ['birdies', 'ctp', 'drive'].includes(k) || GAMES[k]));
 });
 
 test('livePreview counts the side games in the hole’s money', () => {

@@ -14,9 +14,35 @@ export const WHS_ALLOWANCE = {
   stableford: { pct: 95, format: 'Stableford' },
   singlesMatch: { pct: 100, format: 'singles match play' },
   fourBallMatch: { pct: 90, format: 'best ball match play' },
-  // No game plays four-ball stroke play yet: kept for when one does
+  // Best ball played as stroke play (2026-10-03)
   fourBallStroke: { pct: 85, format: 'best ball stroke play' },
+  // "Best 1 of 4 stroke play 75%" and "Best 2 of 4 stroke play 85%", for best ball with teams of three or four
+  best1of4: { pct: 75, format: 'best 1 of 4' },
+  best2of4: { pct: 85, format: 'best 2 of 4' },
 };
+
+// Shamble isn't in Appendix C. The USGA's guidance for a selected drive, which a shamble starts with, is
+// 75% of each player's course handicap for two-person teams and 65% for four-person teams; three-person
+// teams get 70%, in between. Source, checked 2026-10-03: USGA Rules of Handicapping, Committee content,
+// "Selected drive" https://www.usga.org/handicapping/roh/Content/rules/Committee%20Content/USGA/LG_R7h7.htm
+export const SHAMBLE_ALLOWANCE = { 2: 75, 3: 70, 4: 65 };
+const SIZE_WORD = { 2: 'twos', 3: 'threes', 4: 'fours' };
+
+/**
+ * Best ball and Shamble, from the teams (arrays of ids) and the game's settings. Best ball with pairs
+ * is four-ball: 90% as a match (holes won, or per hole) and 85% as stroke play. Teams of three or four
+ * use the "best 1 of 4" and "best 2 of 4" rows, played as a match too (Appendix C has no match play row
+ * for them, nor a row for teams of three, so those use the four-player one). Uneven teams get nothing.
+ */
+function teamGameAllowance(game, teams, settings) {
+  if (!teams || teams.length !== 2 || teams[0].length !== teams[1].length) return null;
+  const size = Math.min(4, teams[0].length);
+  if (size < 2) return null;
+  if (game === 'shamble') return { pct: SHAMBLE_ALLOWANCE[size], format: `a shamble in ${SIZE_WORD[size]}` };
+  if (size === 2) return settings?.format !== 'hole' && settings?.scoring === 'stroke' ? WHS_ALLOWANCE.fourBallStroke : WHS_ALLOWANCE.fourBallMatch;
+  const row = settings?.count === 2 ? WHS_ALLOWANCE.best2of4 : WHS_ALLOWANCE.best1of4;
+  return size === 4 ? row : { ...row, format: row.format.replace('of 4', `of ${size}`) };
+}
 
 /** The team shape of a head-to-head game: 'singles' (1 v 1), 'fourball' (2 v 2) or null for anything else. */
 function sideShape(teams, players) {
@@ -34,9 +60,13 @@ function sideShape(teams, players) {
  * Skins, Wolf, Banker, Vegas, Quota and the points games have no Appendix C row, so they get
  * nothing. Scramble gets nothing here either: its team allowances are applied already.
  * Uneven or bigger sides (1 v 3, 3 v 3) are not a WHS format, so they get nothing too.
+ * Best ball and Shamble read their `settings` (the game's own block) for the scoring and balls that
+ * count; Alternate shot and Chapman, like Scramble, have their team allowances applied already.
  */
-export function suggestedAllowance(game, { teams = null, players = null } = {}) {
+export function suggestedAllowance(game, { teams = null, players = null, settings = null } = {}) {
   switch (game) {
+    case 'bestball':
+    case 'shamble': return teamGameAllowance(game, teams, settings);
     case 'stroke': return WHS_ALLOWANCE.stroke;
     case 'stableford': return WHS_ALLOWANCE.stableford;
     case 'match':

@@ -1,8 +1,11 @@
 import { roundResults } from '../lib/round.js';
-import { gameLabel, roundDate } from '../lib/format.js';
+import { gameLabel, meFor, roundDate } from '../lib/format.js';
 import { myNet, roundTime } from '../lib/history.js';
 import { useNav } from '../lib/nav.js';
-import { playForOf, playForShort, rewardOutcome, unitFmt } from '../lib/play-for.js';
+import { money as dollars } from '../lib/golf.js';
+import { hasCashBet, playForOf, playForShort, rewardOutcome, tabMoneyOf, unitFmt } from '../lib/play-for.js';
+import { countsLine, roundTalkCounts } from '../lib/talk-counts.js';
+import { TalkCount } from './TalkCount.jsx';
 
 function dayLabel(t, withYear) {
   const d = new Date(t);
@@ -23,22 +26,30 @@ export function RoundRow({ round, state, className = '', withYear = false }) {
   const money = unitFmt(round);
   const pf = playForOf(round);
   const sub = pf.kind === 'reward' ? rewardOutcome(round, roundResults(round)).win.replace(/\.$/, '') : pf.kind === 'points' ? 'For bragging rights' : null;
-  const label = amount == null
+  // A reward round's side bets for money are on the Tab, so the month's total counts them: say so here
+  const me = amount == null ? null : meFor(round, state);
+  const cash = pf.kind === 'reward' && hasCashBet(round, me) ? tabMoneyOf(round, me) : null;
+  const cashText = cash == null ? '' : `. ${cash ? `${dollars(cash, { sign: true })} on side bets` : 'Side bets square'}`;
+  // Its trash talk, in a few characters (talk.js)
+  const talk = countsLine(roundTalkCounts(state, round));
+  const label0 = amount == null
     ? `${round.course.name}, ${gameLabel(round)}, ${roundDate(round)}. ${top ? `${top.name} ${money(top.amount, { sign: true })}` : ''}${sub ? `. ${sub}` : ''}`
-    : `${round.course.name}, ${gameLabel(round)}, ${roundDate(round)}. You ${money(amount, { sign: true })}${sub ? `. ${sub}` : ''}`;
+    : `${round.course.name}, ${gameLabel(round)}, ${roundDate(round)}. You ${money(amount, { sign: true })}${sub ? `. ${sub}` : ''}${cashText}`;
+  const label = talk ? `${label0}. ${talk}` : label0;
   return (
     <button className={`hist-row ${className}`} onClick={() => nav.push('roundDetail', { id: round.id })} aria-label={label}>
       <span className="hr-day">{dayLabel(roundTime(round), withYear)}</span>
       <span className="hr-main">
         <span className="hr-course">{round.course.name}</span>
         <span className="hr-game">{gameLabel(round)}</span>
+        {talk && <TalkCount rows={state.talk?.[`round:${round.id}`]} />}
       </span>
       {/* The play-for label sits under the amount, so a 375px row keeps the course name readable */}
       <span className="hr-end">
         {amount != null
           ? <span className={`hr-amt ${amount > 0 ? 'pos' : amount < 0 ? 'neg' : ''}`}>{money(amount, { sign: true })}</span>
           : <span className="hr-amt other">{top ? `${top.name.split(' ')[0]} ${money(top.amount, { sign: true })}` : '–'}</span>}
-        {pf.kind === 'reward' && <span className="hr-for" aria-hidden="true">{playForShort(round)}</span>}
+        {pf.kind === 'reward' && <span className="hr-for" aria-hidden="true">{playForShort(round)}{cash != null && cash !== 0 && <> · <span className={cash > 0 ? 'pos' : 'neg'}>{dollars(cash, { sign: true })}</span></>}</span>}
       </span>
     </button>
   );

@@ -1,6 +1,6 @@
 // "Lately" on Up next: what happened with your group in the last 30 days, newest first, built
 // only from data this phone already has: payments recorded on the Tab, carry-overs (once they
-// exist), who answered an upcoming round, and recaps of finished rounds.
+// exist), who answered an upcoming round, challenges and their answers, and recaps of finished rounds.
 //
 // Money stays between the two people in it: an amount shows only when you are one of them.
 // Anything between two other people says who, never how much.
@@ -17,7 +17,8 @@ import { dayLabel } from './plans.js';
 import { PAY_APPS } from './pay.js';
 import { lastResult, roundTime } from './history.js';
 import { canonicalOf, paymentGroups } from './shared-tab.js';
-import { countsMoney, rewardOutcome, unitFmt } from './play-for.js';
+import { countsMoney, hasCashBet, rewardOutcome, tabMoneyOf, unitFmt } from './play-for.js';
+import { challengeLately } from './challenges.js';
 
 export const LATELY_DAYS = 30;
 const DAY = 24 * 60 * 60 * 1000;
@@ -45,7 +46,7 @@ function agreedCarries(list) {
 
 /**
  * Lately items, newest first: [{ id, kind, at, text, sub, target }], where kind is 'payment',
- * 'carry', 'rsvp' or 'recap' and target is a [screen, params] pair to open (or null).
+ * 'carry', 'rsvp', 'challenge' or 'recap' and target is a [screen, params] pair to open (or null).
  * The round shown in "Last time out" is left out, since Up next already shows it.
  */
 export function latelyItems(state, now = Date.now(), { carries = state?.carries, days = LATELY_DAYS } = {}) {
@@ -117,8 +118,12 @@ export function latelyItems(state, now = Date.now(), { carries = state?.carries,
     }
   }
 
+  // Challenges: someone challenging you (or two friends), and the answers to yours
+  for (const c of challengeLately(state, since, t + 60000)) items.push({ ...c, sub: agoLabel(c.at, t) });
+
   // Finished rounds: who took it, and only your own amount (in points for a points or reward
-  // round, which is never money; a reward round says who's buying instead)
+  // round, which is never money; a reward round says who's buying instead, plus your side bets
+  // for money in dollars when you had one, as the Tab counts them)
   const shown = lastResult(state)?.round?.id;
   for (const r of Object.values(state.rounds || {})) {
     if (r?.status !== 'done' || r.id === shown || !inWindow(roundTime(r)) || !GAMES[r.game]) continue;
@@ -134,10 +139,13 @@ export function latelyItems(state, now = Date.now(), { carries = state?.carries,
     const fmt = unitFmt(r);
     const reward = rewardOutcome(r, roundResults(r));
     const yours = amount == null ? null : amount === 0 ? (countsMoney(r) ? 'You broke even' : 'You were level') : `You ${fmt(amount, { sign: true })}`;
+    // A reward round's side bets for money are yours on the Tab, so they show in dollars (only when you had one)
+    const cash = reward && played && hasCashBet(r, me) ? cents(tabMoneyOf(r, me)) : null;
+    const bets = cash == null ? null : cash === 0 ? 'Side bets square' : `You ${money(cash, { sign: true })} on side bets`;
     items.push({
       id: `recap:${r.id}`, kind: 'recap', at: roundTime(r),
       text: `${gameLabel(r)} at ${r.course?.name || 'the course'} · ${took}`,
-      sub: [reward ? reward.buy.replace(/\.$/, '') : yours, agoLabel(roundTime(r), t)].filter(Boolean).join(' · '),
+      sub: [reward ? reward.buy.replace(/\.$/, '') : yours, bets, agoLabel(roundTime(r), t)].filter(Boolean).join(' · '),
       target: ['roundDetail', { id: r.id }],
     });
   }

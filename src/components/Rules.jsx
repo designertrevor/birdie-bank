@@ -1,5 +1,26 @@
 import { Sheet } from './ui.jsx';
 
+// The bets every team game shares (Best ball, Shamble, Alternate shot, Chapman): how they pay, match
+// or stroke play, pressing, and what happens when someone leaves. `oneBall` for the games played with
+// one ball a team, which need both partners.
+function teamBets(oneBall = false) {
+  return [
+    ['The bets', <ul key="b">
+      <li><strong>Nassau</strong> (the usual): three bets, the front 9, the back 9 and the total 18. Playing nine? The first 4, the last 5 and all 9.</li>
+      <li><strong>One bet</strong>: one bet on the whole round.</li>
+      <li><strong>Per hole</strong>: every hole your team wins pays the bet. A halved hole pays nothing.</li>
+    </ul>],
+    ['Match or stroke play', <ul key="s">
+      <li><strong>Match play</strong>: the lower team score wins the hole, and the team that wins more holes wins the bet.</li>
+      <li><strong>Stroke play</strong>: add up the team score on every hole. The lower total wins the bet; a tie pays nothing.</li>
+    </ul>],
+    ['Pressing', <p key="p">In match play a team that’s 2 down (or whatever your group set) can <strong>press</strong>: a new bet from the next hole to the end of that leg. Press at the turn and no press on the last hole work as in Nassau. Stroke play and per hole have no presses.</p>],
+    ['Money', <p key="m">Each player on the winning team wins the bet from the other team, so in 2 v 2 at $5 it’s $5 each way. A bet that isn’t finished when the round stops pays whoever leads it on the holes played.</p>],
+    ['Net or gross', <p key="g">With handicaps on, strokes come off the low {oneBall ? 'team' : 'player'} on the hardest holes. Turn handicaps off to play gross.</p>],
+    ['If someone leaves', <p key="l">{oneBall ? 'The game needs both partners, so once one leaves, that team’s holes after don’t count and the bets stand as they are.' : 'Their partners carry on for the team. A team that can’t make enough scores for a hole doesn’t play it, and the bets stand as they are.'}</p>],
+  ];
+}
+
 const RULES = {
   banker: {
     title: 'How to play Banker',
@@ -26,6 +47,7 @@ const RULES = {
         <li><strong>Fixed</strong>: the same banker all round.</li>
         <li><strong>Pick</strong>: the group picks each hole; defaults to last hole’s banker.</li>
       </ul>],
+      ['Par 3 presses triple', <p key="t">A house rule, off unless you turn it on: on a par 3 a double is a <strong>triple</strong> (3×), and the banker’s press back makes it 9×. A $5 bet tripled and pressed back is $45.</p>],
     ],
   },
   nassau: {
@@ -45,6 +67,7 @@ const RULES = {
       ['House rules', <ul key="hr">
         <li><strong>Press at the turn</strong>: whoever lost the front nine can press the back nine at the turn, however far down. It’s a new bet on the back for the back’s amount.</li>
         <li><strong>No press on the last hole</strong>: nobody can start a press on the 9th or the 18th. A one-hole bet is a coin flip.</li>
+        <li><strong>Both balls count</strong>: playing 2 v 2, partners add their two net scores on each hole instead of counting the better one. A 3 and a 6 (9) lose to two 4s (8). A side missing a partner plays best ball that hole.</li>
       </ul>],
     ],
   },
@@ -59,6 +82,7 @@ const RULES = {
       ['After the last hole', <p key="l">Skins still carried after the last hole go unclaimed by default. Or the players tied on the last hole <strong>split</strong> them, or play them off on a <strong>playoff</strong> hole.</p>],
       ['House rules', <ul key="hr">
         <li><strong>Canadian skins</strong>: when the low net score is a birdie and it’s tied, a natural birdie (made without a stroke) beats a net one. Two natural birdies still tie. Net skins only.</li>
+        <li><strong>Back nine doubles</strong>: per skin over 18 holes, a skin on holes 10 to 18 is worth twice the bet. A front-nine skin carried onto the back keeps its front value.</li>
         <li><strong>Validate skins</strong>: win a skin, then make net par or better on the next hole to keep it. Miss, and the skins you took go back into the carry and ride on that hole. The last hole’s skin needs no check, and neither does the last hole played in a round ended early.</li>
       </ul>],
       ['Joining late', <p key="j">A carry stays with the players who built it. Someone added partway plays for every skin from the hole they join, but not for skins already carrying when they got there: they don’t pay into those and can’t win them. If they win a hole outright, they take that hole’s skin and the older carry keeps rolling among the players who built it. In a pot game they sit the pot out.</p>],
@@ -80,7 +104,10 @@ const RULES = {
         <li>Lone wolf: the points are multiplied (2× by default), paid by or to each of the three.</li>
         <li>Blind wolf: always more than a lone wolf, one or two more (lone 2× makes blind 3× or 4×), paid by or to each of the three. At $2 a point and blind 3×, a blind wolf who wins is up $18, and one who loses is down $18.</li>
       </ul>],
-      ['House rules', <p key="hr"><strong>Ties carry</strong> (off unless you turn it on): a tied hole’s points ride on to the next hole that’s won. Two ties in a row and the next hole pays 3×. Ties still carried after the last hole go to nobody.</p>],
+      ['House rules', <ul key="hr">
+        <li><strong>Ties carry</strong> (off unless you turn it on): a tied hole’s points ride on to the next hole that’s won. Two ties in a row and the next hole pays 3×. Ties still carried after the last hole go to nobody.</li>
+        <li><strong>Last place is wolf on 17 and 18</strong> (off unless you turn it on): whoever is furthest down in the wolf money after 16 is the wolf on the last two holes, to give them a way back. A tie for last keeps the usual turn if it’s one of them.</li>
+      </ul>],
     ],
   },
   match: {
@@ -96,6 +123,7 @@ const RULES = {
       ['Money', <p key="m">Each player on the winning side wins the bet; each on the losing side pays it. With uneven sides the loner plays every opponent for the bet, so in 1 v 3 they win or lose three bets.</p>],
       ['Closing it out', <p key="c">A match ends as soon as one side leads by more holes than remain: 3&2 means 3 up with 2 to play. <strong>Dormie</strong> means the leader can’t lose. The remaining holes don’t count for this bet.</p>],
       ['Presses', <p key="p">Turn presses on and a side that falls behind by the set number of holes can start a fresh bet for the same amount over the remaining holes.</p>],
+      ['Both balls count', <p key="b">A house rule for 2 v 2, off unless you turn it on: partners add their two net scores on each hole instead of counting the better one. A side missing a partner plays best ball that hole.</p>],
     ],
   },
   hammer: {
@@ -111,6 +139,7 @@ const RULES = {
       ['House rules', <ul key="r">
         <li><strong>Most hammers on a hole</strong>: 1, 2, 3 or no limit. Three hammers make a $5 hole worth $40.</li>
         <li><strong>Who throws first</strong>: either side, or only the side behind on the day (either side when it’s level).</li>
+        <li><strong>Birdie hammer</strong>: win a hole with a real birdie or better and that’s one more hammer, so it pays double. A hole that was folded doesn’t count.</li>
       </ul>],
       ['Money', <p key="m">Each player on the winning side wins the hole’s value; each on the losing side pays it.</p>],
     ],
@@ -123,6 +152,7 @@ const RULES = {
       ['Each hole', <p key="e">The team with the lower number wins the difference in points. 45 against 56 is 11 points. Every point is worth the amount you set, paid by each player on the losing team.</p>],
       ['Birdie flip', <p key="b">With the flip on, a natural birdie (or better) flips the other team’s number so the high score goes first: 45 becomes <strong>54</strong>. If both teams birdie, nothing flips.</p>],
       ['Birdies double', <p key="d">A house rule, off unless you turn it on: when one team alone makes a real birdie, the hole’s points double. A lone eagle triples them. With the flip that’s a big swing: 34 against a flipped 54 is 40 points.</p>],
+      ['Daytona', <p key="y">A house rule, off unless you turn it on: a team with no real par or better on the hole puts its high number first. A 5 and a 6 make <strong>65</strong>, not 56, so a bogey hole costs more.</p>],
       ['Handicaps', <p key="h">Strokes come off the low player, so net scores make the numbers. Turn handicaps off to play gross.</p>],
     ],
   },
@@ -137,7 +167,10 @@ const RULES = {
         <li><strong>Per match</strong>: each player on the winning pair gets the bet from one player on the losing pair; a halved match pushes. A match cut short pays whoever is ahead on the holes played.</li>
         <li><strong>Per hole</strong>: the bet for every hole a team finishes ahead in that match.</li>
       </ul>],
-      ['House rules', <p key="hr"><strong>Halved matches carry</strong> (per match, off unless you turn it on): a match that ends all square adds its bet to the next one, so that match is worth double. Halve the last match and nobody gets it.</p>],
+      ['House rules', <ul key="hr">
+        <li><strong>Halved matches carry</strong> (per match, off unless you turn it on): a match that ends all square adds its bet to the next one, so that match is worth double. Halve the last match and nobody gets it.</li>
+        <li><strong>Both balls count</strong> (off unless you turn it on): partners add their two net scores on each hole instead of counting the better one.</li>
+      </ul>],
     ],
   },
   scramble: {
@@ -148,7 +181,49 @@ const RULES = {
       ['Scoring', <p key="s">Enter one score per team on each hole. Lowest net total for the round wins.</p>],
       ['Team handicaps', <p key="h">Each team plays off a blend of its members’ course handicaps, lowest first, using the WHS allowances: 35% and 15% for pairs, 30/20/10% for threes, 25/20/15/10% for fours. Strokes are then given off the low team on the hardest holes.</p>],
       ['Money', <p key="m">Everyone puts the same amount in the pot. The winning team’s players split it; tied teams share it.</p>],
+      ['Second gets its money back', <p key="2">A house rule, off unless you turn it on: with three or more teams, the team alone in second takes back what it put in, and the winners split the rest. A tie for first or for second, and it’s winner takes all.</p>],
       ['Minimum drives', <p key="d">A house rule, off unless you pick it: every player’s drive has to be used at least 2, 3 or 4 times. Tap whose drive the team took on each hole and the app keeps count, and warns you when the rest have to be someone’s.</p>],
+    ],
+  },
+  bestball: {
+    title: 'How to play Best ball',
+    sub: '4–8 players · 2 v 2 up to 4 v 4 · Also called four-ball',
+    sections: [
+      ['Overview', <p key="o">Two teams, everyone plays their own ball, and the team takes its <strong>best score</strong> on each hole. Teams of three or four can count the <strong>best two</strong> scores instead, added up.</p>],
+      ['Teams', <p key="t">Two teams the same size: 2 v 2, 3 v 3 or 4 v 4. Enter every player’s score; the app picks the ones that count and tags them.</p>],
+      ...teamBets(),
+      ['Handicaps', <p key="h">The WHS allowance for best ball is 90% of each player’s handicap as a match and 85% as stroke play. With teams of three or four it’s 75% counting the best one and 85% counting the best two. Setup suggests the right one.</p>],
+    ],
+  },
+  shamble: {
+    title: 'How to play Shamble',
+    sub: '4–8 players · 2 v 2 up to 4 v 4 · Best drive, then your own ball',
+    sections: [
+      ['Overview', <p key="o">Everyone tees off and the team picks the <strong>best drive</strong>. Everyone moves their ball to it and plays their own ball into the hole from there. The team’s best score counts (or the best two, with teams of three or four).</p>],
+      ['Scoring', <p key="s">Enter every player’s score, as in best ball. The app picks the ones that count.</p>],
+      ['Minimum drives', <p key="d">A house rule, off unless you pick it: every player’s drive has to be used at least 2, 3 or 4 times. Tap whose drive the team took on each hole and the app keeps count.</p>],
+      ...teamBets(),
+      ['Handicaps', <p key="h">The USGA’s guidance for a selected drive is 75% of each player’s handicap for teams of two and 65% for teams of four (70% for threes, in between). Setup suggests it.</p>],
+    ],
+  },
+  altshot: {
+    title: 'How to play Alternate shot',
+    sub: '4 players · 2 v 2 · One ball a team · Also called foursomes',
+    sections: [
+      ['Overview', <p key="o">Partners play <strong>one ball</strong> and take turns hitting it until it’s holed. One partner tees off on the odd holes and the other on the even holes.</p>],
+      ['Scoring', <p key="s">Enter one score per team on each hole.</p>],
+      ['Team handicaps', <p key="h">Each team plays off half of its two players’ course handicaps added up, the WHS allowance for foursomes. Strokes then come off the low team on the hardest holes.</p>],
+      ...teamBets(true),
+    ],
+  },
+  chapman: {
+    title: 'How to play Chapman',
+    sub: '4 players · 2 v 2 · One ball a team · Also called Pinehurst',
+    sections: [
+      ['Overview', <p key="o">Both partners tee off, then each plays the <strong>other’s ball</strong> for the second shot. The team picks the better of the two and takes turns from there until it’s holed.</p>],
+      ['Scoring', <p key="s">Enter one score per team on each hole.</p>],
+      ['Team handicaps', <p key="h">Each team plays off 60% of the lower course handicap plus 40% of the higher, the WHS allowance for Chapman. Strokes then come off the low team on the hardest holes.</p>],
+      ...teamBets(true),
     ],
   },
   stroke: {
@@ -161,7 +236,10 @@ const RULES = {
         <li><strong>Per stroke</strong>: every pair of players settles the difference in their net totals, so each stroke wins the bet from every player you beat by it.</li>
       </ul>],
       ['Handicaps', <p key="h">Strokes come off the low player on the hardest holes. Picked-up holes count as a double bogey after strokes.</p>],
-      ['Net double bogey max', <p key="c">A house rule, off unless you turn it on: no hole counts for more than a net double bogey, the same cap your handicap uses. Take a 9 on a par 4 and it counts as a 6 (or a 7 if you get a stroke there).</p>],
+      ['House rules', <ul key="hr">
+        <li><strong>Net double bogey max</strong>: no hole counts for more than a net double bogey, the same cap your handicap uses. Take a 9 on a par 4 and it counts as a 6 (or a 7 if you get a stroke there).</li>
+        <li><strong>Front, back and total</strong>: played for a pot over 18 holes, the front nine, the back nine and the 18 are a pot each, each at the amount you set. Low net on each nine takes that nine’s pot, and low net for the round takes the third. A nine still being played pays on the holes so far.</li>
+      </ul>],
     ],
   },
   stableford: {
@@ -174,6 +252,9 @@ const RULES = {
         <li><strong>Modified</strong>: double bogey −3, bogey −1, par 0, birdie 2, eagle 5, albatross 8. Rewards aggression.</li>
       </ul>],
       ['Money', <p key="m">Highest points wins. By default each player puts in and the top total takes the pot. Or pay per point: every pair settles the difference, so each point wins the bet from every other player.</p>],
+      ['House rules', <ul key="hr">
+        <li><strong>Front, back and total</strong>: played for a pot over 18 holes, the front nine, the back nine and the 18 are a pot each, each at the amount you set. Most points on each nine takes that nine’s pot, and most for the round takes the third. A nine still being played pays on the holes so far.</li>
+      </ul>],
     ],
   },
   quota: {
@@ -185,6 +266,11 @@ const RULES = {
       ['Winning', <p key="w">The player who finishes furthest above their quota (or least below it) wins. By default that takes the pot; or pay per point of difference between every pair.</p>],
       ['Short round', <p key="s">Stop early and each quota shrinks to the holes played: a quota of 30 is 15 after nine holes.</p>],
       ['No handicaps?', <p key="h">Turn handicaps off and everyone’s quota is 36, a straight points race.</p>],
+      ['House rules', <ul key="hr">
+        <li><strong>Double bogey costs a point</strong>: double bogey or worse is −1 instead of 0, so a blow-up hole hurts.</li>
+        <li><strong>Front, back and total</strong>: played for a pot over 18 holes, the front nine, the back nine and the 18 are a pot each, each at the amount you set. Each nine is measured against half your quota, so a quota of 24 needs 12 on the front and 12 on the back, and the 18 against all of it. A nine still being played pays on the holes so far.</li>
+        <li><strong>Everyone over quota shares</strong>: in a pot, everyone who beats their quota shares it by how far over they are. At +4 and +2, a $15 pot is $10 and $5. Nobody over, and the best finish takes it as usual.</li>
+      </ul>],
     ],
   },
   nines: {
@@ -198,6 +284,7 @@ const RULES = {
         <li>All three tie: 3-3-3.</li>
       </ul>],
       ['Win by 2 takes all 9', <p key="s">A house rule, off unless you turn it on: beat both of the others by two strokes or more and you take all nine points, 9-0-0.</p>],
+      ['Birdie wins 7', <p key="b">A house rule, off unless you turn it on: win a hole outright with a real birdie and it’s 7-1-1 instead of 5-3-1. Win by two as well, with that rule on, and it’s still 9-0-0.</p>],
       ['Money', <p key="m">Three points a hole is par, so 54 over 18 holes (27 over nine). Every point above or below that is worth the bet: finish on 60 at $1 a point and you’re up $6.</p>],
     ],
   },
@@ -224,6 +311,7 @@ const RULES = {
       ['Order matters', <p key="r">Play strictly by who’s away, or the points don’t mean much. Tap each point as it happens; leave it blank if nobody earned it.</p>],
       ['Money', <p key="m">Every pair of players settles the difference in their points at the value you set.</p>],
       ['Sweep doubles', <p key="s">A house rule, off unless you turn it on: take all three points on one hole and they count six.</p>],
+      ['Bongo is low net', <p key="n">A house rule, off unless you turn it on: the third point goes to the outright lowest net score on the hole instead of first in, so handicaps count. A tie for low, and nobody gets it.</p>],
     ],
   },
   dots: {
@@ -242,6 +330,7 @@ const RULES = {
         <li><strong>Hogan</strong>: par or better after hitting the fairway and the green in regulation, after Ben Hogan. Par 4s and 5s.</li>
       </ul>],
       ['Setup', <p key="s">Pick which dots are in play when you set up the round (Arnie and Hogan start off). Tap them on each player as they happen.</p>],
+      ['Greenies carry', <p key="g">A house rule, off unless you turn it on: a par 3 where nobody gets the greenie adds one to the next par 3’s, so it’s worth two dots, then three. Still carried after the last par 3, nobody gets it.</p>],
     ],
   },
   rabbit: {
@@ -252,6 +341,7 @@ const RULES = {
       ['Ties', <p key="t">A tied hole changes nothing: the holder keeps it, and a loose rabbit stays loose.</p>],
       ['House rules', <p key="h">Prefer the old way? Switch to <strong>Steal it</strong> so any outright winner takes it straight away, and turn on <strong>Ties set it loose</strong>.</p>],
       ['Paying out', <p key="p">Whoever holds the rabbit after hole 9 wins the bet from everyone, and again after hole 18. Over nine holes there’s one payout. A loose rabbit at the turn pays nobody. Stop early and whoever holds it then is paid.</p>],
+      ['Three rabbits', <p key="3">A house rule over 18 holes, off unless you turn it on: a rabbit every six holes instead of each nine, paid after holes 6, 12 and 18. More chances for more winners.</p>],
     ],
   },
   birdies: {
@@ -271,6 +361,45 @@ const RULES = {
       ['With Junk', <p key="k">When Junk counts birdies automatically, it counts <strong>natural</strong> birdies, before strokes, and the pot counts net birdies. So a natural birdie pays twice: a dot from each player and a share of the pot. A birdie that only comes from a stroke counts in the pot alone.</p>],
     ],
   },
+  ctp: {
+    title: 'How to play Closest to the pin',
+    sub: '2–8 players · A side game · A pot for the par 3s',
+    sections: [
+      ['Overview', <p key="o">Everyone puts the same amount in the pot before the round. The pot is shared out across the par 3s, and whoever hits it closest to the pin on each one takes that hole’s share.</p>],
+      ['Who wins', <ul key="w">
+        <li>Your tee shot has to finish <strong>on the green</strong> to count.</li>
+        <li>On each par 3 the scorekeeper taps who was closest, or <strong>Nobody</strong> if nobody hit the green.</li>
+      </ul>],
+      ['Paying out', <p key="p">Four players at $5 make a $20 pot. With 4 par 3s each one is worth $5. Ann wins two and Bo wins two, so they each take $10 and are up $5, and the other two are down $5.</p>],
+      ['Nobody on the green', <ul key="n">
+        <li><strong>Carries</strong> (the usual way): the share rolls to the next par 3, so that one is worth two. Still carried after the last par 3, it goes back to everyone.</li>
+        <li><strong>Split</strong>: the shares nobody won are split across the par 3s that were won.</li>
+        <li>If nobody wins a par 3 all round, nobody pays.</li>
+      </ul>],
+      ['Stopping early', <p key="s">Only the par 3s played count. Stop after 9 and the pot is the front nine’s share. Added partway through? Go back to the par 3s already played and tap who was closest, and they count too.</p>],
+      ['Joining late', <p key="j">The pot is for the players who started. Anyone added partway, or who leaves early, sits it out.</p>],
+      ['With Junk', <p key="k">The pot pays for being closest, so Junk’s greenies are off while it’s on. Sandies, chip-ins and the rest still count in Junk.</p>],
+    ],
+  },
+  drive: {
+    title: 'How to play Long drive',
+    sub: '2–8 players · A side game · A pot for the longest drives',
+    sections: [
+      ['Overview', <p key="o">Everyone puts the same amount in the pot before the round. Pick the long drive holes (every par 5 unless you choose), and the pot is shared out across them. The longest drive on each one takes that hole’s share.</p>],
+      ['Who wins', <ul key="w">
+        <li>Your drive has to finish <strong>in the fairway</strong> to count.</li>
+        <li>On each long drive hole the scorekeeper taps who was longest, or <strong>Nobody</strong> if nobody found the fairway.</li>
+      </ul>],
+      ['Paying out', <p key="p">Four players at $5 make a $20 pot. With 2 long drive holes each one is worth $10. Ann wins both, so she takes $20 and is up $15, and the other three are down $5.</p>],
+      ['Nobody in the fairway', <ul key="n">
+        <li><strong>Carries</strong> (the usual way): the share rolls to the next long drive hole. Still carried after the last one, it goes back to everyone.</li>
+        <li><strong>Split</strong>: the shares nobody won are split across the holes that were won.</li>
+        <li>If nobody wins a long drive hole all round, nobody pays.</li>
+      </ul>],
+      ['Stopping early', <p key="s">Only the long drive holes played count. Added partway through? Go back to the long drive holes already played and tap who was longest, and they count too.</p>],
+      ['Joining late', <p key="j">The pot is for the players who started. Anyone added partway, or who leaves early, sits it out.</p>],
+    ],
+  },
   snake: {
     title: 'How to play Snake',
     sub: '2–8 players · Don’t three-putt',
@@ -283,6 +412,7 @@ const RULES = {
         <li><strong>Doubles</strong>: every three-putt doubles it, up to a cap. The cap is 4 doubles unless you change it, so a $5 snake goes $5, $10, $20, $40, $80 and then stays at $80. Three-putts after that still pass it on. Pick <strong>No cap</strong> to let it keep doubling.</li>
       </ul>],
       ['Each nine', <p key="n">Turn it on to settle the snake at the turn and start a fresh one on the back. Stop early and whoever holds it then pays.</p>],
+      ['Four-putts count twice', <p key="f">A house rule for a snake that grows or doubles, off unless you turn it on: a four-putt takes the snake and counts as two three-putts. Tap the player, then tap 4-putt.</p>],
     ],
   },
 };
