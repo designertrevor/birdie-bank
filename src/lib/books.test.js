@@ -88,6 +88,10 @@ test('a rolled line with someone you shared a round live with asks them to roll 
   // Closing again with the ask still open doesn't ask twice
   const again = closeBooks(mine, SAT, { picks: pick(closePreview(mine, SAT, { now: NOW + 2 }).lines, 'rolled'), now: NOW + 2, makeId });
   assert.equal(again.carries.length, 0);
+  // With the shared Tab off, a rolled line is only kept in the book
+  const offline = closeBooks(base([structuredClone(r1)]), SAT, { now: NOW, ask: false, makeId });
+  assert.deepEqual([offline.carries, offline.rows], [[], []]);
+  assert.equal(offline.book.lines[0].how, 'rolled');
 });
 
 test('closing the whole Tab with every line paid leaves it square, and the friend’s phone agrees', () => {

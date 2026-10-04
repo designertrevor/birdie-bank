@@ -24,7 +24,7 @@ import { tripsOf } from './trips.js';
 /** The whole Tab's books, as against one crew's. */
 export const ALL = 'all';
 /** The reason on a carry made by closing the books, shown on both phones' cards. */
-export const ROLL_REASON = 'Rolled to next season';
+export const ROLL_REASON = 'Closing the books for the season';
 
 const cents = v => Math.round((Number(v) || 0) * 100);
 export const lineKey = l => `${l.from}>${l.to}`;
@@ -105,9 +105,10 @@ export function closePreview(state, scope, { now = Date.now() } = {}) {
  * of them squares the tab exactly. Returns { book, rows, settlements, expenses, carries } to send
  * and keep: payments the way the Tab (allocatePayment) or the crew's tab (crewPayment) pays a whole
  * line, and a Roll to next time ask for each rolled line of yours with someone you shared a round
- * live with (unless one is already asked or agreed between you).
+ * live with (unless one is already asked or agreed between you). With `ask` off (the shared Tab
+ * can't reach the other phone) a rolled line is only kept in the book.
  */
-export function closeBooks(state, scope, { name = null, picks = {}, now = Date.now(), makeId = () => Math.random().toString(36).slice(2, 9) } = {}) {
+export function closeBooks(state, scope, { name = null, picks = {}, now = Date.now(), ask = true, makeId = () => Math.random().toString(36).slice(2, 9) } = {}) {
   const who = canonicalOf(state);
   const me = state.me ? who(state.me) : null;
   const prev = closePreview(state, scope, { now });
@@ -128,7 +129,7 @@ export function closeBooks(state, scope, { name = null, picks = {}, now = Date.n
     // Rolled: still owed, into the next season. Between you and someone you shared a round live
     // with, it's a Roll to next time ask their phone answers, on the rounds both phones have
     const other = line.from === me ? line.to : line.to === me ? line.from : null;
-    if (!other || !canCarry(state, me, other, now)) continue;
+    if (!ask || !other || !canCarry(state, me, other, now)) continue;
     const owed = { from: line.from, to: line.to, amount: line.amount };
     const open = cardCarry(state, me, other, owed, now);
     if (open && (open.status === 'asked' || open.status === 'agreed')) continue;

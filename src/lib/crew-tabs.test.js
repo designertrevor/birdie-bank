@@ -4,7 +4,7 @@ import assert from 'node:assert/strict';
 import { tabResults } from './play-for.js';
 import { allocatePayment, applyRows } from './shared-tab.js';
 import { outstanding, tabBalances } from './ledger.js';
-import { tripStatus } from './trips.js';
+import { tripPayment, tripStatus } from './trips.js';
 import { NOW, OCT, TRIP, base, skins } from './crew-tabs.fixtures.js';
 import { OTHER, crewKey, crewOfRound, crewPayment, crewsOf, netsOf, switchTabs, tabKeyOf, tabOf, tabsOf, tripKey } from './crew-tabs.js';
 
@@ -155,4 +155,37 @@ test('Everyone and the trip’s Settle the trip are the same with or without cre
   const tagged = { ...crewed, settlements: [...settlements, { id: 's2', from: 'a', to: 't', amount: 2, at: OCT(18), tab: crewKey('sat') }] };
   assert.deepEqual(tripStatus(tagged, 'tp', { now: NOW }).plan, tripStatus(crewed, 'tp', { now: NOW }).plan);
   assert.deepEqual(summed(tabsOf(tagged, { now: NOW })), netsOf(outstanding(tagged, { now: NOW })));
+});
+
+test('settling every crew and trip on its own leaves Everyone with just Other rounds, to the cent', () => {
+  const crews = { sat: { id: 'sat', name: 'Saturday crew', playerIds: ['a', 'b'] }, big: { id: 'big', name: 'Big group', playerIds: ['a', 'b', 'c'] } };
+  const rounds = [
+    skins('r1', ['t', 'a', 'b'], [[1, 't'], [2, 'b'], [3, 'b'], [4, 'a']], { at: OCT(2) }),
+    skins('r2', ['t', 'a', 'c'], [[1, 'c'], [2, 'c'], [3, 't']], { at: OCT(4), code: 'BIG001' }),
+    skins('r3', ['t', 'b', 'c'], [[1, 'b']], { at: OCT(6), skin: 5 }),
+    skins('r4', ['t', 'd'], [[1, 't'], [2, 't']], { at: OCT(8) }),
+    skins('r5', ['t', 'a', 'd'], [[1, 'd']], { at: OCT(9), code: 'OTH001' }),
+    skins('r6', ['t', 'a', 'b'], [[1, 'a'], [2, 'a'], [3, 'a']], { at: OCT(16), code: 'TRP001', trip: true }),
+    skins('r7', ['t', 'c'], [[1, 't']], { at: OCT(17), trip: true }),
+  ];
+  let s = base(rounds, { crews, trips: { tp: TRIP }, settlements: [{ id: 'early', from: 'b', to: 't', amount: 3, at: OCT(7) }] });
+  const start = tabsOf(s, { now: NOW });
+  assert.deepEqual(summed(start), start.everyone.balances);
+  const otherBefore = tabBy(start, OTHER).balances;
+  let n = 0;
+  for (const key of [crewKey('sat'), crewKey('big')]) {
+    const tab = tabBy(tabsOf(s, { now: NOW }), key);
+    for (const line of tab.lines) {
+      const { rows, settlements } = crewPayment(s, tab.id, line.from, line.to, { now: NOW, makeId: () => `c${n++}`, tab, line });
+      s = applyRows({ ...s, settlements: [...s.settlements, ...settlements] }, rows);
+    }
+  }
+  for (const line of tripStatus(s, 'tp', { now: NOW }).plan) {
+    const { rows, settlements } = tripPayment(s, 'tp', line.from, line.to, { now: NOW });
+    s = applyRows({ ...s, settlements: [...s.settlements, ...settlements] }, rows);
+  }
+  const end = tabsOf(s, { now: NOW + 1 });
+  for (const t of end.tabs) if (t.kind !== 'other') assert.deepEqual(t.lines, [], `${t.name} is square`);
+  assert.deepEqual(tabBy(end, OTHER).balances, otherBefore, 'Other rounds untouched');
+  assert.deepEqual(end.everyone.balances, otherBefore, 'Everyone is just Other rounds now');
 });

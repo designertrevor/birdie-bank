@@ -21,12 +21,11 @@ import { PAYWALL_ON } from '../lib/paywall-flag.js';
 import { isOrganizer } from '../lib/paywall.js';
 import { openRewards } from '../lib/play-for.js';
 import { StartTripLink, TripTabCard } from '../components/Trips.jsx';
-import { currentTrips, tripsOf } from '../lib/trips.js';
+import { currentTrips, tripHidden, tripsOf } from '../lib/trips.js';
 import { tripSettleOf } from '../lib/trip-pay.js';
 import { OneTab, SinceBooks, TabSwitch } from '../components/CrewTabs.jsx';
 import { switchTabs, tabsOf } from '../lib/crew-tabs.js';
 import { ALL } from '../lib/books.js';
-import { tripHidden } from '../lib/trips.js';
 
 const first = name => name.split(' ')[0];
 // The tab you last looked at this visit (Everyone, or a crew's or trip's), so coming back keeps it
@@ -220,6 +219,7 @@ export default function Ledger() {
             <p className="field-help pad">Netted across every round, then squared in the fewest payments. Nobody is asked to pay someone they haven’t played with.{hasShared ? ' Money from rounds you shared live stays between the two players, so both phones agree on it.' : ''}</p>
           </>
         )}
+        {plan.length === 0 && <SinceBooks scope={ALL} />}
         {plan.length === 0 && rewardOnly.map(rewardCard)}
         {plan.length === 0 && recentSquare.map(squareCard)}
         {history.length > 0 && (

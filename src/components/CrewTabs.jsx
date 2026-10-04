@@ -41,7 +41,7 @@ export function TabSwitch({ tabs, value, onChange }) {
 }
 
 /** On Everyone, once the whole Tab's books have closed: since when, and what was rolled into this season. */
-export function SinceBooks({ scope, where = '' }) {
+export function SinceBooks({ scope }) {
   const state = useStore();
   const book = lastBook(state, scope);
   if (!book) return null;
@@ -50,7 +50,7 @@ export function SinceBooks({ scope, where = '' }) {
   return (
     <p className="field-help pad books-since">
       {plural(n, 'round')} since the books closed on {dayWithYear(book.closedAt)} ({book.name}).
-      {rolled ? ` ${rolled > 0 ? `${money(rolled / 100)} owed to you` : `${money(-rolled / 100)} you owe`} was rolled into this season${where}.` : ''}
+      {rolled ? ` ${rolled > 0 ? `${money(rolled / 100)} owed to you` : `${money(-rolled / 100)} you owe`} was rolled into this season.` : ''}
     </p>
   );
 }
@@ -153,7 +153,7 @@ export function OneTab({ tab }) {
       {isCrew && <SinceRolled scope={tab.key} />}
       {isCrew ? (
         <>
-          <p className="field-help pad">Only the rounds where everyone else who played is in {tab.name}, squared in the fewest payments. With your other tabs it adds up to Everyone.</p>
+          <p className="field-help pad">Only rounds where everyone else who played is in this crew, squared in the fewest payments. With your other tabs it adds up to Everyone.</p>
           <button className="text-link stats-link" onClick={() => nav.push('closeBooks', { scope: tab.key })}>
             <Icon name="book-bookmark" fill /> <span className="row-main">Close the books<span className="sl-sub">Save the season with everyone’s totals, then settle up or roll each balance to next season</span></span> <Icon name="caret-right" />
           </button>

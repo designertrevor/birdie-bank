@@ -375,7 +375,7 @@ export function markCrewPayment({ crewId, from, to }) {
 export function closeTheBooks({ scope, name, picks }) {
   const now = Date.now();
   const s = getState();
-  const res = closeBooks(s, scope, { name, picks, now, makeId: () => uid() });
+  const res = closeBooks(s, scope, { name, picks, now, ask: !off, makeId: () => uid() });
   commit(res.rows, { add: res.settlements });
   keepExpenses(res.expenses);
   update(st => { st.books = { ...(st.books || {}), [res.book.id]: res.book }; });
