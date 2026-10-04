@@ -29,6 +29,8 @@ export function toDocs(state) {
     tripExpenses: state.tripExpenses && typeof state.tripExpenses === 'object' && !Array.isArray(state.tripExpenses) ? state.tripExpenses : {},
     // Stake payments you marked on a team points trip (cup.js), kept off the Tab
     cupPaid: state.cupPaid && typeof state.cupPaid === 'object' && !Array.isArray(state.cupPaid) ? state.cupPaid : {},
+    // Closed seasons (books.js): a marker and the season's totals; the money is in the payments and carries
+    books: state.books && typeof state.books === 'object' && !Array.isArray(state.books) ? state.books : {},
   });
   for (const p of Object.values(state.players)) put('player', p.id, p);
   for (const c of Object.values(state.crews)) put('crew', c.id, c);
@@ -96,6 +98,8 @@ export function applyDoc(draft, kind, id, data) {
     }
     // And the stake marks of team points trips later still
     if (data.cupPaid && typeof data.cupPaid === 'object' && !Array.isArray(data.cupPaid)) draft.cupPaid = data.cupPaid;
+    // Closed seasons came later again: an older profile keeps this phone's
+    if (data.books && typeof data.books === 'object' && !Array.isArray(data.books)) draft.books = data.books;
   }
 }
 
