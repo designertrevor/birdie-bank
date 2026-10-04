@@ -490,7 +490,8 @@ export function cupStatus(state, trip, people = tripPeople(state, trip.id), { ov
   };
   const marks = stakeMarks(state, trip.id);
   const seats = stakeSeats(def, entries);
-  const money = final ? tripMoney(state, trip.id) : [];
+  // Only the payments between a pair count against an "I paid" mark, never their other trip expenses
+  const money = final ? tripMoney(state, trip.id).filter(x => x.pay) : [];
   const lines = stakeOpen(final ? stakeLines(def, winner) : [], marks).map(l => {
     // On the Tab when the two of them sat in a cup round shared live together (cup.js stakeLink),
     // the same on every phone; else it's marked paid on the trip
