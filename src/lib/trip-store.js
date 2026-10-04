@@ -138,7 +138,8 @@ export function saveExpense({ id = null, tripId, what, amount, payer, split, peo
   const s = getState();
   const old = id ? cleanExpense(s.tripExpenses?.[id]) : null;
   if (id && (!old || old.deleted || !canEditExpense(s, old))) return null;
-  const now = Date.now();
+  // Always newer than the copy it replaces, so every phone takes it even if this phone's clock went back
+  const now = Math.max(Date.now(), (old?.updatedAt || 0) + 1);
   const person = x => personFor(s, tripId, x, nameOf(s, x));
   const raw = {
     id: old?.id || uid('x_'), tripId, what: cleanWhat(what), amount: Math.round(amount) / 100, split,
@@ -158,7 +159,7 @@ export function deleteExpense(id) {
   const s = getState();
   const old = cleanExpense(s.tripExpenses?.[id]);
   if (!old || old.deleted || !canEditExpense(s, old)) return false;
-  const stub = { id: old.id, tripId: old.tripId, by: old.by, deleted: true, at: old.at, updatedAt: Date.now() };
+  const stub = { id: old.id, tripId: old.tripId, by: old.by, deleted: true, at: old.at, updatedAt: Math.max(Date.now(), old.updatedAt + 1) };
   update(st => { st.tripExpenses = { ...(st.tripExpenses || {}), [id]: stub }; });
   refreshPlans();
   return true;
@@ -166,7 +167,8 @@ export function deleteExpense(id) {
 
 /** Put back an expense you just deleted (the toast's Undo), as a newer copy so every phone takes it. */
 export function restoreExpense(expense) {
-  const e = cleanExpense({ ...expense, updatedAt: Date.now() });
+  const gone = cleanExpense(getState().tripExpenses?.[expense?.id]);
+  const e = cleanExpense({ ...expense, updatedAt: Math.max(Date.now(), (gone?.updatedAt || 0) + 1, (Number(expense?.updatedAt) || 0) + 1) });
   if (!e || e.deleted || !canEditExpense(getState(), e)) return null;
   update(st => { st.tripExpenses = { ...(st.tripExpenses || {}), [e.id]: e }; });
   refreshPlans();

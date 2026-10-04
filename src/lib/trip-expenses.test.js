@@ -4,13 +4,13 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { createRound, roundResults } from './round.js';
-import { headToHeadSummary, outstanding, personStory, tabBalances, tabWith } from './ledger.js';
+import { headToHeadSummary, nameOf, outstanding, personStory, tabBalances, tabWith } from './ledger.js';
 import { breakdownWith } from './where-from.js';
 import { applyRows } from './shared-tab.js';
 import { buildPlan, cleanPlan, duePlan, planState, samePlan } from './trip-plan.js';
 import { canDeleteTrip, myTripAllIn, newTrip, partPlan, tripPayment, tripStamp, tripStatus, tripsOf, currentTrips } from './trips.js';
 import {
-  allExpenses, cleanExpense, expenseMark, expensesToSend, expenseTotals, mergeExpenses, parseAmount, personFor, resolveExpense, restampExpenses, shareCents, splitLine, tripExpenses,
+  allExpenses, canEditExpense, cleanExpense, expenseMark, expensesToSend, expenseTotals, mergeExpenses, parseAmount, personFor, resolveExpense, restampExpenses, shareCents, splitLine, tripExpenses,
 } from './trip-expenses.js';
 import { applyDoc, toDocs } from './cloud-model.js';
 import { makeBackup, mergeBackup, parseBackup } from './backup.js';
@@ -495,4 +495,25 @@ test('a copy of an expense under another trip or another adder doesn’t replace
   assert.equal(mergeExpenses(cur, [{ ...dinner, tripId: 't_other', updatedAt: dinner.updatedAt + 5 }]), cur);
   assert.equal(mergeExpenses(cur, [{ ...dinner, by: 'zx', amount: 1, updatedAt: dinner.updatedAt + 5 }]), cur);
   assert.equal(mergeExpenses(cur, [{ ...dinner, amount: 90, updatedAt: dinner.updatedAt + 5 }]).x1.amount, 90, 'a newer copy of the same one still does');
+});
+
+test('a friend’s phone can tell who added an expense, and names someone only the expense knows', () => {
+  const phones = phonesOf(rounds5());
+  // Bob's phone adds dinner for him, Trevor and Mia, who doesn't golf and is only in Bob's Players
+  const dinner = expense(phones.b, { id: 'x1', payer: 'zb', people: ['zb', 't', 'm'], amount: 90 });
+  assert.ok(dinner.payer.refs.includes('AAAAAA:b'));
+  phones.b = { ...phones.b, tripExpenses: { x1: dinner } };
+  assert.equal(nameOf(phones.t, 'm'), 'Someone', 'before it arrives, Trevor’s phone doesn’t know Mia');
+  share(phones, dinner);
+  const onT = tripExpenses(phones.t, 't_bandon')[0];
+  assert.equal(onT.by, 'b', 'Trevor’s phone knows Bob added it, by his seat');
+  assert.equal(nameOf(phones.t, onT.by), 'B');
+  assert.equal(canEditExpense(phones.t, onT), false, 'and only Bob can change it');
+  assert.equal(canEditExpense(phones.b, tripExpenses(phones.b, 't_bandon')[0]), true);
+  // Mia owes Bob on Trevor's phone too: the Tab can say her name
+  assert.equal(nameOf(phones.t, 'm'), 'M');
+  assert.equal(cents(tabBalances(phones.t).m), -3000);
+  // An expense added by someone who isn't in it still names them by the id it came with
+  const gas = expense(phones.b, { id: 'x2', payer: 't', people: ['t', 'a'], amount: 20, what: 'Gas' });
+  assert.equal(resolveExpense(phones.t, gas).by, 'zb');
 });

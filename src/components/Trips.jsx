@@ -158,7 +158,7 @@ export function TripUpNext({ status: st, renderPlan }) {
       </div>
       {/* While the trip is on: gas, dinner, the house, one tap from the trip's own page */}
       {(st.phase === 'on' || st.phase === 'soon') && (
-        <button className="trip-line" onClick={() => nav.push('trip', { id: st.trip.id, view: 'expenses', add: !st.expenses.length })}>
+        <button className="trip-line" onClick={() => nav.push('trip', { id: st.trip.id, view: 'expenses', add: st.expenses.length ? false : Date.now() })}>
           <Icon name="receipt" /> {st.expenses.length ? `Trip expenses · ${money(st.spent)} so far` : 'Paid for something? Add an expense'} <Icon name="caret-right" />
         </button>
       )}
