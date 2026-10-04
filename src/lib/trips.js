@@ -622,6 +622,16 @@ export function countsByDefault(state, tripId, playerIds = []) {
  * with: friends' copies don't hear about a change any more, so their standings and the Tab's
  * pair-by-pair money would stop matching this phone's.
  */
+/**
+ * Whether a trip switched to team points (or edited while it is) gives a round on it its matches:
+ * one this phone can still change for everyone (canRecount) that isn't finished, so a round played
+ * before the change keeps its result as it was (an old Alternate shot round never turns into a
+ * foursomes match after the fact).
+ */
+export function cupOnEdit(state, round) {
+  return round?.status !== 'done' && canRecount(state, round);
+}
+
 export function canRecount(state, round) {
   if (!codeOf(round)) return true;
   if (round.status !== 'active' || !round.shared || round.shared.ended) return false;

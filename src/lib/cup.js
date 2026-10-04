@@ -222,9 +222,28 @@ export function cleanRoundCup(round) {
     if (!pairs) return null;
     const on = (pair, side) => pair.filter(id => saved[side].includes(id)).length;
     const flip = on(pairs[1], 0) + on(pairs[0], 1) > on(pairs[0], 0) + on(pairs[1], 1);
-    return { kind: 'foursomes', sides: flip ? [pairs[1], pairs[0]] : pairs };
+    const sides = flip ? [pairs[1], pairs[0]] : pairs;
+    // A pair with someone from each trip team can't win a point for either (2026-10-04): no match
+    return { kind: 'foursomes', sides, ...(mixedPairs(round, sides) ? { mixed: true } : {}) };
   }
   return { kind: CUP_KINDS[c.kind] && c.kind !== 'foursomes' ? c.kind : defaultKind(saved), sides: saved };
+}
+
+/**
+ * Whether an Alternate shot round's pairs mix the trip's teams: a pair with one player from each
+ * (by id, or else by a name only one person on the teams has), from the teams in the round's trip stamp.
+ */
+function mixedPairs(round, sides) {
+  const cup = cupOf(round.trip);
+  if (!cup) return false;
+  const name = id => lower(round.players.find(p => p.id === id)?.name);
+  const teamOfId = id => {
+    for (const i of [0, 1]) if (cup.teams[i].some(p => p.id === id)) return i;
+    const n = name(id);
+    const hits = n ? [0, 1].flatMap(i => cup.teams[i].filter(p => lower(p.name) === n).map(() => i)) : [];
+    return hits.length === 1 ? hits[0] : null;
+  };
+  return sides.some(pair => { const t = pair.map(teamOfId).filter(x => x != null); return t.length === 2 && t[0] !== t[1]; });
 }
 
 /**
@@ -233,7 +252,7 @@ export function cleanRoundCup(round) {
  * [{ kind, sides: [[ids], [ids]] }], plus `out` (the ids sitting out).
  */
 export function pairMatches(cup) {
-  if (!cup) return { matches: [], out: [] };
+  if (!cup || cup.mixed) return { matches: [], out: [] };
   const [a, b] = cup.sides.map(s => [...s]);
   const matches = [];
   if (cup.kind === 'fourball' || cup.kind === 'foursomes') while (a.length >= 2 && b.length >= 2) matches.push({ kind: cup.kind, sides: [a.splice(0, 2), b.splice(0, 2)] });
@@ -325,6 +344,8 @@ export function cupEntry(state, round) {
     course: round.course?.name || null, holes: round.holes.length,
     players: round.players.map(p => ({ id: p.id, name: p.name, team: team(p.id), ...(isStr(acct[p.id]) ? { acct: acct[p.id] } : {}) })),
     matches: matches.map(m => ({ kind: m.kind, sides: m.sides, result: pick(m.result) })),
+    // Foursomes pairs that mix the teams: no match, and the cup view says why
+    ...(cup.mixed ? { mixed: true } : {}),
   };
 }
 const pick = r => ({ thru: r.thru, leader: r.leader, by: r.by, left: r.left, closed: r.closed, done: r.done, winner: r.winner, points: r.points, label: r.label, ...(r.void ? { void: true } : {}) });
@@ -353,7 +374,7 @@ export function cleanEntry(raw) {
   return {
     key: raw.key.slice(0, 64), status: raw.status === 'done' ? 'done' : 'active', at: Number(raw.at) || 0,
     day: /^\d{4}-\d{2}-\d{2}$/.test(raw.day) ? raw.day : null, course: isStr(raw.course) ? raw.course.slice(0, 60) : null,
-    holes: num(raw.holes, 18), players, matches,
+    holes: num(raw.holes, 18), players, matches, ...(raw.mixed === true && !matches.length ? { mixed: true } : {}),
   };
 }
 

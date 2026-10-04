@@ -8,9 +8,9 @@ import { createRound } from './round.js';
 import { outstanding, tabWith } from './ledger.js';
 import { allocatePayment, applyRows } from './shared-tab.js';
 import { buildPlan, duePlan, planState } from './trip-plan.js';
-import { newTrip, tripPayment, tripStamp, tripStatus, tripsOf } from './trips.js';
+import { cupOnEdit, newTrip, tripPayment, tripStamp, tripStatus, tripsOf } from './trips.js';
 import { mergeExpenses } from './trip-expenses.js';
-import { cupEntry } from './cup.js';
+import { cleanEntry, cleanRoundCup, cupEntry, roundCupResults } from './cup.js';
 
 const flat9 = { id: 'f9', name: 'Flat Nine', city: 'Town', tees: [], holes: Array.from({ length: 9 }, (_, i) => ({ par: 4, hdcp: i + 1 })) };
 const OCT = (d, h = 12) => new Date(2026, 9, d, h).getTime();
@@ -113,4 +113,37 @@ test('a third phone settling a stake line between two others names them by their
     assert.equal(owes(ph[k], 's', 'm'), 0, `${k}: paid`);
     assert.equal(owes(ph[k], 'm', 's'), 0, `${k}: never flipped`);
   }
+});
+
+/** A 9-hole Alternate shot round on the trip, `pairs` its two teams, Blue (t, s) against Red (q, m) on the trip. */
+function altRound(trip, pairs, { status = 'done' } = {}) {
+  const r = createRound({ id: 'a1', game: 'altshot', course: flat9, holesCount: 9, players: pairs.flat().map(x => ({ id: x, name: NAMES[x], index: 0 })), settings: { hcPct: 100, altshot: { format: 'total', scoring: 'match', stake: 10 } }, hcPct: 100, useHandicaps: false, teams: pairs });
+  for (const h of r.holes) r.scores[h.no] = { t0: h.no === 1 ? 3 : 4, t1: 4 };
+  r.createdAt = OCT(16, 8); r.status = status; if (status === 'done') r.finishedAt = OCT(16, 12);
+  r.trip = tripStamp(trip);
+  r.cup = { kind: 'foursomes', sides: pairs };
+  return r;
+}
+
+test('an edited cup trip gives matches only to rounds not finished before the change', () => {
+  const trip = tripWith([[P('t'), P('s')], [P('q'), P('m')]]);
+  const s = base('t', []);
+  const { cup: _c, ...done } = altRound(trip, [['t', 's'], ['q', 'm']]);
+  assert.equal(cupOnEdit(s, done), false, 'a finished round keeps its result as it was');
+  assert.equal(cupOnEdit(s, { ...done, status: 'active' }), true);
+});
+
+test('foursomes pairs that mix the teams make no match, and say so, rather than a point for one team', () => {
+  const trip = tripWith([[P('t'), P('s')], [P('q'), P('m')]]);
+  const ok = altRound(trip, [['t', 's'], ['q', 'm']]);
+  assert.equal(roundCupResults(ok).matches.length, 1);
+  // Trevor with Quinn against Sam and Mike: each pair has a Blue and a Red
+  const mixed = altRound(trip, [['t', 'q'], ['s', 'm']]);
+  assert.equal(cleanRoundCup(mixed).mixed, true);
+  assert.deepEqual(roundCupResults(mixed).matches, []);
+  const e = cupEntry({}, mixed);
+  assert.equal(e.mixed, true);
+  assert.equal(cleanEntry(JSON.parse(JSON.stringify(e))).mixed, true, 'another phone reads it the same');
+  const st = tripStatus(base('t', [mixed], { trips: { t_cup: trip } }), 't_cup', { now: NOW });
+  assert.deepEqual(st.cup.score.points, [0, 0]);
 });

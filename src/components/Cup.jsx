@@ -62,7 +62,7 @@ export function CupScore({ cup }) {
 export function CupMatches({ cup }) {
   const state = useStore();
   const [editing, setEditing] = useState(null);
-  const entries = [...cup.entries].reverse().filter(e => e.matches.length);
+  const entries = [...cup.entries].reverse().filter(e => e.matches.length || e.mixed);
   if (!entries.length) return <p className="field-help pad">No matches yet. Each round counted for the trip pairs off its players by team: four-ball for two against two, or singles. An Alternate shot round is foursomes, partners taking turns on one ball.</p>;
   const nameIn = (e, id) => first(e.players.find(p => p.id === id)?.name);
   return (
@@ -86,6 +86,7 @@ export function CupMatches({ cup }) {
               {canChange && <button className="pill-btn sm" onClick={() => setEditing(round.id)} aria-label="Change the matches"><Icon name="pencil-simple" /></button>}
             </div>
             {e.matches.map((m, i) => <MatchRow key={i} names={cup.names} m={m} left={m.sides[0].map(id => nameIn(e, id))} right={m.sides[1].map(id => nameIn(e, id))} />)}
+            {e.mixed && <p className="field-help">{mixedNote(cup)}</p>}
           </div>
         );
       })}
@@ -342,9 +343,13 @@ export function CupMatchesSheet({ open, onClose, names, players, value, onSave, 
   );
 }
 
+/** A foursomes round whose pairs mix the teams, in a line. */
+const mixedNote = cup => `Foursomes: a pair here has a player from ${cup.names[0]} and one from ${cup.names[1]}, so this round doesn’t count for the cup. Partners from the same team make it a match.`;
+
 /** On a trip round's results: how its matches went, and the cup now. */
 export function CupRoundNote({ cup, round }) {
   const entry = cup.entries.find(e => e.local && e.roundId === round.id);
+  if (entry?.mixed) return <div className="cup-note"><div className="trip-sub">{mixedNote(cup)}</div></div>;
   if (!entry || !entry.matches.length) return null;
   const won = [0, 0];
   for (const m of entry.matches) if (m.result.points) { won[0] += m.result.points[0]; won[1] += m.result.points[1]; }
