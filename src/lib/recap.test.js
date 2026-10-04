@@ -144,7 +144,12 @@ test('recap: paid on the Tab since (no round on the payment) counts as paid; net
   const older = skins('r0', YESTERDAY - 3 * DAY, ['me', 'sam'], { 1: { me: 3 }, 2: { me: 3 } });
   const net = currentRecap(stateWith([older, r]), NOW);
   assert.deepEqual(net.paid.people.map(p => p.status), ['square', 'square']);
-  assert.deepEqual(net.paid.mine.map(l => l.text), ['Your $4 to Sam is squared on the Tab']);
+  assert.deepEqual(net.paid.mine.map(l => l.text), ['Your $4 to Sam evens out with what Sam owed you on the Tab']);
+  // Sam owed you more from before: it comes off that, and the line says so
+  const more = skins('r0', YESTERDAY - 3 * DAY, ['me', 'sam'], { 1: { me: 3 }, 2: { me: 3 }, 3: { me: 3 }, 4: { me: 3 } });
+  assert.deepEqual(currentRecap(stateWith([more, r]), NOW).paid.mine.map(l => l.text), ['Your $4 to Sam comes off what Sam owes you on the Tab']);
+  // From Sam's phone, the other way round
+  assert.deepEqual(currentRecap({ ...stateWith([more, r]), me: 'sam' }, NOW).paid.mine.map(l => l.text), ['Trevor’s $4 to you comes off what you owe Trevor on the Tab']);
 });
 
 test('recap: someone who owes you shows on your line with what the Tab has', () => {

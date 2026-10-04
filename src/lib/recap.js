@@ -260,6 +260,9 @@ export function recapPaid(state, round, { now = Date.now(), rows = roundRows(sta
   const people = round.players.map(p => ({ id: p.id, name: name(p.id), status: status[p.id] }));
   const square = people.filter(p => p.status === 'square').length;
   const mine = [];
+  // What the Tab has between you and someone now (positive: they pay you), worked out only when a line needs it
+  let plan = null;
+  const between = id => tabWith(plan ??= outstanding(state, { now }), ids, id);
   for (const t of transfers) {
     const fromMe = isMe(t.from), toMe = isMe(t.to);
     if (fromMe === toMe) continue; // between two other people (or you and you): status only
@@ -272,6 +275,15 @@ export function recapPaid(state, round, { now = Date.now(), rows = roundRows(sta
     const doneForMe = routed && !fromMe && t.payeeDone;
     // Squared some other way: it's this round's money that's square, not always everything between you
     const squared = fromMe ? `Your ${amt} to ${o} is squared on the Tab` : `${o}’s ${amt} to you is squared on the Tab`;
+    // Netted against other money between the two of you: say against what
+    const netted = () => {
+      const v = between(other);
+      if (fromMe && v > 0) return `Your ${amt} to ${o} comes off what ${o} owes you on the Tab`;
+      if (fromMe && v === 0) return `Your ${amt} to ${o} evens out with what ${o} owed you on the Tab`;
+      if (!fromMe && v < 0) return `${o}’s ${amt} to you comes off what you owe ${o} on the Tab`;
+      if (!fromMe && v === 0) return `${o}’s ${amt} to you evens out with what you owed ${o} on the Tab`;
+      return squared;
+    };
     const text = doneForMe
       ? squared
       : routed
@@ -282,7 +294,7 @@ export function recapPaid(state, round, { now = Date.now(), rows = roundRows(sta
         ? `You and ${o} rolled ${amt} to next time`
         : t.status === 'paid'
           ? (fromMe ? `You paid ${o} ${amt}` : `${o} paid you ${amt}`)
-          : squared;
+          : netted();
     mine.push({ id: `${t.from}>${t.to}`, text, status: doneForMe ? 'square' : t.status, other });
   }
   return { people, square, total: people.length, allSquare: square === people.length, mine };
