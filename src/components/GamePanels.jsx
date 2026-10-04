@@ -5,6 +5,7 @@ import { update, uid } from '../lib/store.js';
 import {
   hammerOptions, hammerTable, holeAtPos, holeComplete, nassauAmounts, nassauPressOptions, nassauWinners, playersOn, pointsTable, pressMode, rabbitTable,
   roundLegs, sideNames, sides, sixesMatches, snakeTable, totalsTable, vegasPreview, vegasTable, scorers, netFor, playsHole, posOf, settingsAt, teamTable,
+  POT_NONE, potHoles, potTable,
 } from '../lib/round.js';
 import { nassauBets } from '../lib/golf.js';
 import { DOT_KINDS, DOT_PARS, scoreDots } from '../lib/games.js';
@@ -427,6 +428,61 @@ export function DotsRow({ round, player, hole, marks, setMarks, gross, label = n
       {kinds.map(k => (
         <button key={k} className={`pill-btn sm ${mine.includes(k) ? 'on' : ''}`} aria-pressed={mine.includes(k)} title={DOT_KINDS[k].help} onClick={() => toggle(k)}>{DOT_KINDS[k].name}</button>
       ))}
+    </div>
+  );
+}
+
+// --------------------------- Closest to the pin and long drive pots -------
+
+/**
+ * Who won the pot on this hole, for each closest to the pin or long drive pot played on it. `pots`
+ * are the pots' game views (see gameView). The winner is saved in the hole's marks under the pot's key
+ * (a player id, or 'none'); a hole saved with nothing tapped counts as nobody's, so Nobody shows
+ * picked until someone is tapped. A phone that isn't keeping score sees who won (`readOnly`).
+ */
+export function PotPicker({ pots, hole, marks, setMarks, readOnly = false }) {
+  const here = pots.filter(v => potHoles(v, v.game).some(h => h.no === hole.no));
+  if (!here.length) return null;
+  return (
+    <div className="marks-card pot-card" role="group" aria-label="Pots on this hole">
+      {here.map(v => {
+        const key = v.game;
+        const fmt = unitFmt(v);
+        const t = potTable(v, key);
+        // What this hole is played for: its share plus anything carried to it
+        const row = potTable({ ...v, marks: { ...(v.marks || {}), [hole.no]: { ...(marks || {}), [key]: POT_NONE } } }, key).holes.find(h => h.no === hole.no);
+        const split = t.unclaimed === 'split';
+        const worth = split ? t.worth : row?.value ?? t.worth;
+        const title = key === 'ctp' ? 'Closest to the pin' : 'Long drive';
+        const sub = t.inPot.length < 2 ? 'Needs two players in the pot'
+          : `${fmt(Math.round(worth * 100) / 100)}${split ? ' share' : ' on this hole'}${!split && row?.carried ? `, ${fmt(Math.round(row.carried * 100) / 100)} carried` : ''}`;
+        const won = marks?.[key] ?? null;
+        const players = v.players.filter(p => t.inPot.includes(p.id));
+        const label = `${title}: who ${key === 'ctp' ? 'was closest' : 'hit it longest'}`;
+        if (readOnly) {
+          const who = won && won !== POT_NONE ? players.find(p => p.id === won) : null;
+          return (
+            <div key={key} className="marks-row pot-row">
+              <div className="marks-lbl pot-lbl"><strong>{title}</strong><span>{sub}</span></div>
+              <div className="hb-state">{who ? `${firstName(who.name)} ${key === 'ctp' ? 'was closest' : 'hit it longest'}` : won === POT_NONE ? 'Nobody won it' : 'Not tapped yet'}</div>
+            </div>
+          );
+        }
+        const pick = pid => { setMarks({ ...(marks || {}), [key]: pid }); buzz(8); };
+        return (
+          <div key={key} className="marks-row pot-row">
+            <div className="marks-lbl pot-lbl"><strong>{title}</strong><span>{sub}</span></div>
+            <div className="chip-row" style={{ padding: 0 }} role="radiogroup" aria-label={label}>
+              {players.map(p => (
+                <button key={p.id} role="radio" aria-checked={won === p.id} className={`pill-btn sm ${won === p.id ? 'on' : ''}`} onClick={() => pick(won === p.id ? POT_NONE : p.id)}>
+                  {won === p.id && <Icon name="check" />} {firstName(p.name)}
+                </button>
+              ))}
+              <button role="radio" aria-checked={!won || won === POT_NONE} className={`pill-btn sm ${!won || won === POT_NONE ? 'on' : ''}`} onClick={() => pick(POT_NONE)}>Nobody</button>
+            </div>
+          </div>
+        );
+      })}
     </div>
   );
 }

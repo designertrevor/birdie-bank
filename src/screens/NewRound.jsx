@@ -866,7 +866,7 @@ function SetupStep({ game, course, holesCount, nine, picked, setPicked, opts, se
           players={picked.length || null} firstName={game === 'banker' ? state.players[picked[0]]?.name : null} inPoints={!countsMoney({ playFor })}
           teamSize={teams?.length ? Math.min(...teams.map(t => t.length)) : null} />
 
-        <SideGamesSetup game={game} sideGames={sideGames} setSideGames={setSideGames} defaults={opts} players={picked.length || 4} playFor={playFor} />
+        <SideGamesSetup game={game} sideGames={sideGames} setSideGames={setSideGames} defaults={opts} players={picked.length || 4} playFor={playFor} holes={holes} />
 
         {setPairBets && pairBets.some(b => challengeIdOfBet(b.id)) && (
           <p className="hint-card ch-setup-note"><Icon name="sword" fill /> {challengeNote(betRound, pairBets)}</p>

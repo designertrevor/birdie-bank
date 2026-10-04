@@ -1,5 +1,5 @@
 // Side games in words: worked examples, the by-game line and the Nassau note. Pure, so tests can load it.
-import { GAMES, TEAM_GAMES } from './round.js';
+import { GAMES, POT_GAMES, SIDE_GAMES, TEAM_GAMES, holeComplete, potHoles, potHolesDefault, sideGamesOf } from './round.js';
 import { DOT_KINDS } from './games.js';
 import { money } from './golf.js';
 
@@ -21,10 +21,78 @@ export function dotsNote(kinds) {
 /** "a foursome" for 4, else "3 players". */
 const groupOf = n => (n === 4 ? 'a foursome' : n === 3 ? 'a threesome' : `${n} players`);
 
-/** The worked example under a side game's bet, for `n` players. */
-export function sideExample(game, settings, n = 4) {
+/** "holes 5, 9 and 14", "hole 18". */
+function holesWords(nos) {
+  if (nos.length === 1) return `hole ${nos[0]}`;
+  return `holes ${nos.slice(0, -1).join(', ')} and ${nos.at(-1)}`;
+}
+
+/**
+ * Which holes a closest to the pin or long drive pot is played on, in words: "Every par 3 (4 of
+ * them)", "Every par 5", "Holes 5, 9 and 14". `holes` are the holes in play (null when the course
+ * isn't picked yet).
+ */
+export function potHolesLine(game, settings, holes = null) {
+  if (!holes?.length) {
+    if (game === 'ctp') return 'Every par 3';
+    return Array.isArray(settings?.holes) && settings.holes.length ? holesWords(settings.holes).replace(/^h/, 'H') : 'Every par 5';
+  }
+  const list = potHoles({ holes }, game, settings);
+  if (!list.length) return game === 'ctp' ? 'No par 3s on this course' : 'No holes picked';
+  const count = list.length === 1 ? '' : ` (${list.length} of them)`;
+  if (game === 'ctp') return `Every par 3${count}`;
+  if (potHolesDefault({ holes }, game, settings)) return `Every par ${list[0].par >= 5 ? 5 : 4}${count}`;
+  const w = holesWords(list.map(h => h.no));
+  return w[0].toUpperCase() + w.slice(1);
+}
+
+/**
+ * Adding a closest to the pin or long drive pot partway: a pot hole already played counts only once
+ * the keeper goes back and taps who won it, so say which (one line per pot new in `list`, the side
+ * games about to be saved). Empty when no pot is new or none of its holes is played yet.
+ */
+export function potCatchUpNotes(round, list) {
+  const had = new Set(sideGamesOf(round).map(sg => sg.game));
+  const out = [];
+  for (const sg of list) {
+    if (!POT_GAMES.includes(sg.game) || had.has(sg.game)) continue;
+    const nos = potHoles(round, sg.game, sg.settings).filter(h => holeComplete(round, h) && round.marks?.[h.no]?.[sg.game] == null).map(h => h.no);
+    if (!nos.length) continue;
+    const where = holesWords(nos);
+    const who = sg.game === 'ctp' ? 'was closest' : 'hit it longest';
+    out.push(`${where[0].toUpperCase()}${where.slice(1)} ${nos.length === 1 ? 'is' : 'are'} already played. ${SIDE_GAMES[sg.game].label} counts ${nos.length === 1 ? 'it' : 'them'} once you go back and tap who ${who}.`);
+  }
+  return out;
+}
+
+/**
+ * A side game's settings as the round plays them next to `sideGames`: Junk next to a closest to the
+ * pin pot plays without greenies (the pot pays for being closest, see gameView), so its worked example
+ * shouldn't promise one. Anything else comes back as it is.
+ */
+export function asPlayedWith(game, settings, sideGames = []) {
+  if (game !== 'dots' || !settings?.kinds?.greenie || !sideGames.some(sg => sg.game === 'ctp')) return settings;
+  return { ...settings, kinds: { ...settings.kinds, greenie: false } };
+}
+
+/** What happens to a pot hole nobody wins, in a sentence, for a closest to the pin or long drive pot. */
+export function potUnclaimedLine(game, settings) {
+  const hole = game === 'ctp' ? 'A par 3' : 'A long drive hole';
+  if (settings?.unclaimed === 'split') return `${hole} nobody wins is split across the holes that were won.`;
+  return `${hole} nobody wins carries to the next one. Still carried after the last, it goes back to everyone.`;
+}
+
+/** The worked example under a side game's bet, for `n` players. `holes` are the holes in play, when known. */
+export function sideExample(game, settings, n = 4, holes = null) {
   const others = Math.max(1, n - 1);
   const s = settings || {};
+  if (game === 'ctp' || game === 'drive') {
+    const pot = (s.stake || 0) * n;
+    const count = holes?.length ? potHoles({ holes }, game, s).length : 0;
+    const who = game === 'ctp' ? 'Closest to the pin on each par 3' : 'The longest drive in the fairway on each long drive hole';
+    const share = count === 1 ? ' takes the whole pot' : count ? ` takes ${money(Math.round((pot / count) * 100) / 100)}, one of ${count} shares` : ' takes that hole’s share';
+    return `Each player puts in ${money(s.stake || 0)}, so the pot is ${money(pot)}. ${who}${share}. ${potUnclaimedLine(game, s)}`;
+  }
   if (game === 'skins') {
     if (s.payout === 'pot') {
       const stake = s.stake ?? s.value;

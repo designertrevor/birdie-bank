@@ -1,6 +1,6 @@
 // What's on the line in a game: a one-line summary and a sanity check on its options.
 import { money } from './golf.js';
-import { TEAM_GAMES, betChanges, blindMultiplierOf, gameKeyLabel, sideGamesOf } from './round.js';
+import { POT_NAMES, TEAM_GAMES, betChanges, blindMultiplierOf, gameKeyLabel, sideGamesOf } from './round.js';
 import { inUnits, pointsLines } from './play-for.js';
 import { houseRulesLine } from './house-rules.js';
 
@@ -11,6 +11,7 @@ export function optionsProblem(game, settings) {
     if (b.min > b.max || b.defaultBet < b.min || b.defaultBet > b.max) return 'Default bet has to sit between the minimum and maximum.';
   }
   if (game === 'birdies' && !(settings.birdies?.stake > 0)) return 'Each player has to put something in the birdie pot.';
+  if ((game === 'ctp' || game === 'drive') && !(settings[game]?.stake > 0)) return 'Each player has to put something in the pot.';
   return null;
 }
 
@@ -20,6 +21,8 @@ export function optionsProblem(game, settings) {
  */
 export function sideBetLine(game, settings) {
   if (game === 'birdies') return `${money(settings?.stake ?? 0)} each in the birdie pot`;
+  // Named, so a round with a pot as its main game and both side pots doesn't read "each in the pot" three times
+  if (game === 'ctp' || game === 'drive') return `${money(settings?.stake ?? 0)} each in the ${POT_NAMES[game]}`;
   // The bet in its own unit ("$2 a skin"); the worked example under it covers the house rules
   return stakeSummary(game, { [game]: settings }).split(' · ')[0];
 }
@@ -115,6 +118,7 @@ function baseSummary(game, settings) {
     case 'rabbit': return `${money(s.rabbit.stake)} a rabbit`;
     case 'birdies': return `${money(s.birdies.stake)} each in the birdie pot`;
     case 'bestball': case 'shamble': case 'altshot': case 'chapman': return teamSummary(s[game]);
+    case 'ctp': case 'drive': return `${money(s[game].stake)} each in the ${POT_NAMES[game]}`;
     default: return '';
   }
 }

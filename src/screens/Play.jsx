@@ -7,7 +7,7 @@ import {
   betPresets, blindMultiplierOf, noHandicap, resizeRound, roundLegs, roundResults, scoredHolesDropped, scorers, skinsKinds, skinsTable, strokesFor, popsFor, wolfHoleSetup, changeBets, wholeRoundOnly,
   gameView, sideGamesOf, holeFixOf, gameKeys, gameKeyLabel, settingsAt, wolfCarryBefore, posOf, isTeamGame, matchScored, oneBall, teamCounting,
 } from '../lib/round.js';
-import { SIDE_GAMES } from '../lib/round.js';
+import { POT_GAMES, SIDE_GAMES, potHoles, potMarksFor } from '../lib/round.js';
 import { CourseTeeSheet, FixHoleSheet } from '../components/FixHole.jsx';
 import { HandicapsSheet } from '../components/HandicapsSheet.jsx';
 import { LineupSheet } from '../components/LineupSheet.jsx';
@@ -19,7 +19,7 @@ import { findCourse } from '../lib/courses.js';
 import { money, netScoreName, scoreName, pickupGross } from '../lib/golf.js';
 import { halfStrokesOn, strokesRulesLines, strokesWords } from '../lib/allowances.js';
 import {
-  BBBPicker, DotsRow, HammerPanel, MatchPanel, MoneyPanel, PointsPanel, RabbitPanel, ScramblePanel, SixesPanel, SnakePanel, SnakePicker, TeamPanel, TotalsPanel, VegasPanel,
+  BBBPicker, DotsRow, HammerPanel, MatchPanel, MoneyPanel, PointsPanel, PotPicker, RabbitPanel, ScramblePanel, SixesPanel, SnakePanel, SnakePicker, TeamPanel, TotalsPanel, VegasPanel,
 } from '../components/GamePanels.jsx';
 import { GameOptions } from '../components/GameOptions.jsx';
 import { DrivesShortfall, ScrambleDrivesPicker } from '../components/ScrambleDrives.jsx';
@@ -43,7 +43,7 @@ import { betPromptFor, markPrompt } from '../lib/bet-prompt.js';
 import { RoundMoments } from '../components/Moments.jsx';
 import { FirstTeeSheet } from '../components/FirstTee.jsx';
 import { isLocked, lockAgreement, noteChanges, showFirstTee } from '../lib/agreed.js';
-import { nassauOpenNote, sideExample } from '../lib/side-games.js';
+import { nassauOpenNote, potCatchUpNotes, sideExample } from '../lib/side-games.js';
 import {
   ASK_MS, askForCard, askLeft, canEdit, canTakeCard, clearAsk, clockText, declineAsk, declinedAsk, handOff, handOffChoices, hostKeeper, isKeeper,
   keeperMe, keeperName, keeperOf, keeperSaved, openAsk, seatTaken, shouldLeaveHole, takeCard as takeCardPatch, tookFromMe,
@@ -178,10 +178,14 @@ function PlayRound({ round, momentUp = false }) {
   const junk = useMemo(() => (sideGamesOf(round).some(sg => sg.game === 'dots') ? gameView(round, 'dots') : null), [round]);
   // ...and Snake as a side game: its three-putts go in there too, under `snake`
   const snakeSide = useMemo(() => (sideGamesOf(round).some(sg => sg.game === 'snake') ? gameView(round, 'snake') : null), [round]);
+  // ...and the closest to the pin and long drive pots: who won each pot hole goes in there, under `ctp` or `drive`
+  const pots = useMemo(() => sideGamesOf(round).filter(sg => POT_GAMES.includes(sg.game)).map(sg => gameView(round, sg.game)), [round]);
+  const potHere = pots.some(v => potHoles(v, v.game).some(h => h.no === hole.no));
   const [marks, setMarks] = useState(() => {
     // A scramble playing for minimum drives saves whose drive each team used in the marks too
-    if (!GAMES[game].marks && !junk && !snakeSide && !drivesNeeded(round)) return null;
-    const m = (wasDirty && kept.marks) || structuredClone(round.marks?.[hole.no] || emptyMarks);
+    if (!GAMES[game].marks && !junk && !snakeSide && !potHere && !drivesNeeded(round)) return null;
+    // A pot hole saved with nobody tapped is saved as nobody's, so it counts (and carries) like one tapped
+    const m = potMarksFor(round, hole, (wasDirty && kept.marks) || structuredClone(round.marks?.[hole.no] || emptyMarks));
     return snakeSide && !m.snake ? { ...m, snake: [] } : m;
   });
   useEffect(() => { DRAFTS.set(draftKey, { draft, base, touched, dirty, marks }); }, [draftKey, draft, base, touched, dirty, marks]);
@@ -339,8 +343,10 @@ function PlayRound({ round, momentUp = false }) {
     if (!editable) return;
     if (game === 'wolf' && wolf.partner === undefined) { showToast(`Pick ${round.players.find(p => p.id === wolf.wolf)?.name.split(' ')[0] || 'the wolf'}’s partner, or go lone wolf`); return; }
     const scores = Object.fromEntries(units.map(p => [p.id, draft[p.id]]));
+    // ...and a pot added while this hole was open still saves the hole as nobody's when nobody's tapped
+    const holeMarks = potMarksFor(round, hole, marks);
     DRAFTS.delete(draftKey);
-    const moneyLine = holeMoneyLine(round, hole, livePreview(round, hole, { scores, banker, wolf, marks }).delta);
+    const moneyLine = holeMoneyLine(round, hole, livePreview(round, hole, { scores, banker, wolf, marks: holeMarks }).delta);
     // The last hole's line would sit over the reveal's buttons, so it only shows if the round does not finish
     if (!isLast) showToast(moneyLine);
     update(s => {
@@ -348,7 +354,7 @@ function PlayRound({ round, momentUp = false }) {
       r.scores[hole.no] = scores;
       if (game === 'banker') r.banker[hole.no] = banker;
       if (game === 'wolf') r.wolf[hole.no] = wolf;
-      if (marks) { if (!r.marks) r.marks = {}; r.marks[hole.no] = marks; }
+      if (holeMarks) { if (!r.marks) r.marks = {}; r.marks[hole.no] = holeMarks; }
       if (!isLast) r.current = nextIdx;
       // The keeper's phone saved a hole (kept for the record of who's been scoring)
       if (isKeeper(r, me, isHost)) Object.assign(r, keeperSaved(r));
@@ -437,7 +443,7 @@ function PlayRound({ round, momentUp = false }) {
   // Money with this hole counted as it's being entered, so totals move with every tap
   const preview = useMemo(() => {
     const counting = phase === 'scores' && dirty && !(game === 'wolf' && wolf.partner === undefined);
-    return livePreview(round, hole, counting ? { scores: draft, banker, wolf, marks } : null);
+    return livePreview(round, hole, counting ? { scores: draft, banker, wolf, marks: potMarksFor(round, hole, marks) } : null);
   }, [round, hole, phase, dirty, game, draft, banker, wolf, marks]);
 
   return (
@@ -540,6 +546,7 @@ function PlayRound({ round, momentUp = false }) {
           {DRIVE_GAMES.includes(game) && <ScrambleDrivesPicker round={main} hole={hole} marks={marks} setMarks={editable ? setMarksDirty : null} />}
           {game === 'snake' && editable && <SnakePicker round={main} hole={hole} marks={marks} setMarks={setMarksDirty} />}
           {snakeSide && editable && <SnakePicker round={snakeSide} hole={hole} marks={marks} setMarks={setMarksDirty} />}
+          {potHere && <PotPicker pots={pots} hole={hole} marks={editable ? marks : round.marks?.[hole.no]} setMarks={setMarksDirty} readOnly={!editable} />}
           {!editable && units.map(p => {
             // Whole pops for the dots; with half strokes each counts as half (strokesWords says so)
             const st = round.useHandicaps ? popsFor(round, p, hole) : 0;
@@ -984,7 +991,9 @@ function GamesSheet({ round, onClose }) {
     <Sheet open onClose={onClose} title="Side games" className="sc-sheet">
       <p className="sheet-text">Same course, same players, same scores. {played ? `A new game counts the ${played} hole${played === 1 ? '' : 's'} already scored too.` : 'Every game reads the one scorecard.'}</p>
       {played > 0 && sideGamesOf(round).length > 0 && <p className="field-help pad">Changes here cover the whole round. To change a bet from the next hole, use Bets.</p>}
-      <SideGamesSetup game={round.game} sideGames={list} setSideGames={edit} defaults={round.settings} players={round.players.length} playFor={round.playFor} />
+      <SideGamesSetup game={round.game} sideGames={list} setSideGames={edit} defaults={round.settings} players={round.players.length} playFor={round.playFor} holes={round.holes} />
+      {/* A pot added partway: its holes already played count once the winner is tapped */}
+      {potCatchUpNotes(round, list).map(t => <p key={t} className="field-help pad">{t}</p>)}
       <div className="cta-wrap">
         <button className="full-btn" disabled={!changed || bad} onClick={save}>{changed ? 'Save games' : 'No changes'}</button>
       </div>
@@ -1038,7 +1047,7 @@ function BetsSheet({ round, onClose }) {
   const whole = !canSplit || scope === 'whole';
   // Why a change can't start from the next hole, when it isn't a pot: net, gross or both is read
   // once for the round, and so is a snake split into nines
-  const pot = game === 'scramble' || game === 'birdies' || current[game]?.payout === 'pot' || opts[game]?.payout === 'pot';
+  const pot = game === 'scramble' || game === 'birdies' || POT_GAMES.includes(game) || current[game]?.payout === 'pot' || opts[game]?.payout === 'pot';
   const layout = game === 'snake' ? 'Each nine or one snake is set' : isTeamGame(game) ? 'How the game is played (the bets, the scoring, the scores that count) is set' : 'Net, gross or both is set';
   const label = gameKeyLabel(round, gameKey);
   const apply = () => {
@@ -1094,15 +1103,16 @@ function BetsSheet({ round, onClose }) {
             </p>
           </div>
         )}
-        {game === 'birdies' ? (
-          // The Birdie pot is a side game only, so it has no main-game options: just what each player puts in
+        {game === 'birdies' || POT_GAMES.includes(game) ? (
+          // The Birdie, closest to the pin and long drive pots are side games only, so they have no
+          // main-game options: just what each player puts in (the rest is under Side games)
           <>
             <div className="nassau-bet-row">
               <div className="nassau-bet-lbl">Each player puts in</div>
-              <button className="nassau-bet-btn" aria-label={`Each player puts in: ${unitFmt(round)(get('birdies.stake') ?? 0)}. Change`}
-                onClick={() => setPad({ path: 'birdies.stake', title: 'Each player puts in', min: 1, max: 500 })}>{unitFmt(round)(get('birdies.stake') ?? 0)}</button>
+              <button className="nassau-bet-btn" aria-label={`Each player puts in: ${unitFmt(round)(get(`${game}.stake`) ?? 0)}. Change`}
+                onClick={() => setPad({ path: `${game}.stake`, title: 'Each player puts in', min: 1, max: 500 })}>{unitFmt(round)(get(`${game}.stake`) ?? 0)}</button>
             </div>
-            <p className="field-help pad">{inUnits(round, sideExample('birdies', opts.birdies, view.players.length))}</p>
+            <p className="field-help pad">{inUnits(round, sideExample(game, opts[game], view.players.length, round.holes))}</p>
           </>
         ) : (
           <GameOptions game={game} get={get} set={set} onAmount={(path, title, o) => setPad({ path, title, ...o })} holesCount={round.holesCount}

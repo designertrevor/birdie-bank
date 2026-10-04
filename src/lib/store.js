@@ -48,6 +48,11 @@ export const DEFAULT_SETTINGS = {
   snake: { stake: 5, growth: 'flat', nines: false, cap: SNAKE_CAP_DEFAULT }, // cap: most doubles, 0 for none
   // Birdie pot, a side game only: each player puts in the stake; a net eagle or better is 2 shares
   birdies: { stake: 5, eagleShares: 2 },
+  // Closest to the pin and long drive pots, side games only: each player puts in the stake, and a
+  // hole nobody wins carries to the next pot hole ('carry') or is split across the holes won ('split').
+  // Long drive's holes are picked for each round (none picked: every par 5, see potHoles in round.js)
+  ctp: { stake: 5, unclaimed: 'carry' },
+  drive: { stake: 5, unclaimed: 'carry' },
   rev: SETTINGS_REV,
 };
 

@@ -519,6 +519,32 @@ function GameBreakdown({ round, res, label = null }) {
       </>
     );
   }
+  if ((round.game === 'ctp' || round.game === 'drive') && res.detail.pot) {
+    // Closest to the pin and long drive: each pot hole, who won it and what it paid
+    const t = res.detail.pot;
+    const what = round.game === 'ctp' ? 'par 3' : 'long drive hole';
+    const cents = v => money(Math.round(v * 100) / 100);
+    return (
+      <>
+        <div className="sec-label">{label || (round.game === 'ctp' ? 'Closest to the pin' : 'Long drive')}</div>
+        {t.holes.length === 0 && <p className="hint-card"><Icon name="flag" fill /> {round.game === 'ctp' ? 'No par 3s in this round' : 'No long drive holes in this round'}, so nobody pays.</p>}
+        {t.holes.map(h => {
+          const who = h.winner && h.winner !== 'none' ? first(names[h.winner]) : null;
+          const state = !h.reached ? 'Not counted' : who || (t.unclaimed === 'split' ? 'Nobody, split across the rest' : 'Nobody, carried');
+          return (
+            <div key={h.no} className="leg-row">
+              <div className="leg-name">Hole {h.no}</div>
+              <div className={`leg-winner ${who ? '' : 'leg-tie'}`}>{state}</div>
+              <div className="leg-amt">{who ? cents(h.paid) : '–'}</div>
+            </div>
+          );
+        })}
+        {t.holes.length > 0 && t.paidOut === 0 && <p className="field-help" style={{ padding: '0 20px' }}>Nobody won a {what}, so nobody pays.</p>}
+        {t.paidOut > 0 && t.handedBack > 0 && <p className="field-help" style={{ padding: '0 20px' }}>{cents(t.handedBack)} still carried after the last {what} goes back to everyone.</p>}
+        {round.players.length > t.inPot.length && <p className="field-help" style={{ padding: '0 20px' }}>Players who joined late or left early aren’t in the pot.</p>}
+      </>
+    );
+  }
   if (round.game === 'snake') {
     return (
       <>
