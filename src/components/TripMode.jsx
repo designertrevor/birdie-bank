@@ -133,10 +133,10 @@ export function ScheduleEditor({ schedule, onChange, perTeam, start }) {
 /**
  * The trip's schedule on its Cup view: each day's sessions with their points, how many of its rounds
  * are planned, and a way to plan them (or plan them again from the teams, for the organizer).
+ * `onRounds` switches the trip's page to its Rounds view.
  */
-export function ScheduleCard({ st }) {
+export function ScheduleCard({ st, onRounds }) {
   const state = useStore();
-  const nav = useNav();
   const { ask, showToast } = useUI();
   const cup = st.cup.def;
   const schedule = cup.schedule;
@@ -187,7 +187,7 @@ export function ScheduleCard({ st }) {
             {!planned.length && !started
               ? <button className="full-btn" onClick={() => plan(false)}><Icon name="calendar-plus" /> Plan the rounds</button>
               : <button className="pill-btn" onClick={() => plan(true)}><Icon name="arrows-clockwise" /> Plan them again from the teams</button>}
-            {planned.length > 0 && <button className="pill-btn" onClick={() => nav.push('trip', { id: st.trip.id, view: 'rounds' })}>See the rounds <Icon name="caret-right" /></button>}
+            {planned.length > 0 && onRounds && <button className="pill-btn" onClick={onRounds}>See the rounds <Icon name="caret-right" /></button>}
           </div>
         )}
       </div>

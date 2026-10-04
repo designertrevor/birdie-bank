@@ -173,7 +173,7 @@ export default function Trip({ id, view: firstView = null, add = false }) {
             <CupMatches cup={cup} />
             <div className="sec-label">Leaderboard</div>
             <CupBoard cup={cup} />
-            <ScheduleCard st={st} />
+            <ScheduleCard st={st} onRounds={() => setView('rounds')} />
             <FlightsView st={st} />
             <p className="field-help pad">{cup.entries.some(e => !e.local) ? 'Other groups’ matches come from their phones. ' : ''}A match is worked out from the round’s own scores and strokes, whatever game the round plays. A round that ends early goes to whoever led on the holes played.</p>
           </>

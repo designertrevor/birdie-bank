@@ -14,7 +14,7 @@ import { sendReminder } from '../lib/pay.js';
 import { DRAFT_ORDERS, draftLink, seatPhones } from '../lib/draft.js';
 import { draftPick, draftState, draftUndo, joinDraft, mySeats, pickForHere, startDraft, useDraftSync } from '../lib/draft-sync.js';
 import { cupOf } from '../lib/cup.js';
-import { tripOf } from '../lib/trips.js';
+import { isOrganizer, tripOf } from '../lib/trips.js';
 
 const first = name => String(name || '').trim().split(/\s+/)[0] || 'Player';
 
@@ -57,7 +57,7 @@ function DraftBody({ tripId }) {
 
   if (!def) {
     // The organizer on a phone without the draft yet (it was started on another of theirs, say)
-    if (trip && cup?.draft?.live && cup.captains[0] && cup.captains[1] && status === 'ok') {
+    if (trip && isOrganizer(state, trip) && cup?.draft?.live && cup.captains[0] && cup.captains[1] && status === 'ok') {
       return (
         <div className="scroll">
           <Empty title="Start the draft" text={`${first(state.players[cup.captains[0]]?.name)} and ${first(state.players[cup.captains[1]]?.name)} pick on their own phones, on their turns.`}
@@ -110,7 +110,7 @@ function DraftBody({ tripId }) {
     : myTurn ? (seats.size > 1 ? `${capName(turn)}’s pick for ${def.names[turn]}` : `Your pick for ${def.names[turn]}`)
     : `${capName(turn)}’s pick for ${def.names[turn]}`;
   const sub = merged.done
-    ? (organizer ? 'The teams are on the trip, and every round on its schedule has its matches.' : `The teams go on the trip from ${def.byName ? `${def.byName}’s` : 'the organizer’s'} phone.`)
+    ? (organizer ? (cup?.schedule ? 'The teams are on the trip, and every round on its schedule is planned with its matches.' : 'The teams are on the trip.') : `The teams go on the trip from ${def.byName ? `${def.byName}’s` : 'the organizer’s'} phone.`)
     : `${order} of ${total} picked · ${DRAFT_ORDERS[def.order].name.toLowerCase()}, ${def.names[def.first]} first`;
 
   return (
