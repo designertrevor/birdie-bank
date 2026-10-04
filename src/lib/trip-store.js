@@ -210,3 +210,25 @@ export function makeScheduledRounds(tripId, { redo = false, now = Date.now() } =
   });
   return { made: plans.length, kept: redo ? kept.length : 0, problem: null };
 }
+
+/**
+ * Set a day's course on the trip's schedule (the organizer only): the day's planned rounds not
+ * started yet move to it too, so one pick sets every group's course. `course` null clears it.
+ */
+export function setDayCourse(tripId, day, course) {
+  const s = getState();
+  const trip = tripOf(s, tripId);
+  const cup = cupOf(trip);
+  if (!cup?.schedule || !isOrganizer(s, trip) || !cup.schedule.days[day]) return 0;
+  const c = course ? { id: course.id, name: course.name } : null;
+  const schedule = { ...cup.schedule, days: cup.schedule.days.map((d, i) => (i === day ? { ...d, course: c } : d)) };
+  editTrip(tripId, { cup: { ...cup, schedule } });
+  const plans = scheduledPlans(getState(), tripId).filter(p => p.session.day === day + 1);
+  for (const p of plans) {
+    editPlan(p.id, x => {
+      x.course = course ? { id: course.id, name: course.name, city: course.city || null } : null;
+      if (x.setup) x.setup.courseId = course?.id || null;
+    });
+  }
+  return plans.length;
+}

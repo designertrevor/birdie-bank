@@ -2487,3 +2487,4 @@ button.ch-main:active { transform: scale(.98); }
 .tm-captain { gap: 8px; }
 .tm-captain .lr-name { display: flex; align-items: center; gap: 6px; }
 .tm-captain .pill-btn { flex-shrink: 0; background: var(--surface); min-height: 40px; }
+.tm-day-course { margin-top: 6px; background: var(--surface); }

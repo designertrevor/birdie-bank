@@ -17,7 +17,7 @@ import {
 } from '../lib/trip-templates.js';
 import { flightBoard } from '../lib/flights.js';
 import { draftState } from '../lib/draft-sync.js';
-import { makeScheduledRounds } from '../lib/trip-store.js';
+import { makeScheduledRounds, setDayCourse } from '../lib/trip-store.js';
 
 const first = name => String(name || '').trim().split(/\s+/)[0] || 'Player';
 const plus = (iso, n) => {
@@ -164,8 +164,9 @@ export function ScheduleCard({ st }) {
           <div key={di} className="tm-sched-day">
             <div className="tm-day-head">
               <span className="tm-day-name">Day {di + 1}</span>
-              <span className="tm-day-date">{shortDay(plus(st.trip.start, di))}{d.course ? ` · ${d.course.name}` : ''}</span>
+              <span className="tm-day-date">{shortDay(plus(st.trip.start, di))}{d.course && !st.organizer ? ` · ${d.course.name}` : ''}</span>
             </div>
+            {st.organizer && <DayCourse tripId={st.trip.id} day={di} value={d.course} />}
             {d.sessions.map((s, si) => {
               const n = sessionMatches(s.kind, perTeam);
               return (
@@ -190,6 +191,29 @@ export function ScheduleCard({ st }) {
           </div>
         )}
       </div>
+    </>
+  );
+}
+
+/** The organizer sets a day's course on the trip's page: the day's planned rounds move to it too. */
+function DayCourse({ tripId, day, value }) {
+  const state = useStore();
+  const { showToast } = useUI();
+  const { starred, recent, all } = coursePickerSections(state);
+  const pick = id => {
+    const c = [...starred, ...recent, ...all].find(x => x.id === id) || null;
+    const n = setDayCourse(tripId, day, c);
+    showToast(c ? `Day ${day + 1} is at ${c.name}${n ? `, all ${n} round${n === 1 ? '' : 's'}` : ''}` : `Day ${day + 1}’s course is cleared`);
+  };
+  return (
+    <>
+      <label className="sr-only" htmlFor={`tm-day-course-${day}`}>Day {day + 1} course</label>
+      <select id={`tm-day-course-${day}`} className="select sm tm-day-course" value={value?.id || ''} onChange={e => pick(e.target.value)}>
+        <option value="">Course to be set</option>
+        {starred.length > 0 && <optgroup label="Starred">{starred.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}</optgroup>}
+        {recent.length > 0 && <optgroup label="Recent">{recent.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}</optgroup>}
+        <optgroup label="All courses">{all.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}</optgroup>
+      </select>
     </>
   );
 }
