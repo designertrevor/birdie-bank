@@ -377,7 +377,8 @@ export default function NewRound({ rematch, fromPlan, present, edit = null, ahea
       st.settings = { ...st.settings, ...settings };
       if (!st.favorites.includes(course.id)) st.favorites = [course.id, ...st.favorites].slice(0, 6);
     });
-    if (fromPlan) editPlan(fromPlan, p => { p.status = 'started'; p.roundId = id; });
+    // The roll call's keys to player ids, so a round kept for another day carries its challenges to the right people
+    if (fromPlan) editPlan(fromPlan, p => { p.status = 'started'; p.roundId = id; if (pre?.idOf && Object.keys(pre.idOf).length) p.rollIds = { ...pre.idOf }; });
     markChallengesOn(challengesIn, id);
     setCreatedId(id);
     setStep(4);

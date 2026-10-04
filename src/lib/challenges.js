@@ -116,11 +116,34 @@ const isPerson = side => side === 'from' || side === 'to';
  * answered from their own phone before the round started (their own answer wins). An answer of
  * their own after it went into a round never fits, so it changes nothing.
  */
-function counted(moves) {
+function counted(ch, moves) {
+  return countedOf(ch, moves).list;
+}
+
+/**
+ * The moves that count ({ list }) and the own answers that came too late (`late`): once the round
+ * went in from answers put in for someone ('on'), an answer of their own that would undo it (made
+ * before, but heard after the round started) is left out, so the round keeps its side bet and the
+ * challenge never goes into another round as well (2026-10-04).
+ */
+function countedOf(ch, moves) {
   const list = ordered(moves);
   const onAt = list.find(m => m.move === 'on')?.at ?? Infinity;
   const own = new Set(list.filter(m => isPerson(m.side) && !isProxy(m) && (m.at || 0) <= onAt).map(m => m.side));
-  return own.size ? list.filter(m => !(isProxy(m) && own.has(m.side))) : list;
+  if (!own.size) return { list, late: [] };
+  const theirs = list.filter(m => !(isProxy(m) && own.has(m.side)));
+  if (onAt === Infinity || onFits(ch, theirs)) return { list: theirs, late: [] };
+  const late = list.filter(m => isPerson(m.side) && !isProxy(m) && (m.at || 0) <= onAt && proxyOf(list, m.side));
+  const kept = list.filter(m => !late.includes(m));
+  return onFits(ch, kept) ? { list: kept, late } : { list: theirs, late: [] };
+}
+const proxyOf = (list, side) => list.some(m => m.side === side && isProxy(m));
+/** Whether the first 'on' in `list` (played back as it is) fits. */
+const onFits = (ch, list) => run(ch, list).steps.some(x => x.m.move === 'on');
+
+/** The answers `side` gave from their own phone that came after the round went in (countedOf), so their card can say so. */
+export function lateAnswers(ch, side) {
+  return countedOf(ch, ch.moves).late.filter(m => m.side === side);
 }
 
 /** Whether it's `side`'s call where the challenge stands `s` ('both': either of the two). */
@@ -142,10 +165,15 @@ export function challengeState(ch) {
 
 /** The challenge played back: { state, steps: [{ m, after }] } for each move that counted. */
 function play(ch, moves = ch.moves) {
+  return run(ch, counted(ch, moves));
+}
+
+/** `list` played back move by move (play), as it is. */
+function run(ch, list) {
   const setBy = !!ch.setBy?.who;
   const s = { status: 'open', stake: ch.stake, turn: setBy ? 'both' : 'to', by: setBy ? 'keeper' : 'from', counters: 0, roundId: null, at: ch.at || 0, acceptedAt: null, ins: setBy ? [] : ['from'], setBy };
   const steps = [];
-  for (const m of counted(moves)) {
+  for (const m of list) {
     if (!fits(s, m)) continue;
     s.by = m.side;
     s.at = m.at || s.at;
@@ -269,6 +297,10 @@ export function challengeView(state, ch) {
     view.from = { ...ch.from, who: key(ch.from.who) };
     view.to = { ...ch.to, who: key(ch.to.who) };
     if (ch.setBy) view.setBy = { ...ch.setBy, who: key(ch.setBy.who) };
+    // Someone the move couldn't place on the new plan (movedKeys): it waits for them, and says so
+    const on = new Set([plan.hostWho, ...(plan.people || []).map(p => p?.id), ...Object.keys(plan.answers || {})].filter(Boolean));
+    const waiting = [ch.from, ch.to].filter(p => !moved.keys[p.who] && !on.has(p.who)).map(p => first(p.name));
+    if (waiting.length) view.waitingFor = waiting;
   }
   return view;
 }
@@ -471,6 +503,8 @@ function unitFits(ch, round) {
  */
 export function challengesForRound(state, round, { planId = null, idOf = null, now = Date.now(), me = state?.me } = {}) {
   const have = new Set([...(round.bets || []).map(b => b?.id), ...(round.betsGone || [])]);
+  // A challenge already in any round on this phone never goes into another (2026-10-04)
+  for (const r of Object.values(state?.rounds || {})) if (r && r.id !== round.id) for (const b of r.bets || []) if (challengeIdOfBet(b?.id)) have.add(b.id);
   let room = MAX_BETS - (round.bets || []).length;
   const out = [];
   for (const ch of allChallenges(state)) {
@@ -602,6 +636,8 @@ export function challengeTone(ch, side, life = 'live') {
  */
 export function proxyNote(state, ch, side, life = 'live') {
   const s = challengeState(ch);
+  // Your own answer came after the round went in with the one put in for you: it's played as marked
+  if (s.status === 'on' && side && lateAnswers(ch, side).length) return `Your answer came after the round started, so it’s in at ${challengeFmt(ch)(s.stake)}, as ${markerName(state, ch)} marked it. Change the amount in the round’s side bets.`;
   if (life !== 'live' || s.status === 'on' || s.status === 'off' || s.status === 'declined') return null;
   const marked = ['from', 'to'].filter(x => proxiedFor(ch, x).length);
   if (!marked.length) return null;
@@ -655,6 +691,7 @@ export function challengeNextText(state, ch, now = Date.now()) {
   const side = sideOf(state, ch);
   const them = first(ch[other(side || 'from')].name);
   if (s.status === 'on') return 'It’s in the round as a side bet.';
+  if (ch.waitingFor?.length && life === 'live' && s.status !== 'declined' && s.status !== 'off') return `The round moved, and ${ch.waitingFor.join(' and ')} ${ch.waitingFor.length > 1 ? 'aren’t' : 'isn’t'} on the new plan yet, so it waits until they’re in.`;
   if (life === 'expired') return 'Nobody played it in time, so it’s off. Challenge again any time.';
   if (life === 'missed') return 'The round went ahead without it. Challenge again next time.';
   if (life === 'gone') return 'That round is off, so the challenge is too.';
@@ -736,24 +773,34 @@ export function challengeLately(state, since, until) {
 
 /**
  * The old plan's keys to the new plan's, for a round kept for another day: the organizer to the
- * organizer, anyone on both by their key, and anyone else (a friend from the group link, who got a
- * player id at the roll call) by their name, when exactly one person on the new plan has it.
+ * organizer, anyone on both by their key, and a friend from the group link (who got a player id at
+ * the roll call) by that id (`rollIds` on the old plan: its keys to the round's player ids). With
+ * no roll call kept (a plan from before), by their first name only when exactly one person on each
+ * plan goes by it and the new plan's one isn't someone else from the old plan. Anyone else is left
+ * out, so a challenge with them waits on the new plan (challengeView `waitingFor`) rather than
+ * pointing at the wrong person (2026-10-04).
  */
 export function movedKeys(oldPlan, newPlan) {
   const keys = {};
   const newPeople = (newPlan?.people || []).filter(p => p?.id);
+  const onNew = id => newPeople.some(p => p.id === id);
   const taken = new Set();
   const oldWho = [...new Set([...(oldPlan?.people || []).map(p => p?.id), ...Object.keys(oldPlan?.answers || {})].filter(Boolean))];
   const nameOf = who => (oldPlan.people || []).find(p => p.id === who)?.name || oldPlan.answers?.[who]?.name || '';
+  const roll = isObj(oldPlan?.rollIds) ? oldPlan.rollIds : null;
   const later = [];
   for (const who of oldWho) {
-    const to = who === oldPlan.hostWho ? newPlan.hostWho : newPeople.some(p => p.id === who) ? who : null;
-    if (to) { keys[who] = to; taken.add(to); } else later.push(who);
+    const to = who === oldPlan.hostWho ? newPlan.hostWho : onNew(who) ? who : roll && typeof roll[who] === 'string' && onNew(roll[who]) ? roll[who] : null;
+    if (to && !taken.has(to)) { keys[who] = to; taken.add(to); } else later.push(who);
   }
+  if (roll) return keys;
+  const old = new Set(oldWho);
+  const firstOf = n => first(n).toLowerCase();
   for (const who of later) {
-    const n = first(nameOf(who)).toLowerCase();
-    const fits = newPeople.filter(p => !taken.has(p.id) && first(p.name).toLowerCase() === n);
-    if (fits.length === 1) { keys[who] = fits[0].id; taken.add(fits[0].id); }
+    const n = firstOf(nameOf(who));
+    if (oldWho.filter(x => firstOf(nameOf(x)) === n).length !== 1) continue;
+    const fits = newPeople.filter(p => firstOf(p.name) === n);
+    if (fits.length === 1 && !taken.has(fits[0].id) && !old.has(fits[0].id)) { keys[who] = fits[0].id; taken.add(fits[0].id); }
   }
   return keys;
 }
