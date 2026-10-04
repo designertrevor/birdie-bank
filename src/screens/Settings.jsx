@@ -130,6 +130,10 @@ export default function Settings() {
         <div className="sec-label">Games</div>
         {row('sliders-horizontal', 'Game defaults', 'Your usual bets and house rules', () => nav.push('defaults'))}
         {row('map-trifold', 'Courses', `${allCourses(state).length} courses · add or fix a scorecard`, () => nav.push('courses'))}
+        <div className="toggle-row">
+          <div><div className="toggle-lbl" id="bet-prompt-lbl">Ask about side bets</div><div className="toggle-sub" id="bet-prompt-sub">A quick “Any side bets?” on the first hole, a par 3 and the turn</div></div>
+          <Toggle on={state.settings.betPrompt !== false} onChange={v => update(s => { s.settings.betPrompt = v; })} labelledBy="bet-prompt-lbl" describedBy="bet-prompt-sub" />
+        </div>
         <div className="sec-label">Your data</div>
         {row('export', 'Back up your data', 'Save rounds, players, courses and payments to a file', backup)}
         <label className="set-row" htmlFor="restore-file" role="button" tabIndex={0}>
@@ -231,7 +235,7 @@ export function Defaults() {
             <GameOptions game={g} get={get} set={set} onAmount={(path, label, o) => setPad({ path, label, ...o })} compact />
           </div>
         ))}
-        <button className="danger-link" onClick={async () => { if (await ask({ title: 'Reset your game defaults?', text: 'Every game goes back to the standard bets and house rules. Rounds you’ve played don’t change.', confirmLabel: 'Reset' })) update(st => { st.settings = { ...structuredClone(DEFAULT_SETTINGS), theme: st.settings.theme, shareAmounts: st.settings.shareAmounts }; }); }}><Icon name="arrow-counter-clockwise" /> Reset to defaults</button>
+        <button className="danger-link" onClick={async () => { if (await ask({ title: 'Reset your game defaults?', text: 'Every game goes back to the standard bets and house rules. Rounds you’ve played don’t change.', confirmLabel: 'Reset' })) update(st => { st.settings = { ...structuredClone(DEFAULT_SETTINGS), theme: st.settings.theme, shareAmounts: st.settings.shareAmounts, betPrompt: st.settings.betPrompt }; }); }}><Icon name="arrow-counter-clockwise" /> Reset to defaults</button>
       </div>
       <Numpad open={!!pad} title={pad?.label} prefix="$" initial={pad ? get(pad.path) : ''} min={pad?.min} max={pad?.max}
         onClose={() => setPad(null)} onDone={v => { set(pad.path, v); setPad(null); }} />

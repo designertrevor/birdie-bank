@@ -29,13 +29,15 @@ const MONEY_UNIT = { prefix: '$', suffix: '' };
  * One bet, made or changed. `round` is the round (or, in setup, a round-shaped draft with its
  * players and holes); `fromPos` the hole a new bet starts from by default (the next hole to play).
  * `me`: a player who isn't keeping score, who can only make or change a bet they're in, so they stay
- * picked. `waitOn`: whose phone a change from here waits on, for the button.
+ * picked. `waitOn`: whose phone a change from here waits on, for the button. `initial`: what a new bet
+ * starts on ({ kind, holes }), from the "Any side bets?" card (bet-prompt.js).
  */
-export function BetEditor({ round, bet = null, fromPos = 1, onSave, onRemove = null, onClose, me = null, waitOn = null }) {
+export function BetEditor({ round, bet = null, fromPos = 1, onSave, onRemove = null, onClose, me = null, waitOn = null, initial = null }) {
   const reward = playForOf(round).kind === 'reward';
   const kinds = betKindsFor();
   const n = round.holes.length;
-  const [kind, setKind] = useState(bet?.kind && kinds.includes(bet.kind) ? bet.kind : kinds[0]);
+  const startKind = bet?.kind ?? initial?.kind;
+  const [kind, setKind] = useState(startKind && kinds.includes(startKind) ? startKind : kinds[0]);
   const [sides, setSides] = useState(() => (bet?.sides ? [...bet.sides] : me ? [me] : []));
   // A reward round: each bet is played for money (on the Tab) or points (toward the reward). New ones start on money
   const [playFor, setPlayFor] = useState(() => (bet ? betPlayFor(round, bet) : 'money'));
@@ -44,7 +46,7 @@ export function BetEditor({ round, bet = null, fromPos = 1, onSave, onRemove = n
   const unit = cash ? MONEY_UNIT : padUnit(round);
   const [stake, setStake] = useState(bet?.stake ?? 5);
   const [label, setLabel] = useState(bet?.label ?? '');
-  const [holes, setHoles] = useState(() => (bet ? betRange(round, bet) : [fromPos > 1 && fromPos <= n ? fromPos : 1, n]));
+  const [holes, setHoles] = useState(() => (bet ? betRange(round, bet) : initial?.holes ? betRange(round, { holes: initial.holes }) : [fromPos > 1 && fromPos <= n ? fromPos : 1, n]));
   const [strokes, setStrokes] = useState(() => (bet?.strokes?.to ? { to: bet.strokes.to, count: bet.strokes.count || 1 } : null));
   const [pad, setPad] = useState(false);
 
@@ -238,11 +240,14 @@ export function PairBetsSetup({ round, bets, setBets }) {
  * "Side bets" from the round menu: every bet in the round and where it stands. The phone keeping
  * score can add one (from the next hole on, or the whole round), change it or take it off. Any other
  * player (`me`) can add one they're in and change or take off their own: it goes to the keeper's
- * phone, which puts it in by itself, and shows here as waiting until then.
+ * phone, which puts it in by itself, and shows here as waiting until then. `start`: open straight on a
+ * new bet filled in ({ kind, holes }, from the "Any side bets?" card), and close it all with the editor.
  */
-export function PairBetsSheet({ round, editable, me = null, onClose }) {
+export function PairBetsSheet({ round, editable, me = null, onClose, start = null }) {
   const { showToast } = useUI();
-  const [editing, setEditing] = useState(null);
+  const [editing, setEditing] = useState(start ? 'new' : null);
+  // Opened from the card: leaving the editor leaves the side bets too
+  const closeEditor = () => (start ? onClose() : setEditing(null));
   // This phone's changes still on their way to the keeper's phone show straight away, marked as waiting
   const view = editable ? round : withAsks(round);
   const pending = editable ? new Set() : pendingIds(round);
@@ -269,7 +274,7 @@ export function PairBetsSheet({ round, editable, me = null, onClose }) {
   };
   const save = b => {
     const fmt = betFmt(round, b);
-    setEditing(null);
+    closeEditor();
     if (!editable) { ask({ op: bet ? 'change' : 'add', id: b.id, bet: b }, 'It goes in when their phone gets it.'); return; }
     write(r => (bet ? changeBet(r, bet.id, b) : addBet(r, b)));
     showToast(bet ? `Side bet updated · ${betLine(round, b, fmt)}` : `Side bet on · ${betLine(round, b, fmt)}`);
@@ -313,8 +318,8 @@ export function PairBetsSheet({ round, editable, me = null, onClose }) {
         <div className="cta-wrap"><button className="full-btn outline" onClick={onClose}>Done</button></div>
       </Sheet>
       {editing && (
-        <BetEditor round={view} bet={bet} fromPos={played ? from : 1} onClose={() => setEditing(null)} onSave={save} onRemove={bet ? remove : null}
-          me={editable ? null : me} waitOn={editable ? null : keeper} />
+        <BetEditor round={view} bet={bet} fromPos={played ? from : 1} onClose={closeEditor} onSave={save} onRemove={bet ? remove : null}
+          me={editable ? null : me} waitOn={editable ? null : keeper} initial={bet ? null : start} />
       )}
     </>
   );

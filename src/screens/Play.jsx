@@ -36,6 +36,7 @@ import { RoundsInProgressSheet } from '../components/RoundsInProgress.jsx';
 import { ByGameTable, SideGamesSetup } from '../components/SideGames.jsx';
 import { HoleBets, PairBetsSheet } from '../components/PairBets.jsx';
 import { betsOf } from '../lib/pair-bets.js';
+import { betPromptFor, markPrompt } from '../lib/bet-prompt.js';
 import { RoundMoments } from '../components/Moments.jsx';
 import { FirstTeeSheet } from '../components/FirstTee.jsx';
 import { isLocked, lockAgreement, noteChanges, showFirstTee } from '../lib/agreed.js';
@@ -49,6 +50,8 @@ export default function Play({ id }) {
   const round = useStore(s => s.rounds[id]);
   const nav = useNav();
   const { showToast } = useUI();
+  // Whether a moment banner is up, so the "Any side bets?" card waits for it (it outlives the hole's remount)
+  const [momentUp, setMomentUp] = useState(false);
   // The round you open is the one the play button brings you back to
   const inPlay = round?.status === 'active';
   useEffect(() => {
@@ -94,9 +97,9 @@ export default function Play({ id }) {
   const keeps = canEdit(round, keeperMe(round, { me: getState().me }), !!round.shared?.host);
   return (
     <>
-      <PlayRound key={`${games}:${round.holesCount}:${round.current}:${round._remote?.[cur?.no] || 0}:${left}:${joined}:${cur?.par}`} round={round} />
+      <PlayRound key={`${games}:${round.holesCount}:${round.current}:${round._remote?.[cur?.no] || 0}:${left}:${joined}:${cur?.par}`} round={round} momentUp={momentUp} />
       {/* Outside the hole, which remounts on every save, so it sees the hole that was just scored */}
-      <RoundMoments round={round} onFinish={keeps ? finishHere : null} />
+      <RoundMoments round={round} onFinish={keeps ? finishHere : null} onShowing={setMomentUp} />
     </>
   );
 }
@@ -132,7 +135,7 @@ const DRAFTS = new Map();
 // Rounds whose locked-in rules card this phone has closed (a phone that isn't keeping score sees it until then)
 const AGREED_SEEN = new Set();
 
-function PlayRound({ round }) {
+function PlayRound({ round, momentUp = false }) {
   useWakeLock();
   const nav = useNav();
   const { ask, showToast } = useUI();
@@ -190,6 +193,8 @@ function PlayRound({ round }) {
   const [betsSheet, setBetsSheet] = useState(false);
   const [gamesSheet, setGamesSheet] = useState(false);
   const [pairSheet, setPairSheet] = useState(false);
+  // A new side bet started from the "Any side bets?" card: { kind, holes }
+  const [pairStart, setPairStart] = useState(null);
   const [switching, setSwitching] = useState(false);
   const others = useStore(s => roundsInProgress(s).filter(r => r.id !== round.id).length);
   const [addSheet, setAddSheet] = useState(null); // true, or the seat request being answered
@@ -228,6 +233,25 @@ function PlayRound({ round }) {
     setAgreedSheet(null);
   };
   const setCalls = calls => update(s => { const r = s.rounds[round.id]; if (r?.agreed?.at) Object.assign(r.agreed, calls); });
+
+  // --- "Any side bets on this hole?" (see bet-prompt.js) ---
+  const promptOn = useStore(s => s.settings.betPrompt !== false);
+  const promptSeen = useStore(s => s.betPrompts?.[round.id] || null);
+  // Never over the first-tee card, which comes first on hole 1
+  const cardUp = firstTee || watchCard || !!agreedSheet;
+  const betPrompt = betPromptFor(round, idx + 1, { me, editable, on: promptOn, seen: promptSeen, moment: momentUp || cardUp, scoring: dirty });
+  const promptAdd = () => {
+    update(s => markPrompt(s, round.id, { pos: betPrompt.pos }));
+    setPairStart({ kind: betPrompt.kind, holes: betPrompt.holes });
+  };
+  const promptSkip = () => {
+    update(s => markPrompt(s, round.id, { skip: true }));
+    showToast('No more side bet asks this round');
+  };
+  const promptOff = () => {
+    update(s => { s.settings.betPrompt = false; });
+    showToast('Side bet asks are off. Turn them on again in Settings.', { label: 'Undo', run: () => update(s => { s.settings.betPrompt = true; }) });
+  };
 
   // --- Keeping score in a shared round ---
   const keeper = keeperOf(round);
@@ -502,6 +526,7 @@ function PlayRound({ round }) {
       {phase === 'scores' && (
         <div className="scroll">
           {!editable && sharedLive && <p className="field-help" style={{ padding: '0 20px' }}>{round.status === 'active' ? `Scores as ${holderName} saves them. Browse any hole.` : 'Only the players in this round can fix its scores.'}</p>}
+          {betPrompt && <BetPromptCard prompt={betPrompt} onAdd={promptAdd} onSkip={promptSkip} onOff={promptOff} />}
           <HoleBets round={round} hole={hole} editable={editable} me={me} />
           {game === 'bbb' && editable && <BBBPicker round={main} hole={hole} marks={marks} setMarks={setMarksDirty} />}
           {game === 'scramble' && <ScrambleDrivesPicker round={main} hole={hole} marks={marks} setMarks={editable ? setMarksDirty : null} />}
@@ -667,7 +692,10 @@ function PlayRound({ round }) {
           : <button className="sheet-item" onClick={endEarly}><span><Icon name="flag-checkered" /> End round</span><Icon name="caret-right" /></button>)}
       </Sheet>
       {gamesSheet && <GamesSheet round={round} onClose={() => setGamesSheet(false)} />}
-      {pairSheet && <PairBetsSheet round={round} editable={editable} me={me} onClose={() => setPairSheet(false)} />}
+      {(pairSheet || pairStart) && (
+        <PairBetsSheet key={pairStart ? 'start' : 'menu'} round={round} editable={editable} me={me} start={pairStart}
+          onClose={() => { setPairSheet(false); setPairStart(null); }} />
+      )}
       <RoundsInProgressSheet open={switching} onClose={() => setSwitching(false)} currentId={round.id} />
       {holesSheet && <HolesSheet round={round} onClose={() => setHolesSheet(false)} />}
       {betsSheet && <BetsSheet round={round} onClose={() => setBetsSheet(false)} />}
@@ -720,6 +748,29 @@ function PlayRound({ round }) {
         </>
       )}
     </Screen>
+  );
+}
+
+// --------------------------- Any side bets? -------------------------------
+
+/**
+ * The "Any side bets on this hole?" card (bet-prompt.js): what it suggests, one tap to add it (the
+ * side bet editor opens filled in), one to put it away for the round, and a way to turn it off.
+ */
+function BetPromptCard({ prompt, onAdd, onSkip, onOff }) {
+  return (
+    <div className="bet-prompt" role="group" aria-labelledby="bp-title">
+      <div className="bp-ic" aria-hidden="true"><Icon name={prompt.kind === 'ctp' ? 'target' : 'hand-coins'} fill /></div>
+      <div className="bp-main">
+        <div className="bp-title" id="bp-title">{prompt.title}</div>
+        <div className="bp-text">{prompt.text}</div>
+        <div className="bp-actions">
+          <button className="pill-btn on" onClick={onAdd}><Icon name="plus" /> Add a side bet</button>
+          <button className="pill-btn ghost" onClick={onSkip}>Not this round</button>
+        </div>
+        <button className="link-btn bp-off" onClick={onOff}>Don’t ask again</button>
+      </div>
+    </div>
   );
 }
 
