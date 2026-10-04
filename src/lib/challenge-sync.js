@@ -10,8 +10,8 @@ import { getState, update, uid } from './store.js';
 import { getSupabase, supabaseConfigured } from './supabase.js';
 import { ChallengesOffError, challengeLocalAdapter, challengeSupabaseAdapter } from './challenge-adapters.js';
 import { newCode } from './sync-model.js';
-import { challengeLife, challengeLink, cleanChallenge, mergeMoves, withMove } from './challenges.js';
-import { planCodeOf, pushChallenge as pushChallengeWith, pushMoves } from './challenge-push.js';
+import { challengeLife, challengeLink, challengesToGiveBack, cleanChallenge, mergeMoves, withMove } from './challenges.js';
+import { challengeMeta, planCodeOf, pushChallenge as pushChallengeWith, pushMoves } from './challenge-push.js';
 
 const localFlag = () => { try { return localStorage.getItem('bb-sync-local') === '1'; } catch { return false; } };
 
@@ -37,6 +37,8 @@ function noteError(e) {
   }
 }
 const subOff = l => { offListeners.add(l); return () => offListeners.delete(l); };
+/** Whether challenges can't leave this phone (no server, or its SQL hasn't run), as last learned. */
+export const challengesOff = () => off;
 /** True while challenges can't leave this phone, so screens say so and offer to mark answers. */
 export function useChallengesOff() {
   return useSyncExternalStore(subOff, () => off, () => off);
@@ -92,6 +94,14 @@ export function markChallengesOn(ids, roundId) {
   for (const id of ids || []) moveChallenge(id, { side: 'keeper', move: 'on', roundId });
 }
 
+/**
+ * Give back the challenges that went into a round this phone set up, when the round goes before it's
+ * finished (deleted, or kept for another day): they're agreed again for the next round together.
+ */
+export function challengesBack(round) {
+  for (const id of challengesToGiveBack(getState(), round)) moveChallenge(id, { side: 'keeper', move: 'back', roundId: round.id });
+}
+
 /** Put a server copy onto this phone: new ones are added, known ones pick up moves they don't have. */
 function applyRemote(code, remote, planId = null) {
   const meta = cleanChallenge(remote?.meta);
@@ -108,7 +118,7 @@ function applyRemote(code, remote, planId = null) {
       c.syncedAt = Date.now();
       return;
     }
-    s.challenges[meta.id] = { ...meta, plan: meta.plan ? { ...meta.plan, id: planId } : null, code, moves, mine: null, made: false, syncedAt: Date.now() };
+    s.challenges[meta.id] = { ...challengeMeta(meta), plan: meta.plan ? { ...meta.plan, id: planId } : null, code, moves, mine: null, made: false, syncedAt: Date.now() };
   });
 }
 
@@ -182,7 +192,7 @@ export async function openChallengeLink(code) {
     const plan = meta.plan?.code ? Object.values(getState().plans || {}).find(p => p?.code === meta.plan.code) : null;
     update(s => {
       if (!s.challenges) s.challenges = {};
-      s.challenges[meta.id] = { ...meta, plan: meta.plan ? { ...meta.plan, id: plan?.id ?? null } : null, code, moves: mergeMoves([], remote.moves), mine: meta.plan ? null : 'to', made: false, syncedAt: Date.now() };
+      s.challenges[meta.id] = { ...challengeMeta(meta), plan: meta.plan ? { ...meta.plan, id: plan?.id ?? null } : null, code, moves: mergeMoves([], remote.moves), mine: meta.plan ? null : 'to', made: false, syncedAt: Date.now() };
     });
   } else applyRemote(code, remote);
   return meta.id;

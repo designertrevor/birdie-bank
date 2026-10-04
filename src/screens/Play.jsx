@@ -41,6 +41,7 @@ import { HoleBets, PairBetsSheet } from '../components/PairBets.jsx';
 import { betsOf } from '../lib/pair-bets.js';
 import { betPromptFor, markPrompt } from '../lib/bet-prompt.js';
 import { RoundMoments } from '../components/Moments.jsx';
+import { challengesBack } from '../lib/challenge-sync.js';
 import { FirstTeeSheet } from '../components/FirstTee.jsx';
 import { isLocked, lockAgreement, noteChanges, showFirstTee } from '../lib/agreed.js';
 import { nassauOpenNote, potCatchUpNotes, sideExample } from '../lib/side-games.js';
@@ -436,6 +437,8 @@ function PlayRound({ round, momentUp = false }) {
     if (choice === 'discard') {
       const sure = await ask({ title: 'Delete this round?', text: 'Scores and bets from this round will be gone for good.', confirmLabel: 'Delete round', danger: true });
       if (!sure) return;
+      // A challenge that went into it is agreed again for the next round together
+      challengesBack(getState().rounds[round.id]);
       update(s => { delete s.rounds[round.id]; leaveRound(s, round.id); });
       nav.reset('upnext');
     }

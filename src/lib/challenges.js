@@ -13,7 +13,9 @@
 //   id on the phone that made it).
 // - moves: [{ id, side: 'from' | 'to' | 'keeper', move, stake?, roundId?, at }]. 'accept', 'decline'
 //   and 'counter' (a new stake) are for whoever's turn it is; 'withdraw' is either of the two calling
-//   it off before it's played; 'on' is the phone starting the round putting it in. Moves are played
+//   it off before it's played; 'on' is the phone starting the round putting it in, and 'back' that
+//   phone giving it back when the round goes before it's played (deleted, or kept for another day),
+//   so it's agreed again for the next round together. Moves are played
 //   back in time order and one that doesn't fit where the challenge stands is skipped, so two phones
 //   that tap at once always end up agreeing.
 // Only the phone of whoever made it knows `mine`/`made`; everything else is shared. Pure, unit tested.
@@ -80,7 +82,7 @@ export function challengeProblem(draft) {
 export function cleanChallenge(raw) {
   if (!isObj(raw) || typeof raw.id !== 'string' || !raw.id) return null;
   if (!isObj(raw.from) || !isObj(raw.to) || !raw.from.who || !raw.to.who || raw.from.who === raw.to.who) return null;
-  if (!CHALLENGE_KINDS.includes(raw.kind) || !validStake(raw.stake)) return null;
+  if (!CHALLENGE_KINDS.includes(raw.kind) || !CHALLENGE_HOLES.includes(raw.holes) || !validStake(raw.stake)) return null;
   return raw;
 }
 
@@ -109,6 +111,7 @@ export function challengeState(ch) {
     else if (m.move === 'counter') { s.status = 'countered'; s.stake = roundStake(m.stake); s.turn = other(m.side); s.counters++; }
     else if (m.move === 'withdraw') { s.status = 'off'; s.turn = null; }
     else if (m.move === 'on') { s.status = 'on'; s.turn = null; s.roundId = m.roundId || null; }
+    else if (m.move === 'back') { s.status = 'accepted'; s.turn = null; s.roundId = null; }
   }
   return s;
 }
@@ -121,24 +124,28 @@ function fits(s, m) {
     case 'counter': return waiting && m.side === s.turn && s.counters < MAX_COUNTERS && validStake(Number(m.stake)) && roundStake(m.stake) !== s.stake;
     case 'withdraw': return (waiting || s.status === 'accepted') && (m.side === 'from' || m.side === 'to');
     case 'on': return s.status === 'accepted';
+    case 'back': return s.status === 'on' && !!m.roundId && m.roundId === s.roundId;
     default: return false;
   }
 }
 
-/** Whether `side` can make `move` now (for the buttons). A counter without a `stake` asks whether one could be made at all. */
-export function canMove(ch, side, move, stake = null) {
+/**
+ * Whether `side` can make `move` now (for the buttons). A counter without a `stake` asks whether one
+ * could be made at all; 'back' needs the `roundId` it went into.
+ */
+export function canMove(ch, side, move, stake = null, roundId = null) {
   if ((ch.moves || []).length >= MAX_MOVES) return false;
   const s = challengeState(ch);
   if (move === 'counter' && stake == null) return (s.status === 'open' || s.status === 'countered') && side === s.turn && s.counters < MAX_COUNTERS;
-  return fits(s, { move, side, stake });
+  return fits(s, { move, side, stake, roundId });
 }
 
 /** The challenge with a move made on it, or null when the move doesn't fit (nothing changes). */
 export function withMove(ch, { id, side, move, stake = null, roundId = null, at = Date.now() }) {
-  if (!canMove(ch, side, move, move === 'counter' ? Number(stake) : null)) return null;
+  if (!canMove(ch, side, move, move === 'counter' ? Number(stake) : null, roundId)) return null;
   const m = { id, side, move, at };
   if (move === 'counter') m.stake = roundStake(stake);
-  if (move === 'on' && roundId) m.roundId = roundId;
+  if ((move === 'on' || move === 'back') && roundId) m.roundId = roundId;
   return { ...ch, moves: [...(ch.moves || []), m] };
 }
 
@@ -190,7 +197,8 @@ export function challengeLife(state, ch, now = Date.now()) {
     return days != null && days < 0 ? 'missed' : 'live';
   }
   if (s.status === 'accepted') return now - (s.acceptedAt || s.at) > ACCEPTED_DAYS * DAY ? 'expired' : 'live';
-  return now - (ch.at || 0) > OPEN_DAYS * DAY ? 'expired' : 'live';
+  // Unanswered: from when it was made, or from the last counter (a new amount is a fresh ask)
+  return now - (s.at || ch.at || 0) > OPEN_DAYS * DAY ? 'expired' : 'live';
 }
 
 /** Every challenge on this phone, well formed. */
@@ -318,6 +326,16 @@ export function withChallenges(state, round, opts = {}) {
   const found = challengesForRound(state, round, opts);
   if (!found.length) return { round, used: [] };
   return { round: { ...round, bets: [...(round.bets || []), ...found.map(f => f.bet)] }, used: found.map(f => f.ch.id) };
+}
+
+/**
+ * The challenges to give back ('back') when `round` goes from this phone before it's finished
+ * (deleted, or kept for another day): the ones that went into it. Only for a round this phone set
+ * up; a copy of someone else's round leaving this phone gives nothing back, since it goes on there.
+ */
+export function challengesToGiveBack(state, round) {
+  if (!round?.id || round.status === 'done' || round.localMe || round.shared?.host === false) return [];
+  return allChallenges(state).filter(ch => { const s = challengeState(ch); return s.status === 'on' && s.roundId === round.id; }).map(ch => ch.id);
 }
 
 /** The challenge id a side bet came from, or null. */
@@ -460,10 +478,14 @@ export function challengeLately(state, since, until) {
       const who = first(ch[m.side].name);
       const yours = side === other(m.side);
       let text = null;
-      if (m.move === 'accept') text = yours ? `${who} is in for ${challengeAsk(ch, challengeState(played).stake)}` : `${who} accepted ${first(ch[other(m.side)].name)}’s challenge`;
-      if (m.move === 'decline') text = yours ? `${who} passed on your challenge this time` : `${who} passed on ${first(ch[other(m.side)].name)}’s challenge`;
-      if (m.move === 'counter') text = yours ? `${who} came back with ${challengeFmt(ch)(m.stake)}` : `${who} came back on ${first(ch[other(m.side)].name)}’s challenge`;
-      if (m.move === 'withdraw') text = yours ? `${who} called off your challenge` : `${who} called off a challenge with ${first(ch[other(m.side)].name)}`;
+      // The challenge is the maker's: when they answer a counter it's on "your counter", and when
+      // they call it off it's "the challenge", never "yours"
+      const theirs = first(ch[other(m.side)].name);
+      const ofIt = m.side === 'to' ? `${theirs}’s challenge` : `a challenge with ${theirs}`;
+      if (m.move === 'accept') text = yours ? `${who} is in for ${challengeAsk(ch, challengeState(played).stake)}` : `${who} accepted ${ofIt}`;
+      if (m.move === 'decline') text = yours ? `${who} passed on your ${m.side === 'to' ? 'challenge' : 'counter'} this time` : `${who} passed on ${ofIt}`;
+      if (m.move === 'counter') text = yours ? `${who} came back with ${challengeFmt(ch)(m.stake)}` : `${who} came back on ${ofIt}`;
+      if (m.move === 'withdraw') text = yours ? `${who} called off ${m.side === 'to' ? 'your' : 'the'} challenge` : `${who} called off a challenge with ${theirs}`;
       if (text) out.push({ id: `chm:${ch.id}:${m.id}`, kind: 'challenge', at: m.at, target, text });
     }
   }

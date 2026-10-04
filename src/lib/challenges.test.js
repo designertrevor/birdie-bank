@@ -13,7 +13,7 @@ import { mergeBackup } from './backup.js';
 import {
   ACCEPTED_DAYS, MAX_COUNTERS, OPEN_DAYS, betIdOf, canMove, challengeAsk, challengeBet, challengeHeadline, challengeInviteText, challengeLately, challengeLife,
   challengeLine, challengeNextText, challengePair, challengeProblem, challengeState, challengeStatusText, challengeTone, challengeWhat, challengesForRound, challengesWith,
-  cleanChallenge, mergeMoves, myChallenges, newChallenge, planChallenges, sideOf, withChallenges, withMove,
+  challengesToGiveBack, cleanChallenge, mergeMoves, myChallenges, newChallenge, planChallenges, sideOf, withChallenges, withMove,
 } from './challenges.js';
 
 const DAY = 86400000;
@@ -460,4 +460,81 @@ test('Lately leaves out a planned round’s challenge once its plan is off this 
   const withPlan = { me: 'me', plans: { pl1: { ...plan(), code: 'PLAN01' } }, challenges: { c1: ch } };
   assert.deepEqual(challengeLately(withPlan, NOW - 30 * DAY, NOW).map(r => r.text), ['Mike challenged you to a $20 match']);
   assert.deepEqual(challengeLately({ me: 'me', plans: {}, challenges: { c1: ch } }, NOW - 30 * DAY, NOW), []);
+});
+
+// --------------------------- review fixes ------------------------------------
+
+test('a round that goes before it’s played gives its challenges back: agreed again, and into the next round together', () => {
+  const on = { ...played(base(), { side: 'to', move: 'accept' }, { side: 'keeper', move: 'on', roundId: 'r1' }), mine: 'from', made: true };
+  // Only for the round it went into
+  assert.equal(canMove(on, 'keeper', 'back', null, 'r2'), false);
+  assert.equal(canMove(on, 'keeper', 'back'), false);
+  const back = played(on, { side: 'keeper', move: 'back', roundId: 'r1' });
+  const s = challengeState(back);
+  assert.equal(s.status, 'accepted');
+  assert.equal(s.roundId, null);
+  assert.equal(s.stake, 20);
+  assert.equal(challengeStatusText(back, 'from'), 'You’re on');
+  assert.equal(challengeLife({}, back, NOW), 'live');
+  // Given back once: a second back changes nothing, and it can go into another round
+  assert.equal(canMove(back, 'keeper', 'back', null, 'r1'), false);
+  assert.equal(challengeState(played(back, { side: 'keeper', move: 'on', roundId: 'r3' })).roundId, 'r3');
+  // And it does go in again: the next round with both of them in it
+  const round = createRound({ id: 'r3', game: 'skins', course: COURSE, holesCount: 18, players: [{ id: 'dave', name: 'Dave Smith' }, { id: 'mike', name: 'Mike Jones' }], settings: SETTINGS });
+  const found = challengesForRound({ me: 'dave', players: {}, challenges: { c1: back } }, round, { now: NOW });
+  assert.equal(found.length, 1);
+  assert.equal(found[0].bet.stake, 20);
+  // The answers in Lately don't change: the phone giving it back isn't news
+  assert.deepEqual(challengeLately({ me: 'dave', challenges: { c1: back } }, 0, NOW + DAY).map(r => r.text), ['Mike is in for a $20 match']);
+});
+
+test('which challenges a round gives back: only one this phone set up, before it’s finished', () => {
+  const on = { ...played(base(), { side: 'to', move: 'accept' }, { side: 'keeper', move: 'on', roundId: 'r1' }), mine: 'from', made: true };
+  const other = { ...played(base({ id: 'c2' }), { side: 'to', move: 'accept' }, { side: 'keeper', move: 'on', roundId: 'r9' }), mine: 'from', made: true };
+  const open = { ...base({ id: 'c3' }), mine: 'from', made: true };
+  const state = { me: 'dave', challenges: { c1: on, c2: other, c3: open } };
+  assert.deepEqual(challengesToGiveBack(state, { id: 'r1', status: 'playing' }), ['c1']);
+  assert.deepEqual(challengesToGiveBack(state, { id: 'r1', status: 'playing', shared: { host: true, code: 'ABC123' } }), ['c1']);
+  // A finished round played it; a joined copy of someone else's round goes on on their phone
+  assert.deepEqual(challengesToGiveBack(state, { id: 'r1', status: 'done' }), []);
+  assert.deepEqual(challengesToGiveBack(state, { id: 'r1', status: 'playing', localMe: 'p2' }), []);
+  assert.deepEqual(challengesToGiveBack(state, { id: 'r1', status: 'playing', shared: { host: false, code: 'ABC123' } }), []);
+  assert.deepEqual(challengesToGiveBack(state, null), []);
+});
+
+test('Lately says whose challenge it is when the one who made it answers a counter or calls it off', () => {
+  const at = NOW - 3 * DAY;
+  // On Mike's phone: Dave made it, Mike countered, Dave passed
+  const passed = { ...played(base({ now: at }), { side: 'to', move: 'counter', stake: 10 }, { side: 'from', move: 'decline' }), mine: 'to' };
+  assert.deepEqual(challengeLately({ me: 'mike', challenges: { c1: passed } }, 0, NOW).map(r => r.text),
+    ['Dave challenged you to a $20 match', 'Dave passed on your counter this time']);
+  // Dave called it off after Mike said yes: it was Dave's, so it's "the challenge"
+  const off = { ...played(base({ now: at }), { side: 'to', move: 'accept' }, { side: 'from', move: 'withdraw' }), mine: 'to' };
+  assert.deepEqual(challengeLately({ me: 'mike', challenges: { c1: off } }, 0, NOW).map(r => r.text),
+    ['Dave challenged you to a $20 match', 'Dave called off the challenge']);
+  // On Dave's phone, Mike calling it off is "your challenge", and Mike passing is on "your challenge"
+  const mikeOff = { ...played(base({ now: at }), { side: 'to', move: 'accept' }, { side: 'to', move: 'withdraw' }), mine: 'from', made: true };
+  assert.deepEqual(challengeLately({ me: 'dave', challenges: { c1: mikeOff } }, 0, NOW).map(r => r.text),
+    ['Mike is in for a $20 match', 'Mike called off your challenge']);
+  // Between two others: whose it is, never how much
+  const p = { ...plan(), code: 'PLAN01', host: true, hostWho: 'host' };
+  const theirs = played(planned({ now: at }), { side: 'to', move: 'counter', stake: 10 }, { side: 'from', move: 'accept' });
+  const rows = challengeLately({ me: 'me', plans: { pl1: p }, challenges: { c1: theirs } }, 0, NOW).map(r => r.text);
+  assert.deepEqual(rows, ['Dave challenged Mike', 'Mike came back on Dave’s challenge', 'Dave accepted a challenge with Mike']);
+  assert.ok(rows.every(t => !t.includes('$')));
+});
+
+test('a counter is a fresh ask: a Player card challenge runs out OPEN_DAYS after the last answer, not after it was made', () => {
+  const ch = base({ now: NOW });
+  const countered = withMove(ch, { id: 'x1', side: 'to', move: 'counter', stake: 10, at: NOW + 13 * DAY });
+  assert.equal(challengeLife({}, countered, NOW + 20 * DAY), 'live');
+  assert.equal(challengeLife({}, countered, NOW + (13 + OPEN_DAYS + 1) * DAY), 'expired');
+  assert.equal(challengeLife({}, ch, NOW + 20 * DAY), 'expired');
+});
+
+test('cleanChallenge leaves out one with holes it could never have been made for (so its words never break)', () => {
+  assert.equal(cleanChallenge({ ...base(), holes: 'middle' }), null);
+  const { holes: _h, ...noHoles } = base();
+  assert.equal(cleanChallenge(noHoles), null);
+  for (const h of ['all', 'front', 'back']) assert.ok(cleanChallenge(base({ holes: h })));
 });
