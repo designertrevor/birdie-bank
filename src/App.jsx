@@ -74,6 +74,8 @@ const Book = screen(books, 'Book');
 const draft = () => import('./screens/Draft.jsx');
 const Draft = screen(draft);
 const DraftLink = screen(draft, 'DraftLink');
+const BigGame = screen(() => import('./screens/BigGame.jsx'));
+const BigGameSetup = screen(() => import('./screens/BigGameSetup.jsx'));
 
 /** A plan link (?plan=CODE, &p=WHO for one person's own) waiting to open: { code, who } or null. */
 function pendingPlanLink() {
@@ -143,6 +145,7 @@ const SCREENS = {
   plan: Plan, rollCall: RollCall, planLink: PlanLink, preview: Preview, paywall: Paywall, season: Season,
   challenge: Challenge, challengeLink: ChallengeLink,
   joinInvite: JoinInviteScreen, lately: Lately, trip: Trip, tripSettle: TripSettle, draft: Draft, draftLink: DraftLink,
+  bigGame: BigGame, bigGameSetup: BigGameSetup,
   friends: Friends, friendRound: FriendRound,
   profile: Profile, stats: Stats, share: Share, closeBooks: CloseBooks, book: Book,
 };

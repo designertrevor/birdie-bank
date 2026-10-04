@@ -487,13 +487,15 @@ export function newPayment(state, { id, tripId, from, to, amount, fromName = '',
  * them): the same on both their phones when both mark it before they sync, so the two taps are one
  * payment, like a round transfer's row. It comes from the trip, the expenses between the two (each
  * one's id, version and where the two are in it), the payments already between them and the
- * amount, and never one this phone already has (a payment taken back keeps its id).
+ * amount, and never one this phone already has (a payment taken back keeps its id). `also`: the
+ * trip's decided cup stake lines as trip expenses write them (cup-stake.js stakeRaw), so a stake
+ * paid between two people never shares an id with an equal stake between two others.
  */
-export function expensePayId(state, tripId, from, to, amount) {
+export function expensePayId(state, tripId, from, to, amount, also = []) {
   const who = codesWho(state);
   const at = p => personOn(state, p, who);
   const parts = [];
-  for (const e of rawTripExpenses(state, tripId)) {
+  for (const e of [...rawTripExpenses(state, tripId), ...also]) {
     if (e.deleted || e.undoes) continue;
     const list = [e.payer, ...e.people].map(at);
     const f = list.flatMap((id, i) => (id === from ? [i] : [])), t = list.flatMap((id, i) => (id === to ? [i] : []));

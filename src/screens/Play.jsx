@@ -41,6 +41,9 @@ import { RoundsInProgressSheet } from '../components/RoundsInProgress.jsx';
 import { ByGameTable, SideGamesSetup } from '../components/SideGames.jsx';
 import { HoleBets, PairBetsSheet } from '../components/PairBets.jsx';
 import { betsOf } from '../lib/pair-bets.js';
+import { BIG_FORMAT } from '../lib/big-game.js';
+import { BigBar } from '../components/BigGame.jsx';
+import { useBigSync } from '../lib/big-sync.js';
 import { betPromptFor, markPrompt } from '../lib/bet-prompt.js';
 import { RoundMoments } from '../components/Moments.jsx';
 import { challengesBack } from '../lib/challenge-sync.js';
@@ -56,6 +59,8 @@ export default function Play({ id }) {
   const round = useStore(s => s.rounds[id]);
   const nav = useNav();
   const { showToast } = useUI();
+  // A Big Game's group round: the other groups' scores keep coming in for the board (big-sync.js)
+  useBigSync({ live: round?.trip?.format === BIG_FORMAT && round?.status === 'active' });
   // Whether a moment banner is up, so the "Any side bets?" card waits for it (it outlives the hole's remount)
   const [momentUp, setMomentUp] = useState(false);
   // The round you open is the one the play button brings you back to
@@ -468,11 +473,15 @@ function PlayRound({ round, mount, momentUp = false }) {
         <button className="header-close" onClick={() => nav.pop()} aria-label="Leave round (it stays saved)"><Icon name="caret-down" /></button>
         <div className="play-title">
           <div className="play-course">{round.course.name}</div>
-          <div className="play-progress">{gameLabel(round)} · Hole {idx + 1} of {round.holes.length} {round.shared && <button className="pill-link" onClick={() => setLive(true)}><LivePill round={round} /></button>}</div>
+          <div className="play-progress">{round.trip?.format === 'big' && !ownMoney(round) ? round.trip.name : gameLabel(round)} · Hole {idx + 1} of {round.holes.length} {round.shared && <button className="pill-link" onClick={() => setLive(true)}><LivePill round={round} /></button>}</div>
         </div>
         <button className="header-close" onClick={() => setMenu(true)} aria-label="Round menu"><Icon name="dots-three" /></button>
       </div>
-      <MoneyBar round={round} hole={hole} preview={preview} />
+      {/* A Big Game's group round with no money of its own shows the game across every group instead */}
+      {round.trip?.format === BIG_FORMAT && !ownMoney(round) ? <BigBar round={round} /> : <MoneyBar round={round} hole={hole} preview={preview} />}
+      {round.trip?.format === BIG_FORMAT && ownMoney(round) && (
+        <button className="big-link" onClick={() => nav.push('bigGame', { id: round.trip.id })}><Icon name="users-four" fill /> {round.trip.name}: the board across every group <Icon name="caret-right" /></button>
+      )}
       {sharedLive && keeper && round.status === 'active' && !round.editing && (
         <div className="seat-req keeper-bar" role="status">
           <Icon name="pencil-simple" fill />
@@ -1156,6 +1165,11 @@ function BetsSheet({ round, onClose }) {
         onClose={() => setPad(null)} onDone={v => { set(pad.path, v); setPad(null); }} />
     </>
   );
+}
+
+/** A round with money of its own: a game with a bet, side games or side bets (a Big Game's group round starts with none). */
+function ownMoney(round) {
+  return (round.sideGames?.length || 0) > 0 || betsOf(round).length > 0 || round.game !== 'stroke' || (round.settings?.stroke?.stake || 0) > 0;
 }
 
 /** Everyone's money, pinned under the header from the first hole, updating as scores go in. */

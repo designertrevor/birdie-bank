@@ -69,6 +69,11 @@ export function savedPayInfo(state, id) {
     const info = payInfo(r.players?.find(p => p.id === x));
     if (info) return info;
   }
+  // Someone in another group of a Big Game: their seat on the copy of that group's round (big-sync.js)
+  for (const cards of Object.values(state.bigCards || {})) for (const c of Object.values(cards || {})) {
+    const info = payInfo(c?.players?.find(p => p.id === id));
+    if (info) return info;
+  }
   return null;
 }
 

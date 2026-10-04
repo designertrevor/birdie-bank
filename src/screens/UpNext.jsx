@@ -84,7 +84,7 @@ export default function UpNext() {
               <div className="resume-pulse" aria-hidden="true" />
               <div className="row-main">
                 <div className="bl resume-eyebrow">{played ? 'Round in progress' : 'Ready to tee off'}</div>
-                <div className="d" style={{ fontSize: 20, fontWeight: 800 }}>{gameLabel(r)} · {r.course.name}</div>
+                <div className="d" style={{ fontSize: 20, fontWeight: 800 }}>{r.trip?.format === 'big' ? r.trip.name : gameLabel(r)} · {r.course.name}</div>
                 <div className="resume-sub">{played} of {r.holes.length} holes · {r.players.map(p => p.name.split(' ')[0]).join(', ')}</div>
               </div>
               <span className="resume-go"><Icon name="play" fill /></span>
@@ -210,6 +210,7 @@ function PlanNext({ last, fresh, planned = false, trip = false }) {
         )}
         <button className="pc-btn ghost" onClick={() => nav.push('newRound', { ahead: true })}><Icon name="calendar-plus" /> Plan ahead</button>
         {trip && <button className="pc-btn ghost" onClick={() => setTripping(true)}><Icon name="suitcase-rolling" /> Start a trip</button>}
+        <button className="pc-btn ghost" onClick={() => nav.push('bigGameSetup')}><Icon name="users-four" /> Big Game</button>
       </div>
       {tripping && <Later><TripSheet open onClose={() => setTripping(false)} onDone={t => { setTripping(false); nav.push('trip', { id: t.id }); }} /></Later>}
     </div>

@@ -10,6 +10,7 @@ import { betsOf, isCashBet } from './pair-bets.js';
 import { planDebts } from './trip-plan.js';
 import { allExpenses, allTripMoney, allTripPays, expensePairDebts, expensePairs, expensesBetween, tripMoney } from './trip-expenses.js';
 import { allStakeMoney, stakeBetween, stakeMoney } from './cup-stake.js';
+import { allBigMoney, bigBetween, bigMoney, bigOf, bigTripIds } from './big-money.js';
 
 const toCents = v => Math.round((Number(v) || 0) * 100);
 /** Whether two players had a side bet for money together in a reward round. */
@@ -123,7 +124,7 @@ export function tabBalances(state, { now = Date.now() } = {}) {
   for (const r of moneyRounds(state)) {
     for (const [id, v] of Object.entries(tabResults(r).balances)) add(id, v);
   }
-  for (const x of [...allTripMoney(state), ...allStakeMoney(state, { now })]) for (const [id, c] of Object.entries(x.balances)) add(id, c / 100);
+  for (const x of [...allTripMoney(state), ...allStakeMoney(state, { now }), ...allBigMoney(state)]) for (const [id, c] of Object.entries(x.balances)) add(id, c / 100);
   for (const s of state.settlements || []) { add(s.from, s.amount); add(s.to, -s.amount); }
   return bal;
 }
@@ -138,7 +139,8 @@ export function tabBalances(state, { now = Date.now() } = {}) {
  * money. `trip` keeps it to one trip.
  */
 export function expenseDebts(state, { now = Date.now(), trip = null } = {}) {
-  const stake = trip ? stakeMoney(state, trip, { now }) : allStakeMoney(state, { now });
+  // A decided Big Game's lines are trip money the same way (big-money.js)
+  const stake = trip ? [...stakeMoney(state, trip, { now }), ...bigMoney(state, trip)] : [...allStakeMoney(state, { now }), ...allBigMoney(state)];
   if (!state.tripExpenses && !stake.length) return [];
   const covered = new Set(planDebts(state, { now }).expenses);
   const list = [...(trip ? tripMoney(state, trip) : allTripMoney(state)), ...stake].filter(x => !covered.has(x.id));
@@ -231,7 +233,7 @@ function planBalances(state, trip, now = Date.now()) {
     // A reward round's side bets for money in dollars, never its points
     for (const [id, v] of Object.entries(tabResults(r).balances)) add(id, toCents(v));
   }
-  for (const x of [...allTripMoney(state), ...allStakeMoney(state, { now })]) {
+  for (const x of [...allTripMoney(state), ...allStakeMoney(state, { now }), ...allBigMoney(state)]) {
     if (skipSpent.has(x.id)) continue;
     for (const [id, c] of Object.entries(x.balances)) add(id, c);
   }
@@ -285,7 +287,7 @@ export function personStory(state, ids, other, { now = Date.now() } = {}) {
   // Trip expenses: what one of you paid for the other (trip-expenses.js), and a decided cup stake
   // between you (cup-stake.js), which is trip money the same way (`expense.stake`)
   let spent = 0;
-  for (const x of [...expensesBetween(state, isMine, isThem), ...stakeBetween(state, isMine, isThem, { now })]) {
+  for (const x of [...expensesBetween(state, isMine, isThem), ...stakeBetween(state, isMine, isThem, { now }), ...bigBetween(state, isMine, isThem)]) {
     items.push({ kind: 'expense', id: x.expense.id, expense: x.expense, amount: x.amount / 100, at: x.at });
     spent += x.amount;
   }
@@ -385,5 +387,7 @@ export function nameOf(state, id) {
     const k = linksOf(state).personOf(id);
     for (const x of allExpenses(state)) { const n = x.names[id] || x.names[k]; if (n) return n; }
   }
+  // Someone only a Big Game knows (a player in another group): the name the game has for them
+  for (const t of bigTripIds(state)) { const n = bigOf(state, t)?.people[id]?.name; if (n) return n; }
   return 'Someone';
 }

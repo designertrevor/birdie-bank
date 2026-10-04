@@ -13,6 +13,8 @@ import { nameOf } from '../lib/ledger.js';
 import { placeOf, sortedPlayers } from '../lib/format.js';
 import { dayLabel, isoDate, timeLabel } from '../lib/plans.js';
 import { canonicalOf } from '../lib/pair-debts.js';
+import { BIG_FORMAT } from '../lib/big-game.js';
+import { BigCard, BigRoundNote } from './BigGame.jsx';
 import { TRIP_FORMATS, myTripAllIn, myTripNet, startsLine, tripChips, tripDates, tripStatus, upDown } from '../lib/trips.js';
 import { countsMoney, onTab, playForOf } from '../lib/play-for.js';
 import { editTrip, hideTrip, makeScheduledRounds, makeTrip } from '../lib/trip-store.js';
@@ -84,6 +86,12 @@ function HideX({ st }) {
  * the amount is your whole trip, all in.
  */
 export function TripTabCard({ status: st }) {
+  // A Big Game has its own card (BigGame.jsx)
+  if (st.trip.format === BIG_FORMAT) return <BigCard status={st} onTab />;
+  return <MoneyTripTabCard status={st} />;
+}
+
+function MoneyTripTabCard({ status: st }) {
   const nav = useNav();
   const state = useStore();
   const me = canonicalOf(state)(state.me);
@@ -140,6 +148,11 @@ export function TripDays({ status }) {
  * next round, and the trip's planned rounds grouped under it (`renderPlan` draws each).
  */
 export function TripUpNext({ status: st, renderPlan }) {
+  if (st.trip.format === BIG_FORMAT) return <BigCard status={st} />;
+  return <TripUpNextCard status={st} renderPlan={renderPlan} />;
+}
+
+function TripUpNextCard({ status: st, renderPlan }) {
   const nav = useNav();
   const state = useStore();
   const line = st.hasMoney ? standingLine(state, st) : null;
@@ -215,6 +228,11 @@ function TripPlanned({ st, renderPlan }) {
  * wrap-up ("That’s the trip") with the standings and Settle the trip.
  */
 export function TripRoundNote({ round }) {
+  if (round?.trip?.format === BIG_FORMAT) return <BigRoundNote round={round} />;
+  return <TripRoundCard round={round} />;
+}
+
+function TripRoundCard({ round }) {
   const nav = useNav();
   const state = useStore();
   if (!round?.trip?.id) return null;

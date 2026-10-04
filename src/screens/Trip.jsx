@@ -27,13 +27,15 @@ import { DraftCard, FlightsView, ScheduleCard } from '../components/TripMode.jsx
 import { buzz } from '../lib/delight.js';
 import { allTripPays } from '../lib/trip-expenses.js';
 import { markTripPayment, undoPayments, usePaymentsOff, useTabSync } from '../lib/tab-sync.js';
-import { TRIP_FORMATS, canDeleteTrip, canMarkLine, canRecount, myTripAllIn, myTripNet, partPlan, roundsInDates, tripByGame, tripDates, tripHidden, tripStatus, upDown } from '../lib/trips.js';
+import { TRIP_FORMATS, canDeleteTrip, canMarkLine, canRecount, myTripAllIn, myTripNet, partPlan, roundsInDates, tripByGame, tripDates, tripHidden, tripOf, tripStatus, upDown } from '../lib/trips.js';
 import { deleteTrip, endTrip, hideTrip, seenTripPlan, setRoundTrip } from '../lib/trip-store.js';
 import { plansOn, useTripPlans } from '../lib/trip-plan-sync.js';
 import { CupBoard, CupMatches, CupScore, StakeLines } from '../components/Cup.jsx';
 import { useCupSync } from '../lib/cup-sync.js';
 import { useDraftSync } from '../lib/draft-sync.js';
 import { cupHeadline } from '../lib/cup.js';
+import { BIG_FORMAT } from '../lib/big-game.js';
+import BigGame from './BigGame.jsx';
 
 const first = name => String(name || '').trim().split(/\s+/)[0];
 const sign = v => (v > 0 ? 'pos' : v < 0 ? 'neg' : '');
@@ -63,7 +65,14 @@ const addsDone = new Set();
  * `view`: which part opens first ('cup', 'standings', 'rounds', 'games' or 'expenses'); a team
  * points trip opens on the cup. `add` (the tap's time) opens Add an expense, once.
  */
-export default function Trip({ id, view: firstView = null, add = false }) {
+export default function Trip(props) {
+  // A Big Game is a one-day trip with a page of its own (BigGame.jsx)
+  const format = useStore(s => tripOf(s, props.id)?.format);
+  if (format === BIG_FORMAT) return <BigGame id={props.id} />;
+  return <TripPage {...props} />;
+}
+
+function TripPage({ id, view: firstView = null, add = false }) {
   const nav = useNav();
   const state = useStore();
   const { ask, showToast } = useUI();
@@ -405,7 +414,13 @@ function CountSheet({ open, onClose, st }) {
 /** "Ann and Bob", "Ann, Bob and Cal". */
 const listNames = names => (names.length < 2 ? names.join('') : `${names.slice(0, -1).join(', ')} and ${names.at(-1)}`);
 
-export function TripSettle({ id, who = null }) {
+export function TripSettle(props) {
+  const format = useStore(s => tripOf(s, props.id)?.format);
+  if (format === BIG_FORMAT) return <BigGame id={props.id} view="money" />;
+  return <TripSettlePage {...props} />;
+}
+
+function TripSettlePage({ id, who = null }) {
   const nav = useNav();
   const state = useStore();
   const { showToast } = useUI();

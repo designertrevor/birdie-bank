@@ -19,6 +19,7 @@ import { refreshTab } from '../lib/tab-sync.js';
 import { refreshChallenges } from '../lib/challenge-sync.js';
 import { useTripPlans } from '../lib/trip-plan-sync.js';
 import { useCupSync } from '../lib/cup-sync.js';
+import { useBigSync } from '../lib/big-sync.js';
 
 const LATELY_ON_HOME = 3;
 
@@ -30,6 +31,8 @@ export function UpNextSync() {
   useStore(); // the trip and cup hooks read the state as it is on each render, so this one follows it as Up next did
   useTripPlans();
   useCupSync();
+  // A Big Game's other groups (big-sync.js)
+  useBigSync();
   useEffect(() => { refreshPlans(); refreshTab(); refreshChallenges(); }, []);
   return null;
 }
