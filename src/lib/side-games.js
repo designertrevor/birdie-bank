@@ -2,6 +2,7 @@
 import { GAMES, POT_GAMES, SIDE_GAMES, TEAM_GAMES, holeComplete, potHoles, potHolesDefault, sideGamesOf } from './round.js';
 import { DOT_KINDS } from './games.js';
 import { money } from './golf.js';
+import { points, wholeByGame } from './play-for.js';
 
 const PLURAL = { greenie: 'greenies', sandy: 'sandies', barkie: 'barkies', chipin: 'chip-ins', polie: 'polies', arnie: 'arnies', hogan: 'hogans' };
 
@@ -141,7 +142,9 @@ export function gamesLine(byGame, pid, fmt = money) {
   if (!byGame) return '';
   // Side bets between two players only show for someone with a bet
   const has = ([key, g]) => key !== 'bets' || (g.detail?.bets || []).some(b => b.sides.includes(pid));
-  return Object.entries(byGame).filter(has).map(([, g]) => `${g.label} ${fmt(g.balances[pid] || 0, { sign: true })}`).join(' · ');
+  // In points, each game in whole points, adding up to the player's own whole total
+  const whole = fmt === points ? wholeByGame(byGame, [pid]) : null;
+  return Object.entries(byGame).filter(has).map(([key, g]) => `${g.label} ${fmt(whole ? whole[key][pid] : g.balances[pid] || 0, { sign: true })}`).join(' · ');
 }
 
 /**

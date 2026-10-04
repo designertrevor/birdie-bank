@@ -33,7 +33,7 @@ import { LivePill, ShareSheet } from '../components/Live.jsx';
 import { syncConfigured, useSeatRequests } from '../lib/sync.js';
 import { AddPlayerSheet } from '../components/AddPlayer.jsx';
 import { firstName, gameLabel, holeMoneyLine } from '../lib/format.js';
-import { countsMoney, inUnits, onTab, padUnit, playForShort, unitFmt } from '../lib/play-for.js';
+import { countsMoney, inUnits, onTab, padUnit, playForShort, unitFmt, wholeDelta } from '../lib/play-for.js';
 import { leaveRound, roundsInProgress } from '../lib/rounds.js';
 import { RoundsInProgressSheet } from '../components/RoundsInProgress.jsx';
 import { ByGameTable, SideGamesSetup } from '../components/SideGames.jsx';
@@ -1186,7 +1186,8 @@ function MoneyBar({ round, hole, preview }) {
       <div className="mb-items" style={{ gridTemplateColumns: `repeat(${round.players.length}, minmax(0, 1fr))` }}>
         {round.players.map(p => {
           const v = preview.balances[p.id];
-          const d = preview.delta[p.id];
+          // In points, the hole's change is the whole total less the whole total before, so they agree
+          const d = countsMoney(round) ? preview.delta[p.id] : wholeDelta(v, preview.delta[p.id]);
           return (
             <div key={p.id} className={`mb-item ${top > 0 && v === top ? 'lead' : ''}`}>
               <div className="mb-p">{p.name.split(' ')[0]}</div>

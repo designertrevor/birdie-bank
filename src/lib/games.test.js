@@ -4,7 +4,7 @@ import {
   bestBall, sideSplit, matchLabel, vegasNumber, vegasHole, sixesPairings, sixesSegments, stablefordPoints, quotaPoints, quotaFor,
   ninesPoints, acesDeuces, pointsToMoney, settleTotals, scrambleTeamHandicap, rabbitHolder, scoreDots, roundCents,
 } from './games.js';
-import { createRound, roundResults, scorers, holeComplete, sixesMatches, vegasPreview } from './round.js';
+import { GAMES, createRound, roundResults, scorers, holeComplete, sixesMatches, vegasPreview } from './round.js';
 import { matchStatus } from './golf.js';
 import { optionsProblem, stakeSummary } from './stakes.js';
 
@@ -249,4 +249,15 @@ test('stake summary and option checks', () => {
   assert.equal(optionsProblem('banker', { banker: { defaultBet: 5, min: 1, max: 20 } }), null);
   assert.match(optionsProblem('banker', { banker: { defaultBet: 25, min: 1, max: 20 } }), /between/);
   assert.equal(optionsProblem('skins', {}), null);
+});
+
+test('each game’s blurb names only what that game is: Best ball has its own, so Match play doesn’t claim it', () => {
+  assert.equal(GAMES.match.blurb, 'Singles, or one against the field');
+  // A game named in another game's blurb would read as a second way to play it
+  const names = Object.entries(GAMES).map(([key, g]) => [key, g.name.toLowerCase()]);
+  for (const [key, g] of Object.entries(GAMES)) {
+    for (const [other, name] of names) {
+      if (other !== key) assert.ok(!g.blurb.toLowerCase().includes(name), `${g.name}'s blurb names ${name}`);
+    }
+  }
 });

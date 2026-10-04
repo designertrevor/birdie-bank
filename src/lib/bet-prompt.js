@@ -6,7 +6,9 @@
 // It never asks on a phone that's only watching, while a moment banner shows, on a hole already
 // scored or being scored, at a par 3 when the group plays a closest to the pin pot, or when nobody
 // this phone can make a bet for could have that kind of bet (two teammates in a scramble share one
-// score, so they can't have a match). Pure, unit tested.
+// score, so they can't have a match). With only two playing, the game is already a match between
+// them, so the first hole doesn't suggest one, and a Nassau's turn doesn't either (its back nine is
+// one already). Pure, unit tested.
 import { holeComplete, playersOn } from './round.js';
 import { MAX_BETS, betRange, betsOf, kindFits, nextPos, nineRange } from './pair-bets.js';
 import { withAsks } from './bet-asks.js';
@@ -112,6 +114,8 @@ export function betPromptFor(round, pos, { me = null, editable = false, on = tru
   if (covered(view, kind, pos, mine)) return null;
   // Someone this phone can make the bet for has someone to make it with (a scramble's match needs the two on different teams)
   const here = playersOn(round, hole).map(p => p.id);
+  // Two players: the game itself is their head to head (2026-10-04, Trevor)
+  if (here.length === 2 && (spot.why === 'first' || (spot.why === 'turn' && round.game === 'nassau'))) return null;
   const fits = here.some((a, i) => here.some((b, j) => j > i && (!mine || a === mine || b === mine) && kindFits(round, kind, [a, b])));
   if (!fits) return null;
   return { pos, why: spot.why, ...spotDraft(round, spot), ...spotCopy(round, spot) };

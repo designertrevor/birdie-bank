@@ -5,7 +5,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { createRound, roundResults } from './round.js';
 import {
-  cleanReward, countsMoney, inUnits, noMoneyNote, padUnit, openRewards, playForLine, playForOf, points, rewardKey, rewardLineText, rewardNoun,
+  cleanReward, countsMoney, inUnits, wholeByGame, wholeDelta, wholeParts, wholePoints, noMoneyNote, padUnit, openRewards, playForLine, playForOf, points, rewardKey, rewardLineText, rewardNoun,
   rewardOutcome, storedPlayFor, unitFmt,
 } from './play-for.js';
 import { roundStakeLines } from './stakes.js';
@@ -82,12 +82,15 @@ test('points are the engine numbers one for one, and bet lines read in points', 
   assert.equal(points(12), '12 pts');
   assert.equal(points(1), '1 pt');
   assert.equal(points(-3, { sign: true }), '−3 pts');
-  assert.equal(points(2.5, { sign: true }), '+2.5 pts');
   assert.equal(points(0, { sign: true }), '0 pts');
-  // A pot's share split across holes: one decimal at most
-  assert.equal(points(16.92, { sign: true }), '+16.9 pts');
-  assert.equal(points(-12.09, { sign: true }), '−12.1 pts');
+  // Whole points on screen: a pot's share split across holes reads +17, halves away from zero
+  assert.equal(points(16.92, { sign: true }), '+17 pts');
+  assert.equal(points(-12.09, { sign: true }), '−12 pts');
+  assert.equal(points(2.5, { sign: true }), '+3 pts');
+  assert.equal(points(-2.5, { sign: true }), '−3 pts');
   assert.equal(points(-0.04, { sign: true }), '0 pts');
+  assert.equal(points(-0.4, { sign: true }), '0 pts');
+  assert.equal(points(0.6), '1 pt');
   assert.equal(unitFmt({})(5, { sign: true }), '+$5');
   assert.equal(unitFmt({ playFor: { kind: 'points' } })(5, { sign: true }), '+5 pts');
   const nassau = { game: 'nassau', settings: { nassau: { front: 5, back: 5, total: 5 } } };
@@ -378,4 +381,53 @@ test('the friendly-wagers note says what a no-money round is played for', () => 
   assert.equal(noMoneyNote({}), null);
   assert.equal(noMoneyNote({ playFor: { kind: 'points' } }), 'No money on this one, just bragging rights.');
   assert.equal(noMoneyNote({ playFor: { kind: 'reward', reward: 'A drink' } }), 'No money on this one, just a drink.');
+});
+
+test('points show whole, the exact values stay underneath, and the parts on screen add up to the total on screen', () => {
+  assert.equal(wholePoints(16.92), 17);
+  assert.equal(wholePoints(-2.5), -3);
+  assert.ok(Object.is(wholePoints(-0.2), 0));
+  // Already whole: nothing moves
+  assert.deepEqual(wholeParts([5, -3, 12]), [5, -3, 12]);
+  // 5.4 and 5.4 make 10.8, shown 11: one of them reads 6
+  assert.deepEqual(wholeParts([5.4, 5.4]), [6, 5]);
+  // 0.5 and 0.5 make 1: plain rounding would show 1 and 1 under a 1
+  assert.deepEqual(wholeParts([0.5, 0.5]), [0, 1]);
+  // A third of a pot each way still adds up
+  const thirds = wholeParts([16.666, 16.666, -3.332]);
+  assert.equal(thirds.reduce((a, v) => a + v, 0), wholePoints(30));
+  // The part nudged is the one closest to the other side of a half
+  assert.deepEqual(wholeParts([2.4, 1.1, 0.3], 3.8), [3, 1, 0]);
+  assert.deepEqual(wholeParts([-2.4, -1.1, -0.3]), [-3, -1, 0]);
+  // A by-game table: each player's games add up to their own whole total
+  const byGame = { main: { balances: { a: 16.92, b: -16.92 } }, skins: { balances: { a: 0.4, b: -0.4 } } };
+  const shown = wholeByGame(byGame, ['a', 'b']);
+  assert.equal(shown.main.a + shown.skins.a, wholePoints(17.32));
+  assert.equal(shown.main.b + shown.skins.b, wholePoints(-17.32));
+  // A hole's change is the difference of the whole totals, so it always agrees with the running total
+  assert.equal(wholeDelta(17.3, 0.4), 0);
+  assert.equal(wholeDelta(17.6, 0.4), 1);
+  assert.equal(wholeDelta(-3, -3), -3);
+});
+
+test('whole points are for the screen only: a points round’s results are exactly as before', () => {
+  const ids = ['t', 's', 'd'];
+  const make = playFor => roundResults(round('r', ids, wins(ids, { 1: 't' }), { skin: 1.25, playFor })).balances;
+  const money = make(undefined);
+  const pts = make({ kind: 'points' });
+  assert.deepEqual(pts, money);
+  // One skin at 1.25 from each of two: 2.5 exact underneath, shown +3, and the others −1 each
+  assert.equal(pts.t, 2.5);
+  assert.equal(pts.s, -1.25);
+  assert.equal(points(pts.s, { sign: true }), '−1 pt');
+  assert.equal(points(pts.t, { sign: true }), '+3 pts');
+});
+
+test('a player’s games line in points adds up to their whole total; in money it’s exactly as before', async () => {
+  const { gamesLine } = await import('./side-games.js');
+  const { money } = await import('./golf.js');
+  const byGame = { main: { label: 'Stroke play', balances: { a: 5.4 } }, skins: { label: 'Skins', balances: { a: 5.4 } } };
+  assert.equal(gamesLine(byGame, 'a', points), 'Stroke play +6 pts · Skins +5 pts');
+  assert.equal(points(10.8, { sign: true }), '+11 pts');
+  assert.equal(gamesLine(byGame, 'a', money), 'Stroke play +$5.40 · Skins +$5.40');
 });
