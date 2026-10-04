@@ -224,7 +224,9 @@ export function calloutCandidates(state, now = Date.now()) {
  */
 export function callouts(state, now = Date.now(), { limit = CALLOUT_LIMIT } = {}) {
   if (!calloutsOn(state)) return [];
-  const kind = calloutCandidates(state, now).filter(neverMean);
+  let kind;
+  // A round it can't read never takes Up next down with it
+  try { kind = calloutCandidates(state, now).filter(neverMean); } catch { return []; }
   const out = [];
   let withMoney = 0, aboutMe = 0;
   const people = new Set();

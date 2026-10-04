@@ -242,3 +242,9 @@ test('recap: still owed but routed through someone else on the Tab says so, with
   assert.deepEqual(rc.paid.mine.map(l => l.text), ['You still owe $2 from this round. The Tab has who to pay']);
   assert.deepEqual(rc.paid.people.map(p => p.status), ['owes', 'waiting']);
 });
+
+test('recap: a garbled round gives no recap instead of breaking Up next', () => {
+  const r = skins('r1', YESTERDAY, FOUR, SAM_DAY);
+  const bad = { ...r, holes: null };
+  assert.equal(currentRecap(stateWith([bad]), NOW), null);
+});

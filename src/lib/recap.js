@@ -274,8 +274,12 @@ export function recapOf(state, round, now = Date.now()) {
   };
 }
 
-/** The recap to show on Up next right now, or null. */
+/** The recap to show on Up next right now, or null. A round it can't read never takes Up next down with it. */
 export function currentRecap(state, now = Date.now()) {
-  const r = recapRound(state, now);
-  return r ? recapOf(state, r, now) : null;
+  try {
+    const r = recapRound(state, now);
+    return r ? recapOf(state, r, now) : null;
+  } catch {
+    return null;
+  }
 }

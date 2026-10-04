@@ -200,3 +200,8 @@ test('callouts: a seeded sweep of random groups never makes an unkind line', () 
     }
   }
 });
+
+test('callouts: a garbled round gives no callouts instead of breaking Up next', () => {
+  const r = round('r1', 1, ['me', 'sam'], samWins(3));
+  assert.deepEqual(callouts(stateWith([{ ...r, holes: null }]), NOW), []);
+});
