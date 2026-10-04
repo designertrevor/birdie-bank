@@ -18,8 +18,9 @@ import { payFields, sendReminder } from '../lib/pay.js';
 import { shareLink, shareRound, syncConfigured } from '../lib/sync.js';
 import {
   RSVPS, RSVP_LABEL, betLabel, betUnitLabel, cleanName, countsLine, daysUntil, inviteText, isoDate, morningText, nudgeAllText, nudgeText,
-  dayLabel, movedPlanOf, planChoice, planCounts, planPeople, planRules, planSides, planStart, rollCallDefault, tally, tallySides, whenLabel,
+  dayLabel, movedPlanOf, planChoice, planCounts, planPeople, planRules, planSides, planStart, rollCallDefault, tally, tallySides, timeLabel, whenLabel,
 } from '../lib/plans.js';
+import { TeeTimeSection } from '../components/Reminders.jsx';
 import { PlansOffError } from '../lib/plan-adapters.js';
 import { CountForTrip } from '../components/Trips.jsx';
 import { keptLine, roundBets } from '../lib/plan-setup.js';
@@ -177,6 +178,7 @@ function PlanBody({ plan, standalone = false, onSkip }) {
           {playForLine(plan) && <div className="ic-playfor"><Icon name={plan.playFor?.kind === 'reward' ? 'gift' : 'trophy'} fill /> {playForLine(plan)}</div>}
           {plan.status === 'off' && <p className="ic-note"><Icon name="calendar-x" fill /> {plan.host ? 'You called this one off.' : `${host} called this one off.`}</p>}
           {plan.gone && plan.status === 'planned' && <p className="ic-note"><Icon name="calendar-x" fill /> {host} deleted this plan.</p>}
+          {planned && plan.booked && !plan.movedTo && <p className="ic-note"><Icon name="calendar-check" fill /> Tee time booked{plan.teeTime ? ` for ${timeLabel(plan.teeTime)}` : ''}.</p>}
           {plan.movedTo && <MovedNote plan={plan} host={host} />}
           {plan.status === 'started' && !plan.movedTo && (
             <p className="ic-note"><Icon name="flag-pennant" fill /> The round is on.{plan.liveCode ? ' Follow the money live.' : ''}</p>
@@ -256,6 +258,9 @@ function PlanBody({ plan, standalone = false, onSkip }) {
         {plan.host && planned && plan.code && (
           <p className="field-help pad">Tap a name to mark someone who told you in person. Friends answer from the link, no download needed, and once they do it’s theirs to change.</p>
         )}
+
+        {/* The organizer's booking link, the day to be reminded to book, and Booked (tee-reminders.js) */}
+        {planned && plan.host && !plan.movedTo && (days ?? 0) >= 0 && <TeeTimeSection plan={plan} />}
 
         {plan.status !== 'off' && !plan.gone && <TalkSection ctx={planTalk(plan)} on="plan" />}
 
