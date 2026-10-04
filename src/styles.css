@@ -1969,3 +1969,6 @@ button.trip-card:active { transform: scale(.97); }
 /* The leading vote's bar: mint behind light text was low contrast in dark mode, so it uses the dark win green there */
 :root[data-theme="dark"] .vote-row.leading .vr-bar { background: var(--win-bg); opacity: 1; }
 @media (prefers-color-scheme: dark) { :root:not([data-theme="light"]):not([data-theme="dark"]) .vote-row.leading .vr-bar { background: var(--win-bg); opacity: 1; } }
+/* The scorecard's hole numbers: the button fills its whole header cell, not just the 11px number */
+.sc-table th:has(> .sc-col-btn) { padding: 0; }
+.sc-col-btn { padding: 12px 6px; min-height: 40px; }
