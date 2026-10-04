@@ -4,7 +4,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 // trips.js first: cup.js and trips.js import each other, and the trip formats need the cup's loaded
-import { newTrip, tripStamp } from './trips.js';
+import { newTrip, tripChips, tripStamp } from './trips.js';
 import { createRound, roundResults } from './round.js';
 import { cleanCup, cleanEntry, cleanRoundCup, closeEntry, cupEntries, cupEntry, cupLeaderboard, cupPosts, cupScore, roundCupResults } from './cup.js';
 import {
@@ -430,3 +430,25 @@ test('a draft’s rows on the trip table are never a round’s matches, and neve
 function draftRowLike() {
   return { draft: 1, v: 1, pool: POOL, captains: ['cap0', 'cap1'], names: ['Blue', 'Red'], order: 'snake', first: 0, here: [false, false], picks: [[], []], at: OCT(1) };
 }
+
+test('the trip’s days show one chip a scheduled session, whatever its number of groups', () => {
+  const sess = (day, session) => ({ trip: 't_rc', key: `d${day}s${session}g1`, day, session, label: 'Four-ball', kind: 'fourball', worth: 1, group: 1, groups: 3 });
+  const plan = (id, date, teeTime, session = null) => ({ id, date, teeTime, ...(session ? { session } : {}) });
+  const done = (id, at, session = null) => ({ id, createdAt: at, finishedAt: at, ...(session ? { session } : {}) });
+  const chips = tripChips({
+    done: [done('r1', OCT(16, 8), sess(1, 1)), done('r2', OCT(16, 8), sess(1, 1))],
+    live: [{ id: 'r3', createdAt: OCT(16, 13), session: sess(1, 2) }],
+    planned: [plan('a', '2026-10-16', '13:10', sess(1, 2)), plan('b', '2026-10-17', '08:00', sess(2, 1)), plan('c', '2026-10-17', '08:10', sess(2, 1)), plan('own', '2026-10-18', '09:00')],
+  });
+  assert.deepEqual(chips.map(c => [c.label, c.state]), [['Fri AM', 'done'], ['Fri PM', 'now'], ['Sat', 'planned'], ['Sun', 'planned']]);
+  // A session with some groups done and the rest still to tee off is under way
+  const mixed = tripChips({ done: [done('r1', OCT(16, 8), sess(1, 1))], live: [], planned: [plan('x', '2026-10-16', '08:20', sess(1, 1))] });
+  assert.deepEqual(mixed.map(c => c.state), ['now']);
+});
+
+test('a draft carries the trip’s name for a captain’s phone that doesn’t know the trip', () => {
+  const d = newDraft({ pool: POOL, captains: ['cap0', 'cap1'], names: ['Blue', 'Red'], title: 'Bandon 2026', now: OCT(1) });
+  assert.equal(d.title, 'Bandon 2026');
+  assert.equal(cleanDraft({ ...d, draft: 1, title: 'x'.repeat(50) }).title.length, 32);
+  assert.equal(newDraft({ pool: POOL, captains: ['cap0', 'cap1'], names: ['Blue', 'Red'] }).title, null);
+});

@@ -32,7 +32,7 @@ export function draftState(state, tripId) {
   if (d.def && cleanDraft(d.def)) rows[DRAFT_KEY] = d.def;
   const key = captainKey(myDevice());
   if (d.mine && key) rows[key] = d.mine;
-  return { def, mine: d.mine ? cleanCaptainRow(d.mine) : null, rows, merged: def ? mergeDraft(def, rows) : null, at: d.checkedAt || 0 };
+  return { def, mine: d.mine ? cleanCaptainRow(d.mine) : null, rows, merged: def ? mergeDraft(def, rows) : null };
 }
 
 /** Which captain this phone picks for in the trip's draft: the organizer's for any it picks for, a captain's own seat. */
@@ -50,15 +50,19 @@ export function mySeats(state, tripId) {
 // --------------------------- talking to the server ---------------------------
 
 const running = new Map();
+const again = new Set();
 /**
  * Post this phone's rows for the trip's draft (when they changed), then read every row. Resolves
- * 'off' when the table isn't on the server, 'offline' with no signal, else 'ok'. On the
- * organizer's phone a finished draft goes onto the trip.
+ * 'off' when the table isn't on the server, 'offline' with no signal, else 'ok'. A pick made
+ * while one is on its way goes right after it. On the organizer's phone a finished draft goes onto
+ * the trip.
  */
 export function refreshDraft(tripId) {
-  if (running.has(tripId)) return running.get(tripId);
+  if (running.has(tripId)) { again.add(tripId); return running.get(tripId); }
+  // Off (no table on the server): the draft runs on this phone, and still lands on the trip when it's done
+  const offHere = () => { followDraft(tripId); return 'off'; };
   const p = (async () => {
-    if (cupOff()) return 'off';
+    if (cupOff()) return offHere();
     await deviceReady();
     try {
       const s = getState();
@@ -67,21 +71,26 @@ export function refreshDraft(tripId) {
       const key = captainKey(myDevice());
       // Post first: the server only lets a phone read a trip's rows once it has posted one
       if (d.def && stable(rows[DRAFT_KEY] || null) !== stable(d.def)) {
-        if (!(await postCupRow(tripId, DRAFT_KEY, d.def))) return 'off';
+        if (!(await postCupRow(tripId, DRAFT_KEY, d.def))) return offHere();
       }
       if (d.mine && key && stable(rows[key] || null) !== stable(d.mine)) {
-        if (!(await postCupRow(tripId, key, d.mine))) return 'off';
+        if (!(await postCupRow(tripId, key, d.mine))) return offHere();
       }
       const all = await cupRows(tripId);
-      if (all == null) return 'off';
+      if (all == null) return offHere();
       const mine = Object.fromEntries(Object.entries(all).filter(([k]) => isDraftKey(k)));
-      put(tripId, { rows: mine, checkedAt: Date.now() });
+      // Only a change is written, so a draft screen left open doesn't rewrite the app's state every few seconds
+      if (stable(mine) !== stable(slot(getState(), tripId).rows || {})) put(tripId, { rows: mine });
       followDraft(tripId);
       return 'ok';
     } catch {
+      followDraft(tripId);
       return 'offline';
     }
-  })().finally(() => running.delete(tripId));
+  })().finally(() => {
+    running.delete(tripId);
+    if (again.delete(tripId)) refreshDraft(tripId);
+  });
   running.set(tripId, p);
   return p;
 }
@@ -102,7 +111,8 @@ function followDraft(tripId) {
   if (!cup) return;
   editTrip(tripId, { cup: { ...cup, pick: 'draft', teams: draftTeams(def, merged), captains: def.captains } });
   put(tripId, { applied: def.v });
-  if (cup.schedule) makeScheduledRounds(tripId);
+  // A draft started over after the rounds were planned plans them again from the new teams
+  if (cup.schedule) makeScheduledRounds(tripId, { redo: true });
 }
 
 /**
@@ -147,7 +157,7 @@ export function startDraft(tripId, { order = 'snake', first = 0, here = [false, 
   const old = cleanDraft(slot(s, tripId).def);
   const pool = tripGoing(s, trip).map(id => s.players[id]).filter(Boolean).map(p => ({ id: p.id, name: p.name, index: p.index ?? null }));
   for (const c of cup.captains) if (!pool.some(p => p.id === c)) { const p = s.players[c]; if (p) pool.push({ id: p.id, name: p.name, index: p.index ?? null }); }
-  const def = newDraft({ pool, captains: cup.captains, names: cup.names, order, first, here, byName: myName(s), v: (old?.v || 0) + 1 });
+  const def = newDraft({ pool, captains: cup.captains, names: cup.names, order, first, here, byName: myName(s), title: trip.name, v: (old?.v || 0) + 1 });
   if (!def) return null;
   put(tripId, { def: draftRow(def), applied: null });
   // The trip waits on the draft: its captains on their teams, nobody else yet

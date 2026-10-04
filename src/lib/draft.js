@@ -44,7 +44,7 @@ export function draftOrder(n, { order = 'snake', first = 0 } = {}) {
   });
 }
 
-/** The draft as the organizer's phone posted it, tidied, or null: { v, pool, captains, names, order, first, here, picks, byName, at }. */
+/** The draft as the organizer's phone posted it, tidied, or null: { v, pool, captains, names, order, first, here, picks, byName, title (the trip's name), at }. */
 export function cleanDraft(raw) {
   if (!isObj(raw) || raw.draft !== 1 || !Array.isArray(raw.pool) || !Array.isArray(raw.captains)) return null;
   const seen = new Set();
@@ -63,6 +63,7 @@ export function cleanDraft(raw) {
     here: [0, 1].map(i => raw.here?.[i] === true),
     picks: [0, 1].map(i => list(raw.picks?.[i])),
     byName: isStr(raw.byName) ? raw.byName.slice(0, 40) : null,
+    title: isStr(raw.title) ? raw.title.slice(0, 32) : null,
     at: Number(raw.at) || 0,
   };
 }
@@ -148,15 +149,15 @@ export function undoFor(draft, rows, seat) {
 }
 
 /** A new draft for the organizer's phone to post: pool, captains, names, order and who picks first. */
-export function newDraft({ pool, captains, names, order = 'snake', first = 0, here = [false, false], byName = null, v = 1, now = Date.now() }) {
-  return cleanDraft({ draft: 1, v, pool, captains, names, order, first, here, picks: [[], []], byName, at: now });
+export function newDraft({ pool, captains, names, order = 'snake', first = 0, here = [false, false], byName = null, title = null, v = 1, now = Date.now() }) {
+  return cleanDraft({ draft: 1, v, pool, captains, names, order, first, here, picks: [[], []], byName, title, at: now });
 }
 
 /**
  * The draft as it goes to the server (the organizer's row). `here` and `picks` say which captains
  * pick on the organizer's phone, and what they've picked there.
  */
-export const draftRow = d => ({ draft: 1, v: d.v, pool: d.pool, captains: d.captains, names: d.names, order: d.order, first: d.first, here: d.here, picks: d.picks, byName: d.byName, at: d.at });
+export const draftRow = d => ({ draft: 1, v: d.v, pool: d.pool, captains: d.captains, names: d.names, order: d.order, first: d.first, here: d.here, picks: d.picks, byName: d.byName, ...(d.title ? { title: d.title } : {}), at: d.at });
 
 /**
  * The organizer's phone takes over picking for a captain (no signal on theirs, say): what that

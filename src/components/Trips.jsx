@@ -349,7 +349,8 @@ function TripForm({ trip, onDone }) {
   const teams = cup.teams.map(t => t.filter(p => going.has(p.id)));
   const cupNow = { ...cup, teams, captains: cup.captains.map(c => (going.has(c) ? c : null)) };
   // A live draft (draft.js) starts with just the captains: the rest is picked on their phones
-  const liveOk = !trip || !!trip.cup?.draft?.live;
+  // Editing: only while that draft is still going (just the captains on the teams); after it, the teams are the trip's like any
+  const liveOk = !trip || (!!trip.cup?.draft?.live && cleanCup(trip.cup).teams.flat().length <= 2);
   const live = cupNow.pick === 'draft' && cupNow.draft?.live && liveOk;
   const teamsOk = live ? !!(cupNow.captains[0] && cupNow.captains[1]) : teams[0].length > 0 && teams[1].length > 0;
   const sched = isCup ? schedule : null;
@@ -380,7 +381,9 @@ function TripForm({ trip, onDone }) {
     const last = end < start ? start : end;
     const cupOut = isCup || trip?.cup ? cleanCup({ ...cupNow, ...(sched ? { schedule: sched } : { schedule: null }) }) : null;
     // Handicap flights (flights.js) are set now, from everyone's index today
-    const flights = flightsOn && pool.length >= 2 ? flightsOf(pool).map(f => f.map(p => ({ id: p.id, name: p.name }))) : null;
+    // (an edit keeps them as they were while the same people are going, so a changed index moves nobody)
+    const sameFlights = trip?.flights && JSON.stringify(trip.flights.flat().map(p => p.id).sort()) === JSON.stringify(pool.map(p => p.id).sort());
+    const flights = !flightsOn || pool.length < 2 ? null : sameFlights ? trip.flights : flightsOf(pool).map(f => f.map(p => ({ id: p.id, name: p.name })));
     if (trip) {
       const before = trip.cup ? JSON.stringify([cleanCup(trip.cup).teams, cleanCup(trip.cup).schedule]) : '';
       editTrip(trip.id, { name: name.trim().slice(0, 32), start, end: last, where: where.trim().slice(0, 32) || null, people, format, flights, ...(cupOut ? { cup: cupOut } : {}) });

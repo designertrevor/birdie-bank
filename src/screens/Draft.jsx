@@ -95,7 +95,7 @@ function DraftBody({ tripId }) {
   };
   const share = async seat => {
     const link = draftLink(location.origin, tripId, seat);
-    const text = `You’re captain of ${def.names[seat]} for ${trip?.name || 'the trip'}. Pick your team here when it’s your turn: ${link}`;
+    const text = `You’re captain of ${def.names[seat]} for ${trip?.name || def.title || 'the trip'}. Pick your team here when it’s your turn: ${link}`;
     const r = await sendReminder(text);
     if (r === 'copied') showToast(`${capName(seat)}’s link is copied. Paste it in a text to them`);
     if (r === 'failed') showToast('Couldn’t share on this device');
@@ -116,7 +116,7 @@ function DraftBody({ tripId }) {
   return (
     <div className="scroll">
       <div className={`block tm-draft-head ${turn != null ? `t${turn}` : ''}`} role="status" aria-live="polite">
-        <div className="eyebrow">{trip?.name || `${def.names[0]} v ${def.names[1]}`}</div>
+        <div className="eyebrow">{trip?.name || def.title || `${def.names[0]} v ${def.names[1]}`}</div>
         <div className="d tm-draft-big">{headline}</div>
         <div className="tm-draft-sub">{sub}</div>
         {status === 'offline' && <div className="tm-draft-sub warn"><Icon name="wifi-slash" /> No signal. Picks go up when it’s back.</div>}
@@ -167,14 +167,16 @@ function DraftBody({ tripId }) {
               <div key={i} className="ledger-row static tm-captain">
                 <div className="lr-info">
                   <div className="lr-name" style={{ fontSize: 16 }}><TeamDot team={i} /> {name(def.captains[i])}</div>
-                  <div className="lr-status">{here ? 'Picking on this phone' : phone ? `Picking on ${phone.row.name ? `${first(phone.row.name)}’s` : 'their'} phone` : 'Hasn’t opened the link yet'}</div>
+                  <div className="lr-status">{here ? 'Picking on this phone' : phone ? `Picking on ${phone.row.name ? `${first(phone.row.name)}’s` : 'their'} phone` : status === 'off' ? 'Pick here for them' : 'Hasn’t opened the link yet'}</div>
                 </div>
-                {!here && !merged.done && <button className="pill-btn sm" onClick={() => share(i)}><Icon name="share" /> Link</button>}
+                {!here && !merged.done && status !== 'off' && <button className="pill-btn sm" onClick={() => share(i)}><Icon name="share" /> Link</button>}
                 {!here && !merged.done && <button className="pill-btn sm" onClick={() => pickForHere(tripId, i)}>Pick here</button>}
               </div>
             );
           })}
-          <p className="field-help pad">Each captain picks on their own phone from their link. No signal on one? Pick here for them: what they’ve picked stays theirs.</p>
+          <p className="field-help pad">{status === 'off'
+            ? 'Live drafts aren’t switched on yet, so the captains can’t pick on their own phones. Pick here for both and pass this phone around.'
+            : 'Each captain picks on their own phone from their link. No signal on one? Pick here for them: what they’ve picked stays theirs.'}</p>
           {!merged.done && merged.picks.length > 0 && <button className="text-link danger" onClick={again}><Icon name="arrow-counter-clockwise" /> Start the draft over</button>}
         </>
       )}
