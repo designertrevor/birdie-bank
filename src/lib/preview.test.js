@@ -443,6 +443,9 @@ test('strokes: a plan with a setup gives the tees, handicap edits and starting h
     assert.equal(row.plays, rp.plays, rp.name);
     assert.deepEqual(row.strokes.map(x => x.no).sort((a, b) => a - b), round.holes.filter(h => popsFor(round, rp, h) > 0).map(h => h.no).sort((a, b) => a - b));
   }
+  // The holes read in number order, not playing order, though the round starts on 10
+  for (const r of st.rows) assert.deepEqual(r.strokes.map(x => x.no), [...r.strokes.map(x => x.no)].sort((a, b) => a - b), r.name);
+  assert.ok(st.rows.some(r => r.strokes.some(x => x.no < 10) && r.strokes.some(x => x.no >= 10)));
   // 12 as edited off Trevor's 2 is 10; Dave's 20 from the White tee is 17, so 15
   assert.deepEqual(st.rows.map(r => [r.name, r.plays]), [['Dave', 15], ['Mike', 10], ['Trevor', 0]]);
   // Without the setup it is the plain preview: everyone on Blue, Mike off his index

@@ -189,7 +189,8 @@ export function previewStrokes(state, plan, { settings = state?.settings } = {})
       who: p.who, name: p.name, me: p.me,
       // A handicap edit from setup counts as a handicap: only someone with neither plays off 0
       index: rp.index, noIndex: rp.index == null && rp.courseHcOverride == null, plays: rp.plays,
-      strokes: round.holes.map(h => ({ no: h.no, n: popsFor(round, rp, h) })).filter(x => x.n > 0),
+      // By hole number, so a round starting on 10 still reads "4, 7 and 14"
+      strokes: round.holes.map(h => ({ no: h.no, n: popsFor(round, rp, h) })).filter(x => x.n > 0).sort((a, b) => a.no - b.no),
     };
   });
   rows.sort((a, b) => b.plays - a.plays);
