@@ -20,7 +20,9 @@ import { nameOf } from '../lib/ledger.js';
 import { canonicalOf } from '../lib/pair-debts.js';
 import { PAY_APPS, payInfoFor } from '../lib/pay.js';
 import { points } from '../lib/play-for.js';
-import { whenLabel } from '../lib/plans.js';
+import { dayLabel, whenLabel } from '../lib/plans.js';
+import { plansByDay } from '../lib/trip-templates.js';
+import { DraftCard, FlightsView, ScheduleCard } from '../components/TripMode.jsx';
 import { buzz } from '../lib/delight.js';
 import { allTripPays } from '../lib/trip-expenses.js';
 import { markTripPayment, undoPayments, usePaymentsOff, useTabSync } from '../lib/tab-sync.js';
@@ -29,6 +31,7 @@ import { deleteTrip, endTrip, hideTrip, seenTripPlan, setRoundTrip } from '../li
 import { plansOn, useTripPlans } from '../lib/trip-plan-sync.js';
 import { CupBoard, CupMatches, CupScore, StakeLines } from '../components/Cup.jsx';
 import { useCupSync } from '../lib/cup-sync.js';
+import { useDraftSync } from '../lib/draft-sync.js';
 import { cupHeadline } from '../lib/cup.js';
 
 const first = name => String(name || '').trim().split(/\s+/)[0];
@@ -77,6 +80,9 @@ export default function Trip({ id, view: firstView = null, add = false }) {
   const st = tripStatus(state, id);
   const { me, label, short } = useWho(state);
   useSeenPlan(id, st?.published.version || 0);
+  // A live captains' draft still going (draft-sync.js): keep up with it here too, so the organizer's
+  // phone puts the teams on the trip as soon as the last pick is in
+  useDraftSync(st?.cup?.def?.draft?.live && st.cup.def.teams.flat().length <= 2 ? id : null);
   if (!st) {
     return <Screen><Header title="Trip" small onBack={nav.pop} /><div className="scroll"><Empty title="This trip is gone" text="Its rounds and their money are still in History and on the Tab." /></div></Screen>;
   }
@@ -161,30 +167,40 @@ export default function Trip({ id, view: firstView = null, add = false }) {
 
         {view === 'cup' && cup && (
           <>
+            <DraftCard st={st} />
             <CupScore cup={cup} />
             <div className="sec-label">Matches</div>
             <CupMatches cup={cup} />
             <div className="sec-label">Leaderboard</div>
             <CupBoard cup={cup} />
+            <ScheduleCard st={st} />
+            <FlightsView st={st} />
             <p className="field-help pad">{cup.entries.some(e => !e.local) ? 'Other groups’ matches come from their phones. ' : ''}A match is worked out from the round’s own scores and strokes, whatever game the round plays. A round that ends early goes to whoever led on the holes played.</p>
           </>
         )}
 
         {view === 'standings' && <Standings st={st} state={state} label={label} me={me} />}
+        {view === 'standings' && !cup && <FlightsView st={st} />}
         {view === 'rounds' && (
           <>
             {st.rounds.length === 0 && st.planned.length === 0 && <p className="field-help pad">No rounds yet. Start one at the course, or plan the trip’s rounds so everyone can answer.</p>}
             {[...st.done].reverse().map(r => <RoundRow key={r.id} round={r} state={state} className="card" />)}
             {st.live.map(r => <LiveRow key={r.id} round={r} />)}
-            {st.planned.map(p => (
-              <button key={p.id} className="ledger-row trip-plan-row" onClick={() => nav.push('plan', { id: p.id })}>
-                <div className="lr-info">
-                  <div className="lr-name" style={{ fontSize: 16 }}>{p.course?.name || 'Course to be set'}</div>
-                  <div className="lr-status">{whenLabel(p)}</div>
-                </div>
-                <span className="chevron"><Icon name="caret-right" /></span>
-              </button>
-            ))}
+            {/* Planned rounds day by day, a Trip Mode schedule's groups under their session (trip-templates.js) */}
+            {plansByDay(st.planned).map(d => d.sessions.map(sess => (
+              <div key={`${d.date}${sess.key}`}>
+                {sess.label && <div className="sec-label">{dayLabel(d.date)} · {sess.label}{sess.worth > 1 ? ` · ${sess.worth} points a match` : ''}</div>}
+                {sess.plans.map(p => (
+                  <button key={p.id} className="ledger-row trip-plan-row" onClick={() => nav.push('plan', { id: p.id })}>
+                    <div className="lr-info">
+                      <div className="lr-name" style={{ fontSize: 16 }}>{p.session?.line || p.course?.name || 'Course to be set'}</div>
+                      <div className="lr-status">{whenLabel(p)}{p.session?.line ? ` · ${p.course?.name || 'Course to be set'}` : ''}</div>
+                    </div>
+                    <span className="chevron"><Icon name="caret-right" /></span>
+                  </button>
+                ))}
+              </div>
+            )))}
             <button className="add-row" onClick={() => nav.push('newRound', { trip: id })}><div className="add-ci"><Icon name="golf" fill /></div><span className="add-lbl">Start a round for the trip</span></button>
             <button className="add-row" onClick={() => nav.push('newRound', { ahead: true, trip: id })}><div className="add-ci"><Icon name="calendar-plus" /></div><span className="add-lbl">Plan a round for the trip</span></button>
             <button className="text-link" onClick={() => setCounting(true)}><Icon name="list-checks" /> Which rounds count?</button>

@@ -750,15 +750,29 @@ export function tripDates(trip) {
  * when both are in the same half of the day.
  */
 export function tripChips(status) {
-  const items = [
-    ...status.done.map(r => ({ key: r.id, at: r.createdAt || finishedAt(r), state: 'done' })),
-    ...status.live.map(r => ({ key: r.id, at: r.createdAt || Date.now(), state: 'now' })),
+  // A Trip Mode schedule's session (trip-templates.js) is one chip for all its groups: its rounds
+  // and plans carry `session`; done once every group is, now while any is being played or some are in
+  const sessionKey = x => (x?.session?.trip && x.session.day ? `s:${x.session.day}.${x.session.session}` : null);
+  const raw = [
+    ...status.done.map(r => ({ key: r.id, at: r.createdAt || finishedAt(r), state: 'done', group: sessionKey(r) })),
+    ...status.live.map(r => ({ key: r.id, at: r.createdAt || Date.now(), state: 'now', group: sessionKey(r) })),
     ...status.planned.map(p => {
       const [y, m, d] = parts(p.date);
       const [h, min] = String(p.teeTime || '09:00').split(':').map(Number);
-      return { key: p.id, at: new Date(y, m - 1, d, h || 9, min || 0).getTime(), state: 'planned' };
+      return { key: p.id, at: new Date(y, m - 1, d, h || 9, min || 0).getTime(), state: 'planned', group: sessionKey(p) };
     }),
-  ].sort((a, b) => a.at - b.at);
+  ];
+  const groups = new Map();
+  const items = [];
+  for (const x of raw) {
+    if (!x.group) { items.push(x); continue; }
+    const g = groups.get(x.group);
+    if (!g) { const y = { ...x, states: new Set([x.state]) }; groups.set(x.group, y); items.push(y); continue; }
+    g.at = Math.min(g.at, x.at);
+    g.states.add(x.state);
+  }
+  for (const g of groups.values()) g.state = g.states.has('now') || g.states.size > 1 ? 'now' : [...g.states][0];
+  items.sort((a, b) => a.at - b.at);
   const half = t => (new Date(t).getHours() < 12 ? 'AM' : 'PM');
   const perDay = new Map();
   for (const x of items) perDay.set(dayOf(x.at), [...(perDay.get(dayOf(x.at)) || []), x]);

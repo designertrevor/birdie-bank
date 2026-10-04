@@ -498,6 +498,8 @@ export function RollCall({ id }) {
     const planned = tripPick ? cleanRoundCup({ ...round, cup: planCupFor(plan, round.players) }) : null;
     const cup = tripPick ? planned || startingCup(getState(), round, tripPick) : null;
     if (cup) round.cup = cup;
+    // Where it sits in the trip's schedule, so the trip's days show one chip a session
+    if (tripPick && plan.session?.trip === tripPick.id) round.session = structuredClone(plan.session);
     // Agreed challenges go in as side bets, once each
     const { round: withCh, used } = withChallenges(getState(), round, { planId: id, idOf: setup.idOf });
     update(s => { addRound(s, withCh); });

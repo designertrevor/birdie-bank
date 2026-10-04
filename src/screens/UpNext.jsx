@@ -183,8 +183,9 @@ function UpcomingCard({ plan }) {
     <button className={`upcoming-card ${off ? 'off' : ''} ${ahead ? 'has-preview' : ''}`} onClick={() => nav.push('plan', { id: plan.id })}>
       <div className="row-main">
         <div className="eyebrow">{ahead ? countdownLine(plan) : whenLabel(plan)}{off ? (plan.status === 'off' ? ' · Called off' : ' · Deleted') : moved ? ' · Moved' : started ? ' · The round is on' : ''}</div>
-        <div className="uc-title d">{GAMES[game]?.name || 'Golf'} · {plan.course?.name || 'Course to be set'}</div>
-        <div className="uc-sub">{off ? `Organized by ${plan.host ? 'you' : plan.hostName || 'a friend'}` : moved ? `Moved to ${moved.date ? dayLabel(moved.date) : 'another day'}${moved.code ? '. Tap for the new plan' : ''}` : started ? (plan.liveCode ? 'Tap to follow along' : 'Teeing off now') : countsLine(c)}</div>
+        {/* A round a trip's schedule planned (trip-templates.js) leads with its matches */}
+        <div className="uc-title d">{plan.session?.line || `${GAMES[game]?.name || 'Golf'} · ${plan.course?.name || 'Course to be set'}`}</div>
+        <div className="uc-sub">{off ? `Organized by ${plan.host ? 'you' : plan.hostName || 'a friend'}` : moved ? `Moved to ${moved.date ? dayLabel(moved.date) : 'another day'}${moved.code ? '. Tap for the new plan' : ''}` : started ? (plan.liveCode ? 'Tap to follow along' : 'Teeing off now') : plan.session?.line ? `${GAMES[game]?.name || 'Golf'} · ${plan.course?.name || 'Course to be set'} · ${countsLine(c)}` : countsLine(c)}</div>
       </div>
       {!off && !started && !moved && <span className={`who-status ${mine || 'none'}`}>{mine ? `You’re ${RSVP_LABEL[mine].toLowerCase()}` : 'Answer'}</span>}
       <span className="chevron"><Icon name="caret-right" /></span>

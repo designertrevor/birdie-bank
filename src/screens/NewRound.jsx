@@ -374,6 +374,9 @@ export default function NewRound({ rematch, fromPlan, present, edit = null, ahea
       const c = cleanRoundCup({ game, players: round.players, teams: round.teams, cup: roundCup });
       if (c) round.cup = c;
     }
+    // A round the trip's schedule planned keeps its place in it (trip-templates.js)
+    const planSession = fromPlan ? s.plans?.[fromPlan]?.session : null;
+    if (tripPick && planSession?.trip === tripPick.id) round.session = structuredClone(planSession);
     // Started from a saved usual (still the same game at the same course): finishing it updates "Last played"
     const from = usualId && usualsOf(s).find(u => u.id === usualId);
     if (from && from.game === game && (from.courseId === course.id || findCourse(s, from.courseId)?.id === course.id)) round.usualId = usualId;

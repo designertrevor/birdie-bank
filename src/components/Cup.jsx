@@ -1,5 +1,6 @@
 // A team points trip's pieces (cup.js): the scoreboard, every match, the leaderboard, picking the
-// teams (a captains' draft on one phone, or balanced by handicap), a round's matches in setup, and
+// teams (a captains' draft on one phone or live on the captains' own, balanced by handicap or by
+// flights), a round's matches in setup, and
 // the stake on Settle the trip (trip money on the Tab once decided, cup-stake.js). The trip's page
 // and cards put them together (Trip.jsx, Trips.jsx).
 import { useState } from 'react';
@@ -11,7 +12,10 @@ import { nameOf } from '../lib/ledger.js';
 import { canonicalOf } from '../lib/pair-debts.js';
 import { payInfoFor } from '../lib/pay.js';
 import { buzz } from '../lib/delight.js';
-import { CUP_KINDS, FOURSOMES_GAME, MAX_STAKE, balanceTeams, cleanStake, cupCounts, cupHeadline, cupKindsFor, cupPoints, moveTo, pairMatches, pickingTeam, teamHandicaps } from '../lib/cup.js';
+import { CUP_KINDS, FOURSOMES_GAME, MAX_STAKE, balanceTeams, cleanStake, cupCounts, cupHeadline, cupKindsFor, cupPoints, moveTo, pairMatches, teamHandicaps } from '../lib/cup.js';
+import { DRAFT_ORDERS, draftOrder } from '../lib/draft.js';
+import { FLIGHT_NAMES, flightTeams, flightsOf } from '../lib/flights.js';
+import { schedulePoints } from '../lib/trip-templates.js';
 import { canRecount } from '../lib/trips.js';
 import { GAMES } from '../lib/round.js';
 import { markStake, resetRoundCup, setRoundCup, undoStake } from '../lib/cup-store.js';
@@ -37,6 +41,9 @@ export function CupScore({ cup }) {
   const lead = a > b ? 0 : b > a ? 1 : null;
   const live = cup.score.live.length;
   const stake = cup.def.stake;
+  // A Trip Mode schedule (trip-templates.js) says how many points win it, with the teams as they are
+  const per = Math.min(cup.def.teams[0].length, cup.def.teams[1].length);
+  const toWin = cup.def.schedule && per > 1 && !cup.final ? schedulePoints(cup.def.schedule, per).toWin : null;
   return (
     <div className="block cup-score" role="group" aria-label={cupHeadline(cup)}>
       <div className="cup-board">
@@ -51,6 +58,7 @@ export function CupScore({ cup }) {
       <div className="cup-headline">{cupHeadline(cup)}</div>
       <div className="cup-sub">
         {cup.score.done} match{cup.score.done === 1 ? '' : 'es'} played{live ? ` · ${live} in play` : ''}
+        {toWin && ` · ${cupPoints(toWin)} wins it`}
         {stake > 0 && ` · ${money(stake)} a person on the cup`}
         {cup.myTeam != null && ` · You’re on ${cup.names[cup.myTeam]}`}
       </div>
@@ -144,12 +152,20 @@ export function CupBoard({ cup }) {
 
 // --------------------------- picking the teams ---------------------------
 
+/** The draft order in words, with the team names: "Blue, Red, Red, Blue, Blue, Red and so on: ...". */
+function orderLine(opts, names) {
+  const seq = draftOrder(6, opts).map(i => names[i]).join(', ');
+  return `${seq} and so on. ${opts.order === 'snake' ? 'Whoever picks second gets two in a row, so the first pick isn’t worth more than the rest.' : 'One pick each, the same team first every time.'}`;
+}
+
 /**
  * The teams for a trip, picked from who's going (`people`: [{ id, name, index }]): the team names,
- * a captains' draft or balanced by handicap, a tap to move anyone across, and the stake.
- * `value` and `onChange` work with the cup (cup.js cleanCup's shape).
+ * a captains' draft (passing this phone around, or live on the captains' own phones, draft.js),
+ * balanced by handicap or by flights (each team gets the same number of A, B, C and D players,
+ * flights.js), a tap to move anyone across, and the stake. `value` and `onChange` work with the cup
+ * (cup.js cleanCup's shape). `live`: the live draft can be offered (a trip being started).
  */
-export function TeamsPicker({ people, value, onChange }) {
+export function TeamsPicker({ people, value, onChange, live: liveOk = true }) {
   const cup = value;
   const set = patch => onChange({ ...cup, ...patch });
   const placed = new Set(cup.teams.flat().map(p => p.id));
@@ -157,20 +173,41 @@ export function TeamsPicker({ people, value, onChange }) {
   const byId = id => people.find(p => p.id === id);
   const hcs = teamHandicaps(cup.teams, id => byId(id)?.index ?? null);
   const drafting = cup.pick === 'draft';
+  const opts = cup.draft || { live: false, order: 'snake', first: 0 };
+  const live = drafting && opts.live && liveOk;
   const captainsSet = cup.captains[0] && cup.captains[1];
-  const turn = !captainsSet ? (cup.captains[0] ? 1 : 0) : pickingTeam(cup.teams);
+  // Captains first (the first team's, then the second's), then the picks in the draft's order
+  const made = Math.max(0, cup.teams.flat().length - 2);
+  const turn = !captainsSet ? (cup.captains[0] ? 1 : 0) : draftOrder(made + 1, opts)[made];
+  const mode = drafting ? 'draft' : cup.pick === 'flights' ? 'flights' : 'balance';
+  const letters = new Map(flightsOf(people).flatMap((f, i) => f.map(p => [p.id, FLIGHT_NAMES[i]])));
   const [stakeText, setStakeText] = useState(cup.stake ? String(cup.stake) : '');
 
   const balance = () => set({ pick: 'balance', teams: balanceTeams(people), captains: [null, null] });
-  const startDraft = () => set({ pick: 'draft', teams: [[], []], captains: [null, null] });
+  const byFlights = () => set({ pick: 'flights', teams: flightTeams(people), captains: [null, null] });
+  const toDraft = (patch = {}) => set({ pick: 'draft', teams: [[], []], captains: [null, null], draft: { ...opts, ...patch } });
+  const setOpts = patch => {
+    // Live or passed around changes who picks where, so the draft starts again from the captains
+    if ('live' in patch && patch.live !== opts.live) return set({ draft: { ...opts, ...patch }, teams: cup.captains.map(c => (c ? [{ id: c, name: byId(c)?.name || 'Player' }] : [])) });
+    set({ draft: { ...opts, ...patch } });
+  };
   const pickFree = p => {
     if (!drafting) return set({ teams: moveTo(cup.teams, p, cup.teams[0].length <= cup.teams[1].length ? 0 : 1), pick: 'hand' });
+    if (live && captainsSet) return;
     const teams = moveTo(cup.teams, p, turn);
     const captains = captainsSet ? cup.captains : cup.captains.map((c, i) => (i === turn ? p.id : c));
     buzz(10);
     set({ teams, captains });
   };
-  const flip = (p, from) => set({ teams: moveTo(cup.teams, p, 1 - from), captains: cup.captains.map(c => (c === p.id ? null : c)), pick: drafting && free.length ? 'draft' : 'hand' });
+  const flip = (p, from) => {
+    if (live) return set({ teams: cup.teams.map((t, i) => (i === from ? t.filter(x => x.id !== p.id) : t)), captains: cup.captains.map(c => (c === p.id ? null : c)) });
+    set({ teams: moveTo(cup.teams, p, 1 - from), captains: cup.captains.map(c => (c === p.id ? null : c)), pick: drafting && free.length ? 'draft' : 'hand' });
+  };
+  const help = mode === 'flights'
+    ? 'Everyone sorted into flights A to D by handicap index, then each flight split between the teams, so both have the same number of A players, B players and so on. Tap anyone to move them across.'
+    : mode === 'balance' ? 'Best player first, then picks snake back and forth so neither team gets every low handicap. Tap anyone to move them across.'
+    : live ? (captainsSet ? 'Each captain gets a link once the trip is started and picks on their own phone, on their turn. Every phone sees each pick as it’s made.' : 'Pick a captain for each team. Each one gets a link and picks on their own phone, on their turn.')
+    : 'Pick a captain for each team, then the captains take turns picking. Pass the phone around.';
 
   return (
     <div className="cup-pick">
@@ -184,23 +221,35 @@ export function TeamsPicker({ people, value, onChange }) {
       </div>
 
       <div className="field-label">Pick the teams</div>
-      <Segmented label="How the teams are picked" className="press-mode-row" btn="pm-btn" value={drafting ? 'draft' : 'balance'}
-        onChange={v => (v === 'draft' ? startDraft() : balance())}
-        options={[{ value: 'draft', label: 'Captains pick' }, { value: 'balance', label: 'Balance by handicap' }]} />
-      <p className="field-help">{drafting
-        ? 'Pick a captain for each team, then the captains take turns picking. Pass the phone around.'
-        : 'Best player first, then picks snake back and forth so neither team gets every low handicap. Tap anyone to move them across.'}</p>
+      <Segmented label="How the teams are picked" className="press-mode-row" btn="pm-btn" value={mode}
+        onChange={v => (v === 'draft' ? toDraft() : v === 'flights' ? byFlights() : balance())}
+        options={[{ value: 'draft', label: 'Captains pick' }, { value: 'balance', label: 'By handicap' }, { value: 'flights', label: 'By flights' }]} />
+      {drafting && (
+        <div className="tm-draft-opts">
+          {liveOk && (
+            <Segmented label="Where the captains pick" className="press-mode-row" btn="pm-btn" value={opts.live ? 'live' : 'here'} onChange={v => setOpts({ live: v === 'live' })}
+              options={[{ value: 'here', label: 'Pass this phone' }, { value: 'live', label: 'Their own phones' }]} />
+          )}
+          <Segmented label="Draft order" className="press-mode-row" btn="pm-btn" value={opts.order} onChange={order => setOpts({ order })}
+            options={Object.entries(DRAFT_ORDERS).map(([k, o]) => ({ value: k, label: o.name }))} />
+          <Segmented label="Who picks first" className="press-mode-row" btn="pm-btn" value={opts.first} onChange={f => setOpts({ first: f })}
+            options={[0, 1].map(i => ({ value: i, label: `${cup.names[i]} first` }))} />
+          <p className="field-help">{orderLine(opts, cup.names)}</p>
+        </div>
+      )}
+      <p className="field-help">{help}</p>
 
       <div className="cup-cols">
         {[0, 1].map(i => (
-          <div key={i} className={`cup-col t${i} ${drafting && free.length && turn === i ? 'turn' : ''}`}>
+          <div key={i} className={`cup-col t${i} ${drafting && free.length && turn === i && !(live && captainsSet) ? 'turn' : ''}`}>
             <div className="cup-col-head"><TeamDot team={i} /> {cup.names[i]}<span className="cup-col-hc">{cup.teams[i].length ? `${cup.teams[i].length} · hcp ${hcs[i]}` : ''}</span></div>
             {cup.teams[i].map(p => (
-              <button key={p.id} type="button" className="cup-chip" onClick={() => flip(p, i)} aria-label={`${p.name}, on ${cup.names[i]}. Move to ${cup.names[1 - i]}`}>
+              <button key={p.id} type="button" className="cup-chip" onClick={() => flip(p, i)} aria-label={live ? `${p.name}, captain of ${cup.names[i]}. Pick someone else` : `${p.name}, on ${cup.names[i]}. Move to ${cup.names[1 - i]}`}>
                 <Avatar id={p.id} name={p.name} size="sm" />
                 <span className="cup-chip-name">{p.name}</span>
+                {mode === 'flights' && letters.has(p.id) && <span className="tm-flight-tag">{letters.get(p.id)}</span>}
                 {cup.captains[i] === p.id && <span className="cup-cap" title="Captain">C</span>}
-                <Icon name="arrows-left-right" />
+                <Icon name={live ? 'x' : 'arrows-left-right'} />
               </button>
             ))}
             {!cup.teams[i].length && <div className="cup-col-empty">Nobody yet</div>}
@@ -208,7 +257,7 @@ export function TeamsPicker({ people, value, onChange }) {
         ))}
       </div>
 
-      {free.length > 0 && (
+      {free.length > 0 && !(live && captainsSet) && (
         <>
           <div className="field-label">{drafting ? (!captainsSet ? `Who captains ${cup.names[turn]}?` : `${cup.names[turn]}’s pick`) : 'Not on a team yet'}</div>
           <div className="cup-free">
@@ -222,7 +271,8 @@ export function TeamsPicker({ people, value, onChange }) {
           </div>
         </>
       )}
-      {drafting && cup.teams.flat().length > 0 && <button type="button" className="link-btn" onClick={startDraft}>Start the draft over</button>}
+      {live && captainsSet && free.length > 0 && <p className="field-help">{free.length} to pick in the draft.</p>}
+      {drafting && !live && cup.teams.flat().length > 0 && <button type="button" className="link-btn" onClick={() => toDraft()}>Start the draft over</button>}
 
       <label className="field-label" htmlFor="cup-stake">On the cup <span className="opt">(optional)</span></label>
       <div className="cup-stake-row">

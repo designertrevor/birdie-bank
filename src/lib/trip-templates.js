@@ -209,10 +209,21 @@ export function scheduleRounds(schedule, teams, { start }) {
 }
 
 /**
- * Where a planned round sits in a trip's schedule, as it rides on the plan (`plan.session`):
- * { trip, key, day, session, label, kind, worth, group, groups }.
+ * A round's matches in words, first names: "Trevor & Sam v Mike & Dave", or two singles
+ * "Trevor v Mike, Sam v Dave". `name(id)` gives a name.
  */
-export const sessionOf = (tripId, r) => ({ trip: tripId, key: r.key, day: r.day, session: r.session, label: r.label, kind: r.kind, worth: r.worth, group: r.group, groups: r.groups });
+export function matchLine(cup, name) {
+  const first = id => String(name(id) || '').trim().split(/\s+/)[0] || 'Player';
+  if (CUP_KINDS[cup.kind]?.size === 2) return `${cup.sides[0].map(first).join(' & ')} v ${cup.sides[1].map(first).join(' & ')}`;
+  return cup.sides[0].map((a, i) => `${first(a)} v ${first(cup.sides[1][i])}`).join(', ');
+}
+
+/**
+ * Where a planned round sits in a trip's schedule, as it rides on the plan (`plan.session`):
+ * { trip, key, day, session, label, kind, worth, group, groups, line } (`line`: its matches in words,
+ * so every phone with the plan can say who plays whom).
+ */
+export const sessionOf = (tripId, r, line = null) => ({ trip: tripId, key: r.key, day: r.day, session: r.session, label: r.label, kind: r.kind, worth: r.worth, group: r.group, groups: r.groups, ...(line ? { line } : {}) });
 
 /**
  * The plan for one scheduled round, on the organizer's phone: its day and tee time, the day's
@@ -238,7 +249,7 @@ export function scheduledPlan(r, { id, tripId, me, players, settings, stamp, now
   if (!inIt) plan.answers[plan.hostWho] = { ...plan.answers[plan.hostWho], status: 'out', game: null, bet: null, betGame: null };
   plan.trip = stamp;
   plan.cup = structuredClone(r.cup);
-  plan.session = sessionOf(tripId, r);
+  plan.session = sessionOf(tripId, r, matchLine(r.cup, pid => p(pid).name));
   return plan;
 }
 
@@ -279,4 +290,11 @@ export function plansByDay(plans) {
   }
   return [...days].sort((a, b) => String(a[0]).localeCompare(String(b[0])))
     .map(([date, d]) => ({ date, sessions: [...d.values()].map(s => ({ ...s, plans: s.plans.sort((a, b) => (a.session?.group || 0) - (b.session?.group || 0) || String(a.teeTime || '').localeCompare(String(b.teeTime || ''))) })) }));
+}
+
+/** "Day 1 · Morning four-ball · Group 2 of 3": a planned round's place in its trip's schedule, or null. */
+export function sessionEyebrow(plan) {
+  const s = plan?.session;
+  if (!s || !s.label) return null;
+  return `Day ${s.day} · ${s.label}${s.groups > 1 ? ` · Group ${s.group} of ${s.groups}` : ''}`;
 }

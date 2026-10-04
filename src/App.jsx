@@ -8,6 +8,7 @@ import { bootSync, syncConfigured } from './lib/sync.js';
 import { bootCloud } from './lib/cloud.js';
 import { bootProfiles } from './lib/profiles.js';
 import { cleanCode } from './lib/sync-model.js';
+import { cleanTripId } from './lib/draft.js';
 import UpNext from './screens/UpNext.jsx';
 import './lib/feedback.js'; // sends any suggestions queued while offline
 
@@ -66,6 +67,9 @@ const Lately = screen(() => import('./screens/Lately.jsx'));
 const trip = () => import('./screens/Trip.jsx');
 const Trip = screen(trip);
 const TripSettle = screen(trip, 'TripSettle');
+const draft = () => import('./screens/Draft.jsx');
+const Draft = screen(draft);
+const DraftLink = screen(draft, 'DraftLink');
 
 /** A plan link (?plan=CODE, &p=WHO for one person's own) waiting to open: { code, who } or null. */
 function pendingPlanLink() {
@@ -93,6 +97,22 @@ function pendingChallengeLink() {
 }
 const clearChallengeLink = () => { try { sessionStorage.removeItem('pending-challenge'); } catch { /* ignore */ } };
 
+/** A captain's draft link (?draft=TRIP&c=0|1) waiting to open: { tripId, seat }, or null. Kept for this tab until it opens. */
+function pendingDraftLink() {
+  try {
+    const q = new URLSearchParams(location.search);
+    const tripId = cleanTripId(q.get('draft'));
+    if (tripId) {
+      const v = { tripId, seat: q.get('c') === '1' ? 1 : 0 };
+      sessionStorage.setItem('pending-draft', JSON.stringify(v));
+      return v;
+    }
+    const saved = JSON.parse(sessionStorage.getItem('pending-draft'));
+    return cleanTripId(saved?.tripId) ? { tripId: saved.tripId, seat: saved.seat === 1 ? 1 : 0 } : null;
+  } catch { return null; }
+}
+const clearDraftLink = () => { try { sessionStorage.removeItem('pending-draft'); } catch { /* ignore */ } };
+
 /** A join link (?join=CODE) waiting to open, from the address bar or saved for this tab. */
 function pendingJoin() {
   try { return cleanCode(new URLSearchParams(location.search).get('join') || sessionStorage.getItem('bb-join')) || null; } catch { return null; }
@@ -111,7 +131,7 @@ const SCREENS = {
   settings: Settings, defaults: Defaults, courses: Courses, courseEdit: CourseEdit, about: About, suggest: Suggest,
   plan: Plan, rollCall: RollCall, planLink: PlanLink, preview: Preview, paywall: Paywall, season: Season,
   challenge: Challenge, challengeLink: ChallengeLink,
-  joinInvite: JoinInviteScreen, lately: Lately, trip: Trip, tripSettle: TripSettle,
+  joinInvite: JoinInviteScreen, lately: Lately, trip: Trip, tripSettle: TripSettle, draft: Draft, draftLink: DraftLink,
   profile: Profile, stats: Stats,
 };
 // Settings lives behind the avatar on Up next, so it's a pushed screen rather than a tab
@@ -140,6 +160,8 @@ export default function App() {
   const [planLinkAt, setPlanLinkAt] = useState(pendingPlanLink);
   // A challenge link too: someone set up gets it on top of Up next, anyone else answers it as it is
   const [challengeAt, setChallengeAt] = useState(pendingChallengeLink);
+  // A captain's draft link: on top of Up next for someone set up, on its own for anyone else
+  const [draftAt, setDraftAt] = useState(pendingDraftLink);
   const [stack, setStack] = useState(() => {
     if (!onboarded) return [];
     if (planLinkAt) {
@@ -149,6 +171,10 @@ export default function App() {
     if (challengeAt) {
       clearChallengeLink();
       return [{ name: 'challengeLink', params: { code: challengeAt }, key: Date.now() }];
+    }
+    if (draftAt) {
+      clearDraftLink();
+      return [{ name: 'draftLink', params: draftAt, key: Date.now() }];
     }
     // A join link for someone already set up opens the invite card (seats, "Not on the list? Add me")
     const code = syncConfigured ? pendingJoin() : null;
@@ -191,6 +217,7 @@ export default function App() {
     }
     if (new URLSearchParams(location.search).get('plan')) history.replaceState(null, '', location.pathname);
     if (new URLSearchParams(location.search).get('challenge')) history.replaceState(null, '', location.pathname);
+    if (new URLSearchParams(location.search).get('draft')) history.replaceState(null, '', location.pathname);
   }, []);
 
   // Overlays opened in place over a screen (the course editor over round setup): the phone's back
@@ -239,6 +266,7 @@ export default function App() {
     // A friend with a plan link answers and votes with no setup; the plan waits on their Up next if they set up later
     const skipPlan = () => { clearPlanLink(); setPlanLinkAt(null); };
     const skipChallenge = () => { clearChallengeLink(); setChallengeAt(null); };
+    const skipDraft = () => { clearDraftLink(); setDraftAt(null); };
     return (
       <UIProvider>
         <div className="device">
@@ -246,6 +274,7 @@ export default function App() {
             {inviteCode ? <JoinInvite code={inviteCode} onJoined={joined} onSkip={skip} />
               : planLinkAt ? <PlanLink code={planLinkAt.code} who={planLinkAt.who} standalone onSkip={skipPlan} />
               : challengeAt ? <ChallengeLink code={challengeAt} standalone onSkip={skipChallenge} />
+              : draftAt ? <DraftLink tripId={draftAt.tripId} seat={draftAt.seat} standalone onSkip={skipDraft} />
               : <Onboarding onDone={routes => setStack(routes.map(([name, params = {}]) => ({ name, params, key: Date.now() + Math.random() })))} />}
           </Suspense>
         </div>

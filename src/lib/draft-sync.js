@@ -11,7 +11,7 @@ import { getState, update } from './store.js';
 import { cupOff, cupRows, postCupRow, LOCAL_KEY } from './cup-sync.js';
 import { deviceReady, myDevice } from './device.js';
 import { stable } from './sync-model.js';
-import { DRAFT_KEY, captainKey, cleanCaptainRow, cleanDraft, draftRow, draftTeams, isDraftKey, mergeDraft, newDraft, pickFor, pickHere, undoFor } from './draft.js';
+import { DRAFT_KEY, captainKey, cleanCaptainRow, cleanDraft, draftRow, draftTeams, isDraftKey, mergeDraft, newDraft, pickFor, pickHere, seatPhones, undoFor } from './draft.js';
 import { cupOf } from './cup.js';
 import { isOrganizer, tripGoing, tripOf } from './trips.js';
 import { editTrip, makeScheduledRounds } from './trip-store.js';
@@ -37,11 +37,13 @@ export function draftState(state, tripId) {
 
 /** Which captain this phone picks for in the trip's draft: the organizer's for any it picks for, a captain's own seat. */
 export function mySeats(state, tripId) {
-  const { def, mine } = draftState(state, tripId);
+  const { def, mine, rows } = draftState(state, tripId);
   const out = new Set();
   if (!def) return out;
   if (slot(state, tripId).def) def.here.forEach((h, i) => { if (h) out.add(i); });
-  if (mine && mine.v === def.v && !def.here[mine.seat]) out.add(mine.seat);
+  // A captain's link: only the first phone that opened it picks (draft.js seatPhones)
+  const key = captainKey(myDevice());
+  if (mine && key && mine.v === def.v && !def.here[mine.seat] && seatPhones(def, rows)[mine.seat]?.key === key) out.add(mine.seat);
   return out;
 }
 
