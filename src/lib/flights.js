@@ -10,7 +10,7 @@
 // on a money trip a phone counts the rounds it has. Pure, unit tested.
 import { canonicalOf, codeOf } from './pair-debts.js';
 import { cleanEntry, cupKey } from './cup.js';
-import { toParOf } from './to-par.js';
+import { courseNetOf } from './to-par.js';
 import { isDraftKey } from './draft.js';
 
 export const FLIGHT_NAMES = ['A', 'B', 'C', 'D'];
@@ -106,7 +106,7 @@ function finishedRounds(state, tripId) {
   const out = new Map();
   const local = Object.values(state.rounds || {}).filter(r => r?.trip?.id === tripId && r.status === 'done');
   for (const r of local) {
-    const players = r.players.map(p => ({ id: p.id, name: p.name, ...toParOf(r, p, { withNet: true }) })).filter(p => p.played > 0);
+    const players = r.players.map(p => ({ id: p.id, name: p.name, ...courseNetOf(r, p) })).filter(p => p.played > 0);
     out.set(cupKey(r), { key: cupKey(r), players });
   }
   const mine = new Set(Object.values(state.rounds || {}).flatMap(r => [cupKey(r), `L${r.id}`, codeOf(r)].filter(Boolean)));

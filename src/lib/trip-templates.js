@@ -12,7 +12,8 @@
 // trip's teams decide, as for any trip round). Partners rotate from session to session, and in
 // singles each player meets a different opponent each time, so nobody plays the same match twice
 // when the team is big enough. Pure, unit tested.
-import { CUP_KINDS, cleanSchedule, cleanWorth } from './cup.js';
+import { CUP_KINDS, cleanSchedule, cleanWorth, cupOf } from './cup.js';
+import { canonicalOf } from './pair-debts.js';
 import { betOf, isoDate, newPlan } from './plans.js';
 import { setupForPlan } from './plan-setup.js';
 
@@ -259,6 +260,23 @@ export function scheduledPlans(state, tripId) {
 }
 
 /**
+ * What planning a trip's schedule does on the organizer's phone: { rounds, remove, kept }: the
+ * schedule's rounds still to plan, and the ids of planned rounds to take off first. A group that
+ * already has a plan keeps it, whether it's started, played, called off or shared. `redo` (the
+ * teams or the schedule changed): the planned rounds not shared yet are planned again, and `kept`
+ * counts the shared ones left as they are (friends have their link). A round that's been started
+ * is never planned again, so a played day doesn't come back on Up next.
+ */
+export function scheduleWork(state, tripId, schedule, teams, { redo = false, start }) {
+  const mine = Object.values(state.plans || {}).filter(p => p?.host && p.session?.trip === tripId && !p.gone);
+  const remove = redo ? mine.filter(p => p.status === 'planned' && !p.code).map(p => p.id) : [];
+  const going = new Set(remove);
+  const have = new Set(mine.filter(p => !going.has(p.id)).map(p => p.session.key));
+  const kept = redo ? mine.filter(p => p.status === 'planned' && p.code).length : 0;
+  return { rounds: scheduleRounds(schedule, teams, { start }).filter(r => !have.has(r.key)), remove, kept };
+}
+
+/**
  * A planned round's matches for the round it starts (`players`: the round's [{ id }]), or null when
  * they don't fit any more (someone in them didn't come, or the setup changed who's in the round),
  * and the trip's teams decide instead. Only the people in the round, each once.
@@ -271,6 +289,61 @@ export function planCupFor(plan, players) {
   const all = sides.flat();
   if (all.length !== ids.size || !all.every(id => ids.has(id)) || new Set(all).size !== all.length) return null;
   return { kind: c.kind, sides: sides.map(s => [...s]), ...(cleanWorth(c.worth) !== 1 ? { worth: cleanWorth(c.worth) } : {}) };
+}
+
+const lower = s => String(s || '').trim().replace(/\s+/g, ' ').toLowerCase();
+
+/**
+ * The schedule's group a round started on any phone is (not from the organizer's plan: a friend in
+ * a group the organizer isn't in tees off on their own phone), worked out from the trip's schedule
+ * and teams as every phone on the trip has them: { cup, session } with the round's own player ids,
+ * or null. `players`: the round's [{ id, name }], who must be exactly one group of the schedule on
+ * `date` (each the same person as a team player, by a link or else a name only one of them has).
+ * With two groups of the same four that day, the one whose game the round plays, then the morning's
+ * before noon and the afternoon's after.
+ */
+export function scheduledCupFor(state, trip, players, { date, game = null, hour = 12 } = {}) {
+  const cup = cupOf(trip);
+  if (!cup?.schedule || !trip.start || !Array.isArray(players) || !players.length) return null;
+  const teams = cup.teams.map(t => t.map(p => p.id));
+  const who = canonicalOf(state);
+  const named = new Map();
+  for (const p of cup.teams.flat()) named.set(lower(p.name), (named.get(lower(p.name)) || 0) + 1);
+  const nameOf = id => cup.teams.flat().find(p => p.id === id)?.name || '';
+  const seat = id => {
+    const same = players.filter(p => p.id === id || who(p.id) === who(id));
+    if (same.length === 1) return same[0].id;
+    const n = lower(nameOf(id));
+    if (!n || named.get(n) !== 1) return null;
+    const byName = players.filter(p => lower(p.name) === n);
+    return byName.length === 1 ? byName[0].id : null;
+  };
+  const hits = [];
+  for (const r of scheduleRounds(cup.schedule, teams, { start: trip.start })) {
+    if (r.date !== date || r.players.length !== players.length) continue;
+    const map = new Map(r.players.map(id => [id, seat(id)]));
+    const got = [...map.values()];
+    if (got.some(x => !x) || new Set(got).size !== got.length) continue;
+    hits.push({ r, map });
+  }
+  if (!hits.length) return null;
+  const score = ({ r }) => (r.game === game ? 2 : 0) + ((r.session === 1) === (hour < 12) ? 1 : 0);
+  const { r, map } = hits.sort((a, b) => score(b) - score(a))[0];
+  const sides = r.cup.sides.map(side => side.map(id => map.get(id)));
+  const name = id => players.find(p => p.id === id)?.name;
+  const out = { kind: r.cup.kind, sides, ...(r.worth !== 1 ? { worth: r.worth } : {}) };
+  return { cup: out, session: sessionOf(trip.id, r, matchLine(out, name)) };
+}
+
+/**
+ * A round's matches at its session's worth: a planned round whose own matches no longer fit who
+ * showed up starts with matches from the trip's teams, and they're still worth what the session's
+ * are (2 points a singles match, say). `session`: the plan's (`plan.session`), for trip `tripId`.
+ */
+export function withSessionWorth(cup, session, tripId) {
+  if (!cup || !session || session.trip !== tripId) return cup;
+  const w = cleanWorth(session.worth);
+  return w !== 1 && cleanWorth(cup.worth) === 1 ? { ...cup, worth: w } : cup;
 }
 
 /**

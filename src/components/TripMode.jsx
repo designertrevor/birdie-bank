@@ -146,7 +146,9 @@ export function ScheduleCard({ st, onRounds }) {
   const perTeam = per > 1 ? per : Math.max(1, Math.floor((st.going?.length || schedule.size || 8) / 2));
   const pts = schedulePoints(schedule, perTeam);
   const planned = scheduledPlans(state, st.trip.id);
-  const started = Object.values(state.plans || {}).filter(p => p?.host && p.session?.trip === st.trip.id && p.status !== 'planned').length;
+  // Groups whose plan is past planning (started, or called off): planning again leaves them be
+  const past = Object.values(state.plans || {}).filter(p => p?.host && p.session?.trip === st.trip.id && !p.gone && p.status !== 'planned');
+  const started = past.filter(p => p.status === 'started').length;
   const problem = scheduleProblem(schedule, cup.teams.map(t => t.map(p => p.id)));
   const drafting = cup.draft?.live && !draftState(state, st.trip.id).merged?.done && cup.teams.flat().length <= 2;
   const plan = async redo => {
@@ -179,12 +181,12 @@ export function ScheduleCard({ st, onRounds }) {
           </div>
         ))}
         {planned.length > 0 && <p className="field-help">{planned.length} round{planned.length === 1 ? ' is' : 's are'} planned, each with its matches{started ? `, and ${started} started` : ''}. Each one starts from its roll call on Up next.</p>}
-        {!planned.length && !started && (drafting ? <p className="field-help">The rounds are planned as soon as the draft is done.</p>
+        {!planned.length && !past.length && (drafting ? <p className="field-help">The rounds are planned as soon as the draft is done.</p>
           : problem ? <p className="field-help">{problem}</p>
           : st.organizer ? <p className="field-help">Plan every round now: each group gets its day, a tee time and its matches.</p> : null)}
         {st.organizer && !problem && !drafting && (
           <div className="tm-sched-acts">
-            {!planned.length && !started
+            {!planned.length && !past.length
               ? <button className="full-btn" onClick={() => plan(false)}><Icon name="calendar-plus" /> Plan the rounds</button>
               : <button className="pill-btn" onClick={() => plan(true)}><Icon name="arrows-clockwise" /> Plan them again from the teams</button>}
             {planned.length > 0 && onRounds && <button className="pill-btn" onClick={onRounds}>See the rounds <Icon name="caret-right" /></button>}
@@ -275,7 +277,7 @@ export function FlightsView({ st }) {
           </div>
         </div>
       ))}
-      <p className="field-help pad">{any ? 'Net to par across the trip’s finished rounds, with each round’s own strokes. Someone who missed a round sorts after everyone who played them all.' : 'Each flight fills in as rounds finish: net to par, with each round’s own strokes.'}{st.cup ? ' Other groups’ rounds come from their phones.' : ' From the rounds on this phone.'} Flights were set by handicap when the trip was.</p>
+      <p className="field-help pad">{any ? 'Net to par across the trip’s finished rounds, off each player’s full course handicap, whoever was in their group. Someone who missed a round sorts after everyone who played them all.' : 'Each flight fills in as rounds finish: net to par off each player’s full course handicap.'}{st.cup ? ' Other groups’ rounds come from their phones.' : ' From the rounds on this phone.'} Flights were set by handicap when the trip was.</p>
     </>
   );
 }

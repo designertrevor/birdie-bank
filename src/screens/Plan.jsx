@@ -27,7 +27,7 @@ import { tripOf, tripOnDay, tripStamp } from '../lib/trips.js';
 import { toGoLabel, weekdayOf } from '../lib/preview.js';
 import { startingCup } from '../lib/cup-store.js';
 import { cleanRoundCup } from '../lib/cup.js';
-import { planCupFor } from '../lib/trip-templates.js';
+import { planCupFor, sessionEyebrow, withSessionWorth } from '../lib/trip-templates.js';
 import { PLAN_LOCKED, answerPlan, editPlan, openPlanLink, planShareLink, removePlan, sharePlan, usePlanLive, usePlansOff } from '../lib/plan-sync.js';
 import { TalkSection } from '../components/Talk.jsx';
 import { planTalk, planThread } from '../lib/talk.js';
@@ -177,6 +177,8 @@ function PlanBody({ plan, standalone = false, onSkip }) {
           <div className="ic-game"><Icon name={game?.icon || 'golf'} fill /> {game?.name || 'Golf'}</div>
           <div className="ic-course">{plan.course?.name || 'Course to be set'} · {plan.holesCount} holes{choice.bet ? ` · ${inUnits(plan, betLabel(choice.game, rules, choice.bet, plan.holesCount ?? 18) || money(choice.bet))}` : ''}</div>
           {playForLine(plan) && <div className="ic-playfor"><Icon name={plan.playFor?.kind === 'reward' ? 'gift' : 'trophy'} fill /> {playForLine(plan)}</div>}
+          {/* A round a trip's schedule planned (trip-templates.js): its place in the schedule and its matches */}
+          {sessionEyebrow(plan) && <div className="ic-playfor"><Icon name="users-three" fill /> {sessionEyebrow(plan)}{plan.session.line ? `: ${plan.session.line}` : ''}</div>}
           {plan.status === 'off' && <p className="ic-note"><Icon name="calendar-x" fill /> {plan.host ? 'You called this one off.' : `${host} called this one off.`}</p>}
           {plan.gone && plan.status === 'planned' && <p className="ic-note"><Icon name="calendar-x" fill /> {host} deleted this plan.</p>}
           {plan.movedTo && <MovedNote plan={plan} host={host} />}
@@ -496,7 +498,7 @@ export function RollCall({ id }) {
     // A team points trip: the matches the trip's schedule planned for this group when they still fit
     // who showed up (trip-templates.js), else from the trip's teams (they can be changed from the trip's page)
     const planned = tripPick ? cleanRoundCup({ ...round, cup: planCupFor(plan, round.players) }) : null;
-    const cup = tripPick ? planned || startingCup(getState(), round, tripPick) : null;
+    const cup = tripPick ? planned || withSessionWorth(startingCup(getState(), round, tripPick), plan.session, tripPick.id) : null;
     if (cup) round.cup = cup;
     // Where it sits in the trip's schedule, so the trip's days show one chip a session
     if (tripPick && plan.session?.trip === tripPick.id) round.session = structuredClone(plan.session);

@@ -104,7 +104,8 @@ function followDraft(tripId) {
   const { def, merged } = draftState(s, tripId);
   const d = slot(s, tripId);
   if (!def) return;
-  if (d.mine && d.mine.v !== def.v) put(tripId, { mine: { ...d.mine, v: def.v, picks: [], at: Date.now() } });
+  // Its picks start over; when it opened the link stays, so the first phone on a captain's link keeps picking
+  if (d.mine && d.mine.v !== def.v) put(tripId, { mine: { ...d.mine, v: def.v, picks: [], at: d.mine.at || Date.now() } });
   const trip = tripOf(s, tripId);
   if (!d.def || !merged?.done || !trip || !isOrganizer(s, trip) || d.applied === def.v) return;
   const cup = cupOf(trip);

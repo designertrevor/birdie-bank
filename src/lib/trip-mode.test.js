@@ -9,8 +9,9 @@ import { createRound, roundResults } from './round.js';
 import { cleanCup, cleanEntry, cleanRoundCup, closeEntry, cupEntries, cupEntry, cupLeaderboard, cupPosts, cupScore, roundCupResults } from './cup.js';
 import {
   TEMPLATE_SIZES, addDay, addSession, cleanSchedule, partnersFor, planCupFor, plansByDay, removeSession, ryderTemplate, scheduleProblem,
-  schedulePoints, scheduleRounds, scheduledPlan, sessionLabel, sessionMatches, setSession,
+  schedulePoints, scheduleRounds, scheduleWork, scheduledCupFor, scheduledPlan, sessionLabel, sessionMatches, setSession, withSessionWorth,
 } from './trip-templates.js';
+import { courseNetOf, toParOf } from './to-par.js';
 import { planStart, rollCallDefault } from './plans.js';
 import { cleanFlights, flightBoard, flightCount, flightTeams, flightsOf } from './flights.js';
 import { DRAFT_KEY, captainKey, cleanDraft, draftLink, draftOrder, draftTeams, isDraftKey, mergeDraft, newDraft, pickFor, pickHere, undoFor } from './draft.js';
@@ -451,4 +452,84 @@ test('a draft carries the trip’s name for a captain’s phone that doesn’t k
   assert.equal(d.title, 'Bandon 2026');
   assert.equal(cleanDraft({ ...d, draft: 1, title: 'x'.repeat(50) }).title.length, 32);
   assert.equal(newDraft({ pool: POOL, captains: ['cap0', 'cap1'], names: ['Blue', 'Red'] }).title, null);
+});
+
+// ---------------------------------------------------------------------------
+// Review fixes (2026-10-04)
+
+test('planning the schedule again never brings back a group that has started, been called off or is shared', () => {
+  const plan = (id, key, status = 'planned', code = null) => ({ id, host: true, status, code, session: { trip: 't_rc', key } });
+  const state = { plans: {
+    a: plan('a', 'd1s1g1', 'started'), b: plan('b', 'd1s1g2'), c: plan('c', 'd1s2g1', 'planned', 'ABCDEF'), d: plan('d', 'd1s2g2', 'off'),
+    other: { id: 'other', host: true, status: 'planned', session: { trip: 't_x', key: 'd1s1g2' } },
+  } };
+  const keys = w => w.rounds.map(r => r.key);
+  const redo = scheduleWork(state, 't_rc', TRIP8.cup.schedule, T8, { redo: true, start: TRIP8.start });
+  assert.deepEqual(redo.remove, ['b'], 'only the planned round nobody has a link to is taken off');
+  assert.equal(redo.kept, 1, 'the shared one stays as it is');
+  assert.ok(keys(redo).includes('d1s1g2'), 'and is planned again');
+  for (const k of ['d1s1g1', 'd1s2g1', 'd1s2g2']) assert.ok(!keys(redo).includes(k), `${k} is not planned again`);
+  assert.equal(redo.rounds.length, 6 - 3);
+  const first = scheduleWork(state, 't_rc', TRIP8.cup.schedule, T8, { start: TRIP8.start });
+  assert.deepEqual(first.remove, []);
+  assert.equal(first.kept, 0);
+  assert.deepEqual(keys(first), ['d2s1g1', 'd2s1g2'], 'a first plan fills only the groups with no plan');
+  assert.equal(scheduleWork({ plans: {} }, 't_rc', TRIP8.cup.schedule, T8, { start: TRIP8.start }).rounds.length, 6);
+});
+
+test('a planned round started with other matches keeps its session’s worth; a round without one is unchanged', () => {
+  const cup = { kind: 'singles', sides: [['a'], ['b']] };
+  assert.deepEqual(withSessionWorth(cup, { trip: 't1', worth: 2 }, 't1'), { ...cup, worth: 2 });
+  assert.equal(withSessionWorth(cup, { trip: 't1', worth: 1 }, 't1'), cup);
+  assert.equal(withSessionWorth(cup, { trip: 't2', worth: 2 }, 't1'), cup, 'another trip’s session');
+  assert.equal(withSessionWorth(cup, null, 't1'), cup);
+  assert.equal(withSessionWorth(null, { trip: 't1', worth: 2 }, 't1'), null);
+  assert.deepEqual(withSessionWorth({ ...cup, worth: 3 }, { trip: 't1', worth: 2 }, 't1'), { ...cup, worth: 3 }, 'a worth already set stays');
+});
+
+test('a group the organizer isn’t in tees off on a friend’s phone with the schedule’s matches, by name', () => {
+  const t = { ...TRIP8, cup: { ...TRIP8.cup, schedule: setSession(TRIP8.cup.schedule, 1, 0, { worth: 2 }) } };
+  const rounds = scheduleRounds(t.cup.schedule, T8, { start: t.start });
+  const theirs = rounds.find(r => r.day === 1 && r.session === 1 && !r.players.includes('me'));
+  // The friend's phone has its own ids for the same people
+  const players = theirs.players.map(id => ({ id: `f_${id}`, name: PLAYERS[id].name }));
+  const state = { me: 'f_x', players: {}, rounds: {}, links: {} };
+  const hit = scheduledCupFor(state, t, players, { date: '2026-10-16', game: 'bestball', hour: 8 });
+  assert.equal(hit.cup.kind, 'fourball');
+  assert.deepEqual(hit.cup.sides, theirs.cup.sides.map(side => side.map(id => `f_${id}`)));
+  assert.equal(hit.session.key, theirs.key);
+  assert.equal(hit.session.trip, 't_rc');
+  assert.equal(hit.cup.worth, undefined, 'four-ball is worth 1');
+  // Day 2's singles, worth 2
+  const sing = rounds.find(r => r.day === 2 && !r.players.includes('me'));
+  const hit2 = scheduledCupFor(state, t, sing.players.map(id => ({ id: `f_${id}`, name: PLAYERS[id].name })), { date: '2026-10-17', game: 'skins' });
+  assert.equal(hit2.cup.worth, 2);
+  assert.equal(hit2.session.key, sing.key);
+  // Not a group of the day, the wrong day, or someone nobody can tell apart: the trip's teams decide as before
+  assert.equal(scheduledCupFor(state, t, players, { date: '2026-10-18' }), null);
+  assert.equal(scheduledCupFor(state, t, players.slice(0, 3), { date: '2026-10-16' }), null);
+  assert.equal(scheduledCupFor(state, t, [...players.slice(0, 3), { id: 'zz', name: 'Somebody' }], { date: '2026-10-16' }), null);
+  assert.equal(scheduledCupFor(state, CUPTRIP, players, { date: '2026-10-16' }), null, 'a trip with no schedule');
+});
+
+test('the flighted leaderboard nets off each player’s full course handicap, whoever is in their group', () => {
+  const card = (id, others) => {
+    const r = createRound({ id, game: 'skins', course: flat9, holesCount: 9, players: [{ id: 'a', name: 'Al', index: 18 }, ...others.map((x, i) => ({ id: `o${i}`, name: `O${i}`, index: x }))], settings: { hcPct: 100, skins: { value: 2, carryover: true } }, hcPct: 100, useHandicaps: true });
+    for (const h of r.holes) r.scores[h.no] = Object.fromEntries(r.players.map(p => [p.id, 5]));
+    r.status = 'done';
+    return r;
+  };
+  // Al (9 strokes over nine holes) shoots 45 on a par 36 both days: net even, with a scratch group or a group of 18s
+  const easy = card('r1', [0, 0, 0]);
+  const hard = card('r2', [18, 18, 18]);
+  const al = r => r.players.find(p => p.id === 'a');
+  assert.deepEqual(courseNetOf(easy, al(easy)), { played: 9, net: 0 });
+  assert.deepEqual(courseNetOf(hard, al(hard)), { played: 9, net: 0 });
+  // The round's own games play off the low, so its net isn't the same across groups
+  assert.equal(toParOf(hard, al(hard), { withNet: true }).net, 9);
+  assert.equal(cupEntry({}, { ...hard, cup: { kind: 'singles', sides: [['a', 'o0'], ['o1', 'o2']] }, trip: tripStamp(CUPTRIP) }).players[0].net, 0);
+  // A pickup is net double bogey
+  const pick = card('r3', [0]);
+  pick.scores[1].a = 'X';
+  assert.equal(courseNetOf(pick, al(pick)).net, 2);
 });

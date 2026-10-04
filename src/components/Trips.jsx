@@ -514,6 +514,8 @@ function WhoGoing({ picked, onChange, quickAdd = false }) {
   const add = () => {
     const n = newName.replace(/\s+/g, ' ').trim().slice(0, 24);
     if (!n) return;
+    // Your own name: you're going already, so don't save a second you
+    if (String(state.players?.[state.me]?.name || '').trim().toLowerCase() === n.toLowerCase()) { setNewName(''); return; }
     const same = list.find(p => p.name.trim().toLowerCase() === n.toLowerCase());
     const id = same?.id || uid('p_');
     if (!same) update(s => { s.players[id] = { id, name: n, index: null, venmo: '', createdAt: Date.now() }; });

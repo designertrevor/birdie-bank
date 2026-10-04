@@ -35,7 +35,7 @@ import { holeWinner } from './golf.js';
 import { oneBall, sideNet, teamHoleScore } from './round.js';
 import { canonicalOf, codeOf } from './pair-debts.js';
 import { stable } from './sync-model.js';
-import { toParOf } from './to-par.js';
+import { courseNetOf } from './to-par.js';
 import { isDraftKey } from './draft.js';
 
 export const CUP_FORMAT = 'cup';
@@ -387,9 +387,9 @@ export function cupEntry(state, round) {
     ...(cup.mixed ? { mixed: true } : {}),
   };
 }
-/** A player's net to par for the entry, when they have a score: { net, played }. */
+/** A player's net to par for the entry off their full course handicap (flights.js), when they have a score: { net, played }. */
 function netPart(round, p) {
-  const t = toParOf(round, p, { withNet: true });
+  const t = courseNetOf(round, p);
   return t.played ? { net: t.net, played: t.played } : {};
 }
 const pick = r => ({ thru: r.thru, leader: r.leader, by: r.by, left: r.left, closed: r.closed, done: r.done, winner: r.winner, points: r.points, label: r.label, ...(r.void ? { void: true } : {}) });

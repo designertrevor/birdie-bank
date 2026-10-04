@@ -3,6 +3,7 @@
 // A pickup counts as the card shows it (net double bogey). Net uses the main game's strokes,
 // the same ones as the dots on the card, so it can end in ½ with half strokes on.
 import { grossFor, netFor, popsFor } from './round.js';
+import { strokesOnHole } from './golf.js';
 
 /** { played, gross, net } to par for a scorer (a player, or a scramble team). `net` only when `withNet`. */
 export function toParOf(round, scorer, { withNet = false } = {}) {
@@ -15,6 +16,24 @@ export function toParOf(round, scorer, { withNet = false } = {}) {
     if (withNet) net += netFor(round, scorer, h) - h.par;
   }
   return { played, gross, net: withNet ? net : null };
+}
+
+/**
+ * { played, net } to par off the player's own full course handicap, not the strokes off the group's
+ * low the round's games use, so a net from one group compares with a net from another: the trip's
+ * flighted net leaderboard (flights.js). A pickup is net double bogey. A one-ball team's player has
+ * no score of their own (played 0).
+ */
+export function courseNetOf(round, player) {
+  const hc = Number(player?.courseHc) || 0;
+  let played = 0, net = 0;
+  for (const h of round.holes) {
+    const g = round.scores?.[h.no]?.[player.id];
+    if (g == null) continue;
+    played++;
+    net += g === 'X' ? 2 : g - strokesOnHole(hc, h.rank, round.holes.length) - h.par;
+  }
+  return { played, net };
 }
 
 /** Whether a scorer gets (or gives) a stroke anywhere in the round: only then is their net worth showing. */

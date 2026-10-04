@@ -11,7 +11,7 @@ import { canEditExpense, cleanExpense, cleanWhat, personFor } from './trip-expen
 import { publishDeleted, refreshPlans } from './trip-plan-sync.js';
 import { CUP_FORMAT, cleanCup, cupOf } from './cup.js';
 import { startingCup } from './cup-store.js';
-import { scheduleProblem, scheduleRounds, scheduledPlan, scheduledPlans } from './trip-templates.js';
+import { scheduleProblem, scheduleWork, scheduledPlan, scheduledPlans } from './trip-templates.js';
 
 /** Make a trip and keep it on this phone (it syncs with your account). Returns it. */
 export function makeTrip({ name, start, end, where, people = [], format, cup = null, flights = null }) {
@@ -181,7 +181,8 @@ export function restoreExpense(expense) {
  * Trip Mode (trip-templates.js): plan every round of the trip's schedule from its teams, one a
  * group, each with its matches and the group marked in, so each day's rounds are on Up next ready to
  * start. The organizer only. `redo`: the teams or the schedule changed, so the schedule's rounds not
- * shared yet are planned again; shared ones (friends have their link) stay as they are. Returns
+ * shared yet are planned again; shared ones (friends have their link) stay as they are, and a group
+ * that's started or played is never planned again (trip-templates.js scheduleWork). Returns
  * { made, kept, problem }: how many were planned, how many shared ones were kept, or why none could be.
  */
 export function makeScheduledRounds(tripId, { redo = false, now = Date.now() } = {}) {
@@ -192,13 +193,10 @@ export function makeScheduledRounds(tripId, { redo = false, now = Date.now() } =
   const teams = cup.teams.map(t => t.map(p => p.id));
   const problem = scheduleProblem(cup.schedule, teams);
   if (problem) return { made: 0, kept: 0, problem };
-  const old = scheduledPlans(s, tripId);
-  const kept = redo ? old.filter(p => p.code) : old;
-  if (redo) for (const p of old) if (!p.code) removePlan(p.id);
-  const have = new Set(kept.map(p => p.session.key));
+  const { rounds, remove, kept } = scheduleWork(s, tripId, cup.schedule, teams, { redo, start: trip.start });
+  for (const id of remove) removePlan(id);
   const stamp = tripStamp(trip);
-  const plans = scheduleRounds(cup.schedule, teams, { start: trip.start })
-    .filter(r => !have.has(r.key))
+  const plans = rounds
     .map((r, i) => scheduledPlan(r, { id: uid('pl_'), tripId, me: s.me, players: s.players, settings: s.settings, stamp, now: now + i }));
   update(st => {
     st.plans = { ...(st.plans || {}) };
@@ -208,7 +206,7 @@ export function makeScheduledRounds(tripId, { redo = false, now = Date.now() } =
     const last = plans.reduce((m, p) => (p.date > m ? p.date : m), t?.end || '');
     if (t && last && last > t.end) st.trips[tripId] = { ...t, end: last, updatedAt: Date.now() };
   });
-  return { made: plans.length, kept: redo ? kept.length : 0, problem: null };
+  return { made: plans.length, kept, problem: null };
 }
 
 /**
