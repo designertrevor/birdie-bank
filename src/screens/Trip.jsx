@@ -13,6 +13,7 @@ import { SquareFaces, TripDays, TripSheet } from '../components/Trips.jsx';
 import { TripExpensesView } from '../components/TripExpenses.jsx';
 import { getState, useStore } from '../lib/store.js';
 import { useNav } from '../lib/nav.js';
+import { useKept } from '../lib/kept.js';
 import { holeComplete } from '../lib/round.js';
 import { gameLabel, placeOf } from '../lib/format.js';
 import { money } from '../lib/golf.js';
@@ -68,7 +69,7 @@ export default function Trip({ id, view: firstView = null, add = false }) {
   useTripPlans();
   // A team points trip's matches from other groups' phones (cup-sync.js)
   useCupSync();
-  const [pickedView, setView] = useState(firstView);
+  const [pickedView, setView] = useKept('trip:view', firstView);
   const [editing, setEditing] = useState(false);
   const [counting, setCounting] = useState(false);
   const [leaving, setLeaving] = useState(false);

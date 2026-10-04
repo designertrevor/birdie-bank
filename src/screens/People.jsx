@@ -14,6 +14,7 @@ import { money } from '../lib/golf.js';
 import { AvatarButton, BottomNav } from '../nav.jsx';
 import { roundsInProgress } from '../lib/rounds.js';
 import { useNav } from '../lib/nav.js';
+import { useKept } from '../lib/kept.js';
 import { RSVP_LABEL, dayLabel, rsvpFor } from '../lib/plans.js';
 import { nemesis } from '../lib/rivalry.js';
 import { NemesisCard } from '../components/Rivalry.jsx';
@@ -127,10 +128,10 @@ export function PlayerEdit({ id, onSaved }) {
   // Someone you only met in a joined round has no saved player yet; saving gives them one
   const existing = id ? state.players[id] || { id, name: nameOf(state, id), joined: true } : null;
   const [merging, setMerging] = useState(false);
-  const [name, setName] = useState(existing?.name || '');
-  const [index, setIndex] = useState(existing?.index ?? null);
-  const [payApp, setPayApp] = useState(payInfo(existing)?.app || null);
-  const [handle, setHandle] = useState(() => { const i = payInfo(existing); return i ? handleText(i) : ''; });
+  const [name, setName] = useKept('player:name', existing?.name || '');
+  const [index, setIndex] = useKept('player:index', existing?.index ?? null);
+  const [payApp, setPayApp] = useKept('player:payApp', payInfo(existing)?.app || null);
+  const [handle, setHandle] = useKept('player:handle', () => { const i = payInfo(existing); return i ? handleText(i) : ''; });
   const isMe = !!id && id === state.me;
   const [pad, setPad] = useState(false);
   const trimmed = name.trim();
@@ -280,8 +281,8 @@ export function CrewEdit({ id }) {
   const { ask } = useUI();
   const state = useStore();
   const existing = id ? state.crews[id] : null;
-  const [name, setName] = useState(existing?.name || '');
-  const [sel, setSel] = useState(existing?.playerIds || []);
+  const [name, setName] = useKept('crew:name', existing?.name || '');
+  const [sel, setSel] = useKept('crew:sel', existing?.playerIds || []);
   const players = sortedPlayers(state);
   const toggle = pid => setSel(s => (s.includes(pid) ? s.filter(x => x !== pid) : [...s, pid]));
 

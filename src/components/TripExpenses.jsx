@@ -1,7 +1,8 @@
 // Trip expenses on the Trip page (trip-expenses.js): what's been spent, each expense with your part
 // in it, everyone's whole trip all in, and the sheet that adds one, changes or deletes yours, or
 // shows someone else's. Anyone on the trip adds one; only whoever added it changes or deletes it.
-import { useState } from 'react';
+import { useEffect } from 'react';
+import { dropKept, useKept, useKeptScope } from '../lib/kept.js';
 import { Icon, Segmented, Sheet, useUI } from './ui.jsx';
 import { Avatar } from './Pay.jsx';
 import { AtScreen } from './Trips.jsx';
@@ -53,7 +54,7 @@ function useNames(st, me) {
  * expense newest first, and everyone's whole trip all in.
  */
 export function TripExpensesView({ st, me, adding = false, onAdded }) {
-  const [editing, setEditing] = useState(adding ? 'new' : null); // 'new', or the expense being looked at
+  const [editing, setEditing] = useKept('expenses:open', adding ? 'new' : null); // 'new', or the expense being looked at
   const close = () => { setEditing(null); onAdded?.(); };
   const { full, short } = useNames(st, me);
   const mine = st.spending.get(me);
@@ -195,18 +196,25 @@ function ExpenseForm({ expense, st, me, full, short, onDone }) {
   // Who can be in it: you, who's going, everyone who's played a round of the trip, and anyone already in an expense
   const base = [me, ...st.going, ...st.people.keys(), ...st.expenses.flatMap(x => [x.payer, ...x.parts.map(p => p.id)])];
   if (expense) base.push(expense.payer, ...expense.parts.map(p => p.id));
-  const [extra, setExtra] = useState([]);
+  // Half filled in stays filled in after switching apps (see kept.js), until the form closes
+  const scope = useKeptScope();
+  const at = `expense:${expense?.id || 'new'}:`;
+  useEffect(() => () => { if (scope != null) dropKept(scope, at); }, [scope, at]);
+  const [extra, setExtra] = useKept(`${at}extra`, []);
   const pool = [...new Set([...base, ...extra].filter(Boolean))];
-  const [more, setMore] = useState(false);
+  const [more, setMore] = useKept(`${at}more`, false);
   const others = sortedPlayers(state).map(p => who(p.id)).filter((id, i, a) => a.indexOf(id) === i && !pool.includes(id));
 
-  const [what, setWhat] = useState(expense?.what || '');
-  const [amountText, setAmountText] = useState(expense ? centsText(expense.cents) : '');
-  const [payer, setPayer] = useState(expense?.payer || me);
-  const [split, setSplit] = useState(expense?.split || 'equal');
-  const [inSplit, setInSplit] = useState(() => new Set(expense ? expense.parts.map(p => p.id) : pool));
-  const [amounts, setAmounts] = useState(() => Object.fromEntries((expense?.split === 'amounts' ? expense.parts : []).map(p => [p.id, centsText(p.cents)])));
-  const [shares, setShares] = useState(() => Object.fromEntries(expense?.split === 'shares' ? expense.parts.map(p => [p.id, p.part]) : pool.map(id => [id, 1])));
+  const [what, setWhat] = useKept(`${at}what`, expense?.what || '');
+  const [amountText, setAmountText] = useKept(`${at}amount`, expense ? centsText(expense.cents) : '');
+  const [payer, setPayer] = useKept(`${at}payer`, expense?.payer || me);
+  const [split, setSplit] = useKept(`${at}split`, expense?.split || 'equal');
+  // Kept as a list (a Set doesn't save), used as a Set
+  const [inList, setInList] = useKept(`${at}in`, () => (expense ? expense.parts.map(p => p.id) : pool));
+  const inSplit = new Set(inList);
+  const setInSplit = next => setInList(cur => [...(typeof next === 'function' ? next(new Set(cur)) : next)]);
+  const [amounts, setAmounts] = useKept(`${at}amounts`, () => Object.fromEntries((expense?.split === 'amounts' ? expense.parts : []).map(p => [p.id, centsText(p.cents)])));
+  const [shares, setShares] = useKept(`${at}shares`, () => Object.fromEntries(expense?.split === 'shares' ? expense.parts.map(p => [p.id, p.part]) : pool.map(id => [id, 1])));
 
   const total = parseAmount(amountText);
   const badAmount = amountText.trim() !== '' && (total == null || total <= 0 || total > MAX_CENTS);

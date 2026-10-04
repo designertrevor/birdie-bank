@@ -8,6 +8,7 @@ import { bootSync, syncConfigured } from './lib/sync.js';
 import { bootCloud } from './lib/cloud.js';
 import { bootProfiles } from './lib/profiles.js';
 import { cleanCode } from './lib/sync-model.js';
+import { KeptScope, notePlace, startPlace } from './lib/kept.js';
 import UpNext from './screens/UpNext.jsx';
 import './lib/feedback.js'; // sends any suggestions queued while offline
 
@@ -91,6 +92,13 @@ function pendingChallengeLink() {
     return cleanCode(sessionStorage.getItem('pending-challenge')) || null;
   } catch { return null; }
 }
+/** A plan, challenge or join link opened the app: it goes first, ahead of where you were. */
+function linkWaiting() {
+  try {
+    const q = new URLSearchParams(location.search);
+    return !!(q.get('plan') || q.get('challenge') || q.get('join') || sessionStorage.getItem('bb-plan') || sessionStorage.getItem('pending-challenge') || sessionStorage.getItem('bb-join'));
+  } catch { return false; }
+}
 const clearChallengeLink = () => { try { sessionStorage.removeItem('pending-challenge'); } catch { /* ignore */ } };
 
 /** A join link (?join=CODE) waiting to open, from the address bar or saved for this tab. */
@@ -135,7 +143,14 @@ export default function App() {
     mq?.addEventListener?.('change', apply);
     return () => mq?.removeEventListener?.('change', apply);
   }, [theme]);
-  const [tab, setTab] = useState('upnext');
+  // Coming back after the phone dropped the page (another app, a call, low memory): the same tab and
+  // screens, unless a link is what opened the app (see place.js)
+  const [fromLink] = useState(linkWaiting);
+  const [restored] = useState(() => {
+    const back = startPlace(getState(), { screens: Object.keys(SCREENS), tabs: Object.keys(TABS) });
+    return back && !fromLink ? back : null;
+  });
+  const [tab, setTab] = useState(() => restored?.tab || 'upnext');
   // A plan link opens straight onto the plan: for someone set up, on top of Up next
   const [planLinkAt, setPlanLinkAt] = useState(pendingPlanLink);
   // A challenge link too: someone set up gets it on top of Up next, anyone else answers it as it is
@@ -154,7 +169,8 @@ export default function App() {
     const code = syncConfigured ? pendingJoin() : null;
     try { sessionStorage.removeItem('bb-join'); } catch { /* ignore */ }
     const to = code ? joinRoute(getState(), code) : null;
-    return to ? [{ name: to[0], params: to[1], key: Date.now() }] : [];
+    if (to) return [{ name: to[0], params: to[1], key: Date.now() }];
+    return restored ? restored.stack : [];
   });
   // A join link opened before onboarding skips straight to picking your name in that round
   const [inviteCode, setInviteCode] = useState(() => {
@@ -176,6 +192,15 @@ export default function App() {
     if (nextTab) setTab(nextTab);
     setStack(routes.map(([name, params = {}]) => ({ name, params, key: Date.now() + Math.random() })));
   }, []);
+
+  // Save where you are as it changes (and kept.js saves again as the app goes to the background)
+  useEffect(() => { if (onboarded) notePlace(tab, stack); }, [onboarded, tab, stack]);
+
+  // Screens brought back after a cold start get their history entries again, so the phone's back still walks them
+  useEffect(() => {
+    if (!restored?.stack.length || history.state?.bb) return;
+    try { restored.stack.forEach(() => history.pushState({ bb: true }, '')); } catch { /* ignore */ }
+  }, [restored]);
 
   // Live shared rounds + ?join=CODE links
   useEffect(() => {
@@ -263,7 +288,9 @@ export default function App() {
         <div className="device">
           <ErrorBoundary onReset={() => reset('upnext')}>
             <Suspense fallback={<div className="screen active" aria-busy="true" />}>
-              {Top ? <Top key={top.key} {...top.params} /> : <TabScreen key={tab} />}
+              <KeptScope.Provider value={top ? String(top.key) : `tab:${tab}`}>
+                {Top ? <Top key={top.key} {...top.params} /> : <TabScreen key={tab} />}
+              </KeptScope.Provider>
             </Suspense>
           </ErrorBoundary>
         </div>
