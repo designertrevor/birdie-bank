@@ -82,7 +82,7 @@ $$;
 -- Each seat in a live round's meta that's linked to an account: the seat, the account, its setting
 -- and whether its money may show
 create or replace function public.feed_seats(m jsonb)
-returns table (seat text, account uuid, level text, money boolean)
+returns table (seat text, account uuid, level text, shows_money boolean)
 language sql stable security definer set search_path = '' as $$
   select a.player_id, a.user_id, public.feed_level(p.privacy), public.feed_money(p.privacy)
   from public.profile_round_ids(m -> 'players') as x(id)
@@ -114,7 +114,7 @@ begin
   return query
   with recent as (
     select r.code, r.meta,
-      greatest(r.updated_at, coalesce((select max(h.updated_at) from public.live_holes h where h.code = r.code), r.updated_at)) as at
+      greatest(r.updated_at, coalesce((select max(h.updated_at) from public.live_holes h where h.code = r.code), r.updated_at)) as moved_at
     from public.live_rounds r
     where r.updated_at > now() - interval '7 days' and jsonb_typeof(r.meta) = 'object'
       and r.meta ->> 'status' in ('active', 'done')
@@ -125,15 +125,15 @@ begin
       where h.code = c.code and h.hole_no > 0 and h.data is not null
     ), '{}'::jsonb),
     coalesce((
-      select jsonb_object_agg(s.seat, jsonb_build_object('friend', s.friend, 'money', s.money, 'account', case when s.friend then s.account end))
-      from (select fs.seat, fs.account, fs.money, public.profile_visible_to_me(fs.account) as friend from public.feed_seats(c.meta) fs) s
+      select jsonb_object_agg(s.seat, jsonb_build_object('friend', s.friend, 'money', s.shows_money, 'account', case when s.friend then s.account end))
+      from (select fs.seat, fs.account, fs.shows_money, public.profile_visible_to_me(fs.account) as friend from public.feed_seats(c.meta) fs) s
     ), '{}'::jsonb),
-    c.at
+    c.moved_at
   from recent c
   -- A round still going that nobody has touched in 12 hours was left behind, so it's not live news
-  where (c.meta ->> 'status' = 'done' or c.at > now() - interval '12 hours')
+  where (c.meta ->> 'status' = 'done' or c.moved_at > now() - interval '12 hours')
     and public.feed_round_ok(c.meta)
-  order by c.at desc
+  order by c.moved_at desc
   limit 30;
 end $$;
 
