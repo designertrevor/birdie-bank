@@ -193,3 +193,16 @@ test('lately: a winner merged into another card goes by the name kept for them',
   s.links = { sammy: 'sam' };
   assert.equal(latelyItems(s, NOW)[0].text, 'Skins at Pebble Creek · Sam took it');
 });
+
+test('an answer for today or tomorrow reads mid-sentence, and the full Lately screen keeps the newest round', () => {
+  const s = stateWith({
+    rounds: [skins('old', NOW - 5 * DAY), skins('last', NOW - 1 * DAY)],
+    plans: { p1: { id: 'p1', status: 'planned', host: true, hostWho: 'host', date: '2026-09-29', course: { name: 'Pebble Creek' },
+      answers: { d: { name: 'Dave', status: 'in', at: NOW - 60 * 60 * 1000 } } } },
+  });
+  const items = latelyItems(s, NOW);
+  assert.equal(items[0].text, 'Dave is in for tomorrow');
+  // Up next shows the newest round as Last time out, so its Lately leaves it out; the full screen doesn't
+  assert.ok(!items.some(i => i.id === 'recap:last'));
+  assert.ok(latelyItems(s, NOW, { withLast: true }).some(i => i.id === 'recap:last'));
+});

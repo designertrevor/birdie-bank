@@ -47,9 +47,10 @@ function agreedCarries(list) {
 /**
  * Lately items, newest first: [{ id, kind, at, text, sub, target }], where kind is 'payment',
  * 'carry', 'rsvp', 'challenge' or 'recap' and target is a [screen, params] pair to open (or null).
- * The round shown in "Last time out" is left out, since Up next already shows it.
+ * The round shown in "Last time out" is left out, since Up next already shows it; the full Lately
+ * screen has no Last time out, so it asks for it (`withLast`).
  */
-export function latelyItems(state, now = Date.now(), { carries = state?.carries, days = LATELY_DAYS } = {}) {
+export function latelyItems(state, now = Date.now(), { carries = state?.carries, days = LATELY_DAYS, withLast = false } = {}) {
   const t = typeof now === 'number' ? now : now.getTime();
   const since = t - days * DAY;
   const inWindow = at => typeof at === 'number' && at >= since && at <= t + 60000;
@@ -63,7 +64,8 @@ export function latelyItems(state, now = Date.now(), { carries = state?.carries,
   // Payments recorded on the Tab: one tap that filled several round transfers is one payment
   // (or went both ways: the shared rounds one way, the rest of the Tab the other, netted)
   const taps = paymentGroups({ ...state, settlements: (state.settlements || []).filter(s => inWindow(s.at) && s.from && s.to) })
-    .filter(g => g.amount > 0)
+    // Payments for trip expenses come in with the trip's expenses (trip-expenses.js): only the recent ones
+    .filter(g => g.amount > 0 && inWindow(g.at))
     .map(g => {
       const lead = g.settlements.find(s => s.from === g.from && s.to === g.to) || g.settlements[0];
       return { ...lead, from: g.from, to: g.to, amount: g.amount, roundId: g.settlements.find(s => s.roundId)?.roundId || null, app: g.settlements.find(s => s.app)?.app || null };
@@ -108,7 +110,9 @@ export function latelyItems(state, now = Date.now(), { carries = state?.carries,
   for (const plan of Object.values(state.plans || {})) {
     if (!plan || plan.status !== 'planned') continue;
     const me = plan.host ? plan.hostWho : plan.localMe;
-    const day = dayLabel(plan.date, new Date(t));
+    // Mid-sentence: "in for tomorrow", "in for Saturday"
+    const label = dayLabel(plan.date, new Date(t));
+    const day = label === 'Today' || label === 'Tomorrow' ? label.toLowerCase() : label;
     for (const [who, a] of Object.entries(plan.answers || {})) {
       if (who === me || !a?.status || !inWindow(a.at)) continue;
       const n = first(a.name);
@@ -124,7 +128,7 @@ export function latelyItems(state, now = Date.now(), { carries = state?.carries,
   // Finished rounds: who took it, and only your own amount (in points for a points or reward
   // round, which is never money; a reward round says who's buying instead, plus your side bets
   // for money in dollars when you had one, as the Tab counts them)
-  const shown = lastResult(state)?.round?.id;
+  const shown = withLast ? null : lastResult(state)?.round?.id;
   for (const r of Object.values(state.rounds || {})) {
     if (r?.status !== 'done' || r.id === shown || !inWindow(roundTime(r)) || !GAMES[r.game]) continue;
     const bal = roundResults(r).balances;

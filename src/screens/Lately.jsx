@@ -11,7 +11,7 @@ export default function Lately() {
   const nav = useNav();
   const state = useStore();
   useTalkSync(recentTalkKeys(state));
-  const items = withTalk(latelyItems(state), state);
+  const items = withTalk(latelyItems(state, Date.now(), { withLast: true }), state);
   return (
     <Screen>
       <Header title="Lately" onBack={nav.pop} />

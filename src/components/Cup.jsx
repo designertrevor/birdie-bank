@@ -426,7 +426,7 @@ function StakePaid({ st, label }) {
         return (
           <div key={m.id} className="ledger-row static">
             <div className="lr-info">
-              <div className="lr-name" style={{ fontSize: 16 }}>{label(fromId, line?.fromName)} paid {label(toId, line?.toName)}</div>
+              <div className="lr-name" style={{ fontSize: 16 }}>{label(fromId, line?.fromName)} paid {toId === me ? 'you' : label(toId, line?.toName)}</div>
               <div className="lr-status">{new Date(m.at).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })}{m.mine ? '' : m.byName ? ` · marked on ${m.byName}’s phone` : ' · marked on another phone'}</div>
             </div>
             <div className="lr-amt" style={{ marginRight: 8 }}>{money(m.amount)}</div>
