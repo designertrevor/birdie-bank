@@ -39,7 +39,7 @@ import { countsMoney, inUnits, padUnit, playForLine, playForShort } from '../lib
 import { CountForTrip, StartTripLink } from '../components/Trips.jsx';
 import { CupRoundSetup } from '../components/Cup.jsx';
 import { startingCup } from '../lib/cup-store.js';
-import { cleanRoundCup, cupOf } from '../lib/cup.js';
+import { cleanRoundCup, cupCounts, cupOf } from '../lib/cup.js';
 import { countsByDefault, tripOf, tripOnDay, tripPlanDay, tripStamp } from '../lib/trips.js';
 import { challengeIdOfBet, challengesForRound } from '../lib/challenges.js';
 import { markChallengesOn } from '../lib/challenge-sync.js';
@@ -214,8 +214,8 @@ export default function NewRound({ rematch, fromPlan, present, edit = null, ahea
   const cupSig = `${game}|${picked.join(',')}|${tripPick?.id || ''}`;
   const tripCup = !planning && tripPick ? cupOf(tripPick) : null;
   const roundCup = !tripCup ? null
-    : cupPick?.sig === cupSig ? cleanRoundCup({ players: cupPlayers, cup: cupPick.cup })
-    : startingCup(state, { game, players: cupPlayers }, tripPick) || (game === 'scramble' ? { kind: 'singles', sides: [[], []] } : null);
+    : cupPick?.sig === cupSig ? cleanRoundCup({ game, players: cupPlayers, cup: cupPick.cup })
+    : startingCup(state, { game, players: cupPlayers }, tripPick) || (!cupCounts(game) ? { kind: 'singles', sides: [[], []] } : null);
   const cupRow = tripCup ? <CupRoundSetup trip={tripPick} players={cupPlayers} value={roundCup} names={tripCup.names} game={game} onChange={c => setCupPick({ sig: cupSig, cup: c })} /> : null;
   const tripRow = tripOn && !editing ? <><CountForTrip trip={tripOn} on={countOn} onChange={setCountTrip} />{cupRow}</> : null;
   const tripLink = !tripOn && !editing && !fromPlan ? <StartTripLink /> : null;
@@ -345,9 +345,9 @@ export default function NewRound({ rematch, fromPlan, present, edit = null, ahea
     const challengesIn = bets.map(b => challengeIdOfBet(b.id)).filter(Boolean);
     // Counted for the trip: the stamp rides in the round to every phone in it (trips.js)
     if (tripPick) round.trip = tripStamp(tripPick);
-    // Its matches for a team points trip, as set up here (a scramble has none: one ball a team)
-    if (tripCup && roundCup && game !== 'scramble') {
-      const c = cleanRoundCup({ players: round.players, cup: roundCup });
+    // Its matches for a team points trip, as set up here (a scramble, alternate shot or Chapman has none: one ball a team)
+    if (tripCup && roundCup && cupCounts(game)) {
+      const c = cleanRoundCup({ game, players: round.players, cup: roundCup });
       if (c) round.cup = c;
     }
     // Started from a saved usual (still the same game at the same course): finishing it updates "Last played"

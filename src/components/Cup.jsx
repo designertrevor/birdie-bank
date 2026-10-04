@@ -10,8 +10,9 @@ import { nameOf } from '../lib/ledger.js';
 import { canonicalOf } from '../lib/pair-debts.js';
 import { payInfoFor } from '../lib/pay.js';
 import { buzz } from '../lib/delight.js';
-import { CUP_KINDS, MAX_STAKE, balanceTeams, cleanStake, cupHeadline, cupPoints, moveTo, pairMatches, pickingTeam, teamHandicaps } from '../lib/cup.js';
+import { CUP_KINDS, MAX_STAKE, balanceTeams, cleanStake, cupCounts, cupHeadline, cupPoints, moveTo, pairMatches, pickingTeam, teamHandicaps } from '../lib/cup.js';
 import { canRecount } from '../lib/trips.js';
+import { GAMES } from '../lib/round.js';
 import { markStake, resetRoundCup, setRoundCup, undoStake } from '../lib/cup-store.js';
 
 const first = name => String(name || '').trim().split(/\s+/)[0] || 'Player';
@@ -224,7 +225,7 @@ export function TeamsPicker({ people, value, onChange }) {
       <div className="cup-stake-row">
         <span className="cup-stake-sign">$</span>
         <input id="cup-stake" className="text-input" inputMode="numeric" placeholder="0" value={stakeText}
-          onChange={e => { const t = e.target.value.replace(/[^0-9]/g, '').slice(0, 3); setStakeText(t); set({ stake: cleanStake(t) }); }} />
+          onChange={e => { const t = e.target.value.replace(/[^0-9]/g, '').slice(0, 3); setStakeText(Number(t) > MAX_STAKE ? String(MAX_STAKE) : t); set({ stake: cleanStake(t) }); }} />
         <span className="cup-stake-unit">a person</span>
       </div>
       <p className="field-help">{cup.stake > 0
@@ -250,7 +251,7 @@ function matchLines(players, cup) {
 export function CupRoundSetup({ trip, players, value, names, game, onChange }) {
   const [open, setOpen] = useState(false);
   if (!trip || !value) return null;
-  if (game === 'scramble') return <p className="field-help cup-setup-note"><Icon name="trophy" /> A scramble plays one ball a team, so it doesn’t count for the cup. Its own bets still go on the trip.</p>;
+  if (!cupCounts(game)) return <p className="field-help cup-setup-note"><Icon name="trophy" /> {GAMES[game]?.name || 'This game'} is played with one ball a team, so it doesn’t count for the cup. Its own bets still go on the trip.</p>;
   const { lines, out } = matchLines(players, value);
   return (
     <div className="cup-setup">

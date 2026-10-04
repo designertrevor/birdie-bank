@@ -9,7 +9,7 @@ import { outstanding, tabBalances } from './ledger.js';
 import {
   balanceTeams, cleanCup, cleanEntry, cupEntries, cupEntry, cupLeaderboard, cupPoints, cupScore, defaultRoundCup, matchResult,
   moveTo, pairMatches, pickingTeam, roundCupResults, stakeBalances, stakeLines, stakeMarks, stakeOpen, teamOf, cleanStake, cupPosts, cupHeadline,
-  closeEntry,
+  closeEntry, cupCounts, cleanRoundCup,
 } from './cup.js';
 import { CUP_COLUMN, TRIP_FORMATS, newTrip, tripByGame, tripStamp, tripStatus, tripsOf, myTripNet } from './trips.js';
 
@@ -541,4 +541,24 @@ test('the Games view gives the stake its own column, so each row adds up to the 
   const plain = tripByGame(s, 't_cup');
   assert.ok(!plain.columns.includes(CUP_COLUMN));
   assert.deepEqual(tripByGame(s, 't_cup', { stake: {} }), plain);
+});
+
+test('a one-ball game (a scramble, alternate shot, Chapman) never has cup matches, and one posted before goes', () => {
+  // Matches use each player's own scores, which a one-ball game doesn't have
+  for (const g of ['scramble', 'altshot', 'chapman']) assert.equal(cupCounts(g), false, g);
+  for (const g of ['skins', 'nassau', 'bestball', 'shamble', 'match']) assert.equal(cupCounts(g), true, g);
+  const r = round('r1', ['t', 's', 'm', 'd'], birdies('t', 4), { cup: FOURBALL });
+  assert.ok(cleanRoundCup(r));
+  for (const game of ['scramble', 'altshot', 'chapman']) {
+    const one = { ...r, game };
+    assert.equal(cleanRoundCup(one), null, game);
+    assert.equal(cupEntry(stateOf('t', [one]), one), null, game);
+    assert.deepEqual(cupEntries(stateOf('t', [one]), 't_cup'), [], game);
+    // A copy this phone posted before it was a one-ball game is taken back
+    assert.deepEqual(cupPosts(stateOf('t', [one]), TRIP, { Lr1: { ...cupEntry(stateOf('t', [r]), r), by: 'Pabc' } }, 'Pabc'), [{ key: 'Lr1', data: { gone: true } }]);
+  }
+  // A friend's copy of a shared round from before can't bring it back on a phone that has the round
+  const shared = { ...round('r2', ['t', 's', 'm', 'd'], birdies('t', 4), { cup: FOURBALL, code: 'ALTS01' }), game: 'altshot', shared: { code: 'ALTS01', host: false } };
+  const before = cupEntry(stateOf('t', [r]), { ...shared, game: 'skins' });
+  assert.deepEqual(cupEntries(stateOf('t', [shared], { cupRemote: { t_cup: { ALTS01: before } } }), 't_cup'), []);
 });
