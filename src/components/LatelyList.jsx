@@ -1,4 +1,4 @@
-// The "Lately" rows: payments, carry-overs, answers and round recaps (see lib/lately.js).
+// The "Lately" rows: payments, carry-overs, answers, challenges and round recaps (see lib/lately.js).
 import { Icon } from './ui.jsx';
 import { useNav } from '../lib/nav.js';
 
@@ -6,6 +6,7 @@ const LOOK = {
   payment: { icon: 'hand-coins', tint: 'mint' },
   carry: { icon: 'arrow-bend-up-right', tint: 'lav' },
   rsvp: { icon: 'calendar-check', tint: 'peach' },
+  challenge: { icon: 'sword', tint: 'lav' },
   recap: { icon: 'flag-pennant', tint: 'ochre' },
 };
 
