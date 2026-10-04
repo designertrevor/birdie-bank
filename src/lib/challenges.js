@@ -432,8 +432,7 @@ export function challengeLately(state, since, until) {
   const inWindow = at => typeof at === 'number' && at >= since && at <= until;
   for (const ch of allChallenges(state)) {
     const side = sideOf(state, ch);
-    const plan = planOf(state, ch);
-    const target = ch.plan ? (plan ? ['plan', { id: plan.id }] : null) : ['challenge', { id: ch.id }];
+    const target = ['challenge', { id: ch.id }];
     const fromN = first(ch.from.name), toN = first(ch.to.name);
     if (side !== 'from' && inWindow(ch.at)) {
       out.push({ id: `ch:${ch.id}`, kind: 'challenge', at: ch.at, target, text: side === 'to' ? `${fromN} challenged you to ${challengeAsk(ch, ch.stake)}` : `${fromN} challenged ${toN}` });

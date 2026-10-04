@@ -76,7 +76,7 @@ export function ChallengeMaker({ open, onClose, from, people, whens, holesCount 
     // A friend's copy of a plan only reaches the organizer through the server
     if (!code && plan && !plan.host) {
       forgetChallenge(ch.id);
-      showToast(`Challenges aren’t switched on for the group yet. Tell ${first(plan.hostName) || 'the organizer'} and it can go in as a side bet at the tee.`);
+      showToast(`Challenges aren’t switched on for the group yet. Tell ${first(plan.hostName)} and it can go in as a side bet at the tee.`);
       return;
     }
     const link = linkFor(getState(), getState().challenges?.[ch.id]);
@@ -239,15 +239,11 @@ export function ChallengeCard({ ch, onOpen = null }) {
 /** Your challenges on Up next: the ones waiting on you first, then on them, then the agreed. */
 export function ChallengesUpNext({ list }) {
   const nav = useNav();
-  const state = useStore();
   if (!list.length) return null;
   return (
     <>
       <div className="sec-label">Challenges</div>
-      {list.map(ch => {
-        const plan = planOf(state, ch);
-        return <ChallengeCard key={ch.id} ch={ch} onOpen={() => (plan ? nav.push('plan', { id: plan.id }) : nav.push('challenge', { id: ch.id }))} />;
-      })}
+      {list.map(ch => <ChallengeCard key={ch.id} ch={ch} onOpen={() => nav.push('challenge', { id: ch.id })} />)}
     </>
   );
 }
@@ -257,6 +253,7 @@ export function ChallengesUpNext({ list }) {
  * challenges are switched on, a friend's copy of the plan says to tell the organizer instead.
  */
 export function PlanChallenges({ plan, myName }) {
+  const nav = useNav(); // none for a friend answering from the link with no install
   const state = useStore();
   const off = useChallengesOff();
   const [making, setMaking] = useState(false);
@@ -271,14 +268,14 @@ export function PlanChallenges({ plan, myName }) {
   return (
     <>
       <div className="sec-label">Challenges</div>
-      {list.map(ch => <ChallengeCard key={ch.id} ch={ch} />)}
+      {list.map(ch => <ChallengeCard key={ch.id} ch={ch} onOpen={nav && sideOf(state, ch) ? () => nav.push('challenge', { id: ch.id }) : null} />)}
       {canMake && (
         <button className="add-row ch-add" onClick={() => setMaking(true)}>
           <div className="add-ci"><Icon name="sword" fill /></div>
           <span className="add-lbl">Challenge someone</span>
         </button>
       )}
-      {!plan.host && off && planned && <p className="field-help pad">Challenges reach the group once they’re switched on. Until then, tell {first(plan.hostName) || 'the organizer'} and it can go in as a side bet at the tee.</p>}
+      {!plan.host && off && planned && <p className="field-help pad">Challenges reach the group once they’re switched on. Until then, tell {first(plan.hostName)} and it can go in as a side bet at the tee.</p>}
       {making && (
         <ChallengeMaker open onClose={() => setMaking(false)} from={{ who: me, name: mine?.name || myName || 'Me' }} people={others}
           whens={[{ key: plan.id, label: 'This round', plan }]} holesCount={plan.holesCount} />

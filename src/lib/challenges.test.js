@@ -5,14 +5,14 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { createRound, roundResults, holeComplete } from './round.js';
-import { betResult, betsOf } from './pair-bets.js';
+import { MAX_BETS, betResult, betsOf } from './pair-bets.js';
 import { newPlan, planStart } from './plans.js';
 import { oldRounds } from './overnight5-money.fixtures.js';
 import { latelyItems } from './lately.js';
 import { mergeBackup } from './backup.js';
 import {
   ACCEPTED_DAYS, MAX_COUNTERS, OPEN_DAYS, betIdOf, canMove, challengeAsk, challengeBet, challengeHeadline, challengeInviteText, challengeLately, challengeLife,
-  challengeLine, challengePair, challengeProblem, challengeState, challengeStatusText, challengeTone, challengeWhat, challengesForRound, challengesWith,
+  challengeLine, challengeNextText, challengePair, challengeProblem, challengeState, challengeStatusText, challengeTone, challengeWhat, challengesForRound, challengesWith,
   cleanChallenge, mergeMoves, myChallenges, newChallenge, planChallenges, sideOf, withChallenges, withMove,
 } from './challenges.js';
 
@@ -394,11 +394,39 @@ test('Lately: challenges to you and answers to yours, with amounts only when you
   assert.equal(items.length, 4);
   assert.ok(items.every(i => i.sub));
   assert.deepEqual(items.find(i => i.text.startsWith('Mike challenged you')).target, ['challenge', { id: 'a' }]);
-  assert.deepEqual(items.find(i => i.text === 'Dave challenged Mike').target, ['plan', { id: 'pl1' }]);
+  assert.deepEqual(items.find(i => i.text === 'Dave challenged Mike').target, ['challenge', { id: 'c' }]);
 });
 
 test('a backup keeps challenges, so an agreed one still goes into the round after a restore', () => {
   const data = { players: {}, challenges: { c1: base() } };
   const { state } = mergeBackup({ players: {}, challenges: {} }, data);
   assert.deepEqual(Object.keys(state.challenges), ['c1']);
+});
+
+test('a round full of side bets takes no more; one with room keeps its own bets first', () => {
+  const state = { me: 'dave', players: {}, challenges: { c1: { ...played(base(), { side: 'to', move: 'accept' }), mine: 'from', made: true } } };
+  const r = round({ ids: ['dave', 'mike'], names: ['Dave', 'Mike'] });
+  const own = { id: 'b1', kind: 'hole', sides: ['dave', 'mike'], stake: 1 };
+  const full = { ...r, bets: Array.from({ length: MAX_BETS }, (_, i) => ({ ...own, id: `b${i}` })) };
+  assert.equal(challengesForRound(state, full, { now: NOW }).length, 0);
+  const out = withChallenges(state, { ...r, bets: [own] }, { now: NOW }).round;
+  assert.deepEqual(out.bets.map(b => b.id), ['b1', 'ch_c1']);
+});
+
+test('what happens next, in a line, for each place a challenge can be', () => {
+  const st = { plans: { pl1: { ...plan(), code: 'PLAN01' } } };
+  const mine = { ...base(), mine: 'from', made: true, code: 'ABCDEF' };
+  assert.equal(challengeNextText({}, mine, NOW), 'Mike can accept, pass or name their own amount.');
+  assert.equal(challengeNextText({}, { ...mine, code: null }, NOW), 'It lives on your phone for now. Mark Mike’s answer when they tell you.');
+  assert.equal(challengeNextText({}, { ...mine, mine: 'to', made: false }, NOW), 'Accept, pass, or name your own amount.');
+  assert.equal(challengeNextText({}, played(mine, { side: 'to', move: 'accept' }), NOW), 'It goes in as a side bet the next time you two play a round together.');
+  assert.equal(challengeNextText(st, played(planned(), { side: 'to', move: 'accept' }), NOW), 'It goes in as a side bet when the round starts.');
+  assert.equal(challengeNextText(st, played(planned(), { side: 'to', move: 'accept' }, { side: 'keeper', move: 'on', roundId: 'r' }), NOW), 'It’s in the round as a side bet.');
+  assert.equal(challengeNextText(st, played(planned(), { side: 'to', move: 'decline' }), NOW), null);
+  assert.equal(challengeNextText({ plans: {} }, planned(), NOW), 'That round is off, so the challenge is too.');
+});
+
+test('Lately leaves out challenges from before the last 30 days', () => {
+  const old = { ...base({ id: 'old', from: mike, to: dave, now: NOW - 45 * DAY }), mine: 'to' };
+  assert.deepEqual(challengeLately({ me: 'dave', challenges: { old } }, NOW - 30 * DAY, NOW), []);
 });
