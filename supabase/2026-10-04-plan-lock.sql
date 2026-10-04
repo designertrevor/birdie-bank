@@ -82,7 +82,7 @@ declare
 begin
   select * into h from public.plan_hosts x where x.code = p_code;
   if not found then return true; end if;
-  if not ((h.dev is not null and h.dev = w) or (h.user_id is not null and h.user_id = u)) then return false; end if;
+  if not coalesce((h.dev is not null and h.dev = w) or (h.user_id is not null and h.user_id = u), false) then return false; end if;
   -- The organizer signed in since sharing it: their account can change it from another phone too
   if h.user_id is null and u is not null then
     update public.plan_hosts set user_id = u where code = p_code;
@@ -108,7 +108,7 @@ begin
   if not found then return 'open'; end if; -- no such plan (the write fails on its own), or it's being deleted
   select * into h from public.plan_hosts x where x.code = p_code;
   if not found then return 'open'; end if; -- shared before the lock, or by an older copy of the app
-  is_host := (h.dev is not null and h.dev = w) or (h.user_id is not null and h.user_id = u);
+  is_host := coalesce((h.dev is not null and h.dev = w) or (h.user_id is not null and h.user_id = u), false);
 
   -- The organizer's own answer is theirs alone
   if p_who = coalesce(public.bb_str(m -> 'hostWho'), 'host') then
@@ -117,10 +117,11 @@ begin
 
   select * into o from public.plan_answer_owners x where x.code = p_code and x.who = p_who;
   has_owner := found and (o.dev is not null or o.user_id is not null);
+  -- (A null anywhere below means "no": a request with no device key and no account is nobody)
 
   -- The person's own answer: only their phone or their account
   if has_owner and not o.by_host then
-    if not ((o.dev is not null and o.dev = w) or (o.user_id is not null and o.user_id = u)) then return null; end if;
+    if not coalesce((o.dev is not null and o.dev = w) or (o.user_id is not null and o.user_id = u), false) then return null; end if;
     if o.user_id is null and u is not null then
       update public.plan_answer_owners set user_id = u, updated_at = now() where code = p_code and who = p_who;
     end if;
