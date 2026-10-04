@@ -268,23 +268,33 @@ function paymentsOf(state, id, rounds, local, together, bal, spent = []) {
 
 /**
  * The plan: the published plan's open lines, each pair's net on the shared rounds it doesn't
- * cover and on the expenses it doesn't cover, then the fewest payments for the rest, one line per
- * pair and way: [{ from, to, amount, shared, local, plan, expense }], with each part in cents.
+ * cover and on the expenses it doesn't cover, then the fewest payments for the rest, netted to one
+ * line a pair: [{ from, to, amount, shared, local, plan, expense }], with each part in cents, positive
+ * from `from` to `to` (a part can run the other way, negative, when the pair's net doesn't).
+ * Paying the line squares the pair on the trip (tripPayment).
  */
 function mergePlan(pairs, local, onPlan = [], spent = []) {
   const lines = new Map();
   const add = (from, to, part, c) => {
-    const k = `${from}>${to}`;
-    const line = lines.get(k) || { from, to, amount: 0, shared: 0, local: 0, plan: 0, expense: 0 };
-    line[part] += c;
-    line.amount = (line.shared + line.local + line.plan + line.expense) / 100;
+    const [a, b, sign] = from < to ? [from, to, 1] : [to, from, -1];
+    const k = `${a}|${b}`;
+    const line = lines.get(k) || { a, b, shared: 0, local: 0, plan: 0, expense: 0 };
+    line[part] += sign * c;
     lines.set(k, line);
   };
   for (const d of onPlan) add(d.from, d.to, 'plan', d.cents);
   for (const d of spent) add(d.from, d.to, 'expense', d.cents);
   for (const d of pairs) add(d.from, d.to, 'shared', d.cents);
   for (const t of local) add(t.from, t.to, 'local', cents(t.amount));
-  return [...lines.values()];
+  const out = [];
+  for (const l of lines.values()) {
+    const net = l.shared + l.local + l.plan + l.expense;
+    if (!net) continue;
+    const s = net > 0 ? 1 : -1;
+    const [from, to] = s > 0 ? [l.a, l.b] : [l.b, l.a];
+    out.push({ from, to, amount: Math.abs(net) / 100, shared: s * l.shared || 0, local: s * l.local || 0, plan: s * l.plan || 0, expense: s * l.expense || 0 });
+  }
+  return out.sort((x, y) => y.amount - x.amount || x.from.localeCompare(y.from) || x.to.localeCompare(y.to));
 }
 
 /**
@@ -492,8 +502,10 @@ export function tripPayment(state, tripId, from, to, { now = Date.now(), part = 
   const reason = tripReason(tripId, part);
   const rows = line.shared ? squareRows(state, from, to, ids, { now, reason }).rows : [];
   if (line.plan) rows.push(...planRows(state, from, to, { now, trip: tripId, reason }).rows);
-  const expenses = line.expense ? expensePayments(state, from, to, { amount: line.expense, now, trip: tripId, reason, ...(makeId ? { makeId } : {}) }).expenses : [];
-  const settlements = line.local ? [{ id: tripPaymentId(tripId, from, to, now), from, to, amount: line.local / 100, at: now, ...(part ? { tripPart: true } : {}) }] : [];
+  // Each part squares in whichever way it runs, so the line as a whole is paid
+  const expenses = line.expense ? expensePayments(state, from, to, { now, trip: tripId, reason, ...(makeId ? { makeId } : {}) }).expenses : [];
+  const [lf, lt] = line.local > 0 ? [from, to] : [to, from];
+  const settlements = line.local ? [{ id: tripPaymentId(tripId, lf, lt, now), from: lf, to: lt, amount: Math.abs(line.local) / 100, at: now, ...(part ? { tripPart: true } : {}) }] : [];
   return { rows, settlements, expenses };
 }
 

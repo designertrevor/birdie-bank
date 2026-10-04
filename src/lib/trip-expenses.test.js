@@ -647,3 +647,20 @@ test('a payment for expenses is tidied like any expense, and a bad one is left o
   assert.equal(cleanExpense({ ...x, people: [] }), null);
   assert.equal(cleanExpense({ ...x, amount: 0 }), null);
 });
+
+test('Settle the trip nets each pair to one line, and paying it squares the pair on both phones', () => {
+  // A money round Andy wins by a skin (Trevor owes him $2, on the plan) and Trevor's dinner for him,
+  // Andy and Mia, who doesn't golf (so the plan leaves it out, and Andy owes Trevor $30 for it)
+  const phones = lunchPair({ lunch: false });
+  phones.t = { ...phones.t, tripExpenses: {} };
+  phones.a = { ...phones.a, tripExpenses: {} };
+  share(phones, expense(phones.t, { id: 'x2', payer: 't', people: ['t', 'a', 'm'], amount: 90, at: OCT(16, 21) }));
+  publish(phones, buildPlan(phones.t, 't_bandon', { now: NOW }));
+  assert.equal(planState(phones.a, 't_bandon', { now: NOW }).status, 'live');
+  const lines = tripStatus(phones.a, 't_bandon', { now: NOW }).plan.filter(l => [l.from, l.to].includes('za'));
+  assert.equal(lines.length, 1, JSON.stringify(lines));
+  assert.deepEqual([lines[0].from, lines[0].to, cents(lines[0].amount), lines[0].plan, lines[0].expense], ['za', 't', 2800, -200, 3000]);
+  paid(phones, 'a', tripPayment(phones.a, 't_bandon', 'za', 't', { now: NOW + 1000, makeId: () => 'p1' }));
+  for (const k of ['t', 'a']) assert.equal(owes(phones[k], 'a', 't', NOW + 2000), 0, k);
+  assert.ok(!tripStatus(phones.t, 't_bandon', { now: NOW + 2000 }).plan.some(l => [l.from, l.to].includes('a')));
+});
