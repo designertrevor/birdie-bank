@@ -906,7 +906,7 @@ function GamesSheet({ round, onClose }) {
     <Sheet open onClose={onClose} title="Side games" className="sc-sheet">
       <p className="sheet-text">Same course, same players, same scores. {played ? `A new game counts the ${played} hole${played === 1 ? '' : 's'} already scored too.` : 'Every game reads the one scorecard.'}</p>
       {played > 0 && sideGamesOf(round).length > 0 && <p className="field-help pad">Changes here cover the whole round. To change a bet from the next hole, use Bets.</p>}
-      <SideGamesSetup game={round.game} sideGames={list} setSideGames={edit} defaults={round.settings} players={round.players.length} playFor={round.playFor} />
+      <SideGamesSetup game={round.game} sideGames={list} setSideGames={edit} defaults={round.settings} players={round.players.length} playFor={round.playFor} holesCount={round.holes.length} />
       <div className="cta-wrap">
         <button className="full-btn" disabled={!changed || bad} onClick={save}>{changed ? 'Save games' : 'No changes'}</button>
       </div>
@@ -972,14 +972,17 @@ function BetsSheet({ round, onClose }) {
     // A points or reward round reads in points
     showToast(inUnits(round, side
       ? `${label} bet updated${whole ? '' : ` from hole ${fromHole.no}`} · ${sideBetLine(game, opts[game])}`
-      : `Bets updated${whole ? '' : ` from hole ${fromHole.no}`} · ${stakeSummary(game, opts)}`));
+      : `Bets updated${whole ? '' : ` from hole ${fromHole.no}`} · ${stakeSummary(game, opts, round.holes.length)}`));
     buzz(20);
   };
   const legs = game === 'nassau' || game === 'match' || game === 'rabbit' || game === 'snake' || (game === 'sixes' && opts.sixes.mode === 'match');
   // A snake or rabbit is played for the bet in force when its leg started: one leg for the round, or
-  // one a nine. Say when the new bet starts counting, or that only "Whole round" changes it
+  // one a nine (or with "three rabbits", one every six holes). Say when the new bet starts counting, or
+  // that only "Whole round" changes it
   const legStarts = game === 'snake' || game === 'rabbit'
-    ? ((game === 'snake' ? settingsAt(view, 1).snake?.nines : true) && round.holes.length === 18 ? [1, 10] : [1]) : null;
+    ? (round.holes.length !== 18 ? [1]
+      : game === 'rabbit' && settingsAt(view, 1).rabbit?.sixes ? [1, 7, 13]
+        : (game === 'snake' ? settingsAt(view, 1).snake?.nines : true) ? [1, 10] : [1]) : null;
   const nextLeg = legStarts?.find(x => x >= fromPos);
   const legNote = !legStarts ? 'A bet already under way, like a leg or a match, keeps what it started with.'
     : nextLeg === fromPos ? ''

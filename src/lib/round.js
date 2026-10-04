@@ -1571,18 +1571,23 @@ export function totalsPots(round, stay, table = totalsTable(round)) {
   if (!cfg.nassau || n !== 18 || cfg.payout !== 'pot') return [whole];
   const byId = Object.fromEntries(round.players.map(p => [p.id, p]));
   const legs = nassauLegs(n);
+  // Points less the quota for the holes, taken once, then tidied to a millionth: adding up a ninth of a
+  // quota hole by hole leaves float dust (2.0000000000000004), and that broke ties two players really
+  // had, giving one of them the whole pot (found in review, 2026-10-03)
+  const tidy = v => Math.round(v * 1e6) / 1e6;
   const nine = leg => {
     const holes = round.holes.slice(leg.start - 1, leg.end).filter(h => holeComplete(round, h));
     if (!holes.length) return null;
-    const value = (pid, h) => totalsHoleValue(round, byId[pid], h) - (round.game === 'quota' ? quotaOf(round, byId[pid]) / n : 0);
-    return Object.fromEntries(stay.map(pid => [pid, holes.reduce((a, h) => a + value(pid, h), 0)]));
+    const value = pid => holes.reduce((a, h) => a + totalsHoleValue(round, byId[pid], h), 0)
+      - (round.game === 'quota' ? quotaOf(round, byId[pid]) * holes.length / n : 0);
+    return Object.fromEntries(stay.map(pid => [pid, tidy(value(pid))]));
   };
   const out = [];
   for (const k of ['front', 'back']) {
     const totals = nine(legs[k]);
     if (totals) out.push({ key: k, label: legs[k].label, totals });
   }
-  out.push(whole);
+  out.push({ ...whole, totals: Object.fromEntries(Object.entries(whole.totals).map(([id, v]) => [id, v == null ? v : tidy(v)])) });
   return out;
 }
 

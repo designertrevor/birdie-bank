@@ -103,7 +103,7 @@ export function VegasPanel({ round, hole, draft, touched }) {
           <div key={t.id} className={`vegas-team ${(i === 0 ? total : -total) > 0 ? 'ahead' : (i === 0 ? total : -total) < 0 ? 'behind' : ''}`}>
             <span className="ms-lbl"><span className={`side-tag ${i === 0 ? 'a' : 'b'}`}>{['A', 'B'][i]}</span> {t.name}</span>
             <span className="ms-val">{pv ? pv.numbers[i] : '–'}</span>
-            <span className="ms-sub">{pv?.flipped[i] ? 'Flipped by a birdie' : pv ? 'This hole' : 'Enter scores'}</span>
+            <span className="ms-sub">{pv?.flipped[i] ? 'Flipped by a birdie' : pv?.high?.[i] ? 'No par: high number first' : pv ? 'This hole' : 'Enter scores'}</span>
           </div>
         ))}
       </div>
@@ -297,6 +297,8 @@ export function HammerPanel({ round, hole, marks, setMarks, readOnly = false }) 
   const can = hammerOptions(round, hole, mark);
   const n = mark.hammers.length;
   const value = base * 2 ** n;
+  // Birdie hammer (a house rule): the amount here is before the scores, so say a winning birdie doubles it
+  const birdieRule = !!settingsAt(round, posOf(round, hole)).hammer?.birdie;
   const pending = n > 0 && mark.conceded == null ? 1 - mark.hammers.at(-1) : null;
   const before = rows.filter(r => r.pos < (row?.pos ?? 0)).reduce((a, r) => a + r.net, 0);
   const put = next => { setMarks({ ...marks, ...next }); buzz(next.hammers?.length > n ? [20, 40, 20] : 12); };
@@ -308,7 +310,7 @@ export function HammerPanel({ round, hole, marks, setMarks, readOnly = false }) 
   return (
     <div className="wolf-panel">
       <div className="bl" style={{ marginBottom: 8, display: 'flex', justifyContent: 'space-between', gap: 8 }}>
-        <span><Icon name="hammer" fill /> This hole: <strong>{money(mark.conceded != null ? value / 2 : value)}</strong>{n ? ` · ${n} hammer${n === 1 ? '' : 's'}` : ''}</span>
+        <span><Icon name="hammer" fill /> This hole: <strong>{money(mark.conceded != null ? value / 2 : value)}</strong>{n ? ` · ${n} hammer${n === 1 ? '' : 's'}` : ''}{birdieRule && mark.conceded == null ? ' · a winning birdie doubles it' : ''}</span>
         <span>{before === 0 ? 'All square' : `${short[before > 0 ? 0 : 1]} +${money(Math.abs(before))}`}</span>
       </div>
       {status && <p className="bl" style={{ margin: '0 0 8px', fontWeight: 500 }} aria-live="polite">{status}</p>}

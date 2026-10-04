@@ -188,6 +188,9 @@ export function pointsToMoney(points, value) {
  * ("paid out depending on their points over Quota in relation to all of the points over Quota").
  */
 export function settleTotals(totals, { mode = 'pot', stake = 1, lowerWins = true, over = false } = {}) {
+  // Sharing by points over, totals are tidied to a millionth first: a quota taken over part of a round
+  // leaves float dust, and dust must neither put someone over nor break a real tie (review, 2026-10-03)
+  if (over) totals = Object.fromEntries(Object.entries(totals).map(([id, v]) => [id, v == null ? v : Math.round(v * 1e6) / 1e6]));
   const ids = Object.keys(totals).filter(id => totals[id] != null);
   const out = Object.fromEntries(Object.keys(totals).map(id => [id, 0]));
   if (ids.length < 2) return out;

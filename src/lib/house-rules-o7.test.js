@@ -469,3 +469,52 @@ test('the first-tee card lists the new rules that are on, and only those', () =>
   const bet = agreementItems(r, {}).find(i => i.id === 'bet:main');
   assert.doesNotMatch(bet.text, /front, back/);
 });
+
+// ---------------------------------------------------------------------------
+// Review fixes (2026-10-03)
+
+test('front, back and total: two players level against their quotas on a nine split it, whatever the quotas', () => {
+  // Ann plays off 0 (quota 36, 18 a nine) and Bo off 2 (quota 34, 17 a nine). Both are +2 on the
+  // front. Adding up a 34th-of-18 hole by hole used to leave Bo 2.0000000000000004 and hand him the pot
+  const players = [{ id: 'a', name: 'Ann', index: 0 }, { id: 'b', name: 'Bo', index: 2 }, { id: 'c', name: 'Cy', index: 0 }];
+  const settings = structuredClone(DEFAULTS);
+  Object.assign(settings.quota, { nassau: true });
+  const r = createRound({ id: 'r', game: 'quota', course: flat(18), holesCount: 18, players, settings, hcPct: 100, useHandicaps: true });
+  assert.deepEqual(r.players.map(p => p.courseHc), [0, 2, 0]);
+  // Ann: a birdie on 1 (20 points on the front). Bo: a birdie on 1 and a bogey on 2 (19)
+  scores(r, 18, { 1: { a: 3, b: 3 }, 2: { b: 5 } });
+  const front = roundResults(r).detail.pots.find(p => p.key === 'front');
+  assert.deepEqual(front.totals, { a: 2, b: 2, c: 0 });
+  assert.deepEqual(front.deltas, { a: 2.5, b: 2.5, c: -5 });
+  assert.equal(zero(bal(r)), 0);
+});
+
+test('settleTotals over: float dust above zero is not over quota', () => {
+  assert.deepEqual(settleTotals({ a: 1e-15, b: 0, c: -1 }, { stake: 5, lowerWins: false, over: true }), { a: 2.5, b: 2.5, c: -5 });
+});
+
+test('a 9-hole round never lists the rules that only play over 18', () => {
+  const s = structuredClone(DEFAULTS);
+  assert.equal(houseRulesLine('wolf', { ...s.wolf, lastWolf: true }, 9), '');
+  assert.equal(houseRulesLine('rabbit', { ...s.rabbit, sixes: true }, 9), '');
+  assert.equal(houseRulesLine('skins', { ...s.skins, backDouble: true }, 9), '');
+  assert.equal(houseRulesLine('stroke', { ...s.stroke, nassau: true }, 9), '');
+  assert.equal(houseRulesLine('quota', { ...s.quota, nassau: true, minus: true }, 9), 'double bogey −1');
+  assert.doesNotMatch(stakeSummary('wolf', { ...s, wolf: { ...s.wolf, lastWolf: true } }, 9), /last place/);
+  for (const [game, set] of [['wolf', { lastWolf: true }], ['rabbit', { sixes: true }], ['skins', { backDouble: true }], ['quota', { nassau: true }], ['stableford', { nassau: true }]]) {
+    const ids = game === 'wolf' ? ['a', 'b', 'c', 'd'] : ['a', 'b', 'c'];
+    const nine = mk(game, ids, { set });
+    const on = agreementItems(nine, {}).filter(i => i.group === 'rules' && i.on && i.id.endsWith(Object.keys(set)[0]));
+    assert.deepEqual(on, [], game);
+    const full = mk(game, ids, { set, holes: 18 });
+    assert.equal(agreementItems(full, {}).filter(i => i.group === 'rules' && i.on && i.id.endsWith(Object.keys(set)[0])).length, 1, game);
+  }
+});
+
+test('the first-tee card lists both balls count only for 2 v 2', () => {
+  const on = r => agreementItems(r, {}).filter(i => i.group === 'rules' && i.on).map(i => i.text);
+  const solo = mk('nassau', ['a', 'b'], { set: { teamScore: 'total' } });
+  assert.deepEqual(on(solo), []);
+  const four = mk('nassau', ['a', 'b', 'c', 'd'], { set: { teamScore: 'total' }, teams: [['a', 'b'], ['c', 'd']] });
+  assert.deepEqual(on(four), ['Both balls count (partners’ scores added up)']);
+});

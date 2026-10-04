@@ -304,15 +304,20 @@ function GameBreakdown({ round, res, label = null }) {
               {rows.map(r => (
                 <tr key={r.hole.no}>
                   <td>{r.hole.no}</td>
-                  <td className={r.flipped[0] ? 'neg' : ''}>{r.numbers[0]}{r.flipped[0] ? ' ↺' : ''}</td>
-                  <td className={r.flipped[1] ? 'neg' : ''}>{r.numbers[1]}{r.flipped[1] ? ' ↺' : ''}</td>
+                  {[0, 1].map(k => {
+                    // ↺ a birdie flip, or Daytona (a house rule): no par or better, so the high number went first
+                    const turned = r.flipped[k] || r.high?.[k];
+                    return <td key={k} className={turned ? 'neg' : ''}>{r.numbers[k]}{turned ? ' ↺' : ''}</td>;
+                  })}
                   <td className={r.diff > 0 ? 'pos' : r.diff < 0 ? 'neg' : 'zero'}>{r.diff === 0 ? '·' : `${r.diff > 0 ? t[0].name : t[1].name} +${Math.abs(r.diff)}`}</td>
                 </tr>
               ))}
             </tbody>
           </table>
         </div>
-        {rows.some(r => r.flipped.some(Boolean)) && <p className="field-help" style={{ padding: '0 20px' }}>↺ number flipped by the other team’s birdie.</p>}
+        {rows.some(r => r.flipped.some(Boolean) || r.high?.some(Boolean)) && <p className="field-help" style={{ padding: '0 20px' }}>{rows.some(r => r.high?.some(Boolean))
+          ? (rows.some(r => r.flipped.some(Boolean)) ? '↺ high number first: flipped by the other team’s birdie, or no par or better (Daytona).' : '↺ high number first: no par or better (Daytona).')
+          : '↺ number flipped by the other team’s birdie.'}</p>}
       </>
     );
   }
@@ -364,7 +369,7 @@ function GameBreakdown({ round, res, label = null }) {
             return (
               <div key={p.key} className="leg-row">
                 <div className="leg-name">{p.key === 'total' ? (round.holes.length === 18 ? '18' : 'All') : p.label}</div>
-                <div className={`leg-winner ${won.length ? '' : 'leg-tie'}`}>{won.length ? won.map(([pid]) => first(names[pid])).join(', ') : 'Square, money back'}</div>
+                <div className={`leg-winner ${won.length ? '' : 'leg-tie'}`}>{won.length ? won.map(([pid]) => first(names[pid])).join(', ') : 'All square'}</div>
                 <div className={`leg-amt ${won.length ? '' : 'zero'}`}>{money(won.reduce((a, [, v]) => a + v, 0))}</div>
               </div>
             );
@@ -513,7 +518,7 @@ function GameBreakdown({ round, res, label = null }) {
               {rows.map(r => (
                 <tr key={r.hole.no}>
                   <td>{r.hole.no}</td>
-                  <td>{r.hammers.length || '·'}{r.conceded != null ? ' · folded' : ''}</td>
+                  <td>{r.hammers.length || '·'}{r.conceded != null ? ' · folded' : ''}{r.birdie ? ' · birdie' : ''}</td>
                   <td>{r.winner == null ? 'Halved' : round.teams ? sn[r.winner] : first(sn[r.winner])}</td>
                   <td className={r.net > 0 ? 'pos' : r.net < 0 ? 'neg' : 'zero'}>{r.value ? money(r.value) : '·'}</td>
                 </tr>

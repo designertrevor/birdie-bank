@@ -37,9 +37,11 @@ const strokesText = (n, half = false) => (!n ? 'scratch' : `${n} ${half ? 'half 
  * A game's house rules, on or off: [{ id, text, on }]. The card lists the ones that are on; a change
  * mid-round says which one went on or off. Options that set the bet itself are in the bet line.
  */
-export function houseRulesFor(game, s) {
+export function houseRulesFor(game, s, holes = 18) {
   if (!s) return [];
   const r = (id, text, on) => ({ id, text, on: !!on });
+  // Rules added 2026-10-03 that only play over 18 holes are off in a 9-hole round, whatever the settings say
+  const full = holes === 18;
   switch (game) {
     case 'skins': return [
       // Net is the usual, so only gross (or both) is worth saying
@@ -48,7 +50,7 @@ export function houseRulesFor(game, s) {
       r('lastCarry', { void: 'A carry left after the last hole goes unclaimed', split: 'A carry left after the last hole is split', playoff: 'A carry left after the last hole is played off' }[s.lastCarry || 'void'], s.carryover),
       r('canadian', 'Canadian skins (a natural birdie beats a net one)', s.canadian && s.kind !== 'gross'),
       r('validate', 'Validate skins (net par on the next hole keeps a skin)', s.validate),
-      r('backDouble', 'Back nine skins are worth double', s.backDouble && s.payout !== 'pot'),
+      r('backDouble', 'Back nine skins are worth double', full && s.backDouble && s.payout !== 'pot'),
     ];
     case 'nassau': return [
       r('turnPress', 'Press at the turn', s.turnPress),
@@ -65,24 +67,24 @@ export function houseRulesFor(game, s) {
       r('lone', `Lone wolf ${s.loneMultiplier ?? 2}×`, true),
       r('blind', `Blind wolf ${blindMultiplierOf(s)}×`, s.blind),
       r('carry', 'Tied holes carry to the next one won', s.carry),
-      r('lastWolf', 'Last place is the wolf on 17 and 18', s.lastWolf),
+      r('lastWolf', 'Last place is the wolf on 17 and 18', full && s.lastWolf),
     ];
     case 'hammer': return [r('who', 'Only the side behind throws the first hammer', s.who === 'trailing'), r('birdie', 'A birdie that wins the hole is one more hammer', s.birdie)];
     case 'vegas': return [r('birdieFlip', 'Birdie flip', s.birdieFlip), r('birdieDouble', 'Birdies double, eagles triple', s.birdieDouble), r('daytona', 'Daytona (no par or better, high number first)', s.daytona)];
     case 'sixes': return [r('carry', 'A halved match carries to the next', s.carry && s.mode !== 'holes'), r('teamScore', 'Both balls count (partners’ scores added up)', s.teamScore === 'total')];
     case 'scramble': return [r('drives', `${s.drives} drives each`, s.drives), r('second', 'Second place gets its money back', s.second)];
-    case 'stroke': return [r('cap', 'Net double bogey max', s.cap), r('nassau', 'Front, back and total: a pot each', s.nassau && s.payout === 'pot')];
-    case 'stableford': return [r('nassau', 'Front, back and total: a pot each', s.nassau && s.payout === 'pot')];
+    case 'stroke': return [r('cap', 'Net double bogey max', s.cap), r('nassau', 'Front, back and total: a pot each', full && s.nassau && s.payout === 'pot')];
+    case 'stableford': return [r('nassau', 'Front, back and total: a pot each', full && s.nassau && s.payout === 'pot')];
     case 'quota': return [
       r('minus', 'Double bogey or worse is −1', s.minus),
-      r('nassau', 'Front, back and total: a pot each, nines against half quota', s.nassau && s.payout === 'pot'),
+      r('nassau', 'Front, back and total: a pot each, nines against half quota', full && s.nassau && s.payout === 'pot'),
       r('split', 'Everyone over quota shares the pot', s.split === 'over' && s.payout === 'pot'),
     ];
     case 'nines': return [r('sweep', 'Win a hole by 2 and take all 9', s.sweep), r('birdie', 'Win a hole with a birdie: 7-1-1', s.birdie)];
     case 'aces': return [r('carry', 'Ties carry', s.carry)];
     case 'bbb': return [r('sweep', 'All three on one hole count double', s.sweep), r('netBongo', 'Bongo goes to the low net score', s.netBongo)];
     case 'dots': return [r('auto', 'Birdies count as junk', s.auto), r('greenieCarry', 'A missed greenie carries to the next par 3', s.greenieCarry)];
-    case 'rabbit': return [r('sixes', 'Three rabbits, one every six holes', s.sixes)];
+    case 'rabbit': return [r('sixes', 'Three rabbits, one every six holes', full && s.sixes)];
     case 'snake': return [r('nines', 'A snake for each nine', s.nines), r('fourPutt', 'A four-putt counts twice', s.fourPutt && (s.growth || 'flat') !== 'flat')];
     default: return [];
   }
@@ -134,12 +136,15 @@ export function agreementItems(round, choices = round.agreed) {
     const game = key === 'main' ? round.game : key;
     const label = gameKeyLabel(round, key);
     // Skins and Wolf keep their house rules out of the bet line, since they're listed as rules below
-    const full = key === 'main' ? stakeSummary(game, round.settings) : sideBetLine(game, block);
+    const holes = round.holes?.length ?? 18;
+    const full = key === 'main' ? stakeSummary(game, round.settings, holes) : sideBetLine(game, block);
     // The newer house rules' tags come off the bet line too, since they're listed as rules
-    const tags = houseRulesLine(game, block);
+    const tags = houseRulesLine(game, block, holes);
     const bet = game === 'skins' || game === 'wolf' ? full.split(' · ')[0] : tags && full.endsWith(` · ${tags}`) ? full.slice(0, -(tags.length + 3)) : full;
     items.push({ id: `bet:${key}`, group: 'bets', label, text: inUnits(round, bet) });
-    for (const h of houseRulesFor(game, block)) items.push({ id: `rule:${key}:${h.id}`, group: 'rules', label, text: h.text, on: h.on });
+    // "Both balls count" only plays 2 v 2 (Sixes always is), so a singles match or a 1 v 2 doesn't list it
+    const twoByTwo = game === 'sixes' || (round.teams?.length === 2 && round.teams.every(t => t.players?.length === 2));
+    for (const h of houseRulesFor(game, block, holes)) items.push({ id: `rule:${key}:${h.id}`, group: 'rules', label, text: h.text, on: h.on && (h.id !== 'teamScore' || twoByTwo) });
   }
   // Side bets between two players are agreed like the games' bets; a tapped winner isn't a change.
   // On a reward round a bet played for money stays in dollars and says so

@@ -767,7 +767,7 @@ function SetupStep({ game, course, holesCount, nine, picked, setPicked, opts, se
       <div className="scroll">
         <div className="block summary-card">
           <div className="li-sub">{gameLabel({ game, sideGames })} · {holesCount} holes</div>
-          <div className="d stake-big">{inUnits({ playFor }, stakeSummary(game, opts))}</div>
+          <div className="d stake-big">{inUnits({ playFor }, stakeSummary(game, opts, holesCount))}</div>
           {sideGames.length > 0 && <div className="li-sub">{roundStakeLines({ game, settings: opts, sideGames, playFor }).slice(1).map(l => l.line).join(' + ')}</div>}
           {playForLine({ playFor }) && <div className="li-sub">{playForLine({ playFor })}</div>}
           <div className="li-sub">{course.name}{holesCount === 9 && course.holes.length === 18 ? ` · ${nine === 'front' ? 'Front' : 'Back'} 9` : ''} · Par {holes.reduce((a, h) => a + h.par, 0)} · {picked.length} players</div>
@@ -801,7 +801,7 @@ function SetupStep({ game, course, holesCount, nine, picked, setPicked, opts, se
         <GameOptions game={game} get={get} set={set} onAmount={(path, title, o) => setPad({ path, title, ...o })} holesCount={holesCount}
           players={picked.length || null} firstName={game === 'banker' ? state.players[picked[0]]?.name : null} inPoints={!countsMoney({ playFor })} />
 
-        <SideGamesSetup game={game} sideGames={sideGames} setSideGames={setSideGames} defaults={opts} players={picked.length || 4} playFor={playFor} />
+        <SideGamesSetup game={game} sideGames={sideGames} setSideGames={setSideGames} defaults={opts} players={picked.length || 4} playFor={playFor} holesCount={holesCount} />
 
         {setPairBets && <PairBetsSetup round={betRound} bets={pairBets} setBets={setPairBets} />}
 
