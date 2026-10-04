@@ -594,6 +594,14 @@ export function buyIns(big) {
   return out;
 }
 
+/**
+ * The game's day once its groups start (`today` YYYY-MM-DD): today when the day it was set for has
+ * gone by, so the game's day is its rounds' day, else as it was ({} for no change).
+ */
+export function startDay(trip, today) {
+  return trip?.start && today && trip.start < today ? { start: today, end: today } : {};
+}
+
 /** Whether the game has started: a group's round has a score in it. Then its formats and groups stay as they are. */
 export function bigStarted(field) {
   return field.groups.some(g => g.card && Object.values(g.card.scores || {}).some(s => s && Object.values(s).some(v => v != null)));

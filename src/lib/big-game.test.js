@@ -14,7 +14,7 @@ import { mergeExpenses } from './trip-expenses.js';
 import { newTrip, tripOnDay, tripPayment, tripStamp, tripStatus } from './trips.js';
 import {
   BIG_FORMAT, allot, balanceGroups, balanceTeams, betStrokesFor, bigField, bigLines, bigResults, buyIns, cleanBig, groupCount,
-  groupsProblem, moveTo, payPlaces, placeLabels, potBoard, scoreOn, skinsBoard, skinsMoney,
+  groupsProblem, moveTo, payPlaces, placeLabels, potBoard, scoreOn, skinsBoard, skinsMoney, startDay,
 } from './big-game.js';
 import { allBigMoney, bigMoney, bigOf, bigStatus } from './big-money.js';
 import { codesToRead, handOffs, recordDue, toCard } from './big-sync-model.js';
@@ -408,4 +408,42 @@ test('a phone in one group knows the other group’s players by name and payment
   assert.equal(nameOf(d, 'e'), 'Eve');
   assert.deepEqual(payInfoFor(d, 'e'), { app: 'venmo', handle: 'eve-golf' });
   assert.equal(nameOf(d, 'nobody'), 'Someone');
+});
+
+// --------------------------- review fixes ------------------------------------------
+
+test('equal lines between different pairs are different payments: each pair’s phones agree on its id and both payments count', () => {
+  // Winner takes all: everyone pays Gus their $10, seven lines of the same amount
+  const phones = phonesOf(game({ skins: { on: false }, teams: { on: false }, bets: [], pot: { on: true, kind: 'gross', stake: 10, places: [100] } }));
+  const lines = bigStatus(phones.a, 't_big').lines;
+  assert.equal(lines.length, 7);
+  assert.ok(lines.every(l => l.to === 'g' && l.cents === 1000));
+  const hal = tripPayment(phones.h, 't_big', 'zh', 'g', { now: NOW + 5 }).expenses;
+  const dave = tripPayment(phones.d, 't_big', 'zd', 'g', { now: NOW + 9 }).expenses;
+  assert.equal(hal.length, 1);
+  assert.equal(dave.length, 1);
+  assert.notEqual(hal[0].id, dave[0].id, 'two people paying Gus the same amount are two payments');
+  // Gus marking Hal's payment on his own phone makes the same payment as Hal marking it on his
+  assert.equal(tripPayment(phones.g, 't_big', 'h', 'zg', { now: NOW + 7 }).expenses[0].id, hal[0].id);
+  for (const k of Object.keys(phones)) phones[k] = { ...phones[k], tripExpenses: mergeExpenses(mergeExpenses(phones[k].tripExpenses || {}, hal), dave) };
+  for (const k of ['a', 'g']) {
+    assert.equal(owes(phones[k], 'h', 'g'), 0, `Hal square with Gus on ${k}’s phone`);
+    assert.equal(owes(phones[k], 'd', 'g'), 0, `Dave square with Gus on ${k}’s phone`);
+    assert.equal(owes(phones[k], 'e', 'g'), 1000, `Eve still owes Gus on ${k}’s phone`);
+  }
+  assert.equal(owes(phones.h, 'h', 'g'), 0);
+  assert.equal(owes(phones.d, 'd', 'g'), 0);
+});
+
+test('a group’s round read while it was still being played is read again days later, until it’s done', () => {
+  const phones = phonesOf(game(), { r2: { done: false, holes: 6 } });
+  const later = OCT(17 + 5, 12);
+  assert.deepEqual(codesToRead(phones.d, 't_big', { now: NOW }), ['BIGBBB']);
+  assert.deepEqual(codesToRead(phones.d, 't_big', { now: later }), ['BIGBBB'], 'still being played: read again');
+  const done = phonesOf().d;
+  assert.deepEqual(codesToRead(done, 't_big', { now: later }), [], 'finished and days on: final');
+  assert.deepEqual(codesToRead(phones.d, 't_big', { now: OCT(17 + 20, 12) }), [], 'given up on after two weeks');
+  // A game started after the day it was set for becomes today's
+  assert.deepEqual(startDay({ start: '2026-10-10', end: '2026-10-10' }, '2026-10-17'), { start: '2026-10-17', end: '2026-10-17' });
+  assert.deepEqual(startDay({ start: '2026-10-17', end: '2026-10-17' }, '2026-10-17'), {});
 });

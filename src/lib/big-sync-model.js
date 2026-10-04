@@ -14,6 +14,8 @@ import { payFields } from './pay.js';
 const DAY = 864e5;
 /** Another group's round is read again until this long after the game's day, for scores fixed after it ended. */
 const READ_DAYS = 3;
+/** A card still being played is read until this long after the game's day, then it's given up on. */
+const LIVE_DAYS = 14;
 
 /** The game record as it goes on the server: { tripId, v, at, big, endedAt, byName }. */
 export function gameRecord(state, tripId) {
@@ -58,13 +60,16 @@ export function codesToRead(state, tripId, { now = Date.now() } = {}) {
   if (!big) return [];
   const rounds = bigRounds(state, tripId);
   const trip = tripOf(state, tripId);
-  const old = trip?.end && isoDate(new Date(now - READ_DAYS * DAY)) > trip.end;
+  const past = days => !!trip?.end && isoDate(new Date(now - days * DAY)) > trip.end;
+  const old = past(READ_DAYS), gone = past(LIVE_DAYS);
   const out = [];
   for (const g of big.groups) {
     if (!g.code) continue;
     if (rounds.some(r => r.id === g.roundId || codeOf(r) === g.code)) continue;
     const have = state.bigCards?.[tripId]?.[g.code];
-    if (have && old) continue;
+    // A finished card a few days on is final; one read while it was still being played is read
+    // again until it's done, so a group that finishes late still reaches this phone
+    if (have && old && (have.status === 'done' || gone)) continue;
     out.push(g.code);
   }
   return out;

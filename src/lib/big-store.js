@@ -8,11 +8,12 @@ import { createRound } from './round.js';
 import { addRound } from './rounds.js';
 import { defaultTee, findCourse } from './courses.js';
 import { isOrganizer, newTrip, tripOf, tripStamp } from './trips.js';
-import { BIG_FORMAT, BIG_NAME, cleanBig, groupsProblem } from './big-game.js';
+import { BIG_FORMAT, BIG_NAME, cleanBig, groupsProblem, startDay } from './big-game.js';
 import { bigOf, bigStatus } from './big-money.js';
 import { shareRound, syncConfigured } from './sync.js';
 import { refreshBig } from './big-sync.js';
 import { codeOf } from './pair-debts.js';
+import { isoDate } from './plans.js';
 
 /** A group's own round has no money of its own: stroke play at $0, so the game's money is all the Big Game's. */
 export const GROUP_STROKE = { stake: 0, payout: 'pot', cap: false, nassau: false };
@@ -145,8 +146,10 @@ export async function startGroups(tripId) {
   });
   const next = cleanBig({ ...big, v: big.v + 1, at: Date.now(), groups: big.groups.map(g => ({ ...g, roundId: made.find(m => m.group === g.id).round.id })) });
   const mine = made.find(m => big.groups.find(g => g.id === m.group).players.includes(s.me)) || made[0];
+  // Started after the day it was set for: the game is today's, so its day matches its rounds
+  const day = startDay(trip, isoDate());
   update(st => {
-    st.trips[tripId] = { ...st.trips[tripId], big: next, updatedAt: Date.now() };
+    st.trips[tripId] = { ...st.trips[tripId], ...day, big: next, updatedAt: Date.now() };
     const stamp = tripStamp(st.trips[tripId]);
     for (const m of made) addRound(st, { ...m.round, trip: stamp });
     st.activeRoundId = mine.round.id;
