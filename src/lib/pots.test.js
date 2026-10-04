@@ -347,3 +347,31 @@ test('Junk’s worked example next to a closest to the pin pot doesn’t promise
   assert.equal(asPlayedWith('dots', dots, [{ game: 'drive' }]), dots);
   assert.equal(asPlayedWith('skins', { value: 2 }, [{ game: 'ctp' }]).value, 2);
 });
+
+test('review: Junk with no greenie in its kinds still pays none next to a closest to the pin pot', () => {
+  // Junk counts any dot whose kind isn't false, so a round whose kinds leave the greenie out (or have none) still counted it
+  for (const kinds of [undefined, { sandy: true }]) {
+    const r = make({ game: 'nassau', upto: 18, pots: [{ game: 'dots', settings: { value: 1, auto: false, ...(kinds ? { kinds } : {}) } }, { game: 'ctp', settings: { stake: 5 } }] });
+    r.marks[2] = { a: ['greenie'], ctp: 'a' };
+    assert.deepEqual(roundResults(r).detail.byGame.dots.balances, { a: 0, b: 0, c: 0, d: 0 });
+    assert.equal(gameView(r, 'dots').settings.dots.kinds.greenie, false);
+    assert.equal(asPlayedWith('dots', r.sideGames[0].settings, r.sideGames).kinds.greenie, false);
+    // ...and the round's own Junk settings are untouched
+    assert.deepEqual(r.sideGames[0].settings.kinds, kinds);
+  }
+  // Without the pot, those greenies count as they always did
+  const old = make({ game: 'nassau', upto: 18, pots: [{ game: 'dots', settings: { value: 1, auto: false } }] });
+  old.marks[2] = { a: ['greenie'] };
+  assert.deepEqual(roundResults(old).detail.byGame.dots.balances, { a: 3, b: -1, c: -1, d: -1 });
+});
+
+test('review: long drive holes picked partway say which of the new ones are already played', () => {
+  const r = make({ upto: 9, pots: [{ game: 'drive', settings: { stake: 5 } }] });
+  // Every par 5 so far (3, 6 and 9), saved as nobody's
+  for (const no of [3, 6, 9]) r.marks[no] = { drive: POT_NONE };
+  const picked = [{ game: 'drive', settings: { stake: 5, holes: [1, 3, 4, 12] } }];
+  assert.deepEqual(potCatchUpNotes(r, picked), ['Holes 1 and 4 are already played. Long drive counts them once you go back and tap who hit it longest.']);
+  // Nothing new, or only holes not played yet: nothing to say
+  assert.deepEqual(potCatchUpNotes(r, r.sideGames), []);
+  assert.deepEqual(potCatchUpNotes(r, [{ game: 'drive', settings: { stake: 5, holes: [3, 12] } }]), []);
+});

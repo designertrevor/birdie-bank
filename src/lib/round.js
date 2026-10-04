@@ -2106,8 +2106,9 @@ export function gameView(round, key) {
 
 /** Junk's settings with the greenie off. */
 function withoutGreenie(dots) {
-  if (!dots?.kinds?.greenie) return dots;
-  return { ...dots, kinds: { ...dots.kinds, greenie: false } };
+  // Junk counts a dot unless its kind is `false` (see pointsTable), so a greenie missing from the kinds is on too
+  if (!dots || dots.kinds?.greenie === false) return dots;
+  return { ...dots, kinds: { ...(dots.kinds || {}), greenie: false } };
 }
 
 /** Whether Junk's greenies are off in this round because a closest to the pin pot pays for them. */
