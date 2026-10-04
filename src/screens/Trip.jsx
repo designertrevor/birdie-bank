@@ -87,7 +87,7 @@ export default function Trip({ id, view: firstView = null }) {
     : st.phase === 'soon' ? 'Nothing played yet' : st.done.length ? 'No money on it yet' : 'Nothing played yet';
   const stakeOpen = cup ? cup.lines.filter(l => l.open > 0).length : 0;
   const settleCount = st.plan.length + stakeOpen;
-  const hint = cup && st.phase === 'ready' ? `${cupHeadline(cup)}. ${settleCount} payment${settleCount === 1 ? '' : 's'} square${settleCount === 1 ? 's' : ''} the trip${stakeOpen ? `, the cup stake included` : ''}. The rounds’ money is already in each person’s total on the Tab; the cup stake is paid here.`
+  const hint = cup && st.phase === 'ready' ? `${cupHeadline(cup)}. ${settleCount} payment${settleCount === 1 ? '' : 's'} square${settleCount === 1 ? 's' : ''} the trip${stakeOpen ? ', the cup stake included' : ''}.${st.money.length ? ' The rounds’ money is already in each person’s total on the Tab.' : ''}${cup.stakeOn ? ' The cup stake is paid here, not on the Tab.' : ''}`
     : cup && st.phase === 'square' ? `${cupHeadline(cup)}. Everyone’s square on the trip.`
     : cup && (st.phase === 'on' || st.phase === 'soon') && !st.money.length ? `Every round counted for the trip adds its matches to the cup. ${cup.def.stake ? `${money(cup.def.stake)} a person is on the cup, paid once the trip is over.` : 'Each round keeps its own bets, if it has any.'}`
     : st.pointsOnly ? 'Played for points, so there’s nothing to pay. Everyone on the trip sees the standings.'

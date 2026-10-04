@@ -36,7 +36,7 @@ export function CupScore({ cup }) {
   const live = cup.score.live.length;
   const stake = cup.def.stake;
   return (
-    <div className="block cup-score" aria-label={cupHeadline(cup)}>
+    <div className="block cup-score" role="group" aria-label={cupHeadline(cup)}>
       <div className="cup-board">
         {[0, 1].map(i => (
           <div key={i} className={`cup-team t${i} ${lead === i ? 'lead' : ''} ${cup.final && cup.winner === i ? 'won' : ''}`}>
@@ -103,7 +103,7 @@ function MatchRow({ names, m, left, right }) {
   const label = r.void ? 'Not played' : done ? r.label : `${r.label}${r.thru ? ` thru ${r.thru}` : ''}`;
   const who = side == null ? '' : `${names[side]} `;
   return (
-    <div className={`cup-match ${done ? 'done' : 'live'}`} aria-label={`${both(left)} against ${both(right)}: ${r.void ? label : side == null ? label : `${who}${done ? 'won' : 'leads'} ${label}`}`}>
+    <div className={`cup-match ${done ? 'done' : 'live'}`} role="group" aria-label={`${both(left)} against ${both(right)}: ${r.void ? label : side == null ? label : `${who}${done ? 'won' : 'leads'} ${label}`}`}>
       <span className={`cm-side t0 ${side === 0 ? 'ahead' : ''}`}><TeamDot team={0} />{both(left)}</span>
       <span className={`cm-res ${side == null ? '' : `t${side}`}`}>{label}</span>
       <span className={`cm-side t1 right ${side === 1 ? 'ahead' : ''}`}>{both(right)}<TeamDot team={1} /></span>
