@@ -13,7 +13,7 @@ import { gameLabel, roundDate } from './format.js';
 import { money } from './golf.js';
 import { nameOf } from './ledger.js';
 import { countsMoney, points } from './play-for.js';
-import { recapMoments, recapOf, recapPaid } from './recap.js';
+import { recapOf } from './recap.js';
 import { shareCardModel } from './shareImage.js';
 import { tripDates } from './trips.js';
 import { cupHeadline, cupPoints } from './cup.js';
@@ -69,9 +69,10 @@ export function recapCardModel(state, round, { showAmounts = false, now = Date.n
   const res = roundResults(round);
   const show = countsMoney(round) ? showAmounts : true;
   const base = shareCardModel(round, res, { showAmounts: show });
-  const moments = recapMoments(round).map(m => (show || !MONEY.test(m.text) ? `Hole ${m.hole}: ${m.title}. ${m.text}` : `Hole ${m.hole}: ${m.title}`));
-  const paid = recapPaid(state, round, { now });
-  const rolled = recapOf(state, round, now).carried.length;
+  const rc = recapOf(state, round, now);
+  const moments = rc.moments.map(m => (show || !MONEY.test(m.text) ? `Hole ${m.hole}: ${m.title}. ${m.text}` : `Hole ${m.hole}: ${m.title}`));
+  const paid = rc.paid;
+  const rolled = rc.carried.length;
   const sq = [];
   if (paid) sq.push(paid.allSquare ? 'Everyone’s square' : `${paid.square} of ${paid.total} square`);
   if (rolled) sq.push(rolled === 1 ? 'One rolled to next time' : `${rolled} rolled to next time`);
@@ -183,14 +184,15 @@ export function challengeGroupText(ch, { showAmounts = false, now = Date.now() }
   const when = day ? (day === 'Today' || day === 'Tomorrow' ? ` ${day.toLowerCase()}` : ` on ${day}`) : ' next time they play';
   const holes = ch.holes !== 'all' ? ` on the ${HOLES_LABEL[ch.holes].toLowerCase()}` : '';
   const a = first(ch.from.name), b = first(ch.to.name);
+  const by = k => first((k === 'keeper' ? ch.setBy : ch[k])?.name || b);
   const lead = ch.setBy
     ? `${first(ch.setBy.name)} set up ${a} v ${b}, ${what}${holes}${when}.`
     : `${a} challenged ${b} to ${what}${holes}${when}.`;
   const tail = s.status === 'on' ? 'It’s on in the round.'
     : s.status === 'accepted' ? 'It’s on.'
-    : s.status === 'declined' ? `${first(ch[s.by]?.name || b)} passed this time.`
+    : s.status === 'declined' ? `${by(s.by)} passed this time.`
     : s.status === 'off' ? 'It’s off.'
-    : s.status === 'countered' ? `${first(ch[s.by]?.name)} came back with ${show ? challengeAsk(ch, s.stake) : 'another amount'}.`
+    : s.status === 'countered' ? `${by(s.by)} came back with ${show ? challengeAsk(ch, s.stake) : 'another amount'}.`
     : s.turn === 'both' ? `Waiting on ${a} and ${b}.`
     : `Waiting on ${first(ch[s.turn]?.name || b)}.`;
   return `${lead} ${tail}`;
