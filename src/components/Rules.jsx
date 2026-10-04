@@ -1,5 +1,26 @@
 import { Sheet } from './ui.jsx';
 
+// The bets every team game shares (Best ball, Shamble, Alternate shot, Chapman): how they pay, match
+// or stroke play, pressing, and what happens when someone leaves. `oneBall` for the games played with
+// one ball a team, which need both partners.
+function teamBets(oneBall = false) {
+  return [
+    ['The bets', <ul key="b">
+      <li><strong>Nassau</strong> (the usual): three bets, the front 9, the back 9 and the total 18. Playing nine? The first 4, the last 5 and all 9.</li>
+      <li><strong>One bet</strong>: one bet on the whole round.</li>
+      <li><strong>Per hole</strong>: every hole your team wins pays the bet. A halved hole pays nothing.</li>
+    </ul>],
+    ['Match or stroke play', <ul key="s">
+      <li><strong>Match play</strong>: the lower team score wins the hole, and the team that wins more holes wins the bet.</li>
+      <li><strong>Stroke play</strong>: add up the team score on every hole. The lower total wins the bet; a tie pays nothing.</li>
+    </ul>],
+    ['Pressing', <p key="p">In match play a team that’s 2 down (or whatever your group set) can <strong>press</strong>: a new bet from the next hole to the end of that leg. Press at the turn and no press on the last hole work as in Nassau. Stroke play and per hole have no presses.</p>],
+    ['Money', <p key="m">Each player on the winning team wins the bet from the other team, so in 2 v 2 at $5 it’s $5 each way. A bet that isn’t finished when the round stops pays whoever leads it on the holes played.</p>],
+    ['Net or gross', <p key="g">With handicaps on, strokes come off the low {oneBall ? 'team' : 'player'} on the hardest holes. Turn handicaps off to play gross.</p>],
+    ['If someone leaves', <p key="l">{oneBall ? 'The game needs both partners, so once one leaves, that team’s holes after don’t count and the bets stand as they are.' : 'Their partners carry on for the team. A team that can’t make enough scores for a hole doesn’t play it, and the bets stand as they are.'}</p>],
+  ];
+}
+
 const RULES = {
   banker: {
     title: 'How to play Banker',
@@ -149,6 +170,47 @@ const RULES = {
       ['Team handicaps', <p key="h">Each team plays off a blend of its members’ course handicaps, lowest first, using the WHS allowances: 35% and 15% for pairs, 30/20/10% for threes, 25/20/15/10% for fours. Strokes are then given off the low team on the hardest holes.</p>],
       ['Money', <p key="m">Everyone puts the same amount in the pot. The winning team’s players split it; tied teams share it.</p>],
       ['Minimum drives', <p key="d">A house rule, off unless you pick it: every player’s drive has to be used at least 2, 3 or 4 times. Tap whose drive the team took on each hole and the app keeps count, and warns you when the rest have to be someone’s.</p>],
+    ],
+  },
+  bestball: {
+    title: 'How to play Best ball',
+    sub: '4–8 players · 2 v 2 up to 4 v 4 · Also called four-ball',
+    sections: [
+      ['Overview', <p key="o">Two teams, everyone plays their own ball, and the team takes its <strong>best score</strong> on each hole. Teams of three or four can count the <strong>best two</strong> scores instead, added up.</p>],
+      ['Teams', <p key="t">Two teams the same size: 2 v 2, 3 v 3 or 4 v 4. Enter every player’s score; the app picks the ones that count and tags them.</p>],
+      ...teamBets(),
+      ['Handicaps', <p key="h">The WHS allowance for best ball is 90% of each player’s handicap as a match and 85% as stroke play. With teams of three or four it’s 75% counting the best one and 85% counting the best two. Setup suggests the right one.</p>],
+    ],
+  },
+  shamble: {
+    title: 'How to play Shamble',
+    sub: '4–8 players · 2 v 2 up to 4 v 4 · Best drive, then your own ball',
+    sections: [
+      ['Overview', <p key="o">Everyone tees off and the team picks the <strong>best drive</strong>. Everyone moves their ball to it and plays their own ball into the hole from there. The team’s best score counts (or the best two, with teams of three or four).</p>],
+      ['Scoring', <p key="s">Enter every player’s score, as in best ball. The app picks the ones that count.</p>],
+      ['Minimum drives', <p key="d">A house rule, off unless you pick it: every player’s drive has to be used at least 2, 3 or 4 times. Tap whose drive the team took on each hole and the app keeps count.</p>],
+      ...teamBets(),
+      ['Handicaps', <p key="h">The USGA’s guidance for a selected drive is 75% of each player’s handicap for teams of two and 65% for teams of four (70% for threes, in between). Setup suggests it.</p>],
+    ],
+  },
+  altshot: {
+    title: 'How to play Alternate shot',
+    sub: '4 players · 2 v 2 · One ball a team · Also called foursomes',
+    sections: [
+      ['Overview', <p key="o">Partners play <strong>one ball</strong> and take turns hitting it until it’s holed. One partner tees off on the odd holes and the other on the even holes.</p>],
+      ['Scoring', <p key="s">Enter one score per team on each hole.</p>],
+      ['Team handicaps', <p key="h">Each team plays off half of its two players’ course handicaps added up, the WHS allowance for foursomes. Strokes then come off the low team on the hardest holes.</p>],
+      ...teamBets(true),
+    ],
+  },
+  chapman: {
+    title: 'How to play Chapman',
+    sub: '4 players · 2 v 2 · One ball a team · Also called Pinehurst',
+    sections: [
+      ['Overview', <p key="o">Both partners tee off, then each plays the <strong>other’s ball</strong> for the second shot. The team picks the better of the two and takes turns from there until it’s holed.</p>],
+      ['Scoring', <p key="s">Enter one score per team on each hole.</p>],
+      ['Team handicaps', <p key="h">Each team plays off 60% of the lower course handicap plus 40% of the higher, the WHS allowance for Chapman. Strokes then come off the low team on the hardest holes.</p>],
+      ...teamBets(true),
     ],
   },
   stroke: {

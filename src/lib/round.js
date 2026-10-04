@@ -280,6 +280,8 @@ export function createRound({ id, game, course, holesCount, nine, startHole, pla
     left: {},        // playerId -> hole number they stopped after (0: before the first hole)
   };
   if (teams?.length) round.teams = withTeamHandicaps(round, buildTeams(teams, full), full, useHandicaps, hcPct);
+  // Best two only counts with teams of three or four: a round with pairs says best ball, as it's played
+  if ((game === 'bestball' || game === 'shamble') && round.settings[game]?.count === 2 && round.teams && teamBestCount(round) === 1) round.settings[game].count = 1;
   // Half strokes (allowances.js) only when chosen, so a round without them looks as it always did
   if (halfStrokes && useHandicaps) round.halfStrokes = true;
   return round;
@@ -1796,6 +1798,17 @@ export function teamHoleScore(round, i, hole, count = teamBestCount(round)) {
   if (score == null) return { score: null, counted: [] };
   const cut = nets.map(n => n[1]).sort((a, b) => a - b)[count - 1];
   return { score, counted: nets.filter(n => n[1] <= cut).map(n => n[0]) };
+}
+
+/**
+ * The players whose scores count for their team on a hole, both teams, for the "Counts" tag on the
+ * score rows: Best ball and Shamble only. `scores` stands in for the hole's saved scores (the draft
+ * being entered); a team still missing a score shows nobody yet.
+ */
+export function teamCounting(round, hole, scores = null) {
+  if (!isTeamGame(round.game) || oneBall(round.game) || round.teams?.length !== 2) return [];
+  const r = scores ? { ...round, scores: { ...round.scores, [hole.no]: scores } } : round;
+  return [0, 1].flatMap(i => teamHoleScore(r, i, hole).counted);
 }
 
 /** Hole winners between the two teams (0 | 1 | null halved), keyed by playing position. */

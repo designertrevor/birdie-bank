@@ -225,7 +225,7 @@ export function Defaults() {
           <div><div className="toggle-lbl">Ties carry</div><div className="toggle-sub">A tied hole’s points ride on to the next hole that’s won</div></div>
           <Toggle on={!!s.wolf.carry} onChange={v => set('wolf.carry', v)} label="Ties carry" />
         </div>
-        {['match', 'hammer', 'vegas', 'sixes', 'scramble', 'stroke', 'stableford', 'quota', 'nines', 'aces', 'bbb', 'dots', 'rabbit', 'snake'].map(g => (
+        {['match', 'hammer', 'vegas', 'sixes', 'scramble', 'bestball', 'shamble', 'altshot', 'chapman', 'stroke', 'stableford', 'quota', 'nines', 'aces', 'bbb', 'dots', 'rabbit', 'snake'].map(g => (
           <div key={g}>
             <div className="sec-label">{GAMES[g].name}</div>
             <GameOptions game={g} get={get} set={set} onAmount={(path, label, o) => setPad({ path, label, ...o })} compact />

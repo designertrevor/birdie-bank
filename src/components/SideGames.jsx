@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import { Icon, Numpad, Sheet, Toggle } from './ui.jsx';
 import { RulesSheet } from './Rules.jsx';
-import { GAMES, MAX_GAMES, SIDE_GAMES, sideGameChoices } from '../lib/round.js';
+import { GAMES, MAX_GAMES, SIDE_GAMES, oneBall, sideGameChoices } from '../lib/round.js';
 import { DOT_KINDS } from '../lib/games.js';
 import { dotsNote, sideExample, skinsRulesLine } from '../lib/side-games.js';
 import { GameOptions } from './GameOptions.jsx';
@@ -36,11 +36,11 @@ export function SideGamesSetup({ game, sideGames, setSideGames, defaults, player
   const [rulePad, setRulePad] = useState(null); // an amount in those rules being changed
   const [howTo, setHowTo] = useState(null); // the side game whose how-to-play sheet is open
   if (!game) return null;
-  if (game === 'scramble') {
+  if (oneBall(game)) {
     return (
       <>
         <div className="sec-label">Side games</div>
-        <p className="hint-card"><Icon name="info" fill /> A scramble is scored by team, so side games can’t ride along.</p>
+        <p className="hint-card"><Icon name="info" fill /> {game === 'scramble' ? 'A scramble' : GAMES[game].name} is scored by team, so side games can’t ride along.</p>
       </>
     );
   }

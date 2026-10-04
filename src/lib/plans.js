@@ -41,6 +41,9 @@ export function betOf(game, settings) {
     case 'wolf': case 'vegas': case 'nines': return s.point;
     case 'aces': return s.ace;
     case 'bbb': case 'dots': return s.value;
+    // A team game's bet is a Nassau leg, the one bet, or a hole, whichever way it's played
+    case 'bestball': case 'shamble': case 'altshot': case 'chapman':
+      return s.format === 'hole' ? s.perHole : s.format === 'total' ? s.stake : s.front;
     default: return s.stake;
   }
 }
@@ -64,6 +67,11 @@ export function withBet(game, settings, amount) {
     case 'wolf': case 'vegas': case 'nines': s.point = a; break;
     case 'aces': s.ace = a; s.deuce = cents(a / 2); break;
     case 'bbb': case 'dots': s.value = a; break;
+    case 'bestball': case 'shamble': case 'altshot': case 'chapman':
+      if (s.format === 'hole') s.perHole = a;
+      else if (s.format === 'total') s.stake = a;
+      else { s.front = a; s.back = a; s.total = a; }
+      break;
     default: s.stake = a;
   }
   return out;

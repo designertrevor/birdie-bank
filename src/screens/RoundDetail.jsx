@@ -1,7 +1,7 @@
 import { Fragment, useEffect, useRef, useState } from 'react';
 import { Empty, Header, Icon, Screen, useUI } from '../components/ui.jsx';
 import { getState, update, useStore } from '../lib/store.js';
-import { GAMES, gameView, holeAtPos, holeComplete, playsHole, roundLegs, roundNotes, roundResults, scoreSummary, scorers, sideNames, skinsKinds, skinsTable, popsFor, netFor } from '../lib/round.js';
+import { GAMES, gameView, holeAtPos, holeComplete, isTeamGame, matchScored, oneBall, playsHole, roundLegs, roundNotes, roundResults, scoreSummary, scorers, sideNames, skinsKinds, skinsTable, popsFor, netFor } from '../lib/round.js';
 import { halfStrokesOn, netText, strokesWords } from '../lib/allowances.js';
 import { matchLabel } from '../lib/games.js';
 import { money } from '../lib/golf.js';
@@ -134,9 +134,9 @@ export default function RoundDetail({ id, celebrate }) {
     );
   }
 
-  // In a scramble the team gets the strokes, not each player
+  // In a one-ball game (scramble, alternate shot, Chapman) the team gets the strokes, not each player
   const strokesNote = p => {
-    const team = round.game === 'scramble' && round.teams?.find(t => t.players.includes(p.id));
+    const team = oneBall(round.game) && round.teams?.find(t => t.players.includes(p.id));
     const n = team ? team.plays || 0 : p.plays;
     if (!n) return null;
     return <span className="li-sub"> · {team ? 'team got' : 'got'} {strokesWords(n, halfStrokesOn(round))}</span>;
@@ -268,9 +268,11 @@ function GameBreakdown({ round, res, label = null }) {
   const money = unitFmt(round);
   const names = Object.fromEntries(round.players.map(p => [p.id, p.name]));
   const first = n => (n || '').split(' ')[0];
-  if (round.game === 'nassau' || round.game === 'match') {
+  // Nassau, Match play, and a team game played as a match
+  if (matchScored(round) && res.detail.lines) {
     const LEGS = roundLegs(round);
     const sn = sideNames(round);
+    const multi = Object.keys(LEGS).length > 1;
     return (
       <>
         <div className="sec-label">Bets{round.teams ? ` · ${sn[0]} v ${sn[1]}` : ''}</div>
@@ -280,11 +282,40 @@ function GameBreakdown({ round, res, label = null }) {
           return (
             <div key={l.key} className="leg-row">
               <div className="leg-name">{l.press ? 'Press' : LEGS[l.leg].label}</div>
-              <div className={`leg-winner ${s.leader === null ? 'leg-tie' : ''}`}>{l.press ? `${round.game === 'nassau' ? `${LEGS[l.leg].label} ` : ''}from H${holeAtPos(round, l.start)} · ` : ''}{who}</div>
+              <div className={`leg-winner ${s.leader === null ? 'leg-tie' : ''}`}>{l.press ? `${multi ? `${LEGS[l.leg].label} ` : ''}from H${holeAtPos(round, l.start)} · ` : ''}{who}</div>
               <div className={`leg-amt ${l.value === 0 ? 'zero' : ''}`}>{money(Math.abs(l.value))}</div>
             </div>
           );
         })}
+        {round.game === 'shamble' && <DrivesShortfall round={round} done={round.status === 'done'} />}
+      </>
+    );
+  }
+  // A team game played as stroke play (each leg to the lower team total) or per hole (holes won)
+  if (isTeamGame(round.game) && res.detail.lines) {
+    const sn = sideNames(round);
+    return (
+      <>
+        <div className="sec-label">Bets · {sn[0]} v {sn[1]}</div>
+        {res.detail.lines.map(l => {
+          let who;
+          if (l.key === 'holes') {
+            const [a, b] = l.won;
+            who = !l.played ? 'Not played' : a === b ? `${a} hole${a === 1 ? '' : 's'} each` : `${sn[a > b ? 0 : 1]} won ${Math.max(a, b)} to ${Math.min(a, b)}`;
+          } else {
+            const s = l.status;
+            const [a, b] = s.totals;
+            who = !s.played ? 'Not played' : s.leader === null ? `Tied on ${a}` : `${sn[s.leader]} by ${s.by}, ${Math.min(a, b)} to ${Math.max(a, b)}`;
+          }
+          return (
+            <div key={l.key} className="leg-row">
+              <div className="leg-name">{l.label}</div>
+              <div className={`leg-winner ${l.value === 0 ? 'leg-tie' : ''}`}>{who}</div>
+              <div className={`leg-amt ${l.value === 0 ? 'zero' : ''}`}>{money(Math.abs(l.value))}</div>
+            </div>
+          );
+        })}
+        {round.game === 'shamble' && <DrivesShortfall round={round} done={round.status === 'done'} />}
       </>
     );
   }

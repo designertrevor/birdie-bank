@@ -1,6 +1,6 @@
 // What's on the line in a game: a one-line summary and a sanity check on its options.
 import { money } from './golf.js';
-import { betChanges, blindMultiplierOf, gameKeyLabel, sideGamesOf } from './round.js';
+import { TEAM_GAMES, betChanges, blindMultiplierOf, gameKeyLabel, sideGamesOf } from './round.js';
 import { inUnits, pointsLines } from './play-for.js';
 import { houseRulesLine } from './house-rules.js';
 
@@ -114,8 +114,17 @@ function baseSummary(game, settings) {
     case 'dots': return `${money(s.dots.value)} a dot`;
     case 'rabbit': return `${money(s.rabbit.stake)} a rabbit`;
     case 'birdies': return `${money(s.birdies.stake)} each in the birdie pot`;
+    case 'bestball': case 'shamble': case 'altshot': case 'chapman': return teamSummary(s[game]);
     default: return '';
   }
+}
+
+/** A team game's bets: "$5 / $5 / $5", "$10 a player · stroke play" or "$2 a hole" (see round.js). */
+function teamSummary(t = {}) {
+  if (t.format === 'hole') return `${money(t.perHole ?? 0)} a hole`;
+  const stroke = t.scoring === 'stroke' ? ' · stroke play' : '';
+  if (t.format === 'total') return `${money(t.stake ?? 0)} a player${stroke}`;
+  return `${money(t.front ?? 0)} / ${money(t.back ?? 0)} / ${money(t.total ?? 0)}${stroke}`;
 }
 
 /**
@@ -123,7 +132,8 @@ function baseSummary(game, settings) {
  * The first part of the summary line, except a Nassau with the same bet on every leg reads "a side".
  */
 export function stakeHeadline(game, settings) {
-  const n = game === 'nassau' ? settings.nassau : null;
+  // A team game bet as a Nassau reads the same way
+  const n = game === 'nassau' ? settings.nassau : TEAM_GAMES.includes(game) && (settings[game]?.format ?? 'nassau') === 'nassau' ? settings[game] : null;
   if (n && n.front === n.back && n.back === n.total) return `${money(n.front)} a side`;
   return stakeSummary(game, settings).split(' · ')[0];
 }

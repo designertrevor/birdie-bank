@@ -5,7 +5,7 @@ import { DEFAULT_SETTINGS, getState, update, useStore } from '../lib/store.js';
 import {
   GAMES, addPlayerProblem, bankerHoleSetup, canLeave, defaultNine, holeComplete, leftRule, livePreview, nassauPressOptions, playersLeft, playersOn, playsHole, pressMode,
   betPresets, blindMultiplierOf, noHandicap, resizeRound, roundLegs, roundResults, scoredHolesDropped, scorers, skinsKinds, skinsTable, strokesFor, popsFor, wolfHoleSetup, changeBets, wholeRoundOnly,
-  gameView, sideGamesOf, holeFixOf, gameKeys, gameKeyLabel, settingsAt, wolfCarryBefore, posOf,
+  gameView, sideGamesOf, holeFixOf, gameKeys, gameKeyLabel, settingsAt, wolfCarryBefore, posOf, isTeamGame, matchScored, oneBall, teamCounting,
 } from '../lib/round.js';
 import { SIDE_GAMES } from '../lib/round.js';
 import { CourseTeeSheet, FixHoleSheet } from '../components/FixHole.jsx';
@@ -16,12 +16,12 @@ import { findCourse } from '../lib/courses.js';
 import { money, netScoreName, scoreName, pickupGross } from '../lib/golf.js';
 import { halfStrokesOn, strokesRulesLines, strokesWords } from '../lib/allowances.js';
 import {
-  BBBPicker, DotsRow, HammerPanel, MatchPanel, MoneyPanel, PointsPanel, RabbitPanel, ScramblePanel, SixesPanel, SnakePanel, SnakePicker, TotalsPanel, VegasPanel,
+  BBBPicker, DotsRow, HammerPanel, MatchPanel, MoneyPanel, PointsPanel, RabbitPanel, ScramblePanel, SixesPanel, SnakePanel, SnakePicker, TeamPanel, TotalsPanel, VegasPanel,
 } from '../components/GamePanels.jsx';
 import { GameOptions } from '../components/GameOptions.jsx';
 import { DrivesShortfall, ScrambleDrivesPicker } from '../components/ScrambleDrives.jsx';
 import { holeStrokeNotes, holeStrokeNoteText } from '../lib/stroke-key.js';
-import { drivesNeeded } from '../lib/scramble-drives.js';
+import { DRIVE_GAMES, drivesNeeded } from '../lib/scramble-drives.js';
 import { optionsProblem, roundStakeLines, sideBetLine, stakeSummary } from '../lib/stakes.js';
 import { buzz, confettiFrom } from '../lib/delight.js';
 import { useNav } from '../lib/nav.js';
@@ -140,7 +140,7 @@ function PlayRound({ round }) {
   const hole = round.holes[idx];
   const isLast = idx === round.holes.length - 1;
   const game = round.game;
-  const units = scorers(round, hole); // players still playing, or teams in a scramble
+  const units = scorers(round, hole); // players still playing, or teams in a one-ball game (scramble, alternate shot, Chapman)
   // The main game's own round: without anyone who's only in the side games, so they never enter a
   // wolf rotation, the banker's bets, the Sixes pairings or a head-to-head's sides
   const main = useMemo(() => gameView(round, 'main'), [round]);
@@ -163,6 +163,8 @@ function PlayRound({ round }) {
   const [base] = useState(() => Object.fromEntries(units.map(p => [p.id, mine(p.id) ? kept.base[p.id] : saved[p.id] ?? hole.par])));
   const [draft, setDraft] = useState(() => Object.fromEntries(units.map(p => [p.id, mine(p.id) ? kept.draft[p.id] : saved[p.id] ?? hole.par])));
   const [touched, setTouched] = useState(() => Object.fromEntries(units.map(p => [p.id, saved[p.id] != null || (wasDirty && !!kept.touched[p.id])])));
+  // Best ball and Shamble: whose scores count for each team on this hole (only scores entered, while entering)
+  const counting = editable ? teamCounting(main, hole, Object.fromEntries(units.filter(u => touched[u.id]).map(u => [u.id, draft[u.id]]))) : teamCounting(main, hole);
   const emptyMarks = { bbb: { bingo: null, bango: null, bongo: null }, snake: { snake: [] }, hammer: { hammers: [], conceded: null } }[game] || {};
   // Junk as a side game: its dots are saved in the same marks object as the main game's marks
   const junk = useMemo(() => (sideGamesOf(round).some(sg => sg.game === 'dots') ? gameView(round, 'dots') : null), [round]);
@@ -334,7 +336,7 @@ function PlayRound({ round }) {
       const r = getState().rounds[round.id];
       const legs = roundLegs(r);
       const fresh = r.presses.filter(p => p.start === nextIdx + 1);
-      if (fresh.length) showToast(game === 'nassau' ? `Auto press on the ${fresh.map(p => legs[p.leg].label.replace(/^[A-Z]/, c => c.toLowerCase())).join(' and ')}` : 'Auto press!');
+      if (fresh.length) showToast(Object.keys(legs).length > 1 ? `Auto press on the ${fresh.map(p => legs[p.leg].label.replace(/^[A-Z]/, c => c.toLowerCase())).join(' and ')}` : 'Auto press!');
     }
     if (isLast && !(await finish())) showToast(moneyLine);
   };
@@ -485,7 +487,8 @@ function PlayRound({ round }) {
         <BankerPanel round={main} readOnly={!editable} banker={banker} setBanker={setBanker} phase={phase} setPhase={setPhase}
           onPick={() => setBankerPick(true)} onBet={pid => setBetPad(pid)} draft={draft} hole={hole} />
       )}
-      {(game === 'nassau' || game === 'match') && <MatchPanel round={main} hole={hole} readOnly={!editable} />}
+      {matchScored(main) && <MatchPanel round={main} hole={hole} readOnly={!editable} />}
+      {isTeamGame(game) && !matchScored(main) && <TeamPanel round={main} hole={hole} />}
       {game === 'skins' && <SkinsPanel round={main} hole={hole} onChange={editable ? () => setBetsSheet(true) : null} />}
       {game === 'wolf' && <WolfPanel round={main} hole={hole} wolf={wolf} setWolf={editable ? setWolf : null} />}
       {game === 'vegas' && <VegasPanel round={main} hole={hole} draft={draft} touched={touched} />}
@@ -493,7 +496,7 @@ function PlayRound({ round }) {
       {(game === 'stroke' || game === 'stableford' || game === 'quota') && <TotalsPanel round={main} />}
       {(game === 'nines' || game === 'bbb' || game === 'dots') && <PointsPanel round={main} />}
       {game === 'scramble' && <ScramblePanel round={main} />}
-      {game === 'scramble' && <DrivesShortfall round={main} />}
+      {DRIVE_GAMES.includes(game) && <DrivesShortfall round={main} />}
       {game === 'aces' && <MoneyPanel round={main} results={results} icon="spade" label="Aces & deuces so far" />}
       {game === 'rabbit' && <RabbitPanel round={main} hole={hole} />}
       {game === 'snake' && <SnakePanel round={main} hole={hole} marks={marks} />}
@@ -504,7 +507,7 @@ function PlayRound({ round }) {
           {!editable && sharedLive && <p className="field-help" style={{ padding: '0 20px' }}>{round.status === 'active' ? `Scores as ${holderName} saves them. Browse any hole.` : 'Only the players in this round can fix its scores.'}</p>}
           <HoleBets round={round} hole={hole} editable={editable} me={me} />
           {game === 'bbb' && editable && <BBBPicker round={main} hole={hole} marks={marks} setMarks={setMarksDirty} />}
-          {game === 'scramble' && <ScrambleDrivesPicker round={main} hole={hole} marks={marks} setMarks={editable ? setMarksDirty : null} />}
+          {DRIVE_GAMES.includes(game) && <ScrambleDrivesPicker round={main} hole={hole} marks={marks} setMarks={editable ? setMarksDirty : null} />}
           {game === 'snake' && editable && <SnakePicker round={main} hole={hole} marks={marks} setMarks={setMarksDirty} />}
           {snakeSide && editable && <SnakePicker round={snakeSide} hole={hole} marks={marks} setMarks={setMarksDirty} />}
           {!editable && units.map(p => {
@@ -514,7 +517,7 @@ function PlayRound({ round }) {
             return (
               <div key={p.id} className="pcard score-row">
                 <div className="row-main">
-                  <div className="pname">{p.name}</div>
+                  <div className="pname">{p.name}{counting.includes(p.id) && <span className="counts-tag">Counts</span>}</div>
                   <div className="ps">
                     {st > 0 && <span className="stroke-dots">{'●'.repeat(st)} Gets {strokesWords(st, halfStrokesOn(round))}</span>}
                     {holeStrokeNotes(round, p, hole).map(x => <span key={x.key} className="stroke-note"> · {holeStrokeNoteText(x)}</span>)}
@@ -532,6 +535,8 @@ function PlayRound({ round }) {
           })}
           {editable && units.map(p => {
             const st = round.useHandicaps ? popsFor(round, p, hole) : 0;
+            // Best ball and Shamble: whose score counts for the team, once the team's scores are all in
+            const counts = counting.includes(p.id);
             const counted = round.useHandicaps ? strokesFor(round, p, hole) : 0;
             const v = draft[p.id];
             const isBanker = banker?.banker === p.id;
@@ -545,6 +550,7 @@ function PlayRound({ round }) {
                     {isBanker && <span className="bkr-badge"><Icon name="bank" fill /> Banker</span>}
                     {isWolf && <span className="bkr-badge"><Icon name="paw-print" fill /> Wolf</span>}
                     {round.teams && !p.team && <span className={`side-tag ${round.teams.findIndex(t => t.players.includes(p.id)) === 0 ? 'a' : 'b'}`}>{['A', 'B', 'C', 'D'][round.teams.findIndex(t => t.players.includes(p.id))]}</span>}
+                    {counts && <span className="counts-tag">Counts</span>}
                   </div>
                   {p.team && <div className="ps">{p.players.map(pid => round.players.find(x => x.id === pid)?.name.split(' ')[0]).join(', ')} · team handicap {p.courseHc ?? 0}</div>}
                   <div className="ps">
@@ -612,7 +618,7 @@ function PlayRound({ round }) {
             <span><Icon name="scales" /> Handicaps · {round.useHandicaps === false ? 'Off' : noHandicap(round).length ? `On, ${noHandicap(round).length} with none` : 'On'}</span><Icon name="caret-right" />
           </button>
         )}
-        {game !== 'scramble' && (
+        {!oneBall(game) && (
           <button className="sheet-item" onClick={() => { setMenu(false); setGamesSheet(true); }}>
             <span><Icon name="plus-circle" /> {sideGamesOf(round).length ? `Side games · ${sideGamesOf(round).length}` : 'Add a side game'}</span><Icon name="caret-right" />
           </button>
@@ -831,7 +837,7 @@ function LeftSheet({ round, idx, onClose, onEnd }) {
       )}
       {nobody ? (
         <>
-          <p className="hint-card"><Icon name="info" fill /> At least two {round.game === 'scramble' ? 'teams' : 'players'} have to stay to keep the game going. To stop here, end the round: the holes played still count.</p>
+          <p className="hint-card"><Icon name="info" fill /> At least two {oneBall(round.game) ? 'teams' : 'players'} have to stay to keep the game going. To stop here, end the round: the holes played still count.</p>
           <div className="cta-wrap"><button className="full-btn" onClick={onEnd}><Icon name="flag-checkered" /> End round</button></div>
         </>
       ) : (
@@ -975,7 +981,8 @@ function BetsSheet({ round, onClose }) {
       : `Bets updated${whole ? '' : ` from hole ${fromHole.no}`} · ${stakeSummary(game, opts)}`));
     buzz(20);
   };
-  const legs = game === 'nassau' || game === 'match' || game === 'rabbit' || game === 'snake' || (game === 'sixes' && opts.sixes.mode === 'match');
+  const legs = game === 'nassau' || game === 'match' || game === 'rabbit' || game === 'snake' || (game === 'sixes' && opts.sixes.mode === 'match')
+    || (isTeamGame(game) && opts[game]?.format !== 'hole');
   // A snake or rabbit is played for the bet in force when its leg started: one leg for the round, or
   // one a nine. Say when the new bet starts counting, or that only "Whole round" changes it
   const legStarts = game === 'snake' || game === 'rabbit'
@@ -1027,10 +1034,11 @@ function BetsSheet({ round, onClose }) {
           </>
         ) : (
           <GameOptions game={game} get={get} set={set} onAmount={(path, title, o) => setPad({ path, title, ...o })} holesCount={round.holesCount}
-            players={view.players.length} firstName={game === 'banker' ? round.players[0]?.name : null} inPoints={!countsMoney(round)} />
+            players={view.players.length} firstName={game === 'banker' ? round.players[0]?.name : null} inPoints={!countsMoney(round)}
+            teamSize={!side && round.teams?.length ? Math.min(...round.teams.map(t => t.players.length)) : null} />
         )}
         {game === 'banker' && <p className="hint-card"><Icon name="info" fill /> The default bet fills in from the next hole. Bets on this hole are set from the Bets button.</p>}
-        {!side && (game === 'nassau' || game === 'match') && round.presses.length > 0 && whole && <p className="hint-card"><Icon name="lightning" fill /> Presses already made pay at the new amounts too.</p>}
+        {!side && matchScored(round) && round.presses.length > 0 && whole && <p className="hint-card"><Icon name="lightning" fill /> Presses already made pay at the new amounts too.</p>}
         {problem && <p className="field-error">{problem}</p>}
         <div className="cta-wrap">
           <button className="full-btn" disabled={!changed || !!problem || stuck} onClick={apply}>

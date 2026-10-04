@@ -4,8 +4,14 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import {
   GAMES, TEAM_GAMES, createRound, roundResults, teamTable, teamHoleScore, teamBestCount, teamFormatOf, matchScored,
-  scorers, nassauPressOptions, changeBets, wholeRoundOnly, leftRule, sideGameChoices, sideGamesOf, livePreview, canLeave,
+  scorers, nassauPressOptions, changeBets, wholeRoundOnly, leftRule, sideGameChoices, sideGamesOf, livePreview, canLeave, teamCounting,
 } from './round.js';
+import { stakeSummary, stakeHeadline } from './stakes.js';
+import { houseRulesLine } from './house-rules.js';
+import { betOf, withBet } from './plans.js';
+import { agreementItems } from './agreed.js';
+import { revealSteps } from './reveal.js';
+import { matchRoundMoment } from './moments.js';
 import { bestOf, foursomesTeamHandicap, chapmanTeamHandicap } from './games.js';
 import { suggestedAllowance, allowanceHint } from './allowances.js';
 import { defaultTeams, teamsProblem } from './teams.js';
@@ -76,6 +82,8 @@ test('teams: Best ball needs two teams the same size; Alternate shot needs pairs
   assert.match(teamsProblem('bestball', [['a', 'b'], ['c', 'd', 'e']], ['a', 'b', 'c', 'd', 'e']), /same size, so it takes 4, 6 or 8/);
   assert.match(teamsProblem('shamble', [['a'], ['b', 'c', 'd']], ['a', 'b', 'c', 'd']), /same size/);
   assert.match(teamsProblem('altshot', [['a'], ['b', 'c', 'd']], ['a', 'b', 'c', 'd']), /teams of 2/);
+  // Three teams left over from a scramble don't make a Best ball round
+  assert.equal(teamsProblem('bestball', [['a', 'b'], ['c', 'd'], ['e', 'f']], ['a', 'b', 'c', 'd', 'e', 'f']), 'Best ball is played in two teams');
 });
 
 // ---------------------------------------------------------------------------
@@ -315,4 +323,76 @@ test('WHS suggestions: four-ball for pairs, best 1 or 2 of 4 for bigger teams, t
   // Alternate shot and Chapman have their allowances built into the team handicap already
   assert.equal(suggestedAllowance('altshot', { teams: pairs }), null);
   assert.equal(suggestedAllowance('chapman', { teams: pairs }), null);
+});
+
+// ---------------------------------------------------------------------------
+// Bet lines, the rules card, the reveal, the ballot and moments
+
+test('bet lines: a Nassau, one bet, per hole, stroke play and the house rules', () => {
+  const s = { ...SETTINGS };
+  assert.equal(stakeSummary('bestball', s), '$5 / $5 / $5');
+  assert.equal(stakeHeadline('bestball', s), '$5 a side');
+  assert.equal(stakeSummary('altshot', { altshot: { ...s.altshot, format: 'total', scoring: 'stroke' } }), '$10 a player · stroke play');
+  assert.equal(stakeSummary('chapman', { chapman: { ...s.chapman, format: 'hole', perHole: 3 } }), '$3 a hole');
+  assert.equal(stakeSummary('shamble', { shamble: { ...s.shamble, count: 2, drives: 3 } }), '$5 / $5 / $5 · 3 drives each · best two balls');
+  assert.equal(houseRulesLine('bestball', s.bestball), '');
+});
+
+test('a 2 v 2 round set to best two plays and reads as best ball', () => {
+  const r = round('bestball', TWO, { settings: { count: 2 } });
+  assert.equal(r.settings.bestball.count, 1);
+  assert.equal(stakeSummary('bestball', r.settings), '$5 / $5 / $5');
+});
+
+test('the ballot: one number for each team game, whichever way it is bet', () => {
+  assert.equal(betOf('bestball', SETTINGS), 5);
+  const hole = { altshot: { ...SETTINGS.altshot, format: 'hole', perHole: 2 } };
+  assert.equal(betOf('altshot', hole), 2);
+  assert.equal(withBet('altshot', hole, 5).altshot.perHole, 5);
+  const nassau = withBet('bestball', SETTINGS, 10).bestball;
+  assert.deepEqual([nassau.front, nassau.back, nassau.total], [10, 10, 10]);
+  assert.equal(withBet('chapman', { chapman: { ...SETTINGS.chapman, format: 'total' } }, 20).chapman.stake, 20);
+});
+
+test('the rules card: presses for a match, team strokes for alternate shot, the bet line once', () => {
+  const m = round('bestball', TWO);
+  const items = agreementItems(m);
+  assert.equal(items.find(i => i.id === 'presses')?.text, 'Press when 2 down');
+  assert.equal(items.find(i => i.id === 'bet:main').text, '$5 / $5 / $5');
+  const stroke = round('bestball', TWO, { settings: { scoring: 'stroke' } });
+  assert.equal(agreementItems(stroke).find(i => i.id === 'presses'), undefined);
+  const alt = round('altshot', TWO, { useHandicaps: true, hcs: [10, 20, 4, 6] });
+  const strokes = agreementItems(alt).filter(i => i.group === 'strokes').map(i => i.label);
+  assert.deepEqual(strokes, ['Ann & Bo', 'Cy & Di']);
+  const sh = round('shamble', [['a', 'b', 'c'], ['d', 'e', 'f']], { settings: { count: 2, drives: 2 } });
+  const rules = agreementItems(sh).filter(i => i.group === 'rules' && i.on).map(i => i.text);
+  assert.deepEqual(rules, ['Best two balls count', '2 drives each']);
+});
+
+test('the reveal: a match reads leg by leg; stroke play by strokes; per hole by holes won', () => {
+  const m = scores(round('bestball', TWO), 9, { 1: { a: 3 }, 2: { b: 3 } });
+  const steps = revealSteps(m, roundResults(m)).steps;
+  assert.deepEqual(steps.map(x => [x.label, x.text, x.amount ?? 0]), [['First 4', 'Ann & Bo 2 up', 5], ['Last 5', 'Halved', 0], ['All 9', 'Ann & Bo 2 up', 5]]);
+  const st = scores(round('bestball', TWO, { settings: { scoring: 'stroke', format: 'total' } }), 9, { 1: { a: 3 }, 2: { b: 3 } });
+  const one = revealSteps(st, roundResults(st));
+  assert.equal(one.title, 'The match');
+  assert.deepEqual(one.steps.map(x => [x.label, x.text, x.amount]), [['Total', 'Ann & Bo by 2 strokes, 34 to 36', 10]]);
+  const ph = scores(round('altshot', TWO, { settings: { format: 'hole' } }), 9, { 1: { t0: 3 }, 2: { t1: 3 }, 3: { t1: 3 } });
+  assert.deepEqual(revealSteps(ph, roundResults(ph)).steps.map(x => [x.label, x.text, x.amount]), [['Holes won', 'Cy & Di won 2 to 1', 2]]);
+});
+
+test('match moments come up in a team match, and not in stroke play', () => {
+  // Ann & Bo win the first 4 with a hole to spare: 3 up with 1 to play after hole 3
+  const m = scores(round('bestball', TWO), 3, { 1: { a: 3 }, 2: { a: 3 }, 3: { b: 3 } });
+  assert.ok(matchRoundMoment(m, 3));
+  const st = scores(round('bestball', TWO, { settings: { scoring: 'stroke' } }), 3, { 1: { a: 3 }, 2: { a: 3 }, 3: { b: 3 } });
+  assert.equal(matchRoundMoment(st, 3), null);
+});
+
+test('the Counts tag: the team’s best ball, every tied one, and nothing until the team is in', () => {
+  const r = round('bestball', TWO);
+  const h = r.holes[0];
+  assert.deepEqual(teamCounting(r, h, { a: 4, b: 4, c: 3, d: 5 }), ['a', 'b', 'c']);
+  assert.deepEqual(teamCounting(r, h, { a: 4, c: 3, d: 5 }), ['c']);
+  assert.deepEqual(teamCounting(round('altshot', TWO), h, { t0: 4, t1: 5 }), []);
 });

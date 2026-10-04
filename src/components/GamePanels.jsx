@@ -4,7 +4,7 @@ import { Icon, useUI } from './ui.jsx';
 import { update, uid } from '../lib/store.js';
 import {
   hammerOptions, hammerTable, holeAtPos, holeComplete, nassauAmounts, nassauPressOptions, nassauWinners, playersOn, pointsTable, pressMode, rabbitTable,
-  roundLegs, sideNames, sides, sixesMatches, snakeTable, totalsTable, vegasPreview, vegasTable, scorers, netFor, playsHole, posOf, settingsAt,
+  roundLegs, sideNames, sides, sixesMatches, snakeTable, totalsTable, vegasPreview, vegasTable, scorers, netFor, playsHole, posOf, settingsAt, teamTable,
 } from '../lib/round.js';
 import { nassauBets } from '../lib/golf.js';
 import { DOT_KINDS, DOT_PARS, scoreDots } from '../lib/games.js';
@@ -24,6 +24,8 @@ export function MatchPanel({ round, hole, readOnly = false }) {
   const winners = nassauWinners(round);
   const LEGS = roundLegs(round);
   const legs = Object.keys(LEGS);
+  // Three legs (a Nassau, or a team game bet like one) name the leg in presses and toasts
+  const multi = legs.length > 1;
   const pos = round.holes.findIndex(h => h.no === hole.no) + 1;
   const bets = nassauBets(winners, round.presses, nassauAmounts(round), LEGS);
   const names = sideNames(round);
@@ -38,7 +40,7 @@ export function MatchPanel({ round, hole, readOnly = false }) {
   const activePresses = bets.filter(b => b.press && pos >= b.start && pos <= b.end);
   const press = o => {
     update(s => { const r = s.rounds[round.id]; r.presses.push({ id: uid('pr_'), leg: o.leg, start: pos, by: o.trailing }); });
-    showToast(`${names[o.trailing]} pressed${round.game === 'nassau' ? ` the ${LEGS[o.leg].label.toLowerCase()}` : ''}!`);
+    showToast(`${names[o.trailing]} pressed${multi ? ` the ${LEGS[o.leg].label.toLowerCase()}` : ''}!`);
     buzz(30);
   };
   const tile = leg => {
@@ -66,7 +68,7 @@ export function MatchPanel({ round, hole, readOnly = false }) {
         <div className="press-bar">
           <span className="press-bar-lbl">Presses</span>
           {activePresses.map(p => (
-            <span key={p.key} className="press-chip">{round.game === 'nassau' ? `${LEGS[p.leg].label} ` : ''}from H{holeAtPos(round, p.start)}: {p.status.leader === null ? 'All square' : `${short[p.status.leader]} ${p.status.by} up`}</span>
+            <span key={p.key} className="press-chip">{multi ? `${LEGS[p.leg].label} ` : ''}from H{holeAtPos(round, p.start)}: {p.status.leader === null ? 'All square' : `${short[p.status.leader]} ${p.status.by} up`}</span>
           ))}
         </div>
       )}
@@ -76,12 +78,68 @@ export function MatchPanel({ round, hole, readOnly = false }) {
             <div key={o.leg} className="press-alert-row">
               <span className="press-alert-txt">{o.turn
                 ? `${names[o.trailing]} lost the ${LEGS.front.label.toLowerCase()}. Press the ${LEGS.back.label.toLowerCase()}?`
-                : `${names[o.trailing]} ${sides(round)[o.trailing].length > 1 ? 'are' : 'is'} ${o.by} down${round.game === 'nassau' ? ` on the ${LEGS[o.leg].label.toLowerCase()}` : ''}`}</span>
+                : `${names[o.trailing]} ${sides(round)[o.trailing].length > 1 ? 'are' : 'is'} ${o.by} down${multi ? ` on the ${LEGS[o.leg].label.toLowerCase()}` : ''}`}</span>
               <button className="press-call-btn" onClick={() => press(o)}>Press <Icon name="lightning" fill /></button>
             </div>
           ))}
         </div>
       )}
+    </>
+  );
+}
+
+// --------------------------- Team games ------------------------------------
+
+/**
+ * A team game played as stroke play (a tile a leg: who's ahead and each team to par) or per hole (holes
+ * won by each team and what it's worth). Played as a match it uses MatchPanel, presses and all.
+ */
+export function TeamPanel({ round, hole }) {
+  const money = unitFmt(round); // points in a points or reward round
+  const t = teamTable(round);
+  const names = sideNames(round);
+  const pos = posOf(round, hole);
+  const sideLine = <div className="sides-line"><span className="side-tag a">A</span> {names[0]} <span className="sides-v">v</span> <span className="side-tag b">B</span> {names[1]}</div>;
+  if (t.format === 'hole') {
+    const line = t.lines[0];
+    const each = Math.abs(line.value);
+    return (
+      <div className="vegas-panel">
+        <div className="vegas-teams">
+          {[0, 1].map(i => (
+            <div key={i} className={`vegas-team ${line.won[i] > line.won[1 - i] ? 'ahead' : line.won[i] < line.won[1 - i] ? 'behind' : ''}`}>
+              <div className="ms-lbl"><span className={`side-tag ${i ? 'b' : 'a'}`}>{i ? 'B' : 'A'}</span> {names[i]}</div>
+              <div className="ms-val">{line.won[i]}</div>
+            </div>
+          ))}
+        </div>
+        <div className="vegas-line">
+          <span>Holes won · {money(settingsAt(round, pos)[round.game]?.perHole ?? line.amount)} a hole</span>
+          <span className="vegas-total">{!line.value ? 'All square' : `${names[line.value > 0 ? 0 : 1]} up ${money(each)} each`}</span>
+        </div>
+      </div>
+    );
+  }
+  // Stroke play: each leg's team totals, to par on the holes both teams have played
+  const fmt = v => (v === 0 ? 'E' : v > 0 ? `+${v}` : `−${-v}`);
+  const tile = l => {
+    const s = l.status;
+    const part = t.rows.filter(r => r.pos >= l.start && r.pos <= l.end && r.winner !== undefined);
+    const par = part.reduce((a, r) => a + r.hole.par * t.count, 0);
+    const notStarted = pos < l.start && !s.played;
+    const val = notStarted ? '–' : s.leader === null ? (s.played ? 'Level' : '–') : `${s.leader ? 'B' : 'A'} by ${s.by}`;
+    const sub = notStarted ? `Starts H${holeAtPos(round, l.start)}` : s.played ? `A ${fmt(s.totals[0] - par)} · B ${fmt(s.totals[1] - par)}${s.left === 0 ? ' · Final' : ''}` : 'No holes yet';
+    const said = `${l.label}: ${notStarted ? 'not started' : s.leader === null ? 'level' : `${names[s.leader]} ahead by ${s.by}`}. ${sub}`;
+    return (
+      <div key={l.key} role="group" aria-label={said} className={`ms-tile ${s.leader === 0 ? 'ahead' : s.leader === 1 ? 'behind' : ''} ${t.lines.length === 1 ? 'solo' : ''}`}>
+        <span className="ms-lbl">{l.label}</span><span className={`ms-val ${val === 'Level' ? 'sq' : ''}`}>{val}</span><span className="ms-sub">{sub}</span>
+      </div>
+    );
+  };
+  return (
+    <>
+      {sideLine}
+      <div className="match-status">{t.lines.map(tile)}</div>
     </>
   );
 }

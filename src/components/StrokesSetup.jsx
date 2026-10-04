@@ -31,11 +31,13 @@ function PctPicker({ label, value, onChange, whs }) {
 /**
  * `opts.hcPct` is the round's % (the main game's), `sideGames[i].hcPct` a side game's own. With
  * "Set by game" off no side game has its own, so every game plays off the one %, as rounds always did.
+ * `settings` is the main game's own block, for the games whose WHS % depends on how they're played
+ * (Best ball and Shamble); it's opts[game] in setup.
  */
-export function StrokesSetup({ game, teams, players, opts, set, sideGames = [], setSideGames }) {
+export function StrokesSetup({ game, teams, players, opts, set, sideGames = [], setSideGames, settings = opts?.[game] }) {
   const withStrokes = sideGames.filter(sg => STROKE_SIDE_GAMES.includes(sg.game));
   const [byGame, setByGame] = useState(() => withStrokes.some(sg => sg.hcPct != null));
-  const whs = suggestedAllowance(game, { teams: GAMES[game].teams ? teams : null, players });
+  const whs = suggestedAllowance(game, { teams: GAMES[game].teams ? teams : null, players, settings });
   const split = byGame && withStrokes.length > 0;
   const setSide = (key, v) => setSideGames(list => list.map(sg => (sg.game === key ? { ...sg, hcPct: v } : sg)));
   const toggleByGame = () => {
