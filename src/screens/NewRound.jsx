@@ -277,9 +277,9 @@ export default function NewRound({ rematch, fromPlan, present, edit = null, ahea
     }
     const id = uid('r_');
     const players = orderedPicked.map(pid => ({ ...s.players[pid], tee: tees[pid] || defaultTee, courseHcOverride: hcOverride[pid] }));
-    // Share-image choice is a personal setting, not part of a round's bets
+    // Share-image choice and the side bet card are personal settings, not part of a round's bets
     // Half strokes are this round's choice, never next time's default
-    const { shareAmounts: _personal, halfStrokes: _half, ...settings } = structuredClone(opts);
+    const { shareAmounts: _personal, betPrompt: _prompt, halfStrokes: _half, ...settings } = structuredClone(opts);
     const sides = sidesFor(game);
     const halfStrokes = !!opts.halfStrokes && halfStrokesOffered(game, sides);
     const round = createRound({ id, game, course, holesCount, nine, startHole, players, settings, hcPct: opts.hcPct, useHandicaps: useHc && !(noHc.length && noHc.length === orderedPicked.length), teams: GAMES[game].teams ? teams : null, halfStrokes });

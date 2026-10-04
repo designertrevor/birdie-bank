@@ -329,6 +329,7 @@ export function planStart(state, plan, present, { newId, course: courseIn } = {}
   const rules = planRules(plan, state.settings);
   const settings = bet ? withBet(game, rules, bet) : structuredClone(rules);
   delete settings.shareAmounts; // a personal setting, not part of a round's bets
+  delete settings.betPrompt; // so is the side bet card
   const tee = defaultTee(course)?.name ?? null;
   // The side games the group voted for, each with the organizer's house rules for it
   // A side game's own Strokes given % comes along when the plan carries one (from a usual or a rescheduled round)

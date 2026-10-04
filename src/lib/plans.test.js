@@ -8,7 +8,7 @@ import {
 } from './plans.js';
 
 const SETTINGS = {
-  hcPct: 100, shareAmounts: true,
+  hcPct: 100, shareAmounts: true, betPrompt: true,
   skins: { value: 2, carryover: true, kind: 'net', payout: 'per', stake: 10, lastCarry: 'void' },
   nassau: { front: 5, back: 5, total: 5, pressMode: 'manual' },
   wolf: { point: 2, loneMultiplier: 2 },
@@ -126,6 +126,7 @@ test('roll call: starts with the voted game and bet, in the plan’s order, with
   assert.equal(s.game, 'nassau');
   assert.equal(s.settings.nassau.front, 5);
   assert.equal(s.settings.shareAmounts, undefined);
+  assert.equal(s.settings.betPrompt, undefined);
   assert.deepEqual(s.players.map(x => x.id), ['me', 'mike', 'dave']);
   assert.equal(s.players[0].tee, 'Blue');
   assert.deepEqual(s.teams, [['me', 'mike'], ['dave']]);
