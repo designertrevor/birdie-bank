@@ -82,7 +82,10 @@ function matchIds(setup, ids, sameAs) {
 /**
  * Who goes on which team: the teams as set up when they still work for the players here (anyone
  * who didn't come taken off, anyone new on the smallest team), else null for a fresh split.
- * { teams, changed } where `changed` says the people on them changed.
+ * Even sides set up for more players than came (a 2 v 2 Nassau and three turn up) start fresh
+ * too, rather than keep a 1 v 2 nobody picked (2026-10-04, Trevor); sides set up uneven on
+ * purpose (one against the field) keep their shape. { teams, changed } where `changed` says the
+ * people on them changed.
  */
 function keptTeams(game, setTeams, ids) {
   const cfg = GAMES[game]?.teams;
@@ -94,6 +97,8 @@ function keptTeams(game, setTeams, ids) {
     const small = teams.reduce((m, t, i) => (t.length < teams[m].length ? i : m), 0);
     teams[small].push(pid);
   }
+  const even = list => list.every(t => t.length === list[0].length);
+  if (teams.flat().length < setTeams.flat().length && even(setTeams) && !even(teams)) return null;
   if (teamsProblem(game, teams, ids)) return null;
   return { teams, changed: joined.length > 0 || teams.flat().length !== setTeams.flat().length };
 }

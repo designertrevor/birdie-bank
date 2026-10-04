@@ -96,13 +96,37 @@ test('the round from roll call is the same round, and pays the same, as starting
   assert.equal(fromPlan.holes[0].no, 10);
 });
 
-test('someone didn’t come: their side bet is off and the teams go on without them, with a line for each', () => {
+test('someone didn’t come to a 2 v 2: the teams start fresh instead of a 1 v 2, and the card says so', () => {
   const s = planStart(state(), plan(), ['host', 'mike', 'sam'], { course: COURSE });
   assert.equal(s.problem, null);
   assert.deepEqual(s.players.map(p => p.id), ['sam', 'me', 'mike']);
-  assert.deepEqual(s.teams, [['sam'], ['me', 'mike']]);
+  // A fresh split, not the kept [['sam'], ['me', 'mike']]
+  assert.deepEqual(s.teams, [['me', 'mike'], ['sam']]);
+  assert.ok(!s.kept.includes('sides'));
   assert.deepEqual(s.bets, []);
-  assert.deepEqual(s.changes, ['Teams as you set them, without Dave.', 'Trevor and Dave’s side bet is off: Dave isn’t here.']);
+  assert.deepEqual(s.changes, ['Teams start fresh: Dave isn’t here.', 'Trevor and Dave’s side bet is off: Dave isn’t here.']);
+});
+
+test('sides set up uneven on purpose keep their shape when one of the field doesn’t come', () => {
+  // Match play, Trevor against the other three: Dave stays home, still Trevor against the field
+  const field = { ...SETUP, game: 'match', teams: [['me'], ['sam', 'dave', 'mike']], bets: [] };
+  const s = planStart(state({ settings: { ...SETTINGS, match: { stake: 5 } } }), plan({ game: 'match', setup: field }), ['host', 'mike', 'sam'], { course: COURSE });
+  assert.equal(s.problem, null);
+  assert.deepEqual(s.teams, [['me'], ['sam', 'mike']]);
+  assert.deepEqual(s.changes, ['Teams as you set them, without Dave.']);
+});
+
+test('even sides that stay even with fewer players keep the teams', () => {
+  // Scramble, two teams of three: one from each side stays home, still 2 v 2
+  const six = { ...SETUP, game: 'scramble', order: ['sam', 'me', 'dave', 'mike', 'al', 'bo'], teams: [['sam', 'dave', 'al'], ['me', 'mike', 'bo']], bets: [] };
+  const players = { ...structuredClone(PLAYERS), al: { id: 'al', name: 'Al Green', index: 10 }, bo: { id: 'bo', name: 'Bo Hart', index: 12 } };
+  const built = applySetup(six, { game: 'scramble', course: COURSE, holesCount: 18, players: ['sam', 'me', 'dave', 'mike'].map(id => players[id]), nameOf: id => players[id]?.name, fresh: () => 'fresh' });
+  assert.deepEqual(built.teams, [['sam', 'dave'], ['me', 'mike']]);
+  assert.deepEqual(built.changes, ['Teams as you set them, without Al and Bo.']);
+  // One stays home from a 3 v 3: fresh, with a line
+  const five = applySetup(six, { game: 'scramble', course: COURSE, holesCount: 18, players: ['sam', 'me', 'dave', 'mike', 'al'].map(id => players[id]), nameOf: id => players[id]?.name, fresh: () => 'fresh' });
+  assert.equal(five.teams, 'fresh');
+  assert.deepEqual(five.changes, ['Teams start fresh: Bo isn’t here.']);
 });
 
 test('a walk-up joins the smaller team, and goes last in a game with an order', () => {
@@ -211,8 +235,8 @@ test('a scramble side bet between two people now on the same team is off', () =>
   const setup = { ...SETUP, game: 'scramble', teams: [['sam', 'dave'], ['me', 'mike']], bets: [{ id: 'b2', kind: 'match', sides: ['me', 'sam'], stake: 5 }] };
   const p = plan({ game: 'scramble', setup });
   const s = planStart(state(), p, ['host', 'dave', 'sam'], { course: COURSE });
-  // Without Mike the teams keep as set, so Trevor and Sam are still on different teams and the bet stands
-  assert.deepEqual(s.teams, [['sam', 'dave'], ['me']]);
+  // Without Mike the 2 v 2 starts fresh, and Trevor and Sam land on different teams, so the bet stands
+  assert.deepEqual(s.teams, [['me', 'dave'], ['sam']]);
   assert.deepEqual(s.bets.map(b => b.id), ['b2']);
   const together = applySetup(setupForPlan({ ...setup, teams: [['sam', 'me'], ['dave', 'mike']] }), {
     game: 'scramble', course: COURSE, holesCount: 18, players: [PLAYERS.sam, PLAYERS.me, PLAYERS.dave, PLAYERS.mike].map(x => ({ ...x })),
