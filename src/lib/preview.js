@@ -23,7 +23,7 @@ import { keptId } from './format.js';
 import { roundTime } from './history.js';
 import { money } from './golf.js';
 import { STROKE_SIDE_GAMES, halfStrokesOffered, pctWords } from './allowances.js';
-import { agreedOnPlan, challengeWhat, challengeWhatNoAmount } from './challenges.js';
+import { agreedOnPlan, challengeIdOfBet, challengeWhat, challengeWhatNoAmount } from './challenges.js';
 
 const first = name => String(name || '').trim().split(/\s+/)[0];
 const listNames = n => (n.length < 2 ? n.join('') : `${n.slice(0, -1).join(', ')} and ${n.at(-1)}`);
@@ -354,6 +354,9 @@ export function previewPairBets(state, plan, { now = new Date() } = {}) {
   const outOf = who => byWho.get(who)?.status === 'out';
   const unit = playForOf(plan).kind === 'money' ? 'money' : 'points';
   const setup = plan?.setup;
+  const agreed = agreedOnPlan(state, plan, now instanceof Date ? now.getTime() : now);
+  // A setup bet that came from a challenge listed below (a round kept for another day keeps it): once
+  const listed = new Set(agreed.map(x => x.ch.id));
   if (plan?.host && Array.isArray(setup?.bets) && setup.bets.length) {
     // Setup knows people by the organizer's own player ids; the plan by its keys
     let links = null;
@@ -362,6 +365,7 @@ export function previewPairBets(state, plan, { now = new Date() } = {}) {
       : people.find(p => p.who === pid)?.who ?? people.find(p => personOf(p.who) === personOf(pid))?.who ?? null);
     for (const b of setup.bets) {
       if (!Array.isArray(b?.sides) || b.sides.length !== 2 || !(Number(b.stake) > 0)) continue;
+      if (listed.has(challengeIdOfBet(b.id))) continue;
       const [a, c] = b.sides.map(keyOf);
       if (!a || !c || a === c || outOf(a) || outOf(c)) continue;
       const kind = { kind: b.kind, label: b.label, unit };
@@ -373,7 +377,7 @@ export function previewPairBets(state, plan, { now = new Date() } = {}) {
       });
     }
   }
-  for (const x of agreedOnPlan(state, plan, now instanceof Date ? now.getTime() : now)) {
+  for (const x of agreed) {
     if (outOf(x.from) || outOf(x.to)) continue;
     out.push({ key: `ch:${x.ch.id}`, source: 'challenge', a: x.from, b: x.to, aName: x.fromName, bName: x.toName, what: x.what, plain: x.plain });
   }

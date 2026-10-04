@@ -362,6 +362,14 @@ test('the preview lists the kept side bets and the agreed challenges, "Dave v Mi
   assert.equal(pv.pairBets.length, 2);
 });
 
+test('a round kept for another day keeps the challenge’s bet in its setup, and the preview lists it once (2026-10-04)', () => {
+  const state = previewState();
+  const p = state.plans.pl1;
+  p.setup = setupForPlan({ game: 'nassau', courseId: 'c1', holesCount: 18, me: 'me', order: ['me', 'sam', 'dave', 'mike'], bets: [{ id: 'b1', kind: 'hole', sides: ['sam', 'me'], stake: 2 }, { id: 'ch_c1', kind: 'match', sides: ['dave', 'mike'], stake: 20 }] });
+  const bets = previewPairBets(state, p, { now: new Date(NOW) });
+  assert.deepEqual(bets.map(x => pairBetLine(x)), ['Sam v Trevor, $2 a hole', 'Dave v Mike, $20 match']);
+});
+
 test('the image and the text carry them, with amounts hidden until they’re switched on', () => {
   const state = previewState();
   const pv = planPreview(state, state.plans.pl1, { now: new Date(NOW) });
