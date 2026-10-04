@@ -13,7 +13,7 @@ import { isMissingTable } from './plan-adapters.js';
 import { deviceReady, myDevice } from './device.js';
 import { accountNow } from './cloud.js';
 import { codeOf } from './pair-debts.js';
-import { mergeRows, newComment, removedRow, talkFromDb, talkToDb, toggleReaction, unsentRows } from './talk.js';
+import { mergeRows, newComment, removedRow, talkFromDb, talkReach, talkToDb, toggleReaction, unsentRows } from './talk.js';
 
 const localFlag = () => { try { return localStorage.getItem('bb-sync-local') === '1'; } catch { return false; } };
 
@@ -107,63 +107,73 @@ export function threadTarget(state, key) {
 }
 
 /**
- * Whether this phone can talk in a thread, and whether the others will see it:
- * { can, linked, shared, off }. `can` is false only once the server has said you're not in that
- * round. `linked`: the round was shared live (or the plan has its link), so the talk can reach the
- * others once comments are on; `shared`: it does now.
+ * Whether the others will see this phone's talk in a thread: { can, linked, shared, closed, off }
+ * (see talkReach in talk.js). `linked`: the round was shared live (or the plan has its link), so
+ * the talk can reach the others once comments are on; `shared`: it does now; `closed`: the server
+ * can't place this phone in it, so the talk stays here.
  */
 export function useTalkReach(key) {
   useSyncExternalStore(sub, () => version, () => version);
   const t = threadTarget(getState(), key);
-  const linked = !!t.code;
-  if (off || !linked) return { can: true, linked, shared: false, off };
-  const s = seats.get(`${t.scope}:${t.code}`);
-  return { can: s !== null, linked, shared: true, off: false };
+  return talkReach({ off, code: t.code, seats: t.code ? seats.get(`${t.scope}:${t.code}`) : undefined });
 }
 
 // --------------------------- sending ------------------------------------------
 
 let flushing = null;
-/** Send every row of yours the server doesn't have yet. Safe to call often. */
+let again = false;
+/**
+ * Send every row of yours the server doesn't have yet. Safe to call often: a call while one is
+ * going runs it once more after, so a jab sent mid-send doesn't wait for the next look.
+ */
 export function flushTalk() {
-  if (flushing) return flushing;
+  if (flushing) { again = true; return flushing; }
   flushing = (async () => {
-    if (off) return;
-    const adapter = await getTalkAdapter();
-    if (!adapter) return;
-    await deviceReady();
-    const s = getState();
-    for (const [key, rows] of Object.entries(s.talk || {})) {
-      const t = threadTarget(s, key);
-      const waiting = unsentRows(rows);
-      if (!t.code || !waiting.length) continue;
-      // Join first (a plan's talk takes rows only from phones that have), once a session
-      const k = `${t.scope}:${t.code}`;
-      if (!seats.has(k)) {
-        try { seats.set(k, await adapter.join(t.scope, t.code)); changed(); } catch (e) { noteError(e); return; }
-      }
-      if (seats.get(k) === null) continue; // not in it: nothing would be taken
-      for (const row of waiting) {
-        const mark = patch => update(st => {
-          const r = st.talk?.[key]?.[row.id];
-          if (r && r.updatedAt === row.updatedAt) Object.assign(r, patch);
-        });
-        try {
-          await adapter.upsertRow(talkToDb(t.scope, t.code, row));
-          mark({ sent: row.updatedAt });
-        } catch (e) {
-          if (e instanceof BadRowError) {
-            console.warn('Comments: the server refused a row, keeping it on this phone', row.id, e.cause);
-            mark({ refused: true });
-            continue;
-          }
-          noteError(e);
-          return;
-        }
-      }
-    }
+    do {
+      again = false;
+      if (await flushOnce() === false) break;
+    } while (again);
   })().finally(() => { flushing = null; });
   return flushing;
+}
+
+// One pass over every thread. Returns false when it stopped early (off, no signal), so it isn't run again
+async function flushOnce() {
+  if (off) return false;
+  const adapter = await getTalkAdapter();
+  if (!adapter) return false;
+  await deviceReady();
+  const s = getState();
+  for (const [key, rows] of Object.entries(s.talk || {})) {
+    const t = threadTarget(s, key);
+    const waiting = unsentRows(rows);
+    if (!t.code || !waiting.length) continue;
+    // Join first (a plan's talk takes rows only from phones that have), once a session
+    const k = `${t.scope}:${t.code}`;
+    if (!seats.has(k)) {
+      try { seats.set(k, await adapter.join(t.scope, t.code)); changed(); } catch (e) { noteError(e); return false; }
+    }
+    if (seats.get(k) === null) continue; // not in it: nothing would be taken
+    for (const row of waiting) {
+      const mark = patch => update(st => {
+        const r = st.talk?.[key]?.[row.id];
+        if (r && r.updatedAt === row.updatedAt) Object.assign(r, patch);
+      });
+      try {
+        await adapter.upsertRow(talkToDb(t.scope, t.code, row));
+        mark({ sent: row.updatedAt });
+      } catch (e) {
+        if (e instanceof BadRowError) {
+          console.warn('Comments: the server refused a row, keeping it on this phone', row.id, e.cause);
+          mark({ refused: true });
+          continue;
+        }
+        noteError(e);
+        return false;
+      }
+    }
+  }
+  return true;
 }
 
 // --------------------------- fetching -----------------------------------------
@@ -271,5 +281,9 @@ export function takeBack(key, id) {
   const had = getState().talk?.[key]?.[id];
   if (!had?.mine || had.deleted) return null;
   save(key, removedRow(had));
-  return () => save(key, { ...had, updatedAt: Date.now(), sent: had.sent, refused: false });
+  // Put back as a newer edit than the delete, so every phone (and the server) takes it
+  return () => {
+    const now = getState().talk?.[key]?.[id];
+    save(key, { ...had, updatedAt: Math.max(Date.now(), (now?.updatedAt || 0) + 1), sent: now?.sent ?? had.sent, refused: false });
+  };
 }
