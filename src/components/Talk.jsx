@@ -116,6 +116,8 @@ function useCtx(ctx) {
 export function TalkSection({ ctx, on, title = 'Trash talk' }) {
   const { rows, reach, canTalk } = useCtx(ctx);
   const quiet = !commentsOn(rows, on).length;
+  // Someone who can't join in (a watcher) sees the talk only once there is some
+  if (!canTalk && quiet && !reactionsOn(rows, on).length) return null;
   return (
     <section className="talk" aria-label={title}>
       <div className="sec-label">{title}</div>

@@ -132,9 +132,15 @@ export function flushTalk() {
     const s = getState();
     for (const [key, rows] of Object.entries(s.talk || {})) {
       const t = threadTarget(s, key);
-      if (!t.code) continue;
-      if (seats.get(`${t.scope}:${t.code}`) === null) continue; // not in it: nothing would be taken
-      for (const row of unsentRows(rows)) {
+      const waiting = unsentRows(rows);
+      if (!t.code || !waiting.length) continue;
+      // Join first (a plan's talk takes rows only from phones that have), once a session
+      const k = `${t.scope}:${t.code}`;
+      if (!seats.has(k)) {
+        try { seats.set(k, await adapter.join(t.scope, t.code)); changed(); } catch (e) { noteError(e); return; }
+      }
+      if (seats.get(k) === null) continue; // not in it: nothing would be taken
+      for (const row of waiting) {
         const mark = patch => update(st => {
           const r = st.talk?.[key]?.[row.id];
           if (r && r.updatedAt === row.updatedAt) Object.assign(r, patch);
