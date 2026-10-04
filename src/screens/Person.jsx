@@ -205,10 +205,10 @@ export default function Person({ id: opened }) {
             <div className="lr-amt d story-amt">{money(Math.abs(it.amount))}</div>
           </div>
         ) : it.kind === 'expense' ? (
-          <button key={it.id} className="ledger-row" onClick={() => nav.push('trip', { id: it.expense.tripId, view: 'expenses' })}>
+          <button key={it.id} className="ledger-row" onClick={() => nav.push('trip', { id: it.expense.tripId, view: it.expense.stake ? 'cup' : 'expenses' })}>
             <div className="lr-info">
-              <div className="lr-name" style={{ fontSize: 16 }}>{it.expense.what} · trip expense</div>
-              <div className="lr-status">{when(it.at)} · {it.amount > 0 ? `You paid, ${firstName}’s share` : `${firstName} paid, your share`}</div>
+              <div className="lr-name" style={{ fontSize: 16 }}>{it.expense.stake ? 'Cup stake · team points trip' : `${it.expense.what} · trip expense`}</div>
+              <div className="lr-status">{when(it.at)} · {it.expense.stake ? (it.amount > 0 ? `Your team won the cup, ${firstName} pays the stake` : `${firstName}’s team won the cup, you pay the stake`) : it.amount > 0 ? `You paid, ${firstName}’s share` : `${firstName} paid, your share`}</div>
             </div>
             <div className={`lr-amt d story-amt ${it.amount > 0 ? 'pos' : 'neg'}`}>{money(it.amount, { sign: true })}</div>
           </button>

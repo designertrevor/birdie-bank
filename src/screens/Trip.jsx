@@ -113,9 +113,10 @@ export default function Trip({ id, view: firstView = null, add = false }) {
     : scoreUp ? `For the expenses, ${owedLine(allIn).replace(/^You/, 'you')}` : null;
   const settles = st.expenses.length ? 'the rounds and the expenses' : 'the whole trip';
   const askExpenses = !st.expenses.length ? ' Add gas, dinner and the house under Expenses and they settle with it.' : '';
-  const stakeOpen = cup ? cup.lines.filter(l => l.open > 0).length : 0;
+  // The stake's lines with someone this phone can't place are marked paid on the trip; the rest are in the plan (cup-stake.js)
+  const stakeOpen = cup ? cup.lines.filter(l => l.open > 0 && !l.onTab).length : 0;
   const settleCount = st.plan.length + stakeOpen;
-  const hint = cup && st.phase === 'ready' ? `${cupHeadline(cup)}. ${settleCount} payment${settleCount === 1 ? '' : 's'} square${settleCount === 1 ? 's' : ''} the trip${stakeOpen ? ', the cup stake included' : ''}.${st.money.length || st.expenses.length ? ' The trip’s money is already in each person’s total on the Tab.' : ''}${cup.stakeOn ? ' The cup stake is paid here, not on the Tab.' : ''}`
+  const hint = cup && st.phase === 'ready' ? `${cupHeadline(cup)}. ${settleCount} payment${settleCount === 1 ? '' : 's'} square${settleCount === 1 ? 's' : ''} the trip${cup.stakeOn ? ', the cup stake included' : ''}.${st.money.length || st.expenses.length || cup.stakeOn ? ' The trip’s money is already in each person’s total on the Tab, so paying here pays the Tab too.' : ''}`
     : cup && st.phase === 'square' ? `${cupHeadline(cup)}. Everyone’s square on the trip.`
     : cup && (st.phase === 'on' || st.phase === 'soon') && !st.money.length ? `Every round counted for the trip adds its matches to the cup. ${cup.def.stake ? `${money(cup.def.stake)} a person is on the cup, paid once the trip is over.` : 'Each round keeps its own bets, if it has any.'}${askExpenses}`
     : st.pointsOnly ? 'Played for points, so there’s nothing to pay. Everyone on the trip sees the standings.'
@@ -402,7 +403,8 @@ export function TripSettle({ id, who = null }) {
   const others = plan.filter(t => t.from !== me && t.to !== me);
   const paid = st.payments.filter(g => !who || g.from === who || g.to === who);
   // A team points trip's stake is settled with the whole trip, never someone's part
-  const stakeOpen = !who && st.cup ? st.cup.lines.filter(l => l.open > 0).length : 0;
+  // Lines with someone this phone can't place are marked paid on the trip; the rest are in the plan (cup-stake.js)
+  const stakeOpen = !who && st.cup ? st.cup.lines.filter(l => l.open > 0 && !l.onTab).length : 0;
   const stakePaid = !who && st.cup ? st.cup.lines.filter(l => l.open === 0 && l.paid > 0).length : 0;
   const n = plan.length + stakeOpen;
   // Like with like: the payments the trip takes in all (still to pay and paid) against round by round

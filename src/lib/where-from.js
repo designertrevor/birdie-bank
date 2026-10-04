@@ -9,6 +9,7 @@ import { meFor } from './format.js';
 import { canonicalOf } from './pair-debts.js';
 import { onTab, tabResults } from './play-for.js';
 import { allTripPays, expensesBetween } from './trip-expenses.js';
+import { stakeBetween } from './cup-stake.js';
 
 const toCents = v => Math.round((Number(v) || 0) * 100);
 
@@ -64,7 +65,7 @@ const mineOf = (state, mine) => {
  * what trip expenses put between you (in dollars, positive when they owe you), and `open` what's
  * still between you two (net and spent, less paid). `ids` is every id that means you.
  */
-export function breakdownWith(state, ids, other) {
+export function breakdownWith(state, ids, other, { now = Date.now() } = {}) {
   const mine = ids instanceof Set ? ids : new Set(ids);
   const who = canonicalOf(state);
   const isMine = mineOf(state, mine);
@@ -100,8 +101,9 @@ export function breakdownWith(state, ids, other) {
   }
   rounds.sort((x, y) => y.at - x.at);
   const list = [...totals.values()].filter(t => toCents(t.amount)).sort((x, y) => Math.abs(y.amount) - Math.abs(x.amount) || x.label.localeCompare(y.label));
-  // Trip expenses one of you paid for the other: not golf, so on their own lines
-  const expenses = expensesBetween(state, isMine, isThem).map(x => ({ ...x, amount: x.amount / 100 }));
+  // Trip expenses one of you paid for the other, and a decided cup stake between you (cup-stake.js):
+  // not a round's golf, so on their own lines
+  const expenses = [...expensesBetween(state, isMine, isThem), ...stakeBetween(state, isMine, isThem, { now })].sort((a, b) => b.at - a.at).map(x => ({ ...x, amount: x.amount / 100 }));
   const spent = expenses.reduce((a, x) => a + toCents(x.amount), 0);
   return { rounds, totals: list, net: net / 100, paid: paid / 100, open: (net + spent - paid) / 100, expenses, spent: spent / 100 };
 }

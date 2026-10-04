@@ -1,7 +1,8 @@
 // Team points, Ryder Cup style (cup.js, trips.js): picking the teams, each round's matches, match
 // results hole by hole, the team score across the trip (other groups' rounds from the server
 // too), the leaderboard, and the stake on the team result, which folds into each person's trip
-// total and never touches the rounds' own money or the Tab.
+// total and, once decided, the Tab (cup-stake.test.js has the stake as trip money), never the
+// rounds' own money.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { createRound, roundResults } from './round.js';
@@ -231,6 +232,8 @@ function cupRounds({ day3 = true } = {}) {
   if (day3) list.push(round('r3', ['t', 's', 'm', 'd'], merge(birdies('m', 1), birdies('d', 2)), { at: OCT(18, 12), cup: { kind: 'singles', sides: [['t', 's'], ['m', 'd']] } }));
   return list;
 }
+/** The same rounds on a money trip: no matches, no stake. */
+const plainOf = (me, rounds, extra = {}) => stateOf(me, rounds.map(r => { const x = structuredClone(r); delete x.cup; x.trip = tripStamp(MONEY_TRIP); return x; }), { trips: { t_cup: MONEY_TRIP }, ...extra });
 
 test('the team score adds up every match on the trip, and the leaderboard each player’s points', () => {
   const s = stateOf('t', cupRounds());
@@ -330,7 +333,7 @@ test('stake marks: this phone’s and other phones’, each once, and what’s l
   assert.deepEqual(open.map(l => [l.key, l.paid, l.open]), [['t>m', 2000, 0], ['s>d', 500, 1500]]);
 });
 
-test('the stake folds into each person’s trip total once the trip is over, and the Tab stays round by round', () => {
+test('the stake folds into each person’s trip total and the Tab once the trip is over, and not before', () => {
   const rounds = cupRounds();
   const s = stateOf('t', rounds);
   // Mid-trip (the last day, before its round is in): no stake in anyone's total yet
@@ -351,25 +354,36 @@ test('the stake folds into each person’s trip total once the trip is over, and
   assert.equal(st.standings.find(p => p.id === 'd').stake, 20);
   assert.equal(myTripNet(s, st), total('t'));
   assert.equal(st.phase, 'ready', 'the stake is still to pay');
-  // The Tab: exactly what the rounds alone make, with or without the cup
-  const plain = stateOf('t', rounds.map(r => { const x = structuredClone(r); delete x.cup; x.trip = tripStamp(MONEY_TRIP); return x; }), { trips: { t_cup: MONEY_TRIP } });
-  assert.deepEqual(tabBalances(s), tabBalances(plain));
-  assert.deepEqual(outstanding(s, { now: OCT(18, 20) }), outstanding(plain, { now: OCT(18, 20) }));
-  // The money trip's own standings and plan are the cup trip's without the stake
+  // The Tab: the rounds' money, and the stake on top of it once the cup is decided
+  const plain = plainOf('t', rounds);
+  const now = OCT(18, 20);
+  const bal = tabBalances(s, { now }), plainBal = tabBalances(plain, { now });
+  for (const id of ['t', 's', 'm', 'd']) assert.equal(Math.round(bal[id] * 100), Math.round((plainBal[id] + st.cup.stakeBy[id]) * 100), id);
+  // Mid-trip it's exactly what the rounds alone make, with or without the cup
+  assert.deepEqual(tabBalances(s, { now: OCT(17, 18) }), tabBalances(plain, { now: OCT(17, 18) }));
+  assert.deepEqual(outstanding(s, { now: OCT(17, 18) }), outstanding(plain, { now: OCT(17, 18) }));
+  // Settle the trip: each person's lines add up to their whole trip, the stake in it once
+  const netOf = (plan, id) => plan.reduce((a, t) => a + (t.to === id ? 1 : t.from === id ? -1 : 0) * Math.round(t.amount * 100), 0);
+  for (const id of ['t', 's', 'm', 'd']) assert.equal(netOf(st.plan, id), Math.round(total(id) * 100), id);
+  // The money trip's own standings are the cup trip's without the stake
   const ms = tripStatus(plain, 't_cup', { now: OCT(18, 20) });
   assert.equal(ms.cup, null);
-  assert.deepEqual(ms.plan, st.plan);
+  for (const id of ['t', 's', 'm', 'd']) assert.equal(netOf(ms.plan, id), Math.round(money[id] * 100), id);
   assert.deepEqual(ms.standings.map(p => [p.id, p.amount]).sort(), Object.entries(money).sort());
 });
 
 test('a stake marked paid squares the trip; a halved cup or no stake pays nothing', () => {
   const rounds = cupRounds();
-  // Every round's own money paid, so only the stake is left
+  // Every round's own money paid, and the stake marked paid the way it was before it went on the Tab
   const st0 = tripStatus(stateOf('t', rounds), 't_cup', { now: OCT(18, 20) });
-  const paidRounds = st0.plan.map((t, i) => ({ id: `trip:t_cup:${t.from}>${t.to}:${i}`, from: t.from, to: t.to, amount: t.amount, at: OCT(18, 19) + i }));
+  const roundsOnly = tripStatus(plainOf('t', rounds), 't_cup', { now: OCT(18, 20) }).plan;
+  const paidRounds = roundsOnly.map((t, i) => ({ id: `trip:t_cup:${t.from}>${t.to}:${i}`, from: t.from, to: t.to, amount: t.amount, at: OCT(18, 19) + i }));
   const marks = st0.cup.lines.map((l, i) => ({ id: `cup:t_cup:${l.key}:${i}`, key: l.key, from: l.from, to: l.to, amount: l.amount, at: OCT(18, 19) + i }));
-  const done = tripStatus(stateOf('t', rounds, { settlements: paidRounds, cupPaid: { t_cup: marks } }), 't_cup', { now: OCT(18, 21) });
+  const paidState = stateOf('t', rounds, { settlements: paidRounds, cupPaid: { t_cup: marks } });
+  const done = tripStatus(paidState, 't_cup', { now: OCT(18, 21) });
   assert.equal(done.phase, 'square');
+  assert.deepEqual(done.plan, []);
+  assert.deepEqual(outstanding(paidState, { now: OCT(18, 21) }), [], 'the marks square the Tab too');
   // Halved: on day three Trevor and Mike halve, Dave beats Sam, so 2½ to 2½
   const halved = cupRounds({ day3: false });
   halved.push(round('r3', ['t', 's', 'm', 'd'], birdies('d', 2), { at: OCT(18, 12), cup: SINGLES }));
@@ -543,12 +557,13 @@ test('the Games view gives the stake its own column, so each row adds up to the 
   assert.deepEqual(tripByGame(s, 't_cup', { stake: {} }), plain);
 });
 
-test('a one-ball game (a scramble, alternate shot, Chapman) never has cup matches, and one posted before goes', () => {
-  // Matches use each player's own scores, which a one-ball game doesn't have
-  for (const g of ['scramble', 'altshot', 'chapman']) assert.equal(cupCounts(g), false, g);
-  for (const g of ['skins', 'nassau', 'bestball', 'shamble', 'match']) assert.equal(cupCounts(g), true, g);
+test('a scramble or Chapman never has cup matches (nor Alternate shot without its two pairs), and one posted before goes', () => {
+  // Four-ball and singles use each player's own scores, which a one-ball game doesn't have; Alternate shot is foursomes
+  for (const g of ['scramble', 'chapman']) assert.equal(cupCounts(g), false, g);
+  for (const g of ['skins', 'nassau', 'bestball', 'shamble', 'match', 'altshot']) assert.equal(cupCounts(g), true, g);
   const r = round('r1', ['t', 's', 'm', 'd'], birdies('t', 4), { cup: FOURBALL });
   assert.ok(cleanRoundCup(r));
+  // `r` has no teams, so as Alternate shot it has no pairs to play foursomes
   for (const game of ['scramble', 'altshot', 'chapman']) {
     const one = { ...r, game };
     assert.equal(cleanRoundCup(one), null, game);

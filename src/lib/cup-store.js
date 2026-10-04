@@ -12,7 +12,7 @@ import { payKey, refreshCup } from './cup-sync.js';
 export function startingCup(state, round, trip) {
   if (!trip || !cupCounts(round.game)) return null;
   const before = Object.values(state.rounds || {}).filter(r => r?.trip?.id === trip.id && r.cup && r.id !== round.id).length;
-  return defaultRoundCup(state, trip, round.players, null, { rotate: before });
+  return defaultRoundCup(state, trip, round.players, null, { rotate: before, game: round.game });
 }
 
 /**

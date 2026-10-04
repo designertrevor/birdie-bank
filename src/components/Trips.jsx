@@ -86,12 +86,12 @@ export function TripTabCard({ status: st }) {
   const inExpenses = st.spending.has(me);
   const net = inExpenses ? myTripAllIn(state, st) : myTripNet(state, st);
   // A team points trip's stake is paid from the trip, not the Tab: it counts in the trip's payments
-  const n = st.plan.length + (st.cup ? st.cup.lines.filter(l => l.open > 0).length : 0);
+  const n = st.plan.length + (st.cup ? st.cup.lines.filter(l => l.open > 0 && !l.onTab).length : 0);
   const spent = st.expenses.length ? ` · ${st.expenses.length} expense${st.expenses.length === 1 ? '' : 's'}` : '';
   const sub = st.phase === 'soon' ? `${startsLine(st.trip.start)}${spent}`
     : st.phase === 'empty' ? 'No rounds were counted for it'
     : st.pointsOnly ? `${roundsLine(st.done.length)}${st.phase === 'on' ? ' so far' : ''} · played for points`
-    : st.phase === 'ready' ? `${n} payment${n === 1 ? '' : 's'} square${n === 1 ? 's' : ''} the trip · ${st.payments.length + (st.cup?.marks.length || 0)} paid so far${st.cup?.stakeOn ? ' · the cup stake is paid on the trip' : ''}`
+    : st.phase === 'ready' ? `${n} payment${n === 1 ? '' : 's'} square${n === 1 ? 's' : ''} the trip · ${st.payments.length + (st.cup?.marks.length || 0)} paid so far${st.cup?.stakeOn ? ' · the cup stake included' : ''}`
     : st.phase === 'square' ? `${roundsLine(st.done.length)}${spent} · settled`
     : `${roundsLine(st.done.length)}${spent} so far · settle after the last round`;
   const played = st.standings.some(p => p.id === me);

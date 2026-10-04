@@ -9,6 +9,9 @@
 // - expenses: the trip expenses it covers (trip-expenses.js), each with a mark of its money, so a
 //   changed or deleted expense shows. Only expenses whose people all played a round shared live
 //   on the trip that links them up, so the payments can square them. Left out when there are none.
+//   A team points trip's decided stake goes in the same way, line by line (cup-stake.js, ids
+//   "cup:<tripId>:<key>"), with a mark of who won and what's open on it: a phone that works out
+//   another result, or hasn't decided the cup yet, finds the plan out of date.
 // - netted: the payments on those rounds it already counted (round settle ups, earlier plan
 //   payments), by row. A payment on them it didn't count means it's out of date.
 // - lines: who pays whom. `from` and `to` are player ids in round `code`, a round both of them
@@ -29,6 +32,7 @@ import { FETCH_DAYS, canonicalOf, codeOf, played } from './pair-debts.js';
 import { tripOfPayment } from './trip-pay.js';
 import { meFor } from './format.js';
 import { expenseMark, rawTripExpenses, tripExpenses } from './trip-expenses.js';
+import { stakeMoney, stakeMoneyId } from './cup-stake.js';
 
 const DAY = 864e5;
 const cents = v => Math.round((Number(v) || 0) * 100);
@@ -96,11 +100,11 @@ function tripShared(state, tripId, now) {
 }
 
 /**
- * The trip's expenses the plan can square: everyone in one (and whoever paid) is linked up by the
- * rounds shared live the plan covers, so the payments can reach them. The rest stay with the Tab.
+ * The trip's expenses (or its stake's lines) the plan can square: everyone in one (and whoever
+ * paid) is linked up by the rounds shared live the plan covers, so the payments can reach them.
+ * The rest stay with the Tab.
  */
-function plannable(state, tripId, rounds, who) {
-  const list = tripExpenses(state, tripId);
+function plannable(list, rounds, who) {
   if (!list.length) return [];
   const up = new Map();
   const top = id => { let x = id; while (up.get(x) !== x) x = up.get(x); return x; };
@@ -125,8 +129,9 @@ export function buildPlan(state, tripId, { now = Date.now(), version = 1, endedA
   const bal = {};
   const add = (id, c) => { bal[id] = (bal[id] || 0) + c; };
   for (const r of rounds) for (const [pid, v] of Object.entries(tabResults(r).balances)) add(who(pid), cents(v));
-  // Only expenses every phone can have: `covers` says the server holds it as this phone does
-  const spent = plannable(state, tripId, rounds, who).filter(x => covers(x.raw));
+  // Only expenses every phone can have: `covers` says the server holds it as this phone does. The
+  // cup's stake every phone works out for itself (cup-stake.js)
+  const spent = [...plannable(tripExpenses(state, tripId), rounds, who).filter(x => covers(x.raw)), ...plannable(stakeMoney(state, tripId, { now }), rounds, who)];
   for (const x of spent) for (const [id, c] of Object.entries(x.balances)) add(id, c);
   const netted = [];
   for (const s of state.settlements || []) {
@@ -161,7 +166,7 @@ export function buildPlan(state, tripId, { now = Date.now(), version = 1, endedA
   return {
     tripId, version, at: now, endedAt: endedAt || null, byName: byName || null,
     rounds: rounds.map(r => ({ code: codeOf(r), mark: roundMark(r) })), netted: netted.sort(), lines,
-    ...(spent.length ? { expenses: spent.map(x => ({ id: x.id, mark: expenseMark(x.raw) })).sort((a, b) => a.id.localeCompare(b.id)) } : {}),
+    ...(spent.length ? { expenses: spent.map(x => ({ id: x.id, mark: x.stake ? x.mark : expenseMark(x.raw) })).sort((a, b) => a.id.localeCompare(b.id)) } : {}),
   };
 }
 
@@ -179,7 +184,8 @@ export function duePlan(state, trip, { now = Date.now(), byName = null, covers }
   // reach (a non-golfer) never goes in, so it mustn't republish the plan after every payment
   const waiting = () => {
     if (!ps.pendingExpenses.length) return false;
-    const can = plannable(state, trip.id, tripShared(state, trip.id, now), canonicalOf(state)).filter(x => !covers || covers(x.raw));
+    const rounds = tripShared(state, trip.id, now), who = canonicalOf(state);
+    const can = [...plannable(tripExpenses(state, trip.id), rounds, who).filter(x => !covers || covers(x.raw)), ...plannable(stakeMoney(state, trip.id, { now }), rounds, who)];
     return can.some(x => ps.pendingExpenses.includes(x.id));
   };
   if (cur && ps.status === 'live' && !ps.pending.length && !waiting() && (cur.endedAt || null) === ended) return null;
@@ -251,7 +257,14 @@ function check(state, tripId, now) {
   for (const e of marks.size ? rawTripExpenses(state, tripId) : []) {
     if (marks.has(e.id) && (e.deleted || expenseMark(e) !== marks.get(e.id))) return stale('expense');
   }
-  const spent = tripExpenses(state, tripId);
+  // The cup's stake (cup-stake.js): each line it covers as this phone works it out
+  const stake = stakeMoney(state, tripId, { now });
+  const stakePre = stakeMoneyId(tripId, '');
+  for (const [id, mark] of marks) {
+    if (!id.startsWith(stakePre)) continue;
+    if (stake.find(x => x.id === id)?.mark !== mark) return stale('cup');
+  }
+  const spent = [...tripExpenses(state, tripId), ...stake];
   const spentIn = spent.filter(x => marks.has(x.id));
   // The lines, as this phone knows the people in them
   const lines = [];
