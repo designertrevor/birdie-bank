@@ -25,6 +25,7 @@
 import { holeWinner } from './golf.js';
 import { sideNet } from './round.js';
 import { canonicalOf, codeOf } from './pair-debts.js';
+import { stable } from './sync-model.js';
 
 export const CUP_FORMAT = 'cup';
 export const CUP_KINDS = {
@@ -45,6 +46,17 @@ export function cupPoints(v) {
   const n = Math.round((Number(v) || 0) * 2) / 2;
   const whole = Math.floor(n);
   return n % 1 ? (whole ? `${whole}½` : '½') : String(whole);
+}
+
+/** The cup in a few words (`cup` from trips.js cupStatus): "Blue leads 3½ to 2½", "All square at 2", "Red wins the cup 5 to 3". */
+export function cupHeadline(cup) {
+  const [a, b] = cup.score.points;
+  const n = cup.names;
+  if (cup.final) return cup.winner == null ? `The cup is halved, ${cupPoints(a)} all` : `${n[cup.winner]} wins the cup ${cupPoints(Math.max(a, b))} to ${cupPoints(Math.min(a, b))}`;
+  if (!cup.score.done) return cup.score.live.length ? 'The first matches are out' : 'No matches played yet';
+  if (a === b) return `All square at ${cupPoints(a)}`;
+  const lead = a > b ? 0 : 1;
+  return `${n[lead]} leads ${cupPoints(Math.max(a, b))} to ${cupPoints(Math.min(a, b))}`;
 }
 
 /** A team name typed in: trimmed, single spaces, at most 16 characters. */
@@ -459,4 +471,45 @@ export function stakeOpen(lines, marks) {
     const paid = on.reduce((a, m) => a + cents(m.amount), 0);
     return { ...l, paid, open: Math.max(0, cents(l.amount) - paid), marks: on };
   });
+}
+
+// --------------------------- what goes to the server ---------------------------
+
+/** How far a round's matches have got, to tell an older copy from a newer one. */
+const progress = e => (e?.matches || []).reduce((a, m) => a + (Number(m.result?.thru) || 0), 0) + (e?.status === 'done' ? 1000 : 0);
+
+const myName = s => String(s.players?.[s.me]?.name || '').trim().split(/\s+/)[0] || null;
+
+/**
+ * What this phone should post for a trip now: [{ key, data }]. A round only this phone has, or one
+ * it shared live, always; a round it joined only when the server has no copy, or an older one (the
+ * phone that shared it may be out of signal). A round taken off the trip is posted as gone. And
+ * this phone's stake marks, when there are any (`me`: this phone's key for them, cup-sync.js).
+ */
+export function cupPosts(s, trip, remote = {}, me = null) {
+  const out = [];
+  const same = (key, data) => remote[key] && stable(remote[key]) === stable(data);
+  for (const r of Object.values(s.rounds || {})) {
+    if (r.status !== 'done' && r.status !== 'active') continue;
+    const key = cupKey(r);
+    const mine = !codeOf(r) || !!r.shared?.host;
+    if (r.trip?.id !== trip.id) {
+      // Taken off the trip: it stops counting on every phone
+      if (mine && remote[key] && !remote[key].gone) out.push({ key, data: { gone: true } });
+      continue;
+    }
+    const e = cupEntry(s, r);
+    if (!e) {
+      if (mine && remote[key] && !remote[key].gone) out.push({ key, data: { gone: true } });
+      continue;
+    }
+    if (same(key, e)) continue;
+    if (mine || !remote[key] || progress(e) > progress(remote[key])) out.push({ key, data: e });
+  }
+  const pays = Array.isArray(s.cupPaid?.[trip.id]) ? s.cupPaid[trip.id] : [];
+  if (me && (pays.length || remote[me])) {
+    const data = { byName: myName(s), pays };
+    if (!same(me, data)) out.push({ key: me, data });
+  }
+  return out;
 }

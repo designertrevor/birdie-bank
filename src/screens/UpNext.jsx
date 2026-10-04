@@ -23,6 +23,7 @@ import { applyUpdate, useUpdateReady } from '../lib/sw-update.js';
 import { TripSheet, TripUpNext } from '../components/Trips.jsx';
 import { currentTrips } from '../lib/trips.js';
 import { useTripPlans } from '../lib/trip-plan-sync.js';
+import { useCupSync } from '../lib/cup-sync.js';
 
 const LATELY_ON_HOME = 3;
 
@@ -31,6 +32,7 @@ export default function UpNext() {
   const nav = useNav();
   const state = useStore();
   useTripPlans();
+  useCupSync();
   // (A join link opened by someone already set up goes straight to the invite card: see App.)
   const [joining, setJoining] = useState(false);
   const live = activeRounds(state);

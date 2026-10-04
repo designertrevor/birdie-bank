@@ -24,6 +24,9 @@ import { markTripPayment, undoPayments, usePaymentsOff, useTabSync } from '../li
 import { TRIP_FORMATS, canDeleteTrip, canRecount, myTripNet, partPlan, roundsInDates, tripByGame, tripDates, tripHidden, tripStatus, upDown } from '../lib/trips.js';
 import { deleteTrip, endTrip, hideTrip, seenTripPlan, setRoundTrip } from '../lib/trip-store.js';
 import { plansOn, useTripPlans } from '../lib/trip-plan-sync.js';
+import { CupBoard, CupMatches, CupScore, StakeLines } from '../components/Cup.jsx';
+import { useCupSync } from '../lib/cup-sync.js';
+import { cupHeadline } from '../lib/cup.js';
 
 const first = name => String(name || '').trim().split(/\s+/)[0];
 const sign = v => (v > 0 ? 'pos' : v < 0 ? 'neg' : '');
@@ -42,15 +45,17 @@ function useWho(state) {
   return { me, label: id => (id === me ? 'You' : nameOf(state, id)), short: id => (id === me ? 'You' : first(nameOf(state, id))) };
 }
 
-/** `view`: which part opens first ('standings', 'rounds' or 'games'). */
-export default function Trip({ id, view: firstView = 'standings' }) {
+/** `view`: which part opens first ('cup', 'standings', 'rounds' or 'games'); a team points trip opens on the cup. */
+export default function Trip({ id, view: firstView = null }) {
   const nav = useNav();
   const state = useStore();
   const { ask, showToast } = useUI();
   // Payments from Settle the trip ride on the trip's shared rounds, and its plan on the server: keep them fresh
   useTabSync({ live: true });
   useTripPlans();
-  const [view, setView] = useState(firstView);
+  // A team points trip's matches from other groups' phones (cup-sync.js)
+  useCupSync();
+  const [pickedView, setView] = useState(firstView);
   const [editing, setEditing] = useState(false);
   const [counting, setCounting] = useState(false);
   const [leaving, setLeaving] = useState(false);
@@ -61,6 +66,8 @@ export default function Trip({ id, view: firstView = 'standings' }) {
     return <Screen><Header title="Trip" small onBack={nav.pop} /><div className="scroll"><Empty title="This trip is gone" text="Its rounds and their money are still in History and on the Tab." /></div></Screen>;
   }
   const { trip } = st;
+  const cup = st.cup;
+  const view = pickedView === 'cup' && !cup ? 'standings' : pickedView || (cup ? 'cup' : 'standings');
   const played = st.standings.some(p => p.id === me);
   const net = myTripNet(state, st);
   const myPoints = st.points?.[me] ?? null;
@@ -73,10 +80,17 @@ export default function Trip({ id, view: firstView = 'standings' }) {
     : st.phase === 'ready' ? 'That’s the trip'
     : st.phase === 'square' ? 'All square'
     : `${st.day ? `Day ${st.day} of ${st.days} · ` : ''}${st.done.length} round${st.done.length === 1 ? '' : 's'} done`;
-  const big = st.money.length && played ? upDown(net)
+  const cupOn = cup && (cup.score.done > 0 || cup.score.live.length > 0);
+  const big = st.hasMoney && played ? upDown(net)
+    : cupOn ? cupHeadline(cup)
     : myPoints != null ? `You’re on ${points(myPoints, { sign: true })}`
     : st.phase === 'soon' ? 'Nothing played yet' : st.done.length ? 'No money on it yet' : 'Nothing played yet';
-  const hint = st.pointsOnly ? 'Played for points, so there’s nothing to pay. Everyone on the trip sees the standings.'
+  const stakeOpen = cup ? cup.lines.filter(l => l.open > 0).length : 0;
+  const settleCount = st.plan.length + stakeOpen;
+  const hint = cup && st.phase === 'ready' ? `${cupHeadline(cup)}. ${settleCount} payment${settleCount === 1 ? '' : 's'} square${settleCount === 1 ? 's' : ''} the trip${stakeOpen ? `, the cup stake included` : ''}. The rounds’ money is already in each person’s total on the Tab; the cup stake is paid here.`
+    : cup && st.phase === 'square' ? `${cupHeadline(cup)}. Everyone’s square on the trip.`
+    : cup && (st.phase === 'on' || st.phase === 'soon') && !st.money.length ? `Every round counted for the trip adds its matches to the cup. ${cup.def.stake ? `${money(cup.def.stake)} a person is on the cup, paid once the trip is over.` : 'Each round keeps its own bets, if it has any.'}`
+    : st.pointsOnly ? 'Played for points, so there’s nothing to pay. Everyone on the trip sees the standings.'
     : st.published.status === 'stale' && st.money.length ? `A round or a score changed, so the trip’s payments are being worked out again on ${theirPhone(st)}. Until then the Tab keeps the trip’s money pair by pair.`
     : st.phase === 'ready' ? `${st.plan.length} payment${st.plan.length === 1 ? '' : 's'} square${st.plan.length === 1 ? 's' : ''} the whole trip${st.published.status === 'live' ? ', the same on every phone' : ''}. Trip money is already in each person’s total on the Tab, so paying here pays the Tab too.`
     : st.phase === 'square' ? 'Everyone’s square on the trip.'
@@ -103,7 +117,7 @@ export default function Trip({ id, view: firstView = 'standings' }) {
       <div className="scroll">
         <div className="trip-hero">
           <div className="eyebrow pink">{eyebrow}{st.published.updated && <> <span className="trip-updated">Updated</span></>}</div>
-          <div className={`tab-big d ${st.money.length && played ? sign(net) : ''}`}>{big}</div>
+          <div className={`tab-big d ${st.hasMoney && played ? sign(net) : ''}`}>{big}</div>
           <div className="trip-sub">{[tripDates(trip), trip.where].filter(Boolean).join(' · ')}</div>
           <TripDays status={st} />
         </div>
@@ -111,8 +125,19 @@ export default function Trip({ id, view: firstView = 'standings' }) {
 
         <div className="tab-view">
           <Segmented label="Trip view" className="press-mode-row" btn="pm-btn" value={view} onChange={setView}
-            options={[{ value: 'standings', label: 'Standings' }, { value: 'rounds', label: 'Rounds' }, { value: 'games', label: 'Games' }]} />
+            options={[...(cup ? [{ value: 'cup', label: 'Cup' }] : []), { value: 'standings', label: cup ? 'Money' : 'Standings' }, { value: 'rounds', label: 'Rounds' }, { value: 'games', label: 'Games' }]} />
         </div>
+
+        {view === 'cup' && cup && (
+          <>
+            <CupScore cup={cup} />
+            <div className="sec-label">Matches</div>
+            <CupMatches cup={cup} />
+            <div className="sec-label">Leaderboard</div>
+            <CupBoard cup={cup} />
+            <p className="field-help pad">{cup.entries.some(e => !e.local) ? 'Other groups’ matches come from their phones. ' : ''}A match is worked out from the round’s own scores and strokes, whatever game the round plays. A round that ends early goes to whoever led on the holes played.</p>
+          </>
+        )}
 
         {view === 'standings' && <Standings st={st} state={state} label={label} me={me} />}
         {view === 'rounds' && (
@@ -152,6 +177,10 @@ export default function Trip({ id, view: firstView = 'standings' }) {
             {/* The organizer's call: it rides in the trip's plan, so every phone opens Settle the trip together */}
             {st.organizer && !st.live.length && <button className="link-btn center" onClick={doneNow}>Done playing? Settle the trip now</button>}
           </>
+        )}
+        {/* A team points trip with only the cup's stake on it: the organizer still says when it's over */}
+        {(st.phase === 'on' || st.phase === 'soon') && !st.money.length && cup?.def.stake > 0 && st.done.length > 0 && st.organizer && !st.live.length && (
+          <button className="link-btn center" onClick={doneNow}>Done playing? Decide the cup now</button>
         )}
         {st.organizer && st.phase === 'ready' && trip.endedAt && !st.settling.length && <button className="link-btn center" onClick={() => endTrip(id, false)}>Still playing? Reopen the trip</button>}
       </div>
@@ -220,6 +249,7 @@ function Standings({ st, state, label, me }) {
             <span className="tr-main">
               <span className="tr-name">{label(p.id)}</span>
               {p.rounds < st.done.length && <span className="tr-sub">{p.rounds} of {st.done.length} rounds</span>}
+              {p.stake != null && <span className="tr-sub">{money(p.stake, { sign: true })} from the cup</span>}
             </span>
             <span className={`tr-amt ${sign(p.amount)}`}>{money(p.amount, { sign: true })}</span>
           </div>
@@ -326,6 +356,7 @@ export function TripSettle({ id, who = null }) {
   const { showToast } = useUI();
   useTabSync({ live: true });
   useTripPlans();
+  useCupSync();
   const off = usePaymentsOff();
   const st = tripStatus(state, id);
   const { me, label, short } = useWho(state);
@@ -338,7 +369,9 @@ export function TripSettle({ id, who = null }) {
   const mineLines = plan.filter(t => t.from === me || t.to === me);
   const others = plan.filter(t => t.from !== me && t.to !== me);
   const paid = st.payments.filter(g => !who || g.from === who || g.to === who);
-  const n = plan.length;
+  // A team points trip's stake is settled with the whole trip, never someone's part
+  const stakeOpen = !who && st.cup ? st.cup.lines.filter(l => l.open > 0).length : 0;
+  const n = plan.length + stakeOpen;
   // Like with like: the payments the trip takes in all (still to pay and paid) against round by round
   const all = n + paid.length;
   const note = trip.name;
@@ -425,6 +458,8 @@ export function TripSettle({ id, who = null }) {
             ))}
           </>
         )}
+
+        {!who && <StakeLines st={st} />}
 
         {!who && !updating && st.between.map(r => {
           const kept = canonicalOf(state);

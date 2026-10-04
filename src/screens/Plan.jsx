@@ -23,6 +23,7 @@ import {
 import { PlansOffError } from '../lib/plan-adapters.js';
 import { CountForTrip } from '../components/Trips.jsx';
 import { tripOf, tripOnDay, tripStamp } from '../lib/trips.js';
+import { startingCup } from '../lib/cup-store.js';
 import { answerPlan, editPlan, openPlanLink, planShareLink, removePlan, sharePlan, usePlanLive, usePlansOff } from '../lib/plan-sync.js';
 
 const first = name => String(name || '').trim().split(/\s+/)[0];
@@ -438,6 +439,9 @@ export function RollCall({ id }) {
     if (setup.playFor) round.playFor = structuredClone(setup.playFor);
     // Planned for a trip (or teeing off while one is on, and counted): the stamp rides in the round
     if (tripPick) round.trip = tripStamp(tripPick);
+    // A team points trip: its matches from the trip's teams (they can be changed from the trip's page)
+    const cup = tripPick ? startingCup(getState(), round, tripPick) : null;
+    if (cup) round.cup = cup;
     update(s => { addRound(s, round); });
     editPlan(id, p => { p.status = 'started'; p.roundId = rid; });
     // Friends on the plan can follow the round live from the same page

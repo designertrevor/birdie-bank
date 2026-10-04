@@ -9,8 +9,7 @@ import { getState, update } from './store.js';
 import { getSupabase, supabaseConfigured } from './supabase.js';
 import { isMissingTable } from './plan-adapters.js';
 import { stable } from './sync-model.js';
-import { codeOf } from './pair-debts.js';
-import { cupEntry, cupKey, CUP_FORMAT } from './cup.js';
+import { CUP_FORMAT, cupPosts } from './cup.js';
 import { tripRounds, tripsOf } from './trips.js';
 import { deviceReady, myDevice } from './device.js';
 
@@ -80,46 +79,8 @@ const note = e => {
 /** Team points trips this phone knows. */
 const cupTrips = s => [...tripsOf(s).values()].filter(t => t.format === CUP_FORMAT);
 
-/** How far a round's matches have got, to tell an older copy from a newer one. */
-const progress = e => (e?.matches || []).reduce((a, m) => a + (Number(m.result?.thru) || 0), 0) + (e?.status === 'done' ? 1000 : 0);
-
 /** This phone's key for its own stake marks: one row a phone (null until the device hash is known). */
 export const payKey = () => (myDevice() ? `P${myDevice().slice(0, 20)}` : null);
-const myName = s => String(s.players?.[s.me]?.name || '').trim().split(/\s+/)[0] || null;
-
-/**
- * What this phone should post for a trip now: [{ key, data }]. A round only this phone has, or one
- * it shared live, always; a round it joined only when the server has no copy, or an older one (the
- * phone that shared it may be out of signal). A round taken off the trip is posted as gone. And
- * this phone's stake marks, when there are any.
- */
-export function cupPosts(s, trip, remote = {}, me = payKey()) {
-  const out = [];
-  const same = (key, data) => remote[key] && stable(remote[key]) === stable(data);
-  for (const r of Object.values(s.rounds || {})) {
-    if (r.status !== 'done' && r.status !== 'active') continue;
-    const key = cupKey(r);
-    const mine = !codeOf(r) || !!r.shared?.host;
-    if (r.trip?.id !== trip.id) {
-      // Taken off the trip: it stops counting on every phone
-      if (mine && remote[key] && !remote[key].gone) out.push({ key, data: { gone: true } });
-      continue;
-    }
-    const e = cupEntry(s, r);
-    if (!e) {
-      if (mine && remote[key] && !remote[key].gone) out.push({ key, data: { gone: true } });
-      continue;
-    }
-    if (same(key, e)) continue;
-    if (mine || !remote[key] || progress(e) > progress(remote[key])) out.push({ key, data: e });
-  }
-  const pays = Array.isArray(s.cupPaid?.[trip.id]) ? s.cupPaid[trip.id] : [];
-  if (me && (pays.length || remote[me])) {
-    const data = { byName: myName(s), pays };
-    if (!same(me, data)) out.push({ key: me, data });
-  }
-  return out;
-}
 
 /** Keep what the server has for each trip (every row it lets this phone read). */
 function keep(tripIds, rows) {
@@ -147,7 +108,7 @@ export function refreshCup() {
       keep(ids, await adapter.fetch(ids));
       for (const trip of trips) {
         const remote = getState().cupRemote?.[trip.id] || {};
-        const posts = cupPosts(getState(), trip, remote);
+        const posts = cupPosts(getState(), trip, remote, payKey());
         for (const p of posts) await adapter.publish(trip.id, p.key, p.data);
         if (posts.length) update(st => { st.cupRemote = { ...(st.cupRemote || {}), [trip.id]: { ...(st.cupRemote?.[trip.id] || {}), ...Object.fromEntries(posts.map(p => [p.key, p.data])) } }; });
       }

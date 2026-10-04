@@ -8,7 +8,7 @@ import { createRound, roundResults } from './round.js';
 import { outstanding, tabBalances } from './ledger.js';
 import {
   balanceTeams, cleanCup, cleanEntry, cupEntries, cupEntry, cupLeaderboard, cupPoints, cupScore, defaultRoundCup, matchResult,
-  moveTo, pairMatches, pickingTeam, roundCupResults, stakeBalances, stakeLines, stakeMarks, stakeOpen, teamOf, cleanStake,
+  moveTo, pairMatches, pickingTeam, roundCupResults, stakeBalances, stakeLines, stakeMarks, stakeOpen, teamOf, cleanStake, cupPosts, cupHeadline,
 } from './cup.js';
 import { TRIP_FORMATS, newTrip, tripStamp, tripStatus, tripsOf, myTripNet } from './trips.js';
 
@@ -382,4 +382,42 @@ test('a friend’s phone with other ids for the teams finds who’s who by the r
   assert.ok(mine, 'Mike’s phone knows the line to him is his');
   assert.equal(mine.amount, 20);
   assert.equal(st.standings.find(p => p.id === 'mike_own').stake, 20);
+});
+
+// ---------------------------------------------------------------------------
+// What goes to the server
+
+test('a phone posts the rounds it keeps, a joined round only when the server’s copy is missing or older, and its own marks', () => {
+  const local = round('r1', ['t', 's', 'm', 'd'], birdies('t', 4), { cup: FOURBALL });
+  const hosted = { ...round('r2', ['t', 's', 'm', 'd'], birdies('m', 2), { cup: FOURBALL, code: 'HOST01' }), shared: { code: 'HOST01', host: true } };
+  const joined = { ...round('r3', ['t', 'a', 'm', 'b'], {}, { cup: { kind: 'singles', sides: [['t', 'a'], ['m', 'b']] }, code: 'JOIN01', status: 'active', upto: 3 }), shared: { code: 'JOIN01', host: false } };
+  const s = stateOf('t', [local, hosted, joined], { cupPaid: { t_cup: [{ id: 'x', key: 't>m', from: 't', to: 'm', amount: 20, at: 1 }] } });
+  const keys = cupPosts(s, TRIP, {}, 'Pabc').map(p => p.key);
+  assert.deepEqual(keys.sort(), ['HOST01', 'JOIN01', 'Lr1', 'Pabc']);
+  // Once the server has them all as they are, nothing to post
+  const remote = Object.fromEntries(cupPosts(s, TRIP, {}, 'Pabc').map(p => [p.key, JSON.parse(JSON.stringify(p.data))]));
+  assert.deepEqual(cupPosts(s, TRIP, remote, 'Pabc'), []);
+  // The joined round's server copy is further along (its keeper's phone): this phone leaves it
+  const ahead = { ...remote, JOIN01: { ...remote.JOIN01, status: 'done' } };
+  const scored = structuredClone(s);
+  scored.rounds.r3.scores[4] = { t: 3, a: 4, m: 4, b: 4 };
+  assert.deepEqual(cupPosts(scored, TRIP, ahead, 'Pabc'), []);
+  // Behind it: this phone's newer copy goes up
+  assert.deepEqual(cupPosts(scored, TRIP, remote, 'Pabc').map(p => p.key), ['JOIN01']);
+  // A round of its own taken off the trip is posted as gone
+  const off = structuredClone(s);
+  delete off.rounds.r1.trip;
+  assert.deepEqual(cupPosts(off, TRIP, remote, 'Pabc'), [{ key: 'Lr1', data: { gone: true } }]);
+  // And a gone round counts for nothing on another phone
+  const friend = stateOf('x', [], { cupRemote: { t_cup: { Lr1: { gone: true }, HOST01: remote.HOST01 } } });
+  assert.deepEqual(cupEntries(friend, 't_cup').map(e => e.key), ['HOST01']);
+});
+
+test('the cup in a few words', () => {
+  const st = tripStatus(stateOf('t', cupRounds()), 't_cup', { now: OCT(18, 20) });
+  assert.equal(cupHeadline(st.cup), 'Red wins the cup 3 to 2');
+  const mid = tripStatus(stateOf('t', cupRounds({ day3: false })), 't_cup', { now: OCT(17, 18) });
+  assert.equal(cupHeadline(mid.cup), 'Blue leads 2 to 1');
+  const none = tripStatus(stateOf('t', []), 't_cup', { now: OCT(15) });
+  assert.equal(cupHeadline(none.cup), 'No matches played yet');
 });

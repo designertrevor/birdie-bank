@@ -36,6 +36,9 @@ import { SaveUsualButton, UsualsList } from '../components/Usuals.jsx';
 import PlayForPicker from '../components/PlayFor.jsx';
 import { countsMoney, inUnits, padUnit, playForLine, playForShort } from '../lib/play-for.js';
 import { CountForTrip, StartTripLink } from '../components/Trips.jsx';
+import { CupRoundSetup } from '../components/Cup.jsx';
+import { startingCup } from '../lib/cup-store.js';
+import { cleanRoundCup, cupOf } from '../lib/cup.js';
 import { countsByDefault, tripOf, tripOnDay, tripPlanDay, tripStamp } from '../lib/trips.js';
 
 const STEPS = ['Game', 'Course', 'Players', 'Bets'];
@@ -173,7 +176,16 @@ export default function NewRound({ rematch, fromPlan, present, edit = null, ahea
   const [countTrip, setCountTrip] = useState(null); // null until changed: the default
   const countOn = countTrip ?? (!!tripOn && (!!tripId || !!fromPlanTrip || countsByDefault(state, tripOn.id, planning ? [state.me, ...invited] : picked)));
   const tripPick = tripOn && countOn ? tripOn : null;
-  const tripRow = tripOn && !editing ? <CountForTrip trip={tripOn} on={countOn} onChange={setCountTrip} /> : null;
+  // A team points trip: the round's matches from the trip's teams, changeable here (cup.js)
+  const [cupPick, setCupPick] = useState(null); // { sig, cup } once changed
+  const cupPlayers = picked.map(pid => state.players[pid]).filter(Boolean).map(p => ({ id: p.id, name: p.name }));
+  const cupSig = `${game}|${picked.join(',')}|${tripPick?.id || ''}`;
+  const tripCup = !planning && tripPick ? cupOf(tripPick) : null;
+  const roundCup = !tripCup ? null
+    : cupPick?.sig === cupSig ? cleanRoundCup({ players: cupPlayers, cup: cupPick.cup })
+    : startingCup(state, { game, players: cupPlayers }, tripPick) || (game === 'scramble' ? { kind: 'singles', sides: [[], []] } : null);
+  const cupRow = tripCup ? <CupRoundSetup trip={tripPick} players={cupPlayers} value={roundCup} names={tripCup.names} game={game} onChange={c => setCupPick({ sig: cupSig, cup: c })} /> : null;
+  const tripRow = tripOn && !editing ? <><CountForTrip trip={tripOn} on={countOn} onChange={setCountTrip} />{cupRow}</> : null;
   const tripLink = !tripOn && !editing && !fromPlan ? <StartTripLink /> : null;
   // Names from the usual still not saved here (adding one by the same name clears it from the hint)
   const savedNames = new Set(Object.values(state.players || {}).map(p => String(p?.name || '').trim().toLowerCase()));
@@ -290,6 +302,11 @@ export default function NewRound({ rematch, fromPlan, present, edit = null, ahea
     if (bets.length) round.bets = bets;
     // Counted for the trip: the stamp rides in the round to every phone in it (trips.js)
     if (tripPick) round.trip = tripStamp(tripPick);
+    // Its matches for a team points trip, as set up here (a scramble has none: one ball a team)
+    if (tripCup && roundCup && game !== 'scramble') {
+      const c = cleanRoundCup({ players: round.players, cup: roundCup });
+      if (c) round.cup = c;
+    }
     // Started from a saved usual (still the same game at the same course): finishing it updates "Last played"
     const from = usualId && usualsOf(s).find(u => u.id === usualId);
     if (from && from.game === game && (from.courseId === course.id || findCourse(s, from.courseId)?.id === course.id)) round.usualId = usualId;

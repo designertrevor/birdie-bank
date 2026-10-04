@@ -1935,3 +1935,93 @@ button.trip-card:active { transform: scale(.97); }
 .trip-who { display: flex; flex-direction: column; gap: 6px; margin-top: 8px; }
 .trip-who .sheet-item { width: 100%; margin: 0; }
 .trip-who .avatar { margin: 0; }
+
+/* ---------- Team points trips, Ryder Cup style (o7 rydercup): the cup's score, matches, leaderboard, teams ---------- */
+/* Two team colors, deep enough for white text in light mode and bright enough on dark cards */
+:root { --cup-a: #2563b8; --cup-a-bg: #e1ecfb; --cup-b: #c2382c; --cup-b-bg: #fde3df; }
+:root[data-theme="dark"] { --cup-a: #7fb0ff; --cup-a-bg: #1d2d47; --cup-b: #ff8a7a; --cup-b-bg: #46201c; }
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]):not([data-theme="dark"]) { --cup-a: #7fb0ff; --cup-a-bg: #1d2d47; --cup-b: #ff8a7a; --cup-b-bg: #46201c; } }
+.cup-dot { display: inline-block; width: 9px; height: 9px; border-radius: 50%; flex-shrink: 0; vertical-align: 1px; }
+.cup-dot.t0 { background: var(--cup-a); }
+.cup-dot.t1 { background: var(--cup-b); }
+.cup-line { display: inline-flex; flex-wrap: wrap; gap: 4px 12px; font-variant-numeric: tabular-nums; }
+.cup-line-team { display: inline-flex; align-items: center; gap: 5px; color: var(--body); }
+.cup-line-team b { color: var(--ink); font-weight: 800; }
+/* The scoreboard */
+.cup-score { padding: 14px; }
+.cup-board { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 8px; }
+.cup-team { min-width: 0; padding: 12px; border-radius: 16px; text-align: center; }
+.cup-team.t0 { background: var(--cup-a-bg); }
+.cup-team.t1 { background: var(--cup-b-bg); }
+.cup-team-name { display: flex; align-items: center; justify-content: center; gap: 6px; font-weight: 700; font-size: 15px; color: var(--ink); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.cup-team-pts { font-size: 40px; font-weight: 800; line-height: 1.1; letter-spacing: -.02em; color: var(--ink); font-variant-numeric: tabular-nums; margin-top: 2px; }
+.cup-team.t0.lead .cup-team-pts { color: var(--cup-a); }
+.cup-team.t1.lead .cup-team-pts { color: var(--cup-b); }
+.cup-team.won { box-shadow: inset 0 0 0 2px currentColor; }
+.cup-team.t0.won { color: var(--cup-a); }
+.cup-team.t1.won { color: var(--cup-b); }
+.cup-team-tag { display: inline-flex; align-items: center; gap: 4px; margin-top: 2px; font-size: 12px; font-weight: 700; }
+.cup-headline { margin-top: 12px; font-weight: 700; font-size: 16px; color: var(--ink); text-align: center; text-wrap: balance; }
+.cup-sub { margin-top: 4px; font-size: 13px; color: var(--mute); text-align: center; line-height: 1.4; }
+/* Matches, a round at a time */
+.cup-round { padding: 12px 14px; }
+.cup-round-head { display: flex; align-items: center; gap: 10px; margin-bottom: 4px; }
+.cup-round-head .row-main { display: flex; flex-direction: column; min-width: 0; }
+.cup-round-title { font-weight: 700; font-size: 15px; color: var(--ink); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.cup-round-sub { font-size: 12px; color: var(--mute); }
+.cup-match { display: grid; grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr); align-items: center; gap: 8px; padding: 9px 0; border-top: 1px solid var(--line-soft); font-size: 14px; }
+.cup-round .cup-match:nth-child(2) { border-top: none; }
+.cm-side { display: flex; align-items: center; gap: 6px; min-width: 0; color: var(--body); overflow-wrap: anywhere; line-height: 1.3; }
+.cm-side.right { justify-content: flex-end; text-align: right; }
+.cm-side.ahead { color: var(--ink); font-weight: 700; }
+.cm-res { padding: 3px 9px; border-radius: 999px; background: var(--surface); color: var(--ink); font-size: 12px; font-weight: 800; white-space: nowrap; font-variant-numeric: tabular-nums; }
+.cup-match.done .cm-res.t0 { background: var(--cup-a); color: #fff; }
+.cup-match.done .cm-res.t1 { background: var(--cup-b); color: #fff; }
+.cup-match.live .cm-res.t0 { color: var(--cup-a); box-shadow: inset 0 0 0 1.5px var(--cup-a); background: none; }
+.cup-match.live .cm-res.t1 { color: var(--cup-b); box-shadow: inset 0 0 0 1.5px var(--cup-b); background: none; }
+:root[data-theme="dark"] .cup-match.done .cm-res.t0, :root[data-theme="dark"] .cup-match.done .cm-res.t1 { color: #0a0a0a; }
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]):not([data-theme="dark"]) .cup-match.done .cm-res.t0, :root:not([data-theme="light"]):not([data-theme="dark"]) .cup-match.done .cm-res.t1 { color: #0a0a0a; } }
+.cup-table .tr-sub { display: inline-flex; align-items: center; gap: 5px; font-variant-numeric: tabular-nums; }
+/* Picking the teams */
+.cup-names { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 10px; }
+.cup-names .field-label { display: flex; align-items: center; gap: 6px; }
+.cup-names .text-input { min-width: 0; }
+.cup-cols { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 8px; margin-top: 12px; }
+.cup-col { min-width: 0; padding: 10px 8px; border-radius: 16px; display: flex; flex-direction: column; gap: 6px; }
+.cup-col.t0 { background: var(--cup-a-bg); }
+.cup-col.t1 { background: var(--cup-b-bg); }
+.cup-col.turn.t0 { box-shadow: inset 0 0 0 2px var(--cup-a); }
+.cup-col.turn.t1 { box-shadow: inset 0 0 0 2px var(--cup-b); }
+.cup-col-head { display: flex; align-items: center; gap: 6px; padding: 0 4px; font-weight: 700; font-size: 14px; color: var(--ink); min-width: 0; }
+.cup-col-hc { margin-left: auto; font-size: 11px; font-weight: 600; color: var(--mute); white-space: nowrap; font-variant-numeric: tabular-nums; }
+.cup-col-empty { padding: 8px 4px; font-size: 13px; color: var(--mute); }
+.cup-chip { display: flex; align-items: center; gap: 6px; width: 100%; min-height: 44px; padding: 6px 8px; border: none; border-radius: 12px; background: var(--card); color: var(--ink); font: inherit; font-size: 14px; text-align: left; cursor: pointer; transition: transform .2s var(--spring); }
+.cup-chip:active { transform: scale(.96); }
+.cup-chip .avatar { margin: 0; flex-shrink: 0; }
+.cup-chip > i { margin-left: auto; color: var(--mute); font-size: 14px; flex-shrink: 0; }
+.cup-chip-name { flex: 1; min-width: 0; font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.cup-chip-hc { font-size: 12px; color: var(--mute); font-variant-numeric: tabular-nums; }
+.cup-cap { display: grid; place-items: center; width: 20px; height: 20px; border-radius: 50%; background: var(--ink); color: var(--on-ink); font-size: 11px; font-weight: 800; flex-shrink: 0; }
+.cup-free { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 6px; }
+.cup-chip.free { background: var(--surface); }
+.cup-chip.pick.t0 { box-shadow: inset 0 0 0 1.5px var(--cup-a); }
+.cup-chip.pick.t1 { box-shadow: inset 0 0 0 1.5px var(--cup-b); }
+.cup-chip.static { cursor: default; grid-column: 1 / -1; flex-wrap: wrap; }
+.cup-chip.static:active { transform: none; }
+.cup-pick .link-btn { margin-top: 8px; }
+.cup-stake-row { display: flex; align-items: center; gap: 8px; }
+.cup-stake-row .text-input { width: 96px; flex: 0 0 auto; font-variant-numeric: tabular-nums; }
+.cup-stake-sign, .cup-stake-unit { font-weight: 600; color: var(--body); }
+/* A round's matches in setup and in its sheet */
+.cup-setup { display: flex; align-items: center; gap: 12px; margin-top: 8px; padding: 12px 14px; background: var(--card); border-radius: 18px; }
+.cup-setup .toggle-sub { overflow-wrap: anywhere; }
+.cup-setup-note { display: flex; gap: 6px; align-items: flex-start; }
+.cup-sheet { padding: 4px 0 0; background: none; }
+.cup-order { display: flex; align-items: center; gap: 6px; min-height: 44px; padding: 4px 6px; border-radius: 12px; background: var(--card); }
+.cup-order-n { width: 18px; text-align: center; font-size: 12px; font-weight: 700; color: var(--mute); flex-shrink: 0; }
+.cup-order .icon-btn { width: 32px; height: 32px; font-size: 14px; background: var(--surface); }
+.cup-preview { padding: 6px 0; font-size: 14px; color: var(--body); overflow-wrap: anywhere; }
+.cup-preview b { color: var(--ink); margin-right: 4px; }
+/* On a trip round's results */
+.cup-note { margin-top: 6px; }
+.cup-note .cup-match:first-child { border-top: none; }
