@@ -12,7 +12,6 @@ import { BIG_FORMAT, BIG_NAME, cleanBig, groupsProblem } from './big-game.js';
 import { bigOf, bigStatus } from './big-money.js';
 import { shareRound, syncConfigured } from './sync.js';
 import { refreshBig } from './big-sync.js';
-import { keeperOf } from './keeper.js';
 import { codeOf } from './pair-debts.js';
 
 /** A group's own round has no money of its own: stroke play at $0, so the game's money is all the Big Game's. */
@@ -103,6 +102,9 @@ export function closeBig(tripId, ended = true) {
   });
 }
 
+/** A player's strokes across the field: their course handicap at the game's percentage. */
+export const fieldPlays = (courseHc, pct) => Math.round((Number(courseHc) || 0) * (pct / 100));
+
 /** A group's players as a round takes them: the saved player, with the tee and handicap edit from setup. */
 function groupPlayers(s, big, setup, ids, course) {
   const tee = defaultTee(course)?.name || null;
@@ -131,13 +133,16 @@ export async function startGroups(tripId) {
   if (!course) return { ok: false, why: 'The course isn’t on this phone any more. Edit the game and pick it again.' };
   const settings = Object.fromEntries(Object.entries(structuredClone(s.settings)).filter(([k]) => !PERSONAL.includes(k)));
   settings.stroke = { ...GROUP_STROKE };
-  const made = big.groups.map(g => ({
-    group: g.id,
-    round: createRound({
+  const made = big.groups.map(g => {
+    const round = createRound({
       id: uid('r_'), game: 'stroke', course, holesCount: trip.setup.holesCount || 18, nine: trip.setup.nine || 'front',
       players: groupPlayers(s, big, trip.setup, g.players, course), settings, hcPct: big.hcPct, useHandicaps: big.useHandicaps,
-    }),
-  }));
+    });
+    // Strokes on the card are the field's, each player's own in full, never off the group's low player,
+    // so the dots on each hole are the strokes the pot and the skins count (big-game.js)
+    if (big.useHandicaps) round.players = round.players.map(p => ({ ...p, plays: fieldPlays(p.courseHc, big.hcPct) }));
+    return { group: g.id, round };
+  });
   const next = cleanBig({ ...big, v: big.v + 1, at: Date.now(), groups: big.groups.map(g => ({ ...g, roundId: made.find(m => m.group === g.id).round.id })) });
   const mine = made.find(m => big.groups.find(g => g.id === m.group).players.includes(s.me)) || made[0];
   update(st => {
@@ -179,10 +184,4 @@ export function deleteBig(tripId) {
   if (!big || !isOrganizer(s, tripOf(s, tripId)) || big.groups.some(g => g.roundId)) return false;
   update(st => { delete st.trips[tripId]; });
   return true;
-}
-
-/** Whether this phone still has a group's card to hand to someone (it's the host phone and keeps it). */
-export function keepsCard(state, round) {
-  const k = keeperOf(round);
-  return !!round?.shared?.host && !!k && k.id === null;
 }

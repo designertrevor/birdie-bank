@@ -13,7 +13,7 @@ import { allCourses, defaultTee as firstTee, teeDotStyle } from '../lib/courses.
 import { effectiveCourseHc, holesInPlay } from '../lib/round.js';
 import { formatIndex, playerLabel, sortedPlayers } from '../lib/format.js';
 import { money } from '../lib/golf.js';
-import { dayChoices, isoDate } from '../lib/plans.js';
+import { dayChoices, dayLabel, isoDate } from '../lib/plans.js';
 import { allowanceHint, suggestedAllowance } from '../lib/allowances.js';
 import {
   BIG_MAX_PLAYERS, BIG_MAX_STAKE, BIG_MIN_PLAYERS, BIG_NAME, GROUP_MAX, PLACES, POT_KINDS, balanceGroups, balanceTeams, bigField, bigResults,
@@ -85,7 +85,14 @@ export default function BigGameSetup({ id = null }) {
     return { id: `g${i + 1}`, name: `Group ${i + 1}`, players: ids, keeper: ids.includes(k) ? k : ids.includes(state.me) ? state.me : ids[0] || null };
   });
   const teamsNow = { ...teams, list: teams.list.map(t => ({ ...t, players: t.players.filter(x => people[x]) })).filter(t => t.players.length) };
-  const big = cleanBig({ ...init, hcPct, useHandicaps: useHc, people, groups: groupList.map((g, i) => ({ ...g, roundId: init.groups[i]?.roundId || null, code: init.groups[i]?.code || null })), pot, skins: { ...skins, out: skins.out.filter(x => people[x]) }, teams: teamsNow, bets: bets.filter(b => b.sides.every(x => people[x])) });
+  // Without handicaps, net is gross: it says so
+  const gross = k => (!useHc && k === 'net' ? 'gross' : k);
+  const big = cleanBig({
+    ...init, hcPct, useHandicaps: useHc, people,
+    groups: groupList.map((g, i) => ({ ...g, roundId: init.groups[i]?.roundId || null, code: init.groups[i]?.code || null })),
+    pot: { ...pot, kind: gross(pot.kind) }, skins: { ...skins, kind: gross(skins.kind), out: skins.out.filter(x => people[x]) },
+    teams: { ...teamsNow, kind: gross(teamsNow.kind) }, bets: bets.filter(b => b.sides.every(x => people[x])),
+  });
   const problem = groupsProblem(big);
   const today = day <= isoDate();
 
@@ -109,7 +116,7 @@ export default function BigGameSetup({ id = null }) {
       else showToast(res.shared === big.groups.length ? 'The groups are on. Send them their links' : 'The groups are on. Share the links once there’s signal');
     } else {
       setBusy(false);
-      showToast(was ? 'Saved' : `${trip.name} is set for ${day === isoDate() ? 'today' : 'the day'}`);
+      showToast(was ? 'Saved' : `${trip.name} is set for ${dayLabel(day).toLowerCase() === 'tomorrow' ? 'tomorrow' : dayLabel(day)}`);
     }
     nav.reset('upnext', ['bigGame', { id: trip.id }]);
   };
@@ -153,7 +160,7 @@ export default function BigGameSetup({ id = null }) {
           problem={problem} onNext={() => setStep(4)} />
       )}
       {step === 4 && course && (
-        <Games pot={pot} setPot={setPot} skins={skins} setSkins={setSkins} teams={teamsNow} setTeams={setTeams} pool={pool} nameOf={nameOf}
+        <Games pot={{ ...pot, kind: gross(pot.kind) }} setPot={setPot} skins={{ ...skins, kind: gross(skins.kind) }} setSkins={setSkins} teams={teamsNow} setTeams={setTeams} pool={pool} nameOf={nameOf}
           useHc={useHc} hcPct={hcPct} setHcPct={setHcPct} onNext={() => setStep(5)} />
       )}
       {step === 5 && course && (

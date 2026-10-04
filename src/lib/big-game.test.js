@@ -6,11 +6,12 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { createRound } from './round.js';
 import { buildHoles, buildMeta } from './sync-model.js';
-import { outstanding, personStory, tabBalances, tabWith } from './ledger.js';
+import { nameOf, outstanding, personStory, tabBalances, tabWith } from './ledger.js';
+import { payInfoFor } from './pay.js';
 import { breakdownWith } from './where-from.js';
 import { allocatePayment } from './shared-tab.js';
 import { mergeExpenses } from './trip-expenses.js';
-import { newTrip, tripOnDay, tripStamp, tripStatus } from './trips.js';
+import { newTrip, tripOnDay, tripPayment, tripStamp, tripStatus } from './trips.js';
 import {
   BIG_FORMAT, allot, balanceGroups, balanceTeams, betStrokesFor, bigField, bigLines, bigResults, buyIns, cleanBig, groupCount,
   groupsProblem, moveTo, payPlaces, placeLabels, potBoard, scoreOn, skinsBoard, skinsMoney,
@@ -376,4 +377,35 @@ test('the invite card and the bar read a group’s round as the game: its name, 
   const { isMe } = bigWho(phones.g, bs.big);
   assert.equal(myPlaceLine(bs, isMe), 'You’re 1st of 8, −2');
   assert.equal(myBigMoney(bs, isMe), 86);
+});
+
+test('Settle the game lists the same payments as the Tab, and marking one there squares it on the other phone', () => {
+  const phones = phonesOf();
+  const lines = bigStatus(phones.a, 't_big').lines;
+  const st = tripStatus(phones.a, 't_big', { now: NOW });
+  assert.equal(st.phase, 'ready');
+  assert.deepEqual(st.plan.map(l => [l.from, l.to, cents(l.amount)]).sort(), lines.map(l => [l.from, l.to, l.cents]).sort());
+  // Gus's phone has Gus's lines as his own
+  const gs = tripStatus(phones.g, 't_big', { now: NOW });
+  const mine = gs.plan.filter(l => l.to === 'zg').map(l => [l.from, cents(l.amount)]).sort();
+  assert.deepEqual(mine, lines.filter(l => l.to === 'g').map(l => [l.from, l.cents]).sort());
+  // Hal marks his payment to Gus on Settle the game; Gus's phone gets it and is square with Hal
+  const res = tripPayment(phones.h, 't_big', 'zh', 'g', { now: NOW + 5 });
+  assert.equal(res.expenses.length, 1);
+  for (const k of Object.keys(phones)) phones[k] = { ...phones[k], tripExpenses: mergeExpenses(phones[k].tripExpenses || {}, res.expenses) };
+  assert.equal(owes(phones.g, 'h', 'g'), 0);
+  assert.equal(owes(phones.h, 'h', 'g'), 0);
+  assert.ok(!tripStatus(phones.g, 't_big', { now: NOW }).plan.some(l => l.from === 'h'));
+  // The standings carry each person's money from the game
+  assert.equal(st.standings.find(p => p.id === 'g').big, 86);
+});
+
+test('a phone in one group knows the other group’s players by name and payment app, from the card it read', () => {
+  const trip = tripOf(game());
+  const r2 = groupRound('r2', G2, 'BIGBBB', trip);
+  r2.players = r2.players.map(p => (p.id === 'e' ? { ...p, payApp: 'venmo', payHandle: 'eve-golf' } : p));
+  const d = stateOf('zd', [{ ...groupRound('r1', G1, 'BIGAAA', trip), localMe: 'd', shared: { code: 'BIGAAA', host: false } }], { bigCards: { t_big: { BIGBBB: cardOfRound(r2) } } });
+  assert.equal(nameOf(d, 'e'), 'Eve');
+  assert.deepEqual(payInfoFor(d, 'e'), { app: 'venmo', handle: 'eve-golf' });
+  assert.equal(nameOf(d, 'nobody'), 'Someone');
 });
