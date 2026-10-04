@@ -17,7 +17,7 @@
 //  • Who throws the first hammer: the whole round. It only decides who may hammer, never the money.
 //  • Play for (money, points or a reward): the whole round. A round is played for one thing.
 // Nothing here runs unless someone changes a setting, so old rounds keep their money.
-import { GAMES, bankerHoleSetup, gameView, holeComplete, nassauPressOptions, playersOn, pressMode, roundResults, roundStarted, teamsFor, wolfFor } from './round.js';
+import { GAMES, bankerHoleSetup, gameView, holeComplete, nassauPressOptions, playersOn, roundResults, roundStarted, settingsAt, teamsFor, wolfFor } from './round.js';
 import { teamsProblem } from './teams.js';
 import { betsOf, kindFits } from './pair-bets.js';
 import { playForOf, points, rewardOutcome, storedPlayFor, tabResults } from './play-for.js';
@@ -214,21 +214,41 @@ export function teamsChangeProblem(round, groups) {
 /**
  * Auto presses worked out again from the first hole for the round's sides, as they would have come
  * up hole by hole: each from the holes played before it and the presses already on. Presses called
- * by hand stay as they are.
+ * by hand stay as they are. The press before a hole comes up from the bets in force on the hole just
+ * played (as the app does when that hole is saved), so a stretch played with presses off or by hand
+ * gets no auto presses, even when they're on now.
  */
 export function replayAutoPresses(round) {
-  if ((round.game !== 'nassau' && round.game !== 'match') || pressMode(round) !== 'auto') return round;
+  if (round.game !== 'nassau' && round.game !== 'match') return round;
   const main = gameView(round, 'main');
+  const before = k => settingsAt(main, k - 1);
+  const autoBefore = k => before(k)[round.game]?.pressMode === 'auto';
+  const ks = Array.from({ length: Math.max(0, round.holes.length - 1) }, (_, i) => i + 2);
+  if (!ks.some(autoBefore)) return round;
   const presses = (round.presses || []).filter(p => !p.auto);
-  for (let k = 2; k <= round.holes.length; k++) {
-    if (!holeComplete(round, round.holes[k - 2])) continue;
+  for (const k of ks) {
+    if (!autoBefore(k) || !holeComplete(round, round.holes[k - 2])) continue;
     const scores = {};
     for (const h of round.holes.slice(0, k - 1)) if (round.scores[h.no]) scores[h.no] = round.scores[h.no];
-    const view = { ...main, scores, presses: presses.filter(p => p.start <= k) };
+    const view = { ...main, settings: before(k), scores, presses: presses.filter(p => p.start <= k) };
     for (const o of nassauPressOptions(view, k)) presses.push({ id: `auto-${o.leg}-${k}`, leg: o.leg, start: k, by: o.trailing, auto: true });
   }
   presses.sort((a, b) => a.start - b.start || String(a.id).localeCompare(String(b.id)));
   return { ...round, presses };
+}
+
+const sameGroup = (a, b) => sameList([...a].sort(), [...b].sort());
+const overlap = (a, b) => a.filter(id => b.includes(id)).length;
+
+/**
+ * The new groups lined up with the old ones: the same teams in another order are the old order, and
+ * two sides keep their place on the card (first or second) with the most of their players, so a
+ * press called or a hammer thrown by a side stays with the players who made it.
+ */
+function alignGroups(was, groups) {
+  if (was.length === groups.length && groups.every(g => was.some(w => sameGroup(w, g)))) return was.map(w => groups.find(g => sameGroup(w, g)));
+  if (was.length === 2 && groups.length === 2 && overlap(was[0], groups[1]) + overlap(was[1], groups[0]) > overlap(was[0], groups[0]) + overlap(was[1], groups[1])) return [groups[1], groups[0]];
+  return groups;
 }
 
 /**
@@ -238,8 +258,9 @@ export function replayAutoPresses(round) {
 export function changeTeams(round, groups) {
   if (lineupKind(round) !== 'teams' || teamsChangeProblem(round, groups)) return round;
   const was = teamGroups(round);
-  if (was.length === groups.length && was.every((g, i) => sameList([...g].sort(), [...groups[i]].sort()))) return round;
-  return replayAutoPresses({ ...round, teams: teamsFor(round, groups) });
+  const next = alignGroups(was, groups);
+  if (was.length === next.length && was.every((g, i) => sameGroup(g, next[i]))) return round;
+  return replayAutoPresses({ ...round, teams: teamsFor(round, next) });
 }
 
 /** Who throws the first hammer ('either' or 'trailing') for every hole, past bets kept as they were. */
@@ -298,20 +319,22 @@ function nonZero(round, balances) {
 const listOf = (xs, fmt) => xs.map(x => `${first(x.name)} ${fmt(x.v, { sign: true })}`).join(', ');
 
 /**
- * What a change does to the Tab, in one plain line, or null when the Tab doesn't move: "Goes on the
- * Tab: Ann +$4, Bob −$4", "Comes off the Tab: ...", or "The Tab moves: ... On it now: ..." when it
- * was on and still is, by different amounts. Always worked out with tabResults(), so a reward round's side
- * bets for money count and nothing else does.
+ * What a change does to the Tab, in one plain line, or null when the Tab doesn't move. Only a
+ * finished round goes on the Tab, so it says what this one will put there, from the holes so far:
+ * "Goes on the Tab when the round's done: so far Ann +$4, Bob −$4", "Won't go on the Tab: so far
+ * ...", or "The Tab moves: ... On it when the round's done, so far: ..." when it would go on before
+ * and still does, by different amounts. Always worked out with tabResults(), so a reward round's
+ * side bets for money count and nothing else does.
  */
 export function tabLine(before, after) {
   const was = nonZero(before, tabResults(before).balances);
   const now = nonZero(after, tabResults(after).balances);
   if (!was.length && !now.length) return null;
-  if (!now.length) return `Comes off the Tab: ${listOf(was, money)}`;
-  if (!was.length) return `Goes on the Tab: ${listOf(now, money)}`;
+  if (!now.length) return `Won’t go on the Tab: so far ${listOf(was, money)}`;
+  if (!was.length) return `Goes on the Tab when the round’s done: so far ${listOf(now, money)}`;
   const a = tabResults(before).balances, b = tabResults(after).balances;
   const moved = after.players.map(p => ({ id: p.id, name: p.name, v: cents((b[p.id] || 0) - (a[p.id] || 0)) })).filter(x => x.v !== 0).sort((x, y) => y.v - x.v);
-  return moved.length ? `The Tab moves: ${listOf(moved, money)}. On it now: ${listOf(now, money)}` : null;
+  return moved.length ? `The Tab moves: ${listOf(moved, money)}. On it when the round’s done, so far: ${listOf(now, money)}` : null;
 }
 
 /**

@@ -8,7 +8,7 @@ import { useState } from 'react';
 import { Icon, Segmented, Sheet, useUI } from './ui.jsx';
 import { SixesPreview, TeamPicker } from './GameOptions.jsx';
 import { update } from '../lib/store.js';
-import { gameView } from '../lib/round.js';
+import { gameView, pressMode } from '../lib/round.js';
 import { teamsProblem } from '../lib/teams.js';
 import {
   changeHammerWho, changeOrder, changeTeams, lineupKind, lineupLabel, orderNow, orderRuns, teamGroups, teamsChangeProblem, teamsLocked,
@@ -55,6 +55,8 @@ export function LineupSheet({ round, onClose }) {
   const banker = main.settings.banker || {};
   const rotates = game === 'wolf' || (game === 'banker' && banker.rotation !== 'low' && banker.rotation !== 'choice');
   const role = game === 'banker' ? 'banks' : 'is the wolf';
+  // A fixed banker, or a banker each nine with one nine left: the first name banks every hole still to play
+  const oneBanker = game === 'banker' && (banker.rotation === 'fixed' || (banker.rotation === 'nine' && (now.idx >= 9 || round.holes.length <= 9)));
 
   const apply = () => {
     update(s => {
@@ -81,12 +83,16 @@ export function LineupSheet({ round, onClose }) {
     : game === 'sixes' ? 'Partners count for the whole round, holes already played too. Everyone partners everyone once, so the order sets who’s with who on each stretch.'
       : !fromNext ? null
         : nextNo == null ? 'Every hole has been played, so there’s no hole left for a new order.'
+          : oneBanker ? `From hole ${nextNo} on: the first name banks every hole left. Holes already played keep their banker.`
+          : game === 'banker' && banker.rotation === 'nine' ? `From hole ${nextNo} on: the first name banks the rest of this nine, the next name the nine after. Holes already played keep their banker.`
           : rotates ? `From hole ${nextNo} on: the first name ${role} on hole ${nextNo}, then down the list. Holes already played keep their ${game === 'banker' ? 'banker' : 'wolf'}.`
             : banker.rotation === 'low' ? `From hole ${nextNo} on. The lowest score on the last hole banks the next, and the order settles a tie. Holes already played keep their banker.`
               : `From hole ${nextNo} on. The banker is picked at each hole, and the order is how the card lists everyone. Holes already played keep their banker.`;
-  const pressNote = (game === 'nassau' || game === 'match') && kind === 'teams' && !locked
-    ? 'Auto presses are worked out again for the new sides. A press someone called stays with its side.'
-    : game === 'hammer' && kind === 'teams' ? 'Hammers already thrown stay with their side of the card, the first or the second.' : null;
+  // Only said when there's something to say: a round with no presses, or no hammer thrown, has none to move
+  const presses = round.presses || [];
+  const pressNote = (game === 'nassau' || game === 'match') && kind === 'teams' && !locked && (presses.length || pressMode(round) === 'auto')
+    ? (presses.some(p => !p.auto) ? 'Auto presses are worked out again for the new sides. A press someone called stays with its side.' : 'Auto presses are worked out again for the new sides.')
+    : game === 'hammer' && kind === 'teams' && Object.values(round.marks || {}).some(m => m?.hammers?.length) ? 'Hammers already thrown stay with their side of the card, the first or the second.' : null;
 
   return (
     <Sheet open onClose={onClose} title={kind ? label : 'First hammer'} className="sc-sheet">

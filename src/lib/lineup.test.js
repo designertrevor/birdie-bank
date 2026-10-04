@@ -243,6 +243,39 @@ test('Nassau presses that only came up for the old sides are dropped', () => {
   assert.deepEqual(changeTeams(tied, [['a', 'd'], ['b', 'c']]).presses, []);
 });
 
+test('auto presses replayed for new sides only come up where presses were on: a stretch played with them off gets none', () => {
+  const r = mk('nassau', { teams: [['a', 'b'], ['c', 'd']], settings: { nassau: { ...SETTINGS.nassau, pressMode: 'off' } } });
+  play(r, 10, () => ({ a: 3, b: 5, c: 4, d: 5 }));
+  // Auto presses switched on from hole 11, after ten holes played with none
+  const on = changeBets(r, { ...r.settings.nassau, pressMode: 'auto' }, 11);
+  const after = changeTeams(on, [['a', 'c'], ['b', 'd']]);
+  assert.deepEqual(after.presses, []);
+  assert.deepEqual(bal(after), bal(changeTeams(r, [['a', 'c'], ['b', 'd']])));
+  // Auto presses on the front nine, switched off from hole 10: the front nine's are worked out again
+  const auto = mk('nassau', { teams: [['a', 'b'], ['c', 'd']] });
+  play(auto, 9, () => ({ a: 3, b: 5, c: 4, d: 5 }));
+  const off = changeBets(replayAutoPresses(auto), { ...auto.settings.nassau, pressMode: 'off' }, 10);
+  assert.ok(off.presses.length > 0);
+  const moved = changeTeams(off, [['a', 'c'], ['b', 'd']]);
+  assert.ok(moved.presses.length > 0 && moved.presses.every(p => p.start <= 10));
+  assert.ok(moved.presses.every(p => p.by === 1));
+});
+
+test('the same sides listed the other way round are no change, and a side keeps its place with most of its players', () => {
+  const r = mk('match', { teams: [['a', 'b'], ['c', 'd']] });
+  play(r, 3, () => ({ a: 4, b: 5, c: 3, d: 5 }));
+  // Ann and Bo, behind, called a press on hole 3
+  r.presses = [{ id: 'm', leg: 'match', start: 3, by: 0 }];
+  assert.equal(changeTeams(r, [['c', 'd'], ['a', 'b']]), r);
+  assert.equal(changeTeams(r, [['d', 'c'], ['b', 'a']]), r);
+  // Cy joins Ann and Bo, listed second: they stay the first side, so the press stays theirs
+  const after = changeTeams(r, [['d'], ['a', 'b', 'c']]);
+  assert.deepEqual(teamGroups(after), [['a', 'b', 'c'], ['d']]);
+  assert.deepEqual(after.presses, r.presses);
+  // One from each side swaps: it's as the keeper listed it
+  assert.deepEqual(teamGroups(changeTeams(r, [['a', 'd'], ['c', 'b']])), [['a', 'd'], ['c', 'b']]);
+});
+
 test('Hammer sides: hammers thrown stay with their side of the card', () => {
   const r = mk('hammer', { teams: [['a', 'b'], ['c', 'd']] });
   play(r, 1, () => ({ a: 3, b: 5, c: 4, d: 5 }));
@@ -295,7 +328,7 @@ function moneyBanker() {
   return r;
 }
 
-test('money to points: what was on the Tab comes off it, and the round reads in points', () => {
+test('money to points: what would have gone on the Tab won’t, and the round reads in points', () => {
   const r = moneyBanker();
   const was = bal(r);
   const pts = changePlayFor(r, { kind: 'points' });
@@ -303,13 +336,13 @@ test('money to points: what was on the Tab comes off it, and the round reads in 
   // The game's numbers don't change, only what they're worth
   assert.deepEqual(bal(pts), was);
   assert.ok(Object.values(tabResults(pts).balances).every(v => v === 0));
-  assert.equal(tabLine(r, pts), 'Comes off the Tab: Ann +$25, Dan −$5, Bo −$10, Cy −$10');
+  assert.equal(tabLine(r, pts), 'Won’t go on the Tab: so far Ann +$25, Dan −$5, Bo −$10, Cy −$10');
   assert.equal(standingLine(pts), 'Points so far: Ann +25 pts, Dan −5 pts, Bo −10 pts, Cy −10 pts');
   assert.equal(playForText(pts), 'Points (bragging rights)');
   // And back to money: it all goes on the Tab again, the round as it was
   const back = changePlayFor(pts, null);
   assert.deepEqual(back, r);
-  assert.equal(tabLine(pts, back), 'Goes on the Tab: Ann +$25, Dan −$5, Bo −$10, Cy −$10');
+  assert.equal(tabLine(pts, back), 'Goes on the Tab when the round’s done: so far Ann +$25, Dan −$5, Bo −$10, Cy −$10');
   assert.equal(standingLine(back), null);
 });
 
@@ -323,7 +356,7 @@ test('the same play for is no change; before a hole is played nothing moves', ()
   assert.equal(standingLine(lunch), null);
 });
 
-test('money to a reward: the games come off the Tab, so far someone wins it, and side bets for money stay on', () => {
+test('money to a reward: the games stay off the Tab, so far someone wins it, and side bets for money still go on', () => {
   const r = moneyBanker();
   r.bets = [{ id: 'x', kind: 'custom', sides: ['b', 'c'], stake: 4, holes: [1, 18], winner: 'b', label: 'Longest drive' }];
   const lunch = changePlayFor(r, { kind: 'reward', reward: 'Lunch', owes: 'last' });
@@ -332,14 +365,14 @@ test('money to a reward: the games come off the Tab, so far someone wins it, and
   // Only Bo's $4 from Cy is still on the Tab
   assert.deepEqual(tabResults(lunch).balances, { a: 0, b: 4, c: -4, d: 0 });
   // The games' money comes off; what's left is the side bet
-  assert.equal(tabLine(r, lunch), 'The Tab moves: Bo +$10, Cy +$10, Dan +$5, Ann −$25. On it now: Bo +$4, Cy −$4');
+  assert.equal(tabLine(r, lunch), 'The Tab moves: Bo +$10, Cy +$10, Dan +$5, Ann −$25. On it when the round’s done, so far: Bo +$4, Cy −$4');
   assert.match(standingLine(lunch), /^So far: Ann wins lunch\./);
   assert.equal(playForText(lunch), 'Lunch, last place buys');
   // Or the side bets go to points too: nothing's left on the Tab
   const all = changePlayFor(r, { kind: 'reward', reward: 'Lunch', owes: 'last' }, { cashBets: false });
   assert.equal('playFor' in all.bets[0], false);
   assert.equal(onTab({ ...all, status: 'done' }), false);
-  assert.equal(tabLine(r, all), 'Comes off the Tab: Ann +$25, Dan −$5, Bo −$6, Cy −$14');
+  assert.equal(tabLine(r, all), 'Won’t go on the Tab: so far Ann +$25, Dan −$5, Bo −$6, Cy −$14');
 });
 
 test('a reward round to points or money: each bet’s money or points choice goes, the round’s unit counts', () => {
@@ -348,7 +381,7 @@ test('a reward round to points or money: each bet’s money or points choice goe
   r.bets = [{ id: 'x', kind: 'custom', sides: ['b', 'c'], stake: 4, holes: [1, 18], winner: 'b', playFor: 'money' }];
   const pts = changePlayFor(r, { kind: 'points' });
   assert.equal('playFor' in pts.bets[0], false);
-  assert.equal(tabLine(r, pts), 'Comes off the Tab: Bo +$4, Cy −$4');
+  assert.equal(tabLine(r, pts), 'Won’t go on the Tab: so far Bo +$4, Cy −$4');
   const cash = changePlayFor(r, null);
   assert.equal(cash.playFor, undefined);
   assert.equal('playFor' in cash.bets[0], false);
