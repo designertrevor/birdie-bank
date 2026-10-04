@@ -74,6 +74,7 @@ function fresh() {
     profile: {},       // your own profile beyond your player card: avatar, home course, privacy (see profile-model.js)
     accountOf: {},     // which account each player id is, from the server: { playerId: accountId } (see profiles.js)
     profiles: {},      // profiles of people you've played with, by account: { accountId: profile } (see profiles.js)
+    talk: {},          // comments and reactions: { 'round:<id>' | 'plan:<id>': { rowId: row } } (see talk.js)
     settings: structuredClone(DEFAULT_SETTINGS),
   };
 }
