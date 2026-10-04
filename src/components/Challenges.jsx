@@ -105,7 +105,7 @@ export function ChallengeMaker({ open, onClose, from, people, whens, holesCount 
           )}
           {whens.length > 1 && (
             <>
-              <div className="field-label" id="ch-when">For</div>
+              <div className="field-label" id="ch-when">Which round</div>
               <div className="chip-row flush" role="radiogroup" aria-labelledby="ch-when">
                 {whens.map(w => (
                   <button key={w.key} role="radio" aria-checked={when.key === w.key} className={`pill-btn ${when.key === w.key ? 'on' : ''}`} onClick={() => setWhenKey(w.key)}>{w.label}</button>
@@ -129,7 +129,7 @@ export function ChallengeMaker({ open, onClose, from, people, whens, holesCount 
                 placeholder="e.g. Longest drive on 7" onChange={e => setLabel(e.target.value)} />
             </>
           )}
-          <div className="field-label" id="ch-stake">{kind === 'hole' ? 'A hole' : kind === 'ctp' ? 'A par 3' : 'For'}</div>
+          <div className="field-label" id="ch-stake">{kind === 'hole' ? 'A hole' : kind === 'ctp' ? 'A par 3' : 'How much'}</div>
           <div className="chip-row flush" role="radiogroup" aria-labelledby="ch-stake">
             {CHALLENGE_STAKES.map(v => (
               <button key={v} role="radio" aria-checked={stake === v} className={`pill-btn ${stake === v ? 'on' : ''}`} onClick={() => setStake(v)}>{fmt(v)}</button>
