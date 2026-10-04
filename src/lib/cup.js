@@ -320,12 +320,32 @@ export function cupEntries(state, tripId) {
   const remote = isObj(state.cupRemote?.[tripId]) ? state.cupRemote[tripId] : {};
   for (const [key, raw] of Object.entries(remote)) {
     if (key.startsWith('P') || out.has(key)) continue;
-    // A round this phone has that isn't on the cup here (taken off the trip) stays off
-    if (Object.values(state.rounds || {}).some(r => cupKey(r) === key && r.trip?.id !== tripId)) continue;
+    // A round this phone has that isn't on the cup here (taken off the trip) stays off, and so does
+    // the copy a round posted under its own id before it was shared live (it goes by its code now)
+    if (Object.values(state.rounds || {}).some(r => `L${r.id}` === key || (cupKey(r) === key && r.trip?.id !== tripId))) continue;
     const e = cleanEntry({ ...raw, key });
     if (e) out.set(key, { ...e, local: false });
   }
   return [...out.values()].sort((a, b) => a.at - b.at || a.key.localeCompare(b.key));
+}
+
+/**
+ * Another group's round the server still has as being played, once the trip is over (the
+ * organizer said so, or its last day has gone by): its phone stopped posting, so each match goes
+ * to whoever led on the holes played, as in a round ended early, and one with no hole played
+ * counts for nothing. Without this a group that never finished would hold up the cup for good.
+ */
+export function closeEntry(e) {
+  if (e.status !== 'active') return e;
+  const matches = e.matches.map(m => {
+    const r = m.result;
+    if (r.points || r.void) return m;
+    if (!r.thru) return { ...m, result: { ...r, done: true, winner: null, points: null, void: true, label: 'Not played' } };
+    const winner = r.leader === 0 || r.leader === 1 ? r.leader : null;
+    const points = winner === 0 ? [1, 0] : winner === 1 ? [0, 1] : [0.5, 0.5];
+    return { ...m, result: { ...r, done: true, winner, points, label: resultLabel({ by: winner == null ? 0 : r.by, left: 0, closed: false, done: true }) } };
+  });
+  return { ...e, status: 'done', matches };
 }
 
 /**
@@ -495,29 +515,40 @@ const myName = s => String(s.players?.[s.me]?.name || '').trim().split(/\s+/)[0]
  * this phone's stake marks, when there are any (`me`: this phone's key for them, cup-sync.js).
  */
 export function cupPosts(s, trip, remote = {}, me = null) {
-  const out = [];
+  const out = new Map();
   const same = (key, data) => remote[key] && stable(remote[key]) === stable(data);
+  const live = key => !!remote[key] && !remote[key].gone;
+  const posted = key => !!me && live(key) && remote[key].by === me;
+  const claimed = new Set();
   for (const r of Object.values(s.rounds || {})) {
     if (r.status !== 'done' && r.status !== 'active') continue;
     const key = cupKey(r);
     const mine = !codeOf(r) || !!r.shared?.host;
+    // Posted under its own id before it was shared live: that copy goes, or the round counts twice
+    const old = `L${r.id}`;
+    if (old !== key && (mine || posted(old)) && live(old)) out.set(old, { gone: true });
     if (r.trip?.id !== trip.id) {
       // Taken off the trip: it stops counting on every phone
-      if (mine && remote[key] && !remote[key].gone) out.push({ key, data: { gone: true } });
+      if ((mine || posted(key)) && live(key)) out.set(key, { gone: true });
       continue;
     }
     const e = cupEntry(s, r);
     if (!e) {
-      if (mine && remote[key] && !remote[key].gone) out.push({ key, data: { gone: true } });
+      if ((mine || posted(key)) && live(key)) out.set(key, { gone: true });
       continue;
     }
-    if (same(key, e)) continue;
-    if (mine || !remote[key] || progress(e) > progress(remote[key])) out.push({ key, data: e });
+    claimed.add(key);
+    // `by`: this phone posted it, so it can take it back if the round is deleted here
+    const data = me ? { ...e, by: me } : e;
+    if (same(key, data)) continue;
+    if (mine || !remote[key] || progress(e) > progress(remote[key])) out.set(key, data);
   }
+  // A round only this phone had, deleted here: it stops counting on every phone
+  for (const key of Object.keys(remote)) if (key.startsWith('L') && !claimed.has(key) && !out.has(key) && posted(key)) out.set(key, { gone: true });
   const pays = Array.isArray(s.cupPaid?.[trip.id]) ? s.cupPaid[trip.id] : [];
   if (me && (pays.length || remote[me])) {
     const data = { byName: myName(s), pays };
-    if (!same(me, data)) out.push({ key: me, data });
+    if (!same(me, data)) out.set(me, data);
   }
-  return out;
+  return [...out].map(([key, data]) => ({ key, data }));
 }

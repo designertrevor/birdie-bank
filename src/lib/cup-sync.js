@@ -109,8 +109,18 @@ export function refreshCup() {
       for (const trip of trips) {
         const remote = getState().cupRemote?.[trip.id] || {};
         const posts = cupPosts(getState(), trip, remote, payKey());
-        for (const p of posts) await adapter.publish(trip.id, p.key, p.data);
-        if (posts.length) update(st => { st.cupRemote = { ...(st.cupRemote || {}), [trip.id]: { ...(st.cupRemote?.[trip.id] || {}), ...Object.fromEntries(posts.map(p => [p.key, p.data])) } }; });
+        // One row the server turns down (a round whose live sharing has stopped, say) never holds up the rest
+        const sent = [];
+        for (const p of posts) {
+          try {
+            await adapter.publish(trip.id, p.key, p.data);
+            sent.push(p);
+          } catch (e) {
+            if (e instanceof CupOffError) throw e;
+            note(e);
+          }
+        }
+        if (sent.length) update(st => { st.cupRemote = { ...(st.cupRemote || {}), [trip.id]: { ...(st.cupRemote?.[trip.id] || {}), ...Object.fromEntries(sent.map(p => [p.key, p.data])) } }; });
       }
     } catch (e) { note(e); }
   })().finally(() => {

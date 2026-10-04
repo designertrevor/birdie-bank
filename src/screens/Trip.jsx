@@ -104,7 +104,7 @@ export default function Trip({ id, view: firstView = null }) {
   };
   const doneNow = () => {
     endTrip(id);
-    showToast('Settle the trip is open');
+    showToast(cup && !st.money.length && !cup.def.stake ? 'The cup is decided' : 'Settle the trip is open');
   };
   const hide = () => {
     hideTrip(id, !hidden);
@@ -125,7 +125,7 @@ export default function Trip({ id, view: firstView = null }) {
 
         <div className="tab-view">
           <Segmented label="Trip view" className="press-mode-row" btn="pm-btn" value={view} onChange={setView}
-            options={[...(cup ? [{ value: 'cup', label: 'Cup' }] : []), { value: 'standings', label: cup ? 'Money' : 'Standings' }, { value: 'rounds', label: 'Rounds' }, { value: 'games', label: 'Games' }]} />
+            options={[...(cup ? [{ value: 'cup', label: 'Cup' }] : []), { value: 'standings', label: cup ? (st.points && !st.standings.length ? 'Points' : 'Money') : 'Standings' }, { value: 'rounds', label: 'Rounds' }, { value: 'games', label: 'Games' }]} />
         </div>
 
         {view === 'cup' && cup && (
@@ -170,7 +170,7 @@ export default function Trip({ id, view: firstView = null }) {
       </div>
       <div className="cta-wrap">
         {st.phase === 'ready' && <button className="full-btn pink" onClick={() => nav.push('tripSettle', { id })}>Settle the trip <Icon name="arrow-right" /></button>}
-        {st.phase === 'square' && st.payments.length > 0 && <button className="full-btn outline" onClick={() => nav.push('tripSettle', { id })}>See the trip’s payments</button>}
+        {st.phase === 'square' && (st.payments.length > 0 || cup?.marks.length > 0) && <button className="full-btn outline" onClick={() => nav.push('tripSettle', { id })}>See the trip’s payments</button>}
         {(st.phase === 'on' || st.phase === 'soon') && st.money.length > 0 && (
           <>
             <button className="full-btn outline" onClick={() => setLeaving(true)}><Icon name="sign-out" /> Leaving early? Settle a part</button>
@@ -178,8 +178,8 @@ export default function Trip({ id, view: firstView = null }) {
             {st.organizer && !st.live.length && <button className="link-btn center" onClick={doneNow}>Done playing? Settle the trip now</button>}
           </>
         )}
-        {/* A team points trip with only the cup's stake on it: the organizer still says when it's over */}
-        {(st.phase === 'on' || st.phase === 'soon') && !st.money.length && cup?.def.stake > 0 && st.done.length > 0 && st.organizer && !st.live.length && (
+        {/* A team points trip with no round money (a stake or not): the organizer still says when it's over */}
+        {(st.phase === 'on' || st.phase === 'soon') && !st.money.length && cup && st.done.length > 0 && st.organizer && !st.live.length && (
           <button className="link-btn center" onClick={doneNow}>Done playing? Decide the cup now</button>
         )}
         {st.organizer && st.phase === 'ready' && trip.endedAt && !st.settling.length && <button className="link-btn center" onClick={() => endTrip(id, false)}>Still playing? Reopen the trip</button>}
@@ -279,7 +279,8 @@ function LiveRow({ round }) {
 
 /** Each person's money in each game across the trip's finished rounds. A game someone didn't play shows a dash. */
 function Games({ st, state, label }) {
-  const { columns, rows } = tripByGame(state, st.trip.id);
+  // A team points trip's stake gets its own column once it's decided, so each row adds up to the trip total
+  const { columns, rows } = tripByGame(state, st.trip.id, { stake: st.cup?.stakeBy });
   if (!columns.length) return <p className="field-help pad">Money by game shows up once a round with money on it is finished.</p>;
   const order = st.standings.map(p => p.id).filter(id => rows.has(id));
   return (
@@ -371,9 +372,11 @@ export function TripSettle({ id, who = null }) {
   const paid = st.payments.filter(g => !who || g.from === who || g.to === who);
   // A team points trip's stake is settled with the whole trip, never someone's part
   const stakeOpen = !who && st.cup ? st.cup.lines.filter(l => l.open > 0).length : 0;
+  const stakePaid = !who && st.cup ? st.cup.lines.filter(l => l.open === 0 && l.paid > 0).length : 0;
   const n = plan.length + stakeOpen;
   // Like with like: the payments the trip takes in all (still to pay and paid) against round by round
-  const all = n + paid.length;
+  const all = n + paid.length + stakePaid;
+  const paidCount = paid.length + stakePaid;
   const note = trip.name;
   const myApp = payInfoFor(state, state.me);
 
@@ -404,7 +407,7 @@ export function TripSettle({ id, who = null }) {
         {n > 0 ? (
           <div className="settle-lede">
             <div className="eyebrow">{who ? 'Leaving early' : 'Whole trip'}{st.published.updated && <> <span className="trip-updated">Updated</span></>}</div>
-            <div className="d settle-count">{all} payment{all === 1 ? '' : 's'}{paid.length ? `, ${paid.length} paid` : ''}</div>
+            <div className="d settle-count">{all} payment{all === 1 ? '' : 's'}{paidCount ? `, ${paidCount} paid` : ''}</div>
             <p>{who
               ? `Just ${who === me ? 'your' : `${short(who)}’s`} payments for the rounds so far. Everyone else settles after the last round.`
               : st.perRound > all ? `Round by round it would have been ${st.perRound}.` : 'Every round is netted first, so nobody sends money that just comes back to them.'}

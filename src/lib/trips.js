@@ -37,7 +37,7 @@ import { dayLabel, daysUntil, isoDate } from './plans.js';
 import { canEdit, keeperMe } from './keeper.js';
 import { money } from './golf.js';
 import { isPlanPayment, planRows, planState } from './trip-plan.js';
-import { CUP_FORMAT, cleanCup, cupEntries, cupLeaderboard, cupOf, cupScore, stakeLines, stakeMarks, stakeOpen, teamOf } from './cup.js';
+import { CUP_FORMAT, cleanCup, closeEntry, cupEntries, cupLeaderboard, cupOf, cupScore, stakeLines, stakeMarks, stakeOpen, teamOf } from './cup.js';
 
 const DAY = 864e5;
 /**
@@ -359,7 +359,9 @@ export function tripStatus(state, id, { now = Date.now() } = {}) {
   const quiet = !live.length && !planned.length;
   const who = canonicalOf(state);
   // A team points trip: the matches, the team score, and the stake once the trip is over (cup.js)
-  const cup = cupStatus(state, trip, people, { over: over && quiet });
+  // Its last day gone by, or ended by the organizer: another group's round the server still has as
+  // being played counts as it stood (cup.js closeEntry)
+  const cup = cupStatus(state, trip, people, { over: over && quiet, close: !!endedAt || (!!trip.end && today > trip.end) });
   const stakeLeft = cup ? cup.lines.filter(l => l.open > 0) : [];
   let phase;
   if (!done.length && !live.length) phase = trip.start && today < trip.start ? 'soon' : over ? 'empty' : planned.length ? 'soon' : 'on';
@@ -412,11 +414,11 @@ export function tripStatus(state, id, { now = Date.now() } = {}) {
  * toId as this phone knows them, null for someone it doesn't). `stakeBy`: each person's stake, by
  * the id this phone knows them by.
  */
-export function cupStatus(state, trip, people = tripPeople(state, trip.id), { over = false } = {}) {
+export function cupStatus(state, trip, people = tripPeople(state, trip.id), { over = false, close = false } = {}) {
   const def = cupOf(trip);
   if (!def) return null;
   const who = canonicalOf(state);
-  const entries = cupEntries(state, trip.id);
+  const entries = cupEntries(state, trip.id).map(e => (close && !e.local ? closeEntry(e) : e));
   const score = cupScore(entries);
   const final = over && !score.live.length && score.done > 0;
   const [a, b] = score.points;
@@ -578,12 +580,15 @@ export function roundsInDates(state, trip) {
     .sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
 }
 
+/** The Games view's column for a team points trip's stake. */
+export const CUP_COLUMN = 'Cup stake';
+
 /**
  * The money each person made in each game across the trip's finished money rounds, for the
  * Games view: { columns: [game names], rows: Map(id -> { [game]: amount }) }. Read from each
  * round's own results (byGame when it has more than one game), so every bet a round has counts.
  */
-export function tripByGame(state, id) {
+export function tripByGame(state, id, { stake = null } = {}) {
   const who = canonicalOf(state);
   const columns = [];
   const rows = new Map();
@@ -601,6 +606,12 @@ export function tripByGame(state, id) {
         rows.set(k, row);
       }
     }
+  }
+  // A team points trip's stake once it's decided (`stake`: cupStatus stakeBy), so each row adds up to the trip total
+  const staked = Object.entries(stake || {}).filter(([, v]) => v);
+  if (staked.length) {
+    columns.push(CUP_COLUMN);
+    for (const [k, v] of staked) rows.set(k, { ...(rows.get(k) || {}), [CUP_COLUMN]: v });
   }
   return { columns, rows };
 }

@@ -70,7 +70,10 @@ declare
 begin
   if w is null then raise exception 'A device key is needed to post trip matches' using errcode = '42501'; end if;
   if tg_op = 'INSERT' then
-    if code and not (w = any(public.bb_round_devs(array[new.key]))) then
+    -- An upsert of a row already there runs this first: the update's own check decides that one,
+    -- so the phone that posted a round's matches can still change them after the round stops being shared
+    if code and not (w = any(public.bb_round_devs(array[new.key])))
+      and not exists (select 1 from public.trip_cup c where c.trip_id = new.trip_id and c.key = new.key) then
       raise exception 'Only a phone in that round posts its matches' using errcode = '42501';
     end if;
     if left(new.key, 1) = 'P' and new.key <> ('P' || left(w, 20)) then

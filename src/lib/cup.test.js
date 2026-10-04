@@ -9,8 +9,9 @@ import { outstanding, tabBalances } from './ledger.js';
 import {
   balanceTeams, cleanCup, cleanEntry, cupEntries, cupEntry, cupLeaderboard, cupPoints, cupScore, defaultRoundCup, matchResult,
   moveTo, pairMatches, pickingTeam, roundCupResults, stakeBalances, stakeLines, stakeMarks, stakeOpen, teamOf, cleanStake, cupPosts, cupHeadline,
+  closeEntry,
 } from './cup.js';
-import { TRIP_FORMATS, newTrip, tripStamp, tripStatus, tripsOf, myTripNet } from './trips.js';
+import { CUP_COLUMN, TRIP_FORMATS, newTrip, tripByGame, tripStamp, tripStatus, tripsOf, myTripNet } from './trips.js';
 
 const flat9 = { id: 'f9', name: 'Flat Nine', city: 'Town', tees: [], holes: Array.from({ length: 9 }, (_, i) => ({ par: 4, hdcp: i + 1 })) };
 const OCT = (day, hour = 12) => new Date(2026, 9, day, hour).getTime();
@@ -452,4 +453,92 @@ test('stake marks sync with your account, and an older profile without them keep
   delete older.cupPaid;
   applyDoc(draft, 'profile', 'me', older);
   assert.deepEqual(draft.cupPaid, marks);
+});
+
+// ---------------------------------------------------------------------------
+// Review fixes: rows that outlive their round, a group that never finished, the Games view
+
+test('a round posted before it was shared live goes by its code after, and its first copy is taken back', () => {
+  const before = round('r1', ['t', 's', 'm', 'd'], birdies('t', 4), { cup: FOURBALL });
+  const s0 = stateOf('t', [before]);
+  const first = cupPosts(s0, TRIP, {}, 'Pme');
+  assert.deepEqual(first.map(p => p.key), ['Lr1']);
+  assert.equal(first[0].data.by, 'Pme', 'the phone that posted it is on the row');
+  const server = { Lr1: first[0].data };
+  // Shared live now: the same round goes by its code
+  const shared = { ...structuredClone(before), shareCode: 'SHARE1', shared: { code: 'SHARE1', host: true } };
+  const s1 = stateOf('t', [shared], { cupRemote: { t_cup: server } });
+  // This phone counts it once, even before the server hears
+  assert.deepEqual(cupEntries(s1, 't_cup').map(e => e.key), ['SHARE1']);
+  assert.deepEqual(cupScore(cupEntries(s1, 't_cup')).points, [1, 0]);
+  const posts = cupPosts(s1, TRIP, server, 'Pme');
+  assert.deepEqual(posts.map(p => p.key).sort(), ['Lr1', 'SHARE1']);
+  assert.deepEqual(posts.find(p => p.key === 'Lr1').data, { gone: true });
+  // A friend in another group then counts it once too
+  const after = Object.fromEntries(posts.map(p => [p.key, p.data]));
+  const friend = stateOf('x', [], { cupRemote: { t_cup: { ...server, ...after } } });
+  assert.deepEqual(cupScore(cupEntries(friend, 't_cup')).points, [1, 0]);
+  // A friend who joined the round leaves the host's first copy alone (it isn't theirs to take back)
+  const joined = { ...structuredClone(shared), shared: { code: 'SHARE1', host: false } };
+  const fs = stateOf('m', [joined], { cupRemote: { t_cup: server } });
+  assert.ok(!cupPosts(fs, TRIP, server, 'Pmike').some(p => p.key === 'Lr1'));
+  assert.deepEqual(cupScore(cupEntries(fs, 't_cup')).points, [1, 0], 'and counts the round once meanwhile');
+});
+
+test('a round deleted on the phone that posted it stops counting; another phone’s rounds are left alone', () => {
+  const mine = round('r1', ['t', 's', 'm', 'd'], birdies('t', 4), { cup: FOURBALL });
+  const posted = cupPosts(stateOf('t', [mine]), TRIP, {}, 'Pme')[0].data;
+  const theirs = { ...cupEntry({}, round('o1', ['a', 'b'], birdies('b', 1), { cup: { kind: 'singles', sides: [['a'], ['b']] } })), by: 'Pother' };
+  const server = { Lr1: posted, Lo1: theirs };
+  const gone = stateOf('t', [], { cupRemote: { t_cup: server } });
+  assert.deepEqual(cupPosts(gone, TRIP, server, 'Pme'), [{ key: 'Lr1', data: { gone: true } }]);
+  // With no device key this phone can't tell its rows from anyone's, so it leaves them all
+  assert.deepEqual(cupPosts(gone, TRIP, server, null), []);
+  // Once taken back, only the other group's round counts
+  const friend = stateOf('x', [], { cupRemote: { t_cup: { ...server, Lr1: { gone: true } } } });
+  assert.deepEqual(cupEntries(friend, 't_cup').map(e => e.key), ['Lo1']);
+});
+
+test('once the trip is over, another group’s round left unfinished counts as it stood, and the cup is decided', () => {
+  const [r1, r2] = cupRounds({ day3: false });
+  // Day three: the other group's phone posted Mike 2 up thru 5 on Trevor, Sam and Dave not started, then went quiet
+  const other = round('o3', ['t', 's', 'm', 'd'], merge(birdies('m', 1), birdies('m', 2)), { at: OCT(18, 12), cup: SINGLES, status: 'active', upto: 5, code: 'GRP002' });
+  const stuck = cupEntry({}, other);
+  stuck.matches[1].result = { ...stuck.matches[1].result, thru: 0, leader: null, by: 0, label: 'All square' };
+  const s = stateOf('t', [r1, r2], { cupRemote: { t_cup: { GRP002: stuck } } });
+  // The last day, still being played: not decided
+  const lastDay = tripStatus(s, 't_cup', { now: OCT(18, 20) });
+  assert.equal(lastDay.cup.final, false);
+  assert.equal(lastDay.cup.score.live.length, 2);
+  // The day after: Mike's lead stands and the match never started counts for nothing, so Blue 2, Red 1 + 1
+  const next = tripStatus(s, 't_cup', { now: OCT(19, 9) });
+  assert.equal(next.cup.final, true);
+  assert.deepEqual(next.cup.score.points, [2, 2]);
+  assert.equal(next.cup.halved, true);
+  assert.deepEqual(next.cup.lines, [], 'a halved cup pays nothing');
+  // Or the organizer says it's over, on the last day
+  const ended = tripStatus({ ...s, trips: { t_cup: { ...TRIP, endedAt: OCT(18, 19) } } }, 't_cup', { now: OCT(18, 20) });
+  assert.equal(ended.cup.final, true);
+  // A finished entry is left as it is
+  const fin = cupEntry({}, r1);
+  assert.equal(closeEntry(fin), fin);
+  const closed = closeEntry(cleanEntry(stuck));
+  assert.equal(closed.status, 'done');
+  assert.deepEqual(closed.matches.map(m => [m.result.winner, m.result.label, m.result.void || false]), [[1, '2 up', false], [null, 'Not played', true]]);
+});
+
+test('the Games view gives the stake its own column, so each row adds up to the trip total', () => {
+  const rounds = cupRounds();
+  const s = stateOf('t', rounds);
+  const st = tripStatus(s, 't_cup', { now: OCT(18, 20) });
+  const { columns, rows } = tripByGame(s, 't_cup', { stake: st.cup.stakeBy });
+  assert.equal(columns.at(-1), CUP_COLUMN);
+  for (const p of st.standings) {
+    const sum = Object.values(rows.get(p.id)).reduce((a, v) => a + Math.round(v * 100), 0);
+    assert.equal(sum, Math.round(p.amount * 100), `${p.id}'s games and stake add up to their trip total`);
+  }
+  // Without a decided stake (or on a money trip) the view is exactly as before
+  const plain = tripByGame(s, 't_cup');
+  assert.ok(!plain.columns.includes(CUP_COLUMN));
+  assert.deepEqual(tripByGame(s, 't_cup', { stake: {} }), plain);
 });
