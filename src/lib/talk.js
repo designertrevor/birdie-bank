@@ -32,7 +32,7 @@ export const REACTIONS = [
   { key: 'fire', emoji: '🔥', label: 'On fire' },
   { key: 'laugh', emoji: '😂', label: 'Too funny' },
   { key: 'yikes', emoji: '😬', label: 'Yikes' },
-  { key: 'money', emoji: '💸', label: 'Pay up' },
+  { key: 'money', emoji: '💸', label: 'Pay up', money: true },
 ];
 const REACTION_BY_KEY = Object.fromEntries(REACTIONS.map(r => [r.key, r]));
 export const emojiOf = key => REACTION_BY_KEY[key]?.emoji || '';
@@ -84,6 +84,14 @@ export function contextOf(on) {
   if (s === 'plan') return 'plan';
   return 'round';
 }
+/**
+ * The reactions to offer on a target: all five on a thing played for money, and no "Pay up" on a
+ * points or lunch round (the same rule as the jabs). One someone already picked still shows.
+ */
+export function reactionsFor({ money = true, picked = [] } = {}) {
+  const have = new Set(picked);
+  return REACTIONS.filter(r => money || !r.money || have.has(r.key));
+}
 /** The jabs that fit a target. `money`: whether that thing is played for money (see moneyOn). */
 export function jabsFor(on, { money = true } = {}) {
   const list = JABS[contextOf(on)] || JABS.round;
@@ -115,11 +123,13 @@ export const payTarget = (from, to) => `pay:${from}>${to}`;
 export const betTarget = id => `bet:${id}`;
 export const reactionRowId = (on, who, key) => `r:${on}:${who}:${key}`;
 
+// Cut to n characters without splitting an emoji in two (half of one is a character the server refuses)
+const cut = (s, n) => s.slice(0, n).replace(/[\uD800-\uDBFF]$/, '');
 /** Tidy a comment: single spaces, no blank lines, at most MAX_BODY characters. */
 export function cleanBody(text) {
-  return String(text || '').replace(/[\r\n]+/g, ' ').replace(/\s+/g, ' ').trim().slice(0, MAX_BODY);
+  return cut(String(text || '').replace(/[\r\n]+/g, ' ').replace(/\s+/g, ' ').trim(), MAX_BODY).trim();
 }
-const cleanName = name => String(name || '').replace(/\s+/g, ' ').trim().slice(0, 40) || null;
+const cleanName = name => cut(String(name || '').replace(/\s+/g, ' ').trim(), 40).trim() || null;
 
 /** A new comment, or null when there's nothing to say. A jab keeps its key so it reads as one. */
 export function newComment({ id, on, who, name, body, jab = null, now = Date.now() }) {
@@ -177,6 +187,21 @@ export function mergeRows(local = {}, incoming = []) {
     changed = true;
   }
   return changed ? out : local;
+}
+
+/**
+ * Who sees a thread's talk, from what this phone knows: { can, linked, shared, closed, off }.
+ * `code`: the round's share code or the plan's link code (null when it never had one); `off`: no
+ * server or no comments table yet; `seats`: what the server said when this phone joined (undefined
+ * until it has, null when it said this phone isn't in it). A player always gets to talk: when the
+ * server can't place this phone (the live round is gone and it never joined, or a new phone the
+ * round doesn't know), the talk stays on this phone (`closed`) instead of the section vanishing.
+ */
+export function talkReach({ off = false, code = null, seats } = {}) {
+  const linked = !!code;
+  if (off || !linked) return { can: true, linked, shared: false, closed: false, off: !!off };
+  if (seats === null) return { can: true, linked, shared: false, closed: true, off: false };
+  return { can: true, linked, shared: true, closed: false, off: false };
 }
 
 /** Rows of yours the server doesn't have yet (a row it refused for good is left out). */

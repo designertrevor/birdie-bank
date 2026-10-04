@@ -6,7 +6,7 @@ import { Avatar } from './Avatar.jsx';
 import { useStore } from '../lib/store.js';
 import { canonicalOf } from '../lib/pair-debts.js';
 import { agoLabel } from '../lib/lately.js';
-import { MAX_BODY, REACTIONS, commentsOn, jabsFor, reactionsOn, talkName } from '../lib/talk.js';
+import { MAX_BODY, commentsOn, jabsFor, reactionsFor, reactionsOn, talkName } from '../lib/talk.js';
 import { talkCounts } from '../lib/talk-counts.js';
 import { postComment, react, takeBack, useTalkReach } from '../lib/talk-sync.js';
 
@@ -20,6 +20,12 @@ function ReachNote({ ctx, reach }) {
       ? 'Only on your phone until the plan has its group link.'
       : 'Only on this phone: this round wasn’t shared live, so the others can’t see it.'}</p>;
   }
+  // The server can't place this phone in it (the live round is gone, or the round doesn't know this phone)
+  if (reach.closed) {
+    return <p className="field-help pad">{ctx.kind === 'plan'
+      ? 'Only on this phone: the plan’s group link has closed, so the others can’t see it.'
+      : 'Only on this phone: the shared round doesn’t know this phone, so the others can’t see it.'}</p>;
+  }
   if (reach.off) return <p className="field-help pad">Saved on this phone. The others see it once comments are switched on.</p>;
   return <p className="field-help pad">Everyone in the {ctx.kind === 'plan' ? 'plan' : 'round'} sees it. Keep it friendly.</p>;
 }
@@ -29,9 +35,10 @@ function ReactionPills({ ctx, on, rows, canTap }) {
   const state = useStore();
   const canon = canonicalOf(state);
   const picked = Object.fromEntries(reactionsOn(rows, on, { me: ctx.who, canon }).map(r => [r.key, r]));
+  const offer = reactionsFor({ money: moneyOf(ctx, on), picked: Object.keys(picked) });
   return (
     <div className="talk-reacts" role="group" aria-label="Reactions">
-      {REACTIONS.map(r => {
+      {offer.map(r => {
         const p = picked[r.key];
         const label = `${r.label}${p ? `, ${p.count}` : ''}${p?.mine ? ', yours' : ''}`;
         const body = <><span className="tr-emoji" aria-hidden="true">{r.emoji}</span>{p && <span className="tr-n">{p.count}</span>}</>;
@@ -43,6 +50,9 @@ function ReactionPills({ ctx, on, rows, canTap }) {
     </div>
   );
 }
+
+// Whether a thing is played for money, so money jabs and "Pay up" show only there (talk.js)
+const moneyOf = (ctx, on) => (ctx.moneyOn ? ctx.moneyOn(on) : true);
 
 /** The comments on one thing, oldest first, with Delete on your own. */
 function CommentList({ ctx, on, rows }) {
@@ -92,7 +102,7 @@ function Composer({ ctx, on }) {
   return (
     <>
       <div className="talk-jabs" role="group" aria-label="Quick jabs">
-        {jabsFor(on, { money: ctx.moneyOn ? ctx.moneyOn(on) : true }).map(j => <button key={j.key} type="button" className="pill-btn sm talk-jab" onClick={() => jab(j)}>{j.text}</button>)}
+        {jabsFor(on, { money: moneyOf(ctx, on) }).map(j => <button key={j.key} type="button" className="pill-btn sm talk-jab" onClick={() => jab(j)}>{j.text}</button>)}
       </div>
       <form className="talk-compose" onSubmit={send}>
         <label className="sr-only" htmlFor={`talk-${ctx.key}-${on}`}>Add a comment</label>
@@ -163,7 +173,7 @@ export function TalkBar({ ctx, on, title }) {
       )}
       {tray && canTalk && (
         <div className="talk-tray" role="group" aria-label={`React to ${title}`}>
-          {REACTIONS.map(r => {
+          {reactionsFor({ money: moneyOf(ctx, on), picked: picked.map(p => p.key) }).map(r => {
             const mine = picked.find(p => p.key === r.key)?.mine;
             return <button key={r.key} type="button" className={`talk-react ${mine ? 'on' : ''}`} aria-pressed={!!mine} aria-label={r.label}
               onClick={() => { react(ctx.key, { on, who: ctx.who, name: ctx.myName, emoji: r.key }); setTray(false); }}><span aria-hidden="true">{r.emoji}</span></button>;

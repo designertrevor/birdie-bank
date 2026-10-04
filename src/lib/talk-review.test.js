@@ -6,7 +6,8 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { createRound } from './round.js';
 import { betsOf } from './pair-bets.js';
-import { JABS, betTarget, jabsFor, latelyTalk, moneyOn, payTarget, planTalk, roundTalk, toggleReaction } from './talk.js';
+import { JABS, betTarget, cleanBody, jabsFor, latelyTalk, moneyOn, newComment, payTarget, planTalk, reactionsFor, roundTalk, talkReach, toggleReaction } from './talk.js';
+import { mergeBackup, parseBackup, replaceFromBackup } from './backup.js';
 
 const course = {
   id: 'c9', name: 'Pebble Creek', city: 'Town', custom: true,
@@ -92,4 +93,55 @@ test('talk review: the comments SQL is safe to run again and keeps its helpers t
   assert.equal((code.match(/\$\$/g) || []).length % 2, 0);
   // No earlier dated file was touched for this
   assert.doesNotMatch(code, /alter table public\.(live_rounds|planned_rounds|plan_rsvps|account_players)/);
+});
+
+test('talk review: a player the server can\u2019t place keeps talking on this phone instead of the section vanishing', () => {
+  // Never shared, or no server yet: on this phone
+  assert.deepEqual(talkReach({ code: null }), { can: true, linked: false, shared: false, closed: false, off: false });
+  assert.deepEqual(talkReach({ off: true, code: 'ABC123' }), { can: true, linked: true, shared: false, closed: false, off: true });
+  // Before the server has answered, and once it let this phone in: everyone sees it
+  assert.equal(talkReach({ code: 'ABC123', seats: undefined }).shared, true);
+  assert.equal(talkReach({ code: 'ABC123', seats: ['me'] }).shared, true);
+  // The live round is gone and this phone never joined (or it's a new phone): still yours to talk, but only here
+  const closed = talkReach({ code: 'ABC123', seats: null });
+  assert.equal(closed.can, true, 'the section doesn\u2019t disappear on a player');
+  assert.equal(closed.closed, true);
+  assert.equal(closed.shared, false);
+});
+
+test('talk review: a long comment or name is cut without splitting an emoji, which the server would refuse', () => {
+  const body = cleanBody(`${'a'.repeat(279)}\u{1F602}`);
+  assert.equal(body, 'a'.repeat(279));
+  assert.ok(!/[\uD800-\uDBFF]$/.test(body));
+  assert.equal(cleanBody(`${'a'.repeat(278)}\u{1F602}`), `${'a'.repeat(278)}\u{1F602}`, 'a whole emoji that fits stays');
+  const c = newComment({ id: 'c:1', on: 'round', who: 'me', name: `${'B'.repeat(39)}\u{1F525}`, body: 'hi' });
+  assert.equal(c.name, 'B'.repeat(39));
+  assert.equal(cleanBody('  two   words \n here  '), 'two words here');
+});
+
+test('talk review: a backup brings a round\u2019s talk back with it, and never overwrites the talk on the phone', () => {
+  const row = { id: 'c:1', on: 'round', kind: 'comment', who: 'sam', name: 'Sam', body: 'Who taught you to chip?', at: 1, updatedAt: 1, deleted: false, mine: false, sent: 1 };
+  const backup = { me: 'me', players: { me: { id: 'me', name: 'Trevor' } }, rounds: { r1: { id: 'r1', players: [] }, r2: { id: 'r2', players: [] } }, talk: { 'round:r1': { 'c:1': row }, 'round:r2': { 'c:9': { ...row, id: 'c:9', body: 'old' } } } };
+  const parsed = parseBackup(JSON.stringify(backup));
+  assert.equal(parsed.ok, true);
+  const phone = { me: 'me', players: { me: { id: 'me', name: 'Trevor' } }, rounds: { r2: { id: 'r2', players: [] } }, settlements: [], talk: { 'round:r2': { 'c:5': { ...row, id: 'c:5', body: 'mine' } } } };
+  const { state } = mergeBackup(phone, parsed.data);
+  assert.deepEqual(state.talk['round:r1'], { 'c:1': row });
+  assert.deepEqual(Object.keys(state.talk['round:r2']), ['c:5'], 'the phone\u2019s own copy stays');
+  // Replacing everything takes the backup's talk, and a backup from before the talk gets an empty one
+  assert.deepEqual(replaceFromBackup({ talk: {}, settings: {} }, parsed.data).talk, backup.talk);
+  const { talk: _drop, ...older } = backup;
+  assert.deepEqual(replaceFromBackup({ talk: {}, settings: {} }, older).talk, {});
+  assert.equal(parseBackup(JSON.stringify({ ...backup, talk: [] })).ok, false, 'a damaged talk list is caught');
+});
+
+test('talk review: "Pay up" shows only on a thing played for money, like the money jabs', () => {
+  const keysOf = list => list.map(r => r.key);
+  assert.deepEqual(keysOf(reactionsFor({ money: true })), ['clap', 'fire', 'laugh', 'yikes', 'money']);
+  assert.deepEqual(keysOf(reactionsFor({ money: false })), ['clap', 'fire', 'laugh', 'yikes']);
+  assert.deepEqual(keysOf(reactionsFor({ money: false, picked: ['money'] })), ['clap', 'fire', 'laugh', 'yikes', 'money'], 'one already picked still shows');
+  // A points round and its points bet offer no money reaction; a lunch round's settle-up line does
+  const pts = round({ kind: 'points' });
+  assert.ok(!keysOf(reactionsFor({ money: roundTalk(pts, { me: 'me', rounds: {} }).moneyOn('round') })).includes('money'));
+  assert.ok(keysOf(reactionsFor({ money: roundTalk(round({ kind: 'reward', reward: 'Lunch' }), { me: 'me', rounds: {} }).moneyOn(payTarget('sam', 'me')) })).includes('money'));
 });
