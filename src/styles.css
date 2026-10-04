@@ -2095,3 +2095,10 @@ button.trip-card:active { transform: scale(.97); }
 .callout-text { flex: 1; min-width: 0; font-size: 15px; font-weight: 600; line-height: 1.35; }
 .callout-go { width: 36px; height: 36px; flex-shrink: 0; border-radius: 50%; display: grid; place-items: center; background: var(--mint); color: var(--on-pastel); font-size: 17px; }
 .callout-off { display: block; min-height: 44px; margin: 2px auto 0; padding: 10px 14px; border: none; background: none; font: inherit; font-size: 13px; font-weight: 600; color: var(--mute); cursor: pointer; }
+
+/* ---- Mid-round lineup (o7 midround): who banks or is the wolf on the holes still to play ---- */
+.lineup-runs { padding-top: 4px; }
+.lineup-run { display: flex; align-items: center; gap: 8px; padding: 8px 0; font-size: 14px; border-top: 1px solid var(--surface); }
+.lineup-run:first-child { border-top: none; }
+.lineup-run.more { color: var(--mute); font-size: 13px; }
+.lineup-holes { color: var(--mute); font-size: 12px; font-weight: 600; width: 92px; flex-shrink: 0; font-variant-numeric: tabular-nums; }

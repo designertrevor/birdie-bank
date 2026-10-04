@@ -17,6 +17,7 @@ import { gamePct, halfStrokesOn, playsAtPct } from './allowances.js';
 import { houseRulesLine } from './house-rules.js';
 import { betHolesText, betName, betPeople, betStakeText, betStrokesText, betsOf, isCashBet } from './pair-bets.js';
 import { money } from './golf.js';
+import { lineupKind, lineupLabel, orderText, playForText, sidesText } from './lineup.js';
 
 export const GIMMES = [
   { value: 'none', label: 'None', text: 'None. Everything gets putted out.' },
@@ -90,12 +91,19 @@ function blockOf(round, key) {
 }
 
 /**
- * Everything agreed, as items: [{ id, group, label, text, on? }]. Groups: 'strokes', 'bets', 'rules'
- * (with `on`) and 'calls' (gimmes, mulligans, presses). `choices` are the gimmes and mulligans, from
+ * Everything agreed, as items: [{ id, group, label, text, on? }]. Groups: 'lineup' (what it's played
+ * for, the sides or the order), 'strokes', 'bets', 'rules' (with `on`) and 'calls' (gimmes,
+ * mulligans, presses). `choices` are the gimmes and mulligans, from
  * round.agreed unless given.
  */
 export function agreementItems(round, choices = round.agreed) {
   const items = [];
+  // What it's played for, then the sides or the playing order (since 2026-10-03; a card locked before
+  // then takes them in quietly, see noteChanges)
+  items.push({ id: 'playFor', group: 'lineup', label: 'Play for', text: playForText(round) });
+  const lineup = lineupKind(round);
+  if (lineup === 'teams') items.push({ id: 'sides', group: 'lineup', label: lineupLabel(round), text: sidesText(round) });
+  if (lineup === 'order') items.push({ id: 'order', group: 'lineup', label: lineupLabel(round), text: orderText(round) });
   if (!round.useHandicaps) items.push({ id: 'strokes', group: 'strokes', label: 'Strokes', text: 'None, it’s gross' });
   else {
     if ((round.hcPct ?? 100) !== 100) items.push({ id: 'hcPct', group: 'strokes', label: 'Handicaps', text: `${round.hcPct}% of each` });
@@ -163,11 +171,29 @@ export function showFirstTee(round) {
     && !Object.values(round.scores || {}).some(s => s && Object.values(s).some(v => v != null));
 }
 
+// The lineup items new on 2026-10-03. A card locked before then never had them, so the first look
+// takes them in without listing a change
+const LINEUP_IDS = ['playFor', 'sides', 'order'];
+// The Banker and Wolf order is listed by the sheet that changes it, which knows the hole it starts
+// from (see logChange), so it's never listed here
+const quiet = (round, id) => id === 'order' && (round?.game === 'banker' || round?.game === 'wolf');
+// A bet's words with the unit taken out, so switching the whole round between money and points
+// isn't listed as a change to every bet too: "5 pts a skin" and "$5 a skin" read the same, and a
+// reward round's "For money" tag is dropped
+const unitless = t => String(t).replace(/ · For money$/, '').replace(/(\d+(?:\.\d+)?) pts?\b/g, '$$$1');
+const lowerFirst = t => (t.length > 1 && t[1] === t[1].toLowerCase() ? t[0].toLowerCase() + t.slice(1) : t);
+
 // "$5 a skin" -> 5, for "raised" or "lowered"
 const amountOf = t => { const m = String(t).match(/(\d+(?:\.\d+)?)/); return m ? Number(m[1]) : null; };
 
 /** One change in words: "Skins raised to $5 a skin", "Skins: Validate skins ... on", "Dave joins, 4 strokes". */
 export function changeText(before, after) {
+  const x = after || before;
+  if (LINEUP_IDS.includes(x.id)) {
+    if (!before || !after || before.text === after.text) return null;
+    if (x.id === 'playFor') return `Now playing for ${lowerFirst(after.text)}, every hole`;
+    return `${after.label} now ${after.text}, every hole`;
+  }
   if (!before) {
     if (after.id.startsWith('strokes:')) return `${after.label} joins, ${after.text}`;
     if (after.id.startsWith('bet:')) return `${after.label} added: ${after.text}`;
@@ -210,9 +236,14 @@ export function noteChanges(round, now = Date.now()) {
   const was = new Map(agreed.seen.map(x => [x.id, x]));
   const is = new Map(cur.map(x => [x.id, x]));
   const texts = [];
+  // What it's played for changed: that one line says it, so the bets that only changed unit don't
+  const pfWas = was.get('playFor'), pfNow = is.get('playFor');
+  const unitSwitch = !!pfWas && !!pfNow && pfWas.text !== pfNow.text;
   for (const x of cur) {
     const was1 = was.get(x.id);
     if (was1 && was1.text === x.text && !!was1.on === !!x.on) continue;
+    if (quiet(round, x.id)) continue;
+    if (unitSwitch && was1 && x.id.startsWith('bet:') && unitless(was1.text) === unitless(x.text)) continue;
     const t = changeText(was1, x);
     if (t) texts.push(t);
   }
@@ -221,6 +252,16 @@ export function noteChanges(round, now = Date.now()) {
   if (same) return null;
   const hole = round.holes?.[Math.min(round.current ?? 0, round.holes.length - 1)]?.no ?? 1;
   return { ...agreed, seen: cur, changes: [...(agreed.changes || []), ...texts.map(text => ({ hole, text, at: now }))] };
+}
+
+/**
+ * A change listed by the sheet that made it, against the hole it counts from: a new round.agreed, or
+ * null when nothing is locked in. The Banker and Wolf order use it ("Banker order from hole 8: Cy,
+ * Dan, Ann, Bob"), since only the sheet knows the hole.
+ */
+export function logChange(round, text, hole, now = Date.now()) {
+  if (!isLocked(round) || !text) return null;
+  return { ...round.agreed, changes: [...(round.agreed.changes || []), { hole, text, at: now }] };
 }
 
 /** "Hole 7: Skins raised to $5 a skin". */
