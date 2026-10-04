@@ -408,13 +408,13 @@ export function StakeLines({ st }) {
         </div>
       ))}
       {!open.length && <p className="field-help pad">The cup stake is all paid.</p>}
-      {cup.marks.length > 0 && <StakePaid st={st} label={label} />}
+      {cup.marks.length > 0 && <StakePaid st={st} label={label} me={me} />}
     </>
   );
 }
 
 /** The stake payments marked so far; this phone's own can be undone. */
-function StakePaid({ st, label }) {
+function StakePaid({ st, label, me }) {
   const cup = st.cup;
   const local = id => cup.localOf({ id, name: '' });
   return (
