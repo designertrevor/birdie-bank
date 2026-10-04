@@ -7,7 +7,8 @@ import { createRound, roundResults } from './round.js';
 import { addBet, setBetWinner } from './pair-bets.js';
 import { tabResults } from './play-for.js';
 import { profileStats } from './profile-model.js';
-import { isLatest, rangeBounds, rangeLabel, rangeOfKind, roundsInRange, shiftRange } from './history.js';
+import { isLatest, rangeBounds, rangeLabel, rangeOfKind, roundsInRange, shiftRange, statsLinkLabel } from './history.js';
+import { oldRounds } from './overnight5-money.fixtures.js';
 import { bestOf, deepStats, dollarsIn, gameParts, pressCount, pressesIn, seatIn, skinsIn, winRate } from './deep-stats.js';
 
 const flat9 = { id: 'f9', name: 'Flat Nine', city: 'Town', tees: [], holes: Array.from({ length: 9 }, (_, i) => ({ par: 4, hdcp: i + 1 })) };
@@ -284,4 +285,43 @@ test('the best line in a few words', async () => {
   assert.equal(bestText({ line, by: 'record' }, money), 'Nassau, 3–1');
   assert.equal(bestText({ line: { ...line, record: { won: 2, lost: 1, even: 1 } }, by: 'record' }, money), 'Nassau, 2–1–1');
   assert.equal(bestText(null, money), '–');
+});
+
+test('across every game, by game and by course add up to the profile’s dollars to the cent, from every seat', () => {
+  // Seeded rounds over every game, side games, presses, bet changes, players leaving and joining
+  const rounds = oldRounds(240, 7).map(({ round: r }, i) => ({ ...r, id: `${r.id}-${i}`, status: 'done', finishedAt: 1e12 + i }));
+  const c = v => Math.round(v * 100) / 100;
+  for (const me of ['p0', 'p1', 'p2', 'p3']) {
+    const state = { me, players: {}, rounds: Object.fromEntries(rounds.map(r => [r.id, r])) };
+    const st = deepStats(state);
+    const prof = profileStats(state);
+    assert.equal(st.rounds, prof.rounds);
+    assert.equal(st.dollars.net, prof.money.net);
+    assert.equal(c(st.games.reduce((a, l) => a + l.dollars.net, 0)), st.dollars.net);
+    assert.equal(c(st.courses.reduce((a, l) => a + l.dollars.net, 0)), st.dollars.net);
+    // Each round's games add up to that round's own result
+    for (const r of rounds.filter(x => x.players.some(p => p.id === me))) {
+      const one = deepStats(state, [r]);
+      assert.equal(c(one.games.reduce((a, l) => a + l.dollars.net, 0)), roundResults(r).balances[me] || 0, r.id);
+    }
+  }
+});
+
+test('the History link to Your stats reads right for every range', () => {
+  const now = new Date(2026, 9, 3);
+  assert.equal(statsLinkLabel({ kind: 'season', year: 2026 }, now), 'Your stats for the 2026 season');
+  assert.equal(statsLinkLabel({ kind: 'month', year: 2026, month: 8 }, now), 'Your stats for September 2026');
+  assert.equal(statsLinkLabel({ kind: 'custom', from: '2026-09-01', to: '2026-09-27' }, now), 'Your stats for Sep 1 to Sep 27');
+  assert.equal(statsLinkLabel({ kind: 'custom', from: '2026-09-01', to: '' }, now), 'Your stats since Sep 1');
+  assert.equal(statsLinkLabel({ kind: 'custom', from: '', to: '2026-09-27' }, now), 'Your stats up to Sep 27');
+  assert.equal(statsLinkLabel({ kind: 'custom', from: '', to: '' }, now), 'Your stats for all time');
+  assert.equal(statsLinkLabel({ kind: 'all' }, now), 'Your stats for all time');
+});
+
+test('a reward round’s win says what it was played for', () => {
+  const r = lunch();
+  r.playFor = { kind: 'reward', reward: 'A drink', owes: 'last' };
+  const [w] = deepStats(stateOf([r])).biggest;
+  assert.deepEqual({ lunch: w.lunch, reward: w.reward, amount: w.amount }, { lunch: true, reward: 'a drink', amount: 10 });
+  assert.equal(deepStats(stateOf([skinsA()])).biggest[0].reward, null);
 });

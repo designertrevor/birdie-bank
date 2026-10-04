@@ -2215,6 +2215,8 @@ button.ch-main:active { transform: scale(.98); }
 .stats-link .row-main { font-weight: 700; }
 .stats-link > i:last-child { color: var(--mute); }
 .pf-more .stats-open { margin-top: 10px; }
+/* Four ranges on Your stats (All time too) still fit one row on a small phone */
+.range-bar .pm-btn { min-width: 0; padding: 0 6px; white-space: nowrap; }
 
 /* ---- Overnight 7, team games (Best ball, Shamble, Alternate shot, Chapman) ---- */
 /* "Counts" next to a player whose score makes the team score on the hole (Best ball and Shamble) */

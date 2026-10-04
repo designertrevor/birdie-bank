@@ -61,7 +61,7 @@ export default function Stats({ range: given = null }) {
         {range.kind === 'all' && <p className="range-label stats-all" aria-live="polite">Every round you’ve played</p>}
 
         {st.rounds === 0 ? (
-          <Empty illo={false} title="No rounds here" text={range.kind === 'all' ? 'Your stats show up after your first finished round.' : `You didn’t finish a round in ${range.kind === 'season' ? `the ${label}` : range.kind === 'month' ? label : 'those dates'}. Try another range.`} />
+          <Empty illo={false} title="No rounds here" text={emptyText(range, label)} />
         ) : (
           <>
             <div className="pf-tiles stats-tiles">
@@ -107,7 +107,7 @@ export default function Stats({ range: given = null }) {
                 <div className="block stats-wins">
                   {st.biggest.map(w => (
                     <button key={w.id} className="hist-row" onClick={() => nav.push('roundDetail', { id: w.id })}
-                      aria-label={`${w.course || 'A round'}, ${w.game}, ${shortDay(w.at)}. You won ${money(w.amount)}${w.lunch ? ' on side bets in a lunch round' : ''}`}>
+                      aria-label={`${w.course || 'A round'}, ${w.game}, ${shortDay(w.at)}. You won ${money(w.amount)}${w.lunch ? ` on side bets in a round played for ${w.reward}` : ''}`}>
                       <span className="hr-day">{shortDay(w.at)}</span>
                       <span className="hr-main">
                         <span className="hr-course">{w.course || 'A round'}</span>
@@ -128,12 +128,19 @@ export default function Stats({ range: given = null }) {
   );
 }
 
+/** Why the range is empty, in the words History uses. */
+function emptyText(range, label) {
+  if (range.kind === 'all') return 'Your stats show up after your first finished round.';
+  if (range.kind === 'custom') return 'You didn’t finish a round between those dates. Try a wider range.';
+  return `You didn’t finish a round in ${range.kind === 'season' ? `the ${label}` : label}. Try another ${range.kind}.`;
+}
+
 const tone = v => (v > 0 ? 'pos' : v < 0 ? 'neg' : '');
 const recordLine = r => `${r.won} won, ${r.lost} lost${r.even ? `, ${r.even} even` : ''}`;
 
 /** What the dollars are, honestly. */
 function moneyNote(st) {
-  const lunch = st.lunchDollars ? ' and side bets for money in lunch rounds' : '';
+  const lunch = st.lunchDollars ? ' and side bets for money in rounds played for a reward, like lunch' : '';
   const pts = st.points.rounds ? ' Rounds for points or a reward count in points, never dollars.' : '';
   return `Dollars come from rounds played for money${lunch}.${pts} Won and lost go by each game’s own result.`;
 }

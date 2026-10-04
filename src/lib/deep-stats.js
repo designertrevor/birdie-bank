@@ -12,7 +12,7 @@
 // Your seat in a round is the same one the profile uses: this phone's "me" for the round when it's
 // one of yours, otherwise any id that is you (people-links.js).
 import { GAMES, SIDE_GAMES, BETS_LABEL, gameView, playsGame, roundResults, sides } from './round.js';
-import { countsMoney, onTab, playForOf, tabResults } from './play-for.js';
+import { countsMoney, onTab, playForOf, rewardNoun, tabResults } from './play-for.js';
 import { betsOf, isCashBet } from './pair-bets.js';
 import { linksOf } from './people-links.js';
 import { meFor } from './format.js';
@@ -172,7 +172,8 @@ const byRounds = (a, b) => b.rounds - a.rounds || b.dollars.net - a.dollars.net 
  *   courses: [{ key, name, place, rounds, record, dollars, points, last }],
  *   presses: { rounds, made: { won, lost, halved }, against: { won, lost, halved } },
  *   skins:   { rounds, won, dollars: { net, rounds }, best: { id, skins, at, course } | null },
- *   biggest: [{ id, amount, at, course, game, lunch }] your biggest wins in dollars, biggest first,
+ *   biggest: [{ id, amount, at, course, game, lunch, reward }] your biggest wins in dollars, biggest first
+ *            (`lunch` for a reward round's side bets for money, `reward` what it was played for: "lunch", "a drink"),
  * }
  */
 export function deepStats(state, rounds = Object.values(state?.rounds || {})) {
@@ -226,7 +227,7 @@ export function deepStats(state, rounds = Object.values(state?.rounds || {})) {
 
     if (cash != null && cash > EPS) {
       const pf = playForOf(r);
-      wins.push({ id: r.id, amount: cash, at, course: r.course?.name || '', game: gameName(r.game), lunch: pf.kind === 'reward' });
+      wins.push({ id: r.id, amount: cash, at, course: r.course?.name || '', game: gameName(r.game), lunch: pf.kind === 'reward', reward: pf.kind === 'reward' ? rewardNoun(pf.reward) : null });
     }
   }
   // Biggest first; the same amount goes to the more recent round

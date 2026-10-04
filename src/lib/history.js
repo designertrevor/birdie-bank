@@ -84,6 +84,22 @@ export function rangeLabel(range, now = new Date()) {
   return 'All time';
 }
 
+/**
+ * The link from History to Your stats on the same range: "Your stats for the 2026 season", "Your
+ * stats for September 2026", "Your stats for Sep 1 to Sep 27", "Your stats since Sep 1", "Your
+ * stats up to Sep 27", or "Your stats for all time" (a custom range with no dates).
+ */
+export function statsLinkLabel(range, now = new Date()) {
+  const label = rangeLabel(range, now);
+  if (range.kind === 'season') return `Your stats for the ${label}`;
+  if (range.kind === 'custom') {
+    if (label.startsWith('Since ') || label.startsWith('Up to ')) return `Your stats ${label[0].toLowerCase()}${label.slice(1)}`;
+    if (label === 'All time') return 'Your stats for all time';
+  }
+  if (range.kind === 'all') return 'Your stats for all time';
+  return `Your stats for ${label}`;
+}
+
 /** Finished rounds in a range, newest first. */
 export function roundsInRange(state, range) {
   const [start, end] = rangeBounds(range);
