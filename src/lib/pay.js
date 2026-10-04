@@ -4,7 +4,7 @@
 import { money } from './golf.js';
 import { linksOf } from './people-links.js';
 import { theirProfile } from './their-profile.js';
-import { shareOut } from './share.js';
+import { shareOut } from './share-out.js';
 
 export const PAY_APPS = {
   venmo: { name: 'Venmo', label: 'Venmo username', placeholder: '@username' },
@@ -120,7 +120,7 @@ export function remindText({ name, amount, mine }) {
 
 /**
  * Send a reminder (or any text): the phone's share sheet when there is one (Messages, WhatsApp,
- * anything), otherwise a text message with it filled in, otherwise copied (share.js shareOut, the
+ * anything), otherwise a text message with it filled in, otherwise copied (share-out.js shareOut, the
  * one way the app shares). Resolves to what happened.
  */
 export function sendReminder(text) {
