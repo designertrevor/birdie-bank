@@ -967,7 +967,7 @@ function BetsSheet({ round, onClose }) {
   // Why a change can't start from the next hole, when it isn't a pot: net, gross or both is read
   // once for the round, and so is a snake split into nines
   const pot = game === 'scramble' || game === 'birdies' || current[game]?.payout === 'pot' || opts[game]?.payout === 'pot';
-  const layout = game === 'snake' ? 'Each nine or one snake is set' : 'Net, gross or both is set';
+  const layout = game === 'snake' ? 'Each nine or one snake is set' : isTeamGame(game) ? 'How the game is played (the bets, the scoring, the scores that count) is set' : 'Net, gross or both is set';
   const label = gameKeyLabel(round, gameKey);
   const apply = () => {
     update(s => {

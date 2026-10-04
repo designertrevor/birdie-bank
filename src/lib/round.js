@@ -330,6 +330,9 @@ export function changeBets(round, gameSettings, fromPos = null, key = 'main') {
   if (key !== 'main') return changeSideBets(round, key, gameSettings, fromPos);
   const game = round.game;
   const next = { ...round, settings: { ...round.settings, [game]: structuredClone(gameSettings) } };
+  // A team game played another way (a Nassau to one bet, match to stroke play) has other legs, so
+  // presses made on the old ones don't stand
+  if (isTeamGame(game) && wholeRoundOnly(game, round.settings[game], gameSettings) && round.presses?.length) next.presses = [];
   if (fromPos == null || fromPos <= 1 || wholeRoundOnly(game, round.settings[game], gameSettings)) {
     delete next.betHistory;
     return next;
@@ -1859,7 +1862,8 @@ export function teamTable(round) {
     const amounts = Object.fromEntries(Object.entries(legs).map(([k, l]) => [k, nassauAmounts(round, l.start)[k]]));
     if (f.scoring === 'match') {
       const winners = Object.fromEntries(rows.filter(r => r.winner !== undefined).map(r => [r.pos, r.winner]));
-      const presses = (round.presses || []).map(p => ({ ...p, amount: p.amount ?? nassauAmounts(round, p.start)[p.leg] }));
+      // Only presses on this layout's legs (changeBets clears the others when the layout changes)
+      const presses = (round.presses || []).filter(p => legs[p.leg]).map(p => ({ ...p, amount: p.amount ?? nassauAmounts(round, p.start)[p.leg] }));
       lines = nassauResult(winners, presses, amounts, legs).lines;
     } else {
       // Stroke play: the lower team total over the leg's holes both teams have played

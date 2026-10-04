@@ -396,3 +396,17 @@ test('the Counts tag: the team’s best ball, every tied one, and nothing until 
   assert.deepEqual(teamCounting(r, h, { a: 4, c: 3, d: 5 }), ['c']);
   assert.deepEqual(teamCounting(round('altshot', TWO), h, { t0: 4, t1: 5 }), []);
 });
+
+test('changing a team match to one bet clears the presses made on the old legs', () => {
+  const r = scores(round('bestball', TWO), 3, { 1: { a: 3 }, 2: { a: 3 } });
+  r.presses.push({ id: 'p1', leg: 'front', start: 3, by: 1 });
+  const next = changeBets(r, { ...r.settings.bestball, format: 'total' });
+  assert.deepEqual(next.presses, []);
+  assert.deepEqual(bal(next), { a: 10, b: 10, c: -10, d: -10 });
+  // A change of amount alone keeps them
+  assert.equal(changeBets(r, { ...r.settings.bestball, back: 10 }, 4).presses.length, 1);
+  // A hand-made round with a press on a leg that isn't there still adds up
+  const odd = structuredClone(next);
+  odd.presses = [{ id: 'p2', leg: 'front', start: 3, by: 1 }];
+  assert.deepEqual(bal(odd), { a: 10, b: 10, c: -10, d: -10 });
+});
