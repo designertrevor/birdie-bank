@@ -13,6 +13,8 @@ import { moneyLine } from './hole-fix.js';
 import { agreementItems, lockAgreement, logChange, noteChanges } from './agreed.js';
 import { onTab, tabResults } from './play-for.js';
 import { oldRounds } from './overnight5-money.fixtures.js';
+import { applyHole, assemble, buildHoles, buildMeta } from './sync-model.js';
+import { metaToSend } from './keeper.js';
 
 const course = n => ({ id: 'c', name: 'Flat', city: 'T', tees: [], holes: Array.from({ length: n }, (_, i) => ({ par: 4, hdcp: i + 1 })) });
 const NAMES = { a: 'Ann Lee', b: 'Bo Ray', c: 'Cy Doe', d: 'Dan Fox' };
@@ -433,6 +435,47 @@ test('a Sixes partner change is listed by the card', () => {
   r.agreed = lockAgreement(r, {}, 'a', 1);
   r = changeOrder(r, ['a', 'c', 'b', 'd']);
   assert.equal(noteChanges(r, 2).changes[0].text, 'Partners now 1–6 Ann & Cy v Bo & Dan; 7–12 Ann & Bo v Cy & Dan; 13–18 Ann & Dan v Cy & Bo, every hole');
+});
+
+// ---------------------------------------------------------------------------
+// Shared rounds: the keeper's phone changes it, every phone sees it
+
+/** The round as a friend's phone puts it back together from the live meta and hole records. */
+function overTheWire(r) {
+  const back = assemble(buildMeta(r), {});
+  for (const [no, data] of Object.entries(buildHoles(r))) applyHole(back, Number(no), data);
+  return back;
+}
+
+test('new sides, a new order and a new play for ride in the live round, so every phone shows the same money', () => {
+  // Sides, with the auto presses worked out again
+  const n = mk('nassau', { teams: [['a', 'b'], ['c', 'd']] });
+  for (let i = 0; i < 5; i++) {
+    n.scores[n.holes[i].no] = { a: 3, b: 5, c: 4, d: 5 };
+    for (const o of nassauPressOptions(gameView(n, 'main'), i + 2)) n.presses.push({ id: `auto-${o.leg}-${i + 2}`, leg: o.leg, start: i + 2, by: o.trailing, auto: true });
+  }
+  const sides = changeTeams(n, [['a', 'c'], ['b', 'd']]);
+  const s2 = overTheWire(sides);
+  assert.deepEqual(s2.teams, sides.teams);
+  assert.deepEqual(s2.presses, sides.presses);
+  assert.deepEqual(bal(s2), bal(sides));
+  // The banker order, and points
+  const b = changePlayFor(changeOrder(bankerRound(), ['b', 'd', 'a', 'c']), { kind: 'points' });
+  const b2 = overTheWire(b);
+  assert.deepEqual(b2.players.map(p => p.id), b.players.map(p => p.id));
+  assert.deepEqual(b2.playFor, { kind: 'points' });
+  assert.deepEqual(bankerHoleSetup(b2, 3).banker, 'b');
+  assert.deepEqual(bal(b2), bal(b));
+});
+
+test('a phone that isn’t keeping score never sends a lineup or play for change of its own', () => {
+  const base = buildMeta(mk('match', { teams: [['a', 'b'], ['c', 'd']] }));
+  const mine = buildMeta(changePlayFor(changeTeams(mk('match', { teams: [['a', 'b'], ['c', 'd']] }), [['a', 'c'], ['b', 'd']]), { kind: 'points' }));
+  const sent = metaToSend(base, mine, { editor: false, me: 'b' });
+  assert.deepEqual(sent.teams, base.teams);
+  assert.equal(sent.playFor, undefined);
+  // The keeper's phone sends its copy as it is
+  assert.deepEqual(metaToSend(base, mine, { editor: true, me: 'a' }).teams, mine.teams);
 });
 
 // ---------------------------------------------------------------------------
