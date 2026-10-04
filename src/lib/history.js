@@ -4,7 +4,7 @@ import { roundResults } from './round.js';
 import { meFor, myIds } from './format.js';
 import { outstanding } from './ledger.js';
 import { canonicalOf } from './pair-debts.js';
-import { countsMoney } from './play-for.js';
+import { tabMoneyOf, tabResultsFor } from './play-for.js';
 
 const MONTHS = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
 const SHORT = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
@@ -96,16 +96,21 @@ export function myNet(round, state) {
   return roundResults(round).balances[me] ?? 0;
 }
 
-/** Your money in a round: null when you weren't playing, or when it wasn't played for money. */
+/**
+ * Your money in a round, as the Tab has it: null when you weren't playing, or when none of it was
+ * money for you. A reward round counts its side bets for money, for the players who had one (see tabMoneyOf).
+ */
 export function myMoney(round, state) {
-  return countsMoney(round) ? myNet(round, state) : null;
+  const me = meFor(round, state);
+  if (!me || !round.players.some(p => p.id === me)) return null;
+  return tabMoneyOf(round, me);
 }
 
 const cents = v => Math.round(v * 100) / 100;
 
 /**
  * Group rounds (newest first) by month: [{ key: '2026-09', label, rounds, count, net, played }].
- * `net` adds up only the money rounds you played in (`played` counts them); the year shows when it isn't this one.
+ * `net` adds up only your money in them (myMoney: money rounds, and lunch rounds' side bets for money you had; `played` counts them); the year shows when it isn't this one.
  */
 export function monthGroups(rounds, state, now = new Date()) {
   const groups = [];
@@ -126,7 +131,7 @@ export function monthGroups(rounds, state, now = new Date()) {
 }
 
 /**
- * Your running total across the money rounds you played in, oldest first:
+ * Your running total across the rounds with money of yours in them (myMoney), oldest first:
  * [{ id, t, amount, total }]. This is what the season chart draws.
  */
 export function netSeries(rounds, state) {
@@ -141,17 +146,19 @@ export function netSeries(rounds, state) {
 /**
  * Net with each player over these rounds (positive: you came out ahead of them). This is the honest
  * head-to-head from roundResults().pairs, bet by bet, not who happened to pay whom in the fewest payments.
- * Money rounds only.
+ * Money rounds, and reward rounds' side bets for money you had one in (the Tab's dollars).
  */
 export function headToHead(rounds, state) {
   const h2h = {};
   // One friend is one line, whichever of their ids a round has (see people-links.js)
   const who = canonicalOf(state);
   const mine = myIds(state);
-  for (const r of rounds.filter(countsMoney)) {
+  for (const r of rounds) {
     const me = meFor(r, state);
     if (!me) continue;
-    for (const [id, v] of Object.entries(roundResults(r).pairs?.[me] || {})) {
+    const res = tabResultsFor(r, me);
+    if (!res) continue;
+    for (const [id, v] of Object.entries(res.pairs?.[me] || {})) {
       const k = who(id);
       if (!v || mine.has(k)) continue;
       h2h[k] = cents((h2h[k] || 0) + v);

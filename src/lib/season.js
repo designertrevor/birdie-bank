@@ -7,7 +7,7 @@ import { meFor, myIds } from './format.js';
 import { nameOf } from './ledger.js';
 import { roundTime } from './history.js';
 import { canonicalOf } from './pair-debts.js';
-import { countsMoney } from './play-for.js';
+import { countsMoney, tabResultsFor } from './play-for.js';
 
 /** Fewer finished rounds than this and the Season preview shows the sample group instead. */
 export const MIN_REAL_ROUNDS = 2;
@@ -15,13 +15,14 @@ export const MIN_REAL_ROUNDS = 2;
 const cents = v => Math.round(v * 100) / 100 || 0;
 
 /**
- * Finished money rounds this season (calendar year) where you were a player, joined rounds
- * included. Oldest first. Points and reward rounds never count toward the season's money.
+ * Finished rounds this season (calendar year) with money of yours on the Tab, joined rounds
+ * included: money rounds, and reward rounds where you had a side bet for money (only those bets
+ * count, see tabResultsFor). Oldest first. Points rounds never count toward the season's money.
  */
 export function seasonRounds(state, year = new Date().getFullYear()) {
   return Object.values(state?.rounds || {})
-    .filter(r => r.status === 'done' && countsMoney(r) && new Date(roundTime(r)).getFullYear() === year)
-    .filter(r => { const me = meFor(r, state); return !!me && r.players.some(p => p.id === me); })
+    .filter(r => r.status === 'done' && new Date(roundTime(r)).getFullYear() === year)
+    .filter(r => { const me = meFor(r, state); return !!me && r.players.some(p => p.id === me) && !!tabResultsFor(r, me); })
     .sort((a, b) => roundTime(a) - roundTime(b));
 }
 
@@ -51,7 +52,8 @@ export function seasonBoard(state, year = new Date().getFullYear()) {
   let biggestDay = null;
   for (const r of rounds) {
     const me = meFor(r, state);
-    const res = roundResults(r);
+    // A money round's whole result; a reward round's side bets for money alone
+    const res = tabResultsFor(r, me, roundResults(r));
     for (const [id, v] of Object.entries(res.balances)) {
       const k = who(id);
       bal.set(k, cents((bal.get(k) || 0) + v));
@@ -75,9 +77,11 @@ export function seasonBoard(state, year = new Date().getFullYear()) {
     }
     const pairs = res.pairs?.[me] || {};
     const inRound = new Map();
+    // A reward round is a round together only with the players you had a side bet for money with
+    const betWith = countsMoney(r) ? null : new Set((res.detail.byGame.bets?.detail?.bets || []).filter(b => b.sides?.includes(me)).flatMap(b => b.sides));
     for (const p of r.players) {
       const k = who(p.id);
-      if (k === meKey) continue;
+      if (k === meKey || (betWith && !betWith.has(p.id))) continue;
       inRound.set(k, (inRound.get(k) || 0) + (pairs[p.id] ?? 0));
     }
     for (const [k, v] of inRound) {

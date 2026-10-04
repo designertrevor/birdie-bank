@@ -1,8 +1,8 @@
 // Shared display helpers and derived stats (kept out of component files for fast refresh).
-import { GAMES, SIDE_GAMES, roundResults, scoreSummary, sideGamesOf } from './round.js';
+import { GAMES, SIDE_GAMES, scoreSummary, sideGamesOf } from './round.js';
 import { money } from './golf.js';
 import { linksOf } from './people-links.js';
-import { countsMoney, playForOf, rewardOutcome, unitFmt } from './play-for.js';
+import { countsMoney, playForOf, rewardOutcome, tabResultsFor, unitFmt } from './play-for.js';
 
 /**
  * A round's games in one name: "Nassau", or "Nassau + Skins + Junk" with side games. Works on a
@@ -110,7 +110,7 @@ export function myIds(state) {
 
 export function seasonStats(state, year = new Date().getFullYear()) {
   const rounds = Object.values(state.rounds)
-    .filter(r => r.status === 'done' && countsMoney(r) && new Date(r.finishedAt || r.createdAt).getFullYear() === year && r.players.some(p => p.id === meFor(r, state)))
+    .filter(r => r.status === 'done' && new Date(r.finishedAt || r.createdAt).getFullYear() === year && r.players.some(p => p.id === meFor(r, state)) && !!tabResultsFor(r, meFor(r, state)))
     .sort((a, b) => (a.finishedAt || a.createdAt) - (b.finishedAt || b.createdAt));
   let total = 0, birdies = 0, streak = 0, best = null;
   const h2h = {};
@@ -119,7 +119,8 @@ export function seasonStats(state, year = new Date().getFullYear()) {
   const mine = myIds(state);
   for (const r of rounds) {
     const me = meFor(r, state);
-    const res = roundResults(r);
+    // A reward round counts its side bets for money alone, like the Tab
+    const res = tabResultsFor(r, me);
     const amt = res.balances[me] || 0;
     total += amt;
     streak = amt > 0 ? streak + 1 : 0;
