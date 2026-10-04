@@ -74,6 +74,7 @@ function TrialButton({ onTrial, status, onClick }) {
 }
 
 function RealSeason({ state, preview = false }) {
+  const nav = useNav();
   const b = seasonBoard(state);
   return (
     <div className="scroll">
@@ -86,6 +87,9 @@ function RealSeason({ state, preview = false }) {
         <Kv k="Best game" v={b.bestGame ? `${b.bestGame.name}, ${signed(b.bestGame.net)}` : DASH} />
       </div>
       <p className="field-help pad">Only you see this. It adds up the money from the rounds you played this season, every game and side bet for money included. Points rounds stay out.</p>
+      <button className="text-link stats-link" onClick={() => nav.push('stats', { range: { kind: 'season', year: b.year } })}>
+        <Icon name="chart-bar" fill /> <span className="row-main">Your stats for the season<span className="sl-sub">By game and course, presses, skins and biggest wins</span></span> <Icon name="caret-right" />
+      </button>
     </div>
   );
 }
