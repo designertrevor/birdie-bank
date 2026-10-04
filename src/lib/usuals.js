@@ -109,6 +109,8 @@ export function planFromUsual(state, usual) {
   return {
     game: s.game, holesCount: s.holesCount, nine: s.nine, courseId: s.courseId,
     invited: s.picked.filter(pid => pid !== state.me),
+    // The usual's playing order, teams, tees and handicap edits, kept on the plan for the roll call (plan-setup.js)
+    order: s.picked, teams: s.teams, tees: s.tees, hcOverride: s.hcOverride,
     opts,
     sides: fits.map(sg => sg.game),
     // The side games as saved, with any Strokes given % of their own (the plan keeps those too)
