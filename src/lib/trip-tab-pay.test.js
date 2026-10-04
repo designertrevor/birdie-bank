@@ -38,3 +38,28 @@ test('paying the whole Tab line squares the pair on Settle the trip too, with mo
   const after = tripStatus(s, 'tp', { now: NOW + 2000 });
   assert.deepEqual(after.plan.filter(l => [l.from, l.to].includes('s') && [l.from, l.to].includes('t')), [], 'and square on the trip');
 });
+
+test('a whole Tab card paid mid-trip pays the trip part but never settles the trip', async () => {
+  const { tripOnDay } = await import('./trips.js');
+  const { cupTiming } = await import('./cup-stake.js');
+  const { tripSettleOf, tripOfPayment } = await import('./trip-pay.js');
+  // Day 1 of 3: a round only this phone has, Sam lost $4 to Trevor
+  const r1 = round('r1', ['t', 's'], [[1, 't'], [2, 't']], { at: OCT(16, 15) });
+  const now = OCT(16, 18);
+  const s0 = { me: 't', players: {}, rounds: { r1 }, settlements: [], carries: [], tabRows: {}, plans: {}, trips: { tp: TRIP } };
+  const card = tabWith(outstanding(s0, { now }), new Set(['t']), 's');
+  assert.equal(card, 4);
+  const res = allocatePayment(s0, { from: 's', to: 't', amount: card }, { now, makeId: () => 'p1' });
+  assert.equal(res.settlements.length, 1);
+  assert.equal(tripOfPayment(res.settlements[0]), 'tp', 'still counted as trip money');
+  assert.equal(tripSettleOf(res.settlements[0]), null, 'but not a Settle the trip payment');
+  const s1 = { ...s0, settlements: res.settlements };
+  const st = tripStatus(s1, 'tp', { now });
+  assert.equal(st.closed, false);
+  assert.equal(st.phase, 'on');
+  assert.deepEqual(st.settling, [], 'the rounds stay unlocked');
+  assert.deepEqual(st.plan, [], 'the pair is square on the trip');
+  assert.equal(tripOnDay(s1, '2026-10-17')?.id, 'tp', 'day 2 is still the trip');
+  assert.equal(cupTiming(s1, TRIP, { now }).over, false);
+  assert.deepEqual(outstanding(s1, { now }), []);
+});

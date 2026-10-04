@@ -15,7 +15,7 @@ import { meFor } from './format.js';
 import { expenseDebts, nameOf, outstanding, tabWith } from './ledger.js';
 import { allTripPays, expensePayId, newPayment } from './trip-expenses.js';
 import { FETCH_DAYS, canonicalOf, cents, codeOf, finishedAt, lockedRounds, nettedId, nettedOn, pairDebt, paidOn, played, sharedRounds } from './pair-debts.js';
-import { isTripPayment, tripPaymentId } from './trip-pay.js';
+import { isTripPayment, tabTripPaymentId } from './trip-pay.js';
 import { tripStatus, tripsOf } from './trips.js';
 import { planRows } from './trip-plan.js';
 import { stakeRaw } from './cup-stake.js';
@@ -297,10 +297,11 @@ export function allocatePayment(state, { from, to, amount }, { now = Date.now(),
   let left = total - settle - onPlan.cents - spent.cents;
   // The whole card: each trip's part between them from rounds only this phone has goes on that
   // trip (2026-10-04), so Settle the trip has the pair square too, even when the Tab netted it
-  // against money from before the trip; the rest is a payment as before
+  // against money from before the trip; the rest is a payment as before. It never settles the
+  // trip (trip-pay.js tabTripPaymentId): paid mid-trip, the trip stays on and its rounds open
   if (whole) for (const x of tripLocalParts(state, F, T, { now })) {
     const [lf, lt] = x.cents > 0 ? [from, to] : [to, from];
-    settlements.push({ id: tripPaymentId(x.tripId, who(lf), who(lt), now), from: lf, to: lt, amount: Math.abs(x.cents) / 100, at: now });
+    settlements.push({ id: tabTripPaymentId(x.tripId, who(lf), who(lt), now), from: lf, to: lt, amount: Math.abs(x.cents) / 100, at: now });
     left -= x.cents;
   }
   if (left > 0) settlements.push({ id: `s_${makeId()}`, from, to, amount: left / 100, at: now });
