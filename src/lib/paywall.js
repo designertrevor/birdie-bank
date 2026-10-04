@@ -23,7 +23,7 @@ export const DEFAULT_PLAN = 'annual';
  * decided at launch; keep this list and "Pro at launch" in ROADMAP.md area 11 in step.
  */
 export const PRO_FEATURES = [
-  { icon: 'receipt', text: 'The season tab across every round' },
+  { icon: 'receipt', text: 'Your season across every round' },
   { icon: 'calendar-check', text: 'Planning rounds ahead, with who’s in and the group vote' },
   { icon: 'arrow-counter-clockwise', text: 'Your usual game in one tap' },
   { icon: 'map-trifold', text: 'Every course' },

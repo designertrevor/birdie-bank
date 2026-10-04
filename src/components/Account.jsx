@@ -68,8 +68,8 @@ function friendly(e) {
 // eslint-disable-next-line react-refresh/only-export-components
 export function syncLabel(acct) {
   if (acct.state === 'syncing') return 'Saving…';
-  if (acct.state === 'offline') return acct.pending ? `Offline, ${acct.pending} change${acct.pending === 1 ? '' : 's'} will sync` : 'Offline, will sync';
-  if (acct.state === 'error') return 'Couldn’t sync. Will keep trying.';
+  if (acct.state === 'offline') return acct.pending ? `Offline. ${acct.pending} change${acct.pending === 1 ? '' : 's'} will save when you’re back` : 'Offline. Saves when you’re back';
+  if (acct.state === 'error') return 'Couldn’t save to your account. Will keep trying.';
   if (acct.pending) return `${acct.pending} change${acct.pending === 1 ? '' : 's'} to save`;
   return 'Saved to your account';
 }

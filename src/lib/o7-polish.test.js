@@ -112,3 +112,20 @@ test('Lately’s lunch recap shows your side bets for money in dollars, and noth
   const theirs = latelyItems(lunchWithBet('b', [q3]), OCT(13)).find(i => i.id === 'recap:q2');
   assert.ok(!/\$/.test(theirs.sub), theirs.sub);
 });
+
+test('a points round’s snake reveal says what the holder pays in points, never dollars', async () => {
+  const { revealSteps } = await import('./reveal.js');
+  const { roundResults } = await import('./round.js');
+  const mk = playFor => {
+    const r = createRound({ id: 'sn', game: 'snake', course: flat9, holesCount: 9, players: IDS.map(x => ({ id: x, name: x.toUpperCase(), index: 0 })), settings: { hcPct: 100, snake: { stake: 5, growth: 'flat', nines: false } }, hcPct: 100, useHandicaps: false });
+    for (const h of r.holes) { r.scores[h.no] = Object.fromEntries(IDS.map(p => [p, 4])); r.marks[h.no] = { snake: [] }; }
+    r.marks[3] = { snake: ['a'] };
+    r.status = 'done';
+    if (playFor) r.playFor = playFor;
+    return r;
+  };
+  const text = r => revealSteps(r, roundResults(r)).steps.map(s => s.text).join(' ');
+  assert.match(text(mk(null)), /pays \$5 a player/);
+  assert.match(text(mk({ kind: 'points' })), /pays 5 pts a player/);
+  assert.ok(!/\$/.test(text(mk({ kind: 'points' }))));
+});

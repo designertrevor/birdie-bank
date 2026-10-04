@@ -46,7 +46,7 @@ export default function Season() {
         <Header title="Season" onBack={nav.pop} />
         {real
           ? <><p className="season-sub">Built from your {n} rounds</p><RealSeason state={state} /></>
-          : <div className="scroll"><Empty title="Your season starts here" text={`Play ${MIN_REAL_ROUNDS} rounds this year and your season shows here: everyone’s totals, you against your most-played friend, your biggest day and best game.`} /></div>}
+          : <div className="scroll"><Empty title="Your season starts here" text={`Play ${MIN_REAL_ROUNDS} rounds for money this year and your season shows here: everyone’s totals, you against your most-played friend, your biggest day and best game.`} /></div>}
       </Screen>
     );
   }
@@ -85,7 +85,7 @@ function RealSeason({ state, preview = false }) {
         <Kv k="Biggest day" v={b.biggestDay ? `${signed(b.biggestDay.amount)} · ${b.biggestDay.course || shortDay(b.biggestDay.at)}` : DASH} />
         <Kv k="Best game" v={b.bestGame ? `${b.bestGame.name}, ${signed(b.bestGame.net)}` : DASH} />
       </div>
-      <p className="field-help pad">Only you see this. It adds up the rounds you played this season, every game in them included.</p>
+      <p className="field-help pad">Only you see this. It adds up the money from the rounds you played this season, every game and side bet for money included. Points rounds stay out.</p>
     </div>
   );
 }
@@ -121,7 +121,7 @@ function Tour({ trialButton, onFree }) {
   const [step, setStep] = useState(0);
   const steps = [
     {
-      title: 'Season tab', text: 'Your group’s whole season in one place, a few rounds in.',
+      title: 'Your season', text: 'Your group’s whole season in one place, a few rounds in.',
       body: <>
         <Balances rows={s.balances} sample />
         <div className="block kv-block">

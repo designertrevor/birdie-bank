@@ -101,8 +101,8 @@ export default function UpNext() {
 
         {hasHistory && (
           <>
-            <div className="sec-label">Your tab</div>
-            <button className="tab-glance" onClick={() => nav.setTab('ledger')} aria-label={tab.people ? `Your tab: owed to you ${money(tab.owed)}, you owe ${money(tab.owe)}` : `Your tab: ${squareText}`}>
+            <div className="sec-label">The Tab</div>
+            <button className="tab-glance" onClick={() => nav.setTab('ledger')} aria-label={tab.people ? `The Tab: owed to you ${money(tab.owed)}, you owe ${money(tab.owe)}` : `The Tab: ${squareText}`}>
               {tab.people ? (
                 <>
                   <div><div className="bl">Owed to you</div><div className={`lr-big ${tab.owed ? 'pos' : ''}`}>{tab.owed ? money(tab.owed) : '–'}</div></div>

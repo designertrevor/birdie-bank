@@ -80,7 +80,7 @@ export default function RoundDetail({ id, celebrate }) {
   const ownSettle = pays && !round.trip?.id;
 
   const del = async () => {
-    if (!(await ask({ title: 'Delete this round?', text: 'It’ll be removed from History and the tab.', confirmLabel: 'Delete round', danger: true }))) return;
+    if (!(await ask({ title: 'Delete this round?', text: 'It’ll be removed from History and the Tab.', confirmLabel: 'Delete round', danger: true }))) return;
     update(s => {
       delete s.rounds[id];
       leaveRound(s, id);
@@ -109,7 +109,7 @@ export default function RoundDetail({ id, celebrate }) {
   const saveRow = accountsEnabled && !acct.user && round.status === 'done' && (
     <button className="set-row" onClick={() => setSigningIn(true)}>
       <div className="set-icon"><Icon name="cloud-arrow-up" fill /></div>
-      <div className="row-main"><div className="set-name">{isMoney && meRow && meRow.amount > 0 ? `You won ${money(meRow.amount)}. Save it to your tab` : 'Save this round to your account'}</div><div className="set-sub">Free. Keeps your rounds and tab safe on any device.</div></div>
+      <div className="row-main"><div className="set-name">{isMoney && meRow && meRow.amount > 0 ? `You won ${money(meRow.amount)}. Save it to your Tab` : 'Save this round to your account'}</div><div className="set-sub">Free. Keeps your rounds and the Tab safe on any device.</div></div>
       <span className="chevron"><Icon name="caret-right" /></span>
     </button>
   );
@@ -203,8 +203,8 @@ export default function RoundDetail({ id, celebrate }) {
             </div>
           ))}
           {res.transfers.length > 0 && <p className="field-help" style={{ padding: '0 4px' }}>{round.trip?.id
-            ? `Fewest payments for this round alone. It’s on the trip, so it’s settled once with the trip’s other rounds, and it’s on the tab until then.`
-            : 'Fewest payments to square everyone up. They’re on the tab until marked paid.'}</p>}
+            ? `Fewest payments for this round alone. It’s on the trip, so it’s settled once with the trip’s other rounds, and it’s on the Tab until then.`
+            : 'Fewest payments to square everyone up. They’re on the Tab until marked paid.'}</p>}
         </div>
         </>}
 

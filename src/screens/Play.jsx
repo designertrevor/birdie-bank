@@ -551,7 +551,7 @@ function PlayRound({ round }) {
                     {st > 0 && <span className="stroke-dots" aria-label={`Gets ${strokesWords(st, halfStrokesOn(round))}`}>{'●'.repeat(st)} Gets {strokesWords(st, halfStrokesOn(round))}</span>}
                     {st < 0 && <span className="stroke-dots">Gives back {strokesWords(-st, halfStrokesOn(round))}</span>}
                     {holeStrokeNotes(round, p, hole).map(x => <span key={x.key} className="stroke-note"> · {holeStrokeNoteText(x)}</span>)}
-                    {game === 'banker' && !isBanker && <span> Bet {money(banker.bets[p.id] || 0)}{banker.doubled[p.id] ? (banker.doubleBack ? ' · 4×' : ' · 2×') : ''}</span>}
+                    {game === 'banker' && !isBanker && <span> Bet {unitFmt(round)(banker.bets[p.id] || 0)}{banker.doubled[p.id] ? (banker.doubleBack ? ' · 4×' : ' · 2×') : ''}</span>}
                     {touched[p.id] && v !== 'X' && <span className={`score-name s${Math.max(-2, Math.min(2, v - hole.par))}`}> {scoreName(v, hole.par)}{counted !== 0 && `, ${netScoreName(v - counted, hole.par)}`}</span>}
                   </div>
                   <button className={`pickup-btn ${v === 'X' ? 'on' : ''}`} onClick={() => setScore(p.id, v === 'X' ? hole.par : 'X')} aria-pressed={v === 'X'}>
