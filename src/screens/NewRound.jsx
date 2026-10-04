@@ -253,8 +253,10 @@ export default function NewRound({ rematch, fromPlan, present, edit = null, ahea
   const toBets = () => {
     const cfg = GAMES[game]?.teams;
     const wrongCount = !!cfg && !!teams && (Array.isArray(cfg.count) ? teams.length < cfg.count[0] || teams.length > cfg.count[1] : teams.length !== cfg.count);
-    // Foursomes on a team points trip: the partners start from the trip's teams, rotated (cup.js)
-    if (!teams || wrongCount || teams.flat().length !== picked.length || teams.flat().some(pid => !picked.includes(pid))) setTeams((foursomes && cupPairs(cupStart)) || defaultTeams(game, picked));
+    // On a team points trip: the partners start from the trip's teams, rotated (cup.js), for
+    // foursomes and for any game played two against two (a 2 v 2 Nassau)
+    const twoTeams = !!cfg && (Array.isArray(cfg.count) ? cfg.count[0] <= 2 && cfg.count[1] >= 2 : cfg.count === 2);
+    if (!teams || wrongCount || teams.flat().length !== picked.length || teams.flat().some(pid => !picked.includes(pid))) setTeams(((foursomes || (tripCup && twoTeams)) && cupPairs(cupStart)) || defaultTeams(game, picked));
     setStep(3);
   };
   // Step bar taps: any earlier step, or a later one already reached whose earlier steps are still filled in
@@ -302,6 +304,8 @@ export default function NewRound({ rematch, fromPlan, present, edit = null, ahea
     // A round from a plan, kept for another day: the plan's challenges move to this one (challenges.js)
     const oldPlan = replaces ? Object.values(s.plans || {}).find(p => p?.host && p.roundId === replaces) : null;
     if (oldPlan) { const moved = movedFromFor(oldPlan, plan); if (moved.length) plan.movedFrom = moved; }
+    // The old plan says where it went, so friends' phones stop showing it as on (plan-sync.js adds the link once there is one)
+    if (oldPlan) editPlan(oldPlan.id, p => { p.movedTo = { id, code: null, date }; });
     // The round it replaces never got played: its challenges are agreed again for the next round together
     if (replaces) challengesBack(getState().rounds[replaces]);
     update(st => {
@@ -377,7 +381,8 @@ export default function NewRound({ rematch, fromPlan, present, edit = null, ahea
       st.settings = { ...st.settings, ...settings };
       if (!st.favorites.includes(course.id)) st.favorites = [course.id, ...st.favorites].slice(0, 6);
     });
-    if (fromPlan) editPlan(fromPlan, p => { p.status = 'started'; p.roundId = id; });
+    // The roll call's keys to player ids, so a round kept for another day carries its challenges to the right people
+    if (fromPlan) editPlan(fromPlan, p => { p.status = 'started'; p.roundId = id; if (pre?.idOf && Object.keys(pre.idOf).length) p.rollIds = { ...pre.idOf }; });
     markChallengesOn(challengesIn, id);
     setCreatedId(id);
     setStep(4);

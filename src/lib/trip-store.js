@@ -6,7 +6,7 @@
 import { getState, uid, update } from './store.js';
 import { editPlan } from './plan-sync.js';
 import { nameOf } from './ledger.js';
-import { TRIP_FORMATS, canRecount, cleanPeople, isOrganizer, newTrip, tripOf, tripStamp } from './trips.js';
+import { TRIP_FORMATS, cleanPeople, cupOnEdit, isOrganizer, newTrip, tripOf, tripStamp } from './trips.js';
 import { canEditExpense, cleanExpense, cleanWhat, personFor } from './trip-expenses.js';
 import { publishDeleted, refreshPlans } from './trip-plan-sync.js';
 import { CUP_FORMAT, cleanCup } from './cup.js';
@@ -50,8 +50,9 @@ export function editTrip(id, patch) {
     for (const r of Object.values(st.rounds)) {
       if (r.trip?.id !== id) continue;
       r.trip = stamp;
-      // Now played for team points: a round this phone can still change for everyone gets its matches
-      if (cupNow && !r.cup && canRecount(st, r)) {
+      // Now played for team points: a round this phone can still change for everyone, not finished
+      // before the change, gets its matches
+      if (cupNow && !r.cup && cupOnEdit(st, r)) {
         const c = startingCup(st, r, trip);
         if (c) r.cup = c;
       }

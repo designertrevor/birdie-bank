@@ -6,10 +6,15 @@
 // payment for trip money (trip-expenses.js newPayment), which reaches every phone with the trip's
 // expenses, so both phones of the pair see it squared.
 //
-// The "I paid" marks from before (`state.cupPaid`, cup-sync.js) still count: a line's money here is
-// what the marks leave open, so a stake marked paid stays paid and is never asked for again. A line
-// with someone this phone can't place (a teammate from another group it never played with) stays off
-// the Tab and is still marked paid on the trip, as before.
+// Whether a line is on the Tab is the same on every phone (2026-10-04 fix): it is when its two people
+// sat in a cup round shared live together (cup.js stakeLink), so both their phones tell who's who in a
+// payment between them by those seats, and every phone places them the way it places them in a
+// payment (trip-expenses.js placedOn). A line between two people who never played together stays off
+// the Tab on every phone and is marked paid on the trip, as before, so a mark and a Tab payment are
+// never both asked for. The "I paid" marks from before (`state.cupPaid`, cup-sync.js, and a phone not
+// up to date still only has them) still count: a line's money here is what the marks leave open, and
+// on a line on the Tab they only cover what the pair's payments haven't, so a mark and a payment for
+// the same stake count once.
 //
 // Each person's trip total already has the stake (trips.js standings); it's never in the trip's
 // expenses list or their totals, so it counts once. Old trips, and trips without a cup or a stake,
@@ -76,14 +81,24 @@ export function stakeMoney(state, tripId, { now = Date.now() } = {}) {
   const cup = cupStake(state, tripId, { now });
   if (!cup?.final || !cup.lines.length) return [];
   const at = Math.max(0, ...tripRounds(state, tripId).filter(r => r.status === 'done').map(finishedAt), ...cup.entries.map(e => e.at || 0));
-  return cup.lines.filter(l => l.onTab && l.open > 0).map(l => ({
+  return cup.lines.filter(l => l.onTab && l.open > 0 && l.fromId !== l.toId).map(l => ({
     id: stakeMoneyId(tripId, l.key), tripId, stake: true, what: 'Cup stake', key: l.key,
     payer: l.toId, parts: [{ id: l.fromId, cents: l.open, part: null }],
     balances: { [l.toId]: l.open, [l.fromId]: -l.open }, cents: l.open, amount: l.open / 100,
     names: { [l.fromId]: l.fromName, [l.toId]: l.toName }, at,
     // What the plan checks it against: who won and what's open on the line
     mark: `w${cup.winner}.${l.open.toString(36)}`,
+    // Marked paid in part before (cup.js stakeMarks): pair by pair, never on the published plan,
+    // since what's open on it then turns on the pair's payments, which not every phone has
+    ...(l.paid > 0 ? { marked: true } : {}),
+    // The two of them as a trip expense writes them, so a payment between them names them the same way
+    raw: { id: stakeMoneyId(tripId, l.key), payer: l.people.to, people: [l.people.from] },
   }));
+}
+
+/** A trip's decided stake lines as trip expenses write people (stakeMoney `raw`), for a payment between two of them. */
+export function stakeRaw(state, tripId, { now = Date.now() } = {}) {
+  return stakeMoney(state, tripId, { now }).map(x => x.raw);
 }
 
 /** Trip ids this phone knows that are played for team points. */

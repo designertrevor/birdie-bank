@@ -210,11 +210,17 @@ test('Lately: an answer put in for you says who put it in; the phone that put it
   const mikes = friendState('mike', { challenges: { c1: ch } });
   assert.deepEqual(challengeLately(mikes, 0, NOW + DAY).map(r => r.text), ['Trevor set you up v Dave, a $20 match', 'Trevor marked you in for a $20 match', 'Dave is in for a $20 match']);
   const daves = friendState('dave', { challenges: { c1: ch } });
-  assert.deepEqual(challengeLately(daves, 0, NOW + DAY).map(r => r.text), ['Trevor set you up v Mike, a $20 match', 'Mike is in for a $20 match']);
+  assert.deepEqual(challengeLately(daves, 0, NOW + DAY).map(r => r.text), ['Trevor set you up v Mike, a $20 match', 'Trevor marked Mike in for a $20 match'], 'who put it in (2026-10-04)');
   const host = hostState({ challenges: { c1: ch } });
   assert.deepEqual(challengeLately(host, 0, NOW + DAY).map(r => r.text), ['Dave accepted the one with Mike']);
   const sams = friendState('sam', { challenges: { c1: ch } });
-  assert.deepEqual(challengeLately(sams, 0, NOW + DAY).map(r => r.text), ['Trevor set up Mike v Dave', 'Mike accepted the one with Dave', 'Dave accepted the one with Mike']);
+  assert.deepEqual(challengeLately(sams, 0, NOW + DAY).map(r => r.text), ['Trevor set up Mike v Dave', 'Trevor marked Mike in on the one with Dave', 'Dave accepted the one with Mike']);
+});
+
+test('Lately says the same news about a challenge once, the latest (2026-10-04)', () => {
+  const ch = played(setUp(), { side: 'from', move: 'accept' }, { side: 'to', move: 'counter', stake: 10 }, { side: 'from', move: 'accept' });
+  const texts = challengeLately(friendState('sam', { challenges: { c1: ch } }), 0, NOW + DAY).map(r => r.text);
+  assert.equal(texts.filter(t => t === 'Mike accepted the one with Dave').length, 1);
 });
 
 test('old challenges play exactly as before: no set-up, no answers put in for anyone', () => {
@@ -360,6 +366,14 @@ test('the preview lists the kept side bets and the agreed challenges, "Dave v Mi
   assert.deepEqual(bets.map(x => x.source), ['bet', 'challenge']);
   const pv = planPreview(state, state.plans.pl1, { now: new Date(NOW) });
   assert.equal(pv.pairBets.length, 2);
+});
+
+test('a round kept for another day keeps the challenge’s bet in its setup, and the preview lists it once (2026-10-04)', () => {
+  const state = previewState();
+  const p = state.plans.pl1;
+  p.setup = setupForPlan({ game: 'nassau', courseId: 'c1', holesCount: 18, me: 'me', order: ['me', 'sam', 'dave', 'mike'], bets: [{ id: 'b1', kind: 'hole', sides: ['sam', 'me'], stake: 2 }, { id: 'ch_c1', kind: 'match', sides: ['dave', 'mike'], stake: 20 }] });
+  const bets = previewPairBets(state, p, { now: new Date(NOW) });
+  assert.deepEqual(bets.map(x => pairBetLine(x)), ['Sam v Trevor, $2 a hole', 'Dave v Mike, $20 match']);
 });
 
 test('the image and the text carry them, with amounts hidden until they’re switched on', () => {

@@ -222,9 +222,28 @@ export function cleanRoundCup(round) {
     if (!pairs) return null;
     const on = (pair, side) => pair.filter(id => saved[side].includes(id)).length;
     const flip = on(pairs[1], 0) + on(pairs[0], 1) > on(pairs[0], 0) + on(pairs[1], 1);
-    return { kind: 'foursomes', sides: flip ? [pairs[1], pairs[0]] : pairs };
+    const sides = flip ? [pairs[1], pairs[0]] : pairs;
+    // A pair with someone from each trip team can't win a point for either (2026-10-04): no match
+    return { kind: 'foursomes', sides, ...(mixedPairs(round, sides) ? { mixed: true } : {}) };
   }
   return { kind: CUP_KINDS[c.kind] && c.kind !== 'foursomes' ? c.kind : defaultKind(saved), sides: saved };
+}
+
+/**
+ * Whether an Alternate shot round's pairs mix the trip's teams: a pair with one player from each
+ * (by id, or else by a name only one person on the teams has), from the teams in the round's trip stamp.
+ */
+function mixedPairs(round, sides) {
+  const cup = cupOf(round.trip);
+  if (!cup) return false;
+  const name = id => lower(round.players.find(p => p.id === id)?.name);
+  const teamOfId = id => {
+    for (const i of [0, 1]) if (cup.teams[i].some(p => p.id === id)) return i;
+    const n = name(id);
+    const hits = n ? [0, 1].flatMap(i => cup.teams[i].filter(p => lower(p.name) === n).map(() => i)) : [];
+    return hits.length === 1 ? hits[0] : null;
+  };
+  return sides.some(pair => { const t = pair.map(teamOfId).filter(x => x != null); return t.length === 2 && t[0] !== t[1]; });
 }
 
 /**
@@ -233,7 +252,7 @@ export function cleanRoundCup(round) {
  * [{ kind, sides: [[ids], [ids]] }], plus `out` (the ids sitting out).
  */
 export function pairMatches(cup) {
-  if (!cup) return { matches: [], out: [] };
+  if (!cup || cup.mixed) return { matches: [], out: [] };
   const [a, b] = cup.sides.map(s => [...s]);
   const matches = [];
   if (cup.kind === 'fourball' || cup.kind === 'foursomes') while (a.length >= 2 && b.length >= 2) matches.push({ kind: cup.kind, sides: [a.splice(0, 2), b.splice(0, 2)] });
@@ -325,6 +344,8 @@ export function cupEntry(state, round) {
     course: round.course?.name || null, holes: round.holes.length,
     players: round.players.map(p => ({ id: p.id, name: p.name, team: team(p.id), ...(isStr(acct[p.id]) ? { acct: acct[p.id] } : {}) })),
     matches: matches.map(m => ({ kind: m.kind, sides: m.sides, result: pick(m.result) })),
+    // Foursomes pairs that mix the teams: no match, and the cup view says why
+    ...(cup.mixed ? { mixed: true } : {}),
   };
 }
 const pick = r => ({ thru: r.thru, leader: r.leader, by: r.by, left: r.left, closed: r.closed, done: r.done, winner: r.winner, points: r.points, label: r.label, ...(r.void ? { void: true } : {}) });
@@ -353,7 +374,7 @@ export function cleanEntry(raw) {
   return {
     key: raw.key.slice(0, 64), status: raw.status === 'done' ? 'done' : 'active', at: Number(raw.at) || 0,
     day: /^\d{4}-\d{2}-\d{2}$/.test(raw.day) ? raw.day : null, course: isStr(raw.course) ? raw.course.slice(0, 60) : null,
-    holes: num(raw.holes, 18), players, matches,
+    holes: num(raw.holes, 18), players, matches, ...(raw.mixed === true && !matches.length ? { mixed: true } : {}),
   };
 }
 
@@ -512,6 +533,49 @@ export function stakeBalances(cup, winner) {
     out[l.to] = Math.round(((out[l.to] || 0) + l.amount) * 100) / 100;
   }
   return out;
+}
+
+/**
+ * Where each person on the trip's teams sat in the trip's cup rounds shared live (2026-10-04), from
+ * what every phone on the trip has alike (the teams, and each round's matches, its own or from the
+ * server), so the answer is the same on every phone: Map(team id -> Map(round code -> seat id)). A
+ * seat is theirs when it has their id, or else their name when exactly one seat in that round and
+ * exactly one person on the teams go by it. Rounds not shared live (no code) are left out: a
+ * friend's phone never has them.
+ */
+export function stakeSeats(cup, entries) {
+  const out = new Map();
+  if (!cup) return out;
+  const people = [...cup.teams[0], ...cup.teams[1]];
+  const named = new Map();
+  for (const p of people) { const n = lower(p.name); named.set(n, (named.get(n) || 0) + 1); }
+  for (const p of people) out.set(p.id, new Map());
+  for (const e of entries) {
+    if (!isStr(e.key) || e.key.startsWith('L')) continue;
+    for (const p of people) {
+      let seat = e.players.find(x => x.id === p.id)?.id || null;
+      const n = lower(p.name);
+      if (!seat && n && named.get(n) === 1) {
+        const hits = e.players.filter(x => lower(x.name) === n);
+        if (hits.length === 1 && !people.some(q => q.id === hits[0].id)) seat = hits[0].id;
+      }
+      if (seat) out.get(p.id).set(e.key, seat);
+    }
+  }
+  return out;
+}
+
+/**
+ * The round that puts a stake line on the Tab: the first cup round shared live both of its people
+ * sat in, as { code, from, to } (their seats), or null when they never played one together. Only
+ * then can both their phones tell who's who in a payment between them (by those seats), so a line
+ * is on the Tab, or marked paid on the trip, the same way on every phone.
+ */
+export function stakeLink(seats, from, to) {
+  const a = seats.get(from), b = seats.get(to);
+  if (!a || !b) return null;
+  for (const [code, seat] of a) if (b.has(code) && b.get(code) !== seat) return { code, from: seat, to: b.get(code) };
+  return null;
 }
 
 /** The id of a stake payment marked on this phone. */

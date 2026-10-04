@@ -45,8 +45,8 @@ import { dayLabel, daysUntil, isoDate } from './plans.js';
 import { canEdit, keeperMe } from './keeper.js';
 import { money } from './golf.js';
 import { isPlanPayment, planRows, planState } from './trip-plan.js';
-import { expensePairs, expenseTotals, placeable, tripExpenses, tripPays } from './trip-expenses.js';
-import { CUP_FORMAT, cleanCup, closeEntry, cupEntries, cupLeaderboard, cupOf, cupScore, stakeLines, stakeMarks, stakeOpen, teamOf } from './cup.js';
+import { expensePairDebts, expensePairs, expenseTotals, placeable, placedOn, tripExpenses, tripMoney, tripPays } from './trip-expenses.js';
+import { CUP_FORMAT, cleanCup, closeEntry, cupEntries, cupLeaderboard, cupOf, cupScore, stakeLines, stakeLink, stakeMarks, stakeOpen, stakeSeats, teamOf } from './cup.js';
 import { cupStake } from './cup-stake.js';
 
 const DAY = 864e5;
@@ -259,9 +259,19 @@ function paymentsOf(state, id, rounds, local, together, bal, spent = []) {
   }
   for (const s of [...trip, ...onRounds]) pay(who(s.from), who(s.to), cents(s.amount));
   const counted = [];
+  // What the trip's own rounds have each one paying another (2026-10-04): a payment from the Tab
+  // between two people counts for the trip up to that too, so paying a Tab line that nets the
+  // shared rounds against the rest (the Tab pays one part back the other way) squares the trip
+  const due = new Map();
+  const dueOf = () => {
+    due.clear();
+    const rest = fewestPayments(Object.fromEntries(Object.entries(left).map(([k, c]) => [k, c / 100])), { canPay: (a, b) => together.has(pairKey(a, b)) });
+    for (const t of rest) due.set(`${t.from}>${t.to}`, cents(t.amount));
+  };
   for (const s of loose.sort((a, b) => (a.at || 0) - (b.at || 0))) {
     const f = who(s.from), t = who(s.to);
-    const c = Math.min(cents(s.amount), Math.max(0, -(left[f] || 0)), Math.max(0, left[t] || 0));
+    let c = Math.min(cents(s.amount), Math.max(0, -(left[f] || 0)), Math.max(0, left[t] || 0));
+    if (c < cents(s.amount)) { dueOf(); c = Math.max(c, Math.min(cents(s.amount), due.get(`${f}>${t}`) || 0)); }
     if (c <= 0) continue;
     pay(f, t, c);
     counted.push({ settlement: s, cents: c });
@@ -453,8 +463,10 @@ export function tripStatus(state, id, { now = Date.now() } = {}) {
  * going, the cup is decided: the team with more points wins, and a stake pays out in `lines`
  * ([{ key, from, to, amount, fromName, toName, open, paid, marks, fromId, toId, onTab }], with fromId
  * and toId as this phone knows them, null for someone it doesn't, and `open` and `paid` from the
- * stake's "I paid" marks). A line with both people known here (`onTab`) is trip money on the Tab and
- * in Settle the trip (cup-stake.js). `stakeBy`: each person's stake, by the id this phone knows them by.
+ * stake's "I paid" marks). A line whose two people sat in a cup round shared live together
+ * (`onTab`, cup.js stakeLink, the same on every phone) is trip money on the Tab and in Settle the
+ * trip (cup-stake.js), its people placed the way a payment between them is (`people`, as a trip
+ * expense writes them). `stakeBy`: each person's stake, by the id this phone knows them by.
  */
 export function cupStatus(state, trip, people = tripPeople(state, trip.id), { over = false, close = false } = {}) {
   const def = cupOf(trip);
@@ -477,10 +489,28 @@ export function cupStatus(state, trip, people = tripPeople(state, trip.id), { ov
     return names.get(String(p.name || '').trim().toLowerCase()) || null;
   };
   const marks = stakeMarks(state, trip.id);
+  const seats = stakeSeats(def, entries);
+  const money = final ? tripMoney(state, trip.id) : [];
   const lines = stakeOpen(final ? stakeLines(def, winner) : [], marks).map(l => {
-    const fromId = localOf({ id: l.from, name: l.fromName }), toId = localOf({ id: l.to, name: l.toName });
-    // On the Tab when this phone can place both people (cup-stake.js); else marked paid on the trip
-    return { ...l, fromId, toId, onTab: !!fromId && !!toId && fromId !== toId };
+    // On the Tab when the two of them sat in a cup round shared live together (cup.js stakeLink),
+    // the same on every phone; else it's marked paid on the trip
+    const link = stakeLink(seats, l.from, l.to);
+    if (!link) return { ...l, fromId: localOf({ id: l.from, name: l.fromName }), toId: localOf({ id: l.to, name: l.toName }), onTab: false };
+    // Each of them as a trip expense writes them, by their seats in the trip's cup rounds, so this
+    // phone tells who they are just as it does in a payment between them
+    const person = (id, seat, name) => ({ id: seat, name, refs: [...seats.get(id)].map(([code, x]) => `${code}:${x}`) });
+    const people = { from: person(l.from, link.from, l.fromName), to: person(l.to, link.to, l.toName) };
+    const at = (p, id, name) => placedOn(state, p) ?? localOf({ id, name }) ?? who(p.id);
+    const fromId = at(people.from, l.from, l.fromName), toId = at(people.to, l.to, l.toName);
+    // A mark from before (or from a phone not up to date) and a payment from the Tab for the same
+    // money count once: the marks only cover what the pair's payments haven't
+    let open = l.open;
+    if (l.paid > 0 && fromId !== toId) {
+      const d = expensePairDebts(money).find(x => (x.from === fromId && x.to === toId) || (x.from === toId && x.to === fromId));
+      const owed = cents(l.amount) + (d ? (d.from === fromId ? d.cents : -d.cents) : 0);
+      open = cents(l.amount) - Math.min(l.paid, cents(l.amount), Math.max(0, owed));
+    }
+    return { ...l, open, fromId, toId, onTab: true, people, link: link.code };
   });
   const stakeBy = {};
   for (const l of lines) {
@@ -602,6 +632,16 @@ export function countsByDefault(state, tripId, playerIds = []) {
  * with: friends' copies don't hear about a change any more, so their standings and the Tab's
  * pair-by-pair money would stop matching this phone's.
  */
+/**
+ * Whether a trip switched to team points (or edited while it is) gives a round on it its matches:
+ * one this phone can still change for everyone (canRecount) that isn't finished, so a round played
+ * before the change keeps its result as it was (an old Alternate shot round never turns into a
+ * foursomes match after the fact).
+ */
+export function cupOnEdit(state, round) {
+  return round?.status !== 'done' && canRecount(state, round);
+}
+
 export function canRecount(state, round) {
   if (!codeOf(round)) return true;
   if (round.status !== 'active' || !round.shared || round.shared.ended) return false;

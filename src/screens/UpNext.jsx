@@ -13,7 +13,7 @@ import { AvatarButton, BottomNav } from '../nav.jsx';
 import { useNav } from '../lib/nav.js';
 import { JoinSheet } from '../components/Live.jsx';
 import { syncConfigured } from '../lib/sync.js';
-import { RSVP_LABEL, countsLine, daysUntil, planChoice, planCounts, upcomingPlans, whenLabel } from '../lib/plans.js';
+import { RSVP_LABEL, countsLine, dayLabel, daysUntil, planChoice, planCounts, upcomingPlans, whenLabel } from '../lib/plans.js';
 import { refreshPlans } from '../lib/plan-sync.js';
 import { countdownLine, weekdayOf } from '../lib/preview.js';
 import { refreshTab } from '../lib/tab-sync.js';
@@ -174,17 +174,19 @@ function UpcomingCard({ plan }) {
   const me = plan.host ? plan.hostWho : plan.localMe;
   const mine = plan.answers?.[me]?.status;
   const off = plan.status === 'off' || (plan.gone && plan.status !== 'started'); // a started round goes on either way
-  const started = plan.status === 'started' && !off;
+  // Kept for another day: the new plan isn't on this phone yet, so this one says where it went
+  const moved = !off && plan.movedTo ? plan.movedTo : null;
+  const started = plan.status === 'started' && !off && !moved;
   // Still to come: a plan from yesterday that never started has nothing left to count down to
-  const ahead = !off && !started && (daysUntil(plan.date) ?? 0) >= 0;
+  const ahead = !off && !started && !moved && (daysUntil(plan.date) ?? 0) >= 0;
   const card = (
     <button className={`upcoming-card ${off ? 'off' : ''} ${ahead ? 'has-preview' : ''}`} onClick={() => nav.push('plan', { id: plan.id })}>
       <div className="row-main">
-        <div className="eyebrow">{ahead ? countdownLine(plan) : whenLabel(plan)}{off ? (plan.status === 'off' ? ' · Called off' : ' · Deleted') : started ? ' · The round is on' : ''}</div>
+        <div className="eyebrow">{ahead ? countdownLine(plan) : whenLabel(plan)}{off ? (plan.status === 'off' ? ' · Called off' : ' · Deleted') : moved ? ' · Moved' : started ? ' · The round is on' : ''}</div>
         <div className="uc-title d">{GAMES[game]?.name || 'Golf'} · {plan.course?.name || 'Course to be set'}</div>
-        <div className="uc-sub">{off ? `Organized by ${plan.host ? 'you' : plan.hostName || 'a friend'}` : started ? (plan.liveCode ? 'Tap to follow along' : 'Teeing off now') : countsLine(c)}</div>
+        <div className="uc-sub">{off ? `Organized by ${plan.host ? 'you' : plan.hostName || 'a friend'}` : moved ? `Moved to ${moved.date ? dayLabel(moved.date) : 'another day'}${moved.code ? '. Tap for the new plan' : ''}` : started ? (plan.liveCode ? 'Tap to follow along' : 'Teeing off now') : countsLine(c)}</div>
       </div>
-      {!off && !started && <span className={`who-status ${mine || 'none'}`}>{mine ? `You’re ${RSVP_LABEL[mine].toLowerCase()}` : 'Answer'}</span>}
+      {!off && !started && !moved && <span className={`who-status ${mine || 'none'}`}>{mine ? `You’re ${RSVP_LABEL[mine].toLowerCase()}` : 'Answer'}</span>}
       <span className="chevron"><Icon name="caret-right" /></span>
     </button>
   );

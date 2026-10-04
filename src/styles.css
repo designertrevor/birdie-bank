@@ -2404,3 +2404,7 @@ button.ch-main:active { transform: scale(.98); }
 .ch-pick { margin: 0 16px 10px; padding-top: 12px; }
 .ch-pick .ch-mark { padding: 0 2px 8px; }
 .ch-pick .ch-actions { padding: 0 0 12px; }
+
+/* o7a fix: the money bar head keeps a gap between its two labels at phone width */
+.mb-head { gap: 12px; }
+.mb-head > span:last-child { text-align: right; }

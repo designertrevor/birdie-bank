@@ -68,9 +68,12 @@ export function spotDraft(round, spot) {
 /** The card's words for a spot: { title, text }. */
 export function spotCopy(round, spot) {
   const kind = spotKind(spot.why);
-  if (kind === 'ctp') return { title: 'Closest to the pin?', text: 'A par 3. Two of you can bet on who lands it closest, here and on the par 3s after.' };
-  if (spot.why === 'turn') return { title: `A side bet for the ${nineName(round, spot.pos) ?? 'last'} nine?`, text: 'A fresh match for the last nine holes, just between two of you.' };
-  return { title: 'Any side bets this round?', text: 'Two of you can play your own match on top of the game.' };
+  // Just two in the round: "You two", never "Two of you"
+  const two = (round.players || []).length === 2;
+  const who = two ? 'You two' : 'Two of you';
+  if (kind === 'ctp') return { title: 'Closest to the pin?', text: `A par 3. ${who} can bet on who lands it closest, here and on the par 3s after.` };
+  if (spot.why === 'turn') return { title: `A side bet for the ${nineName(round, spot.pos) ?? 'last'} nine?`, text: `A fresh match for the last nine holes, just between ${two ? 'you two' : 'two of you'}.` };
+  return { title: 'Any side bets this round?', text: `${who} can play your own match on top of the game.` };
 }
 
 /** Whether a bet of the same sort already covers this hole for these players (closest to the pin, or a match or per-hole bet). */

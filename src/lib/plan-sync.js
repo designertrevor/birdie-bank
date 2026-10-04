@@ -10,7 +10,7 @@ import { getState, update } from './store.js';
 import { getSupabase, supabaseConfigured } from './supabase.js';
 import { PlansOffError, planLocalAdapter, planSupabaseAdapter } from './plan-adapters.js';
 import { newCode, stable } from './sync-model.js';
-import { RSVPS, answersFrom, betVoteChoice, cleanName, gameVoteChoice, planLink, planMeta } from './plans.js';
+import { RSVPS, answersFrom, betVoteChoice, cleanName, daysUntil, gameVoteChoice, movedLocalMe, movedPlanOf, planLink, planMeta } from './plans.js';
 import { PAY_APP_IDS } from './pay.js';
 import { deviceReady, myDevice } from './device.js';
 
@@ -98,6 +98,11 @@ export async function sharePlan(id) {
     for (const [who, a] of Object.entries(plan.answers || {})) await pushAnswer(adapter, code, who, a);
   } catch (e) { noteError(e); throw e; }
   update(s => { const p = s.plans?.[id]; if (p) { p.code = code; p.syncedAt = Date.now(); } });
+  // A round kept for another day: its old plan points friends to this one now it has a link
+  for (const e of Array.isArray(plan.movedFrom) ? plan.movedFrom : []) {
+    const old = e?.id && getState().plans?.[e.id];
+    if (old?.host) await editPlan(old.id, p => { p.movedTo = { id, code, date: plan.date || null }; });
+  }
   return code;
 }
 
@@ -188,6 +193,9 @@ export async function refreshPlan(id) {
       return;
     }
     applyRemote(id, remote);
+    // A friend's plan whose round moved to another day: pick up the new plan, as the same person
+    const now = getState().plans?.[id];
+    if (!now?.host && now?.movedTo?.code && !movedPlanOf(getState(), now)) await openPlanLink(now.movedTo.code);
   } catch (e) { noteError(e); }
 }
 
@@ -218,7 +226,8 @@ export function usePlanLive(id, code) {
 /** Refresh every shared plan once (Up next calls this when it opens). A friend's started plan keeps looking until the live round's link arrives. */
 export function refreshPlans() {
   for (const p of Object.values(getState().plans || {})) {
-    if (p?.code && (p.status !== 'started' || (!p.host && !p.liveCode))) refreshPlan(p.id);
+    // A friend's started plan also until its day has gone by, so a round kept for another day reaches them
+    if (p?.code && (p.status !== 'started' || (!p.host && (!p.liveCode || (!p.movedTo && (daysUntil(p.date) ?? -99) >= -1))))) refreshPlan(p.id);
   }
 }
 
@@ -240,14 +249,17 @@ export async function openPlanLink(code, who = null) {
   const meta = remote.meta || {};
   const known = w => !!w && (meta.people?.some(p => p.id === w) || remote.rsvps?.some(r => r.who === w));
   if (existing) {
-    if (!existing.host && !existing.localMe && known(who)) update(s => { s.plans[existing.id].localMe = who; });
+    const me = !existing.host && !existing.localMe ? (known(who) ? who : movedLocalMe(getState(), meta)) : null;
+    if (me) update(s => { s.plans[existing.id].localMe = me; });
     applyRemote(existing.id, remote);
     return existing.id;
   }
   const id = meta.id && !getState().plans?.[meta.id] ? meta.id : `pl_${code}`;
+  // The new plan of a round kept for another day: you're who you were on the old one
+  const me = known(who) ? who : movedLocalMe(getState(), meta);
   update(s => {
     if (!s.plans) s.plans = {};
-    s.plans[id] = { ...meta, id, code, host: false, answers: answersFrom(remote.rsvps, remote.votes), localMe: known(who) ? who : null, syncedAt: Date.now() };
+    s.plans[id] = { ...meta, id, code, host: false, answers: answersFrom(remote.rsvps, remote.votes), localMe: me, syncedAt: Date.now() };
   });
   return id;
 }

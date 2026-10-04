@@ -15,8 +15,10 @@ import { meFor } from './format.js';
 import { expenseDebts, nameOf, outstanding, tabWith } from './ledger.js';
 import { allTripPays, expensePayId, newPayment } from './trip-expenses.js';
 import { FETCH_DAYS, canonicalOf, cents, codeOf, finishedAt, lockedRounds, nettedId, nettedOn, pairDebt, paidOn, played, sharedRounds } from './pair-debts.js';
-import { isTripPayment } from './trip-pay.js';
+import { isTripPayment, tripPaymentId } from './trip-pay.js';
+import { tripStatus, tripsOf } from './trips.js';
 import { planRows } from './trip-plan.js';
+import { stakeRaw } from './cup-stake.js';
 
 export { FETCH_DAYS, canonicalOf, codeOf, nettedId, pairDebt, played, sharedRounds };
 
@@ -246,6 +248,20 @@ export function squareRows(state, from, to, roundIds, { now = Date.now(), reason
 }
 
 /**
+ * Each trip's part between two people from rounds only this phone has (trips.js tripStatus, a
+ * line's `local`): [{ tripId, cents }], cents positive when `F` owes `T`.
+ */
+function tripLocalParts(state, F, T, { now = Date.now() } = {}) {
+  const out = [];
+  for (const id of tripsOf(state).keys()) {
+    const st = tripStatus(state, id, { now });
+    const line = st?.plan.find(l => (l.from === F && l.to === T) || (l.from === T && l.to === F));
+    if (line?.local) out.push({ tripId: id, cents: line.from === F ? line.local : -line.local });
+  }
+  return out;
+}
+
+/**
  * Record `from` paying `to` (the person card, the Settle up sheet). Only the shared rounds
  * between the two count on the shared side, never money passed on through someone else:
  * - A payment of the whole card (what the Tab has between them) squares their shared rounds
@@ -278,7 +294,15 @@ export function allocatePayment(state, { from, to, amount }, { now = Date.now(),
   const onPlan = planRows(state, F, T, { amount: whole ? null : Math.max(0, total - settle), now });
   rows.push(...onPlan.rows);
   const spent = expensePayments(state, F, T, { amount: whole ? null : Math.max(0, total - settle - onPlan.cents), now });
-  const left = total - settle - onPlan.cents - spent.cents;
+  let left = total - settle - onPlan.cents - spent.cents;
+  // The whole card: each trip's part between them from rounds only this phone has goes on that
+  // trip (2026-10-04), so Settle the trip has the pair square too, even when the Tab netted it
+  // against money from before the trip; the rest is a payment as before
+  if (whole) for (const x of tripLocalParts(state, F, T, { now })) {
+    const [lf, lt] = x.cents > 0 ? [from, to] : [to, from];
+    settlements.push({ id: tripPaymentId(x.tripId, who(lf), who(lt), now), from: lf, to: lt, amount: Math.abs(x.cents) / 100, at: now });
+    left -= x.cents;
+  }
   if (left > 0) settlements.push({ id: `s_${makeId()}`, from, to, amount: left / 100, at: now });
   if (left < 0) settlements.push({ id: `s_${makeId()}`, from: to, to: from, amount: -left / 100, at: now });
   return { rows, settlements, expenses: spent.expenses };
@@ -305,7 +329,8 @@ export function expensePayments(state, from, to, { amount = null, now = Date.now
     if (!pay) continue;
     const [pf, pt] = pay > 0 ? [F, T] : [T, F];
     // One id for the same payment on both phones, so marking it on each before they sync pays it once
-    const x = newPayment(state, { id: expensePayId(state, tripId, pf, pt, Math.abs(pay)), tripId, from: pf, to: pt, amount: Math.abs(pay), fromName: nameOf(state, pf), toName: nameOf(state, pt), reason, now });
+    // With the cup stake's people as its lines name them (cup-stake.js), so their phones place them by those seats
+    const x = newPayment(state, { id: expensePayId(state, tripId, pf, pt, Math.abs(pay)), tripId, from: pf, to: pt, amount: Math.abs(pay), fromName: nameOf(state, pf), toName: nameOf(state, pt), reason, now, also: stakeRaw(state, tripId, { now }) });
     if (!x) continue;
     expenses.push(x);
     paid += pay;

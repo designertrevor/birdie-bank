@@ -120,7 +120,7 @@ export default function History() {
                         <div className="eyebrow">Your net</div>
                         <div className={`cc-big ${net > 0 ? 'pos' : net < 0 ? 'neg' : ''}`}><CountUp key={label + game} value={net} /></div>
                       </div>
-                      <div className="cc-meta">{series.length} round{series.length === 1 ? '' : 's'}</div>
+                      <div className="cc-meta">{series.length < shown.length ? `${series.length} of ${shown.length} rounds for money` : `${series.length} round${series.length === 1 ? '' : 's'}`}</div>
                     </div>
                     <SeasonChart series={series} label={label} />
                   </div>

@@ -447,7 +447,35 @@ export function dayChoices(now = new Date(), n = 14) {
 export function upcomingPlans(state, now = new Date()) {
   return Object.values(state?.plans || {})
     .filter(p => p && (p.status === 'planned' || p.status === 'off' || (p.status === 'started' && !p.host)) && (daysUntil(p.date, now) ?? -99) >= -1)
+    // A round kept for another day: the new plan takes the old one's place once it's on this phone
+    .filter(p => !(p.movedTo && movedPlanOf(state, p)))
     .sort((a, b) => String(a.date).localeCompare(String(b.date)) || String(a.teeTime || '').localeCompare(String(b.teeTime || '')) || (a.createdAt || 0) - (b.createdAt || 0));
+}
+
+/**
+ * The plan a round kept for another day moved to (`movedTo` on the old plan: { id, code, date },
+ * set on the organizer's phone and shared with the plan), as it is on this phone, or null.
+ */
+export function movedPlanOf(state, plan) {
+  const m = plan?.movedTo;
+  if (!m) return null;
+  const plans = Object.values(state?.plans || {});
+  return (m.code && plans.find(p => p?.code === m.code)) || (m.id && state?.plans?.[m.id]) || null;
+}
+
+/**
+ * Who you are on a plan opened from its link, when it's the new plan of a round kept for another
+ * day and this phone had you on the old one: your key there, through the move's keys
+ * (`movedFrom`, challenges.js movedKeys), or null.
+ */
+export function movedLocalMe(state, meta) {
+  for (const e of Array.isArray(meta?.movedFrom) ? meta.movedFrom : []) {
+    const old = Object.values(state?.plans || {}).find(p => p && !p.host && p.localMe && ((e.code && p.code === e.code) || (e.id && p.id === e.id)));
+    if (!old) continue;
+    const key = e.keys && typeof e.keys[old.localMe] === 'string' ? e.keys[old.localMe] : old.localMe;
+    if (key === meta.hostWho || (meta.people || []).some(p => p.id === key)) return key;
+  }
+  return null;
 }
 
 /**
@@ -524,7 +552,7 @@ export function morningText(plan, link, settings, now = new Date()) {
 // organizer's copy would resend (and so overwrite) answers that were never theirs.
 // `usualId` is the organizer's own saved usual, which means nothing on a friend's phone, and
 // `setup` (plan-setup.js) is keyed by the organizer's own player ids and holds handicap edits.
-const LOCAL_ONLY = ['code', 'host', 'answers', 'localMe', 'syncedAt', 'gone', 'unsent', 'metaUnsent', 'roundId', 'usualId', 'setup'];
+const LOCAL_ONLY = ['code', 'host', 'answers', 'localMe', 'syncedAt', 'gone', 'unsent', 'metaUnsent', 'roundId', 'usualId', 'setup', 'rollIds'];
 
 /** The shared part of a plan (what friends' phones read). */
 export function planMeta(plan) {

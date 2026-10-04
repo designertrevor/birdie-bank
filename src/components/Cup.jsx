@@ -62,7 +62,7 @@ export function CupScore({ cup }) {
 export function CupMatches({ cup }) {
   const state = useStore();
   const [editing, setEditing] = useState(null);
-  const entries = [...cup.entries].reverse().filter(e => e.matches.length);
+  const entries = [...cup.entries].reverse().filter(e => e.matches.length || e.mixed);
   if (!entries.length) return <p className="field-help pad">No matches yet. Each round counted for the trip pairs off its players by team: four-ball for two against two, or singles. An Alternate shot round is foursomes, partners taking turns on one ball.</p>;
   const nameIn = (e, id) => first(e.players.find(p => p.id === id)?.name);
   return (
@@ -86,6 +86,7 @@ export function CupMatches({ cup }) {
               {canChange && <button className="pill-btn sm" onClick={() => setEditing(round.id)} aria-label="Change the matches"><Icon name="pencil-simple" /></button>}
             </div>
             {e.matches.map((m, i) => <MatchRow key={i} names={cup.names} m={m} left={m.sides[0].map(id => nameIn(e, id))} right={m.sides[1].map(id => nameIn(e, id))} />)}
+            {e.mixed && <p className="field-help">{mixedNote(cup)}</p>}
           </div>
         );
       })}
@@ -342,9 +343,13 @@ export function CupMatchesSheet({ open, onClose, names, players, value, onSave, 
   );
 }
 
+/** A foursomes round whose pairs mix the teams, in a line. */
+const mixedNote = cup => `Foursomes: a pair here has a player from ${cup.names[0]} and one from ${cup.names[1]}, so this round doesn’t count for the cup. Partners from the same team make it a match.`;
+
 /** On a trip round's results: how its matches went, and the cup now. */
 export function CupRoundNote({ cup, round }) {
   const entry = cup.entries.find(e => e.local && e.roundId === round.id);
+  if (entry?.mixed) return <div className="cup-note"><div className="trip-sub">{mixedNote(cup)}</div></div>;
   if (!entry || !entry.matches.length) return null;
   const won = [0, 0];
   for (const m of entry.matches) if (m.result.points) { won[0] += m.result.points[0]; won[1] += m.result.points[1]; }
@@ -363,10 +368,11 @@ export function CupRoundNote({ cup, round }) {
 // --------------------------- the stake ---------------------------
 
 /**
- * The stake on Settle the trip. Once decided it's trip money (cup-stake.js): the lines this phone
- * can place are in the trip's payments above and on the Tab, so here it just says so. A line with
- * someone it can't place (a teammate from another group) is marked paid here, yours first with
- * your payee's app, and every phone on the trip sees it. So do the marks made before.
+ * The stake on Settle the trip. Once decided it's trip money (cup-stake.js): a line between two
+ * people who played a cup round shared live together is in the trip's payments above and on the
+ * Tab, on every phone, so here it just says so. A line between two who never did is marked paid
+ * here, on every phone alike, yours first with your payee's app, and every phone on the trip sees
+ * it. So do the marks made before.
  */
 export function StakeLines({ st }) {
   const state = useStore();
@@ -390,7 +396,7 @@ export function StakeLines({ st }) {
   return (
     <>
       <div className="sec-label">The cup</div>
-      <p className="field-help pad">{winners} won the cup, so each player on {cup.names[1 - cup.winner]} pays {money(cup.def.stake)} and {winners} split it.{onTab ? ' It’s in the payments above and on the Tab, with the rest of the trip.' : ''}{open.length ? ` ${open.length === 1 ? 'One payment is' : `${open.length} payments are`} with someone this phone hasn’t played with, so ${open.length === 1 ? 'it’s' : 'they’re'} marked paid here.` : ''}</p>
+      <p className="field-help pad">{winners} won the cup, so each player on {cup.names[1 - cup.winner]} pays {money(cup.def.stake)} and {winners} splits it.{onTab ? ' It’s in the payments above and on the Tab, with the rest of the trip.' : ''}{open.length ? ` ${open.length === 1 ? 'One payment is' : `${open.length} payments are`} between two people who haven’t played a round together on the trip, so ${open.length === 1 ? 'it’s' : 'they’re'} marked paid here.` : ''}</p>
       {mine.map(l => {
         const iPay = l.fromId === me;
         const otherId = iPay ? l.toId : l.fromId;

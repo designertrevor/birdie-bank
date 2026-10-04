@@ -334,7 +334,8 @@ test('stake marks: this phone’s and other phones’, each once, and what’s l
 });
 
 test('the stake folds into each person’s trip total and the Tab once the trip is over, and not before', () => {
-  const rounds = cupRounds();
+  // Shared live, so every phone on the trip can tell who's who in a payment for it (cup.js stakeLink)
+  const rounds = cupRounds().map((r, i) => ({ ...r, shareCode: `CUP${i}XX` }));
   const s = stateOf('t', rounds);
   // Mid-trip (the last day, before its round is in): no stake in anyone's total yet
   const mid = tripStatus(stateOf('t', cupRounds({ day3: false })), 't_cup', { now: OCT(17, 18) });
@@ -368,6 +369,14 @@ test('the stake folds into each person’s trip total and the Tab once the trip 
   // The money trip's own standings are the cup trip's without the stake
   const ms = tripStatus(plain, 't_cup', { now: OCT(18, 20) });
   assert.equal(ms.cup, null);
+  // Rounds kept on this phone alone: the other phones never have them, so the stake is marked paid
+  // on the trip, off the Tab (as before it went on the Tab), and still in each person's trip total
+  const solo = stateOf('t', cupRounds());
+  const so = tripStatus(solo, 't_cup', { now });
+  assert.ok(so.cup.lines.length && so.cup.lines.every(l => !l.onTab));
+  assert.deepEqual(tabBalances(solo, { now }), tabBalances(plainOf('t', cupRounds()), { now }));
+  assert.equal(so.standings.find(p => p.id === 't').stake, -20);
+  assert.equal(so.phase, 'ready');
   for (const id of ['t', 's', 'm', 'd']) assert.equal(netOf(ms.plan, id), Math.round(money[id] * 100), id);
   assert.deepEqual(ms.standings.map(p => [p.id, p.amount]).sort(), Object.entries(money).sort());
 });

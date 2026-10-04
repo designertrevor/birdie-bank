@@ -250,3 +250,11 @@ test('a Nassau with three or four still asks at the turn', () => {
   r.holes.slice(0, 9).forEach(h => { r.scores[h.no] = Object.fromEntries(IDS.map(id => [id, h.par])); });
   assert.equal(betPromptFor(r, 10, keeper)?.why, 'turn');
 });
+
+test('a round of two says "You two", never "Two of you" (2026-10-04)', () => {
+  const r = stroke();
+  const two = { ...r, players: r.players.slice(0, 2) };
+  assert.match(spotCopy(two, { pos: 1, why: 'first' }).text, /^You two can/);
+  assert.match(spotCopy(two, { pos: 3, why: 'par3' }).text, /You two can bet/);
+  if (r.players.length > 2) assert.match(spotCopy(r, { pos: 1, why: 'first' }).text, /^Two of you can/);
+});
