@@ -23,6 +23,9 @@ import { personTalk, recentTalkKeys } from '../lib/talk.js';
 import { useTalkSync } from '../lib/talk-sync.js';
 import { TalkCount } from '../components/TalkCount.jsx';
 import { agoLabel } from '../lib/lately.js';
+import { PersonChallenges } from '../components/Challenges.jsx';
+import { challengesWith } from '../lib/challenges.js';
+import { planPeople, upcomingPlans } from '../lib/plans.js';
 
 export default function Person({ id: opened }) {
   const nav = useNav();
@@ -59,6 +62,13 @@ export default function Person({ id: opened }) {
   const direct = Math.round((story.net - story.paid) * 100) / 100;
   const rerouted = Math.abs(direct - tab) >= 0.01;
   const when = t => new Date(t).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+  // Challenges with them from this card, and the rounds you've planned that they're on (to challenge them for one)
+  const L = linksOf(state);
+  const challenges = challengesWith(state, id);
+  const plansTogether = upcomingPlans(state).filter(p => p.host && p.status === 'planned' && !p.gone).map(plan => {
+    const x = planPeople(plan).find(q => q.who !== plan.hostWho && L.personOf(q.who) === L.personOf(id) && q.status !== 'out');
+    return x ? { plan, who: x.who } : null;
+  }).filter(Boolean);
 
   // Same person: the other ids this card also covers, and merging another player into it
   // A seat you claimed from your other phone is you too, so no "Same person as..." on it
@@ -150,6 +160,7 @@ export default function Person({ id: opened }) {
             </ul>
           </>
         )}
+        {!isMine && <PersonChallenges id={id} name={name} list={challenges} plans={plansTogether} />}
         {rerouted && story.rounds > 0 && (
           <p className="field-help pad">
             Just between you two, {direct > 0 ? `${firstName} owes you ${money(direct)}` : direct < 0 ? `you owe ${firstName} ${money(-direct)}` : 'you’re square'}.

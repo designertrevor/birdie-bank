@@ -65,6 +65,7 @@ function fresh() {
     carries: [],       // carry-overs between two people (see carry.js)
     tabRows: {},       // this phone's copy of the shared Tab rows, for who's square (see shared-tab.js)
     plans: {},         // upcoming rounds (see plans.js)
+    challenges: {},    // challenges made or answered on this phone (see challenges.js)
     trips: {},         // golf trips this phone made: name, dates, who's going, "done playing" (see trips.js)
     tripHidden: {},    // trips you hid from the Tab and Up next: { tripId: when }, synced in the profile
     tripPlans: {},     // the organizer's published plan for each trip, from the server (see trip-plan.js)

@@ -292,7 +292,8 @@ export function playersProblem(game, count) {
  * to setup instead. `present` is the `who` keys of the people who showed, in any order; they
  * start in the plan's order. People not saved on this phone (friends from the group link, or
  * walk-ups added at the tee as answers) come back in `newPlayers` for the caller to save first.
- * `newId` makes an id for them (the store's uid, passed in to keep this pure).
+ * `newId` makes an id for them (the store's uid, passed in to keep this pure). `idOf` maps each
+ * present person's key on the plan to their player id.
  */
 export function planStart(state, plan, present, { newId, course: courseIn } = {}) {
   const { game, bet } = planChoice(plan);
@@ -301,6 +302,8 @@ export function planStart(state, plan, present, { newId, course: courseIn } = {}
   const chosen = people.filter(p => present.includes(p.who));
   const players = [];
   const newPlayers = [];
+  // Each person's key on the plan to the player they start as, for their challenges (challenges.js)
+  const idOf = {};
   for (const p of chosen) {
     const who = p.who === plan.hostWho ? (state.me ?? p.who) : p.who;
     let saved = state.players?.[who];
@@ -315,6 +318,7 @@ export function planStart(state, plan, present, { newId, course: courseIn } = {}
       }
     }
     if (!players.some(x => x.id === saved.id)) players.push(saved);
+    idOf[p.who] = saved.id;
   }
   const g = GAMES[game];
   let problem = null;
@@ -335,7 +339,7 @@ export function planStart(state, plan, present, { newId, course: courseIn } = {}
   // A side game's own Strokes given % comes along when the plan carries one (from a usual or a rescheduled round)
   const sideGames = planSides(plan, game).filter(k => rules[k]).map(k => ({ game: k, settings: structuredClone(rules[k]), ...(validPct(plan.sidePcts?.[k]) ? { hcPct: plan.sidePcts[k] } : {}) }));
   return {
-    game, bet, course, holesCount, nine: plan.nine || 'front', teams, problem, newPlayers, sideGames,
+    game, bet, course, holesCount, nine: plan.nine || 'front', teams, problem, newPlayers, sideGames, idOf,
     players: players.map(p => ({ ...p, tee })),
     settings,
     // A plan from a saved usual keeps the usual's handicap percentage; others use this phone's

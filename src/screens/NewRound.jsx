@@ -37,6 +37,8 @@ import PlayForPicker from '../components/PlayFor.jsx';
 import { countsMoney, inUnits, padUnit, playForLine, playForShort } from '../lib/play-for.js';
 import { CountForTrip, StartTripLink } from '../components/Trips.jsx';
 import { countsByDefault, tripOf, tripOnDay, tripPlanDay, tripStamp } from '../lib/trips.js';
+import { challengeIdOfBet, challengesForRound } from '../lib/challenges.js';
+import { markChallengesOn } from '../lib/challenge-sync.js';
 
 const STEPS = ['Game', 'Course', 'Players', 'Bets'];
 
@@ -75,6 +77,8 @@ function planSetup(state, planId, present) {
     bets: structuredClone(s.settings[s.game]), hcPct: s.hcPct, useHc: s.useHandicaps, teams: s.teams, sideGames: s.sideGames, halfStrokes: s.halfStrokes,
     usualId: plan.usualId ?? null,
     playFor: s.playFor,
+    // Who each person on the plan is here, so the plan's agreed challenges come in as side bets
+    idOf: s.idOf,
     step: !course ? 1 : picked.length < g.min || picked.length > g.max ? 2 : 3,
   };
 }
@@ -163,7 +167,25 @@ export default function NewRound({ rematch, fromPlan, present, edit = null, ahea
   // A change to the holes played puts a bet on some of the holes back on the whole round (fitSetupBets)
   const betShape = `${holesCount}|${nine}|${courseId ?? ''}|${startHole ?? ''}`;
   const setupBets = fitSetupBets(pairBets, betShape);
-  const editBets = fn => setPairBets(l => fn(fitSetupBets(l, betShape)).map(b => ({ ...b, shape: betShape })));
+  // Agreed challenges between two players picked (challenges.js) show up as side bets of their own.
+  // One taken off here stays off for this round only; it's still on for the next round together
+  const [chOff, setChOff] = useState([]);
+  const challengeBets = (() => {
+    const c = findCourse(state, courseId);
+    if (planning || !c || !GAMES[game] || !Object.keys(state.challenges || {}).length) return [];
+    const draft = {
+      game, holes: holesInPlay(c, holesCount, nine, startHole), playFor, bets: setupBets, betsGone: chOff,
+      players: picked.map(pid => ({ id: pid, name: state.players[pid]?.name || '?' })), ...(game === 'scramble' && teams ? { teams } : {}),
+    };
+    return challengesForRound(state, draft, { planId: fromPlan || null, idOf: pre?.idOf || null }).map(f => f.bet);
+  })();
+  const shownBets = [...setupBets, ...challengeBets];
+  const editBets = fn => {
+    const next = fn(shownBets);
+    const gone = shownBets.filter(b => challengeIdOfBet(b.id) && !next.some(x => x.id === b.id)).map(b => b.id);
+    if (gone.length) setChOff(l => [...l, ...gone]);
+    setPairBets(next.map(b => ({ ...b, shape: betShape })));
+  };
 
   const course = findCourse(state, courseId);
   // "Count it for the trip?": a trip on the round's day (or the trip it was started from). Yes by
@@ -285,9 +307,11 @@ export default function NewRound({ rematch, fromPlan, present, edit = null, ahea
     const round = createRound({ id, game, course, holesCount, nine, startHole, players, settings, hcPct: opts.hcPct, useHandicaps: useHc && !(noHc.length && noHc.length === orderedPicked.length), teams: GAMES[game].teams ? teams : null, halfStrokes });
     if (sides.length) round.sideGames = structuredClone(sides);
     if (playFor) round.playFor = structuredClone(playFor);
-    // Side bets whose two players are both still in the round (setup's list can outlive a change of players)
-    const bets = betsOf({ ...round, bets: setupBets }).map(b => cleanBet(round, b));
+    // Side bets whose two players are both still in the round (setup's list can outlive a change of players),
+    // agreed challenges among them
+    const bets = betsOf({ ...round, bets: shownBets }).map(b => cleanBet(round, b));
     if (bets.length) round.bets = bets;
+    const challengesIn = bets.map(b => challengeIdOfBet(b.id)).filter(Boolean);
     // Counted for the trip: the stamp rides in the round to every phone in it (trips.js)
     if (tripPick) round.trip = tripStamp(tripPick);
     // Started from a saved usual (still the same game at the same course): finishing it updates "Last played"
@@ -301,6 +325,7 @@ export default function NewRound({ rematch, fromPlan, present, edit = null, ahea
       if (!st.favorites.includes(course.id)) st.favorites = [course.id, ...st.favorites].slice(0, 6);
     });
     if (fromPlan) editPlan(fromPlan, p => { p.status = 'started'; p.roundId = id; });
+    markChallengesOn(challengesIn, id);
     setCreatedId(id);
     setStep(4);
   };
@@ -406,7 +431,7 @@ export default function NewRound({ rematch, fromPlan, present, edit = null, ahea
         <SetupStep game={game} course={course} holesCount={holesCount} nine={nine} picked={picked} setPicked={setPicked}
           opts={opts} setOpts={setOpts} useHc={useHc} setUseHc={setUseHc} startHole={startHole} setStartHole={setStartHole} onStart={start} onLater={fromPlan ? null : () => later()}
           teams={teams} setTeams={setTeams} sideGames={sidesFor(game)} setSideGames={editSides} playFor={playFor} setPlayFor={setPlayFor}
-          tees={tees} hcOverride={hcOverride} defaultTee={defaultTee} pairBets={setupBets} setPairBets={editBets}
+          tees={tees} hcOverride={hcOverride} defaultTee={defaultTee} pairBets={shownBets} setPairBets={editBets}
           tripRow={tripRow} tripLink={tripLink} />
       )}
       {step === 4 && created && <ReadyStep round={created} onStart={() => nav.reset('upnext', ['play', { id: created.id }])} onLater={fromPlan || created.shared ? null : () => later(created.id)} />}
@@ -734,6 +759,16 @@ function QuickAddPlayer({ open, onClose, onAdded }) {
 
 // ---------------------------------------------------------------------------
 
+/** "Dave and Mike’s challenge is in as a side bet." for the challenges setup brought in. */
+function challengeNote(round, bets) {
+  const name = id => (round.players.find(p => p.id === id)?.name || '?').split(' ')[0];
+  const pairs = bets.filter(b => challengeIdOfBet(b.id) && b.sides.every(id => round.players.some(p => p.id === id))).map(b => `${name(b.sides[0])} and ${name(b.sides[1])}’s`);
+  if (!pairs.length) return '';
+  const who = pairs.length === 1 ? pairs[0] : `${pairs.slice(0, -1).join(', ')} and ${pairs.at(-1)}`;
+  return pairs.length === 1 ? `${who} challenge is in as a side bet. Tap it to change it, or take it off for today.`
+    : `${who} challenges are in as side bets. Tap one to change it, or take it off for today.`;
+}
+
 function SetupStep({ game, course, holesCount, nine, picked, setPicked, opts, setOpts, useHc, setUseHc, startHole, setStartHole, onStart, onLater = null, teams, setTeams, sideGames = [], setSideGames, playFor = null, setPlayFor,
   tees = {}, hcOverride = {}, defaultTee = null, pairBets = [], setPairBets, tripRow = null, tripLink = null }) {
   const state = useStore();
@@ -803,6 +838,9 @@ function SetupStep({ game, course, holesCount, nine, picked, setPicked, opts, se
 
         <SideGamesSetup game={game} sideGames={sideGames} setSideGames={setSideGames} defaults={opts} players={picked.length || 4} playFor={playFor} />
 
+        {setPairBets && pairBets.some(b => challengeIdOfBet(b.id)) && (
+          <p className="hint-card ch-setup-note"><Icon name="sword" fill /> {challengeNote(betRound, pairBets)}</p>
+        )}
         {setPairBets && <PairBetsSetup round={betRound} bets={pairBets} setBets={setPairBets} />}
 
         <button className="set-row more-opts" onClick={() => setMore(!more)} aria-expanded={more}>

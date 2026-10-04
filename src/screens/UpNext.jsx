@@ -29,6 +29,9 @@ import { useTripPlans } from '../lib/trip-plan-sync.js';
 import { currentRecap } from '../lib/recap.js';
 import { callouts } from '../lib/callouts.js';
 import { CalloutsCard, RecapCard } from '../components/Recap.jsx';
+import { ChallengesUpNext } from '../components/Challenges.jsx';
+import { myChallenges } from '../lib/challenges.js';
+import { refreshChallenges } from '../lib/challenge-sync.js';
 
 const LATELY_ON_HOME = 3;
 
@@ -57,10 +60,12 @@ export default function UpNext() {
   const lately = withTalk(latelyItems(state).filter(i => i.id !== `recap:${recap?.id}`), state);
   const lines = useMemo(() => callouts(state), [state]);
   useTalkSync(recentTalkKeys(state));
+  // Challenges you're in that are still going: your call first
+  const challenges = myChallenges(state);
   // A new version only shows up here once no round is going on, so a tap never cuts into one
   const updateReady = useUpdateReady() && updateSafe(state);
   // Pick up answers and votes that came in since last time
-  useEffect(() => { refreshPlans(); refreshTab(); }, []);
+  useEffect(() => { refreshPlans(); refreshTab(); refreshChallenges(); }, []);
 
   return (
     <Screen>
@@ -98,6 +103,7 @@ export default function UpNext() {
 
         {plans.length > 0 && <div className="sec-label">Upcoming</div>}
         {plans.map(p => <UpcomingCard key={p.id} plan={p} />)}
+        <ChallengesUpNext list={challenges} />
         {/* Starting a round at the course (or running the last one back) stays one tap, plans or not */}
         {live.length === 0 && <PlanNext last={last?.round} fresh={!hasHistory} planned={plans.length > 0 || trips.length > 0} trip={trips.length === 0} />}
 
