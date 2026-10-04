@@ -164,3 +164,24 @@ test('a gone plan, trip, challenge, round or preview says where to go and has a 
     }
   }
 });
+
+test('the money screen is the Tab and the home tab is Up next, capitalized as names in the copy', () => {
+  const bad = [];
+  for (const f of [...jsxFiles, ...libFiles]) {
+    code(read(f)).split('\n').forEach((l, i) => {
+      // Onboarding's "Whoever keeps the tab" is anyone's tab, before the app has one
+      if (/keeps the tab/.test(l)) return;
+      const words = /\b(the|your|on|off|to) tab\b|\bup next\b|\bUp Next\b/.test(l) && /['"`>]/.test(l);
+      // "Ledger" is the screen's file and component name, never a word in the copy
+      const ledger = /['"`][^'"`]*\bLedger\b(?!\.jsx)[^'"`]*['"`]|(?<!=)>[^<{]*\bLedger\b(?!\.jsx)/.test(l);
+      if (words || ledger) bad.push(`${f}:${i + 1}`);
+    });
+  }
+  assert.deepEqual(bad, []);
+});
+
+test('one voice for the payments: who pays who, never who pays whom', () => {
+  const bad = [];
+  for (const f of [...jsxFiles, ...libFiles]) code(read(f)).split('\n').forEach((l, i) => { if (/pays whom/.test(l)) bad.push(`${f}:${i + 1}`); });
+  assert.deepEqual(bad, []);
+});

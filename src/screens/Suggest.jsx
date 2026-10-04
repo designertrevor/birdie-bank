@@ -12,7 +12,7 @@ const FORMS = {
     fields: [
       { key: 'name', label: 'What’s the game called?', placeholder: 'e.g. Hammer', required: true },
       { key: 'rules', label: 'How is it played?', placeholder: 'Teams, who tees off, how a hole is won…', area: true, required: true },
-      { key: 'money', label: 'How does the money work?', placeholder: 'Points, carryovers, presses, who pays whom…', area: true },
+      { key: 'money', label: 'How does the money work?', placeholder: 'Points, carryovers, presses, who pays who…', area: true },
     ],
   },
   course: {

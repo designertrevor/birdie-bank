@@ -75,7 +75,7 @@ export function RoundWhereFrom({ round, res, fmt: fmtIn = null, title = 'Where i
             <p className="sheet-text">{open.a === me ? 'What you won or lost with them' : `What ${first(roundPlayerName(round, open.a))} won or lost with ${first(roundPlayerName(round, open.b))}`}, game by game and bet by bet.</p>
             <ul className="wf-list">{bd.items.map(x => <Item key={x.key} x={x} fmt={fmt} />)}</ul>
             <div className="wf-sum"><span>Between {open.a === me ? 'you two' : 'them'}</span><strong className={cls(bd.total)}>{fmt(bd.total, { sign: true })}</strong></div>
-            {isMoney && <p className="field-help pad">The payments square everyone in as few as possible, so who pays whom can differ from this.</p>}
+            {isMoney && <p className="field-help pad">The payments square everyone in as few as possible, so who pays who can differ from this.</p>}
           </>
         )}
         <div className="cta-wrap"><button className="full-btn outline" onClick={() => setOpen(null)}>Close</button></div>
