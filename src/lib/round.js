@@ -250,7 +250,7 @@ export function createRound({ id, game, course, holesCount, nine, startHole, pla
  * or both, which is read once for the round, and a Snake split into nines or not).
  */
 export function wholeRoundOnly(game, before, after) {
-  if (game === 'scramble' || game === 'birdies') return true;
+  if (game === 'scramble' || game === 'birdies' || POT_GAMES.includes(game)) return true;
   if (game === 'skins') return before?.payout === 'pot' || after?.payout === 'pot' || (before?.kind || 'net') !== (after?.kind || 'net');
   if (game === 'snake') return !!before?.nines !== !!after?.nines;
   if (game === 'stroke' || game === 'stableford' || game === 'quota') return before?.payout === 'pot' || after?.payout === 'pot';
@@ -442,7 +442,7 @@ function mainAddProblem(round) {
  * the players who started, so it only takes someone new before the first hole they'd miss (`late`).
  */
 function sideTakes(sg, late) {
-  if (sg.game === 'birdies') return !late;
+  if (sg.game === 'birdies' || POT_GAMES.includes(sg.game)) return !late;
   if (sg.game === 'skins' && sg.settings?.payout === 'pot') return !late;
   return true;
 }
@@ -556,7 +556,7 @@ function joinRuleByGame(round, pid, list) {
     : ADD_MID_ROUND.includes(round.game) ? `They sit out ${g.name}.` : `${g.name} is set up for the players already in it, so they sit it out.`];
   for (const sg of sideGamesOf(round)) {
     const inIt = list.includes(sg.game);
-    const pot = sg.game === 'birdies' ? 'birdie pot' : sg.game === 'skins' && sg.settings?.payout === 'pot' ? 'skins pot' : null;
+    const pot = POT_NAMES[sg.game] || (sg.game === 'skins' && sg.settings?.payout === 'pot' ? 'skins pot' : null);
     const label = SIDE_GAMES[sg.game].label;
     if (!inIt) parts.push(`They sit out ${pot ? `the ${pot}` : label}.`);
     else if (pot && !whole) parts.push(`The ${pot} is for the players who started, so they’re not in it.`);
@@ -576,8 +576,13 @@ function withSideRule(text, round, kind) {
   const sgs = sideGamesOf(round);
   if (!sgs.length) return text;
   const notes = [];
-  if (sgs.some(sg => sg.game === 'birdies')) notes.push(kind === 'joined' ? 'The birdie pot is for the players who started, so they’re not in it.' : 'They’re out of the birdie pot.');
-  const others = sgs.filter(sg => sg.game !== 'birdies').map(sg => SIDE_GAMES[sg.game].label);
+  // The birdie, closest to the pin and long drive pots: one sentence for them all
+  const pots = sgs.filter(sg => POT_NAMES[sg.game]).map(sg => POT_NAMES[sg.game]);
+  if (pots.length) {
+    const what = pots.length === 1 ? `The ${pots[0]} is` : `The ${nameList(pots)} are`;
+    notes.push(kind === 'joined' ? `${what} for the players who started, so they’re not in ${pots.length === 1 ? 'it' : 'them'}.` : `They’re out of the ${nameList(pots)}.`);
+  }
+  const others = sgs.filter(sg => !POT_NAMES[sg.game]).map(sg => SIDE_GAMES[sg.game].label);
   if (others.length) notes.push(kind === 'joined' ? `They’re in ${others.join(' and ')} from there.` : `${others.join(' and ')} carr${others.length > 1 ? 'y' : 'ies'} on among the players still there.`);
   return [text, ...notes].join(' ');
 }
@@ -1953,6 +1958,13 @@ export function gameResults(round) {
     detail.birdies = t;
   }
 
+  if (POT_GAMES.includes(round.game)) {
+    // Closest to the pin or long drive, a side game only (see potTable): the winner on each pot hole takes its share
+    const t = potTable(round, round.game);
+    addSpread(t.deltas);
+    detail.pot = t;
+  }
+
   if (round.game === 'rabbit') {
     const t = rabbitTable(round);
     // Like Nassau, a leg that isn't finished pays whoever holds the rabbit on the holes played
@@ -1994,6 +2006,8 @@ export const SIDE_GAMES = {
   birdies: { label: 'Birdie pot', icon: 'bird' },
   snake: { label: 'Snake', icon: 'wave-sine' },
   rabbit: { label: 'Rabbit', icon: 'rabbit' },
+  ctp: { label: 'Closest to the pin', icon: 'crosshair' },
+  drive: { label: 'Long drive', icon: 'golf' },
 };
 
 /** Most games in one round, the main game included. */
@@ -2005,8 +2019,15 @@ export const MAX_GAMES = 4;
  * hole outright; Rabbit is a one-pot skin), and Junk with Bingo Bango Bongo (the greenie and the
  * bango both pay for being closest).
  */
-const CLASH = { skins: ['skins', 'rabbit'], rabbit: ['rabbit', 'skins'], dots: ['dots', 'bbb'], snake: ['snake'], birdies: ['birdies'] };
+const CLASH = { skins: ['skins', 'rabbit'], rabbit: ['rabbit', 'skins'], dots: ['dots', 'bbb'], snake: ['snake'], birdies: ['birdies'], ctp: ['ctp', 'bbb'], drive: ['drive'] };
 function clashes(key, game) { return (CLASH[key] || []).includes(game); }
+/**
+ * A closest to the pin pot pays for the same shot as a greenie, so it never rides on a Dots round,
+ * whose greenies are the main game's. Next to Junk as a side game both stay on, and the pot is
+ * what pays for being closest: Junk's greenies are off (see gameView).
+ */
+const MAIN_CLASH = { ctp: ['dots'] };
+const mainClashes = (key, game) => clashes(key, game) || (MAIN_CLASH[key] || []).includes(game);
 
 /**
  * A round's side games (an empty list on older rounds). Anything setup could never make is dropped,
@@ -2022,7 +2043,9 @@ export function sideGamesOf(round) {
     if (out.length >= MAX_GAMES - 1) break;
     if (!sg || !SIDE_GAMES[sg.game] || !sg.settings || typeof sg.settings !== 'object') continue;
     const hard = g => g !== 'bbb' && clashes(sg.game, g);
-    if (hard(round.game) || out.some(x => hard(x.game))) continue;
+    // Rounds before the pots never had one, so a pot next to Bingo Bango Bongo or Dots is dropped outright
+    const potClash = POT_GAMES.includes(sg.game) && mainClashes(sg.game, round.game);
+    if (potClash || hard(round.game) || out.some(x => hard(x.game))) continue;
     out.push(sg);
   }
   return out;
@@ -2047,7 +2070,7 @@ export function gameKeyLabel(round, key) {
 export function sideGameChoices(mainGame, sideGames = []) {
   if (!mainGame || mainGame === 'scramble') return [];
   if (sideGames.length >= MAX_GAMES - 1) return [];
-  return Object.keys(SIDE_GAMES).filter(k => !clashes(k, mainGame) && !sideGames.some(sg => sg.game === k || clashes(k, sg.game)));
+  return Object.keys(SIDE_GAMES).filter(k => !mainClashes(k, mainGame) && !sideGames.some(sg => sg.game === k || clashes(k, sg.game)));
 }
 
 /** Whether `pid` plays the game `key` in this round (everyone is in every game unless gamesFor says otherwise). */
@@ -2071,10 +2094,26 @@ export function gameView(round, key) {
   // A side game with its own Strokes given % plays off it (see allowances.js); else everyone's strokes are the round's
   const pct = gamePct(round, key);
   const own = round.useHandicaps && pct !== gamePct(round);
+  // With a closest to the pin pot on, Junk's greenies are off: the pot pays for being closest (see MAIN_CLASH)
+  const noGreenie = sg.game === 'dots' && sideGamesOf(round).some(x => x.game === 'ctp');
+  const settings = noGreenie ? withoutGreenie(sg.settings) : sg.settings;
+  const betHistory = !Array.isArray(sg.betHistory) ? undefined : noGreenie ? sg.betHistory.map(e => ({ ...e, settings: withoutGreenie(e.settings) })) : sg.betHistory;
   return {
-    ...round, game: sg.game, settings: { ...round.settings, [sg.game]: sg.settings }, teams: null, presses: [], betHistory: Array.isArray(sg.betHistory) ? sg.betHistory : undefined,
+    ...round, game: sg.game, settings: { ...round.settings, [sg.game]: settings }, teams: null, presses: [], betHistory,
     players: own ? playsAtPct(players, pct, round.joined) : players, ...(own ? { hcPct: pct } : {}),
   };
+}
+
+/** Junk's settings with the greenie off. */
+function withoutGreenie(dots) {
+  if (!dots?.kinds?.greenie) return dots;
+  return { ...dots, kinds: { ...dots.kinds, greenie: false } };
+}
+
+/** Whether Junk's greenies are off in this round because a closest to the pin pot pays for them. */
+export function greeniesInPot(round) {
+  const sgs = sideGamesOf(round);
+  return sgs.some(x => x.game === 'ctp') && sgs.some(x => x.game === 'dots');
 }
 
 /** Birdie pot shares: { shares: { pid: n }, inPot: [pid], holes: [{ no, pid, shares }] }. */
@@ -2093,6 +2132,102 @@ export function birdiePotShares(round) {
     }
   }
   return { shares, inPot: inPot.map(p => p.id), holes };
+}
+
+// --------------------------- Closest to the pin and long drive pots ------
+// Side games only. Everyone in the pot puts in the stake, and the pot is shared out across the pot's
+// holes: every par 3 for closest to the pin, the chosen holes for long drive (every par 5 until the
+// group picks, else every par 4). The keeper taps the winner on each pot hole, kept with the hole's
+// marks as `marks[no].ctp` or `marks[no].drive`: a player id, or 'none' when nobody won it (nobody on
+// the green, say). A hole nobody won carries its share to the next pot hole, or (house rule `unclaimed:
+// 'split'`) its share is split across the holes that were won. Only holes reached count: a pot hole
+// with its winner tapped or its scores in. So a round stopped early, or a pot under way, pays for the
+// holes played, and a share still carried at the end goes back to everyone (nobody pays it).
+
+/** The side games that are a pot of this kind. */
+export const POT_GAMES = ['ctp', 'drive'];
+/** What each pot is called in a sentence ("They’re out of the birdie pot"), the birdie pot too. */
+export const POT_NAMES = { birdies: 'birdie pot', ctp: 'closest to the pin pot', drive: 'long drive pot' };
+/** What tapping "nobody" saves for a pot hole nobody won. */
+export const POT_NONE = 'none';
+
+/**
+ * The holes a pot is played on, in playing order. `round` is any round (or the pot's game view);
+ * `settings` the pot's own. Long drive's `holes` are hole numbers; a number this round doesn't play is
+ * skipped, and none left (or none picked) means the default: every par 5, else every par 4.
+ */
+export function potHoles(round, key, settings = round.settings?.[key]) {
+  const holes = round.holes || [];
+  if (key === 'ctp') return holes.filter(h => h.par === 3);
+  const picked = Array.isArray(settings?.holes) ? holes.filter(h => settings.holes.includes(h.no)) : [];
+  if (picked.length) return picked;
+  const fives = holes.filter(h => h.par >= 5);
+  return fives.length ? fives : holes.filter(h => h.par === 4);
+}
+
+/** Whether long drive is on the default holes (none picked, or none this round plays). */
+export function potHolesDefault(round, key, settings = round.settings?.[key]) {
+  if (key === 'ctp') return true;
+  const picked = Array.isArray(settings?.holes) ? (round.holes || []).filter(h => settings.holes.includes(h.no)) : [];
+  return !picked.length;
+}
+
+/** Who won a pot hole from its marks: a player id, POT_NONE, or undefined when not tapped yet. */
+export function potWinner(round, key, no) {
+  const v = round.marks?.[no]?.[key];
+  return v == null ? undefined : v;
+}
+
+/**
+ * A pot worked out on the game view `round` (round.game is the pot's key):
+ * { key, inPot, stake, pot, worth, unclaimed, holes: [{ no, par, winner, reached, value, carried, paid }],
+ *   won: { pid: { holes: [no], amount } }, paidOut, handedBack, deltas }.
+ * `worth` is one hole's share; `value` what a reached hole was played for (its share plus any carry, or
+ * with split, the pot shared out across the holes won), `paid` what its winner took. `deltas` is each
+ * player's money: what they won less their part of everything paid out. Nobody's money moves until a
+ * pot hole is won, and with fewer than two in the pot or no pot holes nothing does.
+ */
+export function potTable(round, key = round.game) {
+  const s = round.settings?.[key] || {};
+  const stake = s.stake ?? 0;
+  const unclaimed = s.unclaimed === 'split' ? 'split' : 'carry';
+  // Like the other pots, a player who left or joined partway is out of it
+  const inPot = round.players.filter(p => playsWholeRound(round, p.id)).map(p => p.id);
+  const list = potHoles(round, key, s);
+  const n = inPot.length;
+  const worth = list.length && n ? (stake * n) / list.length : 0;
+  const won = Object.fromEntries(inPot.map(id => [id, { holes: [], amount: 0 }]));
+  const holes = list.map(h => {
+    const w = potWinner(round, key, h.no);
+    // A winner who isn't in the pot (they left, or joined late) can't take it: nobody won it
+    const winner = w === undefined ? undefined : inPot.includes(w) ? w : POT_NONE;
+    const reached = winner !== undefined || holeComplete(round, h);
+    return { no: h.no, par: h.par, winner: reached ? winner ?? POT_NONE : undefined, reached, value: 0, carried: 0, paid: 0 };
+  });
+  const reached = holes.filter(h => h.reached);
+  const wins = reached.filter(h => h.winner !== POT_NONE);
+  let handedBack = 0;
+  if (n >= 2 && stake > 0) {
+    if (unclaimed === 'split') {
+      // The holes reached are shared out across the ones won
+      const each = wins.length ? (worth * reached.length) / wins.length : 0;
+      for (const h of wins) { h.value = each; h.paid = each; }
+      if (!wins.length) handedBack = worth * reached.length;
+    } else {
+      let carry = 0;
+      for (const h of reached) {
+        h.carried = carry;
+        h.value = worth + carry;
+        if (h.winner !== POT_NONE) { h.paid = h.value; carry = 0; } else carry = h.value;
+      }
+      handedBack = carry;
+    }
+  }
+  for (const h of wins) if (h.paid) { won[h.winner].holes.push(h.no); won[h.winner].amount += h.paid; }
+  const paidOut = wins.reduce((a, h) => a + h.paid, 0);
+  const deltas = Object.fromEntries(round.players.map(p => [p.id, 0]));
+  if (paidOut > 0) for (const id of inPot) deltas[id] = won[id].amount - paidOut / n;
+  return { key, inPot, stake, pot: stake * n, worth, unclaimed, holes, won, paidOut, handedBack, deltas: roundCents(deltas) };
 }
 
 /** What the side bets between two players are called in the by-game table (see pair-bets.js). */

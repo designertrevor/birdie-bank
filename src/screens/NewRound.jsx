@@ -801,7 +801,7 @@ function SetupStep({ game, course, holesCount, nine, picked, setPicked, opts, se
         <GameOptions game={game} get={get} set={set} onAmount={(path, title, o) => setPad({ path, title, ...o })} holesCount={holesCount}
           players={picked.length || null} firstName={game === 'banker' ? state.players[picked[0]]?.name : null} inPoints={!countsMoney({ playFor })} />
 
-        <SideGamesSetup game={game} sideGames={sideGames} setSideGames={setSideGames} defaults={opts} players={picked.length || 4} playFor={playFor} />
+        <SideGamesSetup game={game} sideGames={sideGames} setSideGames={setSideGames} defaults={opts} players={picked.length || 4} playFor={playFor} holes={holes} />
 
         {setPairBets && <PairBetsSetup round={betRound} bets={pairBets} setBets={setPairBets} />}
 

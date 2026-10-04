@@ -271,6 +271,45 @@ const RULES = {
       ['With Junk', <p key="k">When Junk counts birdies automatically, it counts <strong>natural</strong> birdies, before strokes, and the pot counts net birdies. So a natural birdie pays twice: a dot from each player and a share of the pot. A birdie that only comes from a stroke counts in the pot alone.</p>],
     ],
   },
+  ctp: {
+    title: 'How to play Closest to the pin',
+    sub: '2–8 players · A side game · A pot for the par 3s',
+    sections: [
+      ['Overview', <p key="o">Everyone puts the same amount in the pot before the round. The pot is shared out across the par 3s, and whoever hits it closest to the pin on each one takes that hole’s share.</p>],
+      ['Who wins', <ul key="w">
+        <li>Your tee shot has to finish <strong>on the green</strong> to count.</li>
+        <li>On each par 3 the scorekeeper taps who was closest, or <strong>Nobody</strong> if nobody hit the green.</li>
+      </ul>],
+      ['Paying out', <p key="p">Four players at $5 make a $20 pot. With 4 par 3s each one is worth $5. Ann wins two and Bo wins two, so they each take $10 and are up $5, and the other two are down $5.</p>],
+      ['Nobody on the green', <ul key="n">
+        <li><strong>Carries</strong> (the usual way): the share rolls to the next par 3, so that one is worth two. Still carried after the last par 3, it goes back to everyone.</li>
+        <li><strong>Split</strong>: the shares nobody won are split across the par 3s that were won.</li>
+        <li>If nobody wins a par 3 all round, nobody pays.</li>
+      </ul>],
+      ['Stopping early', <p key="s">Only the par 3s played count. Stop after 9 and the pot is the front nine’s share.</p>],
+      ['Joining late', <p key="j">The pot is for the players who started. Anyone added partway, or who leaves early, sits it out.</p>],
+      ['With Junk', <p key="k">The pot pays for being closest, so Junk’s greenies are off while it’s on. Sandies, chip-ins and the rest still count in Junk.</p>],
+    ],
+  },
+  drive: {
+    title: 'How to play Long drive',
+    sub: '2–8 players · A side game · A pot for the longest drives',
+    sections: [
+      ['Overview', <p key="o">Everyone puts the same amount in the pot before the round. Pick the long drive holes (every par 5 unless you choose), and the pot is shared out across them. The longest drive on each one takes that hole’s share.</p>],
+      ['Who wins', <ul key="w">
+        <li>Your drive has to finish <strong>in the fairway</strong> to count.</li>
+        <li>On each long drive hole the scorekeeper taps who was longest, or <strong>Nobody</strong> if nobody found the fairway.</li>
+      </ul>],
+      ['Paying out', <p key="p">Four players at $5 make a $20 pot. With 2 long drive holes each one is worth $10. Ann wins both, so she takes $20 and is up $15, and the other three are down $5.</p>],
+      ['Nobody in the fairway', <ul key="n">
+        <li><strong>Carries</strong> (the usual way): the share rolls to the next long drive hole. Still carried after the last one, it goes back to everyone.</li>
+        <li><strong>Split</strong>: the shares nobody won are split across the holes that were won.</li>
+        <li>If nobody wins a long drive hole all round, nobody pays.</li>
+      </ul>],
+      ['Stopping early', <p key="s">Only the long drive holes played count.</p>],
+      ['Joining late', <p key="j">The pot is for the players who started. Anyone added partway, or who leaves early, sits it out.</p>],
+    ],
+  },
   snake: {
     title: 'How to play Snake',
     sub: '2–8 players · Don’t three-putt',

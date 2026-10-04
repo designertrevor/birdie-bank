@@ -79,7 +79,8 @@ export function oldRounds(count = 160, seed = 2026) {
       const want = Math.floor(rnd() * 3);
       const sgs = [];
       for (let j = 0; j < want; j++) {
-        const opts = sideGameChoices(game, sgs);
+        // The side games setup offered then: the closest to the pin and long drive pots came later
+        const opts = sideGameChoices(game, sgs).filter(k => SIDE[k]);
         if (!opts.length) break;
         const key = pick(opts);
         sgs.push({ game: key, settings: structuredClone(pick(SIDE[key])) });

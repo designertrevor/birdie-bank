@@ -70,13 +70,19 @@ function sideStep(key, g, name, players) {
   const amount = g.balances[best] || 0;
   const d = g.detail || {};
   if (amount <= 0) {
-    const text = { skins: 'No skins won', dots: 'No dots', birdies: 'No birdies, nobody pays' }[key] || 'All square';
+    const text = { skins: 'No skins won', dots: 'No dots', birdies: 'No birdies, nobody pays', ctp: 'Nobody won a par 3, nobody pays', drive: 'No long drive won, nobody pays' }[key] || 'All square';
     return { key: `side-${key}`, label: g.label, text, tie: true };
   }
   let text = `${name(best)} comes out ahead`;
   if (key === 'skins' && d.skinsWon?.[best]) text = `${name(best)} won ${plural(Math.round(d.skinsWon[best].skins * 10) / 10, 'skin')}`;
   if (key === 'dots' && d.points) text = `${name(best)} had ${plural(d.points[best] || 0, 'dot')}`;
   if (key === 'birdies' && d.birdies) text = `${name(best)} took ${plural(d.birdies.shares[best] || 0, 'share')} of the pot`;
+  // Closest to the pin and long drive: who took the most of the pot, and on which holes
+  if ((key === 'ctp' || key === 'drive') && d.pot?.won?.[best]) {
+    const nos = d.pot.won[best].holes;
+    const where = `${nos.length === 1 ? 'hole' : 'holes'} ${nos.length > 1 ? `${nos.slice(0, -1).join(', ')} and ${nos.at(-1)}` : nos[0]}`;
+    text = key === 'ctp' ? `${name(best)} was closest on ${where}` : `${name(best)} had the long drive on ${where}`;
+  }
   return { key: `side-${key}`, label: g.label, text, amount };
 }
 

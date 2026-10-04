@@ -11,6 +11,7 @@ export function optionsProblem(game, settings) {
     if (b.min > b.max || b.defaultBet < b.min || b.defaultBet > b.max) return 'Default bet has to sit between the minimum and maximum.';
   }
   if (game === 'birdies' && !(settings.birdies?.stake > 0)) return 'Each player has to put something in the birdie pot.';
+  if ((game === 'ctp' || game === 'drive') && !(settings[game]?.stake > 0)) return 'Each player has to put something in the pot.';
   return null;
 }
 
@@ -20,6 +21,7 @@ export function optionsProblem(game, settings) {
  */
 export function sideBetLine(game, settings) {
   if (game === 'birdies') return `${money(settings?.stake ?? 0)} each in the birdie pot`;
+  if (game === 'ctp' || game === 'drive') return `${money(settings?.stake ?? 0)} each in the pot`;
   // The bet in its own unit ("$2 a skin"); the worked example under it covers the house rules
   return stakeSummary(game, { [game]: settings }).split(' · ')[0];
 }
@@ -114,6 +116,7 @@ function baseSummary(game, settings) {
     case 'dots': return `${money(s.dots.value)} a dot`;
     case 'rabbit': return `${money(s.rabbit.stake)} a rabbit`;
     case 'birdies': return `${money(s.birdies.stake)} each in the birdie pot`;
+    case 'ctp': case 'drive': return `${money(s[game].stake)} each in the pot`;
     default: return '';
   }
 }
