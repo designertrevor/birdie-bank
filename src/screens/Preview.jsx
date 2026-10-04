@@ -7,8 +7,8 @@ import { Empty, Header, Icon, Screen } from '../components/ui.jsx';
 import { Avatar } from '../components/Pay.jsx';
 import { useStore } from '../lib/store.js';
 import { useNav } from '../lib/nav.js';
-import { pairBetLine, planPreview, previewAlt, previewCardModel, previewImageName, previewText, recordSentence, strokesLine } from '../lib/preview.js';
-import { amountsRule } from '../lib/share.js';
+import { pairBetLine, planPreview, previewAlt, previewRecordsHeld, previewCardModel, previewImageName, previewText, recordSentence, strokesLine } from '../lib/preview.js';
+import { amountsRule, heldNote } from '../lib/share.js';
 import { ShareView } from '../components/ShareSheet.jsx';
 import { renderPreviewCard } from '../lib/preview-image.js';
 import { planShareLink, usePlanLive } from '../lib/plan-sync.js';
@@ -198,6 +198,8 @@ function PreviewShare({ plan, pv, onBack }) {
   const state = useStore();
   const link = planShareLink(plan);
   const recordPeople = pv.records.flatMap(r => [{ id: r.aId, name: r.aName }, { id: r.bId, name: r.bName }]);
+  // The line under the switch says so when a record's money is held back while the bets show
+  const recordHeld = previewRecordsHeld(state, pv);
   const make = show => {
     const recordAmounts = amountsRule(state, { on: show, people: recordPeople }).show;
     const model = previewCardModel(pv, { showAmounts: show, recordAmounts });
@@ -206,8 +208,8 @@ function PreviewShare({ plan, pv, onBack }) {
   return (
     <Screen>
       <ShareView title="Share the preview" small onBack={onBack} make={make} render={renderPreviewCard}
-        fileName={previewImageName(plan)} link={link} what="The preview" money={pv.money}
-        onText="The bets and the money between players are on the image" offText="The game, who’s in, strokes and records, no money"
+        fileName={previewImageName(plan)} link={link} what="Preview" money={pv.money}
+        onText={recordHeld.length ? `The bets are on the image, not the money in records: ${heldNote(recordHeld)}` : 'The bets and the money between players are on the image'} offText="The game, who’s in, strokes and records, no money"
         standIn={() => (
           <div className="share-card">
             <div className="sc-brand">{pv.weekday ? `${pv.weekday} preview` : 'Preview'}</div>

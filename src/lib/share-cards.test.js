@@ -187,6 +187,9 @@ test('challenge for the group: who and what, the stake only with amounts on, poi
   assert.equal(challengeGroupText(yes, { now }), 'Dave challenged Mike to a match on Saturday. It’s on.');
   const pts = newChallenge({ id: 'c2', from: { who: 'd', name: 'Dave' }, to: { who: 'm', name: 'Mike' }, kind: 'hole', stake: 5, unit: 'points', now });
   assert.equal(challengeGroupText(pts, { now }), 'Dave challenged Mike to 5 pts a hole next time they play. Waiting on Mike.');
+  const hole = newChallenge({ id: 'c3', from: { who: 'd', name: 'Dave' }, to: { who: 'm', name: 'Mike' }, kind: 'hole', stake: 5, holes: 'back', now });
+  assert.equal(challengeGroupText(hole, { now }), 'Dave challenged Mike to a hole-by-hole bet on the back 9 next time they play. Waiting on Mike.');
+  assert.equal(challengeGroupText(hole, { showAmounts: true, now }), 'Dave challenged Mike to $5 a hole on the back 9 next time they play. Waiting on Mike.');
 });
 
 // --------------------------- the words --------------------------------------

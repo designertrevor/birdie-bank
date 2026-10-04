@@ -24,6 +24,7 @@ import { roundTime } from './history.js';
 import { money } from './golf.js';
 import { STROKE_SIDE_GAMES, halfStrokesOffered, pctWords } from './allowances.js';
 import { agreedOnPlan, challengeIdOfBet, challengeWhat, challengeWhatNoAmount } from './challenges.js';
+import { amountsRule, shareAmountsOn } from './share.js';
 
 const first = name => String(name || '').trim().split(/\s+/)[0];
 const listNames = n => (n.length < 2 ? n.join('') : `${n.slice(0, -1).join(', ')} and ${n.at(-1)}`);
@@ -484,6 +485,19 @@ export function previewCardModel(pv, { showAmounts: moneyOn = false, recordAmoun
     records: pv.records.map(r => recordSentence(r.rec, r.aName, r.bName, { scope: r.scope, amounts: showAmounts && pv.money && recordAmounts })),
     footer: 'In, maybe or out? Answer from the group link.',
   };
+}
+
+/**
+ * Who keeps the money in the preview's head-to-head records off it (share.js amountsRule): their
+ * first names, or [] when the switch is off, the plan isn't for money or no record has money in it.
+ * The bets are the round's terms, so they show either way.
+ */
+export function previewRecordsHeld(state, pv, { on = shareAmountsOn(state) } = {}) {
+  if (!pv.money || !on) return [];
+  const withMoney = JSON.stringify(previewCardModel(pv, { showAmounts: true, recordAmounts: true }).records);
+  if (withMoney === JSON.stringify(previewCardModel(pv, { showAmounts: true, recordAmounts: false }).records)) return [];
+  const people = pv.records.flatMap(r => [{ id: r.aId, name: r.aName }, { id: r.bId, name: r.bName }]);
+  return amountsRule(state, { on: true, people }).held;
 }
 
 /** The image's alt text, from the same model as the image (so hidden amounts stay hidden). */

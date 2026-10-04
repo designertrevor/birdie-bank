@@ -6,8 +6,8 @@ import assert from 'node:assert/strict';
 import { createRound, roundResults } from './round.js';
 import { shareText } from './format.js';
 import { resultsAlt, shareCardModel } from './shareImage.js';
-import { amountsNote, amountsRule, appLink, keepsMoneyPrivate, roundLink, shareAmountsOn, shareOut, shareToast, slugName, withLink } from './share.js';
-import { planPreview, previewAlt, previewCardModel, previewText } from './preview.js';
+import { amountsNote, amountsRule, appLink, heldNote, keepsMoneyPrivate, roundLink, shareAmountsOn, shareOut, shareToast, slugName, withLink } from './share.js';
+import { planPreview, previewAlt, previewCardModel, previewRecordsHeld, previewText } from './preview.js';
 import { newPlan } from './plans.js';
 
 const ORIGIN = 'https://golf.test';
@@ -180,7 +180,7 @@ test('shareOut: text goes to the share sheet, else a text message on a phone, el
   assert.deepEqual(f.log.sms, [`Hi\n${ORIGIN}`]);
   f = fakeEnv({ share: false });
   assert.equal(await shareOut({ text: 'Hi' }, f.env), 'copied');
-  assert.equal(shareToast('copied', 'The recap'), 'The recap copied. Paste it in the group text');
+  assert.equal(shareToast('copied', 'Recap'), 'Recap copied. Paste it in the group text');
   f = fakeEnv({ share: false, copyOk: false });
   assert.equal(await shareOut({ text: 'Hi' }, f.env), 'failed');
   assert.equal(shareToast('failed'), 'Couldn’t share on this device');
@@ -223,6 +223,19 @@ test('preview: the money between two players stays off when one of them keeps it
   const open = previewState(OPEN);
   const m2 = previewCardModel(open.pv, { showAmounts: true, recordAmounts: amountsRule(open.s, { on: true, people }).show });
   assert.deepEqual(m2.records, ['Sam is 1 and 0 against Mike this season, up $10']);
+});
+
+test('preview: the line under the switch names who keeps a record\'s money off, only when a record has money and the switch is on', () => {
+  const { s, pv } = previewState(ONLY_YOU);
+  assert.deepEqual(previewRecordsHeld(s, pv, { on: false }), [], 'switch off: nothing held back to explain');
+  assert.deepEqual(previewRecordsHeld(s, pv, { on: true }), ['Sam']);
+  assert.equal(heldNote(['Sam']), 'Sam keeps their money private');
+  assert.equal(heldNote(['Sam', 'Mike']), 'Sam and Mike keep their money private');
+  const open = previewState(OPEN);
+  assert.deepEqual(previewRecordsHeld(open.s, open.pv, { on: true }), []);
+  // No record has money in it: nothing to name
+  const bare = { ...pv, records: pv.records.map(r => ({ ...r, rec: { ...r.rec, net: 0 } })) };
+  assert.deepEqual(previewRecordsHeld(s, bare, { on: true }), []);
 });
 
 test('preview: off by default nothing has a dollar, and the alt text reads the card', () => {

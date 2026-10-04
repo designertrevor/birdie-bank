@@ -29,7 +29,7 @@ function CardStandIn({ model }) {
  * - make(showAmounts): { model, text, alt }, the card worked out with amounts on or off.
  * - render(model): a promise of the PNG blob.
  * - money: whether the card has dollars on it; people: [{ id, name }] whose money is on it.
- * - link: the short link back to the round or plan; what: "Results", "The recap" for the toasts.
+ * - link: the short link back to the round or plan; what: "Results", "Recap" for the toasts.
  * - onText / offText: the line under the switch. standIn(model): the stand-in, if not the plain one.
  */
 export function ShareView({ title, onBack, onDone, doneLabel = 'Done', make, render, fileName, link = null, what = 'It', money = true, people = [], onText, offText, standIn = null, children = null, small = false }) {

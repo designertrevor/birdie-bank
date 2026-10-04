@@ -63,9 +63,12 @@ export function amountsRule(state, { money = true, on = false, people = [] } = {
   return { show: !!on && held.length === 0, held: on ? [...new Set(held)] : [], money: true };
 }
 
+/** Who kept their money off a card, for a line: "Sam keeps their money private". */
+export const heldNote = held => `${list(held)} ${held.length === 1 ? 'keeps' : 'keep'} their money private`;
+
 /** The line under Show amounts: what's on the card, or who kept their money off it. */
 export function amountsNote(rule, { onText, offText }) {
-  if (rule.held.length) return `Amounts stay off: ${list(rule.held)} ${rule.held.length === 1 ? 'keeps' : 'keep'} their money private`;
+  if (rule.held.length) return `Amounts stay off: ${heldNote(rule.held)}`;
   return rule.show ? onText : offText;
 }
 
@@ -158,7 +161,7 @@ export async function shareOut({ title = '', text = '', url = null, image = null
   return (await env.copy(body)) ? 'copied' : 'failed';
 }
 
-/** The toast after a share, or null when the share sheet said it all. `what`: "Results", "The recap". */
+/** The toast after a share, or null when the share sheet said it all. `what`: "Results", "Recap". */
 export function shareToast(result, what = 'It') {
   if (result === 'copied') return `${what} copied. Paste it in the group text`;
   if (result === 'copied-saved') return 'Image saved and the text copied. Paste them in the group text';

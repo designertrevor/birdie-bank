@@ -28,7 +28,7 @@ export default function ShareScreen({ kind, id }) {
     const link = roundLink(round);
     return (
       <Screen>
-        <ShareView title="Share the recap" small onBack={nav.pop} what="The recap" link={link}
+        <ShareView title="Share the recap" small onBack={nav.pop} what="Recap" link={link}
           make={show => card(recapCardModel(state, round, { showAmounts: show, link }))} render={renderCard}
           fileName={slugName('recap', round.course?.name, round.finishedAt || round.createdAt)}
           money={countsMoney(round)} people={round.players}
@@ -43,7 +43,7 @@ export default function ShareScreen({ kind, id }) {
   if (kind === 'cup' && st.cup) {
     return (
       <Screen>
-        <ShareView title="Share the cup" small onBack={nav.pop} what="The cup" link={link}
+        <ShareView title="Share the cup" small onBack={nav.pop} what="Cup score" link={link}
           make={show => card(cupCardModel(state, st.trip, st.cup, { showAmounts: show, link }))} render={renderCard}
           fileName={slugName('cup', st.trip.name)} money={st.cup.def.stake > 0}
           onText="What’s on the cup is on the image" offText="The score and the leaderboard, no money" />
@@ -54,7 +54,7 @@ export default function ShareScreen({ kind, id }) {
   const people = st.standings.map(p => ({ id: p.id, name: nameOf(state, p.id) }));
   return (
     <Screen>
-      <ShareView title="Share the standings" small onBack={nav.pop} what="The standings" link={link}
+      <ShareView title="Share the standings" small onBack={nav.pop} what="Standings" link={link}
         make={show => card(tripCardModel(state, st, { showAmounts: show, link }))} render={renderCard}
         fileName={slugName('trip', st.trip.name)} money={st.standings.length > 0} people={people}
         onText="Everyone’s money on the trip is on the image" offText="The order and the cup, no money" />

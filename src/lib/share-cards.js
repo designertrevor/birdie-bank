@@ -178,7 +178,7 @@ export function cupCardModel(state, trip, cup, { showAmounts = false, link = nul
 export function challengeGroupText(ch, { showAmounts = false, now = Date.now() } = {}) {
   const s = challengeState(ch);
   const show = ch.unit === 'points' ? true : showAmounts;
-  const plain = { match: 'a match', hole: 'a bet a hole', ctp: 'closest to the pin', custom: cleanBetLabel(ch.label) || 'a side bet' }[ch.kind] || 'a side bet';
+  const plain = { match: 'a match', hole: 'a hole-by-hole bet', ctp: 'closest to the pin', custom: cleanBetLabel(ch.label) || 'a side bet' }[ch.kind] || 'a side bet';
   const what = show ? challengeAsk(ch) : plain;
   const day = ch.plan ? dayLabel(ch.plan.date, new Date(now)) : null;
   const when = day ? (day === 'Today' || day === 'Tomorrow' ? ` ${day.toLowerCase()}` : ` on ${day}`) : ' next time they play';
