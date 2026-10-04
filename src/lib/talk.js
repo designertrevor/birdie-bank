@@ -73,6 +73,16 @@ export const JABS = {
     { key: 'firstRound', text: 'Loser buys the first round' },
     { key: 'teeTime', text: 'Don’t be late for the tee time' },
   ],
+  // From a friend watching someone else's round (the Friends feed): cheering and ribbing from the
+  // gallery, nothing about the money (they may not see it) and nothing only a player would say
+  gallery: [
+    { key: 'niceShot', text: 'Nice shot!' },
+    { key: 'pressure', text: 'Pressure’s on' },
+    { key: 'wishThere', text: 'Wish I was out there' },
+    { key: 'fairway', text: 'Find the fairway' },
+    { key: 'watching', text: 'I’m watching every hole' },
+    { key: 'buying', text: 'Who’s buying after?' },
+  ],
 };
 const JAB_BY_KEY = Object.fromEntries(Object.values(JABS).flat().map(j => [j.key, j]));
 
@@ -92,9 +102,12 @@ export function reactionsFor({ money = true, picked = [] } = {}) {
   const have = new Set(picked);
   return REACTIONS.filter(r => money || !r.money || have.has(r.key));
 }
-/** The jabs that fit a target. `money`: whether that thing is played for money (see moneyOn). */
-export function jabsFor(on, { money = true } = {}) {
-  const list = JABS[contextOf(on)] || JABS.round;
+/**
+ * The jabs that fit a target. `money`: whether that thing is played for money (see moneyOn);
+ * `set`: a list to use instead ('gallery' for a friend watching).
+ */
+export function jabsFor(on, { money = true, set = null } = {}) {
+  const list = (set && JABS[set]) || JABS[contextOf(on)] || JABS.round;
   return money ? list : list.filter(j => !j.money);
 }
 
@@ -117,6 +130,8 @@ export function moneyOn(round, on) {
 
 export const roundThread = round => `round:${round.id}`;
 export const planThread = plan => `plan:${plan.id}`;
+/** A friend's round you watch from the Friends feed, by its code: its talk is the round's own. */
+export const followThread = code => `follow:${code}`;
 /** A settle-up line of a round: one transfer, from `from` to `to`. */
 export const payTarget = (from, to) => `pay:${from}>${to}`;
 /** A side bet between two players. */
@@ -356,6 +371,18 @@ export function roundTalk(round, state) {
   const seatName = id => round.players.find(p => p.id === id)?.name || null;
   return { key: roundThread(round), who, myName: who ? firstOf(seatName(who)) : null, seatName, kind: 'round', moneyOn: on => moneyOn(round, on) };
 }
+/**
+ * The same for a friend's round you watch (the Friends feed): you write as yourself, from the
+ * gallery, on the round itself only (never its settle-ups or side bets), with the gallery's jabs
+ * and nothing about money.
+ */
+export function followTalk(code, round, state) {
+  const who = state?.me || null;
+  const mine = who ? state.players?.[who]?.name : null;
+  const seatName = id => round?.players?.find(p => p.id === id)?.name || (id === who ? mine : null) || null;
+  return { key: followThread(code), who, myName: who ? firstOf(mine) : null, seatName, kind: 'follow', jabs: 'gallery', moneyOn: () => false };
+}
+
 /** The same for a plan's talk. */
 export function planTalk(plan) {
   const who = planWho(plan);

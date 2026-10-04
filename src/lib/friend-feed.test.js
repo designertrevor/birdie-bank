@@ -11,6 +11,8 @@ import {
 } from './friend-feed.js';
 import { normalizePrivacy } from './profile-model.js';
 import { tabResults } from './play-for.js';
+import { JABS, followTalk, followThread, jabsFor, newComment, reactionsFor } from './talk.js';
+import { moneyHelp, profileHelp } from './profile-view.js';
 
 const HOUR = 36e5;
 const NOW = new Date(2026, 9, 6, 15).getTime();
@@ -331,4 +333,42 @@ test('feed: following friends’ rounds never changes your own rounds or money',
   groupFeed(state, { rounds: [], now: NOW });
   assert.equal(JSON.stringify(state), before);
   assert.equal(JSON.stringify(roundResults(mine)), res);
+});
+
+// --------------------------- the gallery's talk --------------------------
+
+test('gallery talk: a friend watching writes as themselves on the round, with the gallery’s jabs and no money talk', () => {
+  const round = skinsRound();
+  const ctx = followTalk('ABC123', round, { me: 'me', players: { me: { id: 'me', name: 'Trevor Nielsen' } } });
+  assert.equal(ctx.key, followThread('ABC123'));
+  assert.equal(ctx.key, 'follow:ABC123');
+  assert.equal(ctx.who, 'me');
+  assert.equal(ctx.myName, 'Trevor');
+  assert.equal(ctx.kind, 'follow');
+  assert.equal(ctx.seatName('sam'), 'Sam Snead');
+  assert.equal(ctx.seatName('me'), 'Trevor Nielsen');
+  // Money never comes into it: no money jabs and no "Pay up", even on a money round
+  assert.equal(ctx.moneyOn('round'), false);
+  assert.ok(!reactionsFor({ money: ctx.moneyOn('round') }).some(r => r.key === 'money'));
+  const jabs = jabsFor('round', { money: ctx.moneyOn('round'), set: ctx.jabs });
+  assert.deepEqual(jabs, JABS.gallery);
+  assert.ok(jabs.every(j => !j.money));
+  // A gallery jab posts its own words like any other jab
+  const c = newComment({ id: 'c1', on: 'round', who: 'me', name: 'Trevor', jab: 'niceShot' });
+  assert.equal(c.body, 'Nice shot!');
+  assert.equal(c.jab, 'niceShot');
+  // Nobody set up yet can't write
+  assert.equal(followTalk('ABC123', round, { me: null, players: {} }).who, null);
+  // Every jab key is still unique across the lists
+  const keys = Object.values(JABS).flat().map(j => j.key);
+  assert.equal(new Set(keys).size, keys.length);
+  // Without a set, the round's own jabs as before
+  assert.deepEqual(jabsFor('round'), JABS.round);
+});
+
+test('privacy copy: the one setting says what it does to the feed', () => {
+  assert.match(profileHelp({ profile: 'hidden' }), /your rounds stay out of friends’ feeds/);
+  assert.match(profileHelp({ profile: 'played' }), /your rounds in their feed/);
+  assert.match(moneyHelp({ profile: 'played', showMoney: true }), /your amounts in rounds of yours they follow/);
+  assert.match(moneyHelp({ profile: 'played' }), /Nobody else sees them/);
 });

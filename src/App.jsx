@@ -63,6 +63,8 @@ const Paywall = screen(() => import('./screens/Paywall.jsx'));
 const Season = screen(() => import('./screens/Season.jsx'));
 const Stats = screen(() => import('./screens/Stats.jsx'));
 const Lately = screen(() => import('./screens/Lately.jsx'));
+const Friends = screen(() => import('./screens/Friends.jsx'));
+const FriendRound = screen(() => import('./screens/FriendRound.jsx'));
 const trip = () => import('./screens/Trip.jsx');
 const Trip = screen(trip);
 const TripSettle = screen(trip, 'TripSettle');
@@ -112,6 +114,7 @@ const SCREENS = {
   plan: Plan, rollCall: RollCall, planLink: PlanLink, preview: Preview, paywall: Paywall, season: Season,
   challenge: Challenge, challengeLink: ChallengeLink,
   joinInvite: JoinInviteScreen, lately: Lately, trip: Trip, tripSettle: TripSettle,
+  friends: Friends, friendRound: FriendRound,
   profile: Profile, stats: Stats,
 };
 // Settings lives behind the avatar on Up next, so it's a pushed screen rather than a tab

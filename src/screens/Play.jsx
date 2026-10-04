@@ -30,6 +30,7 @@ import { buzz, confettiFrom } from '../lib/delight.js';
 import { useNav } from '../lib/nav.js';
 import { Scorecard } from './RoundDetail.jsx';
 import { LivePill, ShareSheet } from '../components/Live.jsx';
+import { GalleryBar } from '../components/Gallery.jsx';
 import { syncConfigured, useSeatRequests } from '../lib/sync.js';
 import { AddPlayerSheet } from '../components/AddPlayer.jsx';
 import { firstName, gameLabel, holeMoneyLine } from '../lib/format.js';
@@ -481,6 +482,8 @@ function PlayRound({ round, momentUp = false }) {
                 : <button className="pill-btn" onClick={askCard}>{declined ? 'Ask again' : 'Ask for it'}</button>)}
         </div>
       )}
+      {/* Friends watching from their feed, and the players, trash talking mid-round */}
+      <GalleryBar round={round} />
       {amKeeper && cardAsk && round.status === 'active' && (
         <div className="seat-req" role="status">
           <Icon name="hand-grabbing" fill />

@@ -2408,3 +2408,51 @@ button.ch-main:active { transform: scale(.98); }
 /* o7a fix: the money bar head keeps a gap between its two labels at phone width */
 .mb-head { gap: 12px; }
 .mb-head > span:last-child { text-align: right; }
+
+/* ---------- o8 follow: friends' rounds live, Watch, the group feed, the gallery on Play ---------- */
+.fr-eyebrow { display: flex; align-items: center; gap: 6px; color: var(--pink-text); }
+.fr-eyebrow.done { color: var(--mute); }
+.fr-dot { width: 7px; height: 7px; border-radius: 50%; background: currentColor; flex-shrink: 0; animation: frPulse 1.6s ease-out infinite; }
+@keyframes frPulse { 0% { box-shadow: 0 0 0 0 color-mix(in srgb, currentColor 60%, transparent); } 100% { box-shadow: 0 0 0 8px transparent; } }
+.fr-card .row-main { min-width: 0; }
+.fr-line { font-size: 15px; font-weight: 700; color: var(--ink); margin-top: 4px; overflow-wrap: anywhere; }
+.fr-watch > i:first-child { color: var(--pink-text); }
+.fr-all { gap: 8px; margin-bottom: 8px; }
+.fr-all > i:first-child { color: var(--icon); }
+.fr-note { display: flex; align-items: center; gap: 10px; margin: 4px 16px 10px; padding: 12px 14px; border-radius: 18px; background: var(--surface); color: var(--body); font-size: 14px; line-height: 1.4; }
+.fr-note > i { color: var(--icon); font-size: 20px; flex-shrink: 0; }
+.fr-note .pill-btn { flex-shrink: 0; min-height: 44px; }
+.fr-privacy { padding: 14px 20px 8px; }
+.fr-privacy-link { margin: 4px 0 0; padding: 10px 0; }
+/* A friend's round */
+.fr-hero { margin: 4px 16px 12px; padding: 18px; border-radius: 24px; background: var(--card); }
+.fr-hero-title { font-size: 24px; font-weight: 800; letter-spacing: -.02em; color: var(--ink); margin-top: 4px; line-height: 1.15; overflow-wrap: anywhere; }
+.fr-hero-line { font-family: var(--display); font-size: 20px; font-weight: 800; color: var(--pink-text); margin-top: 8px; overflow-wrap: anywhere; }
+.fr-hero .uc-sub { margin-top: 4px; }
+.fr-watch-cta { padding: 0 16px 4px; }
+.fr-watch-cta .field-help { text-align: center; margin: 8px 8px 0; }
+.fr-watching { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin: 0 16px; }
+.fr-watch-tag { display: inline-flex; align-items: center; gap: 6px; padding: 8px 14px; border-radius: 999px; background: var(--win-bg); color: var(--win); font-size: 14px; font-weight: 700; }
+.fr-stop { margin: 0; padding: 10px 4px; }
+.fr-board { list-style: none; margin: 0 16px 6px; padding: 4px 0; background: var(--card); border-radius: 20px; }
+.fr-board-row { display: flex; align-items: center; gap: 10px; min-height: 56px; padding: 8px 16px; }
+.fr-board-row + .fr-board-row { border-top: 1px solid var(--line-soft); }
+.fr-board-row .avatar { flex-shrink: 0; margin: 0; }
+.fr-place { width: 18px; text-align: center; font-size: 13px; font-weight: 700; color: var(--mute); flex-shrink: 0; font-variant-numeric: tabular-nums; }
+.fr-name { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+.fr-name-main { display: flex; align-items: center; gap: 4px; font-weight: 700; color: var(--ink); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.fr-name-sub { font-size: 12px; color: var(--mute); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.fr-friend { color: var(--icon); font-size: 14px; display: inline-flex; }
+.fr-par { display: flex; flex-direction: column; align-items: flex-end; flex-shrink: 0; min-width: 44px; }
+.fr-par-v { font-family: var(--display); font-size: 18px; font-weight: 800; font-variant-numeric: tabular-nums; }
+.fr-thru { font-size: 11px; color: var(--mute); white-space: nowrap; }
+.fr-amt { flex-shrink: 0; min-width: 52px; text-align: right; font-weight: 800; font-size: 15px; color: var(--mute); font-variant-numeric: tabular-nums; white-space: nowrap; }
+.fr-amt.pos { color: var(--win); }
+.fr-amt.neg { color: var(--loss); }
+.fr-readonly { display: flex; align-items: center; gap: 6px; margin-top: 10px; }
+.fr-readonly i { color: var(--icon); }
+/* The gallery bar on a live round: pastel like the other bars on Play, dark text in both themes */
+.seat-req.gallery-bar { width: calc(100% - 32px); border: none; font: inherit; text-align: left; cursor: pointer; background: var(--peach); color: var(--on-pastel); transition: transform .2s var(--spring); }
+.seat-req.gallery-bar:active { transform: scale(.98); }
+.seat-req.gallery-bar .gb-line { overflow: hidden; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow-wrap: anywhere; }
+.seat-req.gallery-bar > i { font-size: 20px; flex-shrink: 0; }

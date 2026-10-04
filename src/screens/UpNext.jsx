@@ -33,6 +33,7 @@ import { ChallengesUpNext } from '../components/Challenges.jsx';
 import { myChallenges } from '../lib/challenges.js';
 import { refreshChallenges } from '../lib/challenge-sync.js';
 import { useCupSync } from '../lib/cup-sync.js';
+import { FriendsUpNext } from '../components/FriendsFeed.jsx';
 
 const LATELY_ON_HOME = 3;
 
@@ -114,6 +115,9 @@ export default function UpNext() {
             <div className="add-ci"><Icon name="broadcast" fill /></div><span className="add-lbl">Join a friend’s round</span>
           </button>
         )}
+
+        {/* Friends' rounds you're not in, live, and the way into the group feed (friend-feed.js) */}
+        <FriendsUpNext show={hasHistory || plans.length > 0 || trips.length > 0} />
 
         {lines.length > 0 && (
           <>

@@ -20,7 +20,9 @@ import { countsMoney, playForOf, points, rewardOutcome } from './play-for.js';
 import { toParOf } from './to-par.js';
 import { agoLabel, latelyItems } from './lately.js';
 import { countsLine, planChoice, planCounts, upcomingPlans, whenLabel } from './plans.js';
-import { withTalk } from './talk.js';
+import { followThread, withTalk } from './talk.js';
+
+export { followThread };
 
 const HOUR = 36e5;
 const DAY = 24 * HOUR;
@@ -329,9 +331,6 @@ export function planItem(plan, now = new Date()) {
     target: ['plan', { id: plan.id }],
   };
 }
-
-/** The talk thread of a friend's round you watch (see talk.js threads and talk-sync.js). */
-export const followThread = code => `follow:${code}`;
 
 /**
  * The newest comment and reactions by other people on each friend's round you watch, as feed rows.
