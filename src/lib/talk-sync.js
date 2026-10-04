@@ -16,7 +16,7 @@ import { isMissingTable } from './plan-adapters.js';
 import { deviceReady, myDevice } from './device.js';
 import { accountNow } from './cloud.js';
 import { codeOf } from './pair-debts.js';
-import { mergeRows, newComment, removedRow, talkFromDb, talkReach, talkToDb, toggleReaction, unsentRows } from './talk.js';
+import { mergeRows, newComment, removedRow, talkFromDb, talkReach, talkSeatKey, talkToDb, toggleReaction, unsentRows } from './talk.js';
 
 const localFlag = () => { try { return localStorage.getItem('bb-sync-local') === '1'; } catch { return false; } };
 
@@ -124,8 +124,8 @@ export function threadTarget(state, key) {
   if (kind === 'follow') return { scope: 'round', code: /^[A-Z0-9]{6}$/.test(id) ? id : null, via: 'follow' };
   return { scope: null, code: null };
 }
-// Who you may speak as is kept per way in: a player's seats, or a friend watching
-const seatKey = t => `${t.via || t.scope}:${t.code}`;
+// Who you may speak as is kept per way in: a player's seats, or a friend watching (per account)
+const seatKey = t => talkSeatKey(t, accountNow().user?.id || null);
 
 /** Let this phone in on a thread: as a player (join_comments), or as a friend watching (follow_round). */
 async function joinThread(adapter, t) {

@@ -212,6 +212,16 @@ export function mergeRows(local = {}, incoming = []) {
  * server can't place this phone (the live round is gone and it never joined, or a new phone the
  * round doesn't know), the talk stays on this phone (`closed`) instead of the section vanishing.
  */
+/**
+ * The key a thread's seats are kept under for the session: one per way in (a player's seats, or a
+ * friend watching) and code. A friend watching follows as an account, so theirs is kept per account
+ * too: signing in after a look while signed out, or as someone else, asks the server again.
+ */
+export function talkSeatKey(t, user = null) {
+  if (t?.via === 'follow') return `follow:${user || '-'}:${t.code}`;
+  return `${t?.scope}:${t?.code}`;
+}
+
 export function talkReach({ off = false, code = null, seats } = {}) {
   const linked = !!code;
   if (off || !linked) return { can: true, linked, shared: false, closed: false, off: !!off };

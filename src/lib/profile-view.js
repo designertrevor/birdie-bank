@@ -40,16 +40,16 @@ export function whoSees(privacy) {
  */
 export function profileHelp(privacy) {
   const p = normalizePrivacy(privacy);
-  if (p.profile === 'hidden') return 'Your record, stats, handicap and home course stay on your phone, and your rounds stay out of friends’ feeds. People in your rounds still see your name and avatar, so they know it’s you.';
-  if (p.profile === 'everyone') return 'Anyone who opens your profile sees your record, stats, handicap and home course. For now that’s people who’ve been in a round with you, the same as People you’ve played with. When people you haven’t played with can open profiles, they’ll see it too. Your rounds show in the feed of people you’ve played with.';
-  return 'People you’ve played a round with see your record, stats, handicap and home course, and your rounds in their feed.';
+  if (p.profile === 'hidden') return 'Your record, stats, handicap and home course stay on your phone, and rounds you play stay out of everyone’s feed. People in your rounds still see your name and avatar, so they know it’s you.';
+  if (p.profile === 'everyone') return 'Anyone who opens your profile sees your record, stats, handicap and home course. For now that’s people who’ve been in a round with you, the same as People you’ve played with. When people you haven’t played with can open profiles, they’ll see it too. Rounds you play show in the feed of people who’ve played with someone in them: your first name and scores, nothing from your profile.';
+  return 'People you’ve played a round with see your record, stats, handicap and home course. Rounds you play show in the feed of people who’ve played with someone in them: your first name and scores, nothing from your profile.';
 }
 
 /** The line under "Show my money". */
 export function moneyHelp(privacy) {
   const p = normalizePrivacy(privacy);
   if (!moneyShown(p)) return 'Your net and your best round stay on your phone. Nobody else sees them.';
-  return `${p.profile === 'everyone' ? 'Anyone who opens your profile sees' : 'People you’ve played with see'} your net and your best round, and your amounts in rounds of yours they follow.`;
+  return `${p.profile === 'everyone' ? 'Anyone who opens your profile sees' : 'People you’ve played with see'} your net and your best round, and your amounts on your rounds in their feed.`;
 }
 
 /** One line for the privacy section: what other people see of your profile. */

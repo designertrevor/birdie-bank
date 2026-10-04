@@ -6,7 +6,7 @@
 --  • friend_rounds(): the live rounds of people you've played with that you're not in (someone's
 --    Tuesday round), going on now or finished in the last 7 days, newest first, at most 30. Each row
 --    is the round as a watcher sees it (its meta and hole scores) plus, for each seat linked to an
---    account, whether that person is a friend of yours and whether their money may show.
+--    account, whether that person is a friend of yours and whether their money may show to you.
 --  • follow_round(code): "Watch" on a friend's round. It remembers you in round_followers and
 --    returns the ids you may write as on the round's own trash talk, or null when you can't follow it.
 --  • The four comments policies again (from 2026-10-04-comments.sql), each with one more way in: a
@@ -21,8 +21,10 @@
 --    people outside it, so nobody's scores reach people they didn't choose.
 --  • People you've played with ('played', the default) and Everyone ('everyone'): the round comes up
 --    for that friend's friends. Today both reach the same people, as for profiles.
---  • Money: someone's amounts show only when they turned on Show my money (showMoney). A guest
---    with no account has no setting, so theirs never shows. The app hides the rest.
+--  • Money: someone's amounts show only when they turned on Show my money (showMoney), and only to
+--    people they've played with: a friend of someone else in the round sees their first name and
+--    scores, never their amounts. A guest with no account has no setting, so theirs never shows.
+--    The app hides the rest.
 --  • A round you're in (a seat linked to your account, or this phone's device on it) never comes up:
 --    it's already on your phone.
 --  • A row saved before the one setting (no profile level) keeps the rule fromLegacy() in
@@ -125,7 +127,7 @@ begin
       where h.code = c.code and h.hole_no > 0 and h.data is not null
     ), '{}'::jsonb),
     coalesce((
-      select jsonb_object_agg(s.seat, jsonb_build_object('friend', s.friend, 'money', s.shows_money, 'account', case when s.friend then s.account end))
+      select jsonb_object_agg(s.seat, jsonb_build_object('friend', s.friend, 'money', s.friend and s.shows_money, 'account', case when s.friend then s.account end))
       from (select fs.seat, fs.account, fs.shows_money, public.profile_visible_to_me(fs.account) as friend from public.feed_seats(c.meta) fs) s
     ), '{}'::jsonb),
     c.moved_at

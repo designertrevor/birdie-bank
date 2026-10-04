@@ -8,7 +8,7 @@ import { TalkSection } from '../components/Talk.jsx';
 import { Scorecard } from './RoundDetail.jsx';
 import { useStore } from '../lib/store.js';
 import { useNav } from '../lib/nav.js';
-import { friendRoundView, friendsLine, statusLine } from '../lib/friend-feed.js';
+import { friendRoundView, friendsLine, shownRow, statusLine } from '../lib/friend-feed.js';
 import { rowFor, stopWatching, useFeed, useLiveRound, watchRound } from '../lib/feed-sync.js';
 import { followTalk } from '../lib/talk.js';
 import { useTalkSync } from '../lib/talk-sync.js';
@@ -23,8 +23,10 @@ export default function FriendRound({ code }) {
   const base = feed.status === 'signed-out' ? null : rowFor(feed, code);
   // Followed live while it's on screen, the same way a watcher's phone follows it
   const live = useLiveRound(code, base);
-  // Only while the feed still has it: someone changing who sees their rounds takes it off here too
-  const row = base ? live.row || base : null;
+  // Only while the feed still has it: someone changing who sees their rounds takes it off here too.
+  // Who's a friend and whose money shows always comes from the feed's latest answer, so turning
+  // off Show my money hides the amount here on the next refresh, not on the next hole scored.
+  const row = useMemo(() => shownRow(base, live.row), [base, live.row]);
   const view = useMemo(() => (row ? friendRoundView(row, { following }) : null), [row, following]);
   const ctx = view ? followTalk(code, view.round, state) : null;
   useTalkSync(following && view ? [ctx.key] : [], { live: true });
@@ -90,7 +92,7 @@ export default function FriendRound({ code }) {
             );
           })}
         </ul>
-        {hidden && <p className="field-help pad">Amounts show only for players who turned on Show my money.</p>}
+        {hidden && <p className="field-help pad">Amounts show only for people you’ve played with who turned on Show my money.</p>}
 
         <div className="sec-label">Scorecard</div>
         <Scorecard round={view.round} />

@@ -8,11 +8,11 @@ import { createRound, roundResults } from './round.js';
 import { buildHoles, buildMeta } from './sync-model.js';
 import {
   DONE_DAYS, LIVE_HOURS, cleanFeedRow, feedLevel, feedMeta, feedMoney, feedPeople, feedRoundOk, feedSeats, feedWindowOk, followSeatsFor, followerMayWrite,
-  friendRoundItem, friendRoundView, friendRounds, friendsLine, groupFeed, matchLine, planItem, statusLine, upNextFriends,
+  friendRoundItem, friendRoundView, friendRounds, friendsLine, groupFeed, matchLine, planItem, shownRow, statusLine, upNextFriends,
 } from './friend-feed.js';
 import { normalizePrivacy } from './profile-model.js';
 import { tabResults } from './play-for.js';
-import { JABS, followTalk, followThread, jabsFor, newComment, reactionsFor } from './talk.js';
+import { JABS, followTalk, followThread, jabsFor, newComment, reactionsFor, talkSeatKey } from './talk.js';
 import { moneyHelp, profileHelp } from './profile-view.js';
 
 const HOUR = 36e5;
@@ -178,6 +178,21 @@ test('friend round: Show my money shows that player’s amount, and only theirs'
   assert.equal(v.players.find(p => p.id === 'guest').amountText, null);
 });
 
+test('friend round: Show my money reaches only people who played with them, never a friend of a friend', () => {
+  const r = skinsRound();
+  // Dave chose Show my money, but you've never played with him: you see his scores, not his amounts
+  const v = friendRoundView(rowOf(r, { people: { sam: SAM, dave: { friend: false, money: true, account: null } } }));
+  assert.equal(v.players.find(p => p.id === 'dave').amountText, null);
+  assert.equal(v.players.find(p => p.id === 'dave').amount, null);
+  assert.equal(v.players.find(p => p.id === 'dave').played, 5);
+  // The server's rule says the same: money goes out only for a friend's seat
+  const meta = feedMeta(buildMeta(r));
+  const people = feedPeople(meta, { friends: new Set(['acct-sam']), accounts: { sam: 'acct-sam', dave: 'acct-dave' }, privacy: { 'acct-dave': { profile: 'played', showMoney: true } } });
+  assert.deepEqual(people.dave, { friend: false, money: false, account: null });
+  const sql = readFileSync(new URL('../../supabase/2026-10-06-friend-feed.sql', import.meta.url), 'utf8');
+  assert.match(sql, /'money', s\.friend and s\.shows_money/);
+});
+
 test('friend round: a points round reads in points for everyone, never dollars', () => {
   const v = friendRoundView(rowOf(skinsRound({ playFor: { kind: 'points' } }), { people: { sam: SAM } }));
   assert.equal(v.line, 'Sam leads, +8 pts');
@@ -296,7 +311,7 @@ test('feed: the group feed has friends’ live rounds, plans you’re invited to
 
 test('feed: a finished round lists only the amounts people chose to show', () => {
   const r = skinsRound({ status: 'done', played: 9 });
-  const both = friendRoundView(rowOf(r, { people: { sam: { ...SAM, money: true }, dave: { ...DAVE, money: true } } }));
+  const both = friendRoundView(rowOf(r, { people: { sam: { ...SAM, money: true }, dave: { friend: true, money: true, account: 'acct-dave' } } }));
   assert.match(friendRoundItem(both, NOW).sub, /Dave −\$4/);
   const none = friendRoundView(rowOf(r, { people: { sam: SAM, dave: DAVE } }));
   assert.ok(!friendRoundItem(none, NOW).sub.includes('$'));
@@ -368,9 +383,11 @@ test('gallery talk: a friend watching writes as themselves on the round, with th
 });
 
 test('privacy copy: the one setting says what it does to the feed', () => {
-  assert.match(profileHelp({ profile: 'hidden' }), /your rounds stay out of friends’ feeds/);
-  assert.match(profileHelp({ profile: 'played' }), /your rounds in their feed/);
-  assert.match(moneyHelp({ profile: 'played', showMoney: true }), /your amounts in rounds of yours they follow/);
+  assert.match(profileHelp({ profile: 'hidden' }), /rounds you play stay out of everyone’s feed/);
+  // Your rounds reach the friends of anyone in them, so the copy says what they see of you there
+  for (const profile of ['played', 'everyone']) assert.match(profileHelp({ profile }), /your first name and scores, nothing from your profile/);
+  // Amounts reach only people you've played with, whether or not they watch the round
+  assert.match(moneyHelp({ profile: 'played', showMoney: true }), /your amounts on your rounds in their feed/);
   assert.match(moneyHelp({ profile: 'played' }), /Nobody else sees them/);
 });
 
@@ -393,4 +410,29 @@ test('the server file says the same as this one: the time windows, what goes out
   for (const f of ['feed_seats\\(jsonb\\)', 'feed_round_ok\\(jsonb\\)', 'follow_ids\\(\\)']) {
     assert.match(sql, new RegExp(`revoke all on function public\\.${f} from public, anon, authenticated`));
   }
+});
+
+test('gallery talk: what a friend watching may write as is kept per account, so signing in asks again', () => {
+  const t = { scope: 'round', code: 'ABC123', via: 'follow' };
+  // Signed out, then signed in, then as someone else: three different keys, so none is reused
+  const keys = [talkSeatKey(t, null), talkSeatKey(t, 'acct-a'), talkSeatKey(t, 'acct-b')];
+  assert.equal(new Set(keys).size, 3);
+  // A player's seats stay where they were, whoever is signed in
+  assert.equal(talkSeatKey({ scope: 'round', code: 'ABC123' }, 'acct-a'), 'round:ABC123');
+  assert.equal(talkSeatKey({ scope: 'plan', code: 'XYZ789' }), 'plan:XYZ789');
+  assert.notEqual(talkSeatKey(t, 'acct-a'), talkSeatKey({ scope: 'round', code: 'ABC123' }, 'acct-a'));
+});
+
+test('friend round: the live copy keeps its scores, but whose money shows is the feed’s latest answer', () => {
+  const r = skinsRound();
+  // Sam showed his money when the live copy came in, then turned Show my money off
+  const live = cleanFeedRow(rowOf(r, { people: { sam: { ...SAM, money: true } } }));
+  const base = cleanFeedRow(rowOf(skinsRound({ played: 3 }), { people: { sam: SAM } }));
+  const v = friendRoundView(shownRow(base, live));
+  assert.equal(v.thru, 5);
+  assert.equal(v.players.find(p => p.id === 'sam').amountText, null);
+  assert.equal(v.line, 'Sam leads');
+  // Before the live copy, the feed's own; once the feed drops it, nothing
+  assert.equal(shownRow(base, null), base);
+  assert.equal(shownRow(null, live), null);
 });

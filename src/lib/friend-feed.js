@@ -1,4 +1,4 @@
-// The Friends feed: friends' rounds you're not in (live, and finished this week), plans you're
+// The Friends feed: friends' rounds you're not in (live, and finished in the last 7 days), plans you're
 // invited to, settle-ups, recaps and trash talk, in one place. Pure and unit tested. The transport
 // is feed-sync.js; the server's rules are supabase/2026-10-06-friend-feed.sql, and the first part
 // of this file is the same rules in JavaScript (keep the two in step).
@@ -7,8 +7,10 @@
 //  • A friend is an account you've played a round with. Only rounds with a friend in them come up.
 //  • Only you: nothing. A round with anyone in it set to Only you never comes up for people outside it.
 //  • People you've played with (the default) and Everyone: the round comes up for that friend's friends.
-//  • Money: a player's amounts show only with Show my money on. A guest with no account has no
-//    setting, so theirs never shows. Points rounds read in points, which are bragging rights.
+//  • Money: a player's amounts show only with Show my money on, and only to people they've played
+//    with (a friend of someone else in the round sees their scores, never their amounts). A guest
+//    with no account has no setting, so theirs never shows. Points rounds read in points, which are
+//    bragging rights.
 // A friend's round as the server sends it (a "row"):
 //   { code, meta, holes: { [holeNo]: data }, people: { [seat]: { friend, money, account } }, updatedAt }
 import { GAMES, gameView, holeComplete, isTeamGame, matchScored, nassauWinners, roundResults, scorers, sideNames } from './round.js';
@@ -105,12 +107,16 @@ export function feedWindowOk(status, at, now = Date.now()) {
   return false;
 }
 
-/** What the feed says about each linked seat (friend_rounds people): { seat: { friend, money, account } }. */
+/**
+ * What the feed says about each linked seat (friend_rounds people): { seat: { friend, money, account } }.
+ * Money shows only to someone the player has played with: Show my money reaches the same people
+ * the profile does.
+ */
 export function feedPeople(m, { friends = new Set(), accounts = {}, privacy = {} } = {}) {
   const out = {};
   for (const s of feedSeats(m, { accounts, privacy })) {
     const friend = friends.has(s.account);
-    out[s.seat] = { friend, money: s.money, account: friend ? s.account : null };
+    out[s.seat] = { friend, money: friend && s.money, account: friend ? s.account : null };
   }
   return out;
 }
@@ -142,7 +148,9 @@ export function cleanFeedRow(x) {
   const people = {};
   for (const [seat, p] of Object.entries(isObj(x.people) ? x.people : {})) {
     if (!isObj(p)) continue;
-    people[seat] = { friend: p.friend === true, money: p.money === true, account: p.friend === true && typeof p.account === 'string' ? p.account : null };
+    // Amounts only for a friend of yours who chose to show them, whatever a row says
+    const friend = p.friend === true;
+    people[seat] = { friend, money: friend && p.money === true, account: friend && typeof p.account === 'string' ? p.account : null };
   }
   const at = typeof x.updatedAt === 'number' ? x.updatedAt : Date.parse(x.updated_at ?? x.updatedAt) || 0;
   return { code: x.code, meta, holes, people, updatedAt: at };
@@ -222,6 +230,16 @@ export function roundView(round, { code, people = {}, at = 0, following = false,
     at, following, round,
     target: target || ['friendRound', { code }],
   };
+}
+
+/**
+ * The copy of a friend's round to show: the live connection's latest scores (`live`) over the
+ * feed's row (`base`), or null once the feed no longer has it. Who's a friend and whose money
+ * shows always come from the feed's row, the server's latest answer, never an older copy.
+ */
+export function shownRow(base, live = null) {
+  if (!base) return null;
+  return live ? { ...live, people: base.people } : base;
 }
 
 /** A row from friend_rounds() as the feed shows it, or null. */
