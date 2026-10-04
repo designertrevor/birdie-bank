@@ -380,6 +380,9 @@ export function challengeLife(state, ch, now = Date.now()) {
     // A round moved to another day: the challenge lives on the plan it moved to
     const plan = planOf(state, ch);
     if (!plan || plan.gone || plan.status === 'off') return 'gone';
+    // Its round was deleted before it was played: agreed again for the next round together
+    const back = offPlan(state, ch);
+    if (back) return now - back > ACCEPTED_DAYS * DAY ? 'expired' : 'live';
     if (plan.status === 'started') return 'missed';
     const days = daysUntil(plan.date, new Date(now));
     return days != null && days < 0 ? 'missed' : 'live';
@@ -387,6 +390,19 @@ export function challengeLife(state, ch, now = Date.now()) {
   if (s.status === 'accepted') return now - (s.acceptedAt || s.at) > ACCEPTED_DAYS * DAY ? 'expired' : 'live';
   // Unanswered: from when it was made, or from the last counter (a new amount is a fresh ask)
   return now - (s.at || ch.at || 0) > OPEN_DAYS * DAY ? 'expired' : 'live';
+}
+
+/**
+ * When a planned round's challenge was given back because its round went before it was played
+ * (deleted from End round, 2026-10-04): the plan stays started, so the challenge is agreed again for
+ * the next round the two of them play, like one from a Player card. The time it was given back, or 0.
+ */
+export function offPlan(state, ch) {
+  if (!ch?.plan) return 0;
+  const plan = planOf(state, ch);
+  if (plan?.status !== 'started' || !plan.roundId || challengeState(ch).status !== 'accepted') return 0;
+  const back = ordered(ch.moves || []).filter(m => m.move === 'back' && m.roundId === plan.roundId).pop();
+  return back ? back.at || 1 : 0;
 }
 
 /** Every challenge on this phone, well formed. */
@@ -511,12 +527,14 @@ export function challengesForRound(state, round, { planId = null, idOf = null, n
     if (room <= 0) break;
     if (challengeState(ch).status !== 'accepted' || challengeLife(state, ch, now) !== 'live') continue;
     if (have.has(betIdOf(ch))) continue;
-    if (ch.plan && (!planId || planOf(state, ch)?.id !== planId)) continue;
+    const back = !!offPlan(state, ch);
+    if (ch.plan && !back && (!planId || planOf(state, ch)?.id !== planId)) continue;
     if (!unitFits(ch, round)) continue;
     // A front or back nine challenge waits for a round that plays that nine: in a 9-hole round of the
     // other nine it would be a bet on holes nobody agreed to
     if ((ch.holes === 'front' || ch.holes === 'back') && !nineRange(round, ch.holes)) continue;
-    const pair = challengePair(state, ch, round, { idOf: ch.plan ? idOf : null, me });
+    // Given back from its plan's deleted round: its people by the ids its roll call gave them
+    const pair = challengePair(state, ch, round, { idOf: ch.plan ? (back ? planOf(state, ch)?.rollIds || idOf : idOf) : null, me });
     if (!pair || !kindFits(round, ch.kind, pair)) continue;
     out.push({ ch, bet: challengeBet(ch, round, pair) });
     have.add(betIdOf(ch));
@@ -696,6 +714,7 @@ export function challengeNextText(state, ch, now = Date.now()) {
   if (life === 'missed') return 'The round went ahead without it. Challenge again next time.';
   if (life === 'gone') return 'That round is off, so the challenge is too.';
   if (s.status === 'declined' || s.status === 'off') return null;
+  if (s.status === 'accepted' && ch.plan && offPlan(state, ch)) return `That round was deleted before it was played, so it goes in as a side bet the next time ${side ? 'you two play' : 'they play'} a round together.`;
   if (s.status === 'accepted') return ch.plan ? 'It goes in as a side bet when the round starts.' : ch.setBy ? `It goes in as a side bet the next time ${first(ch.from.name)} and ${first(ch.to.name)} play a round together.` : 'It goes in as a side bet the next time you two play a round together.';
   if (!side && setUpHere(state, ch)) return `Mark ${first(ch.from.name)} and ${first(ch.to.name)}’s answers when they tell you, or send it to them. If they answer from their own phone, theirs counts.`;
   if (!ch.code && ch.made) return `It lives on your phone for now. Mark ${them}’s answer when they tell you.`;

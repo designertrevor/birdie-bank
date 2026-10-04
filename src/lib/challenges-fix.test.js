@@ -7,7 +7,7 @@ import assert from 'node:assert/strict';
 import { createRound } from './round.js';
 import { newPlan } from './plans.js';
 import {
-  canMove, challengeNextText, challengeState, challengeView, challengesForRound, lateAnswers, mergeMoves, moveIdFor, movedKeys, newChallenge, proxyNote, withMove,
+  canMove, challengeLife, challengeNextText, challengeState, challengeView, challengesForRound, lateAnswers, mergeMoves, moveIdFor, movedKeys, newChallenge, proxyNote, withMove,
 } from './challenges.js';
 
 const DAY = 864e5;
@@ -86,4 +86,18 @@ test('a round kept for another day carries each challenge by id, never to someon
   const view = challengeView(state, ch);
   assert.deepEqual(view.waitingFor, ['Joe']);
   assert.match(challengeNextText(state, view, NOW), /Joe isn’t on the new plan yet/);
+});
+
+test('a planned round’s challenge given back when its round is deleted shows again and goes into the next round together', () => {
+  const p = { ...newPlan({ id: 'pl1', hostName: 'Trevor', game: 'skins', holesCount: 18, date: '2026-10-03', teeTime: '08:00', course: COURSE, people: [{ id: 'mike', name: 'Mike' }], ballot: { games: [], bets: [5] }, suggestedBet: 5, settings: SET, now: NOW - DAY }), code: 'PLAN01', status: 'started', roundId: 'r1', rollIds: { mike: 'pmike', host: 'me' } };
+  let ch = newChallenge({ id: 'c1', from: { who: p.hostWho, name: 'Trevor' }, to: { who: 'mike', name: 'Mike' }, kind: 'match', stake: 20, plan: { id: 'pl1', code: 'PLAN01', date: '2026-10-03' }, now: NOW - DAY });
+  ch = withMove({ ...ch, mine: 'from', made: true }, { id: 'acc', side: 'to', move: 'accept', at: NOW - 7200e3 });
+  ch = withMove(ch, { id: 'on1', side: 'keeper', move: 'on', roundId: 'r1', at: NOW - 3600e3 });
+  ch = withMove(ch, { id: 'bk1', side: 'keeper', move: 'back', roundId: 'r1', at: NOW - 1800e3 });
+  const state = { me: 'me', players: { pmike: { id: 'pmike', name: 'Mike' } }, plans: { pl1: p }, challenges: { c1: ch }, rounds: {} };
+  assert.equal(challengeState(ch).status, 'accepted');
+  assert.equal(challengeLife(state, ch, NOW), 'live', 'not Missed the round');
+  assert.match(challengeNextText(state, ch, NOW), /deleted before it was played/);
+  const r2 = createRound({ id: 'r2', game: 'skins', course: COURSE, holesCount: 18, players: [{ id: 'me', name: 'Trevor' }, { id: 'pmike', name: 'Mike' }], settings: SET });
+  assert.deepEqual(challengesForRound(state, r2, { now: NOW }).map(x => x.bet.players || x.bet.sides), [['me', 'pmike']]);
 });
