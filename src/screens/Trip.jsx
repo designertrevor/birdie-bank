@@ -166,11 +166,15 @@ export default function Trip({ id, view: firstView = null, add = false }) {
             <CupMatches cup={cup} />
             <div className="sec-label">Leaderboard</div>
             <CupBoard cup={cup} />
+            {cupOn && <button className="text-link" onClick={() => nav.push('share', { kind: 'cup', id })}><Icon name="share-network" /> Share the cup</button>}
             <p className="field-help pad">{cup.entries.some(e => !e.local) ? 'Other groups’ matches come from their phones. ' : ''}A match is worked out from the round’s own scores and strokes, whatever game the round plays. A round that ends early goes to whoever led on the holes played.</p>
           </>
         )}
 
         {view === 'standings' && <Standings st={st} state={state} label={label} me={me} />}
+        {view === 'standings' && (st.standings.length > 0 || !!st.points) && (
+          <button className="text-link" onClick={() => nav.push('share', { kind: 'trip', id })}><Icon name="share-network" /> Share the standings</button>
+        )}
         {view === 'rounds' && (
           <>
             {st.rounds.length === 0 && st.planned.length === 0 && <p className="field-help pad">No rounds yet. Start one at the course, or plan the trip’s rounds so everyone can answer.</p>}

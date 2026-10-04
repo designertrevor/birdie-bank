@@ -2408,3 +2408,7 @@ button.ch-main:active { transform: scale(.98); }
 /* o7a fix: the money bar head keeps a gap between its two labels at phone width */
 .mb-head { gap: 12px; }
 .mb-head > span:last-child { text-align: right; }
+
+/* ---------- Easy sharing: one share screen for every card (o8 sharing) ---------- */
+/* Show amounts held back because someone on the card keeps their money private */
+.toggle-sub.share-held { color: var(--ink); font-weight: 600; }

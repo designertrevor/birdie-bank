@@ -17,13 +17,15 @@
 //    money follows the round, which everyone in it already sees.
 // The pure parts are tested in share.test.js; shareOut takes its browser pieces as `env` so the
 // tests can stand in for them.
-import { myIds } from './format.js';
+// Kept to these two light imports so pay.js (which the round engine imports) can share through it
 import { linksOf } from './people-links.js';
 import { theirProfile } from './their-profile.js';
-import { codeOf } from './pair-debts.js';
 
 const isObj = v => v !== null && typeof v === 'object' && !Array.isArray(v);
 const first = n => String(n || '').trim().split(/\s+/)[0] || '';
+// Every id that means you on this phone (format.js myIds) and a round's live code (pair-debts.js codeOf)
+const myIds = state => new Set([state.me, ...Object.values(state.rounds || {}).map(r => r?.localMe)].filter(Boolean));
+const codeOf = round => round?.shareCode || round?.shared?.code || null;
 const list = names => (names.length <= 1 ? names.join('') : `${names.slice(0, -1).join(', ')} and ${names.at(-1)}`);
 
 /** The money switch, remembered on this phone (off until you turn it on). */

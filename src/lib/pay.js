@@ -4,6 +4,7 @@
 import { money } from './golf.js';
 import { linksOf } from './people-links.js';
 import { theirProfile } from './their-profile.js';
+import { shareOut } from './share.js';
 
 export const PAY_APPS = {
   venmo: { name: 'Venmo', label: 'Venmo username', placeholder: '@username' },
@@ -118,20 +119,12 @@ export function remindText({ name, amount, mine }) {
 }
 
 /**
- * Send a reminder: the phone's share sheet when there is one (Messages, WhatsApp, anything),
- * otherwise a text message with it filled in, otherwise copied. Resolves to what happened.
+ * Send a reminder (or any text): the phone's share sheet when there is one (Messages, WhatsApp,
+ * anything), otherwise a text message with it filled in, otherwise copied (share.js shareOut, the
+ * one way the app shares). Resolves to what happened.
  */
-export async function sendReminder(text) {
-  if (typeof navigator !== 'undefined' && navigator.share) {
-    try { await navigator.share({ text }); return 'shared'; }
-    catch (e) { if (e?.name === 'AbortError') return 'cancelled'; }
-  }
-  if (typeof navigator !== 'undefined' && /iPhone|iPad|Android/i.test(navigator.userAgent || '')) {
-    location.href = `sms:?&body=${encodeURIComponent(text)}`;
-    return 'sms';
-  }
-  try { await navigator.clipboard.writeText(text); return 'copied'; }
-  catch { return 'failed'; }
+export function sendReminder(text) {
+  return shareOut({ text });
 }
 
 /** Copy a handle (for Zelle, which has no pay link). */

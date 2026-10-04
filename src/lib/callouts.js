@@ -85,7 +85,8 @@ function skinsWon(round) {
 
 /**
  * Every callout this phone could make right now, best first:
- * [{ id, kind, about, tone, money, text, rank }]. Unfiltered: callouts() keeps only the kind ones.
+ * [{ id, kind, about, tone, money, text, rank, roundId? }] (roundId: the round a line is about, for
+ * the link back when it's shared). Unfiltered: callouts() keeps only the kind ones.
  */
 export function calloutCandidates(state, now = Date.now()) {
   const rounds = myDoneRounds(state);
@@ -111,7 +112,7 @@ export function calloutCandidates(state, now = Date.now()) {
     const lead = mine ? (names.length ? `${names.join(', ')} and I` : 'I') : names.length > 1 ? `${names.slice(0, -1).join(', ')} and ${names.at(-1)}` : names[0];
     const tail = mine ? (names.length ? 'Good team.' : 'Just saying.') : 'Tip of the cap.';
     add({
-      id: `win:${last.id}`, kind: 'winner', about: mine ? 'me' : others.length === 1 ? who(others[0]) : 'group', people: others.map(who),
+      id: `win:${last.id}`, roundId: last.id, kind: 'winner', about: mine ? 'me' : others.length === 1 ? who(others[0]) : 'group', people: others.map(who),
       text: `${lead} won ${prize} at ${course}. ${tail}`, rank: 80,
     });
   }
@@ -124,7 +125,7 @@ export function calloutCandidates(state, now = Date.now()) {
     if (best >= 2 && tops.length === 1) {
       const id = tops[0];
       add({
-        id: `skins:${last.id}`, kind: 'skins', about: isMe(id) ? 'me' : who(id), rank: 85,
+        id: `skins:${last.id}`, roundId: last.id, kind: 'skins', about: isMe(id) ? 'me' : who(id), rank: 85,
         text: isMe(id) ? `I took ${best} skins at ${course}. Call me the skin collector.` : `${name(id)} took ${best} skins at ${course}. Skin collector.`,
       });
     }
@@ -146,12 +147,12 @@ export function calloutCandidates(state, now = Date.now()) {
         : best.birdies === 1
           ? (me ? `I made a birdie at ${course}. Still smiling.` : `${n} made a birdie at ${course}. Nice ball.`)
           : (me ? `I made ${best.birdies} birdies at ${course}. Hot putter.` : `${n} made ${best.birdies} birdies at ${course}. Hot putter.`);
-      add({ id: `birdie:${last.id}`, kind: 'birdies', about: me ? 'me' : who(best.id), text, rank: best.eagles ? 95 : 75 });
+      add({ id: `birdie:${last.id}`, roundId: last.id, kind: 'birdies', about: me ? 'me' : who(best.id), text, rank: best.eagles ? 95 : 75 });
     }
   }
 
   // The last round: everyone square (status only, never amounts)
-  if (recapPaid(state, last, { now })?.allSquare) add({ id: `square:${last.id}`, kind: 'square', about: 'group', text: `Everyone’s square from ${course}. Clean books.`, rank: 78 });
+  if (recapPaid(state, last, { now })?.allSquare) add({ id: `square:${last.id}`, roundId: last.id, kind: 'square', about: 'group', text: `Everyone’s square from ${course}. Clean books.`, rank: 78 });
 
   // Streaks: rounds won in a row, newest back, by anyone in your rounds
   const seen = new Set();
