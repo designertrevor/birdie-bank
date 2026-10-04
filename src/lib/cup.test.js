@@ -119,6 +119,23 @@ test('a round’s matches start from the teams, with anyone not picked on the sh
   assert.equal(defaultRoundCup(s, TRIP, [{ id: 't', name: 'T' }, { id: 's', name: 'S' }, { id: 'm', name: 'M' }, { id: 'd', name: 'D' }], 'singles').kind, 'singles');
 });
 
+test('partners and opponents rotate from round to round', () => {
+  const s = stateOf('t', []);
+  const four = [{ id: 't', name: 'Trevor' }, { id: 's', name: 'Sam' }, { id: 'm', name: 'Mike' }, { id: 'd', name: 'Dave' }];
+  // Singles: the second round swaps opponents
+  const r1 = pairMatches(defaultRoundCup(s, TRIP, four, 'singles')).matches.map(m => m.sides.flat().join('v'));
+  const r2 = pairMatches(defaultRoundCup(s, TRIP, four, 'singles', { rotate: 1 })).matches.map(m => m.sides.flat().join('v'));
+  assert.deepEqual(r1, ['tvm', 'svd']);
+  assert.deepEqual(r2, ['tvd', 'svm']);
+  // Four-ball with four a side: partners change
+  const cup8 = { ...CUP, teams: [[{ id: 'a', name: 'A' }, { id: 'b', name: 'B' }, { id: 'c', name: 'C' }, { id: 'd', name: 'D' }], [{ id: 'e', name: 'E' }, { id: 'f', name: 'F' }, { id: 'g', name: 'G' }, { id: 'h', name: 'H' }]] };
+  const trip8 = newTrip({ id: 't8', name: 'Eight', start: '2026-10-16', end: '2026-10-18', by: 'a', format: 'cup', cup: cup8, now: OCT(1) });
+  const eight = 'abcdefgh'.split('').map(id => ({ id, name: id.toUpperCase() }));
+  const pairs = n => pairMatches(defaultRoundCup({ me: 'a', players: {}, rounds: {} }, trip8, eight, 'fourball', { rotate: n })).matches.map(m => m.sides[0].join(''));
+  assert.deepEqual(pairs(0), ['ab', 'cd']);
+  assert.deepEqual(pairs(1), ['bc', 'da']);
+});
+
 test('matches pair off in order: four-ball while both sides have two, then singles; the rest sit out', () => {
   const { matches, out } = pairMatches({ kind: 'fourball', sides: [['a', 'b', 'c'], ['d', 'e', 'f']] });
   assert.deepEqual(matches, [{ kind: 'fourball', sides: [['a', 'b'], ['d', 'e']] }, { kind: 'singles', sides: [['c'], ['f']] }]);

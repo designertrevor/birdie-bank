@@ -5,10 +5,14 @@ import { cleanRoundCup, defaultRoundCup, stakePaymentId } from './cup.js';
 import { canRecount, tripOf } from './trips.js';
 import { payKey, refreshCup } from './cup-sync.js';
 
-/** A round's matches to start with when it counts for a team points trip, or null for a money trip. */
+/**
+ * A round's matches to start with when it counts for a team points trip, or null for a money trip.
+ * Each round after the first turns the pairings, so partners and opponents rotate over the trip.
+ */
 export function startingCup(state, round, trip) {
   if (!trip || round.game === 'scramble') return null;
-  return defaultRoundCup(state, trip, round.players);
+  const before = Object.values(state.rounds || {}).filter(r => r?.trip?.id === trip.id && r.cup && r.id !== round.id).length;
+  return defaultRoundCup(state, trip, round.players, null, { rotate: before });
 }
 
 /**

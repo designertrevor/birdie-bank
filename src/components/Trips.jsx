@@ -73,11 +73,12 @@ export function TripTabCard({ status: st }) {
   const nav = useNav();
   const state = useStore();
   const net = myTripNet(state, st);
-  const n = st.plan.length;
+  // A team points trip's stake is paid from the trip, not the Tab: it counts in the trip's payments
+  const n = st.plan.length + (st.cup ? st.cup.lines.filter(l => l.open > 0).length : 0);
   const sub = st.phase === 'soon' ? startsLine(st.trip.start)
     : st.phase === 'empty' ? 'No rounds were counted for it'
     : st.pointsOnly ? `${roundsLine(st.done.length)}${st.phase === 'on' ? ' so far' : ''} · played for points`
-    : st.phase === 'ready' ? `${n} payment${n === 1 ? '' : 's'} square${n === 1 ? 's' : ''} the trip · ${st.payments.length} paid so far`
+    : st.phase === 'ready' ? `${n} payment${n === 1 ? '' : 's'} square${n === 1 ? 's' : ''} the trip · ${st.payments.length + (st.cup?.marks.length || 0)} paid so far${st.cup?.stakeOn ? ' · the cup stake is paid on the trip' : ''}`
     : st.phase === 'square' ? `${roundsLine(st.done.length)} · settled`
     : `${roundsLine(st.done.length)} so far · settle after the last round`;
   const played = st.standings.some(p => p.id === canonicalOf(state)(state.me));

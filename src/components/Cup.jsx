@@ -69,6 +69,9 @@ export function CupMatches({ cup }) {
         const round = e.local ? state.rounds[e.roundId] : null;
         const canChange = round && canRecount(state, round);
         const day = e.day ? new Date(`${e.day}T12:00:00`).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' }) : '';
+        // The round's own points, day by day
+        const pts = e.matches.reduce((acc, m) => (m.result.points ? [acc[0] + m.result.points[0], acc[1] + m.result.points[1]] : acc), [0, 0]);
+        const scored = e.matches.some(m => m.result.points);
         return (
           <div key={e.key} className="block cup-round">
             <div className="cup-round-head">
@@ -76,7 +79,8 @@ export function CupMatches({ cup }) {
                 <span className="cup-round-title">{[day, e.course].filter(Boolean).join(' · ')}</span>
                 <span className="cup-round-sub">{[...new Set(e.matches.map(m => CUP_KINDS[m.kind].name))].join(' and ')}{e.status === 'active' ? ' · being played' : ''}{!e.local ? ' · another group' : ''}</span>
               </span>
-              {canChange && <button className="pill-btn sm" onClick={() => setEditing(round.id)}><Icon name="pencil-simple" /> Change</button>}
+              {scored && <span className="cup-round-pts" aria-label={`${cup.names[0]} ${cupPoints(pts[0])}, ${cup.names[1]} ${cupPoints(pts[1])}`}><b className="t0">{cupPoints(pts[0])}</b>–<b className="t1">{cupPoints(pts[1])}</b></span>}
+              {canChange && <button className="pill-btn sm" onClick={() => setEditing(round.id)} aria-label="Change the matches"><Icon name="pencil-simple" /></button>}
             </div>
             {e.matches.map((m, i) => <MatchRow key={i} names={cup.names} m={m} left={m.sides[0].map(id => nameIn(e, id))} right={m.sides[1].map(id => nameIn(e, id))} />)}
           </div>

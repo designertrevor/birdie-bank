@@ -148,12 +148,18 @@ export function teamOf(state, cup, player) {
 /** Four-ball when both sides have two or more, else singles. */
 export const defaultKind = sides => (sides[0].length >= 2 && sides[1].length >= 2 ? 'fourball' : 'singles');
 
+/** A list turned `k` places: [a, b, c] by 1 is [b, c, a]. */
+const turned = (list, k) => (list.length ? list.map((_, i) => list[(i + k) % list.length]) : list);
+
 /**
  * A round's matches to start with: everyone on the trip's teams on their team's side, in the
  * team's order, and anyone on neither team on the side with fewer so far (so a friend who wasn't
  * picked still plays). `players`: the round's [{ id, name }]. `kind` null picks four-ball or singles.
+ * Partners and opponents rotate from round to round: `rotate` is how many of the trip's rounds
+ * came before, and each one turns the order (both sides in four-ball, so partners change; the
+ * second side in singles, so opponents do).
  */
-export function defaultRoundCup(state, trip, players, kind = null) {
+export function defaultRoundCup(state, trip, players, kind = null, { rotate = 0 } = {}) {
   const cup = cupOf(trip);
   if (!cup) return null;
   const sides = [[], []];
@@ -167,7 +173,9 @@ export function defaultRoundCup(state, trip, players, kind = null) {
   const known = players.map(p => ({ p, t: teamOf(state, cup, p) }));
   for (const t of [0, 1]) sides[t] = known.filter(x => x.t === t).map(x => x.p).sort((a, b) => order(a) - order(b)).map(p => p.id);
   for (const { p, t } of known) if (t == null) sides[sides[0].length <= sides[1].length ? 0 : 1].push(p.id);
-  return { kind: kind && CUP_KINDS[kind] ? kind : defaultKind(sides), sides };
+  const k = kind && CUP_KINDS[kind] ? kind : defaultKind(sides);
+  const n = Math.max(0, Math.floor(rotate) || 0);
+  return { kind: k, sides: k === 'fourball' ? sides.map(s => turned(s, n)) : [sides[0], turned(sides[1], n)] };
 }
 
 /** A round's cup as it was saved, tidied to the round's own players, or null. */

@@ -2025,3 +2025,6 @@ button.trip-card:active { transform: scale(.97); }
 /* On a trip round's results */
 .cup-note { margin-top: 6px; }
 .cup-note .cup-match:first-child { border-top: none; }
+.cup-round-pts { flex-shrink: 0; font-family: var(--display); font-weight: 800; font-size: 17px; color: var(--mute); font-variant-numeric: tabular-nums; white-space: nowrap; }
+.cup-round-pts .t0 { color: var(--cup-a); }
+.cup-round-pts .t1 { color: var(--cup-b); }
