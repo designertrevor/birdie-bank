@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {
-  countdown, countdownLine, pairRecords, planPreview, previewCardModel, previewImageName, previewPeople, previewRecords,
+  countdown, countdownLine, toGoLabel, pairRecords, planPreview, previewCardModel, previewImageName, previewPeople, previewRecords,
   previewStrokes, previewText, recordSentence, savedPlayerFor, strokeHolesText, strokesLine,
 } from './preview.js';
 import { newPlan, planStart } from './plans.js';
@@ -84,6 +84,13 @@ test('countdown: on the day it counts down to the tee time', () => {
   assert.equal(countdown({ date: '2026-10-01', teeTime: '05:00' }, NOW).label, 'Today');
   assert.equal(countdown({ date: '2026-10-01' }, NOW).label, 'Today');
   assert.equal(countdown({ date: '2026-10-01' }, NOW).big, 'Today');
+});
+
+test('how long to go, for the plan page', () => {
+  assert.equal(toGoLabel({ date: '2026-10-03' }, NOW), '2 days to go');
+  assert.equal(toGoLabel({ date: '2026-10-02' }, NOW), 'Tomorrow');
+  assert.equal(toGoLabel({ date: '2026-10-01', teeTime: '08:10' }, NOW), 'Today, in 3 hours');
+  assert.equal(toGoLabel({ date: '2026-09-30' }, NOW), '');
 });
 
 test('the Up next line: the countdown and the tee time', () => {

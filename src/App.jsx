@@ -55,6 +55,7 @@ const plan = () => import('./screens/Plan.jsx');
 const Plan = screen(plan);
 const RollCall = screen(plan, 'RollCall');
 const PlanLink = screen(plan, 'PlanLink');
+const Preview = screen(() => import('./screens/Preview.jsx'));
 const Paywall = screen(() => import('./screens/Paywall.jsx'));
 const Season = screen(() => import('./screens/Season.jsx'));
 const Lately = screen(() => import('./screens/Lately.jsx'));
@@ -94,7 +95,7 @@ const SCREENS = {
   roundDetail: RoundDetail, newRound: NewRound, play: Play,
   playerEdit: PlayerEdit, crewEdit: CrewEdit, person: Person,
   settings: Settings, defaults: Defaults, courses: Courses, courseEdit: CourseEdit, about: About, suggest: Suggest,
-  plan: Plan, rollCall: RollCall, planLink: PlanLink, paywall: Paywall, season: Season,
+  plan: Plan, rollCall: RollCall, planLink: PlanLink, preview: Preview, paywall: Paywall, season: Season,
   joinInvite: JoinInviteScreen, lately: Lately, trip: Trip, tripSettle: TripSettle,
   profile: Profile,
 };

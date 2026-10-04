@@ -75,6 +75,13 @@ export function countdown(plan, now = new Date()) {
   return { days: n, label: `${day}, ${n} days`, big: String(n), unit: 'days' };
 }
 
+/** How long to go, without the day: "2 days to go", "Tomorrow", "Today, in 3 hours". Empty once it's gone. */
+export function toGoLabel(plan, now = new Date()) {
+  const cd = countdown(plan, now);
+  if (!cd || cd.days < 0) return '';
+  return cd.days > 1 ? `${cd.days} days to go` : cd.label;
+}
+
 /** The Up next card's line: the countdown and the tee time, "Saturday, 2 days · 8:10 AM". */
 export function countdownLine(plan, now = new Date()) {
   const cd = countdown(plan, now);

@@ -15,6 +15,7 @@ import { JoinSheet } from '../components/Live.jsx';
 import { syncConfigured } from '../lib/sync.js';
 import { RSVP_LABEL, countsLine, planChoice, planCounts, upcomingPlans, whenLabel } from '../lib/plans.js';
 import { refreshPlans } from '../lib/plan-sync.js';
+import { countdownLine, weekdayOf } from '../lib/preview.js';
 import { refreshTab } from '../lib/tab-sync.js';
 import { latelyItems } from '../lib/lately.js';
 import { LatelyList } from '../components/LatelyList.jsx';
@@ -125,7 +126,10 @@ export default function UpNext() {
   );
 }
 
-/** An upcoming round: when, the group's game so far, the course and who's in. */
+/**
+ * An upcoming round: the countdown ("Saturday, 2 days"), the group's game so far, the course and
+ * who's in. A round still on opens its preview from the strip under it.
+ */
 function UpcomingCard({ plan }) {
   const nav = useNav();
   const { game } = planChoice(plan);
@@ -134,16 +138,29 @@ function UpcomingCard({ plan }) {
   const mine = plan.answers?.[me]?.status;
   const off = plan.status === 'off' || (plan.gone && plan.status !== 'started'); // a started round goes on either way
   const started = plan.status === 'started' && !off;
-  return (
-    <button className={`upcoming-card ${off ? 'off' : ''}`} onClick={() => nav.push('plan', { id: plan.id })}>
+  const ahead = !off && !started;
+  const card = (
+    <button className={`upcoming-card ${off ? 'off' : ''} ${ahead ? 'has-preview' : ''}`} onClick={() => nav.push('plan', { id: plan.id })}>
       <div className="row-main">
-        <div className="eyebrow">{whenLabel(plan)}{off ? (plan.status === 'off' ? ' · Called off' : ' · Deleted') : started ? ' · The round is on' : ''}</div>
+        <div className="eyebrow">{ahead ? countdownLine(plan) : whenLabel(plan)}{off ? (plan.status === 'off' ? ' · Called off' : ' · Deleted') : started ? ' · The round is on' : ''}</div>
         <div className="uc-title d">{GAMES[game]?.name || 'Golf'} · {plan.course?.name || 'Course to be set'}</div>
         <div className="uc-sub">{off ? `Organized by ${plan.host ? 'you' : plan.hostName || 'a friend'}` : started ? (plan.liveCode ? 'Tap to follow along' : 'Teeing off now') : countsLine(c)}</div>
       </div>
       {!off && !started && <span className={`who-status ${mine || 'none'}`}>{mine ? `You’re ${RSVP_LABEL[mine].toLowerCase()}` : 'Answer'}</span>}
       <span className="chevron"><Icon name="caret-right" /></span>
     </button>
+  );
+  if (!ahead) return card;
+  const day = weekdayOf(plan);
+  return (
+    <div className="uc-wrap">
+      {card}
+      <button className="uc-preview" onClick={() => nav.push('preview', { id: plan.id })}>
+        <Icon name="binoculars" fill />
+        <span className="row-main"><b>{day ? `${day} preview` : 'The preview'}</b> <span className="uc-pv-sub">Strokes, head to head, a card for the group</span></span>
+        <Icon name="caret-right" />
+      </button>
+    </div>
   );
 }
 
