@@ -74,7 +74,7 @@ export default function PreviewScreen({ id, fromPlan = false }) {
             <div key={s.key} className="pv-line"><Icon name="plus-circle" fill /><span className="row-main"><b>{s.label}</b>{s.bet ? <span className="set-sub"> {s.bet}</span> : null}</span></div>
           ))}
           {pv.playFor && <div className="pv-line"><Icon name={plan.playFor?.kind === 'reward' ? 'gift' : 'trophy'} fill /><span className="row-main">{pv.playFor}</span></div>}
-          <p className="field-help">The group’s pick so far. Side bets between two players are set at the tee.</p>
+          <p className="field-help">The group’s pick so far. Side bets and agreed challenges between two players go in at the tee.</p>
         </div>
 
         <div className="sec-label">Strokes</div>
