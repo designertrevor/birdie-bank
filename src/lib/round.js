@@ -45,7 +45,7 @@ export const GAMES = {
   },
   match: {
     name: 'Match play', min: 2, max: 8, holes: [9, 18], teams: { count: 2 },
-    blurb: 'Singles, best ball, or one against the field',
+    blurb: 'Singles, or one against the field',
     players: '2–8 players', icon: 'sword', group: 'Head to head',
   },
   hammer: {
