@@ -30,7 +30,7 @@ import { LivePill, ShareSheet } from '../components/Live.jsx';
 import { syncConfigured, useSeatRequests } from '../lib/sync.js';
 import { AddPlayerSheet } from '../components/AddPlayer.jsx';
 import { firstName, gameLabel, holeMoneyLine } from '../lib/format.js';
-import { countsMoney, inUnits, padUnit, unitFmt } from '../lib/play-for.js';
+import { countsMoney, inUnits, onTab, padUnit, unitFmt } from '../lib/play-for.js';
 import { leaveRound, roundsInProgress } from '../lib/rounds.js';
 import { RoundsInProgressSheet } from '../components/RoundsInProgress.jsx';
 import { ByGameTable, SideGamesSetup } from '../components/SideGames.jsx';
@@ -450,7 +450,7 @@ function PlayRound({ round }) {
       )}
       {round.editing && editable && (
         <button className="finished-banner" onClick={doneEditing}>
-          <Icon name="pencil-simple" fill /> Fixing scores. {countsMoney(round) ? 'The Tab updates' : 'The points update'} as you save. Done <Icon name="arrow-right" />
+          <Icon name="pencil-simple" fill /> Fixing scores. {onTab(round) ? 'The Tab updates' : 'The points update'} as you save. Done <Icon name="arrow-right" />
         </button>
       )}
       {requests[0] && round.status === 'active' && editable && (
