@@ -67,6 +67,9 @@ const FriendRound = screen(() => import('./screens/FriendRound.jsx'));
 const trip = () => import('./screens/Trip.jsx');
 const Trip = screen(trip);
 const TripSettle = screen(trip, 'TripSettle');
+const books = () => import('./screens/Books.jsx');
+const CloseBooks = screen(books, 'CloseBooks');
+const Book = screen(books, 'Book');
 
 /** A plan link (?plan=CODE, &p=WHO for one person's own) waiting to open: { code, who } or null. */
 function pendingPlanLink() {
@@ -121,7 +124,7 @@ const SCREENS = {
   challenge: Challenge, challengeLink: ChallengeLink,
   joinInvite: JoinInviteScreen, lately: Lately, trip: Trip, tripSettle: TripSettle,
   friends: Friends, friendRound: FriendRound,
-  profile: Profile, stats: Stats, share: Share,
+  profile: Profile, stats: Stats, share: Share, closeBooks: CloseBooks, book: Book,
 };
 // Settings lives behind the avatar on Up next, so it's a pushed screen rather than a tab
 const TABS = { upnext: UpNext, ledger: Ledger, history: History, people: People };

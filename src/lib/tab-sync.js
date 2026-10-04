@@ -11,8 +11,11 @@ import { isMissingTable } from './plan-adapters.js';
 import { allocatePayment, applyRows, lastPayment, nettedFor, tabCodes, undoRows } from './shared-tab.js';
 import { cardCarry, carryReducer, carryRows, carrySplit, splitCodes, splitRounds } from './carry.js';
 import { tripPayment } from './trips.js';
-import { mergeExpenses, newPayment, resolveExpense } from './trip-expenses.js';
+import { allTripPays, mergeExpenses, newPayment, resolveExpense } from './trip-expenses.js';
 import { expensesOn, refreshExpenses } from './trip-expense-sync.js';
+import { crewPayment } from './crew-tabs.js';
+import { closeBooks } from './books.js';
+import { canonicalOf } from './pair-debts.js';
 
 // Per dev profile (?profile=b), so two tabs acting as two phones never read each other's queue
 const QUEUE = 'bb-tab-queue' + STORE_KEY.slice('birdie-bank-v1'.length);
@@ -339,4 +342,58 @@ export function answerCarry(carry, type) {
   // A carry that reached this phone through your account but not its rounds: answer it here
   const { carried: _carried, ...plain } = next;
   update(st => { st.carries = (st.carries || []).map(c => (c.id === next.id ? plain : c)); });
+}
+
+/**
+ * Undo for payments made in one tap at `at` (and the transfers they netted): the payments this
+ * phone has from that moment with those ids, rows and expense payments included. Returns a redo, or null.
+ */
+function undoMadeAt(at, ids) {
+  const s = getState();
+  const list = [...(s.settlements || []), ...allTripPays(s)].filter(x => x.at === at && ids.has(x.id));
+  return list.length ? undoPayments(list) : null;
+}
+
+/**
+ * One line of a crew's tab paid (crew-tabs.js crewPayment): its rounds shared live are squared on
+ * their rows, which every phone in them gets; the rest is a payment here that names the crew.
+ * Returns { shared, undo }.
+ */
+export function markCrewPayment({ crewId, from, to }) {
+  const now = Date.now();
+  const { rows, settlements } = crewPayment(getState(), crewId, from, to, { now, makeId: () => uid() });
+  commit(rows, { add: settlements });
+  const ids = new Set([...rows.filter(r => r.kind === 'payment' && r.status === 'paid').map(r => r.id), ...settlements.map(x => x.id)]);
+  return { shared: !off && rows.some(r => r.status === 'paid'), undo: () => undoMadeAt(now, ids) };
+}
+
+/**
+ * Close a tab's books (books.js): pay the lines picked Paid, ask to roll the rest, and keep the
+ * closed season. Returns { book, shared, undo }: undo takes the payments back, withdraws the asks
+ * to roll and reopens the season, the way one tap does on a person card.
+ */
+export function closeTheBooks({ scope, name, picks }) {
+  const now = Date.now();
+  const s = getState();
+  const res = closeBooks(s, scope, { name, picks, now, ask: !off, makeId: () => uid() });
+  commit(res.rows, { add: res.settlements });
+  keepExpenses(res.expenses);
+  update(st => { st.books = { ...(st.books || {}), [res.book.id]: res.book }; });
+  const ids = new Set([...res.rows.filter(r => r.kind === 'payment' && r.status === 'paid').map(r => r.id), ...res.settlements.map(x => x.id), ...res.expenses.map(x => x.id)]);
+  const undo = () => {
+    undoMadeAt(now, ids);
+    const s2 = getState();
+    const who = canonicalOf(s2);
+    for (const c of res.carries) {
+      const cur = (s2.carries || []).find(k => k.id === c.id || (k.at === c.at && who(k.from) === who(c.from) && who(k.to) === who(c.to)));
+      if (cur) answerCarry(cur, 'withdraw');
+    }
+    update(st => { const next = { ...(st.books || {}) }; delete next[res.book.id]; st.books = next; });
+  };
+  return { book: res.book, shared: (!off && res.rows.length > 0) || (res.expenses.length > 0 && expensesOn()), undo };
+}
+
+/** Reopen a closed season: the marker goes, and its payments and roll-overs stay as they are. */
+export function reopenBooks(id) {
+  update(st => { const next = { ...(st.books || {}) }; delete next[id]; st.books = next; });
 }

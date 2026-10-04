@@ -14,6 +14,7 @@ import { TRIAL_DAYS, planStatus } from '../lib/paywall.js';
 import { seasonAccess } from '../lib/entitlements.js';
 import { PAYWALL_ON } from '../lib/paywall-flag.js';
 import { MIN_REAL_ROUNDS, realRoundCount, sampleBoard, seasonBoard } from '../lib/season.js';
+import { ClosedSeasons } from '../components/CrewTabs.jsx';
 
 const DASH = '–';
 const shortDay = t => new Date(t).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
@@ -46,7 +47,7 @@ export default function Season() {
         <Header title="Season" onBack={nav.pop} />
         {real
           ? <><p className="season-sub">Built from your {n} rounds</p><RealSeason state={state} /></>
-          : <div className="scroll"><Empty title="Your season starts here" text={`Play ${MIN_REAL_ROUNDS} rounds for money this year and your season shows here: everyone’s totals, you against your most-played friend, your biggest day and best game.`} /></div>}
+          : <div className="scroll"><Empty title="Your season starts here" text={`Play ${MIN_REAL_ROUNDS} rounds for money this year and your season shows here: everyone’s totals, you against your most-played friend, your biggest day and best game.`} /><ClosedSeasons /></div>}
       </Screen>
     );
   }
@@ -90,6 +91,7 @@ function RealSeason({ state, preview = false }) {
       <button className="text-link stats-link" onClick={() => nav.push('stats', { range: { kind: 'season', year: b.year } })}>
         <Icon name="chart-bar" fill /> <span className="row-main">Your stats for the season<span className="sl-sub">By game and course, presses, skins and biggest wins</span></span> <Icon name="caret-right" />
       </button>
+      <ClosedSeasons />
     </div>
   );
 }

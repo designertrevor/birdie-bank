@@ -1,5 +1,5 @@
 // The Tab: your net with each friend across every round, squared in the fewest payments.
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { Empty, Header, Icon, Screen, Segmented, useUI } from '../components/ui.jsx';
 import FreePromise from '../components/FreePromise.jsx';
 import { Avatar, SettleSheet } from '../components/Pay.jsx';
@@ -21,10 +21,16 @@ import { PAYWALL_ON } from '../lib/paywall-flag.js';
 import { isOrganizer } from '../lib/paywall.js';
 import { openRewards } from '../lib/play-for.js';
 import { StartTripLink, TripTabCard } from '../components/Trips.jsx';
-import { currentTrips, tripsOf } from '../lib/trips.js';
+import { currentTrips, tripHidden, tripsOf } from '../lib/trips.js';
 import { tripSettleOf } from '../lib/trip-pay.js';
+import { OneTab, SinceBooks, TabSwitch } from '../components/CrewTabs.jsx';
+import { switchTabs, tabsOf } from '../lib/crew-tabs.js';
+import { ALL } from '../lib/books.js';
 
 const first = name => name.split(' ')[0];
+// The tab you last looked at this visit (Everyone, or a crew's or trip's), so coming back keeps it
+const VIEW_KEY = 'bb-tab-view';
+const readView = () => { try { return sessionStorage.getItem(VIEW_KEY) || 'everyone'; } catch { return 'everyone'; } };
 
 export default function Ledger() {
   const nav = useNav();
@@ -35,6 +41,13 @@ export default function Ledger() {
   useTripPlans();
   useCupSync();
   const plan = outstanding(state);
+  // A tab for each crew or trip (crew-tabs.js), one tap from Everyone; they add up to it
+  const all = useMemo(() => tabsOf(state), [state]);
+  const switches = switchTabs(all, { hidden: id => tripHidden(state, id) });
+  const [viewRaw, setViewRaw] = useState(readView);
+  const view = switches.some(t => t.key === viewRaw) ? viewRaw : 'everyone';
+  const setView = v => { setViewRaw(v); try { sessionStorage.setItem(VIEW_KEY, v); } catch { /* ignore */ } };
+  const one = view === 'everyone' ? null : switches.find(t => t.key === view);
   const [open, setOpen] = useState(null);
   const [free, setFree] = useState(false);
   // Before launch Season is open to everyone who has played a round. With the paywall flag on it's
@@ -173,6 +186,8 @@ export default function Ledger() {
               options={[{ value: 'person', label: 'By person' }, { value: 'season', label: PAYWALL_ON ? <>Season<span className="pro-tag"><span className="sr-only">, </span>Pro</span></> : 'Season' }]} />
           </div>
         )}
+        <TabSwitch tabs={switches} value={view} onChange={setView} />
+        {one ? <OneTab tab={one} /> : <>
         <SquareStrip />
         {trips.map(t => <TripTabCard key={t.trip.id} status={t} />)}
         {trips.some(t => t.money.length > 0) && plan.length > 0 && <p className="field-help pad trip-folded">Trip money is in each person’s total below.</p>}
@@ -190,6 +205,7 @@ export default function Ledger() {
                 </div>
               </div>
             )}
+            <SinceBooks scope={ALL} />
             {people.map(personRow)}
             {recentSquare.map(squareCard)}
             {rewardOnly.map(rewardCard)}
@@ -203,6 +219,7 @@ export default function Ledger() {
             <p className="field-help pad">Netted across every round, then squared in the fewest payments. Nobody is asked to pay someone they haven’t played with.{hasShared ? ' Money from rounds you shared live stays between the two players, so both phones agree on it.' : ''}</p>
           </>
         )}
+        {plan.length === 0 && <SinceBooks scope={ALL} />}
         {plan.length === 0 && rewardOnly.map(rewardCard)}
         {plan.length === 0 && recentSquare.map(squareCard)}
         {history.length > 0 && (
@@ -220,6 +237,11 @@ export default function Ledger() {
             ))}
           </>
         )}
+        {hasRounds && (
+          <button className="text-link stats-link" onClick={() => nav.push('closeBooks', { scope: ALL })}>
+            <Icon name="book-bookmark" fill /> <span className="row-main">Close the books<span className="sl-sub">End a season: keep everyone’s totals, then settle up or roll each balance to next season</span></span> <Icon name="caret-right" />
+          </button>
+        )}
         {trips.length === 0 && <StartTripLink onMade={t => nav.push('trip', { id: t.id })} />}
         {/* The free-forever list is held until Trevor says so: only with the paywall preview flag */}
         {PAYWALL_ON && (
@@ -228,6 +250,7 @@ export default function Ledger() {
             <button className="link-btn" onClick={() => setFree(true)}>See what’s free forever</button>
           </div>
         )}
+        </>}
       </div>
       <BottomNav />
       <SettleSheet debt={open} onClose={() => setOpen(null)} />

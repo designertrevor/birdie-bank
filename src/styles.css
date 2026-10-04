@@ -2409,6 +2409,34 @@ button.ch-main:active { transform: scale(.98); }
 .mb-head { gap: 12px; }
 .mb-head > span:last-child { text-align: right; }
 
+/* ---------- A tab for each crew or trip, and close the books (o8 crewtabs) ---------- */
+/* The switch under the Tab's header: Everyone, then a chip for each crew or trip. It scrolls sideways when there are many */
+.tab-switch { flex-wrap: nowrap; overflow-x: auto; scrollbar-width: none; padding-bottom: 12px; }
+.tab-switch::-webkit-scrollbar { display: none; }
+.tab-switch .pill-btn { flex-shrink: 0; min-height: 44px; white-space: nowrap; }
+.tab-switch .pill-btn i { color: var(--icon); }
+.tab-switch .pill-btn.on i { color: var(--on-ink); }
+.tab-cta { padding-top: 4px; padding-bottom: 4px; }
+.books-since { margin-top: -4px; }
+/* Close the books: each line's Paid or Roll pick */
+.book-line .book-pick { margin-top: 12px; }
+.book-line .book-pick .pm-btn { font-size: 14px; padding: 0 8px; line-height: 1.1; }
+.book-line .trip-pay-sub { margin-top: 8px; }
+.text-input.book-name { margin-top: 8px; }
+/* Closed seasons in Season and History */
+.book-row { gap: 8px; }
+.book-row .lr-status { overflow-wrap: anywhere; }
+.book-net { font-family: var(--display); font-size: 18px; font-weight: 800; color: var(--mute); font-variant-numeric: tabular-nums; white-space: nowrap; }
+.books-mark { display: flex; align-items: center; gap: 10px; width: 100%; min-height: 52px; padding: 10px 16px; background: var(--surface); border: none; border-top: 1px solid var(--line-soft); text-align: left; font: inherit; font-size: 14px; font-weight: 700; color: var(--ink); cursor: pointer; }
+.books-mark:first-child { border-top: none; }
+.books-mark > i { color: var(--icon); font-size: 18px; flex-shrink: 0; }
+.books-mark > i:last-child { color: var(--mute-soft); }
+.books-mark .bm-sub { display: block; margin-top: 1px; font-size: 12px; font-weight: 500; color: var(--mute); }
+.text-link.book-reopen { margin: 8px auto 16px; }
+/* A crew's line that Everyone nets the other way: a note under its buttons */
+.crew-net-note { margin: 10px 0 0; font-size: 13px; line-height: 1.35; color: var(--mute); }
+.books-mark + .hist-row { border-top: 1px solid var(--line-soft); }
+
 /* ---------- Overnight 8 polish and accessibility sweep (o8 polish8) ---------- */
 /* The round in progress card on Up next: its two small lines in full white on the pink fill. They
    were white at 80% and 85%, about 3.7:1 and 4:1, under the 4.5:1 small text needs */

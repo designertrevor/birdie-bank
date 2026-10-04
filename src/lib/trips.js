@@ -255,6 +255,8 @@ function paymentsOf(state, id, rounds, local, together, bal, spent = []) {
     if (localIds.has(s.roundId) || (s.code && localCodes.has(s.code))) { onRounds.push(s); continue; }
     if (allIds.has(s.roundId) || (s.code && allCodes.has(s.code))) { onPairs.push(s); continue; }
     if (s.roundId || s.code) continue; // another round's payment
+    // Paid from a crew's own tab (crew-tabs.js): that crew's rounds, never the trip's
+    if (s.tab) continue;
     if ((s.at || 0) >= startAt && together.has(pairKey(who(s.from), who(s.to)))) loose.push(s);
   }
   for (const s of [...trip, ...onRounds]) pay(who(s.from), who(s.to), cents(s.amount));
@@ -436,6 +438,8 @@ export function tripStatus(state, id, { now = Date.now() } = {}) {
   };
   return {
     trip, phase, rounds, done, live, planned, money, people, standings, plan, paid, settling, closed, pairRounds, published, endedAt, cup,
+    // The Tab payments tied to no round that count for the trip, and how much of each (crew-tabs.js)
+    counted,
     expenses, spent: expenses.reduce((a, x) => a + x.cents, 0) / 100, spending, totals,
     // Money to show: the rounds' own, or the cup's stake once it's decided
     hasMoney: money.length > 0 || !!cup?.stakeOn,
