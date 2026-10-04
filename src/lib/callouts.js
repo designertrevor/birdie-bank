@@ -10,7 +10,7 @@
 //  • Points and reward rounds are never dollars: season money is what the Tab has (tabResults).
 // There's an off switch (settings.callouts) on the card and in Settings. Pure, unit tested in
 // callouts.test.js.
-import { gameKeys, gameView, roundResults, scoreSummary, scorers, skinsKinds, skinsTable } from './round.js';
+import { gameKeys, gameView, oneBall, roundResults, scoreSummary, scorers, skinsKinds, skinsTable } from './round.js';
 import { myIds } from './format.js';
 import { money } from './golf.js';
 import { nameOf, outstanding } from './ledger.js';
@@ -126,8 +126,8 @@ export function calloutCandidates(state, now = Date.now()) {
     }
   }
 
-  // The last round: an eagle, or the most real birdies (a scramble's scores are a team's, so not there)
-  if (last.game !== 'scramble') {
+  // The last round: an eagle, or the most real birdies (a one-ball game's scores are a team's, so not there)
+  if (!oneBall(last.game)) {
     let best = null;
     for (const p of scorers(last)) {
       const s = scoreSummary(last, p.id);

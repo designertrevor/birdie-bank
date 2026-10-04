@@ -185,7 +185,7 @@ export default function NewRound({ rematch, fromPlan, present, edit = null, ahea
     if (planning || !c || !GAMES[game] || !Object.keys(state.challenges || {}).length) return [];
     const draft = {
       game, holes: holesInPlay(c, holesCount, nine, startHole), playFor, bets: setupBets, betsGone: chOff,
-      players: picked.map(pid => ({ id: pid, name: state.players[pid]?.name || '?' })), ...(game === 'scramble' && teams ? { teams } : {}),
+      players: picked.map(pid => ({ id: pid, name: state.players[pid]?.name || '?' })), ...(oneBall(game) && teams ? { teams } : {}),
     };
     return challengesForRound(state, draft, { planId: fromPlan || null, idOf: pre?.idOf || null }).map(f => f.bet);
   })();

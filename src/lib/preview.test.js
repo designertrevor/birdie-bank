@@ -184,6 +184,8 @@ test('strokes: handicaps off, a game without strokes, scramble, a missing course
   assert.equal(off.rows.find(r => r.name === 'Mike').plays, 7); // what handicaps would give
   assert.equal(previewStrokes(s, allIn(plan({ game: 'bbb' }))).status, 'noStrokes');
   assert.equal(previewStrokes(s, allIn(plan({ game: 'scramble' }))).status, 'scramble');
+  // Alternate shot and Chapman play off a team handicap too, set with the teams
+  for (const game of ['altshot', 'chapman']) assert.equal(previewStrokes(s, allIn(plan({ game }))).status, 'scramble');
   assert.equal(previewStrokes({ ...s, customCourses: {} }, allIn(plan())).status, 'noCourse');
   assert.equal(previewStrokes(s, plan()).status, 'few');
 });

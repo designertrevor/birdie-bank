@@ -17,7 +17,7 @@
 //  • Who throws the first hammer: the whole round. It only decides who may hammer, never the money.
 //  • Play for (money, points or a reward): the whole round. A round is played for one thing.
 // Nothing here runs unless someone changes a setting, so old rounds keep their money.
-import { GAMES, bankerHoleSetup, gameView, holeComplete, nassauPressOptions, playersOn, roundResults, roundStarted, settingsAt, teamsFor, wolfFor } from './round.js';
+import { GAMES, bankerHoleSetup, gameView, holeComplete, nassauPressOptions, oneBall, playersOn, roundResults, roundStarted, settingsAt, teamsFor, wolfFor } from './round.js';
 import { teamsProblem } from './teams.js';
 import { betsOf, kindFits } from './pair-bets.js';
 import { playForOf, points, rewardOutcome, storedPlayFor, tabResults } from './play-for.js';
@@ -189,9 +189,9 @@ export function sidesText(round, groups = teamGroups(round)) {
   return groups.map(g => g.map(id => first(round.players.find(p => p.id === id)?.name)).join(' & ') || '–').join(' v ');
 }
 
-/** Why the teams can't change now, or null when they can: a Scramble once a score is in. */
+/** Why the teams can't change now, or null when they can: a one-ball game (Scramble, Alternate shot, Chapman) once a score is in. */
 export function teamsLocked(round) {
-  if (round.game === 'scramble' && roundStarted(round)) return 'Each team has played its own ball since the first hole, so the teams stay as they are.';
+  if (oneBall(round.game) && roundStarted(round)) return 'Each team has played its own ball since the first hole, so the teams stay as they are.';
   return null;
 }
 
@@ -202,8 +202,8 @@ export function teamsChangeProblem(round, groups) {
   const ids = gameView(round, 'main').players.map(p => p.id);
   const problem = teamsProblem(round.game, groups, ids);
   if (problem) return problem;
-  // A Scramble side bet on scores is played on the two teams' balls, so the two need different teams
-  if (round.game === 'scramble') {
+  // A one-ball game's side bet on scores is played on the two teams' balls, so the two need different teams
+  if (oneBall(round.game)) {
     const view = { ...round, teams: groups.map((players, i) => ({ id: `t${i}`, players })) };
     const clash = betsOf(round).find(b => !kindFits(view, b.kind, b.sides));
     if (clash) return `${clash.sides.map(id => first(round.players.find(p => p.id === id)?.name)).join(' and ')} have a side bet on their scores, so they need to be on different teams.`;

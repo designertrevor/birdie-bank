@@ -9,7 +9,7 @@
 // Records use the same round-by-round head to head as the rivalry card and the Players list
 // (roundResults pairs, people-links for who is the same person). Points and reward rounds count in
 // the record, never in dollars; dollars come only from rounds that put money on the Tab.
-import { GAMES, SIDE_GAMES, createRound, popsFor, roundResults } from './round.js';
+import { GAMES, SIDE_GAMES, createRound, oneBall, popsFor, roundResults } from './round.js';
 import { defaultTee, findCourse } from './courses.js';
 import { betLabel, betUnitLabel, daysUntil, dayLabel, planChoice, planPeople, planRules, planSides, timeLabel } from './plans.js';
 import { sideBetLine } from './stakes.js';
@@ -160,7 +160,7 @@ export function previewStrokes(state, plan, { settings = state?.settings } = {})
   const base = { status: 'on', pct: null, half: false, holes: [], rows: [], notes: [] };
   if (!GAMES[game]) return { ...base, status: 'noCourse' };
   if (NO_STROKES.includes(game)) return { ...base, status: 'noStrokes' };
-  if (game === 'scramble') return { ...base, status: 'scramble' };
+  if (oneBall(game)) return { ...base, status: 'scramble' };
   const course = findCourse(state, plan.course?.id);
   if (!course?.holes?.length) return { ...base, status: 'noCourse' };
   if (people.length < 2) return { ...base, status: 'few' };

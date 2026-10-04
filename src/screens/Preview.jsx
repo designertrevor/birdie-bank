@@ -96,7 +96,7 @@ function Strokes({ plan, st, hostName }) {
   const [whatIf, setWhatIf] = useState(false);
   const why = {
     noStrokes: 'This game doesn’t use handicaps, so nobody gets strokes.',
-    scramble: 'Scramble teams get their strokes when the teams are set at the tee.',
+    scramble: 'Each team gets its strokes when the teams are set at the tee.',
     noCourse: 'Strokes show once the course is on your phone.',
     few: 'Strokes show once two people are in.',
   }[st.status];

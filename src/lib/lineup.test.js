@@ -13,6 +13,7 @@ import { moneyLine } from './hole-fix.js';
 import { agreementItems, lockAgreement, logChange, noteChanges } from './agreed.js';
 import { onTab, tabResults } from './play-for.js';
 import { oldRounds } from './overnight5-money.fixtures.js';
+import { TEAM_DEFAULTS } from './settings.js';
 import { applyHole, assemble, buildHoles, buildMeta } from './sync-model.js';
 import { metaToSend } from './keeper.js';
 
@@ -310,6 +311,28 @@ test('a Scramble’s teams change only before the first score, with team strokes
   const started = { ...r, scores: { 1: { t0: 4 } } };
   assert.match(teamsLocked(started), /own ball/);
   assert.equal(changeTeams(started, [['a', 'd'], ['b', 'c']]), started);
+});
+
+test('Alternate shot and Chapman lock their teams once a score is in; Best ball and Shamble teams can still change', () => {
+  const settings = { ...structuredClone(SETTINGS), ...structuredClone(TEAM_DEFAULTS) };
+  for (const game of ['altshot', 'chapman']) {
+    const r = createRound({ id: game, game, course: course(18), holesCount: 18, nine: 'front', players: four, settings, hcPct: 100, useHandicaps: false, teams: [['a', 'b'], ['c', 'd']] });
+    assert.equal(teamsLocked(r), null, game);
+    const started = { ...r, scores: { 1: { [r.teams[0].id]: 4 } } };
+    assert.match(teamsLocked(started), /own ball/, game);
+  }
+  for (const game of ['bestball', 'shamble']) {
+    const r = createRound({ id: game, game, course: course(18), holesCount: 18, nine: 'front', players: four, settings, hcPct: 100, useHandicaps: false, teams: [['a', 'b'], ['c', 'd']] });
+    assert.equal(teamsLocked({ ...r, scores: { 1: { a: 4, b: 5, c: 4, d: 4 } } }), null, game);
+  }
+});
+
+test('an Alternate shot side bet on scores keeps its two players on different teams', () => {
+  const settings = { ...structuredClone(SETTINGS), ...structuredClone(TEAM_DEFAULTS) };
+  const r = createRound({ id: 'as', game: 'altshot', course: course(18), holesCount: 18, nine: 'front', players: four, settings, hcPct: 100, useHandicaps: false, teams: [['a', 'b'], ['c', 'd']] });
+  r.bets = [{ id: 'x', kind: 'match', sides: ['a', 'c'], stake: 5, holes: [1, 18] }];
+  assert.equal(teamsChangeProblem(r, [['a', 'c'], ['b', 'd']]), 'Ann and Cy have a side bet on their scores, so they need to be on different teams.');
+  assert.equal(teamsChangeProblem(r, [['a', 'd'], ['b', 'c']]), null);
 });
 
 test('a Scramble side bet on scores keeps its two players on different teams', () => {

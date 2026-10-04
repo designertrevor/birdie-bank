@@ -7,7 +7,7 @@
 // It stays on the organizer's phone (plans.js LOCAL_ONLY): it's keyed by this phone's own player
 // ids and holds handicap edits, which mean nothing on a friend's phone. Plans made before it have
 // none, and their roll call works as it always did. Pure, so tests can load it.
-import { GAMES, holesInPlay } from './round.js';
+import { GAMES, holesInPlay, oneBall } from './round.js';
 import { teamsProblem } from './teams.js';
 import { betsOf, cleanBet } from './pair-bets.js';
 import { defaultTee, findCourse } from './courses.js';
@@ -197,7 +197,7 @@ export function applySetup(setup, { game, course, holesCount, nine = 'front', pl
       if (bet.strokes?.on) bet.strokes = { to: bet.strokes.to, count: bet.strokes.count };
       if (b.holes || b.strokes?.on) changes.push(`${pair}’s side bet covers every hole now: ${why}.`);
     }
-    if (game === 'scramble' && !betsOf({ game, players: out, teams, bets: [bet] }).length) {
+    if (oneBall(game) && !betsOf({ game, players: out, teams, bets: [bet] }).length) {
       changes.push(`${pair}’s side bet is off: they’re on the same team now.`);
       continue;
     }
