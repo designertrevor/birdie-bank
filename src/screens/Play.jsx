@@ -7,7 +7,7 @@ import {
   betPresets, blindMultiplierOf, noHandicap, resizeRound, roundLegs, roundResults, scoredHolesDropped, scorers, skinsKinds, skinsTable, strokesFor, popsFor, wolfHoleSetup, changeBets, wholeRoundOnly,
   gameView, sideGamesOf, holeFixOf, gameKeys, gameKeyLabel, settingsAt, wolfCarryBefore, posOf,
 } from '../lib/round.js';
-import { POT_GAMES, SIDE_GAMES, potHoles } from '../lib/round.js';
+import { POT_GAMES, POT_NONE, SIDE_GAMES, potHoles } from '../lib/round.js';
 import { CourseTeeSheet, FixHoleSheet } from '../components/FixHole.jsx';
 import { HandicapsSheet } from '../components/HandicapsSheet.jsx';
 import { courseTeeLabel, keepsDraft } from '../lib/hole-fix.js';
@@ -175,6 +175,8 @@ function PlayRound({ round }) {
     // A scramble playing for minimum drives saves whose drive each team used in the marks too
     if (!GAMES[game].marks && !junk && !snakeSide && !potHere && !drivesNeeded(round)) return null;
     const m = (wasDirty && kept.marks) || structuredClone(round.marks?.[hole.no] || emptyMarks);
+    // A pot hole saved with nobody tapped is saved as nobody's, so it counts (and carries) like one tapped
+    for (const v of pots) if (m[v.game] == null && potHoles(v, v.game).some(h => h.no === hole.no)) m[v.game] = POT_NONE;
     return snakeSide && !m.snake ? { ...m, snake: [] } : m;
   });
   useEffect(() => { DRAFTS.set(draftKey, { draft, base, touched, dirty, marks }); }, [draftKey, draft, base, touched, dirty, marks]);

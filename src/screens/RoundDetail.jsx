@@ -480,7 +480,7 @@ function GameBreakdown({ round, res, label = null }) {
         {t.holes.length === 0 && <p className="hint-card"><Icon name="flag" fill /> {round.game === 'ctp' ? 'No par 3s in this round' : 'No long drive holes in this round'}, so nobody pays.</p>}
         {t.holes.map(h => {
           const who = h.winner && h.winner !== 'none' ? first(names[h.winner]) : null;
-          const state = !h.reached ? 'Not played' : who || (t.unclaimed === 'split' ? 'Nobody, split across the rest' : 'Nobody, carried');
+          const state = !h.reached ? 'Not counted' : who || (t.unclaimed === 'split' ? 'Nobody, split across the rest' : 'Nobody, carried');
           return (
             <div key={h.no} className="leg-row">
               <div className="leg-name">Hole {h.no}</div>

@@ -286,7 +286,7 @@ const RULES = {
         <li><strong>Split</strong>: the shares nobody won are split across the par 3s that were won.</li>
         <li>If nobody wins a par 3 all round, nobody pays.</li>
       </ul>],
-      ['Stopping early', <p key="s">Only the par 3s played count. Stop after 9 and the pot is the front nine’s share.</p>],
+      ['Stopping early', <p key="s">Only the par 3s played count. Stop after 9 and the pot is the front nine’s share. Added partway through? Go back to the par 3s already played and tap who was closest, and they count too.</p>],
       ['Joining late', <p key="j">The pot is for the players who started. Anyone added partway, or who leaves early, sits it out.</p>],
       ['With Junk', <p key="k">The pot pays for being closest, so Junk’s greenies are off while it’s on. Sandies, chip-ins and the rest still count in Junk.</p>],
     ],
@@ -306,7 +306,7 @@ const RULES = {
         <li><strong>Split</strong>: the shares nobody won are split across the holes that were won.</li>
         <li>If nobody wins a long drive hole all round, nobody pays.</li>
       </ul>],
-      ['Stopping early', <p key="s">Only the long drive holes played count.</p>],
+      ['Stopping early', <p key="s">Only the long drive holes played count. Added partway through? Go back to the long drive holes already played and tap who was longest, and they count too.</p>],
       ['Joining late', <p key="j">The pot is for the players who started. Anyone added partway, or who leaves early, sits it out.</p>],
     ],
   },

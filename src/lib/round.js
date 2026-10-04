@@ -2141,8 +2141,10 @@ export function birdiePotShares(round) {
 // marks as `marks[no].ctp` or `marks[no].drive`: a player id, or 'none' when nobody won it (nobody on
 // the green, say). A hole nobody won carries its share to the next pot hole, or (house rule `unclaimed:
 // 'split'`) its share is split across the holes that were won. Only holes reached count: a pot hole
-// with its winner tapped or its scores in. So a round stopped early, or a pot under way, pays for the
-// holes played, and a share still carried at the end goes back to everyone (nobody pays it).
+// saved with a winner or 'none' (the scoring screen saves 'none' when nobody is tapped). So a round
+// stopped early, or a pot under way, pays for the holes played; a pot added partway counts the pot
+// holes already played once the keeper goes back and taps them (never as a pile of carries); and a
+// share still carried at the end goes back to everyone (nobody pays it).
 
 /** The side games that are a pot of this kind. */
 export const POT_GAMES = ['ctp', 'drive'];
@@ -2201,8 +2203,7 @@ export function potTable(round, key = round.game) {
     const w = potWinner(round, key, h.no);
     // A winner who isn't in the pot (they left, or joined late) can't take it: nobody won it
     const winner = w === undefined ? undefined : inPot.includes(w) ? w : POT_NONE;
-    const reached = winner !== undefined || holeComplete(round, h);
-    return { no: h.no, par: h.par, winner: reached ? winner ?? POT_NONE : undefined, reached, value: 0, carried: 0, paid: 0 };
+    return { no: h.no, par: h.par, winner, reached: winner !== undefined, value: 0, carried: 0, paid: 0 };
   });
   const reached = holes.filter(h => h.reached);
   const wins = reached.filter(h => h.winner !== POT_NONE);

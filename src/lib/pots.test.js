@@ -83,11 +83,18 @@ test('split: the shares nobody won are split across the holes that were won', ()
   assert.deepEqual(b, { a: 5, b: 5, c: -5, d: -5 });
 });
 
-test('nobody wins anything: nobody pays, and a hole scored with nothing tapped counts as nobody', () => {
+test('nobody wins anything: nobody pays, and a pot hole with nothing saved for it doesn’t count', () => {
   const r = make({ upto: 18 });
+  tap(r, 'ctp', { 2: POT_NONE, 5: POT_NONE, 8: POT_NONE, 11: POT_NONE, 14: POT_NONE, 17: POT_NONE });
   assert.deepEqual(roundResults(r).detail.byGame.ctp.balances, { a: 0, b: 0, c: 0, d: 0 });
   const t = potTable(gameView(r, 'ctp'));
   assert.ok(t.holes.every(h => h.reached && h.winner === POT_NONE));
+  // A pot added after the front nine: its par 3s there count only once tapped, never as one big carry
+  const late = make({ upto: 12 });
+  tap(late, 'ctp', { 11: 'a' });
+  const lt = potTable(gameView(late, 'ctp'));
+  assert.deepEqual(lt.holes.filter(h => h.reached).map(h => h.no), [11]);
+  assert.equal(cents(lt.paidOut), cents(lt.worth));
   const steps = revealSteps(r, roundResults(r)).steps;
   assert.deepEqual(steps.find(s => s.key === 'side-ctp'), { key: 'side-ctp', label: 'Closest to the pin', text: 'Nobody won a par 3, nobody pays', tie: true });
 });
@@ -97,6 +104,7 @@ test('only the pot holes reached count: a round stopped after 9 pays the front n
   tap(r, 'ctp', { 2: 'a', 5: 'a', 8: 'b' });
   const t = potTable(gameView(r, 'ctp'));
   assert.deepEqual(t.holes.filter(h => h.reached).map(h => h.no), [2, 5, 8]);
+  assert.ok(t.holes.filter(h => !h.reached).every(h => h.winner === undefined));
   // 3 shares of $3.33 paid out, each pays $2.50: a +$4.17, b +$0.83
   assert.deepEqual(roundResults(r).detail.byGame.ctp.balances, { a: 4.17, b: 0.83, c: -2.5, d: -2.5 });
   // A winner tapped before the scores are in counts the hole too
