@@ -14,6 +14,24 @@ function matchWho(s, names) {
   return matchLabel(s, names[s.leader]);
 }
 
+/**
+ * A team game's stroke play leg or per-hole line in words, for the reveal and the Bets breakdown:
+ * "Ann & Bo by 2 strokes, 34 to 36", "Tied on 36", "Cy & Di won 3 to 1". Per hole, a bet changed
+ * partway can leave the team that won fewer holes (or as many) ahead on the money, so it says so.
+ */
+export function teamLineText(l, names) {
+  if (l.key === 'holes') {
+    const [a, b] = l.won;
+    const text = a === b ? `${plural(a, 'hole')} each` : `${names[a > b ? 0 : 1]} won ${Math.max(a, b)} to ${Math.min(a, b)}`;
+    const up = l.value > 0 ? 0 : l.value < 0 ? 1 : null;
+    const holesUp = a > b ? 0 : b > a ? 1 : null;
+    return up != null && up !== holesUp ? `${text}. The bet changed partway, so ${names[up]} come out ahead` : text;
+  }
+  const s = l.status;
+  const [a, b] = s.totals;
+  return s.leader === null ? `Tied on ${a}` : `${names[s.leader]} by ${plural(s.by, 'stroke')}, ${Math.min(a, b)} to ${Math.max(a, b)}`;
+}
+
 /** Up to three holes with the biggest single win, in playing order. rows: [{ no, deltas, text(pid) }]. */
 function biggestHoles(rows, max = 3) {
   const best = rows.map((r, i) => {
@@ -115,15 +133,9 @@ function mainRevealSteps(round, res) {
   if (isTeamGame(round.game) && d.lines) {
     const sn = sideNames(round);
     const steps = d.lines.filter(l => (l.status?.played ?? l.played) > 0).map(l => {
-      if (l.key === 'holes') {
-        const [a, b] = l.won;
-        const text = a === b ? `${plural(a, 'hole')} each` : `${sn[a > b ? 0 : 1]} won ${Math.max(a, b)} to ${Math.min(a, b)}`;
-        return l.value ? { key: l.key, label: 'Holes won', text, amount: Math.abs(l.value) } : { key: l.key, label: 'Holes won', text, tie: true };
-      }
-      const s = l.status;
-      const [a, b] = s.totals;
-      const text = s.leader === null ? `Tied on ${a}` : `${sn[s.leader]} by ${plural(s.by, 'stroke')}, ${Math.min(a, b)} to ${Math.max(a, b)}`;
-      return s.leader === null ? { key: l.key, label: l.label, text, tie: true } : { key: l.key, label: l.label, text, amount: Math.abs(l.value) };
+      const label = l.key === 'holes' ? 'Holes won' : l.label;
+      const text = teamLineText(l, sn);
+      return l.value ? { key: l.key, label, text, amount: Math.abs(l.value) } : { key: l.key, label, text, tie: true };
     });
     return { title: steps.length > 1 || d.lines[0]?.key === 'holes' ? 'The bets' : 'The match', steps };
   }

@@ -11,6 +11,7 @@ import { leaveRound } from '../lib/rounds.js';
 import { gameLabel, meFor, placeOf, roundDate, roundPlayerName } from '../lib/format.js';
 import { gamesLine } from '../lib/side-games.js';
 import { betStretchLine } from '../lib/stakes.js';
+import { teamLineText } from '../lib/reveal.js';
 import { ByGameTable } from '../components/SideGames.jsx';
 import { accountsEnabled, useAccount } from '../lib/cloud.js';
 import { SignInSheet } from '../components/Account.jsx';
@@ -317,15 +318,8 @@ function GameBreakdown({ round, res, label = null }) {
       <>
         <div className="sec-label">Bets · {sn[0]} v {sn[1]}</div>
         {res.detail.lines.map(l => {
-          let who;
-          if (l.key === 'holes') {
-            const [a, b] = l.won;
-            who = !l.played ? 'Not played' : a === b ? `${a} hole${a === 1 ? '' : 's'} each` : `${sn[a > b ? 0 : 1]} won ${Math.max(a, b)} to ${Math.min(a, b)}`;
-          } else {
-            const s = l.status;
-            const [a, b] = s.totals;
-            who = !s.played ? 'Not played' : s.leader === null ? `Tied on ${a}` : `${sn[s.leader]} by ${s.by}, ${Math.min(a, b)} to ${Math.max(a, b)}`;
-          }
+          // The same words as the reveal (reveal.js), "Not played" for a leg with no holes in
+          const who = !(l.status?.played ?? l.played) ? 'Not played' : teamLineText(l, sn);
           return (
             <div key={l.key} className="leg-row">
               <div className="leg-name">{l.label}</div>

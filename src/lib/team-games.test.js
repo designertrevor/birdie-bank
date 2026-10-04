@@ -10,7 +10,7 @@ import { stakeSummary, stakeHeadline } from './stakes.js';
 import { houseRulesLine } from './house-rules.js';
 import { betOf, withBet } from './plans.js';
 import { agreementItems } from './agreed.js';
-import { revealSteps } from './reveal.js';
+import { revealSteps, teamLineText } from './reveal.js';
 import { matchRoundMoment } from './moments.js';
 import { bestOf, foursomesTeamHandicap, chapmanTeamHandicap } from './games.js';
 import { suggestedAllowance, allowanceHint } from './allowances.js';
@@ -430,4 +430,23 @@ test('review: in alternate shot and Chapman one team keeps both partners, so the
   const s = scores(round('scramble', [['a', 'b'], ['c', 'd']]), 3);
   s.left = { a: 3 };
   assert.ok(canLeave(s, 'c'));
+});
+
+test('review: per hole with the bet raised partway, the words say which team the money went to', () => {
+  // A wins holes 1 and 2 at $1, then the bet goes to $5 from hole 3 and B wins hole 3: B is up $3 each
+  const r = scores(round('bestball', TWO, { settings: { format: 'hole', perHole: 1 } }), 2, { 1: { a: 3 }, 2: { b: 3 } });
+  const up = changeBets(r, { ...r.settings.bestball, perHole: 5 }, 3);
+  scores(up, 9, { 1: { a: 3 }, 2: { b: 3 }, 3: { c: 3 } });
+  const line = teamTable(up).lines[0];
+  assert.deepEqual(line.won, [2, 1]);
+  assert.equal(line.value, -3);
+  assert.deepEqual(bal(up), { a: -3, b: -3, c: 3, d: 3 });
+  const step = revealSteps(up, roundResults(up)).steps[0];
+  assert.equal(step.text, 'Ann & Bo won 2 to 1. The bet changed partway, so Cy & Di come out ahead');
+  assert.equal(step.amount, 3);
+  // As many holes each, and the money still went one way
+  assert.equal(teamLineText({ key: 'holes', won: [1, 1], value: 4 }, ['Ann & Bo', 'Cy & Di']), '1 hole each. The bet changed partway, so Ann & Bo come out ahead');
+  // The usual case reads as before, and stroke play legs read in strokes
+  assert.equal(teamLineText({ key: 'holes', won: [3, 1], value: 4 }, ['Ann & Bo', 'Cy & Di']), 'Ann & Bo won 3 to 1');
+  assert.equal(teamLineText({ key: 'front', status: { leader: 1, by: 1, totals: [35, 34] } }, ['Ann & Bo', 'Cy & Di']), 'Cy & Di by 1 stroke, 34 to 35');
 });
