@@ -218,3 +218,35 @@ test('the closest to the pin card says the bet runs on the par 3s after this one
   assert.deepEqual(p.holes, [3, 18]);
   assert.match(p.text, /par 3s after/);
 });
+
+test('two players: no match ask on the first hole (the game is their match), closest to the pin and the turn still ask', () => {
+  const two = (game = 'stroke', upto = 0) => {
+    const r = createRound({
+      id: 'r2', game, course: course(18), holesCount: 18, players: [{ id: 'a', name: 'A', index: null }, { id: 'b', name: 'B', index: null }],
+      settings: { hcPct: 100, stroke: { stake: 5, payout: 'pot' }, nassau: { front: 5, back: 5, total: 5 }, match: { stake: 5 } }, hcPct: 100, useHandicaps: false,
+    });
+    r.holes.slice(0, upto).forEach(h => { r.scores[h.no] = { a: h.par, b: h.par }; });
+    return r;
+  };
+  const k = { me: 'a', editable: true };
+  for (const game of ['stroke', 'match', 'nassau', 'skins']) assert.equal(betPromptFor(two(game), 1, k), null, game);
+  assert.equal(betPromptFor(two('stroke'), 1, { me: 'a', editable: false }), null);
+  // Closest to the pin still asks on the first par 3
+  assert.equal(betPromptFor(two('stroke', 2), 3, k)?.kind, 'ctp');
+  assert.equal(betPromptFor(two('match', 2), 3, k)?.kind, 'ctp');
+  // The turn's fresh match for the back nine still asks, but not in a Nassau, whose back nine is a bet already
+  assert.equal(betPromptFor(two('stroke', 9), 10, k)?.why, 'turn');
+  assert.equal(betPromptFor(two('match', 9), 10, k)?.why, 'turn');
+  assert.equal(betPromptFor(two('nassau', 9), 10, k), null);
+  // Three or more still get the first hole's ask
+  assert.equal(betPromptFor(stroke(), 1, keeper)?.why, 'first');
+});
+
+test('a Nassau with three or four still asks at the turn', () => {
+  const r = createRound({
+    id: 'n', game: 'nassau', course: course(18), holesCount: 18, players: IDS.map(id => ({ id, name: id.toUpperCase(), index: null })),
+    teams: [['t', 'p'], ['y', 'z']], settings: { hcPct: 100, nassau: { front: 5, back: 5, total: 5 } }, hcPct: 100, useHandicaps: false,
+  });
+  r.holes.slice(0, 9).forEach(h => { r.scores[h.no] = Object.fromEntries(IDS.map(id => [id, h.par])); });
+  assert.equal(betPromptFor(r, 10, keeper)?.why, 'turn');
+});
