@@ -75,16 +75,16 @@ export default function FriendRound({ code }) {
             const seat = view.round.players.find(x => x.id === p.id);
             return (
               <li key={p.id} className="fr-board-row">
-                <span className="fr-place" aria-label={`Place ${p.place}`}>{p.place}</span>
+                <span className="fr-place" role="img" aria-label={`Place ${p.place}`}>{p.place}</span>
                 <Avatar id={p.id} name={p.name} seat={seat} size="sm" />
                 <span className="fr-name">
-                  <span className="fr-name-main">{p.name}{p.friend && <span className="fr-friend" aria-label=", a friend"><Icon name="user-check" fill /></span>}</span>
+                  <span className="fr-name-main">{p.name}{p.friend && <span className="fr-friend" role="img" aria-label=", a friend"><Icon name="user-check" fill /></span>}</span>
                   {p.team && <span className="fr-name-sub">{p.team}</span>}
                 </span>
                 <span className="fr-par">
                   {p.toPar == null
                     ? <span className="fr-par-v">–</span>
-                    : <span className={`fr-par-v sc-par ${toParTone(p.toPar)}`} aria-label={toParWords(p.toPar)}>{toParText(p.toPar)}</span>}
+                    : <span className={`fr-par-v sc-par ${toParTone(p.toPar)}`} role="img" aria-label={toParWords(p.toPar)}>{toParText(p.toPar)}</span>}
                   <span className="fr-thru">{p.played ? (p.played >= view.holes ? 'F' : `thru ${p.played}`) : ''}</span>
                 </span>
                 {p.amountText != null && <span className={`fr-amt ${p.amount > 0 ? 'pos' : p.amount < 0 ? 'neg' : ''}`}>{p.amountText}</span>}
