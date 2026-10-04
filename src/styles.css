@@ -2433,6 +2433,8 @@ button.ch-main:active { transform: scale(.98); }
 .books-mark > i:last-child { color: var(--mute-soft); }
 .books-mark .bm-sub { display: block; margin-top: 1px; font-size: 12px; font-weight: 500; color: var(--mute); }
 .text-link.book-reopen { margin: 8px auto 16px; }
+/* A crew's line that Everyone nets the other way: a note under its buttons */
+.crew-net-note { margin: 10px 0 0; font-size: 13px; line-height: 1.35; color: var(--mute); }
 .books-mark + .hist-row { border-top: 1px solid var(--line-soft); }
 
 /* ---------- Overnight 8 polish and accessibility sweep (o8 polish8) ---------- */

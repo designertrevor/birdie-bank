@@ -7,7 +7,7 @@ import { TripTabCard } from './Trips.jsx';
 import { useStore } from '../lib/store.js';
 import { useNav } from '../lib/nav.js';
 import { money } from '../lib/golf.js';
-import { nameOf } from '../lib/ledger.js';
+import { nameOf, outstanding } from '../lib/ledger.js';
 import { canonicalOf } from '../lib/pair-debts.js';
 import { payInfoFor } from '../lib/pay.js';
 import { buzz } from '../lib/delight.js';
@@ -67,6 +67,10 @@ export function OneTab({ tab }) {
   const myNet = tab.balances[me] || 0;
   const isCrew = tab.kind === 'crew';
   const note = tab.name;
+  // What Everyone has between you and someone, in cents, positive when they owe you: a crew's line
+  // can run against it when your other rounds with them net it out
+  const everyone = isCrew ? outstanding(state) : [];
+  const onEveryone = other => Math.round(everyone.reduce((a, l) => a + (l.from === other && l.to === me ? l.amount : l.from === me && l.to === other ? -l.amount : 0), 0) * 100);
 
   const mark = l => {
     const { shared, undo } = markCrewPayment({ crewId: tab.id, from: l.from, to: l.to });
@@ -112,6 +116,8 @@ export function OneTab({ tab }) {
         const other = l.from === me ? l.to : l.from;
         const owesMe = l.to === me;
         const name = nameOf(state, other);
+        const e = isCrew ? onEveryone(other) : null;
+        const against = e != null && (owesMe ? e <= 0 : e >= 0);
         return (
           <div key={l.from + l.to} className="tab-card">
             <button className="tab-person" onClick={() => nav.push('person', { id: other })} aria-label={`${name}: ${owesMe ? 'owes you' : 'you owe'} ${money(l.amount)} on ${tab.name}. See the story`}>
@@ -133,6 +139,11 @@ export function OneTab({ tab }) {
                 </button>
               </div>
             )}
+            {against && (
+              <p className="crew-net-note">
+                {e === 0 ? `Square with ${first(name)} on Everyone` : e > 0 ? `On Everyone ${first(name)} owes you ${money(e / 100)}` : `On Everyone you owe ${first(name)} ${money(-e / 100)}`}: your other tabs net this out.
+              </p>
+            )}
           </div>
         );
       })}
@@ -145,7 +156,7 @@ export function OneTab({ tab }) {
                 <div className="lr-name" style={{ fontSize: 16 }}>{nameOf(state, l.from)} owes {nameOf(state, l.to)}</div>
               </div>
               <div className="lr-amt" style={{ marginRight: 8 }}>{money(l.amount)}</div>
-              {isCrew && <button className="pill-btn sm" onClick={() => mark(l)}>Mark paid</button>}
+              {isCrew && <button className="pill-btn sm" onClick={() => mark(l)} aria-label={`Mark paid: ${nameOf(state, l.from)} paid ${nameOf(state, l.to)} ${money(l.amount)}`}>Mark paid</button>}
             </div>
           ))}
         </>
