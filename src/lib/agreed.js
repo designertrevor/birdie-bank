@@ -10,7 +10,8 @@
 //   { skipped }  the card was skipped (the time). It can still be locked in from the round menu.
 // It lives in the round's meta, so it syncs to every phone in a shared round. Only the phone keeping
 // score locks it or records changes (see keeper.js).
-import { GAMES, blindMultiplierOf, gameKeyLabel, gameKeys, holesPlayed, scorers, sideGamesOf } from './round.js';
+import { GAMES, POT_GAMES, blindMultiplierOf, gameKeyLabel, gameKeys, greeniesInPot, holesPlayed, scorers, sideGamesOf } from './round.js';
+import { potHolesLine } from './side-games.js';
 import { sideBetLine, stakeSummary } from './stakes.js';
 import { inUnits } from './play-for.js';
 import { gamePct, halfStrokesOn, playsAtPct } from './allowances.js';
@@ -72,6 +73,11 @@ export function houseRulesFor(game, s) {
     case 'bbb': return [r('sweep', 'All three on one hole count double', s.sweep)];
     case 'dots': return [r('auto', 'Birdies count as junk', s.auto)];
     case 'snake': return [r('nines', 'A snake for each nine', s.nines)];
+    // Closest to the pin and long drive pots: what a hole nobody wins does, said either way
+    case 'ctp': case 'drive': {
+      const hole = game === 'ctp' ? 'A par 3' : 'A long drive hole';
+      return [r('carry', `${hole} nobody wins carries to the next`, s.unclaimed !== 'split'), r('split', `${hole} nobody wins is split across the ones won`, s.unclaimed === 'split')];
+    }
     default: return [];
   }
 }
@@ -128,6 +134,9 @@ export function agreementItems(round, choices = round.agreed) {
     const bet = game === 'skins' || game === 'wolf' ? full.split(' · ')[0] : tags && full.endsWith(` · ${tags}`) ? full.slice(0, -(tags.length + 3)) : full;
     items.push({ id: `bet:${key}`, group: 'bets', label, text: inUnits(round, bet) });
     for (const h of houseRulesFor(game, block)) items.push({ id: `rule:${key}:${h.id}`, group: 'rules', label, text: h.text, on: h.on });
+    // A pot's holes: every par 3, or the long drive holes picked for this round
+    if (key !== 'main' && POT_GAMES.includes(game)) items.push({ id: `rule:${key}:holes`, group: 'rules', label, text: potHolesLine(game, block, round.holes), on: true });
+    if (key === 'dots' && greeniesInPot(round)) items.push({ id: 'rule:dots:greenie', group: 'rules', label, text: 'No greenies: the closest to the pin pot pays for them', on: true });
   }
   // Side bets between two players are agreed like the games' bets; a tapped winner isn't a change.
   // On a reward round a bet played for money stays in dollars and says so

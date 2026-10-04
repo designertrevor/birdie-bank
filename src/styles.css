@@ -1935,3 +1935,15 @@ button.trip-card:active { transform: scale(.97); }
 .trip-who { display: flex; flex-direction: column; gap: 6px; margin-top: 8px; }
 .trip-who .sheet-item { width: 100%; margin: 0; }
 .trip-who .avatar { margin: 0; }
+
+/* ---- Closest to the pin and long drive pots (overnight 7, o7/pots) ---- */
+.side-game .pot-holes { display: flex; align-items: center; gap: 8px; margin: 8px 0 0; color: var(--ink); font-weight: 600; }
+.side-game .pot-holes i { color: var(--icon); font-size: 16px; }
+.pot-unclaimed { display: flex; flex-direction: column; gap: 8px; margin: 12px 0 4px; }
+.pot-unclaimed .press-mode-row .pm-btn { flex: 1; }
+.pot-hole-chips { padding: 0 16px 6px; }
+.pot-hole-chips .pill-btn { min-width: 64px; justify-content: center; }
+.pot-par { font-weight: 500; opacity: .7; font-size: 12px; }
+.pot-row { flex-direction: column; align-items: stretch; gap: 8px; }
+.pot-row .pot-lbl { width: auto; flex-direction: row; align-items: baseline; gap: 8px; flex-wrap: wrap; }
+.pot-row .pot-lbl span { font-size: 12px; }
