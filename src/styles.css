@@ -1935,3 +1935,27 @@ button.trip-card:active { transform: scale(.97); }
 .trip-who { display: flex; flex-direction: column; gap: 6px; margin-top: 8px; }
 .trip-who .sheet-item { width: 100%; margin: 0; }
 .trip-who .avatar { margin: 0; }
+
+/* ---------- Challenges (overnight 7, challenges): the card with Accept, Counter and Decline, the maker, the page ---------- */
+.ch-card { margin: 0 16px 10px; border-radius: 22px; background: var(--card); overflow: hidden; }
+.ch-main { display: flex; align-items: center; gap: 0; width: 100%; padding: 14px 12px 14px 14px; border: none; background: none; font: inherit; color: inherit; text-align: left; }
+button.ch-main { cursor: pointer; transition: transform .2s var(--spring); }
+button.ch-main:active { transform: scale(.98); }
+.ch-main .row-main { display: flex; flex-direction: column; min-width: 0; margin-right: 8px; }
+.ch-head { font-size: 16px; font-weight: 700; color: var(--ink); line-height: 1.25; }
+.ch-line { font-size: 13px; color: var(--mute); margin-top: 2px; font-variant-numeric: tabular-nums; }
+.ch-status { flex-shrink: 0; max-width: 46%; font-size: 13px; font-weight: 700; padding: 6px 10px; border-radius: 999px; background: var(--surface); color: var(--mute); text-align: center; line-height: 1.25; }
+.ch-status.mine { background: var(--pink-fill); color: #fff; }
+.ch-status.on { background: var(--win-bg); color: var(--win); }
+.ch-status.done { color: var(--mute-soft); }
+.ch-main .chevron { margin-left: 4px; }
+.ch-mark { padding: 0 16px 6px; font-size: 13px; color: var(--mute); }
+.ch-actions { display: flex; flex-wrap: wrap; gap: 8px; padding: 0 14px 14px; }
+.ch-actions .pill-btn { min-height: 44px; background: var(--surface); }
+.ch-actions .pill-btn.ch-yes { background: var(--ink); color: var(--on-ink); }
+.ch-card.done { background: var(--surface); }
+.ch-card.done .ch-status { background: var(--card); }
+.ch-add .add-ci { background: var(--lav); color: var(--on-pastel); }
+.ch-page { padding-top: 4px; }
+.ch-illo { display: block; width: 96px; height: 96px; margin: 8px auto 12px; }
+.ch-setup-note { margin-top: 4px; }

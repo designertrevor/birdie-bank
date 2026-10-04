@@ -23,6 +23,9 @@ import { applyUpdate, useUpdateReady } from '../lib/sw-update.js';
 import { TripSheet, TripUpNext } from '../components/Trips.jsx';
 import { currentTrips } from '../lib/trips.js';
 import { useTripPlans } from '../lib/trip-plan-sync.js';
+import { ChallengesUpNext } from '../components/Challenges.jsx';
+import { myChallenges } from '../lib/challenges.js';
+import { refreshChallenges } from '../lib/challenge-sync.js';
 
 const LATELY_ON_HOME = 3;
 
@@ -46,10 +49,12 @@ export default function UpNext() {
   const onTrip = new Set(trips.flatMap(t => t.planned.map(p => p.id)));
   const plans = upcomingPlans(state).filter(p => !onTrip.has(p.id));
   const lately = latelyItems(state);
+  // Challenges you're in that are still going: your call first
+  const challenges = myChallenges(state);
   // A new version only shows up here once no round is going on, so a tap never cuts into one
   const updateReady = useUpdateReady() && updateSafe(state);
   // Pick up answers and votes that came in since last time
-  useEffect(() => { refreshPlans(); refreshTab(); }, []);
+  useEffect(() => { refreshPlans(); refreshTab(); refreshChallenges(); }, []);
 
   return (
     <Screen>
@@ -80,6 +85,7 @@ export default function UpNext() {
 
         {plans.length > 0 && <div className="sec-label">Upcoming</div>}
         {plans.map(p => <UpcomingCard key={p.id} plan={p} />)}
+        <ChallengesUpNext list={challenges} />
         {/* Starting a round at the course (or running the last one back) stays one tap, plans or not */}
         {live.length === 0 && <PlanNext last={last?.round} fresh={!hasHistory} planned={plans.length > 0 || trips.length > 0} trip={trips.length === 0} />}
 

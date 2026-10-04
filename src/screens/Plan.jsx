@@ -7,7 +7,7 @@ import { BallIllo, Empty, Header, Icon, Screen, Sheet, useUI } from '../componen
 import { Avatar } from '../components/Pay.jsx';
 import { getState, update, uid, useStore } from '../lib/store.js';
 import { useNav } from '../lib/nav.js';
-import { GAMES, SIDE_GAMES, createRound } from '../lib/round.js';
+import { GAMES, SIDE_GAMES, createRound, holesInPlay } from '../lib/round.js';
 import { sideBetLine } from '../lib/stakes.js';
 import { inUnits, noMoneyNote, playForLine } from '../lib/play-for.js';
 import { money } from '../lib/golf.js';
@@ -24,6 +24,10 @@ import { PlansOffError } from '../lib/plan-adapters.js';
 import { CountForTrip } from '../components/Trips.jsx';
 import { tripOf, tripOnDay, tripStamp } from '../lib/trips.js';
 import { answerPlan, editPlan, openPlanLink, planShareLink, removePlan, sharePlan, usePlanLive, usePlansOff } from '../lib/plan-sync.js';
+import { PlanChallenges } from '../components/Challenges.jsx';
+import { challengeIdOfBet, challengeWhat, withChallenges } from '../lib/challenges.js';
+import { markChallengesOn, useChallengesLive } from '../lib/challenge-sync.js';
+import { betPeople } from '../lib/pair-bets.js';
 
 const first = name => String(name || '').trim().split(/\s+/)[0];
 const listNames = n => (n.length < 2 ? n.join('') : `${n.slice(0, -1).join(', ')} and ${n.at(-1)}`);
@@ -69,6 +73,8 @@ function PlanBody({ plan, standalone = false, onSkip }) {
   const myPlayer = useStore(s => s.players?.[s.me]);
   const off = usePlansOff();
   const send = useSend();
+  // Challenges on this plan come and go live while it's on screen
+  useChallengesLive({ planCode: plan.code });
   const [marking, setMarking] = useState(null); // the organizer marking someone's answer
   const [sharing, setSharing] = useState(false);
   const me = plan.host ? plan.hostWho : plan.localMe;
@@ -186,6 +192,8 @@ function PlanBody({ plan, standalone = false, onSkip }) {
             )}
           </>
         )}
+
+        <PlanChallenges plan={plan} myName={myPlayer?.name} />
 
         <div className="sec-label">Who’s in · {countsLine(counts)}</div>
         <div className="who-list">
@@ -399,11 +407,17 @@ export function RollCall({ id }) {
   const [adding, setAdding] = useState(false);
   const [starting, setStarting] = useState(false);
   const [countTrip, setCountTrip] = useState(true);
+  // The latest answers to the plan's challenges, so the agreed ones go in at the tee
+  useChallengesLive({ planCode: plan?.code });
   if (!plan) return <Screen><Header title="Roll call" small onBack={nav.pop} /><div className="scroll"><Empty title="This plan is gone" /></div></Screen>;
   const people = planPeople(plan);
   const course = findCourse(state, plan.course?.id);
   const setup = planStart(state, plan, present, { newId: () => uid('p_'), course });
   const g = GAMES[setup.game];
+  // Agreed challenges between two people who showed go in as side bets (challenges.js)
+  const draft = course && g ? { game: setup.game, players: setup.players, holes: holesInPlay(course, setup.holesCount, setup.nine), playFor: setup.playFor, teams: setup.teams } : null;
+  const challengeIn = draft ? withChallenges(state, draft, { planId: id, idOf: setup.idOf }) : { round: null, used: [] };
+  const challengeBets = (challengeIn.round?.bets || []).map(b => ({ bet: b, ch: state.challenges?.[challengeIdOfBet(b.id)] })).filter(x => x.ch);
   const t = tally(plan, 'game');
   const toggle = who => setPresent(p => (p.includes(who) ? p.filter(x => x !== who) : [...p, who]));
   // A round planned for a trip counts for it; one that wasn't asks when a trip is on today
@@ -438,7 +452,10 @@ export function RollCall({ id }) {
     if (setup.playFor) round.playFor = structuredClone(setup.playFor);
     // Planned for a trip (or teeing off while one is on, and counted): the stamp rides in the round
     if (tripPick) round.trip = tripStamp(tripPick);
-    update(s => { addRound(s, round); });
+    // Agreed challenges go in as side bets, once each
+    const { round: withCh, used } = withChallenges(getState(), round, { planId: id, idOf: setup.idOf });
+    update(s => { addRound(s, withCh); });
+    markChallengesOn(used, rid);
     editPlan(id, p => { p.status = 'started'; p.roundId = rid; });
     // Friends on the plan can follow the round live from the same page
     if (plan.code && syncConfigured) {
@@ -460,6 +477,7 @@ export function RollCall({ id }) {
           <div className="d stake-big">{g?.name || 'Pick a game'}{setup.bet && setup.settings?.[setup.game] ? ` · ${inUnits(plan, betLabel(setup.game, setup.settings, setup.bet))}` : ''}</div>
           {setup.sideGames.length > 0 && <div className="li-sub">+ {setup.sideGames.map(sg => `${SIDE_GAMES[sg.game].label}, ${inUnits(plan, sideBetLine(sg.game, sg.settings))}`).join(' + ')}</div>}
           {playForLine(plan) && <div className="li-sub">{playForLine(plan)}</div>}
+          {challengeBets.map(({ bet, ch }) => <div key={bet.id} className="li-sub">+ Challenge: {betPeople(challengeIn.round, bet)}, {challengeWhat(ch)}</div>)}
           <div className="li-sub">{t.total > 1 ? `The group’s pick (${t.rows.find(r => r.choice === setup.game)?.votes || 0} of ${t.total} votes)` : 'Your suggestion. Nobody else voted'}</div>
         </div>
         <h2 className="step-q d">Who showed up?</h2>

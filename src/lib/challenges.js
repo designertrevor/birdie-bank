@@ -17,7 +17,7 @@
 //   back in time order and one that doesn't fit where the challenge stands is skipped, so two phones
 //   that tap at once always end up agreeing.
 // Only the phone of whoever made it knows `mine`/`made`; everything else is shared. Pure, unit tested.
-import { BET_KINDS, BET_MAX, MAX_BETS, cleanBet, cleanBetLabel, kindFits, nineRange } from './pair-bets.js';
+import { BET_MAX, MAX_BETS, cleanBet, cleanBetLabel, kindFits, nineRange } from './pair-bets.js';
 import { daysUntil, dayLabel } from './plans.js';
 import { linksOf } from './people-links.js';
 import { money } from './golf.js';
@@ -398,13 +398,26 @@ export function challengeInviteText(ch, link, side = 'from', now = Date.now()) {
   return [lead, 'Tap to accept, decline or name your own amount:', link].filter(Boolean).join('\n');
 }
 
+/** What happens next, in a line, for a challenge's page (null once it's answered no or called off). */
+export function challengeNextText(state, ch, now = Date.now()) {
+  const s = challengeState(ch);
+  const life = challengeLife(state, ch, now);
+  const side = sideOf(state, ch);
+  const them = first(ch[other(side || 'from')].name);
+  if (s.status === 'on') return 'It’s in the round as a side bet.';
+  if (life === 'expired') return 'Nobody played it in time, so it’s off. Challenge again any time.';
+  if (life === 'missed') return 'The round went ahead without it. Challenge again next time.';
+  if (life === 'gone') return 'That round is off, so the challenge is too.';
+  if (s.status === 'declined' || s.status === 'off') return null;
+  if (s.status === 'accepted') return ch.plan ? 'It goes in as a side bet when the round starts.' : 'It goes in as a side bet the next time you two play a round together.';
+  if (!ch.code && ch.made) return `It lives on your phone for now. Mark ${them}’s answer when they tell you.`;
+  return s.turn === side ? 'Accept, pass, or name your own amount.' : `${them} can accept, pass or name their own amount.`;
+}
+
 /** The link that opens one challenge: ?challenge=CODE. */
 export function challengeLink(origin, code) {
   return `${origin}/?challenge=${code}`;
 }
-
-/** The kinds as the maker shows them: the side bet kinds' names, icons and help. */
-export const kindInfo = k => BET_KINDS[k];
 
 // --------------------------- Lately -----------------------------------------
 
