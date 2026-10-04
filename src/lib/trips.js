@@ -25,8 +25,9 @@
 //
 // Trip expenses (trip-expenses.js) go on the same trip: each person's total, the Tab and Settle the
 // trip count them with the rounds. The published plan covers the ones its rounds link up; the rest
-// settle with the rounds only this phone has, in the fewest payments, each person in one paying
-// whoever paid (or someone in between).
+// stay between each person in one and whoever paid, pair by pair, the same on every phone with the
+// trip's expenses (ledger.js expenseDebts), and paying them is a payment for them that reaches
+// those phones too.
 //
 // A trip can instead be played for team points, Ryder Cup style (`format: 'cup'`, cup.js): two
 // teams, each round's matches worth points, a team score and a leaderboard, and an optional stake
@@ -34,15 +35,15 @@
 // own money works exactly as on a money trip. Pure, unit tested.
 import { GAMES, roundResults } from './round.js';
 import { onTab, playForOf, tabResults } from './play-for.js';
-import { fewestPayments, nameOf } from './ledger.js';
+import { expenseDebts, fewestPayments, nameOf } from './ledger.js';
 import { canonicalOf, codeOf, finishedAt, openByPair, sharedRounds } from './pair-debts.js';
 import { tripOfPayment, tripPaymentId, tripReason, tripSettleOf } from './trip-pay.js';
-import { squareRows } from './shared-tab.js';
+import { expensePayments, squareRows } from './shared-tab.js';
 import { dayLabel, daysUntil, isoDate } from './plans.js';
 import { canEdit, keeperMe } from './keeper.js';
 import { money } from './golf.js';
 import { isPlanPayment, planRows, planState } from './trip-plan.js';
-import { addExpenseCents, expensePairs, expenseTotals, tripExpenses } from './trip-expenses.js';
+import { expensePairs, expenseTotals, tripExpenses, tripPays } from './trip-expenses.js';
 import { CUP_FORMAT, cleanCup, closeEntry, cupEntries, cupLeaderboard, cupOf, cupScore, stakeLines, stakeMarks, stakeOpen, teamOf } from './cup.js';
 
 const DAY = 864e5;
@@ -267,19 +268,20 @@ function paymentsOf(state, id, rounds, local, together, bal, spent = []) {
 
 /**
  * The plan: the published plan's open lines, each pair's net on the shared rounds it doesn't
- * cover, then the fewest payments for the rest, one line per pair and way:
- * [{ from, to, amount, shared, local, plan }], with each part in cents.
+ * cover and on the expenses it doesn't cover, then the fewest payments for the rest, one line per
+ * pair and way: [{ from, to, amount, shared, local, plan, expense }], with each part in cents.
  */
-function mergePlan(pairs, local, onPlan = []) {
+function mergePlan(pairs, local, onPlan = [], spent = []) {
   const lines = new Map();
   const add = (from, to, part, c) => {
     const k = `${from}>${to}`;
-    const line = lines.get(k) || { from, to, amount: 0, shared: 0, local: 0, plan: 0 };
+    const line = lines.get(k) || { from, to, amount: 0, shared: 0, local: 0, plan: 0, expense: 0 };
     line[part] += c;
-    line.amount = (line.shared + line.local + line.plan) / 100;
+    line.amount = (line.shared + line.local + line.plan + line.expense) / 100;
     lines.set(k, line);
   };
   for (const d of onPlan) add(d.from, d.to, 'plan', d.cents);
+  for (const d of spent) add(d.from, d.to, 'expense', d.cents);
   for (const d of pairs) add(d.from, d.to, 'shared', d.cents);
   for (const t of local) add(t.from, t.to, 'local', cents(t.amount));
   return [...lines.values()];
@@ -355,15 +357,16 @@ export function tripStatus(state, id, { now = Date.now() } = {}) {
   const pairRounds = tripPairRounds(state, id, { now }).filter(r => !covered.has(r.id));
   const local = rounds.filter(r => !pairRounds.includes(r) && !covered.has(r.id));
   const bal = balanceCents(state, rounds);
-  // Expenses the published plan covers are in its lines; the rest settle with the local rounds
+  // Expenses the published plan covers are in its lines; the rest stay pair by pair, less the
+  // payments for them, as every phone with the trip's expenses has them
   const expenses = tripExpenses(state, id);
   const spentIn = live_?.expenses || new Set();
-  const spentHere = expenses.filter(x => !spentIn.has(x.id));
-  for (const k of expensePairs(spentHere)) together.add(k);
-  const { trip: tripPaid, onPlan, onRounds, onPairs, counted, left } = paymentsOf(state, id, rounds, local, together, addExpenseCents(balanceCents(state, local), spentHere), spentHere);
+  for (const k of expensePairs(expenses.filter(x => !spentIn.has(x.id)))) together.add(k);
+  const owedSpent = expenseDebts(state, { now, trip: id });
+  const { trip: tripPaid, onPlan, onRounds, onPairs, counted, left } = paymentsOf(state, id, rounds, local, together, balanceCents(state, local), expenses);
   const rest = fewestPayments(Object.fromEntries(Object.entries(left).map(([k, c]) => [k, c / 100])), { canPay: (a, b) => together.has(pairKey(a, b)) });
-  const plan = mergePlan(openByPair(state, pairRounds), rest, live_?.open || []);
-  const paid = [...tripPaid, ...onPlan, ...onRounds, ...onPairs, ...counted.map(x => x.settlement)];
+  const plan = mergePlan(openByPair(state, pairRounds), rest, live_?.open || [], owedSpent);
+  const paid = [...tripPaid, ...onPlan, ...onRounds, ...onPairs, ...counted.map(x => x.settlement), ...tripPays(state, id)];
   // Payments made from "Settle the trip" (trip-pay.js): `settling` locks the trip's rounds on it
   const settling = paid.filter(s => tripSettleOf(s)?.id === id);
   const closed = settling.some(s => !tripSettleOf(s).part);
@@ -476,18 +479,22 @@ export function cupStatus(state, trip, people = tripPeople(state, trip.id), { ov
  * One line of "Settle the trip" paid (`part`: someone leaving early settles their part). The
  * published plan's part is paid on the plan's own rows (trip-plan.js), and the shared rounds' part
  * squares the pair on the trip's round transfers, as rows every phone in those rounds gets, so
- * both phones of the pair agree; the part from rounds only this phone has is a payment here (its
- * id names the trip). Returns { rows, settlements }, empty when the line is gone.
+ * both phones of the pair agree; the expenses the plan doesn't cover are paid with a payment for
+ * them (trip-expenses.js), which every phone with the trip's expenses gets; the part from rounds
+ * only this phone has is a payment here (its id names the trip). Returns { rows, settlements,
+ * expenses }, empty when the line is gone.
  */
-export function tripPayment(state, tripId, from, to, { now = Date.now(), part = false } = {}) {
+export function tripPayment(state, tripId, from, to, { now = Date.now(), part = false, makeId } = {}) {
   const st = tripStatus(state, tripId, { now });
   const line = st?.plan.find(t => t.from === from && t.to === to);
-  if (!line) return { rows: [], settlements: [] };
+  if (!line) return { rows: [], settlements: [], expenses: [] };
   const ids = new Set(st.pairRounds.map(r => r.id));
-  const rows = line.shared ? squareRows(state, from, to, ids, { now, reason: tripReason(tripId, part) }).rows : [];
-  if (line.plan) rows.push(...planRows(state, from, to, { now, trip: tripId, reason: tripReason(tripId, part) }).rows);
+  const reason = tripReason(tripId, part);
+  const rows = line.shared ? squareRows(state, from, to, ids, { now, reason }).rows : [];
+  if (line.plan) rows.push(...planRows(state, from, to, { now, trip: tripId, reason }).rows);
+  const expenses = line.expense ? expensePayments(state, from, to, { amount: line.expense, now, trip: tripId, reason, ...(makeId ? { makeId } : {}) }).expenses : [];
   const settlements = line.local ? [{ id: tripPaymentId(tripId, from, to, now), from, to, amount: line.local / 100, at: now, ...(part ? { tripPart: true } : {}) }] : [];
-  return { rows, settlements };
+  return { rows, settlements, expenses };
 }
 
 /** Your net on the trip's rounds so far (you are `state.me` to the trip). */

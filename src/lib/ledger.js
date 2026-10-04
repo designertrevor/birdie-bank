@@ -8,7 +8,7 @@ import { linksOf } from './people-links.js';
 import { countsMoney, onTab, tabResults } from './play-for.js';
 import { betsOf, isCashBet } from './pair-bets.js';
 import { planDebts } from './trip-plan.js';
-import { allExpenses, expensePairs, expensesBetween } from './trip-expenses.js';
+import { allExpenses, allTripMoney, allTripPays, expensePairDebts, expensePairs, expensesBetween, tripMoney } from './trip-expenses.js';
 
 const toCents = v => Math.round((Number(v) || 0) * 100);
 /** Whether two players had a side bet for money together in a reward round. */
@@ -122,9 +122,27 @@ export function tabBalances(state) {
   for (const r of moneyRounds(state)) {
     for (const [id, v] of Object.entries(tabResults(r).balances)) add(id, v);
   }
-  for (const x of allExpenses(state)) for (const [id, c] of Object.entries(x.balances)) add(id, c / 100);
+  for (const x of allTripMoney(state)) for (const [id, c] of Object.entries(x.balances)) add(id, c / 100);
   for (const s of state.settlements || []) { add(s.from, s.amount); add(s.to, -s.amount); }
   return bal;
+}
+
+/**
+ * What trip expenses put between two people where the trip's published plan doesn't cover them
+ * (trip-plan.js), pair by pair and trip by trip, less the payments for them (trip-expenses.js):
+ * [{ tripId, from, to, cents }], `from` owing `to`. Every phone that has the trip's expenses has
+ * the same between each two people, so both phones of a pair agree on it, the way they do on the
+ * rounds shared live. `trip` keeps it to one trip.
+ */
+export function expenseDebts(state, { now = Date.now(), trip = null } = {}) {
+  if (!state.tripExpenses) return [];
+  const covered = new Set(planDebts(state, { now }).expenses);
+  const list = (trip ? tripMoney(state, trip) : allTripMoney(state)).filter(x => !covered.has(x.id));
+  const byTrip = new Map();
+  for (const x of list) { if (!byTrip.has(x.tripId)) byTrip.set(x.tripId, []); byTrip.get(x.tripId).push(x); }
+  const out = [];
+  for (const [tripId, xs] of byTrip) for (const d of expensePairDebts(xs)) out.push({ tripId, ...d });
+  return out;
 }
 
 /** Finished money rounds each pair played together, by "a|b" key (ids sorted). */
@@ -147,7 +165,8 @@ export function roundsTogether(state) {
  * who have played a round together (friends from different groups never get asked to pay each
  * other). What's open on rounds that were shared live stays between the two people in them, as
  * both phones see it (pair-debts.js), and only the rest is squared across the group. A trip
- * expense counts like a round between each person in it and whoever paid.
+ * expense stays between each person in it and whoever paid (expenseDebts), as every phone with
+ * the trip's expenses sees it, unless the trip's published plan covers it.
  * Returns [{ from, to, amount, rounds: [roundId] }], where rounds are the finished rounds the two
  * played together.
  */
@@ -161,8 +180,12 @@ export function outstanding(state, { now = Date.now() } = {}) {
   // A trip's published plan (trip-plan.js): its rounds and their payments come out of the
   // balances, and each pair's open money on the plan goes in as it is, the same on every phone
   const trip = planDebts(state, { now });
-  const onPlan = trip.rounds.length > 0;
-  if (!direct.length && !onPlan) {
+  // A plan can cover expenses on a phone that has none of its rounds (a friend who didn't play
+  // them): they come out of the balances all the same, since the plan's own lines pay them
+  const onPlan = trip.rounds.length > 0 || trip.expenses.length > 0;
+  // Trip expenses the plan doesn't cover, and the payments for them: pair by pair
+  const owedSpent = expenseDebts(state, { now });
+  if (!direct.length && !onPlan && !owedSpent.length) {
     const plan = fewestPayments(tabBalances(state), { canPay });
     return plan.map(t => ({ ...t, rounds: together.get(pairKey(t.from, t.to)) || [] }));
   }
@@ -173,7 +196,7 @@ export function outstanding(state, { now = Date.now() } = {}) {
     const k = pairKey(from, to);
     net.set(k, (net.get(k) || 0) + (from < to ? c : -c));
   };
-  for (const d of direct) {
+  for (const d of [...direct, ...owedSpent]) {
     bal[d.from] = (bal[d.from] || 0) + d.cents;
     bal[d.to] = (bal[d.to] || 0) - d.cents;
     owe(d.from, d.to, d.cents);
@@ -204,7 +227,7 @@ function planBalances(state, trip) {
     // A reward round's side bets for money in dollars, never its points
     for (const [id, v] of Object.entries(tabResults(r).balances)) add(id, toCents(v));
   }
-  for (const x of allExpenses(state)) {
+  for (const x of allTripMoney(state)) {
     if (skipSpent.has(x.id)) continue;
     for (const [id, c] of Object.entries(x.balances)) add(id, c);
   }
@@ -249,7 +272,8 @@ export function personStory(state, ids, other) {
     net += cash;
     items.push({ kind: 'round', id: r.id, round: r, amount, money: isMoney, ...(cashPairs && them.some(id => hasCashWith(r, me, id)) ? { cash } : {}), at: r.finishedAt || r.createdAt || 0 });
   }
-  for (const s of state.settlements || []) {
+  // Payments, and payments for trip expenses (trip-expenses.js), which every phone on the trip has
+  for (const s of [...(state.settlements || []), ...allTripPays(state)]) {
     // amount: what the payment did for your side (they paid you: +, you paid them: -)
     if (isThem(s.from) && isMine(s.to)) { items.push({ kind: 'payment', id: s.id, settlement: s, amount: s.amount, at: s.at || 0 }); paid += s.amount; }
     else if (isMine(s.from) && isThem(s.to)) { items.push({ kind: 'payment', id: s.id, settlement: s, amount: -s.amount, at: s.at || 0 }); paid -= s.amount; }

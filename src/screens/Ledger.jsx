@@ -7,6 +7,7 @@ import { PersonActions, RecentPaid, RewardLines, SquareStrip } from '../componen
 import { TabWhereFrom } from '../components/WhereFrom.jsx';
 import { useStore } from '../lib/store.js';
 import { headToHeadSummary, nameOf, outstanding } from '../lib/ledger.js';
+import { allTripPays } from '../lib/trip-expenses.js';
 import { canonicalOf, paymentGroups, recentPayment } from '../lib/shared-tab.js';
 import { sharedDebts } from '../lib/pair-debts.js';
 import { undoPayments, useTabSync } from '../lib/tab-sync.js';
@@ -73,7 +74,7 @@ export default function Ledger() {
   // People you squared with lately keep a card for a few days, so the last payment can be taken back
   const who = canonicalOf(state);
   const meId = state.me || [...mine][0] || null;
-  const recentSquare = [...new Set(state.settlements.flatMap(s => [s.from, s.to]).map(who))]
+  const recentSquare = [...new Set([...state.settlements, ...allTripPays(state)].flatMap(s => [s.from, s.to]).map(who))]
     .filter(id => meId && !isMe(id) && !people.some(p => p.id === id))
     .map(id => ({ id, pay: recentPayment(state, meId, id) }))
     .filter(x => x.pay)

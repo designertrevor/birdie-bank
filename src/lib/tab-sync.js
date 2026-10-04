@@ -11,6 +11,8 @@ import { isMissingTable } from './plan-adapters.js';
 import { allocatePayment, applyRows, lastPayment, nettedFor, tabCodes, undoRows } from './shared-tab.js';
 import { cardCarry, carryReducer, carryRows, carrySplit, splitCodes, splitRounds } from './carry.js';
 import { tripPayment } from './trips.js';
+import { canEditExpense, cleanExpense, mergeExpenses, newPayment } from './trip-expenses.js';
+import { expensesOn, refreshExpenses } from './trip-expense-sync.js';
 
 // Per dev profile (?profile=b), so two tabs acting as two phones never read each other's queue
 const QUEUE = 'bb-tab-queue' + STORE_KEY.slice('birdie-bank-v1'.length);
@@ -172,6 +174,17 @@ function commit(rows, extra) {
   flushTab();
 }
 
+/**
+ * Keep payments for trip expenses (or their deletions) on this phone and send them up with the
+ * trip's expenses (trip-expense-sync.js), so every phone on the trip gets them.
+ */
+function keepExpenses(list) {
+  const xs = list.filter(Boolean);
+  if (!xs.length) return;
+  update(st => { st.tripExpenses = mergeExpenses(st.tripExpenses || {}, xs); });
+  refreshExpenses();
+}
+
 /** Send anything waiting, then pick up the other phones' rows for your recent shared rounds. */
 export async function refreshTab() {
   if (off) return;
@@ -236,11 +249,12 @@ if (typeof window !== 'undefined') {
 export function markPaid({ from, to, amount }) {
   const s = getState();
   const now = Date.now();
-  const { rows, settlements } = allocatePayment(s, { from, to, amount }, { now, makeId: () => uid() });
+  const { rows, settlements, expenses } = allocatePayment(s, { from, to, amount }, { now, makeId: () => uid() });
   const carry = cardCarry(s, from, to, { from, to, amount }, now);
   if (carry?.status === 'asked') rows.push(...carryRows(s, carryReducer(carry, { type: 'withdraw', at: now }), { now }));
   commit(rows, { add: settlements });
-  return { shared: !off && rows.some(r => r.kind === 'payment') };
+  keepExpenses(expenses);
+  return { shared: (!off && rows.some(r => r.kind === 'payment')) || (expenses.length > 0 && expensesOn()) };
 }
 
 /** Mark one round transfer paid in full (the end-of-round settle-up). */
@@ -266,9 +280,10 @@ export function markTransfer(round, t, code) {
  */
 export function markTripPayment({ tripId, from, to, part = false }) {
   const now = Date.now();
-  const { rows, settlements } = tripPayment(getState(), tripId, from, to, { now, part });
+  const { rows, settlements, expenses } = tripPayment(getState(), tripId, from, to, { now, part, makeId: () => uid() });
   commit(rows, { add: settlements });
-  return { shared: !off && rows.some(r => r.status === 'paid'), at: now };
+  keepExpenses(expenses);
+  return { shared: (!off && rows.some(r => r.status === 'paid')) || (expenses.length > 0 && expensesOn()), at: now };
 }
 
 /** Take back payments (one tap, no confirm: it can be put back the same way). Returns a redo function. */
@@ -277,12 +292,23 @@ export function undoPayments(settlementsToUndo, netted = null) {
   // From the payments list: what that payment netted is taken back with it
   if (!netted) netted = nettedFor(s, settlementsToUndo);
   const now = Date.now();
-  const { rows, remove } = undoRows(s, { settlements: settlementsToUndo, netted }, { now });
+  const { rows, remove, spent } = undoRows(s, { settlements: settlementsToUndo, netted }, { now });
   const gone = (s.settlements || []).filter(x => remove.includes(x.id));
   commit(rows, { remove });
+  // Payments for trip expenses: this phone's own one is deleted; someone else's is undone by one
+  // of this phone's that takes it back, so every phone on the trip hears it either way
+  const back = spent.map(x => {
+    const own = cleanExpense(s.tripExpenses?.[x.id]);
+    if (own && canEditExpense(s, own)) return { put: own, gone: { id: own.id, tripId: own.tripId, by: own.by, deleted: true, at: own.at, updatedAt: Math.max(now, own.updatedAt + 1) } };
+    const undo = newPayment(s, { id: `x_${uid()}`, tripId: x.tripId, from: x.to, to: x.from, amount: Math.round(x.amount * 100), undoes: x.id, now });
+    return undo ? { put: { id: undo.id, tripId: undo.tripId, by: undo.by, deleted: true, at: undo.at, updatedAt: now + 1 }, gone: undo } : null;
+  }).filter(Boolean);
+  keepExpenses(back.map(b => b.gone));
   return () => {
     const later = Date.now();
     commit(rows.map(r => ({ ...r, status: r.id.endsWith(':net') ? 'netted' : 'paid', updatedAt: later })), { add: gone });
+    // Put back: your own payment again, or your undo deleted
+    keepExpenses(back.map(b => ({ ...b.put, updatedAt: Math.max(later, (b.gone.updatedAt || 0) + 1) })));
   };
 }
 

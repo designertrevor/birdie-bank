@@ -6,11 +6,11 @@ import assert from 'node:assert/strict';
 import { createRound, roundResults } from './round.js';
 import { headToHeadSummary, nameOf, outstanding, personStory, tabBalances, tabWith } from './ledger.js';
 import { breakdownWith } from './where-from.js';
-import { applyRows } from './shared-tab.js';
+import { allocatePayment, applyRows, lastPayment, paymentGroups, undoRows } from './shared-tab.js';
 import { buildPlan, cleanPlan, duePlan, planState, samePlan } from './trip-plan.js';
 import { canDeleteTrip, myTripAllIn, newTrip, partPlan, tripPayment, tripStamp, tripStatus, tripsOf, currentTrips } from './trips.js';
 import {
-  allExpenses, canEditExpense, cleanExpense, expenseMark, expensesToSend, expenseTotals, mergeExpenses, parseAmount, personFor, resolveExpense, restampExpenses, shareCents, splitLine, tripExpenses,
+  allExpenses, allTripPays, canEditExpense, cleanExpense, expenseMark, newPayment, expensesToSend, expenseTotals, mergeExpenses, parseAmount, personFor, resolveExpense, restampExpenses, shareCents, splitLine, tripExpenses,
 } from './trip-expenses.js';
 import { applyDoc, toDocs } from './cloud-model.js';
 import { makeBackup, mergeBackup, parseBackup } from './backup.js';
@@ -174,8 +174,8 @@ test('paying Settle the trip squares the rounds and the expenses together, on th
   const st = tripStatus(s, 't_bandon', { now: NOW });
   assert.equal(st.phase, 'ready');
   for (const t of st.plan) {
-    const { settlements } = tripPayment(s, 't_bandon', t.from, t.to, { now: NOW + 1000 });
-    s = { ...s, settlements: [...s.settlements, ...settlements] };
+    const { settlements, expenses } = tripPayment(s, 't_bandon', t.from, t.to, { now: NOW + 1000 });
+    s = { ...s, settlements: [...s.settlements, ...settlements], tripExpenses: mergeExpenses(s.tripExpenses, expenses) };
   }
   const done = tripStatus(s, 't_bandon', { now: NOW + 2000 });
   assert.equal(done.plan.length, 0);
@@ -317,7 +317,7 @@ test('an expense with someone the trip’s shared rounds don’t reach stays out
   const st = tripStatus(phones.t, 't_bandon', { now: NOW });
   const mia = st.plan.find(t => t.from === 'm');
   assert.equal(cents(mia.amount), 3000);
-  assert.equal(mia.local, 3000, 'paid on this phone (in cents)');
+  assert.equal(mia.expense, 3000, 'between the two of them, paid with a payment for it (in cents)');
   assert.equal(owes(phones.t, 'm', 't'), 3000);
   assert.equal(duePlan(phones.t, tripsOf(phones.t).get('t_bandon'), { now: NOW }), null, 'no churn over it');
   agree(phones);
@@ -516,4 +516,134 @@ test('a friend’s phone can tell who added an expense, and names someone only t
   // An expense added by someone who isn't in it still names them by the id it came with
   const gas = expense(phones.b, { id: 'x2', payer: 't', people: ['t', 'a'], amount: 20, what: 'Gas' });
   assert.equal(resolveExpense(phones.t, gas).by, 'zb');
+});
+
+// ---------------------------------------------------------------------------
+// Paying expenses the plan doesn't cover (review, 2026-10-04)
+
+/** Two phones (Trevor's and Andy's) with one round shared live, and Trevor's $100 dinner for the two of them. */
+function lunchPair({ lunch = true } = {}) {
+  const r = round('l1', ['t', 'a'], wins(['t', 'a'], [1, 'a']), { at: OCT(16, 12), code: 'LLLLLL' });
+  if (lunch) r.playFor = { kind: 'reward', reward: 'Lunch', owes: 'last' };
+  const phones = { t: stateOf('t', [r], { trips: { t_bandon: TRIP } }), a: stateOf('za', [{ ...r, localMe: 'a' }]) };
+  share(phones, expense(phones.t, { id: 'x1', payer: 't', people: ['t', 'a'], amount: 100, at: OCT(16, 20) }));
+  return phones;
+}
+/** What a payment sends: its rows to the phones in the round, its payments for expenses to every phone on the trip. */
+function paid(phones, k, res) {
+  phones[k] = { ...phones[k], settlements: [...phones[k].settlements, ...res.settlements] };
+  deliver(phones, res.rows);
+  share(phones, ...(res.expenses || []));
+}
+
+test('paying for expenses no plan covers reaches the other phone: a trip played only for lunch', () => {
+  const phones = lunchPair();
+  assert.equal(buildPlan(phones.t, 't_bandon', { now: NOW }), null, 'nothing for money, so no plan');
+  assert.equal(owes(phones.a, 'a', 't'), 5000);
+  assert.equal(owes(phones.t, 'a', 't'), 5000);
+  // Andy settles the trip on his phone
+  const line = tripStatus(phones.a, 't_bandon', { now: NOW }).plan.find(l => l.from === 'za');
+  assert.equal(line.expense, 5000);
+  const res = tripPayment(phones.a, 't_bandon', line.from, line.to, { now: NOW + 1000, makeId: () => 'p1' });
+  assert.deepEqual(res.settlements, [], 'nothing kept on his phone alone');
+  assert.equal(res.expenses.length, 1);
+  paid(phones, 'a', res);
+  // Both phones see it
+  assert.equal(owes(phones.a, 'a', 't', NOW + 2000), 0);
+  assert.equal(owes(phones.t, 'a', 't', NOW + 2000), 0);
+  for (const k of ['t', 'a']) assert.equal(tripStatus(phones[k], 't_bandon', { now: NOW + 2000 }).phase, 'square', k);
+  // It's a payment, never an expense: the trip's expenses and what they add up to don't change
+  const st = tripStatus(phones.t, 't_bandon', { now: NOW + 2000 });
+  assert.deepEqual(st.expenses.map(x => x.id), ['x1']);
+  assert.equal(st.spent, 100);
+  assert.equal(st.payments.length, 1);
+  assert.deepEqual(paymentGroups(phones.t).map(g => [g.from, g.to, g.amount]), [['a', 't', 50]]);
+});
+
+test('the Tab’s I paid for expenses no plan covers reaches the other phone, in part or in full', () => {
+  const phones = lunchPair();
+  paid(phones, 'a', allocatePayment(phones.a, { from: 'za', to: 't', amount: 20 }, { now: NOW, makeId: () => 'p1' }));
+  assert.equal(owes(phones.t, 'a', 't'), 3000);
+  assert.equal(owes(phones.a, 'a', 't'), 3000);
+  // Trevor marks the rest on his phone
+  paid(phones, 't', allocatePayment(phones.t, { from: 'a', to: 't', amount: 30 }, { now: NOW + 1000, makeId: () => 'p2' }));
+  for (const k of ['t', 'a']) assert.equal(owes(phones[k], 'a', 't', NOW + 2000), 0, k);
+  for (const k of ['t', 'a']) assert.equal(cents(tabBalances(phones[k])[phones[k].me]), 0, k);
+});
+
+test('a non-golfer in an expense keeps the plan off it, and paying your part still reaches the payer’s phone', () => {
+  const phones = lunchPair({ lunch: false });
+  // Mia doesn't golf: Trevor's dinner for him, Andy and Mia is left out of the plan
+  share(phones, expense(phones.t, { id: 'x2', payer: 't', people: ['t', 'a', 'm'], amount: 90, at: OCT(16, 21) }));
+  const plan = buildPlan(phones.t, 't_bandon', { now: NOW });
+  publish(phones, plan);
+  assert.equal(planState(phones.a, 't_bandon', { now: NOW }).status, 'live');
+  const before = owes(phones.a, 'a', 't');
+  assert.equal(before, owes(phones.t, 'a', 't'));
+  paid(phones, 'a', allocatePayment(phones.a, { from: 'za', to: 't', amount: before / 100 }, { now: NOW, makeId: () => 'p1' }));
+  assert.equal(owes(phones.a, 'a', 't'), 0);
+  assert.equal(owes(phones.t, 'a', 't'), 0);
+  assert.equal(owes(phones.t, 'm', 't'), 3000, 'Mia still owes Trevor her part');
+});
+
+test('expenses no plan covers stay between the two people in them, so every phone shows the same between each two', () => {
+  // A money round for Trevor, Andy and Cal; a lunch round for Trevor, Bob and Cal: Bob is in no money round
+  const r1 = round('m1', ['t', 'a', 'c'], wins(['t', 'a', 'c'], [1, 't']), { at: OCT(16), code: 'AAAAAA' });
+  const r2 = round('m2', ['t', 'b', 'c'], {}, { at: OCT(17), code: 'BBBBBB' });
+  r2.playFor = { kind: 'reward', reward: 'Lunch', owes: 'last' };
+  const on = (me, seat, list) => stateOf(me, list.map(r => (seat === me ? r : { ...r, localMe: seat })), seat === 't' ? { trips: { t_bandon: TRIP } } : {});
+  const phones = { t: on('t', 't', [r1, r2]), a: on('za', 'a', [r1]), b: on('zb', 'b', [r2]), c: on('zc', 'c', [r1, r2]) };
+  // On Cal's phone: Bob paid $30 for Andy, and Cal $30 for Bob
+  const person = id => ({ ...personFor(phones.c, 't_bandon', id === 'c' ? 'zc' : id, id.toUpperCase()), part: null });
+  const one = (id, payer, who, at) => cleanExpense({ id, tripId: 't_bandon', what: 'Cart', amount: 30, split: 'equal', payer: person(payer), people: [person(who)], by: 'zc', at, updatedAt: at });
+  share(phones, one('x1', 'b', 'a', OCT(17, 20)), one('x2', 'c', 'b', OCT(17, 21)));
+  publish(phones, buildPlan(phones.t, 't_bandon', { now: NOW }));
+  const pairs = [['a', 'b'], ['b', 'c'], ['a', 'c']];
+  for (const [x, y] of pairs) {
+    const seen = [x, y].map(k => owes(phones[k], x, y));
+    assert.equal(new Set(seen).size, 1, `${x} and ${y} agree (${seen})`);
+  }
+  assert.equal(owes(phones.b, 'a', 'b'), 3000, 'Andy owes Bob');
+  assert.equal(owes(phones.c, 'b', 'c'), 3000, 'Bob owes Cal');
+  assert.equal(owes(phones.a, 'a', 'c'), owes(phones.c, 'a', 'c'));
+});
+
+test('a payment for expenses is taken back on every phone: by deleting it, or by the other one undoing it', () => {
+  const phones = lunchPair();
+  const res = allocatePayment(phones.a, { from: 'za', to: 't', amount: 50 }, { now: NOW, makeId: () => 'p1' });
+  paid(phones, 'a', res);
+  const pay = lastPayment(phones.t, 't', 'a');
+  assert.equal(pay.settlements.length, 1);
+  assert.equal(pay.settlements[0].expensePay, true);
+  // Trevor didn't get it: his phone can't delete Andy's payment, so it undoes it with one of its own
+  const { spent } = undoRows(phones.t, pay);
+  assert.equal(spent.length, 1);
+  assert.equal(canEditExpense(phones.t, cleanExpense(phones.t.tripExpenses[spent[0].id])), false);
+  const undo = newPayment(phones.t, { id: 'u1', tripId: 't_bandon', from: 't', to: 'a', amount: 5000, undoes: spent[0].id, now: NOW + 1000 });
+  share(phones, undo);
+  for (const k of ['t', 'a']) assert.equal(owes(phones[k], 'a', 't', NOW + 2000), 5000, k);
+  assert.deepEqual(allTripPays(phones.a), [], 'gone from the payments on both phones');
+  // An undo that's left over (Andy deleted his payment too) moves no money
+  share(phones, { id: res.expenses[0].id, tripId: 't_bandon', by: 'za', deleted: true, at: NOW, updatedAt: NOW + 3000 });
+  for (const k of ['t', 'a']) assert.equal(owes(phones[k], 'a', 't', NOW + 4000), 5000, k);
+  // Paid again, then Andy takes his own back by deleting it
+  const again = allocatePayment(phones.a, { from: 'za', to: 't', amount: 50 }, { now: NOW + 5000, makeId: () => 'p2' });
+  paid(phones, 'a', again);
+  for (const k of ['t', 'a']) assert.equal(owes(phones[k], 'a', 't', NOW + 6000), 0, k);
+  share(phones, { id: again.expenses[0].id, tripId: 't_bandon', by: 'za', deleted: true, at: NOW + 5000, updatedAt: NOW + 7000 });
+  for (const k of ['t', 'a']) assert.equal(owes(phones[k], 'a', 't', NOW + 8000), 5000, k);
+});
+
+test('a payment for expenses is tidied like any expense, and a bad one is left out', () => {
+  const phones = lunchPair();
+  const x = newPayment(phones.a, { id: 'p1', tripId: 't_bandon', from: 'za', to: 't', amount: 1234, reason: 'trip:t_bandon', now: NOW });
+  assert.equal(x.kind, 'payment');
+  assert.equal(x.amount, 12.34);
+  assert.equal(x.people[0].part, 12.34);
+  assert.equal(x.reason, 'trip:t_bandon');
+  // Andy is written by his seat in the round, so Trevor's phone knows him
+  assert.equal(x.payer.id, 'a');
+  assert.equal(cleanExpense({ ...x, people: [x.payer] }), null, 'never to yourself');
+  assert.equal(cleanExpense({ ...x, people: [] }), null);
+  assert.equal(cleanExpense({ ...x, amount: 0 }), null);
 });

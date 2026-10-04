@@ -8,7 +8,7 @@ import { gameKeyLabel, roundResults } from './round.js';
 import { meFor } from './format.js';
 import { canonicalOf } from './pair-debts.js';
 import { onTab, tabResults } from './play-for.js';
-import { expensesBetween } from './trip-expenses.js';
+import { allTripPays, expensesBetween } from './trip-expenses.js';
 
 const toCents = v => Math.round((Number(v) || 0) * 100);
 
@@ -93,7 +93,8 @@ export function breakdownWith(state, ids, other) {
     }
     rounds.push({ round: r, at: r.finishedAt || r.createdAt || 0, total, items });
   }
-  for (const s of state.settlements || []) {
+  // Payments, and payments for trip expenses (trip-expenses.js)
+  for (const s of [...(state.settlements || []), ...allTripPays(state)]) {
     if (isThem(s.from) && isMine(s.to)) paid += toCents(s.amount);
     else if (isMine(s.from) && isThem(s.to)) paid -= toCents(s.amount);
   }

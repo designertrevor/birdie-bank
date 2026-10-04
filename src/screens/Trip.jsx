@@ -22,6 +22,7 @@ import { PAY_APPS, payInfoFor } from '../lib/pay.js';
 import { points } from '../lib/play-for.js';
 import { whenLabel } from '../lib/plans.js';
 import { buzz } from '../lib/delight.js';
+import { allTripPays } from '../lib/trip-expenses.js';
 import { markTripPayment, undoPayments, usePaymentsOff, useTabSync } from '../lib/tab-sync.js';
 import { TRIP_FORMATS, canDeleteTrip, canRecount, myTripAllIn, myTripNet, partPlan, roundsInDates, tripByGame, tripDates, tripHidden, tripStatus, upDown } from '../lib/trips.js';
 import { deleteTrip, endTrip, hideTrip, seenTripPlan, setRoundTrip } from '../lib/trip-store.js';
@@ -418,7 +419,8 @@ export function TripSettle({ id, who = null }) {
     showToast(shared ? `${text}. Everyone in the rounds sees it.` : text, { label: 'Undo', run: () => {
       const kept = canonicalOf(getState());
       const pair = [t.from, t.to].sort().join();
-      const list = getState().settlements.filter(x => x.at === at && [kept(x.from), kept(x.to)].sort().join() === pair);
+      // Payments for trip expenses (trip-expenses.js) were made in the same tap
+      const list = [...getState().settlements, ...allTripPays(getState())].filter(x => x.at === at && [kept(x.from), kept(x.to)].sort().join() === pair);
       if (list.length) undoPayments(list);
     } });
   };

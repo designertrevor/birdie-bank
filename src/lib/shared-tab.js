@@ -12,7 +12,8 @@
 import { countsMoney, onTab, tabResults } from './play-for.js';
 import { betsOf, isCashBet } from './pair-bets.js';
 import { meFor } from './format.js';
-import { outstanding, tabWith } from './ledger.js';
+import { expenseDebts, nameOf, outstanding, tabWith } from './ledger.js';
+import { allTripPays, newPayment } from './trip-expenses.js';
 import { FETCH_DAYS, canonicalOf, cents, codeOf, finishedAt, lockedRounds, nettedId, nettedOn, pairDebt, paidOn, played, sharedRounds } from './pair-debts.js';
 import { isTripPayment } from './trip-pay.js';
 import { planRows } from './trip-plan.js';
@@ -254,9 +255,12 @@ export function squareRows(state, from, to, roundIds, { now = Date.now(), reason
  *   it covers the whole shared amount.
  * - Then a trip's published plan between the two (trip-plan.js): all of it with the whole card,
  *   or what a part payment has left over, on the plan's own rows so both phones see it.
+ * - Then the trip expenses between the two that no plan covers (ledger.js expenseDebts): all of
+ *   them with the whole card, in whichever way they run, or what a part payment has left over, as
+ *   payments for them (trip-expenses.js) that every phone with the trip's expenses gets.
  * Whatever the shared rounds don't explain (local-only rounds, money passed on) is a local
  * settlement with no code, as before: it can run the other way when the shared rounds owe more
- * than the whole card. Returns { rows, settlements } to send and to add.
+ * than the whole card. Returns { rows, settlements, expenses } to send and to add.
  */
 export function allocatePayment(state, { from, to, amount }, { now = Date.now(), makeId = () => Math.random().toString(36).slice(2, 9) } = {}) {
   const who = canonicalOf(state);
@@ -273,10 +277,39 @@ export function allocatePayment(state, { from, to, amount }, { now = Date.now(),
   // Then what a trip's published plan has between them (trip-plan.js), on the plan's own rows
   const onPlan = planRows(state, F, T, { amount: whole ? null : Math.max(0, total - settle), now });
   rows.push(...onPlan.rows);
-  const left = total - settle - onPlan.cents;
+  const spent = expensePayments(state, F, T, { amount: whole ? null : Math.max(0, total - settle - onPlan.cents), now, makeId });
+  const left = total - settle - onPlan.cents - spent.cents;
   if (left > 0) settlements.push({ id: `s_${makeId()}`, from, to, amount: left / 100, at: now });
   if (left < 0) settlements.push({ id: `s_${makeId()}`, from: to, to: from, amount: -left / 100, at: now });
-  return { rows, settlements };
+  return { rows, settlements, expenses: spent.expenses };
+}
+
+/**
+ * Payments for the trip expenses between two people that no plan covers (ledger.js expenseDebts),
+ * one a trip: `amount` cents from `from` to `to`, or all of it either way (`amount` null, a whole
+ * card or Settle the trip). `trip` keeps it to one trip. Returns { expenses, cents }: cents is what
+ * `from` paid `to` (negative when the expenses had `to` owing `from`).
+ */
+export function expensePayments(state, from, to, { amount = null, now = Date.now(), makeId = () => Math.random().toString(36).slice(2, 9), trip = null, reason = null } = {}) {
+  const who = canonicalOf(state);
+  const F = who(from), T = who(to);
+  const net = new Map(); // tripId -> cents F owes T
+  for (const d of expenseDebts(state, { now, trip })) {
+    if (d.from === F && d.to === T) net.set(d.tripId, (net.get(d.tripId) || 0) + d.cents);
+    else if (d.from === T && d.to === F) net.set(d.tripId, (net.get(d.tripId) || 0) - d.cents);
+  }
+  const expenses = [];
+  let paid = 0;
+  for (const [tripId, c] of [...net].sort((a, b) => a[0].localeCompare(b[0]))) {
+    const pay = amount == null ? c : c > 0 ? Math.max(0, Math.min(c, amount - paid)) : 0;
+    if (!pay) continue;
+    const [pf, pt] = pay > 0 ? [F, T] : [T, F];
+    const x = newPayment(state, { id: `x_${makeId()}`, tripId, from: pf, to: pt, amount: Math.abs(pay), fromName: nameOf(state, pf), toName: nameOf(state, pt), reason, now });
+    if (!x) continue;
+    expenses.push(x);
+    paid += pay;
+  }
+  return { expenses, cents: paid };
 }
 
 /**
@@ -288,7 +321,8 @@ export function lastPayment(state, a, b) {
   const who = canonicalOf(state);
   const A = who(a), B = who(b);
   const between = (x, y) => (who(x) === A && who(y) === B) || (who(x) === B && who(y) === A);
-  const list = (state.settlements || []).filter(s => between(s.from, s.to));
+  // Payments for trip expenses count too: one tap can pay the rounds and the expenses
+  const list = [...(state.settlements || []), ...allTripPays(state)].filter(s => between(s.from, s.to));
   if (!list.length) return null;
   const at = Math.max(...list.map(s => s.at || 0));
   return {
@@ -306,7 +340,7 @@ export function lastPayment(state, a, b) {
 export function paymentGroups(state) {
   const who = canonicalOf(state);
   const groups = new Map();
-  for (const s of state.settlements || []) {
+  for (const s of [...(state.settlements || []), ...allTripPays(state)]) {
     const [a, b] = [who(s.from), who(s.to)].sort();
     const key = `${s.at || 0}|${a}|${b}`;
     if (!groups.has(key)) groups.set(key, { key, at: s.at || 0, a, list: [] });
@@ -329,17 +363,21 @@ export function nettedFor(state, settlements) {
   return Object.values(state.tabRows || {}).filter(r => r.kind === 'payment' && r.status === 'netted' && keys.has(`${r.at}|${pair(r.from, r.to)}`));
 }
 
-/** Rows that take a payment back (and what to remove locally for payments that were never shared). */
+/**
+ * Rows that take a payment back (and what to remove locally for payments that were never shared).
+ * `spent` are the payments for trip expenses in it, which are taken back as expenses (tab-sync.js).
+ */
 export function undoRows(state, pay, { now = Date.now() } = {}) {
-  const rows = [], remove = [];
+  const rows = [], remove = [], spent = [];
   for (const s of pay.settlements) {
+    if (s.expensePay) { spent.push(s); continue; }
     const row = s.code && state.tabRows?.[`${s.code}|${s.id}`];
     if (row) rows.push({ ...row, status: 'undone', updatedAt: now });
     else if (s.code) rows.push({ code: s.code, id: s.id, kind: 'payment', from: s.from, to: s.to, amount: s.amount, status: 'undone', by: s.by || null, reason: null, at: s.at, updatedAt: now });
     else remove.push(s.id);
   }
   for (const r of pay.netted) rows.push({ ...r, status: 'undone', updatedAt: now });
-  return { rows, remove };
+  return { rows, remove, spent };
 }
 
 /** Everything this phone knows about one round's payments and carries, as rows. */

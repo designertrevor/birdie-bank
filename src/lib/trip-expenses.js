@@ -18,6 +18,16 @@
 // the split (so nobody is asked for a cent more than their share), then down the list. Every
 // expense adds up to exactly $0 across the people in it. Expenses reach the other phones through
 // trip-expense-sync.js; until then they're on this phone and your account. Pure, unit tested.
+//
+// Paying for expenses the trip's published plan doesn't cover (trip-plan.js: someone it can't link
+// up, a trip played only for lunch or points, or before the organizer's phone republishes) is an
+// expense too, a payment: { ..., kind: 'payment', what: 'Payment', split: 'amounts', payer: whoever
+// paid, people: [whoever got it, part: the amount], reason? }. It goes up and comes back like any
+// expense, so it reaches every phone that has the trip's expenses, and its money squares the
+// expenses between the two of them on every phone. Its adder takes it back by deleting it; anyone
+// else takes it back with one that `undoes` it (the same money back the other way), which counts
+// only while the payment it undoes is there. Those expenses stay between the two people in them,
+// pair by pair, the same on every phone (ledger.js expenseDebts). Payments never show as expenses.
 import { canonicalOf, codeOf } from './pair-debts.js';
 
 const MAX_AMOUNT = 99999.99;
@@ -63,6 +73,7 @@ export function cleanExpense(e) {
   const updatedAt = Number(e.updatedAt) || 0;
   const by = isStr(e.by) ? e.by.slice(0, 64) : null;
   if (e.deleted) return { id: e.id, tripId: e.tripId, by, deleted: true, at: Number(e.at) || 0, updatedAt };
+  if (e.kind === 'payment') return cleanPayment(e, { by, updatedAt });
   const total = toCents(e.amount);
   if (total <= 0 || total > toCents(MAX_AMOUNT) || Math.abs(Number(e.amount) * 100 - total) > 1e-6) return null;
   if (!SPLITS[e.split]) return null;
@@ -82,6 +93,28 @@ export function cleanExpense(e) {
     payer, people, by, at: Number(e.at) || 0, updatedAt,
   };
 }
+
+const REASON = /^(trip|trip-part):.{1,64}$/;
+
+/** A payment for expenses (see the top of this file), tidied, or null when it isn't one. */
+function cleanPayment(e, { by, updatedAt }) {
+  const total = toCents(e.amount);
+  if (total <= 0 || total > toCents(MAX_AMOUNT) || Math.abs(Number(e.amount) * 100 - total) > 1e-6) return null;
+  const payer = cleanPerson(e.payer);
+  const to = Array.isArray(e.people) && e.people.length === 1 ? cleanPerson(e.people[0], { part: true }) : null;
+  if (!payer || !to || to.id === payer.id) return null;
+  to.part = total / 100;
+  const out = {
+    id: e.id, tripId: e.tripId, kind: 'payment', what: 'Payment', amount: total / 100, split: 'amounts',
+    payer, people: [to], by, at: Number(e.at) || 0, updatedAt,
+  };
+  if (isStr(e.undoes) && e.undoes.length <= 64 && e.undoes !== e.id) out.undoes = e.undoes;
+  if (isStr(e.reason) && REASON.test(e.reason)) out.reason = e.reason;
+  return out;
+}
+
+/** Whether an expense (raw or as this phone sees it) is a payment for expenses rather than one. */
+export const isPayment = x => (x?.raw || x)?.kind === 'payment';
 
 /**
  * Each person's share in cents, in the order of `people`, adding up to the amount exactly. Equal and
@@ -149,6 +182,37 @@ export function personFor(state, tripId, id, name = '') {
   return { id: k, name: String(name || '').slice(0, 40), refs: refs.slice(0, 8) };
 }
 
+/**
+ * How a payment for expenses between two people writes one of them (`id`, paying or paid by
+ * `other`): as personFor, with the seats and the id the trip's expenses already know them by on
+ * this phone, the ones between the two of them first, so the other one's phone tells who they are
+ * in the payment the way it does in those expenses (a phone that knows you only by a seat in
+ * someone else's round reads you by that seat, never by this phone's own id for you).
+ */
+function payPerson(state, tripId, id, name, other) {
+  const who = codesWho(state);
+  const k = who.who(id), o = who.who(other);
+  const base = personFor(state, tripId, k, name);
+  const refs = [...base.refs];
+  const ids = new Map();
+  for (const e of rawTripExpenses(state, tripId)) {
+    if (e.deleted) continue;
+    const list = [e.payer, ...e.people];
+    const between = list.some(p => personOn(state, p, who) === o);
+    for (const p of list) {
+      if (personOn(state, p, who) !== k) continue;
+      for (const r of p.refs || []) if (!refs.includes(r)) refs.push(r);
+      ids.set(p.id, (ids.get(p.id) || 0) + (between ? 1000 : 1));
+    }
+  }
+  // For a phone none of the seats reach: the id the expenses use most for them (between the two of
+  // them first), else their seat in the newest round, never just this phone's own id for them
+  const common = [...ids].sort((a, b) => b[1] - a[1])[0]?.[0];
+  const seat = base.refs[0] ? base.refs[0].slice(base.refs[0].indexOf(':') + 1) : null;
+  return { id: common || seat || base.id, name: base.name, refs: refs.slice(0, 8) };
+}
+const codesWho = state => ({ who: canonicalOf(state), codes: byCode(state) });
+
 /** Whether a trip is still known on this phone (a deleted trip's expenses move no money). */
 function tripKnown(state, id) {
   if (state.tripPlans?.[id]?.deleted && !state.trips?.[id]) return false;
@@ -179,6 +243,7 @@ export function resolveExpense(state, e, opts = {}) {
   return {
     id: e.id, tripId: e.tripId, what: e.what, amount: e.amount, cents: toCents(e.amount), split: e.split,
     payer, parts, balances, names, by: adder ? at(adder) : e.by ? who(e.by) : null, at: e.at, updatedAt: e.updatedAt, raw: e,
+    ...(e.kind === 'payment' ? { pay: true, ...(e.undoes ? { undoes: e.undoes } : {}), ...(e.reason ? { reason: e.reason } : {}) } : {}),
   };
 }
 
@@ -195,7 +260,7 @@ function indexOf(state) {
     if (!byTrip.has(e.tripId)) byTrip.set(e.tripId, []);
     byTrip.get(e.tripId).push(e);
   }
-  hit = { byTrip, resolved: new Map(), all: null };
+  hit = { byTrip, resolved: new Map(), money: new Map(), all: null, allMoney: null };
   cache.set(state, hit);
   return hit;
 }
@@ -206,27 +271,111 @@ export function rawTripExpenses(state, tripId) {
   return indexOf(state).byTrip.get(tripId) || [];
 }
 
-/** A trip's expenses as this phone sees them (resolveExpense), newest first. Deleted ones are left out. */
+/**
+ * Everything with money a trip has on this phone (resolveExpense), newest first: its expenses and
+ * the payments for them (`pay: true`), deleted ones left out. A payment that `undoes` another counts
+ * only while that one is here, and only the first to undo it (by time) when two phones did at once.
+ */
+export function tripMoney(state, tripId) {
+  if (!state.tripExpenses) return [];
+  const idx = indexOf(state);
+  if (idx.money.has(tripId)) return idx.money.get(tripId);
+  const who = canonicalOf(state);
+  const codes = byCode(state);
+  const raw = tripKnown(state, tripId) ? (idx.byTrip.get(tripId) || []).filter(e => !e.deleted) : [];
+  const pays = new Set(raw.filter(e => e.kind === 'payment' && !e.undoes).map(e => e.id));
+  const undone = new Set();
+  const list = [...raw].sort((a, b) => (a.at || 0) - (b.at || 0) || a.id.localeCompare(b.id)).filter(e => {
+    if (e.kind !== 'payment' || !e.undoes) return true;
+    if (!pays.has(e.undoes) || undone.has(e.undoes)) return false;
+    undone.add(e.undoes);
+    return true;
+  }).map(e => resolveExpense(state, e, { who, codes }))
+    .sort((a, b) => (b.at || 0) - (a.at || 0) || a.id.localeCompare(b.id));
+  idx.money.set(tripId, list);
+  return list;
+}
+
+/** A trip's expenses as this phone sees them (resolveExpense), newest first. Deleted ones and payments are left out. */
 export function tripExpenses(state, tripId) {
   if (!state.tripExpenses) return [];
   const idx = indexOf(state);
   if (idx.resolved.has(tripId)) return idx.resolved.get(tripId);
-  const who = canonicalOf(state);
-  const codes = byCode(state);
-  const list = tripKnown(state, tripId)
-    ? (idx.byTrip.get(tripId) || []).filter(e => !e.deleted).map(e => resolveExpense(state, e, { who, codes }))
-      .sort((a, b) => (b.at || 0) - (a.at || 0) || a.id.localeCompare(b.id))
-    : [];
+  const list = tripMoney(state, tripId).filter(x => !x.pay);
   idx.resolved.set(tripId, list);
   return list;
 }
 
-/** Every trip expense on this phone with money on the Tab (its trip still known here). */
+/**
+ * The payments for a trip's expenses, as payments ({ id, from, to, amount, at, by, tripId, reason?,
+ * expensePay: true, expense }), newest first: the ones still standing (not taken back), so the Tab
+ * and the trip list them with the rest. `expense` is the payment as tripMoney has it.
+ */
+export function tripPays(state, tripId) {
+  const list = tripMoney(state, tripId);
+  const undone = new Set(list.filter(x => x.undoes).map(x => x.undoes));
+  return list.filter(x => x.pay && !x.undoes && !undone.has(x.id)).map(x => ({
+    id: x.id, from: x.payer, to: x.parts[0].id, amount: x.cents / 100, at: x.at || 0, by: x.by, tripId: x.tripId,
+    ...(x.reason ? { reason: x.reason } : {}), expensePay: true, expense: x,
+  }));
+}
+
+/** Every trip expense on this phone with money on the Tab (its trip still known here), payments left out. */
 export function allExpenses(state) {
   if (!state.tripExpenses) return [];
   const idx = indexOf(state);
   if (!idx.all) idx.all = [...idx.byTrip.keys()].flatMap(id => tripExpenses(state, id));
   return idx.all;
+}
+
+/** Every trip's expenses and the payments for them on this phone (tripMoney), for the Tab's money. */
+export function allTripMoney(state) {
+  if (!state.tripExpenses) return [];
+  const idx = indexOf(state);
+  if (!idx.allMoney) idx.allMoney = [...idx.byTrip.keys()].flatMap(id => tripMoney(state, id));
+  return idx.allMoney;
+}
+
+/** Every payment for trip expenses still standing on this phone (tripPays), newest first. */
+export function allTripPays(state) {
+  if (!state.tripExpenses) return [];
+  return [...indexOf(state).byTrip.keys()].flatMap(id => tripPays(state, id)).sort((a, b) => b.at - a.at);
+}
+
+/**
+ * What expenses and their payments put between each two people, pair by pair: [{ from, to, cents }]
+ * with `from` owing `to`, one a pair (ids as this phone knows them). Each person in an expense owes
+ * whoever paid their part; a payment takes it off.
+ */
+export function expensePairDebts(list) {
+  const net = new Map(); // "a|b" -> cents a owes b
+  for (const x of list) {
+    for (const p of x.parts) {
+      if (p.id === x.payer || !p.cents) continue;
+      const [a, b] = p.id < x.payer ? [p.id, x.payer] : [x.payer, p.id];
+      net.set(`${a}|${b}`, (net.get(`${a}|${b}`) || 0) + (p.id === a ? p.cents : -p.cents));
+    }
+  }
+  const out = [];
+  for (const [k, c] of net) {
+    if (!c) continue;
+    const [a, b] = k.split('|');
+    out.push(c > 0 ? { from: a, to: b, cents: c } : { from: b, to: a, cents: -c });
+  }
+  return out;
+}
+
+/**
+ * A payment for trip expenses, written on this phone: `from` paid `to` `amount` cents (ids as this
+ * phone knows them, with their names). `undoes` takes back someone else's payment.
+ */
+export function newPayment(state, { id, tripId, from, to, amount, fromName = '', toName = '', reason = null, undoes = null, now = Date.now() }) {
+  const who = canonicalOf(state);
+  return cleanExpense({
+    id, tripId, kind: 'payment', amount: amount / 100, split: 'amounts',
+    payer: payPerson(state, tripId, from, fromName, to), people: [{ ...payPerson(state, tripId, to, toName, from), part: amount / 100 }],
+    by: who(state.me), at: now, updatedAt: now, ...(reason ? { reason } : {}), ...(undoes ? { undoes } : {}),
+  });
 }
 
 /** Add expenses' balances into `bal` ({ id: cents }), mutating it. */
