@@ -42,15 +42,14 @@ function season() {
 // ------------------------------- privacy rules ---------------------------------
 
 test('privacy: money is hidden by default, and the screen says only you see it', () => {
+  assert.equal(PRIVACY_DEFAULTS.showMoney, false);
   assert.equal(PRIVACY_DEFAULTS.money, 'hidden');
-  assert.equal(whoSees({}, 'money'), 'Only you');
-  assert.equal(whoSees({}, 'stats'), 'People you’ve played with');
-  assert.equal(whoSees({ money: 'played' }, 'money'), 'People you’ve played with');
+  assert.equal(whoSees({}), 'People you’ve played with');
   assert.match(privacySummary({}), /Your money is only for you/);
-  assert.doesNotMatch(privacySummary({}), /money,/);
-  assert.match(privacySummary({ money: 'played' }), /money/);
-  assert.equal(privacySummary({}), 'People you’ve played with see your name, avatar, record, handicap and home course. Your money is only for you.');
-  assert.equal(privacySummary({ money: 'hidden', stats: 'hidden', handicap: 'hidden', homeCourse: 'hidden' }), 'Everything on your profile is only for you.');
+  assert.equal(privacySummary({}), 'People you’ve played with see your name, avatar, record, stats, handicap and home course. Your money is only for you.');
+  assert.equal(privacySummary({ profile: 'played', showMoney: true }), 'People you’ve played with see your name, avatar, record, stats, handicap, home course and money.');
+  assert.equal(privacySummary({ profile: 'hidden' }), 'Everything on your profile is only for you, except your name and avatar in rounds you play.');
+  assert.equal(privacySummary({ money: 'hidden', stats: 'hidden', handicap: 'hidden', homeCourse: 'hidden' }), privacySummary({ profile: 'hidden' }), 'everything hidden before reads as only you');
 });
 
 test('privacy: your own phone always shows your own money, marked only you while it’s hidden', () => {
@@ -61,14 +60,13 @@ test('privacy: your own phone always shows your own money, marked only you while
   assert.equal(tile(hidden, 'net').onlyYou, true);
   assert.equal(tile(hidden, 'best').onlyYou, true);
   assert.equal(tile(hidden, 'rounds').onlyYou, false, 'your record is seen by default');
-  const shown = statTiles(stats, { mine: true, privacy: { money: 'played' } });
+  const shown = statTiles(stats, { mine: true, privacy: { profile: 'played', showMoney: true } });
   assert.equal(tile(shown, 'net').onlyYou, false);
-  // Money goes out with your record (shareableStats), so a hidden record keeps money yours alone too
-  const noRecord = statTiles(stats, { mine: true, privacy: { money: 'played', stats: 'hidden' } });
-  assert.equal(tile(noRecord, 'rounds').onlyYou, true, 'a hidden record is marked too');
-  assert.equal(tile(noRecord, 'net').onlyYou, true);
-  assert.equal(tile(noRecord, 'best').onlyYou, true);
-  assert.equal(privacySummary({ money: 'played', stats: 'hidden' }), 'People you’ve played with see your name, avatar, handicap and home course. Your money shows only with your record, so it’s only for you too.');
+  // Only you: everything is marked, money too even with the switch left on
+  const onlyYou = statTiles(stats, { mine: true, privacy: { profile: 'hidden', showMoney: true } });
+  assert.equal(tile(onlyYou, 'rounds').onlyYou, true, 'a hidden record is marked too');
+  assert.equal(tile(onlyYou, 'net').onlyYou, true);
+  assert.equal(tile(onlyYou, 'best').onlyYou, true);
 });
 
 test('privacy: hidden money never reaches anyone else, so their card has no money tiles', () => {

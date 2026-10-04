@@ -2,7 +2,8 @@
 // what. Opened from Settings (behind your avatar on every main tab) and from your row on Players.
 // It all works on this phone first; people you've played with see it once your account has it.
 import { useMemo, useState } from 'react';
-import { Header, Icon, Numpad, Screen, Segmented, Toggle, useUI } from '../components/ui.jsx';
+import { Header, Icon, Numpad, Screen, useUI } from '../components/ui.jsx';
+import { ProfilePrivacy } from '../components/ProfilePrivacy.jsx';
 import { Avatar } from '../components/Avatar.jsx';
 import { AvatarPicker } from '../components/AvatarPicker.jsx';
 import { HomeCourseSheet } from '../components/HomeCourseSheet.jsx';
@@ -12,19 +13,21 @@ import { formatIndex } from '../lib/format.js';
 import { PAY_APPS, PAY_APP_IDS, handleText, payInfo } from '../lib/pay.js';
 import { savePlayerCard } from '../lib/player-save.js';
 import { avatarLabel } from '../lib/avatars.js';
-import { refreshProfiles, setHomeCourse, setPrivacy, useMyProfile, useMyStats, useProfileServer } from '../lib/profiles.js';
-import { MONEY_CHOICES, PRIVACY_ROWS, moneyHelp, privacySummary, profileSubline, sinceText, statTiles } from '../lib/profile-view.js';
+import { refreshProfiles, setHomeCourse, useMyProfile, useMyStats, useProfileServer } from '../lib/profiles.js';
+import { privacySummary, profileSubline, sinceText, statTiles } from '../lib/profile-view.js';
 import { accountsEnabled, useAccount } from '../lib/cloud.js';
 import { money } from '../lib/golf.js';
 import { bestOf, bestText, deepStats, pressText, skinsText, winRate } from '../lib/deep-stats.js';
 
 /** Where your profile is, in one quiet line under your name. */
-function whereLine(user, server) {
+function whereLine(user, server, privacy) {
   if (!accountsEnabled) return 'Saved on this phone';
   if (!user) return 'Only on this phone until you sign in';
-  if (server === 'ready') return 'People you’ve played with see this';
+  if (privacy.profile === 'hidden') return 'Only you see this';
+  const who = privacy.profile === 'everyone' ? 'Anyone who opens your profile' : 'People you’ve played with';
+  if (server === 'ready') return `${who} ${privacy.profile === 'everyone' ? 'sees' : 'see'} this`;
   if (server === 'offline') return 'Saved. It goes to your account when you’re back online';
-  return 'Saved to your account. People you’ve played with see it soon';
+  return `Saved to your account. ${who} ${privacy.profile === 'everyone' ? 'sees' : 'see'} it soon`;
 }
 
 export default function Profile() {
@@ -43,7 +46,7 @@ export default function Profile() {
   const [pad, setPad] = useState(false);
   const [picking, setPicking] = useState(false);
   const [home, setHome] = useState(false);
-  // The deeper stats, all time, from your rounds on this phone (only you see them)
+  // The deeper stats, all time, from your rounds on this phone (their records go with your profile, the money never)
   const deep = useMemo(() => deepStats(state), [state]);
 
   if (!card) {
@@ -79,7 +82,6 @@ export default function Profile() {
 
   const tiles = statTiles(stats, { mine: true, privacy: me.privacy });
   const since = sinceText(stats.since);
-  const moneyLevel = me.privacy.money;
 
   return (
     <Screen>
@@ -92,7 +94,7 @@ export default function Profile() {
           </button>
           <div className="pf-name d">{card.name}</div>
           <div className="ph-sub">{profileSubline({ index: card.index, homeCourse: me.homeCourse }, formatIndex)}</div>
-          <div className="pf-where"><Icon name={acct.user && server === 'ready' ? 'users-three' : 'device-mobile'} /> {whereLine(acct.user, server)}</div>
+          <div className="pf-where"><Icon name={acct.user && server === 'ready' && me.privacy.profile !== 'hidden' ? 'users-three' : 'device-mobile'} /> {whereLine(acct.user, server, me.privacy)}</div>
         </div>
 
         {stats.rounds > 0 ? (
@@ -117,7 +119,7 @@ export default function Profile() {
                   {deep.skins.rounds > 0 && <div className="kv-row"><span className="kv-k">Skins won</span><span className="kv-v">{skinsText(deep.skins.won)}</span></div>}
                   <button className="pf-home stats-open" onClick={() => nav.push('stats', { range: { kind: 'all' } })}>
                     <Icon name="chart-bar" fill />
-                    <span className="row-main"><b>See all your stats</b><span>By game and course, presses, skins and biggest wins. Only you see them.</span></span>
+                    <span className="row-main"><b>See all your stats</b><span>By game and course, presses, skins and biggest wins. {me.privacy.profile === 'hidden' ? 'Only you see them.' : 'Records, presses and skins show on your profile. Dollars and biggest wins stay with you.'}</span></span>
                     <Icon name="caret-right" />
                   </button>
                 </div>
@@ -162,21 +164,7 @@ export default function Profile() {
         </div>
 
         <div className="sec-label">Privacy</div>
-        <div className="block">
-          <div className="eyebrow" id="pf-money" style={{ marginBottom: 10 }}>Who sees your money</div>
-          <Segmented label="Who sees your money" className="press-mode-row ft-seg pf-money-seg" btn="pm-btn" value={moneyLevel} onChange={v => setPrivacy('money', v)}
-            options={MONEY_CHOICES} />
-          <p className="field-help">{moneyHelp(me.privacy)} What you owe each other always shows on the Tab, to the two of you.</p>
-        </div>
-        {PRIVACY_ROWS.filter(r => r.key !== 'money').map(r => (
-          <div key={r.key} className="toggle-row">
-            <div>
-              <div className="toggle-lbl" id={`pf-p-${r.key}`}>Show {r.title.toLowerCase()}</div>
-              <div className="toggle-sub" id={`pf-ps-${r.key}`}>{r.help} {me.privacy[r.key] === 'played' ? 'People you’ve played with see it.' : 'Only you see it.'}</div>
-            </div>
-            <Toggle on={me.privacy[r.key] === 'played'} onChange={on => setPrivacy(r.key, on ? 'played' : 'hidden')} labelledBy={`pf-p-${r.key}`} describedBy={`pf-ps-${r.key}`} />
-          </div>
-        ))}
+        <ProfilePrivacy id="pf-pv" />
         <p className="field-help pad">{privacySummary(me.privacy)} Your own phone always shows you everything.</p>
       </div>
       {dirty && (
