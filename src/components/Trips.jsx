@@ -3,8 +3,9 @@
 // trip?" in setup, and the sheet that starts or edits a trip.
 import { useCallback, useState } from 'react';
 import { createPortal } from 'react-dom';
-import { Icon, Sheet, Steps, Toggle, useUI } from './ui.jsx';
+import { Icon, Segmented, Sheet, Steps, Toggle, useUI } from './ui.jsx';
 import { Avatar } from './Pay.jsx';
+import { CupLine, CupRoundNote, TeamsPicker } from './Cup.jsx';
 import { useStore } from '../lib/store.js';
 import { useNav } from '../lib/nav.js';
 import { money } from '../lib/golf.js';
@@ -15,6 +16,7 @@ import { canonicalOf } from '../lib/pair-debts.js';
 import { TRIP_FORMATS, myTripAllIn, myTripNet, startsLine, tripChips, tripDates, tripStatus, upDown } from '../lib/trips.js';
 import { countsMoney, onTab, playForOf } from '../lib/play-for.js';
 import { editTrip, hideTrip, makeTrip } from '../lib/trip-store.js';
+import { CUP_FORMAT, balanceTeams, cleanCup, cupHeadline } from '../lib/cup.js';
 
 const first = name => String(name || '').trim().split(/\s+/)[0];
 
@@ -74,23 +76,26 @@ export function TripTabCard({ status: st }) {
   const me = canonicalOf(state)(state.me);
   const inExpenses = st.spending.has(me);
   const net = inExpenses ? myTripAllIn(state, st) : myTripNet(state, st);
-  const n = st.plan.length;
+  // A team points trip's stake is paid from the trip, not the Tab: it counts in the trip's payments
+  const n = st.plan.length + (st.cup ? st.cup.lines.filter(l => l.open > 0).length : 0);
   const spent = st.expenses.length ? ` · ${st.expenses.length} expense${st.expenses.length === 1 ? '' : 's'}` : '';
   const sub = st.phase === 'soon' ? `${startsLine(st.trip.start)}${spent}`
     : st.phase === 'empty' ? 'No rounds were counted for it'
     : st.pointsOnly ? `${roundsLine(st.done.length)}${st.phase === 'on' ? ' so far' : ''} · played for points`
-    : st.phase === 'ready' ? `${n} payment${n === 1 ? '' : 's'} square${n === 1 ? 's' : ''} the trip · ${st.payments.length} paid so far`
+    : st.phase === 'ready' ? `${n} payment${n === 1 ? '' : 's'} square${n === 1 ? 's' : ''} the trip · ${st.payments.length + (st.cup?.marks.length || 0)} paid so far${st.cup?.stakeOn ? ' · the cup stake is paid on the trip' : ''}`
     : st.phase === 'square' ? `${roundsLine(st.done.length)}${spent} · settled`
     : `${roundsLine(st.done.length)}${spent} so far · settle after the last round`;
   const played = st.standings.some(p => p.id === me);
-  const showAmt = (played && st.money.length > 0) || inExpenses;
+  const showAmt = (played && st.hasMoney) || inExpenses;
   const said = inExpenses ? (net > 0 ? `The trip owes you ${money(net)}` : net < 0 ? `You owe ${money(-net)} on the trip` : 'You’re square on the trip') : upDown(net);
+  const cupOn = st.cup && (st.cup.score.done > 0 || st.cup.score.live.length > 0);
   return (
     <div className="trip-card-wrap">
-      <button className="trip-card on-tab" onClick={() => nav.push('trip', { id: st.trip.id })} aria-label={`${st.trip.name}. ${sub}${showAmt ? `. ${said}` : ''}. See the trip`}>
+      <button className="trip-card on-tab" onClick={() => nav.push('trip', { id: st.trip.id })} aria-label={`${st.trip.name}. ${sub}${cupOn ? `. ${cupHeadline(st.cup)}` : ''}${showAmt ? `. ${said}` : ''}. See the trip`}>
         <div className="row-main">
           <div className="eyebrow">{tripEyebrow(st)} <Updated st={st} /></div>
           <div className="trip-name d">{st.trip.name}</div>
+          {cupOn && <div className="trip-sub"><CupLine cup={st.cup} /></div>}
           <div className="trip-sub">{sub}</div>
         </div>
         {showAmt && (
@@ -124,9 +129,12 @@ export function TripDays({ status }) {
 export function TripUpNext({ status: st, renderPlan }) {
   const nav = useNav();
   const state = useStore();
-  const line = st.money.length ? standingLine(state, st) : null;
+  const line = st.hasMoney ? standingLine(state, st) : null;
   const next = st.planned[0];
+  // A team points trip leads with the cup, while it's on and once it's decided
+  const cupOn = st.cup && (st.cup.score.done > 0 || st.cup.score.live.length > 0);
   const title = st.phase === 'soon' ? startsLine(st.trip.start)
+    : cupOn && (st.phase === 'on' || !line) ? cupHeadline(st.cup)
     : st.phase === 'ready' ? (line ? `That’s the trip. ${line.replace('You’re ', 'You finished ')}` : 'That’s the trip')
     : st.phase === 'square' ? (st.pointsOnly ? 'That’s the trip' : 'All square on the trip')
     : st.phase === 'empty' ? 'No rounds were counted for it'
@@ -139,6 +147,7 @@ export function TripUpNext({ status: st, renderPlan }) {
           <div className="row-main">
             <div className="eyebrow">{st.trip.name}{st.day ? ` · Day ${st.day} of ${st.days}` : ` · ${tripDates(st.trip)}`} <Updated st={st} /></div>
             <div className="trip-name d">{title}</div>
+            {cupOn && <div className="trip-sub"><CupLine cup={st.cup} />{st.phase === 'on' && line ? ` · ${line}` : ''}</div>}
             <TripDays status={st} />
             {next && <div className="trip-sub">Next: {dayLabel(next.date)}{next.teeTime ? ` ${timeLabel(next.teeTime)}` : ''} · {next.course?.name || 'Course to be set'}</div>}
             {st.phase === 'ready' && <div className="trip-sub strong">Settle the trip <Icon name="arrow-right" /></div>}
@@ -172,11 +181,13 @@ export function TripRoundNote({ round }) {
   const label = id => (id === me ? 'You' : first(nameOf(state, id)));
   const open = () => nav.push('trip', { id: st.trip.id });
   const last = (st.phase === 'ready' || st.phase === 'square') && st.done.at(-1)?.id === round.id;
-  if (last && st.money.length && onTab(round)) {
+  const cupNote = st.cup ? <CupRoundNote cup={st.cup} round={round} /> : null;
+  if (last && st.hasMoney && (onTab(round) || st.cup?.stakeOn)) {
     return (
       <div className="trip-card wrap-up">
         <div className="eyebrow">That’s the trip</div>
         <div className="trip-name d">{st.trip.name} is in the books</div>
+        {cupNote}
         <div className="trip-stand">
           {st.standings.slice(0, 6).map((p, i) => (
             <div key={p.id} className="ts-row">
@@ -200,6 +211,7 @@ export function TripRoundNote({ round }) {
     <button className="trip-card note" onClick={open} aria-label={`Counts for ${st.trip.name}. See the trip`}>
       <div className="row-main">
         <div className="eyebrow">Counts for {st.trip.name}</div>
+        {cupNote}
         <div className="trip-sub">
           {/* A points or reward round's results never show a dollar, even the trip's, but for a reward round's side bets for money */}
           {played && st.money.length && onTab(round) ? `${upDown(net)} on the trip. ` : ''}
@@ -267,6 +279,7 @@ export function AtScreen({ children }) {
 
 function TripForm({ trip, onDone }) {
   const { showToast } = useUI();
+  const state = useStore();
   const today = isoDate();
   const [step, setStep] = useState(0);
   const [name, setName] = useState(trip?.name || '');
@@ -274,24 +287,42 @@ function TripForm({ trip, onDone }) {
   const [end, setEnd] = useState(trip?.end || plusDays(trip?.start || today, 2));
   const [where, setWhere] = useState(trip?.where || '');
   const [people, setPeople] = useState(() => trip?.people || []);
+  const [format, setFormat] = useState(trip?.format || 'money');
+  const [cup, setCup] = useState(() => cleanCup(trip?.cup));
   const ok = name.trim().length > 0 && /^\d{4}-\d{2}-\d{2}$/.test(start) && /^\d{4}-\d{2}-\d{2}$/.test(end);
+  const isCup = format === CUP_FORMAT;
+  // Who can be on a team: you and who's going, as this phone has them
+  const me = trip?.by || state.me;
+  const pool = [me, ...people.filter(id => id !== me)].map(id => state.players[id]).filter(Boolean).map(p => ({ id: p.id, name: p.name, index: p.index ?? null }));
+  const going = new Set(pool.map(p => p.id));
+  // Someone taken off Who's going comes off their team too
+  const teams = cup.teams.map(t => t.filter(p => going.has(p.id)));
+  const cupNow = { ...cup, teams, captains: cup.captains.map(c => (going.has(c) ? c : null)) };
+  const teamsOk = teams[0].length > 0 && teams[1].length > 0;
+  const toTeams = () => {
+    // First time on Teams: balanced by handicap to start from
+    if (!cup.teams.flat().length) setCup(c => ({ ...c, pick: 'balance', teams: balanceTeams(pool) }));
+    setStep(2);
+  };
   const save = () => {
-    if (!ok) return;
+    if (!ok || (isCup && !teamsOk)) return;
     const last = end < start ? start : end;
+    const cupOut = isCup || trip?.cup ? cleanCup(cupNow) : null;
     if (trip) {
-      editTrip(trip.id, { name: name.trim().slice(0, 32), start, end: last, where: where.trim().slice(0, 32) || null, people });
+      editTrip(trip.id, { name: name.trim().slice(0, 32), start, end: last, where: where.trim().slice(0, 32) || null, people, format, ...(cupOut ? { cup: cupOut } : {}) });
       showToast('Trip updated');
       onDone?.(trip);
       return;
     }
-    const t = makeTrip({ name, start, end: last, where, people });
+    const t = makeTrip({ name, start, end: last, where, people, format, cup: cupOut });
     showToast(`${t.name} is on`);
     onDone?.(t);
   };
+  const steps = isCup ? ['Trip', 'Who’s going', 'Teams'] : ['Trip', 'Who’s going'];
   return (
     <div className="block trip-form">
-      <Steps steps={['Trip', 'Who’s going']} current={step} canGo={i => i === 0 || ok} onGo={setStep} />
-      {step === 0 ? (
+      <Steps steps={steps} current={step} canGo={i => i === 0 || (ok && (i < 2 || pool.length >= 2))} onGo={i => (i === 2 ? toTeams() : setStep(i))} />
+      {step === 0 && (
         <>
           <label className="field-label" htmlFor="trip-name">Name</label>
           <input id="trip-name" className="text-input" value={name} onChange={e => setName(e.target.value)} maxLength={32} placeholder="Bandon 2026" autoFocus={!trip} />
@@ -307,13 +338,29 @@ function TripForm({ trip, onDone }) {
           </div>
           <label className="field-label" htmlFor="trip-where">Where <span className="opt">(optional)</span></label>
           <input id="trip-where" className="text-input" value={where} onChange={e => setWhere(e.target.value)} maxLength={32} placeholder="Bandon Dunes Resort" />
-          <p className="field-help">{TRIP_FORMATS.money.name}: each round keeps its own games and bets, everyone on the trip sees the standings, and it’s settled once, in the fewest payments, right after the last round. Rounds started in these dates ask to count for it.</p>
+          <div className="field-label">How it’s played</div>
+          <Segmented label="How the trip is played" className="press-mode-row" btn="pm-btn" value={format} onChange={setFormat}
+            options={[{ value: 'money', label: 'Money' }, { value: CUP_FORMAT, label: 'Team points' }]} />
+          <p className="field-help">{isCup
+            ? `${TRIP_FORMATS[CUP_FORMAT].name}: two teams play matches in every round, 1 point a win and ½ a halved match, with a team score and a leaderboard. Each round keeps its own games and bets, and it’s all settled once, right after the last round.`
+            : `${TRIP_FORMATS.money.name}: each round keeps its own games and bets, everyone on the trip sees the standings, and it’s settled once, in the fewest payments, right after the last round.`} Rounds started in these dates ask to count for it.</p>
           <button className="full-btn" style={{ marginTop: 14 }} disabled={!ok} onClick={() => setStep(1)}>Next <Icon name="arrow-right" /></button>
         </>
-      ) : (
+      )}
+      {step === 1 && (
         <>
           <WhoGoing picked={people} onChange={setPeople} />
-          <button className="full-btn" style={{ marginTop: 14 }} disabled={!ok} onClick={save}>{trip ? 'Save changes' : 'Start the trip'} <Icon name={trip ? 'check' : 'arrow-right'} /></button>
+          {isCup
+            ? <button className="full-btn" style={{ marginTop: 14 }} disabled={!ok || pool.length < 2} onClick={toTeams}>Next: the teams <Icon name="arrow-right" /></button>
+            : <button className="full-btn" style={{ marginTop: 14 }} disabled={!ok} onClick={save}>{trip ? 'Save changes' : 'Start the trip'} <Icon name={trip ? 'check' : 'arrow-right'} /></button>}
+          {isCup && pool.length < 2 && <p className="field-help">Pick at least one friend to make two teams.</p>}
+        </>
+      )}
+      {step === 2 && isCup && (
+        <>
+          <TeamsPicker people={pool} value={cupNow} onChange={setCup} />
+          <button className="full-btn" style={{ marginTop: 14 }} disabled={!ok || !teamsOk} onClick={save}>{trip ? 'Save changes' : 'Start the trip'} <Icon name={trip ? 'check' : 'arrow-right'} /></button>
+          {!teamsOk && <p className="field-help">Each team needs at least one player.</p>}
         </>
       )}
     </div>

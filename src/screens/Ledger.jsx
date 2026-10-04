@@ -11,6 +11,7 @@ import { canonicalOf, paymentGroups, recentPayment } from '../lib/shared-tab.js'
 import { sharedDebts } from '../lib/pair-debts.js';
 import { undoPayments, useTabSync } from '../lib/tab-sync.js';
 import { useTripPlans } from '../lib/trip-plan-sync.js';
+import { useCupSync } from '../lib/cup-sync.js';
 import { money } from '../lib/golf.js';
 import { myIds } from '../lib/format.js';
 import { AvatarButton, BottomNav } from '../nav.jsx';
@@ -31,6 +32,7 @@ export default function Ledger() {
   useTabSync({ live: true });
   // A trip's published plan sets what each pair on it owes (trip-plan.js)
   useTripPlans();
+  useCupSync();
   const plan = outstanding(state);
   const [open, setOpen] = useState(null);
   const [free, setFree] = useState(false);
