@@ -8,6 +8,7 @@ import { linksOf } from './people-links.js';
 import { countsMoney, onTab, tabResults } from './play-for.js';
 import { betsOf, isCashBet } from './pair-bets.js';
 import { planDebts } from './trip-plan.js';
+import { allExpenses, expensePairs, expensesBetween } from './trip-expenses.js';
 
 const toCents = v => Math.round((Number(v) || 0) * 100);
 /** Whether two players had a side bet for money together in a reward round. */
@@ -110,7 +111,10 @@ const mineOf = (state, mine) => {
   return id => mine.has(id) || mine.has(who(id));
 };
 
-/** Everyone's running balance across finished rounds, less payments recorded. Positive = owed money. */
+/**
+ * Everyone's running balance across finished rounds and trip expenses (trip-expenses.js), less
+ * payments recorded. Positive = owed money.
+ */
 export function tabBalances(state) {
   const bal = {};
   const who = canonical(state);
@@ -118,6 +122,7 @@ export function tabBalances(state) {
   for (const r of moneyRounds(state)) {
     for (const [id, v] of Object.entries(tabResults(r).balances)) add(id, v);
   }
+  for (const x of allExpenses(state)) for (const [id, c] of Object.entries(x.balances)) add(id, c / 100);
   for (const s of state.settlements || []) { add(s.from, s.amount); add(s.to, -s.amount); }
   return bal;
 }
@@ -141,13 +146,17 @@ export function roundsTogether(state) {
  * The Tab's payment plan: the fewest payments across the whole group, only ever between people
  * who have played a round together (friends from different groups never get asked to pay each
  * other). What's open on rounds that were shared live stays between the two people in them, as
- * both phones see it (pair-debts.js), and only the rest is squared across the group.
+ * both phones see it (pair-debts.js), and only the rest is squared across the group. A trip
+ * expense counts like a round between each person in it and whoever paid.
  * Returns [{ from, to, amount, rounds: [roundId] }], where rounds are the finished rounds the two
  * played together.
  */
 export function outstanding(state, { now = Date.now() } = {}) {
   const together = roundsTogether(state);
-  const canPay = (a, b) => together.has(pairKey(a, b));
+  // A trip expense puts money between each person in it and whoever paid, round together or not
+  const spent = allExpenses(state);
+  const spentPairs = spent.length ? expensePairs(spent) : null;
+  const canPay = spentPairs ? (a, b) => together.has(pairKey(a, b)) || spentPairs.has(pairKey(a, b)) : (a, b) => together.has(pairKey(a, b));
   const direct = sharedDebts(state, { now });
   // A trip's published plan (trip-plan.js): its rounds and their payments come out of the
   // balances, and each pair's open money on the plan goes in as it is, the same on every phone
@@ -182,10 +191,11 @@ export function outstanding(state, { now = Date.now() } = {}) {
   return plan.sort((a, b) => b.amount - a.amount || a.from.localeCompare(b.from));
 }
 
-/** Everyone's balance in cents, leaving out the rounds and payments a trip's live plan settles. */
+/** Everyone's balance in cents, leaving out the rounds, expenses and payments a trip's live plan settles. */
 function planBalances(state, trip) {
   const skipRounds = new Set(trip.rounds.map(r => r.id));
   const skipPays = new Set(trip.settlements);
+  const skipSpent = new Set(trip.expenses || []);
   const bal = {};
   const who = canonical(state);
   const add = (id, c) => { const k = who(id); bal[k] = (bal[k] || 0) + c; };
@@ -193,6 +203,10 @@ function planBalances(state, trip) {
     if (skipRounds.has(r.id)) continue;
     // A reward round's side bets for money in dollars, never its points
     for (const [id, v] of Object.entries(tabResults(r).balances)) add(id, toCents(v));
+  }
+  for (const x of allExpenses(state)) {
+    if (skipSpent.has(x.id)) continue;
+    for (const [id, c] of Object.entries(x.balances)) add(id, c);
   }
   for (const s of state.settlements || []) {
     if (skipPays.has(s)) continue;
@@ -204,9 +218,11 @@ function planBalances(state, trip) {
 /**
  * Everything between you and one person, for the round-by-round story: each finished round you
  * both played with the honest head-to-head (what you won from them, bet by bet), each payment
- * between you and each agreed carry-over. Newest first. `ids` is every id that means you.
+ * between you, each agreed carry-over and each trip expense one of you paid for the other. Newest
+ * first. `ids` is every id that means you.
  * Points and reward rounds are in the story and the record (`money: false` on the item), but
- * never in `net`: that is dollars only.
+ * never in `net`: that is dollars only. Trip expenses aren't golf, so they're never in `net` (the
+ * head to head) either: `spent` is what they put between you, positive when they owe you.
  */
 export function personStory(state, ids, other) {
   const mine = ids instanceof Set ? ids : new Set(ids);
@@ -238,6 +254,12 @@ export function personStory(state, ids, other) {
     if (isThem(s.from) && isMine(s.to)) { items.push({ kind: 'payment', id: s.id, settlement: s, amount: s.amount, at: s.at || 0 }); paid += s.amount; }
     else if (isMine(s.from) && isThem(s.to)) { items.push({ kind: 'payment', id: s.id, settlement: s, amount: -s.amount, at: s.at || 0 }); paid -= s.amount; }
   }
+  // Trip expenses: what one of you paid for the other (trip-expenses.js)
+  let spent = 0;
+  for (const x of expensesBetween(state, isMine, isThem)) {
+    items.push({ kind: 'expense', id: x.expense.id, expense: x.expense, amount: x.amount / 100, at: x.at });
+    spent += x.amount;
+  }
   // Agreed carry-overs get their own line. They move no money, so net and paid stay as they are
   for (const k of state.carries || []) {
     if (k.status !== 'agreed') continue;
@@ -246,7 +268,7 @@ export function personStory(state, ids, other) {
   }
   items.sort((a, b) => b.at - a.at);
   const c = v => Math.round(v * 100) / 100 || 0;
-  return { items, rounds: won + lost + even, won, lost, even, net: c(net), paid: c(paid) };
+  return { items, rounds: won + lost + even, won, lost, even, net: c(net), paid: c(paid), spent: spent / 100 };
 }
 
 /**

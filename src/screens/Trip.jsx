@@ -1,14 +1,16 @@
-// A trip: everyone's standings across its rounds, the rounds themselves, and money by game; then
-// Settle the trip, once, right after the last round (or someone's part, for a friend leaving
-// early), from the one plan the organizer's phone publishes so every phone shows the same
-// payments. Trip money is already in each person's total on the Tab, so paying here pays the Tab
-// too. Only the organizer edits, deletes or says "Done playing"; anyone can hide the trip from
-// their own Tab and Up next. See trips.js and trip-plan.js for how it's all worked out.
+// A trip: everyone's standings across its rounds, the rounds themselves, money by game and the
+// trip's expenses (gas, dinner, the house); then Settle the trip, once, right after the last round
+// (or someone's part, for a friend leaving early), for the rounds and the expenses together, from
+// the one plan the organizer's phone publishes so every phone shows the same payments. Trip money
+// is already in each person's total on the Tab, so paying here pays the Tab too. Only the
+// organizer edits, deletes or says "Done playing"; anyone can hide the trip from their own Tab and
+// Up next. See trips.js, trip-plan.js and trip-expenses.js for how it's all worked out.
 import { useEffect, useState } from 'react';
 import { Empty, Header, Icon, Screen, Segmented, Sheet, useUI } from '../components/ui.jsx';
 import { Avatar, PayButton, RequestButton } from '../components/Pay.jsx';
 import { RoundRow } from '../components/RoundRow.jsx';
 import { SquareFaces, TripDays, TripSheet } from '../components/Trips.jsx';
+import { TripExpensesView } from '../components/TripExpenses.jsx';
 import { getState, useStore } from '../lib/store.js';
 import { useNav } from '../lib/nav.js';
 import { holeComplete } from '../lib/round.js';
@@ -21,7 +23,7 @@ import { points } from '../lib/play-for.js';
 import { whenLabel } from '../lib/plans.js';
 import { buzz } from '../lib/delight.js';
 import { markTripPayment, undoPayments, usePaymentsOff, useTabSync } from '../lib/tab-sync.js';
-import { TRIP_FORMATS, canDeleteTrip, canRecount, myTripNet, partPlan, roundsInDates, tripByGame, tripDates, tripHidden, tripStatus, upDown } from '../lib/trips.js';
+import { TRIP_FORMATS, canDeleteTrip, canRecount, myTripAllIn, myTripNet, partPlan, roundsInDates, tripByGame, tripDates, tripHidden, tripStatus, upDown } from '../lib/trips.js';
 import { deleteTrip, endTrip, hideTrip, seenTripPlan, setRoundTrip } from '../lib/trip-store.js';
 import { plansOn, useTripPlans } from '../lib/trip-plan-sync.js';
 
@@ -36,14 +38,17 @@ function useSeenPlan(id, version) {
 /** Whose phone the trip's payments come from, for the words: "Sam’s phone", or "the organizer’s phone". */
 const theirPhone = st => (st.organizer ? 'your phone' : st.published.byName ? `${st.published.byName}’s phone` : 'the organizer’s phone');
 
+/** "You’re owed $40", "You owe $12" or "You’re square": your whole trip, all in. */
+const owedLine = v => (v > 0 ? `You’re owed ${money(v)}` : v < 0 ? `You owe ${money(-v)}` : 'You’re square');
+
 /** Who "you" are to the trip, and a name for anyone on it. */
 function useWho(state) {
   const me = canonicalOf(state)(state.me);
   return { me, label: id => (id === me ? 'You' : nameOf(state, id)), short: id => (id === me ? 'You' : first(nameOf(state, id))) };
 }
 
-/** `view`: which part opens first ('standings', 'rounds' or 'games'). */
-export default function Trip({ id, view: firstView = 'standings' }) {
+/** `view`: which part opens first ('standings', 'rounds', 'games' or 'expenses'); `add` opens Add an expense. */
+export default function Trip({ id, view: firstView = 'standings', add = false }) {
   const nav = useNav();
   const state = useStore();
   const { ask, showToast } = useUI();
@@ -54,6 +59,8 @@ export default function Trip({ id, view: firstView = 'standings' }) {
   const [editing, setEditing] = useState(false);
   const [counting, setCounting] = useState(false);
   const [leaving, setLeaving] = useState(false);
+  // Opened to add an expense (from Up next): only the first time the Expenses view shows
+  const [adding, setAdding] = useState(add);
   const st = tripStatus(state, id);
   const { me, label, short } = useWho(state);
   useSeenPlan(id, st?.published.version || 0);
@@ -63,6 +70,9 @@ export default function Trip({ id, view: firstView = 'standings' }) {
   const { trip } = st;
   const played = st.standings.some(p => p.id === me);
   const net = myTripNet(state, st);
+  const allIn = myTripAllIn(state, st);
+  // In an expense: your whole trip, the rounds and the expenses
+  const inExpenses = st.spending.has(me);
   const myPoints = st.points?.[me] ?? null;
   // Only the organizer deletes, and only before any trip money is paid. A finished round shared
   // live keeps the trip on friends' phones, so that needs trip plans on the server to tell them
@@ -74,14 +84,21 @@ export default function Trip({ id, view: firstView = 'standings' }) {
     : st.phase === 'square' ? 'All square'
     : `${st.day ? `Day ${st.day} of ${st.days} · ` : ''}${st.done.length} round${st.done.length === 1 ? '' : 's'} done`;
   const big = st.money.length && played ? upDown(net)
+    : inExpenses ? owedLine(allIn)
     : myPoints != null ? `You’re on ${points(myPoints, { sign: true })}`
     : st.phase === 'soon' ? 'Nothing played yet' : st.done.length ? 'No money on it yet' : 'Nothing played yet';
+  const bigSign = st.money.length && played ? sign(net) : inExpenses ? sign(allIn) : '';
+  // With expenses too, the whole trip under the rounds' money
+  const allInLine = st.money.length && played && inExpenses ? `All in with expenses, ${owedLine(allIn).replace(/^You/, 'you')}` : null;
+  const settles = st.expenses.length ? 'the rounds and the expenses' : 'the whole trip';
+  const askExpenses = !st.expenses.length ? ' Add gas, dinner and the house under Expenses and they settle with it.' : '';
   const hint = st.pointsOnly ? 'Played for points, so there’s nothing to pay. Everyone on the trip sees the standings.'
-    : st.published.status === 'stale' && st.money.length ? `A round or a score changed, so the trip’s payments are being worked out again on ${theirPhone(st)}. Until then the Tab keeps the trip’s money pair by pair.`
-    : st.phase === 'ready' ? `${st.plan.length} payment${st.plan.length === 1 ? '' : 's'} square${st.plan.length === 1 ? 's' : ''} the whole trip${st.published.status === 'live' ? ', the same on every phone' : ''}. Trip money is already in each person’s total on the Tab, so paying here pays the Tab too.`
+    : st.published.status === 'stale' && (st.money.length || st.expenses.length) ? `A round, a score or an expense changed, so the trip’s payments are being worked out again on ${theirPhone(st)}. Until then the Tab keeps the trip’s money pair by pair.`
+    : st.phase === 'ready' ? `${st.plan.length} payment${st.plan.length === 1 ? '' : 's'} square${st.plan.length === 1 ? 's' : ''} ${settles}${st.published.status === 'live' ? ', the same on every phone' : ''}. Trip money is already in each person’s total on the Tab, so paying here pays the Tab too.`
     : st.phase === 'square' ? 'Everyone’s square on the trip.'
-    : st.phase === 'soon' ? `Rounds you start from ${tripDates(trip)} ask to count for the trip. Plan them now so everyone can answer.`
-    : 'Nothing’s paid yet. Settle the trip opens after the last round, once for the whole trip. Trip money is already in each person’s total on the Tab.';
+    : st.phase === 'soon' ? `Rounds you start from ${tripDates(trip)} ask to count for the trip. Plan them now so everyone can answer.${askExpenses}`
+    : `Nothing’s paid yet. Settle the trip opens after the last round, once for the whole trip. Trip money is already in each person’s total on the Tab.${askExpenses}`;
+  const anyMoney = st.money.length > 0 || st.expenses.length > 0;
 
   const del = async () => {
     if (!(await ask({ title: `Delete ${trip.name}?`, text: `Its rounds stay in History and their money stays on the Tab. They just stop being a trip${del_.everywhere ? ', on everyone’s phone' : ''}.`, confirmLabel: 'Delete the trip', danger: true }))) return;
@@ -103,15 +120,16 @@ export default function Trip({ id, view: firstView = 'standings' }) {
       <div className="scroll">
         <div className="trip-hero">
           <div className="eyebrow pink">{eyebrow}{st.published.updated && <> <span className="trip-updated">Updated</span></>}</div>
-          <div className={`tab-big d ${st.money.length && played ? sign(net) : ''}`}>{big}</div>
+          <div className={`tab-big d ${bigSign}`}>{big}</div>
+          {allInLine && <div className={`trip-allin ${sign(allIn)}`}>{allInLine}</div>}
           <div className="trip-sub">{[tripDates(trip), trip.where].filter(Boolean).join(' · ')}</div>
           <TripDays status={st} />
         </div>
         <p className="hint-card"><Icon name={st.phase === 'square' ? 'handshake' : 'suitcase-rolling'} fill /> {hint}</p>
 
         <div className="tab-view">
-          <Segmented label="Trip view" className="press-mode-row" btn="pm-btn" value={view} onChange={setView}
-            options={[{ value: 'standings', label: 'Standings' }, { value: 'rounds', label: 'Rounds' }, { value: 'games', label: 'Games' }]} />
+          <Segmented label="Trip view" className="press-mode-row trip-views" btn="pm-btn" value={view} onChange={setView}
+            options={[{ value: 'standings', label: 'Standings' }, { value: 'rounds', label: 'Rounds' }, { value: 'games', label: 'Games' }, { value: 'expenses', label: 'Expenses' }]} />
         </div>
 
         {view === 'standings' && <Standings st={st} state={state} label={label} me={me} />}
@@ -135,18 +153,19 @@ export default function Trip({ id, view: firstView = 'standings' }) {
           </>
         )}
         {view === 'games' && <Games st={st} state={state} label={label} />}
+        {view === 'expenses' && <TripExpensesView st={st} me={me} adding={adding} onAdded={() => setAdding(false)} />}
 
         <p className="field-help pad">{TRIP_FORMATS[trip.format]?.name || TRIP_FORMATS.money.name}. Each round keeps its own games and bets. Someone who plays only some rounds is on the trip for those rounds.</p>
         {/* Only the organizer deletes; everyone else can hide it from their own Tab and Up next */}
         {del_.ok && <button className="text-link danger" onClick={del}><Icon name="trash" /> Delete the trip</button>}
-        {st.organizer && !del_.ok && <p className="field-help pad">Trip money has been paid, so the trip stays. You can still edit its name and dates.</p>}
+        {st.organizer && !del_.ok && <p className="field-help pad">{!st.paid.length && st.expenses.length ? 'The trip has expenses, so it stays. Once they’re deleted under Expenses, the trip can be too.' : 'Trip money has been paid, so the trip stays.'} You can still edit its name and dates.</p>}
         {(!st.organizer || hidden) && <button className="text-link" onClick={hide}><Icon name={hidden ? 'eye' : 'eye-slash'} /> {hidden ? 'Show it on your Tab and Up next' : 'Hide this trip'}</button>}
         {!st.organizer && !hidden && <p className="field-help pad">Hiding takes it off your own Tab and Up next. Your rounds and money stay as they are.</p>}
       </div>
       <div className="cta-wrap">
         {st.phase === 'ready' && <button className="full-btn pink" onClick={() => nav.push('tripSettle', { id })}>Settle the trip <Icon name="arrow-right" /></button>}
         {st.phase === 'square' && st.payments.length > 0 && <button className="full-btn outline" onClick={() => nav.push('tripSettle', { id })}>See the trip’s payments</button>}
-        {(st.phase === 'on' || st.phase === 'soon') && st.money.length > 0 && (
+        {(st.phase === 'on' || st.phase === 'soon') && anyMoney && (
           <>
             <button className="full-btn outline" onClick={() => setLeaving(true)}><Icon name="sign-out" /> Leaving early? Settle a part</button>
             {/* The organizer's call: it rides in the trip's plan, so every phone opens Settle the trip together */}
@@ -158,8 +177,8 @@ export default function Trip({ id, view: firstView = 'standings' }) {
       {st.organizer && <TripSheet open={editing} trip={trip} onClose={() => setEditing(false)} onDone={() => setEditing(false)} />}
       <CountSheet open={counting} onClose={() => setCounting(false)} st={st} />
       <Sheet open={leaving} onClose={() => setLeaving(false)} title="Who’s leaving?">
-        <p className="field-help pad">Their payments for the rounds so far. Everyone else settles after the last round.</p>
-        {st.standings.map(p => (
+        <p className="field-help pad">Their payments for the rounds{st.expenses.length ? ' and expenses' : ''} so far. Everyone else settles after the last round.</p>
+        {st.totals.map(p => (
           <button key={p.id} className="sheet-item" onClick={() => { setLeaving(false); nav.push('tripSettle', { id, who: p.id }); }}>
             <span><Avatar id={p.id} name={nameOf(state, p.id)} /> {p.id === me ? 'Settle my part' : `Settle ${short(p.id)}’s part`}</span>
             <span className={`trip-li-amt ${sign(p.amount)}`}>{money(p.amount, { sign: true })}</span>
@@ -226,7 +245,7 @@ function Standings({ st, state, label, me }) {
         ))}
       </div>
       {st.live.map(r => <LiveRow key={r.id} round={r} />)}
-      <p className="field-help pad">Finished rounds on this phone{total > 1 ? `, all ${total} of them` : ''}. Adds up to $0 across everyone on the trip. Someone who missed a round sees only the rounds they played, but the payments are the same on every phone.</p>
+      <p className="field-help pad">Finished rounds on this phone{total > 1 ? `, all ${total} of them` : ''}. Adds up to $0 across everyone on the trip. Someone who missed a round sees only the rounds they played, but the payments are the same on every phone.{st.expenses.length ? ' The rounds only: everyone’s total with the expenses is under Expenses.' : ''}</p>
     </>
   );
 }
@@ -362,7 +381,7 @@ export function TripSettle({ id, who = null }) {
   };
 
   const title = who ? (who === me ? 'Settle your part' : `Settle ${short(who)}’s part`) : `Settle ${trip.name}`;
-  const people = st.standings.map(p => p.id);
+  const people = st.totals.map(p => p.id);
   const updating = st.published.status === 'stale' && n > 0;
   return (
     <Screen>
@@ -373,9 +392,10 @@ export function TripSettle({ id, who = null }) {
             <div className="eyebrow">{who ? 'Leaving early' : 'Whole trip'}{st.published.updated && <> <span className="trip-updated">Updated</span></>}</div>
             <div className="d settle-count">{all} payment{all === 1 ? '' : 's'}{paid.length ? `, ${paid.length} paid` : ''}</div>
             <p>{who
-              ? `Just ${who === me ? 'your' : `${short(who)}’s`} payments for the rounds so far. Everyone else settles after the last round.`
-              : st.perRound > all ? `Round by round it would have been ${st.perRound}.` : 'Every round is netted first, so nobody sends money that just comes back to them.'}
-              {st.published.updated ? ' A round or a score changed since you last looked, so these are the new payments.' : ''}</p>
+              ? `Just ${who === me ? 'your' : `${short(who)}’s`} payments for the rounds${st.expenses.length ? ' and expenses' : ''} so far. Everyone else settles after the last round.`
+              : st.perRound > all ? `Round by round it would have been ${st.perRound}.` : `Every round${st.expenses.length ? ' and expense' : ''} is netted first, so nobody sends money that just comes back to them.`}
+              {st.expenses.length > 0 && !who ? ` The trip’s ${st.expenses.length} expense${st.expenses.length === 1 ? ' is' : 's are'} in it too.` : ''}
+              {st.published.updated ? ' A round, a score or an expense changed since you last looked, so these are the new payments.' : ''}</p>
           </div>
         ) : (
           <div className="block trip-square">
@@ -386,7 +406,7 @@ export function TripSettle({ id, who = null }) {
         )}
 
         {updating && (
-          <p className="hint-card"><Icon name="arrows-clockwise" /> A round or a score changed, so the trip’s payments are being worked out again on {theirPhone(st)}. They show here as soon as they’re ready, the same on every phone. Nothing can be marked paid until then.</p>
+          <p className="hint-card"><Icon name="arrows-clockwise" /> A round, a score or an expense changed, so the trip’s payments are being worked out again on {theirPhone(st)}. They show here as soon as they’re ready, the same on every phone. Nothing can be marked paid until then.</p>
         )}
 
         {!updating && mineLines.map((t, i) => {
@@ -454,7 +474,7 @@ export function TripSettle({ id, who = null }) {
           </>
         )}
 
-        <p className="field-help pad">Nobody pays someone they didn’t play with on the trip. {st.published.status === 'live'
+        <p className="field-help pad">Nobody pays someone they didn’t play with{st.expenses.length ? ' or share an expense with' : ''} on the trip. {st.published.status === 'live'
           ? `One plan for the whole trip, worked out on ${theirPhone(st)}, so every phone shows the same payments.`
           : 'Rounds shared live settle between the two people in them, so every phone agrees.'} Money from before the trip stays on the Tab as it is.{off ? '' : ' A payment marked here shows on the phones of everyone in the rounds it’s tied to.'}</p>
       </div>

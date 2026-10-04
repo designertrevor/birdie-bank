@@ -12,7 +12,7 @@ import { nameOf } from '../lib/ledger.js';
 import { placeOf, sortedPlayers } from '../lib/format.js';
 import { dayLabel, isoDate, timeLabel } from '../lib/plans.js';
 import { canonicalOf } from '../lib/pair-debts.js';
-import { TRIP_FORMATS, myTripNet, startsLine, tripChips, tripDates, tripStatus, upDown } from '../lib/trips.js';
+import { TRIP_FORMATS, myTripAllIn, myTripNet, startsLine, tripChips, tripDates, tripStatus, upDown } from '../lib/trips.js';
 import { countsMoney, onTab, playForOf } from '../lib/play-for.js';
 import { editTrip, hideTrip, makeTrip } from '../lib/trip-store.js';
 
@@ -65,32 +65,38 @@ function HideX({ st }) {
 
 /**
  * The trip's card on the Tab. Trip money is already in each person's total below it; the card is
- * the trip's own view of it, one tap from the standings and Settle the trip.
+ * the trip's own view of it, one tap from the standings and Settle the trip. With expenses in it,
+ * the amount is your whole trip, all in.
  */
 export function TripTabCard({ status: st }) {
   const nav = useNav();
   const state = useStore();
-  const net = myTripNet(state, st);
+  const me = canonicalOf(state)(state.me);
+  const inExpenses = st.spending.has(me);
+  const net = inExpenses ? myTripAllIn(state, st) : myTripNet(state, st);
   const n = st.plan.length;
-  const sub = st.phase === 'soon' ? startsLine(st.trip.start)
+  const spent = st.expenses.length ? ` · ${st.expenses.length} expense${st.expenses.length === 1 ? '' : 's'}` : '';
+  const sub = st.phase === 'soon' ? `${startsLine(st.trip.start)}${spent}`
     : st.phase === 'empty' ? 'No rounds were counted for it'
     : st.pointsOnly ? `${roundsLine(st.done.length)}${st.phase === 'on' ? ' so far' : ''} · played for points`
     : st.phase === 'ready' ? `${n} payment${n === 1 ? '' : 's'} square${n === 1 ? 's' : ''} the trip · ${st.payments.length} paid so far`
-    : st.phase === 'square' ? `${roundsLine(st.done.length)} · settled`
-    : `${roundsLine(st.done.length)} so far · settle after the last round`;
-  const played = st.standings.some(p => p.id === canonicalOf(state)(state.me));
+    : st.phase === 'square' ? `${roundsLine(st.done.length)}${spent} · settled`
+    : `${roundsLine(st.done.length)}${spent} so far · settle after the last round`;
+  const played = st.standings.some(p => p.id === me);
+  const showAmt = (played && st.money.length > 0) || inExpenses;
+  const said = inExpenses ? (net > 0 ? `The trip owes you ${money(net)}` : net < 0 ? `You owe ${money(-net)} on the trip` : 'You’re square on the trip') : upDown(net);
   return (
     <div className="trip-card-wrap">
-      <button className="trip-card on-tab" onClick={() => nav.push('trip', { id: st.trip.id })} aria-label={`${st.trip.name}. ${sub}${played && st.money.length ? `. ${upDown(net)}` : ''}. See the trip`}>
+      <button className="trip-card on-tab" onClick={() => nav.push('trip', { id: st.trip.id })} aria-label={`${st.trip.name}. ${sub}${showAmt ? `. ${said}` : ''}. See the trip`}>
         <div className="row-main">
           <div className="eyebrow">{tripEyebrow(st)} <Updated st={st} /></div>
           <div className="trip-name d">{st.trip.name}</div>
           <div className="trip-sub">{sub}</div>
         </div>
-        {played && st.money.length > 0 && (
+        {showAmt && (
           <div className="trip-amt-col">
             <div className={`trip-amt d ${net > 0 ? 'pos' : net < 0 ? 'neg' : ''}`}>{money(net, { sign: true })}</div>
-            <div className="trip-amt-sub">{st.phase === 'square' ? (net > 0 ? 'won' : net < 0 ? 'lost' : 'even') : 'so far'}</div>
+            <div className="trip-amt-sub">{inExpenses ? 'all in' : st.phase === 'square' ? (net > 0 ? 'won' : net < 0 ? 'lost' : 'even') : 'so far'}</div>
           </div>
         )}
         <span className="chevron"><Icon name="caret-right" /></span>
@@ -141,6 +147,12 @@ export function TripUpNext({ status: st, renderPlan }) {
         </button>
         <HideX st={st} />
       </div>
+      {/* While the trip is on: gas, dinner, the house, one tap from the trip's own page */}
+      {(st.phase === 'on' || st.phase === 'soon') && (
+        <button className="trip-line" onClick={() => nav.push('trip', { id: st.trip.id, view: 'expenses', add: !st.expenses.length })}>
+          <Icon name="receipt" /> {st.expenses.length ? `Trip expenses · ${money(st.spent)} so far` : 'Paid for something? Add an expense'} <Icon name="caret-right" />
+        </button>
+      )}
       {st.planned.map(renderPlan)}
     </>
   );
@@ -247,7 +259,7 @@ export function TripSheet({ open, onClose, onDone, trip = null }) {
 }
 
 /** Opened from inside a card or the scrolling list, the sheet still covers the whole screen (as in TabCard.jsx). */
-function AtScreen({ children }) {
+export function AtScreen({ children }) {
   const [target, setTarget] = useState(null);
   const ref = useCallback(el => { if (el) setTarget(el.closest('.screen')); }, []);
   return <><span ref={ref} hidden />{target && createPortal(children, target)}</>;

@@ -2235,3 +2235,53 @@ button.ch-main:active { transform: scale(.98); }
 .pot-row { flex-direction: column; align-items: stretch; gap: 8px; }
 .pot-row .pot-lbl { width: auto; flex-direction: row; align-items: baseline; gap: 8px; flex-wrap: wrap; }
 .pot-row .pot-lbl span { font-size: 12px; }
+
+/* ---------- Trip expenses (overnight 7, expenses): the Expenses view on the Trip page and its sheet ---------- */
+/* Tokens only, so light and dark both follow the theme */
+.trip-allin { margin-top: 4px; font-size: 15px; font-weight: 700; color: var(--body); font-variant-numeric: tabular-nums; }
+.exp-sum { padding: 14px 16px; }
+.exp-big { font-size: 34px; font-weight: 800; letter-spacing: -.02em; color: var(--ink); line-height: 1.1; margin-top: 2px; font-variant-numeric: tabular-nums; }
+.exp-big.sm { font-size: 26px; }
+.exp-sum-sub { font-size: 13px; color: var(--mute); margin-top: 4px; line-height: 1.4; font-variant-numeric: tabular-nums; }
+.ledger-row.exp-row { gap: 12px; padding: 14px 14px 14px 12px; width: calc(100% - 32px); border: none; font: inherit; color: inherit; text-align: left; }
+.exp-ic { width: 40px; height: 40px; border-radius: 50%; flex-shrink: 0; display: grid; place-items: center; background: var(--trip-tag-bg); color: var(--pink-text); font-size: 19px; }
+.exp-name { font-family: var(--display); font-size: 17px; font-weight: 800; color: var(--ink); overflow-wrap: anywhere; }
+.exp-row .lr-info { min-width: 0; }
+.exp-mine { font-size: 13px; font-weight: 700; margin-top: 3px; font-variant-numeric: tabular-nums; }
+.exp-amt { font-family: var(--display); font-size: 18px; font-weight: 800; color: var(--ink); white-space: nowrap; font-variant-numeric: tabular-nums; align-self: flex-start; padding-top: 2px; }
+.trip-games tr.me th[scope="row"] { color: var(--pink-text); }
+/* The sheet: one column, big touch targets, every part to the cent as you go */
+.exp-form { margin: 0 16px 16px; padding: 4px 0 0; background: none; }
+.exp-chips { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
+.exp-chips .pill-btn.sm { min-height: 36px; }
+.exp-money { position: relative; display: flex; align-items: center; }
+.exp-money .text-input { padding-left: 28px; font-variant-numeric: tabular-nums; }
+.exp-dollar { position: absolute; left: 14px; font-size: 16px; font-weight: 600; color: var(--mute); pointer-events: none; }
+.exp-money.sm { width: 112px; flex-shrink: 0; }
+.exp-money.sm .text-input { padding: 9px 10px 9px 24px; text-align: right; }
+.exp-money.sm .exp-dollar { left: 11px; }
+.field-help.err { color: var(--loss); }
+.exp-people { list-style: none; margin: 10px 0 0; padding: 2px 12px; background: var(--card); border-radius: 18px; }
+.exp-person { display: flex; align-items: center; gap: 10px; min-height: 56px; padding: 6px 0; border-top: 1px solid var(--line-soft); }
+.exp-person:first-child { border-top: none; }
+.exp-who { flex: 1; min-width: 0; display: flex; align-items: center; gap: 8px; }
+.exp-who .avatar { margin: 0; width: 34px; height: 34px; font-size: 15px; }
+.exp-tick { border: none; background: none; font: inherit; color: inherit; text-align: left; cursor: pointer; padding: 6px 0; min-height: 44px; }
+.exp-tick > i { font-size: 22px; color: var(--mute-soft); flex-shrink: 0; }
+.exp-tick[aria-pressed="true"] > i { color: var(--pink-text); }
+.exp-pname { font-weight: 700; font-size: 15px; color: var(--ink); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.exp-person.me .exp-pname { color: var(--pink-text); }
+.exp-of { font-size: 12px; color: var(--mute); white-space: nowrap; }
+.exp-share { font-family: var(--display); font-weight: 800; font-size: 16px; color: var(--ink); white-space: nowrap; font-variant-numeric: tabular-nums; min-width: 64px; text-align: right; }
+.exp-share.none { color: var(--mute-soft); }
+.exp-step { display: inline-flex; align-items: center; gap: 6px; flex-shrink: 0; }
+.exp-step .icon-btn:disabled { opacity: .4; }
+.exp-n { min-width: 22px; text-align: center; font-family: var(--display); font-weight: 800; font-size: 17px; font-variant-numeric: tabular-nums; }
+.exp-status { display: flex; align-items: center; gap: 6px; margin: 8px 4px 0; font-size: 13px; font-weight: 600; color: var(--mute); font-variant-numeric: tabular-nums; }
+.exp-status.ok, .exp-status.ok i { color: var(--win); }
+.exp-status.off { color: var(--loss); }
+.exp-form .text-link { margin: 10px 0 0; padding-left: 0; }
+.exp-view-top { display: flex; align-items: center; gap: 12px; }
+/* Four views on the Trip page: a step smaller so "Standings" and "Expenses" fit side by side at 375px */
+.trip-views .pm-btn { min-width: 0; padding: 0 2px; font-size: 14px; }
+.link-btn.exp-all { display: block; margin: 8px 4px 0 auto; }

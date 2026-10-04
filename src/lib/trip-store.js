@@ -1,9 +1,13 @@
 // Changing trips on this phone: making one, editing its name, dates and who's going, saying
 // you're done playing, counting a round for it or taking it out, deleting it (all the organizer's),
-// and hiding it from your own Tab and Up next (anyone's). The math is in trips.js.
+// hiding it from your own Tab and Up next (anyone's), and adding, changing or deleting a trip
+// expense (anyone adds one; only its adder changes or deletes it). The math is in trips.js and
+// trip-expenses.js.
 import { getState, uid, update } from './store.js';
 import { editPlan } from './plan-sync.js';
+import { nameOf } from './ledger.js';
 import { cleanPeople, isOrganizer, newTrip, tripOf, tripStamp } from './trips.js';
+import { canEditExpense, cleanExpense, cleanWhat, personFor } from './trip-expenses.js';
 import { publishDeleted, refreshPlans } from './trip-plan-sync.js';
 
 /** Make a trip and keep it on this phone (it syncs with your account). Returns it. */
@@ -100,4 +104,50 @@ export function hideTrip(id, hidden = true) {
 export function seenTripPlan(id, version) {
   if (!version || getState().tripPlanSeen?.[id] === version) return;
   update(st => { st.tripPlanSeen = { ...(st.tripPlanSeen || {}), [id]: version }; });
+}
+
+/**
+ * Add a trip expense, or change one you added (`id`). `amount` is in cents, `payer` and each of
+ * `people` ({ id, part }) are ids as this phone knows them: `part` is null for an equal split, cents
+ * for a split by amount, or the number of shares. Each person is written with their seat in the
+ * trip's rounds shared live, so friends' phones know who they are. Goes to the other phones on the
+ * trip right away when there's signal. Returns the expense, or null when it doesn't add up.
+ */
+export function saveExpense({ id = null, tripId, what, amount, payer, split, people }) {
+  const s = getState();
+  const old = id ? cleanExpense(s.tripExpenses?.[id]) : null;
+  if (id && (!old || old.deleted || !canEditExpense(s, old))) return null;
+  const now = Date.now();
+  const person = x => personFor(s, tripId, x, nameOf(s, x));
+  const raw = {
+    id: old?.id || uid('x_'), tripId, what: cleanWhat(what), amount: Math.round(amount) / 100, split,
+    payer: person(payer),
+    people: people.map(p => ({ ...person(p.id), part: split === 'amounts' ? Math.round(p.part) / 100 : split === 'shares' ? p.part : null })),
+    by: old?.by || s.me, at: old?.at || now, updatedAt: now,
+  };
+  const e = cleanExpense(raw);
+  if (!e) return null;
+  update(st => { st.tripExpenses = { ...(st.tripExpenses || {}), [e.id]: e }; });
+  refreshPlans();
+  return e;
+}
+
+/** Delete a trip expense you added. It stays as a stub so every phone on the trip hears it's gone. */
+export function deleteExpense(id) {
+  const s = getState();
+  const old = cleanExpense(s.tripExpenses?.[id]);
+  if (!old || old.deleted || !canEditExpense(s, old)) return false;
+  const stub = { id: old.id, tripId: old.tripId, by: old.by, deleted: true, at: old.at, updatedAt: Date.now() };
+  update(st => { st.tripExpenses = { ...(st.tripExpenses || {}), [id]: stub }; });
+  refreshPlans();
+  return true;
+}
+
+/** Put back an expense you just deleted (the toast's Undo), as a newer copy so every phone takes it. */
+export function restoreExpense(expense) {
+  const e = cleanExpense({ ...expense, updatedAt: Date.now() });
+  if (!e || e.deleted || !canEditExpense(getState(), e)) return null;
+  update(st => { st.tripExpenses = { ...(st.tripExpenses || {}), [e.id]: e }; });
+  refreshPlans();
+  return e;
 }

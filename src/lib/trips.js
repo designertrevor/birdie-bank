@@ -21,7 +21,12 @@
 // a trip; anyone can hide one from their own Tab and Up next (`state.tripHidden`).
 // Planned rounds carry the same stamp (`plan.trip`), so they group under the trip on Up next.
 //
-// Someone who only plays some rounds is on the trip for those rounds only. Pure, unit tested.
+// Someone who only plays some rounds is on the trip for those rounds only.
+//
+// Trip expenses (trip-expenses.js) go on the same trip: each person's total, the Tab and Settle the
+// trip count them with the rounds. The published plan covers the ones its rounds link up; the rest
+// settle with the rounds only this phone has, in the fewest payments, each person in one paying
+// whoever paid (or someone in between). Pure, unit tested.
 import { GAMES, roundResults } from './round.js';
 import { onTab, playForOf, tabResults } from './play-for.js';
 import { fewestPayments } from './ledger.js';
@@ -32,6 +37,7 @@ import { dayLabel, daysUntil, isoDate } from './plans.js';
 import { canEdit, keeperMe } from './keeper.js';
 import { money } from './golf.js';
 import { isPlanPayment, planRows, planState } from './trip-plan.js';
+import { addExpenseCents, expensePairs, expenseTotals, tripExpenses } from './trip-expenses.js';
 
 const DAY = 864e5;
 /** How a trip is scored. Only money for now; trip formats (team points, a leaderboard) can join later. */
@@ -211,13 +217,14 @@ export function tripPairRounds(state, id, { now = Date.now() } = {}) {
  *   payee owed. Trip money is in each person's total on the Tab, so paying that total pays the
  *   trip too, and the trip never asks for it again.
  */
-function paymentsOf(state, id, rounds, local, together, bal) {
+function paymentsOf(state, id, rounds, local, together, bal, spent = []) {
   const who = canonicalOf(state);
   const localIds = new Set(local.map(r => r.id));
   const localCodes = new Set(local.map(codeOf).filter(Boolean));
   const allIds = new Set(rounds.map(r => r.id));
   const allCodes = new Set(rounds.map(codeOf).filter(Boolean));
-  const startAt = rounds.length ? Math.min(...rounds.map(r => r.createdAt || finishedAt(r))) : Infinity;
+  // The trip starts with its first round, or its first expense when one came before it
+  const startAt = Math.min(rounds.length ? Math.min(...rounds.map(r => r.createdAt || finishedAt(r))) : Infinity, ...spent.map(x => x.at || Infinity));
   const left = { ...bal };
   const pay = (f, t, c) => { left[f] = (left[f] || 0) + c; left[t] = (left[t] || 0) - c; };
   const trip = [], onPlan = [], onRounds = [], onPairs = [], loose = [];
@@ -303,6 +310,9 @@ export function tripDay(trip, today) {
  *   the fewest payments for the rounds only this phone has.
  * - published: the plan's state here ('none', 'live', 'stale'), its version, whether it changed
  *   since you last looked (`updated`), and `pending` rounds it doesn't cover yet.
+ * - expenses: the trip's expenses (trip-expenses.js), newest first; spent: what they add up to;
+ *   spending: Map(id -> { paid, share, net }) in cents; totals: everyone's whole trip, the rounds'
+ *   money and the expenses, [{ id, golf, expenses, amount }] in dollars, most owed first.
  * - paid: every payment that counts for the trip; payments: the same, one a tap; perRound: how
  *   many payments the rounds one by one would have taken.
  * The trip opens to settle right after its last round: no round still being played, no planned
@@ -329,7 +339,12 @@ export function tripStatus(state, id, { now = Date.now() } = {}) {
   const pairRounds = tripPairRounds(state, id, { now }).filter(r => !covered.has(r.id));
   const local = rounds.filter(r => !pairRounds.includes(r) && !covered.has(r.id));
   const bal = balanceCents(state, rounds);
-  const { trip: tripPaid, onPlan, onRounds, onPairs, counted, left } = paymentsOf(state, id, rounds, local, together, balanceCents(state, local));
+  // Expenses the published plan covers are in its lines; the rest settle with the local rounds
+  const expenses = tripExpenses(state, id);
+  const spentIn = live_?.expenses || new Set();
+  const spentHere = expenses.filter(x => !spentIn.has(x.id));
+  for (const k of expensePairs(spentHere)) together.add(k);
+  const { trip: tripPaid, onPlan, onRounds, onPairs, counted, left } = paymentsOf(state, id, rounds, local, together, addExpenseCents(balanceCents(state, local), spentHere), spentHere);
   const rest = fewestPayments(Object.fromEntries(Object.entries(left).map(([k, c]) => [k, c / 100])), { canPay: (a, b) => together.has(pairKey(a, b)) });
   const plan = mergePlan(openByPair(state, pairRounds), rest, live_?.open || []);
   const paid = [...tripPaid, ...onPlan, ...onRounds, ...onPairs, ...counted.map(x => x.settlement)];
@@ -342,13 +357,20 @@ export function tripStatus(state, id, { now = Date.now() } = {}) {
   const over = !!endedAt || closed || (!!trip.end && (today > trip.end || (today === trip.end && done.some(r => dayOf(finishedAt(r)) === today))));
   const quiet = !live.length && !planned.length;
   let phase;
-  if (!done.length && !live.length) phase = trip.start && today < trip.start ? 'soon' : over ? 'empty' : planned.length ? 'soon' : 'on';
+  if (!done.length && !live.length && !expenses.length) phase = trip.start && today < trip.start ? 'soon' : over ? 'empty' : planned.length ? 'soon' : 'on';
+  // Only expenses so far (the house paid ahead, or a trip rained out): they settle like rounds
+  else if (!done.length && !live.length) phase = quiet && over ? (plan.length ? 'ready' : 'square') : trip.start && today < trip.start ? 'soon' : 'on';
   else if (quiet && over && done.length) phase = plan.length ? 'ready' : 'square';
   else phase = 'on';
   const lastPaid = Math.max(0, ...paid.map(s => s.at || 0));
   const who = canonicalOf(state);
   const standings = [...people.entries()].filter(([pid]) => money.some(r => r.players.some(p => who(p.id) === pid)))
     .map(([pid, v]) => ({ id: pid, amount: (bal[pid] || 0) / 100, rounds: v.rounds }))
+    .sort((a, b) => b.amount - a.amount || a.id.localeCompare(b.id));
+  const spending = expenseTotals(expenses);
+  const golf = new Map(standings.map(p => [p.id, Math.round(p.amount * 100)]));
+  const totals = [...new Set([...golf.keys(), ...spending.keys()])]
+    .map(pid => ({ id: pid, golf: (golf.get(pid) || 0) / 100, expenses: (spending.get(pid)?.net || 0) / 100, amount: ((golf.get(pid) || 0) + (spending.get(pid)?.net || 0)) / 100 }))
     .sort((a, b) => b.amount - a.amount || a.id.localeCompare(b.id));
   const seen = state.tripPlanSeen?.[id] ?? null;
   const published = {
@@ -357,13 +379,14 @@ export function tripStatus(state, id, { now = Date.now() } = {}) {
   };
   return {
     trip, phase, rounds, done, live, planned, money, people, standings, plan, paid, settling, closed, pairRounds, published, endedAt,
+    expenses, spent: expenses.reduce((a, x) => a + x.cents, 0) / 100, spending, totals,
     going: tripGoing(state, trip), organizer: isOrganizer(state, trip),
     payments: tripPaymentGroups(state, paid),
     // Points standings only for a trip played for points (null otherwise, so a trip with nothing in
     // it yet, or played only for rewards, shows Who's going or says so)
     points: !money.length && pointsDone(rounds).length ? pointsOf(state, rounds) : null,
-    // Played only for points so far: nothing to pay, and never a dollar
-    pointsOnly: !money.length && pointsDone(rounds).length > 0,
+    // Played only for points so far: nothing to pay, and never a dollar (but for any expenses)
+    pointsOnly: !money.length && pointsDone(rounds).length > 0 && !expenses.length,
     perRound: money.reduce((a, r) => a + tabResults(r).transfers.length, 0),
     // With a plan live: trip rounds with money it leaves out though they finished before it was
     // published, so the organizer's phone doesn't have them (they didn't play) and the players in
@@ -392,10 +415,16 @@ export function tripPayment(state, tripId, from, to, { now = Date.now(), part = 
   return { rows, settlements };
 }
 
-/** Your net on the trip so far (you are `state.me` to the trip). */
+/** Your net on the trip's rounds so far (you are `state.me` to the trip). */
 export function myTripNet(state, status) {
   const me = canonicalOf(state)(state.me);
   return status.standings.find(s => s.id === me)?.amount ?? 0;
+}
+
+/** Your whole trip so far, the rounds' money and the expenses: what it owes you (negative: what you owe). */
+export function myTripAllIn(state, status) {
+  const me = canonicalOf(state)(state.me);
+  return status.totals.find(s => s.id === me)?.amount ?? 0;
 }
 
 /** Just one person's payments in the trip's plan: their part, for someone leaving early. */
@@ -416,7 +445,7 @@ export function currentTrips(state, { now = Date.now() } = {}) {
     const s = tripStatus(state, id, { now });
     if (!s) continue;
     const show = s.phase === 'on' || s.phase === 'ready' || s.phase === 'square'
-      || ((s.phase === 'soon' || s.phase === 'empty') && (!s.trip.derived || s.planned.length > 0));
+      || ((s.phase === 'soon' || s.phase === 'empty') && (!s.trip.derived || s.planned.length > 0 || s.expenses.length > 0));
     if (show) out.push(s);
   }
   return out.sort((a, b) => String(a.trip.start || '').localeCompare(String(b.trip.start || '')));
@@ -466,13 +495,14 @@ export function canRecount(state, round) {
 
 /**
  * Whether the organizer can delete the trip: only before any trip money is paid (a round's own
- * settle up, a Tab payment counted for it, Settle the trip). A finished round shared live keeps its
+ * settle up, a Tab payment counted for it, Settle the trip) and while it has no expenses (each is
+ * its adder's, so they go first). A finished round shared live keeps its
  * trip on friends' phones, so deleting one needs trip plans on the server to tell them it's gone
  * (`plansOn`). Returns { ok, everywhere }: everywhere when friends' phones need telling.
  */
 export function canDeleteTrip(state, st, { plansOn = false } = {}) {
   const no = { ok: false, everywhere: false };
-  if (!st?.organizer || st.paid.length > 0) return no;
+  if (!st?.organizer || st.paid.length > 0 || st.expenses?.length > 0) return no;
   const rounds = tripRounds(state, st.trip.id);
   if (!plansOn && rounds.some(r => !canRecount(state, r))) return no;
   return { ok: true, everywhere: plansOn && rounds.some(r => codeOf(r)) };

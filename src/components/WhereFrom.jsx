@@ -111,6 +111,7 @@ export function TabWhereFrom({ other }) {
               {w.totals.length > 0 ? <ul className="wf-list">{w.totals.map(x => <Item key={x.group} x={{ ...x, bet: x.group.startsWith('bet:') }} fmt={money} />)}</ul>
                 : <p className="hint-card"><Icon name="handshake" fill /> All square on every game.</p>}
               <div className="wf-sum"><span>From your rounds</span><strong className={cls(w.net)}>{money(w.net, { sign: true })}</strong></div>
+              {w.spent !== 0 && <div className="wf-sum sub"><span>Trip expenses</span><strong className={cls(w.spent)}>{money(w.spent, { sign: true })}</strong></div>}
               {w.paid !== 0 && <div className="wf-sum sub"><span>{w.paid > 0 ? `${f} paid you` : `You paid ${f}`}</span><strong>{money(-w.paid, { sign: true })}</strong></div>}
               <div className="wf-sum"><span>{onTab > 0 ? `${f} pays you now` : onTab < 0 ? `You pay ${f} now` : 'On the Tab now'}</span><strong className={cls(onTab)}>{onTab ? money(Math.abs(onTab)) : 'Square'}</strong></div>
               <p className="field-help pad">The Tab squares everyone in the fewest payments, so what you pay each other now can differ from what you won or lost with {f}.</p>
@@ -122,6 +123,16 @@ export function TabWhereFrom({ other }) {
                     <strong className={cls(x.total)}>{money(x.total, { sign: true })}</strong>
                   </div>
                   <div className="wf-rline">{breakdownLine(x.items, money)}</div>
+                </div>
+              ))}
+              {w.expenses.length > 0 && <div className="sec-label">Trip expenses</div>}
+              {w.expenses.map(x => (
+                <div key={x.expense.id} className="wf-round">
+                  <div className="wf-rhead">
+                    <span>{x.expense.what} · {shortDate(x.at)}</span>
+                    <strong className={cls(x.amount)}>{money(x.amount, { sign: true })}</strong>
+                  </div>
+                  <div className="wf-rline">{x.amount > 0 ? `You paid, ${f}’s share` : `${f} paid, your share`}</div>
                 </div>
               ))}
             </>

@@ -8,6 +8,7 @@ import { gameKeyLabel, roundResults } from './round.js';
 import { meFor } from './format.js';
 import { canonicalOf } from './pair-debts.js';
 import { onTab, tabResults } from './play-for.js';
+import { expensesBetween } from './trip-expenses.js';
 
 const toCents = v => Math.round((Number(v) || 0) * 100);
 
@@ -55,11 +56,13 @@ const mineOf = (state, mine) => {
  * Where everything between you and one person comes from, across every finished money round you
  * both played (points and reward rounds aren't money, so they're left out, but for a reward round's
  * side bets played for money):
- * { rounds: [{ round, at, total, items }], totals: [{ group, label, amount }], net, paid, open }.
+ * { rounds: [{ round, at, total, items }], totals: [{ group, label, amount }], net, paid, open,
+ *   expenses: [{ expense, amount, at }], spent }.
  * `rounds` is newest first, each with its pairBreakdown from your side; `totals` adds each game
  * and kind of bet up across the rounds (biggest first, square ones left out); `net` is what you
- * won from them in all, `paid` what they paid you less what you paid them, and `open` what's
- * still between you two (net less paid). `ids` is every id that means you.
+ * won from them in all, `paid` what they paid you less what you paid them, `expenses` and `spent`
+ * what trip expenses put between you (in dollars, positive when they owe you), and `open` what's
+ * still between you two (net and spent, less paid). `ids` is every id that means you.
  */
 export function breakdownWith(state, ids, other) {
   const mine = ids instanceof Set ? ids : new Set(ids);
@@ -96,7 +99,10 @@ export function breakdownWith(state, ids, other) {
   }
   rounds.sort((x, y) => y.at - x.at);
   const list = [...totals.values()].filter(t => toCents(t.amount)).sort((x, y) => Math.abs(y.amount) - Math.abs(x.amount) || x.label.localeCompare(y.label));
-  return { rounds, totals: list, net: net / 100, paid: paid / 100, open: (net - paid) / 100 };
+  // Trip expenses one of you paid for the other: not golf, so on their own lines
+  const expenses = expensesBetween(state, isMine, isThem).map(x => ({ ...x, amount: x.amount / 100 }));
+  const spent = expenses.reduce((a, x) => a + toCents(x.amount), 0);
+  return { rounds, totals: list, net: net / 100, paid: paid / 100, open: (net + spent - paid) / 100, expenses, spent: spent / 100 };
 }
 
 /**

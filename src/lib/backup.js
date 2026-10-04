@@ -13,7 +13,8 @@ export const BACKUP_VERSION = 1;
 // Collections kept as { id: thing }
 // Golf trips too (trips.js): their rounds carry the trip, the record keeps its dates and "done playing"
 // Challenges (challenges.js) too, so one agreed before a backup still goes into the round after it
-const MAPS = ['players', 'crews', 'customCourses', 'rounds', 'plans', 'challenges', 'tabRows', 'links', 'rewardsDone', 'accountOf', 'trips', 'tripHidden'];
+// And trip expenses (trip-expenses.js), deleted ones as a stub
+const MAPS = ['players', 'crews', 'customCourses', 'rounds', 'plans', 'challenges', 'tabRows', 'links', 'rewardsDone', 'accountOf', 'trips', 'tripHidden', 'tripExpenses'];
 // Collections kept as [thing with an id]
 const LISTS = ['settlements', 'carries', 'usuals'];
 

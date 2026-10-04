@@ -4,6 +4,7 @@
 import { stable } from './sync-model.js';
 import { mergeSettings, migrateSettings } from './settings.js';
 import { nextActiveId } from './rounds.js';
+import { mergeExpenses } from './trip-expenses.js';
 
 // Round fields that only mean something on this phone
 const ROUND_LOCAL = ['_remote'];
@@ -24,6 +25,8 @@ export function toDocs(state) {
     trips: state.trips && typeof state.trips === 'object' && !Array.isArray(state.trips) ? state.trips : {},
     // Trips you hid from your Tab and Up next (trips.js tripHidden)
     tripHidden: state.tripHidden && typeof state.tripHidden === 'object' && !Array.isArray(state.tripHidden) ? state.tripHidden : {},
+    // Trip expenses (trip-expenses.js), yours and the ones friends' phones sent, deleted ones as a stub
+    tripExpenses: state.tripExpenses && typeof state.tripExpenses === 'object' && !Array.isArray(state.tripExpenses) ? state.tripExpenses : {},
   });
   for (const p of Object.values(state.players)) put('player', p.id, p);
   for (const c of Object.values(state.crews)) put('crew', c.id, c);
@@ -84,6 +87,11 @@ export function applyDoc(draft, kind, id, data) {
     if (data.trips && typeof data.trips === 'object' && !Array.isArray(data.trips)) draft.trips = data.trips;
     // And hidden trips later again
     if (data.tripHidden && typeof data.tripHidden === 'object' && !Array.isArray(data.tripHidden)) draft.tripHidden = data.tripHidden;
+    // Trip expenses are kept expense by expense, the newer copy of each, so two of your phones
+    // adding one at once both keep theirs (a deleted one stays as a stub, so it stays deleted)
+    if (data.tripExpenses && typeof data.tripExpenses === 'object' && !Array.isArray(data.tripExpenses)) {
+      draft.tripExpenses = mergeExpenses(draft.tripExpenses || {}, Object.values(data.tripExpenses));
+    }
   }
 }
 
