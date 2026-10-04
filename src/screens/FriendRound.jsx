@@ -20,10 +20,11 @@ export default function FriendRound({ code }) {
   const state = useStore();
   const feed = useFeed();
   const following = !!feed.follows[code];
-  const base = rowFor(feed, code);
+  const base = feed.status === 'signed-out' ? null : rowFor(feed, code);
   // Followed live while it's on screen, the same way a watcher's phone follows it
   const live = useLiveRound(code, base);
-  const row = live.row || base;
+  // Only while the feed still has it: someone changing who sees their rounds takes it off here too
+  const row = base ? live.row || base : null;
   const view = useMemo(() => (row ? friendRoundView(row, { following }) : null), [row, following]);
   const ctx = view ? followTalk(code, view.round, state) : null;
   useTalkSync(following && view ? [ctx.key] : [], { live: true });

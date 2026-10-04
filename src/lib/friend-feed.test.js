@@ -3,10 +3,11 @@
 // points always), and how the feed puts friends' rounds, plans and Lately together.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
+import { readFileSync } from 'node:fs';
 import { createRound, roundResults } from './round.js';
 import { buildHoles, buildMeta } from './sync-model.js';
 import {
-  cleanFeedRow, feedLevel, feedMeta, feedMoney, feedPeople, feedRoundOk, feedSeats, feedWindowOk, followSeatsFor, followerMayWrite,
+  DONE_DAYS, LIVE_HOURS, cleanFeedRow, feedLevel, feedMeta, feedMoney, feedPeople, feedRoundOk, feedSeats, feedWindowOk, followSeatsFor, followerMayWrite,
   friendRoundItem, friendRoundView, friendRounds, friendsLine, groupFeed, matchLine, planItem, statusLine, upNextFriends,
 } from './friend-feed.js';
 import { normalizePrivacy } from './profile-model.js';
@@ -371,4 +372,25 @@ test('privacy copy: the one setting says what it does to the feed', () => {
   assert.match(profileHelp({ profile: 'played' }), /your rounds in their feed/);
   assert.match(moneyHelp({ profile: 'played', showMoney: true }), /your amounts in rounds of yours they follow/);
   assert.match(moneyHelp({ profile: 'played' }), /Nobody else sees them/);
+});
+
+test('the server file says the same as this one: the time windows, what goes out and who may follow', () => {
+  const sql = readFileSync(new URL('../../supabase/2026-10-06-friend-feed.sql', import.meta.url), 'utf8');
+  assert.match(sql, new RegExp(`interval '${LIVE_HOURS} hours'`));
+  assert.match(sql, new RegExp(`interval '${DONE_DAYS} days'`));
+  // What a friend watching never gets
+  for (const key of ['devs', 'hostDev', 'claims', 'payApp', 'payHandle']) assert.match(sql, new RegExp(`- '${key}'`));
+  // Safe to run again, and nothing from an earlier file is edited: only replaced or added
+  assert.ok(!/\bcreate function\b/i.test(sql));
+  assert.ok(!/\bcreate table public\./i.test(sql));
+  assert.ok(!/\balter table public\.comments\b/i.test(sql));
+  for (const p of ['comment members read', 'comment members add', 'comment authors change', 'comment authors remove']) {
+    assert.match(sql, new RegExp(`drop policy if exists "${p}" on public.comments`));
+  }
+  // A friend watching writes on the round itself only
+  assert.equal((sql.match(/scope = 'round' and target = 'round'/g) || []).length, 3);
+  // The helpers that read accounts for any meta stay inside the server
+  for (const f of ['feed_seats\\(jsonb\\)', 'feed_round_ok\\(jsonb\\)', 'follow_ids\\(\\)']) {
+    assert.match(sql, new RegExp(`revoke all on function public\\.${f} from public, anon, authenticated`));
+  }
 });

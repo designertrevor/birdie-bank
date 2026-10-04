@@ -26,8 +26,8 @@ import { isNotSetUp, retryOnLoad, serverStateAfter } from './profile-model.js';
 import { getAdapter } from './sync.js';
 import { cleanFeedRow, feedMeta, friendRounds } from './friend-feed.js';
 
-const FEED_KEY = `bb-feed:${STORE_KEY}`;       // { rows, at, offAt }
-const FOLLOW_KEY = `bb-follows:${STORE_KEY}`;  // { [code]: { since, row } }
+const FEED_KEY = `bb-feed:${STORE_KEY}`;       // { rows, at, offAt, uid }: uid is the account the rows came for
+const FOLLOW_KEY = `bb-follows:${STORE_KEY}`;  // { [code]: { since, row } }, for that same account
 const MIN_GAP = 20e3;
 const EVERY = 60e3;
 const localFlag = () => { try { return localStorage.getItem('bb-sync-local') === '1'; } catch { return false; } };
@@ -43,13 +43,23 @@ let snap = {
   follows: load(FOLLOW_KEY, {}),
 };
 let offAt = Number(cached.offAt) || 0;
+let uid = typeof cached.uid === 'string' ? cached.uid : null;
 const listeners = new Set();
 function set(patch) {
   snap = { ...snap, ...patch };
   listeners.forEach(l => l());
 }
 const sub = l => { listeners.add(l); return () => listeners.delete(l); };
-const persistFeed = () => save(FEED_KEY, { rows: snap.rows, at: snap.at, offAt });
+const persistFeed = () => save(FEED_KEY, { rows: snap.rows, at: snap.at, offAt, uid });
+
+/** What the phone kept is another account's: start the feed over for this one. */
+function forAccount(user) {
+  if (!user || user === uid) return;
+  uid = user;
+  set({ rows: [], at: 0, follows: {} });
+  persistFeed();
+  persistFollows();
+}
 const persistFollows = () => save(FOLLOW_KEY, snap.follows);
 
 /** The feed as this phone has it now. */
@@ -96,7 +106,9 @@ export function refreshFeed({ force = false } = {}) {
     else set({ status: 'off' });
     return Promise.resolve();
   }
-  if (!accountNow().user?.id) { set({ status: 'signed-out' }); return Promise.resolve(); }
+  const user = accountNow().user?.id || null;
+  if (!user) { set({ status: 'signed-out' }); return Promise.resolve(); }
+  forAccount(user);
   // A server that said "not set up" only a little while ago isn't asked again until later
   if (!force && offAt && !retryOnLoad(offAt)) { set({ status: 'off' }); return Promise.resolve(); }
   lastRun = Date.now();
@@ -131,7 +143,14 @@ export function useFeed() {
     const timer = setInterval(tick, EVERY);
     document.addEventListener('visibilitychange', tick);
     window.addEventListener('online', tick);
-    const off = onAccount(() => refreshFeed({ force: true }));
+    // Signing in or out (not every sync the account makes)
+    let user = accountNow().user?.id || null;
+    const off = onAccount(() => {
+      const now = accountNow().user?.id || null;
+      if (now === user) return;
+      user = now;
+      refreshFeed({ force: true });
+    });
     return () => {
       clearInterval(timer);
       document.removeEventListener('visibilitychange', tick);
@@ -146,7 +165,10 @@ export function useFeed() {
 export function useFriendRounds() {
   const state = useStore();
   const feed = useFeed();
-  const rounds = useMemo(() => friendRounds(state, { rows: feed.rows, follows: feed.follows, status: feed.status }), [state, feed]);
+  // Signed out, what came from the server for an account stays out of sight (rounds this phone
+  // watches from a code still show, from the phone itself)
+  const out = feed.status === 'signed-out';
+  const rounds = useMemo(() => friendRounds(state, { rows: out ? [] : feed.rows, follows: out ? {} : feed.follows, status: feed.status }), [state, feed, out]);
   return { rounds, feed };
 }
 
