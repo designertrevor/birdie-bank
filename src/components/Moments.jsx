@@ -3,7 +3,7 @@
 // or fold, the money lead changing hands, a Match play or Nassau lead change, all square, dormie or a
 // nine won, and a full screen for a match won before the last hole. One per hole at most. The maths
 // is in lib/moments.js.
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { Icon } from './ui.jsx';
 import { donePositions, finalMoment, firstShowing, freshHole, roundMoment } from '../lib/moments.js';
@@ -50,7 +50,8 @@ export function RoundMoments({ round, onFinish, onShowing = null }) {
     if (m && firstShowing(SHOWN, round.id, fresh.pos)) setMoment(m);
   }
 
-  useEffect(() => { onShowing?.(!!moment); }, [moment, onShowing]);
+  // Before paint, so the card is never drawn under a moment that just arrived (reduced motion skips its fade)
+  useLayoutEffect(() => { onShowing?.(!!moment); }, [moment, onShowing]);
   if (!moment) return null;
   const close = () => setMoment(null);
   return moment.level === 'big'

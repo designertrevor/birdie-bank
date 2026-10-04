@@ -58,11 +58,37 @@ test('the first hole suggests a match for the whole round, a par 3 closest to th
   assert.equal(spotCopy(r, { pos: 1, why: 'first' }).title, 'Any side bets this round?');
 });
 
-test('a first hole that is a par 3 suggests closest to the pin', () => {
-  const r = stroke({ holes: 9, pars: [3, 4, 4, 4, 5, 4, 4, 4, 4] });
+test('a first hole that is a par 3 still suggests a match for the round; closest to the pin waits for the next par 3', () => {
+  const r = stroke({ holes: 9, pars: [3, 4, 4, 3, 5, 4, 4, 4, 4] });
   const p = betPromptFor(r, 1, keeper);
-  assert.equal(p.kind, 'ctp');
+  assert.equal(p.kind, 'match');
+  assert.equal(p.title, 'Any side bets this round?');
   assert.deepEqual(p.holes, [1, 9]);
+  assert.deepEqual(promptSpots(r), [{ pos: 1, why: 'first' }, { pos: 4, why: 'par3' }]);
+});
+
+test('a par 3 at the turn still asks about a back-nine match, so closest to the pin is never asked twice', () => {
+  const pars = [4, 4, 3, 4, 5, 4, 4, 4, 4, 3, 4, 4, 4, 5, 3, 4, 4, 3];
+  const r = stroke({ upto: 9, pars });
+  const p = betPromptFor(r, 10, keeper);
+  assert.equal(p.kind, 'match');
+  assert.equal(p.title, 'A side bet for the back nine?');
+  assert.deepEqual(p.holes, [10, 18]);
+});
+
+test('a shotgun start on another hole calls its turn the last nine, not the back nine', () => {
+  const r = stroke({ startHole: 5, upto: 9 });
+  assert.equal(r.holes[9].no, 14);
+  assert.equal(betPromptFor(r, 10, keeper).title, 'A side bet for the last nine?');
+});
+
+test('a player’s own bet still on its way to the keeper’s phone counts, so the next spot stays quiet', () => {
+  // Preston asked for a whole-round match with Tyler on hole 1; the keeper's phone hasn't put it in yet
+  const r = stroke({ upto: 9 });
+  r.betAsks = [{ no: -1, status: 'waiting', ask: { by: 'p', at: 1, op: 'add', id: 'm1', bet: bet('match', ['p', 'y'], { id: 'm1' }) } }];
+  assert.equal(betPromptFor(r, 10, { me: 'p', editable: false }), null);
+  // Zach isn't in it, so his phone still asks
+  assert.equal(betPromptFor(r, 10, { me: 'z', editable: false })?.why, 'turn');
 });
 
 test('a round started on 10 calls its turn the front nine', () => {

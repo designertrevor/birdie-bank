@@ -7,7 +7,8 @@
 // scored or being scored, or when nobody this phone can make a bet for could have that kind of bet
 // (two teammates in a scramble share one score, so they can't have a match). Pure, unit tested.
 import { holeComplete, playersOn } from './round.js';
-import { MAX_BETS, betRange, betsOf, kindFits, nextPos } from './pair-bets.js';
+import { MAX_BETS, betRange, betsOf, kindFits, nextPos, nineRange } from './pair-bets.js';
+import { withAsks } from './bet-asks.js';
 
 /** The most holes a round asks on. */
 export const PROMPT_MAX = 3;
@@ -29,14 +30,27 @@ export function promptSpots(round) {
   return spots.sort((a, b) => a.pos - b.pos).slice(0, PROMPT_MAX);
 }
 
-/** The kind of bet a spot suggests: closest to the pin on a par 3, else a match. */
-export function spotKind(round, pos, why) {
-  if (why === 'par3' || round.holes[pos - 1]?.par === 3) return 'ctp';
-  return 'match';
+/**
+ * The kind of bet a spot suggests: closest to the pin at the par 3 spot, a match at the first hole
+ * and the turn, even when that hole is a par 3 (the par 3 spot is then the next one, so a round never
+ * asks about closest to the pin twice and always gets its match asks).
+ */
+export function spotKind(why) {
+  return why === 'par3' ? 'ctp' : 'match';
 }
 
-/** Which nine the turn starts, by hole number: 'back' unless the round started on 10. */
-const nineName = (round, pos) => ((round.holes[pos - 1]?.no ?? pos) <= 9 ? 'front' : 'back');
+/**
+ * Which nine the turn starts, by hole number: 'back', or 'front' when the round started on 10, or
+ * null when the last nine holes aren't a nine in a row (a shotgun start on another hole).
+ */
+function nineName(round, pos) {
+  const n = round.holes.length;
+  for (const which of ['front', 'back']) {
+    const r = nineRange(round, which);
+    if (r && r[0] === pos && r[1] === n) return which;
+  }
+  return null;
+}
 
 /**
  * The bet a spot's "Add a side bet" starts the editor on: { kind, holes }. The first hole's match is
@@ -44,15 +58,15 @@ const nineName = (round, pos) => ((round.holes[pos - 1]?.no ?? pos) <= 9 ? 'fron
  */
 export function spotDraft(round, spot) {
   const n = round.holes.length;
-  const kind = spotKind(round, spot.pos, spot.why);
+  const kind = spotKind(spot.why);
   return { kind, holes: spot.why === 'first' ? [1, n] : [spot.pos, n] };
 }
 
 /** The card's words for a spot: { title, text }. */
 export function spotCopy(round, spot) {
-  const kind = spotKind(round, spot.pos, spot.why);
+  const kind = spotKind(spot.why);
   if (kind === 'ctp') return { title: 'Closest to the pin?', text: 'A par 3. Two of you can bet on who lands it closest.' };
-  if (spot.why === 'turn') return { title: `A side bet for the ${nineName(round, spot.pos)} nine?`, text: 'A fresh match for the last nine holes, just between two of you.' };
+  if (spot.why === 'turn') return { title: `A side bet for the ${nineName(round, spot.pos) ?? 'last'} nine?`, text: 'A fresh match for the last nine holes, just between two of you.' };
   return { title: 'Any side bets this round?', text: 'Two of you can play your own match on top of the game.' };
 }
 
@@ -85,11 +99,13 @@ export function betPromptFor(round, pos, { me = null, editable = false, on = tru
   const hole = round.holes[pos - 1];
   // Only the next hole to play, before it's scored (browsing back or ahead asks nothing)
   if (!hole || holeComplete(round, hole) || nextPos(round) !== pos) return null;
-  if (betsOf(round).length >= MAX_BETS) return null;
-  const kind = spotKind(round, pos, spot.why);
+  // A player's own bets still on their way to the keeper's phone count already (bet-asks.js)
+  const view = editable ? round : withAsks(round);
+  if (betsOf(view).length >= MAX_BETS) return null;
+  const kind = spotKind(spot.why);
   // A player who isn't keeping score can only make a bet they're in
   const mine = !editable ? me : null;
-  if (covered(round, kind, pos, mine)) return null;
+  if (covered(view, kind, pos, mine)) return null;
   // Someone this phone can make the bet for has someone to make it with (a scramble's match needs the two on different teams)
   const here = playersOn(round, hole).map(p => p.id);
   const fits = here.some((a, i) => here.some((b, j) => j > i && (!mine || a === mine || b === mine) && kindFits(round, kind, [a, b])));
