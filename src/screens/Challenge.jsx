@@ -88,8 +88,8 @@ export function ChallengeLink({ code, standalone = false, onSkip }) {
       {!standalone && <Header title="Challenge" small onBack={nav.pop} />}
       <div className="scroll onboard-body">
         <BallIllo className="onboard-illo" face={!err} />
-        <h1 className="onboard-title" style={{ fontSize: 34 }}>{err ? (err === 'off' ? 'Not quite ready' : missing ? 'Challenge not found' : 'No signal') : 'Finding the challenge…'}</h1>
-        <p className="onboard-text">
+        <h1 className="onboard-title" style={{ fontSize: 34 }} aria-live="polite">{err ? (err === 'off' ? 'Not quite ready' : missing ? 'Challenge not found' : 'No signal') : 'Finding the challenge…'}</h1>
+        <p className="onboard-text" aria-live="polite">
           {!err && <>Code {code}</>}
           {err === 'off' && <>Challenges aren’t switched on yet. Tell whoever sent it your answer in person.</>}
           {err === 'missing' && <>We can’t find challenge {code}. The link may be old. Ask for a fresh one.</>}

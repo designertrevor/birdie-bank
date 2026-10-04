@@ -252,7 +252,7 @@ export default function Onboarding({ onDone }) {
 function SampleMoney({ game }) {
   const rows = [['You', 15], ['Mike', 5], ['Dave', -5], ['Sam', -15]];
   return (
-    <div className="block ob-sample" aria-label="Example: the money after hole 4">
+    <div className="block ob-sample" role="group" aria-label="Example: the money after hole 4">
       <div className="ob-card-head"><span className="eyebrow">The money · hole 4</span><span className="eyebrow">{GAMES[game]?.name}</span></div>
       <div className="ob-money">
         {rows.map(([n, v], i) => (

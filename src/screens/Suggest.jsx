@@ -1,6 +1,6 @@
 // "Suggest something": pick what kind, then a short form that asks for what's useful.
 import { Fragment, useState } from 'react';
-import { Header, Icon, Screen, useUI } from '../components/ui.jsx';
+import { FileButton, Header, Icon, Screen, useUI } from '../components/ui.jsx';
 import { useStore } from '../lib/store.js';
 import { FEEDBACK_KINDS, shrinkImage, submitFeedback } from '../lib/feedback.js';
 import { useNav } from '../lib/nav.js';
@@ -135,16 +135,15 @@ export default function Suggest({ kind: initialKind = null, prefill = null, lead
           })}
           {form.photo && (
             <>
-              <label className="field-label">{form.photo} <span className="opt">optional</span></label>
+              <div className="field-label" id="fb-photo-l">{form.photo} <span className="opt">optional</span></div>
               {image ? (
                 <div className="fb-photo">
                   <img src={image} alt={form.photo} />
-                  <button className="hc-chip" onClick={() => setImage(null)}><Icon name="x" /> Remove</button>
+                  <button className="hc-chip" onClick={() => setImage(null)} aria-label={`Remove the ${form.photo.toLowerCase()}`}><Icon name="x" /> Remove</button>
                 </div>
               ) : (
-                <label className="hc-chip" htmlFor="fb-photo" role="button" tabIndex={0}><Icon name="camera" /> Add a photo</label>
+                <FileButton id="fb-photo" onPick={pickPhoto} aria-describedby="fb-photo-l"><Icon name="camera" /> Add a photo</FileButton>
               )}
-              <input id="fb-photo" type="file" accept="image/*" hidden onChange={pickPhoto} />
             </>
           )}
           <label className="field-label" htmlFor="fb-contact">Email for a reply <span className="opt">optional</span></label>

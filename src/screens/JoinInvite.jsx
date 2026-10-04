@@ -123,11 +123,11 @@ export default function JoinInvite({ code, onJoined, onSkip, setUp = false }) {
       <Screen className="onboard">
         <div className="scroll onboard-body">
           <BallIllo className="onboard-illo" face={!err} />
-          <h1 className="onboard-title" style={{ fontSize: 34 }}>{err ? (missing ? 'Round not found' : 'No signal') : 'Finding your round…'}</h1>
-          <p className="onboard-text">
+          <h1 className="onboard-title" style={{ fontSize: 34 }} aria-live="polite">{err ? (missing ? 'Round not found' : 'No signal') : 'Finding your round…'}</h1>
+          <p className="onboard-text" aria-live="polite">
             {!err && <>Code {code}</>}
             {missing && <>We can’t find round {code}. It may have finished, or the link is old. Ask the scorekeeper for a fresh one.</>}
-            {err === 'offline' && <>Couldn’t reach Birdie Bank. Check your signal and try again.</>}
+            {err === 'offline' && <>Couldn’t get the round. Check your signal and try again.</>}
           </p>
         </div>
         {err && (
@@ -150,7 +150,7 @@ export default function JoinInvite({ code, onJoined, onSkip, setUp = false }) {
           <input id="ji-name" className="name-input" value={name} onChange={e => setName(e.target.value)} placeholder="e.g. Trevor" autoComplete="given-name" maxLength={24} />
         </div>
         <div className="cta-wrap">
-          {joinErr && <p className="field-error" role="alert" style={{ textAlign: 'center' }}>Couldn’t reach Birdie Bank. Check your signal and try again.</p>}
+          {joinErr && <p className="field-error" role="alert" style={{ textAlign: 'center' }}>Couldn’t join. Check your signal and try again.</p>}
           <button className="full-btn" disabled={!name.trim() || busy} onClick={() => join(null, name)}>{busy ? 'Joining…' : <>Start watching <Icon name="eye" /></>}</button>
           <button className="full-btn outline" onClick={() => setStep('card')}>Back</button>
         </div>
@@ -256,7 +256,7 @@ export default function JoinInvite({ code, onJoined, onSkip, setUp = false }) {
           {handicaps && <p className="field-help">Strokes look wrong? Tell {scorekeeper} before you tee off.</p>}
         </div>
         <div className="cta-wrap">
-          {joinErr && <p className="field-error" role="alert" style={{ textAlign: 'center' }}>Couldn’t reach Birdie Bank. Check your signal and try again.</p>}
+          {joinErr && <p className="field-error" role="alert" style={{ textAlign: 'center' }}>Couldn’t join. Check your signal and try again.</p>}
           <button className="full-btn" disabled={busy} onClick={() => join(seat)}>{busy ? 'Joining…' : done ? <>See the results <Icon name="arrow-right" /></> : <>Into the round <Icon name="arrow-right" /></>}</button>
           <button className="full-btn outline" disabled={busy} onClick={() => setStep('seat')}>That’s not me</button>
         </div>
@@ -338,7 +338,7 @@ export default function JoinInvite({ code, onJoined, onSkip, setUp = false }) {
         <button className="full-btn" onClick={() => setStep('seat')}>Pick your seat <Icon name="arrow-right" /></button>
         <button className="full-btn outline" disabled={busy} onClick={() => (setUp ? join(null) : setStep('watch'))}>{busy ? 'Joining…' : 'I’m just watching'}</button>
         {setUp && <button className="sheet-cancel" style={{ width: '100%', margin: 0 }} onClick={onSkip}>Not now</button>}
-        {setUp && joinErr && <p className="field-error" role="alert" style={{ textAlign: 'center' }}>Couldn’t reach Birdie Bank. Check your signal and try again.</p>}
+        {setUp && joinErr && <p className="field-error" role="alert" style={{ textAlign: 'center' }}>Couldn’t join. Check your signal and try again.</p>}
       </div>
     </Screen>
   );

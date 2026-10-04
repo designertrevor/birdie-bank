@@ -45,7 +45,7 @@ function ReactionPills({ ctx, on, rows, canTap }) {
         return canTap
           ? <button key={r.key} type="button" className={`talk-react ${p?.mine ? 'on' : ''}`} aria-pressed={!!p?.mine} aria-label={label}
               onClick={() => react(ctx.key, { on, who: ctx.who, name: ctx.myName, emoji: r.key })}>{body}</button>
-          : p ? <span key={r.key} className="talk-react static" aria-label={label}>{body}</span> : null;
+          : p ? <span key={r.key} className="talk-react static" role="img" aria-label={label}>{body}</span> : null;
       })}
     </div>
   );
@@ -160,7 +160,7 @@ export function TalkBar({ ctx, on, title }) {
       {picked.map(r => canTalk
         ? <button key={r.key} type="button" className={`talk-react sm ${r.mine ? 'on' : ''}`} aria-pressed={r.mine} aria-label={`${r.label}, ${r.count}${r.mine ? ', yours' : ''}`}
             onClick={() => react(ctx.key, { on, who: ctx.who, name: ctx.myName, emoji: r.key })}><span aria-hidden="true">{r.emoji}</span><span className="tr-n">{r.count}</span></button>
-        : <span key={r.key} className="talk-react sm static" aria-label={`${r.label}, ${r.count}`}><span aria-hidden="true">{r.emoji}</span><span className="tr-n">{r.count}</span></span>)}
+        : <span key={r.key} className="talk-react sm static" role="img" aria-label={`${r.label}, ${r.count}`}><span aria-hidden="true">{r.emoji}</span><span className="tr-n">{r.count}</span></span>)}
       {canTalk && (
         <button type="button" className={`talk-react sm add ${tray ? 'on' : ''}`} aria-expanded={tray} aria-label={`React to ${title}`} onClick={() => setTray(t => !t)}>
           <Icon name="smiley" /><Icon name="plus" className="tr-plus" />

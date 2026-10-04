@@ -563,7 +563,7 @@ function PlayRound({ round, momentUp = false }) {
                 <div className="row-main">
                   <div className="pname">{p.name}{counting.includes(p.id) && <span className="counts-tag">Counts</span>}</div>
                   <div className="ps">
-                    {st > 0 && <span className="stroke-dots">{'●'.repeat(st)} Gets {strokesWords(st, halfStrokesOn(round))}</span>}
+                    {st > 0 && <span className="stroke-dots"><span aria-hidden="true">{'●'.repeat(st)}</span> Gets {strokesWords(st, halfStrokesOn(round))}</span>}
                     {holeStrokeNotes(round, p, hole).map(x => <span key={x.key} className="stroke-note"> · {holeStrokeNoteText(x)}</span>)}
                     {v != null && v !== 'X' && <span className={`score-name s${Math.max(-2, Math.min(2, v - hole.par))}`}> {scoreName(v, hole.par)}</span>}
                     {v === 'X' && <span> Picked up</span>}
@@ -598,7 +598,7 @@ function PlayRound({ round, momentUp = false }) {
                   </div>
                   {p.team && <div className="ps">{p.players.map(pid => round.players.find(x => x.id === pid)?.name.split(' ')[0]).join(', ')}{round.useHandicaps ? ` · team handicap ${p.courseHc ?? 0}` : ''}</div>}
                   <div className="ps">
-                    {st > 0 && <span className="stroke-dots" aria-label={`Gets ${strokesWords(st, halfStrokesOn(round))}`}>{'●'.repeat(st)} Gets {strokesWords(st, halfStrokesOn(round))}</span>}
+                    {st > 0 && <span className="stroke-dots"><span aria-hidden="true">{'●'.repeat(st)}</span> Gets {strokesWords(st, halfStrokesOn(round))}</span>}
                     {st < 0 && <span className="stroke-dots">Gives back {strokesWords(-st, halfStrokesOn(round))}</span>}
                     {holeStrokeNotes(round, p, hole).map(x => <span key={x.key} className="stroke-note"> · {holeStrokeNoteText(x)}</span>)}
                     {game === 'banker' && !isBanker && <span> Bet {unitFmt(round)(banker.bets[p.id] || 0)}{banker.doubled[p.id] ? ` · ${bankerPress(round, hole) ** (banker.doubleBack ? 2 : 1)}×` : ''}</span>}
@@ -1172,8 +1172,10 @@ function MoneyBar({ round, hole, preview }) {
   const word = countsMoney(round) ? 'Money' : 'Points';
   const thru = played ? (pending ? `Thru ${played} + this hole` : `Thru ${played} hole${played === 1 ? '' : 's'}`) : pending ? 'This hole' : `Everyone starts at ${fmt(0)}`;
   const Box = byGame ? 'button' : 'div';
+  // A button's label replaces what's in it, so it carries everyone's total too
+  const said = round.players.map(p => `${p.name.split(' ')[0]} ${fmt(preview.balances[p.id], { sign: true })}`).join(', ');
   const boxProps = byGame
-    ? { type: 'button', className: 'money-bar mb-tap', 'aria-label': `${word} so far. Show by game`, 'aria-haspopup': 'dialog', onClick: () => setOpen(true) }
+    ? { type: 'button', className: 'money-bar mb-tap', 'aria-label': `${word} so far, ${thru.toLowerCase()}: ${said}. Show by game`, 'aria-haspopup': 'dialog', onClick: () => setOpen(true) }
     : { className: 'money-bar', role: 'group', 'aria-label': `${word} so far` };
   // Not a live region: it changes on every tap. The saved hole's result is announced by the toast.
   return (
@@ -1233,7 +1235,7 @@ function BankerPanel({ round, banker, setBanker, phase, setPhase, onPick, onBet,
         <div className="bb-who"><div className="bl">Banker this hole</div><div className="bn"><Icon name="bank" fill /> <span className="bn-name">{b?.name}</span></div></div>
         <div className="bb-line" aria-live="polite"><div className="bl">On the line</div><div className="bn">{money(onTheLine(banker, f))}</div></div>
         {readOnly ? null : phase === 'bets'
-          ? canPick && <button className="change-btn" onClick={onPick}>Change</button>
+          ? canPick && <button className="change-btn" onClick={onPick} aria-label="Change the banker">Change</button>
           : <button className="change-btn" onClick={() => setPhase('bets')}><Icon name="coins" /> Bets</button>}
       </div>
       {phase === 'bets' && (

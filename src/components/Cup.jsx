@@ -82,7 +82,7 @@ export function CupMatches({ cup }) {
                 <span className="cup-round-title">{[day, e.course].filter(Boolean).join(' · ')}</span>
                 <span className="cup-round-sub">{[...new Set(e.matches.map(m => CUP_KINDS[m.kind].name))].join(' and ')}{e.status === 'active' ? ' · being played' : ''}{!e.local ? ' · another group' : ''}</span>
               </span>
-              {scored && <span className="cup-round-pts" aria-label={`${cup.names[0]} ${cupPoints(pts[0])}, ${cup.names[1]} ${cupPoints(pts[1])}`}><b className="t0">{cupPoints(pts[0])}</b>–<b className="t1">{cupPoints(pts[1])}</b></span>}
+              {scored && <span className="cup-round-pts" role="img" aria-label={`${cup.names[0]} ${cupPoints(pts[0])}, ${cup.names[1]} ${cupPoints(pts[1])}`}><b className="t0">{cupPoints(pts[0])}</b>–<b className="t1">{cupPoints(pts[1])}</b></span>}
               {canChange && <button className="pill-btn sm" onClick={() => setEditing(round.id)} aria-label="Change the matches"><Icon name="pencil-simple" /></button>}
             </div>
             {e.matches.map((m, i) => <MatchRow key={i} names={cup.names} m={m} left={m.sides[0].map(id => nameIn(e, id))} right={m.sides[1].map(id => nameIn(e, id))} />)}
@@ -196,7 +196,7 @@ export function TeamsPicker({ people, value, onChange }) {
           <div key={i} className={`cup-col t${i} ${drafting && free.length && turn === i ? 'turn' : ''}`}>
             <div className="cup-col-head"><TeamDot team={i} /> {cup.names[i]}<span className="cup-col-hc">{cup.teams[i].length ? `${cup.teams[i].length} · hcp ${hcs[i]}` : ''}</span></div>
             {cup.teams[i].map(p => (
-              <button key={p.id} type="button" className="cup-chip" onClick={() => flip(p, i)} aria-label={`${p.name}, on ${cup.names[i]}. Move to ${cup.names[1 - i]}`}>
+              <button key={p.id} type="button" className="cup-chip" onClick={() => flip(p, i)} aria-label={`${p.name}${cup.captains[i] === p.id ? ', captain' : ''}, on ${cup.names[i]}. Move to ${cup.names[1 - i]}`}>
                 <Avatar id={p.id} name={p.name} size="sm" />
                 <span className="cup-chip-name">{p.name}</span>
                 {cup.captains[i] === p.id && <span className="cup-cap" title="Captain">C</span>}
@@ -266,7 +266,7 @@ export function CupRoundSetup({ trip, players, value, names, game, onChange }) {
           : <div className="toggle-sub">{pairs ? 'Foursomes needs two partners from each team' : 'Both teams need a player here for a match'}</div>}
         {out.length > 0 && <div className="toggle-sub">{out.join(' and ')} sit{out.length === 1 ? 's' : ''} this one out</div>}
       </div>
-      <button type="button" className="pill-btn sm" onClick={() => setOpen(true)}>Change</button>
+      <button type="button" className="pill-btn sm" onClick={() => setOpen(true)} aria-label="Change the cup matches">Change</button>
       {open && <CupMatchesSheet open onClose={() => setOpen(false)} names={names} players={players} value={value} game={game} onSave={c => { onChange(c); setOpen(false); }} />}
     </div>
   );
@@ -312,7 +312,7 @@ export function CupMatchesSheet({ open, onClose, names, players, value, onSave, 
                   <button type="button" className="icon-btn sm" onClick={() => move(id, 1 - t)} aria-label={`Move ${name(id)} to ${names[1 - t]}`}><Icon name="arrows-left-right" /></button>
                 </div>
               ))}
-              {!draft.sides[t].length && <div className="cup-col-empty">Nobody</div>}
+              {!draft.sides[t].length && <div className="cup-col-empty">Nobody yet. Move a player over from the other team.</div>}
             </div>
           ))}
         </div>

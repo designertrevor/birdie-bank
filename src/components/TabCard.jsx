@@ -219,9 +219,10 @@ export function SquareStrip() {
         </button>
         <ul className="sq-people">
           {people.map(p => (
-            <li key={p.id} className={`sq-p ${p.st}`} aria-label={`${p.name}: ${STATUS_WORD[p.st].toLowerCase()}`}>
+            <li key={p.id} className={`sq-p ${p.st}`}>
               <Avatar model={faces.get(p.id)} />
               <span className="sq-word" aria-hidden="true">{STATUS_WORD[p.st]}</span>
+              <span className="sr-only">{p.name}: {STATUS_WORD[p.st].toLowerCase()}</span>
             </li>
           ))}
         </ul>

@@ -199,13 +199,14 @@ export function PlayerEdit({ id, onSaved }) {
       <div className="scroll">
         <div className="block">
           <label className="field-label" htmlFor="pe-name">Name</label>
-          <input id="pe-name" className="name-input" value={name} maxLength={24} onChange={e => setName(e.target.value)} placeholder="Name" autoFocus={!existing} />
+          <input id="pe-name" className="name-input" value={name} maxLength={24} onChange={e => setName(e.target.value)} placeholder="Name" autoFocus={!existing}
+            aria-invalid={duplicate || undefined} aria-describedby={duplicate ? 'pe-name-err' : undefined} />
           {profName && profName !== trimmed && <p className="field-help">{who}’s own profile says “{profName}”, so that’s the name you see everywhere. The name here is used if they ever take theirs off.</p>}
-          {duplicate && <p className="field-error">Someone already has that name. Add an initial so scorecards stay clear, or merge them below if it’s the same person.</p>}
-          <label className="field-label">Handicap index <span className="opt">optional</span></label>
+          {duplicate && <p className="field-error" id="pe-name-err" role="status">Someone already has that name. Add an initial so scorecards stay clear, or merge them below if it’s the same person.</p>}
+          <div className="field-label">Handicap index <span className="opt">optional</span></div>
           <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
-            <button className="amt-btn" onClick={() => setPad(true)}>{index == null ? 'Add' : formatIndex(index)}</button>
-            {index != null && <button className="header-btn" onClick={() => setIndex(null)}>Clear</button>}
+            <button className="amt-btn" onClick={() => setPad(true)} aria-label={index == null ? 'Handicap index: add one' : `Handicap index ${formatIndex(index)}. Change it`}>{index == null ? 'Add' : formatIndex(index)}</button>
+            {index != null && <button className="header-btn" onClick={() => setIndex(null)} aria-label="Clear the handicap index">Clear</button>}
           </div>
           <p className="field-help">Their usual 18-hole index. Strokes are worked out from it for each course and tee.</p>
           <div className="field-label" id="pe-pay">{isMe ? 'How you get paid' : `How ${trimmed.split(' ')[0] || 'they'} ${trimmed ? 'gets' : 'get'} paid`} <span className="opt">optional</span></div>

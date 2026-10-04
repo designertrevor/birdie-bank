@@ -292,6 +292,8 @@ function sourceLabel(s) {
 }
 
 const TEE_COLORS = ['#1a1a1a', '#2f6fd6', '#f2f2f2', '#e8b94a', '#d64545', '#2c8c66'];
+// What a screen reader says for each swatch, never the color code
+const TEE_COLOR_NAMES = { '#1a1a1a': 'Black', '#2f6fd6': 'Blue', '#f2f2f2': 'White', '#e8b94a': 'Gold', '#d64545': 'Red', '#2c8c66': 'Green' };
 
 function blankCourse(n = 18) {
   return {
@@ -384,7 +386,7 @@ export function CourseEdit({ id, prefill = null, onDone = null }) {
           <input id="cn" className="name-input" value={c.name} onChange={e => setC({ ...c, name: e.target.value })} placeholder="e.g. Birch Creek GC" />
           <label className="field-label" htmlFor="cc">City</label>
           <input id="cc" className="text-input" value={c.city || ''} onChange={e => setC({ ...c, city: e.target.value })} placeholder="City, State" />
-          <label className="field-label">Holes</label>
+          <div className="field-label" aria-hidden="true">Holes</div>
           <Segmented label="Holes" value={n} onChange={setHoles} options={[{ value: 9, label: '9' }, { value: 18, label: '18' }]} />
         </div>
 
@@ -417,7 +419,7 @@ export function CourseEdit({ id, prefill = null, onDone = null }) {
             </div>
             <div className="color-row" role="radiogroup" aria-label="Tee color">
               {TEE_COLORS.map(col => (
-                <button key={col} role="radio" aria-checked={t.color === col} aria-label={col} className={`swatch ${t.color === col ? 'on' : ''}`} style={{ background: col }}
+                <button key={col} role="radio" aria-checked={t.color === col} aria-label={TEE_COLOR_NAMES[col]} className={`swatch ${t.color === col ? 'on' : ''}`} style={{ background: col }}
                   onClick={() => setC(x => { const y = structuredClone(x); y.tees[ti].color = col; return y; })} />
               ))}
             </div>

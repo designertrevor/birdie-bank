@@ -235,7 +235,8 @@ export default function Trip({ id, view: firstView = null, add = false }) {
 function Standings({ st, state, label, me }) {
   if (!st.standings.length && st.points) {
     const rows = Object.entries(st.points).sort((a, b) => b[1] - a[1]);
-    return rows.length ? (
+    if (!rows.length) return <p className="field-help pad">The points fill in as soon as a round is finished.</p>;
+    return (
       <div className="trip-table">
         {rows.map(([id, v], i) => (
           <div key={id} className={`trip-row ${id === me ? 'me' : ''}`}>
@@ -245,7 +246,7 @@ function Standings({ st, state, label, me }) {
           </div>
         ))}
       </div>
-    ) : null;
+    );
   }
   if (!st.standings.length && st.done.length) {
     // Played only for rewards so far: nothing in dollars or points to add up

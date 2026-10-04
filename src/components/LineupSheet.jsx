@@ -120,7 +120,7 @@ export function LineupSheet({ round, onClose }) {
           ))}
           {game === 'sixes' && <SixesPreview names={ids.map(first)} holesCount={round.holes.length} />}
           {runs.length > 0 && (
-            <div className="block lineup-runs" aria-label={game === 'banker' ? 'Who banks next' : 'Who’s the wolf next'}>
+            <div className="block lineup-runs" role="group" aria-label={game === 'banker' ? 'Who banks next' : 'Who’s the wolf next'}>
               {runs.map(r => (
                 <div key={r.from} className="lineup-run"><span className="lineup-holes">{runLabel(r)}</span><span>{first(r.id)} {role}</span></div>
               ))}

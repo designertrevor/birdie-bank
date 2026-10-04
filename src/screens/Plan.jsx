@@ -124,7 +124,7 @@ function PlanBody({ plan, standalone = false, onSkip }) {
       return planShareLink(getState().plans[plan.id]);
     } catch (e) {
       // The first try is how this phone learns the SQL hasn't run, so ask the error, not `off`
-      showToast(e instanceof PlansOffError ? 'Group links aren’t switched on yet' : 'Couldn’t reach Birdie Bank. Check your signal');
+      showToast(e instanceof PlansOffError ? 'Group links aren’t switched on yet' : 'Couldn’t get the link. Check your signal');
       return null;
     } finally { setSharing(false); }
   };
@@ -242,7 +242,7 @@ function PlanBody({ plan, standalone = false, onSkip }) {
                   {p.status ? RSVP_LABEL[p.status] : 'No answer'}
                 </button>
               ) : (
-                <span className={`who-status ${p.status || 'none'}`} aria-label={plan.host && p.self ? `${first(p.name)}: ${RSVP_LABEL[p.status] || 'No answer'}, answered from their own phone` : undefined}>{p.status ? RSVP_LABEL[p.status] : 'No answer'}</span>
+                <span className={`who-status ${p.status || 'none'}`} role={plan.host && p.self ? 'img' : undefined} aria-label={plan.host && p.self ? `${first(p.name)}: ${RSVP_LABEL[p.status] || 'No answer'}, answered from their own phone` : undefined}>{p.status ? RSVP_LABEL[p.status] : 'No answer'}</span>
               )}
             </div>
           ))}
@@ -608,12 +608,12 @@ export function PlanLink({ code, who = null, standalone = false, onSkip }) {
       {!standalone && <Header title="Upcoming round" small onBack={nav.pop} />}
       <div className="scroll onboard-body">
         <BallIllo className="onboard-illo" face={!err} />
-        <h1 className="onboard-title" style={{ fontSize: 34 }}>{err ? (err === 'off' ? 'Not quite ready' : missing ? 'Plan not found' : 'No signal') : 'Finding the plan…'}</h1>
-        <p className="onboard-text">
+        <h1 className="onboard-title" style={{ fontSize: 34 }} aria-live="polite">{err ? (err === 'off' ? 'Not quite ready' : missing ? 'Plan not found' : 'No signal') : 'Finding the plan…'}</h1>
+        <p className="onboard-text" aria-live="polite">
           {!err && <>Code {code}</>}
           {err === 'off' && <>Group links aren’t switched on yet. Ask whoever sent it to tell you the plan instead.</>}
           {err === 'missing' && <>We can’t find plan {code}. It may have been deleted, or the link is old. Ask for a fresh one.</>}
-          {err === 'offline' && <>Couldn’t reach Birdie Bank. Check your signal and try again.</>}
+          {err === 'offline' && <>Couldn’t get the plan. Check your signal and try again.</>}
         </p>
       </div>
       {err && (
