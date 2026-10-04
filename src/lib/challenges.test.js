@@ -430,3 +430,34 @@ test('Lately leaves out challenges from before the last 30 days', () => {
   const old = { ...base({ id: 'old', from: mike, to: dave, now: NOW - 45 * DAY }), mine: 'to' };
   assert.deepEqual(challengeLately({ me: 'dave', challenges: { old } }, NOW - 30 * DAY, NOW), []);
 });
+
+// --------------------------- review fixes ----------------------------------
+
+test('a points challenge never goes into a money round as dollars, and a plan’s money one never into a points round', () => {
+  const p = { ...plan(), code: 'PLAN01' };
+  const idOf = { host: 'me', dave: 'dave', mike: 'mike' };
+  const agreed = o => played(planned(o), { side: 'to', move: 'accept' });
+  const state = ch => ({ me: 'me', players: {}, plans: { pl1: p }, challenges: { c1: ch } });
+  // Made on a points plan (20 points), then the plan went back to money: 20 points is not $20
+  const pts = agreed({ unit: 'points' });
+  const money = round();
+  assert.equal(challengesForRound(state(pts), money, { planId: 'pl1', idOf, now: NOW }).length, 0);
+  const before = JSON.stringify(roundResults(money));
+  assert.equal(JSON.stringify(roundResults(withChallenges(state(pts), money, { planId: 'pl1', idOf, now: NOW }).round)), before);
+  // Still in points on a points round, and in points toward the reward on a reward round
+  assert.equal(challengesForRound(state(pts), round({ playFor: { kind: 'points' } }), { planId: 'pl1', idOf, now: NOW }).length, 1);
+  assert.equal(challengesForRound(state(pts), round({ playFor: { kind: 'reward', reward: 'Lunch' } }), { planId: 'pl1', idOf, now: NOW })[0].bet.playFor, 'points');
+  // Made on a money plan that went to points: it waits, like one from a Player card
+  const cash = agreed();
+  assert.equal(challengesForRound(state(cash), round({ playFor: { kind: 'points' } }), { planId: 'pl1', idOf, now: NOW }).length, 0);
+  assert.equal(challengesForRound(state(cash), money, { planId: 'pl1', idOf, now: NOW }).length, 1);
+  // A lunch round carries a money challenge on the Tab
+  assert.equal(challengesForRound(state(cash), round({ playFor: { kind: 'reward', reward: 'Lunch' } }), { planId: 'pl1', idOf, now: NOW })[0].bet.playFor, 'money');
+});
+
+test('Lately leaves out a planned round’s challenge once its plan is off this phone (nobody here can say whose it was)', () => {
+  const ch = { ...planned({ from: mike, to: { who: 'host', name: 'Trevor' }, now: NOW - DAY }) };
+  const withPlan = { me: 'me', plans: { pl1: { ...plan(), code: 'PLAN01' } }, challenges: { c1: ch } };
+  assert.deepEqual(challengeLately(withPlan, NOW - 30 * DAY, NOW).map(r => r.text), ['Mike challenged you to a $20 match']);
+  assert.deepEqual(challengeLately({ me: 'me', plans: {}, challenges: { c1: ch } }, NOW - 30 * DAY, NOW), []);
+});

@@ -326,7 +326,8 @@ export function ChallengeExtras({ ch, onGone }) {
         <button className="text-link" onClick={() => send(challengeInviteText(ch, link, side), `Copied. Paste it to ${them}`)}><Icon name="paper-plane-right" /> Send it to {them} again</button>
       )}
       {life === 'live' && side && canMove(ch, side, 'withdraw') && <button className="danger-link" onClick={moves.withdraw}><Icon name="x-circle" /> Call it off</button>}
-      {life !== 'live' && <button className="danger-link" onClick={() => { forgetChallenge(ch.id); onGone?.(); }}><Icon name="trash" /> Take it off this phone</button>}
+      {/* A planned round's challenge comes back with its plan, so it goes when the plan does */}
+      {life !== 'live' && (!ch.plan || life === 'gone') && <button className="danger-link" onClick={() => { forgetChallenge(ch.id); onGone?.(); }}><Icon name="trash" /> Take it off this phone</button>}
     </>
   );
 }

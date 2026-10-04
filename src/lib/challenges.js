@@ -277,10 +277,21 @@ export function challengeBet(ch, round, [a, b]) {
 }
 
 /**
+ * Whether a round can carry a challenge's amount as it was agreed: a money one never goes into a
+ * points round (it waits for one that can carry it), and a points one (made on a points plan) never
+ * goes into a money round, where its points would be played as dollars. A reward round carries both.
+ */
+function unitFits(ch, round) {
+  const kind = round.playFor?.kind;
+  if (kind === 'reward') return true;
+  return (kind === 'points' ? 'points' : 'money') === (ch.unit === 'points' ? 'points' : 'money');
+}
+
+/**
  * The agreed challenges that go into a round about to start, as side bets: [{ ch, bet }].
  * `planId`: the plan it's starting from (its own challenges come in by the roll call's `idOf`).
  * Challenges from Player cards come in whenever both people are in the round, except a money one
- * on a points round (it waits for a round that can carry it). Never one already in the round or
+ * on a points round or a points one on a money round (unitFits). Never one already in the round or
  * taken off it, a match or per-hole bet between two teammates in a scramble, or past MAX_BETS.
  */
 export function challengesForRound(state, round, { planId = null, idOf = null, now = Date.now(), me = state?.me } = {}) {
@@ -291,8 +302,8 @@ export function challengesForRound(state, round, { planId = null, idOf = null, n
     if (room <= 0) break;
     if (challengeState(ch).status !== 'accepted' || challengeLife(state, ch, now) !== 'live') continue;
     if (have.has(betIdOf(ch))) continue;
-    if (ch.plan) { if (!planId || planOf(state, ch)?.id !== planId) continue; }
-    else if (ch.unit === 'money' && round.playFor?.kind === 'points') continue;
+    if (ch.plan && (!planId || planOf(state, ch)?.id !== planId)) continue;
+    if (!unitFits(ch, round)) continue;
     const pair = challengePair(state, ch, round, { idOf: ch.plan ? idOf : null, me });
     if (!pair || !kindFits(round, ch.kind, pair)) continue;
     out.push({ ch, bet: challengeBet(ch, round, pair) });
@@ -431,6 +442,8 @@ export function challengeLately(state, since, until) {
   const out = [];
   const inWindow = at => typeof at === 'number' && at >= since && at <= until;
   for (const ch of allChallenges(state)) {
+    // A planned round's challenge whose plan isn't on this phone any more: nobody here can say whose it was
+    if (ch.plan && !planOf(state, ch)) continue;
     const side = sideOf(state, ch);
     const target = ['challenge', { id: ch.id }];
     const fromN = first(ch.from.name), toN = first(ch.to.name);

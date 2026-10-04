@@ -10,7 +10,8 @@ import { getState, update, uid } from './store.js';
 import { getSupabase, supabaseConfigured } from './supabase.js';
 import { ChallengesOffError, challengeLocalAdapter, challengeSupabaseAdapter } from './challenge-adapters.js';
 import { newCode } from './sync-model.js';
-import { challengeLink, cleanChallenge, mergeMoves, planOf, withMove } from './challenges.js';
+import { challengeLife, challengeLink, cleanChallenge, mergeMoves, withMove } from './challenges.js';
+import { planCodeOf, pushChallenge as pushChallengeWith, pushMoves } from './challenge-push.js';
 
 const localFlag = () => { try { return localStorage.getItem('bb-sync-local') === '1'; } catch { return false; } };
 
@@ -41,47 +42,9 @@ export function useChallengesOff() {
   return useSyncExternalStore(subOff, () => off, () => off);
 }
 
-// Fields that stay on this phone: which side it is, whether it was made here, and the retry flags
-const LOCAL_ONLY = ['code', 'mine', 'made', 'unsent', 'unsentMoves', 'syncedAt', 'moves'];
-
-/** The shared part of a challenge (what the other phones read). The plan goes by its code. */
-export function challengeMeta(ch) {
-  const meta = {};
-  for (const [k, v] of Object.entries(ch)) if (!LOCAL_ONLY.includes(k)) meta[k] = v;
-  if (meta.plan) meta.plan = { code: meta.plan.code ?? null, date: meta.plan.date ?? null };
-  return meta;
-}
-
-/** The plan code a challenge goes up under (null for one from a Player card), or undefined while its plan isn't shared yet. */
-function planCodeOf(state, ch) {
-  if (!ch.plan) return null;
-  const plan = planOf(state, ch);
-  return plan?.code || ch.plan.code || undefined;
-}
-
-/** Send a challenge made here (and every move on it so far). Resolves true once it's on the server. */
-async function pushChallenge(id) {
-  const ch = getState().challenges?.[id];
-  if (!ch) return false;
-  const planCode = planCodeOf(getState(), ch);
-  if (planCode === undefined) return false; // its plan goes up first
-  const adapter = await getChallengeAdapter();
-  if (!adapter) return false;
-  const code = ch.code || newCode();
-  const meta = challengeMeta({ ...ch, plan: ch.plan ? { ...ch.plan, code: planCode } : null });
-  await adapter.create(code, planCode, meta);
-  for (const m of ch.moves || []) await adapter.addMove(code, planCode, m);
-  update(s => {
-    const c = s.challenges?.[id];
-    if (!c) return;
-    c.code = code;
-    if (c.plan) c.plan.code = planCode;
-    delete c.unsent;
-    delete c.unsentMoves;
-    c.syncedAt = Date.now();
-  });
-  return true;
-}
+const deps = adapter => ({ getState, update, adapter, newCode });
+/** Send a challenge made here (see challenge-push.js). Resolves true once it's on the server. */
+const pushChallenge = async id => pushChallengeWith(deps(await getChallengeAdapter()), id);
 
 /**
  * Save a new challenge made on this phone (see challenges.js newChallenge) and send it. Resolves
@@ -151,15 +114,19 @@ function applyRemote(code, remote, planId = null) {
 
 /** Send anything unsent, then pick up the latest for every shared plan and every challenge from a link. */
 export async function refreshChallenges() {
+  // Before the challenges SQL has run there's nothing to send or fetch (learned on the first try)
+  if (off) return;
   const adapter = await getChallengeAdapter().catch(() => null);
   if (!adapter) return;
   try {
+    // One at a time, so one that can't go up (its plan gone from the server) never holds up the rest
     for (const ch of Object.values(getState().challenges || {})) {
-      if (ch?.unsent) await pushChallenge(ch.id);
-      else if (ch?.code && ch.unsentMoves) {
-        const planCode = planCodeOf(getState(), ch) ?? null;
-        for (const m of ch.moves || []) if (ch.unsentMoves[m.id]) await adapter.addMove(ch.code, planCode, m);
-        update(s => { const c = s.challenges?.[ch.id]; if (c) delete c.unsentMoves; });
+      if (!ch?.unsent && !(ch?.code && ch.unsentMoves)) continue;
+      try {
+        if (ch.unsent) await pushChallengeWith(deps(adapter), ch.id);
+        else await pushMoves(deps(adapter), ch.id);
+      } catch (e) {
+        if (e instanceof ChallengesOffError) throw e;
       }
     }
     const state = getState();
@@ -167,8 +134,9 @@ export async function refreshChallenges() {
       if (!plan?.code || plan.gone || plan.status === 'off') continue;
       for (const r of await adapter.fetchForPlan(plan.code)) applyRemote(r.code, r, plan.id);
     }
+    // Player card challenges still going (one that's over never changes again)
     for (const ch of Object.values(getState().challenges || {})) {
-      if (!ch?.code || ch.plan) continue;
+      if (!ch?.code || ch.plan || !cleanChallenge(ch) || challengeLife(getState(), ch) !== 'live') continue;
       const r = await adapter.fetch(ch.code);
       if (r) applyRemote(ch.code, r);
     }

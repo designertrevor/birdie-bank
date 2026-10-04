@@ -25,8 +25,8 @@ export default function ChallengeScreen({ id }) {
 function ChallengeBody({ ch, onGone, standalone = false, onSkip }) {
   const nav = useNav();
   const state = useStore();
-  useChallengesLive({ code: ch.plan ? null : ch.code });
   const plan = planOf(state, ch);
+  useChallengesLive(ch.plan ? { planCode: plan?.code || null } : { code: ch.code });
   const next = challengeNextText(state, ch);
   return (
     <>
