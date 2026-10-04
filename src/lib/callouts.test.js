@@ -220,3 +220,12 @@ test('callouts: a garbled round gives no callouts instead of breaking Up next', 
   const r = round('r1', 1, ['me', 'sam'], samWins(3));
   assert.deepEqual(callouts(stateWith([{ ...r, holes: null }]), NOW), []);
 });
+
+test('callouts: never two lines about the same friend, even when that leaves the card short', () => {
+  // Dave took six skins and the day: two lines about him, and the card keeps one
+  const daveWins = Object.fromEntries(Array.from({ length: 6 }, (_, i) => [i + 1, { dave: 3 }]));
+  const s = stateWith([round('r1', 1, ['me', 'sam', 'dave'], daveWins)]);
+  assert.ok(calloutCandidates(s, NOW).filter(c => c.about === 'dave').length >= 2);
+  const lines = callouts(s, NOW);
+  assert.equal(lines.filter(c => c.about === 'dave' || c.people?.includes('dave')).length, 1, lines.map(c => c.text).join(' / '));
+});

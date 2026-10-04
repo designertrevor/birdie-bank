@@ -226,7 +226,8 @@ export function calloutCandidates(state, now = Date.now()) {
 
 /**
  * The callouts for the card, best first, at most `limit`: only lines neverMean() passes, at most one
- * with money in it, at most two about you, and none when callouts are off.
+ * with money in it, at most two about you, at most one about each friend (so one hot round never
+ * fills the card with one name, even when that leaves it shorter), and none when callouts are off.
  */
 export function callouts(state, now = Date.now(), { limit = CALLOUT_LIMIT } = {}) {
   if (!calloutsOn(state)) return [];
@@ -237,12 +238,12 @@ export function callouts(state, now = Date.now(), { limit = CALLOUT_LIMIT } = {}
   let withMoney = 0, aboutMe = 0;
   const people = new Set();
   const subjects = c => (c.people?.length ? c.people : [c.about]);
-  // Two passes: a line about someone new first, so one hot round doesn't fill the card with one name
+  // Two passes: a line about someone new first; then a second line about you, never a second about a friend
   for (const fresh of [true, false]) {
     for (const c of kind) {
       if (out.length >= limit) break;
       if (out.includes(c)) continue;
-      if (fresh && c.about !== 'group' && subjects(c).some(x => people.has(x))) continue;
+      if (c.about !== 'group' && subjects(c).some(x => people.has(x) && (fresh || x !== 'me'))) continue;
       if (c.money && withMoney >= 1) continue;
       if (c.about === 'me' && aboutMe >= 2) continue;
       if (c.money) withMoney++;
