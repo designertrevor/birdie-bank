@@ -196,8 +196,11 @@ create policy "comment authors change" on public.comments for update to anon, au
 create policy "comment authors remove" on public.comments for delete to anon, authenticated
   using (public.comment_mine(author_dev, author_user));
 
-revoke all on function public.comment_round_seats(jsonb, text, uuid) from public;
-revoke all on function public.comment_plan_seats(text) from public;
+-- The two helpers run only inside comment_seats() and join_comments(). Supabase grants every new
+-- function to anon and authenticated by itself, so take it back from them too: comment_round_seats
+-- reads account_players for any account id it's handed.
+revoke all on function public.comment_round_seats(jsonb, text, uuid) from public, anon, authenticated;
+revoke all on function public.comment_plan_seats(text) from public, anon, authenticated;
 grant execute on function public.comment_seats(text, text) to anon, authenticated;
 grant execute on function public.join_comments(text, text) to anon, authenticated;
 grant execute on function public.comment_mine(text, uuid) to anon, authenticated;

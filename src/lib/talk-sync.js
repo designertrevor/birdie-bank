@@ -108,14 +108,17 @@ export function threadTarget(state, key) {
 
 /**
  * Whether this phone can talk in a thread, and whether the others will see it:
- * { can, shared, off }. `can` is false only once the server has said you're not in that round.
+ * { can, linked, shared, off }. `can` is false only once the server has said you're not in that
+ * round. `linked`: the round was shared live (or the plan has its link), so the talk can reach the
+ * others once comments are on; `shared`: it does now.
  */
 export function useTalkReach(key) {
   useSyncExternalStore(sub, () => version, () => version);
   const t = threadTarget(getState(), key);
-  if (off || !t.code) return { can: true, shared: false, off };
+  const linked = !!t.code;
+  if (off || !linked) return { can: true, linked, shared: false, off };
   const s = seats.get(`${t.scope}:${t.code}`);
-  return { can: s !== null, shared: true, off: false };
+  return { can: s !== null, linked, shared: true, off: false };
 }
 
 // --------------------------- sending ------------------------------------------

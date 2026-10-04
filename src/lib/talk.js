@@ -16,6 +16,8 @@ import { gameLabel, meFor, myIds } from './format.js';
 import { canonicalOf } from './pair-debts.js';
 import { nameOf } from './ledger.js';
 import { dayLabel, planPeople } from './plans.js';
+import { countsMoney, playForOf } from './play-for.js';
+import { betsOf, isCashBet } from './pair-bets.js';
 import { roundTime } from './history.js';
 import { agoLabel, LATELY_DAYS } from './lately.js';
 export { countsLine, roundTalkCounts, talkCounts } from './talk-counts.js';
@@ -37,13 +39,14 @@ export const emojiOf = key => REACTION_BY_KEY[key]?.emoji || '';
 
 /**
  * Quick jabs, one list for each kind of thing. Friendly ribbing between friends, never about
- * anyone's looks, money troubles or anything off the course.
+ * anyone's looks, money troubles or anything off the course. A jab marked `money` talks about
+ * money, so it shows only on a thing played for money (never on a points or lunch round).
  */
 export const JABS = {
   round: [
     { key: 'putt', text: 'Nice putt, finally' },
     { key: 'chip', text: 'Who taught you to chip?' },
-    { key: 'lesson', text: 'Put your winnings toward a lesson' },
+    { key: 'lesson', text: 'Put your winnings toward a lesson', money: true },
     { key: 'gimme', text: 'That was not a gimme' },
     { key: 'bounce', text: 'Lucky bounce. Still counts' },
     { key: 'rematch', text: 'I want a rematch' },
@@ -58,7 +61,7 @@ export const JABS = {
     { key: 'receipt', text: 'Framing this one' },
   ],
   bet: [
-    { key: 'easy', text: 'Easiest money all day' },
+    { key: 'easy', text: 'Easiest money all day', money: true },
     { key: 'double', text: 'Double or nothing?' },
     { key: 'strokes', text: 'I want more strokes next time' },
     { key: 'called', text: 'Called it on the first tee' },
@@ -66,7 +69,7 @@ export const JABS = {
   plan: [
     { key: 'agame', text: 'Bringing my A game' },
     { key: 'practice', text: 'Hope you’ve been practicing' },
-    { key: 'wallet', text: 'Bring your wallet' },
+    { key: 'wallet', text: 'Bring your wallet', money: true },
     { key: 'firstRound', text: 'Loser buys the first round' },
     { key: 'teeTime', text: 'Don’t be late for the tee time' },
   ],
@@ -81,8 +84,26 @@ export function contextOf(on) {
   if (s === 'plan') return 'plan';
   return 'round';
 }
-/** The jabs that fit a target. */
-export const jabsFor = on => JABS[contextOf(on)] || JABS.round;
+/** The jabs that fit a target. `money`: whether that thing is played for money (see moneyOn). */
+export function jabsFor(on, { money = true } = {}) {
+  const list = JABS[contextOf(on)] || JABS.round;
+  return money ? list : list.filter(j => !j.money);
+}
+
+/**
+ * Whether a target in a round is played for money: a settle-up line always is (it's on the Tab),
+ * a side bet when the round is for money or it's a lunch round's bet for money, and the round
+ * itself when it counts money. A points or reward round reads in points or the reward.
+ */
+export function moneyOn(round, on) {
+  const c = contextOf(on);
+  if (c === 'settle') return true;
+  if (c === 'bet') {
+    const bet = betsOf(round).find(b => b.id === String(on).slice(4));
+    return !!bet && (countsMoney(round) || isCashBet(round, bet));
+  }
+  return countsMoney(round);
+}
 
 // --------------------------- threads and targets ---------------------------
 
@@ -116,7 +137,8 @@ export function toggleReaction(rows, { on, who, name, emoji, now = Date.now() })
   if (!REACTION_BY_KEY[emoji] || !who || !on) return null;
   const id = reactionRowId(on, who, emoji);
   const had = rows?.[id];
-  if (had) return { ...had, deleted: !had.deleted, name: cleanName(name) || had.name, updatedAt: Math.max(now, (had.updatedAt || 0) + 1), mine: true };
+  // A new tap is a new try: a copy the server refused before goes up again
+  if (had) return { ...had, deleted: !had.deleted, name: cleanName(name) || had.name, updatedAt: Math.max(now, (had.updatedAt || 0) + 1), mine: true, refused: false };
   return { id, on, kind: 'reaction', who, name: cleanName(name), body: null, jab: null, emoji, at: now, updatedAt: now, deleted: false, mine: true };
 }
 
@@ -258,8 +280,9 @@ export function latelyTalk(state, now = Date.now(), { days = LATELY_DAYS } = {})
     });
   }
   for (const p of Object.values(state.plans || {})) {
-    if (!p || !state.talk?.[planThread(p)]) continue;
-    const day = dayLabel(p.date, new Date(t));
+    // A plan called off (or taken down) has no talk on its page any more, so none here either
+    if (!p || p.status === 'off' || p.gone || !state.talk?.[planThread(p)]) continue;
+    const day = dayLabel(p.date, new Date(t)).replace(/^(Today|Tomorrow)$/, w => w.toLowerCase());
     add(planThread(p), state.talk[planThread(p)], {
       title: [day ? `Plan for ${day}` : 'Upcoming round', p.course?.name].filter(Boolean).join(' at '),
       target: ['plan', { id: p.id }], me: planWho(p),
@@ -306,14 +329,15 @@ export function recentTalkKeys(state, { days = LATELY_DAYS, now = Date.now() } =
 export function roundTalk(round, state) {
   const who = talkWho(round, state);
   const seatName = id => round.players.find(p => p.id === id)?.name || null;
-  return { key: roundThread(round), who, myName: who ? firstOf(seatName(who)) : null, seatName, kind: 'round' };
+  return { key: roundThread(round), who, myName: who ? firstOf(seatName(who)) : null, seatName, kind: 'round', moneyOn: on => moneyOn(round, on) };
 }
 /** The same for a plan's talk. */
 export function planTalk(plan) {
   const who = planWho(plan);
   const people = planPeople(plan);
   const seatName = id => people.find(p => p.who === id)?.name || (id === plan.hostWho ? plan.hostName : null) || null;
-  return { key: planThread(plan), who, myName: who ? firstOf(seatName(who)) : null, seatName, kind: 'plan' };
+  const money = playForOf(plan).kind === 'money';
+  return { key: planThread(plan), who, myName: who ? firstOf(seatName(who)) : null, seatName, kind: 'plan', moneyOn: () => money };
 }
 
 /** Lately with the talk mixed in, newest first. */

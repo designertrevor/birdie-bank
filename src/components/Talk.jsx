@@ -14,12 +14,13 @@ import { postComment, react, takeBack, useTalkReach } from '../lib/talk-sync.js'
 function ReachNote({ ctx, reach }) {
   if (!ctx.who) return <p className="field-help pad">{ctx.kind === 'plan' ? 'Pick who you are on the plan to join in.' : 'You watched this one, so the talk is the players’.'}</p>;
   if (!reach.can) return <p className="field-help pad">Only the players’ phones can join in on this round.</p>;
-  if (reach.off) return <p className="field-help pad">Saved on this phone. The others see it once comments are switched on.</p>;
-  if (!reach.shared) {
+  // A round never shared (or a plan with no link) is on this phone whether comments are on or not
+  if (!reach.linked) {
     return <p className="field-help pad">{ctx.kind === 'plan'
       ? 'Only on your phone until the plan has its group link.'
       : 'Only on this phone: this round wasn’t shared live, so the others can’t see it.'}</p>;
   }
+  if (reach.off) return <p className="field-help pad">Saved on this phone. The others see it once comments are switched on.</p>;
   return <p className="field-help pad">Everyone in the {ctx.kind === 'plan' ? 'plan' : 'round'} sees it. Keep it friendly.</p>;
 }
 
@@ -91,7 +92,7 @@ function Composer({ ctx, on }) {
   return (
     <>
       <div className="talk-jabs" role="group" aria-label="Quick jabs">
-        {jabsFor(on).map(j => <button key={j.key} type="button" className="pill-btn sm talk-jab" onClick={() => jab(j)}>{j.text}</button>)}
+        {jabsFor(on, { money: ctx.moneyOn ? ctx.moneyOn(on) : true }).map(j => <button key={j.key} type="button" className="pill-btn sm talk-jab" onClick={() => jab(j)}>{j.text}</button>)}
       </div>
       <form className="talk-compose" onSubmit={send}>
         <label className="sr-only" htmlFor={`talk-${ctx.key}-${on}`}>Add a comment</label>
