@@ -22,6 +22,7 @@ export const DEFAULT_SETTINGS = {
   shareAmounts: false, // results image shows dollar amounts (off until you turn it on, then remembered)
   betPrompt: true,     // "Any side bets on this hole?" on the Play screen (see bet-prompt.js); personal, never a round's
   callouts: true,      // callouts for the group text on Up next (see callouts.js); off from the card or Settings
+  nudgeDays: 7,        // suggest a friendly payment reminder on Up next once someone has owed you this many days; 0 is Off (see nudges.js)
   banker: { defaultBet: 5, min: 1, max: 20, ties: 'push', rotation: 'rotate', birdies: 'off', par3Triple: false },
   nassau: { front: 5, back: 5, total: 5, pressMode: 'manual', threshold: 2, turnPress: false, noLastPress: false, teamScore: 'best' },
   skins: { value: 2, carryover: true, kind: 'net', payout: 'per', stake: 10, lastCarry: 'void', backDouble: false },
@@ -90,6 +91,8 @@ function fresh() {
     accountOf: {},     // which account each player id is, from the server: { playerId: accountId } (see profiles.js)
     profiles: {},      // profiles of people you've played with, by account: { accountId: profile } (see profiles.js)
     betPrompts: {},    // rounds whose "Any side bets?" card was answered on this phone: { roundId: { skip, done } } (see bet-prompt.js)
+    courseLinks: {},   // booking pages you saved for courses: { courseId: url } (see tee-reminders.js), synced in the profile
+    nudges: {},        // when you last nudged each person about money they owe you: { personId: when } (see nudges.js), synced in the profile
     talk: {},          // comments and reactions: { 'round:<id>' | 'plan:<id>': { rowId: row } } (see talk.js)
     settings: structuredClone(DEFAULT_SETTINGS),
   };

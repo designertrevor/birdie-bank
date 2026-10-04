@@ -23,6 +23,8 @@ const isObj = v => !!v && typeof v === 'object' && !Array.isArray(v);
 const pad2 = n => String(n).padStart(2, '0');
 // The trash talk (talk.js) is kept as { thread: rows } too, so a round added back brings its talk
 MAPS.push('talk');
+// Booking pages saved for courses and when you last nudged each person (tee-reminders.js, nudges.js)
+MAPS.push('courseLinks', 'nudges');
 
 /** birdie-bank-backup-2026-09-30.json, in the phone's own date. */
 export function backupFileName(date = new Date()) {

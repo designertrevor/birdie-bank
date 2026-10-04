@@ -29,6 +29,9 @@ export function toDocs(state) {
     tripExpenses: state.tripExpenses && typeof state.tripExpenses === 'object' && !Array.isArray(state.tripExpenses) ? state.tripExpenses : {},
     // Stake payments you marked on a team points trip (cup.js), kept off the Tab
     cupPaid: state.cupPaid && typeof state.cupPaid === 'object' && !Array.isArray(state.cupPaid) ? state.cupPaid : {},
+    // Booking pages saved for courses, and when you last nudged each person (tee-reminders.js, nudges.js)
+    courseLinks: state.courseLinks && typeof state.courseLinks === 'object' && !Array.isArray(state.courseLinks) ? state.courseLinks : {},
+    nudges: state.nudges && typeof state.nudges === 'object' && !Array.isArray(state.nudges) ? state.nudges : {},
   });
   for (const p of Object.values(state.players)) put('player', p.id, p);
   for (const c of Object.values(state.crews)) put('crew', c.id, c);
@@ -96,6 +99,9 @@ export function applyDoc(draft, kind, id, data) {
     }
     // And the stake marks of team points trips later still
     if (data.cupPaid && typeof data.cupPaid === 'object' && !Array.isArray(data.cupPaid)) draft.cupPaid = data.cupPaid;
+    // Booking links and nudges came later again: an older profile keeps this phone's
+    if (data.courseLinks && typeof data.courseLinks === 'object' && !Array.isArray(data.courseLinks)) draft.courseLinks = data.courseLinks;
+    if (data.nudges && typeof data.nudges === 'object' && !Array.isArray(data.nudges)) draft.nudges = data.nudges;
   }
 }
 
