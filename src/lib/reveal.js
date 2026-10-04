@@ -2,7 +2,7 @@
 // or each player's skins, points or totals) that play before everyone's money lands. Pure: no DOM.
 import { holeAtPos, roundLegs, sideNames, sides } from './round.js';
 import { matchLabel, sideSplit } from './games.js';
-import { money } from './golf.js';
+import { unitFmt } from './play-for.js';
 import { betPeople, betStatusText } from './pair-bets.js';
 
 const first = n => (n || '').split(' ')[0];
@@ -209,7 +209,7 @@ function mainRevealSteps(round, res) {
 
   if (round.game === 'snake' && d.snake) {
     const steps = d.snake.legs.filter(l => l.played).map(l => (l.holder && l.value
-      ? { key: l.seg.label, label: d.snake.legs.length > 1 ? l.seg.label : 'The snake', text: `${name(l.holder)} ${l.done ? 'held' : 'holds'} it, so pays ${money(l.value)} a player`, amount: l.value * l.others.length }
+      ? { key: l.seg.label, label: d.snake.legs.length > 1 ? l.seg.label : 'The snake', text: `${name(l.holder)} ${l.done ? 'held' : 'holds'} it, so pays ${unitFmt(round)(l.value)} a player`, amount: l.value * l.others.length }
       : { key: l.seg.label, label: d.snake.legs.length > 1 ? l.seg.label : 'The snake', text: 'Nobody three-putted', tie: true }));
     return { title: 'The snake', steps };
   }

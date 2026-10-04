@@ -149,7 +149,7 @@ export default function Person({ id: opened }) {
           <div key={it.id} className="ledger-row static">
             <div className="lr-info">
               <div className="lr-name" style={{ fontSize: 16 }}>Carried over · agreed {when(it.at)}</div>
-              <div className="lr-status">{it.amount > 0 ? `${firstName} owes you` : `You owe ${firstName}`}, rolls into your next round</div>
+              <div className="lr-status">{it.amount > 0 ? `${firstName} owes you` : `You owe ${firstName}`}, rolls to next time</div>
             </div>
             <div className="lr-amt d story-amt">{money(Math.abs(it.amount))}</div>
           </div>

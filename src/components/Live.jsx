@@ -8,11 +8,23 @@ import { countsMoney } from '../lib/play-for.js';
 import { gameLabel } from '../lib/format.js';
 import { useNav } from '../lib/nav.js';
 
+/**
+ * What to say when sharing fails: our own plain messages ("Shared scoring isn’t set up yet") as
+ * they are, no signal as no signal, and anything from the server (raw database or network text) as
+ * the fallback, so a golfer never reads an error code.
+ */
+function plainError(e, fallback) {
+  const m = String(e?.message || '');
+  if (/isn’t set up yet|^Round not found$/.test(m)) return m === 'Round not found' ? 'No round with that code. Check it with the scorekeeper.' : `${m}.`;
+  if (typeof navigator !== 'undefined' && navigator.onLine === false) return 'No signal. Try again when you’re back online.';
+  return fallback;
+}
+
 export function LivePill({ round }) {
   const st = useSyncStatus();
   if (!round.shared) return null;
   if (round.shared.ended) return <span className="live-pill ended">Sharing ended</span>;
-  const label = st.state === 'offline' ? 'Offline, will sync' : st.state === 'connecting' ? 'Connecting' : 'Live';
+  const label = st.state === 'offline' ? 'Offline, will catch up' : st.state === 'connecting' ? 'Connecting' : 'Live';
   return <span className={`live-pill ${st.state}`} role="status"><span className="live-dot" aria-hidden="true" />{label}</span>;
 }
 
@@ -26,7 +38,7 @@ export function ShareSheet({ round, open, onClose }) {
   const start = async () => {
     setBusy(true);
     try { await shareRound(round.id); }
-    catch (e) { showToast(e.message || 'Couldn’t start sharing'); }
+    catch (e) { showToast(plainError(e, 'Couldn’t start sharing. Try again.')); }
     setBusy(false);
   };
   const send = async () => {
@@ -93,7 +105,7 @@ export function JoinSheet({ open, onClose, initialCode = '' }) {
       const remote = await fetchShared(code);
       if (!remote) setErr('No round with that code. Check it with the scorekeeper.');
       else { onClose(); nav.push('joinInvite', { code }); }
-    } catch (e) { setErr(e.message || 'Couldn’t reach the server. Check your signal.'); }
+    } catch (e) { setErr(plainError(e, 'Couldn’t look that code up. Check your signal and try again.')); }
     setBusy(false);
   };
 

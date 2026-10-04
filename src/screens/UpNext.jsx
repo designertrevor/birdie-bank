@@ -101,8 +101,8 @@ export default function UpNext() {
 
         {hasHistory && (
           <>
-            <div className="sec-label">Your tab</div>
-            <button className="tab-glance" onClick={() => nav.setTab('ledger')} aria-label={tab.people ? `Your tab: owed to you ${money(tab.owed)}, you owe ${money(tab.owe)}` : `Your tab: ${squareText}`}>
+            <div className="sec-label">The Tab</div>
+            <button className="tab-glance" onClick={() => nav.setTab('ledger')} aria-label={tab.people ? `The Tab: owed to you ${money(tab.owed)}, you owe ${money(tab.owe)}` : `The Tab: ${squareText}`}>
               {tab.people ? (
                 <>
                   <div><div className="bl">Owed to you</div><div className={`lr-big ${tab.owed ? 'pos' : ''}`}>{tab.owed ? money(tab.owed) : '–'}</div></div>
@@ -153,7 +153,7 @@ function PlanNext({ last, fresh, planned = false, trip = false }) {
   const [tripping, setTripping] = useState(false);
   return (
     <div className="plan-card">
-      <span className="eyebrow">{planned ? 'Something else' : fresh ? 'Welcome to the bank' : 'Nothing on the calendar'}</span>
+      <span className="eyebrow">{planned ? 'Something else' : fresh ? 'Welcome to the first tee' : 'Nothing on the calendar'}</span>
       <div className="pc-title d">{planned ? 'Playing now, or another day?' : 'Plan your next round'}</div>
       <div className="pc-sub">{planned
         ? 'Start a round at the course in one tap, or plan another one for later.'

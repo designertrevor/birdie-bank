@@ -7,7 +7,8 @@
 // changes: a points or reward round plays the same bets, and a $5 bet is simply 5 points.
 // Every place that adds up dollars (the Tab, head to head, History, Season, Lately) keeps only
 // the rounds where countsMoney() is true. The one exception: a reward round's side bets played for
-// money (pair-bets.js), which the Tab counts through onTab() and tabResults(). Pure, unit tested.
+// money (pair-bets.js), which the Tab counts through onTab() and tabResults(), and History, Season
+// and Lately through tabMoneyOf() and tabResultsFor(), only for the players who had one. Pure, unit tested.
 import { money } from './golf.js';
 import { BETS_LABEL, leftAt, roundResults } from './round.js';
 import { betsOf, isCashBet } from './pair-bets.js';
@@ -66,6 +67,27 @@ export function tabResults(round, res = roundResults(round)) {
     balances: c.balances, standings: c.standings, transfers: c.transfers, pairs: c.pairs,
     detail: { byGame: { bets: { label: BETS_LABEL, balances: c.balances, pairs: c.pairs, detail: { bets: c.list } } } },
   };
+}
+
+/** Whether this seat had a side bet for money in a reward round (only then is it a money round for that player). */
+export const hasCashBet = (round, seat) => !!seat && betsOf(round).some(b => isCashBet(round, b) && (b.sides || []).includes(seat));
+
+/**
+ * The dollars a round put on the Tab for one seat, or null when it put none there for them: a
+ * money round's net (exactly as before), a reward round's side bets for money when the seat had
+ * one, null for a points round or a reward round with no money bet of theirs. History, Season and
+ * Lately add up this, so their totals match the Tab. `res` is roundResults(round), when you have it.
+ */
+export function tabMoneyOf(round, seat, res) {
+  if (countsMoney(round)) return (res || roundResults(round)).balances?.[seat] ?? 0;
+  if (!hasCashBet(round, seat)) return null;
+  return tabResults(round, res || roundResults(round)).balances?.[seat] ?? 0;
+}
+
+/** The round's results as the Tab has them for one seat (see tabMoneyOf): tabResults(), or null when nothing is theirs. */
+export function tabResultsFor(round, seat, res) {
+  if (countsMoney(round)) return res || roundResults(round);
+  return hasCashBet(round, seat) ? tabResults(round, res || roundResults(round)) : null;
 }
 
 /** The formatter for one side bet's amounts: money for a reward round's bet played for money, else the round's. */

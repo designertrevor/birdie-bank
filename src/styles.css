@@ -1952,3 +1952,40 @@ button.trip-card:active { transform: scale(.97); }
 .bp-actions .pill-btn { min-height: 40px; }
 .bet-prompt .pill-btn.ghost { background: transparent; color: var(--ink); box-shadow: inset 0 0 0 1.5px var(--surface-strong); }
 .bp-off { margin-left: -4px; font-size: 13px; font-weight: 600; color: var(--mute); }
+
+/* ---------- o7 polish: add rows, copy and theme fixes ---------- */
+/* The add rows ("Add a course", "Add a player", "Join a friend's round") keep their dashed edge: the
+   button reset above (border: none) had wiped it. The dash is a step darker than --surface-strong so
+   it still reads on the row's own surface fill, in both themes. Join a friend's round stays solid. */
+:root { --edge: #d3cbb4; --warn-bg: #fff1c9; --warn-ink: #5c3d00; --warn-mark: #8a5a00; }
+:root[data-theme="dark"] { --edge: #3f4845; --warn-bg: #3a3116; --warn-ink: #f5e4b0; --warn-mark: #f2c14e; }
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]):not([data-theme="dark"]) { --edge: #3f4845; --warn-bg: #3a3116; --warn-ink: #f5e4b0; --warn-mark: #f2c14e; } }
+.add-row { border: 2px dashed var(--edge); }
+.add-row.join-row { border-style: solid; }
+/* A second-choice button reads as a button, not as a disabled one: a thin edge on its surface fill.
+   A disabled one keeps no edge, so the two never look the same. */
+.full-btn.outline:not(:disabled) { box-shadow: inset 0 0 0 1.5px var(--edge); }
+.match-won .full-btn.outline:not(:disabled) { box-shadow: none; }
+/* The yellow warning pills and cards were light-mode colors only: a bright yellow block in dark mode */
+.warn-tag, .hc-chip.missing { color: var(--warn-mark); background: var(--warn-bg); }
+.hc-chip.missing strong { color: var(--warn-mark); }
+.hint-card.warn { background: var(--warn-bg); color: var(--warn-ink); }
+.hint-card.warn i { color: var(--warn-mark); }
+/* Touch targets that were under 44px: pills (History's game filter and the rest), the check-in x,
+   "Paid part of it?" and the par picker on Add a course */
+.pill-btn { position: relative; }
+.pill-btn::before { content: ''; position: absolute; left: 50%; top: 50%; width: max(100%, 44px); height: max(100%, 44px); transform: translate(-50%, -50%); }
+.checkin-x { position: relative; }
+.checkin-x::before { content: ''; position: absolute; inset: -6px; }
+.tab-part { min-height: 44px; }
+.hole-grid { grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); }
+.par-pick button { width: 42px; height: 36px; position: relative; }
+.par-pick button::before { content: ''; position: absolute; left: 0; right: 0; top: 50%; height: 44px; transform: translateY(-50%); }
+/* Vegas: the winning team's name sat in --mute on mint, unreadable in dark mode */
+.vegas-team.ahead .ms-lbl { color: var(--teal); }
+/* The leading vote's bar: mint behind light text was low contrast in dark mode, so it uses the dark win green there */
+:root[data-theme="dark"] .vote-row.leading .vr-bar { background: var(--win-bg); opacity: 1; }
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]):not([data-theme="dark"]) .vote-row.leading .vr-bar { background: var(--win-bg); opacity: 1; } }
+/* The scorecard's hole numbers: the button fills its whole header cell, not just the 11px number */
+.sc-table th:has(> .sc-col-btn) { padding: 0; }
+.sc-col-btn { padding: 12px 6px; min-height: 40px; }

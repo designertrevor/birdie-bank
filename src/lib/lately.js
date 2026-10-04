@@ -17,7 +17,7 @@ import { dayLabel } from './plans.js';
 import { PAY_APPS } from './pay.js';
 import { lastResult, roundTime } from './history.js';
 import { canonicalOf, paymentGroups } from './shared-tab.js';
-import { countsMoney, rewardOutcome, unitFmt } from './play-for.js';
+import { countsMoney, hasCashBet, rewardOutcome, tabMoneyOf, unitFmt } from './play-for.js';
 
 export const LATELY_DAYS = 30;
 const DAY = 24 * 60 * 60 * 1000;
@@ -118,7 +118,8 @@ export function latelyItems(state, now = Date.now(), { carries = state?.carries,
   }
 
   // Finished rounds: who took it, and only your own amount (in points for a points or reward
-  // round, which is never money; a reward round says who's buying instead)
+  // round, which is never money; a reward round says who's buying instead, plus your side bets
+  // for money in dollars when you had one, as the Tab counts them)
   const shown = lastResult(state)?.round?.id;
   for (const r of Object.values(state.rounds || {})) {
     if (r?.status !== 'done' || r.id === shown || !inWindow(roundTime(r)) || !GAMES[r.game]) continue;
@@ -134,10 +135,13 @@ export function latelyItems(state, now = Date.now(), { carries = state?.carries,
     const fmt = unitFmt(r);
     const reward = rewardOutcome(r, roundResults(r));
     const yours = amount == null ? null : amount === 0 ? (countsMoney(r) ? 'You broke even' : 'You were level') : `You ${fmt(amount, { sign: true })}`;
+    // A reward round's side bets for money are yours on the Tab, so they show in dollars (only when you had one)
+    const cash = reward && played && hasCashBet(r, me) ? cents(tabMoneyOf(r, me)) : null;
+    const bets = cash == null ? null : cash === 0 ? 'Side bets square' : `You ${money(cash, { sign: true })} on side bets`;
     items.push({
       id: `recap:${r.id}`, kind: 'recap', at: roundTime(r),
       text: `${gameLabel(r)} at ${r.course?.name || 'the course'} · ${took}`,
-      sub: [reward ? reward.buy.replace(/\.$/, '') : yours, agoLabel(roundTime(r), t)].filter(Boolean).join(' · '),
+      sub: [reward ? reward.buy.replace(/\.$/, '') : yours, bets, agoLabel(roundTime(r), t)].filter(Boolean).join(' · '),
       target: ['roundDetail', { id: r.id }],
     });
   }

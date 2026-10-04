@@ -119,7 +119,7 @@ export function PersonActions({ other, net, meId }) {
           {carry.status === 'agreed' && (
             <>
               <div className="cn-title">Carried over: {money(carry.carried)}</div>
-              <div className="cn-sub">Agreed {shortDate(carry.answeredAt || carry.at)} · rolls into your next round</div>
+              <div className="cn-sub">Agreed {shortDate(carry.answeredAt || carry.at)} · rolls to next time</div>
               {rest > 0 && <div className="cn-sub">From your shared rounds. The other {money(rest)} is still on the Tab.</div>}
               <div className="cn-foot"><span className="cn-tag">Carried over</span></div>
             </>

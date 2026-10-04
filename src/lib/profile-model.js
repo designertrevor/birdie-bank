@@ -16,8 +16,7 @@
 // account each player id is in state.accountOf, which people-links.js uses so two player records
 // on one account are one person.
 import { GAMES, roundResults } from './round.js';
-import { countsMoney, onTab, tabResults } from './play-for.js';
-import { betsOf, isCashBet } from './pair-bets.js';
+import { countsMoney, hasCashBet, onTab, tabResults } from './play-for.js';
 import { linksOf } from './people-links.js';
 import { meFor } from './format.js';
 import { payInfo } from './pay.js';
@@ -99,8 +98,6 @@ export function normalizeHomeCourse(c) {
  * up the rounds played for money and reward rounds' side bets for money (the Tab's dollars). Rounds
  * you watched don't count.
  */
-/** Whether this seat had a side bet for money in a reward round (only then is it a money round for you). */
-const myCashBet = (r, seat) => betsOf(r).some(b => isCashBet(r, b) && b.sides.includes(seat));
 
 export function profileStats(state, ids = null) {
   const L = linksOf(state);
@@ -130,7 +127,7 @@ export function profileStats(state, ids = null) {
     if (at && (lastPlayed == null || at > lastPlayed)) lastPlayed = at;
     if (amt > 0) record.won++; else if (amt < 0) record.lost++; else record.even++;
     // Dollars: a money round's net, or a reward round's side bets for money, as the Tab has them
-    const cash = countsMoney(r) ? amt : onTab(r) && myCashBet(r, seat) ? tabResults(r).balances[seat] || 0 : null;
+    const cash = countsMoney(r) ? amt : onTab(r) && hasCashBet(r, seat) ? tabResults(r).balances[seat] || 0 : null;
     if (cash != null) {
       moneyRounds++;
       net = cents(net + cash);

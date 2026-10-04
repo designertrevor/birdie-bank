@@ -175,7 +175,7 @@ export default function Ledger() {
         {trips.some(t => t.money.length > 0) && plan.length > 0 && <p className="field-help pad trip-folded">Trip money is in each person’s total below.</p>}
         {plan.length === 0 ? (
           <Empty title={hasRounds ? 'All square' : 'Nothing owed yet'}
-            text={hasRounds ? 'Everyone’s settled up. Time to go win it back.' : 'Finish a round and the tab fills in. Money nets out across every round, so you pay less often.'}
+            text={hasRounds ? 'Everyone’s settled up. Time to go win it back.' : 'Finish a round and the Tab fills in. Money nets out across every round, so you pay less often.'}
             action={!hasRounds && <button className="ec" onClick={() => nav.push('newRound')}><Icon name="golf" fill /> Start a round</button>} />
         ) : (
           <>
