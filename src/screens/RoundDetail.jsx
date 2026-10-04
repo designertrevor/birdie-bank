@@ -409,11 +409,16 @@ function GameBreakdown({ round, res, label = null }) {
           {/* Front, back and total (a house rule): what each pot paid, and to whom */}
           <div className="sec-label">Front, back and total</div>
           {res.detail.pots.map(p => {
-            const won = Object.entries(p.deltas).filter(([, v]) => v > 0).sort((a, b) => b[1] - a[1]);
+            // What each winner took out of the pot (their stake back and the rest), so a pot shared
+            // by everyone over quota lists them all, even one who only got their stake back plus a bit
+            const stake = Number(round.settings[round.game]?.stake) || 0;
+            const square = Object.values(p.deltas).every(v => !v);
+            const won = square ? [] : Object.entries(p.deltas).map(([pid, v]) => [pid, Math.round((v + (p.totals[pid] == null ? 0 : stake)) * 100) / 100])
+              .filter(([, v]) => v > 0).sort((a, b) => b[1] - a[1]);
             return (
               <div key={p.key} className="leg-row">
                 <div className="leg-name">{p.key === 'total' ? (round.holes.length === 18 ? '18' : 'All') : p.label}</div>
-                <div className={`leg-winner ${won.length ? '' : 'leg-tie'}`}>{won.length ? won.map(([pid]) => first(names[pid])).join(', ') : 'All square'}</div>
+                <div className={`leg-winner ${won.length ? '' : 'leg-tie'}`}>{won.length ? won.map(([pid, v]) => (won.length > 1 ? `${first(names[pid])} ${money(v)}` : first(names[pid]))).join(', ') : 'All square'}</div>
                 <div className={`leg-amt ${won.length ? '' : 'zero'}`}>{money(won.reduce((a, [, v]) => a + v, 0))}</div>
               </div>
             );
