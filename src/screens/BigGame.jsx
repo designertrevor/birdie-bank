@@ -173,6 +173,8 @@ export default function BigGame({ id, view: firstView = null }) {
         {organizer && !started && <button className="full-btn pink" disabled={busy || soon} onClick={start}>{busy ? 'Starting…' : soon ? `Start the groups ${day.toLowerCase() === 'tomorrow' ? 'tomorrow' : `on ${day}`}` : <>Start the groups <Icon name="flag-pennant" fill /></>}</button>}
         {organizer && started && !bs.final && !bs.ended && bs.field.groups.some(g => g.status === 'done') && <button className="link-btn center" onClick={close}>Group still out there? Close the game now</button>}
         {organizer && bs.ended && !paidAny && <button className="link-btn center" onClick={() => closeBig(id, false)}>Still playing? Open the game again</button>}
+        {/* A weekly game: next time's starts from this one, the same players, groups and pots */}
+        {organizer && bs.final && <button className="full-btn outline" onClick={() => nav.push('bigGameSetup', { from: id })}><Icon name="arrow-counter-clockwise" /> Set it up for next time</button>}
       </div>
       {betSheet && <BigBetSheet open tripId={id} big={big} bet={betSheet === 'new' ? null : betSheet} name={name} onClose={() => setBetSheet(null)} onRemove={betSheet !== 'new' ? () => unbet(betSheet) : null} />}
       <Sheet open={!!groupOpen} onClose={() => setGroupOpen(null)} title={groupOpen?.name || ''}>

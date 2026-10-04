@@ -26,29 +26,34 @@ const QUESTIONS = ['When’s the Big Game?', 'Where are you playing?', 'Who’s 
 const first = n => String(n || '').trim().split(/\s+/)[0] || 'Player';
 const PCTS = [100, 95, 90, 85, 80];
 
-/** `id`: change a game that hasn't started yet. */
-export default function BigGameSetup({ id = null }) {
+/**
+ * `id`: change a game that hasn't started yet. `from`: set up next time's game from one already
+ * played (the same players, groups, pot, skins and teams, a new day, no side bets).
+ */
+export default function BigGameSetup({ id = null, from = null }) {
   const nav = useNav();
   const state = useStore();
   const { ask, showToast } = useUI();
   const was = id ? state.trips?.[id] : null;
-  const init = useMemo(() => (was ? cleanBig(was.big) : defaultBig()), [was]);
+  const again = !was && from ? state.trips?.[from] : null;
+  const base = was || again;
+  const init = useMemo(() => (was ? cleanBig(was.big) : again ? againOf(again.big) : defaultBig()), [was, again]);
   const [step, showStep] = useState(0);
-  const [reached, setReached] = useState(was ? STEPS.length - 1 : 0);
+  const [reached, setReached] = useState(base ? STEPS.length - 1 : 0);
   const setStep = n => { showStep(n); setReached(r => Math.max(r, n)); };
-  const [name, setName] = useState(was?.name || BIG_NAME);
+  const [name, setName] = useState(base?.name || BIG_NAME);
   const [day, setDay] = useState(was?.start || isoDate());
-  const [holesCount, setHolesCount] = useState(was?.setup?.holesCount || 18);
-  const [nine, setNine] = useState(was?.setup?.nine || 'front');
-  const [courseId, setCourseId] = useState(was?.setup?.courseId || null);
-  const [picked, setPicked] = useState(() => (was ? init.groups.flatMap(g => g.players) : state.me ? [state.me] : []));
-  const [tees, setTees] = useState(was?.setup?.tees || {});
-  const [hcOverride, setHcOverride] = useState(was?.setup?.hcOverride || {});
+  const [holesCount, setHolesCount] = useState(base?.setup?.holesCount || 18);
+  const [nine, setNine] = useState(base?.setup?.nine || 'front');
+  const [courseId, setCourseId] = useState(base?.setup?.courseId || null);
+  const [picked, setPicked] = useState(() => (base ? init.groups.flatMap(g => g.players).filter(pid => state.players[pid]) : state.me ? [state.me] : []));
+  const [tees, setTees] = useState(base?.setup?.tees || {});
+  const [hcOverride, setHcOverride] = useState(base?.setup?.hcOverride || {});
   const [useHc, setUseHc] = useState(init.useHandicaps);
   const [hcPct, setHcPct] = useState(init.hcPct);
-  const [groups, setGroups] = useState(() => (was ? init.groups.map(g => [...g.players]) : null));
-  const [keepers, setKeepers] = useState(() => (was ? init.groups.map(g => g.keeper) : []));
-  const [byHand, setByHand] = useState(!!was);
+  const [groups, setGroups] = useState(() => (base ? init.groups.map(g => [...g.players]) : null));
+  const [keepers, setKeepers] = useState(() => (base ? init.groups.map(g => g.keeper) : []));
+  const [byHand, setByHand] = useState(!!base);
   const [pot, setPot] = useState(init.pot);
   const [skins, setSkins] = useState(init.skins);
   const [teams, setTeams] = useState(init.teams);
@@ -168,6 +173,12 @@ export default function BigGameSetup({ id = null }) {
       )}
     </Screen>
   );
+}
+
+/** Last time's game as the start of next time's: the people, groups and formats, nothing about the rounds or the bets. */
+function againOf(raw) {
+  const b = cleanBig(raw) || defaultBig();
+  return cleanBig({ ...b, v: 1, at: 0, endedAt: null, bets: [], groups: b.groups.map(g => ({ ...g, roundId: null, code: null })) });
 }
 
 /**
