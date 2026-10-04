@@ -23,7 +23,7 @@
 // own "I paid" marks (`state.cupPaid`, shared through cup-sync.js too). A halved cup pays nothing.
 // Pure, unit tested.
 import { holeWinner } from './golf.js';
-import { sideNet } from './round.js';
+import { oneBall, sideNet } from './round.js';
 import { canonicalOf, codeOf } from './pair-debts.js';
 import { stable } from './sync-model.js';
 
@@ -178,10 +178,16 @@ export function defaultRoundCup(state, trip, players, kind = null, { rotate = 0 
   return { kind: k, sides: k === 'fourball' ? sides.map(s => turned(s, n)) : [sides[0], turned(sides[1], n)] };
 }
 
-/** A round's cup as it was saved, tidied to the round's own players, or null. */
+/**
+ * Whether a round's game can count for the cup: matches use each player's own scores, so a game
+ * played with one ball a team (a scramble, alternate shot, Chapman: round.js ONE_BALL_GAMES) can't.
+ */
+export const cupCounts = game => !oneBall(game);
+
+/** A round's cup as it was saved, tidied to the round's own players, or null (always for a one-ball game). */
 export function cleanRoundCup(round) {
   const c = round?.cup;
-  if (!isObj(c) || !Array.isArray(c.sides)) return null;
+  if (!isObj(c) || !Array.isArray(c.sides) || !cupCounts(round.game)) return null;
   const ids = new Set((round.players || []).map(p => p.id));
   const seen = new Set();
   const sides = [0, 1].map(i => (Array.isArray(c.sides[i]) ? c.sides[i] : []).filter(id => ids.has(id) && !seen.has(id) && seen.add(id)));
@@ -320,9 +326,9 @@ export function cupEntries(state, tripId) {
   const remote = isObj(state.cupRemote?.[tripId]) ? state.cupRemote[tripId] : {};
   for (const [key, raw] of Object.entries(remote)) {
     if (key.startsWith('P') || out.has(key)) continue;
-    // A round this phone has that isn't on the cup here (taken off the trip) stays off, and so does
-    // the copy a round posted under its own id before it was shared live (it goes by its code now)
-    if (Object.values(state.rounds || {}).some(r => `L${r.id}` === key || (cupKey(r) === key && r.trip?.id !== tripId))) continue;
+    // A round this phone has that isn't on the cup here (taken off the trip, or a one-ball game) stays
+    // off, and so does the copy a round posted under its own id before it was shared live (it goes by its code now)
+    if (Object.values(state.rounds || {}).some(r => `L${r.id}` === key || cupKey(r) === key)) continue;
     const e = cleanEntry({ ...raw, key });
     if (e) out.set(key, { ...e, local: false });
   }

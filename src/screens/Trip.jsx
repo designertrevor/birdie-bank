@@ -201,7 +201,7 @@ export default function Trip({ id, view: firstView = null, add = false }) {
         {(st.phase === 'on' || st.phase === 'soon') && !anyMoney && cup && st.done.length > 0 && st.organizer && !st.live.length && (
           <button className="link-btn center" onClick={doneNow}>Done playing? Decide the cup now</button>
         )}
-        {st.organizer && st.phase === 'ready' && trip.endedAt && !st.settling.length && <button className="link-btn center" onClick={() => endTrip(id, false)}>Still playing? Reopen the trip</button>}
+        {st.organizer && (st.phase === 'ready' || (st.phase === 'square' && cup && !st.paid.length && !cup.marks.length)) && trip.endedAt && !st.settling.length && <button className="link-btn center" onClick={() => endTrip(id, false)}>Still playing? Reopen the trip</button>}
       </div>
       {st.organizer && <TripSheet open={editing} trip={trip} onClose={() => setEditing(false)} onDone={() => setEditing(false)} />}
       <CountSheet open={counting} onClose={() => setCounting(false)} st={st} />

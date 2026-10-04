@@ -1,7 +1,7 @@
 // Changing a team points trip on this phone (cup.js has the math): a round's matches, and the
 // stake's "I paid" marks. Picking the teams goes through the trip's own edit (trip-store.js).
 import { getState, update } from './store.js';
-import { cleanRoundCup, defaultRoundCup, stakePaymentId } from './cup.js';
+import { cleanRoundCup, cupCounts, defaultRoundCup, stakePaymentId } from './cup.js';
 import { canRecount, tripOf } from './trips.js';
 import { payKey, refreshCup } from './cup-sync.js';
 
@@ -10,7 +10,7 @@ import { payKey, refreshCup } from './cup-sync.js';
  * Each round after the first turns the pairings, so partners and opponents rotate over the trip.
  */
 export function startingCup(state, round, trip) {
-  if (!trip || round.game === 'scramble') return null;
+  if (!trip || !cupCounts(round.game)) return null;
   const before = Object.values(state.rounds || {}).filter(r => r?.trip?.id === trip.id && r.cup && r.id !== round.id).length;
   return defaultRoundCup(state, trip, round.players, null, { rotate: before });
 }
