@@ -35,6 +35,8 @@ const first = name => String(name || '').trim().split(/\s+/)[0] || 'Someone';
 const toCents = v => Math.round((Number(v) || 0) * 100);
 const startOfDay = t => { const d = new Date(t); return new Date(d.getFullYear(), d.getMonth(), d.getDate()).getTime(); };
 const list = names => (names.length <= 1 ? names.join('') : `${names.slice(0, -1).join(', ')} and ${names.at(-1)}`);
+// "You and Sam", never "Sam and You"
+const youFirst = names => (names.includes('You') ? ['You', ...names.filter(n => n !== 'You')] : names);
 
 /** "Yesterday" for the day before `now`, otherwise "Sat, Sep 26". */
 export function recapDay(at, now = Date.now()) {
@@ -80,7 +82,7 @@ function youBuy(state, reward) {
   const names = reward.owers.map(id => youOr(state, id));
   if (!names.includes('You')) return reward.buy;
   // You first, then the rest
-  const ordered = ['You', ...names.filter(n => n !== 'You')];
+  const ordered = youFirst(names);
   const split = reward.lines.some(l => l.split);
   return ordered.length === 1 ? 'You’re buying.' : split ? `${list(ordered)} split it.` : `${list(ordered)} each buy one.`;
 }
@@ -91,16 +93,14 @@ function headline(round, state, res) {
   if (reward) {
     // Who wins the reward, with you as "You" like the rest of the card
     if (!reward.winners.length) return 'All square';
-    const names = reward.winners.map(id => youOr(state, id));
+    const names = youFirst(reward.winners.map(id => youOr(state, id)));
     return names.length > 1 ? `${list(names)} share ${reward.noun}` : `${names[0]} ${names[0] === 'You' ? 'win' : 'wins'} ${reward.noun}`;
   }
   const bal = res.balances;
   const top = Math.max(...round.players.map(p => bal[p.id] ?? 0));
   if (!(top > EPS)) return 'All square';
   const winners = round.players.filter(p => top - (bal[p.id] ?? 0) < EPS).map(p => p.id);
-  const ids = myIds(state);
-  const who = canonicalOf(state);
-  const names = winners.map(id => (ids.has(id) || ids.has(who(id)) ? 'You' : first(nameOf(state, who(id)))));
+  const names = youFirst(winners.map(id => youOr(state, id)));
   if (names.length === 1) return `${names[0]} took it`;
   const team = round.teams?.find(t => t.players.length === winners.length && t.players.every(id => winners.includes(id)));
   return team ? `${list(names)} took it` : `${list(names)} split it`;
@@ -167,11 +167,16 @@ function roundCarries(state, round, rows) {
     out.set(k, { from, to, amount: (had?.amount || 0) + (Number(amount) || 0) });
   };
   for (const r of rows) if (r.kind === 'carry' && r.status === 'agreed') add(r.from, r.to, r.amount);
-  // A carry saved on this phone that names the round (rows already counted keep it from doubling)
+  // A carry saved on this phone that names the round (rows already counted keep it from doubling).
+  // Its amount can cover other rounds too, so only this round's part of it shows: never more than
+  // the round has between the two of them
+  const transfers = tabResults(round).transfers;
   for (const c of state.carries || []) {
     if (c?.status !== 'agreed' || !Array.isArray(c.roundIds) || !c.roundIds.includes(round.id)) continue;
     const k = [who(c.from), who(c.to)].sort().join('|');
-    if (!out.has(k)) add(c.from, c.to, c.amount);
+    if (out.has(k)) continue;
+    const t = transfers.find(x => who(x.from) === who(c.from) && who(x.to) === who(c.to));
+    add(t?.from ?? c.from, t?.to ?? c.to, t ? Math.min(toCents(c.amount), toCents(t.amount)) / 100 : 0);
   }
   return [...out.values()];
 }
@@ -296,7 +301,9 @@ export function recapOf(state, round, now = Date.now()) {
   const isMe = id => ids.has(id) || ids.has(who(id));
   const name = id => (isMe(id) ? 'You' : first(nameOf(state, who(id))));
   const rows = roundRows(state, round);
-  const paid = recapPaid(state, round, { now, rows, res });
+  const owed = recapPaid(state, round, { now, rows, res });
+  // What you rolled over has its own line under "Rolled to next time", so it isn't said twice
+  const paid = owed && { ...owed, mine: owed.mine.filter(l => l.status !== 'carried') };
   const carried = roundCarries(state, round, rows).map(c => {
     const mineToo = isMe(c.from) || isMe(c.to);
     const other = isMe(c.from) ? c.to : c.from;

@@ -64,7 +64,10 @@ function winnersOf(round) {
   return team ? tops : [];
 }
 
-/** Skins each player won in a round, across every Skins game in it (main or side): { id: n }. */
+/**
+ * Skins each player won in a round, across every Skins game in it (main or side): { id: n }, with a 0
+ * for everyone who played one of them, so someone left out of a side Skins game isn't in it at all.
+ */
 function skinsWon(round) {
   const out = {};
   let any = false;
@@ -72,6 +75,7 @@ function skinsWon(round) {
     const view = gameView(round, key);
     if (!view || view.game !== 'skins' || !view.settings?.skins) continue;
     any = true;
+    for (const p of view.players) out[p.id] = out[p.id] || 0;
     for (const kind of skinsKinds(view)) {
       for (const row of skinsTable(view, kind).rows) if (row.winner && !row.pending) out[row.winner] = (out[row.winner] || 0) + row.skins;
     }
@@ -210,6 +214,8 @@ export function calloutCandidates(state, now = Date.now()) {
     const won = skinsWon(r);
     if (!won) continue;
     const seat = r.players.find(p => isMe(p.id));
+    // A round whose Skins game you sat out isn't a skins game of yours
+    if (seat && !(seat.id in won)) continue;
     if (!seat || won[seat.id]) break;
     dry++;
   }

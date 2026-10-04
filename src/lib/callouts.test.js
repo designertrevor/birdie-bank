@@ -105,6 +105,18 @@ test('callouts: a skins drought is only ever your own', () => {
   assert.equal(calloutCandidates(s, NOW).some(c => /Mike/.test(c.text)), false);
 });
 
+test('callouts: a side Skins game you sat out is never one of your skins games', () => {
+  // Stroke play with a side Skins game the other two play, three times: you were never in the skins
+  const sat = (id, d) => round(id, d, ['me', 'sam', 'mike'], samWins(2), {
+    game: 'stroke', sideGames: [{ game: 'skins', settings: { value: 2, carryover: true } }], gamesFor: { me: ['main'] },
+  });
+  const s = stateWith([sat('s1', 1), sat('s2', 3), sat('s3', 6)]);
+  assert.equal(calloutCandidates(s, NOW).some(c => c.kind === 'drought'), false);
+  // Your own skins games still count past them
+  const mixed = stateWith([sat('s1', 1), ...[3, 6, 9].map((d, i) => round(`r${i}`, d, ['me', 'sam', 'mike'], samWins(2)))]);
+  assert.equal(calloutCandidates(mixed, NOW).find(c => c.kind === 'drought')?.text, 'No skins for me in my last 3 skins games. I’m due.');
+});
+
 test('callouts: your season in dollars from the Tab, points rounds never in it', () => {
   const s = stateWith([
     round('m1', 1, ['me', 'sam'], { 1: { me: 3 }, 2: { me: 3 } }),

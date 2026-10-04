@@ -173,7 +173,24 @@ test('recap: what carried, with an amount only on a carry you’re in', () => {
   assert.doesNotMatch(other.text, /\$/);
   const st = recapTransfers(s, r, { now: NOW });
   assert.equal(st.find(t => t.from === theirs.from && t.to === theirs.to).status, 'carried');
-  assert.ok(rc.paid.mine.some(l => l.status === 'carried'));
+  // Your carry is said once, under Rolled to next time, not again in Who's paid
+  assert.equal(rc.paid.mine.some(l => l.status === 'carried'), false);
+  assert.equal([...rc.paid.mine.map(l => l.text), ...texts].filter(t => /rolled/.test(t) && /^You/.test(t)).length, 1);
+});
+
+test('recap: a carry saved on this phone over more than this round shows only this round’s part', () => {
+  const r = skins('r1', YESTERDAY, ['me', 'sam'], { 1: { sam: 3 }, 2: { sam: 3 } });
+  const carry = { id: 'k1', from: 'me', to: 'sam', amount: 30, status: 'agreed', at: NOW - 3600e3, answeredAt: NOW - 3600e3, roundIds: ['r0', 'r1'], codes: [] };
+  const rc = currentRecap(stateWith([r], { carries: [carry] }), NOW);
+  assert.deepEqual(rc.carried.map(c => c.text), ['You and Sam rolled $4 to next time']);
+  assert.deepEqual(rc.paid.people.map(p => p.status), ['carried', 'carried']);
+});
+
+test('recap: you come first when you share the top, "You and Sam", never "Sam and You"', () => {
+  const pair = (more = {}) => skins('t1', YESTERDAY, ['sam', 'me', 'mike'], { 1: { sam: 3 }, 2: { me: 3 } }, more);
+  assert.equal(currentRecap(stateWith([pair()]), NOW).headline, 'You and Sam split it');
+  const lunch = pair({ playFor: { kind: 'reward', reward: 'Lunch', owes: 'last' } });
+  assert.equal(currentRecap(stateWith([lunch]), NOW).headline, 'You and Sam share lunch');
 });
 
 test('recap: a lunch round’s side bet for money is the only money on it', () => {
