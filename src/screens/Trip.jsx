@@ -47,8 +47,8 @@ function useWho(state) {
   return { me, label: id => (id === me ? 'You' : nameOf(state, id)), short: id => (id === me ? 'You' : first(nameOf(state, id))) };
 }
 
-/** `view`: which part opens first ('standings', 'rounds', 'games' or 'expenses'). */
-export default function Trip({ id, view: firstView = 'standings' }) {
+/** `view`: which part opens first ('standings', 'rounds', 'games' or 'expenses'); `add` opens Add an expense. */
+export default function Trip({ id, view: firstView = 'standings', add = false }) {
   const nav = useNav();
   const state = useStore();
   const { ask, showToast } = useUI();
@@ -59,6 +59,8 @@ export default function Trip({ id, view: firstView = 'standings' }) {
   const [editing, setEditing] = useState(false);
   const [counting, setCounting] = useState(false);
   const [leaving, setLeaving] = useState(false);
+  // Opened to add an expense (from Up next): only the first time the Expenses view shows
+  const [adding, setAdding] = useState(add);
   const st = tripStatus(state, id);
   const { me, label, short } = useWho(state);
   useSeenPlan(id, st?.published.version || 0);
@@ -151,7 +153,7 @@ export default function Trip({ id, view: firstView = 'standings' }) {
           </>
         )}
         {view === 'games' && <Games st={st} state={state} label={label} />}
-        {view === 'expenses' && <TripExpensesView st={st} me={me} />}
+        {view === 'expenses' && <TripExpensesView st={st} me={me} adding={adding} onAdded={() => setAdding(false)} />}
 
         <p className="field-help pad">{TRIP_FORMATS[trip.format]?.name || TRIP_FORMATS.money.name}. Each round keeps its own games and bets. Someone who plays only some rounds is on the trip for those rounds.</p>
         {/* Only the organizer deletes; everyone else can hide it from their own Tab and Up next */}

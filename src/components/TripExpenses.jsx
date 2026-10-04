@@ -52,8 +52,9 @@ function useNames(st, me) {
  * The Expenses part of the Trip page: what's been spent and your part of it, Add an expense, each
  * expense newest first, and everyone's whole trip all in.
  */
-export function TripExpensesView({ st, me }) {
-  const [editing, setEditing] = useState(null); // 'new', or the expense being looked at
+export function TripExpensesView({ st, me, adding = false, onAdded }) {
+  const [editing, setEditing] = useState(adding ? 'new' : null); // 'new', or the expense being looked at
+  const close = () => { setEditing(null); onAdded?.(); };
   const { full, short } = useNames(st, me);
   const mine = st.spending.get(me);
   const offNote = st.expenses.some(x => x.by === me) && !expensesOn();
@@ -79,7 +80,7 @@ export function TripExpensesView({ st, me }) {
       {st.expenses.length > 0 && <AllIn st={st} me={me} short={short} />}
       {offNote && <p className="hint-card"><Icon name="cloud-slash" /> Expenses you add stay on your phone and your account for now, so friends don’t see them on theirs yet. They still count here and on your Tab.</p>}
       {st.expenses.length > 0 && <p className="field-help pad">Anyone on the trip can add one. Only the person who added an expense changes or deletes it. Settle the trip squares the expenses and the rounds together, in the fewest payments.</p>}
-      <ExpenseSheet open={!!editing} expense={editing === 'new' ? null : editing} st={st} me={me} full={full} short={short} onClose={() => setEditing(null)} />
+      <ExpenseSheet open={!!editing} expense={editing === 'new' ? null : editing} st={st} me={me} full={full} short={short} onClose={close} />
     </>
   );
 }
