@@ -250,7 +250,11 @@ function PlayRound({ round, momentUp = false }) {
   const promptSeen = useStore(s => s.betPrompts?.[round.id] || null);
   // Never over the first-tee card, which comes first on hole 1
   const cardUp = firstTee || watchCard || !!agreedSheet;
-  const betPrompt = betPromptFor(round, idx + 1, { me, editable, on: promptOn, seen: promptSeen, moment: momentUp || cardUp, scoring: dirty });
+  // It only comes up before a score on the hole is touched, but once up it stays while scores go in,
+  // so the score rows never jump up under a finger (the hole remounts on save, which starts this over)
+  const [promptShown, setPromptShown] = useState(false);
+  const betPrompt = betPromptFor(round, idx + 1, { me, editable, on: promptOn, seen: promptSeen, moment: momentUp || cardUp, scoring: dirty && !promptShown });
+  if (betPrompt && !promptShown) setPromptShown(true);
   const promptAdd = () => {
     update(s => markPrompt(s, round.id, { pos: betPrompt.pos }));
     setPairStart({ kind: betPrompt.kind, holes: betPrompt.holes });

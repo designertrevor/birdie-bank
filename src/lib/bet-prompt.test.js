@@ -201,3 +201,20 @@ test('markPrompt records a hole answered or the round put away, and drops finish
   markPrompt(s, 'r', { skip: true });
   assert.deepEqual(s.betPrompts.r, { done: [1, 3], skip: true });
 });
+
+test('a group already playing a closest to the pin pot isn’t asked about closest to the pin, but still gets its match asks', () => {
+  const pot = r => ({ ...r, sideGames: [{ game: 'ctp', settings: { stake: 5 } }] });
+  assert.equal(betPromptFor(pot(stroke({ upto: 2 })), 3, keeper), null);
+  assert.equal(betPromptFor(pot(stroke({ upto: 2 })), 3, { me: 'p', editable: false }), null);
+  assert.equal(betPromptFor(pot(stroke()), 1, keeper)?.kind, 'match');
+  assert.equal(betPromptFor(pot(stroke({ upto: 9 })), 10, keeper)?.why, 'turn');
+  // Another side game doesn't count
+  const skins = { ...stroke({ upto: 2 }), sideGames: [{ game: 'skins', settings: { value: 2 } }] };
+  assert.equal(betPromptFor(skins, 3, keeper)?.kind, 'ctp');
+});
+
+test('the closest to the pin card says the bet runs on the par 3s after this one too, as the editor starts it', () => {
+  const p = betPromptFor(stroke({ upto: 2 }), 3, keeper);
+  assert.deepEqual(p.holes, [3, 18]);
+  assert.match(p.text, /par 3s after/);
+});
