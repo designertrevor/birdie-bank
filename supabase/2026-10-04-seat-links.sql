@@ -11,10 +11,12 @@
 --
 -- From now on an id is linked only from what the server saw for itself, with the phone told apart
 -- by the device key every request carries (keeper-lock.js):
---  1. A seat you took in a live round. The round's devs map says which phone took each seat, and
---     only that phone can ever put itself there, once (the keeper lock enforces it). The seat is
---     linked when this request comes from that phone and the round's claims say it's your seat
---     now (claims follow a switch to another seat, so a mis-tap doesn't stay linked).
+--  1. A seat you took in a live round. The round's devs map says which phone took each seat (a
+--     phone can only ever put its own key there, so nobody can put a seat on your phone for you).
+--     The seat is linked when this request comes from that phone and the round's claims say it's
+--     your seat now (claims follow a switch to another seat, so a mis-tap doesn't stay linked).
+--     Any phone with the round's link can still take a seat that isn't the keeper's, so this is
+--     only as strong as the link: it never moves an id another account already has (see below).
 --  2. Your own player id, when this phone holds it as a seat in a live round (the round you shared
 --     and play in has devs[your id] = this phone).
 --  3. Your own player id when nobody else could know it yet: no other account's saved rounds have
@@ -36,10 +38,10 @@
 --    round from the organizer's old phone); "Same person as..." still joins them by hand.
 --
 -- What happens to links:
---  • Links made before this ran stay as they are. If one of them was made from your own word and
---    another account later shows the server's evidence for that id (1 or 2 above), the id moves to
---    that account.
---  • Otherwise the first account to link an id keeps it, as before.
+--  • Links made before this ran stay as they are, with the account that made them.
+--  • The first account to link an id keeps it, as before. Nothing above moves an id from one
+--    account to another: anyone in the group with a live round's link can take a seat in it, so
+--    letting that move a link would let them take over a friend's profile, payment app included.
 --  • A seat linked from a live round comes off your account when that round still exists and its
 --    claims no longer give you that seat (you switched seats). Once the round itself is gone the
 --    link stays, so links don't fade as old rounds are tidied away.
@@ -165,11 +167,11 @@ begin
       );
   end if;
 
-  -- The server's evidence: a new link, or one made before from someone's own word (yours or another account's)
+  -- The server's evidence: a new link, or one of yours brought up to date. Another account's link stays theirs
   insert into public.account_players (player_id, user_id, dev, round_code)
   select u.id, me, w, u.code from unnest(strong_ids, strong_codes) as u(id, code)
-  on conflict (player_id) do update set user_id = excluded.user_id, dev = excluded.dev, round_code = excluded.round_code
-    where public.account_players.dev is null or public.account_players.user_id = excluded.user_id;
+  on conflict (player_id) do update set dev = excluded.dev, round_code = excluded.round_code
+    where public.account_players.user_id = excluded.user_id;
 
   -- Your own id with nobody else to know it: only when nobody has it yet (or it's already yours)
   if own_ok then
