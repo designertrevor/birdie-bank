@@ -69,7 +69,7 @@ export default function RoundDetail({ id, celebrate }) {
   const [shareFrom, setShareFrom] = useState(null);
 
   if (!round) {
-    return <Screen><Header title="Round" onBack={nav.pop} /><Empty title="Round not found" text="It may have been deleted." /></Screen>;
+    return <Screen><Header title="Round" onBack={nav.pop} /><Empty title="Round not found" text="It may have been deleted. Finished rounds are in History." action={<button className="ec" onClick={nav.pop}>Go back</button>} /></Screen>;
   }
   const res = roundResults(round);
   const played = round.holes.filter(h => holeComplete(round, h)).length;
@@ -685,8 +685,8 @@ export function Scorecard({ round, current, onHole }) {
                   <span className="sc-name">{p.team ? p.name : p.name.split(' ')[0]}</span>
                   {par.played > 0 && (
                     <span className="sc-topar">
-                      <span className={`sc-par ${toParTone(par.gross)}`} aria-label={showNet ? `Gross ${toParWords(par.gross)}` : toParWords(par.gross)}>{toParText(par.gross)}</span>
-                      {showNet && <span className={`sc-par net ${toParTone(par.net)}`} aria-label={`Net ${toParWords(par.net)}`}>net {toParText(par.net)}</span>}
+                      <span className={`sc-par ${toParTone(par.gross)}`} role="img" aria-label={showNet ? `Gross ${toParWords(par.gross)}` : toParWords(par.gross)}>{toParText(par.gross)}</span>
+                      {showNet && <span className={`sc-par net ${toParTone(par.net)}`} role="img" aria-label={`Net ${toParWords(par.net)}`}>net {toParText(par.net)}</span>}
                     </span>
                   )}
                 </td>
@@ -702,7 +702,7 @@ export function Scorecard({ round, current, onHole }) {
                       <span className="sc-cell">
                         {gone ? <span className="empty-dot">–</span> : g == null ? <span className="empty-dot">·</span> : <span className={`sc-mark ${cls(g, h.par)} ${countedOn(k, p.id) ? 'sc-counts' : ''}`}>{g}</span>}
                         {st > 0 && <span className="sc-strokes" role="img" aria-label={`Gets ${strokesWords(st, half)}`}>{Array.from({ length: st }, (_, i) => <i key={i} />)}</span>}
-                        {st < 0 && <span className="sc-strokes give" aria-label={`Gives back ${strokesWords(-st, half)}`}>{'–'.repeat(-st)}</span>}
+                        {st < 0 && <span className="sc-strokes give" role="img" aria-label={`Gives back ${strokesWords(-st, half)}`}>{'–'.repeat(-st)}</span>}
                       </span>
                     </td>
                   );

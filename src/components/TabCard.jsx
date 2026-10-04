@@ -102,7 +102,7 @@ export function PersonActions({ other, net, meId }) {
               <div className="cn-sub">{money(carry.carried)} to next time{carry.reason ? <> · “{carry.reason}”</> : null}</div>
               <div className="cn-foot">
                 <span className="cn-tag">Waiting on {first}</span>
-                <button className="link-btn" onClick={() => answer('withdraw')}>Take it back</button>
+                <button className="link-btn" onClick={() => answer('withdraw')} aria-label={`Take back asking ${first} to roll it over`}>Take it back</button>
               </div>
             </>
           )}
@@ -111,7 +111,7 @@ export function PersonActions({ other, net, meId }) {
               <div className="cn-title">{first} wants to roll {money(carry.carried)} to next time</div>
               {carry.reason && <div className="cn-sub">“{carry.reason}”</div>}
               <div className="pay-acts wrap">
-                <button className="pay-btn ink" onClick={() => answer('agree')}>Agree</button>
+                <button className="pay-btn ink" onClick={() => answer('agree')} aria-label={`Agree to roll ${money(carry.carried)} with ${first} to next time`}>Agree</button>
                 <button className="pay-btn" onClick={() => answer('decline')}>{owesMe ? 'I’d rather get paid' : 'I’ll just pay'}</button>
               </div>
             </>
@@ -148,7 +148,8 @@ export function PersonActions({ other, net, meId }) {
             </>
           )}
           {canRoll && (
-            <button className={`pay-btn ${partOnly ? 'roll-part' : ''}`} onClick={() => setRolling(true)}><span className="pay-in"><Icon name="arrow-u-down-right" /><span className="pay-lbl">{partOnly ? `Roll ${money(shared.amount)} from your shared rounds to next time` : 'Roll to next time'}</span></span></button>
+            <button className={`pay-btn ${partOnly ? 'roll-part' : ''}`} onClick={() => setRolling(true)}
+              aria-label={partOnly ? undefined : `Roll what’s between you and ${first} to next time`}><span className="pay-in"><Icon name="arrow-u-down-right" /><span className="pay-lbl">{partOnly ? `Roll ${money(shared.amount)} from your shared rounds to next time` : 'Roll to next time'}</span></span></button>
           )}
         </div>
       )}
@@ -219,9 +220,10 @@ export function SquareStrip() {
         </button>
         <ul className="sq-people">
           {people.map(p => (
-            <li key={p.id} className={`sq-p ${p.st}`} aria-label={`${p.name}: ${STATUS_WORD[p.st].toLowerCase()}`}>
+            <li key={p.id} className={`sq-p ${p.st}`}>
               <Avatar model={faces.get(p.id)} />
               <span className="sq-word" aria-hidden="true">{STATUS_WORD[p.st]}</span>
+              <span className="sr-only">{p.name}: {STATUS_WORD[p.st].toLowerCase()}</span>
             </li>
           ))}
         </ul>

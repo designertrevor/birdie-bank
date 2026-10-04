@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Empty, Header, Icon, Numpad, Screen, Segmented, Toggle, useUI } from '../components/ui.jsx';
+import { Empty, FileButton, Header, Icon, Numpad, Screen, Segmented, Toggle, useUI } from '../components/ui.jsx';
 import { RulesSheet } from '../components/Rules.jsx';
 import { Avatar } from '../components/Avatar.jsx';
 import { ProfilePrivacy } from '../components/ProfilePrivacy.jsx';
@@ -18,6 +18,7 @@ import { DeleteAccountButton } from '../components/DeleteAccount.jsx';
 import { PAYWALL_ON } from '../lib/paywall-flag.js';
 import { isOrganizer, planStatus } from '../lib/paywall.js';
 import { accountsEnabled, signOut, syncNow, unsyncedCount, useAccount } from '../lib/cloud.js';
+import { NUDGE_CHOICES, nudgeChoiceLabel, nudgeDays } from '../lib/nudges.js';
 
 export default function Settings() {
   const nav = useNav();
@@ -139,6 +140,12 @@ export default function Settings() {
           <div><div className="toggle-lbl" id="callouts-lbl">Callouts</div><div className="toggle-sub" id="callouts-sub">A few friendly lines from the Tab and your stats, one tap to post in the group text</div></div>
           <Toggle on={state.settings.callouts !== false} onChange={v => update(s => { s.settings.callouts = v; })} labelledBy="callouts-lbl" describedBy="callouts-sub" />
         </div>
+        <div className="block">
+          <div className="toggle-lbl" id="nudge-lbl">Payment reminders</div>
+          <div className="toggle-sub" id="nudge-sub" style={{ marginBottom: 10 }}>When someone has owed you this long, Up next suggests a friendly reminder you send with one tap. Never more than once a week each, and never for money you agreed to carry over.</div>
+          <Segmented label="Payment reminders" className="press-mode-row" btn="pm-btn" value={nudgeDays(state.settings)} onChange={v => update(s => { s.settings.nudgeDays = v; })}
+            options={NUDGE_CHOICES.map(n => ({ value: n, label: nudgeChoiceLabel(n) }))} />
+        </div>
         <div className="sec-label">Games</div>
         {row('sliders-horizontal', 'Game defaults', 'Your usual bets and house rules', () => nav.push('defaults'))}
         {row('map-trifold', 'Courses', `${allCourses(state).length} courses · add or fix a scorecard`, () => nav.push('courses'))}
@@ -148,12 +155,11 @@ export default function Settings() {
         </div>
         <div className="sec-label">Your data</div>
         {row('export', 'Back up your data', 'Save rounds, players, courses and payments to a file', backup)}
-        <label className="set-row" htmlFor="restore-file" role="button" tabIndex={0}>
+        <FileButton id="restore-file" className="set-row" accept="application/json,.json" onPick={restore}>
           <div className="set-icon"><Icon name="download-simple" fill /></div>
           <div className="row-main"><div className="set-name">Restore from a backup</div><div className="set-sub">Add what’s missing, or replace everything</div></div>
           <span className="chevron"><Icon name="caret-right" /></span>
-        </label>
-        <input id="restore-file" type="file" accept="application/json,.json" hidden onChange={restore} />
+        </FileButton>
         {PAYWALL_ON && isOrganizer(state) && <>
           <div className="sec-label">Your plan</div>
           {row('star', 'Birdie Bank Pro', planStatus(state), () => nav.push('paywall', { source: 'settings' }))}
@@ -247,7 +253,7 @@ export function Defaults() {
             <GameOptions game={g} get={get} set={set} onAmount={(path, label, o) => setPad({ path, label, ...o })} compact />
           </div>
         ))}
-        <button className="danger-link" onClick={async () => { if (await ask({ title: 'Reset your game defaults?', text: 'Every game goes back to the standard bets and house rules. Rounds you’ve played don’t change.', confirmLabel: 'Reset' })) update(st => { st.settings = { ...structuredClone(DEFAULT_SETTINGS), theme: st.settings.theme, shareAmounts: st.settings.shareAmounts, betPrompt: st.settings.betPrompt, callouts: st.settings.callouts }; }); }}><Icon name="arrow-counter-clockwise" /> Reset to defaults</button>
+        <button className="danger-link" onClick={async () => { if (await ask({ title: 'Reset your game defaults?', text: 'Every game goes back to the standard bets and house rules. Rounds you’ve played don’t change.', confirmLabel: 'Reset' })) update(st => { st.settings = { ...structuredClone(DEFAULT_SETTINGS), theme: st.settings.theme, shareAmounts: st.settings.shareAmounts, betPrompt: st.settings.betPrompt, callouts: st.settings.callouts, nudgeDays: st.settings.nudgeDays }; }); }}><Icon name="arrow-counter-clockwise" /> Reset to defaults</button>
       </div>
       <Numpad open={!!pad} title={pad?.label} prefix="$" initial={pad ? get(pad.path) : ''} min={pad?.min} max={pad?.max}
         onClose={() => setPad(null)} onDone={v => { set(pad.path, v); setPad(null); }} />
@@ -292,6 +298,8 @@ function sourceLabel(s) {
 }
 
 const TEE_COLORS = ['#1a1a1a', '#2f6fd6', '#f2f2f2', '#e8b94a', '#d64545', '#2c8c66'];
+// What a screen reader says for each swatch, never the color code
+const TEE_COLOR_NAMES = { '#1a1a1a': 'Black', '#2f6fd6': 'Blue', '#f2f2f2': 'White', '#e8b94a': 'Gold', '#d64545': 'Red', '#2c8c66': 'Green' };
 
 function blankCourse(n = 18) {
   return {
@@ -384,7 +392,7 @@ export function CourseEdit({ id, prefill = null, onDone = null }) {
           <input id="cn" className="name-input" value={c.name} onChange={e => setC({ ...c, name: e.target.value })} placeholder="e.g. Birch Creek GC" />
           <label className="field-label" htmlFor="cc">City</label>
           <input id="cc" className="text-input" value={c.city || ''} onChange={e => setC({ ...c, city: e.target.value })} placeholder="City, State" />
-          <label className="field-label">Holes</label>
+          <div className="field-label" aria-hidden="true">Holes</div>
           <Segmented label="Holes" value={n} onChange={setHoles} options={[{ value: 9, label: '9' }, { value: 18, label: '18' }]} />
         </div>
 
@@ -417,7 +425,7 @@ export function CourseEdit({ id, prefill = null, onDone = null }) {
             </div>
             <div className="color-row" role="radiogroup" aria-label="Tee color">
               {TEE_COLORS.map(col => (
-                <button key={col} role="radio" aria-checked={t.color === col} aria-label={col} className={`swatch ${t.color === col ? 'on' : ''}`} style={{ background: col }}
+                <button key={col} role="radio" aria-checked={t.color === col} aria-label={TEE_COLOR_NAMES[col]} className={`swatch ${t.color === col ? 'on' : ''}`} style={{ background: col }}
                   onClick={() => setC(x => { const y = structuredClone(x); y.tees[ti].color = col; return y; })} />
               ))}
             </div>

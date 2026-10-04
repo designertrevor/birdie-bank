@@ -30,6 +30,7 @@ import { findCourse } from '../lib/courses.js';
 import { BET_LADDER, MAX_BALLOT_GAMES, betChoices, betLabel, betOf, betUnitLabel, dayChoices, isoDate, newPlan, planStart } from '../lib/plans.js';
 import { rescheduleSetup, setupForPlan } from '../lib/plan-setup.js';
 import { PLAN_LOCKED, editPlan } from '../lib/plan-sync.js';
+import { rebookIfMoved } from '../lib/tee-reminders.js';
 import { shouldShowPaywall } from '../lib/paywall.js';
 import { PAYWALL_ON } from '../lib/paywall-flag.js';
 import { matchingUsual, planFromUsual, setupFromUsual, usualsOf } from '../lib/usuals.js';
@@ -321,6 +322,8 @@ export default function NewRound({ rematch, fromPlan, present, edit = null, ahea
   // Save the changed day, time, course or holes on the plan; a shared plan sends them to the group
   const savePlan = () => {
     editPlan(editing.id, p => {
+      // A tee time booked for the old day or course comes off (tee-reminders.js)
+      rebookIfMoved(p, { date, courseId: course.id });
       p.date = date;
       p.teeTime = teeTime || null;
       p.holesCount = holesCount;
@@ -762,7 +765,8 @@ function PlayersStep({ game, course, holesCount, nine, picked, setPicked, tees, 
                         })}
                       </div>
                     )}
-                    {showHc && <button className={`hc-chip ${hc.source === 'none' ? 'missing' : ''}`} onClick={() => setHcFor(p.id)}>
+                    {showHc && <button className={`hc-chip ${hc.source === 'none' ? 'missing' : ''}`} onClick={() => setHcFor(p.id)}
+                      aria-label={`${p.name}’s ${holesCount === 9 ? '9-hole handicap' : 'course handicap'}: ${hc.value < 0 ? `+${-hc.value}` : hc.value}${hcNote ? hcNote.replace(' · ', ', ') : ''}. Change it`}>
                       {holesCount === 9 ? '9-hole handicap' : 'Course handicap'} <strong>{hc.value < 0 ? `+${-hc.value}` : hc.value}</strong>{hcNote} <Icon name="pencil-simple" />
                     </button>}
                   </div>
@@ -806,10 +810,11 @@ function QuickAddPlayer({ open, onClose, onAdded }) {
       <Sheet open={open && !pad} onClose={onClose} title="Add a player">
         <div style={{ padding: '8px 16px 0' }}>
           <label className="field-label" htmlFor="qa-name">Name</label>
-          <input id="qa-name" className="name-input" value={name} onChange={e => setName(e.target.value)} maxLength={24} placeholder="Name" autoFocus />
-          {dup && <p className="field-error">Someone already has that name. Add an initial.</p>}
-          <label className="field-label">Handicap index <span className="opt">optional</span></label>
-          <button className="amt-btn" onClick={() => setPad(true)}>{index == null ? 'Add' : formatIndex(index)}</button>
+          <input id="qa-name" className="name-input" value={name} onChange={e => setName(e.target.value)} maxLength={24} placeholder="Name" autoFocus
+            aria-invalid={dup || undefined} aria-describedby={dup ? 'qa-name-err' : undefined} />
+          {dup && <p className="field-error" id="qa-name-err" role="status">Someone already has that name. Add an initial.</p>}
+          <div className="field-label">Handicap index <span className="opt">optional</span></div>
+          <button className="amt-btn" onClick={() => setPad(true)} aria-label={index == null ? 'Handicap index: add one' : `Handicap index ${formatIndex(index)}. Change it`}>{index == null ? 'Add' : formatIndex(index)}</button>
           <p className="field-help">Their 18-hole handicap index. We halve it for 9 holes.</p>
           <div style={{ marginTop: 16 }}><button className="full-btn" disabled={!t || dup} onClick={add}>Add to round</button></div>
         </div>

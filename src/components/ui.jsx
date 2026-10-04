@@ -25,7 +25,7 @@ export function Screen({ children, className = '' }) {
  */
 export function Steps({ steps, current, canGo, onGo }) {
   return (
-    <div className="step-bar" aria-label={`Step ${current + 1} of ${steps.length}`}>
+    <div className="step-bar" role="group" aria-label={`Step ${current + 1} of ${steps.length}`}>
       {steps.map((s, i) => {
         const cls = `step ${i < current ? 'done' : ''} ${i === current ? 'active' : ''}`;
         const label = <>{i < current && <Icon name="check" className="step-check" />}{s}</>;
@@ -206,6 +206,20 @@ function NumpadInner({ title, prefix = '', suffix = '', initial = '', min, max, 
   );
 }
 
+/**
+ * A button that opens the photo picker. The file input stays hidden; the button is a real button,
+ * so it takes keyboard focus and Enter or Space like every other. `onPick` gets the change event.
+ */
+export function FileButton({ id, onPick, className = 'hc-chip', accept = 'image/*', children, ...rest }) {
+  const input = useRef(null);
+  return (
+    <>
+      <button type="button" className={className} onClick={() => input.current?.click()} {...rest}>{children}</button>
+      <input ref={input} id={id} type="file" accept={accept} hidden tabIndex={-1} onChange={onPick} />
+    </>
+  );
+}
+
 // ---------------------------------------------------------------------------
 // Toasts + confirm dialogs (global)
 // ---------------------------------------------------------------------------
@@ -228,7 +242,8 @@ export function UIProvider({ children }) {
     <UICtx.Provider value={{ showToast, ask }}>
       {children}
       <div className={`toast ${toast ? 'show' : ''} ${toast?.action ? 'has-act' : ''}`} role="status" aria-live="polite">
-        {toast?.msg}
+        {/* Keyed, so the same words twice in a row are read out twice */}
+        {toast && <span key={toast.key}>{toast.msg}</span>}
         {toast?.action && <button className="toast-act" onClick={() => { toast.action.run(); setToast(null); }}>{toast.action.label}</button>}
       </div>
       {confirm && <Confirm confirm={confirm} close={close} />}

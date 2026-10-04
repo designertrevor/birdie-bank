@@ -4,6 +4,8 @@
 // { id, name, city, holes: [{ par, hdcp }], tees: [{ name, rating, slope }], verified, custom }.
 // If the server has no key, search quietly returns nothing and the app works as before.
 
+import { cleanBookingUrl } from './booking-url.js';
+
 export const SOURCE = 'golfcourseapi';
 const ENDPOINT = '/api/courses';
 
@@ -90,6 +92,15 @@ function cleanSlope(v) {
   return isInt(s) && s >= 55 && s <= 155 ? s : null;
 }
 
+/** A booking page from a course record (tee times first, then the course's website), or ''. */
+function bookingOf(c) {
+  for (const k of ['booking_url', 'tee_times_url', 'website', 'url']) {
+    const u = typeof c?.[k] === 'string' ? cleanBookingUrl(c[k]) : '';
+    if (u) return u;
+  }
+  return '';
+}
+
 /**
  * A full course from GET /v1/courses/{id} in the app's shape, or null when no tee has a
  * usable 9 or 18 hole scorecard. Par and hole handicaps come from the first tee with a
@@ -134,6 +145,8 @@ export function mapCourse(json) {
     ...coordsOf(c.location),
     holes,
     tees,
+    // The course's own booking page or website when the database sends one, for tee time reminders
+    ...(bookingOf(c) ? { bookingUrl: bookingOf(c) } : {}),
     custom: true,
     verified: complete && tees.some(t => t.rating != null && t.slope != null),
   };

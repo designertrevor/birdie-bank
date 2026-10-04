@@ -33,6 +33,7 @@ import { ChallengesUpNext } from '../components/Challenges.jsx';
 import { myChallenges } from '../lib/challenges.js';
 import { refreshChallenges } from '../lib/challenge-sync.js';
 import { useCupSync } from '../lib/cup-sync.js';
+import { RemindersUpNext } from '../components/Reminders.jsx';
 
 const LATELY_ON_HOME = 3;
 
@@ -92,9 +93,9 @@ export default function UpNext() {
             <button key={r.id} className="resume-card" onClick={() => nav.push('play', { id: r.id })}>
               <div className="resume-pulse" aria-hidden="true" />
               <div className="row-main">
-                <div className="bl" style={{ color: 'rgba(255,255,255,.8)' }}>{played ? 'Round in progress' : 'Ready to tee off'}</div>
+                <div className="bl resume-eyebrow">{played ? 'Round in progress' : 'Ready to tee off'}</div>
                 <div className="d" style={{ fontSize: 20, fontWeight: 800 }}>{gameLabel(r)} · {r.course.name}</div>
-                <div style={{ fontSize: 13, opacity: 0.85 }}>{played} of {r.holes.length} holes · {r.players.map(p => p.name.split(' ')[0]).join(', ')}</div>
+                <div className="resume-sub">{played} of {r.holes.length} holes · {r.players.map(p => p.name.split(' ')[0]).join(', ')}</div>
               </div>
               <span className="resume-go"><Icon name="play" fill /></span>
             </button>
@@ -102,6 +103,9 @@ export default function UpNext() {
         })}
 
         {trips.map(t => <TripUpNext key={t.trip.id} status={t} renderPlan={p => <UpcomingCard key={p.id} plan={p} />} />)}
+
+        {/* A tee time to book and friendly payment reminders: there's no push yet, so these are the reminders */}
+        <RemindersUpNext />
 
         {plans.length > 0 && <div className="sec-label">Upcoming</div>}
         {plans.map(p => <UpcomingCard key={p.id} plan={p} />)}

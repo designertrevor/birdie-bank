@@ -31,6 +31,9 @@ export function toDocs(state) {
     cupPaid: state.cupPaid && typeof state.cupPaid === 'object' && !Array.isArray(state.cupPaid) ? state.cupPaid : {},
     // Closed seasons (books.js): a marker and the season's totals; the money is in the payments and carries
     books: state.books && typeof state.books === 'object' && !Array.isArray(state.books) ? state.books : {},
+    // Booking pages saved for courses, and when you last nudged each person (tee-reminders.js, nudges.js)
+    courseLinks: state.courseLinks && typeof state.courseLinks === 'object' && !Array.isArray(state.courseLinks) ? state.courseLinks : {},
+    nudges: state.nudges && typeof state.nudges === 'object' && !Array.isArray(state.nudges) ? state.nudges : {},
   });
   for (const p of Object.values(state.players)) put('player', p.id, p);
   for (const c of Object.values(state.crews)) put('crew', c.id, c);
@@ -100,6 +103,16 @@ export function applyDoc(draft, kind, id, data) {
     if (data.cupPaid && typeof data.cupPaid === 'object' && !Array.isArray(data.cupPaid)) draft.cupPaid = data.cupPaid;
     // Closed seasons came later again: an older profile keeps this phone's
     if (data.books && typeof data.books === 'object' && !Array.isArray(data.books)) draft.books = data.books;
+    // Booking links and nudges came later again: an older profile keeps this phone's
+    if (data.courseLinks && typeof data.courseLinks === 'object' && !Array.isArray(data.courseLinks)) draft.courseLinks = data.courseLinks;
+    // Nudges keep the newer time for each person, so a reminder sent on this phone before the
+    // profile went up isn't undone by another phone's older copy (and the card doesn't come back)
+    if (data.nudges && typeof data.nudges === 'object' && !Array.isArray(data.nudges)) {
+      const mine = draft.nudges && typeof draft.nudges === 'object' && !Array.isArray(draft.nudges) ? draft.nudges : {};
+      const next = { ...mine };
+      for (const [k, t] of Object.entries(data.nudges)) if (Number(t) > (Number(next[k]) || 0)) next[k] = Number(t);
+      draft.nudges = next;
+    }
   }
 }
 

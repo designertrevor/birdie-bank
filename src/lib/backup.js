@@ -25,6 +25,8 @@ const pad2 = n => String(n).padStart(2, '0');
 MAPS.push('talk');
 // And closed seasons (books.js)
 MAPS.push('books');
+// Booking pages saved for courses and when you last nudged each person (tee-reminders.js, nudges.js)
+MAPS.push('courseLinks', 'nudges');
 
 /** birdie-bank-backup-2026-09-30.json, in the phone's own date. */
 export function backupFileName(date = new Date()) {

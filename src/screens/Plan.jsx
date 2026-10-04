@@ -18,8 +18,9 @@ import { payFields, sendReminder } from '../lib/pay.js';
 import { shareLink, shareRound, syncConfigured } from '../lib/sync.js';
 import {
   RSVPS, RSVP_LABEL, betLabel, betUnitLabel, cleanName, countsLine, daysUntil, inviteText, isoDate, morningText, nudgeAllText, nudgeText,
-  dayLabel, movedPlanOf, planChoice, planCounts, planPeople, planRules, planSides, planStart, rollCallDefault, tally, tallySides, whenLabel,
+  dayLabel, movedPlanOf, planChoice, planCounts, planPeople, planRules, planSides, planStart, rollCallDefault, tally, tallySides, timeLabel, whenLabel,
 } from '../lib/plans.js';
+import { TeeTimeSection } from '../components/Reminders.jsx';
 import { PlansOffError } from '../lib/plan-adapters.js';
 import { CountForTrip } from '../components/Trips.jsx';
 import { keptLine, roundBets } from '../lib/plan-setup.js';
@@ -57,7 +58,7 @@ export default function PlanScreen({ id }) {
     return (
       <Screen>
         <Header title="Upcoming round" small onBack={nav.pop} />
-        <div className="scroll"><Empty title="This plan is gone" text="It was deleted from this phone." /></div>
+        <div className="scroll"><Empty title="This plan is gone" text="It was deleted from this phone. Your other rounds are on Up next." action={<button className="ec" onClick={nav.pop}>Go back</button>} /></div>
       </Screen>
     );
   }
@@ -124,7 +125,7 @@ function PlanBody({ plan, standalone = false, onSkip }) {
       return planShareLink(getState().plans[plan.id]);
     } catch (e) {
       // The first try is how this phone learns the SQL hasn't run, so ask the error, not `off`
-      showToast(e instanceof PlansOffError ? 'Group links aren’t switched on yet' : 'Couldn’t reach Birdie Bank. Check your signal');
+      showToast(e instanceof PlansOffError ? 'Group links aren’t switched on yet' : 'Couldn’t get the link. Check your signal');
       return null;
     } finally { setSharing(false); }
   };
@@ -177,6 +178,7 @@ function PlanBody({ plan, standalone = false, onSkip }) {
           {playForLine(plan) && <div className="ic-playfor"><Icon name={plan.playFor?.kind === 'reward' ? 'gift' : 'trophy'} fill /> {playForLine(plan)}</div>}
           {plan.status === 'off' && <p className="ic-note"><Icon name="calendar-x" fill /> {plan.host ? 'You called this one off.' : `${host} called this one off.`}</p>}
           {plan.gone && plan.status === 'planned' && <p className="ic-note"><Icon name="calendar-x" fill /> {host} deleted this plan.</p>}
+          {planned && plan.booked && !plan.movedTo && <p className="ic-note"><Icon name="calendar-check" fill /> Tee time booked{plan.teeTime ? ` for ${timeLabel(plan.teeTime)}` : ''}.</p>}
           {plan.movedTo && <MovedNote plan={plan} host={host} />}
           {plan.status === 'started' && !plan.movedTo && (
             <p className="ic-note"><Icon name="flag-pennant" fill /> The round is on.{plan.liveCode ? ' Follow the money live.' : ''}</p>
@@ -242,7 +244,7 @@ function PlanBody({ plan, standalone = false, onSkip }) {
                   {p.status ? RSVP_LABEL[p.status] : 'No answer'}
                 </button>
               ) : (
-                <span className={`who-status ${p.status || 'none'}`} aria-label={plan.host && p.self ? `${first(p.name)}: ${RSVP_LABEL[p.status] || 'No answer'}, answered from their own phone` : undefined}>{p.status ? RSVP_LABEL[p.status] : 'No answer'}</span>
+                <span className={`who-status ${p.status || 'none'}`} role={plan.host && p.self ? 'img' : undefined} aria-label={plan.host && p.self ? `${first(p.name)}: ${RSVP_LABEL[p.status] || 'No answer'}, answered from their own phone` : undefined}>{p.status ? RSVP_LABEL[p.status] : 'No answer'}</span>
               )}
             </div>
           ))}
@@ -256,6 +258,9 @@ function PlanBody({ plan, standalone = false, onSkip }) {
         {plan.host && planned && plan.code && (
           <p className="field-help pad">Tap a name to mark someone who told you in person. Friends answer from the link, no download needed, and once they do it’s theirs to change.</p>
         )}
+
+        {/* The organizer's booking link, the day to be reminded to book, and Booked (tee-reminders.js) */}
+        {planned && plan.host && !plan.movedTo && (days ?? 0) >= 0 && <TeeTimeSection plan={plan} />}
 
         {plan.status !== 'off' && !plan.gone && <TalkSection ctx={planTalk(plan)} on="plan" />}
 
@@ -445,7 +450,7 @@ export function RollCall({ id }) {
   const [countTrip, setCountTrip] = useState(true);
   // The latest answers to the plan's challenges, so the agreed ones go in at the tee
   useChallengesLive({ planCode: plan?.code });
-  if (!plan) return <Screen><Header title="Roll call" small onBack={nav.pop} /><div className="scroll"><Empty title="This plan is gone" /></div></Screen>;
+  if (!plan) return <Screen><Header title="Roll call" small onBack={nav.pop} /><div className="scroll"><Empty title="This plan is gone" text="It was deleted from this phone. Your other rounds are on Up next." action={<button className="ec" onClick={nav.pop}>Go back</button>} /></div></Screen>;
   const people = planPeople(plan);
   const course = findCourse(state, plan.course?.id);
   const setup = planStart(state, plan, present, { newId: () => uid('p_'), course });
@@ -608,12 +613,12 @@ export function PlanLink({ code, who = null, standalone = false, onSkip }) {
       {!standalone && <Header title="Upcoming round" small onBack={nav.pop} />}
       <div className="scroll onboard-body">
         <BallIllo className="onboard-illo" face={!err} />
-        <h1 className="onboard-title" style={{ fontSize: 34 }}>{err ? (err === 'off' ? 'Not quite ready' : missing ? 'Plan not found' : 'No signal') : 'Finding the plan…'}</h1>
-        <p className="onboard-text">
+        <h1 className="onboard-title" style={{ fontSize: 34 }} aria-live="polite">{err ? (err === 'off' ? 'Not quite ready' : missing ? 'Plan not found' : 'No signal') : 'Finding the plan…'}</h1>
+        <p className="onboard-text" aria-live="polite">
           {!err && <>Code {code}</>}
           {err === 'off' && <>Group links aren’t switched on yet. Ask whoever sent it to tell you the plan instead.</>}
           {err === 'missing' && <>We can’t find plan {code}. It may have been deleted, or the link is old. Ask for a fresh one.</>}
-          {err === 'offline' && <>Couldn’t reach Birdie Bank. Check your signal and try again.</>}
+          {err === 'offline' && <>Couldn’t get the plan. Check your signal and try again.</>}
         </p>
       </div>
       {err && (

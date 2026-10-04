@@ -4,7 +4,7 @@
 // the same phone never asks for the same course twice. "Add it yourself for now" opens the
 // course editor with the name filled in, so the round isn't held up waiting on us.
 import { useId, useRef, useState } from 'react';
-import { Icon, useUI } from './ui.jsx';
+import { FileButton, Icon, useUI } from './ui.jsx';
 import { getState, STORE_KEY } from '../lib/store.js';
 import { shrinkImage, submitFeedback } from '../lib/feedback.js';
 import { canRequestCourse, cleanCourseName, courseRequestView, findCourseRequest, requestCourse } from '../lib/course-request.js';
@@ -89,19 +89,15 @@ export default function RequestCourse({ query, onAddYourself, roundId = null }) 
       <p className="rc-text">{sendable ? <>No course matches “{name}”. Ask us to add it for everyone, or add it yourself in a minute from the scorecard.</> : 'Type a bit more of the course name, then ask us to add it.'}</p>
       <label className="field-label" htmlFor={`${ids}-city`}>City and state <span className="opt">optional</span></label>
       <input id={`${ids}-city`} className="text-input" value={city} onChange={e => setCity(e.target.value)} placeholder="e.g. Smithfield, UT" maxLength={120} autoComplete="address-level2" />
-      <label className="field-label">Scorecard photo <span className="opt">optional</span></label>
+      <div className="field-label" id={`${ids}-photo-l`}>Scorecard photo <span className="opt">optional</span></div>
       {image ? (
         <div className="fb-photo">
           <img src={image} alt="Scorecard" />
-          <button className="hc-chip" onClick={() => setImage(null)}><Icon name="x" /> Remove</button>
+          <button className="hc-chip" onClick={() => setImage(null)} aria-label="Remove the scorecard photo"><Icon name="x" /> Remove</button>
         </div>
       ) : (
-        <label className="hc-chip" htmlFor={`${ids}-photo`} role="button" tabIndex={0}
-          onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); e.currentTarget.click(); } }}>
-          <Icon name="camera" /> Add a photo
-        </label>
+        <FileButton id={`${ids}-photo`} onPick={pickPhoto} aria-describedby={`${ids}-photo-l`}><Icon name="camera" /> Add a photo</FileButton>
       )}
-      <input id={`${ids}-photo`} type="file" accept="image/*" hidden onChange={pickPhoto} />
       <div className="rc-actions">
         <button className="full-btn rc-btn" disabled={busy || !sendable} onClick={send} aria-busy={busy || undefined}>
           {busy ? 'Sending…' : <><Icon name="paper-plane-tilt" fill /> Request this course</>}
