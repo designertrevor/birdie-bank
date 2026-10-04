@@ -1935,3 +1935,22 @@ button.trip-card:active { transform: scale(.97); }
 .trip-who { display: flex; flex-direction: column; gap: 6px; margin-top: 8px; }
 .trip-who .sheet-item { width: 100%; margin: 0; }
 .trip-who .avatar { margin: 0; }
+
+/* ---------- Deeper stats (o7 stats): Your stats screen, the profile's More stats, the links to it ---------- */
+.stats-tiles .pf-tile { grid-column: span 3; }
+.stats-tiles .pf-tile:nth-child(3) .pf-v { font-size: 22px; line-height: normal; white-space: nowrap; }
+.stats-all { display: block; margin: -2px 16px 10px; text-align: center; }
+.stats-lines { list-style: none; padding: 4px 16px; }
+.stats-line { display: flex; align-items: center; gap: 12px; min-height: 52px; padding: 10px 0; border-bottom: 1px solid var(--line); }
+.stats-line:last-child { border-bottom: 0; }
+.sl-name { display: block; font-weight: 700; font-size: 15px; color: var(--ink); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.sl-place { font-weight: 500; color: var(--mute); }
+.sl-sub { display: block; margin-top: 2px; font-size: 13px; font-weight: 500; color: var(--mute); font-variant-numeric: tabular-nums; }
+.sl-amt { flex-shrink: 0; font-size: 17px; font-weight: 800; color: var(--ink); white-space: nowrap; font-variant-numeric: tabular-nums; }
+.stats-wins { padding: 4px 0; overflow: hidden; }
+.stats-foot { display: flex; gap: 6px; align-items: baseline; }
+.stats-foot i { flex-shrink: 0; color: var(--icon); font-size: 12px; }
+.stats-link { width: calc(100% - 32px); min-height: 52px; color: var(--ink); }
+.stats-link .row-main { font-weight: 700; }
+.stats-link > i:last-child { color: var(--mute); }
+.pf-more .stats-open { margin-top: 10px; }

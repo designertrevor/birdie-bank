@@ -242,3 +242,34 @@ test('reading stats never changes a round', () => {
   assert.equal(JSON.stringify(rounds), before);
   assert.deepEqual(rounds.map(r => JSON.stringify(roundResults(r).balances)), money);
 });
+
+test('how the stats read: skins, amounts, records and presses', async () => {
+  const { lineAmount, lineSub, pressText, skinsText } = await import('./deep-stats.js');
+  const { money } = await import('./golf.js');
+  const { points } = await import('./play-for.js');
+  const fmt = { money, points };
+  assert.deepEqual([4, 4.5, 0.5, 4 / 3].map(skinsText), ['4', '4½', '½', '1.3']);
+  const st = deepStats(stateOf(all()));
+  const g = Object.fromEntries(st.games.map(l => [l.key, l]));
+  assert.deepEqual(lineAmount(g.bets, fmt), { text: '+$10', tone: 'pos', unit: 'dollars' });
+  const ptsOnly = { ...g.skins, dollars: { net: 0, rounds: 0 } };
+  assert.equal(lineAmount(ptsOnly, fmt).unit, 'points');
+  assert.match(lineAmount(ptsOnly, fmt).text, /pts?$/);
+  assert.equal(lineAmount({ ...ptsOnly, points: { net: 0, rounds: 0 } }, fmt).text, '–');
+  // Skins mixes money and points, so it says how the points went
+  assert.match(lineSub(g.skins, fmt), /^4 rounds · \d–\d(–\d)? · .+ in 2 for points$/);
+  assert.equal(lineSub(g.nassau, fmt), '2 rounds · 1–1');
+  assert.equal(pressText({ won: 2, lost: 0, halved: 1 }), '2 won, 1 halved');
+  assert.equal(pressText({ won: 0, lost: 0, halved: 0 }), 'None yet');
+  assert.equal(pressText({ won: 0, lost: 3, halved: 0 }), '0 won, 3 lost');
+});
+
+test('the best line in a few words', async () => {
+  const { bestText } = await import('./deep-stats.js');
+  const { money } = await import('./golf.js');
+  const line = { name: 'Nassau', rounds: 4, record: { won: 3, lost: 1, even: 0 }, dollars: { net: 40, rounds: 4 }, points: { net: 0, rounds: 0 } };
+  assert.equal(bestText({ line, by: 'dollars' }, money), 'Nassau, +$40');
+  assert.equal(bestText({ line, by: 'record' }, money), 'Nassau, 3–1');
+  assert.equal(bestText({ line: { ...line, record: { won: 2, lost: 1, even: 1 } }, by: 'record' }, money), 'Nassau, 2–1–1');
+  assert.equal(bestText(null, money), '–');
+});

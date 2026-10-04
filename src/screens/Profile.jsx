@@ -1,7 +1,7 @@
 // Your profile: your avatar, name, handicap, home course and payment app, your stats, and who sees
 // what. Opened from Settings (behind your avatar on every main tab) and from your row on Players.
 // It all works on this phone first; people you've played with see it once your account has it.
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { Header, Icon, Numpad, Screen, Segmented, Toggle, useUI } from '../components/ui.jsx';
 import { Avatar } from '../components/Avatar.jsx';
 import { AvatarPicker } from '../components/AvatarPicker.jsx';
@@ -15,6 +15,9 @@ import { avatarLabel } from '../lib/avatars.js';
 import { refreshProfiles, setHomeCourse, setPrivacy, useMyProfile, useMyStats, useProfileServer } from '../lib/profiles.js';
 import { MONEY_CHOICES, PRIVACY_ROWS, moneyHelp, privacySummary, profileSubline, sinceText, statTiles } from '../lib/profile-view.js';
 import { accountsEnabled, useAccount } from '../lib/cloud.js';
+import { money } from '../lib/golf.js';
+import { bestOf, bestText, deepStats, pressText, skinsText, winRate } from '../lib/deep-stats.js';
+
 
 /** Where your profile is, in one quiet line under your name. */
 function whereLine(user, server) {
@@ -41,6 +44,8 @@ export default function Profile() {
   const [pad, setPad] = useState(false);
   const [picking, setPicking] = useState(false);
   const [home, setHome] = useState(false);
+  // The deeper stats, all time, from your rounds on this phone (only you see them)
+  const deep = useMemo(() => deepStats(state), [state]);
 
   if (!card) {
     return (
@@ -103,6 +108,22 @@ export default function Profile() {
               ))}
             </div>
             {since && <p className="field-help pad">{since} · {stats.friends} {stats.friends === 1 ? 'person' : 'people'} played with</p>}
+            {deep.rounds > 0 && (
+              <>
+                <div className="sec-label">More stats</div>
+                <div className="block kv-block pf-more">
+                  <div className="kv-row"><span className="kv-k">Best game</span><span className="kv-v">{bestText(bestOf(deep.games), money)}</span></div>
+                  <div className="kv-row"><span className="kv-k">Best course</span><span className="kv-v">{bestText(bestOf(deep.courses), money)}</span></div>
+                  {deep.presses.rounds > 0 && <div className="kv-row"><span className="kv-k">Your presses</span><span className="kv-v">{pressText(deep.presses.made)}{winRate(deep.presses.made) == null ? '' : ` · ${winRate(deep.presses.made)}%`}</span></div>}
+                  {deep.skins.rounds > 0 && <div className="kv-row"><span className="kv-k">Skins won</span><span className="kv-v">{skinsText(deep.skins.won)}</span></div>}
+                  <button className="pf-home stats-open" onClick={() => nav.push('stats')}>
+                    <Icon name="chart-bar" fill />
+                    <span className="row-main"><b>See all your stats</b><span>By game and course, presses, skins and biggest wins. Only you see them.</span></span>
+                    <Icon name="caret-right" />
+                  </button>
+                </div>
+              </>
+            )}
           </>
         ) : (
           <p className="hint-card"><Icon name="flag-pennant" fill /> Your rounds, record and favorite game show up here after your first round.</p>

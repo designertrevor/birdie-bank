@@ -258,3 +258,53 @@ export function bestOf(lines) {
   const rec = lines.filter(l => l.rounds >= 2 && l.record.won > l.record.lost).sort((a, b) => rate(b) - rate(a) || b.rounds - a.rounds)[0];
   return rec ? { line: rec, by: 'record' } : null;
 }
+
+// --------------------------- how the stats read ------------------------------
+
+const EMPTY = '–';
+const plural = (n, one, many = `${one}s`) => `${n} ${n === 1 ? one : many}`;
+
+/** Skins can split on a tie: 4, 4½, 1.3. */
+export function skinsText(n) {
+  const v = Number(n) || 0;
+  if (Number.isInteger(v)) return String(v);
+  const whole = Math.floor(v);
+  if (Math.abs(v - whole - 0.5) < 0.01) return `${whole || ''}½`;
+  return v.toFixed(1);
+}
+
+/**
+ * A line's money as it reads on the right: { text, tone, unit } in dollars when it has money rounds,
+ * otherwise in points, otherwise an en dash. `fmt` is { money, points } (golf.js money, play-for.js points).
+ */
+export function lineAmount(line, fmt) {
+  if (line.dollars.rounds) return { text: fmt.money(line.dollars.net, { sign: true }), tone: line.dollars.net > EPS ? 'pos' : line.dollars.net < -EPS ? 'neg' : '', unit: 'dollars' };
+  if (line.points.rounds) return { text: fmt.points(line.points.net, { sign: true }), tone: '', unit: 'points' };
+  return { text: EMPTY, tone: '', unit: null };
+}
+
+/** "4 rounds · 3–1", with the even ones when there are some ("3–1–1"), and "2 for points" when money and points mix. */
+export function lineSub(line, fmt) {
+  const r = line.record;
+  const rec = (r.even ? [r.won, r.lost, r.even] : [r.won, r.lost]).join(EMPTY);
+  const parts = [plural(line.rounds, 'round'), rec];
+  if (line.dollars.rounds && line.points.rounds) parts.push(`${fmt.points(line.points.net, { sign: true })} in ${line.points.rounds} for points`);
+  return parts.join(' · ');
+}
+
+/** "2 won, 1 lost, 1 halved" (only the parts there are), or "None yet". */
+export function pressText(rec) {
+  if (!pressCount(rec)) return 'None yet';
+  const parts = [`${rec.won} won`];
+  if (rec.lost) parts.push(`${rec.lost} lost`);
+  if (rec.halved) parts.push(`${rec.halved} halved`);
+  return parts.join(', ');
+}
+
+/** The best line in a few words: "Nassau, +$40" by the money, "Nassau, 3–1" by the record, or an en dash. */
+export function bestText(best, moneyFmt) {
+  if (!best) return EMPTY;
+  const { line, by } = best;
+  const r = line.record;
+  return `${line.name}, ${by === 'dollars' ? moneyFmt(line.dollars.net, { sign: true }) : (r.even ? [r.won, r.lost, r.even] : [r.won, r.lost]).join(EMPTY)}`;
+}

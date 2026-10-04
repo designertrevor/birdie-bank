@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
-import { Empty, Header, Icon, Screen, Segmented } from '../components/ui.jsx';
+import { Empty, Header, Icon, Screen } from '../components/ui.jsx';
+import { RangeBar } from '../components/RangeBar.jsx';
 import { useStore } from '../lib/store.js';
 import { GAMES } from '../lib/round.js';
 import { money } from '../lib/golf.js';
@@ -7,7 +8,7 @@ import { nameOf } from '../lib/ledger.js';
 import { AvatarButton, BottomNav } from '../nav.jsx';
 import { useNav } from '../lib/nav.js';
 import {
-  defaultRange, headToHead, isLatest, lastResult, monthGroups, netSeries, rangeLabel, rangeOfKind, roundTime, roundsInRange, shiftRange,
+  defaultRange, headToHead, lastResult, monthGroups, netSeries, rangeLabel, roundTime, roundsInRange,
 } from '../lib/history.js';
 import { RoundRow } from '../components/RoundRow.jsx';
 import { SeasonChart } from '../components/SeasonChart.jsx';
@@ -96,24 +97,7 @@ export default function History() {
             action={<button className="ec" onClick={() => nav.push('newRound')}><Icon name="golf" fill /> Start a round</button>} />
         ) : (
           <>
-            <div className="range-bar">
-              <Segmented label="Time range" className="press-mode-row" btn="pm-btn" value={range.kind} onChange={k => setRange(rangeOfKind(k, range))}
-                options={[{ value: 'season', label: 'Season' }, { value: 'month', label: 'Month' }, { value: 'custom', label: 'Custom' }]} />
-              {range.kind === 'custom' ? (
-                <div className="range-dates">
-                  <label><span className="eyebrow">From</span>
-                    <input type="date" className="text-input" value={range.from} max={range.to || undefined} onChange={e => setRange({ ...range, from: e.target.value })} /></label>
-                  <label><span className="eyebrow">To</span>
-                    <input type="date" className="text-input" value={range.to} min={range.from || undefined} onChange={e => setRange({ ...range, to: e.target.value })} /></label>
-                </div>
-              ) : (
-                <div className="range-step">
-                  <button className="icon-btn sm" onClick={() => setRange(shiftRange(range, -1))} aria-label={`Previous ${range.kind}`}><Icon name="caret-left" /></button>
-                  <span className="range-label" aria-live="polite">{label}</span>
-                  <button className="icon-btn sm" onClick={() => setRange(shiftRange(range, 1))} disabled={isLatest(range)} aria-label={`Next ${range.kind}`}><Icon name="caret-right" /></button>
-                </div>
-              )}
-            </div>
+            <RangeBar range={range} onChange={setRange} />
 
             {games.length > 1 && (
               <div className="chip-row" role="group" aria-label="Filter by game">
@@ -141,6 +125,11 @@ export default function History() {
                     <SeasonChart series={series} label={label} />
                   </div>
                 )}
+
+                {/* Deeper stats for the same range: by game, by course, presses, skins and biggest wins */}
+                <button className="text-link stats-link" onClick={() => nav.push('stats', { range })}>
+                  <Icon name="chart-bar" fill /> <span className="row-main">Your stats for {range.kind === 'season' ? `the ${label}` : label}<span className="sl-sub">By game and course, presses, skins and biggest wins</span></span> <Icon name="caret-right" />
+                </button>
 
                 {h2h.length > 0 && (
                   <>
