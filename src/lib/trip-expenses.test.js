@@ -674,3 +674,20 @@ test('a stale copy later in the same batch never brings back a deleted expense',
   // A newer copy later in the batch still wins
   assert.equal(mergeExpenses({}, [e, { ...e, amount: 50, updatedAt: 9 }]).x1.amount, 50);
 });
+
+test('an expense the plan can never take doesn’t republish the plan after every payment', () => {
+  const phones = lunchPair({ lunch: false });
+  // Mia doesn't golf, so the plan never covers Trevor's dinner for him and Mia
+  share(phones, expense(phones.t, { id: 'x2', payer: 't', people: ['t', 'm'], amount: 60, at: OCT(16, 21) }));
+  const plan = duePlan(phones.t, TRIP, { now: NOW });
+  publish(phones, plan);
+  assert.deepEqual(planState(phones.t, 't_bandon', { now: NOW }).pendingExpenses, ['x2']);
+  const before = owes(phones.a, 'a', 't');
+  assert.ok(before > 0);
+  paid(phones, 'a', allocatePayment(phones.a, { from: 'za', to: 't', amount: before / 100 }, { now: NOW, makeId: () => 'p1' }));
+  assert.equal(planState(phones.t, 't_bandon', { now: NOW + 1 }).status, 'live');
+  assert.equal(duePlan(phones.t, TRIP, { now: NOW + 1 }), null, 'the plan stays as it is');
+  // An expense the plan can take still brings the next version
+  share(phones, expense(phones.t, { id: 'x3', payer: 't', people: ['t', 'a'], amount: 20, at: OCT(16, 22) }));
+  assert.equal(duePlan(phones.t, TRIP, { now: NOW + 2 })?.version, 2);
+});

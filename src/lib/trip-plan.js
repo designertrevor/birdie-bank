@@ -175,7 +175,14 @@ export function duePlan(state, trip, { now = Date.now(), byName = null, covers }
   if (cur?.deleted) return null;
   const ps = planState(state, trip.id, { now });
   const ended = trip.endedAt || null;
-  if (cur && ps.status === 'live' && !ps.pending.length && !ps.pendingExpenses.length && (cur.endedAt || null) === ended) return null;
+  // Only an expense a new plan could take counts as waiting: one with someone the rounds don't
+  // reach (a non-golfer) never goes in, so it mustn't republish the plan after every payment
+  const waiting = () => {
+    if (!ps.pendingExpenses.length) return false;
+    const can = plannable(state, trip.id, tripShared(state, trip.id, now), canonicalOf(state)).filter(x => !covers || covers(x.raw));
+    return can.some(x => ps.pendingExpenses.includes(x.id));
+  };
+  if (cur && ps.status === 'live' && !ps.pending.length && !waiting() && (cur.endedAt || null) === ended) return null;
   const next = buildPlan(state, trip.id, { now, version: (cur?.version || 0) + 1, endedAt: ended, byName, ...(covers ? { covers } : {}) });
   return !next || (cur && samePlan(cur, next)) ? null : next;
 }
