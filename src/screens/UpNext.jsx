@@ -153,7 +153,7 @@ function PlanNext({ last, fresh, planned = false, trip = false }) {
   const [tripping, setTripping] = useState(false);
   return (
     <div className="plan-card">
-      <span className="eyebrow">{planned ? 'Something else' : fresh ? 'Welcome to the bank' : 'Nothing on the calendar'}</span>
+      <span className="eyebrow">{planned ? 'Something else' : fresh ? 'Welcome to the first tee' : 'Nothing on the calendar'}</span>
       <div className="pc-title d">{planned ? 'Playing now, or another day?' : 'Plan your next round'}</div>
       <div className="pc-sub">{planned
         ? 'Start a round at the course in one tap, or plan another one for later.'

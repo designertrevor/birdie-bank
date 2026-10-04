@@ -117,7 +117,7 @@ function PlanBody({ plan, standalone = false, onSkip }) {
   };
   const morning = () => send(morningText(plan, link, settings), 'Text copied. Paste it in your group text');
   const callOff = async () => {
-    if (!(await ask({ title: 'Call it off?', text: 'Everyone with the link sees it’s off. Nobody’s tab changes.', confirmLabel: 'Call it off', cancelLabel: 'Keep it on', danger: true }))) return;
+    if (!(await ask({ title: 'Call it off?', text: 'Everyone with the link sees it’s off. Nothing on the Tab changes.', confirmLabel: 'Call it off', cancelLabel: 'Keep it on', danger: true }))) return;
     editPlan(plan.id, p => { p.status = 'off'; });
   };
   const del = async () => {

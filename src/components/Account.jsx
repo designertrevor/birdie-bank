@@ -3,7 +3,7 @@ import { Icon, Sheet } from './ui.jsx';
 import { sendEmailCode, signInWithGoogle, verifyEmailCode } from '../lib/cloud.js';
 
 /** Sign in with Google or an emailed link / code. */
-export function SignInSheet({ open, onClose, title = 'Save your rounds', text = 'Sign in to keep your rounds, players and tab safe, and pick up on any phone or computer.' }) {
+export function SignInSheet({ open, onClose, title = 'Save your rounds', text = 'Sign in to keep your rounds, players and the Tab safe, and pick up on any phone or computer.' }) {
   const [email, setEmail] = useState('');
   const [sentTo, setSentTo] = useState(null);
   const [code, setCode] = useState('');

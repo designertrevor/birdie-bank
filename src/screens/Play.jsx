@@ -349,7 +349,7 @@ function PlayRound({ round }) {
       const one = missing.length === 1;
       const go = await ask({
         title: `${missing.length} hole${one ? '' : 's'} not fully scored`,
-        text: `Hole${one ? '' : 's'} ${missing.map(h => h.no).join(', ')} ${one ? 'is' : 'are'} missing scores and won’t count for money. Finish anyway? You can fix scores later from the results.`,
+        text: `Hole${one ? '' : 's'} ${missing.map(h => h.no).join(', ')} ${one ? 'is' : 'are'} missing scores and won’t count for ${countsMoney(round) ? 'money' : 'points'}. Finish anyway? You can fix scores later from the results.`,
         actions: [{ label: 'Finish round', value: 'finish' }, { label: 'Go to first missing hole', value: 'goto', secondary: true }],
       });
       if (go === 'goto') { update(s => { s.rounds[round.id].current = r.holes.indexOf(missing[0]); }); return; }
@@ -450,7 +450,7 @@ function PlayRound({ round }) {
       )}
       {round.editing && editable && (
         <button className="finished-banner" onClick={doneEditing}>
-          <Icon name="pencil-simple" fill /> Fixing scores. The tab updates as you save. Done <Icon name="arrow-right" />
+          <Icon name="pencil-simple" fill /> Fixing scores. {countsMoney(round) ? 'The Tab updates' : 'The points update'} as you save. Done <Icon name="arrow-right" />
         </button>
       )}
       {requests[0] && round.status === 'active' && editable && (
