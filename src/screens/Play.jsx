@@ -1174,8 +1174,10 @@ function MoneyBar({ round, hole, preview }) {
   const Box = byGame ? 'button' : 'div';
   // A button's label replaces what's in it, so it carries everyone's total too
   const said = round.players.map(p => `${p.name.split(' ')[0]} ${fmt(preview.balances[p.id], { sign: true })}`).join(', ');
+  // and the dollar side bets line under it in a reward round, which the label would hide as well
+  const cashSaid = cash ? `. Side bets for money: ${cashLine || 'all square'}` : '';
   const boxProps = byGame
-    ? { type: 'button', className: 'money-bar mb-tap', 'aria-label': `${word} so far, ${thru.toLowerCase()}: ${said}. Show by game`, 'aria-haspopup': 'dialog', onClick: () => setOpen(true) }
+    ? { type: 'button', className: 'money-bar mb-tap', 'aria-label': `${word} so far, ${thru.toLowerCase()}: ${said}${cashSaid}. Show by game`, 'aria-haspopup': 'dialog', onClick: () => setOpen(true) }
     : { className: 'money-bar', role: 'group', 'aria-label': `${word} so far` };
   // Not a live region: it changes on every tap. The saved hole's result is announced by the toast.
   return (
