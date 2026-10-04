@@ -253,6 +253,7 @@ export function wholeRoundOnly(game, before, after) {
   if (game === 'scramble' || game === 'birdies') return true;
   if (game === 'skins') return before?.payout === 'pot' || after?.payout === 'pot' || (before?.kind || 'net') !== (after?.kind || 'net');
   if (game === 'snake') return !!before?.nines !== !!after?.nines;
+  if (game === 'rabbit') return !!before?.sixes !== !!after?.sixes;
   if (game === 'stroke' || game === 'stableford' || game === 'quota') return before?.payout === 'pot' || after?.payout === 'pot';
   return false;
 }
@@ -988,6 +989,12 @@ export function betPresets(min = 1, max = 20, def = null) {
   return picks;
 }
 
+/** What a Banker press multiplies a bet by on `hole`: 2, or 3 on a par 3 with "par 3 presses triple". */
+export function bankerPress(round, hole) {
+  const bs = settingsAt(round, posOf(round, hole)).banker;
+  return bs?.par3Triple && hole?.par === 3 ? 3 : 2;
+}
+
 export function bankerHoleSetup(round, idx) {
   const hole = round.holes[idx];
   const existing = round.banker[hole.no];
@@ -1034,12 +1041,32 @@ export function sideNet(round, side, hole) {
   return bestBall(on.map(pid => netFor(round, playerById(round, pid), hole)));
 }
 
+/**
+ * Both sides' numbers on a hole for a two-side game (`key`: 'nassau', 'match' or 'sixes'): best ball,
+ * or with the "both balls count" house rule (teamScore 'total', off unless the round says so, added
+ * 2026-10-03) the two partners' nets added up. Both balls only counts when each side has two players
+ * on the hole; a side that's lost a partner, or a 1 v 2, plays best ball that hole.
+ * Source, checked 2026-10-03: 18Birdies, "Nassau" https://help.18birdies.com/article/27-nassau (team
+ * scoring "Use the best score" or "Add the scores from all players").
+ */
+export function sidesNets(round, a, b, hole, key = round.game) {
+  const both = settingsAt(round, posOf(round, hole))[key]?.teamScore === 'total';
+  if (both) {
+    const onA = a.filter(pid => playsHole(round, pid, hole)), onB = b.filter(pid => playsHole(round, pid, hole));
+    if (onA.length === 2 && onB.length === 2) {
+      const sum = on => { const n = on.map(pid => netFor(round, playerById(round, pid), hole)); return n.some(x => x == null) ? null : n[0] + n[1]; };
+      return [sum(onA), sum(onB)];
+    }
+  }
+  return [sideNet(round, a, hole), sideNet(round, b, hole)];
+}
+
 /** Hole winners (0 | 1 | null) keyed by playing position (1-based). Legs follow playing order. */
 export function nassauWinners(round) {
   const [a, b] = sides(round);
   const w = {};
   round.holes.forEach((h, i) => {
-    const r = holeWinner(sideNet(round, a, h), sideNet(round, b, h));
+    const r = holeWinner(...sidesNets(round, a, b, h));
     if (r !== undefined) w[i + 1] = r;
   });
   return w;
@@ -1182,7 +1209,13 @@ export function skinsTable(round, kind = skinsKinds(round)[0]) {
       } else row.pending = false;
     }
     if (pending?.at <= i) pending = null;
-    const all = [...carry, { worth: s.value, field }];
+    // House rule "back nine doubles" (backDouble, per skin over 18 holes, off unless the round says so,
+    // added 2026-10-03): a skin from holes 10 to 18 is worth twice the bet. A front-nine skin carried
+    // onto the back keeps its front value. Source, checked 2026-10-03: Golf Digest, "How to play Skins"
+    // https://www.golfdigest.com/story/how-to-play-skins-golf-betting-games-explained (doubling the
+    // value per skin on the back nine) and Stix https://stix.golf/blogs/rough-thoughts/how-to-play-skins-in-golf
+    const back = s.backDouble && s.payout !== 'pot' && round.holes.length === 18 && i >= 9;
+    const all = [...carry, { worth: s.value * (back ? 2 : 1), field }];
     const worth = all.reduce((a, sk) => a + sk.worth, 0);
     const purse = all.reduce((a, sk) => a + sk.worth * Math.max(0, sk.field.filter(id => field.includes(id)).length - 1), 0);
     const base = { hole: h, pot: all.length, worth, purse, field };
@@ -1308,7 +1341,24 @@ export function wolfFor(round, idx) {
   const hole = round.holes[idx];
   const on = hole ? playersOn(round, hole) : round.players;
   const list = on.length ? on : round.players;
-  return list[idx % list.length].id;
+  const turn = list[idx % list.length].id;
+  // House rule "last place is wolf on 17 and 18" (wolf.lastWolf, 18 holes, off unless the round says
+  // so, added 2026-10-03): whoever is furthest down in the wolf money so far is the wolf on the last
+  // two holes. A tie keeps the usual turn if they're in it, else the first of them in playing order.
+  // Source, checked 2026-10-03: 18Birdies, "Wolf golf betting game"
+  // https://help.18birdies.com/article/480-wolf-golf-betting-game-how-to-play-and-win ("The final two
+  // holes are reserved for the golfer in last place to be the Wolf").
+  if (round.holes.length === 18 && idx >= 16 && settingsAt(round, idx + 1).wolf?.lastWolf) {
+    const money = Object.fromEntries(list.map(p => [p.id, 0]));
+    for (const h of round.holes.slice(0, idx)) {
+      const r = wolfHoleResult(round, h);
+      if (r) for (const [id, v] of Object.entries(r.deltas)) if (id in money) money[id] += v;
+    }
+    const low = Math.min(...Object.values(money));
+    const last = list.filter(p => Math.abs(money[p.id] - low) < 1e-9).map(p => p.id);
+    return last.includes(turn) ? turn : last[0];
+  }
+  return turn;
 }
 
 /** The saved wolf pick for a hole if it still stands (nobody in it has left), else a fresh one. */
@@ -1400,12 +1450,12 @@ export function vegasTable(round) {
   const rows = [];
   for (const [i, h] of round.holes.entries()) {
     if (!holeComplete(round, h) || teams.length !== 2) { rows.push({ hole: h, played: false }); continue; }
-    const { point, birdieFlip, birdieDouble } = settingsAt(round, i + 1).vegas;
+    const { point, birdieFlip, birdieDouble, daytona } = settingsAt(round, i + 1).vegas;
     // Vegas needs two full teams: once a player leaves, the holes after aren't counted
     if (teams.some(t => t.players.some(pid => !playsHole(round, pid, h)))) { rows.push({ hole: h, played: false, short: true }); continue; }
     const nets = teams.map(t => t.players.map(pid => netFor(round, playerById(round, pid), h)));
     const gross = teams.map(t => t.players.map(pid => round.scores[h.no]?.[pid]));
-    const r = vegasHole(nets, gross, h.par, { birdieFlip, birdieDouble: !!birdieDouble });
+    const r = vegasHole(nets, gross, h.par, { birdieFlip, birdieDouble: !!birdieDouble, daytona: !!daytona });
     const deltas = {};
     teams[0].players.forEach(pid => { deltas[pid] = r.diff * point; });
     teams[1].players.forEach(pid => { deltas[pid] = -r.diff * point; });
@@ -1422,7 +1472,7 @@ export function vegasPreview(round, hole, draft) {
   const nets = teams.map(t => t.players.map(eff));
   const gross = teams.map(t => t.players.map(pid => draft[pid]));
   const vs = settingsAt(round, posOf(round, hole)).vegas;
-  return vegasHole(nets, gross, hole.par, { birdieFlip: vs.birdieFlip, birdieDouble: !!vs.birdieDouble });
+  return vegasHole(nets, gross, hole.par, { birdieFlip: vs.birdieFlip, birdieDouble: !!vs.birdieDouble, daytona: !!vs.daytona });
 }
 
 // --------------------------- Sixes ----------------------------------------
@@ -1441,7 +1491,7 @@ export function sixesMatches(round) {
     if (firstGone < seg.start) return { seg, sides: [a, b], winners, status: matchStatus(winners, seg.start, seg.end), index: i, off: true };
     for (let pos = seg.start; pos <= seg.end; pos++) {
       const h = round.holes[pos - 1];
-      const r = holeWinner(sideNet(round, a, h), sideNet(round, b, h));
+      const r = holeWinner(...sidesNets(round, a, b, h, 'sixes'));
       if (r !== undefined) winners[pos] = r;
     }
     return { seg, sides: [a, b], winners, status: matchStatus(winners, seg.start, seg.end), index: i };
@@ -1500,7 +1550,40 @@ function totalsHoleValue(round, p, h) {
     return settingsAt(round, posOf(round, h)).stroke?.cap ? Math.min(net, h.par + 2) : net;
   }
   if (round.game === 'stableford') return stablefordPoints(netFor(round, p, h), h.par, round.settings.stableford.modified);
-  return quotaPoints(grossFor(round, p, h), h.par);
+  return quotaPoints(grossFor(round, p, h), h.par, { minus: !!settingsAt(round, posOf(round, h)).quota?.minus });
+}
+
+/**
+ * The pots a totals game (Stroke play, Stableford, Quota) is played for, among the players `stay`.
+ * One pot for the round, unless the "front, back and total" house rule is on (`nassau`, 18 holes, off
+ * unless the round says so, added 2026-10-03): then the front nine, the back nine and the 18 are a pot
+ * each, each at the stake, like a Nassau. A nine is measured on its own holes; in Quota that's against
+ * half the quota. A nine with no hole played yet has no pot. Each pot: { key, label, totals }.
+ * Source, checked 2026-10-03: Golf Genius, "Tournament scored points and purse options"
+ * https://docs.golfgenius.com/en/articles/10778633-tournament-scored-points-and-purse-options (Nassau
+ * payouts to the front 9, back 9 and overall winners).
+ */
+export function totalsPots(round, stay, table = totalsTable(round)) {
+  const key = round.game === 'quota' ? 'vsQuotaExact' : 'total';
+  const whole = { key: 'total', label: 'Total', totals: Object.fromEntries(table.filter(t => stay.includes(t.id)).map(t => [t.id, t[key]])) };
+  const cfg = round.settings[round.game] || {};
+  const n = round.holes.length;
+  if (!cfg.nassau || n !== 18 || cfg.payout !== 'pot') return [whole];
+  const byId = Object.fromEntries(round.players.map(p => [p.id, p]));
+  const legs = nassauLegs(n);
+  const nine = leg => {
+    const holes = round.holes.slice(leg.start - 1, leg.end).filter(h => holeComplete(round, h));
+    if (!holes.length) return null;
+    const value = (pid, h) => totalsHoleValue(round, byId[pid], h) - (round.game === 'quota' ? quotaOf(round, byId[pid]) / n : 0);
+    return Object.fromEntries(stay.map(pid => [pid, holes.reduce((a, h) => a + value(pid, h), 0)]));
+  };
+  const out = [];
+  for (const k of ['front', 'back']) {
+    const totals = nine(legs[k]);
+    if (totals) out.push({ key: k, label: legs[k].label, totals });
+  }
+  out.push(whole);
+  return out;
 }
 
 /**
@@ -1524,17 +1607,36 @@ function settlePairs(round, value, { stake, lowerWins, onPair = null }) {
 }
 
 /** Points per hole per player for nines, aces (as money), bingo bango bongo and dots. */
+/** The player with the outright lowest net score on `hole` among `field`, or null (a tie, or not scored). */
+export function bbbLowNet(round, hole, field) {
+  if (!holeComplete(round, hole)) return null;
+  const nets = field.map(id => [id, netFor(round, playerById(round, id), hole)]).filter(n => n[1] != null);
+  if (nets.length < 2) return null;
+  const low = Math.min(...nets.map(n => n[1]));
+  const lows = nets.filter(n => n[1] === low);
+  return lows.length === 1 ? lows[0][0] : null;
+}
+
 export function pointsTable(round) {
   const ids = round.players.map(p => p.id);
   const rows = [];
+  let greenieCarry = 0; // Dots: greenies carried to the next par 3 (see below)
   for (const [i, h] of round.holes.entries()) {
     const s = settingsAt(round, i + 1);
     // Rows carry `field`: the players still on the hole, who are the only ones it settles between
     const field = playersOn(round, h).map(p => p.id);
     if (round.game === 'bbb') {
       // Bingo bango bongo is marks only, so a missing score doesn't stop the hole counting
-      const m = round.marks?.[h.no];
-      if (!m) continue;
+      // House rule "Bongo is low net" (bbb.netBongo, off unless the round says so, added 2026-10-03):
+      // the third point goes to the outright lowest net score on the hole instead of first in, so
+      // handicaps count. A tie for low, or a score missing, and nobody gets it. Source, checked
+      // 2026-10-03: 18Birdies, "Bingo Bango Bongo" https://help.18birdies.com/article/476-bingo-bango-bongo
+      // (the handicap version: "The golfer with the lowest net score on the hole")
+      const netBongo = !!s.bbb.netBongo;
+      const marked = round.marks?.[h.no];
+      if (!marked && !(netBongo && holeComplete(round, h))) continue;
+      const m = { ...(marked || {}) };
+      if (netBongo) m.bongo = bbbLowNet(round, h, field);
       const pts = Object.fromEntries(ids.map(id => [id, 0]));
       const got = ['bingo', 'bango', 'bongo'].filter(k => m[k] && field.includes(m[k]));
       for (const k of got) pts[m[k]] += 1;
@@ -1556,13 +1658,26 @@ export function pointsTable(round) {
         const auto = s.dots.auto ? scoreDots(round.scores[h.no]?.[pid], h.par) : 0;
         pts[pid] = manual.length + auto;
       }
-      rows.push({ hole: h, points: pts, field, value: s.dots.value });
+      // House rule "greenies carry" (dots.greenieCarry, off unless the round says so, added 2026-10-03):
+      // a par 3 with no greenie adds one to the next par 3's greenie, so it's worth two dots, then three.
+      // Still carried after the last par 3, nobody gets it. Source, checked 2026-10-03: CaddieHQ, "How to
+      // play Greenies" https://www.caddiehq.com/resources/how-to-play-greenies-in-golf ("the next par 3
+      // becomes a double Greenie")
+      let carried = 0;
+      if (h.par === 3 && s.dots.greenieCarry && s.dots.kinds?.greenie !== false) {
+        const got = field.filter(pid => (m[pid] || []).includes('greenie'));
+        if (got.length === 1 && greenieCarry) { pts[got[0]] += greenieCarry; carried = greenieCarry; }
+        // Two greenies on one par 3 (it shouldn't happen) leave the carry where it was
+        greenieCarry = got.length === 1 ? 0 : got.length ? greenieCarry : greenieCarry + 1;
+      }
+      rows.push({ hole: h, points: pts, field, value: s.dots.value, ...(carried ? { greenieCarried: carried } : {}) });
       continue;
     }
     // Nines is scored for exactly three, so once a player leaves the holes after aren't counted
     if (round.game === 'nines' && field.length === round.players.length) {
       const nets = round.players.map(p => netFor(round, p, h));
-      const pts = ninesPoints(nets, { sweep: !!s.nines.sweep });
+      const birdies = s.nines.birdie ? round.players.map(p => { const g = round.scores[h.no]?.[p.id]; return typeof g === 'number' && g <= h.par - 1; }) : null;
+      const pts = ninesPoints(nets, { sweep: !!s.nines.sweep, birdies });
       rows.push({ hole: h, points: Object.fromEntries(ids.map((id, k) => [id, pts[k]])), field, value: s.nines.point });
     }
   }
@@ -1574,7 +1689,14 @@ export function pointsTable(round) {
 /** Rabbit legs: for each nine, the rows and who holds it at the end. */
 export function rabbitTable(round) {
   const legs = nassauLegs(round.holes.length);
-  const segs = round.holes.length === 18 ? [legs.front, legs.back] : [legs.total];
+  // House rule "three rabbits" (rabbit.sixes, 18 holes, off unless the round says so, added 2026-10-03):
+  // a rabbit every six holes instead of each nine. It lays out the whole round, so it's read once.
+  // Source, checked 2026-10-03: Golf Digest, "How to play Rabbit"
+  // https://www.golfdigest.com/story/how-to-play-rabbit-golf-games-explained (6-hole Rabbits, three
+  // over 18 holes, "a greater possibility for more than one winner")
+  const six = (a, b) => ({ start: a, end: b, label: `Holes ${a}–${b}` });
+  const segs = round.holes.length !== 18 ? [legs.total]
+    : round.settings.rabbit?.sixes ? [six(1, 6), six(7, 12), six(13, 18)] : [legs.front, legs.back];
   const rows = round.holes.map((h, i) => {
     // `gone`: players who left before this hole. If the rabbit's holder leaves, it runs loose.
     // Someone added partway through a leg sits that leg out and plays for the next one
@@ -1629,7 +1751,16 @@ export function snakeTable(round) {
   const legs = nassauLegs(round.holes.length);
   const first = settingsAt(round, 1).snake || {};
   const segs = first.nines && round.holes.length === 18 ? [legs.front, legs.back] : [legs.total];
-  const rows = round.holes.map(h => ({ hole: h, putts: snakePutts(round, h) }));
+  // House rule "four-putts count twice" (snake.fourPutt, off unless the round says so, added 2026-10-03):
+  // a four-putt (marks.snake4) takes the snake like a three-putt and grows it by two, so it only
+  // matters when the snake grows or doubles. Source, checked 2026-10-03: The Golf News Net, "How to
+  // play Snake" https://thegolfnewsnet.com/ryan_ballengee/2024/01/29/golf-betting-games-how-to-play-snake-rules-44859
+  // (a four-putt "worth double the stake, immediately adding two units to the pot")
+  const rows = round.holes.map((h, i) => {
+    const putts = snakePutts(round, h);
+    const fours = putts && settingsAt(round, i + 1).snake?.fourPutt ? (round.marks[h.no].snake4 || []).filter(pid => putts.includes(pid)) : [];
+    return { hole: h, putts, ...(fours.length ? { fours } : {}) };
+  });
   const out = segs.map(seg => {
     const part = rows.slice(seg.start - 1, seg.end);
     const ss = settingsAt(round, seg.start).snake || {};
@@ -1664,7 +1795,16 @@ export function hammerTable(round) {
     const behind = total > 0 ? 1 : total < 0 ? 0 : null;
     const mark = round.marks?.[h.no] || {};
     const winner = holeWinner(sideNet(round, a, h), sideNet(round, b, h));
-    const r = hammerHole(mark, winner, base);
+    let r = hammerHole(mark, winner, base);
+    // House rule "birdie hammer" (hammer.birdie, off unless the round says so, added 2026-10-03): win
+    // the hole with a real birdie or better and that's one more hammer, so it pays double. A hole that
+    // was folded isn't won on the score, so it doesn't count. Source, checked 2026-10-03: CaddieHQ,
+    // "How to play Hammer" https://www.caddiehq.com/resources/how-to-play-hammer-in-golf ("Birdie Hammer")
+    if (hs.birdie && r.conceded == null && r.winner != null) {
+      const side = (r.winner === 0 ? a : b).filter(pid => playsHole(round, pid, h));
+      const best = Math.min(...side.map(pid => round.scores[h.no]?.[pid]).map(g => (typeof g === 'number' ? g : Infinity)));
+      if (best <= h.par - 1) r = { ...r, value: r.value * 2, birdie: true };
+    }
     const net = r.winner === 0 ? r.value : r.winner === 1 ? -r.value : 0;
     total += net;
     return { hole: h, pos: i + 1, base, behind, ...r, net, running: total, max: hs.max ?? 3, who: hs.who || 'either' };
@@ -1723,7 +1863,7 @@ export function gameResults(round) {
       if (!field.includes(setup.banker)) return;
       const net = Object.fromEntries(on.map(p => [p.id, netFor(round, p, h)]));
       const bs = settingsAt(round, posOf(round, h)).banker;
-      const r = settleBankerHole(setup, net, field, { ties: bs.ties, birdies: bs.birdies, gross: round.scores[h.no], par: h.par });
+      const r = settleBankerHole(setup, net, field, { ties: bs.ties, birdies: bs.birdies, gross: round.scores[h.no], par: h.par, par3Triple: !!bs.par3Triple });
       add(r.deltas);
       for (const m of r.matchups) {
         if (m.result === 'win') pay(setup.banker, m.pid, m.amount);
@@ -1845,9 +1985,21 @@ export function gameResults(round) {
       const inIds = inTeams.flatMap(t => t.players);
       const best = Math.min(...inTeams.map(t => totals[t.id]));
       const winners = inTeams.filter(t => totals[t.id] === best).flatMap(t => t.players);
-      const pot = s.scramble.stake * inIds.length;
+      let pot = s.scramble.stake * inIds.length;
       const d = zero();
       for (const id of inIds) d[id] -= s.scramble.stake;
+      // House rule "second gets its money back" (scramble.second, three or more teams, off unless the
+      // round says so, added 2026-10-03): the team alone in second takes back what it put in, and the
+      // winners split the rest. A tie for first or for second leaves it winner takes all. Source,
+      // checked 2026-10-03: National Club Golfer, "The best golf betting games in the US"
+      // https://nationalclubgolfer.com/articles/the-best-golf-betting-games-in-the-us-gamble-with-friends-on-the-course/
+      // (the scramble pot "is split between the top two teams")
+      if (s.scramble.second && inTeams.length >= 3 && inTeams.filter(t => totals[t.id] === best).length === 1) {
+        const rest = inTeams.filter(t => totals[t.id] !== best);
+        const next = Math.min(...rest.map(t => totals[t.id]));
+        const seconds = rest.filter(t => totals[t.id] === next);
+        if (seconds.length === 1) for (const id of seconds[0].players) { d[id] += s.scramble.stake; pot -= s.scramble.stake; }
+      }
       for (const id of winners) d[id] += pot / winners.length;
       addSpread(d);
     }
@@ -1862,10 +2014,17 @@ export function gameResults(round) {
     if (played && cfg.payout === 'pot') {
       // The pot is played for by those in it from the first hole to the last. Anyone who left, or
       // was added partway, is out of it: they don't pay or win
-      const key = round.game === 'quota' ? 'vsQuotaExact' : 'total';
       const stay = round.players.filter(p => playsWholeRound(round, p.id)).map(p => p.id);
-      const totals = Object.fromEntries(table.filter(t => stay.includes(t.id)).map(t => [t.id, t[key]]));
-      addSpread(settleTotals(totals, { mode: 'pot', stake: cfg.stake, lowerWins }));
+      // House rule (Quota, `split: 'over'`, off unless the round says so, added 2026-10-03): everyone
+      // over their quota shares each pot by how far over they are (see settleTotals)
+      const over = round.game === 'quota' && cfg.split === 'over';
+      const pots = totalsPots(round, stay, table);
+      for (const p of pots) {
+        p.deltas = settleTotals(p.totals, { mode: 'pot', stake: cfg.stake, lowerWins, over });
+        addSpread(p.deltas);
+      }
+      // Front, back and total: what each pot paid, for the results
+      if (pots.length > 1) detail.pots = pots;
     } else if (played) {
       // Per stroke or point: each pair settles on the holes they both played, each hole at its own bet.
       // A quota is for the whole round, so each hole carries an even share of it: a short round, or a

@@ -7,7 +7,7 @@ import {
   betPresets, blindMultiplierOf, noHandicap, resizeRound, roundLegs, roundResults, scoredHolesDropped, scorers, skinsKinds, skinsTable, strokesFor, popsFor, wolfHoleSetup, changeBets, wholeRoundOnly,
   gameView, sideGamesOf, holeFixOf, gameKeys, gameKeyLabel, settingsAt, wolfCarryBefore, posOf,
 } from '../lib/round.js';
-import { SIDE_GAMES } from '../lib/round.js';
+import { SIDE_GAMES, bankerPress } from '../lib/round.js';
 import { CourseTeeSheet, FixHoleSheet } from '../components/FixHole.jsx';
 import { HandicapsSheet } from '../components/HandicapsSheet.jsx';
 import { courseTeeLabel, keepsDraft } from '../lib/hole-fix.js';
@@ -551,7 +551,7 @@ function PlayRound({ round }) {
                     {st > 0 && <span className="stroke-dots" aria-label={`Gets ${strokesWords(st, halfStrokesOn(round))}`}>{'●'.repeat(st)} Gets {strokesWords(st, halfStrokesOn(round))}</span>}
                     {st < 0 && <span className="stroke-dots">Gives back {strokesWords(-st, halfStrokesOn(round))}</span>}
                     {holeStrokeNotes(round, p, hole).map(x => <span key={x.key} className="stroke-note"> · {holeStrokeNoteText(x)}</span>)}
-                    {game === 'banker' && !isBanker && <span> Bet {money(banker.bets[p.id] || 0)}{banker.doubled[p.id] ? (banker.doubleBack ? ' · 4×' : ' · 2×') : ''}</span>}
+                    {game === 'banker' && !isBanker && <span> Bet {money(banker.bets[p.id] || 0)}{banker.doubled[p.id] ? ` · ${bankerPress(round, hole) ** (banker.doubleBack ? 2 : 1)}×` : ''}</span>}
                     {touched[p.id] && v !== 'X' && <span className={`score-name s${Math.max(-2, Math.min(2, v - hole.par))}`}> {scoreName(v, hole.par)}{counted !== 0 && `, ${netScoreName(v - counted, hole.par)}`}</span>}
                   </div>
                   <button className={`pickup-btn ${v === 'X' ? 'on' : ''}`} onClick={() => setScore(p.id, v === 'X' ? hole.par : 'X')} aria-pressed={v === 'X'}>
@@ -1120,12 +1120,14 @@ function BankerPanel({ round, banker, setBanker, phase, setPhase, onPick, onBet,
   const b = round.players.find(p => p.id === banker.banker);
   const others = playersOn(round, hole).filter(p => p.id !== banker.banker);
   const anyDoubled = others.some(p => banker.doubled[p.id]);
+  // A press doubles a bet, or triples it on a par 3 with that house rule on
+  const f = bankerPress(round, hole);
   const canPick = round.settings.banker.rotation === 'choice' || true;
   return (
     <>
       <div className="banker-bar">
         <div className="bb-who"><div className="bl">Banker this hole</div><div className="bn"><Icon name="bank" fill /> <span className="bn-name">{b?.name}</span></div></div>
-        <div className="bb-line" aria-live="polite"><div className="bl">On the line</div><div className="bn">{money(onTheLine(banker))}</div></div>
+        <div className="bb-line" aria-live="polite"><div className="bl">On the line</div><div className="bn">{money(onTheLine(banker, f))}</div></div>
         {readOnly ? null : phase === 'bets'
           ? canPick && <button className="change-btn" onClick={onPick}>Change</button>
           : <button className="change-btn" onClick={() => setPhase('bets')}><Icon name="coins" /> Bets</button>}
@@ -1148,16 +1150,16 @@ function BankerPanel({ round, banker, setBanker, phase, setPhase, onPick, onBet,
                     const still = others.some(o => doubled[o.id]);
                     setBanker({ ...banker, doubled, doubleBack: still ? banker.doubleBack : false });
                   }}>
-                  <Icon name="lightning" fill /> {banker.doubled[p.id] ? `Doubled · ${money(banker.bets[p.id] * (banker.doubleBack ? 4 : 2))}` : 'Double it'}
+                  <Icon name="lightning" fill /> {banker.doubled[p.id] ? `${f === 3 ? 'Tripled' : 'Doubled'} · ${money(banker.bets[p.id] * (banker.doubleBack ? f * f : f))}` : f === 3 ? 'Triple it' : 'Double it'}
                 </button>
               </div>
             </div>
           ))}
           <div className="block" style={{ background: 'var(--surface)' }}>
-            <div className="eyebrow" style={{ marginBottom: 10 }}>{b?.name} can double back</div>
+            <div className="eyebrow" style={{ marginBottom: 10 }}>{b?.name} can {f === 3 ? 'triple' : 'double'} back</div>
             <button className={`dbl-btn ${banker.doubleBack ? 'on' : ''}`} style={{ width: '100%', height: 52, fontSize: 17 }} disabled={!anyDoubled} aria-pressed={banker.doubleBack}
               onClick={() => setBanker({ ...banker, doubleBack: !banker.doubleBack })}>
-              <Icon name="lightning" fill /> {anyDoubled ? (banker.doubleBack ? 'Doubled back · 4×' : 'Double back to 4×') : 'Unlocks when someone doubles'}
+              <Icon name="lightning" fill /> {anyDoubled ? (banker.doubleBack ? `${f === 3 ? 'Tripled' : 'Doubled'} back · ${f * f}×` : `${f === 3 ? 'Triple' : 'Double'} back to ${f * f}×`) : `Unlocks when someone ${f === 3 ? 'triples' : 'doubles'}`}
             </button>
           </div>
         </div>
@@ -1166,9 +1168,9 @@ function BankerPanel({ round, banker, setBanker, phase, setPhase, onPick, onBet,
   );
 }
 
-/** What the banker has riding on the hole: every bet, at 2× or 4× where it's doubled. */
-function onTheLine(banker) {
-  return Object.entries(banker?.bets || {}).reduce((a, [pid, v]) => a + (v || 0) * (banker.doubled?.[pid] ? (banker.doubleBack ? 4 : 2) : 1), 0);
+/** What the banker has riding on the hole: every bet, at 2× or 4× where it's doubled (3× or 9× on a par 3 that triples). */
+function onTheLine(banker, f = 2) {
+  return Object.entries(banker?.bets || {}).reduce((a, [pid, v]) => a + (v || 0) * (banker.doubled?.[pid] ? (banker.doubleBack ? f * f : f) : 1), 0);
 }
 
 /** Four common amounts at a tap, then Other for the keypad (which has $1 to $10 at a tap too). */

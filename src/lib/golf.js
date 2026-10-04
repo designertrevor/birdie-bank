@@ -65,6 +65,10 @@ export function pickupGross(par, strokes) {
  * opts = { ties: 'push' | 'banker', birdies: 'off' | 'gross' | 'net', gross: {pid: score or 'X'}, par }
  * With birdies on, the winner's birdie doubles that bet and an eagle (or better) doubles it again,
  * on top of any doubles. 'gross' counts only a real birdie; 'net' counts one after strokes.
+ * House rule `par3Triple` (off unless the round says so, added 2026-10-03): on a par 3 a press triples
+ * the bet instead of doubling it, and the banker's press back triples it again (9×). Source, checked
+ * 2026-10-03: The Fried Egg, "Banker golf betting game" https://thefriedegg.com/banker-golf-betting-game/
+ * ("the presses and represses triple the bet instead of double").
  * Returns { deltas: {pid: $}, matchups: [{pid, amount, mult, birdie, result: 'win'|'loss'|'push'}] }
  */
 export function birdieMultiplier(score, par) {
@@ -84,7 +88,8 @@ export function settleBankerHole(hole, net, playerIds, opts = {}) {
   for (const pid of playerIds) {
     if (pid === b) continue;
     const bet = hole.bets?.[pid] || 0;
-    const mult = hole.doubled?.[pid] ? (hole.doubleBack ? 4 : 2) : 1;
+    const f = opts.par3Triple && opts.par === 3 ? 3 : 2;
+    const mult = hole.doubled?.[pid] ? (hole.doubleBack ? f * f : f) : 1;
     let result;
     if (net[pid] < net[b]) result = 'win';
     else if (net[pid] > net[b]) result = 'loss';
