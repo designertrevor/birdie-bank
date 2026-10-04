@@ -8,6 +8,7 @@ import { linksOf } from './people-links.js';
 import { countsMoney, onTab, tabResults } from './play-for.js';
 import { betsOf, isCashBet } from './pair-bets.js';
 import { planDebts } from './trip-plan.js';
+import { allExpenses, expensePairs } from './trip-expenses.js';
 
 const toCents = v => Math.round((Number(v) || 0) * 100);
 /** Whether two players had a side bet for money together in a reward round. */
@@ -110,7 +111,10 @@ const mineOf = (state, mine) => {
   return id => mine.has(id) || mine.has(who(id));
 };
 
-/** Everyone's running balance across finished rounds, less payments recorded. Positive = owed money. */
+/**
+ * Everyone's running balance across finished rounds and trip expenses (trip-expenses.js), less
+ * payments recorded. Positive = owed money.
+ */
 export function tabBalances(state) {
   const bal = {};
   const who = canonical(state);
@@ -118,6 +122,7 @@ export function tabBalances(state) {
   for (const r of moneyRounds(state)) {
     for (const [id, v] of Object.entries(tabResults(r).balances)) add(id, v);
   }
+  for (const x of allExpenses(state)) for (const [id, c] of Object.entries(x.balances)) add(id, c / 100);
   for (const s of state.settlements || []) { add(s.from, s.amount); add(s.to, -s.amount); }
   return bal;
 }
@@ -141,13 +146,17 @@ export function roundsTogether(state) {
  * The Tab's payment plan: the fewest payments across the whole group, only ever between people
  * who have played a round together (friends from different groups never get asked to pay each
  * other). What's open on rounds that were shared live stays between the two people in them, as
- * both phones see it (pair-debts.js), and only the rest is squared across the group.
+ * both phones see it (pair-debts.js), and only the rest is squared across the group. A trip
+ * expense counts like a round between each person in it and whoever paid.
  * Returns [{ from, to, amount, rounds: [roundId] }], where rounds are the finished rounds the two
  * played together.
  */
 export function outstanding(state, { now = Date.now() } = {}) {
   const together = roundsTogether(state);
-  const canPay = (a, b) => together.has(pairKey(a, b));
+  // A trip expense puts money between each person in it and whoever paid, round together or not
+  const spent = allExpenses(state);
+  const spentPairs = spent.length ? expensePairs(spent) : null;
+  const canPay = spentPairs ? (a, b) => together.has(pairKey(a, b)) || spentPairs.has(pairKey(a, b)) : (a, b) => together.has(pairKey(a, b));
   const direct = sharedDebts(state, { now });
   // A trip's published plan (trip-plan.js): its rounds and their payments come out of the
   // balances, and each pair's open money on the plan goes in as it is, the same on every phone
@@ -182,10 +191,11 @@ export function outstanding(state, { now = Date.now() } = {}) {
   return plan.sort((a, b) => b.amount - a.amount || a.from.localeCompare(b.from));
 }
 
-/** Everyone's balance in cents, leaving out the rounds and payments a trip's live plan settles. */
+/** Everyone's balance in cents, leaving out the rounds, expenses and payments a trip's live plan settles. */
 function planBalances(state, trip) {
   const skipRounds = new Set(trip.rounds.map(r => r.id));
   const skipPays = new Set(trip.settlements);
+  const skipSpent = new Set(trip.expenses || []);
   const bal = {};
   const who = canonical(state);
   const add = (id, c) => { const k = who(id); bal[k] = (bal[k] || 0) + c; };
@@ -193,6 +203,10 @@ function planBalances(state, trip) {
     if (skipRounds.has(r.id)) continue;
     // A reward round's side bets for money in dollars, never its points
     for (const [id, v] of Object.entries(tabResults(r).balances)) add(id, toCents(v));
+  }
+  for (const x of allExpenses(state)) {
+    if (skipSpent.has(x.id)) continue;
+    for (const [id, c] of Object.entries(x.balances)) add(id, c);
   }
   for (const s of state.settlements || []) {
     if (skipPays.has(s)) continue;

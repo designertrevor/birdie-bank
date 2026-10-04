@@ -3,7 +3,9 @@
 // has run (or with no server at all) nothing is published or read, and every phone settles trips
 // pair by pair exactly as before: no errors, nothing to switch on.
 // The organizer's phone republishes whenever its plan stops checking out (a round added, a score
-// fixed, a payment the plan didn't count), so every phone moves to the new version together.
+// fixed, a payment the plan didn't count, an expense added or changed), so every phone moves to the
+// new version together. The trip's expenses are read first (trip-expense-sync.js), since the plan
+// counts them; they travel even when plans are off.
 import { useEffect } from 'react';
 import { getState, update } from './store.js';
 import { getSupabase, supabaseConfigured } from './supabase.js';
@@ -12,6 +14,7 @@ import { codeOf } from './pair-debts.js';
 import { cleanPlan, duePlan } from './trip-plan.js';
 import { isOrganizer, tripRounds, tripsOf } from './trips.js';
 import { refreshTab } from './tab-sync.js';
+import { EXPENSES_KEY, expensesOn, refreshExpenses } from './trip-expense-sync.js';
 
 const localFlag = () => { try { return localStorage.getItem('bb-sync-local') === '1'; } catch { return false; } };
 
@@ -125,11 +128,16 @@ async function publishMine(adapter) {
 }
 
 let running = null;
-/** Read the plans for every trip this phone knows, then publish your own trips' plans if they're due. */
+/**
+ * Read the expenses and plans for every trip this phone knows, then publish your own trips' plans
+ * if they're due.
+ */
 export function refreshPlans() {
-  if (off) return Promise.resolve();
   if (running) return running;
   running = (async () => {
+    // The plan counts the trip's expenses, so they come first
+    await refreshExpenses();
+    if (off) return;
     const adapter = await getAdapter();
     if (!adapter) return;
     const ids = tripIds(getState());
@@ -168,15 +176,16 @@ export async function publishDeleted(tripId) {
 export function useTripPlans() {
   const s = getState();
   const ids = tripIds(s);
-  const sig = ids.length ? JSON.stringify([ids, ids.map(id => tripRounds(s, id).map(r => `${r.id}:${r.status}:${r.finishedAt || 0}`)), (s.settlements || []).length, Object.keys(s.tabRows || {}).length, ids.map(id => s.trips?.[id]?.endedAt || 0)]) : '';
+  const spent = Object.values(s.tripExpenses || {});
+  const sig = ids.length ? JSON.stringify([ids, ids.map(id => tripRounds(s, id).map(r => `${r.id}:${r.status}:${r.finishedAt || 0}`)), (s.settlements || []).length, Object.keys(s.tabRows || {}).length, ids.map(id => s.trips?.[id]?.endedAt || 0), spent.length, Math.max(0, ...spent.map(e => Number(e?.updatedAt) || 0))]) : '';
   useEffect(() => {
-    if (!sig || off) return undefined;
+    if (!sig || (off && !expensesOn())) return undefined;
     let timer = setTimeout(() => refreshPlans(), 400);
     const soon = () => { clearTimeout(timer); timer = setTimeout(() => refreshPlans(), 250); };
     const wake = () => { if (document.visibilityState === 'visible') soon(); };
     const every = setInterval(() => { if (document.visibilityState === 'visible') refreshPlans(); }, 60e3);
     // Dev's two tabs: the other "phone" published to localStorage, so read it now (the server has no such event; the minute does it)
-    const stored = e => { if (e.key === LOCAL_KEY) soon(); };
+    const stored = e => { if (e.key === LOCAL_KEY || e.key === EXPENSES_KEY) soon(); };
     document.addEventListener('visibilitychange', wake);
     window.addEventListener('online', soon);
     window.addEventListener('storage', stored);

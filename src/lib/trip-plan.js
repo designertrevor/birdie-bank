@@ -4,8 +4,11 @@
 // plan and the Tab shows the same amount on both phones of every pair.
 //
 // A plan: { tripId, version, at, endedAt, byName, rounds: [{ code, mark }], netted: ['CODE|id'],
-// lines: [{ code, from, to, amount }] }.
+// lines: [{ code, from, to, amount }], expenses?: [{ id, mark }] }.
 // - rounds: the shared rounds it covers, each with a mark of its transfers, so a fixed score shows.
+// - expenses: the trip expenses it covers (trip-expenses.js), each with a mark of its money, so a
+//   changed or deleted expense shows. Only expenses whose people all played a round shared live
+//   on the trip that links them up, so the payments can square them. Left out when there are none.
 // - netted: the payments on those rounds it already counted (round settle ups, earlier plan
 //   payments), by row. A payment on them it didn't count means it's out of date.
 // - lines: who pays whom. `from` and `to` are player ids in round `code`, a round both of them
@@ -14,16 +17,18 @@
 //
 // On each phone a plan is 'live' when it checks out against the rounds and payments the phone
 // has: the marks match, every payment it has on those rounds is netted or paid on the plan, and
-// your own lines add up to exactly what those rounds and payments have you owing or owed. Then
-// the covered rounds leave the Tab's pair-by-pair money (pair-debts.js lockedRounds) and the plan's
-// open lines take their place. Otherwise it's 'stale' (the organizer's phone republishes) and the
+// your own lines add up to exactly what those rounds, expenses and payments have you owing or owed.
+// Then the covered rounds leave the Tab's pair-by-pair money (pair-debts.js lockedRounds), the
+// covered expenses leave the rest, and the plan's open lines take their place. Otherwise it's 'stale' (the organizer's phone republishes) and the
 // phone stays pair by pair, exactly as before there were plans. A trip round shared live that the
-// plan doesn't cover yet stays pair by pair until it does. Pure, unit tested.
+// plan doesn't cover yet stays pair by pair until it does, and an expense it doesn't cover yet stays
+// with the rest of the Tab. Pure, unit tested.
 import { onTab, tabResults } from './play-for.js';
 import { fewestPayments } from './ledger.js';
 import { FETCH_DAYS, canonicalOf, codeOf, played } from './pair-debts.js';
 import { tripOfPayment } from './trip-pay.js';
 import { meFor } from './format.js';
+import { expenseMark, rawTripExpenses, tripExpenses } from './trip-expenses.js';
 
 const DAY = 864e5;
 const cents = v => Math.round((Number(v) || 0) * 100);
@@ -62,17 +67,23 @@ export function cleanPlan(p) {
   const lines = p.lines.filter(l => isObj(l) && isStr(l.code) && isStr(l.from) && isStr(l.to) && cents(l.amount) > 0)
     .map(l => ({ code: l.code, from: l.from, to: l.to, amount: cents(l.amount) / 100 }));
   if (rounds.length !== p.rounds.length || lines.length !== p.lines.length) return null;
+  const rawEx = p.expenses == null ? [] : p.expenses;
+  if (!Array.isArray(rawEx)) return null;
+  const expenses = rawEx.filter(x => isObj(x) && isStr(x.id) && isStr(x.mark)).map(x => ({ id: x.id, mark: x.mark }));
+  if (expenses.length !== rawEx.length) return null;
   return {
     tripId: p.tripId, version, at: Number(p.at) || 0, endedAt: Number(p.endedAt) || null,
     byName: isStr(p.byName) ? p.byName.slice(0, 40) : null,
     rounds, netted: p.netted.filter(isStr), lines,
+    // Only when it covers any, so a plan with none is just as it was before there were expenses
+    ...(expenses.length ? { expenses } : {}),
   };
 }
 
 /** The same payments for the same rounds (the version and time aside). */
 export function samePlan(a, b) {
   if (!a || !b) return false;
-  const key = p => JSON.stringify([p.deleted || false, p.endedAt || null, p.rounds, [...p.netted].sort(), p.lines]);
+  const key = p => JSON.stringify([p.deleted || false, p.endedAt || null, p.rounds, [...p.netted].sort(), p.lines, p.expenses || []]);
   return key(a) === key(b);
 }
 
@@ -85,9 +96,26 @@ function tripShared(state, tripId, now) {
 }
 
 /**
- * The organizer's plan for a trip: the fewest payments that square its rounds shared live, less
- * every payment already made on them, only ever between two people who played one of them
- * together. Null when there's nothing to cover, or the money doesn't add up to the cent.
+ * The trip's expenses the plan can square: everyone in one (and whoever paid) is linked up by the
+ * rounds shared live the plan covers, so the payments can reach them. The rest stay with the Tab.
+ */
+function plannable(state, tripId, rounds, who) {
+  const list = tripExpenses(state, tripId);
+  if (!list.length) return [];
+  const up = new Map();
+  const top = id => { let x = id; while (up.get(x) !== x) x = up.get(x); return x; };
+  for (const r of rounds) {
+    const ids = [...new Set(r.players.map(p => who(p.id)))];
+    for (const id of ids) if (!up.has(id)) up.set(id, id);
+    for (const id of ids.slice(1)) up.set(top(id), top(ids[0]));
+  }
+  return list.filter(x => up.has(x.payer) && Object.entries(x.balances).every(([id, c]) => !c || (up.has(id) && top(id) === top(x.payer))));
+}
+
+/**
+ * The organizer's plan for a trip: the fewest payments that square its rounds shared live and the
+ * expenses they link up, less every payment already made on them, only ever between two people who
+ * played one of them together. Null when there's nothing to cover, or the money doesn't add up to the cent.
  */
 export function buildPlan(state, tripId, { now = Date.now(), version = 1, endedAt = null, byName = null } = {}) {
   const who = canonicalOf(state);
@@ -97,6 +125,8 @@ export function buildPlan(state, tripId, { now = Date.now(), version = 1, endedA
   const bal = {};
   const add = (id, c) => { bal[id] = (bal[id] || 0) + c; };
   for (const r of rounds) for (const [pid, v] of Object.entries(tabResults(r).balances)) add(who(pid), cents(v));
+  const spent = plannable(state, tripId, rounds, who);
+  for (const x of spent) for (const [id, c] of Object.entries(x.balances)) add(id, c);
   const netted = [];
   for (const s of state.settlements || []) {
     if (!s.code || !codes.has(s.code)) continue;
@@ -121,9 +151,16 @@ export function buildPlan(state, tripId, { now = Date.now(), version = 1, endedA
     if (!r || !seat(t.from) || !seat(t.to)) return null;
     lines.push({ code: codeOf(r), from: seat(t.from), to: seat(t.to), amount: t.amount });
   }
+  // With expenses in it, every line has to square everyone to the cent, or it's not published
+  if (spent.length) {
+    const got = {};
+    for (const t of pay) { got[t.from] = (got[t.from] || 0) - cents(t.amount); got[t.to] = (got[t.to] || 0) + cents(t.amount); }
+    if (Object.entries(bal).some(([id, c]) => (got[id] || 0) !== c)) return null;
+  }
   return {
     tripId, version, at: now, endedAt: endedAt || null, byName: byName || null,
     rounds: rounds.map(r => ({ code: codeOf(r), mark: roundMark(r) })), netted: netted.sort(), lines,
+    ...(spent.length ? { expenses: spent.map(x => ({ id: x.id, mark: expenseMark(x.raw) })).sort((a, b) => a.id.localeCompare(b.id)) } : {}),
   };
 }
 
@@ -137,7 +174,7 @@ export function duePlan(state, trip, { now = Date.now(), byName = null } = {}) {
   if (cur?.deleted) return null;
   const ps = planState(state, trip.id, { now });
   const ended = trip.endedAt || null;
-  if (cur && ps.status === 'live' && !ps.pending.length && (cur.endedAt || null) === ended) return null;
+  if (cur && ps.status === 'live' && !ps.pending.length && !ps.pendingExpenses.length && (cur.endedAt || null) === ended) return null;
   const next = buildPlan(state, trip.id, { now, version: (cur?.version || 0) + 1, endedAt: ended, byName });
   return !next || (cur && samePlan(cur, next)) ? null : next;
 }
@@ -152,8 +189,9 @@ const cache = new WeakMap();
  * - 'live': settle from the plan. `covered` (round ids on this phone), `rounds` (those rounds),
  *   `settlements` (the payments it netted or that paid its lines, on this phone), `open` (each
  *   pair's open money on the plan, [{ from, to, cents }], ids as this phone knows them), `lines`
- *   (each line: { from, to, cents, code, rf, rt }, rf and rt the round's ids) and `pending` (trip
- *   rounds shared live it doesn't cover yet, which stay pair by pair).
+ *   (each line: { from, to, cents, code, rf, rt }, rf and rt the round's ids), `pending` (trip
+ *   rounds shared live it doesn't cover yet, which stay pair by pair), `expenses` (the ids of the
+ *   trip expenses it covers) and `pendingExpenses` (ones it doesn't cover yet).
  * - 'deleted': the organizer deleted the trip.
  */
 export function planState(state, tripId, { now = Date.now() } = {}) {
@@ -200,6 +238,13 @@ function check(state, tripId, now) {
     else if (mine.has(s.code)) return stale('payment');
   }
   for (const k of netted) if (mine.has(k.slice(0, k.indexOf('|'))) && !seen.has(k)) return stale('missing');
+  // The trip's expenses: each one it covers as it saw it (not changed, not deleted)
+  const marks = new Map((plan.expenses || []).map(x => [x.id, x.mark]));
+  for (const e of marks.size ? rawTripExpenses(state, tripId) : []) {
+    if (marks.has(e.id) && (e.deleted || expenseMark(e) !== marks.get(e.id))) return stale('expense');
+  }
+  const spent = tripExpenses(state, tripId);
+  const spentIn = spent.filter(x => marks.has(x.id));
   // The lines, as this phone knows the people in them
   const lines = [];
   for (const l of plan.lines) {
@@ -212,6 +257,7 @@ function check(state, tripId, now) {
   // Your own lines are exactly what the covered rounds and their payments have you owing or owed
   let left = 0, owed = 0;
   for (const r of byCode.values()) for (const [pid, v] of Object.entries(tabResults(r).balances)) if (who(pid) === me) left += cents(v);
+  for (const x of spentIn) left += x.balances[me] || 0;
   for (const s of settlements) {
     if (post.includes(s)) continue;
     if (who(s.from) === me) left += cents(s.amount);
@@ -232,7 +278,10 @@ function check(state, tripId, now) {
   }
   const covered = new Set([...byCode.values()].map(r => r.id));
   const pending = tripShared(state, tripId, now).filter(r => !codes.has(codeOf(r))).map(r => r.id);
-  return { status: 'live', plan, covered, rounds: [...byCode.values()], settlements, post, open, lines, pending };
+  return {
+    status: 'live', plan, covered, rounds: [...byCode.values()], settlements, post, open, lines, pending,
+    expenses: new Set(spentIn.map(x => x.id)), pendingExpenses: spent.filter(x => !marks.has(x.id)).map(x => x.id),
+  };
 }
 
 /** Every live plan on this phone. */
@@ -250,17 +299,18 @@ export function coveredRounds(state, { now = Date.now() } = {}) {
 }
 
 /**
- * What the Tab takes from the live plans: { rounds, settlements, open }. The rounds and payments
- * come out of the group's balances and each pair's open money on the plan goes in, so the Tab
+ * What the Tab takes from the live plans: { rounds, settlements, open, expenses }. The rounds,
+ * expenses (ids) and payments come out of the group's balances and each pair's open money on the plan goes in, so the Tab
  * shows every pair what the plan has between them.
  */
 export function planDebts(state, { now = Date.now() } = {}) {
-  const out = { rounds: [], settlements: [], open: [] };
+  const out = { rounds: [], settlements: [], open: [], expenses: [] };
   if (!state.tripPlans) return out;
   for (const p of livePlans(state, now)) {
     out.rounds.push(...p.rounds);
     out.settlements.push(...p.settlements);
     out.open.push(...p.open);
+    out.expenses.push(...p.expenses);
   }
   return out;
 }
