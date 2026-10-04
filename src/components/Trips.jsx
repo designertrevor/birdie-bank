@@ -349,7 +349,7 @@ function TripForm({ trip, onDone }) {
               <input id="trip-end" className="text-input" type="date" value={end} min={start} onChange={e => setEnd(e.target.value)} />
             </div>
           </div>
-          <label className="field-label" htmlFor="trip-where">Where <span className="opt">(optional)</span></label>
+          <label className="field-label" htmlFor="trip-where">Where <span className="opt">optional</span></label>
           <input id="trip-where" className="text-input" value={where} onChange={e => setWhere(e.target.value)} maxLength={32} placeholder="Bandon Dunes Resort" />
           <div className="field-label">How it’s played</div>
           <Segmented label="How the trip is played" className="press-mode-row" btn="pm-btn" value={format} onChange={setFormat}

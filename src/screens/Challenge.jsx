@@ -16,7 +16,7 @@ export default function ChallengeScreen({ id }) {
   return (
     <Screen>
       <Header title="Challenge" small onBack={nav.pop} />
-      {ch ? <ChallengeBody ch={ch} onGone={nav.pop} /> : <div className="scroll"><Empty title="This challenge is gone" text="It was taken off this phone." /></div>}
+      {ch ? <ChallengeBody ch={ch} onGone={nav.pop} /> : <div className="scroll"><Empty title="This challenge is gone" text="It was taken off this phone. Your other challenges are on Up next." action={<button className="ec" onClick={nav.pop}>Go back</button>} /></div>}
     </Screen>
   );
 }

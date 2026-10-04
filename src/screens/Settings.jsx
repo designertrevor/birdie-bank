@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Empty, Header, Icon, Numpad, Screen, Segmented, Toggle, useUI } from '../components/ui.jsx';
+import { Empty, FileButton, Header, Icon, Numpad, Screen, Segmented, Toggle, useUI } from '../components/ui.jsx';
 import { RulesSheet } from '../components/Rules.jsx';
 import { Avatar } from '../components/Avatar.jsx';
 import { ProfilePrivacy } from '../components/ProfilePrivacy.jsx';
@@ -148,12 +148,11 @@ export default function Settings() {
         </div>
         <div className="sec-label">Your data</div>
         {row('export', 'Back up your data', 'Save rounds, players, courses and payments to a file', backup)}
-        <label className="set-row" htmlFor="restore-file" role="button" tabIndex={0}>
+        <FileButton id="restore-file" className="set-row" accept="application/json,.json" onPick={restore}>
           <div className="set-icon"><Icon name="download-simple" fill /></div>
           <div className="row-main"><div className="set-name">Restore from a backup</div><div className="set-sub">Add what’s missing, or replace everything</div></div>
           <span className="chevron"><Icon name="caret-right" /></span>
-        </label>
-        <input id="restore-file" type="file" accept="application/json,.json" hidden onChange={restore} />
+        </FileButton>
         {PAYWALL_ON && isOrganizer(state) && <>
           <div className="sec-label">Your plan</div>
           {row('star', 'Birdie Bank Pro', planStatus(state), () => nav.push('paywall', { source: 'settings' }))}

@@ -69,7 +69,7 @@ export default function RoundDetail({ id, celebrate }) {
   const [shareFrom, setShareFrom] = useState(null);
 
   if (!round) {
-    return <Screen><Header title="Round" onBack={nav.pop} /><Empty title="Round not found" text="It may have been deleted." /></Screen>;
+    return <Screen><Header title="Round" onBack={nav.pop} /><Empty title="Round not found" text="It may have been deleted. Finished rounds are in History." action={<button className="ec" onClick={nav.pop}>Go back</button>} /></Screen>;
   }
   const res = roundResults(round);
   const played = round.holes.filter(h => holeComplete(round, h)).length;

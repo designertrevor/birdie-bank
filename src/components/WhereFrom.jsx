@@ -102,7 +102,7 @@ export function TabWhereFrom({ other }) {
   return (
     <>
       <span ref={ref} hidden />
-      <button className="link-btn tab-part" onClick={() => setOpen(true)}>Where it comes from</button>
+      <button className="link-btn tab-part" onClick={() => setOpen(true)} aria-label={`Where it comes from, you and ${f}`}>Where it comes from</button>
       {target && createPortal(
         <Sheet open={open} onClose={() => setOpen(false)} title={`${f} and you`}>
           {w && (

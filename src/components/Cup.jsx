@@ -224,7 +224,7 @@ export function TeamsPicker({ people, value, onChange }) {
       )}
       {drafting && cup.teams.flat().length > 0 && <button type="button" className="link-btn" onClick={startDraft}>Start the draft over</button>}
 
-      <label className="field-label" htmlFor="cup-stake">On the cup <span className="opt">(optional)</span></label>
+      <label className="field-label" htmlFor="cup-stake">On the cup <span className="opt">optional</span></label>
       <div className="cup-stake-row">
         <span className="cup-stake-sign">$</span>
         <input id="cup-stake" className="text-input" inputMode="numeric" placeholder="0" value={stakeText}
