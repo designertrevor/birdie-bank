@@ -2398,3 +2398,9 @@ button.ch-main:active { transform: scale(.98); }
 .pf-friend-more .pf-more-head { padding-top: 14px; padding-bottom: 2px; }
 .pf-friend-more .kv-k { min-width: 0; overflow-wrap: anywhere; }
 .pf-friend-more .kv-v { flex: none; font-variant-numeric: tabular-nums; text-align: right; }
+
+/* o7a challenges: answers put in for someone, set up between two others, and the preview's side bets */
+.ch-proxy { padding: 0 16px 8px; font-size: 13px; color: var(--mute); }
+.ch-pick { margin: 0 16px 10px; padding-top: 12px; }
+.ch-pick .ch-mark { padding: 0 2px 8px; }
+.ch-pick .ch-actions { padding: 0 0 12px; }

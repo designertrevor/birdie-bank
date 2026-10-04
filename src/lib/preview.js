@@ -9,6 +9,8 @@
 // Records use the same round-by-round head to head as the rivalry card and the Players list
 // (roundResults pairs, people-links for who is the same person). Points and reward rounds count in
 // the record, never in dollars; dollars come only from rounds that put money on the Tab.
+// Two-player side bets kept from the plan's setup and the plan's agreed challenges show as
+// "Dave v Mike, $20 match" on the page, the image and the text (amounts hidden like the rest).
 import { GAMES, SIDE_GAMES, createRound, oneBall, popsFor, roundResults } from './round.js';
 import { findCourse } from './courses.js';
 import { applySetup } from './plan-setup.js';
@@ -21,6 +23,7 @@ import { keptId } from './format.js';
 import { roundTime } from './history.js';
 import { money } from './golf.js';
 import { STROKE_SIDE_GAMES, halfStrokesOffered, pctWords } from './allowances.js';
+import { agreedOnPlan, challengeWhat, challengeWhatNoAmount } from './challenges.js';
 
 const first = name => String(name || '').trim().split(/\s+/)[0];
 const listNames = n => (n.length < 2 ? n.join('') : `${n.slice(0, -1).join(', ')} and ${n.at(-1)}`);
@@ -335,12 +338,59 @@ export function previewRecords(state, plan, { now = new Date() } = {}) {
   return out;
 }
 
+// --------------------------- side bets --------------------------------------
+
+/**
+ * The two-player side bets on a plan, for the preview: the ones kept from setup (on the organizer's
+ * phone, where the setup lives), then the agreed challenges. Only between two people neither of
+ * whom said they're out (a bet goes in at the tee when both show).
+ * [{ key, source: 'bet' | 'challenge', a, b, aName, bName, what, plain }]: `what` with the amount in
+ * the plan's unit ("$20 match", "5 pts a hole"), `plain` without it ("match", "per hole").
+ */
+export function previewPairBets(state, plan, { now = new Date() } = {}) {
+  const people = planPeople(plan);
+  const byWho = new Map(people.map(p => [p.who, p]));
+  const out = [];
+  const outOf = who => byWho.get(who)?.status === 'out';
+  const unit = playForOf(plan).kind === 'money' ? 'money' : 'points';
+  const setup = plan?.setup;
+  if (plan?.host && Array.isArray(setup?.bets) && setup.bets.length) {
+    // Setup knows people by the organizer's own player ids; the plan by its keys
+    let links = null;
+    const personOf = pid => (links ??= linksOf(state)).personOf(pid);
+    const keyOf = pid => (pid === setup.me || pid === state?.me ? plan.hostWho
+      : people.find(p => p.who === pid)?.who ?? people.find(p => personOf(p.who) === personOf(pid))?.who ?? null);
+    for (const b of setup.bets) {
+      if (!Array.isArray(b?.sides) || b.sides.length !== 2 || !(Number(b.stake) > 0)) continue;
+      const [a, c] = b.sides.map(keyOf);
+      if (!a || !c || a === c || outOf(a) || outOf(c)) continue;
+      const kind = { kind: b.kind, label: b.label, unit };
+      out.push({
+        key: `bet:${b.id || out.length}`, source: 'bet', a, b: c,
+        aName: first(byWho.get(a)?.name) || first(state?.players?.[b.sides[0]]?.name) || 'Guest',
+        bName: first(byWho.get(c)?.name) || first(state?.players?.[b.sides[1]]?.name) || 'Guest',
+        what: challengeWhat(kind, Number(b.stake)), plain: challengeWhatNoAmount(kind),
+      });
+    }
+  }
+  for (const x of agreedOnPlan(state, plan, now instanceof Date ? now.getTime() : now)) {
+    if (outOf(x.from) || outOf(x.to)) continue;
+    out.push({ key: `ch:${x.ch.id}`, source: 'challenge', a: x.from, b: x.to, aName: x.fromName, bName: x.toName, what: x.what, plain: x.plain });
+  }
+  return out;
+}
+
+/** "Dave v Mike, $20 match", or with amounts hidden "Dave v Mike, match". */
+export function pairBetLine(x, { amounts = true } = {}) {
+  return `${x.aName} v ${x.bName}, ${amounts ? x.what : x.plain}`;
+}
+
 // --------------------------- the whole preview ------------------------------
 
 /**
  * Everything the preview page and the image say about a plan:
  * { when, countdown, weekday, course, holes, game, gameName, gameIcon, bet, betFull, money, playFor,
- *   sides: [{ key, label, bet }], ins: [names], maybes: [names], waiting, out, strokes, records }
+ *   sides: [{ key, label, bet }], pairBets (previewPairBets), ins: [names], maybes: [names], waiting, out, strokes, records }
  * `bet` and each side's `bet` are in the plan's unit ("$5 a side", "5 pts a side"), `betFull` adds
  * the house rules ("$2 a skin · carryovers"); `money` says
  * whether they are dollars, which the image hides unless amounts are switched on.
@@ -365,6 +415,7 @@ export function planPreview(state, plan, { now = new Date(), settings = state?.s
     money: isMoney,
     playFor: playForLine(plan),
     sides,
+    pairBets: previewPairBets(state, plan, { now }),
     ins: named('in'), maybes: named('maybe'), out: named('out').length,
     waiting: people.filter(p => !p.status).length,
     strokes: previewStrokes(state, plan, { settings }),
@@ -422,6 +473,8 @@ export function previewCardModel(pv, { showAmounts: moneyOn = false } = {}) {
     ins: pv.ins,
     inLine: pv.ins.length ? `${pv.ins.length} in: ${listNames(pv.ins)}` : 'Nobody’s in yet',
     maybeLine: pv.maybes.length ? `Maybe: ${listNames(pv.maybes)}` : '',
+    // Two-player side bets and agreed challenges: "Dave v Mike, $20 match" ("Dave v Mike, match" with amounts hidden)
+    pairBets: (pv.pairBets || []).map(x => pairBetLine(x, { amounts: showAmounts })),
     strokesNote: strokes.note,
     strokes: strokes.lines,
     records: pv.records.map(r => recordSentence(r.rec, r.aName, r.bName, { scope: r.scope, amounts: showAmounts && pv.money })),
@@ -439,6 +492,7 @@ export function previewText(pv, { showAmounts = false, link = null } = {}) {
     `${m.toGo ? `${m.toGo}. ` : ''}${[pv.course, pv.when].filter(Boolean).join(', ')}.`,
     `Game: ${pv.gameName}${amounts && pv.bet ? `, ${pv.bet}` : ''}${sides.length ? `, plus ${listNames(sides)}` : ''}.`,
     m.playFor ? `${m.playFor}.` : null,
+    m.pairBets.length ? `Side bets: ${m.pairBets.join('; ')}.` : null,
     `${m.inLine}.${m.maybeLine ? ` ${m.maybeLine}.` : ''}`,
     strokes.length ? `Strokes: ${strokes.join('; ')}.${m.strokesNote ? ` ${m.strokesNote.charAt(0).toUpperCase()}${m.strokesNote.slice(1)}.` : ''}` : m.strokesNote ? `${m.strokesNote}.` : null,
     ...m.records.slice(0, 4).map(r => `${r}.`),

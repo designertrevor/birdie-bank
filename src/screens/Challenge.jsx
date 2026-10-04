@@ -6,8 +6,8 @@ import { BallIllo, Empty, Header, Icon, Screen } from '../components/ui.jsx';
 import { ChallengeCard, ChallengeExtras } from '../components/Challenges.jsx';
 import { useStore } from '../lib/store.js';
 import { useNav } from '../lib/nav.js';
-import { challengeNextText, cleanChallenge, planOf } from '../lib/challenges.js';
-import { openChallengeLink, useChallengesLive } from '../lib/challenge-sync.js';
+import { challengeNextText, challengeView, cleanChallenge, planOf } from '../lib/challenges.js';
+import { openChallengeLink, pickChallengeSide, useChallengesLive } from '../lib/challenge-sync.js';
 import { ChallengesOffError } from '../lib/challenge-adapters.js';
 
 export default function ChallengeScreen({ id }) {
@@ -22,16 +22,28 @@ export default function ChallengeScreen({ id }) {
 }
 
 /** The challenge itself, kept fresh while it's on screen. */
-function ChallengeBody({ ch, onGone, standalone = false, onSkip }) {
+function ChallengeBody({ ch: raw, onGone, standalone = false, onSkip }) {
   const nav = useNav();
   const state = useStore();
+  // As it reads here: on the plan its round moved to, if it did
+  const ch = challengeView(state, raw);
   const plan = planOf(state, ch);
+  // Set up between you and someone else, opened from its link: which one are you?
+  const pick = !ch.plan && ch.setBy && !ch.made && !ch.mine;
   useChallengesLive(ch.plan ? { planCode: plan?.code || null } : { code: ch.code });
   const next = challengeNextText(state, ch);
   return (
     <>
       <div className="scroll ch-page">
         <BallIllo className="ch-illo" />
+        {pick && (
+          <div className="block ch-pick">
+            <p className="ch-mark">{ch.setBy.name} set this up between two of you. Which one are you?</p>
+            <div className="ch-actions" role="group" aria-label="Which one are you?">
+              {['from', 'to'].map(x => <button key={x} className="pill-btn" onClick={() => pickChallengeSide(ch.id, x)}>I’m {ch[x].name}</button>)}
+            </div>
+          </div>
+        )}
         <ChallengeCard ch={ch} />
         {next && <p className="field-help pad">{next}</p>}
         {plan && !standalone && <button className="text-link" onClick={() => nav.push('plan', { id: plan.id })}><Icon name="calendar-check" /> See the round</button>}
