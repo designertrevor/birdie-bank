@@ -1,7 +1,7 @@
 import { Fragment, useEffect, useRef, useState } from 'react';
 import { Empty, Header, Icon, Screen, useUI } from '../components/ui.jsx';
 import { getState, update, useStore } from '../lib/store.js';
-import { GAMES, gameView, holeAtPos, holeComplete, isTeamGame, matchScored, oneBall, playsHole, roundLegs, roundNotes, roundResults, scoreSummary, scorers, sideNames, skinsKinds, skinsTable, popsFor, netFor } from '../lib/round.js';
+import { GAMES, gameView, holeAtPos, holeComplete, isTeamGame, matchScored, oneBall, teamTable, playsHole, roundLegs, roundNotes, roundResults, scoreSummary, scorers, sideNames, skinsKinds, skinsTable, popsFor, netFor } from '../lib/round.js';
 import { halfStrokesOn, netText, strokesWords } from '../lib/allowances.js';
 import { matchLabel } from '../lib/games.js';
 import { money } from '../lib/golf.js';
@@ -588,6 +588,9 @@ export function Scorecard({ round, current, onHole }) {
   // With onHole (during play), any cell in a hole's column jumps to that hole
   const colProps = no => (onHole ? { onClick: () => onHole(no), className: 'sc-tap' } : {});
   const netTotal = p => out.reduce((a, h) => { const n = holeComplete(round, h) ? netFor(round, p, h) : null; return n == null ? a : a + n; }, 0);
+  // Best ball and Shamble: a row per team with its score on each hole, and the scores that made it underlined
+  const tt = isTeamGame(round.game) && !oneBall(round.game) && round.teams?.length === 2 ? teamTable(round) : null;
+  const countedOn = (k, pid) => !!tt && tt.rows[k].counted.some(list => list.includes(pid));
   return (
     <div className="sc-wrap">
       <table className="sc-table scorecard">
@@ -624,7 +627,7 @@ export function Scorecard({ round, current, onHole }) {
                     </span>
                   )}
                 </td>
-                {out.map(h => {
+                {out.map((h, k) => {
                   const g = round.scores[h.no]?.[p.id];
                   // A player who left shows an en dash on the holes after
                   const gone = g == null && !(p.team ? p.players.some(pid => playsHole(round, pid, h)) : playsHole(round, p.id, h));
@@ -633,7 +636,7 @@ export function Scorecard({ round, current, onHole }) {
                   return (
                     <td key={h.no} className={`${h.no === current ? 'cur' : ''} ${tap.className || ''}`} onClick={tap.onClick}>
                       <span className="sc-cell">
-                        {gone ? <span className="empty-dot">–</span> : g == null ? <span className="empty-dot">·</span> : <span className={`sc-mark ${cls(g, h.par)}`}>{g}</span>}
+                        {gone ? <span className="empty-dot">–</span> : g == null ? <span className="empty-dot">·</span> : <span className={`sc-mark ${cls(g, h.par)} ${countedOn(k, p.id) ? 'sc-counts' : ''}`}>{g}</span>}
                         {st > 0 && <span className="sc-strokes" role="img" aria-label={`Gets ${strokesWords(st, half)}`}>{Array.from({ length: st }, (_, i) => <i key={i} />)}</span>}
                         {st < 0 && <span className="sc-strokes give" aria-label={`Gives back ${strokesWords(-st, half)}`}>{'–'.repeat(-st)}</span>}
                       </span>
@@ -642,6 +645,28 @@ export function Scorecard({ round, current, onHole }) {
                 })}
                 <td className="tot">{sum.played ? sum.gross : '–'}</td>
                 {anyStrokes && <td className="tot">{sum.played ? netText(netTotal(p)) : '–'}</td>}
+              </tr>
+            );
+          })}
+          {tt && round.teams.map((t, i) => {
+            const played = tt.rows.filter(r => r.scores[i] != null);
+            return (
+              <tr key={t.id} className="sc-team-row">
+                <td className="sticky">
+                  <span className="sc-name">{t.name}</span>
+                  <span className="sc-topar"><span className="sc-par">{tt.count === 2 ? 'best two' : 'best ball'}{hc ? ', net' : ''}</span></span>
+                </td>
+                {out.map((h, k) => {
+                  const v = tt.rows[k].scores[i];
+                  const tap = colProps(h.no);
+                  return (
+                    <td key={h.no} className={`${h.no === current ? 'cur' : ''} ${tap.className || ''}`} onClick={tap.onClick}>
+                      <span className="sc-cell">{v == null ? <span className="empty-dot">·</span> : <span className="sc-mark">{netText(v)}</span>}</span>
+                    </td>
+                  );
+                })}
+                <td className="tot">{played.length ? netText(played.reduce((a, r) => a + r.scores[i], 0)) : '–'}</td>
+                {anyStrokes && <td />}
               </tr>
             );
           })}
