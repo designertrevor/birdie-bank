@@ -1,7 +1,7 @@
 import { Fragment, useEffect, useRef, useState } from 'react';
 import { Empty, Header, Icon, Screen, useUI } from '../components/ui.jsx';
 import { getState, update, useStore } from '../lib/store.js';
-import { GAMES, gameView, holeAtPos, holeComplete, playsHole, roundLegs, roundNotes, roundResults, scoreSummary, scorers, sideNames, skinsKinds, skinsTable, popsFor, netFor } from '../lib/round.js';
+import { GAMES, gameView, holeAtPos, holeComplete, isTeamGame, matchScored, oneBall, teamTable, playsHole, roundLegs, roundNotes, roundResults, scoreSummary, scorers, sideNames, skinsKinds, skinsTable, popsFor, netFor } from '../lib/round.js';
 import { halfStrokesOn, netText, strokesWords } from '../lib/allowances.js';
 import { matchLabel } from '../lib/games.js';
 import { money } from '../lib/golf.js';
@@ -144,9 +144,9 @@ export default function RoundDetail({ id, celebrate }) {
     );
   }
 
-  // In a scramble the team gets the strokes, not each player
+  // In a one-ball game (scramble, alternate shot, Chapman) the team gets the strokes, not each player
   const strokesNote = p => {
-    const team = round.game === 'scramble' && round.teams?.find(t => t.players.includes(p.id));
+    const team = oneBall(round.game) && round.teams?.find(t => t.players.includes(p.id));
     const n = team ? team.plays || 0 : p.plays;
     if (!n) return null;
     return <span className="li-sub"> · {team ? 'team got' : 'got'} {strokesWords(n, halfStrokesOn(round))}</span>;
@@ -287,9 +287,11 @@ function GameBreakdown({ round, res, label = null }) {
   const money = unitFmt(round);
   const names = Object.fromEntries(round.players.map(p => [p.id, p.name]));
   const first = n => (n || '').split(' ')[0];
-  if (round.game === 'nassau' || round.game === 'match') {
+  // Nassau, Match play, and a team game played as a match
+  if (matchScored(round) && res.detail.lines) {
     const LEGS = roundLegs(round);
     const sn = sideNames(round);
+    const multi = Object.keys(LEGS).length > 1;
     return (
       <>
         <div className="sec-label">Bets{round.teams ? ` · ${sn[0]} v ${sn[1]}` : ''}</div>
@@ -299,11 +301,40 @@ function GameBreakdown({ round, res, label = null }) {
           return (
             <div key={l.key} className="leg-row">
               <div className="leg-name">{l.press ? 'Press' : LEGS[l.leg].label}</div>
-              <div className={`leg-winner ${s.leader === null ? 'leg-tie' : ''}`}>{l.press ? `${round.game === 'nassau' ? `${LEGS[l.leg].label} ` : ''}from H${holeAtPos(round, l.start)} · ` : ''}{who}</div>
+              <div className={`leg-winner ${s.leader === null ? 'leg-tie' : ''}`}>{l.press ? `${multi ? `${LEGS[l.leg].label} ` : ''}from H${holeAtPos(round, l.start)} · ` : ''}{who}</div>
               <div className={`leg-amt ${l.value === 0 ? 'zero' : ''}`}>{money(Math.abs(l.value))}</div>
             </div>
           );
         })}
+        {round.game === 'shamble' && <DrivesShortfall round={round} done={round.status === 'done'} />}
+      </>
+    );
+  }
+  // A team game played as stroke play (each leg to the lower team total) or per hole (holes won)
+  if (isTeamGame(round.game) && res.detail.lines) {
+    const sn = sideNames(round);
+    return (
+      <>
+        <div className="sec-label">Bets · {sn[0]} v {sn[1]}</div>
+        {res.detail.lines.map(l => {
+          let who;
+          if (l.key === 'holes') {
+            const [a, b] = l.won;
+            who = !l.played ? 'Not played' : a === b ? `${a} hole${a === 1 ? '' : 's'} each` : `${sn[a > b ? 0 : 1]} won ${Math.max(a, b)} to ${Math.min(a, b)}`;
+          } else {
+            const s = l.status;
+            const [a, b] = s.totals;
+            who = !s.played ? 'Not played' : s.leader === null ? `Tied on ${a}` : `${sn[s.leader]} by ${s.by}, ${Math.min(a, b)} to ${Math.max(a, b)}`;
+          }
+          return (
+            <div key={l.key} className="leg-row">
+              <div className="leg-name">{l.label}</div>
+              <div className={`leg-winner ${l.value === 0 ? 'leg-tie' : ''}`}>{who}</div>
+              <div className={`leg-amt ${l.value === 0 ? 'zero' : ''}`}>{money(Math.abs(l.value))}</div>
+            </div>
+          );
+        })}
+        {round.game === 'shamble' && <DrivesShortfall round={round} done={round.status === 'done'} />}
       </>
     );
   }
@@ -576,6 +607,9 @@ export function Scorecard({ round, current, onHole }) {
   // With onHole (during play), any cell in a hole's column jumps to that hole
   const colProps = no => (onHole ? { onClick: () => onHole(no), className: 'sc-tap' } : {});
   const netTotal = p => out.reduce((a, h) => { const n = holeComplete(round, h) ? netFor(round, p, h) : null; return n == null ? a : a + n; }, 0);
+  // Best ball and Shamble: a row per team with its score on each hole, and the scores that made it underlined
+  const tt = isTeamGame(round.game) && !oneBall(round.game) && round.teams?.length === 2 ? teamTable(round) : null;
+  const countedOn = (k, pid) => !!tt && tt.rows[k].counted.some(list => list.includes(pid));
   return (
     <div className="sc-wrap">
       <table className="sc-table scorecard">
@@ -612,16 +646,17 @@ export function Scorecard({ round, current, onHole }) {
                     </span>
                   )}
                 </td>
-                {out.map(h => {
+                {out.map((h, k) => {
                   const g = round.scores[h.no]?.[p.id];
                   // A player who left shows an en dash on the holes after
-                  const gone = g == null && !(p.team ? p.players.some(pid => playsHole(round, pid, h)) : playsHole(round, p.id, h));
+                  // (an alternate shot or Chapman team needs both partners there, see scorers)
+                  const gone = g == null && !(p.team ? scorers(round, h).some(u => u.id === p.id) : playsHole(round, p.id, h));
                   const st = hc && !gone ? popsFor(round, p, h) : 0;
                   const tap = colProps(h.no);
                   return (
                     <td key={h.no} className={`${h.no === current ? 'cur' : ''} ${tap.className || ''}`} onClick={tap.onClick}>
                       <span className="sc-cell">
-                        {gone ? <span className="empty-dot">–</span> : g == null ? <span className="empty-dot">·</span> : <span className={`sc-mark ${cls(g, h.par)}`}>{g}</span>}
+                        {gone ? <span className="empty-dot">–</span> : g == null ? <span className="empty-dot">·</span> : <span className={`sc-mark ${cls(g, h.par)} ${countedOn(k, p.id) ? 'sc-counts' : ''}`}>{g}</span>}
                         {st > 0 && <span className="sc-strokes" role="img" aria-label={`Gets ${strokesWords(st, half)}`}>{Array.from({ length: st }, (_, i) => <i key={i} />)}</span>}
                         {st < 0 && <span className="sc-strokes give" aria-label={`Gives back ${strokesWords(-st, half)}`}>{'–'.repeat(-st)}</span>}
                       </span>
@@ -630,6 +665,29 @@ export function Scorecard({ round, current, onHole }) {
                 })}
                 <td className="tot">{sum.played ? sum.gross : '–'}</td>
                 {anyStrokes && <td className="tot">{sum.played ? netText(netTotal(p)) : '–'}</td>}
+              </tr>
+            );
+          })}
+          {tt && round.teams.map((t, i) => {
+            const played = tt.rows.filter(r => r.scores[i] != null);
+            return (
+              <tr key={t.id} className="sc-team-row">
+                <td className="sticky">
+                  <span className="sc-name">{t.name}</span>
+                  <span className="sc-topar"><span className="sc-par">{tt.count === 2 ? 'best two' : 'best ball'}{hc ? ', net' : ''}</span></span>
+                </td>
+                {out.map((h, k) => {
+                  const v = tt.rows[k].scores[i];
+                  const tap = colProps(h.no);
+                  return (
+                    <td key={h.no} className={`${h.no === current ? 'cur' : ''} ${tap.className || ''}`} onClick={tap.onClick}>
+                      <span className="sc-cell">{v == null ? <span className="empty-dot">·</span> : <span className="sc-mark">{netText(v)}</span>}</span>
+                    </td>
+                  );
+                })}
+                {/* The team scores are net with handicaps on, so with strokes given they add up in the Net column */}
+                <td className="tot">{anyStrokes ? '' : played.length ? netText(played.reduce((a, r) => a + r.scores[i], 0)) : '–'}</td>
+                {anyStrokes && <td className="tot">{played.length ? netText(played.reduce((a, r) => a + r.scores[i], 0)) : '–'}</td>}
               </tr>
             );
           })}

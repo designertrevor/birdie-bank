@@ -46,18 +46,20 @@ export const MAX_BETS = 12;
 const isObj = v => v !== null && typeof v === 'object' && !Array.isArray(v);
 const c2 = v => Math.round(v * 100) / 100 || 0;
 const first = n => String(n || '').trim().split(/\s+/)[0] || '?';
-/** Match and per-hole bets are played on scores (a scramble's are by team). */
+/** Games with one score a team (round.js ONE_BALL_GAMES, kept here so the two files don't import each other's constants). */
+const ONE_BALL = ['scramble', 'altshot', 'chapman'];
+/** Match and per-hole bets are played on scores (a scramble's, an alternate shot's or a Chapman's are by team). */
 const needsScores = kind => kind === 'match' || kind === 'hole';
 
 /** Why two teammates in a scramble can't have a match or per-hole bet, in one line for the editor. */
 export const SAME_TEAM_REASON = 'Teammates share one score, so between them it’s closest to the pin or your own bet.';
 
 /**
- * The team a player is on in a scramble: the team's id (round.teams is [{ id, players }], or setup's
+ * The team a player is on in a scramble (or alternate shot, or Chapman): the team's id (round.teams is [{ id, players }], or setup's
  * arrays of player ids, which go by their place), or null when it isn't a scramble or they aren't on one.
  */
 export function teamOf(round, pid) {
-  if (round?.game !== 'scramble' || !Array.isArray(round.teams)) return null;
+  if (!ONE_BALL.includes(round?.game) || !Array.isArray(round.teams)) return null;
   const i = round.teams.findIndex(t => (Array.isArray(t) ? t : t?.players || []).includes(pid));
   if (i < 0) return null;
   const t = round.teams[i];
@@ -69,14 +71,14 @@ export function teamOf(round, pid) {
  * in a scramble, which needs the two on different teams (it's played on their teams' scores).
  */
 export function kindFits(round, kind, sides) {
-  if (round?.game !== 'scramble' || !needsScores(kind)) return true;
+  if (!ONE_BALL.includes(round?.game) || !needsScores(kind)) return true;
   const [a, b] = sides || [];
   const ta = teamOf(round, a), tb = teamOf(round, b);
   return ta != null && tb != null && ta !== tb;
 }
 
 /** Whose score counts for a player in a bet: their own, or in a scramble their team's. */
-const scoreKey = (round, pid) => (round.game === 'scramble' ? teamOf(round, pid) : pid);
+const scoreKey = (round, pid) => (ONE_BALL.includes(round.game) ? teamOf(round, pid) : pid);
 
 /**
  * What a bet is played for, 'money' or 'points': everything on a money round is money and on a
@@ -423,7 +425,7 @@ export function fitSetupBets(list, shape) {
  */
 export function suggestedStrokes(round, a, b, bet = null) {
   // A scramble plays off the teams' handicaps, so there's nothing between two players to suggest
-  if (round.game === 'scramble') return null;
+  if (ONE_BALL.includes(round.game)) return null;
   const pa = round.players.find(p => p.id === a), pb = round.players.find(p => p.id === b);
   if (!pa || !pb) return null;
   const known = p => p.index != null || p.courseHcOverride != null;

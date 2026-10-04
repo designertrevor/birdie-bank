@@ -393,3 +393,51 @@ export function birdiePot(shares, stake) {
   for (const id of ids) out[id] = pot * (shares[id] || 0) / total - stake;
   return roundCents(out);
 }
+
+// ---------------------------------------------------------------------------
+// Team games: Best ball, Shamble, Alternate shot and Chapman
+// ---------------------------------------------------------------------------
+// Published rules, checked 2026-10-03:
+//  Best ball (four-ball, or "best 1 of 4" / "best 2 of 4" with bigger teams): everyone plays their own
+//   ball and the team's best score (or best two added up) on each hole is the team's score.
+//   Rules of Golf, Rule 23 (Four-Ball) https://www.randa.org/rog/the-rules-of-golf/rule-23
+//  Shamble: everyone tees off, the team picks the best drive, then each player plays their own ball in
+//   from there and the best ball counts. Golf Workout Program, "A simple guide to playing the shamble"
+//   https://golfworkoutprogram.com/golf-shamble/
+//  Alternate shot (foursomes): two partners play one ball, taking turns, and one partner tees off on the
+//   odd holes and the other on the even ones. Rules of Golf, Rule 22 (Foursomes, also known as
+//   alternate shot) https://www.randa.org/rog/the-rules-of-golf/rule-22
+//  Chapman (Pinehurst): both partners drive, swap balls for the second shot, pick one ball and play it
+//   in by alternate shot. USGA, "Chapman or Pinehurst (60% low handicap + 40% high handicap)"
+//   https://www.usga.org/handicapping/roh/Content/rules/Committee%20Content/USGA/LG_R7h4.htm
+// Handicap allowances: Rules of Handicapping (effective January 2024), Appendix C: "Foursomes 50% of
+// combined team handicap", "Pinehurst/Chapman 60% low / 40% high", "Best 1 of 4 stroke play 75%",
+// "Best 2 of 4 stroke play 85%" (same PDF as SCRAMBLE_ALLOWANCE above, checked again 2026-10-03).
+// In match play the side with the lower team handicap plays off zero and the other gets the difference.
+
+/** Alternate shot (foursomes): the team plays off half its players' course handicaps added up. */
+export const FOURSOMES_ALLOWANCE = 0.5;
+
+/** Chapman (Pinehurst): 60% of the lower course handicap plus 40% of the higher. */
+export const CHAPMAN_ALLOWANCE = [0.6, 0.4];
+
+/** Team course handicap for alternate shot: 50% of the partners' course handicaps added up, rounded. */
+export function foursomesTeamHandicap(courseHcs) {
+  return Math.round(courseHcs.reduce((a, h) => a + (h ?? 0), 0) * FOURSOMES_ALLOWANCE);
+}
+
+/** Team course handicap for Chapman: 60% of the low course handicap plus 40% of the high one, rounded. */
+export function chapmanTeamHandicap(courseHcs) {
+  const [lo = 0, hi = lo] = courseHcs.map(h => h ?? 0).sort((a, b) => a - b);
+  return Math.round(lo * CHAPMAN_ALLOWANCE[0] + hi * CHAPMAN_ALLOWANCE[1]);
+}
+
+/**
+ * A team's score on a hole from its players' scores: the best `count` added up (best ball is the
+ * best one; "best 2 of 4" adds the best two). Null while a score is missing, or when the team has
+ * fewer players on the hole than `count`.
+ */
+export function bestOf(scores, count = 1) {
+  if (!scores.length || scores.length < count || scores.some(n => n == null)) return null;
+  return [...scores].sort((a, b) => a - b).slice(0, count).reduce((a, n) => a + n, 0);
+}

@@ -2213,3 +2213,14 @@ button.ch-main:active { transform: scale(.98); }
 .stats-link .row-main { font-weight: 700; }
 .stats-link > i:last-child { color: var(--mute); }
 .pf-more .stats-open { margin-top: 10px; }
+
+/* ---- Overnight 7, team games (Best ball, Shamble, Alternate shot, Chapman) ---- */
+/* "Counts" next to a player whose score makes the team score on the hole (Best ball and Shamble) */
+.counts-tag {
+  display: inline-block; margin-left: 6px; padding: 1px 8px; border-radius: 999px; vertical-align: 1px;
+  background: var(--win-bg); color: var(--win); font-size: 11px; font-weight: 700; letter-spacing: .02em; white-space: nowrap;
+}
+/* The scorecard's team rows, and the scores that made each team score */
+.sc-team-row td, .scorecard .sc-team-row .sticky { background: var(--surface); }
+.sc-team-row .sc-name { font-weight: 800; }
+.sc-mark.sc-counts { text-decoration: underline; text-decoration-color: var(--win); text-decoration-thickness: 2px; text-underline-offset: 3px; }

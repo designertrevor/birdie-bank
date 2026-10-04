@@ -6,7 +6,7 @@
 import { useState } from 'react';
 import { Icon, Numpad, Segmented, Sheet, useUI } from './ui.jsx';
 import { update } from '../lib/store.js';
-import { holeComplete } from '../lib/round.js';
+import { holeComplete, oneBall } from '../lib/round.js';
 import {
   BET_KINDS, BET_LABEL_MAX, MAX_BETS, MAX_BET_STROKES, BET_MAX, SAME_TEAM_REASON, addBet, betKindsFor, betLine, betMoneyText, betName, betPeople, betPlayFor, betRange, betResult,
   betStakeText, betStatusText, betsMoney, betsOf, betsToTap, changeBet, cleanBet, cleanBetLabel, ctpHoles, isCashBet, kindFits, nextPos, nineRange, removeBet, repriceText, setBetWinner, suggestedStrokes,
@@ -64,8 +64,8 @@ export function BetEditor({ round, bet = null, fromPos = 1, onSave, onRemove = n
   const clean = ready ? cleanBet(round, draft) : null;
   const noPar3 = kind === 'ctp' && ready && !ctpHoles(round, clean).length;
   const noLabel = kind === 'custom' && !cleanBetLabel(label);
-  // A scramble: two teammates share one score, so a match or per-hole bet needs players on different teams
-  const teammates = ready && round.game === 'scramble' && !kindFits(round, 'match', sides);
+  // A scramble, alternate shot or Chapman: two teammates share one score, so a match or per-hole bet needs players on different teams
+  const teammates = ready && oneBall(round.game) && !kindFits(round, 'match', sides);
   const badKind = ready && !kindFits(round, kind, sides);
   // Changing a bet reprices all of it, the holes already played too: say what that does before saving
   const reprice = bet && clean && !badKind ? repriceText(round, bet, clean, b => betFmt(round, b)) : null;
@@ -113,7 +113,7 @@ export function BetEditor({ round, bet = null, fromPos = 1, onSave, onRemove = n
             ))}
           </div>
           <p className="field-help pb-help">{cash ? BET_KINDS[kind].help : inUnits(round, BET_KINDS[kind].help)}</p>
-          {round.game === 'scramble' && needsScores(kind) && !teammates && <p className="field-help pb-help">Played on their teams’ scores.</p>}
+          {oneBall(round.game) && needsScores(kind) && !teammates && <p className="field-help pb-help">Played on their teams’ scores.</p>}
           {teammates && <p className={badKind ? 'field-error' : 'field-help pb-help'}>{SAME_TEAM_REASON}</p>}
 
           {kind === 'custom' && (

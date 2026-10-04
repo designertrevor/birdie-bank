@@ -1,6 +1,6 @@
 import { Icon, Segmented, Toggle } from './ui.jsx';
 import { GAMES, blindMultiplierOf } from '../lib/round.js';
-import { DOT_KINDS, SCRAMBLE_ALLOWANCE, sixesPairings } from '../lib/games.js';
+import { CHAPMAN_ALLOWANCE, DOT_KINDS, FOURSOMES_ALLOWANCE, SCRAMBLE_ALLOWANCE, sixesPairings } from '../lib/games.js';
 import { money as dollars } from '../lib/golf.js';
 import { points } from '../lib/play-for.js';
 import { teamsProblem } from '../lib/teams.js';
@@ -12,8 +12,10 @@ import { dotsNote } from '../lib/side-games.js';
  * `get(path)` reads a setting, `set(path, v)` writes one, `onAmount(path, title, {min,max})` opens a numpad.
  * `players` is how many are playing, for the worked example under each bet (a foursome when unknown).
  * `inPoints`: a points or reward round, so every bet and example reads in points ("5 pts").
+ * `teamSize`: the smallest team's size in a team game, when the teams are known (Best ball and
+ * Shamble only offer "best two" with teams of three or four; null on the Game defaults screen).
  */
-export function GameOptions({ game, get, set, onAmount, holesCount = 18, compact = false, firstName = null, players = null, inPoints = false }) {
+export function GameOptions({ game, get, set, onAmount, holesCount = 18, compact = false, firstName = null, players = null, inPoints = false, teamSize = null }) {
   const money = inPoints ? points : dollars;
   const n = players || Math.min(Math.max(4, GAMES[game]?.min || 2), GAMES[game]?.max || 4);
   const others = n - 1;
@@ -45,11 +47,11 @@ export function GameOptions({ game, get, set, onAmount, holesCount = 18, compact
   const payout = (path, unit) => seg(path, [{ value: 'pot', label: 'Winner takes the pot' }, { value: 'per', label: `Pay per ${unit}` }], 'Payout');
   const potExample = path => `With ${n} players the pot is ${money(get(path) * n)}, so the winner is up ${money(get(path) * others)}.`;
   const perExample = (path, unit) => `Each ${unit} wins ${money(get(path))} from every other player: finish 3 ${unit}s better than someone and you’re up ${money(get(path) * 3)} on them.`;
-  const presses = prefix => (
+  const presses = (prefix, offText = 'Just the one bet.') => (
     <div className="block">
       {seg(`${prefix}.pressMode`, [{ value: 'off', label: 'Off' }, { value: 'manual', label: 'Manual' }, { value: 'auto', label: 'Auto' }])}
       {get(`${prefix}.pressMode`) !== 'off' && seg(`${prefix}.threshold`, [1, 2, 3].map(n => ({ value: n, label: `${n} hole${n > 1 ? 's' : ''}` })), 'Can press when down by')}
-      {help({ off: 'Just the one bet.', manual: `A Press button shows up when a side is ${get(`${prefix}.threshold`) || 2} down.`, auto: `A press starts by itself when a side is ${get(`${prefix}.threshold`) || 2} down.` }[get(`${prefix}.pressMode`)])}
+      {help({ off: offText, manual: `A Press button shows up when a side is ${get(`${prefix}.threshold`) || 2} down.`, auto: `A press starts by itself when a side is ${get(`${prefix}.threshold`) || 2} down.` }[get(`${prefix}.pressMode`)])}
     </div>
   );
 
@@ -320,6 +322,63 @@ export function GameOptions({ game, get, set, onAmount, holesCount = 18, compact
         </div>
         {holesCount === 18 && toggle('snake.nines', 'Each nine', 'Settle the snake at the turn, then a fresh one for the back')}
         {note('Three-putt and you take the snake. The next three-putt takes it off you. Whoever holds it at the end pays everyone.')}
+      </>;
+    }
+    case 'bestball':
+    case 'shamble':
+    case 'altshot':
+    case 'chapman': {
+      // The team games (2026-10-03): how it's played, then the bets that way (see round.js teamTable)
+      const format = get(`${game}.format`) || 'nassau';
+      const stroke = format !== 'hole' && get(`${game}.scoring`) === 'stroke';
+      const ballGame = game === 'bestball' || game === 'shamble';
+      const canTwo = ballGame && (teamSize == null || teamSize >= 3);
+      const two = canTwo && get(`${game}.count`) === 2;
+      const front = holesCount === 9 ? 'First 4' : 'Front 9', back = holesCount === 9 ? 'Last 5' : 'Back 9', total = holesCount === 9 ? 'All 9' : 'Total 18';
+      const how = {
+        bestball: `Everyone plays their own ball. ${two ? 'Your team’s best two scores on each hole add up to the team score.' : 'Your team’s best score on each hole is the team score.'}`,
+        shamble: `Everyone tees off, your team picks the best drive, and everyone plays their own ball in from there. ${two ? 'The best two scores add up.' : 'The best score counts.'}`,
+        altshot: `Partners take turns on one ball: one tees off on the odd holes, the other on the even holes. The team plays off ${Math.round(FOURSOMES_ALLOWANCE * 100)}% of the pair’s handicaps added up (the WHS allowance).`,
+        chapman: `Both partners drive, play each other’s ball for the second shot, then keep one ball and take turns in. The team plays off ${Math.round(CHAPMAN_ALLOWANCE[0] * 100)}% of the lower handicap plus ${Math.round(CHAPMAN_ALLOWANCE[1] * 100)}% of the higher (the WHS allowance).`,
+      }[game];
+      return <>
+        {label('How it’s played')}
+        <div className="block">
+          {seg(`${game}.format`, [{ value: 'nassau', label: 'Nassau' }, { value: 'total', label: 'One bet' }, { value: 'hole', label: 'Per hole' }], 'Bets', true)}
+          {help({ nassau: `${front}, ${back} and ${total.toLowerCase()}: three bets in one.`, total: 'One bet on the whole round.', hole: 'Every hole your team wins pays the bet. A halved hole pays nothing.' }[format])}
+          {format !== 'hole' && seg(`${game}.scoring`, [{ value: 'match', label: 'Match play' }, { value: 'stroke', label: 'Stroke play' }], 'Scoring')}
+          {format !== 'hole' && help(stroke ? 'Add up the team score on every hole. The lower total wins.' : 'The lower team score wins the hole. The team that wins more holes wins.')}
+          {canTwo && seg(`${game}.count`, [{ value: 1, label: 'Best ball' }, { value: 2, label: 'Best two' }], 'Scores that count')}
+          {canTwo && help(two ? 'The best two scores on each team add up, every hole.' : `Only the best score on each team counts.${teamSize == null ? ' Best two is for teams of three or four.' : ''}`)}
+        </div>
+        {label('Bets')}
+        {format === 'nassau' && <>
+          {amount(`${game}.front`, front)}
+          {amount(`${game}.back`, back)}
+          {amount(`${game}.total`, total)}
+          {example(`Win all three and you’re each up ${money((get(`${game}.front`) || 0) + (get(`${game}.back`) || 0) + (get(`${game}.total`) || 0))}. Halve a bet and nobody pays it.`)}
+        </>}
+        {format === 'total' && <>
+          {amount(`${game}.stake`, 'Per player', { label: 'Per player' })}
+          {example(`${stroke ? 'Finish with the lower team total' : 'Win the match'} and you’re each up ${money(get(`${game}.stake`))}. Lose and you’re each down ${money(get(`${game}.stake`))}.`)}
+        </>}
+        {format === 'hole' && <>
+          {amount(`${game}.perHole`, 'Per hole won', { label: 'Each hole won' })}
+          {example(`Win 3 more holes than the other team and you’re each up ${money((get(`${game}.perHole`) || 0) * 3)}.`)}
+        </>}
+        {format !== 'hole' && !stroke && <>
+          {label('Presses')}
+          {presses(game, format === 'nassau' ? 'Just the three bets.' : 'Just the one bet.')}
+          {format === 'nassau' && toggle(`${game}.turnPress`, 'Press at the turn', `Whoever lost the ${front.toLowerCase()} can press the ${back.toLowerCase()}, however far down`)}
+          {get(`${game}.pressMode`) !== 'off' && toggle(`${game}.noLastPress`, 'No press on the last hole', format === 'nassau' ? `Nobody can start a press on the ${holesCount === 9 ? '4th or the 9th' : '9th or the 18th'}` : `Nobody can start a press on the ${holesCount === 9 ? '9th' : '18th'}`)}
+        </>}
+        {game === 'shamble' && (
+          <div className="block">
+            {seg('shamble.drives', [{ value: 0, label: 'Off' }, { value: 2, label: '2' }, { value: 3, label: '3' }, { value: 4, label: '4' }], 'Minimum drives each', true)}
+            {help(get('shamble.drives') ? `Every player’s drive gets used at least ${get('shamble.drives')} times. Tap whose drive you took on each hole and we’ll keep count.` : 'Use whichever drive you like, every hole.')}
+          </div>
+        )}
+        {note(`${how} Each player on the winning team wins the bet from the other team. Net scores with handicaps on, gross with them off.`)}
       </>;
     }
     default:

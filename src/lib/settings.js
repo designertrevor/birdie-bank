@@ -11,6 +11,21 @@ export const REV2_DEFAULTS = {
 };
 
 /**
+ * How the team games (Best ball, Shamble, Alternate shot, Chapman, 2026-10-03) are bet unless the group
+ * changes it: a $5 Nassau played as a match, presses by hand like Nassau's. `stake` is the one bet on
+ * the round, `perHole` the bet a hole won. Best ball and Shamble count the best ball (count 2: the
+ * best two, for teams of three or four); Shamble's drives are a scramble's minimum drives (0: off).
+ * New games, so nothing saved before them changes: mergeSettings fills them in on older phones.
+ */
+const TEAM_BETS = { format: 'nassau', scoring: 'match', front: 5, back: 5, total: 5, stake: 10, perHole: 2, pressMode: 'manual', threshold: 2, turnPress: false, noLastPress: false };
+export const TEAM_DEFAULTS = {
+  bestball: { ...TEAM_BETS, count: 1 },
+  shamble: { ...TEAM_BETS, count: 1, drives: 0 },
+  altshot: { ...TEAM_BETS },
+  chapman: { ...TEAM_BETS },
+};
+
+/**
  * Most doubles a doubling snake makes, for new rounds (rev 3, 2026-09-28): 4, so a $5 snake stops at $80.
  * 0 means no cap. A round saved without a cap has none, so rounds already played keep their money.
  */

@@ -95,7 +95,7 @@ export function HandicapsSheet({ round, onClose }) {
             )}
             {round.game !== 'bbb' && (
               <StrokesSetup game={round.game} teams={round.teams?.map(t => t.players) || null} players={round.players.length}
-                opts={opts} set={set} sideGames={sides} setSideGames={setSides} />
+                opts={opts} set={set} sideGames={sides} setSideGames={setSides} settings={round.settings?.[round.game]} />
             )}
           </>
         )}

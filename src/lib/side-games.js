@@ -1,5 +1,5 @@
 // Side games in words: worked examples, the by-game line and the Nassau note. Pure, so tests can load it.
-import { GAMES } from './round.js';
+import { GAMES, TEAM_GAMES } from './round.js';
 import { DOT_KINDS } from './games.js';
 import { money } from './golf.js';
 
@@ -78,8 +78,9 @@ export function gamesLine(byGame, pid, fmt = money) {
  * far goes to whoever is ahead on the holes played, as the Nassau always has. Null otherwise.
  */
 export function nassauOpenNote(round, byGame) {
-  if (round.game !== 'nassau' && round.game !== 'match') return null;
-  const lines = byGame?.main?.detail?.lines || [];
+  // The team games' legs pay the same way (stroke play legs too; a hole won per hole is paid as it goes)
+  if (round.game !== 'nassau' && round.game !== 'match' && !TEAM_GAMES.includes(round.game)) return null;
+  const lines = (byGame?.main?.detail?.lines || []).filter(l => l.key !== 'holes');
   if (!lines.some(l => l.status && !l.status.done)) return null;
   return `${GAMES[round.game].name}: a bet still being played counts for whoever is ahead on it right now.`;
 }

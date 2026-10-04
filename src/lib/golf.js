@@ -163,6 +163,8 @@ export function nassauBets(winners, presses, amounts, legs = LEGS) {
   }));
   for (const p of presses) {
     const l = legs[p.leg];
+    // A press on a leg this layout doesn't have (never made by the app) is skipped rather than crash the card
+    if (!l) continue;
     bets.push({ key: 'p' + p.id, id: p.id, leg: p.leg, start: p.start, end: l.end, amount: p.amount ?? amounts[p.leg], press: true, by: p.by });
   }
   return bets.map(b => ({ ...b, status: matchStatus(winners, b.start, b.end) }));

@@ -9,7 +9,7 @@ import { useNearbyCourses } from '../lib/useNearbyCourses.js';
 import { mergeNear, milesLabel } from '../lib/nearby.js';
 import NearYou from '../components/NearYou.jsx';
 import RequestCourse from '../components/RequestCourse.jsx';
-import { GAMES, GAME_GROUPS, MAX_GAMES, SIDE_GAMES, createRound, effectiveCourseHc, holesInPlay, sideGamesOf } from '../lib/round.js';
+import { GAMES, GAME_GROUPS, MAX_GAMES, SIDE_GAMES, createRound, effectiveCourseHc, holesInPlay, oneBall, sideGamesOf } from '../lib/round.js';
 import { SideGamesSetup } from '../components/SideGames.jsx';
 import { PairBetsSetup } from '../components/PairBets.jsx';
 import { betsOf, cleanBet, fitSetupBets } from '../lib/pair-bets.js';
@@ -226,9 +226,12 @@ export default function NewRound({ rematch, fromPlan, present, edit = null, ahea
     if (b.to === 'close') return close();
     if (b.to === 'step') goTo(b.step);
   };
-  // Players to Bets: new or changed players get fresh teams
+  // Players to Bets: new or changed players get fresh teams, and so does a game that takes another
+  // number of teams (three scramble teams, then a switch to Best ball)
   const toBets = () => {
-    if (!teams || teams.flat().length !== picked.length || teams.flat().some(pid => !picked.includes(pid))) setTeams(defaultTeams(game, picked));
+    const cfg = GAMES[game]?.teams;
+    const wrongCount = !!cfg && !!teams && (Array.isArray(cfg.count) ? teams.length < cfg.count[0] || teams.length > cfg.count[1] : teams.length !== cfg.count);
+    if (!teams || wrongCount || teams.flat().length !== picked.length || teams.flat().some(pid => !picked.includes(pid))) setTeams(defaultTeams(game, picked));
     setStep(3);
   };
   // Step bar taps: any earlier step, or a later one already reached whose earlier steps are still filled in
@@ -813,9 +816,13 @@ function SetupStep({ game, course, holesCount, nine, picked, setPicked, opts, se
       const tee = course.tees?.find(t => t.name === (tees[pid] || defaultTee)) || course.tees?.[0] || null;
       return { id: pid, name: p.name || '?', index: p.index ?? null, courseHcOverride: hcOverride[pid] ?? null, courseHc: effectiveCourseHc(p.index, tee, course, inPlay, holesCount, hcOverride[pid]).value };
     });
-    // A scramble's teams (arrays of player ids here), so a match or per-hole bet goes between players on different teams
-    return { game, players, holes: inPlay, playFor, ...(game === 'scramble' && teams ? { teams } : {}) };
+    // A one-ball game's teams (arrays of player ids here), so a match or per-hole bet goes between players on different teams
+    return { game, players, holes: inPlay, playFor, ...(oneBall(game) && teams ? { teams } : {}) };
   }, [course, holesCount, nine, startHole, picked, state.players, tees, defaultTee, hcOverride, game, playFor, teams]);
+  // Best two only counts with teams of three or four (createRound sets a pairs round back to best ball),
+  // so the bet line up top says how it will be played
+  const shownOpts = (game === 'bestball' || game === 'shamble') && opts[game]?.count === 2 && teams?.length && Math.min(...teams.map(t => t.length)) < 3
+    ? { ...opts, [game]: { ...opts[game], count: 1 } } : opts;
   const orderLabel = { wolf: 'Tee order: the wolf moves down this list', banker: 'Playing order', sixes: 'Order: sets who partners who' }[game] || 'Playing order';
 
   return (
@@ -823,8 +830,8 @@ function SetupStep({ game, course, holesCount, nine, picked, setPicked, opts, se
       <div className="scroll">
         <div className="block summary-card">
           <div className="li-sub">{gameLabel({ game, sideGames })} · {holesCount} holes</div>
-          <div className="d stake-big">{inUnits({ playFor }, stakeSummary(game, opts))}</div>
-          {sideGames.length > 0 && <div className="li-sub">{roundStakeLines({ game, settings: opts, sideGames, playFor }).slice(1).map(l => l.line).join(' + ')}</div>}
+          <div className="d stake-big">{inUnits({ playFor }, stakeSummary(game, shownOpts))}</div>
+          {sideGames.length > 0 && <div className="li-sub">{roundStakeLines({ game, settings: shownOpts, sideGames, playFor }).slice(1).map(l => l.line).join(' + ')}</div>}
           {playForLine({ playFor }) && <div className="li-sub">{playForLine({ playFor })}</div>}
           <div className="li-sub">{course.name}{holesCount === 9 && course.holes.length === 18 ? ` · ${nine === 'front' ? 'Front' : 'Back'} 9` : ''} · Par {holes.reduce((a, h) => a + h.par, 0)} · {picked.length} players</div>
         </div>
@@ -835,6 +842,7 @@ function SetupStep({ game, course, holesCount, nine, picked, setPicked, opts, se
         {GAMES[game].teams && teams && (
           <>
             <div className="sec-label">{game === 'nassau' || game === 'hammer' ? 'Sides' : 'Teams'}</div>
+            {GAMES[game].teams.even && <p className="field-help" style={{ padding: '0 20px' }}>Two teams the same size: 2 v 2, 3 v 3 or 4 v 4.</p>}
             <TeamPicker game={game} picked={picked} names={names} teams={teams} setTeams={setTeams} />
           </>
         )}
@@ -855,7 +863,8 @@ function SetupStep({ game, course, holesCount, nine, picked, setPicked, opts, se
         )}
 
         <GameOptions game={game} get={get} set={set} onAmount={(path, title, o) => setPad({ path, title, ...o })} holesCount={holesCount}
-          players={picked.length || null} firstName={game === 'banker' ? state.players[picked[0]]?.name : null} inPoints={!countsMoney({ playFor })} />
+          players={picked.length || null} firstName={game === 'banker' ? state.players[picked[0]]?.name : null} inPoints={!countsMoney({ playFor })}
+          teamSize={teams?.length ? Math.min(...teams.map(t => t.length)) : null} />
 
         <SideGamesSetup game={game} sideGames={sideGames} setSideGames={setSideGames} defaults={opts} players={picked.length || 4} playFor={playFor} />
 

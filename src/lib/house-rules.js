@@ -9,7 +9,8 @@ export function houseRulesLine(game, gs) {
   if (game === 'wolf' && gs.carry) on.push('ties carry');
   if (game === 'vegas' && gs.birdieDouble) on.push('birdies double');
   if (game === 'sixes' && gs.carry && gs.mode !== 'holes') on.push('halved matches carry');
-  if (game === 'scramble' && gs.drives) on.push(`${gs.drives} drives each`);
+  if ((game === 'scramble' || game === 'shamble') && gs.drives) on.push(`${gs.drives} drives each`);
+  if ((game === 'bestball' || game === 'shamble') && gs.count === 2) on.push('best two balls');
   if (game === 'stroke' && gs.cap) on.push('net double bogey max');
   if (game === 'nines' && gs.sweep) on.push('win by 2 takes all 9');
   if (game === 'aces' && gs.carry) on.push('ties carry');
