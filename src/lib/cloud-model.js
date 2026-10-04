@@ -101,7 +101,14 @@ export function applyDoc(draft, kind, id, data) {
     if (data.cupPaid && typeof data.cupPaid === 'object' && !Array.isArray(data.cupPaid)) draft.cupPaid = data.cupPaid;
     // Booking links and nudges came later again: an older profile keeps this phone's
     if (data.courseLinks && typeof data.courseLinks === 'object' && !Array.isArray(data.courseLinks)) draft.courseLinks = data.courseLinks;
-    if (data.nudges && typeof data.nudges === 'object' && !Array.isArray(data.nudges)) draft.nudges = data.nudges;
+    // Nudges keep the newer time for each person, so a reminder sent on this phone before the
+    // profile went up isn't undone by another phone's older copy (and the card doesn't come back)
+    if (data.nudges && typeof data.nudges === 'object' && !Array.isArray(data.nudges)) {
+      const mine = draft.nudges && typeof draft.nudges === 'object' && !Array.isArray(draft.nudges) ? draft.nudges : {};
+      const next = { ...mine };
+      for (const [k, t] of Object.entries(data.nudges)) if (Number(t) > (Number(next[k]) || 0)) next[k] = Number(t);
+      draft.nudges = next;
+    }
   }
 }
 

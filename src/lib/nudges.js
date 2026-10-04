@@ -88,16 +88,29 @@ export function paymentNudges(state, { now = Date.now(), days = nudgeDays(state?
   const ids = myIds(state);
   const who = canonicalOf(state);
   const mine = id => ids.has(id) || ids.has(who(id));
-  const out = [];
+  // One person is one card: what each owes you on the Tab, less anything you owe them back, on
+  // any of their ids (the Tab's own tabWith adds up the same way), so a person never shows twice
+  const owed = new Map();
   for (const d of outstanding(state, { now })) {
-    if (!mine(d.to) || mine(d.from) || !(d.amount >= NUDGE_MIN)) continue;
+    const toMe = mine(d.to) && !mine(d.from), fromMe = mine(d.from) && !mine(d.to);
+    if (!toMe && !fromMe) continue;
+    const k = who(toMe ? d.from : d.to);
+    const o = owed.get(k) || { id: toMe ? d.from : d.to, me: toMe ? d.to : d.from, cents: 0, rounds: [] };
+    o.cents += (toMe ? 1 : -1) * Math.round(d.amount * 100);
+    o.rounds.push(...(d.rounds || []));
+    owed.set(k, o);
+  }
+  const out = [];
+  for (const o of owed.values()) {
+    const amount = o.cents / 100;
+    if (!(amount >= NUDGE_MIN)) continue;
     // A carry-over agreed (or asked for) covers the card, so no nudge rides over it
-    const carry = cardCarry(state, d.to, d.from, { from: d.from, to: d.to, amount: d.amount }, now);
+    const carry = cardCarry(state, o.me, o.id, { from: o.id, to: o.me, amount }, now);
     if (carry && (carry.status === 'agreed' || carry.status === 'asked')) continue;
-    const since = owedSince(state, d.from, d.to, d.rounds);
+    const since = owedSince(state, o.id, o.me, [...new Set(o.rounds)]);
     if (since == null || now - since < days * DAY_MS) continue;
-    if (now - lastNudged(state, d.from) < NUDGE_EVERY_DAYS * DAY_MS) continue;
-    out.push({ id: d.from, amount: d.amount, since, days: Math.floor((now - since) / DAY_MS) });
+    if (now - lastNudged(state, o.id) < NUDGE_EVERY_DAYS * DAY_MS) continue;
+    out.push({ id: o.id, amount, since, days: Math.floor((now - since) / DAY_MS) });
   }
   return out.sort((a, b) => b.amount - a.amount || a.since - b.since);
 }

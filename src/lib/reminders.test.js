@@ -10,7 +10,7 @@ import { mapCourse } from './courseApi.js';
 import { isoDate, newPlan, planMeta } from './plans.js';
 import {
   bookedText, cleanBookingUrl, courseBookingUrl, linkSite, markBooked, planBookingUrl, remindDayChoices, remindOnLabel,
-  setBooking, suggestedRemindOn, teeTimeDue, teeTimeLine, teeTimeReminders, tomorrowIso,
+  rebookIfMoved, setBooking, suggestedRemindOn, teeTimeDue, teeTimeLine, teeTimeReminders, tomorrowIso,
 } from './tee-reminders.js';
 import {
   NUDGE_CHOICES, NUDGE_DEFAULT, lastNudged, noteNudge, nudgeChoiceLabel, nudgeDays, nudgeLine, owedSince, paymentNudges, sinceDay,
@@ -314,4 +314,53 @@ test('booking links come back from a backup', () => {
   const { state } = mergeBackup({ players: {}, rounds: {}, courseLinks: {} }, parsed.data);
   assert.deepEqual(state.courseLinks, { f9: 'https://flat.example.com/' });
   assert.equal(parseBackup(JSON.stringify({ format: 'birdie-bank-backup', backupVersion: 1, data: { players: {}, courseLinks: 'x' } })).ok, false, 'a damaged one is refused');
+});
+
+// --------------------------- review fixes ----------------------------------
+
+test('nudges: one card per person, what they owe you on all your ids added up and less what you owe them', () => {
+  // No account yet, two rounds each with its own seat for you: the Tab adds them up, so does the card
+  const r1 = { ...round('r1', ['a', 'b'], twoSkins, { daysAgo: 10 }), localMe: 'a' };
+  const r2 = { ...round('r2', ['a2', 'b'], { 1: { a2: 3, b: 4 } }, { daysAgo: 9 }), localMe: 'a2' };
+  const s = stateOf(null, [r1, r2]);
+  const plan = outstanding(s, { now: NOW });
+  assert.equal(plan.filter(t => t.from === 'b').length, 2, 'two lines on the Tab for Mike');
+  const list = paymentNudges(s, { now: NOW });
+  assert.deepEqual(list.map(n => [n.id, n.amount]), [['b', 6]], 'one card for Mike, $4 and $2');
+  assert.equal(list[0].since, NOW - 10 * DAY, 'from the first of those rounds');
+  // He won $2 back from your other seat: the card is what he owes you overall
+  const back = { ...round('r2', ['a2', 'b'], { 1: { a2: 4, b: 3 } }, { daysAgo: 9 }), localMe: 'a2' };
+  assert.deepEqual(paymentNudges(stateOf(null, [r1, back]), { now: NOW }).map(n => [n.id, n.amount]), [['b', 2]]);
+});
+
+test('nudges: a lunch round’s side bet for money is on the Tab, so it nudges in dollars', () => {
+  const lunch = { kind: 'reward', reward: 'Lunch', owes: 'last' };
+  const r = round('r1', ['a', 'b'], {}, { daysAgo: 10, playFor: lunch });
+  r.bets = [{ id: 'sb1', kind: 'custom', sides: ['a', 'b'], stake: 5, label: 'Side bet', winner: 'a', at: 1, playFor: 'money' }];
+  const s = stateOf('a', [r]);
+  assert.deepEqual(outstanding(s, { now: NOW }).map(t => [t.from, t.to, t.amount]), [['b', 'a', 5]]);
+  assert.deepEqual(paymentNudges(s, { now: NOW }).map(n => [n.id, n.amount]), [['b', 5]]);
+});
+
+test('tee time: a plan moved to another day or course isn’t booked any more; a new tee time alone keeps it', () => {
+  const p = plan({ teeTime: '08:10' });
+  markBooked(p, '08:10', NOW);
+  assert.equal(rebookIfMoved(p, { date: p.date, courseId: COURSE.id }), false);
+  assert.ok(p.booked, 'same day and course');
+  assert.equal(rebookIfMoved(p, { date: dayOff(4), courseId: COURSE.id }), true);
+  assert.equal(p.booked, undefined, 'a new day');
+  markBooked(p, '08:10', NOW);
+  p.teeSnooze = dayOff(1);
+  rebookIfMoved(p, { date: p.date, courseId: 'other' });
+  assert.equal(p.booked, undefined, 'a new course');
+  assert.equal(p.teeSnooze, undefined);
+  p.booking = { url: 'https://birchcreek.example.com/', courseId: COURSE.id, remindOn: dayOff(1) };
+  p.date = dayOff(4);
+  assert.equal(teeTimeDue(p, new Date(2026, 9, 2, 9)), true, 'and the reminder shows again');
+});
+
+test('nudges: another phone’s older profile never brings back a card you just put away', () => {
+  const s = { nudges: { b: NOW, c: NOW - 30 * DAY } };
+  applyDoc(s, 'profile', 'me', { me: 'a', nudges: { b: NOW - 10 * DAY, c: NOW - DAY, d: NOW - 2 * DAY } });
+  assert.deepEqual(s.nudges, { b: NOW, c: NOW - DAY, d: NOW - 2 * DAY });
 });

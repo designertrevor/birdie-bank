@@ -30,6 +30,7 @@ import { findCourse } from '../lib/courses.js';
 import { BET_LADDER, MAX_BALLOT_GAMES, betChoices, betLabel, betOf, betUnitLabel, dayChoices, isoDate, newPlan, planStart } from '../lib/plans.js';
 import { rescheduleSetup, setupForPlan } from '../lib/plan-setup.js';
 import { PLAN_LOCKED, editPlan } from '../lib/plan-sync.js';
+import { rebookIfMoved } from '../lib/tee-reminders.js';
 import { shouldShowPaywall } from '../lib/paywall.js';
 import { PAYWALL_ON } from '../lib/paywall-flag.js';
 import { matchingUsual, planFromUsual, setupFromUsual, usualsOf } from '../lib/usuals.js';
@@ -321,6 +322,8 @@ export default function NewRound({ rematch, fromPlan, present, edit = null, ahea
   // Save the changed day, time, course or holes on the plan; a shared plan sends them to the group
   const savePlan = () => {
     editPlan(editing.id, p => {
+      // A tee time booked for the old day or course comes off (tee-reminders.js)
+      rebookIfMoved(p, { date, courseId: course.id });
       p.date = date;
       p.teeTime = teeTime || null;
       p.holesCount = holesCount;

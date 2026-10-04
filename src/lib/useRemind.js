@@ -6,8 +6,8 @@ import { noteNudge } from './nudges.js';
 
 /**
  * Remind someone what they owe you: share sheet or a text, with how to pay you. Resolves to what
- * happened (sendReminder's 'shared', 'sms', 'copied', 'cancelled' or 'failed'). A reminder sent counts as this week's nudge for them, so
- * Up next doesn't suggest another one right after (see nudges.js).
+ * happened (sendReminder's 'shared', 'sms', 'copied', 'cancelled' or 'failed'). A reminder sent counts as the
+ * week's nudge for them, so Up next doesn't suggest another one right after (see nudges.js).
  */
 export function useRemind() {
   const state = useStore();

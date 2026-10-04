@@ -113,6 +113,19 @@ export function markBooked(p, teeTime, at = Date.now()) {
   delete p.teeSnooze;
 }
 
+/**
+ * The plan's day or course changed (mutates a plan draft, call it before the change): a tee time
+ * booked for the old day or course isn't booked any more, so Booked comes off and the reminder
+ * can show again. A change of tee time alone keeps it booked.
+ */
+export function rebookIfMoved(p, { date, courseId }) {
+  const moved = (date !== undefined && date !== p.date) || (courseId !== undefined && courseId !== (p.course?.id ?? null));
+  if (!moved) return false;
+  delete p.booked;
+  delete p.teeSnooze;
+  return true;
+}
+
 /** Set the booking link and reminder day on a plan draft (mutates). An empty link clears it. */
 export function setBooking(p, { url, remindOn }) {
   const next = { ...(p.booking || {}) };
