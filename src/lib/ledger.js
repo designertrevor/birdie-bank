@@ -10,7 +10,7 @@ import { betsOf, isCashBet } from './pair-bets.js';
 import { planDebts } from './trip-plan.js';
 import { allExpenses, allTripMoney, allTripPays, expensePairDebts, expensePairs, expensesBetween, tripMoney } from './trip-expenses.js';
 import { allStakeMoney, stakeBetween, stakeMoney } from './cup-stake.js';
-import { allBigMoney, bigBetween, bigMoney } from './big-money.js';
+import { allBigMoney, bigBetween, bigMoney, bigOf, bigTripIds } from './big-money.js';
 
 const toCents = v => Math.round((Number(v) || 0) * 100);
 /** Whether two players had a side bet for money together in a reward round. */
@@ -387,5 +387,7 @@ export function nameOf(state, id) {
     const k = linksOf(state).personOf(id);
     for (const x of allExpenses(state)) { const n = x.names[id] || x.names[k]; if (n) return n; }
   }
+  // Someone only a Big Game knows (a player in another group): the name the game has for them
+  for (const t of bigTripIds(state)) { const n = bigOf(state, t)?.people[id]?.name; if (n) return n; }
   return 'Someone';
 }

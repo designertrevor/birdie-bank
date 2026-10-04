@@ -17,6 +17,8 @@ import {
 } from './big-game.js';
 import { allBigMoney, bigMoney, bigOf, bigStatus } from './big-money.js';
 import { codesToRead, handOffs, recordDue, toCard } from './big-sync-model.js';
+import { bigInvite, bigWho, myBigMoney, myPlaceLine, toParText } from './big-view.js';
+import { money } from './golf.js';
 
 const flat9 = { id: 'f9', name: 'Flat Nine', city: 'Town', tees: [], holes: Array.from({ length: 9 }, (_, i) => ({ par: 4, hdcp: i + 1 })) };
 const OCT = (day, hour = 12) => new Date(2026, 9, day, hour).getTime();
@@ -359,4 +361,19 @@ test('a game set up for another day has no rounds yet: nothing on the board, not
   assert.equal(tripStatus(s, 't_big', { now: OCT(12) }).phase, 'soon');
   assert.deepEqual(bigLines({}), []);
   assert.ok(bigResults(st.big, st.field));
+});
+
+test('the invite card and the bar read a group’s round as the game: its name, the group, the field’s strokes', () => {
+  const phones = phonesOf(game({ useHandicaps: true, hcPct: 90 }), { hc: { h: 10 } });
+  const r2 = phones.a.rounds.r2;
+  const inv = bigInvite(buildMeta(r2), money, 'h');
+  assert.equal(inv.title, 'Saturday Big Game · Group 2');
+  assert.match(inv.bets, /^\$20 gross pot, 50\/30\/20 · \$10 gross skins · \$10 team best ball · 2 side bets$/);
+  assert.equal(inv.strokes, 'You play off 9 across the whole field');
+  assert.equal(bigInvite({ ...buildMeta(r2), trip: null }, money), null);
+  assert.deepEqual([toParText(-2), toParText(0), toParText(3), toParText(null)], ['−2', 'E', '+3', '–']);
+  const bs = bigStatus(phones.g, 't_big');
+  const { isMe } = bigWho(phones.g, bs.big);
+  assert.equal(myPlaceLine(bs, isMe), 'You’re 1st of 8, −2');
+  assert.equal(myBigMoney(bs, isMe), 86);
 });

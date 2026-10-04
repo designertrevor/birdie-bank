@@ -152,7 +152,12 @@ export function refreshBig() {
 export function useBigSync({ live = false } = {}) {
   const s = getState();
   const ids = bigTripIds(s);
-  const sig = ids.length ? JSON.stringify(ids.map(id => [id, bigOf(s, id)?.v || 0, bigOf(s, id)?.groups.map(g => g.code).join(',')])) : '';
+  // The organizer's phone also looks again as soon as a group's phone takes a seat, to hand it the card
+  const sig = ids.length ? JSON.stringify(ids.map(id => {
+    const big = bigOf(s, id);
+    const seats = Object.values(s.rounds || {}).filter(r => r.trip?.id === id && r.shared?.host && r.status === 'active').map(r => `${Object.keys(r.onApp || {}).length}${r.keeper?.id || ''}`);
+    return [id, big?.v || 0, big?.groups.map(g => g.code).join(','), seats.join()];
+  })) : '';
   useEffect(() => {
     if (!sig) return undefined;
     let timer = setTimeout(() => refreshBig(), 300);

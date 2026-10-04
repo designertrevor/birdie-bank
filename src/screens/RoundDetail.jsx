@@ -219,7 +219,9 @@ export default function RoundDetail({ id, celebrate }) {
               {talk && <TalkBar ctx={talk} on={payTarget(t.from, t.to)} title={payTitle(t)} />}
             </div>
           ))}
-          {res.transfers.length > 0 && <p className="field-help" style={{ padding: '0 4px' }}>{round.trip?.id
+          {res.transfers.length > 0 && <p className="field-help" style={{ padding: '0 4px' }}>{round.trip?.format === 'big'
+            ? `Fewest payments for this round alone. It’s part of ${round.trip.name}, so it’s settled once with the whole game, and it’s on the Tab until then.`
+            : round.trip?.id
             ? `Fewest payments for this round alone. It’s on the trip, so it’s settled once with the trip’s other rounds, and it’s on the Tab until then.`
             : 'Fewest payments to square everyone up. They’re on the Tab until marked paid.'}</p>}
         </div>

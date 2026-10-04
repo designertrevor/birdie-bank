@@ -16,6 +16,8 @@ import { roundStakeLines } from '../lib/stakes.js';
 import { firstName, gameLabel, strokesLabel } from '../lib/format.js';
 import { payFields } from '../lib/pay.js';
 import { noMoneyNote, playForLine } from '../lib/play-for.js';
+import { money } from '../lib/golf.js';
+import { bigInvite } from '../lib/big-view.js';
 
 // A seat request survives the page being closed, so reopening the link keeps waiting
 const seatKey = code => `bb-seat:${code}`;
@@ -111,6 +113,8 @@ export default function JoinInvite({ code, onJoined, onSkip, setUp = false }) {
   // Everyone's avatar on the seats: the one their profile has, or the one the round carried (avatars.js)
   const faces = useGroupAvatars(meta?.players);
   const game = meta && GAMES[meta.game];
+  // A group's round in a Big Game reads as the game, not its own $0 stroke play (big-view.js)
+  const big = meta ? bigInvite(meta, money) : null;
   const host = typeof meta?.hostName === 'string' && meta.hostName.trim() ? firstName(meta.hostName) : null;
   // Seat requests go to whoever keeps score now, which may not be the organizer (see keeper.js)
   const keeperSeat = meta?.keeper?.id && Array.isArray(meta.players) ? meta.players.find(p => p?.id === meta.keeper.id) : null;
@@ -245,10 +249,12 @@ export default function JoinInvite({ code, onJoined, onSkip, setUp = false }) {
             <Avatar base="join-avatar" model={faces.get(seat.id)} name={seat.name} size="lg" />
             <h1 className="onboard-title join-h">You’re {firstName(seat.name)}</h1>
             <ul className="join-facts">
-              {handicaps && <li><Icon name="golf" fill /> {strokesLabel(seat.plays)}</li>}
+              {handicaps && !big && <li><Icon name="golf" fill /> {strokesLabel(seat.plays)}</li>}
+              {big && bigInvite(meta, money, seat.id)?.strokes && <li><Icon name="golf" fill /> {bigInvite(meta, money, seat.id).strokes}</li>}
               {team && <li><Icon name="users-three" fill /> {teamLine(team.name, mates)}</li>}
               {from != null && <li><Icon name="user-plus" fill /> Starts on hole {from}. Your money counts from there</li>}
-              <li><Icon name={game?.icon || 'golf'} fill /> {game ? gameLabel(meta) : 'Golf'} · {roundStakeLines(meta).map(l => l.line).join(' + ')}</li>
+              {big ? <li><Icon name="users-four" fill /> {big.title} · {big.bets}</li>
+                : <li><Icon name={game?.icon || 'golf'} fill /> {game ? gameLabel(meta) : 'Golf'} · {roundStakeLines(meta).map(l => l.line).join(' + ')}</li>}
               {/* Your own side bets, so nobody walks onto the tee not knowing they have one */}
               {inviteBetLines(meta, seat.id).map(l => <li key={l}><Icon name="hand-coins" fill /> Side bet: {l}</li>)}
             </ul>
@@ -316,11 +322,12 @@ export default function JoinInvite({ code, onJoined, onSkip, setUp = false }) {
           <div className="ic-from">
             {host ? <><Avatar base="join-avatar" model={faces.get(hostSeat?.id)} name={host} size="sm" /> <span><strong>{host}</strong> invited you</span></> : <span>You’re invited</span>}
           </div>
-          <div className="ic-game"><Icon name={game?.icon || 'golf'} fill /> {game ? gameLabel(meta) : 'Golf'}</div>
+          <div className="ic-game"><Icon name={big ? 'users-four' : game?.icon || 'golf'} fill /> {big ? big.title : game ? gameLabel(meta) : 'Golf'}</div>
           <div className="ic-course">{meta.course?.name} · {meta.holes.length} holes</div>
           {playForLine(meta) && <div className="ic-playfor"><Icon name={meta.playFor?.kind === 'reward' ? 'gift' : 'trophy'} fill /> {playForLine(meta)}</div>}
           <dl className="ic-facts">
-            <div><dt>Bets</dt><dd>{roundStakeLines(meta).map(l => l.line).filter(Boolean).join(' + ') || '–'}</dd></div>
+            {big ? <div><dt>The Big Game</dt><dd>{big.players} players in {big.groups} groups · {big.bets}</dd></div>
+              : <div><dt>Bets</dt><dd>{roundStakeLines(meta).map(l => l.line).filter(Boolean).join(' + ') || '–'}</dd></div>}
             {inviteBetLines(meta).length > 0 && <div><dt>Side bets</dt><dd>{inviteBetLines(meta).join('; ')}</dd></div>}
             <div>
               <dt>Who’s in</dt>

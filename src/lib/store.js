@@ -81,6 +81,8 @@ function fresh() {
     tripExpenses: {},  // trip expenses, yours and friends': { id: expense } (see trip-expenses.js), synced in the profile
     cupRemote: {},     // a team points trip's matches and stake marks from the server, by trip and row (see cup-sync.js)
     cupPaid: {},       // the stake payments you marked for each team points trip (see cup.js), synced in the profile
+    bigCards: {},      // a Big Game's other groups' rounds, as read from their live rounds: { tripId: { code: card } } (see big-sync.js)
+    bigRemote: {},     // the organizer's copy of each Big Game, from the server: { tripId: record } (see big-sync.js)
     usuals: [],        // saved "usual" setups, at most 5 (see usuals.js); an array, so never inside settings
     links: {},         // "Same person as...": { aliasId: keptId } (see people-links.js)
     unlinks: [],       // "Not the same person": [[a, b]] pairs that stay apart (see people-links.js)

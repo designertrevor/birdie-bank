@@ -66,6 +66,8 @@ const Lately = screen(() => import('./screens/Lately.jsx'));
 const trip = () => import('./screens/Trip.jsx');
 const Trip = screen(trip);
 const TripSettle = screen(trip, 'TripSettle');
+const BigGame = screen(() => import('./screens/BigGame.jsx'));
+const BigGameSetup = screen(() => import('./screens/BigGameSetup.jsx'));
 
 /** A plan link (?plan=CODE, &p=WHO for one person's own) waiting to open: { code, who } or null. */
 function pendingPlanLink() {
@@ -111,7 +113,7 @@ const SCREENS = {
   settings: Settings, defaults: Defaults, courses: Courses, courseEdit: CourseEdit, about: About, suggest: Suggest,
   plan: Plan, rollCall: RollCall, planLink: PlanLink, preview: Preview, paywall: Paywall, season: Season,
   challenge: Challenge, challengeLink: ChallengeLink,
-  joinInvite: JoinInviteScreen, lately: Lately, trip: Trip, tripSettle: TripSettle,
+  joinInvite: JoinInviteScreen, lately: Lately, trip: Trip, tripSettle: TripSettle, bigGame: BigGame, bigGameSetup: BigGameSetup,
   profile: Profile, stats: Stats,
 };
 // Settings lives behind the avatar on Up next, so it's a pushed screen rather than a tab

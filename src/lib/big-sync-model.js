@@ -9,6 +9,7 @@ import { handOff, keeperOf } from './keeper.js';
 import { codeOf } from './pair-debts.js';
 import { holeComplete } from './round.js';
 import { isoDate } from './plans.js';
+import { payFields } from './pay.js';
 
 const DAY = 864e5;
 /** Another group's round is read again until this long after the game's day, for scores fixed after it ended. */
@@ -43,7 +44,8 @@ export function toCard(meta, holes, now = Date.now()) {
   const r = assemble(meta, holes);
   return {
     id: r.id, status: r.status, createdAt: r.createdAt || 0, finishedAt: r.finishedAt || null,
-    players: (r.players || []).map(p => ({ id: p.id, name: p.name, courseHc: p.courseHc ?? null, plays: p.plays ?? 0, tee: p.tee ?? null })),
+    // Their payment app rides along too, so a phone in another group can pay them
+    players: (r.players || []).map(p => ({ id: p.id, name: p.name, courseHc: p.courseHc ?? null, plays: p.plays ?? 0, tee: p.tee ?? null, ...payFields(p) })),
     holes: r.holes || [], scores: r.scores || {}, left: r.left || {}, ...(r.joined ? { joined: r.joined } : {}),
     keeper: r.keeper || null, hostName: r.hostName || null, onApp: r.onApp || {}, trip: r.trip || null,
     ...(r.shareCode ? { shareCode: r.shareCode } : {}), fetchedAt: now,

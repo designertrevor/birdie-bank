@@ -26,6 +26,7 @@ import { applyUpdate, useUpdateReady } from '../lib/sw-update.js';
 import { TripSheet, TripUpNext } from '../components/Trips.jsx';
 import { currentTrips } from '../lib/trips.js';
 import { useTripPlans } from '../lib/trip-plan-sync.js';
+import { useBigSync } from '../lib/big-sync.js';
 import { currentRecap } from '../lib/recap.js';
 import { callouts } from '../lib/callouts.js';
 import { CalloutsCard, RecapCard } from '../components/Recap.jsx';
@@ -42,6 +43,8 @@ export default function UpNext() {
   const state = useStore();
   useTripPlans();
   useCupSync();
+  // A Big Game's other groups (big-sync.js)
+  useBigSync();
   // (A join link opened by someone already set up goes straight to the invite card: see App.)
   const [joining, setJoining] = useState(false);
   const live = activeRounds(state);
@@ -93,7 +96,7 @@ export default function UpNext() {
               <div className="resume-pulse" aria-hidden="true" />
               <div className="row-main">
                 <div className="bl" style={{ color: 'rgba(255,255,255,.8)' }}>{played ? 'Round in progress' : 'Ready to tee off'}</div>
-                <div className="d" style={{ fontSize: 20, fontWeight: 800 }}>{gameLabel(r)} · {r.course.name}</div>
+                <div className="d" style={{ fontSize: 20, fontWeight: 800 }}>{r.trip?.format === 'big' ? r.trip.name : gameLabel(r)} · {r.course.name}</div>
                 <div style={{ fontSize: 13, opacity: 0.85 }}>{played} of {r.holes.length} holes · {r.players.map(p => p.name.split(' ')[0]).join(', ')}</div>
               </div>
               <span className="resume-go"><Icon name="play" fill /></span>
@@ -224,6 +227,7 @@ function PlanNext({ last, fresh, planned = false, trip = false }) {
         )}
         <button className="pc-btn ghost" onClick={() => nav.push('newRound', { ahead: true })}><Icon name="calendar-plus" /> Plan ahead</button>
         {trip && <button className="pc-btn ghost" onClick={() => setTripping(true)}><Icon name="suitcase-rolling" /> Start a trip</button>}
+        <button className="pc-btn ghost" onClick={() => nav.push('bigGameSetup')}><Icon name="users-four" /> Big Game</button>
       </div>
       <TripSheet open={tripping} onClose={() => setTripping(false)} onDone={t => { setTripping(false); nav.push('trip', { id: t.id }); }} />
     </div>

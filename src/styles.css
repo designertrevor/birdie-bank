@@ -2408,3 +2408,38 @@ button.ch-main:active { transform: scale(.98); }
 /* o7a fix: the money bar head keeps a gap between its two labels at phone width */
 .mb-head { gap: 12px; }
 .mb-head > span:last-child { text-align: right; }
+
+/* ---------- The Big Game: several groups, one game (o8 biggame) ---------- */
+/* The group's round bar, in place of a money bar when the round has no money of its own */
+.money-bar.big-bar .mb-d { white-space: normal; line-height: 1.25; }
+/* A group's round with money of its own: one line to the game's board */
+.big-link { display: flex; align-items: center; gap: 8px; width: calc(100% - 32px); margin: 6px 16px 0; padding: 10px 14px; min-height: 44px; border: none; border-radius: 16px; background: var(--surface); color: var(--ink); font: inherit; font-size: 14px; font-weight: 600; text-align: left; cursor: pointer; }
+.big-link i:first-child { color: var(--pink-text); font-size: 18px; flex-shrink: 0; }
+.big-link i:last-child { margin-left: auto; color: var(--mute); }
+/* Leaderboards across the field */
+.big-table .tr-amt { font-variant-numeric: tabular-nums; }
+.big-table .tr-rank { width: 26px; }
+.big-table .trip-row > i { color: var(--pink-text); font-size: 18px; }
+.trip-row.big-bet { width: 100%; border: none; background: none; font: inherit; color: inherit; text-align: left; cursor: pointer; }
+.trip-row.big-bet > i { color: var(--mute); }
+.big-card-table th, .big-card-table td { padding: 6px 4px; text-align: center; }
+.big-card-table td.pos { color: var(--win); }
+.big-card-table td.neg { color: var(--loss); }
+/* Each group at a glance */
+.ledger-row.big-group { align-items: center; }
+.ledger-row.big-group:disabled { cursor: default; opacity: 1; }
+.big-group-st { font-weight: 600; }
+.big-group-st.live { color: var(--pink-text); }
+.big-group-st.waiting { color: var(--mute); font-style: italic; }
+.big-line { margin: 0 0 8px; font-size: 15px; line-height: 1.45; color: var(--body); overflow-wrap: anywhere; }
+.big-line b { color: var(--ink); }
+/* A stepper: strokes in a side bet, how many groups */
+.big-strokes { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.big-strokes .icon-btn { min-width: 44px; min-height: 44px; }
+.big-strokes-txt { min-width: 92px; text-align: center; font-weight: 700; color: var(--ink); font-variant-numeric: tabular-nums; }
+/* Setup's groups and teams */
+.big-group-head { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; margin-bottom: 10px; flex-wrap: wrap; }
+.big-group-head .d { font-size: 18px; font-weight: 800; color: var(--ink); }
+.big-setup-group .field-label { margin-top: 4px; }
+.big-team-row { padding: 4px 0; }
+.big-team-row .tr-sub { display: block; margin-bottom: 6px; }

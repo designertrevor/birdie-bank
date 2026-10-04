@@ -540,6 +540,12 @@ function GameStep({ usual, onUsual, onPickUsual, planning, onPlan, game, setGame
             ))}
           </div>
         ))}
+        {/* More than one group (8 to 20 players): one game across every group (BigGameSetup.jsx) */}
+        {!planning && (
+          <button className="quiet-row" onClick={() => nav.push('bigGameSetup')}>
+            <Icon name="users-four" /> <span>More than one group? <u>Set up a Big Game</u></span>
+          </button>
+        )}
         <button className="quiet-row" onClick={() => nav.push('suggest', { kind: 'game' })}>
           <Icon name="chat-circle-dots" /> <span>Don’t see your game? <u>Tell us how it’s played</u></span>
         </button>
@@ -560,7 +566,7 @@ function GameStep({ usual, onUsual, onPickUsual, planning, onPlan, game, setGame
 // else already picked stay put (only the top screen is mounted). Loaded with Settings on first use.
 const CourseEdit = lazy(() => import('./Settings.jsx').then(m => ({ default: m.CourseEdit })));
 
-function CourseStep({ editor, openEditor, closeEditor, courseId, setCourseId, holesCount, nine, setNine, onNext, top = null, nextLabel = 'Next: Players', nextIcon = 'arrow-right' }) {
+export function CourseStep({ editor, openEditor, closeEditor, courseId, setCourseId, holesCount, nine, setNine, onNext, top = null, nextLabel = 'Next: Players', nextIcon = 'arrow-right' }) {
   const state = useStore();
   const [q, setQ] = useState('');
   const courses = allCourses(state);
@@ -788,7 +794,7 @@ function PlayersStep({ game, course, holesCount, nine, picked, setPicked, tees, 
   );
 }
 
-function QuickAddPlayer({ open, onClose, onAdded }) {
+export function QuickAddPlayer({ open, onClose, onAdded }) {
   const state = useStore();
   const [name, setName] = useState('');
   const [index, setIndex] = useState(null);

@@ -15,6 +15,12 @@ import { countsMoney, unitFmt } from '../lib/play-for.js';
 
 const first = n => String(n || '').trim().split(/\s+/)[0] || '?';
 const cls = v => (v > 0 ? 'pos' : v < 0 ? 'neg' : 'zero');
+/** What the money that isn't a round's is called: trip expenses, the cup, a Big Game, or a mix of them. */
+const tripMoneyLabel = list => {
+  const big = list.some(x => x.expense.big);
+  if (big) return list.some(x => !x.expense.big) ? 'Trips and Big Games' : 'The Big Game';
+  return list.some(x => x.expense.stake) ? 'Trip expenses and the cup' : 'Trip expenses';
+};
 
 /** One line of a breakdown: "Banker +$4", a side bet marked as one. */
 function Item({ x, fmt }) {
@@ -111,7 +117,7 @@ export function TabWhereFrom({ other }) {
               {w.totals.length > 0 ? <ul className="wf-list">{w.totals.map(x => <Item key={x.group} x={{ ...x, bet: x.group.startsWith('bet:') }} fmt={money} />)}</ul>
                 : <p className="hint-card"><Icon name="handshake" fill /> All square on every game.</p>}
               <div className="wf-sum"><span>From your rounds</span><strong className={cls(w.net)}>{money(w.net, { sign: true })}</strong></div>
-              {w.spent !== 0 && <div className="wf-sum sub"><span>{w.expenses.some(x => x.expense.stake) ? 'Trip expenses and the cup' : 'Trip expenses'}</span><strong className={cls(w.spent)}>{money(w.spent, { sign: true })}</strong></div>}
+              {w.spent !== 0 && <div className="wf-sum sub"><span>{tripMoneyLabel(w.expenses)}</span><strong className={cls(w.spent)}>{money(w.spent, { sign: true })}</strong></div>}
               {w.paid !== 0 && <div className="wf-sum sub"><span>{w.paid > 0 ? `${f} paid you` : `You paid ${f}`}</span><strong>{money(-w.paid, { sign: true })}</strong></div>}
               <div className="wf-sum"><span>{onTab > 0 ? `${f} pays you now` : onTab < 0 ? `You pay ${f} now` : 'On the Tab now'}</span><strong className={cls(onTab)}>{onTab ? money(Math.abs(onTab)) : 'Square'}</strong></div>
               <p className="field-help pad">The Tab squares everyone in the fewest payments, so what you pay each other now can differ from what you won or lost with {f}.</p>
@@ -125,14 +131,14 @@ export function TabWhereFrom({ other }) {
                   <div className="wf-rline">{breakdownLine(x.items, money)}</div>
                 </div>
               ))}
-              {w.expenses.length > 0 && <div className="sec-label">{w.expenses.some(x => x.expense.stake) ? 'Trip expenses and the cup' : 'Trip expenses'}</div>}
+              {w.expenses.length > 0 && <div className="sec-label">{tripMoneyLabel(w.expenses)}</div>}
               {w.expenses.map(x => (
                 <div key={x.expense.id} className="wf-round">
                   <div className="wf-rhead">
                     <span>{x.expense.what} · {shortDate(x.at)}</span>
                     <strong className={cls(x.amount)}>{money(x.amount, { sign: true })}</strong>
                   </div>
-                  <div className="wf-rline">{x.expense.stake ? (x.amount > 0 ? `Your team won the cup, ${f} pays the stake` : `${f}’s team won the cup, you pay the stake`) : x.amount > 0 ? `You paid, ${f}’s share` : `${f} paid, your share`}</div>
+                  <div className="wf-rline">{x.expense.big ? (x.amount > 0 ? `${f} pays you from the Big Game` : `You pay ${f} from the Big Game`) : x.expense.stake ? (x.amount > 0 ? `Your team won the cup, ${f} pays the stake` : `${f}’s team won the cup, you pay the stake`) : x.amount > 0 ? `You paid, ${f}’s share` : `${f} paid, your share`}</div>
                 </div>
               ))}
             </>
