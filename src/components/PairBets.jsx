@@ -137,7 +137,8 @@ export function BetEditor({ round, bet = null, fromPos = 1, onSave, onRemove = n
             {QUICK.map(v => (
               <button key={v} role="radio" aria-checked={stake === v} className={`pill-btn ${stake === v ? 'on' : ''}`} onClick={() => setStake(v)}>{fmt(v)}</button>
             ))}
-            <button className={`pill-btn ${QUICK.includes(stake) ? '' : 'on'}`} onClick={() => setPad(true)}>{QUICK.includes(stake) ? 'Other' : fmt(stake)}</button>
+            <button role="radio" aria-checked={!QUICK.includes(stake)} className={`pill-btn ${QUICK.includes(stake) ? '' : 'on'}`} onClick={() => setPad(true)}
+              aria-label={QUICK.includes(stake) ? 'Another amount' : `${fmt(stake)}. Change it`}>{QUICK.includes(stake) ? 'Other' : fmt(stake)}</button>
           </div>
 
           <div className="field-label" id="pb-holes">Holes</div>

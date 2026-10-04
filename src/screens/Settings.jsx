@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Empty, Header, Icon, Numpad, Screen, Segmented, Toggle, useUI } from '../components/ui.jsx';
+import { Empty, FileButton, Header, Icon, Numpad, Screen, Segmented, Toggle, useUI } from '../components/ui.jsx';
 import { RulesSheet } from '../components/Rules.jsx';
 import { Avatar } from '../components/Avatar.jsx';
 import { ProfilePrivacy } from '../components/ProfilePrivacy.jsx';
@@ -148,12 +148,11 @@ export default function Settings() {
         </div>
         <div className="sec-label">Your data</div>
         {row('export', 'Back up your data', 'Save rounds, players, courses and payments to a file', backup)}
-        <label className="set-row" htmlFor="restore-file" role="button" tabIndex={0}>
+        <FileButton id="restore-file" className="set-row" accept="application/json,.json" onPick={restore}>
           <div className="set-icon"><Icon name="download-simple" fill /></div>
           <div className="row-main"><div className="set-name">Restore from a backup</div><div className="set-sub">Add what’s missing, or replace everything</div></div>
           <span className="chevron"><Icon name="caret-right" /></span>
-        </label>
-        <input id="restore-file" type="file" accept="application/json,.json" hidden onChange={restore} />
+        </FileButton>
         {PAYWALL_ON && isOrganizer(state) && <>
           <div className="sec-label">Your plan</div>
           {row('star', 'Birdie Bank Pro', planStatus(state), () => nav.push('paywall', { source: 'settings' }))}
@@ -292,6 +291,8 @@ function sourceLabel(s) {
 }
 
 const TEE_COLORS = ['#1a1a1a', '#2f6fd6', '#f2f2f2', '#e8b94a', '#d64545', '#2c8c66'];
+// What a screen reader says for each swatch, never the color code
+const TEE_COLOR_NAMES = { '#1a1a1a': 'Black', '#2f6fd6': 'Blue', '#f2f2f2': 'White', '#e8b94a': 'Gold', '#d64545': 'Red', '#2c8c66': 'Green' };
 
 function blankCourse(n = 18) {
   return {
@@ -384,7 +385,7 @@ export function CourseEdit({ id, prefill = null, onDone = null }) {
           <input id="cn" className="name-input" value={c.name} onChange={e => setC({ ...c, name: e.target.value })} placeholder="e.g. Birch Creek GC" />
           <label className="field-label" htmlFor="cc">City</label>
           <input id="cc" className="text-input" value={c.city || ''} onChange={e => setC({ ...c, city: e.target.value })} placeholder="City, State" />
-          <label className="field-label">Holes</label>
+          <div className="field-label" aria-hidden="true">Holes</div>
           <Segmented label="Holes" value={n} onChange={setHoles} options={[{ value: 9, label: '9' }, { value: 18, label: '18' }]} />
         </div>
 
@@ -417,7 +418,7 @@ export function CourseEdit({ id, prefill = null, onDone = null }) {
             </div>
             <div className="color-row" role="radiogroup" aria-label="Tee color">
               {TEE_COLORS.map(col => (
-                <button key={col} role="radio" aria-checked={t.color === col} aria-label={col} className={`swatch ${t.color === col ? 'on' : ''}`} style={{ background: col }}
+                <button key={col} role="radio" aria-checked={t.color === col} aria-label={TEE_COLOR_NAMES[col]} className={`swatch ${t.color === col ? 'on' : ''}`} style={{ background: col }}
                   onClick={() => setC(x => { const y = structuredClone(x); y.tees[ti].color = col; return y; })} />
               ))}
             </div>

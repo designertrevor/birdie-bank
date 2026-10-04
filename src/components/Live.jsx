@@ -75,7 +75,7 @@ export function ShareSheet({ round, open, onClose }) {
         <div style={{ padding: '0 16px' }}>
           <div className="code-card">
             <div className="bl">Round code</div>
-            <div className="code-big" aria-label={code.split('').join(' ')}>{code}</div>
+            <div className="code-big" role="img" aria-label={code.split('').join(' ')}>{code}</div>
             <div className="code-link">{link.replace(/^https?:\/\//, '')}</div>
           </div>
           {round.shared.ended && <p className="field-error" style={{ textAlign: 'center' }}>The scorekeeper stopped sharing this round.</p>}

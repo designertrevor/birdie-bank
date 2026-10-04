@@ -172,7 +172,8 @@ export function ChallengeMaker({ open, onClose, from, people, whens, holesCount 
             {CHALLENGE_STAKES.map(v => (
               <button key={v} role="radio" aria-checked={stake === v} className={`pill-btn ${stake === v ? 'on' : ''}`} onClick={() => setStake(v)}>{fmt(v)}</button>
             ))}
-            <button className={`pill-btn ${CHALLENGE_STAKES.includes(stake) ? '' : 'on'}`} onClick={() => setPad(true)}>{CHALLENGE_STAKES.includes(stake) ? 'Other' : fmt(stake)}</button>
+            <button role="radio" aria-checked={!CHALLENGE_STAKES.includes(stake)} className={`pill-btn ${CHALLENGE_STAKES.includes(stake) ? '' : 'on'}`} onClick={() => setPad(true)}
+              aria-label={CHALLENGE_STAKES.includes(stake) ? 'Another amount' : `${fmt(stake)}. Change it`}>{CHALLENGE_STAKES.includes(stake) ? 'Other' : fmt(stake)}</button>
           </div>
           {nines && (
             <>

@@ -133,12 +133,13 @@ export default function Profile() {
         <div className="sec-label">Your details</div>
         <div className="block">
           <label className="field-label" htmlFor="pf-name">Name</label>
-          <input id="pf-name" className="name-input" value={name} maxLength={24} onChange={e => setName(e.target.value)} placeholder="Your name" />
-          {duplicate && <p className="field-error">Someone you play with has that name. Add an initial so scorecards stay clear.</p>}
-          <label className="field-label">Handicap index <span className="opt">optional</span></label>
+          <input id="pf-name" className="name-input" value={name} maxLength={24} onChange={e => setName(e.target.value)} placeholder="Your name"
+            aria-invalid={duplicate || undefined} aria-describedby={duplicate ? 'pf-name-err' : undefined} />
+          {duplicate && <p className="field-error" id="pf-name-err" role="status">Someone you play with has that name. Add an initial so scorecards stay clear.</p>}
+          <div className="field-label">Handicap index <span className="opt">optional</span></div>
           <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
-            <button className="amt-btn" onClick={() => setPad(true)}>{index == null ? 'Add' : formatIndex(index)}</button>
-            {index != null && <button className="header-btn" onClick={() => setIndex(null)}>Clear</button>}
+            <button className="amt-btn" onClick={() => setPad(true)} aria-label={index == null ? 'Handicap index: add one' : `Handicap index ${formatIndex(index)}. Change it`}>{index == null ? 'Add' : formatIndex(index)}</button>
+            {index != null && <button className="header-btn" onClick={() => setIndex(null)} aria-label="Clear the handicap index">Clear</button>}
           </div>
           <div className="field-label" id="pf-home">Home course <span className="opt">optional</span></div>
           <button className="pf-home" aria-labelledby="pf-home" aria-describedby="pf-home-v" onClick={() => setHome(true)}>

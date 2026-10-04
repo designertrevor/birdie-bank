@@ -2,7 +2,7 @@
 // initials on a color. Opened from
 // your profile. Every path ends on the same save, and friends see it on seats, the Tab and results.
 import { useEffect, useRef, useState } from 'react';
-import { Icon, Segmented, Sheet, useUI } from './ui.jsx';
+import { FileButton, Icon, Segmented, Sheet, useUI } from './ui.jsx';
 import { AvatarArt } from './Avatar.jsx';
 import { BuddyArt } from './BuddyArt.jsx';
 import { BACKDROPS, BUDDIES, SHELVES, avatarModel, buddyAvatar, buddyOf, initialsAvatar, initialsOf, shelfOf } from '../lib/avatars.js';
@@ -123,8 +123,7 @@ function PickerBody({ onClose }) {
       )}
       {tab === 'photo' && (
         <div className="av-pane">
-          <label className="full-btn outline av-file" htmlFor="av-file"><Icon name="camera" /> {file || hasPhoto ? 'Choose another photo' : 'Choose a photo'}</label>
-          <input id="av-file" type="file" accept="image/*" hidden onChange={pickFile} />
+          <FileButton id="av-file" className="full-btn outline av-file" onPick={pickFile}><Icon name="camera" /> {file || hasPhoto ? 'Choose another photo' : 'Choose a photo'}</FileButton>
           <p className="field-help">Any photo, cropped to the middle square. {acct.user ? 'People you play with see it.' : 'It stays on this phone until you sign in.'}</p>
           {hasPhoto && !file && <button type="button" className="link-btn av-remove" disabled={busy} onClick={dropPhoto}>Remove my photo</button>}
         </div>

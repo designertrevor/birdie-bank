@@ -80,7 +80,8 @@ export function HandicapsSheet({ round, onClose }) {
                           ))}
                         </div>
                       )}
-                      <button className={`hc-chip ${none ? 'missing' : ''}`} onClick={() => setPadFor(p.id)}>
+                      <button className={`hc-chip ${none ? 'missing' : ''}`} onClick={() => setPadFor(p.id)}
+                        aria-label={`${p.name}’s ${round.holesCount === 9 ? '9-hole handicap' : 'course handicap'}: ${hcText(p.courseHc ?? 0)}${none ? ', none, plays as 0' : p.courseHcOverride != null ? ', edited' : ''}. Change it`}>
                         {round.holesCount === 9 ? '9-hole handicap' : 'Course handicap'} <strong>{hcText(p.courseHc ?? 0)}</strong>{none ? ' · none, plays as 0' : p.courseHcOverride != null ? ' · edited' : ''} <Icon name="pencil-simple" />
                       </button>
                     </div>

@@ -48,9 +48,10 @@ export function RecapCard({ recap }) {
           </div>
           <ul className="sq-people">
             {paid.people.map(p => (
-              <li key={p.id} className={`sq-p ${p.status}`} aria-label={`${p.name}: ${STATUS_WORD[p.status].toLowerCase()}`}>
+              <li key={p.id} className={`sq-p ${p.status}`}>
                 <Avatar model={faces.get(p.id)} />
                 <span className="sq-word" aria-hidden="true">{STATUS_WORD[p.status]}</span>
+                <span className="sr-only">{p.name}: {STATUS_WORD[p.status].toLowerCase()}</span>
               </li>
             ))}
           </ul>

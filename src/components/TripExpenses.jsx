@@ -262,7 +262,7 @@ function ExpenseForm({ expense, st, me, full, short, onDone }) {
 
   return (
     <div className="block exp-form">
-      <label className="field-label" htmlFor="exp-what">What was it? <span className="opt">(optional)</span></label>
+      <label className="field-label" htmlFor="exp-what">What was it? <span className="opt">optional</span></label>
       <input id="exp-what" className="text-input" value={what} onChange={e => setWhat(e.target.value)} maxLength={40} placeholder="Dinner, gas, the house" autoFocus={!expense} />
       <div className="exp-chips" role="group" aria-label="Quick picks">
         {QUICK_WHATS.map(w => <button key={w} type="button" className={`pill-btn sm ${what === w ? 'on' : ''}`} aria-pressed={what === w} onClick={() => setWhat(w)}>{w}</button>)}
@@ -271,7 +271,7 @@ function ExpenseForm({ expense, st, me, full, short, onDone }) {
       <label className="field-label" htmlFor="exp-amount">How much?</label>
       <div className="exp-money">
         <span className="exp-dollar" aria-hidden="true">$</span>
-        <input id="exp-amount" className="text-input" inputMode="decimal" value={amountText} onChange={e => setAmountText(e.target.value)} placeholder="0.00" aria-invalid={badAmount || undefined} aria-describedby="exp-amount-help" />
+        <input id="exp-amount" className="text-input" inputMode="decimal" value={amountText} onChange={e => setAmountText(e.target.value)} placeholder="0.00" aria-invalid={badAmount || undefined} aria-describedby={badAmount ? 'exp-amount-help' : undefined} />
       </div>
       {badAmount && <p className="field-help err" id="exp-amount-help">An amount up to $99,999.99, to the cent.</p>}
 
@@ -326,9 +326,9 @@ function ExpenseForm({ expense, st, me, full, short, onDone }) {
 
       {others.length > 0 && (more ? (
         <>
-          <div className="field-label">Someone else from Players</div>
-          <div className="exp-chips">
-            {others.map(id => <button key={id} type="button" className="pill-btn sm" onClick={() => addPerson(id)}><Icon name="plus" /> {first(nameOf(state, id))}</button>)}
+          <div className="field-label" id="exp-more">Someone else from Players</div>
+          <div className="exp-chips" role="group" aria-labelledby="exp-more">
+            {others.map(id => <button key={id} type="button" className="pill-btn sm" onClick={() => addPerson(id)} aria-label={`Add ${nameOf(state, id)} to it`}><Icon name="plus" /> {first(nameOf(state, id))}</button>)}
           </div>
         </>
       ) : (
