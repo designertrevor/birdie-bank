@@ -213,6 +213,17 @@ function ExpenseForm({ expense, st, me, full, short, onDone }) {
   const people = split === 'equal' ? pool.filter(id => inSplit.has(id)).map(id => ({ id, part: null }))
     : split === 'amounts' ? pool.filter(id => parseAmount(amounts[id]) > 0).map(id => ({ id, part: parseAmount(amounts[id]) }))
     : pool.filter(id => (shares[id] || 0) > 0).map(id => ({ id, part: shares[id] }));
+  // Who's in goes along to the other kind of split: someone left out of an equal split gets no
+  // shares (and the other way round), so nobody comes back in without a tap
+  const changeSplit = next => {
+    if (next === split) return;
+    const inIt = new Set(people.map(p => p.id));
+    if (inIt.size) {
+      if (next === 'equal') setInSplit(inIt);
+      if (next === 'shares') setShares(cur => Object.fromEntries(pool.map(id => [id, inIt.has(id) ? cur[id] || 1 : 0])));
+    }
+    setSplit(next);
+  };
   const assigned = people.reduce((a, p) => a + (split === 'amounts' ? p.part : 0), 0);
   const left = split === 'amounts' && total ? total - assigned : 0;
   const ok = !!total && !badAmount && !badParts && people.length > 0 && !!payer && (split !== 'amounts' || left === 0);
@@ -269,7 +280,7 @@ function ExpenseForm({ expense, st, me, full, short, onDone }) {
       </div>
 
       <div className="field-label" id="exp-split">Split it</div>
-      <Segmented label="Split it" className="press-mode-row" btn="pm-btn" value={split} onChange={setSplit}
+      <Segmented label="Split it" className="press-mode-row" btn="pm-btn" value={split} onChange={changeSplit}
         options={Object.entries(SPLITS).map(([value, label]) => ({ value, label }))} />
       <ul className="exp-people" aria-labelledby="exp-split">
         {pool.map(id => {
