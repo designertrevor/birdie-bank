@@ -490,7 +490,9 @@ test('money to a reward: the games stay off the Tab, so far someone wins it, and
   // Only Bo's $4 from Cy is still on the Tab
   assert.deepEqual(tabResults(lunch).balances, { a: 0, b: 4, c: -4, d: 0 });
   // The games' money comes off; what's left is the side bet
-  assert.equal(tabLine(r, lunch), 'The Tab moves: Bo +$10, Cy +$10, Dan +$5, Ann −$25. On it when the round’s done, so far: Bo +$4, Cy −$4');
+  assert.equal(tabLine(r, lunch), 'On the Tab when the round’s done, so far: Bo +$4, Cy −$4 (it was Ann +$25, Dan −$5, Bo −$6, Cy −$14)');
+  // And back to money: one set of numbers to read, and what it was
+  assert.equal(tabLine(lunch, r), 'On the Tab when the round’s done, so far: Ann +$25, Dan −$5, Bo −$6, Cy −$14 (it was Bo +$4, Cy −$4)');
   assert.match(standingLine(lunch), /^So far: Ann wins lunch\./);
   assert.equal(playForText(lunch), 'Lunch, last place buys');
   // Or the side bets go to points too: nothing's left on the Tab

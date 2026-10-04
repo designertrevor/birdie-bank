@@ -363,9 +363,10 @@ const listOf = (xs, fmt) => xs.map(x => `${first(x.name)} ${fmt(x.v, { sign: tru
  * What a change does to the Tab, in one plain line, or null when the Tab doesn't move. Only a
  * finished round goes on the Tab, so it says what this one will put there, from the holes so far:
  * "Goes on the Tab when the round's done: so far Ann +$4, Bob −$4", "Won't go on the Tab: so far
- * ...", or "The Tab moves: ... On it when the round's done, so far: ..." when it would go on before
- * and still does, by different amounts. Always worked out with tabResults(), so a reward round's
- * side bets for money count and nothing else does.
+ * ...", or "On the Tab when the round's done, so far: Ann +$9, Bob −$9 (it was Ann +$4, Bob −$4)"
+ * when it would go on before and still does, by different amounts: one set of numbers to read, and
+ * what it was. Always worked out with tabResults(), so a reward round's side bets for money count
+ * and nothing else does.
  */
 export function tabLine(before, after) {
   const was = nonZero(before, tabResults(before).balances);
@@ -374,8 +375,10 @@ export function tabLine(before, after) {
   if (!now.length) return `Won’t go on the Tab: so far ${listOf(was, money)}`;
   if (!was.length) return `Goes on the Tab when the round’s done: so far ${listOf(now, money)}`;
   const a = tabResults(before).balances, b = tabResults(after).balances;
-  const moved = after.players.map(p => ({ id: p.id, name: p.name, v: cents((b[p.id] || 0) - (a[p.id] || 0)) })).filter(x => x.v !== 0).sort((x, y) => y.v - x.v);
-  return moved.length ? `The Tab moves: ${listOf(moved, money)}. On it when the round’s done, so far: ${listOf(now, money)}` : null;
+  const moved = after.players.some(p => cents((b[p.id] || 0) - (a[p.id] || 0)) !== 0);
+  if (!moved) return null;
+  const when = after.status === 'done' ? 'On the Tab now' : 'On the Tab when the round’s done, so far';
+  return `${when}: ${listOf(now, money)} (it was ${listOf(was, money)})`;
 }
 
 /**
