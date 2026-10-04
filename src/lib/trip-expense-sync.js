@@ -10,7 +10,7 @@ import { getState, update } from './store.js';
 import { getSupabase, supabaseConfigured } from './supabase.js';
 import { isMissingTable } from './plan-adapters.js';
 import { codeOf } from './pair-debts.js';
-import { canEditExpense, cleanExpense, mergeExpenses } from './trip-expenses.js';
+import { expensesToSend, mergeExpenses } from './trip-expenses.js';
 import { tripsOf } from './trips.js';
 
 const localFlag = () => { try { return localStorage.getItem('bb-sync-local') === '1'; } catch { return false; } };
@@ -118,16 +118,8 @@ export function refreshExpenses() {
     try {
       const rows = await adapter.fetch(ids);
       keep(rows.map(x => x.expense));
-      const there = new Map(rows.map(x => [x.expense.id, x]));
-      const s = getState();
-      for (const raw of Object.values(s.tripExpenses || {})) {
-        const e = cleanExpense(raw);
-        if (!e || !trips.has(e.tripId) || !canEditExpense(s, { by: e.by })) continue;
-        const codes = [...trips.get(e.tripId)].slice(0, 100);
-        const have = there.get(e.id);
-        const theirs = have ? cleanExpense(have.expense) : null;
-        const newCodes = !have || codes.some(c => !(have.codes || []).includes(c));
-        if ((theirs && theirs.updatedAt >= e.updatedAt && !newCodes) || refused.has(`${e.id}|${e.updatedAt}`)) continue;
+      for (const { expense: e, codes } of expensesToSend(getState(), rows, trips)) {
+        if (refused.has(`${e.id}|${e.updatedAt}`)) continue;
         try { await adapter.save(e, codes); } catch (err) {
           if (err instanceof RefusedError) { refused.add(`${e.id}|${e.updatedAt}`); console.warn('Trip expenses: the server refused one', e.id, err.cause); continue; }
           throw err;

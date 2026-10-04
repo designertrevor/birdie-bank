@@ -303,3 +303,25 @@ export function expensesBetween(state, isMine, isThem) {
   }
   return out.sort((a, b) => b.at - a.at);
 }
+
+/**
+ * Which of this phone's own expenses to send up, given the server's rows ([{ expense, codes }]) and
+ * the round codes this phone has for each trip it knows (Map(tripId -> Set of codes)): the ones the
+ * server doesn't have, has an older copy of, or has without a round code this phone now knows (so
+ * the people in that round can read it). Returns [{ expense, codes }].
+ */
+export function expensesToSend(state, rows, tripCodes) {
+  const there = new Map(rows.map(x => [x.expense?.id, x]));
+  const out = [];
+  for (const raw of Object.values(state.tripExpenses || {})) {
+    const e = cleanExpense(raw);
+    if (!e || !tripCodes.has(e.tripId) || !canEditExpense(state, { by: e.by })) continue;
+    const codes = [...tripCodes.get(e.tripId)].slice(0, 100);
+    const have = there.get(e.id);
+    const theirs = have ? cleanExpense(have.expense) : null;
+    const newCodes = !have || codes.some(c => !(have.codes || []).includes(c));
+    if (theirs && theirs.updatedAt >= e.updatedAt && !newCodes) continue;
+    out.push({ expense: e, codes });
+  }
+  return out;
+}

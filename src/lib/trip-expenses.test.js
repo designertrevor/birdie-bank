@@ -8,9 +8,9 @@ import { headToHeadSummary, outstanding, personStory, tabBalances, tabWith } fro
 import { breakdownWith } from './where-from.js';
 import { applyRows } from './shared-tab.js';
 import { buildPlan, cleanPlan, duePlan, planState, samePlan } from './trip-plan.js';
-import { canDeleteTrip, newTrip, tripPayment, tripStamp, tripStatus, tripsOf, currentTrips } from './trips.js';
+import { canDeleteTrip, myTripAllIn, newTrip, partPlan, tripPayment, tripStamp, tripStatus, tripsOf, currentTrips } from './trips.js';
 import {
-  allExpenses, cleanExpense, expenseMark, expenseTotals, mergeExpenses, parseAmount, personFor, resolveExpense, shareCents, splitLine, tripExpenses,
+  allExpenses, cleanExpense, expenseMark, expensesToSend, expenseTotals, mergeExpenses, parseAmount, personFor, resolveExpense, shareCents, splitLine, tripExpenses,
 } from './trip-expenses.js';
 import { applyDoc, toDocs } from './cloud-model.js';
 import { makeBackup, mergeBackup, parseBackup } from './backup.js';
@@ -254,6 +254,7 @@ test('a new expense waits with the rest of the Tab until the organizer’s phone
     const add = { t: -1500, b: 3000, c: -1500 }[k] || 0;
     assert.equal(myTotal(s), plain[k] + add, `${k}’s total has the drinks already`);
   }
+  agree(phones);
   const trip = tripsOf(phones.t).get('t_bandon');
   const v2 = duePlan(phones.t, trip, { now: NOW });
   assert.equal(v2.version, 2);
@@ -396,4 +397,39 @@ test('the story with a friend and Where it comes from list the expenses between 
   assert.equal(cents(w.open), cents(breakdownWith(base, mine, 'a').open) + 500);
   assert.deepEqual(w.expenses.map(x => x.amount), [-25, 30]);
   assert.equal(personStory(s, mine, 'c').spent, 0, 'Cal wasn’t in either');
+});
+
+test('each phone sends only its own expenses, and only when the server is behind', () => {
+  const phones = phonesOf(rounds5());
+  const mine = expense(phones.a, { id: 'x1', payer: 'za', people: ['za', 't'], amount: 40 });
+  const theirs = expense(phones.t, { id: 'x2', payer: 't', people: ['t', 'za'], amount: 20 });
+  const s = { ...phones.a, tripExpenses: { x1: mine, x2: theirs } };
+  const codes = new Map([['t_bandon', new Set(['AAAAAA', 'BBBBBB', 'CCCCCC'])]]);
+  assert.deepEqual(expensesToSend(s, [], codes).map(x => x.expense.id), ['x1'], 'never Trevor’s');
+  const up = [{ expense: mine, codes: ['AAAAAA', 'BBBBBB', 'CCCCCC'] }];
+  assert.deepEqual(expensesToSend(s, up, codes), [], 'the server has it as it is');
+  assert.equal(expensesToSend(s, [{ expense: mine, codes: ['AAAAAA'] }], codes).length, 1, 'a round code the server doesn’t have yet');
+  const changed = { ...s, tripExpenses: { ...s.tripExpenses, x1: { ...mine, amount: 44, updatedAt: mine.updatedAt + 1 } } };
+  assert.deepEqual(expensesToSend(changed, up, codes).map(x => x.expense.amount), [44]);
+  const gone = { ...s, tripExpenses: { ...s.tripExpenses, x1: { id: 'x1', tripId: 't_bandon', by: 'za', deleted: true, updatedAt: mine.updatedAt + 2 } } };
+  assert.equal(expensesToSend(gone, up, codes)[0].expense.deleted, true, 'a deletion goes up too');
+  assert.deepEqual(expensesToSend(s, [], new Map()), [], 'a trip this phone doesn’t know');
+});
+
+test('someone leaving early settles their part of the expenses too', () => {
+  const [r1, r2] = rounds5();
+  const phones = phonesOf([r1, r2]);
+  const sat = OCT(17, 12);
+  // The house, split five ways; Eve heads home after the first round
+  const house = expense(phones.t, { id: 'x1', payer: 't', people: ['t', 'a', 'b', 'c', 'e'], amount: 1000, what: 'The house', at: OCT(16, 8) });
+  share(phones, house);
+  publish(phones, buildPlan(phones.t, 't_bandon', { now: sat }));
+  const st = tripStatus(phones.e, 't_bandon', { now: sat });
+  const eve = partPlan(st.plan, 'ze');
+  const net = eve.reduce((a, t) => a + (t.to === 'ze' ? cents(t.amount) : -cents(t.amount)), 0);
+  assert.equal(net, cents(roundResults(r1).balances.e) - 20000, 'her golf less her share of the house');
+  assert.equal(cents(myTripAllIn(phones.e, st)), net);
+  for (const t of eve) deliver(phones, tripPayment(phones.e, 't_bandon', t.from, t.to, { now: sat + 1000, part: true }).rows);
+  assert.equal(partPlan(tripStatus(phones.e, 't_bandon', { now: sat + 2000 }).plan, 'ze').length, 0, 'Eve is square');
+  agree(phones);
 });
