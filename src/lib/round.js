@@ -433,12 +433,17 @@ export function playersToEnd(round) {
 
 /**
  * Whether `pid` can be marked as leaving: at least two players (or, in a scramble, two teams)
- * have to be left to play on.
+ * have to be left to play on. In alternate shot and Chapman one team also has to still have both partners.
  */
 export function canLeave(round, pid) {
   if (round.left?.[pid] != null) return false;
   const staying = playersToEnd(round).filter(p => p.id !== pid).map(p => p.id);
-  if (oneBall(round.game) && round.teams) return round.teams.filter(t => t.players.some(x => staying.includes(x))).length >= 2;
+  if (oneBall(round.game) && round.teams) {
+    // Alternate shot and Chapman take turns, so a team needs both partners to have a score box: keep at
+    // least one team whole, or the holes after would have nobody to score them
+    if (round.game !== 'scramble' && !round.teams.some(t => t.players.every(x => staying.includes(x)))) return false;
+    return round.teams.filter(t => t.players.some(x => staying.includes(x))).length >= 2;
+  }
   return staying.length >= 2;
 }
 

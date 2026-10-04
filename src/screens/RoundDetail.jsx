@@ -630,7 +630,8 @@ export function Scorecard({ round, current, onHole }) {
                 {out.map((h, k) => {
                   const g = round.scores[h.no]?.[p.id];
                   // A player who left shows an en dash on the holes after
-                  const gone = g == null && !(p.team ? p.players.some(pid => playsHole(round, pid, h)) : playsHole(round, p.id, h));
+                  // (an alternate shot or Chapman team needs both partners there, see scorers)
+                  const gone = g == null && !(p.team ? scorers(round, h).some(u => u.id === p.id) : playsHole(round, p.id, h));
                   const st = hc && !gone ? popsFor(round, p, h) : 0;
                   const tap = colProps(h.no);
                   return (
@@ -665,8 +666,9 @@ export function Scorecard({ round, current, onHole }) {
                     </td>
                   );
                 })}
-                <td className="tot">{played.length ? netText(played.reduce((a, r) => a + r.scores[i], 0)) : '–'}</td>
-                {anyStrokes && <td />}
+                {/* The team scores are net with handicaps on, so with strokes given they add up in the Net column */}
+                <td className="tot">{anyStrokes ? '' : played.length ? netText(played.reduce((a, r) => a + r.scores[i], 0)) : '–'}</td>
+                {anyStrokes && <td className="tot">{played.length ? netText(played.reduce((a, r) => a + r.scores[i], 0)) : '–'}</td>}
               </tr>
             );
           })}

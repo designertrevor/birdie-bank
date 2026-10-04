@@ -763,6 +763,10 @@ function SetupStep({ game, course, holesCount, nine, picked, setPicked, opts, se
     // A one-ball game's teams (arrays of player ids here), so a match or per-hole bet goes between players on different teams
     return { game, players, holes: inPlay, playFor, ...(oneBall(game) && teams ? { teams } : {}) };
   }, [course, holesCount, nine, startHole, picked, state.players, tees, defaultTee, hcOverride, game, playFor, teams]);
+  // Best two only counts with teams of three or four (createRound sets a pairs round back to best ball),
+  // so the bet line up top says how it will be played
+  const shownOpts = (game === 'bestball' || game === 'shamble') && opts[game]?.count === 2 && teams?.length && Math.min(...teams.map(t => t.length)) < 3
+    ? { ...opts, [game]: { ...opts[game], count: 1 } } : opts;
   const orderLabel = { wolf: 'Tee order: the wolf moves down this list', banker: 'Playing order', sixes: 'Order: sets who partners who' }[game] || 'Playing order';
 
   return (
@@ -770,8 +774,8 @@ function SetupStep({ game, course, holesCount, nine, picked, setPicked, opts, se
       <div className="scroll">
         <div className="block summary-card">
           <div className="li-sub">{gameLabel({ game, sideGames })} · {holesCount} holes</div>
-          <div className="d stake-big">{inUnits({ playFor }, stakeSummary(game, opts))}</div>
-          {sideGames.length > 0 && <div className="li-sub">{roundStakeLines({ game, settings: opts, sideGames, playFor }).slice(1).map(l => l.line).join(' + ')}</div>}
+          <div className="d stake-big">{inUnits({ playFor }, stakeSummary(game, shownOpts))}</div>
+          {sideGames.length > 0 && <div className="li-sub">{roundStakeLines({ game, settings: shownOpts, sideGames, playFor }).slice(1).map(l => l.line).join(' + ')}</div>}
           {playForLine({ playFor }) && <div className="li-sub">{playForLine({ playFor })}</div>}
           <div className="li-sub">{course.name}{holesCount === 9 && course.holes.length === 18 ? ` · ${nine === 'front' ? 'Front' : 'Back'} 9` : ''} · Par {holes.reduce((a, h) => a + h.par, 0)} · {picked.length} players</div>
         </div>

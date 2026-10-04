@@ -410,3 +410,24 @@ test('changing a team match to one bet clears the presses made on the old legs',
   odd.presses = [{ id: 'p2', leg: 'front', start: 3, by: 1 }];
   assert.deepEqual(bal(odd), { a: 10, b: 10, c: -10, d: -10 });
 });
+
+// ---------------------------------------------------------------------------
+// Review fixes (2026-10-03)
+
+test('review: in alternate shot and Chapman one team keeps both partners, so the holes after always have a score box', () => {
+  for (const game of ['altshot', 'chapman']) {
+    const r = scores(round(game, TWO), 3);
+    // Either team can lose a partner first
+    assert.ok(canLeave(r, 'a') && canLeave(r, 'c'), game);
+    r.left = { a: 3 };
+    // Then nobody else can go: the other team would lose a partner and nobody could score hole 4
+    assert.equal(canLeave(r, 'c'), false, game);
+    assert.equal(canLeave(r, 'd'), false, game);
+    assert.equal(canLeave(r, 'b'), false, game);
+    assert.deepEqual(scorers(r, r.holes[3]).map(u => u.id), ['t1']);
+  }
+  // A scramble team plays on with anyone still there, as before
+  const s = scores(round('scramble', [['a', 'b'], ['c', 'd']]), 3);
+  s.left = { a: 3 };
+  assert.ok(canLeave(s, 'c'));
+});

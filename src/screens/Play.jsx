@@ -837,7 +837,9 @@ function LeftSheet({ round, idx, onClose, onEnd }) {
       )}
       {nobody ? (
         <>
-          <p className="hint-card"><Icon name="info" fill /> At least two {oneBall(round.game) ? 'teams' : 'players'} have to stay to keep the game going. To stop here, end the round: the holes played still count.</p>
+          <p className="hint-card"><Icon name="info" fill /> {round.game === 'altshot' || round.game === 'chapman'
+            ? `${GAMES[round.game].name} needs a team with both partners still playing to keep the game going.`
+            : `At least two ${oneBall(round.game) ? 'teams' : 'players'} have to stay to keep the game going.`} To stop here, end the round: the holes played still count.</p>
           <div className="cta-wrap"><button className="full-btn" onClick={onEnd}><Icon name="flag-checkered" /> End round</button></div>
         </>
       ) : (
@@ -1038,7 +1040,10 @@ function BetsSheet({ round, onClose }) {
             teamSize={!side && round.teams?.length ? Math.min(...round.teams.map(t => t.players.length)) : null} />
         )}
         {game === 'banker' && <p className="hint-card"><Icon name="info" fill /> The default bet fills in from the next hole. Bets on this hole are set from the Bets button.</p>}
-        {!side && matchScored(round) && round.presses.length > 0 && whole && <p className="hint-card"><Icon name="lightning" fill /> Presses already made pay at the new amounts too.</p>}
+        {/* A team game played another way (changeBets clears the presses on the old legs) */}
+        {!side && matchScored(round) && round.presses.length > 0 && whole && (isTeamGame(game) && wholeRoundOnly(game, current[game], opts[game])
+          ? <p className="hint-card"><Icon name="lightning" fill /> The presses made so far go, since the bets are played another way.</p>
+          : <p className="hint-card"><Icon name="lightning" fill /> Presses already made pay at the new amounts too.</p>)}
         {problem && <p className="field-error">{problem}</p>}
         <div className="cta-wrap">
           <button className="full-btn" disabled={!changed || !!problem || stuck} onClick={apply}>
