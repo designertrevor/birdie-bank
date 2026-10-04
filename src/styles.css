@@ -1979,7 +1979,9 @@ button.trip-card:active { transform: scale(.97); }
 .checkin-x::before { content: ''; position: absolute; inset: -6px; }
 .tab-part { min-height: 44px; }
 .hole-grid { grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); }
-.par-pick button { width: 42px; height: 36px; position: relative; }
+.par-pick button { width: 42px; height: 36px; border-radius: 999px; position: relative; }
+/* The handicap button's 44px tap area sat over the bottom of the par buttons: a little more room between them */
+.hole-cell { gap: 10px; }
 .par-pick button::before { content: ''; position: absolute; left: 0; right: 0; top: 50%; height: 44px; transform: translateY(-50%); }
 /* Vegas: the winning team's name sat in --mute on mint, unreadable in dark mode */
 .vegas-team.ahead .ms-lbl { color: var(--teal); }
@@ -1988,7 +1990,7 @@ button.trip-card:active { transform: scale(.97); }
 @media (prefers-color-scheme: dark) { :root:not([data-theme="light"]):not([data-theme="dark"]) .vote-row.leading .vr-bar { background: var(--win-bg); opacity: 1; } }
 /* The scorecard's hole numbers: the button fills its whole header cell, not just the 11px number */
 .sc-table th:has(> .sc-col-btn) { padding: 0; }
-.sc-col-btn { padding: 12px 6px; min-height: 40px; }
+.sc-col-btn { padding: 12px 6px; min-height: 44px; }
 
 /* ---------- Countdown and the Saturday preview (overnight 7, preview) ---------- */
 /* Up next: the plan card with its preview strip under it, one card */
