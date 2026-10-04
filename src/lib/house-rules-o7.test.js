@@ -10,6 +10,7 @@ import { quotaPoints, vegasHole, ninesPoints, settleTotals, snakeHolder } from '
 import { houseRulesLine } from './house-rules.js';
 import { houseRulesFor, agreementItems } from './agreed.js';
 import { stakeSummary } from './stakes.js';
+import { betLabel } from './plans.js';
 
 // The game defaults as a new round gets them (store.js can't load outside the browser)
 const DEFAULTS = {
@@ -517,4 +518,12 @@ test('the first-tee card lists both balls count only for 2 v 2', () => {
   assert.deepEqual(on(solo), []);
   const four = mk('nassau', ['a', 'b', 'c', 'd'], { set: { teamScore: 'total' }, teams: [['a', 'b'], ['c', 'd']] });
   assert.deepEqual(on(four), ['Both balls count (partners’ scores added up)']);
+});
+
+test('a 9-hole plan never lists the rules that only play over 18 in its bet', () => {
+  const s = { ...structuredClone(DEFAULTS), skins: { ...DEFAULTS.skins, backDouble: true }, wolf: { ...DEFAULTS.wolf, lastWolf: true } };
+  assert.match(betLabel('skins', s, 2), /back nine doubles/);
+  assert.doesNotMatch(betLabel('skins', s, 2, 9), /back nine doubles/);
+  assert.match(betLabel('wolf', s, 2, 18), /last place is wolf/);
+  assert.doesNotMatch(betLabel('wolf', s, 2, 9), /last place is wolf/);
 });

@@ -173,7 +173,7 @@ function PlanBody({ plan, standalone = false, onSkip }) {
           </div>
           <div className="eyebrow ph-when">{whenLabel(plan) || 'Date to be set'}</div>
           <div className="ic-game"><Icon name={game?.icon || 'golf'} fill /> {game?.name || 'Golf'}</div>
-          <div className="ic-course">{plan.course?.name || 'Course to be set'} · {plan.holesCount} holes{choice.bet ? ` · ${inUnits(plan, betLabel(choice.game, rules, choice.bet) || money(choice.bet))}` : ''}</div>
+          <div className="ic-course">{plan.course?.name || 'Course to be set'} · {plan.holesCount} holes{choice.bet ? ` · ${inUnits(plan, betLabel(choice.game, rules, choice.bet, plan.holesCount ?? 18) || money(choice.bet))}` : ''}</div>
           {playForLine(plan) && <div className="ic-playfor"><Icon name={plan.playFor?.kind === 'reward' ? 'gift' : 'trophy'} fill /> {playForLine(plan)}</div>}
           {plan.status === 'off' && <p className="ic-note"><Icon name="calendar-x" fill /> {plan.host ? 'You called this one off.' : `${host} called this one off.`}</p>}
           {plan.gone && plan.status === 'planned' && <p className="ic-note"><Icon name="calendar-x" fill /> {host} deleted this plan.</p>}
@@ -377,7 +377,7 @@ function WhoAreYou({ plan, defaultName, standalone, onSkip }) {
   const choice = planChoice(plan);
   const game = GAMES[choice.game];
   const settings = useStore(s => s.settings);
-  const bet = choice.bet ? inUnits(plan, betLabel(choice.game, planRules(plan, settings), choice.bet) || money(choice.bet)) : '';
+  const bet = choice.bet ? inUnits(plan, betLabel(choice.game, planRules(plan, settings), choice.bet, plan.holesCount ?? 18) || money(choice.bet)) : '';
   return (
     <>
       <div className="scroll join-body plan-who">
@@ -515,7 +515,7 @@ export function RollCall({ id }) {
       <div className="scroll">
         <div className="block summary-card">
           <div className="li-sub">{plan.course?.name} · {setup.holesCount} holes</div>
-          <div className="d stake-big">{g?.name || 'Pick a game'}{setup.bet && setup.settings?.[setup.game] ? ` · ${inUnits(plan, betLabel(setup.game, setup.settings, setup.bet))}` : ''}</div>
+          <div className="d stake-big">{g?.name || 'Pick a game'}{setup.bet && setup.settings?.[setup.game] ? ` · ${inUnits(plan, betLabel(setup.game, setup.settings, setup.bet, setup.holesCount ?? 18))}` : ''}</div>
           {setup.sideGames.length > 0 && <div className="li-sub">+ {setup.sideGames.map(sg => `${SIDE_GAMES[sg.game].label}, ${inUnits(plan, sideBetLine(sg.game, sg.settings))}`).join(' + ')}</div>}
           {playForLine(plan) && <div className="li-sub">{playForLine(plan)}</div>}
           {challengeBets.map(({ bet, ch }) => <div key={bet.id} className="li-sub">+ Challenge: {betPeople(challengeIn.round, bet)}, {challengeWhat(ch)}</div>)}
