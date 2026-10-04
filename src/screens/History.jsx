@@ -8,7 +8,7 @@ import { nameOf } from '../lib/ledger.js';
 import { AvatarButton, BottomNav } from '../nav.jsx';
 import { useNav } from '../lib/nav.js';
 import {
-  defaultRange, headToHead, lastResult, monthGroups, netSeries, rangeLabel, roundTime, roundsInRange,
+  defaultRange, headToHead, lastResult, monthGroups, netSeries, rangeLabel, roundTime, roundsInRange, statsLinkLabel,
 } from '../lib/history.js';
 import { RoundRow } from '../components/RoundRow.jsx';
 import { SeasonChart } from '../components/SeasonChart.jsx';
@@ -128,7 +128,7 @@ export default function History() {
 
                 {/* Deeper stats for the same range: by game, by course, presses, skins and biggest wins */}
                 <button className="text-link stats-link" onClick={() => nav.push('stats', { range })}>
-                  <Icon name="chart-bar" fill /> <span className="row-main">Your stats for {range.kind === 'season' ? `the ${label}` : label}<span className="sl-sub">By game and course, presses, skins and biggest wins</span></span> <Icon name="caret-right" />
+                  <Icon name="chart-bar" fill /> <span className="row-main">{statsLinkLabel(range)}<span className="sl-sub">By game and course, presses, skins and biggest wins</span></span> <Icon name="caret-right" />
                 </button>
 
                 {h2h.length > 0 && (

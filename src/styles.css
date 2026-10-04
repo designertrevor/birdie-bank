@@ -1954,3 +1954,5 @@ button.trip-card:active { transform: scale(.97); }
 .stats-link .row-main { font-weight: 700; }
 .stats-link > i:last-child { color: var(--mute); }
 .pf-more .stats-open { margin-top: 10px; }
+/* Four ranges on Your stats (All time too) still fit one row on a small phone */
+.range-bar .pm-btn { min-width: 0; padding: 0 6px; white-space: nowrap; }
