@@ -438,3 +438,18 @@ test('the cup in a few words', () => {
   const none = tripStatus(stateOf('t', []), 't_cup', { now: OCT(15) });
   assert.equal(cupHeadline(none.cup), 'No matches played yet');
 });
+
+test('stake marks sync with your account, and an older profile without them keeps this phone’s', async () => {
+  const { applyDoc, toDocs } = await import('./cloud-model.js');
+  const marks = { t_cup: [{ id: 'cup:t_cup:t>m:1', key: 't>m', from: 't', to: 'm', amount: 20, at: 1 }] };
+  const s = { ...stateOf('t', []), crews: {}, customCourses: {}, cupPaid: marks };
+  const doc = toDocs(s)['profile:me'];
+  assert.deepEqual(doc.data.cupPaid, marks);
+  const draft = { ...stateOf('t', []), settings: {}, cupPaid: {} };
+  applyDoc(draft, 'profile', 'me', doc.data);
+  assert.deepEqual(draft.cupPaid, marks);
+  const older = { ...doc.data };
+  delete older.cupPaid;
+  applyDoc(draft, 'profile', 'me', older);
+  assert.deepEqual(draft.cupPaid, marks);
+});
