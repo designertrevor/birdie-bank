@@ -34,9 +34,10 @@ const reduced = () => window.matchMedia?.('(prefers-reduced-motion: reduce)').ma
  * Watches the round and shows the moment for each newly scored hole, on every phone (the keeper's and
  * the ones following along). Only a single new hole counts (see freshHole): a burst of holes arriving
  * at once, a fixed score on an earlier hole, or the last hole (the end-of-round reveal takes over)
- * shows nothing. `onFinish` ends the round from the match-won screen (the keeper only).
+ * shows nothing. `onFinish` ends the round from the match-won screen (the keeper only). `onShowing`
+ * hears whether a moment is up, so the "Any side bets?" card waits until it's gone.
  */
-export function RoundMoments({ round, onFinish }) {
+export function RoundMoments({ round, onFinish, onShowing = null }) {
   const done = donePositions(round);
   const [moment, setMoment] = useState(null);
   // The holes as last seen: when a new one is in, work out its moment (set during render, like MoneyBar)
@@ -49,6 +50,7 @@ export function RoundMoments({ round, onFinish }) {
     if (m && firstShowing(SHOWN, round.id, fresh.pos)) setMoment(m);
   }
 
+  useEffect(() => { onShowing?.(!!moment); }, [moment, onShowing]);
   if (!moment) return null;
   const close = () => setMoment(null);
   return moment.level === 'big'

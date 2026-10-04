@@ -1935,3 +1935,20 @@ button.trip-card:active { transform: scale(.97); }
 .trip-who { display: flex; flex-direction: column; gap: 6px; margin-top: 8px; }
 .trip-who .sheet-item { width: 100%; margin: 0; }
 .trip-who .avatar { margin: 0; }
+
+/* ---------- Any side bets on this hole? (o7 bet-prompt): the card on the Play screen ---------- */
+/* It fades in after a beat, so a moment banner that arrives with the new hole wins and the card never flashes */
+.bet-prompt {
+  display: flex; gap: 12px; align-items: flex-start; margin: 4px 16px 10px; padding: 14px 14px 6px;
+  background: var(--card); border-radius: 18px; box-shadow: inset 0 0 0 1.5px var(--surface-strong);
+  animation: bp-in .32s var(--spring) .45s both;
+}
+@keyframes bp-in { from { opacity: 0; transform: translateY(-6px); } to { opacity: 1; transform: none; } }
+.bp-ic { width: 36px; height: 36px; flex: none; display: grid; place-items: center; border-radius: 50%; background: var(--surface); color: var(--pink); font-size: 19px; }
+.bp-main { min-width: 0; flex: 1; }
+.bp-title { font-size: 15px; font-weight: 700; color: var(--ink); line-height: 1.3; }
+.bp-text { margin-top: 2px; font-size: 14px; color: var(--body); line-height: 1.4; }
+.bp-actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; }
+.bp-actions .pill-btn { min-height: 40px; }
+.bet-prompt .pill-btn.ghost { background: transparent; color: var(--ink); box-shadow: inset 0 0 0 1.5px var(--surface-strong); }
+.bp-off { margin-left: -4px; font-size: 13px; font-weight: 600; color: var(--mute); }
