@@ -25,6 +25,9 @@ import { CountForTrip } from '../components/Trips.jsx';
 import { tripOf, tripOnDay, tripStamp } from '../lib/trips.js';
 import { toGoLabel, weekdayOf } from '../lib/preview.js';
 import { answerPlan, editPlan, openPlanLink, planShareLink, removePlan, sharePlan, usePlanLive, usePlansOff } from '../lib/plan-sync.js';
+import { TalkSection } from '../components/Talk.jsx';
+import { planTalk, planThread } from '../lib/talk.js';
+import { useTalkSync } from '../lib/talk-sync.js';
 
 const first = name => String(name || '').trim().split(/\s+/)[0];
 const listNames = n => (n.length < 2 ? n.join('') : `${n.slice(0, -1).join(', ')} and ${n.at(-1)}`);
@@ -70,6 +73,8 @@ function PlanBody({ plan, standalone = false, onSkip }) {
   const myPlayer = useStore(s => s.players?.[s.me]);
   const off = usePlansOff();
   const send = useSend();
+  // The plan's trash talk: look now, and every so often while it's open
+  useTalkSync([planThread(plan)], { live: true });
   const [marking, setMarking] = useState(null); // the organizer marking someone's answer
   const [sharing, setSharing] = useState(false);
   const me = plan.host ? plan.hostWho : plan.localMe;
@@ -229,6 +234,8 @@ function PlanBody({ plan, standalone = false, onSkip }) {
         {plan.host && planned && plan.code && (
           <p className="field-help pad">Tap a name to mark someone who told you in person. Friends answer from the link, no download needed.</p>
         )}
+
+        {plan.status !== 'off' && !plan.gone && <TalkSection ctx={planTalk(plan)} on="plan" />}
 
         {planned && plan.host && <button className="text-link" onClick={() => nav.push('newRound', { edit: plan.id })}><Icon name="pencil-simple" /> Change the day, time, course or holes</button>}
         {planned && plan.host && <button className="danger-link" onClick={callOff}><Icon name="calendar-x" /> Call it off</button>}

@@ -18,6 +18,8 @@ import { refreshPlans } from '../lib/plan-sync.js';
 import { countdownLine, weekdayOf } from '../lib/preview.js';
 import { refreshTab } from '../lib/tab-sync.js';
 import { latelyItems } from '../lib/lately.js';
+import { recentTalkKeys, withTalk } from '../lib/talk.js';
+import { useTalkSync } from '../lib/talk-sync.js';
 import { LatelyList } from '../components/LatelyList.jsx';
 import { updateSafe } from '../lib/app-update.js';
 import { applyUpdate, useUpdateReady } from '../lib/sw-update.js';
@@ -52,8 +54,9 @@ export default function UpNext() {
   // The day after a round: its recap, then a few lines for the group text (see recap.js, callouts.js)
   const recap = useMemo(() => currentRecap(state), [state]);
   // The recap's round isn't in Lately too (Lately skips the newest finished round, which can be one you only watched)
-  const lately = latelyItems(state).filter(i => i.id !== `recap:${recap?.id}`);
+  const lately = withTalk(latelyItems(state).filter(i => i.id !== `recap:${recap?.id}`), state);
   const lines = useMemo(() => callouts(state), [state]);
+  useTalkSync(recentTalkKeys(state));
   // A new version only shows up here once no round is going on, so a tap never cuts into one
   const updateReady = useUpdateReady() && updateSafe(state);
   // Pick up answers and votes that came in since last time

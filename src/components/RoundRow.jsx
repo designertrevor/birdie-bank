@@ -4,6 +4,8 @@ import { myNet, roundTime } from '../lib/history.js';
 import { useNav } from '../lib/nav.js';
 import { money as dollars } from '../lib/golf.js';
 import { hasCashBet, playForOf, playForShort, rewardOutcome, tabMoneyOf, unitFmt } from '../lib/play-for.js';
+import { countsLine, roundTalkCounts } from '../lib/talk-counts.js';
+import { TalkCount } from './TalkCount.jsx';
 
 function dayLabel(t, withYear) {
   const d = new Date(t);
@@ -28,15 +30,19 @@ export function RoundRow({ round, state, className = '', withYear = false }) {
   const me = amount == null ? null : meFor(round, state);
   const cash = pf.kind === 'reward' && hasCashBet(round, me) ? tabMoneyOf(round, me) : null;
   const cashText = cash == null ? '' : `. ${cash ? `${dollars(cash, { sign: true })} on side bets` : 'Side bets square'}`;
-  const label = amount == null
+  // Its trash talk, in a few characters (talk.js)
+  const talk = countsLine(roundTalkCounts(state, round));
+  const label0 = amount == null
     ? `${round.course.name}, ${gameLabel(round)}, ${roundDate(round)}. ${top ? `${top.name} ${money(top.amount, { sign: true })}` : ''}${sub ? `. ${sub}` : ''}`
     : `${round.course.name}, ${gameLabel(round)}, ${roundDate(round)}. You ${money(amount, { sign: true })}${sub ? `. ${sub}` : ''}${cashText}`;
+  const label = talk ? `${label0}. ${talk}` : label0;
   return (
     <button className={`hist-row ${className}`} onClick={() => nav.push('roundDetail', { id: round.id })} aria-label={label}>
       <span className="hr-day">{dayLabel(roundTime(round), withYear)}</span>
       <span className="hr-main">
         <span className="hr-course">{round.course.name}</span>
         <span className="hr-game">{gameLabel(round)}</span>
+        {talk && <TalkCount rows={state.talk?.[`round:${round.id}`]} />}
       </span>
       {/* The play-for label sits under the amount, so a 375px row keeps the course name readable */}
       <span className="hr-end">

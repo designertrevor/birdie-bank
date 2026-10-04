@@ -78,6 +78,7 @@ function fresh() {
     accountOf: {},     // which account each player id is, from the server: { playerId: accountId } (see profiles.js)
     profiles: {},      // profiles of people you've played with, by account: { accountId: profile } (see profiles.js)
     betPrompts: {},    // rounds whose "Any side bets?" card was answered on this phone: { roundId: { skip, done } } (see bet-prompt.js)
+    talk: {},          // comments and reactions: { 'round:<id>' | 'plan:<id>': { rowId: row } } (see talk.js)
     settings: structuredClone(DEFAULT_SETTINGS),
   };
 }

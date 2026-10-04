@@ -395,14 +395,15 @@ export function HoleBets({ round: saved, hole, editable, me = null }) {
  * Each side bet's result, for the round's full breakdown. `res` is roundResults(): the bets counted
  * with the games are in detail.byGame.bets, and a reward round's bets for money in `cash`.
  */
-export function BetsBreakdown({ round, res }) {
+/** `talk`: an optional row under each bet (the round's trash talk on it, see Talk.jsx). */
+export function BetsBreakdown({ round, res, talk = null }) {
   const counted = res?.detail?.byGame?.bets?.detail?.bets || [];
   const cash = res?.cash?.list || [];
   if (!counted.length && !cash.length) return null;
   const reward = playForOf(round).kind === 'reward';
   const row = r => {
     const fmt = betFmt(round, r.bet);
-    return (
+    const line = (
       <div key={r.id} className="set-row static pb-row">
         <div className="set-icon"><Icon name={BET_KINDS[r.kind].icon} fill /></div>
         <div className="row-main">
@@ -412,6 +413,7 @@ export function BetsBreakdown({ round, res }) {
         <div className={`pb-amt ${r.amount ? 'pos' : ''}`}>{betMoneyText(round, r, fmt)}</div>
       </div>
     );
+    return talk ? <div key={r.id} className="talk-bet">{line}{talk(r)}</div> : line;
   };
   return (
     <>

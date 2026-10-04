@@ -22,7 +22,11 @@ import { DrivesShortfall } from '../components/ScrambleDrives.jsx';
 import { strokeKey } from '../lib/stroke-key.js';
 import { getsStrokes, toParOf, toParText, toParTone, toParWords } from '../lib/to-par.js';
 import { BetsBreakdown } from '../components/PairBets.jsx';
+import { betPeople } from '../lib/pair-bets.js';
 import { RoundWhereFrom } from '../components/WhereFrom.jsx';
+import { TalkBar, TalkSection } from '../components/Talk.jsx';
+import { betTarget, payTarget, roundTalk, roundThread } from '../lib/talk.js';
+import { useTalkSync } from '../lib/talk-sync.js';
 
 // Where the finale was, so coming back from another screen (e.g. Suggest) doesn't replay the reveal.
 // Keyed by round and its finish time, so finishing the round again starts over.
@@ -39,6 +43,8 @@ export default function RoundDetail({ id, celebrate }) {
   const hero = useRef();
   const acct = useAccount();
   const [signingIn, setSigningIn] = useState(false);
+  // The round's trash talk: look now, and every so often while it's open
+  useTalkSync(round?.status === 'done' ? [roundThread(round)] : [], { live: true });
   // Opening the results means the fixing is over, however you got here (the tab bar, History).
   // Only on arrival, so tapping Edit scores here doesn't undo itself on the way out.
   useEffect(() => {
@@ -78,11 +84,15 @@ export default function RoundDetail({ id, celebrate }) {
   const pays = tab.transfers.length > 0;
   // A trip round has no settle up of its own: the trip is settled once, after its last round
   const ownSettle = pays && !round.trip?.id;
+  // Trash talk on a finished round, its settle-up lines and its side bets (talk.js)
+  const talk = round.status === 'done' ? roundTalk(round, state) : null;
+  const payTitle = t => `${roundPlayerName(round, t.from).split(' ')[0]} pays ${roundPlayerName(round, t.to).split(' ')[0]}`;
 
   const del = async () => {
     if (!(await ask({ title: 'Delete this round?', text: 'It’ll be removed from History and the Tab.', confirmLabel: 'Delete round', danger: true }))) return;
     update(s => {
       delete s.rounds[id];
+      if (s.talk) delete s.talk[`round:${id}`];
       leaveRound(s, id);
       s.settlements = s.settlements.filter(x => x.roundId !== id);
     });
@@ -184,9 +194,12 @@ export default function RoundDetail({ id, celebrate }) {
         <div style={{ padding: '0 16px' }}>
           {tab.transfers.length === 0 && <p className="hint-card" style={{ margin: 0 }}><Icon name="handshake" fill /> The money bets came out square. Nothing goes on the Tab.</p>}
           {tab.transfers.map(t => (
-            <div key={t.from + t.to} className="pay-row">
-              <span className="pf">{roundPlayerName(round, t.from)}</span><span className="pa"><Icon name="arrow-right" /></span><span className="pt">{roundPlayerName(round, t.to)}</span>
-              <span className="pm">{money(t.amount)}</span>
+            <div key={t.from + t.to} className="talk-pay">
+              <div className="pay-row">
+                <span className="pf">{roundPlayerName(round, t.from)}</span><span className="pa"><Icon name="arrow-right" /></span><span className="pt">{roundPlayerName(round, t.to)}</span>
+                <span className="pm">{money(t.amount)}</span>
+              </div>
+              {talk && <TalkBar ctx={talk} on={payTarget(t.from, t.to)} title={payTitle(t)} />}
             </div>
           ))}
           {tab.transfers.length > 0 && <p className="field-help" style={{ padding: '0 4px' }}>Only the side bets played for money. They’re on the Tab until marked paid; the points above decide the reward.</p>}
@@ -197,9 +210,12 @@ export default function RoundDetail({ id, celebrate }) {
         <div style={{ padding: '0 16px' }}>
           {res.transfers.length === 0 && <p className="hint-card" style={{ margin: 0 }}><Icon name="handshake" fill /> Nobody owes anybody. First round’s on whoever three-putted last.</p>}
           {res.transfers.map(t => (
-            <div key={t.from + t.to} className="pay-row">
-              <span className="pf">{roundPlayerName(round, t.from)}</span><span className="pa"><Icon name="arrow-right" /></span><span className="pt">{roundPlayerName(round, t.to)}</span>
-              <span className="pm">{money(t.amount)}</span>
+            <div key={t.from + t.to} className="talk-pay">
+              <div className="pay-row">
+                <span className="pf">{roundPlayerName(round, t.from)}</span><span className="pa"><Icon name="arrow-right" /></span><span className="pt">{roundPlayerName(round, t.to)}</span>
+                <span className="pm">{money(t.amount)}</span>
+              </div>
+              {talk && <TalkBar ctx={talk} on={payTarget(t.from, t.to)} title={payTitle(t)} />}
             </div>
           ))}
           {res.transfers.length > 0 && <p className="field-help" style={{ padding: '0 4px' }}>{round.trip?.id
@@ -207,6 +223,8 @@ export default function RoundDetail({ id, celebrate }) {
             : 'Fewest payments to square everyone up. They’re on the Tab until marked paid.'}</p>}
         </div>
         </>}
+
+        {talk && <TalkSection ctx={talk} on="round" />}
 
         <HowWasIt round={round} />
 
@@ -235,7 +253,8 @@ export default function RoundDetail({ id, celebrate }) {
           </Fragment>
         ))}
 
-        <BetsBreakdown round={round} res={res} />
+        <BetsBreakdown round={round} res={res}
+          talk={talk ? r => <TalkBar ctx={talk} on={betTarget(r.id)} title={`${r.label} · ${betPeople(round, r.bet)}`} /> : null} />
         <RoundWhereFrom round={round} res={res} />
         {/* ...and for a reward round's side bets for money, what's between each pair in dollars */}
         {!isMoney && res.cash && <RoundWhereFrom round={round} res={tab} fmt={money} title="Where the money comes from" />}
