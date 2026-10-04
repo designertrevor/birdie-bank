@@ -3,14 +3,14 @@
 // head-to-head records between the people who are in, then "Share the preview" for the group text.
 // Everything comes from preview.js; this screen only lays it out.
 import { useEffect, useMemo, useState } from 'react';
-import { Empty, Header, Icon, Screen, Toggle, useUI } from '../components/ui.jsx';
+import { Empty, Header, Icon, Screen } from '../components/ui.jsx';
 import { Avatar } from '../components/Pay.jsx';
 import { useStore } from '../lib/store.js';
 import { useNav } from '../lib/nav.js';
-import { sendReminder } from '../lib/pay.js';
-import { pairBetLine, planPreview, previewCardModel, previewImageName, previewText, recordSentence, strokesLine } from '../lib/preview.js';
+import { pairBetLine, planPreview, previewAlt, previewCardModel, previewImageName, previewText, recordSentence, strokesLine } from '../lib/preview.js';
+import { amountsRule } from '../lib/share.js';
+import { ShareView } from '../components/ShareSheet.jsx';
 import { renderPreviewCard } from '../lib/preview-image.js';
-import { IMAGE_H, IMAGE_W } from '../lib/shareImage.js';
 import { planShareLink, usePlanLive } from '../lib/plan-sync.js';
 import { pctWords } from '../lib/allowances.js';
 
@@ -189,58 +189,26 @@ function Records({ pv }) {
 }
 
 /**
- * The preview image for the group text. As with the results image, the PNG is drawn ahead of
- * time so the share sheet opens straight from the tap, and amounts start hidden.
+ * The preview image for the group text, on the same share screen as the results image
+ * (ShareSheet.jsx): drawn ahead of time so the share sheet opens straight from the tap, amounts
+ * start hidden (the one remembered switch), and the group link rides along. The money in a
+ * head-to-head record stays off when either of the two keeps theirs private (share.js).
  */
 function PreviewShare({ plan, pv, onBack }) {
-  const { showToast } = useUI();
-  // Off every time it opens, so nobody posts the bets by accident
-  const [moneyOn, setMoneyOn] = useState(false);
-  const showAmounts = pv.money ? moneyOn : true;
-  const [img, setImg] = useState(null); // { blob, url, key }
-  // The preview is worked out again each minute and on every answer, so the image is drawn again
-  // only when what it says changes (not every minute while the sheet sits open)
-  const cardKey = useMemo(() => JSON.stringify(previewCardModel(pv, { showAmounts })), [pv, showAmounts]);
-  useEffect(() => {
-    let alive = true;
-    renderPreviewCard(JSON.parse(cardKey))
-      .then(blob => { if (alive) setImg({ blob, url: URL.createObjectURL(blob), key: cardKey }); })
-      .catch(() => { if (alive) setImg(null); });
-    return () => { alive = false; };
-  }, [cardKey]);
-  useEffect(() => () => { if (img) URL.revokeObjectURL(img.url); }, [img]);
-
-  const ready = img && img.key === cardKey;
-  const fileName = previewImageName(plan);
-  const shareImage = async () => {
-    if (!ready || typeof File === 'undefined') return;
-    const file = new File([img.blob], fileName, { type: 'image/png' });
-    if (navigator.canShare?.({ files: [file] })) {
-      try { await navigator.share({ files: [file] }); } catch { /* closed the sheet */ }
-      return;
-    }
-    const a = document.createElement('a');
-    a.href = img.url;
-    a.download = fileName;
-    document.body.appendChild(a);
-    a.click();
-    a.remove();
-    showToast('Image saved to your downloads');
+  const state = useStore();
+  const link = planShareLink(plan);
+  const recordPeople = pv.records.flatMap(r => [{ id: r.aId, name: r.aName }, { id: r.bId, name: r.bName }]);
+  const make = show => {
+    const recordAmounts = amountsRule(state, { on: show, people: recordPeople }).show;
+    const model = previewCardModel(pv, { showAmounts: show, recordAmounts });
+    return { model, alt: previewAlt(model), text: previewText(pv, { showAmounts: show, recordAmounts }) };
   };
-  const shareText = async () => {
-    const r = await sendReminder(previewText(pv, { showAmounts, link: planShareLink(plan) }));
-    if (r === 'copied') showToast('Preview copied. Paste it in your group text');
-    if (r === 'failed') showToast('Couldn’t share on this device');
-  };
-
   return (
     <Screen>
-      <Header title="Share the preview" small onBack={onBack} />
-      <div className="scroll">
-        {img ? (
-          <img className="share-img" src={img.url} width={IMAGE_W} height={IMAGE_H}
-            alt={`Preview card: ${pv.gameName} at ${pv.course}, ${pv.when}. In: ${listNames(pv.ins) || 'nobody yet'}.`} />
-        ) : (
+      <ShareView title="Share the preview" small onBack={onBack} make={make} render={renderPreviewCard}
+        fileName={previewImageName(plan)} link={link} what="The preview" money={pv.money}
+        onText="The bets and the money between players are on the image" offText="The game, who’s in, strokes and records, no money"
+        standIn={() => (
           <div className="share-card">
             <div className="sc-brand">{pv.weekday ? `${pv.weekday} preview` : 'Preview'}</div>
             <div className="sc-meta">{pv.course} · {pv.when}</div>
@@ -249,21 +217,7 @@ function PreviewShare({ plan, pv, onBack }) {
               {pv.ins.map(n => <div key={n} className="sc-line"><span>{n}</span></div>)}
             </div>
           </div>
-        )}
-        {pv.money && (
-          <div className="toggle-row share-toggle">
-            <div><div className="toggle-lbl">Show amounts</div><div className="toggle-sub">{showAmounts ? 'The bets and the money between players are on the image' : 'The game, who’s in, strokes and records, no money'}</div></div>
-            <Toggle on={showAmounts} onChange={setMoneyOn} label="Show amounts" />
-          </div>
-        )}
-      </div>
-      <div className="cta-wrap">
-        <button className="full-btn" onClick={shareImage} disabled={!ready}><Icon name="share-network" /> {ready ? 'Share image' : 'Making the image…'}</button>
-        <div className="cta-row">
-          <button className="full-btn outline" onClick={shareText}><Icon name="text-aa" /> Share as text</button>
-          <button className="full-btn outline" onClick={onBack}>Done</button>
-        </div>
-      </div>
+        )} />
     </Screen>
   );
 }

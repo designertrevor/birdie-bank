@@ -457,7 +457,7 @@ function shareStrokes(st) {
  * dollar figure appears anywhere: the game, the side games and the records still read, the money
  * does not. A points or reward plan is never money, so its points always show.
  */
-export function previewCardModel(pv, { showAmounts: moneyOn = false } = {}) {
+export function previewCardModel(pv, { showAmounts: moneyOn = false, recordAmounts = moneyOn } = {}) {
   const showAmounts = pv.money ? moneyOn : true;
   const main = pv.bet && showAmounts ? pv.bet : '';
   const bets = main ? [main] : [];
@@ -481,14 +481,28 @@ export function previewCardModel(pv, { showAmounts: moneyOn = false } = {}) {
     pairBets: (pv.pairBets || []).map(x => pairBetLine(x, { amounts: showAmounts })),
     strokesNote: strokes.note,
     strokes: strokes.lines,
-    records: pv.records.map(r => recordSentence(r.rec, r.aName, r.bName, { scope: r.scope, amounts: showAmounts && pv.money })),
+    records: pv.records.map(r => recordSentence(r.rec, r.aName, r.bName, { scope: r.scope, amounts: showAmounts && pv.money && recordAmounts })),
     footer: 'In, maybe or out? Answer from the group link.',
   };
 }
 
-/** The preview as a text for the group thread, with the link to answer when there is one. */
-export function previewText(pv, { showAmounts = false, link = null } = {}) {
-  const m = previewCardModel(pv, { showAmounts });
+/** The image's alt text, from the same model as the image (so hidden amounts stay hidden). */
+export function previewAlt(m) {
+  return [
+    `Preview card: ${m.headline} at ${m.course}${m.meta ? `, ${m.meta}` : ''}`,
+    m.sub, m.playFor, m.inLine, m.maybeLine,
+    m.pairBets.length ? `Side bets: ${m.pairBets.join('; ')}` : '',
+    m.strokes.length ? `Strokes: ${m.strokes.map(s => `${s.name} gets ${s.count}`).join(', ')}` : m.strokesNote,
+    ...m.records.slice(0, 5),
+  ].filter(Boolean).join('. ');
+}
+
+/**
+ * The preview as a text for the group thread, with the link to answer when there is one.
+ * `recordAmounts`: the money in head-to-head records, off when someone in them keeps theirs private (share.js).
+ */
+export function previewText(pv, { showAmounts = false, recordAmounts = showAmounts, link = null } = {}) {
+  const m = previewCardModel(pv, { showAmounts, recordAmounts });
   const amounts = pv.money ? showAmounts : true;
   const strokes = m.strokes.map(s => `${s.name} gets ${s.count}: ${s.holes}`);
   const sides = pv.sides.map(s => (amounts && s.bet ? `${s.label} (${s.bet})` : s.label));

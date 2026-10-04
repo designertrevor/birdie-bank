@@ -63,7 +63,7 @@ export function shareText(round, res, { amounts = true } = {}) {
     lines.push('', 'Settle up:');
     res.transfers.forEach(t => lines.push(`${roundPlayerName(round, t.from)} → ${roundPlayerName(round, t.to)} ${money(t.amount)}`));
   }
-  lines.push('', 'Scored with Birdie Bank · birdie-bank.vercel.app');
+  // The short link back to the round goes on the end when it's shared (share.js shareOut)
   return lines.join('\n');
 }
 export const roundPlayerName = (round, id) => round.players.find(p => p.id === id)?.name || '?';
@@ -79,15 +79,6 @@ export function holeMoneyLine(round, hole, delta) {
   const team = round.teams?.find(t => t.players.length === top.length && t.players.every(pid => top.includes(pid)));
   const who = team ? team.name : top.map(pid => roundPlayerName(round, pid).split(' ')[0]).join(' & ');
   return `Hole ${hole.no}: ${who} ${unitFmt(round)(best, { sign: true })}`;
-}
-
-export async function shareRound(round, res, showToast, opts) {
-  const text = shareText(round, res, opts);
-  try {
-    if (navigator.share) { await navigator.share({ title: 'Birdie Bank results', text }); return; }
-  } catch (e) { if (e?.name === 'AbortError') return; }
-  try { await navigator.clipboard.writeText(text); showToast('Results copied. Paste them in the group chat'); }
-  catch { showToast('Couldn’t open sharing on this device'); }
 }
 
 /** Which player in a round is "you" on this phone (joined rounds carry their own). */
