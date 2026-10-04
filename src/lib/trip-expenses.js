@@ -287,3 +287,19 @@ export function splitLine(x, short = id => id) {
   if (x.split === 'shares') return 'Split by shares';
   return `Split ${x.parts.length} way${x.parts.length === 1 ? '' : 's'}`;
 }
+
+/**
+ * What the trip expenses put between you and one person, expense by expense: [{ expense, amount, at }]
+ * newest first, amount in cents, positive when they owe you for it (you paid and they're in it),
+ * negative when you owe them. `isMine` and `isThem` say who's who (ids as this phone knows them).
+ */
+export function expensesBetween(state, isMine, isThem) {
+  const out = [];
+  for (const x of allExpenses(state)) {
+    let c = 0;
+    if (isMine(x.payer)) for (const p of x.parts) if (isThem(p.id)) c += p.cents;
+    if (isThem(x.payer)) for (const p of x.parts) if (isMine(p.id)) c -= p.cents;
+    if (c) out.push({ expense: x, amount: c, at: x.at || 0 });
+  }
+  return out.sort((a, b) => b.at - a.at);
+}

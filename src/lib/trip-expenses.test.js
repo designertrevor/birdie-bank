@@ -4,7 +4,8 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { createRound, roundResults } from './round.js';
-import { outstanding, tabBalances, tabWith } from './ledger.js';
+import { headToHeadSummary, outstanding, personStory, tabBalances, tabWith } from './ledger.js';
+import { breakdownWith } from './where-from.js';
 import { applyRows } from './shared-tab.js';
 import { buildPlan, cleanPlan, duePlan, planState, samePlan } from './trip-plan.js';
 import { canDeleteTrip, newTrip, tripPayment, tripStamp, tripStatus, tripsOf, currentTrips } from './trips.js';
@@ -376,4 +377,23 @@ test('expenses ride in your account expense by expense, and in the backup', () =
   const file = parseBackup(JSON.stringify(makeBackup({ ...s, tripExpenses: { x1: a } })));
   assert.ok(file.ok);
   assert.deepEqual(mergeBackup({ ...s, tripExpenses: {} }, file.data).state.tripExpenses, { x1: a });
+});
+
+test('the story with a friend and Where it comes from list the expenses between you, apart from the golf', () => {
+  const base = stateOf('t', rounds5(), { trips: { t_bandon: TRIP } });
+  const dinner = expense(base, { id: 'x1', payer: 't', people: ['t', 'a', 'b'], amount: 90 });
+  const gas = expense(base, { id: 'x2', payer: 'a', people: ['t', 'a'], amount: 50, what: 'Gas', at: OCT(18, 8) });
+  const s = { ...base, tripExpenses: { x1: dinner, x2: gas } };
+  const mine = new Set(['t']);
+  const before = personStory(base, mine, 'a');
+  const story = personStory(s, mine, 'a');
+  assert.equal(story.net, before.net, 'the head to head is still the golf');
+  assert.deepEqual(headToHeadSummary(s, mine), headToHeadSummary(base, mine));
+  assert.equal(story.spent, 30 - 25, 'Andy owes $30 for dinner, Trevor $25 for gas');
+  assert.deepEqual(story.items.filter(it => it.kind === 'expense').map(it => [it.id, it.amount]), [['x2', -25], ['x1', 30]]);
+  const w = breakdownWith(s, mine, 'a');
+  assert.equal(w.spent, 5);
+  assert.equal(cents(w.open), cents(breakdownWith(base, mine, 'a').open) + 500);
+  assert.deepEqual(w.expenses.map(x => x.amount), [-25, 30]);
+  assert.equal(personStory(s, mine, 'c').spent, 0, 'Cal wasn’t in either');
 });

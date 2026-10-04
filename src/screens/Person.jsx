@@ -49,7 +49,8 @@ export default function Person({ id: opened }) {
   const debt = between.length === 1 ? between[0]
     : tab > 0 ? { from: id, to: state.me, amount } : { from: state.me, to: id, amount };
   // What's still open between just the two of you, before the group's fewest payments reroute it
-  const direct = Math.round((story.net - story.paid) * 100) / 100;
+  // Trip expenses between you count too (story.spent): they're on the Tab, though not in the head to head
+  const direct = Math.round((story.net + story.spent - story.paid) * 100) / 100;
   const rerouted = Math.abs(direct - tab) >= 0.01;
   const when = t => new Date(t).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
 
@@ -153,6 +154,14 @@ export default function Person({ id: opened }) {
             </div>
             <div className="lr-amt d story-amt">{money(Math.abs(it.amount))}</div>
           </div>
+        ) : it.kind === 'expense' ? (
+          <button key={it.id} className="ledger-row" onClick={() => nav.push('trip', { id: it.expense.tripId, view: 'expenses' })}>
+            <div className="lr-info">
+              <div className="lr-name" style={{ fontSize: 16 }}>{it.expense.what} · trip expense</div>
+              <div className="lr-status">{when(it.at)} · {it.amount > 0 ? `You paid, ${firstName}’s share` : `${firstName} paid, your share`}</div>
+            </div>
+            <div className={`lr-amt d story-amt ${it.amount > 0 ? 'pos' : 'neg'}`}>{money(it.amount, { sign: true })}</div>
+          </button>
         ) : it.kind === 'round' ? (
           <button key={it.id} className="ledger-row" onClick={() => nav.push('roundDetail', { id: it.id })}>
             <div className="lr-info">

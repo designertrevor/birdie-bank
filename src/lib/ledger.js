@@ -8,7 +8,7 @@ import { linksOf } from './people-links.js';
 import { countsMoney, onTab, tabResults } from './play-for.js';
 import { betsOf, isCashBet } from './pair-bets.js';
 import { planDebts } from './trip-plan.js';
-import { allExpenses, expensePairs } from './trip-expenses.js';
+import { allExpenses, expensePairs, expensesBetween } from './trip-expenses.js';
 
 const toCents = v => Math.round((Number(v) || 0) * 100);
 /** Whether two players had a side bet for money together in a reward round. */
@@ -218,9 +218,11 @@ function planBalances(state, trip) {
 /**
  * Everything between you and one person, for the round-by-round story: each finished round you
  * both played with the honest head-to-head (what you won from them, bet by bet), each payment
- * between you and each agreed carry-over. Newest first. `ids` is every id that means you.
+ * between you, each agreed carry-over and each trip expense one of you paid for the other. Newest
+ * first. `ids` is every id that means you.
  * Points and reward rounds are in the story and the record (`money: false` on the item), but
- * never in `net`: that is dollars only.
+ * never in `net`: that is dollars only. Trip expenses aren't golf, so they're never in `net` (the
+ * head to head) either: `spent` is what they put between you, positive when they owe you.
  */
 export function personStory(state, ids, other) {
   const mine = ids instanceof Set ? ids : new Set(ids);
@@ -252,6 +254,12 @@ export function personStory(state, ids, other) {
     if (isThem(s.from) && isMine(s.to)) { items.push({ kind: 'payment', id: s.id, settlement: s, amount: s.amount, at: s.at || 0 }); paid += s.amount; }
     else if (isMine(s.from) && isThem(s.to)) { items.push({ kind: 'payment', id: s.id, settlement: s, amount: -s.amount, at: s.at || 0 }); paid -= s.amount; }
   }
+  // Trip expenses: what one of you paid for the other (trip-expenses.js)
+  let spent = 0;
+  for (const x of expensesBetween(state, isMine, isThem)) {
+    items.push({ kind: 'expense', id: x.expense.id, expense: x.expense, amount: x.amount / 100, at: x.at });
+    spent += x.amount;
+  }
   // Agreed carry-overs get their own line. They move no money, so net and paid stay as they are
   for (const k of state.carries || []) {
     if (k.status !== 'agreed') continue;
@@ -260,7 +268,7 @@ export function personStory(state, ids, other) {
   }
   items.sort((a, b) => b.at - a.at);
   const c = v => Math.round(v * 100) / 100 || 0;
-  return { items, rounds: won + lost + even, won, lost, even, net: c(net), paid: c(paid) };
+  return { items, rounds: won + lost + even, won, lost, even, net: c(net), paid: c(paid), spent: spent / 100 };
 }
 
 /**
