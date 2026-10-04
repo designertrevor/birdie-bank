@@ -2415,3 +2415,35 @@ button.ch-main:active { transform: scale(.98); }
 :root { --on-pink: #ffffff; } /* text on --pink-fill, the same in both themes (4.8:1) */
 .resume-card .resume-eyebrow { color: var(--on-pink); }
 .resume-sub { font-size: 13px; color: var(--on-pink); }
+
+/* Tee time reminders and gentle payment nudges (Reminders.jsx): Up next's reminder cards and the plan's tee time block */
+.remind-card { margin: 0 16px 10px; padding: 16px 16px 14px; border-radius: 22px; background: var(--card); }
+.remind-card.tee { box-shadow: inset 0 0 0 2px var(--mint); }
+.rc-head { display: flex; align-items: flex-start; gap: 12px; }
+.rc-ic { width: 40px; height: 40px; flex-shrink: 0; border-radius: 50%; display: grid; place-items: center; background: var(--mint); color: var(--on-pastel); font-size: 20px; }
+.remind-card .eyebrow { color: var(--pink-text); }
+.rc-title { font-size: 19px; font-weight: 800; letter-spacing: -.01em; color: var(--ink); line-height: 1.2; margin-top: 2px; }
+.rc-title.sm { font-size: 16px; letter-spacing: 0; margin-top: 0; font-variant-numeric: tabular-nums; }
+.rc-sub { font-size: 13px; color: var(--mute); margin-top: 4px; line-height: 1.4; }
+.rc-acts { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; }
+.rc-btn {
+  display: inline-flex; align-items: center; gap: 6px; min-height: 44px; padding: 10px 14px; border: none; border-radius: 999px;
+  background: var(--surface); color: var(--ink); font: inherit; font-size: 14px; font-weight: 700; text-decoration: none; cursor: pointer;
+  max-width: 100%; transition: transform .2s var(--spring);
+}
+.rc-btn:active { transform: scale(.95); }
+.rc-btn.ink { background: var(--ink); color: var(--on-ink); }
+.rc-btn.ghost { background: transparent; color: var(--mute); }
+.rc-btn i { flex-shrink: 0; }
+.rc-sheet-body { display: flex; flex-direction: column; gap: 10px; padding: 0 20px 20px; }
+.tee-block .tb-label { display: block; margin: 0 0 8px; }
+.tee-block .day-strip + .field-help { margin-bottom: 4px; }
+.tee-block .tb-label + .day-strip { margin-top: 0; }
+.tb-link-row { display: flex; gap: 8px; align-items: center; }
+.tb-link-row .text-input { flex: 1; min-width: 0; }
+.tb-link-row .rc-btn { flex-shrink: 0; }
+.tee-block .field-help { margin-bottom: 14px; }
+.tb-none .dc-bottom { font-size: 12px; }
+.tb-done { margin-top: 2px; }
+.tb-booked { display: flex; align-items: flex-start; gap: 10px; }
+.tb-booked > i { font-size: 22px; color: var(--win); margin-top: 2px; }

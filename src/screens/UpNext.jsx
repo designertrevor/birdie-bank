@@ -33,6 +33,7 @@ import { ChallengesUpNext } from '../components/Challenges.jsx';
 import { myChallenges } from '../lib/challenges.js';
 import { refreshChallenges } from '../lib/challenge-sync.js';
 import { useCupSync } from '../lib/cup-sync.js';
+import { RemindersUpNext } from '../components/Reminders.jsx';
 
 const LATELY_ON_HOME = 3;
 
@@ -102,6 +103,9 @@ export default function UpNext() {
         })}
 
         {trips.map(t => <TripUpNext key={t.trip.id} status={t} renderPlan={p => <UpcomingCard key={p.id} plan={p} />} />)}
+
+        {/* A tee time to book and friendly payment reminders: there's no push yet, so these are the reminders */}
+        <RemindersUpNext />
 
         {plans.length > 0 && <div className="sec-label">Upcoming</div>}
         {plans.map(p => <UpcomingCard key={p.id} plan={p} />)}
