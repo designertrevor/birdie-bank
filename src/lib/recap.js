@@ -152,27 +152,31 @@ function roundCarries(state, round, rows) {
 }
 
 /**
- * Where each of the round's payments stands: [{ from, to, amount, status, left }], where status is
- * 'paid' (paid on the round, or squared when the whole card was paid), 'square' (nothing is open
- * between the two on the Tab any more, however it got there), 'carried' (rolled to next time) or
- * 'open', and `left` is what's still open in cents (never more than the Tab has between them).
+ * Where each of the round's payments stands: [{ from, to, amount, status, left, onTab }], where status is
+ * 'paid' (paid on the round, or squared when the whole card was paid), 'square' (on the Tab the payer
+ * owes nobody any more, or nobody owes the other person, however it got there), 'carried' (rolled to next time) or 'open', and `left` is
+ * what's still open in cents. `onTab` says the Tab still has the payer paying this same person (it
+ * squares the group in the fewest payments, so the money can be routed to someone else): then `left`
+ * is never more than the Tab has between the two.
  */
 export function recapTransfers(state, round, { now = Date.now(), rows = roundRows(state, round), plan = outstanding(state, { now }) } = {}) {
   const who = canonicalOf(state);
   const carries = roundCarries(state, round, rows);
   const match = (r, t) => r.from === t.from && r.to === t.to;
+  const payers = new Set(plan.map(d => who(d.from)));
+  const payees = new Set(plan.map(d => who(d.to)));
   return tabResults(round).transfers.map(t => {
     const due = toCents(t.amount);
     const paid = rows.filter(r => r.kind === 'payment' && r.status === 'paid' && match(r, t)).reduce((a, r) => a + toCents(r.amount), 0);
     const netted = rows.some(r => r.kind === 'payment' && r.status === 'netted' && match(r, t));
     const base = { from: t.from, to: t.to, amount: t.amount };
-    if (netted || paid >= due) return { ...base, status: 'paid', left: 0 };
+    if (netted || paid >= due) return { ...base, status: 'paid', left: 0, onTab: false };
     const pair = [who(t.from), who(t.to)].sort().join('|');
-    if (carries.some(c => [who(c.from), who(c.to)].sort().join('|') === pair)) return { ...base, status: 'carried', left: due - paid };
-    // The Tab has the last word: nothing open from them to the other person means they're square
+    if (carries.some(c => [who(c.from), who(c.to)].sort().join('|') === pair)) return { ...base, status: 'carried', left: due - paid, onTab: false };
+    // The Tab has the last word: a payer who owes nobody on it, or someone nobody owes any more, is square
+    if (!payers.has(who(t.from)) || !payees.has(who(t.to))) return { ...base, status: 'square', left: 0, onTab: false };
     const onCard = toCents(tabWith(plan, new Set([who(t.to)]), who(t.from)));
-    if (onCard <= 0) return { ...base, status: 'square', left: 0 };
-    return { ...base, status: 'open', left: Math.min(due - paid, onCard) };
+    return { ...base, status: 'open', left: onCard > 0 ? Math.min(due - paid, onCard) : due - paid, onTab: onCard > 0 };
   });
 }
 
@@ -217,7 +221,11 @@ export function recapPaid(state, round, { now = Date.now(), rows = roundRows(sta
     const other = who(fromMe ? t.to : t.from);
     const o = name(other);
     const amt = money(t.amount);
-    const text = t.status === 'open'
+    // Still owed, but the Tab squares it through someone else: it says who pays whom
+    const routed = t.status === 'open' && !t.onTab;
+    const text = routed
+      ? (fromMe ? `You still owe ${money(t.left / 100)} from this round. The Tab has who to pay` : `${o} still owes ${money(t.left / 100)} from this round. The Tab has who pays you`)
+      : t.status === 'open'
       ? (fromMe ? `You owe ${o} ${money(t.left / 100)}` : `${o} owes you ${money(t.left / 100)}`)
       : t.status === 'carried'
         ? `You and ${o} rolled ${amt} to next time`

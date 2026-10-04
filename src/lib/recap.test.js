@@ -216,3 +216,29 @@ test('recap: reading a round never changes it or any money', () => {
   assert.deepEqual(roundResults(r).balances, balances);
   assert.deepEqual(outstanding(s, { now: NOW }), tab);
 });
+
+test('recap: money the Tab squared through other rounds is square, not chased twice', () => {
+  // Mike took two skins off everyone before; yesterday Sam took one. Overall Sam is level and only
+  // you owe (Mike), so yesterday's $2 to Sam is square, and you still owe Mike on the Tab
+  const before = skins('r0', YESTERDAY - 3 * DAY, ['me', 'sam', 'mike'], { 1: { mike: 3 }, 2: { mike: 3 } });
+  const last = skins('r1', YESTERDAY, ['me', 'sam', 'mike'], { 1: { sam: 3 } });
+  const s = stateWith([before, last]);
+  const rc = currentRecap(s, NOW);
+  assert.deepEqual(rc.paid.people.map(p => [p.name, p.status]), [['You', 'square'], ['Sam', 'square'], ['Mike', 'square']]);
+  assert.equal(rc.paid.allSquare, true);
+  assert.deepEqual(rc.paid.mine.map(l => l.text), ['You and Sam are square']);
+});
+
+test('recap: still owed but routed through someone else on the Tab says so, without a name', () => {
+  // You owe Sam $2 from yesterday, and Sam is still owed (by Dave) and you still owe (Mike), but the
+  // Tab's fewest payments send your money to Mike: the line doesn't send you to the wrong person
+  const before = skins('r0', YESTERDAY - 3 * DAY, ['me', 'sam', 'mike', 'dave'], { 1: { mike: 3 }, 2: { mike: 3 }, 3: { sam: 3 } });
+  const last = skins('r1', YESTERDAY, ['me', 'sam'], { 1: { sam: 3 } });
+  const s = stateWith([before, last]);
+  // Overall: you −$8, Sam +$4, Mike +$10, Dave −$6, so the Tab has you paying Mike and Dave paying Sam
+  const [t] = recapTransfers(s, last, { now: NOW });
+  assert.deepEqual([t.status, t.onTab, t.left], ['open', false, 200]);
+  const rc = currentRecap(s, NOW);
+  assert.deepEqual(rc.paid.mine.map(l => l.text), ['You still owe $2 from this round. The Tab has who to pay']);
+  assert.deepEqual(rc.paid.people.map(p => p.status), ['owes', 'waiting']);
+});
