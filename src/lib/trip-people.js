@@ -166,7 +166,9 @@ export function tripAnswers(state, trip, now = new Date()) {
       const n = lower(p.name);
       if (!n || names.has(n)) continue;
       names.add(n);
-      out.push({ key: `${plan.id}:${p.who}`, name: p.name, status: p.status });
+      // The saved player they are (by id, or by name), so their avatar matches the one in Who's going
+      const saved = state.players?.[p.who] ? p.who : Object.values(state.players || {}).find(x => x && !x.mergedInto && lower(x.name) === n)?.id || null;
+      out.push({ key: `${plan.id}:${p.who}`, name: p.name, status: p.status, id: saved });
     }
   }
   return out;

@@ -355,7 +355,7 @@ function TripInvite({ st }) {
         {answers.length > 0 && (
           <ul className="trip-answers" aria-label="Answered the link">
             {answers.map(a => (
-              <li key={a.key}><Avatar name={a.name} size="sm" /><span className="trip-answer-name">{a.name}</span><span className={`trip-answer ${a.status}`}>{a.status === 'in' ? 'In' : 'Maybe'}</span></li>
+              <li key={a.key}><Avatar id={a.id} name={a.name} size="sm" /><span className="trip-answer-name">{a.name}</span><span className={`trip-answer ${a.status}`}>{a.status === 'in' ? 'In' : 'Maybe'}</span></li>
             ))}
           </ul>
         )}

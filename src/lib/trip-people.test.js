@@ -205,4 +205,9 @@ test('who answered the link and isn’t going yet: in or maybe, one a name', () 
   const s = world({ trips: { t1: trip }, plans: { pl1: p1, pl2: p2 } });
   const got = tripAnswers(s, trip, NOW);
   assert.deepEqual(got.map(a => [a.name, a.status]), [['Chris', 'in'], ['Josh', 'maybe'], ['Tom', 'in']]);
+  // Nobody here is a saved player, so no id; someone saved by that name gets theirs, for the same avatar
+  assert.deepEqual(got.map(a => a.id), [null, null, null]);
+  const saved = world({ trips: { t1: trip }, plans: { pl1: p1, pl2: p2 } });
+  saved.players.josh = P('josh', 'Josh', 15);
+  assert.equal(tripAnswers(saved, trip, NOW).find(a => a.name === 'Josh').id, 'josh');
 });
