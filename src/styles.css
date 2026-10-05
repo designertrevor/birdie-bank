@@ -2642,3 +2642,9 @@ button.ch-main:active { transform: scale(.98); }
 .big-setup-group .field-label { margin-top: 4px; }
 .big-team-row { padding: 4px 0; }
 .big-team-row .tr-sub { display: block; margin-bottom: 6px; }
+
+/* ---- small9: the age check in onboarding (age.js) ---- */
+.ob-age { margin-top: 20px; }
+.ob-age .chip-row { gap: 8px; padding-bottom: 4px; }
+.ob-age .pill-btn { min-height: 40px; padding: 9px 16px; }
+.ob-age .pill-btn i { font-size: 15px; }

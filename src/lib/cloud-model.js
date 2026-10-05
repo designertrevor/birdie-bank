@@ -5,6 +5,7 @@ import { stable } from './sync-model.js';
 import { mergeSettings, migrateSettings } from './settings.js';
 import { nextActiveId } from './rounds.js';
 import { mergeExpenses } from './trip-expenses.js';
+import { keepAgeAnswer } from './age.js';
 
 // Round fields that only mean something on this phone
 const ROUND_LOCAL = ['_remote'];
@@ -89,7 +90,8 @@ export function applyDoc(draft, kind, id, data) {
     // Starred courses came later too: an older profile keeps this phone's stars
     if (Array.isArray(data.starredCourses)) draft.starredCourses = data.starredCourses;
     // Your own profile came later too: an older profile keeps this phone's
-    if (data.profile && typeof data.profile === 'object' && !Array.isArray(data.profile)) draft.profile = data.profile;
+    // (an age answer given on this phone before signing in stays, so nobody is asked twice: age.js)
+    if (data.profile && typeof data.profile === 'object' && !Array.isArray(data.profile)) draft.profile = keepAgeAnswer(data.profile, draft.profile);
     // Trips came later still: an older profile keeps this phone's
     if (data.trips && typeof data.trips === 'object' && !Array.isArray(data.trips)) draft.trips = data.trips;
     // And hidden trips later again

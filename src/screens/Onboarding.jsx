@@ -14,8 +14,9 @@ import { BUDDIES, buddyAvatar } from '../lib/avatars.js';
 import { accountsEnabled, useAccount } from '../lib/cloud.js';
 import {
   MATHS, ONBOARD_GAMES, SETTLES, SIZES, answered, ballotGames, gameList, nextStep, organizerRecord, payoff, prevStep,
-  progressOf, readyLines, settleLabel, settleMath, sizeLabel, suggestedGame, toggleGame,
+  progressOf, readyLines, settleLabel, settleMath, sizeLabel, suggestedGame, toggleGame, asksAge, nameReady,
 } from '../lib/onboarding.js';
+import { AGE_COPY, setAgeAnswer } from '../lib/age.js';
 import { PAYWALL_ON } from '../lib/paywall-flag.js';
 import { shouldShowPaywall } from '../lib/paywall.js';
 
@@ -37,6 +38,7 @@ export default function Onboarding({ onDone }) {
   const [index, setIndex] = useState(null);
   const [buddy, setBuddy] = useState(null); // a Ball buddy to start with (your profile has the rest)
   const [agreed, setAgreed] = useState(false);
+  const [age, setAge] = useState(null); // 'adult' | 'under', asked when the group plays for money (age.js)
   const [pad, setPad] = useState(false);
   const [signingIn, setSigningIn] = useState(false);
   const acct = useAccount();
@@ -70,6 +72,7 @@ export default function Onboarding({ onDone }) {
       s.me = id;
       if (buddy) s.profile = { ...(s.profile || {}), avatar: buddyAvatar(buddy), updatedAt: Date.now() };
       s.organizer = organizer;
+      if (asksAge(a) && age) setAgeAnswer(s, age);
       s.onboarded = true;
     });
   };
@@ -211,8 +214,23 @@ export default function Onboarding({ onDone }) {
               <div className="li-sub" id="ob-agree-sub">Birdie Bank tracks bets between friends. It never holds, sends or collects money. Check that betting on golf is legal where you play.</div>
             </div>
           </button>
+          {asksAge(a) && (
+            <div className="ob-age">
+              <div className="field-label" id="ob-age-q">{AGE_COPY.title}</div>
+              <div className="chip-row flush" role="radiogroup" aria-labelledby="ob-age-q" aria-describedby="ob-age-help">
+                {[['adult', 'Yes, 18 or older'], ['under', 'No, under 18']].map(([v, label]) => (
+                  <button key={v} type="button" role="radio" aria-checked={age === v} className={`pill-btn ${age === v ? 'on' : ''}`} onClick={() => setAge(v)}>
+                    {age === v && <Icon name="check" />}{label}
+                  </button>
+                ))}
+              </div>
+              <p className="field-help" id="ob-age-help">{age === 'under'
+                ? 'No problem. You can keep score and play for points or a reward. Money rounds wait until you’re 18.'
+                : 'Playing for money is for adults: 18 or older, or the age where you live if it’s higher. We only ask once.'}</p>
+            </div>
+          )}
         </div>
-        {cta('Continue', !!name.trim() && agreed)}
+        {cta('Continue', nameReady({ name, agreed, age }, a))}
         <Numpad open={pad} title="Handicap index" initial={index ?? ''} allowDecimal allowNegative min={-10} max={54}
           onClose={() => setPad(false)} onDone={v => { setIndex(v); setPad(false); }} />
       </Screen>

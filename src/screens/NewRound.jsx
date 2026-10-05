@@ -37,6 +37,8 @@ import { PAYWALL_ON } from '../lib/paywall-flag.js';
 import { matchingUsual, planFromUsual, setupFromUsual, usualsOf } from '../lib/usuals.js';
 import { SaveUsualButton, UsualsList } from '../components/Usuals.jsx';
 import PlayForPicker from '../components/PlayFor.jsx';
+import { useAgeCheck } from '../components/AgeCheck.jsx';
+import { moneyOff, needsAgeCheck } from '../lib/age.js';
 import { countsMoney, inUnits, padUnit, playForLine, playForShort } from '../lib/play-for.js';
 import { CountForTrip, StartTripLink } from '../components/Trips.jsx';
 import { CupRoundSetup } from '../components/Cup.jsx';
@@ -106,6 +108,7 @@ function planSetup(state, planId, present) {
 export default function NewRound({ rematch, fromPlan, present, edit = null, ahead = false, game: preGame = null, ballot = [], onboarding = false, reschedule = null, trip: tripId = null }) {
   const nav = useNav();
   const { ask, showToast } = useUI();
+  const checkAge = useAgeCheck();
   const state = useStore();
   // "Run it back" opens setup already filled in like an earlier round
   const [editing] = useState(() => (edit ? getState().plans?.[edit] || null : null));
@@ -174,7 +177,8 @@ export default function NewRound({ rematch, fromPlan, present, edit = null, ahea
   // A usual whose course isn't on this phone any more: its name, so the course step can say so
   const [lostCourse, setLostCourse] = useKept('setup:lostCourse', null);
   // What it's played for: null is money (as every round before it), else points or a reward
-  const [playFor, setPlayFor] = useKept('setup:playFor', () => pre?.playFor ?? null);
+  // Someone who said they're under 18 (age.js) starts on points rather than money
+  const [playFor, setPlayFor] = useKept('setup:playFor', () => pre?.playFor ?? (moneyOff(getState()) ? { kind: 'points' } : null));
   // Two-player side bets (pair-bets.js): this round's only, so Run it back and usuals never bring them back
   // (a round rescheduled or a plan's roll call keeps the ones it was set up with)
   // Stamped with the holes they start on, so changing the course or holes later puts a bet on some
@@ -373,6 +377,19 @@ export default function NewRound({ rematch, fromPlan, present, edit = null, ahea
     const bets = betsOf({ ...round, bets: shownBets }).map(b => cleanBet(round, b));
     if (bets.length) round.bets = bets;
     const challengesIn = bets.map(b => challengeIdOfBet(b.id)).filter(Boolean);
+    // Money needs a yes to "Are you 18 or older?" once (age.js). Under 18 keeps the round and
+    // turns the money off: points instead of money, or a reward round's side bets for points
+    if (needsAgeCheck(s, round)) {
+      const answer = await checkAge();
+      if (answer !== 'adult') {
+        if (answer === 'under') {
+          if (!playFor) setPlayFor({ kind: 'points' });
+          else setPairBets(list => list.map(b => (b.playFor === 'points' ? b : { ...b, playFor: 'points' })));
+          showToast(playFor ? 'Side bets set to points. Money is for 18 or older.' : 'Switched to points. Money rounds are for 18 or older.');
+        }
+        return;
+      }
+    }
     // Counted for the trip: the stamp rides in the round to every phone in it (trips.js)
     if (tripPick) round.trip = tripStamp(tripPick);
     // Its matches for a team points trip, as set up here (a scramble or Chapman has none: one ball a
