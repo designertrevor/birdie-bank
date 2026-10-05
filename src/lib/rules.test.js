@@ -315,10 +315,10 @@ test('saved settings from before rev 2 move to the new defaults once', () => {
   assert.equal(migrateSettings(null), null);
 });
 
-// Rules.jsx is JSX, so node reads its RULES keys from the source: one `  key: {` line per game
+// rules-content.jsx is JSX, so node reads its RULES keys from the source: one `  key: {` line per game
 test('rules: every game and every side game has a rules sheet, and the Birdie pot example adds up', () => {
-  const src = readFileSync(new URL('../components/Rules.jsx', import.meta.url), 'utf8');
-  const body = src.slice(src.indexOf('const RULES = {'), src.indexOf('export function RulesSheet'));
+  const src = readFileSync(new URL('../components/rules-content.jsx', import.meta.url), 'utf8');
+  const body = src.slice(src.indexOf('export const RULES = {'));
   const keys = new Set([...body.matchAll(/^ {2}(\w+): \{$/gm)].map(m => m[1]));
   for (const k of Object.keys(SIDE_GAMES)) assert.ok(keys.has(k), `rules for side game ${k}`);
   for (const k of Object.keys(GAMES)) assert.ok(keys.has(k), `rules for ${k}`);
