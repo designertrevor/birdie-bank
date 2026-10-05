@@ -29,6 +29,9 @@ npm run build
   warning and can be corrected in-app (saved as the user's own copy).
 - `src/screens/*`: History, Ledger, Players, Settings tabs; New round wizard; Play.
 - `public/sw.js` + `manifest.webmanifest`: installable, works offline once loaded.
+- `src/lib/roadmap-public.js`: the public roadmap (in the app, and at `/roadmap` for anyone),
+  made from `ROADMAP.md` at build time. Only games and features go out, as short titles.
+  `node scripts/roadmap-public.mjs` prints what's public and each item's id.
 
 ## Shared live scoring (Supabase)
 

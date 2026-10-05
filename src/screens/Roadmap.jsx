@@ -17,6 +17,8 @@ import { addComment, deleteComment, loadComments, myCommentName, refreshRoadmap,
 
 /** Shipped is long, so it starts with the newest few. */
 const SHIPPED_FIRST = 20;
+/** Where an id sits in a held order; anything new goes after. */
+const place = (order, id) => { const i = order.indexOf(id); return i < 0 ? order.length : i; };
 
 /**
  * `highlight` opens on that item (or your idea) and marks it; `sent` ('sent' | 'queued') says thanks
@@ -30,9 +32,12 @@ export default function Roadmap({ highlight = null, sent = null, web = false, id
   const items = useMemo(() => roadmapItems(BASE, server.requests), [server.requests]);
   const ideas = useMemo(() => (web ? [] : myIdeas(local, server.mine, items)), [web, local, server.mine, items]);
   const [tab, setTab] = useState(() => (highlight ? tabFor(items, highlight, ideas) : 'planned'));
-  const [allShipped, setAllShipped] = useState(false);
+  // Opening on an item shows the whole of Shipped, so an older one is there to scroll to
+  const [allShipped, setAllShipped] = useState(() => !!highlight);
   const [talking, setTalking] = useState(null);
   const [toldLocal, setToldLocal] = useState(false);
+  // Once you vote, the list holds its order for this visit, so the card you tapped doesn't jump away
+  const [held, setHeld] = useState({});
   const scrolled = useRef(false);
 
   useEffect(() => { refreshRoadmap(); }, []);
@@ -47,7 +52,8 @@ export default function Roadmap({ highlight = null, sent = null, web = false, id
   });
 
   const ctx = { counts: server.counts, local, myVotes: server.myVotes };
-  const rows = section(items, tab, ctx);
+  const sorted = section(items, tab, ctx);
+  const rows = held[tab] ? [...sorted].sort((a, b) => place(held[tab], a.id) - place(held[tab], b.id)) : sorted;
   const shown = tab === 'shipped' && !allShipped ? rows.slice(0, SHIPPED_FIRST) : rows;
   const count = s => items.filter(i => i.status === s).length;
   // Your ideas show on their item too: listed as its own, or folded into one already there
@@ -55,6 +61,7 @@ export default function Roadmap({ highlight = null, sent = null, web = false, id
   const waiting = ideas.filter(i => i.state === 'waiting');
 
   const vote = item => {
+    if (!held[tab]) setHeld(h => ({ ...h, [tab]: rows.map(i => i.id) }));
     const on = toggleRoadmapVote(item.id);
     // Signed out, the vote stays on this phone: say so once a visit, with the way to make it count
     if (on && !acct.user && !toldLocal) {
