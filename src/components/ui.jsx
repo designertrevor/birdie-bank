@@ -291,7 +291,9 @@ function Confirm({ confirm, close }) {
           {(confirm.actions || [{ label: confirm.confirmLabel || 'Confirm', value: true, danger: confirm.danger }]).map(a => (
             <button key={a.label} className={`full-btn ${a.danger ? 'danger' : ''} ${a.secondary ? 'outline' : ''}`} onClick={() => close(a.value)}>{a.label}</button>
           ))}
-          <button className="full-btn outline" onClick={() => close(null)}>{confirm.cancelLabel || 'Cancel'}</button>
+          {confirm.cancelLink
+            ? <button className="link-btn center" onClick={() => close(null)}>{confirm.cancelLabel || 'Cancel'}</button>
+            : <button className="full-btn outline" onClick={() => close(null)}>{confirm.cancelLabel || 'Cancel'}</button>}
         </div>
       </div>
     </div>

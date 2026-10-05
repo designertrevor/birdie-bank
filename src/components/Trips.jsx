@@ -176,7 +176,7 @@ function TripUpNextCard({ status: st, renderPlan }) {
       <div className="trip-card-wrap">
         <button className="trip-card" onClick={() => nav.push('trip', { id: st.trip.id })} aria-label={`${st.trip.name}. ${title}. See the trip`}>
           <div className="row-main">
-            <div className="eyebrow">{st.trip.name}{st.day ? ` · Day ${st.day} of ${st.days}` : ` · ${tripDates(st.trip)}`} <Updated st={st} /></div>
+            <div className="eyebrow trip-card-eb"><span className="tce-name">{st.trip.name}</span><span className="tce-when">{st.day ? ` · Day ${st.day} of ${st.days}` : ` · ${tripDates(st.trip)}`}</span> <Updated st={st} /></div>
             <div className="trip-name d">{title}</div>
             {cupOn && <div className="trip-sub"><CupLine cup={st.cup} />{st.phase === 'on' && line ? ` · ${line}` : ''}</div>}
             <TripDays status={st} />

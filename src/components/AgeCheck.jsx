@@ -16,9 +16,10 @@ export function useAgeCheck() {
     if (!force && moneyOk(getState())) return 'adult';
     const answer = await ask({
       title: AGE_COPY.title,
-      text: AGE_COPY.text,
+      text: force ? AGE_COPY.again : AGE_COPY.text,
       actions: [{ label: AGE_COPY.yes, value: 'adult' }, { label: AGE_COPY.no, value: 'under', secondary: true }],
-      cancelLabel: 'Not now',
+      // Closing without an answer is a text link, so it doesn't look like a third answer
+      cancelLabel: 'Not now', cancelLink: true,
     });
     if (answer === 'adult' || answer === 'under') update(s => setAgeAnswer(s, answer));
     return answer || null;

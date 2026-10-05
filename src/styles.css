@@ -3242,3 +3242,7 @@ a.header-btn.rm-open { text-decoration: none; }
 .cal-cell:disabled { text-decoration: none; opacity: .35; }
 /* The header's Edit and Share keep a 44px tap target */
 .header-btn { min-height: 44px; }
+/* Up next's trip card: the trip's name gives way (with an ellipsis) before its dates break across lines */
+.trip-card-eb { display: flex; align-items: baseline; gap: 4px; min-width: 0; white-space: nowrap; }
+.trip-card-eb .tce-name { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+.trip-card-eb .tce-when { flex-shrink: 0; white-space: pre; }

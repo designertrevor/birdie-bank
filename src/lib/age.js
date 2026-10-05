@@ -77,6 +77,8 @@ export function keepAgeAnswer(incoming, local) {
 export const AGE_COPY = {
   title: 'Are you 18 or older?',
   text: 'Playing for money is for adults: 18 or older, or the age where you live if it’s higher. We only ask once. Under 18? You can still keep score and play for points or a reward.',
+  // Asked again from Settings (to change the answer): the same, without "We only ask once"
+  again: 'Playing for money is for adults: 18 or older, or the age where you live if it’s higher. Under 18? You can still keep score and play for points or a reward.',
   yes: 'Yes, I’m 18 or older',
   no: 'No, I’m under 18',
 };

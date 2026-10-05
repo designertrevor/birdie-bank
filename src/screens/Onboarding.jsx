@@ -207,7 +207,11 @@ export default function Onboarding({ onDone, play = null }) {
             ))}
           </div>
           <p className="field-help">Friends see it on seats and the Tab. Add a photo or pick another any time from your profile.</p>
-          <button className={`list-item pick ob-agree ${agreed ? 'on' : ''}`} role="checkbox" aria-checked={agreed} aria-label="Friendly wagers only" aria-describedby="ob-agree-sub" onClick={() => setAgreed(v => !v)}>
+          <button className={`list-item pick ob-agree ${agreed ? 'on' : ''}`} role="checkbox" aria-checked={agreed} aria-label="Friendly wagers only" aria-describedby="ob-agree-sub" onClick={() => {
+            setAgreed(!agreed);
+            // Ticked with the age question still to answer below the fold: bring it into view, since Continue waits on it
+            if (!agreed && asksAge(a) && !age) requestAnimationFrame(() => document.querySelector('.ob-age')?.scrollIntoView({ block: 'nearest', behavior: 'smooth' }));
+          }}>
             <PickMark on={agreed} add={false} />
             <div className="row-main">
               <div className="li-name">Friendly wagers only</div>
@@ -218,7 +222,7 @@ export default function Onboarding({ onDone, play = null }) {
             <div className="ob-age">
               <div className="field-label" id="ob-age-q">{AGE_COPY.title}</div>
               <div className="chip-row flush" role="radiogroup" aria-labelledby="ob-age-q" aria-describedby="ob-age-help">
-                {[['adult', 'Yes, 18 or older'], ['under', 'No, under 18']].map(([v, label]) => (
+                {[['adult', AGE_COPY.yes], ['under', AGE_COPY.no]].map(([v, label]) => (
                   <PickChip key={v} radio on={age === v} onClick={() => setAge(v)}>{label}</PickChip>
                 ))}
               </div>

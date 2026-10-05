@@ -110,7 +110,7 @@ export default function BigGameSetup({ id = null, from = null }) {
   const canGo = i => i <= reached && (i < 2 || course) && (i < 3 || pool.length >= BIG_MIN_PLAYERS);
   const back = () => (step > 0 ? showStep(step - 1) : nav.pop());
   const close = async () => {
-    if (!(await ask({ title: was ? 'Leave without saving?' : 'Leave the Big Game setup?', text: 'What you’ve set up so far won’t be kept.', confirmLabel: 'Leave', cancelLabel: 'Keep going' }))) return;
+    if (!(await ask({ title: was ? 'Leave without saving?' : 'Leave the Big Game setup?', text: 'What you’ve set up so far won’t be kept.', confirmLabel: 'Leave', danger: true, cancelLabel: 'Keep going' }))) return;
     nav.pop();
   };
 
