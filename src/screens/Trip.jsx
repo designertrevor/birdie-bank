@@ -615,7 +615,7 @@ function TripSettlePage({ id, who = null }) {
               <div className="pay-acts wrap">
                 {iPay ? <PayButton info={payInfoFor(state, other)} amount={t.amount} note={note} />
                   : <RequestButton payer={payInfoFor(state, other)} mine={myApp} amount={t.amount} note={note} who={other} />}
-                <button className="pay-btn ink" onClick={() => mark(t)}><span className="pay-in"><Icon name="check-circle" fill /><span className="pay-lbl">{iPay ? 'I paid' : 'I got it'}</span></span></button>
+                <button className="pay-btn got" onClick={() => mark(t)}><span className="pay-in"><Icon name="check-circle" fill /><span className="pay-lbl">{iPay ? 'I paid' : 'I got it'}</span></span></button>
               </div>
             </div>
           );

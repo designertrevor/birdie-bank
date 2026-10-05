@@ -3227,3 +3227,18 @@ a.header-btn.rm-open { text-decoration: none; }
 /* New round's Who's in rows carry the same avatar as every other people list */
 .player-pick .pick-main { gap: 12px; }
 .player-pick .pick-main .avatar { margin: 0; flex-shrink: 0; }
+/* A plan's session line can run to two lines: a rounded card shape, not a pill, so the text keeps
+   clear of the ends */
+.ic-playfor { border-radius: 14px; align-items: flex-start; line-height: 1.3; }
+.ic-playfor i { margin-top: 2px; }
+/* Settle the trip: the lede on the 16px gutter with room between its lines */
+.settle-lede { padding: 4px 16px 16px; }
+.settle-lede p { line-height: 1.45; }
+/* "I paid" and "I got it" are the quiet second button next to the pay app's, so a page of them
+   doesn't stack up black bars */
+.pay-btn.got { background: var(--surface); color: var(--ink); }
+/* Days and months you can't pick are faded, as unavailable choices are everywhere else */
+.cal-day[aria-disabled] .cd-num { text-decoration: none; opacity: .35; }
+.cal-cell:disabled { text-decoration: none; opacity: .35; }
+/* The header's Edit and Share keep a 44px tap target */
+.header-btn { min-height: 44px; }

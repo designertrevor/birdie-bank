@@ -465,7 +465,7 @@ export function StakeLines({ st }) {
             </div>
             <div className="pay-acts wrap">
               {iPay && otherId && <PayButton info={payInfoFor(state, otherId)} amount={l.open / 100} note={`${st.trip.name} cup`} />}
-              <button className="pay-btn ink" onClick={() => mark(l)}><span className="pay-in"><Icon name="check-circle" fill /><span className="pay-lbl">{iPay ? 'I paid' : 'I got it'}</span></span></button>
+              <button className="pay-btn got" onClick={() => mark(l)}><span className="pay-in"><Icon name="check-circle" fill /><span className="pay-lbl">{iPay ? 'I paid' : 'I got it'}</span></span></button>
             </div>
           </div>
         );

@@ -301,7 +301,7 @@ function Money({ bs, st, id, state, me, isMe, name, off }) {
             <div className="pay-acts wrap">
               {iPay ? <PayButton info={payInfoFor(state, other)} amount={t.amount} note={st.trip.name} />
                 : <RequestButton payer={payInfoFor(state, other)} mine={myApp} amount={t.amount} note={st.trip.name} who={other} />}
-              <button className="pay-btn ink" onClick={() => mark(t)}><span className="pay-in"><Icon name="check-circle" fill /><span className="pay-lbl">{iPay ? 'I paid' : 'I got it'}</span></span></button>
+              <button className="pay-btn got" onClick={() => mark(t)}><span className="pay-in"><Icon name="check-circle" fill /><span className="pay-lbl">{iPay ? 'I paid' : 'I got it'}</span></span></button>
             </div>
           </div>
         );

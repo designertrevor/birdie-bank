@@ -400,7 +400,7 @@ function WhoAreYou({ plan, defaultName, standalone, onSkip }) {
           <div className="ic-from"><Avatar name={host} /> <span><strong>{host}</strong> is getting a game together</span></div>
           <div className="eyebrow ph-when">{whenLabel(plan)}</div>
           <div className="ic-game"><Icon name={game?.icon || 'golf'} fill /> {game?.name || 'Golf'}</div>
-          <div className="ic-course">{plan.course?.name} · {plan.holesCount} holes{bet ? ` · ${bet}` : ''}</div>
+          <div className="ic-course">{plan.course?.name || 'Course to be set'} · {plan.holesCount} holes{bet ? ` · ${bet}` : ''}</div>
           {playForLine(plan) && <div className="ic-playfor"><Icon name={plan.playFor?.kind === 'reward' ? 'gift' : 'trophy'} fill /> {playForLine(plan)}</div>}
         </div>
         {!adding ? (
@@ -550,7 +550,7 @@ export function RollCall({ id }) {
       <Header title="Roll call" small onBack={nav.pop} />
       <div className="scroll">
         <div className="block summary-card">
-          <div className="li-sub">{plan.course?.name} · {setup.holesCount} holes</div>
+          <div className="li-sub">{plan.course?.name || 'Course to be set'} · {setup.holesCount} holes</div>
           <div className="d stake-big">{g?.name || 'Pick a game'}{setup.bet && setup.settings?.[setup.game] ? ` · ${inUnits(plan, betLabel(setup.game, setup.settings, setup.bet, setup.holesCount ?? 18))}` : ''}</div>
           {setup.sideGames.length > 0 && <div className="li-sub">+ {setup.sideGames.map(sg => `${SIDE_GAMES[sg.game].label}, ${inUnits(plan, sideBetLine(sg.game, sg.settings))}`).join(' + ')}</div>}
           {playForLine(plan) && <div className="li-sub">{playForLine(plan)}</div>}
