@@ -3,7 +3,7 @@
 // shows someone else's. Anyone on the trip adds one; only whoever added it changes or deletes it.
 import { useEffect } from 'react';
 import { dropKept, useKept, useKeptScope } from '../lib/kept.js';
-import { Icon, Segmented, Sheet, useUI } from './ui.jsx';
+import { Icon, PickChip, PickMark, Segmented, Sheet, useUI } from './ui.jsx';
 import { Avatar } from './Pay.jsx';
 import { AtScreen } from './Trips.jsx';
 import { useStore } from '../lib/store.js';
@@ -277,7 +277,7 @@ function ExpenseForm({ expense, st, me, full, short, onDone }) {
       <label className="field-label" htmlFor="exp-what">What was it? <span className="opt">optional</span></label>
       <input id="exp-what" className="text-input" value={what} onChange={e => setWhat(e.target.value)} maxLength={40} placeholder="Dinner, gas, the house" autoFocus={!expense} />
       <div className="exp-chips" role="group" aria-label="Quick picks">
-        {QUICK_WHATS.map(w => <button key={w} type="button" className={`pill-btn sm ${what === w ? 'on' : ''}`} aria-pressed={what === w} onClick={() => setWhat(w)}>{what === w && <Icon name="check" />}{w}</button>)}
+        {QUICK_WHATS.map(w => <PickChip key={w} small on={what === w} onClick={() => setWhat(w)}>{w}</PickChip>)}
       </div>
 
       <label className="field-label" htmlFor="exp-amount">How much?</label>
@@ -289,7 +289,7 @@ function ExpenseForm({ expense, st, me, full, short, onDone }) {
 
       <div className="field-label" id="exp-payer">Who paid?</div>
       <div className="exp-chips" role="group" aria-labelledby="exp-payer">
-        {pool.map(id => <button key={id} type="button" className={`pill-btn sm ${payer === id ? 'on' : ''}`} aria-pressed={payer === id} onClick={() => setPayer(id)}>{payer === id && <Icon name="check" />}{short(id)}</button>)}
+        {pool.map(id => <PickChip key={id} small on={payer === id} onClick={() => setPayer(id)}>{short(id)}</PickChip>)}
       </div>
 
       <div className="field-label" id="exp-split">Split it</div>
@@ -306,7 +306,7 @@ function ExpenseForm({ expense, st, me, full, short, onDone }) {
                 <button type="button" className={`exp-who exp-tick ${inSplit.has(id) ? 'on' : ''}`} aria-pressed={inSplit.has(id)} onClick={() => flip(id)}>
                   <Avatar id={id} name={name} /> <span className="exp-pname">{name}</span>
                   <span className={`exp-share ${share == null ? 'none' : ''}`}>{share == null ? '–' : dollars(share)}</span>
-                  <span className={`li-check ${inSplit.has(id) ? 'on' : 'add'}`} aria-hidden="true"><Icon name={inSplit.has(id) ? 'check' : 'plus'} /></span>
+                  <PickMark on={inSplit.has(id)} />
                 </button>
               ) : (
                 <span className="exp-who"><Avatar id={id} name={name} /> <span className="exp-pname">{name}</span></span>

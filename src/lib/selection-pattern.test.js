@@ -15,9 +15,8 @@ const jsxFiles = [
   'App.jsx', 'nav.jsx',
 ];
 
-// The trip screens' own pickers are being redone in the trip flow work of the same night; once
-// that lands, these come off the list and the checks below cover them too.
-const TRIP_FLOW = new Set(['components/Trips.jsx', 'components/TripMode.jsx', 'components/Cup.jsx', 'components/TripExpenses.jsx']);
+// The trip screens' pickers were redone in the trip flow work and now use the shared pieces too
+const TRIP_FLOW = new Set([]);
 
 // Pills that switch a view rather than pick something: tabs, not picks, so no check
 const VIEW_SWITCHES = new Set(['components/CrewTabs.jsx', 'components/AvatarPicker.jsx']);
