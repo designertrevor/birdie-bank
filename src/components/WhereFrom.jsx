@@ -12,6 +12,7 @@ import { money } from '../lib/golf.js';
 import { shortDate } from '../lib/shared-tab.js';
 import { breakdownLine, breakdownWith, pairBreakdown } from '../lib/where-from.js';
 import { countsMoney, unitFmt } from '../lib/play-for.js';
+import { bettingRound } from '../lib/round.js';
 
 const first = n => String(n || '').trim().split(/\s+/)[0] || '?';
 const cls = v => (v > 0 ? 'pos' : v < 0 ? 'neg' : 'zero');
@@ -36,8 +37,10 @@ function Item({ x, fmt }) {
  * "Where it comes from" for one round: a row for each other player (yours with them, from your side),
  * or for each payment when you only watched. Tapping a row opens the breakdown.
  */
-export function RoundWhereFrom({ round, res, fmt: fmtIn = null, title = 'Where it comes from' }) {
-  const me = useStore(s => meFor(round, s));
+export function RoundWhereFrom({ round: whole, res, fmt: fmtIn = null, title = 'Where it comes from' }) {
+  // Someone just playing has no money with anyone, so they never get a row (the same on every screen)
+  const round = bettingRound(whole);
+  const me = useStore(s => meFor(whole, s));
   const [open, setOpen] = useState(null); // { a, b }
   // A reward round reads in points, but its side bets for money come here in dollars (`fmt`, `res` from tabResults)
   const fmt = fmtIn || unitFmt(round);
