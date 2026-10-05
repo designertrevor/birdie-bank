@@ -38,6 +38,8 @@ export function rangeOfKind(kind, from, now = new Date()) {
     const month = year === now.getFullYear() ? now.getMonth() : 11;
     return { kind, year, month: from.kind === 'month' ? from.month : month };
   }
+  // Already custom (Custom tapped again): the dates you picked stay
+  if (from.kind === 'custom' && from.from && from.to) return from;
   // Custom starts on the last 30 days, a sensible window to adjust from
   const to = new Date(now.getFullYear(), now.getMonth(), now.getDate());
   const start = new Date(to); start.setDate(start.getDate() - 29);

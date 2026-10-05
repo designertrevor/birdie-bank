@@ -236,6 +236,12 @@ test('All time is a range that never steps', () => {
   assert.equal(rangeOfKind('month', allTime, new Date(2026, 9, 3)).month, 9);
 });
 
+test('tapping Custom again keeps the dates picked', () => {
+  const picked = { kind: 'custom', from: '2026-09-10', to: '2026-09-20' };
+  assert.deepEqual(rangeOfKind('custom', picked, new Date(2026, 9, 5)), picked);
+  assert.deepEqual(rangeOfKind('custom', { kind: 'month', year: 2026, month: 9 }, new Date(2026, 9, 5)), { kind: 'custom', from: '2026-09-06', to: '2026-10-05' });
+});
+
 test('best of: the most dollars won, else the best record over two rounds or more', () => {
   const st = deepStats(stateOf(all()));
   const best = bestOf(st.games);
