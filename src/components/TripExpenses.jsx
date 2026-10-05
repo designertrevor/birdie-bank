@@ -261,7 +261,7 @@ function ExpenseForm({ expense, st, me, full, short, onDone }) {
     if (!ok) return;
     const e = saveExpense({ id: expense?.id || null, tripId: st.trip.id, what, amount: total, payer, split, people });
     if (!e) { showToast('That doesn’t add up. Check the amounts and try again.'); return; }
-    showToast(expense ? `${e.what} saved` : `${e.what} added${expensesOn() ? '. Everyone on the trip sees it.' : ''}`);
+    showToast(expense ? `${e.what} saved` : `${e.what} added${expensesOn() ? ' for the whole trip' : ''}`);
     onDone();
   };
   const del = async () => {

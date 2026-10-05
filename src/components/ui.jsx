@@ -1,4 +1,4 @@
-import { createContext, useCallback, useContext, useEffect, useRef, useState } from 'react';
+import { createContext, useCallback, useContext, useEffect, useLayoutEffect, useRef, useState } from 'react';
 
 export function Icon({ name, fill = false, className = '', label }) {
   return <i className={`${fill ? 'ph-fill' : 'ph-bold'} ph-${name} ${className}`} aria-hidden={label ? undefined : true} aria-label={label} />;
@@ -254,10 +254,21 @@ export function UIProvider({ children }) {
   }, []);
   const ask = useCallback(opts => new Promise(resolve => setConfirm({ ...opts, resolve })), []);
   const close = v => { confirm?.resolve(v); setConfirm(null); };
+  // A screen with buttons pinned at the bottom (and no tab bar) raises the toast above them, so it
+  // never sits on the button it's about
+  const toastRef = useRef(null);
+  useLayoutEffect(() => {
+    const el = toastRef.current;
+    if (!el || !toast) return;
+    const screen = [...document.querySelectorAll('.device .screen.active')].pop();
+    const foot = screen?.querySelector(':scope > .cta-wrap, :scope > .pin-btn');
+    const top = foot?.getBoundingClientRect().top;
+    el.style.bottom = top ? `${Math.max(0, window.innerHeight - top) + 12}px` : '';
+  }, [toast]);
   return (
     <UICtx.Provider value={{ showToast, ask }}>
       {children}
-      <div className={`toast ${toast ? 'show' : ''} ${toast?.action ? 'has-act' : ''}`} role="status" aria-live="polite">
+      <div ref={toastRef} className={`toast ${toast ? 'show' : ''} ${toast?.action ? 'has-act' : ''}`} role="status" aria-live="polite">
         {/* Keyed, so the same words twice in a row are read out twice */}
         {toast && <span key={toast.key}>{toast.msg}</span>}
         {toast?.action && <button className="toast-act" onClick={() => { toast.action.run(); setToast(null); }}>{toast.action.label}</button>}

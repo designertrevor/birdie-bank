@@ -431,7 +431,7 @@ function TripForm({ trip, onDone }) {
       nav.push('newRound', { ahead: true, trip: t.id });
       return;
     }
-    showToast(r?.made ? `${t.name} is on. ${r.made} round${r.made === 1 ? ' is' : 's are'} planned, day by day, with their matches` : `${t.name} is on`);
+    showToast(r?.made ? `${t.name} is on, ${r.made} round${r.made === 1 ? '' : 's'} planned` : `${t.name} is on`);
     onDone?.(t);
   };
   // "Players" when there are teams to pick too, so four steps fit across a phone
