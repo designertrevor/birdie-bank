@@ -1,7 +1,7 @@
 // Scramble house rule "minimum drives": tap whose drive each team used on the hole, with the count so far.
 import { playsHole } from '../lib/round.js';
 import { drivesNeeded, drivesShortfall, scrambleDrives, shortfallText } from '../lib/scramble-drives.js';
-import { Icon } from './ui.jsx';
+import { Icon, PickChip } from './ui.jsx';
 import { buzz } from '../lib/delight.js';
 
 const firstName = n => (n || '').split(' ')[0];
@@ -34,10 +34,9 @@ export function ScrambleDrivesPicker({ round, hole, marks, setMarks }) {
             <div className="marks-lbl"><strong>{t.name}</strong><span className={t.tight ? 'drives-tight' : undefined}>{sub}</span></div>
             <div className="chip-row" style={{ padding: 0 }} role="radiogroup" aria-label={`${t.name}: whose drive`}>
               {t.players.filter(p => playsHole(round, p.id, hole)).map(p => (
-                <button key={p.id} role="radio" aria-checked={picked[t.id] === p.id} disabled={!setMarks}
-                  className={`pill-btn sm ${picked[t.id] === p.id ? 'on' : ''}`} onClick={() => pick(t.id, p.id)}>
+                <PickChip key={p.id} small radio on={picked[t.id] === p.id} disabled={!setMarks} onClick={() => pick(t.id, p.id)}>
                   {firstName(p.name)} <span className="drives-n">{p.drives}</span>
-                </button>
+                </PickChip>
               ))}
             </div>
           </div>

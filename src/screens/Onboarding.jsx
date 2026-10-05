@@ -3,7 +3,7 @@
 // setting up the next round (the plan flow: the organizer suggests, the group votes) and, when
 // the flag is on, the paywall. Invited players arrive from a link and skip all of this.
 import { useState } from 'react';
-import { BallIllo, Icon, Numpad, Screen } from '../components/ui.jsx';
+import { BallIllo, Icon, Numpad, PickMark, PickRow, Screen } from '../components/ui.jsx';
 import { update, uid } from '../lib/store.js';
 import { formatIndex } from '../lib/format.js';
 import { money } from '../lib/golf.js';
@@ -124,7 +124,7 @@ export default function Onboarding({ onDone }) {
               const on = a.games.includes(k);
               return (
                 <button key={k} className={`ob-tile ${on ? 'on' : ''}`} aria-pressed={on} aria-label={`${g.name}: ${g.blurb}`} onClick={() => setA(x => ({ ...x, games: toggleGame(x.games, k) }))}>
-                  <span className="ob-tile-top"><Icon name={g.icon} fill />{on && <Icon name="check-circle" fill className="ob-tick" />}</span>
+                  <span className="ob-tile-top"><Icon name={g.icon} fill />{on && <PickMark on small />}</span>
                   <span className="ob-tile-name">{g.name}</span>
                   <span className="ob-tile-sub">{g.blurb}</span>
                 </button>
@@ -148,13 +148,8 @@ export default function Onboarding({ onDone }) {
             {q.options.map(o => {
               const on = a[step] === o.value;
               return (
-                <button key={o.value} role="radio" aria-checked={on} aria-label={o.sub ? `${o.label}. ${o.sub}` : o.label} className={`list-item ob-choice ${on ? 'on' : ''}`} onClick={() => set(step, o.value)}>
-                  <div className="row-main">
-                    <div className="li-name">{o.label}</div>
-                    {o.sub && <div className="li-sub">{o.sub}</div>}
-                  </div>
-                  <span className={`li-check ${on ? 'on' : ''}`}>{on && <Icon name="check" />}</span>
-                </button>
+                <PickRow key={o.value} radio on={on} label={o.sub ? `${o.label}. ${o.sub}` : o.label} className="ob-choice" onClick={() => set(step, o.value)}
+                  title={o.label} sub={o.sub} />
               );
             })}
           </div>
@@ -204,8 +199,8 @@ export default function Onboarding({ onDone }) {
             ))}
           </div>
           <p className="field-help">Friends see it on seats and the Tab. Add a photo or pick another any time from your profile.</p>
-          <button className={`list-item ob-agree ${agreed ? 'on' : ''}`} role="checkbox" aria-checked={agreed} aria-label="Friendly wagers only" aria-describedby="ob-agree-sub" onClick={() => setAgreed(v => !v)}>
-            <span className={`li-check ${agreed ? 'on' : ''}`}>{agreed && <Icon name="check" />}</span>
+          <button className={`list-item pick ob-agree ${agreed ? 'on' : ''}`} role="checkbox" aria-checked={agreed} aria-label="Friendly wagers only" aria-describedby="ob-agree-sub" onClick={() => setAgreed(v => !v)}>
+            <PickMark on={agreed} add={false} />
             <div className="row-main">
               <div className="li-name">Friendly wagers only</div>
               <div className="li-sub" id="ob-agree-sub">Birdie Bank tracks bets between friends. It never holds, sends or collects money. Check that betting on golf is legal where you play.</div>

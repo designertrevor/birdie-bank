@@ -1,6 +1,6 @@
 // Per-game panels shown above the score rows while playing.
 import { useEffect, useState } from 'react';
-import { Icon, useUI } from './ui.jsx';
+import { Icon, PickChip, useUI } from './ui.jsx';
 import { update, uid } from '../lib/store.js';
 import {
   hammerOptions, hammerTable, holeAtPos, holeComplete, nassauAmounts, nassauPressOptions, nassauWinners, playersOn, pointsTable, pressMode, rabbitTable,
@@ -330,11 +330,12 @@ export function SnakePicker({ round, hole, marks, setMarks }) {
             const k = putts.indexOf(p.id);
             return (
               <span key={p.id} className="snake4-pair">
-                <button aria-pressed={k >= 0} className={`pill-btn sm ${k >= 0 ? 'on' : ''}`} onClick={() => toggle(p.id)}>
+                {/* With two or more, the order number stands in for the check */}
+                <PickChip small on={k >= 0} check={putts.length <= 1} onClick={() => toggle(p.id)}>
                   {k >= 0 && putts.length > 1 && <span aria-hidden="true">{k + 1}.</span>} {firstName(p.name)}{k >= 0 && k === putts.length - 1 ? ' · has it' : ''}
-                </button>
+                </PickChip>
                 {can4 && k >= 0 && (
-                  <button aria-pressed={fours.includes(p.id)} aria-label={`${firstName(p.name)} four-putted`} className={`pill-btn sm ${fours.includes(p.id) ? 'on' : ''}`} onClick={() => toggle4(p.id)}>4-putt</button>
+                  <PickChip small on={fours.includes(p.id)} label={`${firstName(p.name)} four-putted`} onClick={() => toggle4(p.id)}>4-putt</PickChip>
                 )}
               </span>
             );
@@ -419,8 +420,8 @@ export function BBBPicker({ round, hole, marks, setMarks }) {
           <div className="marks-lbl"><strong>{b.name}</strong><span>{b.help}</span></div>
           <div className="chip-row" style={{ padding: 0 }} role="radiogroup" aria-label={b.name}>
             {playersOn(round, hole).map(p => (
-              <button key={p.id} role="radio" aria-checked={marks[b.key] === p.id} className={`pill-btn sm ${marks[b.key] === p.id ? 'on' : ''}`}
-                onClick={() => { setMarks({ ...marks, [b.key]: marks[b.key] === p.id ? null : p.id }); buzz(8); }}>{firstName(p.name)}</button>
+              <PickChip key={p.id} small radio on={marks[b.key] === p.id}
+                onClick={() => { setMarks({ ...marks, [b.key]: marks[b.key] === p.id ? null : p.id }); buzz(8); }}>{firstName(p.name)}</PickChip>
             ))}
           </div>
         </div>
@@ -455,7 +456,7 @@ export function DotsRow({ round, player, hole, marks, setMarks, gross, label = n
     <div className="dots-row" role="group" aria-label={label || `${player.name.split(' ')[0]}’s dots`}>
       {auto > 0 && <span className="pill-btn sm auto"><Icon name="bird" fill /> {auto === 2 ? 'Eagle · 2 dots' : 'Birdie'}</span>}
       {kinds.map(k => (
-        <button key={k} className={`pill-btn sm ${mine.includes(k) ? 'on' : ''}`} aria-pressed={mine.includes(k)} title={DOT_KINDS[k].help} onClick={() => toggle(k)}>{DOT_KINDS[k].name}{k === 'greenie' && riding ? ` ×${riding + 1}` : ''}</button>
+        <PickChip key={k} small on={mine.includes(k)} title={DOT_KINDS[k].help} onClick={() => toggle(k)}>{DOT_KINDS[k].name}{k === 'greenie' && riding ? ` ×${riding + 1}` : ''}</PickChip>
       ))}
     </div>
   );
@@ -503,11 +504,9 @@ export function PotPicker({ pots, hole, marks, setMarks, readOnly = false }) {
             <div className="marks-lbl pot-lbl"><strong>{title}</strong><span>{sub}</span></div>
             <div className="chip-row" style={{ padding: 0 }} role="radiogroup" aria-label={label}>
               {players.map(p => (
-                <button key={p.id} role="radio" aria-checked={won === p.id} className={`pill-btn sm ${won === p.id ? 'on' : ''}`} onClick={() => pick(won === p.id ? POT_NONE : p.id)}>
-                  {won === p.id && <Icon name="check" />} {firstName(p.name)}
-                </button>
+                <PickChip key={p.id} small radio on={won === p.id} onClick={() => pick(won === p.id ? POT_NONE : p.id)}>{firstName(p.name)}</PickChip>
               ))}
-              <button role="radio" aria-checked={!won || won === POT_NONE} className={`pill-btn sm ${!won || won === POT_NONE ? 'on' : ''}`} onClick={() => pick(POT_NONE)}>Nobody</button>
+              <PickChip small radio on={!won || won === POT_NONE} onClick={() => pick(POT_NONE)}>Nobody</PickChip>
             </div>
           </div>
         );

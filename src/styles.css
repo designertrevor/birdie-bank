@@ -2642,3 +2642,25 @@ button.ch-main:active { transform: scale(.98); }
 .big-setup-group .field-label { margin-top: 4px; }
 .big-team-row { padding: 4px 0; }
 .big-team-row .tr-sub { display: block; margin-bottom: 6px; }
+
+/* ---------- One way to pick (o9 consistency): PickRow, PickMark and PickChip in ui.jsx ---------- */
+/* A list of pickable rows sits on the 16px gutter, in a screen or a sheet */
+.pick-list { padding: 0 16px; }
+.pick-list.sheet-picks { padding-top: 4px; padding-bottom: 8px; }
+.pick-row { gap: 12px; }
+.pick-row .avatar { margin: 0; flex-shrink: 0; }
+.pick-row:disabled { cursor: default; opacity: .55; }
+.pick-row:disabled:active { transform: none; }
+/* The row you're moving from, or a round kept on a trip: picked and still easy to read */
+.pick-row.on:disabled { opacity: 1; }
+/* The small mark, for a tile's corner or a vote's row */
+.li-check.sm { width: 28px; height: 28px; font-size: 14px; }
+/* A chip's check pops in where its icon was */
+.pick-chip .pc-check { font-size: 14px; animation: pop .35s var(--spring); }
+.pick-chip.sm .pc-check { font-size: 12px; }
+/* Picked tiles and votes wear the same pink ring as a picked row, so picked reads one way everywhere */
+.ob-tile.on { background: var(--pick-tint); box-shadow: inset 0 0 0 2px var(--pink-fill); }
+.ob-tile-top .li-check { margin-left: auto; }
+.vote-row.on { box-shadow: inset 0 0 0 2px var(--pink-fill); }
+.vote-row .vr-check { font-size: inherit; }
+.vote-row .li-check { width: 28px; height: 28px; font-size: 14px; }

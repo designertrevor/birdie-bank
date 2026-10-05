@@ -3,7 +3,7 @@
 // Used by the Tab and the person screen, so the card works the same in both places.
 import { useCallback, useState } from 'react';
 import { createPortal } from 'react-dom';
-import { Icon, Sheet, useUI } from './ui.jsx';
+import { Icon, PickChip, Sheet, useUI } from './ui.jsx';
 import { Avatar, PayButton, RequestButton } from './Pay.jsx';
 import { update, useStore } from '../lib/store.js';
 import { useRemind } from '../lib/useRemind.js';
@@ -180,7 +180,7 @@ function CarrySheet({ open, onClose, owed, first, iOwe, rest, onAsk }) {
       <div className="eyebrow" style={{ padding: '0 20px 8px' }}>Add a reason (optional)</div>
       <div className="chip-row">
         {reasons.map(r => (
-          <button key={r} className={`pill-btn tap ${reason === r ? 'on' : ''}`} aria-pressed={reason === r} onClick={() => setReason(reason === r ? null : r)}>{r}</button>
+          <PickChip key={r} className="tap" on={reason === r} onClick={() => setReason(reason === r ? null : r)}>{r}</PickChip>
         ))}
       </div>
       <div style={{ padding: '8px 16px 0', display: 'flex', flexDirection: 'column', gap: 10 }}>

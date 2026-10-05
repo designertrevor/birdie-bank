@@ -6,7 +6,7 @@
 // organizer edits, deletes or says "Done playing"; anyone can hide the trip from their own Tab and
 // Up next. See trips.js, trip-plan.js and trip-expenses.js for how it's all worked out.
 import { useEffect, useState } from 'react';
-import { Empty, Header, Icon, Screen, Segmented, Sheet, useUI } from '../components/ui.jsx';
+import { Empty, Header, Icon, PickRow, Screen, Segmented, Sheet, useUI } from '../components/ui.jsx';
 import { Avatar, PayButton, RequestButton } from '../components/Pay.jsx';
 import { RoundRow } from '../components/RoundRow.jsx';
 import { SquareFaces, TripDays, TripSheet } from '../components/Trips.jsx';
@@ -383,22 +383,18 @@ function CountSheet({ open, onClose, st }) {
     <Sheet open={open} onClose={onClose} title="Which rounds count?">
       <p className="field-help pad">Rounds from {tripDates(st.trip)} on this phone. A round on the trip goes in the standings and settles with the trip. A finished round that was shared live stays as it was set up, so everyone’s phone agrees.{locked ? ' Payments have been made for the trip, so its rounds stay on it.' : ''}</p>
       {list.length === 0 && <p className="field-help pad">No rounds in these dates yet.</p>}
-      {list.map(r => {
-        const on = r.trip?.id === st.trip.id;
-        // A finished round shared live stays as it was set up, so every phone in it agrees
-        const fixed = !canRecount(state, r);
-        return (
-          <button key={r.id} className="sheet-item" disabled={(on && locked) || fixed} aria-pressed={on} onClick={() => setRoundTrip(r.id, on ? null : st.trip)}>
-            <span>
-              <Icon name={on ? 'check-square' : 'square'} fill={on} />
-              <span className="trip-li">
-                <span className="trip-li-name">{r.course.name} · {gameLabel(r)}</span>
-                <span className="trip-li-sub">{new Date(r.createdAt).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })}{r.status === 'active' ? ' · being played' : ''}{fixed ? ` · shared live, so it stays ${on ? 'on' : 'off'} the trip` : ''}</span>
-              </span>
-            </span>
-          </button>
-        );
-      })}
+      <div className="pick-list sheet-picks">
+        {list.map(r => {
+          const on = r.trip?.id === st.trip.id;
+          // A finished round shared live stays as it was set up, so every phone in it agrees
+          const fixed = !canRecount(state, r);
+          return (
+            <PickRow key={r.id} on={on} disabled={(on && locked) || fixed} onClick={() => setRoundTrip(r.id, on ? null : st.trip)}
+              title={`${r.course.name} · ${gameLabel(r)}`}
+              sub={`${new Date(r.createdAt).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })}${r.status === 'active' ? ' · being played' : ''}${fixed ? ` · shared live, so it stays ${on ? 'on' : 'off'} the trip` : ''}`} />
+          );
+        })}
+      </div>
       <div className="cta-wrap"><button className="full-btn" onClick={onClose}>Done</button></div>
     </Sheet>
   );

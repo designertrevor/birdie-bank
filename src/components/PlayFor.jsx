@@ -1,7 +1,7 @@
 // The "Play for" choice in setup and the plan flow: Money (as always), Points (bragging rights)
 // or a reward the winner gets ("Lunch", "A drink" or one typed in), with who's buying it.
 import { useState } from 'react';
-import { Segmented } from './ui.jsx';
+import { PickChip, Segmented } from './ui.jsx';
 import { REWARDS, REWARD_MAX, cleanReward, playForOf, storedPlayFor } from '../lib/play-for.js';
 
 /**
@@ -40,11 +40,9 @@ export default function PlayForPicker({ value, onChange, planning = false }) {
         <>
           <div className="chip-row pf-chips" role="radiogroup" aria-label="The reward">
             {REWARDS.map(r => (
-              <button key={r} type="button" role="radio" aria-checked={!typing && pf.reward === r} className={`pill-btn sm ${!typing && pf.reward === r ? 'on' : ''}`}
-                onClick={() => { setTyping(false); reward(r); }}>{r}</button>
+              <PickChip key={r} small radio on={!typing && pf.reward === r} onClick={() => { setTyping(false); reward(r); }}>{r}</PickChip>
             ))}
-            <button type="button" role="radio" aria-checked={typing} className={`pill-btn sm ${typing ? 'on' : ''}`}
-              onClick={() => { setTyping(true); if (cleanReward(custom)) reward(cleanReward(custom)); }}>Custom</button>
+            <PickChip small radio on={typing} onClick={() => { setTyping(true); if (cleanReward(custom)) reward(cleanReward(custom)); }}>Custom</PickChip>
           </div>
           {typing && (
             <>

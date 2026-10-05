@@ -4,7 +4,7 @@
 // bets between two players. On the day it starts the groups straight away: one live round a
 // group, each with its own link. Set up for another day, it waits on Up next until then.
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { Header, Icon, Numpad, Screen, Segmented, Sheet, Steps, Toggle, useUI } from '../components/ui.jsx';
+import { Header, Icon, Numpad, PickChip, PickMark, PickRow, Screen, Segmented, Sheet, Steps, Toggle, useUI } from '../components/ui.jsx';
 import { CourseStep, QuickAddPlayer } from './NewRound.jsx';
 import { BigBetSheet, BetsList } from '../components/BigGame.jsx';
 import { useStore } from '../lib/store.js';
@@ -253,7 +253,7 @@ function Players({ picked, setPicked, course, holesCount, tees, setTees, hcOverr
           <p className="field-help">{useHc ? 'Net scores use each player’s full course handicap across the field, and side bets work out strokes between the two.' : 'Everyone plays straight up, no strokes.'}</p>
         </div>
         <div className="sec-label">Players · {n} picked ({BIG_MIN_PLAYERS}–{BIG_MAX_PLAYERS})</div>
-        <div style={{ padding: '0 16px' }}>
+        <div className="pick-list">
           {players.map(p => {
             const on = picked.includes(p.id);
             const hc = on && useHc ? courseHc(p.id) : null;
@@ -264,7 +264,7 @@ function Players({ picked, setPicked, course, holesCount, tees, setTees, hcOverr
                     <div className="li-name">{playerLabel(p, state.me)}</div>
                     <div className="li-sub">{p.index == null ? 'No handicap index' : `Index ${formatIndex(p.index)}`}</div>
                   </div>
-                  <span className={`li-check ${on ? 'on' : 'add'}`}><Icon name={on ? 'check' : 'plus'} /></span>
+                  <PickMark on={on} />
                 </button>
                 {on && (
                   <div className="pick-extra">
@@ -327,9 +327,9 @@ function Groups({ groups, byHand, count, pool, nameOf, people, onBalance, onMove
             </div>
             {g.players.length > 0 && (
               <>
-                <div className="field-label">Keeps score</div>
-                <div className="chip-row flush">
-                  {g.players.map(pid => <button key={pid} type="button" className={`pill-btn sm ${g.keeper === pid ? 'on' : ''}`} aria-pressed={g.keeper === pid} onClick={() => onKeeper(i, pid)}>{nameOf(pid)}</button>)}
+                <div className="field-label" id={`big-keeper-${g.id}`}>Keeps score</div>
+                <div className="chip-row flush" role="radiogroup" aria-labelledby={`big-keeper-${g.id}`}>
+                  {g.players.map(pid => <PickChip key={pid} small radio on={g.keeper === pid} onClick={() => onKeeper(i, pid)}>{nameOf(pid)}</PickChip>)}
                 </div>
               </>
             )}
@@ -340,12 +340,14 @@ function Groups({ groups, byHand, count, pool, nameOf, people, onBalance, onMove
       </div>
       <div className="cta-wrap"><button className="full-btn" disabled={!!problem} onClick={onNext}>Next: Games <Icon name="arrow-right" /></button></div>
       <Sheet open={!!moving} onClose={() => setMoving(null)} title={moving ? `Move ${nameOf(moving.pid)} to` : ''}>
-        {moving && groups.map((g, i) => (
-          <button key={g.id} className="sheet-item" disabled={i === moving.from || g.players.length >= GROUP_MAX} onClick={() => { onMove(moving.pid, i); setMoving(null); }}>
-            <span>{g.name} <span className="tr-sub">{g.players.map(nameOf).join(', ') || 'Nobody yet'}</span></span>
-            {g.players.length >= GROUP_MAX && i !== moving.from && <span className="tr-sub">Full</span>}
-          </button>
-        ))}
+        {moving && (
+          <div className="pick-list sheet-picks" role="radiogroup" aria-label={`Move ${nameOf(moving.pid)} to`}>
+            {groups.map((g, i) => (
+              <PickRow key={g.id} radio on={i === moving.from} disabled={i === moving.from || g.players.length >= GROUP_MAX} onClick={() => { onMove(moving.pid, i); setMoving(null); }}
+                title={g.name} sub={`${g.players.map(nameOf).join(', ') || 'Nobody yet'}${g.players.length >= GROUP_MAX && i !== moving.from ? ' · full' : ''}`} />
+            ))}
+          </div>
+        )}
       </Sheet>
     </>
   );
@@ -403,7 +405,7 @@ function Games({ pot, setPot, skins, setSkins, teams, setTeams, pool, groups = n
             <div className="chip-row flush">
               {pool.map(p => {
                 const on = !skins.out.includes(p.id);
-                return <button key={p.id} type="button" className={`pill-btn sm ${on ? 'on' : ''}`} aria-pressed={on} onClick={() => setSkins(s => ({ ...s, out: on ? [...s.out, p.id] : s.out.filter(x => x !== p.id) }))}>{nameOf(p.id)}</button>;
+                return <PickChip key={p.id} small on={on} onClick={() => setSkins(s => ({ ...s, out: on ? [...s.out, p.id] : s.out.filter(x => x !== p.id) }))}>{nameOf(p.id)}</PickChip>;
               })}
             </div>
             <p className="field-help">{money(skins.stake * skinsIn)} in the skins pot.</p>
@@ -434,9 +436,9 @@ function Games({ pot, setPot, skins, setSkins, teams, setTeams, pool, groups = n
         )}
         {useHc && (
           <div className="block">
-            <div className="eyebrow" style={{ marginBottom: 10 }}>Strokes given</div>
-            <div className="chip-row flush">
-              {PCTS.map(p => <button key={p} type="button" className={`pill-btn sm ${hcPct === p ? 'on' : ''}`} aria-pressed={hcPct === p} onClick={() => setHcPct(p)}>{p}%</button>)}
+            <div className="eyebrow" id="big-pct" style={{ marginBottom: 10 }}>Strokes given</div>
+            <div className="chip-row flush" role="radiogroup" aria-labelledby="big-pct">
+              {PCTS.map(p => <PickChip key={p} small radio on={hcPct === p} onClick={() => setHcPct(p)}>{p}%</PickChip>)}
             </div>
             <p className="field-help">{allowanceHint(whs)}{whs ? '. ' : ''}Every player gets their own strokes, never off the low player, so groups don’t matter.</p>
           </div>
@@ -447,11 +449,14 @@ function Games({ pot, setPot, skins, setSkins, teams, setTeams, pool, groups = n
         initial={pad === 'pot' ? pot.stake : pad === 'skins' ? skins.stake : teams.stake} onClose={() => setPad(null)}
         onDone={v => { if (pad === 'pot') setPot(p => ({ ...p, stake: v })); else if (pad === 'skins') setSkins(s => ({ ...s, stake: v })); else setTeams(t => ({ ...t, stake: v })); setPad(null); }} />
       <Sheet open={!!moving} onClose={() => setMoving(null)} title={moving ? `Move ${nameOf(moving.pid)} to` : ''}>
-        {moving && [...lists, []].map((l, i) => (
-          <button key={i} className="sheet-item" disabled={i === moving.from} onClick={() => { setLists(moveTo([...lists, []], moving.pid, i)); setMoving(null); }}>
-            <span>{i < lists.length ? `Team ${i + 1}` : 'A new team'} <span className="tr-sub">{l.map(nameOf).join(', ')}</span></span>
-          </button>
-        ))}
+        {moving && (
+          <div className="pick-list sheet-picks" role="radiogroup" aria-label={`Move ${nameOf(moving.pid)} to`}>
+            {[...lists, []].map((l, i) => (
+              <PickRow key={i} radio on={i === moving.from} disabled={i === moving.from} onClick={() => { setLists(moveTo([...lists, []], moving.pid, i)); setMoving(null); }}
+                title={i < lists.length ? `Team ${i + 1}` : 'A new team'} sub={l.map(nameOf).join(', ') || 'Nobody yet'} />
+            ))}
+          </div>
+        )}
       </Sheet>
     </>
   );

@@ -2,7 +2,7 @@
 // provider is wired up yet, so both buttons just record the answer and move on. Each design is
 // a variant (see VARIANTS in lib/paywall.js); add a view to VIEWS below to test another one.
 import { useEffect, useState } from 'react';
-import { Header, Icon, Screen, useUI } from '../components/ui.jsx';
+import { Header, Icon, PickMark, Screen, useUI } from '../components/ui.jsx';
 import { getState, update } from '../lib/store.js';
 import { useNav } from '../lib/nav.js';
 import { GAMES } from '../lib/round.js';
@@ -82,7 +82,7 @@ function TrialWithFreeWayOut({ plan, setPlan, onClose, onTrial, onFree, freeWayO
                   <div className="li-name">{p.label} {p.per === 'year' && <span className="pw-save">Save {save}%</span>}</div>
                   <div className="li-sub">{priceLabel(p)}{p.per === 'year' ? ` (${perMonthLabel(p)})` : ''} · {TRIAL_DAYS} days free</div>
                 </div>
-                <span className={`li-check ${on ? 'on' : ''}`}>{on && <Icon name="check" />}</span>
+                <PickMark on={on} add={false} />
               </button>
             );
           })}

@@ -3,7 +3,7 @@
 // field skins, the teams, the side bets), the money, and adding a side bet between any two players.
 // The game's page and setup put them together (BigGame.jsx, BigGameSetup.jsx).
 import { useState } from 'react';
-import { Icon, Numpad, Segmented, Sheet, useUI } from './ui.jsx';
+import { Icon, Numpad, PickChip, Segmented, Sheet, useUI } from './ui.jsx';
 import { Avatar } from './Pay.jsx';
 import { useStore } from '../lib/store.js';
 import { useNav } from '../lib/nav.js';
@@ -356,7 +356,7 @@ export function BigBetSheet({ open, onClose, tripId = null, big, bet = null, onR
           <p className="field-help">Any two players, in the same group or not. It’s worked out on their own scores, wherever they’re playing.</p>
           <div className="field-label">Who {sides.length === 2 ? '' : `(pick ${2 - sides.length})`}</div>
           <div className="chip-row flush">
-            {ids.map(id => <button key={id} type="button" className={`pill-btn ${sides.includes(id) ? 'on' : ''}`} aria-pressed={sides.includes(id)} onClick={() => pick(id)}>{name(id)}</button>)}
+            {ids.map(id => <PickChip key={id} on={sides.includes(id)} onClick={() => pick(id)}>{name(id)}</PickChip>)}
           </div>
           <div className="field-label">The bet</div>
           <Segmented label="Kind of bet" className="press-mode-row" btn="pm-btn" value={kind} onChange={setKind}

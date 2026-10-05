@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Empty, Header, Icon, Numpad, Screen, Sheet, useUI } from '../components/ui.jsx';
+import { Empty, Header, Icon, Numpad, PickChip, PickRow, Screen, Sheet, useUI } from '../components/ui.jsx';
 import { Avatar, PayButton, RequestButton } from '../components/Pay.jsx';
 import { useRemind } from '../lib/useRemind.js';
 import { update, uid, useStore } from '../lib/store.js';
@@ -213,8 +213,7 @@ export function PlayerEdit({ id, onSaved }) {
           <div className="field-label" id="pe-pay">{isMe ? 'How you get paid' : `How ${trimmed.split(' ')[0] || 'they'} ${trimmed ? 'gets' : 'get'} paid`} <span className="opt">optional</span></div>
           <div className="chip-row flush" role="group" aria-labelledby="pe-pay">
             {PAY_APP_IDS.map(app => (
-              <button key={app} type="button" className={`pill-btn ${payApp === app ? 'on' : ''}`} aria-pressed={payApp === app}
-                onClick={() => setPayApp(payApp === app ? null : app)}>{PAY_APPS[app].name}</button>
+              <PickChip key={app} on={payApp === app} onClick={() => setPayApp(payApp === app ? null : app)}>{PAY_APPS[app].name}</PickChip>
             ))}
           </div>
           {payApp && (
@@ -307,13 +306,11 @@ export function CrewEdit({ id }) {
           <input id="ce-name" className="name-input" value={name} maxLength={28} onChange={e => setName(e.target.value)} placeholder="e.g. Saturday group" />
         </div>
         <div className="sec-label">Who’s in it · {sel.length} selected</div>
-        <div style={{ padding: '0 16px' }}>
+        <div className="pick-list">
           {players.length === 0 && <Empty illo={false} title="No players yet" text="Add players first, then group them into a crew." />}
           {players.map(p => (
-            <button key={p.id} className="list-item" onClick={() => toggle(p.id)} aria-pressed={sel.includes(p.id)}>
-              <div className="row-main"><div className="li-name">{playerLabel(p, state.me)}</div><div className="li-sub">{p.index == null ? 'No handicap' : `Index ${formatIndex(p.index)}`}</div></div>
-              <span className={`li-check ${sel.includes(p.id) ? 'on' : 'add'}`}><Icon name={sel.includes(p.id) ? 'check' : 'plus'} /></span>
-            </button>
+            <PickRow key={p.id} on={sel.includes(p.id)} onClick={() => toggle(p.id)}
+              title={playerLabel(p, state.me)} sub={p.index == null ? 'No handicap' : `Index ${formatIndex(p.index)}`} />
           ))}
         </div>
         {existing && <button className="danger-link" onClick={remove}><Icon name="trash" /> Delete crew</button>}

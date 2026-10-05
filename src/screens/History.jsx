@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { Empty, Header, Icon, Screen } from '../components/ui.jsx';
+import { Empty, Header, Icon, PickChip, Screen } from '../components/ui.jsx';
 import { RangeBar } from '../components/RangeBar.jsx';
 import { useStore } from '../lib/store.js';
 import { GAMES } from '../lib/round.js';
@@ -106,11 +106,9 @@ export default function History() {
             <RangeBar range={range} onChange={setRange} />
 
             {games.length > 1 && (
-              <div className="chip-row" role="group" aria-label="Filter by game">
+              <div className="chip-row" role="radiogroup" aria-label="Filter by game">
                 {['all', ...games].map(g => (
-                  <button key={g} aria-pressed={game === g} className={`pill-btn ${game === g ? 'on' : ''}`} onClick={() => setFilter(g)}>
-                    {g === 'all' ? 'All games' : GAMES[g].name}
-                  </button>
+                  <PickChip key={g} radio on={game === g} onClick={() => setFilter(g)}>{g === 'all' ? 'All games' : GAMES[g].name}</PickChip>
                 ))}
               </div>
             )}

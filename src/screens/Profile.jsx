@@ -2,7 +2,7 @@
 // what. Opened from Settings (behind your avatar on every main tab) and from your row on Players.
 // It all works on this phone first; people you've played with see it once your account has it.
 import { useMemo, useState } from 'react';
-import { Header, Icon, Numpad, Screen, useUI } from '../components/ui.jsx';
+import { Header, Icon, Numpad, PickChip, Screen, useUI } from '../components/ui.jsx';
 import { ProfilePrivacy } from '../components/ProfilePrivacy.jsx';
 import { Avatar } from '../components/Avatar.jsx';
 import { AvatarPicker } from '../components/AvatarPicker.jsx';
@@ -150,8 +150,7 @@ export default function Profile() {
           <div className="field-label" id="pf-pay">How you get paid <span className="opt">optional</span></div>
           <div className="chip-row flush" role="group" aria-labelledby="pf-pay">
             {PAY_APP_IDS.map(app => (
-              <button key={app} type="button" className={`pill-btn ${payApp === app ? 'on' : ''}`} aria-pressed={payApp === app}
-                onClick={() => setPayApp(payApp === app ? null : app)}>{PAY_APPS[app].name}</button>
+              <PickChip key={app} on={payApp === app} onClick={() => setPayApp(payApp === app ? null : app)}>{PAY_APPS[app].name}</PickChip>
             ))}
           </div>
           {payApp && (
