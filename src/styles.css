@@ -3187,3 +3187,6 @@ a.header-btn.rm-open { text-decoration: none; }
 /* A switch card wears the pink ring only while it's on, as a picked row does (Handicap flights too) */
 .trip-count { box-shadow: none; }
 .trip-count:has(.tog.on) { box-shadow: inset 0 0 0 2px var(--pink); }
+/* The Big Game's places paid: chips that wrap, so 40/30/20/10 never runs past its pill */
+.big-places .pill-btn { font-variant-numeric: tabular-nums; }
+.big-places .pill-btn:not(.on) { background: var(--surface); }

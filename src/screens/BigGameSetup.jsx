@@ -387,9 +387,14 @@ function Games({ pot, setPot, skins, setSkins, teams, setTeams, pool, groups = n
             <p className="field-help">{POT_KINDS[pot.kind].blurb}</p>
             <div className="field-label">Each player puts in</div>
             <button type="button" className="amt-btn" onClick={() => setPad('pot')}>{money(pot.stake)}</button>
-            <div className="field-label">Places paid</div>
-            <Segmented label="Places paid" className="press-mode-row" btn="pm-btn" value={placesLabel(pot.places)} onChange={v => setPot(p => ({ ...p, places: PLACES.find(x => placesLabel(x.places) === v).places }))}
-              options={PLACES.filter(x => x.places.length <= Math.max(1, n - 1)).map(x => ({ value: placesLabel(x.places), label: x.places.length === 1 ? 'Winner' : x.places.join('/') }))} />
+            <div className="field-label" id="big-places-lbl">Places paid</div>
+            <div className="chip-row flush big-places" role="radiogroup" aria-labelledby="big-places-lbl">
+              {PLACES.filter(x => x.places.length <= Math.max(1, n - 1)).map(x => (
+                <PickChip key={placesLabel(x.places)} radio on={placesLabel(x.places) === placesLabel(pot.places)} onClick={() => setPot(p => ({ ...p, places: x.places }))}>
+                  {x.places.length === 1 ? 'Winner' : x.places.join('/')}
+                </PickChip>
+              ))}
+            </div>
             <p className="field-help">{n} players make a {money(pot.stake * n)} pot: {pot.places.map((pc, i) => `${['1st', '2nd', '3rd', '4th'][i]} ${money(Math.round(pot.stake * n * pc) / 100)}`).join(', ')}. Ties share the places they cover.</p>
           </div>
         )}
