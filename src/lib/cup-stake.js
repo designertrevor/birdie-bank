@@ -54,7 +54,8 @@ export function cupTiming(state, trip, { now = Date.now() } = {}) {
     return t && t.id === id && !t.part;
   });
   const over = !!endedAt || closed || (!!trip.end && (today > trip.end || (today === trip.end && done.some(r => dayOf(finishedAt(r)) === today))));
-  return { over: over && !live.length && !planned.length, close: !!endedAt || (!!trip.end && today > trip.end) };
+  // Done playing leaves any rounds still planned behind, as on the trip page (trips.js tripStatus)
+  return { over: over && !live.length && (!planned.length || !!endedAt || closed), close: !!endedAt || (!!trip.end && today > trip.end) };
 }
 
 const cache = new WeakMap();

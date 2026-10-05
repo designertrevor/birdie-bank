@@ -542,6 +542,11 @@ test('once the trip is over, another group’s round left unfinished counts as i
   // Or the organizer says it's over, on the last day
   const ended = tripStatus({ ...s, trips: { t_cup: { ...TRIP, endedAt: OCT(18, 19) } } }, 't_cup', { now: OCT(18, 20) });
   assert.equal(ended.cup.final, true);
+  // Done playing with a round still planned (the template plans every session): decided all the same
+  const plan = { id: 'pl9', status: 'planned', date: '2026-10-18', teeTime: '21:00', trip: tripStamp(TRIP), createdAt: OCT(15) };
+  const endedPlanned = tripStatus({ ...s, plans: { pl9: plan }, trips: { t_cup: { ...TRIP, endedAt: OCT(18, 19) } } }, 't_cup', { now: OCT(18, 20) });
+  assert.equal(endedPlanned.cup.final, true);
+  assert.notEqual(endedPlanned.phase, 'on');
   // A finished entry is left as it is
   const fin = cupEntry({}, r1);
   assert.equal(closeEntry(fin), fin);

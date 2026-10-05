@@ -344,6 +344,10 @@ test('phases: soon, being played, ready right after the last round, then square'
   // Done playing early: the organizer says so and it opens
   const early = stateOf('t', rounds.slice(0, 2), { trips: { t_bandon: { ...TRIP, endedAt: OCT(17, 12) } } });
   assert.equal(tripStatus(early, 't_bandon', { now: OCT(17, 13) }).phase, 'ready');
+  // Done playing with a round still planned: the plan no longer holds it open
+  const left = stateOf('t', rounds.slice(0, 2), { trips: { t_bandon: { ...TRIP, endedAt: OCT(17, 12) } }, plans: { pl1: plan } });
+  assert.equal(tripStatus(left, 't_bandon', { now: OCT(17, 13) }).phase, 'ready');
+  assert.equal(tripStatus(stateOf('t', rounds.slice(0, 2), { plans: { pl1: plan } }), 't_bandon', { now: OCT(17, 13) }).phase, 'on', 'not without Done playing');
   // The dates went by with no rounds at all
   assert.equal(tripStatus(soon, 't_bandon', { now: OCT(25) }).phase, 'empty');
 });

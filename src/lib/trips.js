@@ -433,7 +433,8 @@ export function tripStatus(state, id, { now = Date.now() } = {}) {
   const lastDone = done.length ? Math.max(...done.map(finishedAt)) : 0;
   const endedAt = trip.endedAt || ps.plan?.endedAt || null;
   const over = !!endedAt || closed || (!!trip.end && (today > trip.end || (today === trip.end && done.some(r => dayOf(finishedAt(r)) === today))));
-  const quiet = !live.length && !planned.length;
+  // Done playing (or settled as a whole) leaves any rounds still planned behind: they no longer hold it open
+  const quiet = !live.length && (!planned.length || !!endedAt || closed);
   const who = canonicalOf(state);
   // A team points trip: the matches, the team score, and the stake once the trip is over (cup.js).
   // Its last day gone by, or ended by the organizer: another group's round the server still has as
