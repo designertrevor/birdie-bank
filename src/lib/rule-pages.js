@@ -109,6 +109,7 @@ h1, h2, h3 { font-family: var(--display); font-weight: 800; color: var(--ink); t
 .card-text { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
 .card-name { font-family: var(--display); font-size: 18px; font-weight: 800; color: var(--ink); letter-spacing: -.01em; }
 .card-sub { font-size: 14px; color: var(--mute); line-height: 1.4; }
+.nw { white-space: nowrap; }
 .card-link > .ph-bold { color: var(--mute); font-size: 16px; }
 .foot { margin: 48px 0 0; padding: 24px 0 max(32px, env(safe-area-inset-bottom)); border-top: 1px solid var(--line); font-size: 14px; color: var(--mute); display: flex; flex-direction: column; gap: 8px; }
 .foot a { color: var(--ink); font-weight: 600; }
@@ -219,7 +220,7 @@ export function renderRulesIndex(subs = {}, origin = SITE_URL) {
     .filter(([, keys]) => keys.length);
   const card = k => {
     const f = ruleFacts(k, subs[k]);
-    return `<li><a class="card-link" href="${e(rulePath(k))}"><span class="tile">${icon(iconOf(k))}</span><span class="card-text"><span class="card-name">${e(ruleName(k))}</span><span class="card-sub">${e(f.pitch)} ${e(f.players)}.</span></span>${icon('caret-right', 'bold')}</a></li>`;
+    return `<li><a class="card-link" href="${e(rulePath(k))}"><span class="tile">${icon(iconOf(k))}</span><span class="card-text"><span class="card-name">${e(ruleName(k))}</span><span class="card-sub">${e(f.pitch)} <span class="nw">${e(f.players)}.</span></span></span>${icon('caret-right', 'bold')}</a></li>`;
   };
   const body = `<body>
 <div class="wrap">
