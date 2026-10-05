@@ -4,6 +4,8 @@ import { RulesSheet } from '../components/Rules.jsx';
 import { Avatar } from '../components/Avatar.jsx';
 import { DateSheet, TimePicker } from '../components/DatePicker.jsx';
 import { DEFAULT_SETTINGS, getState, update, uid, useStore } from '../lib/store.js';
+import { inviteeLine, savePerson, tripInvitees } from '../lib/trip-people.js';
+import { canonicalOf } from '../lib/pair-debts.js';
 import { playFromSearch } from '../lib/rule-links.js';
 import { allCourses, coursePar, coursePickerSections, courseTag, defaultTee as firstTee, isStarred, teeDotStyle, toggleStarred } from '../lib/courses.js';
 import { getCourse } from '../lib/courseApi.js';
@@ -1125,7 +1127,16 @@ function WhenPicker({ date, setDate, teeTime, setTeeTime }) {
 function InviteStep({ invited, setInvited, onNext }) {
   const state = useStore();
   const players = sortedPlayers(state).filter(p => p.id !== state.me);
-  const toggle = pid => setInvited(v => (v.includes(pid) ? v.filter(x => x !== pid) : [...v, pid]));
+  // The same people as a trip's Who's going: your players, your usuals and friends from your rounds
+  // (trip-people.js), each saved to your players once invited
+  const who = canonicalOf(state);
+  const on = new Set(invited.map(who));
+  const list = tripInvitees(state, { picked: invited });
+  const toggle = p => {
+    if (on.has(p.id)) { setInvited(v => v.filter(x => who(x) !== p.id)); return; }
+    update(s => savePerson(s, p));
+    setInvited(v => [...v, p.id]);
+  };
   const n = invited.length;
   // A name typed here becomes a saved player and is invited; a name already saved just gets invited
   const [newName, setNewName] = useState('');
@@ -1155,15 +1166,12 @@ function InviteStep({ invited, setInvited, onNext }) {
           {selfNote && <p className="field-help" role="status">That’s you, and you’re already in.</p>}
         </form>
         <div className="pick-list">
-          {players.map(p => {
-            const on = invited.includes(p.id);
-            return (
-              <PickRow key={p.id} on={on} onClick={() => toggle(p.id)} label={`Invite ${p.name}`} lead={<Avatar id={p.id} name={p.name} />}
-                title={p.name} sub={p.index == null ? 'No handicap index' : `Index ${formatIndex(p.index)}`} />
-            );
-          })}
+          {list.map(p => (
+            <PickRow key={p.id} on={on.has(p.id)} onClick={() => toggle(p)} label={`Invite ${p.name}`} lead={<Avatar id={p.id} name={p.name} />}
+              title={p.name} sub={inviteeLine(p)} />
+          ))}
         </div>
-        {players.length === 0 && <p className="field-help pad">No players saved yet. Add their names above, or send the group link and they’ll show up as they answer.</p>}
+        {list.length === 0 && <p className="field-help pad">No players saved yet. Add their names above, or send the group link and they’ll show up as they answer.</p>}
       </div>
       <div className="cta-wrap">
         <button className="full-btn" onClick={onNext}>{n ? `Next: Vote (${n} invited)` : 'Skip, I’ll send a link'} <Icon name="arrow-right" /></button>
