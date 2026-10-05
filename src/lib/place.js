@@ -23,6 +23,8 @@ const NEEDS = {
   rollCall: (s, id) => !!s.plans?.[id],
   preview: (s, id) => !!s.plans?.[id],
   challenge: (s, id) => !!s.challenges?.[id],
+  // A plan link comes back only once its plan is on this phone: a dead link ("Plan not found") never does
+  planLink: (s, _id, p) => !!p.code && Object.values(s.plans || {}).some(x => x?.code === p.code),
   // Editing a plan, or the round setup a plan's roll call started: not once that plan is gone
   newRound: (s, _id, p) => [p.edit, p.fromPlan].every(pid => !pid || !!s.plans?.[pid]),
 };

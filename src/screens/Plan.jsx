@@ -633,6 +633,7 @@ export function PlanLink({ code, who = null, standalone = false, onSkip }) {
       {err && (
         <div className="cta-wrap">
           {!missing && <button className="full-btn" onClick={() => { setErr(null); setTries(t => t + 1); }}>Try again <Icon name="arrow-clockwise" /></button>}
+          {!standalone && missing && <button className="full-btn" onClick={nav.pop}>Go back</button>}
           {standalone && <button className={`full-btn ${missing ? '' : 'outline'}`} onClick={onSkip}>Start my own round instead</button>}
         </div>
       )}

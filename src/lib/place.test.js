@@ -144,3 +144,11 @@ test('closing a screen drops its kept values; the tab and the screens still open
   const kept = { '1|a': 1, '2|b': 2, 'tab:ledger|open': 'sam', 'tab:history|filter': 'won' };
   assert.deepEqual(keptFor(kept, [1, 'tab:ledger']), { '1|a': 1, 'tab:ledger|open': 'sam' });
 });
+
+test('a plan link comes back only when its plan is on this phone, so a dead link never sticks', () => {
+  const screens = [...SCREENS, 'planLink'];
+  const saved = roundTrip({ tab: 'upnext', stack: [{ name: 'planLink', params: { code: 'ZZZZ99' }, key: 1 }] });
+  assert.deepEqual(readPlace(saved, state, { ...opts, screens })?.stack ?? [], [], 'Plan not found: Up next');
+  const found = { ...state, plans: { ...(state.plans || {}), p9: { id: 'p9', code: 'ZZZZ99' } } };
+  assert.deepEqual(readPlace(saved, found, { ...opts, screens }).stack.map(e => e.name), ['planLink']);
+});
