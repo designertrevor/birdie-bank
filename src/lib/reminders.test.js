@@ -227,7 +227,7 @@ test('nudges: the clock starts from the first round after the last payment betwe
   assert.deepEqual(paymentNudges(part, { now: NOW }), []);
 });
 
-test('nudges: never about money agreed to carry over or asked to roll; rolled money starts fresh from the round it rolled into', () => {
+test('nudges: never about money agreed to carry over or asked to roll, even after the round it rolled into', () => {
   const r1 = round('r1', ['a', 'b'], twoSkins, { code: 'AAAAAA', daysAgo: 20 });
   const asked = stateOf('a', [r1], { carries: [{ id: 'k:b>a:1', from: 'b', to: 'a', amount: 4, status: 'asked', by: 'b', at: NOW - 15 * DAY }] });
   assert.deepEqual(paymentNudges(asked, { now: NOW }), [], 'asked to roll');
@@ -235,12 +235,30 @@ test('nudges: never about money agreed to carry over or asked to roll; rolled mo
   assert.deepEqual(paymentNudges(agreed, { now: NOW }), [], 'agreed carry');
   const declined = stateOf('a', [r1], { carries: [{ id: 'k:b>a:1', from: 'b', to: 'a', amount: 4, status: 'declined', by: 'b', at: NOW - 15 * DAY, answeredAt: NOW - 14 * DAY }] });
   assert.equal(paymentNudges(declined, { now: NOW }).length, 1, '“I’d rather get paid” leaves it open');
-  // The carry rolled into the next round together: the clock starts there
+  // The carry rolled into the next round, which came out square: the carried money never nudges
   const r2 = round('r2', ['a', 'b'], {}, { code: 'BBBBBB', daysAgo: 4 });
   const rolled = { ...agreed, rounds: { r1, r2 } };
-  assert.equal(owedSince(rolled, 'b', 'a', ['r1', 'r2']), NOW - 4 * DAY);
-  assert.deepEqual(paymentNudges(rolled, { now: NOW }), [], 'four days since it rolled');
-  assert.equal(paymentNudges(rolled, { now: NOW + 3 * DAY })[0]?.days, 7, 'then a week after');
+  assert.equal(owedSince(rolled, 'b', 'a', ['r1', 'r2']), null);
+  assert.deepEqual(paymentNudges(rolled, { now: NOW + 30 * DAY }), [], 'a square round after the carry starts no clock');
+  // A round Mike won a little after the carry: still nothing
+  const won = { ...agreed, rounds: { r1, r2: round('r2', ['a', 'b'], { 1: { a: 4, b: 3 } }, { code: 'BBBBBB', daysAgo: 4 }) } };
+  assert.deepEqual(paymentNudges(won, { now: NOW + 30 * DAY }), []);
+  // A round Mike lost $2 after the carry: only that $2 nudges, from that round
+  const lost = { ...agreed, rounds: { r1, r2: round('r2', ['a', 'b'], { 1: { a: 3, b: 4 } }, { code: 'BBBBBB', daysAgo: 4 }) } };
+  assert.deepEqual(paymentNudges(lost, { now: NOW + 3 * DAY }).map(n => [n.id, n.amount, n.days]), [['b', 2, 7]]);
+});
+
+test('nudges: money rolled at a close of the books never nudges, and a later round only nudges what it added', () => {
+  // Mike owes $4, rolled at the close two weeks ago (round only on this phone)
+  const r1 = round('r1', ['a', 'b'], twoSkins, { daysAgo: 20 });
+  const books = { k1: { id: 'k1', closedAt: NOW - 15 * DAY, lines: [{ from: 'b', to: 'a', amount: 4, how: 'rolled' }] } };
+  const square = stateOf('a', [r1, round('r2', ['a', 'b'], {}, { daysAgo: 14 })], { books });
+  assert.equal(owedSince(square, 'b', 'a', ['r1', 'r2']), null);
+  assert.deepEqual(paymentNudges(square, { now: NOW }), [], 'a square round after the roll');
+  const won = stateOf('a', [r1, round('r2', ['a', 'b'], { 1: { a: 4, b: 3 } }, { daysAgo: 14 })], { books });
+  assert.deepEqual(paymentNudges(won, { now: NOW }), [], 'Mike won a skin back after the roll');
+  const lost = stateOf('a', [r1, round('r2', ['a', 'b'], { 1: { a: 3, b: 4 } }, { daysAgo: 14 })], { books });
+  assert.deepEqual(paymentNudges(lost, { now: NOW }).map(n => [n.id, n.amount, n.days]), [['b', 2, 14]], 'only the new $2');
 });
 
 test('nudges: never more than once a week per person, on any of their ids', () => {

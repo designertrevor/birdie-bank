@@ -6,12 +6,12 @@
 // reminder: it waits on Up next until you send it or put it away.
 // Pure functions of plain data, so they're easy to test.
 //
-// How long someone has owed you: from the round (or decided Big Game) that started what they owe
-// you now, after the last payment between you (either way), the carry-over you last agreed (its
-// money rolled into the next round, so that round is where the clock starts) or the last close of
-// the books that rolled a line between you (rolled money is never what a nudge is about). A round
-// the two of you came out of square, or that you lost, never starts the clock. Money with no round
-// behind it (a trip expense only) has no clock, so it's left to the Tab's own Remind.
+// How long someone has owed you, and how much: only what's new after the last payment between you
+// (either way), the carry-over you last agreed or the last close of the books that rolled a line
+// between you (rolled and carried money is never what a nudge is about), from the round (or decided
+// Big Game) that started it. A round the two of you came out of square, or that you lost, never
+// starts the clock. Money with no round behind it (a trip expense only) has no clock, so it's left
+// to the Tab's own Remind.
 import { outstanding } from './ledger.js';
 import { canonicalOf, lastPayment } from './shared-tab.js';
 import { cardCarry } from './carry.js';
@@ -61,17 +61,22 @@ export function noteNudge(draft, id, at = Date.now()) {
 }
 
 /**
- * When `from` started owing `to` the money that's open now, as a time, or null when there's no
- * finished money round (or decided Big Game) between them since the last payment, agreed
- * carry-over or rolled close of the books between them. `rounds` are the ids of the rounds the two
- * played together (outstanding()'s `rounds`). Taken oldest first, the clock starts at the round
- * that put `from` owing `to` and starts again whenever they're back to square between the two of
- * them; when the Tab has them owing only through the rest of the group, it's their newest round.
+ * What `from` owes `to` that's new since the last payment, agreed carry-over or rolled close of
+ * the books between them, and when it started: { since, cents }, or null when nothing after that
+ * cutoff put `from` owing `to`. Rolled and carried money never comes back into it, so a square
+ * round (or one `from` won) after a roll never starts a clock on the rolled money. `rounds` are
+ * the ids of the rounds the two played together (outstanding()'s `rounds`). Taken oldest first,
+ * the clock starts at the round that put `from` owing `to` and starts again whenever they're back
+ * to square between the two of them. When the Tab has them owing only through the rest of the
+ * group (nothing direct between them), it's their newest round, and only if `from` lost and `to`
+ * won in it; `cents` is then null (the Tab's amount stands).
  */
-export function owedSince(state, from, to, rounds = []) {
+export function owedAfterCutoff(state, from, to, rounds = [], { isTo = null } = {}) {
   const who = canonicalOf(state);
   const A = who(from), B = who(to);
-  const pair = (x, y) => (who(x) === A && who(y) === B) || (who(x) === B && who(y) === A);
+  // `isTo`: every id that counts as `to` (all of your ids, for a card on Up next)
+  const toB = isTo || (id => who(id) === B);
+  const pair = (x, y) => (who(x) === A && toB(y)) || (toB(x) && who(y) === A);
   let cutoff = lastPayment(state, from, to)?.at || 0;
   for (const c of state?.carries || []) {
     if (pair(c.from, c.to) && c.status === 'agreed') cutoff = Math.max(cutoff, c.answeredAt || c.at || 0);
@@ -79,21 +84,25 @@ export function owedSince(state, from, to, rounds = []) {
   for (const b of Object.values(state?.books || {})) {
     if ((b?.lines || []).some(l => l.how === 'rolled' && pair(l.from, l.to))) cutoff = Math.max(cutoff, b.closedAt || 0);
   }
-  // What `from` owes `to` from each round and decided game after the cutoff, in cents
+  // What `from` owes `to` from each round and decided game after the cutoff, in cents, and
+  // whether the round had `from` losing and `to` winning overall (for the group-only case)
   const events = [];
   for (const id of new Set(rounds)) {
     const r = state?.rounds?.[id];
     const at = r?.status === 'done' ? (r.finishedAt || r.createdAt || 0) : 0;
     if (!(at > cutoff)) continue;
-    const pairs = tabResults(r).pairs || {};
-    let c = 0;
+    const res = tabResults(r);
+    const pairs = res.pairs || {};
+    let c = 0, netA = 0, netB = 0;
     for (const p of r.players || []) {
+      if (who(p.id) === A) netA += Number(res.balances?.[p.id]) || 0;
+      if (toB(p.id)) netB += Number(res.balances?.[p.id]) || 0;
       if (who(p.id) !== A) continue;
-      for (const q of r.players || []) if (who(q.id) === B) c -= Math.round((Number(pairs[p.id]?.[q.id]) || 0) * 100);
+      for (const q of r.players || []) if (toB(q.id)) c -= Math.round((Number(pairs[p.id]?.[q.id]) || 0) * 100);
     }
-    events.push({ at, c });
+    events.push({ at, c, group: netA < 0 && netB > 0 });
   }
-  for (const x of bigBetween(state, id => who(id) === B, id => who(id) === A)) if (x.at > cutoff) events.push({ at: x.at, c: x.amount });
+  for (const x of bigBetween(state, toB, id => who(id) === A)) if (x.at > cutoff) events.push({ at: x.at, c: x.amount });
   if (!events.length) return null;
   events.sort((a, b) => a.at - b.at);
   let owed = 0, since = null;
@@ -103,7 +112,14 @@ export function owedSince(state, from, to, rounds = []) {
     if (owed <= 0) since = null;
     else if (was <= 0) since = e.at;
   }
-  return since ?? events.at(-1).at;
+  if (owed > 0 && since != null) return { since, cents: owed };
+  const last = events.at(-1);
+  return last.group && !events.some(e => e.c) ? { since: last.at, cents: null } : null;
+}
+
+/** When `from` started owing `to` the money that's open now (owedAfterCutoff's `since`), or null. */
+export function owedSince(state, from, to, rounds = []) {
+  return owedAfterCutoff(state, from, to, rounds)?.since ?? null;
 }
 
 /**
@@ -129,14 +145,17 @@ export function paymentNudges(state, { now = Date.now(), days = nudgeDays(state?
     owed.set(k, o);
   }
   const out = [];
-  for (const o of owed.values()) {
-    const amount = o.cents / 100;
-    if (!(amount >= NUDGE_MIN)) continue;
+  for (const [k, o] of owed) {
+    if (!(o.cents / 100 >= NUDGE_MIN)) continue;
     // A carry-over agreed (or asked for) covers the card, so no nudge rides over it
-    const carry = cardCarry(state, o.me, o.id, { from: o.id, to: o.me, amount }, now);
+    const carry = cardCarry(state, o.me, o.id, { from: o.id, to: o.me, amount: o.cents / 100 }, now);
     if (carry && (carry.status === 'agreed' || carry.status === 'asked')) continue;
-    const since = owedSince(state, o.id, o.me, [...new Set(o.rounds)]);
-    if (since == null || now - since < days * DAY_MS) continue;
+    // Only the part that's new since the last payment, carry-over or roll is ever nudged
+    const fresh = owedAfterCutoff(state, o.id, o.me, [...new Set(o.rounds)], { isTo: id => mine(id) && who(id) !== k });
+    if (!fresh) continue;
+    const { since } = fresh;
+    const amount = fresh.cents == null ? o.cents / 100 : Math.min(o.cents, fresh.cents) / 100;
+    if (!(amount >= NUDGE_MIN) || now - since < days * DAY_MS) continue;
     if (now - lastNudged(state, o.id) < NUDGE_EVERY_DAYS * DAY_MS) continue;
     out.push({ id: o.id, amount, since, days: Math.floor((now - since) / DAY_MS) });
   }
