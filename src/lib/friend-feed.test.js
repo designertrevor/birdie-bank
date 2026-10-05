@@ -436,3 +436,21 @@ test('friend round: the live copy keeps its scores, but whose money shows is the
   assert.equal(shownRow(base, null), base);
   assert.equal(shownRow(null, live), null);
 });
+
+test('two players tied on money but not on strokes don’t share a place', () => {
+  // Sam and Dave win two skins each; the guest takes the sixth, where Sam makes 4 and Dave 5
+  const r = createRound({ id: 'r9', game: 'skins', course, holesCount: 9, players: PLAYERS, settings: SETTINGS, hcPct: 100, useHandicaps: false });
+  r.scores[1] = { sam: 3, dave: 4, guest: 4 };
+  r.scores[2] = { sam: 4, dave: 3, guest: 4 };
+  r.scores[3] = { sam: 3, dave: 4, guest: 4 };
+  r.scores[4] = { sam: 4, dave: 3, guest: 5 };
+  r.scores[5] = { sam: 3, dave: 3, guest: 4 };
+  r.scores[6] = { sam: 4, dave: 5, guest: 3 };
+  r.status = 'active'; r.shareCode = 'TIE123';
+  const v = friendRoundView(rowOf(r));
+  const sam = v.players.find(p => p.id === 'sam'), dave = v.players.find(p => p.id === 'dave');
+  assert.equal(roundResults(r).balances.sam, roundResults(r).balances.dave, 'tied on money');
+  assert.notEqual(sam.toPar, dave.toPar);
+  assert.notEqual(sam.place, dave.place);
+  assert.equal(v.players[0].toPar <= v.players[1].toPar, true, 'the lower score first');
+});

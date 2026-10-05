@@ -198,15 +198,22 @@ export function roundView(round, { code, people = {}, at = 0, following = false,
   try { units = scorers(round); } catch { units = []; }
   const unitOf = id => units.find(u => u.id === id) || units.find(u => u.team && (u.players || []).includes(id)) || null;
   const order = res?.standings?.length ? res.standings : round.players.map(p => ({ ...p, amount: 0 }));
-  const players = order.map((p, i) => {
+  const rows = order.map(p => {
     const amt = Number(p.amount) || 0;
-    const place = order.findIndex(q => (Number(q.amount) || 0) === amt) + 1;
     const unit = unitOf(p.id);
     let par = { played: 0, gross: 0 };
     try { if (unit) par = toParOf(round, unit); } catch { /* a scorer this round can't add up */ }
+    return { p, amt, unit, par, toPar: par.played ? par.gross : null };
+  });
+  // Equal money is broken by the score to par, so two players tied on money but not on strokes
+  // never read as tied (the to par is on show, the money often isn't)
+  const parKey = r => (r.toPar == null ? Infinity : r.toPar);
+  rows.sort((a, b) => b.amt - a.amt || parKey(a) - parKey(b));
+  const players = rows.map(({ p, amt, unit, par, toPar }, i) => {
+    const place = rows.findIndex(q => q.amt === amt && parKey(q) === parKey(rows[i])) + 1;
     return {
       id: p.id, name: first(p.name), friend: people[p.id]?.friend === true, place: place || i + 1,
-      amount: shows(p.id) ? amt : null, amountText: fmt(p.id, amt), toPar: par.played ? par.gross : null, played: par.played,
+      amount: shows(p.id) ? amt : null, amountText: fmt(p.id, amt), toPar, played: par.played,
       team: unit?.team ? unit.name : null,
     };
   });
