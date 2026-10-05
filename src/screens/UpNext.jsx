@@ -100,8 +100,8 @@ export default function UpNext() {
         {plans.length > 0 && <div className="sec-label">Upcoming</div>}
         {plans.map(p => <UpcomingCard key={p.id} plan={p} />)}
         {anyChallenges && <Later><ChallengesSection /></Later>}
-        {/* Starting a round at the course (or running the last one back) stays one tap, plans or not */}
-        {live.length === 0 && <PlanNext last={last?.round} fresh={!hasHistory} planned={plans.length > 0 || onNow.length > 0} trip={onNow.length === 0} />}
+        {/* Starting a round at the course (or running the last one back) stays one tap, plans or not; a Big Game on the calendar isn't a trip, so Start a trip stays */}
+        {live.length === 0 && <PlanNext last={last?.round} fresh={!hasHistory} planned={plans.length > 0 || onNow.length > 0} trip={!onNow.some(t => t.trip.format !== 'big')} />}
 
         {syncConfigured && live.length === 0 && (
           <button className="add-row join-row" aria-label="Join a friend’s round" onClick={() => setJoining(true)}>

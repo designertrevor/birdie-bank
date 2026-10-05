@@ -35,8 +35,10 @@ export function BigCard({ status: st, onTab = false }) {
   const title = notStarted ? `${dayLabel(st.trip.start) || 'Coming up'}: ${bigPlayers(bs.big).length} players, ${bs.big.groups.length} groups`
     : bs.final ? (mine == null ? 'Every group is in' : mine > 0 ? `You won ${money(mine)}` : mine < 0 ? `You’re down ${money(-mine)}` : 'You broke even')
     : myPlaceLine(bs, isMe) || `${playing.length || bs.big.groups.length} group${(playing.length || bs.big.groups.length) === 1 ? '' : 's'} out`;
+  // Your own lines paid: you're square in the game, even while others still settle theirs
+  const mineSquare = bs.final && st.phase !== 'square' && !st.plan.some(l => isMe(l.from) || isMe(l.to));
   const sub = notStarted ? 'Start the groups on the day, each with its own scorekeeper'
-    : bs.final ? (st.phase === 'square' ? 'Settled' : 'Settle the game')
+    : bs.final ? (st.phase === 'square' ? 'Settled' : mineSquare ? (st.organizer ? 'You’re square. See who’s left to settle' : 'You’re square') : 'Settle the game')
     : bs.waiting.length ? `Waiting on ${bs.waiting.map(g => g.name).join(', ')}` : playing.map(g => `${g.name} thru ${g.thru}`).join(' · ');
   const open = () => nav.push('bigGame', { id: st.trip.id });
   const hide = e => {
@@ -53,12 +55,12 @@ export function BigCard({ status: st, onTab = false }) {
             <div className="eyebrow">{st.trip.name}{st.trip.where ? ` · ${st.trip.where}` : ''}</div>
             <div className="trip-name d">{title}</div>
             {!notStarted && <BigDots bs={bs} />}
-            <div className={`trip-sub ${bs.final && st.phase === 'ready' ? 'strong' : ''}`}>{sub}{bs.final && st.phase === 'ready' && <> <Icon name="arrow-right" /></>}</div>
+            <div className={`trip-sub ${bs.final && st.phase === 'ready' && !mineSquare ? 'strong' : ''}`}>{sub}{bs.final && st.phase === 'ready' && !mineSquare && <> <Icon name="arrow-right" /></>}</div>
           </div>
           {mine != null && onTab && (
             <div className="trip-amt-col">
               <div className={`trip-amt d ${sign(mine)}`}>{money(mine, { sign: true })}</div>
-              <div className="trip-amt-sub">{st.phase === 'square' ? (mine > 0 ? 'won' : mine < 0 ? 'lost' : 'even') : 'to settle'}</div>
+              <div className="trip-amt-sub">{st.phase === 'square' || mineSquare ? (mine > 0 ? 'won' : mine < 0 ? 'lost' : 'even') : 'to settle'}</div>
             </div>
           )}
           <span className="chevron"><Icon name="caret-right" /></span>
