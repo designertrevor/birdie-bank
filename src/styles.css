@@ -2642,3 +2642,118 @@ button.ch-main:active { transform: scale(.98); }
 .big-setup-group .field-label { margin-top: 4px; }
 .big-team-row { padding: 4px 0; }
 .big-team-row .tr-sub { display: block; margin-bottom: 6px; }
+
+/* ---- Overnight 9, date and tee time pickers (DatePicker.jsx) ---- */
+/* The field: looks like the input it replaces, with the value, a calendar or clock, and a ring while its sheet is up */
+.pick-field { display: flex; align-items: center; justify-content: space-between; gap: 8px; min-height: 48px; text-align: left; cursor: pointer; line-height: 1.25; transition: transform .2s var(--spring), box-shadow .15s; }
+.pick-field:active:not(:disabled) { transform: scale(.98); }
+.pick-field[aria-expanded="true"] { box-shadow: 0 0 0 3px var(--lav); }
+.pick-field:disabled { color: var(--mute-soft); cursor: not-allowed; }
+.pick-field .pf-text { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+.pick-field .pf-main { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.pick-field .pf-sub { font-family: Inter, system-ui, sans-serif; font-size: 12px; font-weight: 600; color: var(--mute); }
+.pick-field.empty .pf-main { color: var(--mute-soft); }
+.pick-field .pf-icon { flex-shrink: 0; font-size: 18px; color: var(--icon); }
+.name-input.pick-field { min-height: 52px; }
+.name-input.pick-field .pf-icon { font-size: 22px; }
+.name-input.pick-field.empty .pf-main { font-size: 18px; }
+.time-input.pick-field { max-width: 220px; }
+.range-dates .rd-end { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 6px; }
+.range-dates .pick-field { width: 100%; }
+.trip-form-days > div { display: flex; flex-direction: column; }
+.trip-form-days .pick-field { flex: 1; }
+
+/* The sheet: sections with room between them, on the sheet's 16px gutter */
+.pick-sheet .pick-body { display: flex; flex-direction: column; gap: 20px; padding: 8px 16px 0; }
+.pick-section { display: flex; flex-direction: column; gap: 10px; }
+.pick-section .field-help { margin-top: 0; }
+.pick-sheet .day-strip { margin: 0 -16px; }
+/* Clear and Done stay in reach when a tall calendar scrolls on a small phone */
+.pick-foot {
+  position: sticky; bottom: 0; z-index: 2; display: grid; grid-template-columns: 1fr 1fr; gap: 10px; background: var(--canvas);
+  margin: 0 -16px calc(-16px - env(safe-area-inset-bottom)); padding: 8px 16px calc(16px + env(safe-area-inset-bottom));
+}
+.pick-foot.one { grid-template-columns: 1fr; }
+
+/* The calendar */
+.cal { background: var(--card); border-radius: 24px; padding: 10px 8px 8px; }
+.cal-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 6px; }
+.cal-head .icon-btn { background: var(--surface); }
+.cal-title {
+  display: inline-flex; align-items: center; gap: 6px; min-height: 44px; padding: 0 14px; border: none; border-radius: 999px; background: none;
+  font-family: var(--display); font-size: 20px; font-weight: 800; letter-spacing: -.01em; color: var(--ink); cursor: pointer;
+  transition: transform .2s var(--spring), background .15s;
+}
+.cal-title i { font-size: 14px; color: var(--mute); }
+button.cal-title:active { transform: scale(.95); background: var(--surface); }
+.cal-title.static { cursor: default; }
+.cal-dow { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); padding: 4px 0; }
+.cal-dow span { text-align: center; font-size: 12px; font-weight: 700; letter-spacing: .04em; color: var(--mute); }
+.cal-days { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); row-gap: 4px; }
+.cal-day { position: relative; height: 44px; padding: 0; border: none; background: none; font: inherit; color: var(--ink); cursor: pointer; display: grid; place-items: center; }
+.cal-day .cd-num {
+  position: relative; z-index: 1; width: 42px; height: 42px; border-radius: 14px; display: grid; place-items: center;
+  font-size: 16px; font-weight: 600; font-variant-numeric: tabular-nums; transition: transform .2s var(--spring), background .15s;
+}
+.cal-day:active:not([aria-disabled]) .cd-num { transform: scale(.86); }
+.cal-day.out { color: var(--mute-soft); }
+.cal-day[aria-disabled] { color: var(--mute-soft); cursor: not-allowed; }
+.cal-day[aria-disabled] .cd-num { text-decoration: line-through; opacity: .7; }
+.cal-day.today .cd-num { font-weight: 800; }
+.cal-day.today .cd-num::after { content: ''; position: absolute; left: 50%; bottom: 5px; width: 4px; height: 4px; margin-left: -2px; border-radius: 50%; background: var(--pink-text); }
+.cal-day.on .cd-num { background: var(--ink); color: var(--on-ink); animation: calPop .35s var(--spring); }
+.cal-day.on.today .cd-num::after { background: var(--on-ink); }
+/* A range: a band runs between its ends, behind the days */
+.cal-day.mid::before, .cal-day.start::before, .cal-day.end::before { content: ''; position: absolute; top: 1px; bottom: 1px; background: var(--surface-strong); }
+.cal-day.mid::before { left: 0; right: 0; }
+.cal-day.start::before { left: 50%; right: 0; }
+.cal-day.end::before { left: 0; right: 50%; }
+.cal-day.mid:nth-child(7n+1)::before { left: 4px; border-radius: 12px 0 0 12px; }
+.cal-day.mid:nth-child(7n)::before { right: 4px; border-radius: 0 12px 12px 0; }
+/* Months and years: big pills, the same height as the days so the sheet doesn't jump */
+.cal-cells { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); grid-auto-rows: 1fr; gap: 8px; min-height: 290px; padding: 4px 2px 2px; }
+.cal-cell {
+  min-height: 52px; border: none; border-radius: 999px; background: var(--surface); color: var(--ink); font: inherit; font-size: 16px; font-weight: 600;
+  font-variant-numeric: tabular-nums; cursor: pointer; transition: transform .2s var(--spring), background .15s;
+}
+.cal-cell:active:not(:disabled) { transform: scale(.94); }
+.cal-cell.now { box-shadow: inset 0 0 0 2px var(--surface-strong); font-weight: 800; }
+.cal-cell.on { background: var(--ink); color: var(--on-ink); box-shadow: none; }
+.cal-cell:disabled { color: var(--mute-soft); text-decoration: line-through; cursor: not-allowed; }
+/* Months slide in from the side they came from; a zoom in or out scales a touch */
+.cal-anim { animation: calIn var(--duration-fast) var(--ease-smooth-out) both; }
+.cal-anim.from-left { --cal-x: calc(-1 * var(--distance-medium)); }
+.cal-anim.from-right { --cal-x: var(--distance-medium); }
+.cal-anim.zoom { --cal-s: .96; }
+@keyframes calIn { from { opacity: 0; transform: translateX(var(--cal-x, 0)) scale(var(--cal-s, 1)); } }
+@keyframes calPop { 0% { transform: scale(.8); } 60% { transform: scale(1.08); } 100% { transform: scale(1); } }
+
+/* A range: which end you're setting, and recent ranges */
+.rg-ends { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 10px; }
+.rg-end {
+  display: flex; flex-direction: column; align-items: flex-start; gap: 4px; min-height: 64px; padding: 10px 14px; border: none; border-radius: 18px;
+  background: var(--card); color: var(--ink); font: inherit; text-align: left; cursor: pointer; box-shadow: inset 0 0 0 2px transparent;
+  transition: transform .2s var(--spring), box-shadow .15s;
+}
+.rg-end:active { transform: scale(.97); }
+.rg-end.active { box-shadow: inset 0 0 0 2px var(--ink); }
+.rg-end strong { font-family: var(--display); font-size: 18px; font-weight: 800; font-variant-numeric: tabular-nums; }
+.rg-end strong.empty { color: var(--mute-soft); }
+.pick-presets { display: flex; gap: 8px; overflow-x: auto; margin: 0 -16px; padding: 2px 16px 4px; scrollbar-width: none; }
+.pick-presets::-webkit-scrollbar { display: none; }
+.pick-presets .pill-btn { flex-shrink: 0; min-height: 44px; background: var(--surface); white-space: nowrap; }
+.pick-presets .pill-btn.on { background: var(--ink); }
+
+/* A tee time: the time big, AM or PM, then hours and minutes as chips */
+.tp-value { font-family: var(--display); font-size: 44px; font-weight: 800; letter-spacing: -.02em; line-height: 1.1; color: var(--ink); text-align: center; font-variant-numeric: tabular-nums; }
+.tp-value.empty { font-size: 22px; line-height: 48px; color: var(--mute-soft); }
+.tp-half .holes-btn { height: 44px; }
+.tp-grid { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 8px; }
+.tp-chip {
+  min-height: 48px; padding: 0; border: none; border-radius: 16px; background: var(--surface); color: var(--ink);
+  font-family: var(--display); font-size: 18px; font-weight: 800; font-variant-numeric: tabular-nums; cursor: pointer;
+  transition: transform .2s var(--spring), background .15s;
+}
+.tp-chip:active:not(:disabled) { transform: scale(.9); }
+.tp-chip.active { background: var(--ink); color: var(--on-ink); animation: calPop .3s var(--spring); }
+.tp-chip:disabled { color: var(--mute-soft); cursor: not-allowed; }

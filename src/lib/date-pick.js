@@ -127,6 +127,17 @@ export function dateLabel(iso, now = new Date()) {
   return d.getFullYear() === now.getFullYear() ? base : `${base}, ${d.getFullYear()}`;
 }
 
+/**
+ * A day for a narrow field, split so the year can sit on its own line under it: { main, year }.
+ * "Sat, Oct 11" (or "Oct 11" without the weekday), and the year only when it isn't this year.
+ */
+export function dayParts(iso, now = new Date(), { weekday = true } = {}) {
+  const d = fromISO(iso);
+  if (!d) return { main: '', year: '' };
+  const day = `${MONTHS_SHORT[d.getMonth()]} ${d.getDate()}`;
+  return { main: weekday ? `${WEEKDAYS[d.getDay()].slice(0, 3)}, ${day}` : day, year: d.getFullYear() === now.getFullYear() ? '' : String(d.getFullYear()) };
+}
+
 /** "Saturday, October 11, 2026": what a screen reader says for a day in the grid. */
 export function longDateLabel(iso) {
   const d = fromISO(iso);
@@ -135,13 +146,14 @@ export function longDateLabel(iso) {
 
 /**
  * The days golfers reach for, inside min and max: Today, Tomorrow, then the coming Saturday and
- * Sunday when they aren't one of those already. Each: { iso, top, bottom, label }.
+ * Sunday when they aren't one of those already. Each: { iso, top, bottom, label, said }, where
+ * `said` is what a screen reader hears ("Today, Monday, October 5, 2026").
  */
 export function quickDays(now = new Date(), { min, max } = {}) {
   const today = toISO(now);
   const out = [
-    { iso: today, top: 'Today', label: 'Today' },
-    { iso: addDays(today, 1), top: 'Tmrw', label: 'Tomorrow' },
+    { iso: today, top: 'Today', label: 'Today', relative: true },
+    { iso: addDays(today, 1), top: 'Tmrw', label: 'Tomorrow', relative: true },
   ];
   for (const dow of [6, 0]) {
     const ahead = (dow - now.getDay() + 7) % 7;
@@ -151,9 +163,9 @@ export function quickDays(now = new Date(), { min, max } = {}) {
   }
   return out
     .filter(q => inBounds(q.iso, min, max))
-    .map(q => {
+    .map(({ relative, ...q }) => {
       const d = fromISO(q.iso);
-      return { ...q, bottom: `${MONTHS_SHORT[d.getMonth()]} ${d.getDate()}` };
+      return { ...q, bottom: `${MONTHS_SHORT[d.getMonth()]} ${d.getDate()}`, said: relative ? `${q.label}, ${longDateLabel(q.iso)}` : longDateLabel(q.iso) };
     });
 }
 
