@@ -364,6 +364,7 @@ Nothing is gated before launch (2026-09-29). Testers use everything; this area i
 - [ ] `S3` Attribution: which creator sent each download, and each step from download to paying
 - [ ] `S3` Support that answers: a help link in the app, a reply within a day in season, and no-fuss refunds (a slow reply on round day loses a whole group)
 - [ ] `S5` Admin view: users, subscriptions, refunds, turning features on and off
+- [ ] `S3` Review hosting costs before launch: compare staying on Vercel with moving to Cloudflare (free data transfer, generous free tier). Moving means rewriting `api/` and `middleware.js` for Cloudflare Workers, so only worth it once real usage, not build minutes, drives the bill. Builds are trimmed by `scripts/vercel-ignore.sh` (added 2026-10-05, when the bill was about $28 a month, almost all builds)
 
 ### 16. Brand and identity
 - [ ] `S1` (partial) A playful color theme, Phosphor icons, no emoji, one golf ball illustration with a face (`BallIllo` in `src/components/ui.jsx`), confetti, count-ups and vibrations (`src/lib/delight.js`), a few small CSS animations
