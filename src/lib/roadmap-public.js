@@ -26,7 +26,7 @@ export const PUBLIC_AREAS = {
 };
 
 // A line about any of these stays private, whatever its area
-const PRIVATE = /\bPro\b|paywall|free trial|\btrial\b|Stripe|RevenueCat|\bprice|pricing|billing|purchase|legal|creator|Slack|SMTP|Sentry|analytics|admin|branding|\blogo\b|domain|digest|referral|research|polish pass|Needs check|Record Book|\bTest\b|\bDecide\b|Talk to|Squabbit|GameBook|Reddit|GolfWRX|Apple requires|test groups/i;
+const PRIVATE = /\bPro\b|paywall|free trial|\btrial\b|Stripe|RevenueCat|\bprice|pricing|billing|purchase|legal|creator|Slack|SMTP|Sentry|analytics|admin|branding|\blogo\b|domain|digest|referral|research|polish pass|Needs check|Record Book|\bTest\b|\bDecide\b|Talk to|Squabbit|GameBook|Reddit|GolfWRX|Apple requires|test groups|App Store|Google Play|Capacitor/i;
 
 /**
  * Titles written by hand, by line key (itemKey: the line's first seven words), for lines that don't cut down well on their own, with an
@@ -37,7 +37,7 @@ const PRIVATE = /\bPro\b|paywall|free trial|\btrial\b|Stripe|RevenueCat|\bprice|
  */
 export const TITLES = {
   'data-saved-on-the-phone-with-a': { title: 'Back up your data', blurb: 'One file with everything on your phone, and restore it any time' },
-  'sign-in-with-apple-google-or-a': { title: 'Sign in with Apple, Google or email', blurb: 'Google and email work now. Apple comes with the App Store app' },
+  'sign-in-with-apple-google-or-a': { title: 'Sign in with Apple, Google or email', blurb: 'Google and email work now' },
   'rounds-crews-and-the-tab-saved-to': { title: 'Your rounds and the Tab on every device' },
   'claim-your-seat-a-guest-player-becomes': { title: 'Claim your seat', blurb: 'Play as a guest, sign up later, and your rounds and Tab come with you' },
   'move-each-phones-existing-local-data-into': { title: 'Bring your rounds into your account' },
@@ -158,7 +158,7 @@ export const TITLES = {
   'the-spring-comeback-email-your-crews-first': null,
   'live-activity-on-the-lock-screen-your': { title: 'Your money on the lock screen' },
   'already-an-installable-web-app-manifest-and': { title: 'Install it on your home screen' },
-  'app-store-and-google-play-apps-capacitor': { title: 'App Store and Google Play apps' },
+  'app-store-and-google-play-apps-capacitor': null,
   'links-that-open-straight-into-the-app': { title: 'Links that open straight into the app' },
   'never-force-an-update-before-or-during': { title: 'Never an update mid-round' },
   'plays-nicely-next-to-other-apps-switching': { title: 'Plays nicely with your GPS and music' },
