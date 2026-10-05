@@ -5,7 +5,7 @@ import assert from 'node:assert/strict';
 import { createRound } from './round.js';
 import { newPlan } from './plans.js';
 import { newTrip, tripGoing, tripPlanDay, tripStatus } from './trips.js';
-import { SEARCH_FROM, cleanPersonName, filterInvitees, inviteeLine, nameToAdd, savePerson, tripAnswers, tripInviteText, tripInvitees, tripLinkPlan } from './trip-people.js';
+import { SEARCH_FROM, cleanPersonName, filterInvitees, inviteeLine, nameToAdd, savePerson, submitTyped, tripAnswers, tripInviteText, tripInvitees, tripLinkPlan } from './trip-people.js';
 
 const course = { id: 'c1', name: 'Pebble Creek', city: 'Town', tees: [], holes: Array.from({ length: 9 }, (_, i) => ({ par: 4, hdcp: i + 1 })) };
 const SEP = day => new Date(2026, 8, day, 12).getTime();
@@ -109,6 +109,28 @@ test('adding a name: you, someone on the list, or someone new', () => {
   assert.deepEqual(nameToAdd(s, list, ' chris  wade '), { kind: 'existing', id: 'chris' });
   assert.deepEqual(nameToAdd(s, list, 'Nate   Diaz'), { kind: 'new', name: 'Nate Diaz' });
   assert.equal(cleanPersonName('x'.repeat(40)).length, 24);
+});
+
+test('the keyboard’s Done never saves a half-typed search as a new player', () => {
+  const s = world();
+  const list = tripInvitees(s);
+  const done = q => submitTyped(s, list, filterInvitees(list, q), q);
+  // Several matches: still searching, so nothing is added or picked
+  assert.equal(done('o'), null);
+  // One match: that person
+  assert.deepEqual(done('ch'), { kind: 'pick', id: 'chris' });
+  // The whole name of someone on the list: them, even with other matches
+  assert.deepEqual(done('sam ortiz'), { kind: 'pick', id: 'sam' });
+  // Nobody matches: someone new
+  assert.deepEqual(done('Nate  Diaz'), { kind: 'add', name: 'Nate Diaz' });
+  assert.deepEqual(done('Trevor Nielsen'), { kind: 'self' });
+  assert.equal(done('  '), null);
+});
+
+test('a usual’s player with no name anywhere isn’t a row of Someone, unless picked already', () => {
+  const s = world({ usuals: [{ id: 'u1', name: 'Saturday skins', game: 'skins', players: ['me', 'sam', 'ghost'], names: { sam: 'Sam Ortiz', ghost: '' } }] });
+  assert.ok(!tripInvitees(s).some(p => p.id === 'ghost'));
+  assert.equal(tripInvitees(s, { picked: ['ghost'] }).find(p => p.id === 'ghost').name, 'Someone');
 });
 
 test('picking someone from a round saves them as a player, and never changes a saved one', () => {

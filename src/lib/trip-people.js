@@ -59,17 +59,22 @@ export function tripInvitees(state, { picked = [] } = {}) {
     }
   }
   for (const u of usualsOf(state)) for (const id of Array.isArray(u?.players) ? u.players : []) touch(id, { name: u.names?.[id], usual: true });
-  for (const id of picked) touch(id);
-  const out = [...people.values()].map(p => {
+  const kept = new Set();
+  for (const id of picked) { touch(id); if (typeof id === 'string' && id) kept.add(who(id)); }
+  const out = [];
+  for (const p of people.values()) {
     const known = nameOf(state, p.id);
+    const name = (known && known !== 'Someone' ? known : p.fallback) || '';
+    // Nobody to show without a name (a usual's player saved with none): a row of "Someone" helps nobody, unless they're picked already
+    if (!name && !kept.has(p.id)) continue;
     const saved = state?.players?.[p.id];
-    return {
+    out.push({
       id: p.id,
-      name: (known && known !== 'Someone' ? known : p.fallback) || 'Someone',
+      name: name || 'Someone',
       index: saved && saved.index != null ? saved.index : p.index,
       usual: p.usual, rounds: p.rounds, lastAt: p.lastAt, saved: !!saved,
-    };
-  });
+    });
+  }
   return out.sort((a, b) => (a.usual === b.usual ? 0 : a.usual ? -1 : 1) || b.lastAt - a.lastAt || a.name.localeCompare(b.name));
 }
 
@@ -91,6 +96,22 @@ export function nameToAdd(state, list, typed) {
   if (state?.me && lower(nameOf(state, state.me)) === lower(name)) return { kind: 'self' };
   const same = list.find(p => lower(p.name) === lower(name));
   return same ? { kind: 'existing', id: same.id } : { kind: 'new', name };
+}
+
+/**
+ * What the keyboard's Done (or Enter) does in the find-or-add box, where `matches` is the list as
+ * the box filters it: the person whose name it is, the one match there is, someone new only when
+ * nothing matches, and nothing at all while it's still a search with several matches, so closing
+ * the keyboard mid-search never saves a half-typed name as a player. { kind: 'pick', id },
+ * { kind: 'add', name }, { kind: 'self' } or null. The Add button and the Add row add the name as typed.
+ */
+export function submitTyped(state, list, matches, typed) {
+  const t = nameToAdd(state, list, typed);
+  if (!t) return null;
+  if (t.kind === 'self') return t;
+  if (t.kind === 'existing') return { kind: 'pick', id: t.id };
+  if (matches.length === 1) return { kind: 'pick', id: matches[0].id };
+  return matches.length ? null : { kind: 'add', name: t.name };
 }
 
 /**

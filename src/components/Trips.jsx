@@ -7,7 +7,7 @@ import { Icon, Segmented, Sheet, Steps, Toggle, useUI } from './ui.jsx';
 import { Avatar } from './Pay.jsx';
 import { CupLine, CupRoundNote, TeamsPicker } from './Cup.jsx';
 import { getState, uid, update, useStore } from '../lib/store.js';
-import { SEARCH_FROM, filterInvitees, inviteeLine, nameToAdd, savePerson, tripInvitees } from '../lib/trip-people.js';
+import { SEARCH_FROM, filterInvitees, inviteeLine, nameToAdd, savePerson, submitTyped, tripInvitees } from '../lib/trip-people.js';
 import { useNav } from '../lib/nav.js';
 import { money } from '../lib/golf.js';
 import { nameOf } from '../lib/ledger.js';
@@ -495,7 +495,7 @@ function TripForm({ trip, onDone }) {
               <Icon name={pool.length === template ? 'check-circle' : 'users-three'} fill /> {pool.length === template ? `All ${template} picked, you included.` : `The template is for ${template}: you and ${template - 1} friends. You have ${pool.length} so far.`}{pool.length !== template && pool.length >= 2 ? ' Any even number works: the schedule fits the teams you pick.' : ''}
             </p>
           )}
-          <WhoGoing picked={people} onChange={setPeople} byIndex={isCup || flightsOn} />
+          <WhoGoing picked={people} onChange={setPeople} byIndex={isCup || flightsOn} canSkip={!trip && !isCup} />
           <section className="trip-sec">
             <div className="trip-count tm-flights">
               <div className="row-main">
@@ -566,10 +566,9 @@ export function PickRow({ on, onClick, lead = null, name, sub = null, disabled =
  * someone new by name. Optional: anyone who plays a trip round is on it anyway. Someone picked from
  * a round or a usual is saved to your players, so the teams and flights can use them.
  */
-function WhoGoing({ picked, onChange, byIndex = false }) {
+function WhoGoing({ picked, onChange, byIndex = false, canSkip = false }) {
   const state = useStore();
   const [query, setQuery] = useState('');
-  const [self, setSelf] = useState(false);
   const all = tripInvitees(state, { picked });
   const list = filterInvitees(all, query);
   // The list goes by each person's kept id; a trip saved before (or a link made since) may have another of theirs
@@ -582,29 +581,39 @@ function WhoGoing({ picked, onChange, byIndex = false }) {
     onChange(on.has(person.id) ? picked : [...picked, person.id]);
   };
   const flip = person => (on.has(person.id) ? onChange(picked.filter(x => who(x) !== person.id)) : pick(person));
-  const add = () => {
-    if (!typed) return;
-    if (typed.kind === 'self') { setSelf(true); setQuery(''); return; }
-    if (typed.kind === 'existing') pick(all.find(p => p.id === typed.id));
-    else {
-      const id = uid('p_');
-      update(s => { s.players[id] = { id, name: typed.name, index: null, venmo: '', createdAt: Date.now() }; });
-      onChange([...picked, id]);
-    }
+  const addNew = name => {
+    const id = uid('p_');
+    update(s => { s.players[id] = { id, name, index: null, venmo: '', createdAt: Date.now() }; });
+    onChange([...picked, id]);
     setQuery('');
+  };
+  const pickId = id => { const p = all.find(x => x.id === id); if (p) pick(p); setQuery(''); };
+  // The Add button and the Add row: the name as typed (or the person by that name)
+  const add = () => {
+    if (!typed || typed.kind === 'self') return;
+    if (typed.kind === 'existing') pickId(typed.id);
+    else addNew(typed.name);
+  };
+  // The keyboard's Done: never a half-typed search saved as a new player (trip-people.js)
+  const submit = e => {
+    e.preventDefault();
+    const t = submitTyped(state, all, list, query);
+    if (t?.kind === 'pick') pickId(t.id);
+    else if (t?.kind === 'add') addNew(t.name);
+    else if (!t) e.currentTarget.querySelector('input')?.blur();
   };
   const count = all.filter(p => on.has(p.id)).length;
   return (
     <div className="trip-who-step">
       <p className="field-help trip-lede">Pick who’s coming, or skip this: anyone who plays a round for the trip is on it. Picked friends show in the standings before anyone plays.</p>
-      <form className="tm-add trip-find" role="search" onSubmit={e => { e.preventDefault(); add(); }}>
+      <form className="tm-add trip-find" role="search" onSubmit={submit}>
         <label className="sr-only" htmlFor="trip-find">{long ? 'Find or add someone' : 'Add someone'}</label>
         <span className="trip-find-ic" aria-hidden="true"><Icon name={long ? 'magnifying-glass' : 'user-plus'} /></span>
-        <input id="trip-find" className="text-input" value={query} onChange={e => { setQuery(e.target.value); setSelf(false); }} maxLength={24}
+        <input id="trip-find" className="text-input" value={query} onChange={e => setQuery(e.target.value)} maxLength={24}
           placeholder={long ? 'Find or add someone' : 'Add someone by name'} autoComplete="off" enterKeyHint="done" />
-        <button type="submit" className="pill-btn" disabled={!typed || typed.kind === 'self'}><Icon name="plus" /> Add</button>
+        <button type="button" className="pill-btn" disabled={!typed || typed.kind === 'self'} onClick={add}><Icon name="plus" /> Add</button>
       </form>
-      {self && <p className="field-help" role="status">That’s you, and you’re going already.</p>}
+      {typed?.kind === 'self' && <p className="field-help" role="status">That’s you, and you’re going already.</p>}
       <div className="trip-who-head">
         <span className="field-label">{!query.trim() ? 'Your players and friends' : list.length ? `${list.length} match${list.length === 1 ? '' : 'es'}` : 'No match yet'}</span>
         {count > 0 && <span className="trip-who-count">{count} picked</span>}
@@ -621,7 +630,7 @@ function WhoGoing({ picked, onChange, byIndex = false }) {
           </button>
         )}
       </div>
-      {all.length === 0 && <p className="field-help">Nobody here yet. Add friends by name above, or start the trip and send its link so they add themselves.</p>}
+      {all.length === 0 && <p className="field-help">{canSkip ? 'Nobody here yet. Add friends by name above, or skip this and send the first round’s link so they add themselves.' : 'Nobody here yet. Add friends by name above.'}</p>}
       {all.length > 0 && query.trim() && !list.length && typed?.kind !== 'new' && <p className="field-help">Nobody by that name.</p>}
       {byIndex && <p className="field-help">Someone new is saved to your players with no handicap. Add their index on Players to balance the teams or flights by it.</p>}
     </div>

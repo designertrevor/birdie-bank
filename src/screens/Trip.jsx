@@ -22,7 +22,7 @@ import { canonicalOf } from '../lib/pair-debts.js';
 import { PAY_APPS, payInfoFor, sendReminder } from '../lib/pay.js';
 import { points } from '../lib/play-for.js';
 import { dayLabel, whenLabel } from '../lib/plans.js';
-import { planShareLink, sharePlan } from '../lib/plan-sync.js';
+import { planShareLink, sharePlan, usePlanLive } from '../lib/plan-sync.js';
 import { PlansOffError } from '../lib/plan-adapters.js';
 import { tripAnswers, tripInviteText, tripLinkPlan } from '../lib/trip-people.js';
 import { plansByDay } from '../lib/trip-templates.js';
@@ -316,6 +316,8 @@ function TripInvite({ st }) {
   const [busy, setBusy] = useState(false);
   const plan = tripLinkPlan(state, st.trip.id);
   const answers = tripAnswers(state, st.trip);
+  // Who answered stays current while the card is up (the plan's own refetch, with its code header)
+  usePlanLive(plan?.id, plan?.code);
   const soon = st.phase === 'soon';
   // Once the trip is under way it's only worth the room with a round to send, or nobody on it yet
   if (!soon && !plan && st.standings.length > 0) return null;
