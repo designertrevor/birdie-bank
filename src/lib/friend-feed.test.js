@@ -454,3 +454,16 @@ test('two players tied on money but not on strokes don’t share a place', () =>
   assert.notEqual(sam.place, dave.place);
   assert.equal(v.players[0].toPar <= v.players[1].toPar, true, 'the lower score first');
 });
+
+test('friend round: when only one player’s amount is hidden, none shows, since the others would give it away', () => {
+  // Two players: Sam's +$8 would say Mike lost $8
+  const r = createRound({ id: 'r2p', game: 'skins', course, holesCount: 9, players: PLAYERS.slice(0, 2), settings: SETTINGS, hcPct: 100, useHandicaps: false });
+  r.holes.slice(0, 5).forEach((h, i) => { r.scores[h.no] = { sam: i < 2 ? 3 : 4, dave: 4 }; });
+  r.status = 'active'; r.shareCode = 'TWO222';
+  const v = friendRoundView(rowOf(r, { people: { sam: { ...SAM, money: true }, dave: { friend: true, money: false, account: 'acct-dave' } } }));
+  assert.ok(v.players.every(p => p.amountText == null));
+  assert.equal(v.line, 'Sam leads');
+  // Both showing: both amounts
+  const both = friendRoundView(rowOf(r, { people: { sam: { ...SAM, money: true }, dave: { friend: true, money: true, account: 'acct-dave' } } }));
+  assert.ok(both.players.every(p => p.amountText != null));
+});

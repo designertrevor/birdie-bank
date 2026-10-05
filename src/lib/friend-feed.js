@@ -191,8 +191,14 @@ export function roundView(round, { code, people = {}, at = 0, following = false,
   // A Big Game's group round has no money of its own: its money is the whole game's, never shown here
   const bigGroup = !!bigGroupName(round);
   const isMoney = countsMoney(round) && !bigGroup;
-  // Points are bragging rights and show for everyone; dollars only for someone who chose Show my money
-  const shows = id => !bigGroup && (!isMoney || people[id]?.money === true);
+  // Points are bragging rights and show for everyone; dollars only for someone who chose Show my
+  // money. A round's money adds up to $0, so when just one player's amount is hidden the others
+  // would give it away (Sam's +$8 says Mike lost $8): then no amount shows at all
+  // (a guest with no profile has no setting to keep)
+  const own = id => people[id]?.money === true;
+  const unshown = round.players.filter(p => !own(p.id));
+  const held = isMoney && unshown.length === 1 && !!people[unshown[0].id];
+  const shows = id => !bigGroup && (!isMoney || (!held && own(id)));
   const fmt = (id, v) => (!shows(id) ? null : isMoney ? money(v, { sign: true }) : points(v, { sign: true }));
   let units = [];
   try { units = scorers(round); } catch { units = []; }
