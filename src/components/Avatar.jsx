@@ -23,7 +23,7 @@ export function AvatarArt({ model, size = '', base = 'avatar', className = '' })
   }
   // Initials (also a photo that won't load: a link that's gone, or no signal before it was cached)
   const b = backdropOf(model.bg);
-  return <span className={`${cls} av-initials`} style={{ background: b.hex, color: b.ink }} aria-hidden="true">{model.text || '?'}</span>;
+  return <span className={`${cls} av-initials`} style={{ background: b.hex, color: b.ink }} aria-hidden="true"><span className="av-letters">{model.text || '?'}</span></span>;
 }
 
 /**
