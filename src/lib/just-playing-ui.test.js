@@ -23,6 +23,8 @@ import { rematchSetup } from './rematch.js';
 import { revealSteps } from './reveal.js';
 import { deepStats } from './deep-stats.js';
 import { roundStatus } from './shared-tab.js';
+import { seasonRounds } from './season.js';
+import { agreementItems } from './agreed.js';
 
 const DAY = 864e5;
 const NOW = new Date(2026, 9, 5, 9).getTime();
@@ -159,6 +161,10 @@ test('the Tab, History and stats: nothing of theirs, and their round is never a 
   assert.deepEqual(stats.games, []);
   // The who's-square strip has nobody just playing in it
   assert.deepEqual(Object.keys(roundStatus(r, [])), ['me', 'sam']);
+  // ...and the season's money is the rounds you had money in
+  const year = new Date(NOW).getFullYear();
+  assert.deepEqual(seasonRounds(state, year).map(x => x.id), []);
+  assert.deepEqual(seasonRounds(stateWith([r]), year).map(x => x.id), ['r1']);
 });
 
 test('head to head and rivalry: a round either of you was just playing had no bet between you', () => {
@@ -249,4 +255,17 @@ test('the reveal and fixing strokes never name them', () => {
 
 test('the seat name', () => {
   assert.equal(JUST_PLAYING, 'Just playing, no bet');
+});
+
+test('the first-tee card says who is just playing, and lists strokes for the betting players only', () => {
+  const r = createRound({
+    id: 'ft', game: 'skins', course, holesCount: 9, players: ['me', 'sam', 'jo'].map((x, i) => ({ id: x, name: NAMES[x], index: [10, 4, 0][i] })),
+    settings: structuredClone(SETTINGS), hcPct: 100, useHandicaps: true, justPlaying: ['jo'],
+  });
+  const items = agreementItems(r, {});
+  assert.deepEqual(items.find(i => i.id === 'justPlaying'), { id: 'justPlaying', group: 'lineup', label: 'Just playing', text: 'Jo. On the card, no bet' });
+  assert.ok(!items.some(i => i.id === 'strokes:jo'));
+  assert.ok(items.some(i => i.id === 'strokes:me'));
+  // Nobody just playing: no line for it
+  assert.ok(!agreementItems({ ...r, justPlaying: undefined }, {}).some(i => i.id === 'justPlaying'));
 });

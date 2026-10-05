@@ -32,7 +32,7 @@
 // place (a teammate from another group it never played with) is still marked paid that way.
 // Pure, unit tested.
 import { holeWinner } from './golf.js';
-import { oneBall, sideNet, teamHoleScore } from './round.js';
+import { isJustPlaying, oneBall, sideNet, teamHoleScore } from './round.js';
 import { canonicalOf, codeOf } from './pair-debts.js';
 import { stable } from './sync-model.js';
 import { courseNetOf } from './to-par.js';
@@ -380,7 +380,8 @@ export function cupEntry(state, round) {
   return {
     key: cupKey(round), status: round.status === 'done' ? 'done' : 'active', at: round.createdAt || 0, day: dayOf(round.createdAt),
     course: round.course?.name || null, holes: round.holes.length,
-    players: round.players.map(p => ({ id: p.id, name: p.name, team: team(p.id), ...(isStr(acct[p.id]) ? { acct: acct[p.id] } : {}), ...netPart(round, p) })),
+    // Someone just playing has no net for the leaderboard (they're out of every competition)
+    players: round.players.map(p => ({ id: p.id, name: p.name, team: team(p.id), ...(isStr(acct[p.id]) ? { acct: acct[p.id] } : {}), ...(isJustPlaying(round, p.id) ? {} : netPart(round, p)) })),
     matches: matches.map(m => ({ kind: m.kind, sides: m.sides, result: pick(m.result) })),
     ...worthPart(worth),
     // Foursomes pairs that mix the teams: no match, and the cup view says why
