@@ -11,7 +11,7 @@
 //  • Won, lost and even are by each game's own result, whatever it was played for.
 // Your seat in a round is the same one the profile uses: this phone's "me" for the round when it's
 // one of yours, otherwise any id that is you (people-links.js).
-import { GAMES, SIDE_GAMES, BETS_LABEL, gameView, playsGame, roundResults, sides } from './round.js';
+import { GAMES, SIDE_GAMES, BETS_LABEL, gameView, isJustPlaying, playsGame, roundResults, sides } from './round.js';
 import { countsMoney, onTab, playForOf, rewardNoun, tabResults } from './play-for.js';
 import { betsOf, isCashBet } from './pair-bets.js';
 import { linksOf } from './people-links.js';
@@ -161,7 +161,8 @@ function yourRounds(state, rounds) {
     let res;
     // A Big Game's round has your money from the whole game on the one round it goes on, as History does
     try { res = withBigMoney(state, r, roundResults(r)); } catch { continue; }
-    out.push({ r, seat, res, noMoney: bigNoMoney(state, r) });
+    // A round you were just playing is a round played, never a money or points round of yours
+    out.push({ r, seat, res, noMoney: bigNoMoney(state, r) || isJustPlaying(r, seat) });
   }
   return out.sort((a, b) => roundTime(a.r) - roundTime(b.r));
 }
@@ -204,7 +205,7 @@ export function deepStats(state, rounds = Object.values(state?.rounds || {})) {
     const total = res.balances[seat] || 0;
     // A Big Game's round with no money on it is a round played, never an even money round
     const cash = noMoney ? null : dollarsIn(r, seat, res);
-    const pts = countsMoney(r) ? null : cents(total);
+    const pts = noMoney || countsMoney(r) ? null : cents(total);
     if (!noMoney) tally(record, total);
     if (cash != null) { dollars.net = cents(dollars.net + cash); dollars.rounds++; if (!countsMoney(r)) lunchDollars++; }
     if (pts != null) { points.net = cents(points.net + pts); points.rounds++; }

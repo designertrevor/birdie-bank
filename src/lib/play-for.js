@@ -10,7 +10,7 @@
 // money (pair-bets.js), which the Tab counts through onTab() and tabResults(), and History, Season
 // and Lately through tabMoneyOf() and tabResultsFor(), only for the players who had one. Pure, unit tested.
 import { money } from './golf.js';
-import { BETS_LABEL, leftAt, roundResults } from './round.js';
+import { BETS_LABEL, isJustPlaying, leftAt, roundResults } from './round.js';
 import { betsOf, isCashBet } from './pair-bets.js';
 
 /** The rewards to pick from; anything else is typed in. */
@@ -79,6 +79,8 @@ export const hasCashBet = (round, seat) => !!seat && betsOf(round).some(b => isC
  * Lately add up this, so their totals match the Tab. `res` is roundResults(round), when you have it.
  */
 export function tabMoneyOf(round, seat, res) {
+  // Just playing: nothing of theirs is ever on the Tab, so it isn't a money round for them
+  if (isJustPlaying(round, seat)) return null;
   if (countsMoney(round)) return (res || roundResults(round)).balances?.[seat] ?? 0;
   if (!hasCashBet(round, seat)) return null;
   return tabResults(round, res || roundResults(round)).balances?.[seat] ?? 0;
@@ -86,6 +88,7 @@ export function tabMoneyOf(round, seat, res) {
 
 /** The round's results as the Tab has them for one seat (see tabMoneyOf): tabResults(), or null when nothing is theirs. */
 export function tabResultsFor(round, seat, res) {
+  if (isJustPlaying(round, seat)) return null;
   if (countsMoney(round)) return res || roundResults(round);
   return hasCashBet(round, seat) ? tabResults(round, res || roundResults(round)) : null;
 }

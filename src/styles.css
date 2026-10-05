@@ -2642,3 +2642,48 @@ button.ch-main:active { transform: scale(.98); }
 .big-setup-group .field-label { margin-top: 4px; }
 .big-team-row { padding: 4px 0; }
 .big-team-row .tr-sub { display: block; margin-bottom: 6px; }
+
+/* ---------- Just playing, no bet (overnight 9, o9/nopressure) ----------
+   The "Just playing" seat: its chip on the Players step, its tag on the card and the money bar, the
+   "How they play" choice when adding someone, the card-only bar, and the friendly "Nice round" finish.
+   Theme tokens only, so light and dark both work. */
+.jp-tag {
+  display: inline-block; margin-left: 6px; padding: 1px 8px; border-radius: 999px; vertical-align: 1px;
+  background: var(--surface); color: var(--body); font-size: 11px; font-weight: 700; letter-spacing: .02em; white-space: nowrap;
+}
+.pick-extra .jp-chip { min-height: 36px; gap: 6px; }
+.pick-extra .jp-chip i { font-size: 15px; }
+.pick-extra .jp-chip:not(.on) i { color: var(--icon); }
+.jp-step-help { margin: -2px 0 12px; }
+.jp-setup-note { margin-top: 4px; margin-bottom: 16px; }
+.mb-jp { padding: 6px 8px 2px; font-size: 11px; font-weight: 600; color: var(--mute); text-align: center; overflow-wrap: anywhere; }
+.card-bar .mb-a.card-par.under { color: var(--pink-text); }
+.card-bar .mb-a.card-par.over { color: var(--body); }
+/* "How they play" when adding someone mid-round, and "How do you want to play?" on Add me */
+.ap-how { padding: 4px 20px 16px; }
+.ap-how .eyebrow, .join-how .eyebrow { margin-bottom: 10px; }
+.ap-how .field-help, .join-how .field-help { margin-top: 10px; }
+.ap-how .pm-btn, .join-how .pm-btn { flex: 1 1 0; min-width: 0; padding: 0 8px; font-size: 14px; line-height: 1.1; }
+.join-how { width: 100%; margin: 12px 0 8px; text-align: left; }
+.own-card-link { align-self: center; justify-content: center; width: 100%; }
+/* The friendly finish: a card with the score, never money */
+.nice-scroll { padding: 8px 16px 24px; }
+.nice-card {
+  margin-top: 8px; padding: 28px 20px 24px; border-radius: 28px; background: var(--card); text-align: center;
+  display: flex; flex-direction: column; align-items: center; gap: 10px;
+}
+.nice-card .nice-face { margin: 0 auto 4px; }
+.nice-title { font-size: 30px; font-weight: 800; letter-spacing: -.03em; line-height: 1.1; color: var(--ink); text-wrap: balance; }
+.nice-score { display: flex; align-items: baseline; justify-content: center; gap: 12px; margin-top: 4px; }
+.nice-num { font-size: 72px; font-weight: 800; letter-spacing: -.04em; line-height: 1; color: var(--ink); font-variant-numeric: tabular-nums; }
+.nice-par { font-size: 22px; font-weight: 800; font-variant-numeric: tabular-nums; }
+.nice-par.under { color: var(--pink-text); }
+.nice-par.even { color: var(--ink); }
+.nice-par.over { color: var(--mute); }
+.nice-line { font-size: 15px; color: var(--body); line-height: 1.45; max-width: 30ch; }
+.nice-note { margin: 16px 4px 0; font-size: 14px; color: var(--mute); text-align: center; line-height: 1.45; }
+/* The round page's hero for a card with no game: the same shape as the winner's, in a calmer color */
+.winner-hero.nice-hero { background: var(--teal); }
+.winner-hero.nice-hero .crown { color: var(--mint); animation: none; }
+.winner-hero.nice-hero .nice-par { color: inherit; opacity: .85; font-size: 28px; letter-spacing: 0; }
+.sc-jp { display: block; margin-top: 1px; font-size: 10px; font-weight: 700; color: var(--mute); letter-spacing: .02em; }

@@ -1,4 +1,5 @@
-import { roundResults } from '../lib/round.js';
+import { isJustPlaying, roundResults } from '../lib/round.js';
+import { JUST_PLAYING_TAG, niceRound } from '../lib/just-playing.js';
 import { gameLabel, meFor, roundDate } from '../lib/format.js';
 import { myNet, roundTime } from '../lib/history.js';
 import { useNav } from '../lib/nav.js';
@@ -34,7 +35,13 @@ export function RoundRow({ round, state, className = '', withYear = false }) {
   const talk = countsLine(roundTalkCounts(state, round));
   // A Big Game's group round goes by the game's name; the game's money is on its own page (big-money.js)
   const game = round.trip?.format === 'big' ? round.trip.name : gameLabel(round);
-  const label0 = amount == null
+  // A round you were just playing shows your score, never money you weren't playing for
+  const seat = meFor(round, state);
+  const casual = round.players.some(p => p.id === seat) && isJustPlaying(round, seat);
+  const nice = casual ? niceRound(round, seat) : null;
+  const label0 = casual
+    ? `${round.course.name}, ${game}, ${roundDate(round)}. ${nice ? `You shot ${nice.score}, ${nice.toParWords}` : 'No scores'}. ${JUST_PLAYING_TAG}`
+    : amount == null
     ? `${round.course.name}, ${game}, ${roundDate(round)}. ${top ? `${top.name} ${money(top.amount, { sign: true })}` : ''}${sub ? `. ${sub}` : ''}`
     : `${round.course.name}, ${game}, ${roundDate(round)}. You ${money(amount, { sign: true })}${sub ? `. ${sub}` : ''}${cashText}`;
   const label = talk ? `${label0}. ${talk}` : label0;
@@ -48,10 +55,13 @@ export function RoundRow({ round, state, className = '', withYear = false }) {
       </span>
       {/* The play-for label sits under the amount, so a 375px row keeps the course name readable */}
       <span className="hr-end">
-        {amount != null
+        {casual ? <>
+          <span className="hr-amt other">{nice ? `${nice.score} (${nice.toPar})` : '–'}</span>
+          <span className="hr-for" aria-hidden="true">{JUST_PLAYING_TAG}</span>
+        </> : amount != null
           ? <span className={`hr-amt ${amount > 0 ? 'pos' : amount < 0 ? 'neg' : ''}`}>{money(amount, { sign: true })}</span>
           : <span className="hr-amt other">{top ? `${top.name.split(' ')[0]} ${money(top.amount, { sign: true })}` : '–'}</span>}
-        {pf.kind === 'reward' && <span className="hr-for" aria-hidden="true">{playForShort(round)}{cash != null && cash !== 0 && <> · <span className={cash > 0 ? 'pos' : 'neg'}>{dollars(cash, { sign: true })}</span></>}</span>}
+        {pf.kind === 'reward' && !casual && <span className="hr-for" aria-hidden="true">{playForShort(round)}{cash != null && cash !== 0 && <> · <span className={cash > 0 ? 'pos' : 'neg'}>{dollars(cash, { sign: true })}</span></>}</span>}
       </span>
     </button>
   );

@@ -9,7 +9,7 @@
 // score, so they can't have a match). With only two playing, the game is already a match between
 // them, so the first hole doesn't suggest one, and a Nassau's turn doesn't either (its back nine is
 // one already). Pure, unit tested.
-import { holeComplete, playersOn } from './round.js';
+import { bettingRound, bettors, holeComplete, playersOn } from './round.js';
 import { MAX_BETS, betRange, betsOf, kindFits, nextPos, nineRange } from './pair-bets.js';
 import { withAsks } from './bet-asks.js';
 
@@ -69,7 +69,7 @@ export function spotDraft(round, spot) {
 export function spotCopy(round, spot) {
   const kind = spotKind(spot.why);
   // Just two in the round: "You two", never "Two of you"
-  const two = (round.players || []).length === 2;
+  const two = (round.players ? bettors(round) : []).length === 2;
   const who = two ? 'You two' : 'Two of you';
   if (kind === 'ctp') return { title: 'Closest to the pin?', text: `A par 3. ${who} can bet on who lands it closest, here and on the par 3s after.` };
   if (spot.why === 'turn') return { title: `A side bet for the ${nineName(round, spot.pos) ?? 'last'} nine?`, text: `A fresh match for the last nine holes, just between ${two ? 'you two' : 'two of you'}.` };
@@ -98,7 +98,8 @@ function covered(round, kind, pos, who) {
 export function betPromptFor(round, pos, { me = null, editable = false, on = true, seen = null, moment = false, scoring = false } = {}) {
   if (!on || moment || scoring || !round || round.status !== 'active' || round.editing) return null;
   if (seen?.skip || (Array.isArray(seen?.done) && seen.done.includes(pos))) return null;
-  const player = !!me && round.players.some(p => p.id === me);
+  // Someone just playing is in no bet, so their phone never asks (see round.js bettingRound)
+  const player = !!me && bettingRound(round).players.some(p => p.id === me);
   // A phone that's only watching can't make a bet
   if (!editable && !player) return null;
   const spot = promptSpots(round).find(s => s.pos === pos);
@@ -116,7 +117,7 @@ export function betPromptFor(round, pos, { me = null, editable = false, on = tru
   const mine = !editable ? me : null;
   if (covered(view, kind, pos, mine)) return null;
   // Someone this phone can make the bet for has someone to make it with (a scramble's match needs the two on different teams)
-  const here = playersOn(round, hole).map(p => p.id);
+  const here = playersOn(bettingRound(round), hole).map(p => p.id);
   // Two players: the game itself is their head to head (2026-10-04, Trevor)
   if (here.length === 2 && (spot.why === 'first' || (spot.why === 'turn' && round.game === 'nassau'))) return null;
   const fits = here.some((a, i) => here.some((b, j) => j > i && (!mine || a === mine || b === mine) && kindFits(round, kind, [a, b])));

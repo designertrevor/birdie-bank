@@ -3,7 +3,7 @@
 import { matchStatus, nassauBets } from './golf.js';
 import { sideSplit } from './games.js';
 import {
-  gameKeys, gameResults, gameView, hammerTable, holeComplete, matchScored, nassauAmounts, nassauWinners, roundLegs, roundResults, settingsAt,
+  cardOnly, gameKeys, gameResults, gameView, hammerTable, holeComplete, matchScored, nassauAmounts, nassauWinners, roundLegs, roundResults, settingsAt,
   sideGamesOf, sideNames, sides, sixesMatches, skinsKinds, skinsTable, vegasTable, wolfHoleResult,
 } from './round.js';
 import { playForOf, rewardNoun, rewardOutcome, unitFmt } from './play-for.js';
@@ -439,6 +439,8 @@ export function hammerMoment(round, pos) {
 
 /** Every hole scored: who won the round, for when it doesn't finish on its own (a skipped hole filled in last). */
 export function finalMoment(round) {
+  // A card with no game: nobody won anything, there's just the card to finish
+  if (cardOnly(round)) return { kind: 'final', title: 'Every hole’s in', text: 'Finish the round to see your card' };
   const res = roundResults(round);
   const pf = playForOf(round);
   const nudge = 'Every hole’s in. Finish the round to settle up';

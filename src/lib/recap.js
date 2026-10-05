@@ -11,7 +11,8 @@
 //    count, its points never do. A points or reward round has nothing to pay, so no paid section.
 //  • Nothing here changes any amount: it only reads the rounds, the payments and the Tab.
 // Pure, unit tested in recap.test.js.
-import { GAMES, holeAtPos, roundResults } from './round.js';
+import { GAMES, bettors, cardOnly, holeAtPos, isJustPlaying, roundResults } from './round.js';
+import { niceRound } from './just-playing.js';
 import { gameLabel, meFor, myIds } from './format.js';
 import { money } from './golf.js';
 import { nameOf, outstanding, tabWith } from './ledger.js';
@@ -55,6 +56,8 @@ function youBuy(state, reward) {
 
 /** Who took the round: "Sam took it", "You took it", "Sam and Dave took it" (a team), "Sam and Dave split it", "All square". */
 function headline(round, state, res) {
+  // A card kept on its own: no game, so nobody took anything
+  if (cardOnly(round)) return 'Nice round';
   const reward = rewardOutcome(round, res);
   if (reward) {
     // Who wins the reward, with you as "You" like the rest of the card
@@ -76,6 +79,11 @@ function headline(round, state, res) {
 function yourLine(round, state, res) {
   const me = meFor(round, state);
   if (!me || !round.players.some(p => p.id === me)) return null;
+  // Just playing: your score, never a bet you weren't in
+  if (isJustPlaying(round, me)) {
+    const n = niceRound(round, me);
+    return n ? `You shot ${n.score} (${n.toPar})` : 'You were just playing';
+  }
   const reward = rewardOutcome(round, res);
   if (reward) {
     // A reward round's side bets for money are dollars of their own, on the Tab
@@ -223,7 +231,8 @@ export function recapPaid(state, round, { now = Date.now(), rows = roundRows(sta
   const name = id => (isMe(id) ? 'You' : first(nameOf(state, who(id))));
   const transfers = recapTransfers(state, round, { now, rows });
   const status = recapStatus(round, transfers);
-  const people = round.players.map(p => ({ id: p.id, name: name(p.id), status: status[p.id] }));
+  // Anyone just playing had nothing to pay, so they're not in who's paid
+  const people = bettors(round).map(p => ({ id: p.id, name: name(p.id), status: status[p.id] }));
   const square = people.filter(p => p.status === 'square').length;
   const mine = [];
   // What the Tab has between you and someone now (positive: they pay you), worked out only when a line needs it

@@ -18,7 +18,7 @@
 // code) and no code: the feed fetches that round again by its ref (friend_round), never with a
 // code, and its trash talk (kept under the code) stays the players'. On this phone a row's `code`
 // is its key either way, with `byRef` saying it's a ref and `held` that its money stays back.
-import { GAMES, gameView, holeComplete, isTeamGame, matchScored, nassauWinners, roundResults, scorers, sideNames } from './round.js';
+import { GAMES, bettors, cardOnly, gameView, holeComplete, isJustPlaying, isTeamGame, matchScored, nassauWinners, roundResults, scorers, sideNames } from './round.js';
 import { assemble } from './sync-model.js';
 import { bigGroupName, gameLabel, meFor, myIds } from './format.js';
 import { money } from './golf.js';
@@ -282,13 +282,17 @@ export function roundView(round, { code, people = {}, at = 0, following = false,
   // (Sam's +$8 says Mike lost $8): amounts show for everyone in it with a setting, or for no one,
   // as on a shared card (a guest with no profile has no setting to keep)
   const own = id => people[id]?.money === true;
-  const held = isMoney && (kept || round.players.some(p => people[p.id] && !own(p.id)));
-  const shows = id => !bigGroup && (!isMoney || (!held && own(id)));
+  // Someone just playing has no money in it, so their setting never holds anyone else's back
+  const held = isMoney && (kept || bettors(round).some(p => people[p.id] && !own(p.id)));
+  const casual = id => isJustPlaying(round, id);
+  const shows = id => !bigGroup && !casual(id) && (!isMoney || (!held && own(id)));
   const fmt = (id, v) => (!shows(id) ? null : isMoney ? money(v, { sign: true }) : points(v, { sign: true }));
   let units = [];
   try { units = scorers(round); } catch { units = []; }
   const unitOf = id => units.find(u => u.id === id) || units.find(u => u.team && (u.players || []).includes(id)) || null;
-  const order = res?.standings?.length ? res.standings : round.players.map(p => ({ ...p, amount: 0 }));
+  // Anyone just playing is on the card too, after the players with a bet (they have no place in the money)
+  const jp = round.players.filter(p => casual(p.id)).map(p => ({ ...p, amount: 0 }));
+  const order = res?.standings?.length ? [...res.standings, ...jp] : round.players.map(p => ({ ...p, amount: 0 }));
   const rows = order.map(p => {
     const amt = Number(p.amount) || 0;
     const unit = unitOf(p.id);
@@ -299,13 +303,16 @@ export function roundView(round, { code, people = {}, at = 0, following = false,
   // Equal money is broken by the score to par, so two players tied on money but not on strokes
   // never read as tied (the to par is on show, the money often isn't)
   const parKey = r => (r.toPar == null ? Infinity : r.toPar);
-  rows.sort((a, b) => b.amt - a.amt || parKey(a) - parKey(b));
+  // A card with nobody betting (or someone just playing) goes by the score alone
+  const solo = cardOnly(round);
+  rows.sort((a, b) => (solo ? 0 : casual(a.p.id) - casual(b.p.id)) || b.amt - a.amt || parKey(a) - parKey(b));
+  const betting = rows.filter(r => solo || !casual(r.p.id));
   const players = rows.map(({ p, amt, unit, par, toPar }, i) => {
-    const place = rows.findIndex(q => q.amt === amt && parKey(q) === parKey(rows[i])) + 1;
+    const place = betting.findIndex(q => q.amt === amt && parKey(q) === parKey(rows[i])) + 1;
     return {
-      id: p.id, name: first(p.name), friend: people[p.id]?.friend === true, place: place || i + 1,
+      id: p.id, name: first(p.name), friend: people[p.id]?.friend === true, place: !solo && casual(p.id) ? null : place || i + 1,
       amount: shows(p.id) ? amt : null, amountText: fmt(p.id, amt), toPar, played: par.played,
-      team: unit?.team ? unit.name : null,
+      team: unit?.team ? unit.name : null, ...(casual(p.id) ? { justPlaying: true } : {}),
     };
   });
   const friends = players.filter(p => p.friend).map(p => p.name);
@@ -320,7 +327,7 @@ export function roundView(round, { code, people = {}, at = 0, following = false,
   let line;
   if (!thru) line = status === 'live' ? 'On the first tee' : 'No holes scored';
   else if (bigGroup) line = status === 'done' ? 'Their card is in' : `Thru ${thru}`;
-  else if (kept) line = lowLine(players);
+  else if (kept || solo) line = lowLine(players);
   else if (status === 'done') line = reward ? reward.text : took;
   else line = matchLine(round) || ahead;
   return {

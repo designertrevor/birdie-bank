@@ -1,5 +1,5 @@
 // Shared display helpers and derived stats (kept out of component files for fast refresh).
-import { GAMES, SIDE_GAMES, scoreSummary, sideGamesOf } from './round.js';
+import { GAMES, SIDE_GAMES, cardOnly, scoreSummary, sideGamesOf } from './round.js';
 import { money } from './golf.js';
 import { linksOf } from './people-links.js';
 import { countsMoney, playForOf, rewardOutcome, tabResultsFor, unitFmt } from './play-for.js';
@@ -11,6 +11,8 @@ import { countsMoney, playForOf, rewardOutcome, tabResultsFor, unitFmt } from '.
 export function gameLabel(round) {
   const big = bigGroupName(round);
   if (big) return big;
+  // Everyone just playing (a card kept from an invite): no game to name
+  if (cardOnly(round)) return 'Just keeping score';
   const main = GAMES[round?.game]?.name || '';
   const sides = sideGamesOf(round).map(sg => SIDE_GAMES[sg.game].label);
   return [main, ...sides].filter(Boolean).join(' + ');
@@ -88,6 +90,8 @@ export const roundPlayerName = (round, id) => round.players.find(p => p.id === i
  * most is named (partners win together), and a whole team is named by its team name.
  */
 export function holeMoneyLine(round, hole, delta) {
+  // A card with no game has nothing to move
+  if (cardOnly(round)) return `Hole ${hole.no} saved`;
   const best = Math.max(0, ...round.players.map(p => delta[p.id] || 0));
   // A Big Game's group round has no money of its own: the hole counts on the game's board
   if (!best && bigGroupName(round)) return `Hole ${hole.no} saved. It counts on the board for ${round.trip.name}`;
