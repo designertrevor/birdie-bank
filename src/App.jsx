@@ -8,7 +8,6 @@ import { syncConfigured } from './lib/supabase.js';
 import { cleanCode } from './lib/sync-model.js';
 import { KeptScope, notePlace, startPlace } from './lib/kept.js';
 import { cleanTripId } from './lib/draft.js';
-import { playFromSearch } from './lib/rule-links.js';
 import UpNext from './screens/UpNext.jsx';
 
 // Only Up next (the first screen) is in the main bundle; the rest load on demand. The service
@@ -111,15 +110,16 @@ function linkWaiting() {
 }
 
 /**
- * "Play this now" on a rule page (?play=wolf, rule-links.js): { game } to open setup with that
- * game picked, { side } for a side-only game, or null. Kept for this tab until it opens.
+ * "Play this now" on a rule page (?play=wolf): the game as the link names it, or null. Setup and
+ * onboarding read which game it is (rule-links.js), so the first screen doesn't load the names.
+ * Kept for this tab until it opens.
  */
 function pendingPlay() {
   try {
-    const now = playFromSearch(location.search);
-    if (now) { sessionStorage.setItem('bb-play', now.game || now.side); return now; }
-    const saved = sessionStorage.getItem('bb-play');
-    return saved ? playFromSearch(`play=${encodeURIComponent(saved)}`) : null;
+    const clean = v => (/^[a-z0-9-]{1,40}$/i.test(String(v || '')) ? String(v).toLowerCase() : null);
+    const now = clean(new URLSearchParams(location.search).get('play'));
+    if (now) { sessionStorage.setItem('bb-play', now); return now; }
+    return clean(sessionStorage.getItem('bb-play'));
   } catch { return null; }
 }
 const clearPlay = () => { try { sessionStorage.removeItem('bb-play'); } catch { /* ignore */ } };
@@ -222,7 +222,7 @@ export default function App() {
     if (to) return [{ name: to[0], params: to[1], key: Date.now() }];
     if (playAt) {
       clearPlay();
-      return [{ name: 'newRound', params: playAt.game ? { game: playAt.game } : { side: playAt.side }, key: Date.now() }];
+      return [{ name: 'newRound', params: { play: playAt }, key: Date.now() }];
     }
     return restored ? restored.stack : [];
   });
@@ -334,7 +334,7 @@ export default function App() {
               : planLinkAt ? <PlanLink code={planLinkAt.code} who={planLinkAt.who} standalone onSkip={skipPlan} />
               : challengeAt ? <ChallengeLink code={challengeAt} standalone onSkip={skipChallenge} />
               : draftAt ? <DraftLink tripId={draftAt.tripId} seat={draftAt.seat} standalone onSkip={skipDraft} />
-              : <Onboarding game={playAt?.game} onDone={routes => { clearPlay(); setStack(routes.map(([name, params = {}]) => ({ name, params, key: Date.now() + Math.random() }))); }} />}
+              : <Onboarding play={playAt} onDone={routes => { clearPlay(); setStack(routes.map(([name, params = {}]) => ({ name, params, key: Date.now() + Math.random() }))); }} />}
           </Suspense>
         </div>
       </UIProvider>

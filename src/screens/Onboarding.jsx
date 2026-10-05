@@ -8,6 +8,7 @@ import { update, uid } from '../lib/store.js';
 import { formatIndex } from '../lib/format.js';
 import { money } from '../lib/golf.js';
 import { GAMES } from '../lib/round.js';
+import { playFromSearch } from '../lib/rule-links.js';
 import { SignInSheet } from '../components/Account.jsx';
 import { BuddyArt } from '../components/BuddyArt.jsx';
 import { BUDDIES, buddyAvatar } from '../lib/avatars.js';
@@ -28,12 +29,13 @@ const QUESTION = {
 
 /**
  * `onDone(routes)`: called when onboarding finishes, with the screens to open on top of Up next
- * ([name, params] pairs), just before the app switches over. `game`: a game to start with ticked.
+ * ([name, params] pairs), just before the app switches over. `play`: a rule page's ?play= game to start with ticked.
  */
-export default function Onboarding({ onDone, game = null }) {
+export default function Onboarding({ onDone, play = null }) {
   const [step, setStep] = useState('welcome');
   // Arrived from "Play this now" on a game's rule page: that game is already ticked, and so it's
   // the one the first round suggests
+  const [game] = useState(() => (play ? playFromSearch(`play=${encodeURIComponent(play)}`)?.game ?? null : null));
   const [a, setA] = useState(() => ({ games: GAMES[game] ? [game] : [], size: null, settle: null, math: null }));
   const [name, setName] = useState('');
   const [index, setIndex] = useState(null);

@@ -2,6 +2,7 @@ import { lazy, Suspense, useEffect, useMemo, useRef, useState } from 'react';
 import { Empty, Header, Icon, Numpad, Screen, Segmented, Sheet, Steps, Toggle, useUI } from '../components/ui.jsx';
 import { RulesSheet } from '../components/Rules.jsx';
 import { DEFAULT_SETTINGS, getState, update, uid, useStore } from '../lib/store.js';
+import { playFromSearch } from '../lib/rule-links.js';
 import { allCourses, coursePar, coursePickerSections, courseTag, defaultTee as firstTee, isStarred, teeDotStyle, toggleStarred } from '../lib/courses.js';
 import { getCourse } from '../lib/courseApi.js';
 import { useCourseSearch } from '../lib/useCourseSearch.js';
@@ -103,10 +104,14 @@ function planSetup(state, planId, present) {
  * plan with the same setup (the round goes once the plan is made). `trip`: started from a trip's
  * page, so it counts for that trip.
  */
-export default function NewRound({ rematch, fromPlan, present, edit = null, ahead = false, game: preGame = null, side: preSide = null, ballot = [], onboarding = false, reschedule = null, trip: tripId = null }) {
+export default function NewRound({ rematch, fromPlan, present, edit = null, ahead = false, game: gameIn = null, play = null, ballot = [], onboarding = false, reschedule = null, trip: tripId = null }) {
   const nav = useNav();
   const { ask, showToast } = useUI();
   const state = useStore();
+  // "Play this now" on a rule page (?play=wolf): that game picked, or a side-only game added
+  const fromPlay = play ? playFromSearch(`play=${encodeURIComponent(play)}`) : null;
+  const preGame = gameIn ?? fromPlay?.game ?? null;
+  const preSide = fromPlay?.side ?? null;
   // "Run it back" opens setup already filled in like an earlier round
   const [editing] = useState(() => (edit ? getState().plans?.[edit] || null : null));
   const [pre] = useState(() => (editing ? { game: editing.game, holesCount: editing.holesCount, courseId: findCourse(getState(), editing.course?.id)?.id ?? null, nine: editing.nine, step: 1 }

@@ -176,11 +176,14 @@ test('the service worker never saves a rule page as the app, and the app never p
 test('"Play this now" is wired: App reads ?play=, setup takes the game or side game, onboarding ticks it', () => {
   const src = f => readFileSync(new URL(f, import.meta.url), 'utf8');
   const app = src('../App.jsx');
-  assert.match(app, /playFromSearch\(location\.search\)/);
-  assert.match(app, /name: 'newRound', params: playAt\.game \? \{ game: playAt\.game \} : \{ side: playAt\.side \}/);
-  assert.match(app, /<Onboarding game=\{playAt\?\.game\}/);
+  assert.match(app, /get\('play'\)/);
+  assert.ok(!app.includes("from './lib/rule-links.js'"), 'the first screen never loads the game names');
+  assert.match(app, /name: 'newRound', params: \{ play: playAt \}/);
+  assert.match(app, /<Onboarding play=\{playAt\}/);
   assert.match(app, /get\('play'\)\) history\.replaceState/, 'the link is tidied out of the address bar');
-  assert.match(src('../screens/NewRound.jsx'), /side: preSide = null/);
+  const setup = src('../screens/NewRound.jsx');
+  assert.match(setup, /const preGame = gameIn \?\? fromPlay\?\.game \?\? null;/);
+  assert.match(setup, /const preSide = fromPlay\?\.side \?\? null;/);
   assert.match(src('../screens/Onboarding.jsx'), /games: GAMES\[game\] \? \[game\] : \[\]/);
 });
 
