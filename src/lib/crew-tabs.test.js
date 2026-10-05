@@ -251,3 +251,34 @@ test('a payment Everyone passed on through someone pays the tabs it stands for, 
   assert.deepEqual(summed(all), {});
   for (const t of all.tabs) assert.deepEqual(t.lines, [], `square on ${t.name}`);
 });
+
+test('paying a whole card on Everyone pays the payer’s whole line on a crew’s tab, even when the payee owes someone else there', () => {
+  // On the crew's tab you owe Al $2 and Bo owes you $20; Bo also owes you $4 on a round with a guest, shared live
+  const r1 = skins('r1', ['t', 'a'], [[1, 'a']], { at: OCT(3) });
+  const r2 = skins('r2', ['t', 'b'], [[1, 't'], [2, 't'], [3, 't'], [4, 't'], [5, 't'], [6, 't'], [7, 't'], [8, 't'], [9, 't']], { at: OCT(4), skin: 20 / 9 });
+  const r3 = skins('r3', ['t', 'b', 'c'], [[1, 't'], [2, 't']], { at: OCT(5), code: 'SHR001' });
+  const s = base([r1, r2, r3]);
+  const line = outstanding(s, { now: NOW }).find(l => l.from === 'b' && l.to === 't');
+  assert.equal(line.amount, 24);
+  const res = allocatePayment(s, { from: 'b', to: 't', amount: line.amount }, { now: NOW, makeId: () => 'x1' });
+  let paid = applyRows(s, res.rows);
+  paid = { ...paid, settlements: [...paid.settlements, ...res.settlements] };
+  const all = tabsOf(paid, { now: NOW + 1 });
+  assert.ok(!all.everyone.lines.some(l => [l.from, l.to].includes('b')), 'Bo is square on Everyone');
+  const sat = tabBy(all, crewKey('sat'));
+  assert.deepEqual(sat.lines.map(l => [l.from, l.to, l.amount]), [['t', 'a', 2]], 'the crew’s tab only has what you owe Al');
+  assert.deepEqual(tabBy(all, OTHER).lines.map(l => [l.from, l.to, l.amount]), [['c', 't', 4]], 'Other rounds has nothing between you and Bo');
+  assert.deepEqual(summed(all), all.everyone.balances);
+});
+
+test('Other rounds keeps money between two people who never shared a round, through someone square there', () => {
+  // Cal wins $6 off you, you win $6 off Dave: Everyone sends Dave's $6 on through you to Cal
+  const r1 = skins('r1', ['t', 'c'], [[1, 'c'], [2, 'c'], [3, 'c']], { at: OCT(3) });
+  const r2 = skins('r2', ['t', 'd'], [[1, 't'], [2, 't'], [3, 't']], { at: OCT(4) });
+  const r3 = skins('r3', ['t', 'a'], [[1, 't']], { at: OCT(5) });
+  const all = tabsOf(base([r1, r2, r3]), { now: NOW });
+  const other = tabBy(all, OTHER);
+  assert.deepEqual(other.balances, { d: -600, c: 600 });
+  assert.deepEqual(netsOf(other.lines), other.balances, 'its lines add up to its balances');
+  assert.deepEqual(other.lines.map(l => [l.from, l.to, l.amount]).sort(), [['d', 't', 6], ['t', 'c', 6]]);
+});

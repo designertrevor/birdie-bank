@@ -169,6 +169,11 @@ export function tabsOf(state, { now = Date.now() } = {}) {
     return { key: crewKey(c.id), kind: 'crew', id: c.id, name: c.name, members: c.members, rounds, bal: {}, ...span(rounds) };
   });
   const crewBy = new Map(crewTabs.map(t => [t.key, t]));
+  // Who can pay whom on each tab: the pairs who played one of its rounds (Other rounds: anyone
+  // who played a round with money together, and anyone Everyone has a line between)
+  const otherTogether = togetherIn(state, moneyRounds(state));
+  for (const t of everyone) otherTogether.add(pairKey(t.from, t.to));
+  for (const t of crewTabs) t.together = togetherIn(state, t.rounds);
   // Other rounds as they stood at each moment, only to see what a payment from Everyone nets
   // across (its own balances at the end are what's left of Everyone, below)
   const otherRun = {};
@@ -213,7 +218,20 @@ export function tabsOf(state, { now = Date.now() } = {}) {
     const f = who(s.from), t = who(s.to);
     let left = cents(s.amount) - (countedBy.get(s.id) || 0);
     const bals = [...order.map(x => x.bal), otherRun];
-    const owing = (bal, a, b) => Math.min(Math.max(0, -(bal[a] || 0)), Math.max(0, bal[b] || 0));
+    const togetherOf = new Map([...order.map(x => [x.bal, x.together]), [otherRun, otherTogether]]);
+    // What a owes b on a tab as it stands: their line in its fewest payments, or, when it sends the
+    // money another way, as far as a owes and b is owed there. A payee who owes someone else on
+    // the tab still takes the payer's whole line there (the tab passes it on, as Everyone does).
+    // Only between two people who played one of the tab's rounds, so a tab never has money
+    // between people it can't put a line between
+    const lineOn = (bal, a, b) => {
+      const flows = fewestPayments(Object.fromEntries(Object.entries(bal).map(([k, c]) => [k, c / 100])), { canPay: (x, y) => togetherOf.get(bal).has(pairKey(x, y)) });
+      return flows.filter(l => l.from === a && l.to === b).reduce((n, l) => n + cents(l.amount), 0);
+    };
+    const owing = (bal, a, b) => {
+      if (!togetherOf.get(bal).has(pairKey(a, b))) return 0;
+      return Math.max(Math.min(Math.max(0, -(bal[a] || 0)), Math.max(0, bal[b] || 0)), lineOn(bal, a, b));
+    };
     for (const bal of bals) {
       if (left <= 0) break;
       const c = Math.min(left, owing(bal, f, t));
@@ -251,8 +269,8 @@ export function tabsOf(state, { now = Date.now() } = {}) {
   events.sort((a, b) => a.at - b.at || a.n - b.n || a.id.localeCompare(b.id));
   for (const e of events) e.run();
   const locked = new Set(lockedRounds(state, { now }).map(r => r.id));
-  const crewOut = crewTabs.map(({ bal, ...t }) => {
-    const lines = planOf(state, bal, t.rounds.filter(r => locked.has(r.id)), togetherIn(state, t.rounds));
+  const crewOut = crewTabs.map(({ bal, together, ...t }) => {
+    const lines = planOf(state, bal, t.rounds.filter(r => locked.has(r.id)), together);
     for (const k of Object.keys(bal)) if (!bal[k]) delete bal[k];
     return { ...t, lines, balances: bal };
   });
@@ -261,11 +279,13 @@ export function tabsOf(state, { now = Date.now() } = {}) {
   const E = netsOf(everyone);
   const rest = { ...E };
   for (const t of [...tripTabs, ...crewOut]) for (const [id, c] of Object.entries(t.balances)) rest[id] = (rest[id] || 0) - c;
-  for (const k of Object.keys(rest)) if (!rest[k]) delete rest[k];
+  // Everyone square on Other rounds stays in its plan, so money between two people who never
+  // shared a round can still go through them (as a crew's tab does)
+  for (const k of otherTogether) for (const id of k.split('|')) rest[id] = rest[id] || 0;
   const otherRounds = byKey.get(OTHER) || [];
-  const together = togetherIn(state, moneyRounds(state));
-  for (const t of everyone) together.add(pairKey(t.from, t.to));
-  const other = { key: OTHER, kind: 'other', id: OTHER, name: 'Other rounds', rounds: otherRounds, lines: planOf(state, rest, otherRounds.filter(r => locked.has(r.id)), together), balances: rest, ...span(otherRounds) };
+  const otherLines = planOf(state, rest, otherRounds.filter(r => locked.has(r.id)), otherTogether);
+  for (const k of Object.keys(rest)) if (!rest[k]) delete rest[k];
+  const other = { key: OTHER, kind: 'other', id: OTHER, name: 'Other rounds', rounds: otherRounds, lines: otherLines, balances: rest, ...span(otherRounds) };
 
   return { everyone: { lines: everyone, balances: E }, tabs: [...tripTabs, ...crewOut, other] };
 }
