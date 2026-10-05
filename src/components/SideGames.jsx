@@ -116,7 +116,7 @@ export function SideGamesSetup({ game, sideGames, setSideGames, defaults, player
               <>
                 <div className="eyebrow" style={{ margin: '12px 0 8px' }}>Dots that count</div>
                 <div className="chip-row" style={{ padding: 0 }} role="group" aria-label="Junk dots that count">
-                  {Object.entries(DOT_KINDS).map(([k, d]) => {
+                  {Object.entries(DOT_KINDS).filter(([, d]) => !d.penalty).map(([k, d]) => {
                     // Next to a closest to the pin pot the greenie is the pot's, so it can't be on here
                     const off = k === 'greenie' && hasCtp;
                     const on = !off && !!sg.settings.kinds?.[k];
@@ -125,6 +125,15 @@ export function SideGamesSetup({ game, sideGames, setSideGames, defaults, player
                     );
                   })}
                 </div>
+                {/* Penalty dots (a house rule, 2026-10-05): off unless picked, each one costs a dot */}
+                <div className="eyebrow" style={{ margin: '16px 0 8px' }}>Penalty dots</div>
+                <div className="chip-row" style={{ padding: 0 }} role="group" aria-label="Junk penalty dots">
+                  {Object.entries(DOT_KINDS).filter(([, d]) => d.penalty).map(([k, d]) => {
+                    const on = sg.settings.kinds?.[k] === true;
+                    return <PickChip key={k} on={on} title={d.help} onClick={() => change(i, s => ({ ...s, kinds: { ...(s.kinds || {}), [k]: !on } }))}>{d.name}</PickChip>;
+                  })}
+                </div>
+                <p className="field-help">A penalty dot costs you: you pay each of the other players one dot.</p>
                 {hasCtp && <p className="field-help">No greenies in Junk: the closest to the pin pot pays for being closest.</p>}
                 {dotsNote(sg.settings.kinds) && <p className="field-help">{dotsNote(sg.settings.kinds)}</p>}
                 <div className="toggle-row flush">

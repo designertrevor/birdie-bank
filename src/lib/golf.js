@@ -89,7 +89,12 @@ export function settleBankerHole(hole, net, playerIds, opts = {}) {
     if (pid === b) continue;
     const bet = hole.bets?.[pid] || 0;
     const f = opts.par3Triple && opts.par === 3 ? 3 : 2;
-    const mult = hole.doubled?.[pid] ? (hole.doubleBack ? f * f : f) : 1;
+    // House rule "the banker presses everyone" (pressAll, off unless the round says so, added
+    // 2026-10-05): the banker's press back doubles every bet, the ones nobody pressed too. Sources,
+    // checked 2026-10-05: The Fried Egg, "Banker" https://thefriedegg.com/banker-golf-betting-game/ and
+    // Golf Digest https://www.golfdigest.com/story/how-to-play-banker-golf-games-explained ("he must press
+    // everyone, not just whoever pressed him")
+    const mult = hole.doubled?.[pid] ? (hole.doubleBack ? f * f : f) : hole.doubleBack && opts.pressAll ? f : 1;
     let result;
     if (net[pid] < net[b]) result = 'win';
     else if (net[pid] > net[b]) result = 'loss';
@@ -170,7 +175,7 @@ export function nassauBets(winners, presses, amounts, legs = LEGS) {
     const l = legs[p.leg];
     // A press on a leg this layout doesn't have (never made by the app) is skipped rather than crash the card
     if (!l) continue;
-    bets.push({ key: 'p' + p.id, id: p.id, leg: p.leg, start: p.start, end: l.end, amount: p.amount ?? amounts[p.leg], press: true, by: p.by });
+    bets.push({ key: 'p' + p.id, id: p.id, leg: p.leg, start: p.start, end: l.end, amount: p.amount ?? amounts[p.leg], press: true, by: p.by, ...(p.bye ? { bye: true } : {}) });
   }
   return bets.map(b => ({ ...b, status: matchStatus(winners, b.start, b.end) }));
 }
@@ -210,6 +215,48 @@ export function pressOpportunities(winners, presses, amounts, nextHole, threshol
     out.push({ leg, trailing: 1 - s.leader, by: s.by });
   }
   return out;
+}
+
+/**
+ * The bye (house rule `bye`, off unless the round says so, added 2026-10-05): once a leg is closed out
+ * with holes to play (3&2), those holes are a new bet of their own, worth all of the leg's bet ('full')
+ * or half of it ('half'). Played like a press with no presser: [{ id, leg, start, amount, bye: true }],
+ * one for each leg closed early, in the shape nassauBets takes. A bye is never closed out into another.
+ * Source, checked 2026-10-05: Golf Compendium, "The Bye golf bet explained"
+ * https://golfcompendium.com/2021/09/bye-golf-bet.html ("typically is worth half the original bet")
+ */
+export function byeBets(winners, amounts, legs = LEGS, mode = 'off') {
+  if (mode !== 'half' && mode !== 'full') return [];
+  const out = [];
+  for (const [leg, l] of Object.entries(legs)) {
+    for (let pos = l.start; pos < l.end; pos++) {
+      if (winners[pos] === undefined) continue;
+      const part = Object.fromEntries(Object.entries(winners).filter(([k]) => Number(k) <= pos));
+      if (!matchStatus(part, l.start, l.end).closed) continue;
+      const amount = (amounts[leg] || 0) * (mode === 'half' ? 0.5 : 1);
+      if (amount) out.push({ id: `bye-${leg}`, leg, start: pos + 1, amount, by: null, bye: true });
+      break;
+    }
+  }
+  return out;
+}
+
+/**
+ * Automatic presses inside one match run from `start` to `end`: whenever the newest bet on it is
+ * `threshold` or more down after a hole, a press starts on the next hole (and a press that falls that far
+ * behind is pressed again). Positions of each press's first hole, in order. Used by Sixes' "Auto press"
+ * house rule (2026-10-05), where each six-hole match is its own leg.
+ */
+export function autoPressStarts(winners, start, end, threshold = 2) {
+  const starts = [];
+  let latest = start;
+  for (let pos = start; pos < end; pos++) {
+    if (winners[pos] === undefined) continue;
+    const part = Object.fromEntries(Object.entries(winners).filter(([k]) => Number(k) <= pos));
+    const s = matchStatus(part, latest, end);
+    if (s.leader != null && s.by >= threshold && !s.closed) { starts.push(pos + 1); latest = pos + 1; }
+  }
+  return starts;
 }
 
 /** Money result for player 0 (positive = player 0 wins) plus per-bet breakdown. */

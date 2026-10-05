@@ -21,7 +21,8 @@ import { GameOptions, SixesPreview, TeamPicker } from '../components/GameOptions
 import { optionsProblem, roundStakeLines, sideBetLine, stakeSummary } from '../lib/stakes.js';
 import { syncConfigured } from '../lib/sync.js';
 import { ShareSheet } from '../components/Live.jsx';
-import { defaultTeams, teamsProblem } from '../lib/teams.js';
+import { defaultTeams, teamsCfg, teamsProblem } from '../lib/teams.js';
+import { carriedLine, carriedQuotas, withQuotaRules } from '../lib/quota-carry.js';
 import { rematchSetup } from '../lib/rematch.js';
 import { halfStrokesOffered, pctsDiffer } from '../lib/allowances.js';
 import { StrokesSetup } from '../components/StrokesSetup.jsx';
@@ -391,10 +392,14 @@ export default function NewRound({ rematch, fromPlan, present, edit = null, ahea
     const { shareAmounts: _personal, betPrompt: _prompt, halfStrokes: _half, ...settings } = structuredClone(opts);
     const sides = sidesFor(game);
     const halfStrokes = !!opts.halfStrokes && halfStrokesOffered(game, sides);
+    // Team quota (a Quota house rule) is played in teams too, when it's on; only the betting players count
     const round = createRound({
       id, game, course, holesCount, nine, startHole, players, settings, hcPct: opts.hcPct, useHandicaps: useHc && !(noHc.length && noHc.length === betting.length),
-      teams: GAMES[game].teams ? teams : null, halfStrokes, justPlaying: casualIds,
+      teams: teamsCfg(game, settings, betting.length) ? teams : null, halfStrokes, justPlaying: casualIds,
     });
+    // "Quota moves after the round": each player starts from the quota their last such round left them,
+    // and Team quota only stays on with its teams
+    withQuotaRules(s, round);
     if (sides.length) round.sideGames = structuredClone(sides);
     if (playFor) round.playFor = structuredClone(playFor);
     // Side bets whose two players are both still in the round (setup's list can outlive a change of players),
@@ -927,7 +932,15 @@ function SetupStep({ game, course, holesCount, nine, picked, setPicked, casual =
   const move = (i, d) => setPicked(p => { const n = [...p]; const j = i + d; if (j < 0 || j >= n.length) return p; [n[i], n[j]] = [n[j], n[i]]; return n; });
   const optsBad = !!optionsProblem(game, opts) || sideGames.some(sg => optionsProblem(sg.game, { [sg.game]: sg.settings }));
   const names = Object.fromEntries(picked.map(pid => [pid, state.players[pid]?.name || '?']));
-  const teamsBad = !!teamsProblem(game, teams, picked);
+  // Team quota (a Quota house rule) gets the team picker when it's on, starting in pairs
+  const tcfg = teamsCfg(game, opts, picked.length);
+  const quotaTeams = !GAMES[game].teams && !!tcfg;
+  const teamsBad = !!teamsProblem(game, teams, picked, tcfg || undefined);
+  useEffect(() => {
+    if (quotaTeams && teamsProblem(game, teams, picked, tcfg)) setTeams(defaultTeams(game, picked, tcfg));
+  }, [quotaTeams, game, teams, picked, tcfg, setTeams]);
+  // Quotas carried from last time under "Quota moves after the round", shown before the round is made
+  const carried = game === 'quota' && (opts.quota?.adjust === 'one' || opts.quota?.adjust === 'half') ? carriedQuotas(state, picked, holesCount) : {};
   // A round-shaped draft for the side bets: the players picked (with course handicaps, for the
   // strokes it suggests) and the holes in play
   const betRound = useMemo(() => {
@@ -989,6 +1002,17 @@ function SetupStep({ game, course, holesCount, nine, picked, setPicked, casual =
         <GameOptions game={game} get={get} set={set} onAmount={(path, title, o) => setPad({ path, title, ...o })} holesCount={holesCount}
           players={picked.length || null} firstName={game === 'banker' ? state.players[picked[0]]?.name : null} inPoints={!countsMoney({ playFor })}
           teamSize={teams?.length ? Math.min(...teams.map(t => t.length)) : null} />
+
+        {quotaTeams && teams && (
+          <>
+            <div className="sec-label">Quota teams</div>
+            <p className="field-help" style={{ padding: '0 20px' }}>Team quota is on: partners add up their points against their quotas.</p>
+            <TeamPicker game={game} picked={picked} names={names} teams={teams} setTeams={setTeams} cfg={tcfg} />
+          </>
+        )}
+        {Object.keys(carried).length > 0 && (
+          <p className="hint-card"><Icon name="target" fill /> Quotas from last time: {carriedLine(carried, pid => names[pid])}.{Object.keys(carried).length < picked.length ? ' The rest come from handicaps.' : ''}</p>
+        )}
 
         <SideGamesSetup game={game} sideGames={sideGames} setSideGames={setSideGames} defaults={opts} players={picked.length || 4} playFor={playFor} holes={holes} holesCount={holesCount} />
 

@@ -20,8 +20,8 @@
 //  • Who throws the first hammer: the whole round. It only decides who may hammer, never the money.
 //  • Play for (money, points or a reward): the whole round. A round is played for one thing.
 // Nothing here runs unless someone changes a setting, so old rounds keep their money.
-import { GAMES, bankerHoleSetup, gameView, holeComplete, isTeamGame, nassauPressOptions, oneBall, playersOn, roundResults, roundStarted, settingsAt, teamsFor, turnOrder, wolfFor } from './round.js';
-import { teamsProblem } from './teams.js';
+import { GAMES, bankerHoleSetup, gameView, holeComplete, isTeamGame, nassauPressOptions, oneBall, playersOn, roundResults, roundStarted, settingsAt, teamQuotaOn, teamsFor, turnOrder, wolfFor } from './round.js';
+import { QUOTA_TEAMS, teamsProblem } from './teams.js';
 import { betsOf, kindFits } from './pair-bets.js';
 import { playForOf, points, rewardOutcome, storedPlayFor, tabResults } from './play-for.js';
 import { sixesPairings, sixesSegments } from './games.js';
@@ -38,6 +38,8 @@ export function lineupKind(round) {
   if (!g) return null;
   if (g.order) return 'order';
   if (g.teams && Array.isArray(round.teams) && round.teams.length >= 2) return 'teams';
+  // Team quota (a Quota house rule, 2026-10-05) is played in teams too
+  if (teamQuotaOn(round)) return 'teams';
   return null;
 }
 
@@ -235,7 +237,7 @@ export function teamsChangeProblem(round, groups) {
   const locked = teamsLocked(round);
   if (locked) return locked;
   const ids = gameView(round, 'main').players.map(p => p.id);
-  const problem = teamsProblem(round.game, groups, ids);
+  const problem = teamsProblem(round.game, groups, ids, teamQuotaOn(round) ? QUOTA_TEAMS : GAMES[round.game]?.teams);
   if (problem) return problem;
   // A one-ball game's side bet on scores is played on the two teams' balls, so the two need different teams
   if (oneBall(round.game)) {

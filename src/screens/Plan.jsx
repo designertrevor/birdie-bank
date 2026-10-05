@@ -26,6 +26,7 @@ import { TeeTimeSection } from '../components/Reminders.jsx';
 import { PlansOffError } from '../lib/plan-adapters.js';
 import { CountForTrip } from '../components/Trips.jsx';
 import { keptLine, roundBets } from '../lib/plan-setup.js';
+import { withQuotaRules } from '../lib/quota-carry.js';
 import { tripOf, tripOnDay, tripStamp } from '../lib/trips.js';
 import { toGoLabel, weekdayOf } from '../lib/preview.js';
 import { startingCup } from '../lib/cup-store.js';
@@ -494,6 +495,8 @@ export function RollCall({ id }) {
       id: rid, game: setup.game, course, holesCount: setup.holesCount, nine: setup.nine, startHole: setup.startHole,
       players: setup.players, settings: setup.settings, hcPct: setup.hcPct, useHandicaps: setup.useHandicaps, teams: setup.teams, halfStrokes: setup.halfStrokes,
     });
+    // Quota's carried quotas, and Team quota only with its teams (quota-carry.js)
+    withQuotaRules(getState(), round);
     // The side games the group voted for ride along
     if (setup.sideGames.length) round.sideGames = structuredClone(setup.sideGames);
     // Played for points or a reward, as planned (money plans have none)

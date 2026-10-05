@@ -20,9 +20,11 @@ function matchWho(s, names) {
  * partway can leave the team that won fewer holes (or as many) ahead on the money, so it says so.
  */
 export function teamLineText(l, names) {
-  if (l.key === 'holes') {
+  if (l.key === 'holes' || l.key === 'lowtotal') {
     const [a, b] = l.won;
-    const text = a === b ? `${plural(a, 'hole')} each` : `${names[a > b ? 0 : 1]} won ${Math.max(a, b)} to ${Math.min(a, b)}`;
+    // Low total (a house rule) counts its points the same way: a point a hole for the lower team total
+    const unit = l.key === 'lowtotal' ? 'point' : 'hole';
+    const text = a === b ? `${plural(a, unit)} each` : `${names[a > b ? 0 : 1]} won ${Math.max(a, b)} to ${Math.min(a, b)}`;
     const up = l.value > 0 ? 0 : l.value < 0 ? 1 : null;
     const holesUp = a > b ? 0 : b > a ? 1 : null;
     return up != null && up !== holesUp ? `${text}. The bet changed partway, so ${names[up]} come out ahead` : text;
@@ -135,8 +137,9 @@ function mainRevealSteps(round, res) {
     const steps = lines.map(l => {
       const s = l.status;
       const legLabel = LEGS[l.leg]?.label || l.leg;
+      // The bye (a house rule) is played like a press, so it's named like one
       const label = l.press
-        ? `${legs3 ? `${legLabel} press` : 'Press'} from H${holeAtPos(round, l.start)}`
+        ? `${legs3 ? `${legLabel} ${l.bye ? 'bye' : 'press'}` : l.bye ? 'Bye' : 'Press'} from H${holeAtPos(round, l.start)}`
         : legLabel;
       return s.leader === null
         ? { key: l.key, label, text: matchWho(s, sn), tie: true }
@@ -274,6 +277,15 @@ function mainRevealSteps(round, res) {
       .sort((a, b) => (d.points[b.id] || 0) - (d.points[a.id] || 0))
       .map(p => ({ key: p.id, label: name(p.id), text: '', value: dots ? plural(d.points[p.id] || 0, 'dot') : plural(d.points[p.id] || 0, 'point') }));
     return { title: dots ? 'Dots' : 'Points', steps };
+  }
+
+  // Team quota (a Quota house rule): the teams against their quotas added up, best first
+  if (round.game === 'quota' && d.teamQuota?.length) {
+    const tenth = v => Math.round(v * 10) / 10;
+    const toPar = v => (v === 0 ? 'E' : v > 0 ? `+${tenth(v)}` : String(tenth(v)));
+    const steps = [...d.teamQuota].sort((a, b) => b.over - a.over)
+      .map(t => ({ key: t.id, label: t.players.map(name).join(' & '), text: `${t.points} pts, quota ${tenth(t.quota)}`, value: toPar(t.over) }));
+    return { title: 'Team quota', steps };
   }
 
   if (['stroke', 'stableford', 'quota', 'scramble'].includes(round.game) && d.totals) {

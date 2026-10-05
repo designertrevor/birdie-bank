@@ -4,7 +4,7 @@
 import { rematchSetup } from './rematch.js';
 import { findCourse } from './courses.js';
 import { GAMES, sideGamesOf } from './round.js';
-import { defaultTeams } from './teams.js';
+import { defaultTeams, teamsCfg } from './teams.js';
 import { stable } from './sync-model.js';
 import { storedPlayFor } from './play-for.js';
 
@@ -47,7 +47,8 @@ export function usualFromRound(state, round, { id, name = null, now = Date.now()
     useHc: s.useHc,
     // Half strokes ride along (absent: full strokes, as every usual saved before them)
     ...(s.halfStrokes ? { halfStrokes: true } : {}),
-    teams: GAMES[s.game]?.teams ? s.teams : null,
+    // Team quota (a Quota house rule) keeps its teams too
+    teams: teamsCfg(s.game, { [s.game]: s.bets }, (s.picked || []).length) ? s.teams : null,
     createdAt: now,
     lastPlayedAt: round.status === 'done' ? (round.finishedAt || round.createdAt || now) : null,
   };

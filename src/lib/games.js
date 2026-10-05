@@ -101,10 +101,17 @@ export function sixesSegments(n = 18) {
 // Points games
 // ---------------------------------------------------------------------------
 
-/** Stableford points for a net score. Standard: 0/1/2/3/4/5. Modified: −3/−1/0/2/5/8. */
-export function stablefordPoints(net, par, modified = false) {
+/**
+ * Stableford points for a net score. Standard: 0/1/2/3/4/5. Modified: −3/−1/0/2/5/8. `table` is
+ * true (or 'modified') for Modified, false (or 'standard') for Standard, and since 2026-10-05 it can be
+ * 'chicago', the house rule "Big birdies": the Chicago (Quota) points, 0/1/2/4/8/16, so a birdie is
+ * worth two pars. Source, checked 2026-10-05: Golf Compendium, "The Chicago golf format explained"
+ * https://golfcompendium.com/2023/08/chicago-golf-format.html (bogey 1, par 2, birdie 4, eagle 8).
+ */
+export function stablefordPoints(net, par, table = false) {
   const d = net - par;
-  if (modified) return d >= 2 ? -3 : d === 1 ? -1 : d === 0 ? 0 : d === -1 ? 2 : d === -2 ? 5 : 8;
+  if (table === 'chicago') return d >= 2 ? 0 : d === 1 ? 1 : d === 0 ? 2 : d === -1 ? 4 : d === -2 ? 8 : 16;
+  if (table === true || table === 'modified') return d >= 2 ? -3 : d === 1 ? -1 : d === 0 ? 0 : d === -1 ? 2 : d === -2 ? 5 : 8;
   return d >= 2 ? 0 : d === 1 ? 1 : d === 0 ? 2 : d === -1 ? 3 : d === -2 ? 4 : 5;
 }
 
@@ -114,10 +121,33 @@ export function stablefordPoints(net, par, modified = false) {
  * instead of 0, so a blow-up hole costs you. Source, checked 2026-10-03: Live Tourney, "Quota game in
  * golf" https://www.livetourney.com/blog/quota-game-in-golf ("penalizing double bogeys with -1 point").
  */
-export function quotaPoints(gross, par, { minus = false } = {}) {
+export function quotaPoints(gross, par, { minus = false, table = 'chicago' } = {}) {
   const d = gross - par;
   if (d >= 2) return minus ? -1 : 0;
+  // House rule "Stableford points" (table 'stableford', off unless the round says so, added 2026-10-05):
+  // bogey 1, par 2, birdie 3, eagle 4, albatross 5, the gentler table many leagues run their quotas on.
+  // Source, checked 2026-10-05: Unknown Golf, "Player Stableford Quota (Auto Adjust)"
+  // https://help.unknowngolf.com/article/616qvdlzvx-player-stableford-quota-auto-adjust
+  if (table === 'stableford') return d === 1 ? 1 : d === 0 ? 2 : d === -1 ? 3 : d === -2 ? 4 : 5;
   return d === 1 ? 1 : d === 0 ? 2 : d === -1 ? 4 : d === -2 ? 8 : 16;
+}
+
+/**
+ * Quota for next time, under the house rule "Quota moves after the round" (`adjust`, off unless the round
+ * says so, added 2026-10-05). `quota` is the round's full target and `over` how far the player finished
+ * above it (negative: below). 'one': beat it and it goes up one, miss it and it comes down one. 'half':
+ * it moves half the difference, rounded to a whole point (a half rounds away from zero). Null when off.
+ * Sources, checked 2026-10-05: Golf Software, "Quota settings"
+ * https://www.golfsoftware.com/help/lmw/QuotaSettings.html (league quotas moved by the last result) and
+ * TXGA https://txga.org/first-round-of-womens-partnership-suspended/ ("adjusted 50-percent": 33 and
+ * 40 points makes the next quota 36.5).
+ */
+export function quotaAdjusted(quota, over, adjust = 'off') {
+  if (quota == null || over == null || !Number.isFinite(over)) return null;
+  const d = Math.round(over * 1e6) / 1e6;
+  if (adjust === 'one') return quota + Math.sign(d);
+  if (adjust === 'half') return quota + Math.sign(d) * Math.round(Math.abs(d) / 2);
+  return null;
 }
 
 /** Quota target: 36 less the course handicap over 18 holes, 18 less it over 9. */
@@ -305,7 +335,18 @@ export const DOT_KINDS = {
   polie: { name: 'Polie', help: 'Holed a putt longer than the flagstick' },
   arnie: { name: 'Arnie', help: 'Par or better without ever being on the fairway (par 4s and 5s)' },
   hogan: { name: 'Hogan', help: 'Par or better after hitting the fairway and the green in regulation (par 4s and 5s)' },
+  // Penalty dots (house rule, added 2026-10-05): junk that costs you a dot, paid to each of the others.
+  // Off unless switched on one by one. Sources, checked 2026-10-05: Golf Compendium, "How to play Dots"
+  // https://golfcompendium.com/2024/09/dots-game.html ("negative" dots for a three-putt, a ball in the
+  // water or out of bounds) and 18Birdies, "How to play the Dots golf betting game"
+  // https://help.18birdies.com/article/477-how-to-play-the-dots-golf-betting-game
+  threeputt: { name: 'Three-putt', help: 'Took three putts or more. Costs a dot', penalty: true },
+  water: { name: 'Water', help: 'Hit it in the water. Costs a dot', penalty: true },
+  ob: { name: 'Out of bounds', help: 'Hit it out of bounds. Costs a dot', penalty: true },
 };
+
+/** The penalty dots: they cost you a dot instead of winning one. */
+export const PENALTY_DOTS = Object.keys(DOT_KINDS).filter(k => DOT_KINDS[k].penalty);
 
 /** Dots that only happen on some pars: a greenie is a par 3 thing, an Arnie or a Hogan needs a fairway. */
 export const DOT_PARS = { greenie: [3], arnie: [4, 5], hogan: [4, 5] };
