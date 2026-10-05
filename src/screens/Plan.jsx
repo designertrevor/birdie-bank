@@ -4,6 +4,7 @@
 // Friends open it from the group link with no install and no paywall (PlanLink below).
 import { useEffect, useState } from 'react';
 import { BallIllo, Empty, Header, Icon, PickChip, PickMark, PickRow, Screen, Sheet, useUI } from '../components/ui.jsx';
+import { LinkBrand, LinkHowTo } from '../components/LinkBrand.jsx';
 import { Avatar } from '../components/Pay.jsx';
 import { getState, update, uid, useStore } from '../lib/store.js';
 import { useNav } from '../lib/nav.js';
@@ -423,6 +424,7 @@ function WhoAreYou({ plan, defaultName, standalone, onSkip }) {
                 <span className="seat-sub">Add me</span>
               </button>
             </div>
+            {standalone && <LinkHowTo kind="plan" />}
           </>
         ) : (
           <>
@@ -624,6 +626,7 @@ export function PlanLink({ code, who = null, standalone = false, onSkip }) {
   if (id && plan) {
     return (
       <Screen className="plan-standalone">
+        <LinkBrand />
         <PlanBody plan={plan} standalone onSkip={onSkip} />
       </Screen>
     );
@@ -631,7 +634,7 @@ export function PlanLink({ code, who = null, standalone = false, onSkip }) {
   const missing = err === 'missing' || err === 'off';
   return (
     <Screen className="onboard">
-      {!standalone && <Header title="Upcoming round" small onBack={nav.pop} />}
+      {standalone ? <LinkBrand /> : <Header title="Upcoming round" small onBack={nav.pop} />}
       <div className="scroll onboard-body">
         <BallIllo className="onboard-illo" face={!err} />
         <h1 className="onboard-title" style={{ fontSize: 34 }} aria-live="polite">{err ? (err === 'off' ? 'Not quite ready' : missing ? 'Plan not found' : 'No signal') : 'Finding the plan…'}</h1>

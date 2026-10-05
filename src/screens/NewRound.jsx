@@ -3,7 +3,8 @@ import { Empty, Header, Icon, Numpad, PickChip, PickMark, PickRow, Screen, Segme
 import { RulesSheet } from '../components/Rules.jsx';
 import { Avatar } from '../components/Avatar.jsx';
 import { TimePicker } from '../components/DatePicker.jsx';
-import { getState, update, uid, useStore } from '../lib/store.js';
+import { DEFAULT_SETTINGS, getState, update, uid, useStore } from '../lib/store.js';
+import { playFromSearch } from '../lib/rule-links.js';
 import { allCourses, coursePar, coursePickerSections, courseTag, defaultTee as firstTee, isStarred, teeDotStyle, toggleStarred } from '../lib/courses.js';
 import { getCourse } from '../lib/courseApi.js';
 import { useCourseSearch } from '../lib/useCourseSearch.js';
@@ -107,11 +108,15 @@ function planSetup(state, planId, present) {
  * plan with the same setup (the round goes once the plan is made). `trip`: started from a trip's
  * page, so it counts for that trip.
  */
-export default function NewRound({ rematch, fromPlan, present, edit = null, ahead = false, game: preGame = null, ballot = [], onboarding = false, reschedule = null, trip: tripId = null }) {
+export default function NewRound({ rematch, fromPlan, present, edit = null, ahead = false, game: gameIn = null, play = null, ballot = [], onboarding = false, reschedule = null, trip: tripId = null }) {
   const nav = useNav();
   const { ask, showToast } = useUI();
   const checkAge = useAgeCheck();
   const state = useStore();
+  // "Play this now" on a rule page (?play=wolf): that game picked, or a side-only game added
+  const fromPlay = play ? playFromSearch(`play=${encodeURIComponent(play)}`) : null;
+  const preGame = gameIn ?? fromPlay?.game ?? null;
+  const preSide = fromPlay?.side ?? null;
   // "Run it back" opens setup already filled in like an earlier round
   const [editing] = useState(() => (edit ? getState().plans?.[edit] || null : null));
   const [pre] = useState(() => (editing ? { game: editing.game, holesCount: editing.holesCount, courseId: findCourse(getState(), editing.course?.id)?.id ?? null, nine: editing.nine, step: 1 }
@@ -163,7 +168,9 @@ export default function NewRound({ rematch, fromPlan, present, edit = null, ahea
   const [startHole, setStartHole] = useKept('setup:startHole', pre?.startHole ?? null);
   const [teams, setTeams] = useKept('setup:teams', pre?.teams ?? null); // arrays of player ids, for team games
   // Side games on top of the main game: [{ game, settings }] (start-now setup only, not plans)
-  const [sideGames, setSideGames] = useKept('setup:sideGames', () => structuredClone(pre?.sideGames || []));
+  // "Play this now" on a side game's rule page (Closest to the pin, say) starts with it added, from your usual settings
+  const [sideGames, setSideGames] = useKept('setup:sideGames', () => structuredClone(pre?.sideGames
+    || (SIDE_GAMES[preSide] && !GAMES[preSide] ? [{ game: preSide, settings: { ...(DEFAULT_SETTINGS[preSide] || {}), ...(state.settings?.[preSide] || {}) } }] : [])));
   // Only the side games that still fit the main game (a Skins main game drops a Skins side game)
   const sidesFor = gm => sideGamesOf({ game: gm, sideGames });
   // Setup edits the list it shows, so an index always points at the side game on screen (a side game

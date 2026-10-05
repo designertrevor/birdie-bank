@@ -101,13 +101,28 @@ function pendingChallengeLink() {
     return cleanCode(sessionStorage.getItem('pending-challenge')) || null;
   } catch { return null; }
 }
-/** A plan, challenge, draft or join link opened the app: it goes first, ahead of where you were. */
+/** A plan, challenge, draft, join or "Play this now" link opened the app: it goes first, ahead of where you were. */
 function linkWaiting() {
   try {
     const q = new URLSearchParams(location.search);
-    return !!(q.get('plan') || q.get('challenge') || q.get('join') || q.get('draft') || sessionStorage.getItem('bb-plan') || sessionStorage.getItem('pending-challenge') || sessionStorage.getItem('bb-join') || sessionStorage.getItem('pending-draft'));
+    return !!(q.get('plan') || q.get('challenge') || q.get('join') || q.get('draft') || q.get('play') || sessionStorage.getItem('bb-plan') || sessionStorage.getItem('pending-challenge') || sessionStorage.getItem('bb-join') || sessionStorage.getItem('pending-draft') || sessionStorage.getItem('bb-play'));
   } catch { return false; }
 }
+
+/**
+ * "Play this now" on a rule page (?play=wolf): the game as the link names it, or null. Setup and
+ * onboarding read which game it is (rule-links.js), so the first screen doesn't load the names.
+ * Kept for this tab until it opens.
+ */
+function pendingPlay() {
+  try {
+    const clean = v => (/^[a-z0-9-]{1,40}$/i.test(String(v || '')) ? String(v).toLowerCase() : null);
+    const now = clean(new URLSearchParams(location.search).get('play'));
+    if (now) { sessionStorage.setItem('bb-play', now); return now; }
+    return clean(sessionStorage.getItem('bb-play'));
+  } catch { return null; }
+}
+const clearPlay = () => { try { sessionStorage.removeItem('bb-play'); } catch { /* ignore */ } };
 const clearChallengeLink = () => { try { sessionStorage.removeItem('pending-challenge'); } catch { /* ignore */ } };
 
 /** A captain's draft link (?draft=TRIP&c=0|1) waiting to open: { tripId, seat }, or null. Kept for this tab until it opens. */
@@ -184,6 +199,8 @@ export default function App() {
   const [challengeAt, setChallengeAt] = useState(pendingChallengeLink);
   // A captain's draft link: on top of Up next for someone set up, on its own for anyone else
   const [draftAt, setDraftAt] = useState(pendingDraftLink);
+  // "Play this now" from a rule page: setup with the game picked, or onboarding with it ticked
+  const [playAt] = useState(pendingPlay);
   const [stack, setStack] = useState(() => {
     if (!onboarded) return [];
     if (planLinkAt) {
@@ -203,6 +220,10 @@ export default function App() {
     try { sessionStorage.removeItem('bb-join'); } catch { /* ignore */ }
     const to = code ? joinRoute(getState(), code) : null;
     if (to) return [{ name: to[0], params: to[1], key: Date.now() }];
+    if (playAt) {
+      clearPlay();
+      return [{ name: 'newRound', params: { play: playAt }, key: Date.now() }];
+    }
     return restored ? restored.stack : [];
   });
   // A join link opened before onboarding skips straight to picking your name in that round
@@ -255,6 +276,7 @@ export default function App() {
     if (new URLSearchParams(location.search).get('plan')) history.replaceState(null, '', location.pathname);
     if (new URLSearchParams(location.search).get('challenge')) history.replaceState(null, '', location.pathname);
     if (new URLSearchParams(location.search).get('draft')) history.replaceState(null, '', location.pathname);
+    if (new URLSearchParams(location.search).get('play')) history.replaceState(null, '', location.pathname);
   }, []);
 
   // Overlays opened in place over a screen (the course editor over round setup): the phone's back
@@ -312,7 +334,7 @@ export default function App() {
               : planLinkAt ? <PlanLink code={planLinkAt.code} who={planLinkAt.who} standalone onSkip={skipPlan} />
               : challengeAt ? <ChallengeLink code={challengeAt} standalone onSkip={skipChallenge} />
               : draftAt ? <DraftLink tripId={draftAt.tripId} seat={draftAt.seat} standalone onSkip={skipDraft} />
-              : <Onboarding onDone={routes => setStack(routes.map(([name, params = {}]) => ({ name, params, key: Date.now() + Math.random() })))} />}
+              : <Onboarding play={playAt} onDone={routes => { clearPlay(); setStack(routes.map(([name, params = {}]) => ({ name, params, key: Date.now() + Math.random() }))); }} />}
           </Suspense>
         </div>
       </UIProvider>

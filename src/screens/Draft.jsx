@@ -5,6 +5,7 @@
 // schedule (if it has one) plans every round with its matches.
 import { useEffect } from 'react';
 import { BallIllo, Empty, Header, Icon, Screen, useUI } from '../components/ui.jsx';
+import { LinkBrand } from '../components/LinkBrand.jsx';
 import { Avatar } from '../components/Pay.jsx';
 import { TeamDot } from '../components/Cup.jsx';
 import { useStore } from '../lib/store.js';
@@ -38,6 +39,7 @@ export function DraftLink({ tripId, seat, standalone = false, onSkip }) {
   useEffect(() => { joinDraft(tripId, seat); }, [tripId, seat]);
   return (
     <Screen>
+      {standalone && <LinkBrand />}
       {standalone ? <Header title="Captains’ draft" small /> : <Header title="Captains’ draft" small onBack={nav.pop} />}
       <DraftBody tripId={tripId} />
       {standalone && onSkip && <div className="cta-wrap"><button className="link-btn center" onClick={onSkip}>Done here</button></div>}

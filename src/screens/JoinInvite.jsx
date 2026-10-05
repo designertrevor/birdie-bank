@@ -5,6 +5,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { BallIllo, Icon, Screen } from '../components/ui.jsx';
 import { Avatar } from '../components/Avatar.jsx';
+import { LinkBrand, LinkHowTo } from '../components/LinkBrand.jsx';
 import { useGroupAvatars } from '../lib/useAvatars.js';
 import { getState, update, uid } from '../lib/store.js';
 import { useNav } from '../lib/nav.js';
@@ -15,7 +16,7 @@ import { GAMES, addPlayerProblem } from '../lib/round.js';
 import { roundStakeLines } from '../lib/stakes.js';
 import { firstName, gameLabel, strokesLabel } from '../lib/format.js';
 import { payFields } from '../lib/pay.js';
-import { noMoneyNote, playForLine } from '../lib/play-for.js';
+import { noMoneyNote, onTab, playForLine } from '../lib/play-for.js';
 import { money } from '../lib/golf.js';
 import { bigInvite } from '../lib/big-view.js';
 import { useAgeCheck } from '../components/AgeCheck.jsx';
@@ -134,11 +135,14 @@ export default function JoinInvite({ code, onJoined, onSkip, setUp = false }) {
   const keeperSeat = meta?.keeper?.id && Array.isArray(meta.players) ? meta.players.find(p => p?.id === meta.keeper.id) : null;
   const keeperFirst = typeof keeperSeat?.name === 'string' && keeperSeat.name.trim() ? firstName(keeperSeat.name) : host;
   const scorekeeper = keeperFirst || 'the scorekeeper';
+  // Someone who opened the link with no app gets the app's name and "No download needed" on every step
+  const brand = setUp ? null : <LinkBrand />;
 
   if (!meta && step !== 'waiting') {
     const missing = err === 'missing';
     return (
       <Screen className="onboard">
+        {brand}
         <div className="scroll onboard-body">
           <BallIllo className="onboard-illo" face={!err} />
           <h1 className="onboard-title" style={{ fontSize: 34 }} aria-live="polite">{err ? (missing ? 'Round not found' : 'No signal') : 'Finding your round…'}</h1>
@@ -161,6 +165,7 @@ export default function JoinInvite({ code, onJoined, onSkip, setUp = false }) {
   if (step === 'watch') {
     return (
       <Screen className="onboard">
+        {brand}
         <div className="scroll onboard-body join-body">
           <h1 className="onboard-title join-h">Follow along</h1>
           <p className="onboard-text join-p">See every hole as it’s scored. Add your name so the group knows who’s watching.</p>
@@ -208,6 +213,7 @@ export default function JoinInvite({ code, onJoined, onSkip, setUp = false }) {
     };
     return (
       <Screen className="onboard">
+        {brand}
         <div className="scroll onboard-body join-body">
           <h1 className="onboard-title join-h">Not on the list?</h1>
           {problem ? (
@@ -248,6 +254,7 @@ export default function JoinInvite({ code, onJoined, onSkip, setUp = false }) {
     const title = step === 'waiting' ? (busy ? 'You’re in' : `Waiting on ${scorekeeper}`) : step === 'no' ? 'Not this time' : 'Round closed';
     return (
       <Screen className="onboard">
+        {brand}
         <div className="scroll onboard-body">
           <BallIllo className="onboard-illo" face={step !== 'gone'} />
           <h1 className="onboard-title join-h" aria-live="polite">{title}</h1>
@@ -276,6 +283,7 @@ export default function JoinInvite({ code, onJoined, onSkip, setUp = false }) {
     const from = meta.joined?.[seat.id];
     return (
       <Screen className="onboard">
+        {brand}
         <div className="scroll onboard-body join-body">
           <div className="join-confirm">
             <Avatar base="join-avatar" model={faces.get(seat.id)} name={seat.name} size="lg" />
@@ -305,6 +313,7 @@ export default function JoinInvite({ code, onJoined, onSkip, setUp = false }) {
   if (step === 'seat') {
     return (
       <Screen className="onboard">
+        {brand}
         <div className="scroll onboard-body join-body">
           <h1 className="onboard-title join-h">Pick your seat</h1>
           <p className="onboard-text join-p">Which one are you?</p>
@@ -349,6 +358,7 @@ export default function JoinInvite({ code, onJoined, onSkip, setUp = false }) {
     : host ? meta.players.find(p => firstName(p.name) === host) : null;
   return (
     <Screen className="onboard">
+      {brand}
       <div className="scroll onboard-body join-body">
         <div className="invite-card">
           <div className="ic-from">
@@ -371,6 +381,7 @@ export default function JoinInvite({ code, onJoined, onSkip, setUp = false }) {
           </dl>
           {done && <p className="ic-note">This round is finished. Pick your seat to see how it ended.</p>}
         </div>
+        {!setUp && <LinkHowTo kind="join" money={onTab(meta)} />}
         <p className="field-help">{noMoneyNote(meta) || 'Friendly wagers only. Birdie Bank never holds or moves money. You settle up yourselves.'}</p>
       </div>
       <div className="cta-wrap">
