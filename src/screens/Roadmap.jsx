@@ -165,7 +165,8 @@ function RoadmapCard({ item, web, ids, mine, flash, voted, votes, comments, comm
       {votable ? (
         <button type="button" className={`rm-vote ${voted ? 'on' : ''}`} aria-pressed={voted} onClick={onVote}
           aria-label={voted ? `You voted for ${item.title}, ${voteLabel}. Tap to take it back` : `Vote for ${item.title}, ${voteLabel}`}>
-          <Icon name={voted ? 'check' : 'arrow-fat-up'} fill />
+          {/* Voted: the plain bold check, never the filled square that reads as a checkbox */}
+          <Icon name={voted ? 'check' : 'arrow-fat-up'} fill={!voted} />
           <span className="rm-count">{votes}</span>
         </button>
       ) : votes > 0 ? (

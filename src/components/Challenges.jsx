@@ -265,7 +265,7 @@ function AnswerRow({ ch, side, marking }) {
     <>
       {marking && <p className="ch-mark">{ask}</p>}
       <div className="ch-actions" role="group" aria-label={marking ? `${who}’s answer` : 'Your answer'}>
-        {canMove(ch, side, 'accept', null, null, marking) && <button className="pill-btn ch-yes" onClick={moves.accept}><Icon name="check" /> {marking ? `${who}’s in` : 'Accept'}</button>}
+        {canMove(ch, side, 'accept', null, null, marking) && <button className={`pill-btn ${marking ? '' : 'ch-yes'}`} onClick={moves.accept}><Icon name={marking ? 'thumbs-up' : 'check'} /> {marking ? `${who}’s in` : 'Accept'}</button>}
         {canMove(ch, side, 'counter', null, null, marking) && <button className="pill-btn" onClick={() => setCountering(true)}><Icon name="arrows-left-right" /> {marking ? `${who} says…` : 'Counter'}</button>}
         {canMove(ch, side, 'decline', null, null, marking) && <button className="pill-btn" onClick={moves.decline}>{marking ? 'Passed' : 'Decline'}</button>}
       </div>
