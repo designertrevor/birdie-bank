@@ -3,9 +3,11 @@ import react from '@vitejs/plugin-react'
 import { createHash } from 'node:crypto'
 import { mkdirSync, readFileSync, readdirSync, statSync, writeFileSync } from 'node:fs'
 import { dirname, join, relative } from 'node:path'
+import { fileURLToPath } from 'node:url'
 import { createElement, Fragment } from 'react'
 import { renderToStaticMarkup } from 'react-dom/server'
 import { RULE_KEYS, renderRulePage, renderRulesIndex, ruleFile, robotsTxt, sitemapXml } from './src/lib/rule-pages.js'
+import { publicRoadmap } from './src/lib/roadmap-public.js'
 
 // Files the service worker should not save for offline use
 // (and not the public rule pages, sitemap or robots.txt: they're web pages, not the app)
@@ -117,7 +119,26 @@ function rulePages() {
   };
 }
 
+/**
+ * The public roadmap, made from ROADMAP.md as the app builds: `import items from 'virtual:roadmap'`
+ * gives the short public list (see src/lib/roadmap-public.js), never the file itself, so Trevor's
+ * notes stay out of the app. A change to ROADMAP.md reloads it in dev.
+ */
+function roadmapList() {
+  const id = 'virtual:roadmap';
+  const file = fileURLToPath(new URL('./ROADMAP.md', import.meta.url));
+  return {
+    name: 'bb-roadmap',
+    resolveId(x) { return x === id ? `\0${id}` : null; },
+    load(x) {
+      if (x !== `\0${id}`) return null;
+      this.addWatchFile(file);
+      return `export default ${JSON.stringify(publicRoadmap(readFileSync(file, 'utf8')))};`;
+    },
+  };
+}
+
 // https://vite.dev/config/
 export default defineConfig({
-  plugins: [react(), rulePages(), precache(), firstScreen()],
+  plugins: [react(), roadmapList(), rulePages(), precache(), firstScreen()],
 })

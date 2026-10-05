@@ -108,9 +108,9 @@ export function flushFeedback() {
   return flushing;
 }
 
-/** Queue a message and try to send it. Resolves to 'sent' or 'queued'. */
-export async function submitFeedback({ kind, body, details = {}, contact = '', image = null, roundId = null }) {
-  const item = { id: crypto.randomUUID(), kind, body: body.trim(), details, contact: contact.trim(), image, context: feedbackContext(roundId), at: Date.now() };
+/** Queue a message and try to send it. Resolves to 'sent' or 'queued'. `id` lets the caller know it ahead (the roadmap keeps it). */
+export async function submitFeedback({ id = crypto.randomUUID(), kind, body, details = {}, contact = '', image = null, roundId = null }) {
+  const item = { id, kind, body: body.trim(), details, contact: contact.trim(), image, context: feedbackContext(roundId), at: Date.now() };
   writeQueue([...readQueue(), item]);
   await flushFeedback();
   return readQueue().some(x => x.id === item.id) ? 'queued' : 'sent';

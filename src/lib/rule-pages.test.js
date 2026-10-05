@@ -174,7 +174,10 @@ test('the service worker never saves a rule page as the app, and the app never p
   assert.ok(!skip.test('assets/rules-abc.js'));
   // /rules and /rules/wolf reach the built pages on Vercel
   const v = JSON.parse(readFileSync(new URL('../../vercel.json', import.meta.url), 'utf8'));
-  assert.deepEqual(v.rewrites.map(r => [r.source, r.destination]), [['/rules', '/rules/index.html'], ['/rules/:slug', '/rules/:slug/index.html']]);
+  const rewrites = v.rewrites.map(r => [r.source, r.destination]);
+  assert.deepEqual(rewrites.filter(([src]) => src.startsWith('/rules')), [['/rules', '/rules/index.html'], ['/rules/:slug', '/rules/:slug/index.html']]);
+  // and no other rewrite (the app's own /roadmap) sends a rules path anywhere else
+  assert.ok(rewrites.every(([src, dest]) => src.startsWith('/rules') || !dest.startsWith('/rules')));
 });
 
 test('"Play this now" is wired: App reads ?play=, setup takes the game or side game, onboarding ticks it', () => {
