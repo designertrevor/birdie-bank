@@ -34,6 +34,22 @@ export function myBigMoney(bs, isMe) {
 }
 
 /**
+ * What's still to settle on the decided game, from Settle the game's lines (tripStatus plan), in
+ * dollars: { mine, others }. `mine` is what's still between you and anyone (positive: owed to you),
+ * so a line paid comes off it; `others` is what's still to pay between other people.
+ */
+export function bigLeft(plan, isMe) {
+  let mine = 0, others = 0;
+  for (const l of plan || []) {
+    const c = Math.round((Number(l.amount) || 0) * 100);
+    if (isMe(l.to)) mine += c;
+    else if (isMe(l.from)) mine -= c;
+    else others += c;
+  }
+  return { mine: mine / 100, others: others / 100 };
+}
+
+/**
  * A group's round on the invite card: the game's name and the group, what's on the line across the
  * field, and your strokes (in full, from your course handicap, never off the low player), or null
  * when the round isn't part of a Big Game. `fmt` formats dollars.

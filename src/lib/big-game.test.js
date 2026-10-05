@@ -27,7 +27,7 @@ import { shareCardModel } from './shareImage.js';
 import { feedMeta, friendRoundView, friendRounds } from './friend-feed.js';
 import { callouts } from './callouts.js';
 import { changesReach, codesToRead, handOffs, recordDue, toCard } from './big-sync-model.js';
-import { bigInvite, bigWho, myBigMoney, myPlaceLine, toParText } from './big-view.js';
+import { bigInvite, bigLeft, bigWho, myBigMoney, myPlaceLine, toParText } from './big-view.js';
 import { money } from './golf.js';
 import { owedSince, paymentNudges } from './nudges.js';
 
@@ -638,4 +638,26 @@ test('the organizer never marks paid a line between two people that includes the
   assert.equal(kl.theirs, undefined);
   assert.equal(canMarkLine(kept, kl), true);
   assert.equal(tripPayment(kept, 't_big', 'h', 'e', { now: NOW + 5 }).settlements.length, 1);
+});
+
+test('the game’s card says what’s still owed to you and what’s between others apart, so a line paid to the organizer comes off theirs', () => {
+  const phones = phonesOf();
+  const a = phones.a;
+  const isAnn = id => id === 'a';
+  const st = tripStatus(a, 't_big', { now: NOW });
+  // Ann's whole game is +$2.67: Fay owes her $2.34 and Bob $0.33; the rest is between others
+  const left = bigLeft(st.plan, isAnn);
+  assert.equal(left.mine, 2.67);
+  assert.equal(left.mine, myBigMoney(bigStatus(a, 't_big'), isAnn));
+  const total = st.plan.reduce((x, l) => x + cents(l.amount), 0);
+  assert.equal(cents(left.others), total - 267);
+  // Bob pays Ann: only Fay's $2.34 is still hers, the game's result stays +$2.67
+  const res = tripPayment(a, 't_big', 'b', 'a', { now: NOW + 5 });
+  const paid = { ...a, tripExpenses: mergeExpenses(a.tripExpenses || {}, res.expenses) };
+  const after = tripStatus(paid, 't_big', { now: NOW + 10 });
+  assert.equal(bigLeft(after.plan, isAnn).mine, 2.34);
+  assert.equal(bigLeft(after.plan, isAnn).others, left.others);
+  assert.equal(myBigMoney(bigStatus(paid, 't_big'), isAnn), 2.67);
+  // Someone who isn't in the game has nothing of theirs on it
+  assert.deepEqual(bigLeft(st.plan, () => false), { mine: 0, others: total / 100 });
 });

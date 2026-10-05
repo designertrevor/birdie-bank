@@ -11,7 +11,7 @@ import { money } from '../lib/golf.js';
 import { hideTrip } from '../lib/trip-store.js';
 import { dayLabel } from '../lib/plans.js';
 import { BIG_BET_KINDS, BIG_MAX_STAKE, POT_KINDS, SKINS_KINDS, betStandLine, betStrokesFor, bigName, bigPlayers, groupOf } from '../lib/big-game.js';
-import { bigWho, myBigMoney, myPlaceLine, toParText } from '../lib/big-view.js';
+import { bigLeft, bigWho, myBigMoney, myPlaceLine, toParText } from '../lib/big-view.js';
 import { bigStatus } from '../lib/big-money.js';
 import { saveBigBet } from '../lib/big-store.js';
 import { useBigSync } from '../lib/big-sync.js';
@@ -37,9 +37,18 @@ export function BigCard({ status: st, onTab = false }) {
     : myPlaceLine(bs, isMe) || `${playing.length || bs.big.groups.length} group${(playing.length || bs.big.groups.length) === 1 ? '' : 's'} out`;
   // Your own lines paid: you're square in the game, even while others still settle theirs
   const mineSquare = bs.final && st.phase !== 'square' && !st.plan.some(l => isMe(l.from) || isMe(l.to));
+  // What's still yours to settle, and (for the organizer) what's still between other people, apart
+  const left = bigLeft(st.plan, isMe);
+  const between = st.organizer && left.others > 0 ? money(left.others) : null;
+  const settled = mine == null ? (between ? `${between} left to settle` : 'Settle the game')
+    : st.organizer && between ? `You’re square. ${between} left between others` : 'You’re square';
   const sub = notStarted ? 'Start the groups on the day, each with its own scorekeeper'
-    : bs.final ? (st.phase === 'square' ? 'Settled' : mineSquare ? (st.organizer ? 'You’re square. See who’s left to settle' : 'You’re square') : 'Settle the game')
+    : bs.final ? (st.phase === 'square' ? 'Settled' : mineSquare ? settled : between ? `Settle the game · ${between} between others` : 'Settle the game')
     : bs.waiting.length ? `Waiting on ${bs.waiting.map(g => g.name).join(', ')}` : playing.map(g => `${g.name} thru ${g.thru}`).join(' · ');
+  // On the Tab: what the game still has between you and others while it's open, your result once you're square
+  const done = st.phase === 'square' || mineSquare || !bs.final;
+  const amt = done ? mine : left.mine;
+  const amtSub = done ? (mine > 0 ? 'won' : mine < 0 ? 'lost' : 'even') : left.mine > 0 ? 'owed to you' : left.mine < 0 ? 'you owe' : 'to settle';
   const open = () => nav.push('bigGame', { id: st.trip.id });
   const hide = e => {
     e.stopPropagation();
@@ -59,8 +68,8 @@ export function BigCard({ status: st, onTab = false }) {
           </div>
           {mine != null && onTab && (
             <div className="trip-amt-col">
-              <div className={`trip-amt d ${sign(mine)}`}>{money(mine, { sign: true })}</div>
-              <div className="trip-amt-sub">{st.phase === 'square' || mineSquare ? (mine > 0 ? 'won' : mine < 0 ? 'lost' : 'even') : 'to settle'}</div>
+              <div className={`trip-amt d ${sign(amt)}`}>{money(amt, { sign: true })}</div>
+              <div className="trip-amt-sub">{amtSub}</div>
             </div>
           )}
           <span className="chevron"><Icon name="caret-right" /></span>
