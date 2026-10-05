@@ -5,7 +5,7 @@
 // "HH:MM", "" when empty, so nothing that reads them changes. The logic is in lib/date-pick.js.
 import { useEffect, useId, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
-import { Icon, Segmented, Sheet } from './ui.jsx';
+import { Icon, PickChip, Segmented, Sheet } from './ui.jsx';
 import {
   HOURS, canStepMonth, clampISO, dayLook, dayParts, from24, fromISO, inBounds, longDateLabel, minuteChoices, monthCells,
   monthGrid, monthTitle, moveCursor, parseTime, quickDays, rangePresets, rangeTap, timeTap, toISO, yearCells,
@@ -304,10 +304,10 @@ export function DateRangePicker({ from = '', to = '', onChange, min, max, title 
                 {presets.map(r => {
                   const on = r.from === draft.from && r.to === draft.to;
                   return (
-                    <button key={r.key} type="button" className={`pill-btn ${on ? 'on' : ''}`} aria-pressed={on}
+                    <PickChip key={r.key} on={on}
                       onClick={() => { setDraft({ from: r.from, to: r.to }); setEditing('to'); reseed(); }}>
-                      {on && <Icon name="check" />}{r.label}
-                    </button>
+                      {r.label}
+                    </PickChip>
                   );
                 })}
               </div>
