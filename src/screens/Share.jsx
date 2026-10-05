@@ -9,7 +9,7 @@ import { useNav } from '../lib/nav.js';
 import { nameOf } from '../lib/ledger.js';
 import { countsMoney } from '../lib/play-for.js';
 import { tripStatus } from '../lib/trips.js';
-import { appLink, roundLink, slugName } from '../lib/share.js';
+import { appLink, shareRoundLink, slugName } from '../lib/share.js';
 import { cardText, cupCardModel, recapCardModel, tripCardModel } from '../lib/share-cards.js';
 import { renderCard } from '../lib/share-cards-image.js';
 
@@ -25,7 +25,8 @@ export default function ShareScreen({ kind, id }) {
   if (kind === 'recap') {
     const round = state.rounds?.[id];
     if (!round || round.status !== 'done') return gone('This round is gone', 'It was taken off this phone.');
-    const link = roundLink(round);
+    // No live link when someone keeps their money private: watching the round would show it
+    const link = shareRoundLink(state, round, { money: countsMoney(round) });
     return (
       <Screen>
         <ShareView title="Share the recap" small onBack={nav.pop} what="Recap" link={link}

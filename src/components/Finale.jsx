@@ -17,7 +17,7 @@ import { markTransfer, undoPayments, useTabSync } from '../lib/tab-sync.js';
 import { useNav } from '../lib/nav.js';
 import { revealSteps, revealTiming } from '../lib/reveal.js';
 import { renderResultsCard, resultsAlt, shareCardModel, shareImageName } from '../lib/shareImage.js';
-import { roundLink } from '../lib/share.js';
+import { shareRoundLink } from '../lib/share.js';
 import { ShareView } from './ShareSheet.jsx';
 import { countsMoney, playForOf, rewardOutcome, unitFmt } from '../lib/play-for.js';
 import { RoundWhereFrom } from './WhereFrom.jsx';
@@ -323,7 +323,8 @@ export function SettleUp({ round, res, onBack, onNext }) {
  * your choice is remembered, and nobody's money shows if they keep it private (share.js).
  */
 export function ShareCard({ round, res, onBack, onDone, doneLabel = 'Done' }) {
-  const link = roundLink(round);
+  // No live link when someone keeps their money private: watching the round would show it
+  const link = shareRoundLink(getState(), round, { money: countsMoney(round) });
   const make = show => {
     // A Big Game's group round shares the game's money (res, from bigRoundResults)
     const model = shareCardModel(round, res?.big ? res : roundResults(round), { showAmounts: show, link });

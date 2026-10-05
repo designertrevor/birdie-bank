@@ -84,6 +84,16 @@ export function roundLink(round, origin) {
   return code ? `${o}/?join=${code}` : o || null;
 }
 
+/**
+ * The link a round's results or recap goes out with: its live link, unless someone in a money
+ * round keeps their money private. Anyone with the live link can watch the round, and watching
+ * shows everyone's money, so then it's the app alone, the way the card keeps their amounts off.
+ */
+export function shareRoundLink(state, round, { money = true, origin } = {}) {
+  if (money && (round?.players || []).some(p => keepsMoneyPrivate(state, p.id))) return appLink(origin);
+  return roundLink(round, origin);
+}
+
 /** The app itself, for a card with no round or plan of its own (a trip, the cup). */
 export function appLink(origin) {
   return originOf(origin) || null;

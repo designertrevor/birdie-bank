@@ -6,7 +6,7 @@ import assert from 'node:assert/strict';
 import { createRound, roundResults } from './round.js';
 import { shareText } from './format.js';
 import { resultsAlt, shareCardModel } from './shareImage.js';
-import { amountsNote, amountsRule, appLink, heldNote, keepsMoneyPrivate, roundLink, shareAmountsOn, shareOut, shareToast, slugName, withLink } from './share.js';
+import { amountsNote, amountsRule, appLink, heldNote, keepsMoneyPrivate, roundLink, shareAmountsOn, shareRoundLink, shareOut, shareToast, slugName, withLink } from './share.js';
 import { planPreview, previewAlt, previewCardModel, previewRecordsHeld, previewText } from './preview.js';
 import { newPlan } from './plans.js';
 
@@ -249,4 +249,14 @@ test('copy: nothing a share says has a long dash', () => {
   const r = nassau();
   const m = shareCardModel(r, roundResults(r), { showAmounts: true });
   for (const t of [resultsAlt(m), shareText(r, roundResults(r)), amountsNote({ held: ['A'], show: false }, {}), shareToast('copied-saved')]) assert.ok(!t.includes(EM), t);
+});
+
+test('privacy: a round shared with someone who keeps their money private goes out without its live link', () => {
+  const round = { players: [{ id: 'me', name: 'Trevor' }, { id: 'sam', name: 'Sam' }], shareCode: 'ABC123' };
+  const o = 'https://example.test';
+  assert.equal(shareRoundLink(stateWith(), round, { origin: o }), `${o}/?join=ABC123`);
+  // Watching from the link would show Sam's money: the app alone
+  assert.equal(shareRoundLink(stateWith({ sam: ONLY_YOU }), round, { origin: o }), o);
+  // A points round has no money to show
+  assert.equal(shareRoundLink(stateWith({ sam: ONLY_YOU }), round, { origin: o, money: false }), `${o}/?join=ABC123`);
 });
