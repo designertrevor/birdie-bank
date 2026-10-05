@@ -2,7 +2,7 @@ import { lazy, Suspense, useEffect, useMemo, useRef, useState } from 'react';
 import { Empty, Header, Icon, Numpad, PickChip, PickMark, PickRow, Screen, Segmented, Sheet, Steps, Toggle, useUI } from '../components/ui.jsx';
 import { RulesSheet } from '../components/Rules.jsx';
 import { Avatar } from '../components/Avatar.jsx';
-import { TimePicker } from '../components/DatePicker.jsx';
+import { DateSheet, TimePicker } from '../components/DatePicker.jsx';
 import { DEFAULT_SETTINGS, getState, update, uid, useStore } from '../lib/store.js';
 import { playFromSearch } from '../lib/rule-links.js';
 import { allCourses, coursePar, coursePickerSections, courseTag, defaultTee as firstTee, isStarred, teeDotStyle, toggleStarred } from '../lib/courses.js';
@@ -1091,14 +1091,15 @@ function HolesPicker({ game, holesCount, setHolesCount }) {
 }
 
 function WhenPicker({ date, setDate, teeTime, setTeeTime }) {
-  // An edited plan keeps its day in the strip even when it's further out than two weeks
+  const [picking, setPicking] = useState(false);
+  // A day further out than two weeks (picked from the calendar, or an edited plan's) leads the strip, picked
   const days = useMemo(() => {
     const list = dayChoices(new Date(), 14);
     if (!date || list.some(d => d.iso === date)) return list;
     const [y, m, d] = date.split('-').map(Number);
     const day = new Date(y, m - 1, d);
     const extra = { ...dayChoices(day, 1)[0], top: day.toLocaleDateString('en-US', { weekday: 'short' }) };
-    return date < list[0].iso ? [extra, ...list] : [...list, extra];
+    return [extra, ...list];
   }, [date]);
   return (
     <div className="block when-block">
@@ -1109,7 +1110,11 @@ function WhenPicker({ date, setDate, teeTime, setTeeTime }) {
             <span className="dc-top">{d.top}</span><span className="dc-bottom">{d.bottom}</span>
           </button>
         ))}
+        <button type="button" className="day-chip more" onClick={() => setPicking(true)} aria-haspopup="dialog">
+          <Icon name="calendar-blank" /><span className="dc-bottom">Pick a date</span>
+        </button>
       </div>
+      <DateSheet open={picking} onClose={() => setPicking(false)} title="Day" value={date} min={isoDate()} onPick={setDate} />
       <label className="field-label" htmlFor="when-time" style={{ marginTop: 14 }}>Tee time <span className="opt">optional</span></label>
       <TimePicker id="when-time" label="Tee time" className="name-input time-input" value={teeTime} onChange={setTeeTime} step={300} placeholder="Add a tee time" />
     </div>

@@ -240,6 +240,23 @@ export function DatePicker({
   );
 }
 
+/**
+ * Just the calendar sheet, for a picker whose field is something else: the "Pick a date" chip at the
+ * end of a day strip. `onPick(iso)` and the sheet closes.
+ */
+export function DateSheet({ open, onClose, title, value = '', onPick, min, max }) {
+  const [now] = useState(() => new Date());
+  return (
+    <PickSheet open={open} onClose={onClose} title={title}>
+      {open && (
+        <div className="pick-body">
+          <Calendar value={value} onPick={iso => { onPick(iso); onClose(); }} min={min} max={max} now={now} label={title} />
+        </div>
+      )}
+    </PickSheet>
+  );
+}
+
 // ---------------------------------------------------------------------------
 // A range
 // ---------------------------------------------------------------------------
