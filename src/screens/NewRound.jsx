@@ -1,7 +1,7 @@
 import { lazy, Suspense, useEffect, useMemo, useRef, useState } from 'react';
 import { Empty, Header, Icon, Numpad, Screen, Segmented, Sheet, Steps, Toggle, useUI } from '../components/ui.jsx';
 import { RulesSheet } from '../components/Rules.jsx';
-import { getState, update, uid, useStore } from '../lib/store.js';
+import { DEFAULT_SETTINGS, getState, update, uid, useStore } from '../lib/store.js';
 import { allCourses, coursePar, coursePickerSections, courseTag, defaultTee as firstTee, isStarred, teeDotStyle, toggleStarred } from '../lib/courses.js';
 import { getCourse } from '../lib/courseApi.js';
 import { useCourseSearch } from '../lib/useCourseSearch.js';
@@ -103,7 +103,7 @@ function planSetup(state, planId, present) {
  * plan with the same setup (the round goes once the plan is made). `trip`: started from a trip's
  * page, so it counts for that trip.
  */
-export default function NewRound({ rematch, fromPlan, present, edit = null, ahead = false, game: preGame = null, ballot = [], onboarding = false, reschedule = null, trip: tripId = null }) {
+export default function NewRound({ rematch, fromPlan, present, edit = null, ahead = false, game: preGame = null, side: preSide = null, ballot = [], onboarding = false, reschedule = null, trip: tripId = null }) {
   const nav = useNav();
   const { ask, showToast } = useUI();
   const state = useStore();
@@ -158,7 +158,9 @@ export default function NewRound({ rematch, fromPlan, present, edit = null, ahea
   const [startHole, setStartHole] = useKept('setup:startHole', pre?.startHole ?? null);
   const [teams, setTeams] = useKept('setup:teams', pre?.teams ?? null); // arrays of player ids, for team games
   // Side games on top of the main game: [{ game, settings }] (start-now setup only, not plans)
-  const [sideGames, setSideGames] = useKept('setup:sideGames', () => structuredClone(pre?.sideGames || []));
+  // "Play this now" on a side game's rule page (Closest to the pin, say) starts with it added, from your usual settings
+  const [sideGames, setSideGames] = useKept('setup:sideGames', () => structuredClone(pre?.sideGames
+    || (SIDE_GAMES[preSide] && !GAMES[preSide] ? [{ game: preSide, settings: { ...(DEFAULT_SETTINGS[preSide] || {}), ...(state.settings?.[preSide] || {}) } }] : [])));
   // Only the side games that still fit the main game (a Skins main game drops a Skins side game)
   const sidesFor = gm => sideGamesOf({ game: gm, sideGames });
   // Setup edits the list it shows, so an index always points at the side game on screen (a side game

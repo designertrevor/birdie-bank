@@ -173,3 +173,16 @@ test('middleware: preview bots on any kind of link go to the function, people ge
   // A person opening the same link gets the app straight away
   assert.equal(middleware(new Request('https://x.test/?plan=PL4N99', { headers: { 'user-agent': 'Mozilla/5.0 (iPhone)' } })), undefined);
 });
+
+test('link pages: three short steps for a round, a plan and a challenge, no em dashes', async () => {
+  const { HOW_IT_WORKS, howItWorks, BROWSER_LINE } = await import('./link-landing.js');
+  for (const kind of ['join', 'plan', 'challenge']) {
+    const steps = howItWorks(kind);
+    assert.equal(steps.length, 3, kind);
+    for (const s of steps) { assert.ok(s.length < 80, s); assert.ok(!s.includes(EM)); assert.match(s, /\.$/); }
+  }
+  assert.deepEqual(howItWorks('draft'), []);
+  assert.deepEqual(howItWorks('nope'), []);
+  assert.equal(Object.keys(HOW_IT_WORKS).length, 3);
+  assert.equal(BROWSER_LINE, 'No download needed');
+});

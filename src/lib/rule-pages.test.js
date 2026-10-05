@@ -172,3 +172,20 @@ test('the service worker never saves a rule page as the app, and the app never p
   const v = JSON.parse(readFileSync(new URL('../../vercel.json', import.meta.url), 'utf8'));
   assert.deepEqual(v.rewrites.map(r => [r.source, r.destination]), [['/rules', '/rules/index.html'], ['/rules/:slug', '/rules/:slug/index.html']]);
 });
+
+test('"Play this now" is wired: App reads ?play=, setup takes the game or side game, onboarding ticks it', () => {
+  const src = f => readFileSync(new URL(f, import.meta.url), 'utf8');
+  const app = src('../App.jsx');
+  assert.match(app, /playFromSearch\(location\.search\)/);
+  assert.match(app, /name: 'newRound', params: playAt\.game \? \{ game: playAt\.game \} : \{ side: playAt\.side \}/);
+  assert.match(app, /<Onboarding game=\{playAt\?\.game\}/);
+  assert.match(app, /get\('play'\)\) history\.replaceState/, 'the link is tidied out of the address bar');
+  assert.match(src('../screens/NewRound.jsx'), /side: preSide = null/);
+  assert.match(src('../screens/Onboarding.jsx'), /games: GAMES\[game\] \? \[game\] : \[\]/);
+});
+
+test('new copy reads the app name from the one constant, never spelled out', () => {
+  for (const f of ['./rule-pages.js', './rule-links.js', './link-landing.js', './link-target.js', './og.js', '../components/LinkBrand.jsx', '../components/Rules.jsx']) {
+    assert.ok(!readFileSync(new URL(f, import.meta.url), 'utf8').includes('Birdie Bank'), f);
+  }
+});

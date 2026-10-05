@@ -4,6 +4,7 @@
 import { useEffect, useState } from 'react';
 import { BallIllo, Empty, Header, Icon, Screen } from '../components/ui.jsx';
 import { ChallengeCard, ChallengeExtras } from '../components/Challenges.jsx';
+import { LinkBrand, LinkHowTo } from '../components/LinkBrand.jsx';
 import { useStore } from '../lib/store.js';
 import { useNav } from '../lib/nav.js';
 import { challengeNextText, challengeView, cleanChallenge, planOf } from '../lib/challenges.js';
@@ -46,6 +47,7 @@ function ChallengeBody({ ch: raw, onGone, standalone = false, onSkip }) {
         )}
         <ChallengeCard ch={ch} />
         {next && <p className="field-help pad">{next}</p>}
+        {standalone && <div className="pad-x"><LinkHowTo kind="challenge" /></div>}
         {plan && !standalone && <button className="text-link" onClick={() => nav.push('plan', { id: plan.id })}><Icon name="calendar-check" /> See the round</button>}
         <ChallengeExtras ch={ch} onGone={onGone} />
         <p className="field-help pad">Friendly wagers only. Nobody holds or moves money here. You settle up yourselves.</p>
@@ -77,7 +79,7 @@ export function ChallengeLink({ code, standalone = false, onSkip }) {
   if (ch) {
     return (
       <Screen className={standalone ? 'plan-standalone' : ''}>
-        {!standalone && <Header title="Challenge" small onBack={nav.pop} />}
+        {standalone ? <LinkBrand /> : <Header title="Challenge" small onBack={nav.pop} />}
         <ChallengeBody ch={ch} standalone={standalone} onSkip={onSkip} onGone={standalone ? onSkip : nav.pop} />
       </Screen>
     );
@@ -85,7 +87,7 @@ export function ChallengeLink({ code, standalone = false, onSkip }) {
   const missing = err === 'missing' || err === 'off';
   return (
     <Screen className="onboard">
-      {!standalone && <Header title="Challenge" small onBack={nav.pop} />}
+      {standalone ? <LinkBrand /> : <Header title="Challenge" small onBack={nav.pop} />}
       <div className="scroll onboard-body">
         <BallIllo className="onboard-illo" face={!err} />
         <h1 className="onboard-title" style={{ fontSize: 34 }} aria-live="polite">{err ? (err === 'off' ? 'Not quite ready' : missing ? 'Challenge not found' : 'No signal') : 'Finding the challenge…'}</h1>
