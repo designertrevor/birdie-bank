@@ -1,7 +1,7 @@
 // Who can see your profile: one setting for all of it (Everyone, People you've played with, Only
 // you), and Show my money on top while it isn't only you. On your profile and in Settings, the
 // same block in both (profile-view.js has the words, profile-model.js the rules).
-import { Segmented, Toggle } from './ui.jsx';
+import { PickRow, Toggle } from './ui.jsx';
 import { setProfilePrivacy, setShowMoney, useMyProfile } from '../lib/profiles.js';
 import { PROFILE_CHOICES, moneyHelp, profileHelp } from '../lib/profile-view.js';
 
@@ -11,8 +11,12 @@ export function ProfilePrivacy({ id = 'pp' }) {
     <>
       <div className="block">
         <div className="eyebrow" id={`${id}-who`} style={{ marginBottom: 10 }}>Who can see your profile</div>
-        <Segmented label="Who can see your profile" className="press-mode-row ft-seg pf-money-seg" btn="pm-btn" value={privacy.profile}
-          onChange={setProfilePrivacy} options={PROFILE_CHOICES} />
+        {/* Three long choices read best as a list of selectable rows, each on one line */}
+        <div className="pp-choices" role="radiogroup" aria-labelledby={`${id}-who`}>
+          {PROFILE_CHOICES.map(c => (
+            <PickRow key={c.value} radio on={privacy.profile === c.value} onClick={() => setProfilePrivacy(c.value)} title={c.label} />
+          ))}
+        </div>
         <p className="field-help">{profileHelp(privacy)}</p>
       </div>
       {privacy.profile !== 'hidden' && (

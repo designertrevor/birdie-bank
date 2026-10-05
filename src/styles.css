@@ -3208,3 +3208,7 @@ a.header-btn.rm-open { text-decoration: none; }
 .day-chip.more .dc-bottom { font-size: 12px; line-height: 1.15; text-align: center; max-width: 7ch; }
 /* Two buttons side by side under a primary one: a step smaller, with room inside each */
 .cta-row .full-btn { font-size: 15px; padding: 0 12px; gap: 6px; }
+/* Who can see your profile: one selectable row a choice */
+.pp-choices .pick-row { padding: 12px 14px; min-height: 52px; }
+.pp-choices .pick-row:not(.on) { background: var(--surface); }
+.pp-choices .pick-row:last-child { margin-bottom: 0; }
