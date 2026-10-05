@@ -101,6 +101,12 @@ export const JABS = {
     { key: 'chThink', text: 'Take your time. I’ll wait' },
     { key: 'chScared', text: 'Nervous? Totally fine' },
   ],
+  // ...waiting on your answer
+  chAsked: [
+    { key: 'chCalendar', text: 'Let me check my calendar' },
+    { key: 'chSure', text: 'You sure about this?' },
+    { key: 'chBold', text: 'Bold move. I like it' },
+  ],
   // ...agreed (or already in a round)
   chAccepted: [
     { key: 'chGameOn', text: 'Game on' },
@@ -136,11 +142,17 @@ export const JABS = {
     { key: 'lossFun', text: 'Still had more fun than you' },
     { key: 'lossLucky', text: 'You got lucky and you know it' },
   ],
-  // A settle-up line still owed
+  // A settle-up line still owed (to you, or between two others)
   owed: [
     { key: 'payUp', text: 'Pay up, partner', money: true },
     { key: 'tabForgets', text: 'The Tab never forgets' },
     { key: 'noRush', text: 'No rush. Okay, a little rush' },
+  ],
+  // A settle-up line you still owe
+  owing: [
+    { key: 'owingMail', text: 'Check’s in the mail' },
+    { key: 'owingWorth', text: 'Worth every penny', money: true },
+    { key: 'owingRelax', text: 'Sending it now. Relax' },
   ],
   // A payment marked paid
   paid: [
@@ -193,7 +205,7 @@ export function jabsFor(on, { money = true, set = null, moments = [] } = {}) {
 const JAB_ART = {
   birdie: { id: 'birdie', bg: 'mint' }, threePutt: { id: 'goose', bg: 'lav' }, win: { id: 'tiger', bg: 'pink' },
   loss: { id: 'frog', bg: 'peach' }, owed: { id: 'gopher', bg: 'blush' }, paid: { id: 'flamingo', bg: 'ochre' },
-  chOpen: { id: 'flag', bg: 'mint' }, chAccepted: { id: 'eagle', bg: 'teal' }, chDeclined: { id: 'goose', bg: 'lav' },
+  chOpen: { id: 'flag', bg: 'mint' }, chAsked: { id: 'gopher', bg: 'lav' }, owing: { id: 'goose', bg: 'peach' }, chAccepted: { id: 'eagle', bg: 'teal' }, chDeclined: { id: 'goose', bg: 'lav' },
   round: { id: 'birdie', bg: 'mint' }, settle: { id: 'gopher', bg: 'blush' }, bet: { id: 'tiger', bg: 'pink' },
   plan: { id: 'flag', bg: 'mint' }, gallery: { id: 'birdie', bg: 'mint' }, challenge: { id: 'flag', bg: 'mint' },
 };
@@ -512,7 +524,7 @@ export function roundTalk(round, state) {
     const c = contextOf(on);
     if (c === 'round') return (mine ??= roundMoments(round, who));
     const pay = c === 'settle' ? payParts(on) : null;
-    return pay ? settleMoments(state, round, pay.from, pay.to) : [];
+    return pay ? settleMoments(state, round, pay.from, pay.to, who) : [];
   };
   return { key: roundThread(round), who, myName: who ? firstOf(seatName(who)) : null, seatName, kind: 'round', moneyOn: on => moneyOn(round, on), momentsOn };
 }
@@ -533,7 +545,7 @@ export function challengeTalk(state, raw) {
   const seatName = id => names[id] || null;
   return {
     key: challengeThread(ch), who, myName: who ? firstOf(seatName(who)) : null, seatName, kind: 'challenge',
-    moneyOn: () => ch.unit !== 'points', momentsOn: () => challengeMoments(ch),
+    moneyOn: () => ch.unit !== 'points', momentsOn: () => challengeMoments(ch, side || null),
   };
 }
 

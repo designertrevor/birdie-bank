@@ -91,7 +91,8 @@ begin
 end $$;
 
 -- Let this phone (and its account) in on a challenge's talk, and remember its people. Returns the
--- ids it may speak as, or null when there's no such challenge.
+-- ids it may speak as, or null when it can't: no such challenge, and this phone never joined it.
+-- A phone that joined before keeps its talk once the challenge itself is tidied up.
 create or replace function public.join_challenge_comments(p_code text) returns text[]
 language plpgsql volatile security definer set search_path = '' as $$
 declare
@@ -100,12 +101,13 @@ declare
 begin
   if p_code is null or p_code !~ '^[A-Z0-9]{6}$' then return null; end if;
   s := public.comment_challenge_seats(p_code);
-  if s is null then return null; end if;
-  foreach k in array array_remove(array['d:' || public.bb_writer(), 'u:' || auth.uid()::text], null) loop
-    insert into public.comment_members as c (scope, code, member, seats) values ('challenge', p_code, k, s)
-    on conflict (scope, code, member) do update
-      set seats = (select coalesce(array_agg(distinct x), '{}'::text[]) from unnest(c.seats || excluded.seats) x);
-  end loop;
+  if s is not null then
+    foreach k in array array_remove(array['d:' || public.bb_writer(), 'u:' || auth.uid()::text], null) loop
+      insert into public.comment_members as c (scope, code, member, seats) values ('challenge', p_code, k, s)
+      on conflict (scope, code, member) do update
+        set seats = (select coalesce(array_agg(distinct x), '{}'::text[]) from unnest(c.seats || excluded.seats) x);
+    end loop;
+  end if;
   return public.comment_seats('challenge', p_code);
 end $$;
 

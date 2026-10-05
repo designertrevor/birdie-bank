@@ -29,7 +29,7 @@ const keys = list => list.map(j => j.key);
 const MONEY_JABS = Object.values(JABS).flat().filter(j => j.money).map(j => j.key);
 
 test('talk review: money jabs show only on a thing played for money', () => {
-  assert.deepEqual(MONEY_JABS.sort(), ['easy', 'lesson', 'payUp', 'wallet']);
+  assert.deepEqual(MONEY_JABS.sort(), ['easy', 'lesson', 'owingWorth', 'payUp', 'wallet']);
   // A money round: every jab, everywhere
   const cash = round();
   assert.equal(betsOf(cash).length, 1, 'the bet is a real side bet');

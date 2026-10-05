@@ -129,7 +129,7 @@ function noteError(e) {
 
 /**
  * Where a thread's talk goes: { scope, code, via? } once it can reach the others, else { scope, code: null }.
- * Thread keys are 'round:<roundId>' and 'plan:<planId>' (talk.js), and 'follow:<code>' for a
+ * Thread keys are 'round:<roundId>', 'plan:<planId>' and 'challenge:<challengeId>' (talk.js), and 'follow:<code>' for a
  * friend's round you watch (via 'follow': its talk is the round's, joined as a friend watching).
  */
 export function threadTarget(state, key) {

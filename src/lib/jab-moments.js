@@ -3,7 +3,7 @@
 // the moments for one thing, most fitting first, and the jab picker puts their jabs ahead of the
 // thing's own list. Only ever read from what this phone already shows the person looking: a loss is
 // their own, a line's paid state is the one on their round's page. No amounts, ever, and nothing
-// here touches money. Pure, unit tested in jab-moments.test.js.
+// here touches money. Pure, unit tested in jabs.test.js.
 import { oneBall, roundResults, scoreSummary, scorers } from './round.js';
 import { tabResults } from './play-for.js';
 import { cents, codeOf, nettedOn, paidOn } from './pair-debts.js';
@@ -51,14 +51,25 @@ export function linePaid(state, round, from, to) {
   return paidOn(state, round, code, t) >= cents(t.amount);
 }
 
-/** The moments on a settle-up line: 'paid' once it is, else 'owed' ("Pay up, partner"). */
-export const settleMoments = (state, round, from, to) => [linePaid(state, round, from, to) ? 'paid' : 'owed'];
+/**
+ * The moments on a settle-up line: 'paid' once it is, else 'owing' when `who` (your seat) is the
+ * one who pays ("Check’s in the mail"), or 'owed' for everyone else ("Pay up, partner").
+ */
+export function settleMoments(state, round, from, to, who = null) {
+  if (linePaid(state, round, from, to)) return ['paid'];
+  return [who && who === from ? 'owing' : 'owed'];
+}
 
-/** The moments on a challenge: waiting on an answer, agreed (or in the round), or passed. */
-export function challengeMoments(ch) {
+/**
+ * The moments on a challenge: waiting on an answer, agreed (or in the round), or passed. While it
+ * waits, `side` ('from' or 'to', yours) whose call it is gets 'chAsked' ("Let me check my
+ * calendar"); whoever asked, or set it up, gets 'chOpen' ("Tick tock. In or out?").
+ */
+export function challengeMoments(ch, side = null) {
   if (!ch) return [];
-  const s = challengeState(ch).status;
-  if (s === 'open' || s === 'countered') return ['chOpen'];
+  const st = challengeState(ch);
+  const s = st.status;
+  if (s === 'open' || s === 'countered') return [side && (st.turn === side || st.turn === 'both') ? 'chAsked' : 'chOpen'];
   if (s === 'accepted' || s === 'on') return ['chAccepted'];
   if (s === 'declined') return ['chDeclined'];
   return [];

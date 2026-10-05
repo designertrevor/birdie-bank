@@ -148,7 +148,7 @@ test('moments: a round’s talk knows its moments on the round and on each line'
   const r = skins({ birdie: true });
   const ctx = roundTalk(r, stateWith({ rounds: [r] }));
   assert.deepEqual(ctx.momentsOn('round'), ['loss', 'birdie']);
-  assert.deepEqual(ctx.momentsOn(payTarget('me', 'sam')), ['owed']);
+  assert.deepEqual(ctx.momentsOn(payTarget('me', 'sam')), ['owing'], 'Trevor pays this line, so his jabs are the payer’s');
   assert.deepEqual(ctx.momentsOn('bet:b1'), []);
   assert.deepEqual(payParts(payTarget('me', 'sam')), { from: 'me', to: 'sam' });
   assert.equal(payParts('round'), null);
@@ -310,4 +310,59 @@ test('talk access: the challenge talk SQL is new, safe to run again, and keeps t
   const roundPart = s => s.slice(s.indexOf("if p_scope is distinct from 'round'"), s.indexOf('end $$', s.indexOf("if p_scope is distinct from 'round'")));
   assert.equal(roundPart(sql), roundPart(before));
   assert.match(before, /select r\.meta into m from public\.live_rounds/);
+});
+
+// --------------------------- review fixes ------------------------------------
+
+test('review: a line you still owe leads with the payer’s jabs, a line owed to you with the payee’s', () => {
+  const r = skins();
+  const st = stateWith({ rounds: [r] });
+  assert.deepEqual(settleMoments(st, r, 'me', 'sam', 'me'), ['owing'], 'Trevor pays Sam: Trevor is the one owing');
+  assert.deepEqual(settleMoments(st, r, 'me', 'sam', 'sam'), ['owed'], 'Sam is owed');
+  assert.deepEqual(settleMoments(st, r, 'me', 'sam'), ['owed'], 'nobody in particular: owed');
+  const paid = stateWith({ rounds: [r], settlements: [{ id: 's1', from: 'me', to: 'sam', amount: tabResults(r).transfers[0].amount, at: NOW, roundId: r.id }] });
+  assert.deepEqual(settleMoments(paid, r, 'me', 'sam', 'me'), ['paid'], 'paid is paid, whoever looks');
+  // On the round's page Trevor (the payer) never gets "Pay up, partner" first
+  const ctx = roundTalk(r, st);
+  assert.equal(ctx.who, 'me');
+  const list = jabsFor(payTarget('me', 'sam'), { money: true, moments: ctx.momentsOn(payTarget('me', 'sam')) });
+  assert.equal(list[0].key, 'owingMail');
+  assert.ok(!keys(list).includes('payUp'));
+  assert.equal(jabArt(payTarget('me', 'sam'), { moments: ['owing'] }).id, 'goose');
+  // Nothing about it moves money
+  assert.deepEqual(roundResults(r).balances, roundResults(skins()).balances);
+});
+
+test('review: while a challenge waits, the one whose call it is gets their own jabs', () => {
+  const ch = newChallenge({ id: 'c1', from: { who: 'dave', name: 'Dave' }, to: { who: 'mike', name: 'Mike' }, kind: 'match', stake: 20, now: NOW });
+  assert.deepEqual(challengeMoments(ch, 'to'), ['chAsked'], 'Mike was asked');
+  assert.deepEqual(challengeMoments(ch, 'from'), ['chOpen'], 'Dave asked');
+  assert.deepEqual(challengeMoments(ch), ['chOpen'], 'whoever set it up');
+  const countered = withMove(ch, { id: 'm1', side: 'to', move: 'counter', stake: 30, at: NOW + 1 });
+  assert.deepEqual(challengeMoments(countered, 'from'), ['chAsked'], 'a counter puts it back to Dave');
+  assert.deepEqual(challengeMoments(countered, 'to'), ['chOpen']);
+  const between = newChallenge({ id: 'c2', from: { who: 'dave', name: 'Dave' }, to: { who: 'mike', name: 'Mike' }, kind: 'match', stake: 20, setBy: { who: 'me', name: 'Trevor' }, now: NOW });
+  assert.deepEqual(challengeMoments(between, 'from'), ['chAsked'], 'set up between two: both are asked');
+  assert.deepEqual(challengeMoments(between, 'to'), ['chAsked']);
+  const theirs = challengeTalk(stateWith(), { ...ch, mine: 'to', made: false });
+  assert.deepEqual(theirs.momentsOn('challenge'), ['chAsked']);
+  assert.equal(jabsFor('challenge', { moments: ['chAsked'] })[0].key, 'chCalendar');
+  assert.equal(jabArt('challenge', { moments: ['chAsked'] }).id, 'gopher');
+});
+
+test('review: a phone that joined a challenge’s talk keeps it after the challenge is tidied up', () => {
+  const sql = readFileSync(new URL('../../supabase/2026-10-07-challenge-talk.sql', import.meta.url), 'utf8');
+  const join = sql.slice(sql.indexOf('create or replace function public.join_challenge_comments'), sql.indexOf('end $$', sql.indexOf('create or replace function public.join_challenge_comments')));
+  assert.ok(!/if s is null then return null/.test(join), 'no early null when the challenge is gone');
+  assert.match(join, /if s is not null then[\s\S]*end if;\s*return public\.comment_seats\('challenge', p_code\);/);
+  // The same in JavaScript: remembered seats once the challenge is gone, nothing for a stranger
+  assert.deepEqual(seatsFor({ scope: 'challenge', challenge: null, joined: [{ member: 'd:w1', seats: ['dave'] }], w: 'w1' }), ['dave']);
+  assert.equal(seatsFor({ scope: 'challenge', challenge: null, joined: [], w: 'w1' }), null);
+});
+
+test('review: a payment card on the Tab is as wide as the plain rows, and jabs keep a 44px tap target', () => {
+  const css = readFileSync(new URL('../styles.css', import.meta.url), 'utf8');
+  const block = css.slice(css.indexOf('(o9 jabs)'));
+  assert.match(block, /\.pay-talk \.ledger-row \{[^}]*width: 100%/);
+  assert.ok(!/\.talk-jab \{[^}]*min-height: 40px/.test(block), 'no 40px jabs');
 });
