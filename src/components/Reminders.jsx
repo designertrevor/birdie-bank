@@ -213,7 +213,7 @@ export function TeeTimeSection({ plan }) {
                 <div className="eyebrow tb-label" id="remind-day">Remind me to book</div>
                 <div className="day-strip" role="radiogroup" aria-labelledby="remind-day">
                   <button role="radio" aria-checked={!remindOn} className={`day-chip tb-none ${!remindOn ? 'on' : ''}`} onClick={() => save(p => setBooking(p, { remindOn: null }))}>
-                    <span className="dc-top">No</span><span className="dc-bottom">reminder</span>
+                    <span className="dc-bottom">No reminder</span>
                   </button>
                   {days.map(d => (
                     <button key={d.iso} role="radio" aria-checked={d.iso === remindOn} className={`day-chip ${d.iso === remindOn ? 'on' : ''}`} onClick={() => save(p => setBooking(p, { remindOn: d.iso }))}>
