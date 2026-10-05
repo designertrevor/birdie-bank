@@ -258,6 +258,20 @@ export const to24 = (h12, half) => (h12 % 12) + (half === 'pm' ? 12 : 0);
 export const HOURS = [12, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11];
 
 /**
+ * The hours in the order a golfer reaches for them: the morning from 6 AM, so the tee times people
+ * play (6 to 11) are the first row and the small hours come last; the afternoon from noon.
+ */
+export const hoursFor = half => (half === 'am' ? [6, 7, 8, 9, 10, 11, 12, 1, 2, 3, 4, 5] : HOURS);
+
+/** A minute earlier or later (`d` is -1 or 1), round the clock: a booked 8:08 off a 5 minute grid. */
+export function nudgeTime(value, d) {
+  const t = parseTime(value);
+  if (!t) return value || '';
+  const m = (((t.h * 60 + t.m + d) % 1440) + 1440) % 1440;
+  return toTime(Math.floor(m / 60), m % 60);
+}
+
+/**
  * The minutes to pick from for a step in seconds (what a native time input's step was), at least
  * a minute. A saved minute off the step ("08:07" with 5 minute steps) is kept in the list.
  */

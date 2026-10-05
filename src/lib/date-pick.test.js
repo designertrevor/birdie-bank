@@ -4,7 +4,7 @@ import { readFileSync, readdirSync } from 'node:fs';
 import {
   addDays, addMonths, betweenEnds, canStepMonth, clampISO, dayLook, dayParts, daysBetween, endWhenStartMoves, from24, fromISO, HOURS, inBounds, longDateLabel,
   minuteChoices, monthCells, monthGrid, monthTitle, moveCursor, parseTime, quickDays, rangePresets, rangeTap,
-  timeTap, to24, toISO, toTime, yearCells,
+  timeTap, to24, toISO, toTime, yearCells, hoursFor, nudgeTime,
 } from './date-pick.js';
 
 // Monday, October 5, 2026
@@ -243,4 +243,15 @@ test('moving a trip’s first day later takes the last day with it, so the trip 
   // No last day yet, or no first day picked
   assert.equal(endWhenStartMoves('2026-10-05', '', '2026-10-10'), '2026-10-10');
   assert.equal(endWhenStartMoves('2026-10-05', '2026-10-07', ''), '2026-10-07');
+});
+
+test('the morning hours start at 6, and a booked time moves a minute at a time', () => {
+  assert.deepEqual(hoursFor('am').slice(0, 6), [6, 7, 8, 9, 10, 11]);
+  assert.deepEqual([...hoursFor('am')].sort((a, b) => a - b), [...HOURS].sort((a, b) => a - b));
+  assert.deepEqual(hoursFor('pm'), HOURS);
+  assert.equal(nudgeTime('08:05', 1), '08:06');
+  assert.equal(nudgeTime('08:10', -1), '08:09');
+  assert.equal(nudgeTime('08:59', 1), '09:00');
+  assert.equal(nudgeTime('00:00', -1), '23:59');
+  assert.equal(nudgeTime('', 1), '');
 });

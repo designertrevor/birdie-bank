@@ -7,7 +7,7 @@ import { useEffect, useId, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { Icon, PickChip, Segmented, Sheet } from './ui.jsx';
 import {
-  HOURS, canStepMonth, clampISO, dayLook, dayParts, from24, fromISO, inBounds, longDateLabel, minuteChoices, monthCells,
+  canStepMonth, hoursFor, nudgeTime, clampISO, dayLook, dayParts, from24, fromISO, inBounds, longDateLabel, minuteChoices, monthCells,
   monthGrid, monthTitle, moveCursor, parseTime, quickDays, rangePresets, rangeTap, timeTap, toISO, yearCells,
 } from '../lib/date-pick.js';
 import { timeLabel } from '../lib/plans.js';
@@ -346,7 +346,12 @@ export function TimePicker({ id, label, value = '', onChange, step = 300, cleara
         said={`${label}: ${timeLabel(value) || 'not set'}`} open={p.open} onOpen={() => p.show()} disabled={disabled} />
       <PickSheet open={p.open} onClose={p.close} title={label}>
         <div className="pick-body">
-          <div className={`tp-value ${t ? '' : 'empty'}`} aria-live="polite">{timeLabel(value) || 'Pick the hour'}</div>
+          {/* A minute either way, for a booked time off the 5 minute grid (tee sheets run 7 to 10 minutes apart) */}
+          <div className="tp-value-row">
+            {t && <button type="button" className="icon-btn tp-nudge" onClick={() => set(nudgeTime(value, -1))} aria-label="One minute earlier"><Icon name="minus" /></button>}
+            <div className={`tp-value ${t ? '' : 'empty'}`} aria-live="polite">{timeLabel(value) || 'Pick the hour'}</div>
+            {t && <button type="button" className="icon-btn tp-nudge" onClick={() => set(nudgeTime(value, 1))} aria-label="One minute later"><Icon name="plus" /></button>}
+          </div>
           <Segmented label="Morning or afternoon" className="holes-toggle tp-half" btn="holes-btn" value={showHalf}
             onChange={h => { setHalf(h); set(timeTap(value, 'half', h)); }}
             options={[{ value: 'am', label: 'AM' }, { value: 'pm', label: 'PM' }]} />
@@ -354,7 +359,7 @@ export function TimePicker({ id, label, value = '', onChange, step = 300, cleara
             <span className="eyebrow" aria-hidden="true">Hour</span>
             <Segmented label="Hour" className="tp-grid" btn="tp-chip" value={t ? from24(t.h).h12 : null}
               onChange={h => set(timeTap(value, 'hour', h, showHalf))}
-              options={HOURS.map(h => ({ value: h, label: String(h), aria: `${h} ${showHalf === 'am' ? 'AM' : 'PM'}` }))} />
+              options={hoursFor(showHalf).map(h => ({ value: h, label: String(h), aria: `${h} ${showHalf === 'am' ? 'AM' : 'PM'}` }))} />
           </div>
           <div className="pick-section">
             <span className="eyebrow" aria-hidden="true">Minutes</span>
