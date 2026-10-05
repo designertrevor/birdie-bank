@@ -246,7 +246,7 @@ export function TotalsPanel({ round }) {
     const tied = played ? sorted.filter(x => x.over === sorted[0].over) : [];
     const nameOf = x => x.players.map(pid => firstName(round.players.find(p => p.id === pid)?.name || '')).join(' & ');
     const lead = !played ? 'Nobody’s ahead yet' : tied.length === sorted.length ? 'All level' : tied.length > 1 ? `${tied.length} teams tied for the lead` : `${nameOf(sorted[0])} lead`;
-    return <ChipsPanel icon="target" label={`Team quota · ${played} hole${played === 1 ? '' : 's'}`} items={sorted.map((x, i) => ({ id: x.id, name: nameOf(x), value: `${x.over > 0 ? '+' : ''}${tenth(x.over)}`, lead: i === 0 ? lead : null }))} />;
+    return <ChipsPanel icon="target" label={`Team quota · ${played} hole${played === 1 ? '' : 's'}`} items={sorted.map((x, i) => ({ id: x.id, name: nameOf(x), value: x.over > 0 ? `+${tenth(x.over)}` : x.over < 0 ? `−${tenth(-x.over)}` : '0', lead: i === 0 ? lead : null }))} />;
   }
   const lowerWins = round.game === 'stroke';
   // To par with a real minus sign, as the rest of the app writes it

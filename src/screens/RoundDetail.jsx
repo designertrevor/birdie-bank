@@ -31,6 +31,11 @@ import { TalkBar, TalkSection } from '../components/Talk.jsx';
 import { betTarget, payTarget, roundTalk, roundThread } from '../lib/talk.js';
 import { useTalkSync } from '../lib/talk-sync.js';
 
+/** A signed number with a real minus sign, as the rest of the app writes it: +2, −1, 0. */
+const signed = v => (v > 0 ? `+${v}` : v < 0 ? `−${-v}` : '0');
+/** "1 pt", "3 pts". */
+const pts = n => `${n} pt${n === 1 ? '' : 's'}`;
+
 // Where the finale was, so coming back from another screen (e.g. Suggest) doesn't replay the reveal.
 // Keyed by round and its finish time, so finishing the round again starts over.
 const finaleStage = new Map();
@@ -430,9 +435,9 @@ function GameBreakdown({ round, res, label = null }) {
     const rows = res.detail.totals;
     const fmt = x => {
       // A short round is measured against the quota for the holes played
-      if (round.game === 'quota') return `${x.total} pts · quota ${x.target ?? x.quota} · ${x.vsQuota > 0 ? '+' : ''}${x.vsQuota}`;
-      if (round.game === 'stableford') return `${x.total} pts`;
-      return `Net ${x.total} · ${x.toPar === 0 ? 'E' : x.toPar > 0 ? `+${x.toPar}` : x.toPar}`;
+      if (round.game === 'quota') return `${pts(x.total)} · quota ${x.target ?? x.quota} · ${signed(x.vsQuota)}`;
+      if (round.game === 'stableford') return pts(x.total);
+      return `Net ${x.total} · ${x.toPar === 0 ? 'E' : signed(x.toPar)}`;
     };
     const lowerWins = round.game === 'stroke' || round.game === 'scramble';
     const sorted = [...rows].sort((a, b) => (lowerWins ? a.total - b.total : round.game === 'quota' ? b.vsQuota - a.vsQuota : b.total - a.total));
@@ -825,7 +830,7 @@ function TeamQuota({ round, teams, names }) {
         <div key={t.id} className="leg-row">
           <div className="leg-name">{i + 1}</div>
           <div className={`leg-winner ${t.over === best ? '' : 'leg-tie'}`}>{t.players.map(first).join(' & ')}{t.over === best && round.status === 'done' ? <span className="li-sub"> · took the pot</span> : null}</div>
-          <div className="leg-amt">{t.points} pts · quota {tenth(t.quota)} · {t.over > 0 ? '+' : ''}{tenth(t.over)}</div>
+          <div className="leg-amt">{pts(t.points)} · quota {tenth(t.quota)} · {signed(tenth(t.over))}</div>
         </div>
       ))}
     </>
