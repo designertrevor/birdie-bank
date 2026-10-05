@@ -1,6 +1,6 @@
 // Words for fixing a hole or a tee during a round (the engine is fixHole and fixTee in round.js):
 // who gains or loses a stroke, how the money recounts, and the note sent to Birdie Bank.
-import { fixedCourse, roundResults, strokeChanges } from './round.js';
+import { bettors, fixedCourse, isJustPlaying, roundResults, strokeChanges } from './round.js';
 import { countsMoney, unitFmt } from './play-for.js';
 
 const first = name => String(name || '').split(' ')[0];
@@ -50,7 +50,7 @@ export function strokeImpact(before, after, holeNo) {
 export function moneyChanges(before, after) {
   const a = roundResults(before).balances;
   const b = roundResults(after).balances;
-  return after.players
+  return bettors(after)
     .map(p => ({ id: p.id, name: p.name, delta: Math.round(((b[p.id] || 0) - (a[p.id] || 0)) * 100) / 100 }))
     .filter(x => x.delta !== 0)
     .sort((x, y) => y.delta - x.delta);
@@ -116,9 +116,10 @@ export function teeFixFeedback(round, course, teeName, before, after) {
 
 /** "Strokes: Dave 8 → 9, Al 3 → 2" for players whose strokes off the low move, or null. */
 export function playsLine(before, after) {
+  // Someone just playing has no strokes in any game, so theirs never make the list
   const ch = after.players
-    .map((p, i) => ({ name: first(p.name), from: before.players[i]?.plays ?? 0, to: p.plays ?? 0 }))
-    .filter(c => c.from !== c.to);
+    .map((p, i) => ({ name: first(p.name), from: before.players[i]?.plays ?? 0, to: p.plays ?? 0, casual: isJustPlaying(after, p.id) }))
+    .filter(c => !c.casual && c.from !== c.to);
   return ch.length ? `Strokes: ${ch.map(c => `${c.name} ${c.from} → ${c.to}`).join(', ')}` : null;
 }
 

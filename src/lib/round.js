@@ -1072,7 +1072,8 @@ export function noHandicap(round) {
  */
 export function strokeChanges(before, after) {
   const out = [];
-  const units = scorers(after);
+  // Someone just playing has no strokes that count anywhere, so theirs never show as changed
+  const units = scorers(after).filter(u => !isJustPlaying(after, u.id));
   for (const u of units) {
     const was = scorers(before).find(x => x.id === u.id);
     if (!was) continue;
