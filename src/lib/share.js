@@ -94,6 +94,17 @@ export function shareRoundLink(state, round, { money = true, origin } = {}) {
   return roundLink(round, origin);
 }
 
+/**
+ * The live link a line about a round goes out with (a callout), or null: only for a round shared
+ * live, and never when someone in a money round keeps their money private (shareRoundLink). A
+ * bare link to the app adds nothing to a line, so then it goes alone.
+ */
+export function liveLinkFor(state, round, { money = true, origin } = {}) {
+  if (!codeOf(round)) return null;
+  const link = shareRoundLink(state, round, { money, origin });
+  return link === roundLink(round, origin) ? link : null;
+}
+
 /** The app itself, for a card with no round or plan of its own (a trip, the cup). */
 export function appLink(origin) {
   return originOf(origin) || null;

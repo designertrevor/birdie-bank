@@ -6,8 +6,8 @@ import assert from 'node:assert/strict';
 import { createRound } from './round.js';
 import { newTrip, tripStamp, tripStatus } from './trips.js';
 import { newChallenge, withMove } from './challenges.js';
-import { amountsRule } from './share.js';
-import { cardAlt, cardText, challengeGroupText, cupCardModel, recapCardModel, shortUrl, tripCardModel } from './share-cards.js';
+import { amountsRule, liveLinkFor } from './share.js';
+import { cardAlt, cardText, challengeAmountsShow, challengeGroupText, cupCardModel, cupPeople, recapCardModel, shortUrl, tripCardModel } from './share-cards.js';
 
 const DOLLAR = /\$/;
 const EM = String.fromCharCode(0x2014);
@@ -204,4 +204,39 @@ test('words: short links, alt text that reads the card, and no long dash anywher
     assert.equal(m.alt, cardAlt(m.alt.split(':')[0], m));
     for (const t of [m.alt, cardText(m), JSON.stringify(m)]) assert.ok(!t.includes(EM));
   }
+});
+
+// --------------------------- review fixes: every share path follows the one setting
+
+test('a challenge shared with the group shows its stake only with the switch on and nobody in it keeping their money private', () => {
+  const ch = newChallenge({ id: 'c1', from: { who: 't', name: 'Trevor Nielsen' }, to: { who: 's', name: 'Sam Ray' }, kind: 'match', stake: 20, plan: { id: 'p1', date: '2026-10-10' }, now: OCT(5) });
+  const on = { settings: { shareAmounts: true } };
+  assert.equal(challengeAmountsShow(stateOf([], on), ch), true);
+  assert.equal(challengeAmountsShow(stateOf([]), ch), false, 'the switch is off');
+  const held = stateOf([], { ...on, ...ONLY_YOU });
+  assert.equal(challengeAmountsShow(held, ch), false, 'Sam keeps his money private');
+  assert.doesNotMatch(challengeGroupText(ch, { showAmounts: challengeAmountsShow(held, ch), now: OCT(5) }), DOLLAR);
+  // Points always show
+  const pts = newChallenge({ id: 'c2', from: { who: 't', name: 'Trevor' }, to: { who: 's', name: 'Sam' }, kind: 'hole', stake: 5, unit: 'points', now: OCT(5) });
+  assert.equal(challengeAmountsShow(held, pts), true);
+});
+
+test('the cup card carries everyone on its leaderboard for the rule, so someone keeping their money private keeps the stake off', () => {
+  const s = stateOf([], ONLY_YOU);
+  const cup = cupOf({ final: true, winner: 0 });
+  assert.deepEqual(cupPeople(s, cup).map(p => p.id), ['t', 's']);
+  const rule = amountsRule(s, { money: true, on: true, people: cupPeople(s, cup) });
+  assert.equal(rule.show, false);
+  assert.deepEqual(rule.held, ['Sam']);
+  assert.doesNotMatch(JSON.stringify(cupCardModel(s, TRIP, cup, { showAmounts: rule.show })), DOLLAR);
+  assert.equal(amountsRule(stateOf([]), { money: true, on: true, people: cupPeople(stateOf([]), cup) }).show, true);
+});
+
+test('a callout links to the live round only when nobody in a money round keeps their money private', () => {
+  const r = round('r1', FOUR, {}, { code: 'AAA111' });
+  assert.equal(liveLinkFor(stateOf([r]), r, { origin: 'https://golf.test' }), 'https://golf.test/?join=AAA111');
+  assert.equal(liveLinkFor(stateOf([r], ONLY_YOU), r, { origin: 'https://golf.test' }), null, 'no live link, and no bare app link either');
+  assert.equal(liveLinkFor(stateOf([r], ONLY_YOU), r, { money: false, origin: 'https://golf.test' }), 'https://golf.test/?join=AAA111', 'a points round');
+  const plain = round('r2', FOUR);
+  assert.equal(liveLinkFor(stateOf([plain]), plain, { origin: 'https://golf.test' }), null, 'never shared live');
 });

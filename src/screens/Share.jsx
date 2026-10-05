@@ -10,7 +10,7 @@ import { nameOf } from '../lib/ledger.js';
 import { countsMoney } from '../lib/play-for.js';
 import { tripStatus } from '../lib/trips.js';
 import { appLink, shareRoundLink, slugName } from '../lib/share.js';
-import { cardText, cupCardModel, recapCardModel, tripCardModel } from '../lib/share-cards.js';
+import { cardText, cupCardModel, cupPeople, recapCardModel, tripCardModel } from '../lib/share-cards.js';
 import { renderCard } from '../lib/share-cards-image.js';
 
 const card = model => ({ model, alt: model.alt, text: cardText(model) });
@@ -46,7 +46,7 @@ export default function ShareScreen({ kind, id }) {
       <Screen>
         <ShareView title="Share the cup" small onBack={nav.pop} what="Cup score" link={link}
           make={show => card(cupCardModel(state, st.trip, st.cup, { showAmounts: show, link }))} render={renderCard}
-          fileName={slugName('cup', st.trip.name)} money={st.cup.def.stake > 0}
+          fileName={slugName('cup', st.trip.name)} money={st.cup.def.stake > 0} people={cupPeople(state, st.cup)}
           onText="What’s on the cup is on the image" offText="The score and the leaderboard, no money" />
       </Screen>
     );

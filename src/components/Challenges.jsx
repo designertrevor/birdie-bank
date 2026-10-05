@@ -14,8 +14,7 @@ import {
 import { challengeShareLink, challengesOff, forgetChallenge, makeChallenge, moveChallenge, useChallengesOff } from '../lib/challenge-sync.js';
 import { planShareLink } from '../lib/plan-sync.js';
 import { sendReminder } from '../lib/pay.js';
-import { shareAmountsOn } from '../lib/share.js';
-import { challengeGroupText } from '../lib/share-cards.js';
+import { challengeAmountsShow, challengeGroupText } from '../lib/share-cards.js';
 import { useShareText } from '../lib/useShare.js';
 import { dayLabel, planPeople } from '../lib/plans.js';
 
@@ -437,7 +436,7 @@ export function ChallengeExtras({ ch, onGone }) {
       })}
       {/* For the group text: who challenged whom, with the stake only when Show amounts is on */}
       {(live || s.status === 'on') && s.status !== 'declined' && s.status !== 'off' && (
-        <button className="text-link" onClick={() => shareText(challengeGroupText(ch, { showAmounts: shareAmountsOn(state) }), { url: groupLinkFor(state, ch), what: 'Challenge' })}><Icon name="share-network" /> Share with the group</button>
+        <button className="text-link" onClick={() => shareText(challengeGroupText(ch, { showAmounts: challengeAmountsShow(state, ch) }), { url: groupLinkFor(state, ch), what: 'Challenge' })}><Icon name="share-network" /> Share with the group</button>
       )}
       {live && side && canMove(ch, side, 'withdraw') && <button className="danger-link" onClick={moves.withdraw}><Icon name="x-circle" /> Call it off</button>}
       {live && setter && !side && canMove(ch, 'keeper', 'withdraw') && <button className="danger-link" onClick={moves.withdraw}><Icon name="x-circle" /> Call it off</button>}

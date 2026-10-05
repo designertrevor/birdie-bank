@@ -5,7 +5,8 @@ import { update, useStore } from '../lib/store.js';
 import { useNav } from '../lib/nav.js';
 import { useShareText } from '../lib/useShare.js';
 import { useGroupAvatars } from '../lib/useAvatars.js';
-import { roundLink } from '../lib/share.js';
+import { liveLinkFor } from '../lib/share.js';
+import { countsMoney } from '../lib/play-for.js';
 
 const STATUS_WORD = { square: 'Square', owes: 'Owes', waiting: 'Waiting', carried: 'Carried' };
 const MOMENT_ICON = { won: 'trophy', final: 'trophy', bigskin: 'fire', skin: 'coins', lonewolf: 'paw-print', blindwolf: 'paw-print', wolfdown: 'paw-print', hammer: 'hammer', hammerback: 'hammer', swing: 'arrows-down-up' };
@@ -85,16 +86,16 @@ export function RecapCard({ recap }) {
 
 /**
  * Callouts: a few lines for the group text, each one tap to post. A line about a round that was
- * shared live links back to it; the rest go as they are (a bare link to the app adds nothing).
+ * shared live links back to it, unless someone in it keeps their money private (watching shows
+ * everyone's money); the rest go as they are (a bare link to the app adds nothing).
  */
 export function CalloutsCard({ items }) {
   const { showToast } = useUI();
-  const rounds = useStore(s => s.rounds);
+  const state = useStore();
   const shareText = useShareText();
   const share = c => {
-    const r = c.roundId ? rounds[c.roundId] : null;
-    const code = r?.shareCode || r?.shared?.code;
-    return shareText(c.text, { url: code ? roundLink(r) : null, copied: 'Copied. Paste it in the group text' });
+    const r = c.roundId ? state.rounds?.[c.roundId] : null;
+    return shareText(c.text, { url: r ? liveLinkFor(state, r, { money: countsMoney(r) }) : null, copied: 'Copied. Paste it in the group text' });
   };
   const off = () => {
     update(s => { s.settings.callouts = false; });

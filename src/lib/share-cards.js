@@ -20,6 +20,7 @@ import { cupHeadline, cupPoints } from './cup.js';
 import { HOLES_LABEL, challengeAsk, challengeState } from './challenges.js';
 import { cleanBetLabel } from './pair-bets.js';
 import { dayLabel } from './plans.js';
+import { amountsRule, shareAmountsOn } from './share.js';
 
 const first = n => String(n || '').trim().split(/\s+/)[0] || 'Someone';
 const list = names => (names.length <= 1 ? names.join('') : `${names.slice(0, -1).join(', ')} and ${names.at(-1)}`);
@@ -169,6 +170,23 @@ export function cupCardModel(state, trip, cup, { showAmounts = false, link = nul
 }
 
 // --------------------------- a challenge ------------------------------------
+
+/**
+ * Whose money a cup card carries, for its Show amounts rule (share.js amountsRule): everyone on the
+ * leaderboard, since once the cup is decided its stake is each person's result.
+ */
+export function cupPeople(state, cup) {
+  return (cup?.leaderboard || []).filter(p => p.id).map(p => ({ id: p.id, name: nameOf(state, p.id) }));
+}
+
+/**
+ * Whether a challenge shared with the group shows its stake: the Show amounts switch, and the one
+ * profile setting of the two in it (share.js amountsRule), the way a card does. Points always show.
+ */
+export function challengeAmountsShow(state, ch) {
+  const people = [ch?.from, ch?.to].filter(p => p?.who).map(p => ({ id: p.who, name: p.name }));
+  return amountsRule(state, { money: ch?.unit !== 'points', on: shareAmountsOn(state), people }).show;
+}
 
 /**
  * A challenge for the group thread (not the invite to the one challenged, which has its own words):
