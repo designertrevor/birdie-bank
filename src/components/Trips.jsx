@@ -543,21 +543,19 @@ function TripForm({ trip, onDone }) {
 }
 
 /**
- * One person or option to pick on a trip screen: the same selectable row as picking players for a
+ * One person or round to pick on a trip screen: the same selectable row as picking players for a
  * round (a pink ring and tint when picked, the round check on the right: a check when picked, a
- * plus when not, or an empty circle for one-of-a-kind picks with `single`). `lead` goes before the
- * words (an avatar), `extra` before the check (an amount).
+ * plus when not). `lead` goes before the words (an avatar).
  */
-export function PickRow({ on, onClick, lead = null, name, sub = null, extra = null, single = false, disabled = false, label, className = '' }) {
+export function PickRow({ on, onClick, lead = null, name, sub = null, disabled = false, label }) {
   return (
-    <button type="button" className={`list-item pick trip-pick ${on ? 'on' : ''} ${className}`.trim()} aria-pressed={single ? undefined : on} role={single ? 'radio' : undefined} aria-checked={single ? on : undefined} disabled={disabled} onClick={onClick} aria-label={label}>
+    <button type="button" className={`list-item pick trip-pick ${on ? 'on' : ''}`} aria-pressed={on} disabled={disabled} onClick={onClick} aria-label={label}>
       {lead}
       <span className="row-main">
         <span className="li-name">{name}</span>
         {sub && <span className="li-sub">{sub}</span>}
       </span>
-      {extra}
-      <span className={`li-check ${on ? 'on' : single ? '' : 'add'}`} aria-hidden="true">{(on || !single) && <Icon name={on ? 'check' : 'plus'} />}</span>
+      <span className={`li-check ${on ? 'on' : 'add'}`} aria-hidden="true"><Icon name={on ? 'check' : 'plus'} /></span>
     </button>
   );
 }
