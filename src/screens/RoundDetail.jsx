@@ -308,7 +308,7 @@ function GameBreakdown({ round, res, label = null }) {
           const who = s.leader === null ? (s.left === 0 ? 'Halved' : 'All square') : matchLabel(s, sn[s.leader]);
           return (
             <div key={l.key} className="leg-row">
-              <div className="leg-name">{l.press ? 'Press' : LEGS[l.leg].label}</div>
+              <div className="leg-name">{l.bye ? 'Bye' : l.press ? 'Press' : LEGS[l.leg].label}</div>
               <div className={`leg-winner ${s.leader === null ? 'leg-tie' : ''}`}>{l.press ? `${multi ? `${LEGS[l.leg].label} ` : ''}from H${holeAtPos(round, l.start)} · ` : ''}{who}</div>
               <div className={`leg-amt ${l.value === 0 ? 'zero' : ''}`}>{money(Math.abs(l.value))}</div>
             </div>
@@ -380,12 +380,24 @@ function GameBreakdown({ round, res, label = null }) {
         {res.detail.matches.map(m => {
           const s = m.status;
           const who = m.off ? 'Off: a player left' : !s.played ? 'Not played' : s.leader === null ? (s.left === 0 ? 'Halved' : 'All square') : matchLabel(s, pair(m.sides[s.leader]));
+          // Auto presses (a house rule) are shown under their match, so the match's own amount is the rest
+          const pressed = (m.presses || []).reduce((a, p) => a + p.value, 0);
+          const own = m.net - pressed;
           return (
-            <div key={m.index} className="leg-row">
-              <div className="leg-name">{m.seg.label}</div>
-              <div className={`leg-winner ${s.leader === null ? 'leg-tie' : ''}`}>{pair(m.sides[0])} v {pair(m.sides[1])} · {who}</div>
-              <div className={`leg-amt ${m.net === 0 ? 'zero' : ''}`}>{money(Math.abs(m.net))}</div>
-            </div>
+            <Fragment key={m.index}>
+              <div className="leg-row">
+                <div className="leg-name">{m.seg.label}</div>
+                <div className={`leg-winner ${s.leader === null ? 'leg-tie' : ''}`}>{pair(m.sides[0])} v {pair(m.sides[1])} · {who}</div>
+                <div className={`leg-amt ${own === 0 ? 'zero' : ''}`}>{money(Math.abs(own))}</div>
+              </div>
+              {(m.presses || []).map(p => (
+                <div key={p.start} className="leg-row">
+                  <div className="leg-name">Press</div>
+                  <div className={`leg-winner ${p.status.leader === null ? 'leg-tie' : ''}`}>From H{holeAtPos(round, p.start)} · {p.status.leader === null ? (p.status.left === 0 ? 'Halved' : 'All square') : matchLabel(p.status, pair(m.sides[p.status.leader]))}</div>
+                  <div className={`leg-amt ${p.value === 0 ? 'zero' : ''}`}>{money(Math.abs(p.value))}</div>
+                </div>
+              ))}
+            </Fragment>
           );
         })}
       </>
@@ -413,8 +425,8 @@ function GameBreakdown({ round, res, label = null }) {
         ))}
         {round.game === 'scramble' && <DrivesShortfall round={round} done={round.status === 'done'} />}
         {res.detail.pots && <>
-          {/* Front, back and total (a house rule): what each pot paid, and to whom */}
-          <div className="sec-label">Front, back and total</div>
+          {/* Front, back and total, or low gross too (house rules): what each pot paid, and to whom */}
+          <div className="sec-label">{res.detail.pots.some(p => p.key === 'front') ? 'Front, back and total' : 'Pots'}</div>
           {res.detail.pots.map(p => {
             // What each winner took out of the pot (their stake back and the rest), so a pot shared
             // by everyone over quota lists them all, even one who only got their stake back plus a bit
@@ -424,13 +436,15 @@ function GameBreakdown({ round, res, label = null }) {
               .filter(([, v]) => v > 0).sort((a, b) => b[1] - a[1]);
             return (
               <div key={p.key} className="leg-row">
-                <div className="leg-name">{p.key === 'total' ? (round.holes.length === 18 ? '18' : 'All') : p.label}</div>
+                <div className="leg-name">{p.key === 'total' ? (!res.detail.pots.some(x => x.key === 'front') ? 'Low net' : round.holes.length === 18 ? '18' : 'All') : p.label}</div>
                 <div className={`leg-winner ${won.length ? '' : 'leg-tie'}`}>{won.length ? won.map(([pid, v]) => (won.length > 1 ? `${first(names[pid])} ${money(v)}` : first(names[pid]))).join(', ') : 'All square'}</div>
                 <div className={`leg-amt ${won.length ? '' : 'zero'}`}>{money(won.reduce((a, [, v]) => a + v, 0))}</div>
               </div>
             );
           })}
         </>}
+        {res.detail.teamQuota && <TeamQuota round={round} teams={res.detail.teamQuota} names={names} />}
+        {res.detail.nextQuotas && <NextQuotas round={round} next={res.detail.nextQuotas} names={names} />}
       </>
     );
   }
@@ -464,7 +478,7 @@ function GameBreakdown({ round, res, label = null }) {
         {res.detail.rabbit.legs.map(l => (
           <div key={l.seg.label} className="leg-row">
             <div className="leg-name">{l.seg.label}</div>
-            <div className={`leg-winner ${!l.pays ? 'leg-tie' : ''}`}>{!l.done ? (l.pays ? `${names[l.holder]} holds it` : 'Loose') : l.pays ? `${names[l.holder]} held it at the end` : 'Loose at the end, no payout'}</div>
+            <div className={`leg-winner ${!l.pays ? 'leg-tie' : ''}`}>{!l.done ? (l.pays ? `${names[l.holder]} holds it` : 'Loose') : l.pays ? `${names[l.holder]} held it at the end` : 'Loose at the end, no payout'}{l.doubled && <div className="li-sub">Back nine doubles: {money(l.stake)} a player</div>}</div>
             <div className={`leg-amt ${l.pays ? '' : 'zero'}`}>{money(l.pays ? l.amount : l.stake * (l.payers.length - 1))}</div>
           </div>
         ))}
@@ -579,7 +593,7 @@ function GameBreakdown({ round, res, label = null }) {
             <div className="leg-name">{res.detail.snake.legs.length > 1 ? l.seg.label : 'Snake'}</div>
             <div className={`leg-winner ${!l.holder ? 'leg-tie' : ''}`}>
               {l.holder ? `${names[l.holder]} ${l.done ? 'held it at the end' : 'holds it'}` : 'Nobody three-putted'}
-              {l.count > 0 && <div className="li-sub">{l.count} three-putt{l.count === 1 ? '' : 's'} · worth {money(l.value)} a player</div>}
+              {l.count > 0 && <div className="li-sub">{l.count} three-putt{l.count === 1 ? '' : 's'} · worth {money(l.value)}{l.split ? ', split among the rest' : ' a player'}</div>}
             </div>
             <div className={`leg-amt ${l.holder ? '' : 'zero'}`}>{money(l.amount)}</div>
           </div>
@@ -766,4 +780,48 @@ export function Scorecard({ round, current, onHole }) {
 /** "Mike and Sue", "Mike, Sue and Al". */
 function listNames(names) {
   return names.length <= 1 ? names.join('') : `${names.slice(0, -1).join(', ')} and ${names.at(-1)}`;
+}
+
+/**
+ * Team quota (a Quota house rule): each team's points against its quotas added up, best first. The
+ * team furthest over took the pot.
+ */
+function TeamQuota({ round, teams, names }) {
+  const first = id => (names[id] || '').split(' ')[0];
+  const best = Math.max(...teams.map(t => t.over));
+  const sorted = [...teams].sort((a, b) => b.over - a.over);
+  const tenth = v => Math.round(v * 10) / 10;
+  return (
+    <>
+      <div className="sec-label">Team quota</div>
+      {sorted.map((t, i) => (
+        <div key={t.id} className="leg-row">
+          <div className="leg-name">{i + 1}</div>
+          <div className={`leg-winner ${t.over === best ? '' : 'leg-tie'}`}>{t.players.map(first).join(' & ')}{t.over === best && round.status === 'done' ? <span className="li-sub"> · took the pot</span> : null}</div>
+          <div className="leg-amt">{t.points} pts · quota {tenth(t.quota)} · {t.over > 0 ? '+' : ''}{tenth(t.over)}</div>
+        </div>
+      ))}
+    </>
+  );
+}
+
+/** "Quota moves after the round" (a Quota house rule): each player's quota for the next Quota round. */
+function NextQuotas({ round, next, names }) {
+  const rows = round.players.filter(p => next[p.id]);
+  return (
+    <div className="hr-extra">
+      <div className="eyebrow">Quotas for next time</div>
+      {rows.map(p => {
+        const n = next[p.id];
+        const d = n.next - n.quota;
+        return (
+          <div key={p.id} className="hr-extra-row">
+            <span><b>{(names[p.id] || '').split(' ')[0]}</b> {n.over > 0 ? `beat ${n.quota} by ${n.over}` : n.over < 0 ? `missed ${n.quota} by ${-n.over}` : `made ${n.quota} on the nose`}</span>
+            <span className={`hr-v ${d > 0 ? 'up' : d < 0 ? 'down' : ''}`}>{n.next}{d ? ` (${d > 0 ? '+' : '−'}${Math.abs(d)})` : ''}</span>
+          </div>
+        );
+      })}
+      <p className="field-help">The next Quota round with this rule on starts each of you there.</p>
+    </div>
+  );
 }

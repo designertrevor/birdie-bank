@@ -1100,6 +1100,11 @@ export function bankerPress(round, hole) {
   return bs?.par3Triple && hole?.par === 3 ? 3 : 2;
 }
 
+/** Whether the banker's press back takes in every bet on `hole` (house rule "the banker presses everyone"). */
+export function bankerPressAll(round, hole) {
+  return !!settingsAt(round, posOf(round, hole)).banker?.pressAll;
+}
+
 export function bankerHoleSetup(round, idx) {
   const hole = round.holes[idx];
   const existing = round.banker[hole.no];

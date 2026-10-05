@@ -2642,3 +2642,19 @@ button.ch-main:active { transform: scale(.98); }
 .big-setup-group .field-label { margin-top: 4px; }
 .big-team-row { padding: 4px 0; }
 .big-team-row .tr-sub { display: block; margin-bottom: 6px; }
+
+/* ---------------------------------------------------------------------------
+   House rules for every game (overnight 9, 2026-10-05)
+   --------------------------------------------------------------------------- */
+/* Penalty dots: setup picks them with the usual selection chip; tapped on a player while scoring, they
+   read as a cost, in the loss colors (both themes) */
+.pill-btn.sm.penalty.on { background: var(--loss-bg); color: var(--loss); box-shadow: inset 0 0 0 2px var(--loss); }
+/* What the results add for the new rules: team quota, quotas for next time, presses and byes */
+.hr-extra { margin: 0 16px 16px; padding: 14px 16px; border-radius: 16px; background: var(--surface); }
+.hr-extra .eyebrow { margin-bottom: 10px; }
+.hr-extra-row { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; padding: 6px 0; font-size: 15px; color: var(--body); }
+.hr-extra-row + .hr-extra-row { border-top: 1px solid var(--line); }
+.hr-extra-row b { color: var(--ink); font-weight: 700; }
+.hr-extra-row .hr-v { flex-shrink: 0; font-variant-numeric: tabular-nums; font-weight: 600; color: var(--ink); }
+.hr-extra-row .hr-v.up { color: var(--win); }
+.hr-extra-row .hr-v.down { color: var(--loss); }

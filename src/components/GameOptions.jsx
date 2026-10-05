@@ -17,8 +17,10 @@ const OFF = { teamScore: 'best', split: 'top' };
  * `inPoints`: a points or reward round, so every bet and example reads in points ("5 pts").
  * `teamSize`: the smallest team's size in a team game, when the teams are known (Best ball and
  * Shamble only offer "best two" with teams of three or four; null on the Game defaults screen).
+ * `canTeam`: false in a round under way that has no teams, where Team quota can't be turned on (its
+ * teams are picked in setup).
  */
-export function GameOptions({ game, get, set, onAmount, holesCount = 18, compact = false, firstName = null, players = null, inPoints = false, teamSize = null }) {
+export function GameOptions({ game, get, set, onAmount, holesCount = 18, compact = false, firstName = null, players = null, inPoints = false, teamSize = null, canTeam = true }) {
   const money = inPoints ? points : dollars;
   const n = players || Math.min(Math.max(4, GAMES[game]?.min || 2), GAMES[game]?.max || 4);
   const others = n - 1;
@@ -55,6 +57,13 @@ export function GameOptions({ game, get, set, onAmount, holesCount = 18, compact
   const payout = (path, unit) => seg(path, [{ value: 'pot', label: 'Winner takes the pot' }, { value: 'per', label: `Pay per ${unit}` }], 'Payout');
   const potExample = path => `With ${n} players the pot is ${money(get(path) * n)}, so the winner is up ${money(get(path) * others)}.`;
   const perExample = (path, unit) => `Each ${unit} wins ${money(get(path))} from every other player: finish 3 ${unit}s better than someone and you’re up ${money(get(path) * 3)} on them.`;
+  // The bye (2026-10-05): a match closed out early plays the holes left as a bet of its own
+  const bye = g => (
+    <div className="block">
+      {seg(`${g}.bye`, [{ value: 'off', label: 'Off' }, { value: 'half', label: 'Half the bet' }, { value: 'full', label: 'The bet' }], 'The bye', true)}
+      {help({ off: 'A match that’s closed out early is over.', half: `Win 5&4 and the last four holes are a new bet for half as much${g === 'nassau' ? ', on any leg closed out early' : ''}.`, full: `Win 5&4 and the last four holes are a new bet for the same${g === 'nassau' ? ', on any leg closed out early' : ''}.` }[get(`${g}.bye`) || 'off'])}
+    </div>
+  );
   const presses = (prefix, offText = 'Just the one bet.') => (
     <div className="block">
       {seg(`${prefix}.pressMode`, [{ value: 'off', label: 'Off' }, { value: 'manual', label: 'Manual' }, { value: 'auto', label: 'Auto' }])}
@@ -89,6 +98,7 @@ export function GameOptions({ game, get, set, onAmount, holesCount = 18, compact
           {help({ off: 'A birdie pays the same as any win.', gross: 'Win with a real birdie and your bet doubles. An eagle doubles it again (4×). Strokes don’t make a birdie.', net: 'Win with a birdie after strokes and your bet doubles. A net eagle doubles it again (4×).' }[b.birdies || 'off'])}
         </div>
         {toggle('banker.par3Triple', 'Par 3 presses triple', 'On a par 3 a press is 3× instead of 2×, and the banker’s press back makes it 9×')}
+        {toggle('banker.pressAll', 'Banker presses everyone', 'The banker’s press back doubles every bet on the hole, not only the ones that were pressed')}
       </>;
     }
     case 'nassau':
@@ -107,6 +117,7 @@ export function GameOptions({ game, get, set, onAmount, holesCount = 18, compact
         {toggle('nassau.turnPress', 'Press at the turn', `Whoever lost the ${holesCount === 9 ? 'first 4' : 'front 9'} can press the ${holesCount === 9 ? 'last 5' : 'back 9'}, however far down`)}
         {get('nassau.pressMode') !== 'off' && toggle('nassau.noLastPress', 'No press on the last hole', holesCount === 9 ? 'Nobody can start a press on the 4th or the 9th' : 'Nobody can start a press on the 9th or the 18th')}
         {bothBalls('nassau')}
+        {bye('nassau')}
       </>;
     case 'skins': {
       const pot = get('skins.payout') === 'pot';
@@ -137,6 +148,7 @@ export function GameOptions({ game, get, set, onAmount, holesCount = 18, compact
         {get('skins.kind') !== 'gross' && toggle('skins.canadian', 'Canadian skins', 'A natural birdie beats a net birdie on the same hole')}
         {!pot && holesCount === 18 && toggle('skins.backDouble', 'Back nine doubles', `A skin on holes 10 to 18 is worth ${money((get('skins.value') || 0) * 2)}. A front skin carried onto the back keeps its value`)}
         {toggle('skins.validate', 'Validate skins', `Keep a skin only with net par or better on the next hole. Miss, and it goes back ${get('skins.carryover') ? 'into the carry' : 'unclaimed'}.`)}
+        {toggle('skins.birdieDouble', 'Birdies win two skins', pot ? 'Win a hole with a real birdie and its skin counts as two shares of the pot' : `Win a hole with a real birdie and its skin counts as two, ${money((get('skins.value') || 0) * 2)} from each player`)}
       </>;
     }
     case 'wolf':
@@ -157,6 +169,7 @@ export function GameOptions({ game, get, set, onAmount, holesCount = 18, compact
         )}
         {toggle('wolf.carry', 'Ties carry', 'A tied hole’s points ride on to the next hole that’s won')}
         {holesCount === 18 && toggle('wolf.lastWolf', 'Last place is wolf on 17 and 18', 'Whoever is furthest down gets the last two holes as wolf, to catch up')}
+        {toggle('wolf.birdieDouble', 'Birdies double', 'Win a hole with a real birdie on your side and it pays double')}
       </>;
     case 'match':
       return <>
@@ -172,6 +185,7 @@ export function GameOptions({ game, get, set, onAmount, holesCount = 18, compact
         {label('Presses')}
         {presses('match')}
         {bothBalls('match')}
+        {bye('match')}
       </>;
     case 'hammer': {
       const max = get('hammer.max') ?? 3;
@@ -186,6 +200,7 @@ export function GameOptions({ game, get, set, onAmount, holesCount = 18, compact
           {help(get('hammer.who') === 'trailing' ? 'Only the side behind can throw the first hammer on a hole (either side when it’s level). Then it goes back and forth.' : 'Either side can throw the first hammer. Then it goes back and forth: nobody hammers twice in a row.')}
         </div>
         {toggle('hammer.birdie', 'Birdie hammer', 'Win a hole with a real birdie and that’s one more hammer: it pays double')}
+        {toggle('hammer.carry', 'Halved holes carry', `A halved hole rides on the next, hammers and all: halve a ${money((get('hammer.stake') || 0) * 2)} hole and the next starts at ${money((get('hammer.stake') || 0) * 3)}`)}
         {note('Each hole goes to the lower net score (best ball with partners). Hammer to double the hole. The other side plays on at double, or folds and pays what it was worth before.')}
       </>;
     }
@@ -197,6 +212,7 @@ export function GameOptions({ game, get, set, onAmount, holesCount = 18, compact
         {toggle('vegas.birdieFlip', 'Birdies flip', 'A birdie flips the other team’s number (45 becomes 54)')}
         {toggle('vegas.birdieDouble', 'Birdies double', 'One team alone makes a real birdie? The hole’s points double. An eagle triples them')}
         {toggle('vegas.daytona', 'Daytona', 'A team with no real par or better puts its high number first: 5 and 6 make 65')}
+        {toggle('vegas.max9', 'No double digits', 'A score counts as 9 at most, so a 4 and an 11 make 49, not 114')}
         {note('Each hole, each player on the losing team pays the point difference.')}
       </>;
     case 'sixes':
@@ -211,6 +227,7 @@ export function GameOptions({ game, get, set, onAmount, holesCount = 18, compact
           {help(get('sixes.mode') === 'holes' ? `Each ${holesCount === 9 ? 'three' : 'six'}-hole match pays the bet for every hole a team finishes up.` : `Each ${holesCount === 9 ? 'three' : 'six'}-hole match pays the bet to each winner. ${get('sixes.carry') ? 'A halved match carries its bet into the next one.' : 'Halved matches push.'}`)}
         </div>
         {get('sixes.mode') !== 'holes' && toggle('sixes.carry', 'Halved matches carry', `A halved match adds its bet to the next one. Halve the last one and nobody gets it`)}
+        {get('sixes.mode') !== 'holes' && toggle('sixes.press', 'Auto press at 2 down', `In each match, a pair 2 down starts a new ${money(get('sixes.stake'))} bet over the holes left in it`)}
         {bothBalls('sixes')}
       </>;
     case 'scramble':
@@ -236,33 +253,51 @@ export function GameOptions({ game, get, set, onAmount, holesCount = 18, compact
         </div>
         {toggle('stroke.cap', 'Net double bogey max', 'The most a hole can cost you, like for your handicap. A blow-up hole won’t sink your day')}
         {fbt('stroke', 'Low net on the front, the back and the 18')}
+        {get('stroke.payout') === 'pot' && toggle('stroke.gross', 'Low gross too', `A second pot, ${money(get('stroke.stake'))} each, for the lowest score before strokes`)}
       </>;
-    case 'stableford':
+    case 'stableford': {
+      const stablefordTable = get('stableford.table') === 'chicago' ? 'chicago' : get('stableford.modified') ? 'modified' : 'standard';
       return <>
         {label('Bets')}
         {amount('stableford.stake', get('stableford.payout') === 'pot' ? 'Each player puts in' : 'Per point', { label: get('stableford.payout') === 'pot' ? 'Each player puts in' : 'Per point' })}
         {example(get('stableford.payout') === 'pot' ? potExample('stableford.stake') : perExample('stableford.stake', 'point'))}
         <div className="block">
           {payout('stableford.payout', 'point')}
-          {seg('stableford.modified', [{ value: false, label: 'Standard' }, { value: true, label: 'Modified' }], 'Points')}
-          {help(get('stableford.modified') ? 'Modified: double bogey −3, bogey −1, par 0, birdie 2, eagle 5, albatross 8.' : 'Standard: double bogey 0, bogey 1, par 2, birdie 3, eagle 4, albatross 5. Uses net scores.')}
+          {/* Big birdies (2026-10-05) is a third table: `table` 'chicago', with `modified` off */}
+          <div className="eyebrow" style={{ margin: '14px 0 8px' }}>Points</div>
+          <Segmented label="Points" className="press-mode-row" btn="pm-btn" value={stablefordTable} onChange={v => { set('stableford.table', v === 'chicago' ? 'chicago' : 'standard'); set('stableford.modified', v === 'modified'); }}
+            options={[{ value: 'standard', label: 'Standard' }, { value: 'modified', label: 'Modified' }, { value: 'chicago', label: 'Big birdies' }]} />
+          {help({ modified: 'Modified: double bogey −3, bogey −1, par 0, birdie 2, eagle 5, albatross 8.', chicago: 'Big birdies: double bogey 0, bogey 1, par 2, birdie 4, eagle 8, albatross 16. A birdie is worth two pars. Uses net scores.', standard: 'Standard: double bogey 0, bogey 1, par 2, birdie 3, eagle 4, albatross 5. Uses net scores.' }[stablefordTable])}
         </div>
         {fbt('stableford', 'Most points on the front, the back and the 18')}
       </>;
-    case 'quota':
+    }
+    case 'quota': {
+      const stableTable = get('quota.table') === 'stableford';
+      const pot = get('quota.payout') === 'pot';
+      // Team quota (2026-10-05) is one pot between teams, so it takes the place of the other pot rules
+      const team = pot && !!get('quota.team') && n >= 4;
+      const adjust = get('quota.adjust') || 'off';
       return <>
         {label('Bets')}
-        {amount('quota.stake', get('quota.payout') === 'pot' ? 'Each player puts in' : 'Per point', { label: get('quota.payout') === 'pot' ? 'Each player puts in' : 'Per point' })}
-        {example(get('quota.payout') === 'pot' ? potExample('quota.stake') : perExample('quota.stake', 'point'))}
+        {amount('quota.stake', pot ? 'Each player puts in' : 'Per point', { label: pot ? 'Each player puts in' : 'Per point' })}
+        {example(pot ? (team ? `With ${n} players the pot is ${money(get('quota.stake') * n)}, and the team furthest over its quota splits it.` : potExample('quota.stake')) : perExample('quota.stake', 'point'))}
         <div className="block">
           {payout('quota.payout', 'point')}
-          {help(`Your quota is 36 minus your course handicap (18 minus it over nine). Gross scores earn ${get('quota.minus') ? 'double bogey −1, ' : ''}bogey 1, par 2, birdie 4, eagle 8. Best finish against quota wins. Stop early and the quota shrinks to the holes played.`)}
+          {seg('quota.table', [{ value: 'chicago', label: 'Chicago' }, { value: 'stableford', label: 'Stableford' }], 'Points')}
+          {help(`Your quota is 36 minus your course handicap (18 minus it over nine). Gross scores earn ${get('quota.minus') ? 'double bogey −1, ' : ''}bogey 1, par 2, ${stableTable ? 'birdie 3, eagle 4' : 'birdie 4, eagle 8'}. Best finish against quota wins. Stop early and the quota shrinks to the holes played.`)}
         </div>
         {label('House rules')}
         {toggle('quota.minus', 'Double bogey costs a point', 'Double bogey or worse is −1 instead of 0')}
-        {fbt('quota', 'Each nine against half your quota, and the 18 against all of it')}
-        {get('quota.payout') === 'pot' && toggle('quota.split', 'Everyone over quota shares', 'The pot is split by points over quota: +4 gets twice what +2 does. Nobody over, and the best finish takes it', 'over')}
+        {!team && fbt('quota', 'Each nine against half your quota, and the 18 against all of it')}
+        {pot && !team && toggle('quota.split', 'Everyone over quota shares', 'The pot is split by points over quota: +4 gets twice what +2 does. Nobody over, and the best finish takes it', 'over')}
+        {pot && n >= 4 && (canTeam || get('quota.team')) && toggle('quota.team', 'Team quota', canTeam ? 'Partners add up their points and their quotas. The team furthest over takes the pot' : 'Teams are picked when the round is set up, so this one plays each player for themselves')}
+        <div className="block">
+          {seg('quota.adjust', [{ value: 'off', label: 'Off' }, { value: 'one', label: '1 point' }, { value: 'half', label: 'Half' }], 'Quota moves after the round', true)}
+          {help({ off: 'Everyone’s quota comes from their handicap every time.', one: 'Beat your quota and it goes up 1 next time; miss it and it comes down 1. Next time picks it up for you.', half: 'Your quota moves half of what you beat it or missed it by: +6 makes it 3 higher next time. Next time picks it up for you.' }[adjust])}
+        </div>
       </>;
+    }
     case 'nines':
       return <>
         {label('Bets')}
@@ -299,13 +334,25 @@ export function GameOptions({ game, get, set, onAmount, holesCount = 18, compact
         <div className="block">
           <div className="eyebrow" style={{ marginBottom: 10 }}>Dots in play</div>
           <div className="chip-row" style={{ padding: 0 }}>
-            {Object.entries(DOT_KINDS).map(([k, d]) => (
+            {Object.entries(DOT_KINDS).filter(([, d]) => !d.penalty).map(([k, d]) => (
               <button key={k} className={`pill-btn ${get(`dots.kinds.${k}`) ? 'on' : ''}`} title={d.help} aria-pressed={!!get(`dots.kinds.${k}`)} onClick={() => set(`dots.kinds.${k}`, !get(`dots.kinds.${k}`))}>
                 {get(`dots.kinds.${k}`) && <Icon name="check" />} {d.name}
               </button>
             ))}
           </div>
           {help(`Every dot is paid by each of the other players. Tap a player’s dots as they happen.${dotsNote(get('dots.kinds')) ? ` ${dotsNote(get('dots.kinds'))}` : ''}`)}
+        </div>
+        {/* Penalty dots (2026-10-05): off unless picked, and each one costs a dot */}
+        <div className="block">
+          <div className="eyebrow" style={{ marginBottom: 10 }}>Penalty dots</div>
+          <div className="chip-row" style={{ padding: 0 }} role="group" aria-label="Penalty dots">
+            {Object.entries(DOT_KINDS).filter(([, d]) => d.penalty).map(([k, d]) => (
+              <button key={k} className={`pill-btn penalty ${get(`dots.kinds.${k}`) === true ? 'on' : ''}`} title={d.help} aria-pressed={get(`dots.kinds.${k}`) === true} onClick={() => set(`dots.kinds.${k}`, get(`dots.kinds.${k}`) !== true)}>
+                {get(`dots.kinds.${k}`) === true && <Icon name="check" />} {d.name}
+              </button>
+            ))}
+          </div>
+          {help('A penalty dot costs you: you pay each of the other players one dot.')}
         </div>
       </>;
     case 'rabbit':
@@ -319,6 +366,7 @@ export function GameOptions({ game, get, set, onAmount, holesCount = 18, compact
         </div>
         {toggle('rabbit.tiesFree', 'Ties set it loose', 'Off, a halved hole changes nothing')}
         {holesCount === 18 && toggle('rabbit.sixes', 'Three rabbits', 'A rabbit every six holes instead of each nine: paid after 6, 12 and 18')}
+        {holesCount === 18 && !get('rabbit.sixes') && toggle('rabbit.backDouble', 'Back nine doubles', `The back nine rabbit is worth ${money((get('rabbit.stake') || 0) * 2)} from each player`)}
         {note(holesCount === 9 ? 'Whoever holds the rabbit after the last hole wins the bet from everyone. Stop early and whoever holds it then is paid.' : get('rabbit.sixes') ? 'Whoever holds the rabbit after holes 6, 12 and 18 wins the bet from everyone each time. Stop early and whoever holds it then is paid.' : 'Whoever holds the rabbit after hole 9 and again after hole 18 wins the bet from everyone. Stop early and whoever holds it then is paid.')}
       </>;
     case 'snake': {
@@ -348,6 +396,7 @@ export function GameOptions({ game, get, set, onAmount, holesCount = 18, compact
         </div>
         {holesCount === 18 && toggle('snake.nines', 'Each nine', 'Settle the snake at the turn, then a fresh one for the back')}
         {growth !== 'flat' && toggle('snake.fourPutt', 'Four-putts count twice', growth === 'grow' ? 'A four-putt takes the snake and adds two three-putts to it' : 'A four-putt takes the snake and doubles it twice')}
+        {toggle('snake.split', 'Split the snake', `Whoever holds it pays the snake once, and the other ${others} share it`)}
         {note('Three-putt and you take the snake. The next three-putt takes it off you. Whoever holds it at the end pays everyone.')}
       </>;
     }
@@ -431,9 +480,9 @@ export function SixesPreview({ names, holesCount }) {
 
 const LETTERS = ['A', 'B', 'C', 'D'];
 
-/** Tap a letter to move a player between teams. */
-export function TeamPicker({ game, picked, names, teams, setTeams }) {
-  const cfg = GAMES[game]?.teams;
+/** Tap a letter to move a player between teams. `cfg` stands in for the game's own teams (team quota, see teams.js). */
+export function TeamPicker({ game, picked, names, teams, setTeams, cfg: own }) {
+  const cfg = own || GAMES[game]?.teams;
   if (!cfg || !teams) return null;
   const canChooseCount = Array.isArray(cfg.count);
   const count = teams.length;
@@ -445,7 +494,7 @@ export function TeamPicker({ game, picked, names, teams, setTeams }) {
     // Rebalance anything that was on a dropped team
     setTeams(next);
   };
-  const problem = teamsProblem(game, teams, picked);
+  const problem = teamsProblem(game, teams, picked, cfg);
   return (
     <>
       {canChooseCount && (

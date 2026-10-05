@@ -8,8 +8,8 @@ import { useState } from 'react';
 import { Icon, Segmented, Sheet, useUI } from './ui.jsx';
 import { SixesPreview, TeamPicker } from './GameOptions.jsx';
 import { update } from '../lib/store.js';
-import { gameView, pressMode } from '../lib/round.js';
-import { teamsProblem } from '../lib/teams.js';
+import { gameView, pressMode, teamQuotaOn } from '../lib/round.js';
+import { QUOTA_TEAMS, teamsProblem } from '../lib/teams.js';
 import {
   changeHammerWho, changeOrder, changeTeams, lineupKind, lineupLabel, orderNow, orderRuns, pressesOn, teamGroups, teamsChangeProblem, teamsLocked,
 } from '../lib/lineup.js';
@@ -40,7 +40,7 @@ export function LineupSheet({ round, onClose }) {
   const locked = kind === 'teams' ? teamsLocked(round) : null;
   const problem = kind === 'teams' && !locked ? teamsChangeProblem(round, groups) : null;
   // The split itself is checked under the team letters; a side bet that needs two apart is said here
-  const betClash = problem && !teamsProblem(game, groups, main.players.map(p => p.id)) ? problem : null;
+  const betClash = problem && !teamsProblem(game, groups, main.players.map(p => p.id), teamQuotaOn(round) ? QUOTA_TEAMS : undefined) ? problem : null;
   const build = r => {
     let next = r;
     if (kind === 'order') next = changeOrder(next, ids);
@@ -102,7 +102,7 @@ export function LineupSheet({ round, onClose }) {
       {kind === 'teams' && groups && (
         locked
           ? <p className="field-help" style={{ padding: '0 20px' }}>{groups.map((g, i) => `${'ABCD'[i]}: ${g.map(first).join(' & ')}`).join(' · ')}</p>
-          : <TeamPicker game={game} picked={main.players.map(p => p.id)} names={names} teams={groups} setTeams={setGroups} />
+          : <TeamPicker game={game} picked={main.players.map(p => p.id)} names={names} teams={groups} setTeams={setGroups} cfg={teamQuotaOn(round) ? QUOTA_TEAMS : undefined} />
       )}
       {betClash && <p className="hint-card warn"><Icon name="warning" fill /> {betClash}</p>}
       {pressNote && <p className="field-help" style={{ padding: '0 20px' }}>{pressNote}</p>}

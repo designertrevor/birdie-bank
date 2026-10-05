@@ -5,9 +5,9 @@ import { update, uid } from '../lib/store.js';
 import {
   hammerOptions, hammerTable, holeAtPos, holeComplete, nassauAmounts, nassauPressOptions, nassauWinners, playersOn, pointsTable, pressMode, rabbitTable,
   roundLegs, sideNames, sides, sixesMatches, snakeTable, totalsTable, vegasPreview, vegasTable, scorers, netFor, playsHole, posOf, settingsAt, teamTable,
-  POT_NONE, potHoles, potTable, greenieCarryBefore,
+  POT_NONE, potHoles, potTable, greenieCarryBefore, teamQuotaTable,
 } from '../lib/round.js';
-import { nassauBets } from '../lib/golf.js';
+import { byeBets, nassauBets } from '../lib/golf.js';
 import { DOT_KINDS, DOT_PARS, scoreDots } from '../lib/games.js';
 import { buzz } from '../lib/delight.js';
 import { unitFmt } from '../lib/play-for.js';
@@ -28,7 +28,9 @@ export function MatchPanel({ round, hole, readOnly = false }) {
   // Three legs (a Nassau, or a team game bet like one) name the leg in presses and toasts
   const multi = legs.length > 1;
   const pos = round.holes.findIndex(h => h.no === hole.no) + 1;
-  const bets = nassauBets(winners, round.presses, nassauAmounts(round), LEGS);
+  // The bye (a house rule for Nassau and Match play): a leg closed out early plays its last holes as a bet of their own
+  const byes = round.game === 'nassau' || round.game === 'match' ? byeBets(winners, nassauAmounts(round), LEGS, round.settings[round.game]?.bye || 'off') : [];
+  const bets = nassauBets(winners, [...round.presses, ...byes], nassauAmounts(round), LEGS);
   const names = sideNames(round);
   // One match fills the row, so it says the leader's name; Nassau's three tiles use a letter
   const short = names.map((n, i) => (round.teams ? ['A', 'B'][i] : round.game === 'match' ? n.split(' ')[0] : n.charAt(0).toUpperCase()));
@@ -67,9 +69,9 @@ export function MatchPanel({ round, hole, readOnly = false }) {
       <div className="match-status">{legs.map(tile)}</div>
       {activePresses.length > 0 && (
         <div className="press-bar">
-          <span className="press-bar-lbl">Presses</span>
+          <span className="press-bar-lbl">{activePresses.every(p => p.bye) ? 'The bye' : activePresses.some(p => p.bye) ? 'Presses and the bye' : 'Presses'}</span>
           {activePresses.map(p => (
-            <span key={p.key} className="press-chip">{multi ? `${LEGS[p.leg].label} ` : ''}from H{holeAtPos(round, p.start)}: {p.status.leader === null ? 'All square' : `${short[p.status.leader]} ${p.status.by} up`}</span>
+            <span key={p.key} className="press-chip">{p.bye ? 'Bye: ' : ''}{multi ? `${LEGS[p.leg].label} ` : ''}from H{holeAtPos(round, p.start)}: {p.status.leader === null ? 'All square' : `${short[p.status.leader]} ${p.status.by} up`}</span>
           ))}
         </div>
       )}
@@ -216,6 +218,16 @@ export function ChipsPanel({ icon, label, items, color = 'var(--lav)' }) {
 export function TotalsPanel({ round }) {
   const t = totalsTable(round);
   const played = Math.max(0, ...t.map(x => x.played));
+  // Team quota (a Quota house rule): the teams against their quotas added up, as the pot is played
+  const teams = teamQuotaTable(round, t);
+  if (teams.length) {
+    const sorted = [...teams].sort((a, b) => b.over - a.over);
+    const tenth = v => Math.round(v * 10) / 10;
+    const tied = played ? sorted.filter(x => x.over === sorted[0].over) : [];
+    const nameOf = x => x.players.map(pid => firstName(round.players.find(p => p.id === pid)?.name || '')).join(' & ');
+    const lead = !played ? 'Nobody’s ahead yet' : tied.length === sorted.length ? 'All level' : tied.length > 1 ? `${tied.length} teams tied for the lead` : `${nameOf(sorted[0])} lead`;
+    return <ChipsPanel icon="target" label={`Team quota · ${played} hole${played === 1 ? '' : 's'}`} items={sorted.map((x, i) => ({ id: x.id, name: nameOf(x), value: `${x.over > 0 ? '+' : ''}${tenth(x.over)}`, lead: i === 0 ? lead : null }))} />;
+  }
   const lowerWins = round.game === 'stroke';
   // To par with a real minus sign, as the rest of the app writes it
   const fmt = x => (round.game === 'stroke' ? (x.toPar === 0 ? 'E' : x.toPar > 0 ? `+${x.toPar}` : `−${-x.toPar}`) : round.game === 'quota' ? `${x.total}/${x.quota}` : `${x.total}`);
@@ -373,7 +385,7 @@ export function HammerPanel({ round, hole, marks, setMarks, readOnly = false }) 
   return (
     <div className="wolf-panel">
       <div className="bl" style={{ marginBottom: 8, display: 'flex', justifyContent: 'space-between', gap: 8 }}>
-        <span><Icon name="hammer" fill /> This hole: <strong>{money(mark.conceded != null ? value / 2 : value)}</strong>{n ? ` · ${n} hammer${n === 1 ? '' : 's'}` : ''}{birdieRule && mark.conceded == null ? ' · a winning birdie doubles it' : ''}</span>
+        <span><Icon name="hammer" fill /> This hole: <strong>{money(mark.conceded != null ? value / 2 : value)}</strong>{n ? ` · ${n} hammer${n === 1 ? '' : 's'}` : ''}{row?.carried ? ` · ${money(row.carried)} carried in` : ''}{birdieRule && mark.conceded == null ? ' · a winning birdie doubles it' : ''}</span>
         <span>{before === 0 ? 'All square' : `${short[before > 0 ? 0 : 1]} +${money(Math.abs(before))}`}</span>
       </div>
       {status && <p className="bl" style={{ margin: '0 0 8px', fontWeight: 500 }} aria-live="polite">{status}</p>}
@@ -455,7 +467,7 @@ export function DotsRow({ round, player, hole, marks, setMarks, gross, label = n
     <div className="dots-row" role="group" aria-label={label || `${player.name.split(' ')[0]}’s dots`}>
       {auto > 0 && <span className="pill-btn sm auto"><Icon name="bird" fill /> {auto === 2 ? 'Eagle · 2 dots' : 'Birdie'}</span>}
       {kinds.map(k => (
-        <button key={k} className={`pill-btn sm ${mine.includes(k) ? 'on' : ''}`} aria-pressed={mine.includes(k)} title={DOT_KINDS[k].help} onClick={() => toggle(k)}>{DOT_KINDS[k].name}{k === 'greenie' && riding ? ` ×${riding + 1}` : ''}</button>
+        <button key={k} className={`pill-btn sm ${DOT_KINDS[k].penalty ? 'penalty' : ''} ${mine.includes(k) ? 'on' : ''}`} aria-pressed={mine.includes(k)} title={DOT_KINDS[k].help} onClick={() => toggle(k)}>{DOT_KINDS[k].name}{DOT_KINDS[k].penalty ? ' −1' : ''}{k === 'greenie' && riding ? ` ×${riding + 1}` : ''}</button>
       ))}
     </div>
   );
