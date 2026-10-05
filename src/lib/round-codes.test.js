@@ -28,7 +28,11 @@ function fakeServer({ locked }) {
     eq(k, v) { this.filters[k] = v; return this; }
     maybeSingle() { this.single = true; return this; }
     setHeader(k, v) { this.headers = { ...this.headers, [k.toLowerCase()]: v }; return this; }
-    then(res, rej) { return Promise.resolve().then(() => this.run()).then(res, rej); }
+    // A slow read (server.slow ms) reads the server when it's sent and answers late, the way a slow network does
+    then(res, rej) {
+      if (this.op === 'select' && server.slow) { const out = this.run(); return new Promise(r => setTimeout(() => r(out), server.slow)).then(res, rej); }
+      return Promise.resolve().then(() => this.run()).then(res, rej);
+    }
     run() {
       requests.push({ table: this.table, op: this.op, code: this.filters.code ?? this.rows?.[0]?.code, header: this.headers[CODE_HEADER] });
       const h = this.headers;
@@ -86,7 +90,8 @@ function fakeServer({ locked }) {
     channel,
     removeChannel: ch => { ch.removed = true; return Promise.resolve('ok'); },
   };
-  return { db, rounds, holes, requests, channels };
+  const server = { db, rounds, holes, requests, channels, slow: 0 };
+  return server;
 }
 
 for (const locked of [false, true]) {
@@ -286,4 +291,60 @@ test('the join link preview reads the round with its code in the header', async 
   assert.ok(read, 'it reads the round');
   assert.equal(read.headers['x-round-code'], 'ABCDEF');
   assert.match(read.url, /code=eq\.ABCDEF/);
+});
+
+// A poke's fetch that is still out when a newer change to the same hole lands must never be told last
+async function pokeRace(locked) {
+  const s = fakeServer({ locked });
+  const a = supabaseAdapter(s.db, { pollMs: 0 });
+  await a.create('ABCDEF', { v: 1 }, { 7: { s: { me: 4 } } });
+  const told = [];
+  const stop = a.subscribe('ABCDEF', ev => { if (ev.type === 'hole' && ev.holeNo === 7) told.push(ev.data.s.me); });
+  await wait();
+  const ch = s.channels[0];
+  // On the open server table changes are already coming through
+  if (!locked) ch.table('live_holes', { eventType: 'UPDATE', new: { code: 'ABCDEF', hole_no: 1, data: { s: {} } } });
+  s.slow = 30;
+  ch.broadcast('poke', { kind: 'hole', holeNo: 7 }); // the keeper wrote 4, and this fetch is slow
+  await wait();
+  s.slow = 0;
+  s.holes.set('ABCDEF:7', { s: { me: 5 } }); // the keeper corrects it to 5
+  if (!locked) ch.table('live_holes', { eventType: 'UPDATE', new: { code: 'ABCDEF', hole_no: 7, data: { s: { me: 5 } } } });
+  else ch.broadcast('poke', { kind: 'hole', holeNo: 7 });
+  await wait(60);
+  stop();
+  return told;
+}
+
+test('the open server: a slow poke fetch never lands after a newer table change, and pokes are left to the table changes', async () => {
+  assert.deepEqual(await pokeRace(false), [5]);
+});
+
+test('the locked server: a slow poke fetch overtaken by a newer poke for the same hole is dropped', async () => {
+  assert.deepEqual(await pokeRace(true), [5]);
+});
+
+test('the locked server: the check still heals a hole whose poke went missing, and leaves a part heard about meanwhile', async () => {
+  const s = fakeServer({ locked: true });
+  const a = supabaseAdapter(s.db, { pollMs: 20 });
+  await a.create('ABCDEF', { v: 1 }, { 7: { s: { me: 4 } } });
+  const told = [];
+  const stop = a.subscribe('ABCDEF', ev => { if (ev.type === 'hole') told.push([ev.holeNo, ev.data.s.me]); });
+  await wait(30);
+  assert.deepEqual(told, [[7, 4]]);
+  // A missed poke: the check heals it
+  s.holes.set('ABCDEF:7', { s: { me: 5 } });
+  await wait(30);
+  assert.deepEqual(told.at(-1), [7, 5]);
+  // A slow check reads 6, then a poke for 7 brings the newer 3 first: the check's 6 is dropped
+  told.length = 0;
+  s.holes.set('ABCDEF:7', { s: { me: 6 } });
+  s.slow = 15;
+  await wait(12);
+  s.slow = 0;
+  s.holes.set('ABCDEF:7', { s: { me: 3 } });
+  s.channels[0].broadcast('poke', { kind: 'hole', holeNo: 7 });
+  await wait(10);
+  stop();
+  assert.equal(told.at(-1)[1], 3);
 });

@@ -17,7 +17,10 @@ import { holeAllowed, lockTrack, lockedMeta, removeAllowed } from './keeper-lock
 // the code. A phone also hears its own write back (the server's copy, which the keeper lock may
 // have kept), and while a round is open, phones that hear nothing from the table changes check
 // again every POLL_MS in case a poke went missing. On a server without the SQL the table changes
-// still come through as before.
+// still come through as before, and pokes are left to them, since a table change carries the data.
+//
+// Fetches can come back out of order: a poke's fetch that started before a newer change to the
+// same part (a hole, or the round's meta) arrived is dropped, so an older copy never lands last.
 
 export const CODE_HEADER = 'x-round-code';
 export const POLL_MS = 20000;
@@ -33,10 +36,14 @@ export function supabaseAdapter(db, { pollMs = POLL_MS } = {}) {
 
   // One channel per round code on this phone, shared by everything listening to it (live sync,
   // a seat request, a friend's round on screen), so one stopping doesn't stop the others
-  const hubs = new Map(); // code -> { ch, cbs, connected, tableLive, seen, timer, busy }
+  const hubs = new Map(); // code -> { ch, cbs, connected, tableLive, seen, heard, timer, busy }
+  // Each part's count of what this phone has heard about it, so a fetch knows if it's been overtaken
+  const partOf = ev => (ev.type === 'hole' || ev.kind === 'hole' ? ev.holeNo : 'meta');
+  const hear = (hub, part) => { hub.heard[part] = (hub.heard[part] || 0) + 1; };
   const emit = (code, ev) => {
     const hub = hubs.get(code);
     if (!hub) return;
+    if (ev.type === 'meta' || ev.type === 'hole' || ev.type === 'deleted') hear(hub, partOf(ev));
     if (ev.type === 'meta') hub.seen.meta = JSON.stringify(ev.data);
     if (ev.type === 'hole') hub.seen[ev.holeNo] = JSON.stringify(ev.data ?? null);
     [...hub.cbs].forEach(cb => cb(ev));
@@ -63,14 +70,22 @@ export function supabaseAdapter(db, { pollMs = POLL_MS } = {}) {
 
   // A poke or a table change came in: fetch what it names and tell the listeners
   async function refresh(code, what = {}) {
-    if (!hubs.has(code)) return;
+    const hub = hubs.get(code);
+    if (!hub) return;
+    const isHole = what.kind === 'hole' && Number.isInteger(what.holeNo);
+    const part = isHole ? what.holeNo : 'meta';
+    hear(hub, part);
+    const at = hub.heard[part];
+    // Something newer about this part came in while fetching: its own fetch or change tells it
+    const stale = () => hubs.get(code) !== hub || hub.heard[part] !== at;
     try {
-      if (what.kind === 'hole' && Number.isInteger(what.holeNo)) {
+      if (isHole) {
         const [row] = await readHoles(code, what.holeNo);
-        emit(code, { type: 'hole', holeNo: what.holeNo, data: row ? row.data : null });
+        if (!stale()) emit(code, { type: 'hole', holeNo: what.holeNo, data: row ? row.data : null });
         return;
       }
       const meta = await readMeta(code);
+      if (stale()) return;
       if (meta == null) emit(code, { type: 'deleted' });
       else if (what.kind !== 'deleted') emit(code, { type: 'meta', data: meta });
     } catch { /* no signal: the next poke, check or reconnect catches up */ }
@@ -81,13 +96,16 @@ export function supabaseAdapter(db, { pollMs = POLL_MS } = {}) {
     const hub = hubs.get(code);
     if (!hub || hub.busy || hub.tableLive || !visible()) return;
     hub.busy = true;
+    const at = { ...hub.heard };
+    // A part heard about while checking is left to what was heard
+    const fresh = part => (hub.heard[part] || 0) === (at[part] || 0);
     try {
       const remote = await fetchRound(code);
       if (hubs.get(code) !== hub) return;
-      if (!remote) { emit(code, { type: 'deleted' }); return; }
-      if (JSON.stringify(remote.meta) !== hub.seen.meta) emit(code, { type: 'meta', data: remote.meta });
+      if (!remote) { if (fresh('meta')) emit(code, { type: 'deleted' }); return; }
+      if (fresh('meta') && JSON.stringify(remote.meta) !== hub.seen.meta) emit(code, { type: 'meta', data: remote.meta });
       for (const [no, data] of Object.entries(remote.holes)) {
-        if (JSON.stringify(data ?? null) !== hub.seen[no]) emit(code, { type: 'hole', holeNo: Number(no), data });
+        if (fresh(Number(no)) && JSON.stringify(data ?? null) !== hub.seen[no]) emit(code, { type: 'hole', holeNo: Number(no), data });
       }
     } catch { /* no signal: try again on the next tick */ } finally {
       hub.busy = false;
@@ -106,7 +124,7 @@ export function supabaseAdapter(db, { pollMs = POLL_MS } = {}) {
   }
 
   function openHub(code) {
-    const hub = { ch: null, cbs: new Set(), connected: false, tableLive: false, seen: {}, timer: null, busy: false };
+    const hub = { ch: null, cbs: new Set(), connected: false, tableLive: false, seen: {}, heard: {}, timer: null, busy: false };
     hubs.set(code, hub);
     const table = () => { hub.tableLive = true; };
     hub.ch = db.channel(topic(code))
@@ -120,7 +138,8 @@ export function supabaseAdapter(db, { pollMs = POLL_MS } = {}) {
         if (p.eventType === 'DELETE') { if (!p.old?.code || p.old.code === code) refresh(code, { kind: 'deleted' }); }
         else if (p.new?.meta) emit(code, { type: 'meta', data: p.new.meta });
       })
-      .on('broadcast', { event: POKE }, msg => refresh(code, msg?.payload || {}))
+      // Once table changes come through they carry the data, so a poke's fetch would only race them
+      .on('broadcast', { event: POKE }, msg => { if (!hub.tableLive) refresh(code, msg?.payload || {}); })
       .subscribe(status => {
         if (status === 'SUBSCRIBED') { hub.connected = true; emit(code, { type: 'connected' }); }
         else if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT' || status === 'CLOSED') hub.connected = false;
