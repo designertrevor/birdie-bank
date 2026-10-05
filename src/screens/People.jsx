@@ -309,7 +309,7 @@ export function CrewEdit({ id }) {
         <div className="pick-list">
           {players.length === 0 && <Empty illo={false} title="No players yet" text="Add players first, then group them into a crew." />}
           {players.map(p => (
-            <PickRow key={p.id} on={sel.includes(p.id)} onClick={() => toggle(p.id)}
+            <PickRow key={p.id} on={sel.includes(p.id)} onClick={() => toggle(p.id)} lead={<Avatar id={p.id} name={p.name} />}
               title={playerLabel(p, state.me)} sub={p.index == null ? 'No handicap' : `Index ${formatIndex(p.index)}`} />
           ))}
         </div>

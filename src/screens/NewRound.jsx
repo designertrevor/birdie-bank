@@ -1,6 +1,7 @@
 import { lazy, Suspense, useEffect, useMemo, useRef, useState } from 'react';
 import { Empty, Header, Icon, Numpad, PickChip, PickMark, PickRow, Screen, Segmented, Sheet, Steps, Toggle, useUI } from '../components/ui.jsx';
 import { RulesSheet } from '../components/Rules.jsx';
+import { Avatar } from '../components/Avatar.jsx';
 import { getState, update, uid, useStore } from '../lib/store.js';
 import { allCourses, coursePar, coursePickerSections, courseTag, defaultTee as firstTee, isStarred, teeDotStyle, toggleStarred } from '../lib/courses.js';
 import { getCourse } from '../lib/courseApi.js';
@@ -1065,7 +1066,7 @@ function InviteStep({ invited, setInvited, onNext }) {
           {players.map(p => {
             const on = invited.includes(p.id);
             return (
-              <PickRow key={p.id} on={on} onClick={() => toggle(p.id)} label={`Invite ${p.name}`}
+              <PickRow key={p.id} on={on} onClick={() => toggle(p.id)} label={`Invite ${p.name}`} lead={<Avatar id={p.id} name={p.name} />}
                 title={p.name} sub={p.index == null ? 'No handicap index' : `Index ${formatIndex(p.index)}`} />
             );
           })}
