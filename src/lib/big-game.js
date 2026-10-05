@@ -34,8 +34,9 @@ import { matchLabel, stablefordPoints } from './games.js';
 import { playsHole } from './round.js';
 import { betResult } from './pair-bets.js';
 import { fewestPayments } from './ledger.js';
+import { BIG_FORMAT } from './big-format.js';
 
-export const BIG_FORMAT = 'big';
+export { BIG_FORMAT };
 /** The field: at least two groups, up to six foursomes. */
 export const BIG_MIN_PLAYERS = 4;
 export const BIG_MAX_PLAYERS = 24;

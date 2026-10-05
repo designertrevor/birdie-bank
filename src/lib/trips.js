@@ -49,7 +49,8 @@ import { expensePairDebts, expensePairs, expenseTotals, placeable, placedOn, tri
 import { CUP_FORMAT, cleanCup, closeEntry, cupEntries, cupLeaderboard, cupOf, cupScore, stakeLines, stakeLink, stakeMarks, stakeOpen, stakeSeats, teamOf } from './cup.js';
 import { cupStake } from './cup-stake.js';
 import { cleanFlights } from './flights.js';
-import { BIG_FORMAT, cleanBig, defaultBig } from './big-game.js';
+import { cleanBig, defaultBig } from './big-game.js';
+import { BIG_FORMAT } from './big-format.js';
 import { bigBy, bigStatus } from './big-money.js';
 
 const DAY = 864e5;
