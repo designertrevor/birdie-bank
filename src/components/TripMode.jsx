@@ -48,13 +48,13 @@ export function TemplatePick({ value, onPick }) {
               <span className="tm-t-name">Ryder Cup weekend</span>
               <span className="tm-t-sub">{size / 2} a side · {t.days.length} days · {cupPoints(p.total)} points</span>
             </span>
-            {on && <Icon name="check-circle" fill />}
+            <span className={`li-check ${on ? 'on' : ''}`} aria-hidden="true">{on && <Icon name="check" />}</span>
           </button>
         );
       })}
       <button type="button" role="radio" aria-checked={value == null} className={`tm-template scratch ${value == null ? 'on' : ''}`} onClick={() => onPick(null)}>
         <span className="tm-t-main"><span className="tm-t-name">From scratch</span><span className="tm-t-sub">Pick how it’s played yourself</span></span>
-        {value == null && <Icon name="check-circle" fill />}
+        <span className={`li-check ${value == null ? 'on' : ''}`} aria-hidden="true">{value == null && <Icon name="check" />}</span>
       </button>
     </div>
   );

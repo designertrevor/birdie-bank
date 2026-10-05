@@ -71,7 +71,7 @@ export function CupMatches({ cup }) {
   const state = useStore();
   const [editing, setEditing] = useState(null);
   const entries = [...cup.entries].reverse().filter(e => e.matches.length || e.mixed);
-  if (!entries.length) return <p className="field-help pad">No matches yet. Each round counted for the trip pairs off its players by team: four-ball for two against two, or singles. An Alternate shot round is foursomes, partners taking turns on one ball.</p>;
+  if (!entries.length) return <p className="trip-empty">No matches yet. Each round counted for the trip pairs off its players by team: four-ball for two against two, or singles. An Alternate shot round is foursomes, partners taking turns on one ball.</p>;
   const nameIn = (e, id) => first(e.players.find(p => p.id === id)?.name);
   return (
     <>
@@ -128,7 +128,7 @@ export function CupBoard({ cup }) {
   const state = useStore();
   const me = canonicalOf(state)(state.me);
   const rows = cup.leaderboard;
-  if (!rows.length) return <p className="field-help pad">The leaderboard fills in as matches finish: 1 point a win, ½ a halved match.</p>;
+  if (!rows.length) return <p className="trip-empty">The leaderboard fills in as matches finish: 1 point a win, ½ a halved match.</p>;
   return (
     <div className="trip-table cup-table">
       {rows.map((p, i) => {
@@ -246,7 +246,7 @@ export function TeamsPicker({ people, value, onChange, live: liveOk = true }) {
             {cup.teams[i].map(p => (
               <button key={p.id} type="button" className="cup-chip" onClick={() => flip(p, i)} aria-label={live ? `${p.name}, captain of ${cup.names[i]}. Pick someone else` : `${p.name}${cup.captains[i] === p.id ? ', captain' : ''}, on ${cup.names[i]}. Move to ${cup.names[1 - i]}`}>
                 <Avatar id={p.id} name={p.name} size="sm" />
-                <span className="cup-chip-name">{p.name}</span>
+                <span className="cup-chip-name">{first(p.name)}</span>
                 {mode === 'flights' && letters.has(p.id) && <span className="tm-flight-tag">{letters.get(p.id)}</span>}
                 {cup.captains[i] === p.id && <span className="cup-cap" title="Captain">C</span>}
                 <Icon name={live ? 'x' : 'arrows-left-right'} />
@@ -262,9 +262,9 @@ export function TeamsPicker({ people, value, onChange, live: liveOk = true }) {
           <div className="field-label">{drafting ? (!captainsSet ? `Who captains ${cup.names[turn]}?` : `${cup.names[turn]}’s pick`) : 'Not on a team yet'}</div>
           <div className="cup-free">
             {free.map(p => (
-              <button key={p.id} type="button" className={`cup-chip free ${drafting ? `pick t${turn}` : ''}`} onClick={() => pickFree(p)}>
+              <button key={p.id} type="button" className={`cup-chip free ${drafting ? `pick t${turn}` : ''}`} onClick={() => pickFree(p)} aria-label={drafting ? `Pick ${p.name}` : `Put ${p.name} on a team`}>
                 <Avatar id={p.id} name={p.name} size="sm" />
-                <span className="cup-chip-name">{p.name}</span>
+                <span className="cup-chip-name">{first(p.name)}</span>
                 {p.index != null && <span className="cup-chip-hc">{p.index}</span>}
               </button>
             ))}
