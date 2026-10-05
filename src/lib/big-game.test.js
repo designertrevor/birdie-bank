@@ -14,7 +14,7 @@ import { mergeExpenses } from './trip-expenses.js';
 import { newTrip, tripOnDay, tripPayment, tripStamp, tripStatus } from './trips.js';
 import {
   BIG_FORMAT, allot, balanceGroups, balanceTeams, betStrokesFor, bigField, bigLines, bigResults, buyIns, cleanBig, groupCount,
-  groupsProblem, moveTo, payPlaces, placeLabels, potBoard, scoreOn, skinsBoard, skinsMoney, startDay,
+  frozenHoles, groupsProblem, moveTo, payPlaces, placeLabels, potBoard, scoreOn, skinsBoard, skinsMoney, startDay,
 } from './big-game.js';
 import { allBigMoney, bigMoney, bigOf, bigRoundMoney, bigRoundResults, bigStatus } from './big-money.js';
 import { gameLabel, holeMoneyLine } from './format.js';
@@ -318,6 +318,29 @@ test('the organizer closing the game counts a group still playing as it stands',
   // Group 2's players have no full card, so only Group 1 places in the stroke play pot
   assert.ok(st.results.pot.filter(r => r.place !== '–').every(r => G1.includes(r.id)));
   assert.equal(Object.values(st.results.balances).reduce((x, c) => x + c, 0), 0);
+});
+
+test('a game closed early counts only the holes each group had scored then: a hole scored after never changes the money', () => {
+  const live = phonesOf(game(), { r2: { done: false, holes: 6 } }).a;
+  const field = bigStatus(live, 't_big').field;
+  const frozen = frozenHoles(field);
+  assert.deepEqual(frozen, { g2: [1, 2, 3, 4, 5, 6] });
+  const closedBig = cleanBig({ ...game(), v: 3, endedAt: OCT(17, 18), frozen });
+  assert.deepEqual(closedBig.frozen, frozen, 'it rides in the game');
+  const trip = { ...live.trips.t_big, big: closedBig, endedAt: OCT(17, 18) };
+  const at = { ...live, trips: { t_big: trip } };
+  const before = bigStatus(at, 't_big');
+  assert.equal(before.final, true);
+  // Group 2 keeps playing after the close: holes 7 to 9, Hal with a 2 on 7
+  const r2 = structuredClone(at.rounds.r2);
+  for (const no of [7, 8, 9]) r2.scores[no] = Object.fromEntries(G2.map(id => [id, id === 'h' && no === 7 ? 2 : 4]));
+  const later = { ...at, rounds: { ...at.rounds, r2 } };
+  const after = bigStatus(later, 't_big');
+  assert.deepEqual(after.results.balances, before.results.balances);
+  assert.deepEqual(after.lines, before.lines);
+  // Without the frozen holes (an older copy of the game), the late holes would count
+  const loose = { ...later, trips: { t_big: { ...trip, big: cleanBig({ ...closedBig, frozen: undefined }) } } };
+  assert.notDeepEqual(bigStatus(loose, 't_big').results.balances, before.results.balances);
 });
 
 test('the newest copy of the game counts: the organizer’s record, the server’s, a round’s stamp or a card', () => {

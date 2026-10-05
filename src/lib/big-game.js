@@ -14,7 +14,9 @@
 // with the game in it (`trip.big`), and its money is trip money once it's decided (big-money.js):
 // on the Tab, settled in one go. The rounds keep their own games and money, if they add any.
 //
-// The game: { v, at, hcPct, useHandicaps, people, groups, pot, skins, teams, bets, endedAt? }
+// The game: { v, at, hcPct, useHandicaps, people, groups, pot, skins, teams, bets, endedAt?, frozen? }
+// - frozen: { groupId: [hole no] }, the holes each group still playing had scored when the game was
+//   closed early: only those count, so a hole scored after the close never changes the money.
 // - v: the organizer's version, one more each change, so every phone takes the newest copy.
 // - people: { id: { name, hc } }: everyone in it, by the organizer's ids (the ids in every group's
 //   round), with their course handicap from setup (a round's own copy wins once it's being played).
@@ -156,6 +158,24 @@ export function cleanBig(raw) {
     bets,
   };
   if (Number(raw.endedAt) > 0) out.endedAt = Number(raw.endedAt);
+  if (isObj(raw.frozen)) {
+    const frozen = {};
+    for (const g of groups) {
+      const nos = raw.frozen[g.id];
+      if (Array.isArray(nos)) frozen[g.id] = [...new Set(nos.map(Number).filter(n => Number.isInteger(n) && n > 0 && n <= 36))].sort((a, b) => a - b);
+    }
+    if (Object.keys(frozen).length) out.frozen = frozen;
+  }
+  return out;
+}
+
+/** The holes each group still playing has scored, for closing the game early: { groupId: [hole no] }. */
+export function frozenHoles(field) {
+  const out = {};
+  for (const g of field.groups) {
+    if (!g.card || g.done) continue;
+    out[g.id] = (g.card.holes || []).filter(h => g.players.some(id => g.card.scores?.[h.no]?.[id] != null)).map(h => h.no);
+  }
   return out;
 }
 
@@ -270,7 +290,9 @@ export function bigField(big, cardOf, { ended = false } = {}) {
     for (const id of g.players) {
       const seat = g.card?.players?.find(p => p.id === id) || null;
       const hc = seat?.courseHc ?? big.people[id]?.hc ?? null;
-      players.set(id, { id, group: g.id, card: seat ? g.card : null, closed: g.done || ended, plays: big.useHandicaps ? Math.round((Number(hc) || 0) * (big.hcPct / 100)) : 0, hc });
+      // Closed early: only the holes the group had scored by then count (big.frozen)
+      const frozen = ended && Array.isArray(big.frozen?.[g.id]) ? new Set(big.frozen[g.id]) : null;
+      players.set(id, { id, group: g.id, card: seat ? g.card : null, closed: g.done || ended, frozen, plays: big.useHandicaps ? Math.round((Number(hc) || 0) * (big.hcPct / 100)) : 0, hc });
     }
   }
   return { groups, holes: list, players, ended, final: groups.length > 0 && groups.every(g => g.card) && (groups.every(g => g.done) || ended) };
@@ -298,6 +320,7 @@ export function scoreOn(field, id, no) {
   if (!p?.card) return field.final ? { out: true } : null;
   const hole = p.card.holes.find(h => h.no === no);
   if (!hole || !playsHole(p.card, id, hole)) return { out: true };
+  if (p.frozen && !p.frozen.has(no)) return { out: true };
   const raw = p.card.scores?.[no]?.[id];
   if (raw == null) return p.closed ? { out: true } : null;
   const strokes = strokesOnHole(p.plays, hole.rank, p.card.holes.length);

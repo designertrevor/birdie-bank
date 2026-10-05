@@ -8,7 +8,7 @@ import { createRound } from './round.js';
 import { addRound } from './rounds.js';
 import { defaultTee, findCourse } from './courses.js';
 import { isOrganizer, newTrip, tripOf, tripStamp } from './trips.js';
-import { BIG_FORMAT, BIG_NAME, cleanBig, groupsProblem, startDay } from './big-game.js';
+import { BIG_FORMAT, BIG_NAME, cleanBig, frozenHoles, groupsProblem, startDay } from './big-game.js';
 import { bigOf, bigStatus } from './big-money.js';
 import { shareRound, syncConfigured } from './sync.js';
 import { recordOn, refreshBig } from './big-sync.js';
@@ -100,9 +100,11 @@ export function closeBig(tripId, ended = true) {
     if (ended) t.endedAt = now; else delete t.endedAt;
     st.trips[tripId] = t;
   });
+  // The holes each group still out there has scored now are the ones that count, on every phone
+  const field = bigStatus(s, tripId)?.field;
   return editBig(tripId, b => {
     const out = { ...b };
-    if (ended) out.endedAt = now; else delete out.endedAt;
+    if (ended) { out.endedAt = now; if (field) out.frozen = frozenHoles(field); } else { delete out.endedAt; delete out.frozen; }
     return out;
   });
 }
