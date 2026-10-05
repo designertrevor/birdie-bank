@@ -7,7 +7,7 @@ import {
   roundLegs, sideNames, sides, sixesMatches, snakeTable, totalsTable, vegasPreview, vegasTable, scorers, netFor, playsHole, posOf, settingsAt, teamTable,
   POT_NONE, potHoles, potTable, greenieCarryBefore, teamQuotaTable,
 } from '../lib/round.js';
-import { byeBets, nassauBets } from '../lib/golf.js';
+import { autoPressStarts, byeBets, matchStatus, nassauBets } from '../lib/golf.js';
 import { DOT_KINDS, DOT_PARS, scoreDots } from '../lib/games.js';
 import { buzz } from '../lib/delight.js';
 import { unitFmt } from '../lib/play-for.js';
@@ -190,6 +190,11 @@ export function SixesPanel({ round, hole }) {
   const pos = round.holes.findIndex(h => h.no === hole.no) + 1;
   const cur = matches.find(m => pos >= m.seg.start && pos <= m.seg.end);
   const pair = side => side.map(pid => firstName(nameOf(round, pid))).join(' & ');
+  // Auto press at 2 down (a house rule): the presses running in the match under way
+  const ms = cur ? settingsAt(round, cur.seg.start).sixes : null;
+  const presses = cur && !cur.off && ms?.press && ms.mode !== 'holes'
+    ? autoPressStarts(cur.winners, cur.seg.start, cur.seg.end).filter(start => start <= pos).map(start => ({ start, status: matchStatus(cur.winners, start, cur.seg.end) }))
+    : [];
   return (
     <>
       {cur && <div className="sides-line"><Icon name="arrows-clockwise" fill /> Match {cur.index + 1} · <strong>{pair(cur.sides[0])}</strong> <span className="sides-v">v</span> <strong>{pair(cur.sides[1])}</strong></div>}
@@ -207,6 +212,14 @@ export function SixesPanel({ round, hole }) {
           );
         })}
       </div>
+      {presses.length > 0 && (
+        <div className="press-bar">
+          <span className="press-bar-lbl">Presses</span>
+          {presses.map(p => (
+            <span key={p.start} className="press-chip">From H{holeAtPos(round, p.start)}: {p.status.leader === null ? 'All square' : `${pair(cur.sides[p.status.leader])} ${p.status.by} up`}</span>
+          ))}
+        </div>
+      )}
     </>
   );
 }
