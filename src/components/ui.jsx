@@ -105,8 +105,9 @@ function useDialog(open, onClose) {
     const el = ref.current;
     const inside = el?.contains(document.activeElement);
     const opener = inside ? focusBefore : document.activeElement;
-    // Start at the sheet itself so its title is read, unless a field in it already took focus
-    if (!inside) el?.focus({ preventScroll: true });
+    // Start at the sheet itself so its title is read, unless a field in it already took focus or
+    // something in it asks for it (a calendar's cursor day, so the arrow keys work straight away)
+    if (!inside) (el?.querySelector('[data-autofocus="true"]') || el)?.focus({ preventScroll: true });
     const onKey = e => {
       if (openDialogs[openDialogs.length - 1] !== token) return;
       const el = ref.current;

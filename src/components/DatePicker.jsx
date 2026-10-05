@@ -123,7 +123,7 @@ function Calendar({ value, onPick, min, max, rangeStart, rangeEnd, now, label, a
             const { on, mid, start, end } = dayLook(c.iso, { value, rangeStart, rangeEnd });
             const isCursor = c.iso === cursor;
             return (
-              <button key={c.iso} type="button" data-cursor={isCursor} tabIndex={isCursor ? 0 : -1}
+              <button key={c.iso} type="button" data-cursor={isCursor} data-autofocus={isCursor && autoFocus ? 'true' : undefined} tabIndex={isCursor ? 0 : -1}
                 className={`cal-day${c.outside ? ' out' : ''}${on ? ' on' : ''}${mid ? ' mid' : ''}${start ? ' start' : ''}${end ? ' end' : ''}${c.today ? ' today' : ''}`}
                 aria-pressed={on} aria-current={c.today ? 'date' : undefined} aria-disabled={c.disabled || undefined}
                 aria-label={`${longDateLabel(c.iso)}${c.today ? ', today' : ''}`}
