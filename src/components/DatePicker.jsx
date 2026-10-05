@@ -18,7 +18,7 @@ const DOW = ['S', 'M', 'T', 'W', 'T', 'F', 'S'];
  * A bottom sheet on top of everything, even another sheet (the tee time inside the Booked sheet):
  * it renders at the device frame, so the sheet it's opened from can't clip or cover it.
  */
-function PickSheet({ open, onClose, title, children }) {
+export function PickSheet({ open, onClose, title, children }) {
   if (!open) return null;
   const host = document.querySelector('.device') || document.body;
   return createPortal(<Sheet open onClose={onClose} title={title} className="sheet pick-sheet">{children}</Sheet>, host);
@@ -41,7 +41,7 @@ function usePicker() {
 }
 
 /** The field a picker opens from: the value (or a placeholder) and an icon, styled like the inputs around it. */
-function PickField({ id, fieldRef, className, icon, main, sub, placeholder, said, open, onOpen, disabled }) {
+export function PickField({ id, fieldRef, className, icon, main, sub, placeholder, said, open, onOpen, disabled }) {
   return (
     <button ref={fieldRef} id={id} type="button" className={`${className} pick-field ${main ? '' : 'empty'}`} onClick={onOpen} disabled={disabled}
       aria-haspopup="dialog" aria-expanded={open} aria-label={said}>

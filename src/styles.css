@@ -3167,3 +3167,16 @@ a.header-btn.rm-open { text-decoration: none; }
 .trip-views .pm-btn { flex: 1 1 auto; padding: 0 6px; white-space: nowrap; }
 .trip-views.five { gap: 2px; }
 .trip-views.five .pm-btn { font-size: 13px; padding: 0 5px; }
+/* Trip Mode: a day's course opens a sheet of courses, and a session's worth and handicaps are
+   chips, labelled above each row, so nothing opens the phone's own picker */
+.tm-day .pick-field { background: var(--card); }
+.tm-session-opts { display: flex; flex-direction: column; gap: 0; }
+.tm-opt { margin: 6px 0 8px; font-size: 13px; font-weight: 600; color: var(--mute); }
+.tm-session .chip-row.flush { padding-bottom: 4px; }
+.tm-session .chip-row.flush .pill-btn:not(.on) { background: var(--card); }
+.tm-course-pick { padding-bottom: 16px; }
+/* The schedule card on the trip's page: each day, its course and its sessions get their own room */
+.tm-sched-card .tm-sched-day { padding: 16px 0; }
+.tm-sched-card .pick-field.tm-day-course { margin: 10px 0 12px; }
+.tm-sched-row { padding: 8px 0 0; line-height: 1.35; }
+.tm-sched-acts { margin-top: 16px; gap: 10px; }

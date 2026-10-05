@@ -1,7 +1,9 @@
 // Trip Mode's pieces (trip-templates.js, flights.js, draft.js): "Start from a template" and the
 // schedule editor in the trip sheet, and on the trip's page the schedule with its planned rounds,
 // the live captains' draft card and the flighted net leaderboard.
-import { Icon, PickMark, Segmented, useUI } from './ui.jsx';
+import { useRef, useState } from 'react';
+import { Icon, PickChip, PickMark, PickRow, Segmented, useUI } from './ui.jsx';
+import { PickField, PickSheet } from './DatePicker.jsx';
 import { Avatar } from './Pay.jsx';
 import { TeamDot } from './Cup.jsx';
 import { useStore } from '../lib/store.js';
@@ -26,6 +28,8 @@ const plus = (iso, n) => {
   return `${t.getFullYear()}-${String(t.getMonth() + 1).padStart(2, '0')}-${String(t.getDate()).padStart(2, '0')}`;
 };
 const shortDay = iso => new Date(`${iso}T12:00:00`).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
+// Handicap allowances a session can play at
+const HC_PCTS = [100, 95, 90, 85, 80, 75, 70, 60, 50];
 const pointsLine = p => `${cupPoints(p.total)} point${p.total === 1 ? '' : 's'} · ${cupPoints(p.toWin)} wins the cup`;
 
 // --------------------------- in the trip sheet ---------------------------
@@ -65,11 +69,8 @@ export function TemplatePick({ value, onPick }) {
  * handicap allowance. `perTeam`: players a side, for the matches and points. `start`: the first day.
  */
 export function ScheduleEditor({ schedule, onChange, perTeam, start }) {
-  const state = useStore();
-  const { starred, recent, all } = coursePickerSections(state);
   const pts = schedulePoints(schedule, perTeam);
-  const pick = (day, id) => {
-    const c = [...starred, ...recent, ...all].find(x => x.id === id);
+  const pick = (day, c) => {
     onChange({ ...schedule, days: schedule.days.map((d, i) => (i === day ? { ...d, course: c ? { id: c.id, name: c.name } : null } : d)) });
   };
   return (
@@ -85,12 +86,7 @@ export function ScheduleEditor({ schedule, onChange, perTeam, start }) {
             <span className="tm-day-date">{shortDay(plus(start, di))}</span>
           </div>
           <label className="field-label" htmlFor={`tm-course-${di}`}>Course <span className="opt">(optional)</span></label>
-          <select id={`tm-course-${di}`} className="select" value={d.course?.id || ''} onChange={e => pick(di, e.target.value)}>
-            <option value="">Set it later</option>
-            {starred.length > 0 && <optgroup label="Starred">{starred.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}</optgroup>}
-            {recent.length > 0 && <optgroup label="Recent">{recent.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}</optgroup>}
-            <optgroup label="All courses">{all.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}</optgroup>
-          </select>
+          <CoursePick id={`tm-course-${di}`} title={`Day ${di + 1} course`} value={d.course} none="Set it later" onPick={c => pick(di, c)} />
           {d.sessions.map((s, si) => (
             <div key={si} className="tm-session">
               <div className="tm-session-head">
@@ -104,18 +100,18 @@ export function ScheduleEditor({ schedule, onChange, perTeam, start }) {
                 onChange={kind => onChange(setSession(schedule, di, si, { kind }))}
                 options={SESSION_KINDS.map(k => ({ value: k, label: CUP_KINDS[k].name }))} />
               <div className="tm-session-opts">
-                <label className="tm-opt">
-                  <span>A match is worth</span>
-                  <select className="select sm" value={s.worth} onChange={e => onChange(setSession(schedule, di, si, { worth: Number(e.target.value) }))}>
-                    {WORTHS.map(w => <option key={w} value={w}>{w} point{w === 1 ? '' : 's'}</option>)}
-                  </select>
-                </label>
-                <label className="tm-opt">
-                  <span>Handicaps at</span>
-                  <select className="select sm" value={s.pct} onChange={e => onChange(setSession(schedule, di, si, { pct: Number(e.target.value) }))}>
-                    {[100, 95, 90, 85, 80, 75, 70, 60, 50].map(p => <option key={p} value={p}>{p}%</option>)}
-                  </select>
-                </label>
+                <div className="tm-opt" id={`tm-worth-${di}-${si}`}>A match is worth</div>
+                <div className="chip-row flush" role="radiogroup" aria-labelledby={`tm-worth-${di}-${si}`}>
+                  {WORTHS.map(w => (
+                    <PickChip key={w} radio small on={s.worth === w} onClick={() => onChange(setSession(schedule, di, si, { worth: w }))}>{w} point{w === 1 ? '' : 's'}</PickChip>
+                  ))}
+                </div>
+                <div className="tm-opt" id={`tm-pct-${di}-${si}`}>Handicaps at</div>
+                <div className="chip-row flush" role="radiogroup" aria-labelledby={`tm-pct-${di}-${si}`}>
+                  {HC_PCTS.map(p => (
+                    <PickChip key={p} radio small on={s.pct === p} onClick={() => onChange(setSession(schedule, di, si, { pct: p }))}>{p}%</PickChip>
+                  ))}
+                </div>
               </div>
             </div>
           ))}
@@ -199,23 +195,52 @@ export function ScheduleCard({ st, onRounds }) {
 
 /** The organizer sets a day's course on the trip's page: the day's planned rounds move to it too. */
 function DayCourse({ tripId, day, value }) {
-  const state = useStore();
   const { showToast } = useUI();
-  const { starred, recent, all } = coursePickerSections(state);
-  const pick = id => {
-    const c = [...starred, ...recent, ...all].find(x => x.id === id) || null;
+  const pick = c => {
     const n = setDayCourse(tripId, day, c);
     showToast(c ? `Day ${day + 1} is at ${c.name}${n ? `, all ${n} round${n === 1 ? '' : 's'}` : ''}` : `Day ${day + 1}’s course is cleared`);
   };
+  return <CoursePick id={`tm-day-course-${day}`} className="text-input sm tm-day-course" title={`Day ${day + 1} course`} value={value} none="Course to be set" onPick={pick} />;
+}
+
+/**
+ * A day's course: a field that opens a sheet of your courses (starred and played lately first, then
+ * every course), each a selectable row like the plan's course step, in place of the phone's own list.
+ * `onPick({ id, name } | null)`; `none` names the no-course choice.
+ */
+function CoursePick({ id, title, value, none, onPick, className = 'text-input' }) {
+  const state = useStore();
+  const [open, setOpen] = useState(false);
+  const fieldRef = useRef(null);
+  const { starred, recent, all } = coursePickerSections(state);
+  // Every course once: the starred and recent ones aren't listed again under All courses
+  const mine = [...starred, ...recent.filter(c => !starred.some(x => x.id === c.id))];
+  const rest = all.filter(c => !mine.some(x => x.id === c.id));
+  const choose = c => { setOpen(false); onPick(c ? { id: c.id, name: c.name } : null); };
+  const row = c => <PickRow key={c.id} radio on={value?.id === c.id} onClick={() => choose(c)} title={c.name} sub={c.city || null} />;
   return (
     <>
-      <label className="sr-only" htmlFor={`tm-day-course-${day}`}>Day {day + 1} course</label>
-      <select id={`tm-day-course-${day}`} className="select sm tm-day-course" value={value?.id || ''} onChange={e => pick(e.target.value)}>
-        <option value="">Course to be set</option>
-        {starred.length > 0 && <optgroup label="Starred">{starred.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}</optgroup>}
-        {recent.length > 0 && <optgroup label="Recent">{recent.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}</optgroup>}
-        <optgroup label="All courses">{all.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}</optgroup>
-      </select>
+      <PickField id={id} fieldRef={fieldRef} className={className} icon="caret-down" main={value?.name || ''} placeholder={none}
+        said={`${title}: ${value?.name || none}`} open={open} onOpen={() => setOpen(true)} />
+      <PickSheet open={open} onClose={() => setOpen(false)} title={title}>
+        <div className="pick-body tm-course-pick" role="radiogroup" aria-label={title}>
+          <div className="pick-section">
+            <PickRow radio on={!value} onClick={() => choose(null)} title={none} />
+          </div>
+          {mine.length > 0 && (
+            <div className="pick-section">
+              <span className="eyebrow">{!starred.length ? 'Played lately' : recent.length ? 'Starred and played lately' : 'Starred'}</span>
+              {mine.map(row)}
+            </div>
+          )}
+          {rest.length > 0 && (
+            <div className="pick-section">
+              <span className="eyebrow">All courses</span>
+              {rest.map(row)}
+            </div>
+          )}
+        </div>
+      </PickSheet>
     </>
   );
 }
