@@ -77,7 +77,7 @@ function TrialWithFreeWayOut({ plan, setPlan, onClose, onTrial, onFree, freeWayO
           {Object.values(PLANS).map(p => {
             const on = plan === p.id;
             return (
-              <button key={p.id} role="radio" aria-checked={on} aria-label={`${p.label}, ${priceLabel(p)}${p.per === 'year' ? `, ${perMonthLabel(p)}, save ${save}%` : ''}, ${TRIAL_DAYS} days free`} className={`list-item pw-plan ${on ? 'on' : ''}`} onClick={() => setPlan(p.id)}>
+              <button key={p.id} role="radio" aria-checked={on} aria-label={`${p.label}, ${priceLabel(p)}${p.per === 'year' ? `, ${perMonthLabel(p)}, save ${save}%` : ''}, ${TRIAL_DAYS} days free`} className={`list-item pick pw-plan ${on ? 'on' : ''}`} onClick={() => setPlan(p.id)}>
                 <div className="row-main">
                   <div className="li-name">{p.label} {p.per === 'year' && <span className="pw-save">Save {save}%</span>}</div>
                   <div className="li-sub">{priceLabel(p)}{p.per === 'year' ? ` (${perMonthLabel(p)})` : ''} · {TRIAL_DAYS} days free</div>

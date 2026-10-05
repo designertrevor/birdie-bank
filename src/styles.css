@@ -2661,6 +2661,8 @@ button.ch-main:active { transform: scale(.98); }
 /* Picked tiles and votes wear the same pink ring as a picked row, so picked reads one way everywhere */
 .ob-tile.on { background: var(--pick-tint); box-shadow: inset 0 0 0 2px var(--pink-fill); }
 .ob-tile-top .li-check { margin-left: auto; }
+/* The tile's top holds the mark's height either way, so picking a tile never nudges its name down */
+.ob-tile-top { min-height: 28px; }
 .vote-row.on { box-shadow: inset 0 0 0 2px var(--pink-fill); }
 .vote-row .vr-check { font-size: inherit; }
 .vote-row .li-check { width: 28px; height: 28px; font-size: 14px; }
@@ -2693,8 +2695,9 @@ button.ch-main:active { transform: scale(.98); }
 .big-setup-group .big-group-head + .chip-row.flush { padding-bottom: 4px; }
 .big-team-row + .big-team-row { margin-top: 6px; }
 .big-team-row ~ .pill-btn.sm { margin-top: 8px; }
-/* A toggle's settings card reads as part of it: a little closer to its toggle than to the next one */
-.toggle-row + .block { margin-top: -2px; margin-bottom: 16px; }
+/* Big Game setup, Games step: a toggle's settings card reads as part of it, a little closer to its
+   toggle than to the next one. Only this step, so Settings and game setup keep their spacing */
+.big-games > .toggle-row + .block { margin-top: -2px; margin-bottom: 16px; }
 /* The tee time block: Booked is its own step after the reminder day */
 .tee-block .tb-done { margin-top: 12px; }
 .rc-sheet-body .full-btn { margin-top: 6px; }

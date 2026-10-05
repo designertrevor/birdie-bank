@@ -369,7 +369,7 @@ function Games({ pot, setPot, skins, setSkins, teams, setTeams, pool, groups = n
   const skinsIn = n - skins.out.filter(x => pool.some(p => p.id === x)).length;
   return (
     <>
-      <div className="scroll">
+      <div className="scroll big-games">
         <div className="toggle-row">
           <div><div className="toggle-lbl">The pot</div><div className="toggle-sub">One leaderboard across every group, places paid</div></div>
           <Toggle on={pot.on} onChange={on => setPot(p => ({ ...p, on }))} label="The pot" />

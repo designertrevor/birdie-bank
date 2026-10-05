@@ -630,7 +630,7 @@ export function CourseStep({ editor, openEditor, closeEditor, courseId, setCours
     }
   };
   const apiRow = r => (
-    <button key={r.apiId} className="list-item" onClick={() => pickApi(r)} aria-busy={loadingId === r.apiId} aria-label={[`Add ${r.name}`, r.miles != null ? `${milesLabel(r.miles)} away` : null, r.city, r.teeCount ? teeCount(r.teeCount) : null].filter(Boolean).join(', ')}>
+    <button key={r.apiId} className="list-item pick" onClick={() => pickApi(r)} aria-busy={loadingId === r.apiId} aria-label={[`Add ${r.name}`, r.miles != null ? `${milesLabel(r.miles)} away` : null, r.city, r.teeCount ? teeCount(r.teeCount) : null].filter(Boolean).join(', ')}>
       <div className="row-main">
         <div className="li-name">{r.name}</div>
         <div className="li-sub">{[r.miles != null ? milesLabel(r.miles) : null, r.city, r.teeCount ? teeCount(r.teeCount) : null].filter(Boolean).join(' · ')}</div>

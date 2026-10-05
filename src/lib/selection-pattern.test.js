@@ -74,3 +74,25 @@ test('every screen that picks from a list uses the shared pieces', () => {
     'components/TabCard.jsx', 'components/HomeCourseSheet.jsx', 'components/ScrambleDrives.jsx',
   ]) assert.ok(uses(f), `${f} picks from a list without the shared pieces`);
 });
+
+test('a list row that wears the round mark takes the pick tint once picked', () => {
+  // The nearest list-item above a PickMark must be a .pick row, or it shows the pink check with no ring
+  const bare = jsxFiles.filter(f => f !== UI).flatMap(f => {
+    const lines = code(read(f)).split('\n');
+    return lines.flatMap((line, i) => {
+      if (!/<PickMark\b/.test(line)) return [];
+      const above = lines.slice(Math.max(0, i - 12), i + 1).reverse().find(l => /className=[^>]*\blist-item\b/.test(l));
+      return above && !/\blist-item pick\b/.test(above) ? [`${f}:${i + 1}`] : [];
+    });
+  });
+  assert.deepEqual(bare, []);
+});
+
+test('the spacing pass never shifts other screens through a bare sibling rule', () => {
+  // A toggle's settings card sits closer to it only on the Big Game's Games step; Settings and game
+  // setup put unrelated cards after a toggle, and those keep the usual gap
+  const css = readFileSync(new URL('styles.css', SRC), 'utf8');
+  assert.doesNotMatch(css, /^\.toggle-row \+ \.block\b/m);
+  assert.match(css, /^\.big-games > \.toggle-row \+ \.block \{/m);
+  assert.match(read('screens/BigGameSetup.jsx'), /className="scroll big-games"/);
+});
