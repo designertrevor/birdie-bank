@@ -345,7 +345,7 @@ export function planDebts(state, { now = Date.now() } = {}) {
  * get it. Returns { rows, cents }: cents is what `from` paid `to` on the plan (negative when the
  * plan had `to` owing `from`).
  */
-export function planRows(state, from, to, { amount = null, now = Date.now(), reason = null, trip = null } = {}) {
+export function planRows(state, from, to, { amount = null, now = Date.now(), reason = null, trip = null, fromTab = false } = {}) {
   const who = canonicalOf(state);
   const F = who(from), T = who(to);
   const rows = [];
@@ -366,7 +366,7 @@ export function planRows(state, from, to, { amount = null, now = Date.now(), rea
     const round = p.rounds.find(r => codeOf(r) === line.code);
     rows.push({
       code: line.code, id: planPaymentId(tripId, rf, rt, now), kind: 'payment', from: rf, to: rt, amount: c / 100,
-      status: 'paid', by: meFor(round, state) || null, reason: reason || `trip:${tripId}`, at: now, updatedAt: now,
+      status: 'paid', by: meFor(round, state) || null, reason: reason || `${fromTab ? 'trip-tab' : 'trip'}:${tripId}`, at: now, updatedAt: now,
     });
     paid += forward ? c : -c;
   }

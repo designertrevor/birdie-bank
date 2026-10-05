@@ -147,3 +147,39 @@ test('foursomes pairs that mix the teams make no match, and say so, rather than 
   const st = tripStatus(base('t', [mixed], { trips: { t_cup: trip } }), 't_cup', { now: NOW });
   assert.deepEqual(st.cup.score.points, [0, 0]);
 });
+
+test('equal stakes paid between two different pairs get their own ids, and both phones of a pair the same one', () => {
+  // Trevor owes Quinn $20 and Sam owes Mike $20; each pays on his own phone before anyone syncs
+  const trip = tripWith([[P('t'), P('s')], [P('q'), P('m')]]);
+  const r1 = round(trip, 'r1', ['t', 'q'], 'q', OCT(16, 15), 'RRR111');
+  const r2 = round(trip, 'r2', ['s', 'm'], 'm', OCT(17, 15), 'RRR222');
+  const ph = phones(trip, [r1, r2], { t: [r1], q: [r1], s: [r2], m: [r2] });
+  const p1 = allocatePayment(ph.t, { from: 't', to: 'q', amount: 20 }, { now: NOW + 1000, makeId: () => 'a' });
+  const p2 = allocatePayment(ph.s, { from: 'zs', to: 'm', amount: 20 }, { now: NOW + 2000, makeId: () => 'b' });
+  assert.equal(p1.expenses.length, 1);
+  assert.equal(p2.expenses.length, 1);
+  assert.notEqual(p1.expenses[0].id, p2.expenses[0].id);
+  // Quinn taps it on his phone too: one payment with Trevor's
+  const p3 = allocatePayment(ph.q, { from: 't', to: 'zq', amount: 20 }, { now: NOW + 3000, makeId: () => 'c' });
+  assert.equal(p3.expenses[0].id, p1.expenses[0].id);
+  deliver(ph, p1); deliver(ph, p2); deliver(ph, p3);
+  for (const k of ['t', 'q']) assert.equal(owes(ph[k], 't', 'q'), 0, `${k}: Trevor paid Quinn`);
+  for (const k of ['s', 'm']) assert.equal(owes(ph[k], 's', 'm'), 0, `${k}: Sam paid Mike`);
+});
+
+test('an I paid mark covers the stake even when the winner owes the loser for a dinner', async () => {
+  const { personFor } = await import('./trip-expenses.js');
+  const { stakePaymentId } = await import('./cup.js');
+  // Trevor loses $20 to Quinn and paid Quinn's $30 dinner, then marks the stake paid in cash
+  const trip = tripWith([[P('t'), P('s')], [P('q'), P('m')]]);
+  const r1 = round(trip, 'r1', ['t', 'q'], 'q', OCT(16, 15), 'RRR111');
+  const r2 = round(trip, 'r2', ['s', 'm'], 'm', OCT(17, 15), 'RRR222');
+  let s = phones(trip, [r1, r2], { t: [r1] }).t;
+  const dinner = { id: 'x_dinner', tripId: 't_cup', what: 'Dinner', amount: 30, split: 'equal', payer: personFor(s, 't_cup', 't', 'Trevor'), people: [personFor(s, 't_cup', 'q', 'Quinn')], by: 't', at: OCT(17, 20), updatedAt: OCT(17, 20) };
+  s = { ...s, tripExpenses: mergeExpenses({}, [dinner]) };
+  assert.equal(owes(s, 'q', 't'), 1000, 'the dinner less the stake');
+  const mark = { id: stakePaymentId('t_cup', 't>q', NOW), key: 't>q', from: 't', to: 'q', amount: 20, at: NOW, byName: 'Quinn' };
+  s = { ...s, cupRemote: { t_cup: { ...s.cupRemote.t_cup, Pq: { byName: 'Quinn', pays: [mark] } } } };
+  assert.equal(tripStatus(s, 't_cup', { now: NOW }).cup.lines.find(l => l.key === 't>q').open, 0, 'the mark covers the stake');
+  assert.equal(owes(s, 'q', 't'), 3000, 'Quinn owes Trevor the whole dinner');
+});

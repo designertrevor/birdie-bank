@@ -22,6 +22,22 @@ export function tripOfPayment(s) {
 export const isTripPayment = s => tripOfPayment(s) != null;
 
 /**
+ * A whole Tab card paid while a trip is on (shared-tab.js allocatePayment): the trip's part between
+ * the two from rounds only this phone has, "trip:<tripId>:tab:<from>><to>:<when>". It counts as
+ * paid toward the trip's money like any trip payment, but it never settles the trip: the trip
+ * stays open, its rounds stay unlocked and a cup isn't decided by it (2026-10-04).
+ */
+export function tabTripPaymentId(tripId, from, to, at) {
+  return `${PREFIX}${tripId}:tab:${from}>${to}:${Number(at || 0).toString(36)}`;
+}
+
+/** Whether a payment is a whole Tab card's part on a trip (tabTripPaymentId). */
+export function isTabTripPayment(s) {
+  const id = tripOfPayment(s);
+  return !!id && String(s.id).startsWith(`${PREFIX}${id}:tab:`);
+}
+
+/**
  * A payment row's reason when it was made from "Settle the trip": the whole trip once it's over,
  * or someone's part when they leave early (`part`). It rides on the trip's shared round transfers,
  * so every phone in that round knows the trip is being settled.
@@ -31,8 +47,11 @@ export const tripReason = (tripId, part = false) => `${part ? 'trip-part' : 'tri
 /** What a payment says about the trip it settled: { id, part }, or null for any other payment. */
 export function tripSettleOf(s) {
   const r = String(s?.reason || '');
+  // A plan line paid from the Tab pays the trip's money but settles nothing (shared-tab.js)
+  if (r.startsWith('trip-tab:')) return null;
   const m = /^(trip|trip-part):(.+)$/.exec(r);
   if (m) return { id: m[2], part: m[1] === 'trip-part' };
   const id = tripOfPayment(s);
-  return id ? { id, part: !!s.tripPart } : null;
+  // A whole Tab card's part on the trip pays the trip's money, but it settles nothing
+  return id && !isTabTripPayment(s) ? { id, part: !!s.tripPart } : null;
 }
