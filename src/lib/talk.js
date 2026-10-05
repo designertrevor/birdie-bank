@@ -1,25 +1,28 @@
 // Trash talk: reactions and comments on a finished round, its settle-ups and its side bets
-// between two players (the head-to-head challenges), and on an upcoming round, plus quick jabs
-// to pick from. Pure, unit tested. The transport is talk-sync.js; the server's rules are
+// between two players, on an upcoming round, on a challenge, and on a payment marked paid on the
+// Tab (its round's settle-up line), plus quick jabs to pick from. Pure, unit tested. The transport is talk-sync.js; the server's rules are
 // supabase/2026-10-04-comments.sql, and talk-access.js is the same rules in JavaScript.
 //
 // Each round or plan is one thread on this phone: state.talk[threadKey] = { rowId: row }, where
 // a row is one comment, or one person's reaction with one emoji:
 //   { id, on, kind: 'comment' | 'reaction', who, name, body, jab, emoji, at, updatedAt, deleted, mine, sent }
-// `on` says what it's about: 'round', 'plan', 'pay:from>to' (a settle-up line) or 'bet:id' (a side
-// bet between two). `who` is the author's seat in that round (or their id on the plan), the same
+// `on` says what it's about: 'round', 'plan', 'challenge', 'pay:from>to' (a settle-up line, which
+// a payment on the Tab talks on too) or 'bet:id' (a side bet between two). `who` is the author's seat in that round (or their id on the plan), the same
 // on every phone in it. `mine`: written from this phone (or your account), so you can take it
 // back. `sent`: the updatedAt the server has, so a row with sent !== updatedAt still has to go up.
 // Nothing here ever touches money.
 import { GAMES } from './round.js';
 import { gameLabel, meFor, myIds } from './format.js';
-import { canonicalOf } from './pair-debts.js';
+import { canonicalOf, codeOf } from './pair-debts.js';
+import { isTripPayment } from './trip-pay.js';
 import { nameOf } from './ledger.js';
 import { dayLabel, planPeople } from './plans.js';
-import { countsMoney, playForOf } from './play-for.js';
+import { countsMoney, playForOf, tabResults } from './play-for.js';
 import { betsOf, isCashBet } from './pair-bets.js';
 import { roundTime } from './history.js';
 import { agoLabel, LATELY_DAYS } from './lately.js';
+import { challengeLife, challengeWhatNoAmount, cleanChallenge, setUpHere, sideOf } from './challenges.js';
+import { challengeMoments, roundMoments, settleMoments } from './jab-moments.js';
 export { countsLine, roundTalkCounts, talkCounts } from './talk-counts.js';
 
 const DAY = 864e5;
@@ -39,8 +42,12 @@ export const emojiOf = key => REACTION_BY_KEY[key]?.emoji || '';
 
 /**
  * Quick jabs, one list for each kind of thing. Friendly ribbing between friends, never about
- * anyone's looks, money troubles or anything off the course. A jab marked `money` talks about
- * money, so it shows only on a thing played for money (never on a points or lunch round).
+ * anyone's looks, money troubles or anything off the course, and nothing that sounds like a casino.
+ * A jab marked `money` talks about money, so it shows only on a thing played for money (never on a
+ * points or lunch round). The lists after `gallery` are for a moment (see jab-moments.js): a birdie
+ * or a three-putt in the round, how it went for you, a settle-up still owed or paid, and where a
+ * challenge stands. Their jabs come first, then the thing's own list. Every key is unique (a posted
+ * jab keeps its key) and at most 32 characters, the server's column.
  */
 export const JABS = {
   round: [
@@ -53,16 +60,15 @@ export const JABS = {
     { key: 'carried', text: 'Thanks for carrying me, partner' },
     { key: 'sameTime', text: 'Same time next time?' },
   ],
+  // A settle-up line, owed or paid
   settle: [
     { key: 'business', text: 'Pleasure doing business' },
-    { key: 'finally', text: 'Paid in full. Finally' },
     { key: 'spend', text: 'Don’t spend it all at once' },
     { key: 'back', text: 'I’ll win it back next time' },
-    { key: 'receipt', text: 'Framing this one' },
   ],
   bet: [
     { key: 'easy', text: 'Easiest money all day', money: true },
-    { key: 'double', text: 'Double or nothing?' },
+    { key: 'double', text: 'Rematch, same bet?' },
     { key: 'strokes', text: 'I want more strokes next time' },
     { key: 'called', text: 'Called it on the first tee' },
   ],
@@ -83,15 +89,77 @@ export const JABS = {
     { key: 'watching', text: 'I’m watching every hole' },
     { key: 'buying', text: 'Who’s buying after?' },
   ],
+  // A challenge between two (challenges.js): its own list, then one for where it stands
+  challenge: [
+    { key: 'chFirstTee', text: 'See you on the first tee' },
+    { key: 'chWarm', text: 'Better start warming up' },
+    { key: 'chTalk', text: 'All talk until the first tee' },
+  ],
+  // ...waiting on an answer
+  chOpen: [
+    { key: 'chTick', text: 'Tick tock. In or out?' },
+    { key: 'chThink', text: 'Take your time. I’ll wait' },
+    { key: 'chScared', text: 'Nervous? Totally fine' },
+  ],
+  // ...agreed (or already in a round)
+  chAccepted: [
+    { key: 'chGameOn', text: 'Game on' },
+    { key: 'chRegret', text: 'You’re going to regret that' },
+    { key: 'chBring', text: 'Bring your best stuff' },
+  ],
+  // ...passed this time
+  chDeclined: [
+    { key: 'chNextTime', text: 'Next time, then' },
+    { key: 'chMaybe', text: 'I’ll take that as a maybe' },
+    { key: 'chSmart', text: 'Smart move, honestly' },
+  ],
+  // Someone in the round made a birdie (or better)
+  birdie: [
+    { key: 'birdieTour', text: 'Somebody call the tour' },
+    { key: 'birdieAgain', text: 'Do that again. I dare you' },
+    { key: 'birdieFluke', text: 'Skill or fluke? Asking for a friend' },
+  ],
+  // Someone three-putted (marked in a Snake game)
+  threePutt: [
+    { key: 'threePutt', text: 'Three putts? The hole wasn’t moving' },
+    { key: 'snakeYours', text: 'The snake looks good on you' },
+    { key: 'lagPutt', text: 'Lag putting is a skill, I hear' },
+  ],
+  // The round went your way
+  win: [
+    { key: 'winHumble', text: 'I’ll try to stay humble' },
+    { key: 'winTrophy', text: 'Where do I pick up my trophy?' },
+  ],
+  // The round didn't go your way
+  loss: [
+    { key: 'lossMine', text: 'Next time is mine' },
+    { key: 'lossFun', text: 'Still had more fun than you' },
+    { key: 'lossLucky', text: 'You got lucky and you know it' },
+  ],
+  // A settle-up line still owed
+  owed: [
+    { key: 'payUp', text: 'Pay up, partner', money: true },
+    { key: 'tabForgets', text: 'The Tab never forgets' },
+    { key: 'noRush', text: 'No rush. Okay, a little rush' },
+  ],
+  // A payment marked paid
+  paid: [
+    { key: 'finally', text: 'Paid in full. Finally' },
+    { key: 'receipt', text: 'Framing this one' },
+    { key: 'paidFast', text: 'Fastest payment in the West' },
+  ],
 };
 const JAB_BY_KEY = Object.fromEntries(Object.values(JABS).flat().map(j => [j.key, j]));
+/** The most jabs a picker shows at once (a moment's first, then the thing's own). */
+export const MAX_JABS = 8;
 
-/** What a target is: 'round', 'settle', 'bet' or 'plan'. */
+/** What a target is: 'round', 'settle', 'bet', 'plan' or 'challenge'. */
 export function contextOf(on) {
   const s = String(on || '');
   if (s.startsWith('pay:')) return 'settle';
   if (s.startsWith('bet:')) return 'bet';
   if (s === 'plan') return 'plan';
+  if (s === 'challenge') return 'challenge';
   return 'round';
 }
 /**
@@ -104,11 +172,34 @@ export function reactionsFor({ money = true, picked = [] } = {}) {
 }
 /**
  * The jabs that fit a target. `money`: whether that thing is played for money (see moneyOn);
- * `set`: a list to use instead ('gallery' for a friend watching).
+ * `set`: a list to use instead ('gallery' for a friend watching); `moments`: what happened that
+ * the jabs can be about ('birdie', 'loss', 'owed', 'chAccepted' and the rest, see jab-moments.js),
+ * whose jabs come first. Each jab once, at most MAX_JABS.
  */
-export function jabsFor(on, { money = true, set = null } = {}) {
-  const list = (set && JABS[set]) || JABS[contextOf(on)] || JABS.round;
-  return money ? list : list.filter(j => !j.money);
+export function jabsFor(on, { money = true, set = null, moments = [] } = {}) {
+  const base = (set && JABS[set]) || JABS[contextOf(on)] || JABS.round;
+  const extra = (moments || []).flatMap(m => (m !== set && JABS[m] && JABS[m] !== base ? JABS[m] : []));
+  if (!extra.length) return money ? base : base.filter(j => !j.money);
+  const seen = new Set();
+  return [...extra, ...base]
+    .filter(j => (money || !j.money) && !seen.has(j.key) && seen.add(j.key))
+    .slice(0, MAX_JABS);
+}
+
+/**
+ * The critter from the Ball buddies art (avatars.js) that sits by the jabs, for the first moment
+ * there is, else for the kind of thing: { id, bg }.
+ */
+const JAB_ART = {
+  birdie: { id: 'birdie', bg: 'mint' }, threePutt: { id: 'goose', bg: 'lav' }, win: { id: 'tiger', bg: 'pink' },
+  loss: { id: 'frog', bg: 'peach' }, owed: { id: 'gopher', bg: 'blush' }, paid: { id: 'flamingo', bg: 'ochre' },
+  chOpen: { id: 'flag', bg: 'mint' }, chAccepted: { id: 'eagle', bg: 'teal' }, chDeclined: { id: 'goose', bg: 'lav' },
+  round: { id: 'birdie', bg: 'mint' }, settle: { id: 'gopher', bg: 'blush' }, bet: { id: 'tiger', bg: 'pink' },
+  plan: { id: 'flag', bg: 'mint' }, gallery: { id: 'birdie', bg: 'mint' }, challenge: { id: 'flag', bg: 'mint' },
+};
+export function jabArt(on, { set = null, moments = [] } = {}) {
+  const m = (moments || []).find(k => JAB_ART[k]);
+  return JAB_ART[m] || JAB_ART[set] || JAB_ART[contextOf(on)] || JAB_ART.round;
 }
 
 /**
@@ -130,6 +221,8 @@ export function moneyOn(round, on) {
 
 export const roundThread = round => `round:${round.id}`;
 export const planThread = plan => `plan:${plan.id}`;
+/** A challenge between two (challenges.js), by its id on this phone. */
+export const challengeThread = ch => `challenge:${ch.id}`;
 /** A friend's round you watch from the Friends feed, by its code: its talk is the round's own. */
 export const followThread = code => `follow:${code}`;
 /** A settle-up line of a round: one transfer, from `from` to `to`. */
@@ -339,7 +432,26 @@ export function latelyTalk(state, now = Date.now(), { days = LATELY_DAYS } = {})
       seatName: planTalk(p).seatName,
     });
   }
+  for (const raw of Object.values(state.challenges || {})) {
+    const ch = cleanChallenge(raw);
+    if (!ch || !state.talk?.[challengeThread(ch)]) continue;
+    const ctx = challengeTalk(state, ch);
+    if (!ctx?.who) continue;
+    add(ctx.key, state.talk[ctx.key], { title: challengeTitle(ch, ctx.who), target: ['challenge', { id: ch.id }], me: ctx.who, seatName: ctx.seatName });
+  }
   return items.sort((a, b) => b.at - a.at || String(a.id).localeCompare(String(b.id)));
+}
+
+/**
+ * A challenge's name in one short line, never with its amount: "Challenge with Mike: match", or
+ * "Mike v Dave: closest to the pin" for one you set up between two others.
+ */
+export function challengeTitle(ch, me = null) {
+  const a = firstOf(ch.from.name), b = firstOf(ch.to.name);
+  const what = challengeWhatNoAmount(ch);
+  if (me && me === ch.from.who) return `Challenge with ${b}: ${what}`;
+  if (me && me === ch.to.who) return `Challenge with ${a}: ${what}`;
+  return `${a} v ${b}: ${what}`;
 }
 
 /**
@@ -372,14 +484,75 @@ export function recentTalkKeys(state, { days = LATELY_DAYS, now = Date.now() } =
   const since = now - days * DAY;
   const rounds = Object.values(state.rounds || {}).filter(r => r?.status === 'done' && roundTime(r) >= since && talkWho(r, state));
   const plans = Object.values(state.plans || {}).filter(p => p && p.status === 'planned' && planWho(p));
-  return [...rounds.map(roundThread), ...plans.map(planThread)];
+  // Challenges you're in (or set up) that are still going, and any with talk from lately
+  const chs = Object.values(state.challenges || {}).map(cleanChallenge).filter(ch => {
+    if (!ch?.code || !challengeTalk(state, ch)?.who) return false;
+    if (challengeLife(state, ch, now) === 'live') return true;
+    return Object.values(state.talk?.[challengeThread(ch)] || {}).some(r => (r.updatedAt || 0) >= since);
+  });
+  return [...rounds.map(roundThread), ...plans.map(planThread), ...chs.map(challengeThread)];
 }
 
-/** Who you are and how names read in a round's talk (for the talk on screen). */
+/** The two ends of a settle-up line's target ('pay:from>to'), or null. */
+export function payParts(on) {
+  const m = /^pay:(.+?)>(.+)$/.exec(String(on || ''));
+  return m ? { from: m[1], to: m[2] } : null;
+}
+
+/**
+ * Who you are and how names read in a round's talk (for the talk on screen). `momentsOn(on)` says
+ * what the jabs can be about there (jab-moments.js): how the round went for you, a birdie or a
+ * three-putt on the round itself; owed or paid on a settle-up line.
+ */
 export function roundTalk(round, state) {
   const who = talkWho(round, state);
   const seatName = id => round.players.find(p => p.id === id)?.name || null;
-  return { key: roundThread(round), who, myName: who ? firstOf(seatName(who)) : null, seatName, kind: 'round', moneyOn: on => moneyOn(round, on) };
+  let mine = null; // the round's moments, worked out once
+  const momentsOn = on => {
+    const c = contextOf(on);
+    if (c === 'round') return (mine ??= roundMoments(round, who));
+    const pay = c === 'settle' ? payParts(on) : null;
+    return pay ? settleMoments(state, round, pay.from, pay.to) : [];
+  };
+  return { key: roundThread(round), who, myName: who ? firstOf(seatName(who)) : null, seatName, kind: 'round', moneyOn: on => moneyOn(round, on), momentsOn };
+}
+
+/**
+ * The same for a challenge between two (challenges.js): you talk as your side of it (or as whoever
+ * set it up between two others), by the ids it was made with, which every phone in it shares. Only
+ * the people in it can join in; a challenge on points never talks money.
+ */
+export function challengeTalk(state, raw) {
+  const ch = cleanChallenge(raw);
+  if (!ch) return null;
+  const side = sideOf(state, ch);
+  const setter = !side && setUpHere(state, ch);
+  // A side is worked out on the plan its round moved to, if it did; the id is as it was made
+  const who = side ? ch[side].who : setter ? ch.setBy.who : null;
+  const names = { [ch.from.who]: ch.from.name, [ch.to.who]: ch.to.name, ...(ch.setBy?.who ? { [ch.setBy.who]: ch.setBy.name } : {}) };
+  const seatName = id => names[id] || null;
+  return {
+    key: challengeThread(ch), who, myName: who ? firstOf(seatName(who)) : null, seatName, kind: 'challenge',
+    moneyOn: () => ch.unit !== 'points', momentsOn: () => challengeMoments(ch),
+  };
+}
+
+/**
+ * Where a payment on the Tab (shared-tab.js paymentGroups) talks: on its round's settle-up line,
+ * the same line the round's page shows, so a reaction on one is on the other. When one tap paid
+ * several rounds, the newest one you played that's still on this phone. { round, on } or null for
+ * a payment no round of yours explains (money passed on, a trip's expenses).
+ */
+export function paymentTalk(state, pay) {
+  let best = null;
+  for (const s of pay?.settlements || []) {
+    if (!s || s.expensePay || isTripPayment(s)) continue;
+    const r = (s.roundId && state.rounds?.[s.roundId]) || (s.code ? Object.values(state.rounds || {}).find(x => x && codeOf(x) === s.code) : null);
+    if (r?.status !== 'done' || !GAMES[r.game] || !talkWho(r, state)) continue;
+    if (!tabResults(r).transfers.some(t => t.from === s.from && t.to === s.to)) continue;
+    if (!best || roundTime(r) > roundTime(best.round)) best = { round: r, on: payTarget(s.from, s.to) };
+  }
+  return best;
 }
 /**
  * The same for a friend's round you watch (the Friends feed): you write as yourself, from the

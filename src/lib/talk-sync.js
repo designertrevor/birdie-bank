@@ -9,6 +9,9 @@
 // A friend's round you watch from the Friends feed (thread 'follow:<code>') talks on that round's
 // own thread, joined with follow_round() (supabase/2026-10-06-friend-feed.sql), which lets a friend
 // watching in on the round itself only. Before that SQL is run, it stays on this phone.
+// A challenge's talk (thread 'challenge:<id>') goes up under the challenge's code once it has one,
+// joined with join_challenge_comments() (supabase/2026-10-07-challenge-talk.sql). Before that SQL
+// is run, it stays on this phone, and the rest of the talk goes on as before.
 import { useEffect, useSyncExternalStore } from 'react';
 import { getState, uid, update } from './store.js';
 import { getSupabase, supabaseConfigured } from './supabase.js';
@@ -24,6 +27,10 @@ const localFlag = () => { try { return localStorage.getItem('bb-sync-local') ===
 export class TalkOffError extends Error {
   constructor() { super('Comments aren’t switched on yet'); this.name = 'TalkOffError'; }
 }
+/** Thrown when the challenges' talk isn't on the server yet. */
+class ChallengeTalkOffError extends Error {
+  constructor() { super('Talk on challenges isn’t switched on yet'); this.name = 'ChallengeTalkOffError'; }
+}
 /** Thrown when following a friend's round isn't on the server yet. */
 class FollowOffError extends Error {
   constructor() { super('Following friends’ rounds isn’t switched on yet'); this.name = 'FollowOffError'; }
@@ -34,8 +41,8 @@ class BadRowError extends Error {
 }
 
 // --------------------------- transport ---------------------------------------
-//   join(scope, code) -> seats | null   follow(code) -> seats | null   fetchRows(scope, codes) -> db rows
-//   upsertRow(dbRow)
+//   join(scope, code) -> seats | null   follow(code) -> seats | null   joinChallenge(code) -> seats | null
+//   fetchRows(scope, codes) -> db rows   upsertRow(dbRow)
 
 function supabaseTalk(db) {
   const check = ({ error }) => {
@@ -58,6 +65,12 @@ function supabaseTalk(db) {
       check(r);
       return Array.isArray(r.data) ? r.data : null;
     },
+    async joinChallenge(code) {
+      const r = await db.rpc('join_challenge_comments', { p_code: code });
+      if (r.error && (isMissingTable(r.error) || r.error.code === 'PGRST202' || r.error.code === '42883')) throw new ChallengeTalkOffError();
+      check(r);
+      return Array.isArray(r.data) ? r.data : null;
+    },
     async fetchRows(scope, codes) {
       if (!codes.length) return [];
       const r = await db.from('comments').select('*').eq('scope', scope).in('code', codes);
@@ -76,6 +89,7 @@ function localTalk() {
     kind: 'local',
     async join() { return ['*']; },
     async follow() { return ['*']; },
+    async joinChallenge() { return ['*']; },
     async fetchRows(scope, codes) { return Object.values(load()).filter(r => r.scope === scope && codes.includes(r.code)); },
     async upsertRow(row) {
       const all = load();
@@ -101,6 +115,8 @@ const hasServer = supabaseConfigured || import.meta.env.DEV || (typeof localStor
 let off = !hasServer;
 // Following friends' rounds isn't on the server yet (2026-10-06-friend-feed.sql), for this session
 let followOff = false;
+// The challenges' talk isn't on the server yet (2026-10-07-challenge-talk.sql), for this session
+let challengeOff = false;
 // Who you may speak as in each thread's talk on the server: `${scope}:${code}` -> seats | null
 const seats = new Map();
 let version = 0;
@@ -122,13 +138,26 @@ export function threadTarget(state, key) {
   if (kind === 'round') return { scope: 'round', code: codeOf(state.rounds?.[id]) };
   if (kind === 'plan') return { scope: 'plan', code: state.plans?.[id]?.code || null };
   if (kind === 'follow') return { scope: 'round', code: /^[A-Z0-9]{6}$/.test(id) ? id : null, via: 'follow' };
+  if (kind === 'challenge') { const c = state.challenges?.[id]?.code; return { scope: 'challenge', code: /^[A-Z0-9]{6}$/.test(c || '') ? c : null }; }
   return { scope: null, code: null };
 }
 // Who you may speak as is kept per way in: a player's seats, or a friend watching (per account)
 const seatKey = t => talkSeatKey(t, accountNow().user?.id || null);
 
-/** Let this phone in on a thread: as a player (join_comments), or as a friend watching (follow_round). */
+/**
+ * Let this phone in on a thread: as a player (join_comments), as one of a challenge's people
+ * (join_challenge_comments), or as a friend watching (follow_round).
+ */
 async function joinThread(adapter, t) {
+  if (t.scope === 'challenge') {
+    if (challengeOff) return null;
+    try { return await adapter.joinChallenge(t.code); } catch (e) {
+      if (!(e instanceof ChallengeTalkOffError)) throw e;
+      challengeOff = true;
+      changed();
+      return null;
+    }
+  }
   if (t.via !== 'follow') return adapter.join(t.scope, t.code);
   // Only an account can follow a friend's round; signed out, the talk stays on this phone
   if (followOff || (adapter.kind === 'supabase' && !accountNow().user?.id)) return null;
@@ -148,7 +177,8 @@ async function joinThread(adapter, t) {
 export function useTalkReach(key) {
   useSyncExternalStore(sub, () => version, () => version);
   const t = threadTarget(getState(), key);
-  return talkReach({ off: off || (t.via === 'follow' && followOff), code: t.code, seats: t.code ? seats.get(seatKey(t)) : undefined });
+  const scopeOff = (t.via === 'follow' && followOff) || (t.scope === 'challenge' && challengeOff);
+  return talkReach({ off: off || scopeOff, code: t.code, seats: t.code ? seats.get(seatKey(t)) : undefined });
 }
 
 // --------------------------- sending ------------------------------------------
@@ -234,7 +264,7 @@ export async function refreshTalk(keys) {
     }
     await flushTalk();
     const who = { device: myDevice(), user: accountNow().user?.id || null };
-    for (const scope of ['round', 'plan']) {
+    for (const scope of ['round', 'plan', 'challenge']) {
       const codes = [...new Set([...byCode].filter(([k, { t }]) => t.scope === scope && seats.get(k) != null).map(([, { t }]) => t.code))];
       if (!codes.length) continue;
       const rows = await adapter.fetchRows(scope, codes);
