@@ -69,7 +69,8 @@ export function noteNudge(draft, id, at = Date.now()) {
  * the clock starts at the round that put `from` owing `to` and starts again whenever they're back
  * to square between the two of them. When the Tab has them owing only through the rest of the
  * group (nothing direct between them), it's their newest round, and only if `from` lost and `to`
- * won in it; `cents` is then null (the Tab's amount stands).
+ * won in it; `cents` is then only what that round shows: the smaller of what `from` lost in it and
+ * what `to` won, so money rolled or carried before it never rides along.
  */
 export function owedAfterCutoff(state, from, to, rounds = [], { isTo = null } = {}) {
   const who = canonicalOf(state);
@@ -100,7 +101,8 @@ export function owedAfterCutoff(state, from, to, rounds = [], { isTo = null } = 
       if (who(p.id) !== A) continue;
       for (const q of r.players || []) if (toB(q.id)) c -= Math.round((Number(pairs[p.id]?.[q.id]) || 0) * 100);
     }
-    events.push({ at, c, group: netA < 0 && netB > 0 });
+    const group = netA < 0 && netB > 0;
+    events.push({ at, c, group, g: group ? Math.round(Math.min(-netA, netB) * 100) : 0 });
   }
   for (const x of bigBetween(state, toB, id => who(id) === A)) if (x.at > cutoff) events.push({ at: x.at, c: x.amount });
   if (!events.length) return null;
@@ -114,7 +116,7 @@ export function owedAfterCutoff(state, from, to, rounds = [], { isTo = null } = 
   }
   if (owed > 0 && since != null) return { since, cents: owed };
   const last = events.at(-1);
-  return last.group && !events.some(e => e.c) ? { since: last.at, cents: null } : null;
+  return last.group && !events.some(e => e.c) ? { since: last.at, cents: last.g } : null;
 }
 
 /** When `from` started owing `to` the money that's open now (owedAfterCutoff's `since`), or null. */
@@ -154,7 +156,7 @@ export function paymentNudges(state, { now = Date.now(), days = nudgeDays(state?
     const fresh = owedAfterCutoff(state, o.id, o.me, [...new Set(o.rounds)], { isTo: id => mine(id) && who(id) !== k });
     if (!fresh) continue;
     const { since } = fresh;
-    const amount = fresh.cents == null ? o.cents / 100 : Math.min(o.cents, fresh.cents) / 100;
+    const amount = Math.min(o.cents, fresh.cents) / 100;
     if (!(amount >= NUDGE_MIN) || now - since < days * DAY_MS) continue;
     if (now - lastNudged(state, o.id) < NUDGE_EVERY_DAYS * DAY_MS) continue;
     out.push({ id: o.id, amount, since, days: Math.floor((now - since) / DAY_MS) });
