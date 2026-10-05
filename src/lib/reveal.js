@@ -277,6 +277,15 @@ function mainRevealSteps(round, res) {
     return { title: dots ? 'Dots' : 'Points', steps };
   }
 
+  // Team quota (a Quota house rule): the teams against their quotas added up, best first
+  if (round.game === 'quota' && d.teamQuota?.length) {
+    const tenth = v => Math.round(v * 10) / 10;
+    const toPar = v => (v === 0 ? 'E' : v > 0 ? `+${tenth(v)}` : String(tenth(v)));
+    const steps = [...d.teamQuota].sort((a, b) => b.over - a.over)
+      .map(t => ({ key: t.id, label: t.players.map(name).join(' & '), text: `${t.points} pts, quota ${tenth(t.quota)}`, value: toPar(t.over) }));
+    return { title: 'Team quota', steps };
+  }
+
   if (['stroke', 'stableford', 'quota', 'scramble'].includes(round.game) && d.totals) {
     const rows = d.totals.filter(x => x.played);
     const lowerWins = round.game === 'stroke' || round.game === 'scramble';

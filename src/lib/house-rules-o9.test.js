@@ -12,6 +12,9 @@ import { houseRulesLine } from './house-rules.js';
 import { houseRulesFor, agreementItems } from './agreed.js';
 import { stakeSummary } from './stakes.js';
 import { carriedQuotas, carriedLine } from './quota-carry.js';
+import { revealSteps } from './reveal.js';
+import { QUOTA_TEAMS, defaultTeams, teamsCfg, teamsProblem } from './teams.js';
+import { changeTeams, lineupKind } from './lineup.js';
 import { o9Rounds } from './o9-money.fixtures.js';
 
 const SNAPSHOT = JSON.parse(readFileSync(new URL('./o9-money.snapshot.json', import.meta.url), 'utf8'));
@@ -400,6 +403,10 @@ test('team quota: partners add up their points against their quotas, and the bes
   assert.deepEqual(q.on, { a: 5, b: 5, c: -5, d: -5 });
   assert.deepEqual(teamQuotaTable(q.round).map(t => [t.points, t.quota, t.over]), [[38, 36, 2], [37, 36, 1]]);
   assert.equal(roundResults(q.round).detail.teamQuota.length, 2);
+  // The reveal shows the teams, best first
+  const rv = revealSteps({ ...q.round, status: 'done' }, roundResults(q.round));
+  assert.equal(rv.title, 'Team quota');
+  assert.deepEqual(rv.steps.map(x => [x.label, x.value]), [['Ann & Bo', '+2'], ['Cy & Di', '+1']]);
   // Nobody joins a team quota partway, and turning it on or off counts the whole round
   assert.ok(addPlayerProblem(q.round));
   assert.equal(addPlayerProblem(build(mk('quota', ['a', 'b', 'c', 'd'], { teams, set: { payout: 'pot' } }))), null);
@@ -567,4 +574,24 @@ test('bingo is the longest drive: the same tap, so the same money, and the card 
   assert.deepEqual(b.before, b.off);
   assert.equal(houseRulesLine('bbb', { value: 1, bingoDrive: true }), 'Bingo is the longest drive');
   assert.ok(houseRulesFor('bbb', { bingoDrive: true }).some(h => h.id === 'bingoDrive' && h.on));
+});
+
+test('team quota teams: pairs by default in setup, checked like any teams, and changeable from the round menu', () => {
+  const pot = { quota: { payout: 'pot', team: true } };
+  assert.equal(teamsCfg('quota', pot, 4), QUOTA_TEAMS);
+  assert.equal(teamsCfg('quota', pot, 3), null);
+  assert.equal(teamsCfg('quota', { quota: { payout: 'per', team: true } }, 4), null);
+  assert.equal(teamsCfg('quota', { quota: { payout: 'pot', team: false } }, 4), null);
+  assert.deepEqual(defaultTeams('quota', ['a', 'b', 'c', 'd'], QUOTA_TEAMS), [['a', 'b'], ['c', 'd']]);
+  assert.deepEqual(defaultTeams('quota', ['a', 'b', 'c', 'd', 'e', 'f'], QUOTA_TEAMS), [['a', 'b'], ['c', 'd'], ['e', 'f']]);
+  assert.deepEqual(defaultTeams('quota', ['a', 'b', 'c', 'd', 'e'], QUOTA_TEAMS), [['a', 'b', 'c'], ['d', 'e']]);
+  assert.equal(teamsProblem('quota', [['a', 'b', 'c', 'd']], ['a', 'b', 'c', 'd'], QUOTA_TEAMS), 'Quota is played in 2 to 4 teams');
+  assert.equal(teamsProblem('quota', [['a', 'b'], ['c', 'd']], ['a', 'b', 'c', 'd'], QUOTA_TEAMS), null);
+  const r = scores(mk('quota', ['a', 'b', 'c', 'd'], { teams: [['a', 'b'], ['c', 'd']], set: { payout: 'pot', stake: 5, team: true } }), 9, { 1: { a: 3 }, 2: { c: 3 }, 3: { d: 4 } });
+  assert.equal(lineupKind(r), 'teams');
+  // Swap Bo and Di: Ann & Di are +1, Cy & Bo +2
+  const swapped = changeTeams(r, [['a', 'd'], ['c', 'b']]);
+  assert.deepEqual(bal(swapped), { a: -5, b: 5, c: 5, d: -5 });
+  // Without the rule a Quota round has no lineup to change
+  assert.equal(lineupKind(mk('quota', ['a', 'b', 'c', 'd'])), null);
 });
