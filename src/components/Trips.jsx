@@ -598,7 +598,8 @@ function WhoGoing({ picked, onChange, byIndex = false, canSkip = false }) {
       </form>
       {typed?.kind === 'self' && <p className="field-help" role="status">That’s you, and you’re going already.</p>}
       <div className="trip-who-head">
-        <span className="field-label">{!query.trim() ? 'Your players and friends' : list.length ? `${list.length} match${list.length === 1 ? '' : 'es'}` : 'No match yet'}</span>
+        {/* Your own name says so once, above: no "No match yet" under it as well */}
+        <span className="field-label">{!query.trim() ? 'Your players and friends' : list.length ? `${list.length} match${list.length === 1 ? '' : 'es'}` : typed?.kind === 'self' ? '' : 'No match yet'}</span>
         {count > 0 && <span className="trip-who-count">{count} picked</span>}
       </div>
       <div className="trip-who" role="group" aria-label="Who’s going">
@@ -614,7 +615,7 @@ function WhoGoing({ picked, onChange, byIndex = false, canSkip = false }) {
         )}
       </div>
       {all.length === 0 && <p className="field-help">{canSkip ? 'Nobody here yet. Add friends by name above, or skip this and send the first round’s link so they add themselves.' : 'Nobody here yet. Add friends by name above.'}</p>}
-      {all.length > 0 && query.trim() && !list.length && typed?.kind !== 'new' && <p className="field-help">Nobody by that name.</p>}
+      {all.length > 0 && query.trim() && !list.length && typed?.kind !== 'new' && typed?.kind !== 'self' && <p className="field-help">Nobody by that name.</p>}
       {byIndex && <p className="field-help">Someone new is saved to your players with no handicap. Add their index on Players to balance the teams or flights by it.</p>}
     </div>
   );

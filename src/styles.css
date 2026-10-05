@@ -3218,3 +3218,6 @@ a.header-btn.rm-open { text-decoration: none; }
 .exp-foot-row .link-btn.exp-all { display: inline-flex; align-items: center; margin: 0; flex-shrink: 0; min-height: 44px; }
 /* Which rounds count: a row's reason wraps so it can be read in full */
 .trip-pick .li-sub { white-space: normal; overflow: visible; text-overflow: clip; line-height: 1.35; }
+/* Who's going: the sheet keeps its full height while the list filters, so the search box and Add
+   button hold still under your thumb as you type */
+.sheet:has(.trip-who-step) { min-height: 90%; }
