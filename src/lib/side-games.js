@@ -105,7 +105,8 @@ export function sideExample(game, settings, n = 4, holes = null) {
     return `Win a hole outright, win the skin.${s.carryover ? ' Ties carry.' : ''} Win 3 skins in ${groupOf(n)} and the other ${others} each pay you ${money(s.value * 3)}.`;
   }
   if (game === 'dots') {
-    const on = Object.keys(DOT_KINDS).filter(k => s.kinds?.[k]);
+    // The penalty dots cost you, so they're not in the list of what pays
+    const on = Object.keys(DOT_KINDS).filter(k => s.kinds?.[k] && !DOT_KINDS[k].penalty);
     const list = on.length ? `${on.slice(0, 3).map(k => PLURAL[k]).join(', ')}${on.length > 3 ? ' and more' : ''}` : 'birdies';
     const one = on.includes('greenie') ? 'greenie' : on.length ? DOT_KINDS[on[0]].name.toLowerCase() : 'birdie';
     return `${list[0].toUpperCase()}${list.slice(1)}. One ${one} in ${groupOf(n)}: the other ${others} each pay you ${money(s.value)}.`;

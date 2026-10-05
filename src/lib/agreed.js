@@ -15,7 +15,8 @@ import { potHolesLine } from './side-games.js';
 import { sideBetLine, stakeSummary } from './stakes.js';
 import { inUnits } from './play-for.js';
 import { gamePct, halfStrokesOn, playsAtPct } from './allowances.js';
-import { houseRulesLine } from './house-rules.js';
+import { houseRulesLine, penaltyDotsOn } from './house-rules.js';
+import { DOT_KINDS } from './games.js';
 import { betHolesText, betName, betPeople, betStakeText, betStrokesText, betsOf, isCashBet } from './pair-bets.js';
 import { money } from './golf.js';
 import { bigGroupName } from './format.js';
@@ -54,27 +55,41 @@ export function houseRulesFor(game, s, holes = 18) {
       r('canadian', 'Canadian skins (a natural birdie beats a net one)', s.canadian && s.kind !== 'gross'),
       r('validate', 'Validate skins (net par on the next hole keeps a skin)', s.validate),
       r('backDouble', 'Back nine skins are worth double', full && s.backDouble && s.payout !== 'pot'),
+      r('birdieDouble', 'A skin won with a birdie counts as two', s.birdieDouble),
     ];
     case 'nassau': return [
       r('turnPress', 'Press at the turn', s.turnPress),
       r('noLastPress', 'No press on the last hole', s.noLastPress && s.pressMode !== 'off'),
       r('teamScore', 'Both balls count (partners’ scores added up)', s.teamScore === 'total'),
+      byeRule(s),
     ];
-    case 'match': return [r('teamScore', 'Both balls count (partners’ scores added up)', s.teamScore === 'total')];
+    case 'match': return [r('teamScore', 'Both balls count (partners’ scores added up)', s.teamScore === 'total'), byeRule(s)];
     case 'banker': return [
       r('ties', 'Ties go to the banker', s.ties === 'banker'),
       r('birdies', s.birdies === 'net' ? 'Net birdies double' : 'Birdies double', s.birdies && s.birdies !== 'off'),
       r('par3Triple', 'Presses triple on par 3s', s.par3Triple),
+      r('pressAll', 'The banker’s press back doubles every bet', s.pressAll),
     ];
     case 'wolf': return [
       r('lone', `Lone wolf ${s.loneMultiplier ?? 2}×`, true),
       r('blind', `Blind wolf ${blindMultiplierOf(s)}×`, s.blind),
       r('carry', 'Tied holes carry to the next one won', s.carry),
       r('lastWolf', 'Last place is the wolf on 17 and 18', full && s.lastWolf),
+      r('birdieDouble', 'A hole won with a birdie pays double', s.birdieDouble),
     ];
-    case 'hammer': return [r('who', 'Only the side behind throws the first hammer', s.who === 'trailing'), r('birdie', 'A birdie that wins the hole is one more hammer', s.birdie)];
-    case 'vegas': return [r('birdieFlip', 'Birdie flip', s.birdieFlip), r('birdieDouble', 'Birdies double, eagles triple', s.birdieDouble), r('daytona', 'Daytona (no par or better, high number first)', s.daytona)];
-    case 'sixes': return [r('carry', 'A halved match carries to the next', s.carry && s.mode !== 'holes'), r('teamScore', 'Both balls count (partners’ scores added up)', s.teamScore === 'total')];
+    case 'hammer': return [
+      r('who', 'Only the side behind throws the first hammer', s.who === 'trailing'),
+      r('birdie', 'A birdie that wins the hole is one more hammer', s.birdie),
+      r('carry', 'A halved hole carries its value to the next', s.carry),
+    ];
+    case 'vegas': return [
+      r('birdieFlip', 'Birdie flip', s.birdieFlip), r('birdieDouble', 'Birdies double, eagles triple', s.birdieDouble),
+      r('daytona', 'Daytona (no par or better, high number first)', s.daytona), r('max9', 'No double digits: a score counts 9 at most', s.max9),
+    ];
+    case 'sixes': return [
+      r('carry', 'A halved match carries to the next', s.carry && s.mode !== 'holes'), r('teamScore', 'Both balls count (partners’ scores added up)', s.teamScore === 'total'),
+      r('press', 'Auto press at 2 down in each match', s.press && s.mode !== 'holes'),
+    ];
     case 'scramble': return [r('drives', `${s.drives} drives each`, s.drives), r('second', 'Second place gets its money back', s.second)];
     // The team games (2026-10-03): best two and drives are worth saying (the bet line says stroke play);
     // Nassau's press rules when it's played as a match
@@ -84,19 +99,40 @@ export function houseRulesFor(game, s, holes = 18) {
       r('turnPress', 'Press at the turn', s.format === 'nassau' && s.scoring !== 'stroke' && s.turnPress),
       r('noLastPress', 'No press on the last hole', s.format !== 'hole' && s.scoring !== 'stroke' && s.noLastPress && s.pressMode !== 'off'),
     ];
-    case 'stroke': return [r('cap', 'Net double bogey max', s.cap), r('nassau', 'Front, back and total: a pot each', full && s.nassau && s.payout === 'pot')];
-    case 'stableford': return [r('nassau', 'Front, back and total: a pot each', full && s.nassau && s.payout === 'pot')];
-    case 'quota': return [
-      r('minus', 'Double bogey or worse is −1', s.minus),
-      r('nassau', 'Front, back and total: a pot each, nines against half quota', full && s.nassau && s.payout === 'pot'),
-      r('split', 'Everyone over quota shares the pot', s.split === 'over' && s.payout === 'pot'),
+    case 'stroke': return [
+      r('cap', 'Net double bogey max', s.cap), r('nassau', 'Front, back and total: a pot each', full && s.nassau && s.payout === 'pot'),
+      r('gross', 'Low gross takes a pot too', s.gross && s.payout === 'pot'),
     ];
+    case 'stableford': return [r('nassau', 'Front, back and total: a pot each', full && s.nassau && s.payout === 'pot'), r('table', 'Big birdies: bogey 1, par 2, birdie 4, eagle 8', s.table === 'chicago')];
+    case 'quota': {
+      // Team quota is one pot between the teams: front, back and total and sharing the pot don't play with it
+      const team = !!s.team && s.payout === 'pot';
+      return [
+        r('minus', 'Double bogey or worse is −1', s.minus),
+        r('nassau', 'Front, back and total: a pot each, nines against half quota', full && s.nassau && s.payout === 'pot' && !team),
+        r('split', 'Everyone over quota shares the pot', s.split === 'over' && s.payout === 'pot' && !team),
+        r('table', 'Stableford points: bogey 1, par 2, birdie 3, eagle 4', s.table === 'stableford'),
+        r('adjust', s.adjust === 'half' ? 'Quotas move half the difference for next time' : 'Quotas move 1 for next time: up if you beat it, down if you miss', s.adjust === 'one' || s.adjust === 'half'),
+        r('team', 'Team quota: partners’ points against their quotas added up', team),
+      ];
+    }
     case 'nines': return [r('sweep', 'Win a hole by 2 and take all 9', s.sweep), r('birdie', 'Win a hole with a birdie: 7-1-1', s.birdie)];
     case 'aces': return [r('carry', 'Ties carry', s.carry)];
     case 'bbb': return [r('sweep', 'All three on one hole count double', s.sweep), r('netBongo', 'Bongo goes to the low net score', s.netBongo)];
-    case 'dots': return [r('auto', 'Birdies count as junk', s.auto), r('greenieCarry', 'A missed greenie carries to the next par 3', s.greenieCarry)];
-    case 'rabbit': return [r('sixes', 'Three rabbits, one every six holes', full && s.sixes)];
-    case 'snake': return [r('nines', 'A snake for each nine', s.nines), r('fourPutt', 'A four-putt counts twice', s.fourPutt && (s.growth || 'flat') !== 'flat')];
+    case 'dots': {
+      const bad = penaltyDotsOn(s.kinds);
+      const names = bad.map(k => DOT_KINDS[k].name.toLowerCase());
+      const list = names.length > 1 ? `${names.slice(0, -1).join(', ')} and ${names.at(-1)}` : names[0] || '';
+      return [
+        r('auto', 'Birdies count as junk', s.auto), r('greenieCarry', 'A missed greenie carries to the next par 3', s.greenieCarry),
+        r('penalty', `Penalty dots: ${list} cost${bad.length === 1 ? 's' : ''} a dot`, bad.length),
+      ];
+    }
+    case 'rabbit': return [r('sixes', 'Three rabbits, one every six holes', full && s.sixes), r('backDouble', 'The back nine rabbit is worth double', full && s.backDouble && !s.sixes)];
+    case 'snake': return [
+      r('nines', 'A snake for each nine', s.nines), r('fourPutt', 'A four-putt counts twice', s.fourPutt && (s.growth || 'flat') !== 'flat'),
+      r('split', 'The snake is split among everyone else', s.split),
+    ];
     // Closest to the pin and long drive pots: what a hole nobody wins does. One rule, always on, so a
     // switch from carries to split after locking in reads as one change
     case 'ctp': case 'drive': {
@@ -105,6 +141,11 @@ export function houseRulesFor(game, s, holes = 18) {
     }
     default: return [];
   }
+}
+
+/** Nassau's and Match play's bye, on or off (2026-10-05). */
+function byeRule(s) {
+  return { id: 'bye', text: s.bye === 'half' ? 'The bye: a match closed out early plays the rest for half the bet' : 'The bye: a match closed out early plays the rest for the bet', on: s.bye === 'half' || s.bye === 'full' };
 }
 
 /** Presses as set, for a game that has them ('' when it doesn't). */
