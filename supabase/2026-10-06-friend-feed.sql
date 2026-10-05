@@ -24,14 +24,22 @@
 --  • Money: someone's amounts show only when they turned on Show my money (showMoney), and only to
 --    people they've played with: a friend of someone else in the round sees their first name and
 --    scores, never their amounts. A guest with no account has no setting, so theirs never shows.
---    The app hides the rest.
+--    The money between a few people adds up to $0, so one hidden amount could be worked out from
+--    the rest: a round's money goes out to you only when every seat linked to an account lets it
+--    reach you (all or none, as a shared card in the app, share.js amountsRule). Otherwise the
+--    round goes without anything that carries its money (feed_meta, feed_hole): the stakes, side
+--    games, side bets, what the group agreed, presses and the banker's bets, marked
+--    "feedMoney": false. A points round goes whole (points are bragging rights), and a lunch
+--    round keeps its game (it says who's buying) but not its side bets.
 --  • A round you're in (a seat linked to your account, or this phone's device on it) never comes up:
 --    it's already on your phone.
 --  • A row saved before the one setting (no profile level) keeps the rule fromLegacy() in
 --    profile-model.js has: any of stats, handicap or home course hidden reads as Only you, and money
 --    shows when money was 'played' or 'everyone'.
 -- Each round's meta goes out without the phones' device hashes (devs, hostDev), the seat claims or
--- anyone's payment app and handle: a friend watching doesn't pay anyone.
+-- anyone's payment app and handle: a friend watching doesn't pay anyone. A Big Game's setup on
+-- its rounds (trip.big) goes as its groups' names and codes only: its stakes, its side bets and
+-- the whole field's handicaps stay with the game.
 --
 -- Until this runs, the app's Friends feed shows only what the phone already has (rounds it's
 -- watching, plans you're invited to, settle-ups, recaps and trash talk), and Watch follows nothing
@@ -41,7 +49,8 @@
 --          run the four comments policies from 2026-10-04-comments.sql again, then
 --          drop function public.follow_seats(text); drop function public.follow_ids();
 --          drop function public.feed_round_ok(jsonb); drop function public.feed_seats(jsonb);
---          drop function public.feed_meta(jsonb); drop function public.feed_money(jsonb);
+--          drop function public.feed_meta(jsonb, boolean); drop function public.feed_hole(jsonb, jsonb, boolean);
+--          drop function public.feed_kind(jsonb); drop function public.feed_money(jsonb);
 --          drop function public.feed_level(jsonb); drop table public.round_followers;
 -- The index on live_rounds can stay.
 
@@ -68,16 +77,58 @@ create or replace function public.feed_money(p jsonb) returns boolean language s
   end, false)
 $$;
 
--- A round's meta as a friend watching gets it: no device hashes, no seat claims, nobody's payment app
-create or replace function public.feed_meta(m jsonb) returns jsonb language sql immutable set search_path = '' as $$
+-- What a round is played for: 'points', 'reward' or 'money' (play-for.js playForOf)
+create or replace function public.feed_kind(m jsonb) returns text language sql immutable set search_path = '' as $$
   select case
-    when jsonb_typeof(m) <> 'object' then null
-    when jsonb_typeof(m -> 'players') = 'array' then
-      jsonb_set(m - 'devs' - 'hostDev' - 'claims', '{players}', coalesce((
-        select jsonb_agg(case when jsonb_typeof(x) = 'object' then x - 'payApp' - 'payHandle' else x end order by n)
-        from jsonb_array_elements(m -> 'players') with ordinality as t(x, n)
-      ), '[]'::jsonb))
-    else m - 'devs' - 'hostDev' - 'claims'
+    when jsonb_typeof(m -> 'playFor') = 'object' and m -> 'playFor' ->> 'kind' in ('points', 'reward') then m -> 'playFor' ->> 'kind'
+    else 'money'
+  end
+$$;
+
+-- A round's meta as a friend watching gets it: no device hashes, no seat claims, nobody's payment
+-- app, and a Big Game's setup cut to its groups. With keep_money false, nothing that carries the
+-- money either (a points round keeps it all). An earlier draft of this file had a one-argument
+-- feed_meta, so that one goes.
+drop function if exists public.feed_meta(jsonb);
+create or replace function public.feed_meta(m jsonb, keep_money boolean) returns jsonb
+language plpgsql immutable set search_path = '' as $$
+declare
+  r jsonb;
+  k text;
+begin
+  if m is null or jsonb_typeof(m) <> 'object' then return null; end if;
+  r := m - 'devs' - 'hostDev' - 'claims';
+  if jsonb_typeof(r -> 'players') = 'array' then
+    r := jsonb_set(r, '{players}', coalesce((
+      select jsonb_agg(case when jsonb_typeof(x) = 'object' then x - 'payApp' - 'payHandle' else x end order by n)
+      from jsonb_array_elements(r -> 'players') with ordinality as t(x, n)
+    ), '[]'::jsonb));
+  end if;
+  if jsonb_typeof(r -> 'trip') = 'object' and jsonb_typeof(r #> '{trip,big}') = 'object' then
+    r := jsonb_set(r, '{trip,big}', jsonb_build_object('groups', coalesce((
+      select jsonb_agg(jsonb_strip_nulls(jsonb_build_object('id', g -> 'id', 'name', g -> 'name', 'roundId', g -> 'roundId', 'code', g -> 'code')) order by n)
+      from jsonb_array_elements(case when jsonb_typeof(r #> '{trip,big,groups}') = 'array' then r #> '{trip,big,groups}' else '[]'::jsonb end)
+        with ordinality as t(g, n)
+      where jsonb_typeof(g) = 'object'
+    ), '[]'::jsonb)));
+  end if;
+  k := public.feed_kind(r);
+  if coalesce(keep_money, false) or k = 'points' then return r; end if;
+  r := (r - 'bets' - 'betsGone' - 'agreed') || '{"feedMoney": false}'::jsonb;
+  if k = 'reward' then return r; end if;
+  return r - 'settings' - 'betHistory' - 'sideGames' - 'gamesFor';
+end $$;
+
+-- One hole as a friend watching gets it: a money round's money kept back takes its presses and
+-- the banker's bets with it, leaving only who was the banker
+create or replace function public.feed_hole(d jsonb, m jsonb, keep_money boolean) returns jsonb
+language sql immutable set search_path = '' as $$
+  select case
+    when jsonb_typeof(d) is distinct from 'object' or coalesce(keep_money, false) or public.feed_kind(m) <> 'money' then d
+    else (d - 'presses' - 'banker') || case
+      when jsonb_typeof(d -> 'banker') = 'object' and d #> '{banker,banker}' is not null and d #> '{banker,banker}' <> 'null'::jsonb
+        then jsonb_build_object('banker', jsonb_build_object('banker', d #> '{banker,banker}'))
+      else '{}'::jsonb end
   end
 $$;
 
@@ -120,10 +171,19 @@ begin
     from public.live_rounds r
     where r.updated_at > now() - interval '7 days' and jsonb_typeof(r.meta) = 'object'
       and r.meta ->> 'status' in ('active', 'done')
+  ), shown as (
+    -- The money goes along only when every seat with an account is a friend of yours who shows it
+    select r.code, r.meta, r.moved_at,
+      not exists (select 1 from public.feed_seats(r.meta) fs
+        where not (fs.shows_money and public.profile_visible_to_me(fs.account))) as keep_money
+    from recent r
+    -- A round still going that nobody has touched in 12 hours was left behind, so it's not live news
+    where (r.meta ->> 'status' = 'done' or r.moved_at > now() - interval '12 hours')
+      and public.feed_round_ok(r.meta)
   )
-  select c.code, public.feed_meta(c.meta),
+  select c.code, public.feed_meta(c.meta, c.keep_money),
     coalesce((
-      select jsonb_object_agg(h.hole_no::text, h.data) from public.live_holes h
+      select jsonb_object_agg(h.hole_no::text, public.feed_hole(h.data, c.meta, c.keep_money)) from public.live_holes h
       where h.code = c.code and h.hole_no > 0 and h.data is not null
     ), '{}'::jsonb),
     coalesce((
@@ -131,10 +191,7 @@ begin
       from (select fs.seat, fs.account, fs.shows_money, public.profile_visible_to_me(fs.account) as friend from public.feed_seats(c.meta) fs) s
     ), '{}'::jsonb),
     c.moved_at
-  from recent c
-  -- A round still going that nobody has touched in 12 hours was left behind, so it's not live news
-  where (c.meta ->> 'status' = 'done' or c.moved_at > now() - interval '12 hours')
-    and public.feed_round_ok(c.meta)
+  from shown c
   order by c.moved_at desc
   limit 30;
 end $$;

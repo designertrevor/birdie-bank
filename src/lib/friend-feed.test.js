@@ -7,7 +7,7 @@ import { readFileSync } from 'node:fs';
 import { createRound, roundResults } from './round.js';
 import { buildHoles, buildMeta } from './sync-model.js';
 import {
-  DONE_DAYS, LIVE_HOURS, cleanFeedRow, feedLevel, feedMeta, feedMoney, feedPeople, feedRoundOk, feedSeats, feedWindowOk, followSeatsFor, followerMayWrite,
+  DONE_DAYS, LIVE_HOURS, cleanFeedRow, feedHole, feedLevel, feedMeta, feedMoney, feedPeople, feedRoundOk, feedSeats, feedWindowOk, followSeatsFor, followerMayWrite,
   friendRoundItem, friendRoundView, friendRounds, friendsLine, groupFeed, matchLine, planItem, shownRow, statusLine, upNextFriends,
 } from './friend-feed.js';
 import { normalizePrivacy } from './profile-model.js';
@@ -156,7 +156,8 @@ test('friend round: scores so far, who’s up and the game, with no dollars unle
   assert.equal(v.title, 'Skins at Pebble Creek');
   assert.equal(v.thru, 5);
   assert.equal(statusLine(v, NOW), 'Live · Hole 6 of 9');
-  assert.equal(v.line, 'Sam leads');
+  // Nobody's money reaches you, so the round came without it: the low score, not who's up the money
+  assert.equal(v.line, 'Sam low at −2');
   assert.deepEqual(v.friends, ['Sam']);
   assert.equal(friendsLine(v), 'Sam is playing');
   const sam = v.players.find(p => p.id === 'sam');
@@ -170,11 +171,12 @@ test('friend round: scores so far, who’s up and the game, with no dollars unle
 
 test('friend round: Show my money shows that player’s amount, and only theirs', () => {
   const r = skinsRound();
-  const v = friendRoundView(rowOf(r, { people: { sam: { ...SAM, money: true }, dave: DAVE } }));
+  const v = friendRoundView(rowOf(r, { people: { sam: { ...SAM, money: true }, dave: { friend: true, money: true, account: 'acct-dave' } } }));
   const res = roundResults(r);
   assert.equal(v.players.find(p => p.id === 'sam').amount, res.balances.sam);
   assert.equal(v.line, 'Sam leads, +$8');
-  assert.equal(v.players.find(p => p.id === 'dave').amountText, null);
+  assert.equal(v.players.find(p => p.id === 'dave').amountText, '−$4');
+  // A guest has no setting to show it with
   assert.equal(v.players.find(p => p.id === 'guest').amountText, null);
 });
 
@@ -201,9 +203,11 @@ test('friend round: a points round reads in points for everyone, never dollars',
 });
 
 test('friend round: a finished one says who took it, a lunch round who’s buying, never the side bets for money', () => {
-  const done = friendRoundView(rowOf(skinsRound({ status: 'done', played: 9 }), { people: { sam: SAM } }));
+  const done = friendRoundView(rowOf(skinsRound({ status: 'done', played: 9 }), { people: { sam: { ...SAM, money: true } } }));
   assert.equal(done.status, 'done');
-  assert.equal(done.line, 'Sam took it');
+  assert.equal(done.line, 'Sam took it, +$8');
+  const kept = friendRoundView(rowOf(skinsRound({ status: 'done', played: 9 }), { people: { sam: SAM } }));
+  assert.equal(kept.line, 'Sam low at −2');
   assert.match(statusLine(done, NOW), /^Finished · /);
   const lunch = skinsRound({ status: 'done', played: 9, playFor: { kind: 'reward', reward: 'Lunch' } });
   lunch.bets = [{ id: 'b1', kind: 'match', sides: ['sam', 'dave'], stake: 20, cash: true }];
@@ -291,7 +295,7 @@ test('feed: Up next shows live friends’ rounds and ones finished in the last d
 
 test('feed: the group feed has friends’ live rounds, plans you’re invited to, and Lately', () => {
   const live = rowOf(skinsRound({ code: 'AAA111' }), { people: { sam: SAM } });
-  const done = rowOf(skinsRound({ code: 'BBB222', status: 'done', played: 9 }), { at: NOW - 2 * HOUR, people: { sam: { ...SAM, money: true }, dave: DAVE } });
+  const done = rowOf(skinsRound({ code: 'BBB222', status: 'done', played: 9 }), { at: NOW - 2 * HOUR, people: { sam: { ...SAM, money: true } } });
   const plans = {
     p1: { id: 'p1', status: 'planned', host: false, hostName: 'Sam Snead', localMe: 'x', date: '2026-10-10', course: { name: 'Pebble Creek' }, game: 'skins', people: [{ id: 'x', name: 'Trevor' }], answers: { x: { status: 'in', at: NOW - HOUR } } },
     p2: { id: 'p2', status: 'planned', host: true, hostWho: 'host', date: '2026-10-11', course: { name: 'Mine' }, game: 'skins', people: [] },
@@ -431,7 +435,8 @@ test('friend round: the live copy keeps its scores, but whose money shows is the
   const v = friendRoundView(shownRow(base, live));
   assert.equal(v.thru, 5);
   assert.equal(v.players.find(p => p.id === 'sam').amountText, null);
-  assert.equal(v.line, 'Sam leads');
+  assert.equal(v.line, 'Sam low at −2');
+  assert.equal(v.round.settings, undefined, 'the live copy goes without its stakes too');
   // Before the live copy, the feed's own; once the feed drops it, nothing
   assert.equal(shownRow(base, null), base);
   assert.equal(shownRow(null, live), null);
@@ -455,15 +460,104 @@ test('two players tied on money but not on strokes don’t share a place', () =>
   assert.equal(v.players[0].toPar <= v.players[1].toPar, true, 'the lower score first');
 });
 
-test('friend round: when only one player’s amount is hidden, none shows, since the others would give it away', () => {
+test('friend round: when one player’s amount is hidden, none shows, since the others would give it away', () => {
   // Two players: Sam's +$8 would say Mike lost $8
   const r = createRound({ id: 'r2p', game: 'skins', course, holesCount: 9, players: PLAYERS.slice(0, 2), settings: SETTINGS, hcPct: 100, useHandicaps: false });
   r.holes.slice(0, 5).forEach((h, i) => { r.scores[h.no] = { sam: i < 2 ? 3 : 4, dave: 4 }; });
   r.status = 'active'; r.shareCode = 'TWO222';
   const v = friendRoundView(rowOf(r, { people: { sam: { ...SAM, money: true }, dave: { friend: true, money: false, account: 'acct-dave' } } }));
   assert.ok(v.players.every(p => p.amountText == null));
-  assert.equal(v.line, 'Sam leads');
+  assert.equal(v.line, 'Sam low at −2');
+  // Three players, two hidden: Sam's amount alone still says what the other two lost between them
+  const three = friendRoundView(rowOf(skinsRound(), { people: { sam: { ...SAM, money: true }, dave: DAVE } }));
+  assert.ok(three.players.every(p => p.amountText == null));
   // Both showing: both amounts
   const both = friendRoundView(rowOf(r, { people: { sam: { ...SAM, money: true }, dave: { friend: true, money: true, account: 'acct-dave' } } }));
   assert.ok(both.players.every(p => p.amountText != null));
+});
+
+// --------------------------- what the server sends ------------------------
+
+/** A Nassau round with a press, a side bet, an agreed card and a side game: money in every place it lives. */
+function moneyRound() {
+  const r = createRound({ id: 'n1', game: 'nassau', course, holesCount: 9, players: PLAYERS.slice(0, 2), settings: { ...SETTINGS, nassau: { front: 7, back: 7, total: 7, pressMode: 'manual' } }, hcPct: 100, useHandicaps: false });
+  r.holes.slice(0, 4).forEach((h, i) => { r.scores[h.no] = { sam: i < 2 ? 3 : 4, dave: 4 }; });
+  r.presses = [{ id: 'p1', start: 3, by: 'dave' }];
+  r.bets = [{ id: 'b1', kind: 'match', sides: ['sam', 'dave'], stake: 25 }];
+  r.betsGone = ['b0'];
+  r.agreed = { at: NOW, seen: [{ id: 'main', label: 'Nassau', text: '$7 front, back and total' }] };
+  r.betHistory = [{ upto: 2, settings: { front: 3 } }];
+  r.sideGames = [{ id: 's1', game: 'skins', settings: { value: 4 } }];
+  r.gamesFor = { sam: ['main', 's1'] };
+  r.trip = { id: 't1', name: 'Saturday', format: 'big', big: { pot: { stake: 20 }, bets: [{ id: 'x', stake: 50 }], people: { sam: { name: 'Sam', hc: 4 } }, groups: [{ id: 'g1', name: 'Group 1', players: ['sam'], keeper: 'sam', code: 'MON111', roundId: 'n1' }] } };
+  r.status = 'active'; r.shareCode = 'MON111';
+  return r;
+}
+const holdsMoney = (meta, holes) => {
+  const text = JSON.stringify({ meta, holes });
+  return ['"settings"', '"betHistory"', '"sideGames"', '"gamesFor"', '"bets"', '"betsGone"', '"agreed"', '"presses":[{', '"stake"'].filter(k => text.includes(k));
+};
+
+test('feed rules: a round whose money someone keeps from you goes without its stakes, side bets and presses', () => {
+  const r = moneyRound();
+  const kept = feedMeta(buildMeta(r), { money: false });
+  const holes = Object.fromEntries(Object.entries(buildHoles(r)).map(([no, d]) => [no, feedHole(d, kept)]));
+  assert.deepEqual(holdsMoney(kept, holes), []);
+  assert.equal(kept.feedMoney, false);
+  // The round itself, the scores and the Big Game's group names still go
+  assert.equal(kept.game, 'nassau');
+  assert.deepEqual(holes[1].scores, { sam: 3, dave: 4 });
+  assert.deepEqual(kept.trip.big, { groups: [{ id: 'g1', name: 'Group 1', roundId: 'n1', code: 'MON111' }] });
+  // With everyone's money allowed, everything but the Big Game's setup goes
+  const all = feedMeta(buildMeta(r));
+  assert.equal(all.settings.nassau.front, 7);
+  assert.equal(all.bets.length, 1);
+  assert.equal(all.feedMoney, undefined);
+  assert.deepEqual(all.trip.big, kept.trip.big, 'a Big Game’s stakes and the field’s handicaps stay with the game');
+  // A banker keeps who was the banker, not the bets
+  assert.deepEqual(feedHole({ scores: { sam: 4 }, banker: { banker: 'sam', bets: { dave: 10 }, doubled: true }, presses: [{ id: 'p' }] }, kept), { scores: { sam: 4 }, banker: { banker: 'sam' } });
+  // Points are bragging rights: a points round goes whole
+  const pts = buildMeta({ ...r, playFor: { kind: 'points' } });
+  assert.deepEqual(feedMeta(pts, { money: false }).settings, pts.settings);
+  // A lunch round keeps its game (it says who's buying) but not its side bets
+  const lunch = feedMeta(buildMeta({ ...r, playFor: { kind: 'reward', reward: 'Lunch' } }), { money: false });
+  assert.ok(lunch.settings);
+  assert.equal(lunch.bets, undefined);
+  assert.equal(lunch.agreed, undefined);
+});
+
+test('friend round: the old full row and the new kept-back row show the same, with no money in either', () => {
+  const r = moneyRound();
+  delete r.trip;
+  const people = { sam: { ...SAM, money: true }, dave: { friend: false, money: false, account: null } };
+  // Before the SQL change, the server sent everything
+  const old = { code: 'MON111', meta: feedMeta(buildMeta(r)), holes: buildHoles(r), people, updated_at: new Date(NOW - HOUR).toISOString() };
+  // After it, the server keeps the money back itself
+  const metaNew = feedMeta(buildMeta(r), { money: false });
+  const fresh = { ...old, meta: metaNew, holes: Object.fromEntries(Object.entries(buildHoles(r)).map(([no, d]) => [no, feedHole(d, metaNew)])) };
+  for (const row of [old, fresh]) {
+    const clean = cleanFeedRow(row);
+    assert.deepEqual(holdsMoney(clean.meta, clean.holes), [], 'nothing of the money stays on this phone');
+    const v = friendRoundView(row);
+    assert.equal(v.isMoney, true);
+    assert.ok(v.players.every(p => p.amount == null && p.amountText == null));
+    assert.equal(v.line, 'Sam low at −2');
+    assert.equal(v.thru, 4);
+  }
+  assert.deepEqual(friendRoundView(old).players, friendRoundView(fresh).players);
+  // Everyone in it lets you see it: the full row shows the money
+  const open = friendRoundView({ ...old, people: { sam: { ...SAM, money: true }, dave: { friend: true, money: true, account: 'acct-dave' } } });
+  assert.ok(open.players.every(p => p.amountText != null));
+});
+
+test('feed rules: the SQL keeps the money back unless every seat with a setting lets it reach you', () => {
+  const sql = readFileSync(new URL('../../supabase/2026-10-06-friend-feed.sql', import.meta.url), 'utf8');
+  // One rule for the whole round: all or none, as the app reads it
+  assert.match(sql, /not exists \(select 1 from public\.feed_seats\(r\.meta\) fs\s+where not \(fs\.shows_money and public\.profile_visible_to_me\(fs\.account\)\)\) as keep_money/);
+  assert.match(sql, /public\.feed_meta\(c\.meta, c\.keep_money\)/);
+  assert.match(sql, /public\.feed_hole\(h\.data, c\.meta, c\.keep_money\)/);
+  // Every key the app strips, the server strips
+  for (const k of ['bets', 'betsGone', 'agreed', 'settings', 'betHistory', 'sideGames', 'gamesFor', 'presses']) assert.match(sql, new RegExp(`- '${k}'`), k);
+  assert.match(sql, /'\{"feedMoney": false\}'/);
+  assert.match(sql, /drop function if exists public\.feed_meta\(jsonb\)/);
 });

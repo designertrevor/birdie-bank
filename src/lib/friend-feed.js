@@ -19,7 +19,7 @@ import { bigGroupName, gameLabel, meFor, myIds } from './format.js';
 import { money } from './golf.js';
 import { codeOf } from './pair-debts.js';
 import { countsMoney, playForOf, points, rewardOutcome } from './play-for.js';
-import { toParOf } from './to-par.js';
+import { toParOf, toParText } from './to-par.js';
 import { agoLabel, latelyItems } from './lately.js';
 import { countsLine, planChoice, planCounts, upcomingPlans, whenLabel } from './plans.js';
 import { followThread, withTalk } from './talk.js';
@@ -57,8 +57,25 @@ export function feedMoney(p) {
   return ['played', 'everyone'].includes(p.money);
 }
 
-/** A round's meta as a friend watching gets it (feed_meta): no device hashes, seat claims or payment apps. */
-export function feedMeta(m) {
+/** What a round is played for, as feed_kind() reads it: 'points', 'reward' or 'money' (play-for.js playForOf). */
+export function feedKind(m) {
+  const k = isObj(m?.playFor) ? m.playFor.kind : null;
+  return k === 'points' || k === 'reward' ? k : 'money';
+}
+
+// What carries a round's money in its meta: the side bets and what the group agreed (any round
+// but a points one), and the stakes themselves, the side games and who's in them (a money round)
+const BET_KEYS = ['bets', 'betsGone', 'agreed'];
+const STAKE_KEYS = ['settings', 'betHistory', 'sideGames', 'gamesFor'];
+
+/**
+ * A round's meta as a friend watching gets it (feed_meta): no device hashes, seat claims or payment
+ * apps, and a Big Game's setup cut to its groups' names and codes (its stakes, side bets and the
+ * whole field's handicaps stay with the game). With `money` off (someone in the round keeps their
+ * money from you), nothing that carries the money goes either, and `feedMoney: false` says so: a
+ * points round keeps everything, since points are bragging rights.
+ */
+export function feedMeta(m, { money = true } = {}) {
   if (!isObj(m)) return null;
   const { devs: _d, hostDev: _h, claims: _c, ...rest } = m;
   if (Array.isArray(rest.players)) {
@@ -68,6 +85,30 @@ export function feedMeta(m) {
       return keep;
     });
   }
+  if (isObj(rest.trip) && isObj(rest.trip.big)) {
+    const groups = (Array.isArray(rest.trip.big.groups) ? rest.trip.big.groups : []).filter(isObj).map(g => {
+      const out = {};
+      for (const k of ['id', 'name', 'roundId', 'code']) if (g[k] != null) out[k] = g[k];
+      return out;
+    });
+    rest.trip = { ...rest.trip, big: { groups } };
+  }
+  const kind = feedKind(rest);
+  if (money || kind === 'points') return rest;
+  for (const k of BET_KEYS) delete rest[k];
+  if (kind === 'money') for (const k of STAKE_KEYS) delete rest[k];
+  rest.feedMoney = false;
+  return rest;
+}
+
+/**
+ * One hole as a friend watching gets it (feed_hole): a money round whose money stays off (its meta
+ * says feedMoney: false) goes without its presses and the banker's bets, only who was the banker.
+ */
+export function feedHole(data, meta) {
+  if (!isObj(data) || meta?.feedMoney !== false || feedKind(meta) !== 'money') return data;
+  const { presses: _p, banker, ...rest } = data;
+  if (isObj(banker) && banker.banker != null) rest.banker = { banker: banker.banker };
   return rest;
 }
 
@@ -141,10 +182,7 @@ export function followerMayWrite(row, seats) {
 /** A row from friend_rounds() (or the cache) cleaned for this phone, or null when it isn't one. */
 export function cleanFeedRow(x) {
   if (!isObj(x) || typeof x.code !== 'string' || !/^[A-Z0-9]{6}$/.test(x.code)) return null;
-  const meta = feedMeta(x.meta);
-  if (!meta || !Array.isArray(meta.players) || !Array.isArray(meta.holes)) return null;
-  const holes = {};
-  for (const [no, data] of Object.entries(isObj(x.holes) ? x.holes : {})) if (Number(no) > 0 && isObj(data)) holes[no] = data;
+  if (!isObj(x.meta) || !Array.isArray(x.meta.players) || !Array.isArray(x.meta.holes)) return null;
   const people = {};
   for (const [seat, p] of Object.entries(isObj(x.people) ? x.people : {})) {
     if (!isObj(p)) continue;
@@ -152,6 +190,15 @@ export function cleanFeedRow(x) {
     const friend = p.friend === true;
     people[seat] = { friend, money: friend && p.money === true, account: friend && typeof p.account === 'string' ? p.account : null };
   }
+  // The money goes with the round only when everyone in it who has a setting lets it reach you,
+  // the way a shared card shows amounts for all or none (share.js amountsRule): the money between a
+  // few people adds up to $0, so the rest would give one hidden amount away. A guest has no setting.
+  // A row from before the server kept it back (or a copy kept on this phone) is cut down the same way.
+  const seats = new Set(seatIds(x.meta));
+  const money = x.meta.feedMoney !== false && Object.entries(people).every(([seat, p]) => !seats.has(seat) || p.money);
+  const meta = feedMeta(x.meta, { money });
+  const holes = {};
+  for (const [no, data] of Object.entries(isObj(x.holes) ? x.holes : {})) if (Number(no) > 0 && isObj(data)) holes[no] = feedHole(data, meta);
   const at = typeof x.updatedAt === 'number' ? x.updatedAt : Date.parse(x.updated_at ?? x.updatedAt) || 0;
   return { code: x.code, meta, holes, people, updatedAt: at };
 }
@@ -175,6 +222,15 @@ export function matchLine(round) {
   } catch { return null; }
 }
 
+/** "Sam low at −2", "Sam and Dave low at E": who has the low score so far, for a round shown without its money. */
+function lowLine(players) {
+  const scored = players.filter(p => p.toPar != null);
+  if (!scored.length) return 'Scores so far';
+  const low = Math.min(...scored.map(p => p.toPar));
+  const who = scored.filter(p => p.toPar === low).map(p => p.team || p.name);
+  return `${nameList([...new Set(who)])} low at ${toParText(low)}`;
+}
+
 /**
  * A round for the feed, from the round itself. `people` says, for each linked seat, whether they're a
  * friend and whether their money may show. Returns null for a round that can't be shown.
@@ -186,18 +242,19 @@ export function roundView(round, { code, people = {}, at = 0, following = false,
   const status = round.status === 'done' ? 'done' : 'live';
   let thru = 0;
   try { thru = round.holes.filter(h => holeComplete(round, h)).length; } catch { thru = 0; }
+  // A money round that came without its money (feedMoney: false) has no stakes to work it out from
+  const kept = round.feedMoney === false && countsMoney(round);
   let res = null;
-  try { res = roundResults(round); } catch { res = null; }
+  if (!kept) try { res = roundResults(round); } catch { res = null; }
   // A Big Game's group round has no money of its own: its money is the whole game's, never shown here
   const bigGroup = !!bigGroupName(round);
   const isMoney = countsMoney(round) && !bigGroup;
   // Points are bragging rights and show for everyone; dollars only for someone who chose Show my
-  // money. A round's money adds up to $0, so when just one player's amount is hidden the others
-  // would give it away (Sam's +$8 says Mike lost $8): then no amount shows at all
-  // (a guest with no profile has no setting to keep)
+  // money. A round's money adds up to $0, so one hidden amount could be worked out from the rest
+  // (Sam's +$8 says Mike lost $8): amounts show for everyone in it with a setting, or for no one,
+  // as on a shared card (a guest with no profile has no setting to keep)
   const own = id => people[id]?.money === true;
-  const unshown = round.players.filter(p => !own(p.id));
-  const held = isMoney && unshown.length === 1 && !!people[unshown[0].id];
+  const held = isMoney && (kept || round.players.some(p => people[p.id] && !own(p.id)));
   const shows = id => !bigGroup && (!isMoney || (!held && own(id)));
   const fmt = (id, v) => (!shows(id) ? null : isMoney ? money(v, { sign: true }) : points(v, { sign: true }));
   let units = [];
@@ -235,6 +292,7 @@ export function roundView(round, { code, people = {}, at = 0, following = false,
   let line;
   if (!thru) line = status === 'live' ? 'On the first tee' : 'No holes scored';
   else if (bigGroup) line = status === 'done' ? 'Their card is in' : `Thru ${thru}`;
+  else if (kept) line = lowLine(players);
   else if (status === 'done') line = reward ? reward.text : took;
   else line = matchLine(round) || ahead;
   return {
