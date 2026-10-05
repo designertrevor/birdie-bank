@@ -5,7 +5,7 @@ import { assemble } from './sync-model.js';
 import { cleanBig } from './big-game.js';
 import { bigOf, bigRounds, cardFor } from './big-money.js';
 import { isOrganizer, tripOf } from './trips.js';
-import { handOff, keeperOf } from './keeper.js';
+import { handOff, isKeeper, keeperMe, keeperOf } from './keeper.js';
 import { codeOf } from './pair-debts.js';
 import { holeComplete } from './round.js';
 import { isoDate } from './plans.js';
@@ -95,4 +95,23 @@ export function handOffs(state, tripId, now = Date.now()) {
     out.push({ roundId: r.id, patch: handOff(g.keeper, null, now) });
   }
   return out;
+}
+
+/**
+ * Whether a change to the game from this phone reaches every phone in it: always once the game's
+ * record is on the server (big-sync.js); until then, only while this phone still keeps every
+ * group's card (the newest copy rides on the rounds it posts). Once a scorekeeper has a group's
+ * card, that group would never see the change, and the phones would work out different money.
+ */
+export function changesReach(state, tripId, record) {
+  if (record) return true;
+  const big = bigOf(state, tripId);
+  if (!big) return false;
+  return big.groups.every(g => {
+    if (!g.roundId) return true;
+    const r = state.rounds?.[g.roundId];
+    if (!r) return false;
+    if (!r.shared || r.shared.ended || !r.keeper) return true;
+    return isKeeper(r, keeperMe(r, state), !!r.shared.host);
+  });
 }

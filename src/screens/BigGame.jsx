@@ -26,8 +26,8 @@ import { canMarkLine, tripStatus } from '../lib/trips.js';
 import { useTripPlans } from '../lib/trip-plan-sync.js';
 import { BIG_NAME, POT_KINDS, bigSummary, buyIns, placesLabel } from '../lib/big-game.js';
 import { bigStatus } from '../lib/big-money.js';
-import { recordOn, useBigSync } from '../lib/big-sync.js';
-import { closeBig, deleteBig, removeBigBet, shareGroups, startGroups } from '../lib/big-store.js';
+import { useBigSync } from '../lib/big-sync.js';
+import { bigChangesReach, closeBig, deleteBig, removeBigBet, shareGroups, startGroups } from '../lib/big-store.js';
 
 const first = n => String(n || '').trim().split(/\s+/)[0];
 const sign = v => (v > 0 ? 'pos' : v < 0 ? 'neg' : '');
@@ -73,6 +73,9 @@ export default function BigGame({ id, view: firstView = null }) {
   const day = dayLabel(trip.start);
   const soon = (daysUntil(trip.start) ?? 0) > 0;
   const paidAny = st.paid.length > 0;
+  // Until the game's record is on the server, a change only reaches the groups whose card this
+  // phone keeps, so once a scorekeeper has one, the bets and the close stay as they are
+  const reach = organizer && bigChangesReach(state, id);
   // Who set it up, by the name the game has for them
   const host = trip.by && !isMe(trip.by) ? first(big.people[trip.by]?.name || nameOf(state, trip.by)) : null;
 
@@ -157,10 +160,10 @@ export default function BigGame({ id, view: firstView = null }) {
         {started && view === 'teams' && <TeamsTable bs={bs} isMe={isMe} name={name} />}
         {started && view === 'bets' && (
           <>
-            <BetsList bs={bs} name={name} onEdit={organizer && !bs.final ? setBetSheet : null} />
-            {organizer && !bs.final && <button className="add-row" onClick={() => setBetSheet('new')}><div className="add-ci"><Icon name="plus" /></div><span className="add-lbl">Add a side bet</span></button>}
+            <BetsList bs={bs} name={name} onEdit={reach && !bs.final ? setBetSheet : null} />
+            {reach && !bs.final && <button className="add-row" onClick={() => setBetSheet('new')}><div className="add-ci"><Icon name="plus" /></div><span className="add-lbl">Add a side bet</span></button>}
             {!organizer && !bs.final && <p className="field-help pad">Want one with someone? Ask {host || 'the organizer'} to add it. Bets inside your own group go on your round as usual.</p>}
-            {organizer && !recordOn() && <p className="field-help pad">A bet added after tee off reaches the groups whose card your phone keeps. The rest see it once the game’s record is switched on.</p>}
+            {organizer && !reach && !bs.final && <p className="field-help pad">The scorekeepers have the cards now, so a change to the game’s bets wouldn’t reach every group yet. Bets inside a group still go on its round as usual.</p>}
           </>
         )}
         {started && view === 'money' && <Money bs={bs} st={st} id={id} state={state} me={me} isMe={isMe} name={name} off={off} />}
@@ -171,8 +174,8 @@ export default function BigGame({ id, view: firstView = null }) {
       </div>
       <div className="cta-wrap">
         {organizer && !started && <button className="full-btn pink" disabled={busy || soon} onClick={start}>{busy ? 'Starting…' : soon ? `Start the groups ${day.toLowerCase() === 'tomorrow' ? 'tomorrow' : `on ${day}`}` : <>Start the groups <Icon name="flag-pennant" fill /></>}</button>}
-        {organizer && started && !bs.final && !bs.ended && bs.field.groups.some(g => g.status === 'done') && <button className="link-btn center" onClick={close}>Group still out there? Close the game now</button>}
-        {organizer && bs.ended && !paidAny && <button className="link-btn center" onClick={() => closeBig(id, false)}>Still playing? Open the game again</button>}
+        {reach && started && !bs.final && !bs.ended && bs.field.groups.some(g => g.status === 'done') && <button className="link-btn center" onClick={close}>Group still out there? Close the game now</button>}
+        {reach && bs.ended && !paidAny && <button className="link-btn center" onClick={() => closeBig(id, false)}>Still playing? Open the game again</button>}
         {/* A weekly game: next time's starts from this one, the same players, groups and pots */}
         {organizer && bs.final && <button className="full-btn outline" onClick={() => nav.push('bigGameSetup', { from: id })}><Icon name="arrow-counter-clockwise" /> Set it up for next time</button>}
       </div>

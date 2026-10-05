@@ -11,9 +11,13 @@ import { isOrganizer, newTrip, tripOf, tripStamp } from './trips.js';
 import { BIG_FORMAT, BIG_NAME, cleanBig, groupsProblem, startDay } from './big-game.js';
 import { bigOf, bigStatus } from './big-money.js';
 import { shareRound, syncConfigured } from './sync.js';
-import { refreshBig } from './big-sync.js';
+import { recordOn, refreshBig } from './big-sync.js';
+import { changesReach } from './big-sync-model.js';
 import { codeOf } from './pair-debts.js';
 import { isoDate } from './plans.js';
+
+/** Whether a change to the game from this phone reaches every phone in it now (big-sync-model.js changesReach). */
+export const bigChangesReach = (state, tripId) => changesReach(state, tripId, recordOn());
 
 /** A group's own round has no money of its own: stroke play at $0, so the game's money is all the Big Game's. */
 export const GROUP_STROKE = { stake: 0, payout: 'pot', cap: false, nassau: false };
@@ -73,13 +77,13 @@ export function editBig(tripId, fn) {
 
 /** Add or change a side bet (the organizer only), until the game is decided. */
 export function saveBigBet(tripId, bet) {
-  if (bigStatus(getState(), tripId)?.final) return false;
+  if (bigStatus(getState(), tripId)?.final || !bigChangesReach(getState(), tripId)) return false;
   return editBig(tripId, b => ({ ...b, bets: [...b.bets.filter(x => x.id !== bet.id), bet] }));
 }
 
 /** Take a side bet off, until the game is decided. */
 export function removeBigBet(tripId, betId) {
-  if (bigStatus(getState(), tripId)?.final) return false;
+  if (bigStatus(getState(), tripId)?.final || !bigChangesReach(getState(), tripId)) return false;
   return editBig(tripId, b => ({ ...b, bets: b.bets.filter(x => x.id !== betId) }));
 }
 
@@ -90,7 +94,7 @@ export function removeBigBet(tripId, betId) {
 export function closeBig(tripId, ended = true) {
   const now = Date.now();
   const s = getState();
-  if (!s.trips?.[tripId] || !isOrganizer(s, tripOf(s, tripId))) return false;
+  if (!s.trips?.[tripId] || !isOrganizer(s, tripOf(s, tripId)) || !bigChangesReach(s, tripId)) return false;
   update(st => {
     const t = { ...st.trips[tripId], updatedAt: now };
     if (ended) t.endedAt = now; else delete t.endedAt;

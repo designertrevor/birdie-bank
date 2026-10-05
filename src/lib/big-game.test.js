@@ -17,7 +17,7 @@ import {
   groupsProblem, moveTo, payPlaces, placeLabels, potBoard, scoreOn, skinsBoard, skinsMoney, startDay,
 } from './big-game.js';
 import { allBigMoney, bigMoney, bigOf, bigStatus } from './big-money.js';
-import { codesToRead, handOffs, recordDue, toCard } from './big-sync-model.js';
+import { changesReach, codesToRead, handOffs, recordDue, toCard } from './big-sync-model.js';
 import { bigInvite, bigWho, myBigMoney, myPlaceLine, toParText } from './big-view.js';
 import { money } from './golf.js';
 import { owedSince, paymentNudges } from './nudges.js';
@@ -471,4 +471,17 @@ test('a payment nudge for the game’s money dates from the game, never an older
   // A week on, everyone in the game who owes Gus, in another group or not
   const later = paymentNudges(s, { now: OCT(25, 10) });
   assert.deepEqual(later.map(n => [n.id, n.amount, n.since]), [['h', 40, OCT(17, 15)], ['c', 35, OCT(17, 15)], ['d', 7.33, OCT(17, 15)], ['b', 3.67, OCT(17, 15)]]);
+});
+
+test('before the game’s record is on the server, the organizer changes bets or closes the game only while their phone keeps every group’s card', () => {
+  const a = phonesOf().a;
+  const live = (r, keeper) => ({ ...r, status: 'active', finishedAt: null, shared: { code: r.shareCode, host: true }, keeper: { id: keeper, since: OCT(17, 8) } });
+  const kept = { ...a, rounds: { r1: live(a.rounds.r1, null), r2: live(a.rounds.r2, null) } };
+  assert.equal(changesReach(kept, 't_big', false), true, 'the organizer’s phone keeps both cards');
+  const handed = { ...a, rounds: { r1: live(a.rounds.r1, null), r2: live(a.rounds.r2, 'g') } };
+  assert.equal(changesReach(handed, 't_big', false), false, 'Gus has Group 2’s card: a change would never reach it');
+  assert.equal(changesReach(handed, 't_big', true), true, 'with the record on, every phone reads the newest copy');
+  // Not started yet: nobody else has anything
+  const draft = { ...a, rounds: {}, trips: { t_big: tripOf(game({ groups: game().groups.map(g => ({ ...g, roundId: null, code: null })) })) } };
+  assert.equal(changesReach(draft, 't_big', false), true);
 });
