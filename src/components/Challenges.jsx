@@ -17,6 +17,7 @@ import { sendReminder } from '../lib/pay.js';
 import { challengeAmountsShow, challengeGroupText } from '../lib/share-cards.js';
 import { useShareText } from '../lib/useShare.js';
 import { dayLabel, planPeople } from '../lib/plans.js';
+import { TalkCount } from './TalkCount.jsx';
 
 const first = n => String(n || '').trim().split(/\s+/)[0] || 'them';
 const other = side => (side === 'from' ? 'to' : 'from');
@@ -318,6 +319,8 @@ export function ChallengeCard({ ch, onOpen = null }) {
         <span className="row-main">
           <span className="ch-head">{challengeHeadline(ch, side, setter)}</span>
           <span className="ch-line">{challengeLine(ch)}</span>
+          {/* Its talk, only on the cards of the people in it */}
+          {(side || setter) && <TalkCount rows={state.talk?.[`challenge:${ch.id}`]} />}
         </span>
         <span className={`ch-status ${tone}`}>{challengeStatusText(ch, side, life)}</span>
         {onOpen && <span className="chevron" aria-hidden="true"><Icon name="caret-right" /></span>}

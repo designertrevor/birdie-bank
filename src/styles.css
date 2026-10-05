@@ -2648,3 +2648,19 @@ button.ch-main:active { transform: scale(.98); }
 .ob-age .chip-row { gap: 8px; padding-bottom: 4px; }
 .ob-age .pill-btn { min-height: 40px; padding: 9px 16px; }
 .ob-age .pill-btn i { font-size: 15px; }
+
+/* ---------- Reactions and quick jabs on challenges and settle-ups (o9 jabs) ---------- */
+/* The jab picker: a critter from the Ball buddies art, a label, then one scrolling row of jabs */
+.talk-jabs-head { display: flex; align-items: center; gap: 8px; margin-top: 14px; padding-top: 12px; border-top: 1px solid var(--line-soft); }
+.talk-jabs-head .avatar.talk-jab-art { margin: 0; width: 28px; height: 28px; flex-shrink: 0; }
+.talk-jabs-label { font-size: 13px; font-weight: 700; color: var(--ink); }
+.talk-jabs-hint { margin-left: auto; font-size: 12px; color: var(--mute); }
+.talk-jabs-head + .talk-jabs, .talk-sheet .talk-jabs-head + .talk-jabs { margin-top: 10px; }
+/* A payment on the Tab with its talk: the row and its reactions read as one card, as wide as the
+   plain rows around it (a .ledger-row is 32px narrower than its parent, so it fills the card here) */
+.pay-talk { margin: 0 16px 8px; background: var(--card); border-radius: 18px; }
+.pay-talk .ledger-row { width: 100%; margin: 0; background: none; }
+.pay-talk .talk-bar { padding: 0 16px 14px; }
+/* A challenge's talk sits clear of the links above it */
+.ch-page .talk { margin-top: 8px; }
+.ch-main .talk-count { margin-top: 6px; }

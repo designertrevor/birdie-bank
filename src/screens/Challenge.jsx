@@ -9,6 +9,9 @@ import { useNav } from '../lib/nav.js';
 import { challengeNextText, challengeView, cleanChallenge, planOf } from '../lib/challenges.js';
 import { openChallengeLink, pickChallengeSide, useChallengesLive } from '../lib/challenge-sync.js';
 import { ChallengesOffError } from '../lib/challenge-adapters.js';
+import { TalkSection } from '../components/Talk.jsx';
+import { challengeTalk } from '../lib/talk.js';
+import { useTalkSync } from '../lib/talk-sync.js';
 
 export default function ChallengeScreen({ id }) {
   const nav = useNav();
@@ -32,6 +35,9 @@ function ChallengeBody({ ch: raw, onGone, standalone = false, onSkip }) {
   const pick = !ch.plan && ch.setBy && !ch.made && !ch.mine;
   useChallengesLive(ch.plan ? { planCode: plan?.code || null } : { code: ch.code });
   const next = challengeNextText(state, ch);
+  // Its talk: only for the people in it (the two, and whoever set it up between them)
+  const talk = challengeTalk(state, raw);
+  useTalkSync(talk?.who ? [talk.key] : [], { live: true });
   return (
     <>
       <div className="scroll ch-page">
@@ -48,6 +54,7 @@ function ChallengeBody({ ch: raw, onGone, standalone = false, onSkip }) {
         {next && <p className="field-help pad">{next}</p>}
         {plan && !standalone && <button className="text-link" onClick={() => nav.push('plan', { id: plan.id })}><Icon name="calendar-check" /> See the round</button>}
         <ChallengeExtras ch={ch} onGone={onGone} />
+        {talk?.who && <TalkSection ctx={talk} on="challenge" />}
         <p className="field-help pad">Friendly wagers only. Nobody holds or moves money here. You settle up yourselves.</p>
       </div>
       {standalone && <div className="cta-wrap"><button className="full-btn outline" onClick={onSkip}>Start my own round instead</button></div>}

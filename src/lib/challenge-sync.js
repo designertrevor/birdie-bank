@@ -216,7 +216,10 @@ export function challengeShareLink(ch) {
   return ch?.code ? challengeLink(location.origin, ch.code) : null;
 }
 
-/** Take a challenge off this phone (one that's over). The other phone keeps its own copy. */
+/** Take a challenge off this phone (one that's over), and its talk. The other phone keeps its own copy. */
 export function forgetChallenge(id) {
-  update(s => { if (s.challenges) delete s.challenges[id]; });
+  update(s => {
+    if (s.challenges) delete s.challenges[id];
+    if (s.talk) delete s.talk[`challenge:${id}`];
+  });
 }
