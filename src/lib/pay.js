@@ -98,7 +98,7 @@ const realAmount = a => typeof a === 'number' && Number.isFinite(a) && Math.roun
  * Zelle has no pay or request link at all (it lives inside each bank's app), so it's null: the
  * app shows the Zelle email or phone to copy, with the amount, instead.
  */
-export function payLink(info, amount, note = 'Birdie Bank') {
+export function payLink(info, amount, note = 'Golf') {
   if (!info?.handle || !realAmount(amount)) return null;
   const h = encodeURIComponent(info.handle);
   if (info.app === 'venmo') return `https://venmo.com/${h}?txn=pay&amount=${amt(amount)}&note=${encodeURIComponent(note)}`;
@@ -112,7 +112,7 @@ export function payLink(info, amount, note = 'Birdie Bank') {
  * prefill a request to someone else, so this needs the payer's Venmo, and you using Venmo too (or not
  * having picked an app yet). requestFor covers every other app.
  */
-export function requestLink(payer, mine, amount, note = 'Birdie Bank') {
+export function requestLink(payer, mine, amount, note = 'Golf') {
   if (payer?.app !== 'venmo' || !payer.handle || (mine && mine.app !== 'venmo') || !realAmount(amount)) return null;
   return `https://venmo.com/${encodeURIComponent(payer.handle)}?txn=charge&amount=${amt(amount)}&note=${encodeURIComponent(note)}`;
 }

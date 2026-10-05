@@ -38,6 +38,8 @@ import { PlanChallenges } from '../components/Challenges.jsx';
 import { challengeIdOfBet, challengeWhat, withChallenges } from '../lib/challenges.js';
 import { markChallengesOn, useChallengesLive } from '../lib/challenge-sync.js';
 import { betPeople } from '../lib/pair-bets.js';
+import { useAgeCheck } from '../components/AgeCheck.jsx';
+import { needsAgeCheck } from '../lib/age.js';
 
 const first = name => String(name || '').trim().split(/\s+/)[0];
 const listNames = n => (n.length < 2 ? n.join('') : `${n.slice(0, -1).join(', ')} and ${n.at(-1)}`);
@@ -446,6 +448,7 @@ function WhoAreYou({ plan, defaultName, standalone, onSkip }) {
 export function RollCall({ id }) {
   const nav = useNav();
   const { showToast } = useUI();
+  const checkAge = useAgeCheck();
   const state = useStore();
   const plan = state.plans?.[id];
   const [present, setPresent] = useKept('rollCall:present', () => (plan ? rollCallDefault(plan) : []));
@@ -479,7 +482,7 @@ export function RollCall({ id }) {
 
   // Save anyone new first, so setup (or the round) can find them
   const saveNew = () => update(s => { for (const p of setup.newPlayers) s.players[p.id] = p; });
-  const start = () => {
+  const start = async () => {
     // One round per tee time, even on a double tap
     if (starting || getState().plans?.[id]?.status !== 'planned') return;
     setStarting(true);
@@ -510,6 +513,19 @@ export function RollCall({ id }) {
     if (tripPick && plan.session?.trip === tripPick.id) round.session = structuredClone(plan.session);
     // Agreed challenges go in as side bets, once each
     const { round: withCh, used } = withChallenges(getState(), round, { planId: id, idOf: setup.idOf });
+    // Money needs a yes to "Are you 18 or older?" once (age.js), the same as Tee off in setup. Under
+    // 18 goes to setup, which starts on points, rather than starting the money round as planned
+    if (needsAgeCheck(getState(), withCh)) {
+      const answer = await checkAge();
+      if (answer !== 'adult') {
+        setStarting(false);
+        if (answer === 'under') {
+          showToast('Money rounds are for 18 or older. Set it up for points or a reward.');
+          toSetup();
+        }
+        return;
+      }
+    }
     update(s => { addRound(s, withCh); });
     markChallengesOn(used, rid);
     editPlan(id, p => { p.status = 'started'; p.roundId = rid; }).then(r => { if (r === 'taken') showToast(PLAN_LOCKED); });

@@ -105,3 +105,8 @@ test('requests: points and reward rounds never put an amount in front of a reque
     assert.equal((res?.transfers || []).length, 0, `${pf.kind}: nothing to request`);
   }
 });
+
+test('pay links: no codename in a payment note when none is given', () => {
+  assert.equal(payLink(VENMO, 5), 'https://venmo.com/trev?txn=pay&amount=5.00&note=Golf');
+  assert.equal(requestLink(DAVE_VENMO, VENMO, 5), 'https://venmo.com/dave-s?txn=charge&amount=5.00&note=Golf');
+});

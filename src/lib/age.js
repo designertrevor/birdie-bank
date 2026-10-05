@@ -9,6 +9,7 @@
 // bets for money. A round already in progress is never stopped or changed by it.
 // Pure functions of plain data, so they're easy to test.
 import { onTab } from './play-for.js';
+import { buyIns } from './big-game.js';
 
 /** The youngest age for money rounds anywhere. Some places ask more, so the copy says so too. */
 export const MONEY_AGE = 18;
@@ -42,6 +43,13 @@ export function needsAgeCheck(state, round, { inProgress = false } = {}) {
   return !moneyOk(state);
 }
 
+/**
+ * Whether a Big Game plays for money: anyone puts in for the pot, the skins or the teams, or there's
+ * a side bet. Its groups' rounds are stroke play with no money of their own, so it's asked of the
+ * organizer before the groups start, and of each player taking a seat.
+ */
+export const bigPlaysForMoney = big => !!big && (Object.values(buyIns(big)).some(c => c > 0) || (Array.isArray(big.bets) && big.bets.length > 0));
+
 /** Save an answer on a state draft (mutates). Anything but 'adult' or 'under' is ignored. */
 export function setAgeAnswer(draft, answer, at = Date.now()) {
   if (!ANSWERS.includes(answer)) return;
@@ -50,15 +58,19 @@ export function setAgeAnswer(draft, answer, at = Date.now()) {
 }
 
 /**
- * The account's profile coming down onto this phone: it wins, as always, except an answer this
- * phone has that the account's copy doesn't (answered before signing in), which is kept so nobody is
- * asked twice.
+ * The account's profile coming down onto this phone: it wins, as always, except an age answer this
+ * phone has that the account's copy doesn't (answered before signing in) or that is newer than the
+ * account's, which is kept so nobody is asked twice and a change isn't undone.
  */
 export function keepAgeAnswer(incoming, local) {
   if (!incoming || typeof incoming !== 'object') return incoming;
-  if (ANSWERS.includes(incoming.age?.answer)) return incoming;
   const mine = local?.age;
-  return ANSWERS.includes(mine?.answer) ? { ...incoming, age: mine } : incoming;
+  if (!ANSWERS.includes(mine?.answer)) return incoming;
+  const theirs = incoming.age;
+  // Both have one: the newer answer wins, so a change made on this phone (in Settings) isn't put
+  // back by an older copy of the account coming down before this phone's went up
+  if (ANSWERS.includes(theirs?.answer) && !(Number(mine.at) > Number(theirs.at || 0))) return incoming;
+  return { ...incoming, age: mine };
 }
 
 /** The words for the question, the same everywhere it's asked. */

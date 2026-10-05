@@ -3,7 +3,8 @@
 // across signing in, never on the row other people can see.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { AGE_COPY, MONEY_AGE, ageAnswer, ageLine, keepAgeAnswer, moneyOff, moneyOk, needsAgeCheck, playsForMoney, setAgeAnswer } from './age.js';
+import { AGE_COPY, MONEY_AGE, ageAnswer, ageLine, bigPlaysForMoney, keepAgeAnswer, moneyOff, moneyOk, needsAgeCheck, playsForMoney, setAgeAnswer } from './age.js';
+import { defaultBig } from './big-game.js';
 import { createRound } from './round.js';
 import { applyDoc, toDocs } from './cloud-model.js';
 import { profileOf, toRow } from './profile-model.js';
@@ -92,9 +93,9 @@ test('age: the answer goes to your account with your profile, and an answer from
   applyDoc(draft, 'profile', 'me', { me: 'me', profile: { avatar: null, updatedAt: 9 } });
   assert.equal(ageAnswer(draft), 'adult');
   assert.equal(draft.profile.updatedAt, 9, 'the rest is the account\'s');
-  // Down from an account that has one: the account's wins, as everything in the profile does
+  // Down from an account with a newer one (answered on another phone): the account's wins
   const other = answered('under');
-  applyDoc(other, 'profile', 'me', { me: 'me', profile: { age: { answer: 'adult', at: 2 } } });
+  applyDoc(other, 'profile', 'me', { me: 'me', profile: { age: { answer: 'adult', at: 2000 } } });
   assert.equal(ageAnswer(other), 'adult');
   assert.equal(keepAgeAnswer(null, { age: { answer: 'adult' } }), null);
   assert.deepEqual(keepAgeAnswer({}, {}), {});
@@ -118,4 +119,34 @@ test('age: onboarding asks only when the group plays for money, and needs an ans
   assert.equal(nameReady({ name: 'Sam', agreed: true, age: null }, { settle: 'none' }), true);
   assert.equal(nameReady({ name: ' ', agreed: true, age: 'adult' }, a), false);
   assert.equal(nameReady({ name: 'Sam', agreed: false, age: 'adult' }, a), false);
+});
+
+test('age: the newer answer wins when this phone and the account both have one', () => {
+  const acct = { avatar: null, age: { answer: 'under', at: 100 } };
+  // Changed in Settings on this phone after the account's copy: kept, so it goes up next
+  assert.deepEqual(keepAgeAnswer(acct, { age: { answer: 'adult', at: 200 } }).age, { answer: 'adult', at: 200 });
+  // The account's is newer (changed on another phone): it wins
+  assert.deepEqual(keepAgeAnswer(acct, { age: { answer: 'adult', at: 50 } }).age, { answer: 'under', at: 100 });
+  // The same moment, or no time on this phone's: the account's, as before
+  assert.deepEqual(keepAgeAnswer(acct, { age: { answer: 'adult', at: 100 } }).age, { answer: 'under', at: 100 });
+  assert.deepEqual(keepAgeAnswer(acct, { age: { answer: 'adult' } }).age, { answer: 'under', at: 100 });
+  // A stray value on this phone never replaces the account's
+  assert.deepEqual(keepAgeAnswer(acct, { age: { answer: 'maybe', at: 999 } }).age, { answer: 'under', at: 100 });
+  // Through applyDoc too
+  const draft = answered('adult');
+  draft.profile.age.at = 5000;
+  applyDoc(draft, 'profile', 'me', { me: 'me', profile: { age: { answer: 'under', at: 10 } } });
+  assert.equal(ageAnswer(draft), 'adult');
+});
+
+test('age: a Big Game asks before its groups start only when there is money in it', () => {
+  const big = defaultBig();
+  big.pot = { ...big.pot, on: true, stake: 10 };
+  big.people = { a: { name: 'A' }, b: { name: 'B' } };
+  big.groups = [{ id: 'g1', name: 'Group 1', players: ['a', 'b'] }];
+  assert.equal(bigPlaysForMoney(big), true, 'a pot to put in for');
+  const none = { ...big, pot: { ...big.pot, on: false }, skins: { ...big.skins, on: false }, teams: { ...big.teams, on: false }, bets: [] };
+  assert.equal(bigPlaysForMoney(none), false, 'nothing put in and no side bets');
+  assert.equal(bigPlaysForMoney({ ...none, bets: [{ id: 'x', sides: ['a', 'b'] }] }), true, 'a side bet is money');
+  assert.equal(bigPlaysForMoney(null), false);
 });

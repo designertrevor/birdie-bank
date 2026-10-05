@@ -383,9 +383,12 @@ export default function NewRound({ rematch, fromPlan, present, edit = null, ahea
       const answer = await checkAge();
       if (answer !== 'adult') {
         if (answer === 'under') {
-          if (!playFor) setPlayFor({ kind: 'points' });
-          else setPairBets(list => list.map(b => (b.playFor === 'points' ? b : { ...b, playFor: 'points' })));
-          showToast(playFor ? 'Side bets set to points. Money is for 18 or older.' : 'Switched to points. Money rounds are for 18 or older.');
+          // Through editBets, so agreed challenges shown as side bets go to points too and the next
+          // Tee off doesn't ask again
+          const whole = countsMoney({ playFor });
+          if (whole) setPlayFor({ kind: 'points' });
+          else editBets(list => list.map(b => (b.playFor === 'points' ? b : { ...b, playFor: 'points' })));
+          showToast(whole ? 'Switched to points. Money rounds are for 18 or older.' : 'Side bets set to points. Money is for 18 or older.');
         }
         return;
       }

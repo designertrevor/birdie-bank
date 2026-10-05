@@ -20,6 +20,7 @@ import {
   cleanBig, defaultBig, groupCount, groupsProblem, moveTo, placesLabel,
 } from '../lib/big-game.js';
 import { saveBigGame, startGroups } from '../lib/big-store.js';
+import { useBigAgeCheck } from '../components/AgeCheck.jsx';
 
 const STEPS = ['Day', 'Course', 'Players', 'Groups', 'Games', 'Bets'];
 const QUESTIONS = ['When’s the Big Game?', 'Where are you playing?', 'Who’s playing?', 'How are the groups?', 'What’s on the line?', 'Any side bets?'];
@@ -34,6 +35,7 @@ export default function BigGameSetup({ id = null, from = null }) {
   const nav = useNav();
   const state = useStore();
   const { ask, showToast } = useUI();
+  const bigAgeOk = useBigAgeCheck();
   const was = id ? state.trips?.[id] : null;
   const again = !was && from ? state.trips?.[from] : null;
   const base = was || again;
@@ -116,10 +118,14 @@ export default function BigGameSetup({ id = null, from = null }) {
     const trip = saveBigGame({ id, name: name.trim() || BIG_NAME, day, setup, big });
     if (!trip) { setBusy(false); showToast('Only the organizer changes the game'); return; }
     if (today && !was) {
-      const res = await startGroups(trip.id);
+      // Starting today: money needs a yes to "Are you 18 or older?" once (age.js). Otherwise it's
+      // saved, and starts from the game's page
+      if (await bigAgeOk(big)) {
+        const res = await startGroups(trip.id);
+        if (!res.ok) showToast(res.why);
+        else showToast(res.shared === big.groups.length ? 'The groups are on. Send them their links' : 'The groups are on. Share the links once there’s signal');
+      }
       setBusy(false);
-      if (!res.ok) showToast(res.why);
-      else showToast(res.shared === big.groups.length ? 'The groups are on. Send them their links' : 'The groups are on. Share the links once there’s signal');
     } else {
       setBusy(false);
       showToast(was ? 'Saved' : `${trip.name} is set for ${dayLabel(day).toLowerCase() === 'tomorrow' ? 'tomorrow' : dayLabel(day)}`);
