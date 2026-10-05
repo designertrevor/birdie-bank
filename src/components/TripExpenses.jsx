@@ -299,17 +299,19 @@ function ExpenseForm({ expense, st, me, full, short, onDone }) {
         {pool.map(id => {
           const share = partOf(id);
           const name = full(id);
+          // Your avatar has your initial, as everywhere else, though the row says You
+          const face = id === me ? nameOf(state, id) : name;
           return (
             <li key={id} className={`exp-person ${id === me ? 'me' : ''}`}>
               {split === 'equal' ? (
                 // Ticked or not: the same round check as picking players, on the whole row
                 <button type="button" className={`exp-who exp-tick ${inSplit.has(id) ? 'on' : ''}`} aria-pressed={inSplit.has(id)} onClick={() => flip(id)}>
-                  <Avatar id={id} name={name} /> <span className="exp-pname">{name}</span>
+                  <Avatar id={id} name={face} /> <span className="exp-pname">{name}</span>
                   <span className={`exp-share ${share == null ? 'none' : ''}`}>{share == null ? '–' : dollars(share)}</span>
                   <PickMark on={inSplit.has(id)} />
                 </button>
               ) : (
-                <span className="exp-who"><Avatar id={id} name={name} /> <span className="exp-pname">{name}</span></span>
+                <span className="exp-who"><Avatar id={id} name={face} /> <span className="exp-pname">{name}</span></span>
               )}
               {split === 'amounts' && (
                 <span className="exp-money sm">
@@ -331,12 +333,15 @@ function ExpenseForm({ expense, st, me, full, short, onDone }) {
           );
         })}
       </ul>
-      {split === 'equal' && pool.length > 2 && (
-        <button type="button" className="link-btn exp-all" onClick={() => setInSplit(new Set(people.length === pool.length ? [] : pool))}>
-          {people.length === pool.length ? 'Untick everyone' : 'Tick everyone'}
-        </button>
-      )}
-      {status && <p className={`exp-status ${split === 'amounts' ? (left ? 'off' : 'ok') : ''}`} role="status">{split === 'amounts' && !left ? <Icon name="check-circle" fill /> : null} {status}</p>}
+      {/* How it splits on the left, and ticking everyone on the right, on one line */}
+      <div className="exp-foot-row">
+        {status ? <p className={`exp-status ${split === 'amounts' ? (left ? 'off' : 'ok') : ''}`} role="status">{split === 'amounts' && !left ? <Icon name="check-circle" fill /> : null} {status}</p> : <span />}
+        {split === 'equal' && pool.length > 2 && (
+          <button type="button" className="link-btn exp-all" onClick={() => setInSplit(new Set(people.length === pool.length ? [] : pool))}>
+            {people.length === pool.length ? 'Untick everyone' : 'Tick everyone'}
+          </button>
+        )}
+      </div>
 
       {others.length > 0 && (more ? (
         <>

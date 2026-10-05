@@ -3212,3 +3212,7 @@ a.header-btn.rm-open { text-decoration: none; }
 .pp-choices .pick-row { padding: 12px 14px; min-height: 52px; }
 .pp-choices .pick-row:not(.on) { background: var(--surface); }
 .pp-choices .pick-row:last-child { margin-bottom: 0; }
+/* Add an expense: how it splits and Tick everyone share one line, with room above what follows */
+.exp-foot-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin: 8px 4px 12px; min-height: 44px; }
+.exp-foot-row .exp-status { margin: 0; }
+.exp-foot-row .link-btn.exp-all { display: inline-flex; align-items: center; margin: 0; flex-shrink: 0; min-height: 44px; }
