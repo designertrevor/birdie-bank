@@ -77,12 +77,13 @@ export function TripExpensesView({ st, me, adding = false, onAdded }) {
         <div className="add-ci"><Icon name="receipt" /></div><span className="add-lbl">Add an expense</span>
       </button>
       {st.expenses.length === 0 && (
-        <p className="field-help pad">Gas, dinner, the house: add what someone paid for the group and how to split it. It’s in everyone’s total on the Tab right away, and it settles with the rounds, once, at the end.</p>
+        <p className="trip-empty">Gas, dinner, the house: add what someone paid for the group and how to split it. It’s in everyone’s total on the Tab right away, and it settles with the rounds, once, at the end.</p>
       )}
+      {st.expenses.length > 0 && <div className="sec-label">Expenses · {st.expenses.length}</div>}
       {st.expenses.map(x => <ExpenseRow key={x.id} x={x} me={me} short={short} onOpen={() => setOpenId(x.id)} />)}
       {st.expenses.length > 0 && <AllIn st={st} me={me} short={short} />}
       {offNote && <p className="hint-card"><Icon name="cloud-slash" /> Expenses you add stay on your phone and your account for now, so friends don’t see them on theirs yet. They still count here and on your Tab.</p>}
-      {st.expenses.length > 0 && <p className="field-help pad">Anyone on the trip can add one. Only the person who added an expense changes or deletes it. Settle the trip squares the expenses and the rounds together, in the fewest payments.</p>}
+      {st.expenses.length > 0 && <p className="field-help pad trip-note">Anyone on the trip can add one. Only the person who added an expense changes or deletes it. Settle the trip squares the expenses and the rounds together, in the fewest payments.</p>}
       <ExpenseSheet open={!!editing} expense={editing === 'new' ? null : editing} st={st} me={me} full={full} short={short} onClose={close} />
     </>
   );
@@ -136,7 +137,7 @@ function AllIn({ st, me, short }) {
           </tbody>
         </table>
       </div>
-      <p className="field-help pad">{golf ? `The rounds on this phone${st.cup?.stakeOn ? ', the cup stake' : ''} and every expense. ` : ''}Plus is what the trip owes them, minus what they owe. It all adds up to $0.</p>
+      <p className="field-help pad trip-note">{golf ? `The rounds on this phone${st.cup?.stakeOn ? ', the cup stake' : ''} and every expense. ` : ''}Plus is what the trip owes them, minus what they owe. It all adds up to $0.</p>
     </>
   );
 }
@@ -275,7 +276,7 @@ function ExpenseForm({ expense, st, me, full, short, onDone }) {
       <label className="field-label" htmlFor="exp-what">What was it? <span className="opt">optional</span></label>
       <input id="exp-what" className="text-input" value={what} onChange={e => setWhat(e.target.value)} maxLength={40} placeholder="Dinner, gas, the house" autoFocus={!expense} />
       <div className="exp-chips" role="group" aria-label="Quick picks">
-        {QUICK_WHATS.map(w => <button key={w} type="button" className={`pill-btn sm ${what === w ? 'on' : ''}`} aria-pressed={what === w} onClick={() => setWhat(w)}>{w}</button>)}
+        {QUICK_WHATS.map(w => <button key={w} type="button" className={`pill-btn sm ${what === w ? 'on' : ''}`} aria-pressed={what === w} onClick={() => setWhat(w)}>{what === w && <Icon name="check" />}{w}</button>)}
       </div>
 
       <label className="field-label" htmlFor="exp-amount">How much?</label>
@@ -287,7 +288,7 @@ function ExpenseForm({ expense, st, me, full, short, onDone }) {
 
       <div className="field-label" id="exp-payer">Who paid?</div>
       <div className="exp-chips" role="group" aria-labelledby="exp-payer">
-        {pool.map(id => <button key={id} type="button" className={`pill-btn sm ${payer === id ? 'on' : ''}`} aria-pressed={payer === id} onClick={() => setPayer(id)}>{short(id)}</button>)}
+        {pool.map(id => <button key={id} type="button" className={`pill-btn sm ${payer === id ? 'on' : ''}`} aria-pressed={payer === id} onClick={() => setPayer(id)}>{payer === id && <Icon name="check" />}{short(id)}</button>)}
       </div>
 
       <div className="field-label" id="exp-split">Split it</div>
@@ -300,9 +301,11 @@ function ExpenseForm({ expense, st, me, full, short, onDone }) {
           return (
             <li key={id} className={`exp-person ${id === me ? 'me' : ''}`}>
               {split === 'equal' ? (
-                <button type="button" className="exp-who exp-tick" aria-pressed={inSplit.has(id)} onClick={() => flip(id)}>
-                  <Icon name={inSplit.has(id) ? 'check-square' : 'square'} fill={inSplit.has(id)} />
+                // Ticked or not: the same round check as picking players, on the whole row
+                <button type="button" className={`exp-who exp-tick ${inSplit.has(id) ? 'on' : ''}`} aria-pressed={inSplit.has(id)} onClick={() => flip(id)}>
                   <Avatar id={id} name={name} /> <span className="exp-pname">{name}</span>
+                  <span className={`exp-share ${share == null ? 'none' : ''}`}>{share == null ? '–' : dollars(share)}</span>
+                  <span className={`li-check ${inSplit.has(id) ? 'on' : 'add'}`} aria-hidden="true"><Icon name={inSplit.has(id) ? 'check' : 'plus'} /></span>
                 </button>
               ) : (
                 <span className="exp-who"><Avatar id={id} name={name} /> <span className="exp-pname">{name}</span></span>
@@ -322,7 +325,7 @@ function ExpenseForm({ expense, st, me, full, short, onDone }) {
                   <button type="button" className="icon-btn sm" onClick={() => step(id, 1)} disabled={(shares[id] || 0) >= MAX_SHARES} aria-label={`One share more for ${id === me ? 'you' : first(name)}`}><Icon name="plus" /></button>
                 </span>
               )}
-              {split !== 'amounts' && <span className={`exp-share ${share == null ? 'none' : ''}`}>{share == null ? '–' : dollars(share)}</span>}
+              {split === 'shares' && <span className={`exp-share ${share == null ? 'none' : ''}`}>{share == null ? '–' : dollars(share)}</span>}
             </li>
           );
         })}

@@ -2642,3 +2642,150 @@ button.ch-main:active { transform: scale(.98); }
 .big-setup-group .field-label { margin-top: 4px; }
 .big-team-row { padding: 4px 0; }
 .big-team-row .tr-sub { display: block; margin-bottom: 6px; }
+
+/* ---------- Trip setup fixes and a design pass on every trip screen (o9 tripflow) ---------- */
+/* An avatar's initials, buddy or photo sit in the middle of its circle at every size, even inside a
+   row that makes its spans flex (.sheet-item span), which used to pin the letter to the left */
+.avatar, .join-avatar { justify-content: center; align-items: center; justify-items: center; text-align: center; line-height: 1; }
+.sheet-item span.avatar, .sheet-item span.join-avatar { display: grid; gap: 0; }
+.sheet-item span.join-avatar { display: inline-grid; }
+
+/* One way to pick on every trip screen: the round setup's selectable row (pink ring, pink tint, the round check) */
+.list-item.trip-pick { gap: 12px; min-height: 64px; margin: 0; text-align: left; font: inherit; color: inherit; border: none; }
+.trip-pick .avatar { margin: 0; }
+.trip-pick .row-main { display: flex; flex-direction: column; min-width: 0; }
+.trip-pick .li-name { font-size: 16px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.trip-pick .li-sub { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.trip-pick:disabled { opacity: .55; cursor: default; }
+.trip-pick:disabled:active { transform: none; }
+.trip-pick-list { display: flex; flex-direction: column; gap: 8px; padding: 4px 16px 0; }
+.trip-pick-list .list-item { margin: 0; }
+.list-item.trip-leave { gap: 12px; min-height: 64px; }
+.trip-leave .avatar { margin: 0; }
+.trip-leave .li-name { font-size: 16px; }
+
+/* The trip sheet: steps, then sections with room between them, and the button pinned at the bottom */
+.trip-form { margin: 0 16px; padding: 4px 0 0; }
+.trip-form .step-bar { margin: 0 0 22px; padding: 4px 0 0; }
+.trip-form .step { min-height: 36px; white-space: nowrap; }
+.trip-sec { margin-top: 24px; }
+.trip-form .step-bar + .trip-sec, .trip-form .step-bar + .hint-card + .trip-who-step { margin-top: 0; }
+.trip-form .field-label { margin: 16px 0 8px; }
+.trip-sec > .field-label:first-child, .trip-form .step-bar + .field-label { margin-top: 0; }
+.trip-form .text-input { min-height: 48px; }
+.trip-form-days { gap: 12px; }
+.trip-sec-help { margin-top: 14px; }
+.trip-form .tm-templates { gap: 8px; }
+.trip-form .tm-count { margin: 0 0 16px; }
+.trip-form-cta {
+  /* Down over the sheet's own bottom padding, so no row shows under the button */
+  position: sticky; bottom: calc(-16px - env(safe-area-inset-bottom)); z-index: 2; display: flex; flex-direction: column; gap: 6px;
+  margin: 24px -16px 0; padding: 18px 16px calc(12px + env(safe-area-inset-bottom)); background: linear-gradient(rgba(0,0,0,0), var(--canvas) 18px);
+}
+.trip-form-cta .full-btn { margin: 0; }
+.trip-form-cta .link-btn.center { align-self: center; }
+.trip-form-cta .field-help { margin: 2px 0 0; text-align: center; }
+/* Templates: picked like a game in setup */
+.tm-template { min-height: 64px; padding: 12px 14px; border-radius: 18px; background: var(--card); }
+.tm-template.on { background: var(--pick-tint); box-shadow: inset 0 0 0 2px var(--pink-fill); }
+.tm-template .li-check { margin-left: auto; }
+.tm-template.scratch { min-height: 56px; }
+/* Who's going: find or add, then everyone you could take */
+.trip-who-step .trip-lede { margin: 0 0 16px; }
+.trip-find { position: relative; margin: 0; gap: 8px; }
+.trip-find .text-input { padding-left: 42px; }
+.trip-find-ic { position: absolute; left: 14px; top: 50%; transform: translateY(-50%); display: grid; place-items: center; color: var(--mute); font-size: 18px; pointer-events: none; }
+.trip-find .pill-btn { min-height: 48px; padding: 0 16px; }
+.trip-who-head { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; margin: 22px 0 10px; }
+.trip-form .trip-who-head .field-label { margin: 0; }
+.trip-who-count { font-size: 13px; font-weight: 700; color: var(--pink-text); font-variant-numeric: tabular-nums; }
+.trip-who { gap: 8px; margin-top: 0; }
+.add-row.trip-add-name { width: 100%; margin: 0; background: none; font: inherit; color: inherit; text-align: left; min-height: 64px; }
+.trip-who-step > .field-help:last-child { margin-top: 12px; }
+.trip-form .tm-flights { margin-top: 0; padding: 14px 16px; }
+/* The schedule and the teams in the sheet */
+.trip-form .tm-schedule .tm-total { padding: 0 2px 14px; }
+.tm-day { margin-bottom: 12px; padding: 16px; }
+.tm-session { margin-top: 16px; padding-top: 16px; gap: 10px; }
+.tm-session-opts { gap: 10px; }
+.cup-names { gap: 12px; }
+.cup-pick > .field-label { margin: 22px 0 8px; }
+.cup-pick > .field-help { margin-top: 10px; }
+.tm-draft-opts { gap: 10px; margin-top: 12px; }
+.cup-cols { gap: 10px; margin-top: 16px; }
+.cup-col { padding: 10px; gap: 8px; }
+.cup-free { gap: 8px; }
+.cup-stake-row .text-input { min-height: 48px; }
+
+/* Selects on trip screens show they open */
+.trip-screen .select, .trip-form .select {
+  background-image: linear-gradient(45deg, transparent 50%, var(--mute) 50%), linear-gradient(135deg, var(--mute) 50%, transparent 50%);
+  background-position: calc(100% - 20px) 50%, calc(100% - 15px) 50%; background-size: 5px 5px, 5px 5px; background-repeat: no-repeat; padding-right: 36px;
+}
+.select.sm.tm-day-course { background-color: var(--surface); margin-top: 8px; }
+
+/* The trip's page: the hero, the hint and the view switch each get their own room */
+.trip-screen .trip-hero { padding: 4px 20px 18px; }
+.trip-screen .trip-days { margin-top: 14px; }
+.trip-hint { margin-bottom: 18px; }
+.trip-view-switch { margin-bottom: 18px; }
+.trip-screen .trip-table { margin-bottom: 12px; }
+.trip-row { padding: 12px 0; }
+.field-help.pad.trip-note { margin-top: 10px; padding-bottom: 4px; }
+.trip-empty { margin: 0 16px 12px; padding: 16px; border-radius: 18px; background: var(--surface); color: var(--body); font-size: 14px; line-height: 1.45; }
+.trip-screen .text-link { margin-top: 8px; }
+.trip-screen .add-row { margin-bottom: 10px; }
+.trip-screen .ledger-row.trip-plan-row { margin-bottom: 8px; }
+/* Heading home: leaving early and done playing, as rows in the page instead of a crowded footer */
+.trip-act {
+  display: flex; align-items: center; gap: 12px; width: calc(100% - 32px); min-height: 64px; margin: 0 16px 8px; padding: 12px 14px;
+  border: none; border-radius: 18px; background: var(--card); color: var(--ink); font: inherit; text-align: left; cursor: pointer; transition: transform .2s var(--spring);
+}
+.trip-act:active { transform: scale(.98); }
+.trip-act > i:last-child { color: var(--mute-soft); font-size: 18px; flex-shrink: 0; }
+.trip-act-ic { width: 40px; height: 40px; border-radius: 50%; flex-shrink: 0; display: grid; place-items: center; background: var(--trip-tag-bg); color: var(--pink-text); font-size: 19px; }
+.trip-act .row-main { display: flex; flex-direction: column; gap: 2px; }
+.trip-act-lbl { font-weight: 700; font-size: 16px; }
+.trip-act-sub { font-size: 13px; color: var(--mute); }
+/* The quiet notes and Delete or Hide at the very end, set apart */
+.trip-foot { display: flex; flex-direction: column; gap: 10px; margin: 32px 16px 8px; padding: 18px 4px 0; border-top: 1px solid var(--line); }
+.trip-foot .field-help { margin: 0; }
+.trip-screen .trip-foot .text-link { margin: 0; padding: 10px 0; }
+/* Bring the group in: the trip's link and who answered it */
+.trip-invite { display: flex; flex-direction: column; gap: 14px; }
+.trip-invite-top { display: flex; gap: 12px; align-items: flex-start; }
+.trip-invite-top p { margin: 0; font-size: 14px; line-height: 1.45; color: var(--body); }
+.trip-invite .full-btn { height: 52px; font-size: 17px; }
+.trip-answers { list-style: none; margin: 0; padding: 0; }
+.trip-answers li { display: flex; align-items: center; gap: 10px; min-height: 48px; border-top: 1px solid var(--line-soft); }
+.trip-answers .avatar { margin: 0; }
+.trip-answer-name { flex: 1; min-width: 0; font-weight: 700; color: var(--ink); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.trip-answer { flex-shrink: 0; padding: 3px 10px; border-radius: 999px; background: var(--surface); color: var(--body); font-size: 12px; font-weight: 700; }
+.trip-answer.in { background: var(--win-bg); color: var(--win); }
+
+/* Expenses: the form's fields spaced like the trip sheet, ticks as the round check */
+.exp-form .field-label { margin: 20px 0 8px; }
+.exp-form > .field-label:first-child { margin-top: 0; }
+.exp-form .text-input { min-height: 48px; }
+.exp-chips { gap: 8px; margin-top: 10px; }
+.exp-chips .pill-btn.sm { min-height: 40px; padding: 0 14px; }
+.exp-people { margin-top: 12px; }
+.exp-tick { gap: 10px; width: 100%; }
+.exp-tick .exp-pname { flex: 1; text-align: left; }
+.exp-tick .li-check { width: 32px; height: 32px; font-size: 16px; }
+.exp-status { margin-top: 10px; }
+.trip-screen .exp-sum { margin-bottom: 12px; }
+.trip-screen .ledger-row.exp-row { margin-bottom: 8px; }
+
+/* Settle the trip and the cup: a little more air between the lede, the cards and the lists */
+.trip-screen .settle-lede { padding-bottom: 18px; }
+.trip-screen .pay-card { margin-bottom: 12px; }
+.trip-screen .cup-score { margin-bottom: 4px; }
+.trip-screen .cup-round { margin-bottom: 12px; }
+.tm-sched-card .tm-sched-day { padding: 12px 0; }
+.tm-sched-card .field-help { margin-top: 12px; }
+.tm-sched-acts { margin-top: 16px; }
+
+/* The trip's cards on the Tab and Up next: the line under a card is a full tap target */
+.trip-line { min-height: 44px; margin-bottom: 12px; }
+.trip-card .trip-days { margin-top: 12px; }

@@ -9,7 +9,7 @@ import { useEffect, useState } from 'react';
 import { Empty, Header, Icon, Screen, Segmented, Sheet, useUI } from '../components/ui.jsx';
 import { Avatar, PayButton, RequestButton } from '../components/Pay.jsx';
 import { RoundRow } from '../components/RoundRow.jsx';
-import { SquareFaces, TripDays, TripSheet } from '../components/Trips.jsx';
+import { PickRow, SquareFaces, TripDays, TripSheet } from '../components/Trips.jsx';
 import { TripExpensesView } from '../components/TripExpenses.jsx';
 import { getState, useStore } from '../lib/store.js';
 import { useNav } from '../lib/nav.js';
@@ -19,9 +19,12 @@ import { gameLabel, placeOf } from '../lib/format.js';
 import { money } from '../lib/golf.js';
 import { nameOf } from '../lib/ledger.js';
 import { canonicalOf } from '../lib/pair-debts.js';
-import { PAY_APPS, payInfoFor } from '../lib/pay.js';
+import { PAY_APPS, payInfoFor, sendReminder } from '../lib/pay.js';
 import { points } from '../lib/play-for.js';
 import { dayLabel, whenLabel } from '../lib/plans.js';
+import { planShareLink, sharePlan } from '../lib/plan-sync.js';
+import { PlansOffError } from '../lib/plan-adapters.js';
+import { tripAnswers, tripInviteText, tripLinkPlan } from '../lib/trip-people.js';
 import { plansByDay } from '../lib/trip-templates.js';
 import { DraftCard, FlightsView, ScheduleCard } from '../components/TripMode.jsx';
 import { buzz } from '../lib/delight.js';
@@ -157,8 +160,15 @@ function TripPage({ id, view: firstView = null, add = false }) {
     showToast(hidden ? 'Back on your Tab and Up next' : `${trip.name} is off your Tab and Up next. Your rounds and money stay as they are.`);
   };
 
+  const wrapping = (st.phase === 'on' || st.phase === 'soon') && anyMoney;
+  const decideCup = (st.phase === 'on' || st.phase === 'soon') && !anyMoney && cup && st.done.length > 0 && st.organizer && !st.live.length;
+  const inviting = st.organizer && (st.phase === 'soon' || st.phase === 'on');
+  // The pinned button: Settle the trip once it's ready, its payments once square, and the organizer's way back
+  const reopen = st.organizer && (st.phase === 'ready' || (st.phase === 'square' && cup && !st.paid.length && !cup.marks.length)) && trip.endedAt && !st.settling.length;
+  const seePaid = st.phase === 'square' && (st.payments.length > 0 || cup?.marks.length > 0);
+
   return (
-    <Screen>
+    <Screen className="trip-screen">
       <Header title={trip.name} small onBack={nav.pop} right={st.organizer ? <button className="header-btn" onClick={() => setEditing(true)}><Icon name="pencil-simple" /> Edit</button> : null} />
       <div className="scroll">
         <div className="trip-hero">
@@ -168,9 +178,9 @@ function TripPage({ id, view: firstView = null, add = false }) {
           <div className="trip-sub">{[tripDates(trip), trip.where].filter(Boolean).join(' · ')}</div>
           <TripDays status={st} />
         </div>
-        <p className="hint-card"><Icon name={st.phase === 'square' ? 'handshake' : 'suitcase-rolling'} fill /> {hint}</p>
+        <p className="hint-card trip-hint"><Icon name={st.phase === 'square' ? 'handshake' : 'suitcase-rolling'} fill /> {hint}</p>
 
-        <div className="tab-view">
+        <div className="tab-view trip-view-switch">
           <Segmented label="Trip view" className="press-mode-row trip-views" btn="pm-btn" value={view} onChange={setView}
             options={[...(cup ? [{ value: 'cup', label: 'Cup' }] : []), { value: 'standings', label: cup ? (st.points && !st.standings.length ? 'Points' : 'Money') : 'Standings' }, { value: 'rounds', label: 'Rounds' }, { value: 'games', label: 'Games' }, { value: 'expenses', label: 'Expenses' }]} />
         </div>
@@ -179,6 +189,7 @@ function TripPage({ id, view: firstView = null, add = false }) {
           <>
             <DraftCard st={st} />
             <CupScore cup={cup} />
+            {inviting && st.phase === 'soon' && <TripInvite st={st} />}
             <div className="sec-label">Matches</div>
             <CupMatches cup={cup} />
             <div className="sec-label">Leaderboard</div>
@@ -186,24 +197,30 @@ function TripPage({ id, view: firstView = null, add = false }) {
             {cupOn && <button className="text-link" onClick={() => nav.push('share', { kind: 'cup', id })}><Icon name="share-network" /> Share the cup</button>}
             <ScheduleCard st={st} onRounds={() => setView('rounds')} />
             <FlightsView st={st} />
-            <p className="field-help pad">{cup.entries.some(e => !e.local) ? 'Other groups’ matches come from their phones. ' : ''}A match is worked out from the round’s own scores and strokes, whatever game the round plays. A round that ends early goes to whoever led on the holes played.</p>
+            <p className="field-help pad trip-note">{cup.entries.some(e => !e.local) ? 'Other groups’ matches come from their phones. ' : ''}A match is worked out from the round’s own scores and strokes, whatever game the round plays. A round that ends early goes to whoever led on the holes played.</p>
           </>
         )}
 
-        {view === 'standings' && <Standings st={st} state={state} label={label} me={me} />}
-        {view === 'standings' && (st.standings.length > 0 || !!st.points) && (
-          <button className="text-link" onClick={() => nav.push('share', { kind: 'trip', id })}><Icon name="share-network" /> Share the standings</button>
+        {view === 'standings' && (
+          <>
+            <Standings st={st} state={state} label={label} me={me} />
+            {(st.standings.length > 0 || !!st.points) && (
+              <button className="text-link" onClick={() => nav.push('share', { kind: 'trip', id })}><Icon name="share-network" /> Share the standings</button>
+            )}
+            {inviting && <TripInvite st={st} />}
+            {!cup && <FlightsView st={st} />}
+          </>
         )}
-        {view === 'standings' && !cup && <FlightsView st={st} />}
         {view === 'rounds' && (
           <>
-            {st.rounds.length === 0 && st.planned.length === 0 && <p className="field-help pad">No rounds yet. Start one at the course, or plan the trip’s rounds so everyone can answer.</p>}
-            {[...st.done].reverse().map(r => <RoundRow key={r.id} round={r} state={state} className="card" />)}
+            {st.rounds.length === 0 && st.planned.length === 0 && <p className="trip-empty">No rounds yet. Start one at the course, or plan the trip’s rounds so everyone can answer.</p>}
+            {(st.done.length > 0 || st.live.length > 0) && <div className="sec-label">Played</div>}
             {st.live.map(r => <LiveRow key={r.id} round={r} />)}
+            {[...st.done].reverse().map(r => <RoundRow key={r.id} round={r} state={state} className="card" />)}
             {/* Planned rounds day by day, a Trip Mode schedule's groups under their session (trip-templates.js) */}
             {plansByDay(st.planned).map(d => d.sessions.map(sess => (
               <div key={`${d.date}${sess.key}`}>
-                {sess.label && <div className="sec-label">{dayLabel(d.date)} · {sess.label}{sess.worth > 1 ? ` · ${sess.worth} points a match` : ''}</div>}
+                <div className="sec-label">{sess.label ? `${dayLabel(d.date)} · ${sess.label}${sess.worth > 1 ? ` · ${sess.worth} points a match` : ''}` : `Planned · ${dayLabel(d.date)}`}</div>
                 {sess.plans.map(p => (
                   <button key={p.id} className="ledger-row trip-plan-row" onClick={() => nav.push('plan', { id: p.id })}>
                     <div className="lr-info">
@@ -215,6 +232,7 @@ function TripPage({ id, view: firstView = null, add = false }) {
                 ))}
               </div>
             )))}
+            <div className="sec-label">Add to the trip</div>
             <button className="add-row" onClick={() => nav.push('newRound', { trip: id })}><div className="add-ci"><Icon name="golf" fill /></div><span className="add-lbl">Start a round for the trip</span></button>
             <button className="add-row" onClick={() => nav.push('newRound', { ahead: true, trip: id })}><div className="add-ci"><Icon name="calendar-plus" /></div><span className="add-lbl">Plan a round for the trip</span></button>
             <button className="text-link" onClick={() => setCounting(true)}><Icon name="list-checks" /> Which rounds count?</button>
@@ -223,41 +241,118 @@ function TripPage({ id, view: firstView = null, add = false }) {
         {view === 'games' && <Games st={st} state={state} label={label} />}
         {view === 'expenses' && <TripExpensesView st={st} me={me} adding={adding} onAdded={() => { if (add) addsDone.add(add); setAdding(false); }} />}
 
-        <p className="field-help pad">{TRIP_FORMATS[trip.format]?.name || TRIP_FORMATS.money.name}. Each round keeps its own games and bets. Someone who plays only some rounds is on the trip for those rounds.</p>
-        {/* Only the organizer deletes; everyone else can hide it from their own Tab and Up next */}
-        {del_.ok && <button className="text-link danger" onClick={del}><Icon name="trash" /> Delete the trip</button>}
-        {st.organizer && !del_.ok && <p className="field-help pad">{!st.paid.length && st.expenses.length ? 'The trip has expenses, so it stays. Once they’re deleted under Expenses, the trip can be too.' : 'Trip money has been paid, so the trip stays.'} You can still edit its name and dates.</p>}
-        {(!st.organizer || hidden) && <button className="text-link" onClick={hide}><Icon name={hidden ? 'eye' : 'eye-slash'} /> {hidden ? 'Show it on your Tab and Up next' : 'Hide this trip'}</button>}
-        {!st.organizer && !hidden && <p className="field-help pad">Hiding takes it off your own Tab and Up next. Your rounds and money stay as they are.</p>}
-      </div>
-      <div className="cta-wrap">
-        {st.phase === 'ready' && <button className="full-btn pink" onClick={() => nav.push('tripSettle', { id })}>Settle the trip <Icon name="arrow-right" /></button>}
-        {st.phase === 'square' && (st.payments.length > 0 || cup?.marks.length > 0) && <button className="full-btn outline" onClick={() => nav.push('tripSettle', { id })}>See the trip’s payments</button>}
-        {(st.phase === 'on' || st.phase === 'soon') && anyMoney && (
+        {(wrapping || decideCup) && (
           <>
-            <button className="full-btn outline" onClick={() => setLeaving(true)}><Icon name="sign-out" /> Leaving early? Settle a part</button>
+            <div className="sec-label">Heading home</div>
+            {wrapping && (
+              <button className="trip-act" onClick={() => setLeaving(true)}>
+                <span className="trip-act-ic" aria-hidden="true"><Icon name="sign-out" /></span>
+                <span className="row-main"><span className="trip-act-lbl">Leaving early?</span><span className="trip-act-sub">Settle someone’s part before the rest</span></span>
+                <Icon name="caret-right" />
+              </button>
+            )}
             {/* The organizer's call: it rides in the trip's plan, so every phone opens Settle the trip together */}
-            {st.organizer && !st.live.length && <button className="link-btn center" onClick={doneNow}>Done playing? Settle the trip now</button>}
+            {wrapping && st.organizer && !st.live.length && (
+              <button className="trip-act" onClick={doneNow}>
+                <span className="trip-act-ic" aria-hidden="true"><Icon name="flag-checkered" /></span>
+                <span className="row-main"><span className="trip-act-lbl">Done playing?</span><span className="trip-act-sub">Open Settle the trip for everyone now</span></span>
+                <Icon name="caret-right" />
+              </button>
+            )}
+            {/* A team points trip with no round money or expenses (a stake or not): the organizer still says when it's over */}
+            {decideCup && (
+              <button className="trip-act" onClick={doneNow}>
+                <span className="trip-act-ic" aria-hidden="true"><Icon name="trophy" /></span>
+                <span className="row-main"><span className="trip-act-lbl">Done playing?</span><span className="trip-act-sub">Decide the cup now</span></span>
+                <Icon name="caret-right" />
+              </button>
+            )}
           </>
         )}
-        {/* A team points trip with no round money or expenses (a stake or not): the organizer still says when it's over */}
-        {(st.phase === 'on' || st.phase === 'soon') && !anyMoney && cup && st.done.length > 0 && st.organizer && !st.live.length && (
-          <button className="link-btn center" onClick={doneNow}>Done playing? Decide the cup now</button>
-        )}
-        {st.organizer && (st.phase === 'ready' || (st.phase === 'square' && cup && !st.paid.length && !cup.marks.length)) && trip.endedAt && !st.settling.length && <button className="link-btn center" onClick={() => endTrip(id, false)}>Still playing? Reopen the trip</button>}
+
+        <div className="trip-foot">
+          <p className="field-help">{TRIP_FORMATS[trip.format]?.name || TRIP_FORMATS.money.name}. Each round keeps its own games and bets. Someone who plays only some rounds is on the trip for those rounds.</p>
+          {st.organizer && !del_.ok && <p className="field-help">{!st.paid.length && st.expenses.length ? 'The trip has expenses, so it stays. Once they’re deleted under Expenses, the trip can be too.' : 'Trip money has been paid, so the trip stays.'} You can still edit its name and dates.</p>}
+          {!st.organizer && !hidden && <p className="field-help">Hiding takes it off your own Tab and Up next. Your rounds and money stay as they are.</p>}
+          {/* Only the organizer deletes; everyone else can hide it from their own Tab and Up next */}
+          {del_.ok && <button className="text-link danger" onClick={del}><Icon name="trash" /> Delete the trip</button>}
+          {(!st.organizer || hidden) && <button className="text-link" onClick={hide}><Icon name={hidden ? 'eye' : 'eye-slash'} /> {hidden ? 'Show it on your Tab and Up next' : 'Hide this trip'}</button>}
+        </div>
       </div>
+      {(st.phase === 'ready' || seePaid || reopen) && (
+        <div className="cta-wrap">
+          {st.phase === 'ready' && <button className="full-btn pink" onClick={() => nav.push('tripSettle', { id })}>Settle the trip <Icon name="arrow-right" /></button>}
+          {seePaid && <button className="full-btn outline" onClick={() => nav.push('tripSettle', { id })}>See the trip’s payments</button>}
+          {reopen && <button className="link-btn center" onClick={() => endTrip(id, false)}>Still playing? Reopen the trip</button>}
+        </div>
+      )}
       {st.organizer && <TripSheet open={editing} trip={trip} onClose={() => setEditing(false)} onDone={() => setEditing(false)} />}
       <CountSheet open={counting} onClose={() => setCounting(false)} st={st} />
       <Sheet open={leaving} onClose={() => setLeaving(false)} title="Who’s leaving?">
         <p className="field-help pad">Their payments for the rounds{st.expenses.length ? ' and expenses' : ''} so far. Everyone else settles after the last round.</p>
-        {st.totals.map(p => (
-          <button key={p.id} className="sheet-item" onClick={() => { setLeaving(false); nav.push('tripSettle', { id, who: p.id }); }}>
-            <span><Avatar id={p.id} name={nameOf(state, p.id)} /> {p.id === me ? 'Settle my part' : `Settle ${short(p.id)}’s part`}</span>
-            <span className={`trip-li-amt ${sign(p.amount)}`}>{money(p.amount, { sign: true })}</span>
-          </button>
-        ))}
+        <div className="trip-pick-list">
+          {st.totals.map(p => (
+            <button key={p.id} className="list-item trip-leave" onClick={() => { setLeaving(false); nav.push('tripSettle', { id, who: p.id }); }}>
+              <Avatar id={p.id} name={nameOf(state, p.id)} />
+              <span className="row-main"><span className="li-name">{p.id === me ? 'Settle my part' : `Settle ${short(p.id)}’s part`}</span></span>
+              <span className={`trip-li-amt ${sign(p.amount)}`}>{money(p.amount, { sign: true })}</span>
+            </button>
+          ))}
+        </div>
       </Sheet>
     </Screen>
+  );
+}
+
+/**
+ * The trip's link, for the organizer before and during the trip: who answered it, and Send the
+ * link (the trip's first planned round's group link, trip-people.js), or Plan the first round when
+ * there's none yet. Friends who answer it add themselves, and the round they play is on the trip.
+ */
+function TripInvite({ st }) {
+  const nav = useNav();
+  const state = useStore();
+  const { showToast } = useUI();
+  const [busy, setBusy] = useState(false);
+  const plan = tripLinkPlan(state, st.trip.id);
+  const answers = tripAnswers(state, st.trip);
+  const send = async () => {
+    if (!plan) { nav.push('newRound', { ahead: true, trip: st.trip.id }); return; }
+    let link = planShareLink(plan);
+    if (!link) {
+      setBusy(true);
+      try {
+        await sharePlan(plan.id);
+        link = planShareLink(getState().plans[plan.id]);
+      } catch (e) {
+        showToast(e instanceof PlansOffError ? 'Group links aren’t switched on yet' : 'Couldn’t get the link. Check your signal');
+        return;
+      } finally { setBusy(false); }
+    }
+    const r = await sendReminder(tripInviteText(st.trip, getState().plans[plan.id], link));
+    if (r === 'copied') showToast('Invite copied. Paste it in your group text');
+    if (r === 'failed') showToast('Couldn’t share on this device');
+  };
+  return (
+    <>
+      <div className="sec-label">Bring the group in</div>
+      <div className="block trip-invite">
+        <div className="trip-invite-top">
+          <span className="trip-act-ic" aria-hidden="true"><Icon name="link" /></span>
+          <p className="row-main">{plan
+            ? `One link for the trip: ${dayLabel(plan.date)}’s round. Friends say they’re in and vote on the game and the bet, and the round they play counts for the trip.`
+            : 'Plan the trip’s first round and send its link. Friends add themselves by saying they’re in, and the round they play counts for the trip.'}</p>
+        </div>
+        {answers.length > 0 && (
+          <ul className="trip-answers" aria-label="Answered the link">
+            {answers.map(a => (
+              <li key={a.key}><Avatar name={a.name} size="sm" /><span className="trip-answer-name">{a.name}</span><span className={`trip-answer ${a.status}`}>{a.status === 'in' ? 'In' : 'Maybe'}</span></li>
+            ))}
+          </ul>
+        )}
+        <button className="full-btn" onClick={send} disabled={busy}><Icon name={plan ? 'share' : 'calendar-plus'} /> {plan ? 'Send the link' : 'Plan the first round'}</button>
+      </div>
+    </>
   );
 }
 
@@ -265,7 +360,7 @@ function TripPage({ id, view: firstView = null, add = false }) {
 function Standings({ st, state, label, me }) {
   if (!st.standings.length && st.points) {
     const rows = Object.entries(st.points).sort((a, b) => b[1] - a[1]);
-    if (!rows.length) return <p className="field-help pad">The points fill in as soon as a round is finished.</p>;
+    if (!rows.length) return <p className="trip-empty">The points fill in as soon as a round is finished.</p>;
     return (
       <div className="trip-table">
         {rows.map(([id, v], i) => (
@@ -280,7 +375,7 @@ function Standings({ st, state, label, me }) {
   }
   if (!st.standings.length && st.done.length) {
     // Played only for rewards so far: nothing in dollars or points to add up
-    return <p className="field-help pad">Played for rewards so far, so there’s no money to add up. Each round’s results say who’s buying.</p>;
+    return <p className="trip-empty">Played for rewards so far, so there’s no money to add up. Each round’s results say who’s buying.</p>;
   }
   if (!st.standings.length && st.going.length > 1) {
     // Who's going, before anyone has played: everyone even
@@ -296,11 +391,11 @@ function Standings({ st, state, label, me }) {
             </div>
           ))}
         </div>
-        <p className="field-help pad">Who’s going. The standings fill in as soon as a round is finished, and anyone who plays a round for the trip joins them.</p>
+        <p className="field-help pad trip-note">Who’s going. The standings fill in as soon as a round is finished, and anyone who plays a round for the trip joins them.</p>
       </>
     );
   }
-  if (!st.standings.length) return <p className="field-help pad">The standings fill in as soon as a round is finished.</p>;
+  if (!st.standings.length) return <p className="trip-empty">The standings fill in as soon as a round is finished. Anyone who plays a round for the trip is in them.</p>;
   const total = st.done.filter(r => st.money.includes(r)).length;
   return (
     <>
@@ -319,7 +414,7 @@ function Standings({ st, state, label, me }) {
         ))}
       </div>
       {st.live.map(r => <LiveRow key={r.id} round={r} />)}
-      <p className="field-help pad">Finished rounds on this phone{total > 1 ? `, all ${total} of them` : ''}. Adds up to $0 across everyone on the trip. Someone who missed a round sees only the rounds they played, but the payments are the same on every phone.{st.expenses.length ? ' The rounds only: everyone’s total with the expenses is under Expenses.' : ''}</p>
+      <p className="field-help pad trip-note">Finished rounds on this phone{total > 1 ? `, all ${total} of them` : ''}. Adds up to $0 across everyone on the trip. Someone who missed a round sees only the rounds they played, but the payments are the same on every phone.{st.expenses.length ? ' The rounds only: everyone’s total with the expenses is under Expenses.' : ''}</p>
     </>
   );
 }
@@ -344,7 +439,7 @@ function LiveRow({ round }) {
 function Games({ st, state, label }) {
   // A team points trip's stake gets its own column once it's decided, so each row adds up to the trip total
   const { columns, rows } = tripByGame(state, st.trip.id, { stake: st.cup?.stakeBy });
-  if (!columns.length) return <p className="field-help pad">Money by game shows up once a round with money on it is finished.</p>;
+  if (!columns.length) return <p className="trip-empty">Money by game shows up once a round with money on it is finished.</p>;
   const order = st.standings.map(p => p.id).filter(id => rows.has(id));
   return (
     <>
@@ -368,7 +463,7 @@ function Games({ st, state, label }) {
           </tbody>
         </table>
       </div>
-      <p className="field-help pad">Finished rounds only. A game someone didn’t play shows –.</p>
+      <p className="field-help pad trip-note">Finished rounds only. A game someone didn’t play shows –.</p>
     </>
   );
 }
@@ -383,22 +478,19 @@ function CountSheet({ open, onClose, st }) {
     <Sheet open={open} onClose={onClose} title="Which rounds count?">
       <p className="field-help pad">Rounds from {tripDates(st.trip)} on this phone. A round on the trip goes in the standings and settles with the trip. A finished round that was shared live stays as it was set up, so everyone’s phone agrees.{locked ? ' Payments have been made for the trip, so its rounds stay on it.' : ''}</p>
       {list.length === 0 && <p className="field-help pad">No rounds in these dates yet.</p>}
-      {list.map(r => {
-        const on = r.trip?.id === st.trip.id;
-        // A finished round shared live stays as it was set up, so every phone in it agrees
-        const fixed = !canRecount(state, r);
-        return (
-          <button key={r.id} className="sheet-item" disabled={(on && locked) || fixed} aria-pressed={on} onClick={() => setRoundTrip(r.id, on ? null : st.trip)}>
-            <span>
-              <Icon name={on ? 'check-square' : 'square'} fill={on} />
-              <span className="trip-li">
-                <span className="trip-li-name">{r.course.name} · {gameLabel(r)}</span>
-                <span className="trip-li-sub">{new Date(r.createdAt).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })}{r.status === 'active' ? ' · being played' : ''}{fixed ? ` · shared live, so it stays ${on ? 'on' : 'off'} the trip` : ''}</span>
-              </span>
-            </span>
-          </button>
-        );
-      })}
+      <div className="trip-pick-list">
+        {list.map(r => {
+          const on = r.trip?.id === st.trip.id;
+          // A finished round shared live stays as it was set up, so every phone in it agrees
+          const fixed = !canRecount(state, r);
+          return (
+            <PickRow key={r.id} on={on} disabled={(on && locked) || fixed} onClick={() => setRoundTrip(r.id, on ? null : st.trip)}
+              name={`${r.course.name} · ${gameLabel(r)}`}
+              sub={`${new Date(r.createdAt).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })}${r.status === 'active' ? ' · being played' : ''}${fixed ? ` · shared live, so it stays ${on ? 'on' : 'off'} the trip` : ''}`}
+              label={`${r.course.name}, ${gameLabel(r)}${on ? ', on the trip' : ''}`} />
+          );
+        })}
+      </div>
       <div className="cta-wrap"><button className="full-btn" onClick={onClose}>Done</button></div>
     </Sheet>
   );
@@ -472,7 +564,7 @@ function TripSettlePage({ id, who = null }) {
   const people = st.totals.map(p => p.id);
   const updating = st.published.status === 'stale' && n > 0;
   return (
-    <Screen>
+    <Screen className="trip-screen">
       <Header title={title} small onBack={nav.pop} />
       <div className="scroll">
         {n > 0 ? (
