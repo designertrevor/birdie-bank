@@ -1,7 +1,8 @@
 // Round-specific link previews for join links (https://birdie-bank.vercel.app/?join=CODE).
 // vercel.json sends only link-preview bots here (iMessage, WhatsApp, Slack and friends), so
 // people opening the link never wait on this. It reads the shared round with the public anon
-// key (the same one the app ships with; live_rounds is readable by code) and swaps the round's
+// key (the same one the app ships with; a round is readable by its code, sent in the x-round-code
+// header the way the app sends it, see supabase/2026-10-06-round-codes.sql) and swaps the round's
 // game, course and players into the page's preview tags. Anything goes wrong: the plain page.
 import { cleanCode } from '../src/lib/sync-model.js';
 import { injectMeta, joinPreview } from '../src/lib/og.js';
@@ -14,7 +15,7 @@ const ANON_KEY = process.env.VITE_SUPABASE_ANON_KEY || process.env.SUPABASE_ANON
 async function roundMeta(code) {
   if (!SUPABASE_URL || !ANON_KEY) return null;
   const url = `${SUPABASE_URL}/rest/v1/live_rounds?select=meta&code=eq.${encodeURIComponent(code)}&limit=1`;
-  const res = await fetch(url, { headers: { apikey: ANON_KEY, Authorization: `Bearer ${ANON_KEY}` }, signal: AbortSignal.timeout(2500) });
+  const res = await fetch(url, { headers: { apikey: ANON_KEY, Authorization: `Bearer ${ANON_KEY}`, 'x-round-code': code }, signal: AbortSignal.timeout(2500) });
   if (!res.ok) return null;
   const rows = await res.json();
   return rows?.[0]?.meta || null;
