@@ -378,7 +378,11 @@ export function closeTheBooks({ scope, name, picks }) {
   const res = closeBooks(s, scope, { name, picks, now, ask: !off, makeId: () => uid() });
   commit(res.rows, { add: res.settlements });
   keepExpenses(res.expenses);
-  update(st => { st.books = { ...(st.books || {}), [res.book.id]: res.book }; });
+  update(st => {
+    st.books = { ...(st.books || {}), [res.book.id]: res.book };
+    // An ask taken back that no shared round carries: this phone's copy is the one to change
+    if (res.withdrawn?.length) st.carries = (st.carries || []).map(c => (c.status === 'asked' && res.withdrawn.find(w => w.id === c.id)) || c);
+  });
   const ids = new Set([...res.rows.filter(r => r.kind === 'payment' && r.status === 'paid').map(r => r.id), ...res.settlements.map(x => x.id), ...res.expenses.map(x => x.id)]);
   const undo = () => {
     undoMadeAt(now, ids);

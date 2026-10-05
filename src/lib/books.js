@@ -106,7 +106,8 @@ export function closePreview(state, scope, { now = Date.now() } = {}) {
 /**
  * Close a tab's books. `picks` says for each line (by lineKey) 'paid' or 'rolled' (rolled when it
  * says nothing). Every line is worked out from the same Tab, before any of it is paid, so paying all
- * of them squares the tab exactly. Returns { book, rows, settlements, expenses, carries } to send
+ * of them squares the tab exactly. Returns { book, rows, settlements, expenses, carries, withdrawn }
+ * (`withdrawn`: an earlier close's unanswered asks to roll a line now paid, taken back) to send
  * and keep: payments the way the Tab (allocatePayment) or the crew's tab (crewPayment) pays a whole
  * line, and a Roll to next time ask for each rolled line of yours with someone you shared a round
  * live with (unless one is already asked or agreed between you). With `ask` off (the shared Tab
@@ -117,7 +118,8 @@ export function closeBooks(state, scope, { name = null, picks = {}, now = Date.n
   const me = state.me ? who(state.me) : null;
   const prev = closePreview(state, scope, { now });
   const crew = crewIdOf(scope);
-  const rows = [], settlements = [], expenses = [], carries = [], lines = [];
+  const rows = [], settlements = [], expenses = [], carries = [], withdrawn = [], lines = [];
+  const pair = (c, l) => (who(c.from) === who(l.from) && who(c.to) === who(l.to)) || (who(c.from) === who(l.to) && who(c.to) === who(l.from));
   for (const line of prev.lines) {
     const how = picks[lineKey(line)] === 'paid' ? 'paid' : 'rolled';
     lines.push({ from: line.from, to: line.to, fromName: nameOf(state, line.from), toName: nameOf(state, line.to), cents: cents(line.amount), how });
@@ -128,6 +130,13 @@ export function closeBooks(state, scope, { name = null, picks = {}, now = Date.n
       rows.push(...res.rows);
       settlements.push(...res.settlements);
       expenses.push(...(res.expenses || []));
+      // An earlier close's ask to roll this line, still unanswered, is moot once it's paid
+      for (const c of state.carries || []) {
+        if (c?.status !== 'asked' || c.reason !== ROLL_REASON || !pair(c, line)) continue;
+        const next = carryReducer(c, { type: 'withdraw', at: now });
+        rows.push(...carryRows(state, next, { now }));
+        withdrawn.push(next);
+      }
       continue;
     }
     // Rolled: still owed, into the next season. Between you and someone you shared a round live
@@ -155,7 +164,7 @@ export function closeBooks(state, scope, { name = null, picks = {}, now = Date.n
     totals: prev.totals.map(t => ({ ...t, name: names(t.id) })),
     lines, carries: carries.map(c => c.id), updatedAt: now,
   };
-  return { book, rows, settlements, expenses, carries };
+  return { book, rows, settlements, expenses, carries, withdrawn };
 }
 
 /** Your final net in a closed season, in cents (you are `state.me`). */

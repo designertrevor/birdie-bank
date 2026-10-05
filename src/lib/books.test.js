@@ -159,3 +159,24 @@ test('History puts a closed season in among the month’s rounds, where it close
   const aug = { id: 'b5', closedAt: new Date(2026, 7, 3).getTime(), name: 'summer' };
   assert.deepEqual(withClosedBooks([r1], [aug], '2026-09', { kind: 'all' }, ['2026-10', '2026-09']).map(x => x.round?.id || x.book.id), ['r1', 'b5']);
 });
+
+test('paying a line an earlier close rolled takes back that close’s ask to roll it, on both phones', () => {
+  const r1 = skins('r1', ['t', 'a'], [[1, 't'], [2, 't'], [3, 't']], { at: OCT(12), code: 'CRW002' });
+  let mine = base([r1]);
+  let theirs = { ...base([structuredClone(r1)]), me: 'a', crews: {} };
+  const first = closeBooks(mine, SAT, { picks: pick(closePreview(mine, SAT, { now: NOW }).lines, 'rolled'), now: NOW, makeId });
+  assert.equal(first.carries.length, 1);
+  mine = apply(mine, first);
+  theirs = applyRows(theirs, first.rows);
+  const prev = closePreview(mine, SAT, { now: NOW + 10 });
+  const second = closeBooks(mine, SAT, { picks: pick(prev.lines, 'paid'), now: NOW + 10, makeId });
+  assert.equal(second.withdrawn.length, 1);
+  assert.equal(second.withdrawn[0].status, 'withdrawn');
+  mine = apply(mine, second);
+  theirs = applyRows(theirs, second.rows);
+  for (const [s, a, b] of [[mine, 't', 'a'], [theirs, 'a', 't']]) {
+    const c = cardCarry(s, a, b, { from: 'a', to: 't', amount: 6 }, NOW + 11);
+    assert.notEqual(c?.status, 'asked', `${s.me}’s phone`);
+  }
+  assert.deepEqual(pair(mine, 't', 'a'), [], 'and the money is square');
+});
