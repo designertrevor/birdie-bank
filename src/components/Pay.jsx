@@ -2,12 +2,13 @@
 // Pay buttons only ever show to the person paying or the person owed, and use the payee's own app.
 import { useState } from 'react';
 import { Icon, Numpad, Sheet, useUI } from './ui.jsx';
-import { useStore } from '../lib/store.js';
+import { update, useStore } from '../lib/store.js';
 import { markPaid } from '../lib/tab-sync.js';
 import { money } from '../lib/golf.js';
 import { myIds } from '../lib/format.js';
 import { nameOf } from '../lib/ledger.js';
-import { PAY_APPS, copyText, handleText, payInfoFor, payLabel, payLink, requestLink } from '../lib/pay.js';
+import { PAY_APPS, copyText, handleText, payInfoFor, payLabel, payLink, requestFor, sendReminder, zelleCopy } from '../lib/pay.js';
+import { noteNudge } from '../lib/nudges.js';
 import { useRemind } from '../lib/useRemind.js';
 
 /** A friend's avatar (see Avatar.jsx): kept here too, where the Tab and player cards import it. */
@@ -26,22 +27,51 @@ export function PayButton({ info, amount, note, className = 'pay-btn', children 
       </a>
     );
   }
-  const copy = async () => showToast(await copyText(info.handle) ? `Copied ${info.handle}. Paste it in ${app}` : `${app}: ${info.handle}`);
+  // Zelle has no link: their email or phone and the amount, one tap to copy the handle
+  const z = zelleCopy(info, amount);
+  const shown = z ? z.label : `${app}: ${info.handle}`;
+  const copy = async () => showToast(await copyText(info.handle) ? `Copied ${info.handle}. Send ${money(amount)} in ${app}` : shown);
   return (
     <button className={`${className} app-${info.app}`} onClick={copy} aria-label={`Copy ${info.handle} to pay ${money(amount)} on ${app}`}>
-      <span className="pay-in"><Icon name="copy" /><span className="pay-lbl">{app}: {info.handle}</span></span>
+      <span className="pay-in"><Icon name="copy" /><span className="pay-lbl">{shown}</span></span>
     </button>
   );
 }
 
-/** Ask for the money in their app (only Venmo can prefill a request). */
-export function RequestButton({ payer, mine, amount, note, className = 'pay-btn' }) {
-  const link = requestLink(payer, mine, amount, note);
-  if (!link) return null;
+/**
+ * Ask for the money in the app you get paid on, whatever it is (pay.js requestFor): a Venmo request
+ * already filled in when you both use Venmo, otherwise a message with your pay link for the amount
+ * (or your Zelle and the amount) through the share sheet or a text. `who` is the payer's player id,
+ * for the message and so Up next doesn't suggest a reminder right after.
+ */
+export function RequestButton({ payer, mine, amount, note, who = null, full = false, className = 'pay-btn' }) {
+  const state = useStore();
+  const { showToast } = useUI();
+  const name = who ? nameOf(state, who) : '';
+  const ask = requestFor({ payer, mine, amount, name, note: note || 'Golf' });
+  if (!ask) return null;
+  const app = PAY_APPS[ask.app].name;
+  const asked = () => { if (who) update(s => noteNudge(s, who)); };
+  // `full`: the longer words for a sheet row, with the amount and the app
+  const label = full ? `Request ${money(amount)} ${ask.kind === 'link' ? 'on Venmo' : `with your ${app}`}` : 'Request';
+  if (ask.kind === 'link') {
+    return (
+      <a className={`${className} app-venmo`} href={ask.url} target="_blank" rel="noreferrer" onClick={asked} aria-label={`Request ${money(amount)} from ${handleText(payer)} on Venmo`}>
+        <span className="pay-in"><Icon name="hand-coins" fill /><span className="pay-lbl">{label}</span></span>
+      </a>
+    );
+  }
+  const send = async () => {
+    const r = await sendReminder(ask.text);
+    const first = name.split(' ')[0];
+    if (r === 'copied') showToast(first ? `Request copied. Paste it to ${first}` : 'Request copied');
+    if (r === 'failed') showToast('Couldn’t share on this device');
+    if (r === 'shared' || r === 'sms' || r === 'copied') asked();
+  };
   return (
-    <a className={`${className} app-venmo`} href={link} target="_blank" rel="noreferrer" aria-label={`Request ${money(amount)} from ${handleText(payer)} on Venmo`}>
-      <span className="pay-in"><Icon name="hand-coins" fill /><span className="pay-lbl">Request</span></span>
-    </a>
+    <button className={`${className} app-${ask.app}`} onClick={send} aria-label={`Request ${money(amount)}${name ? ` from ${name.split(' ')[0]}` : ''} with your ${app}`}>
+      <span className="pay-in"><Icon name="hand-coins" fill /><span className="pay-lbl">{label}</span></span>
+    </button>
   );
 }
 
@@ -85,7 +115,7 @@ export function SettleSheet({ debt, onClose }) {
             </div>
             {iPay && <PayButton info={payee} amount={debt.amount} note={note} className="sheet-item" />}
             {iPay && !payee && <p className="field-help" style={{ padding: '0 20px 8px' }}>Ask {nameOf(state, debt.to).split(' ')[0]} which payment app they use and add it to their player card for a pay button here.</p>}
-            {imOwed && <RequestButton payer={payer} mine={myApp} amount={debt.amount} note={note} className="sheet-item" />}
+            {imOwed && <RequestButton payer={payer} mine={myApp} amount={debt.amount} note={note} who={debt.from} full className="sheet-item" />}
             {imOwed && <button className="sheet-item" onClick={() => remind(debt.from, debt.amount)}><span><Icon name="bell-ringing" fill /> Remind {nameOf(state, debt.from).split(' ')[0]}</span></button>}
             <button className="sheet-item" onClick={() => record(debt.amount)}><span><Icon name="check-circle" fill /> Mark {money(debt.amount)} paid</span></button>
             <button className="sheet-item" onClick={() => setPartial(true)}><span><Icon name="coins" /> They paid part of it</span></button>

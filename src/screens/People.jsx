@@ -86,7 +86,7 @@ export default function People() {
                 {tab > 0 ? (
                   <>
                     <button className="pay-btn" onClick={() => remind(id, amount)} aria-label={`Remind ${first} about ${money(amount)}`}><span className="pay-in"><Icon name="bell-ringing" fill /><span className="pay-lbl">Remind</span></span></button>
-                    <RequestButton payer={payInfoFor(state, id)} mine={myApp} amount={amount} note="Golf" />
+                    <RequestButton payer={payInfoFor(state, id)} mine={myApp} amount={amount} note="Golf" who={id} />
                   </>
                 ) : <PayButton info={payInfoFor(state, id)} amount={amount} note="Golf" />}
               </div>

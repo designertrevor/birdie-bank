@@ -24,7 +24,7 @@ test('pay: the old Venmo field still counts, and a chosen app wins', () => {
 test('pay: links open the payee\'s own app, and Zelle has none', () => {
   assert.equal(payLink({ app: 'venmo', handle: 'mike' }, 12, 'Skins'), 'https://venmo.com/mike?txn=pay&amount=12.00&note=Skins');
   assert.equal(payLink({ app: 'cashapp', handle: 'mike' }, 7.5), 'https://cash.app/$mike/7.50');
-  assert.equal(payLink({ app: 'paypal', handle: 'mike' }, 20), 'https://paypal.me/mike/20.00');
+  assert.equal(payLink({ app: 'paypal', handle: 'mike' }, 20), 'https://paypal.me/mike/20.00USD');
   assert.equal(payLink({ app: 'zelle', handle: 'mike@x.com' }, 20), null);
   assert.equal(handleText({ app: 'cashapp', handle: 'mike' }), '$mike');
 });

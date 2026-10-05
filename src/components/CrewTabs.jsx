@@ -136,7 +136,7 @@ export function OneTab({ tab }) {
             {isCrew && (
               <div className="pay-acts wrap">
                 {owesMe
-                  ? <RequestButton payer={payInfoFor(state, other)} mine={payInfoFor(state, state.me)} amount={l.amount} note={note} />
+                  ? <RequestButton payer={payInfoFor(state, other)} mine={payInfoFor(state, state.me)} amount={l.amount} note={note} who={other} />
                   : <PayButton info={payInfoFor(state, other)} amount={l.amount} note={note} />}
                 <button className="pay-btn ink" onClick={() => mark(l)} aria-label={owesMe ? `${first(name)} paid me ${money(l.amount)}` : `I paid ${first(name)} ${money(l.amount)}`}>
                   <span className="pay-in"><Icon name="check-circle" fill /><span className="pay-lbl">{owesMe ? `${first(name)} paid me` : 'I paid'}</span></span>
