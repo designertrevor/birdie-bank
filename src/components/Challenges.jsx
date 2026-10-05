@@ -18,6 +18,7 @@ import { challengeAmountsShow, challengeGroupText } from '../lib/share-cards.js'
 import { useShareText } from '../lib/useShare.js';
 import { dayLabel, planPeople } from '../lib/plans.js';
 import { TalkCount } from './TalkCount.jsx';
+import { shortNames } from '../lib/short-names.js';
 
 const first = n => String(n || '').trim().split(/\s+/)[0] || 'them';
 const other = side => (side === 'from' ? 'to' : 'from');
@@ -122,7 +123,9 @@ export function ChallengeMaker({ open, onClose, from, people, whens, holesCount 
     else if (!challengesOff()) showToast(`Challenge saved. Once you’re back online, send it to ${first(to.name)} from its page.`);
     else showToast(`Challenge saved. Mark ${first(to.name)}’s answer when they tell you.`);
   };
-  const chip = (p, on, pick, label = first(p.name)) => (
+  // Two people with the same first name get their last initial, so each chip says which one
+  const short = shortNames(pool.map(p => [p.who, p.name]), 'them');
+  const chip = (p, on, pick, label = short.get(p.who) || first(p.name)) => (
     <PickChip key={p.who} radio on={on} onClick={() => pick(p.who)}>{label}</PickChip>
   );
   const title = fixed ? (setter ? `${first(a.name)} v ${first(fixed.name)}` : `Challenge ${first(fixed.name)}`) : setter ? 'Set up a challenge' : 'Challenge someone';

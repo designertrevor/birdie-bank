@@ -21,6 +21,7 @@ import {
 } from '../lib/big-game.js';
 import { saveBigGame, startGroups } from '../lib/big-store.js';
 import { useBigAgeCheck } from '../components/AgeCheck.jsx';
+import { shortNames } from '../lib/short-names.js';
 
 const STEPS = ['Day', 'Course', 'Players', 'Groups', 'Games', 'Bets'];
 const QUESTIONS = ['When’s the Big Game?', 'Where are you playing?', 'Who’s playing?', 'How are the groups?', 'What’s on the line?', 'Any side bets?'];
@@ -83,7 +84,9 @@ export default function BigGameSetup({ id = null, from = null }) {
   };
   const people = Object.fromEntries(picked.filter(pid => state.players[pid]).map(pid => [pid, { name: state.players[pid].name, hc: useHc ? courseHc(pid).value : 0 }]));
   const pool = picked.filter(pid => people[pid]).map(pid => ({ id: pid, hc: people[pid].hc }));
-  const nameOf = pid => (pid === state.me ? 'You' : first(people[pid]?.name || state.players[pid]?.name));
+  // Two people with the same first name get their last initial on the chips, so each says which one
+  const short = shortNames(picked.map(pid => [pid, people[pid]?.name || state.players[pid]?.name]));
+  const nameOf = pid => (pid === state.me ? 'You' : short.get(pid) || first(people[pid]?.name || state.players[pid]?.name));
 
   // The groups: balanced by handicap unless they're being made by hand; anyone picked since goes in the smallest
   const count = groups?.length || groupCount(pool.length);
