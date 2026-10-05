@@ -3,19 +3,21 @@
 // setting up the next round (the plan flow: the organizer suggests, the group votes) and, when
 // the flag is on, the paywall. Invited players arrive from a link and skip all of this.
 import { useState } from 'react';
-import { BallIllo, Icon, Numpad, Screen } from '../components/ui.jsx';
+import { BallIllo, Icon, Numpad, PickChip, PickMark, PickRow, Screen } from '../components/ui.jsx';
 import { update, uid } from '../lib/store.js';
 import { formatIndex } from '../lib/format.js';
 import { money } from '../lib/golf.js';
 import { GAMES } from '../lib/round.js';
+import { playFromSearch } from '../lib/rule-links.js';
 import { SignInSheet } from '../components/Account.jsx';
 import { BuddyArt } from '../components/BuddyArt.jsx';
 import { BUDDIES, buddyAvatar } from '../lib/avatars.js';
 import { accountsEnabled, useAccount } from '../lib/cloud.js';
 import {
   MATHS, ONBOARD_GAMES, SETTLES, SIZES, answered, ballotGames, gameList, nextStep, organizerRecord, payoff, prevStep,
-  progressOf, readyLines, settleLabel, settleMath, sizeLabel, suggestedGame, toggleGame,
+  progressOf, readyLines, settleLabel, settleMath, sizeLabel, suggestedGame, toggleGame, asksAge, nameReady,
 } from '../lib/onboarding.js';
+import { AGE_COPY, setAgeAnswer } from '../lib/age.js';
 import { PAYWALL_ON } from '../lib/paywall-flag.js';
 import { shouldShowPaywall } from '../lib/paywall.js';
 
@@ -28,15 +30,19 @@ const QUESTION = {
 
 /**
  * `onDone(routes)`: called when onboarding finishes, with the screens to open on top of Up next
- * ([name, params] pairs), just before the app switches over.
+ * ([name, params] pairs), just before the app switches over. `play`: a rule page's ?play= game to start with ticked.
  */
-export default function Onboarding({ onDone }) {
+export default function Onboarding({ onDone, play = null }) {
   const [step, setStep] = useState('welcome');
-  const [a, setA] = useState({ games: [], size: null, settle: null, math: null });
+  // Arrived from "Play this now" on a game's rule page: that game is already ticked, and so it's
+  // the one the first round suggests
+  const [game] = useState(() => (play ? playFromSearch(`play=${encodeURIComponent(play)}`)?.game ?? null : null));
+  const [a, setA] = useState(() => ({ games: GAMES[game] ? [game] : [], size: null, settle: null, math: null }));
   const [name, setName] = useState('');
   const [index, setIndex] = useState(null);
   const [buddy, setBuddy] = useState(null); // a Ball buddy to start with (your profile has the rest)
   const [agreed, setAgreed] = useState(false);
+  const [age, setAge] = useState(null); // 'adult' | 'under', asked when the group plays for money (age.js)
   const [pad, setPad] = useState(false);
   const [signingIn, setSigningIn] = useState(false);
   const acct = useAccount();
@@ -70,6 +76,7 @@ export default function Onboarding({ onDone }) {
       s.me = id;
       if (buddy) s.profile = { ...(s.profile || {}), avatar: buddyAvatar(buddy), updatedAt: Date.now() };
       s.organizer = organizer;
+      if (asksAge(a) && age) setAgeAnswer(s, age);
       s.onboarded = true;
     });
   };
@@ -119,12 +126,13 @@ export default function Onboarding({ onDone }) {
           <h1 className="ob-q d">{QUESTION.games.q}</h1>
           <p className="ob-sub">{QUESTION.games.sub}</p>
           <div className="ob-tiles">
-            {ONBOARD_GAMES.map(k => {
+            {/* The game a rule page sent you with leads the list, even when it isn't one of the usual eight */}
+            {[...(GAMES[game] && !ONBOARD_GAMES.includes(game) ? [game] : []), ...ONBOARD_GAMES].map(k => {
               const g = GAMES[k];
               const on = a.games.includes(k);
               return (
                 <button key={k} className={`ob-tile ${on ? 'on' : ''}`} aria-pressed={on} aria-label={`${g.name}: ${g.blurb}`} onClick={() => setA(x => ({ ...x, games: toggleGame(x.games, k) }))}>
-                  <span className="ob-tile-top"><Icon name={g.icon} fill />{on && <Icon name="check-circle" fill className="ob-tick" />}</span>
+                  <span className="ob-tile-top"><Icon name={g.icon} fill />{on && <PickMark on small />}</span>
                   <span className="ob-tile-name">{g.name}</span>
                   <span className="ob-tile-sub">{g.blurb}</span>
                 </button>
@@ -148,13 +156,8 @@ export default function Onboarding({ onDone }) {
             {q.options.map(o => {
               const on = a[step] === o.value;
               return (
-                <button key={o.value} role="radio" aria-checked={on} aria-label={o.sub ? `${o.label}. ${o.sub}` : o.label} className={`list-item ob-choice ${on ? 'on' : ''}`} onClick={() => set(step, o.value)}>
-                  <div className="row-main">
-                    <div className="li-name">{o.label}</div>
-                    {o.sub && <div className="li-sub">{o.sub}</div>}
-                  </div>
-                  <span className={`li-check ${on ? 'on' : ''}`}>{on && <Icon name="check" />}</span>
-                </button>
+                <PickRow key={o.value} radio on={on} label={o.sub ? `${o.label}. ${o.sub}` : o.label} className="ob-choice" onClick={() => set(step, o.value)}
+                  title={o.label} sub={o.sub} />
               );
             })}
           </div>
@@ -204,15 +207,28 @@ export default function Onboarding({ onDone }) {
             ))}
           </div>
           <p className="field-help">Friends see it on seats and the Tab. Add a photo or pick another any time from your profile.</p>
-          <button className={`list-item ob-agree ${agreed ? 'on' : ''}`} role="checkbox" aria-checked={agreed} aria-label="Friendly wagers only" aria-describedby="ob-agree-sub" onClick={() => setAgreed(v => !v)}>
-            <span className={`li-check ${agreed ? 'on' : ''}`}>{agreed && <Icon name="check" />}</span>
+          <button className={`list-item pick ob-agree ${agreed ? 'on' : ''}`} role="checkbox" aria-checked={agreed} aria-label="Friendly wagers only" aria-describedby="ob-agree-sub" onClick={() => setAgreed(v => !v)}>
+            <PickMark on={agreed} add={false} />
             <div className="row-main">
               <div className="li-name">Friendly wagers only</div>
               <div className="li-sub" id="ob-agree-sub">Birdie Bank tracks bets between friends. It never holds, sends or collects money. Check that betting on golf is legal where you play.</div>
             </div>
           </button>
+          {asksAge(a) && (
+            <div className="ob-age">
+              <div className="field-label" id="ob-age-q">{AGE_COPY.title}</div>
+              <div className="chip-row flush" role="radiogroup" aria-labelledby="ob-age-q" aria-describedby="ob-age-help">
+                {[['adult', 'Yes, 18 or older'], ['under', 'No, under 18']].map(([v, label]) => (
+                  <PickChip key={v} radio on={age === v} onClick={() => setAge(v)}>{label}</PickChip>
+                ))}
+              </div>
+              <p className="field-help" id="ob-age-help">{age === 'under'
+                ? 'No problem. You can keep score and play for points or a reward. Money rounds wait until you’re 18.'
+                : 'Playing for money is for adults: 18 or older, or the age where you live if it’s higher. We only ask once.'}</p>
+            </div>
+          )}
         </div>
-        {cta('Continue', !!name.trim() && agreed)}
+        {cta('Continue', nameReady({ name, agreed, age }, a))}
         <Numpad open={pad} title="Handicap index" initial={index ?? ''} allowDecimal allowNegative min={-10} max={54}
           onClose={() => setPad(false)} onDone={v => { setIndex(v); setPad(false); }} />
       </Screen>

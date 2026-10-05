@@ -1,7 +1,7 @@
 // Trip Mode's pieces (trip-templates.js, flights.js, draft.js): "Start from a template" and the
 // schedule editor in the trip sheet, and on the trip's page the schedule with its planned rounds,
 // the live captains' draft card and the flighted net leaderboard.
-import { Icon, Segmented, useUI } from './ui.jsx';
+import { Icon, PickMark, Segmented, useUI } from './ui.jsx';
 import { Avatar } from './Pay.jsx';
 import { TeamDot } from './Cup.jsx';
 import { useStore } from '../lib/store.js';
@@ -48,13 +48,13 @@ export function TemplatePick({ value, onPick }) {
               <span className="tm-t-name">Ryder Cup weekend</span>
               <span className="tm-t-sub">{size / 2} a side · {t.days.length} days · {cupPoints(p.total)} points</span>
             </span>
-            {on && <Icon name="check-circle" fill />}
+            <PickMark on={on} add={false} />
           </button>
         );
       })}
       <button type="button" role="radio" aria-checked={value == null} className={`tm-template scratch ${value == null ? 'on' : ''}`} onClick={() => onPick(null)}>
         <span className="tm-t-main"><span className="tm-t-name">From scratch</span><span className="tm-t-sub">Pick how it’s played yourself</span></span>
-        {value == null && <Icon name="check-circle" fill />}
+        <PickMark on={value == null} add={false} />
       </button>
     </div>
   );

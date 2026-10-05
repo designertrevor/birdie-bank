@@ -68,7 +68,9 @@ export function BallIllo({ className = 'empty-illo', face = true }) {
 // Sheets
 // ---------------------------------------------------------------------------
 
-const FOCUSABLE = 'button:not([disabled]), [href], input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])';
+// Only what Tab can reach: a roving list (radio chips, calendar days) keeps its other items at tabindex -1
+const FOCUSABLE = ['button:not([disabled])', '[href]', 'input:not([disabled])', 'select:not([disabled])', 'textarea:not([disabled])', '[tabindex]']
+  .map(s => `${s}:not([tabindex="-1"])`).join(', ');
 const openDialogs = []; // topmost last, so Escape and Tab only act on the sheet in front
 // The last two focused elements, so a sheet whose field autofocuses still knows what opened it
 let focusNow = null, focusBefore = null;
@@ -303,5 +305,61 @@ export function Segmented({ options, value, onChange, className = 'holes-toggle'
         );
       })}
     </div>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Picking from a list: one look everywhere a person or an option is chosen
+// ---------------------------------------------------------------------------
+
+/**
+ * The round mark at the end of a pickable row: a plus while it can be added, a pink check once
+ * it's picked. `add={false}` leaves an empty ring instead of the plus (one-of-a-list picks), and
+ * `small` is the 28px size for a tile's corner or a tight row.
+ */
+export function PickMark({ on, add = true, busy = false, small = false }) {
+  const name = busy ? 'circle-notch' : on ? 'check' : add ? 'plus' : null;
+  return (
+    <span className={`li-check ${small ? 'sm' : ''} ${on ? 'on' : add ? 'add' : ''}`} aria-hidden="true">
+      {name && <Icon name={name} className={busy ? 'spin' : ''} />}
+    </span>
+  );
+}
+
+/**
+ * A row picked from a list or a sheet: a name, an optional line under it, and the PickMark.
+ * Picked rows take the pink tint and ring. `radio` makes it one of a list (role radio) rather
+ * than a toggle; `lead` goes before the name (an avatar), `children` under the sub line.
+ */
+export function PickRow({ on, onClick, title, sub, lead, radio = false, add = !radio, busy = false, disabled, label, describedBy, className = '', children }) {
+  const a11y = radio ? { role: 'radio', 'aria-checked': !!on } : { 'aria-pressed': !!on };
+  return (
+    <button type="button" className={`list-item pick pick-row ${on ? 'on' : ''} ${className}`} disabled={disabled} onClick={onClick}
+      aria-label={label} aria-describedby={describedBy} {...a11y}>
+      {lead}
+      <div className="row-main">
+        <div className="li-name">{title}</div>
+        {sub && <div className="li-sub">{sub}</div>}
+        {children}
+      </div>
+      <PickMark on={on} add={add} busy={busy} />
+    </button>
+  );
+}
+
+/**
+ * A pill chip picked from a row of options: ink fill and a check once picked. `radio` for one of
+ * a set (the parent holds role radiogroup), otherwise a toggle. `check={false}` for bare numbers
+ * in a tight grid (hole numbers), where the fill alone reads and the width has to hold. An `icon`
+ * shows while it's off and gives way to the check once picked, so a chip never wears two icons.
+ */
+export function PickChip({ on, onClick, radio = false, small = false, check = true, icon, disabled, label, title, className = '', children }) {
+  const a11y = radio ? { role: 'radio', 'aria-checked': !!on } : { 'aria-pressed': !!on };
+  return (
+    <button type="button" className={`pill-btn pick-chip ${small ? 'sm' : ''} ${on ? 'on' : ''} ${className}`} disabled={disabled} onClick={onClick}
+      aria-label={label} title={title} {...a11y}>
+      {check && on ? <Icon name="check" className="pc-check" /> : icon ? <Icon name={icon} fill /> : null}
+      {children}
+    </button>
   );
 }

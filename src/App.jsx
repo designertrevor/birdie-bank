@@ -76,6 +76,19 @@ const Draft = screen(draft);
 const DraftLink = screen(draft, 'DraftLink');
 const BigGame = screen(() => import('./screens/BigGame.jsx'));
 const BigGameSetup = screen(() => import('./screens/BigGameSetup.jsx'));
+const Roadmap = screen(() => import('./screens/Roadmap.jsx'));
+
+/**
+ * The public roadmap link (/roadmap, or ?roadmap): { ids } (with &ids, each item's id shows, for
+ * Trevor), or null. Anyone can open it: someone set up gets it on top of Up next, anyone else reads it.
+ */
+function roadmapLink() {
+  try {
+    const q = new URLSearchParams(location.search);
+    if (location.pathname.replace(/\/+$/, '') !== '/roadmap' && !q.has('roadmap')) return null;
+    return { ids: q.has('ids') };
+  } catch { return null; }
+}
 
 /** A plan link (?plan=CODE, &p=WHO for one person's own) waiting to open: { code, who } or null. */
 function pendingPlanLink() {
@@ -101,13 +114,28 @@ function pendingChallengeLink() {
     return cleanCode(sessionStorage.getItem('pending-challenge')) || null;
   } catch { return null; }
 }
-/** A plan, challenge, draft or join link opened the app: it goes first, ahead of where you were. */
+/** A plan, challenge, draft, join or "Play this now" link opened the app: it goes first, ahead of where you were. */
 function linkWaiting() {
   try {
     const q = new URLSearchParams(location.search);
-    return !!(q.get('plan') || q.get('challenge') || q.get('join') || q.get('draft') || sessionStorage.getItem('bb-plan') || sessionStorage.getItem('pending-challenge') || sessionStorage.getItem('bb-join') || sessionStorage.getItem('pending-draft'));
+    return !!(roadmapLink() || q.get('plan') || q.get('challenge') || q.get('join') || q.get('draft') || q.get('play') || sessionStorage.getItem('bb-plan') || sessionStorage.getItem('pending-challenge') || sessionStorage.getItem('bb-join') || sessionStorage.getItem('pending-draft') || sessionStorage.getItem('bb-play'));
   } catch { return false; }
 }
+
+/**
+ * "Play this now" on a rule page (?play=wolf): the game as the link names it, or null. Setup and
+ * onboarding read which game it is (rule-links.js), so the first screen doesn't load the names.
+ * Kept for this tab until it opens.
+ */
+function pendingPlay() {
+  try {
+    const clean = v => (/^[a-z0-9-]{1,40}$/i.test(String(v || '')) ? String(v).toLowerCase() : null);
+    const now = clean(new URLSearchParams(location.search).get('play'));
+    if (now) { sessionStorage.setItem('bb-play', now); return now; }
+    return clean(sessionStorage.getItem('bb-play'));
+  } catch { return null; }
+}
+const clearPlay = () => { try { sessionStorage.removeItem('bb-play'); } catch { /* ignore */ } };
 const clearChallengeLink = () => { try { sessionStorage.removeItem('pending-challenge'); } catch { /* ignore */ } };
 
 /** A captain's draft link (?draft=TRIP&c=0|1) waiting to open: { tripId, seat }, or null. Kept for this tab until it opens. */
@@ -145,7 +173,7 @@ const SCREENS = {
   plan: Plan, rollCall: RollCall, planLink: PlanLink, preview: Preview, paywall: Paywall, season: Season,
   challenge: Challenge, challengeLink: ChallengeLink,
   joinInvite: JoinInviteScreen, lately: Lately, trip: Trip, tripSettle: TripSettle, draft: Draft, draftLink: DraftLink,
-  bigGame: BigGame, bigGameSetup: BigGameSetup,
+  bigGame: BigGame, bigGameSetup: BigGameSetup, roadmap: Roadmap,
   friends: Friends, friendRound: FriendRound,
   profile: Profile, stats: Stats, share: Share, closeBooks: CloseBooks, book: Book,
 };
@@ -184,6 +212,11 @@ export default function App() {
   const [challengeAt, setChallengeAt] = useState(pendingChallengeLink);
   // A captain's draft link: on top of Up next for someone set up, on its own for anyone else
   const [draftAt, setDraftAt] = useState(pendingDraftLink);
+  // "Play this now" from a rule page: setup with the game picked, or onboarding with it ticked
+  const [playAt] = useState(pendingPlay);
+  // The roadmap link: read-only on its own for anyone not set up (no sign-in needed)
+  const [roadmapAt] = useState(roadmapLink);
+  const [webRoadmap, setWebRoadmap] = useState(() => !onboarded && !!roadmapAt);
   const [stack, setStack] = useState(() => {
     if (!onboarded) return [];
     if (planLinkAt) {
@@ -198,11 +231,16 @@ export default function App() {
       clearDraftLink();
       return [{ name: 'draftLink', params: draftAt, key: Date.now() }];
     }
+    if (roadmapAt) return [{ name: 'roadmap', params: roadmapAt, key: Date.now() }];
     // A join link for someone already set up opens the invite card (seats, "Not on the list? Add me")
     const code = syncConfigured ? pendingJoin() : null;
     try { sessionStorage.removeItem('bb-join'); } catch { /* ignore */ }
     const to = code ? joinRoute(getState(), code) : null;
     if (to) return [{ name: to[0], params: to[1], key: Date.now() }];
+    if (playAt) {
+      clearPlay();
+      return [{ name: 'newRound', params: { play: playAt }, key: Date.now() }];
+    }
     return restored ? restored.stack : [];
   });
   // A join link opened before onboarding skips straight to picking your name in that round
@@ -219,6 +257,10 @@ export default function App() {
   const pop = useCallback(() => {
     if (history.state?.bb) history.back();
     else setStack(s => s.slice(0, -1));
+  }, []);
+  /** Swap the top screen for another, with no new history entry (sending an idea → the roadmap). */
+  const replace = useCallback((name, params = {}) => {
+    setStack(s => [...s.slice(0, -1), { name, params, key: Date.now() + Math.random() }]);
   }, []);
   /** Replace the whole stack (e.g. finish a round → go to its results). */
   const reset = useCallback((nextTab, ...routes) => {
@@ -255,6 +297,9 @@ export default function App() {
     if (new URLSearchParams(location.search).get('plan')) history.replaceState(null, '', location.pathname);
     if (new URLSearchParams(location.search).get('challenge')) history.replaceState(null, '', location.pathname);
     if (new URLSearchParams(location.search).get('draft')) history.replaceState(null, '', location.pathname);
+    if (new URLSearchParams(location.search).get('play')) history.replaceState(null, '', location.pathname);
+    // Someone set up who opened the roadmap link has it on top of Up next; a reload starts at home
+    if (getState().onboarded && roadmapLink()) history.replaceState(null, '', '/');
   }, []);
 
   // Overlays opened in place over a screen (the course editor over round setup): the phone's back
@@ -289,7 +334,7 @@ export default function App() {
     return () => window.removeEventListener('popstate', onPop);
   }, []);
 
-  const nav = useMemo(() => ({ push, pop, reset, layer, tab, setTab: t => { setTab(t); setStack([]); } }), [push, pop, reset, layer, tab]);
+  const nav = useMemo(() => ({ push, pop, replace, reset, layer, tab, setTab: t => { setTab(t); setStack([]); } }), [push, pop, replace, reset, layer, tab]);
 
   if (!onboarded) {
     const joined = (id, done) => {
@@ -308,11 +353,12 @@ export default function App() {
       <UIProvider>
         <div className="device">
           <Suspense fallback={<div className="screen active" aria-busy="true" />}>
-            {inviteCode ? <JoinInvite code={inviteCode} onJoined={joined} onSkip={skip} />
+            {webRoadmap ? <Roadmap web ids={roadmapAt?.ids} onStart={() => { history.replaceState(null, '', '/'); setWebRoadmap(false); }} />
+              : inviteCode ? <JoinInvite code={inviteCode} onJoined={joined} onSkip={skip} />
               : planLinkAt ? <PlanLink code={planLinkAt.code} who={planLinkAt.who} standalone onSkip={skipPlan} />
               : challengeAt ? <ChallengeLink code={challengeAt} standalone onSkip={skipChallenge} />
               : draftAt ? <DraftLink tripId={draftAt.tripId} seat={draftAt.seat} standalone onSkip={skipDraft} />
-              : <Onboarding onDone={routes => setStack(routes.map(([name, params = {}]) => ({ name, params, key: Date.now() + Math.random() })))} />}
+              : <Onboarding play={playAt} onDone={routes => { clearPlay(); setStack(routes.map(([name, params = {}]) => ({ name, params, key: Date.now() + Math.random() }))); }} />}
           </Suspense>
         </div>
       </UIProvider>

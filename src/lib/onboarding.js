@@ -61,6 +61,18 @@ export function answered(step, a = {}) {
   }
 }
 
+/**
+ * Whether the group plays for money, so the name screen asks the one-time "Are you 18 or older?"
+ * (age.js): every way of settling up but "Honestly? We mostly don't". A group that doesn't is asked
+ * later, before its first money round.
+ */
+export const asksAge = (a = {}) => !!a.settle && a.settle !== 'none';
+
+/** Whether the name screen can go on: a name, the friendly wagers note, and the age answer when it's asked. */
+export function nameReady({ name = '', agreed = false, age = null } = {}, a = {}) {
+  return !!String(name).trim() && !!agreed && (!asksAge(a) || age === 'adult' || age === 'under');
+}
+
 /** Add or remove a game from the picks, keeping the order they were tapped in. */
 export function toggleGame(games = [], key) {
   return games.includes(key) ? games.filter(g => g !== key) : [...games, key];

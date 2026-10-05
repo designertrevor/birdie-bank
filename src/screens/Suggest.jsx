@@ -4,6 +4,8 @@ import { FileButton, Header, Icon, Screen, useUI } from '../components/ui.jsx';
 import { useStore } from '../lib/store.js';
 import { FEEDBACK_KINDS, shrinkImage, submitFeedback } from '../lib/feedback.js';
 import { useNav } from '../lib/nav.js';
+import { requestItemId, requestTitle } from '../lib/roadmap.js';
+import { noteSentIdea } from '../lib/roadmap-sync.js';
 
 // Each kind's fields. The first is the main message and is required.
 const FORMS = {
@@ -66,7 +68,10 @@ export default function Suggest({ kind: initialKind = null, prefill = null, lead
             {sent === 'sent' ? 'Got it. Every suggestion gets read, and the most asked-for ones get built first.' : 'No signal right now, so it’s saved on your phone and will send by itself when you’re back online.'}
           </p>
         </div>
-        <div className="cta-wrap"><button className="full-btn" onClick={nav.pop}>Done</button></div>
+        <div className="cta-wrap">
+          <button className="full-btn" onClick={nav.pop}>Done</button>
+          <button className="full-btn outline" onClick={() => nav.replace('roadmap')}><Icon name="signpost" /> See the roadmap</button>
+        </div>
       </Screen>
     );
   }
@@ -84,6 +89,12 @@ export default function Suggest({ kind: initialKind = null, prefill = null, lead
               <span className="chevron"><Icon name="caret-right" /></span>
             </button>
           ))}
+          <div className="sec-label">Already asked for?</div>
+          <button className="set-row" onClick={() => nav.push('roadmap')}>
+            <div className="set-icon"><Icon name="signpost" fill /></div>
+            <div className="row-main"><div className="set-name">See the roadmap</div><div className="set-sub">Vote for what other golfers asked for, and see what shipped</div></div>
+            <span className="chevron"><Icon name="caret-right" /></span>
+          </button>
         </div>
       </Screen>
     );
@@ -111,9 +122,18 @@ export default function Suggest({ kind: initialKind = null, prefill = null, lead
     const body = kind === 'game' ? `${values.name.trim()}\n\n${values.rules.trim()}`
       : kind === 'course' ? `${values.name.trim()}, ${values.city.trim()}`
       : values[main.key];
-    try { setSent(await submitFeedback({ kind, body, details: { ...details, [main.key]: values[main.key].trim() }, contact, image, roundId })); }
-    catch { setSent('queued'); }
+    const id = crypto.randomUUID();
+    let result;
+    try { result = await submitFeedback({ id, kind, body, details: { ...details, [main.key]: values[main.key].trim() }, contact, image, roundId }); }
+    catch { result = 'queued'; }
     setBusy(false);
+    // A game or a feature lands on the roadmap, where you see it and can follow it (roadmap.js)
+    if (kind === 'game' || kind === 'feature') {
+      noteSentIdea({ id, kind, title: requestTitle(kind, values) });
+      nav.replace('roadmap', { highlight: requestItemId(id), sent: result });
+      return;
+    }
+    setSent(result);
   };
 
   return (

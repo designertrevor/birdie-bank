@@ -1,5 +1,5 @@
 import { Fragment, useEffect, useRef, useState } from 'react';
-import { Empty, Header, Icon, Screen, useUI } from '../components/ui.jsx';
+import { Empty, Header, Icon, PickChip, Screen, useUI } from '../components/ui.jsx';
 import { getState, update, useStore } from '../lib/store.js';
 import { GAMES, gameView, holeAtPos, holeComplete, isTeamGame, matchScored, oneBall, teamTable, playsHole, roundLegs, roundNotes, roundResults, scoreSummary, scorers, sideNames, skinsKinds, skinsTable, popsFor, netFor } from '../lib/round.js';
 import { halfStrokesOn, netText, strokesWords } from '../lib/allowances.js';
@@ -529,7 +529,7 @@ function GameBreakdown({ round, res, label = null }) {
               <div className="eyebrow" style={{ marginBottom: 8 }}>Playoff for {end.skins} skin{end.skins > 1 ? 's' : ''}: who won it?</div>
               <div className="chip-row" style={{ padding: 0 }} role="radiogroup" aria-label={`Playoff for ${kind} skins`}>
                 {end.tied.map(pid => (
-                  <button key={pid} role="radio" aria-checked={end.winner === pid} className={`pill-btn sm ${end.winner === pid ? 'on' : ''}`} onClick={() => pickPlayoff(kind, pid)}>{first(names[pid])}</button>
+                  <PickChip key={pid} small radio on={end.winner === pid} onClick={() => pickPlayoff(kind, pid)}>{first(names[pid])}</PickChip>
                 ))}
               </div>
               <p className="field-help">{end.winner ? `${first(names[end.winner])} takes the carried skins.` : 'Play a hole among the tied players, then tap who won it.'}</p>

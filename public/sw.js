@@ -98,8 +98,9 @@ self.addEventListener('fetch', e => {
   // Live data (course search) always goes to the network; the app keeps what it needs itself
   if (url.origin === location.origin && url.pathname.startsWith('/api/')) return;
   if (req.mode === 'navigate') {
-    // Only the app itself is the offline copy; plain pages like /privacy.html cache under their own path
-    const key = url.pathname.endsWith('.html') ? url.pathname : '/';
+    // Only the app itself (/) is the offline copy; plain pages like /privacy.html and the rule pages
+    // (/rules/wolf) cache under their own path, so opening one never replaces the app's saved copy
+    const key = url.pathname === '/' || url.pathname === '/index.html' ? '/' : url.pathname;
     e.respondWith(pageFromNetwork(req, key));
     return;
   }

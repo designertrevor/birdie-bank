@@ -3,15 +3,18 @@
 // trip?" in setup, and the sheet that starts or edits a trip.
 import { useCallback, useState } from 'react';
 import { createPortal } from 'react-dom';
-import { Icon, Segmented, Sheet, Steps, Toggle, useUI } from './ui.jsx';
+import { Icon, PickRow, Segmented, Sheet, Steps, Toggle, useUI } from './ui.jsx';
+import { DatePicker } from './DatePicker.jsx';
 import { Avatar } from './Pay.jsx';
 import { CupLine, CupRoundNote, TeamsPicker } from './Cup.jsx';
 import { getState, uid, update, useStore } from '../lib/store.js';
+import { SEARCH_FROM, filterInvitees, inviteeLine, nameToAdd, savePerson, submitTyped, tripInvitees } from '../lib/trip-people.js';
 import { useNav } from '../lib/nav.js';
 import { money } from '../lib/golf.js';
 import { nameOf } from '../lib/ledger.js';
-import { placeOf, sortedPlayers } from '../lib/format.js';
+import { placeOf } from '../lib/format.js';
 import { dayLabel, isoDate, timeLabel } from '../lib/plans.js';
+import { endWhenStartMoves } from '../lib/date-pick.js';
 import { canonicalOf } from '../lib/pair-debts.js';
 import { BIG_FORMAT } from '../lib/big-game.js';
 import { BigCard, BigRoundNote } from './BigGame.jsx';
@@ -394,7 +397,7 @@ function TripForm({ trip, onDone }) {
     if (!cup.teams.flat().length) setCup(c => ({ ...c, pick: 'balance', teams: balanceTeams(pool) }));
     setStep(2);
   };
-  const save = () => {
+  const save = ({ thenPlan = false } = {}) => {
     if (!ok || (isCup && !teamsOk)) return;
     const last = end < start ? start : end;
     const cupOut = isCup || trip?.cup ? cleanCup({ ...cupNow, ...(sched ? { schedule: sched } : { schedule: null }) }) : null;
@@ -421,58 +424,69 @@ function TripForm({ trip, onDone }) {
       return;
     }
     const r = cupOut?.schedule ? makeScheduledRounds(t.id) : null;
+    if (thenPlan) {
+      // Skipped picking people: plan the trip's first round now, and its group link brings them in
+      showToast(`${t.name} is on. Plan its first round, then send the link: friends add themselves.`);
+      onDone?.(t);
+      nav.push('newRound', { ahead: true, trip: t.id });
+      return;
+    }
     showToast(r?.made ? `${t.name} is on. ${r.made} round${r.made === 1 ? ' is' : 's are'} planned, day by day, with their matches` : `${t.name} is on`);
     onDone?.(t);
   };
-  const steps = isCup ? ['Trip', 'Who’s going', 'Teams', ...(sched ? ['Schedule'] : [])] : ['Trip', 'Who’s going'];
+  // "Players" when there are teams to pick too, so four steps fit across a phone
+  const who = isCup ? 'Players' : 'Who’s going';
+  const steps = isCup ? ['Trip', who, 'Teams', ...(sched ? ['Schedule'] : [])] : ['Trip', who];
   // A step that went away (the schedule taken out, or the format changed) lands on the last one left
   const at = Math.min(step, steps.length - 1);
-  const saveBtn = (
-    <button className="full-btn" style={{ marginTop: 14 }} disabled={!ok || (isCup && !teamsOk)} onClick={save}>{trip ? 'Save changes' : live ? 'Start the trip and the draft' : 'Start the trip'} <Icon name={trip ? 'check' : 'arrow-right'} /></button>
-  );
+  const saveLabel = trip ? 'Save changes' : live ? 'Start the trip and the draft' : 'Start the trip';
+  const saveBtn = <button className="full-btn" disabled={!ok || (isCup && !teamsOk)} onClick={() => save()}>{saveLabel} <Icon name={trip ? 'check' : 'arrow-right'} /></button>;
   return (
     <div className="block trip-form">
       <Steps steps={steps} current={at} canGo={i => i === 0 || (ok && (i < 2 || (pool.length >= 2 && (i < 3 || teamsOk))))} onGo={i => (i === 2 && at < 2 ? toTeams() : setStep(i))} />
       {at === 0 && (
         <>
           {!trip && (
-            <>
+            <section className="trip-sec">
               <div className="field-label">Start from a template</div>
               <TemplatePick value={template} onPick={pickTemplate} />
-            </>
+            </section>
           )}
-          <label className="field-label" htmlFor="trip-name">Name</label>
-          <input id="trip-name" className="text-input" value={name} onChange={e => setName(e.target.value)} maxLength={32} placeholder="Bandon 2026" autoFocus={!trip && !template} />
-          <div className="trip-form-days">
-            <div>
-              <label className="field-label" htmlFor="trip-start">First day</label>
-              <input id="trip-start" className="text-input" type="date" value={start} onChange={e => {
-                const v = e.target.value;
-                setStart(v);
-                const need = sched ? plusDays(v, sched.days.length - 1) : v;
-                if (end < need) setEnd(need);
-              }} />
+          <section className="trip-sec">
+            <label className="field-label" htmlFor="trip-name">Name</label>
+            <input id="trip-name" className="text-input" value={name} onChange={e => setName(e.target.value)} maxLength={32} placeholder="Bandon 2026" autoFocus={!trip && !template} />
+            <div className="trip-form-days">
+              <div>
+                <label className="field-label" htmlFor="trip-start">First day</label>
+                <DatePicker id="trip-start" label="First day" value={start} rangeStart={start} rangeEnd={end} quick onChange={v => {
+                  setStart(v);
+                  // A later first day takes the last day with it, so the trip keeps its length (and fits its schedule)
+                  setEnd(endWhenStartMoves(start, end, v, sched ? sched.days.length : 1));
+                }} />
+              </div>
+              <div>
+                <label className="field-label" htmlFor="trip-end">Last day</label>
+                <DatePicker id="trip-end" label="Last day" value={end} min={sched ? plusDays(start, sched.days.length - 1) : start} rangeStart={start} rangeEnd={end} onChange={setEnd} />
+              </div>
             </div>
-            <div>
-              <label className="field-label" htmlFor="trip-end">Last day</label>
-              <input id="trip-end" className="text-input" type="date" value={end} min={start} onChange={e => setEnd(e.target.value)} />
-            </div>
-          </div>
-          <label className="field-label" htmlFor="trip-where">Where <span className="opt">optional</span></label>
-          <input id="trip-where" className="text-input" value={where} onChange={e => setWhere(e.target.value)} maxLength={32} placeholder="Bandon Dunes Resort" />
+            <label className="field-label" htmlFor="trip-where">Where <span className="opt">optional</span></label>
+            <input id="trip-where" className="text-input" value={where} onChange={e => setWhere(e.target.value)} maxLength={32} placeholder="Bandon Dunes Resort" />
+          </section>
           {!template && (
-            <>
-              <div className="field-label">How it’s played</div>
+            <section className="trip-sec">
+              <div className="field-label" id="trip-format-lbl">How it’s played</div>
               <Segmented label="How the trip is played" className="press-mode-row" btn="pm-btn" value={format} onChange={setFormat}
                 options={[{ value: 'money', label: 'Money' }, { value: CUP_FORMAT, label: 'Team points' }]} />
-            </>
+            </section>
           )}
-          <p className="field-help">{template
+          <p className="field-help trip-sec-help">{template
             ? `A Ryder Cup weekend for ${template}: two teams of ${template / 2}, ${sched.days.length} days of four-ball, foursomes and singles, 1 point a match. You pick the teams next, then change the schedule if you like, and every round is planned with its matches. Each round keeps its own bets too.`
             : isCup
               ? `${TRIP_FORMATS[CUP_FORMAT].name}: two teams play matches in every round, 1 point a win and ½ a halved match, with a team score and a leaderboard. Each round keeps its own games and bets, and it’s all settled once, right after the last round.`
               : `${TRIP_FORMATS.money.name}: each round keeps its own games and bets, everyone on the trip sees the standings, and it’s settled once, in the fewest payments, right after the last round.`} Rounds started in these dates ask to count for it.</p>
-          <button className="full-btn" style={{ marginTop: 14 }} disabled={!ok} onClick={() => setStep(1)}>Next <Icon name="arrow-right" /></button>
+          <div className="trip-form-cta">
+            <button className="full-btn" disabled={!ok} onClick={() => setStep(1)}>Next: {who.toLowerCase()} <Icon name="arrow-right" /></button>
+          </div>
         </>
       )}
       {at === 1 && (
@@ -482,28 +496,36 @@ function TripForm({ trip, onDone }) {
               <Icon name={pool.length === template ? 'check-circle' : 'users-three'} fill /> {pool.length === template ? `All ${template} picked, you included.` : `The template is for ${template}: you and ${template - 1} friends. You have ${pool.length} so far.`}{pool.length !== template && pool.length >= 2 ? ' Any even number works: the schedule fits the teams you pick.' : ''}
             </p>
           )}
-          <WhoGoing picked={people} onChange={setPeople} quickAdd={!!template || isCup} />
-          <div className="trip-count tm-flights">
-            <div className="row-main">
-              <div className="toggle-lbl" id="trip-flights-lbl">Handicap flights</div>
-              <div className="toggle-sub">{flightsOn ? `Everyone sorted into ${FLIGHT_NAMES.slice(0, flightsOf(pool).length).join(', ')} by index today, with a net leaderboard for each flight on the trip.` : 'A, B, C and D by handicap index, each with its own net leaderboard, so everyone has someone to beat.'}</div>
+          <WhoGoing picked={people} onChange={setPeople} byIndex={isCup || flightsOn} canSkip={!trip && !isCup} />
+          <section className="trip-sec">
+            <div className="trip-count tm-flights">
+              <div className="row-main">
+                <div className="toggle-lbl" id="trip-flights-lbl">Handicap flights</div>
+                <div className="toggle-sub">{flightsOn ? `Everyone sorted into ${FLIGHT_NAMES.slice(0, flightsOf(pool).length).join(', ')} by index today, with a net leaderboard for each flight on the trip.` : 'A, B, C and D by handicap index, each with its own net leaderboard, so everyone has someone to beat.'}</div>
+              </div>
+              <Toggle on={flightsOn} onChange={setFlightsOn} labelledBy="trip-flights-lbl" />
             </div>
-            <Toggle on={flightsOn} onChange={setFlightsOn} labelledBy="trip-flights-lbl" />
+          </section>
+          <div className="trip-form-cta">
+            {isCup
+              ? <button className="full-btn" disabled={!ok || pool.length < 2} onClick={toTeams}>Next: the teams <Icon name="arrow-right" /></button>
+              : <button className="full-btn" disabled={!ok} onClick={() => save()}>{trip ? 'Save changes' : 'Start the trip'} <Icon name={trip ? 'check' : 'arrow-right'} /></button>}
+            {isCup && pool.length < 2 && <p className="field-help center">Pick at least one friend to make two teams.</p>}
+            {/* Not sure who's coming: the trip and its first round now, and the round's link lets friends add themselves */}
+            {!trip && !isCup && <button type="button" className="link-btn center" disabled={!ok} onClick={() => save({ thenPlan: true })}>Skip: plan the first round and send its link</button>}
           </div>
-          {isCup
-            ? <button className="full-btn" style={{ marginTop: 14 }} disabled={!ok || pool.length < 2} onClick={toTeams}>Next: the teams <Icon name="arrow-right" /></button>
-            : <button className="full-btn" style={{ marginTop: 14 }} disabled={!ok} onClick={save}>{trip ? 'Save changes' : 'Start the trip'} <Icon name={trip ? 'check' : 'arrow-right'} /></button>}
-          {isCup && pool.length < 2 && <p className="field-help">Pick at least one friend to make two teams.</p>}
         </>
       )}
       {at === 2 && isCup && (
         <>
           <TeamsPicker people={pool} value={cupNow} onChange={setCup} live={liveOk} />
-          {sched
-            ? <button className="full-btn" style={{ marginTop: 14 }} disabled={!ok || !teamsOk} onClick={() => setStep(3)}>Next: the schedule <Icon name="arrow-right" /></button>
-            : saveBtn}
-          {!teamsOk && <p className="field-help">{live ? 'Pick both captains.' : 'Each team needs at least one player.'}</p>}
-          {isCup && !sched && !trip && <button type="button" className="link-btn" onClick={() => { setSchedule(ryderTemplate(TEMPLATE_SIZES.includes(pool.length) ? pool.length : 8)); }}><Icon name="calendar-plus" /> Plan every round from a schedule</button>}
+          <div className="trip-form-cta">
+            {sched
+              ? <button className="full-btn" disabled={!ok || !teamsOk} onClick={() => setStep(3)}>Next: the schedule <Icon name="arrow-right" /></button>
+              : saveBtn}
+            {!teamsOk && <p className="field-help center">{live ? 'Pick both captains.' : 'Each team needs at least one player.'}</p>}
+            {isCup && !sched && !trip && <button type="button" className="link-btn center" onClick={() => { setSchedule(ryderTemplate(TEMPLATE_SIZES.includes(pool.length) ? pool.length : 8)); }}><Icon name="calendar-plus" /> Plan every round from a schedule</button>}
+          </div>
         </>
       )}
       {at === 3 && sched && (
@@ -511,8 +533,10 @@ function TripForm({ trip, onDone }) {
           <ScheduleEditor schedule={sched} onChange={onSchedule} perTeam={live ? perTeam : Math.max(teams[0].length, teams[1].length) || perTeam} start={start} />
           {schedProblem && <p className="hint-card warn" role="status"><Icon name="warning" fill /> {schedProblem} The trip still starts, and you can plan the rounds from its page once the teams work.</p>}
           {live && <p className="field-help">Every round is planned with its matches as soon as the draft is done.</p>}
-          {saveBtn}
-          {!trip && <button type="button" className="link-btn center" onClick={() => { setSchedule(null); setTemplate(null); setStep(2); }}>No schedule: plan the rounds yourself</button>}
+          <div className="trip-form-cta">
+            {saveBtn}
+            {!trip && <button type="button" className="link-btn center" onClick={() => { setSchedule(null); setTemplate(null); setStep(2); }}>No schedule: plan the rounds yourself</button>}
+          </div>
         </>
       )}
     </div>
@@ -520,47 +544,79 @@ function TripForm({ trip, onDone }) {
 }
 
 /**
- * "Who's going?": your players, ticked or not. Optional: anyone who plays a trip round is on it anyway.
- * `quickAdd`: a name box to add someone new to your players and tick them, for a big trip.
+ * "Who's going?": everyone you could take (trip-people.js: your usuals, everyone you've played
+ * with, your players), one row a person, with a search box once the list is long, and a box to add
+ * someone new by name. Optional: anyone who plays a trip round is on it anyway. Someone picked from
+ * a round or a usual is saved to your players, so the teams and flights can use them.
  */
-function WhoGoing({ picked, onChange, quickAdd = false }) {
+function WhoGoing({ picked, onChange, byIndex = false, canSkip = false }) {
   const state = useStore();
-  const [newName, setNewName] = useState('');
-  const list = sortedPlayers(state).filter(p => p.id !== state.me);
-  const on = new Set(picked);
-  const flip = id => onChange(on.has(id) ? picked.filter(x => x !== id) : [...picked, id]);
-  const add = () => {
-    const n = newName.replace(/\s+/g, ' ').trim().slice(0, 24);
-    if (!n) return;
-    // Your own name: you're going already, so don't save a second you
-    if (String(state.players?.[state.me]?.name || '').trim().toLowerCase() === n.toLowerCase()) { setNewName(''); return; }
-    const same = list.find(p => p.name.trim().toLowerCase() === n.toLowerCase());
-    const id = same?.id || uid('p_');
-    if (!same) update(s => { s.players[id] = { id, name: n, index: null, venmo: '', createdAt: Date.now() }; });
-    if (!on.has(id)) onChange([...picked, id]);
-    setNewName('');
+  const [query, setQuery] = useState('');
+  const all = tripInvitees(state, { picked });
+  const list = filterInvitees(all, query);
+  // The list goes by each person's kept id; a trip saved before (or a link made since) may have another of theirs
+  const who = canonicalOf(state);
+  const on = new Set(picked.map(who));
+  const long = all.length > SEARCH_FROM;
+  const typed = nameToAdd(state, all, query);
+  const pick = person => {
+    update(s => savePerson(s, person));
+    onChange(on.has(person.id) ? picked : [...picked, person.id]);
   };
+  const flip = person => (on.has(person.id) ? onChange(picked.filter(x => who(x) !== person.id)) : pick(person));
+  const addNew = name => {
+    const id = uid('p_');
+    update(s => { s.players[id] = { id, name, index: null, venmo: '', createdAt: Date.now() }; });
+    onChange([...picked, id]);
+    setQuery('');
+  };
+  const pickId = id => { const p = all.find(x => x.id === id); if (p) pick(p); setQuery(''); };
+  // The Add button and the Add row: the name as typed (or the person by that name)
+  const add = () => {
+    if (!typed || typed.kind === 'self') return;
+    if (typed.kind === 'existing') pickId(typed.id);
+    else addNew(typed.name);
+  };
+  // The keyboard's Done: never a half-typed search saved as a new player (trip-people.js)
+  const submit = e => {
+    e.preventDefault();
+    const t = submitTyped(state, all, list, query);
+    if (t?.kind === 'pick') pickId(t.id);
+    else if (t?.kind === 'add') addNew(t.name);
+    else if (!t) e.currentTarget.querySelector('input')?.blur();
+  };
+  const count = all.filter(p => on.has(p.id)).length;
   return (
-    <>
-      <p className="field-help">Optional. Picked friends show in the standings before anyone plays, and rounds with them in it count for the trip by default. Anyone who plays a round for the trip is on it too.</p>
-      {list.length === 0 && !quickAdd && <p className="field-help">Add friends on Players to pick them here, or skip this: whoever plays a trip round is on the trip.</p>}
-      <div className="trip-who">
-        {list.map(p => (
-          <button key={p.id} type="button" className="sheet-item" aria-pressed={on.has(p.id)} onClick={() => flip(p.id)}>
-            <span><Icon name={on.has(p.id) ? 'check-square' : 'square'} fill={on.has(p.id)} /><Avatar id={p.id} name={p.name} /> {p.name}</span>
-            {p.index != null && <span className="tm-who-hc">{p.index}</span>}
-          </button>
-        ))}
+    <div className="trip-who-step">
+      <p className="field-help trip-lede">Pick who’s coming, or skip this: anyone who plays a round for the trip is on it. Picked friends show in the standings before anyone plays.</p>
+      <form className="tm-add trip-find" role="search" onSubmit={submit}>
+        <label className="sr-only" htmlFor="trip-find">{long ? 'Find or add someone' : 'Add someone'}</label>
+        <span className="trip-find-ic" aria-hidden="true"><Icon name={long ? 'magnifying-glass' : 'user-plus'} /></span>
+        <input id="trip-find" className="text-input" value={query} onChange={e => setQuery(e.target.value)} maxLength={24}
+          placeholder={long ? 'Find or add someone' : 'Add someone by name'} autoComplete="off" enterKeyHint="done" />
+        <button type="button" className="pill-btn" disabled={!typed || typed.kind === 'self'} onClick={add}><Icon name="plus" /> Add</button>
+      </form>
+      {typed?.kind === 'self' && <p className="field-help" role="status">That’s you, and you’re going already.</p>}
+      <div className="trip-who-head">
+        <span className="field-label">{!query.trim() ? 'Your players and friends' : list.length ? `${list.length} match${list.length === 1 ? '' : 'es'}` : 'No match yet'}</span>
+        {count > 0 && <span className="trip-who-count">{count} picked</span>}
       </div>
-      {quickAdd && (
-        <form className="tm-add" onSubmit={e => { e.preventDefault(); add(); }}>
-          <label className="sr-only" htmlFor="trip-add-name">Add someone new</label>
-          <input id="trip-add-name" className="text-input" value={newName} onChange={e => setNewName(e.target.value)} maxLength={24} placeholder="Add someone new" autoComplete="off" />
-          <button type="submit" className="pill-btn" disabled={!newName.trim()}><Icon name="plus" /> Add</button>
-        </form>
-      )}
-      {quickAdd && <p className="field-help">Someone new is saved to your players with no handicap. Add their index on Players to balance the teams by it.</p>}
-    </>
+      <div className="trip-who" role="group" aria-label="Who’s going">
+        {list.map(p => (
+          <PickRow key={p.id} className="trip-pick" on={on.has(p.id)} onClick={() => flip(p)} lead={<Avatar id={p.id} name={p.name} />} title={p.name} sub={inviteeLine(p)}
+            label={`${p.name}${on.has(p.id) ? ', going' : ''}`} />
+        ))}
+        {typed?.kind === 'new' && (
+          <button type="button" className="add-row trip-add-name" onClick={add}>
+            <span className="add-ci" aria-hidden="true"><Icon name="plus" /></span>
+            <span className="add-lbl">Add “{typed.name}”</span>
+          </button>
+        )}
+      </div>
+      {all.length === 0 && <p className="field-help">{canSkip ? 'Nobody here yet. Add friends by name above, or skip this and send the first round’s link so they add themselves.' : 'Nobody here yet. Add friends by name above.'}</p>}
+      {all.length > 0 && query.trim() && !list.length && typed?.kind !== 'new' && <p className="field-help">Nobody by that name.</p>}
+      {byIndex && <p className="field-help">Someone new is saved to your players with no handicap. Add their index on Players to balance the teams or flights by it.</p>}
+    </div>
   );
 }
 

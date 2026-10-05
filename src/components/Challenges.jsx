@@ -3,7 +3,7 @@
 // stays friendly: a no is "passed this time", never anything worse.
 import { useCallback, useState } from 'react';
 import { createPortal } from 'react-dom';
-import { Icon, Numpad, Segmented, Sheet, useUI } from './ui.jsx';
+import { Icon, Numpad, PickChip, Segmented, Sheet, useUI } from './ui.jsx';
 import { getState, uid, useStore } from '../lib/store.js';
 import { useNav } from '../lib/nav.js';
 import { BET_KINDS, BET_LABEL_MAX, BET_MAX } from '../lib/pair-bets.js';
@@ -17,6 +17,7 @@ import { sendReminder } from '../lib/pay.js';
 import { challengeAmountsShow, challengeGroupText } from '../lib/share-cards.js';
 import { useShareText } from '../lib/useShare.js';
 import { dayLabel, planPeople } from '../lib/plans.js';
+import { TalkCount } from './TalkCount.jsx';
 
 const first = n => String(n || '').trim().split(/\s+/)[0] || 'them';
 const other = side => (side === 'from' ? 'to' : 'from');
@@ -122,7 +123,7 @@ export function ChallengeMaker({ open, onClose, from, people, whens, holesCount 
     else showToast(`Challenge saved. Mark ${first(to.name)}’s answer when they tell you.`);
   };
   const chip = (p, on, pick, label = first(p.name)) => (
-    <button key={p.who} role="radio" aria-checked={on} className={`pill-btn ${on ? 'on' : ''}`} onClick={() => pick(p.who)}>{label}</button>
+    <PickChip key={p.who} radio on={on} onClick={() => pick(p.who)}>{label}</PickChip>
   );
   const title = fixed ? (setter ? `${first(a.name)} v ${first(fixed.name)}` : `Challenge ${first(fixed.name)}`) : setter ? 'Set up a challenge' : 'Challenge someone';
 
@@ -157,7 +158,7 @@ export function ChallengeMaker({ open, onClose, from, people, whens, holesCount 
               <div className="field-label" id="ch-when">Which round</div>
               <div className="chip-row flush" role="radiogroup" aria-labelledby="ch-when">
                 {whens.map(w => (
-                  <button key={w.key} role="radio" aria-checked={when.key === w.key} className={`pill-btn ${when.key === w.key ? 'on' : ''}`} onClick={() => setWhenKey(w.key)}>{w.label}</button>
+                  <PickChip key={w.key} radio on={when.key === w.key} onClick={() => setWhenKey(w.key)}>{w.label}</PickChip>
                 ))}
               </div>
               {setUp && aWho && a.who !== aWho && <p className="field-help pb-help">{first(aName)} isn’t on that round, so it’s you{fixed ? ` against ${first(fixed.name)}` : ''}. Pick someone else under Who, or another round.</p>}
@@ -166,9 +167,7 @@ export function ChallengeMaker({ open, onClose, from, people, whens, holesCount 
           <div className="field-label" id="ch-kind">What’s the bet</div>
           <div className="chip-row flush" role="radiogroup" aria-labelledby="ch-kind">
             {CHALLENGE_KINDS.map(k => (
-              <button key={k} role="radio" aria-checked={kind === k} className={`pill-btn ${kind === k ? 'on' : ''}`} onClick={() => setKind(k)}>
-                <Icon name={BET_KINDS[k].icon} fill={kind === k} /> {BET_KINDS[k].label}
-              </button>
+              <PickChip key={k} radio on={kind === k} icon={BET_KINDS[k].icon} onClick={() => setKind(k)}>{BET_KINDS[k].label}</PickChip>
             ))}
           </div>
           <p className="field-help pb-help">{setter ? othersHelp(BET_KINDS[kind].help) : BET_KINDS[kind].help}</p>
@@ -182,10 +181,10 @@ export function ChallengeMaker({ open, onClose, from, people, whens, holesCount 
           <div className="field-label" id="ch-stake">{kind === 'hole' ? 'A hole' : kind === 'ctp' ? 'A par 3' : 'How much'}</div>
           <div className="chip-row flush" role="radiogroup" aria-labelledby="ch-stake">
             {CHALLENGE_STAKES.map(v => (
-              <button key={v} role="radio" aria-checked={stake === v} className={`pill-btn ${stake === v ? 'on' : ''}`} onClick={() => setStake(v)}>{fmt(v)}</button>
+              <PickChip key={v} radio on={stake === v} onClick={() => setStake(v)}>{fmt(v)}</PickChip>
             ))}
-            <button role="radio" aria-checked={!CHALLENGE_STAKES.includes(stake)} className={`pill-btn ${CHALLENGE_STAKES.includes(stake) ? '' : 'on'}`} onClick={() => setPad(true)}
-              aria-label={CHALLENGE_STAKES.includes(stake) ? 'Another amount' : `${fmt(stake)}. Change it`}>{CHALLENGE_STAKES.includes(stake) ? 'Other' : fmt(stake)}</button>
+            <PickChip radio on={!CHALLENGE_STAKES.includes(stake)} onClick={() => setPad(true)}
+              label={CHALLENGE_STAKES.includes(stake) ? 'Another amount' : `${fmt(stake)}. Change it`}>{CHALLENGE_STAKES.includes(stake) ? 'Other' : fmt(stake)}</PickChip>
           </div>
           {nines && (
             <>
@@ -318,6 +317,8 @@ export function ChallengeCard({ ch, onOpen = null }) {
         <span className="row-main">
           <span className="ch-head">{challengeHeadline(ch, side, setter)}</span>
           <span className="ch-line">{challengeLine(ch)}</span>
+          {/* Its talk, only on the cards of the people in it */}
+          {(side || setter) && <TalkCount rows={state.talk?.[`challenge:${ch.id}`]} />}
         </span>
         <span className={`ch-status ${tone}`}>{challengeStatusText(ch, side, life)}</span>
         {onOpen && <span className="chevron" aria-hidden="true"><Icon name="caret-right" /></span>}

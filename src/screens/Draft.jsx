@@ -5,6 +5,7 @@
 // schedule (if it has one) plans every round with its matches.
 import { useEffect } from 'react';
 import { BallIllo, Empty, Header, Icon, Screen, useUI } from '../components/ui.jsx';
+import { LinkBrand } from '../components/LinkBrand.jsx';
 import { Avatar } from '../components/Pay.jsx';
 import { TeamDot } from '../components/Cup.jsx';
 import { useStore } from '../lib/store.js';
@@ -22,7 +23,7 @@ const first = name => String(name || '').trim().split(/\s+/)[0] || 'Player';
 export default function Draft({ id }) {
   const nav = useNav();
   return (
-    <Screen>
+    <Screen className="trip-screen">
       <Header title="Captains’ draft" small onBack={nav.pop} />
       <DraftBody tripId={id} />
     </Screen>
@@ -37,7 +38,8 @@ export function DraftLink({ tripId, seat, standalone = false, onSkip }) {
   const nav = useNav();
   useEffect(() => { joinDraft(tripId, seat); }, [tripId, seat]);
   return (
-    <Screen>
+    <Screen className="trip-screen">
+      {standalone && <LinkBrand />}
       {standalone ? <Header title="Captains’ draft" small /> : <Header title="Captains’ draft" small onBack={nav.pop} />}
       <DraftBody tripId={tripId} />
       {standalone && onSkip && <div className="cta-wrap"><button className="link-btn center" onClick={onSkip}>Done here</button></div>}
@@ -130,7 +132,7 @@ function DraftBody({ tripId }) {
               <div key={id} className="cup-chip static-row">
                 <span className="cup-order-n">{k === 0 ? '' : merged.picks.findIndex(p => p.id === id) + 1}</span>
                 <Avatar id={state.players?.[id] ? id : null} name={name(id)} size="sm" />
-                <span className="cup-chip-name">{name(id)}</span>
+                <span className="cup-chip-name">{first(name(id))}</span>
                 {k === 0 && <span className="cup-cap" title="Captain">C</span>}
               </div>
             ))}

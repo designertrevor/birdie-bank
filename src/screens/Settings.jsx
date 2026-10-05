@@ -19,6 +19,8 @@ import { PAYWALL_ON } from '../lib/paywall-flag.js';
 import { isOrganizer, planStatus } from '../lib/paywall.js';
 import { accountsEnabled, signOut, syncNow, unsyncedCount, useAccount } from '../lib/cloud.js';
 import { NUDGE_CHOICES, nudgeChoiceLabel, nudgeDays } from '../lib/nudges.js';
+import { useAgeCheck } from '../components/AgeCheck.jsx';
+import { ageLine } from '../lib/age.js';
 
 export default function Settings() {
   const nav = useNav();
@@ -28,6 +30,7 @@ export default function Settings() {
   const myPay = payInfo(me);
   const acct = useAccount();
   const [signingIn, setSigningIn] = useState(false);
+  const checkAge = useAgeCheck();
 
   const logOut = async () => {
     if (unsyncedCount() > 0) {
@@ -105,6 +108,11 @@ export default function Settings() {
           <div className="row-main"><div className="set-name">Report a bug or send an idea</div><div className="set-sub">A game, a course, a feature or something broken</div></div>
           <span className="chevron"><Icon name="caret-right" /></span>
         </button>
+        <button className="set-row rm-set" onClick={() => nav.push('roadmap')}>
+          <div className="set-icon"><Icon name="signpost" fill /></div>
+          <div className="row-main"><div className="set-name">Roadmap</div><div className="set-sub">Vote on what’s next and see what shipped</div></div>
+          <span className="chevron"><Icon name="caret-right" /></span>
+        </button>
         <div className="sec-label">You</div>
         {accountsEnabled && (acct.user ? (
           <div className="set-row static">
@@ -123,6 +131,12 @@ export default function Settings() {
             <span className="chevron"><Icon name="caret-right" /></span>
           </button>
         )}
+        {/* The one-time age answer for money rounds (age.js), changeable here */}
+        {me && row('identification-card', 'Playing for money', ageLine(state), async () => {
+          const answer = await checkAge({ force: true });
+          if (answer === 'adult') showToast('Money rounds are on');
+          if (answer === 'under') showToast('Points and reward rounds only');
+        })}
         {me && (
           <>
             <div className="sec-label">Privacy</div>

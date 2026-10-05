@@ -3,7 +3,8 @@
 // only the organizer can mark answers for others, call it off and start it.
 // Friends open it from the group link with no install and no paywall (PlanLink below).
 import { useEffect, useState } from 'react';
-import { BallIllo, Empty, Header, Icon, Screen, Sheet, useUI } from '../components/ui.jsx';
+import { BallIllo, Empty, Header, Icon, PickChip, PickMark, PickRow, Screen, Sheet, useUI } from '../components/ui.jsx';
+import { LinkBrand, LinkHowTo } from '../components/LinkBrand.jsx';
 import { Avatar } from '../components/Pay.jsx';
 import { getState, update, uid, useStore } from '../lib/store.js';
 import { useNav } from '../lib/nav.js';
@@ -38,6 +39,8 @@ import { PlanChallenges } from '../components/Challenges.jsx';
 import { challengeIdOfBet, challengeWhat, withChallenges } from '../lib/challenges.js';
 import { markChallengesOn, useChallengesLive } from '../lib/challenge-sync.js';
 import { betPeople } from '../lib/pair-bets.js';
+import { useAgeCheck } from '../components/AgeCheck.jsx';
+import { needsAgeCheck } from '../lib/age.js';
 
 const first = name => String(name || '').trim().split(/\s+/)[0];
 const listNames = n => (n.length < 2 ? n.join('') : `${n.slice(0, -1).join(', ')} and ${n.at(-1)}`);
@@ -338,8 +341,8 @@ function SideVote({ plan, rows, rules, mine, onVote }) {
               <div className="set-sub">{r.yes} yes · {r.no} no · {r.on ? 'On so far' : 'Off so far'}</div>
             </div>
             <div className="sv-btns" role="group" aria-label={`${name}: play it?`}>
-              <button className={`pill-btn sm ${v === true ? 'on' : ''}`} aria-pressed={v === true} onClick={() => onVote(r.side, v === true ? null : true)}>Yes</button>
-              <button className={`pill-btn sm ${v === false ? 'on' : ''}`} aria-pressed={v === false} onClick={() => onVote(r.side, v === false ? null : false)}>No</button>
+              <PickChip small on={v === true} onClick={() => onVote(r.side, v === true ? null : true)}>Yes</PickChip>
+              <PickChip small on={v === false} onClick={() => onVote(r.side, v === false ? null : false)}>No</PickChip>
             </div>
           </div>
         );
@@ -364,7 +367,7 @@ function VoteBlock({ label, kind, t, mineValue, onVote, render }) {
               <span className="vr-bar" style={{ width: `${Math.round((r.votes / top) * 100)}%` }} aria-hidden="true" />
               <span className="vr-name">{render(r.choice)}{r.suggested && <span className="vr-tag">Suggested</span>}</span>
               <span className="vr-n">{r.votes} {r.votes === 1 ? 'vote' : 'votes'}</span>
-              <span className="vr-check" aria-hidden="true"><Icon name={on ? 'check-circle' : 'circle'} fill={on} /></span>
+              <span className="vr-check"><PickMark on={on} add={false} /></span>
             </button>
           );
         })}
@@ -421,6 +424,7 @@ function WhoAreYou({ plan, defaultName, standalone, onSkip }) {
                 <span className="seat-sub">Add me</span>
               </button>
             </div>
+            {standalone && <LinkHowTo kind="plan" />}
           </>
         ) : (
           <>
@@ -446,6 +450,7 @@ function WhoAreYou({ plan, defaultName, standalone, onSkip }) {
 export function RollCall({ id }) {
   const nav = useNav();
   const { showToast } = useUI();
+  const checkAge = useAgeCheck();
   const state = useStore();
   const plan = state.plans?.[id];
   const [present, setPresent] = useKept('rollCall:present', () => (plan ? rollCallDefault(plan) : []));
@@ -479,7 +484,7 @@ export function RollCall({ id }) {
 
   // Save anyone new first, so setup (or the round) can find them
   const saveNew = () => update(s => { for (const p of setup.newPlayers) s.players[p.id] = p; });
-  const start = () => {
+  const start = async () => {
     // One round per tee time, even on a double tap
     if (starting || getState().plans?.[id]?.status !== 'planned') return;
     setStarting(true);
@@ -510,6 +515,19 @@ export function RollCall({ id }) {
     if (tripPick && plan.session?.trip === tripPick.id) round.session = structuredClone(plan.session);
     // Agreed challenges go in as side bets, once each
     const { round: withCh, used } = withChallenges(getState(), round, { planId: id, idOf: setup.idOf });
+    // Money needs a yes to "Are you 18 or older?" once (age.js), the same as Tee off in setup. Under
+    // 18 goes to setup, which starts on points, rather than starting the money round as planned
+    if (needsAgeCheck(getState(), withCh)) {
+      const answer = await checkAge();
+      if (answer !== 'adult') {
+        setStarting(false);
+        if (answer === 'under') {
+          showToast('Money rounds are for 18 or older. Set it up for points or a reward.');
+          toSetup();
+        }
+        return;
+      }
+    }
     update(s => { addRound(s, withCh); });
     markChallengesOn(used, rid);
     editPlan(id, p => { p.status = 'started'; p.roundId = rid; }).then(r => { if (r === 'taken') showToast(PLAN_LOCKED); });
@@ -537,17 +555,13 @@ export function RollCall({ id }) {
           <div className="li-sub">{t.total > 1 ? `The group’s pick (${t.rows.find(r => r.choice === setup.game)?.votes || 0} of ${t.total} votes)` : 'Your suggestion. Nobody else voted'}</div>
         </div>
         <h2 className="step-q d">Who showed up?</h2>
-        <div style={{ padding: '0 16px' }}>
+        <div className="pick-list">
           {people.map(p => {
             const on = present.includes(p.who);
             return (
-              <button key={p.who} className={`list-item ${on ? 'on' : ''}`} onClick={() => toggle(p.who)} aria-pressed={on}>
-                <div className="row-main">
-                  <div className="li-name">{p.who === plan.hostWho ? `${first(p.name)} (you)` : p.name}</div>
-                  <div className="li-sub">{p.who.startsWith('w_') ? 'Walked up' : <>{p.status ? `Said ${RSVP_LABEL[p.status].toLowerCase()}` : 'Didn’t answer'}{!p.invited ? ' · from the link' : ''}</>}</div>
-                </div>
-                <span className={`li-check ${on ? 'on' : 'add'}`}><Icon name={on ? 'check' : 'plus'} /></span>
-              </button>
+              <PickRow key={p.who} on={on} onClick={() => toggle(p.who)}
+                title={p.who === plan.hostWho ? `${first(p.name)} (you)` : p.name}
+                sub={p.who.startsWith('w_') ? 'Walked up' : <>{p.status ? `Said ${RSVP_LABEL[p.status].toLowerCase()}` : 'Didn’t answer'}{!p.invited ? ' · from the link' : ''}</>} />
             );
           })}
         </div>
@@ -612,6 +626,7 @@ export function PlanLink({ code, who = null, standalone = false, onSkip }) {
   if (id && plan) {
     return (
       <Screen className="plan-standalone">
+        <LinkBrand />
         <PlanBody plan={plan} standalone onSkip={onSkip} />
       </Screen>
     );
@@ -619,7 +634,7 @@ export function PlanLink({ code, who = null, standalone = false, onSkip }) {
   const missing = err === 'missing' || err === 'off';
   return (
     <Screen className="onboard">
-      {!standalone && <Header title="Upcoming round" small onBack={nav.pop} />}
+      {standalone ? <LinkBrand /> : <Header title="Upcoming round" small onBack={nav.pop} />}
       <div className="scroll onboard-body">
         <BallIllo className="onboard-illo" face={!err} />
         <h1 className="onboard-title" style={{ fontSize: 34 }} aria-live="polite">{err ? (err === 'off' ? 'Not quite ready' : missing ? 'Plan not found' : 'No signal') : 'Finding the plan…'}</h1>

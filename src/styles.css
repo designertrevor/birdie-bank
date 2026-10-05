@@ -2643,6 +2643,455 @@ button.ch-main:active { transform: scale(.98); }
 .big-team-row { padding: 4px 0; }
 .big-team-row .tr-sub { display: block; margin-bottom: 6px; }
 
+/* ---- small9: the age check in onboarding (age.js) ---- */
+.ob-age { margin-top: 20px; }
+.ob-age .chip-row { gap: 8px; padding-bottom: 4px; }
+.ob-age .pill-btn { min-height: 40px; padding: 9px 16px; }
+.ob-age .pill-btn i { font-size: 15px; }
+
+/* ---------- Reactions and quick jabs on challenges and settle-ups (o9 jabs) ---------- */
+/* The jab picker: a critter from the Ball buddies art, a label, then one scrolling row of jabs */
+.talk-jabs-head { display: flex; align-items: center; gap: 8px; margin-top: 14px; padding-top: 12px; border-top: 1px solid var(--line-soft); }
+.talk-jabs-head .avatar.talk-jab-art { margin: 0; width: 28px; height: 28px; flex-shrink: 0; }
+.talk-jabs-label { font-size: 13px; font-weight: 700; color: var(--ink); }
+.talk-jabs-hint { margin-left: auto; font-size: 12px; color: var(--mute); }
+.talk-jabs-head + .talk-jabs, .talk-sheet .talk-jabs-head + .talk-jabs { margin-top: 10px; }
+/* A payment on the Tab with its talk: the row and its reactions read as one card, as wide as the
+   plain rows around it (a .ledger-row is 32px narrower than its parent, so it fills the card here) */
+.pay-talk { margin: 0 16px 8px; background: var(--card); border-radius: 18px; }
+.pay-talk .ledger-row { width: 100%; margin: 0; background: none; }
+.pay-talk .talk-bar { padding: 0 16px 14px; }
+/* A challenge's talk sits clear of the links above it */
+.ch-page .talk { margin-top: 8px; }
+.ch-main .talk-count { margin-top: 6px; }
+
+/* ---------- One way to pick (o9 consistency): PickRow, PickMark and PickChip in ui.jsx ---------- */
+/* A list of pickable rows sits on the 16px gutter, in a screen or a sheet */
+.pick-list { padding: 0 16px; }
+.pick-list.sheet-picks { padding-top: 4px; padding-bottom: 8px; }
+.pick-row { gap: 12px; }
+.pick-row .avatar { margin: 0; flex-shrink: 0; }
+.pick-row:disabled { cursor: default; opacity: .55; }
+.pick-row:disabled:active { transform: none; }
+/* The row you're moving from, or a round kept on a trip: picked and still easy to read */
+.pick-row.on:disabled { opacity: 1; }
+/* The small mark, for a tile's corner or a vote's row */
+.li-check.sm { width: 28px; height: 28px; font-size: 14px; }
+/* A chip's check pops in where its icon was */
+.pick-chip .pc-check { font-size: 14px; animation: pop .35s var(--spring); }
+.pick-chip.sm .pc-check { font-size: 12px; }
+/* Picked tiles and votes wear the same pink ring as a picked row, so picked reads one way everywhere */
+.ob-tile.on { background: var(--pick-tint); box-shadow: inset 0 0 0 2px var(--pink-fill); }
+.ob-tile-top .li-check { margin-left: auto; }
+/* The tile's top holds the mark's height either way, so picking a tile never nudges its name down */
+.ob-tile-top { min-height: 28px; }
+.vote-row.on { box-shadow: inset 0 0 0 2px var(--pink-fill); }
+.vote-row .vr-check { font-size: inherit; }
+.vote-row .li-check { width: 28px; height: 28px; font-size: 14px; }
+/* Initials sit in the middle of the circle at every size: the letters get their own box, one line
+   high, and where the browser can it's trimmed to the capitals, so the display font's tall ascent
+   no longer pushes them low. Buddies and photos already fill the circle edge to edge. */
+.av-letters { display: block; line-height: 1; text-align: center; white-space: nowrap; }
+@supports (text-box: trim-both cap alphabetic) { .av-letters { text-box: trim-both cap alphabetic; } }
+
+/* ---------- Breathing room (o9 consistency): the overnight 7 and 8 screens and sheets ---------- */
+/* Cards in a column keep the 10px gap the Tab and Up next use, so nothing sits on the card under it */
+.pv-hero { margin-bottom: 12px; }
+.talk-card, .person-talk, .fr-board { margin-bottom: 10px; }
+/* Form sheets (a side bet, a challenge, a Big Game bet): the 20px gutter the sheet's title and text
+   use, and each question a clear step down from the answer above it */
+.sheet-form { padding: 4px 20px 4px; }
+.sheet-form > .field-help:first-child { margin-top: 0; }
+.pb-edit .field-label, .sheet-form .field-label { margin-top: 22px; }
+.pb-edit .field-label:first-child, .sheet-form .field-label:first-child { margin-top: 4px; }
+.sheet-form > .field-help:first-child + .field-label { margin-top: 16px; }
+.sheet-form .amt-btn { margin-bottom: 2px; }
+.sheet-form-cta { padding: 20px 0 0; }
+.sheet-form-cta .text-link { margin: 0 auto; }
+/* A sheet's chips sit on the same gutter as its text, with room before the buttons */
+.pot-hole-chips { padding: 0 20px 12px; }
+/* The Big Game: the organizer's share pills stand apart from the groups above them */
+.chip-row.big-share { padding-top: 4px; padding-bottom: 14px; }
+/* Big Game setup: "Keeps score" is its own question under the group's players, not stuck to them */
+.big-setup-group .field-label { margin-top: 14px; }
+.big-setup-group .big-group-head + .chip-row.flush { padding-bottom: 4px; }
+.big-team-row + .big-team-row { margin-top: 6px; }
+.big-team-row ~ .pill-btn.sm { margin-top: 8px; }
+/* Big Game setup, Games step: a toggle's settings card reads as part of it, a little closer to its
+   toggle than to the next one. Only this step, so Settings and game setup keep their spacing */
+.big-games > .toggle-row + .block { margin-top: -2px; margin-bottom: 16px; }
+/* The tee time block: Booked is its own step after the reminder day */
+.tee-block .tb-done { margin-top: 12px; }
+.rc-sheet-body .full-btn { margin-top: 6px; }
+/* Your stats: the privacy line under the last card */
+.stats-foot { margin-top: 6px; }
+/* The friends feed: the privacy note stands apart from the last card */
+.fr-privacy { padding-top: 18px; }
+
+/* ---- Overnight 9, date and tee time pickers (DatePicker.jsx) ---- */
+/* The field: looks like the input it replaces, with the value, a calendar or clock, and a ring while its sheet is up */
+.pick-field { display: flex; align-items: center; justify-content: space-between; gap: 8px; min-height: 48px; text-align: left; cursor: pointer; line-height: 1.25; transition: transform .2s var(--spring), box-shadow .15s; }
+.pick-field:active:not(:disabled) { transform: scale(.98); }
+.pick-field[aria-expanded="true"] { box-shadow: 0 0 0 3px var(--lav); }
+.pick-field:disabled { color: var(--mute-soft); cursor: not-allowed; }
+.pick-field .pf-text { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+.pick-field .pf-main { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.pick-field .pf-sub { font-family: Inter, system-ui, sans-serif; font-size: 12px; font-weight: 600; color: var(--mute); }
+.pick-field.empty .pf-main { color: var(--mute-soft); }
+.pick-field .pf-icon { flex-shrink: 0; font-size: 18px; color: var(--icon); }
+.name-input.pick-field { min-height: 52px; }
+.name-input.pick-field .pf-icon { font-size: 22px; }
+.name-input.pick-field.empty .pf-main { font-size: 18px; }
+.time-input.pick-field { max-width: 220px; }
+.range-dates .rd-end { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 6px; }
+/* The older rule grew every label in .range-dates; here the label sits on top and the two fields match in height */
+.range-dates .rd-end > label { flex: none; display: block; }
+.range-dates .pick-field { width: 100%; flex: 1; }
+.trip-form-days > div { display: flex; flex-direction: column; }
+.trip-form-days .pick-field { flex: 1; }
+/* First day and Last day are their div's first child, so .field-label:first-child took their gap to the Name field away */
+.trip-form-days .field-label:first-child { margin-top: 14px; }
+
+/* The sheet: sections with room between them, on the sheet's 16px gutter */
+.pick-sheet .pick-body { display: flex; flex-direction: column; gap: 20px; padding: 8px 16px 0; }
+.pick-section { display: flex; flex-direction: column; gap: 10px; }
+.pick-section .field-help { margin-top: 0; }
+.pick-sheet .day-strip { margin: 0 -16px; }
+/* Clear and Done stay in reach when a tall calendar scrolls on a small phone */
+.pick-foot {
+  position: sticky; bottom: 0; z-index: 2; display: grid; grid-template-columns: 1fr 1fr; gap: 10px; background: var(--canvas);
+  margin: 0 -16px calc(-16px - env(safe-area-inset-bottom)); padding: 8px 16px calc(16px + env(safe-area-inset-bottom));
+}
+.pick-foot.one { grid-template-columns: 1fr; }
+
+/* The calendar */
+.cal { background: var(--card); border-radius: 24px; padding: 10px 8px 8px; }
+.cal-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 6px; }
+.cal-head .icon-btn { background: var(--surface); }
+.cal-title {
+  display: inline-flex; align-items: center; gap: 6px; min-height: 44px; padding: 0 14px; border: none; border-radius: 999px; background: none;
+  font-family: var(--display); font-size: 20px; font-weight: 800; letter-spacing: -.01em; color: var(--ink); cursor: pointer;
+  transition: transform .2s var(--spring), background .15s;
+}
+.cal-title i { font-size: 14px; color: var(--mute); }
+button.cal-title:active { transform: scale(.95); background: var(--surface); }
+.cal-title.static { cursor: default; }
+.cal-dow { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); padding: 4px 0; }
+.cal-dow span { text-align: center; font-size: 12px; font-weight: 700; letter-spacing: .04em; color: var(--mute); }
+.cal-days { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); row-gap: 4px; }
+.cal-day { position: relative; height: 44px; padding: 0; border: none; background: none; font: inherit; color: var(--ink); cursor: pointer; display: grid; place-items: center; }
+.cal-day .cd-num {
+  position: relative; z-index: 1; width: 42px; height: 42px; border-radius: 14px; display: grid; place-items: center;
+  font-size: 16px; font-weight: 600; font-variant-numeric: tabular-nums; transition: transform .2s var(--spring), background .15s;
+}
+.cal-day:active:not([aria-disabled]) .cd-num { transform: scale(.86); }
+.cal-day.out { color: var(--mute-soft); }
+.cal-day[aria-disabled] { color: var(--mute-soft); cursor: not-allowed; }
+.cal-day[aria-disabled] .cd-num { text-decoration: line-through; opacity: .7; }
+.cal-day.today .cd-num { font-weight: 800; }
+.cal-day.today .cd-num::after { content: ''; position: absolute; left: 50%; bottom: 5px; width: 4px; height: 4px; margin-left: -2px; border-radius: 50%; background: var(--pink-text); }
+.cal-day.on .cd-num { background: var(--ink); color: var(--on-ink); animation: calPop .35s var(--spring); }
+.cal-day.on.today .cd-num::after { background: var(--on-ink); }
+/* A range: a band runs between its ends, behind the days */
+.cal-day.mid::before, .cal-day.start::before, .cal-day.end::before { content: ''; position: absolute; top: 1px; bottom: 1px; background: var(--surface-strong); }
+.cal-day.mid::before { left: 0; right: 0; }
+.cal-day.start::before { left: 50%; right: 0; }
+.cal-day.end::before { left: 0; right: 50%; }
+.cal-day.mid:nth-child(7n+1)::before { left: 4px; border-radius: 12px 0 0 12px; }
+.cal-day.mid:nth-child(7n)::before { right: 4px; border-radius: 0 12px 12px 0; }
+/* Months and years: big pills, the same height as the days so the sheet doesn't jump */
+.cal-cells { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); grid-auto-rows: 1fr; gap: 8px; min-height: 290px; padding: 4px 2px 2px; }
+.cal-cell {
+  min-height: 52px; border: none; border-radius: 999px; background: var(--surface); color: var(--ink); font: inherit; font-size: 16px; font-weight: 600;
+  font-variant-numeric: tabular-nums; cursor: pointer; transition: transform .2s var(--spring), background .15s;
+}
+.cal-cell:active:not(:disabled) { transform: scale(.94); }
+.cal-cell.now { box-shadow: inset 0 0 0 2px var(--surface-strong); font-weight: 800; }
+.cal-cell.on { background: var(--ink); color: var(--on-ink); box-shadow: none; }
+.cal-cell:disabled { color: var(--mute-soft); text-decoration: line-through; cursor: not-allowed; }
+/* Months slide in from the side they came from; a zoom in or out scales a touch */
+.cal-anim { animation: calIn var(--duration-fast) var(--ease-smooth-out) both; }
+.cal-anim.from-left { --cal-x: calc(-1 * var(--distance-medium)); }
+.cal-anim.from-right { --cal-x: var(--distance-medium); }
+.cal-anim.zoom { --cal-s: .96; }
+@keyframes calIn { from { opacity: 0; transform: translateX(var(--cal-x, 0)) scale(var(--cal-s, 1)); } }
+@keyframes calPop { 0% { transform: scale(.8); } 60% { transform: scale(1.08); } 100% { transform: scale(1); } }
+
+/* A range: which end you're setting, and recent ranges */
+.rg-ends { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 10px; }
+.rg-end {
+  display: flex; flex-direction: column; align-items: flex-start; gap: 4px; min-height: 64px; padding: 10px 14px; border: none; border-radius: 18px;
+  background: var(--card); color: var(--ink); font: inherit; text-align: left; cursor: pointer; box-shadow: inset 0 0 0 2px transparent;
+  transition: transform .2s var(--spring), box-shadow .15s;
+}
+.rg-end:active { transform: scale(.97); }
+.rg-end.active { box-shadow: inset 0 0 0 2px var(--ink); }
+.rg-end strong { font-family: var(--display); font-size: 18px; font-weight: 800; font-variant-numeric: tabular-nums; }
+.rg-end strong.empty { color: var(--mute-soft); }
+.pick-presets { display: flex; gap: 8px; overflow-x: auto; margin: 0 -16px; padding: 2px 16px 4px; scrollbar-width: none; }
+.pick-presets::-webkit-scrollbar { display: none; }
+.pick-presets .pill-btn { flex-shrink: 0; min-height: 44px; background: var(--surface); white-space: nowrap; }
+.pick-presets .pill-btn.on { background: var(--ink); }
+
+/* A tee time: the time big, AM or PM, then hours and minutes as chips */
+.tp-value { font-family: var(--display); font-size: 44px; font-weight: 800; letter-spacing: -.02em; line-height: 1.1; color: var(--ink); text-align: center; font-variant-numeric: tabular-nums; }
+.tp-value.empty { font-size: 22px; line-height: 48px; color: var(--mute-soft); }
+.tp-half .holes-btn { height: 44px; }
+.tp-grid { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 8px; }
+.tp-chip {
+  min-height: 48px; padding: 0; border: none; border-radius: 16px; background: var(--surface); color: var(--ink);
+  font-family: var(--display); font-size: 18px; font-weight: 800; font-variant-numeric: tabular-nums; cursor: pointer;
+  transition: transform .2s var(--spring), background .15s;
+}
+.tp-chip:active:not(:disabled) { transform: scale(.9); }
+.tp-chip.active { background: var(--ink); color: var(--on-ink); animation: calPop .3s var(--spring); }
+.tp-chip:disabled { color: var(--mute-soft); cursor: not-allowed; }
+
+/* ============================================================
+   RULE PAGES AND BRANDED LINK PAGES (overnight 9, rules)
+   The app's mark and name at the top of a page opened from a link
+   by someone with no app, "How it works" under the invite, and
+   "Send these rules" in the rules sheet.
+   ============================================================ */
+.link-brand { display: flex; align-items: center; gap: 10px; padding: 12px 16px 8px; flex-shrink: 0; min-height: 56px; }
+.lb-mark { width: 30px; height: 30px; border-radius: 9px; display: block; flex-shrink: 0; }
+.lb-name { font-family: var(--display); font-size: 17px; font-weight: 800; letter-spacing: -.02em; color: var(--ink); white-space: nowrap; }
+.lb-pill { margin-left: auto; display: inline-flex; align-items: center; gap: 6px; padding: 7px 12px; border-radius: 999px; background: var(--surface); color: var(--body); font-size: 13px; font-weight: 600; white-space: nowrap; }
+.lb-pill i { font-size: 15px; color: var(--icon); }
+@media (max-width: 340px) { .lb-pill { padding: 7px 10px; font-size: 12px; } }
+.link-howto { margin: 24px 0 8px; text-align: left; width: 100%; }
+.lh-title { font-family: Inter, system-ui, sans-serif; font-size: 12px; font-weight: 600; text-transform: uppercase; letter-spacing: .08em; color: var(--mute); margin-bottom: 12px; }
+.link-howto ol { list-style: none; display: flex; flex-direction: column; gap: 12px; padding: 16px; border-radius: 20px; background: var(--card); box-shadow: 0 1px 0 var(--line); }
+.link-howto li { display: flex; align-items: flex-start; gap: 12px; font-size: 15px; line-height: 1.45; color: var(--body); }
+.lh-num { width: 26px; height: 26px; border-radius: 50%; background: var(--ink); color: var(--on-ink); display: grid; place-items: center; flex-shrink: 0; font-family: var(--display); font-size: 13px; font-weight: 800; line-height: 1; margin-top: -1px; }
+.join-body .link-howto + .field-help { margin-top: 16px; }
+.plan-who .link-howto { margin-top: 28px; }
+.rules-send { margin: 20px 0 0; padding: 12px 0; min-height: 44px; color: var(--ink); font-size: 15px; }
+.rules-send i { font-size: 18px; }
+
+/* ---------- The public roadmap: votes, comments and your ideas (o9 roadmap) ---------- */
+.rm-intro { padding: 0 20px 16px; font-size: 15px; line-height: 1.5; color: var(--body); }
+.rm-thanks { margin-bottom: 16px; }
+.rm-thanks i { color: var(--win); }
+.rm-tabs { padding: 0 16px 6px; }
+.rm-tabs .pm-btn { padding: 0 6px; font-size: 14px; white-space: nowrap; }
+.rm-n { margin-left: 2px; font-family: Inter, system-ui, sans-serif; font-size: 12px; font-weight: 700; font-variant-numeric: tabular-nums; }
+.rm-tabs + .rm-list, .rm-tabs + .rm-empty { margin-top: 14px; }
+.rm-list, .rm-ideas { list-style: none; margin: 0; padding: 0; }
+.rm-card { display: flex; align-items: flex-start; gap: 12px; margin: 0 16px 10px; padding: 16px; border-radius: 20px; background: var(--card); scroll-margin: 24px; }
+.rm-card.flash { box-shadow: inset 0 0 0 2px var(--pink-fill); animation: rm-flash 1.4s var(--ease-out) 2; }
+@keyframes rm-flash { 50% { box-shadow: inset 0 0 0 2px var(--pink-fill), 0 0 0 6px var(--pick-tint); } }
+.rm-main { flex: 1; min-width: 0; }
+.rm-area { display: block; margin-bottom: 4px; color: var(--pink-text); }
+.rm-title { font-family: var(--display); font-size: 18px; font-weight: 800; line-height: 1.25; letter-spacing: -.01em; color: var(--ink); text-wrap: balance; }
+.rm-blurb { margin-top: 4px; font-size: 14px; line-height: 1.45; color: var(--body); }
+.rm-meta { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 10px; margin-top: 12px; }
+.rm-meta:empty { display: none; }
+.rm-when { display: inline-flex; align-items: center; gap: 5px; font-size: 13px; font-weight: 600; color: var(--mute); }
+.rm-when i { font-size: 16px; color: var(--win); }
+.rm-when.building i { color: var(--icon); }
+.rm-tag { display: inline-flex; align-items: center; padding: 4px 10px; border-radius: 999px; background: var(--pick-tint); color: var(--pink-text); font-size: 12px; font-weight: 700; white-space: nowrap; }
+.rm-tag.wait { background: var(--surface); color: var(--mute); }
+.rm-talk {
+  position: relative; display: inline-flex; align-items: center; gap: 5px; min-height: 36px; padding: 0 12px; border: none; border-radius: 999px;
+  background: var(--surface); color: var(--ink); font: inherit; font-size: 13px; font-weight: 700; font-variant-numeric: tabular-nums; cursor: pointer;
+  transition: transform var(--duration-fast) var(--spring);
+}
+.rm-talk::before { content: ''; position: absolute; inset: -4px 0; } /* a 44px tap target on a 36px pill */
+.rm-talk i { font-size: 16px; color: var(--icon); }
+.rm-talk:active { transform: scale(.94); }
+.rm-id { display: block; margin-top: 8px; font-size: 11px; color: var(--mute); overflow-wrap: anywhere; }
+/* The vote: one per person, filled with the accent and a check once it's yours */
+.rm-vote {
+  flex-shrink: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; width: 56px; min-height: 64px;
+  border: none; border-radius: 16px; background: var(--surface); color: var(--ink); font: inherit; cursor: pointer;
+  transition: transform var(--duration-fast) var(--spring), background var(--duration-quick), color var(--duration-quick);
+}
+.rm-vote i { font-size: 20px; }
+.rm-vote .rm-count { font-family: var(--display); font-size: 17px; font-weight: 800; font-variant-numeric: tabular-nums; line-height: 1; }
+.rm-vote:active { transform: scale(.92); }
+.rm-vote.on { background: var(--pink-fill); color: #fff; }
+.rm-vote.static { min-height: 0; padding: 8px 0; background: transparent; color: var(--mute); cursor: default; }
+.rm-vote.static:active { transform: none; }
+/* Your ideas, and what became of them */
+.rm-ideas { margin: 0 16px; border-radius: 20px; background: var(--card); overflow: hidden; }
+.rm-ideas li + li .rm-idea { border-top: 1px solid var(--line-soft); }
+.rm-ideas li { scroll-margin: 24px; }
+.rm-ideas li.flash { box-shadow: inset 0 0 0 2px var(--pink-fill); border-radius: 20px; }
+.rm-idea { display: flex; align-items: center; gap: 12px; width: 100%; min-height: 64px; padding: 12px 16px; border: none; background: none; font: inherit; color: inherit; text-align: left; }
+button.rm-idea { cursor: pointer; }
+.rm-idea > i { color: var(--mute-soft); font-size: 18px; flex-shrink: 0; }
+.rm-idea .row-main { display: flex; flex-direction: column; gap: 6px; min-width: 0; }
+.rm-idea-ic { width: 36px; height: 36px; flex-shrink: 0; border-radius: 12px; display: grid; place-items: center; background: var(--lav); color: var(--on-pastel); font-size: 18px; }
+.rm-idea-ic.game { background: var(--peach); }
+.rm-idea-title { font-size: 16px; font-weight: 700; line-height: 1.3; color: var(--ink); overflow-wrap: anywhere; }
+.rm-idea-sub { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; }
+.rm-idea-in { font-size: 13px; color: var(--mute); }
+.rm-note { margin: 10px 20px 0; font-size: 13px; line-height: 1.45; color: var(--mute); }
+.rm-empty { margin: 0 20px 10px; font-size: 15px; color: var(--mute); }
+.rm-all { margin-top: 4px; }
+.set-row.rm-cta { margin-top: 24px; }
+a.set-row.rm-cta { color: inherit; }
+a.header-btn.rm-open { text-decoration: none; }
+/* Comments on an item */
+.rm-sheet { padding: 4px 20px 20px; }
+.rm-sheet .talk-list { margin-top: 4px; }
+.rm-sheet .talk-compose { margin-top: 16px; }
+.rm-signin { display: flex; flex-direction: column; align-items: flex-start; gap: 10px; margin-top: 16px; }
+.rm-signin .field-help { margin-top: 0; }
+/* Settings: right under the feedback button, with room between them */
+.set-row.rm-set { margin-top: 10px; }
+/* Up next: the "it shipped" note */
+.remind-card.rm-live { box-shadow: inset 0 0 0 2px var(--pink); }
+.remind-card.rm-live .rc-ic { background: var(--pink); color: var(--on-pastel); }
+
+/* ---------- Trip setup fixes and a design pass on every trip screen (o9 tripflow) ---------- */
+/* An avatar's initials, buddy or photo sit in the middle of its circle at every size, even inside a
+   row that makes its spans flex (.sheet-item span), which used to pin the letter to the left */
+.avatar, .join-avatar { justify-content: center; align-items: center; justify-items: center; text-align: center; line-height: 1; }
+.sheet-item span.avatar, .sheet-item span.join-avatar { display: grid; gap: 0; }
+.sheet-item span.join-avatar { display: inline-grid; }
+
+/* One way to pick on every trip screen: the round setup's selectable row (pink ring, pink tint, the round check) */
+.list-item.trip-pick { gap: 12px; min-height: 64px; margin: 0; text-align: left; font: inherit; color: inherit; border: none; }
+.trip-pick .avatar { margin: 0; }
+.trip-pick .row-main { display: flex; flex-direction: column; min-width: 0; }
+.trip-pick .li-name { font-size: 16px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.trip-pick .li-sub { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.trip-pick:disabled { opacity: .55; cursor: default; }
+.trip-pick:disabled:active { transform: none; }
+.trip-pick-list { display: flex; flex-direction: column; gap: 8px; padding: 4px 16px 0; }
+.trip-pick-list .list-item { margin: 0; }
+.list-item.trip-leave { gap: 12px; min-height: 64px; }
+.trip-leave .avatar { margin: 0; }
+.trip-leave .li-name { font-size: 16px; }
+
+/* The trip sheet: steps, then sections with room between them, and the button pinned at the bottom */
+.trip-form { margin: 0 16px; padding: 4px 0 0; }
+.trip-form .step-bar { margin: 0 0 22px; padding: 4px 0 0; }
+.trip-form .step { min-height: 36px; white-space: nowrap; }
+.trip-sec { margin-top: 24px; }
+.trip-form .step-bar + .trip-sec, .trip-form .step-bar + .hint-card + .trip-who-step { margin-top: 0; }
+.trip-form .field-label { margin: 16px 0 8px; }
+.trip-sec > .field-label:first-child, .trip-form .step-bar + .field-label { margin-top: 0; }
+.trip-form .text-input { min-height: 48px; }
+.trip-form-days { gap: 12px; }
+.trip-sec-help { margin-top: 14px; }
+.trip-form .tm-templates { gap: 8px; }
+.trip-form .tm-count { margin: 0 0 16px; }
+.trip-form-cta {
+  /* Down over the sheet's own bottom padding, so no row shows under the button */
+  position: sticky; bottom: calc(-16px - env(safe-area-inset-bottom)); z-index: 2; display: flex; flex-direction: column; gap: 6px;
+  margin: 24px -16px 0; padding: 18px 16px calc(12px + env(safe-area-inset-bottom)); background: linear-gradient(rgba(0,0,0,0), var(--canvas) 18px);
+}
+.trip-form-cta .full-btn { margin: 0; }
+.trip-form-cta .link-btn.center { align-self: center; }
+.trip-form-cta .field-help { margin: 2px 0 0; text-align: center; }
+/* Templates: picked like a game in setup */
+.tm-template { min-height: 64px; padding: 12px 14px; border-radius: 18px; background: var(--card); }
+.tm-template.on { background: var(--pick-tint); box-shadow: inset 0 0 0 2px var(--pink-fill); }
+.tm-template .li-check { margin-left: auto; }
+.tm-template.scratch { min-height: 56px; }
+/* Who's going: find or add, then everyone you could take */
+.trip-who-step .trip-lede { margin: 0 0 16px; }
+.trip-find { position: relative; margin: 0; gap: 8px; }
+.trip-find .text-input { padding-left: 42px; }
+.trip-find-ic { position: absolute; left: 14px; top: 50%; transform: translateY(-50%); display: grid; place-items: center; color: var(--mute); font-size: 18px; pointer-events: none; }
+.trip-find .pill-btn { min-height: 48px; padding: 0 16px; }
+.trip-who-head { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; margin: 22px 0 10px; }
+.trip-form .trip-who-head .field-label { margin: 0; }
+.trip-who-count { font-size: 13px; font-weight: 700; color: var(--pink-text); font-variant-numeric: tabular-nums; }
+.trip-who { gap: 8px; margin-top: 0; }
+.add-row.trip-add-name { width: 100%; margin: 0; background: none; font: inherit; color: inherit; text-align: left; min-height: 64px; }
+.trip-who-step > .field-help:last-child { margin-top: 12px; }
+.trip-form .tm-flights { margin-top: 0; padding: 14px 16px; }
+/* The schedule and the teams in the sheet */
+.trip-form .tm-schedule .tm-total { padding: 0 2px 14px; }
+.tm-day { margin-bottom: 12px; padding: 16px; }
+.tm-session { margin-top: 16px; padding-top: 16px; gap: 10px; }
+.tm-session-opts { gap: 10px; }
+.cup-names { gap: 12px; }
+.cup-pick > .field-label { margin: 22px 0 8px; }
+.cup-pick > .field-help { margin-top: 10px; }
+.tm-draft-opts { gap: 10px; margin-top: 12px; }
+.cup-cols { gap: 10px; margin-top: 16px; }
+.cup-col { padding: 10px; gap: 8px; }
+.cup-free { gap: 8px; }
+.cup-stake-row .text-input { min-height: 48px; }
+
+/* Selects on trip screens show they open */
+.trip-screen .select, .trip-form .select {
+  background-image: linear-gradient(45deg, transparent 50%, var(--mute) 50%), linear-gradient(135deg, var(--mute) 50%, transparent 50%);
+  background-position: calc(100% - 20px) 50%, calc(100% - 15px) 50%; background-size: 5px 5px, 5px 5px; background-repeat: no-repeat; padding-right: 36px;
+}
+.select.sm.tm-day-course { background-color: var(--surface); margin-top: 8px; }
+
+/* The trip's page: the hero, the hint and the view switch each get their own room */
+.trip-screen .trip-hero { padding: 4px 20px 18px; }
+.trip-screen .trip-days { margin-top: 14px; }
+.trip-hint { margin-bottom: 18px; }
+.trip-view-switch { margin-bottom: 18px; }
+.trip-screen .trip-table { margin-bottom: 12px; }
+.trip-row { padding: 12px 0; }
+.field-help.pad.trip-note { margin-top: 10px; padding-bottom: 4px; }
+.trip-empty { margin: 0 16px 12px; padding: 16px; border-radius: 18px; background: var(--surface); color: var(--body); font-size: 14px; line-height: 1.45; }
+.trip-screen .text-link { margin-top: 8px; }
+.trip-screen .add-row { margin-bottom: 10px; }
+.trip-screen .ledger-row.trip-plan-row { margin-bottom: 8px; }
+/* Heading home: leaving early and done playing, as rows in the page instead of a crowded footer */
+.trip-act {
+  display: flex; align-items: center; gap: 12px; width: calc(100% - 32px); min-height: 64px; margin: 0 16px 8px; padding: 12px 14px;
+  border: none; border-radius: 18px; background: var(--card); color: var(--ink); font: inherit; text-align: left; cursor: pointer; transition: transform .2s var(--spring);
+}
+.trip-act:active { transform: scale(.98); }
+.trip-act > i:last-child { color: var(--mute-soft); font-size: 18px; flex-shrink: 0; }
+.trip-act-ic { width: 40px; height: 40px; border-radius: 50%; flex-shrink: 0; display: grid; place-items: center; background: var(--trip-tag-bg); color: var(--pink-text); font-size: 19px; }
+.trip-act .row-main { display: flex; flex-direction: column; gap: 2px; }
+.trip-act-lbl { font-weight: 700; font-size: 16px; }
+.trip-act-sub { font-size: 13px; color: var(--mute); }
+/* The quiet notes and Delete or Hide at the very end, set apart */
+.trip-foot { display: flex; flex-direction: column; gap: 10px; margin: 32px 16px 8px; padding: 18px 4px 0; border-top: 1px solid var(--line); }
+.trip-foot .field-help { margin: 0; }
+.trip-screen .trip-foot .text-link { margin: 0; padding: 10px 0; }
+/* Bring the group in: the trip's link and who answered it */
+.trip-invite { display: flex; flex-direction: column; gap: 14px; }
+.trip-invite-top { display: flex; gap: 12px; align-items: flex-start; }
+.trip-invite-top p { margin: 0; font-size: 14px; line-height: 1.45; color: var(--body); }
+.trip-invite .full-btn { height: 52px; font-size: 17px; }
+.trip-answers { list-style: none; margin: 0; padding: 0; }
+.trip-answers li { display: flex; align-items: center; gap: 10px; min-height: 48px; border-top: 1px solid var(--line-soft); }
+.trip-answers .avatar { margin: 0; }
+.trip-answer-name { flex: 1; min-width: 0; font-weight: 700; color: var(--ink); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.trip-answer { flex-shrink: 0; padding: 3px 10px; border-radius: 999px; background: var(--surface); color: var(--body); font-size: 12px; font-weight: 700; }
+.trip-answer.in { background: var(--win-bg); color: var(--win); }
+
+/* Expenses: the form's fields spaced like the trip sheet, ticks as the round check */
+.exp-form .field-label { margin: 20px 0 8px; }
+.exp-form > .field-label:first-child { margin-top: 0; }
+.exp-form .text-input { min-height: 48px; }
+.exp-chips { gap: 8px; margin-top: 10px; }
+.exp-chips .pill-btn.sm { min-height: 44px; padding: 0 14px; }
+.exp-people { margin-top: 12px; }
+.exp-tick { gap: 10px; width: 100%; }
+.exp-tick .exp-pname { flex: 1; text-align: left; }
+.exp-tick .li-check { width: 32px; height: 32px; font-size: 16px; }
+.exp-status { margin-top: 10px; }
+.trip-screen .exp-sum { margin-bottom: 12px; }
+.trip-screen .ledger-row.exp-row { margin-bottom: 8px; }
+
+/* Settle the trip and the cup: a little more air between the lede, the cards and the lists */
+.trip-screen .settle-lede { padding-bottom: 18px; }
+.trip-screen .pay-card { margin-bottom: 12px; }
+.trip-screen .cup-score { margin-bottom: 4px; }
+.trip-screen .cup-round { margin-bottom: 12px; }
+.tm-sched-card .tm-sched-day { padding: 12px 0; }
+.tm-sched-card .field-help { margin-top: 12px; }
+.tm-sched-acts { margin-top: 16px; }
+
+/* The trip's cards on the Tab and Up next: the line under a card is a full tap target */
+.trip-line { min-height: 44px; margin-bottom: 12px; }
+.trip-card .trip-days { margin-top: 12px; }
+
 /* ---------------------------------------------------------------------------
    House rules for every game (overnight 9, 2026-10-05)
    --------------------------------------------------------------------------- */
