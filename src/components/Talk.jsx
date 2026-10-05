@@ -1,18 +1,20 @@
-// Trash talk: reactions, comments and quick jabs on a finished round, its settle-up lines, its side
-// bets between two players, and an upcoming round (see lib/talk.js and lib/talk-sync.js).
+// Trash talk: reactions, comments and quick jabs on a finished round, its settle-up lines (and a
+// payment on the Tab, which talks on its round's line), its side bets between two players, an
+// upcoming round and a challenge (see lib/talk.js and lib/talk-sync.js).
 import { useState } from 'react';
 import { Icon, Sheet, useUI } from './ui.jsx';
-import { Avatar } from './Avatar.jsx';
+import { Avatar, AvatarArt } from './Avatar.jsx';
 import { useStore } from '../lib/store.js';
 import { canonicalOf } from '../lib/pair-debts.js';
 import { agoLabel } from '../lib/lately.js';
-import { MAX_BODY, commentsOn, jabsFor, reactionsFor, reactionsOn, talkName } from '../lib/talk.js';
+import { MAX_BODY, commentsOn, jabArt, jabsFor, reactionsFor, reactionsOn, talkName } from '../lib/talk.js';
 import { talkCounts } from '../lib/talk-counts.js';
 import { postComment, react, takeBack, useTalkReach } from '../lib/talk-sync.js';
 
 /** The line under the talk that says who sees it. `on`: what it's about ('round', a settle-up line, a side bet). */
 function ReachNote({ ctx, reach, on = null }) {
   if (ctx.kind === 'follow') return <FollowReachNote ctx={ctx} reach={reach} />;
+  if (ctx.kind === 'challenge') return <ChallengeReachNote ctx={ctx} reach={reach} />;
   if (!ctx.who) return <p className="field-help pad">{ctx.kind === 'plan' ? 'Pick who you are on the plan to join in.' : 'You watched this one, so the talk is the players’.'}</p>;
   if (!reach.can) return <p className="field-help pad">Only the players’ phones can join in on this round.</p>;
   // A round never shared (or a plan with no link) is on this phone whether comments are on or not
@@ -41,6 +43,15 @@ function FollowReachNote({ ctx, reach }) {
   return <p className="field-help pad">The players and friends watching see it. Keep it friendly.</p>;
 }
 
+/** The same line for a challenge's talk: only its people ever see it. */
+function ChallengeReachNote({ ctx, reach }) {
+  if (!ctx.who) return <p className="field-help pad">Only the people in the challenge can join in.</p>;
+  if (!reach.linked) return <p className="field-help pad">Only on this phone until the challenge has gone out.</p>;
+  if (reach.closed) return <p className="field-help pad">Only on this phone: the challenge doesn’t know this phone, so the others can’t see it.</p>;
+  if (reach.off) return <p className="field-help pad">Saved on this phone. The others see it once talk on challenges is switched on.</p>;
+  return <p className="field-help pad">Only the people in the challenge see it. Keep it friendly.</p>;
+}
+
 /** All five reactions, each with its count, one tap to add yours or take it back. */
 function ReactionPills({ ctx, on, rows, canTap }) {
   const state = useStore();
@@ -64,6 +75,8 @@ function ReactionPills({ ctx, on, rows, canTap }) {
 
 // Whether a thing is played for money, so money jabs and "Pay up" show only there (talk.js)
 const moneyOf = (ctx, on) => (ctx.moneyOn ? ctx.moneyOn(on) : true);
+// What the jabs can be about there: a birdie, a loss, a line still owed, a challenge accepted (jab-moments.js)
+const momentsOf = (ctx, on) => (ctx.momentsOn ? ctx.momentsOn(on) : []);
 
 /** The comments on one thing, oldest first, with Delete on your own. */
 function CommentList({ ctx, on, rows }) {
@@ -110,10 +123,17 @@ function Composer({ ctx, on }) {
     const id = postComment(ctx.key, { on, who: ctx.who, name: ctx.myName, jab: j.key });
     if (id) showToast('Jab sent', { label: 'Undo', run: () => takeBack(ctx.key, id) });
   };
+  const moments = momentsOf(ctx, on);
+  const art = jabArt(on, { set: ctx.jabs || null, moments });
   return (
     <>
+      <div className="talk-jabs-head">
+        <AvatarArt model={{ kind: 'buddy', buddy: art.id, bg: art.bg }} size="sm" className="talk-jab-art" />
+        <span className="talk-jabs-label">Quick jabs</span>
+        <span className="talk-jabs-hint">Tap one to send it</span>
+      </div>
       <div className="talk-jabs" role="group" aria-label="Quick jabs">
-        {jabsFor(on, { money: moneyOf(ctx, on), set: ctx.jabs || null }).map(j => <button key={j.key} type="button" className="pill-btn sm talk-jab" onClick={() => jab(j)}>{j.text}</button>)}
+        {jabsFor(on, { money: moneyOf(ctx, on), set: ctx.jabs || null, moments }).map(j => <button key={j.key} type="button" className="pill-btn sm talk-jab" onClick={() => jab(j)}>{j.text}</button>)}
       </div>
       <form className="talk-compose" onSubmit={send}>
         <label className="sr-only" htmlFor={`talk-${ctx.key}-${on}`}>Add a comment</label>

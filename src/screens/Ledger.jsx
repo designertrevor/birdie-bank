@@ -27,6 +27,9 @@ import { tripSettleOf } from '../lib/trip-pay.js';
 import { OneTab, SinceBooks, TabSwitch } from '../components/CrewTabs.jsx';
 import { switchTabs, tabsOf } from '../lib/crew-tabs.js';
 import { ALL } from '../lib/books.js';
+import { TalkBar } from '../components/Talk.jsx';
+import { paymentTalk, roundTalk, roundThread } from '../lib/talk.js';
+import { useTalkSync } from '../lib/talk-sync.js';
 
 const first = name => name.split(' ')[0];
 // The tab you last looked at this visit (Everyone, or a crew's or trip's), so coming back keeps it
@@ -75,6 +78,9 @@ export default function Ledger() {
   const h2h = headToHeadSummary(state, mine);
   // One row per tap: a tap that paid several rounds, or went both ways, is one payment
   const history = paymentGroups(state);
+  // A payment talks on its round's settle-up line (talk.js paymentTalk): reactions and jabs on a paid mark
+  const payTalks = new Map(history.slice(0, 30).map(s => [s.key, paymentTalk(state, s)]));
+  useTalkSync([...new Set([...payTalks.values()].filter(Boolean).map(t => roundThread(t.round)))]);
   const hasRounds = Object.values(state.rounds).some(r => r.status === 'done');
   const hasShared = sharedDebts(state).length > 0;
   // Trips on now (or just settled): a card each on top. Their money is already in each total below
@@ -228,16 +234,23 @@ export default function Ledger() {
         {history.length > 0 && (
           <>
             <div className="sec-label">Payments</div>
-            {history.slice(0, 30).map(s => (
-              <div key={s.key} className="ledger-row static">
-                <div className="lr-info">
-                  <div className="lr-name" style={{ fontSize: 16 }}>{isMe(s.from) ? 'You' : nameOf(state, s.from)} paid {isMe(s.to) ? 'you' : nameOf(state, s.to)}</div>
-                  <div className="lr-status">{new Date(s.at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}{tripNames.get(tripOf(s))?.name ? ` · ${tripNames.get(tripOf(s)).name}` : ''}</div>
+            {history.slice(0, 30).map(s => {
+              const line = `${isMe(s.from) ? 'You' : nameOf(state, s.from)} paid ${isMe(s.to) ? 'you' : nameOf(state, s.to)}`;
+              const pt = payTalks.get(s.key);
+              return (
+                <div key={s.key} className={pt ? 'pay-talk' : undefined}>
+                  <div className="ledger-row static">
+                    <div className="lr-info">
+                      <div className="lr-name" style={{ fontSize: 16 }}>{line}</div>
+                      <div className="lr-status">{new Date(s.at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}{tripNames.get(tripOf(s))?.name ? ` · ${tripNames.get(tripOf(s)).name}` : ''}</div>
+                    </div>
+                    <div className="lr-amt" style={{ marginRight: 8 }}>{money(s.amount)}</div>
+                    <button className="icon-btn sm" onClick={() => undo(s)} aria-label="Undo payment"><Icon name="arrow-counter-clockwise" /></button>
+                  </div>
+                  {pt && <TalkBar ctx={roundTalk(pt.round, state)} on={pt.on} title={line} />}
                 </div>
-                <div className="lr-amt" style={{ marginRight: 8 }}>{money(s.amount)}</div>
-                <button className="icon-btn sm" onClick={() => undo(s)} aria-label="Undo payment"><Icon name="arrow-counter-clockwise" /></button>
-              </div>
-            ))}
+              );
+            })}
           </>
         )}
         {hasRounds && (
