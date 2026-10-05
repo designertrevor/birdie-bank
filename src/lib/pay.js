@@ -119,7 +119,7 @@ export function remindText({ name, amount, mine }) {
   const link = payLink(mine, amount, 'Golf');
   if (link) lines.push(`${PAY_APPS[mine.app].name}: ${link}`);
   else if (mine) lines.push(`${PAY_APPS[mine.app].name}: ${handleText(mine)}`);
-  lines.push('Tracked with Birdie Bank');
+  // No app name on the end: the name is a codename for now, and the reminder reads fine without it
   return lines.join('\n');
 }
 

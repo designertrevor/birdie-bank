@@ -217,10 +217,14 @@ export function TotalsPanel({ round }) {
   const t = totalsTable(round);
   const played = Math.max(0, ...t.map(x => x.played));
   const lowerWins = round.game === 'stroke';
-  const fmt = x => (round.game === 'stroke' ? (x.toPar === 0 ? 'E' : x.toPar > 0 ? `+${x.toPar}` : String(x.toPar)) : round.game === 'quota' ? `${x.total}/${x.quota}` : `${x.total}`);
+  // To par with a real minus sign, as the rest of the app writes it
+  const fmt = x => (round.game === 'stroke' ? (x.toPar === 0 ? 'E' : x.toPar > 0 ? `+${x.toPar}` : `−${-x.toPar}`) : round.game === 'quota' ? `${x.total}/${x.quota}` : `${x.total}`);
   const sorted = [...t].sort((a, b) => (lowerWins ? a.total - b.total : (round.game === 'quota' ? b.vsQuota - a.vsQuota : b.total - a.total)));
   const label = { stroke: 'Net to par', stableford: 'Stableford points', quota: 'Points / quota' }[round.game];
-  const lead = played ? `${firstName(sorted[0].name)} leads` : 'Nobody’s ahead yet';
+  // Everyone level with the leader is tied for it, never "Sam leads" over two others on the same score
+  const key = x => (round.game === 'quota' ? x.vsQuota : x.total);
+  const tied = played ? sorted.filter(x => key(x) === key(sorted[0])) : [];
+  const lead = !played ? 'Nobody’s ahead yet' : tied.length === sorted.length ? 'All level' : tied.length > 1 ? `${tied.length} tied for the lead` : `${firstName(sorted[0].name)} leads`;
   return <ChipsPanel icon={round.game === 'stroke' ? 'list-numbers' : round.game === 'quota' ? 'target' : 'star'} label={`${label} · ${played} hole${played === 1 ? '' : 's'}`} items={sorted.map((x, i) => ({ id: x.id, name: firstName(x.name), value: fmt(x), lead: i === 0 ? lead : null }))} />;
 }
 

@@ -55,4 +55,5 @@ test('pay: the reminder names the amount and how to pay', () => {
   assert.match(t, /Cash App: https:\/\/cash\.app\/\$trev\/12\.00/);
   assert.match(remindText({ name: 'Dave', amount: 5, mine: { app: 'zelle', handle: 't@x.com' } }), /Zelle: t@x\.com/);
   assert.doesNotMatch(remindText({ name: 'Dave', amount: 5, mine: null }), /Venmo/);
+  assert.doesNotMatch(t, /Birdie Bank/, 'the app’s name is a codename for now: never in a text that goes out');
 });
