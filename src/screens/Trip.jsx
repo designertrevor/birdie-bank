@@ -531,8 +531,11 @@ function TripSettlePage({ id, who = null }) {
                 {canMarkLine(state, t) && <button className="pill-btn sm" onClick={() => mark(t)}>Mark paid</button>}
               </div>
             ))}
-            {others.some(t => !canMarkLine(state, t)) && (
+            {others.some(t => !t.theirs && !canMarkLine(state, t)) && (
               <p className="field-help pad">Some of these people are only in the trip’s expenses on your phone, so they mark their payments on their own phones.</p>
+            )}
+            {others.some(t => t.theirs) && (
+              <p className="field-help pad">Some of these include a round the two of them have on their own phones, so they mark those paid there.</p>
             )}
           </>
         )}

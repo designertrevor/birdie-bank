@@ -324,6 +324,22 @@ function mergePlan(pairs, local, onPlan = [], spent = []) {
 }
 
 /**
+ * Whether a line's part from the rounds only this phone settles comes from a round the two of
+ * them settle on their own phones: a finished round shared live that both played, where either took
+ * their seat on a phone of their own (its `devs` or `claims`). A Big Game organizer's phone has
+ * every group's round, a group's own side bet included, but a payment it marks for two people in
+ * another group stays on this phone, so it would count twice once they settle it there (canMarkLine).
+ */
+function theirsOn(state, rounds, line) {
+  const who = canonicalOf(state);
+  return moneyDone(rounds).some(r => {
+    if (!codeOf(r)) return false;
+    const seats = [line.from, line.to].map(x => r.players.find(p => who(p.id) === x)?.id);
+    return seats.every(Boolean) && seats.some(x => !!(r.devs?.[x] || r.claims?.[x]));
+  });
+}
+
+/**
  * The trip's payments, one a tap (the same two people at the same moment, since one tap can pay
  * several round transfers), newest first: [{ key, at, from, to, amount, settlements }].
  */
@@ -361,7 +377,8 @@ export function tripDay(trip, today) {
  * - plan: what's left over just the trip's rounds, [{ from, to, amount, shared, local, plan }]:
  *   the published plan's open lines when it checks out here (every phone on the trip agrees on
  *   it), each pair's net on shared rounds it doesn't cover (both their phones agree on it), and
- *   the fewest payments for the rounds only this phone has.
+ *   the fewest payments for the rounds only this phone has. `theirs` on a line between two other
+ *   people: part of it is a round they settle on their own phones, so it isn't marked here.
  * - published: the plan's state here ('none', 'live', 'stale'), its version, whether it changed
  *   since you last looked (`updated`), and `pending` rounds it doesn't cover yet.
  * - expenses: the trip's expenses (trip-expenses.js), newest first; spent: what they add up to;
@@ -403,6 +420,7 @@ export function tripStatus(state, id, { now = Date.now() } = {}) {
   const { trip: tripPaid, onPlan, onRounds, onPairs, counted, left } = paymentsOf(state, id, rounds, local, together, balanceCents(state, local), expenses);
   const rest = fewestPayments(Object.fromEntries(Object.entries(left).map(([k, c]) => [k, c / 100])), { canPay: (a, b) => together.has(pairKey(a, b)) });
   const plan = mergePlan(openByPair(state, pairRounds), rest, live_?.open || [], owedSpent);
+  for (const l of plan) if (l.local && theirsOn(state, local, l)) l.theirs = true;
   const paid = [...tripPaid, ...onPlan, ...onRounds, ...onPairs, ...counted.map(x => x.settlement), ...tripPays(state, id)];
   // Payments made from "Settle the trip" (trip-pay.js): `settling` locks the trip's rounds on it
   const settling = paid.filter(s => tripSettleOf(s)?.id === id);
@@ -581,11 +599,13 @@ export function tripPayment(state, tripId, from, to, { now = Date.now(), part = 
 
 /**
  * Whether this phone can mark a line of Settle the trip paid: it's yours, or it can place both
- * people in it (someone only the trip's expenses know marks theirs on a phone that has them).
+ * people in it (someone only the trip's expenses know marks theirs on a phone that has them) and
+ * none of it is a round the two of them settle on their own phones (`theirs`, see theirsOn).
  */
 export function canMarkLine(state, line) {
   const me = canonicalOf(state)(state.me);
-  return line.from === me || line.to === me || (placeable(state, line.from) && placeable(state, line.to));
+  if (line.from === me || line.to === me) return true;
+  return !line.theirs && placeable(state, line.from) && placeable(state, line.to);
 }
 
 /** Your net on the trip's rounds so far (you are `state.me` to the trip). */

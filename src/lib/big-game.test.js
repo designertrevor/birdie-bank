@@ -11,7 +11,7 @@ import { payInfoFor } from './pay.js';
 import { breakdownWith } from './where-from.js';
 import { allocatePayment } from './shared-tab.js';
 import { mergeExpenses } from './trip-expenses.js';
-import { newTrip, tripOnDay, tripPayment, tripStamp, tripStatus } from './trips.js';
+import { canMarkLine, newTrip, tripOnDay, tripPayment, tripStamp, tripStatus } from './trips.js';
 import {
   BIG_FORMAT, allot, balanceGroups, balanceTeams, betStrokesFor, bigField, bigLines, bigResults, buyIns, cleanBig, groupCount,
   frozenHoles, groupsProblem, moveTo, payPlaces, placeLabels, potBoard, scoreOn, skinsBoard, skinsMoney, startDay,
@@ -611,4 +611,31 @@ test('a group’s round says what’s on the line across the game, and a saved h
   assert.match(bets[0].text, /pot.*across every group$/);
   assert.doesNotMatch(bets.map(b => b.text).join(' '), /\$0/);
   assert.equal(holeMoneyLine(r, r.holes[0], {}), 'Hole 1 saved. It counts on the board for Saturday Big Game');
+});
+
+test('the organizer never marks paid a line between two people that includes their group’s own side bet, which only their phones can settle', () => {
+  // Eve and Hal have a $20 match of their own in Group 2, each on their own phone in it
+  const phones = phonesOf();
+  const withBet = devs => ({ ...phones.a.rounds.r2, bets: [{ id: 'pb1', kind: 'match', sides: ['e', 'h'], stake: 20 }], devs });
+  const a = { ...phones.a, rounds: { ...phones.a.rounds, r2: withBet({ e: 'dev-e', h: 'dev-h', g: 'dev-g' }) } };
+  const st = tripStatus(a, 't_big', { now: NOW });
+  const line = st.plan.find(l => l.from === 'h' && l.to === 'e');
+  assert.deepEqual([line.amount, line.local, line.expense], [20, 2000, 0], 'the side bet, which Ann’s phone has from the group’s round');
+  assert.equal(line.theirs, true);
+  assert.equal(canMarkLine(a, line), false);
+  // A mark here would be a payment only Ann's phone has: none is made
+  assert.deepEqual(tripPayment(a, 't_big', 'h', 'e', { now: NOW + 5 }), { rows: [], settlements: [], expenses: [] });
+  // The game's own lines still travel and can be marked, and every amount is as before
+  const game_ = st.plan.find(l => l.from === 'd' && l.to === 'e');
+  assert.equal(canMarkLine(a, game_), true);
+  assert.equal(tripPayment(a, 't_big', 'd', 'e', { now: NOW + 5 }).expenses.length, 1);
+  const before = tripStatus(phones.a, 't_big', { now: NOW }).plan.filter(l => l.from !== 'h' || l.to !== 'e');
+  assert.deepEqual(st.plan.filter(l => l.from !== 'h' || l.to !== 'e').map(l => { const c = { ...l }; delete c.theirs; return c; }), before);
+  // Nobody in it on a phone of their own (the keeper scored for them): it's only on the phones
+  // that kept the round, so marking it on Ann's is still the way to square it
+  const kept = { ...phones.a, rounds: { ...phones.a.rounds, r2: withBet({ g: 'dev-g' }) } };
+  const kl = tripStatus(kept, 't_big', { now: NOW }).plan.find(l => l.from === 'h' && l.to === 'e');
+  assert.equal(kl.theirs, undefined);
+  assert.equal(canMarkLine(kept, kl), true);
+  assert.equal(tripPayment(kept, 't_big', 'h', 'e', { now: NOW + 5 }).settlements.length, 1);
 });

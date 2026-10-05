@@ -315,6 +315,7 @@ function Money({ bs, st, id, state, me, isMe, name, off }) {
               {canMarkLine(state, t) && <button className="pill-btn sm" onClick={() => mark(t)}>Mark paid</button>}
             </div>
           ))}
+          {others.some(t => t.theirs) && <p className="field-help pad">Some of these include a side bet in their own group, so they mark those paid on their own phones.</p>}
         </>
       )}
       {st.payments.length > 0 && (
