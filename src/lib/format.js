@@ -9,9 +9,24 @@ import { countsMoney, playForOf, rewardOutcome, tabResultsFor, unitFmt } from '.
  * round or a live round's meta (anything with `game` and optional `sideGames`).
  */
 export function gameLabel(round) {
+  const big = bigGroupName(round);
+  if (big) return big;
   const main = GAMES[round?.game]?.name || '';
   const sides = sideGamesOf(round).map(sg => SIDE_GAMES[sg.game].label);
   return [main, ...sides].filter(Boolean).join(' + ');
+}
+
+/**
+ * A Big Game's group round with no money of its own (stroke play at $0, no side games or side
+ * bets) goes by the game and its group: "Sunday Shootout · Group 1". Null for any other round.
+ */
+export function bigGroupName(round) {
+  const t = round?.trip;
+  if (t?.format !== 'big' || !t.name) return null;
+  if (round.game !== 'stroke' || (round.settings?.stroke?.stake || 0) > 0 || (round.sideGames?.length || 0) > 0 || (Array.isArray(round.bets) && round.bets.length > 0)) return null;
+  const code = round.shareCode || round.shared?.code || null;
+  const g = (t.big?.groups || []).find(x => x && ((x.roundId && x.roundId === round.id) || (code && x.code === code)));
+  return g?.name ? `${t.name} · ${g.name}` : t.name;
 }
 
 export function formatIndex(i) {

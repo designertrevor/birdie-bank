@@ -15,6 +15,7 @@
 import { BIG_FORMAT, BIG_NAME, bigField, bigLines, bigResults, bigStarted, cleanBig, groupOf } from './big-game.js';
 import { canonicalOf, codeOf, finishedAt } from './pair-debts.js';
 import { cleanPlan } from './trip-plan.js';
+import { meFor } from './format.js';
 
 /** The id the game's line between two people goes by as trip money: "big:<tripId>:<from>><to>". */
 export const bigMoneyId = (tripId, from, to) => `big:${tripId}:${from}>${to}`;
@@ -173,4 +174,71 @@ export function bigBy(state, tripId) {
     out[k] = Math.round(((out[k] || 0) * 100 + c)) / 100;
   }
   return out;
+}
+
+/**
+ * The decided game's money on one of its rounds here, for the screens that add rounds up (History,
+ * Season, Players, Close the books; the Tab has it already, as trip money): { id: dollars }, the
+ * whole game's money on one round a phone, the round you played (else the game's first finished
+ * round here), so the game counts once. Ids are that round's player ids (the game's for someone
+ * in another group). With `group`, only this round's own players' money, on whichever round it's
+ * asked for: what the round's results screen shows. Null when it isn't a decided game's round.
+ */
+export function bigRoundMoney(state, round, { group = false } = {}) {
+  const tripId = round?.trip?.format === BIG_FORMAT ? round.trip.id : null;
+  if (!tripId || round.status !== 'done') return null;
+  const st = bigStatus(state, tripId);
+  if (!st?.final) return null;
+  const who = canonicalOf(state);
+  const seatIn = (r, id) => (r.players || []).find(p => p.id === id || who(p.id) === who(id));
+  if (!group) {
+    const done = st.rounds.filter(r => r.status === 'done');
+    const home = done.find(r => { const me = meFor(r, state); return !!me && (r.players || []).some(p => p.id === me); }) || done[0];
+    if (home?.id !== round.id) return {};
+  }
+  const out = {};
+  for (const [id, c] of Object.entries(st.results.balances)) {
+    if (!c) continue;
+    const seat = seatIn(round, id)?.id || (group ? null : id);
+    if (!seat) continue;
+    out[seat] = Math.round((out[seat] || 0) * 100 + c) / 100;
+  }
+  return out;
+}
+
+/**
+ * A round's results (roundResults or tabResults) with the decided game's money in them, for those
+ * screens: `balances` and `standings` add bigRoundMoney (`group` as there), and `pairs` add the
+ * game's payments between two people in the round (what each won from the other). The same
+ * results otherwise.
+ */
+export function withBigMoney(state, round, res, { group = false } = {}) {
+  const add = bigRoundMoney(state, round, { group });
+  if (!add || !res) return res;
+  const r2 = v => Math.round(v * 100) / 100;
+  const balances = { ...res.balances };
+  for (const [id, v] of Object.entries(add)) balances[id] = r2((balances[id] || 0) + v);
+  const who = canonicalOf(state);
+  const seat = id => (round.players || []).find(p => p.id === id || who(p.id) === who(id))?.id || null;
+  const pairs = Object.fromEntries(Object.entries(res.pairs || {}).map(([k, v]) => [k, { ...v }]));
+  for (const l of bigStatus(state, round.trip.id).lines) {
+    const a = seat(l.from), b = seat(l.to);
+    if (!a || !b || a === b) continue;
+    pairs[b] = { ...(pairs[b] || {}), [a]: r2((pairs[b]?.[a] || 0) + l.cents / 100) };
+    pairs[a] = { ...(pairs[a] || {}), [b]: r2((pairs[a]?.[b] || 0) - l.cents / 100) };
+  }
+  const standings = (res.standings || []).map(p => ({ ...p, amount: balances[p.id] ?? p.amount ?? 0 }))
+    .sort((x, y) => y.amount - x.amount);
+  return { ...res, balances, pairs, standings };
+}
+
+/**
+ * A Big Game's group round with no money of its own, as its results screens show it: the round's
+ * results with each of its players' money from the whole game once it's decided (withBigMoney,
+ * `group`), and `big: { final }` so the screens say whose game it is and that it's settled once.
+ */
+export function bigRoundResults(state, round, res) {
+  const st = round?.trip?.format === BIG_FORMAT ? bigStatus(state, round.trip.id) : null;
+  if (!st || !res) return res;
+  return { ...withBigMoney(state, round, res, { group: true }), transfers: [], big: { final: !!st.final } };
 }

@@ -22,7 +22,8 @@ export function shareCardModel(round, res, { showAmounts: moneyOn = true, link =
   const square = res.standings.every(p => p.amount === 0);
   const leaders = res.standings.filter(p => p.amount === top.amount);
   let headline, sub;
-  if (square) { headline = 'All square'; sub = reward ? 'Nobody’s buying' : countsMoney(round) ? 'Nobody owes anybody' : 'Bragging rights shared'; }
+  if (res.big && !res.big.final) { headline = 'In the books'; sub = 'Waiting on the other groups'; }
+  else if (square) { headline = 'All square'; sub = reward ? 'Nobody’s buying' : countsMoney(round) ? 'Nobody owes anybody' : 'Bragging rights shared'; }
   else if (leaders.length > 1) {
     // Partners who won together are a side, not a tie
     const side = round.teams?.find(t => t.players.length === leaders.length && leaders.every(p => t.players.includes(p.id)));

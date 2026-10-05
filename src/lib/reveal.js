@@ -56,6 +56,8 @@ function biggestHoles(rows, max = 3) {
  * play on their own.
  */
 export function revealSteps(round, res) {
+  // A Big Game's group round: the money is the whole game's, so the round's own $0 stroke play has nothing to show
+  if (res?.big) return { title: 'The bets', steps: [] };
   const out = gameSteps(round, res);
   // A reward round's side bets for money come last, in dollars (see roundResults' `cash`)
   const cash = (res?.cash?.list || []).map(b => ({ ...betStep(round, b), label: `${b.label} · ${betPeople(round, b.bet)} · For money`, money: true }));

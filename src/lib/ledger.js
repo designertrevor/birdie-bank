@@ -10,7 +10,7 @@ import { betsOf, isCashBet } from './pair-bets.js';
 import { planDebts } from './trip-plan.js';
 import { allExpenses, allTripMoney, allTripPays, expensePairDebts, expensePairs, expensesBetween, tripMoney } from './trip-expenses.js';
 import { allStakeMoney, stakeBetween, stakeMoney } from './cup-stake.js';
-import { allBigMoney, bigBetween, bigMoney, bigOf, bigTripIds } from './big-money.js';
+import { allBigMoney, bigBetween, bigMoney, bigOf, bigTripIds, withBigMoney } from './big-money.js';
 
 const toCents = v => Math.round((Number(v) || 0) * 100);
 /** Whether two players had a side bet for money together in a reward round. */
@@ -319,7 +319,8 @@ export function headToHeadSummary(state, ids, { moneyOnly = false } = {}) {
     const me = meFor(r, state);
     if (!mine.has(me) || !r.players.some(p => p.id === me)) continue; // watched rounds aren't yours
     if (moneyOnly && !onTab(r)) continue;
-    const pairs = roundResults(r).pairs[me] || {};
+    // A Big Game's round: the game's payments between two of its players count as what each won from the other
+    const pairs = withBigMoney(state, r, roundResults(r)).pairs[me] || {};
     // A reward round's side bets for money count in net, in dollars (the record stays the round's points)
     const cashPairs = !countsMoney(r) && onTab(r) ? tabResults(r).pairs[me] || {} : null;
     const inCash = new Map();

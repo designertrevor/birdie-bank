@@ -46,6 +46,8 @@ export function holesScored(round) {
 export function usualRound(state) {
   const recent = Object.values(state.rounds || {})
     .filter(r => !r.localMe && r.shared?.host !== false && GAMES[r.game] && r.status === 'done' && !r.editing) // watched rounds aren't yours to repeat
+    // A Big Game's group round is the game's, set up again from the game's page, never a usual
+    .filter(r => r.trip?.format !== 'big')
     .sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
   for (const r of recent) {
     const course = findCourse(state, r.course?.id);

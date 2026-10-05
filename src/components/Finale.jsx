@@ -158,6 +158,7 @@ export function Reveal({ round, res, onNext, onDetail, extra, instant = false })
   // A reward round says what's won: "Ann wins lunch", "Ann and Bo share a drink"
   const prize = reward ? rewardOutcome(round, res) : null;
   const winnerTitle = prize?.winners.length ? prize.win.replace(/\.$/, '')
+    : res.big && !res.big.final ? 'Waiting on the other groups'
     : square ? 'All square' : side ? `${side.name} take it` : tied ? `${leaderNames} tie for top` : `${top.name.split(' ')[0]} takes it`;
   const title = done || !nSteps ? winnerTitle : 'Adding it up';
   // Both titles share one grid cell and crossfade, so the swap never moves the rows below
@@ -324,7 +325,8 @@ export function SettleUp({ round, res, onBack, onNext }) {
 export function ShareCard({ round, res, onBack, onDone, doneLabel = 'Done' }) {
   const link = roundLink(round);
   const make = show => {
-    const model = shareCardModel(round, roundResults(round), { showAmounts: show, link });
+    // A Big Game's group round shares the game's money (res, from bigRoundResults)
+    const model = shareCardModel(round, res?.big ? res : roundResults(round), { showAmounts: show, link });
     return { model, alt: resultsAlt(model), text: shareText(round, res, { amounts: show }) };
   };
   return (

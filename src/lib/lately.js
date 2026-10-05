@@ -19,6 +19,7 @@ import { lastResult, roundTime } from './history.js';
 import { canonicalOf, paymentGroups } from './shared-tab.js';
 import { countsMoney, hasCashBet, rewardOutcome, tabMoneyOf, unitFmt } from './play-for.js';
 import { challengeLately } from './challenges.js';
+import { withBigMoney } from './big-money.js';
 
 export const LATELY_DAYS = 30;
 const DAY = 24 * 60 * 60 * 1000;
@@ -131,9 +132,10 @@ export function latelyItems(state, now = Date.now(), { carries = state?.carries,
   const shown = withLast ? null : lastResult(state)?.round?.id;
   for (const r of Object.values(state.rounds || {})) {
     if (r?.status !== 'done' || r.id === shown || !inWindow(roundTime(r)) || !GAMES[r.game]) continue;
-    const bal = roundResults(r).balances;
+    // A Big Game's round: each of its players' money from the whole game (big-money.js)
+    const bal = withBigMoney(state, r, roundResults(r), { group: true }).balances;
     const me = meFor(r, state);
-    const top = Math.max(...Object.values(bal));
+    const top = Math.max(...r.players.map(p => bal[p.id] ?? 0));
     const winners = top > 0.004 ? r.players.filter(p => Math.abs(bal[p.id] - top) < 0.005) : [];
     // A friend linked to someone else ("Same person as...") goes by the name on the card kept for them
     const names = winners.map(p => (mine.has(p.id) ? 'You' : who(p.id) !== p.id ? name(p.id) : first(p.name)));

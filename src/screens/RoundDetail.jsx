@@ -8,7 +8,8 @@ import { money } from '../lib/golf.js';
 import { canEdit, keeperMe } from '../lib/keeper.js';
 import { useNav } from '../lib/nav.js';
 import { leaveRound } from '../lib/rounds.js';
-import { gameLabel, meFor, placeOf, roundDate, roundPlayerName } from '../lib/format.js';
+import { bigGroupName, gameLabel, meFor, placeOf, roundDate, roundPlayerName } from '../lib/format.js';
+import { bigRoundResults } from '../lib/big-money.js';
 import { gamesLine } from '../lib/side-games.js';
 import { betStretchLine } from '../lib/stakes.js';
 import { teamLineText } from '../lib/reveal.js';
@@ -71,7 +72,9 @@ export default function RoundDetail({ id, celebrate }) {
   if (!round) {
     return <Screen><Header title="Round" onBack={nav.pop} /><Empty title="Round not found" text="It may have been deleted. Finished rounds are in History." action={<button className="ec" onClick={nav.pop}>Go back</button>} /></Screen>;
   }
-  const res = roundResults(round);
+  const own = roundResults(round);
+  // A Big Game's group round with no money of its own shows each player's money from the whole game
+  const res = bigGroupName(round) ? bigRoundResults(state, round, own) : own;
   const played = round.holes.filter(h => holeComplete(round, h)).length;
   const top = res.standings[0];
   const meRow = res.standings.find(p => p.id === meFor(round, state));
@@ -81,7 +84,7 @@ export default function RoundDetail({ id, celebrate }) {
   const fmt = unitFmt(round);
   const isMoney = countsMoney(round);
   // What goes on the Tab: the whole round, or a reward round's side bets for money alone (in dollars)
-  const tab = tabResults(round, res);
+  const tab = tabResults(round, own);
   const pays = tab.transfers.length > 0;
   // A trip round has no settle up of its own: the trip is settled once, after its last round
   const ownSettle = pays && !round.trip?.id;
@@ -107,7 +110,8 @@ export default function RoundDetail({ id, celebrate }) {
   };
 
   let heroTitle, heroAmt;
-  if (allSquare) { heroTitle = 'All square'; heroAmt = fmt(0); }
+  if (res.big && !res.big.final) { heroTitle = 'Waiting on the other groups'; heroAmt = fmt(0); }
+  else if (allSquare) { heroTitle = 'All square'; heroAmt = fmt(0); }
   else if (tie) {
     // Partners who won together are one winning side, not a tie (same as the reveal)
     const leaders = res.standings.filter(p => p.amount === top.amount);
@@ -209,7 +213,8 @@ export default function RoundDetail({ id, celebrate }) {
         {isMoney && <>
         <div className="sec-label">Who pays who</div>
         <div style={{ padding: '0 16px' }}>
-          {res.transfers.length === 0 && <p className="hint-card" style={{ margin: 0 }}><Icon name="handshake" fill /> Nobody owes anybody. First round’s on whoever three-putted last.</p>}
+          {res.big ? <p className="hint-card" style={{ margin: 0 }}><Icon name="handshake" fill /> {res.big.final ? `${round.trip.name} is settled once for the whole game, on its page.` : `${round.trip.name} is decided once every group is in. It’s settled once, on its page.`}</p>
+            : res.transfers.length === 0 && <p className="hint-card" style={{ margin: 0 }}><Icon name="handshake" fill /> Nobody owes anybody. First round’s on whoever three-putted last.</p>}
           {res.transfers.map(t => (
             <div key={t.from + t.to} className="talk-pay">
               <div className="pay-row">

@@ -5,6 +5,7 @@ import { meFor, myIds } from './format.js';
 import { outstanding } from './ledger.js';
 import { canonicalOf } from './pair-debts.js';
 import { tabMoneyOf, tabResultsFor } from './play-for.js';
+import { bigRoundMoney, withBigMoney } from './big-money.js';
 
 const MONTHS = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
 const SHORT = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
@@ -108,11 +109,11 @@ export function roundsInRange(state, range) {
     .sort((a, b) => roundTime(b) - roundTime(a));
 }
 
-/** What you won or lost in a round, or null when you weren't playing in it. */
+/** What you won or lost in a round (a Big Game's round with your money from the game), or null when you weren't playing in it. */
 export function myNet(round, state) {
   const me = meFor(round, state);
   if (!me || !round.players.some(p => p.id === me)) return null;
-  return roundResults(round).balances[me] ?? 0;
+  return withBigMoney(state, round, roundResults(round)).balances[me] ?? 0;
 }
 
 /**
@@ -122,7 +123,10 @@ export function myNet(round, state) {
 export function myMoney(round, state) {
   const me = meFor(round, state);
   if (!me || !round.players.some(p => p.id === me)) return null;
-  return tabMoneyOf(round, me);
+  // A Big Game's round: your money from the whole game counts on it (big-money.js bigRoundMoney)
+  const big = bigRoundMoney(state, round)?.[me];
+  const own = tabMoneyOf(round, me);
+  return big ? Math.round(((own || 0) + big) * 100) / 100 : own;
 }
 
 const cents = v => Math.round(v * 100) / 100;
@@ -175,7 +179,7 @@ export function headToHead(rounds, state) {
   for (const r of rounds) {
     const me = meFor(r, state);
     if (!me) continue;
-    const res = tabResultsFor(r, me);
+    const res = withBigMoney(state, r, tabResultsFor(r, me));
     if (!res) continue;
     for (const [id, v] of Object.entries(res.pairs?.[me] || {})) {
       const k = who(id);

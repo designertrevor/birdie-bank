@@ -4,9 +4,9 @@
 // phone agreeing on it, paying a line squaring it on both phones, and rounds from before unchanged.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { createRound } from './round.js';
+import { createRound, roundResults } from './round.js';
 import { buildHoles, buildMeta } from './sync-model.js';
-import { nameOf, outstanding, personStory, tabBalances, tabWith } from './ledger.js';
+import { headToHeadSummary, nameOf, outstanding, personStory, tabBalances, tabWith } from './ledger.js';
 import { payInfoFor } from './pay.js';
 import { breakdownWith } from './where-from.js';
 import { allocatePayment } from './shared-tab.js';
@@ -16,7 +16,13 @@ import {
   BIG_FORMAT, allot, balanceGroups, balanceTeams, betStrokesFor, bigField, bigLines, bigResults, buyIns, cleanBig, groupCount,
   groupsProblem, moveTo, payPlaces, placeLabels, potBoard, scoreOn, skinsBoard, skinsMoney, startDay,
 } from './big-game.js';
-import { allBigMoney, bigMoney, bigOf, bigStatus } from './big-money.js';
+import { allBigMoney, bigMoney, bigOf, bigRoundMoney, bigRoundResults, bigStatus } from './big-money.js';
+import { gameLabel } from './format.js';
+import { lastResult, myMoney, myNet } from './history.js';
+import { latelyItems } from './lately.js';
+import { seasonBoard } from './season.js';
+import { closePreview, ALL } from './books.js';
+import { shareCardModel } from './shareImage.js';
 import { changesReach, codesToRead, handOffs, recordDue, toCard } from './big-sync-model.js';
 import { bigInvite, bigWho, myBigMoney, myPlaceLine, toParText } from './big-view.js';
 import { money } from './golf.js';
@@ -484,4 +490,57 @@ test('before the game’s record is on the server, the organizer changes bets or
   // Not started yet: nobody else has anything
   const draft = { ...a, rounds: {}, trips: { t_big: tripOf(game({ groups: game().groups.map(g => ({ ...g, roundId: null, code: null })) })) } };
   assert.equal(changesReach(draft, 't_big', false), true);
+});
+
+test('a group’s round shows the game: its name and group, and each player’s money from the whole game, counted once a phone', () => {
+  const a = phonesOf().a;
+  const st = bigStatus(a, 't_big');
+  assert.equal(gameLabel(a.rounds.r1), 'Saturday Big Game · Group 1');
+  // The whole game's money is on one round on Ann's phone, the one she played, so it counts once
+  const on1 = bigRoundMoney(a, a.rounds.r1), on2 = bigRoundMoney(a, a.rounds.r2);
+  assert.deepEqual(on2, {});
+  for (const [id, c] of Object.entries(st.results.balances)) assert.equal(cents(on1[id] || 0), c, id);
+  // Each round's own results show its own players' money from the game
+  const g2 = bigRoundResults(a, a.rounds.r2, roundResults(a.rounds.r2));
+  for (const id of G2) assert.equal(cents(g2.standings.find(p => p.id === id).amount), st.results.balances[id], id);
+  // History, Last time out and the results screen read the game's money, never the round's $0
+  const annGame = st.results.balances.a / 100;
+  assert.notEqual(annGame, 0);
+  assert.equal(myNet(a.rounds.r1, a), annGame);
+  assert.equal(myMoney(a.rounds.r1, a), annGame);
+  assert.equal(lastResult(a).amount, myNet(lastResult(a).round, a));
+  const res = bigRoundResults(a, a.rounds.r1, roundResults(a.rounds.r1));
+  assert.equal(res.big.final, true);
+  assert.deepEqual(res.transfers, [], 'settled once, on the game’s page');
+  assert.equal(res.standings.find(p => p.id === 'a').amount, annGame);
+  const card = shareCardModel(a.rounds.r1, res);
+  assert.notEqual(card.headline, 'All square');
+  assert.match(card.meta, /Saturday Big Game · Group 1/);
+  // Lately says the game and the amount
+  const item = latelyItems(a, NOW, { withLast: true }).find(i => i.id === 'recap:r1');
+  assert.match(item.text, /^Saturday Big Game · Group 1 at /);
+  assert.doesNotMatch(item.sub, /broke even/);
+  // Season and Close the books add up to the game, like the Tab
+  const board = seasonBoard(a, 2026);
+  for (const id of ['g', 'h', 'c']) assert.equal(cents(board.balances.find(b => b.id === id)?.net || 0), st.results.balances[id], id);
+  const prev = closePreview(a, ALL, { now: NOW });
+  for (const t of prev.totals) assert.equal(t.cents, st.results.balances[t.id], t.id);
+  assert.equal(prev.totals.length, Object.values(st.results.balances).filter(Boolean).length);
+  // Players: the game's payments between two people in the same group are a win and a loss, not even
+  const h2h = headToHeadSummary(a, new Set(['a']));
+  const line = st.lines.find(l => [l.from, l.to].includes('b') && [l.from, l.to].includes('a'));
+  if (line) assert.equal(h2h.get('b').won + h2h.get('b').lost, 1);
+  // Not decided yet: nothing from the game, and the screens say it's waiting
+  const open = { ...a, rounds: { ...a.rounds, r2: { ...a.rounds.r2, status: 'active', finishedAt: null } } };
+  assert.equal(bigRoundMoney(open, open.rounds.r1), null);
+  assert.equal(bigRoundResults(open, open.rounds.r1, roundResults(open.rounds.r1)).big.final, false);
+  assert.equal(shareCardModel(open.rounds.r1, bigRoundResults(open, open.rounds.r1, roundResults(open.rounds.r1))).sub, 'Waiting on the other groups');
+});
+
+test('a friend’s phone with only their own group’s round counts the whole game on it', () => {
+  const d = phonesOf().d;
+  const st = bigStatus(d, 't_big');
+  const on = bigRoundMoney(d, d.rounds.r1);
+  for (const [id, c] of Object.entries(st.results.balances)) if (c) assert.equal(cents(on[id] || 0), c, id);
+  assert.equal(myNet(d.rounds.r1, d), st.results.balances.d / 100);
 });

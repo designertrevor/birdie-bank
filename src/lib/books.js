@@ -20,6 +20,7 @@ import { nameOf } from './ledger.js';
 import { canonicalOf, finishedAt } from './pair-debts.js';
 import { onTab, tabResults } from './play-for.js';
 import { tripsOf } from './trips.js';
+import { withBigMoney } from './big-money.js';
 
 /** The whole Tab's books, as against one crew's. */
 export const ALL = 'all';
@@ -61,11 +62,14 @@ export function openRounds(state, scope, { now = Date.now() } = {}) {
     .sort((a, b) => finishedAt(a) - finishedAt(b));
 }
 
-/** Each person's final net in some rounds, in cents, biggest first: what they won or lost in them, before any payment. */
+/**
+ * Each person's final net in some rounds, in cents, biggest first: what they won or lost in them,
+ * before any payment. A Big Game's rounds have the game's money in them (big-money.js), as the Tab does.
+ */
 export function seasonTotals(state, rounds) {
   const who = canonicalOf(state);
   const bal = new Map();
-  for (const r of rounds) for (const [id, v] of Object.entries(tabResults(r).balances)) bal.set(who(id), (bal.get(who(id)) || 0) + cents(v));
+  for (const r of rounds) for (const [id, v] of Object.entries(withBigMoney(state, r, tabResults(r)).balances)) bal.set(who(id), (bal.get(who(id)) || 0) + cents(v));
   return [...bal].map(([id, c]) => ({ id, cents: c })).filter(x => x.cents)
     .sort((a, b) => b.cents - a.cents || a.id.localeCompare(b.id));
 }

@@ -8,6 +8,7 @@ import { nameOf } from './ledger.js';
 import { roundTime } from './history.js';
 import { canonicalOf } from './pair-debts.js';
 import { countsMoney, hasCashBet, onTab, tabResults } from './play-for.js';
+import { withBigMoney } from './big-money.js';
 
 /** Fewer finished rounds than this and the Season preview shows the sample group instead. */
 export const MIN_REAL_ROUNDS = 2;
@@ -62,7 +63,8 @@ export function seasonBoard(state, year = new Date().getFullYear()) {
   for (const r of playedOnTab(state, year)) {
     const me = meFor(r, state);
     // A money round's whole result; a reward round's side bets for money alone (the Tab's dollars)
-    const res = tabResults(r, roundResults(r));
+    // A Big Game's round has each person's money from the whole game in it (big-money.js)
+    const res = withBigMoney(state, r, tabResults(r, roundResults(r)));
     for (const [id, v] of Object.entries(res.balances)) {
       const k = who(id);
       bal.set(k, cents((bal.get(k) || 0) + v));
