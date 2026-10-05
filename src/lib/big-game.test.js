@@ -17,7 +17,8 @@ import {
   groupsProblem, moveTo, payPlaces, placeLabels, potBoard, scoreOn, skinsBoard, skinsMoney, startDay,
 } from './big-game.js';
 import { allBigMoney, bigMoney, bigOf, bigRoundMoney, bigRoundResults, bigStatus } from './big-money.js';
-import { gameLabel } from './format.js';
+import { gameLabel, holeMoneyLine } from './format.js';
+import { agreementItems } from './agreed.js';
 import { lastResult, myMoney, myNet } from './history.js';
 import { latelyItems } from './lately.js';
 import { seasonBoard } from './season.js';
@@ -103,6 +104,12 @@ test('groups balanced by handicap deal best to worst like a snake, and teams pai
   const list = [3, 18, 7, 12, 1, 25, 9, 15].map((hc, i) => ({ id: `p${i}`, hc }));
   assert.deepEqual(balanceGroups(list, 2), [['p4', 'p6', 'p3', 'p5'], ['p0', 'p2', 'p7', 'p1']]);
   assert.deepEqual(balanceTeams(list, 2), [['p4', 'p5'], ['p0', 'p1'], ['p2', 'p7'], ['p6', 'p3']]);
+  // With the groups balanced the same way, every pair would be in one group: partners go across groups
+  const groups = balanceGroups(list, 2);
+  const across = balanceTeams(list, 2, { groups });
+  const gOf = id => groups.findIndex(g => g.includes(id));
+  assert.ok(across.every(([a, b]) => gOf(a) !== gOf(b)), JSON.stringify(across));
+  assert.deepEqual(across.flat().sort(), list.map(p => p.id).sort());
   assert.deepEqual([4, 5, 8, 9, 10, 12, 13, 16, 20, 24].map(groupCount), [2, 2, 2, 2, 3, 3, 3, 4, 5, 6]);
   assert.deepEqual(moveTo([['a', 'b'], ['c']], 'b', 1), [['a'], ['c', 'b']]);
 });
@@ -572,4 +579,13 @@ test('the season callout counts your money from the Big Game', () => {
   const net = bigStatus(s, 't_big').results.balances.a / 100;
   const line = callouts(s, NOW).find(c => c.kind === 'net');
   if (Math.abs(net) >= 1) assert.match(line.text, new RegExp(money(Math.abs(net)).replace('$', '\\$')));
+});
+
+test('a group’s round says what’s on the line across the game, and a saved hole counts on its board', () => {
+  const r = { ...phonesOf().a.rounds.r1, status: 'active' };
+  const bets = agreementItems(r).filter(x => x.group === 'bets');
+  assert.equal(bets[0].label, 'Saturday Big Game');
+  assert.match(bets[0].text, /pot.*across every group$/);
+  assert.doesNotMatch(bets.map(b => b.text).join(' '), /\$0/);
+  assert.equal(holeMoneyLine(r, r.holes[0], {}), 'Hole 1 saved. It counts on the board for Saturday Big Game');
 });

@@ -166,7 +166,7 @@ export default function BigGameSetup({ id = null, from = null }) {
           problem={problem} onNext={() => setStep(4)} />
       )}
       {step === 4 && course && (
-        <Games pot={{ ...pot, kind: gross(pot.kind) }} setPot={setPot} skins={{ ...skins, kind: gross(skins.kind) }} setSkins={setSkins} teams={teamsNow} setTeams={setTeams} pool={pool} nameOf={nameOf}
+        <Games pot={{ ...pot, kind: gross(pot.kind) }} setPot={setPot} skins={{ ...skins, kind: gross(skins.kind) }} setSkins={setSkins} teams={teamsNow} setTeams={setTeams} pool={pool} groups={fitted} nameOf={nameOf}
           useHc={useHc} hcPct={hcPct} setHcPct={setHcPct} onNext={() => setStep(5)} />
       )}
       {step === 5 && course && (
@@ -352,7 +352,7 @@ function Groups({ groups, byHand, count, pool, nameOf, people, onBalance, onMove
 }
 
 /** What's on the line across the field: the pot and its places, the skins, the teams, and the handicap %. */
-function Games({ pot, setPot, skins, setSkins, teams, setTeams, pool, nameOf, useHc, hcPct, setHcPct, onNext }) {
+function Games({ pot, setPot, skins, setSkins, teams, setTeams, pool, groups = null, nameOf, useHc, hcPct, setHcPct, onNext }) {
   const [pad, setPad] = useState(null);
   const [moving, setMoving] = useState(null);
   const n = pool.length;
@@ -360,10 +360,10 @@ function Games({ pot, setPot, skins, setSkins, teams, setTeams, pool, nameOf, us
   const lists = teams.list.map(t => t.players);
   const setLists = ls => setTeams(t => ({ ...t, list: ls.filter(l => l.length).map((players, i) => ({ id: `T${i + 1}`, name: `Team ${i + 1}`, players })) }));
   const teamOn = on => {
-    if (on && !teams.list.length) setTeams(t => ({ ...t, on, list: balanceTeams(pool, t.best === 2 ? 4 : 2).map((players, i) => ({ id: `T${i + 1}`, name: `Team ${i + 1}`, players })) }));
+    if (on && !teams.list.length) setTeams(t => ({ ...t, on, list: balanceTeams(pool, t.best === 2 ? 4 : 2, { groups }).map((players, i) => ({ id: `T${i + 1}`, name: `Team ${i + 1}`, players })) }));
     else setTeams(t => ({ ...t, on }));
   };
-  const teamSize = size => setTeams(t => ({ ...t, best: size === 4 ? 2 : 1, list: balanceTeams(pool, size).map((players, i) => ({ id: `T${i + 1}`, name: `Team ${i + 1}`, players })) }));
+  const teamSize = size => setTeams(t => ({ ...t, best: size === 4 ? 2 : 1, list: balanceTeams(pool, size, { groups }).map((players, i) => ({ id: `T${i + 1}`, name: `Team ${i + 1}`, players })) }));
   const skinsIn = n - skins.out.filter(x => pool.some(p => p.id === x)).length;
   return (
     <>

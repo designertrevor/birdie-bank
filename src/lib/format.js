@@ -89,6 +89,8 @@ export const roundPlayerName = (round, id) => round.players.find(p => p.id === i
  */
 export function holeMoneyLine(round, hole, delta) {
   const best = Math.max(0, ...round.players.map(p => delta[p.id] || 0));
+  // A Big Game's group round has no money of its own: the hole counts on the game's board
+  if (!best && bigGroupName(round)) return `Hole ${hole.no} saved. It counts on the board for ${round.trip.name}`;
   if (!best) return `Hole ${hole.no} saved. ${countsMoney(round) ? 'No money' : 'No points'} moved`;
   const top = round.players.filter(p => delta[p.id] === best).map(p => p.id);
   const team = round.teams?.find(t => t.players.length === top.length && t.players.every(pid => top.includes(pid)));

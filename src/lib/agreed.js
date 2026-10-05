@@ -18,6 +18,7 @@ import { gamePct, halfStrokesOn, playsAtPct } from './allowances.js';
 import { houseRulesLine } from './house-rules.js';
 import { betHolesText, betName, betPeople, betStakeText, betStrokesText, betsOf, isCashBet } from './pair-bets.js';
 import { money } from './golf.js';
+import { bigGroupName } from './format.js';
 import { lineupKind, lineupLabel, orderText, playForText, sidesText } from './lineup.js';
 
 export const GIMMES = [
@@ -119,6 +120,15 @@ function blockOf(round, key) {
   return key === 'main' ? round.settings?.[round.game] : sideGamesOf(round).find(sg => sg.game === key)?.settings;
 }
 
+/** A Big Game's formats in a line, for its group's rounds: "$20 pot · $10 skins · 2 side bets, across every group". */
+function bigLine(big) {
+  const b = big && typeof big === 'object' ? big : {};
+  const stake = x => money(Number(x?.stake) || 0);
+  const parts = [b.pot?.on && `${stake(b.pot)} pot`, b.skins?.on && `${stake(b.skins)} skins`, b.teams?.on && `${stake(b.teams)} team best ball`,
+    Array.isArray(b.bets) && b.bets.length && `${b.bets.length} side bet${b.bets.length === 1 ? '' : 's'}`].filter(Boolean);
+  return parts.length ? `${parts.join(' · ')}, across every group` : 'Played for fun, across every group';
+}
+
 /**
  * Everything agreed, as items: [{ id, group, label, text, on? }]. Groups: 'lineup' (what it's played
  * for, the sides or the order), 'strokes', 'bets', 'rules' (with `on`) and 'calls' (gimmes,
@@ -164,6 +174,8 @@ export function agreementItems(round, choices = round.agreed) {
     // The newer house rules' tags come off the bet line too, since they're listed as rules
     const tags = houseRulesLine(game, block, holes);
     const bet = game === 'skins' || game === 'wolf' ? full.split(' · ')[0] : tags && full.endsWith(` · ${tags}`) ? full.slice(0, -(tags.length + 3)) : full;
+    // A Big Game's group round has no money of its own: what's on the line is the whole game's
+    if (key === 'main' && bigGroupName(round)) { items.push({ id: `bet:${key}`, group: 'bets', label: round.trip.name, text: bigLine(round.trip.big) }); continue; }
     items.push({ id: `bet:${key}`, group: 'bets', label, text: inUnits(round, bet) });
     // "Both balls count" only plays 2 v 2 (Sixes always is), so a singles match or a 1 v 2 doesn't list it
     const twoByTwo = game === 'sixes' || (round.teams?.length === 2 && round.teams.every(t => t.players?.length === 2));

@@ -192,14 +192,26 @@ export function balanceGroups(people, count = groupCount(people.length)) {
 /**
  * Teams balanced by handicap for team best ball: the best player with the worst, the second best
  * with the second worst, and so on (pairs), or a snake over four for teams of four. A spare player
- * goes in the last team. Returns arrays of ids.
+ * goes in the last team. With `groups` (lists of ids), two pairs next to each other whose partners
+ * are both in one group swap their second players when that puts each pair across two groups, so
+ * partners play in different groups (groups balanced by handicap would otherwise line them up in
+ * the same group every time). Returns arrays of ids.
  */
-export function balanceTeams(people, size = 2) {
+export function balanceTeams(people, size = 2, { groups = null } = {}) {
   const sorted = [...people].sort((a, b) => (a.hc ?? 99) - (b.hc ?? 99) || String(a.id).localeCompare(String(b.id)));
   const count = Math.max(1, Math.floor(sorted.length / size));
   if (size === 2) {
     const out = [];
     for (let i = 0; i < count; i++) out.push([sorted[i].id, sorted[sorted.length - 1 - i].id]);
+    const gOf = id => (groups || []).findIndex(g => g.includes(id));
+    const apart = (a, b) => gOf(a) >= 0 && gOf(b) >= 0 && gOf(a) !== gOf(b);
+    if (groups?.length > 1) {
+      for (let i = 0; i + 1 < out.length; i++) {
+        const [p, q] = [out[i], out[i + 1]];
+        if (apart(p[0], p[1]) || apart(q[0], q[1])) continue;
+        if (apart(p[0], q[1]) && apart(q[0], p[1])) { [p[1], q[1]] = [q[1], p[1]]; i++; }
+      }
+    }
     const spare = sorted.slice(count, sorted.length - count).map(p => p.id);
     if (spare.length) out[out.length - 1].push(...spare);
     return out;
