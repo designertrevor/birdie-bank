@@ -3154,3 +3154,11 @@ a.header-btn.rm-open { text-decoration: none; }
 .hr-extra-row .hr-v { flex-shrink: 0; font-variant-numeric: tabular-nums; font-weight: 600; color: var(--ink); }
 .hr-extra-row .hr-v.up { color: var(--win); }
 .hr-extra-row .hr-v.down { color: var(--loss); }
+
+/* ---------------------------------------------------------------------------
+   Fix pass (overnight 9, 2026-10-05)
+   --------------------------------------------------------------------------- */
+/* Five or more steps (the Big Game's six): the bar scrolls sideways and every label fits its pill */
+.step-bar.many { position: relative; overflow-x: auto; scrollbar-width: none; -webkit-overflow-scrolling: touch; }
+.step-bar.many::-webkit-scrollbar { display: none; }
+.step-bar.many .step { flex: 0 0 auto; padding: 8px 12px; min-height: 36px; white-space: nowrap; }

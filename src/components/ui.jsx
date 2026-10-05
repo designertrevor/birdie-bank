@@ -21,14 +21,28 @@ export function Screen({ children, className = '' }) {
 
 /**
  * The setup step bar. Steps before the current one are green with a check.
- * `canGo(i)` and `onGo(i)` make a step tappable.
+ * `canGo(i)` and `onGo(i)` make a step tappable. Five or more steps scroll sideways (the green says
+ * done, so they drop the check), keeping the one you're on in view. Moving to a step starts it at
+ * the top, with the title and this bar in view, wherever the last step was scrolled to.
  */
 export function Steps({ steps, current, canGo, onGo }) {
+  const ref = useRef(null);
+  const moved = useRef(false);
+  const many = steps.length > 4;
+  useEffect(() => {
+    const bar = ref.current;
+    if (!bar) return;
+    const on = many ? bar.querySelector('.step.active') : null;
+    if (on) bar.scrollLeft = Math.max(0, on.offsetLeft - (bar.clientWidth - on.offsetWidth) / 2);
+    if (!moved.current) { moved.current = true; return; }
+    const box = bar.closest('.sheet') || bar.closest('.screen')?.querySelector('.scroll');
+    box?.scrollTo?.({ top: 0 });
+  }, [current, many]);
   return (
-    <div className="step-bar" role="group" aria-label={`Step ${current + 1} of ${steps.length}`}>
+    <div ref={ref} className={`step-bar${many ? ' many' : ''}`} role="group" aria-label={`Step ${current + 1} of ${steps.length}`}>
       {steps.map((s, i) => {
         const cls = `step ${i < current ? 'done' : ''} ${i === current ? 'active' : ''}`;
-        const label = <>{i < current && <Icon name="check" className="step-check" />}{s}</>;
+        const label = <>{i < current && !many && <Icon name="check" className="step-check" />}{s}</>;
         return i !== current && onGo && canGo?.(i)
           ? <button key={s} type="button" className={`${cls} tappable`} onClick={() => onGo(i)} aria-label={`Go to ${s}`}>{label}</button>
           : <div key={s} className={cls} aria-current={i === current ? 'step' : undefined}>{label}</div>;
@@ -122,7 +136,7 @@ export function Sheet({ open, onClose, title, children, className = 'sheet' }) {
       <div className={className}>
         <div className="sheet-handle" />
         {title && (
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '12px 16px 4px 20px' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '12px 16px 4px 16px' }}>
             <span className="d" style={{ fontSize: 22, fontWeight: 800 }}>{title}</span>
             {onClose && <button className="icon-btn" onClick={onClose} aria-label="Close"><Icon name="x" /></button>}
           </div>
