@@ -969,6 +969,8 @@ function SetupStep({ game, course, holesCount, nine, picked, setPicked, casual =
           {playForLine({ playFor }) && <div className="li-sub">{playForLine({ playFor })}</div>}
           <div className="li-sub">{course.name}{holesCount === 9 && course.holes.length === 18 ? ` · ${nine === 'front' ? 'Front' : 'Back'} 9` : ''} · Par {holes.reduce((a, h) => a + h.par, 0)} · {picked.length} players{casual.length ? ` + ${casual.length} just playing` : ''}</div>
         </div>
+        {/* Counting it for a trip (and its cup matches) sits up top in the page, so the footer keeps to its buttons */}
+        {tripRow && <div className="trip-in-setup">{tripRow}</div>}
         {casual.length > 0 && (
           <p className="hint-card jp-setup-note"><Icon name="smiley" fill /> {listNames(casual.map(pid => state.players[pid]?.name || '?'))} {casual.length === 1 ? 'is' : 'are'} just playing: on the card, out of the bets below.</p>
         )}
@@ -1049,7 +1051,6 @@ function SetupStep({ game, course, holesCount, nine, picked, setPicked, casual =
         {tripLink}
       </div>
       <div className="cta-wrap">
-        {tripRow}
         <button className="full-btn" disabled={optsBad || teamsBad} onClick={onStart}>Create round <Icon name="arrow-right" /></button>
         {onLater && <button className="full-btn outline" disabled={optsBad} onClick={onLater}><Icon name="calendar-plus" /> Schedule for later</button>}
       </div>
@@ -1188,6 +1189,7 @@ function VoteStep({ game, holesCount = 18, opts, onPlan, ballot = [], initialSid
           {playForLine({ playFor }) && <div className="li-sub">{playForLine({ playFor })}</div>}
           <div className="li-sub">The group votes when they answer. Most votes wins; a tie goes to your suggestion.</div>
         </div>
+        {tripRow && <div className="trip-in-setup">{tripRow}</div>}
         {/* Play for first, so the bet chips below read in points when it isn't money */}
         <PlayForPicker value={playFor} onChange={setPlayFor} planning />
         <div className="sec-label">Your bet</div>
@@ -1236,7 +1238,6 @@ function VoteStep({ game, holesCount = 18, opts, onPlan, ballot = [], initialSid
         {others.length === 0 && extraBets.length === 0 && sides.length === 0 && <p className="field-help pad">Nothing else on the ballot, so everyone just says if they’re in.</p>}
       </div>
       <div className="cta-wrap">
-        {tripRow}
         <button className="full-btn" onClick={() => onPlan({ ballotGames: others, suggestedBet: bet, ballotBets, ballotSides: sides })}>Plan it <Icon name="arrow-right" /></button>
       </div>
     </>

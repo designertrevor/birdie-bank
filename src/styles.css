@@ -3180,3 +3180,10 @@ a.header-btn.rm-open { text-decoration: none; }
 .tm-sched-card .pick-field.tm-day-course { margin: 10px 0 12px; }
 .tm-sched-row { padding: 8px 0 0; line-height: 1.35; }
 .tm-sched-acts { margin-top: 16px; gap: 10px; }
+/* Counting a round for a trip sits in the page under the bet summary, not in the footer, so the
+   footer keeps to its buttons and the bets keep their room */
+.trip-in-setup { display: flex; flex-direction: column; gap: 10px; margin: 6px 16px 16px; }
+.trip-in-setup .trip-count, .trip-in-setup .cup-setup { margin: 0; background: var(--surface); }
+/* A switch card wears the pink ring only while it's on, as a picked row does (Handicap flights too) */
+.trip-count { box-shadow: none; }
+.trip-count:has(.tog.on) { box-shadow: inset 0 0 0 2px var(--pink); }
