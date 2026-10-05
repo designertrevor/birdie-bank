@@ -15,7 +15,7 @@
 //   { code, meta, holes: { [holeNo]: data }, people: { [seat]: { friend, money, account } }, updatedAt }
 import { GAMES, gameView, holeComplete, isTeamGame, matchScored, nassauWinners, roundResults, scorers, sideNames } from './round.js';
 import { assemble } from './sync-model.js';
-import { gameLabel, meFor, myIds } from './format.js';
+import { bigGroupName, gameLabel, meFor, myIds } from './format.js';
 import { money } from './golf.js';
 import { codeOf } from './pair-debts.js';
 import { countsMoney, playForOf, points, rewardOutcome } from './play-for.js';
@@ -188,9 +188,11 @@ export function roundView(round, { code, people = {}, at = 0, following = false,
   try { thru = round.holes.filter(h => holeComplete(round, h)).length; } catch { thru = 0; }
   let res = null;
   try { res = roundResults(round); } catch { res = null; }
-  const isMoney = countsMoney(round);
+  // A Big Game's group round has no money of its own: its money is the whole game's, never shown here
+  const bigGroup = !!bigGroupName(round);
+  const isMoney = countsMoney(round) && !bigGroup;
   // Points are bragging rights and show for everyone; dollars only for someone who chose Show my money
-  const shows = id => !isMoney || people[id]?.money === true;
+  const shows = id => !bigGroup && (!isMoney || people[id]?.money === true);
   const fmt = (id, v) => (!shows(id) ? null : isMoney ? money(v, { sign: true }) : points(v, { sign: true }));
   let units = [];
   try { units = scorers(round); } catch { units = []; }
@@ -219,6 +221,7 @@ export function roundView(round, { code, people = {}, at = 0, following = false,
   const reward = status === 'done' && res ? rewardOutcome(round, res) : null;
   let line;
   if (!thru) line = status === 'live' ? 'On the first tee' : 'No holes scored';
+  else if (bigGroup) line = status === 'done' ? 'Their card is in' : `Thru ${thru}`;
   else if (status === 'done') line = reward ? reward.text : took;
   else line = matchLine(round) || ahead;
   return {
@@ -276,6 +279,8 @@ export function friendRounds(state, { rows = [], follows = {}, status = 'unknown
     const code = codeOf(r);
     if (!r || !Array.isArray(r.players)) continue;
     if (code) here.add(code);
+    // The other groups of a Big Game you're in are your own game, on its page, never a friend's round
+    if (r.trip?.format === 'big') for (const g of r.trip.big?.groups || []) if (g?.code) here.add(g.code);
     // Watching from a code: a friend's round as this phone already has it
     if (!playsIn(r, state) && r.shared?.code && !r.shared.ended && r.status === 'active') {
       const v = roundView(r, { code: r.shared.code, at: r.createdAt || 0, source: 'watching', target: ['play', { id: r.id }] });

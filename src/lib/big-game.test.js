@@ -23,6 +23,8 @@ import { latelyItems } from './lately.js';
 import { seasonBoard } from './season.js';
 import { closePreview, ALL } from './books.js';
 import { shareCardModel } from './shareImage.js';
+import { feedMeta, friendRoundView, friendRounds } from './friend-feed.js';
+import { callouts } from './callouts.js';
 import { changesReach, codesToRead, handOffs, recordDue, toCard } from './big-sync-model.js';
 import { bigInvite, bigWho, myBigMoney, myPlaceLine, toParText } from './big-view.js';
 import { money } from './golf.js';
@@ -543,4 +545,31 @@ test('a friend’s phone with only their own group’s round counts the whole ga
   const on = bigRoundMoney(d, d.rounds.r1);
   for (const [id, c] of Object.entries(st.results.balances)) if (c) assert.equal(cents(on[id] || 0), c, id);
   assert.equal(myNet(d.rounds.r1, d), st.results.balances.d / 100);
+});
+
+test('the Friends feed never lists another group of your own Big Game, and a group’s round on a friend’s feed has no $0 money', () => {
+  const p = phonesOf();
+  const row = r => ({ code: r.shareCode, meta: feedMeta(buildMeta(r)), holes: buildHoles(r), people: { e: { friend: true, money: true } }, updated_at: new Date(NOW - 36e5).toISOString() });
+  // Dave plays in Group 1: Group 2's round is his own game
+  assert.deepEqual(friendRounds(p.d, { rows: [row(p.a.rounds.r2)], status: 'ready', now: NOW }), []);
+  // Someone not in the game sees the group's round by the game's name, with no amounts
+  const v = friendRoundView(row(p.a.rounds.r2));
+  assert.equal(v.title.startsWith('Saturday Big Game · Group 2 at '), true);
+  assert.equal(v.line, 'Their card is in');
+  assert.ok(v.players.every(x => x.amountText == null));
+});
+
+test('the season callout counts your money from the Big Game', () => {
+  const a = phonesOf().a;
+  // Two more money rounds for Ann so the season line has enough to go on
+  const extra = ['x1', 'x2'].map((id, i) => {
+    const r = createRound({ id, game: 'skins', course: flat9, holesCount: 9, players: [{ id: 'a', name: 'Ann', index: 0 }, { id: 'b', name: 'Bob', index: 0 }], settings: { skins: { value: 1, carryover: false } }, hcPct: 100, useHandicaps: false });
+    for (const h of r.holes) r.scores[h.no] = { a: 4, b: 4 };
+    r.status = 'done'; r.createdAt = OCT(10 + i, 8); r.finishedAt = OCT(10 + i, 12);
+    return r;
+  });
+  const s = { ...a, rounds: { ...a.rounds, ...Object.fromEntries(extra.map(r => [r.id, r])) } };
+  const net = bigStatus(s, 't_big').results.balances.a / 100;
+  const line = callouts(s, NOW).find(c => c.kind === 'net');
+  if (Math.abs(net) >= 1) assert.match(line.text, new RegExp(money(Math.abs(net)).replace('$', '\\$')));
 });

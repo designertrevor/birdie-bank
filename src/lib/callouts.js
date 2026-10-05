@@ -18,6 +18,7 @@ import { canonicalOf } from './shared-tab.js';
 import { roundTime } from './history.js';
 import { onTab, playForOf, rewardNoun, tabResults } from './play-for.js';
 import { myDoneRounds, recapPaid } from './recap.js';
+import { withBigMoney } from './big-money.js';
 
 /** Callouts show while your last round is this recent. */
 export const CALLOUT_DAYS = 14;
@@ -199,7 +200,8 @@ export function calloutCandidates(state, now = Date.now()) {
   for (const r of season) {
     if (!onTab(r)) continue;
     const seat = r.players.find(p => isMe(p.id));
-    const v = seat ? tabResults(r).balances[seat.id] ?? 0 : 0;
+    // A Big Game's round has your money from the whole game in it (big-money.js)
+    const v = seat ? withBigMoney(state, r, tabResults(r)).balances[seat.id] ?? 0 : 0;
     if (Math.abs(v) > EPS || playForOf(r).kind === 'money') moneyRounds++;
     net += v;
   }
