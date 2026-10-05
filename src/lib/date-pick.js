@@ -49,6 +49,24 @@ export function inBounds(v, min, max) {
   return (!min || v >= min.slice(0, v.length)) && (!max || v <= max.slice(0, v.length));
 }
 
+/** Whole days from `a` to `b` (negative when `b` is earlier), 0 when either isn't a day. */
+export function daysBetween(a, b) {
+  const x = fromISO(a), y = fromISO(b);
+  return x && y ? Math.round((y - x) / 86400000) : 0;
+}
+
+/**
+ * A trip's last day once its first day moves from `start` to `next`. It stays put while it's still
+ * at least `minDays` days in (counting both ends, so a schedule fits), and otherwise moves with the
+ * first day so the trip keeps the length it had, instead of shrinking to one day.
+ */
+export function endWhenStartMoves(start, end, next, minDays = 1) {
+  if (!fromISO(next)) return end;
+  const need = addDays(next, Math.max(0, minDays - 1));
+  if (fromISO(end) && end >= need) return end;
+  return addDays(next, Math.max(0, minDays - 1, daysBetween(start, end)));
+}
+
 /** The nearest allowed day to `iso`. */
 export function clampISO(iso, min, max) {
   if (min && iso < min) return min;
@@ -119,14 +137,6 @@ export function moveCursor(iso, key) {
   }
 }
 
-/** "Sat, Oct 11", with the year when it isn't this year: "Sat, Oct 11, 2027". */
-export function dateLabel(iso, now = new Date()) {
-  const d = fromISO(iso);
-  if (!d) return '';
-  const base = `${WEEKDAYS[d.getDay()].slice(0, 3)}, ${MONTHS_SHORT[d.getMonth()]} ${d.getDate()}`;
-  return d.getFullYear() === now.getFullYear() ? base : `${base}, ${d.getFullYear()}`;
-}
-
 /**
  * A day for a narrow field, split so the year can sit on its own line under it: { main, year }.
  * "Sat, Oct 11" (or "Oct 11" without the weekday), and the year only when it isn't this year.
@@ -181,6 +191,23 @@ export function betweenEnds(iso, from, to) {
 }
 
 /**
+ * How a day looks in the calendar: `on` (filled) for the picked day and for each end of a range
+ * as soon as that end is set, `mid` for the days between two ends, and `start` and `end` where the
+ * band between them begins and stops (none for a one-day range).
+ */
+export function dayLook(iso, { value = '', rangeStart = '', rangeEnd = '' } = {}) {
+  const a = fromISO(rangeStart) ? rangeStart : '', b = fromISO(rangeEnd) ? rangeEnd : '';
+  const span = !!(a && b && a !== b);
+  const [lo, hi] = span ? [a, b].sort() : [];
+  return {
+    on: !!iso && (iso === value || iso === a || iso === b),
+    mid: span && betweenEnds(iso, a, b),
+    start: span && iso === lo,
+    end: span && iso === hi,
+  };
+}
+
+/**
  * A tap on a day in the range sheet. `editing` is the end the tap sets ('from' or 'to').
  * Setting From moves on to To; a From after To starts the range over from that day. Setting To
  * before From makes that day the new From and waits for To again. Setting To stays on To, so
@@ -193,19 +220,6 @@ export function rangeTap({ from = '', to = '' }, iso, editing) {
   }
   if (from && iso < from) return { range: { from: iso, to: '' }, editing: 'to' };
   return { range: { from, to: iso }, editing: 'to' };
-}
-
-/** "Sep 6 to Oct 5", "Since Sep 6", "Up to Oct 5", or "Any dates", for the range field. */
-export function rangeText({ from, to }, now = new Date()) {
-  const short = iso => {
-    const d = fromISO(iso);
-    return `${MONTHS_SHORT[d.getMonth()]} ${d.getDate()}${d.getFullYear() === now.getFullYear() ? '' : `, ${d.getFullYear()}`}`;
-  };
-  const a = fromISO(from) ? from : '', b = fromISO(to) ? to : '';
-  if (a && b) return a <= b ? `${short(a)} to ${short(b)}` : `${short(b)} to ${short(a)}`;
-  if (a) return `Since ${short(a)}`;
-  if (b) return `Up to ${short(b)}`;
-  return 'Any dates';
 }
 
 /** Ranges to start from when looking back: the last 7, 30 and 90 days and the last 12 months. */

@@ -7,7 +7,7 @@ import { useEffect, useId, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { Icon, Segmented, Sheet } from './ui.jsx';
 import {
-  HOURS, betweenEnds, canStepMonth, clampISO, dayParts, from24, fromISO, inBounds, longDateLabel, minuteChoices, monthCells,
+  HOURS, canStepMonth, clampISO, dayLook, dayParts, from24, fromISO, inBounds, longDateLabel, minuteChoices, monthCells,
   monthGrid, monthTitle, moveCursor, parseTime, quickDays, rangePresets, rangeTap, timeTap, toISO, yearCells,
 } from '../lib/date-pick.js';
 import { timeLabel } from '../lib/plans.js';
@@ -106,8 +106,6 @@ function Calendar({ value, onPick, min, max, rangeStart, rangeEnd, now, label, a
   let head, body;
   if (view === 'days') {
     const weeks = monthGrid(y, m, { min, max, today });
-    const hasRange = fromISO(rangeStart) && fromISO(rangeEnd);
-    const [lo, hi] = hasRange ? [rangeStart, rangeEnd].sort() : [];
     head = (
       <>
         <button type="button" className="icon-btn" onClick={() => stepMonth(-1)} disabled={!canStepMonth(y, m, -1, min, max)} aria-label="Previous month"><Icon name="caret-left" /></button>
@@ -122,13 +120,11 @@ function Calendar({ value, onPick, min, max, rangeStart, rangeEnd, now, label, a
         <div className="cal-dow" aria-hidden="true">{DOW.map((x, i) => <span key={i}>{x}</span>)}</div>
         <div key={`${y}-${m}`} ref={gridRef} className={`cal-days cal-anim ${slide}`} role="group" aria-label={monthTitle(y, m)} onKeyDown={onKey}>
           {weeks.flat().map(c => {
-            const on = c.iso === value || (hasRange && (c.iso === rangeStart || c.iso === rangeEnd));
-            const mid = hasRange && betweenEnds(c.iso, rangeStart, rangeEnd);
-            const ends = hasRange && lo !== hi ? `${c.iso === lo ? ' start' : ''}${c.iso === hi ? ' end' : ''}` : '';
+            const { on, mid, start, end } = dayLook(c.iso, { value, rangeStart, rangeEnd });
             const isCursor = c.iso === cursor;
             return (
               <button key={c.iso} type="button" data-cursor={isCursor} tabIndex={isCursor ? 0 : -1}
-                className={`cal-day${c.outside ? ' out' : ''}${on ? ' on' : ''}${mid ? ' mid' : ''}${ends}${c.today ? ' today' : ''}`}
+                className={`cal-day${c.outside ? ' out' : ''}${on ? ' on' : ''}${mid ? ' mid' : ''}${start ? ' start' : ''}${end ? ' end' : ''}${c.today ? ' today' : ''}`}
                 aria-pressed={on} aria-current={c.today ? 'date' : undefined} aria-disabled={c.disabled || undefined}
                 aria-label={`${longDateLabel(c.iso)}${c.today ? ', today' : ''}`}
                 onClick={() => { if (c.disabled) return; setCursor(c.iso); onPick(c.iso); }}>
@@ -161,9 +157,9 @@ function Calendar({ value, onPick, min, max, rangeStart, rangeEnd, now, label, a
     const first = years[0].year, last = years[years.length - 1].year;
     head = (
       <>
-        <button type="button" className="icon-btn" onClick={() => go(`${y - 12}-01-01`, -1)} disabled={!inBounds(String(first - 1), min, max)} aria-label="Earlier years"><Icon name="caret-left" /></button>
+        <button type="button" className="icon-btn" onClick={() => go(`${y - 12}-${String(m + 1).padStart(2, '0')}-01`, -1)} disabled={!inBounds(String(first - 1), min, max)} aria-label="Earlier years"><Icon name="caret-left" /></button>
         <span className="cal-title static">{first} to {last}</span>
-        <button type="button" className="icon-btn" onClick={() => go(`${y + 12}-01-01`, 1)} disabled={!inBounds(String(last + 1), min, max)} aria-label="Later years"><Icon name="caret-right" /></button>
+        <button type="button" className="icon-btn" onClick={() => go(`${y + 12}-${String(m + 1).padStart(2, '0')}-01`, 1)} disabled={!inBounds(String(last + 1), min, max)} aria-label="Later years"><Icon name="caret-right" /></button>
       </>
     );
     body = (

@@ -13,6 +13,7 @@ import { money } from '../lib/golf.js';
 import { nameOf } from '../lib/ledger.js';
 import { placeOf, sortedPlayers } from '../lib/format.js';
 import { dayLabel, isoDate, timeLabel } from '../lib/plans.js';
+import { endWhenStartMoves } from '../lib/date-pick.js';
 import { canonicalOf } from '../lib/pair-debts.js';
 import { BIG_FORMAT } from '../lib/big-game.js';
 import { BigCard, BigRoundNote } from './BigGame.jsx';
@@ -449,13 +450,13 @@ function TripForm({ trip, onDone }) {
               <label className="field-label" htmlFor="trip-start">First day</label>
               <DatePicker id="trip-start" label="First day" value={start} rangeStart={start} rangeEnd={end} quick onChange={v => {
                 setStart(v);
-                const need = sched ? plusDays(v, sched.days.length - 1) : v;
-                if (end < need) setEnd(need);
+                // A later first day takes the last day with it, so the trip keeps its length (and fits its schedule)
+                setEnd(endWhenStartMoves(start, end, v, sched ? sched.days.length : 1));
               }} />
             </div>
             <div>
               <label className="field-label" htmlFor="trip-end">Last day</label>
-              <DatePicker id="trip-end" label="Last day" value={end} min={start} rangeStart={start} rangeEnd={end} onChange={setEnd} />
+              <DatePicker id="trip-end" label="Last day" value={end} min={sched ? plusDays(start, sched.days.length - 1) : start} rangeStart={start} rangeEnd={end} onChange={setEnd} />
             </div>
           </div>
           <label className="field-label" htmlFor="trip-where">Where <span className="opt">optional</span></label>

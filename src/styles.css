@@ -2659,9 +2659,13 @@ button.ch-main:active { transform: scale(.98); }
 .name-input.pick-field.empty .pf-main { font-size: 18px; }
 .time-input.pick-field { max-width: 220px; }
 .range-dates .rd-end { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 6px; }
-.range-dates .pick-field { width: 100%; }
+/* The older rule grew every label in .range-dates; here the label sits on top and the two fields match in height */
+.range-dates .rd-end > label { flex: none; display: block; }
+.range-dates .pick-field { width: 100%; flex: 1; }
 .trip-form-days > div { display: flex; flex-direction: column; }
 .trip-form-days .pick-field { flex: 1; }
+/* First day and Last day are their div's first child, so .field-label:first-child took their gap to the Name field away */
+.trip-form-days .field-label:first-child { margin-top: 14px; }
 
 /* The sheet: sections with room between them, on the sheet's 16px gutter */
 .pick-sheet .pick-body { display: flex; flex-direction: column; gap: 20px; padding: 8px 16px 0; }

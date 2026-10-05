@@ -2,8 +2,8 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync, readdirSync } from 'node:fs';
 import {
-  addDays, addMonths, betweenEnds, canStepMonth, clampISO, dateLabel, dayParts, from24, fromISO, HOURS, inBounds, longDateLabel,
-  minuteChoices, monthCells, monthGrid, monthTitle, moveCursor, parseTime, quickDays, rangePresets, rangeTap, rangeText,
+  addDays, addMonths, betweenEnds, canStepMonth, clampISO, dayLook, dayParts, daysBetween, endWhenStartMoves, from24, fromISO, HOURS, inBounds, longDateLabel,
+  minuteChoices, monthCells, monthGrid, monthTitle, moveCursor, parseTime, quickDays, rangePresets, rangeTap,
   timeTap, to24, toISO, toTime, yearCells,
 } from './date-pick.js';
 
@@ -93,9 +93,6 @@ test('keys move the cursor by a day, a week, a month or to the ends of the week'
 });
 
 test('labels: the short day on the field, the year only when it isn’t this year, and the long day read out', () => {
-  assert.equal(dateLabel('2026-10-10', MON), 'Sat, Oct 10');
-  assert.equal(dateLabel('2027-01-02', MON), 'Sat, Jan 2, 2027');
-  assert.equal(dateLabel('', MON), '');
   assert.equal(longDateLabel('2026-10-10'), 'Saturday, October 10, 2026');
   assert.deepEqual(dayParts('2026-10-10', MON), { main: 'Sat, Oct 10', year: '' });
   assert.deepEqual(dayParts('2027-05-14', MON), { main: 'Fri, May 14', year: '2027' });
@@ -142,15 +139,6 @@ test('a range: From moves on to To, and a day on the wrong side starts the range
   assert.equal(betweenEnds('2026-09-15', '2026-09-20', '2026-09-10'), true);
   assert.equal(betweenEnds('2026-09-10', '2026-09-10', '2026-09-20'), false);
   assert.equal(betweenEnds('2026-09-15', '2026-09-10', ''), false);
-});
-
-test('the range field says both ends, one end, or any dates, like History’s own label', () => {
-  assert.equal(rangeText({ from: '2026-09-06', to: '2026-10-05' }, MON), 'Sep 6 to Oct 5');
-  assert.equal(rangeText({ from: '2026-10-05', to: '2026-09-06' }, MON), 'Sep 6 to Oct 5');
-  assert.equal(rangeText({ from: '2025-12-30', to: '2026-01-02' }, MON), 'Dec 30, 2025 to Jan 2');
-  assert.equal(rangeText({ from: '2026-09-06', to: '' }, MON), 'Since Sep 6');
-  assert.equal(rangeText({ from: '', to: '2026-10-05' }, MON), 'Up to Oct 5');
-  assert.equal(rangeText({ from: '', to: '' }, MON), 'Any dates');
 });
 
 test('range presets end today and count today in', () => {
@@ -217,4 +205,42 @@ test('no native date or time input is left: every one is the app’s own picker'
   assert.match(uses('components/Reminders.jsx'), /<TimePicker id="booked-time"/);
   assert.match(uses('components/RangeBar.jsx'), /<DateRangePicker /);
   assert.match(uses('components/Trips.jsx'), /<DatePicker id="trip-start"[\s\S]*<DatePicker id="trip-end"/);
+});
+
+test('a range end shows as picked as soon as it is set, and the band only runs between two ends', () => {
+  // From picked, To not yet: From is filled (it used to show nothing until To was picked too)
+  assert.deepEqual(dayLook('2026-09-10', { value: '', rangeStart: '2026-09-10', rangeEnd: '' }), { on: true, mid: false, start: false, end: false });
+  assert.deepEqual(dayLook('2026-09-11', { value: '', rangeStart: '2026-09-10', rangeEnd: '' }), { on: false, mid: false, start: false, end: false });
+  // To picked before From
+  assert.equal(dayLook('2026-09-20', { rangeStart: '', rangeEnd: '2026-09-20' }).on, true);
+  // Both ends: filled ends, a band between, and where it starts and stops (either order)
+  const r = { value: '2026-09-20', rangeStart: '2026-09-20', rangeEnd: '2026-09-10' };
+  assert.deepEqual(dayLook('2026-09-10', r), { on: true, mid: false, start: true, end: false });
+  assert.deepEqual(dayLook('2026-09-15', r), { on: false, mid: true, start: false, end: false });
+  assert.deepEqual(dayLook('2026-09-20', r), { on: true, mid: false, start: false, end: true });
+  // A one-day range has no band
+  assert.deepEqual(dayLook('2026-09-10', { rangeStart: '2026-09-10', rangeEnd: '2026-09-10' }), { on: true, mid: false, start: false, end: false });
+  // A single day with no range, and empty values never match
+  assert.equal(dayLook('2026-09-10', { value: '2026-09-10' }).on, true);
+  assert.equal(dayLook('', {}).on, false);
+});
+
+test('moving a trip’s first day later takes the last day with it, so the trip keeps its length', () => {
+  assert.equal(daysBetween('2026-10-05', '2026-10-07'), 2);
+  assert.equal(daysBetween('2026-10-07', '2026-10-05'), -2);
+  // Across the clocks going back in November
+  assert.equal(daysBetween('2026-10-31', '2026-11-02'), 2);
+  assert.equal(daysBetween('', '2026-10-05'), 0);
+  // A three day trip moved to Saturday stays three days, instead of shrinking to Saturday alone
+  assert.equal(endWhenStartMoves('2026-10-05', '2026-10-07', '2026-10-10'), '2026-10-12');
+  // A first day still before the last one leaves the last day where it was
+  assert.equal(endWhenStartMoves('2026-10-05', '2026-10-07', '2026-10-06'), '2026-10-07');
+  assert.equal(endWhenStartMoves('2026-10-05', '2026-10-07', '2026-10-01'), '2026-10-07');
+  // A schedule's days still fit: three days needed from a one-day trip
+  assert.equal(endWhenStartMoves('2026-10-05', '2026-10-05', '2026-10-10', 3), '2026-10-12');
+  // A four day trip whose last day would cut into the schedule moves with it, still four days
+  assert.equal(endWhenStartMoves('2026-10-05', '2026-10-08', '2026-10-07', 3), '2026-10-10');
+  // No last day yet, or no first day picked
+  assert.equal(endWhenStartMoves('2026-10-05', '', '2026-10-10'), '2026-10-10');
+  assert.equal(endWhenStartMoves('2026-10-05', '2026-10-07', ''), '2026-10-07');
 });
