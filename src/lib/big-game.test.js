@@ -20,6 +20,7 @@ import { allBigMoney, bigMoney, bigOf, bigStatus } from './big-money.js';
 import { codesToRead, handOffs, recordDue, toCard } from './big-sync-model.js';
 import { bigInvite, bigWho, myBigMoney, myPlaceLine, toParText } from './big-view.js';
 import { money } from './golf.js';
+import { owedSince, paymentNudges } from './nudges.js';
 
 const flat9 = { id: 'f9', name: 'Flat Nine', city: 'Town', tees: [], holes: Array.from({ length: 9 }, (_, i) => ({ par: 4, hdcp: i + 1 })) };
 const OCT = (day, hour = 12) => new Date(2026, 9, day, hour).getTime();
@@ -454,4 +455,20 @@ test('an organizer who isn’t playing has no money in the game, never “You br
   assert.equal(myBigMoney(bs, id => id === 'g'), 86);
   // In it and exactly square: $0, not nothing
   assert.equal(myBigMoney({ ...bs, results: { ...bs.results, balances: { ...bs.results.balances, a: 0 } } }, id => id === 'a'), 0);
+});
+
+test('a payment nudge for the game’s money dates from the game, never an older round the two came out of square', () => {
+  // Gus's phone: Hal owes him $40 from the game, and they played a square round ten days before
+  const old = createRound({ id: 'old', game: 'skins', course: flat9, holesCount: 9, players: [{ id: 'zg', name: 'Gus', index: 0 }, { id: 'h', name: 'Hal', index: 0 }], settings: { skins: { value: 2, carryover: false } }, hcPct: 100, useHandicaps: false });
+  for (const h of old.holes) old.scores[h.no] = { zg: 4, h: 4 };
+  old.status = 'done'; old.createdAt = OCT(7, 8); old.finishedAt = OCT(7, 12);
+  const g = phonesOf().g;
+  const s = { ...g, rounds: { ...g.rounds, old } };
+  const line = outstanding(s, { now: NOW }).find(l => l.from === 'h');
+  assert.equal(line.amount, 40);
+  assert.equal(owedSince(s, 'h', 'zg', line.rounds), OCT(17, 15), 'from when the last group finished');
+  assert.deepEqual(paymentNudges(s, { now: NOW }), [], 'the game was today');
+  // A week on, everyone in the game who owes Gus, in another group or not
+  const later = paymentNudges(s, { now: OCT(25, 10) });
+  assert.deepEqual(later.map(n => [n.id, n.amount, n.since]), [['h', 40, OCT(17, 15)], ['c', 35, OCT(17, 15)], ['d', 7.33, OCT(17, 15)], ['b', 3.67, OCT(17, 15)]]);
 });

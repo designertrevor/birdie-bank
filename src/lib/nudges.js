@@ -6,14 +6,18 @@
 // reminder: it waits on Up next until you send it or put it away.
 // Pure functions of plain data, so they're easy to test.
 //
-// How long someone has owed you: from the first money round you played together after the last
-// payment between you (either way) or the carry-over you last agreed (its money rolled into the
-// next round, so that round is where the clock starts). Money with no round behind it (a trip
-// expense only) has no clock, so it's left to the Tab's own Remind.
+// How long someone has owed you: from the round (or decided Big Game) that started what they owe
+// you now, after the last payment between you (either way), the carry-over you last agreed (its
+// money rolled into the next round, so that round is where the clock starts) or the last close of
+// the books that rolled a line between you (rolled money is never what a nudge is about). A round
+// the two of you came out of square, or that you lost, never starts the clock. Money with no round
+// behind it (a trip expense only) has no clock, so it's left to the Tab's own Remind.
 import { outstanding } from './ledger.js';
 import { canonicalOf, lastPayment } from './shared-tab.js';
 import { cardCarry } from './carry.js';
 import { myIds } from './format.js';
+import { tabResults } from './play-for.js';
+import { bigBetween } from './big-money.js';
 
 export const DAY_MS = 864e5;
 /** The gaps to pick from in Settings, in days. 0 is Off. */
@@ -58,24 +62,48 @@ export function noteNudge(draft, id, at = Date.now()) {
 
 /**
  * When `from` started owing `to` the money that's open now, as a time, or null when there's no
- * finished money round together since the last payment or agreed carry-over between them.
- * `rounds` are the ids of the rounds the two played together (outstanding()'s `rounds`).
+ * finished money round (or decided Big Game) between them since the last payment, agreed
+ * carry-over or rolled close of the books between them. `rounds` are the ids of the rounds the two
+ * played together (outstanding()'s `rounds`). Taken oldest first, the clock starts at the round
+ * that put `from` owing `to` and starts again whenever they're back to square between the two of
+ * them; when the Tab has them owing only through the rest of the group, it's their newest round.
  */
 export function owedSince(state, from, to, rounds = []) {
   const who = canonicalOf(state);
   const A = who(from), B = who(to);
+  const pair = (x, y) => (who(x) === A && who(y) === B) || (who(x) === B && who(y) === A);
   let cutoff = lastPayment(state, from, to)?.at || 0;
   for (const c of state?.carries || []) {
-    const pair = (who(c.from) === A && who(c.to) === B) || (who(c.from) === B && who(c.to) === A);
-    if (pair && c.status === 'agreed') cutoff = Math.max(cutoff, c.answeredAt || c.at || 0);
+    if (pair(c.from, c.to) && c.status === 'agreed') cutoff = Math.max(cutoff, c.answeredAt || c.at || 0);
   }
-  let since = null;
-  for (const id of rounds) {
+  for (const b of Object.values(state?.books || {})) {
+    if ((b?.lines || []).some(l => l.how === 'rolled' && pair(l.from, l.to))) cutoff = Math.max(cutoff, b.closedAt || 0);
+  }
+  // What `from` owes `to` from each round and decided game after the cutoff, in cents
+  const events = [];
+  for (const id of new Set(rounds)) {
     const r = state?.rounds?.[id];
     const at = r?.status === 'done' ? (r.finishedAt || r.createdAt || 0) : 0;
-    if (at > cutoff && (since == null || at < since)) since = at;
+    if (!(at > cutoff)) continue;
+    const pairs = tabResults(r).pairs || {};
+    let c = 0;
+    for (const p of r.players || []) {
+      if (who(p.id) !== A) continue;
+      for (const q of r.players || []) if (who(q.id) === B) c -= Math.round((Number(pairs[p.id]?.[q.id]) || 0) * 100);
+    }
+    events.push({ at, c });
   }
-  return since;
+  for (const x of bigBetween(state, id => who(id) === B, id => who(id) === A)) if (x.at > cutoff) events.push({ at: x.at, c: x.amount });
+  if (!events.length) return null;
+  events.sort((a, b) => a.at - b.at);
+  let owed = 0, since = null;
+  for (const e of events) {
+    const was = owed;
+    owed += e.c;
+    if (owed <= 0) since = null;
+    else if (was <= 0) since = e.at;
+  }
+  return since ?? events.at(-1).at;
 }
 
 /**

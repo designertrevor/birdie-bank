@@ -364,3 +364,35 @@ test('nudges: another phone’s older profile never brings back a card you just 
   applyDoc(s, 'profile', 'me', { me: 'a', nudges: { b: NOW - 10 * DAY, c: NOW - DAY, d: NOW - 2 * DAY } });
   assert.deepEqual(s.nudges, { b: NOW, c: NOW - DAY, d: NOW - 2 * DAY });
 });
+
+test('nudges: the clock starts at the round that left them owing you, never an older one you came out of square', () => {
+  // Square ten days ago, then two skins lost to you two days ago
+  const even = round('r1', ['a', 'b'], {}, { daysAgo: 10 });
+  const lost = round('r2', ['a', 'b'], twoSkins, { daysAgo: 2 });
+  const s = stateOf('a', [even, lost]);
+  assert.equal(owedSince(s, 'b', 'a', ['r1', 'r2']), NOW - 2 * DAY);
+  assert.deepEqual(paymentNudges(s, { now: NOW }), [], 'two days, not ten');
+  assert.equal(paymentNudges(s, { now: NOW + 5 * DAY })[0]?.days, 7);
+  // Owing you, then back to square between you, then owing again: from the last time it started
+  const won = round('r3', ['a', 'b'], { 1: { a: 4, b: 3 }, 2: { a: 4, b: 3 } }, { daysAgo: 12 });
+  const back = stateOf('a', [round('r0', ['a', 'b'], twoSkins, { daysAgo: 14 }), won, lost]);
+  assert.equal(owedSince(back, 'b', 'a', ['r0', 'r3', 'r2']), NOW - 2 * DAY);
+  // Still owing from the first: the first is when it started
+  const still = stateOf('a', [round('r0', ['a', 'b'], twoSkins, { daysAgo: 14 }), even, lost]);
+  assert.equal(owedSince(still, 'b', 'a', ['r0', 'r1', 'r2']), NOW - 14 * DAY);
+});
+
+test('nudges: never about a line the books rolled to next season, even with no round shared live to ask on', () => {
+  const r1 = round('r1', ['a', 'b'], twoSkins, { daysAgo: 20 });
+  const book = { id: 'bk_1', scope: 'all', name: '2026 season', closedAt: NOW - 19 * DAY, lines: [{ from: 'b', to: 'a', cents: 400, how: 'rolled' }] };
+  const s = stateOf('a', [r1], { books: { bk_1: book } });
+  assert.equal(outstanding(s, { now: NOW })[0].amount, 4, 'still owed on the Tab');
+  assert.equal(owedSince(s, 'b', 'a', ['r1']), null);
+  assert.deepEqual(paymentNudges(s, { now: NOW }), []);
+  // A line the books marked paid never stops one
+  const paidLine = stateOf('a', [r1], { books: { bk_1: { ...book, lines: [{ ...book.lines[0], how: 'paid' }] } } });
+  assert.equal(paymentNudges(paidLine, { now: NOW }).length, 1);
+  // A new round after the close starts the clock again
+  const after = stateOf('a', [r1, round('r2', ['a', 'b'], twoSkins, { daysAgo: 9 })], { books: { bk_1: book } });
+  assert.equal(paymentNudges(after, { now: NOW })[0]?.since, NOW - 9 * DAY);
+});
