@@ -2642,3 +2642,79 @@ button.ch-main:active { transform: scale(.98); }
 .big-setup-group .field-label { margin-top: 4px; }
 .big-team-row { padding: 4px 0; }
 .big-team-row .tr-sub { display: block; margin-bottom: 6px; }
+
+/* ---------- The public roadmap: votes, comments and your ideas (o9 roadmap) ---------- */
+.rm-intro { padding: 0 20px 16px; font-size: 15px; line-height: 1.5; color: var(--body); }
+.rm-thanks { margin-bottom: 16px; }
+.rm-thanks i { color: var(--win); }
+.rm-tabs { padding: 0 16px 6px; }
+.rm-tabs .pm-btn { padding: 0 6px; font-size: 14px; white-space: nowrap; }
+.rm-n { margin-left: 2px; font-family: Inter, system-ui, sans-serif; font-size: 12px; font-weight: 700; font-variant-numeric: tabular-nums; }
+.rm-tabs + .rm-list, .rm-tabs + .rm-empty { margin-top: 14px; }
+.rm-list, .rm-ideas { list-style: none; margin: 0; padding: 0; }
+.rm-card { display: flex; align-items: flex-start; gap: 12px; margin: 0 16px 10px; padding: 16px; border-radius: 20px; background: var(--card); scroll-margin: 24px; }
+.rm-card.flash { box-shadow: inset 0 0 0 2px var(--pink-fill); animation: rm-flash 1.4s var(--ease-out) 2; }
+@keyframes rm-flash { 50% { box-shadow: inset 0 0 0 2px var(--pink-fill), 0 0 0 6px var(--pick-tint); } }
+.rm-main { flex: 1; min-width: 0; }
+.rm-area { display: block; margin-bottom: 4px; color: var(--pink-text); }
+.rm-title { font-family: var(--display); font-size: 18px; font-weight: 800; line-height: 1.25; letter-spacing: -.01em; color: var(--ink); text-wrap: balance; }
+.rm-blurb { margin-top: 4px; font-size: 14px; line-height: 1.45; color: var(--body); }
+.rm-meta { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 10px; margin-top: 12px; }
+.rm-meta:empty { display: none; }
+.rm-when { display: inline-flex; align-items: center; gap: 5px; font-size: 13px; font-weight: 600; color: var(--mute); }
+.rm-when i { font-size: 16px; color: var(--win); }
+.rm-when.building i { color: var(--icon); }
+.rm-tag { display: inline-flex; align-items: center; padding: 4px 10px; border-radius: 999px; background: var(--pick-tint); color: var(--pink-text); font-size: 12px; font-weight: 700; white-space: nowrap; }
+.rm-tag.wait { background: var(--surface); color: var(--mute); }
+.rm-talk {
+  position: relative; display: inline-flex; align-items: center; gap: 5px; min-height: 36px; padding: 0 12px; border: none; border-radius: 999px;
+  background: var(--surface); color: var(--ink); font: inherit; font-size: 13px; font-weight: 700; font-variant-numeric: tabular-nums; cursor: pointer;
+  transition: transform var(--duration-fast) var(--spring);
+}
+.rm-talk::before { content: ''; position: absolute; inset: -4px 0; } /* a 44px tap target on a 36px pill */
+.rm-talk i { font-size: 16px; color: var(--icon); }
+.rm-talk:active { transform: scale(.94); }
+.rm-id { display: block; margin-top: 8px; font-size: 11px; color: var(--mute); overflow-wrap: anywhere; }
+/* The vote: one per person, filled with the accent and a check once it's yours */
+.rm-vote {
+  flex-shrink: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; width: 56px; min-height: 64px;
+  border: none; border-radius: 16px; background: var(--surface); color: var(--ink); font: inherit; cursor: pointer;
+  transition: transform var(--duration-fast) var(--spring), background var(--duration-quick), color var(--duration-quick);
+}
+.rm-vote i { font-size: 20px; }
+.rm-vote .rm-count { font-family: var(--display); font-size: 17px; font-weight: 800; font-variant-numeric: tabular-nums; line-height: 1; }
+.rm-vote:active { transform: scale(.92); }
+.rm-vote.on { background: var(--pink-fill); color: var(--on-pink, #fff); }
+.rm-vote.static { min-height: 0; padding: 8px 0; background: transparent; color: var(--mute); cursor: default; }
+.rm-vote.static:active { transform: none; }
+/* Your ideas, and what became of them */
+.rm-ideas { margin: 0 16px; border-radius: 20px; background: var(--card); overflow: hidden; }
+.rm-ideas li + li .rm-idea { border-top: 1px solid var(--line-soft); }
+.rm-ideas li { scroll-margin: 24px; }
+.rm-ideas li.flash { box-shadow: inset 0 0 0 2px var(--pink-fill); border-radius: 20px; }
+.rm-idea { display: flex; align-items: center; gap: 12px; width: 100%; min-height: 64px; padding: 12px 16px; border: none; background: none; font: inherit; color: inherit; text-align: left; }
+button.rm-idea { cursor: pointer; }
+.rm-idea > i { color: var(--mute-soft); font-size: 18px; flex-shrink: 0; }
+.rm-idea .row-main { display: flex; flex-direction: column; gap: 6px; min-width: 0; }
+.rm-idea-ic { width: 36px; height: 36px; flex-shrink: 0; border-radius: 12px; display: grid; place-items: center; background: var(--lav); color: var(--on-pastel); font-size: 18px; }
+.rm-idea-ic.game { background: var(--peach); }
+.rm-idea-title { font-size: 16px; font-weight: 700; line-height: 1.3; color: var(--ink); overflow-wrap: anywhere; }
+.rm-idea-sub { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; }
+.rm-idea-in { font-size: 13px; color: var(--mute); }
+.rm-note { margin: 10px 20px 0; font-size: 13px; line-height: 1.45; color: var(--mute); }
+.rm-empty { margin: 0 20px 10px; font-size: 15px; color: var(--mute); }
+.rm-all { margin-top: 4px; }
+.set-row.rm-cta { margin-top: 24px; }
+a.set-row.rm-cta { color: inherit; }
+a.header-btn.rm-open { text-decoration: none; }
+/* Comments on an item */
+.rm-sheet { padding: 4px 20px 20px; }
+.rm-sheet .talk-list { margin-top: 4px; }
+.rm-sheet .talk-compose { margin-top: 16px; }
+.rm-signin { display: flex; flex-direction: column; align-items: flex-start; gap: 10px; margin-top: 16px; }
+.rm-signin .field-help { margin-top: 0; }
+/* Settings: right under the feedback button, with room between them */
+.set-row.rm-set { margin-top: 10px; }
+/* Up next: the "it shipped" note */
+.remind-card.rm-live { box-shadow: inset 0 0 0 2px var(--pink); }
+.remind-card.rm-live .rc-ic { background: var(--pink); color: var(--on-pastel); }
