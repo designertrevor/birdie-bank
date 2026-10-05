@@ -155,9 +155,12 @@ export default function UpNext() {
 function UpcomingCard({ plan }) {
   const nav = useNav();
   const { game } = planChoice(plan);
-  const c = planCounts(plan);
   const me = plan.host ? plan.hostWho : plan.localMe;
   const mine = plan.answers?.[me]?.status;
+  // A trip's scheduled round for a group you organized but aren't in (trip-templates.js marks you
+  // out of it): you're not one of its players, so you're neither counted out nor "out"
+  const notIn = !!(plan.host && plan.session && mine === 'out');
+  const c = (n => (notIn ? { ...n, out: Math.max(0, n.out - 1) } : n))(planCounts(plan));
   const off = plan.status === 'off' || (plan.gone && plan.status !== 'started'); // a started round goes on either way
   // Kept for another day: the new plan isn't on this phone yet, so this one says where it went
   const moved = !off && plan.movedTo ? plan.movedTo : null;
@@ -172,7 +175,7 @@ function UpcomingCard({ plan }) {
         <div className="uc-title d">{plan.session?.line || `${GAMES[game]?.name || 'Golf'} · ${plan.course?.name || 'Course to be set'}`}</div>
         <div className="uc-sub">{off ? `Organized by ${plan.host ? 'you' : plan.hostName || 'a friend'}` : moved ? `Moved to ${moved.date ? dayLabel(moved.date) : 'another day'}${moved.code ? '. Tap for the new plan' : ''}` : started ? (plan.liveCode ? 'Tap to follow along' : 'Teeing off now') : plan.session?.line ? `${GAMES[game]?.name || 'Golf'} · ${plan.course?.name || 'Course to be set'} · ${countsLine(c)}` : countsLine(c)}</div>
       </div>
-      {!off && !started && !moved && <span className={`who-status ${mine || 'none'}`}>{mine ? `You’re ${RSVP_LABEL[mine].toLowerCase()}` : 'Answer'}</span>}
+      {!off && !started && !moved && !notIn && <span className={`who-status ${mine || 'none'}`}>{mine ? `You’re ${RSVP_LABEL[mine].toLowerCase()}` : 'Answer'}</span>}
       <span className="chevron"><Icon name="caret-right" /></span>
     </button>
   );

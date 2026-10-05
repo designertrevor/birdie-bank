@@ -81,10 +81,12 @@ export function OneTab({ tab }) {
 
   if (tab.kind === 'trip') {
     const st = tab.status;
+    // A Big Game is a one-day trip: it reads as the game, settled from its own page
+    const big = !!st.big;
     return (
       <>
         <TripTabCard status={st} />
-        {tab.lines.length > 0 && <div className="sec-label">The trip’s payments</div>}
+        {tab.lines.length > 0 && <div className="sec-label">{big ? 'The game’s payments' : 'The trip’s payments'}</div>}
         {tab.lines.map(l => (
           <div key={l.from + l.to} className="ledger-row static">
             <div className="lr-info">
@@ -94,11 +96,13 @@ export function OneTab({ tab }) {
           </div>
         ))}
         <div className="cta-wrap tab-cta">
-          {st.phase === 'ready'
-            ? <button className="full-btn pink" onClick={() => nav.push('tripSettle', { id: tab.id })}>Settle the trip <Icon name="arrow-right" /></button>
-            : <button className="full-btn outline" onClick={() => nav.push('trip', { id: tab.id })}>See the trip</button>}
+          {big
+            ? <button className={`full-btn ${st.phase === 'ready' ? 'pink' : 'outline'}`} onClick={() => nav.push('bigGame', { id: tab.id, view: st.phase === 'ready' ? 'money' : null })}>{st.phase === 'ready' ? <>Settle the game <Icon name="arrow-right" /></> : 'See the game'}</button>
+            : st.phase === 'ready'
+              ? <button className="full-btn pink" onClick={() => nav.push('tripSettle', { id: tab.id })}>Settle the trip <Icon name="arrow-right" /></button>
+              : <button className="full-btn outline" onClick={() => nav.push('trip', { id: tab.id })}>See the trip</button>}
         </div>
-        <p className="field-help pad">Just the trip’s rounds{st.expenses.length ? ' and expenses' : ''}, settled once after the last round. With your other tabs it adds up to Everyone.</p>
+        <p className="field-help pad">{big ? 'Just the game’s money, settled once for the whole game.' : `Just the trip’s rounds${st.expenses.length ? ' and expenses' : ''}, settled once after the last round.`} With your other tabs it adds up to Everyone.</p>
       </>
     );
   }

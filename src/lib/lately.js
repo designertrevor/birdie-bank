@@ -116,6 +116,9 @@ export function latelyItems(state, now = Date.now(), { carries = state?.carries,
     const day = label === 'Today' || label === 'Tomorrow' ? label.toLowerCase() : label;
     for (const [who, a] of Object.entries(plan.answers || {})) {
       if (who === me || !a?.status || !inWindow(a.at)) continue;
+      // A trip's scheduled round starts with its group marked in by the organizer: only an answer
+      // someone gave from their own phone is news
+      if (plan.session && !a.self) continue;
       const n = first(a.name);
       const text = a.status === 'in' ? `${n} is in for ${day}` : a.status === 'out' ? `${n} is out for ${day}` : a.status === 'maybe' ? `${n} is a maybe for ${day}` : null;
       if (!text) continue;

@@ -193,7 +193,7 @@ export default function Ledger() {
         {one ? <OneTab tab={one} /> : <>
         <SquareStrip />
         {trips.map(t => <TripTabCard key={t.trip.id} status={t} />)}
-        {trips.some(t => t.money.length > 0) && plan.length > 0 && <p className="field-help pad trip-folded">Trip money is in each person’s total below.</p>}
+        {trips.some(t => t.money.length > 0) && plan.length > 0 && <p className="field-help pad trip-folded">{trips.filter(t => t.money.length > 0).every(t => t.big) ? 'The game’s money is in each person’s total below.' : 'Trip money is in each person’s total below.'}</p>}
         {plan.length === 0 ? (
           <Empty title={hasRounds ? 'All square' : 'Nothing owed yet'}
             text={hasRounds ? 'Everyone’s settled up. Time to go win it back.' : 'Finish a round and the Tab fills in. Money nets out across every round, so you pay less often.'}

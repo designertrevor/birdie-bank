@@ -13,6 +13,7 @@ import {
 } from './trip-templates.js';
 import { courseNetOf, toParOf } from './to-par.js';
 import { planStart, rollCallDefault } from './plans.js';
+import { latelyItems } from './lately.js';
 import { cleanFlights, flightBoard, flightCount, flightTeams, flightsOf } from './flights.js';
 import { DRAFT_KEY, captainKey, cleanDraft, draftLink, draftOrder, draftTeams, isDraftKey, mergeDraft, newDraft, pickFor, pickHere, undoFor } from './draft.js';
 
@@ -532,4 +533,15 @@ test('the flighted leaderboard nets off each player’s full course handicap, wh
   const pick = card('r3', [0]);
   pick.scores[1].a = 'X';
   assert.equal(courseNetOf(pick, al(pick)).net, 2);
+});
+
+test('a trip’s planned rounds don’t fill Lately with the group the organizer marked in; a friend’s own answer does show', () => {
+  const rounds = scheduleRounds(TRIP8.cup.schedule, T8, { start: TRIP8.start });
+  const plans = Object.fromEntries(rounds.map((r, i) => [`pl${i}`, scheduledPlan(r, { id: `pl${i}`, tripId: 't_rc', me: 'me', players: PLAYERS, settings: SETTINGS, stamp: tripStamp(TRIP8), now: OCT(2) })]));
+  const state = { me: 'me', players: PLAYERS, settings: SETTINGS, rounds: {}, plans, settlements: [], carries: [], links: {} };
+  assert.deepEqual(latelyItems(state, OCT(2, 13)).filter(i => i.kind === 'rsvp'), []);
+  const first = plans.pl0;
+  const who = Object.keys(first.answers).find(k => k !== first.hostWho);
+  first.answers[who] = { ...first.answers[who], status: 'out', at: OCT(2, 12), self: true };
+  assert.equal(latelyItems(state, OCT(2, 13)).filter(i => i.kind === 'rsvp').length, 1);
 });
