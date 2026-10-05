@@ -181,7 +181,7 @@ function TripPage({ id, view: firstView = null, add = false }) {
         <p className="hint-card trip-hint"><Icon name={st.phase === 'square' ? 'handshake' : 'suitcase-rolling'} fill /> {hint}</p>
 
         <div className="tab-view trip-view-switch">
-          <Segmented label="Trip view" className="press-mode-row trip-views" btn="pm-btn" value={view} onChange={setView}
+          <Segmented label="Trip view" className={`press-mode-row trip-views${cup ? ' five' : ''}`} btn="pm-btn" value={view} onChange={setView}
             options={[...(cup ? [{ value: 'cup', label: 'Cup' }] : []), { value: 'standings', label: cup ? (st.points && !st.standings.length ? 'Points' : 'Money') : 'Standings' }, { value: 'rounds', label: 'Rounds' }, { value: 'games', label: 'Games' }, { value: 'expenses', label: 'Expenses' }]} />
         </div>
 

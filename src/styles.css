@@ -3162,3 +3162,8 @@ a.header-btn.rm-open { text-decoration: none; }
 .step-bar.many { position: relative; overflow-x: auto; scrollbar-width: none; -webkit-overflow-scrolling: touch; }
 .step-bar.many::-webkit-scrollbar { display: none; }
 .step-bar.many .step { flex: 0 0 auto; padding: 8px 12px; min-height: 36px; white-space: nowrap; }
+/* The Trip page's views size to their labels, so "Expenses" keeps clear of its pill's edge; a cup trip's
+   five views go a step smaller to fit 375px */
+.trip-views .pm-btn { flex: 1 1 auto; padding: 0 6px; white-space: nowrap; }
+.trip-views.five { gap: 2px; }
+.trip-views.five .pm-btn { font-size: 13px; padding: 0 5px; }
