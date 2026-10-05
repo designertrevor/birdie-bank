@@ -3190,3 +3190,9 @@ a.header-btn.rm-open { text-decoration: none; }
 /* The Big Game's places paid: chips that wrap, so 40/30/20/10 never runs past its pill */
 .big-places .pill-btn { font-variant-numeric: tabular-nums; }
 .big-places .pill-btn:not(.on) { background: var(--surface); }
+/* The captains' draft: every free player is a plain tile (a ring would read as picked); whose turn it
+   is shows in the label's team dot and the ringed column. Each draft option gets its own label */
+.cup-chip.pick.t0, .cup-chip.pick.t1 { box-shadow: none; }
+.tm-draft-opts { gap: 0; margin-top: 4px; }
+.cup-pick .tm-draft-opts > .field-label { margin: 16px 0 8px; }
+.tm-draft-opts > .field-help { margin-top: 10px; }

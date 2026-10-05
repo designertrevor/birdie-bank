@@ -223,15 +223,20 @@ export function TeamsPicker({ people, value, onChange, live: liveOk = true }) {
       <div className="field-label">Pick the teams</div>
       <Segmented label="How the teams are picked" className="press-mode-row" btn="pm-btn" value={mode}
         onChange={v => (v === 'draft' ? toDraft() : v === 'flights' ? byFlights() : balance())}
-        options={[{ value: 'draft', label: 'Captains pick' }, { value: 'balance', label: 'By handicap' }, { value: 'flights', label: 'By flights' }]} />
+        options={[{ value: 'draft', label: 'Captains’ draft' }, { value: 'balance', label: 'By handicap' }, { value: 'flights', label: 'By flights' }]} />
       {drafting && (
         <div className="tm-draft-opts">
           {liveOk && (
-            <Segmented label="Where the captains pick" className="press-mode-row" btn="pm-btn" value={opts.live ? 'live' : 'here'} onChange={v => setOpts({ live: v === 'live' })}
-              options={[{ value: 'here', label: 'Pass this phone' }, { value: 'live', label: 'Their own phones' }]} />
+            <>
+              <div className="field-label" aria-hidden="true">Where the captains pick</div>
+              <Segmented label="Where the captains pick" className="press-mode-row" btn="pm-btn" value={opts.live ? 'live' : 'here'} onChange={v => setOpts({ live: v === 'live' })}
+                options={[{ value: 'here', label: 'Pass this phone' }, { value: 'live', label: 'Their own phones' }]} />
+            </>
           )}
+          <div className="field-label" aria-hidden="true">Draft order</div>
           <Segmented label="Draft order" className="press-mode-row" btn="pm-btn" value={opts.order} onChange={order => setOpts({ order })}
             options={Object.entries(DRAFT_ORDERS).map(([k, o]) => ({ value: k, label: o.name }))} />
+          <div className="field-label" aria-hidden="true">Who picks first</div>
           <Segmented label="Who picks first" className="press-mode-row" btn="pm-btn" value={opts.first} onChange={f => setOpts({ first: f })}
             options={[0, 1].map(i => ({ value: i, label: `${cup.names[i]} first` }))} />
           <p className="field-help">{orderLine(opts, cup.names)}</p>
@@ -259,7 +264,7 @@ export function TeamsPicker({ people, value, onChange, live: liveOk = true }) {
 
       {free.length > 0 && !(live && captainsSet) && (
         <>
-          <div className="field-label">{drafting ? (!captainsSet ? `Who captains ${cup.names[turn]}?` : `${cup.names[turn]}’s pick`) : 'Not on a team yet'}</div>
+          <div className="field-label">{drafting ? <><TeamDot team={turn} /> {!captainsSet ? `Who captains ${cup.names[turn]}?` : `${cup.names[turn]}’s pick`}</> : 'Not on a team yet'}</div>
           <div className="cup-free">
             {free.map(p => (
               <button key={p.id} type="button" className={`cup-chip free ${drafting ? `pick t${turn}` : ''}`} onClick={() => pickFree(p)} aria-label={drafting ? `Pick ${p.name}` : `Put ${p.name} on a team`}>
