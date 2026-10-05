@@ -5,16 +5,19 @@
 import { useState } from 'react';
 import { Icon, Sheet, Toggle, useUI } from './ui.jsx';
 import PlayForPicker from './PlayFor.jsx';
-import { update } from '../lib/store.js';
 import { holesPlayed } from '../lib/round.js';
 import { betsOf } from '../lib/pair-bets.js';
 import { playForOf, rewardNoun } from '../lib/play-for.js';
 import { changePlayFor, standingLine, tabLine } from '../lib/lineup.js';
 import { buzz } from '../lib/delight.js';
+import { useAgeCheck } from './AgeCheck.jsx';
+import { needsAgeCheck, playsForMoney } from '../lib/age.js';
+import { getState, update } from '../lib/store.js';
 
 /** Mounted only while open, so it starts from the round as it is each time. */
 export function PlayForSheet({ round, onClose }) {
   const { showToast } = useUI();
+  const checkAge = useAgeCheck();
   const [value, setValue] = useState(round.playFor ?? null);
   const was = playForOf(round);
   const pf = playForOf({ playFor: value });
@@ -30,7 +33,16 @@ export function PlayForSheet({ round, onClose }) {
   const tab = same ? null : tabLine(round, after);
   const stand = same ? null : standingLine(after);
 
-  const apply = () => {
+  const apply = async () => {
+    // Turning money on mid-round asks the one-time age question first (age.js). The round goes on
+    // either way: a no just leaves it as it was
+    if (!playsForMoney(round) && needsAgeCheck(getState(), after)) {
+      const answer = await checkAge();
+      if (answer !== 'adult') {
+        if (answer === 'under') showToast('Money is for 18 or older, so this round stays as it is.');
+        return;
+      }
+    }
     update(s => {
       const r = s.rounds[round.id];
       if (r) s.rounds[round.id] = changePlayFor(r, value, opts);

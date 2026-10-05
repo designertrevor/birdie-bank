@@ -28,6 +28,7 @@ import { BIG_NAME, POT_KINDS, bigSummary, buyIns, placesLabel } from '../lib/big
 import { bigStatus } from '../lib/big-money.js';
 import { useBigSync } from '../lib/big-sync.js';
 import { bigChangesReach, closeBig, deleteBig, removeBigBet, shareGroups, startGroups } from '../lib/big-store.js';
+import { useBigAgeCheck } from '../components/AgeCheck.jsx';
 
 const first = n => String(n || '').trim().split(/\s+/)[0];
 const sign = v => (v > 0 ? 'pos' : v < 0 ? 'neg' : '');
@@ -42,6 +43,7 @@ export default function BigGame({ id, view: firstView = null }) {
   const nav = useNav();
   const state = useStore();
   const { ask, showToast } = useUI();
+  const bigAgeOk = useBigAgeCheck();
   // Other groups' rounds and the organizer's copy of the game, the payments, and the trip's plan
   useBigSync({ live: true });
   useTabSync({ live: true });
@@ -91,6 +93,8 @@ export default function BigGame({ id, view: firstView = null }) {
     : 'Every group’s scores come in as they’re played. Nothing’s paid until every group is in, then it’s settled once.';
 
   const start = async () => {
+    // Money needs a yes to "Are you 18 or older?" once (age.js)
+    if (!(await bigAgeOk(big))) return;
     setBusy(true);
     const res = await startGroups(id);
     setBusy(false);
@@ -296,7 +300,7 @@ function Money({ bs, st, id, state, me, isMe, name, off }) {
             {app && <div className="trip-pay-sub">To {iPay ? `${short(other)}’s` : 'your'} {PAY_APPS[app.app]?.name || 'pay app'}</div>}
             <div className="pay-acts wrap">
               {iPay ? <PayButton info={payInfoFor(state, other)} amount={t.amount} note={st.trip.name} />
-                : <RequestButton payer={payInfoFor(state, other)} mine={myApp} amount={t.amount} note={st.trip.name} />}
+                : <RequestButton payer={payInfoFor(state, other)} mine={myApp} amount={t.amount} note={st.trip.name} who={other} />}
               <button className="pay-btn ink" onClick={() => mark(t)}><span className="pay-in"><Icon name="check-circle" fill /><span className="pay-lbl">{iPay ? 'I paid' : 'I got it'}</span></span></button>
             </div>
           </div>

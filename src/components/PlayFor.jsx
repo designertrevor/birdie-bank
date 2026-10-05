@@ -2,6 +2,8 @@
 // or a reward the winner gets ("Lunch", "A drink" or one typed in), with who's buying it.
 import { useState } from 'react';
 import { Segmented } from './ui.jsx';
+import { useStore } from '../lib/store.js';
+import { moneyOff } from '../lib/age.js';
 import { REWARDS, REWARD_MAX, cleanReward, playForOf, storedPlayFor } from '../lib/play-for.js';
 
 /**
@@ -14,6 +16,8 @@ export default function PlayForPicker({ value, onChange, planning = false }) {
   const [custom, setCustom] = useState(() => (pf.kind === 'reward' && !REWARDS.includes(pf.reward) ? pf.reward : ''));
   const isCustom = pf.kind === 'reward' && !REWARDS.includes(pf.reward);
   const [typing, setTyping] = useState(isCustom);
+  // Said they're under 18 (age.js): money stays a choice, and the help says what happens
+  const under = useStore(moneyOff);
   const set = next => onChange(storedPlayFor(next));
   const reward = (r, owes = pf.owes) => set({ kind: 'reward', reward: r, owes: owes || 'last' });
 
@@ -30,7 +34,8 @@ export default function PlayForPicker({ value, onChange, planning = false }) {
     ? 'Bragging rights: the bets below count as points, so $5 is 5 pts. No money changes hands.'
     : pf.kind === 'reward'
       ? `Whoever wins the round gets it, and ${pf.owes === 'everyone' ? 'everyone else owes them one each' : 'last place is buying'}. No money changes hands, unless you play a side bet for money.`
-      : planning ? 'The group plays for money, and it goes on the Tab.' : 'Played for money, and it goes on the Tab.';
+      : under && !planning ? 'Money rounds are for 18 or older. You said you’re under 18, so points or a reward it is (change it in Settings).'
+        : planning ? 'The group plays for money, and it goes on the Tab.' : 'Played for money, and it goes on the Tab.';
 
   return (
     <div className="block play-for">

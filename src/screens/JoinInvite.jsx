@@ -18,6 +18,8 @@ import { payFields } from '../lib/pay.js';
 import { noMoneyNote, playForLine } from '../lib/play-for.js';
 import { money } from '../lib/golf.js';
 import { bigInvite } from '../lib/big-view.js';
+import { useAgeCheck } from '../components/AgeCheck.jsx';
+import { needsAgeCheck } from '../lib/age.js';
 
 // A seat request survives the page being closed, so reopening the link keeps waiting
 const seatKey = code => `bb-seat:${code}`;
@@ -47,6 +49,9 @@ export default function JoinInvite({ code, onJoined, onSkip, setUp = false }) {
   const [name, setName] = useState(() => loadSeat(code)?.name || (setUp ? (() => { const s = getState(); return s.players?.[s.me]?.name || ''; })() : ''));
   const [askErr, setAskErr] = useState(false);
   const [joinErr, setJoinErr] = useState(false);
+  // Said they're under 18 when taking a seat in a money round (age.js): they can still watch
+  const [minor, setMinor] = useState(false);
+  const checkAge = useAgeCheck();
 
   useEffect(() => {
     let cancelled = false;
@@ -80,6 +85,15 @@ export default function JoinInvite({ code, onJoined, onSkip, setUp = false }) {
       setBusy(false);
       setJoinErr(true);
     }
+  };
+
+  // A seat in a money round asks the one-time age question first. A finished round has no money
+  // left to play, so seeing how it ended never asks
+  const okToPlay = async () => {
+    if (!round || round.status === 'done' || !needsAgeCheck(getState(), round)) return true;
+    const answer = await checkAge();
+    if (answer === 'under') setMinor(true);
+    return answer === 'adult';
   };
 
   // Waiting on the scorekeeper: watch the request, and once they let you in, take the seat
@@ -162,9 +176,27 @@ export default function JoinInvite({ code, onJoined, onSkip, setUp = false }) {
     );
   }
 
+  // Under 18 and this one's for money: follow along live instead, or ask for points
+  if (minor && meta) {
+    return (
+      <Screen className="onboard">
+        <div className="scroll onboard-body">
+          <BallIllo className="onboard-illo" />
+          <h1 className="onboard-title join-h">This one’s for money</h1>
+          <p className="onboard-text">Money rounds are for 18 or older. You can still follow along live, or ask {scorekeeper} to play it for points and take a seat.</p>
+        </div>
+        <div className="cta-wrap">
+          <button className="full-btn" onClick={() => { setMinor(false); if (setUp) join(null); else setStep('watch'); }}>Watch instead <Icon name="eye" /></button>
+          <button className="full-btn outline" onClick={() => { setMinor(false); setStep('card'); }}>Back</button>
+        </div>
+      </Screen>
+    );
+  }
+
   if (step === 'ask') {
     const problem = round ? addPlayerProblem(round) : null;
     const send = async () => {
+      if (!(await okToPlay())) return;
       setBusy(true); setAskErr(false);
       try {
         const clean = cleanRequestName(name);
@@ -263,7 +295,7 @@ export default function JoinInvite({ code, onJoined, onSkip, setUp = false }) {
         </div>
         <div className="cta-wrap">
           {joinErr && <p className="field-error" role="alert" style={{ textAlign: 'center' }}>Couldn’t join. Check your signal and try again.</p>}
-          <button className="full-btn" disabled={busy} onClick={() => join(seat)}>{busy ? 'Joining…' : done ? <>See the results <Icon name="arrow-right" /></> : <>Into the round <Icon name="arrow-right" /></>}</button>
+          <button className="full-btn" disabled={busy} onClick={async () => { if (done || await okToPlay()) join(seat); }}>{busy ? 'Joining…' : done ? <>See the results <Icon name="arrow-right" /></> : <>Into the round <Icon name="arrow-right" /></>}</button>
           <button className="full-btn outline" disabled={busy} onClick={() => setStep('seat')}>That’s not me</button>
         </div>
       </Screen>

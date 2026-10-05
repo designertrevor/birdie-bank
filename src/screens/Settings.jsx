@@ -19,6 +19,8 @@ import { PAYWALL_ON } from '../lib/paywall-flag.js';
 import { isOrganizer, planStatus } from '../lib/paywall.js';
 import { accountsEnabled, signOut, syncNow, unsyncedCount, useAccount } from '../lib/cloud.js';
 import { NUDGE_CHOICES, nudgeChoiceLabel, nudgeDays } from '../lib/nudges.js';
+import { useAgeCheck } from '../components/AgeCheck.jsx';
+import { ageLine } from '../lib/age.js';
 
 export default function Settings() {
   const nav = useNav();
@@ -28,6 +30,7 @@ export default function Settings() {
   const myPay = payInfo(me);
   const acct = useAccount();
   const [signingIn, setSigningIn] = useState(false);
+  const checkAge = useAgeCheck();
 
   const logOut = async () => {
     if (unsyncedCount() > 0) {
@@ -123,6 +126,12 @@ export default function Settings() {
             <span className="chevron"><Icon name="caret-right" /></span>
           </button>
         )}
+        {/* The one-time age answer for money rounds (age.js), changeable here */}
+        {me && row('identification-card', 'Playing for money', ageLine(state), async () => {
+          const answer = await checkAge({ force: true });
+          if (answer === 'adult') showToast('Money rounds are on');
+          if (answer === 'under') showToast('Points and reward rounds only');
+        })}
         {me && (
           <>
             <div className="sec-label">Privacy</div>

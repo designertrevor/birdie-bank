@@ -136,7 +136,7 @@ export function PersonActions({ other, net, meId }) {
               {carry?.status !== 'agreed' && (
                 <>
                   <button className="pay-btn" onClick={() => remind(other, amount)} aria-label={`Remind ${first} about ${money(amount)}`}><span className="pay-in"><Icon name="bell-ringing" fill /><span className="pay-lbl">Remind</span></span></button>
-                  <RequestButton payer={theirApp} mine={myApp} amount={amount} note="Golf" />
+                  <RequestButton payer={theirApp} mine={myApp} amount={amount} note="Golf" who={other} />
                 </>
               )}
               <button className="pay-btn ink" onClick={paid} aria-label={`${first} paid me ${money(amount)}`}><span className="pay-in"><Icon name="check-circle" fill /><span className="pay-lbl">{first} paid me</span></span></button>
