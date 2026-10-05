@@ -152,7 +152,7 @@ function Calendar({ value, onPick, min, max, rangeStart, rangeEnd, now, label, a
       <div key={`m${y}`} className={`cal-cells cal-anim ${slide}`} role="group" aria-label={`Months of ${y}`}>
         {monthCells(y, { min, max }).map(c => (
           <button key={c.ym} type="button" className={`cal-cell${c.ym === picked ? ' on' : ''}${c.ym === today.slice(0, 7) ? ' now' : ''}`} disabled={c.disabled}
-            aria-pressed={c.ym === picked} aria-label={`${monthTitle(y, c.month)}`} onClick={() => zoomIn(`${c.ym}-01`)}>{c.label}</button>
+            aria-pressed={c.ym === picked} aria-label={`${monthTitle(y, c.month)}`} onClick={() => zoomIn(c.ym === picked ? value : `${c.ym}-01`)}>{c.label}</button>
         ))}
       </div>
     );
@@ -188,12 +188,13 @@ function Calendar({ value, onPick, min, max, rangeStart, rangeEnd, now, label, a
 
 /** The days golfers reach for, as the same day chips the round setup uses. */
 function QuickDays({ now, value, min, max, onPick }) {
+  const id = useId();
   const days = quickDays(now, { min, max });
   if (!days.length) return null;
   return (
     <div className="pick-section">
-      <span className="eyebrow" id="pick-quick">Quick picks</span>
-      <div className="day-strip" role="radiogroup" aria-labelledby="pick-quick">
+      <span className="eyebrow" id={id}>Quick picks</span>
+      <div className="day-strip" role="radiogroup" aria-labelledby={id}>
         {days.map(q => (
           <button key={q.iso} type="button" role="radio" aria-checked={q.iso === value} aria-label={q.said}
             className={`day-chip ${q.iso === value ? 'on' : ''}`} onClick={() => onPick(q.iso)}>
