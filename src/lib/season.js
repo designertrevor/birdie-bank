@@ -8,7 +8,7 @@ import { nameOf } from './ledger.js';
 import { roundTime } from './history.js';
 import { canonicalOf } from './pair-debts.js';
 import { countsMoney, hasCashBet, onTab, tabResults } from './play-for.js';
-import { withBigMoney } from './big-money.js';
+import { countsAsDone, withBigMoney } from './big-money.js';
 
 /** Fewer finished rounds than this and the Season preview shows the sample group instead. */
 export const MIN_REAL_ROUNDS = 2;
@@ -31,7 +31,7 @@ export function seasonRounds(state, year = new Date().getFullYear()) {
  */
 function playedOnTab(state, year) {
   return Object.values(state?.rounds || {})
-    .filter(r => r.status === 'done' && onTab(r) && new Date(roundTime(r)).getFullYear() === year)
+    .filter(r => countsAsDone(state, r) && onTab(r) && new Date(roundTime(r)).getFullYear() === year)
     .filter(r => { const me = meFor(r, state); return !!me && r.players.some(p => p.id === me); })
     .sort((a, b) => roundTime(a) - roundTime(b));
 }

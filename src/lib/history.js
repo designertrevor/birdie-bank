@@ -5,7 +5,8 @@ import { meFor, myIds } from './format.js';
 import { outstanding } from './ledger.js';
 import { canonicalOf } from './pair-debts.js';
 import { tabMoneyOf, tabResultsFor } from './play-for.js';
-import { bigRoundMoney, withBigMoney } from './big-money.js';
+import { bigAcross, bigRoundMoney, countsAsDone, withBigMoney } from './big-money.js';
+import { BIG_FORMAT } from './big-format.js';
 
 const MONTHS = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
 const SHORT = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
@@ -101,11 +102,11 @@ export function statsLinkLabel(range, now = new Date()) {
   return `Your stats for ${label}`;
 }
 
-/** Finished rounds in a range, newest first. */
+/** Finished rounds in a range, newest first (a decided Big Game's round its money goes on counts as finished, big-money.js countsAsDone). */
 export function roundsInRange(state, range) {
   const [start, end] = rangeBounds(range);
   return Object.values(state.rounds)
-    .filter(r => r.status === 'done' && roundTime(r) >= start && roundTime(r) < end)
+    .filter(r => countsAsDone(state, r) && roundTime(r) >= start && roundTime(r) < end)
     .sort((a, b) => roundTime(b) - roundTime(a));
 }
 
@@ -125,6 +126,8 @@ export function myMoney(round, state) {
   if (!me || !round.players.some(p => p.id === me)) return null;
   // A Big Game's round: your money from the whole game counts on it (big-money.js bigRoundMoney)
   const big = bigRoundMoney(state, round)?.[me];
+  // A Big Game's round still open (the game was closed early) has only the game's money on the Tab
+  if (round.status !== 'done' && round.trip?.format === BIG_FORMAT) return countsAsDone(state, round) ? big || 0 : null;
   const own = tabMoneyOf(round, me);
   return big ? Math.round(((own || 0) + big) * 100) / 100 : own;
 }
@@ -185,6 +188,12 @@ export function headToHead(rounds, state) {
       const k = who(id);
       if (!v || mine.has(k)) continue;
       h2h[k] = cents((h2h[k] || 0) + v);
+    }
+    // A Big Game's payments with people in the other groups, once, on the round its money goes on
+    for (const x of bigAcross(state, r, id => id === me || mine.has(id) || mine.has(who(id)))) {
+      const k = who(x.id);
+      if (mine.has(k)) continue;
+      h2h[k] = cents((h2h[k] || 0) + x.amount);
     }
   }
   return h2h;

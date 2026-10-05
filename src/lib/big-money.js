@@ -16,6 +16,7 @@ import { BIG_FORMAT, BIG_NAME, bigField, bigLines, bigResults, bigStarted, clean
 import { canonicalOf, codeOf, finishedAt } from './pair-debts.js';
 import { cleanPlan } from './trip-plan.js';
 import { meFor } from './format.js';
+import { betsOf } from './pair-bets.js';
 
 /** The id the game's line between two people goes by as trip money: "big:<tripId>:<from>><to>". */
 export const bigMoneyId = (tripId, from, to) => `big:${tripId}:${from}>${to}`;
@@ -177,31 +178,95 @@ export function bigBy(state, tripId) {
 }
 
 /**
+ * The round on this phone the decided game's money goes on, for the screens that add rounds up, so
+ * the game counts once: the round you played (finished, else still open: a game the organizer
+ * closed early can leave your group's round open), else the game's first finished round here.
+ * Null when the game isn't decided.
+ */
+export function bigHome(state, tripId) {
+  const st = bigStatus(state, tripId);
+  if (!st?.final) return null;
+  const mine = r => { const me = meFor(r, state); return !!me && (r.players || []).some(p => p.id === me); };
+  const done = st.rounds.filter(r => r.status === 'done');
+  return done.find(mine) || st.rounds.find(mine) || done[0] || null;
+}
+
+/**
+ * Whether a round counts on the screens that add up finished rounds (History, Season, Close the
+ * books, the profile and Your stats): a finished round, or the round a decided Big Game's money
+ * goes on while it's still open (bigHome), so a game closed early has its money there too.
+ */
+export function countsAsDone(state, round) {
+  if (round?.status === 'done') return true;
+  return round?.trip?.format === BIG_FORMAT && !!round.trip.id && bigHome(state, round.trip.id)?.id === round.id;
+}
+
+/**
+ * What a Big Game's round is to the screens that count money rounds: null when it isn't one,
+ * 'home' when the decided game's money goes on it (bigHome), else 'none' (the game isn't decided,
+ * or its money goes on another round), which is never an even money round of its own unless the
+ * round had money of its own (a side bet between two of its players).
+ */
+export function bigRole(state, round) {
+  if (round?.trip?.format !== BIG_FORMAT || !round.trip.id) return null;
+  return bigHome(state, round.trip.id)?.id === round.id ? 'home' : 'none';
+}
+
+/** A round with money of its own: a game with a bet, side games or side bets (a Big Game's group round starts with none). */
+export function hasOwnMoney(round) {
+  return (round?.sideGames?.length || 0) > 0 || betsOf(round).length > 0 || round?.game !== 'stroke' || (round?.settings?.stroke?.stake || 0) > 0;
+}
+
+/**
+ * A Big Game's round with no money on it for the screens that count money rounds: the game's money
+ * goes on another round (or isn't decided yet) and the round has none of its own. It's a round you
+ * played, never an even money round.
+ */
+export const bigNoMoney = (state, round) => bigRole(state, round) === 'none' && !hasOwnMoney(round);
+
+/**
  * The decided game's money on one of its rounds here, for the screens that add rounds up (History,
  * Season, Players, Close the books; the Tab has it already, as trip money): { id: dollars }, the
- * whole game's money on one round a phone, the round you played (else the game's first finished
- * round here), so the game counts once. Ids are that round's player ids (the game's for someone
- * in another group). With `group`, only this round's own players' money, on whichever round it's
- * asked for: what the round's results screen shows. Null when it isn't a decided game's round.
+ * whole game's money on one round a phone (bigHome), so the game counts once. Ids are that
+ * round's player ids (the game's for someone in another group). With `group`, only this round's
+ * own players' money, on whichever finished round it's asked for: what the round's results screen
+ * shows. Null when it isn't a decided game's round.
  */
 export function bigRoundMoney(state, round, { group = false } = {}) {
   const tripId = round?.trip?.format === BIG_FORMAT ? round.trip.id : null;
-  if (!tripId || round.status !== 'done') return null;
+  if (!tripId) return null;
   const st = bigStatus(state, tripId);
   if (!st?.final) return null;
+  const home = !group && bigHome(state, tripId)?.id === round.id;
+  if (round.status !== 'done' && !home) return null;
   const who = canonicalOf(state);
   const seatIn = (r, id) => (r.players || []).find(p => p.id === id || who(p.id) === who(id));
-  if (!group) {
-    const done = st.rounds.filter(r => r.status === 'done');
-    const home = done.find(r => { const me = meFor(r, state); return !!me && (r.players || []).some(p => p.id === me); }) || done[0];
-    if (home?.id !== round.id) return {};
-  }
+  if (!group && !home) return {};
   const out = {};
   for (const [id, c] of Object.entries(st.results.balances)) {
     if (!c) continue;
     const seat = seatIn(round, id)?.id || (group ? null : id);
     if (!seat) continue;
     out[seat] = Math.round((out[seat] || 0) * 100 + c) / 100;
+  }
+  return out;
+}
+
+/**
+ * The decided game's payments between you and people in other groups, on the round its money goes
+ * on (bigHome), for the head to heads: [{ id, amount }], `id` as this phone knows them, `amount` in
+ * dollars, positive when they owe you. People in your own group are in the round's pairs already
+ * (withBigMoney). `isMe` says which ids are yours. Empty for any other round.
+ */
+export function bigAcross(state, round, isMe) {
+  if (bigRole(state, round) !== 'home') return [];
+  const who = canonicalOf(state);
+  const seated = new Set((round.players || []).map(p => who(p.id)));
+  const out = [];
+  for (const x of bigMoney(state, round.trip.id)) {
+    const from = x.parts[0].id, to = x.payer;
+    if (isMe(to) && !isMe(from) && !seated.has(who(from))) out.push({ id: from, amount: x.cents / 100 });
+    else if (isMe(from) && !isMe(to) && !seated.has(who(to))) out.push({ id: to, amount: -x.cents / 100 });
   }
   return out;
 }
@@ -215,6 +280,11 @@ export function bigRoundMoney(state, round, { group = false } = {}) {
 export function withBigMoney(state, round, res, { group = false } = {}) {
   const add = bigRoundMoney(state, round, { group });
   if (!add || !res) return res;
+  // A round still open (the game was closed early) has none of its own money on the Tab yet: only the game's
+  if (round.status !== 'done') {
+    const ids = (round.players || []).map(p => p.id);
+    res = { ...res, balances: Object.fromEntries(ids.map(id => [id, 0])), pairs: Object.fromEntries(ids.map(id => [id, {}])), standings: (res.standings || []).map(p => ({ ...p, amount: 0 })) };
+  }
   const r2 = v => Math.round(v * 100) / 100;
   const balances = { ...res.balances };
   for (const [id, v] of Object.entries(add)) balances[id] = r2((balances[id] || 0) + v);

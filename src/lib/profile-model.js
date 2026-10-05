@@ -20,6 +20,7 @@ import { linksOf } from './people-links.js';
 import { meFor } from './format.js';
 import { payInfo } from './pay.js';
 import { normalizeAvatar } from './avatar-model.js';
+import { bigNoMoney, countsAsDone, withBigMoney } from './big-money.js';
 
 // The avatar's own rules live in avatar-model.js, so every avatar on screen doesn't load the profile rules
 export { normalizeAvatar } from './avatar-model.js';
@@ -144,22 +145,25 @@ export function profileStats(state, ids = null) {
   const games = new Map(); // game -> { rounds, last }
   let rounds = 0, since = null, lastPlayed = null, net = 0, best = null, moneyRounds = 0;
   const done = Object.values(state?.rounds || {})
-    .filter(r => r && r.status === 'done' && Array.isArray(r.players))
+    .filter(r => r && countsAsDone(state, r) && Array.isArray(r.players))
     .sort((a, b) => (a.finishedAt || a.createdAt || 0) - (b.finishedAt || b.createdAt || 0));
   for (const r of done) {
     // Your seat: this phone's "me" for the round when it's one of yours, otherwise any of the ids
     const local = meFor(r, state);
     const seat = mine.has(local) && r.players.some(p => p.id === local) ? local : r.players.find(p => mine.has(p.id))?.id;
     if (!seat) continue;
-    let amt = 0;
-    try { amt = roundResults(r).balances[seat] || 0; } catch { continue; }
+    let amt = 0, res;
+    // A Big Game's round has your money from the whole game on the one round it goes on, as History does
+    try { res = withBigMoney(state, r, roundResults(r)); amt = res.balances[seat] || 0; } catch { continue; }
+    // A Big Game's round with no money on it (the game's goes on another, or isn't decided) is a round played, not a result
+    const noMoney = bigNoMoney(state, r);
     rounds++;
     const at = r.finishedAt || r.createdAt || null;
     if (at && (since == null || at < since)) since = at;
     if (at && (lastPlayed == null || at > lastPlayed)) lastPlayed = at;
-    if (amt > 0) record.won++; else if (amt < 0) record.lost++; else record.even++;
+    if (noMoney) { /* no result of its own */ } else if (amt > 0) record.won++; else if (amt < 0) record.lost++; else record.even++;
     // Dollars: a money round's net, or a reward round's side bets for money, as the Tab has them
-    const cash = countsMoney(r) ? amt : onTab(r) && hasCashBet(r, seat) ? tabResults(r).balances[seat] || 0 : null;
+    const cash = noMoney ? null : countsMoney(r) ? amt : onTab(r) && hasCashBet(r, seat) ? tabResults(r).balances[seat] || 0 : null;
     if (cash != null) {
       moneyRounds++;
       net = cents(net + cash);

@@ -19,7 +19,9 @@ import {
 import { allBigMoney, bigMoney, bigOf, bigRoundMoney, bigRoundResults, bigStatus } from './big-money.js';
 import { gameLabel, holeMoneyLine } from './format.js';
 import { agreementItems } from './agreed.js';
-import { lastResult, myMoney, myNet } from './history.js';
+import { headToHead, lastResult, monthGroups, myMoney, myNet, roundsInRange } from './history.js';
+import { profileStats } from './profile-model.js';
+import { deepStats } from './deep-stats.js';
 import { latelyItems } from './lately.js';
 import { seasonBoard } from './season.js';
 import { closePreview, ALL } from './books.js';
@@ -660,4 +662,81 @@ test('the game’s card says what’s still owed to you and what’s between oth
   assert.equal(myBigMoney(bigStatus(paid, 't_big'), isAnn), 2.67);
   // Someone who isn't in the game has nothing of theirs on it
   assert.deepEqual(bigLeft(st.plan, () => false), { mine: 0, others: total / 100 });
+});
+
+// --------------------------- review fixes: the game's money everywhere ------
+
+/** Ann's phone and Dave's (both Group 1) with the game closed early while Group 1's round is still open. */
+function closedEarly() {
+  const p = phonesOf(game(), { done: false, holes: 6, r2: { done: true } });
+  const endedAt = OCT(17, 18);
+  const a = { ...p.a, trips: { t_big: { ...p.a.trips.t_big, endedAt } } };
+  const d = { ...p.d, bigRemote: { t_big: { big: game(), endedAt } } };
+  return { a, d };
+}
+const tabNet = s => cents(tabBalances(s, { now: NOW })[s.me] || 0);
+
+test('a game closed early with your own group still out has its money in History, Season and Close the books, as on the Tab', () => {
+  const { a, d } = closedEarly();
+  for (const [s, me, own] of [[a, 'a', 'r1'], [d, 'zd', 'r1']]) {
+    const st = bigStatus(s, 't_big');
+    assert.equal(st.final, true);
+    assert.equal(s.rounds[own].status, 'active', 'the group’s own round is still open');
+    const game = st.results.balances[me.replace(/^z/, '')];
+    assert.notEqual(game, 0);
+    assert.equal(tabNet(s), game, 'the Tab has the game');
+    // History lists the round the game's money goes on and adds it up, once
+    const list = roundsInRange(s, { kind: 'all' });
+    assert.ok(list.some(r => r.id === own), 'History has the round');
+    assert.equal(cents(list.reduce((x, r) => x + (myMoney(r, s) || 0), 0)), game, 'History');
+    assert.equal(cents(monthGroups(list, s, new Date(NOW)).reduce((x, m) => x + m.net, 0)), game, 'the month');
+    assert.equal(cents(seasonBoard(s, 2026).balances.find(b => b.me).net), game, 'Season');
+    const mine = closePreview(s, ALL, { now: NOW }).totals.find(t => t.id === s.me || t.id === me.replace(/^z/, ''));
+    assert.equal(mine?.cents || 0, game, 'Close the books');
+  }
+  // The open round's own side bet isn't on the Tab yet, so it isn't in History either
+  const withBet = closedEarly().a;
+  withBet.rounds.r1 = { ...withBet.rounds.r1, bets: [{ id: 'sb', kind: 'custom', sides: ['a', 'b'], stake: 5, label: 'Side bet', winner: 'a', at: 1 }] };
+  assert.equal(cents(myMoney(withBet.rounds.r1, withBet)), bigStatus(withBet, 't_big').results.balances.a);
+});
+
+test('the profile and Your stats count the game’s money once, as History does, and a group round waiting on the game is no even money round', () => {
+  for (const s of [phonesOf().a, phonesOf().d, closedEarly().a, closedEarly().d]) {
+    const net = tabNet(s);
+    assert.notEqual(net, 0);
+    assert.equal(cents(profileStats(s).money.net), net, 'profile');
+    assert.equal(profileStats(s).money.rounds, 1);
+    assert.equal(cents(deepStats(s).dollars.net), net, 'Your stats');
+    assert.equal(deepStats(s).dollars.rounds, 1);
+  }
+  // Not decided yet: the round you played is a round, not an even money round
+  const a = phonesOf().a;
+  const open = { ...a, rounds: { ...a.rounds, r2: { ...a.rounds.r2, status: 'active', finishedAt: null } } };
+  const prof = profileStats(open);
+  assert.equal(prof.rounds, 1);
+  assert.equal(prof.money.rounds, 0);
+  assert.deepEqual(prof.record, { won: 0, lost: 0, even: 0 });
+  const deep = deepStats(open);
+  assert.equal(deep.dollars.rounds, 0);
+  assert.deepEqual(deep.record, { won: 0, lost: 0, even: 0 });
+});
+
+test('head to head has the game’s money with people in the other group, once, the same as Where it comes from', () => {
+  for (const s of [phonesOf().a, phonesOf().e, closedEarly().a]) {
+    const meId = s.me.replace(/^z/, '');
+    const ids = new Set([s.me, meId]);
+    const h2h = headToHeadSummary(s, ids, { moneyOnly: true });
+    const hist = headToHead(roundsInRange(s, { kind: 'all' }), s);
+    let across = 0;
+    for (const o of Object.keys(NAMES)) {
+      if (o === meId) continue;
+      const w = breakdownWith(s, ids, o, { now: NOW });
+      const where = cents(w.net + w.spent);
+      assert.equal(cents(h2h.get(o)?.net ?? 0), where, `${s.me} vs ${o}`);
+      assert.equal(cents(hist[o] ?? 0), where, `History’s head to head, ${s.me} vs ${o}`);
+      const same = [G1, G2].some(g => g.includes(meId) && g.includes(o));
+      if (!same && where) { across++; assert.equal(h2h.get(o).rounds, 1, 'one game, one round'); }
+    }
+    assert.ok(across > 0, 'someone in the other group has money with you');
+  }
 });

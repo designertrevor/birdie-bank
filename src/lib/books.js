@@ -20,7 +20,7 @@ import { nameOf } from './ledger.js';
 import { canonicalOf, finishedAt } from './pair-debts.js';
 import { onTab, tabResults } from './play-for.js';
 import { tripsOf } from './trips.js';
-import { withBigMoney } from './big-money.js';
+import { countsAsDone, withBigMoney } from './big-money.js';
 
 /** The whole Tab's books, as against one crew's. */
 export const ALL = 'all';
@@ -57,7 +57,7 @@ export function openRounds(state, scope, { now = Date.now() } = {}) {
   const trips = tripsOf(state), crews = crewsOf(state);
   const crew = crewIdOf(scope);
   return Object.values(state.rounds || {})
-    .filter(r => r.status === 'done' && onTab(r) && finishedAt(r) > since && finishedAt(r) <= now)
+    .filter(r => countsAsDone(state, r) && onTab(r) && finishedAt(r) > since && finishedAt(r) <= now)
     .filter(r => !crew || tabKeyOf(state, r, { trips, crews }) === crewKey(crew))
     .sort((a, b) => finishedAt(a) - finishedAt(b));
 }

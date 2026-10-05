@@ -17,6 +17,7 @@ import { betsOf, isCashBet } from './pair-bets.js';
 import { linksOf } from './people-links.js';
 import { meFor } from './format.js';
 import { roundTime } from './history.js';
+import { bigNoMoney, countsAsDone, withBigMoney } from './big-money.js';
 
 const cents = v => Math.round(v * 100) / 100 || 0;
 const EPS = 0.004;
@@ -154,12 +155,13 @@ function yourRounds(state, rounds) {
   const mine = myIdSet(state);
   const out = [];
   for (const r of rounds) {
-    if (!r || r.status !== 'done' || !Array.isArray(r.players)) continue;
+    if (!r || !countsAsDone(state, r) || !Array.isArray(r.players)) continue;
     const seat = seatIn(r, state, mine);
     if (!seat) continue;
     let res;
-    try { res = roundResults(r); } catch { continue; }
-    out.push({ r, seat, res });
+    // A Big Game's round has your money from the whole game on the one round it goes on, as History does
+    try { res = withBigMoney(state, r, roundResults(r)); } catch { continue; }
+    out.push({ r, seat, res, noMoney: bigNoMoney(state, r) });
   }
   return out.sort((a, b) => roundTime(a.r) - roundTime(b.r));
 }
@@ -197,16 +199,17 @@ export function deepStats(state, rounds = Object.values(state?.rounds || {})) {
   const skins = { rounds: 0, won: 0, dollars: { net: 0, rounds: 0 }, best: null };
   const wins = [];
   const list = yourRounds(state, rounds);
-  for (const { r, seat, res } of list) {
+  for (const { r, seat, res, noMoney } of list) {
     const at = roundTime(r);
     const total = res.balances[seat] || 0;
-    const cash = dollarsIn(r, seat, res);
+    // A Big Game's round with no money on it is a round played, never an even money round
+    const cash = noMoney ? null : dollarsIn(r, seat, res);
     const pts = countsMoney(r) ? null : cents(total);
-    tally(record, total);
+    if (!noMoney) tally(record, total);
     if (cash != null) { dollars.net = cents(dollars.net + cash); dollars.rounds++; if (!countsMoney(r)) lunchDollars++; }
     if (pts != null) { points.net = cents(points.net + pts); points.rounds++; }
 
-    for (const part of gameParts(r, seat, res)) {
+    for (const part of noMoney ? [] : gameParts(r, seat, res)) {
       const line = games.get(part.key) || blankLine(part.key, gameName(part.key));
       addTo(line, part);
       games.set(part.key, line);
@@ -216,7 +219,7 @@ export function deepStats(state, rounds = Object.values(state?.rounds || {})) {
     const ckey = r.course?.id ? `id:${r.course.id}` : `name:${cname.toLowerCase()}`;
     const c = courses.get(ckey) || { ...blankLine(ckey, cname), place: r.course?.city || '', last: 0 };
     c.rounds++;
-    tally(c.record, total);
+    if (!noMoney) tally(c.record, total);
     if (cash != null) { c.dollars.net = cents(c.dollars.net + cash); c.dollars.rounds++; }
     if (pts != null) { c.points.net = cents(c.points.net + pts); c.points.rounds++; }
     if (at >= c.last) { c.last = at; c.name = cname; if (r.course?.city) c.place = r.course.city; }

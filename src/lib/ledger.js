@@ -10,7 +10,7 @@ import { betsOf, isCashBet } from './pair-bets.js';
 import { planDebts } from './trip-plan.js';
 import { allExpenses, allTripMoney, allTripPays, expensePairDebts, expensePairs, expensesBetween, tripMoney } from './trip-expenses.js';
 import { allStakeMoney, stakeBetween, stakeMoney } from './cup-stake.js';
-import { allBigMoney, bigBetween, bigMoney, bigOf, bigTripIds, withBigMoney } from './big-money.js';
+import { allBigMoney, bigAcross, bigBetween, bigMoney, bigOf, bigTripIds, countsAsDone, withBigMoney } from './big-money.js';
 
 const toCents = v => Math.round((Number(v) || 0) * 100);
 /** Whether two players had a side bet for money together in a reward round. */
@@ -315,7 +315,7 @@ export function headToHeadSummary(state, ids, { moneyOnly = false } = {}) {
   const who = canonical(state);
   const isMine = mineOf(state, mine);
   const out = new Map();
-  for (const r of doneRounds(state)) {
+  for (const r of Object.values(state.rounds || {}).filter(x => countsAsDone(state, x))) {
     const me = meFor(r, state);
     if (!mine.has(me) || !r.players.some(p => p.id === me)) continue; // watched rounds aren't yours
     if (moneyOnly && !onTab(r)) continue;
@@ -334,6 +334,11 @@ export function headToHeadSummary(state, ids, { moneyOnly = false } = {}) {
       const k = who(p.id);
       inRound.set(k, (inRound.get(k) || 0) + ((cashOnly ? cashPairs : pairs)[p.id] ?? 0));
       if (cashPairs) inCash.set(k, (inCash.get(k) || 0) + (cashPairs[p.id] ?? 0));
+    }
+    // A Big Game's payments with people in the other groups, once, on the round its money goes on
+    for (const x of bigAcross(state, r, id => isMine(id) || id === me)) {
+      const k = who(x.id);
+      inRound.set(k, Math.round(((inRound.get(k) || 0) + x.amount) * 100) / 100);
     }
     for (const [k, v] of inRound) {
       const cur = out.get(k) || { rounds: 0, won: 0, lost: 0, even: 0, net: 0 };
