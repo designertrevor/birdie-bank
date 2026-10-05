@@ -19,7 +19,7 @@ export default function Friends() {
   const [signingIn, setSigningIn] = useState(false);
   const { live, plans, lately } = useMemo(() => groupFeed(state, { rounds }), [state, rounds]);
   // The talk on your rounds and plans, and on the friends' rounds you watch
-  useTalkSync([...recentTalkKeys(state), ...rounds.filter(v => v.following).map(v => followThread(v.code))]);
+  useTalkSync([...recentTalkKeys(state), ...rounds.filter(v => v.following && v.talk !== false).map(v => followThread(v.code))]);
   const empty = !live.length && !plans.length && !lately.length;
   return (
     <Screen>

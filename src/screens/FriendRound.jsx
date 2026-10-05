@@ -28,8 +28,9 @@ export default function FriendRound({ code }) {
   // off Show my money hides the amount here on the next refresh, not on the next hole scored.
   const row = useMemo(() => shownRow(base, live.row), [base, live.row]);
   const view = useMemo(() => (row ? friendRoundView(row, { following }) : null), [row, following]);
-  const ctx = view ? followTalk(code, view.round, state) : null;
-  useTalkSync(following && view ? [ctx.key] : [], { live: true });
+  // A round whose money stays back from you has no gallery talk: the talk is kept under its code
+  const ctx = view && view.talk !== false ? followTalk(code, view.round, state) : null;
+  useTalkSync(following && ctx ? [ctx.key] : [], { live: true });
 
   if (!view) {
     return (
@@ -65,7 +66,7 @@ export default function FriendRound({ code }) {
           ) : (
             <div className="fr-watch-cta">
               <button className="full-btn" onClick={watch}><Icon name="eye" fill /> Watch this round</button>
-              <p className="field-help">Follow every hole as it’s scored, read only, and cheer them on in the trash talk.</p>
+              <p className="field-help">{ctx ? 'Follow every hole as it’s scored, read only, and cheer them on in the trash talk.' : 'Follow every hole as it’s scored, read only.'}</p>
             </div>
           ))}
 
@@ -97,9 +98,9 @@ export default function FriendRound({ code }) {
         <div className="sec-label">Scorecard</div>
         <Scorecard round={view.round} />
 
-        {following && ctx.who
+        {following && ctx?.who
           ? <TalkSection ctx={ctx} on="round" title="Trash talk" />
-          : <p className="field-help pad">{done ? 'You didn’t watch this one, so its trash talk is the players’.' : 'Watch to react and add to the trash talk.'}</p>}
+          : <p className="field-help pad">{!ctx ? 'Its trash talk stays with the players.' : done ? 'You didn’t watch this one, so its trash talk is the players’.' : 'Watch to react and add to the trash talk.'}</p>}
         <p className="field-help pad fr-readonly"><Icon name="lock-simple" /> Watching is read only. It never goes on your Tab or in your History.</p>
       </div>
     </Screen>

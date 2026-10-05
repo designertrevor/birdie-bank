@@ -8,7 +8,7 @@ import { createRound, roundResults } from './round.js';
 import { buildHoles, buildMeta } from './sync-model.js';
 import {
   DONE_DAYS, LIVE_HOURS, cleanFeedRow, feedHole, feedLevel, feedMeta, feedMoney, feedPeople, feedRoundOk, feedSeats, feedWindowOk, followSeatsFor, followerMayWrite,
-  friendRoundItem, friendRoundView, friendRounds, friendsLine, groupFeed, matchLine, planItem, shownRow, statusLine, upNextFriends,
+  followTalkItems, friendRoundItem, friendRoundView, liveSource, friendRounds, friendsLine, groupFeed, matchLine, planItem, shownRow, statusLine, upNextFriends,
 } from './friend-feed.js';
 import { normalizePrivacy } from './profile-model.js';
 import { tabResults } from './play-for.js';
@@ -323,7 +323,7 @@ test('feed: a finished round lists only the amounts people chose to show', () =>
 });
 
 test('feed: talk on a round you watch shows the newest comment by someone else', () => {
-  const live = rowOf(skinsRound({ code: 'AAA111' }), { people: { sam: SAM } });
+  const live = rowOf(skinsRound({ code: 'AAA111' }), { people: { sam: { ...SAM, money: true } } });
   const talk = { 'follow:AAA111': {
     c1: { id: 'c1', on: 'round', kind: 'comment', who: 'sam', name: 'Sam', body: 'Two skins already', at: NOW - 10 * 60e3 },
     c2: { id: 'c2', on: 'round', kind: 'comment', who: 'me', name: 'Trevor', body: 'Mine', at: NOW - 5 * 60e3, mine: true },
@@ -507,7 +507,9 @@ test('feed rules: a round whose money someone keeps from you goes without its st
   // The round itself, the scores and the Big Game's group names still go
   assert.equal(kept.game, 'nassau');
   assert.deepEqual(holes[1].scores, { sam: 3, dave: 4 });
-  assert.deepEqual(kept.trip.big, { groups: [{ id: 'g1', name: 'Group 1', roundId: 'n1', code: 'MON111' }] });
+  // The groups go without their codes: a code reads that group's round whole, money and all
+  assert.deepEqual(kept.trip.big, { groups: [{ id: 'g1', name: 'Group 1', roundId: 'n1' }] });
+  assert.deepEqual(feedMeta(buildMeta(r)).trip.big, { groups: [{ id: 'g1', name: 'Group 1', roundId: 'n1' }] });
   // With everyone's money allowed, everything but the Big Game's setup goes
   const all = feedMeta(buildMeta(r));
   assert.equal(all.settings.nassau.front, 7);
@@ -553,11 +555,59 @@ test('friend round: the old full row and the new kept-back row show the same, wi
 test('feed rules: the SQL keeps the money back unless every seat with a setting lets it reach you', () => {
   const sql = readFileSync(new URL('../../supabase/2026-10-06-friend-feed.sql', import.meta.url), 'utf8');
   // One rule for the whole round: all or none, as the app reads it
-  assert.match(sql, /not exists \(select 1 from public\.feed_seats\(r\.meta\) fs\s+where not \(fs\.shows_money and public\.profile_visible_to_me\(fs\.account\)\)\) as keep_money/);
+  assert.match(sql, /feed_keep_money\(m jsonb\)[\s\S]*?not exists \(select 1 from public\.feed_seats\(m\) fs\s+where not \(fs\.shows_money and public\.profile_visible_to_me\(fs\.account\)\)\)/);
+  assert.match(sql, /public\.feed_keep_money\(r\.meta\) as keep_money/);
+  // The code goes only with the money; otherwise the ref, and talk stays the players'
+  assert.match(sql, /select case when c\.keep_money then c\.code end,\s+case when not c\.keep_money then public\.feed_ref\(c\.code\) end/);
+  assert.match(sql, /if not public\.feed_round_ok\(m\) or not public\.feed_keep_money\(m\) then return null/);
+  // Functions whose return type changed while it was drafted go first, so it runs over a draft
+  assert.match(sql, /drop function if exists public\.feed_seats\(jsonb\);\s+create or replace function public\.feed_seats/);
+  assert.match(sql, /drop function if exists public\.friend_rounds\(\);/);
   assert.match(sql, /public\.feed_meta\(c\.meta, c\.keep_money\)/);
   assert.match(sql, /public\.feed_hole\(h\.data, c\.meta, c\.keep_money\)/);
   // Every key the app strips, the server strips
   for (const k of ['bets', 'betsGone', 'agreed', 'settings', 'betHistory', 'sideGames', 'gamesFor', 'presses']) assert.match(sql, new RegExp(`- '${k}'`), k);
   assert.match(sql, /'\{"feedMoney": false\}'/);
   assert.match(sql, /drop function if exists public\.feed_meta\(jsonb\)/);
+});
+
+// --------------------------- review fixes: no code without the money -------
+
+test('feed: a round whose money stays back comes by its ref, is never fetched with a code, and has no gallery talk', () => {
+  const r = skinsRound({ code: 'AAA111' });
+  // The server sends it without its code, with a ref instead
+  const sent = { ...rowOf(r, { people: { sam: SAM, dave: DAVE } }), code: null, ref: 'F7DD39' };
+  const row = cleanFeedRow(sent);
+  assert.equal(row.code, 'F7DD39', 'the ref is its key on this phone');
+  assert.equal(row.byRef, true);
+  assert.equal(row.held, true);
+  assert.ok(!JSON.stringify(row).includes('AAA111'));
+  assert.deepEqual(liveSource(sent), { kind: 'ref', ref: 'F7DD39' });
+  // A copy kept on this phone reads the same next time
+  assert.deepEqual(cleanFeedRow(JSON.parse(JSON.stringify(row))), row);
+  assert.deepEqual(liveSource(row), { kind: 'ref', ref: 'F7DD39' });
+  // Even if a ref row says everyone shows their money, it's held: only the code carries money
+  const odd = cleanFeedRow({ ...sent, people: { sam: { ...SAM, money: true } } });
+  assert.equal(odd.held, true);
+  assert.equal(odd.meta.feedMoney, false);
+  // No gallery talk: the talk is kept under the code
+  const view = friendRoundView(sent, { following: true });
+  assert.equal(view.talk, false);
+  const done = friendRoundView({ ...rowOf(skinsRound({ code: 'AAA111', status: 'done' }), { people: { sam: SAM } }), code: null, ref: 'F7DD39' });
+  assert.equal(friendRoundItem(done, NOW).talkKey, null);
+  const talk = { 'follow:F7DD39': { c1: { id: 'c1', on: 'round', kind: 'comment', who: 'sam', name: 'Sam', body: 'Hi', at: NOW } } };
+  assert.deepEqual(followTalkItems([view], talk, { now: NOW }), []);
+  // A row that still has its code but holds money back (from a draft of the server, or a copy from
+  // before it ran) is followed only through the feed, never fetched with that code
+  const old = rowOf(r, { people: { sam: SAM, dave: DAVE } });
+  assert.equal(cleanFeedRow(old).held, true);
+  assert.deepEqual(liveSource(old), { kind: 'feed' });
+  assert.equal(friendRoundView(old).talk, false);
+  // A round whose money may reach you is read with its code, and its talk is open
+  const open = rowOf(r, { people: { sam: { ...SAM, money: true } } });
+  assert.deepEqual(liveSource(open), { kind: 'code', code: 'AAA111' });
+  assert.equal(friendRoundView(open).talk, true);
+  // Junk refs and codes are no row at all
+  assert.equal(cleanFeedRow({ ...sent, ref: 'nope' }), null);
+  assert.equal(cleanFeedRow({ ...sent, ref: null }), null);
 });

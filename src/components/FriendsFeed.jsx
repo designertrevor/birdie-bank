@@ -38,7 +38,7 @@ export function FriendRoundCard({ view }) {
       {card}
       <button className="uc-preview fr-watch" onClick={watch}>
         <Icon name="eye" fill />
-        <span className="row-main"><b>Watch</b> <span className="uc-pv-sub">Follow along live, cheer and trash talk</span></span>
+        <span className="row-main"><b>Watch</b> <span className="uc-pv-sub">{view.talk === false ? 'Follow along live' : 'Follow along live, cheer and trash talk'}</span></span>
         <Icon name="caret-right" />
       </button>
     </div>

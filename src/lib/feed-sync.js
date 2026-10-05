@@ -18,13 +18,15 @@
 //   watchRound(code, row)   follow a friend's round; stopWatching(code) lets it go
 //   useLiveRound(code, row) while mounted, the round's latest copy from the live connection:
 //                           { row, state: 'connecting' | 'live' | 'gone' | 'offline' }
+//                           A round whose money stays back from you has no code here: it's fetched
+//                           by its ref (friend_round) every 20 seconds, never with a code.
 import { useEffect, useMemo, useState, useSyncExternalStore } from 'react';
 import { STORE_KEY, useStore } from './store.js';
 import { getSupabase, supabaseConfigured } from './supabase.js';
 import { accountNow, onAccount } from './cloud.js';
 import { isNotSetUp, retryOnLoad, serverStateAfter } from './profile-model.js';
 import { getAdapter } from './sync.js';
-import { cleanFeedRow, feedMeta, friendRounds } from './friend-feed.js';
+import { cleanFeedRow, feedMeta, friendRounds, liveSource } from './friend-feed.js';
 
 const FEED_KEY = `bb-feed:${STORE_KEY}`;       // { rows, at, offAt, uid }: uid is the account the rows came for
 const FOLLOW_KEY = `bb-follows:${STORE_KEY}`;  // { [code]: { since, row } }, for that same account
@@ -206,19 +208,52 @@ function liveCopy(row, remote) {
   return cleanFeedRow({ ...row, meta: feedMeta(remote.meta), holes, updatedAt: Date.now() });
 }
 
+/** Fetch one friend's round by its ref (friend_round), for a round whose money stays back. */
+async function fetchByRef(ref) {
+  const db = await getSupabase();
+  if (!db) throw new Error('offline');
+  const { data, error } = await db.rpc('friend_round', { p_ref: ref });
+  if (error) throw error;
+  return cleanFeedRow(Array.isArray(data) ? data[0] : null);
+}
+
+/** The feed's copy of one round replaced with a fresher one (a round fetched by its ref). */
+function landRow(code, next) {
+  const rows = snap.rows.map(r => (r.code === code ? next : r));
+  const follows = snap.follows[code] ? { ...snap.follows, [code]: { ...snap.follows[code], row: next } } : snap.follows;
+  set({ rows, follows });
+  persistFeed();
+  if (follows !== snap.follows) persistFollows();
+}
+
 /**
- * While a friend's round is on screen: its latest copy, live. It listens on the round's own channel
- * (the one a watcher's phone uses) and fetches the round again a moment after anything changes, so
- * a run of saves is one fetch. A round you watch keeps the new copy for next time.
+ * While a friend's round is on screen: its latest copy, live. A round whose money may reach you
+ * listens on the round's own channel (the one a watcher's phone uses) and fetches the round again
+ * a moment after anything changes, so a run of saves is one fetch. One whose money stays back is
+ * never fetched with a code (that would bring the money with it): it's asked for by its ref every
+ * 20 seconds, with the same parts kept back, or left to the feed when it has no ref. A round you
+ * watch keeps the new copy for next time.
  */
 export function useLiveRound(code, row) {
   const [live, setLive] = useState({ row: null, state: 'connecting' });
   const has = !!row;
+  const source = liveSource(row);
+  const kind = source?.kind || null;
   useEffect(() => {
-    if (!code || !has) return undefined;
-    let stopped = false, unsub = null, timer = null;
+    if (!code || !has || !kind) return undefined;
+    let stopped = false, unsub = null, timer = null, every = null;
+    const wake = () => { if (document.visibilityState === 'visible') pull(); };
     const pull = async () => {
       try {
+        if (kind === 'feed') { await refreshFeed(); if (!stopped) setLive(l => ({ ...l, state: 'live' })); return; }
+        if (kind === 'ref') {
+          const next = await fetchByRef(code);
+          if (stopped) return;
+          if (!next) { setLive(l => ({ ...l, state: 'gone' })); return; }
+          landRow(code, next);
+          setLive({ row: next, state: 'live' });
+          return;
+        }
         const adapter = await getAdapter();
         const remote = await adapter?.fetch(code);
         if (stopped) return;
@@ -233,23 +268,27 @@ export function useLiveRound(code, row) {
         }
       } catch { if (!stopped) setLive(l => ({ ...l, state: 'offline' })); }
     };
-    const soon = () => { clearTimeout(timer); timer = setTimeout(pull, 500); };
-    getAdapter().then(adapter => {
-      if (stopped || !adapter) return;
-      unsub = adapter.subscribe(code, ev => {
-        if (ev.type === 'deleted') setLive(l => ({ ...l, state: 'gone' }));
-        else if (ev.type === 'connected' || ev.type === 'meta' || (ev.type === 'hole' && Number(ev.holeNo) > 0)) soon();
+    if (kind === 'code') {
+      const soon = () => { clearTimeout(timer); timer = setTimeout(pull, 500); };
+      getAdapter().then(adapter => {
+        if (stopped || !adapter) return;
+        unsub = adapter.subscribe(code, ev => {
+          if (ev.type === 'deleted') setLive(l => ({ ...l, state: 'gone' }));
+          else if (ev.type === 'connected' || ev.type === 'meta' || (ev.type === 'hole' && Number(ev.holeNo) > 0)) soon();
+        });
       });
-    });
+    } else {
+      every = setInterval(wake, MIN_GAP);
+    }
     pull();
-    const wake = () => { if (document.visibilityState === 'visible') pull(); };
     document.addEventListener('visibilitychange', wake);
     return () => {
       stopped = true;
       clearTimeout(timer);
+      clearInterval(every);
       unsub?.();
       document.removeEventListener('visibilitychange', wake);
     };
-  }, [code, has]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [code, has, kind]); // eslint-disable-line react-hooks/exhaustive-deps
   return live;
 }

@@ -12,7 +12,12 @@
 //    with no account has no setting, so theirs never shows. Points rounds read in points, which are
 //    bragging rights.
 // A friend's round as the server sends it (a "row"):
-//   { code, meta, holes: { [holeNo]: data }, people: { [seat]: { friend, money, account } }, updatedAt }
+//   { code, ref, meta, holes: { [holeNo]: data }, people: { [seat]: { friend, money, account } }, updatedAt }
+// The round's code lets a phone read the whole round, money and all, so a row has it only when the
+// round's money may reach you. Otherwise the row has a ref (a stand-in the server makes from the
+// code) and no code: the feed fetches that round again by its ref (friend_round), never with a
+// code, and its trash talk (kept under the code) stays the players'. On this phone a row's `code`
+// is its key either way, with `byRef` saying it's a ref and `held` that its money stays back.
 import { GAMES, gameView, holeComplete, isTeamGame, matchScored, nassauWinners, roundResults, scorers, sideNames } from './round.js';
 import { assemble } from './sync-model.js';
 import { bigGroupName, gameLabel, meFor, myIds } from './format.js';
@@ -69,15 +74,17 @@ const BET_KEYS = ['bets', 'betsGone', 'agreed'];
 const STAKE_KEYS = ['settings', 'betHistory', 'sideGames', 'gamesFor'];
 
 /**
- * A round's meta as a friend watching gets it (feed_meta): no device hashes, seat claims or payment
- * apps, and a Big Game's setup cut to its groups' names and codes (its stakes, side bets and the
- * whole field's handicaps stay with the game). With `money` off (someone in the round keeps their
+ * A round's meta as a friend watching gets it (feed_meta): no code, device hashes, seat claims or payment
+ * apps, and a Big Game's setup cut to its groups' names and round ids (its stakes, side bets, the
+ * whole field's handicaps and the other groups' codes, which would read their rounds whole, stay
+ * with the game). With `money` off (someone in the round keeps their
  * money from you), nothing that carries the money goes either, and `feedMoney: false` says so: a
  * points round keeps everything, since points are bragging rights.
  */
 export function feedMeta(m, { money = true } = {}) {
   if (!isObj(m)) return null;
-  const { devs: _d, hostDev: _h, claims: _c, ...rest } = m;
+  // Never its code either (shareCode): the row has it when the money may go, and only then
+  const { devs: _d, hostDev: _h, claims: _c, shareCode: _s, ...rest } = m;
   if (Array.isArray(rest.players)) {
     rest.players = rest.players.map(p => {
       if (!isObj(p)) return p;
@@ -88,7 +95,7 @@ export function feedMeta(m, { money = true } = {}) {
   if (isObj(rest.trip) && isObj(rest.trip.big)) {
     const groups = (Array.isArray(rest.trip.big.groups) ? rest.trip.big.groups : []).filter(isObj).map(g => {
       const out = {};
-      for (const k of ['id', 'name', 'roundId', 'code']) if (g[k] != null) out[k] = g[k];
+      for (const k of ['id', 'name', 'roundId']) if (g[k] != null) out[k] = g[k];
       return out;
     });
     rest.trip = { ...rest.trip, big: { groups } };
@@ -181,7 +188,12 @@ export function followerMayWrite(row, seats) {
 
 /** A row from friend_rounds() (or the cache) cleaned for this phone, or null when it isn't one. */
 export function cleanFeedRow(x) {
-  if (!isObj(x) || typeof x.code !== 'string' || !/^[A-Z0-9]{6}$/.test(x.code)) return null;
+  if (!isObj(x)) return null;
+  const code = typeof x.code === 'string' && /^[A-Z0-9]{6}$/.test(x.code) ? x.code : null;
+  // A round sent by its ref has no code; one cleaned before (a copy on this phone) says so itself
+  const byRef = !!code && x.byRef === true;
+  const ref = !code && typeof x.ref === 'string' && /^[0-9A-F]{6}$/.test(x.ref) ? x.ref : null;
+  if (!code && !ref) return null;
   if (!isObj(x.meta) || !Array.isArray(x.meta.players) || !Array.isArray(x.meta.holes)) return null;
   const people = {};
   for (const [seat, p] of Object.entries(isObj(x.people) ? x.people : {})) {
@@ -195,12 +207,27 @@ export function cleanFeedRow(x) {
   // few people adds up to $0, so the rest would give one hidden amount away. A guest has no setting.
   // A row from before the server kept it back (or a copy kept on this phone) is cut down the same way.
   const seats = new Set(seatIds(x.meta));
-  const money = x.meta.feedMoney !== false && Object.entries(people).every(([seat, p]) => !seats.has(seat) || p.money);
+  const money = !ref && !byRef && x.meta.feedMoney !== false && Object.entries(people).every(([seat, p]) => !seats.has(seat) || p.money);
   const meta = feedMeta(x.meta, { money });
   const holes = {};
   for (const [no, data] of Object.entries(isObj(x.holes) ? x.holes : {})) if (Number(no) > 0 && isObj(data)) holes[no] = feedHole(data, meta);
   const at = typeof x.updatedAt === 'number' ? x.updatedAt : Date.parse(x.updated_at ?? x.updatedAt) || 0;
-  return { code: x.code, meta, holes, people, updatedAt: at };
+  const viaRef = byRef || !!ref;
+  return { code: code || ref, byRef: viaRef, held: viaRef || !money, meta, holes, people, updatedAt: at };
+}
+
+/**
+ * How a friend's round on screen is followed live (feed-sync.js useLiveRound), from its row:
+ *  • { kind: 'code', code }: its money may reach you, so it's read with its code like a watcher's phone
+ *  • { kind: 'ref', ref }: its money stays back and it came with a ref, so friend_round(ref) fetches it
+ *  • { kind: 'feed' }: its money stays back but it has no ref (a copy from before), so only the feed
+ * A round whose money stays back is never fetched with a code: that would bring the money with it.
+ */
+export function liveSource(row) {
+  const r = cleanFeedRow(row);
+  if (!r) return null;
+  if (!r.held) return { kind: 'code', code: r.code };
+  return r.byRef ? { kind: 'ref', ref: r.code } : { kind: 'feed' };
 }
 
 // --------------------------- one round, as the feed shows it ----------------
@@ -235,9 +262,10 @@ function lowLine(players) {
  * A round for the feed, from the round itself. `people` says, for each linked seat, whether they're a
  * friend and whether their money may show. Returns null for a round that can't be shown.
  * { id, code, status: 'live' | 'done', title, game, course, thru, holes, hole, friends, line, result,
- *   players: [{ id, name, friend, place, amount, amountText, toPar, played }], isMoney, at, following, target }
+ *   players: [{ id, name, friend, place, amount, amountText, toPar, played }], isMoney, at, following, target, talk }
+ * `talk` false: the gallery has no trash talk on this round (its money stays back from you).
  */
-export function roundView(round, { code, people = {}, at = 0, following = false, source = 'feed', target = null } = {}) {
+export function roundView(round, { code, people = {}, at = 0, following = false, source = 'feed', target = null, talk = true } = {}) {
   if (!round || !Array.isArray(round.players) || !round.players.length || !Array.isArray(round.holes) || !round.holes.length || !GAMES[round.game]) return null;
   const status = round.status === 'done' ? 'done' : 'live';
   let thru = 0;
@@ -301,7 +329,7 @@ export function roundView(round, { code, people = {}, at = 0, following = false,
     game: gameLabel(round), course: round.course?.name || null,
     thru, holes: round.holes.length, hole: Math.min(thru + 1, round.holes.length),
     friends, names: players.map(p => p.name), line, players, isMoney, playFor: playForOf(round).kind,
-    at, following, round,
+    at, following, round, talk,
     target: target || ['friendRound', { code }],
   };
 }
@@ -322,7 +350,7 @@ export function friendRoundView(row, { following = false } = {}) {
   if (!r) return null;
   let round;
   try { round = assemble(r.meta, r.holes); } catch { return null; }
-  return roundView(round, { code: r.code, people: r.people, at: r.updatedAt, following });
+  return roundView(round, { code: r.code, people: r.people, at: r.updatedAt, following, talk: !r.held });
 }
 
 // --------------------------- the feed ----------------------------------------
@@ -408,7 +436,7 @@ export function friendRoundItem(view, now = Date.now()) {
     id: view.id, kind: 'friend', at: view.at,
     text: `${view.title} · ${view.line}`,
     sub: [friendsLine(view), ...shown.map(p => `${p.name} ${p.amountText}`), agoLabel(view.at, now)].join(' · '),
-    target: view.target, talkKey: followThread(view.code),
+    target: view.target, talkKey: view.talk === false ? null : followThread(view.code),
   };
 }
 
@@ -433,6 +461,7 @@ export function planItem(plan, now = new Date()) {
 export function followTalkItems(views, talk = {}, { ids = new Set(), now = Date.now() } = {}) {
   const out = [];
   for (const v of views) {
+    if (v.talk === false) continue;
     const rows = Object.values(talk?.[followThread(v.code)] || {}).filter(r => r && !r.deleted && !r.mine && !ids.has(r.who));
     const comments = rows.filter(r => r.kind === 'comment' && r.body).sort((a, b) => b.at - a.at);
     const name = r => v.players.find(p => p.id === r.who)?.name || first(r.name);

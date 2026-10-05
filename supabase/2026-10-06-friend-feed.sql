@@ -7,6 +7,10 @@
 --    Tuesday round), going on now or finished in the last 7 days, newest first, at most 30. Each row
 --    is the round as a watcher sees it (its meta and hole scores) plus, for each seat linked to an
 --    account, whether that person is a friend of yours and whether their money may show to you.
+--    A round's code is what lets a phone read it whole, money and all, so a row carries the code
+--    only when the round's money may reach you. Otherwise it carries a ref instead (feed_ref: the
+--    code hashed with a secret only the server knows), and friend_round(ref) is how the feed fetches
+--    that round again, with the same parts kept back.
 --  • follow_round(code): "Watch" on a friend's round. It remembers you in round_followers and
 --    returns the ids you may write as on the round's own trash talk, or null when you can't follow it.
 --  • The four comments policies again (from 2026-10-04-comments.sql), each with one more way in: a
@@ -36,22 +40,26 @@
 --  • A row saved before the one setting (no profile level) keeps the rule fromLegacy() in
 --    profile-model.js has: any of stats, handicap or home course hidden reads as Only you, and money
 --    shows when money was 'played' or 'everyone'.
--- Each round's meta goes out without the phones' device hashes (devs, hostDev), the seat claims or
--- anyone's payment app and handle: a friend watching doesn't pay anyone. A Big Game's setup on
--- its rounds (trip.big) goes as its groups' names and codes only: its stakes, its side bets and
--- the whole field's handicaps stay with the game.
+-- Each round's meta goes out without its code (shareCode), the phones' device hashes (devs,
+-- hostDev), the seat claims or anyone's payment app and handle: a friend watching doesn't pay anyone. A Big Game's setup on
+-- its rounds (trip.big) goes as its groups' names and round ids only: its stakes, its side bets,
+-- the whole field's handicaps and the other groups' codes stay with the game.
+-- Trash talk from the gallery (follow_round, follow_seats) is only on rounds whose money may reach
+-- you: the talk is kept under the round's code, which would hand the money over with it.
 --
 -- Until this runs, the app's Friends feed shows only what the phone already has (rounds it's
 -- watching, plans you're invited to, settle-ups, recaps and trash talk), and Watch follows nothing
 -- new. Nothing else changes.
 --
--- To undo: drop function public.friend_rounds(); drop function public.follow_round(text);
+-- To undo: drop function public.friend_rounds(); drop function public.friend_round(text);
+--          drop function public.friend_rows(text); drop function public.follow_round(text);
 --          run the four comments policies from 2026-10-04-comments.sql again, then
 --          drop function public.follow_seats(text); drop function public.follow_ids();
 --          drop function public.feed_round_ok(jsonb); drop function public.feed_seats(jsonb);
 --          drop function public.feed_meta(jsonb, boolean); drop function public.feed_hole(jsonb, jsonb, boolean);
 --          drop function public.feed_kind(jsonb); drop function public.feed_money(jsonb);
---          drop function public.feed_level(jsonb); drop table public.round_followers;
+--          drop function public.feed_level(jsonb); drop function public.feed_keep_money(jsonb);
+--          drop function public.feed_ref(text); drop table public.round_followers, public.feed_secret;
 -- The index on live_rounds can stay.
 
 -- --------------------------- privacy, as the feed reads it ------------------
@@ -86,7 +94,7 @@ create or replace function public.feed_kind(m jsonb) returns text language sql i
 $$;
 
 -- A round's meta as a friend watching gets it: no device hashes, no seat claims, nobody's payment
--- app, and a Big Game's setup cut to its groups. With keep_money false, nothing that carries the
+-- app, and a Big Game's setup cut to its groups' names (never their codes). With keep_money false, nothing that carries the
 -- money either (a points round keeps it all). An earlier draft of this file had a one-argument
 -- feed_meta, so that one goes.
 drop function if exists public.feed_meta(jsonb);
@@ -97,7 +105,8 @@ declare
   k text;
 begin
   if m is null or jsonb_typeof(m) <> 'object' then return null; end if;
-  r := m - 'devs' - 'hostDev' - 'claims';
+  -- Nor its code (shareCode): the row says it when the money may go, and only then
+  r := m - 'devs' - 'hostDev' - 'claims' - 'shareCode';
   if jsonb_typeof(r -> 'players') = 'array' then
     r := jsonb_set(r, '{players}', coalesce((
       select jsonb_agg(case when jsonb_typeof(x) = 'object' then x - 'payApp' - 'payHandle' else x end order by n)
@@ -106,7 +115,7 @@ begin
   end if;
   if jsonb_typeof(r -> 'trip') = 'object' and jsonb_typeof(r #> '{trip,big}') = 'object' then
     r := jsonb_set(r, '{trip,big}', jsonb_build_object('groups', coalesce((
-      select jsonb_agg(jsonb_strip_nulls(jsonb_build_object('id', g -> 'id', 'name', g -> 'name', 'roundId', g -> 'roundId', 'code', g -> 'code')) order by n)
+      select jsonb_agg(jsonb_strip_nulls(jsonb_build_object('id', g -> 'id', 'name', g -> 'name', 'roundId', g -> 'roundId')) order by n)
       from jsonb_array_elements(case when jsonb_typeof(r #> '{trip,big,groups}') = 'array' then r #> '{trip,big,groups}' else '[]'::jsonb end)
         with ordinality as t(g, n)
       where jsonb_typeof(g) = 'object'
@@ -133,7 +142,8 @@ language sql immutable set search_path = '' as $$
 $$;
 
 -- Each seat in a live round's meta that's linked to an account: the seat, the account, its setting
--- and whether its money may show
+-- and whether its money may show. A draft of this file had another return type, so it goes first.
+drop function if exists public.feed_seats(jsonb);
 create or replace function public.feed_seats(m jsonb)
 returns table (seat text, account uuid, level text, shows_money boolean)
 language sql stable security definer set search_path = '' as $$
@@ -153,13 +163,41 @@ language sql stable security definer set search_path = '' as $$
     and exists (select 1 from public.feed_seats(m) s where s.account <> (select auth.uid()) and public.profile_visible_to_me(s.account)), false)
 $$;
 
+-- Whether the round with meta m may go to the signed-in account with its money: every seat with an
+-- account is a friend of theirs who shows it (all or none)
+create or replace function public.feed_keep_money(m jsonb) returns boolean
+language sql stable security definer set search_path = '' as $$
+  select not exists (select 1 from public.feed_seats(m) fs
+    where not (fs.shows_money and public.profile_visible_to_me(fs.account)))
+$$;
+
+-- The secret a round's feed ref is made with. Nobody but the functions here reads it.
+create table if not exists public.feed_secret (
+  id boolean primary key default true check (id),
+  secret text not null default gen_random_uuid()::text
+);
+alter table public.feed_secret enable row level security;
+revoke all on public.feed_secret from anon, authenticated;
+insert into public.feed_secret (id) values (true) on conflict (id) do nothing;
+
+-- What a round goes by in the feed when its money stays back: six characters from its code and the
+-- secret, so it names the round to friend_round() and can't be turned back into the code
+create or replace function public.feed_ref(p_code text) returns text
+language sql stable security definer set search_path = '' as $$
+  select upper(substr(md5((select s.secret from public.feed_secret s where s.id) || ':' || p_code), 1, 6))
+$$;
+
 -- --------------------------- friends' rounds ---------------------------------
 
 -- Live rounds are found by when they last moved: a hole scored updates live_holes, not the round row
 create index if not exists live_rounds_updated on public.live_rounds (updated_at);
 
-create or replace function public.friend_rounds()
-returns table (code text, meta jsonb, holes jsonb, people jsonb, updated_at timestamptz)
+-- The feed's rows: every friend's round (p_ref null, at most 30) or the one round with that ref.
+-- A row has the round's code only when its money goes along; otherwise its ref and no code.
+-- An earlier draft of this file returned other columns from friend_rounds(), so it goes first.
+drop function if exists public.friend_rounds();
+create or replace function public.friend_rows(p_ref text)
+returns table (code text, ref text, meta jsonb, holes jsonb, people jsonb, updated_at timestamptz)
 language plpgsql stable security definer set search_path = '' as $$
 #variable_conflict use_column
 begin
@@ -171,17 +209,18 @@ begin
     from public.live_rounds r
     where r.updated_at > now() - interval '7 days' and jsonb_typeof(r.meta) = 'object'
       and r.meta ->> 'status' in ('active', 'done')
+      and (p_ref is null or public.feed_ref(r.code) = p_ref)
   ), shown as (
     -- The money goes along only when every seat with an account is a friend of yours who shows it
-    select r.code, r.meta, r.moved_at,
-      not exists (select 1 from public.feed_seats(r.meta) fs
-        where not (fs.shows_money and public.profile_visible_to_me(fs.account))) as keep_money
+    select r.code, r.meta, r.moved_at, public.feed_keep_money(r.meta) as keep_money
     from recent r
     -- A round still going that nobody has touched in 12 hours was left behind, so it's not live news
     where (r.meta ->> 'status' = 'done' or r.moved_at > now() - interval '12 hours')
       and public.feed_round_ok(r.meta)
   )
-  select c.code, public.feed_meta(c.meta, c.keep_money),
+  select case when c.keep_money then c.code end,
+    case when not c.keep_money then public.feed_ref(c.code) end,
+    public.feed_meta(c.meta, c.keep_money),
     coalesce((
       select jsonb_object_agg(h.hole_no::text, public.feed_hole(h.data, c.meta, c.keep_money)) from public.live_holes h
       where h.code = c.code and h.hole_no > 0 and h.data is not null
@@ -193,8 +232,21 @@ begin
     c.moved_at
   from shown c
   order by c.moved_at desc
-  limit 30;
+  limit case when p_ref is null then 30 else 1 end;
 end $$;
+
+create or replace function public.friend_rounds()
+returns table (code text, ref text, meta jsonb, holes jsonb, people jsonb, updated_at timestamptz)
+language sql stable security definer set search_path = '' as $$
+  select * from public.friend_rows(null)
+$$;
+
+-- One friend's round by its ref, for a round whose money stays back (it has no code to fetch with)
+create or replace function public.friend_round(p_ref text)
+returns table (code text, ref text, meta jsonb, holes jsonb, people jsonb, updated_at timestamptz)
+language sql stable security definer set search_path = '' as $$
+  select * from public.friend_rows(p_ref) where p_ref ~ '^[0-9A-F]{6}$'
+$$;
 
 -- --------------------------- following one -----------------------------------
 
@@ -224,8 +276,9 @@ language sql stable security definer set search_path = '' as $$
 $$;
 
 -- The ids the signed-in account may write as on round p_code's own talk as a friend watching, or
--- null when it can't. While the live round is there, everyone's setting decides (feed_round_ok); once
--- it's gone, a friend who followed it keeps it, as the players keep theirs.
+-- null when it can't. While the live round is there, everyone's setting decides (feed_round_ok), and
+-- only a round whose money may reach them (feed_keep_money: its talk is kept under its code, which
+-- would give the money away); once it's gone, a friend who followed it keeps it, as the players keep theirs.
 create or replace function public.follow_seats(p_code text) returns text[]
 language plpgsql stable security definer set search_path = '' as $$
 declare
@@ -235,7 +288,7 @@ begin
   if (select auth.uid()) is null or p_code is null then return null; end if;
   select r.meta into m from public.live_rounds r where r.code = p_code;
   if found then
-    if not public.feed_round_ok(m) then return null; end if;
+    if not public.feed_round_ok(m) or not public.feed_keep_money(m) then return null; end if;
     s := public.follow_ids();
   else
     select f.seats into s from public.round_followers f where f.code = p_code and f.user_id = (select auth.uid());
@@ -291,9 +344,14 @@ create policy "comment authors remove" on public.comments for delete to anon, au
 revoke all on function public.feed_seats(jsonb) from public, anon, authenticated;
 revoke all on function public.feed_round_ok(jsonb) from public, anon, authenticated;
 revoke all on function public.follow_ids() from public, anon, authenticated;
+revoke all on function public.feed_keep_money(jsonb) from public, anon, authenticated;
+revoke all on function public.feed_ref(text) from public, anon, authenticated;
+revoke all on function public.friend_rows(text) from public, anon, authenticated;
 -- friend_rounds() and follow_round() are for signed-in people; follow_seats() is checked by the
 -- comments policies for every request (it says null to anyone not signed in)
 revoke all on function public.friend_rounds() from public, anon;
+revoke all on function public.friend_round(text) from public, anon;
+grant execute on function public.friend_round(text) to authenticated;
 revoke all on function public.follow_round(text) from public, anon;
 grant execute on function public.friend_rounds() to authenticated;
 grant execute on function public.follow_round(text) to authenticated;
