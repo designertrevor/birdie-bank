@@ -249,7 +249,8 @@ export default function JoinInvite({ code, onJoined, onSkip, setUp = false }) {
     const casual = !jpProblem && (casualPick ?? !!betProblem);
     const problem = casual ? null : betProblem;
     const send = async () => {
-      if (!(await okToPlay())) return;
+      // Just playing has no money on it, so it never asks the age question
+      if (!casual && !(await okToPlay())) return;
       setBusy(true); setAskErr(false);
       try {
         const clean = cleanRequestName(name);

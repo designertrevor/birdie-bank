@@ -840,9 +840,7 @@ function PlayersStep({ game, gameKey, course, holesCount, nine, picked, setPicke
                     )}
                     {/* Out of every bet: a selection chip like the tee's, filled with a check when it's on */}
                     {casualOk && (bettingCount > 1 || casual) && (
-                      <button className={`pill-btn sm jp-chip ${casual ? 'on' : ''}`} aria-pressed={casual} onClick={() => toggleCasual(p.id)}>
-                        <Icon name={casual ? 'check' : 'smiley'} /> {JUST_PLAYING}
-                      </button>
+                      <PickChip small className="jp-chip" icon="smiley" on={casual} onClick={() => toggleCasual(p.id)}>{JUST_PLAYING}</PickChip>
                     )}
                     {showHc && !casual && <button className={`hc-chip ${hc.source === 'none' ? 'missing' : ''}`} onClick={() => setHcFor(p.id)}
                       aria-label={`${p.name}’s ${holesCount === 9 ? '9-hole handicap' : 'course handicap'}: ${hc.value < 0 ? `+${-hc.value}` : hc.value}${hcNote ? hcNote.replace(' · ', ', ') : ''}. Change it`}>
