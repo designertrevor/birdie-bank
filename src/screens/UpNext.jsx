@@ -183,7 +183,9 @@ function UpcomingCard({ plan }) {
     </button>
   );
   if (!ahead) return card;
-  const day = weekdayOf(plan);
+  // Today's or tomorrow's round says so, rather than naming today's weekday
+  const until = daysUntil(plan.date);
+  const day = until === 0 ? 'Today’s' : until === 1 ? 'Tomorrow’s' : weekdayOf(plan);
   return (
     <div className="uc-wrap">
       {card}

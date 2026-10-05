@@ -113,7 +113,10 @@ function TripPage({ id, view: firstView = null, add = false }) {
   const del_ = canDeleteTrip(state, st, { plansOn: plansOn() });
   const hidden = tripHidden(state, id);
 
-  const eyebrow = st.phase === 'soon' ? `Starts ${tripDates(trip)}`
+  // A trip whose first day is today (or gone by, with its rounds still planned) has started: it says which day
+  const startsLater = st.phase === 'soon' && !st.day;
+  const eyebrow = startsLater ? `Starts ${tripDates(trip)}`
+    : st.phase === 'soon' ? `Day ${st.day} of ${st.days} · ${tripDates(trip)}`
     : st.phase === 'ready' ? 'That’s the trip'
     : st.phase === 'square' ? 'All square'
     : `${st.day ? `Day ${st.day} of ${st.days} · ` : ''}${st.done.length} round${st.done.length === 1 ? '' : 's'} done`;
@@ -175,7 +178,8 @@ function TripPage({ id, view: firstView = null, add = false }) {
           <div className="eyebrow pink">{eyebrow}{st.published.updated && <> <span className="trip-updated">Updated</span></>}</div>
           <div className={`tab-big d ${bigSign}`}>{big}</div>
           {allInLine && <div className={`trip-allin ${sign(allIn)}`}>{allInLine}</div>}
-          <div className="trip-sub">{[tripDates(trip), trip.where].filter(Boolean).join(' · ')}</div>
+          {/* The dates once, so not here when the eyebrow already has them */}
+          {(st.phase !== 'soon' || trip.where) && <div className="trip-sub">{[st.phase === 'soon' ? null : tripDates(trip), trip.where].filter(Boolean).join(' · ')}</div>}
           <TripDays status={st} />
         </div>
         <p className="hint-card trip-hint"><Icon name={st.phase === 'square' ? 'handshake' : 'suitcase-rolling'} fill /> {hint}</p>
@@ -192,8 +196,8 @@ function TripPage({ id, view: firstView = null, add = false }) {
             {inviting && st.phase === 'soon' && <TripInvite st={st} />}
             <div className="sec-label">Matches</div>
             <CupMatches cup={cup} />
-            <div className="sec-label">Leaderboard</div>
-            <CupBoard cup={cup} />
+            {/* The leaderboard once a match is in: before that the matches' note says it all */}
+            {cup.leaderboard.length > 0 && <><div className="sec-label">Leaderboard</div><CupBoard cup={cup} /></>}
             {cupOn && <button className="text-link" onClick={() => nav.push('share', { kind: 'cup', id })}><Icon name="share-network" /> Share the cup</button>}
             <ScheduleCard st={st} onRounds={() => setView('rounds')} />
             <FlightsView st={st} />
@@ -203,7 +207,7 @@ function TripPage({ id, view: firstView = null, add = false }) {
 
         {view === 'standings' && (
           <>
-            <Standings st={st} state={state} label={label} me={me} />
+            <Standings st={st} state={state} label={label} me={me} flights={!cup && trip.flights?.length > 0} />
             {(st.standings.length > 0 || !!st.points) && (
               <button className="text-link" onClick={() => nav.push('share', { kind: 'trip', id })}><Icon name="share-network" /> Share the standings</button>
             )}
@@ -362,7 +366,7 @@ function TripInvite({ st }) {
 }
 
 /** Everyone's net across the trip, best first, with any round still being played under it. */
-function Standings({ st, state, label, me }) {
+function Standings({ st, state, label, me, flights = false }) {
   if (!st.standings.length && st.points) {
     const rows = Object.entries(st.points).sort((a, b) => b[1] - a[1]);
     if (!rows.length) return <p className="trip-empty">The points fill in as soon as a round is finished.</p>;
@@ -382,6 +386,8 @@ function Standings({ st, state, label, me }) {
     // Played only for rewards so far: nothing in dollars or points to add up
     return <p className="trip-empty">Played for rewards so far, so there’s no money to add up. Each round’s results say who’s buying.</p>;
   }
+  // With flights, who's going is listed once, by flight, below
+  if (!st.standings.length && st.going.length > 1 && flights) return <p className="trip-empty">The standings fill in as soon as a round is finished. Who’s going is below, by flight.</p>;
   if (!st.standings.length && st.going.length > 1) {
     // Who's going, before anyone has played: everyone even
     return (
