@@ -3,7 +3,7 @@
 // setting up the next round (the plan flow: the organizer suggests, the group votes) and, when
 // the flag is on, the paywall. Invited players arrive from a link and skip all of this.
 import { useState } from 'react';
-import { BallIllo, Icon, Numpad, PickMark, PickRow, Screen } from '../components/ui.jsx';
+import { BallIllo, Icon, Numpad, PickChip, PickMark, PickRow, Screen } from '../components/ui.jsx';
 import { update, uid } from '../lib/store.js';
 import { formatIndex } from '../lib/format.js';
 import { money } from '../lib/golf.js';
@@ -214,9 +214,7 @@ export default function Onboarding({ onDone }) {
               <div className="field-label" id="ob-age-q">{AGE_COPY.title}</div>
               <div className="chip-row flush" role="radiogroup" aria-labelledby="ob-age-q" aria-describedby="ob-age-help">
                 {[['adult', 'Yes, 18 or older'], ['under', 'No, under 18']].map(([v, label]) => (
-                  <button key={v} type="button" role="radio" aria-checked={age === v} className={`pill-btn ${age === v ? 'on' : ''}`} onClick={() => setAge(v)}>
-                    {age === v && <Icon name="check" />}{label}
-                  </button>
+                  <PickChip key={v} radio on={age === v} onClick={() => setAge(v)}>{label}</PickChip>
                 ))}
               </div>
               <p className="field-help" id="ob-age-help">{age === 'under'
