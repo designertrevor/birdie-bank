@@ -3,7 +3,7 @@
 import { matchStatus, nassauBets } from './golf.js';
 import { sideSplit } from './games.js';
 import {
-  cardOnly, gameKeys, gameResults, gameView, hammerTable, holeComplete, matchScored, nassauAmounts, nassauWinners, roundLegs, roundResults, settingsAt,
+  bettingRound, cardOnly, gameKeys, gameResults, gameView, hammerTable, holeComplete, matchScored, nassauAmounts, nassauWinners, roundLegs, roundResults, settingsAt,
   sideGamesOf, sideNames, sides, sixesMatches, skinsKinds, skinsTable, vegasTable, wolfHoleResult,
 } from './round.js';
 import { playForOf, rewardNoun, rewardOutcome, unitFmt } from './play-for.js';
@@ -259,8 +259,10 @@ export function matchRoundMoment(round, pos) {
   if (!matchScored(main)) return null;
   const winners = nassauWinners(main);
   const m = matchMoment(winners, pos, roundLegs(main), {
-    names: sideNames(round).map(n => (round.teams ? n : first(n))),
-    plural: sides(main).map(s => !!round.teams && s.length > 1),
+    // The sides' names from the main game's own players, so someone just playing (or only in the side
+    // games) listed first is never named for a match they aren't in
+    names: sideNames(main).map(n => (main.teams ? n : first(n))),
+    plural: sides(main).map(s => !!main.teams && s.length > 1),
     holeNo: round.holes[pos - 1]?.no ?? pos,
   });
   if (!m) return null;
@@ -268,7 +270,9 @@ export function matchRoundMoment(round, pos) {
     // What's still in play after the match is won: presses and side games keep going
     const bets = nassauBets(winners, main.presses || [], nassauAmounts(main), roundLegs(main));
     m.more = bets.some(b => !b.status.done) || sideGamesOf(round).length > 0;
-    m.left = round.holes.filter(h => !holeComplete(round, h)).length;
+    // Holes left for the bets: a friend just playing with a hole still to fill in doesn't add one
+    const bet = bettingRound(round);
+    m.left = bet.holes.filter(h => !holeComplete(bet, h)).length;
   }
   return m;
 }

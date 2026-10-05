@@ -67,6 +67,8 @@ export function seasonBoard(state, year = new Date().getFullYear()) {
     // A Big Game's round has each person's money from the whole game in it (big-money.js)
     const res = withBigMoney(state, r, tabResults(r, roundResults(r)));
     for (const [id, v] of Object.entries(res.balances)) {
+      // Someone just playing had no money in it, so it gives them no row (a $0 among the bets)
+      if (isJustPlaying(r, id)) continue;
       const k = who(id);
       bal.set(k, cents((bal.get(k) || 0) + v));
     }

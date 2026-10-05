@@ -35,7 +35,7 @@
 // the stake is trip money like the expenses (cup-stake.js): on the Tab, in Settle the trip and the
 // published plan, paid like the rest. The rounds' own money works exactly as on a money trip. Pure,
 // unit tested.
-import { GAMES, bettors, roundResults } from './round.js';
+import { GAMES, bettors, isJustPlaying, roundResults } from './round.js';
 import { onTab, playForOf, tabResults } from './play-for.js';
 import { expenseDebts, fewestPayments, nameOf } from './ledger.js';
 import { canonicalOf, codeOf, finishedAt, openByPair, sharedRounds } from './pair-debts.js';
@@ -222,6 +222,8 @@ function pointsOf(state, rounds) {
   const out = {};
   for (const r of pointsDone(rounds)) {
     for (const [pid, v] of Object.entries(roundResults(r).balances)) {
+      // Someone just playing had no points in it, so they get no 0 pts line
+      if (isJustPlaying(r, pid)) continue;
       const k = who(pid);
       out[k] = Math.round(((out[k] || 0) + v) * 100) / 100;
     }
