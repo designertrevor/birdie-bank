@@ -14,7 +14,7 @@
 // votes ride inside their game vote ("nassau~skins.-dots"), so no new table or column is needed.
 import { GAMES, MAX_GAMES, SIDE_GAMES, sideGameChoices } from './round.js';
 import { stakeHeadline, stakeSummary } from './stakes.js';
-import { defaultTeams, teamsProblem } from './teams.js';
+import { defaultTeams, teamsCfg, teamsProblem } from './teams.js';
 import { inUnits, playForLine, storedPlayFor } from './play-for.js';
 import { halfStrokesOffered } from './allowances.js';
 import { applySetup } from './plan-setup.js';
@@ -353,11 +353,13 @@ export function planStart(state, plan, present, { newId, course: courseIn } = {}
     sameAs: (a, b) => (a === plan.setup?.me && b === state.me) || personOf(a) === personOf(b),
   });
   const ids = built.players.map(p => p.id);
-  const teams = g?.teams ? built.teams : null;
-  if (!problem && g?.teams) problem = teamsProblem(game, teams, ids);
   // The house rules the group saw on the ballot (older plans: this phone's), with the bet they picked
   const rules = planRules(plan, state.settings);
   const settings = bet ? withBet(game, rules, bet) : structuredClone(rules);
+  // Team quota (a Quota house rule) is played in teams too: pairs, as setup starts them
+  const quotaTeams = !g?.teams && g ? teamsCfg(game, settings, ids.length) : null;
+  const teams = g?.teams ? built.teams : quotaTeams ? defaultTeams(game, ids, quotaTeams) : null;
+  if (!problem && g?.teams) problem = teamsProblem(game, teams, ids);
   delete settings.shareAmounts; // a personal setting, not part of a round's bets
   delete settings.betPrompt; // so is the side bet card
   // The side games the group voted for, each with the organizer's house rules for it

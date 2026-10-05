@@ -426,7 +426,7 @@ function GameBreakdown({ round, res, label = null }) {
         {round.game === 'scramble' && <DrivesShortfall round={round} done={round.status === 'done'} />}
         {res.detail.pots && <>
           {/* Front, back and total, or low gross too (house rules): what each pot paid, and to whom */}
-          <div className="sec-label">{res.detail.pots.some(p => p.key === 'front') ? 'Front, back and total' : 'Pots'}</div>
+          <div className="sec-label">{res.detail.pots.some(p => p.key === 'gross') ? 'Pots' : 'Front, back and total'}</div>
           {res.detail.pots.map(p => {
             // What each winner took out of the pot (their stake back and the rest), so a pot shared
             // by everyone over quota lists them all, even one who only got their stake back plus a bit

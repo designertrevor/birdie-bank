@@ -22,7 +22,7 @@ export function teamsCfg(game, settings, players = 4) {
 export function defaultTeams(game, picked, cfg = GAMES[game]?.teams) {
   if (!cfg) return null;
   if (cfg.optional && picked.length <= 2) return null;
-  // Team quota starts in pairs: 4 players make two teams, 6 three, 8 four (an odd one out joins the last)
+  // Team quota starts in pairs: 4 players make two teams, 6 three, 8 four (an odd one out joins the first)
   const count = cfg.pairs ? Math.min(cfg.count[1], Math.max(cfg.count[0], Math.floor(picked.length / 2))) : Array.isArray(cfg.count) ? cfg.count[0] : cfg.count;
   const groups = Array.from({ length: count }, () => []);
   picked.forEach((pid, i) => groups[Math.floor(i * count / picked.length)].push(pid));

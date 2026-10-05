@@ -319,6 +319,10 @@ export function wholeRoundOnly(game, before, after) {
   if ((game === 'nassau' || game === 'match') && (before?.bye || 'off') !== (after?.bye || 'off')) return true;
   // Team quota (2026-10-05) is one pot between the teams for the whole round
   if (game === 'quota' && !!before?.team !== !!after?.team) return true;
+  // Stableford's points table is read once for the round (Modified always was, and Big birdies with it),
+  // and Quota's "moves after the round" looks at the whole round, so neither can start partway
+  if (game === 'stableford' && ((before?.table === 'chicago') !== (after?.table === 'chicago') || !!before?.modified !== !!after?.modified)) return true;
+  if (game === 'quota' && (before?.adjust || 'off') !== (after?.adjust || 'off')) return true;
   if (game === 'stroke' || game === 'stableford' || game === 'quota') return before?.payout === 'pot' || after?.payout === 'pot';
   return false;
 }
@@ -3002,6 +3006,8 @@ function mainLeftRule(round, pid) {
     const names = nameList(mates.map(x => first(playerById(round, x)?.name || '')));
     return `${names} ${mates.length === 1 ? 'carries' : 'carry'} on for the ${g === 'scramble' ? 'team' : 'side'}.`;
   }
+  // Team quota (a house rule) keeps a player who leaves on their team, in the pot, for the holes they played
+  if (g === 'quota' && teamQuotaOn(round)) return 'They stay on their team: their points count against their quota for the holes they played.';
   if ((g === 'stroke' || g === 'stableford' || g === 'quota') && round.settings[g]?.payout === 'pot') return 'They’re out of the pot, so they don’t pay or win it.';
   if (g === 'stroke' || g === 'stableford' || g === 'quota') return 'They settle with each player on the holes they both played.';
   return 'The holes after that are settled among the players still playing.';

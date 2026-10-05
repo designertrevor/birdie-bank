@@ -21,7 +21,7 @@ import { optionsProblem, roundStakeLines, sideBetLine, stakeSummary } from '../l
 import { syncConfigured } from '../lib/sync.js';
 import { ShareSheet } from '../components/Live.jsx';
 import { defaultTeams, teamsCfg, teamsProblem } from '../lib/teams.js';
-import { carriedLine, carriedQuotas } from '../lib/quota-carry.js';
+import { carriedLine, carriedQuotas, withQuotaRules } from '../lib/quota-carry.js';
 import { rematchSetup } from '../lib/rematch.js';
 import { halfStrokesOffered, pctsDiffer } from '../lib/allowances.js';
 import { StrokesSetup } from '../components/StrokesSetup.jsx';
@@ -381,11 +381,9 @@ export default function NewRound({ rematch, fromPlan, present, edit = null, ahea
     const halfStrokes = !!opts.halfStrokes && halfStrokesOffered(game, sides);
     // Team quota (a Quota house rule) is played in teams too, when it's on
     const round = createRound({ id, game, course, holesCount, nine, startHole, players, settings, hcPct: opts.hcPct, useHandicaps: useHc && !(noHc.length && noHc.length === orderedPicked.length), teams: teamsCfg(game, settings, orderedPicked.length) ? teams : null, halfStrokes });
-    // "Quota moves after the round": each player starts from the quota their last such round left them
-    if (game === 'quota' && (settings.quota?.adjust === 'one' || settings.quota?.adjust === 'half')) {
-      const carried = carriedQuotas(s, orderedPicked, holesCount);
-      if (Object.keys(carried).length) round.quotas = Object.fromEntries(Object.entries(carried).map(([pid, c]) => [pid, c.quota]));
-    }
+    // "Quota moves after the round": each player starts from the quota their last such round left them,
+    // and Team quota only stays on with its teams
+    withQuotaRules(s, round);
     if (sides.length) round.sideGames = structuredClone(sides);
     if (playFor) round.playFor = structuredClone(playFor);
     // Side bets whose two players are both still in the round (setup's list can outlive a change of players),

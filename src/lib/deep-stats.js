@@ -122,8 +122,9 @@ export function pressesIn(round, seat, res = roundResults(round)) {
   if (mySide < 0) return out;
   const lines = res.detail?.lines || res.detail?.byGame?.main?.detail?.lines || [];
   for (const l of lines) {
-    // A press none of whose holes were played (the round ended first) never had a result
-    if (!l.press || !l.status?.played) continue;
+    // A press none of whose holes were played (the round ended first) never had a result. The bye (a
+    // house rule) is played like a press, but nobody called it, so it's not anyone's press
+    if (!l.press || l.bye || !l.status?.played) continue;
     const rec = l.by === mySide ? out.made : out.against;
     const leader = l.status?.leader;
     if (leader == null) rec.halved++;
