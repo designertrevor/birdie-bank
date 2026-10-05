@@ -7,7 +7,7 @@ import { useSyncExternalStore } from 'react';
 import { getSupabase } from './supabase.js';
 import { getState } from './store.js';
 import { accountNow, onAccount } from './cloud.js';
-import { addSent, cleanLocal, commentName, countsFromRows, emptyLocal, markTold, markVotesSynced, pendingVotes, roadmapOff, toggleVote } from './roadmap.js';
+import { addSent, cleanLocal, commentName, countsFromRows, dropSynced, emptyLocal, markTold, markVotesSynced, pendingVotes, roadmapOff, syncedVotes, toggleVote } from './roadmap.js';
 
 const LOCAL = 'bb-roadmap';
 const SERVER = 'bb-roadmap-server';
@@ -56,6 +56,8 @@ export function refreshRoadmap({ every = 0 } = {}) {
     if (!db) { set({ server: { ...snap.server, state: 'off', at: Date.now() } }); return snap.server; }
     const me = signedIn();
     const askMine = me || snap.local.sent.length > 0;
+    // Votes the server already had before this look: its answer about them is the latest word
+    const settled = me ? syncedVotes(snap.local) : [];
     const [c, r, m, v] = await Promise.all([
       db.rpc('roadmap_counts'),
       db.rpc('roadmap_requests'),
@@ -65,6 +67,9 @@ export function refreshRoadmap({ every = 0 } = {}) {
     const err = c.error || r.error || m.error || v.error;
     if (err) { set({ server: { ...snap.server, state: offState(err), at: Date.now() } }); return snap.server; }
     set({
+      // Your account's votes as the server has them win over this phone's copy of ones it already
+      // sent, so a vote taken back on another phone shows taken back here too
+      ...(settled.length ? { local: dropSynced(snap.local, settled) } : {}),
       server: {
         counts: countsFromRows(c.data),
         requests: Array.isArray(r.data) ? r.data : [],
@@ -81,10 +86,10 @@ export function refreshRoadmap({ every = 0 } = {}) {
   return refreshing;
 }
 
-/** Up next's light look: only when this phone has voted or sent an idea, and not too often. */
+/** Up next's light look: only when you've voted or sent an idea (on this phone or your account), and not too often. */
 export function refreshForUpNext() {
   const { votes, sent } = snap.local;
-  if (!Object.keys(votes).length && !sent.length) return Promise.resolve(snap.server);
+  if (!Object.keys(votes).length && !sent.length && !snap.server.myVotes.length && !snap.server.mine.length) return Promise.resolve(snap.server);
   return refreshRoadmap({ every: UP_NEXT_EVERY });
 }
 
@@ -94,6 +99,7 @@ export function flushVotes() {
   if (flushing) return flushing;
   const todo = pendingVotes(snap.local);
   if (!todo.length || !signedIn() || snap.server.state === 'off') return Promise.resolve();
+  let again = false;
   flushing = (async () => {
     const db = await getSupabase();
     if (!db) return;
@@ -107,6 +113,8 @@ export function flushVotes() {
       done.push(t);
     }
     if (!done.length) return;
+    // A vote tapped while these were going up waits for this run to end, then goes up too
+    again = done.length === todo.length;
     const myVotes = new Set(snap.server.myVotes);
     const counts = { ...snap.server.counts };
     for (const t of done) {
@@ -115,7 +123,10 @@ export function flushVotes() {
       if (!t.on && had) { myVotes.delete(t.item); counts[t.item] = { votes: Math.max(0, (counts[t.item]?.votes || 0) - 1), comments: counts[t.item]?.comments || 0 }; }
     }
     set({ local: markVotesSynced(snap.local, done), server: { ...snap.server, myVotes: [...myVotes], counts } });
-  })().catch(() => {}).finally(() => { flushing = null; });
+  })().catch(() => {}).finally(() => {
+    flushing = null;
+    if (again && pendingVotes(snap.local).length) flushVotes();
+  });
   return flushing;
 }
 
@@ -178,7 +189,8 @@ export async function addComment(item, body) {
   if (!db) throw new Error('Comments aren’t open yet');
   const id = crypto.randomUUID();
   const name = myCommentName();
-  const { error } = await db.rpc('roadmap_add_comment', { p_id: id, p_item: item, p_body: text, p_name: name });
+  // The server works out the name as it's read (the same rule as myCommentName); this one is for the screen now
+  const { error } = await db.rpc('roadmap_add_comment', { p_id: id, p_item: item, p_body: text });
   if (error) {
     if (roadmapOff(error)) throw new Error('Comments aren’t open yet');
     if (error.code === '54000') throw new Error('That’s a lot of comments for one day. Try again tomorrow');

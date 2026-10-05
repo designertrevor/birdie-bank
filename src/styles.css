@@ -2684,7 +2684,7 @@ button.ch-main:active { transform: scale(.98); }
 .rm-vote i { font-size: 20px; }
 .rm-vote .rm-count { font-family: var(--display); font-size: 17px; font-weight: 800; font-variant-numeric: tabular-nums; line-height: 1; }
 .rm-vote:active { transform: scale(.92); }
-.rm-vote.on { background: var(--pink-fill); color: var(--on-pink, #fff); }
+.rm-vote.on { background: var(--pink-fill); color: #fff; }
 .rm-vote.static { min-height: 0; padding: 8px 0; background: transparent; color: var(--mute); cursor: default; }
 .rm-vote.static:active { transform: none; }
 /* Your ideas, and what became of them */

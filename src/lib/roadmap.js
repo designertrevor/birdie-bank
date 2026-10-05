@@ -124,6 +124,25 @@ export function markVotesSynced(local, sent) {
   return { ...(local || emptyLocal()), votes };
 }
 
+/** This phone's votes the server already has: [{ item, on, at }]. */
+export function syncedVotes(local) {
+  return Object.entries(local?.votes || {}).filter(([, v]) => v.synced).map(([item, v]) => ({ item, on: v.on, at: v.at }));
+}
+
+/**
+ * The local record without these sent votes, once the server's list of your votes has been read
+ * after them: from then on that list says whether you voted (another phone may have changed it).
+ * A vote tapped again since stays.
+ */
+export function dropSynced(local, sent) {
+  const votes = { ...(local?.votes || {}) };
+  for (const s of list(sent)) {
+    const v = votes[s.item];
+    if (v && v.synced && v.at === s.at && v.on === s.on) delete votes[s.item];
+  }
+  return { ...(local || emptyLocal()), votes };
+}
+
 // --------------------------- your ideas --------------------------------------
 
 /** A short title for an idea sent from "Suggest something": the game's name, or the idea's first line. */

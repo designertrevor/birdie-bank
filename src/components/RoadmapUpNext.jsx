@@ -10,7 +10,7 @@ import { markNotesTold, refreshForUpNext, useRoadmap } from '../lib/roadmap-sync
 export function ShippedUpNext() {
   const nav = useNav();
   const { local, server } = useRoadmap();
-  const interested = Object.keys(local.votes).length > 0 || local.sent.length > 0 || server.mine.length > 0;
+  const interested = Object.keys(local.votes).length > 0 || local.sent.length > 0 || server.mine.length > 0 || server.myVotes.length > 0;
   const [base, setBase] = useState(null);
   // What this visit shows, kept after it's marked as told so it stays put until you leave Up next
   const [shown, setShown] = useState(null);

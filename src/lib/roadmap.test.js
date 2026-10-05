@@ -1,9 +1,9 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {
-  addSent, canVote, cleanLocal, commentCount, commentName, countsFromRows, emptyLocal, markTold, markVotesSynced,
+  addSent, canVote, cleanLocal, commentCount, commentName, countsFromRows, dropSynced, emptyLocal, markTold, markVotesSynced,
   myIdeas, myVote, pendingVotes, requestItemId, requestTitle, roadmapItems, roadmapOff, section, shippedLabel,
-  shippedNotes, tabFor, toggleVote, voteCount, NOTE_DAYS,
+  shippedNotes, syncedVotes, tabFor, toggleVote, voteCount, NOTE_DAYS,
 } from './roadmap.js';
 
 const NOW = Date.parse('2026-10-07T18:00:00Z');
@@ -81,6 +81,26 @@ test('the count adds your vote until the server has it, and never counts it twic
   // Never below zero, even with odd server numbers
   assert.equal(voteCount('r-push', { counts: { 'r-push': { votes: 0 } }, local, myVotes: ['r-push'] }), 0);
   assert.equal(voteCount('r-none', { counts: {}, local: emptyLocal(), myVotes: [] }), 0);
+});
+
+test('once the server has a vote, its list of your votes wins, so taking it back on another phone shows here', () => {
+  let local = toggleVote(emptyLocal(), 'r-push', [], NOW);
+  local = toggleVote(local, 'r-calcutta', [], NOW + 1);
+  local = markVotesSynced(local, pendingVotes(local));
+  const before = syncedVotes(local);
+  assert.deepEqual(before.map(v => v.item).sort(), ['r-calcutta', 'r-push']);
+  // Tapped again while the server was asked: that one stays this phone's say
+  local = toggleVote(local, 'r-calcutta', ['r-push', 'r-calcutta'], NOW + 2);
+  // The account took r-push back on another phone, so the server's list no longer has it
+  local = dropSynced(local, before);
+  assert.deepEqual(Object.keys(local.votes), ['r-calcutta']);
+  assert.equal(local.votes['r-calcutta'].on, false);
+  assert.equal(myVote(local, ['r-calcutta'], 'r-push'), false);
+  assert.equal(voteCount('r-push', { counts: { 'r-push': { votes: 3 } }, local, myVotes: ['r-calcutta'] }), 3);
+  // Nothing sent: nothing dropped
+  const fresh = toggleVote(emptyLocal(), 'r-push', [], NOW);
+  assert.deepEqual(syncedVotes(fresh), []);
+  assert.deepEqual(dropSynced(fresh, [{ item: 'r-push', on: true, at: NOW }]).votes, fresh.votes);
 });
 
 test('a vote from your account on another phone shows as yours here', () => {

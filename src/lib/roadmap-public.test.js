@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
-import { checklistLines, friendlyTitle, itemId, itemKind, publicRoadmap, shippedDate, PUBLIC_AREAS, TITLES } from './roadmap-public.js';
+import { checklistLines, friendlyTitle, itemId, itemKey, itemKind, publicRoadmap, shippedDate, PUBLIC_AREAS, TITLES } from './roadmap-public.js';
 
 const ROADMAP = readFileSync(new URL('../../ROADMAP.md', import.meta.url), 'utf8');
 
@@ -68,13 +68,22 @@ test('the shipped date is the "shipped" one, else the last date on its own in br
   assert.equal(shippedDate('16 games with the setup wizard'), null);
 });
 
-test('ids are the first seven words, so checking a line off or marking it partial keeps its votes', () => {
-  const open = itemId('Push reminders for upcoming rounds (the morning text is a share for now)');
-  assert.equal(open, 'r-push-reminders-for-upcoming-rounds-the-morning');
-  assert.equal(itemId('(partial) Push reminders for upcoming rounds (the morning text) Built 2026-11-01'), open);
-  assert.equal(itemId('**Carry it over:** instead of'), 'r-carry-it-over-instead-of');
-  assert.equal(itemId('What’s on the line stays in view'), 'r-whats-on-the-line-stays-in-view');
-  assert.match(itemId('x'.repeat(200)), /^r-x{1,78}$/);
+test('keys are the first seven words, so checking a line off or marking it partial keeps its votes', () => {
+  const open = itemKey('Push reminders for upcoming rounds (the morning text is a share for now)');
+  assert.equal(open, 'push-reminders-for-upcoming-rounds-the-morning');
+  assert.equal(itemKey('(partial) Push reminders for upcoming rounds (the morning text) Built 2026-11-01'), open);
+  assert.equal(itemKey('**Carry it over:** instead of'), 'carry-it-over-instead-of');
+  assert.equal(itemKey('What’s on the line stays in view'), 'whats-on-the-line-stays-in-view');
+  assert.match(itemKey('x'.repeat(200)), /^x{1,78}$/);
+});
+
+test('a public id is a hash of the key: stable, and none of the line\'s words go out with it', () => {
+  const id = itemId('Year in review ("Birdie Bank Wrapped"): a free card for Trevor and Pro');
+  assert.match(id, /^r-[0-9a-f]{12}$/);
+  assert.equal(itemId('(partial) Year in review ("Birdie Bank Wrapped"): a free card for Trevor and Pro. Built 2026-11-01'), id);
+  assert.notEqual(itemId('Year in review cards sized for Instagram Stories'), id);
+  // The same line always gets the same id (votes on the server name items by it)
+  assert.equal(itemId('Push reminders for upcoming rounds'), itemId('Push reminders for upcoming rounds'));
 });
 
 test('statuses: checked is Shipped with its date, (partial) is In progress, the rest Planned', () => {
@@ -121,7 +130,7 @@ test('the real ROADMAP.md: a sensible public list with nothing private in it', (
     assert.ok(!/Birdie Bank|Trevor|Reddit|overnight|SQL|Supabase|\bPro\b|paywall|creator|Stripe|\d{4}-\d{2}-\d{2}/i.test(words), words);
     assert.ok(!words.includes(EM), words);
     assert.ok(i.title.length <= 60, i.title);
-    assert.match(i.id, /^r-[a-z0-9-]{1,78}$/);
+    assert.match(i.id, /^r-[0-9a-f]{12}$/);
     if (i.status === 'shipped' && i.shipped) assert.match(i.shipped, /^\d{4}-\d{2}-\d{2}$/);
   }
   // Business areas never show
@@ -131,7 +140,7 @@ test('the real ROADMAP.md: a sensible public list with nothing private in it', (
 });
 
 test('the hand-written titles still match ROADMAP.md (a rewritten line or two is fine: it falls back)', () => {
-  const ids = new Set(checklistLines(ROADMAP).map(l => itemId(l.text)));
-  const stale = Object.keys(TITLES).filter(id => !ids.has(id));
+  const keys = new Set(checklistLines(ROADMAP).map(l => itemKey(l.text)));
+  const stale = Object.keys(TITLES).filter(k => !keys.has(k));
   assert.ok(stale.length <= Object.keys(TITLES).length / 10, `stale: ${stale.join(', ')}`);
 });

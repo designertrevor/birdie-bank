@@ -1,16 +1,19 @@
 -- The public roadmap: votes, comments and ideas sent in (added 2026-10-07). Run this once in
 -- Supabase: Dashboard, SQL Editor, New query, paste, Run. Safe to run again. Needs schema.sql's
--- feedback table and 2026-09-30-keeper-lock.sql (bb_writer), both already run.
+-- feedback table, 2026-09-30-keeper-lock.sql (bb_writer) and 2026-10-01-profiles.sql (profiles), all
+-- already run.
 --
 -- The list itself comes from ROADMAP.md when the app is built (src/lib/roadmap-public.js), so
--- nothing here holds the items: a vote or comment names an item by its id ('r-' and the line's
--- first seven words, or 'q-' and a feedback id for an idea Trevor put on the roadmap).
+-- nothing here holds the items: a vote or comment names an item by its id ('r-' and a hash of the
+-- line's first seven words, or 'q-' and a feedback id for an idea Trevor put on the roadmap).
 --
 -- What it adds:
 --  • roadmap_votes: one vote per account per item. Only signed-in people vote; anyone reads the
 --    counts through roadmap_counts(), never who voted.
 --  • roadmap_comments: signed-in people comment; everyone reads them through roadmap_comments(item),
---    which hands out the name the person posted under (first name, or none) and never an account id.
+--    which never hands out an account id. The name on a comment is worked out as it's read, from the
+--    one profile setting: the first name in profiles when it's Everyone, else none ("A golfer"), so
+--    changing the setting later changes every old comment too, and nobody posts under a made-up name.
 --    Each person takes back only their own (roadmap_delete_comment). Trevor hides one from the
 --    Dashboard by setting hidden = true.
 --  • Five columns on feedback so an idea can go on the roadmap, set by Trevor in the Dashboard:
@@ -34,7 +37,7 @@
 --
 -- To undo: drop function public.roadmap_counts(); drop function public.roadmap_comments(text);
 --          drop function public.roadmap_vote(text, boolean); drop function public.roadmap_my_votes();
---          drop function public.roadmap_add_comment(uuid, text, text, text);
+--          drop function public.roadmap_add_comment(uuid, text, text);
 --          drop function public.roadmap_delete_comment(uuid); drop function public.roadmap_requests();
 --          drop function public.roadmap_mine(); drop table public.roadmap_votes;
 --          drop table public.roadmap_comments; and the feedback columns below.
@@ -82,7 +85,6 @@ create table if not exists public.roadmap_comments (
   id uuid primary key,
   item text not null check (item ~ '^[a-z0-9][a-z0-9-]{0,79}$'),
   user_id uuid not null references auth.users (id) on delete cascade,
-  name text check (name is null or length(name) between 1 and 40),
   body text not null check (length(btrim(body)) between 1 and 500),
   deleted boolean not null default false,
   hidden boolean not null default false,  -- set by Trevor in the Dashboard
@@ -114,12 +116,18 @@ language sql stable security definer set search_path = '' as $$
      or exists (select 1 from public.feedback f where f.roadmap_item is null and public.roadmap_request_item(f) = i.item)
 $$;
 
--- The comments on one item, oldest first, with whether each one is yours
+-- The comments on one item, oldest first, with whether each one is yours. The name is the
+-- commenter's first name only while their profile is open to Everyone (profile-model.js), read now
+-- rather than when they posted.
 create or replace function public.roadmap_comments(p_item text)
 returns table (id uuid, name text, body text, created_at timestamptz, mine boolean)
 language sql stable security definer set search_path = '' as $$
-  select rc.id, rc.name, rc.body, rc.created_at, (auth.uid() is not null and rc.user_id = auth.uid())
+  select rc.id,
+    case when p.privacy ->> 'profile' = 'everyone'
+      then nullif(left(split_part(regexp_replace(btrim(coalesce(p.display_name, '')), '\s+', ' ', 'g'), ' ', 1), 40), '') end,
+    rc.body, rc.created_at, (auth.uid() is not null and rc.user_id = auth.uid())
   from public.roadmap_comments rc
+  left join public.profiles p on p.user_id = rc.user_id
   where rc.item = p_item and not rc.deleted and not rc.hidden
   order by rc.created_at
   limit 200
@@ -146,7 +154,7 @@ begin
 end $$;
 
 -- Add a comment (the phone makes its id, so sending twice adds it once). At most 30 a day each.
-create or replace function public.roadmap_add_comment(p_id uuid, p_item text, p_body text, p_name text) returns void
+create or replace function public.roadmap_add_comment(p_id uuid, p_item text, p_body text) returns void
 language plpgsql volatile security definer set search_path = '' as $$
 declare me uuid := auth.uid();
 begin
@@ -155,8 +163,8 @@ begin
   if (select count(*) from public.roadmap_comments rc where rc.user_id = me and rc.created_at > now() - interval '1 day') >= 30 then
     raise exception 'That''s a lot of comments for one day' using errcode = '54000';
   end if;
-  insert into public.roadmap_comments (id, item, user_id, name, body)
-  values (p_id, p_item, me, nullif(left(btrim(coalesce(p_name, '')), 40), ''), left(btrim(p_body), 500))
+  insert into public.roadmap_comments (id, item, user_id, body)
+  values (p_id, p_item, me, left(btrim(p_body), 500))
   on conflict (id) do nothing;
 end $$;
 
@@ -201,9 +209,9 @@ grant execute on function public.roadmap_requests() to anon, authenticated;
 grant execute on function public.roadmap_mine() to anon, authenticated;
 revoke all on function public.roadmap_my_votes() from public, anon;
 revoke all on function public.roadmap_vote(text, boolean) from public, anon;
-revoke all on function public.roadmap_add_comment(uuid, text, text, text) from public, anon;
+revoke all on function public.roadmap_add_comment(uuid, text, text) from public, anon;
 revoke all on function public.roadmap_delete_comment(uuid) from public, anon;
 grant execute on function public.roadmap_my_votes() to authenticated;
 grant execute on function public.roadmap_vote(text, boolean) to authenticated;
-grant execute on function public.roadmap_add_comment(uuid, text, text, text) to authenticated;
+grant execute on function public.roadmap_add_comment(uuid, text, text) to authenticated;
 grant execute on function public.roadmap_delete_comment(uuid) to authenticated;
