@@ -3221,3 +3221,6 @@ a.header-btn.rm-open { text-decoration: none; }
 /* Who's going: the sheet keeps its full height while the list filters, so the search box and Add
    button hold still under your thumb as you type */
 .sheet:has(.trip-who-step) { min-height: 90%; }
+/* A plan's vote you picked wears the picked-row tint, so it outweighs the suggested one's mint bar */
+.vote-row.on { background: var(--pick-tint); box-shadow: inset 0 0 0 2px var(--pink-fill); }
+.vote-row.on .vr-name { color: var(--ink); }
