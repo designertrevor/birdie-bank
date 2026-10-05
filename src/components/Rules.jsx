@@ -21,6 +21,9 @@ function teamBets(oneBall = false) {
   ];
 }
 
+// Best ball and Shamble's per hole house rule (2026-10-05)
+const lowTotalRule = ['Low ball and low total', <p key="lt">A house rule for per hole bets, off unless you turn it on: two points a hole. One goes to the team with the best score, the other to the lower team total, everyone’s net added up. Each point pays the bet; a tie, and nobody gets that one. A 3 and a 6 (9) win low ball against a 4 and a 4 (8), and lose low total.</p>];
+
 const RULES = {
   banker: {
     title: 'How to play Banker',
@@ -200,6 +203,7 @@ const RULES = {
       ['Overview', <p key="o">Two teams, everyone plays their own ball, and the team takes its <strong>best score</strong> on each hole. Teams of three or four can count the <strong>best two</strong> scores instead, added up.</p>],
       ['Teams', <p key="t">Two teams the same size: 2 v 2, 3 v 3 or 4 v 4. Enter every player’s score; the app picks the ones that count and tags them.</p>],
       ...teamBets(),
+      lowTotalRule,
       ['Handicaps', <p key="h">The WHS allowance for best ball is 90% of each player’s handicap as a match and 85% as stroke play. With teams of three or four it’s 75% counting the best one and 85% counting the best two. Setup suggests the right one.</p>],
     ],
   },
@@ -211,6 +215,7 @@ const RULES = {
       ['Scoring', <p key="s">Enter every player’s score, as in best ball. The app picks the ones that count.</p>],
       ['Minimum drives', <p key="d">A house rule, off unless you pick it: every player’s drive has to be used at least 2, 3 or 4 times. Tap whose drive the team took on each hole and the app keeps count.</p>],
       ...teamBets(),
+      lowTotalRule,
       ['Handicaps', <p key="h">The USGA’s guidance for a selected drive is 75% of each player’s handicap for teams of two and 65% for teams of four (70% for threes, in between). Setup suggests it.</p>],
     ],
   },
@@ -326,6 +331,7 @@ const RULES = {
       ['Order matters', <p key="r">Play strictly by who’s away, or the points don’t mean much. Tap each point as it happens; leave it blank if nobody earned it.</p>],
       ['Money', <p key="m">Every pair of players settles the difference in their points at the value you set.</p>],
       ['Sweep doubles', <p key="s">A house rule, off unless you turn it on: take all three points on one hole and they count six.</p>],
+      ['Bingo is the longest drive', <p key="d">A house rule, off unless you turn it on: the first point goes to the longest drive in the fairway instead of first on the green, so the long hitters have one to play for too.</p>],
       ['Bongo is low net', <p key="n">A house rule, off unless you turn it on: the third point goes to the outright lowest net score on the hole instead of first in, so handicaps count. A tie for low, and nobody gets it.</p>],
     ],
   },

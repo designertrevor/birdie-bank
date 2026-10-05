@@ -59,5 +59,7 @@ export function houseRulesLine(game, gs, holes = 18) {
   if (game === 'dots' && penaltyDotsOn(gs.kinds).length) on.push('penalty dots');
   if (game === 'rabbit' && full && gs.backDouble && !gs.sixes) on.push('back nine rabbit doubles');
   if (game === 'snake' && gs.split) on.push('snake split');
+  if (game === 'bbb' && gs.bingoDrive) on.push('Bingo is the longest drive');
+  if ((game === 'bestball' || game === 'shamble') && gs.lowTotal && gs.format === 'hole') on.push('low ball and low total');
   return on.join(' · ');
 }

@@ -120,6 +120,13 @@ export function TeamPanel({ round, hole }) {
           <span>Holes won · {money(settingsAt(round, pos)[round.game]?.perHole ?? line.amount)} a hole</span>
           <span className="vegas-total">{!line.value ? 'All square' : `${names[line.value > 0 ? 0 : 1]} up ${money(each)} each`}</span>
         </div>
+        {/* Low ball and low total (a house rule): the second point a hole */}
+        {t.lines[1]?.key === 'lowtotal' && (
+          <div className="vegas-line">
+            <span>Low total · A {t.lines[1].won[0]}, B {t.lines[1].won[1]}</span>
+            <span className="vegas-total">{!t.lines[1].value ? 'Level' : `${names[t.lines[1].value > 0 ? 0 : 1]} up ${money(Math.abs(t.lines[1].value))} each`}</span>
+          </div>
+        )}
       </div>
     );
   }
@@ -418,7 +425,10 @@ const BBB = [
 
 export function BBBPicker({ round, hole, marks, setMarks }) {
   // "Bongo is low net" (house rule): the third point comes from the scores, so there's nothing to tap
-  const netBongo = !!settingsAt(round, posOf(round, hole)).bbb?.netBongo;
+  const bs = settingsAt(round, posOf(round, hole)).bbb;
+  const netBongo = !!bs?.netBongo;
+  // "Bingo is the longest drive" (house rule, 2026-10-05): the same tap, for another shot (see round.js)
+  const help = b => (b.key === 'bingo' && bs?.bingoDrive ? 'Longest drive in the fairway' : b.help);
   return (
     <div className="marks-card">
       {netBongo && (
@@ -428,7 +438,7 @@ export function BBBPicker({ round, hole, marks, setMarks }) {
       )}
       {BBB.filter(b => !(netBongo && b.key === 'bongo')).map(b => (
         <div key={b.key} className="marks-row">
-          <div className="marks-lbl"><strong>{b.name}</strong><span>{b.help}</span></div>
+          <div className="marks-lbl"><strong>{b.name}</strong><span>{help(b)}</span></div>
           <div className="chip-row" style={{ padding: 0 }} role="radiogroup" aria-label={b.name}>
             {playersOn(round, hole).map(p => (
               <button key={p.id} role="radio" aria-checked={marks[b.key] === p.id} className={`pill-btn sm ${marks[b.key] === p.id ? 'on' : ''}`}

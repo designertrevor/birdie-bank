@@ -4,7 +4,8 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
-import { roundResults, createRound, wholeRoundOnly, addPlayerProblem, hammerTable, vegasScore, teamQuotaTable, nextQuotas, snakeTable, rabbitTable, skinsTable, changeBets } from './round.js';
+import { TEAM_DEFAULTS } from './settings.js';
+import { roundResults, teamTable, createRound, wholeRoundOnly, addPlayerProblem, hammerTable, vegasScore, teamQuotaTable, nextQuotas, snakeTable, rabbitTable, skinsTable, changeBets } from './round.js';
 import { quotaPoints, quotaAdjusted, stablefordPoints } from './games.js';
 import { byeBets, autoPressStarts, settleBankerHole } from './golf.js';
 import { houseRulesLine } from './house-rules.js';
@@ -35,6 +36,7 @@ const OFF = {
   banker: { pressAll: false }, nassau: { bye: 'off' }, match: { bye: 'off' }, skins: { birdieDouble: false }, wolf: { birdieDouble: false },
   hammer: { carry: false }, vegas: { max9: false }, sixes: { press: false }, stroke: { gross: false }, stableford: { table: 'standard' },
   quota: { table: 'chicago', adjust: 'off', team: false }, rabbit: { backDouble: false }, snake: { split: false },
+  bestball: { lowTotal: false }, shamble: { lowTotal: false }, bbb: { bingoDrive: false },
 };
 const offBlock = (game, block) => {
   if (!block || typeof block !== 'object') return block;
@@ -72,6 +74,7 @@ const DEFAULTS = {
   dots: { value: 1, auto: true, greenieCarry: false, kinds: { greenie: true, sandy: true, barkie: true, chipin: true, polie: false, arnie: false, hogan: false } },
   rabbit: { stake: 5, mode: 'free', tiesFree: false, sixes: false, backDouble: false },
   snake: { stake: 5, growth: 'flat', nines: false, cap: 4, fourPutt: false, split: false },
+  bbb: { value: 1, sweep: false, netBongo: false, bingoDrive: false },
 };
 const flat = n => ({ id: `f${n}`, name: 'Flat', city: 'T', tees: [], holes: Array.from({ length: n }, (_, i) => ({ par: i === 2 || i === 11 ? 3 : 4, hdcp: i + 1 })) });
 const NAMES = { a: 'Ann', b: 'Bo', c: 'Cy', d: 'Di' };
@@ -113,6 +116,10 @@ test('every house rule added 2026-10-05 starts off in the app defaults', () => {
   assert.doesNotMatch(line('dots'), /threeputt: true|water: true|ob: true/);
   assert.match(line('rabbit'), /backDouble: false/);
   assert.match(line('snake'), /split: false/);
+  assert.match(line('bbb'), /bingoDrive: false/);
+  const settingsSrc = readFileSync(new URL('./settings.js', import.meta.url), 'utf8');
+  assert.match(settingsSrc, /bestball: \{ \.\.\.TEAM_BETS, count: 1, lowTotal: false \}/);
+  assert.match(settingsSrc, /shamble: \{ \.\.\.TEAM_BETS, count: 1, drives: 0, lowTotal: false \}/);
   for (const [game, gs] of Object.entries(DEFAULTS)) if (game !== 'hcPct') assert.equal(houseRulesLine(game, gs), '', game);
 });
 
@@ -523,4 +530,41 @@ test('every new rule on at random: every round adds up to zero in whole cents, a
       assert.ok(Math.abs(sum - Math.round(balances[a] * 100)) <= ids.length, `${name}: ${a} head to head ${sum} v ${balances[a]}`);
     }
   }
+});
+
+// ---------------------------------------------------------------------------
+// Best ball and Shamble: low ball and low total. Bingo Bango Bongo: Bingo is the longest drive
+
+test('low ball and low total: a second point a hole for the lower team total, per hole only', () => {
+  const teams = [['a', 'b'], ['c', 'd']];
+  const set = { format: 'hole', perHole: 2 };
+  const mkT = (extra = {}) => {
+    const settings = structuredClone(DEFAULTS);
+    settings.bestball = { ...TEAM_DEFAULTS.bestball, ...set, ...extra };
+    return createRound({ id: 'r', game: 'bestball', course: flat(9), holesCount: 9, players: ['a', 'b', 'c', 'd'].map(id => ({ id, name: NAMES[id], index: 0 })), settings, hcPct: 100, useHandicaps: false, teams });
+  };
+  const build = r => scores(r, 2, { 1: { a: 3, b: 6 }, 2: { c: 3 } });
+  // Hole 1: Ann's 3 wins low ball, but 9 loses low total to 8. Hole 2: Cy's birdie wins both
+  const before = build(mkT()); delete before.settings.bestball.lowTotal;
+  const off = build(mkT({ lowTotal: false }));
+  const on = build(mkT({ lowTotal: true }));
+  assert.deepEqual(bal(before), { a: 0, b: 0, c: 0, d: 0 });
+  assert.deepEqual(bal(off), bal(before));
+  assert.deepEqual(bal(on), { a: -4, b: -4, c: 4, d: 4 });
+  const t = teamTable(on);
+  assert.deepEqual(t.lines.map(l => [l.key, l.won, l.value]), [['holes', [1, 1], 0], ['lowtotal', [0, 2], -4]]);
+  assert.equal(houseRulesLine('bestball', on.settings.bestball), 'low ball and low total');
+  // As a match it's the usual Nassau: the rule is for per hole bets
+  const nassau = build(mkT({ lowTotal: true, format: 'nassau' }));
+  assert.deepEqual(bal(nassau), bal(build(mkT({ format: 'nassau' }))));
+  assert.equal(houseRulesLine('bestball', nassau.settings.bestball), '');
+});
+
+test('bingo is the longest drive: the same tap, so the same money, and the card says so', () => {
+  const build = r => { scores(r, 1); r.marks = { 1: { bingo: 'a', bango: 'b', bongo: 'a' } }; return r; };
+  const b = threeWays('bbb', ['a', 'b', 'c'], 'bingoDrive', true, build);
+  assert.deepEqual(b.on, b.off);
+  assert.deepEqual(b.before, b.off);
+  assert.equal(houseRulesLine('bbb', { value: 1, bingoDrive: true }), 'Bingo is the longest drive');
+  assert.ok(houseRulesFor('bbb', { bingoDrive: true }).some(h => h.id === 'bingoDrive' && h.on));
 });

@@ -1864,6 +1864,12 @@ export function pointsTable(round) {
       // 2026-10-03: 18Birdies, "Bingo Bango Bongo" https://help.18birdies.com/article/476-bingo-bango-bongo
       // (the handicap version: "The golfer with the lowest net score on the hole")
       const netBongo = !!s.bbb.netBongo;
+      // House rule "Bingo is the longest drive" (bbb.bingoDrive, off unless the round says so, added
+      // 2026-10-05): the first point goes to the longest drive in the fairway instead of first on the
+      // green, so the long hitters get one. It's the same tap, so the money is worked out the same way.
+      // Source, checked 2026-10-05: Golfcare, "Bingo Bango Bongo"
+      // https://www.golfcare.co.uk/blog/bingo-bango-bongo/ ("the Bingo point might go to the player with
+      // the longest drive as opposed to the player who reaches the green first")
       const marked = round.marks?.[h.no];
       if (!marked && !(netBongo && holeComplete(round, h))) continue;
       const m = { ...(marked || {}) };
@@ -2183,6 +2189,35 @@ export function teamTable(round) {
       value += r.value;
     }
     lines = [{ key: 'holes', leg: 'holes', label: 'Holes won', start: 1, end: n, amount: round.settings[game]?.perHole ?? 0, won, played, left: n - played, value }];
+    // House rule "low ball and low total" (lowTotal, Best ball and Shamble per hole, off unless the round
+    // says so, added 2026-10-05): a second point on every hole for the lower team total, everyone's net
+    // added up, worth the same bet. A tie, or a team missing a player on the hole, and nobody gets it.
+    // Source, checked 2026-10-05: Golf Compendium, "How to play the Low Ball/Low Total format"
+    // https://www.golfcompendium.com/2024/08/low-ball-low-total.html ("low ball is worth a point and low
+    // total earns another point, with no points for ties")
+    if ((game === 'bestball' || game === 'shamble') && rows.some(r => settingsAt(round, r.pos)[game]?.lowTotal)) {
+      const tWon = [0, 0];
+      let tPlayed = 0, tValue = 0;
+      const sumOf = (i, h) => {
+        const t = round.teams?.[i];
+        if (!t || !t.players.every(pid => playsHole(round, pid, h))) return null;
+        const nets = t.players.map(pid => netFor(round, playerById(round, pid), h));
+        return nets.some(x => x == null) ? null : nets.reduce((a, x) => a + x, 0);
+      };
+      for (const r of rows) {
+        if (r.winner === undefined || !settingsAt(round, r.pos)[game]?.lowTotal) continue;
+        const tw = holeWinner(sumOf(0, r.hole), sumOf(1, r.hole));
+        if (tw === undefined) continue;
+        tPlayed++;
+        r.totals = [sumOf(0, r.hole), sumOf(1, r.hole)];
+        if (tw == null) continue;
+        const bet = settingsAt(round, r.pos)[game]?.perHole ?? 0;
+        tWon[tw]++;
+        r.totalValue = tw === 0 ? bet : -bet;
+        tValue += r.totalValue;
+      }
+      lines.push({ key: 'lowtotal', leg: 'lowtotal', label: 'Low total', start: 1, end: n, amount: round.settings[game]?.perHole ?? 0, won: tWon, played: tPlayed, left: n - tPlayed, value: tValue });
+    }
   } else {
     // Each bet is played for the amount in force on the hole it started, like Nassau
     const legs = roundLegs(round);

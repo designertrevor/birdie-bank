@@ -45,7 +45,7 @@ export const DEFAULT_SETTINGS = {
   quota: { ...REV2_DEFAULTS.quota, nassau: false, minus: false, split: 'top', table: 'chicago', adjust: 'off', team: false },
   nines: { point: 1, sweep: false, birdie: false }, // sweep: win a hole by 2 and take all nine; birdie: 7-1-1
   aces: { ace: 2, deuce: 1, carry: false },
-  bbb: { value: 1, sweep: false, netBongo: false }, // sweep: all three points on a hole count double
+  bbb: { value: 1, sweep: false, netBongo: false, bingoDrive: false }, // sweep: all three points on a hole count double; bingoDrive: bingo is the longest drive
   dots: { value: 1, auto: true, greenieCarry: false, kinds: { greenie: true, sandy: true, barkie: true, chipin: true, polie: false, arnie: false, hogan: false } }, // the penalty dots (threeputt, water, ob) are off when unset
   rabbit: { ...REV2_DEFAULTS.rabbit, sixes: false, backDouble: false },
   snake: { stake: 5, growth: 'flat', nines: false, cap: SNAKE_CAP_DEFAULT, fourPutt: false, split: false }, // cap: most doubles, 0 for none

@@ -18,9 +18,10 @@ export const REV2_DEFAULTS = {
  * New games, so nothing saved before them changes: mergeSettings fills them in on older phones.
  */
 const TEAM_BETS = { format: 'nassau', scoring: 'match', front: 5, back: 5, total: 5, stake: 10, perHole: 2, pressMode: 'manual', threshold: 2, turnPress: false, noLastPress: false };
+// lowTotal (2026-10-05): low ball and low total, a second point a hole per hole, off unless picked
 export const TEAM_DEFAULTS = {
-  bestball: { ...TEAM_BETS, count: 1 },
-  shamble: { ...TEAM_BETS, count: 1, drives: 0 },
+  bestball: { ...TEAM_BETS, count: 1, lowTotal: false },
+  shamble: { ...TEAM_BETS, count: 1, drives: 0, lowTotal: false },
   altshot: { ...TEAM_BETS },
   chapman: { ...TEAM_BETS },
 };

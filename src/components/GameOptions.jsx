@@ -323,7 +323,8 @@ export function GameOptions({ game, get, set, onAmount, holesCount = 18, compact
         {example(`Each point wins ${money(get('bbb.value'))} from every other player: take one and you’re up ${money(get('bbb.value') * others)}.`)}
         {toggle('bbb.sweep', 'Sweep doubles', 'Take all three points on a hole and they count six')}
         {toggle('bbb.netBongo', 'Bongo is low net', 'The third point goes to the lowest net score on the hole instead of first in, so handicaps count')}
-        {note(get('bbb.netBongo') ? 'Three points a hole: first on the green, closest once everyone is on, and the outright low net score (a tie, nobody gets it). Every pair settles the difference in points.' : 'Three points a hole: first on the green, closest once everyone is on, first in the hole. Every pair settles the difference in points. Handicaps don’t matter, so anyone can win.')}
+        {toggle('bbb.bingoDrive', 'Bingo is the longest drive', 'The first point goes to the longest drive in the fairway instead of first on the green')}
+        {note(`Three points a hole: ${get('bbb.bingoDrive') ? 'the longest drive in the fairway' : 'first on the green'}, closest once everyone is on, ${get('bbb.netBongo') ? 'and the outright low net score (a tie, nobody gets it). Every pair settles the difference in points.' : 'first in the hole. Every pair settles the difference in points. Handicaps don’t matter, so anyone can win.'}`)}
       </>;
     case 'dots':
       return <>
@@ -441,6 +442,7 @@ export function GameOptions({ game, get, set, onAmount, holesCount = 18, compact
         {format === 'hole' && <>
           {amount(`${game}.perHole`, 'Per hole won', { label: 'Each hole won' })}
           {example(`Win 3 more holes than the other team and you’re each up ${money((get(`${game}.perHole`) || 0) * 3)}.`)}
+          {ballGame && toggle(`${game}.lowTotal`, 'Low ball and low total', `Two points a hole: one for the best score, one for the lower team total, ${money(get(`${game}.perHole`) || 0)} each`)}
         </>}
         {format !== 'hole' && !stroke && <>
           {label('Presses')}

@@ -20,9 +20,11 @@ function matchWho(s, names) {
  * partway can leave the team that won fewer holes (or as many) ahead on the money, so it says so.
  */
 export function teamLineText(l, names) {
-  if (l.key === 'holes') {
+  if (l.key === 'holes' || l.key === 'lowtotal') {
     const [a, b] = l.won;
-    const text = a === b ? `${plural(a, 'hole')} each` : `${names[a > b ? 0 : 1]} won ${Math.max(a, b)} to ${Math.min(a, b)}`;
+    // Low total (a house rule) counts its points the same way: a point a hole for the lower team total
+    const unit = l.key === 'lowtotal' ? 'point' : 'hole';
+    const text = a === b ? `${plural(a, unit)} each` : `${names[a > b ? 0 : 1]} won ${Math.max(a, b)} to ${Math.min(a, b)}`;
     const up = l.value > 0 ? 0 : l.value < 0 ? 1 : null;
     const holesUp = a > b ? 0 : b > a ? 1 : null;
     return up != null && up !== holesUp ? `${text}. The bet changed partway, so ${names[up]} come out ahead` : text;
@@ -133,8 +135,9 @@ function mainRevealSteps(round, res) {
     const steps = lines.map(l => {
       const s = l.status;
       const legLabel = LEGS[l.leg]?.label || l.leg;
+      // The bye (a house rule) is played like a press, so it's named like one
       const label = l.press
-        ? `${legs3 ? `${legLabel} press` : 'Press'} from H${holeAtPos(round, l.start)}`
+        ? `${legs3 ? `${legLabel} ${l.bye ? 'bye' : 'press'}` : l.bye ? 'Bye' : 'Press'} from H${holeAtPos(round, l.start)}`
         : legLabel;
       return s.leader === null
         ? { key: l.key, label, text: matchWho(s, sn), tie: true }

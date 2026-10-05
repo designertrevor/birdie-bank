@@ -98,6 +98,7 @@ export function houseRulesFor(game, s, holes = 18) {
       r('drives', `${s.drives} drives each`, game === 'shamble' && s.drives),
       r('turnPress', 'Press at the turn', s.format === 'nassau' && s.scoring !== 'stroke' && s.turnPress),
       r('noLastPress', 'No press on the last hole', s.format !== 'hole' && s.scoring !== 'stroke' && s.noLastPress && s.pressMode !== 'off'),
+      r('lowTotal', 'Low ball and low total: a point a hole for each', (game === 'bestball' || game === 'shamble') && s.format === 'hole' && s.lowTotal),
     ];
     case 'stroke': return [
       r('cap', 'Net double bogey max', s.cap), r('nassau', 'Front, back and total: a pot each', full && s.nassau && s.payout === 'pot'),
@@ -118,7 +119,7 @@ export function houseRulesFor(game, s, holes = 18) {
     }
     case 'nines': return [r('sweep', 'Win a hole by 2 and take all 9', s.sweep), r('birdie', 'Win a hole with a birdie: 7-1-1', s.birdie)];
     case 'aces': return [r('carry', 'Ties carry', s.carry)];
-    case 'bbb': return [r('sweep', 'All three on one hole count double', s.sweep), r('netBongo', 'Bongo goes to the low net score', s.netBongo)];
+    case 'bbb': return [r('sweep', 'All three on one hole count double', s.sweep), r('netBongo', 'Bongo goes to the low net score', s.netBongo), r('bingoDrive', 'Bingo goes to the longest drive in the fairway', s.bingoDrive)];
     case 'dots': {
       const bad = penaltyDotsOn(s.kinds);
       const names = bad.map(k => DOT_KINDS[k].name.toLowerCase());
