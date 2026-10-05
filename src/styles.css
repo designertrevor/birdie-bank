@@ -3216,3 +3216,5 @@ a.header-btn.rm-open { text-decoration: none; }
 .exp-foot-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin: 8px 4px 12px; min-height: 44px; }
 .exp-foot-row .exp-status { margin: 0; }
 .exp-foot-row .link-btn.exp-all { display: inline-flex; align-items: center; margin: 0; flex-shrink: 0; min-height: 44px; }
+/* Which rounds count: a row's reason wraps so it can be read in full */
+.trip-pick .li-sub { white-space: normal; overflow: visible; text-overflow: clip; line-height: 1.35; }
