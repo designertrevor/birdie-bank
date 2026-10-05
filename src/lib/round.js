@@ -254,7 +254,7 @@ export function teamsFor(round, groups) {
 }
 
 /** Build a new round object from wizard selections. `teams` is an array of arrays of player ids. */
-export function createRound({ id, game, course, holesCount, nine, startHole, players, settings, hcPct, useHandicaps = true, teams = null, halfStrokes = false }) {
+export function createRound({ id, game, course, holesCount, nine, startHole, players, settings, hcPct, useHandicaps = true, teams = null, halfStrokes = false, justPlaying = [] }) {
   const holes = holesInPlay(course, holesCount, nine, startHole);
   const par = parOf(holes);
   const withHc = players.map(p => {
@@ -263,7 +263,9 @@ export function createRound({ id, game, course, holesCount, nine, startHole, pla
     // Payment app and handle ride along, so friends who join the round can pay each other
     return { id: p.id, name: p.name, tee: tee?.name ?? null, index: p.index ?? null, courseHc, courseHcOverride: p.courseHcOverride ?? null, ...payFields(p) };
   });
-  const plays = useHandicaps ? strokesOffLow(withHc.map(p => p.courseHc), hcPct) : withHc.map(() => 0);
+  // Someone just playing never sets the low: the betting players play off their own (see Just playing)
+  const jp = new Set((Array.isArray(justPlaying) ? justPlaying : []).filter(pid => withHc.some(p => p.id === pid)));
+  const plays = useHandicaps ? offBettorsLow(strokesOffLow(withHc.map(p => p.courseHc), hcPct), withHc.map(p => !jp.has(p.id))) : withHc.map(() => 0);
   const full = withHc.map((p, i) => ({ ...p, plays: plays[i] }));
   const round = {
     id, game, status: 'active',
@@ -284,7 +286,10 @@ export function createRound({ id, game, course, holesCount, nine, startHole, pla
     current: 0,      // index into holes
     left: {},        // playerId -> hole number they stopped after (0: before the first hole)
   };
-  if (teams?.length) round.teams = withTeamHandicaps(round, buildTeams(teams, full), full, useHandicaps, hcPct);
+  if (jp.size) round.justPlaying = Object.fromEntries([...jp].map(pid => [pid, true]));
+  // Teams are for the players with a bet: someone just playing is never on one
+  const betTeams = jp.size && teams?.length ? teams.map(t => t.filter(pid => !jp.has(pid))).filter(t => t.length) : teams;
+  if (betTeams?.length) round.teams = withTeamHandicaps(round, buildTeams(betTeams, full), full, useHandicaps, hcPct);
   // Best two only counts with teams of three or four: a round with pairs says best ball, as it's played
   if ((game === 'bestball' || game === 'shamble') && round.settings[game]?.count === 2 && round.teams && teamBestCount(round) === 1) round.settings[game].count = 1;
   // Half strokes (allowances.js) only when chosen, so a round without them looks as it always did
@@ -389,6 +394,94 @@ export function betChanges(round, key = 'main') {
   return (historyOf(round, key) || []).map(e => ({ pos: e.upto + 1, no: round.holes?.[e.upto]?.no ?? e.upto + 1 }));
 }
 
+// --------------------------- Just playing --------------------------------
+// round.justPlaying = { pid: true } marks someone on the card with no bet: their scores go on the
+// scorecard and count for the group's to-par, but they're in no game, no side game and no side bet,
+// never set the low for strokes, never take a turn in a rotation or sit on a team, and have nothing
+// on the Tab. Every game is worked out on bettingRound(), the round without them, so the betting
+// players' money is exactly what it would be if they weren't there. Rounds without the field (every
+// round before it) are untouched.
+
+/** Whether `pid` is just playing in this round: on the card, no bet. */
+export function isJustPlaying(round, pid) {
+  return !!round?.justPlaying?.[pid];
+}
+
+/** Whether anyone in the round is just playing. */
+export function anyJustPlaying(round) {
+  const jp = round?.justPlaying;
+  return !!jp && typeof jp === 'object' && (round.players || []).some(p => jp[p.id]);
+}
+
+/** The players with a bet: everyone but the ones just playing. */
+export function bettors(round) {
+  return anyJustPlaying(round) ? round.players.filter(p => !isJustPlaying(round, p.id)) : round.players;
+}
+
+/** Whether every player in the round is just playing: a card with no game at all (just keeping score). */
+export function cardOnly(round) {
+  return !!round?.players?.length && round.players.every(p => isJustPlaying(round, p.id));
+}
+
+/**
+ * `plays` taken down so the low betting player plays off 0. strokesOffLow rounds each playing handicap
+ * before taking the low off, so this is exactly strokesOffLow of the betting players alone. Nobody
+ * betting (a card only round): the low is everyone's.
+ */
+function offBettorsLow(plays, betting) {
+  const lows = plays.filter((_, i) => betting[i]);
+  const low = lows.length ? Math.min(...lows) : Math.min(0, ...plays);
+  return plays.map(v => v - low);
+}
+
+/** An object without the keys in `drop`, or `obj` itself when it has none of them. */
+function without(obj, drop) {
+  if (!obj || typeof obj !== 'object' || !Object.keys(obj).some(k => drop.has(k))) return obj;
+  return Object.fromEntries(Object.entries(obj).filter(([k]) => !drop.has(k)));
+}
+
+/**
+ * The round as the games see it: without anyone just playing. Their scores, seats, comings and goings
+ * and any side bet of theirs are left out, so every game and every amount is the one the betting
+ * players would have had without them. The same round when nobody is just playing.
+ */
+export function bettingRound(round) {
+  if (!anyJustPlaying(round)) return round;
+  const drop = new Set(round.players.filter(p => isJustPlaying(round, p.id)).map(p => p.id));
+  const { justPlaying: _jp, ...rest } = round;
+  const next = { ...rest, players: round.players.filter(p => !drop.has(p.id)) };
+  if (round.teams) {
+    const bad = round.teams.some(t => t.players.some(pid => drop.has(pid)));
+    if (bad) next.teams = round.teams.map(t => ({ ...t, players: t.players.filter(pid => !drop.has(pid)) })).filter(t => t.players.length);
+  }
+  if (round.scores) next.scores = Object.fromEntries(Object.entries(round.scores).map(([no, sc]) => [no, without(sc, drop)]));
+  for (const k of ['left', 'joined', 'gamesFor']) {
+    if (!round[k]) continue;
+    const v = without(round[k], drop);
+    if (k === 'gamesFor' && !Object.keys(v).length) delete next.gamesFor; else next[k] = v;
+  }
+  if (Array.isArray(round.bets)) next.bets = round.bets.filter(b => !(b?.sides || []).some(pid => drop.has(pid)));
+  return next;
+}
+
+/** Results worked out on bettingRound(), with a 0 for each player just playing so every seat has a line. */
+function withJustPlaying(round, res) {
+  const ids = round.players.filter(p => isJustPlaying(round, p.id)).map(p => p.id);
+  const pad = r => {
+    if (!r) return r;
+    const balances = { ...r.balances };
+    const pairs = Object.fromEntries(Object.entries(r.pairs || {}).map(([a, row]) => [a, { ...row }]));
+    for (const id of ids) {
+      balances[id] = 0;
+      pairs[id] = {};
+      for (const a of Object.keys(pairs)) if (a !== id && !ids.includes(a)) { pairs[a][id] = 0; pairs[id][a] = 0; }
+    }
+    return { ...r, balances, pairs };
+  };
+  const out = pad(res);
+  return res.cash ? { ...out, cash: pad(res.cash) } : out;
+}
+
 // --------------------------- Players who left --------------------------------
 // round.left maps a player id to the hole number they stopped after (0 means before the first hole).
 // From the next hole on they have no score box, holes are complete without them and each game's
@@ -444,6 +537,12 @@ export function playersToEnd(round) {
 export function canLeave(round, pid) {
   if (round.left?.[pid] != null) return false;
   const staying = playersToEnd(round).filter(p => p.id !== pid).map(p => p.id);
+  // Someone just playing can head in whenever anyone's still out there; a betting player needs two
+  // betting players to stay, so the games have somebody to play
+  if (anyJustPlaying(round)) {
+    if (isJustPlaying(round, pid)) return staying.length >= 1;
+    return staying.filter(x => !isJustPlaying(round, x)).length >= 2;
+  }
   if (oneBall(round.game) && round.teams) {
     // Alternate shot and Chapman take turns, so a team needs both partners to have a score box: keep at
     // least one team whole, or the holes after would have nobody to score them
@@ -582,16 +681,20 @@ export function firstOpenHole(round) {
  * not in every game, round.gamesFor records theirs, and nobody else's strokes change even before the
  * first score, so a player who's only in a side game never moves the main game's strokes.
  */
-export function addPlayerToRound(round, player, fromNo = null, games = null) {
+export function addPlayerToRound(round, player, fromNo = null, games = null, { justPlaying = false } = {}) {
   const hc = player.courseHc ?? (player.index != null ? Math.round(round.holesCount === 9 ? player.index / 2 : player.index) : 0);
   const fresh = { id: player.id, name: player.name, tee: null, index: player.index ?? null, courseHc: hc, courseHcOverride: player.courseHc ?? null, ...payFields(player) };
   const next = { ...round, players: [...round.players], joined: { ...(round.joined || {}) } };
   const keys = gameKeys(round);
-  const inAll = !Array.isArray(games) || keys.every(k => games.includes(k));
-  if (!inAll) next.gamesFor = { ...(round.gamesFor || {}), [fresh.id]: keys.filter(k => games.includes(k)) };
+  const inAll = !justPlaying && (!Array.isArray(games) || keys.every(k => games.includes(k)));
+  // Just playing: on the card with no bet, in no game, so nobody's strokes move (see Just playing)
+  if (justPlaying) next.justPlaying = { ...(round.justPlaying || {}), [fresh.id]: true };
+  else if (!inAll) next.gamesFor = { ...(round.gamesFor || {}), [fresh.id]: keys.filter(k => games.includes(k)) };
   const started = roundStarted(round) || !inAll;
   if (!started) {
     const all = [...round.players, fresh];
+    // With someone just playing already in, the low stays the betting players' own
+    if (anyJustPlaying(round)) { next.players = withPlays(round, all); return next; }
     const plays = round.useHandicaps ? strokesOffLow(all.map(p => p.courseHc), round.hcPct) : all.map(() => 0);
     next.players = all.map((p, i) => ({ ...p, plays: plays[i] }));
     return next;
@@ -776,6 +879,9 @@ function withPlays(round, players) {
     const lows = plays.filter((_, i) => playsGame(round, players[i].id, 'main'));
     const low = lows.length ? Math.min(...lows) : 0;
     plays = plays.map(v => v - low);
+  } else if (round.useHandicaps && anyJustPlaying(round)) {
+    // Nor does someone just playing: the betting players' strokes are what they'd be without them
+    plays = offBettorsLow(plays, players.map(p => !isJustPlaying(round, p.id)));
   }
   return players.map((p, i) => ({ ...p, plays: plays[i] }));
 }
@@ -2091,6 +2197,8 @@ export function teamTable(round) {
  * This is one game only: a round with side games adds them up in roundResults.
  */
 export function gameResults(round) {
+  // Nobody to bet (a card only round): nothing changes hands
+  if (!round.players.length) return { balances: {}, standings: [], transfers: [], detail: {}, pairs: {} };
   const ids = round.players.map(p => p.id);
   const balances = Object.fromEntries(ids.map(id => [id, 0]));
   const detail = {};
@@ -2502,6 +2610,8 @@ export function sideGameChoices(mainGame, sideGames = []) {
 
 /** Whether `pid` plays the game `key` in this round (everyone is in every game unless gamesFor says otherwise). */
 export function playsGame(round, pid, key) {
+  // Someone just playing is in no game at all
+  if (round.justPlaying?.[pid]) return false;
   const list = round.gamesFor?.[pid];
   return !Array.isArray(list) || list.includes(key);
 }
@@ -2513,7 +2623,9 @@ export function playsGame(round, pid, key) {
  * the side game's key), and has no teams or presses. Old rounds have no side game history, so
  * every hole reads the side game's settings as it always did.
  */
-export function gameView(round, key) {
+export function gameView(full, key) {
+  // Every game is played among the betting players alone, as if anyone just playing weren't there
+  const round = bettingRound(full);
   const players = round.gamesFor ? round.players.filter(p => playsGame(round, p.id, key)) : round.players;
   if (key === 'main') return players === round.players ? round : { ...round, players };
   const sg = sideGamesOf(round).find(x => x.game === key);
@@ -2718,6 +2830,8 @@ const withCash = (res, cash) => (cash ? { ...res, cash } : res);
  * as `cash` (see cashResults), only when there are some.
  */
 export function roundResults(round) {
+  // Someone just playing: the money is worked out without them, exactly as if they weren't in the round
+  if (anyJustPlaying(round)) return withJustPlaying(round, roundResults(bettingRound(round)));
   const sgs = sideGamesOf(round);
   const all = betsOf(round);
   // A reward round's money bets stay out of the totals (they're dollars, the totals are points): see cashResults
