@@ -128,6 +128,10 @@ test('rule page: a side game says how to add it, and headings and titles are esc
   assert.ok(html.includes('href="/?play=closest-to-the-pin"'));
   assert.match(html, /<title>[^<]*golf side game rules/);
   assert.ok(html.includes('More side games'));
+  // The app never holds anyone's money: it keeps track of the pot, it doesn't keep it
+  const d = rulePageMeta('ctp', { sub: '2–8 players · A side game · A pot for the par 3s' }).description;
+  assert.match(d, /keeps track of the pot/);
+  assert.ok(!/keeps the pot|holds the pot/.test(d), d);
 });
 
 test('rule page meta: a page from another origin points at itself', () => {

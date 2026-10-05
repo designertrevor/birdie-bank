@@ -36,7 +36,7 @@ export function rulePageMeta(key, { title, sub = '' } = {}, origin = SITE_URL) {
   const f = ruleFacts(key, sub);
   const heading = title || `How to play ${ruleName(key)}`;
   const tail = f.side
-    ? `Add it to any round and ${APP_NAME} keeps the pot for you.`
+    ? `Add it to any round and ${APP_NAME} keeps track of the pot for you.`
     : 'The rules, the bets and how the money works, then play it free with your group.';
   return {
     heading,

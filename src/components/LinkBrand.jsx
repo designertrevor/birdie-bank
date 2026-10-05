@@ -16,9 +16,12 @@ export function LinkBrand() {
   );
 }
 
-/** "How it works" in three numbered steps for `kind` ('join', 'plan' or 'challenge'). */
-export function LinkHowTo({ kind }) {
-  const steps = howItWorks(kind);
+/**
+ * "How it works" in three numbered steps for `kind` ('join', 'plan' or 'challenge'). `money`:
+ * false for a round with nothing on the Tab, so its steps read in scores.
+ */
+export function LinkHowTo({ kind, money = true }) {
+  const steps = howItWorks(kind, money);
   if (!steps.length) return null;
   return (
     <section className="link-howto" aria-label="How it works">

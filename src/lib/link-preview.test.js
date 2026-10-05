@@ -57,7 +57,7 @@ const PLAN = { hostName: 'Trevor', date: '2026-10-10', teeTime: '08:10', course:
 
 test('planPreview: who asked, the day, the course and the game', () => {
   const p = planPreview(PLAN);
-  assert.equal(p.title, 'Golf Sat, Oct 10 at 8:10 AM at Birch Creek');
+  assert.equal(p.title, 'Golf at Birch Creek, Sat, Oct 10 at 8:10 AM');
   assert.equal(p.description, 'Trevor invited you · Thinking Wolf. Tap to say if you’re in and vote on the game and the bet. No download needed.');
 });
 
@@ -80,8 +80,21 @@ test('planPreview: no amounts, a called-off plan says so, and nothing to go on i
   assert.equal(planPreview({ game: 'wolf' }), null);
   // No host, no tee time, no game: still reads
   const bare = planPreview({ date: '2026-10-10', course: { name: 'Oak' } });
-  assert.equal(bare.title, 'Golf Sat, Oct 10 at Oak');
+  assert.equal(bare.title, 'Golf at Oak, Sat, Oct 10');
+  assert.equal(planPreview({ date: '2026-10-10', teeTime: '07:00' }).title, 'Golf Sat, Oct 10 at 7:00 AM');
+  assert.equal(planPreview({ course: { name: 'Oak' } }).title, 'Golf at Oak');
   assert.match(bare.description, /^You’re invited\. Tap/);
+});
+
+test('planPreview: a plan moved to another day points there, and one going now says it is on', () => {
+  const moved = planPreview({ ...PLAN, movedTo: { id: 'x', code: 'NEW123', date: '2026-10-17' } }, 'p_dave1');
+  assert.equal(moved.title, 'Golf moved to Sat, Oct 17');
+  assert.match(moved.description, /^Trevor moved the round at Birch Creek to Sat, Oct 17\./);
+  assert.ok(!moved.title.includes('Oct 10'));
+  const on = planPreview({ ...PLAN, status: 'started' });
+  assert.equal(on.title, 'Golf at Birch Creek is on');
+  assert.match(on.description, /Tap to follow it live/);
+  assert.ok(!/say if you/.test(on.description), 'it no longer asks who is in');
 });
 
 test('challengePreview: who challenged who, the kind, the holes and the day, never the amount', () => {
@@ -107,7 +120,7 @@ test('joinPreview: a live round names who sent it; a finished one names the app 
 });
 
 test('previews: none of them use an em dash', () => {
-  const all = [planPreview(PLAN), planPreview(PLAN, 'p_dave1'), planPreview({ ...PLAN, status: 'off' }), challengePreview({ from: { name: 'A' }, to: { name: 'B' }, kind: 'hole', holes: 'front' }), draftPreview()];
+  const all = [planPreview(PLAN), planPreview(PLAN, 'p_dave1'), planPreview({ ...PLAN, status: 'off' }), planPreview({ ...PLAN, status: 'started' }), planPreview({ ...PLAN, movedTo: { date: '2026-10-17' } }), challengePreview({ from: { name: 'A' }, to: { name: 'B' }, kind: 'hole', holes: 'front' }), draftPreview()];
   for (const p of all) assert.ok(!(p.title + p.description).includes(EM));
 });
 
@@ -127,7 +140,7 @@ async function withFetch(rows, run) {
   try {
     const { default: handler } = await import('../../api/join.js');
     const res = await run(handler);
-    return { seen, html: await res.text() };
+    return { seen, html: await res.text(), robots: res.headers.get('x-robots-tag') };
   } finally {
     globalThis.fetch = realFetch;
   }
@@ -146,7 +159,8 @@ test('api/join: a plan link reads the plan with its code in x-plan-code and fill
 
 test('api/join: a challenge link reads it with x-challenge-code', async () => {
   const ch = { from: { who: 'a', name: 'Mike' }, to: { who: 'b', name: 'Dave' }, kind: 'match', stake: 20, holes: 'all' };
-  const { seen, html } = await withFetch([{ meta: ch }], h => h.fetch(new Request('https://x.test/api/join?challenge=CH4LL3')));
+  const { seen, html, robots } = await withFetch([{ meta: ch }], h => h.fetch(new Request('https://x.test/api/join?challenge=CH4LL3')));
+  assert.equal(robots, 'noindex, nofollow', 'a preview that names people is never in search results');
   const read = seen.find(r => r.url.includes('/rest/v1/challenges'));
   assert.equal(read.headers['x-challenge-code'], 'CH4LL3');
   assert.ok(html.includes('<title>Mike challenged Dave</title>'));
@@ -182,6 +196,12 @@ test('link pages: three short steps for a round, a plan and a challenge, no em d
     for (const s of steps) { assert.ok(s.length < 80, s); assert.ok(!s.includes(EM)); assert.match(s, /\.$/); }
   }
   assert.deepEqual(howItWorks('draft'), []);
+  // A points or lunch round has no money to follow or settle
+  const noMoney = howItWorks('join', false);
+  assert.equal(noMoney.length, 3);
+  assert.ok(!noMoney.some(s => /money|settle|pay/i.test(s)), noMoney.join(' '));
+  assert.deepEqual(howItWorks('join', true), HOW_IT_WORKS.join);
+  assert.deepEqual(howItWorks('plan', false), HOW_IT_WORKS.plan);
   assert.deepEqual(howItWorks('nope'), []);
   assert.equal(Object.keys(HOW_IT_WORKS).length, 3);
   assert.equal(BROWSER_LINE, 'No download needed');

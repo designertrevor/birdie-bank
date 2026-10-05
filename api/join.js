@@ -61,6 +61,9 @@ export default {
         headers: {
           'Content-Type': 'text/html; charset=utf-8',
           'Cache-Control': 'public, max-age=0, s-maxage=300, stale-while-revalidate=600',
+          // A preview names people (who invited who, who challenged who): link previews read it,
+          // search engines must never list it, whatever each person's profile setting is
+          'X-Robots-Tag': 'noindex, nofollow',
         },
       });
     } catch {

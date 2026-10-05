@@ -24,5 +24,16 @@ export const HOW_IT_WORKS = {
   ],
 };
 
-/** The steps for a kind of link, or none. */
-export const howItWorks = kind => HOW_IT_WORKS[kind] || [];
+// A round played for points or a reward (with no side bet for money) has no money to follow or
+// settle, so its steps say the scores instead
+const JOIN_NO_MONEY = [
+  'Pick your seat, or just watch.',
+  'Follow every hole and the scores live, right here in your browser.',
+  'See who won the moment the round is done.',
+];
+
+/**
+ * The steps for a kind of link, or none. `money`: false for a round with nothing on the Tab
+ * (play-for.js onTab), so a points or lunch round never talks about settling up.
+ */
+export const howItWorks = (kind, money = true) => (kind === 'join' && !money ? JOIN_NO_MONEY : HOW_IT_WORKS[kind] || []);

@@ -16,7 +16,7 @@ import { GAMES, addPlayerProblem } from '../lib/round.js';
 import { roundStakeLines } from '../lib/stakes.js';
 import { firstName, gameLabel, strokesLabel } from '../lib/format.js';
 import { payFields } from '../lib/pay.js';
-import { noMoneyNote, playForLine } from '../lib/play-for.js';
+import { noMoneyNote, onTab, playForLine } from '../lib/play-for.js';
 import { money } from '../lib/golf.js';
 import { bigInvite } from '../lib/big-view.js';
 
@@ -349,7 +349,7 @@ export default function JoinInvite({ code, onJoined, onSkip, setUp = false }) {
           </dl>
           {done && <p className="ic-note">This round is finished. Pick your seat to see how it ended.</p>}
         </div>
-        {!setUp && <LinkHowTo kind="join" />}
+        {!setUp && <LinkHowTo kind="join" money={onTab(meta)} />}
         <p className="field-help">{noMoneyNote(meta) || 'Friendly wagers only. Birdie Bank never holds or moves money. You settle up yourselves.'}</p>
       </div>
       <div className="cta-wrap">

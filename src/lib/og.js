@@ -107,12 +107,22 @@ export function planPreview(meta, who = null) {
   const name = person ? first(person.name) : '';
   const when = [day, time && `at ${time}`].filter(Boolean).join(' ');
   const game = gameName(meta.game);
+  // Kept for another day (plans.js movedTo): the old link says where it went, not the old day
+  const moved = meta.movedTo && typeof meta.movedTo === 'object' ? previewDay(meta.movedTo.date) : '';
+  if (moved) {
+    return { title: `Golf moved to ${moved}`, description: `${host || 'The organizer'} moved the round${course ? ` at ${course}` : ''} to ${moved}. Tap to see the new plan. No download needed.` };
+  }
   if (meta.status === 'off') {
     return { title: when ? `Golf on ${when} is off` : 'This round is off', description: `${host || 'The organizer'} called off the round${course ? ` at ${course}` : ''}. Keep an eye out for the next one.` };
   }
+  // The round is on: the same link follows it live, so it no longer asks who's in (and the vote
+  // may have picked another game than the suggestion, so it says golf)
+  if (meta.status === 'started') {
+    return { title: `Golf${course ? ` at ${course}` : ''} is on`, description: `${host ? `${host}’s` : 'The'} round is going now. Tap to follow it live. No download needed.` };
+  }
   const title = name
     ? `${name}, you in for golf${when ? ` ${when}` : ''}?`
-    : `Golf${when ? ` ${when}` : ''}${course ? ` at ${course}` : ''}`;
+    : `Golf${course ? ` at ${course}` : ''}${when ? `${course ? ',' : ''} ${when}` : ''}`;
   const facts = [
     host ? `${host} invited you` : 'You’re invited',
     name && course ? `${course}` : '',
