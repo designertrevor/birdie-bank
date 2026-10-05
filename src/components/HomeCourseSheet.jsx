@@ -1,7 +1,7 @@
 // Picking your home course for your profile: your courses and the course database, or any name
 // you type. It's a label on your profile, so a course from the database isn't downloaded here.
 import { useState } from 'react';
-import { Icon, Sheet } from './ui.jsx';
+import { PickRow, Sheet } from './ui.jsx';
 import { useStore } from '../lib/store.js';
 import { coursePickerSections } from '../lib/courses.js';
 import { useCourseSearch } from '../lib/useCourseSearch.js';
@@ -23,13 +23,7 @@ function Body({ current, onPick }) {
   const row = (key, name, place, course) => {
     const on = current && (current.id ? current.id === course.id : current.name === name);
     return (
-      <button key={key} className={`list-item pick ${on ? 'on' : ''}`} aria-pressed={!!on} onClick={() => onPick(course)}>
-        <div className="row-main">
-          <div className="li-name">{name}</div>
-          {place && <div className="li-sub">{place}</div>}
-        </div>
-        <span className={`li-check ${on ? 'on' : ''}`} aria-hidden="true">{on && <Icon name="check" />}</span>
-      </button>
+      <PickRow key={key} on={!!on} add={false} onClick={() => onPick(course)} title={name} sub={place} />
     );
   };
   const local = c => row(c.id, c.name, c.city, { id: c.id, name: c.name, place: c.city || '' });

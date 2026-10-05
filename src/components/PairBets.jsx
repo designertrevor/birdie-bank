@@ -4,7 +4,7 @@
 // them; either player in a bet changes it from their own phone, which asks the keeper's phone to put
 // it in (bet-asks.js) and shows it as waiting until it lands.
 import { useState } from 'react';
-import { Icon, Numpad, Segmented, Sheet, useUI } from './ui.jsx';
+import { Icon, Numpad, PickChip, Segmented, Sheet, useUI } from './ui.jsx';
 import { update } from '../lib/store.js';
 import { holeComplete, oneBall } from '../lib/round.js';
 import {
@@ -107,9 +107,7 @@ export function BetEditor({ round, bet = null, fromPos = 1, onSave, onRemove = n
           <div className="field-label" id="pb-kind">What’s the bet</div>
           <div className="chip-row flush" role="radiogroup" aria-labelledby="pb-kind">
             {kinds.map(k => (
-              <button key={k} role="radio" aria-checked={kind === k} className={`pill-btn ${kind === k ? 'on' : ''}`} onClick={() => setKind(k)}>
-                <Icon name={BET_KINDS[k].icon} fill={kind === k} /> {BET_KINDS[k].label}
-              </button>
+              <PickChip key={k} radio on={kind === k} icon={BET_KINDS[k].icon} onClick={() => setKind(k)}>{BET_KINDS[k].label}</PickChip>
             ))}
           </div>
           <p className="field-help pb-help">{cash ? BET_KINDS[kind].help : inUnits(round, BET_KINDS[kind].help)}</p>
@@ -128,17 +126,17 @@ export function BetEditor({ round, bet = null, fromPos = 1, onSave, onRemove = n
           <div className="chip-row flush" role="group" aria-labelledby="pb-who">
             {round.players.map(p => {
               const on = sides.includes(p.id);
-              return <button key={p.id} aria-pressed={on} disabled={p.id === me && on} className={`pill-btn ${on ? 'on' : ''}`} onClick={() => pick(p.id)}>{on && <Icon name="check" />} {p.name}{p.id === me ? ' (you)' : ''}</button>;
+              return <PickChip key={p.id} on={on} disabled={p.id === me && on} onClick={() => pick(p.id)}>{p.name}{p.id === me ? ' (you)' : ''}</PickChip>;
             })}
           </div>
 
           <div className="field-label" id="pb-stake">{kind === 'match' ? 'For' : kind === 'hole' ? 'A hole' : kind === 'ctp' ? 'A par 3' : 'For'}</div>
           <div className="chip-row flush" role="radiogroup" aria-labelledby="pb-stake">
             {QUICK.map(v => (
-              <button key={v} role="radio" aria-checked={stake === v} className={`pill-btn ${stake === v ? 'on' : ''}`} onClick={() => setStake(v)}>{fmt(v)}</button>
+              <PickChip key={v} radio on={stake === v} onClick={() => setStake(v)}>{fmt(v)}</PickChip>
             ))}
-            <button role="radio" aria-checked={!QUICK.includes(stake)} className={`pill-btn ${QUICK.includes(stake) ? '' : 'on'}`} onClick={() => setPad(true)}
-              aria-label={QUICK.includes(stake) ? 'Another amount' : `${fmt(stake)}. Change it`}>{QUICK.includes(stake) ? 'Other' : fmt(stake)}</button>
+            <PickChip radio on={!QUICK.includes(stake)} onClick={() => setPad(true)}
+              label={QUICK.includes(stake) ? 'Another amount' : `${fmt(stake)}. Change it`}>{QUICK.includes(stake) ? 'Other' : fmt(stake)}</PickChip>
           </div>
 
           <div className="field-label" id="pb-holes">Holes</div>
@@ -374,13 +372,9 @@ export function HoleBets({ round: saved, hole, editable, me = null }) {
             {canTap(b) ? (
               <div className="chip-row flush" role="radiogroup" aria-label={`${q}: who ${b.kind === 'ctp' ? 'was closest' : 'won'}`}>
                 {b.sides.map(id => (
-                  <button key={id} role="radio" aria-checked={won === id} className={`pill-btn ${won === id ? 'on' : ''}`} onClick={() => set(b, won === id ? null : id)}>
-                    {won === id && <Icon name="check" />} {nameIn(round, id)}
-                  </button>
+                  <PickChip key={id} radio on={won === id} onClick={() => set(b, won === id ? null : id)}>{nameIn(round, id)}</PickChip>
                 ))}
-                {b.kind === 'ctp' && (
-                  <button role="radio" aria-checked={won == null} className={`pill-btn ${won == null ? 'on' : ''}`} onClick={() => set(b, null)}>Neither</button>
-                )}
+                {b.kind === 'ctp' && <PickChip radio on={won == null} onClick={() => set(b, null)}>Neither</PickChip>}
               </div>
             ) : (
               <div className="hb-state">{won ? `${nameIn(round, won)} ${b.kind === 'ctp' ? 'was closest' : 'won'}` : b.kind === 'ctp' ? 'Not tapped yet' : 'Not decided yet'}</div>

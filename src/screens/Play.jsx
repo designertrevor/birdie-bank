@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { Empty, Icon, Numpad, Screen, Segmented, Sheet, useUI } from '../components/ui.jsx';
+import { Empty, Icon, Numpad, PickChip, PickRow, Screen, Segmented, Sheet, useUI } from '../components/ui.jsx';
 import { RulesSheet } from '../components/Rules.jsx';
 import { DEFAULT_SETTINGS, getState, update, useStore } from '../lib/store.js';
 import {
@@ -787,18 +787,18 @@ function PlayRound({ round, mount, momentUp = false }) {
       {game === 'banker' && (
         <>
           <Sheet open={bankerPick} onClose={() => setBankerPick(false)} title={`Banker · Hole ${hole.no}`}>
+            <div className="pick-list sheet-picks" role="radiogroup" aria-label={`Banker on hole ${hole.no}`}>
             {playersOn(main, hole).map(p => (
-              <button key={p.id} className={`sheet-item ${banker.banker === p.id ? 'selected' : ''}`} aria-pressed={banker.banker === p.id}
+              <PickRow key={p.id} radio on={banker.banker === p.id} title={p.name} sub={p.plays ? `Gets ${p.plays} stroke${p.plays > 1 ? 's' : ''}` : 'No strokes'}
                 onClick={() => {
                   const bets = {};
                   const def = round.settings.banker.defaultBet;
                   for (const q of playersOn(main, hole)) if (q.id !== p.id) bets[q.id] = banker.bets[q.id] ?? def;
                   setBanker({ ...banker, banker: p.id, bets, doubled: {}, doubleBack: false });
                   setBankerPick(false);
-                }}>
-                {p.name}<span style={{ fontSize: 13 }}>{p.plays ? `Gets ${p.plays} stroke${p.plays > 1 ? 's' : ''}` : 'No strokes'}</span>
-              </button>
+                }} />
             ))}
+            </div>
           </Sheet>
           <Numpad open={!!betPad} title={`${round.players.find(p => p.id === betPad)?.name}’s bet`} {...padUnit(round)}
             initial={betPad ? banker.bets[betPad] : ''} min={round.settings.banker.min} max={round.settings.banker.max}
@@ -952,7 +952,7 @@ function LeftSheet({ round, idx, onClose, onEnd }) {
             <div className="eyebrow" style={{ marginBottom: 8 }}>Who left</div>
             <div className="chip-row" style={{ padding: 0 }} role="radiogroup" aria-label="Who left">
               {staying.map(p => (
-                <button key={p.id} role="radio" aria-checked={pid === p.id} disabled={!canLeave(round, p.id)} className={`pill-btn ${pid === p.id ? 'on' : ''}`} onClick={() => setPid(p.id)}>{p.name}</button>
+                <PickChip key={p.id} radio on={pid === p.id} disabled={!canLeave(round, p.id)} onClick={() => setPid(p.id)}>{p.name}</PickChip>
               ))}
             </div>
           </div>
@@ -960,9 +960,9 @@ function LeftSheet({ round, idx, onClose, onEnd }) {
             <div style={{ padding: '0 20px 12px' }}>
               <div className="eyebrow" style={{ marginBottom: 8 }}>Last hole they finished</div>
               <div className="chip-row" style={{ padding: 0 }} role="radiogroup" aria-label="Last hole they finished">
-                <button role="radio" aria-checked={pos === 0} className={`pill-btn ${pos === 0 ? 'on' : ''}`} onClick={() => setPos(0)}>None</button>
+                <PickChip radio on={pos === 0} onClick={() => setPos(0)}>None</PickChip>
                 {round.holes.slice(0, upto + 1).map((h, i) => (
-                  <button key={h.no} role="radio" aria-checked={pos === i + 1} className={`pill-btn ${pos === i + 1 ? 'on' : ''}`} onClick={() => setPos(i + 1)}>{h.no}</button>
+                  <PickChip key={h.no} radio check={false} on={pos === i + 1} onClick={() => setPos(i + 1)}>{h.no}</PickChip>
                 ))}
               </div>
             </div>
@@ -1383,13 +1383,10 @@ function WolfPanel({ round, hole, wolf, setWolf }) {
       </div>
       {setWolf && <div className="chip-row" style={{ padding: 0 }}>
         {others.map(p => (
-          <button key={p.id} className={`pill-btn ${wolf.partner === p.id ? 'on' : ''}`} aria-pressed={wolf.partner === p.id}
-            onClick={() => pick(p.id)}>{p.name}</button>
+          <PickChip key={p.id} on={wolf.partner === p.id} onClick={() => pick(p.id)}>{p.name}</PickChip>
         ))}
-        <button className={`pill-btn lone ${wolf.partner === null && !blind ? 'on' : ''}`} aria-pressed={wolf.partner === null && !blind}
-          onClick={() => pick(null)}><Icon name="paw-print" fill /> Lone wolf {mult}×</button>
-        {offerBlind && <button className={`pill-btn lone ${blind ? 'on' : ''}`} aria-pressed={blind}
-          onClick={() => pick(null, true)}><Icon name="eye-slash" fill /> Blind wolf {blindMult}×</button>}
+        <PickChip className="lone" icon="paw-print" on={wolf.partner === null && !blind} onClick={() => pick(null)}>Lone wolf {mult}×</PickChip>
+        {offerBlind && <PickChip className="lone" icon="eye-slash" on={blind} onClick={() => pick(null, true)}>Blind wolf {blindMult}×</PickChip>}
       </div>}
       {setWolf && offerBlind && <p className="wolf-note">Blind wolf: call it before anyone tees off.</p>}
       {carried > 0 && <p className="wolf-note">{carried === 1 ? 'A tied hole is' : `${carried} tied holes are`} riding on this one: it pays {carried + 1}×.</p>}

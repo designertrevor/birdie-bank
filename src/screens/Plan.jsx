@@ -3,7 +3,7 @@
 // only the organizer can mark answers for others, call it off and start it.
 // Friends open it from the group link with no install and no paywall (PlanLink below).
 import { useEffect, useState } from 'react';
-import { BallIllo, Empty, Header, Icon, Screen, Sheet, useUI } from '../components/ui.jsx';
+import { BallIllo, Empty, Header, Icon, PickChip, PickMark, PickRow, Screen, Sheet, useUI } from '../components/ui.jsx';
 import { Avatar } from '../components/Pay.jsx';
 import { getState, update, uid, useStore } from '../lib/store.js';
 import { useNav } from '../lib/nav.js';
@@ -340,8 +340,8 @@ function SideVote({ plan, rows, rules, mine, onVote }) {
               <div className="set-sub">{r.yes} yes · {r.no} no · {r.on ? 'On so far' : 'Off so far'}</div>
             </div>
             <div className="sv-btns" role="group" aria-label={`${name}: play it?`}>
-              <button className={`pill-btn sm ${v === true ? 'on' : ''}`} aria-pressed={v === true} onClick={() => onVote(r.side, v === true ? null : true)}>Yes</button>
-              <button className={`pill-btn sm ${v === false ? 'on' : ''}`} aria-pressed={v === false} onClick={() => onVote(r.side, v === false ? null : false)}>No</button>
+              <PickChip small on={v === true} onClick={() => onVote(r.side, v === true ? null : true)}>Yes</PickChip>
+              <PickChip small on={v === false} onClick={() => onVote(r.side, v === false ? null : false)}>No</PickChip>
             </div>
           </div>
         );
@@ -366,7 +366,7 @@ function VoteBlock({ label, kind, t, mineValue, onVote, render }) {
               <span className="vr-bar" style={{ width: `${Math.round((r.votes / top) * 100)}%` }} aria-hidden="true" />
               <span className="vr-name">{render(r.choice)}{r.suggested && <span className="vr-tag">Suggested</span>}</span>
               <span className="vr-n">{r.votes} {r.votes === 1 ? 'vote' : 'votes'}</span>
-              <span className="vr-check" aria-hidden="true"><Icon name={on ? 'check-circle' : 'circle'} fill={on} /></span>
+              <span className="vr-check"><PickMark on={on} add={false} /></span>
             </button>
           );
         })}
@@ -553,17 +553,13 @@ export function RollCall({ id }) {
           <div className="li-sub">{t.total > 1 ? `The group’s pick (${t.rows.find(r => r.choice === setup.game)?.votes || 0} of ${t.total} votes)` : 'Your suggestion. Nobody else voted'}</div>
         </div>
         <h2 className="step-q d">Who showed up?</h2>
-        <div style={{ padding: '0 16px' }}>
+        <div className="pick-list">
           {people.map(p => {
             const on = present.includes(p.who);
             return (
-              <button key={p.who} className={`list-item ${on ? 'on' : ''}`} onClick={() => toggle(p.who)} aria-pressed={on}>
-                <div className="row-main">
-                  <div className="li-name">{p.who === plan.hostWho ? `${first(p.name)} (you)` : p.name}</div>
-                  <div className="li-sub">{p.who.startsWith('w_') ? 'Walked up' : <>{p.status ? `Said ${RSVP_LABEL[p.status].toLowerCase()}` : 'Didn’t answer'}{!p.invited ? ' · from the link' : ''}</>}</div>
-                </div>
-                <span className={`li-check ${on ? 'on' : 'add'}`}><Icon name={on ? 'check' : 'plus'} /></span>
-              </button>
+              <PickRow key={p.who} on={on} onClick={() => toggle(p.who)}
+                title={p.who === plan.hostWho ? `${first(p.name)} (you)` : p.name}
+                sub={p.who.startsWith('w_') ? 'Walked up' : <>{p.status ? `Said ${RSVP_LABEL[p.status].toLowerCase()}` : 'Didn’t answer'}{!p.invited ? ' · from the link' : ''}</>} />
             );
           })}
         </div>

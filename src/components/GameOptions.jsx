@@ -1,4 +1,4 @@
-import { Icon, Segmented, Toggle } from './ui.jsx';
+import { Icon, PickChip, Segmented, Toggle } from './ui.jsx';
 import { GAMES, blindMultiplierOf } from '../lib/round.js';
 import { CHAPMAN_ALLOWANCE, DOT_KINDS, FOURSOMES_ALLOWANCE, SCRAMBLE_ALLOWANCE, sixesPairings } from '../lib/games.js';
 import { money as dollars } from '../lib/golf.js';
@@ -300,9 +300,7 @@ export function GameOptions({ game, get, set, onAmount, holesCount = 18, compact
           <div className="eyebrow" style={{ marginBottom: 10 }}>Dots in play</div>
           <div className="chip-row" style={{ padding: 0 }}>
             {Object.entries(DOT_KINDS).map(([k, d]) => (
-              <button key={k} className={`pill-btn ${get(`dots.kinds.${k}`) ? 'on' : ''}`} title={d.help} aria-pressed={!!get(`dots.kinds.${k}`)} onClick={() => set(`dots.kinds.${k}`, !get(`dots.kinds.${k}`))}>
-                {get(`dots.kinds.${k}`) && <Icon name="check" />} {d.name}
-              </button>
+              <PickChip key={k} on={!!get(`dots.kinds.${k}`)} title={d.help} onClick={() => set(`dots.kinds.${k}`, !get(`dots.kinds.${k}`))}>{d.name}</PickChip>
             ))}
           </div>
           {help(`Every dot is paid by each of the other players. Tap a player’s dots as they happen.${dotsNote(get('dots.kinds')) ? ` ${dotsNote(get('dots.kinds'))}` : ''}`)}

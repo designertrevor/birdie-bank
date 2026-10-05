@@ -144,7 +144,7 @@ export default function BigGame({ id, view: firstView = null }) {
 
         <Groups bs={bs} state={state} name={name} organizer={organizer} onOpen={g => (g.card && state.rounds[g.card.id] ? nav.push('play', { id: g.card.id }) : setGroupOpen(g))} />
         {organizer && started && !bs.final && (
-          <div className="chip-row">
+          <div className="chip-row big-share">
             {big.groups.every(g => g.code) && <button className="pill-btn" onClick={share}><Icon name="share-network" /> Send every group its link</button>}
             {big.groups.some(g => !g.code) && <button className="pill-btn" disabled={busy} onClick={reshare}><Icon name="broadcast" /> {busy ? 'Sharing…' : 'Share the groups again'}</button>}
           </div>

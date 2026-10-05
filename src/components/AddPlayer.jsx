@@ -3,7 +3,7 @@
 // With side games, the scorekeeper picks which games they're in: one start hole for all of them, and
 // a main game with set sides (Nassau, Wolf, Vegas...) never takes them, but its side games can.
 import { useMemo, useState } from 'react';
-import { Icon, Sheet, Toggle, useUI } from './ui.jsx';
+import { Icon, PickChip, Sheet, Toggle, useUI } from './ui.jsx';
 import { update, uid, useStore } from '../lib/store.js';
 import { addPlayerProblem, addPlayerToRound, firstOpenHole, joinGames, joinRule, roundStarted, sideGamesOf } from '../lib/round.js';
 import { payFields } from '../lib/pay.js';
@@ -97,7 +97,7 @@ export function AddPlayerSheet({ round, request = null, onClose }) {
             {!request && saved.length > 0 && (
               <div className="chip-row" style={{ padding: '10px 0 0' }} role="radiogroup" aria-label="Saved players">
                 {saved.slice(0, 12).map(p => (
-                  <button key={p.id} role="radio" aria-checked={pick === p.id} className={`pill-btn sm ${pick === p.id ? 'on' : ''}`} onClick={() => choose(pick === p.id ? null : p.id)}>{p.name}</button>
+                  <PickChip key={p.id} small radio on={pick === p.id} onClick={() => choose(pick === p.id ? null : p.id)}>{p.name}</PickChip>
                 ))}
               </div>
             )}
@@ -119,7 +119,7 @@ export function AddPlayerSheet({ round, request = null, onClose }) {
               <div className="eyebrow" style={{ marginBottom: 8 }}>Starts on hole</div>
               <div className="chip-row" style={{ padding: 0 }} role="radiogroup" aria-label="Starts on hole">
                 {choices.map(h => (
-                  <button key={h.no} role="radio" aria-checked={fromNo === h.no} className={`pill-btn ap-hole ${fromNo === h.no ? 'on' : ''}`} onClick={() => setFromNo(h.no)}>{h.no}</button>
+                  <PickChip key={h.no} radio check={false} className="ap-hole" on={fromNo === h.no} onClick={() => setFromNo(h.no)}>{h.no}</PickChip>
                 ))}
               </div>
             </div>

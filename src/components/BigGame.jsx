@@ -3,7 +3,7 @@
 // field skins, the teams, the side bets), the money, and adding a side bet between any two players.
 // The game's page and setup put them together (BigGame.jsx, BigGameSetup.jsx).
 import { useState } from 'react';
-import { Icon, Numpad, Segmented, Sheet, useUI } from './ui.jsx';
+import { Icon, Numpad, PickChip, Segmented, Sheet, useUI } from './ui.jsx';
 import { Avatar } from './Pay.jsx';
 import { useStore } from '../lib/store.js';
 import { useNav } from '../lib/nav.js';
@@ -352,11 +352,11 @@ export function BigBetSheet({ open, onClose, tripId = null, big, bet = null, onR
   return (
     <>
       <Sheet open={open && !pad} onClose={onClose} title={bet ? 'Change the side bet' : 'Add a side bet'}>
-        <div style={{ padding: '4px 16px 0' }}>
+        <div className="sheet-form">
           <p className="field-help">Any two players, in the same group or not. It’s worked out on their own scores, wherever they’re playing.</p>
           <div className="field-label">Who {sides.length === 2 ? '' : `(pick ${2 - sides.length})`}</div>
           <div className="chip-row flush">
-            {ids.map(id => <button key={id} type="button" className={`pill-btn ${sides.includes(id) ? 'on' : ''}`} aria-pressed={sides.includes(id)} onClick={() => pick(id)}>{name(id)}</button>)}
+            {ids.map(id => <PickChip key={id} on={sides.includes(id)} onClick={() => pick(id)}>{name(id)}</PickChip>)}
           </div>
           <div className="field-label">The bet</div>
           <Segmented label="Kind of bet" className="press-mode-row" btn="pm-btn" value={kind} onChange={setKind}
@@ -376,7 +376,7 @@ export function BigBetSheet({ open, onClose, tripId = null, big, bet = null, onR
               <p className="field-help">{auto ? `From their handicaps at ${big.hcPct}%: ${name(auto.to)} ${name(auto.to) === 'You' ? 'get' : 'gets'} ${auto.count} on the hardest holes.` : 'Their handicaps are the same, so nobody gets strokes.'} Only in this bet, never in the pot or the skins.</p>
             </>
           )}
-          <div className="cta-wrap" style={{ padding: '14px 0 0' }}>
+          <div className="cta-wrap sheet-form-cta">
             <button className="full-btn" disabled={sides.length !== 2 || !(stake > 0)} onClick={save}>{sides.length === 2 ? (bet ? 'Save the bet' : 'Add the bet') : 'Pick two players'}</button>
             {onRemove && <button className="text-link danger" onClick={onRemove}><Icon name="trash" /> Take this bet off</button>}
           </div>

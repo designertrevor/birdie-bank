@@ -1,6 +1,7 @@
 import { lazy, Suspense, useEffect, useMemo, useRef, useState } from 'react';
-import { Empty, Header, Icon, Numpad, Screen, Segmented, Sheet, Steps, Toggle, useUI } from '../components/ui.jsx';
+import { Empty, Header, Icon, Numpad, PickChip, PickMark, PickRow, Screen, Segmented, Sheet, Steps, Toggle, useUI } from '../components/ui.jsx';
 import { RulesSheet } from '../components/Rules.jsx';
+import { Avatar } from '../components/Avatar.jsx';
 import { getState, update, uid, useStore } from '../lib/store.js';
 import { allCourses, coursePar, coursePickerSections, courseTag, defaultTee as firstTee, isStarred, teeDotStyle, toggleStarred } from '../lib/courses.js';
 import { getCourse } from '../lib/courseApi.js';
@@ -569,7 +570,7 @@ function GameStep({ usual, onUsual, onPickUsual, planning, onPlan, game, setGame
                   </div>
                   <div className="gs">{info.players} · {info.blurb}</div>
                 </div>
-                <span className={`li-check ${game === key ? 'on' : ''}`} aria-hidden="true">{game === key && <Icon name="check" />}</span>
+                <PickMark on={game === key} add={false} />
               </div>
             ))}
           </div>
@@ -649,12 +650,12 @@ export function CourseStep({ editor, openEditor, closeEditor, courseId, setCours
     }
   };
   const apiRow = r => (
-    <button key={r.apiId} className="list-item" onClick={() => pickApi(r)} aria-busy={loadingId === r.apiId} aria-label={[`Add ${r.name}`, r.miles != null ? `${milesLabel(r.miles)} away` : null, r.city, r.teeCount ? teeCount(r.teeCount) : null].filter(Boolean).join(', ')}>
+    <button key={r.apiId} className="list-item pick" onClick={() => pickApi(r)} aria-busy={loadingId === r.apiId} aria-label={[`Add ${r.name}`, r.miles != null ? `${milesLabel(r.miles)} away` : null, r.city, r.teeCount ? teeCount(r.teeCount) : null].filter(Boolean).join(', ')}>
       <div className="row-main">
         <div className="li-name">{r.name}</div>
         <div className="li-sub">{[r.miles != null ? milesLabel(r.miles) : null, r.city, r.teeCount ? teeCount(r.teeCount) : null].filter(Boolean).join(' · ')}</div>
       </div>
-      <span className="li-check add"><Icon name={loadingId === r.apiId ? 'circle-notch' : 'plus'} className={loadingId === r.apiId ? 'spin' : ''} /></span>
+      <PickMark busy={loadingId === r.apiId} />
     </button>
   );
 
@@ -673,7 +674,7 @@ export function CourseStep({ editor, openEditor, closeEditor, courseId, setCours
         <button className={`course-star ${on ? 'on' : ''}`} aria-pressed={on} aria-label={`Favorite ${c.name}`} onClick={e => { e.stopPropagation(); star(c); }}>
           <Icon name="star" fill={on} />
         </button>
-        <span className={`li-check ${picked ? 'on' : ''}`} aria-hidden="true">{picked && <Icon name="check" />}</span>
+        <PickMark on={picked} add={false} />
       </div>
     );
   };
@@ -774,7 +775,7 @@ function PlayersStep({ game, course, holesCount, nine, picked, setPicked, tees, 
           </div>
         )}
         <div className="sec-label">Players · {count} picked ({game.min === game.max ? game.min : `${game.min}–${game.max}`})</div>
-        <div style={{ padding: '0 16px' }}>
+        <div className="pick-list">
           {players.map(p => {
             const on = picked.includes(p.id);
             const hc = on ? courseHc(p.id) : null;
@@ -786,7 +787,7 @@ function PlayersStep({ game, course, holesCount, nine, picked, setPicked, tees, 
                     <div className="li-name">{playerLabel(p, state.me)}</div>
                     <div className="li-sub">{p.index == null ? 'No handicap index' : `Index ${formatIndex(p.index)}`}</div>
                   </div>
-                  <span className={`li-check ${on ? 'on' : 'add'}`}><Icon name={on ? 'check' : 'plus'} /></span>
+                  <PickMark on={on} />
                 </button>
                 {on && (
                   <div className="pick-extra">
@@ -1081,17 +1082,12 @@ function InviteStep({ invited, setInvited, onNext }) {
           </div>
           {selfNote && <p className="field-help" role="status">That’s you, and you’re already in.</p>}
         </form>
-        <div style={{ padding: '0 16px' }}>
+        <div className="pick-list">
           {players.map(p => {
             const on = invited.includes(p.id);
             return (
-              <button key={p.id} className={`list-item pick ${on ? 'on' : ''}`} onClick={() => toggle(p.id)} aria-pressed={on} aria-label={`Invite ${p.name}`}>
-                <div className="row-main">
-                  <div className="li-name">{p.name}</div>
-                  <div className="li-sub">{p.index == null ? 'No handicap index' : `Index ${formatIndex(p.index)}`}</div>
-                </div>
-                <span className={`li-check ${on ? 'on' : 'add'}`}><Icon name={on ? 'check' : 'plus'} /></span>
-              </button>
+              <PickRow key={p.id} on={on} onClick={() => toggle(p.id)} label={`Invite ${p.name}`} lead={<Avatar id={p.id} name={p.name} />}
+                title={p.name} sub={p.index == null ? 'No handicap index' : `Index ${formatIndex(p.index)}`} />
             );
           })}
         </div>
@@ -1131,13 +1127,13 @@ function VoteStep({ game, holesCount = 18, opts, onPlan, ballot = [], initialSid
         <div className="sec-label">Your bet</div>
         <div className="chip-row" role="radiogroup" aria-label="Your bet">
           {ladder.map(b => (
-            <button key={b} role="radio" aria-checked={b === bet} className={`pill-btn ${b === bet ? 'on' : ''}`} onClick={() => { setBet(b); setExtraBets(v => v.filter(x => x !== b)); }}>{inUnits({ playFor }, money(b))}</button>
+            <PickChip key={b} radio on={b === bet} onClick={() => { setBet(b); setExtraBets(v => v.filter(x => x !== b)); }}>{inUnits({ playFor }, money(b))}</PickChip>
           ))}
         </div>
         <div className="sec-label">Other bets to vote on</div>
         <div className="chip-row">
           {ladder.filter(b => b !== bet).map(b => (
-            <button key={b} aria-pressed={extraBets.includes(b)} className={`pill-btn sm ${extraBets.includes(b) ? 'on' : ''}`} onClick={() => toggleBet(b)}>{inUnits({ playFor }, money(b))}</button>
+            <PickChip key={b} small on={extraBets.includes(b)} onClick={() => toggleBet(b)}>{inUnits({ playFor }, money(b))}</PickChip>
           ))}
         </div>
         <p className="field-help pad">{GAMES[game].name} bets on the ballot: {ballotBets.map(b => inUnits({ playFor }, betUnitLabel(game, opts, b))).join(', ')}.</p>
@@ -1146,9 +1142,7 @@ function VoteStep({ game, holesCount = 18, opts, onPlan, ballot = [], initialSid
           {Object.entries(GAMES).filter(([k]) => k !== game).map(([k, g]) => {
             const on = others.includes(k);
             return (
-              <button key={k} aria-pressed={on} disabled={!on && others.length >= MAX_BALLOT_GAMES - 1} className={`pill-btn sm ${on ? 'on' : ''}`} onClick={() => toggleGame(k)}>
-                <Icon name={g.icon} fill /> {g.name}
-              </button>
+              <PickChip key={k} small on={on} icon={g.icon} disabled={!on && others.length >= MAX_BALLOT_GAMES - 1} onClick={() => toggleGame(k)}>{g.name}</PickChip>
             );
           })}
         </div>
@@ -1163,9 +1157,7 @@ function VoteStep({ game, holesCount = 18, opts, onPlan, ballot = [], initialSid
           {Object.entries(SIDE_GAMES).map(([k, sg]) => {
             const on = sides.includes(k);
             return (
-              <button key={k} aria-pressed={on} className={`pill-btn sm ${on ? 'on' : ''}`} onClick={() => toggleSide(k)}>
-                <Icon name={sg.icon} fill /> {sg.label}
-              </button>
+              <PickChip key={k} small on={on} icon={sg.icon} onClick={() => toggleSide(k)}>{sg.label}</PickChip>
             );
           })}
         </div>

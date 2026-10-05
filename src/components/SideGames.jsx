@@ -1,7 +1,7 @@
 // Side games: Skins, Junk, a Birdie pot, Snake, Rabbit and the closest to the pin and long drive pots riding along with the main game.
 // Setup rows and the add sheet, the by-game money table, and the one-line "games in small type".
 import { useState } from 'react';
-import { Icon, Numpad, Segmented, Sheet, Toggle } from './ui.jsx';
+import { Icon, Numpad, PickChip, Segmented, Sheet, Toggle } from './ui.jsx';
 import { RulesSheet } from './Rules.jsx';
 import { GAMES, MAX_GAMES, POT_GAMES, SIDE_GAMES, oneBall, potHoles, potHolesDefault, sideGameChoices } from '../lib/round.js';
 import { DOT_KINDS } from '../lib/games.js';
@@ -121,9 +121,7 @@ export function SideGamesSetup({ game, sideGames, setSideGames, defaults, player
                     const off = k === 'greenie' && hasCtp;
                     const on = !off && !!sg.settings.kinds?.[k];
                     return (
-                      <button key={k} className={`pill-btn ${on ? 'on' : ''}`} aria-pressed={on} title={d.help} disabled={off} onClick={() => change(i, s => ({ ...s, kinds: { ...(s.kinds || {}), [k]: !on } }))}>
-                        {on && <Icon name="check" />} {d.name}
-                      </button>
+                      <PickChip key={k} on={on} title={d.help} disabled={off} onClick={() => change(i, s => ({ ...s, kinds: { ...(s.kinds || {}), [k]: !on } }))}>{d.name}</PickChip>
                     );
                   })}
                 </div>
@@ -202,9 +200,9 @@ function DriveHoles({ settings, holes, onChange, onClose }) {
         {holes.map(h => {
           const lit = on.has(h.no);
           return (
-            <button key={h.no} className={`pill-btn sm ${lit ? 'on' : ''}`} aria-pressed={lit} aria-label={`Hole ${h.no}, par ${h.par}`} onClick={() => toggle(h.no)}>
-              {lit && <Icon name="check" />} {h.no} <span className="pot-par">Par {h.par}</span>
-            </button>
+            <PickChip key={h.no} small on={lit} label={`Hole ${h.no}, par ${h.par}`} onClick={() => toggle(h.no)}>
+              {h.no} <span className="pot-par">Par {h.par}</span>
+            </PickChip>
           );
         })}
       </div>
