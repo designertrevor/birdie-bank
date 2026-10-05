@@ -10,7 +10,7 @@ import { useNav } from '../lib/nav.js';
 import { money } from '../lib/golf.js';
 import { hideTrip } from '../lib/trip-store.js';
 import { dayLabel } from '../lib/plans.js';
-import { BIG_BET_KINDS, BIG_MAX_STAKE, POT_KINDS, SKINS_KINDS, betStrokesFor, bigName, bigPlayers, groupOf } from '../lib/big-game.js';
+import { BIG_BET_KINDS, BIG_MAX_STAKE, POT_KINDS, SKINS_KINDS, betStandLine, betStrokesFor, bigName, bigPlayers, groupOf } from '../lib/big-game.js';
 import { bigWho, myBigMoney, myPlaceLine, toParText } from '../lib/big-view.js';
 import { bigStatus } from '../lib/big-money.js';
 import { saveBigBet } from '../lib/big-store.js';
@@ -33,7 +33,7 @@ export function BigCard({ status: st, onTab = false }) {
   const playing = bs.field.groups.filter(g => g.status === 'live');
   const notStarted = !bs.big.groups.some(g => g.roundId);
   const title = notStarted ? `${dayLabel(st.trip.start) || 'Coming up'}: ${bigPlayers(bs.big).length} players, ${bs.big.groups.length} groups`
-    : bs.final ? (mine == null ? 'Every group is in' : mine > 0 ? `You won ${money(mine)}` : mine < 0 ? `You’re down ${money(-mine)}` : 'You broke even')
+    : bs.final ? (mine == null ? (bs.ended ? 'The game is closed' : 'Every group is in') : mine > 0 ? `You won ${money(mine)}` : mine < 0 ? `You’re down ${money(-mine)}` : 'You broke even')
     : myPlaceLine(bs, isMe) || `${playing.length || bs.big.groups.length} group${(playing.length || bs.big.groups.length) === 1 ? '' : 's'} out`;
   // Your own lines paid: you're square in the game, even while others still settle theirs
   const mineSquare = bs.final && st.phase !== 'square' && !st.plan.some(l => isMe(l.from) || isMe(l.to));
@@ -229,7 +229,9 @@ export function BetsList({ bs, name, onEdit = null }) {
   if (!results.bets.length) return <p className="field-help pad">No side bets yet. Any two players can have one, in the same group or not: a match or per hole, with strokes between the two of them.</p>;
   return (
     <div className="trip-table big-table">
-      {results.bets.map(({ bet, result, line }) => {
+      {results.bets.map(({ bet, result }) => {
+        // Said with the screen's names, so your own bet reads "You 1 up", never your first name
+        const line = betStandLine(bet, result, bs.final, name);
         const strokes = bet.strokes ? `${name(bet.strokes.to)} ${name(bet.strokes.to) === 'You' ? 'get' : 'gets'} ${bet.strokes.count}` : 'No strokes';
         const Row = onEdit ? 'button' : 'div';
         return (

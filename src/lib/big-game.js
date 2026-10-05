@@ -528,17 +528,19 @@ export function pairCard(field, a, b) {
   return { id: `pair:${a}:${b}`, game: 'stroke', players, holes: field.holes.map(h => ({ ...h })), scores, left, status: field.final ? 'done' : 'active' };
 }
 
+/** Where one side bet stands, in words: "Mike 2 up thru 9", "Ann 3–1". `name` says each player (a screen's own "You"). */
+export function betStandLine(bet, result, final, name) {
+  if (!result.holes.length) return 'Not started';
+  if (bet.kind === 'match') return `${matchLabel(result.status, result.status.leader == null ? null : name(bet.sides[result.status.leader]))}${result.status.left > 0 && !final ? ` thru ${result.holes.length}` : ''}`;
+  return result.wins[0] === result.wins[1] ? `All square, ${result.wins[0]} each` : `${name(bet.sides[result.wins[0] > result.wins[1] ? 0 : 1])} ${Math.max(...result.wins)}–${Math.min(...result.wins)}`;
+}
+
 /** Each side bet as it stands: [{ bet, result (pair-bets.js betResult), line }], `line` like "Mike 2 up thru 9". */
 export function betsBoard(big, field) {
   return big.bets.map(bet => {
     const card = pairCard(field, ...bet.sides);
     const result = betResult(card, bet);
-    const name = id => bigName(big, id);
-    let line;
-    if (!result.holes.length) line = 'Not started';
-    else if (bet.kind === 'match') line = `${matchLabel(result.status, result.status.leader == null ? null : name(bet.sides[result.status.leader]))}${result.status.left > 0 && !field.final ? ` thru ${result.holes.length}` : ''}`;
-    else line = result.wins[0] === result.wins[1] ? `All square, ${result.wins[0]} each` : `${name(bet.sides[result.wins[0] > result.wins[1] ? 0 : 1])} ${Math.max(...result.wins)}–${Math.min(...result.wins)}`;
-    return { bet, result, line };
+    return { bet, result, line: betStandLine(bet, result, field.final, id => bigName(big, id)) };
   });
 }
 

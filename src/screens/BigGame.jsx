@@ -79,12 +79,14 @@ export default function BigGame({ id, view: firstView = null }) {
   // Who set it up, by the name the game has for them
   const host = trip.by && !isMe(trip.by) ? first(big.people[trip.by]?.name || nameOf(state, trip.by)) : null;
 
-  const eyebrow = [day, trip.where, `${big.groups.length} groups`].filter(Boolean).join(' · ');
+  // A friend's phone knows the trip from a round's stamp, which has no course: the round has it
+  const where = trip.where || bs.rounds.find(r => r.course?.name)?.course.name || null;
+  const eyebrow = [day, where, `${big.groups.length} groups`].filter(Boolean).join(' · ');
   const headline = !started ? (soon ? `Set for ${day.toLowerCase() === 'tomorrow' ? 'tomorrow' : day}` : 'Ready to start the groups')
-    : bs.final ? (mine == null ? 'Every group is in' : mine > 0 ? `You won ${money(mine)}` : mine < 0 ? `You’re down ${money(-mine)}` : 'You broke even')
+    : bs.final ? (mine == null ? (bs.ended ? 'The game is closed' : 'Every group is in') : mine > 0 ? `You won ${money(mine)}` : mine < 0 ? `You’re down ${money(-mine)}` : 'You broke even')
     : myPlaceLine(bs, isMe) || 'Under way';
   const hint = !started ? `Each group gets its own round and its own link, and one player in each keeps score. ${organizer ? 'Start the groups on the day, at the course.' : ''}`
-    : bs.final ? (st.phase === 'square' ? 'Everyone’s square on the game.' : `Every group is in. ${st.plan.length} payment${st.plan.length === 1 ? '' : 's'} square${st.plan.length === 1 ? 's' : ''} the whole game${st.money.some(r => r.bets?.length || r.sideGames?.length) ? ', the groups’ own bets included' : ''}, the same on every phone. It’s already in each person’s total on the Tab.`)
+    : bs.final ? (st.phase === 'square' ? 'Everyone’s square on the game.' : `${bs.ended ? 'The game is closed, every card as it stood.' : 'Every group is in.'} ${st.plan.length} payment${st.plan.length === 1 ? '' : 's'} square${st.plan.length === 1 ? 's' : ''} the whole game${st.money.some(r => r.bets?.length || r.sideGames?.length) ? ', the groups’ own bets included' : ''}, the same on every phone. It’s already in each person’s total on the Tab.`)
     : bs.waiting.length ? `Waiting on ${bs.waiting.map(g => g.name).join(', ')}: ${bs.waiting.length === 1 ? 'its' : 'their'} scores aren’t on this phone yet. Nothing’s paid until every group is in.`
     : 'Every group’s scores come in as they’re played. Nothing’s paid until every group is in, then it’s settled once.';
 

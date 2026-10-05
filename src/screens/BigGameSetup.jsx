@@ -137,7 +137,7 @@ export default function BigGameSetup({ id = null, from = null }) {
           <div className="scroll">
             <div className="block">
               <label className="field-label" htmlFor="big-name">Name</label>
-              <input id="big-name" className="text-input" value={name} onChange={e => setName(e.target.value)} maxLength={32} placeholder="Saturday Big Game" />
+              <input id="big-name" className="text-input" value={name} onChange={e => setName(e.target.value)} maxLength={32} placeholder={`${new Date(`${day}T12:00:00`).toLocaleDateString('en-US', { weekday: 'long' })} ${BIG_NAME}`} />
               <p className="field-help">Several groups, one game: one pot and one leaderboard across every group, settled once when they’re all in.</p>
             </div>
             <DayPicker day={day} setDay={setDay} />
@@ -438,7 +438,7 @@ function Games({ pot, setPot, skins, setSkins, teams, setTeams, pool, groups = n
             <div className="chip-row flush">
               {PCTS.map(p => <button key={p} type="button" className={`pill-btn sm ${hcPct === p ? 'on' : ''}`} aria-pressed={hcPct === p} onClick={() => setHcPct(p)}>{p}%</button>)}
             </div>
-            <p className="field-help">{allowanceHint(whs)} Every player gets their own strokes, never off the low player, so groups don’t matter.</p>
+            <p className="field-help">{allowanceHint(whs)}{whs ? '. ' : ''}Every player gets their own strokes, never off the low player, so groups don’t matter.</p>
           </div>
         )}
       </div>
