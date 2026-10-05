@@ -50,7 +50,7 @@ function howMany(g) {
 /**
  * The Players step's head count, with anyone just playing left out of the game's numbers:
  * { valid, bettors, casual, text } where `text` is what the button says when it can't go on.
- * Wolf with three betting players and a friend just playing: "Wolf needs 4 betting players".
+ * Wolf with three betting players and a friend just playing: "Needs 4 betting players".
  */
 export function pickedCheck(game, picked = [], justPlaying = []) {
   const g = GAMES[game];
@@ -64,7 +64,7 @@ export function pickedCheck(game, picked = [], justPlaying = []) {
   }
   if (n < g.min) {
     const need = g.min - n;
-    return { ...out, text: jp.length ? `${g.name} needs ${howMany(g)} betting players` : `Add ${need} more player${need === 1 ? '' : 's'}` };
+    return { ...out, text: jp.length ? `Needs ${howMany(g)} betting players` : `Add ${need} more player${need === 1 ? '' : 's'}` };
   }
   if (n > g.max) {
     const over = n - g.max;
@@ -73,13 +73,17 @@ export function pickedCheck(game, picked = [], justPlaying = []) {
   return { ...out, valid: true };
 }
 
-/** The Players step's count line: "4 picked (4)", or "5 picked · 4 betting, 1 just playing". */
+/**
+ * The Players step's count line, short enough for one line: "4 picked (4)", or with someone just
+ * playing, the betting count against the game's range, "4 betting (2–8)" (who's just playing is
+ * said under it).
+ */
 export function pickedLine(game, picked = [], justPlaying = []) {
   const g = GAMES[game];
   const c = pickedCheck(game, picked, justPlaying);
   const range = g ? (g.min === g.max ? `${g.min}` : `${g.min}–${g.max}`) : '';
   if (!c.casual) return `${picked.length} picked (${range})`;
-  return `${picked.length} picked · ${c.bettors} betting (${range}), ${c.casual} just playing`;
+  return `${c.bettors} betting (${range})`;
 }
 
 /**

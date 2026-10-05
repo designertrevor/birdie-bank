@@ -53,14 +53,14 @@ const joBirdies = Object.fromEntries(Array.from({ length: 9 }, (_, i) => [i + 1,
 test('the Players step counts only the betting players for the game', () => {
   // Wolf is for exactly four betting players: a friend just playing is a fifth on the card
   assert.equal(pickedCheck('wolf', ['a', 'b', 'c', 'd', 'j'], ['j']).valid, true);
-  assert.deepEqual(pickedCheck('wolf', ['a', 'b', 'c', 'j'], ['j']), { valid: false, bettors: 3, casual: 1, text: 'Wolf needs 4 betting players' });
+  assert.deepEqual(pickedCheck('wolf', ['a', 'b', 'c', 'j'], ['j']), { valid: false, bettors: 3, casual: 1, text: 'Needs 4 betting players' });
   assert.equal(pickedCheck('wolf', ['a', 'b', 'c', 'd', 'e'], []).text, 'Wolf is for 4. Mark 1 just playing');
-  assert.equal(pickedCheck('banker', ['a', 'b', 'j'], ['j']).text, 'Banker needs at least 3 betting players');
-  assert.equal(pickedCheck('aces', ['a', 'b', 'j'], ['j']).text, 'Aces & Deuces needs 3 to 4 betting players');
-  assert.equal(pickedCheck('skins', ['a', 'j'], ['j']).text, 'Skins needs at least 2 betting players');
+  assert.equal(pickedCheck('banker', ['a', 'b', 'j'], ['j']).text, 'Needs at least 3 betting players');
+  assert.equal(pickedCheck('aces', ['a', 'b', 'j'], ['j']).text, 'Needs 3 to 4 betting players');
+  assert.equal(pickedCheck('skins', ['a', 'j'], ['j']).text, 'Needs at least 2 betting players');
   // A singles match with a friend along for the walk
   assert.equal(pickedCheck('match', ['a', 'b', 'j'], ['j']).valid, true);
-  assert.equal(pickedLine('match', ['a', 'b', 'j'], ['j']), '3 picked · 2 betting (2–8), 1 just playing');
+  assert.equal(pickedLine('match', ['a', 'b', 'j'], ['j']), '2 betting (2–8)');
   assert.equal(pickedLine('vegas', ['a', 'b', 'c', 'd'], []), '4 picked (4)');
   // Nobody marked: the old words
   assert.equal(pickedCheck('skins', ['a'], []).text, 'Add 1 more player');

@@ -765,6 +765,7 @@ function PlayersStep({ game, gameKey, course, holesCount, nine, picked, setPicke
   // Past the game's own cap when the extra people can be just playing (just-playing.js)
   const most = maxPicked(gameKey);
   const casualOk = canJustPlay(gameKey);
+  const casualNow = casualOk ? picked.filter(pid => justPlaying.includes(pid)) : [];
   const toggleCasual = pid => setJustPlaying(l => (l.includes(pid) ? l.filter(x => x !== pid) : [...l, pid]));
 
   const toggle = pid => setPicked(p => {
@@ -813,8 +814,11 @@ function PlayersStep({ game, gameKey, course, holesCount, nine, picked, setPicke
           </div>
         )}
         <div className="sec-label">Players · {pickedLine(gameKey, picked, justPlaying)}</div>
+        {/* Who's just playing is said here, so the count above stays on one line */}
         {casualOk ? (
-          picked.length > 1 && <p className="field-help pad jp-step-help">Someone not up for a bet? Mark them <strong>{JUST_PLAYING}</strong>. They’re on the card with everyone and out of every game.</p>
+          casualNow.length > 0
+            ? <p className="field-help pad jp-step-help">{listNames(casualNow.map(pid => (pid === state.me ? 'You' : state.players[pid]?.name || '?')))} {casualNow.length === 1 && casualNow[0] !== state.me ? 'is' : 'are'} just playing: on the card with everyone and out of every game.</p>
+            : picked.length > 1 && <p className="field-help pad jp-step-help">Someone not up for a bet? Mark them <strong>{JUST_PLAYING}</strong>. They’re on the card with everyone and out of every game.</p>
         ) : cantJustPlay(gameKey) && <p className="field-help pad jp-step-help">{cantJustPlay(gameKey)}</p>}
         <div className="pick-list">
           {players.map(p => {
@@ -825,6 +829,7 @@ function PlayersStep({ game, gameKey, course, holesCount, nine, picked, setPicke
             return (
               <div key={p.id} className={`list-item pick player-pick ${on ? 'on' : ''}`}>
                 <button className="pick-main" onClick={() => toggle(p.id)} aria-pressed={on}>
+                  <Avatar id={p.id} name={p.name} />
                   <div className="row-main">
                     <div className="li-name">{playerLabel(p, state.me)}</div>
                     <div className="li-sub">{casual ? JUST_PLAYING : p.index == null ? 'No handicap index' : `Index ${formatIndex(p.index)}`}</div>
