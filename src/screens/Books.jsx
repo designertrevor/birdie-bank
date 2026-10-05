@@ -87,7 +87,7 @@ export function CloseBooks({ scope = ALL }) {
               </div>
               <Segmented label={`${text} ${money(l.amount)}`} className="press-mode-row book-pick" btn="pm-btn" value={how(l)}
                 onChange={v => setPicks(p => ({ ...p, [lineKey(l)]: v }))}
-                options={[{ value: 'paid', label: 'Paid' }, { value: 'rolled', label: 'Roll to next season' }]} />
+                options={[{ value: 'paid', label: 'Paid', aria: `Paid: ${text} ${money(l.amount)}` }, { value: 'rolled', label: 'Roll to next season', aria: `Roll to next season: ${text} ${money(l.amount)}` }]} />
               <div className="trip-pay-sub">{sub}</div>
             </div>
           );

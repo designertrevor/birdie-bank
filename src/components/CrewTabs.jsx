@@ -109,7 +109,7 @@ export function OneTab({ tab }) {
 
   const book = isCrew ? lastBook(state, tab.key) : null;
   const n = isCrew ? openRounds(state, tab.key).length : tab.rounds.length;
-  const sub = book ? `${plural(n, 'round')} since the books closed on ${dayWithYear(book.closedAt)}` : `${plural(n, 'round')}${tab.since ? ` since ${dayWithYear(tab.since)}` : ''}`;
+  const sub = book ? `${plural(n, 'round')} since the books closed on ${dayWithYear(book.closedAt)} (${book.name})` : `${plural(n, 'round')}${tab.since ? ` since ${dayWithYear(tab.since)}` : ''}`;
   return (
     <>
       <div className="tab-overall">
@@ -225,8 +225,9 @@ export function ClosedSeasons({ title = 'Closed seasons' }) {
       {books.map(b => {
         const net = myBookNet(state, b);
         const played = (b.totals || []).some(t => canonicalOf(state)(t.id) === canonicalOf(state)(state.me));
+        const empty = !(b.rounds || []).length;
         return (
-          <button key={b.id} className="ledger-row book-row" onClick={() => nav.push('book', { id: b.id })} aria-label={`${b.name}, ${bookScopeName(state, b)}: ${played ? `you finished ${money(net / 100, { sign: true })}` : 'you weren’t in it'}. See the season`}>
+          <button key={b.id} className="ledger-row book-row" onClick={() => nav.push('book', { id: b.id })} aria-label={`${b.name}, ${bookScopeName(state, b)}: ${played ? `you finished ${money(net / 100, { sign: true })}` : empty ? 'no rounds in it' : 'you weren’t in it'}. See the season`}>
             <div className="lr-info">
               <div className="lr-name" style={{ fontSize: 16 }}>{b.name}</div>
               <div className="lr-status">{bookScopeName(state, b)} · {plural((b.rounds || []).length, 'round')} · closed {dayWithYear(b.closedAt)}</div>

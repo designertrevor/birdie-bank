@@ -298,7 +298,7 @@ export function Segmented({ options, value, onChange, className = 'holes-toggle'
         // Only the chosen option is a Tab stop (the first one when nothing is chosen)
         const tabbable = on || (!hasValue && o === enabled[0]);
         return (
-          <button key={String(o.value)} type="button" role="radio" aria-checked={on} disabled={o.disabled} tabIndex={tabbable ? 0 : -1}
+          <button key={String(o.value)} type="button" role="radio" aria-checked={on} disabled={o.disabled} tabIndex={tabbable ? 0 : -1} aria-label={o.aria || undefined}
             className={`${btn} ${on ? 'active' : ''}`} onClick={() => onChange(o.value)}>{o.label}</button>
         );
       })}
