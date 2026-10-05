@@ -167,7 +167,9 @@ test('answers from the server before the lock (no by_self) read as before', () =
 
 // A stand-in for the Supabase client: each call resolves to the rows the server sent back
 function fakeDb(rows) {
-  const q = { eq: () => q, select: () => Promise.resolve({ data: rows, error: null }) };
+  // (setHeader: every plan request names the plan's code)
+  const sent = () => { const p = Promise.resolve({ data: rows, error: null }); p.setHeader = () => p; return p; };
+  const q = { eq: () => q, select: sent };
   return { from: () => ({ update: () => q, upsert: () => q }) };
 }
 

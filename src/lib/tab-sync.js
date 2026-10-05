@@ -7,7 +7,6 @@
 import { useEffect, useSyncExternalStore } from 'react';
 import { STORE_KEY, getState, uid, update } from './store.js';
 import { getSupabase, supabaseConfigured } from './supabase.js';
-import { isMissingTable } from './plan-adapters.js';
 import { allocatePayment, applyRows, lastPayment, nettedFor, tabCodes, undoRows } from './shared-tab.js';
 import { cardCarry, carryReducer, carryRows, carrySplit, splitCodes, splitRounds } from './carry.js';
 import { tripPayment } from './trips.js';
@@ -16,62 +15,13 @@ import { expensesOn, refreshExpenses } from './trip-expense-sync.js';
 import { crewPayment } from './crew-tabs.js';
 import { closeBooks } from './books.js';
 import { canonicalOf } from './pair-debts.js';
+import { BadRowError, TAB_CHECK_MS, TabOffError, supabaseTab } from './tab-adapters.js';
+
+export { TabOffError, TAB_CHECK_MS } from './tab-adapters.js';
 
 // Per dev profile (?profile=b), so two tabs acting as two phones never read each other's queue
 const QUEUE = 'bb-tab-queue' + STORE_KEY.slice('birdie-bank-v1'.length);
 const localFlag = () => { try { return localStorage.getItem('bb-sync-local') === '1'; } catch { return false; } };
-
-/** Thrown when the round_payments table isn't on the server yet. */
-export class TabOffError extends Error {
-  constructor() { super('The shared Tab isn’t switched on yet'); this.name = 'TabOffError'; }
-}
-
-/** The server refused this one row for good (bad data), so retrying won't help. */
-class BadRowError extends Error {
-  constructor(cause) { super(cause?.message || 'Row refused'); this.name = 'BadRowError'; this.cause = cause; }
-}
-
-const iso = ms => new Date(ms || Date.now()).toISOString();
-const toDb = r => ({
-  code: r.code, id: r.id, kind: r.kind, from_id: r.from, to_id: r.to, amount: Number(r.amount) || 0, status: r.status,
-  by_id: r.by || null, reason: r.reason ? String(r.reason).slice(0, 60) : null, created_at: iso(r.at), updated_at: iso(r.updatedAt),
-});
-const fromDb = x => ({
-  code: x.code, id: x.id, kind: x.kind, from: x.from_id, to: x.to_id, amount: Number(x.amount) || 0, status: x.status,
-  by: x.by_id || null, reason: x.reason || null, at: Date.parse(x.created_at) || 0, updatedAt: Date.parse(x.updated_at) || 0,
-});
-
-// --------------------------- transport ---------------------------------------
-//   fetchRows(codes) -> rows   upsertRow(row)   subscribe(codes, cb) -> unsubscribe
-
-function supabaseTab(db) {
-  const check = ({ error }) => {
-    if (!error) return;
-    if (isMissingTable(error)) throw new TabOffError();
-    // A row the table can never take (a check it fails): drop it rather than block the queue behind it
-    if (/^2[23]/.test(String(error.code || ''))) throw new BadRowError(error);
-    throw error;
-  };
-  return {
-    kind: 'supabase',
-    async fetchRows(codes) {
-      if (!codes.length) return [];
-      const r = await db.from('round_payments').select('*').in('code', codes);
-      check(r);
-      return (r.data || []).map(fromDb);
-    },
-    async upsertRow(row) { check(await db.from('round_payments').upsert(toDb(row))); },
-    subscribe(codes, cb) {
-      if (!codes.length) return () => {};
-      const ch = db.channel(`tab-${codes.join('-').slice(0, 60)}`)
-        .on('postgres_changes', { event: '*', schema: 'public', table: 'round_payments', filter: `code=in.(${codes.join(',')})` }, p => {
-          if (p.new?.code) cb(fromDb(p.new));
-        })
-        .subscribe();
-      return () => { db.removeChannel(ch); };
-    },
-  };
-}
 
 // Dev and testing: localStorage + BroadcastChannel, so two tabs (one with ?profile=b) act as two phones
 function localTab() {
@@ -224,11 +174,14 @@ export function useTabSync({ live = false } = {}) {
       });
     }
     const wake = () => { if (document.visibilityState === 'visible') soon(); };
+    // Table changes stop once the round codes SQL is run, so a Tab left open checks again now and then
+    const every = live ? setInterval(wake, TAB_CHECK_MS) : null;
     document.addEventListener('visibilitychange', wake);
     window.addEventListener('online', soon);
     return () => {
       stopped = true;
       clearTimeout(timer);
+      clearInterval(every);
       unsub?.();
       document.removeEventListener('visibilitychange', wake);
       window.removeEventListener('online', soon);

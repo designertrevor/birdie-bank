@@ -17,6 +17,14 @@
 --  • Realtime can't see request headers, so table changes on these two tables stop reaching phones.
 --    The app pokes the round's broadcast channel after each write instead (a nudge with no data)
 --    and the other phones fetch with the code, plus a check every 20 seconds while a round is open.
+--  • The tables that name a round's or a plan's code are locked the same way, so none of them can
+--    be listed to find a code (or undo the friend feed's refs): round_payments needs the round's
+--    code in x-round-code (a comma list, since the Tab reads many rounds at once); planned_rounds,
+--    plan_rsvps and plan_votes need the plan's code in x-plan-code; challenges and challenge_moves
+--    need the challenge's code in x-challenge-code (a comma list too) or their plan's in
+--    x-plan-code. The app sends these on every request (tab-sync.js, plan-adapters.js,
+--    challenge-adapters.js), and pokes each plan's and challenge's channel after a write, since
+--    table changes stop reaching phones here too.
 --
 -- Run it only once the app that sends x-round-code is live: a copy of the app from before it sees
 -- no rounds at all and can't share one. Until it runs, the app works the same as before (the
@@ -28,6 +36,8 @@
 --          create policy "round code holders" on public.live_holes for all to anon, authenticated using (true) with check (true);
 --          alter function public.bb_round_devs(text[]) security invoker;
 --          drop function public.bb_round_code();
+--          and for the other tables, drop each "... in header" policy below and create again the
+--          ones 2026-09-29-round-payments.sql, schema.sql and 2026-10-04-challenges.sql made.
 
 -- The round code this request names in its x-round-code header, or null (none, or not a code)
 create or replace function public.bb_round_code() returns text language plpgsql stable set search_path = '' as $$
@@ -60,3 +70,60 @@ create policy "round code in header" on public.live_rounds for all to anon, auth
   using (code = public.bb_round_code()) with check (code = public.bb_round_code());
 create policy "round code in header" on public.live_holes for all to anon, authenticated
   using (code = public.bb_round_code()) with check (code = public.bb_round_code());
+
+-- The codes a request names in a header: one code or a comma list (at most 200), each a code
+create or replace function public.bb_header_codes(p_name text) returns text[] language plpgsql stable set search_path = '' as $$
+declare v text;
+begin
+  begin
+    v := (nullif(current_setting('request.headers', true), '')::json) ->> p_name;
+  exception when others then
+    return '{}';
+  end;
+  if v is null then return '{}'; end if;
+  return coalesce((select array_agg(x) from (
+    select x from unnest(string_to_array(v, ',')) x where x ~ '^[A-Z0-9]{4,8}$' limit 200
+  ) s), '{}');
+end $$;
+
+-- Payments and carry-overs: only with the round's code
+do $$ begin
+  if to_regclass('public.round_payments') is not null then
+    execute 'drop policy if exists "round code holders" on public.round_payments';
+    execute 'drop policy if exists "round code in header" on public.round_payments';
+    execute $p$create policy "round code in header" on public.round_payments for all to anon, authenticated
+      using (code = any (public.bb_header_codes('x-round-code'))) with check (code = any (public.bb_header_codes('x-round-code')))$p$;
+  end if;
+end $$;
+
+-- Plans, their answers and votes: only with the plan's code (the plan lock's triggers run as the owner)
+do $$
+declare t text;
+begin
+  foreach t in array array['planned_rounds', 'plan_rsvps', 'plan_votes'] loop
+    if to_regclass('public.' || t) is not null then
+      execute format('drop policy if exists "plan code holders" on public.%I', t);
+      execute format('drop policy if exists "plan code in header" on public.%I', t);
+      execute format($p$create policy "plan code in header" on public.%I for all to anon, authenticated
+        using (code = any (public.bb_header_codes('x-plan-code'))) with check (code = any (public.bb_header_codes('x-plan-code')))$p$, t);
+    end if;
+  end loop;
+end $$;
+
+-- Challenges and their moves (added, never changed): with the challenge's code or its plan's
+do $$
+declare t text;
+begin
+  foreach t in array array['challenges', 'challenge_moves'] loop
+    if to_regclass('public.' || t) is not null then
+      execute format('drop policy if exists "challenge code holders read" on public.%I', t);
+      execute format('drop policy if exists "challenge code holders add" on public.%I', t);
+      execute format('drop policy if exists "challenge code in header read" on public.%I', t);
+      execute format('drop policy if exists "challenge code in header add" on public.%I', t);
+      execute format($p$create policy "challenge code in header read" on public.%I for select to anon, authenticated
+        using (code = any (public.bb_header_codes('x-challenge-code')) or plan_code = any (public.bb_header_codes('x-plan-code')))$p$, t);
+      execute format($p$create policy "challenge code in header add" on public.%I for insert to anon, authenticated
+        with check (code = any (public.bb_header_codes('x-challenge-code')) or plan_code = any (public.bb_header_codes('x-plan-code')))$p$, t);
+    end if;
+  end loop;
+end $$;

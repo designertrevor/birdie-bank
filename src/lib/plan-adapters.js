@@ -11,6 +11,35 @@
 // answer is open and every write is kept, as before.
 import { answerWrite, hostOf, planWrite } from './plan-lock.js';
 
+// A plan is read and written only with its code: every request carries it in the x-plan-code
+// header, and once supabase/2026-10-06-round-codes.sql is run the server shows a request only the
+// plan its header names (until then the header is ignored). Table changes then reach nobody, so
+// every write also pokes the plan's channel (a broadcast with no data) and the phones on it fetch again.
+export const PLAN_HEADER = 'x-plan-code';
+const POKE = 'poke';
+
+/**
+ * Pokes for a code's channel: `listen(ch, cb)` adds the poke to a channel being opened, `send(topic)`
+ * tells the phones on it, over the open channel when this phone has one, else over HTTP.
+ */
+export function pokes(db) {
+  const open = new Map(); // topic -> channel
+  return {
+    listen(topic, ch, cb) {
+      open.set(topic, ch);
+      return { ch: ch.on('broadcast', { event: POKE }, () => cb()), done: () => { if (open.get(topic) === ch) open.delete(topic); } };
+    },
+    send(topic) {
+      try {
+        const have = open.get(topic);
+        if (have) { have.send({ type: 'broadcast', event: POKE, payload: {} })?.catch?.(() => {}); return; }
+        const ch = db.channel(topic);
+        Promise.resolve(ch.httpSend ? ch.httpSend(POKE, {}) : null).catch(() => {}).finally(() => { if (!open.has(topic)) db.removeChannel(ch); });
+      } catch { /* no realtime: the others fetch when they wake */ }
+    },
+  };
+}
+
 /** Thrown when the upcoming rounds tables aren't on the server yet (the SQL hasn't been run). */
 export class PlansOffError extends Error {
   constructor() { super('Group links aren’t switched on yet'); this.name = 'PlansOffError'; }
@@ -32,25 +61,31 @@ export function planSupabaseAdapter(db) {
     throw error;
   };
   const now = () => new Date().toISOString();
+  const withCode = (q, code) => q.setHeader(PLAN_HEADER, String(code));
+  const poke = pokes(db);
+  const topic = code => `plan-${code}`;
+  // Every request for a plan's tables names the plan
+  const req = (table, code, build) => withCode(build(db.from(table)), code);
   return {
     kind: 'supabase',
     async create(code, meta) {
-      check(await db.from('planned_rounds').insert({ code, meta, updated_at: now() }));
+      check(await req('planned_rounds', code, t => t.insert({ code, meta, updated_at: now() })));
     },
     async updateMeta(code, meta) {
-      const r = await db.from('planned_rounds').update({ meta, updated_at: now() }).eq('code', code).select('code');
+      const r = await req('planned_rounds', code, t => t.update({ meta, updated_at: now() }).eq('code', code).select('code'));
       check(r);
+      poke.send(topic(code));
       // The lock leaves a plan that isn't this phone's (or account's) as it is, so no row comes back
       return !Array.isArray(r.data) || r.data.length > 0;
     },
     async fetch(code) {
-      const r = await db.from('planned_rounds').select('meta').eq('code', code).maybeSingle();
+      const r = await req('planned_rounds', code, t => t.select('meta').eq('code', code).maybeSingle());
       check(r);
       if (!r.data) return null;
       const [a, v] = await Promise.all([
         // Every column, so by_self comes back once the plan lock SQL has added it (and nothing breaks before)
-        db.from('plan_rsvps').select('*').eq('code', code),
-        db.from('plan_votes').select('who, kind, choice').eq('code', code),
+        req('plan_rsvps', code, t => t.select('*').eq('code', code)),
+        req('plan_votes', code, t => t.select('who, kind, choice').eq('code', code)),
       ]);
       check(a); check(v);
       return {
@@ -60,28 +95,32 @@ export function planSupabaseAdapter(db) {
       };
     },
     async setRsvp(code, { who, name, status, payApp = null, payHandle = null }) {
-      const r = await db.from('plan_rsvps').upsert({ code, who, name, status, pay_app: payApp, pay_handle: payHandle, updated_at: now() }).select('who');
+      const r = await req('plan_rsvps', code, t => t.upsert({ code, who, name, status, pay_app: payApp, pay_handle: payHandle, updated_at: now() }).select('who'));
       check(r);
+      poke.send(topic(code));
       // The lock leaves someone else's answer as it is, so no row comes back
       return !Array.isArray(r.data) || r.data.length > 0;
     },
     async setVote(code, who, kind, choice) {
-      if (choice == null) check(await db.from('plan_votes').delete().eq('code', code).eq('who', who).eq('kind', kind));
-      else check(await db.from('plan_votes').upsert({ code, who, kind, choice: String(choice), updated_at: now() }));
+      if (choice == null) check(await req('plan_votes', code, t => t.delete().eq('code', code).eq('who', who).eq('kind', kind)));
+      else check(await req('plan_votes', code, t => t.upsert({ code, who, kind, choice: String(choice), updated_at: now() })));
+      poke.send(topic(code));
     },
     subscribe(code, cb) {
       const changed = () => cb({ type: 'changed' });
-      const ch = db.channel(`plan-${code}`)
+      const heard = poke.listen(topic(code), db.channel(topic(code)), changed);
+      const ch = heard.ch
         .on('postgres_changes', { event: '*', schema: 'public', table: 'plan_rsvps', filter: `code=eq.${code}` }, changed)
         .on('postgres_changes', { event: '*', schema: 'public', table: 'plan_votes', filter: `code=eq.${code}` }, changed)
         .on('postgres_changes', { event: '*', schema: 'public', table: 'planned_rounds', filter: `code=eq.${code}` }, p => {
           cb({ type: p.eventType === 'DELETE' ? 'deleted' : 'changed' });
         })
         .subscribe(status => { if (status === 'SUBSCRIBED') cb({ type: 'connected' }); });
-      return () => { db.removeChannel(ch); };
+      return () => { heard.done(); db.removeChannel(ch); };
     },
     async remove(code) {
-      check(await db.from('planned_rounds').delete().eq('code', code));
+      check(await req('planned_rounds', code, t => t.delete().eq('code', code)));
+      poke.send(topic(code));
     },
   };
 }

@@ -5,7 +5,12 @@
 //   addMove(code, planCode | null, { id, side, move, stake, roundId, at })
 //   subscribe({ code } | { planCode }, cb) -> unsubscribe   (cb gets { type: 'changed' | 'connected' })
 // Moves are only ever added, never changed, so two phones can't overwrite each other.
-import { isMissingTable } from './plan-adapters.js';
+import { PLAN_HEADER, isMissingTable, pokes } from './plan-adapters.js';
+
+// A challenge is read and written only with its code (x-challenge-code, a comma list for several)
+// or its plan's (x-plan-code), the way plans are (plan-adapters.js), and a write pokes the
+// channel of the plan or challenge it belongs to.
+export const CHALLENGE_HEADER = 'x-challenge-code';
 
 /** Thrown when the challenges tables aren't on the server yet (supabase/2026-10-04-challenges.sql hasn't run). */
 export class ChallengesOffError extends Error {
@@ -22,9 +27,17 @@ export function challengeSupabaseAdapter(db) {
     if (isMissingTable(error)) throw new ChallengesOffError();
     throw error;
   };
-  const movesOf = async codes => {
+  // The codes this request may read: the challenges', and the plan's when there is one
+  const named = (q, codes, planCode) => {
+    if (codes.length) q = q.setHeader(CHALLENGE_HEADER, codes.join(','));
+    return planCode ? q.setHeader(PLAN_HEADER, String(planCode)) : q;
+  };
+  const poke = pokes(db);
+  const topic = c => `challenge-${c}`;
+  const poked = (code, planCode) => { poke.send(topic(code)); if (planCode) poke.send(topic(planCode)); };
+  const movesOf = async (codes, planCode = null) => {
     if (!codes.length) return [];
-    const r = await db.from('challenge_moves').select('code, id, side, move, stake, round_id, at').in('code', codes);
+    const r = await named(db.from('challenge_moves').select('code, id, side, move, stake, round_id, at').in('code', codes), codes, planCode);
     check(r);
     return r.data.map(x => ({ code: x.code, ...moveRow({ ...x, roundId: x.round_id }) }));
   };
@@ -32,32 +45,36 @@ export function challengeSupabaseAdapter(db) {
     kind: 'supabase',
     async create(code, planCode, meta) {
       // Insert only (the server never lets a challenge be changed): sending it again is a no-op
-      check(await db.from('challenges').upsert({ code, plan_code: planCode, meta }, { onConflict: 'code', ignoreDuplicates: true }));
+      check(await named(db.from('challenges').upsert({ code, plan_code: planCode, meta }, { onConflict: 'code', ignoreDuplicates: true }), [code], planCode));
+      poked(code, planCode);
     },
     async fetch(code) {
-      const r = await db.from('challenges').select('code, meta').eq('code', code).maybeSingle();
+      const r = await named(db.from('challenges').select('code, meta').eq('code', code).maybeSingle(), [code]);
       check(r);
       if (!r.data) return null;
       return { meta: r.data.meta, moves: await movesOf([code]) };
     },
     async fetchForPlan(planCode) {
-      const r = await db.from('challenges').select('code, meta').eq('plan_code', planCode);
+      const r = await named(db.from('challenges').select('code, meta').eq('plan_code', planCode), [], planCode);
       check(r);
-      const moves = await movesOf(r.data.map(x => x.code));
+      const moves = await movesOf(r.data.map(x => x.code), planCode);
       return r.data.map(x => ({ code: x.code, meta: x.meta, moves: moves.filter(m => m.code === x.code) }));
     },
     async addMove(code, planCode, m) {
       const row = moveRow(m);
-      check(await db.from('challenge_moves').upsert({ code, plan_code: planCode, id: row.id, side: row.side, move: row.move, stake: row.stake ?? null, round_id: row.roundId ?? null, at: row.at }, { onConflict: 'code,id', ignoreDuplicates: true }));
+      check(await named(db.from('challenge_moves').upsert({ code, plan_code: planCode, id: row.id, side: row.side, move: row.move, stake: row.stake ?? null, round_id: row.roundId ?? null, at: row.at }, { onConflict: 'code,id', ignoreDuplicates: true }), [code], planCode));
+      poked(code, planCode);
     },
     subscribe({ code = null, planCode = null }, cb) {
       const changed = () => cb({ type: 'changed' });
       const filter = planCode ? `plan_code=eq.${planCode}` : `code=eq.${code}`;
-      const ch = db.channel(`challenge-${planCode || code}`)
+      const t = topic(planCode || code);
+      const heard = poke.listen(t, db.channel(t), changed);
+      const ch = heard.ch
         .on('postgres_changes', { event: '*', schema: 'public', table: 'challenges', filter }, changed)
         .on('postgres_changes', { event: '*', schema: 'public', table: 'challenge_moves', filter }, changed)
         .subscribe(status => { if (status === 'SUBSCRIBED') cb({ type: 'connected' }); });
-      return () => { db.removeChannel(ch); };
+      return () => { heard.done(); db.removeChannel(ch); };
     },
   };
 }
