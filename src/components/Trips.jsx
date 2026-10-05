@@ -574,14 +574,16 @@ function WhoGoing({ picked, onChange, byIndex = false }) {
   const [self, setSelf] = useState(false);
   const all = tripInvitees(state, { picked });
   const list = filterInvitees(all, query);
-  const on = new Set(picked);
+  // The list goes by each person's kept id; a trip saved before (or a link made since) may have another of theirs
+  const who = canonicalOf(state);
+  const on = new Set(picked.map(who));
   const long = all.length > SEARCH_FROM;
   const typed = nameToAdd(state, all, query);
   const pick = person => {
     update(s => savePerson(s, person));
     onChange(on.has(person.id) ? picked : [...picked, person.id]);
   };
-  const flip = person => (on.has(person.id) ? onChange(picked.filter(x => x !== person.id)) : pick(person));
+  const flip = person => (on.has(person.id) ? onChange(picked.filter(x => who(x) !== person.id)) : pick(person));
   const add = () => {
     if (!typed) return;
     if (typed.kind === 'self') { setSelf(true); setQuery(''); return; }
@@ -593,7 +595,7 @@ function WhoGoing({ picked, onChange, byIndex = false }) {
     }
     setQuery('');
   };
-  const count = picked.filter(id => all.some(p => p.id === id)).length;
+  const count = all.filter(p => on.has(p.id)).length;
   return (
     <div className="trip-who-step">
       <p className="field-help trip-lede">Pick who’s coming, or skip this: anyone who plays a round for the trip is on it. Picked friends show in the standings before anyone plays.</p>

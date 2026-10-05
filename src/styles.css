@@ -2768,7 +2768,7 @@ button.ch-main:active { transform: scale(.98); }
 .exp-form > .field-label:first-child { margin-top: 0; }
 .exp-form .text-input { min-height: 48px; }
 .exp-chips { gap: 8px; margin-top: 10px; }
-.exp-chips .pill-btn.sm { min-height: 40px; padding: 0 14px; }
+.exp-chips .pill-btn.sm { min-height: 44px; padding: 0 14px; }
 .exp-people { margin-top: 12px; }
 .exp-tick { gap: 10px; width: 100%; }
 .exp-tick .exp-pname { flex: 1; text-align: left; }

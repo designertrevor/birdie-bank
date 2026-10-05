@@ -316,6 +316,9 @@ function TripInvite({ st }) {
   const [busy, setBusy] = useState(false);
   const plan = tripLinkPlan(state, st.trip.id);
   const answers = tripAnswers(state, st.trip);
+  const soon = st.phase === 'soon';
+  // Once the trip is under way it's only worth the room with a round to send, or nobody on it yet
+  if (!soon && !plan && st.standings.length > 0) return null;
   const send = async () => {
     if (!plan) { nav.push('newRound', { ahead: true, trip: st.trip.id }); return; }
     let link = planShareLink(plan);
@@ -341,7 +344,7 @@ function TripInvite({ st }) {
           <span className="trip-act-ic" aria-hidden="true"><Icon name="link" /></span>
           <p className="row-main">{plan
             ? `One link for the trip: ${dayLabel(plan.date)}’s round. Friends say they’re in and vote on the game and the bet, and the round they play counts for the trip.`
-            : 'Plan the trip’s first round and send its link. Friends add themselves by saying they’re in, and the round they play counts for the trip.'}</p>
+            : `Plan the trip’s ${soon ? 'first' : 'next'} round and send its link. Friends add themselves by saying they’re in, and the round they play counts for the trip.`}</p>
         </div>
         {answers.length > 0 && (
           <ul className="trip-answers" aria-label="Answered the link">
@@ -350,7 +353,7 @@ function TripInvite({ st }) {
             ))}
           </ul>
         )}
-        <button className="full-btn" onClick={send} disabled={busy}><Icon name={plan ? 'share' : 'calendar-plus'} /> {plan ? 'Send the link' : 'Plan the first round'}</button>
+        <button className="full-btn" onClick={send} disabled={busy}><Icon name={plan ? 'share' : 'calendar-plus'} /> {plan ? 'Send the link' : soon ? 'Plan the first round' : 'Plan the next round'}</button>
       </div>
     </>
   );

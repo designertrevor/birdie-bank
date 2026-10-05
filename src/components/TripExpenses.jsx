@@ -9,7 +9,7 @@ import { AtScreen } from './Trips.jsx';
 import { useStore } from '../lib/store.js';
 import { money } from '../lib/golf.js';
 import { nameOf } from '../lib/ledger.js';
-import { sortedPlayers } from '../lib/format.js';
+import { tripInvitees } from '../lib/trip-people.js';
 import { canonicalOf } from '../lib/pair-debts.js';
 import { QUICK_WHATS, SPLITS, canEditExpense, parseAmount, shareCents, splitLine } from '../lib/trip-expenses.js';
 import { deleteExpense, restoreExpense, saveExpense } from '../lib/trip-store.js';
@@ -206,7 +206,8 @@ function ExpenseForm({ expense, st, me, full, short, onDone }) {
   const [extra, setExtra] = useKept(`${at}extra`, []);
   const pool = [...new Set([...base, ...extra].filter(Boolean))];
   const [more, setMore] = useKept(`${at}more`, false);
-  const others = sortedPlayers(state).map(p => who(p.id)).filter((id, i, a) => a.indexOf(id) === i && !pool.includes(id));
+  // Your players and everyone you've played with (trip-people.js); someone only in a usual has no name here to go by
+  const others = tripInvitees(state).filter(p => p.saved || p.rounds).map(p => p.id).filter(id => !pool.includes(id) && !pool.some(x => who(x) === id));
 
   const [what, setWhat] = useKept(`${at}what`, expense?.what || '');
   const [amountText, setAmountText] = useKept(`${at}amount`, expense ? centsText(expense.cents) : '');
@@ -339,7 +340,7 @@ function ExpenseForm({ expense, st, me, full, short, onDone }) {
 
       {others.length > 0 && (more ? (
         <>
-          <div className="field-label" id="exp-more">Someone else from Players</div>
+          <div className="field-label" id="exp-more">Someone else in it</div>
           <div className="exp-chips" role="group" aria-labelledby="exp-more">
             {others.map(id => <button key={id} type="button" className="pill-btn sm" onClick={() => addPerson(id)} aria-label={`Add ${nameOf(state, id)} to it`}><Icon name="plus" /> {first(nameOf(state, id))}</button>)}
           </div>
