@@ -1,6 +1,7 @@
 import { lazy, Suspense, useEffect, useMemo, useRef, useState } from 'react';
 import { Empty, Header, Icon, Numpad, Screen, Segmented, Sheet, Steps, Toggle, useUI } from '../components/ui.jsx';
 import { RulesSheet } from '../components/Rules.jsx';
+import { TimePicker } from '../components/DatePicker.jsx';
 import { getState, update, uid, useStore } from '../lib/store.js';
 import { allCourses, coursePar, coursePickerSections, courseTag, defaultTee as firstTee, isStarred, teeDotStyle, toggleStarred } from '../lib/courses.js';
 import { getCourse } from '../lib/courseApi.js';
@@ -1023,7 +1024,7 @@ function WhenPicker({ date, setDate, teeTime, setTeeTime }) {
         ))}
       </div>
       <label className="field-label" htmlFor="when-time" style={{ marginTop: 14 }}>Tee time <span className="opt">optional</span></label>
-      <input id="when-time" className="name-input time-input" type="time" value={teeTime} onChange={e => setTeeTime(e.target.value)} step={300} />
+      <TimePicker id="when-time" label="Tee time" className="name-input time-input" value={teeTime} onChange={setTeeTime} step={300} placeholder="Add a tee time" />
     </div>
   );
 }

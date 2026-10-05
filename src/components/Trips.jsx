@@ -4,6 +4,7 @@
 import { useCallback, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { Icon, Segmented, Sheet, Steps, Toggle, useUI } from './ui.jsx';
+import { DatePicker } from './DatePicker.jsx';
 import { Avatar } from './Pay.jsx';
 import { CupLine, CupRoundNote, TeamsPicker } from './Cup.jsx';
 import { getState, uid, update, useStore } from '../lib/store.js';
@@ -446,8 +447,7 @@ function TripForm({ trip, onDone }) {
           <div className="trip-form-days">
             <div>
               <label className="field-label" htmlFor="trip-start">First day</label>
-              <input id="trip-start" className="text-input" type="date" value={start} onChange={e => {
-                const v = e.target.value;
+              <DatePicker id="trip-start" label="First day" value={start} rangeStart={start} rangeEnd={end} quick onChange={v => {
                 setStart(v);
                 const need = sched ? plusDays(v, sched.days.length - 1) : v;
                 if (end < need) setEnd(need);
@@ -455,7 +455,7 @@ function TripForm({ trip, onDone }) {
             </div>
             <div>
               <label className="field-label" htmlFor="trip-end">Last day</label>
-              <input id="trip-end" className="text-input" type="date" value={end} min={start} onChange={e => setEnd(e.target.value)} />
+              <DatePicker id="trip-end" label="Last day" value={end} min={start} rangeStart={start} rangeEnd={end} onChange={setEnd} />
             </div>
           </div>
           <label className="field-label" htmlFor="trip-where">Where <span className="opt">optional</span></label>

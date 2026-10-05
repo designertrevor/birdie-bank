@@ -1,7 +1,8 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
+import { readFileSync, readdirSync } from 'node:fs';
 import {
-  addDays, addMonths, betweenEnds, canStepMonth, clampISO, dateLabel, from24, fromISO, HOURS, inBounds, longDateLabel,
+  addDays, addMonths, betweenEnds, canStepMonth, clampISO, dateLabel, dayParts, from24, fromISO, HOURS, inBounds, longDateLabel,
   minuteChoices, monthCells, monthGrid, monthTitle, moveCursor, parseTime, quickDays, rangePresets, rangeTap, rangeText,
   timeTap, to24, toISO, toTime, yearCells,
 } from './date-pick.js';
@@ -96,6 +97,10 @@ test('labels: the short day on the field, the year only when it isn’t this yea
   assert.equal(dateLabel('2027-01-02', MON), 'Sat, Jan 2, 2027');
   assert.equal(dateLabel('', MON), '');
   assert.equal(longDateLabel('2026-10-10'), 'Saturday, October 10, 2026');
+  assert.deepEqual(dayParts('2026-10-10', MON), { main: 'Sat, Oct 10', year: '' });
+  assert.deepEqual(dayParts('2027-05-14', MON), { main: 'Fri, May 14', year: '2027' });
+  assert.deepEqual(dayParts('2025-09-06', MON, { weekday: false }), { main: 'Sep 6', year: '2025' });
+  assert.deepEqual(dayParts('', MON), { main: '', year: '' });
 });
 
 test('quick picks: today, tomorrow and the coming weekend, without repeats', () => {
@@ -105,6 +110,7 @@ test('quick picks: today, tomorrow and the coming weekend, without repeats', () 
     ['Saturday', '2026-10-10', 'Sat', 'Oct 10'],
     ['Sunday', '2026-10-11', 'Sun', 'Oct 11'],
   ]);
+  assert.deepEqual(quickDays(MON).map(q => q.said), ['Today, Monday, October 5, 2026', 'Tomorrow, Tuesday, October 6, 2026', 'Saturday, October 10, 2026', 'Sunday, October 11, 2026']);
   // On a Friday, tomorrow is Saturday, so only Sunday is added
   assert.deepEqual(quickDays(new Date(2026, 9, 9)).map(q => q.label), ['Today', 'Tomorrow', 'Sunday']);
   // On a Saturday, today is Saturday and tomorrow Sunday
@@ -194,4 +200,21 @@ test('tapping the time: an hour first gives :00, minutes wait for an hour, AM an
   assert.equal(timeTap('20:10', 'half', 'am'), '08:10');
   assert.equal(timeTap('12:00', 'half', 'am'), '00:00');
   assert.equal(timeTap('', 'half', 'pm'), '');
+});
+
+test('no native date or time input is left: every one is the app’s own picker', () => {
+  const src = new URL('../', import.meta.url);
+  const files = [
+    ...readdirSync(new URL('screens/', src)).filter(f => f.endsWith('.jsx')).map(f => `screens/${f}`),
+    ...readdirSync(new URL('components/', src)).filter(f => f.endsWith('.jsx')).map(f => `components/${f}`),
+    'App.jsx',
+  ];
+  const bad = files.filter(f => /type=["'{`]*(date|time|datetime-local|month|week)["'`}]/.test(readFileSync(new URL(f, src), 'utf8')));
+  assert.deepEqual(bad, []);
+  // And the pickers are where the native inputs were
+  const uses = f => readFileSync(new URL(f, src), 'utf8');
+  assert.match(uses('screens/NewRound.jsx'), /<TimePicker id="when-time"/);
+  assert.match(uses('components/Reminders.jsx'), /<TimePicker id="booked-time"/);
+  assert.match(uses('components/RangeBar.jsx'), /<DateRangePicker /);
+  assert.match(uses('components/Trips.jsx'), /<DatePicker id="trip-start"[\s\S]*<DatePicker id="trip-end"/);
 });
