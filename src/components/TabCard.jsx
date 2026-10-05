@@ -17,6 +17,7 @@ import { CARRY_REASONS, cardCarry, sharedOwed } from '../lib/carry.js';
 import { answerCarry, askCarry, markPaid, undoLastPayment, usePaymentsOff } from '../lib/tab-sync.js';
 import { openRewards, rewardLineText } from '../lib/play-for.js';
 import { useGroupAvatars } from '../lib/useAvatars.js';
+import { bettors } from '../lib/round.js';
 
 const firstOf = name => name.split(' ')[0];
 
@@ -206,7 +207,8 @@ export function SquareStrip() {
   const { round, latest } = pick;
   const status = roundStatus(round, roundRows(state, round));
   const me = meFor(round, state);
-  const people = round.players.map(p => ({ id: p.id, name: p.id === me ? 'You' : firstOf(p.name), st: status[p.id] || 'square' }));
+  // Anyone just playing had nothing to pay, so the strip leaves them off (shared-tab.js roundStatus)
+  const people = bettors(round).map(p => ({ id: p.id, name: p.id === me ? 'You' : firstOf(p.name), st: status[p.id] || 'square' }));
   const square = people.filter(p => p.st === 'square').length;
   const date = new Date(round.finishedAt || round.createdAt).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
   const label = latest ? `Last round · ${date}` : date;

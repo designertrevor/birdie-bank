@@ -9,7 +9,7 @@
 // the rest is netted and passed on through the group as before. The shared layer is per round
 // transfer: a payment is tied to the round transfers between the two people, oldest first, and
 // anything the shared rounds don't explain stays local.
-import { bettors } from './round.js';
+import { bettors, isJustPlaying } from './round.js';
 import { countsMoney, onTab, tabResults } from './play-for.js';
 import { betsOf, isCashBet } from './pair-bets.js';
 import { meFor } from './format.js';
@@ -459,7 +459,8 @@ export function roundStatus(round, rows) {
  * most recent finished round of all, or null.
  */
 export function stripRound(state, { now = Date.now() } = {}) {
-  const shared = lockedRounds(state, { days: STRIP_DAYS, now }).filter(r => tabResults(r).transfers.length);
+  // A round you were just playing had nothing of yours on the Tab, so it's never your strip
+  const shared = lockedRounds(state, { days: STRIP_DAYS, now }).filter(r => tabResults(r).transfers.length && !isJustPlaying(r, meFor(r, state)));
   const round = shared.at(-1);
   if (!round) return null;
   // Your newest round of any kind (a points round after it means it isn't your latest)

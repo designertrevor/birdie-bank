@@ -104,13 +104,16 @@ test('the friendly finish: their score, to par and the good holes, never money',
 
 test('Just keep my own score: a card of your own from the invite, with no game and nothing on the Tab', () => {
   const group = round('g', 0, ['me', 'sam', 'mike'], { status: 'active', hostName: 'Trevor Nielsen' });
-  const card = cardOnlyRound({ id: 'mine', meta: buildMeta(group), me: { id: 'jo', name: 'Jo Park', index: 12 }, code: 'ABC123', at: NOW });
+  const card = cardOnlyRound({ id: 'mine', meta: buildMeta(group), me: { id: 'jo', name: 'Jo Park', index: 12 }, at: NOW });
   assert.equal(card.players.length, 1);
   assert.deepEqual(card.justPlaying, { jo: true });
   assert.equal(card.holes.length, 9);
   assert.equal(card.par, 35);
   assert.equal(gameLabel(card), 'Just keeping score');
   assert.equal(cardFromLine(card), 'Your own card, from Trevor’s round');
+  // The group's live code never goes in it: if this card were shared, its meta would carry the code
+  assert.ok(!JSON.stringify(buildMeta({ ...group, shared: { code: 'ABC123' } })).includes('ABC123'));
+  assert.ok(!JSON.stringify(card).includes('ABC123') && !('code' in card.cardFrom));
   card.scores[1] = { jo: 5 };
   assert.deepEqual(roundResults(card).balances, { jo: 0 });
   assert.equal(onTab(card), false);
@@ -268,4 +271,70 @@ test('the first-tee card says who is just playing, and lists strokes for the bet
   assert.ok(items.some(i => i.id === 'strokes:me'));
   // Nobody just playing: no line for it
   assert.ok(!agreementItems({ ...r, justPlaying: undefined }, {}).some(i => i.id === 'justPlaying'));
+});
+
+// --------------------------- review fixes (overnight 9) ---------------------------
+import { breakdownWith } from './where-from.js';
+import { pairRecords } from './preview.js';
+import { crewOfRound, crewsOf } from './crew-tabs.js';
+import { rolled } from './carry.js';
+import { shareRoundLink } from './share.js';
+
+test('where it comes from and the plan preview’s records leave out a round either of you was just playing', () => {
+  // Sam just playing with Trevor and Mike: no bet between Trevor and Sam
+  const r = round('w', 1, ['me', 'sam', 'mike'], { jp: ['sam'] });
+  const s = stateWith([r]);
+  assert.equal(breakdownWith(s, ['me'], 'sam').rounds.length, 0, 'nothing comes from it with Sam');
+  assert.equal(breakdownWith(s, ['me'], 'mike').rounds.length, 1, 'Mike and Trevor still had their bet');
+  const recs = pairRecords(s, ['me', 'sam', 'mike']);
+  assert.equal(recs.get('me|sam').all.rounds, 0, 'not an even round with Sam');
+  assert.equal(recs.get('me|mike').all.rounds, 1);
+  // Trevor just playing: no record with anyone
+  const mine = stateWith([round('w2', 1, ['me', 'sam', 'mike'], { jp: ['me'] })]);
+  assert.equal(breakdownWith(mine, ['me'], 'sam').rounds.length, 0);
+  assert.equal(pairRecords(mine, ['me', 'sam', 'mike']).get('me|sam').all.rounds, 0);
+  assert.equal(pairRecords(mine, ['me', 'sam', 'mike']).get('sam|mike').all.rounds, 1);
+});
+
+test('a friend just playing never moves a crew’s round off the crew’s tab', () => {
+  const crews = { k1: { id: 'k1', name: 'Tuesday crew', playerIds: ['sam', 'mike'] } };
+  const withJo = round('k', 1, ['me', 'sam', 'mike', 'jo'], { jp: ['jo'] });
+  const s = stateWith([withJo], { crews });
+  assert.equal(crewOfRound(s, withJo, crewsOf(s))?.id, 'k1');
+  // Jo in the bets: not the crew's round (as before)
+  const betting = round('k2', 1, ['me', 'sam', 'mike', 'jo']);
+  assert.equal(crewOfRound(stateWith([betting], { crews }), betting), null);
+});
+
+test('an agreed carry stands through a round one of the two was just playing', () => {
+  const carry = { id: 'k:sam>me:1', from: 'sam', to: 'me', amount: 4, status: 'agreed', by: 'sam', at: NOW - 3 * DAY, answeredAt: NOW - 2 * DAY };
+  const casual = stateWith([round('c1', 1, ['me', 'sam', 'mike'], { jp: ['sam'] })], { carries: [carry] });
+  assert.equal(rolled(carry, casual), false, 'no money between them to roll it into');
+  const both = stateWith([round('c2', 1, ['me', 'sam', 'mike'])], { carries: [carry] });
+  assert.equal(rolled(carry, both), true);
+});
+
+test('the live link: someone just playing who keeps their money private holds nobody’s link back', () => {
+  const o = 'https://example.test';
+  const r = { players: [{ id: 'me', name: 'Trevor' }, { id: 'sam', name: 'Sam' }, { id: 'jo', name: 'Jo' }], justPlaying: { jo: true }, shareCode: 'ABC123' };
+  const privateJo = { ...stateWith([]), accountOf: { jo: 'acct-jo' }, profiles: { 'acct-jo': { name: 'Jo Park', stats: null } } };
+  assert.equal(shareRoundLink(privateJo, r, { origin: o }), `${o}/?join=ABC123`);
+  // The same setting on a betting player still keeps the link back
+  const privateSam = { ...stateWith([]), accountOf: { sam: 'acct-sam' }, profiles: { 'acct-sam': { name: 'Sam Ray', stats: null } } };
+  assert.equal(shareRoundLink(privateSam, r, { origin: o }), o);
+});
+
+import { stripRound } from './shared-tab.js';
+
+test('the Tab strip: never a round you were just playing, and nobody just playing is in its who’s square', () => {
+  // Sam beats Mike, Trevor just playing: the group's money, none of it yours
+  const scores = { 1: { sam: 3, mike: 5 } };
+  const casual = round('s1', 1, ['me', 'sam', 'mike'], { jp: ['me'], scores, shared: { code: 'SSSSSS' } });
+  assert.ok(roundResults(casual).transfers.length > 0);
+  assert.equal(stripRound(stateWith([casual]), { now: NOW }), null);
+  // Jo just playing in your round: the strip is yours, and Jo isn't in who's square
+  const yours = round('s2', 1, ['me', 'sam', 'jo'], { jp: ['jo'], scores: { 1: { me: 3, sam: 5 } }, shared: { code: 'TTTTTT' } });
+  const pick = stripRound(stateWith([yours]), { now: NOW });
+  assert.equal(pick?.round.id, 's2');
+  assert.ok(!('jo' in roundStatus(yours, [])));
 });

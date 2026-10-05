@@ -10,6 +10,7 @@
 import { canonicalOf, carryId, carryRowId, codeOf, openTransfers, pairDebt, pairRounds } from './shared-tab.js';
 import { countsMoney } from './play-for.js';
 import { betsOf, isCashBet } from './pair-bets.js';
+import { bettors } from './round.js';
 
 const cents = v => Math.round((Number(v) || 0) * 100);
 
@@ -47,7 +48,8 @@ export function rolled(carry, state) {
   const since = carry.answeredAt || carry.at || 0;
   return Object.values(state.rounds || {}).some(r => {
     if (r.status !== 'done' || (r.finishedAt || 0) <= since) return false;
-    const ids = new Set(r.players.map(p => who(p.id)));
+    // ...with money between them: a round either was just playing had none, so the carry stands
+    const ids = new Set(bettors(r).map(p => who(p.id)));
     if (!ids.has(who(carry.from)) || !ids.has(who(carry.to))) return false;
     if (countsMoney(r)) return true;
     // A reward round nets it only when the two of them had a side bet for money together

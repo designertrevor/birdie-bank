@@ -101,7 +101,7 @@ export default function JoinInvite({ code, onJoined, onSkip, setUp = false }) {
         s.me = pid;
         s.onboarded = true;
       }
-      addRound(s, cardOnlyRound({ id, meta, me: { id: me.id, name: me.name, index: me.index ?? null }, code }));
+      addRound(s, cardOnlyRound({ id, meta, me: { id: me.id, name: me.name, index: me.index ?? null } }));
     });
     saveSeat(code, null);
     onJoined(id, false);

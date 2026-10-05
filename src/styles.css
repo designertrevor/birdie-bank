@@ -2651,7 +2651,9 @@ button.ch-main:active { transform: scale(.98); }
   display: inline-block; margin-left: 6px; padding: 1px 8px; border-radius: 999px; vertical-align: 1px;
   background: var(--surface); color: var(--body); font-size: 11px; font-weight: 700; letter-spacing: .02em; white-space: nowrap;
 }
-.pick-extra .jp-chip { min-height: 36px; gap: 6px; }
+.pick-extra .jp-chip { min-height: 36px; gap: 6px; font-size: 13px; }
+/* Off, it sits on the player's card like the tee and handicap chips (a card-colored pill would vanish into it) */
+.pick-extra .jp-chip:not(.on) { background: var(--surface); color: var(--body); }
 .pick-extra .jp-chip i { font-size: 15px; }
 .pick-extra .jp-chip:not(.on) i { color: var(--icon); }
 .jp-step-help { margin: -2px 0 12px; }

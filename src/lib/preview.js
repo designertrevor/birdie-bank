@@ -11,7 +11,7 @@
 // the record, never in dollars; dollars come only from rounds that put money on the Tab.
 // Two-player side bets kept from the plan's setup and the plan's agreed challenges show as
 // "Dave v Mike, $20 match" on the page, the image and the text (amounts hidden like the rest).
-import { GAMES, SIDE_GAMES, createRound, oneBall, popsFor, roundResults } from './round.js';
+import { GAMES, SIDE_GAMES, createRound, isJustPlaying, oneBall, popsFor, roundResults } from './round.js';
 import { findCourse } from './courses.js';
 import { applySetup } from './plan-setup.js';
 import { linksOf } from './people-links.js';
@@ -201,7 +201,8 @@ export function pairRecords(state, ids, { now = new Date() } = {}) {
     const inRound = new Map();
     for (const p of r.players || []) {
       const k = who(p.id);
-      if (!wanted.has(k)) continue;
+      // Someone just playing had no bet with anyone, so the round isn't in their record (ledger.js headToHeadSummary)
+      if (!wanted.has(k) || isJustPlaying(r, p.id)) continue;
       if (!inRound.has(k)) inRound.set(k, []);
       inRound.get(k).push(p.id);
     }

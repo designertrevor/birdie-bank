@@ -733,13 +733,14 @@ function PlayersStep({ game, gameKey, course, holesCount, nine, picked, setPicke
 
   const toggle = pid => setPicked(p => {
     if (p.includes(pid)) return p.filter(x => x !== pid);
-    if (p.length >= most) { showToast(`${game.name} takes up to ${most} players`); return p; }
+    // Past the game's own cap the extra people are just playing, so the cap is the round's, not the game's
+    if (p.length >= most) { showToast(most > game.max ? `A round is for up to ${most} players` : `${game.name} takes up to ${most} players`); return p; }
     return [...p, pid];
   });
   const pickCrew = c => {
     const ids = c.playerIds.filter(id => state.players[id]);
     const merged = [...new Set([...picked, ...ids])];
-    if (merged.length > most) { showToast(game.min === game.max && most === game.max ? `${game.name} is for exactly ${game.max}. Remove someone first` : `${game.name} takes up to ${most} players. Remove someone first`); return; }
+    if (merged.length > most) { showToast(game.min === game.max && most === game.max ? `${game.name} is for exactly ${game.max}. Remove someone first` : most > game.max ? `A round is for up to ${most} players. Remove someone first` : `${game.name} takes up to ${most} players. Remove someone first`); return; }
     setPicked(merged);
   };
   const check = pickedCheck(gameKey, picked, justPlaying);

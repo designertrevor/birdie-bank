@@ -22,7 +22,7 @@ import { ShareView } from './ShareSheet.jsx';
 import { countsMoney, playForOf, rewardOutcome, unitFmt } from '../lib/play-for.js';
 import { RoundWhereFrom } from './WhereFrom.jsx';
 import { NICE_ROUND_NOTE, cardFromLine, niceRound } from '../lib/just-playing.js';
-import { cardOnly } from '../lib/round.js';
+import { bettors, cardOnly } from '../lib/round.js';
 
 const reducedMotion = () => !!window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
 
@@ -376,7 +376,7 @@ export function ShareCard({ round, res, onBack, onDone, doneLabel = 'Done' }) {
   };
   return (
     <ShareView title="Share" onBack={onBack} onDone={onDone} doneLabel={doneLabel} make={make} render={renderResultsCard}
-      fileName={shareImageName(round)} link={link} what="Results" money={countsMoney(round)} people={round.players}
+      fileName={shareImageName(round)} link={link} what="Results" money={countsMoney(round)} people={bettors(round)}
       onText="Dollar figures are on the image" offText="Only the order and the bets, no money"
       standIn={(m, show) => <ResultsStandIn round={round} res={res} show={show} />}>
       <HowWasIt round={round} />

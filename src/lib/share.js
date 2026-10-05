@@ -90,7 +90,8 @@ export function roundLink(round, origin) {
  * shows everyone's money, so then it's the app alone, the way the card keeps their amounts off.
  */
 export function shareRoundLink(state, round, { money = true, origin } = {}) {
-  if (money && (round?.players || []).some(p => keepsMoneyPrivate(state, p.id))) return appLink(origin);
+  // Someone just playing has no money in the round, so their setting holds nobody else's back
+  if (money && (round?.players || []).some(p => !round.justPlaying?.[p.id] && keepsMoneyPrivate(state, p.id))) return appLink(origin);
   return roundLink(round, origin);
 }
 

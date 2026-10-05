@@ -8,6 +8,7 @@ import { useStore } from '../lib/store.js';
 import { useNav } from '../lib/nav.js';
 import { nameOf } from '../lib/ledger.js';
 import { countsMoney } from '../lib/play-for.js';
+import { bettors } from '../lib/round.js';
 import { tripStatus } from '../lib/trips.js';
 import { appLink, shareRoundLink, slugName } from '../lib/share.js';
 import { cardText, cupCardModel, cupPeople, recapCardModel, tripCardModel } from '../lib/share-cards.js';
@@ -32,7 +33,7 @@ export default function ShareScreen({ kind, id }) {
         <ShareView title="Share the recap" small onBack={nav.pop} what="Recap" link={link}
           make={show => card(recapCardModel(state, round, { showAmounts: show, link }))} render={renderCard}
           fileName={slugName('recap', round.course?.name, round.finishedAt || round.createdAt)}
-          money={countsMoney(round)} people={round.players}
+          money={countsMoney(round)} people={bettors(round)}
           onText="Everyone’s money from the round is on the image" offText="Who took it, the order and the moments, no money" />
       </Screen>
     );

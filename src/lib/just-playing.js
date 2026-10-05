@@ -146,7 +146,7 @@ export function justPlayingNote(round) {
  * this phone: the group's round is untouched. `meta` is the shared round's meta (sync-model.js),
  * `me` { id, name, index }.
  */
-export function cardOnlyRound({ id, meta, me, code = null, at = Date.now() }) {
+export function cardOnlyRound({ id, meta, me, at = Date.now() }) {
   const holes = (meta?.holes || []).map(h => ({ ...h }));
   const host = typeof meta?.hostName === 'string' && meta.hostName.trim() ? meta.hostName.trim() : null;
   return {
@@ -161,8 +161,9 @@ export function cardOnlyRound({ id, meta, me, code = null, at = Date.now() }) {
     scores: {}, banker: {}, wolf: {}, marks: {}, presses: [], pressSeq: 0, current: 0, left: {},
     justPlaying: { [me.id]: true },
     playFor: { kind: 'points' },
-    // Where it came from, for the card's subtitle ("From Trevor's round")
-    cardFrom: { code, host },
+    // Where it came from, for the card's subtitle ("From Trevor's round"). Never the group's code: it
+    // opens their live round, and this card's meta would carry it to anyone it's shared with
+    cardFrom: { host },
   };
 }
 

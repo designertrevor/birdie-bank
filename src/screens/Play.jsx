@@ -625,7 +625,8 @@ function PlayRound({ round, mount, momentUp = false }) {
                     {isBanker && <span className="bkr-badge"><Icon name="bank" fill /> Banker</span>}
                     {isWolf && <span className="bkr-badge"><Icon name="paw-print" fill /> Wolf</span>}
                     {casual && !solo && <span className="jp-tag">{JUST_PLAYING_TAG}</span>}
-                    {round.teams && !p.team && <span className={`side-tag ${round.teams.findIndex(t => t.players.includes(p.id)) === 0 ? 'a' : 'b'}`}>{['A', 'B', 'C', 'D'][round.teams.findIndex(t => t.players.includes(p.id))]}</span>}
+                    {/* Only someone on a team gets its letter: anyone just playing (or only in the side games) is on none */}
+                    {round.teams && !p.team && round.teams.some(t => t.players.includes(p.id)) && <span className={`side-tag ${round.teams.findIndex(t => t.players.includes(p.id)) === 0 ? 'a' : 'b'}`}>{['A', 'B', 'C', 'D'][round.teams.findIndex(t => t.players.includes(p.id))]}</span>}
                     {counts && <span className="counts-tag">Counts</span>}
                   </div>
                   {p.team && <div className="ps">{p.players.map(pid => round.players.find(x => x.id === pid)?.name.split(' ')[0]).join(', ')}{round.useHandicaps ? ` · team handicap ${p.courseHc ?? 0}` : ''}</div>}
@@ -860,7 +861,8 @@ function HolesSheet({ round, onClose }) {
   const preview = useMemo(() => (course && changed ? resizeRound(round, course, count, nine) : null), [round, course, changed, count, nine]);
   const dropped = preview ? scoredHolesDropped(round, preview.holes) : [];
   const hcChanges = preview && round.useHandicaps
-    ? round.players.map((p, i) => ({ name: p.name.split(' ')[0], from: p.plays, to: preview.players[i].plays })).filter(c => c.from !== c.to)
+    // Someone just playing has no strokes in any game, so theirs never show as changed
+    ? round.players.map((p, i) => ({ name: p.name.split(' ')[0], from: p.plays, to: preview.players[i].plays, casual: isJustPlaying(round, p.id) })).filter(c => !c.casual && c.from !== c.to)
     : [];
   const apply = () => {
     update(s => {
