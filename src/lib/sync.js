@@ -435,7 +435,7 @@ function noteRequest(roundId, no, data) {
   const r = readRequest(data);
   const list = requests.get(roundId) || new Map();
   const had = list.has(no);
-  if (r?.status === 'waiting') list.set(no, { no, name: r.name, at: r.at });
+  if (r?.status === 'waiting') list.set(no, { no, name: r.name, at: r.at, ...(r.justPlaying ? { justPlaying: true } : {}) });
   else list.delete(no);
   requests.set(roundId, list);
   if (had !== list.has(no) || r?.status === 'waiting') reqChanged();
@@ -459,9 +459,9 @@ export function useSeatRequests(roundId) {
  * Ask for a seat in a shared round. Returns the request's slot number to watch.
  * Throws when it can't be sent, so the joiner can be told to ask the scorekeeper instead.
  */
-export async function requestSeat(code, name) {
+export async function requestSeat(code, name, { justPlaying = false } = {}) {
   const adapter = await getAdapter();
-  const data = buildRequest(name);
+  const data = buildRequest(name, Date.now(), { justPlaying });
   if (!adapter || !data) throw new Error('Can’t send a request');
   const no = newRequestNo();
   await adapter.upsertHole(code, no, data);
@@ -517,7 +517,7 @@ export async function answerSeatRequest(roundId, no, playerId) {
     // A push already running returns straight away (the new player goes in the next one), so wait for ours to land
     for (let i = 0; i < 10 && !(await pushChanges(roundId)); i++) await new Promise(res => setTimeout(res, 300));
   }
-  await adapter.upsertHole(round.shared.code, no, { request: { name: req.name, at: req.at, status: playerId ? 'in' : 'no', ...(playerId ? { playerId } : {}) } });
+  await adapter.upsertHole(round.shared.code, no, { request: { name: req.name, at: req.at, status: playerId ? 'in' : 'no', ...(playerId ? { playerId } : {}), ...(req.justPlaying ? { justPlaying: true } : {}) } });
   requests.get(roundId)?.delete(no);
   reqChanged();
 }

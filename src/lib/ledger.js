@@ -1,5 +1,5 @@
 // The Tab: who owes whom across every finished round, less payments recorded. Pure, unit tested.
-import { roundResults } from './round.js';
+import { isJustPlaying, roundResults } from './round.js';
 import { roundCents } from './games.js';
 import { keptId, meFor } from './format.js';
 import { theirName } from './their-profile.js';
@@ -265,8 +265,9 @@ export function personStory(state, ids, other, { now = Date.now() } = {}) {
   for (const r of doneRounds(state)) {
     const me = meFor(r, state);
     // A round you only watched is not a round you played with them
-    const them = r.players.filter(p => isThem(p.id)).map(p => p.id);
-    if (!mine.has(me) || isThem(me) || !them.length || !r.players.some(p => p.id === me)) continue;
+    // ...and a round either of you was just playing had no bet between you, so it isn't in the story either
+    const them = r.players.filter(p => isThem(p.id) && !isJustPlaying(r, p.id)).map(p => p.id);
+    if (!mine.has(me) || isThem(me) || !them.length || !r.players.some(p => p.id === me) || isJustPlaying(r, me)) continue;
     const pairs = roundResults(r).pairs[me] || {};
     const amount = Math.round(them.reduce((a, id) => a + (pairs[id] ?? 0), 0) * 100) / 100;
     if (amount > 0) won++; else if (amount < 0) lost++; else even++;
@@ -318,6 +319,7 @@ export function headToHeadSummary(state, ids, { moneyOnly = false } = {}) {
   for (const r of Object.values(state.rounds || {}).filter(x => countsAsDone(state, x))) {
     const me = meFor(r, state);
     if (!mine.has(me) || !r.players.some(p => p.id === me)) continue; // watched rounds aren't yours
+    if (isJustPlaying(r, me)) continue; // nor are rounds you were just playing: no bet with anyone
     if (moneyOnly && !onTab(r)) continue;
     // A Big Game's round: the game's payments between two of its players count as what each won from the other
     const pairs = withBigMoney(state, r, roundResults(r)).pairs[me] || {};
@@ -327,7 +329,7 @@ export function headToHeadSummary(state, ids, { moneyOnly = false } = {}) {
     // One person is one line, whichever id they had in this round
     const inRound = new Map();
     for (const p of r.players) {
-      if (p.id === me || isMine(p.id)) continue;
+      if (p.id === me || isMine(p.id) || isJustPlaying(r, p.id)) continue;
       // Dollars only: a reward round is between you and the people you had a side bet for money with
       const cashOnly = moneyOnly && cashPairs;
       if (cashOnly && !hasCashWith(r, me, p.id)) continue;

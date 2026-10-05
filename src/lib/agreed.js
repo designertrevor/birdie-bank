@@ -10,7 +10,7 @@
 //   { skipped }  the card was skipped (the time). It can still be locked in from the round menu.
 // It lives in the round's meta, so it syncs to every phone in a shared round. Only the phone keeping
 // score locks it or records changes (see keeper.js).
-import { GAMES, POT_GAMES, blindMultiplierOf, gameKeyLabel, gameKeys, greeniesInPot, holesPlayed, matchScored, oneBall, scorers, sideGamesOf } from './round.js';
+import { GAMES, POT_GAMES, bettors, blindMultiplierOf, gameKeyLabel, gameKeys, greeniesInPot, holesPlayed, isJustPlaying, matchScored, oneBall, scorers, sideGamesOf } from './round.js';
 import { potHolesLine } from './side-games.js';
 import { sideBetLine, stakeSummary } from './stakes.js';
 import { inUnits } from './play-for.js';
@@ -143,6 +143,9 @@ export function agreementItems(round, choices = round.agreed) {
   const lineup = lineupKind(round);
   if (lineup === 'teams') items.push({ id: 'sides', group: 'lineup', label: lineupLabel(round), text: sidesText(round) });
   if (lineup === 'order') items.push({ id: 'order', group: 'lineup', label: lineupLabel(round), text: orderText(round) });
+  // Anyone just playing: on the card, out of every bet (absent when nobody is, so older cards never change)
+  const casual = (round.players || []).filter(p => isJustPlaying(round, p.id)).map(p => firstName(p.name));
+  if (casual.length) items.push({ id: 'justPlaying', group: 'lineup', label: 'Just playing', text: `${casual.join(', ')}. On the card, no bet` });
   if (!round.useHandicaps) items.push({ id: 'strokes', group: 'strokes', label: 'Strokes', text: 'None, it’s gross' });
   else {
     if ((round.hcPct ?? 100) !== 100) items.push({ id: 'hcPct', group: 'strokes', label: 'Handicaps', text: `${round.hcPct}% of each` });
@@ -151,7 +154,7 @@ export function agreementItems(round, choices = round.agreed) {
     if (oneBall(round.game) && round.teams) {
       for (const t of scorers(round)) items.push({ id: `strokes:${t.id}`, group: 'strokes', label: t.name, text: strokesText(t.plays) });
     } else {
-      for (const p of round.players) items.push({ id: `strokes:${p.id}`, group: 'strokes', label: firstName(p.name), text: strokesText(p.plays, half) });
+      for (const p of bettors(round)) items.push({ id: `strokes:${p.id}`, group: 'strokes', label: firstName(p.name), text: strokesText(p.plays, half) });
     }
     // A side game at its own %, and half strokes, are agreed up front like the rest, after each
     // player's strokes in the main game
@@ -159,7 +162,7 @@ export function agreementItems(round, choices = round.agreed) {
       if (!sg || gamePct(round, sg.game) === gamePct(round)) continue;
       // "80%: Bo 7, Dan 12", each player's strokes in that game, so nobody works them out on the tee
       const pct = gamePct(round, sg.game);
-      const gets = playsAtPct(round.players, pct, round.joined).filter(p => p.plays).map(p => `${firstName(p.name)} ${p.plays}`);
+      const gets = playsAtPct(bettors(round), pct, round.joined).filter(p => p.plays).map(p => `${firstName(p.name)} ${p.plays}`);
       items.push({ id: `hcPct:${sg.game}`, group: 'strokes', label: gameKeyLabel(round, sg.game), text: gets.length ? `${pct}%: ${gets.join(', ')}` : `${pct}%, nobody gets strokes` });
     }
     if (half) items.push({ id: 'half', group: 'strokes', label: 'Half strokes', text: 'Each stroke counts as half' });

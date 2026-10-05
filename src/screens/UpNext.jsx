@@ -1,7 +1,7 @@
 import { Suspense, lazy, useState } from 'react';
 import { Header, Icon, Screen } from '../components/ui.jsx';
 import { useStore } from '../lib/store.js';
-import { GAMES, holeComplete } from '../lib/round.js';
+import { GAMES, cardOnly, holeComplete } from '../lib/round.js';
 import { gameLabel, myIds } from '../lib/format.js';
 import { nameOf } from '../lib/ledger.js';
 import { canonicalOf } from '../lib/shared-tab.js';
@@ -211,7 +211,7 @@ function PlanNext({ last, fresh, planned = false, trip = false }) {
         : 'Pick the game, the course and the bets. Everyone joins from a link.'}</div>
       <div className="pc-actions">
         <button className="pc-btn" onClick={() => nav.push('newRound')}><Icon name="golf" fill /> Start a round</button>
-        {last && GAMES[last.game] && (
+        {last && GAMES[last.game] && !cardOnly(last) && (
           <button className="pc-btn ghost" onClick={() => nav.push('newRound', { rematch: last.id })}><Icon name="arrow-counter-clockwise" /> Run it back</button>
         )}
         <button className="pc-btn ghost" onClick={() => nav.push('newRound', { ahead: true })}><Icon name="calendar-plus" /> Plan ahead</button>

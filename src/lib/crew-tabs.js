@@ -18,6 +18,7 @@
 // money the Tab has, and paying from it squares the rounds shared live on the shared Tab's own rows
 // (shared-tab.js squareRows), so a friend's phone sees the payment on its Tab too. Pure, unit tested.
 import { fewestPayments, outstanding } from './ledger.js';
+import { bettors } from './round.js';
 import { canonicalOf, codeOf, finishedAt, lockedRounds, nettedId, nettedOn, openByPair, paidOn } from './pair-debts.js';
 import { onTab, tabResults } from './play-for.js';
 import { tripOfPayment } from './trip-pay.js';
@@ -53,7 +54,8 @@ export function crewsOf(state) {
 export function crewOfRound(state, round, crews = crewsOf(state)) {
   const who = canonicalOf(state);
   const me = state.me ? who(state.me) : null;
-  const ids = [...new Set((round?.players || []).map(p => who(p.id)))].filter(id => id !== me);
+  // Anyone just playing has no money in it, so a friend tagging along never moves the crew's round to Other
+  const ids = [...new Set((round?.players ? bettors(round) : []).map(p => who(p.id)))].filter(id => id !== me);
   if (!ids.length) return null;
   return crews.find(c => ids.every(id => c.members.has(id))) || null;
 }
@@ -117,7 +119,8 @@ function togetherIn(state, rounds) {
   const who = canonicalOf(state);
   const out = new Set();
   for (const r of rounds) {
-    const ids = [...new Set(r.players.map(p => who(p.id)))];
+    // Someone just playing had no money with anyone (as trips.js togetherOf)
+    const ids = [...new Set(bettors(r).map(p => who(p.id)))];
     for (let i = 0; i < ids.length; i++) for (let j = i + 1; j < ids.length; j++) out.add(pairKey(ids[i], ids[j]));
   }
   return out;

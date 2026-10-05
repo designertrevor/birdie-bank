@@ -2,10 +2,13 @@
 // ("Not on the list? Add me" on a join link). Their money counts from the hole they start on.
 // With side games, the scorekeeper picks which games they're in: one start hole for all of them, and
 // a main game with set sides (Nassau, Wolf, Vegas...) never takes them, but its side games can.
+// Anyone can come in "Just playing, no bet" instead: on the card, in no game, so even a game with set
+// sides or a full group takes them (just-playing.js).
 import { useMemo, useState } from 'react';
-import { Icon, PickChip, Sheet, Toggle, useUI } from './ui.jsx';
+import { Icon, PickChip, Segmented, Sheet, Toggle, useUI } from './ui.jsx';
 import { update, uid, useStore } from '../lib/store.js';
-import { addPlayerProblem, addPlayerToRound, firstOpenHole, joinGames, joinRule, roundStarted, sideGamesOf } from '../lib/round.js';
+import { addPlayerProblem, addPlayerToRound, cardOnly, firstOpenHole, joinGames, joinRule, roundStarted, sideGamesOf } from '../lib/round.js';
+import { JUST_PLAYING, JUST_PLAYING_HELP, addJustPlayingProblem } from '../lib/just-playing.js';
 import { payFields } from '../lib/pay.js';
 import { answerSeatRequest } from '../lib/sync.js';
 import { cleanRequestName } from '../lib/sync-model.js';
@@ -16,7 +19,13 @@ import { buzz } from '../lib/delight.js';
 export function AddPlayerSheet({ round, request = null, onClose }) {
   const { showToast } = useUI();
   const state = useStore();
-  const problem = addPlayerProblem(round);
+  const betProblem = addPlayerProblem(round);
+  const jpProblem = addJustPlayingProblem(round);
+  // A card with no game only takes people just playing; a game that can't take a betting player
+  // starts on just playing, with the reason under the choice
+  const onlyCasual = cardOnly(round);
+  const [casual, setCasual] = useState(() => !jpProblem && (onlyCasual || !!request?.justPlaying || !!betProblem));
+  const problem = casual ? jpProblem : betProblem && jpProblem ? betProblem : null;
   const started = roundStarted(round);
   const open = firstOpenHole(round);
   const saved = useMemo(() => sortedPlayers(state).filter(p => !round.players.some(x => x.id === p.id)), [state, round.players]);
@@ -35,17 +44,18 @@ export function AddPlayerSheet({ round, request = null, onClose }) {
   const newId = useMemo(() => uid('p_'), []);
   const player = { id: pick || newId, name: cleanName, index: person?.index ?? null, courseHc: hc, ...payFields(person) };
   // Which games they play (rounds with side games only): each switch starts where joinGames says
-  const hasSides = sideGamesOf(round).length > 0;
+  const hasSides = !casual && sideGamesOf(round).length > 0;
   const offers = hasSides ? joinGames(round, cleanName ? firstName(cleanName) : 'this player', started ? fromNo : null) : [];
   const [picked, setPicked] = useState({});
   const inGame = o => !o.disabled && (picked[o.key] ?? o.on);
   const games = hasSides ? offers.filter(inGame).map(o => o.key) : null;
   const noGame = hasSides && !games.length;
-  const preview = cleanName && !problem && !noGame && (open != null || !started) ? addPlayerToRound(round, player, started ? fromNo : null, games) : null;
+  const preview = cleanName && !problem && (casual || !betProblem) && !noGame && (open != null || !started)
+    ? addPlayerToRound(round, player, started ? fromNo : null, games, { justPlaying: casual }) : null;
   const added = preview?.players.at(-1);
   const pos = started && fromNo != null ? round.holes.findIndex(h => h.no === fromNo) + 1 : 1;
   // With side games each switch says what joining does to its game, so no extra sentence
-  const rule = preview && pos > 1 && !hasSides ? joinRule(preview, player.id) : null;
+  const rule = preview && pos > 1 && !hasSides && !casual ? joinRule(preview, player.id) : null;
   // Holes they could start on: the ones from here on that nobody has scored yet
   const choices = round.holes.filter((h, i) => i >= Math.min(round.current || 0, round.holes.length - 1) && !Object.values(round.scores[h.no] || {}).some(v => v != null));
 
@@ -61,7 +71,7 @@ export function AddPlayerSheet({ round, request = null, onClose }) {
     update(s => {
       const r = s.rounds[round.id];
       if (!r) return;
-      Object.assign(r, addPlayerToRound(r, player, started ? fromNo : null, games));
+      Object.assign(r, addPlayerToRound(r, player, started ? fromNo : null, games, { justPlaying: casual }));
       // Someone new goes in People too, like a guest added when setting up a round
       if (!s.players[player.id]) s.players[player.id] = { id: player.id, name: player.name, index: null, venmo: '', createdAt: Date.now() };
     });
@@ -70,7 +80,7 @@ export function AddPlayerSheet({ round, request = null, onClose }) {
       catch { showToast(`${firstName(player.name)} is in. Their phone couldn’t be told, so have them pick their name from the link`); onClose(); return; }
     }
     onClose();
-    showToast(pos > 1 ? `${firstName(player.name)} is in from hole ${fromNo}` : `${firstName(player.name)} is in`);
+    showToast(casual ? `${firstName(player.name)} is on the card, just playing` : pos > 1 ? `${firstName(player.name)} is in from hole ${fromNo}` : `${firstName(player.name)} is in`);
     buzz(20);
   };
 
@@ -88,7 +98,8 @@ export function AddPlayerSheet({ round, request = null, onClose }) {
       ) : (
         <>
           <p className="sheet-text">
-            {started ? 'Holes already played stay as they are. The new player’s money counts from the hole they start on.' : 'Nothing’s scored yet, so they’re simply one more player.'}
+            {casual ? 'They’re on the card with everyone, and out of every bet. Nobody else’s strokes or money change.'
+              : started ? 'Holes already played stay as they are. The new player’s money counts from the hole they start on.' : 'Nothing’s scored yet, so they’re simply one more player.'}
           </p>
           <div style={{ padding: '0 20px 12px' }}>
             <label className="field-label" htmlFor="ap-name">Name</label>
@@ -102,7 +113,15 @@ export function AddPlayerSheet({ round, request = null, onClose }) {
               </div>
             )}
           </div>
-          {round.useHandicaps && (
+          {!onlyCasual && !jpProblem && (
+            <div className="ap-how">
+              <div className="eyebrow" id="ap-how">How they play</div>
+              <Segmented label="How they play" className="press-mode-row" btn="pm-btn" value={casual ? 'casual' : 'bet'} onChange={v => setCasual(v === 'casual')}
+                options={[{ value: 'bet', label: 'In the games', disabled: !!betProblem }, { value: 'casual', label: JUST_PLAYING }]} />
+              <p className="field-help">{casual ? JUST_PLAYING_HELP : 'Their money counts like everyone’s.'}{betProblem && casual ? ` ${betProblem}` : ''}</p>
+            </div>
+          )}
+          {round.useHandicaps && !casual && (
             <div style={{ padding: '0 20px 12px' }}>
               <div className="eyebrow" style={{ marginBottom: 8 }}>Handicap for this round</div>
               <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>

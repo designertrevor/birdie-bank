@@ -6,7 +6,7 @@ import { roundResults } from '../lib/round.js';
 import { money } from '../lib/golf.js';
 import { payInfoFor } from '../lib/pay.js';
 import { PayButton, RequestButton } from './Pay.jsx';
-import { AvatarArt } from './Avatar.jsx';
+import { Avatar, AvatarArt } from './Avatar.jsx';
 import { useGroupAvatars } from '../lib/useAvatars.js';
 import { buzz, confettiFrom } from '../lib/delight.js';
 import { gameLabel, meFor, placeOf, roundDate, roundPlayerName, shareText } from '../lib/format.js';
@@ -21,6 +21,8 @@ import { shareRoundLink } from '../lib/share.js';
 import { ShareView } from './ShareSheet.jsx';
 import { countsMoney, playForOf, rewardOutcome, unitFmt } from '../lib/play-for.js';
 import { RoundWhereFrom } from './WhereFrom.jsx';
+import { NICE_ROUND_NOTE, cardFromLine, niceRound } from '../lib/just-playing.js';
+import { bettors, cardOnly } from '../lib/round.js';
 
 const reducedMotion = () => !!window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
 
@@ -198,6 +200,48 @@ export function Reveal({ round, res, onNext, onDetail, extra, instant = false })
 }
 
 /**
+ * The finish for someone just playing (just-playing.js): no money reveal, no "you lost", just a
+ * friendly "Nice round" with their score, to par, and the good holes. A card with no game ends here
+ * too. `onDetail` opens the round (the card, and the group's bets when there were some).
+ */
+export function NiceRound({ round, me, onDetail, onDone }) {
+  const hero = useRef();
+  const faces = useGroupAvatars(round.players);
+  const n = niceRound(round, me);
+  const solo = cardOnly(round);
+  const p = round.players.find(x => x.id === me);
+  useEffect(() => {
+    if (!n || reducedMotion()) return;
+    confettiFrom(hero.current, 40);
+    buzz([15, 30, 15]);
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+  return (
+    <>
+      <Header title={solo ? 'Your card' : 'Final results'} small />
+      <div className="scroll nice-scroll">
+        <div className="nice-card" ref={hero}>
+          <Avatar model={faces.get(me) || null} id={me} name={p?.name || ''} size="lg" className="nice-face" />
+          <div className="eyebrow">{round.course.name} · {roundDate(round)}</div>
+          <h1 className="nice-title d">{n ? n.title : `Thanks for playing, ${(p?.name || '').split(' ')[0] || 'friend'}`}</h1>
+          {n && (
+            <div className="nice-score" role="img" aria-label={`You shot ${n.score}, ${n.toParWords}`}>
+              <span className="nice-num d">{n.score}</span>
+              <span className={`nice-par ${n.tone}`}>{n.toPar}</span>
+            </div>
+          )}
+          <p className="nice-line">{n ? n.line : 'No scores went in for you this time.'}</p>
+        </div>
+        <p className="nice-note">{solo ? cardFromLine(round) || 'Just you and the card. Nothing to settle.' : NICE_ROUND_NOTE}</p>
+      </div>
+      <div className="cta-wrap">
+        <button className="full-btn" onClick={onDone}>Done <Icon name="check" /></button>
+        <button className="full-btn outline" onClick={onDetail}>{solo ? 'See your card' : 'See the card and how the group did'}</button>
+      </div>
+    </>
+  );
+}
+
+/**
  * A reward round's result, where the payments would be: "Sam wins lunch. Dave's buying." No
  * pay buttons: it isn't money. The Tab keeps a line on each person card until it's marked done.
  */
@@ -332,7 +376,7 @@ export function ShareCard({ round, res, onBack, onDone, doneLabel = 'Done' }) {
   };
   return (
     <ShareView title="Share" onBack={onBack} onDone={onDone} doneLabel={doneLabel} make={make} render={renderResultsCard}
-      fileName={shareImageName(round)} link={link} what="Results" money={countsMoney(round)} people={round.players}
+      fileName={shareImageName(round)} link={link} what="Results" money={countsMoney(round)} people={bettors(round)}
       onText="Dollar figures are on the image" offText="Only the order and the bets, no money"
       standIn={(m, show) => <ResultsStandIn round={round} res={res} show={show} />}>
       <HowWasIt round={round} />

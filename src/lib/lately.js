@@ -9,7 +9,8 @@
 // can fill several round transfers at once, so settlements between the same two people recorded
 // at the same moment show as one row. Carry-overs come from state.carries (see carry.js): only
 // agreed ones show, dated when they were agreed (answeredAt).
-import { GAMES, roundResults } from './round.js';
+import { GAMES, cardOnly, isJustPlaying, roundResults } from './round.js';
+import { niceRound } from './just-playing.js';
 import { money } from './golf.js';
 import { gameLabel, meFor, myIds } from './format.js';
 import { nameOf } from './ledger.js';
@@ -142,12 +143,15 @@ export function latelyItems(state, now = Date.now(), { carries = state?.carries,
     const winners = top > 0.004 ? r.players.filter(p => Math.abs(bal[p.id] - top) < 0.005) : [];
     // A friend linked to someone else ("Same person as...") goes by the name on the card kept for them
     const names = winners.map(p => (mine.has(p.id) ? 'You' : who(p.id) !== p.id ? name(p.id) : first(p.name)));
-    const took = !names.length ? 'All square' : names.length === 1 ? `${names[0]} took it` : `${names.slice(0, -1).join(', ')} and ${names.at(-1)} split it`;
+    const took = cardOnly(r) ? 'Nice round' : !names.length ? 'All square' : names.length === 1 ? `${names[0]} took it` : `${names.slice(0, -1).join(', ')} and ${names.at(-1)} split it`;
     const played = me && r.players.some(p => p.id === me);
     const amount = played ? cents(bal[me] ?? 0) : null;
     const fmt = unitFmt(r);
     const reward = rewardOutcome(r, roundResults(r));
-    const yours = amount == null ? null : amount === 0 ? (countsMoney(r) ? 'You broke even' : 'You were level') : `You ${fmt(amount, { sign: true })}`;
+    // Just playing: your score, never money you weren't playing for
+    const nice = played && isJustPlaying(r, me) ? niceRound(r, me) : null;
+    const yours = nice ? `You shot ${nice.score} (${nice.toPar})` : played && isJustPlaying(r, me) ? 'You were just playing'
+      : amount == null ? null : amount === 0 ? (countsMoney(r) ? 'You broke even' : 'You were level') : `You ${fmt(amount, { sign: true })}`;
     // A reward round's side bets for money are yours on the Tab, so they show in dollars (only when you had one)
     const cash = reward && played && hasCashBet(r, me) ? cents(tabMoneyOf(r, me)) : null;
     const bets = cash == null ? null : cash === 0 ? 'Side bets square' : `You ${money(cash, { sign: true })} on side bets`;

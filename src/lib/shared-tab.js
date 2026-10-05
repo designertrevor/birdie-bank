@@ -9,6 +9,7 @@
 // the rest is netted and passed on through the group as before. The shared layer is per round
 // transfer: a payment is tied to the round transfers between the two people, oldest first, and
 // anything the shared rounds don't explain stays local.
+import { bettors, isJustPlaying } from './round.js';
 import { countsMoney, onTab, tabResults } from './play-for.js';
 import { betsOf, isCashBet } from './pair-bets.js';
 import { meFor } from './format.js';
@@ -51,7 +52,8 @@ export function pairRounds(state, a, b, { days = FETCH_DAYS, now = Date.now() } 
   const who = canonicalOf(state);
   const A = who(a), B = who(b);
   return lockedRounds(state, { days, now }).filter(r => {
-    const ids = new Set(r.players.map(p => who(p.id)));
+    // Someone just playing has nothing between them and anyone
+    const ids = new Set(bettors(r).map(p => who(p.id)));
     if (!ids.has(A) || !ids.has(B)) return false;
     // A reward round is between the two of them only when they had a side bet for money together:
     // one between two other people puts nothing between these two
@@ -431,7 +433,8 @@ export function roundRows(state, round) {
  * what's been paid reaches its current amount (a fixed hole can grow it after a payment).
  */
 export function roundStatus(round, rows) {
-  const out = Object.fromEntries(round.players.map(p => [p.id, 'square']));
+  // Anyone just playing had nothing to pay, so the strip leaves them off
+  const out = Object.fromEntries(bettors(round).map(p => [p.id, 'square']));
   const owes = new Set(), waits = new Set(), carried = new Set();
   const match = (r, t) => r.from === t.from && r.to === t.to;
   for (const t of tabResults(round).transfers) {
@@ -456,7 +459,8 @@ export function roundStatus(round, rows) {
  * most recent finished round of all, or null.
  */
 export function stripRound(state, { now = Date.now() } = {}) {
-  const shared = lockedRounds(state, { days: STRIP_DAYS, now }).filter(r => tabResults(r).transfers.length);
+  // A round you were just playing had nothing of yours on the Tab, so it's never your strip
+  const shared = lockedRounds(state, { days: STRIP_DAYS, now }).filter(r => tabResults(r).transfers.length && !isJustPlaying(r, meFor(r, state)));
   const round = shared.at(-1);
   if (!round) return null;
   // Your newest round of any kind (a points round after it means it isn't your latest)

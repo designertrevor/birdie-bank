@@ -14,7 +14,7 @@
 // People you've played with are cached on the phone by account (state.profiles), and which
 // account each player id is in state.accountOf, which people-links.js uses so two player records
 // on one account are one person.
-import { GAMES, roundResults } from './round.js';
+import { GAMES, isJustPlaying, roundResults } from './round.js';
 import { countsMoney, hasCashBet, onTab, tabResults } from './play-for.js';
 import { linksOf } from './people-links.js';
 import { meFor } from './format.js';
@@ -156,7 +156,8 @@ export function profileStats(state, ids = null) {
     // A Big Game's round has your money from the whole game on the one round it goes on, as History does
     try { res = withBigMoney(state, r, roundResults(r)); amt = res.balances[seat] || 0; } catch { continue; }
     // A Big Game's round with no money on it (the game's goes on another, or isn't decided) is a round played, not a result
-    const noMoney = bigNoMoney(state, r);
+    // ...and so is one you were just playing: no bet, so no result
+    const noMoney = bigNoMoney(state, r) || isJustPlaying(r, seat);
     rounds++;
     const at = r.finishedAt || r.createdAt || null;
     if (at && (since == null || at < since)) since = at;
@@ -170,7 +171,7 @@ export function profileStats(state, ids = null) {
       if (best == null || cash > best) best = cents(cash);
     }
     for (const p of r.players) if (p.id !== seat && !mine.has(p.id)) friends.add(L.personOf(p.id));
-    if (GAMES[r.game]) {
+    if (GAMES[r.game] && !isJustPlaying(r, seat)) {
       const g = games.get(r.game) || { rounds: 0, last: 0 };
       g.rounds++; g.last = Math.max(g.last, at || 0);
       games.set(r.game, g);

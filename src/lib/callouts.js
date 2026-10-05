@@ -10,7 +10,7 @@
 //  • Points and reward rounds are never dollars: season money is what the Tab has (tabResults).
 // There's an off switch (settings.callouts) on the card and in Settings. Pure, unit tested in
 // callouts.test.js.
-import { gameKeys, gameView, oneBall, roundResults, scoreSummary, scorers, skinsKinds, skinsTable } from './round.js';
+import { gameKeys, gameView, isJustPlaying, oneBall, roundResults, scoreSummary, scorers, skinsKinds, skinsTable } from './round.js';
 import { myIds } from './format.js';
 import { money } from './golf.js';
 import { nameOf, outstanding } from './ledger.js';
@@ -135,7 +135,9 @@ export function calloutCandidates(state, now = Date.now()) {
   // The last round: an eagle, or the most real birdies (a one-ball game's scores are a team's, so not there)
   if (!oneBall(last.game)) {
     let best = null;
+    // Nobody just playing is called out, however well they played: no pressure means no spotlight
     for (const p of scorers(last)) {
+      if (isJustPlaying(last, p.id) && !isMe(p.id)) continue;
       const s = scoreSummary(last, p.id);
       const score = s.eagles * 10 + s.birdies;
       if (score > 0 && (!best || score > best.score)) best = { id: p.id, score, eagles: s.eagles, birdies: s.birdies };
@@ -164,7 +166,8 @@ export function calloutCandidates(state, now = Date.now()) {
     let streak = 0;
     for (const x of rounds) {
       const seat = x.players.find(q => (k === 'me' ? isMe(q.id) : who(q.id) === k));
-      if (!seat) continue;
+      // A round they were just playing had nothing to win, so it neither adds to a streak nor ends one
+      if (!seat || isJustPlaying(x, seat.id)) continue;
       if (!winnersOf(x).includes(seat.id)) break;
       streak++;
     }
@@ -200,6 +203,7 @@ export function calloutCandidates(state, now = Date.now()) {
   for (const r of season) {
     if (!onTab(r)) continue;
     const seat = r.players.find(p => isMe(p.id));
+    if (seat && isJustPlaying(r, seat.id)) continue;
     // A Big Game's round has your money from the whole game in it (big-money.js)
     const v = seat ? withBigMoney(state, r, tabResults(r)).balances[seat.id] ?? 0 : 0;
     if (Math.abs(v) > EPS || playForOf(r).kind === 'money') moneyRounds++;

@@ -35,7 +35,7 @@
 // the stake is trip money like the expenses (cup-stake.js): on the Tab, in Settle the trip and the
 // published plan, paid like the rest. The rounds' own money works exactly as on a money trip. Pure,
 // unit tested.
-import { GAMES, roundResults } from './round.js';
+import { GAMES, bettors, isJustPlaying, roundResults } from './round.js';
 import { onTab, playForOf, tabResults } from './play-for.js';
 import { expenseDebts, fewestPayments, nameOf } from './ledger.js';
 import { canonicalOf, codeOf, finishedAt, openByPair, sharedRounds } from './pair-debts.js';
@@ -196,7 +196,8 @@ function togetherOf(state, rounds) {
   const who = canonicalOf(state);
   const out = new Set();
   for (const r of moneyDone(rounds)) {
-    const ids = [...new Set(r.players.map(p => who(p.id)))];
+    // Someone just playing had no money with anyone
+    const ids = [...new Set(bettors(r).map(p => who(p.id)))];
     for (let i = 0; i < ids.length; i++) for (let j = i + 1; j < ids.length; j++) out.add(pairKey(ids[i], ids[j]));
   }
   return out;
@@ -221,6 +222,8 @@ function pointsOf(state, rounds) {
   const out = {};
   for (const r of pointsDone(rounds)) {
     for (const [pid, v] of Object.entries(roundResults(r).balances)) {
+      // Someone just playing had no points in it, so they get no 0 pts line
+      if (isJustPlaying(r, pid)) continue;
       const k = who(pid);
       out[k] = Math.round(((out[k] || 0) + v) * 100) / 100;
     }
@@ -450,7 +453,7 @@ export function tripStatus(state, id, { now = Date.now() } = {}) {
   // A Big Game is played until every group is in on this phone: only then is there money to settle
   if (bigSt && !bigSt.final && (phase === 'ready' || phase === 'square')) phase = 'on';
   const lastPaid = Math.max(0, ...paid.map(s => s.at || 0), ...(cup ? cup.marks.map(m => m.at) : []));
-  const standings = [...people.entries()].filter(([pid]) => money.some(r => r.players.some(p => who(p.id) === pid)))
+  const standings = [...people.entries()].filter(([pid]) => money.some(r => bettors(r).some(p => who(p.id) === pid)))
     .map(([pid, v]) => ({ id: pid, amount: (bal[pid] || 0) / 100, rounds: v.rounds }));
   // The stake folds into each person's trip total, once the cup is decided
   if (cup?.stakeOn) {

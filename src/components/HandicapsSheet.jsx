@@ -7,7 +7,7 @@ import { Icon, Numpad, Sheet, Toggle, useUI } from './ui.jsx';
 import { StrokesSetup } from './StrokesSetup.jsx';
 import { update, useStore } from '../lib/store.js';
 import { findCourse, teeDotStyle } from '../lib/courses.js';
-import { changeHandicaps, sideGamesOf } from '../lib/round.js';
+import { changeHandicaps, isJustPlaying, sideGamesOf } from '../lib/round.js';
 import { STROKE_SIDE_GAMES } from '../lib/allowances.js';
 import { moneyLine, playsLine } from '../lib/hole-fix.js';
 import { buzz } from '../lib/delight.js';
@@ -32,7 +32,8 @@ export function HandicapsSheet({ round, onClose }) {
     === JSON.stringify({ u: round.useHandicaps !== false, h: round.hcPct, x: !!round.halfStrokes, p: round.players, s: round.sideGames ?? null });
   const strokes = same ? null : playsLine(round, after);
   const money = same ? null : moneyLine(round, after);
-  const missing = useHc ? after.players.filter(p => p.index == null && p.courseHcOverride == null) : [];
+  // Someone just playing gets no strokes, so they have no handicap to set here
+  const missing = useHc ? after.players.filter(p => !isJustPlaying(round, p.id) && p.index == null && p.courseHcOverride == null) : [];
   const padPlayer = after.players.find(p => p.id === padFor);
 
   const apply = () => {
@@ -62,7 +63,7 @@ export function HandicapsSheet({ round, onClose }) {
           <>
             <div className="sec-label">Players</div>
             <div style={{ padding: '0 16px' }}>
-              {after.players.map(p => {
+              {after.players.filter(p => !isJustPlaying(round, p.id)).map(p => {
                 const none = p.index == null && p.courseHcOverride == null;
                 return (
                   <div key={p.id} className="list-item player-pick on hc-row">

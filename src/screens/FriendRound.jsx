@@ -42,7 +42,8 @@ export default function FriendRound({ code }) {
   }
   const watch = () => { if (watchRound(code, row)) showToast('Watching. It stays at the top of your feed.'); };
   const stop = () => { stopWatching(code); showToast('Stopped watching', { label: 'Undo', run: () => watchRound(code, row) }); };
-  const hidden = view.isMoney && view.players.some(p => p.amountText == null);
+  // Someone just playing never has an amount, so they never make the money look hidden
+  const hidden = view.isMoney && view.players.some(p => p.amountText == null && !p.justPlaying);
   const done = view.status === 'done';
   return (
     <Screen>
@@ -76,11 +77,14 @@ export default function FriendRound({ code }) {
             const seat = view.round.players.find(x => x.id === p.id);
             return (
               <li key={p.id} className="fr-board-row">
-                <span className="fr-place" role="img" aria-label={`Place ${p.place}`}>{p.place}</span>
+                {p.place == null
+                  ? <span className="fr-place" aria-hidden="true">–</span>
+                  : <span className="fr-place" role="img" aria-label={`Place ${p.place}`}>{p.place}</span>}
                 <Avatar id={p.id} name={p.name} seat={seat} size="sm" />
                 <span className="fr-name">
                   <span className="fr-name-main">{p.name}{p.friend && <span className="fr-friend" role="img" aria-label=", a friend"><Icon name="user-check" fill /></span>}</span>
                   {p.team && <span className="fr-name-sub">{p.team}</span>}
+                  {p.justPlaying && <span className="fr-name-sub">Just playing</span>}
                 </span>
                 <span className="fr-par">
                   {p.toPar == null

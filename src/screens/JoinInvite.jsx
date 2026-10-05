@@ -3,7 +3,7 @@
 // Not on the list? Ask the scorekeeper for a seat and wait here for them to let you in.
 // No organizer onboarding. They become "me" using their player from the shared round.
 import { useEffect, useMemo, useState } from 'react';
-import { BallIllo, Icon, Screen } from '../components/ui.jsx';
+import { BallIllo, Icon, Screen, Segmented } from '../components/ui.jsx';
 import { Avatar } from '../components/Avatar.jsx';
 import { LinkBrand, LinkHowTo } from '../components/LinkBrand.jsx';
 import { useGroupAvatars } from '../lib/useAvatars.js';
@@ -12,7 +12,9 @@ import { useNav } from '../lib/nav.js';
 import { afterJoin, inviteBetLines, teamLine } from '../lib/join.js';
 import { cancelSeatRequest, fetchShared, joinShared, requestSeat, watchSeatRequest } from '../lib/sync.js';
 import { assemble, cleanRequestName } from '../lib/sync-model.js';
-import { GAMES, addPlayerProblem } from '../lib/round.js';
+import { GAMES, addPlayerProblem, isJustPlaying } from '../lib/round.js';
+import { JUST_PLAYING, JUST_PLAYING_HELP, JUST_PLAYING_TAG, addJustPlayingProblem, cardOnlyRound } from '../lib/just-playing.js';
+import { addRound } from '../lib/rounds.js';
 import { roundStakeLines } from '../lib/stakes.js';
 import { firstName, gameLabel, strokesLabel } from '../lib/format.js';
 import { payFields } from '../lib/pay.js';
@@ -53,6 +55,9 @@ export default function JoinInvite({ code, onJoined, onSkip, setUp = false }) {
   // Said they're under 18 when taking a seat in a money round (age.js): they can still watch
   const [minor, setMinor] = useState(false);
   const checkAge = useAgeCheck();
+  // "Add me" just playing: on the card with no bet (just-playing.js). Null until picked: the default
+  // is what the round can take
+  const [casualPick, setCasualPick] = useState(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -95,6 +100,26 @@ export default function JoinInvite({ code, onJoined, onSkip, setUp = false }) {
     const answer = await checkAge();
     if (answer === 'under') setMinor(true);
     return answer === 'adult';
+  };
+
+  // "Just keep my own score": a card of your own on the same course, no game and nothing shared
+  const ownCard = () => {
+    const meta = found?.meta;
+    if (!meta) return;
+    const id = uid('r_');
+    update(s => {
+      let me = setUp ? s.players?.[s.me] : null;
+      if (!me) {
+        const pid = uid('p_');
+        me = { id: pid, name: cleanRequestName(name) || 'Me', index: null, venmo: '', createdAt: Date.now() };
+        s.players[pid] = me;
+        s.me = pid;
+        s.onboarded = true;
+      }
+      addRound(s, cardOnlyRound({ id, meta, me: { id: me.id, name: me.name, index: me.index ?? null } }));
+    });
+    saveSeat(code, null);
+    onJoined(id, false);
   };
 
   // Waiting on the scorekeeper: watch the request, and once they let you in, take the seat
@@ -162,6 +187,25 @@ export default function JoinInvite({ code, onJoined, onSkip, setUp = false }) {
     );
   }
 
+  if (step === 'own') {
+    return (
+      <Screen className="onboard">
+        <div className="scroll onboard-body join-body">
+          <h1 className="onboard-title join-h">Just keep your own score</h1>
+          <p className="onboard-text join-p">Your own card at {meta.course?.name || 'the course'}, {meta.holes.length} holes. No game and no bets: just your score, hole by hole. The group’s round carries on without you in it.</p>
+          {!setUp && <>
+            <label className="field-label" htmlFor="ji-own">Your name</label>
+            <input id="ji-own" className="name-input" value={name} onChange={e => setName(e.target.value)} placeholder="e.g. Sam" autoComplete="given-name" maxLength={24} />
+          </>}
+        </div>
+        <div className="cta-wrap">
+          <button className="full-btn" disabled={!setUp && !cleanRequestName(name)} onClick={ownCard}>Start my card <Icon name="arrow-right" /></button>
+          <button className="full-btn outline" onClick={() => setStep('card')}>Back</button>
+        </div>
+      </Screen>
+    );
+  }
+
   if (step === 'watch') {
     return (
       <Screen className="onboard">
@@ -199,14 +243,18 @@ export default function JoinInvite({ code, onJoined, onSkip, setUp = false }) {
   }
 
   if (step === 'ask') {
-    const problem = round ? addPlayerProblem(round) : null;
+    const betProblem = round ? addPlayerProblem(round) : null;
+    const jpProblem = round ? addJustPlayingProblem(round) : null;
+    // A game that can't take another betting player (set sides, or a full group) can still take someone just playing
+    const casual = !jpProblem && (casualPick ?? !!betProblem);
+    const problem = casual ? null : betProblem;
     const send = async () => {
       if (!(await okToPlay())) return;
       setBusy(true); setAskErr(false);
       try {
         const clean = cleanRequestName(name);
-        const no = await requestSeat(code, clean);
-        saveSeat(code, { no, name: clean });
+        const no = await requestSeat(code, clean, { justPlaying: casual });
+        saveSeat(code, { no, name: clean, ...(casual ? { justPlaying: true } : {}) });
         setStep('waiting');
       } catch { setAskErr(true); }
       setBusy(false);
@@ -223,7 +271,17 @@ export default function JoinInvite({ code, onJoined, onSkip, setUp = false }) {
             </>
           ) : (
             <>
-              <p className="onboard-text join-p">Tell {scorekeeper} who you are. They get a note on their phone and give you a seat, and your money counts from the hole you start on.</p>
+              <p className="onboard-text join-p">{casual
+                ? <>Tell {scorekeeper} who you are. They get a note on their phone and put you on the card, with no bet.</>
+                : <>Tell {scorekeeper} who you are. They get a note on their phone and give you a seat, and your money counts from the hole you start on.</>}</p>
+              {!jpProblem && (
+                <div className="join-how">
+                  <div className="eyebrow" id="ji-how">How do you want to play?</div>
+                  <Segmented label="How do you want to play?" className="press-mode-row" btn="pm-btn" value={casual ? 'casual' : 'bet'} onChange={v => setCasualPick(v === 'casual')}
+                    options={[{ value: 'bet', label: 'In the games', disabled: !!betProblem }, { value: 'casual', label: JUST_PLAYING }]} />
+                  <p className="field-help">{casual ? `${JUST_PLAYING_HELP}${betProblem ? ` ${betProblem}` : ''}` : 'Your money counts like everyone’s.'}</p>
+                </div>
+              )}
               <label className="field-label" htmlFor="ji-ask">Your name</label>
               <input id="ji-ask" className="name-input" value={name} onChange={e => { setName(e.target.value); setAskErr(false); }} placeholder="e.g. Sam" autoComplete="given-name" maxLength={24} />
               {askErr && (
@@ -259,7 +317,7 @@ export default function JoinInvite({ code, onJoined, onSkip, setUp = false }) {
           <BallIllo className="onboard-illo" face={step !== 'gone'} />
           <h1 className="onboard-title join-h" aria-live="polite">{title}</h1>
           <p className="onboard-text">
-            {step === 'waiting' && (busy ? 'Taking you to your seat.' : <>Asked for a seat as {pending?.name || name}. Keep this open: you’ll go straight in when {scorekeeper} says yes.</>)}
+            {step === 'waiting' && (busy ? 'Taking you to your seat.' : <>Asked for a seat as {pending?.name || name}{pending?.justPlaying ? ', just playing' : ''}. Keep this open: you’ll go straight in when {scorekeeper} says yes.</>)}
             {step === 'no' && <>{keeperFirst || 'The scorekeeper'} didn’t add you to this one. You can still follow along live.</>}
             {step === 'gone' && <>{host || 'The scorekeeper'} stopped sharing this round.</>}
           </p>
@@ -281,6 +339,8 @@ export default function JoinInvite({ code, onJoined, onSkip, setUp = false }) {
     const team = teamOf(seat.id);
     const mates = team ? team.players.filter(x => x !== seat.id).map(x => firstName(meta.players.find(p => p.id === x)?.name)).filter(Boolean) : [];
     const from = meta.joined?.[seat.id];
+    // A seat that's just playing: on the card, out of every bet
+    const casualSeat = isJustPlaying(meta, seat.id);
     return (
       <Screen className="onboard">
         {brand}
@@ -288,6 +348,13 @@ export default function JoinInvite({ code, onJoined, onSkip, setUp = false }) {
           <div className="join-confirm">
             <Avatar base="join-avatar" model={faces.get(seat.id)} name={seat.name} size="lg" />
             <h1 className="onboard-title join-h">You’re {firstName(seat.name)}</h1>
+            {casualSeat ? (
+              <ul className="join-facts">
+                <li><Icon name="smiley" fill /> {JUST_PLAYING}. {JUST_PLAYING_HELP}</li>
+                {from != null && <li><Icon name="user-plus" fill /> On the card from hole {from}</li>}
+                <li><Icon name={game?.icon || 'golf'} fill /> The group plays {game ? gameLabel(meta) : 'golf'}. You’re out of it.</li>
+              </ul>
+            ) : (
             <ul className="join-facts">
               {handicaps && !big && <li><Icon name="golf" fill /> {strokesLabel(seat.plays)}</li>}
               {big && bigInvite(meta, money, seat.id)?.strokes && <li><Icon name="golf" fill /> {bigInvite(meta, money, seat.id).strokes}</li>}
@@ -298,8 +365,9 @@ export default function JoinInvite({ code, onJoined, onSkip, setUp = false }) {
               {/* Your own side bets, so nobody walks onto the tee not knowing they have one */}
               {inviteBetLines(meta, seat.id).map(l => <li key={l}><Icon name="hand-coins" fill /> Side bet: {l}</li>)}
             </ul>
+            )}
           </div>
-          {handicaps && <p className="field-help">Strokes look wrong? Tell {scorekeeper} before you tee off.</p>}
+          {handicaps && !casualSeat && <p className="field-help">Strokes look wrong? Tell {scorekeeper} before you tee off.</p>}
         </div>
         <div className="cta-wrap">
           {joinErr && <p className="field-error" role="alert" style={{ textAlign: 'center' }}>Couldn’t join. Check your signal and try again.</p>}
@@ -321,7 +389,8 @@ export default function JoinInvite({ code, onJoined, onSkip, setUp = false }) {
             {meta.players.map(p => {
               const team = teamOf(p.id);
               const from = meta.joined?.[p.id];
-              const facts = [handicaps ? strokesLabel(p.plays) : null, team?.name, from != null ? `From hole ${from}` : null].filter(Boolean);
+              const casualSeat = isJustPlaying(meta, p.id);
+              const facts = [casualSeat ? JUST_PLAYING_TAG : handicaps ? strokesLabel(p.plays) : null, team?.name, from != null ? `From hole ${from}` : null].filter(Boolean);
               return (
                 <button key={p.id} className="seat-tile" aria-label={[`I’m ${p.name}`, ...facts].join(', ')} onClick={() => { setSeat(p); setStep('confirm'); }}>
                   <Avatar base="join-avatar" model={faces.get(p.id)} name={p.name} />
@@ -387,6 +456,8 @@ export default function JoinInvite({ code, onJoined, onSkip, setUp = false }) {
       <div className="cta-wrap">
         <button className="full-btn" onClick={() => setStep('seat')}>Pick your seat <Icon name="arrow-right" /></button>
         <button className="full-btn outline" disabled={busy} onClick={() => (setUp ? join(null) : setStep('watch'))}>{busy ? 'Joining…' : 'I’m just watching'}</button>
+        {/* Not up for a bet at all: a card of your own on the same course (just-playing.js) */}
+        {!done && <button className="text-link own-card-link" onClick={() => setStep('own')}>Just keep my own score</button>}
         {setUp && <button className="sheet-cancel" style={{ width: '100%', margin: 0 }} onClick={onSkip}>Not now</button>}
         {setUp && joinErr && <p className="field-error" role="alert" style={{ textAlign: 'center' }}>Couldn’t join. Check your signal and try again.</p>}
       </div>

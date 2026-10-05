@@ -12,7 +12,8 @@ import { useNearbyCourses } from '../lib/useNearbyCourses.js';
 import { mergeNear, milesLabel } from '../lib/nearby.js';
 import NearYou from '../components/NearYou.jsx';
 import RequestCourse from '../components/RequestCourse.jsx';
-import { GAMES, GAME_GROUPS, MAX_GAMES, SIDE_GAMES, createRound, effectiveCourseHc, holesInPlay, oneBall, sideGamesOf } from '../lib/round.js';
+import { GAMES, GAME_GROUPS, MAX_GAMES, SIDE_GAMES, bettors, createRound, effectiveCourseHc, holesInPlay, isJustPlaying, oneBall, sideGamesOf } from '../lib/round.js';
+import { JUST_PLAYING, canJustPlay, cantJustPlay, maxPicked, pickedCheck, pickedLine } from '../lib/just-playing.js';
 import { SideGamesSetup } from '../components/SideGames.jsx';
 import { PairBetsSetup } from '../components/PairBets.jsx';
 import { betsOf, cleanBet, fitSetupBets } from '../lib/pair-bets.js';
@@ -167,6 +168,17 @@ export default function NewRound({ rematch, fromPlan, present, edit = null, ahea
   const [useHc, setUseHc] = useKept('setup:useHc', pre?.useHc ?? false);
   const [startHole, setStartHole] = useKept('setup:startHole', pre?.startHole ?? null);
   const [teams, setTeams] = useKept('setup:teams', pre?.teams ?? null); // arrays of player ids, for team games
+  // Players marked "Just playing, no bet" (just-playing.js): on the card, out of every game. Only the
+  // betting players count for the game's numbers, its teams, its order and its side bets
+  const [justPlaying, setJustPlaying] = useKept('setup:justPlaying', () => pre?.justPlaying ?? []);
+  const casualIds = canJustPlay(game) ? picked.filter(pid => justPlaying.includes(pid)) : [];
+  const betting = casualIds.length ? picked.filter(pid => !casualIds.includes(pid)) : picked;
+  // The playing order and teams change only the betting players: anyone just playing keeps their place after them
+  const setBetting = fn => setPicked(p => {
+    const jp = p.filter(pid => casualIds.includes(pid));
+    const next = typeof fn === 'function' ? fn(p.filter(pid => !jp.includes(pid))) : fn;
+    return [...next, ...jp];
+  });
   // Side games on top of the main game: [{ game, settings }] (start-now setup only, not plans)
   // "Play this now" on a side game's rule page (Closest to the pin, say) starts with it added, from your usual settings
   const [sideGames, setSideGames] = useKept('setup:sideGames', () => structuredClone(pre?.sideGames
@@ -204,7 +216,7 @@ export default function NewRound({ rematch, fromPlan, present, edit = null, ahea
     if (planning || !c || !GAMES[game] || !Object.keys(state.challenges || {}).length) return [];
     const draft = {
       game, holes: holesInPlay(c, holesCount, nine, startHole), playFor, bets: setupBets, betsGone: chOff,
-      players: picked.map(pid => ({ id: pid, name: state.players[pid]?.name || '?' })), ...(oneBall(game) && teams ? { teams } : {}),
+      players: betting.map(pid => ({ id: pid, name: state.players[pid]?.name || '?' })), ...(oneBall(game) && teams ? { teams } : {}),
     };
     return challengesForRound(state, draft, { planId: fromPlan || null, idOf: pre?.idOf || null }).map(f => f.bet);
   })();
@@ -226,8 +238,8 @@ export default function NewRound({ rematch, fromPlan, present, edit = null, ahea
   const tripPick = tripOn && countOn ? tripOn : null;
   // A team points trip: the round's matches from the trip's teams, changeable here (cup.js)
   const [cupPick, setCupPick] = useKept('setup:cupPick', null); // { sig, cup } once changed
-  const cupPlayers = picked.map(pid => state.players[pid]).filter(Boolean).map(p => ({ id: p.id, name: p.name }));
-  const cupSig = `${game}|${picked.join(',')}|${tripPick?.id || ''}`;
+  const cupPlayers = betting.map(pid => state.players[pid]).filter(Boolean).map(p => ({ id: p.id, name: p.name }));
+  const cupSig = `${game}|${betting.join(',')}|${tripPick?.id || ''}`;
   const tripCup = !planning && tripPick ? cupOf(tripPick) : null;
   // Foursomes (an Alternate shot round): the match is the round's two teams, so its partners are the teams
   const foursomes = !!tripCup && game === FOURSOMES_GAME;
@@ -237,7 +249,7 @@ export default function NewRound({ rematch, fromPlan, present, edit = null, ahea
   // Else a group of the trip's schedule today, from the trip's teams (a friend's group teeing off on their own phone)
   const schedHit = tripCup && !planCup && !(fromSession?.trip === tripPick.id) ? scheduledCupFor(state, tripPick, cupPlayers, { date: isoDate(), game, hour: new Date().getHours() }) : null;
   const cupStart = tripCup ? planCup || schedHit?.cup || withSessionWorth(startingCup(state, { game, players: cupPlayers }, tripPick), fromSession, tripPick.id) : null;
-  const cupPairs = c => (c && c.sides.every(x => x.length === 2) && c.sides.flat().length === picked.length && c.sides.flat().every(pid => picked.includes(pid)) ? c.sides.map(x => [...x]) : null);
+  const cupPairs = c => (c && c.sides.every(x => x.length === 2) && c.sides.flat().length === betting.length && c.sides.flat().every(pid => betting.includes(pid)) ? c.sides.map(x => [...x]) : null);
   const roundCup = !tripCup ? null
     : foursomes ? (teams ? cleanRoundCup({ game, players: cupPlayers, teams: teams.map(t => ({ players: t })), cup: cupStart || { kind: 'foursomes', sides: [[], []] } }) : cupStart) || { kind: 'foursomes', sides: [[], []] }
     : cupPick?.sig === cupSig ? cleanRoundCup({ game, players: cupPlayers, cup: cupPick.cup })
@@ -277,7 +289,7 @@ export default function NewRound({ rematch, fromPlan, present, edit = null, ahea
     // On a team points trip: the partners start from the trip's teams, rotated (cup.js), for
     // foursomes and for any game played two against two (a 2 v 2 Nassau)
     const twoTeams = !!cfg && (Array.isArray(cfg.count) ? cfg.count[0] <= 2 && cfg.count[1] >= 2 : cfg.count === 2);
-    if (!teams || wrongCount || teams.flat().length !== picked.length || teams.flat().some(pid => !picked.includes(pid))) setTeams(((foursomes || (tripCup && twoTeams)) && cupPairs(cupStart)) || defaultTeams(game, picked));
+    if (!teams || wrongCount || teams.flat().length !== betting.length || teams.flat().some(pid => !betting.includes(pid))) setTeams(((foursomes || (tripCup && twoTeams)) && cupPairs(cupStart)) || defaultTeams(game, betting));
     setStep(3);
   };
   // Step bar taps: any earlier step, or a later one already reached whose earlier steps are still filled in
@@ -285,7 +297,7 @@ export default function NewRound({ rematch, fromPlan, present, edit = null, ahea
     if (i <= step) return true;
     if (i > reached || !game || !course) return false;
     if (planning) return true;
-    return i < 3 || (picked.length >= GAMES[game].min && picked.length <= GAMES[game].max);
+    return i < 3 || pickedCheck(game, picked, casualIds).valid;
   };
   const goTo = i => {
     if (!canGo(i)) return;
@@ -358,10 +370,11 @@ export default function NewRound({ rematch, fromPlan, present, edit = null, ahea
   // A round already in progress is never touched: it stays saved and you can switch back to it
   const start = async () => {
     const s = getState();
-    const noHc = useHc && game !== 'bbb' ? orderedPicked.filter(pid => s.players[pid]?.index == null && hcOverride[pid] == null) : [];
+    // Only the betting players' handicaps matter: someone just playing gets no strokes
+    const noHc = useHc && game !== 'bbb' ? betting.filter(pid => s.players[pid]?.index == null && hcOverride[pid] == null) : [];
     if (noHc.length) {
       const names = noHc.map(pid => s.players[pid]?.name || '?');
-      const all = noHc.length === orderedPicked.length;
+      const all = noHc.length === betting.length;
       const ok = await ask({
         title: all ? 'Nobody has a handicap' : `${listNames(names)} ${noHc.length === 1 ? 'has' : 'have'} no handicap`,
         text: all ? 'Everyone plays as scratch (0), so nobody gets strokes. Add handicaps, or play without them.'
@@ -378,7 +391,10 @@ export default function NewRound({ rematch, fromPlan, present, edit = null, ahea
     const { shareAmounts: _personal, betPrompt: _prompt, halfStrokes: _half, ...settings } = structuredClone(opts);
     const sides = sidesFor(game);
     const halfStrokes = !!opts.halfStrokes && halfStrokesOffered(game, sides);
-    const round = createRound({ id, game, course, holesCount, nine, startHole, players, settings, hcPct: opts.hcPct, useHandicaps: useHc && !(noHc.length && noHc.length === orderedPicked.length), teams: GAMES[game].teams ? teams : null, halfStrokes });
+    const round = createRound({
+      id, game, course, holesCount, nine, startHole, players, settings, hcPct: opts.hcPct, useHandicaps: useHc && !(noHc.length && noHc.length === betting.length),
+      teams: GAMES[game].teams ? teams : null, halfStrokes, justPlaying: casualIds,
+    });
     if (sides.length) round.sideGames = structuredClone(sides);
     if (playFor) round.playFor = structuredClone(playFor);
     // Side bets whose two players are both still in the round (setup's list can outlive a change of players),
@@ -451,6 +467,7 @@ export default function NewRound({ rematch, fromPlan, present, edit = null, ahea
     setUseHc(p.useHc);
     setStartHole(null);
     setTeams(p.teams);
+    setJustPlaying(p.justPlaying || []);
     setSideGames(structuredClone(p.sideGames || []));
     setPlayFor(p.playFor ?? null);
     setMissing(p.missing || []);
@@ -529,12 +546,13 @@ export default function NewRound({ rematch, fromPlan, present, edit = null, ahea
       {step === 3 && planning && course && <VoteStep game={game} holesCount={holesCount} opts={opts} onPlan={makePlan} ballot={ballot} initialSides={planSides.length ? planSides : sidesFor(game).map(sg => sg.game)} playFor={playFor} setPlayFor={setPlayFor} tripRow={tripRow} />}
       {step === 1 && !planning && <CourseStep editor={editor} openEditor={openEditor} closeEditor={closeEditor} courseId={courseId} setCourseId={id => { setCourseId(id); setTees({}); setStartHole(null); }} holesCount={holesCount} nine={nine} setNine={setNine} onNext={() => setStep(2)} />}
       {step === 2 && !planning && course && (
-        <PlayersStep game={g} course={course} holesCount={holesCount} nine={nine} picked={picked} setPicked={setPicked}
+        <PlayersStep game={g} gameKey={game} course={course} holesCount={holesCount} nine={nine} picked={picked} setPicked={setPicked}
           tees={tees} setTees={setTees} hcOverride={hcOverride} setHcOverride={setHcOverride}
+          justPlaying={casualIds} setJustPlaying={setJustPlaying}
           useHc={useHc} setUseHc={setUseHc} noHandicaps={game === 'bbb'} onNext={toBets} />
       )}
       {step === 3 && !planning && course && (
-        <SetupStep game={game} course={course} holesCount={holesCount} nine={nine} picked={picked} setPicked={setPicked}
+        <SetupStep game={game} course={course} holesCount={holesCount} nine={nine} picked={betting} setPicked={setBetting} casual={casualIds}
           opts={opts} setOpts={setOpts} useHc={useHc} setUseHc={setUseHc} startHole={startHole} setStartHole={setStartHole} onStart={start} onLater={fromPlan ? null : () => later()}
           teams={teams} setTeams={setTeams} sideGames={sidesFor(game)} setSideGames={editSides} playFor={playFor} setPlayFor={setPlayFor}
           tees={tees} hcOverride={hcOverride} defaultTee={defaultTee} pairBets={shownBets} setPairBets={editBets}
@@ -729,7 +747,7 @@ export function CourseStep({ editor, openEditor, closeEditor, courseId, setCours
 
 // ---------------------------------------------------------------------------
 
-function PlayersStep({ game, course, holesCount, nine, picked, setPicked, tees, setTees, hcOverride, setHcOverride, useHc, setUseHc, noHandicaps = false, onNext }) {
+function PlayersStep({ game, gameKey, course, holesCount, nine, picked, setPicked, tees, setTees, hcOverride, setHcOverride, justPlaying = [], setJustPlaying, useHc, setUseHc, noHandicaps = false, onNext }) {
   const state = useStore();
   const { showToast } = useUI();
   const players = sortedPlayers(state);
@@ -737,26 +755,31 @@ function PlayersStep({ game, course, holesCount, nine, picked, setPicked, tees, 
   const [adding, setAdding] = useState(false);
   const [hcFor, setHcFor] = useState(null);
   const holes = useMemo(() => holesInPlay(course, holesCount, nine), [course, holesCount, nine]);
+  // Past the game's own cap when the extra people can be just playing (just-playing.js)
+  const most = maxPicked(gameKey);
+  const casualOk = canJustPlay(gameKey);
+  const toggleCasual = pid => setJustPlaying(l => (l.includes(pid) ? l.filter(x => x !== pid) : [...l, pid]));
 
   const toggle = pid => setPicked(p => {
     if (p.includes(pid)) return p.filter(x => x !== pid);
-    if (p.length >= game.max) { showToast(`${game.name} takes up to ${game.max} players`); return p; }
+    // Past the game's own cap the extra people are just playing, so the cap is the round's, not the game's
+    if (p.length >= most) { showToast(most > game.max ? `A round is for up to ${most} players` : `${game.name} takes up to ${most} players`); return p; }
     return [...p, pid];
   });
   const pickCrew = c => {
     const ids = c.playerIds.filter(id => state.players[id]);
     const merged = [...new Set([...picked, ...ids])];
-    if (merged.length > game.max) { showToast(game.min === game.max ? `${game.name} is for exactly ${game.max}. Remove someone first` : `${game.name} takes up to ${game.max} players. Remove someone first`); return; }
+    if (merged.length > most) { showToast(game.min === game.max && most === game.max ? `${game.name} is for exactly ${game.max}. Remove someone first` : most > game.max ? `A round is for up to ${most} players. Remove someone first` : `${game.name} takes up to ${most} players. Remove someone first`); return; }
     setPicked(merged);
   };
-  const count = picked.length;
-  const valid = count >= game.min && count <= game.max;
-  const needText = count < game.min
-    ? `Add ${game.min - count} more player${game.min - count === 1 ? '' : 's'}`
-    : count > game.max ? `Remove ${count - game.max} player${count - game.max === 1 ? '' : 's'}` : null;
+  const check = pickedCheck(gameKey, picked, justPlaying);
+  const valid = check.valid;
+  const needText = check.text;
 
   const showHc = useHc && !noHandicaps;
-  const noHc = showHc ? picked.filter(pid => courseHc(pid).source === 'none') : [];
+  // Someone just playing gets no strokes, so their handicap never matters
+  const noHc = showHc ? picked.filter(pid => !justPlaying.includes(pid) && courseHc(pid).source === 'none') : [];
+  const bettingCount = picked.length - justPlaying.length;
   function courseHc(pid) {
     const p = state.players[pid];
     const tee = course.tees?.find(t => t.name === (tees[pid] || firstTee(course)?.name));
@@ -782,10 +805,14 @@ function PlayersStep({ game, course, holesCount, nine, picked, setPicked, tees, 
             <p className="field-help">{useHc ? 'Better players give strokes on the hardest holes. Check each handicap below.' : 'Everyone plays straight up, no strokes.'}</p>
           </div>
         )}
-        <div className="sec-label">Players · {count} picked ({game.min === game.max ? game.min : `${game.min}–${game.max}`})</div>
+        <div className="sec-label">Players · {pickedLine(gameKey, picked, justPlaying)}</div>
+        {casualOk ? (
+          picked.length > 1 && <p className="field-help pad jp-step-help">Someone not up for a bet? Mark them <strong>{JUST_PLAYING}</strong>. They’re on the card with everyone and out of every game.</p>
+        ) : cantJustPlay(gameKey) && <p className="field-help pad jp-step-help">{cantJustPlay(gameKey)}</p>}
         <div className="pick-list">
           {players.map(p => {
             const on = picked.includes(p.id);
+            const casual = on && justPlaying.includes(p.id);
             const hc = on ? courseHc(p.id) : null;
             const hcNote = hc && { set: ' · edited', index: ' · from index', none: ' · none, plays as 0', whs: '' }[hc.source];
             return (
@@ -793,7 +820,7 @@ function PlayersStep({ game, course, holesCount, nine, picked, setPicked, tees, 
                 <button className="pick-main" onClick={() => toggle(p.id)} aria-pressed={on}>
                   <div className="row-main">
                     <div className="li-name">{playerLabel(p, state.me)}</div>
-                    <div className="li-sub">{p.index == null ? 'No handicap index' : `Index ${formatIndex(p.index)}`}</div>
+                    <div className="li-sub">{casual ? JUST_PLAYING : p.index == null ? 'No handicap index' : `Index ${formatIndex(p.index)}`}</div>
                   </div>
                   <PickMark on={on} />
                 </button>
@@ -811,7 +838,13 @@ function PlayersStep({ game, course, holesCount, nine, picked, setPicked, tees, 
                         })}
                       </div>
                     )}
-                    {showHc && <button className={`hc-chip ${hc.source === 'none' ? 'missing' : ''}`} onClick={() => setHcFor(p.id)}
+                    {/* Out of every bet: a selection chip like the tee's, filled with a check when it's on */}
+                    {casualOk && (bettingCount > 1 || casual) && (
+                      <button className={`pill-btn sm jp-chip ${casual ? 'on' : ''}`} aria-pressed={casual} onClick={() => toggleCasual(p.id)}>
+                        <Icon name={casual ? 'check' : 'smiley'} /> {JUST_PLAYING}
+                      </button>
+                    )}
+                    {showHc && !casual && <button className={`hc-chip ${hc.source === 'none' ? 'missing' : ''}`} onClick={() => setHcFor(p.id)}
                       aria-label={`${p.name}’s ${holesCount === 9 ? '9-hole handicap' : 'course handicap'}: ${hc.value < 0 ? `+${-hc.value}` : hc.value}${hcNote ? hcNote.replace(' · ', ', ') : ''}. Change it`}>
                       {holesCount === 9 ? '9-hole handicap' : 'Course handicap'} <strong>{hc.value < 0 ? `+${-hc.value}` : hc.value}</strong>{hcNote} <Icon name="pencil-simple" />
                     </button>}
@@ -831,7 +864,7 @@ function PlayersStep({ game, course, holesCount, nine, picked, setPicked, tees, 
       <div className="cta-wrap">
         <button className="full-btn" disabled={!valid} onClick={onNext}>{valid ? <>Next: Bets <Icon name="arrow-right" /></> : needText}</button>
       </div>
-      <QuickAddPlayer open={adding} onClose={() => setAdding(false)} onAdded={pid => { setAdding(false); if (picked.length < game.max) setPicked([...picked, pid]); }} />
+      <QuickAddPlayer open={adding} onClose={() => setAdding(false)} onAdded={pid => { setAdding(false); if (picked.length < most) setPicked([...picked, pid]); }} />
       <Numpad open={!!hcFor} title={`${state.players[hcFor]?.name}’s ${holesCount === 9 ? '9-hole ' : ''}course handicap`} initial={hcFor ? courseHc(hcFor).value : ''} allowNegative min={-10} max={60}
         onClose={() => setHcFor(null)} onDone={v => { setHcOverride({ ...hcOverride, [hcFor]: v }); setHcFor(null); }} />
     </>
@@ -883,7 +916,7 @@ function challengeNote(round, bets) {
     : `${who} challenges are in as side bets. Tap one to change it, or take it off for today.`;
 }
 
-function SetupStep({ game, course, holesCount, nine, picked, setPicked, opts, setOpts, useHc, setUseHc, startHole, setStartHole, onStart, onLater = null, teams, setTeams, sideGames = [], setSideGames, playFor = null, setPlayFor,
+function SetupStep({ game, course, holesCount, nine, picked, setPicked, casual = [], opts, setOpts, useHc, setUseHc, startHole, setStartHole, onStart, onLater = null, teams, setTeams, sideGames = [], setSideGames, playFor = null, setPlayFor,
   tees = {}, hcOverride = {}, defaultTee = null, pairBets = [], setPairBets, tripRow = null, tripLink = null }) {
   const state = useStore();
   const [pad, setPad] = useState(null); // {path, title, min, max}
@@ -923,8 +956,11 @@ function SetupStep({ game, course, holesCount, nine, picked, setPicked, opts, se
           <div className="d stake-big">{inUnits({ playFor }, stakeSummary(game, shownOpts, holesCount))}</div>
           {sideGames.length > 0 && <div className="li-sub">{roundStakeLines({ game, settings: shownOpts, sideGames, playFor }).slice(1).map(l => l.line).join(' + ')}</div>}
           {playForLine({ playFor }) && <div className="li-sub">{playForLine({ playFor })}</div>}
-          <div className="li-sub">{course.name}{holesCount === 9 && course.holes.length === 18 ? ` · ${nine === 'front' ? 'Front' : 'Back'} 9` : ''} · Par {holes.reduce((a, h) => a + h.par, 0)} · {picked.length} players</div>
+          <div className="li-sub">{course.name}{holesCount === 9 && course.holes.length === 18 ? ` · ${nine === 'front' ? 'Front' : 'Back'} 9` : ''} · Par {holes.reduce((a, h) => a + h.par, 0)} · {picked.length} players{casual.length ? ` + ${casual.length} just playing` : ''}</div>
         </div>
+        {casual.length > 0 && (
+          <p className="hint-card jp-setup-note"><Icon name="smiley" fill /> {listNames(casual.map(pid => state.players[pid]?.name || '?'))} {casual.length === 1 ? 'is' : 'are'} just playing: on the card, out of the bets below.</p>
+        )}
 
         {/* Play for first, so the bets below are read the right way. Side games follow the round's choice */}
         <PlayForPicker value={playFor} onChange={setPlayFor} />
@@ -1191,7 +1227,9 @@ function VoteStep({ game, holesCount = 18, opts, onPlan, ballot = [], initialSid
 function ReadyStep({ round, onStart, onLater }) {
   const [sharing, setSharing] = useState(false);
   const others = useStore(roundsInProgress).filter(r => r.id !== round.id);
-  const names = (round.teams || round.players).map(p => p.name.split(' ')[0]);
+  // Anyone just playing has a line of their own: they're on the card, not in the game
+  const names = (round.teams || bettors(round)).map(p => p.name.split(' ')[0]);
+  const casualNames = round.players.filter(p => isJustPlaying(round, p.id)).map(p => p.name.split(' ')[0]);
   const first = round.holes[0];
   return (
     <>
@@ -1203,6 +1241,7 @@ function ReadyStep({ round, onStart, onLater }) {
         <div className="block">
           <div className="ready-row"><span>Course</span><b>{round.course.name}{round.nine ? ` · ${round.nine === 'front' ? 'Front' : 'Back'} 9` : ''}</b></div>
           <div className="ready-row"><span>{round.teams ? 'Teams' : 'Players'}</span><b>{round.teams ? round.teams.map(t => t.name).join(' v ') : names.join(', ')}</b></div>
+          {casualNames.length > 0 && <div className="ready-row"><span>Just playing</span><b>{casualNames.join(', ')}</b></div>}
           <div className="ready-row"><span>On the line</span><b>{roundStakeLines(round).map(l => l.line).join(' + ')}</b></div>
           {playForLine(round) && <div className="ready-row"><span>Playing for</span><b>{playForShort(round)}</b></div>}
           <div className="ready-row"><span>Handicaps</span><b>{round.useHandicaps ? `${pctsDiffer(round) ? 'Set by game' : hcPctLabel(round.hcPct)}${round.halfStrokes ? ', half strokes' : ''}` : 'Off'}</b></div>

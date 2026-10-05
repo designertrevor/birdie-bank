@@ -1,7 +1,7 @@
 import { Fragment, useEffect, useRef, useState } from 'react';
 import { Empty, Header, Icon, PickChip, Screen, useUI } from '../components/ui.jsx';
 import { getState, update, useStore } from '../lib/store.js';
-import { GAMES, gameView, holeAtPos, holeComplete, isTeamGame, matchScored, oneBall, teamTable, playsHole, roundLegs, roundNotes, roundResults, scoreSummary, scorers, sideNames, skinsKinds, skinsTable, popsFor, netFor } from '../lib/round.js';
+import { GAMES, bettingRound, cardOnly, gameView, holeAtPos, isJustPlaying, holeComplete, isTeamGame, matchScored, oneBall, teamTable, playsHole, roundLegs, roundNotes, roundResults, scoreSummary, scorers, sideNames, skinsKinds, skinsTable, popsFor, netFor } from '../lib/round.js';
 import { halfStrokesOn, netText, strokesWords } from '../lib/allowances.js';
 import { matchLabel } from '../lib/games.js';
 import { money } from '../lib/golf.js';
@@ -16,7 +16,8 @@ import { teamLineText } from '../lib/reveal.js';
 import { ByGameTable } from '../components/SideGames.jsx';
 import { accountsEnabled, useAccount } from '../lib/cloud.js';
 import { SignInSheet } from '../components/Account.jsx';
-import { HowWasIt, Reveal, RewardCard, SettleUp, ShareCard } from '../components/Finale.jsx';
+import { HowWasIt, NiceRound, Reveal, RewardCard, SettleUp, ShareCard } from '../components/Finale.jsx';
+import { cardFromLine, justPlayingNote, niceRound } from '../lib/just-playing.js';
 import { TripRoundNote } from '../components/Trips.jsx';
 import { countsMoney, playForOf, tabResults, unitFmt } from '../lib/play-for.js';
 import { SaveUsualButton } from '../components/Usuals.jsx';
@@ -73,6 +74,13 @@ export default function RoundDetail({ id, celebrate }) {
     return <Screen><Header title="Round" onBack={nav.pop} /><Empty title="Round not found" text="It may have been deleted. Finished rounds are in History." action={<button className="ec" onClick={nav.pop}>Go back</button>} /></Screen>;
   }
   const own = roundResults(round);
+  // The games' own round, without anyone just playing (round.js bettingRound), for the breakdowns
+  const betRound = bettingRound(round);
+  // You were just playing: a friendly "Nice round" with your score instead of a money reveal
+  const meId = meFor(round, state);
+  const solo = cardOnly(round);
+  const casualMe = round.players.some(p => p.id === meId) && isJustPlaying(round, meId);
+  const nice = casualMe ? niceRound(round, meId) : null;
   // A Big Game's group round with no money of its own shows each player's money from the whole game
   const res = bigGroupName(round) ? bigRoundResults(state, round, own) : own;
   const played = round.holes.filter(h => holeComplete(round, h)).length;
@@ -130,16 +138,17 @@ export default function RoundDetail({ id, celebrate }) {
   );
   const done = () => { finaleStage.delete(id); nav.reset('history'); };
   // Who left and which holes didn't count, said plainly so nobody wonders where the money went
-  const notes = roundNotes(round);
+  const notes = [...roundNotes(round), ...(justPlayingNote(round) ? [{ kind: 'casual', text: justPlayingNote(round) }] : [])];
   const notesEl = notes.length > 0 && (
     <div style={{ marginTop: 12 }}>
-      {notes.map(n => <p key={n.text} className="hint-card"><Icon name={n.kind === 'left' ? 'user-minus' : n.kind === 'joined' ? 'user-plus' : 'warning'} fill /> {n.text}</p>)}
+      {notes.map(n => <p key={n.text} className="hint-card"><Icon name={n.kind === 'left' ? 'user-minus' : n.kind === 'joined' ? 'user-plus' : n.kind === 'casual' ? 'smiley' : 'warning'} fill /> {n.text}</p>)}
     </div>
   );
   if (stage !== 'detail') {
     return (
       <Screen key={stage} className={`finale-stage ${stageBack ? 'back' : ''}`}>
-        {stage === 'reveal' && <Reveal round={round} res={res} instant={revealSeen} onNext={() => { setRevealSeen(true); setStage(ownSettle ? 'settle' : 'share'); }} onDetail={() => { setRevealSeen(true); setStage('detail'); }} extra={<>{round.trip?.id && <div style={{ marginTop: 12 }}><TripRoundNote round={round} /></div>}{notesEl}{saveRow && <div style={{ marginTop: 12 }}>{saveRow}</div>}</>} />}
+        {stage === 'reveal' && casualMe && <NiceRound round={round} me={meId} onDetail={() => { setRevealSeen(true); setStage('detail'); }} onDone={done} />}
+        {stage === 'reveal' && !casualMe && <Reveal round={round} res={res} instant={revealSeen} onNext={() => { setRevealSeen(true); setStage(ownSettle ? 'settle' : 'share'); }} onDetail={() => { setRevealSeen(true); setStage('detail'); }} extra={<>{round.trip?.id && <div style={{ marginTop: 12 }}><TripRoundNote round={round} /></div>}{notesEl}{saveRow && <div style={{ marginTop: 12 }}>{saveRow}</div>}</>} />}
         {stage === 'settle' && <SettleUp round={round} res={tab} onBack={() => setStage('reveal')} onNext={() => setStage('share')} />}
         {stage === 'share' && (shareFrom === 'detail'
           ? <ShareCard round={round} res={res} onBack={() => setStage('detail')} onDone={() => setStage('detail')} doneLabel="Back to the round" />
@@ -160,20 +169,32 @@ export default function RoundDetail({ id, celebrate }) {
   return (
     <Screen>
       <Header title={celebrate ? 'Final results' : 'Round'} onBack={celebrate ? undefined : nav.pop} small
-        right={<button className="header-btn" onClick={() => { setShareFrom('detail'); setStage('share'); }}><Icon name="share-network" /> Share</button>} />
+        right={solo ? null : <button className="header-btn" onClick={() => { setShareFrom('detail'); setStage('share'); }}><Icon name="share-network" /> Share</button>} />
       <div className="scroll">
+        {solo ? (
+          <div className="winner-hero nice-hero" ref={hero}>
+            <Icon name="smiley" fill className="crown" />
+            <div className="wn">{nice ? nice.title : 'Your card'}</div>
+            <div className="wa">{nice ? <>{nice.score} <span className={`nice-par ${nice.tone}`}>{nice.toPar}</span></> : '–'}</div>
+            <div className="ws">{round.course.name} · {roundDate(round)} · {nice ? nice.line : 'No scores yet'}</div>
+            {cardFromLine(round) && <div className="me-line">{cardFromLine(round)}</div>}
+          </div>
+        ) : (
         <div className="winner-hero" ref={hero}>
           <Icon name={allSquare ? 'handshake' : 'crown'} fill className="crown" />
           <div className="wn">{heroTitle}</div>
           <div className="wa">{heroAmt}</div>
           <div className="ws">{round.course.name} · {roundDate(round)} · {gameLabel(round)} · {played === round.holes.length ? `${played} holes` : `${played} of ${round.holes.length} holes`}</div>
           {meRow && meRow.id !== top.id && !allSquare && <div className="me-line">You: {fmt(meRow.amount, { sign: true })}</div>}
+          {nice && <div className="me-line">You were just playing: {nice.score} ({nice.toPar})</div>}
         </div>
+        )}
 
         {round.trip?.id && <TripRoundNote round={round} />}
         {notesEl}
         {saveRow}
 
+        {!solo && <>
         <div className="sec-label">Standings</div>
         {res.standings.map((p, i) => (
           <div key={p.id} className="settle-row">
@@ -239,7 +260,7 @@ export default function RoundDetail({ id, celebrate }) {
         {res.detail.byGame && (
           <>
             <div className="sec-label">By game</div>
-            <ByGameTable round={round} byGame={res.detail.byGame} total={res.balances} fmt={fmt} />
+            <ByGameTable round={betRound} byGame={res.detail.byGame} total={res.balances} fmt={fmt} />
           </>
         )}
         {/* A reward round's side bets for money get their own table, in dollars, never added to the points */}
@@ -247,11 +268,11 @@ export default function RoundDetail({ id, celebrate }) {
           <>
             {!res.detail.byGame && <div className="sec-label">By game</div>}
             <p className="field-help pad">{res.detail.byGame ? 'Above in points. ' : ''}Side bets for money, in dollars:</p>
-            <ByGameTable round={round} byGame={{ cash: { label: res.cash.label, balances: res.cash.balances } }} total={res.cash.balances} fmt={money} caption="Side bets for money" />
+            <ByGameTable round={betRound} byGame={{ cash: { label: res.cash.label, balances: res.cash.balances } }} total={res.cash.balances} fmt={money} caption="Side bets for money" />
           </>
         )}
 
-        <GameBreakdown round={round} res={res} />
+        <GameBreakdown round={betRound} res={res} />
         {/* Each side game's own breakdown, worked out on its own like the main game */}
         {Object.entries(res.detail.byGame || {}).filter(([key]) => key !== 'main' && key !== 'bets').map(([key, g]) => (
           <Fragment key={key}>
@@ -261,27 +282,29 @@ export default function RoundDetail({ id, celebrate }) {
           </Fragment>
         ))}
 
-        <BetsBreakdown round={round} res={res}
+        <BetsBreakdown round={betRound} res={res}
           talk={talk ? r => <TalkBar ctx={talk} on={betTarget(r.id)} title={`${r.label} · ${betPeople(round, r.bet)}`} /> : null} />
-        <RoundWhereFrom round={round} res={res} />
+        <RoundWhereFrom round={betRound} res={res} />
         {/* ...and for a reward round's side bets for money, what's between each pair in dollars */}
-        {!isMoney && res.cash && <RoundWhereFrom round={round} res={tab} fmt={money} title="Where the money comes from" />}
+        {!isMoney && res.cash && <RoundWhereFrom round={betRound} res={tab} fmt={money} title="Where the money comes from" />}
+        </>}
+        {solo && <HowWasIt round={round} />}
 
         <div className="sec-label">Scorecard</div>
         <Scorecard round={round} />
 
         <div className="detail-actions">
-          {round.status === 'done' && GAMES[round.game] && (
+          {round.status === 'done' && GAMES[round.game] && !solo && (
             <button className="full-btn" onClick={() => nav.push('newRound', { rematch: id })}><Icon name="arrow-counter-clockwise" /> Run it back</button>
           )}
-          {round.status === 'done' && !round.localMe && round.shared?.host !== false && <SaveUsualButton round={round} />}
+          {round.status === 'done' && !round.localMe && !solo && round.shared?.host !== false && <SaveUsualButton round={round} />}
           {canEdit(round, keeperMe(round, state), !!round.shared?.host) && <button className="full-btn outline" onClick={edit}><Icon name="pencil-simple" /> Edit scores</button>}
           <button className="danger-link" onClick={del}><Icon name="trash" /> Delete round</button>
         </div>
       </div>
       {celebrate && (
         <div className="cta-wrap">
-          {ownSettle && <button className="full-btn" onClick={() => setStage('settle')}><Icon name="receipt" /> Settle up</button>}
+          {ownSettle && !casualMe && <button className="full-btn" onClick={() => setStage('settle')}><Icon name="receipt" /> Settle up</button>}
           <button className="full-btn outline" onClick={done}>Done</button>
         </div>
       )}
@@ -650,7 +673,10 @@ export function Scorecard({ round, current, onHole }) {
   const cls = (g, par) => (g === 'X' ? 'pu' : g <= par - 2 ? 'eagle' : g === par - 1 ? 'birdie' : g === par + 1 ? 'bogey' : g >= par + 2 ? 'dbl' : '');
   const hc = !!round.useHandicaps;
   const units = scorers(round);
-  const anyStrokes = hc && units.some(p => out.some(h => popsFor(round, p, h) !== 0));
+  // Someone just playing gets no strokes: they're in no game (just-playing.js)
+  const casual = p => isJustPlaying(round, p.id);
+  const solo = cardOnly(round);
+  const anyStrokes = hc && units.some(p => !casual(p) && out.some(h => popsFor(round, p, h) !== 0));
   // With half strokes each dot counts half, and the net total can end in ½
   const half = halfStrokesOn(round);
   // The dots are the main game's; a side game with its own % or half strokes gets its own key line
@@ -659,7 +685,7 @@ export function Scorecard({ round, current, onHole }) {
   const colProps = no => (onHole ? { onClick: () => onHole(no), className: 'sc-tap' } : {});
   const netTotal = p => out.reduce((a, h) => { const n = holeComplete(round, h) ? netFor(round, p, h) : null; return n == null ? a : a + n; }, 0);
   // Best ball and Shamble: a row per team with its score on each hole, and the scores that made it underlined
-  const tt = isTeamGame(round.game) && !oneBall(round.game) && round.teams?.length === 2 ? teamTable(round) : null;
+  const tt = isTeamGame(round.game) && !oneBall(round.game) && round.teams?.length === 2 ? teamTable(bettingRound(round)) : null;
   const countedOn = (k, pid) => !!tt && tt.rows[k].counted.some(list => list.includes(pid));
   return (
     <div className="sc-wrap">
@@ -684,12 +710,13 @@ export function Scorecard({ round, current, onHole }) {
           {units.map(p => {
             const sum = scoreSummary(round, p.id);
             // Net under the name only for someone who gets strokes: "E net E" says nothing
-            const showNet = anyStrokes && getsStrokes(round, p);
+            const showNet = anyStrokes && !casual(p) && getsStrokes(round, p);
             const par = toParOf(round, p, { withNet: showNet });
             return (
               <tr key={p.id}>
                 <td className="sticky">
                   <span className="sc-name">{p.team ? p.name : p.name.split(' ')[0]}</span>
+                  {casual(p) && !solo && <span className="sc-jp">Just playing</span>}
                   {par.played > 0 && (
                     <span className="sc-topar">
                       <span className={`sc-par ${toParTone(par.gross)}`} role="img" aria-label={showNet ? `Gross ${toParWords(par.gross)}` : toParWords(par.gross)}>{toParText(par.gross)}</span>
@@ -702,7 +729,7 @@ export function Scorecard({ round, current, onHole }) {
                   // A player who left shows an en dash on the holes after
                   // (an alternate shot or Chapman team needs both partners there, see scorers)
                   const gone = g == null && !(p.team ? scorers(round, h).some(u => u.id === p.id) : playsHole(round, p.id, h));
-                  const st = hc && !gone ? popsFor(round, p, h) : 0;
+                  const st = hc && !gone && !casual(p) ? popsFor(round, p, h) : 0;
                   const tap = colProps(h.no);
                   return (
                     <td key={h.no} className={`${h.no === current ? 'cur' : ''} ${tap.className || ''}`} onClick={tap.onClick}>

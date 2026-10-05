@@ -124,6 +124,8 @@ export function betsOf(round) {
     if (!Array.isArray(b.sides) || b.sides.length !== 2) continue;
     const [a, c] = b.sides;
     if (a === c || !ids.has(a) || !ids.has(c)) continue;
+    // Nobody just playing is in a bet (see round.js bettingRound)
+    if (round.justPlaying?.[a] || round.justPlaying?.[c]) continue;
     if (!(typeof b.stake === 'number' && Number.isFinite(b.stake) && b.stake > 0)) continue;
     if (!kindFits(round, b.kind, b.sides)) continue;
     seen.add(b.id);

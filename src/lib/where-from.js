@@ -4,7 +4,7 @@
 // across every finished money round on the Tab. The items always add up to the pair's honest head
 // to head (roundResults().pairs), which is what you won from them, whoever ends up paying whom.
 // One friend is one person whatever id a round has for them (see people-links.js). Pure, unit tested.
-import { gameKeyLabel, roundResults } from './round.js';
+import { gameKeyLabel, isJustPlaying, roundResults } from './round.js';
 import { meFor } from './format.js';
 import { canonicalOf } from './pair-debts.js';
 import { onTab, tabResults } from './play-for.js';
@@ -78,8 +78,9 @@ export function breakdownWith(state, ids, other, { now = Date.now() } = {}) {
   for (const r of Object.values(state.rounds || {})) {
     if (r.status !== 'done' || !onTab(r)) continue;
     const me = meFor(r, state);
-    if (!mine.has(me) || isThem(me) || !r.players.some(p => p.id === me)) continue;
-    const them = r.players.filter(p => isThem(p.id)).map(p => p.id);
+    if (!mine.has(me) || isThem(me) || !r.players.some(p => p.id === me) || isJustPlaying(r, me)) continue;
+    // A round either of you was just playing had no bet between you, so nothing comes from it (as personStory)
+    const them = r.players.filter(p => isThem(p.id) && !isJustPlaying(r, p.id)).map(p => p.id);
     if (!them.length) continue;
     // A reward round counts only its side bets for money here (see tabResults)
     const res = tabResults(r);

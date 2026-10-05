@@ -1,6 +1,6 @@
 // The end-of-round reveal: turns a round's results into short, ordered steps (each bet resolving,
 // or each player's skins, points or totals) that play before everyone's money lands. Pure: no DOM.
-import { holeAtPos, isTeamGame, matchScored, roundLegs, sideNames, sides } from './round.js';
+import { bettingRound, holeAtPos, isTeamGame, matchScored, roundLegs, sideNames, sides } from './round.js';
 import { matchLabel, sideSplit } from './games.js';
 import { unitFmt } from './play-for.js';
 import { betPeople, betStatusText } from './pair-bets.js';
@@ -55,7 +55,9 @@ function biggestHoles(rows, max = 3) {
  * the rest read in points. Games with nothing worth breaking down return no steps, so the totals
  * play on their own.
  */
-export function revealSteps(round, res) {
+export function revealSteps(full, res) {
+  // The bets are the betting players' alone: anyone just playing is never in a step
+  const round = bettingRound(full);
   // A Big Game's group round: the money is the whole game's, so the round's own $0 stroke play has nothing to show
   if (res?.big) return { title: 'The bets', steps: [] };
   const out = gameSteps(round, res);

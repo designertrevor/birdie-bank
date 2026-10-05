@@ -22,7 +22,8 @@ const first = n => String(n || '').trim().split(/\s+/)[0] || '?';
 const nameIn = (round, id) => first(round.players.find(p => p.id === id)?.name);
 const QUICK = [1, 2, 5, 10, 20];
 const needsScores = kind => kind === 'match' || kind === 'hole';
-const isPlayer = (round, id) => !!id && round.players.some(p => p.id === id);
+// Someone just playing is in no bet, so they can't make one (round.js bettingRound)
+const isPlayer = (round, id) => !!id && round.players.some(p => p.id === id && !round.justPlaying?.[p.id]);
 const MONEY_UNIT = { prefix: '$', suffix: '' };
 
 /**
@@ -38,7 +39,7 @@ export function BetEditor({ round, bet = null, fromPos = 1, onSave, onRemove = n
   const n = round.holes.length;
   const startKind = bet?.kind ?? initial?.kind;
   const [kind, setKind] = useState(startKind && kinds.includes(startKind) ? startKind : kinds[0]);
-  const [sides, setSides] = useState(() => (bet?.sides ? [...bet.sides] : me ? [me] : []));
+  const [sides, setSides] = useState(() => (bet?.sides ? [...bet.sides] : me && !round.justPlaying?.[me] ? [me] : []));
   // A reward round: each bet is played for money (on the Tab) or points (toward the reward). New ones start on money
   const [playFor, setPlayFor] = useState(() => (bet ? betPlayFor(round, bet) : 'money'));
   const cash = reward && playFor === 'money';
@@ -124,7 +125,7 @@ export function BetEditor({ round, bet = null, fromPos = 1, onSave, onRemove = n
 
           <div className="field-label" id="pb-who">Between <span className="opt">· pick two</span></div>
           <div className="chip-row flush" role="group" aria-labelledby="pb-who">
-            {round.players.map(p => {
+            {round.players.filter(p => !round.justPlaying?.[p.id]).map(p => {
               const on = sides.includes(p.id);
               return <PickChip key={p.id} on={on} disabled={p.id === me && on} onClick={() => pick(p.id)}>{p.name}{p.id === me ? ' (you)' : ''}</PickChip>;
             })}

@@ -2,7 +2,7 @@
 // finished rounds. Pure functions of plain data. Every number comes from roundResults(), so
 // anything a round's money includes is included here too.
 // Nothing here is new data: History and Players already show your own season for free, and they stay free.
-import { GAMES, roundResults } from './round.js';
+import { GAMES, isJustPlaying, roundResults } from './round.js';
 import { meFor, myIds } from './format.js';
 import { nameOf } from './ledger.js';
 import { roundTime } from './history.js';
@@ -21,7 +21,8 @@ const cents = v => Math.round(v * 100) / 100 || 0;
  * count, see tabResultsFor). Oldest first. Points rounds never count toward the season's money.
  */
 export function seasonRounds(state, year = new Date().getFullYear()) {
-  return playedOnTab(state, year).filter(r => countsMoney(r) || hasCashBet(r, meFor(r, state)));
+  // A round you were just playing had no money of yours in it
+  return playedOnTab(state, year).filter(r => !isJustPlaying(r, meFor(r, state)) && (countsMoney(r) || hasCashBet(r, meFor(r, state))));
 }
 
 /**
@@ -66,11 +67,13 @@ export function seasonBoard(state, year = new Date().getFullYear()) {
     // A Big Game's round has each person's money from the whole game in it (big-money.js)
     const res = withBigMoney(state, r, tabResults(r, roundResults(r)));
     for (const [id, v] of Object.entries(res.balances)) {
+      // Someone just playing had no money in it, so it gives them no row (a $0 among the bets)
+      if (isJustPlaying(r, id)) continue;
       const k = who(id);
       bal.set(k, cents((bal.get(k) || 0) + v));
     }
     // The rest is yours: a reward round counts only when you had a side bet for money in it
-    if (!countsMoney(r) && !hasCashBet(r, me)) continue;
+    if (isJustPlaying(r, me) || (!countsMoney(r) && !hasCashBet(r, me))) continue;
     const mineNet = res.balances[me] || 0;
     if (mineNet > 0 && (!biggestDay || mineNet > biggestDay.amount)) {
       biggestDay = { id: r.id, course: r.course?.name || '', amount: cents(mineNet), at: roundTime(r) };

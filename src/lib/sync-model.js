@@ -133,10 +133,13 @@ export function cleanRequestName(name) {
   return String(name || '').replace(/\s+/g, ' ').trim().slice(0, 24);
 }
 
-/** A seat request record as sent, or null when the name is empty. */
-export function buildRequest(name, at = Date.now()) {
+/**
+ * A seat request record as sent, or null when the name is empty. `justPlaying`: they asked to be on
+ * the card with no bet (just-playing.js); a phone on an older version just sees a seat request.
+ */
+export function buildRequest(name, at = Date.now(), { justPlaying = false } = {}) {
   const n = cleanRequestName(name);
-  return n ? { request: { name: n, at, status: 'waiting' } } : null;
+  return n ? { request: { name: n, at, status: 'waiting', ...(justPlaying ? { justPlaying: true } : {}) } } : null;
 }
 
 /** The request inside a record if it's well formed, else null. */
@@ -145,7 +148,7 @@ export function readRequest(data) {
   if (!r || typeof r !== 'object') return null;
   const name = cleanRequestName(r.name);
   if (!name || !['waiting', 'in', 'no'].includes(r.status)) return null;
-  return { name, at: Number(r.at) || 0, status: r.status, playerId: typeof r.playerId === 'string' ? r.playerId : null };
+  return { name, at: Number(r.at) || 0, status: r.status, playerId: typeof r.playerId === 'string' ? r.playerId : null, ...(r.justPlaying === true ? { justPlaying: true } : {}) };
 }
 
 /** Requests still waiting on the scorekeeper, oldest first: [{ no, name, at }]. */

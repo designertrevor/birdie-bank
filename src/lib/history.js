@@ -1,6 +1,6 @@
 // History and Up next: which finished rounds fall in a time range, month totals, the season
 // line and "your tab at a glance". Pure functions of the app state, so they're easy to test.
-import { roundResults } from './round.js';
+import { isJustPlaying, roundResults } from './round.js';
 import { meFor, myIds } from './format.js';
 import { outstanding } from './ledger.js';
 import { canonicalOf } from './pair-debts.js';
@@ -113,7 +113,7 @@ export function roundsInRange(state, range) {
 /** What you won or lost in a round (a Big Game's round with your money from the game), or null when you weren't playing in it. */
 export function myNet(round, state) {
   const me = meFor(round, state);
-  if (!me || !round.players.some(p => p.id === me)) return null;
+  if (!me || !round.players.some(p => p.id === me) || isJustPlaying(round, me)) return null;
   return withBigMoney(state, round, roundResults(round)).balances[me] ?? 0;
 }
 
