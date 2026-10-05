@@ -4,6 +4,7 @@
 import { useCallback, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { Icon, Segmented, Sheet, Steps, Toggle, useUI } from './ui.jsx';
+import { DatePicker } from './DatePicker.jsx';
 import { Avatar } from './Pay.jsx';
 import { CupLine, CupRoundNote, TeamsPicker } from './Cup.jsx';
 import { getState, uid, update, useStore } from '../lib/store.js';
@@ -12,6 +13,7 @@ import { money } from '../lib/golf.js';
 import { nameOf } from '../lib/ledger.js';
 import { placeOf, sortedPlayers } from '../lib/format.js';
 import { dayLabel, isoDate, timeLabel } from '../lib/plans.js';
+import { endWhenStartMoves } from '../lib/date-pick.js';
 import { canonicalOf } from '../lib/pair-debts.js';
 import { BIG_FORMAT } from '../lib/big-game.js';
 import { BigCard, BigRoundNote } from './BigGame.jsx';
@@ -446,16 +448,15 @@ function TripForm({ trip, onDone }) {
           <div className="trip-form-days">
             <div>
               <label className="field-label" htmlFor="trip-start">First day</label>
-              <input id="trip-start" className="text-input" type="date" value={start} onChange={e => {
-                const v = e.target.value;
+              <DatePicker id="trip-start" label="First day" value={start} rangeStart={start} rangeEnd={end} quick onChange={v => {
                 setStart(v);
-                const need = sched ? plusDays(v, sched.days.length - 1) : v;
-                if (end < need) setEnd(need);
+                // A later first day takes the last day with it, so the trip keeps its length (and fits its schedule)
+                setEnd(endWhenStartMoves(start, end, v, sched ? sched.days.length : 1));
               }} />
             </div>
             <div>
               <label className="field-label" htmlFor="trip-end">Last day</label>
-              <input id="trip-end" className="text-input" type="date" value={end} min={start} onChange={e => setEnd(e.target.value)} />
+              <DatePicker id="trip-end" label="Last day" value={end} min={sched ? plusDays(start, sched.days.length - 1) : start} rangeStart={start} rangeEnd={end} onChange={setEnd} />
             </div>
           </div>
           <label className="field-label" htmlFor="trip-where">Where <span className="opt">optional</span></label>

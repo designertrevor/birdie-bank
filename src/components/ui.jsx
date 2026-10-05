@@ -68,7 +68,9 @@ export function BallIllo({ className = 'empty-illo', face = true }) {
 // Sheets
 // ---------------------------------------------------------------------------
 
-const FOCUSABLE = 'button:not([disabled]), [href], input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])';
+// Only what Tab can reach: a roving list (radio chips, calendar days) keeps its other items at tabindex -1
+const FOCUSABLE = ['button:not([disabled])', '[href]', 'input:not([disabled])', 'select:not([disabled])', 'textarea:not([disabled])', '[tabindex]']
+  .map(s => `${s}:not([tabindex="-1"])`).join(', ');
 const openDialogs = []; // topmost last, so Escape and Tab only act on the sheet in front
 // The last two focused elements, so a sheet whose field autofocuses still knows what opened it
 let focusNow = null, focusBefore = null;

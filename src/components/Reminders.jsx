@@ -3,6 +3,7 @@
 // (nudges.js). There's no push yet, so these cards are the reminders.
 import { useMemo, useState } from 'react';
 import { Icon, Sheet, useUI } from './ui.jsx';
+import { TimePicker } from './DatePicker.jsx';
 import { Avatar } from './Pay.jsx';
 import { getState, update, useStore } from '../lib/store.js';
 import { useNav } from '../lib/nav.js';
@@ -145,7 +146,7 @@ function BookedBody({ plan, done, onDone, onClose }) {
         <p className="sheet-text">It goes on the plan, so everyone with the link sees the tee time.</p>
         <div className="rc-sheet-body">
           <label className="eyebrow" htmlFor="booked-time">Tee time</label>
-          <input id="booked-time" className="name-input time-input" type="time" step={300} value={time} onChange={e => setTime(e.target.value)} />
+          <TimePicker id="booked-time" label="Tee time" className="name-input time-input" step={300} value={time} onChange={setTime} placeholder="Add the time" />
           <button className="full-btn" onClick={save}><Icon name="calendar-check" fill /> {time ? `Booked for ${timeLabel(time)}` : 'Booked'}</button>
         </div>
       </>
