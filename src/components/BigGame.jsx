@@ -352,7 +352,7 @@ export function BigBetSheet({ open, onClose, tripId = null, big, bet = null, onR
   return (
     <>
       <Sheet open={open && !pad} onClose={onClose} title={bet ? 'Change the side bet' : 'Add a side bet'}>
-        <div style={{ padding: '4px 16px 0' }}>
+        <div className="sheet-form">
           <p className="field-help">Any two players, in the same group or not. It’s worked out on their own scores, wherever they’re playing.</p>
           <div className="field-label">Who {sides.length === 2 ? '' : `(pick ${2 - sides.length})`}</div>
           <div className="chip-row flush">
@@ -376,7 +376,7 @@ export function BigBetSheet({ open, onClose, tripId = null, big, bet = null, onR
               <p className="field-help">{auto ? `From their handicaps at ${big.hcPct}%: ${name(auto.to)} ${name(auto.to) === 'You' ? 'get' : 'gets'} ${auto.count} on the hardest holes.` : 'Their handicaps are the same, so nobody gets strokes.'} Only in this bet, never in the pot or the skins.</p>
             </>
           )}
-          <div className="cta-wrap" style={{ padding: '14px 0 0' }}>
+          <div className="cta-wrap sheet-form-cta">
             <button className="full-btn" disabled={sides.length !== 2 || !(stake > 0)} onClick={save}>{sides.length === 2 ? (bet ? 'Save the bet' : 'Add the bet') : 'Pick two players'}</button>
             {onRemove && <button className="text-link danger" onClick={onRemove}><Icon name="trash" /> Take this bet off</button>}
           </div>

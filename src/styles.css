@@ -2669,3 +2669,36 @@ button.ch-main:active { transform: scale(.98); }
    no longer pushes them low. Buddies and photos already fill the circle edge to edge. */
 .av-letters { display: block; line-height: 1; text-align: center; white-space: nowrap; }
 @supports (text-box: trim-both cap alphabetic) { .av-letters { text-box: trim-both cap alphabetic; } }
+
+/* ---------- Breathing room (o9 consistency): the overnight 7 and 8 screens and sheets ---------- */
+/* Cards in a column keep the 10px gap the Tab and Up next use, so nothing sits on the card under it */
+.pv-hero { margin-bottom: 12px; }
+.talk-card, .person-talk, .fr-board { margin-bottom: 10px; }
+/* Form sheets (a side bet, a challenge, a Big Game bet): the 20px gutter the sheet's title and text
+   use, and each question a clear step down from the answer above it */
+.sheet-form { padding: 4px 20px 4px; }
+.sheet-form > .field-help:first-child { margin-top: 0; }
+.pb-edit .field-label, .sheet-form .field-label { margin-top: 22px; }
+.pb-edit .field-label:first-child, .sheet-form .field-label:first-child { margin-top: 4px; }
+.sheet-form > .field-help:first-child + .field-label { margin-top: 16px; }
+.sheet-form .amt-btn { margin-bottom: 2px; }
+.sheet-form-cta { padding: 20px 0 0; }
+.sheet-form-cta .text-link { margin: 0 auto; }
+/* A sheet's chips sit on the same gutter as its text, with room before the buttons */
+.pot-hole-chips { padding: 0 20px 12px; }
+/* The Big Game: the organizer's share pills stand apart from the groups above them */
+.chip-row.big-share { padding-top: 4px; padding-bottom: 14px; }
+/* Big Game setup: "Keeps score" is its own question under the group's players, not stuck to them */
+.big-setup-group .field-label { margin-top: 14px; }
+.big-setup-group .big-group-head + .chip-row.flush { padding-bottom: 4px; }
+.big-team-row + .big-team-row { margin-top: 6px; }
+.big-team-row ~ .pill-btn.sm { margin-top: 8px; }
+/* A toggle's settings card reads as part of it: a little closer to its toggle than to the next one */
+.toggle-row + .block { margin-top: -2px; margin-bottom: 16px; }
+/* The tee time block: Booked is its own step after the reminder day */
+.tee-block .tb-done { margin-top: 12px; }
+.rc-sheet-body .full-btn { margin-top: 6px; }
+/* Your stats: the privacy line under the last card */
+.stats-foot { margin-top: 6px; }
+/* The friends feed: the privacy note stands apart from the last card */
+.fr-privacy { padding-top: 18px; }
