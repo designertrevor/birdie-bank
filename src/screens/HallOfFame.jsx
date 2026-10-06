@@ -143,6 +143,9 @@ export default function HallOfFame({ crew: crewId }) {
           <Kv k="Most rounds" v={records.regular ? `${first(records.regular.id)}, ${records.regular.n}` : DASH} />
         </div>
         <p className="field-help pad">Only you see this. It’s built from the crew’s rounds on this phone, back to the first one. Points rounds count in points and reward rounds in the reward, never in the money.</p>
+        <button className="text-link stats-link" onClick={() => nav.push('share', { kind: 'wrapped', year: new Date(now).getFullYear() })}>
+          <Icon name="share-network" /> <span className="row-main">Your year in review<span className="sl-sub">A card for your Story, money only if you show it</span></span> <Icon name="caret-right" />
+        </button>
         {season.rounds > 0 && (
           <button className="text-link stats-link" onClick={() => nav.push('closeBooks', { scope: `crew:${crew.id}` })}>
             <Icon name="book-bookmark" fill /> <span className="row-main">Close the books<span className="sl-sub">End this season and start the next</span></span> <Icon name="caret-right" />
