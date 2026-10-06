@@ -3246,3 +3246,7 @@ a.header-btn.rm-open { text-decoration: none; }
 .trip-card-eb { display: flex; align-items: baseline; gap: 4px; min-width: 0; white-space: nowrap; }
 .trip-card-eb .tce-name { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
 .trip-card-eb .tce-when { flex-shrink: 0; white-space: pre; }
+
+/* ---------- O10 polish10: a pass on the overnight 9 screens ---------- */
+/* Before anyone has played, a trip's standings show a quiet dash, not a bold one that reads as a minus */
+.trip-row .tr-amt.none { color: var(--mute-soft); font-weight: 600; }
