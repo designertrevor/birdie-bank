@@ -3246,3 +3246,12 @@ a.header-btn.rm-open { text-decoration: none; }
 .trip-card-eb { display: flex; align-items: baseline; gap: 4px; min-width: 0; white-space: nowrap; }
 .trip-card-eb .tce-name { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
 .trip-card-eb .tce-when { flex-shrink: 0; white-space: pre; }
+/* O10 trend: the handicap guide from your rounds on Your stats, next to the official index */
+.trend-official { text-align: right; padding-bottom: 6px; }
+.trend-official-v { font-family: var(--display); font-size: 24px; font-weight: 800; letter-spacing: -.02em; color: var(--mute); font-variant-numeric: tabular-nums; }
+.trend-vs { padding-bottom: 8px; }
+.trend-chart { margin-top: 2px; }
+.trend-chart.flat .chart-line { stroke: var(--ink); }
+.trend-chart.flat .chart-dot { fill: var(--ink); }
+.trend-empty-t { font-weight: 600; color: var(--ink); }
+.trend-empty .field-help { margin-top: 4px; }
