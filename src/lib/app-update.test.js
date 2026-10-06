@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { openedFromLink, roundHoldsUpdate, updateAction, updateSafe } from './app-update.js';
+import { VERSION_CHECK_MS, isNewerBuild, openedFromLink, readBuilt, roundHoldsUpdate, stampBuild, updateAction, updateSafe, versionCheckDue } from './app-update.js';
 
 const rounds = (...list) => ({ rounds: Object.fromEntries(list.map((r, i) => [`r${i}`, { id: `r${i}`, ...r }])) });
 
@@ -51,4 +51,41 @@ test('opened from a join, plan or sign-in link, it never reloads at launch (the 
   assert.equal(openedFromLink('', '#access_token=abc'), true);
   assert.equal(openedFromLink('', ''), false);
   assert.equal(openedFromLink('?', '#'), false);
+});
+
+test('a later build stamp is newer, the same or an older one is not', () => {
+  assert.equal(isNewerBuild(2000, 1000), true);
+  assert.equal(isNewerBuild(1000, 1000), false);
+  assert.equal(isNewerBuild(500, 1000), false);
+});
+
+test('dev mode and a missing or broken version.json never count as newer', () => {
+  assert.equal(isNewerBuild(2000, 0), false);
+  assert.equal(isNewerBuild(null, 1000), false);
+  assert.equal(isNewerBuild(readBuilt(null), 1000), false);
+  assert.equal(readBuilt(undefined), null);
+  assert.equal(readBuilt({}), null);
+  assert.equal(readBuilt({ built: 'soon' }), null);
+  assert.equal(readBuilt({ built: -4 }), null);
+  assert.equal(readBuilt({ built: 1760000000000, id: 'abc' }), 1760000000000);
+});
+
+test('version.json is read at launch, then at most once per gap', () => {
+  assert.equal(versionCheckDue(1000, 0), true);
+  assert.equal(versionCheckDue(VERSION_CHECK_MS - 1, 1), false);
+  assert.equal(versionCheckDue(VERSION_CHECK_MS + 1, 1), true);
+});
+
+test('a shared round carries the newest build that kept score, and never goes back down', () => {
+  assert.deepEqual(stampBuild({ id: 'r' }, 2000), { id: 'r', appBuilt: 2000 });
+  assert.deepEqual(stampBuild({ id: 'r', appBuilt: 1000 }, 2000), { id: 'r', appBuilt: 2000 });
+  const newer = { id: 'r', appBuilt: 3000 };
+  assert.equal(stampBuild(newer, 2000), newer);
+  assert.equal(isNewerBuild(stampBuild(newer, 2000).appBuilt, 2000), true);
+});
+
+test('dev builds and old rounds leave the meta untouched', () => {
+  const meta = { id: 'r', players: [] };
+  assert.equal(stampBuild(meta, 0), meta);
+  assert.equal(stampBuild(null, 2000), null);
 });

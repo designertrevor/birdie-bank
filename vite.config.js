@@ -1,3 +1,4 @@
+import process from 'node:process'
 import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
 import { createHash } from 'node:crypto'
@@ -11,7 +12,7 @@ import { publicRoadmap } from './src/lib/roadmap-public.js'
 
 // Files the service worker should not save for offline use
 // (and not the public rule pages, sitemap or robots.txt: they're web pages, not the app)
-const SKIP = /(^|\/)(sw\.js|prototype\.html)$|\.map$|^rules\/|^(sitemap\.xml|robots\.txt)$/;
+const SKIP = /(^|\/)(sw\.js|prototype\.html)$|\.map$|^rules\/|^(sitemap\.xml|robots\.txt|version\.json)$/;
 // The JS the first screen (Up next) waits for: the entry and what it imports up front. Main was
 // 481 kB before overnight 8 split the later parts of Up next out; a build over it says so.
 const FIRST_SCREEN_BUDGET = 481_000;
@@ -35,6 +36,26 @@ function firstScreen() {
       const kb = (bytes / 1000).toFixed(2);
       if (bytes > FIRST_SCREEN_BUDGET) this.warn(`First screen JS is ${kb} kB, over its ${FIRST_SCREEN_BUDGET / 1000} kB budget. Load what isn't on Up next's first paint with import().`);
       else console.log(`First screen JS: ${kb} kB of ${FIRST_SCREEN_BUDGET / 1000} kB`);
+    },
+  };
+}
+
+/**
+ * Stamp each build with when it was built: the app knows its own stamp (src/lib/build-info.js) and
+ * /version.json says which build is live, so an open app can tell it's behind (app-update.js).
+ * A dev server gets no stamp, so it never asks.
+ */
+function buildStamp() {
+  const built = Date.now();
+  const sha = process.env.VERCEL_GIT_COMMIT_SHA;
+  const id = sha ? sha.slice(0, 7) : built.toString(36);
+  return {
+    name: 'bb-build-stamp',
+    config(_, { command }) {
+      return { define: { __APP_BUILT__: command === 'build' ? String(built) : '0' } };
+    },
+    generateBundle() {
+      this.emitFile({ type: 'asset', fileName: 'version.json', source: JSON.stringify({ id, built }) });
     },
   };
 }
@@ -140,5 +161,5 @@ function roadmapList() {
 
 // https://vite.dev/config/
 export default defineConfig({
-  plugins: [react(), roadmapList(), rulePages(), precache(), firstScreen()],
+  plugins: [react(), buildStamp(), roadmapList(), rulePages(), precache(), firstScreen()],
 })

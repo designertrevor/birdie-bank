@@ -3,7 +3,8 @@
 // takes over on its own (see public/sw.js), so a phone mid-round keeps the version it started on.
 import { useSyncExternalStore } from 'react';
 import { getState } from './store.js';
-import { openedFromLink, updateAction, updateSafe } from './app-update.js';
+import { isNewerBuild, openedFromLink, readBuilt, updateAction, updateSafe, versionCheckDue } from './app-update.js';
+import { BUILT } from './build-info.js';
 
 // Matches the message public/sw.js listens for
 const APPLY = 'apply-update';
@@ -17,6 +18,9 @@ let ready = false;
 let asked = false;
 let touched = false;
 let lastCheck = 0;
+let lastVersion = 0;
+// The newest build this phone has already asked the service worker to fetch
+let chased = 0;
 // Read when this file first runs, before the app tidies ?join=, ?plan= or a sign-in code out of the address bar
 const fromLink = openedFromLink(location.search, location.hash);
 const listeners = new Set();
@@ -56,6 +60,33 @@ function check() {
   reg.update().catch(() => {});
 }
 
+/** Ask the service worker for the new version now, once per newer build seen. */
+function chase(theirs) {
+  if (!reg || !isNewerBuild(theirs, BUILT) || theirs <= chased) return;
+  chased = theirs;
+  lastCheck = Date.now();
+  reg.update().catch(() => {});
+}
+
+/**
+ * Read /version.json (at launch, then at most every 10 minutes when the app comes back to the screen)
+ * and chase a newer build. The query string keeps an older service worker from answering with a
+ * saved copy. A missing file, no signal or a dev build does nothing.
+ */
+async function checkVersion() {
+  if (!BUILT || !versionCheckDue(Date.now(), lastVersion)) return;
+  lastVersion = Date.now();
+  try {
+    const res = await fetch(`/version.json?t=${Date.now()}`, { cache: 'no-store' });
+    if (res.ok) chase(readBuilt(await res.json()));
+  } catch { /* offline, or no version.json */ }
+}
+
+/** A shared round says a newer build kept its score (sync.js): fetch that version so Up next can offer it. */
+export function noticeNewerBuild(theirs) {
+  chase(theirs);
+}
+
 export function registerServiceWorker() {
   if (!('serviceWorker' in navigator)) return;
   const sw = navigator.serviceWorker;
@@ -66,10 +97,11 @@ export function registerServiceWorker() {
     reg = r;
     lastCheck = Date.now();
     found();
+    checkVersion();
     // With no controller yet this is the very first install, which isn't an update
     const follow = next => next?.addEventListener('statechange', () => { if (next.state === 'installed' && sw.controller) found(); });
     follow(r.installing);
     r.addEventListener('updatefound', () => follow(r.installing));
-    document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') check(); });
+    document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') { check(); checkVersion(); } });
   }).catch(() => {}));
 }

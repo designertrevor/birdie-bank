@@ -10,6 +10,9 @@ import { applyHole, applyMeta, assemble, buildHole, buildMeta, buildRequest, fir
 import { payFields } from './pay.js';
 import { canEdit, holeToKeep, hostKeeper, isKeeper, keeperMe, keeperOf, metaToKeep, metaToSend, registerDevice, seatTaken } from './keeper.js';
 import { deviceReady, myDevice } from './device.js';
+import { stampBuild } from './app-update.js';
+import { BUILT } from './build-info.js';
+import { noticeNewerBuild } from './sw-update.js';
 import { claimSeat, mergeClaims } from './people-links.js';
 import { applyBetAsk, betAskProblem, buildBetAsk, keepAsks, readBetAsk } from './bet-asks.js';
 
@@ -71,6 +74,8 @@ function dropBase(id) {
   try { localStorage.removeItem(baseKey(id)); } catch { /* ignore */ }
 }
 const parse = json => (json == null ? undefined : JSON.parse(json));
+// What this phone would send for a round's meta, with the newest build that kept score on it (app-update.js)
+const metaOf = round => stampBuild(buildMeta(round), BUILT);
 
 /** Send one round's unsent changes: meta first, then holes. Resolves true when all went through. */
 async function pushOnce(roundId, entry) {
@@ -80,7 +85,7 @@ async function pushOnce(roundId, entry) {
   // Only the phone keeping score sends changes to the game. Any other phone sends only what it's
   // allowed to (asking for the card, taking its seat): see metaToSend
   const { me, editor } = editorOf(round);
-  const meta = metaToSend(parse(entry.lastMeta), buildMeta(round), { editor, me });
+  const meta = metaToSend(parse(entry.lastMeta), metaOf(round), { editor, me });
   const metaJson = meta ? stable(meta) : entry.lastMeta;
   // Holes go up from any phone whose copy differs from the server's. On a phone that isn't keeping
   // score that can only be holes it saved while it had the card and couldn't send yet (no signal,
@@ -150,6 +155,8 @@ function onRemote(roundId, ev) {
     return;
   }
   if (ev.type === 'meta') {
+    // A newer build kept this round's score: this phone may count it differently until it updates
+    noticeNewerBuild(ev.data?.appBuilt);
     const json = stable(ev.data);
     if (json === entry.lastMeta) return;
     const base = parse(entry.lastMeta);
@@ -157,7 +164,7 @@ function onRemote(roundId, ev) {
     saveBase(roundId, entry);
     const round = getState().rounds[roundId];
     if (!round) return;
-    const local = buildMeta(round);
+    const local = metaOf(round);
     // A phone that isn't keeping score keeps only what it may change (see metaToKeep)
     const merged = metaToKeep(base, local, ev.data, editorOf(round));
     if (stable(merged) === stable(local)) return;
@@ -359,7 +366,7 @@ export async function shareRound(roundId) {
   const round = getState().rounds[roundId];
   const holes = {};
   round.holes.forEach((h, i) => { const d = buildHole(round, i); if (d) holes[h.no] = d; });
-  await adapter.create(code, buildMeta(round), holes);
+  await adapter.create(code, metaOf(round), holes);
   freshNext.add(roundId);
   // shareCode stays after sharing stops, so the round's payments on the shared Tab outlive the live round
   update(s => { s.rounds[roundId].shared = { code, host: true, since: Date.now() }; s.rounds[roundId].shareCode = code; });
@@ -375,6 +382,7 @@ export async function fetchShared(code) {
 
 /** Join a shared round as `localMe` (a player id in that round, or null to watch). */
 export async function joinShared(code, remote, localMe) {
+  noticeNewerBuild(remote.meta?.appBuilt);
   const round = assemble(remote.meta, remote.holes);
   round.shared = { code, host: false, since: Date.now() };
   round.shareCode = code;
