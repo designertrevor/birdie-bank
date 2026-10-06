@@ -103,3 +103,11 @@ test('only ever your own card: it reads state.me, never the person you were look
   assert.deepEqual(mine, other);
   assert.equal(profileCard({ ...s, me: null }, { year: Y }).nemesis, null);
 });
+
+test('a buddy avatar with no picture to draw yet falls back to your initials, not a question mark', () => {
+  const s = season();
+  s.profile = { avatar: { kind: 'buddy', id: 'flatcap', bg: 'ochre' } };
+  const card = profileCard(s, { year: Y });
+  assert.equal(card.avatar.kind, 'buddy');
+  assert.equal(profileCardModel(card).avatar.text, 'TN');
+});

@@ -3300,3 +3300,6 @@ a.header-btn.rm-open { text-decoration: none; }
 .share-card.square { overflow: hidden; padding: 20px; }
 .share-card.square .wrapped-tiles { margin: 8px 0 0; }
 .pf-share { margin: 12px 16px 0; }
+
+/* O10 qa10: the Big Game's skins options line up with the rest of their card (no extra inset) */
+.big-games .block > .toggle-row.ap-game { padding-left: 0; padding-right: 0; }

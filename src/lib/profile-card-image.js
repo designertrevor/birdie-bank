@@ -64,7 +64,8 @@ function draw(ctx, m, pic) {
   avatar(ctx, m.avatar, pic, cx, cy, r);
   ctx.textAlign = 'left';
   ctx.textBaseline = 'alphabetic';
-  const x0 = PAD + r * 2 + 40, nameW = W - x0 - 200;
+  // The name stops short of the ochre dot (it starts at W - 240)
+  const x0 = PAD + r * 2 + 40, nameW = W - x0 - 256;
   ctx.fillStyle = C.mint;
   ctx.font = `800 32px ${DISPLAY}`;
   spaced(ctx, m.eyebrow.toUpperCase(), x0, 142, 5);
