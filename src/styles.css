@@ -3246,3 +3246,14 @@ a.header-btn.rm-open { text-decoration: none; }
 .trip-card-eb { display: flex; align-items: baseline; gap: 4px; min-width: 0; white-space: nowrap; }
 .trip-card-eb .tce-name { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
 .trip-card-eb .tce-when { flex-shrink: 0; white-space: pre; }
+/* O10 halloffame: a crew's money list, ranked, one row a person; you get the picked-row tint */
+.hof-list { list-style: none; padding: 6px 14px; }
+.hof-row { display: flex; align-items: center; gap: 12px; min-height: 52px; padding: 8px 0; border-bottom: 1px solid var(--line); }
+.hof-row:last-child { border-bottom: 0; }
+.hof-row.me { margin: 0 -14px; padding: 8px 14px; background: var(--pick-tint); border-radius: 14px; border-bottom-color: transparent; }
+.hof-row .avatar { margin: 0; flex-shrink: 0; }
+.hof-rank { width: 18px; flex-shrink: 0; text-align: center; font-weight: 700; color: var(--mute); font-variant-numeric: tabular-nums; }
+.hof-name { display: block; font-weight: 700; color: var(--ink); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.hof-sub { display: block; margin-top: 1px; font-size: 13px; color: var(--mute); font-variant-numeric: tabular-nums; }
+.hof-amt { flex-shrink: 0; font-family: var(--display); font-size: 18px; font-weight: 800; color: var(--ink); font-variant-numeric: tabular-nums; }
+.hof .kv-k .sl-sub { margin-top: 1px; }
