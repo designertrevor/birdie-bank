@@ -10,7 +10,7 @@ import { useNav } from '../lib/nav.js';
 import { money } from '../lib/golf.js';
 import { hideTrip } from '../lib/trip-store.js';
 import { dayLabel } from '../lib/plans.js';
-import { BIG_BET_KINDS, BIG_MAX_STAKE, POT_KINDS, SKINS_KINDS, betStandLine, betStrokesFor, bigName, bigPlayers, groupOf } from '../lib/big-game.js';
+import { BIG_BET_KINDS, BIG_MAX_STAKE, POT_KINDS, SKINS_KINDS, betStandLine, betStrokesFor, bigName, bigPlayers, groupOf, skinsNow, skinsRulesLine } from '../lib/big-game.js';
 import { bigLeft, bigWho, myBigMoney, myPlaceLine, toParText } from '../lib/big-view.js';
 import { bigStatus } from '../lib/big-money.js';
 import { saveBigBet } from '../lib/big-store.js';
@@ -182,30 +182,71 @@ export function PotTable({ bs, isMe, name }) {
   );
 }
 
-/** Field skins, hole by hole: who took each, what tied (and carried), and what's still out. */
-export function SkinsList({ bs, name }) {
+/**
+ * Field skins: who has a skin on which hole and what each is worth now (the pot over the skins won so
+ * far, or with carries, each hole's part of the pot), hole by hole, with the game's house rules.
+ */
+export function SkinsList({ bs, name, isMe = () => false }) {
   const { big, results } = bs;
   const m = results.money.skins;
+  const now = skinsNow(big, bs.field, results.skins, m);
   const won = results.skins.filter(h => h.state === 'won');
+  const count = won.reduce((a, h) => a + (h.skins || 1), 0);
   const kind = SKINS_KINDS[big.skins.kind].toLowerCase();
+  const cash = c => money(Math.round(c) / 100);
+  const rules = skinsRulesLine(big.skins);
+  const sub = h => {
+    if (h.state === 'open') return 'Not every group has played it';
+    if (h.state === 'none') return big.skins.carry ? 'Nobody scored it, it carries' : 'Nobody scored it';
+    if (h.state === 'lost') return `${name(h.lost)} won it but missed net par on the next hole${big.skins.carry ? ', so it carried' : ''}`;
+    if (h.state === 'tied') return `${h.tied.length} at ${kind} ${h.score}${big.skins.carry ? ', carries' : ''}`;
+    const bits = [`${kind} ${h.score}`];
+    if (h.canadian) bits.push('natural birdie');
+    if (h.birdie) bits.push('birdie, two skins');
+    if (big.skins.carry && h.carry > 1) bits.push(`${h.carry} holes`);
+    if (h.pending) bits.push('to hold on the next hole');
+    return bits.join(' · ');
+  };
   return (
     <>
+      {now.players.length > 0 && (
+        <>
+          <div className="sec-label">{bs.final ? 'Skins won' : 'Who has skins'}</div>
+          <div className="trip-table big-table">
+            {now.players.map(p => (
+              <div key={p.id} className={`trip-row ${isMe(p.id) ? 'me' : ''}`}>
+                <span className="tr-main">
+                  <span className="tr-name">{name(p.id)}</span>
+                  <span className="tr-sub">{p.skins} skin{p.skins === 1 ? '' : 's'} · {p.holes.length === 1 ? 'hole' : 'holes'} {p.holes.join(', ')}</span>
+                </span>
+                <span className="tr-amt">{cash(p.cents)}</span>
+              </div>
+            ))}
+          </div>
+        </>
+      )}
+      <div className="sec-label">Hole by hole</div>
       <div className="trip-table big-table">
         {results.skins.map(h => (
           <div key={h.no} className="trip-row">
             <span className="tr-rank">{h.no}</span>
             <span className="tr-main">
-              <span className="tr-name">{h.state === 'won' ? name(h.winner) : h.state === 'open' ? 'Still out' : h.state === 'none' ? 'Nobody scored' : 'Tied'}</span>
-              <span className="tr-sub">{h.state === 'won' ? `${kind} ${h.score}${big.skins.carry && h.carry > 1 ? ` · worth ${h.carry} holes` : ''}`
-                : h.state === 'tied' ? `${h.tied.length} at ${kind} ${h.score}${big.skins.carry ? ', carries' : ''}` : h.state === 'open' ? 'Not every group has played it' : ''}</span>
+              <span className="tr-name">{h.state === 'won' ? name(h.winner) : h.state === 'open' ? 'Still out' : h.state === 'none' ? 'Nobody scored' : h.state === 'lost' ? 'Gone back' : 'Tied'}</span>
+              <span className="tr-sub">{sub(h)}</span>
             </span>
+            {h.state === 'won' && now.holes[h.no] > 0 && <span className="tr-amt">{cash(now.holes[h.no])}</span>}
             {h.state === 'won' && <Icon name="coins" fill />}
           </div>
         ))}
       </div>
-      <p className="field-help pad">{won.length} skin{won.length === 1 ? '' : 's'} so far across every group. {big.skins.carry
-        ? 'A tied hole carries to the next, and anything carried past the last hole is shared by every skin.'
-        : 'The pot is split by skins won, so each skin is worth the same.'}{bs.final && m.pool ? ` ${money(m.pool / 100)} in the pot${won.length && !big.skins.carry ? `, ${money(m.perSkin / 100)} a skin` : ''}.` : ''}</p>
+      <p className="field-help pad">
+        {count} skin{count === 1 ? '' : 's'} so far across every group, from a {cash(now.pool)} pot.{' '}
+        {big.skins.carry
+          ? `Each hole is worth ${cash(now.perHole)}, and a skin takes every hole carried into it.${now.riding > 0 && !bs.final ? ` ${cash(now.riding)} is riding on the next hole.` : ''}`
+          : count ? `Each skin is worth ${cash(now.perSkin)} now, less as more are won.` : 'The pot is split by skins won, so each skin is worth the same.'}
+        {rules ? ` House rules: ${rules}.` : ''}
+        {bs.final && !count && now.pool ? ' No skins won, so everyone gets theirs back.' : ''}
+      </p>
     </>
   );
 }

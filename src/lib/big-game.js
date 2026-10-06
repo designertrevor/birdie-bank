@@ -23,7 +23,9 @@
 // - groups: [{ id, name, players: [id], keeper, roundId, code }]: keeper is who's planned to keep
 //   score, roundId and code the group's round and its live code once the groups are started.
 // - pot: { on, kind: 'net' | 'gross' | 'stableford', stake, places: [pct] }
-// - skins: { on, kind: 'net' | 'gross', stake, carry, out: [id] }: out sit the skins out.
+// - skins: { on, kind: 'net' | 'gross', stake, carry, out: [id], leftover?, canadian?, validate?, birdieDouble? }:
+//   out sit the skins out. The house rules (added 2026-10-08, see skinsBoard) are only there when on,
+//   so a game from before reads exactly as it always did.
 // - teams: { on, kind: 'net' | 'gross', stake, best: 1 | 2, list: [{ id, name, players }], places }
 // - bets: [{ id, kind: 'match' | 'hole', sides: [a, b], stake, strokes?: { to, count } }]
 // Strokes for the field are full playing handicaps (course handicap at hcPct), never off the low,
@@ -52,6 +54,12 @@ export const POT_KINDS = {
   stableford: { name: 'Stableford', short: 'Stableford', blurb: 'Points a hole: 2 for a net par, 3 a birdie, 1 a bogey. Most points wins.' },
 };
 export const SKINS_KINDS = { net: 'Net', gross: 'Gross' };
+/** With carries, what's still carried past the last hole does (field skins house rule, 2026-10-08). */
+export const SKINS_LEFTOVER = {
+  share: { label: 'Every skin', help: 'Shared by every skin won, so each skin gets a little more.' },
+  split: { label: 'Last-hole ties', help: 'The players tied for low on the last hole share it.' },
+  back: { label: 'Paid back', help: 'Paid back to everyone in the skins, the same to each.' },
+};
 /** Places paid, in percent of the pot. */
 export const PLACES = [
   { key: '1', label: 'Winner takes all', places: [100] },
@@ -70,12 +78,12 @@ const toCents = v => Math.round((Number(v) || 0) * 100);
 const stakeOf = v => Math.min(BIG_MAX_STAKE, Math.max(0, Math.round((Number(v) || 0) * 100) / 100));
 const first = n => String(n || '').trim().split(/\s+/)[0] || '?';
 
-/** A new game's formats: a $20 net pot paying three places and $10 net skins, no teams. */
+/** A new game's formats: a $20 net pot paying three places and $10 net skins, no teams. Its skins split to the exact cent (skinsMoney). */
 export function defaultBig() {
   return {
     v: 1, at: 0, hcPct: 95, useHandicaps: true, people: {}, groups: [],
     pot: { on: true, kind: 'net', stake: 20, places: [50, 30, 20] },
-    skins: { on: true, kind: 'net', stake: 10, carry: false, out: [] },
+    skins: { on: true, kind: 'net', stake: 10, carry: false, out: [], exact: true },
     teams: { on: false, kind: 'net', stake: 10, best: 1, list: [], places: [100] },
     bets: [],
   };
@@ -154,7 +162,7 @@ export function cleanBig(raw) {
     useHandicaps: raw.useHandicaps !== false,
     people, groups,
     pot: { on: pot.on !== false, kind: kindOf(pot.kind, POT_KINDS, 'net'), stake: stakeOf(pot.stake ?? base.pot.stake), places: cleanPlaces(pot.places ?? base.pot.places) },
-    skins: { on: skins.on !== false, kind: kindOf(skins.kind, SKINS_KINDS, 'net'), stake: stakeOf(skins.stake ?? base.skins.stake), carry: !!skins.carry, out: (Array.isArray(skins.out) ? skins.out : []).filter(inGame) },
+    skins: { on: skins.on !== false, kind: kindOf(skins.kind, SKINS_KINDS, 'net'), stake: stakeOf(skins.stake ?? base.skins.stake), carry: !!skins.carry, out: (Array.isArray(skins.out) ? skins.out : []).filter(inGame), ...skinsRules(skins) },
     teams: { on: !!teams.on && list.length > 1, kind: kindOf(teams.kind, SKINS_KINDS, 'net'), stake: stakeOf(teams.stake ?? base.teams.stake), best: teams.best === 2 ? 2 : 1, list, places: cleanPlaces(teams.places ?? base.teams.places) },
     bets,
   };
@@ -167,6 +175,17 @@ export function cleanBig(raw) {
     }
     if (Object.keys(frozen).length) out.frozen = frozen;
   }
+  return out;
+}
+
+/** A skins game's house rules, tidied: only the ones on, so a game without them has none of these keys. */
+function skinsRules(s) {
+  const out = {};
+  if (s.leftover === 'split' || s.leftover === 'back') out.leftover = s.leftover;
+  if (s.canadian === true) out.canadian = true;
+  if (s.validate === true) out.validate = true;
+  if (s.birdieDouble === true) out.birdieDouble = true;
+  if (s.exact === true) out.exact = true;
   return out;
 }
 
@@ -351,6 +370,23 @@ export function allot(total, weights) {
 }
 
 /**
+ * `allot` in whole numbers, so equal remainders are truly equal: `total` cents split by whole-number
+ * weights `[[id, w]]`, each share rounded down, then a spare cent each to the biggest remainders,
+ * equal remainders in the order given. Nothing made or lost. Returns { id: cents }.
+ */
+export function allotWhole(total, weights) {
+  const list = weights.filter(([, w]) => w > 0);
+  const W = list.reduce((a, [, w]) => a + w, 0);
+  if (!list.length || !(total > 0)) return {};
+  const parts = list.map(([id, w], i) => ({ id, base: Math.floor((total * w) / W), rem: (total * w) % W, i }));
+  let spare = total - parts.reduce((a, x) => a + x.base, 0);
+  for (const x of [...parts].sort((a, b) => b.rem - a.rem || a.i - b.i)) { if (spare <= 0) break; x.base++; spare--; }
+  const out = {};
+  for (const x of parts) out[x.id] = (out[x.id] || 0) + x.base;
+  return out;
+}
+
+/**
  * The pot paid by place: `rows` best first ({ id, value }, equal values tie), `places` in percent.
  * Tied players share the places they cover. With fewer finishers than places, the places nobody
  * reached go to the ones paid, in the same proportions. Returns { id: cents won }.
@@ -430,59 +466,173 @@ export function potMoney(big, field, board = potBoard(big, field)) {
 export const skinsPlayers = big => bigPlayers(big).filter(id => !big.skins.out.includes(id));
 
 /**
- * Field skins, hole by hole across every group: [{ no, state: 'open' | 'won' | 'tied' | 'none', winner,
- * score, tied: [ids], carry }]. A hole is decided once everyone in the skins has a score on it or
- * won't get one; the lowest score on it alone wins the skin (net or gross). With carries, a tied hole
- * carries to the next: `carry` is how many holes the skin won (or carried) is worth.
+ * Field skins, hole by hole across every group: [{ no, state: 'open' | 'won' | 'tied' | 'none' | 'lost',
+ * winner, score, tied: [ids], carry, units, skins }]. A hole is decided once everyone in the skins has
+ * a score on it or won't get one; the lowest score on it alone wins the skin (net or gross). With
+ * carries, a tied hole carries to the next: `carry` is how many holes the skin won (or carried) is
+ * worth. `units` is what a won hole takes of a pot paid by hole (its carry, one more for a birdie
+ * skin) and `skins` how many skins it counts as (two for a birdie skin).
+ *
+ * House rules, each off unless the game says so (added 2026-10-08, the same rules as Skins in a round,
+ * round.js skinsTable, worked across the field):
+ * - canadian: net skins only. Tied for low with a net birdie or better, a natural birdie (gross under
+ *   the player's own par, no stroke needed) beats a net one: the lowest gross among the tied players
+ *   who made it naturally wins, if that's one player (`canadian: true` on the row).
+ * - validate: a skin only counts if its winner makes net par or better on the next hole. If they
+ *   don't, the hole is 'lost' (`lost` names who had it) and what it took goes back into the carry
+ *   and rides on that next hole (with carries off it's gone). The last hole's skin needs no check,
+ *   and a winner who won't play the next hole (left, or the game closed first) keeps theirs. Until
+ *   the next hole says so the row is `pending`.
+ * - birdieDouble: win a hole with a real birdie or better (gross) and its own skin counts as two:
+ *   two skins of the split, or two holes of a pot paid by hole. Holes carried into it count once.
+ *   A birdie skin lost to validate goes back into the carry as the one hole it was.
  */
 export function skinsBoard(big, field) {
   const ids = skinsPlayers(big);
+  const r = big.skins;
+  const n = field.holes.length;
   const out = [];
   let carry = 0;
-  for (const h of field.holes) {
+  // The last skin won, waiting on its winner's next hole (validate): { row, at }
+  let pending = null;
+  field.holes.forEach((h, i) => {
+    if (pending?.at === i) {
+      const s = scoreOn(field, pending.row.winner, h.no);
+      const row = pending.row;
+      if (s && !s.out && s.net > s.par) {
+        Object.assign(row, { state: 'lost', lost: row.winner, winner: null, pending: false, units: 0, skins: 0 });
+        if (r.carry) carry += row.carry;
+        pending = null;
+      } else if (s) { row.pending = false; pending = null; }
+      // No score on it yet: the skin waits (only while the game is being played)
+    }
     const scores = ids.map(id => ({ id, s: scoreOn(field, id, h.no) }));
-    if (scores.some(x => x.s == null)) { out.push({ no: h.no, state: 'open', winner: null, score: null, tied: [], carry: 0 }); continue; }
-    const live = scores.filter(x => !x.s.out).map(x => ({ id: x.id, v: valueOf(x.s, big.skins.kind) }));
-    const worth = 1 + (big.skins.carry ? carry : 0);
-    if (!live.length) { out.push({ no: h.no, state: 'none', winner: null, score: null, tied: [], carry: worth }); carry = big.skins.carry ? carry + 1 : 0; continue; }
+    if (scores.some(x => x.s == null)) { out.push({ no: h.no, state: 'open', winner: null, score: null, tied: [], carry: 0 }); return; }
+    const live = scores.filter(x => !x.s.out).map(x => ({ id: x.id, v: valueOf(x.s, r.kind), s: x.s }));
+    const worth = 1 + (r.carry ? carry : 0);
+    if (!live.length) { out.push({ no: h.no, state: 'none', winner: null, score: null, tied: [], carry: worth }); carry = r.carry ? carry + 1 : 0; return; }
     const low = Math.min(...live.map(x => x.v));
-    const at = live.filter(x => x.v === low);
-    if (at.length === 1) { out.push({ no: h.no, state: 'won', winner: at[0].id, score: low, tied: [], carry: worth }); carry = 0; }
-    else { out.push({ no: h.no, state: 'tied', winner: null, score: low, tied: at.map(x => x.id), carry: worth }); carry = big.skins.carry ? carry + 1 : 0; }
-  }
+    let at = live.filter(x => x.v === low);
+    let canadian = false;
+    if (at.length > 1 && r.canadian && r.kind === 'net' && low <= h.par - 1) {
+      const naturals = at.filter(x => x.s.gross <= x.s.par - 1);
+      const best = naturals.filter(x => x.s.gross === Math.min(...naturals.map(y => y.s.gross)));
+      if (best.length === 1) { at = best; canadian = true; }
+    }
+    if (at.length === 1) {
+      const w = at[0];
+      const birdie = !!r.birdieDouble && w.s.gross <= w.s.par - 1;
+      const row = { no: h.no, state: 'won', winner: w.id, score: low, tied: [], carry: worth, units: worth + (birdie ? 1 : 0), skins: birdie ? 2 : 1 };
+      if (canadian) row.canadian = true;
+      if (birdie) row.birdie = true;
+      carry = 0;
+      if (r.validate && i < n - 1) { row.pending = true; pending = { row, at: i + 1 }; }
+      out.push(row);
+    } else { out.push({ no: h.no, state: 'tied', winner: null, score: low, tied: at.map(x => x.id), carry: worth }); carry = r.carry ? carry + 1 : 0; }
+  });
   return out;
 }
 
 /**
  * What the skins pay: { pool, skins: { id: count }, won: { id: cents }, balances, perSkin, leftover }.
  * Without carries the pot is split by skins won. With carries each hole is worth an equal part of the
- * pot, a tie carries its part on, and whatever is still carried after the last hole is shared
- * equally by every skin won. No skins at all: everyone gets their money back.
+ * pot, a tie carries its part on, and whatever is still carried after the last hole goes by the
+ * `leftover` house rule: shared by every skin won (the default), shared by the players tied for low
+ * on the last hole ('split'), or paid back to everyone in the skins ('back'). No skins at all:
+ * everyone gets their money back.
+ *
+ * Cents: the pot is split to the cent with nothing made or lost: each share rounded down, then the
+ * spare cents one each to the biggest remainders, equal remainders in order: the skin winners in the
+ * order they first won a skin (hole order), then everyone else in the skins in the order of the
+ * groups. A game set up since 2026-10-08 (`skins.exact`) works the remainders in whole numbers
+ * (allotWhole), so equal ones are always equal. A game from before keeps the split it was decided
+ * with (allot, in floating point, where two equal remainders can come out a hair apart and the
+ * spare cent goes to the other of them), so its money never moves by a cent.
  */
 export function skinsMoney(big, field, board = skinsBoard(big, field)) {
   const ids = skinsPlayers(big);
   const stake = toCents(big.skins.stake);
   const skins = {};
-  for (const h of board) if (h.state === 'won') skins[h.winner] = (skins[h.winner] || 0) + 1;
+  for (const h of board) if (h.state === 'won') skins[h.winner] = (skins[h.winner] || 0) + (h.skins || 1);
   if (!big.skins.on || !stake || ids.length < 2) return { pool: 0, skins, won: {}, balances: {}, perSkin: 0, leftover: 0 };
   const pool = stake * ids.length;
   const total = Object.values(skins).reduce((a, n) => a + n, 0);
+  // Each share as whole numbers over one denominator ([id, w], in the order spare cents go), split
+  // exactly (allotWhole) in a game set up since 2026-10-08, else as it was decided (allot, `float`)
+  const pay = (whole, float) => (big.skins.exact ? allotWhole(pool, whole) : allot(pool, float()));
   let won;
   let leftover = 0;
   if (!total) won = Object.fromEntries(ids.map(id => [id, stake]));
-  else if (!big.skins.carry) won = allot(pool, Object.entries(skins).map(([id, n]) => ({ id, w: n })));
+  else if (!big.skins.carry) won = pay(Object.entries(skins), () => Object.entries(skins).map(([id, n]) => ({ id, w: n })));
   else {
     // Units: each hole is one part of the pot; a skin takes its hole and every hole carried into it
     const decided = board.filter(h => h.state !== 'open');
     const units = {};
-    for (const h of decided) if (h.state === 'won') units[h.winner] = (units[h.winner] || 0) + h.carry;
+    for (const h of decided) if (h.state === 'won') units[h.winner] = (units[h.winner] || 0) + (h.units ?? h.carry);
     const last = decided.at(-1);
     leftover = last && last.state !== 'won' ? last.carry : 0;
-    const w = Object.entries(units).map(([id, u]) => ({ id, w: u + (skins[id] * leftover) / total }));
-    won = allot(pool, w);
+    const rule = big.skins.leftover;
+    const tied = last?.state === 'tied' ? last.tied : [];
+    // Units over `per`, plus the carry left over over `per` for each of `to` (in the order given)
+    const share = (to, per) => {
+      const w = new Map(Object.entries(units).map(([id, u]) => [id, u * per]));
+      for (const id of to) w.set(id, (w.get(id) || 0) + leftover);
+      return [...w];
+    };
+    if (rule === 'split' && tied.length && leftover) won = pay(share(tied, tied.length), () => share(tied, tied.length).map(([id, x]) => ({ id, w: x / tied.length })));
+    else if (rule === 'back' && leftover) won = pay(share(ids, ids.length), () => share(ids, ids.length).map(([id, x]) => ({ id, w: x / ids.length })));
+    else won = pay(Object.entries(units).map(([id, u]) => [id, u * total + skins[id] * leftover]), () => Object.entries(units).map(([id, u]) => ({ id, w: u + (skins[id] * leftover) / total })));
   }
   const balances = Object.fromEntries(ids.map(id => [id, (won[id] || 0) - stake]));
   return { pool, skins, won, balances, perSkin: total ? Math.round(pool / total) : 0, leftover };
+}
+
+/**
+ * The skins board as it stands, for while it's played: what each skin is worth now and who has which.
+ * Without carries a skin is worth the pot over the skins won so far (it shrinks as more are won).
+ * With carries each hole is worth the pot over the holes (and birdie skins) in it, a won hole that
+ * times the holes it took, and `riding` is what's carrying onto the next hole now. Once decided, the
+ * players' amounts are what they win (skinsMoney). Returns { pool, perSkin, perHole, riding,
+ * holes: { no: cents }, players: [{ id, skins, holes: [no], cents }] } in cents (worths can be
+ * fractions of a cent; screens round them).
+ */
+export function skinsNow(big, field, board = skinsBoard(big, field), m = skinsMoney(big, field, board)) {
+  const ids = skinsPlayers(big);
+  const pool = toCents(big.skins.stake) * (ids.length > 1 ? ids.length : 0);
+  const won = board.filter(h => h.state === 'won');
+  const total = won.reduce((a, h) => a + (h.skins || 1), 0);
+  const extra = won.reduce((a, h) => a + (h.birdie ? 1 : 0), 0);
+  const perSkin = !big.skins.carry && total ? pool / total : 0;
+  const perHole = big.skins.carry && field.holes.length ? pool / (field.holes.length + extra) : 0;
+  const holes = {};
+  for (const h of won) holes[h.no] = big.skins.carry ? perHole * (h.units ?? h.carry) : perSkin * (h.skins || 1);
+  let riding = 0;
+  if (big.skins.carry) {
+    const decided = board.filter(h => h.state !== 'open');
+    const last = decided.at(-1);
+    // A tie, a hole nobody scored, or a skin lost on the hole after it: its holes ride on
+    riding = last && last.state !== 'won' ? perHole * last.carry : 0;
+  }
+  const by = new Map();
+  for (const h of won) {
+    const p = by.get(h.winner) || { id: h.winner, skins: 0, holes: [], cents: 0 };
+    p.skins += h.skins || 1; p.holes.push(h.no); p.cents += holes[h.no];
+    by.set(h.winner, p);
+  }
+  const players = [...by.values()];
+  if (field.final) for (const p of players) p.cents = m.won[p.id] || 0;
+  players.sort((a, b) => b.cents - a.cents || b.skins - a.skins || a.holes[0] - b.holes[0]);
+  return { pool, perSkin, perHole, riding, holes, players };
+}
+
+/** The skins house rules in a line: "ties carry, what's left at the end is paid back · Canadian · validated", or ''. */
+export function skinsRulesLine(skins) {
+  const parts = [];
+  if (skins.carry) parts.push(`ties carry, and what’s carried past the last hole ${({ split: 'goes to the last-hole ties', back: 'is paid back' })[skins.leftover] || 'is shared by every skin'}`);
+  if (skins.canadian && skins.kind === 'net') parts.push('a natural birdie beats a net one');
+  if (skins.validate) parts.push('a skin holds with net par on the next hole');
+  if (skins.birdieDouble) parts.push('a birdie wins two skins');
+  return parts.join(' · ');
 }
 
 // --------------------------- Team best ball -----------------------------------------
