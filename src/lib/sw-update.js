@@ -22,7 +22,7 @@ let lastVersion = 0;
 // The newest build this phone has already asked the service worker to fetch
 let chased = 0;
 // Read when this file first runs, before the app tidies ?join=, ?plan= or a sign-in code out of the address bar
-const fromLink = openedFromLink(location.search, location.hash);
+const fromLink = typeof location === 'undefined' ? false : openedFromLink(location.search, location.hash);
 const listeners = new Set();
 
 const launching = () => !touched && performance.now() < LAUNCH_MS;
