@@ -11,7 +11,7 @@ import { useSyncExternalStore } from 'react';
 import { getSupabase, supabaseConfigured } from './supabase.js';
 import { getState } from './store.js';
 import { afterNotNow, afterOff, afterOn, afterShown, pushSupport, settingsRow, shouldAsk } from './notify-ask.js';
-import { carryPushes, cleanPushRequest, paidPushes, pushKey, talkPush } from './push-events.js';
+import { carriedPushes, carryPushes, cleanPushRequest, finishResults, paidPushes, pushSlot, rememberPush, talkPush } from './push-events.js';
 
 const KEY = import.meta.env.VITE_VAPID_PUBLIC_KEY || '';
 /** Push is switched on for this build. */
@@ -188,27 +188,32 @@ export async function answerAsk(answer) {
 
 // --------------------------- sending ----------------------------------------
 
-const sent = new Set();
+const sent = new Map();
+const waiting = new Map();
 
 /**
  * Ask the server to send one push (push-events.js). Fire and forget: after a few seconds (so the
- * round or plan has reached the server and your account), once a session, signed in only, and
- * silent whatever happens.
+ * round or plan has reached the server and your account), once a session (who's in: once per
+ * change of answer, and a newer answer replaces one still waiting), signed in only, and silent
+ * whatever happens.
  */
 export function sendPush(request, { delay = 4000 } = {}) {
   if (!pushConfigured) return;
   const req = cleanPushRequest(request);
   if (!req) return;
-  const key = pushKey(req);
-  if (sent.has(key)) return;
-  sent.add(key);
-  setTimeout(async () => {
+  const slot = pushSlot(req);
+  if (!rememberPush(sent, req)) return;
+  // A newer answer replaces one still waiting (the same answer again was stopped just above)
+  if (slot) { clearTimeout(waiting.get(slot)); waiting.delete(slot); }
+  const timer = setTimeout(async () => {
+    if (slot) waiting.delete(slot);
     try {
       const { token } = await session();
       if (!token) return;
       await fetch('/api/push', { method: 'POST', keepalive: true, headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` }, body: JSON.stringify(request) });
     } catch { /* a push is a nice-to-have */ }
   }, delay);
+  if (slot) waiting.set(slot, timer);
 }
 
 // The moments, one line at each call site
@@ -232,19 +237,31 @@ export function pushRsvp(plan, status, name) {
   sendPush({ kind: 'rsvp', scope: 'plan', code: plan.code, topic: status, data: { name: name || myFirst(), status, day: plan.date, course: plan.course?.name } }, { delay: 1500 });
 }
 
-/** You finished a shared round: everyone in it hears it's done. */
+/**
+ * You finished a shared round: everyone in it hears it's done, and how they did (won, their place,
+ * square), never an amount (push-events.js finishResults). Just-playing seats and a card with no
+ * game get the plain "Round finished".
+ */
 export function pushRoundFinished(round) {
   const code = round?.shared?.code || round?.shareCode;
-  if (code) sendPush({ kind: 'finished', scope: 'round', code, data: { course: round.course?.name } });
+  if (!pushConfigured || !code) return;
+  const request = results => sendPush({ kind: 'finished', scope: 'round', code, results, data: { course: round.course?.name } });
+  // The money logic is already loaded on the scoring screen; loaded here only when push is on
+  import('./round.js').then(({ bettors, cardOnly, roundResults }) => {
+    if (cardOnly(round)) return request(undefined);
+    request(finishResults(roundResults(round).balances, bettors(round).map(p => p.id)));
+  }).catch(() => request(undefined));
 }
 
 /**
- * Rows just marked on the shared Tab (tab-sync.js): the people paid hear it, and so does the other
- * person when you ask to roll a balance to next time (push-events.js paidPushes, carryPushes).
+ * Rows just marked on the shared Tab (tab-sync.js): the people paid hear it, so does the other
+ * person when you ask to roll a balance to next time, and the person who asked when you answer
+ * (push-events.js paidPushes, carryPushes, carriedPushes).
  */
 export function pushTab(rows) {
   if (!pushConfigured) return;
-  for (const req of [...paidPushes(rows, myFirst()), ...carryPushes(rows, myFirst())]) sendPush(req, { delay: 1500 });
+  const name = myFirst();
+  for (const req of [...paidPushes(rows, name), ...carryPushes(rows, name), ...carriedPushes(rows, name)]) sendPush(req, { delay: 1500 });
 }
 
 /**
