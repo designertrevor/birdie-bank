@@ -59,21 +59,22 @@ function draw(ctx, m) {
   if (col) y += tileH + gap;
 
   // The sections: a label and a line or two each, as far as there's room
-  for (const s of m.sections) {
-    if (y + 140 > footerY - 40) break;
-    y += 56;
+  // A wider gap above each label after the first, so a section's last line doesn't run into the next
+  m.sections.forEach((s, i) => {
+    if (y + 140 > footerY - 40) return;
+    y += i ? 72 : 56;
     ctx.fillStyle = C.mint;
     ctx.font = `700 28px ${BODY}`;
     spaced(ctx, s.label.toUpperCase(), PAD, y, 3);
     y += 8;
     for (const line of s.lines.slice(0, 2)) {
-      if (y + 56 > footerY - 40) break;
+      if (y + 54 > footerY - 70) break;
       y += 54;
       ctx.fillStyle = C.ink;
       ctx.font = `600 36px ${BODY}`;
       ctx.fillText(clip(ctx, line, inner), PAD, y);
     }
-  }
+  });
 
   ctx.fillStyle = C.soft;
   ctx.font = `600 30px ${BODY}`;
