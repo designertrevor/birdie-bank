@@ -67,6 +67,19 @@ drop trigger if exists push_subscriptions_touch on public.push_subscriptions;
 create trigger push_subscriptions_touch before update on public.push_subscriptions
   for each row execute function public.push_subscriptions_touch();
 
+-- One browser, one account: when a phone's push address is saved for someone, it stops belonging
+-- to anyone else, so on a shared phone the last person signed in is the only one it buzzes for
+-- (even when the one before never signed out).
+create or replace function public.push_subscriptions_claim() returns trigger language plpgsql security definer set search_path = '' as $$
+begin
+  delete from public.push_subscriptions s where s.endpoint = new.endpoint and s.user_id <> new.user_id;
+  return new;
+end $$;
+revoke all on function public.push_subscriptions_claim() from public, anon, authenticated;
+drop trigger if exists push_subscriptions_claim on public.push_subscriptions;
+create trigger push_subscriptions_claim before insert or update of endpoint on public.push_subscriptions
+  for each row execute function public.push_subscriptions_claim();
+
 -- --------------------------- what was sent ----------------------------------
 
 create table if not exists public.push_sends (
