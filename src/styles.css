@@ -3294,3 +3294,9 @@ a.header-btn.rm-open { text-decoration: none; }
 .notify-acts { padding: 12px 16px 16px; display: flex; flex-direction: column; gap: 6px; }
 .notify-acts .link-btn { min-height: 44px; }
 .notify-lede { padding: 4px 16px 14px; }
+
+/* O10 profilecard: the square profile card on the share screen, its stand-in, and the row on your profile that opens it */
+.share-img.square, .share-card.square { aspect-ratio: 1 / 1; width: min(320px, calc(100% - 32px)); }
+.share-card.square { overflow: hidden; padding: 20px; }
+.share-card.square .wrapped-tiles { margin: 8px 0 0; }
+.pf-share { margin: 12px 16px 0; }

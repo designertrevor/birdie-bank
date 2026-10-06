@@ -1,5 +1,6 @@
-// Your profile: your avatar, name, handicap, home course and payment app, your stats, and who sees
-// what. Opened from Settings (behind your avatar on every main tab) and from your row on Players.
+// Your profile: your avatar, name, handicap, home course and payment app, your stats, who sees
+// what, and Share my card (profile-card.js). Opened from Settings (behind your avatar on every main
+// tab) and from your row on Players.
 // It all works on this phone first; people you've played with see it once your account has it.
 import { useMemo, useState } from 'react';
 import { Header, Icon, Numpad, PickChip, Screen, useUI } from '../components/ui.jsx';
@@ -129,6 +130,10 @@ export default function Profile() {
         ) : (
           <p className="hint-card"><Icon name="flag-pennant" fill /> Your rounds, record and favorite game show up here after your first round.</p>
         )}
+
+        <button className="text-link stats-link pf-share" onClick={() => nav.push('share', { kind: 'profile' })}>
+          <Icon name="share-network" /> <span className="row-main">Share my card<span className="sl-sub">Handicap, record, nemesis and favorite game, square for the group chat. Money only if you show it</span></span> <Icon name="caret-right" />
+        </button>
 
         <div className="sec-label">Your details</div>
         <div className="block">
