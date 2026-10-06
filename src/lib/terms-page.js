@@ -1,5 +1,5 @@
 // The terms of service at /terms.html, next to the privacy policy (public/privacy.html) and in its
-// look. The build (vite.config.js termsPage) writes it from here, so the app’s name comes from
+// look. The build (vite.config.js legalPages) writes it from here, so the app’s name comes from
 // app-name.js and the contact address from support.js: the rename and a new support inbox are
 // one-line changes. The body says "the app" and "we", so it reads the same whatever the name.
 // It’s a draft for a lawyer to review, and the banner at the top says so until they have.

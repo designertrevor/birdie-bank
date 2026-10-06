@@ -10,6 +10,7 @@ import { renderToStaticMarkup } from 'react-dom/server'
 import { RULE_KEYS, renderRulePage, renderRulesIndex, ruleFile, robotsTxt, sitemapXml } from './src/lib/rule-pages.js'
 import { publicRoadmap } from './src/lib/roadmap-public.js'
 import { TERMS_FILE, TERMS_PATH, renderTermsPage } from './src/lib/terms-page.js'
+import { fillSupportEmail } from './src/lib/support.js'
 
 // Files the service worker should not save for offline use
 // (and not the public rule pages, sitemap or robots.txt: they're web pages, not the app)
@@ -142,22 +143,27 @@ function rulePages() {
 }
 
 /**
- * The terms of service (terms-page.js): written to dist/terms.html after a build, next to
- * privacy.html, with the app's name and support address from their constants. The dev server
- * answers /terms.html with the same page.
+ * The legal pages. The terms of service (terms-page.js): written to dist/terms.html after a build,
+ * next to privacy.html, with the app's name and support address from their constants. The privacy
+ * policy (public/privacy.html): its support address placeholder filled in from support.js, before
+ * the offline list is made. The dev server answers both with the same pages.
  */
-function termsPage() {
+function legalPages() {
+  const privacySource = fileURLToPath(new URL('./public/privacy.html', import.meta.url));
   return {
-    name: 'bb-terms-page',
+    name: 'bb-legal-pages',
     configureServer(server) {
       server.middlewares.use((req, res, next) => {
-        if (req.url?.split('?')[0] !== TERMS_PATH) return next();
+        const path = req.url?.split('?')[0];
+        if (path !== TERMS_PATH && path !== '/privacy.html') return next();
         res.setHeader('Content-Type', 'text/html; charset=utf-8');
-        res.end(renderTermsPage());
+        res.end(path === TERMS_PATH ? renderTermsPage() : fillSupportEmail(readFileSync(privacySource, 'utf8')));
       });
     },
     writeBundle({ dir }) {
       writeFileSync(join(dir, TERMS_FILE), renderTermsPage());
+      const privacy = join(dir, 'privacy.html');
+      writeFileSync(privacy, fillSupportEmail(readFileSync(privacy, 'utf8')));
     },
   };
 }
@@ -183,5 +189,5 @@ function roadmapList() {
 
 // https://vite.dev/config/
 export default defineConfig({
-  plugins: [react(), buildStamp(), roadmapList(), rulePages(), termsPage(), precache(), firstScreen()],
+  plugins: [react(), buildStamp(), roadmapList(), rulePages(), legalPages(), precache(), firstScreen()],
 })
