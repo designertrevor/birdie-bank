@@ -4,6 +4,7 @@ import ErrorBoundary from './components/ErrorBoundary.jsx';
 import { NavCtx } from './lib/nav.js';
 import { getState, useStore } from './lib/store.js';
 import { joinRoute } from './lib/join.js';
+import { NotifyAsk } from './components/NotifyAsk.jsx';
 import { syncConfigured } from './lib/supabase.js';
 import { cleanCode } from './lib/sync-model.js';
 import { KeptScope, notePlace, startPlace } from './lib/kept.js';
@@ -382,6 +383,7 @@ export default function App() {
               </KeptScope.Provider>
             </Suspense>
           </ErrorBoundary>
+          <NotifyAsk />
         </div>
       </NavCtx.Provider>
     </UIProvider>

@@ -113,3 +113,40 @@ self.addEventListener('fetch', e => {
     return res;
   })));
 });
+
+// Web push (api/push.js sends them, push-events.js says what they say): show it, grouped by its
+// tag so a newer push about the same round or plan replaces the last one. A push with no readable
+// text still shows something, since a browser can stop sending to a site that shows nothing.
+self.addEventListener('push', e => {
+  let p = {};
+  try { p = e.data ? e.data.json() : {}; } catch { p = { body: e.data?.text?.() || '' }; }
+  const title = typeof p.title === 'string' && p.title ? p.title : 'Your golf group';
+  e.waitUntil(self.registration.showNotification(title, {
+    body: typeof p.body === 'string' ? p.body : '',
+    tag: typeof p.tag === 'string' ? p.tag : undefined,
+    icon: '/icon-192.png',
+    badge: '/icon-192.png',
+    data: { url: typeof p.url === 'string' ? p.url : '/' },
+  }));
+});
+
+// Tapping one opens the app at its round or plan: an open copy of the app goes there and comes to
+// the front, otherwise a new one opens. Only the app's own addresses, never one from elsewhere.
+self.addEventListener('notificationclick', e => {
+  e.notification.close();
+  let url = '/';
+  try {
+    const u = new URL(e.notification.data?.url || '/', self.location.origin);
+    if (u.origin === self.location.origin) url = u.pathname + u.search;
+  } catch { /* the app's home */ }
+  e.waitUntil((async () => {
+    const wins = await self.clients.matchAll({ type: 'window', includeUncontrolled: true });
+    const open = wins.find(w => new URL(w.url).origin === self.location.origin);
+    if (open) {
+      await open.focus().catch(() => {});
+      if (url !== '/') await open.navigate(url).catch(() => {});
+      return;
+    }
+    await self.clients.openWindow(url);
+  })());
+});
