@@ -1,11 +1,13 @@
 // "The game you asked for is live": on Up next, once, when something you asked for or voted for on
 // the roadmap ships (roadmap.js shippedNotes). There's no push yet, so this is how you hear. It
-// loads nothing more until this phone has voted or sent an idea.
+// loads nothing more until this phone has voted or sent an idea. It goes ahead of What's new, and
+// only one of them shows a visit (upnext-card.js).
 import { useEffect, useState } from 'react';
 import { Icon } from './ui.jsx';
 import { useNav } from '../lib/nav.js';
 import { roadmapItems, shippedNotes } from '../lib/roadmap.js';
 import { markNotesTold, refreshForUpNext, useRoadmap } from '../lib/roadmap-sync.js';
+import { claimCard, shippedNone } from '../lib/upnext-card.js';
 
 export function ShippedUpNext() {
   const nav = useNav();
@@ -16,7 +18,7 @@ export function ShippedUpNext() {
   const [shown, setShown] = useState(null);
 
   useEffect(() => {
-    if (!interested) return undefined;
+    if (!interested) { shippedNone(); return undefined; }
     let live = true;
     refreshForUpNext();
     import('virtual:roadmap').then(m => { if (live) setBase(m.default); }, () => {});
@@ -26,7 +28,9 @@ export function ShippedUpNext() {
   useEffect(() => {
     if (!base || shown) return;
     const notes = shippedNotes(roadmapItems(base, server.requests), { local, mine: server.mine, myVotes: server.myVotes });
-    if (!notes.length) return;
+    if (!notes.length) { shippedNone(); return; }
+    // What's new already has this visit: these stay untold, for the next one
+    if (!claimCard('shipped')) { setShown([]); return; }
     setShown(notes);
     markNotesTold(notes.map(n => n.key));
   }, [base, shown, local, server]);
