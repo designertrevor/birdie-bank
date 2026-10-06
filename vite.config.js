@@ -8,10 +8,11 @@ import { createElement, Fragment } from 'react'
 import { renderToStaticMarkup } from 'react-dom/server'
 import { RULE_KEYS, renderRulePage, renderRulesIndex, ruleFile, robotsTxt, sitemapXml } from './src/lib/rule-pages.js'
 import { publicRoadmap } from './src/lib/roadmap-public.js'
+import { TERMS_FILE, TERMS_PATH, renderTermsPage } from './src/lib/terms-page.js'
 
 // Files the service worker should not save for offline use
 // (and not the public rule pages, sitemap or robots.txt: they're web pages, not the app)
-const SKIP = /(^|\/)(sw\.js|prototype\.html)$|\.map$|^rules\/|^(sitemap\.xml|robots\.txt)$/;
+const SKIP = /(^|\/)(sw\.js|prototype\.html)$|\.map$|^rules\/|^(sitemap\.xml|robots\.txt|terms\.html)$/;
 // The JS the first screen (Up next) waits for: the entry and what it imports up front. Main was
 // 481 kB before overnight 8 split the later parts of Up next out; a build over it says so.
 const FIRST_SCREEN_BUDGET = 481_000;
@@ -120,6 +121,27 @@ function rulePages() {
 }
 
 /**
+ * The terms of service (terms-page.js): written to dist/terms.html after a build, next to
+ * privacy.html, with the app's name and support address from their constants. The dev server
+ * answers /terms.html with the same page.
+ */
+function termsPage() {
+  return {
+    name: 'bb-terms-page',
+    configureServer(server) {
+      server.middlewares.use((req, res, next) => {
+        if (req.url?.split('?')[0] !== TERMS_PATH) return next();
+        res.setHeader('Content-Type', 'text/html; charset=utf-8');
+        res.end(renderTermsPage());
+      });
+    },
+    writeBundle({ dir }) {
+      writeFileSync(join(dir, TERMS_FILE), renderTermsPage());
+    },
+  };
+}
+
+/**
  * The public roadmap, made from ROADMAP.md as the app builds: `import items from 'virtual:roadmap'`
  * gives the short public list (see src/lib/roadmap-public.js), never the file itself, so Trevor's
  * notes stay out of the app. A change to ROADMAP.md reloads it in dev.
@@ -140,5 +162,5 @@ function roadmapList() {
 
 // https://vite.dev/config/
 export default defineConfig({
-  plugins: [react(), roadmapList(), rulePages(), precache(), firstScreen()],
+  plugins: [react(), roadmapList(), rulePages(), termsPage(), precache(), firstScreen()],
 })
