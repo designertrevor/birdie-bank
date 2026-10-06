@@ -29,6 +29,8 @@ import { APP_NAME } from './app-name.js';
 
 const EMPTY = '–';
 const first = n => String(n || '').trim().split(/\s+/)[0] || '';
+// A buddy whose picture isn't ready (or won't load) falls back to your initials, never a question mark
+const initialsOf = n => String(n || '').trim().split(/\s+/).filter(Boolean).slice(0, 2).map(w => w[0].toUpperCase()).join('');
 const plural = (n, word, many = `${word}s`) => `${n} ${n === 1 ? word : many}`;
 
 /** The trend's label on the card: it's never an official index. */
@@ -100,7 +102,7 @@ export function profileCardModel(card, { showAmounts = false, link = null, avata
     eyebrow: 'Player card',
     title: card.name || 'My player card',
     meta: `${APP_NAME} · ${season.year} season`,
-    avatar: { text: card.avatar.text || '?', bg: bg.hex, ink: bg.ink, src: avatarSrc || null },
+    avatar: { text: card.avatar.text || initialsOf(card.name) || '?', bg: bg.hex, ink: bg.ink, src: avatarSrc || null },
     tiles,
     sections,
     note: card.guide == null ? null : GUIDE_NOTE,
