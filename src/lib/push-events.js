@@ -1,15 +1,18 @@
-// The five pushes: what the app asks the server to send (api/push.js), who each one goes to, and
+// The pushes: what the app asks the server to send (api/push.js), who each one goes to, and
 // what it says. Shared by the app and the server, so both read a request the same way.
 // Pure functions of plain data, so they're easy to test. No storage, no network.
 //
-// A request: { kind, scope: 'round' | 'plan', code, players?, topic?, data: { name, day, course, status } }
+// A request: { kind, scope: 'round' | 'plan' | 'challenge', code, players?, topic?, data: { name, day, course, status } }
 //   invite    a round or plan you share: everyone on it with an account, but you
 //   rsvp      you answered a plan: its organizer
 //   finished  you finished a shared round: everyone in it, but you
 //   paid      you marked a payment: the person you paid (players: [their seat in the round])
+//   carry     you asked to roll a balance to next time: the other person, to agree (players: [their seat])
+//   talk      you posted trash talk on a round, plan or challenge: everyone on it, but you. Never
+//             what you wrote, only that you wrote something, and at most one every 10 minutes
 //   tee       the tee time reminder: the plan's organizer, sent by the daily job, never by the app
 // Who counts as "on it" is the server's call (supabase/2026-10-08-push.sql push_targets): it only
-// sends when the caller is on that round or plan too, and only to people on it.
+// sends when the caller is on that round, plan or challenge too, and only to people on it.
 //
 // What a push says never has an amount in it: it shows on a lock screen, and money stays hidden
 // unless you open the app (the same default as the results image).
@@ -19,6 +22,8 @@ export const PUSH_KINDS = {
   rsvp: { scopes: ['plan'], to: 'host' },
   finished: { scopes: ['round'], to: 'all' },
   paid: { scopes: ['round'], to: 'players' },
+  carry: { scopes: ['round'], to: 'players' },
+  talk: { scopes: ['round', 'plan', 'challenge'], to: 'all' },
   tee: { scopes: ['plan'], to: 'host', server: true },
 };
 
@@ -34,7 +39,7 @@ export function pushText(v, max = 40) {
 }
 
 /**
- * A request as the server accepts it from the app, or null. Only the five kinds, a real code, and
+ * A request as the server accepts it from the app, or null. Only the kinds above, a real code, and
  * short plain text; `to` comes from the kind, never from the request. The tee reminder only ever
  * comes from the daily job.
  */
@@ -74,9 +79,10 @@ export function weekday(iso) {
   return Number.isNaN(t.getTime()) ? '' : WEEKDAYS[t.getUTCDay()];
 }
 
-/** Where tapping the push opens: the plan or the round by its link, or Up next. */
+/** Where tapping the push opens: the plan, the round or the challenge by its link, or Up next (the Tab's pushes). */
 export function pushUrl(req) {
-  if (req.kind === 'paid') return '/';
+  if (req.kind === 'paid' || req.kind === 'carry') return '/';
+  if (req.scope === 'challenge') return `/?challenge=${req.code}`;
   return req.scope === 'plan' ? `/?plan=${req.code}` : `/?join=${req.code}`;
 }
 
@@ -113,6 +119,14 @@ export function pushPayload(req) {
       title = `${who} paid you`;
       body = 'It’s marked paid on the Tab.';
       break;
+    case 'carry':
+      title = `${who} asked to roll it to next time`;
+      body = 'Agree, or say you’d rather get paid, on the Tab.';
+      break;
+    case 'talk':
+      title = 'New trash talk';
+      body = `${who} posted on ${req.scope === 'challenge' ? 'your challenge' : req.scope === 'plan' ? (at ? `the round ${at}` : 'your round coming up') : data.course ? `the ${data.course} round` : 'your round'}. Tap to read it.`;
+      break;
     case 'tee':
       title = 'Book your tee time';
       body = `${at || 'Your round coming up'}. Tee times fill up, so grab one.`;
@@ -142,4 +156,37 @@ export function paidPushes(rows, name = '') {
     out.push({ kind: 'paid', scope: 'round', code: r.code, players: [r.to], topic: r.id, data: { name } });
   }
   return out;
+}
+
+/**
+ * The "roll it to next time" pushes for carry-over rows just asked for on the shared Tab
+ * (tab-sync.js): one per person asked, and only when one of the two asked it themselves. A carry
+ * split over several rounds is one push. The topic is the ask's moment, so asking again after
+ * taking one back is a new push.
+ */
+export function carryPushes(rows, name = '') {
+  const out = [];
+  const seen = new Set();
+  for (const r of rows || []) {
+    if (r?.kind !== 'carry' || r.status !== 'asked' || !r.code || !r.from || !r.to || !r.by) continue;
+    if (r.by !== r.from && r.by !== r.to) continue;
+    const other = r.by === r.from ? r.to : r.from;
+    if (seen.has(other)) continue;
+    seen.add(other);
+    out.push({ kind: 'carry', scope: 'round', code: r.code, players: [other], topic: `${r.from}>${r.to}@${r.at || ''}`, data: { name } });
+  }
+  return out;
+}
+
+/**
+ * The "new trash talk" push for a comment just posted in a thread whose target is `t` (talk-sync.js
+ * threadTarget: { scope, code }), or null when the thread can't reach anyone yet. `id` is the
+ * comment's, so each one is asked for; the server sends at most one every 10 minutes per thread.
+ */
+export function talkPush(t, { id, name = '', course = '', day = '' } = {}) {
+  if (!t?.code || !['round', 'plan', 'challenge'].includes(t.scope) || !id) return null;
+  const data = { name };
+  if (course && t.scope !== 'challenge') data.course = course;
+  if (day && t.scope === 'plan') data.day = day;
+  return { kind: 'talk', scope: t.scope, code: t.code, topic: String(id), data };
 }

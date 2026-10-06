@@ -16,7 +16,7 @@ import { crewPayment } from './crew-tabs.js';
 import { closeBooks } from './books.js';
 import { canonicalOf } from './pair-debts.js';
 import { BadRowError, TAB_CHECK_MS, TabOffError, supabaseTab } from './tab-adapters.js';
-import { pushPaid } from './push-client.js';
+import { pushTab } from './push-client.js';
 
 export { TabOffError, TAB_CHECK_MS } from './tab-adapters.js';
 
@@ -126,8 +126,8 @@ function commit(rows, extra) {
   if (!rows.length) return;
   enqueue(rows);
   flushTab();
-  // The person paid hears it (push-client.js)
-  pushPaid(rows);
+  // The person paid, or asked to roll it over, hears it (push-client.js)
+  pushTab(rows);
 }
 
 /**

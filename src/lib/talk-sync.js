@@ -18,6 +18,7 @@ import { getSupabase, supabaseConfigured } from './supabase.js';
 import { isMissingTable } from './plan-adapters.js';
 import { deviceReady, myDevice } from './device.js';
 import { accountNow } from './cloud.js';
+import { pushTalk } from './push-client.js';
 import { codeOf } from './pair-debts.js';
 import { mergeRows, newComment, removedRow, talkFromDb, talkReach, talkSeatKey, talkToDb, toggleReaction, unsentRows } from './talk.js';
 
@@ -328,6 +329,11 @@ export function postComment(key, { on, who, name, body, jab = null }) {
   const row = newComment({ id: `c:${uid()}`, on, who, name, body, jab });
   if (!row) return null;
   save(key, row);
+  // The others on it hear there's something new, once the thread can reach them (push-client.js)
+  const s = getState();
+  const [kind, ...rest] = String(key).split(':');
+  const thing = kind === 'round' ? s.rounds?.[rest.join(':')] : kind === 'plan' ? s.plans?.[rest.join(':')] : null;
+  pushTalk(threadTarget(s, key), { id: row.id, name, course: thing?.course?.name, day: kind === 'plan' ? thing?.date : '' });
   return row.id;
 }
 
