@@ -1,16 +1,12 @@
 // Rounds in progress: more than one can be going at once (a paused round never gets deleted
 // to make room for a new one). `activeRoundId` is just the one you were in last, so the
 // play button knows where to take you back to.
-import { GAMES, holeComplete } from './round.js';
+import { GAMES } from './round.js';
 import { findCourse } from './courses.js';
 import { stampAvatars } from './avatars.js';
+import { roundsInProgress } from './rounds-live.js';
 
-/** Every round still being played, the one you were in last first, then newest first. */
-export function roundsInProgress(state) {
-  return Object.values(state.rounds || {})
-    .filter(r => r.status === 'active')
-    .sort((a, b) => (b.id === state.activeRoundId) - (a.id === state.activeRoundId) || (b.createdAt || 0) - (a.createdAt || 0));
-}
+export { holesScored, roundsInProgress } from './rounds-live.js';
 
 /** The round to go back to once `leavingId` is finished or deleted: the newest other one in progress, or null. */
 export function nextActiveId(state, leavingId) {
@@ -31,11 +27,6 @@ export function leaveRound(draft, id) {
   if (draft.activeRoundId === id || !draft.rounds[draft.activeRoundId] || draft.rounds[draft.activeRoundId].status !== 'active') {
     draft.activeRoundId = nextActiveId(draft, id);
   }
-}
-
-/** Holes with every score in, for "3 of 18 holes" lines. */
-export function holesScored(round) {
-  return round.holes.filter(h => holeComplete(round, h)).length;
 }
 
 /**

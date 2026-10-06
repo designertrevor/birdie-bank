@@ -1,6 +1,6 @@
 // How long until a planned round: "Saturday, 2 days", "Today, in 3 hours". Up next's cards and the
 // preview both read it (see preview.js). Pure, tested in preview.test.js.
-import { dayLabel, daysUntil, timeLabel } from './plans.js';
+import { dayLabel, daysUntil, timeLabel } from './plan-basics.js';
 
 const DAYS = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
 

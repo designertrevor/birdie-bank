@@ -10,7 +10,7 @@ import {
   snakeHolder, snakeValue, hammerHole, canHammer, birdiePot, birdieShares, bestOf, foursomesTeamHandicap, chapmanTeamHandicap,
   quotaAdjusted,
 } from './games.js';
-import { payFields } from './pay.js';
+import { payFields } from './pay-fields.js';
 import { gamePct, halfStrokesOn, playsAtPct } from './allowances.js';
 import { betsMoney, betsOf, isCashBet } from './pair-bets.js';
 

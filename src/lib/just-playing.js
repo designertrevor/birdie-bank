@@ -4,20 +4,19 @@
 // aimed at them, and finish on a friendly "Nice round" with their score instead of a money reveal.
 // The engine side (round.justPlaying, bettingRound) is in round.js; this is the setup rules and the
 // words. Pure, unit tested in just-playing-ui.test.js.
-import { GAMES, MAX_SIDE_PLAYERS, anyJustPlaying, bettors, cardOnly, isJustPlaying, oneBall, parOf, scoreSummary, scorers } from './round.js';
-import { toParOf, toParText, toParWords } from './to-par.js';
+import { GAMES, MAX_SIDE_PLAYERS, anyJustPlaying, bettors, cardOnly, isJustPlaying, oneBall, parOf } from './round.js';
+import { first, plural } from './nice-round.js';
+
+// The tag and the friendly finish are in nice-round.js, so a round's row on Up next reads them alone
+export { JUST_PLAYING_TAG, niceRound } from './nice-round.js';
 
 /** The seat's name on the Players step, the add-a-player sheet and the invite card. */
 export const JUST_PLAYING = 'Just playing, no bet';
-/** The short tag next to their name on the card and the money bar. */
-export const JUST_PLAYING_TAG = 'Just playing';
 /** What it means, in one line, under the choice. */
 export const JUST_PLAYING_HELP = 'On the card with everyone, out of every bet. Nothing on the Tab.';
 /** The most people in one round, the ones just playing included. */
 export const MAX_GROUP = MAX_SIDE_PLAYERS;
 
-const first = n => String(n || '').trim().split(/\s+/)[0] || 'Someone';
-const plural = (n, word) => `${n} ${word}${n === 1 ? '' : 's'}`;
 
 export { anyJustPlaying, bettors, cardOnly, isJustPlaying };
 
@@ -108,31 +107,6 @@ export function addJustPlayingProblem(round) {
   if (no) return no;
   if (round.players.length >= MAX_GROUP) return `A round is for up to ${MAX_GROUP} players, and the group is full.`;
   return null;
-}
-
-/**
- * The friendly finish for someone just playing: their own score, no money.
- * { title, score, toPar, toParWords, line, holes } or null when they have no scores.
- * "Nice round, Sam" · "84" · "+12" · "Through 18 holes, with 2 birdies and 7 pars".
- */
-export function niceRound(round, pid) {
-  const p = round?.players?.find(x => x.id === pid);
-  if (!p) return null;
-  const unit = scorers(round).find(x => x.id === pid);
-  if (!unit) return null;
-  const s = scoreSummary(round, pid);
-  if (!s.played) return null;
-  const par = toParOf(round, unit).gross;
-  const all = s.played === round.holes.length;
-  const good = [s.eagles && plural(s.eagles, 'eagle'), s.birdies && plural(s.birdies, 'birdie'), s.pars && plural(s.pars, 'par')].filter(Boolean);
-  const holes = all ? `${round.holes.length} holes` : `${s.played} of ${round.holes.length} holes`;
-  const tail = good.length ? `, with ${good.length > 1 ? `${good.slice(0, -1).join(', ')} and ${good.at(-1)}` : good[0]}` : '';
-  return {
-    title: `Nice round, ${first(p.name)}`,
-    score: s.gross, toPar: toParText(par), toParWords: toParWords(par), tone: par < 0 ? 'under' : par > 0 ? 'over' : 'even',
-    line: `${all ? 'All' : 'Through'} ${holes}${tail}.`,
-    holes: s.played,
-  };
 }
 
 /** What the reveal's subtitle says to someone just playing in a betting round: the bets happened, but not to them. */

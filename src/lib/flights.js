@@ -12,12 +12,13 @@ import { canonicalOf, codeOf } from './pair-debts.js';
 import { cleanEntry, cupKey } from './cup.js';
 import { courseNetOf } from './to-par.js';
 import { isJustPlaying } from './round.js';
-import { isDraftKey } from './draft.js';
+import { isDraftKey } from './draft-keys.js';
+import { FLIGHT_NAMES, cleanFlights } from './flights-clean.js';
 
-export const FLIGHT_NAMES = ['A', 'B', 'C', 'D'];
+// The saved list's cleaning is in flights-clean.js, so a trip can read its flights without the rest
+export { FLIGHT_NAMES, cleanFlights } from './flights-clean.js';
 
 const isObj = v => !!v && typeof v === 'object' && !Array.isArray(v);
-const isStr = v => typeof v === 'string' && v.length > 0;
 const lower = s => String(s || '').trim().replace(/\s+/g, ' ').toLowerCase();
 /** Handicap index for sorting: no handicap sorts after everyone with one. */
 const indexOf = p => (p?.index == null || p.index === '' || Number.isNaN(Number(p.index)) ? 99 : Number(p.index));
@@ -69,17 +70,6 @@ export function flightTeams(people) {
     });
   });
   return teams;
-}
-
-/** A trip's flights as saved: up to four lists of { id, name }, each person once, or null. */
-export function cleanFlights(raw) {
-  if (!Array.isArray(raw)) return null;
-  const seen = new Set();
-  const out = raw.slice(0, FLIGHT_NAMES.length).map(f => (Array.isArray(f) ? f : [])
-    .filter(p => isObj(p) && isStr(p.id) && !seen.has(p.id) && seen.add(p.id)).slice(0, 24)
-    .map(p => ({ id: p.id, name: String(p.name || '').trim().slice(0, 40) || 'Player' })))
-    .filter(f => f.length);
-  return out.length ? out : null;
 }
 
 /**

@@ -34,9 +34,9 @@
 import { holeWinner } from './golf.js';
 import { isJustPlaying, oneBall, sideNet, teamHoleScore } from './round.js';
 import { canonicalOf, codeOf } from './pair-debts.js';
-import { stable } from './sync-model.js';
+import { stable } from './sync-codes.js';
 import { courseNetOf } from './to-par.js';
-import { isDraftKey } from './draft.js';
+import { isDraftKey } from './draft-keys.js';
 
 export const CUP_FORMAT = 'cup';
 export const CUP_KINDS = {

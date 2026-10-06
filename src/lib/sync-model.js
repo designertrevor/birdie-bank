@@ -3,20 +3,16 @@
 // different holes never overwrite each other. Round-wide fields like `left` (players who left)
 // travel in the meta record.
 import { holeComplete } from './round.js';
+import { stable } from './sync-codes.js';
+
+// Stable JSON and a code as typed are in sync-codes.js, so the app's start and the cup read them alone
+export { cleanCode, stable } from './sync-codes.js';
 
 /**
  * Fields that belong to one phone only and are never shared. `editing`: this phone is fixing a finished
  * round's scores. `betAsks`: side bet changes this phone sent the keeper and is waiting on (bet-asks.js).
  */
 const LOCAL_ONLY = ['scores', 'banker', 'wolf', 'marks', 'presses', 'current', 'shared', 'localMe', '_remote', 'pressSeq', 'editing', 'betAsks'];
-
-/** JSON with sorted keys so equal data always compares equal. */
-export function stable(v) {
-  if (v === undefined) return 'null';
-  if (v === null || typeof v !== 'object') return JSON.stringify(v);
-  if (Array.isArray(v)) return '[' + v.map(stable).join(',') + ']';
-  return '{' + Object.keys(v).sort().filter(k => v[k] !== undefined).map(k => JSON.stringify(k) + ':' + stable(v[k])).join(',') + '}';
-}
 
 export function buildMeta(round) {
   const meta = {};
@@ -164,7 +160,4 @@ const ALPHABET = 'ABCDEFGHJKMNPQRSTUVWXYZ23456789';
 export function newCode(len = 6) {
   const bytes = crypto.getRandomValues(new Uint8Array(len));
   return Array.from(bytes, b => ALPHABET[b % ALPHABET.length]).join('');
-}
-export function cleanCode(s) {
-  return String(s || '').toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 6);
 }
