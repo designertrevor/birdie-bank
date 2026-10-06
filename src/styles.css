@@ -3256,3 +3256,13 @@ a.header-btn.rm-open { text-decoration: none; }
 /* ---------- O10 polish10: a pass on the overnight 9 screens ---------- */
 /* Before anyone has played, a trip's standings show a quiet dash, not a bold one that reads as a minus */
 .trip-row .tr-amt.none { color: var(--mute-soft); font-weight: 600; }
+
+/* O10 trend: the handicap guide from your rounds on Your stats, next to the official index */
+.trend-official { text-align: right; padding-bottom: 6px; }
+.trend-official-v { font-family: var(--display); font-size: 24px; font-weight: 800; letter-spacing: -.02em; color: var(--mute); font-variant-numeric: tabular-nums; }
+.trend-vs { padding-bottom: 8px; }
+.trend-chart { margin-top: 2px; }
+.trend-chart.flat .chart-line { stroke: var(--ink); }
+.trend-chart.flat .chart-dot { fill: var(--ink); }
+.trend-empty-t { font-weight: 600; color: var(--ink); }
+.trend-empty .field-help { margin-top: 4px; }

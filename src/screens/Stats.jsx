@@ -14,6 +14,9 @@ import { rangeLabel, roundsInRange } from '../lib/history.js';
 import { useMyProfile } from '../lib/profiles.js';
 import { statsShareLine } from '../lib/profile-view.js';
 import { deepStats, lineAmount, lineSub, pressCount, pressText, skinsText, winRate } from '../lib/deep-stats.js';
+import { TREND_LABEL, handicapTrend, trendEmptyText, trendVsOfficial } from '../lib/hc-trend.js';
+import { formatIndex } from '../lib/format.js';
+import { TrendChart } from '../components/TrendChart.jsx';
 
 const RANGE_KEY = 'bb-stats-range';
 const KINDS = ['all', 'season', 'month', 'custom'];
@@ -53,6 +56,12 @@ export default function Stats({ range: given = null }) {
     const s = { rounds, me, players, links, unlinks, accountOf };
     return deepStats(s, roundsInRange(s, range));
   }, [rounds, me, players, links, unlinks, accountOf, range]);
+  // The handicap trend looks at every round you've finished, whatever the range
+  const { customCourses } = state;
+  const trend = useMemo(
+    () => handicapTrend({ rounds, me, players, links, unlinks, accountOf, customCourses }),
+    [rounds, me, players, links, unlinks, accountOf, customCourses],
+  );
   const label = rangeLabel(range);
   const made = st.presses.made;
   const rate = winRate(made);
@@ -65,7 +74,10 @@ export default function Stats({ range: given = null }) {
         {range.kind === 'all' && <p className="range-label stats-all" aria-live="polite">Every round you’ve played</p>}
 
         {st.rounds === 0 ? (
-          <Empty illo={false} title="No rounds here" text={emptyText(range, label)} />
+          <>
+            <Empty illo={false} title="No rounds here" text={emptyText(range, label)} />
+            <Trend trend={trend} />
+          </>
         ) : (
           <>
             <div className="pf-tiles stats-tiles">
@@ -75,6 +87,8 @@ export default function Stats({ range: given = null }) {
               <Tile label="Press win rate" value={rate == null ? '–' : `${rate}%`} sub={pressCount(made) ? `${made.won} of ${pressCount(made)} presses` : 'No presses yet'} />
               <Tile label="Skins won" value={st.skins.rounds ? skinsText(st.skins.won) : '–'} sub={st.skins.rounds ? `in ${st.skins.rounds} round${st.skins.rounds === 1 ? '' : 's'} with skins` : 'No skins games'} />
             </div>
+
+            <Trend trend={trend} />
 
             <div className="sec-label">By game</div>
             <Lines lines={st.games} label="Results by game" />
@@ -129,6 +143,42 @@ export default function Stats({ range: given = null }) {
         )}
       </div>
     </Screen>
+  );
+}
+
+/** Your handicap guide from your own rounds, next to the official index you entered. */
+function Trend({ trend }) {
+  const { guide, official, needed, used, byPar, points } = trend;
+  const vs = trendVsOfficial(guide, official);
+  return (
+    <>
+      <div className="sec-label">Handicap trend</div>
+      {guide == null ? (
+        <div className="block trend-empty">
+          <p className="trend-empty-t">Your trend needs {needed} more round{needed === 1 ? '' : 's'}</p>
+          <p className="field-help">{trendEmptyText(needed)}</p>
+        </div>
+      ) : (
+        <div className="chart-card trend-card">
+          <div className="cc-head">
+            <div>
+              <div className="eyebrow">From your rounds</div>
+              <div className="cc-big">{formatIndex(guide)}</div>
+            </div>
+            <div className="trend-official">
+              <div className="eyebrow">Official index</div>
+              <div className="trend-official-v d">{formatIndex(official)}</div>
+            </div>
+          </div>
+          {vs && <div className="cc-meta trend-vs">{vs}</div>}
+          <TrendChart points={points} official={official} />
+        </div>
+      )}
+      <p className="field-help pad">
+        {TREND_LABEL}. {guide == null ? 'Your official index comes from GHIN or your club.' : `Your best rounds of the last ${used}, the way official handicaps count them, each hole capped at net double bogey.${byPar ? ` ${byPar === 1 ? 'One round was' : `${byPar} rounds were`} on a tee with no rating, so it goes by par.` : ''}`}
+        {official == null && guide != null ? ' Add your official index on your profile to see them side by side.' : ''}
+      </p>
+    </>
   );
 }
 
