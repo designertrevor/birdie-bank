@@ -144,6 +144,7 @@ test('records: the longest run of wins, the most skins in a round, the low round
   assert.equal(records.low.holes, 9);
   assert.equal(records.regular.id, 'b');
   assert.equal(records.regular.n, 5);
+  assert.deepEqual(records.regular.ids, ['b', 't'], 'a tie for most rounds names everyone level');
 });
 
 test('no rounds, no records; only crews with something to show get a hall of fame', () => {

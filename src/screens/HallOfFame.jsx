@@ -47,6 +47,8 @@ export default function HallOfFame({ crew: crewId }) {
     return n.length <= 2 ? n.join(' and ') : `${n.slice(0, -1).join(', ')} and ${n.at(-1)}`;
   };
   const { records } = hall;
+  // A tie for most rounds: two names, or Everyone when the whole crew that played is level
+  const regularNames = ids => (ids.length <= 2 ? names([...ids].sort((a, b) => (b === me) - (a === me))) : ids.length === hall.players ? 'Everyone' : `${ids.length} tied`);
   const sinceLine = season.since ? `since the books closed on ${day(season.since)}` : 'this season';
   const rewardWord = season.rewards.names.length === 1 ? season.rewards.names[0].toLowerCase() : 'the reward';
 
@@ -140,7 +142,7 @@ export default function HallOfFame({ crew: crewId }) {
           <Kv k="Longest win streak" v={records.streak ? `${first(records.streak.id)}, ${records.streak.n} in a row` : DASH} />
           <Kv k="Most skins in a round" v={records.skins ? `${first(records.skins.id)}, ${records.skins.skins}` : DASH} sub={records.skins ? `${records.skins.course || 'A round'}, ${day(records.skins.at)}` : null} />
           <Kv k={records.low ? `Low ${records.low.holes}` : 'Low round'} v={records.low ? `${first(records.low.id)}, ${records.low.strokes}` : DASH} sub={records.low ? `${records.low.course || 'A round'}, ${day(records.low.at)}` : null} />
-          <Kv k="Most rounds" v={records.regular ? `${first(records.regular.id)}, ${records.regular.n}` : DASH} />
+          <Kv k="Most rounds" v={records.regular ? `${regularNames(records.regular.ids || [records.regular.id])}, ${records.regular.n}` : DASH} />
         </div>
         <p className="field-help pad">Only you see this. It’s built from the crew’s rounds on this phone, back to the first one. Points rounds count in points and reward rounds in the reward, never in the money.</p>
         <button className="text-link stats-link" onClick={() => nav.push('share', { kind: 'wrapped', year: new Date(now).getFullYear() })}>

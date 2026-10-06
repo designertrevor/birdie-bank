@@ -35,6 +35,7 @@ const CSS = `
   h2 { font-size: 22px; margin: 36px 0 8px; }
   .meta { color: var(--mute); margin: 0 0 24px; }
   .card { background: var(--card); border: 1px solid var(--line); border-radius: 18px; padding: 16px 20px; margin: 16px 0; }
+  .card > p:first-child { margin-top: 0; } .card > p:last-child { margin-bottom: 0; }
   .draft { background: var(--warn-bg); border: 1px solid var(--warn-line); border-radius: 18px; padding: 12px 20px; margin: 0 0 24px; color: var(--ink); }
   ul { padding-left: 20px; }
   li { margin: 6px 0; }
