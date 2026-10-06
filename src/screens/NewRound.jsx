@@ -15,7 +15,7 @@ import { mergeNear, milesLabel } from '../lib/nearby.js';
 import NearYou from '../components/NearYou.jsx';
 import RequestCourse from '../components/RequestCourse.jsx';
 import { GAMES, GAME_GROUPS, MAX_GAMES, SIDE_GAMES, bettors, createRound, effectiveCourseHc, holesInPlay, isJustPlaying, oneBall, sideGamesOf } from '../lib/round.js';
-import { JUST_PLAYING, canJustPlay, cantJustPlay, maxPicked, pickedCheck, pickedLine } from '../lib/just-playing.js';
+import { JUST_PLAYING, canJustPlay, cantJustPlay, justPlayingWho, maxPicked, pickedCheck, pickedLine } from '../lib/just-playing.js';
 import { SideGamesSetup } from '../components/SideGames.jsx';
 import { PairBetsSetup } from '../components/PairBets.jsx';
 import { betsOf, cleanBet, fitSetupBets } from '../lib/pair-bets.js';
@@ -817,7 +817,7 @@ function PlayersStep({ game, gameKey, course, holesCount, nine, picked, setPicke
         {/* Who's just playing is said here, so the count above stays on one line */}
         {casualOk ? (
           casualNow.length > 0
-            ? <p className="field-help pad jp-step-help">{listNames(casualNow.map(pid => (pid === state.me ? 'You' : state.players[pid]?.name || '?')))} {casualNow.length === 1 && casualNow[0] !== state.me ? 'is' : 'are'} just playing: on the card with everyone and out of every game.</p>
+            ? <p className="field-help pad jp-step-help">{justPlayingWho(casualNow, state.me, pid => state.players[pid]?.name)} just playing: on the card with everyone and out of every game.</p>
             : picked.length > 1 && <p className="field-help pad jp-step-help">Someone not up for a bet? Mark them <strong>{JUST_PLAYING}</strong>. They’re on the card with everyone and out of every game.</p>
         ) : cantJustPlay(gameKey) && <p className="field-help pad jp-step-help">{cantJustPlay(gameKey)}</p>}
         <div className="pick-list">
@@ -979,7 +979,7 @@ function SetupStep({ game, course, holesCount, nine, picked, setPicked, casual =
         {/* Counting it for a trip (and its cup matches) sits up top in the page, so the footer keeps to its buttons */}
         {tripRow && <div className="trip-in-setup">{tripRow}</div>}
         {casual.length > 0 && (
-          <p className="hint-card jp-setup-note"><Icon name="smiley" fill /> {listNames(casual.map(pid => state.players[pid]?.name || '?'))} {casual.length === 1 ? 'is' : 'are'} just playing: on the card, out of the bets below.</p>
+          <p className="hint-card jp-setup-note"><Icon name="smiley" fill /> {justPlayingWho(casual, state.me, pid => state.players[pid]?.name)} just playing: on the card, out of the bets below.</p>
         )}
 
         {/* Play for first, so the bets below are read the right way. Side games follow the round's choice */}
