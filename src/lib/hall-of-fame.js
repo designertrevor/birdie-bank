@@ -137,7 +137,8 @@ function grossOf(r, id) {
  *   skins   { id, skins, roundId, course, at } the most skins in one round;
  *   low     { id, strokes, holes, roundId, course, at } the low score over a full round (18 holes
  *           when the crew has played one, else 9), every hole scored, one-ball games left out;
- *   regular { id, n } the most rounds played.
+ *   regular { id, n, ids } the most rounds played (ids: everyone tied on n, id first).
+ * - players: how many people played in the crew's rounds.
  */
 export function crewHall(state, crewId, { now = Date.now() } = {}) {
   const who = canonicalOf(state);
@@ -187,6 +188,9 @@ export function crewHall(state, crewId, { now = Date.now() } = {}) {
     return id ? { id, n } : null;
   };
   const streak = most(bestRun);
+  // Most rounds ties often (a crew that always plays together), so it names everyone at the top
+  const regular = most(played);
+  if (regular) regular.ids = [...played].filter(([, n]) => n === regular.n).map(([id]) => id).sort(byName);
   return {
     seasons,
     biggestWins: wins.sort((a, b) => b.cents - a.cents || a.at - b.at || a.id.localeCompare(b.id)).slice(0, TOP_WINS),
@@ -194,9 +198,10 @@ export function crewHall(state, crewId, { now = Date.now() } = {}) {
       streak: streak && streak.n >= 2 ? streak : null,
       skins,
       low: lows[18] || lows[9],
-      regular: most(played),
+      regular,
     },
     rounds: rounds.length,
+    players: played.size,
   };
 }
 
