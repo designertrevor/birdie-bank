@@ -3246,3 +3246,9 @@ a.header-btn.rm-open { text-decoration: none; }
 .trip-card-eb { display: flex; align-items: baseline; gap: 4px; min-width: 0; white-space: nowrap; }
 .trip-card-eb .tce-name { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
 .trip-card-eb .tce-when { flex-shrink: 0; white-space: pre; }
+
+/* ---------- O10 whatsnew: What's new, the release notes screen and its Up next card ---------- */
+.whats-new .rm-list { margin-bottom: 6px; }
+.whats-new .rm-cta { margin-top: 16px; }
+.whats-new .rm-tag { background: var(--mint); color: var(--on-pastel); }
+.wn-card .rc-sub { text-wrap: pretty; }

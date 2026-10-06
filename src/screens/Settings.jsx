@@ -113,6 +113,11 @@ export default function Settings() {
           <div className="row-main"><div className="set-name">Roadmap</div><div className="set-sub">Vote on what’s next and see what shipped</div></div>
           <span className="chevron"><Icon name="caret-right" /></span>
         </button>
+        <button className="set-row" onClick={() => nav.push('whatsNew')}>
+          <div className="set-icon"><Icon name="sparkle" fill /></div>
+          <div className="row-main"><div className="set-name">What’s new</div><div className="set-sub">What landed in the latest updates</div></div>
+          <span className="chevron"><Icon name="caret-right" /></span>
+        </button>
         <div className="sec-label">You</div>
         {accountsEnabled && (acct.user ? (
           <div className="set-row static">
