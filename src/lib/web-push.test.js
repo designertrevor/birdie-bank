@@ -106,3 +106,23 @@ test('only https push services, never a local address', () => {
   assert.equal(okEndpoint('https://169.254.169.254/latest'), false);
   assert.equal(okEndpoint('nope'), false);
 });
+
+test('only the browsers\' push services: any other https host, a private address or a lookalike is never sent to', () => {
+  for (const ok of [
+    'https://fcm.googleapis.com/fcm/send/x', 'https://android.googleapis.com/gcm/send/x',
+    'https://updates.push.services.mozilla.com/wpush/v2/x', 'https://web.push.apple.com/QO-x',
+    'https://wns2-by3p.notify.windows.com/w/?token=x',
+  ]) assert.equal(okEndpoint(ok), true, ok);
+  for (const bad of [
+    'https://evil.example.com/x', 'https://172.16.0.1/x', 'https://0.0.0.0/x', 'https://[::1]/x',
+    'https://fcm.googleapis.com.evil.com/x', 'https://evilpush.apple.com/x', 'https://storage.googleapis.com/x',
+    'https://fcm.googleapis.com:8443/x', 'https://u:p@fcm.googleapis.com/x',
+  ]) assert.equal(okEndpoint(bad), false, bad);
+});
+
+test('a push never follows a redirect', () => {
+  const v = vapidKeys(b64u(Buffer.alloc(32, 7)), 'mailto:a@b.co');
+  const ua = createECDH('prime256v1'); ua.generateKeys();
+  const { init } = pushRequest({ endpoint: 'https://fcm.googleapis.com/fcm/send/x', p256dh: b64u(ua.getPublicKey()), auth: b64u(Buffer.alloc(16, 1)) }, { title: 'x' }, v);
+  assert.equal(init.redirect, 'manual');
+});

@@ -82,13 +82,22 @@ export function pushRequest(sub, payload, vapid, { ttl = 86400, urgency = 'norma
   // A push service takes a topic of up to 32 base64url characters
   const t = String(topic || '').replace(/[^A-Za-z0-9_-]/g, '').slice(0, 32);
   if (t) headers.Topic = t;
-  return { url: sub.endpoint, init: { method: 'POST', headers, body } };
+  // Never follow a redirect: a push service doesn't send one, and it could point anywhere
+  return { url: sub.endpoint, init: { method: 'POST', headers, body, redirect: 'manual' } };
 }
 
-/** Only ever send to a real push service over https (an endpoint is something a browser gave us). */
+// The push services browsers hand out endpoints on: Chrome, Edge on Android, Samsung and Opera
+// (Google), Firefox (Mozilla), Safari (Apple) and Edge on Windows (Microsoft). A subscription row is
+// written by its owner, so its endpoint can be any address: only these hosts are ever sent to.
+const PUSH_HOSTS = ['fcm.googleapis.com', 'android.googleapis.com'];
+const PUSH_DOMAINS = ['push.services.mozilla.com', 'push.apple.com', 'notify.windows.com'];
+
+/** Only ever send to a real push service over https (an endpoint is something a browser gave us, or anyone with an account wrote). */
 export function okEndpoint(endpoint) {
   try {
     const u = new URL(endpoint);
-    return u.protocol === 'https:' && !/^(localhost|127\.|10\.|192\.168\.|169\.254\.|\[)/.test(u.hostname);
+    if (u.protocol !== 'https:' || u.username || u.password || (u.port && u.port !== '443')) return false;
+    const host = u.hostname.toLowerCase();
+    return PUSH_HOSTS.includes(host) || PUSH_DOMAINS.some(d => host === d || host.endsWith(`.${d}`));
   } catch { return false; }
 }
