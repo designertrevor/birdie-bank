@@ -118,7 +118,7 @@ export function SettleSheet({ debt, onClose }) {
             {imOwed && <RequestButton payer={payer} mine={myApp} amount={debt.amount} note={note} who={debt.from} full className="sheet-item" />}
             {imOwed && <button className="sheet-item" onClick={() => remind(debt.from, debt.amount)}><span><Icon name="bell-ringing" fill /> Remind {nameOf(state, debt.from).split(' ')[0]}</span></button>}
             <button className="sheet-item" onClick={() => record(debt.amount)}><span><Icon name="check-circle" fill /> Mark {money(debt.amount)} paid</span></button>
-            <button className="sheet-item" onClick={() => setPartial(true)}><span><Icon name="coins" /> They paid part of it</span></button>
+            <button className="sheet-item" onClick={() => setPartial(true)}><span><Icon name="coins" /> {iPay ? 'I paid part of it' : imOwed ? 'They paid part of it' : `${nameOf(state, debt.from).split(' ')[0]} paid part of it`}</span></button>
           </>
         )}
       </Sheet>

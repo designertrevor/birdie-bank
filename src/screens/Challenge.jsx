@@ -105,7 +105,8 @@ export function ChallengeLink({ code, standalone = false, onSkip }) {
           {err === 'offline' && <>Couldn’t get the challenge. Check your signal and try again.</>}
         </p>
       </div>
-      {err && (
+      {/* A missing challenge in the app has only the header's back: no empty bar of buttons */}
+      {err && (!missing || standalone) && (
         <div className="cta-wrap">
           {!missing && <button className="full-btn" onClick={() => { setErr(null); setTries(t => t + 1); }}>Try again <Icon name="arrow-clockwise" /></button>}
           {standalone && <button className={`full-btn ${missing ? '' : 'outline'}`} onClick={onSkip}>Start my own round instead</button>}
