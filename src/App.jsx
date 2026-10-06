@@ -79,6 +79,8 @@ const BigGameSetup = screen(() => import('./screens/BigGameSetup.jsx'));
 const Roadmap = screen(() => import('./screens/Roadmap.jsx'));
 const WhatsNew = screen(() => import('./screens/WhatsNew.jsx'));
 
+const HallOfFame = screen(() => import('./screens/HallOfFame.jsx'));
+
 /**
  * The public roadmap link (/roadmap, or ?roadmap): { ids } (with &ids, each item's id shows, for
  * Trevor), or null. Anyone can open it: someone set up gets it on top of Up next, anyone else reads it.
@@ -176,7 +178,7 @@ const SCREENS = {
   joinInvite: JoinInviteScreen, lately: Lately, trip: Trip, tripSettle: TripSettle, draft: Draft, draftLink: DraftLink,
   bigGame: BigGame, bigGameSetup: BigGameSetup, roadmap: Roadmap, whatsNew: WhatsNew,
   friends: Friends, friendRound: FriendRound,
-  profile: Profile, stats: Stats, share: Share, closeBooks: CloseBooks, book: Book,
+  profile: Profile, stats: Stats, share: Share, closeBooks: CloseBooks, book: Book, hallOfFame: HallOfFame,
 };
 // Settings lives behind the avatar on Up next, so it's a pushed screen rather than a tab
 const TABS = { upnext: UpNext, ledger: Ledger, history: History, people: People };

@@ -13,6 +13,7 @@ import { payInfoFor } from '../lib/pay.js';
 import { buzz } from '../lib/delight.js';
 import { markCrewPayment } from '../lib/tab-sync.js';
 import { bookScopeName, booksOf, lastBook, myBookNet, openRounds, rolledIn } from '../lib/books.js';
+import { hallCrews } from '../lib/hall-of-fame.js';
 
 const first = name => String(name || '').split(' ')[0];
 const shortDay = t => new Date(t).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
@@ -169,6 +170,9 @@ export function OneTab({ tab }) {
       {isCrew ? (
         <>
           <p className="field-help pad">Only rounds where everyone else who played is in this crew, squared in the fewest payments. With your other tabs it adds up to Everyone.</p>
+          <button className="text-link stats-link" onClick={() => nav.push('hallOfFame', { crew: tab.id })}>
+            <Icon name="trophy" fill /> <span className="row-main">Hall of fame<span className="sl-sub">The season’s money list, champions, biggest wins and records</span></span> <Icon name="caret-right" />
+          </button>
           <button className="text-link stats-link" onClick={() => nav.push('closeBooks', { scope: tab.key })}>
             <Icon name="book-bookmark" fill /> <span className="row-main">Close the books<span className="sl-sub">Save the season with everyone’s totals, then settle up or roll each balance to next season</span></span> <Icon name="caret-right" />
           </button>
@@ -237,6 +241,24 @@ export function ClosedSeasons({ title = 'Closed seasons' }) {
           </button>
         );
       })}
+    </>
+  );
+}
+
+/** A row for each of your crews with a hall of fame (hall-of-fame.js), for Season. Nothing when there's none. */
+export function HallLinks() {
+  const state = useStore();
+  const nav = useNav();
+  const crews = hallCrews(state);
+  if (!crews.length) return null;
+  return (
+    <>
+      <div className="sec-label">Hall of fame</div>
+      {crews.map(c => (
+        <button key={c.id} className="text-link stats-link" onClick={() => nav.push('hallOfFame', { crew: c.id })}>
+          <Icon name="trophy" fill /> <span className="row-main">{c.name}<span className="sl-sub">Money list, champions and records</span></span> <Icon name="caret-right" />
+        </button>
+      ))}
     </>
   );
 }
