@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { MAX_RESULTS, PUSH_KINDS, carryPushes, cleanPushRequest, cleanResults, finishResults, ordinal, paidPushes, recipientResult, talkPush, pushKey, pushPayload, pushText, pushUrl, weekday } from './push-events.js';
+import { MAX_RESULTS, PUSH_KINDS, carriedPushes, carryPushes, cleanPushRequest, cleanResults, finishResults, ordinal, paidPushes, recipientResult, talkPush, pushKey, pushPayload, pushText, pushUrl, weekday } from './push-events.js';
 
 test('each push goes to the right people: invites and results to everyone, who is in to the organizer, paid to the payee', () => {
   assert.equal(PUSH_KINDS.invite.to, 'all');
@@ -216,4 +216,34 @@ test('a round finished push says how you did, in a fixed template with no amount
     assert.doesNotMatch(p.title + p.body, /\$|\d{2,}|[0-9]+\.[0-9]/);
   }
   assert.deepEqual([1, 2, 3, 4, 11, 12, 13, 21, 22, 23].map(ordinal), ['1st', '2nd', '3rd', '4th', '11th', '12th', '13th', '21st', '22nd', '23rd']);
+});
+
+test('an answered carry-over goes to the person who asked, once, with no amount', () => {
+  assert.equal(PUSH_KINDS.carried.to, 'players');
+  const row = (over) => ({ kind: 'carry', status: 'agreed', code: 'AB12CD', id: 'AB12CD:a>b:carry', from: 'a', to: 'b', by: 'a', amount: 28, at: 100, ...over });
+  // Split over two rounds: one push, to the asker (the row's by), whichever side they were on
+  const out = carriedPushes([row(), row({ code: 'CD34EF' })], 'Adam');
+  assert.equal(out.length, 1);
+  assert.deepEqual(out[0].players, ['a']);
+  assert.deepEqual(carriedPushes([row({ by: 'b', status: 'declined' })])[0].players, ['b']);
+  // Asked, taken back, a payment, asked by a third phone, or no code: nothing
+  for (const over of [{ status: 'asked' }, { status: 'withdrawn' }, { kind: 'payment', status: 'paid' }, { by: 'z' }, { code: null }]) {
+    assert.equal(carriedPushes([row(over)]).length, 0, JSON.stringify(over));
+  }
+  // An answer is never an ask, and an ask never an answer
+  assert.equal(carryPushes([row()]).length, 0);
+  assert.equal(carriedPushes([row({ status: 'asked' })]).length, 0);
+  const agreed = pushPayload(cleanPushRequest(out[0]));
+  assert.equal(agreed.title, 'Adam agreed to roll it to next time');
+  assert.equal(agreed.url, '/');
+  const declined = pushPayload(cleanPushRequest(carriedPushes([row({ status: 'declined' })], 'Adam')[0]));
+  assert.equal(declined.title, 'Adam would rather settle up');
+  for (const p of [agreed, declined]) assert.doesNotMatch(p.title + p.body, /\$|\d/);
+  // The answer is one of the two, or the request is refused; it has its own key next to the ask
+  assert.equal(cleanPushRequest({ kind: 'carried', scope: 'round', code: 'AB12CD', players: ['a'], data: { answer: 'maybe' } }), null);
+  assert.equal(cleanPushRequest({ kind: 'carried', scope: 'round', code: 'AB12CD', players: ['a'] }), null);
+  assert.equal(cleanPushRequest({ kind: 'carried', scope: 'round', code: 'AB12CD', data: { answer: 'agreed' } }), null);
+  assert.equal(cleanPushRequest({ kind: 'carried', scope: 'plan', code: 'AB12CD', players: ['a'], data: { answer: 'agreed' } }), null);
+  const ask = carryPushes([row({ status: 'asked', by: 'a' })])[0];
+  assert.notEqual(pushKey(cleanPushRequest(ask)), pushKey(cleanPushRequest(out[0])));
 });

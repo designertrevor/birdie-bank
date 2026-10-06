@@ -9,6 +9,7 @@
 //             'lost', 'square' or a place, never an amount), each person's push says how they did
 //   paid      you marked a payment: the person you paid (players: [their seat in the round])
 //   carry     you asked to roll a balance to next time: the other person, to agree (players: [their seat])
+//   carried   you agreed to roll it, or would rather settle up: the person who asked (players: [their seat])
 //   talk      you posted trash talk on a round, plan or challenge: everyone on it, but you. Never
 //             what you wrote, only that you wrote something, and at most one every 10 minutes
 //   tee       the tee time reminder: the plan's organizer, sent by the daily job, never by the app
@@ -24,6 +25,7 @@ export const PUSH_KINDS = {
   finished: { scopes: ['round'], to: 'all' },
   paid: { scopes: ['round'], to: 'players' },
   carry: { scopes: ['round'], to: 'players' },
+  carried: { scopes: ['round'], to: 'players' },
   talk: { scopes: ['round', 'plan', 'challenge'], to: 'all' },
   tee: { scopes: ['plan'], to: 'host', server: true },
 };
@@ -33,6 +35,7 @@ const ID = /^[\w-]{1,64}$/;
 const DATE = /^\d{4}-\d{2}-\d{2}$/;
 const STATUSES = ['in', 'maybe', 'out'];
 const RESULTS = ['won', 'lost', 'square'];
+const ANSWERS = ['agreed', 'declined'];
 /** The most seats a round finished push carries results for; a bigger map is dropped whole. */
 export const MAX_RESULTS = 32;
 
@@ -65,6 +68,10 @@ export function cleanPushRequest(body, { fromServer = false } = {}) {
   if (course) data.course = course;
   if (STATUSES.includes(d.status)) data.status = d.status;
   if (body.kind === 'rsvp' && !data.status) return null;
+  if (body.kind === 'carried') {
+    if (!ANSWERS.includes(d.answer)) return null;
+    data.answer = d.answer;
+  }
   const out = {
     kind: body.kind, scope: body.scope, code, to: spec.to,
     players: spec.to === 'players' ? players : [],
@@ -143,7 +150,7 @@ export function weekday(iso) {
 
 /** Where tapping the push opens: the plan, the round or the challenge by its link, or Up next (the Tab's pushes). */
 export function pushUrl(req) {
-  if (req.kind === 'paid' || req.kind === 'carry') return '/';
+  if (req.kind === 'paid' || req.kind === 'carry' || req.kind === 'carried') return '/';
   if (req.scope === 'challenge') return `/?challenge=${req.code}`;
   return req.scope === 'plan' ? `/?plan=${req.code}` : `/?join=${req.code}`;
 }
@@ -194,6 +201,15 @@ export function pushPayload(req, { result = null } = {}) {
     case 'carry':
       title = `${who} asked to roll it to next time`;
       body = 'Agree, or say you’d rather get paid, on the Tab.';
+      break;
+    case 'carried':
+      if (data.answer === 'agreed') {
+        title = `${who} agreed to roll it to next time`;
+        body = 'It stays on the Tab until you next play.';
+      } else {
+        title = `${who} would rather settle up`;
+        body = 'It’s still on the Tab, so settle up when you can.';
+      }
       break;
     case 'talk':
       title = 'New trash talk';
@@ -246,6 +262,25 @@ export function carryPushes(rows, name = '') {
     if (seen.has(other)) continue;
     seen.add(other);
     out.push({ kind: 'carry', scope: 'round', code: r.code, players: [other], topic: `${r.from}>${r.to}@${r.at || ''}`, data: { name } });
+  }
+  return out;
+}
+
+/**
+ * The answer pushes for carry-over rows just answered on the shared Tab (tab-sync.js answerCarry):
+ * "agreed to roll it" or "would rather settle up", to the person who asked (the row's `by`), only
+ * when one of the two asked it. A carry split over several rounds is one push. The topic is the
+ * ask's moment, and an ask is only ever answered once.
+ */
+export function carriedPushes(rows, name = '') {
+  const out = [];
+  const seen = new Set();
+  for (const r of rows || []) {
+    if (r?.kind !== 'carry' || !ANSWERS.includes(r.status) || !r.code || !r.from || !r.to || !r.by) continue;
+    if (r.by !== r.from && r.by !== r.to) continue;
+    if (seen.has(r.by)) continue;
+    seen.add(r.by);
+    out.push({ kind: 'carried', scope: 'round', code: r.code, players: [r.by], topic: `${r.from}>${r.to}@${r.at || ''}`, data: { name, answer: r.status } });
   }
   return out;
 }

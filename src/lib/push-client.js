@@ -11,7 +11,7 @@ import { useSyncExternalStore } from 'react';
 import { getSupabase, supabaseConfigured } from './supabase.js';
 import { getState } from './store.js';
 import { afterNotNow, afterOff, afterOn, afterShown, pushSupport, settingsRow, shouldAsk } from './notify-ask.js';
-import { carryPushes, cleanPushRequest, finishResults, paidPushes, pushKey, talkPush } from './push-events.js';
+import { carriedPushes, carryPushes, cleanPushRequest, finishResults, paidPushes, pushKey, talkPush } from './push-events.js';
 
 const KEY = import.meta.env.VITE_VAPID_PUBLIC_KEY || '';
 /** Push is switched on for this build. */
@@ -249,12 +249,14 @@ export function pushRoundFinished(round) {
 }
 
 /**
- * Rows just marked on the shared Tab (tab-sync.js): the people paid hear it, and so does the other
- * person when you ask to roll a balance to next time (push-events.js paidPushes, carryPushes).
+ * Rows just marked on the shared Tab (tab-sync.js): the people paid hear it, so does the other
+ * person when you ask to roll a balance to next time, and the person who asked when you answer
+ * (push-events.js paidPushes, carryPushes, carriedPushes).
  */
 export function pushTab(rows) {
   if (!pushConfigured) return;
-  for (const req of [...paidPushes(rows, myFirst()), ...carryPushes(rows, myFirst())]) sendPush(req, { delay: 1500 });
+  const name = myFirst();
+  for (const req of [...paidPushes(rows, name), ...carryPushes(rows, name), ...carriedPushes(rows, name)]) sendPush(req, { delay: 1500 });
 }
 
 /**

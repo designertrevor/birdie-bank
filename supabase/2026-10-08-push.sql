@@ -107,7 +107,8 @@ create index if not exists user_docs_share_code on public.user_docs ((data ->> '
 -- The subscriptions a push from `p_caller` goes to, for a round, plan or challenge by its code:
 --   p_to 'all'      everyone on it but the caller (an invite, a round finished, new trash talk)
 --   p_to 'host'     the plan's organizer (who's in)
---   p_to 'players'  the people in those seats (someone paid you, a carry-over to approve)
+--   p_to 'players'  the people in those seats (someone paid you, a carry-over to approve, or
+--                   the answer to the one you asked)
 -- For trash talk, "on it" also counts the accounts let in on that thread's talk (comment_members,
 -- 2026-10-04-comments.sql), and a challenge is only those: anyone with its code, like its talk.
 -- Nothing when the caller isn't on it themselves, when the same push went in the last 10 minutes
@@ -129,7 +130,7 @@ declare
   seats text[] := coalesce(p_players[1:8], '{}');
 begin
   if p_caller is null or p_code is null or p_code !~ '^[A-Z0-9]{4,8}$' then return; end if;
-  if not ((p_scope = 'round' and p_kind in ('invite', 'finished', 'paid', 'carry', 'talk'))
+  if not ((p_scope = 'round' and p_kind in ('invite', 'finished', 'paid', 'carry', 'carried', 'talk'))
           or (p_scope = 'plan' and p_kind in ('invite', 'rsvp', 'talk'))
           or (p_scope = 'challenge' and p_kind = 'talk')) then return; end if;
   if p_to is null or p_to not in ('all', 'host', 'players') then return; end if;
