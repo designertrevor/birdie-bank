@@ -16,7 +16,7 @@ import { money } from '../lib/golf.js';
 import { dayChoices, dayLabel, isoDate } from '../lib/plans.js';
 import { allowanceHint, suggestedAllowance } from '../lib/allowances.js';
 import {
-  BIG_MAX_PLAYERS, BIG_MAX_STAKE, BIG_MIN_PLAYERS, BIG_NAME, GROUP_MAX, PLACES, POT_KINDS, balanceGroups, balanceTeams, bigField, bigResults,
+  BIG_MAX_PLAYERS, BIG_MAX_STAKE, BIG_MIN_PLAYERS, BIG_NAME, GROUP_MAX, PLACES, POT_KINDS, SKINS_LEFTOVER, balanceGroups, balanceTeams, bigField, bigResults,
   cleanBig, defaultBig, groupCount, groupsProblem, moveTo, placesLabel,
 } from '../lib/big-game.js';
 import { saveBigGame, startGroups } from '../lib/big-store.js';
@@ -101,7 +101,7 @@ export default function BigGameSetup({ id = null, from = null }) {
   const big = cleanBig({
     ...init, hcPct, useHandicaps: useHc, people,
     groups: groupList.map((g, i) => ({ ...g, roundId: init.groups[i]?.roundId || null, code: init.groups[i]?.code || null })),
-    pot: { ...pot, kind: gross(pot.kind) }, skins: { ...skins, kind: gross(skins.kind), out: skins.out.filter(x => people[x]) },
+    pot: { ...pot, kind: gross(pot.kind) }, skins: { ...skins, kind: gross(skins.kind), out: skins.out.filter(x => people[x]), exact: true },
     teams: { ...teamsNow, kind: gross(teamsNow.kind) }, bets: bets.filter(b => b.sides.every(x => people[x])),
   });
   const problem = groupsProblem(big);
@@ -175,7 +175,7 @@ export default function BigGameSetup({ id = null, from = null }) {
           problem={problem} onNext={() => setStep(4)} />
       )}
       {step === 4 && course && (
-        <Games pot={{ ...pot, kind: gross(pot.kind) }} setPot={setPot} skins={{ ...skins, kind: gross(skins.kind) }} setSkins={setSkins} teams={teamsNow} setTeams={setTeams} pool={pool} groups={fitted} nameOf={nameOf}
+        <Games pot={{ ...pot, kind: gross(pot.kind) }} setPot={setPot} skins={{ ...skins, kind: gross(skins.kind) }} setSkins={setSkins} teams={teamsNow} setTeams={setTeams} pool={pool} groups={fitted} nameOf={nameOf} holeCount={holes.length}
           useHc={useHc} hcPct={hcPct} setHcPct={setHcPct} onNext={() => setStep(5)} />
       )}
       {step === 5 && course && (
@@ -363,7 +363,7 @@ function Groups({ groups, byHand, count, pool, nameOf, people, onBalance, onMove
 }
 
 /** What's on the line across the field: the pot and its places, the skins, the teams, and the handicap %. */
-function Games({ pot, setPot, skins, setSkins, teams, setTeams, pool, groups = null, nameOf, useHc, hcPct, setHcPct, onNext }) {
+function Games({ pot, setPot, skins, setSkins, teams, setTeams, pool, groups = null, nameOf, holeCount = 0, useHc, hcPct, setHcPct, onNext }) {
   const [pad, setPad] = useState(null);
   const [moving, setMoving] = useState(null);
   const n = pool.length;
@@ -412,8 +412,34 @@ function Games({ pot, setPot, skins, setSkins, teams, setTeams, pool, groups = n
             <div className="field-label">Each player in puts in</div>
             <button type="button" className="amt-btn" onClick={() => setPad('skins')}>{money(skins.stake)}</button>
             <div className="toggle-row ap-game">
-              <div><div className="toggle-lbl">Ties carry</div><div className="toggle-sub">{skins.carry ? 'Each hole is worth the same part of the pot, a tie carries it on, and what’s carried past the last hole is shared by every skin' : 'The pot is split by skins won, so every skin is worth the same'}</div></div>
+              <div><div className="toggle-lbl">Ties carry</div><div className="toggle-sub">{skins.carry ? 'Each hole is worth the same part of the pot, and a tie carries it on to the next hole' : 'The pot is split by skins won, so every skin is worth the same. A tied hole is nobody’s'}</div></div>
               <Toggle on={skins.carry} onChange={carry => setSkins(s => ({ ...s, carry }))} label="Ties carry" />
+            </div>
+            {skins.carry && (
+              <>
+                <div className="field-label" id="big-leftover-lbl">Still carried after the last hole</div>
+                <div className="chip-row flush" role="radiogroup" aria-labelledby="big-leftover-lbl">
+                  {Object.entries(SKINS_LEFTOVER).map(([value, x]) => (
+                    <PickChip key={value} small radio on={(skins.leftover || 'share') === value} onClick={() => setSkins(s => ({ ...s, leftover: value }))}>{x.label}</PickChip>
+                  ))}
+                </div>
+                <p className="field-help">{SKINS_LEFTOVER[skins.leftover || 'share'].help}</p>
+              </>
+            )}
+            {/* House rules for the field (2026-10-08), the same ones as Skins in a round, off unless turned on */}
+            {skins.kind === 'net' && (
+              <div className="toggle-row ap-game">
+                <div><div className="toggle-lbl">Canadian skins</div><div className="toggle-sub">A natural birdie beats a net birdie on the same hole</div></div>
+                <Toggle on={!!skins.canadian} onChange={canadian => setSkins(s => ({ ...s, canadian }))} label="Canadian skins" />
+              </div>
+            )}
+            <div className="toggle-row ap-game">
+              <div><div className="toggle-lbl">Validate skins</div><div className="toggle-sub">Keep a skin only with net par or better on the next hole. Miss, and it goes back {skins.carry ? 'into the carry' : 'unclaimed'}</div></div>
+              <Toggle on={!!skins.validate} onChange={validate => setSkins(s => ({ ...s, validate }))} label="Validate skins" />
+            </div>
+            <div className="toggle-row ap-game">
+              <div><div className="toggle-lbl">Birdies win two skins</div><div className="toggle-sub">Win a hole with a real birdie and its skin counts as two shares of the pot</div></div>
+              <Toggle on={!!skins.birdieDouble} onChange={birdieDouble => setSkins(s => ({ ...s, birdieDouble }))} label="Birdies win two skins" />
             </div>
             <div className="field-label">Who’s in · {skinsIn} of {n}</div>
             <div className="chip-row flush">
@@ -422,7 +448,7 @@ function Games({ pot, setPot, skins, setSkins, teams, setTeams, pool, groups = n
                 return <PickChip key={p.id} small on={on} onClick={() => setSkins(s => ({ ...s, out: on ? [...s.out, p.id] : s.out.filter(x => x !== p.id) }))}>{nameOf(p.id)}</PickChip>;
               })}
             </div>
-            <p className="field-help">{money(skins.stake * skinsIn)} in the skins pot.</p>
+            <p className="field-help">{money(skins.stake * skinsIn)} in the skins pot.{skinsIn > 1 && !skins.carry ? ` Win 2 of 8 skins and you take a quarter of it, ${money(Math.round(skins.stake * skinsIn * 25) / 100)}.` : ''}{skinsIn > 1 && skins.carry && holeCount ? ` Each hole is worth ${money(Math.round(skins.stake * skinsIn * 100 / holeCount) / 100)}.` : ''}</p>
           </div>
         )}
         <div className="toggle-row">

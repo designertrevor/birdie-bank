@@ -24,7 +24,7 @@ import { allTripPays } from '../lib/trip-expenses.js';
 import { markTripPayment, undoPayments, usePaymentsOff, useTabSync } from '../lib/tab-sync.js';
 import { canMarkLine, tripStatus } from '../lib/trips.js';
 import { useTripPlans } from '../lib/trip-plan-sync.js';
-import { BIG_NAME, POT_KINDS, bigSummary, buyIns, placesLabel } from '../lib/big-game.js';
+import { BIG_NAME, POT_KINDS, bigSummary, buyIns, placesLabel, skinsRulesLine } from '../lib/big-game.js';
 import { bigStatus } from '../lib/big-money.js';
 import { useBigSync } from '../lib/big-sync.js';
 import { bigChangesReach, closeBig, deleteBig, removeBigBet, shareGroups, startGroups } from '../lib/big-store.js';
@@ -162,7 +162,7 @@ export default function BigGame({ id, view: firstView = null }) {
             <p className="field-help pad">{POT_KINDS[big.pot.kind].name} across every group, {placesLabel(big.pot.places).toLowerCase()}{big.useHandicaps && big.pot.kind !== 'gross' ? `, strokes from full handicaps at ${big.hcPct}%` : ''}. {big.pot.kind === 'stableford' ? 'Points so far.' : 'To par on the holes played so far. A card has to be finished to place.'} Ties share the places they cover.</p>
           </>
         ) : <p className="field-help pad">No pot on this game. The groups are above, and the skins, teams and bets have their own tabs.</p>)}
-        {started && view === 'skins' && <SkinsList bs={bs} name={name} />}
+        {started && view === 'skins' && <SkinsList bs={bs} name={name} isMe={isMe} />}
         {started && view === 'teams' && <TeamsTable bs={bs} isMe={isMe} name={name} />}
         {started && view === 'bets' && (
           <>
@@ -237,7 +237,7 @@ function Setup({ bs, name }) {
       <div className="sec-label">On the line</div>
       <div className="block">
         {big.pot.on && <p className="big-line"><b>{money(big.pot.stake)} pot</b> · {POT_KINDS[big.pot.kind].name}, {placesLabel(big.pot.places).toLowerCase()}</p>}
-        {big.skins.on && <p className="big-line"><b>{money(big.skins.stake)} skins</b> · {big.skins.kind === 'net' ? 'Net' : 'Gross'}, one skin a hole across every group{big.skins.carry ? ', ties carry' : ''}{big.skins.out.length ? `. Sitting out: ${big.skins.out.map(name).join(', ')}` : ''}</p>}
+        {big.skins.on && <p className="big-line"><b>{money(big.skins.stake)} skins</b> · {big.skins.kind === 'net' ? 'Net' : 'Gross'}, one skin a hole across every group{skinsRulesLine(big.skins) ? `, ${skinsRulesLine(big.skins)}` : ''}{big.skins.out.length ? `. Sitting out: ${big.skins.out.map(name).join(', ')}` : ''}</p>}
         {big.teams.on && <p className="big-line"><b>{money(big.teams.stake)} team best {big.teams.best === 2 ? 'two' : 'ball'}</b> · {big.teams.list.map(t => t.players.map(name).join(' & ')).join(' · ')}</p>}
         {big.bets.length > 0 && <p className="big-line"><b>{big.bets.length} side bet{big.bets.length === 1 ? '' : 's'}</b> · {big.bets.map(b => `${name(b.sides[0])} v ${name(b.sides[1])}`).join(', ')}</p>}
         <p className="field-help">{each.size === 1 ? `Everyone puts in ${money([...each][0] / 100)}.` : 'What each person puts in depends on what they’re in.'} Nothing is paid until every group is in, then it’s settled once in the fewest payments.</p>
