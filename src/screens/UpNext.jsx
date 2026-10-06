@@ -1,4 +1,4 @@
-import { Suspense, lazy, useState } from 'react';
+import { Suspense, lazy, useEffect, useState } from 'react';
 import { Header, Icon, Screen } from '../components/ui.jsx';
 import { useStore } from '../lib/store.js';
 import { GAMES, cardOnly, holeComplete } from '../lib/round.js';
@@ -18,6 +18,7 @@ import { updateSafe } from '../lib/app-update.js';
 import { applyUpdate, useUpdateReady } from '../lib/sw-update.js';
 import { currentTrips } from '../lib/trips.js';
 import { recapRound } from '../lib/recap-round.js';
+import { endUpNextVisit } from '../lib/upnext-card.js';
 
 // Up next paints first with what's always on it: rounds going on, plans, the Tab. The rest loads
 // right after (its files are saved for offline like every other), each part in its own boundary so
@@ -48,6 +49,8 @@ export default function UpNext() {
   const state = useStore();
   // (A join link opened by someone already set up goes straight to the invite card: see App.)
   const [joining, setJoining] = useState(false);
+  // It shipped and What's new: one a visit, and leaving starts the next (upnext-card.js)
+  useEffect(() => endUpNextVisit, []);
   const live = activeRounds(state);
   const last = lastResult(state);
   const tab = myTab(state);

@@ -11,7 +11,7 @@ import { useSyncExternalStore } from 'react';
 import { getSupabase, supabaseConfigured } from './supabase.js';
 import { getState } from './store.js';
 import { afterNotNow, afterOff, afterOn, afterShown, pushSupport, settingsRow, shouldAsk } from './notify-ask.js';
-import { cleanPushRequest, paidPushes, pushKey } from './push-events.js';
+import { carryPushes, cleanPushRequest, paidPushes, pushKey, talkPush } from './push-events.js';
 
 const KEY = import.meta.env.VITE_VAPID_PUBLIC_KEY || '';
 /** Push is switched on for this build. */
@@ -211,7 +211,7 @@ export function sendPush(request, { delay = 4000 } = {}) {
   }, delay);
 }
 
-// The five moments, one line at each call site
+// The moments, one line at each call site
 const myFirst = () => { const s = getState(); return String(s.players?.[s.me]?.name || '').trim().split(/\s+/)[0] || ''; };
 
 /** You shared a plan: everyone on it hears about it. */
@@ -238,8 +238,21 @@ export function pushRoundFinished(round) {
   if (code) sendPush({ kind: 'finished', scope: 'round', code, data: { course: round.course?.name } });
 }
 
-/** Payments just marked on the shared Tab (tab-sync.js rows): the people paid hear it (push-events.js paidPushes). */
-export function pushPaid(rows) {
+/**
+ * Rows just marked on the shared Tab (tab-sync.js): the people paid hear it, and so does the other
+ * person when you ask to roll a balance to next time (push-events.js paidPushes, carryPushes).
+ */
+export function pushTab(rows) {
   if (!pushConfigured) return;
-  for (const req of paidPushes(rows, myFirst())) sendPush(req, { delay: 1500 });
+  for (const req of [...paidPushes(rows, myFirst()), ...carryPushes(rows, myFirst())]) sendPush(req, { delay: 1500 });
+}
+
+/**
+ * You posted trash talk in a thread whose target is `t` (talk-sync.js threadTarget): the others on
+ * it hear there's something new, never what it says (push-events.js talkPush).
+ */
+export function pushTalk(t, { id, name, course, day } = {}) {
+  if (!pushConfigured) return;
+  const req = talkPush(t, { id, name: String(name || '').trim().split(/\s+/)[0] || myFirst(), course, day });
+  if (req) sendPush(req, { delay: 2500 });
 }

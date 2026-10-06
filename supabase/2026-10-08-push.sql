@@ -1,6 +1,7 @@
 -- Web push (added 2026-10-08). Run this once in Supabase: Dashboard, SQL Editor, New query,
--- paste, Run. Safe to run again. Needs schema.sql, 2026-10-01-profiles.sql and
--- 2026-10-04-plan-lock.sql (all run already).
+-- paste, Run. Safe to run again. Needs schema.sql, 2026-10-01-profiles.sql,
+-- 2026-10-04-plan-lock.sql and 2026-10-04-comments.sql (all run already). The trash talk push on
+-- a challenge also needs 2026-10-07-challenge-talk.sql; until that runs it just finds nobody.
 --
 -- What it adds:
 --  • push_subscriptions: where to send a signed-in person's pushes, one row per browser or
@@ -15,7 +16,8 @@
 -- Rounds and plans stay locked behind their codes (2026-10-06-round-codes.sql): the server only
 -- looks a round or plan up by the code the caller sent, only when the caller is on it themselves
 -- (a seat linked to their account, the round saved in their account, or an answer or the plan made
--- while signed in), and it sends back nothing about it, only the pushes go out.
+-- while signed in; for trash talk also being let in on its talk, the only way onto a challenge),
+-- and it sends back nothing about it, only the pushes go out.
 --
 -- Until this runs, the app works the same as before: turning notifications on keeps the browser's
 -- permission and the server function sends nothing.
@@ -88,12 +90,14 @@ create index if not exists user_docs_share_code on public.user_docs ((data ->> '
 
 -- --------------------------- who gets a push --------------------------------
 
--- The subscriptions a push from `p_caller` goes to, for a round or plan by its code:
---   p_to 'all'      everyone on it but the caller (an invite, a round finished)
+-- The subscriptions a push from `p_caller` goes to, for a round, plan or challenge by its code:
+--   p_to 'all'      everyone on it but the caller (an invite, a round finished, new trash talk)
 --   p_to 'host'     the plan's organizer (who's in)
---   p_to 'players'  the people in those seats (someone paid you)
--- Nothing when the caller isn't on it themselves, when the same push went in the last 10 minutes,
--- or when the caller has sent 40 in the last hour.
+--   p_to 'players'  the people in those seats (someone paid you, a carry-over to approve)
+-- For trash talk, "on it" also counts the accounts let in on that thread's talk (comment_members,
+-- 2026-10-04-comments.sql), and a challenge is only those: anyone with its code, like its talk.
+-- Nothing when the caller isn't on it themselves, when the same push went in the last 10 minutes
+-- (for trash talk, any from the caller on that thread), or when the caller has sent 40 in the last hour.
 create or replace function public.push_targets(p_caller uuid, p_scope text, p_kind text, p_code text,
   p_to text default 'all', p_players text[] default '{}', p_topic text default '')
 returns table (to_user uuid, push_endpoint text, push_p256dh text, push_auth text)
@@ -106,11 +110,13 @@ declare
   seats text[] := coalesce(p_players[1:8], '{}');
 begin
   if p_caller is null or p_code is null or p_code !~ '^[A-Z0-9]{4,8}$' then return; end if;
-  if not ((p_scope = 'round' and p_kind in ('invite', 'finished', 'paid')) or (p_scope = 'plan' and p_kind in ('invite', 'rsvp'))) then return; end if;
+  if not ((p_scope = 'round' and p_kind in ('invite', 'finished', 'paid', 'carry', 'talk'))
+          or (p_scope = 'plan' and p_kind in ('invite', 'rsvp', 'talk'))
+          or (p_scope = 'challenge' and p_kind = 'talk')) then return; end if;
   if p_to is null or p_to not in ('all', 'host', 'players') then return; end if;
 
   if exists (select 1 from public.push_sends s where s.caller = p_caller and s.scope = p_scope and s.kind = p_kind
-             and s.code = p_code and s.topic = t and s.at > now() - interval '10 minutes') then return; end if;
+             and s.code = p_code and (s.topic = t or p_kind = 'talk') and s.at > now() - interval '10 minutes') then return; end if;
   if (select count(*) from public.push_sends s where s.caller = p_caller and s.at > now() - interval '1 hour') >= 40 then return; end if;
 
   if p_scope = 'round' then
@@ -126,11 +132,21 @@ begin
           (select pd.data ->> 'me' from public.user_docs pd where pd.user_id = d.user_id and pd.kind = 'profile' and pd.id = 'me' and not pd.deleted))
         from public.user_docs d
         where d.kind = 'round' and not d.deleted and d.data ->> 'shareCode' = p_code
+      union
+      select substr(c.member, 3)::uuid, null
+        from public.comment_members c
+        where p_kind = 'talk' and c.scope = 'round' and c.code = p_code and c.member ~ '^u:[0-9a-f-]{36}$'
     )
     select array_agg(distinct o.who),
            array_agg(distinct o.who) filter (where p_to = 'all' or (p_to = 'players' and o.seat = any (seats)))
       into members, picked
       from on_it o;
+  elsif p_scope = 'challenge' then
+    -- The accounts let in on the challenge's talk (join_challenge_comments)
+    select array_agg(distinct substr(c.member, 3)::uuid) into members
+      from public.comment_members c
+      where c.scope = 'challenge' and c.code = p_code and c.member ~ '^u:[0-9a-f-]{36}$';
+    picked := members;
   else
     select r.meta into m from public.planned_rounds r where r.code = p_code;
     if m is null then return; end if;
@@ -141,6 +157,10 @@ begin
       select o.user_id, o.who = 'host' from public.plan_answer_owners o where o.code = p_code and o.user_id is not null
       union
       select a.user_id, false from public.account_players a where a.player_id in (select public.profile_round_ids(m -> 'people'))
+      union
+      select substr(c.member, 3)::uuid, false
+        from public.comment_members c
+        where p_kind = 'talk' and c.scope = 'plan' and c.code = p_code and c.member ~ '^u:[0-9a-f-]{36}$'
     )
     select array_agg(distinct o.who),
            array_agg(distinct o.who) filter (where p_to = 'all' or (p_to = 'host' and o.host))

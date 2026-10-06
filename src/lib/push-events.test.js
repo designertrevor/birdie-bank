@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { PUSH_KINDS, cleanPushRequest, paidPushes, pushKey, pushPayload, pushText, pushUrl, weekday } from './push-events.js';
+import { PUSH_KINDS, carryPushes, cleanPushRequest, paidPushes, talkPush, pushKey, pushPayload, pushText, pushUrl, weekday } from './push-events.js';
 
 test('each push goes to the right people: invites and results to everyone, who is in to the organizer, paid to the payee', () => {
   assert.equal(PUSH_KINDS.invite.to, 'all');
@@ -19,8 +19,10 @@ test('a request names who it goes to from its kind, never from what the app sent
   assert.deepEqual(all.players, []);
 });
 
-test('only the five kinds, each on its own scope, with a real code', () => {
-  assert.equal(cleanPushRequest({ kind: 'talk', scope: 'round', code: 'AB12CD' }), null);
+test('only the known kinds, each on its own scope, with a real code', () => {
+  assert.equal(cleanPushRequest({ kind: 'gossip', scope: 'round', code: 'AB12CD' }), null);
+  assert.equal(cleanPushRequest({ kind: 'carry', scope: 'plan', code: 'AB12CD', players: ['p1'] }), null);
+  assert.equal(cleanPushRequest({ kind: 'invite', scope: 'challenge', code: 'AB12CD' }), null);
   assert.equal(cleanPushRequest({ kind: 'finished', scope: 'plan', code: 'AB12CD' }), null);
   assert.equal(cleanPushRequest({ kind: 'invite', scope: 'round', code: 'AB' }), null);
   assert.equal(cleanPushRequest({ kind: 'invite', scope: 'round', code: "AB12CD'--" }), null);
@@ -106,4 +108,49 @@ test('paid pushes go to the person paid, once each, only when the payer marked i
   assert.equal(paidPushes([row({ kind: 'carry', status: 'asked' })]).length, 0);
   assert.equal(paidPushes([row({ code: null })]).length, 0);
   assert.ok(cleanPushRequest(out[0]));
+});
+
+test('a carry-over to approve goes to the other person, once, with no amount', () => {
+  assert.equal(PUSH_KINDS.carry.to, 'players');
+  const row = (over) => ({ kind: 'carry', status: 'asked', code: 'AB12CD', id: 'AB12CD:a>b:carry', from: 'a', to: 'b', by: 'a', amount: 28, at: 100, ...over });
+  // Split over two rounds: one push. Asked by the person owed: it goes to the one who owes
+  const out = carryPushes([row(), row({ code: 'CD34EF' })], 'Adam');
+  assert.equal(out.length, 1);
+  assert.deepEqual(out[0].players, ['b']);
+  assert.deepEqual(carryPushes([row({ by: 'b' })])[0].players, ['a']);
+  // Agreed, declined, taken back, a payment, or asked by a third phone: nothing
+  for (const over of [{ status: 'agreed' }, { status: 'declined' }, { status: 'withdrawn' }, { kind: 'payment', status: 'paid' }, { by: 'z' }, { code: null }]) {
+    assert.equal(carryPushes([row(over)]).length, 0, JSON.stringify(over));
+  }
+  // Asking again after taking one back is a new push
+  assert.notEqual(pushKey(cleanPushRequest(carryPushes([row()])[0])), pushKey(cleanPushRequest(carryPushes([row({ at: 200 })])[0])));
+  const p = pushPayload(cleanPushRequest(out[0]));
+  assert.equal(p.title, 'Adam asked to roll it to next time');
+  assert.equal(p.url, '/');
+  assert.doesNotMatch(p.title + p.body, /\$|\d/);
+  // A carry from a payment row never doubles as a paid push
+  assert.equal(paidPushes([row()]).length, 0);
+});
+
+test('new trash talk goes to everyone on the thread, never says what was written', () => {
+  assert.equal(PUSH_KINDS.talk.to, 'all');
+  assert.equal(talkPush({ scope: 'round', code: null }, { id: 'c:1' }), null);
+  assert.equal(talkPush({ scope: null, code: 'AB12CD' }, { id: 'c:1' }), null);
+  const round = cleanPushRequest(talkPush({ scope: 'round', code: 'AB12CD' }, { id: 'c:1', name: 'Dalton', course: 'Birch Creek' }));
+  assert.equal(round.topic, 'c:1');
+  const r = pushPayload(round);
+  assert.equal(r.title, 'New trash talk');
+  assert.equal(r.body, 'Dalton posted on the Birch Creek round. Tap to read it.');
+  assert.equal(r.url, '/?join=AB12CD');
+  const plan = pushPayload(cleanPushRequest(talkPush({ scope: 'plan', code: 'AB12CD' }, { id: 'c:2', name: 'Dalton', course: 'Birch Creek', day: '2026-10-10' })));
+  assert.equal(plan.body, 'Dalton posted on the round Saturday at Birch Creek. Tap to read it.');
+  assert.equal(plan.url, '/?plan=AB12CD');
+  const ch = pushPayload(cleanPushRequest(talkPush({ scope: 'challenge', code: 'AB12CD' }, { id: 'c:3', course: 'Birch Creek' })));
+  assert.equal(ch.body, 'Someone posted on your challenge. Tap to read it.');
+  assert.equal(ch.url, '/?challenge=AB12CD');
+  // Each comment is its own request (the server keeps it to one every 10 minutes per thread)
+  const a = cleanPushRequest(talkPush({ scope: 'round', code: 'AB12CD' }, { id: 'c:1' }));
+  const b = cleanPushRequest(talkPush({ scope: 'round', code: 'AB12CD' }, { id: 'c:9' }));
+  assert.notEqual(pushKey(a), pushKey(b));
+  assert.equal(pushPayload(a).tag, pushPayload(b).tag);
 });
