@@ -30,7 +30,7 @@ import { DraftCard, FlightsView, ScheduleCard } from '../components/TripMode.jsx
 import { buzz } from '../lib/delight.js';
 import { allTripPays } from '../lib/trip-expenses.js';
 import { markTripPayment, undoPayments, usePaymentsOff, useTabSync } from '../lib/tab-sync.js';
-import { TRIP_FORMATS, canDeleteTrip, canMarkLine, canRecount, myTripAllIn, myTripNet, partPlan, roundsInDates, tripByGame, tripDates, tripHidden, tripOf, tripStatus, upDown } from '../lib/trips.js';
+import { TRIP_FORMATS, canDeleteTrip, canMarkLine, canRecount, myTripAllIn, myTripNet, partPlan, roundsInDates, startsLine, tripByGame, tripDates, tripHidden, tripOf, tripStatus, upDown } from '../lib/trips.js';
 import { deleteTrip, endTrip, hideTrip, seenTripPlan, setRoundTrip } from '../lib/trip-store.js';
 import { plansOn, useTripPlans } from '../lib/trip-plan-sync.js';
 import { CupBoard, CupMatches, CupScore, StakeLines } from '../components/Cup.jsx';
@@ -115,7 +115,8 @@ function TripPage({ id, view: firstView = null, add = false }) {
 
   // A trip whose first day is today (or gone by, with its rounds still planned) has started: it says which day
   const startsLater = st.phase === 'soon' && !st.day;
-  const eyebrow = startsLater ? `Starts ${tripDates(trip)}`
+  // "Starts Friday · Oct 9 to 11", as Up next says it: "Starts Oct 9 to 11" read as if it started on a range
+  const eyebrow = startsLater ? `${startsLine(trip.start)} · ${tripDates(trip)}`
     : st.phase === 'soon' ? `Day ${st.day} of ${st.days} · ${tripDates(trip)}`
     : st.phase === 'ready' ? 'That’s the trip'
     : st.phase === 'square' ? 'All square'
@@ -375,7 +376,8 @@ function Standings({ st, state, label, me, flights = false }) {
         {rows.map(([id, v], i) => (
           <div key={id} className={`trip-row ${id === me ? 'me' : ''}`}>
             <span className="tr-rank">{rows.findIndex(r => r[1] === v) + 1 || i + 1}</span>
-            <span className="tr-name">{label(id)}</span>
+            <Avatar id={id} name={nameOf(state, id)} />
+            <span className="tr-main"><span className="tr-name">{label(id)}</span></span>
             <span className={`tr-amt ${sign(v)}`}>{points(v, { sign: true })}</span>
           </div>
         ))}
@@ -398,7 +400,7 @@ function Standings({ st, state, label, me, flights = false }) {
               <span className="tr-rank">–</span>
               <Avatar id={id} name={nameOf(state, id)} />
               <span className="tr-main"><span className="tr-name">{label(id)}</span></span>
-              <span className="tr-amt">–</span>
+              <span className="tr-amt none">–</span>
             </div>
           ))}
         </div>
@@ -631,7 +633,7 @@ function TripSettlePage({ id, who = null }) {
                   {PAY_APPS[payInfoFor(state, t.to)?.app] && <div className="lr-status">{first(nameOf(state, t.to))} picked {PAY_APPS[payInfoFor(state, t.to).app].name}</div>}
                 </div>
                 <div className="lr-amt" style={{ marginRight: 8 }}>{money(t.amount)}</div>
-                {canMarkLine(state, t) && <button className="pill-btn sm" onClick={() => mark(t)}>Mark paid</button>}
+                {canMarkLine(state, t) && <button className="pill-btn sm" onClick={() => mark(t)} aria-label={`Mark ${short(t.from)} paid ${short(t.to)} ${money(t.amount)}`}>Mark paid</button>}
               </div>
             ))}
             {others.some(t => !t.theirs && !canMarkLine(state, t)) && (
@@ -667,7 +669,7 @@ function TripSettlePage({ id, who = null }) {
                   <div className="lr-status">{new Date(g.at).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })}</div>
                 </div>
                 <div className="lr-amt" style={{ marginRight: 8 }}>{money(g.amount)}</div>
-                <button className="icon-btn sm" onClick={() => undo(g)} aria-label="Undo payment"><Icon name="arrow-counter-clockwise" /></button>
+                <button className="icon-btn sm" onClick={() => undo(g)} aria-label={`Undo ${label(g.from)} paid ${g.to === me ? 'you' : label(g.to)} ${money(g.amount)}`}><Icon name="arrow-counter-clockwise" /></button>
               </div>
             ))}
           </>

@@ -74,6 +74,17 @@ export function pickedCheck(game, picked = [], justPlaying = []) {
 }
 
 /**
+ * Who's just playing, as a sentence's start for the setup screens: "Sam is", "You are", "You and Sam
+ * are", "Sam, Bo and Al are". `ids` in order, `me` your id (said as "You"), `nameOf(id)` a name.
+ */
+export function justPlayingWho(ids = [], me = null, nameOf = id => id) {
+  const names = ids.map(id => (id === me ? 'You' : String(nameOf(id) || '').trim() || 'Someone'));
+  if (!names.length) return '';
+  const list = names.length < 2 ? names[0] : `${names.slice(0, -1).join(', ')} and ${names.at(-1)}`;
+  return `${list} ${names.length === 1 && names[0] !== 'You' ? 'is' : 'are'}`;
+}
+
+/**
  * The Players step's count line, short enough for one line: "4 picked (4)", or with someone just
  * playing, the betting count against the game's range, "4 betting (2–8)" (who's just playing is
  * said under it).

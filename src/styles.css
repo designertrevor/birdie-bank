@@ -3252,3 +3252,7 @@ a.header-btn.rm-open { text-decoration: none; }
 .whats-new .rm-cta { margin-top: 16px; }
 .whats-new .rm-tag { background: var(--mint); color: var(--on-pastel); }
 .wn-card .rc-sub { text-wrap: pretty; }
+
+/* ---------- O10 polish10: a pass on the overnight 9 screens ---------- */
+/* Before anyone has played, a trip's standings show a quiet dash, not a bold one that reads as a minus */
+.trip-row .tr-amt.none { color: var(--mute-soft); font-weight: 600; }
