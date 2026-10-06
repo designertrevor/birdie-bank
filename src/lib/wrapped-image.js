@@ -3,6 +3,35 @@
 // wrapped.js: a title, the big round count, a grid of stat tiles and a few short sections. Needs a DOM.
 import { BODY, C, DISPLAY, IMAGE_H, IMAGE_W, clip, fit, fontsReady, spaced } from './shareImage.js';
 
+/**
+ * One stat tile: a soft rounded box, the value big and the label under it. Shared with the profile
+ * card (profile-card-image.js). `size` is the value's largest font size, `label` the label's.
+ */
+export function drawTile(ctx, t, x, y, w, h, { size = 88, label = 30 } = {}) {
+  ctx.fillStyle = C.faint;
+  ctx.beginPath();
+  if (ctx.roundRect) ctx.roundRect(x, y, w, h, 28); else ctx.rect(x, y, w, h);
+  ctx.fill();
+  ctx.fillStyle = C.ink;
+  fit(ctx, t.value, 800, DISPLAY, size, Math.round(size / 2), w - 64);
+  ctx.fillText(clip(ctx, t.value, w - 64), x + 32, y + h - 72);
+  ctx.fillStyle = C.soft;
+  ctx.font = `600 ${label}px ${BODY}`;
+  ctx.fillText(clip(ctx, t.label, w - 64), x + 32, y + h - 28);
+}
+
+/** Draw on a fresh canvas of `w` by `h` and hand back the PNG, once the fonts are in. */
+export async function drawPng(w, h, paint) {
+  await fontsReady();
+  const canvas = document.createElement('canvas');
+  canvas.width = w;
+  canvas.height = h;
+  const ctx = canvas.getContext('2d');
+  if (!ctx) throw new Error('Canvas unavailable');
+  await paint(ctx);
+  return new Promise((resolve, reject) => canvas.toBlob(b => (b ? resolve(b) : reject(new Error('Could not make the image'))), 'image/png'));
+}
+
 function draw(ctx, m) {
   const W = IMAGE_W, H = IMAGE_H, PAD = 96, inner = W - PAD * 2;
   const footerY = H - 110;
@@ -42,18 +71,7 @@ function draw(ctx, m) {
   const gap = 24, half = (inner - gap) / 2, tileH = 170;
   let col = 0;
   for (const t of m.tiles) {
-    const x = PAD + col * (half + gap);
-    const w = half;
-    ctx.fillStyle = C.faint;
-    ctx.beginPath();
-    if (ctx.roundRect) ctx.roundRect(x, y, w, tileH, 28); else ctx.rect(x, y, w, tileH);
-    ctx.fill();
-    ctx.fillStyle = C.ink;
-    fit(ctx, t.value, 800, DISPLAY, 88, 44, w - 64);
-    ctx.fillText(clip(ctx, t.value, w - 64), x + 32, y + 98);
-    ctx.fillStyle = C.soft;
-    ctx.font = `600 30px ${BODY}`;
-    ctx.fillText(clip(ctx, t.label, w - 64), x + 32, y + 142);
+    drawTile(ctx, t, PAD + col * (half + gap), y, half, tileH);
     if (col === 1) { col = 0; y += tileH + gap; } else col = 1;
   }
   if (col) y += tileH + gap;
@@ -82,13 +100,6 @@ function draw(ctx, m) {
 }
 
 /** Draw a year in review model (wrapped.js) and return it as a PNG blob. */
-export async function renderWrapped(model) {
-  await fontsReady();
-  const canvas = document.createElement('canvas');
-  canvas.width = IMAGE_W;
-  canvas.height = IMAGE_H;
-  const ctx = canvas.getContext('2d');
-  if (!ctx) throw new Error('Canvas unavailable');
-  draw(ctx, model);
-  return new Promise((resolve, reject) => canvas.toBlob(b => (b ? resolve(b) : reject(new Error('Could not make the image'))), 'image/png'));
+export function renderWrapped(model) {
+  return drawPng(IMAGE_W, IMAGE_H, ctx => draw(ctx, model));
 }

@@ -31,8 +31,9 @@ function CardStandIn({ model }) {
  * - money: whether the card has dollars on it; people: [{ id, name }] whose money is on it.
  * - link: the short link back to the round or plan; what: "Results", "Recap" for the toasts.
  * - onText / offText: the line under the switch. standIn(model): the stand-in, if not the plain one.
+ * - square: a 1080 by 1080 image (the profile card) instead of a story-sized one.
  */
-export function ShareView({ title, onBack, onDone, doneLabel = 'Done', make, render, fileName, link = null, what = 'It', money = true, people = [], onText, offText, standIn = null, children = null, small = false }) {
+export function ShareView({ title, onBack, onDone, doneLabel = 'Done', make, render, fileName, link = null, what = 'It', money = true, people = [], onText, offText, standIn = null, children = null, small = false, square = false }) {
   const { showToast } = useUI();
   const state = useStore();
   const on = shareAmountsOn(state);
@@ -68,7 +69,7 @@ export function ShareView({ title, onBack, onDone, doneLabel = 'Done', make, ren
     <>
       <Header title={title} small={small} onBack={onBack} />
       <div className="scroll">
-        {img ? <img className="share-img" src={img.url} width={IMAGE_W} height={IMAGE_H} alt={card.alt} />
+        {img ? <img className={`share-img${square ? ' square' : ''}`} src={img.url} width={IMAGE_W} height={square ? IMAGE_W : IMAGE_H} alt={card.alt} />
           : standIn ? standIn(card.model, rule.show) : <CardStandIn model={card.model} />}
         {rule.money && (
           <div className="toggle-row share-toggle">

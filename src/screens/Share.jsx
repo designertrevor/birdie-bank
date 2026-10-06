@@ -2,8 +2,11 @@
 // a story-sized image in the results image's style (share-cards-image.js) with the same Show
 // amounts switch and buttons (ShareSheet.jsx), the words from share-cards.js.
 // Opened with nav.push('share', { kind: 'recap' | 'trip' | 'cup', id }), or { kind: 'wrapped', year } for
-// your year in review (wrapped.js), drawn by wrapped-image.js.
+// your year in review (wrapped.js), drawn by wrapped-image.js, or { kind: 'profile' } for your own
+// profile card (profile-card.js), a square drawn by profile-card-image.js. Only ever yours: it takes no id.
+import { useCallback, useState } from 'react';
 import { Empty, Header, Screen } from '../components/ui.jsx';
+import { BuddyArt } from '../components/BuddyArt.jsx';
 import { ShareView } from '../components/ShareSheet.jsx';
 import { useStore } from '../lib/store.js';
 import { useNav } from '../lib/nav.js';
@@ -16,6 +19,10 @@ import { cardText, cupCardModel, cupPeople, recapCardModel, tripCardModel } from
 import { renderCard } from '../lib/share-cards-image.js';
 import { wrappedCardModel, yearInReview } from '../lib/wrapped.js';
 import { renderWrapped } from '../lib/wrapped-image.js';
+import { profileCard, profileCardModel } from '../lib/profile-card.js';
+import { renderProfileCard } from '../lib/profile-card-image.js';
+import { photoAllowed } from '../lib/avatars.js';
+import { supabaseUrl } from '../lib/supabase.js';
 
 const card = model => ({ model, alt: model.alt, text: cardText(model) });
 
@@ -25,6 +32,8 @@ export default function ShareScreen({ kind, id, year }) {
   const gone = (title, text) => (
     <Screen><Header title="Share" small onBack={nav.pop} /><div className="scroll"><Empty title={title} text={text} /></div></Screen>
   );
+
+  if (kind === 'profile') return <ProfileShare state={state} onBack={nav.pop} />;
 
   if (kind === 'wrapped') {
     const y = yearInReview(state, year || new Date().getFullYear());
@@ -83,13 +92,43 @@ export default function ShareScreen({ kind, id, year }) {
   );
 }
 
-/** The year in review while its image is being drawn: the same words, as tiles. */
+/**
+ * Your profile card. Your photo goes on the image when it's one the app may fetch; a buddy is drawn
+ * here once, hidden, and handed to the canvas as a picture; initials need nothing.
+ */
+function ProfileShare({ state, onBack }) {
+  const card = profileCard(state);
+  const [buddySrc, setBuddySrc] = useState(null);
+  const a = card.avatar;
+  // The buddy as the avatar draws it, read once it's on the page (keyed below, so a new buddy reads again)
+  const grab = useCallback(node => {
+    const svg = node?.querySelector('svg');
+    if (svg && typeof XMLSerializer !== 'undefined') setBuddySrc(`data:image/svg+xml;charset=utf-8,${encodeURIComponent(new XMLSerializer().serializeToString(svg))}`);
+  }, []);
+  const avatarSrc = a.kind === 'photo' && photoAllowed(a.url, supabaseUrl) ? a.url : a.kind === 'buddy' ? buddySrc : null;
+  const link = appLink();
+  const hasMoney = !!(card.season.money || card.nemesis);
+  return (
+    <Screen>
+      <ShareView title="Share my card" small onBack={onBack} what="Card" link={link} square
+        make={show => { const m = profileCardModel(card, { showAmounts: show, link, avatarSrc }); return { model: m, alt: m.alt, text: m.text }; }}
+        render={renderProfileCard} fileName={slugName('player-card', card.name || 'me')}
+        money={hasMoney} people={[]} standIn={m => <WrappedStandIn model={m} />}
+        onText="Your season’s money and what your nemesis took are on the image" offText="Handicap, record, favorite game and nemesis, no money">
+        <p className="field-help pad">Only your own card. Your nemesis goes by first name, and not at all if their profile is Only you.</p>
+      </ShareView>
+      {a.kind === 'buddy' && <span key={`${a.buddy}-${a.bg}`} ref={grab} hidden><BuddyArt id={a.buddy} bg={a.bg} /></span>}
+    </Screen>
+  );
+}
+
+/** The year in review (or the profile card) while its image is being drawn: the same words, as tiles. */
 function WrappedStandIn({ model }) {
   return (
-    <div className="share-card">
+    <div className={`share-card${model.headline ? '' : ' square'}`}>
       <div className="sc-brand">{model.eyebrow}</div>
       <div className="sc-meta">{model.title}</div>
-      <div className="sc-big d wrapped-big">{model.headline}<br />{model.sub}</div>
+      {model.headline && <div className="sc-big d wrapped-big">{model.headline}<br />{model.sub}</div>}
       <div className="wrapped-tiles">
         {model.tiles.map(t => <div key={t.label} className="wrapped-tile"><b>{t.value}</b><span>{t.label}</span></div>)}
       </div>
