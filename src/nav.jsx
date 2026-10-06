@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { Icon } from './components/ui.jsx';
 import { Avatar } from './components/Avatar.jsx';
 import { RoundsInProgressSheet } from './components/RoundsInProgress.jsx';
-import { roundsInProgress } from './lib/rounds.js';
+import { roundsInProgress } from './lib/rounds-live.js';
 import { useStore } from './lib/store.js';
 import { useNav } from './lib/nav.js';
 

@@ -1,7 +1,7 @@
 // Where a join link or a typed round code takes someone who is already set up. A round this
 // phone already has opens as it is; anything else goes to the invite card (who asked you, the
 // bets, the seats and "Not on the list? Add me"), the same one a brand-new phone sees.
-import { cleanCode } from './sync-model.js';
+import { cleanCode } from './sync-codes.js';
 import { betInviteLine, betsOf, isCashBet } from './pair-bets.js';
 import { betFmt, countsMoney } from './play-for.js';
 

@@ -17,7 +17,10 @@
 // Until that table is on the server (or with no signal) the draft runs on one phone, passed
 // around, as it always has (Cup.jsx TeamsPicker). Pure, unit tested.
 
-export const DRAFT_KEY = 'Ldraft';
+import { DRAFT_KEY, isDraftKey } from './draft-keys.js';
+
+// The draft's row keys and the link's trip id are in draft-keys.js, so the cup and the app's start can read them alone
+export { DRAFT_KEY, cleanTripId, isDraftKey } from './draft-keys.js';
 export const DRAFT_ORDERS = {
   snake: { name: 'Snake', blurb: 'A, B, B, A, A, B: whoever picks second gets two in a row' },
   turns: { name: 'Take turns', blurb: 'A, B, A, B: one pick each, the same captain first every time' },
@@ -28,8 +31,6 @@ const isStr = v => typeof v === 'string' && v.length > 0;
 
 /** A captain's own row's key: 'Ldraft-' and the first 20 characters of the phone's device key. */
 export const captainKey = dev => (isStr(dev) && /^[0-9a-f]{20}/.test(dev) ? `${DRAFT_KEY}-${dev.slice(0, 20)}` : null);
-/** Whether a trip_cup row is part of a draft (never a round's matches). */
-export const isDraftKey = key => key === DRAFT_KEY || String(key).startsWith(`${DRAFT_KEY}-`);
 
 /**
  * Which captain picks each pick (0 or 1), for `n` picks: snake (A, B, B, A, A, B...) or taking
@@ -178,10 +179,4 @@ export function draftTeams(draft, merged) {
 /** The link that opens a captain's side of the draft on their own phone. */
 export function draftLink(origin, tripId, seat) {
   return `${origin}/?draft=${encodeURIComponent(tripId)}&c=${seat === 1 ? 1 : 0}`;
-}
-
-/** A trip id from a draft link, or null. */
-export function cleanTripId(v) {
-  const s = String(v || '').trim();
-  return /^[A-Za-z0-9_-]{1,64}$/.test(s) ? s : null;
 }

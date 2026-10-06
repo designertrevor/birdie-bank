@@ -3,7 +3,7 @@
 import { Icon, Sheet } from './ui.jsx';
 import { update, useStore } from '../lib/store.js';
 import { gameLabel } from '../lib/format.js';
-import { holesScored, roundsInProgress } from '../lib/rounds.js';
+import { holesScored, roundsInProgress } from '../lib/rounds-live.js';
 import { useNav } from '../lib/nav.js';
 
 export function RoundsInProgressSheet({ open, onClose, currentId = null }) {

@@ -29,54 +29,14 @@
 import { merge3 } from './sync-model.js';
 import { mergeClaims } from './people-links.js';
 import { mergeDevs } from './keeper-lock.js';
+import { isPlayer, keeperOf } from './keeper-who.js';
+
+export { canEdit, isKeeper, keeperMe, keeperOf } from './keeper-who.js';
 
 /** How long the keeper has to answer an ask before the asker can take the card. */
 export const ASK_MS = 2 * 60 * 1000;
 /** How long "Mike took the card" or "Trevor said no" stays up. */
 export const NOTE_MS = 10 * 60 * 1000;
-
-/** The keeper record, or null when the round has none (not shared, or shared before keepers existed). */
-export function keeperOf(round) {
-  const k = round?.keeper;
-  if (!k || typeof k !== 'object') return null;
-  return { id: typeof k.id === 'string' ? k.id : null, since: Number(k.since) || 0, by: typeof k.by === 'string' ? k.by : null, lastSaveAt: Number(k.lastSaveAt) || 0, hole: k.hole ?? null };
-}
-
-const isPlayer = (round, pid) => !!pid && (round?.players || []).some(p => p.id === pid);
-
-/**
- * Which player is "you" on this phone, for keeping score. The host phone is the organizer (state.me,
- * who may or may not be playing). A phone that joined from a link is the seat it took (round.localMe),
- * and a watcher has none: we never fall back to state.me there, since saved player ids repeat across
- * an organizer's rounds and a watcher could otherwise look like a player.
- */
-export function keeperMe(round, state) {
-  if (!round?.shared) return state?.me ?? null;
-  return round.shared.host ? state?.me ?? null : round.localMe ?? null;
-}
-
-/** Whether this phone keeps the card right now (in a shared round with a keeper). */
-export function isKeeper(round, me, isHost) {
-  const k = keeperOf(round);
-  if (!k) return false;
-  return k.id === null ? !!isHost : me === k.id;
-}
-
-/** Whether this phone may change the round: scores, marks, bets, players, length. */
-export function canEdit(round, me, isHost) {
-  if (!round) return false;
-  // Not shared, or sharing stopped: this phone's copy is its own
-  if (!round.shared || round.shared.ended) return true;
-  const player = isPlayer(round, me);
-  // Watchers never edit. The host phone always can in a round with no keeper yet
-  if (!player && !isHost) return false;
-  // Fixing a finished round: any player's phone, as before
-  if (round.status === 'done') return true;
-  const k = keeperOf(round);
-  // A round shared before keepers existed: every player's phone edits, as before
-  if (!k) return true;
-  return k.id === null ? !!isHost : me === k.id;
-}
 
 /**
  * Whether this phone should leave the hole screen for the results: a shared round that finished on

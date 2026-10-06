@@ -1,11 +1,17 @@
 // One avatar for every place a person shows: player cards, the Players list, seat tiles, the Tab,
 // the reveal and the button that opens Settings. A photo, then a Ball buddy, then initials on a
 // pastel. Other people's come from their profile once their seat is linked to their account.
-import { useState } from 'react';
+import { Suspense, lazy, useState } from 'react';
 import { useStore } from '../lib/store.js';
 import { avatarFor, avatarModel, avatarName, backdropOf, personKey, photoAllowed } from '../lib/avatars.js';
 import { supabaseUrl } from '../lib/supabase.js';
-import { BuddyArt } from './BuddyArt.jsx';
+
+// The Ball buddy drawings load just after the first paint (they're most of this file's weight), and
+// start loading as soon as the app does, so they're in long before a round or a sheet opens. Until
+// then a buddy shows as its backdrop, the same circle and colour, so nothing jumps.
+const loadArt = () => import('./BuddyArt.jsx');
+const BuddyArt = lazy(() => loadArt().then(m => ({ default: m.BuddyArt }), () => ({ default: () => null })));
+if (typeof window !== 'undefined') loadArt().catch(() => {});
 
 /** The circle for a model from avatarModel(). */
 export function AvatarArt({ model, size = '', base = 'avatar', className = '' }) {
@@ -19,7 +25,7 @@ export function AvatarArt({ model, size = '', base = 'avatar', className = '' })
     return <span className={`${cls} av-photo`} aria-hidden="true"><img src={model.url} alt="" loading="lazy" decoding="async" referrerPolicy="no-referrer" onError={() => setBrokenUrl(model.url)} /></span>;
   }
   if (model.kind === 'buddy') {
-    return <span className={`${cls} av-buddy`} aria-hidden="true"><BuddyArt id={model.buddy} bg={model.bg} /></span>;
+    return <span className={`${cls} av-buddy`} style={{ background: backdropOf(model.bg).hex }} aria-hidden="true"><Suspense fallback={null}><BuddyArt id={model.buddy} bg={model.bg} /></Suspense></span>;
   }
   // Initials (also a photo that won't load: a link that's gone, or no signal before it was cached)
   const b = backdropOf(model.bg);

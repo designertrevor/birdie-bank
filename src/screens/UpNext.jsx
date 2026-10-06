@@ -12,7 +12,7 @@ import { activeRounds, lastResult, myTab } from '../lib/history.js';
 import { AvatarButton, BottomNav } from '../nav.jsx';
 import { useNav } from '../lib/nav.js';
 import { syncConfigured } from '../lib/supabase.js';
-import { RSVP_LABEL, countsLine, dayLabel, daysUntil, planChoice, planCounts, upcomingPlans, whenLabel } from '../lib/plans.js';
+import { RSVP_LABEL, countsLine, dayLabel, daysUntil, planChoice, planCounts, upcomingPlans, whenLabel } from '../lib/plan-basics.js';
 import { countdownLine, weekdayOf } from '../lib/countdown.js';
 import { updateSafe } from '../lib/app-update.js';
 import { applyUpdate, useUpdateReady } from '../lib/sw-update.js';

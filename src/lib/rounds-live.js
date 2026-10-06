@@ -1,0 +1,15 @@
+// The rounds going on right now, for the play button and its sheet. Split out of rounds.js (which
+// re-exports it) so Up next's first paint doesn't load the courses list.
+import { holeComplete } from './round.js';
+
+/** Every round still being played, the one you were in last first, then newest first. */
+export function roundsInProgress(state) {
+  return Object.values(state.rounds || {})
+    .filter(r => r.status === 'active')
+    .sort((a, b) => (b.id === state.activeRoundId) - (a.id === state.activeRoundId) || (b.createdAt || 0) - (a.createdAt || 0));
+}
+
+/** Holes with every score in, for "3 of 18 holes" lines. */
+export function holesScored(round) {
+  return round.holes.filter(h => holeComplete(round, h)).length;
+}

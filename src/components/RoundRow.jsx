@@ -1,5 +1,5 @@
 import { isJustPlaying, roundResults } from '../lib/round.js';
-import { JUST_PLAYING_TAG, niceRound } from '../lib/just-playing.js';
+import { JUST_PLAYING_TAG, niceRound } from '../lib/nice-round.js';
 import { gameLabel, meFor, roundDate } from '../lib/format.js';
 import { myNet, roundTime } from '../lib/history.js';
 import { useNav } from '../lib/nav.js';

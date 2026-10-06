@@ -25,7 +25,7 @@ import { tripPays } from './trip-expenses.js';
 import { tripSettleOf } from './trip-pay.js';
 import { cleanPlan } from './trip-plan.js';
 import { finishedAt } from './pair-debts.js';
-import { isoDate } from './plans.js';
+import { isoDate } from './plan-basics.js';
 
 const dayOf = t => isoDate(new Date(t || 0));
 

@@ -4,11 +4,10 @@ import ErrorBoundary from './components/ErrorBoundary.jsx';
 import { NavCtx } from './lib/nav.js';
 import { getState, useStore } from './lib/store.js';
 import { joinRoute } from './lib/join.js';
-import { NotifyAsk } from './components/NotifyAsk.jsx';
 import { syncConfigured } from './lib/supabase.js';
-import { cleanCode } from './lib/sync-model.js';
+import { cleanCode } from './lib/sync-codes.js';
 import { KeptScope, notePlace, startPlace } from './lib/kept.js';
-import { cleanTripId } from './lib/draft.js';
+import { cleanTripId } from './lib/draft-keys.js';
 import UpNext from './screens/UpNext.jsx';
 
 // Only Up next (the first screen) is in the main bundle; the rest load on demand. The service
@@ -80,6 +79,9 @@ const BigGameSetup = screen(() => import('./screens/BigGameSetup.jsx'));
 const Roadmap = screen(() => import('./screens/Roadmap.jsx'));
 const WhatsNew = screen(() => import('./screens/WhatsNew.jsx'));
 const HallOfFame = screen(() => import('./screens/HallOfFame.jsx'));
+// The notifications ask shows only after planning or joining a round, never on the first paint, so it
+// loads after Up next (and is left off if it can't load, rather than reloading the app)
+const NotifyAsk = lazy(() => import('./components/NotifyAsk.jsx').then(m => ({ default: m.NotifyAsk }), () => ({ default: () => null })));
 
 /**
  * The public roadmap link (/roadmap, or ?roadmap): { ids } (with &ids, each item's id shows, for
@@ -383,7 +385,7 @@ export default function App() {
               </KeptScope.Provider>
             </Suspense>
           </ErrorBoundary>
-          <NotifyAsk />
+          <Suspense fallback={null}><NotifyAsk /></Suspense>
         </div>
       </NavCtx.Provider>
     </UIProvider>
