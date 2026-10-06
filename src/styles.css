@@ -3257,3 +3257,10 @@ a.header-btn.rm-open { text-decoration: none; }
 .hof-sub { display: block; margin-top: 1px; font-size: 13px; color: var(--mute); font-variant-numeric: tabular-nums; }
 .hof-amt { flex-shrink: 0; font-family: var(--display); font-size: 18px; font-weight: 800; color: var(--ink); font-variant-numeric: tabular-nums; }
 .hof .kv-k .sl-sub { margin-top: 1px; }
+/* O10 wrapped: the year in review's stand-in while its image is drawn, the stats as tiles */
+.wrapped-tiles { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin: 12px 0; }
+.wrapped-tile { padding: 10px 12px; border-radius: 14px; background: rgba(255,255,255,.12); }
+.wrapped-tile b { display: block; font-family: var(--display); font-size: 22px; font-weight: 800; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.wrapped-tile span { display: block; font-size: 12px; opacity: .75; }
+.sc-big.wrapped-big { flex: 0 0 auto; font-size: 34px; }
+.share-card:has(.wrapped-tiles) { overflow: hidden; }

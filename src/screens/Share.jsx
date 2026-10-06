@@ -1,7 +1,8 @@
 // Share a card into the group text: the recap of a round, a trip's standings, or the cup. Each is
 // a story-sized image in the results image's style (share-cards-image.js) with the same Show
 // amounts switch and buttons (ShareSheet.jsx), the words from share-cards.js.
-// Opened with nav.push('share', { kind: 'recap' | 'trip' | 'cup', id }).
+// Opened with nav.push('share', { kind: 'recap' | 'trip' | 'cup', id }), or { kind: 'wrapped', year } for
+// your year in review (wrapped.js), drawn by wrapped-image.js.
 import { Empty, Header, Screen } from '../components/ui.jsx';
 import { ShareView } from '../components/ShareSheet.jsx';
 import { useStore } from '../lib/store.js';
@@ -13,15 +14,33 @@ import { tripStatus } from '../lib/trips.js';
 import { appLink, shareRoundLink, slugName } from '../lib/share.js';
 import { cardText, cupCardModel, cupPeople, recapCardModel, tripCardModel } from '../lib/share-cards.js';
 import { renderCard } from '../lib/share-cards-image.js';
+import { wrappedCardModel, yearInReview } from '../lib/wrapped.js';
+import { renderWrapped } from '../lib/wrapped-image.js';
 
 const card = model => ({ model, alt: model.alt, text: cardText(model) });
 
-export default function ShareScreen({ kind, id }) {
+export default function ShareScreen({ kind, id, year }) {
   const nav = useNav();
   const state = useStore();
   const gone = (title, text) => (
     <Screen><Header title="Share" small onBack={nav.pop} /><div className="scroll"><Empty title={title} text={text} /></div></Screen>
   );
+
+  if (kind === 'wrapped') {
+    const y = yearInReview(state, year || new Date().getFullYear());
+    if (!y.rounds) return gone(`No rounds in ${y.year} yet`, 'Finish a round and your year in review starts here.');
+    const link = appLink();
+    // Only your own money is on it: Show amounts (off until you turn it on) is all that puts it there
+    return (
+      <Screen>
+        <ShareView title="Your year in review" small onBack={nav.pop} what="Year in review" link={link}
+          make={show => { const m = wrappedCardModel(state, y, { showAmounts: show, link }); return { model: m, alt: m.alt, text: m.text }; }}
+          render={renderWrapped} fileName={slugName('year-in-review', String(y.year))}
+          money={!!y.money} people={[]} standIn={m => <WrappedStandIn model={m} />}
+          onText="Your net and best day are on the image" offText="Rounds, courses, your low round and the moment of the year, no money" />
+      </Screen>
+    );
+  }
 
   if (kind === 'recap') {
     const round = state.rounds?.[id];
@@ -61,5 +80,20 @@ export default function ShareScreen({ kind, id }) {
         fileName={slugName('trip', st.trip.name)} money={st.standings.length > 0} people={people}
         onText="Everyone’s money on the trip is on the image" offText="The order and the cup, no money" />
     </Screen>
+  );
+}
+
+/** The year in review while its image is being drawn: the same words, as tiles. */
+function WrappedStandIn({ model }) {
+  return (
+    <div className="share-card">
+      <div className="sc-brand">{model.eyebrow}</div>
+      <div className="sc-meta">{model.title}</div>
+      <div className="sc-big d wrapped-big">{model.headline}<br />{model.sub}</div>
+      <div className="wrapped-tiles">
+        {model.tiles.map(t => <div key={t.label} className="wrapped-tile"><b>{t.value}</b><span>{t.label}</span></div>)}
+      </div>
+      {model.sections.map(s => <div key={s.label} className="sc-meta">{s.label}: {s.lines.join('; ')}</div>)}
+    </div>
   );
 }

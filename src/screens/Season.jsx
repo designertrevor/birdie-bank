@@ -91,6 +91,9 @@ function RealSeason({ state, preview = false }) {
       <button className="text-link stats-link" onClick={() => nav.push('stats', { range: { kind: 'season', year: b.year } })}>
         <Icon name="chart-bar" fill /> <span className="row-main">Your stats for the season<span className="sl-sub">By game and course, presses, skins and biggest wins</span></span> <Icon name="caret-right" />
       </button>
+      <button className="text-link stats-link" onClick={() => nav.push('share', { kind: 'wrapped', year: b.year })}>
+        <Icon name="share-network" /> <span className="row-main">Your year in review<span className="sl-sub">A card for your Story, money only if you show it</span></span> <Icon name="caret-right" />
+      </button>
       <HallLinks />
       <ClosedSeasons />
     </div>

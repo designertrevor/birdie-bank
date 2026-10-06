@@ -125,6 +125,9 @@ export default function Stats({ range: given = null }) {
             )}
 
             <p className="field-help pad stats-foot"><Icon name={privacy.profile === 'hidden' ? 'lock-simple' : 'users-three'} fill /> {statsShareLine(privacy)} {moneyNote(st)}</p>
+            <button className="text-link stats-link" onClick={() => nav.push('share', { kind: 'wrapped', year: range.kind === 'season' && range.year ? range.year : new Date().getFullYear() })}>
+              <Icon name="share-network" /> <span className="row-main">Your year in review<span className="sl-sub">A card for your Story, money only if you show it</span></span> <Icon name="caret-right" />
+            </button>
           </>
         )}
       </div>
