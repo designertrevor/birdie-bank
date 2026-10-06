@@ -77,6 +77,7 @@ const DraftLink = screen(draft, 'DraftLink');
 const BigGame = screen(() => import('./screens/BigGame.jsx'));
 const BigGameSetup = screen(() => import('./screens/BigGameSetup.jsx'));
 const Roadmap = screen(() => import('./screens/Roadmap.jsx'));
+const WhatsNew = screen(() => import('./screens/WhatsNew.jsx'));
 
 /**
  * The public roadmap link (/roadmap, or ?roadmap): { ids } (with &ids, each item's id shows, for
@@ -173,7 +174,7 @@ const SCREENS = {
   plan: Plan, rollCall: RollCall, planLink: PlanLink, preview: Preview, paywall: Paywall, season: Season,
   challenge: Challenge, challengeLink: ChallengeLink,
   joinInvite: JoinInviteScreen, lately: Lately, trip: Trip, tripSettle: TripSettle, draft: Draft, draftLink: DraftLink,
-  bigGame: BigGame, bigGameSetup: BigGameSetup, roadmap: Roadmap,
+  bigGame: BigGame, bigGameSetup: BigGameSetup, roadmap: Roadmap, whatsNew: WhatsNew,
   friends: Friends, friendRound: FriendRound,
   profile: Profile, stats: Stats, share: Share, closeBooks: CloseBooks, book: Book,
 };

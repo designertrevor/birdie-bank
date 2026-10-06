@@ -37,6 +37,7 @@ const JoinSheet = part(() => import('../components/Live.jsx'), 'JoinSheet');
 const RemindersUpNext = part(() => import('../components/Reminders.jsx'), 'RemindersUpNext');
 const FriendsUpNext = part(() => import('../components/FriendsFeed.jsx'), 'FriendsUpNext');
 const ShippedUpNext = part(() => import('../components/RoadmapUpNext.jsx'), 'ShippedUpNext');
+const WhatsNewUpNext = part(() => import('../components/WhatsNewUpNext.jsx'), 'WhatsNewUpNext');
 // Start fetching straight away, alongside the first paint, rather than when React gets to them
 if (typeof window !== 'undefined') more().catch(() => {});
 const Later = ({ children }) => <Suspense fallback={null}>{children}</Suspense>;
@@ -99,6 +100,8 @@ export default function UpNext() {
         <Later><RemindersUpNext /></Later>
         {/* Something you asked for or voted for on the roadmap shipped: said once (roadmap.js) */}
         <Later><ShippedUpNext /></Later>
+        {/* What landed in this update: said once, never while a round is going on (whats-new.js) */}
+        <Later><WhatsNewUpNext /></Later>
 
         {plans.length > 0 && <div className="sec-label">Upcoming</div>}
         {plans.map(p => <UpcomingCard key={p.id} plan={p} />)}
