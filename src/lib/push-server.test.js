@@ -72,7 +72,7 @@ test('the database picks who gets it, for the caller it checked, with the kind\'
   assert.deepEqual(r, { status: 204, sent: 1 });
   const rpc = f.calls.find(c => String(c.url).endsWith('/rest/v1/rpc/push_targets'));
   assert.equal(rpc.init.headers.Authorization, 'Bearer service');
-  assert.deepEqual(JSON.parse(rpc.init.body), { p_caller: 'u-dalton', p_scope: 'plan', p_kind: 'rsvp', p_code: 'AB12CD', p_to: 'host', p_players: [], p_topic: '' });
+  assert.deepEqual(JSON.parse(rpc.init.body), { p_caller: 'u-dalton', p_scope: 'plan', p_kind: 'rsvp', p_code: 'AB12CD', p_to: 'host', p_players: [], p_topic: 'in' });
   const push = f.calls.find(c => String(c.url).startsWith('https://fcm.googleapis.com/'));
   assert.match(push.init.headers.Authorization, /^vapid t=/);
 });

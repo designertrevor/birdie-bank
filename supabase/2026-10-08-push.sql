@@ -113,6 +113,9 @@ create index if not exists user_docs_share_code on public.user_docs ((data ->> '
 -- 2026-10-04-comments.sql), and a challenge is only those: anyone with its code, like its talk.
 -- Nothing when the caller isn't on it themselves, when the same push went in the last 10 minutes
 -- (for trash talk, any from the caller on that thread), or when the caller has sent 40 in the last hour.
+-- Who's in is about the answer now, not a log of it: its topic is the answer, and it goes when the
+-- answer changed since the caller's last one on that plan (in, out, in sends all three), at most 6
+-- an hour per plan, so the organizer's newest push always matches the newest answer.
 -- For a round finished push each subscription also comes with its person's seats in the round
 -- (to_seats), so the server can tell each of them how they did; nothing else about the round.
 -- The function's columns grew, so any earlier copy goes first (its grants are given again below)
@@ -135,7 +138,12 @@ begin
           or (p_scope = 'challenge' and p_kind = 'talk')) then return; end if;
   if p_to is null or p_to not in ('all', 'host', 'players') then return; end if;
 
-  if exists (select 1 from public.push_sends s where s.caller = p_caller and s.scope = p_scope and s.kind = p_kind
+  if p_kind = 'rsvp' then
+    if (select s.topic from public.push_sends s where s.caller = p_caller and s.scope = p_scope and s.kind = 'rsvp'
+        and s.code = p_code order by s.at desc, s.id desc limit 1) = t then return; end if;
+    if (select count(*) from public.push_sends s where s.caller = p_caller and s.scope = p_scope and s.kind = 'rsvp'
+        and s.code = p_code and s.at > now() - interval '1 hour') >= 6 then return; end if;
+  elsif exists (select 1 from public.push_sends s where s.caller = p_caller and s.scope = p_scope and s.kind = p_kind
              and s.code = p_code and (s.topic = t or p_kind = 'talk') and s.at > now() - interval '10 minutes') then return; end if;
   if (select count(*) from public.push_sends s where s.caller = p_caller and s.at > now() - interval '1 hour') >= 40 then return; end if;
 

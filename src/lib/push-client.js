@@ -11,7 +11,7 @@ import { useSyncExternalStore } from 'react';
 import { getSupabase, supabaseConfigured } from './supabase.js';
 import { getState } from './store.js';
 import { afterNotNow, afterOff, afterOn, afterShown, pushSupport, settingsRow, shouldAsk } from './notify-ask.js';
-import { carriedPushes, carryPushes, cleanPushRequest, finishResults, paidPushes, pushKey, talkPush } from './push-events.js';
+import { carriedPushes, carryPushes, cleanPushRequest, finishResults, paidPushes, pushSlot, rememberPush, talkPush } from './push-events.js';
 
 const KEY = import.meta.env.VITE_VAPID_PUBLIC_KEY || '';
 /** Push is switched on for this build. */
@@ -188,27 +188,32 @@ export async function answerAsk(answer) {
 
 // --------------------------- sending ----------------------------------------
 
-const sent = new Set();
+const sent = new Map();
+const waiting = new Map();
 
 /**
  * Ask the server to send one push (push-events.js). Fire and forget: after a few seconds (so the
- * round or plan has reached the server and your account), once a session, signed in only, and
- * silent whatever happens.
+ * round or plan has reached the server and your account), once a session (who's in: once per
+ * change of answer, and a newer answer replaces one still waiting), signed in only, and silent
+ * whatever happens.
  */
 export function sendPush(request, { delay = 4000 } = {}) {
   if (!pushConfigured) return;
   const req = cleanPushRequest(request);
   if (!req) return;
-  const key = pushKey(req);
-  if (sent.has(key)) return;
-  sent.add(key);
-  setTimeout(async () => {
+  const slot = pushSlot(req);
+  if (!rememberPush(sent, req)) return;
+  // A newer answer replaces one still waiting (the same answer again was stopped just above)
+  if (slot) { clearTimeout(waiting.get(slot)); waiting.delete(slot); }
+  const timer = setTimeout(async () => {
+    if (slot) waiting.delete(slot);
     try {
       const { token } = await session();
       if (!token) return;
       await fetch('/api/push', { method: 'POST', keepalive: true, headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` }, body: JSON.stringify(request) });
     } catch { /* a push is a nice-to-have */ }
   }, delay);
+  if (slot) waiting.set(slot, timer);
 }
 
 // The moments, one line at each call site

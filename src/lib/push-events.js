@@ -4,7 +4,8 @@
 //
 // A request: { kind, scope: 'round' | 'plan' | 'challenge', code, players?, topic?, results?, data: { name, day, course, status } }
 //   invite    a round or plan you share: everyone on it with an account, but you
-//   rsvp      you answered a plan: its organizer
+//   rsvp      you answered a plan: its organizer. The topic is the answer, and only a change of
+//             answer goes again, so the organizer's newest push is always your newest answer
 //   finished  you finished a shared round: everyone in it, but you. With `results` (seat id: 'won',
 //             'lost', 'square' or a place, never an amount), each person's push says how they did
 //   paid      you marked a payment: the person you paid (players: [their seat in the round])
@@ -75,7 +76,8 @@ export function cleanPushRequest(body, { fromServer = false } = {}) {
   const out = {
     kind: body.kind, scope: body.scope, code, to: spec.to,
     players: spec.to === 'players' ? players : [],
-    topic: pushText(body.topic, 120),
+    // Who's in: the answer is the topic, whatever was sent (the server sends again only on a change)
+    topic: body.kind === 'rsvp' ? data.status : pushText(body.topic, 120),
     data,
   };
   if (body.kind === 'finished') {
@@ -228,6 +230,32 @@ export function pushPayload(req, { result = null } = {}) {
 /** A key for one push, so the app never asks for the same one twice in a session. */
 export function pushKey(req) {
   return [req.kind, req.scope, req.code, req.topic || '', (req.players || []).join('.')].join('|');
+}
+
+/**
+ * For pushes where only the newest counts (who's in: your newest answer on a plan), the slot it
+ * takes, or null. A newer push in the same slot replaces one still waiting to go.
+ */
+export function pushSlot(req) {
+  return req.kind === 'rsvp' ? `rsvp|${req.scope}|${req.code}` : null;
+}
+
+/**
+ * Whether to ask for `req`, remembering it in `seen` (a Map kept for the session): never the same
+ * push twice, except in a slot, where it goes again whenever it differs from the slot's last one
+ * (in, out, in asks for all three; in, in asks once).
+ */
+export function rememberPush(seen, req) {
+  const key = pushKey(req);
+  const slot = pushSlot(req);
+  if (slot) {
+    if (seen.get(slot) === key) return false;
+    seen.set(slot, key);
+    return true;
+  }
+  if (seen.has(key)) return false;
+  seen.set(key, true);
+  return true;
 }
 
 /**

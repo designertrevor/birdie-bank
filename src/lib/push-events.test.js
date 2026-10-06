@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { MAX_RESULTS, PUSH_KINDS, carriedPushes, carryPushes, cleanPushRequest, cleanResults, finishResults, ordinal, paidPushes, recipientResult, talkPush, pushKey, pushPayload, pushText, pushUrl, weekday } from './push-events.js';
+import { MAX_RESULTS, PUSH_KINDS, carriedPushes, carryPushes, cleanPushRequest, cleanResults, finishResults, ordinal, paidPushes, recipientResult, rememberPush, talkPush, pushKey, pushSlot, pushPayload, pushText, pushUrl, weekday } from './push-events.js';
 
 test('each push goes to the right people: invites and results to everyone, who is in to the organizer, paid to the payee', () => {
   assert.equal(PUSH_KINDS.invite.to, 'all');
@@ -246,4 +246,23 @@ test('an answered carry-over goes to the person who asked, once, with no amount'
   assert.equal(cleanPushRequest({ kind: 'carried', scope: 'plan', code: 'AB12CD', players: ['a'], data: { answer: 'agreed' } }), null);
   const ask = carryPushes([row({ status: 'asked', by: 'a' })])[0];
   assert.notEqual(pushKey(cleanPushRequest(ask)), pushKey(cleanPushRequest(out[0])));
+});
+
+test('who\'s in follows your newest answer: in, out, in asks for all three, the same answer twice only once', () => {
+  const rsvp = status => cleanPushRequest({ kind: 'rsvp', scope: 'plan', code: 'AB12CD', topic: 'anything', data: { name: 'Dalton', status } });
+  // The topic is the answer, whatever the app sent, so the server can tell a change from a repeat
+  assert.equal(rsvp('out').topic, 'out');
+  assert.equal(pushSlot(rsvp('in')), pushSlot(rsvp('out')));
+  assert.equal(pushSlot(cleanPushRequest({ kind: 'invite', scope: 'plan', code: 'AB12CD' })), null);
+  const seen = new Map();
+  assert.deepEqual(['in', 'out', 'in', 'in', 'maybe', 'maybe', 'in'].map(s => rememberPush(seen, rsvp(s))), [true, true, true, false, true, false, true]);
+  // Another plan is its own slot
+  assert.equal(rememberPush(seen, cleanPushRequest({ kind: 'rsvp', scope: 'plan', code: 'CD34EF', data: { status: 'in' } })), true);
+  // Every other push still goes once a session
+  const paid = cleanPushRequest({ kind: 'paid', scope: 'round', code: 'AB12CD', players: ['p1'], topic: 'x' });
+  assert.equal(rememberPush(seen, paid), true);
+  assert.equal(rememberPush(seen, paid), false);
+  // The newest answer is what the organizer's push says, and it replaces the last one on the lock screen
+  assert.equal(pushPayload(rsvp('in')).tag, pushPayload(rsvp('out')).tag);
+  assert.equal(pushPayload(rsvp('in')).title, 'Dalton is in');
 });
