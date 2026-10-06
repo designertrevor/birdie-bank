@@ -32,3 +32,42 @@ export function updateAction({ waiting, safe, launching = false, fromLink = fals
   if (!waiting || !safe) return 'wait';
   return launching && !fromLink ? 'apply' : 'offer';
 }
+
+// ---------- Is a newer build live? (overnight 10, version) ----------
+// The service worker only looks for a new version now and then, so a phone (an iPhone home-screen
+// app most of all) can sit on an old build for days. Each build stamps when it was built into the
+// app and into a tiny /version.json beside it. The app reads that file at launch and when it comes
+// back to the screen, and a newer stamp makes the service worker fetch the new version right away.
+// It still only takes over by the rules above: never forced, never mid-round.
+
+/** How often coming back to the screen may read /version.json. */
+export const VERSION_CHECK_MS = 10 * 60000;
+
+/** The build time in a /version.json, or null for anything that isn't one (a missing file, an HTML page). */
+export function readBuilt(json) {
+  const built = json?.built;
+  return Number.isFinite(built) && built > 0 ? built : null;
+}
+
+/**
+ * True when `theirs` is a later build than this one. `mine` is 0 in dev and in tests, which is never
+ * behind, so a dev server or a build with no stamp says nothing.
+ */
+export function isNewerBuild(theirs, mine) {
+  return mine > 0 && Number.isFinite(theirs) && theirs > mine;
+}
+
+/** True when it's time to read /version.json again: at launch (never read yet) or after the gap. */
+export function versionCheckDue(now, last, gap = VERSION_CHECK_MS) {
+  return !last || now - last >= gap;
+}
+
+/**
+ * A shared round's meta with the newest build that has kept its score. Phones on different builds
+ * only ever raise it (never lower it), so two copies never trade it back and forth, and a phone on an
+ * older build sees the round came from a newer one and offers the update (see sync.js).
+ */
+export function stampBuild(meta, mine) {
+  if (!meta || !(mine > 0) || (meta.appBuilt ?? 0) >= mine) return meta;
+  return { ...meta, appBuilt: mine };
+}

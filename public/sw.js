@@ -97,6 +97,8 @@ self.addEventListener('fetch', e => {
   const url = new URL(req.url);
   // Live data (course search) always goes to the network; the app keeps what it needs itself
   if (url.origin === location.origin && url.pathname.startsWith('/api/')) return;
+  // So does the "which build is live" check (src/lib/app-update.js)
+  if (url.origin === location.origin && url.pathname === '/version.json') return;
   if (req.mode === 'navigate') {
     // Only the app itself (/) is the offline copy; plain pages like /privacy.html and the rule pages
     // (/rules/wolf) cache under their own path, so opening one never replaces the app's saved copy
