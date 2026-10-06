@@ -19,6 +19,8 @@ The plan for growing Birdie Bank into a $10k/mo business, and the checklist we w
 
 **Step 1: Foundation, nearly done. Step 2 is well under way.** Accounts, cloud data, invites, the live money bar, the simpler setup and the end-of-round settle-up are built, and Google sign-in is open to anyone. All SQL is run in Supabase (feedback, reactions and the upcoming-rounds tables, 2026-09-28), so "Suggest something", reactions and the group plan link are live. Left for S1: custom email (SMTP) so sign-in emails reach anyone, waiting on the app's final name and a domain. Real rounds keep going alongside as testing: fix bugs, smooth rough spots, and check each kind of user has what they need.
 
+**Overnight 10 is built, waiting for review (2026-10-06):** on `overnight10/next`, stacked on `overnight9/next`. Report and decisions in `overnight/O10-REPORT.md`. Nothing is checked off until it ships.
+
 **Shipped overnight 2026-09-27 (wave 1):** the nine money rules, Snake and Hammer (18 games), skins and Nassau house rules, the Up next home tab and new nav, History by month with a chart, Run it back, the Tab by person with payment apps for everyone and honest head-to-head, Player cards, several rounds in progress, fixing a finished round without reopening it, the invite card with seat tiles and "Add me", adding a player mid-round, and the approved copy audit (the money screen is now the Tab).
 
 **Shipped overnight 2026-09-28:** upcoming rounds (area 21): plan ahead, who's in with a nudge, the group vote on the game and the bet, the RSVP link for friends, the morning text and the roll call. The SQL is run, so the group link is on.
