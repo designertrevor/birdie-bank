@@ -44,6 +44,7 @@ import { HoleBets, PairBetsSheet } from '../components/PairBets.jsx';
 import { betsOf } from '../lib/pair-bets.js';
 import { BIG_FORMAT } from '../lib/big-game.js';
 import { BigBar } from '../components/BigGame.jsx';
+import { pushRoundFinished } from '../lib/push-client.js';
 import { useBigSync } from '../lib/big-sync.js';
 import { betPromptFor, markPrompt } from '../lib/bet-prompt.js';
 import { RoundMoments } from '../components/Moments.jsx';
@@ -106,6 +107,7 @@ export default function Play({ id }) {
     FINISHED_HERE.add(id);
     for (const k of DRAFTS.keys()) if (k.startsWith(`${id}:`)) DRAFTS.delete(k);
     update(s => { const rr = s.rounds[id]; rr.status = 'done'; rr.finishedAt = Date.now(); markUsualPlayed(s, rr, rr.finishedAt); leaveRound(s, id); });
+    pushRoundFinished(getState().rounds[id]);
     nav.reset('history', ['roundDetail', { id, celebrate: true }]);
   };
   const keeps = canEdit(round, keeperMe(round, { me: getState().me }), !!round.shared?.host);
@@ -422,6 +424,7 @@ function PlayRound({ round, mount, momentUp = false }) {
       markUsualPlayed(s, rr, rr.finishedAt);
       leaveRound(s, round.id);
     });
+    pushRoundFinished(getState().rounds[round.id]);
     nav.reset('history', ['roundDetail', { id: round.id, celebrate: true }]);
     return true;
   };
@@ -449,6 +452,7 @@ function PlayRound({ round, mount, momentUp = false }) {
     if (choice === 'finish') {
       FINISHED_HERE.add(round.id);
       update(s => { const rr = s.rounds[round.id]; rr.status = 'done'; rr.finishedAt = Date.now(); markUsualPlayed(s, rr, rr.finishedAt); leaveRound(s, round.id); });
+      pushRoundFinished(getState().rounds[round.id]);
       nav.reset('history', ['roundDetail', { id: round.id, celebrate: true }]);
     }
     if (choice === 'later') nav.push('newRound', { reschedule: round.id });

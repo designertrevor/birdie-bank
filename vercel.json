@@ -4,5 +4,8 @@
     { "source": "/rules", "destination": "/rules/index.html" },
     { "source": "/rules/:slug", "destination": "/rules/:slug/index.html" },
     { "source": "/roadmap", "destination": "/index.html" }
+  ],
+  "crons": [
+    { "path": "/api/push-tee", "schedule": "0 15 * * *" }
   ]
 }

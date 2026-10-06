@@ -212,6 +212,8 @@ export function unsyncedCount() { return meta ? outgoing(toDocs(getState()), met
 /** Sign out and give this phone a fresh start (everything stays in the account). */
 export async function signOut() {
   const db = await client();
+  // This phone's notifications stop going to the account (push-client.js)
+  await import('./push-client.js').then(p => p.forgetThisPhone()).catch(() => {});
   await db.auth.signOut({ scope: 'local' });
   meta = null;
   try { localStorage.removeItem(META); } catch { /* ignore */ }

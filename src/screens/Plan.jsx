@@ -42,6 +42,7 @@ import { markChallengesOn, useChallengesLive } from '../lib/challenge-sync.js';
 import { betPeople } from '../lib/pair-bets.js';
 import { useAgeCheck } from '../components/AgeCheck.jsx';
 import { needsAgeCheck } from '../lib/age.js';
+import { notifyMoment, pushRsvp } from '../lib/push-client.js';
 
 const first = name => String(name || '').trim().split(/\s+/)[0];
 const listNames = n => (n.length < 2 ? n.join('') : `${n.slice(0, -1).join(', ')} and ${n.at(-1)}`);
@@ -120,7 +121,14 @@ function PlanBody({ plan, standalone = false, onSkip }) {
       update(s => { const p = s.plans?.[plan.id]; if (p) p.localMe = null; });
     } else showToast(`${first(name)} answered from their own phone, so it’s theirs to change`);
   };
-  const answer = patch => answerPlan(plan.id, me, { name: myName, ...payFields(myPlayer), ...patch }).then(r => taken(r, myName, true));
+  const answer = patch => answerPlan(plan.id, me, { name: myName, ...payFields(myPlayer), ...patch }).then(r => {
+    taken(r, myName, true);
+    // Your own answer on someone else's plan: the organizer hears it, and saying you're in is a good moment to offer notifications
+    if (r === true && patch.status) {
+      pushRsvp(getState().plans?.[plan.id], patch.status, myName);
+      if (patch.status === 'in') notifyMoment('joined');
+    }
+  });
   const link = planShareLink(plan);
 
   // The group link: share the plan first if it hasn't been yet

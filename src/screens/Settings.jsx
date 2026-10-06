@@ -20,6 +20,7 @@ import { isOrganizer, planStatus } from '../lib/paywall.js';
 import { accountsEnabled, signOut, syncNow, unsyncedCount, useAccount } from '../lib/cloud.js';
 import { NUDGE_CHOICES, nudgeChoiceLabel, nudgeDays } from '../lib/nudges.js';
 import { useAgeCheck } from '../components/AgeCheck.jsx';
+import { NotifyRow } from '../components/NotifyRow.jsx';
 import { ageLine } from '../lib/age.js';
 
 export default function Settings() {
@@ -149,6 +150,7 @@ export default function Settings() {
           <Segmented label="Theme" className="press-mode-row" btn="pm-btn" value={state.settings.theme} onChange={v => update(s => { s.settings.theme = v; })}
             options={[{ value: 'system', label: 'System' }, { value: 'light', label: 'Light' }, { value: 'dark', label: 'Dark' }]} />
         </div>
+        <NotifyRow signedIn={!!acct.user} />
         <div className="sec-label">Up next</div>
         <div className="toggle-row">
           <div><div className="toggle-lbl" id="callouts-lbl">Callouts</div><div className="toggle-sub" id="callouts-sub">A few friendly lines from the Tab and your stats, one tap to post in the group text</div></div>

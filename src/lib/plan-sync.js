@@ -13,6 +13,7 @@ import { newCode, stable } from './sync-model.js';
 import { RSVPS, answersFrom, betVoteChoice, cleanName, daysUntil, gameVoteChoice, movedLocalMe, movedPlanOf, planLink, planMeta } from './plans.js';
 import { PAY_APP_IDS } from './pay.js';
 import { deviceReady, myDevice } from './device.js';
+import { notifyMoment, pushPlanInvite } from './push-client.js';
 
 const localFlag = () => { try { return localStorage.getItem('bb-sync-local') === '1'; } catch { return false; } };
 
@@ -98,6 +99,9 @@ export async function sharePlan(id) {
     for (const [who, a] of Object.entries(plan.answers || {})) await pushAnswer(adapter, code, who, a);
   } catch (e) { noteError(e); throw e; }
   update(s => { const p = s.plans?.[id]; if (p) { p.code = code; p.syncedAt = Date.now(); } });
+  // The people on it hear about it, and this is a good moment to offer notifications (push-client.js)
+  pushPlanInvite(getState().plans?.[id]);
+  notifyMoment('planned');
   // A round kept for another day: its old plan points friends to this one now it has a link
   for (const e of Array.isArray(plan.movedFrom) ? plan.movedFrom : []) {
     const old = e?.id && getState().plans?.[e.id];

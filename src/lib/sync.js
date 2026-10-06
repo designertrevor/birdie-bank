@@ -11,6 +11,7 @@ import { payFields } from './pay.js';
 import { canEdit, holeToKeep, hostKeeper, isKeeper, keeperMe, keeperOf, metaToKeep, metaToSend, registerDevice, seatTaken } from './keeper.js';
 import { deviceReady, myDevice } from './device.js';
 import { claimSeat, mergeClaims } from './people-links.js';
+import { notifyMoment, pushRoundInvite } from './push-client.js';
 import { applyBetAsk, betAskProblem, buildBetAsk, keepAsks, readBetAsk } from './bet-asks.js';
 
 /** Whether this phone may change a shared round (see keeper.js), and who it is in it. */
@@ -364,6 +365,8 @@ export async function shareRound(roundId) {
   // shareCode stays after sharing stops, so the round's payments on the shared Tab outlive the live round
   update(s => { s.rounds[roundId].shared = { code, host: true, since: Date.now() }; s.rounds[roundId].shareCode = code; });
   await start(roundId, { fresh: true });
+  // The others in it with an account hear it's live (push-client.js)
+  pushRoundInvite(getState().rounds[roundId]);
   return code;
 }
 
@@ -400,6 +403,8 @@ export async function joinShared(code, remote, localMe) {
     const claims = seat && claimSeat(r, localMe, s.me);
     if (claims) r.claims = claims;
   });
+  // Just joined: a good moment to offer notifications (push-client.js)
+  notifyMoment('joined');
   return round.id;
 }
 
