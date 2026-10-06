@@ -152,7 +152,7 @@ export function pageHead({ title, shareTitle = title, description, url, imageAlt
 }
 
 const topBar = right => `<header class="top"><a class="brand" href="/"><img src="/icon.svg" alt="" width="34" height="34"><span>${escapeHtml(APP_NAME)}</span></a>${right}</header>`;
-const footer = () => `<footer class="foot"><p>Friendly wagers only. ${escapeHtml(APP_NAME)} never holds or moves money: your group settles up between yourselves.</p><p><a href="/rules">Every game’s rules</a> · <a href="/privacy.html">Privacy</a></p></footer>`;
+const footer = () => `<footer class="foot"><p>Friendly wagers only. ${escapeHtml(APP_NAME)} never holds or moves money: your group settles up between yourselves.</p><p><a href="/rules">Every game’s rules</a> · <a href="/privacy.html">Privacy</a> · <a href="/terms.html">Terms</a></p></footer>`;
 const icon = (name, kind = 'fill') => `<i class="ph-${kind} ph-${escapeHtml(name)}" aria-hidden="true"></i>`;
 
 /**

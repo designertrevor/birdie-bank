@@ -16,6 +16,8 @@ import { PAY_APPS, payInfo } from '../lib/pay.js';
 import { SignInSheet, syncLabel } from '../components/Account.jsx';
 import { DeleteAccountButton } from '../components/DeleteAccount.jsx';
 import { PAYWALL_ON } from '../lib/paywall-flag.js';
+import { SUPPORT_EMAIL, helpMailto } from '../lib/support.js';
+import { TERMS_PATH } from '../lib/terms-page.js';
 import { isOrganizer, planStatus } from '../lib/paywall.js';
 import { accountsEnabled, signOut, syncNow, unsyncedCount, useAccount } from '../lib/cloud.js';
 import { NUDGE_CHOICES, nudgeChoiceLabel, nudgeDays } from '../lib/nudges.js';
@@ -184,6 +186,11 @@ export default function Settings() {
           {row('star', 'Birdie Bank Pro', planStatus(state), () => nav.push('paywall', { source: 'settings' }))}
         </>}
         <div className="sec-label">About</div>
+        <a className="set-row" href={helpMailto()}>
+          <div className="set-icon"><Icon name="lifebuoy" fill /></div>
+          <div className="row-main"><div className="set-name">Help</div><div className="set-sub">{`Questions or trouble? Email ${SUPPORT_EMAIL}`}</div></div>
+          <span className="chevron"><Icon name="envelope-simple" /></span>
+        </a>
         {row('info', 'About Birdie Bank', 'Rules, handicaps and the fine print', () => nav.push('about'))}
         {acct.user
           ? <button className="danger-link" onClick={logOut}><Icon name="sign-out" /> Sign out</button>
@@ -501,6 +508,11 @@ export function About() {
         <a className="set-row" href="/privacy.html" target="_blank" rel="noopener">
           <div className="set-icon"><Icon name="shield-check" fill /></div>
           <div className="row-main"><div className="set-name">Privacy policy</div><div className="set-sub">What we collect and why</div></div>
+          <span className="chevron"><Icon name="arrow-square-out" /></span>
+        </a>
+        <a className="set-row" href={TERMS_PATH} target="_blank" rel="noopener">
+          <div className="set-icon"><Icon name="scroll" fill /></div>
+          <div className="row-main"><div className="set-name">Terms of service</div><div className="set-sub">Friendly wagers, your account and the fine print</div></div>
           <span className="chevron"><Icon name="arrow-square-out" /></span>
         </a>
         <Empty illo title="Birdie Bank" text="Made for the Saturday group." />
