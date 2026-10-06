@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { Buffer } from 'node:buffer';
 import { createECDH } from 'node:crypto';
-import { handlePush, handleTee, pushConfig } from './push-server.js';
+import { handlePush, handleTee, payloadGroups, pushConfig } from './push-server.js';
 import { cleanPushRequest } from './push-events.js';
 
 const b64u = b => Buffer.from(b).toString('base64url');
@@ -104,4 +104,26 @@ test('the daily tee time reminder sends one push per due plan to its organizer',
   const rpc = f.calls.find(c => String(c.url).endsWith('/rest/v1/rpc/push_tee_due'));
   assert.deepEqual(JSON.parse(rpc.init.body), { p_today: '2026-10-08' });
   assert.equal(await handleTee(null, '2026-10-08', f), 0);
+});
+
+test('a round finished push tells each person how they did, by the seats the database says are theirs', async () => {
+  const cfg = pushConfig(ENV);
+  const winner = { ...sub('u-a'), to_seats: ['pa'] };
+  const second = { ...sub('u-b'), to_seats: ['zz', 'pb'] };
+  const unknown = { ...sub('u-c'), to_seats: [] };
+  const f = fakeFetch({ rows: [winner, second, unknown] });
+  const fin = cleanPushRequest({ kind: 'finished', scope: 'round', code: 'AB12CD', results: { pa: 'won', pb: 2 }, data: { course: 'Birch Creek' } });
+  const r = await handlePush(cfg, 'good', fin, f);
+  assert.equal(r.sent, 3);
+  const pushes = f.calls.filter(c => String(c.url).startsWith('https://fcm.googleapis.com/'));
+  assert.equal(pushes.length, 3);
+  assert.deepEqual(pushes.map(c => String(c.url)).sort(), [winner, second, unknown].map(x => x.push_endpoint).sort());
+  // What each one says (the bodies above are encrypted)
+  const said = payloadGroups(fin, [winner, second, unknown]).flatMap(g => g.rows.map(x => [x.to_user, g.payload.title]));
+  assert.deepEqual(Object.fromEntries(said), { 'u-a': 'You won the Birch Creek round', 'u-b': 'You finished 2nd', 'u-c': 'Round finished' });
+  // Any other push: one payload for everyone, seats or not
+  assert.equal(payloadGroups(req, [winner, second, unknown]).length, 1);
+  // What the server asks the database is the same as before: the results never leave the server
+  const rpc = f.calls.find(c => String(c.url).endsWith('/rest/v1/rpc/push_targets'));
+  assert.equal(JSON.parse(rpc.init.body).p_results, undefined);
 });

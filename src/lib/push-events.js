@@ -2,10 +2,11 @@
 // what it says. Shared by the app and the server, so both read a request the same way.
 // Pure functions of plain data, so they're easy to test. No storage, no network.
 //
-// A request: { kind, scope: 'round' | 'plan' | 'challenge', code, players?, topic?, data: { name, day, course, status } }
+// A request: { kind, scope: 'round' | 'plan' | 'challenge', code, players?, topic?, results?, data: { name, day, course, status } }
 //   invite    a round or plan you share: everyone on it with an account, but you
 //   rsvp      you answered a plan: its organizer
-//   finished  you finished a shared round: everyone in it, but you
+//   finished  you finished a shared round: everyone in it, but you. With `results` (seat id: 'won',
+//             'lost', 'square' or a place, never an amount), each person's push says how they did
 //   paid      you marked a payment: the person you paid (players: [their seat in the round])
 //   carry     you asked to roll a balance to next time: the other person, to agree (players: [their seat])
 //   talk      you posted trash talk on a round, plan or challenge: everyone on it, but you. Never
@@ -31,6 +32,9 @@ const CODE = /^[A-Z0-9]{4,8}$/;
 const ID = /^[\w-]{1,64}$/;
 const DATE = /^\d{4}-\d{2}-\d{2}$/;
 const STATUSES = ['in', 'maybe', 'out'];
+const RESULTS = ['won', 'lost', 'square'];
+/** The most seats a round finished push carries results for; a bigger map is dropped whole. */
+export const MAX_RESULTS = 32;
 
 /** Short plain text for a push: no control characters, single spaces, at most `max` characters. */
 export function pushText(v, max = 40) {
@@ -61,12 +65,70 @@ export function cleanPushRequest(body, { fromServer = false } = {}) {
   if (course) data.course = course;
   if (STATUSES.includes(d.status)) data.status = d.status;
   if (body.kind === 'rsvp' && !data.status) return null;
-  return {
+  const out = {
     kind: body.kind, scope: body.scope, code, to: spec.to,
     players: spec.to === 'players' ? players : [],
     topic: pushText(body.topic, 120),
     data,
   };
+  if (body.kind === 'finished') {
+    const results = cleanResults(body.results);
+    if (results) out.results = results;
+  }
+  return out;
+}
+
+/**
+ * A round finished push's results as the server accepts them, or null: a plain object of at most
+ * MAX_RESULTS seat ids, each 'won', 'lost', 'square' or a whole place from 1 to MAX_RESULTS.
+ * Anything else in it is dropped, so no free text or amount ever gets through.
+ */
+export function cleanResults(v) {
+  if (!v || typeof v !== 'object' || Array.isArray(v)) return null;
+  const entries = Object.entries(v);
+  if (!entries.length || entries.length > MAX_RESULTS) return null;
+  const out = {};
+  for (const [seat, r] of entries) {
+    if (!ID.test(seat)) continue;
+    if (RESULTS.includes(r)) out[seat] = r;
+    else if (Number.isInteger(r) && r >= 1 && r <= MAX_RESULTS) out[seat] = r === 1 ? 'won' : r;
+  }
+  return Object.keys(out).length ? out : null;
+}
+
+/**
+ * Each seat's result in a finished round from its balances (money, points or the reward's points),
+ * for the round finished push: the top 'won' (all of them on a tie), anyone else up their place,
+ * 'square' at even and 'lost' when down. Never the amounts. {} with fewer than two seats or more
+ * than MAX_RESULTS.
+ */
+export function finishResults(balances, ids) {
+  const list = [...new Set(ids || [])].map(id => [id, Math.round((Number(balances?.[id]) || 0) * 100)]);
+  if (list.length < 2 || list.length > MAX_RESULTS) return {};
+  const out = {};
+  for (const [id, v] of list) {
+    if (v === 0) out[id] = 'square';
+    else if (v < 0) out[id] = 'lost';
+    else {
+      const place = 1 + list.filter(([, w]) => w > v).length;
+      out[id] = place === 1 ? 'won' : place;
+    }
+  }
+  return out;
+}
+
+/** One person's result from a request's results, by the seats the server knows are theirs, or null. */
+export function recipientResult(results, seats) {
+  if (!results || !Array.isArray(seats)) return null;
+  for (const seat of seats) if (typeof seat === 'string' && Object.hasOwn(results, seat)) return results[seat];
+  return null;
+}
+
+/** 2nd, 3rd, 11th, 22nd. */
+export function ordinal(n) {
+  const t = n % 100;
+  const s = t >= 11 && t <= 13 ? 'th' : ['th', 'st', 'nd', 'rd'][n % 10] || 'th';
+  return `${n}${s}`;
 }
 
 const WEEKDAYS = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
@@ -90,9 +152,10 @@ const when = data => [weekday(data.day), data.course].filter(Boolean).join(' at 
 
 /**
  * What the push says: { title, body, url, tag }. `tag` groups them, so a second push about the same
- * round or plan replaces the first on the lock screen instead of piling up.
+ * round or plan replaces the first on the lock screen instead of piling up. `result` is the
+ * recipient's own result for a round finished push (recipientResult), chosen per person by the server.
  */
-export function pushPayload(req) {
+export function pushPayload(req, { result = null } = {}) {
   const { kind, data = {} } = req;
   const who = data.name || 'Someone';
   const at = when(data);
@@ -112,8 +175,17 @@ export function pushPayload(req) {
       body = at ? `For ${at}.` : 'For your round coming up.';
       break;
     case 'finished':
-      title = 'Round finished';
-      body = `${data.course ? `${data.course}: ` : ''}see how everyone did.`;
+      if (result === 'won') {
+        title = data.course ? `You won the ${data.course} round` : 'You won the round';
+        body = 'See how everyone did.';
+      } else if (result === 'square' || (Number.isInteger(result) && result > 1)) {
+        title = result === 'square' ? 'You finished square' : `You finished ${ordinal(result)}`;
+        body = `${data.course ? `${data.course}: ` : ''}see how everyone did.`;
+      } else {
+        // Down, or no result for you: no rubbing it in
+        title = 'Round finished';
+        body = `${data.course ? `${data.course}: ` : ''}see how everyone did.`;
+      }
       break;
     case 'paid':
       title = `${who} paid you`;

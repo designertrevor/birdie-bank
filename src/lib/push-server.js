@@ -7,7 +7,7 @@
 //   SUPABASE_SERVICE_ROLE_KEY  reads who's on a round or plan and their subscriptions (push_targets)
 // and the app only asks for a push when VITE_VAPID_PUBLIC_KEY (the public half) is set at build.
 import { okEndpoint, pushRequest, vapidKeys } from './web-push.js';
-import { pushPayload, pushText } from './push-events.js';
+import { pushPayload, pushText, recipientResult } from './push-events.js';
 
 /** The push settings from the environment, or null when push is off. */
 export function pushConfig(env = {}) {
@@ -92,8 +92,25 @@ export async function handlePush(cfg, token, req, fetchImpl = fetch) {
   if (!caller) return { status: 401, sent: 0 };
   const rows = await pushTargets(cfg, caller, req, fetchImpl);
   if (!rows.length) return { status: 204, sent: 0 };
-  const { sent } = await sendAll(cfg, rows, pushPayload(req), { topic: `${req.kind}${req.code}`, fetchImpl });
+  let sent = 0;
+  for (const g of payloadGroups(req, rows)) sent += (await sendAll(cfg, g.rows, g.payload, { topic: `${req.kind}${req.code}`, fetchImpl })).sent;
   return { status: 204, sent };
+}
+
+/**
+ * What each subscription row gets, as [{ payload, rows }]: one payload for everyone, except a round
+ * finished push, which says how each person did. The same fixed templates, picked per person by the
+ * seats the database says are theirs (to_seats), never by anything the app says about who they are.
+ */
+export function payloadGroups(req, rows) {
+  const groups = new Map();
+  for (const r of rows) {
+    const result = req.results ? recipientResult(req.results, r.to_seats) : null;
+    const key = String(result ?? '');
+    if (!groups.has(key)) groups.set(key, { payload: pushPayload(req, { result }), rows: [] });
+    groups.get(key).rows.push(r);
+  }
+  return [...groups.values()];
 }
 
 /** The daily tee time reminders: one push per due plan to its organizer. Returns how many went. */

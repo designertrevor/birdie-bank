@@ -11,7 +11,8 @@
 --    Nothing reaches it through the API.
 --  • push_targets() and push_tee_due(): who a push goes to. Only the service role can call them
 --    (the server function api/push.js, with SUPABASE_SERVICE_ROLE_KEY), never the app, so nobody
---    can list rounds, plans or anyone's subscriptions through them.
+--    can list rounds, plans or anyone's subscriptions through them. For a round finished push
+--    push_targets also hands the server each person's seat, so their push can say how they did.
 --
 -- Rounds and plans stay locked behind their codes (2026-10-06-round-codes.sql): the server only
 -- looks a round or plan up by the code the caller sent, only when the caller is on it themselves
@@ -111,14 +112,19 @@ create index if not exists user_docs_share_code on public.user_docs ((data ->> '
 -- 2026-10-04-comments.sql), and a challenge is only those: anyone with its code, like its talk.
 -- Nothing when the caller isn't on it themselves, when the same push went in the last 10 minutes
 -- (for trash talk, any from the caller on that thread), or when the caller has sent 40 in the last hour.
+-- For a round finished push each subscription also comes with its person's seats in the round
+-- (to_seats), so the server can tell each of them how they did; nothing else about the round.
+-- The function's columns grew, so any earlier copy goes first (its grants are given again below)
+drop function if exists public.push_targets(uuid, text, text, text, text, text[], text);
 create or replace function public.push_targets(p_caller uuid, p_scope text, p_kind text, p_code text,
   p_to text default 'all', p_players text[] default '{}', p_topic text default '')
-returns table (to_user uuid, push_endpoint text, push_p256dh text, push_auth text)
+returns table (to_user uuid, push_endpoint text, push_p256dh text, push_auth text, to_seats text[])
 language plpgsql volatile security definer set search_path = '' as $$
 declare
   m jsonb;
   members uuid[];
   picked uuid[];
+  seats_of jsonb;
   t text := left(coalesce(p_topic, ''), 200);
   seats text[] := coalesce(p_players[1:8], '{}');
 begin
@@ -150,10 +156,15 @@ begin
         from public.comment_members c
         where p_kind = 'talk' and c.scope = 'round' and c.code = p_code and c.member ~ '^u:[0-9a-f-]{36}$'
     )
-    select array_agg(distinct o.who),
-           array_agg(distinct o.who) filter (where p_to = 'all' or (p_to = 'players' and o.seat = any (seats)))
-      into members, picked
-      from on_it o;
+    , per as (
+      select o.who, array_agg(distinct o.seat) filter (where o.seat is not null) as seat_list
+        from on_it o group by o.who
+    )
+    select array_agg(p.who),
+           array_agg(p.who) filter (where p_to = 'all' or (p_to = 'players' and p.seat_list && seats)),
+           jsonb_object_agg(p.who::text, coalesce(to_jsonb(p.seat_list), '[]'::jsonb))
+      into members, picked, seats_of
+      from per p;
   elsif p_scope = 'challenge' then
     -- The accounts let in on the challenge's talk (join_challenge_comments)
     select array_agg(distinct substr(c.member, 3)::uuid) into members
@@ -187,7 +198,10 @@ begin
   delete from public.push_sends s where s.kind <> 'tee' and s.at < now() - interval '2 days';
 
   return query
-    select s.user_id, s.endpoint, s.p256dh, s.auth
+    select s.user_id, s.endpoint, s.p256dh, s.auth,
+           case when p_kind = 'finished'
+             then array(select jsonb_array_elements_text(coalesce(seats_of -> s.user_id::text, '[]'::jsonb)))
+             else '{}'::text[] end
     from public.push_subscriptions s
     where s.user_id = any (coalesce(picked, '{}')) and s.user_id <> p_caller
     limit 200;

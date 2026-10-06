@@ -11,7 +11,7 @@ import { useSyncExternalStore } from 'react';
 import { getSupabase, supabaseConfigured } from './supabase.js';
 import { getState } from './store.js';
 import { afterNotNow, afterOff, afterOn, afterShown, pushSupport, settingsRow, shouldAsk } from './notify-ask.js';
-import { carryPushes, cleanPushRequest, paidPushes, pushKey, talkPush } from './push-events.js';
+import { carryPushes, cleanPushRequest, finishResults, paidPushes, pushKey, talkPush } from './push-events.js';
 
 const KEY = import.meta.env.VITE_VAPID_PUBLIC_KEY || '';
 /** Push is switched on for this build. */
@@ -232,10 +232,20 @@ export function pushRsvp(plan, status, name) {
   sendPush({ kind: 'rsvp', scope: 'plan', code: plan.code, topic: status, data: { name: name || myFirst(), status, day: plan.date, course: plan.course?.name } }, { delay: 1500 });
 }
 
-/** You finished a shared round: everyone in it hears it's done. */
+/**
+ * You finished a shared round: everyone in it hears it's done, and how they did (won, their place,
+ * square), never an amount (push-events.js finishResults). Just-playing seats and a card with no
+ * game get the plain "Round finished".
+ */
 export function pushRoundFinished(round) {
   const code = round?.shared?.code || round?.shareCode;
-  if (code) sendPush({ kind: 'finished', scope: 'round', code, data: { course: round.course?.name } });
+  if (!pushConfigured || !code) return;
+  const request = results => sendPush({ kind: 'finished', scope: 'round', code, results, data: { course: round.course?.name } });
+  // The money logic is already loaded on the scoring screen; loaded here only when push is on
+  import('./round.js').then(({ bettors, cardOnly, roundResults }) => {
+    if (cardOnly(round)) return request(undefined);
+    request(finishResults(roundResults(round).balances, bettors(round).map(p => p.id)));
+  }).catch(() => request(undefined));
 }
 
 /**

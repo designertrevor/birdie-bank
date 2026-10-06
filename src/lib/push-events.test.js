@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { PUSH_KINDS, carryPushes, cleanPushRequest, paidPushes, talkPush, pushKey, pushPayload, pushText, pushUrl, weekday } from './push-events.js';
+import { MAX_RESULTS, PUSH_KINDS, carryPushes, cleanPushRequest, cleanResults, finishResults, ordinal, paidPushes, recipientResult, talkPush, pushKey, pushPayload, pushText, pushUrl, weekday } from './push-events.js';
 
 test('each push goes to the right people: invites and results to everyone, who is in to the organizer, paid to the payee', () => {
   assert.equal(PUSH_KINDS.invite.to, 'all');
@@ -153,4 +153,67 @@ test('new trash talk goes to everyone on the thread, never says what was written
   const b = cleanPushRequest(talkPush({ scope: 'round', code: 'AB12CD' }, { id: 'c:9' }));
   assert.notEqual(pushKey(a), pushKey(b));
   assert.equal(pushPayload(a).tag, pushPayload(b).tag);
+});
+
+test('round finished results only take fixed values, a bounded map, and only on that push', () => {
+  const r = cleanPushRequest({ kind: 'finished', scope: 'round', code: 'AB12CD', results: { pa: 'won', pb: 2, pc: 'lost', pd: 'square', pe: 1 } });
+  assert.deepEqual(r.results, { pa: 'won', pb: 2, pc: 'lost', pd: 'square', pe: 'won' });
+  // Amounts, text, bad seats and odd places are dropped, one by one
+  assert.deepEqual(cleanResults({ pa: '$20', pb: 12.5, pc: -3, pd: 0, pe: 'You owe Adam', 'bad id!': 'won', pf: 'won', pg: 99, ph: '2' }), { pf: 'won' });
+  assert.equal(cleanResults({ pa: 20.5 }), null);
+  assert.equal(cleanResults(['won']), null);
+  assert.equal(cleanResults('won'), null);
+  // Too many seats: the whole map goes, the push still goes plain
+  const big = Object.fromEntries(Array.from({ length: MAX_RESULTS + 1 }, (_, i) => [`p${i}`, 'won']));
+  assert.equal(cleanResults(big), null);
+  assert.equal(cleanPushRequest({ kind: 'finished', scope: 'round', code: 'AB12CD', results: big }).results, undefined);
+  // Only a round finished push carries results
+  assert.equal(cleanPushRequest({ kind: 'invite', scope: 'round', code: 'AB12CD', results: { pa: 'won' } }).results, undefined);
+});
+
+test('each seat gets won, its place, square or lost from the balances, never an amount', () => {
+  assert.deepEqual(finishResults({ a: 30, b: 10, c: 0, d: -40 }, ['a', 'b', 'c', 'd']), { a: 'won', b: 2, c: 'square', d: 'lost' });
+  // A tie at the top: both won. Two up behind them: both 3rd
+  assert.deepEqual(finishResults({ a: 5, b: 5, c: 2, d: 2, e: -14 }, ['a', 'b', 'c', 'd', 'e']), { a: 'won', b: 'won', c: 3, d: 3, e: 'lost' });
+  // Float dust is square, and all square is square for everyone
+  assert.deepEqual(finishResults({ a: 0.001, b: -0.001 }, ['a', 'b']), { a: 'square', b: 'square' });
+  assert.deepEqual(finishResults({}, ['a']), {});
+  const many = Array.from({ length: MAX_RESULTS + 1 }, (_, i) => `p${i}`);
+  assert.deepEqual(finishResults({}, many), {});
+  assert.deepEqual(cleanResults(finishResults({ a: 30, b: 10, c: 0, d: -40 }, ['a', 'b', 'c', 'd'])), { a: 'won', b: 2, c: 'square', d: 'lost' });
+});
+
+test('the server finds each person\'s result by their own seats', () => {
+  const results = { pa: 'won', pb: 3 };
+  assert.equal(recipientResult(results, ['pa']), 'won');
+  assert.equal(recipientResult(results, ['zz', 'pb']), 3);
+  assert.equal(recipientResult(results, []), null);
+  assert.equal(recipientResult(results, null), null);
+  assert.equal(recipientResult(null, ['pa']), null);
+  assert.equal(recipientResult(results, ['constructor', '__proto__', 'toString']), null);
+});
+
+test('a round finished push says how you did, in a fixed template with no amount', () => {
+  const req = cleanPushRequest({ kind: 'finished', scope: 'round', code: 'AB12CD', results: { pa: 'won', pb: 2 }, data: { course: 'Birch Creek' } });
+  const won = pushPayload(req, { result: 'won' });
+  assert.equal(won.title, 'You won the Birch Creek round');
+  assert.equal(won.body, 'See how everyone did.');
+  assert.equal(pushPayload(req, { result: 2 }).title, 'You finished 2nd');
+  assert.equal(pushPayload(req, { result: 2 }).body, 'Birch Creek: see how everyone did.');
+  assert.equal(pushPayload(req, { result: 'square' }).title, 'You finished square');
+  // Down, or nothing known: the plain push, the same as before
+  for (const result of ['lost', null]) {
+    const p = pushPayload(req, { result });
+    assert.equal(p.title, 'Round finished');
+    assert.equal(p.body, 'Birch Creek: see how everyone did.');
+  }
+  assert.equal(pushPayload(cleanPushRequest({ kind: 'finished', scope: 'round', code: 'AB12CD' }), { result: 'won' }).title, 'You won the round');
+  // All of them share the tag and the link
+  for (const result of ['won', 2, 'square', 'lost']) {
+    const p = pushPayload(req, { result });
+    assert.equal(p.tag, 'round-AB12CD-finished');
+    assert.equal(p.url, '/?join=AB12CD');
+    assert.doesNotMatch(p.title + p.body, /\$|\d{2,}|[0-9]+\.[0-9]/);
+  }
+  assert.deepEqual([1, 2, 3, 4, 11, 12, 13, 21, 22, 23].map(ordinal), ['1st', '2nd', '3rd', '4th', '11th', '12th', '13th', '21st', '22nd', '23rd']);
 });

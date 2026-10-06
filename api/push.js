@@ -2,7 +2,8 @@
 // finished, someone paid you, a carry-over to approve, new trash talk), fire and forget. The caller
 // must be signed in: their Supabase access token says who they are, and the database only sends
 // when they're on that round, plan or challenge too, and only to the others on it, with rate limits (push_targets in supabase/2026-10-08-push.sql). What a
-// push says is built here from a fixed template (src/lib/push-events.js), never taken as given.
+// push says is built here from a fixed template (src/lib/push-events.js), never taken as given; a round
+// finished push picks each person's template by their own seat (won, their place, square), never an amount.
 //
 // Off, answering 204 and sending nothing, until VAPID_PRIVATE_KEY, VAPID_SUBJECT and
 // SUPABASE_SERVICE_ROLE_KEY are set (src/lib/push-server.js). Make the VAPID keys once with:
