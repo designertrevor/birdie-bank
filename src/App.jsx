@@ -78,7 +78,6 @@ const BigGame = screen(() => import('./screens/BigGame.jsx'));
 const BigGameSetup = screen(() => import('./screens/BigGameSetup.jsx'));
 const Roadmap = screen(() => import('./screens/Roadmap.jsx'));
 const WhatsNew = screen(() => import('./screens/WhatsNew.jsx'));
-
 const HallOfFame = screen(() => import('./screens/HallOfFame.jsx'));
 
 /**
