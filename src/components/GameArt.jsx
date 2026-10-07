@@ -3,6 +3,8 @@
 // column of icons. Drawn on a 64 by 64 square; `GameArt` wraps one in an SVG with a rounded
 // backdrop, `GameScene` gives the drawing alone to place inside a bigger drawing.
 import { GAMES } from '../lib/round.js';
+import { ArtImage } from './ArtFile.jsx';
+import { artFile } from '../lib/art-files.js';
 
 const INK = '#0a0a0a';
 const BALL = '#fbf7ec';
@@ -45,12 +47,15 @@ function Flag({ x, y, h = 26, color = PINK, flip = false, big = false }) {
     </g>
   );
 }
+// Coins are a shade lighter than the ochre backdrop they sit on, with an ink edge, so they read
+const COIN = '#ffd45c';
+const COIN_EDGE = '#b8862b';
 /** A coin, with a dollar on the face. */
-function Coin({ cx, cy, r = 8, color = OCHRE, edge = GOLD }) {
+function Coin({ cx, cy, r = 8, color = COIN, edge = COIN_EDGE }) {
   return (
     <g>
-      <circle cx={cx} cy={cy} r={r} fill={edge} />
-      <circle cx={cx} cy={cy - 1.4} r={r} fill={color} />
+      <circle cx={cx} cy={cy} r={r} fill={edge} stroke={INK} strokeWidth="1.4" />
+      <circle cx={cx} cy={cy - 1.4} r={r} fill={color} stroke={INK} strokeWidth="1.4" />
       <text x={cx} y={cy + 2} textAnchor="middle" fontSize={r * 1.3} fontWeight="800" fontFamily="'Bricolage Grotesque', Inter, sans-serif" fill={INK}>$</text>
     </g>
   );
@@ -85,17 +90,21 @@ const SCENES = {
   </>),
   // Skins: a stack of coins, one slid off the top
   skins: () => (<>
-    <g>{[52, 46, 40, 34].map(y => <g key={y}><ellipse cx="30" cy={y + 2} rx="15" ry="5" fill={GOLD} /><ellipse cx="30" cy={y} rx="15" ry="5" fill={OCHRE} /></g>)}</g>
+    <g>{[52, 46, 40, 34].map(y => <g key={y}><ellipse cx="30" cy={y + 2} rx="15" ry="5" fill={COIN_EDGE} stroke={INK} strokeWidth="1.4" /><ellipse cx="30" cy={y} rx="15" ry="5" fill={COIN} stroke={INK} strokeWidth="1.4" /></g>)}</g>
     <g transform="rotate(-14 44 24)"><ellipse cx="44" cy="26" rx="15" ry="5" fill={DEEP} /><ellipse cx="44" cy="24" rx="15" ry="5" fill={PINK} /><text x="44" y="27" textAnchor="middle" fontSize="8" fontWeight="800" fontFamily="'Bricolage Grotesque', Inter, sans-serif" fill={INK}>$</text></g>
   </>),
-  // Wolf: the ball with wolf ears under a moon
+  // Wolf: the wolf's head, ears up, under a full moon
   wolf: () => (<>
-    <circle cx="48" cy="16" r="8" fill={BALL} opacity=".9" />
-    <circle cx="51" cy="13" r="7" fill={OCHRE} />
-    <path d="M18 30 L14 12 L30 24Z" fill={TEAL} /><path d="M46 30 L50 12 L34 24Z" fill={TEAL} />
-    <path d="M19 27 L17 17 L27 24Z" fill={PINK} /><path d="M45 27 L47 17 L37 24Z" fill={PINK} />
-    <Ball cx={32} cy={38} r={14} />
-    <path d="M26 40 Q32 34 38 40" {...line} strokeWidth="2" />
+    <circle cx="49" cy="14" r="9" fill={BALL} />
+    <circle cx="49" cy="14" r="9" fill="none" stroke="rgba(10,10,10,.18)" strokeWidth="1.2" />
+    <path d="M17 32 L13 9 L29 25Z" fill={TEAL} stroke={INK} strokeWidth="1.6" strokeLinejoin="round" />
+    <path d="M47 32 L51 9 L35 25Z" fill={TEAL} stroke={INK} strokeWidth="1.6" strokeLinejoin="round" />
+    <path d="M18.5 27 L16.5 15 L26 24.5Z" fill={PINK} /><path d="M45.5 27 L47.5 15 L38 24.5Z" fill={PINK} />
+    <path d="M13 32 Q13 56 32 58 Q51 56 51 32 Q42 25 32 25.5 Q22 25 13 32Z" fill={TEAL} stroke={INK} strokeWidth="1.6" strokeLinejoin="round" />
+    <path d="M21 46 Q32 58 43 46 Q39 40 32 40.5 Q25 40 21 46Z" fill={BALL} />
+    <ellipse cx="32" cy="42" rx="3.6" ry="2.6" fill={INK} />
+    <path d="M32 44.5 V48 M27.5 49 Q32 52 36.5 49" {...line} strokeWidth="1.8" />
+    <g><circle cx="24.5" cy="35" r="3" fill={OCHRE} /><circle cx="39.5" cy="35" r="3" fill={OCHRE} /><circle cx="25" cy="35.3" r="1.5" fill={INK} /><circle cx="40" cy="35.3" r="1.5" fill={INK} /></g>
   </>),
   // Head to head
   // Match play: two balls squared up, a bolt between them
@@ -174,7 +183,7 @@ const SCENES = {
   </>),
   // Stableford: a star with a 2 on it
   stableford: () => (<>
-    <path d="M32 6 L38.5 23 L57 24 L42.5 35.5 L47.5 53 L32 42.5 L16.5 53 L21.5 35.5 L7 24 L25.5 23Z" fill={OCHRE} stroke={GOLD} strokeWidth="1.6" strokeLinejoin="round" />
+    <path d="M32 6 L38.5 23 L57 24 L42.5 35.5 L47.5 53 L32 42.5 L16.5 53 L21.5 35.5 L7 24 L25.5 23Z" fill={COIN} stroke={INK} strokeWidth="1.8" strokeLinejoin="round" />
     <text x="32" y="38" textAnchor="middle" fontSize="15" fontWeight="800" fontFamily="'Bricolage Grotesque', Inter, sans-serif" fill={INK}>2</text>
   </>),
   // Quota: your number on a target
@@ -256,7 +265,6 @@ const SCENES = {
 };
 
 /** The games that have art, for the design check. */
-// eslint-disable-next-line react-refresh/only-export-components
 export const GAME_ART_KINDS = Object.keys(SCENES);
 
 /** A game's drawing on its own, as a group to place inside a bigger drawing (64 by 64 units). */
@@ -272,10 +280,12 @@ export function GameScene({ game }) {
 export function GameArt({ game, tint = null, size = null, className = '' }) {
   const Scene = SCENES[game] || SCENES.stroke;
   const bg = tint || GROUP_TINT[GAMES[game]?.group] || PEACH;
+  // An outside drawing (src/art/games/<game>.svg) sits on the same backdrop
+  const file = artFile('games', game);
   return (
     <svg className={`game-art ${className}`.trim()} viewBox="0 0 64 64" width={size || undefined} height={size || undefined} aria-hidden="true" focusable="false">
       <rect width="64" height="64" rx="18" fill={bg} />
-      <Scene />
+      {file ? <ArtImage file={file} w={64} h={64} /> : <Scene />}
     </svg>
   );
 }

@@ -2,6 +2,8 @@
 // on a backdrop, and the critters shelf (birdie, eagle, goose and friends) in the same palette. Drawn on a 64 by 64 square; the avatar circle around it does the clipping.
 // The list and the names live in lib/avatars.js.
 import { backdropOf } from '../lib/avatars.js';
+import { ArtImage } from './ArtFile.jsx';
+import { artFile } from '../lib/art-files.js';
 
 const INK = '#0a0a0a';
 const BALL = '#fbf7ec';
@@ -267,17 +269,22 @@ const CRITTERS = {
 export function BuddyFigure({ id, x = 0, y = 0, size = 64 }) {
   const Critter = CRITTERS[id];
   const Hat = ART[id] || ART.bucket;
-  return <g transform={`translate(${x} ${y}) scale(${size / 64})`}>{Critter ? <Critter /> : <><Ball /><Hat /></>}</g>;
+  const file = fileFor(id);
+  return <g transform={`translate(${x} ${y}) scale(${size / 64})`}>{file ? <ArtImage file={file} w={64} h={64} /> : Critter ? <Critter /> : <><Ball /><Hat /></>}</g>;
 }
+
+/** The outside drawing for a buddy (src/art/buddies/<id>.svg) or a critter (src/art/critters/<id>.svg), if one has landed. */
+const fileFor = id => artFile(CRITTERS[id] ? 'critters' : 'buddies', id);
 
 /** One Ball buddy (or critter) on its backdrop, as an SVG that fills its box. */
 export function BuddyArt({ id, bg, className = '' }) {
   const Critter = CRITTERS[id];
   const Hat = ART[id] || ART.bucket;
+  const file = fileFor(id);
   return (
     <svg className={`buddy-art ${className}`} viewBox="0 0 64 64" aria-hidden="true" focusable="false">
       <rect width="64" height="64" fill={backdropOf(bg).hex} />
-      {Critter ? <Critter /> : <><Ball /><Hat /></>}
+      {file ? <ArtImage file={file} w={64} h={64} /> : Critter ? <Critter /> : <><Ball /><Hat /></>}
     </svg>
   );
 }

@@ -3,6 +3,8 @@
 // 120 by 120 square with no backdrop, so they sit on any surface in both themes. The crowd scenes
 // use the Ball buddies themselves (BuddyFigure).
 import { BuddyFigure } from './BuddyArt.jsx';
+import { ArtImage } from './ArtFile.jsx';
+import { artFile } from '../lib/art-files.js';
 
 const INK = '#0a0a0a';
 const BALL = '#fbf7ec';
@@ -235,12 +237,16 @@ export function SpotScene({ kind = 'tee' }) {
  */
 export function Spot({ kind = 'tee', ids = null, size = 96, className = '', plate = 'auto' }) {
   const Scene = SCENES[kind];
+  // An outside drawing (src/art/spots/<kind>.svg) takes the whole box, plate and all
+  const file = artFile('spots', kind);
   // Small spots (inline, in a row) stay plain; a card-sized one gets its colour
   const color = plate === false ? null : plate === 'auto' ? (size >= 56 ? PLATE_OF[kind] : null) : plate;
   return (
     <svg className={`spot ${className}`.trim()} viewBox="0 0 120 120" width={size} height={size} aria-hidden="true" focusable="false">
-      {color && <Plate color={color} />}
-      {kind === 'crowd' ? <Crowd ids={ids} /> : kind === 'highfive' ? <HighFive ids={ids} /> : Scene ? <Scene /> : <SCENES.tee />}
+      {file ? <ArtImage file={file} w={120} h={120} /> : <>
+        {color && <Plate color={color} />}
+        {kind === 'crowd' ? <Crowd ids={ids} /> : kind === 'highfive' ? <HighFive ids={ids} /> : Scene ? <Scene /> : <SCENES.tee />}
+      </>}
     </svg>
   );
 }

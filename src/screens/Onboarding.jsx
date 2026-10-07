@@ -6,7 +6,7 @@ import { Spot, SpotScene } from '../components/Spot.jsx';
 import { GameArt } from '../components/GameArt.jsx';
 import { Scene } from '../components/Scenes.jsx';
 import { useState } from 'react';
-import { Icon, Numpad, PickChip, PickMark, PickRow, Screen } from '../components/ui.jsx';
+import { ArtIcon, Icon, Numpad, PickChip, PickMark, PickRow, Screen } from '../components/ui.jsx';
 import { update, uid } from '../lib/store.js';
 import { formatIndex } from '../lib/format.js';
 import { money } from '../lib/golf.js';
@@ -113,7 +113,7 @@ export default function Onboarding({ onDone, play = null }) {
           <p className="onboard-text">The bank for your golf game. Play any game, settle every bet, keep the Tab all season.</p>
           <div className="onboard-games">
             {[['bank', 'Banker'], ['flag-pennant', 'Nassau'], ['coins', 'Skins'], ['paw-print', 'Wolf'], ['dice-five', 'Vegas'], ['sword', 'Match play'], ['star', 'Stableford'], ['dots-three-circle', `+ ${Object.keys(GAMES).length - 7} more games`]].map(([i, n]) => (
-              <span key={n} className="chip ochre"><Icon name={i} fill /> {n}</span>
+              <span key={n} className="chip ochre"><ArtIcon name={i} /> {n}</span>
             ))}
           </div>
         </div>

@@ -41,10 +41,10 @@ Raw notes as sent, screen by screen. Analysis and the build list come after the 
 Order within each group is build order. "Mobbin" marks items to research there first.
 
 ### A. Art, first (unblocks the rest)
-1. [ ] **Asset sheet:** one web page showing every illustration in the app, organized by kind (scenes, spot illustrations, game art, Ball buddies, critters, icons used as art), with a light / dark toggle, scrollable, each item labelled with where it's used and its size. Trevor hands it to another AI tool and brings back an on-brand set. Start from the dev gallery (`?gallery`), then publish it as a standalone page (artifact or a route on the preview).
-2. [ ] Define the import path for outside art: SVG or PNG per asset, file names matching the gallery labels, so new art drops in without code changes.
-3. [ ] Until the new art lands: take the welcome hero scene off (it looks cheap), and keep the question-step scenes only if they're not embarrassing; otherwise go back to no illustration there too.
-4. [ ] Game art colour fixes meanwhile (or wait for the outside set): Skins and Banker coins on the ochre backdrop, Stableford star on lavender, Wolf redrawn.
+1. [x] (2026-10-07) **Asset sheet:** one web page showing every illustration in the app, organized by kind (scenes, spot illustrations, game art, Ball buddies, critters, icons used as art), with a light / dark toggle, scrollable, each item labelled with where it's used and its size. Trevor hands it to another AI tool and brings back an on-brand set. Start from the dev gallery (`?gallery`), then publish it as a standalone page (artifact or a route on the preview). **Built:** `?art` on any build, so the Vercel preview serves it (`?gallery` still works). 80 drawings in six kinds, each with where it shows, how big, the file it maps to, a status (hand-drawn, pulled, outside file in) and a Download SVG; the palette and the surfaces at the top; light / dark toggle.
+2. [x] (2026-10-07) Define the import path for outside art: SVG or PNG per asset, file names matching the gallery labels, so new art drops in without code changes. **Built:** `src/art/<kind>/<id>.svg` (or `.png` / `.webp`), plus `<id>.dark.svg` for the dark theme, found at build time by `src/lib/art-files.js`; the app's SVG boxes, clipping and layout stay. `src/art/README.md` says what each kind needs.
+3. [x] (2026-10-07) Until the new art lands: take the welcome hero scene off (it looks cheap), and keep the question-step scenes only if they're not embarrassing; otherwise go back to no illustration there too. **Done:** the tee and clubhouse scenes draw nothing on the welcome and the four questions (the same drawing he called cheap on the welcome); each shows again as its outside file the moment it lands. The road trip scene stays on the Trip screen, which the review didn't reach.
+4. [x] (2026-10-07) Game art colour fixes meanwhile (or wait for the outside set): Skins and Banker coins on the ochre backdrop, Stableford star on lavender, Wolf redrawn. **Done meanwhile:** coins a shade lighter (`#ffd45c`) with an ink edge on Banker and Skins, the Stableford star the same, Wolf redrawn as a wolf's head under the moon. All replaceable by files.
 
 ### B. Onboarding
 5. [ ] Welcome: no scrolling in any direction on any phone size (a horizontal scroll bar shows now); less crammed; illustration smaller or the title over it once the art allows.
@@ -76,3 +76,11 @@ Order within each group is build order. "Mobbin" marks items to research there f
 25. [ ] Mid-round milestone after nine on an 18-hole round: a bottom sheet with "halfway, here's where things stand", every score and the standings. Decide per game and for nine-hole rounds.
 26. [ ] Results reveal: the title spells out large then snaps small. Either small from the start or a longer, smoother shrink timed with the content arriving.
 27. [ ] Results: "See the full breakdown" has no way back; add a back button so the end-of-round flow can be finished.
+
+## Group A notes (2026-10-07)
+
+- **The sheet** is the app itself at `?art` (`src/screens/ArtSheet.jsx`, its own chunk), so it stays current as drawings change and the preview link is the hand-over: `https://<the design2 preview>/?art`. The data behind the labels is `src/lib/art-manifest.js`, and `art-manifest.test.js` fails if a drawing is added without a line on the sheet (or the other way round).
+- **Download SVG** writes the theme's colours into the file, so each one stands on its own as a reference for the outside tool.
+- **Files replace, never mix:** an outside spot replaces the plate too, an outside scene replaces the dusk tokens (add a `.dark.svg` for dusk), an outside buddy sits on the backdrop the player picked. `crowd` and `highfive` are hand-drawn from the group's own buddies; a file is one picture for everyone, which is fine for the empty states and payoffs they're on.
+- **First screen JS:** 508.6 kB, up 2.7 kB from 506.0 kB before this (the hooks in Spot, Scenes, GameArt and BuddyArt); both over the 481 kB budget the design pass already passed. Worth a look before merge, not caused here.
+- **Open for Trevor:** keep the road trip scene on the Trip screen, or pull it too? The small guide balls on the payoff steps (the "Nice" ball that vanishes, the high five) stay for group B.

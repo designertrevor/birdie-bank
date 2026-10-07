@@ -1,9 +1,18 @@
 import { createContext, useCallback, useContext, useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { Spot } from './Spot.jsx';
+import { ArtImage } from './ArtFile.jsx';
+import { artFile } from '../lib/art-files.js';
 
 export function Icon({ name, fill = false, className = '', label }) {
   return <i className={`${fill ? 'ph-fill' : 'ph-bold'} ph-${name} ${className}`} aria-hidden={label ? undefined : true} aria-label={label} />;
+}
+
+/** An icon used as art (the welcome's game tags): the Phosphor glyph until a drawing lands in src/art/icons/<name>.svg. */
+export function ArtIcon({ name, fill = true, className = '' }) {
+  const file = artFile('icons', name);
+  if (!file) return <Icon name={name} fill={fill} className={className} />;
+  return <svg className={`art-icon ${className}`.trim()} viewBox="0 0 24 24" aria-hidden="true" focusable="false"><ArtImage file={file} w={24} h={24} /></svg>;
 }
 
 export function Header({ title, onBack, onClose, right, small }) {
@@ -85,6 +94,9 @@ export function Callout({ spot = null, ids = null, title, children, action = nul
 }
 
 export function BallIllo({ className = 'empty-illo', face = true }) {
+  // The outside drawing (src/art/icons/ball.svg) stands in for the ball on every screen that uses it
+  const file = artFile('icons', 'ball');
+  if (file) return <svg className={className} viewBox="0 0 150 150" aria-hidden="true"><ArtImage file={file} w={150} h={150} /></svg>;
   return (
     <svg className={className} viewBox="0 0 150 150" aria-hidden="true">
       <defs><radialGradient id={`bg-${className}`} cx="35%" cy="30%"><stop offset="0" stopColor="#fff" /><stop offset="1" stopColor="#d9d2bd" /></radialGradient></defs>

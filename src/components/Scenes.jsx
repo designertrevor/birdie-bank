@@ -3,6 +3,8 @@
 // and whoever stands on it stay in view at any width. Colours that make the setting (sky, grass,
 // walls) come from --sc-* tokens, so the dark theme gets dusk instead of a pasted-on day.
 import { BuddyFigure } from './BuddyArt.jsx';
+import { ArtImage } from './ArtFile.jsx';
+import { PULLED_SCENES, artFile } from '../lib/art-files.js';
 
 const INK = '#0a0a0a';
 const BALL = '#fbf7ec';
@@ -135,16 +137,19 @@ export function SceneArt({ kind = 'course', ids = DEFAULT_IDS }) {
 
 /**
  * One full-bleed scene. `kind` picks the setting ('course', 'clubhouse', 'roadtrip'); `ids` the
- * buddies in it. The SVG fills its box and crops from the top. Decorative: screen readers skip it.
+ * buddies in it. The SVG fills its box and crops from the top. An outside drawing
+ * (src/art/scenes/<kind>.svg) replaces the hand-drawn one; a pulled scene with no file draws
+ * nothing. Decorative: screen readers skip it.
  */
 export function Scene({ kind = 'course', ids = DEFAULT_IDS, className = '' }) {
+  const file = artFile('scenes', kind);
+  if (!file && PULLED_SCENES.has(kind)) return null;
   return (
     <svg className={`scene ${className}`.trim()} viewBox="0 0 400 240" preserveAspectRatio="xMidYMax slice" aria-hidden="true" focusable="false">
-      <SceneArt kind={kind} ids={ids} />
+      {file ? <ArtImage file={file} w={400} h={240} slice /> : <SceneArt kind={kind} ids={ids} />}
     </svg>
   );
 }
 
 /** The scenes there are, for the gallery. */
-// eslint-disable-next-line react-refresh/only-export-components
 export const SCENE_KINDS = Object.keys(SCENES);

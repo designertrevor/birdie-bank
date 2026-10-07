@@ -36,7 +36,7 @@ Every spot illustration at card size now has a soft blob of colour behind it (it
 With the buddy beside the name and the stepper on the right, a full name ("Trevor Nielsen", "Dave Ortiz") wrapped to two lines on every score row. The rows now use the app's short names (first name; a last initial only when two people share one), the same helper the chips use. Teams keep their team name.
 
 ### 5. A gallery for checking art
-`?gallery` (and `?gallery&theme=dark`) in dev shows every scene, game drawing, card and spot on one page. Not in production builds.
+`?gallery` (and `?gallery&theme=dark`) in dev shows every scene, game drawing, card and spot on one page. Not in production builds. (2026-10-07, after the review: it became the art sheet, `?art` on every build, with where each drawing shows, a download per drawing and the import path for outside files. See `DESIGN2-FEEDBACK.md`, group A.)
 
 ## Reviewed with the seeded phone (Trevor, Mike, Dave, Sam; five rounds; a Bandon trip)
 
