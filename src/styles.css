@@ -121,7 +121,8 @@ button { font-family: inherit; }
 .full-btn:active i { transform: translateX(4px); }
 .full-btn.outline { background: var(--surface); color: var(--ink); }
 .cta-wrap, .pin-btn { padding: 12px 16px calc(12px + env(safe-area-inset-bottom)); flex-shrink: 0; display: flex; flex-direction: column; gap: 10px; }
-.screen > div[style*="border-top"]:last-child { border-top: none !important; padding-bottom: calc(14px + env(safe-area-inset-bottom)) !important; }
+/* A sheet open at the screen sits after the footer, so it doesn't count as last */
+.screen > div[style*="border-top"]:nth-last-child(1 of :not(.sheet-overlay, .numpad-overlay, [hidden])) { border-top: none !important; padding-bottom: calc(14px + env(safe-area-inset-bottom)) !important; }
 
 /* STEP BAR */
 .step-bar { display: flex; gap: 6px; padding: 4px 16px 12px; flex-shrink: 0; }
