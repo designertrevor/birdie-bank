@@ -1,5 +1,6 @@
 import { lazy, Suspense, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { Callout, Empty, Header, Icon, Numpad, PickChip, PickMark, PickRow, Screen, Segmented, Sheet, Steps, Toggle, useUI } from '../components/ui.jsx';
+import { GameArt } from '../components/GameArt.jsx';
 import { Spot } from '../components/Spot.jsx';
 import { useGroupAvatars } from '../lib/useAvatars.js';
 import { RulesSheet } from '../components/Rules.jsx';
@@ -605,7 +606,7 @@ function GameStep({ usual, onUsual, onPickUsual, planning, onPlan, game, setGame
             return (
               <div key={key} className={`game-row ${game === key ? 'selected' : ''}`} role="radio" aria-checked={game === key} tabIndex={0} aria-label={`${info.name}: ${info.players}, ${info.blurb}`}
                 onClick={() => setGame(game === key ? null : key)} onKeyDown={e => (e.key === 'Enter' || e.key === ' ') && setGame(game === key ? null : key)}>
-                <div className="game-icon"><Icon name={info.icon} fill /></div>
+                <GameArt game={key} className="game-icon" />
                 <div className="row-main">
                   <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                     <div className="gn">{info.name}</div>
@@ -630,7 +631,7 @@ function GameStep({ usual, onUsual, onPickUsual, planning, onPlan, game, setGame
                   return (
                     <div key={key} className={`game-tile ${game === key ? 'selected' : ''}`} role="radio" aria-checked={game === key} tabIndex={0} aria-label={`${info.name}: ${info.players}, ${info.blurb}`}
                       onClick={() => setGame(game === key ? null : key)} onKeyDown={e => (e.key === 'Enter' || e.key === ' ') && setGame(game === key ? null : key)}>
-                      <span className="gt-top"><span className="game-icon sm"><Icon name={info.icon} fill /></span>
+                      <span className="gt-top"><GameArt game={key} className="game-icon sm" />
                         <button className="gt-info" onClick={e => { e.stopPropagation(); setRules(key); }} aria-label={`${info.name} rules`}><Icon name="info" /></button></span>
                       <span className="gn">{info.name}</span>
                       <span className="gs">{game === key ? info.blurb : info.players}</span>

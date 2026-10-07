@@ -682,6 +682,11 @@ button:disabled { cursor: not-allowed; }
 .pill-btn:disabled { opacity: .45; transform: none; }
 .pill-btn.lone.on { background: var(--pink-fill); }
 .game-icon { width: 44px; height: 44px; border-radius: 14px; background: var(--surface); display: grid; place-items: center; font-size: 22px; margin-right: 14px; flex-shrink: 0; }
+/* Game art: the drawing is its own backdrop, so the chip shows no surface behind it */
+.game-art { display: block; }
+.game-art.game-icon, .game-art.set-icon { background: none; }
+.game-art.sg-icon { width: 36px; height: 36px; flex-shrink: 0; }
+.game-art.ob-tile-art { width: 40px; height: 40px; }
 .summary-card { background: var(--ochre); }
 .summary-card .li-sub { color: rgba(0,0,0,.65); }
 .order-num { width: 28px; height: 28px; border-radius: 50%; background: var(--surface); display: grid; place-items: center; font-weight: 800; font-family: var(--display); margin-right: 12px; flex-shrink: 0; }
@@ -3572,7 +3577,7 @@ a.header-btn.rm-open { text-decoration: none; }
 .game-tile:active { transform: scale(.97); }
 .game-tile.selected { box-shadow: inset 0 0 0 2px var(--pink-fill); background: var(--pick-tint); }
 .gt-top { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 6px; }
-.game-icon.sm { width: 36px; height: 36px; font-size: 18px; border-radius: 12px; margin-right: 0; }
+.game-icon.sm { width: 40px; height: 40px; font-size: 18px; border-radius: 12px; margin-right: 0; }
 .gt-info { width: 32px; height: 32px; margin: -6px -6px 0 0; border: none; border-radius: 50%; background: none; color: var(--mute); font-size: 17px; cursor: pointer; display: grid; place-items: center; }
 .game-tile .gn { font-size: 16px; }
 .game-tile .gs { font-size: 12.5px; line-height: 1.3; }

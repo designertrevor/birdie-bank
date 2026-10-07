@@ -3,6 +3,7 @@
 // setting up the next round (the plan flow: the organizer suggests, the group votes) and, when
 // the flag is on, the paywall. Invited players arrive from a link and skip all of this.
 import { Spot, SpotScene } from '../components/Spot.jsx';
+import { GameArt } from '../components/GameArt.jsx';
 import { useState } from 'react';
 import { Icon, Numpad, PickChip, PickMark, PickRow, Screen } from '../components/ui.jsx';
 import { update, uid } from '../lib/store.js';
@@ -160,7 +161,7 @@ export default function Onboarding({ onDone, play = null }) {
               const on = a.games.includes(k);
               return (
                 <button key={k} className={`ob-tile ${on ? 'on' : ''}`} aria-pressed={on} aria-label={`${g.name}: ${g.blurb}`} onClick={() => setA(x => ({ ...x, games: toggleGame(x.games, k) }))}>
-                  <span className="ob-tile-top"><Icon name={g.icon} fill />{on && <PickMark on small />}</span>
+                  <span className="ob-tile-top"><GameArt game={k} className="ob-tile-art" />{on && <PickMark on small />}</span>
                   <span className="ob-tile-name">{g.name}</span>
                   <span className="ob-tile-sub">{g.blurb}</span>
                 </button>

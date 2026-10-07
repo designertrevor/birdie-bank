@@ -2,11 +2,12 @@ import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
 import './styles.css';
 import App from './App.jsx';
+import Gallery from './screens/Gallery.jsx';
 import { registerServiceWorker } from './lib/sw-update.js';
 
 createRoot(document.getElementById('root')).render(
   <StrictMode>
-    <App />
+    {import.meta.env.DEV && location.search.includes('gallery') ? <Gallery /> : <App />}
   </StrictMode>,
 );
 

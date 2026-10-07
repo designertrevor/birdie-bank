@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { Icon, Numpad, PickChip, Segmented, Sheet, Toggle } from './ui.jsx';
 import { RulesSheet } from './Rules.jsx';
+import { GameArt } from './GameArt.jsx';
 import { GAMES, MAX_GAMES, POT_GAMES, SIDE_GAMES, oneBall, potHoles, potHolesDefault, sideGameChoices } from '../lib/round.js';
 import { DOT_KINDS } from '../lib/games.js';
 import { asPlayedWith, dotsNote, potHolesLine, sideExample, skinsRulesLine } from '../lib/side-games.js';
@@ -74,7 +75,7 @@ export function SideGamesSetup({ game, sideGames, setSideGames, defaults, player
         return (
           <div key={sg.game} className="block side-game">
             <div className="sg-head">
-              <Icon name={meta.icon} fill className="sg-icon" />
+              <GameArt game={sg.game} className="sg-icon" />
               <div className="row-main">
                 <div className="sg-name"><span className="set-name">{meta.label}</span>
                   <button className="rules-chip" onClick={() => setHowTo(sg.game)} aria-label={`How to play ${meta.label}`}><Icon name="info" /> Rules</button>
@@ -163,7 +164,7 @@ export function SideGamesSetup({ game, sideGames, setSideGames, defaults, player
           return (
             <div key={k} className="side-choice-wrap">
               <button className="sheet-item side-choice" onClick={() => add(k)} aria-label={`Add ${SIDE_GAMES[k].label}, ${u(sideBetLine(k, s))}`}>
-                <div className="set-icon"><Icon name={SIDE_GAMES[k].icon} fill /></div>
+                <GameArt game={k} className="set-icon" />
                 <div className="row-main" style={{ textAlign: 'left' }}>
                   <div className="set-name">{SIDE_GAMES[k].label} · {u(sideBetLine(k, s))}</div>
                   <div className="set-sub">{u(sideExample(k, asPlayedWith(k, s, sideGames), players, holes))}</div>
