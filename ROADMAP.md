@@ -19,7 +19,7 @@ The plan for growing Birdie Bank into a $10k/mo business, and the checklist we w
 
 **Step 1: Foundation, nearly done. Step 2 is well under way.** Accounts, cloud data, invites, the live money bar, the simpler setup and the end-of-round settle-up are built, and Google sign-in is open to anyone. All SQL is run in Supabase (feedback, reactions and the upcoming-rounds tables, 2026-09-28), so "Suggest something", reactions and the group plan link are live. Left for S1: custom email (SMTP) so sign-in emails reach anyone, waiting on the app's final name and a domain. Real rounds keep going alongside as testing: fix bugs, smooth rough spots, and check each kind of user has what they need.
 
-**Overnight 10 is built, waiting for review (2026-10-06):** on `overnight10/next`, stacked on `overnight9/next`. Report and decisions in `overnight/O10-REPORT.md`. Nothing is checked off until it ships.
+**Shipped to main 2026-10-07 (overnights 9 and 10, with Trevor's review answers):** house rules for every game, Just playing, request links for every app, the age check, 25 game rule pages, branded link pages, the public roadmap with votes, comments and jabs, the trip page polish, a version check with Update ready, What's new, push notifications and the ask at the right moment, the tee time reminder, the handicap trend, the year in review and profile cards, each crew's hall of fame and season money list, field skins house rules for the Big Game, draft terms and a Help link, and the store keyword and creator research. Left for Trevor: run `supabase/2026-10-07-challenge-talk.sql`, `supabase/2026-10-07-roadmap.sql` and `supabase/2026-10-08-push.sql` in that order, then add the push env vars in Vercel (see `overnight/O10-REPORT.md`). Push stays silent until both are done.
 
 **Shipped overnight 2026-09-27 (wave 1):** the nine money rules, Snake and Hammer (18 games), skins and Nassau house rules, the Up next home tab and new nav, History by month with a chart, Run it back, the Tab by person with payment apps for everyone and honest head-to-head, Player cards, several rounds in progress, fixing a finished round without reopening it, the invite card with seat tiles and "Add me", adding a player mid-round, and the approved copy audit (the money screen is now the Tab).
 
@@ -201,7 +201,7 @@ Put more money into the winning creators and copy their video formats with other
 - [x] `S2` Organizer onboarding as a series of questions that sells as it goes: what games your group plays, how many of you, how you settle up now, who ends up doing the math (2026-09-28)
 - [x] `S2` Onboarding ends with "Set up your next round" and inviting the group, so a new organizer gets value on day one, not on Saturday (2026-09-28)
 - [ ] `S2` (partial) The paywall and free trial at the end of organizer onboarding (see area 11). The screen is built (option C) and shows after planning the next round, but it's UI only and off unless the flag is on; nothing is charged yet
-- [ ] `S3` Ask for notification permission at the right moment, not on first launch
+- [x] `S3` Ask for notification permission at the right moment, not on first launch Shipped 2026-10-07 (overnight 10).
 
 ### 4. Invites and joining
 - [x] `S1` Live shared rounds with a code and link (2026-09-23)
@@ -243,12 +243,12 @@ Put more money into the winning creators and copy their video formats with other
 - [x] `S3` New games: Alternate shot, Shamble and Chapman Built 2026-10-04 (overnight 7, shipped 2026-10-04).
 - [x] `S3` New game: Ryder Cup team points across matches Built 2026-10-04 (overnight 7, shipped 2026-10-04). A trip format with four-ball, singles and foursomes, a leaderboard, and a stake that goes on the Tab between people who played a cup round together.
 - [ ] `S5` New games: field skins across several groups, Calcutta, and rolling quota
-- [ ] `S2` (partial) House rules for every game, the variations real groups play. Some exist (modified Stableford, skins carryovers, Rabbit steal or set free and ties, 2026-09-27; skins net and gross together, skins pot split by skins won, what last-hole carryovers do, Nassau press at the turn and no press on the last hole, 2026-09-27; a skins carry stays with the players who built it when someone joins late, 2026-09-28; blind wolf and a Hogan dot, 2026-09-30; wolf and Aces & Deuces ties carry, Vegas birdies double, Sixes halved matches carry, scramble minimum drives, stroke play net double bogey max, Nines win by 2 takes all 9, Bingo Bango Bongo sweep doubles, 2026-09-30 overnight 5). Every game has at least one now except Quota. Go through all 18 games, and add the variations people ask for in "Suggest something."
+- [x] `S2` House rules for every game, the variations real groups play. Some exist (modified Stableford, skins carryovers, Rabbit steal or set free and ties, 2026-09-27; skins net and gross together, skins pot split by skins won, what last-hole carryovers do, Nassau press at the turn and no press on the last hole, 2026-09-27; a skins carry stays with the players who built it when someone joins late, 2026-09-28; blind wolf and a Hogan dot, 2026-09-30; wolf and Aces & Deuces ties carry, Vegas birdies double, Sixes halved matches carry, scramble minimum drives, stroke play net double bogey max, Nines win by 2 takes all 9, Bingo Bango Bongo sweep doubles, 2026-09-30 overnight 5). Every game has at least one now except Quota. Go through all 18 games, and add the variations people ask for in "Suggest something." Shipped 2026-10-07 (overnight 9).
 - [x] `S2` Ending a round is one tap and forgiving: stopping early, a missing score or a player who left never traps the round open. "A player left" in the round menu, holes with a missing score aren't counted (and the results say so), and finished rounds can't get stuck as active (2026-09-26)
 - [x] `S2` The killer end-of-round moment: every game and press totals up in one animated moment, then the fewest payments with one-tap pay links. Each bet resolves in turn (legs, presses, skins, biggest holes), then the totals land, then settle up with Venmo links and Mark paid, then a results image to share (2026-09-26)
 - [x] `S2` Big moments during a match, from Trevor's round: in Match play and Nassau a banner drops in for a lead change, all square, dormie, taking the lead and a nine won or halved, with a little confetti and a buzz; the match tile pops when the score moves and a single match names the leader ("Trevor 1 up", not "T 1 up"). A match won before the last hole gets a full "Match over" screen (like finishing a Duolingo lesson) with Keep playing, or Finish the round here when no presses or side games are left. Every phone following the round sees them; a fixed score on an earlier hole never does (2026-09-29)
 - [x] `S2` Moments for the other games (2026-09-30, overnight 5): a skin won (bigger when it ends a carry of 3 or more), a lone or blind wolf that wins or loses, a big Vegas swing, the money lead changing hands in any game (and the round's first lead, from Trevor's review), and who won when a skipped last hole is filled in. One banner per hole, none on edits or when a phone catches up. Sixes, Banker and Hammer got their own (2026-10-01, overnight 6, shipped 2026-10-03): a six won, halved or swept and "3 for 3"; the banker sweeping the table, the table beating the bank, a big banker hole and birdie doubles; a hammer accepted and won, a fold, and a hammer back.
-- [ ] `S3` A no-pressure way in for friends who don't want to compete (Trevor's friend skipped the app on 2026-09-29): be on the card with no bet and no moments aimed at them, or just keep your own score. Needs thought before building
+- [x] `S3` A no-pressure way in for friends who don't want to compete (Trevor's friend skipped the app on 2026-09-29): be on the card with no bet and no moments aimed at them, or just keep your own score. Needs thought before building Shipped 2026-10-07 (overnight 9).
 - [x] `S2` More than one round in progress: starting a round never deletes the one you're in, and "Rounds in progress" in the round menu switches between them. Fixing scores on a finished round keeps it counting on the tab (2026-09-27)
 - [x] `S2` "Add a player" in the round menu: their money counts from the hole they join, nobody else's strokes move, and the results say so. Games with fixed sides or an exact head count (Nassau, match play, Vegas, Sixes, Wolf, Nines, scramble, Hammer, Snake) never take a new player, not even before the first score (2026-09-27)
 - [x] `S2` Adding a player picks their games: after letting someone in, the scorekeeper switches each game on or off with a reason under it, one start hole for all of them. A late joiner can play the side games when the main game has set sides or is full (up to 8 in the round), sits out a pot that started without them, and never joins a wolf rotation, banker's bets, Sixes pairings or a match's sides (2026-09-29)
@@ -279,7 +279,7 @@ Put more money into the winning creators and copy their video formats with other
 - [x] `S2` Fewest payments for the whole group, not just pair by pair. Only ever between people who have played together; money is passed along through a mutual friend when needed (2026-09-27)
 - [x] `S2` Cash App, PayPal and Zelle alongside Venmo. Each person picks their app; pay buttons use the payee's app (Zelle shows the handle with a copy button) and only show to the person paying or owed. Handles ride along on shared rounds (2026-09-27)
 - [x] `S2` The Tab by person: your net with each friend, Settle up and Remind on every row, Venmo request links, and tap a person for the round-by-round story (2026-09-27)
-- [ ] `S3` (partial) Request links on the Tab for every app. Venmo requests are built (2026-09-27); Cash App, PayPal and Zelle have no prefilled request link, so Remind (with your pay link) covers them for now.
+- [x] `S3` Request links on the Tab for every app. Venmo requests are built (2026-09-27); Cash App, PayPal and Zelle have no prefilled request link, so Remind (with your pay link) covers them for now. Shipped 2026-10-07 (overnight 9).
 - [x] `S2` A trip tab: one tab across the rounds of a golf trip, settled once at the end Built 2026-10-01 (overnight 6, shipped 2026-10-03): "Start a trip" on the Tab, in setup or on Up next; a Trip card on the Tab and the trip's rounds grouped on Up next; "Count it for the trip?" (yes by default) when starting a round; standings on every phone in the trip's rounds; trip money folded into each person's total; "Settle the trip" after the last round, with early settling for someone leaving. Rounds shared live settle pair by pair so both phones agree. No SQL: the trip rides on each round. A format field is saved for trip formats later.
 - [x] `S3` Gentle payment reminders ("Mike still owes $18 from Saturday"). A Remind button sends a friendly text with the amount and your pay link (2026-09-27); automatic reminders still to do. (2026-10-05)
 - [x] `S3` A separate tab for each crew or trip, and "close the books" at season's end (2026-10-05)
@@ -292,18 +292,18 @@ Put more money into the winning creators and copy their video formats with other
 - [x] `S2` Honest head-to-head: each pair's result comes from the bets and holes between them, not from who happened to pay whom (2026-09-27)
 - [x] `S2` History by month: each month shows its round count and your net, one line per round, and a Season, Month or Custom range that also drives a chart of your net over time (2026-09-27)
 - [x] `S3` Deeper stats for Pro: press win rate, results by game and by course Built 2026-10-04 (overnight 7, shipped 2026-10-04). Open to everyone as "Your stats"; the non-money ones show to friends under your profile setting.
-- [ ] `S5` Handicap trend from your rounds, as a guide next to your official index (GameBook users ask for handicap tracking). The official index still comes from GHIN or your club.
-- [ ] `S5` Year in review ("Birdie Bank Wrapped"): a free card everyone can share, with the deeper season story for Pro (Strava got backlash for gating the whole recap)
+- [x] `S5` Handicap trend from your rounds, as a guide next to your official index (GameBook users ask for handicap tracking). The official index still comes from GHIN or your club. Shipped 2026-10-07 (overnight 10).
+- [x] `S5` Year in review ("Birdie Bank Wrapped"): a free card everyone can share, with the deeper season story for Pro (Strava got backlash for gating the whole recap) Shipped 2026-10-07 (overnight 10).
 - [x] `S3` Rivalry cards: for every pair, all-time money won or lost, record, current streak, biggest win and "your nemesis" (the Record Book, a Pro headliner idea). Built 2026-09-30 (overnight 5) on each Player card, with "Your nemesis" on Players; open to everyone, no Record Book limit yet.
 - [ ] `S3` The Record Book limit: free groups see their last 10 or so rounds, and older ones are hidden, never deleted, so Pro brings everything back (the UDisc model; one Redditor keeps 18Birdies Premium for his 160 logged rounds)
-- [ ] `S5` Group champions and a hall of fame: each season's winner, biggest wins and records, the group's own history
+- [x] `S5` Group champions and a hall of fame: each season's winner, biggest wins and records, the group's own history Shipped 2026-10-07 (overnight 10).
 
 ### 9. Social and community
 - [x] `S3` The group's feed between rounds: upcoming round, trash talk, settle-ups, last round's recap (see area 21). "Lately" on Up next (2026-09-29) lists settle-ups, agreed carry-overs, shared-Tab payments, who answered an upcoming round and round recaps from the last 30 days, with amounts only between the two people in them. Still to do: trash talk and reactions in it (2026-10-05)
 - [x] `S3` Follow friends' rounds live, even ones you're not in (someone's Tuesday round), with reactions and comments (2026-10-05)
 - [ ] `S5` Friends list beyond your groups, suggested from people you've played with
 - [ ] `S5` Wider activity feed: big wins, birdie streaks, lone Wolf wins
-- [ ] `S5` A money list for each crew's season
+- [x] `S5` A money list for each crew's season Shipped 2026-10-07 (overnight 10).
 - [ ] `S5` A reputation that travels with you: "pays within a day, 142 rounds settled", "plays to his handicap". Only earned from real rounds, so a new app can't copy it
 - [ ] `S5` Find a game: join an open spot in a vetted money game, at home or when traveling, using that reputation (strangers betting is "insane" on Reddit today because there's no trust)
 - Design rule: dollar amounts are private by default. Feeds show results and bragging rights; only people in the round or the group see the money.
@@ -342,7 +342,7 @@ Nothing is gated before launch (2026-09-29). Testers use everything; this area i
 - [ ] `S5` Free plans for club captains
 
 ### 12. Notifications
-- [ ] `S3` Push: invited to a round, who's in for Saturday, new trash talk, round finished with your result, someone paid you, a carry-over to approve
+- [x] `S3` Push: invited to a round, who's in for Saturday, new trash talk, round finished with your result, someone paid you, a carry-over to approve Shipped 2026-10-07 (overnight 10). Needs the push SQL and the VAPID env vars in Vercel before any push goes out.
 - [ ] `S3` Notification settings (from Trevor, 2026-10-07): a spot in Settings to pick which pushes you get (trash talk, who's in, round finished, payments, tee time reminders), since trash talk now pushes once per comment with its words
 - [ ] `S3` Email: receipts and a welcome email
 - [ ] `S4` The spring comeback email ("Your crew's first round of the season?")
@@ -360,7 +360,7 @@ Nothing is gated before launch (2026-09-29). Testers use everything; this area i
 ### 14. Trust and legal
 - [x] "Friendly wagers only" screen in onboarding
 - [ ] `S3` (partial) Terms of service and privacy policy. Privacy policy at /privacy.html (2026-09-25), still due its legal review; terms of service to come.
-- [ ] `S3` Age check (18+ at minimum, higher in some places)
+- [x] `S3` Age check (18+ at minimum, higher in some places) Shipped 2026-10-07 (overnight 9).
 - [ ] `S3` One-time legal review of how betting is worded, before App Store review and the creator test
 
 ### 15. Behind the scenes
@@ -392,20 +392,20 @@ Nothing is gated before launch (2026-09-29). Testers use everything; this area i
 - [x] `S3` Link preview images for join and share links (iMessage, WhatsApp) (2026-09-26)
 - [x] `S3` Saturday preview card to post in the group chat (see area 21) Built 2026-10-04 (overnight 7, shipped 2026-10-04).
 - [ ] `S3` All of these made from templates in the app, with the logo and a download link
-- [ ] `S5` Profile card: handicap, season record, nemesis, favorite game
-- [ ] `S5` Year in review cards sized for Instagram Stories
+- [x] `S5` Profile card: handicap, season record, nemesis, favorite game Shipped 2026-10-07 (overnight 10).
+- [x] `S5` Year in review cards sized for Instagram Stories Shipped 2026-10-07 (overnight 10).
 
 ### 18. Website
 - [ ] `S3` Home page, pricing, download page that points to the right app store, legal pages
-- [ ] `S3` 16 game rule pages ("How to play Wolf") with a "Play this now" button
-- [ ] `S3` Branded web pages behind join and share links for people without the app
+- [x] `S3` 16 game rule pages ("How to play Wolf") with a "Play this now" button Shipped 2026-10-07 (overnight 9).
+- [x] `S3` Branded web pages behind join and share links for people without the app Shipped 2026-10-07 (overnight 9).
 - [ ] `S5` Press kit
 - [ ] `S5` A page for pro shops, leagues and trip operators (see area 23)
 
 ### 19. App Store presence
 - [ ] `S3` 6 to 8 screenshot slides per store: headline copy, device frames, characters, one idea per slide. Lead with the killer end-of-round moment.
 - [ ] `S3` Short preview video
-- [ ] `S3` Store keyword research for the listing and subtitle
+- [x] `S3` Store keyword research for the listing and subtitle Shipped 2026-10-07 (overnight 10).
 - [ ] `S5` Test different screenshot sets
 
 ### 20. Feedback, roadmap and community
@@ -419,10 +419,10 @@ Nothing is gated before launch (2026-09-29). Testers use everything; this area i
 - [ ] `S2` Slack community (free plan): #feedback, #game-requests, #course-requests, #bugs, #show-your-round, #general. Invite each group's organizer personally.
 - [ ] `S2` Slack to database automation: a Slack app sends feedback channel messages to Supabase, Claude sorts each one (game, course, feature, bug), merges it with matching roadmap items and pulls out details, then replies in Slack with the roadmap link. Needed because Slack's free plan hides messages after 90 days.
 - [ ] `S2` Weekly feedback digest for Trevor to approve items onto the roadmap
-- [ ] `S3` Public roadmap in the app and on the website: Planned, In progress, Shipped, with votes, comments and new requests
+- [x] `S3` Public roadmap in the app and on the website: Planned, In progress, Shipped, with votes, comments and new requests Shipped 2026-10-07 (overnight 9).
 - [ ] `S3` After submitting a request, people land on the roadmap
 - [ ] `S3` Tell requesters when their idea ships ("The game you asked for is live")
-- [ ] `S4` "What's new" screen for release notes
+- [x] `S4` "What's new" screen for release notes Shipped 2026-10-07 (overnight 10).
 - Note: most golfers won't join Slack. The form in the app is the main path; Slack is for the most engaged 5 to 10%.
 - Build or buy: tools like Canny or Featurebase do this with Slack integrations, but they cost money and live outside the app. Building it on Supabase is only a few tables and screens. Check whether a free tier is enough for S2.
 
@@ -439,13 +439,13 @@ The goal: people open the app on days they don't play, and Saturday feels bigger
 - [x] `S2` "Schedule for later" at the end of setup, not just on the first step: on the Bets step, on "Round ready" ("Not playing today?"), and from End round on a round with no holes scored. The game, course, holes, bets and side games carry into the plan and everyone picked is invited, so the organizer can build the round, send the group link, and let the group look it over and vote instead of passing screenshots around. A round already made becomes the plan (2026-09-30)
 - [x] `S3` A plan keeps the rest of the setup made before it was scheduled (teams, playing order, tees, handicap overrides, starting hole), so roll call starts it exactly as built. For now roll call uses fresh teams and the default tee Built 2026-10-04 (overnight 7, shipped 2026-10-04).
 - [x] `S3` Lock down plans before the creator test: only the organizer changes a plan and each person changes only their own answer (anyone with the code can for now, 2026-09-28) Built 2026-10-04 (overnight 7, shipped 2026-10-04). `supabase/2026-10-04-plan-lock.sql` is run; seat links are tightened too (`2026-10-04-seat-links.sql`).
-- [ ] `S3` Push reminders for upcoming rounds (the morning text is a share for now)
+- [x] `S3` Push reminders for upcoming rounds (the morning text is a share for now) Shipped 2026-10-07 (overnight 10). Needs the push SQL and the VAPID env vars in Vercel before any push goes out.
 - [x] `S3` Tee time reminder: "Book your tee time, Saturday fills up by Wednesday," with a link to the course's booking page and a reminder day the organizer picks (2026-10-05)
 - [x] `S3` Countdown and a Saturday preview: who's in, the games, who gets strokes on which holes, head-to-head records ("Mike is 3 and 1 against Dave this season") Built 2026-10-04 (overnight 7, shipped 2026-10-04). The preview lists agreed challenges and side bets.
 
 **Trash talk**
 Kept light on purpose. Groups already have a group text, so Birdie Bank adds to it rather than replacing it.
-- [ ] `S3` Comments and reactions on rounds, challenges and settle-ups, plus quick jabs to pick from, with character illustrations
+- [x] `S3` Comments and reactions on rounds, challenges and settle-ups, plus quick jabs to pick from, with character illustrations Shipped 2026-10-07 (overnight 9).
 - [x] `S3` Easy sharing into the group's own text thread (preview cards, results, callouts) (2026-10-05)
 - [x] `S3` Challenges: "Dave challenges Mike to a $20 match on Saturday." Mike accepts or declines, and it becomes a side bet in the round. Built 2026-10-04 (overnight 7, shipped 2026-10-04). From a Player card or a planned round, with Accept, Counter and Decline; the organizer can set one up between two others and mark their answers; it moves with a rescheduled plan.
 - [x] `S3` Callouts from the tab and stats ("Still owes $40," "Hasn't won a skin in 3 weeks"), easy to post, never mean-spirited Built 2026-10-04 (overnight 7, shipped 2026-10-04). Lines about money are only ever about yourself.
@@ -462,7 +462,7 @@ Kept light on purpose. Groups already have a group text, so Birdie Bank adds to 
 - Note: this is also the answer to Birdie Bank being played once a week. It gives a new organizer something to do on the day they download (set up Saturday, invite the group), which is what makes paid creator marketing work.
 
 ### 22. Creator marketing (from Jake Castillo's playbook)
-- [ ] `S3` List of 50 to 100 golf creators on TikTok, Instagram and YouTube with 10k to 100k followers. Skip the big names and the tiny accounts. Favor ones who already film money matches with their buddies.
+- [x] `S3` List of 50 to 100 golf creators on TikTok, Instagram and YouTube with 10k to 100k followers. Skip the big names and the tiny accounts. Favor ones who already film money matches with their buddies. Shipped 2026-10-07 (overnight 10).
 - [ ] `S3` Price each deal before reaching out: take the median views of their last 10 to 15 videos, leaving out any viral outlier, then compare cost per view across creators
 - [ ] `S3` Two-minute brief (a short doc): the problem, the end-of-round moment, the "friendly games" wording, #ad, the download link. Then let them make the video their way. Show the real app with their real group, not an ad read. GameBook reviews show viewers who feel sold to leave 1 star reviews.
 - [ ] `S3` A download link or code for each creator, so attribution works (see area 15)
@@ -569,3 +569,4 @@ Code is cheap now, so anyone can build a scoring app. What a weekend coder can't
 - 2026-10-04: Overnight 7 (night of 2026-10-03): 14 tasks in 4 stretches, each reviewed and merged, then two-phone QA, three money reviews and fixes (trip expenses paid on one phone only, a friend counted as two people on a third phone, a payment tapped twice, plan lines moving after paying, a cup stake that differed by phone, a challenge becoming two bets). Then Trevor's 40 review answers: the cup stake on the Tab, foursomes, organizer-made challenges that move with the plan, side bets on the preview, one profile privacy setting with shared non-money stats, whole points on screen. Tests: 1594 passing. Checklist: 116 of 237 done (48.9%), up from 100 of 237 (42.2%).
 - 2026-10-05: Overnight 8 shipped to main (`97fc006`): the Big Game, following friends' rounds and the friend and group feed, crew and trip tabs with Close the books, tee time and payment reminders, Trip Mode templates and the captains' draft, sharing into the group text, and keeping your place across apps. Two money reviews (the second found 8 issues, all fixed) and a security fix: live rounds, payments, plans and challenges get locked behind their codes by `2026-10-06-round-codes.sql`, to run once phones have the new build. Tests: 1846 passing. Checklist: 126 of 237 done (53.2%), up from 116 of 237 (48.9%).
 - 2026-10-06: Floating sheets on branch `feedback/floating-sheets` (from Trevor): every bottom sheet, number pad and confirm is a card inset from the sides and bottom with 30px corners and an accent X, on its own raised surface so it stands apart from the page in dark mode (a lighter gray, a faint edge and a darker scrim) and in light mode (white over a dimmed page). One change in the shared sheet styles covers every sheet in the app. Checklist: 127 of 239 done (53.1%), up from 126 of 238 (52.9%, the S3 hosting review was added 2026-10-05).
+- 2026-10-07: Overnights 9 and 10 shipped to main with Trevor's answers from both review queues (money with thousands commas, trash talk pushes that say what was written, "You tied for 1st", points rounds counting as hall of fame wins, faded days in the date picker). Checklist: 147 of 240 done (61.3%), up from 127 of 240 (52.9%). Notification settings added to area 12 from his review note.
