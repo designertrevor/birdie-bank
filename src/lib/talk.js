@@ -42,7 +42,8 @@ export const emojiOf = key => REACTION_BY_KEY[key]?.emoji || '';
 
 /**
  * Quick jabs, one list for each kind of thing. Friendly ribbing between friends, never about
- * anyone's looks, money troubles or anything off the course, and nothing that sounds like a casino.
+ * anyone's looks, money troubles or anything off the course, and nothing that sounds like a casino
+ * ("Double or nothing?" is golf talk for a rematch, and stays).
  * A jab marked `money` talks about money, so it shows only on a thing played for money (never on a
  * points or lunch round). The lists after `gallery` are for a moment (see jab-moments.js): a birdie
  * or a three-putt in the round, how it went for you, a settle-up still owed or paid, and where a
@@ -68,7 +69,7 @@ export const JABS = {
   ],
   bet: [
     { key: 'easy', text: 'Easiest money all day', money: true },
-    { key: 'double', text: 'Rematch, same bet?' },
+    { key: 'double', text: 'Double or nothing?' }, // Trevor kept this one (2026-10-06)
     { key: 'strokes', text: 'I want more strokes next time' },
     { key: 'called', text: 'Called it on the first tee' },
   ],

@@ -53,11 +53,13 @@ test('jabs: every jab is short, friendly and unique, and none sounds like a casi
     assert.ok(j.text.length <= 60 && j.text.length <= MAX_BODY, j.text);
     assert.ok(!j.text.includes(String.fromCharCode(0x2014)), 'no em dashes');
     assert.ok(!/\$|\d/.test(j.text), 'never an amount');
-    assert.ok(!/casino|jackpot|odds|double or nothing|all in|bookie|house always|gambl|wager/i.test(j.text), j.text);
+    assert.ok(!/casino|jackpot|odds|all in|bookie|house always|gambl|wager/i.test(j.text), j.text);
   }
   // A list for each moment the brief names: a birdie, a three-putt, a loss, a payment, a challenge accepted
   for (const m of ['birdie', 'threePutt', 'loss', 'win', 'owed', 'paid', 'chOpen', 'chAccepted', 'chDeclined', 'challenge']) assert.ok(JABS[m]?.length >= 2, m);
   assert.ok(JABS.owed.some(j => j.text === 'Pay up, partner'), 'a "Pay up" jab on a line still owed');
+  // Trevor kept "Double or nothing?" (2026-10-06): golf talk for a rematch on a bet
+  assert.equal(JABS.bet.find(j => j.key === 'double')?.text, 'Double or nothing?');
 });
 
 test('jabs: a moment’s jabs come first, then the thing’s own, each once and at most eight', () => {
