@@ -85,6 +85,8 @@ export function settleBankerHole(hole, net, playerIds, opts = {}) {
   const deltas = Object.fromEntries(playerIds.map(id => [id, 0]));
   const matchups = [];
   const b = hole.banker;
+  const pressed = playerIds.some(pid => pid !== b && hole.doubled?.[pid]);
+  const pressAllNow = opts.pressAll === 'after' ? pressed : !!opts.pressAll;
   for (const pid of playerIds) {
     if (pid === b) continue;
     const bet = hole.bets?.[pid] || 0;
@@ -93,8 +95,10 @@ export function settleBankerHole(hole, net, playerIds, opts = {}) {
     // 2026-10-05): the banker's press back doubles every bet, the ones nobody pressed too. Sources,
     // checked 2026-10-05: The Fried Egg, "Banker" https://thefriedegg.com/banker-golf-betting-game/ and
     // Golf Digest https://www.golfdigest.com/story/how-to-play-banker-golf-games-explained ("he must press
-    // everyone, not just whoever pressed him")
-    const mult = hole.doubled?.[pid] ? (hole.doubleBack ? f * f : f) : hole.doubleBack && opts.pressAll ? f : 1;
+    // everyone, not just whoever pressed him"). Two versions (see bankerPressAll in round.js): 'after', on
+    // rounds started from 2026-10-06, only counts once someone pressed the banker on the hole, a true press
+    // back; true, saved by the 2026-10-05 build, counts any time, so those rounds keep their money
+    const mult = hole.doubled?.[pid] ? (hole.doubleBack ? f * f : f) : hole.doubleBack && pressAllNow ? f : 1;
     let result;
     if (net[pid] < net[b]) result = 'win';
     else if (net[pid] > net[b]) result = 'loss';

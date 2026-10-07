@@ -98,7 +98,11 @@ export function GameOptions({ game, get, set, onAmount, holesCount = 18, compact
           {help({ off: 'A birdie pays the same as any win.', gross: 'Win with a real birdie and your bet doubles. An eagle doubles it again (4×). Strokes don’t make a birdie.', net: 'Win with a birdie after strokes and your bet doubles. A net eagle doubles it again (4×).' }[b.birdies || 'off'])}
         </div>
         {toggle('banker.par3Triple', 'Par 3 presses triple', 'On a par 3 a press is 3× instead of 2×, and the banker’s press back makes it 9×')}
-        {toggle('banker.pressAll', 'Banker presses everyone', 'The banker’s press back doubles every bet on the hole, not only the ones that were pressed')}
+        {/* On is 'after' (2026-10-06): only once someone presses. A round saved with true (any time) still shows on */}
+        <div className="toggle-row" key="banker.pressAll">
+          <div><div className="toggle-lbl">Banker presses everyone</div><div className="toggle-sub">Once someone presses the banker on a hole, the banker’s press back doubles every bet on it, not only the ones that were pressed</div></div>
+          <Toggle on={!!get('banker.pressAll')} onChange={v => set('banker.pressAll', v ? 'after' : false)} label="Banker presses everyone" />
+        </div>
       </>;
     }
     case 'nassau':

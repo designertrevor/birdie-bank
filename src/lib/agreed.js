@@ -68,7 +68,7 @@ export function houseRulesFor(game, s, holes = 18) {
       r('ties', 'Ties go to the banker', s.ties === 'banker'),
       r('birdies', s.birdies === 'net' ? 'Net birdies double' : 'Birdies double', s.birdies && s.birdies !== 'off'),
       r('par3Triple', 'Presses triple on par 3s', s.par3Triple),
-      r('pressAll', 'The banker’s press back doubles every bet', s.pressAll),
+      r('pressAll', 'Once someone presses, the banker’s press back doubles every bet', s.pressAll),
     ];
     case 'wolf': return [
       r('lone', `Lone wolf ${s.loneMultiplier ?? 2}×`, true),

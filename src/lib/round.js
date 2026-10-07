@@ -288,6 +288,9 @@ export function createRound({ id, game, course, holesCount, nine, startHole, pla
     current: 0,      // index into holes
     left: {},        // playerId -> hole number they stopped after (0: before the first hole)
   };
+  // "The banker presses everyone" is only after someone presses (2026-10-06): a new round stamps 'after',
+  // so the true saved by the 2026-10-05 build, any time, stays with the rounds it was played in
+  if (round.settings.banker?.pressAll === true) round.settings.banker.pressAll = 'after';
   if (jp.size) round.justPlaying = Object.fromEntries([...jp].map(pid => [pid, true]));
   // Teams are for the players with a bet: someone just playing is never on one
   const betTeams = jp.size && teams?.length ? teams.map(t => t.filter(pid => !jp.has(pid))).filter(t => t.length) : teams;
@@ -1211,9 +1214,22 @@ export function bankerPress(round, hole) {
   return bs?.par3Triple && hole?.par === 3 ? 3 : 2;
 }
 
-/** Whether the banker's press back takes in every bet on `hole` (house rule "the banker presses everyone"). */
+/**
+ * The house rule "the banker presses everyone" on `hole`: null when it's off, 'after' when the banker's
+ * press back takes in every bet once someone has pressed the banker on the hole (rounds started from
+ * 2026-10-06), or 'any' for a round saved by the 2026-10-05 build, where the press back could come any
+ * time (stored as true) and still scores that way.
+ */
 export function bankerPressAll(round, hole) {
-  return !!settingsAt(round, posOf(round, hole)).banker?.pressAll;
+  const v = settingsAt(round, posOf(round, hole)).banker?.pressAll;
+  return v === 'after' ? 'after' : v ? 'any' : null;
+}
+
+/** Whether the banker's press back takes in every bet on `hole` with this setup (`bh`), the way settleBankerHole scores it. */
+export function bankerPressAllNow(round, hole, bh) {
+  const rule = bankerPressAll(round, hole);
+  if (rule !== 'after') return rule === 'any';
+  return Object.entries(bh?.doubled || {}).some(([pid, on]) => on && pid !== bh.banker && playersOn(round, hole).some(p => p.id === pid));
 }
 
 export function bankerHoleSetup(round, idx) {
@@ -2400,7 +2416,7 @@ export function gameResults(round) {
       if (!field.includes(setup.banker)) return;
       const net = Object.fromEntries(on.map(p => [p.id, netFor(round, p, h)]));
       const bs = settingsAt(round, posOf(round, h)).banker;
-      const r = settleBankerHole(setup, net, field, { ties: bs.ties, birdies: bs.birdies, gross: round.scores[h.no], par: h.par, par3Triple: !!bs.par3Triple, pressAll: !!bs.pressAll });
+      const r = settleBankerHole(setup, net, field, { ties: bs.ties, birdies: bs.birdies, gross: round.scores[h.no], par: h.par, par3Triple: !!bs.par3Triple, pressAll: bs.pressAll === 'after' ? 'after' : !!bs.pressAll });
       add(r.deltas);
       for (const m of r.matchups) {
         if (m.result === 'win') pay(setup.banker, m.pid, m.amount);

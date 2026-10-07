@@ -52,7 +52,7 @@ export const RULES = {
         <li><strong>Pick</strong>: the group picks each hole; defaults to last hole’s banker.</li>
       </ul>],
       ['Par 3 presses triple', <p key="t">A house rule, off unless you turn it on: on a par 3 a double is a <strong>triple</strong> (3×), and the banker’s press back makes it 9×. A $5 bet tripled and pressed back is $45.</p>],
-      ['Banker presses everyone', <p key="a">A house rule, off unless you turn it on: when the banker presses back, it’s on every bet on the hole, not only the ones that were pressed. Bets nobody pressed double, and pressed ones go to 4×.</p>],
+      ['Banker presses everyone', <p key="a">A house rule, off unless you turn it on: once someone presses the banker on a hole, the banker can press back on every bet on it, not only the ones that were pressed. Bets nobody pressed double, and pressed ones go to 4×. Until someone presses, there’s no press back.</p>],
     ],
   },
   nassau: {
