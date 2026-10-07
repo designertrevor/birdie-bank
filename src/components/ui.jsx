@@ -73,7 +73,7 @@ export function Empty({ title, text, action, illo = true, ids = null }) {
 export function Callout({ spot = null, ids = null, title, children, action = null, onDismiss = null, big = false, soft = false, className = '' }) {
   return (
     <div className={`callout ${big ? 'big' : ''} ${soft ? 'soft' : ''} ${className}`.replace(/\s+/g, ' ').trim()}>
-      {spot && <Spot kind={spot} ids={ids} />}
+      {spot && <Spot kind={spot} ids={ids} plate={false} />}
       <div className="co-body">
         {title && <div className="co-title">{title}</div>}
         {children && <div className="co-text">{children}</div>}

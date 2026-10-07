@@ -3593,6 +3593,7 @@ a.header-btn.rm-open { text-decoration: none; }
 .scene { display: block; width: 100%; }
 /* Onboarding: the scene runs edge to edge above the question, into the status bar on the welcome */
 .gallery-scene { height: 100%; }
+.trip-scene { height: 150px; margin: -8px 0 14px; flex-shrink: 0; }
 .ob-scene { height: 176px; margin: -8px -16px 14px; width: auto; flex-shrink: 0; }
 .onboard-body > .ob-scene { height: 38vh; min-height: 220px; max-height: 320px; margin: calc(-24px - env(safe-area-inset-top)) -24px 8px; }
 .ob-cast { width: 280px; max-width: 100%; height: auto; display: block; margin: 0 auto 4px; }

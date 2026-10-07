@@ -7,7 +7,7 @@
 // Up next. See trips.js, trip-plan.js and trip-expenses.js for how it's all worked out.
 import { useEffect, useState } from 'react';
 import { Empty, Header, Icon, PickRow, Screen, Segmented, Sheet, useUI } from '../components/ui.jsx';
-import { Spot } from '../components/Spot.jsx';
+import { Scene } from '../components/Scenes.jsx';
 import { daysUntil } from '../lib/plan-basics.js';
 import { Avatar, PayButton, RequestButton } from '../components/Pay.jsx';
 import { RoundRow } from '../components/RoundRow.jsx';
@@ -187,8 +187,8 @@ function TripPage({ id, view: firstView = null, add = false }) {
     <Screen className="trip-screen">
       <Header title={trip.name} small onBack={nav.pop} right={st.organizer ? <button className="header-btn" onClick={() => setEditing(true)}><Icon name="pencil-simple" /> Edit</button> : null} />
       <div className="scroll">
+        {!played && !cupOn && <Scene kind="roadtrip" className="trip-scene" />}
         <div className="trip-hero">
-          {!played && !cupOn && <Spot kind="suitcase" size={96} className="trip-spot" />}
           <div className="eyebrow pink">{eyebrow}{st.published.updated && <> <span className="trip-updated">Updated</span></>}</div>
           <div className={`tab-big d ${bigSign}`}>{big}</div>
           {allInLine && <div className={`trip-allin ${sign(allIn)}`}>{allInLine}</div>}

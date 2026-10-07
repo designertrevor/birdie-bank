@@ -1357,7 +1357,7 @@ function ReadyStep({ round, onStart, onLater }) {
     <>
       <div className="scroll">
         <div className="ready-hero">
-          <Spot kind="crowd" ids={crew} size={220} className="ready-crew" />
+          <Spot kind="crowd" ids={crew} size={220} className="ready-crew" plate={false} />
           <div className="ready-title d">You’re set for {gameLabel(round)}</div>
         </div>
         <div className="block">

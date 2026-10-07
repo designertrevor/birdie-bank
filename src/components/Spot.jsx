@@ -13,6 +13,18 @@ const TEAL = '#1a3a3a';
 const MINT = '#a4d4c5';
 const CORAL = '#ff6b5a';
 const line = { stroke: INK, strokeWidth: 3.4, fill: 'none', strokeLinecap: 'round', strokeLinejoin: 'round' };
+const LAV = '#b8a4ed';
+const PEACH = '#ffb084';
+const BLUSH = '#ffd6e5';
+
+// The plate: a soft blob of colour behind the scene, so the white ball never sits on a white card.
+// Each scene has its own colour; `plate={false}` drops it where the spot already sits on colour.
+const PLATES = { mint: MINT, lav: LAV, peach: PEACH, blush: BLUSH, ochre: OCHRE };
+const PLATE_OF = {
+  tee: 'mint', megaphone: 'blush', bulb: 'lav', link: 'mint', crown: 'blush', cup: 'peach', sleep: 'lav', suitcase: 'peach',
+  wallet: 'blush', card: 'lav', calendar: 'blush', bell: 'peach', gift: 'blush', shades: 'mint', crowd: 'mint', highfive: 'peach',
+};
+const Plate = ({ color }) => <path d="M14 68 C12 38 34 18 62 20 C90 22 108 42 106 70 C104 98 84 112 58 110 C32 108 16 96 14 68Z" fill={PLATES[color] || MINT} opacity=".9" />;
 
 /** The ball: body, dimples and a face. `cx`, `cy` and `r` place it; `face` picks the expression. */
 function Ball({ cx = 60, cy = 66, r = 30, face = 'smile' }) {
@@ -221,10 +233,13 @@ export function SpotScene({ kind = 'tee' }) {
  * One spot illustration. `kind` picks the scene (see SCENES, plus 'crowd' and 'highfive', which
  * draw the buddies in `ids`). Decorative: screen readers skip it.
  */
-export function Spot({ kind = 'tee', ids = null, size = 96, className = '' }) {
+export function Spot({ kind = 'tee', ids = null, size = 96, className = '', plate = 'auto' }) {
   const Scene = SCENES[kind];
+  // Small spots (inline, in a row) stay plain; a card-sized one gets its colour
+  const color = plate === false ? null : plate === 'auto' ? (size >= 56 ? PLATE_OF[kind] : null) : plate;
   return (
     <svg className={`spot ${className}`.trim()} viewBox="0 0 120 120" width={size} height={size} aria-hidden="true" focusable="false">
+      {color && <Plate color={color} />}
       {kind === 'crowd' ? <Crowd ids={ids} /> : kind === 'highfive' ? <HighFive ids={ids} /> : Scene ? <Scene /> : <SCENES.tee />}
     </svg>
   );

@@ -248,7 +248,7 @@ function PlanNext({ last, fresh, planned = false, trip = false, onJoin = null })
   return (
     <>
       <div className="plan-card">
-        <Spot kind="tee" size={92} className="pc-mascot" />
+        <Spot kind="tee" size={92} className="pc-mascot" plate={false} />
         <span className="eyebrow">{planned ? 'Something else' : fresh ? 'Welcome to the first tee' : 'Nothing on the calendar'}</span>
         <div className="pc-title d">{planned ? 'Playing now, or another day?' : 'Plan your next round'}</div>
         <div className="pc-sub">{planned

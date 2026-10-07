@@ -201,7 +201,7 @@ export default function RoundDetail({ id, celebrate }) {
           {!allSquare && !tie && faces.get(top.id) && !(res.big && !res.big.final)
             ? <CrownedFace model={faces.get(top.id)} size={92} />
             : allSquare || tie
-              ? <Spot kind={allSquare ? 'highfive' : 'crowd'} ids={heroBuddies} size={128} className="hero-spot" />
+              ? <Spot kind={allSquare ? 'highfive' : 'crowd'} ids={heroBuddies} size={128} className="hero-spot" plate={false} />
               : <Icon name="crown" fill className="crown" />}
           <div className="wn">{heroTitle}</div>
           <div className="wa">{heroAmt}</div>
