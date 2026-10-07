@@ -1,5 +1,9 @@
 import { Fragment, useEffect, useRef, useState } from 'react';
-import { Empty, Header, Icon, PickChip, Screen, useUI } from '../components/ui.jsx';
+import { Empty, Header, Icon, PickChip, Screen, Segmented, useUI } from '../components/ui.jsx';
+import { Spot } from '../components/Spot.jsx';
+import { AvatarArt } from '../components/Avatar.jsx';
+import { CrownedFace, Podium } from '../components/Podium.jsx';
+import { useGroupAvatars } from '../lib/useAvatars.js';
 import { BuddyArt } from '../components/BuddyArt.jsx';
 import { getState, update, useStore } from '../lib/store.js';
 import { GAMES, bettingRound, cardOnly, gameView, holeAtPos, isJustPlaying, holeComplete, isTeamGame, matchScored, oneBall, teamTable, playsHole, roundLegs, roundNotes, roundResults, scoreSummary, scorers, sideNames, skinsKinds, skinsTable, popsFor, netFor } from '../lib/round.js';
@@ -9,7 +13,7 @@ import { money } from '../lib/golf.js';
 import { canEdit, keeperMe } from '../lib/keeper.js';
 import { useNav } from '../lib/nav.js';
 import { leaveRound } from '../lib/rounds.js';
-import { bigGroupName, gameLabel, meFor, placeOf, roundDate, roundPlayerName } from '../lib/format.js';
+import { bigGroupName, gameLabel, meFor, placeLabel, roundDate, roundPlayerName } from '../lib/format.js';
 import { bigRoundResults } from '../lib/big-money.js';
 import { gamesLine } from '../lib/side-games.js';
 import { betStretchLine } from '../lib/stakes.js';
@@ -75,6 +79,9 @@ export default function RoundDetail({ id, celebrate }) {
   const [revealSeen, setRevealSeen] = useState(() => celebrate && finaleStage.get(id)?.at === round?.finishedAt);
   // Share from the saved round opens the same results image, and comes back here after
   const [shareFrom, setShareFrom] = useState(null);
+  const faces = useGroupAvatars(round?.players);
+  // Under the standings and who pays: the scorecard, the trash talk, or the game-by-game detail
+  const [view, setView] = useState('card');
 
   if (!round) {
     return <Screen><Header title="Round" onBack={nav.pop} /><Empty title="Round not found" text="It may have been deleted. Finished rounds are in History." action={<button className="ec" onClick={nav.pop}>Go back</button>} /></Screen>;
@@ -134,6 +141,9 @@ export default function RoundDetail({ id, celebrate }) {
     heroAmt = fmt(top.amount, { sign: true });
   }
   else { heroTitle = `${top.name} wins the day`; heroAmt = fmt(top.amount, { sign: true }); }
+  // For a tie or all square: the people at the top (everyone, when it's square) as buddies
+  const heroBuddies = res.standings.filter(p => allSquare || p.amount === top.amount).slice(0, 5)
+    .map((p, i) => (faces.get(p.id)?.kind === 'buddy' ? faces.get(p.id).buddy : ['visor', 'snapback', 'bucket', 'flatcap', 'beanie'][i]));
 
   const saveRow = accountsEnabled && !acct.user && round.status === 'done' && (
     <button className="set-row" onClick={() => setSigningIn(true)}>
@@ -187,7 +197,12 @@ export default function RoundDetail({ id, celebrate }) {
           </div>
         ) : (
         <div className="winner-hero" ref={hero}>
-          <Icon name={allSquare ? 'handshake' : 'crown'} fill className="crown" />
+          {/* The winner's buddy in the crown; a tie or all square shows the group instead */}
+          {!allSquare && !tie && faces.get(top.id) && !(res.big && !res.big.final)
+            ? <CrownedFace model={faces.get(top.id)} size={92} />
+            : allSquare || tie
+              ? <Spot kind={allSquare ? 'highfive' : 'crowd'} ids={heroBuddies} size={128} className="hero-spot" />
+              : <Icon name="crown" fill className="crown" />}
           <div className="wn">{heroTitle}</div>
           <div className="wa">{heroAmt}</div>
           <div className="ws">{round.course.name} · {roundDate(round)} · {gameLabel(round)} · {played === round.holes.length ? `${played} holes` : `${played} of ${round.holes.length} holes`}</div>
@@ -202,13 +217,18 @@ export default function RoundDetail({ id, celebrate }) {
 
         {!solo && <>
         <div className="sec-label">Standings</div>
-        {res.standings.map((p, i) => (
-          <div key={p.id} className="settle-row">
-            <div className="sr">{placeOf(res.standings, i)}</div>
-            <div className="sn">{p.name}{strokesNote(p)}{res.detail.byGame && <span className="rv-games">{gamesLine(res.detail.byGame, p.id, fmt)}</span>}</div>
-            <div className={`sa ${p.amount > 0 ? 'pos' : p.amount < 0 ? 'neg' : ''}`}>{fmt(p.amount, { sign: true })}</div>
-          </div>
-        ))}
+        {/* Three or more with a winner: the top three on a podium, then everyone in one list */}
+        {res.standings.length >= 3 && !allSquare && !(res.big && !res.big.final) && <Podium standings={res.standings} faces={faces} fmt={fmt} />}
+        <div className="stand-group">
+          {res.standings.map((p, i) => (
+            <div key={p.id} className="stand-line">
+              <div className="sr">{placeLabel(res.standings, i)}</div>
+              {faces.get(p.id) && <AvatarArt model={faces.get(p.id)} size="sm" />}
+              <div className="sn">{p.name}{strokesNote(p)}{res.detail.byGame && <span className="rv-games">{gamesLine(res.detail.byGame, p.id, fmt)}</span>}</div>
+              <div className={`sa ${p.amount > 0 ? 'pos' : p.amount < 0 ? 'neg' : ''}`}>{fmt(p.amount, { sign: true })}</div>
+            </div>
+          ))}
+        </div>
 
         {!isMoney && (
           <>
@@ -259,9 +279,13 @@ export default function RoundDetail({ id, celebrate }) {
         </div>
         </>}
 
-        {talk && <TalkSection ctx={talk} on="round" />}
-
-        <HowWasIt round={round} />
+        {/* The rest in three views, so the results lead with who won and who pays */}
+        <div className="rd-views">
+          <Segmented label="Show" className="press-mode-row" btn="pm-btn" value={view} onChange={setView}
+            options={[{ value: 'card', label: 'Card' }, ...(talk ? [{ value: 'talk', label: 'Talk' }] : []), { value: 'details', label: 'Details' }]} />
+        </div>
+        {view === 'talk' && talk && <TalkSection ctx={talk} on="round" />}
+        {view === 'details' && <>
 
         {res.detail.byGame && (
           <>
@@ -293,11 +317,13 @@ export default function RoundDetail({ id, celebrate }) {
         <RoundWhereFrom round={betRound} res={res} />
         {/* ...and for a reward round's side bets for money, what's between each pair in dollars */}
         {!isMoney && res.cash && <RoundWhereFrom round={betRound} res={tab} fmt={money} title="Where the money comes from" />}
+                </>}
         </>}
-        {solo && <HowWasIt round={round} />}
-
-        <div className="sec-label">Scorecard</div>
-        <Scorecard round={round} />
+        {(solo || view === 'card') && <>
+          <div className="sec-label">Scorecard</div>
+          <Scorecard round={round} />
+        </>}
+        <HowWasIt round={round} />
 
         <div className="detail-actions">
           {round.status === 'done' && GAMES[round.game] && !solo && (
@@ -793,8 +819,8 @@ export function Scorecard({ round, current, onHole }) {
       </table>
       <div className="sc-legend">
         {/* Each mark stays on the same line as its words */}
-        <span className="sc-key"><span className="sc-mark birdie">3</span> birdie <span className="sc-critter"><BuddyArt id="birdie" bg="mint" /></span></span>
-        <span className="sc-key"><span className="sc-mark eagle">2</span> eagle <span className="sc-critter"><BuddyArt id="eagle" bg="teal" /></span></span>
+        <span className="sc-key"><span className="sc-mark birdie">3</span> birdie <span className="key-critter"><BuddyArt id="birdie" bg="mint" /></span></span>
+        <span className="sc-key"><span className="sc-mark eagle">2</span> eagle <span className="key-critter"><BuddyArt id="eagle" bg="teal" /></span></span>
         <span className="sc-key"><span className="sc-mark bogey">5</span> bogey</span>
         <span className="sc-key"><span className="sc-mark pu">X</span> picked up</span>
         {anyStrokes && <span className="sc-key"><span className="sc-strokes inline"><i /></span> {half ? 'half stroke' : 'gets a stroke'}</span>}

@@ -307,7 +307,7 @@ export function UIProvider({ children }) {
   return (
     <UICtx.Provider value={{ showToast, ask }}>
       {children}
-      <div ref={toastRef} className={`toast ${toast ? 'show' : ''} ${toast?.action ? 'has-act' : ''}`} role="status" aria-live="polite">
+      <div ref={toastRef} className={`toast ${toast ? 'show' : ''} ${toast?.action ? 'has-act' : ''} ${toast?.tone ? `t-${toast.tone}` : ''}`} role="status" aria-live="polite">
         {/* Keyed, so the same words twice in a row are read out twice */}
         {toast && <span key={toast.key}>{toast.msg}</span>}
         {toast?.action && <button className="toast-act" onClick={() => { toast.action.run(); setToast(null); }}>{toast.action.label}</button>}

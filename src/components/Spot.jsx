@@ -36,6 +36,8 @@ function Ball({ cx = 60, cy = 66, r = 30, face = 'smile' }) {
       )}
       {face === 'wow' ? <ellipse cx={cx} cy={at(0, 11)[1]} rx={4 * k} ry={5 * k} fill={INK} />
         : face === 'sleep' ? <path d={`M${cx - 3 * k} ${at(0, 11)[1]} H${cx + 3 * k}`} {...line} strokeWidth={3 * k} />
+        : face === 'flat' ? <path d={`M${cx - 8 * k} ${at(0, 12)[1]} H${cx + 8 * k}`} {...line} strokeWidth={3.4 * k} />
+        : face === 'worried' ? <path d={`M${cx - 9 * k} ${at(0, 16)[1]} Q${cx} ${at(0, 8)[1]} ${cx + 9 * k} ${at(0, 16)[1]}`} {...line} strokeWidth={3.4 * k} />
         : face === 'happy' ? <path d={`M${cx - 10 * k} ${at(0, 8)[1]} Q${cx} ${at(0, 21)[1]} ${cx + 10 * k} ${at(0, 8)[1]}Z`} fill={INK} />
         : <path d={`M${cx - 10 * k} ${at(0, 9)[1]} Q${cx} ${at(0, 18)[1]} ${cx + 10 * k} ${at(0, 9)[1]}`} {...line} strokeWidth={3.4 * k} />}
     </g>
@@ -157,6 +159,10 @@ const SCENES = {
     <circle cx="96" cy="40" r="3" fill={OCHRE} />
     <g {...line} strokeWidth="3" stroke={PINK}><path d="M114 48 Q118 54 116 60" /><path d="M78 48 Q74 54 76 60" /></g>
   </>),
+  // Faces for "How was it?": great, just OK, something was off
+  'face-great': () => <Ball cy={60} r={44} face="happy" />,
+  'face-ok': () => <Ball cy={60} r={44} face="flat" />,
+  'face-off': () => <Ball cy={60} r={44} face="worried" />,
   // Keeping it private: the ball in sunglasses
   shades: () => (<>
     <Shadow />

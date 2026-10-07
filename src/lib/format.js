@@ -58,6 +58,13 @@ export function roundDate(r) {
 }
 
 /** A standing's place: equal money shares a place (1, 1, 3, 3), same as the reveal and the image. */
+/** "1", or "T2" when two or more share the place. */
+export function placeLabel(standings, i) {
+  const amt = standings[i].amount;
+  const place = standings.findIndex(q => q.amount === amt) + 1;
+  return standings.filter(q => q.amount === amt).length > 1 ? `T${place}` : String(place);
+}
+
 export function placeOf(standings, i) {
   return standings.findIndex(q => q.amount === standings[i].amount) + 1;
 }

@@ -1,6 +1,9 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { Empty, Icon, Numpad, PickChip, PickRow, Screen, Segmented, Sheet, useUI } from '../components/ui.jsx';
 import { Spot } from '../components/Spot.jsx';
+import { BuddyArt } from '../components/BuddyArt.jsx';
+import { AvatarArt } from '../components/Avatar.jsx';
+import { useGroupAvatars } from '../lib/useAvatars.js';
 import { RulesSheet } from '../components/Rules.jsx';
 import { DEFAULT_SETTINGS, getState, update, useStore } from '../lib/store.js';
 import {
@@ -154,6 +157,13 @@ const DRAFTS = keptMap('drafts');
 // Rounds whose locked-in rules card this phone has closed (a phone that isn't keeping score sees it until then)
 const AGREED_SEEN = new Set();
 
+/** The birdie (or the eagle, for two under or better) beside a score, once it's under par. */
+function ScoreCritter({ score, par }) {
+  if (!(score < par)) return null;
+  const eagle = score <= par - 2;
+  return <span key={eagle ? 'e' : 'b'} className="sc-critter" aria-hidden="true"><BuddyArt id={eagle ? 'eagle' : 'birdie'} bg={eagle ? 'teal' : 'mint'} /></span>;
+}
+
 /** One row in the round menu: an icon, what it is, and its current setting on the right. */
 function MenuRow({ icon, label, value = null, onClick, danger = false }) {
   return (
@@ -179,6 +189,7 @@ function PlayRound({ round, mount, momentUp = false }) {
   const isLast = idx === round.holes.length - 1;
   const game = round.game;
   const units = scorers(round, hole); // players still playing, or teams in a one-ball game (scramble, alternate shot, Chapman)
+  const faces = useGroupAvatars(round.players);
   // The main game's own round: without anyone who's only in the side games, so they never enter a
   // wolf rotation, the banker's bets, the Sixes pairings or a head-to-head's sides
   const main = useMemo(() => gameView(round, 'main'), [round]);
@@ -607,6 +618,7 @@ function PlayRound({ round, mount, momentUp = false }) {
             const v = saved[p.id];
             return (
               <div key={p.id} className="pcard score-row">
+                {!p.team && faces.get(p.id) && <AvatarArt model={faces.get(p.id)} />}
                 <div className="row-main">
                   <div className="pname">{p.name}{casual && !solo && <span className="jp-tag">{JUST_PLAYING_TAG}</span>}{counting.includes(p.id) && <span className="counts-tag">Counts</span>}</div>
                   <div className="ps">
@@ -619,6 +631,7 @@ function PlayRound({ round, mount, momentUp = false }) {
                 <div className="score-ctrl">
                   <span className={`sc-num ${v == null ? 'untouched' : ''}`}>
                     <span className="sr-only">{p.name} </span>{v == null ? <><span aria-hidden="true">–</span><span className="sr-only">no score yet</span></> : v === 'X' ? pickupGross(hole.par, st) : v}
+                    {v != null && v !== 'X' && <ScoreCritter score={v} par={hole.par} />}
                   </span>
                 </div>
               </div>
@@ -636,6 +649,7 @@ function PlayRound({ round, mount, momentUp = false }) {
             const shown = v === 'X' ? pickupGross(hole.par, st) : v;
             return (
               <div key={p.id} className={`pcard score-row ${game === 'dots' || junk ? 'with-dots' : ''} ${isBanker || isWolf ? 'bkr' : ''}`}>
+                {!p.team && faces.get(p.id) && <AvatarArt model={faces.get(p.id)} />}
                 <div className="row-main">
                   <div className="pname" style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                     {p.name}
@@ -663,6 +677,7 @@ function PlayRound({ round, mount, momentUp = false }) {
                     onClick={() => setScore(p.id, v === 'X' ? hole.par : Math.max(1, v - 1))}><Icon name="minus" /></button>
                   <span ref={el => { numRefs.current[p.id] = el; }} className={`sc-num ${touched[p.id] ? '' : 'untouched'} ${v !== 'X' && v < hole.par ? 'birdie' : ''}`} aria-live="polite" aria-atomic="true">
                     <span className="sr-only">{p.name} </span>{v === 'X' ? <><span aria-hidden="true">X</span><span className="sr-only">picked up</span></> : v}
+                    {touched[p.id] && v !== 'X' && <ScoreCritter score={v} par={hole.par} />}
                   </span>
                   <button className="sc-btn" aria-label={`${p.name} one more`} disabled={v !== 'X' && v >= 15}
                     onClick={() => setScore(p.id, v === 'X' ? hole.par + 1 : Math.min(15, v + 1))}><Icon name="plus" /></button>

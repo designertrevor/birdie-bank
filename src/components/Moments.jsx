@@ -6,6 +6,8 @@
 import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { Icon } from './ui.jsx';
+import { AvatarArt } from './Avatar.jsx';
+import { useGroupAvatars } from '../lib/useAvatars.js';
 import { donePositions, finalMoment, firstShowing, freshHole, roundMoment } from '../lib/moments.js';
 import { buzz, confetti, confettiFrom } from '../lib/delight.js';
 
@@ -56,11 +58,13 @@ export function RoundMoments({ round, onFinish, onShowing = null }) {
   const close = () => setMoment(null);
   return moment.level === 'big'
     ? <MatchWon key={moment.id} moment={moment} onClose={close} onFinish={onFinish && !moment.more ? () => { close(); onFinish(); } : null} />
-    : <MomentBanner key={moment.id} moment={moment} onClose={close} />;
+    : <MomentBanner key={moment.id} moment={moment} round={round} onClose={close} />;
 }
 
-/** A card that drops in under the header, cheers a little and leaves on its own. Tap to dismiss. */
-function MomentBanner({ moment, onClose }) {
+/** A card that rises above the buttons (the money bar stays in view), cheers a little and leaves on its own. Tap to dismiss. */
+function MomentBanner({ moment, round, onClose }) {
+  const faces = useGroupAvatars(round?.players);
+  const hero = moment.hero && faces.get(moment.hero);
   const ref = useRef(null);
   const [out, setOut] = useState(false);
   useEffect(() => {
@@ -76,7 +80,8 @@ function MomentBanner({ moment, onClose }) {
   return (
     <button ref={ref} type="button" className={`moment-banner k-${moment.kind} ${out ? 'out' : ''}`} onClick={() => setOut(true)}
       onAnimationEnd={e => { if (out && e.target === e.currentTarget) onClose(); }} role="status" aria-live="polite">
-      <span className="mo-ic"><Icon name={ICON[moment.kind]} fill /></span>
+      {/* The player it's about, as their buddy; a moment about nobody in particular keeps its icon */}
+      <span className={`mo-ic ${hero ? 'mo-face' : ''}`}>{hero ? <AvatarArt model={hero} /> : <Icon name={ICON[moment.kind]} fill />}</span>
       <span className="mo-txt"><span className="mo-title">{moment.title}</span><span className="mo-sub">{moment.text}</span></span>
     </button>
   );

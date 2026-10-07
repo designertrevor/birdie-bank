@@ -1,4 +1,6 @@
 // The end of a round in three beats: the money reveal, settling up, and a results card to share.
+import { Spot } from './Spot.jsx';
+import { CrownedFace } from './Podium.jsx';
 import { useEffect, useRef, useState } from 'react';
 import { Header, Icon, useUI } from './ui.jsx';
 import { getState, useStore } from '../lib/store.js';
@@ -175,6 +177,8 @@ export function Reveal({ round, res, onNext, onDetail, extra, instant = false })
             {titles.map(x => <span key={x} className={`rt ${x === title ? '' : 'out'}`} aria-hidden={x !== title}>{x}</span>)}
           </div>
           <div className={`rv-skip ${done ? 'gone' : ''}`} aria-hidden={done}>Tap to skip</div>
+          {/* The winner's buddy takes the crown once the totals land */}
+          {done && !square && !tied && !(res.big && !res.big.final) && faces.get(top.id) && <div className="rv-crowned"><CrownedFace model={faces.get(top.id)} size={76} /></div>}
         </div>
         {nSteps > 0 && (
           <div className={`rv-card ${resolved ? 'compact' : ''}`}>
@@ -457,7 +461,7 @@ export function HowWasIt({ round }) {
       <div className="checkin-opts">
         {picked
           ? <button className="pill-btn" onClick={more}><Icon name="chat-circle-dots" /> Tell us more</button>
-          : REACTIONS.map(r => <button key={r.key} className="pill-btn" onClick={() => pick(r)}><Icon name={r.icon} /> {r.label}</button>)}
+          : REACTIONS.map(r => <button key={r.key} className="checkin-face" onClick={() => pick(r)}><Spot kind={`face-${r.key}`} size={52} /><span>{r.label}</span></button>)}
       </div>
     </div>
   );

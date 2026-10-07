@@ -1,5 +1,7 @@
 import { useState } from 'react';
 import { Icon, Segmented, Sheet } from './ui.jsx';
+import { Spot } from './Spot.jsx';
+import { useGroupAvatars } from '../lib/useAvatars.js';
 import { gameKeys } from '../lib/round.js';
 import { GIMMES, MULLIGANS, agreementItems, changeLine, isLocked, lockedBy } from '../lib/agreed.js';
 
@@ -15,6 +17,7 @@ import { GIMMES, MULLIGANS, agreementItems, changeLine, isLocked, lockedBy } fro
 export function FirstTeeSheet({ round, open, mode = 'view', canEdit = false, me = null, initial = null, onLock, onSkip, onCalls, onClose }) {
   // The card starts from the calls the group made last time (`initial`), else none
   const [calls, setCalls] = useState(() => ({ gimmes: initial?.gimmes || 'none', mulligans: initial?.mulligans || 'none' }));
+  const faces = useGroupAvatars(round.players);
   if (!open) return null;
   const locking = mode === 'lock';
   // Before locking, the card reads the calls being picked; after, what was locked in
@@ -40,6 +43,7 @@ export function FirstTeeSheet({ round, open, mode = 'view', canEdit = false, me 
   return (
     <Sheet open onClose={locking ? onSkip : onClose} title={locking ? 'First tee' : 'What we agreed'}>
       <div className="ft-card">
+        {locking && <div className="ft-art"><Spot kind="highfive" ids={round.players.slice(0, 2).map((p, i) => (faces.get(p.id)?.kind === 'buddy' ? faces.get(p.id).buddy : ['visor', 'snapback'][i]))} size={132} /></div>}
         <p className="ft-lede">
           {locking ? `Settle it here, so nobody argues about it on ${round.holes.at(-1)?.no ?? 18}.`
             : isLocked(round) ? `${lockedBy(round, me)} ${round.agreed.hole ? `on hole ${round.agreed.hole}` : 'on the first tee'}. Anything changed since is listed with its hole.` : 'Not locked in yet.'}
