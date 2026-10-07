@@ -14,8 +14,9 @@ export const ART_KINDS = [
 
 /** Each scene and spot: its name, where it shows (and how big), for the sheet. */
 export const ART_USES = {
-  'scenes/course': { name: 'The first tee', used: ['Welcome, the hero (pulled 2026-10-07)', 'Set up: What does your group play? and How many of you usually play? (pulled)'], px: 'full width, 176px tall on the questions, up to 320px on the welcome' },
-  'scenes/clubhouse': { name: 'The 19th hole', used: ['Set up: How do you settle up now? and Who ends up doing the math? (pulled 2026-10-07)'], px: 'full width, 176px tall' },
+  'scenes/course': { name: 'The first tee', used: ['Welcome, the hero (pulled 2026-10-07)', 'Set up: What does your group play? and How many of you usually play? (pulled; four golfers on the size question)'], px: 'full width, 200px tall plus the status bar on the questions, up to 260px on the welcome' },
+  'scenes/clubhouse': { name: 'The 19th hole', used: ['Set up: How do you settle up now? (pulled 2026-10-07)'], px: 'full width, 200px tall plus the status bar' },
+  'scenes/scorecard': { name: 'Doing the math', used: ['Set up: Who ends up doing the math? (pulled 2026-10-07, never drawn by hand: one of the group at the table with the card and a calculator, the others waiting)'], px: 'full width, 200px tall plus the status bar' },
   'scenes/roadtrip': { name: 'The road trip', used: ['Trip screen, before the first round is played'], px: 'full width, 150px tall' },
 
   'spots/tee': { name: 'Ball on a tee', used: ['Up next, peeking from the Start a round card (92px)', 'Set up, the games question (84px)', 'The notifications ask (30px)'] },

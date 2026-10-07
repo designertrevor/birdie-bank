@@ -27,4 +27,4 @@ export const ART_FILES = byKey;
  * Scenes Trevor pulled from onboarding on 2026-10-07 (the hand-drawn tee and clubhouse read cheap).
  * Each draws nothing until its outside file lands in src/art/scenes, then shows that.
  */
-export const PULLED_SCENES = new Set(['course', 'clubhouse']);
+export const PULLED_SCENES = new Set(['course', 'clubhouse', 'scorecard']);

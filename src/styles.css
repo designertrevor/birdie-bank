@@ -17,6 +17,7 @@
   --focus: #6b4fd0; /* keyboard focus ring, 3:1 on every surface */
   --venmo: #2b76ad; /* Venmo blue, deep enough for white text */
   --win: #0f6b4f; --win-bg: #d6efe6; --loss: #b83226; --loss-bg: #ffe1dc;
+  --check: #15a04c; /* check marks: a bright, playful green (3.4:1 on white), never the near-black teal */
   --on-ink: #ffffff; --on-pastel: #0a0a0a; --bkr-card: #fff6dd; --cur-cell: #ffe3ee; --pick-tint: #fde6ee;
   --display: "Bricolage Grotesque", Inter, system-ui, sans-serif;
   --spring: cubic-bezier(.3,1.5,.5,1);
@@ -837,7 +838,7 @@ button:disabled { cursor: not-allowed; }
   --sc-sky: #1c2a3a; --sc-sun: #f3e7c4; --sc-cloud: #2e3d4d; --sc-hill: #1f4a3f; --sc-tree: #153a2e; --sc-trunk: #3b2a1c; --sc-rough: #245245; --sc-grass: #2f6a58; --sc-green: #3a7a64; --sc-sand: #6b5d3a;
   --sc-wall: #2a2f2e; --sc-door: #3a3330; --sc-stone: #1f2423; --sc-road: #2a2e2d; --sc-snow: #c8d4dc; --sc-glass: #30475a;
   --line: #2c3331; --line-soft: #242a28;
-  --teal: #173d3c; --icon: var(--mint); --pink-text: var(--pink); --coral-text: var(--coral); --focus: var(--lav); --win: #6fd3a8; --win-bg: #173a2e; --loss: #ff8a7d; --loss-bg: #3d1f1c;
+  --teal: #173d3c; --icon: var(--mint); --pink-text: var(--pink); --coral-text: var(--coral); --focus: var(--lav); --win: #6fd3a8; --win-bg: #173a2e; --loss: #ff8a7d; --loss-bg: #3d1f1c; --check: #4ade80;
   --on-ink: #0a0a0a; --bkr-card: #2e2a1c; --cur-cell: #3a2030; --pick-tint: #3a1d29;
   color-scheme: dark;
 }
@@ -848,7 +849,7 @@ button:disabled { cursor: not-allowed; }
   --sc-sky: #1c2a3a; --sc-sun: #f3e7c4; --sc-cloud: #2e3d4d; --sc-hill: #1f4a3f; --sc-tree: #153a2e; --sc-trunk: #3b2a1c; --sc-rough: #245245; --sc-grass: #2f6a58; --sc-green: #3a7a64; --sc-sand: #6b5d3a;
   --sc-wall: #2a2f2e; --sc-door: #3a3330; --sc-stone: #1f2423; --sc-road: #2a2e2d; --sc-snow: #c8d4dc; --sc-glass: #30475a;
   --line: #2c3331; --line-soft: #242a28;
-  --teal: #173d3c; --icon: var(--mint); --pink-text: var(--pink); --coral-text: var(--coral); --focus: var(--lav); --win: #6fd3a8; --win-bg: #173a2e; --loss: #ff8a7d; --loss-bg: #3d1f1c;
+  --teal: #173d3c; --icon: var(--mint); --pink-text: var(--pink); --coral-text: var(--coral); --focus: var(--lav); --win: #6fd3a8; --win-bg: #173a2e; --loss: #ff8a7d; --loss-bg: #3d1f1c; --check: #4ade80;
   --on-ink: #0a0a0a; --bkr-card: #2e2a1c; --cur-cell: #3a2030; --pick-tint: #3a1d29;
   color-scheme: dark;
   }
@@ -3706,3 +3707,82 @@ a.header-btn.rm-open { text-decoration: none; }
 .as-dl { align-self: flex-start; margin-top: auto; border: 0; background: var(--surface); border-radius: 999px; padding: 6px 11px; font: inherit; font-size: 12px; font-weight: 600; color: var(--ink); cursor: pointer; }
 .as-dl:hover { background: var(--surface-strong); }
 @media (max-width: 480px) { .as-card.wide { grid-column: span 1; } .as-top h1 { font-size: 22px; } }
+
+/* ---- Design review, group B: onboarding (2026-10-07) ---- */
+/* Check marks everywhere take the playful green */
+.pw-list li > i, .pw-free .pw-list li > i, .rm-when i, .rc-done-icon, .exp-status.ok i { color: var(--check); }
+
+/* The onboarding screens start at the top edge of the phone, so a question's scene runs behind the status bar */
+.device > .screen.onboard { top: 0; }
+.ob-top { padding-top: calc(12px + env(safe-area-inset-top)); }
+.ob-head { flex-shrink: 0; position: relative; }
+.ob-head .ob-scene { margin: 0; height: calc(208px + env(safe-area-inset-top)); }
+.ob-head.scenic .ob-top { position: absolute; top: 0; left: 0; right: 0; }
+.ob-head.scenic .ob-progress { background: rgba(10,10,10,.16); }
+.ob-head.scenic + .ob-body { padding-top: 16px; }
+
+/* Welcome: fits every phone with no scrolling in either direction, with room to breathe */
+.onboard-body { overflow: hidden; padding-top: calc(24px + env(safe-area-inset-top)); gap: 6px; }
+.onboard-body > .ob-scene { align-self: stretch; width: auto; height: 30vh; min-height: 180px; max-height: 260px; margin: calc(-24px - env(safe-area-inset-top)) -24px 12px; }
+.onboard-text { font-size: 16px; max-width: 300px; }
+@media (max-height: 700px) {
+  .onboard-title { font-size: 40px; }
+  .onboard-text { font-size: 15px; }
+  .onboard-body > .ob-scene { height: 24vh; min-height: 150px; }
+  .onboard-games { margin-top: 6px; }
+}
+/* The game tags drift a little, and wiggle when tapped */
+.ob-tag { --r: -2deg; transform: rotate(var(--r)); animation: tagFloat 3.8s ease-in-out calc(var(--i, 0) * -.5s) infinite; user-select: none; -webkit-user-select: none; cursor: default; }
+.ob-tag:nth-child(even) { --r: 1.5deg; }
+.ob-tag.wiggle { animation: tagWiggle .55s var(--ease-out); }
+@keyframes tagFloat { 0%, 100% { transform: translateY(0) rotate(var(--r)); } 50% { transform: translateY(-4px) rotate(calc(var(--r) + 2deg)); } }
+@keyframes tagWiggle { 0%, 100% { transform: rotate(var(--r)) scale(1); } 20% { transform: rotate(-12deg) scale(1.1); } 50% { transform: rotate(9deg) scale(1.1); } 80% { transform: rotate(-4deg) scale(1.03); } }
+
+/* Payoff, the games: a phone on the table showing the money, a picture rather than a control */
+.ob-mock { position: relative; display: flex; justify-content: center; padding: 16px 0 14px; }
+.ob-phone { width: 236px; padding: 8px; border-radius: 32px; background: var(--teal); transform: rotate(-3deg); box-shadow: 0 14px 24px -12px rgba(10,10,10,.4), inset 0 0 0 2px rgba(255,255,255,.08); }
+.ob-phone::before { content: ""; display: block; width: 56px; height: 6px; border-radius: 6px; background: rgba(255,255,255,.22); margin: 3px auto 7px; }
+.ob-phone-screen { background: var(--card); border-radius: 24px; padding: 12px 10px 12px; }
+.ob-phone-bar { display: flex; justify-content: space-between; font-size: 11px; font-weight: 700; letter-spacing: .04em; text-transform: uppercase; color: var(--mute); }
+.ob-phone .ob-money { margin-top: 8px; gap: 3px; }
+.ob-phone .ob-cell { padding: 6px 0; }
+.ob-phone .ob-amt { font-size: 17px; }
+.ob-phone .li-sub { font-size: 11px; }
+.ob-phone-holes { display: flex; gap: 4px; margin-top: 10px; }
+.ob-phone-holes i { flex: 1; height: 5px; border-radius: 5px; background: var(--surface-strong); }
+.ob-phone-holes i.on { background: var(--pink-fill); }
+.ob-mock-tag { position: absolute; right: 6px; top: 4px; margin: 0; transform: rotate(6deg); box-shadow: 0 2px 0 rgba(10,10,10,.18); animation: pop .45s .5s var(--spring) both; }
+
+/* Payoff, settling up: the tangle of IOUs against the few payments */
+.ob-iou { display: flex; align-items: center; gap: 4px; margin: 0 0 10px; padding: 14px 6px 12px; background: var(--card); border-radius: 20px; }
+.ob-iou-side { flex: 1; min-width: 0; display: flex; flex-direction: column; align-items: center; text-align: center; gap: 2px; }
+.ob-iou-side svg { width: 112px; height: 112px; }
+.ob-iou-n { font-size: 30px; font-weight: 800; letter-spacing: -.03em; line-height: 1.1; font-variant-numeric: tabular-nums; }
+.ob-iou-side.on .ob-iou-n { color: var(--pink-text); }
+.ob-iou-side.on svg { animation: pop .5s .4s var(--spring) both; }
+.ob-iou-arrow { font-size: 22px; color: var(--mute); flex-shrink: 0; }
+.ob-iou .li-sub { max-width: 124px; line-height: 1.3; }
+
+/* Payoff, the math: "You" crossed out and Birdie Bank stamped over each job, one after another */
+.ob-jobs { list-style: none; padding: 4px 16px; }
+.ob-jobs li { display: flex; align-items: center; justify-content: space-between; gap: 10px; min-height: 48px; padding: 6px 0; border-bottom: 1px solid var(--line-soft); font-size: 15px; font-weight: 600; }
+.ob-jobs li:last-child { border-bottom: none; }
+.ob-job-who { display: inline-flex; align-items: center; gap: 10px; flex-shrink: 0; }
+.ob-job-you { position: relative; text-decoration: none; color: var(--mute); animation: jobFade .3s calc(.75s + var(--i) * .5s) both; }
+.ob-job-you::after { content: ""; position: absolute; left: -2px; right: -2px; top: 52%; height: 2.5px; border-radius: 2px; background: var(--pink-fill); transform: scaleX(0); transform-origin: left; animation: strike .25s calc(.5s + var(--i) * .5s) var(--ease-out) both; }
+.ob-stamp { display: inline-block; padding: 4px 8px; border: 2.5px solid var(--pink-fill); border-radius: 7px; color: var(--pink-text); font-size: 12px; font-weight: 800; letter-spacing: .05em; text-transform: uppercase; line-height: 1.2; white-space: nowrap; background: var(--card); box-shadow: inset 0 0 0 2px var(--card), inset 0 0 0 3.5px var(--pink-fill); transform: rotate(-7deg); animation: stamp .38s calc(.8s + var(--i) * .5s) var(--ease-out) both; }
+@keyframes strike { to { transform: scaleX(1); } }
+@keyframes jobFade { to { opacity: .5; } }
+@keyframes stamp { from { opacity: 0; transform: rotate(-7deg) scale(1.9); } 60% { transform: rotate(-7deg) scale(.92); } to { opacity: 1; transform: rotate(-7deg) scale(1); } }
+
+/* The review step: who you are, then each answer checked off */
+.ob-review { padding: 6px 16px; }
+.ob-review-me { display: flex; align-items: center; gap: 12px; padding: 10px 0 12px; border-bottom: 1px solid var(--line-soft); }
+.ob-review-me .avatar { margin: 0; width: 56px; height: 56px; font-size: 24px; flex-shrink: 0; }
+.ob-review-me .li-name { font-family: var(--display); font-size: 20px; font-weight: 800; }
+.ob-review-row { display: flex; align-items: center; gap: 12px; padding: 11px 0; border-bottom: 1px solid var(--line-soft); animation: rise .4s calc(.15s + var(--i) * .08s) var(--ease-out) both; }
+.ob-review-row:last-child { border-bottom: none; }
+.ob-review-k { font-size: 12px; font-weight: 700; letter-spacing: .04em; text-transform: uppercase; color: var(--mute); }
+.ob-review-v { font-size: 16px; font-weight: 600; color: var(--ink); margin-top: 1px; line-height: 1.3; }
+.ob-review-tick { font-size: 22px; color: var(--check); flex-shrink: 0; animation: pop .4s calc(.3s + var(--i) * .08s) var(--spring) both; }
+.ob-ready { margin: 4px 0 14px; padding: 0 4px; }

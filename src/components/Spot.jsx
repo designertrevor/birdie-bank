@@ -25,6 +25,7 @@ const PLATES = { mint: MINT, lav: LAV, peach: PEACH, blush: BLUSH, ochre: OCHRE 
 const PLATE_OF = {
   tee: 'mint', megaphone: 'blush', bulb: 'lav', link: 'mint', crown: 'blush', cup: 'peach', sleep: 'lav', suitcase: 'peach',
   wallet: 'blush', card: 'lav', calendar: 'blush', bell: 'peach', gift: 'blush', shades: 'mint', crowd: 'mint', highfive: 'peach',
+  'face-great': 'mint', 'face-ok': 'peach', 'face-off': 'lav',
 };
 const Plate = ({ color }) => <path d="M14 68 C12 38 34 18 62 20 C90 22 108 42 106 70 C104 98 84 112 58 110 C32 108 16 96 14 68Z" fill={PLATES[color] || MINT} opacity=".9" />;
 
@@ -173,10 +174,11 @@ const SCENES = {
     <circle cx="96" cy="40" r="3" fill={OCHRE} />
     <g {...line} strokeWidth="3" stroke={PINK}><path d="M114 48 Q118 54 116 60" /><path d="M78 48 Q74 54 76 60" /></g>
   </>),
-  // Faces for "How was it?": great, just OK, something was off
-  'face-great': () => <Ball cy={60} r={44} face="happy" />,
-  'face-ok': () => <Ball cy={60} r={44} face="flat" />,
-  'face-off': () => <Ball cy={60} r={44} face="worried" />,
+  // Faces for "How was it?": great, just OK, something was off. On a plate (the setup guide)
+  // the ball sits smaller, so the colour shows round it and the ball never melts into the page
+  'face-great': ({ plated }) => <Ball cy={plated ? 64 : 60} r={plated ? 34 : 44} face="happy" />,
+  'face-ok': ({ plated }) => <Ball cy={plated ? 64 : 60} r={plated ? 34 : 44} face="flat" />,
+  'face-off': ({ plated }) => <Ball cy={plated ? 64 : 60} r={plated ? 34 : 44} face="worried" />,
   // Something you asked for shipped: the ball with a wrapped present
   gift: () => (<>
     <Shadow cx={56} />
@@ -214,14 +216,18 @@ function Crowd({ ids }) {
   </>);
 }
 
+// Two buddies leaning in, arms up to one clap in the middle: the arms and ink motion lines say
+// high five, and a pink star marks the slap (on the peach plate, ochre lines vanished)
 function HighFive({ ids }) {
   const [a, b] = ids?.length >= 2 ? ids : ['visor', 'snapback'];
   return (<>
-    <Shadow cy={102} rx={50} />
-    <BuddyFigure id={a} x={0} y={30} size={66} />
-    <BuddyFigure id={b} x={54} y={30} size={66} />
-    <Hand x={55} y={44} /><Hand x={65} y={44} />
-    <g {...line} strokeWidth="3" stroke={OCHRE}><path d="M60 32 V20" /><path d="M48 34 L41 25" /><path d="M72 34 L79 25" /></g>
+    <Shadow cy={104} rx={50} />
+    <g transform="rotate(10 30 90)"><BuddyFigure id={a} x={-4} y={40} size={62} /></g>
+    <g transform="rotate(-10 90 90)"><BuddyFigure id={b} x={62} y={40} size={62} /></g>
+    <g {...line} strokeWidth="4"><path d="M38 70 Q50 52 56 40" /><path d="M82 70 Q70 52 64 40" /></g>
+    <Hand x={56} y={38} /><Hand x={64} y={38} />
+    <g {...line} strokeWidth="3"><path d="M60 26 V14" /><path d="M46 30 L37 20" /><path d="M74 30 L83 20" /></g>
+    <path d="M60 6 L62.4 10.6 L67.5 11.3 L63.8 14.9 L64.7 20 L60 17.6 L55.3 20 L56.2 14.9 L52.5 11.3 L57.6 10.6Z" fill={PINK} />
   </>);
 }
 
@@ -245,7 +251,7 @@ export function Spot({ kind = 'tee', ids = null, size = 96, className = '', plat
     <svg className={`spot ${className}`.trim()} viewBox="0 0 120 120" width={size} height={size} aria-hidden="true" focusable="false">
       {file ? <ArtImage file={file} w={120} h={120} /> : <>
         {color && <Plate color={color} />}
-        {kind === 'crowd' ? <Crowd ids={ids} /> : kind === 'highfive' ? <HighFive ids={ids} /> : Scene ? <Scene /> : <SCENES.tee />}
+        {kind === 'crowd' ? <Crowd ids={ids} /> : kind === 'highfive' ? <HighFive ids={ids} /> : Scene ? <Scene plated={!!color} /> : <SCENES.tee />}
       </>}
     </svg>
   );

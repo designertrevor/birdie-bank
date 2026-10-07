@@ -4,8 +4,8 @@
 // the flag is on, the paywall. Invited players arrive from a link and skip all of this.
 import { Spot, SpotScene } from '../components/Spot.jsx';
 import { GameArt } from '../components/GameArt.jsx';
-import { Scene } from '../components/Scenes.jsx';
-import { useState } from 'react';
+import { Scene, sceneShows } from '../components/Scenes.jsx';
+import { useEffect, useState } from 'react';
 import { ArtIcon, Icon, Numpad, PickChip, PickMark, PickRow, Screen } from '../components/ui.jsx';
 import { update, uid } from '../lib/store.js';
 import { formatIndex } from '../lib/format.js';
@@ -14,6 +14,7 @@ import { GAMES } from '../lib/round.js';
 import { playFromSearch } from '../lib/rule-links.js';
 import { SignInSheet } from '../components/Account.jsx';
 import { BuddyArt, BuddyFigure } from '../components/BuddyArt.jsx';
+import { Avatar } from '../components/Avatar.jsx';
 import { BUDDIES, buddyAvatar } from '../lib/avatars.js';
 import { accountsEnabled, useAccount } from '../lib/cloud.js';
 import {
@@ -35,12 +36,29 @@ const QUESTION = {
  * `onDone(routes)`: called when onboarding finishes, with the screens to open on top of Up next
  * ([name, params] pairs), just before the app switches over. `play`: a rule page's ?play= game to start with ticked.
  */
-/** The setting behind each question: the tee for the games and the group, the 19th hole for the money. */
+/**
+ * The setting behind each question: the tee for the games and the group (a foursome on the size
+ * question, since most groups are four at most), the 19th hole for settling up, the table with the
+ * card out for the math. Each question has its own; none repeats the one before.
+ */
 function sceneFor(step) {
   if (step === 'games') return { kind: 'course', ids: ['visor', 'snapback', 'bucket'] };
-  if (step === 'size') return { kind: 'course', ids: ['visor', 'snapback', 'bucket', 'flatcap', 'beanie'] };
-  if (step === 'settle' || step === 'math') return { kind: 'clubhouse', ids: ['visor', 'snapback', 'bucket', 'shades'] };
+  if (step === 'size') return { kind: 'course', ids: ['visor', 'snapback', 'bucket', 'flatcap'] };
+  if (step === 'settle') return { kind: 'clubhouse', ids: ['visor', 'snapback', 'bucket', 'shades'] };
+  if (step === 'math') return { kind: 'scorecard', ids: ['flatcap', 'visor', 'snapback', 'bucket'] };
   return null;
+}
+
+/** The welcome's game tags: they drift a little, and wiggle when tapped, since they look tappable. Decorative. */
+const WELCOME_TAGS = [['bank', 'Banker'], ['flag-pennant', 'Nassau'], ['coins', 'Skins'], ['paw-print', 'Wolf'], ['dice-five', 'Vegas'], ['sword', 'Match play'], ['star', 'Stableford']];
+function GameTag({ icon, name, i }) {
+  const [wiggle, setWiggle] = useState(0);
+  return (
+    <span className={`chip ochre ob-tag ${wiggle ? 'wiggle' : ''}`} style={{ '--i': i }} aria-hidden="true"
+      onPointerDown={() => setWiggle(w => w + 1)} onAnimationEnd={e => { if (e.animationName === 'tagWiggle') setWiggle(0); }}>
+      <ArtIcon name={icon} /> {name}
+    </span>
+  );
 }
 
 /** The ball that walks you through setup, reacting to what you've said so far. */
@@ -79,6 +97,10 @@ export default function Onboarding({ onDone, play = null }) {
     if (!name) setName((acct.user.name || '').split(' ')[0]);
   }
 
+  // Each step starts at the top: the scroll is one element across steps, so a name step scrolled to
+  // the age question would otherwise open the review with its title out of view
+  useEffect(() => { document.querySelector('.onboard .scroll')?.scrollTo(0, 0); }, [step]);
+
   const go = s => setStep(s);
   const next = () => go(nextStep(step));
   const back = () => go(prevStep(step));
@@ -111,9 +133,9 @@ export default function Onboarding({ onDone, play = null }) {
           <Scene kind="course" ids={['bucket', 'shades', 'snapback', 'visor']} className="ob-scene" />
           <h1 className="onboard-title">Birdie Bank</h1>
           <p className="onboard-text">The bank for your golf game. Play any game, settle every bet, keep the Tab all season.</p>
-          <div className="onboard-games">
-            {[['bank', 'Banker'], ['flag-pennant', 'Nassau'], ['coins', 'Skins'], ['paw-print', 'Wolf'], ['dice-five', 'Vegas'], ['sword', 'Match play'], ['star', 'Stableford'], ['dots-three-circle', `+ ${Object.keys(GAMES).length - 7} more games`]].map(([i, n]) => (
-              <span key={n} className="chip ochre"><ArtIcon name={i} /> {n}</span>
+          <div className="onboard-games" role="img" aria-label={`${WELCOME_TAGS.map(t => t[1]).join(', ')} and ${Object.keys(GAMES).length - WELCOME_TAGS.length} more games`}>
+            {[...WELCOME_TAGS, ['dots-three-circle', `+ ${Object.keys(GAMES).length - WELCOME_TAGS.length} more games`]].map(([i, n], k) => (
+              <GameTag key={n} icon={i} name={n} i={k} />
             ))}
           </div>
         </div>
@@ -127,11 +149,17 @@ export default function Onboarding({ onDone, play = null }) {
     );
   }
 
+  // The back button and the progress bar. On a question with a scene, the scene runs from the
+  // very top of the phone (behind the status bar) and this bar sits over its sky.
+  const scene = sceneFor(step);
   const top = (
-    <div className="ob-top">
-      <button className="header-back" onClick={back} aria-label="Back"><Icon name="arrow-left" /></button>
-      <div className="ob-progress" role="progressbar" aria-label="Setup progress" aria-valuemin={0} aria-valuemax={100} aria-valuenow={Math.round(progressOf(step) * 100)}>
-        <i style={{ width: `${progressOf(step) * 100}%` }} />
+    <div className={`ob-head ${scene && sceneShows(scene.kind) ? 'scenic' : ''}`}>
+      {scene && <Scene key={step} {...scene} className="ob-scene" />}
+      <div className="ob-top">
+        <button className="header-back" onClick={back} aria-label="Back"><Icon name="arrow-left" /></button>
+        <div className="ob-progress" role="progressbar" aria-label="Setup progress" aria-valuemin={0} aria-valuemax={100} aria-valuenow={Math.round(progressOf(step) * 100)}>
+          <i style={{ width: `${progressOf(step) * 100}%` }} />
+        </div>
       </div>
     </div>
   );
@@ -148,7 +176,6 @@ export default function Onboarding({ onDone, play = null }) {
       <Screen className="onboard">
         {top}
         <div className="scroll ob-body">
-          <Scene key={step} {...sceneFor(step)} className="ob-scene" />
           <h1 className="ob-q d">{QUESTION.games.q}</h1>
           <p className="ob-sub">{QUESTION.games.sub}</p>
           <div className="ob-tiles">
@@ -177,7 +204,6 @@ export default function Onboarding({ onDone, play = null }) {
       <Screen className="onboard">
         {top}
         <div className="scroll ob-body">
-          <Scene key={step} {...sceneFor(step)} className="ob-scene" />
           <h1 className="ob-q d">{q.q}</h1>
           <div role="radiogroup" aria-label={q.q}>
             {q.options.map(o => {
@@ -271,23 +297,36 @@ export default function Onboarding({ onDone, play = null }) {
     );
   }
 
-  // "Here's your group": what they told us, what's ready, then the next round
+  // "All set": who you are, what you told us (each line checked off), what's ready, then the next round
   const rows = [
-    ['Plays', gameList(a.games)],
-    ['Size', sizeLabel(a.size)],
-    ['Settles', settleLabel(a.settle)],
-    ['Math', 'Birdie Bank'],
+    ['Your games', gameList(a.games)],
+    ['Usually', sizeLabel(a.size)],
+    ['Settling up', settleLabel(a.settle)],
+    ['The math', 'Birdie Bank, every time'],
   ];
+  const first = name.trim();
   return (
     <Screen className="onboard">
       {top}
       <div className="scroll ob-body">
-        <h1 className="ob-q d">Here’s your group, {name.trim()}</h1>
-        <div className="block ob-card">
-          <div className="ob-card-head"><span className="eyebrow">Your group</span><span className="chip pink">You’re the bank</span></div>
-          {rows.map(([k, v]) => <div key={k} className="ready-row"><span>{k}</span><b>{v || '–'}</b></div>)}
+        <div className="eyebrow">All set</div>
+        <h1 className="ob-q d">{first}, your group is ready.</h1>
+        <div className="block ob-review">
+          <div className="ob-review-me">
+            <Avatar name={first} model={buddy ? buddyAvatar(buddy) : null} size="lg" className="ob-review-av" />
+            <div className="row-main">
+              <div className="li-name">{first}</div>
+              <div className="li-sub">Runs the group{index != null ? ` · ${formatIndex(index)} index` : ''}</div>
+            </div>
+          </div>
+          {rows.map(([k, v], i) => (
+            <div key={k} className="ob-review-row" style={{ '--i': i }}>
+              <div className="row-main"><div className="ob-review-k">{k}</div><div className="ob-review-v">{v || '–'}</div></div>
+              <Icon name="check-circle" fill className="ob-review-tick" />
+            </div>
+          ))}
         </div>
-        <ul className="block pw-list">
+        <ul className="pw-list ob-ready">
           {readyLines(a).map(t => <li key={t}><Icon name="check-circle" fill /> {t}</li>)}
         </ul>
         <p className="ob-sub">Pick the day and the course, suggest a game and a bet, and the group votes from one link. About 30 seconds.</p>
@@ -300,43 +339,82 @@ export default function Onboarding({ onDone, play = null }) {
   );
 }
 
-/** A made-up live money bar, so the payoff shows what the money looks like mid-round. */
+/**
+ * A made-up round in progress, drawn as a phone on the table (tilted, in a bezel, with a sticker)
+ * so it reads as a picture of the app and not a piece of UI to tap: the money after hole 4.
+ */
 function SampleMoney({ game }) {
   const rows = [['You', 15], ['Mike', 5], ['Dave', -5], ['Sam', -15]];
   return (
-    <div className="block ob-sample" role="group" aria-label="Example: the money after hole 4">
-      <div className="ob-card-head"><span className="eyebrow">The money · hole 4</span><span className="eyebrow">{GAMES[game]?.name}</span></div>
-      <div className="ob-money">
-        {rows.map(([n, v], i) => (
-          <div key={n} className={`ob-cell ${i === 0 ? 'lead' : ''}`}>
-            <div className="li-sub">{n}</div>
-            <div className={`ob-amt ${v > 0 ? 'up' : 'down'}`}>{money(v, { sign: true })}</div>
+    <div className="ob-mock" role="img" aria-label={`Example: ${GAMES[game]?.name || 'the game'} after hole 4, you up ${money(15)}, Mike up ${money(5)}, Dave down ${money(5)}, Sam down ${money(15)}`}>
+      <div className="ob-phone">
+        <div className="ob-phone-screen">
+          <div className="ob-phone-bar"><span>Hole 4</span><span>{GAMES[game]?.name}</span></div>
+          <div className="ob-money">
+            {rows.map(([n, v], i) => (
+              <div key={n} className={`ob-cell ${i === 0 ? 'lead' : ''}`}>
+                <div className="li-sub">{n}</div>
+                <div className={`ob-amt ${v > 0 ? 'up' : 'down'}`}>{money(v, { sign: true })}</div>
+              </div>
+            ))}
           </div>
-        ))}
+          <div className="ob-phone-holes">{Array.from({ length: 9 }, (_, h) => <i key={h} className={h < 4 ? 'on' : ''} />)}</div>
+        </div>
+      </div>
+      <span className="chip pink ob-mock-tag">Live, hole by hole</span>
+    </div>
+  );
+}
+
+/**
+ * The group as a ring of buddies, twice: every IOU between them as a tangle of grey lines, then
+ * the few pink payments that square it. The numbers say how many; the picture says why it's easier.
+ */
+function FewestPayments({ size }) {
+  const m = settleMath(size);
+  // Two of you: one debt, one payment, so there's nothing to show being cut down
+  if (m.debts <= m.payments) return null;
+  const n = m.people;
+  const who = BUDDIES.filter(b => b.shelf === 'buddies').map(b => b.id);
+  const sz = n <= 4 ? 30 : n <= 8 ? 22 : 19;
+  const R = 60 - sz / 2 - 2;
+  const pts = Array.from({ length: n }, (_, i) => { const t = -Math.PI / 2 + (i * 2 * Math.PI) / n; return [60 + R * Math.cos(t), 60 + R * Math.sin(t)]; });
+  const nodes = pts.map(([x, y], i) => <BuddyFigure key={i} id={who[i % who.length]} x={x - sz / 2} y={y - sz / 2} size={sz} />);
+  const pairs = [];
+  for (let i = 0; i < n; i++) for (let j = i + 1; j < n; j++) pairs.push([i, j]);
+  // A payment runs from each of the others to the one who's up, stopping short of the ball
+  const toward = ([x1, y1], [x2, y2], back) => { const d = Math.hypot(x2 - x1, y2 - y1); return [x2 - ((x2 - x1) / d) * back, y2 - ((y2 - y1) / d) * back]; };
+  return (
+    <div className="ob-iou" role="img" aria-label={`${m.debts} possible IOUs between ${n} of you, cut to ${m.payments} payments`}>
+      <div className="ob-iou-side">
+        <svg viewBox="0 0 120 120" aria-hidden="true" focusable="false">
+          <g stroke="var(--mute-soft)" strokeWidth="2" strokeLinecap="round" strokeDasharray="3 4" opacity=".8">{pairs.map(([i, j]) => <path key={`${i}${j}`} d={`M${pts[i][0]} ${pts[i][1]} L${pts[j][0]} ${pts[j][1]}`} />)}</g>
+          {nodes}
+        </svg>
+        <b className="ob-iou-n d">{m.debts}</b><span className="li-sub">IOUs to untangle</span>
+      </div>
+      <Icon name="arrow-right" className="ob-iou-arrow" />
+      <div className="ob-iou-side on">
+        <svg viewBox="0 0 120 120" aria-hidden="true" focusable="false">
+          <defs><marker id="ob-iou-head" viewBox="0 0 8 8" refX="6" refY="4" markerWidth="5" markerHeight="5" orient="auto-start-reverse"><path d="M0 0 L8 4 L0 8Z" fill="var(--pink-fill)" /></marker></defs>
+          <g stroke="var(--pink-fill)" strokeWidth="2.6" strokeLinecap="round" markerEnd="url(#ob-iou-head)">{pts.slice(1).map((p, i) => { const [x2, y2] = toward(p, pts[0], sz / 2 + 5); const [x1, y1] = toward(pts[0], p, sz / 2 + 2); return <path key={i} d={`M${x1} ${y1} L${x2} ${y2}`} />; })}</g>
+          {nodes}
+        </svg>
+        <b className="ob-iou-n d">{m.payments}</b><span className="li-sub">payments, and it’s square</span>
       </div>
     </div>
   );
 }
 
-/** Debts between the group against the payments that square them. */
-function FewestPayments({ size }) {
-  const m = settleMath(size);
-  // Two of you: one debt, one payment, so there's nothing to show being cut down
-  if (m.debts <= m.payments) return null;
-  return (
-    <div className="block ob-sample ob-fewest">
-      <div><div className="ob-big d">{m.debts}</div><div className="li-sub">possible debts between {m.people} of you</div></div>
-      <Icon name="arrow-right" />
-      <div><div className="ob-big d">{m.payments}</div><div className="li-sub">payments at most to square up</div></div>
-    </div>
-  );
-}
-
+/** The four jobs, each with "You" crossed out and a Birdie Bank stamp slapped over it, one after another. */
 function FourJobs() {
   return (
-    <ul className="block pw-list ob-sample">
-      {['Set up the game', 'Keep the card', 'Do the math', 'Chase the payments'].map(t => (
-        <li key={t}><Icon name="check-circle" fill /> <span style={{ flex: 1 }}>{t}</span><span className="li-sub">Birdie Bank</span></li>
+    <ul className="block ob-jobs" aria-label="The four jobs, all Birdie Bank’s now: set up the game, keep the card, do the math, chase the payments">
+      {['Set up the game', 'Keep the card', 'Do the math', 'Chase the payments'].map((t, i) => (
+        <li key={t} style={{ '--i': i }}>
+          <span className="ob-job-name">{t}</span>
+          <span className="ob-job-who" aria-hidden="true"><s className="ob-job-you">You</s><b className="ob-stamp d">Birdie Bank</b></span>
+        </li>
       ))}
     </ul>
   );

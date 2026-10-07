@@ -125,6 +125,27 @@ const SCENES = {
     <rect x="80" y="160" width="14" height="12" rx="3" fill={OCHRE} /><rect x="324" y="160" width="14" height="12" rx="3" fill={CORAL} />
     <g><circle cx="134" cy="192" r="16" fill={INK} /><circle cx="134" cy="192" r="7" fill={BALL} /><circle cx="284" cy="192" r="16" fill={INK} /><circle cx="284" cy="192" r="7" fill={BALL} /></g>
   </>),
+  // Doing the math: one of the group at the patio table with the card and a calculator, the
+  // others waiting on the number. A stand-in until the outside drawing lands (it's pulled, so
+  // the app never shows this one).
+  scorecard: ({ ids }) => (<>
+    <rect width="400" height="240" fill="var(--sc-sky)" />
+    <Sun cx={340} cy={50} />
+    <Cloud x={80} y={44} s={0.8} />
+    <path d="M0 140 Q120 112 240 132 T400 126 V240 H0Z" fill="var(--sc-hill)" />
+    <Tree x={40} y={132} /><Tree x={370} y={126} s={0.9} />
+    <rect x="0" y="168" width="400" height="72" fill="var(--sc-stone)" />
+    <g stroke="rgba(10,10,10,.08)" strokeWidth="2">{[188, 206, 224].map(y => <path key={y} d={`M0 ${y} H400`} />)}</g>
+    <path d="M200 150 V226" {...line} strokeWidth="4" />
+    <path d="M110 150 Q200 92 290 150 Q245 142 200 150 Q155 142 110 150Z" fill={PINK} />
+    <ellipse cx="200" cy="206" rx="70" ry="13" fill={OCHRE} />
+    <ellipse cx="200" cy="202" rx="70" ry="13" fill="#f2cf6a" />
+    <g transform="rotate(-6 176 198)"><rect x="150" y="184" width="52" height="28" rx="3" fill="#fff" stroke="rgba(10,10,10,.2)" strokeWidth="2" /><rect x="150" y="184" width="52" height="7" rx="3" fill="var(--sc-glass)" /><g stroke="rgba(10,10,10,.14)" strokeWidth="1.4">{[196, 203].map(y => <path key={y} d={`M154 ${y} H198`} />)}</g></g>
+    <g transform="rotate(8 230 200)"><rect x="218" y="188" width="24" height="26" rx="4" fill={TEAL} /><rect x="221" y="191" width="18" height="7" rx="1.5" fill="var(--sc-glass)" /><g fill={BALL}>{[0, 1, 2].map(r => [0, 1, 2].map(c => <circle key={`${r}${c}`} cx={224 + c * 6} cy={203 + r * 4} r="1.4" />))}</g></g>
+    <Row ids={ids.slice(0, 1)} cx={200} ground={190} size={56} />
+    <Row ids={ids.slice(1, 3)} cx={92} ground={228} size={58} gap={10} />
+    <Row ids={ids.slice(3, 4)} cx={320} ground={228} size={58} />
+  </>),
 };
 
 const DEFAULT_IDS = ['visor', 'snapback', 'bucket', 'flatcap', 'beanie'];
@@ -141,6 +162,12 @@ export function SceneArt({ kind = 'course', ids = DEFAULT_IDS }) {
  * (src/art/scenes/<kind>.svg) replaces the hand-drawn one; a pulled scene with no file draws
  * nothing. Decorative: screen readers skip it.
  */
+/** Whether a scene draws anything right now: it's hand-drawn and not pulled, or its outside file has landed. */
+// eslint-disable-next-line react-refresh/only-export-components
+export function sceneShows(kind) {
+  return !!artFile('scenes', kind) || !PULLED_SCENES.has(kind);
+}
+
 export function Scene({ kind = 'course', ids = DEFAULT_IDS, className = '' }) {
   const file = artFile('scenes', kind);
   if (!file && PULLED_SCENES.has(kind)) return null;

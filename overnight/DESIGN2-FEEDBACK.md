@@ -47,16 +47,16 @@ Order within each group is build order. "Mobbin" marks items to research there f
 4. [x] (2026-10-07) Game art colour fixes meanwhile (or wait for the outside set): Skins and Banker coins on the ochre backdrop, Stableford star on lavender, Wolf redrawn. **Done meanwhile:** coins a shade lighter (`#ffd45c`) with an ink edge on Banker and Skins, the Stableford star the same, Wolf redrawn as a wolf's head under the moon. All replaceable by files.
 
 ### B. Onboarding
-5. [ ] Welcome: no scrolling in any direction on any phone size (a horizontal scroll bar shows now); less crammed; illustration smaller or the title over it once the art allows.
-6. [ ] Welcome game tags: floaty idle motion and a wiggle on tap (they look tappable).
-7. [ ] Question steps: the scene runs to the very top of the phone, behind the status bar and the progress bar (open sky up there), not cropped under them.
-8. [ ] Group-size scene shows four golfers, not five.
-9. [ ] Payoff "Nice": better eyebrow; the guide ball must not vanish into the background; replace the money-on-the-hole UI block with a mock-up (illustrated phone with a scorecard, in the chosen art style) or a scene.
-10. [ ] Payoff "Settling up": fix the high five (hard to read, the motion lines have no contrast); rethink the "6 debts to 3 payments" graphic.
-11. [ ] Payoff "Math": its own illustration, not the clubhouse again.
-12. [ ] Payoff "So you're the bank": better eyebrow than "About that"; the "Birdie Bank x4" card becomes a fun stylized moment, not a plain list.
-13. [ ] Green check marks (review step and everywhere the same colour is used): a bright, playful green, not near-black.
-14. [ ] Final review step ("Your group", floating "You're the bank" tag): Mobbin review-screen examples, then redesign; drop or reword the tag.
+5. [x] (2026-10-07) Welcome: no scrolling in any direction on any phone size (a horizontal scroll bar shows now); less crammed; illustration smaller or the title over it once the art allows. **Done:** the body never scrolls; the scene (once its file lands) stretches the full width instead of growing past it, at 30% of the height and no more than 260px; smaller title and text on phones under 700px tall. The title stays below the scene until the art is made for text over it.
+6. [x] (2026-10-07) Welcome game tags: floaty idle motion and a wiggle on tap (they look tappable). **Done:** each tag drifts on its own beat, and wiggles when tapped; still nothing to tap through to.
+7. [x] (2026-10-07) Question steps: the scene runs to the very top of the phone, behind the status bar and the progress bar (open sky up there), not cropped under them. **Done:** the onboarding screens start at the top edge of the phone; a question's scene is 208px plus the status bar, with the back button and the progress bar over its sky. Checked with a stand-in file; the pulled scenes still draw nothing until theirs land.
+8. [x] (2026-10-07) Group-size scene shows four golfers, not five. **Done.**
+9. [x] (2026-10-07) Payoff "Nice": better eyebrow; the guide ball must not vanish into the background; replace the money-on-the-hole UI block with a mock-up (illustrated phone with a scorecard, in the chosen art style) or a scene. **Done:** eyebrow is "Rules handled"; the three face balls sit smaller on a coloured plate (mint, peach, lavender) at guide size, and stay plain at 52px on How was it?; the money is now on a tilted phone in a teal bezel with a "Live, hole by hole" sticker, so it reads as a picture (built in HTML, so it isn't on the art sheet).
+10. [x] (2026-10-07) Payoff "Settling up": fix the high five (hard to read, the motion lines have no contrast); rethink the "6 debts to 3 payments" graphic. **Done:** the two buddies lean in with arms up to one clap, ink motion lines and a pink star (still hand-drawn, a file replaces it); the graphic is the group as a ring twice: a dashed grey tangle of every IOU, then the pink payments into the one who's up, with the numbers under each.
+11. [x] (2026-10-07) Payoff "Math": its own illustration, not the clubhouse again. **Done:** the math question gets its own scene id, `scenes/scorecard` (one at the table with the card and a calculator, the others waiting). It's pulled from the start, so nothing shows until its file lands; the sheet carries the brief and a stand-in.
+12. [x] (2026-10-07) Payoff "So you're the bank": better eyebrow than "About that"; the "Birdie Bank x4" card becomes a fun stylized moment, not a plain list. **Done:** eyebrow is "The math"; each job gets "You" struck through and a pink Birdie Bank stamp slapped over it, one after another.
+13. [x] (2026-10-07) Green check marks (review step and everywhere the same colour is used): a bright, playful green, not near-black. **Done:** a `--check` token (`#15a04c` light, 3.4:1 on white; `#4ade80` dark) on every check-circle list mark, the shipped stamps, the booked rows, the request-course done mark and the review ticks. Money stays on `--win`.
+14. [x] (2026-10-07) Final review step ("Your group", floating "You're the bank" tag): Mobbin review-screen examples, then redesign; drop or reword the tag. **Done:** Mobbin's Tonal, Structured, Liven and stoic end-of-setup screens all do the same thing: a headline that says it's ready, then each answer as a labelled row with a check. Now: eyebrow "All set", "Sam, your group is ready.", a card with your Ball buddy, name and "Runs the group" (the tag is gone), then Your games / Usually / Settling up / The math as labelled rows that tick in green one after another, the ready list under it.
 
 ### C. Setup and Round ready
 15. [ ] Course search: clear the input once a course is picked.
@@ -84,3 +84,10 @@ Order within each group is build order. "Mobbin" marks items to research there f
 - **Files replace, never mix:** an outside spot replaces the plate too, an outside scene replaces the dusk tokens (add a `.dark.svg` for dusk), an outside buddy sits on the backdrop the player picked. `crowd` and `highfive` are hand-drawn from the group's own buddies; a file is one picture for everyone, which is fine for the empty states and payoffs they're on.
 - **First screen JS:** 508.6 kB, up 2.7 kB from 506.0 kB before this (the hooks in Spot, Scenes, GameArt and BuddyArt); both over the 481 kB budget the design pass already passed. Worth a look before merge, not caused here.
 - **Open for Trevor:** keep the road trip scene on the Trip screen, or pull it too? The small guide balls on the payoff steps (the "Nice" ball that vanishes, the high five) stay for group B.
+
+## Group B notes (2026-10-07)
+
+- Every step now opens scrolled to the top (the name step scrolled to the age question used to carry over to the review).
+- The question scenes are still pulled, so the top-edge layout only shows once `src/art/scenes/<kind>.svg` lands; a stand-in file proved it on the games and size questions. Over a sky the progress track is a faint dark band so it reads.
+- First screen JS: 508.15 kB, 0.45 kB under group A's 508.6 (the welcome lost its tag list literal). Still over the 481 kB budget from before this pass.
+- **Open for Trevor:** the high five and the phone mock-up are hand-made stand-ins in the clay style; the sheet lists the high five (a file replaces it), the phone is HTML and isn't on the sheet. The math question's new scene has no drawing at all until the outside one comes.

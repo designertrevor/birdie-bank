@@ -120,7 +120,7 @@ export function payoff(step, a = {}) {
   if (step === 'p-games') {
     const n = Object.keys(GAMES).length;
     return {
-      eyebrow: 'Nice',
+      eyebrow: 'Rules handled',
       title: `${gameList(a.games)}. Good taste.`,
       text: `Birdie Bank knows the rules for all ${n} games, carryovers and presses included. You tap scores, and the money keeps up hole by hole.`,
     };
@@ -144,7 +144,7 @@ export function payoff(step, a = {}) {
     }[a.math];
     if (!title) return null;
     return {
-      eyebrow: 'About that',
+      eyebrow: 'The math',
       title,
       text: 'Someone sets up the game, keeps the card, does the math and chases the payments. Birdie Bank does all four. Your group joins free from a link, no download.',
     };
