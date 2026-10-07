@@ -98,7 +98,7 @@ export default function ArtSheet() {
         <p>A new set drops in as one file per drawing, named as each card says, in <code>src/art/&lt;kind&gt;/</code>. SVG first (it scales and takes the theme), PNG or WebP at 3x if it must be a bitmap. Add <code>&lt;id&gt;.dark.svg</code> beside any drawing that needs its own dark version. The app picks each file up with no code change; a drawing with no file stays hand-drawn. Details in <code>src/art/README.md</code>.</p>
         <p className="as-style">The look so far: flat colour, soft rounded shapes, ink outlines on faces and details, the smiley golf ball as the hero, nothing photographic. The palette:</p>
         <div className="as-swatches">{PALETTE.map(([n, hex]) => <span key={hex} className="as-swatch"><i style={{ background: hex }} />{n} <code>{hex}</code></span>)}</div>
-        <p className="as-style">Surfaces the drawings sit on: light canvas <code>#fffaf0</code> and cards <code>#ffffff</code>; dark canvas <code>#121615</code> and cards <code>#1a1f1e</code>.</p>
+        <p className="as-style">Surfaces the drawings sit on: light canvas <code>#f8f2e4</code> and cards <code>#ffffff</code>; dark canvas <code>#0f1413</code> and cards <code>#1e2524</code>.</p>
       </section>
 
       <Section kind="scenes" count={scenes.length}>

@@ -20,7 +20,7 @@ src/art/
 - `.svg` first: it scales to every size the app shows it at and stays crisp. `.png` or `.webp`
   (at 3x the box, so 360px for a 120 box) when it has to be a bitmap.
 - `<id>.dark.svg` (or `.dark.png`) beside a drawing gives the dark theme its own version. Without
-  it, the one file shows in both themes, so check it on the dark canvas (`#121615`, cards `#1a1f1e`).
+  it, the one file shows in both themes, so check it on the dark canvas (`#0f1413`, cards `#1e2524`).
 - A kind or id the app doesn't know is ignored. A drawing with no file stays hand-drawn.
 - Nothing else to do: Vite finds the files at build time (`src/lib/art-files.js`). Reload the dev
   server's page after adding a file.
