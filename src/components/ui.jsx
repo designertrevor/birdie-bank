@@ -122,7 +122,7 @@ export function Sheet({ open, onClose, title, children, className = 'sheet' }) {
         {title && (
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '12px 16px 4px 20px' }}>
             <span className="d" style={{ fontSize: 22, fontWeight: 800 }}>{title}</span>
-            {onClose && <button className="icon-btn" onClick={onClose} aria-label="Close"><Icon name="x" /></button>}
+            {onClose && <button className="icon-btn sheet-close" onClick={onClose} aria-label="Close"><Icon name="x" /></button>}
           </div>
         )}
         {children}

@@ -402,21 +402,50 @@ a.set-row { text-decoration: none; }
 }
 .ec:active { transform: translateY(5px); box-shadow: 0 1px 0 var(--pink); }
 
-/* BOTTOM SHEETS */
+/* BOTTOM SHEETS: a floating card inset from the sides and bottom, rounded like the phone's own corners.
+   The sheet has its own raised surface (white in light mode, a clearly lighter gray in dark mode) over a scrim that
+   dims the page, so the sheet's edge always reads. Inside a sheet the page tokens are swapped for sheet ones, so a
+   card, a chip or a "same as the background" ring sits right on the new surface without each screen knowing. */
+:root {
+  --scrim: rgba(10,26,26,.45);
+  --sheet-bg: #ffffff; --sheet-card: #f7f2e6; --sheet-surface: #f5f0e0; --sheet-surface-strong: #ebe6d6;
+  --sheet-edge: transparent; --sheet-shadow: 0 18px 48px rgba(10,26,26,.22), 0 2px 8px rgba(10,26,26,.08);
+  --sheet-radius: 30px; --sheet-gap: 12px;
+}
+:root[data-theme="dark"] {
+  --scrim: rgba(0,0,0,.62);
+  --sheet-bg: #1f2625; --sheet-card: #252c2b; --sheet-surface: #2c3331; --sheet-surface-strong: #333b39;
+  --sheet-edge: rgba(255,255,255,.09); --sheet-shadow: 0 18px 48px rgba(0,0,0,.5);
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]):not([data-theme="dark"]) {
+    --scrim: rgba(0,0,0,.62);
+    --sheet-bg: #1f2625; --sheet-card: #252c2b; --sheet-surface: #2c3331; --sheet-surface-strong: #333b39;
+    --sheet-edge: rgba(255,255,255,.09); --sheet-shadow: 0 18px 48px rgba(0,0,0,.5);
+  }
+}
 .sheet-overlay, .numpad-overlay {
-  position: absolute; inset: 0; background: rgba(10,26,26,.45); z-index: 100; display: none; align-items: flex-end;
+  position: absolute; inset: 0; background: var(--scrim); z-index: 100; display: none; align-items: flex-end; justify-content: center;
+  padding: calc(env(safe-area-inset-top) + var(--sheet-gap)) calc(env(safe-area-inset-right) + var(--sheet-gap))
+    calc(env(safe-area-inset-bottom) + var(--sheet-gap)) calc(env(safe-area-inset-left) + var(--sheet-gap));
 }
 .sheet-overlay.open, .numpad-overlay.open { display: flex; animation: fadeIn .2s ease-out; }
 .sheet-overlay.open > *, .numpad-overlay.open > * { animation: sheetUp .4s var(--ease-out); }
 @keyframes fadeIn { from { opacity: 0; } }
-@keyframes sheetUp { from { transform: translateY(100%); } }
+/* Starts fully below the screen: its own height plus the gap and the home bar under it */
+@keyframes sheetUp { from { transform: translateY(calc(100% + var(--sheet-gap) + env(safe-area-inset-bottom) + 8px)); } }
 .sheet, .numpad-sheet, .sc-sheet, .rules-sheet {
-  background: var(--canvas); width: 100%; border-radius: 28px 28px 0 0; padding-bottom: calc(16px + env(safe-area-inset-bottom));
+  --canvas: var(--sheet-bg); --card: var(--sheet-card); --surface: var(--sheet-surface); --surface-strong: var(--sheet-surface-strong);
+  background: var(--sheet-bg); width: 100%; max-width: 560px; max-height: 100%; border-radius: var(--sheet-radius);
+  border: 1px solid var(--sheet-edge); box-shadow: var(--sheet-shadow); padding-bottom: 16px;
 }
-.sc-sheet { max-height: 80%; overflow-y: auto; }
-/* A long plain sheet (the round menu) scrolls inside the screen instead of running off the top */
+.sc-sheet { max-height: 80%; overflow-y: auto; overscroll-behavior: contain; }
+/* A long plain sheet (the round menu) scrolls inside the card instead of running off the top */
 .sheet { max-height: 90%; overflow-y: auto; overscroll-behavior: contain; }
-.rules-sheet { max-height: 85%; overflow-y: auto; }
+.rules-sheet { max-height: 85%; overflow-y: auto; overscroll-behavior: contain; }
+.numpad-sheet { overflow-y: auto; }
+/* The close X in a sheet's title row, in the accent color like iOS sheets */
+.sheet-close { color: var(--pink-text); }
 .sheet-handle { width: 40px; height: 5px; background: var(--surface-strong); margin: 10px auto 0; border-radius: 3px; }
 .sheet-title { font-family: var(--display); font-size: 22px; font-weight: 800; color: var(--ink); padding: 14px 20px 10px; }
 .sheet-item {
