@@ -124,6 +124,11 @@ export default function Settings() {
       showToast('Backup restored');
     }
   };
+  // Back to the welcome and the set-up questions (a tester's way to see them again); nothing else changes
+  const startOver = async () => {
+    if (!(await ask({ title: 'Start over?', text: 'You’ll see the welcome and the set-up questions again. Your rounds, players and the Tab stay as they are.', confirmLabel: 'Start over' }))) return;
+    update(s => { s.onboarded = false; });
+  };
   const reset = async () => {
     if (!(await ask({ title: 'Erase everything?', text: 'All players, crews, rounds and payments on this phone will be deleted. Make a backup first if you might want them.', confirmLabel: 'Erase all data', danger: true }))) return;
     resetAll();
@@ -149,6 +154,8 @@ export default function Settings() {
             <div className="row-main"><div className="set-name">{acct.user.email}</div><div className="set-sub">{syncLabel(acct)}</div></div>
           </div>
         ) : row('cloud-arrow-up', 'Save your rounds', 'Sign in to back up and use any device', () => setSigningIn(true)))}
+        {accountsEnabled && acct.user && row('sign-out', 'Sign out', 'Everything stays saved in your account', logOut)}
+        {row('arrow-counter-clockwise', 'Start over', 'See the welcome and set-up questions again', startOver)}
         {/* The one-time age answer for money rounds (age.js), changeable here */}
         {me && row('identification-card', 'Playing for money', ageLine(state), async () => {
           const answer = await checkAge({ force: true });
@@ -217,9 +224,7 @@ export default function Settings() {
           <span className="chevron"><Icon name="envelope-simple" /></span>
         </a>
         {row('info', 'About Birdie Bank', 'Rules, handicaps and the fine print', () => nav.push('about'))}
-        {acct.user
-          ? <button className="danger-link" onClick={logOut}><Icon name="sign-out" /> Sign out</button>
-          : <button className="danger-link" onClick={reset}><Icon name="trash" /> Erase all data</button>}
+        {!acct.user && <button className="danger-link" onClick={reset}><Icon name="trash" /> Erase all data</button>}
         {acct.user && <DeleteAccountButton />}
       </div>
       {signingIn && <SignInSheet open onClose={() => setSigningIn(false)} />}

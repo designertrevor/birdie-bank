@@ -2,9 +2,12 @@
    BIRDIE BANK: Clay-inspired theme
    ============================================================ */
 :root {
-  --canvas: #fffaf0; --surface: #f5f0e0; --surface-strong: #ebe6d6; --card: #ffffff;
+  /* The page is a tone deeper than the white cards (as Klarna, Notion and Wabi do it), and cards
+     carry a soft lift, so a card reads as a card without an outline */
+  --canvas: #f8f2e4; --surface: #efe8d6; --surface-strong: #e3dcc8; --card: #ffffff;
+  --card-shadow: 0 1px 2px rgba(74, 52, 14, .05), 0 6px 18px rgba(74, 52, 14, .07);
   --ink: #0a0a0a; --body: #3a3a3a; --mute: #6a6a6a; --mute-soft: #9a9a9a;
-  --line: #ebe6d6; --line-soft: #f2edde;
+  --line: #e6dfcb; --line-soft: #ede6d4;
   --pink: #ff4d8b; --teal: #1a3a3a; --lav: #b8a4ed; --peach: #ffb084;
   --ochre: #e8b94a; --mint: #a4d4c5; --coral: #ff6b5a;
   /* Scenes (Scenes.jsx): the setting's colours, dusk in the dark theme */
@@ -567,6 +570,16 @@ a.set-row { text-decoration: none; }
 
 /* Inline-block wrappers used across screens */
 .block { padding: 16px; margin: 0 16px 10px; background: var(--card); border-radius: 20px; }
+/* Card lift: every card on the page (the ones on --card) takes the theme's --card-shadow, a soft drop in
+   light mode and a faint edge in the dark. :where() keeps a card's own box-shadow in charge, and a
+   sheet's cards sit on the sheet's own tone instead */
+:where(.block, .set-row:not(.feedback-cta), .list-item, .upcoming-card, .uc-wrap, .game-row:not(.locked), .pcard, .toggle-row, .callout:not(.soft), .usual-card,
+  .ledger-row, .pay-row, .tab-card, .stat-tiles > div, .chart-card, .invite-card, .hist-row.card, .money-card, .game-tile, .recap-card, .talk-card,
+  .ch-card, .remind-card, .rival-card, .trip-table, .rm-card, .as-card, .menu-tile, .pf-tile, .badge-tile, .more-tile, .money-bar, .marks-card,
+  .pay-card, .rv-card, .nassau-bet-row, .leg-row, .h2h-item, .ledger-summary > div, .vegas-panel, .seat-tile, .who-list, .usual-row, .lately-list,
+  .fr-hero, .fr-board, .cal, .first-steps, .people-empty, .stand-group, .nice-card, .rsvp-btn, .resume-card, .round-card) { box-shadow: var(--card-shadow); }
+.uc-wrap .upcoming-card { box-shadow: none; }
+.sheet { --card-shadow: none; }
 .note { padding: 12px 16px; margin: 0 16px 10px; background: var(--surface); border-radius: 18px; }
 
 /* TOAST */
@@ -628,7 +641,7 @@ button:disabled { cursor: not-allowed; }
 /* A quiet note: no box, the icon in a small round chip, the words in body text. The warn kind keeps
    its fill, so a real heads-up still stands out. Big moments use the Callout (ui.jsx) instead. */
 .hint-card { margin: 0 16px 10px; padding: 2px 4px 2px 0; border-radius: 16px; background: transparent; color: var(--body); font-size: 14px; line-height: 1.45; display: flex; gap: 10px; align-items: flex-start; }
-.hint-card > i:first-child { width: 30px; height: 30px; border-radius: 50%; background: var(--surface); color: var(--icon); font-size: 16px; display: grid; place-items: center; margin-top: -4px; flex-shrink: 0; }
+.hint-card > i:first-child { width: 28px; height: 28px; border-radius: 50%; background: var(--surface); color: var(--icon); font-size: 17px; display: grid; place-items: center; margin-top: -4px; flex-shrink: 0; }
 .hint-card i { color: var(--icon); flex-shrink: 0; }
 .hint-card.warn { padding: 12px 14px; }
 .hint-card.warn > i:first-child { width: auto; height: auto; background: none; margin-top: 1px; font-size: 18px; }
@@ -833,22 +846,26 @@ button:disabled { cursor: not-allowed; }
    DARK THEME: Settings > Appearance (system / light / dark)
    ============================================================ */
 :root[data-theme="dark"] {
-  --canvas: #121615; --surface: #202624; --surface-strong: #2c3331; --card: #1a1f1e;
+  /* Cards sit about eight lightness points above a near-black page (Revolut, Orbit and Tabby's
+     dark modes), with a faint edge instead of a shadow, which can't show in the dark */
+  --canvas: #0f1413; --surface: #283030; --surface-strong: #353e3c; --card: #1e2524;
+  --card-shadow: inset 0 0 0 1px rgba(255, 255, 255, .05);
   --ink: #f5f0e4; --body: #d5d0c3; --mute: #a8a498; --mute-soft: #a09c90;
   --sc-sky: #1c2a3a; --sc-sun: #f3e7c4; --sc-cloud: #2e3d4d; --sc-hill: #1f4a3f; --sc-tree: #153a2e; --sc-trunk: #3b2a1c; --sc-rough: #245245; --sc-grass: #2f6a58; --sc-green: #3a7a64; --sc-sand: #6b5d3a;
   --sc-wall: #2a2f2e; --sc-door: #3a3330; --sc-stone: #1f2423; --sc-road: #2a2e2d; --sc-snow: #c8d4dc; --sc-glass: #30475a;
-  --line: #2c3331; --line-soft: #242a28;
+  --line: #303937; --line-soft: #283030;
   --teal: #173d3c; --icon: var(--mint); --pink-text: var(--pink); --coral-text: var(--coral); --focus: var(--lav); --win: #6fd3a8; --win-bg: #173a2e; --loss: #ff8a7d; --loss-bg: #3d1f1c; --check: #4ade80;
   --on-ink: #0a0a0a; --bkr-card: #2e2a1c; --cur-cell: #3a2030; --pick-tint: #3a1d29;
   color-scheme: dark;
 }
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]):not([data-theme="dark"]) {
-  --canvas: #121615; --surface: #202624; --surface-strong: #2c3331; --card: #1a1f1e;
+  --canvas: #0f1413; --surface: #283030; --surface-strong: #353e3c; --card: #1e2524;
+  --card-shadow: inset 0 0 0 1px rgba(255, 255, 255, .05);
   --ink: #f5f0e4; --body: #d5d0c3; --mute: #a8a498; --mute-soft: #a09c90;
   --sc-sky: #1c2a3a; --sc-sun: #f3e7c4; --sc-cloud: #2e3d4d; --sc-hill: #1f4a3f; --sc-tree: #153a2e; --sc-trunk: #3b2a1c; --sc-rough: #245245; --sc-grass: #2f6a58; --sc-green: #3a7a64; --sc-sand: #6b5d3a;
   --sc-wall: #2a2f2e; --sc-door: #3a3330; --sc-stone: #1f2423; --sc-road: #2a2e2d; --sc-snow: #c8d4dc; --sc-glass: #30475a;
-  --line: #2c3331; --line-soft: #242a28;
+  --line: #303937; --line-soft: #283030;
   --teal: #173d3c; --icon: var(--mint); --pink-text: var(--pink); --coral-text: var(--coral); --focus: var(--lav); --win: #6fd3a8; --win-bg: #173a2e; --loss: #ff8a7d; --loss-bg: #3d1f1c; --check: #4ade80;
   --on-ink: #0a0a0a; --bkr-card: #2e2a1c; --cur-cell: #3a2030; --pick-tint: #3a1d29;
   color-scheme: dark;
@@ -1110,6 +1127,7 @@ button:disabled { cursor: not-allowed; }
   color: var(--mute); font-size: 14px; font-weight: 600; cursor: pointer; text-align: left;
 }
 .text-link i { color: var(--icon); }
+.cta-wrap .text-link.centered { justify-content: center; margin: -2px 0 0; padding: 8px 4px; }
 .chip-row.flush { padding: 0 0 10px; }
 .pay-acts:not(.wrap):has(> :nth-child(3)) .pay-btn { padding: 0 8px; }
 .pay-acts:not(.wrap):has(> :nth-child(3)) .pay-btn i { display: none; }
@@ -3532,7 +3550,12 @@ a.header-btn.rm-open { text-decoration: none; }
 /* Friends: who's playing right now, with a live dot */
 .fr-head { display: flex; align-items: center; justify-content: space-between; }
 .fr-live { display: inline-flex; align-items: center; gap: 6px; text-transform: none; letter-spacing: 0; font-size: 13px; color: var(--win); font-weight: 700; }
-.fr-all .fr-crowd { width: 40px; height: 40px; margin: -10px 0; }
+/* The way into the group feed is a banner: the crowd hugs the left at full size, the words beside it, the caret at the end */
+.fr-all { justify-content: flex-start; text-align: left; gap: 10px; min-height: 60px; padding: 0 14px 0 6px; margin-bottom: 8px; }
+.fr-all .fr-crowd { margin: -6px 0; flex-shrink: 0; }
+.fr-all .row-main { flex: 1; min-width: 0; }
+.fr-all > i { color: var(--mute); }
+.invite-intro { margin-top: 4px; }
 
 /* THE TAB: who the money's with and the season's line under the big number; one job per card */
 .tab-who { display: flex; align-items: center; gap: 10px; margin-top: 8px; font-size: 14px; color: var(--mute); font-weight: 600; }

@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Icon, Sheet } from './ui.jsx';
-import { sendEmailCode, signInWithGoogle, verifyEmailCode } from '../lib/cloud.js';
+import { previewBuild, sendEmailCode, signInWithGoogle, verifyEmailCode } from '../lib/cloud.js';
 
 /** Sign in with Google or an emailed link / code. */
 export function SignInSheet({ open, onClose, title = 'Save your rounds', text = 'Sign in to keep your rounds, players and the Tab safe, and pick up on any phone or computer.' }) {
@@ -21,6 +21,16 @@ export function SignInSheet({ open, onClose, title = 'Save your rounds', text = 
   const send = () => run(async () => { await sendEmailCode(email.trim()); setSentTo(email.trim()); });
   const verify = () => run(async () => { await verifyEmailCode(sentTo, code); onClose(); });
 
+  if (previewBuild) {
+    return (
+      <Sheet open={open} onClose={onClose} title="Not on a preview">
+        <div style={{ padding: '0 16px' }}>
+          <p className="sheet-text" style={{ padding: '0 4px 12px' }}>This is a preview build, so signing in isn’t switched on here: it would send you to the real app instead. Carry on without an account, or sign in at birdie-bank.vercel.app.</p>
+          <button className="full-btn" onClick={onClose}>Carry on without signing in</button>
+        </div>
+      </Sheet>
+    );
+  }
   return (
     <Sheet open={open} onClose={onClose} title={sentTo ? 'Check your email' : title}>
       <div style={{ padding: '0 16px' }}>

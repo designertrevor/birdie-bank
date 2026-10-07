@@ -7,7 +7,7 @@ import { GameArt } from '../components/GameArt.jsx';
 import { Scene, sceneShows } from '../components/Scenes.jsx';
 import { useEffect, useState } from 'react';
 import { ArtIcon, Icon, Numpad, PickChip, PickMark, PickRow, Screen } from '../components/ui.jsx';
-import { update, uid } from '../lib/store.js';
+import { getState, update, uid } from '../lib/store.js';
 import { formatIndex } from '../lib/format.js';
 import { money } from '../lib/golf.js';
 import { GAMES } from '../lib/round.js';
@@ -79,8 +79,9 @@ export default function Onboarding({ onDone, play = null }) {
   // the one the first round suggests
   const [game] = useState(() => (play ? playFromSearch(`play=${encodeURIComponent(play)}`)?.game ?? null : null));
   const [a, setA] = useState(() => ({ games: GAMES[game] ? [game] : [], size: null, settle: null, math: null }));
-  const [name, setName] = useState('');
-  const [index, setIndex] = useState(null);
+  // Starting over from Settings: you're already saved, so your name and index come filled in
+  const [name, setName] = useState(() => getState().players?.[getState().me]?.name || '');
+  const [index, setIndex] = useState(() => getState().players?.[getState().me]?.index ?? null);
   const [buddy, setBuddy] = useState(null); // a Ball buddy to start with (your profile has the rest)
   const [agreed, setAgreed] = useState(false);
   const [age, setAge] = useState(null); // 'adult' | 'under', asked when the group plays for money (age.js)
@@ -116,8 +117,11 @@ export default function Onboarding({ onDone, play = null }) {
       : paywall;
     onDone?.(routes);
     update(s => {
-      const id = uid('p_');
-      s.players[id] = { id, name: name.trim(), index, venmo: '', createdAt: Date.now() };
+      // Starting over keeps you as the same player, so your rounds and the Tab stay yours
+      const again = s.me && s.players[s.me] ? s.me : null;
+      const id = again || uid('p_');
+      if (again) { s.players[id].name = name.trim(); s.players[id].index = index; }
+      else s.players[id] = { id, name: name.trim(), index, venmo: '', createdAt: Date.now() };
       s.me = id;
       if (buddy) s.profile = { ...(s.profile || {}), avatar: buddyAvatar(buddy), updatedAt: Date.now() };
       s.organizer = organizer;

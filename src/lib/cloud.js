@@ -8,6 +8,9 @@ import { getSupabase, supabaseConfigured } from './supabase.js';
 import { applyDoc, hashAll, hashDoc, outgoing, remapId, resolve, toDocs } from './cloud-model.js';
 
 export const accountsEnabled = supabaseConfigured;
+// A Vercel preview build: sign-in bounces to the real app (its domain is the only one Supabase sends
+// people back to), so the sign-in sheet says so instead of leaving the preview
+export const previewBuild = typeof location !== 'undefined' && /\.vercel\.app$/i.test(location.hostname) && location.hostname !== 'birdie-bank.vercel.app';
 const META = 'bb-cloud';
 
 // --------------------------- status (for UI) ------------------------------

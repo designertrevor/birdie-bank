@@ -301,7 +301,7 @@ export default function NewRound({ rematch, fromPlan, present, edit = null, ahea
   // Step bar taps: any earlier step, or a later one already reached whose earlier steps are still filled in
   const canGo = i => {
     if (i <= step) return true;
-    if (i > reached || !game || !course) return false;
+    if (i > reached || !game || (!course && !planning)) return false;
     if (planning) return true;
     return i < 3 || pickedCheck(game, picked, casualIds).valid;
   };
@@ -350,7 +350,7 @@ export default function NewRound({ rematch, fromPlan, present, edit = null, ahea
     update(st => {
       if (!st.plans) st.plans = {};
       st.plans[id] = plan;
-      if (!st.favorites.includes(course.id)) st.favorites = [course.id, ...st.favorites].slice(0, 6);
+      if (course && !st.favorites.includes(course.id)) st.favorites = [course.id, ...st.favorites].slice(0, 6);
       if (replaces && st.rounds[replaces]) { delete st.rounds[replaces]; leaveRound(st, replaces); }
     });
     const paywall = onboarding && shouldShowPaywall(getState(), PAYWALL_ON) ? [['paywall', { source: 'onboarding' }]] : [];
@@ -361,14 +361,14 @@ export default function NewRound({ rematch, fromPlan, present, edit = null, ahea
   const savePlan = () => {
     editPlan(editing.id, p => {
       // A tee time booked for the old day or course comes off (tee-reminders.js)
-      rebookIfMoved(p, { date, courseId: course.id });
+      rebookIfMoved(p, { date, courseId: course?.id ?? null });
       p.date = date;
       p.teeTime = teeTime || null;
       p.holesCount = holesCount;
       p.nine = nine || 'front';
-      p.course = { id: course.id, name: course.name, city: course.city || null };
+      p.course = course ? { id: course.id, name: course.name, city: course.city || null } : null;
     }).then(r => { if (r === 'taken') showToast(PLAN_LOCKED); });
-    update(st => { if (!st.favorites.includes(course.id)) st.favorites = [course.id, ...st.favorites].slice(0, 6); });
+    update(st => { if (course && !st.favorites.includes(course.id)) st.favorites = [course.id, ...st.favorites].slice(0, 6); });
     showToast(editing.code ? 'Plan updated. Everyone with the link sees the change.' : 'Plan updated');
     nav.pop();
   };
@@ -546,14 +546,15 @@ export default function NewRound({ rematch, fromPlan, present, edit = null, ahea
       {step === 1 && planning && (
         <CourseStep editor={editor} openEditor={openEditor} closeEditor={closeEditor} courseId={courseId} setCourseId={id => { setCourseId(id); setTees({}); setStartHole(null); }} holesCount={holesCount} nine={nine} setNine={setNine} onNext={editing ? savePlan : () => setStep(2)}
           nextLabel={editing ? 'Save changes' : 'Next: Who’s invited'} nextIcon={editing ? 'check' : 'arrow-right'}
+          onSkip={editing ? savePlan : () => setStep(2)} skipLabel={editing ? 'Save without a course' : 'Decide the course later'}
           top={<>
             <WhenPicker date={date} setDate={setDate} teeTime={teeTime} setTeeTime={setTeeTime} />
             <HolesPicker game={g} holesCount={holesCount} setHolesCount={setHolesCount} />
-            <p className="field-help pad">{course ? 'The course is picked below. Change it if you need to.' : 'Then pick the course below.'}</p>
+            <p className="field-help pad">{course ? 'The course is picked below. Change it if you need to.' : 'Then pick the course below, or decide it later: the plan says the course is still to be set.'}</p>
           </>} />
       )}
-      {step === 2 && planning && course && <InviteStep invited={invited} setInvited={setInvited} onNext={() => setStep(3)} />}
-      {step === 3 && planning && course && <VoteStep game={game} holesCount={holesCount} opts={opts} onPlan={makePlan} ballot={ballot} initialSides={planSides.length ? planSides : sidesFor(game).map(sg => sg.game)} playFor={playFor} setPlayFor={setPlayFor} tripRow={tripRow} />}
+      {step === 2 && planning && <InviteStep invited={invited} setInvited={setInvited} onNext={() => setStep(3)} />}
+      {step === 3 && planning && <VoteStep game={game} holesCount={holesCount} opts={opts} onPlan={makePlan} ballot={ballot} initialSides={planSides.length ? planSides : sidesFor(game).map(sg => sg.game)} playFor={playFor} setPlayFor={setPlayFor} tripRow={tripRow} />}
       {step === 1 && !planning && <CourseStep editor={editor} openEditor={openEditor} closeEditor={closeEditor} courseId={courseId} setCourseId={id => { setCourseId(id); setTees({}); setStartHole(null); }} holesCount={holesCount} nine={nine} setNine={setNine} onNext={() => setStep(2)} />}
       {step === 2 && !planning && course && (
         <PlayersStep game={g} gameKey={game} course={course} holesCount={holesCount} nine={nine} picked={picked} setPicked={setPicked}
@@ -668,23 +669,43 @@ function GameStep({ usual, onUsual, onPickUsual, planning, onPlan, game, setGame
 // else already picked stay put (only the top screen is mounted). Loaded with Settings on first use.
 const CourseEdit = lazy(() => import('./Settings.jsx').then(m => ({ default: m.CourseEdit })));
 
-export function CourseStep({ editor, openEditor, closeEditor, courseId, setCourseId, holesCount, nine, setNine, onNext, top = null, nextLabel = 'Next: Players', nextIcon = 'arrow-right' }) {
+/**
+ * `onSkip`: planning ahead, the course can wait ("Course to be set" on the plan), so the way
+ * forward never depends on knowing it yet.
+ */
+export function CourseStep({ editor, openEditor, closeEditor, courseId, setCourseId, holesCount, nine, setNine, onNext, top = null, nextLabel = 'Next: Players', nextIcon = 'arrow-right', onSkip = null, skipLabel = 'Decide the course later' }) {
   const state = useStore();
   const [q, setQ] = useState('');
+  const searchRef = useRef(null);
   const courses = allCourses(state);
   const needle = q.trim().toLowerCase();
   // Starred, then recently played, then the rest; a search shows only what matches
   const sections = coursePickerSections(state, needle);
-  const { starred, recentLabel, hint } = sections;
+  const { recentLabel, hint } = sections;
+  // The picked course heads the list as "Your course", so it never hides in the sections below
+  const notPicked = c => c.id !== courseId;
+  const starred = sections.starred.filter(notPicked);
   // Near you sits under Favorites: saved courses show as usual rows, new ones as "add" rows.
   // A course only shows once, so near ones leave Recent and All courses.
   const near = useNearbyCourses();
   const starredIds = new Set(starred.map(c => c.id));
-  const nearRows = needle || !near.pos ? [] : mergeNear(near.courses, courses, near.pos).filter(x => !x.c || !starredIds.has(x.c.id));
+  const nearRows = needle || !near.pos ? [] : mergeNear(near.courses, courses, near.pos).filter(x => !x.c || (!starredIds.has(x.c.id) && notPicked(x.c)));
   const nearMiles = new Map(nearRows.filter(x => x.c).map(x => [x.c.id, x.miles]));
-  const recent = sections.recent.filter(c => !nearMiles.has(c.id));
-  const rest = needle ? sections.all : sections.all.filter(c => !nearMiles.has(c.id));
+  const recent = sections.recent.filter(c => !nearMiles.has(c.id) && notPicked(c));
+  const rest = (needle ? sections.all : sections.all.filter(c => !nearMiles.has(c.id))).filter(notPicked);
   const matches = needle ? rest : courses;
+  // Picking a course clears the search, so the typed letters don't sit in a box that's gone quiet,
+  // and brings the search and "Your course" back into view
+  const pick = id => {
+    setCourseId(id);
+    if (!id) return;
+    setQ('');
+    requestAnimationFrame(() => searchRef.current?.scrollIntoView({ block: 'start', behavior: 'smooth' }));
+  };
+  const toSearch = () => {
+    searchRef.current?.scrollIntoView({ block: 'start', behavior: 'smooth' });
+    searchRef.current?.focus({ preventScroll: true });
+  };
   // Starring moves the row to another section, so a short toast says where it went
   const star = c => {
     const was = isStarred(state, c);
@@ -709,7 +730,7 @@ export function CourseStep({ editor, openEditor, closeEditor, courseId, setCours
         s.customCourses[c.id] = { ...c, savedAt: Date.now() };
         s.favorites = [c.id, ...s.favorites.filter(f => f !== c.id)].slice(0, 6);
       });
-      setCourseId(c.id);
+      pick(c.id);
     } catch {
       showToast('Couldn’t load that scorecard. You can add it yourself.');
     } finally {
@@ -731,7 +752,7 @@ export function CourseStep({ editor, openEditor, closeEditor, courseId, setCours
     const on = isStarred(state, c);
     const picked = c.id === courseId;
     return (
-      <div key={c.id} className={`list-item pick course-row ${picked ? 'on' : ''}`} onClick={() => setCourseId(picked ? null : c.id)}>
+      <div key={c.id} className={`list-item pick course-row ${picked ? 'on' : ''}`} onClick={() => pick(picked ? null : c.id)}>
         <button className="course-pick" aria-pressed={picked}
           aria-label={[c.name, nearMiles.has(c.id) ? `${milesLabel(nearMiles.get(c.id))} away` : null, c.city, `${c.holes.length} holes`, `par ${coursePar(c)}`, teeCount(c.tees?.length || 0), courseTag(c)?.text].filter(Boolean).join(', ')}>
           <div className="li-name">{c.name}</div>
@@ -752,8 +773,9 @@ export function CourseStep({ editor, openEditor, closeEditor, courseId, setCours
         {top}
         <div style={{ padding: '4px 16px 8px' }}>
           <label className="sr-only" htmlFor="course-q">Search courses</label>
-          <input id="course-q" className="search-box" type="search" placeholder="Search courses or cities" value={q} onChange={e => setQ(e.target.value)} />
+          <input id="course-q" ref={searchRef} className="search-box" type="search" placeholder="Search courses or cities" value={q} onChange={e => setQ(e.target.value)} />
         </div>
+        {course && <><div className="sec-label">Your course</div><div style={{ padding: '0 16px' }}>{row(course)}</div></>}
         {starred.length > 0 && <><div className="sec-label">Favorites</div><div style={{ padding: '0 16px' }}>{starred.map(row)}</div></>}
         {hint && <p className="course-star-hint"><Icon name="star" /> Tap the star to keep a course at the top</p>}
         {!needle && <NearYou near={near} count={nearRows.length}>{nearRows.map(x => (x.c ? row(x.c) : apiRow({ ...x.r, miles: x.miles })))}</NearYou>}
@@ -771,7 +793,10 @@ export function CourseStep({ editor, openEditor, closeEditor, courseId, setCours
         {tooShort && <p className="hint-card"><Icon name="info" fill /> {course.name} has 9 holes, so you’ll play it twice for 18.</p>}
       </div>
       <div className="cta-wrap">
-        <button className="full-btn" disabled={!course} onClick={onNext}>{course ? <>{nextLabel} <Icon name={nextIcon} /></> : 'Pick a course'}</button>
+        {course
+          ? <button className="full-btn" onClick={onNext}>{nextLabel} <Icon name={nextIcon} /></button>
+          : <button className="full-btn" onClick={toSearch}>Pick a course <Icon name="magnifying-glass" /></button>}
+        {!course && onSkip && <button className="text-link centered" onClick={onSkip}><Icon name="calendar-check" /> {skipLabel}</button>}
       </div>
       {editor && (
         <Suspense fallback={<div className="screen active" aria-busy="true" />}>
@@ -1197,7 +1222,7 @@ function InviteStep({ invited, setInvited, onNext }) {
   return (
     <>
       <div className="scroll">
-        <p className="hint-card"><Icon name="link" fill /> You’re in. Pick who to ask, or skip this and send one group link: anyone with it can answer.</p>
+        <Callout spot="link" title="You’re in" className="invite-intro">Pick who to ask, or skip this and send one group link. Anyone with it can answer.</Callout>
         <form className="add-name-row" onSubmit={addName}>
           <label className="field-label" htmlFor="invite-add-name">Add a name</label>
           <div className="add-name-line">

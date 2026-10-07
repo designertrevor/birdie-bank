@@ -80,7 +80,9 @@ export function FriendsUpNext({ show = true }) {
       <div className="sec-label fr-head">Friends{list.length > 0 && <span className="fr-live"><span className="live-dot" aria-hidden="true" />{list.length} playing now</span>}</div>
       {list.map(v => <FriendRoundCard key={v.id} view={v} />)}
       <button className="lately-all fr-all" onClick={() => nav.push('friends')}>
-        <Spot kind="crowd" size={40} className="fr-crowd" /> {list.length ? 'The group feed' : 'Friends’ rounds and the group feed'} <Icon name="caret-right" />
+        <Spot kind="crowd" size={64} className="fr-crowd" />
+        <span className="row-main">{list.length ? 'The group feed' : 'Friends’ rounds and the group feed'}</span>
+        <Icon name="caret-right" />
       </button>
     </>
   );

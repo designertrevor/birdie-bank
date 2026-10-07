@@ -301,6 +301,8 @@ function PlanBody({ plan, standalone = false, onSkip }) {
             <button className="full-btn outline" onClick={() => nav.push('rollCall', { id: plan.id })}>Playing now? Roll call</button>
           )}
           {standalone && <button className="full-btn outline" onClick={onSkip}>Start my own round instead</button>}
+          {/* The plan is saved, so the organizer has a plain way back into the app from down here, not only the header's arrow */}
+          {plan.host && !standalone && <button className="text-link centered" onClick={() => nav.reset('upnext')}><Icon name="check" /> Done for now. It’s saved on Up next</button>}
         </div>
       )}
       {!planned && standalone && (
