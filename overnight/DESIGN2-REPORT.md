@@ -40,9 +40,9 @@ With the buddy beside the name and the stepper on the right, a full name ("Trevo
 
 ## Reviewed with the seeded phone (Trevor, Mike, Dave, Sam; five rounds; a Bandon trip)
 
-Looked at in light and dark at 375px: welcome and every onboarding step, Choose a game, Up next, the Tab, Players, History, a round's results and scorecard, the Trip screen, Settings, and Play (the Banker bets step and the scores step). All render without errors with the design pass; lint clean, 2,205 tests pass.
+Looked at in light and dark at 375px: welcome and every onboarding step, Choose a game, Up next, the Tab, Players, History, a round's results and scorecard, the Trip screen, Settings, Play (the Banker bets step and the scores step), Hall of fame for the Saturday crew and What's new. All render without errors with the design pass; lint clean, 2,205 tests pass.
 
-What held up well, no change made: the results podium and crowned winner, the grouped standings, the Tab's "All square with Mike and Sam" line, Players' nemesis card, History's season chart, Settings' profile-first layout.
+What held up well, no change made: Hall of fame's crowned leader and podium, What's new's hero card, the results podium and crowned winner, the grouped standings, the Tab's "All square with Mike and Sam" line, Players' nemesis card, History's season chart, Settings' profile-first layout.
 
 ## Questions for Trevor (answer in any order)
 
@@ -57,6 +57,6 @@ What held up well, no change made: the results podium and crowned winner, the gr
 
 - The first-tee card and the moments on Play against Mobbin live-score references.
 - Round ready and the invite card.
-- Hall of fame, What's new, the heads-up sheet (needs push configured) and the year in review image, the four screens the cloud session couldn't see either.
+- The heads-up sheet (needs push configured), the piled reminder cards on Up next and the year in review image, which the cloud session couldn't see either. Hall of fame and What's new were seen this run and hold up.
 - Oura-style data screens for the Tab, Your stats and the handicap trend (roadmap area 24).
 - Trip standings before the first round say "Tees off Fri" instead of dashes (area 24).
