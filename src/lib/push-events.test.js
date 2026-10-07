@@ -132,10 +132,19 @@ test('a carry-over to approve goes to the other person, once, with no amount', (
   assert.equal(paidPushes([row()]).length, 0);
 });
 
-test('new trash talk goes to everyone on the thread, never says what was written', () => {
+test('new trash talk goes to everyone on the thread and says what was written', () => {
   assert.equal(PUSH_KINDS.talk.to, 'all');
   assert.equal(talkPush({ scope: 'round', code: null }, { id: 'c:1' }), null);
   assert.equal(talkPush({ scope: null, code: 'AB12CD' }, { id: 'c:1' }), null);
+  // With the comment's words: who and where on top, the words underneath, cut short and plain
+  const said = pushPayload(cleanPushRequest(talkPush({ scope: 'round', code: 'AB12CD' }, { id: 'c:5', name: 'Dalton', course: 'Birch Creek', text: 'Nice putt, finally' })));
+  assert.equal(said.title, 'Dalton on the Birch Creek round');
+  assert.equal(said.body, 'Nice putt, finally');
+  const long = cleanPushRequest(talkPush({ scope: 'round', code: 'AB12CD' }, { id: 'c:6', text: '<b>' + 'x'.repeat(300) }));
+  assert.equal(long.data.text.length, 120);
+  assert.doesNotMatch(long.data.text, /[<>]/);
+  // Only trash talk carries text
+  assert.equal(cleanPushRequest({ kind: 'invite', scope: 'round', code: 'AB12CD', data: { text: 'hi' } }).data.text, undefined);
   const round = cleanPushRequest(talkPush({ scope: 'round', code: 'AB12CD' }, { id: 'c:1', name: 'Dalton', course: 'Birch Creek' }));
   assert.equal(round.topic, 'c:1');
   const r = pushPayload(round);
@@ -148,7 +157,7 @@ test('new trash talk goes to everyone on the thread, never says what was written
   const ch = pushPayload(cleanPushRequest(talkPush({ scope: 'challenge', code: 'AB12CD' }, { id: 'c:3', course: 'Birch Creek' })));
   assert.equal(ch.body, 'Someone posted on your challenge. Tap to read it.');
   assert.equal(ch.url, '/?challenge=AB12CD');
-  // Each comment is its own request (the server keeps it to one every 10 minutes per thread)
+  // Each comment is its own request and its own push
   const a = cleanPushRequest(talkPush({ scope: 'round', code: 'AB12CD' }, { id: 'c:1' }));
   const b = cleanPushRequest(talkPush({ scope: 'round', code: 'AB12CD' }, { id: 'c:9' }));
   assert.notEqual(pushKey(a), pushKey(b));
@@ -174,7 +183,7 @@ test('round finished results only take fixed values, a bounded map, and only on 
 test('each seat gets won, its place, square or lost from the balances, never an amount', () => {
   assert.deepEqual(finishResults({ a: 30, b: 10, c: 0, d: -40 }, ['a', 'b', 'c', 'd']), { a: 'won', b: 2, c: 'square', d: 'lost' });
   // A tie at the top: both won. Two up behind them: both 3rd
-  assert.deepEqual(finishResults({ a: 5, b: 5, c: 2, d: 2, e: -14 }, ['a', 'b', 'c', 'd', 'e']), { a: 'won', b: 'won', c: 3, d: 3, e: 'lost' });
+  assert.deepEqual(finishResults({ a: 5, b: 5, c: 2, d: 2, e: -14 }, ['a', 'b', 'c', 'd', 'e']), { a: 'tied', b: 'tied', c: 3, d: 3, e: 'lost' });
   // Float dust is square, and all square is square for everyone
   assert.deepEqual(finishResults({ a: 0.001, b: -0.001 }, ['a', 'b']), { a: 'square', b: 'square' });
   assert.deepEqual(finishResults({}, ['a']), {});
@@ -201,6 +210,9 @@ test('a round finished push says how you did, in a fixed template with no amount
   assert.equal(pushPayload(req, { result: 2 }).title, 'You finished 2nd');
   assert.equal(pushPayload(req, { result: 2 }).body, 'Birch Creek: see how everyone did.');
   assert.equal(pushPayload(req, { result: 'square' }).title, 'You finished square');
+  assert.equal(pushPayload(req, { result: 'tied' }).title, 'You tied for 1st');
+  assert.equal(pushPayload(req, { result: 'tied' }).body, 'Birch Creek: see how everyone did.');
+  assert.equal(cleanResults({ pa: 'tied' }).pa, 'tied');
   // Down, or nothing known: the plain push, the same as before
   for (const result of ['lost', null]) {
     const p = pushPayload(req, { result });
@@ -209,7 +221,7 @@ test('a round finished push says how you did, in a fixed template with no amount
   }
   assert.equal(pushPayload(cleanPushRequest({ kind: 'finished', scope: 'round', code: 'AB12CD' }), { result: 'won' }).title, 'You won the round');
   // All of them share the tag and the link
-  for (const result of ['won', 2, 'square', 'lost']) {
+  for (const result of ['won', 'tied', 2, 'square', 'lost']) {
     const p = pushPayload(req, { result });
     assert.equal(p.tag, 'round-AB12CD-finished');
     assert.equal(p.url, '/?join=AB12CD');

@@ -266,10 +266,10 @@ export function pushTab(rows) {
 
 /**
  * You posted trash talk in a thread whose target is `t` (talk-sync.js threadTarget): the others on
- * it hear there's something new, never what it says (push-events.js talkPush).
+ * it hear what you wrote (push-events.js talkPush).
  */
-export function pushTalk(t, { id, name, course, day } = {}) {
+export function pushTalk(t, { id, name, course, day, text } = {}) {
   if (!pushConfigured) return;
-  const req = talkPush(t, { id, name: String(name || '').trim().split(/\s+/)[0] || myFirst(), course, day });
+  const req = talkPush(t, { id, name: String(name || '').trim().split(/\s+/)[0] || myFirst(), course, day, text });
   if (req) sendPush(req, { delay: 2500 });
 }

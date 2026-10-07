@@ -112,7 +112,8 @@ create index if not exists user_docs_share_code on public.user_docs ((data ->> '
 -- For trash talk, "on it" also counts the accounts let in on that thread's talk (comment_members,
 -- 2026-10-04-comments.sql), and a challenge is only those: anyone with its code, like its talk.
 -- Nothing when the caller isn't on it themselves, when the same push went in the last 10 minutes
--- (for trash talk, any from the caller on that thread), or when the caller has sent 40 in the last hour.
+-- (for trash talk the topic is the comment, so each comment goes once), or when the caller has sent
+-- 40 in the last hour.
 -- Who's in is about the answer now, not a log of it: its topic is the answer, and it goes when the
 -- answer changed since the caller's last one on that plan (in, out, in sends all three), at most 6
 -- an hour per plan, so the organizer's newest push always matches the newest answer.
@@ -144,7 +145,7 @@ begin
     if (select count(*) from public.push_sends s where s.caller = p_caller and s.scope = p_scope and s.kind = 'rsvp'
         and s.code = p_code and s.at > now() - interval '1 hour') >= 6 then return; end if;
   elsif exists (select 1 from public.push_sends s where s.caller = p_caller and s.scope = p_scope and s.kind = p_kind
-             and s.code = p_code and (s.topic = t or p_kind = 'talk') and s.at > now() - interval '10 minutes') then return; end if;
+             and s.code = p_code and s.topic = t and s.at > now() - interval '10 minutes') then return; end if;
   if (select count(*) from public.push_sends s where s.caller = p_caller and s.at > now() - interval '1 hour') >= 40 then return; end if;
 
   if p_scope = 'round' then

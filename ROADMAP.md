@@ -343,6 +343,7 @@ Nothing is gated before launch (2026-09-29). Testers use everything; this area i
 
 ### 12. Notifications
 - [ ] `S3` Push: invited to a round, who's in for Saturday, new trash talk, round finished with your result, someone paid you, a carry-over to approve
+- [ ] `S3` Notification settings (from Trevor, 2026-10-07): a spot in Settings to pick which pushes you get (trash talk, who's in, round finished, payments, tee time reminders), since trash talk now pushes once per comment with its words
 - [ ] `S3` Email: receipts and a welcome email
 - [ ] `S4` The spring comeback email ("Your crew's first round of the season?")
 - [ ] `S3` Live Activity on the lock screen: your money and the hole during a round (18Birdies users praise theirs)

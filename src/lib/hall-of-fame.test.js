@@ -108,6 +108,20 @@ test('points and reward rounds are listed on their own and never add into the mo
   assert.ok(hall.biggestWins.every(w => w.roundId === 'r1'));
 });
 
+test('most wins and the win streak count points rounds as well as money rounds', () => {
+  const money = skins('r1', ['t', 'a', 'b'], [[1, 't']], { at: OCT(3) });
+  const p1 = skins('r2', ['t', 'a', 'b'], [[1, 'b'], [2, 'b']], { at: OCT(4) });
+  const p2 = skins('r3', ['t', 'a', 'b'], [[1, 'b']], { at: OCT(5) });
+  p1.playFor = { kind: 'points' };
+  p2.playFor = { kind: 'points' };
+  const s = base([money, p1, p2]);
+  const season = crewSeason(s, 'sat', { now: NOW });
+  assert.deepEqual(season.mostWins, { ids: ['b'], wins: 2 });
+  // The money list's own wins column stays money rounds only
+  assert.equal(season.money.find(x => x.id === 'b')?.wins || 0, 0);
+  assert.deepEqual(crewHall(s, 'sat', { now: NOW }).records.streak, { id: 'b', n: 2 });
+});
+
 test('the season is the rounds since the books closed; the hall keeps the closed season’s champion', () => {
   const r1 = skins('r1', ['t', 'a', 'b'], [[1, 'b'], [2, 'b'], [3, 'b']], { at: OCT(3) });
   const r2 = skins('r2', ['t', 'a', 'b'], [[1, 't']], { at: OCT(12) });

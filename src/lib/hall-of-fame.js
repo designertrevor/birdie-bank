@@ -59,7 +59,8 @@ function toppedBy(balances, seats) {
  * - points: [{ id, points, rounds, wins }] the season's points rounds, in points, by points.
  * - rewards: { names: ['Lunch', ...], rows: [{ id, won, rounds }] } the reward rounds, by rewards won.
  * - champion: the money list's leader when they're up ({ id, cents }), else null.
- * - mostWins: { ids, wins } the most money rounds won (a tie names them all), or null.
+ * - mostWins: { ids, wins } the most rounds won, money and points rounds together (a tie at the
+ *   top of a round shares it, and a tie for most names them all), or null.
  * - rounds: the season's rounds on the Tab, `since` when the season opened (the last close, or null).
  */
 export function crewSeason(state, crewId, { now = Date.now() } = {}) {
@@ -103,13 +104,16 @@ export function crewSeason(state, crewId, { now = Date.now() } = {}) {
   const pointRows = [...points.values()].sort((a, b) => b.points - a.points || b.wins - a.wins || byName(a, b));
   const rewardRows = [...rewards.values()].sort((a, b) => b.won - a.won || a.rounds - b.rounds || byName(a, b));
   const lead = moneyRows[0];
-  const most = Math.max(0, ...moneyRows.map(x => x.wins));
+  // A win is topping a money round or a points round, as Trevor picked
+  const winsBy = new Map();
+  for (const x of [...moneyRows, ...pointRows]) winsBy.set(x.id, (winsBy.get(x.id) || 0) + x.wins);
+  const most = Math.max(0, ...winsBy.values());
   return {
     money: moneyRows,
     points: pointRows,
     rewards: { names: rewardNames, rows: rewardRows },
     champion: lead && lead.cents > 0 ? { id: lead.id, cents: lead.cents } : null,
-    mostWins: most ? { ids: moneyRows.filter(x => x.wins === most).map(x => x.id).sort(), wins: most } : null,
+    mostWins: most ? { ids: [...winsBy].filter(([, n]) => n === most).map(([id]) => id).sort(), wins: most } : null,
     rounds: tabRounds,
     since: since || null,
   };
@@ -133,7 +137,7 @@ function grossOf(r, id) {
  *   each won by the top of its saved final net (only when they finished up).
  * - biggestWins: [{ roundId, id, cents, course, at }] the biggest single-round wins on the Tab, biggest first.
  * - records: { streak, skins, low, regular }, each null when the rounds don't have one:
- *   streak  { id, n } the most money rounds won in a row (of the rounds they played), two or more;
+ *   streak  { id, n } the most money or points rounds won in a row (of the rounds they played), two or more;
  *   skins   { id, skins, roundId, course, at } the most skins in one round;
  *   low     { id, strokes, holes, roundId, course, at } the low score over a full round (18 holes
  *           when the crew has played one, else 9), every hole scored, one-ball games left out;
@@ -150,6 +154,14 @@ export function crewHall(state, crewId, { now = Date.now() } = {}) {
   const wins = [];
   const run = new Map(), bestRun = new Map(), played = new Map();
   let skins = null;
+  const streakStep = (inIt, bal) => {
+    const top = new Set(toppedBy(bal, inIt).map(who));
+    for (const id of new Set(inIt.map(who))) {
+      const n = top.has(id) ? (run.get(id) || 0) + 1 : 0;
+      run.set(id, n);
+      if (n > (bestRun.get(id) || 0)) bestRun.set(id, n);
+    }
+  };
   const lows = { 18: null, 9: null };
   for (const r of rounds) {
     const at = finishedAt(r);
@@ -162,17 +174,11 @@ export function crewHall(state, crewId, { now = Date.now() } = {}) {
         const c = inMoney(r, id) ? cents(bal[id]) : 0;
         if (c > 0) wins.push({ roundId: r.id, id: who(id), cents: c, course, at });
       }
-      if (countsMoney(r)) {
-        const inIt = seats.filter(id => inMoney(r, id));
-        const top = new Set(toppedBy(bal, inIt).map(who));
-        for (const id of new Set(inIt.map(who))) {
-          const n = top.has(id) ? (run.get(id) || 0) + 1 : 0;
-          run.set(id, n);
-          if (n > (bestRun.get(id) || 0)) bestRun.set(id, n);
-        }
-      }
+      if (countsMoney(r)) streakStep(seats.filter(id => inMoney(r, id)), bal);
     }
     const res = roundResults(r);
+    // A points round counts toward a win streak too
+    if (playForOf(r).kind === 'points') streakStep(seats.filter(id => !isJustPlaying(r, id)), res.balances || {});
     for (const id of seats) {
       if (isJustPlaying(r, id)) continue;
       const s = skinsIn(r, id, res);

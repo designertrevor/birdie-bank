@@ -102,6 +102,10 @@ test('money formatting', () => {
   assert.equal(money(-4), '−$4');
   assert.equal(money(4.5, { sign: true }), '+$4.50');
   assert.equal(money(0, { sign: true }), '$0');
+  // Thousands get a comma, cents never do
+  assert.equal(money(1284.5), '$1,284.50');
+  assert.equal(money(-1000000, { sign: true }), '−$1,000,000');
+  assert.equal(money(999.99), '$999.99');
 });
 
 import { createRound, holesInPlay, roundResults, skinsTable, bankerHoleSetup } from './round.js';

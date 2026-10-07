@@ -329,11 +329,11 @@ export function postComment(key, { on, who, name, body, jab = null }) {
   const row = newComment({ id: `c:${uid()}`, on, who, name, body, jab });
   if (!row) return null;
   save(key, row);
-  // The others on it hear there's something new, once the thread can reach them (push-client.js)
+  // The others on it hear what you wrote, once the thread can reach them (push-client.js)
   const s = getState();
   const [kind, ...rest] = String(key).split(':');
   const thing = kind === 'round' ? s.rounds?.[rest.join(':')] : kind === 'plan' ? s.plans?.[rest.join(':')] : null;
-  pushTalk(threadTarget(s, key), { id: row.id, name, course: thing?.course?.name, day: kind === 'plan' ? thing?.date : '' });
+  pushTalk(threadTarget(s, key), { id: row.id, name, course: thing?.course?.name, day: kind === 'plan' ? thing?.date : '', text: row.body });
   return row.id;
 }
 

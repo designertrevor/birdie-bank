@@ -2817,7 +2817,8 @@ button.cal-title:active { transform: scale(.95); background: var(--surface); }
 .cal-day:active:not([aria-disabled]) .cd-num { transform: scale(.86); }
 .cal-day.out { color: var(--mute-soft); }
 .cal-day[aria-disabled] { color: var(--mute-soft); cursor: not-allowed; }
-.cal-day[aria-disabled] .cd-num { text-decoration: line-through; opacity: .7; }
+/* Days you can't pick are faded, not struck through (Trevor's pick) */
+.cal-day[aria-disabled] .cd-num { opacity: .4; }
 .cal-day.today .cd-num { font-weight: 800; }
 .cal-day.today .cd-num::after { content: ''; position: absolute; left: 50%; bottom: 5px; width: 4px; height: 4px; margin-left: -2px; border-radius: 50%; background: var(--pink-text); }
 .cal-day.on .cd-num { background: var(--ink); color: var(--on-ink); animation: calPop .35s var(--spring); }
@@ -2838,7 +2839,7 @@ button.cal-title:active { transform: scale(.95); background: var(--surface); }
 .cal-cell:active:not(:disabled) { transform: scale(.94); }
 .cal-cell.now { box-shadow: inset 0 0 0 2px var(--surface-strong); font-weight: 800; }
 .cal-cell.on { background: var(--ink); color: var(--on-ink); box-shadow: none; }
-.cal-cell:disabled { color: var(--mute-soft); text-decoration: line-through; cursor: not-allowed; }
+.cal-cell:disabled { color: var(--mute-soft); opacity: .5; cursor: not-allowed; }
 /* Months slide in from the side they came from; a zoom in or out scales a touch */
 .cal-anim { animation: calIn var(--duration-fast) var(--ease-smooth-out) both; }
 .cal-anim.from-left { --cal-x: calc(-1 * var(--distance-medium)); }

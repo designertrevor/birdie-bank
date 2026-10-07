@@ -299,7 +299,8 @@ export function minimalTransfers(balances) {
 
 export function money(v, { sign = false } = {}) {
   const abs = Math.abs(v);
-  const s = Number.isInteger(abs) ? String(abs) : abs.toFixed(2);
+  const [whole, cents] = (Number.isInteger(abs) ? String(abs) : abs.toFixed(2)).split('.');
+  const s = whole.replace(/\B(?=(\d{3})+$)/g, ',') + (cents ? '.' + cents : '');
   if (!sign) return (v < 0 ? '−' : '') + '$' + s;
   return (v > 0 ? '+' : v < 0 ? '−' : '') + '$' + s;
 }

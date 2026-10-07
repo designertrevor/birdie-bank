@@ -7,18 +7,19 @@
 //   rsvp      you answered a plan: its organizer. The topic is the answer, and only a change of
 //             answer goes again, so the organizer's newest push is always your newest answer
 //   finished  you finished a shared round: everyone in it, but you. With `results` (seat id: 'won',
-//             'lost', 'square' or a place, never an amount), each person's push says how they did
+//             'tied', 'lost', 'square' or a place, never an amount), each person's push says how they did
 //   paid      you marked a payment: the person you paid (players: [their seat in the round])
 //   carry     you asked to roll a balance to next time: the other person, to agree (players: [their seat])
 //   carried   you agreed to roll it, or would rather settle up: the person who asked (players: [their seat])
-//   talk      you posted trash talk on a round, plan or challenge: everyone on it, but you. Never
-//             what you wrote, only that you wrote something, and at most one every 10 minutes
+//   talk      you posted trash talk on a round, plan or challenge: everyone on it, but you. It says
+//             what you wrote (data.text), one push per comment
 //   tee       the tee time reminder: the plan's organizer, sent by the daily job, never by the app
 // Who counts as "on it" is the server's call (supabase/2026-10-08-push.sql push_targets): it only
 // sends when the caller is on that round, plan or challenge too, and only to people on it.
 //
-// What a push says never has an amount in it: it shows on a lock screen, and money stays hidden
-// unless you open the app (the same default as the results image).
+// What a push says never has an amount in it from the app: it shows on a lock screen, and money
+// stays hidden unless you open the app (the same default as the results image). Trash talk is the
+// one exception to "no free text": it shows the comment as written, as Trevor picked.
 
 export const PUSH_KINDS = {
   invite: { scopes: ['round', 'plan'], to: 'all' },
@@ -35,7 +36,7 @@ const CODE = /^[A-Z0-9]{4,8}$/;
 const ID = /^[\w-]{1,64}$/;
 const DATE = /^\d{4}-\d{2}-\d{2}$/;
 const STATUSES = ['in', 'maybe', 'out'];
-const RESULTS = ['won', 'lost', 'square'];
+const RESULTS = ['won', 'tied', 'lost', 'square'];
 const ANSWERS = ['agreed', 'declined'];
 /** The most seats a round finished push carries results for; a bigger map is dropped whole. */
 export const MAX_RESULTS = 32;
@@ -69,6 +70,10 @@ export function cleanPushRequest(body, { fromServer = false } = {}) {
   if (course) data.course = course;
   if (STATUSES.includes(d.status)) data.status = d.status;
   if (body.kind === 'rsvp' && !data.status) return null;
+  if (body.kind === 'talk') {
+    const text = pushText(d.text, 120);
+    if (text) data.text = text;
+  }
   if (body.kind === 'carried') {
     if (!ANSWERS.includes(d.answer)) return null;
     data.answer = d.answer;
@@ -89,7 +94,7 @@ export function cleanPushRequest(body, { fromServer = false } = {}) {
 
 /**
  * A round finished push's results as the server accepts them, or null: a plain object of at most
- * MAX_RESULTS seat ids, each 'won', 'lost', 'square' or a whole place from 1 to MAX_RESULTS.
+ * MAX_RESULTS seat ids, each 'won', 'tied', 'lost', 'square' or a whole place from 1 to MAX_RESULTS.
  * Anything else in it is dropped, so no free text or amount ever gets through.
  */
 export function cleanResults(v) {
@@ -107,7 +112,7 @@ export function cleanResults(v) {
 
 /**
  * Each seat's result in a finished round from its balances (money, points or the reward's points),
- * for the round finished push: the top 'won' (all of them on a tie), anyone else up their place,
+ * for the round finished push: the top 'won' ('tied' when more than one share it), anyone else up their place,
  * 'square' at even and 'lost' when down. Never the amounts. {} with fewer than two seats or more
  * than MAX_RESULTS.
  */
@@ -120,7 +125,7 @@ export function finishResults(balances, ids) {
     else if (v < 0) out[id] = 'lost';
     else {
       const place = 1 + list.filter(([, w]) => w > v).length;
-      out[id] = place === 1 ? 'won' : place;
+      out[id] = place > 1 ? place : list.some(([o, w]) => o !== id && w === v) ? 'tied' : 'won';
     }
   }
   return out;
@@ -187,6 +192,9 @@ export function pushPayload(req, { result = null } = {}) {
       if (result === 'won') {
         title = data.course ? `You won the ${data.course} round` : 'You won the round';
         body = 'See how everyone did.';
+      } else if (result === 'tied') {
+        title = 'You tied for 1st';
+        body = `${data.course ? `${data.course}: ` : ''}see how everyone did.`;
       } else if (result === 'square' || (Number.isInteger(result) && result > 1)) {
         title = result === 'square' ? 'You finished square' : `You finished ${ordinal(result)}`;
         body = `${data.course ? `${data.course}: ` : ''}see how everyone did.`;
@@ -213,10 +221,17 @@ export function pushPayload(req, { result = null } = {}) {
         body = 'It’s still on the Tab, so settle up when you can.';
       }
       break;
-    case 'talk':
-      title = 'New trash talk';
-      body = `${who} posted on ${req.scope === 'challenge' ? 'your challenge' : req.scope === 'plan' ? (at ? `the round ${at}` : 'your round coming up') : data.course ? `the ${data.course} round` : 'your round'}. Tap to read it.`;
+    case 'talk': {
+      const where = req.scope === 'challenge' ? 'your challenge' : req.scope === 'plan' ? (at ? `the round ${at}` : 'your round coming up') : data.course ? `the ${data.course} round` : 'your round';
+      if (data.text) {
+        title = `${who} on ${where}`;
+        body = data.text;
+      } else {
+        title = 'New trash talk';
+        body = `${who} posted on ${where}. Tap to read it.`;
+      }
       break;
+    }
     case 'tee':
       title = 'Book your tee time';
       body = `${at || 'Your round coming up'}. Tee times fill up, so grab one.`;
@@ -316,11 +331,12 @@ export function carriedPushes(rows, name = '') {
 /**
  * The "new trash talk" push for a comment just posted in a thread whose target is `t` (talk-sync.js
  * threadTarget: { scope, code }), or null when the thread can't reach anyone yet. `id` is the
- * comment's, so each one is asked for; the server sends at most one every 10 minutes per thread.
+ * comment's, so each one is its own push, and `text` is what it says.
  */
-export function talkPush(t, { id, name = '', course = '', day = '' } = {}) {
+export function talkPush(t, { id, name = '', course = '', day = '', text = '' } = {}) {
   if (!t?.code || !['round', 'plan', 'challenge'].includes(t.scope) || !id) return null;
   const data = { name };
+  if (text) data.text = text;
   if (course && t.scope !== 'challenge') data.course = course;
   if (day && t.scope === 'plan') data.day = day;
   return { kind: 'talk', scope: t.scope, code: t.code, topic: String(id), data };
