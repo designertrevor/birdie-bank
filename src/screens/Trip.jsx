@@ -30,7 +30,7 @@ import { DraftCard, FlightsView, ScheduleCard } from '../components/TripMode.jsx
 import { buzz } from '../lib/delight.js';
 import { allTripPays } from '../lib/trip-expenses.js';
 import { markTripPayment, undoPayments, usePaymentsOff, useTabSync } from '../lib/tab-sync.js';
-import { TRIP_FORMATS, canDeleteTrip, canMarkLine, canRecount, myTripAllIn, myTripNet, partPlan, roundsInDates, startsLine, tripByGame, tripDates, tripHidden, tripOf, tripStatus, upDown } from '../lib/trips.js';
+import { TRIP_FORMATS, canDeleteTrip, canMarkLine, canRecount, doneAsk, myTripAllIn, myTripNet, partPlan, roundsInDates, startsLine, tripByGame, tripDates, tripHidden, tripOf, tripStatus, upDown } from '../lib/trips.js';
 import { deleteTrip, endTrip, hideTrip, seenTripPlan, setRoundTrip } from '../lib/trip-store.js';
 import { plansOn, useTripPlans } from '../lib/trip-plan-sync.js';
 import { CupBoard, CupMatches, CupScore, StakeLines } from '../components/Cup.jsx';
@@ -155,7 +155,10 @@ function TripPage({ id, view: firstView = null, add = false }) {
     if (await deleteTrip(id, { everywhere: del_.everywhere })) nav.pop();
     else showToast('Couldn’t reach the other phones. Try again with signal.');
   };
-  const doneNow = () => {
+  const doneNow = async () => {
+    // Planned rounds nobody played: ask first, since they come off the trip (doneAsk in trips.js)
+    const q = doneAsk(st, { cup: !!(cup && !st.money.length && !st.expenses.length) });
+    if (q && !(await ask({ title: q.title, text: q.text, confirmLabel: q.confirmLabel }))) return;
     endTrip(id);
     showToast(cup && !st.money.length && !cup.def.stake ? 'The cup is decided' : 'Settle the trip is open');
   };

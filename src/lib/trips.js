@@ -158,6 +158,25 @@ export function tripRounds(state, id) {
   return Object.values(state.rounds || {}).filter(r => r?.trip?.id === id).sort((a, b) => (a.createdAt || 0) - (b.createdAt || 0));
 }
 
+/**
+ * The organizer's "Done playing?" asks first while the trip still has planned rounds nobody played
+ * (`status.planned`, from tripStatus): null when there are none, so it goes straight through as before.
+ * Saying yes is the same Done playing: the planned rounds stop holding the trip open and it settles
+ * without them (`cup`: a team points trip with nothing to settle, where it decides the cup instead).
+ * Nothing is deleted, so it isn't a danger button. Added 2026-10-06.
+ */
+export function doneAsk(status, { cup = false } = {}) {
+  const n = (status?.planned || []).filter(p => p?.status === 'planned' && !p.roundId).length;
+  if (!n) return null;
+  const rounds = n === 1 ? '1 planned round hasn’t' : `${n} planned rounds haven’t`;
+  return {
+    count: n,
+    title: `${rounds} been played. ${cup ? 'Decide the cup now?' : 'Settle now?'}`,
+    text: `${n === 1 ? 'It comes' : 'They come'} off the trip, and ${cup ? 'the cup is decided on the rounds played' : 'Settle the trip opens for everyone'}.`,
+    confirmLabel: cup ? 'Decide the cup' : 'Settle now',
+  };
+}
+
 /** The trip's planned rounds still to come on this phone, soonest first. */
 export function tripPlans(state, id, now = new Date()) {
   return Object.values(state.plans || {})
