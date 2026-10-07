@@ -1,4 +1,5 @@
 import { createContext, useCallback, useContext, useEffect, useLayoutEffect, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 
 export function Icon({ name, fill = false, className = '', label }) {
   return <i className={`${fill ? 'ph-fill' : 'ph-bold'} ph-${name} ${className}`} aria-hidden={label ? undefined : true} aria-label={label} />;
@@ -129,9 +130,25 @@ function useDialog(open, onClose) {
   return ref;
 }
 
-export function Sheet({ open, onClose, title, children, className = 'sheet' }) {
-  const ref = useDialog(open, onClose);
-  if (!open) return null;
+/**
+ * Renders a sheet at its screen, so it covers the whole screen from the bottom up. Left inside a
+ * step's .scroll, iOS Safari clips it to the scroll's edges: cut off above the buttons below, sliding
+ * under the title above, and the rest of it out of reach. It also stops picking up the scroll rows'
+ * rise animation.
+ */
+function AtScreen({ children }) {
+  const [target, setTarget] = useState(undefined);
+  const ref = useCallback(el => { if (el) setTarget(el.closest('.screen')); }, []);
+  return <><span ref={ref} hidden />{target === undefined ? null : target ? createPortal(children, target) : children}</>;
+}
+
+export function Sheet(props) {
+  if (!props.open) return null;
+  return <AtScreen><SheetInner {...props} /></AtScreen>;
+}
+
+function SheetInner({ onClose, title, children, className = 'sheet' }) {
+  const ref = useDialog(true, onClose);
   return (
     <div ref={ref} tabIndex={-1} className="sheet-overlay open" onClick={e => e.target === e.currentTarget && onClose?.()} role="dialog" aria-modal="true" aria-label={title}>
       <div className={className}>
@@ -139,7 +156,7 @@ export function Sheet({ open, onClose, title, children, className = 'sheet' }) {
         {title && (
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '12px 16px 4px 16px' }}>
             <span className="d" style={{ fontSize: 22, fontWeight: 800 }}>{title}</span>
-            {onClose && <button className="icon-btn" onClick={onClose} aria-label="Close"><Icon name="x" /></button>}
+            {onClose && <button className="icon-btn sheet-close" onClick={onClose} aria-label="Close"><Icon name="x" /></button>}
           </div>
         )}
         {children}
@@ -151,7 +168,7 @@ export function Sheet({ open, onClose, title, children, className = 'sheet' }) {
 /** Number pad sheet. value is a string of digits; supports optional decimal. */
 export function Numpad(props) {
   if (!props.open) return null;
-  return <NumpadInner {...props} />;
+  return <AtScreen><NumpadInner {...props} /></AtScreen>;
 }
 
 /**

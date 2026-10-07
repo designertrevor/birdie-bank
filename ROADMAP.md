@@ -51,11 +51,13 @@ The plan for growing Birdie Bank into a $10k/mo business, and the checklist we w
 
 **Shipped to main 2026-10-05 (overnight 8, `97fc006`):** the Big Game (several groups, one game, one pot and one settle-up), following friends' rounds live with friends' rounds and the group in the feed, a tab per crew or trip with Close the books, the tee time reminder and gentle payment nudges, Trip Mode templates, flights and a live captains' draft, easy sharing into the group text, and keeping your place after switching apps. The profile privacy, Big Game and friend feed SQL is run. `supabase/2026-10-06-round-codes.sql` (locks live rounds, payments, plans and challenges behind their codes) runs about a day after the ship, once phones have reloaded the new build.
 
+**Polish 2026-10-06 (from Trevor, on `feedback/floating-sheets`):** sheets float as rounded cards inset from the screen edges, with a raised surface that reads clearly against the page in dark mode.
+
 **Next in S2:** real payments for the paywall test (Stripe, area 11), talks with the three head pros (area 23), the rest of mid-round settings (teams, order, play for), "Any side bets on this hole?", and the quick logo once the name is picked (area 16).
 
 **The big date:** the creator test (S4) runs February to April 2027, when golf season starts back up. Everything before it is about being ready: a product groups keep using, a smooth path from video to paying, and an App Store app.
 
-Last updated: 2026-10-04 (overnight 7 and Trevor's answers shipped)
+Last updated: 2026-10-06 (floating sheets)
 
 ---
 
@@ -366,6 +368,7 @@ Nothing is gated before launch (2026-09-29). Testers use everything; this area i
 - [ ] `S3` Attribution: which creator sent each download, and each step from download to paying
 - [ ] `S3` Support that answers: a help link in the app, a reply within a day in season, and no-fuss refunds (a slow reply on round day loses a whole group)
 - [ ] `S5` Admin view: users, subscriptions, refunds, turning features on and off
+- [ ] `S3` Review hosting costs before launch: compare staying on Vercel with moving to Cloudflare (free data transfer, generous free tier). Moving means rewriting `api/` and `middleware.js` for Cloudflare Workers, so only worth it once real usage, not build minutes, drives the bill. Builds are trimmed by `scripts/vercel-ignore.sh` (added 2026-10-05, when the bill was about $28 a month, almost all builds)
 
 ### 16. Brand and identity
 - [ ] `S1` (partial) A playful color theme, Phosphor icons, no emoji, one golf ball illustration with a face (`BallIllo` in `src/components/ui.jsx`), confetti, count-ups and vibrations (`src/lib/delight.js`), a few small CSS animations
@@ -375,6 +378,7 @@ Nothing is gated before launch (2026-09-29). Testers use everything; this area i
 - [ ] `S2` Brand foundations: colors, typography, voice and tone (friendly trash talk, never casino), a short brand guide
 - [x] `S2` Copy audit applied across the app: "group" (crew only for saved lists), "bets" not "stakes", "each player puts in" not "ante", "Gets 5 strokes" not "HC 5", one delete verb, and the money screen called the Tab. Deeper pink (#d42a6b) behind small white text (2026-09-27)
 - [x] `S2` Motion for the killer end-of-round moment: bets rise in as they resolve, totals count up and pop, the winner's row lifts with a pink glow, the title crossfades, and Reveal, Settle up and Share slide in. Tap to skip and reduced motion show the finished screen at once, and the reveal runs a little faster than before (2026-09-30). For filming: once the bets resolve the card tightens to one line a bet and every total lands on a phone screen (2026-09-30, Trevor's review)
+- [x] `S1` Floating sheets: every bottom sheet is a card inset 12px from the sides and the bottom, with 30px corners all round like the phone's own, the accent X to close, and its own raised surface (white over a dimmed page in light mode, a lighter gray with a faint edge over a darker scrim in dark mode) so the sheet's top edge never disappears. Text inside stays AA in both themes (from Trevor, 2026-10-06)
 - [ ] `S3` Character and illustration set for key moments: win, loss, press, birdie, lone Wolf, all square, trash talk, empty screens, onboarding, paywalls, one per game
 - [ ] `S3` More motion: character reactions, a launch animation (Lottie or Rive)
 - [ ] `S3` A theme for every game: a custom illustration in place of each game's icon, and a look carried into the round (money bar, big hole moments), the end-of-round reveal and the share card (from Trevor, 2026-09-30)
@@ -563,3 +567,4 @@ Code is cheap now, so anyone can build a scoring app. What a weekend coder can't
 - 2026-10-03: Trevor's overnight 6 answers built on `overnight6/followups`, tested on two phones and money-checked twice (the reviews caught Tab totals going wrong once a trip plan was live, a trip inventing a payment, a carry vanishing and a removed side bet coming back; all fixed with tests). Settle the trip now says when a round the organizer didn't play settles between its players. Both new SQL files run. Tests: 1051 passing. Shipped to main.
 - 2026-10-04: Overnight 7 (night of 2026-10-03): 14 tasks in 4 stretches, each reviewed and merged, then two-phone QA, three money reviews and fixes (trip expenses paid on one phone only, a friend counted as two people on a third phone, a payment tapped twice, plan lines moving after paying, a cup stake that differed by phone, a challenge becoming two bets). Then Trevor's 40 review answers: the cup stake on the Tab, foursomes, organizer-made challenges that move with the plan, side bets on the preview, one profile privacy setting with shared non-money stats, whole points on screen. Tests: 1594 passing. Checklist: 116 of 237 done (48.9%), up from 100 of 237 (42.2%).
 - 2026-10-05: Overnight 8 shipped to main (`97fc006`): the Big Game, following friends' rounds and the friend and group feed, crew and trip tabs with Close the books, tee time and payment reminders, Trip Mode templates and the captains' draft, sharing into the group text, and keeping your place across apps. Two money reviews (the second found 8 issues, all fixed) and a security fix: live rounds, payments, plans and challenges get locked behind their codes by `2026-10-06-round-codes.sql`, to run once phones have the new build. Tests: 1846 passing. Checklist: 126 of 237 done (53.2%), up from 116 of 237 (48.9%).
+- 2026-10-06: Floating sheets on branch `feedback/floating-sheets` (from Trevor): every bottom sheet, number pad and confirm is a card inset from the sides and bottom with 30px corners and an accent X, on its own raised surface so it stands apart from the page in dark mode (a lighter gray, a faint edge and a darker scrim) and in light mode (white over a dimmed page). One change in the shared sheet styles covers every sheet in the app. Checklist: 127 of 239 done (53.1%), up from 126 of 238 (52.9%, the S3 hosting review was added 2026-10-05).
