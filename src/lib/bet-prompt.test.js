@@ -6,7 +6,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { createRound } from './round.js';
 import { addBet, MAX_BETS } from './pair-bets.js';
-import { betPromptFor, markPrompt, promptSpots, spotCopy, spotDraft, PROMPT_MAX } from './bet-prompt.js';
+import { betPromptFor, laterSpot, markPrompt, promptSpots, spotCopy, spotDraft, PROMPT_MAX } from './bet-prompt.js';
 
 // Pars 4 4 3 4 5 3 4 4 3 | 4 4 3 4 5 3 4 4 3: par 3s on 3, 6, 9, 12, 15, 18
 const PARS = [4, 4, 3, 4, 5, 3, 4, 4, 3, 4, 4, 3, 4, 5, 3, 4, 4, 3];
@@ -257,4 +257,73 @@ test('a round of two says "You two", never "Two of you" (2026-10-04)', () => {
   assert.match(spotCopy(two, { pos: 1, why: 'first' }).text, /^You two can/);
   assert.match(spotCopy(two, { pos: 3, why: 'par3' }).text, /You two can bet/);
   if (r.players.length > 2) assert.match(spotCopy(r, { pos: 1, why: 'first' }).text, /^Two of you can/);
+});
+
+// ---------------------------------------------------------------------------
+// "Not this hole" (design review 2026-10-07, item 24): the card comes back later in the round
+
+test('"Not this hole": closest to the pin comes back on the next par 3, a match at the next spot or three holes on', () => {
+  const r = stroke(); // par 3s on 3, 6, 9, 12, 15, 18; the round's own spots are 1, 3 and 10
+  assert.deepEqual(laterSpot(r, 3, 'ctp'), { pos: 6, why: 'later', kind: 'ctp' });
+  assert.deepEqual(laterSpot(r, 6, 'ctp'), { pos: 9, why: 'later', kind: 'ctp' });
+  // The last par 3 is the last hole: a one-hole closest to the pin is still a bet
+  assert.deepEqual(laterSpot(r, 15, 'ctp'), { pos: 18, why: 'later', kind: 'ctp' });
+  assert.equal(laterSpot(r, 18, 'ctp'), null);
+  // A match put off on the first hole comes back at the par 3 spot, which the round asks on anyway (as itself)
+  assert.deepEqual(laterSpot(r, 1, 'match'), { pos: 3, why: 'par3', kind: 'ctp' });
+  // Put off at the turn: three holes on, and again, until two holes left is too few for a match
+  assert.deepEqual(laterSpot(r, 10, 'match'), { pos: 13, why: 'later', kind: 'match' });
+  assert.deepEqual(laterSpot(r, 13, 'match'), { pos: 16, why: 'later', kind: 'match' });
+  assert.equal(laterSpot(r, 16, 'match'), null);
+  // No par 3 left: closest to the pin falls back to the round's next spot
+  const noPar3 = stroke({ pars: [4, 4, 3, 4, 5, 4, 4, 4, 4, 4, 4, 4, 4, 5, 4, 4, 4, 4] });
+  assert.deepEqual(laterSpot(noPar3, 3, 'ctp'), { pos: 10, why: 'turn', kind: 'match' });
+  // Nine holes: the par 3 on 3 comes back on 6, on 6 it comes back on 9, and on 9 there's nothing later
+  assert.deepEqual(laterSpot(stroke({ holes: 9 }), 3, 'ctp'), { pos: 6, why: 'later', kind: 'ctp' });
+  assert.deepEqual(laterSpot(stroke({ holes: 9 }), 6, 'ctp'), { pos: 9, why: 'later', kind: 'ctp' });
+  assert.equal(laterSpot(stroke({ holes: 9 }), 9, 'ctp'), null);
+  assert.equal(laterSpot(stroke({ holes: 9 }), 6, 'match'), null);
+});
+
+test('the card carries where "Not this hole" would bring it back, and nothing when the round has nowhere later', () => {
+  assert.deepEqual(betPromptFor(stroke({ upto: 2 }), 3, keeper).later, { pos: 6, why: 'later', kind: 'ctp' });
+  assert.deepEqual(betPromptFor(stroke(), 1, keeper).later, { pos: 3, why: 'par3', kind: 'ctp' });
+  assert.deepEqual(betPromptFor(stroke({ upto: 9 }), 10, keeper).later, { pos: 13, why: 'later', kind: 'match' });
+  // A 9-hole round's reminder on the last hole has no later, so the card there leaves the button out
+  const seen = { done: [3, 6], later: { pos: 9, kind: 'ctp' } };
+  const last = betPromptFor(stroke({ holes: 9, upto: 8 }), 9, { ...keeper, seen });
+  assert.equal(last.why, 'later');
+  assert.equal(last.later, null);
+});
+
+test('put off with "Not this hole", the card comes back on that hole with the kind it was put off from, then not again', () => {
+  const s = { rounds: { r: { status: 'active' } }, betPrompts: {} };
+  markPrompt(s, 'r', { pos: 3, later: { pos: 6, why: 'later', kind: 'ctp' } });
+  assert.deepEqual(s.betPrompts.r, { done: [3], later: { pos: 6, kind: 'ctp' } });
+  // Hole 3 is done; hole 6 isn't a spot of the round's own, but asks now
+  assert.equal(betPromptFor(stroke({ upto: 2 }), 3, { ...keeper, seen: s.betPrompts.r }), null);
+  assert.equal(betPromptFor(stroke({ upto: 5 }), 6, keeper), null);
+  const p = betPromptFor(stroke({ upto: 5 }), 6, { ...keeper, seen: s.betPrompts.r });
+  assert.equal(p.why, 'later');
+  assert.equal(p.kind, 'ctp');
+  assert.deepEqual(p.holes, [6, 18]);
+  assert.equal(p.title, 'Closest to the pin?');
+  assert.match(p.text, /^Another par 3\./);
+  // Only on that hole, and the round's own spots still ask as themselves
+  assert.equal(betPromptFor(stroke({ upto: 4 }), 5, { ...keeper, seen: s.betPrompts.r }), null);
+  assert.equal(betPromptFor(stroke({ upto: 9 }), 10, { ...keeper, seen: s.betPrompts.r })?.why, 'turn');
+  // Adding the bet from the reminder clears it
+  markPrompt(s, 'r', { pos: 6 });
+  assert.deepEqual(s.betPrompts.r, { done: [3, 6] });
+  assert.equal(betPromptFor(stroke({ upto: 5 }), 6, { ...keeper, seen: s.betPrompts.r }), null);
+  // A match put off at the turn comes back three holes on, for the rest of the way
+  markPrompt(s, 'r', { pos: 10, later: { pos: 13, kind: 'match' } });
+  const m = betPromptFor(stroke({ upto: 12 }), 13, { ...keeper, seen: s.betPrompts.r });
+  assert.equal(m.kind, 'match');
+  assert.deepEqual(m.holes, [13, 18]);
+  assert.equal(m.title, 'A side bet for the rest of the way?');
+  assert.match(m.text, /last 6 holes/);
+  // "Not this round" still wins over a reminder
+  markPrompt(s, 'r', { skip: true });
+  assert.equal(betPromptFor(stroke({ upto: 12 }), 13, { ...keeper, seen: s.betPrompts.r }), null);
 });

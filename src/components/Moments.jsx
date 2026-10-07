@@ -2,13 +2,16 @@
 // wolf, a big Vegas swing, a Sixes match won or swept, a Banker sweep or birdie double, a Hammer back
 // or fold, the money lead changing hands, a Match play or Nassau lead change, all square, dormie or a
 // nine won, and a full screen for a match won before the last hole. One per hole at most. The maths
-// is in lib/moments.js.
+// is in lib/moments.js. After the ninth hole of eighteen, the halfway sheet (lib/halfway.js): where
+// things stand and every score so far, after the hole's own banner if it had one, never on top of it.
 import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
-import { Icon } from './ui.jsx';
+import { Icon, Sheet } from './ui.jsx';
 import { AvatarArt } from './Avatar.jsx';
+import { Scorecard } from '../screens/RoundDetail.jsx';
 import { useGroupAvatars } from '../lib/useAvatars.js';
 import { donePositions, finalMoment, firstShowing, freshHole, roundMoment } from '../lib/moments.js';
+import { atHalfway, halfwayFor } from '../lib/halfway.js';
 import { buzz, confetti, confettiFrom } from '../lib/delight.js';
 
 const ICON = {
@@ -37,11 +40,13 @@ const reduced = () => window.matchMedia?.('(prefers-reduced-motion: reduce)').ma
  * the ones following along). Only a single new hole counts (see freshHole): a burst of holes arriving
  * at once, a fixed score on an earlier hole, or the last hole (the end-of-round reveal takes over)
  * shows nothing. `onFinish` ends the round from the match-won screen (the keeper only). `onShowing`
- * hears whether a moment is up, so the "Any side bets?" card waits until it's gone.
+ * hears whether a moment (or the halfway sheet) is up, so the "Any side bets?" card waits until it's gone.
  */
 export function RoundMoments({ round, onFinish, onShowing = null }) {
   const done = donePositions(round);
   const [moment, setMoment] = useState(null);
+  // The halfway sheet's model, worked out as the ninth hole lands so a tenth coming in meanwhile doesn't change it
+  const [half, setHalf] = useState(null);
   // The holes as last seen: when a new one is in, work out its moment (set during render, like MoneyBar)
   const key = done.join(',');
   const [seen, setSeen] = useState(key);
@@ -50,15 +55,69 @@ export function RoundMoments({ round, onFinish, onShowing = null }) {
     const fresh = freshHole(round, seen ? seen.split(',').map(Number) : [], done);
     const m = fresh && (fresh.final ? { ...finalMoment(round), level: 'medium', id: `${fresh.pos}:final` } : roundMoment(round, fresh.pos));
     if (m && firstShowing(SHOWN, round.id, fresh.pos)) setMoment(m);
+    if (atHalfway(round, fresh) && firstShowing(SHOWN, round.id, 'half')) setHalf(halfwayFor(round));
   }
 
   // Before paint, so the card is never drawn under a moment that just arrived (reduced motion skips its fade)
-  useLayoutEffect(() => { onShowing?.(!!moment); }, [moment, onShowing]);
-  if (!moment) return null;
+  useLayoutEffect(() => { onShowing?.(!!moment || !!half); }, [moment, half, onShowing]);
+  if (!moment && !half) return null;
   const close = () => setMoment(null);
-  return moment.level === 'big'
-    ? <MatchWon key={moment.id} moment={moment} onClose={close} onFinish={onFinish && !moment.more ? () => { close(); onFinish(); } : null} />
-    : <MomentBanner key={moment.id} moment={moment} round={round} onClose={close} />;
+  return (
+    <>
+      {moment && (moment.level === 'big'
+        ? <MatchWon key={moment.id} moment={moment} onClose={close} onFinish={onFinish && !moment.more ? () => { close(); onFinish(); } : null} />
+        : <MomentBanner key={moment.id} moment={moment} round={round} onClose={close} />)}
+      {/* The ninth hole's own banner goes first; the sheet comes up once it has left, so the two never stack */}
+      {half && !moment && <HalfwaySheet model={half} round={round} onClose={() => setHalf(null)} />}
+    </>
+  );
+}
+
+/**
+ * Halfway through eighteen (lib/halfway.js): where things stand after nine as a bottom sheet, with
+ * the game's own summary, everyone's money so far and the first nine's card. Display only: the
+ * money is what the bar already shows.
+ */
+function HalfwaySheet({ model, round, onClose }) {
+  const faces = useGroupAvatars(round.players);
+  useEffect(() => { buzz([15, 30, 15]); }, []);
+  return (
+    <Sheet open onClose={onClose} title="Halfway" className="sc-sheet">
+      <div className="hw-head">
+        <div className="hw-title d">{model.title}</div>
+        <p className="hw-text">{model.text}</p>
+      </div>
+      {model.steps.length > 0 && (
+        <div className="hw-card">
+          <div className="rv-card-title">{model.stepsTitle}</div>
+          {model.steps.map(s => (
+            <div key={s.key} className={`hw-row ${s.tie ? 'tie' : ''}`}>
+              <div className="hw-main">
+                <div className="hw-label">{s.label}</div>
+                {s.text && <div className="hw-line">{s.text}</div>}
+              </div>
+              {s.value && <div className="hw-val">{s.value}</div>}
+            </div>
+          ))}
+        </div>
+      )}
+      {model.standings && (
+        <div className="hw-card">
+          <div className="rv-card-title">{model.money ? 'Money so far' : 'Points so far'}</div>
+          {model.standings.map(p => (
+            <div key={p.id} className="hw-row">
+              {faces.get(p.id) && <AvatarArt model={faces.get(p.id)} size="sm" />}
+              <div className="hw-main"><div className="hw-line">{p.name}</div></div>
+              <div className={`hw-val ${p.amount > 0 ? 'pos' : p.amount < 0 ? 'neg' : ''}`}>{model.fmt(p.amount, { sign: true })}</div>
+            </div>
+          ))}
+        </div>
+      )}
+      <div className="sec-label hw-sec">Every score so far</div>
+      <Scorecard round={round} holes={model.holes} />
+      <div className="cta-wrap"><button className="full-btn" onClick={onClose}>Play on <Icon name="arrow-right" /></button></div>
+    </Sheet>
+  );
 }
 
 /** A card that rises above the buttons (the money bar stays in view), cheers a little and leaves on its own. Tap to dismiss. */

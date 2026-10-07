@@ -122,8 +122,11 @@ export function Reveal({ round, res, onNext, onDetail, extra, instant = false })
   const [landed, setLanded] = useState(false);
   const done = skipped || landed;
   const visible = skipped ? nSteps : shown;
-  // Every bet has resolved: the card tightens (see .rv-card.compact), so the totals land on one screen
-  const resolved = nSteps > 0 && visible >= nSteps;
+  // Every bet has resolved and the totals have started to count: the card tightens (see .rv-card.compact),
+  // so they land on one screen. It waits for the counting instead of the last bet's arrival, and the
+  // tightening is a transition, so the card never snaps smaller while a bet is still fading in
+  const [tight, setTight] = useState(false);
+  const resolved = nSteps > 0 && (skipped || tight);
   const scroller = useRef();
   useEffect(() => {
     if (!(resolved || done) || instant) return;
@@ -139,16 +142,18 @@ export function Reveal({ round, res, onNext, onDetail, extra, instant = false })
       const bottom = Math.min(el.getBoundingClientRect().bottom, cta ? cta.getBoundingClientRect().top : Infinity);
       const over = last.getBoundingClientRect().bottom - bottom + 12;
       if (over > 0) el.scrollBy({ top: over, behavior: reducedMotion() ? 'auto' : 'smooth' });
-    }, done ? 500 : 120); // after the last total's landing pop
+    }, done ? 500 : 560); // after the card's tightening, or the last total's landing pop
     return () => clearTimeout(id);
   }, [resolved, done, instant]);
 
   useEffect(() => {
     if (skipped) return;
     const timers = Array.from({ length: nSteps }, (_, i) => setTimeout(() => { setShown(i + 1); buzz(6); }, i * t.gap + 150));
+    // The card tightens a beat into the totals' counting, once the last bet has fully arrived
+    timers.push(setTimeout(() => setTight(true), t.stepsEnd + 150));
     timers.push(setTimeout(() => setLanded(true), t.landed));
     return () => timers.forEach(clearTimeout);
-  }, [skipped, nSteps, t.gap, t.landed]);
+  }, [skipped, nSteps, t.gap, t.stepsEnd, t.landed]);
   useEffect(() => {
     if (!done || square || instant) return;
     confettiFrom(hero.current, 70);

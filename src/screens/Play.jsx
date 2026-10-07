@@ -11,7 +11,7 @@ import {
   betPresets, blindMultiplierOf, noHandicap, resizeRound, roundLegs, roundResults, scoredHolesDropped, scorers, skinsKinds, skinsTable, strokesFor, popsFor, wolfHoleSetup, changeBets, wholeRoundOnly,
   gameView, sideGamesOf, holeFixOf, gameKeys, gameKeyLabel, settingsAt, wolfCarryBefore, posOf, isTeamGame, matchScored, oneBall, teamCounting,
 } from '../lib/round.js';
-import { POT_GAMES, SIDE_GAMES, bankerPress, bankerPressAll, bankerPressAllNow, bettingRound, bettors, cardOnly, isJustPlaying, potHoles, potMarksFor } from '../lib/round.js';
+import { POT_GAMES, SIDE_GAMES, bankerPress, bankerPressAll, bankerPressAllNow, bettingRound, bettors, cardOnly, holeAtPos, isJustPlaying, potHoles, potMarksFor } from '../lib/round.js';
 import { JUST_PLAYING_TAG, addJustPlayingProblem, niceRound } from '../lib/just-playing.js';
 import { CourseTeeSheet, FixHoleSheet } from '../components/FixHole.jsx';
 import { HandicapsSheet } from '../components/HandicapsSheet.jsx';
@@ -158,11 +158,28 @@ const DRAFTS = keptMap('drafts');
 // Rounds whose locked-in rules card this phone has closed (a phone that isn't keeping score sees it until then)
 const AGREED_SEEN = new Set();
 
-/** The birdie (or the eagle, for two under or better) beside a score, once it's under par. */
-function ScoreCritter({ score, par }) {
-  if (!(score < par)) return null;
+// How long the birdie critter stays beside the score (the CSS pop and fade run the same length)
+const CRITTER_MS = 2400;
+/**
+ * The birdie (or the eagle, for two under or better) beside a score the moment it's tapped under
+ * par: it pops in, holds a beat and fades out, so it celebrates the tap instead of sitting on the
+ * number. Only a score tapped on this phone brings it (`fresh`): one that was already there when
+ * the hole opened doesn't, and the hole remounts on every save, so one birdie never pops twice.
+ * A new score starts it over, so a birdie that becomes an eagle pops again.
+ */
+function ScoreCritter({ score, par, fresh = false }) {
+  const [gone, setGone] = useState(false);
+  const [at, setAt] = useState(score);
+  if (at !== score) { setAt(score); setGone(false); }
+  const up = fresh && !gone && typeof score === 'number' && score < par;
+  useEffect(() => {
+    if (!up) return;
+    const t = setTimeout(() => setGone(true), CRITTER_MS);
+    return () => clearTimeout(t);
+  }, [up, score]);
+  if (!up) return null;
   const eagle = score <= par - 2;
-  return <span key={eagle ? 'e' : 'b'} className="sc-critter" aria-hidden="true"><BuddyArt id={eagle ? 'eagle' : 'birdie'} bg={eagle ? 'teal' : 'mint'} /></span>;
+  return <span key={score} className="sc-critter" aria-hidden="true"><BuddyArt id={eagle ? 'eagle' : 'birdie'} bg={eagle ? 'teal' : 'mint'} /></span>;
 }
 
 /** One row in the round menu: an icon, what it is, and its current setting on the right. */
@@ -260,6 +277,8 @@ function PlayRound({ round, mount, momentUp = false }) {
   const holeFixed = !!holeFixOf(round, hole.no);
   const requests = useSeatRequests(round.id);
   const numRefs = useRef({});
+  // Whose score was tapped since this hole opened: only those get the birdie critter (ScoreCritter)
+  const tapped = useRef(new Set());
 
   // --- The first-tee rules card (see agreed.js) ---
   // 'lock' on the keeper's phone before hole 1; 'view' is "What we agreed" from the menu
@@ -303,6 +322,12 @@ function PlayRound({ round, mount, momentUp = false }) {
   const promptAdd = () => {
     update(s => markPrompt(s, round.id, { pos: betPrompt.pos }));
     setPairStart({ kind: betPrompt.kind, holes: betPrompt.holes });
+  };
+  // "Not this hole": put off to later in the round (bet-prompt.js laterSpot says where), and the toast says when
+  const promptLater = () => {
+    const later = betPrompt.later;
+    update(s => markPrompt(s, round.id, { pos: betPrompt.pos, later }));
+    showToast(`Not this hole. It’ll ask again on hole ${holeAtPos(round, later.pos)}`);
   };
   const promptSkip = () => {
     update(s => markPrompt(s, round.id, { skip: true }));
@@ -369,6 +394,7 @@ function PlayRound({ round, mount, momentUp = false }) {
   const setMarksDirty = m => { setDirty(true); setMarks(m); };
   const setScore = (pid, v) => {
     setDirty(true);
+    tapped.current.add(pid);
     setDraft(d => ({ ...d, [pid]: v }));
     setTouched(t => ({ ...t, [pid]: true }));
     buzz(8);
@@ -605,7 +631,7 @@ function PlayRound({ round, mount, momentUp = false }) {
       {phase === 'scores' && (
         <div className="scroll">
           {!editable && sharedLive && <p className="field-help" style={{ padding: '0 20px' }}>{round.status === 'active' ? `Scores as ${holderName} saves them. Browse any hole.` : 'Only the players in this round can fix its scores.'}</p>}
-          {betPrompt && <BetPromptCard prompt={betPrompt} onAdd={promptAdd} onSkip={promptSkip} onOff={promptOff} />}
+          {betPrompt && <BetPromptCard prompt={betPrompt} onAdd={promptAdd} onLater={betPrompt.later ? promptLater : null} onSkip={promptSkip} onOff={promptOff} />}
           {!solo && <HoleBets round={round} hole={hole} editable={editable} me={me} />}
           {game === 'bbb' && editable && !solo && <BBBPicker round={main} hole={hole} marks={marks} setMarks={setMarksDirty} />}
           {DRIVE_GAMES.includes(game) && !solo && <ScrambleDrivesPicker round={main} hole={hole} marks={marks} setMarks={editable ? setMarksDirty : null} />}
@@ -633,7 +659,6 @@ function PlayRound({ round, mount, momentUp = false }) {
                 <div className="score-ctrl">
                   <span className={`sc-num ${v == null ? 'untouched' : ''}`}>
                     <span className="sr-only">{p.name} </span>{v == null ? <><span aria-hidden="true">–</span><span className="sr-only">no score yet</span></> : v === 'X' ? pickupGross(hole.par, st) : v}
-                    {v != null && v !== 'X' && <ScoreCritter score={v} par={hole.par} />}
                   </span>
                 </div>
               </div>
@@ -682,7 +707,7 @@ function PlayRound({ round, mount, momentUp = false }) {
                     onClick={() => setScore(p.id, v === 'X' ? hole.par : Math.max(1, v - 1))}><Icon name="minus" /></button>
                   <span ref={el => { numRefs.current[p.id] = el; }} className={`sc-num ${touched[p.id] ? '' : 'untouched'} ${v !== 'X' && v < hole.par ? 'birdie' : ''}`} aria-live="polite" aria-atomic="true">
                     <span className="sr-only">{p.name} </span>{v === 'X' ? <><span aria-hidden="true">X</span><span className="sr-only">picked up</span></> : v}
-                    {touched[p.id] && v !== 'X' && <ScoreCritter score={v} par={hole.par} />}
+                    <ScoreCritter score={v} par={hole.par} fresh={tapped.current.has(p.id)} />
                   </span>
                   <button className="sc-btn" aria-label={`${p.name} one more`} disabled={v !== 'X' && v >= 15}
                     onClick={() => setScore(p.id, v === 'X' ? hole.par + 1 : Math.min(15, v + 1))}><Icon name="plus" /></button>
@@ -865,9 +890,10 @@ function PlayRound({ round, mount, momentUp = false }) {
 
 /**
  * The "Any side bets on this hole?" card (bet-prompt.js): what it suggests, one tap to add it (the
- * side bet editor opens filled in), one to put it away for the round, and a way to turn it off.
+ * side bet editor opens filled in), one to put it off to later in the round (`onLater`, only when
+ * the round has a later hole to ask on), one to put it away for the round, and a way to turn it off.
  */
-function BetPromptCard({ prompt, onAdd, onSkip, onOff }) {
+function BetPromptCard({ prompt, onAdd, onLater = null, onSkip, onOff }) {
   return (
     <div className="bet-prompt" role="group" aria-labelledby="bp-title">
       <div className="bp-ic" aria-hidden="true"><Icon name={prompt.kind === 'ctp' ? 'target' : 'hand-coins'} fill /></div>
@@ -876,6 +902,7 @@ function BetPromptCard({ prompt, onAdd, onSkip, onOff }) {
         <div className="bp-text">{prompt.text}</div>
         <div className="bp-actions">
           <button className="pill-btn on" onClick={onAdd}><Icon name="plus" /> Add a side bet</button>
+          {onLater && <button className="pill-btn ghost" onClick={onLater}>Not this hole</button>}
           <button className="pill-btn ghost" onClick={onSkip}>Not this round</button>
         </div>
         <button className="link-btn bp-off" onClick={onOff}>Don’t ask again</button>

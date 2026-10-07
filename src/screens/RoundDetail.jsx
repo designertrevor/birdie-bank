@@ -45,8 +45,9 @@ const pts = n => `${n} pt${n === 1 ? '' : 's'}`;
 // Keyed by round and its finish time, so finishing the round again starts over.
 const finaleStage = new Map();
 
-// The finale's beats in order, so a stage change knows which way to slide
-const STAGE_ORDER = ['reveal', 'settle', 'share'];
+// The finale's beats in order, so a stage change knows which way to slide (the full breakdown is a
+// step past them, so Back from it slides the reveal in from the left)
+const STAGE_ORDER = ['reveal', 'settle', 'share', 'detail'];
 
 export default function RoundDetail({ id, celebrate }) {
   const nav = useNav();
@@ -184,7 +185,8 @@ export default function RoundDetail({ id, celebrate }) {
 
   return (
     <Screen>
-      <Header title={celebrate ? 'Final results' : 'Round'} onBack={celebrate ? undefined : nav.pop} small
+      {/* From the finale, Back returns to the reveal (its end state), so the round can still be settled and shared */}
+      <Header title={celebrate ? 'Final results' : 'Round'} onBack={celebrate ? () => setStage('reveal') : nav.pop} small
         right={solo ? null : <button className="header-btn" onClick={() => { setShareFrom('detail'); setStage('share'); }}><Icon name="share-network" /> Share</button>} />
       <div className="scroll">
         {solo ? (
@@ -714,8 +716,9 @@ function GameBreakdown({ round, res, label = null }) {
  * player's running to par (+3, E, −1) on the holes they've scored, and net too when anyone gets
  * strokes, so it shows without scrolling the card sideways.
  */
-export function Scorecard({ round, current, onHole }) {
-  const out = round.holes;
+export function Scorecard({ round, current, onHole, holes = null }) {
+  // `holes`: a part of the round (the halfway sheet's first nine); strokes still fall as the whole round deals them
+  const out = holes || round.holes;
   const cls = (g, par) => (g === 'X' ? 'pu' : g <= par - 2 ? 'eagle' : g === par - 1 ? 'birdie' : g === par + 1 ? 'bogey' : g >= par + 2 ? 'dbl' : '');
   const hc = !!round.useHandicaps;
   const units = scorers(round);
@@ -749,7 +752,7 @@ export function Scorecard({ round, current, onHole }) {
             <th>Tot</th>
             {anyStrokes && <th>Net</th>}
           </tr>
-          <tr className="par-row"><td className="sticky">Par</td>{out.map(h => <td key={h.no} {...colProps(h.no)}>{h.par}</td>)}<td>{round.par}</td>{anyStrokes && <td />}</tr>
+          <tr className="par-row"><td className="sticky">Par</td>{out.map(h => <td key={h.no} {...colProps(h.no)}>{h.par}</td>)}<td>{holes ? out.reduce((a, h) => a + (h.par || 0), 0) : round.par}</td>{anyStrokes && <td />}</tr>
           {hc && <tr className="hcp-row"><td className="sticky">HCP</td>{out.map(h => <td key={h.no} {...colProps(h.no)}>{h.hdcp ?? '–'}</td>)}<td />{anyStrokes && <td />}</tr>}
         </thead>
         <tbody>

@@ -756,8 +756,17 @@ button:disabled { cursor: not-allowed; }
 /* Play: each player's face beside their name, and a critter when the score is a birdie or better */
 .score-row > .avatar { margin-right: 0; width: 38px; height: 38px; align-self: flex-start; margin-top: 2px; }
 .sc-num { position: relative; }
-.sc-critter { position: absolute; top: -12px; left: -14px; width: 28px; height: 28px; border-radius: 50%; overflow: hidden; box-shadow: 0 0 0 2px var(--card); animation: pop .35s var(--spring) both; }
+/* The birdie critter pops in beside the tapped score, holds a beat and floats off (2.4s, the same as CRITTER_MS in Play.jsx) */
+.sc-critter { position: absolute; top: -12px; left: -14px; width: 28px; height: 28px; border-radius: 50%; overflow: hidden; box-shadow: 0 0 0 2px var(--card); animation: critterPop 2.4s ease-out both; }
 .sc-critter .buddy-art { width: 100%; height: 100%; display: block; }
+@keyframes critterPop {
+  0% { opacity: 0; transform: scale(.3) rotate(-14deg); }
+  12% { opacity: 1; transform: scale(1.28) rotate(8deg); }
+  20% { transform: scale(.96) rotate(-2deg); }
+  26% { transform: scale(1) rotate(0); }
+  74% { opacity: 1; transform: scale(1) translateY(0); }
+  100% { opacity: 0; transform: scale(.8) translateY(-10px); }
+}
 .pickup-btn.on { color: var(--loss); }
 .sc-num.untouched { color: var(--mute-soft); }
 .sc-btn:disabled { opacity: .35; transform: none; }
@@ -1018,7 +1027,8 @@ button:disabled { cursor: not-allowed; }
 .rv-step {
   display: flex; align-items: center; gap: 12px; padding: 9px 0; border-top: 1px solid var(--line-soft);
   opacity: 0; transform: translateY(var(--distance-base)); filter: blur(var(--blur-small));
-  transition: opacity var(--duration-fast) ease-in-out, filter var(--duration-fast) ease-in-out, transform var(--duration-slow) var(--ease-smooth-out);
+  transition: opacity var(--duration-fast) ease-in-out, filter var(--duration-fast) ease-in-out, transform var(--duration-slow) var(--ease-smooth-out),
+    padding var(--duration-slow) var(--ease-smooth-out), gap var(--duration-slow) var(--ease-smooth-out), border-color var(--duration-slow) ease-in-out;
 }
 .rv-card-title + .rv-step { border-top: none; }
 .rv-step.on { opacity: 1; transform: none; filter: none; }
@@ -1738,15 +1748,18 @@ button.lately-row:active { background: var(--surface); }
 .ft-since { border-top: none; padding-top: 0; }
 
 /* ---------- Reveal: the bets card tightens once it has resolved (ship/trial, Trevor's review) ---------- */
-/* One short line a bet, so four players' totals land on screen at 375x812 while filming */
+/* The bets card tightens once every bet is in and the totals start to count (Reveal's `tight`), as one
+   smooth shrink rather than a snap: sizes and spacing only, since putting the label and text on one
+   line can't animate. The scroll nudge still brings four players' totals on screen at 375x812 */
 .rv-card { transition: padding var(--duration-slow) var(--ease-smooth-out); }
+.rv-card-title { transition: padding var(--duration-slow) var(--ease-smooth-out), font-size var(--duration-slow) var(--ease-smooth-out); }
+.rv-label, .rv-text, .rv-val { transition: font-size var(--duration-slow) var(--ease-smooth-out); }
 .rv-card.compact { padding: 0 14px 4px; }
 .rv-card.compact .rv-card-title { padding: 8px 0 2px; font-size: 11px; }
-.rv-card.compact .rv-step { padding: 3px 0; gap: 10px; border-top: none; }
-.rv-card.compact .rv-main { display: flex; align-items: baseline; gap: 8px; }
-.rv-card.compact .rv-label { flex: none; font-size: 12px; }
-.rv-card.compact .rv-text { flex: 1; min-width: 0; font-size: 13px; }
-.rv-card.compact .rv-val { font-size: 14px; }
+.rv-card.compact .rv-step { padding: 4px 0; gap: 10px; border-top-color: transparent; }
+.rv-card.compact .rv-label { font-size: 11px; }
+.rv-card.compact .rv-text { font-size: 13px; }
+.rv-card.compact .rv-val { font-size: 15px; }
 
 /* ---------- Never force an update mid-round: the "Update ready" note on Up next (overnight 6) ---------- */
 /* Only shows with no round going on; one quiet line, not a banner */
@@ -2051,6 +2064,21 @@ button.trip-card:active { transform: scale(.97); }
 .bp-actions .pill-btn { min-height: 40px; }
 .bet-prompt .pill-btn.ghost { background: transparent; color: var(--ink); box-shadow: inset 0 0 0 1.5px var(--surface-strong); }
 .bp-off { margin-left: -4px; font-size: 13px; font-weight: 600; color: var(--mute); }
+
+/* Halfway sheet (Moments.jsx, lib/halfway.js): where things stand after nine of eighteen */
+.hw-head { padding: 2px 20px 12px; }
+.hw-title { font-size: 26px; font-weight: 800; letter-spacing: -.02em; color: var(--ink); line-height: 1.15; }
+.hw-text { margin-top: 4px; font-size: 15px; color: var(--body); line-height: 1.45; }
+.hw-card { margin: 0 16px 10px; padding: 2px 16px 6px; background: var(--card); border-radius: 18px; }
+.hw-row { display: flex; align-items: center; gap: 12px; padding: 9px 0; border-top: 1px solid var(--line-soft); }
+.rv-card-title + .hw-row { border-top: none; }
+.hw-row > .avatar { width: 30px; height: 30px; flex: none; }
+.hw-main { flex: 1; min-width: 0; }
+.hw-label { font-size: 12px; font-weight: 600; color: var(--mute); }
+.hw-line { font-size: 15px; font-weight: 700; color: var(--ink); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.hw-val { font-family: var(--display); font-size: 18px; font-weight: 800; color: var(--ink); font-variant-numeric: tabular-nums; white-space: nowrap; }
+.hw-row.tie .hw-line, .hw-row.tie .hw-val { color: var(--mute); }
+.sc-sheet .hw-head + .hw-card, .sc-sheet .sec-label.hw-sec { padding-top: 8px; }
 
 /* ---------- o7 polish: add rows, copy and theme fixes ---------- */
 /* The add rows ("Add a course", "Add a player", "Join a friend's round") keep their dashed edge: the
