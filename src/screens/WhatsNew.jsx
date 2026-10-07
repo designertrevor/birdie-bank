@@ -23,18 +23,34 @@ export default function WhatsNew({ fresh = null }) {
   useEffect(() => { saveSeen(markSeen(items)); }, [items]);
   const shown = all ? groups : groups.slice(0, MONTHS_FIRST);
   const total = groups.reduce((a, g) => a + g.items.length, 0);
+  const hero = groups[0]?.items[0] || null;
 
   return (
     <Screen className="whats-new">
       <Header title="What’s new" onBack={nav.pop} />
       <div className="scroll">
         <p className="rm-intro">What’s landed in the app lately, newest first.</p>
+        {/* The newest one gets the stage; everything else is a compact list under it */}
+        {hero && (
+          <div className="wn-hero">
+            <Spot kind="gift" size={104} />
+            <div className="wn-hero-words">
+              <span className="eyebrow rm-area">{hero.area}</span>
+              <h2 className="wn-hero-title d">{hero.title}</h2>
+              {hero.blurb && <p className="rm-blurb">{hero.blurb}</p>}
+              <div className="rm-meta">
+                <span className="rm-when"><Icon name="check-circle" fill /> {shippedLabel(hero.shipped)}</span>
+                {hero.fresh && <span className="rm-tag">New</span>}
+              </div>
+            </div>
+          </div>
+        )}
         {groups.length === 0 && <div className="rm-empty"><Spot kind="sleep" size={96} /><p>Nothing here yet. New things land here after each update.</p></div>}
         {shown.map(g => (
           <section key={g.label} className="wn-month">
             <div className="sec-label">{g.label}</div>
-            <ol className="rm-list" role="list">
-              {g.items.map(i => (
+            <ol className="rm-list compact" role="list">
+              {g.items.filter(i => i !== hero).map(i => (
                 <li key={i.id} className="rm-card">
                   <div className="rm-main">
                     <span className="eyebrow rm-area">{i.area}</span>

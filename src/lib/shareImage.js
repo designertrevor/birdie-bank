@@ -264,3 +264,19 @@ export async function renderResultsCard(model) {
   draw(ctx, model);
   return new Promise((resolve, reject) => canvas.toBlob(b => (b ? resolve(b) : reject(new Error('Could not make the image'))), 'image/png'));
 }
+
+/** Load a picture to draw, or null when it won't load (a photo with no CORS, no signal) in time. */
+export function loadImage(src) {
+  if (!src || typeof Image === 'undefined') return Promise.resolve(null);
+  return new Promise(resolve => {
+    const img = new Image();
+    const done = v => { clearTimeout(timer); resolve(v); };
+    const timer = setTimeout(() => done(null), 3000);
+    // A photo from the avatars bucket comes with CORS headers; asking for them keeps the canvas exportable
+    if (!/^data:/.test(src)) img.crossOrigin = 'anonymous';
+    img.referrerPolicy = 'no-referrer';
+    img.onload = () => done(img);
+    img.onerror = () => done(null);
+    img.src = src;
+  });
+}

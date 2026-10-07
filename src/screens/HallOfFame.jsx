@@ -5,6 +5,9 @@
 import { useMemo, useState } from 'react';
 import { Empty, Header, Icon, Screen } from '../components/ui.jsx';
 import { Avatar } from '../components/Avatar.jsx';
+import { Spot } from '../components/Spot.jsx';
+import { CrownedFace, Podium } from '../components/Podium.jsx';
+import { useGroupAvatars } from '../lib/useAvatars.js';
 import { useStore } from '../lib/store.js';
 import { useNav } from '../lib/nav.js';
 import { money } from '../lib/golf.js';
@@ -30,6 +33,9 @@ export default function HallOfFame({ crew: crewId }) {
   const crew = crewsOf(state).find(c => c.id === crewId);
   const season = useMemo(() => (crew ? crewSeason(state, crew.id, { now }) : null), [state, crew, now]);
   const hall = useMemo(() => (crew ? crewHall(state, crew.id, { now }) : null), [state, crew, now]);
+  // The money list's faces, twins sorted out, for the podium and the champion's crown
+  const listed = useMemo(() => (season?.money || []).map(r => ({ id: r.id, name: nameOf(state, r.id) })), [season, state]);
+  const faces = useGroupAvatars(listed);
   if (!crew) {
     return (
       <Screen>
@@ -65,7 +71,8 @@ export default function HallOfFame({ crew: crewId }) {
     <Screen className="hof">
       <Header title="Hall of fame" small onBack={nav.pop} />
       <div className="scroll">
-        <div className="settle-lede">
+        <div className="settle-lede hof-hero">
+          {season.champion && faces.get(season.champion.id) ? <CrownedFace model={faces.get(season.champion.id)} size={84} /> : <Spot kind="cup" size={110} />}
           <div className="eyebrow">{crew.name}</div>
           <div className="d settle-count">{season.champion ? `${first(season.champion.id)} ${season.champion.id === me ? 'lead' : 'leads'} the season` : 'The season so far'}</div>
           <p>{season.rounds ? `${plural(season.rounds, 'round')} for money ${sinceLine}` : `No rounds for money ${sinceLine}`}</p>
@@ -74,6 +81,9 @@ export default function HallOfFame({ crew: crewId }) {
         {season.money.length > 0 && (
           <>
             <div className="sec-label">Money list</div>
+            {season.money.length >= 3 && (
+              <Podium standings={season.money.map(r => ({ id: r.id, name: label(r.id), amount: r.cents }))} faces={faces} fmt={c => signed(c)} />
+            )}
             <ol className="block hof-list" aria-label={`${crew.name} money list`}>
               {season.money.map((r, i) => (
                 <li key={r.id} className={`hof-row ${r.id === me ? 'me' : ''}`}>
@@ -138,11 +148,12 @@ export default function HallOfFame({ crew: crewId }) {
         </div>
 
         <div className="sec-label">Records</div>
-        <div className="block kv-block">
-          <Kv k="Longest win streak" v={records.streak ? `${first(records.streak.id)}, ${records.streak.n} in a row` : DASH} />
-          <Kv k="Most skins in a round" v={records.skins ? `${first(records.skins.id)}, ${records.skins.skins}` : DASH} sub={records.skins ? `${records.skins.course || 'A round'}, ${day(records.skins.at)}` : null} />
-          <Kv k={records.low ? `Low ${records.low.holes}` : 'Low round'} v={records.low ? `${first(records.low.id)}, ${records.low.strokes}` : DASH} sub={records.low ? `${records.low.course || 'A round'}, ${day(records.low.at)}` : null} />
-          <Kv k="Most rounds" v={records.regular ? `${regularNames(records.regular.ids || [records.regular.id])}, ${records.regular.n}` : DASH} />
+        {/* The records as badges: what it is, who holds it, and the number */}
+        <div className="badge-grid">
+          <Badge icon="fire" k="Longest win streak" who={records.streak ? first(records.streak.id) : null} v={records.streak ? `${records.streak.n} in a row` : null} />
+          <Badge icon="coins" k="Most skins in a round" who={records.skins ? first(records.skins.id) : null} v={records.skins ? `${records.skins.skins} skins` : null} sub={records.skins ? `${records.skins.course || 'A round'}, ${day(records.skins.at)}` : null} />
+          <Badge icon="flag-pennant" k={records.low ? `Low ${records.low.holes}` : 'Low round'} who={records.low ? first(records.low.id) : null} v={records.low ? String(records.low.strokes) : null} sub={records.low ? `${records.low.course || 'A round'}, ${day(records.low.at)}` : null} />
+          <Badge icon="calendar-check" k="Most rounds" who={records.regular ? regularNames(records.regular.ids || [records.regular.id]) : null} v={records.regular ? String(records.regular.n) : null} />
         </div>
         <p className="field-help pad">Only you see this. It’s built from the crew’s rounds on this phone, back to the first one. Points rounds count in points and reward rounds in the reward, never in the money.</p>
         <button className="text-link stats-link" onClick={() => nav.push('share', { kind: 'wrapped', year: new Date(now).getFullYear() })}>
@@ -157,6 +168,16 @@ export default function HallOfFame({ crew: crewId }) {
     </Screen>
   );
 }
+
+/** One record as a badge tile. Nobody holding it yet shows the dash. */
+const Badge = ({ icon, k, who, v, sub }) => (
+  <div className={`badge-tile ${who ? '' : 'empty'}`}>
+    <span className="bt-ic" aria-hidden="true"><Icon name={icon} fill /></span>
+    <span className="bt-k">{k}</span>
+    <span className="bt-v d">{v || DASH}</span>
+    <span className="bt-who">{who || 'Nobody yet'}{sub && <span className="sl-sub">{sub}</span>}</span>
+  </div>
+);
 
 const Kv = ({ k, v, sub }) => (
   <div className="kv-row"><span className="kv-k">{k}{sub && <span className="sl-sub">{sub}</span>}</span><span className="kv-v">{v}</span></div>

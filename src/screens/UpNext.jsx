@@ -1,4 +1,4 @@
-import { Suspense, lazy, useEffect, useState } from 'react';
+import { Suspense, lazy, useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { Header, Icon, Screen } from '../components/ui.jsx';
 import { Spot } from '../components/Spot.jsx';
 import { useStore } from '../lib/store.js';
@@ -100,12 +100,16 @@ export default function UpNext() {
 
         {onNow.length > 0 && <Later>{onNow.map(t => <TripUpNext key={t.trip.id} status={t} renderPlan={p => <UpcomingCard key={p.id} plan={p} />} />)}</Later>}
 
-        {/* A tee time to book and friendly payment reminders: there's no push yet, so these are the reminders */}
-        <Later><RemindersUpNext /></Later>
-        {/* Something you asked for or voted for on the roadmap shipped: said once (roadmap.js) */}
-        <Later><ShippedUpNext /></Later>
-        {/* What landed in this update: said once, never while a round is going on (whats-new.js) */}
-        <Later><WhatsNewUpNext /></Later>
+        {/* Reminders, It shipped and What's new share one slot: the first card shows, the rest wait
+            behind it ("2 more"), so the next round stays near the top */}
+        <CardStack>
+          {/* A tee time to book and friendly payment reminders: there's no push yet, so these are the reminders */}
+          <Later><RemindersUpNext /></Later>
+          {/* Something you asked for or voted for on the roadmap shipped: said once (roadmap.js) */}
+          <Later><ShippedUpNext /></Later>
+          {/* What landed in this update: said once, never while a round is going on (whats-new.js) */}
+          <Later><WhatsNewUpNext /></Later>
+        </CardStack>
 
         {plans.length > 0 && <div className="sec-label">Upcoming</div>}
         {plans.map(p => <UpcomingCard key={p.id} plan={p} />)}
@@ -197,6 +201,41 @@ function UpcomingCard({ plan }) {
         <span className="row-main"><b>{day ? `${day} preview` : 'The preview'}</b> <span className="uc-pv-sub">Strokes, head to head, a card for the group</span></span>
         <Icon name="caret-right" />
       </button>
+    </div>
+  );
+}
+
+/**
+ * A pile of cards with only the top one showing, and a "2 more" button that fans the rest out. The
+ * cards come and go on their own (each loads later and can be dismissed), so it counts what's there.
+ */
+function CardStack({ children }) {
+  const ref = useRef(null);
+  const [n, setN] = useState(0);
+  const [open, setOpen] = useState(false);
+  useLayoutEffect(() => {
+    const el = ref.current;
+    if (!el) return undefined;
+    // Mark every card after the first as waiting (and the section labels with them) while it's piled
+    const read = () => {
+      const cards = [...el.querySelectorAll('.remind-card')];
+      cards.forEach((c, i) => c.classList.toggle('cs-wait', !open && i > 0));
+      el.querySelectorAll('.sec-label').forEach(l => l.classList.toggle('cs-wait', !open && cards.length > 1));
+      setN(cards.length);
+    };
+    read();
+    const mo = new MutationObserver(read);
+    mo.observe(el, { subtree: true, childList: true });
+    return () => mo.disconnect();
+  }, [open]);
+  return (
+    <div ref={ref} className={`card-stack ${n > 1 && !open ? 'piled' : ''}`}>
+      {children}
+      {n > 1 && (
+        <button className="cs-more" onClick={() => setOpen(!open)} aria-expanded={open}>
+          {open ? 'Show less' : `${n - 1} more`} <Icon name={open ? 'caret-up' : 'caret-down'} />
+        </button>
+      )}
     </div>
   );
 }

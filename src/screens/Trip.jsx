@@ -7,6 +7,8 @@
 // Up next. See trips.js, trip-plan.js and trip-expenses.js for how it's all worked out.
 import { useEffect, useState } from 'react';
 import { Empty, Header, Icon, PickRow, Screen, Segmented, Sheet, useUI } from '../components/ui.jsx';
+import { Spot } from '../components/Spot.jsx';
+import { daysUntil } from '../lib/plan-basics.js';
 import { Avatar, PayButton, RequestButton } from '../components/Pay.jsx';
 import { RoundRow } from '../components/RoundRow.jsx';
 import { SquareFaces, TripDays, TripSheet } from '../components/Trips.jsx';
@@ -68,6 +70,12 @@ const addsDone = new Set();
  * `view`: which part opens first ('cup', 'standings', 'rounds', 'games' or 'expenses'); a team
  * points trip opens on the cup. `add` (the tap's time) opens Add an expense, once.
  */
+/** How long until a trip starts, for the big line: "Tomorrow", "3 days to go". */
+function countdownBig(start) {
+  const n = daysUntil(start);
+  return n == null ? 'Coming up' : n <= 0 ? 'First tee today' : n === 1 ? 'Tomorrow' : `${n} days to go`;
+}
+
 export default function Trip(props) {
   // A Big Game is a one-day trip with a page of its own (BigGame.jsx)
   const format = useStore(s => tripOf(s, props.id)?.format);
@@ -127,7 +135,8 @@ function TripPage({ id, view: firstView = null, add = false }) {
     : cupOn ? cupHeadline(cup)
     : myPoints != null ? `You’re on ${points(myPoints, { sign: true })}`
     : inExpenses ? owedLine(allIn)
-    : st.phase === 'soon' ? 'Nothing played yet' : st.done.length ? 'No money on it yet' : 'Nothing played yet';
+    : startsLater ? countdownBig(trip.start)
+    : st.phase === 'soon' ? 'First tee today' : st.done.length ? 'No money on it yet' : 'First round coming up';
   const scoreUp = cupOn || myPoints != null;
   const bigSign = st.hasMoney && played ? sign(net) : scoreUp ? '' : inExpenses ? sign(allIn) : '';
   // With expenses too, the whole trip under the rounds' money (or the expenses under the score)
@@ -179,6 +188,7 @@ function TripPage({ id, view: firstView = null, add = false }) {
       <Header title={trip.name} small onBack={nav.pop} right={st.organizer ? <button className="header-btn" onClick={() => setEditing(true)}><Icon name="pencil-simple" /> Edit</button> : null} />
       <div className="scroll">
         <div className="trip-hero">
+          {!played && !cupOn && <Spot kind="suitcase" size={96} className="trip-spot" />}
           <div className="eyebrow pink">{eyebrow}{st.published.updated && <> <span className="trip-updated">Updated</span></>}</div>
           <div className={`tab-big d ${bigSign}`}>{big}</div>
           {allInLine && <div className={`trip-allin ${sign(allIn)}`}>{allInLine}</div>}
@@ -279,7 +289,7 @@ function TripPage({ id, view: firstView = null, add = false }) {
         )}
 
         <div className="trip-foot">
-          <p className="field-help">{TRIP_FORMATS[trip.format]?.name || TRIP_FORMATS.money.name}. Each round keeps its own games and bets. Someone who plays only some rounds is on the trip for those rounds.</p>
+          <details className="how"><summary>How this trip works</summary><p>{TRIP_FORMATS[trip.format]?.name || TRIP_FORMATS.money.name}. Each round keeps its own games and bets. Someone who plays only some rounds is on the trip for those rounds.</p></details>
           {st.organizer && !del_.ok && <p className="field-help">{!st.paid.length && st.expenses.length ? 'The trip has expenses, so it stays. Once they’re deleted under Expenses, the trip can be too.' : 'Trip money has been paid, so the trip stays.'} You can still edit its name and dates.</p>}
           {!st.organizer && !hidden && <p className="field-help">Hiding takes it off your own Tab and Up next. Your rounds and money stay as they are.</p>}
           {/* Only the organizer deletes; everyone else can hide it from their own Tab and Up next */}

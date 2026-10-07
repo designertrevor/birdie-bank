@@ -3012,8 +3012,7 @@ a.header-btn.rm-open { text-decoration: none; }
 /* Settings: right under the feedback button, with room between them */
 .set-row.rm-set { margin-top: 10px; }
 /* Up next: the "it shipped" note */
-.remind-card.rm-live { box-shadow: inset 0 0 0 2px var(--pink); }
-.remind-card.rm-live .rc-ic { background: var(--pink); color: var(--on-pastel); }
+.rc-spot { width: 56px; height: 56px; flex-shrink: 0; margin: -6px 0 0 -6px; }
 
 /* ---------- Trip setup fixes and a design pass on every trip screen (o9 tripflow) ---------- */
 /* An avatar's initials, buddy or photo sit in the middle of its circle at every size, even inside a
@@ -3585,3 +3584,54 @@ a.header-btn.rm-open { text-decoration: none; }
 .ob-guide { display: block; width: 84px; height: 84px; margin: 0 0 4px -8px; animation: pop .5s var(--spring) both; }
 .ob-hint { margin: 8px 0 0; text-align: center; font-size: 13px; color: var(--mute); }
 .ob-body .amt-btn.field-btn { align-self: flex-start; display: block; width: auto; min-width: 128px; height: 50px; padding: 0 22px; font-size: 18px; }
+
+/* UP NEXT: reminders and news share one slot, the rest piled behind the first */
+.card-stack .cs-wait { display: none; }
+.card-stack.piled .remind-card:not(.cs-wait) { box-shadow: 0 6px 0 -2px var(--surface-strong), 0 12px 0 -5px var(--line); margin-bottom: 20px; }
+.cs-more { display: flex; align-items: center; gap: 4px; margin: -8px auto 10px; padding: 6px 12px; border: none; border-radius: 999px; background: var(--surface); color: var(--body); font: inherit; font-size: 13px; font-weight: 700; cursor: pointer; }
+
+/* Want a heads-up: a lock screen with one of ours on it */
+.lock-preview { margin: 4px 16px 12px; padding: 14px 12px 12px; border-radius: 24px; background: linear-gradient(160deg, #1a3a3a, #2c5a5a 55%, #a4d4c5); display: flex; flex-direction: column; gap: 8px; }
+.lp-time { text-align: center; color: #fff; font-size: 40px; font-weight: 800; letter-spacing: -.02em; line-height: 1; margin-bottom: 4px; }
+.lp-note { display: flex; align-items: center; gap: 10px; padding: 10px 12px; border-radius: 18px; background: rgba(255,255,255,.88); color: #0a0a0a; }
+.lp-note.dim { opacity: .7; transform: scale(.96); margin-top: -2px; }
+.lp-app { width: 34px; height: 34px; border-radius: 9px; background: #fffaf0; display: grid; place-items: center; flex-shrink: 0; overflow: hidden; }
+.lp-words { display: flex; flex-direction: column; min-width: 0; font-size: 13px; line-height: 1.3; }
+.lp-words b { font-size: 13px; }
+.lp-now { margin-left: auto; align-self: flex-start; font-size: 11px; color: rgba(10,10,10,.5); }
+
+/* What's new: the newest on a hero card, the rest as one compact list a month */
+.wn-hero { margin: 4px 16px 6px; padding: 16px; border-radius: 24px; background: var(--card); display: flex; gap: 12px; align-items: center; }
+.wn-hero .spot { flex-shrink: 0; margin-left: -8px; }
+.wn-hero-words { min-width: 0; display: flex; flex-direction: column; gap: 4px; }
+.wn-hero-title { margin: 0; font-size: 22px; font-weight: 800; letter-spacing: -.02em; line-height: 1.15; }
+.rm-list.compact { background: var(--card); border-radius: 20px; overflow: hidden; margin-left: 16px; margin-right: 16px; padding: 0; }
+.rm-list.compact .rm-card { background: none; border-radius: 0; margin: 0; padding: 12px 16px; box-shadow: none; }
+.rm-list.compact .rm-card + .rm-card { border-top: 1px solid var(--line); }
+.rm-list.compact .rm-blurb { display: none; }
+.rm-list.compact .rm-title { font-size: 16px; }
+.wn-month:has(.rm-list.compact:empty) { display: none; }
+
+/* HALL OF FAME: the leader crowned, the money list's top three on a podium, records as badges */
+.hof-hero { display: flex; flex-direction: column; align-items: center; text-align: center; }
+.hof-hero .crowned, .hof-hero .spot { margin-bottom: 6px; }
+.badge-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; margin: 0 16px 10px; }
+.badge-tile { display: flex; flex-direction: column; gap: 2px; padding: 14px; border-radius: 20px; background: var(--card); min-width: 0; }
+.bt-ic { width: 36px; height: 36px; border-radius: 50%; display: grid; place-items: center; background: var(--ochre); color: var(--on-pastel); font-size: 18px; margin-bottom: 6px; }
+.badge-tile.empty .bt-ic { background: var(--surface); color: var(--mute-soft); }
+.bt-k { font-size: 12px; font-weight: 700; color: var(--mute); text-transform: uppercase; letter-spacing: .05em; }
+.bt-v { font-size: 24px; font-weight: 800; letter-spacing: -.02em; color: var(--ink); line-height: 1.15; }
+.bt-who { font-size: 14px; font-weight: 600; color: var(--body); overflow-wrap: anywhere; }
+.bt-who .sl-sub { display: block; font-weight: 500; }
+
+.trend-ghost { display: block; width: 100%; height: 48px; color: var(--mute-soft); margin-bottom: 8px; }
+
+/* A trip before it starts: the suitcase and a countdown */
+.trip-hero { position: relative; }
+.trip-spot { position: absolute; right: 8px; top: -6px; width: 96px; height: 96px; }
+.trip-hero:has(.trip-spot) .tab-big { padding-right: 96px; }
+.trip-foot .how { margin: 0 4px 6px; }
+
+/* Join steps: a scene over each */
+.join-spot { display: block; margin: 0 auto 4px; }
+.nice-spot { display: block; margin: -8px auto 0; }

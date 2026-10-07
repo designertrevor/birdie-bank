@@ -224,7 +224,8 @@ export function NiceRound({ round, me, onDetail, onDone }) {
       <Header title={solo ? 'Your card' : 'Final results'} small />
       <div className="scroll nice-scroll">
         <div className="nice-card" ref={hero}>
-          <Avatar model={faces.get(me) || null} id={me} name={p?.name || ''} size="lg" className="nice-face" />
+          {/* No scores in: the blank card instead of a face, so it reads as "nothing to see", not a result */}
+          {n || !solo ? <Avatar model={faces.get(me) || null} id={me} name={p?.name || ''} size="lg" className="nice-face" /> : <Spot kind="card" size={120} className="nice-spot" />}
           <div className="eyebrow">{round.course.name} · {roundDate(round)}</div>
           <h1 className="nice-title d">{n ? n.title : `Thanks for playing, ${(p?.name || '').split(' ')[0] || 'friend'}`}</h1>
           {n && (

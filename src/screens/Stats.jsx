@@ -158,6 +158,10 @@ function Trend({ trend }) {
       <div className="sec-label">Handicap trend</div>
       {guide == null ? (
         <div className="block trend-empty">
+          {/* Where the line will go, dotted, until there are enough rounds to draw it */}
+          <svg className="trend-ghost" viewBox="0 0 320 60" aria-hidden="true" preserveAspectRatio="none">
+            <path d="M6 44 C60 40 90 22 140 28 S230 18 314 12" fill="none" stroke="currentColor" strokeWidth="3" strokeDasharray="2 9" strokeLinecap="round" vectorEffect="non-scaling-stroke" />
+          </svg>
           <p className="trend-empty-t">Your trend needs {needed} more round{needed === 1 ? '' : 's'}</p>
           <p className="field-help">{trendEmptyText(needed)}</p>
         </div>

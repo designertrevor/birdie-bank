@@ -163,6 +163,16 @@ const SCENES = {
   'face-great': () => <Ball cy={60} r={44} face="happy" />,
   'face-ok': () => <Ball cy={60} r={44} face="flat" />,
   'face-off': () => <Ball cy={60} r={44} face="worried" />,
+  // Something you asked for shipped: the ball with a wrapped present
+  gift: () => (<>
+    <Shadow cx={56} />
+    <Ball cx={46} face="happy" />
+    <rect x="74" y="58" width="36" height="34" rx="4" fill={PINK} />
+    <rect x="70" y="50" width="44" height="12" rx="3" fill={DEEP} />
+    <rect x="88" y="50" width="8" height="42" fill={OCHRE} />
+    <path d="M92 50 Q80 36 76 44 Q74 50 92 50 Q104 36 108 44 Q110 50 92 50Z" fill={OCHRE} />
+    <Hand x={74} y={80} />
+  </>),
   // Keeping it private: the ball in sunglasses
   shades: () => (<>
     <Shadow />

@@ -2,6 +2,7 @@
 // the roadmap ships (roadmap.js shippedNotes). There's no push yet, so this is how you hear. It
 // loads nothing more until this phone has voted or sent an idea. It goes ahead of What's new, and
 // only one of them shows a visit (upnext-card.js).
+import { Spot } from './Spot.jsx';
 import { useEffect, useState } from 'react';
 import { Icon } from './ui.jsx';
 import { useNav } from '../lib/nav.js';
@@ -41,7 +42,7 @@ export function ShippedUpNext() {
   return (
     <div className="remind-card rm-live" role="status">
       <div className="rc-head">
-        <span className="rc-ic" aria-hidden="true"><Icon name="confetti" fill /></span>
+        <Spot kind="gift" size={56} className="rc-spot" />
         <div className="row-main">
           <div className="eyebrow">It shipped</div>
           <div className="rc-title d">{first.line}</div>

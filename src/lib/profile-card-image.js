@@ -2,26 +2,11 @@
 // colours and fonts (shareImage.js) with the year in review's tiles (wrapped-image.js), so the
 // cards look like a set. It draws the model from profile-card.js: your avatar and name, six tiles
 // and, with amounts on, the money. Needs a DOM.
-import { BODY, C, DISPLAY, clip, fit, spaced } from './shareImage.js';
+import { BODY, C, DISPLAY, clip, fit, loadImage, spaced } from './shareImage.js';
 import { drawPng, drawTile } from './wrapped-image.js';
 
 export const CARD_SIZE = 1080;
 
-/** Load a picture to draw, or null when it won't load (a photo with no CORS, no signal) in time. */
-function loadImage(src) {
-  if (!src || typeof Image === 'undefined') return Promise.resolve(null);
-  return new Promise(resolve => {
-    const img = new Image();
-    const done = v => { clearTimeout(timer); resolve(v); };
-    const timer = setTimeout(() => done(null), 3000);
-    // A photo from the avatars bucket comes with CORS headers; asking for them keeps the canvas exportable
-    if (!/^data:/.test(src)) img.crossOrigin = 'anonymous';
-    img.referrerPolicy = 'no-referrer';
-    img.onload = () => done(img);
-    img.onerror = () => done(null);
-    img.src = src;
-  });
-}
 
 function avatar(ctx, a, pic, cx, cy, r) {
   ctx.save();

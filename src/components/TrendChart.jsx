@@ -14,7 +14,8 @@ export function TrendChart({ points, official = null }) {
   const hi = Math.max(...all), lo = Math.min(...all);
   const span = hi - lo || 1;
   const x = i => (vals.length === 1 ? W / 2 : PAD_X + (i * (W - PAD_X * 2)) / (vals.length - 1));
-  const y = v => (hi === lo ? H / 2 : PAD_Y + ((hi - v) * (H - PAD_Y * 2)) / span);
+  // Upside down on purpose: a lower handicap is better, so better goes up the chart, like the money
+  const y = v => (hi === lo ? H / 2 : PAD_Y + ((v - lo) * (H - PAD_Y * 2)) / span);
   const pts = vals.map((v, i) => [x(i), y(v)]);
   const line = pts.map(([px, py], i) => `${i ? 'L' : 'M'}${px.toFixed(1)} ${py.toFixed(1)}`).join(' ');
   const first = vals[0], end = vals.at(-1);

@@ -1,7 +1,7 @@
 // The year in review image: a 1080 by 1920 PNG for Stories in the results image's colours, fonts
 // and corner shapes (shareImage.js), so it sits with the other cards. It draws the model from
 // wrapped.js: a title, the big round count, a grid of stat tiles and a few short sections. Needs a DOM.
-import { BODY, C, DISPLAY, IMAGE_H, IMAGE_W, clip, fit, fontsReady, spaced } from './shareImage.js';
+import { BODY, C, DISPLAY, IMAGE_H, IMAGE_W, clip, fit, fontsReady, loadImage, spaced } from './shareImage.js';
 
 /**
  * One stat tile: a soft rounded box, the value big and the label under it. Shared with the profile
@@ -50,11 +50,12 @@ function draw(ctx, m) {
   ctx.font = `800 40px ${DISPLAY}`;
   spaced(ctx, m.eyebrow.toUpperCase(), PAD, 170, 6);
   ctx.fillStyle = C.ink;
-  fit(ctx, m.title, 700, BODY, 52, 34, inner - 260);
-  ctx.fillText(clip(ctx, m.title, inner - 260), PAD, 262);
+  const titleW = m.faced ? inner - 340 : inner - 260;
+  fit(ctx, m.title, 700, BODY, 52, 34, titleW);
+  ctx.fillText(clip(ctx, m.title, titleW), PAD, 262);
   ctx.fillStyle = C.soft;
   ctx.font = `600 38px ${BODY}`;
-  ctx.fillText(clip(ctx, m.meta, inner - 200), PAD, 318);
+  ctx.fillText(clip(ctx, m.meta, m.faced ? inner - 340 : inner - 200), PAD, 318);
 
   // The headline: how many rounds, and the holes under it
   let y = 560;
@@ -99,7 +100,25 @@ function draw(ctx, m) {
   ctx.fillText(clip(ctx, m.footer, inner), PAD, footerY);
 }
 
-/** Draw a year in review model (wrapped.js) and return it as a PNG blob. */
+/** Your Ball buddy (or photo), big, in the pink corner: the card is yours at a glance. */
+function drawFace(ctx, img) {
+  const r = 150, cx = IMAGE_W - 230, cy = 250;
+  ctx.save();
+  ctx.fillStyle = C.bg;
+  ctx.beginPath(); ctx.arc(cx, cy, r + 14, 0, Math.PI * 2); ctx.fill();
+  ctx.beginPath(); ctx.arc(cx, cy, r, 0, Math.PI * 2); ctx.clip();
+  ctx.drawImage(img, cx - r, cy - r, r * 2, r * 2);
+  ctx.restore();
+}
+
+/**
+ * Draw a year in review model (wrapped.js) and return it as a PNG blob. `model.avatarSrc` (a buddy
+ * drawn on the page, or an allowed photo) puts your face in the corner; without it the card is as before.
+ */
 export function renderWrapped(model) {
-  return drawPng(IMAGE_W, IMAGE_H, ctx => draw(ctx, model));
+  return drawPng(IMAGE_W, IMAGE_H, async ctx => {
+    const face = await loadImage(model.avatarSrc);
+    draw(ctx, { ...model, faced: !!face });
+    if (face) drawFace(ctx, face);
+  });
 }

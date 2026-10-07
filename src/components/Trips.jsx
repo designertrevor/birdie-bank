@@ -3,7 +3,7 @@
 // trip?" in setup, and the sheet that starts or edits a trip.
 import { useCallback, useState } from 'react';
 import { createPortal } from 'react-dom';
-import { Icon, PickRow, Segmented, Sheet, Steps, Toggle, useUI } from './ui.jsx';
+import { Empty, Icon, PickRow, Segmented, Sheet, Steps, Toggle, useUI } from './ui.jsx';
 import { DatePicker } from './DatePicker.jsx';
 import { Avatar } from './Pay.jsx';
 import { CupLine, CupRoundNote, TeamsPicker } from './Cup.jsx';
@@ -588,7 +588,7 @@ function WhoGoing({ picked, onChange, byIndex = false, canSkip = false }) {
   const count = all.filter(p => on.has(p.id)).length;
   return (
     <div className="trip-who-step">
-      <p className="field-help trip-lede">Pick who’s coming, or skip this: anyone who plays a round for the trip is on it. Picked friends show in the standings before anyone plays.</p>
+      <p className="field-help trip-lede">Pick who’s coming, or skip it: anyone who plays a trip round joins.</p>
       <form className="tm-add trip-find" role="search" onSubmit={submit}>
         <label className="sr-only" htmlFor="trip-find">{long ? 'Find or add someone' : 'Add someone'}</label>
         <span className="trip-find-ic" aria-hidden="true"><Icon name={long ? 'magnifying-glass' : 'user-plus'} /></span>
@@ -614,7 +614,7 @@ function WhoGoing({ picked, onChange, byIndex = false, canSkip = false }) {
           </button>
         )}
       </div>
-      {all.length === 0 && <p className="field-help">{canSkip ? 'Nobody here yet. Add friends by name above, or skip this and send the first round’s link so they add themselves.' : 'Nobody here yet. Add friends by name above.'}</p>}
+      {all.length === 0 && <Empty illo="suitcase" title="Nobody packed yet" text={canSkip ? 'Add friends by name above, or skip this and they add themselves from the first round’s link.' : 'Add friends by name above.'} />}
       {all.length > 0 && query.trim() && !list.length && typed?.kind !== 'new' && typed?.kind !== 'self' && <p className="field-help">Nobody by that name.</p>}
       {byIndex && <p className="field-help">Someone new is saved to your players with no handicap. Add their index on Players to balance the teams or flights by it.</p>}
     </div>

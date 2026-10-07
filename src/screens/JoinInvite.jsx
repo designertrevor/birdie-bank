@@ -2,6 +2,7 @@
 // bets, the course and who's in), then pick your seat, then check your strokes, then you're in.
 // Not on the list? Ask the scorekeeper for a seat and wait here for them to let you in.
 // No organizer onboarding. They become "me" using their player from the shared round.
+import { Spot } from '../components/Spot.jsx';
 import { useEffect, useMemo, useState } from 'react';
 import { BallIllo, Icon, Screen, Segmented } from '../components/ui.jsx';
 import { Avatar } from '../components/Avatar.jsx';
@@ -191,8 +192,9 @@ export default function JoinInvite({ code, onJoined, onSkip, setUp = false }) {
     return (
       <Screen className="onboard">
         <div className="scroll onboard-body join-body">
+          <Spot kind="card" size={120} className="join-spot" />
           <h1 className="onboard-title join-h">Just keep your own score</h1>
-          <p className="onboard-text join-p">Your own card at {meta.course?.name || 'the course'}, {meta.holes.length} holes. No game and no bets: just your score, hole by hole. The group’s round carries on without you in it.</p>
+          <p className="onboard-text join-p">Your own card at {meta.course?.name || 'the course'}, {meta.holes.length} holes. No bets, just your score.</p>
           {!setUp && <>
             <label className="field-label" htmlFor="ji-own">Your name</label>
             <input id="ji-own" className="name-input" value={name} onChange={e => setName(e.target.value)} placeholder="e.g. Sam" autoComplete="given-name" maxLength={24} />
@@ -211,6 +213,7 @@ export default function JoinInvite({ code, onJoined, onSkip, setUp = false }) {
       <Screen className="onboard">
         {brand}
         <div className="scroll onboard-body join-body">
+          <Spot kind="link" size={120} className="join-spot" />
           <h1 className="onboard-title join-h">Follow along</h1>
           <p className="onboard-text join-p">See every hole as it’s scored. Add your name so the group knows who’s watching.</p>
           <label className="field-label" htmlFor="ji-name">Your name</label>
@@ -230,9 +233,9 @@ export default function JoinInvite({ code, onJoined, onSkip, setUp = false }) {
     return (
       <Screen className="onboard">
         <div className="scroll onboard-body">
-          <BallIllo className="onboard-illo" />
+          <Spot kind="shades" size={140} className="join-spot" />
           <h1 className="onboard-title join-h">This one’s for money</h1>
-          <p className="onboard-text">Money rounds are for 18 or older. You can still follow along live, or ask {scorekeeper} to play it for points and take a seat.</p>
+          <p className="onboard-text">Money rounds are for 18 or older. Follow along live, or ask {scorekeeper} to play it for points.</p>
         </div>
         <div className="cta-wrap">
           <button className="full-btn" onClick={() => { setMinor(false); if (setUp) join(null); else setStep('watch'); }}>Watch instead <Icon name="eye" /></button>

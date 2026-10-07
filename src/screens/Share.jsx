@@ -35,22 +35,7 @@ export default function ShareScreen({ kind, id, year }) {
 
   if (kind === 'profile') return <ProfileShare state={state} onBack={nav.pop} />;
 
-  if (kind === 'wrapped') {
-    const y = yearInReview(state, year || new Date().getFullYear());
-    if (!y.rounds) return gone(`No rounds in ${y.year} yet`, 'Finish a round and your year in review starts here.');
-    const link = appLink();
-    // Only your own money is on it: Show amounts (off until you turn it on) is all that puts it there
-    return (
-      <Screen>
-        <ShareView title="Your year in review" small onBack={nav.pop} what="Year in review" link={link}
-          make={show => { const m = wrappedCardModel(state, y, { showAmounts: show, link }); return { model: m, alt: m.alt, text: m.text }; }}
-          render={renderWrapped} fileName={slugName('year-in-review', String(y.year))}
-          money={!!y.money} people={[]} standIn={m => <WrappedStandIn model={m} />}
-          onText="Your net and best day are on the image" offText="Rounds, courses, your low round and the moment of the year, no money" />
-      </Screen>
-    );
-  }
-
+  if (kind === 'wrapped') return <WrappedShare state={state} year={year} onBack={nav.pop} gone={gone} />;
   if (kind === 'recap') {
     const round = state.rounds?.[id];
     if (!round || round.status !== 'done') return gone('This round is gone', 'It was taken off this phone.');
@@ -88,6 +73,35 @@ export default function ShareScreen({ kind, id, year }) {
         make={show => card(tripCardModel(state, st, { showAmounts: show, link }))} render={renderCard}
         fileName={slugName('trip', st.trip.name)} money={st.standings.length > 0} people={people}
         onText="Everyone’s money on the trip is on the image" offText="The order and the cup, no money" />
+    </Screen>
+  );
+}
+
+/**
+ * Your year in review. Your buddy (or an allowed photo) goes in the image's corner: a buddy is drawn
+ * here once, hidden, and handed to the canvas as a picture, as on the profile card.
+ */
+function WrappedShare({ state, year, onBack, gone }) {
+  const card = profileCard(state);
+  const a = card.avatar;
+  const [buddySrc, setBuddySrc] = useState(null);
+  const grab = useCallback(node => {
+    const svg = node?.querySelector('svg');
+    if (svg && typeof XMLSerializer !== 'undefined') setBuddySrc(`data:image/svg+xml;charset=utf-8,${encodeURIComponent(new XMLSerializer().serializeToString(svg))}`);
+  }, []);
+  const y = yearInReview(state, year || new Date().getFullYear());
+  if (!y.rounds) return gone(`No rounds in ${y.year} yet`, 'Finish a round and your year in review starts here.');
+  const link = appLink();
+  const avatarSrc = a.kind === 'photo' && photoAllowed(a.url, supabaseUrl) ? a.url : a.kind === 'buddy' ? buddySrc : null;
+  // Only your own money is on it: Show amounts (off until you turn it on) is all that puts it there
+  return (
+    <Screen>
+      <ShareView title="Your year in review" small onBack={onBack} what="Year in review" link={link}
+        make={show => { const m = { ...wrappedCardModel(state, y, { showAmounts: show, link }), avatarSrc }; return { model: m, alt: m.alt, text: m.text }; }}
+        render={renderWrapped} fileName={slugName('year-in-review', String(y.year))}
+        money={!!y.money} people={[]} standIn={m => <WrappedStandIn model={m} />}
+        onText="Your net and best day are on the image" offText="Rounds, courses, your low round and the moment of the year, no money" />
+      {a.kind === 'buddy' && <span key={`${a.buddy}-${a.bg}`} ref={grab} hidden><BuddyArt id={a.buddy} bg={a.bg} /></span>}
     </Screen>
   );
 }
