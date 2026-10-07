@@ -59,7 +59,7 @@ The plan for growing Birdie Bank into a $10k/mo business, and the checklist we w
 
 **The big date:** the creator test (S4) runs February to April 2027, when golf season starts back up. Everything before it is about being ready: a product groups keep using, a smooth path from video to paying, and an App Store app.
 
-Last updated: 2026-10-07 (design pass built for review)
+Last updated: 2026-10-07 (design pass 2 built on top, both waiting for review)
 
 ---
 
@@ -515,10 +515,15 @@ The audit found 60 ways to make the app calmer, clearer and worth a screenshot, 
 - [ ] `S2` (partial) Built: onboarding with the whole cast of buddies on the welcome, a ball that reacts to each answer, a line under a grey Continue saying what's left, and a smaller handicap button
 - [ ] `S2` (partial) Built: the overnight 9 and 10 screens brought in line: Hall of fame (crowned leader, podium, records as badges), What's new (hero card, compact list), the heads-up sheet (a lock screen preview), the year in review image (your buddy in the corner), the handicap trend (better goes up, a dotted line while it's empty), trips (a countdown with a suitcase, folded notes), and scenes on the join steps and a solo card with no scores
 
+**Built on top, 2026-10-07 day, on `feedback/design2` (report: `overnight/DESIGN2-REPORT.md`)**
+- [ ] `S2` (partial) Built: game art, one small drawing per game and side game on a backdrop coloured by its group (`src/components/GameArt.jsx`), on Choose a game, the onboarding tiles and the side games sheet
+- [ ] `S2` (partial) Built: full-bleed scenes (`src/components/Scenes.jsx`): the first tee, the clubhouse patio and a road trip car, with dusk tokens for dark mode; on the welcome, the onboarding questions and the Trip screen
+- [ ] `S2` (partial) Built: a colour plate behind every card-sized spot, so the white ball never sits on a white card; a dev gallery (`?gallery`) for every drawing in both themes
+
 **Still to do**
 - [ ] `S2` Trevor reviews `main-mb9pod` (or a feedback branch for a Vercel preview), answers what to keep or change, then it merges to main and the lines above are checked off
 - [ ] `S2` Look at the four screens the cloud session couldn't see with its test data: the heads-up sheet (push isn't configured locally), the piled reminder cards on Up next, Hall of fame (needs a saved crew) and the year in review image
-- [ ] `S2` Second pass with Mobbin open on Trevor's Mac: check each screen against the real reference screens and tighten spacing, type and illustration sizes
+- [ ] `S2` (partial) Second pass with Mobbin open on Trevor's Mac: check each screen against the real reference screens and tighten spacing, type and illustration sizes. Done 2026-10-07 for onboarding, Choose a game, Up next, the Tab, Players, History, results, the Trip screen and Settings; Play, Round ready, Hall of fame and What's new still to look at
 - [ ] `S2` Oura's data screens as the reference for the Tab, Your stats, the handicap trend and the hall of fame (from Trevor, 2026-10-07)
 - [ ] `S2` Trip standings before the first round still show dashes; say "Tees off Fri" instead
 - [ ] `S3` The full end-of-round scene: buddies racing up the leaderboard as the totals land (the crown on the winner is built)
@@ -608,5 +613,6 @@ The audit found 60 ways to make the app calmer, clearer and worth a screenshot, 
 - 2026-10-06: Floating sheets on branch `feedback/floating-sheets` (from Trevor): every bottom sheet, number pad and confirm is a card inset from the sides and bottom with 30px corners and an accent X, on its own raised surface so it stands apart from the page in dark mode (a lighter gray, a faint edge and a darker scrim) and in light mode (white over a dimmed page). One change in the shared sheet styles covers every sheet in the app. Checklist: 127 of 239 done (53.1%), up from 126 of 238 (52.9%, the S3 hosting review was added 2026-10-05).
 - 2026-10-07: Overnights 9 and 10 shipped to main with Trevor's answers from both review queues (money with thousands commas, trash talk pushes that say what was written, "You tied for 1st", points rounds counting as hall of fame wins, faded days in the date picker). Checklist: 147 of 240 done (61.3%), up from 127 of 240 (52.9%). Notification settings added to area 12 from his review note.
 - 2026-10-07: Trevor ran the three overnight 9 and 10 SQL files in Supabase. Push still waits on its Vercel env vars.
+- 2026-10-07 (day): Design pass 2 on Trevor's Mac with Mobbin: game art for every game, full-bleed scenes (course, clubhouse, road trip) on the welcome, the onboarding questions and the Trip screen, colour plates behind the spots, a dev gallery. On `feedback/design2`, stacked on `main-mb9pod`, waiting for review with six questions in `overnight/DESIGN2-REPORT.md`.
 - 2026-10-07: Visual design audit (60 opportunities, web references since Mobbin only runs on Trevor's Mac) and the whole list built on `main-mb9pod` in a cloud session, in six commits: app-wide pieces (buddies for everyone, spot illustrations, callouts, toast tones), Round ready and the Round menu, Play and the results, Up next and the Tab, setup and onboarding, and the overnight 9 and 10 screens. Waiting for review.
 - 2026-10-07: The design pass got its own area (24) in the checklist: 19 lines for what was built, waiting for review, and 8 for what's still to do.
