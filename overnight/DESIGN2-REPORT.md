@@ -32,12 +32,15 @@ Mobbin references: full-bleed onboarding scenes with the headline below, [TheFor
 ### 3. Plates on the spots (`Spot.jsx`)
 Every spot illustration at card size now has a soft blob of colour behind it (its own colour per scene), so the white ball never sits on a white card: the Plan ahead and Big Game tiles, the empty states, the join steps, the Suggest and What's new screens. The plate is off where the spot already sits on colour (the Up next hero, the results hero, Round ready, callouts) and on anything under 56px.
 
-### 4. A gallery for checking art
+### 4. Play: first names on the score rows
+With the buddy beside the name and the stepper on the right, a full name ("Trevor Nielsen", "Dave Ortiz") wrapped to two lines on every score row. The rows now use the app's short names (first name; a last initial only when two people share one), the same helper the chips use. Teams keep their team name.
+
+### 5. A gallery for checking art
 `?gallery` (and `?gallery&theme=dark`) in dev shows every scene, game drawing, card and spot on one page. Not in production builds.
 
 ## Reviewed with the seeded phone (Trevor, Mike, Dave, Sam; five rounds; a Bandon trip)
 
-Looked at in light and dark at 375px: welcome and every onboarding step, Choose a game, Up next, the Tab, Players, History, a round's results and scorecard, the Trip screen, Settings. All render without errors with the design pass; lint clean, 2,205 tests pass.
+Looked at in light and dark at 375px: welcome and every onboarding step, Choose a game, Up next, the Tab, Players, History, a round's results and scorecard, the Trip screen, Settings, and Play (the Banker bets step and the scores step). All render without errors with the design pass; lint clean, 2,205 tests pass.
 
 What held up well, no change made: the results podium and crowned winner, the grouped standings, the Tab's "All square with Mike and Sam" line, Players' nemesis card, History's season chart, Settings' profile-first layout.
 
@@ -52,7 +55,7 @@ What held up well, no change made: the results podium and crowned winner, the gr
 
 ## Still to do (not reached this run)
 
-- The Play screen and the first-tee card against Mobbin live-score references.
+- The first-tee card and the moments on Play against Mobbin live-score references.
 - Round ready and the invite card.
 - Hall of fame, What's new, the heads-up sheet (needs push configured) and the year in review image, the four screens the cloud session couldn't see either.
 - Oura-style data screens for the Tab, Your stats and the handicap trend (roadmap area 24).

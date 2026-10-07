@@ -40,6 +40,7 @@ import { GalleryBar } from '../components/Gallery.jsx';
 import { syncConfigured, useSeatRequests } from '../lib/sync.js';
 import { AddPlayerSheet } from '../components/AddPlayer.jsx';
 import { firstName, gameLabel, holeMoneyLine } from '../lib/format.js';
+import { shortNames } from '../lib/short-names.js';
 import { countsMoney, inUnits, onTab, padUnit, playForShort, unitFmt, wholeDelta } from '../lib/play-for.js';
 import { leaveRound, roundsInProgress } from '../lib/rounds.js';
 import { RoundsInProgressSheet } from '../components/RoundsInProgress.jsx';
@@ -190,6 +191,7 @@ function PlayRound({ round, mount, momentUp = false }) {
   const game = round.game;
   const units = scorers(round, hole); // players still playing, or teams in a one-ball game (scramble, alternate shot, Chapman)
   const faces = useGroupAvatars(round.players);
+  const shortRowNames = useMemo(() => shortNames(round.players.map(p => [p.id, p.name])), [round.players]);
   // The main game's own round: without anyone who's only in the side games, so they never enter a
   // wolf rotation, the banker's bets, the Sixes pairings or a head-to-head's sides
   const main = useMemo(() => gameView(round, 'main'), [round]);
@@ -639,6 +641,9 @@ function PlayRound({ round, mount, momentUp = false }) {
           })}
           {editable && units.map(p => {
             const casual = isJustPlaying(round, p.id);
+            // First names on the score rows (a last initial only when two share one), so a name
+            // never wraps to two lines beside the buddy and the stepper
+            const short = p.team ? p.name : shortRowNames.get(p.id) || p.name;
             const st = round.useHandicaps && !casual ? popsFor(round, p, hole) : 0;
             // Best ball and Shamble: whose score counts for the team, once the team's scores are all in
             const counts = counting.includes(p.id);
@@ -652,7 +657,7 @@ function PlayRound({ round, mount, momentUp = false }) {
                 {!p.team && faces.get(p.id) && <AvatarArt model={faces.get(p.id)} />}
                 <div className="row-main">
                   <div className="pname" style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                    {p.name}
+                    {short}
                     {isBanker && <span className="bkr-badge"><Icon name="bank" fill /> Banker</span>}
                     {isWolf && <span className="bkr-badge"><Icon name="paw-print" fill /> Wolf</span>}
                     {casual && !solo && <span className="jp-tag">{JUST_PLAYING_TAG}</span>}
