@@ -12,6 +12,8 @@ export function BottomNav() {
   // With more than one going, the play button asks which.
   const active = useStore(s => roundsInProgress(s)[0]?.id ?? null);
   const several = useStore(s => roundsInProgress(s).length > 1);
+  // The hole the round in progress is on, on the button, like a live activity
+  const holeNo = useStore(s => { const r = roundsInProgress(s)[0]; return r ? r.holes[Math.min(r.current || 0, r.holes.length - 1)]?.no ?? null : null; });
   const [picking, setPicking] = useState(false);
   const item = (t, icon, label) => (
     <button className={`nav-btn ${nav.tab === t ? 'active' : ''}`} onClick={() => nav.setTab(t)} aria-current={nav.tab === t ? 'page' : undefined}>
@@ -24,7 +26,7 @@ export function BottomNav() {
       {item('ledger', 'receipt', 'Tab')}
       <button className="nav-btn center" aria-label={several ? 'Rounds in progress' : active ? 'Resume round' : 'Start a round'}
         onClick={() => (several ? setPicking(true) : active ? nav.push('play', { id: active }) : nav.push('newRound'))}>
-        <div className="nav-play"><Icon name={active ? 'play' : 'golf'} fill /></div>
+        <div className={`nav-play ${active ? 'live' : ''}`}><Icon name={active ? 'play' : 'golf'} fill />{active && holeNo != null && !several && <span className="np-hole" aria-hidden="true">H{holeNo}</span>}</div>
       </button>
       {several && <RoundsInProgressSheet open={picking} onClose={() => setPicking(false)} />}
       {item('history', 'clock-counter-clockwise', 'History')}

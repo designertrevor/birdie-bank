@@ -56,7 +56,7 @@ export default function HallOfFame({ crew: crewId }) {
     return (
       <Screen>
         <Header title="Hall of fame" small onBack={nav.pop} />
-        <div className="scroll"><Empty title="No rounds yet" text={`Play a round with ${crew.name} and its money list, champions and records start here.`} /></div>
+        <div className="scroll"><Empty illo="cup" title="No rounds yet" text={`Play a round with ${crew.name} and its money list, champions and records start here.`} /></div>
       </Screen>
     );
   }

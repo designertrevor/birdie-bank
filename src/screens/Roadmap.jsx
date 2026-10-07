@@ -2,6 +2,7 @@
 // app is built (roadmap-public.js). Vote for what you want next (one vote each), talk about it, and
 // see your own ideas from "Suggest something". From Settings, from Suggest something, after sending
 // an idea (it opens on yours), and on the web at /roadmap for anyone, read only, with no sign-in.
+import { Spot } from '../components/Spot.jsx';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import BASE from 'virtual:roadmap';
 import { Avatar } from '../components/Avatar.jsx';
@@ -109,7 +110,7 @@ export default function Roadmap({ highlight = null, sent = null, web = false, id
           </>
         )}
 
-        {shown.length === 0 && <p className="rm-empty">{tab === 'progress' ? 'Nothing in the works right now. Check what’s planned.' : 'Nothing here yet.'}</p>}
+        {shown.length === 0 && <div className="rm-empty"><Spot kind={tab === 'progress' ? 'bulb' : 'sleep'} size={96} /><p>{tab === 'progress' ? 'Nothing in the works right now. Check what’s planned.' : 'Nothing here yet.'}</p></div>}
         <ol className="rm-list" role="list">
           {shown.map(item => (
             <RoadmapCard key={item.id} item={item} web={web} ids={ids} mine={yours.has(item.id)} flash={highlight === item.id}

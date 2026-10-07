@@ -1,5 +1,6 @@
 import { Suspense, lazy, useEffect, useState } from 'react';
 import { Header, Icon, Screen } from '../components/ui.jsx';
+import { Spot } from '../components/Spot.jsx';
 import { useStore } from '../lib/store.js';
 import { GAMES, cardOnly, holeComplete } from '../lib/round.js';
 import { gameLabel, myIds } from '../lib/format.js';
@@ -110,13 +111,9 @@ export default function UpNext() {
         {plans.map(p => <UpcomingCard key={p.id} plan={p} />)}
         {anyChallenges && <Later><ChallengesSection /></Later>}
         {/* Starting a round at the course (or running the last one back) stays one tap, plans or not; a Big Game on the calendar isn't a trip, so Start a trip stays */}
-        {live.length === 0 && <PlanNext last={last?.round} fresh={!hasHistory} planned={plans.length > 0 || onNow.length > 0} trip={!onNow.some(t => t.trip.format !== 'big')} />}
-
-        {syncConfigured && live.length === 0 && (
-          <button className="add-row join-row" aria-label="Join a friend’s round" onClick={() => setJoining(true)}>
-            <div className="add-ci"><Icon name="broadcast" fill /></div><span className="add-lbl">Join a friend’s round</span>
-          </button>
-        )}
+        {live.length === 0 && <PlanNext last={last?.round} fresh={!hasHistory} planned={plans.length > 0 || onNow.length > 0} trip={!onNow.some(t => t.trip.format !== 'big')}
+          onJoin={syncConfigured ? () => setJoining(true) : null} />}
+        {!hasHistory && <FirstSteps />}
 
         {/* Friends' rounds you're not in, live, and the way into the group feed (friend-feed.js) */}
         <Later><FriendsUpNext show={hasHistory || plans.length > 0 || onNow.length > 0} /></Later>
@@ -205,28 +202,65 @@ function UpcomingCard({ plan }) {
 }
 
 /** The prompt to set up the next round, with a one-tap "same again" when there's a last one. */
-function PlanNext({ last, fresh, planned = false, trip = false }) {
+function PlanNext({ last, fresh, planned = false, trip = false, onJoin = null }) {
   const nav = useNav();
   const [tripping, setTripping] = useState(false);
+  const again = last && GAMES[last.game] && !cardOnly(last);
   return (
-    <div className="plan-card">
-      <span className="eyebrow">{planned ? 'Something else' : fresh ? 'Welcome to the first tee' : 'Nothing on the calendar'}</span>
-      <div className="pc-title d">{planned ? 'Playing now, or another day?' : 'Plan your next round'}</div>
-      <div className="pc-sub">{planned
-        ? 'Start a round at the course in one tap, or plan another one for later.'
-        : fresh
-        ? 'Pick a game, a course and your group. Birdie Bank keeps score, does the math and settles up.'
-        : 'Pick the game, the course and the bets. Everyone joins from a link.'}</div>
-      <div className="pc-actions">
-        <button className="pc-btn" onClick={() => nav.push('newRound')}><Icon name="golf" fill /> Start a round</button>
-        {last && GAMES[last.game] && !cardOnly(last) && (
-          <button className="pc-btn ghost" onClick={() => nav.push('newRound', { rematch: last.id })}><Icon name="arrow-counter-clockwise" /> Run it back</button>
-        )}
-        <button className="pc-btn ghost" onClick={() => nav.push('newRound', { ahead: true })}><Icon name="calendar-plus" /> Plan ahead</button>
-        {trip && <button className="pc-btn ghost" onClick={() => setTripping(true)}><Icon name="suitcase-rolling" /> Start a trip</button>}
-        <button className="pc-btn ghost" onClick={() => nav.push('bigGameSetup')}><Icon name="users-four" /> Big Game</button>
+    <>
+      <div className="plan-card">
+        <Spot kind="tee" size={92} className="pc-mascot" />
+        <span className="eyebrow">{planned ? 'Something else' : fresh ? 'Welcome to the first tee' : 'Nothing on the calendar'}</span>
+        <div className="pc-title d">{planned ? 'Playing now, or another day?' : 'Plan your next round'}</div>
+        <div className="pc-sub">{planned
+          ? 'Start a round at the course in one tap, or plan another one for later.'
+          : fresh
+          ? 'Pick a game, a course and your group. Birdie Bank keeps score, does the math and settles up.'
+          : 'Pick the game, the course and the bets. Everyone joins from a link.'}</div>
+        <div className="pc-actions">
+          <button className="pc-btn" onClick={() => nav.push('newRound')}><Icon name="golf" fill /> Start a round</button>
+          {again && <button className="pc-btn ghost" onClick={() => nav.push('newRound', { rematch: last.id })}><Icon name="arrow-counter-clockwise" /> Run it back</button>}
+        </div>
+        {onJoin && <button className="pc-join" onClick={onJoin}>Got a code? <u>Join a friend’s round</u></button>}
+      </div>
+      {/* The other ways to play, as three small tiles under the card */}
+      <div className="sec-label">More ways to play</div>
+      <div className={`more-tiles ${trip ? '' : 'two'}`}>
+        <button className="more-tile" onClick={() => nav.push('newRound', { ahead: true })}><Spot kind="calendar" size={64} /><span>Plan ahead</span></button>
+        {trip && <button className="more-tile" onClick={() => setTripping(true)}><Spot kind="suitcase" size={64} /><span>Start a trip</span></button>}
+        <button className="more-tile" onClick={() => nav.push('bigGameSetup')}><Spot kind="crowd" size={64} /><span>Big Game</span></button>
       </div>
       {tripping && <Later><TripSheet open onClose={() => setTripping(false)} onDone={t => { setTripping(false); nav.push('trip', { id: t.id }); }} /></Later>}
-    </div>
+    </>
+  );
+}
+
+/** A brand new organizer's first three steps, each ticked off as it happens. */
+function FirstSteps() {
+  const nav = useNav();
+  const state = useStore();
+  const people = Object.keys(state.players || {}).filter(id => id !== state.me).length;
+  const rounds = Object.values(state.rounds || {});
+  const steps = [
+    { done: people > 0, title: 'Add your group', sub: 'The people you play with', go: () => nav.setTab('people') },
+    { done: rounds.length > 0, title: 'Start a round', sub: 'Pick a game and a course', go: () => nav.push('newRound') },
+    { done: rounds.some(r => r.shared), title: 'Send the group the link', sub: 'They follow the money live', go: () => nav.push('newRound') },
+  ];
+  if (steps.every(x => x.done)) return null;
+  return (
+    <>
+      <div className="sec-label">Your first round</div>
+      <ol className="first-steps">
+        {steps.map((x, i) => (
+          <li key={x.title}>
+            <button className={`fs-row ${x.done ? 'done' : ''}`} onClick={x.go} disabled={x.done}>
+              <span className="fs-num" aria-hidden="true">{x.done ? <Icon name="check" /> : i + 1}</span>
+              <span className="row-main"><span className="fs-title">{x.title}</span><span className="fs-sub">{x.done ? 'Done' : x.sub}</span></span>
+              {!x.done && <Icon name="caret-right" />}
+            </button>
+          </li>
+        ))}
+      </ol>
+    </>
   );
 }

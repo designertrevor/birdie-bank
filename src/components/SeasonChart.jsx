@@ -8,7 +8,7 @@ const W = 320, H = 120, PAD_X = 6, PAD_Y = 12;
  * so a busy week doesn't squash into one point. Colours come from the theme tokens, so it
  * reads in light and dark.
  */
-export function SeasonChart({ series, label }) {
+export function SeasonChart({ series, label, flat = false }) {
   if (!series.length) return null;
   const totals = [0, ...series.map(p => p.total)];
   const hi = Math.max(0, ...totals), lo = Math.min(0, ...totals);
@@ -25,11 +25,12 @@ export function SeasonChart({ series, label }) {
   const summary = `${label}: your net over ${series.length} round${series.length === 1 ? '' : 's'} ended at ${money(end, { sign: true })}. High ${money(best, { sign: true })}, low ${money(worst, { sign: true })}.`;
   const [lx, ly] = pts.at(-1);
   return (
-    <svg className={`season-chart ${tone}`} viewBox={`0 0 ${W} ${H}`} role="img" aria-label={summary}>
+    // `flat` stretches it to any height (a sparkline under a big number), so it skips the end dot
+    <svg className={`season-chart ${tone}`} viewBox={`0 0 ${W} ${H}`} role="img" aria-label={summary} preserveAspectRatio={flat ? 'none' : undefined}>
       <line className="chart-zero" x1={0} x2={W} y1={zero} y2={zero} vectorEffect="non-scaling-stroke" />
       <path className="chart-area" d={area} />
       <path className="chart-line" d={line} vectorEffect="non-scaling-stroke" />
-      <circle className="chart-dot" cx={lx} cy={ly} r={4} />
+      {!flat && <circle className="chart-dot" cx={lx} cy={ly} r={4} />}
     </svg>
   );
 }

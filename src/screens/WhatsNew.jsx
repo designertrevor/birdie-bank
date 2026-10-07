@@ -1,6 +1,7 @@
 // What's new: the app's release notes, newest first, made from the shipped part of the roadmap
 // (whats-new.js). From Settings any time, and from the card Up next shows once after an update.
 // Opening it counts everything here as seen, so the card doesn't come back for the same news.
+import { Spot } from '../components/Spot.jsx';
 import { useEffect, useState } from 'react';
 import BASE from 'virtual:roadmap';
 import { Header, Icon, Screen } from '../components/ui.jsx';
@@ -28,7 +29,7 @@ export default function WhatsNew({ fresh = null }) {
       <Header title="What’s new" onBack={nav.pop} />
       <div className="scroll">
         <p className="rm-intro">What’s landed in the app lately, newest first.</p>
-        {groups.length === 0 && <p className="rm-empty">Nothing here yet.</p>}
+        {groups.length === 0 && <div className="rm-empty"><Spot kind="sleep" size={96} /><p>Nothing here yet. New things land here after each update.</p></div>}
         {shown.map(g => (
           <section key={g.label} className="wn-month">
             <div className="sec-label">{g.label}</div>

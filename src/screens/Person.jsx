@@ -126,18 +126,19 @@ export default function Person({ id: opened }) {
           <div className={`tab-big d ${tab > 0 ? 'pos' : tab < 0 ? 'neg' : ''}`}>{tab ? money(amount) : 'All square'}</div>
         </div>
 
-        <div className="pad-x">
+        {/* The money in one card: pay or mark paid, then the details as two quiet links */}
+        <div className="money-card">
           <PersonActions other={id} net={tab} meId={state.me || (tab > 0 ? debt.to : debt.from)} />
           <RewardLines other={id} />
-          {story.rounds > 0 && <TabWhereFrom other={id} />}
+          {(story.rounds > 0 || tab !== 0) && (
+            <div className="mc-links">
+              {story.rounds > 0 && <TabWhereFrom other={id} />}
+              {tab !== 0 && <button className="link-btn" onClick={() => setOpen(debt)}>Paid part of it?</button>}
+            </div>
+          )}
         </div>
-        {tab !== 0 && (
-          <button className="quiet-row" onClick={() => setOpen(debt)}>
-            <Icon name="coins" /> <span>Paid part of it? <u>Settle up</u></span>
-          </button>
-        )}
 
-        <RivalryCard rv={rv} name={name} isNemesis={!isMine && nem?.id === id} />
+        <RivalryCard rv={rv} name={name} id={id} isNemesis={!isMine && nem?.id === id} />
         {talk.length > 0 && (
           <>
             <div className="sec-label">Trash talk</div>

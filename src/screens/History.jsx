@@ -99,7 +99,7 @@ export default function History() {
       <Header title="History" right={<AvatarButton />} />
       <div className="scroll">
         {!anyDone ? (
-          <Empty title="No rounds yet" text="Your wins, losses and bragging rights will live here. Go make some history."
+          <Empty illo="card" title="No rounds yet" text="Your wins, losses and bragging rights will live here. Go make some history."
             action={<button className="ec" onClick={() => nav.push('newRound')}><Icon name="golf" fill /> Start a round</button>} />
         ) : (
           <>
@@ -114,7 +114,7 @@ export default function History() {
             )}
 
             {shown.length === 0 ? (
-              <Empty illo={false} title="No rounds here" text={range.kind === 'custom' ? 'Nothing finished between those dates. Try a wider range.' : `Nothing finished in ${range.kind === 'season' ? `the ${label}` : label}. Try another ${range.kind}.`} />
+              <Empty illo="card" title="No rounds here" text={range.kind === 'custom' ? 'Nothing finished between those dates. Try a wider range.' : `Nothing finished in ${range.kind === 'season' ? `the ${label}` : label}. Try another ${range.kind}.`} />
             ) : (
               <>
                 {series.length > 0 && (

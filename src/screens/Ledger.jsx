@@ -4,7 +4,9 @@ import { Empty, Header, Icon, Screen, Segmented, useUI } from '../components/ui.
 import FreePromise from '../components/FreePromise.jsx';
 import { Avatar, SettleSheet } from '../components/Pay.jsx';
 import { PersonActions, RecentPaid, RewardLines, SquareStrip } from '../components/TabCard.jsx';
-import { TabWhereFrom } from '../components/WhereFrom.jsx';
+import { SeasonChart } from '../components/SeasonChart.jsx';
+import { defaultRange, netSeries, roundsInRange } from '../lib/history.js';
+import { avatarFor, avatarModel } from '../lib/avatars.js';
 import { useStore } from '../lib/store.js';
 import { headToHeadSummary, nameOf, outstanding } from '../lib/ledger.js';
 import { allTripPays } from '../lib/trip-expenses.js';
@@ -104,7 +106,12 @@ export default function Ledger() {
   // Rewards from reward rounds ("You owe Sam lunch"): on the person's card, or a card of their own
   // for someone square on money (a Square card of their own carries it). Never counted in dollars or in who's square.
   const rewardOnly = [...new Set(openRewards(state, { ids: mine, canon: who }).map(l => l.other))].filter(id => !people.some(p => p.id === id) && !recentSquare.some(x => x.id === id));
-  const squareNames = [...h2h.keys()].filter(id => !byPerson.has(id) && !recentSquare.some(x => x.id === id) && !rewardOnly.includes(id)).map(id => first(nameOf(state, id)));
+  const squareIds = [...h2h.keys()].filter(id => !byPerson.has(id) && !recentSquare.some(x => x.id === id) && !rewardOnly.includes(id));
+  const squareNames = squareIds.map(id => first(nameOf(state, id)));
+  // For the all square scene: the buddies of the people you've played with
+  const squareBuddies = [...h2h.keys()].slice(0, 2).map((id, i) => { const m = avatarModel(avatarFor(state, id), { key: id, name: nameOf(state, id) }); return m.kind === 'buddy' ? m.buddy : ['visor', 'snapback'][i]; });
+  // Your running net this season, for the line under the big number
+  const season = useMemo(() => netSeries(roundsInRange(state, defaultRange()), state), [state]);
 
   // The same Settle up sheet the person screen opens for a part payment
   const partDebt = p => {
@@ -131,10 +138,8 @@ export default function Ledger() {
           <span className="chevron"><Icon name="caret-right" /></span>
         </button>
         <PersonActions other={p.id} net={p.net} meId={state.me || me} />
-        <div className="tab-links">
-          <button className="link-btn tab-part" onClick={() => setOpen(partDebt(p))}>Paid part of it?</button>
-          <TabWhereFrom other={p.id} />
-        </div>
+        {/* Part payments and where it comes from are a tap away on the person, so the card has one job */}
+        <button className="link-btn tab-part" onClick={() => setOpen(partDebt(p))}>Paid part of it?</button>
         <RewardLines other={p.id} />
       </div>
     );
@@ -201,8 +206,8 @@ export default function Ledger() {
         {trips.map(t => <TripTabCard key={t.trip.id} status={t} />)}
         {trips.some(t => t.money.length > 0) && plan.length > 0 && <p className="field-help pad trip-folded">{trips.filter(t => t.money.length > 0).every(t => t.big) ? 'The game’s money is in each person’s total below.' : 'Trip money is in each person’s total below.'}</p>}
         {plan.length === 0 ? (
-          <Empty title={hasRounds ? 'All square' : 'Nothing owed yet'}
-            text={hasRounds ? 'Everyone’s settled up. Time to go win it back.' : 'Finish a round and the Tab fills in. Money nets out across every round, so you pay less often.'}
+          <Empty title={hasRounds ? 'All square' : 'Nothing owed yet'} illo={hasRounds ? 'highfive' : 'wallet'} ids={squareBuddies}
+            text={hasRounds ? 'Nobody owes anybody. Time to go win it back.' : 'Finish a round and the Tab fills in. Money nets out across every round, so you pay less often.'}
             action={!hasRounds && <button className="ec" onClick={() => nav.push('newRound')}><Icon name="golf" fill /> Start a round</button>} />
         ) : (
           <>
@@ -212,20 +217,31 @@ export default function Ledger() {
                 <div className={`tab-big d ${overall > 0 ? 'pos' : overall < 0 ? 'neg' : ''}`}>
                   {overall > 0 ? `You’re up ${money(overall)}` : overall < 0 ? `You’re down ${money(-overall)}` : 'You’re even'}
                 </div>
+                {/* Who it's with, and how the season's gone: one number, one line */}
+                <div className="tab-who">
+                  <span className="tab-faces">{people.slice(0, 5).map(p => <Avatar key={p.id} id={p.id} name={nameOf(state, p.id)} size="sm" />)}</span>
+                  <span>{people.length === 1 ? `With ${first(nameOf(state, people[0].id))}` : `Across ${people.length} people`}</span>
+                </div>
+                {season.length >= 2 && <div className="tab-spark"><SeasonChart series={season} label="This season" flat /></div>}
               </div>
             )}
             <SinceBooks scope={ALL} />
             {people.map(personRow)}
             {recentSquare.map(squareCard)}
             {rewardOnly.map(rewardCard)}
-            {squareNames.length > 0 && people.length > 0 && <p className="field-help pad">All square with {listNames(squareNames)}.</p>}
+            {squareIds.length > 0 && people.length > 0 && (
+              <div className="square-line">
+                <span className="tab-faces">{squareIds.slice(0, 5).map(id => <Avatar key={id} id={id} name={nameOf(state, id)} size="sm" />)}</span>
+                <span><Icon name="check-circle" fill /> All square with {listNames(squareNames)}</span>
+              </div>
+            )}
             {others.length > 0 && (
               <>
                 <div className="sec-label">{people.length ? 'Everyone else' : 'Who owes who'}</div>
                 {others.map(otherRow)}
               </>
             )}
-            <p className="field-help pad">Netted across every round, then squared in the fewest payments. Nobody is asked to pay someone they haven’t played with.{hasShared ? ' Money from rounds you shared live stays between the two players, so both phones agree on it.' : ''}</p>
+            <details className="how pad"><summary>How the Tab works</summary><p>Netted across every round, then squared in the fewest payments. Nobody is asked to pay someone they haven’t played with.{hasShared ? ' Money from rounds you shared live stays between the two players, so both phones agree on it.' : ''}</p></details>
           </>
         )}
         {plan.length === 0 && <SinceBooks scope={ALL} />}
@@ -253,12 +269,17 @@ export default function Ledger() {
             })}
           </>
         )}
-        {hasRounds && (
-          <button className="text-link stats-link" onClick={() => nav.push('closeBooks', { scope: ALL })}>
-            <Icon name="book-bookmark" fill /> <span className="row-main">Close the books<span className="sl-sub">End a season: keep everyone’s totals, then settle up or roll each balance to next season</span></span> <Icon name="caret-right" />
-          </button>
+        {/* The season's tools, together in one short list */}
+        {(hasRounds || trips.length === 0) && (
+          <div className={`tab-tools ${hasRounds ? '' : 'solo'}`}>
+            {hasRounds && (
+              <button className="text-link stats-link" onClick={() => nav.push('closeBooks', { scope: ALL })}>
+                <Icon name="book-bookmark" fill /> <span className="row-main">Close the books<span className="sl-sub">Keep everyone’s totals, then settle up or roll to next season</span></span> <Icon name="caret-right" />
+              </button>
+            )}
+            {trips.length === 0 && <StartTripLink onMade={t => nav.push('trip', { id: t.id })} />}
+          </div>
         )}
-        {trips.length === 0 && <StartTripLink onMade={t => nav.push('trip', { id: t.id })} />}
         {/* The free-forever list is held until Trevor says so: only with the paywall preview flag */}
         {PAYWALL_ON && (
           <div className="tab-free">

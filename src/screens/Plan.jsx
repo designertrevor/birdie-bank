@@ -66,7 +66,7 @@ export default function PlanScreen({ id }) {
     return (
       <Screen>
         <Header title="Upcoming round" small onBack={nav.pop} />
-        <div className="scroll"><Empty title="This plan is gone" text="It was deleted from this phone. Your other rounds are on Up next." action={<button className="ec" onClick={nav.pop}>Go back</button>} /></div>
+        <div className="scroll"><Empty illo="calendar" title="This plan is gone" text="It was deleted from this phone. Your other rounds are on Up next." action={<button className="ec" onClick={nav.pop}>Go back</button>} /></div>
       </Screen>
     );
   }
@@ -469,7 +469,7 @@ export function RollCall({ id }) {
   const [countTrip, setCountTrip] = useKept('rollCall:countTrip', true);
   // The latest answers to the plan's challenges, so the agreed ones go in at the tee
   useChallengesLive({ planCode: plan?.code });
-  if (!plan) return <Screen><Header title="Roll call" small onBack={nav.pop} /><div className="scroll"><Empty title="This plan is gone" text="It was deleted from this phone. Your other rounds are on Up next." action={<button className="ec" onClick={nav.pop}>Go back</button>} /></div></Screen>;
+  if (!plan) return <Screen><Header title="Roll call" small onBack={nav.pop} /><div className="scroll"><Empty illo="calendar" title="This plan is gone" text="It was deleted from this phone. Your other rounds are on Up next." action={<button className="ec" onClick={nav.pop}>Go back</button>} /></div></Screen>;
   const people = planPeople(plan);
   const course = findCourse(state, plan.course?.id);
   const setup = planStart(state, plan, present, { newId: () => uid('p_'), course });

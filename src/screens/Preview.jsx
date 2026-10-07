@@ -32,7 +32,7 @@ export default function PreviewScreen({ id, fromPlan = false }) {
     return (
       <Screen>
         <Header title="Preview" small onBack={nav.pop} />
-        <div className="scroll"><Empty title="This plan is gone" text="It was deleted from this phone. Your other rounds are on Up next." action={<button className="ec" onClick={nav.pop}>Go back</button>} /></div>
+        <div className="scroll"><Empty illo="calendar" title="This plan is gone" text="It was deleted from this phone. Your other rounds are on Up next." action={<button className="ec" onClick={nav.pop}>Go back</button>} /></div>
       </Screen>
     );
   }

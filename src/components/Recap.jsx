@@ -1,5 +1,7 @@
 // The day-after recap card and the callouts card on Up next (see lib/recap.js and lib/callouts.js).
 import { Icon, useUI } from './ui.jsx';
+import { Spot } from './Spot.jsx';
+import { nameOf } from '../lib/ledger.js';
 import { Avatar } from './Pay.jsx';
 import { update, useStore } from '../lib/store.js';
 import { useNav } from '../lib/nav.js';
@@ -103,15 +105,20 @@ export function CalloutsCard({ items }) {
   };
   return (
     <section className="callouts" aria-label="Callouts for the group text">
-      <ul className="callout-list">
-        {items.map(c => (
-          <li key={c.id}>
-            <button className="callout-row" onClick={() => share(c)} aria-label={`Share: ${c.text}`}>
-              <span className="callout-text">{c.text}</span>
-              <span className="callout-go" aria-hidden="true"><Icon name="share-network" /></span>
-            </button>
-          </li>
-        ))}
+      {/* Each line as the message it'll be in the group text, from whoever it's about; swipe for more */}
+      <ul className="callout-list bubbles">
+        {items.map(c => {
+          const pid = c.about === 'me' ? state.me : c.about && c.about !== 'group' ? c.about : null;
+          return (
+            <li key={c.id}>
+              <button className="callout-row" onClick={() => share(c)} aria-label={`Share: ${c.text}`}>
+                <span className="cb-from">{pid ? <Avatar id={pid} name={nameOf(state, pid)} size="sm" /> : <Spot kind="crowd" size={34} className="cb-group" />}</span>
+                <span className="cb-bubble"><span className="callout-text">{c.text}</span></span>
+                <span className="cb-send" aria-hidden="true"><Icon name="paper-plane-tilt" fill /> Send to the group</span>
+              </button>
+            </li>
+          );
+        })}
       </ul>
       <button className="callout-off" onClick={off}>Turn off callouts</button>
     </section>

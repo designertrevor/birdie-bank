@@ -53,10 +53,11 @@ export function Steps({ steps, current, canGo, onGo }) {
   );
 }
 
-export function Empty({ title, text, action, illo = true }) {
+/** An empty screen: a picture, a line, a sentence and one action. `illo` is true for the ball on a tee, a Spot kind ('wallet', 'card', 'sleep'...) for that scene, or false for none. */
+export function Empty({ title, text, action, illo = true, ids = null }) {
   return (
     <div className="empty-state">
-      {illo && <BallIllo />}
+      {illo === true ? <BallIllo /> : illo ? <Spot kind={illo} ids={ids} size={150} className="empty-illo" /> : null}
       <div className="et">{title}</div>
       {text && <div className="es">{text}</div>}
       {action}

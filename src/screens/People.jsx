@@ -73,7 +73,7 @@ export default function People() {
                   {tab > 0 ? ` · owes you ${money(amount)}` : tab < 0 ? ` · you owe ${money(amount)}` : ''}
                 </div>
               </div>
-              <div className={`pr-amt d ${h?.net > 0 ? 'pos' : h?.net < 0 ? 'neg' : ''}`}>{h ? money(h.net, { sign: true }) : '\u2013'}</div>
+              {h ? <div className={`pr-amt d ${h.net > 0 ? 'pos' : h.net < 0 ? 'neg' : ''}`}>{money(h.net, { sign: true })}</div> : <span className="new-chip">New</span>}
               <span className="chevron"><Icon name="caret-right" /></span>
             </button>
           );
@@ -93,7 +93,13 @@ export default function People() {
             </div>
           );
         })}
-        {people.length < 1 && <p className="hint-card"><Icon name="lightbulb" fill /> Add the people you play with so you can pick them when you start a round.</p>}
+        {people.length < 1 && (
+          <div className="people-empty">
+            <div className="pe-outlines" aria-hidden="true">{[0, 1, 2, 3].map(i => <span key={i} className="pe-ghost"><Icon name="plus" /></span>)}</div>
+            <div className="pe-title d">Add the people you play with</div>
+            <p className="pe-sub">Then pick them in one tap when you start a round. Everyone gets a Ball buddy.</p>
+          </div>
+        )}
         <button className="add-row" onClick={() => nav.push('playerEdit', {})}><div className="add-ci"><Icon name="plus" /></div><span className="add-lbl">Add a player</span></button>
 
         {crews.length > 0 ? (
@@ -307,7 +313,7 @@ export function CrewEdit({ id }) {
         </div>
         <div className="sec-label">Who’s in it · {sel.length} selected</div>
         <div className="pick-list">
-          {players.length === 0 && <Empty illo={false} title="No players yet" text="Add players first, then group them into a crew." />}
+          {players.length === 0 && <Empty illo="crowd" title="No players yet" text="Add players first, then group them into a crew." />}
           {players.map(p => (
             <PickRow key={p.id} on={sel.includes(p.id)} onClick={() => toggle(p.id)} lead={<Avatar id={p.id} name={p.name} />}
               title={playerLabel(p, state.me)} sub={p.index == null ? 'No handicap' : `Index ${formatIndex(p.index)}`} />

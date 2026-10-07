@@ -27,7 +27,7 @@ export default function Friends() {
       <div className="scroll">
         <FeedStatusNote status={feed.status} onSignIn={() => setSigningIn(true)} />
         {empty ? (
-          <Empty title="Quiet out there" text="When people you’ve played with tee off, their rounds show up here live, even ones you’re not in. Plans you’re invited to, settle-ups and trash talk show up too." />
+          <Empty illo="sleep" title="Quiet out there" text="When people you’ve played with tee off, their rounds show up here live, even ones you’re not in. Plans you’re invited to, settle-ups and trash talk show up too." />
         ) : (
           <>
             {live.length > 0 && <div className="sec-label">Playing now</div>}

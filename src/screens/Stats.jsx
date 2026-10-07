@@ -75,7 +75,7 @@ export default function Stats({ range: given = null }) {
 
         {st.rounds === 0 ? (
           <>
-            <Empty illo={false} title="No rounds here" text={emptyText(range, label)} />
+            <Empty illo="card" title="No rounds here" text={emptyText(range, label)} />
             <Trend trend={trend} />
           </>
         ) : (

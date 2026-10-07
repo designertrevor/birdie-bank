@@ -1,5 +1,6 @@
 // Friends' rounds in the feed: a card for each (live with Watch, or finished), Up next's Friends
 // section, and the line that says what the feed can see (see lib/friend-feed.js and lib/feed-sync.js).
+import { Spot } from './Spot.jsx';
 import { Icon } from './ui.jsx';
 import { useNav } from '../lib/nav.js';
 import { friendsLine, statusLine, upNextFriends } from '../lib/friend-feed.js';
@@ -76,10 +77,10 @@ export function FriendsUpNext({ show = true }) {
   if (!show && !list.length) return null;
   return (
     <>
-      <div className="sec-label">Friends</div>
+      <div className="sec-label fr-head">Friends{list.length > 0 && <span className="fr-live"><span className="live-dot" aria-hidden="true" />{list.length} playing now</span>}</div>
       {list.map(v => <FriendRoundCard key={v.id} view={v} />)}
       <button className="lately-all fr-all" onClick={() => nav.push('friends')}>
-        <Icon name="users-three" fill /> {list.length ? 'The group feed' : 'Friends’ rounds and the group feed'} <Icon name="caret-right" />
+        <Spot kind="crowd" size={40} className="fr-crowd" /> {list.length ? 'The group feed' : 'Friends’ rounds and the group feed'} <Icon name="caret-right" />
       </button>
     </>
   );

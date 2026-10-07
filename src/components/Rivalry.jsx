@@ -4,13 +4,16 @@ import { Avatar } from './Pay.jsx';
 import { money } from '../lib/golf.js';
 import { gameLabel, roundDate } from '../lib/format.js';
 import { useNav } from '../lib/nav.js';
+import { useStore } from '../lib/store.js';
 import { seriesLine, streakLine } from '../lib/rivalry.js';
 
 const STREAK_ICON = { won: 'fire', lost: 'cloud-rain', even: 'equals' };
 
 /** You against one friend, all time. Nothing shows until you've finished a round together. */
-export function RivalryCard({ rv, name, isNemesis }) {
+export function RivalryCard({ rv, name, isNemesis, id = null }) {
   const nav = useNav();
+  const me = useStore(st => st.me);
+  const myName = useStore(st => st.players[st.me]?.name || 'You');
   if (!rv?.rounds) return null;
   const firstName = name.split(' ')[0];
   const streak = streakLine(rv.streak, name);
@@ -34,6 +37,14 @@ export function RivalryCard({ rv, name, isNemesis }) {
       <div className="sec-label">Rivalry</div>
       <div className="rival-card">
         {isNemesis && <div className="rv-tag"><Icon name="skull" fill /> Your nemesis</div>}
+        {/* Face to face, like a fight card: you, the record, them */}
+        {id && me && (
+          <div className="rv-vs" aria-hidden="true">
+            <span className="rv-side"><Avatar id={me} name={myName} size="lg" /><span>You</span></span>
+            <span className="rv-score d">{rv.won}<span className="rv-dash">–</span>{rv.lost}</span>
+            <span className="rv-side them"><Avatar id={id} name={name} size="lg" /><span>{firstName}</span></span>
+          </div>
+        )}
         <div className="rv-series d">{seriesLine(rv, name)}</div>
         {streak && <div className={`rv-streak ${rv.streak.result}`}><Icon name={STREAK_ICON[rv.streak.result]} fill /> {streak}</div>}
         <div className="rv-stats">
