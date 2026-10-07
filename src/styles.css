@@ -3560,3 +3560,28 @@ a.header-btn.rm-open { text-decoration: none; }
 .rv-side.them .av-buddy svg { transform: scaleX(-1); }
 .rv-score { font-size: 40px; font-weight: 800; letter-spacing: -.03em; font-variant-numeric: tabular-nums; color: var(--ink); }
 .rv-dash { margin: 0 6px; color: var(--mute-soft); }
+
+/* NEW ROUND, Bets: the house rules (the switches) fold under one row that counts how many are on */
+.rules-fold:not(.open) .toggle-row, .rules-fold:not(.open) .toggle-row + .field-help { display: none; }
+.rules-fold .rf-toggle { margin-top: 6px; }
+.cta-link { justify-content: center; margin: 2px auto 0; width: auto; }
+.cta-link:disabled { opacity: .45; }
+
+/* Game picker: every game you don't usually play as a compact tile, two across */
+.game-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; margin: 0 16px 6px; }
+.game-tile { display: flex; flex-direction: column; gap: 2px; padding: 12px 12px 12px; background: var(--card); border-radius: 18px; cursor: pointer; min-width: 0; box-shadow: inset 0 0 0 2px transparent; transition: box-shadow .15s, transform .2s var(--spring); }
+.game-tile:active { transform: scale(.97); }
+.game-tile.selected { box-shadow: inset 0 0 0 2px var(--pink-fill); background: var(--pick-tint); }
+.gt-top { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 6px; }
+.game-icon.sm { width: 36px; height: 36px; font-size: 18px; border-radius: 12px; margin-right: 0; }
+.gt-info { width: 32px; height: 32px; margin: -6px -6px 0 0; border: none; border-radius: 50%; background: none; color: var(--mute); font-size: 17px; cursor: pointer; display: grid; place-items: center; }
+.game-tile .gn { font-size: 16px; }
+.game-tile .gs { font-size: 12.5px; line-height: 1.3; }
+
+/* ONBOARDING: the whole cast on the welcome, a ball that reacts on every question, and a hint under a grey Continue */
+.ob-cast { width: 280px; max-width: 100%; height: auto; display: block; margin: 0 auto 4px; }
+.ob-cast-buddy { animation: castIn .5s var(--ease-bounce) both; transform-box: fill-box; transform-origin: 50% 100%; }
+@keyframes castIn { from { opacity: 0; transform: translateY(14px) scale(.7); } }
+.ob-guide { display: block; width: 84px; height: 84px; margin: 0 0 4px -8px; animation: pop .5s var(--spring) both; }
+.ob-hint { margin: 8px 0 0; text-align: center; font-size: 13px; color: var(--mute); }
+.ob-body .amt-btn.field-btn { align-self: flex-start; display: block; width: auto; min-width: 128px; height: 50px; padding: 0 22px; font-size: 18px; }

@@ -5,9 +5,9 @@ import { useCallback, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { Icon, PickChip, Sheet, useUI } from './ui.jsx';
 import { Avatar, PayButton, RequestButton } from './Pay.jsx';
-import { update, useStore } from '../lib/store.js';
+import { getState, update, useStore } from '../lib/store.js';
 import { useRemind } from '../lib/useRemind.js';
-import { nameOf } from '../lib/ledger.js';
+import { nameOf, outstanding } from '../lib/ledger.js';
 import { PAY_APPS, payInfoFor } from '../lib/pay.js';
 import { money } from '../lib/golf.js';
 import { gameLabel, meFor, myIds } from '../lib/format.js';
@@ -84,8 +84,12 @@ export function PersonActions({ other, net, meId }) {
 
   const paid = () => {
     const { shared } = markPaid(owed);
-    buzz(15);
-    showToast(shared ? `Marked paid. ${first} sees it too.` : 'Marked paid', { label: 'Undo', run: () => undoLastPayment(meId, other) }, { tone: 'win' });
+    // The last one squares you with everyone: say so, once, calmly
+    const now = getState();
+    const mine = myIds(now);
+    const allSquare = !outstanding(now).some(t => mine.has(t.from) || mine.has(t.to));
+    buzz(allSquare ? [15, 40, 15] : 15);
+    showToast(allSquare ? 'All square. Nobody owes anybody.' : shared ? `Marked paid. ${first} sees it too.` : 'Marked paid', { label: 'Undo', run: () => undoLastPayment(meId, other) }, { tone: 'win' });
   };
   const answer = type => {
     answerCarry(carry, type);

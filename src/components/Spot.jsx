@@ -201,6 +201,12 @@ function HighFive({ ids }) {
   </>);
 }
 
+/** A scene's drawing on its own, as a group, to place inside a bigger drawing (120 by 120 units). */
+export function SpotScene({ kind = 'tee' }) {
+  const Scene = SCENES[kind] || SCENES.tee;
+  return <Scene />;
+}
+
 /**
  * One spot illustration. `kind` picks the scene (see SCENES, plus 'crowd' and 'highfive', which
  * draw the buddies in `ids`). Decorative: screen readers skip it.

@@ -1,4 +1,4 @@
-import { lazy, Suspense, useEffect, useMemo, useRef, useState } from 'react';
+import { lazy, Suspense, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { Callout, Empty, Header, Icon, Numpad, PickChip, PickMark, PickRow, Screen, Segmented, Sheet, Steps, Toggle, useUI } from '../components/ui.jsx';
 import { Spot } from '../components/Spot.jsx';
 import { useGroupAvatars } from '../lib/useAvatars.js';
@@ -579,6 +579,12 @@ function GameStep({ usual, onUsual, onPickUsual, planning, onPlan, game, setGame
   const [rules, setRules] = useState(null);
   const g = game && GAMES[game];
   const u = usual?.round;
+  const state = useStore();
+  // Your games: what you've played lately, then what you said your group plays, at most four
+  const mine = useMemo(() => {
+    const played = Object.values(state.rounds || {}).sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0)).map(r => r.game);
+    return [...new Set([...played, ...(state.organizer?.games || [])])].filter(k => GAMES[k]).slice(0, 4);
+  }, [state.rounds, state.organizer]);
   return (
     <>
       <div className="scroll">
@@ -591,10 +597,12 @@ function GameStep({ usual, onUsual, onPickUsual, planning, onPlan, game, setGame
             <span className="uc-btn"><Icon name="arrow-counter-clockwise" /> Set it up again</span>
           </button>
         )}
-        {GAME_GROUPS.map(group => (
-          <div key={group}>
-            <div className="sec-label">{group}</div>
-            {Object.entries(GAMES).filter(([, info]) => info.group === group).map(([key, info]) => (
+        {/* Your games first, as full rows; every other game as a compact tile, rules a tap away */}
+        {mine.length > 0 && <>
+          <div className="sec-label">Your games</div>
+          {mine.map(key => {
+            const info = GAMES[key];
+            return (
               <div key={key} className={`game-row ${game === key ? 'selected' : ''}`} role="radio" aria-checked={game === key} tabIndex={0} aria-label={`${info.name}: ${info.players}, ${info.blurb}`}
                 onClick={() => setGame(game === key ? null : key)} onKeyDown={e => (e.key === 'Enter' || e.key === ' ') && setGame(game === key ? null : key)}>
                 <div className="game-icon"><Icon name={info.icon} fill /></div>
@@ -607,9 +615,32 @@ function GameStep({ usual, onUsual, onPickUsual, planning, onPlan, game, setGame
                 </div>
                 <PickMark on={game === key} add={false} />
               </div>
-            ))}
-          </div>
-        ))}
+            );
+          })}
+        </>}
+        {GAME_GROUPS.map(group => {
+          const keys = Object.entries(GAMES).filter(([k, info]) => info.group === group && !mine.includes(k)).map(([k]) => k);
+          if (!keys.length) return null;
+          return (
+            <div key={group}>
+              <div className="sec-label">{group}</div>
+              <div className="game-grid">
+                {keys.map(key => {
+                  const info = GAMES[key];
+                  return (
+                    <div key={key} className={`game-tile ${game === key ? 'selected' : ''}`} role="radio" aria-checked={game === key} tabIndex={0} aria-label={`${info.name}: ${info.players}, ${info.blurb}`}
+                      onClick={() => setGame(game === key ? null : key)} onKeyDown={e => (e.key === 'Enter' || e.key === ' ') && setGame(game === key ? null : key)}>
+                      <span className="gt-top"><span className="game-icon sm"><Icon name={info.icon} fill /></span>
+                        <button className="gt-info" onClick={e => { e.stopPropagation(); setRules(key); }} aria-label={`${info.name} rules`}><Icon name="info" /></button></span>
+                      <span className="gn">{info.name}</span>
+                      <span className="gs">{game === key ? info.blurb : info.players}</span>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          );
+        })}
         {/* More than one group (8 to 20 players): one game across every group (BigGameSetup.jsx) */}
         {!planning && (
           <button className="quiet-row" onClick={() => nav.push('bigGameSetup')}>
@@ -623,7 +654,7 @@ function GameStep({ usual, onUsual, onPickUsual, planning, onPlan, game, setGame
       </div>
       <div className="cta-wrap">
         <button className="full-btn" disabled={!game} onClick={onNext}>{game ? <>{planning ? 'Next: When' : 'Next: Course'} <Icon name="arrow-right" /></> : 'Pick a game'}</button>
-        {!planning && onPlan && <button className="full-btn outline" disabled={!game} onClick={onPlan}><Icon name="calendar-plus" /> Schedule for later</button>}
+        {!planning && onPlan && <button className="text-link cta-link" disabled={!game} onClick={onPlan}><Icon name="calendar-plus" /> Schedule for later</button>}
       </div>
       <RulesSheet game={rules} open={!!rules} onClose={() => setRules(null)} />
     </>
@@ -1010,9 +1041,11 @@ function SetupStep({ game, course, holesCount, nine, picked, setPicked, casual =
           </>
         )}
 
-        <GameOptions game={game} get={get} set={set} onAmount={(path, title, o) => setPad({ path, title, ...o })} holesCount={holesCount}
-          players={picked.length || null} firstName={game === 'banker' ? state.players[picked[0]]?.name : null} inPoints={!countsMoney({ playFor })}
-          teamSize={teams?.length ? Math.min(...teams.map(t => t.length)) : null} />
+        <HouseRulesFold>
+          <GameOptions game={game} get={get} set={set} onAmount={(path, title, o) => setPad({ path, title, ...o })} holesCount={holesCount}
+            players={picked.length || null} firstName={game === 'banker' ? state.players[picked[0]]?.name : null} inPoints={!countsMoney({ playFor })}
+            teamSize={teams?.length ? Math.min(...teams.map(t => t.length)) : null} />
+        </HouseRulesFold>
 
         {quotaTeams && teams && (
           <>
@@ -1061,7 +1094,7 @@ function SetupStep({ game, course, holesCount, nine, picked, setPicked, casual =
       </div>
       <div className="cta-wrap">
         <button className="full-btn" disabled={optsBad || teamsBad} onClick={onStart}>Create round <Icon name="arrow-right" /></button>
-        {onLater && <button className="full-btn outline" disabled={optsBad} onClick={onLater}><Icon name="calendar-plus" /> Schedule for later</button>}
+        {onLater && <button className="text-link cta-link" disabled={optsBad} onClick={onLater}><Icon name="calendar-plus" /> Schedule for later</button>}
       </div>
       <Numpad open={!!pad} title={pad?.title} {...padUnit({ playFor })} initial={pad ? get(pad.path) : ''} min={pad?.min} max={pad?.max}
         onClose={() => setPad(null)} onDone={v => { set(pad.path, v); setPad(null); }} />
@@ -1265,6 +1298,44 @@ function VoteStep({ game, holesCount = 18, opts, onPlan, ballot = [], initialSid
 }
 
 // ---------------------------------------------------------------------------
+
+/**
+ * The game's bets up front, its house rules (the on/off switches) folded under one row that says how
+ * many are on, so the ones that change the money are always counted in plain sight.
+ */
+function HouseRulesFold({ children }) {
+  const ref = useRef(null);
+  const [count, setCount] = useState({ all: 0, on: 0 });
+  const [open, setOpen] = useState(null);
+  useLayoutEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+    const read = () => {
+      const all = el.querySelectorAll('.toggle-row [role="switch"]');
+      const on = el.querySelectorAll('.toggle-row [role="switch"][aria-checked="true"]').length;
+      setCount(c => (c.all === all.length && c.on === on ? c : { all: all.length, on }));
+    };
+    read();
+    const mo = new MutationObserver(read);
+    mo.observe(el, { subtree: true, childList: true, attributes: true, attributeFilter: ['aria-checked'] });
+    return () => mo.disconnect();
+  }, []);
+  const shown = open ?? false;
+  return (
+    <div ref={ref} className={`rules-fold ${shown ? 'open' : ''} ${count.all ? 'has-rules' : ''}`}>
+      {children}
+      {count.all > 0 && (
+        <button className="set-row rf-toggle" onClick={() => setOpen(!shown)} aria-expanded={shown}>
+          <div className="row-main">
+            <div className="set-name">House rules</div>
+            <div className="set-sub">{count.on ? `${count.on} on` : 'All off'} · {count.all} to choose from</div>
+          </div>
+          <span className="chevron"><Icon name={shown ? 'caret-up' : 'caret-down'} /></span>
+        </button>
+      )}
+    </div>
+  );
+}
 
 /** After setup: invite the group before the first tee, then start. */
 function ReadyStep({ round, onStart, onLater }) {

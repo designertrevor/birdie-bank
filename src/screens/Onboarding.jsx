@@ -2,15 +2,16 @@
 // them), your name with the friendly wagers note, then "Here's your group", which leads into
 // setting up the next round (the plan flow: the organizer suggests, the group votes) and, when
 // the flag is on, the paywall. Invited players arrive from a link and skip all of this.
+import { Spot, SpotScene } from '../components/Spot.jsx';
 import { useState } from 'react';
-import { BallIllo, Icon, Numpad, PickChip, PickMark, PickRow, Screen } from '../components/ui.jsx';
+import { Icon, Numpad, PickChip, PickMark, PickRow, Screen } from '../components/ui.jsx';
 import { update, uid } from '../lib/store.js';
 import { formatIndex } from '../lib/format.js';
 import { money } from '../lib/golf.js';
 import { GAMES } from '../lib/round.js';
 import { playFromSearch } from '../lib/rule-links.js';
 import { SignInSheet } from '../components/Account.jsx';
-import { BuddyArt } from '../components/BuddyArt.jsx';
+import { BuddyArt, BuddyFigure } from '../components/BuddyArt.jsx';
 import { BUDDIES, buddyAvatar } from '../lib/avatars.js';
 import { accountsEnabled, useAccount } from '../lib/cloud.js';
 import {
@@ -32,6 +33,30 @@ const QUESTION = {
  * `onDone(routes)`: called when onboarding finishes, with the screens to open on top of Up next
  * ([name, params] pairs), just before the app switches over. `play`: a rule page's ?play= game to start with ticked.
  */
+/** The ball that walks you through setup, reacting to what you've said so far. */
+function guideFor(step, a) {
+  if (step === 'games') return 'tee';
+  if (step === 'size') return 'crowd';
+  if (step === 'settle') return 'wallet';
+  if (step === 'math') return 'card';
+  if (step === 'p-games') return 'face-great';
+  if (step === 'p-settle') return a.settle === 'none' ? 'face-ok' : 'highfive';
+  if (step === 'p-math') return 'shades';
+  return null;
+}
+
+/** The welcome: the ball on its tee with the whole cast of Ball buddies around it. */
+function WelcomeCast() {
+  const ring = [['bucket', 8, 92], ['shades', 40, 52], ['snapback', 86, 26], ['flatcap', 150, 26], ['beanie', 196, 52], ['sweatband', 228, 92], ['tourcap', 30, 124], ['visor', 206, 124]];
+  return (
+    <svg className="ob-cast" viewBox="0 0 280 180" aria-hidden="true" focusable="false">
+      <ellipse cx="140" cy="172" rx="120" ry="6" fill="rgba(10,10,10,.06)" />
+      {ring.map(([id, x, y], i) => <g key={id} className="ob-cast-buddy" style={{ animationDelay: `${120 + i * 60}ms` }}><BuddyFigure id={id} x={x} y={y} size={46} /></g>)}
+      <g transform="translate(86 46) scale(.9)"><SpotScene kind="tee" /></g>
+    </svg>
+  );
+}
+
 export default function Onboarding({ onDone, play = null }) {
   const [step, setStep] = useState('welcome');
   // Arrived from "Play this now" on a game's rule page: that game is already ticked, and so it's
@@ -85,7 +110,7 @@ export default function Onboarding({ onDone, play = null }) {
     return (
       <Screen className="onboard">
         <div className="scroll onboard-body">
-          <BallIllo className="onboard-illo" />
+          <WelcomeCast />
           <h1 className="onboard-title">Birdie Bank</h1>
           <p className="onboard-text">The bank for your golf game. Play any game, settle every bet, keep the Tab all season.</p>
           <div className="onboard-games">
@@ -112,9 +137,11 @@ export default function Onboarding({ onDone, play = null }) {
       </div>
     </div>
   );
-  const cta = (label = 'Continue', ok = true) => (
+  // `hint` says what's left when Continue can't go yet, so a grey button never looks broken
+  const cta = (label = 'Continue', ok = true, hint = null) => (
     <div className="cta-wrap">
       <button className="full-btn" disabled={!ok} onClick={next}>{label} <Icon name="arrow-right" /></button>
+      {!ok && hint && <p className="ob-hint" role="status">{hint}</p>}
     </div>
   );
 
@@ -123,6 +150,7 @@ export default function Onboarding({ onDone, play = null }) {
       <Screen className="onboard">
         {top}
         <div className="scroll ob-body">
+          <Spot key={step} kind={guideFor(step, a)} size={84} className="ob-guide" />
           <h1 className="ob-q d">{QUESTION.games.q}</h1>
           <p className="ob-sub">{QUESTION.games.sub}</p>
           <div className="ob-tiles">
@@ -140,7 +168,7 @@ export default function Onboarding({ onDone, play = null }) {
             })}
           </div>
         </div>
-        {cta('Continue', answered('games', a))}
+        {cta('Continue', answered('games', a), 'Pick at least one game to go on.')}
       </Screen>
     );
   }
@@ -151,6 +179,7 @@ export default function Onboarding({ onDone, play = null }) {
       <Screen className="onboard">
         {top}
         <div className="scroll ob-body">
+          <Spot key={step} kind={guideFor(step, a)} size={84} className="ob-guide" />
           <h1 className="ob-q d">{q.q}</h1>
           <div role="radiogroup" aria-label={q.q}>
             {q.options.map(o => {
@@ -162,7 +191,7 @@ export default function Onboarding({ onDone, play = null }) {
             })}
           </div>
         </div>
-        {cta('Continue', answered(step, a))}
+        {cta('Continue', answered(step, a), 'Pick one to go on.')}
       </Screen>
     );
   }
@@ -173,6 +202,7 @@ export default function Onboarding({ onDone, play = null }) {
       <Screen className="onboard">
         {top}
         <div className="scroll ob-body">
+          {guideFor(step, a) && <Spot key={step} kind={guideFor(step, a)} size={84} className="ob-guide" ids={['visor', 'snapback']} />}
           <div className="eyebrow">{p.eyebrow}</div>
           <h1 className="ob-q d">{p.title}</h1>
           <p className="ob-sub">{p.text}</p>
@@ -232,7 +262,11 @@ export default function Onboarding({ onDone, play = null }) {
             </div>
           )}
         </div>
-        {cta('Continue', nameReady({ name, agreed, age }, a))}
+        {cta('Continue', nameReady({ name, agreed, age }, a), [
+          !name.trim() && 'add your name',
+          !agreed && 'tick Friendly wagers only',
+          asksAge(a) && !age && 'answer the age question',
+        ].filter(Boolean).join(', then ').replace(/^./, c => `To go on, ${c}`) + '.')}
         <Numpad open={pad} title="Handicap index" initial={index ?? ''} allowDecimal allowNegative min={-10} max={54}
           onClose={() => setPad(false)} onDone={v => { setIndex(v); setPad(false); }} />
       </Screen>
