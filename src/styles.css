@@ -7,6 +7,9 @@
   --line: #ebe6d6; --line-soft: #f2edde;
   --pink: #ff4d8b; --teal: #1a3a3a; --lav: #b8a4ed; --peach: #ffb084;
   --ochre: #e8b94a; --mint: #a4d4c5; --coral: #ff6b5a;
+  /* Scenes (Scenes.jsx): the setting's colours, dusk in the dark theme */
+  --sc-sky: #cfe8f3; --sc-sun: #e8b94a; --sc-cloud: #ffffff; --sc-hill: #7fbfa9; --sc-tree: #2f6b55; --sc-trunk: #6b4a2f; --sc-rough: #8fcaa8; --sc-grass: #a4d4c5; --sc-green: #bfe3c9; --sc-sand: #f1e2b4;
+  --sc-wall: #f6ead2; --sc-door: #e8d2a8; --sc-stone: #e2d6c0; --sc-road: #4a4f4e; --sc-snow: #ffffff; --sc-glass: #e3f2f8;
   --icon: var(--teal); /* icons on cards and surfaces; mint in dark mode so they stay visible */
   --pink-fill: #d42a6b; /* pink behind small white text (4.8:1); brand pink stays on big shapes */
   --pink-text: #c92463; /* pink words and marks on light surfaces (4.5:1); brand pink in dark mode */
@@ -831,6 +834,8 @@ button:disabled { cursor: not-allowed; }
 :root[data-theme="dark"] {
   --canvas: #121615; --surface: #202624; --surface-strong: #2c3331; --card: #1a1f1e;
   --ink: #f5f0e4; --body: #d5d0c3; --mute: #a8a498; --mute-soft: #a09c90;
+  --sc-sky: #1c2a3a; --sc-sun: #f3e7c4; --sc-cloud: #2e3d4d; --sc-hill: #1f4a3f; --sc-tree: #153a2e; --sc-trunk: #3b2a1c; --sc-rough: #245245; --sc-grass: #2f6a58; --sc-green: #3a7a64; --sc-sand: #6b5d3a;
+  --sc-wall: #2a2f2e; --sc-door: #3a3330; --sc-stone: #1f2423; --sc-road: #2a2e2d; --sc-snow: #c8d4dc; --sc-glass: #30475a;
   --line: #2c3331; --line-soft: #242a28;
   --teal: #173d3c; --icon: var(--mint); --pink-text: var(--pink); --coral-text: var(--coral); --focus: var(--lav); --win: #6fd3a8; --win-bg: #173a2e; --loss: #ff8a7d; --loss-bg: #3d1f1c;
   --on-ink: #0a0a0a; --bkr-card: #2e2a1c; --cur-cell: #3a2030; --pick-tint: #3a1d29;
@@ -840,6 +845,8 @@ button:disabled { cursor: not-allowed; }
   :root:not([data-theme="light"]):not([data-theme="dark"]) {
   --canvas: #121615; --surface: #202624; --surface-strong: #2c3331; --card: #1a1f1e;
   --ink: #f5f0e4; --body: #d5d0c3; --mute: #a8a498; --mute-soft: #a09c90;
+  --sc-sky: #1c2a3a; --sc-sun: #f3e7c4; --sc-cloud: #2e3d4d; --sc-hill: #1f4a3f; --sc-tree: #153a2e; --sc-trunk: #3b2a1c; --sc-rough: #245245; --sc-grass: #2f6a58; --sc-green: #3a7a64; --sc-sand: #6b5d3a;
+  --sc-wall: #2a2f2e; --sc-door: #3a3330; --sc-stone: #1f2423; --sc-road: #2a2e2d; --sc-snow: #c8d4dc; --sc-glass: #30475a;
   --line: #2c3331; --line-soft: #242a28;
   --teal: #173d3c; --icon: var(--mint); --pink-text: var(--pink); --coral-text: var(--coral); --focus: var(--lav); --win: #6fd3a8; --win-bg: #173a2e; --loss: #ff8a7d; --loss-bg: #3d1f1c;
   --on-ink: #0a0a0a; --bkr-card: #2e2a1c; --cur-cell: #3a2030; --pick-tint: #3a1d29;
@@ -3583,6 +3590,11 @@ a.header-btn.rm-open { text-decoration: none; }
 .game-tile .gs { font-size: 12.5px; line-height: 1.3; }
 
 /* ONBOARDING: the whole cast on the welcome, a ball that reacts on every question, and a hint under a grey Continue */
+.scene { display: block; width: 100%; }
+/* Onboarding: the scene runs edge to edge above the question, into the status bar on the welcome */
+.gallery-scene { height: 100%; }
+.ob-scene { height: 176px; margin: -8px -16px 14px; width: auto; flex-shrink: 0; }
+.onboard-body > .ob-scene { height: 38vh; min-height: 220px; max-height: 320px; margin: calc(-24px - env(safe-area-inset-top)) -24px 8px; }
 .ob-cast { width: 280px; max-width: 100%; height: auto; display: block; margin: 0 auto 4px; }
 .ob-cast-buddy { animation: castIn .5s var(--ease-bounce) both; transform-box: fill-box; transform-origin: 50% 100%; }
 @keyframes castIn { from { opacity: 0; transform: translateY(14px) scale(.7); } }

@@ -3,6 +3,7 @@
 import { useEffect } from 'react';
 import { Spot, SPOT_KINDS } from '../components/Spot.jsx';
 import { GameArt, GAME_ART_KINDS } from '../components/GameArt.jsx';
+import { Scene, SCENE_KINDS } from '../components/Scenes.jsx';
 import { GAMES } from '../lib/round.js';
 import { SIDE_GAMES } from '../lib/round.js';
 
@@ -24,6 +25,9 @@ const Cell = ({ label, children }) => (
 function Panel({ theme }) {
   return (
     <div style={{ background: 'var(--canvas)', color: 'var(--ink)', padding: 16, minHeight: '100vh' }}>
+      <Shelf title={`Scenes · ${theme}`}>
+        {SCENE_KINDS.map(k => <div key={k} style={{ width: 375, height: 200, overflow: 'hidden', borderRadius: 12 }}><Scene kind={k} className="gallery-scene" /></div>)}
+      </Shelf>
       <Shelf title={`Games · ${theme}`}>
         {GAME_ART_KINDS.map(k => <Cell key={k} label={GAMES[k]?.name || SIDE_GAMES[k]?.label || k}><div className="game-art-box"><GameArt game={k} size={56} /></div></Cell>)}
       </Shelf>
