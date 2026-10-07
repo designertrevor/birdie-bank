@@ -260,6 +260,16 @@ const CRITTERS = {
   ),
 };
 
+/**
+ * A buddy with no backdrop, as a group to place inside a bigger drawing (the spot illustrations).
+ * `x` and `y` are its top left and `size` its width, in the parent drawing's units.
+ */
+export function BuddyFigure({ id, x = 0, y = 0, size = 64 }) {
+  const Critter = CRITTERS[id];
+  const Hat = ART[id] || ART.bucket;
+  return <g transform={`translate(${x} ${y}) scale(${size / 64})`}>{Critter ? <Critter /> : <><Ball /><Hat /></>}</g>;
+}
+
 /** One Ball buddy (or critter) on its backdrop, as an SVG that fills its box. */
 export function BuddyArt({ id, bg, className = '' }) {
   const Critter = CRITTERS[id];

@@ -1,5 +1,6 @@
 import { createContext, useCallback, useContext, useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
+import { Spot } from './Spot.jsx';
 
 export function Icon({ name, fill = false, className = '', label }) {
   return <i className={`${fill ? 'ph-fill' : 'ph-bold'} ph-${name} ${className}`} aria-hidden={label ? undefined : true} aria-label={label} />;
@@ -59,6 +60,25 @@ export function Empty({ title, text, action, illo = true }) {
       <div className="et">{title}</div>
       {text && <div className="es">{text}</div>}
       {action}
+    </div>
+  );
+}
+
+/**
+ * A callout: a spot illustration (see Spot.jsx), a bold line and a sentence or two, on a card. For the
+ * notes worth stopping for (an invite, an idea, a first step). Quieter notes use .hint-card.
+ * `action` goes under the words; `onDismiss` adds a close button.
+ */
+export function Callout({ spot = null, ids = null, title, children, action = null, onDismiss = null, big = false, soft = false, className = '' }) {
+  return (
+    <div className={`callout ${big ? 'big' : ''} ${soft ? 'soft' : ''} ${className}`.replace(/\s+/g, ' ').trim()}>
+      {spot && <Spot kind={spot} ids={ids} />}
+      <div className="co-body">
+        {title && <div className="co-title">{title}</div>}
+        {children && <div className="co-text">{children}</div>}
+        {action}
+      </div>
+      {onDismiss && <button type="button" className="co-x" onClick={onDismiss} aria-label="Dismiss"><Icon name="x" /></button>}
     </div>
   );
 }
@@ -265,9 +285,10 @@ export function UIProvider({ children }) {
   const [confirm, setConfirm] = useState(null);
   const timer = useRef();
   // An optional action ({ label, run }), like Undo, keeps the toast up a little longer
-  const showToast = useCallback((msg, action = null) => {
+  // `tone` is 'money' (pink, money moved), 'win' (mint, good news) or nothing (ink, routine)
+  const showToast = useCallback((msg, action = null, { tone = null } = {}) => {
     clearTimeout(timer.current);
-    setToast({ msg, action, key: Date.now() });
+    setToast({ msg, action, tone, key: Date.now() });
     timer.current = setTimeout(() => setToast(null), action ? 5000 : 2000);
   }, []);
   const ask = useCallback(opts => new Promise(resolve => setConfirm({ ...opts, resolve })), []);

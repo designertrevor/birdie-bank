@@ -1,5 +1,6 @@
 import { Fragment, useEffect, useRef, useState } from 'react';
 import { Empty, Header, Icon, PickChip, Screen, useUI } from '../components/ui.jsx';
+import { BuddyArt } from '../components/BuddyArt.jsx';
 import { getState, update, useStore } from '../lib/store.js';
 import { GAMES, bettingRound, cardOnly, gameView, holeAtPos, isJustPlaying, holeComplete, isTeamGame, matchScored, oneBall, teamTable, playsHole, roundLegs, roundNotes, roundResults, scoreSummary, scorers, sideNames, skinsKinds, skinsTable, popsFor, netFor } from '../lib/round.js';
 import { halfStrokesOn, netText, strokesWords } from '../lib/allowances.js';
@@ -792,8 +793,8 @@ export function Scorecard({ round, current, onHole }) {
       </table>
       <div className="sc-legend">
         {/* Each mark stays on the same line as its words */}
-        <span className="sc-key"><span className="sc-mark birdie">3</span> birdie</span>
-        <span className="sc-key"><span className="sc-mark eagle">2</span> eagle</span>
+        <span className="sc-key"><span className="sc-mark birdie">3</span> birdie <span className="sc-critter"><BuddyArt id="birdie" bg="mint" /></span></span>
+        <span className="sc-key"><span className="sc-mark eagle">2</span> eagle <span className="sc-critter"><BuddyArt id="eagle" bg="teal" /></span></span>
         <span className="sc-key"><span className="sc-mark bogey">5</span> bogey</span>
         <span className="sc-key"><span className="sc-mark pu">X</span> picked up</span>
         {anyStrokes && <span className="sc-key"><span className="sc-strokes inline"><i /></span> {half ? 'half stroke' : 'gets a stroke'}</span>}

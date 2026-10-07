@@ -116,7 +116,21 @@ export function avatarModel(avatar, { name = '', key = '', letters = 1 } = {}) {
     return { kind: 'initials', text: initialsOf(name, letters), bg };
   }
   if (a?.kind === 'initials') return { kind: 'initials', text: initialsOf(name, a.letters || letters), bg: BACKDROP[a.bg] ? a.bg : tintFor(key || name) };
+  // Nobody picked: a Ball buddy worked out from who they are, so every list has faces, not letters
+  const auto = autoBuddyFor(key || name);
+  if (auto) return { kind: 'buddy', buddy: auto.id, bg: auto.bg, auto: true, text: initialsOf(name, letters) };
   return { kind: 'initials', text: initialsOf(name, letters), bg: tintFor(key || name) };
+}
+
+/**
+ * The Ball buddy a person gets when they haven't picked one: a hat from the buddies shelf, picked
+ * from their id (or name) so it's the same on every screen and every phone. Null with nothing to go on.
+ */
+export function autoBuddyFor(key) {
+  if (!String(key || '').trim()) return null;
+  const hats = shelfOf('buddies');
+  const b = hats[hash(key) % hats.length];
+  return { id: b.id, bg: b.bg };
 }
 
 /** How the picker labels an avatar: "Visor", "Your photo", "Initials". */

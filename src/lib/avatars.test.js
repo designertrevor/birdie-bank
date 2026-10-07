@@ -7,7 +7,7 @@ import { addRound } from './rounds.js';
 import { payInfoFor } from './pay.js';
 import { normalizeAvatar } from './profile-model.js';
 import {
-  BACKDROPS, BUDDIES, FALLBACK_TINTS, avatarFor, avatarLabel, avatarModel, buddyAvatar, initialsAvatar,
+  BACKDROPS, BUDDIES, FALLBACK_TINTS, autoBuddyFor, avatarFor, avatarLabel, avatarModel, buddyAvatar, initialsAvatar,
   initialsOf, noTwins, personKey, photoAllowed, shareableAvatar, stampAvatars, tintFor,
 } from './avatars.js';
 
@@ -51,15 +51,17 @@ test('drawing: photo first, then a buddy, then initials on a pastel that stays t
   assert.equal(avatarModel(PHOTO, { name: 'Sam' }).text, 'S', 'a photo keeps initials for when it won’t load');
   assert.deepEqual(avatarModel(buddyAvatar('beanie'), { name: 'Sam' }), { kind: 'buddy', buddy: 'beanie', bg: 'teal' });
   const a = avatarModel(null, { name: 'Sam', key: 'p_sam' });
-  assert.equal(a.kind, 'initials');
-  assert.equal(a.text, 'S');
-  assert.equal(a.bg, tintFor('p_sam'));
+  assert.equal(a.kind, 'buddy', 'nobody picked: a Ball buddy, not letters');
+  assert.equal(a.auto, true);
+  assert.equal(a.buddy, autoBuddyFor('p_sam').id);
+  assert.ok(BUDDIES.find(b => b.id === a.buddy).shelf === 'buddies', 'a hat buddy, never a critter');
   assert.deepEqual(avatarModel(null, { name: 'Sam', key: 'p_sam' }), a, 'the same every time');
+  assert.deepEqual(avatarModel(null, { name: '', key: '' }), { kind: 'initials', text: '?', bg: tintFor('') }, 'nothing to go on: a question mark');
   assert.equal(avatarModel({ kind: 'initials', bg: 'coral', letters: 2 }, { name: 'Trevor Nielsen' }).text, 'TN');
   assert.equal(avatarModel({ kind: 'initials', bg: 'coral', letters: 2 }, { name: 'Trevor Nielsen' }).bg, 'coral');
   // A buddy from a newer app shows as initials on its backdrop
   assert.deepEqual(avatarModel({ kind: 'buddy', id: 'jetpack', bg: 'mint' }, { name: 'Sam' }), { kind: 'initials', text: 'S', bg: 'mint' });
-  assert.equal(avatarModel({ kind: 'photo', url: 'http://plain.example/x.jpg' }, { name: 'Sam' }).kind, 'initials', 'only https or a picture data link');
+  assert.notEqual(avatarModel({ kind: 'photo', url: 'http://plain.example/x.jpg' }, { name: 'Sam' }).kind, 'photo', 'only https or a picture data link');
 });
 
 test('initials: one or two letters, and something for no name', () => {
@@ -131,9 +133,9 @@ test('no twins: the second of two matching buddies moves to another backdrop, on
 });
 
 test('no twins: two Js on the same pastel get different colours too', () => {
-  const j1 = avatarModel(null, { name: 'Jake', key: 'k1' });
+  const j1 = avatarModel({ kind: 'initials' }, { name: 'Jake', key: 'k1' });
   const j2 = { ...j1 };
-  const k = avatarModel(null, { name: 'Kev', key: 'k1' });
+  const k = avatarModel({ kind: 'initials' }, { name: 'Kev', key: 'k1' });
   const out = noTwins([j1, j2, k]);
   assert.equal(out[0].bg, j1.bg);
   assert.notEqual(out[1].bg, j1.bg);

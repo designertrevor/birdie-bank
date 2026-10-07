@@ -85,7 +85,7 @@ export function PersonActions({ other, net, meId }) {
   const paid = () => {
     const { shared } = markPaid(owed);
     buzz(15);
-    showToast(shared ? `Marked paid. ${first} sees it too.` : 'Marked paid', { label: 'Undo', run: () => undoLastPayment(meId, other) });
+    showToast(shared ? `Marked paid. ${first} sees it too.` : 'Marked paid', { label: 'Undo', run: () => undoLastPayment(meId, other) }, { tone: 'win' });
   };
   const answer = type => {
     answerCarry(carry, type);

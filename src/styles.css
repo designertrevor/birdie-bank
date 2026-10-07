@@ -569,7 +569,7 @@ a.set-row { text-decoration: none; }
 /* TOAST */
 .toast {
   position: absolute; bottom: calc(110px + env(safe-area-inset-bottom)); left: 50%; transform: translate(-50%, 16px) scale(.9);
-  background: var(--pink-fill); color: #fff; padding: 12px 20px; border-radius: 24px; font-family: var(--display); font-size: 16px;
+  background: var(--ink); color: var(--on-ink); padding: 12px 20px; border-radius: 24px; font-family: var(--display); font-size: 16px;
   font-weight: 800; opacity: 0; pointer-events: none; z-index: 200;
   /* A long toast (a bets line) wraps inside the screen instead of pushing the page sideways */
   width: max-content; max-width: calc(100% - 32px); text-align: center; text-wrap: balance;
@@ -578,7 +578,10 @@ a.set-row { text-decoration: none; }
 .toast.show { opacity: 1; transform: translate(-50%, 0) scale(1); }
 .toast.has-act { display: flex; align-items: center; gap: 12px; padding: 4px 6px 4px 20px; white-space: normal; text-align: left; width: max-content; max-width: calc(100% - 32px); font-size: 15px; }
 .toast.has-act.show { pointer-events: auto; }
-.toast-act { min-height: 44px; padding: 0 14px; border: none; border-radius: 999px; background: rgba(255,255,255,.2); color: #fff; font: inherit; font-weight: 800; cursor: pointer; flex-shrink: 0; }
+.toast-act { min-height: 44px; padding: 0 14px; border: none; border-radius: 999px; background: rgba(128,128,128,.28); color: inherit; font: inherit; font-weight: 800; cursor: pointer; flex-shrink: 0; }
+/* Toast tones: ink for routine news, pink when money moved, mint for good news (paid, all square) */
+.toast.t-money { background: var(--pink-fill); color: #fff; }
+.toast.t-win { background: var(--mint); color: var(--on-pastel); }
 .confetti { position: fixed; pointer-events: none; z-index: 999; border-radius: 2px; }
 
 /* ============================================================
@@ -619,8 +622,25 @@ button:disabled { cursor: not-allowed; }
 .icon-btn.sm { width: 36px; height: 36px; font-size: 16px; }
 .icon-btn:disabled { opacity: .35; transform: none; }
 
-.hint-card { margin: 0 16px 10px; padding: 12px 14px; border-radius: 16px; background: var(--surface); color: var(--body); font-size: 14px; line-height: 1.45; display: flex; gap: 8px; align-items: flex-start; }
-.hint-card i { color: var(--pink); font-size: 18px; margin-top: 1px; flex-shrink: 0; }
+/* A quiet note: no box, the icon in a small round chip, the words in body text. The warn kind keeps
+   its fill, so a real heads-up still stands out. Big moments use the Callout (ui.jsx) instead. */
+.hint-card { margin: 0 16px 10px; padding: 2px 4px 2px 0; border-radius: 16px; background: transparent; color: var(--body); font-size: 14px; line-height: 1.45; display: flex; gap: 10px; align-items: flex-start; }
+.hint-card > i:first-child { width: 30px; height: 30px; border-radius: 50%; background: var(--surface); color: var(--icon); font-size: 16px; display: grid; place-items: center; margin-top: -4px; flex-shrink: 0; }
+.hint-card i { color: var(--icon); flex-shrink: 0; }
+.hint-card.warn { padding: 12px 14px; }
+.hint-card.warn > i:first-child { width: auto; height: auto; background: none; margin-top: 1px; font-size: 18px; }
+
+/* CALLOUT: a spot illustration, a bold line and one sentence, on a card (ui.jsx Callout) */
+.callout { margin: 0 16px 12px; padding: 12px 16px 12px 10px; border-radius: 22px; background: var(--card); display: flex; gap: 12px; align-items: center; position: relative; }
+.callout .spot { width: 68px; height: 68px; flex-shrink: 0; }
+.callout.big .spot { width: 92px; height: 92px; }
+.callout.soft { background: var(--surface); }
+.co-body { display: flex; flex-direction: column; gap: 2px; min-width: 0; flex: 1; }
+.co-title { font-family: var(--display); font-size: 17px; font-weight: 800; line-height: 1.2; color: var(--ink); letter-spacing: -.01em; }
+.co-text { font-size: 14px; color: var(--body); line-height: 1.4; }
+.co-body .pill-btn, .co-body .co-act { margin-top: 8px; align-self: flex-start; }
+.co-x { position: absolute; top: 6px; right: 6px; width: 32px; height: 32px; border: none; border-radius: 50%; background: transparent; color: var(--mute); cursor: pointer; display: grid; place-items: center; font-size: 16px; }
+.callout:has(.co-x) .co-body { padding-right: 18px; }
 .field-label { display: block; font-size: 13px; font-weight: 600; color: var(--mute); margin: 14px 0 6px; }
 .field-label:first-child { margin-top: 0; }
 .field-label .opt { font-weight: 500; color: var(--mute-soft); }
@@ -775,6 +795,8 @@ button:disabled { cursor: not-allowed; }
 .sc-legend { column-gap: 12px; row-gap: 8px; }
 .sc-legend .sc-key { display: inline-flex; align-items: center; gap: 6px; white-space: nowrap; }
 .sc-legend .sc-mark { width: 20px; height: 20px; font-size: 11px; }
+.sc-critter { width: 22px; height: 22px; border-radius: 50%; overflow: hidden; display: inline-block; flex-shrink: 0; }
+.sc-critter .buddy-art { width: 100%; height: 100%; display: block; }
 .sc-sheet .sc-wrap { margin: 0 16px 16px; }
 
 /* Course editor */
