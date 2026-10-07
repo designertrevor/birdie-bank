@@ -51,11 +51,11 @@ The plan for growing Birdie Bank into a $10k/mo business, and the checklist we w
 
 **Shipped to main 2026-10-05 (overnight 8, `97fc006`):** the Big Game (several groups, one game, one pot and one settle-up), following friends' rounds live with friends' rounds and the group in the feed, a tab per crew or trip with Close the books, the tee time reminder and gentle payment nudges, Trip Mode templates, flights and a live captains' draft, easy sharing into the group text, and keeping your place after switching apps. The profile privacy, Big Game and friend feed SQL is run. `supabase/2026-10-06-round-codes.sql` (locks live rounds, payments, plans and challenges behind their codes) runs about a day after the ship, once phones have reloaded the new build.
 
-**Design pass built, waiting for review (2026-10-07, on `main-mb9pod`):** all 60 items from the visual design audit (benchmarked on Rocket Money, Robinhood, Airbnb, Duolingo, Monzo and Copilot). Every player gets a Ball buddy, a set of spot illustrations made from the buddies, calmer notes and toasts, a quieter feedback row in the Round menu and Settings, the invite card on Round ready, a crowned winner and a podium on the results, one main action on Up next, simpler Tab cards, and the overnight 9 and 10 screens (Hall of fame, What's new, the heads-up sheet, trips) brought in line.
+**Design pass built, waiting for review (2026-10-07, on `main-mb9pod`, see area 24):** all 60 items from the visual design audit (benchmarked on Rocket Money, Robinhood, Airbnb, Duolingo, Monzo and Copilot). Every player gets a Ball buddy, a set of spot illustrations made from the buddies, calmer notes and toasts, a quieter feedback row in the Round menu and Settings, the invite card on Round ready, a crowned winner and a podium on the results, one main action on Up next, simpler Tab cards, and the overnight 9 and 10 screens (Hall of fame, What's new, the heads-up sheet, trips) brought in line.
 
 **Polish 2026-10-06 (from Trevor, on `feedback/floating-sheets`):** sheets float as rounded cards inset from the screen edges, with a raised surface that reads clearly against the page in dark mode.
 
-**Next in S2:** real payments for the paywall test (Stripe, area 11), talks with the three head pros (area 23), the rest of mid-round settings (teams, order, play for), "Any side bets on this hole?", and the quick logo once the name is picked (area 16).
+**Next in S2:** review and merge the design pass (area 24), real payments for the paywall test (Stripe, area 11), talks with the three head pros (area 23), the rest of mid-round settings (teams, order, play for), "Any side bets on this hole?", and the quick logo once the name is picked (area 16).
 
 **The big date:** the creator test (S4) runs February to April 2027, when golf season starts back up. Everything before it is about being ready: a product groups keep using, a smooth path from video to paying, and an App Store app.
 
@@ -382,7 +382,7 @@ Nothing is gated before launch (2026-09-29). Testers use everything; this area i
 - [x] `S2` Copy audit applied across the app: "group" (crew only for saved lists), "bets" not "stakes", "each player puts in" not "ante", "Gets 5 strokes" not "HC 5", one delete verb, and the money screen called the Tab. Deeper pink (#d42a6b) behind small white text (2026-09-27)
 - [x] `S2` Motion for the killer end-of-round moment: bets rise in as they resolve, totals count up and pop, the winner's row lifts with a pink glow, the title crossfades, and Reveal, Settle up and Share slide in. Tap to skip and reduced motion show the finished screen at once, and the reveal runs a little faster than before (2026-09-30). For filming: once the bets resolve the card tightens to one line a bet and every total lands on a phone screen (2026-09-30, Trevor's review)
 - [x] `S1` Floating sheets: every bottom sheet is a card inset 12px from the sides and the bottom, with 30px corners all round like the phone's own, the accent X to close, and its own raised surface (white over a dimmed page in light mode, a lighter gray with a faint edge over a darker scrim in dark mode) so the sheet's top edge never disappears. Text inside stays AA in both themes (from Trevor, 2026-10-06)
-- [ ] `S2` (partial) Visual design pass from the 2026-10-07 audit (60 items): built on `main-mb9pod`, waiting for Trevor's review. Ball buddies for every player, spot illustrations from the buddies (`src/components/Spot.jsx`), a Callout for the notes worth stopping for, calmer feedback entry points, grouped menus, a crowned winner and podium, and empty states with their own scenes. A second pass with Mobbin open on Trevor's Mac comes next, with Oura's data screens as a reference for the Tab, Your stats and the hall of fame (from Trevor, 2026-10-07)
+- [ ] `S2` (partial) Visual design pass from the 2026-10-07 audit: all 60 items built on `main-mb9pod`, waiting for review. What was built and what's left is in area 24
 - [ ] `S3` (partial) Character and illustration set for key moments: win, loss, press, birdie, lone Wolf, all square, trash talk, empty screens, onboarding, paywalls, one per game. The design pass covers win (a crowned buddy), birdie and eagle (the critters), all square (a high five) and the empty screens
 - [ ] `S3` More motion: character reactions, a launch animation (Lottie or Rive)
 - [ ] `S3` A theme for every game: a custom illustration in place of each game's icon, and a look carried into the round (money bar, big hole moments), the end-of-round reveal and the share card (from Trevor, 2026-09-30)
@@ -491,6 +491,40 @@ Code is cheap now, so anyone can build a scoring app. What a weekend coder can't
 
 ---
 
+### 24. Visual design pass (from the 2026-10-07 audit)
+The audit found 60 ways to make the app calmer, clearer and worth a screenshot, benchmarked on Rocket Money, Robinhood, Airbnb, Duolingo, Monzo and Copilot (web references, since Mobbin only runs on Trevor's Mac). All 60 were built in one cloud session on `main-mb9pod`, in six commits. Each line below stays `(partial)` until Trevor reviews it and it merges to main, then it's checked off with the merge date. This area stays off the public roadmap.
+
+**Built, waiting for review (2026-10-07, `main-mb9pod`)**
+- [ ] `S2` (partial) Built: every player gets a Ball buddy picked from who they are, instead of a letter on a pastel; their initials stay on for the share images
+- [ ] `S2` (partial) Built: spot illustrations made from the buddies (`src/components/Spot.jsx`): the ball on a tee, with a megaphone, a bulb, a phone and link, a crown, a cup, asleep, a suitcase, a wallet, a blank scorecard, a calendar, a bell, shades, a present, three faces, a crowd and a high five
+- [ ] `S2` (partial) Built: a Callout for the notes worth stopping for (a spot, a bold line, one sentence), the 79 beige info boxes turned into quiet notes, and the long explanations folded under "How this works"
+- [ ] `S2` (partial) Built: toasts in ink by default, pink only when money moves on a hole, mint for a payment marked, and "All square. Nobody owes anybody." on the last one
+- [ ] `S2` (partial) Built: the birdie and eagle critters on scores under par and in the scorecard key
+- [ ] `S2` (partial) Built: Round ready shows the group's buddies on the first tee, the broadcast note and Invite are one invite card, Tee off is the one main button; Invite the group previews what the group gets from the link
+- [ ] `S2` (partial) Built: the Round menu as Scorecard, Bets and Invite tiles over short grouped lists, End round on its own in red, and feedback as a quiet row with the megaphone ball instead of the pink card at the top
+- [ ] `S2` (partial) Built: Settings leads with your profile (big avatar, what's left to set up as chips and a ring), feedback moves into a warm "Help shape Birdie Bank" card with the roadmap, What's new joins About, the notifications row stops repeating its section name; Suggest something gets the idea bulb
+- [ ] `S2` (partial) Built: Play shows each player's buddy, the hole, par and HCP as light tiles so the pot card is the one coloured block, and Picked up as a small chip; moments rise above the buttons with the player's buddy, so the money bar stays in view; the first-tee card shows two buddies shaking on it
+- [ ] `S2` (partial) Built: results with the winner's buddy in a crown (the group for a tie or all square), the top three on a podium with T2 for a shared place, one grouped list, then Card, Talk and Details; three ball faces for "How was it?"; the reveal crowns the winner when the totals land
+- [ ] `S2` (partial) Built: Up next with Start a round (and Run it back) as the only hero buttons, the ball peeking from the corner, Join a friend's round as a line inside it, Plan ahead, Start a trip and Big Game as illustrated tiles, and a first-round checklist for a new organizer
+- [ ] `S2` (partial) Built: callouts for the group text as chat bubbles you swipe through, a live dot and "2 playing now" on Friends, and a play button that pulses and shows the hole while a round is on
+- [ ] `S2` (partial) Built: reminders, It shipped and What's new share one slot on Up next, the first card showing and the rest piled behind it; It shipped is calm, with a ball holding a present
+- [ ] `S2` (partial) Built: the Tab with who the money's with and a season sparkline under the big number, Remind as a bell beside one main button, All square as a green line with faces, and Close the books with Start a trip in one short list
+- [ ] `S2` (partial) Built: empty states with their own scene (wallet, blank scorecard, asleep, cup, suitcase, calendar, crowd, high five for an all square Tab)
+- [ ] `S2` (partial) Built: Players says New instead of a dash and shows four seats to fill when empty; a person's money sits in one card, and the rivalry is face to face with the record between you
+- [ ] `S2` (partial) Built: the game picker leads with your games and shows the rest as compact tiles; the Bets step folds its house rules under one row that counts how many are on; Schedule for later is a quiet link
+- [ ] `S2` (partial) Built: onboarding with the whole cast of buddies on the welcome, a ball that reacts to each answer, a line under a grey Continue saying what's left, and a smaller handicap button
+- [ ] `S2` (partial) Built: the overnight 9 and 10 screens brought in line: Hall of fame (crowned leader, podium, records as badges), What's new (hero card, compact list), the heads-up sheet (a lock screen preview), the year in review image (your buddy in the corner), the handicap trend (better goes up, a dotted line while it's empty), trips (a countdown with a suitcase, folded notes), and scenes on the join steps and a solo card with no scores
+
+**Still to do**
+- [ ] `S2` Trevor reviews `main-mb9pod` (or a feedback branch for a Vercel preview), answers what to keep or change, then it merges to main and the lines above are checked off
+- [ ] `S2` Look at the four screens the cloud session couldn't see with its test data: the heads-up sheet (push isn't configured locally), the piled reminder cards on Up next, Hall of fame (needs a saved crew) and the year in review image
+- [ ] `S2` Second pass with Mobbin open on Trevor's Mac: check each screen against the real reference screens and tighten spacing, type and illustration sizes
+- [ ] `S2` Oura's data screens as the reference for the Tab, Your stats, the handicap trend and the hall of fame (from Trevor, 2026-10-07)
+- [ ] `S2` Trip standings before the first round still show dashes; say "Tees off Fri" instead
+- [ ] `S3` The full end-of-round scene: buddies racing up the leaderboard as the totals land (the crown on the winner is built)
+- [ ] `S3` Optional: the age sheet's "Not now" as the close X, so it has two buttons (left as a quiet link for now)
+- [ ] `S3` Share the rivalry: a "You v Mike" card for the group text from the face-to-face header
+
 ## Open questions
 
 **Pricing and payments are unknown, and that's fine.** We'll learn what people pay for by testing and talking to groups, not by predicting. It doesn't block building anything else. Prices, plans and the free and Pro split in this file are placeholders. Things to learn along the way:
@@ -575,3 +609,4 @@ Code is cheap now, so anyone can build a scoring app. What a weekend coder can't
 - 2026-10-07: Overnights 9 and 10 shipped to main with Trevor's answers from both review queues (money with thousands commas, trash talk pushes that say what was written, "You tied for 1st", points rounds counting as hall of fame wins, faded days in the date picker). Checklist: 147 of 240 done (61.3%), up from 127 of 240 (52.9%). Notification settings added to area 12 from his review note.
 - 2026-10-07: Trevor ran the three overnight 9 and 10 SQL files in Supabase. Push still waits on its Vercel env vars.
 - 2026-10-07: Visual design audit (60 opportunities, web references since Mobbin only runs on Trevor's Mac) and the whole list built on `main-mb9pod` in a cloud session, in six commits: app-wide pieces (buddies for everyone, spot illustrations, callouts, toast tones), Round ready and the Round menu, Play and the results, Up next and the Tab, setup and onboarding, and the overnight 9 and 10 screens. Waiting for review.
+- 2026-10-07: The design pass got its own area (24) in the checklist: 19 lines for what was built, waiting for review, and 8 for what's still to do.
