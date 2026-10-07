@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { Empty, Icon, Numpad, PickChip, PickRow, Screen, Segmented, Sheet, useUI } from '../components/ui.jsx';
+import { Spot } from '../components/Spot.jsx';
 import { RulesSheet } from '../components/Rules.jsx';
 import { DEFAULT_SETTINGS, getState, update, useStore } from '../lib/store.js';
 import {
@@ -152,6 +153,17 @@ function useWakeLock() {
 const DRAFTS = keptMap('drafts');
 // Rounds whose locked-in rules card this phone has closed (a phone that isn't keeping score sees it until then)
 const AGREED_SEEN = new Set();
+
+/** One row in the round menu: an icon, what it is, and its current setting on the right. */
+function MenuRow({ icon, label, value = null, onClick, danger = false }) {
+  return (
+    <button className={`menu-row ${danger ? 'danger' : ''}`} onClick={onClick}>
+      <Icon name={icon} /><span className="mr-label">{label}</span>
+      {value != null && value !== '' && <span className="mr-value">{value}</span>}
+      <Icon name="caret-right" className="mr-caret" />
+    </button>
+  );
+}
 
 function PlayRound({ round, mount, momentUp = false }) {
   useWakeLock();
@@ -682,91 +694,90 @@ function PlayRound({ round, mount, momentUp = false }) {
       </div>
 
       <Sheet open={menu} onClose={() => setMenu(false)} title="Round">
-        {/* Feedback first and loud: early on, every bug report counts */}
-        <button className="sheet-item feedback-cta" onClick={() => { setMenu(false); nav.push('suggest', { roundId: round.id }); }}>
-          <span><Icon name="megaphone" fill /> <span className="fb-words"><strong>Report a bug or send an idea</strong><small>This round’s details come along</small></span></span><Icon name="caret-right" />
-        </button>
-        <div className="menu-sec">This hole</div>
-        <button className="sheet-item" onClick={() => { setMenu(false); setCard(true); }}><span><Icon name="table" /> Scorecard</span><Icon name="caret-right" /></button>
-        {editable && <button className="sheet-item" onClick={() => { setMenu(false); setFixSheet('hole'); }}><span><Icon name="wrench" /> Fix par or HCP · hole {hole.no}</span><Icon name="caret-right" /></button>}
+        {/* The three things people open mid-round, as tiles; the rest in short grouped lists */}
+        <div className="menu-tiles">
+          <button className="menu-tile" onClick={() => { setMenu(false); setCard(true); }}><Icon name="table" /><span>Scorecard</span></button>
+          {editable && !solo && <button className="menu-tile" onClick={() => { setMenu(false); setBetsSheet(true); }}><Icon name="coins" /><span>Bets</span></button>}
+          {syncConfigured && <button className="menu-tile" onClick={() => { setMenu(false); setLive(true); }}><Icon name="broadcast" /><span>{round.shared ? 'Live' : 'Invite'}</span></button>}
+        </div>
+        {editable && <>
+          <div className="menu-sec">This hole</div>
+          <div className="menu-group">
+            <MenuRow icon="wrench" label={`Fix par or HCP · hole ${hole.no}`} onClick={() => { setMenu(false); setFixSheet('hole'); }} />
+          </div>
+        </>}
         {!solo && <>
         <div className="menu-sec">Games and bets</div>
-        {/* Changing the game is for the phone keeping score (see keeper.js) */}
-        {editable && <>
-        <button className="sheet-item" onClick={() => { setMenu(false); setBetsSheet(true); }}>
-          <span><Icon name="coins" /> Bets · {roundStakeLines(round).map(l => l.line).join(' + ')}</span><Icon name="caret-right" />
-        </button>
-        {game !== 'bbb' && (
-          <button className="sheet-item" onClick={() => { setMenu(false); setFixSheet('hc'); }}>
-            <span><Icon name="scales" /> Handicaps · {round.useHandicaps === false ? 'Off' : noHandicap(round).length ? `On, ${noHandicap(round).length} with none` : 'On'}</span><Icon name="caret-right" />
-          </button>
-        )}
-        {/* What it's played for changes while the round is going on, not when fixing a finished one */}
-        {round.status === 'active' && !round.editing && (
-          <button className="sheet-item" onClick={() => { setMenu(false); setFixSheet('playFor'); }}>
-            <span><Icon name="trophy" /> Play for · {playForShort(round)}</span><Icon name="caret-right" />
-          </button>
-        )}
-        {!oneBall(game) && (
-          <button className="sheet-item" onClick={() => { setMenu(false); setGamesSheet(true); }}>
-            <span><Icon name="plus-circle" /> {sideGamesOf(round).length ? `Side games · ${sideGamesOf(round).length}` : 'Add a side game'}</span><Icon name="caret-right" />
-          </button>
-        )}
+        <div className="menu-group">
+          {/* Changing the game is for the phone keeping score (see keeper.js) */}
+          {editable && <>
+          <MenuRow icon="coins" label="Bets" value={roundStakeLines(round).map(l => l.line).join(' + ')} onClick={() => { setMenu(false); setBetsSheet(true); }} />
+          {game !== 'bbb' && (
+            <MenuRow icon="scales" label="Handicaps" value={round.useHandicaps === false ? 'Off' : noHandicap(round).length ? `On, ${noHandicap(round).length} with none` : 'On'} onClick={() => { setMenu(false); setFixSheet('hc'); }} />
+          )}
+          {/* What it's played for changes while the round is going on, not when fixing a finished one */}
+          {round.status === 'active' && !round.editing && (
+            <MenuRow icon="trophy" label="Play for" value={playForShort(round)} onClick={() => { setMenu(false); setFixSheet('playFor'); }} />
+          )}
+          {!oneBall(game) && (
+            <MenuRow icon="plus-circle" label={sideGamesOf(round).length ? 'Side games' : 'Add a side game'} value={sideGamesOf(round).length || null} onClick={() => { setMenu(false); setGamesSheet(true); }} />
+          )}
+          </>}
+          {/* Two-player side bets: everyone sees them; the phone keeping score, or either player in a bet, changes them */}
+          {(editable || betsOf(round).length > 0 || bettors(round).some(p => p.id === me)) && (
+            <MenuRow icon="hand-coins" label="Side bets" value={betsOf(round).length || null} onClick={() => { setMenu(false); setPairSheet(true); }} />
+          )}
+          {(isLocked(round) || editable) && (
+            <MenuRow icon="handshake" label={isLocked(round) ? 'What we agreed' : 'First-tee rules card'}
+              value={isLocked(round) && round.agreed.changes?.length ? `${round.agreed.changes.length} change${round.agreed.changes.length > 1 ? 's' : ''}` : null}
+              onClick={() => { setMenu(false); setAgreedSheet(isLocked(round) ? 'view' : 'lock'); }} />
+          )}
+          {gameKeys(round).map(k => (
+            <MenuRow key={k} icon="book-open" label={`${k === 'main' ? GAMES[game].name : SIDE_GAMES[k].label} rules`} onClick={() => { setMenu(false); setRules({ key: k, open: true }); }} />
+          ))}
+        </div>
         </>}
-        {/* Two-player side bets: everyone sees them; the phone keeping score, or either player in a bet, changes them */}
-        {(editable || betsOf(round).length > 0 || bettors(round).some(p => p.id === me)) && (
-          <button className="sheet-item" onClick={() => { setMenu(false); setPairSheet(true); }}>
-            <span><Icon name="hand-coins" /> {betsOf(round).length ? `Side bets · ${betsOf(round).length}` : 'Side bets'}</span><Icon name="caret-right" />
-          </button>
-        )}
-        {(isLocked(round) || editable) && (
-          <button className="sheet-item" onClick={() => { setMenu(false); setAgreedSheet(isLocked(round) ? 'view' : 'lock'); }}>
-            <span><Icon name="handshake" /> {isLocked(round) ? `What we agreed${round.agreed.changes?.length ? ` · ${round.agreed.changes.length} change${round.agreed.changes.length > 1 ? 's' : ''}` : ''}` : 'First-tee rules card'}</span><Icon name="caret-right" />
-          </button>
-        )}
-        {gameKeys(round).map(k => (
-          <button key={k} className="sheet-item" onClick={() => { setMenu(false); setRules({ key: k, open: true }); }}>
-            <span><Icon name="book-open" /> {k === 'main' ? GAMES[game].name : SIDE_GAMES[k].label} rules</span><Icon name="caret-right" />
-          </button>
-        ))}
-        </>}
+        {(syncConfigured || editable) && <>
         <div className="menu-sec">Players</div>
-        {syncConfigured && (
-          <button className="sheet-item" onClick={() => { setMenu(false); setLive(true); }}>
-            <span><Icon name="broadcast" /> {round.shared ? `Live · code ${round.shared.code}` : 'Invite the group'}</span><Icon name="caret-right" />
-          </button>
-        )}
-        {editable && <>
-        <button className="sheet-item" onClick={() => { setMenu(false); setAddSheet(true); }}>
-          <span><Icon name="user-plus" /> Add a player</span><Icon name="caret-right" />
-        </button>
-        <button className="sheet-item" onClick={() => { setMenu(false); setLeftSheet(true); }}>
-          <span><Icon name="user-minus" /> {playersLeft(round).length ? `A player left · ${playersLeft(round).map(x => x.player.name.split(' ')[0]).join(', ')}` : 'A player left'}</span><Icon name="caret-right" />
-        </button>
-        {/* Sides or teams, the playing order, and who throws the first hammer (see lineup.js) */}
-        {!solo && (lineupKind(round) || game === 'hammer') && (
-          <button className="sheet-item" onClick={() => { setMenu(false); setFixSheet('lineup'); }}>
-            <span><Icon name={lineupKind(round) === 'order' ? 'list-numbers' : game === 'hammer' && !lineupKind(round) ? 'hammer' : 'users-three'} /> {lineupMenuText(round)}</span><Icon name="caret-right" />
-          </button>
-        )}
+        <div className="menu-group">
+          {syncConfigured && (
+            <MenuRow icon="broadcast" label={round.shared ? 'Live' : 'Invite the group'} value={round.shared ? `Code ${round.shared.code}` : null} onClick={() => { setMenu(false); setLive(true); }} />
+          )}
+          {editable && <>
+          <MenuRow icon="user-plus" label="Add a player" onClick={() => { setMenu(false); setAddSheet(true); }} />
+          <MenuRow icon="user-minus" label="A player left" value={playersLeft(round).length ? playersLeft(round).map(x => x.player.name.split(' ')[0]).join(', ') : null} onClick={() => { setMenu(false); setLeftSheet(true); }} />
+          {/* Sides or teams, the playing order, and who throws the first hammer (see lineup.js) */}
+          {!solo && (lineupKind(round) || game === 'hammer') && (
+            <MenuRow icon={lineupKind(round) === 'order' ? 'list-numbers' : game === 'hammer' && !lineupKind(round) ? 'hammer' : 'users-three'} label={lineupMenuText(round)} onClick={() => { setMenu(false); setFixSheet('lineup'); }} />
+          )}
+          </>}
+        </div>
         </>}
+        {(editable || round.status === 'active') && <>
         <div className="menu-sec">Round</div>
-        {editable && <>
-        <button className="sheet-item" onClick={() => { setMenu(false); setHolesSheet(true); }}>
-          <span><Icon name="flag-pennant" /> Round length · {round.holesCount} holes</span><Icon name="caret-right" />
-        </button>
-        <button className="sheet-item" onClick={() => { setMenu(false); setFixSheet('tee'); }}>
-          <span><Icon name="sliders-horizontal" /> Course and tee{courseTeeLabel(round, localCourse) ? ` · ${courseTeeLabel(round, localCourse)}` : ''}</span><Icon name="caret-right" />
-        </button>
+        <div className="menu-group">
+          {editable && <>
+          <MenuRow icon="flag-pennant" label="Round length" value={`${round.holesCount} holes`} onClick={() => { setMenu(false); setHolesSheet(true); }} />
+          <MenuRow icon="sliders-horizontal" label="Course and tee" value={courseTeeLabel(round, localCourse) || null} onClick={() => { setMenu(false); setFixSheet('tee'); }} />
+          </>}
+          {round.status === 'active' && (
+            <MenuRow icon="stack" label={others ? 'Rounds in progress' : 'Start another round'} value={others ? others + 1 : null} onClick={() => { setMenu(false); setSwitching(true); }} />
+          )}
+        </div>
         </>}
-        {round.status === 'active' && (
-          <button className="sheet-item" onClick={() => { setMenu(false); setSwitching(true); }}>
-            <span><Icon name="stack" /> {others ? `Rounds in progress · ${others + 1}` : 'Start another round'}</span><Icon name="caret-right" />
-          </button>
+        {editable && (
+          <div className="menu-group">
+            {round.editing
+              ? <MenuRow icon="check-circle" label="Done fixing scores" onClick={doneEditing} />
+              : <MenuRow icon="flag-checkered" label="End round" onClick={endEarly} danger />}
+          </div>
         )}
-        {editable && (round.editing
-          ? <button className="sheet-item" onClick={doneEditing}><span><Icon name="check-circle" /> Done fixing scores</span><Icon name="caret-right" /></button>
-          : <button className="sheet-item" onClick={endEarly}><span><Icon name="flag-checkered" /> End round</span><Icon name="caret-right" /></button>)}
+        {/* Feedback stays easy to find, at the bottom where it doesn't shout over the round */}
+        <button className="feedback-row" onClick={() => { setMenu(false); nav.push('suggest', { roundId: round.id }); }}>
+          <Spot kind="megaphone" size={52} />
+          <span className="fb-words"><strong>Something off, or got an idea?</strong><small>Tell us. This round’s details come along.</small></span>
+          <Icon name="caret-right" />
+        </button>
       </Sheet>
       {gamesSheet && <GamesSheet round={round} onClose={() => setGamesSheet(false)} />}
       {(pairSheet || pairStart) && (

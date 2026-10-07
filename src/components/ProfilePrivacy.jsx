@@ -17,13 +17,14 @@ export function ProfilePrivacy({ id = 'pp' }) {
             <PickRow key={c.value} radio on={privacy.profile === c.value} onClick={() => setProfilePrivacy(c.value)} title={c.label} />
           ))}
         </div>
-        <p className="field-help">{profileHelp(privacy)}</p>
+        <details className="how"><summary>How this works</summary><p>{profileHelp(privacy)}</p></details>
       </div>
       {privacy.profile !== 'hidden' && (
         <div className="toggle-row">
           <div>
             <div className="toggle-lbl" id={`${id}-money`}>Show my money</div>
-            <div className="toggle-sub" id={`${id}-money-sub`}>{moneyHelp(privacy)} What you owe each other always shows on the Tab, to the two of you.</div>
+            <div className="toggle-sub" id={`${id}-money-sub`}>{moneyHelp(privacy)}</div>
+            <details className="how"><summary>And the Tab?</summary><p>What you owe each other always shows on the Tab, to the two of you.</p></details>
           </div>
           <Toggle on={privacy.showMoney} onChange={setShowMoney} labelledBy={`${id}-money`} describedBy={`${id}-money-sub`} />
         </div>

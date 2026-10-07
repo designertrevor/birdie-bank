@@ -8,6 +8,8 @@ import { cleanCode } from '../lib/sync-model.js';
 import { countsMoney } from '../lib/play-for.js';
 import { gameLabel } from '../lib/format.js';
 import { useNav } from '../lib/nav.js';
+import { useGroupAvatars } from '../lib/useAvatars.js';
+import { AvatarArt } from './Avatar.jsx';
 
 /**
  * What to say when sharing fails: our own plain messages ("Shared scoring isn’t set up yet") as
@@ -27,6 +29,22 @@ export function LivePill({ round }) {
   if (round.shared.ended) return <span className="live-pill ended">Sharing ended</span>;
   const label = st.state === 'offline' ? 'Offline, will catch up' : st.state === 'connecting' ? 'Connecting' : 'Live';
   return <span className={`live-pill ${st.state}`} role="status"><span className="live-dot" aria-hidden="true" />{label}</span>;
+}
+
+/** What the group gets: the round as their phone shows it from the link, in miniature. */
+function InvitePreview({ round }) {
+  const avatars = useGroupAvatars(round.players);
+  return (
+    <div className="invite-preview" aria-hidden="true">
+      <div className="ip-top"><span className="live-pill"><span className="live-dot" />Live</span><span className="ip-code">Code on its way</span></div>
+      <div className="ip-title d">{gameLabel(round)} at {round.course.name}</div>
+      <div className="ip-faces">
+        {round.players.slice(0, 6).map(p => <AvatarArt key={p.id} model={avatars.get(p.id)} size="sm" />)}
+        <span className="ip-who">{round.players.map(p => p.name.split(' ')[0]).join(', ')}</span>
+      </div>
+      <div className="ip-foot">Follow {countsMoney(round) ? 'the money' : 'the scores'} live. No download.</div>
+    </div>
+  );
 }
 
 /** Share a round live, or show its code if it's already shared. */
@@ -64,12 +82,10 @@ export function ShareSheet({ round, open, onClose }) {
     <Sheet open={open} onClose={onClose} title="Invite the group">
       {!code ? (
         <div style={{ padding: '0 16px' }}>
-          <p className="sheet-text" style={{ padding: '0 4px 12px' }}>Let everyone in the group follow along live. You keep score and can hand it off to a player.</p>
-          <ul className="onboard-list" style={{ marginTop: 0, marginBottom: 14 }}>
-            <li><Icon name="link" fill /> You get a code and a link to send the group.</li>
-            <li><Icon name="device-mobile" fill /> Anyone with it can follow the scores, so only send it to your group.</li>
-          </ul>
+          <p className="sheet-text" style={{ padding: '0 4px 12px' }}>Everyone follows along live from a link. You keep score, and can hand the card to a player.</p>
+          <InvitePreview round={round} />
           <button className="full-btn" disabled={busy} onClick={start}>{busy ? 'Starting…' : <>Get the link <Icon name="broadcast" fill /></>}</button>
+          <p className="field-help" style={{ textAlign: 'center', margin: '10px 8px 0' }}>Anyone with the link can follow the scores, so send it to your group only.</p>
         </div>
       ) : (
         <div style={{ padding: '0 16px' }}>

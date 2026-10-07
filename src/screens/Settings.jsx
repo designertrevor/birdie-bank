@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Empty, FileButton, Header, Icon, Numpad, Screen, Segmented, Toggle, useUI } from '../components/ui.jsx';
+import { Callout, Empty, FileButton, Header, Icon, Numpad, Screen, Segmented, Toggle, useUI } from '../components/ui.jsx';
 import { RulesSheet } from '../components/Rules.jsx';
 import { Avatar } from '../components/Avatar.jsx';
 import { ProfilePrivacy } from '../components/ProfilePrivacy.jsx';
@@ -24,6 +24,42 @@ import { NUDGE_CHOICES, nudgeChoiceLabel, nudgeDays } from '../lib/nudges.js';
 import { useAgeCheck } from '../components/AgeCheck.jsx';
 import { NotifyRow } from '../components/NotifyRow.jsx';
 import { ageLine } from '../lib/age.js';
+
+/**
+ * Your profile at the top of Settings: your avatar big, your name, and what's left to set up as
+ * chips, each opening your profile.
+ */
+function ProfileHero({ me, pay, profile, onOpen }) {
+  const steps = [
+    { done: !!profile?.avatar, label: 'Pick an avatar' },
+    { done: me.index != null, label: 'Add your handicap' },
+    { done: !!pay, label: 'Add how you get paid' },
+    { done: !!profile?.homeCourse, label: 'Add your home course' },
+  ];
+  const done = steps.filter(x => x.done).length;
+  const left = steps.filter(x => !x.done);
+  const deg = Math.round((done / steps.length) * 360);
+  return (
+    <div className="pf-hero">
+      <button className="pf-hero-main" onClick={onOpen}>
+        <Avatar id={me.id} name={me.name} letters={2} size="lg" />
+        <span className="pf-hero-words">
+          <span className="pf-hero-name d">{me.name}</span>
+          <span className="pf-hero-sub">{me.index == null ? 'No handicap index' : `Index ${formatIndex(me.index)}`}{pay ? ` · Paid on ${PAY_APPS[pay.app].name}` : ''}</span>
+          <span className="pf-hero-link">Your profile <Icon name="caret-right" /></span>
+        </span>
+      </button>
+      {left.length > 0 && (
+        <div className="pf-hero-setup">
+          <span className="pf-ring" style={{ '--deg': `${deg}deg` }} aria-hidden="true"><span>{done}/{steps.length}</span></span>
+          <div className="pf-chips">
+            {left.map(x => <button key={x.label} className="pf-chip" onClick={onOpen}><Icon name="plus" /> {x.label}</button>)}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
 
 export default function Settings() {
   const nav = useNav();
@@ -105,22 +141,7 @@ export default function Settings() {
     <Screen>
       <Header title="Settings" onBack={nav.pop} />
       <div className="scroll">
-        {/* Feedback first and loud: early on, every bug report and idea counts */}
-        <button className="set-row feedback-cta" onClick={() => nav.push('suggest')}>
-          <div className="set-icon"><Icon name="megaphone" fill /></div>
-          <div className="row-main"><div className="set-name">Report a bug or send an idea</div><div className="set-sub">A game, a course, a feature or something broken</div></div>
-          <span className="chevron"><Icon name="caret-right" /></span>
-        </button>
-        <button className="set-row rm-set" onClick={() => nav.push('roadmap')}>
-          <div className="set-icon"><Icon name="signpost" fill /></div>
-          <div className="row-main"><div className="set-name">Roadmap</div><div className="set-sub">Vote on what’s next and see what shipped</div></div>
-          <span className="chevron"><Icon name="caret-right" /></span>
-        </button>
-        <button className="set-row" onClick={() => nav.push('whatsNew')}>
-          <div className="set-icon"><Icon name="sparkle" fill /></div>
-          <div className="row-main"><div className="set-name">What’s new</div><div className="set-sub">What landed in the latest updates</div></div>
-          <span className="chevron"><Icon name="caret-right" /></span>
-        </button>
+        {me && <ProfileHero me={me} pay={myPay} profile={state.profile} onOpen={() => nav.push('profile')} />}
         <div className="sec-label">You</div>
         {accountsEnabled && (acct.user ? (
           <div className="set-row static">
@@ -128,17 +149,6 @@ export default function Settings() {
             <div className="row-main"><div className="set-name">{acct.user.email}</div><div className="set-sub">{syncLabel(acct)}</div></div>
           </div>
         ) : row('cloud-arrow-up', 'Save your rounds', 'Sign in to back up and use any device', () => setSigningIn(true)))}
-        {me && (
-          <button className="set-row pf-row" onClick={() => nav.push('profile')}>
-            <Avatar id={me.id} name={me.name} letters={2} />
-            <div className="row-main">
-              <div className="set-name">{me.name}</div>
-              <div className="set-sub">{`${me.index == null ? 'No handicap index' : `Index ${formatIndex(me.index)}`} · ${myPay ? `Paid on ${PAY_APPS[myPay.app].name}` : 'Add how you get paid'}`}</div>
-              <div className="set-sub">Your profile: avatar, home course and stats</div>
-            </div>
-            <span className="chevron"><Icon name="caret-right" /></span>
-          </button>
-        )}
         {/* The one-time age answer for money rounds (age.js), changeable here */}
         {me && row('identification-card', 'Playing for money', ageLine(state), async () => {
           const answer = await checkAge({ force: true });
@@ -187,7 +197,20 @@ export default function Settings() {
           <div className="sec-label">Your plan</div>
           {row('star', 'Birdie Bank Pro', planStatus(state), () => nav.push('paywall', { source: 'settings' }))}
         </>}
+        {/* Feedback: easy to find, warm, and out of the way of your own settings */}
+        <Callout spot="bulb" soft title="Help shape Birdie Bank"
+          action={<div className="co-acts">
+            <button className="pill-btn dark co-act" onClick={() => nav.push('suggest')}><Icon name="megaphone" /> Send an idea or a bug</button>
+            <button className="pill-btn co-act" onClick={() => nav.push('roadmap')}><Icon name="signpost" /> Roadmap</button>
+          </div>}>
+          A game, a course, a feature or something broken. It’s built around what golfers ask for.
+        </Callout>
         <div className="sec-label">About</div>
+        <button className="set-row" onClick={() => nav.push('whatsNew')}>
+          <div className="set-icon"><Icon name="sparkle" fill /></div>
+          <div className="row-main"><div className="set-name">What’s new</div><div className="set-sub">What landed in the latest updates</div></div>
+          <span className="chevron"><Icon name="caret-right" /></span>
+        </button>
         <a className="set-row" href={helpMailto()}>
           <div className="set-icon"><Icon name="lifebuoy" fill /></div>
           <div className="row-main"><div className="set-name">Help</div><div className="set-sub">{`Questions or trouble? Email ${SUPPORT_EMAIL}`}</div></div>

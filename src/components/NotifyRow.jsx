@@ -18,7 +18,7 @@ function Row({ signedIn }) {
     <>
       <div className="sec-label">Notifications</div>
       <div className="toggle-row">
-        <div><div className="toggle-lbl" id="notify-lbl">Notifications</div><div className="toggle-sub" id="notify-sub">{row.sub}</div></div>
+        <div><div className="toggle-lbl" id="notify-lbl">On this phone</div><div className="toggle-sub" id="notify-sub">{row.sub}</div></div>
         <Toggle on={row.on} disabled={row.disabled || busy} onChange={change} labelledBy="notify-lbl" describedBy="notify-sub" />
       </div>
     </>

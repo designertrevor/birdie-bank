@@ -1,6 +1,7 @@
 // "Suggest something": pick what kind, then a short form that asks for what's useful.
 import { Fragment, useState } from 'react';
 import { FileButton, Header, Icon, Screen, useUI } from '../components/ui.jsx';
+import { Spot } from '../components/Spot.jsx';
 import { useStore } from '../lib/store.js';
 import { FEEDBACK_KINDS, shrinkImage, submitFeedback } from '../lib/feedback.js';
 import { useNav } from '../lib/nav.js';
@@ -81,7 +82,11 @@ export default function Suggest({ kind: initialKind = null, prefill = null, lead
       <Screen>
         <Header title="Suggest something" onBack={nav.pop} />
         <div className="scroll">
-          <p className="hint-card"><Icon name="chat-circle-dots" fill /> Birdie Bank is built around what golfers ask for. What’s on your mind?</p>
+          <div className="suggest-hero">
+            <Spot kind="bulb" size={120} />
+            <div className="suggest-title d">What’s on your mind?</div>
+            <p className="suggest-sub">Birdie Bank is built around what golfers ask for.</p>
+          </div>
           {Object.entries(FEEDBACK_KINDS).map(([k, v]) => (
             <button key={k} className="set-row" onClick={() => setKind(k)}>
               <div className="set-icon"><Icon name={v.icon} fill /></div>

@@ -1,5 +1,7 @@
 import { lazy, Suspense, useEffect, useMemo, useRef, useState } from 'react';
-import { Empty, Header, Icon, Numpad, PickChip, PickMark, PickRow, Screen, Segmented, Sheet, Steps, Toggle, useUI } from '../components/ui.jsx';
+import { Callout, Empty, Header, Icon, Numpad, PickChip, PickMark, PickRow, Screen, Segmented, Sheet, Steps, Toggle, useUI } from '../components/ui.jsx';
+import { Spot } from '../components/Spot.jsx';
+import { useGroupAvatars } from '../lib/useAvatars.js';
 import { RulesSheet } from '../components/Rules.jsx';
 import { Avatar } from '../components/Avatar.jsx';
 import { DateSheet, TimePicker } from '../components/DatePicker.jsx';
@@ -1272,11 +1274,18 @@ function ReadyStep({ round, onStart, onLater }) {
   const names = (round.teams || bettors(round)).map(p => p.name.split(' ')[0]);
   const casualNames = round.players.filter(p => isJustPlaying(round, p.id)).map(p => p.name.split(' ')[0]);
   const first = round.holes[0];
+  // The group on the first tee: everyone's buddy (a photo or initials stands in as a stock buddy)
+  const avatars = useGroupAvatars(round.players);
+  const crew = round.players.slice(0, 5).map((p, i) => {
+    const m = avatars.get(p.id);
+    return m?.kind === 'buddy' ? m.buddy : ['visor', 'bucket', 'snapback', 'flatcap', 'beanie'][i];
+  });
+  const what = countsMoney(round) ? 'the money' : 'the scores';
   return (
     <>
       <div className="scroll">
         <div className="ready-hero">
-          <div className="ready-check"><Icon name="check" /></div>
+          <Spot kind="crowd" ids={crew} size={220} className="ready-crew" />
           <div className="ready-title d">You’re set for {gameLabel(round)}</div>
         </div>
         <div className="block">
@@ -1290,15 +1299,22 @@ function ReadyStep({ round, onStart, onLater }) {
         {others.map(o => (
           <p key={o.id} className="hint-card"><Icon name="pause-circle" fill /> Your {gameLabel(o)} round at {o.course.name} ({holesScored(o)} of {o.holes.length} holes) is saved. Switch back any time from Rounds in progress in the round menu.</p>
         ))}
-        <div className="usual-save"><SaveUsualButton round={round} className="pill-btn" /></div>
-        {syncConfigured && (
-          <p className="hint-card"><Icon name="broadcast" fill /> {round.shared ? `The group has the link. They can follow ${countsMoney(round) ? 'the money' : 'the scores'} live.` : `Send the group a link and they can follow ${countsMoney(round) ? 'the money' : 'the scores'} live from their own phones. No download needed.`}</p>
-        )}
+        {syncConfigured && (round.shared ? (
+          <p className="hint-card"><Icon name="broadcast" fill /> The group has the link. They can follow {what} live.
+            <button className="text-link inline" onClick={() => setSharing(true)}>Send it again</button></p>
+        ) : (
+          <Callout spot="link" title={`Let the group watch ${what} live`}
+            action={<button className="pill-btn co-act dark" onClick={() => setSharing(true)}><Icon name="share-network" /> Invite the group</button>}>
+            No download. They just open a link on their own phone.
+          </Callout>
+        ))}
       </div>
       <div className="cta-wrap">
-        {syncConfigured && <button className={`full-btn ${round.shared ? 'outline' : ''}`} onClick={() => setSharing(true)}><Icon name="share-network" /> {round.shared ? 'Send the link again' : 'Invite the group'}</button>}
-        <button className={`full-btn ${syncConfigured && !round.shared ? 'outline' : ''}`} onClick={onStart}>Tee off on hole {first.no} <Icon name="arrow-right" /></button>
-        {onLater && <button className="text-link" onClick={onLater}><Icon name="calendar-plus" /> Not playing today? Schedule for later</button>}
+        <button className="full-btn" onClick={onStart}>Tee off on hole {first.no} <Icon name="arrow-right" /></button>
+        <div className="ready-more">
+          <SaveUsualButton round={round} className="text-link" />
+          {onLater && <button className="text-link" onClick={onLater}><Icon name="calendar-plus" /> Schedule for later</button>}
+        </div>
       </div>
       <ShareSheet round={round} open={sharing} onClose={() => setSharing(false)} />
     </>
