@@ -67,6 +67,16 @@ test('sending remembers the course, and the same phone never sends it twice', as
   assert.deepEqual(readCourseRequests(storage, KEY).map(x => x.key), ['birch creek', 'wolf creek']);
 });
 
+test('the caller can pick the feedback id, so the roadmap can follow the request', async () => {
+  const storage = memory();
+  const sent = [];
+  const submit = async p => { sent.push(p); return 'sent'; };
+  await requestCourse({ storage, storageKey: KEY, submit, name: 'Birch Creek', id: '0f6b4f2a-1d3c-4e5f-8a9b-0c1d2e3f4a5b' });
+  assert.equal(sent[0].id, '0f6b4f2a-1d3c-4e5f-8a9b-0c1d2e3f4a5b');
+  await requestCourse({ storage, storageKey: KEY, submit, name: 'Wolf Creek' });
+  assert.equal('id' in sent[1], false);
+});
+
 test('a double tap sends one request', async () => {
   const storage = memory();
   let calls = 0;

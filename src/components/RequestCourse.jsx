@@ -8,6 +8,7 @@ import { FileButton, Icon, useUI } from './ui.jsx';
 import { getState, STORE_KEY } from '../lib/store.js';
 import { shrinkImage, submitFeedback } from '../lib/feedback.js';
 import { canRequestCourse, cleanCourseName, courseRequestView, findCourseRequest, requestCourse } from '../lib/course-request.js';
+import { noteSentIdea } from '../lib/roadmap-sync.js';
 
 // One list per dev profile, so ?profile=b acts like a second phone
 const REQUESTS_KEY = `bb-course-requests:${STORE_KEY}`;
@@ -50,10 +51,13 @@ export default function RequestCourse({ query, onAddYourself, roundId = null }) 
     sending.current = true;
     setBusy(true);
     const me = getState().players[getState().me];
+    const id = crypto.randomUUID();
     const res = await requestCourse({
       storage, storageKey: REQUESTS_KEY, submit: submitFeedback,
-      name, city, query, from: me?.name || null, image, roundId,
+      name, city, query, from: me?.name || null, image, roundId, id,
     });
+    // The roadmap remembers the request too, so Up next can say "The course you asked for is in" (roadmap.js)
+    if (res.status !== 'already') noteSentIdea({ id, kind: 'course', title: name });
     setDone(res);
     sending.current = false;
     setBusy(false);

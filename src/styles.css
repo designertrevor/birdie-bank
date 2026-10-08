@@ -3697,6 +3697,13 @@ a.header-btn.rm-open { text-decoration: none; }
 .ob-hint { margin: 8px 0 0; text-align: center; font-size: 13px; color: var(--mute); }
 .ob-body .amt-btn.field-btn { align-self: flex-start; display: block; width: auto; min-width: 128px; height: 50px; padding: 0 22px; font-size: 18px; }
 
+/* A put-away card folds its row shut as it fades back up the way it came (useFoldAway in ui.jsx), so
+   the cards below slide up into its place. The row clips only while folding, so a piled card's shadow shows */
+.fold-away { display: grid; grid-template-rows: 1fr; transition: grid-template-rows var(--duration-fast) var(--ease-in); }
+.fold-away > * { min-height: 0; transition: opacity var(--duration-fast) var(--ease-in), transform var(--duration-fast) var(--ease-in); }
+.fold-away.out { grid-template-rows: 0fr; overflow: hidden; pointer-events: none; }
+.fold-away.out > * { opacity: 0; transform: translateY(-6px); }
+
 /* UP NEXT: reminders and news share one slot, the rest piled behind the first */
 .card-stack .cs-wait { display: none; }
 .card-stack.piled .remind-card:not(.cs-wait) { box-shadow: 0 6px 0 -2px var(--surface-strong), 0 12px 0 -5px var(--line); margin-bottom: 20px; }

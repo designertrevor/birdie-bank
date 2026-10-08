@@ -93,6 +93,27 @@ export function Callout({ spot = null, ids = null, title, children, action = nul
   );
 }
 
+/** How long a dismissed card takes to fold shut: the row's fold in styles.css (--duration-fast) plus a beat, so it lands at nothing before it goes. */
+const FOLD_MS = 300;
+/**
+ * A card that folds its row shut and fades when it's put away, so what's below slides up into its
+ * place instead of jumping (every entrance has its exit). Wrap the card in <div className={`fold-away
+ * ${out ? 'out' : ''}`}> and dismiss with away(fn): the fold starts at once and fn runs once the row
+ * is shut. A second tap while it's folding does nothing.
+ */
+// eslint-disable-next-line react-refresh/only-export-components
+export function useFoldAway() {
+  const [out, setOut] = useState(false);
+  const going = useRef(false);
+  const away = fn => () => {
+    if (going.current) return;
+    going.current = true;
+    setOut(true);
+    setTimeout(fn, FOLD_MS);
+  };
+  return [out, away];
+}
+
 export function BallIllo({ className = 'empty-illo', face = true }) {
   // The outside drawing (src/art/icons/ball.svg) stands in for the ball on every screen that uses it
   const file = artFile('icons', 'ball');
