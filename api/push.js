@@ -1,7 +1,8 @@
 // Web push: the app asks for one of its pushes here (a round or plan invite, who's in, a round
 // finished, someone paid you, a carry-over to approve and its answer, new trash talk), fire and forget. The caller
 // must be signed in: their Supabase access token says who they are, and the database only sends
-// when they're on that round, plan or challenge too, and only to the others on it, with rate limits (push_targets in supabase/2026-10-08-push.sql). What a
+// when they're on that round, plan or challenge too, and only to the others on it, with rate limits (push_targets in supabase/2026-10-08-push.sql),
+// leaving out anyone who switched that kind off in Settings (push_prefs in supabase/2026-10-08-push-prefs.sql). What a
 // push says is built here from a fixed template (src/lib/push-events.js), never taken as given; a round
 // finished push picks each person's template by their own seat (won, their place, square), never an amount.
 //

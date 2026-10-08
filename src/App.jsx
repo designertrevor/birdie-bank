@@ -46,6 +46,7 @@ const Defaults = screen(settings, 'Defaults');
 const Courses = screen(settings, 'Courses');
 const CourseEdit = screen(settings, 'CourseEdit');
 const About = screen(settings, 'About');
+const NotifyPicks = screen(settings, 'NotifyPicks');
 const NewRound = screen(() => import('./screens/NewRound.jsx'));
 const Play = screen(() => import('./screens/Play.jsx'));
 const RoundDetail = screen(() => import('./screens/RoundDetail.jsx'));
@@ -175,7 +176,7 @@ function preloadScreens() {
 const SCREENS = {
   roundDetail: RoundDetail, newRound: NewRound, play: Play,
   playerEdit: PlayerEdit, crewEdit: CrewEdit, person: Person,
-  settings: Settings, defaults: Defaults, courses: Courses, courseEdit: CourseEdit, about: About, suggest: Suggest,
+  settings: Settings, defaults: Defaults, courses: Courses, courseEdit: CourseEdit, about: About, suggest: Suggest, notifyPicks: NotifyPicks,
   plan: Plan, rollCall: RollCall, planLink: PlanLink, preview: Preview, paywall: Paywall, season: Season,
   challenge: Challenge, challengeLink: ChallengeLink,
   joinInvite: JoinInviteScreen, lately: Lately, trip: Trip, tripSettle: TripSettle, draft: Draft, draftLink: DraftLink,

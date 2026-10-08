@@ -7,16 +7,23 @@
 // The subscription is saved in push_subscriptions (supabase/2026-10-08-push.sql) under your
 // account. Until that SQL has run the save fails quietly and nothing arrives; turning them on
 // still keeps the browser's permission, so it works from the next launch after it runs.
+//
+// Which ones you get (Settings, Notifications, Which ones) is a list of muted kinds (push-prefs.js),
+// saved on your account in push_prefs (supabase/2026-10-08-push-prefs.sql, where the server leaves
+// them out for you) and on this phone, so the switches show with no signal. Until that SQL runs the
+// save to the account fails quietly and every push still goes.
 import { useSyncExternalStore } from 'react';
 import { getSupabase, supabaseConfigured } from './supabase.js';
 import { getState } from './store.js';
 import { afterNotNow, afterOff, afterOn, afterShown, pushSupport, settingsRow, shouldAsk } from './notify-ask.js';
 import { carriedPushes, carryPushes, cleanPushRequest, finishResults, paidPushes, pushSlot, rememberPush, talkPush } from './push-events.js';
+import { cleanMuted, mergePrefs } from './push-prefs.js';
 
 const KEY = import.meta.env.VITE_VAPID_PUBLIC_KEY || '';
 /** Push is switched on for this build. */
 export const pushConfigured = !!KEY && supabaseConfigured;
 const PREFS = 'bb-notify';
+const PICKS = 'bb-notify-picks';
 
 // --------------------------- this phone -------------------------------------
 
@@ -34,14 +41,20 @@ const permission = () => (typeof Notification === 'undefined' ? 'denied' : Notif
 
 function loadPrefs() { try { return JSON.parse(localStorage.getItem(PREFS)) || {}; } catch { return {}; } }
 function savePrefs(p) { try { localStorage.setItem(PREFS, JSON.stringify(p)); } catch { /* storage blocked */ } }
+// This phone's copy of which pushes you get: { muted, at: ms, uid: whose it is }, or null
+function loadPicks() { try { const p = JSON.parse(localStorage.getItem(PICKS)); return p && Array.isArray(p.muted) ? p : null; } catch { return null; } }
+function savePicks(p) { try { if (p) localStorage.setItem(PICKS, JSON.stringify(p)); else localStorage.removeItem(PICKS); } catch { /* storage blocked */ } }
 
 // --------------------------- status (for UI) --------------------------------
 
-let snap = { asking: null, subscribed: false, busy: false, tick: 0 };
+let snap = { asking: null, subscribed: false, busy: false, tick: 0, muted: cleanMuted(loadPicks()?.muted) };
 const listeners = new Set();
 function set(patch) { snap = { ...snap, ...patch }; listeners.forEach(l => l()); }
 const sub = l => { listeners.add(l); return () => listeners.delete(l); };
-/** { asking: 'planned' | 'joined' | null, subscribed, busy }: the soft ask showing, and the Settings row's state. */
+/**
+ * { asking: 'planned' | 'joined' | null, subscribed, busy, muted }: the soft ask showing, the
+ * Settings row's state, and the kinds of push you switched off (push-prefs.js).
+ */
 export function useNotify() { return useSyncExternalStore(sub, () => snap, () => snap); }
 
 async function session() {
@@ -129,7 +142,8 @@ export async function refreshSubscription() {
 
 /**
  * Signing out: take this phone off the account first, so the next person to sign in here doesn't
- * get the last one's pushes. The browser keeps its permission for whoever signs in next.
+ * get the last one's pushes. The browser keeps its permission for whoever signs in next. Which
+ * ones you get goes with the account, so this phone's copy goes too.
  */
 export async function forgetThisPhone() {
   if (!pushConfigured) return;
@@ -138,11 +152,59 @@ export async function forgetThisPhone() {
     const { db, user } = await session();
     if (s && db && user) await db.from('push_subscriptions').delete().eq('user_id', user.id).eq('endpoint', s.endpoint);
   } catch { /* signing out goes ahead either way */ }
-  set({ subscribed: false });
+  savePicks(null);
+  set({ subscribed: false, muted: [] });
+}
+
+// --------------------------- which ones -------------------------------------
+
+/** Save a muted list on the account. False when it couldn't be (no table yet, offline, signed out). */
+async function saveMutedToAccount(db, user, muted) {
+  if (!db || !user) return false;
+  try {
+    const { error } = await db.from('push_prefs').upsert({ user_id: user.id, muted });
+    return !error;
+  } catch { return false; }
+}
+
+/**
+ * You flipped a switch in Settings: the new muted list (push-prefs.js setGroup) shows at once,
+ * is kept on this phone, and goes to your account, which every phone you're signed in on and the
+ * server read. Quiet when the account can't take it yet.
+ */
+export async function setMuted(muted) {
+  const clean = cleanMuted(muted);
+  set({ muted: clean });
+  const { db, user } = await session().catch(() => ({ db: null, user: null }));
+  savePicks({ muted: clean, at: Date.now(), uid: user?.id || null });
+  await saveMutedToAccount(db, user, clean);
+}
+
+/**
+ * After signing in: your account's muted list and this phone's, merged by whichever was saved
+ * last (push-prefs.js mergePrefs). A copy left here by another account is ignored. When this
+ * phone's is the newer one (saved with no signal), the account catches up. Quiet until the SQL
+ * has run or when offline: this phone's copy stands.
+ */
+export async function refreshMuted() {
+  const { db, user } = await session().catch(() => ({ db: null, user: null }));
+  if (!db || !user) return;
+  let row;
+  try {
+    const { data, error } = await db.from('push_prefs').select('muted, updated_at').eq('user_id', user.id).maybeSingle();
+    if (error) return;
+    row = data;
+  } catch { return; }
+  const here = loadPicks();
+  const mine = here && here.uid === user.id ? here : null;
+  const merged = mergePrefs(mine, row);
+  savePicks({ muted: merged.muted, at: merged.at, uid: user.id });
+  set({ muted: merged.muted });
+  if (merged.from === 'local' && (row || merged.muted.length)) saveMutedToAccount(db, user, merged.muted);
 }
 
 let booted = false;
-/** Call once at launch: keep this phone's subscription on whichever account signs in. */
+/** Call once at launch: keep this phone's subscription, and which pushes you get, on whichever account signs in. */
 export function bootPush() {
   if (!pushConfigured || booted) return;
   booted = true;
@@ -150,7 +212,7 @@ export function bootPush() {
   import('./cloud.js').then(c => {
     const check = () => {
       const id = c.accountNow().user?.id || null;
-      if (id && id !== uid) refreshSubscription();
+      if (id && id !== uid) { refreshSubscription(); refreshMuted(); }
       uid = id;
     };
     c.onAccount(check);

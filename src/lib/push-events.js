@@ -15,7 +15,8 @@
 //             what you wrote (data.text), one push per comment
 //   tee       the tee time reminder: the plan's organizer, sent by the daily job, never by the app
 // Who counts as "on it" is the server's call (supabase/2026-10-08-push.sql push_targets): it only
-// sends when the caller is on that round, plan or challenge too, and only to people on it.
+// sends when the caller is on that round, plan or challenge too, and only to people on it, and
+// never a kind someone switched off in Settings (push-prefs.js, supabase/2026-10-08-push-prefs.sql).
 //
 // What a push says never has an amount in it from the app: it shows on a lock screen, and money
 // stays hidden unless you open the app (the same default as the results image). Trash talk is the
