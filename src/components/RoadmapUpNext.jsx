@@ -4,7 +4,7 @@
 // only one of them shows a visit (upnext-card.js).
 import { Spot } from './Spot.jsx';
 import { useEffect, useState } from 'react';
-import { Icon } from './ui.jsx';
+import { Icon, useFoldAway } from './ui.jsx';
 import { useNav } from '../lib/nav.js';
 import { roadmapItems, shippedNotes } from '../lib/roadmap.js';
 import { markNotesTold, refreshForUpNext, useRoadmap } from '../lib/roadmap-sync.js';
@@ -17,6 +17,8 @@ export function ShippedUpNext() {
   const [base, setBase] = useState(null);
   // What this visit shows, kept after it's marked as told so it stays put until you leave Up next
   const [shown, setShown] = useState(null);
+  // "Nice" folds the card shut before it goes, so the cards below slide up into its place
+  const [out, away] = useFoldAway();
 
   useEffect(() => {
     if (!interested) { shippedNone(); return undefined; }
@@ -40,18 +42,20 @@ export function ShippedUpNext() {
   const [first, ...more] = shown;
   const sub = more.length ? `${first.title}, and ${more.length} more you were waiting on` : first.title;
   return (
-    <div className="remind-card rm-live" role="status">
-      <div className="rc-head">
-        <Spot kind="gift" size={56} className="rc-spot" />
-        <div className="row-main">
-          <div className="eyebrow">It shipped</div>
-          <div className="rc-title d">{first.line}</div>
-          <div className="rc-sub">{sub}. Thanks for helping pick it.</div>
+    <div className={`fold-away ${out ? 'out' : ''}`}>
+      <div className="remind-card rm-live" role="status">
+        <div className="rc-head">
+          <Spot kind="gift" size={56} className="rc-spot" />
+          <div className="row-main">
+            <div className="eyebrow">It shipped</div>
+            <div className="rc-title d">{first.line}</div>
+            <div className="rc-sub">{sub}. Thanks for helping pick it.</div>
+          </div>
         </div>
-      </div>
-      <div className="rc-acts">
-        <button className="rc-btn ink" onClick={() => nav.push('roadmap', { highlight: first.itemId })}><Icon name="signpost" fill /> See what shipped</button>
-        <button className="rc-btn ghost" onClick={() => setShown([])}>Nice</button>
+        <div className="rc-acts">
+          <button className="rc-btn ink" onClick={() => nav.push('roadmap', { highlight: first.itemId })}><Icon name="signpost" fill /> See what shipped</button>
+          <button className="rc-btn ghost" onClick={away(() => setShown([]))}>Nice</button>
+        </div>
       </div>
     </div>
   );

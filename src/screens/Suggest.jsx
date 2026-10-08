@@ -66,7 +66,9 @@ export default function Suggest({ kind: initialKind = null, prefill = null, lead
           <div className="onboard-badge"><Icon name="check-circle" fill /></div>
           <h1 className="onboard-title" style={{ fontSize: 34 }}>Thanks{me ? `, ${me.name}` : ''}</h1>
           <p className="onboard-text">
-            {sent === 'sent' ? 'Got it. Every suggestion gets read, and the most asked-for ones get built first.' : 'No signal right now, so it’s saved on your phone and will send by itself when you’re back online.'}
+            {sent !== 'sent' ? 'No signal right now, so it’s saved on your phone and will send by itself when you’re back online.'
+              : kind === 'course' ? 'Got it. We’ll add it for everyone, and the app will tell you when it’s in.'
+              : 'Got it. Every report gets read, and what breaks for people gets fixed first.'}
           </p>
         </div>
         <div className="cta-wrap">
@@ -132,9 +134,11 @@ export default function Suggest({ kind: initialKind = null, prefill = null, lead
     try { result = await submitFeedback({ id, kind, body, details: { ...details, [main.key]: values[main.key].trim() }, contact, image, roundId }); }
     catch { result = 'queued'; }
     setBusy(false);
-    // A game or a feature lands on the roadmap, where you see it and can follow it (roadmap.js)
+    // A game or a feature lands on the roadmap, where you see it and can follow it (roadmap.js).
+    // A course is remembered the same way, so you hear when it's in, but it isn't a roadmap item
+    // until Trevor lists one, so there'd be nothing to land on: it stays here, with the roadmap a tap away
+    if (kind !== 'bug') noteSentIdea({ id, kind, title: requestTitle(kind, values) });
     if (kind === 'game' || kind === 'feature') {
-      noteSentIdea({ id, kind, title: requestTitle(kind, values) });
       nav.replace('roadmap', { highlight: requestItemId(id), sent: result });
       return;
     }

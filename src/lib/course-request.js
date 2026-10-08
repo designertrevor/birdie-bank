@@ -86,12 +86,15 @@ export function courseRequestView({ done = null, name, earlier = null }) {
 /**
  * Send a request once per phone per course. `submit` is submitFeedback (or a stand-in in tests).
  * Resolves to { status: 'sent' | 'queued' | 'already', entry }. A name already requested here
- * is never sent again; a failed send still counts, since the feedback queue keeps it.
+ * is never sent again; a failed send still counts, since the feedback queue keeps it. `id` is the
+ * feedback id to send under, when the caller wants to know it ahead (the roadmap keeps it, so the
+ * phone hears when the course is in).
  */
-export async function requestCourse({ storage, storageKey, submit, name, city, query, from, image, roundId, now = Date.now() }) {
+export async function requestCourse({ storage, storageKey, submit, name, city, query, from, image, roundId, id = null, now = Date.now() }) {
   const before = findCourseRequest(storage, storageKey, name);
   if (before) return { status: 'already', entry: before };
   const payload = courseRequestPayload({ name, city, query, from, image, roundId });
+  if (id) payload.id = id;
   // Remembered before sending, so a double tap can't send two
   const entry = rememberCourseRequest(storage, storageKey, name, now);
   let status;

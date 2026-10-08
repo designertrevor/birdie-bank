@@ -234,6 +234,35 @@ test('an idea folded into an item hears when that item ships, and asking beats v
   assert.deepEqual(shippedNotes(items, { local: emptyLocal(), mine: course, now: NOW }).map(n => n.line), ['The course you asked for is in']);
 });
 
+test('an idea asked for from your account on another phone: the note comes with no record on this one, and once', () => {
+  const requests = [{ id: `q-${IDEA}`, title: 'Split the cart fee', status: 'shipped', kind: 'feature', shipped_on: '2026-10-06' }];
+  const items = roadmapItems(BASE, requests);
+  const mine = [{ id: IDEA, kind: 'feature', item: `q-${IDEA}`, status: 'shipped', title: 'Split the cart fee', shipped_on: '2026-10-06' }];
+  let local = emptyLocal();
+  let notes = shippedNotes(items, { local, mine, now: NOW });
+  assert.deepEqual(notes.map(n => [n.key, n.line]), [[`q-${IDEA}`, 'The idea you sent in is live']]);
+  local = markTold(local, notes.map(n => n.key), NOW);
+  assert.deepEqual(shippedNotes(items, { local, mine, now: NOW }), []);
+  // Still waiting for a look, or listed but not shipped: nothing yet
+  assert.deepEqual(shippedNotes(roadmapItems(BASE), { local: emptyLocal(), mine: [{ id: IDEA, kind: 'feature', item: null }], now: NOW }), []);
+  const planned = [{ id: `q-${IDEA}`, title: 'Split the cart fee', status: 'planned', kind: 'feature', shipped_on: null }];
+  assert.deepEqual(shippedNotes(roadmapItems(BASE, planned), { local: emptyLocal(), mine: [{ ...mine[0], status: 'planned', shipped_on: null }], now: NOW }), []);
+});
+
+test('a course asked for from the picker stays out of Your ideas, then shows and says so once it’s in', () => {
+  // RequestCourse.jsx and Suggest remember a course request so the phone asks after it
+  const local = addSent(emptyLocal(), { id: IDEA, kind: 'course', title: 'Birch Creek', at: NOW });
+  assert.deepEqual(cleanLocal(local).sent.map(s => s.kind), ['course']);
+  assert.deepEqual(myIdeas(local, [], roadmapItems(BASE)), []);
+  assert.deepEqual(shippedNotes(roadmapItems(BASE), { local, now: NOW }), []);
+  const requests = [{ id: `q-${IDEA}`, title: 'Birch Creek Golf Course', status: 'shipped', kind: 'course', shipped_on: '2026-10-06' }];
+  const items = roadmapItems(BASE, requests);
+  const mine = [{ id: IDEA, kind: 'course', item: `q-${IDEA}`, status: 'shipped', title: 'Birch Creek Golf Course', shipped_on: '2026-10-06' }];
+  assert.deepEqual(myIdeas(local, mine, items).map(i => [i.state, i.title, i.kind]), [['listed', 'Birch Creek Golf Course', 'course']]);
+  assert.equal(items.find(i => i.id === `q-${IDEA}`).area, 'Courses');
+  assert.deepEqual(shippedNotes(items, { local, mine, now: NOW }).map(n => n.line), ['The course you asked for is in']);
+});
+
 test('a vote from your account counts for the note on a phone that never voted', () => {
   const notes = shippedNotes(roadmapItems(BASE), { local: emptyLocal(), myVotes: ['r-big-game'], now: NOW });
   assert.deepEqual(notes.map(n => n.key), ['r-big-game']);
