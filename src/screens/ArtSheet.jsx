@@ -3,7 +3,7 @@
 // makes the on-brand set; the files come back into src/art (see src/art/README.md) and replace
 // the hand-drawn ones here one by one. In every build, outside the app's own screens.
 import { useEffect, useRef, useState } from 'react';
-import { Spot, SPOT_KINDS } from '../components/Spot.jsx';
+import { Spot, SPOT_KINDS } from '../components/SpotArt.jsx';
 import { GameArt, GAME_ART_KINDS } from '../components/GameArt.jsx';
 import { SceneArt, SCENE_KINDS } from '../components/Scenes.jsx';
 import { BuddyArt } from '../components/BuddyArt.jsx';

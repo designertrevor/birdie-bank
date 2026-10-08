@@ -15,7 +15,7 @@ const keysOf = (file, table) => {
 };
 
 test('every scene and spot has a line on the art sheet, and nothing on the sheet is missing a drawing', () => {
-  const drawn = [...keysOf('Scenes.jsx', 'SCENES').map(k => `scenes/${k}`), ...keysOf('Spot.jsx', 'SCENES').map(k => `spots/${k}`), 'spots/crowd', 'spots/highfive'];
+  const drawn = [...keysOf('Scenes.jsx', 'SCENES').map(k => `scenes/${k}`), ...keysOf('SpotArt.jsx', 'SCENES').map(k => `spots/${k}`), 'spots/crowd', 'spots/highfive'];
   assert.deepEqual(Object.keys(ART_USES).sort(), drawn.sort());
   for (const [key, u] of Object.entries(ART_USES)) {
     assert.ok(u.name, `${key} has a name`);

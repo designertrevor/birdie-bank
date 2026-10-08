@@ -6,7 +6,7 @@ import { readFileSync } from 'node:fs';
 import * as palette from './art-palette.js';
 import { PALETTE as fromManifest } from './art-manifest.js';
 
-const COMPONENTS = ['BuddyArt.jsx', 'GameArt.jsx', 'Scenes.jsx', 'Spot.jsx'];
+const COMPONENTS = ['BuddyArt.jsx', 'GameArt.jsx', 'Scenes.jsx', 'SpotArt.jsx'];
 const src = f => readFileSync(new URL(`../components/${f}`, import.meta.url), 'utf8');
 
 test('the palette values are the ones the drawings were made with', () => {

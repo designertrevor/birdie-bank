@@ -671,6 +671,9 @@ button:disabled { cursor: not-allowed; }
 
 /* CALLOUT: a spot illustration, a bold line and one sentence, on a card (ui.jsx Callout) */
 .callout { margin: 0 16px 12px; padding: 12px 16px 12px 10px; border-radius: 22px; background: var(--card); display: flex; gap: 12px; align-items: center; position: relative; }
+/* A spot drawing that landed after its box was painted (Spot.jsx) fades in; the box itself never moves */
+.spot.spot-late { animation: spotIn var(--duration-quick) ease-out both; }
+@keyframes spotIn { from { opacity: 0; } }
 .callout .spot { width: 68px; height: 68px; flex-shrink: 0; }
 .callout.big .spot { width: 92px; height: 92px; }
 .callout.soft { background: var(--surface); }

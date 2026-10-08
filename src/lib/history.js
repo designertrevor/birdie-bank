@@ -11,8 +11,9 @@ import { BIG_FORMAT } from './big-format.js';
 const MONTHS = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
 const SHORT = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
 
-/** When a round counts for History: when it finished, or when it started if it never did. */
-export const roundTime = r => r.finishedAt || r.createdAt || 0;
+// When a round counts, and the rounds going on, live in rounds-live.js (Up next's first paint reads them without the Tab's money)
+import { roundTime } from './rounds-live.js';
+export { activeRounds, roundTime } from './rounds-live.js';
 
 /** "2026-09-27" for a local date (what a date input gives back). */
 export function isoDay(d) {
@@ -242,13 +243,6 @@ export function myTab(state) {
     else if (mine.has(d.from)) { owe += d.amount; people++; }
   }
   return { owed: cents(owed), owe: cents(owe), net: cents(owed - owe), people };
-}
-
-/** Rounds still being played, the one the Play button resumes first. */
-export function activeRounds(state) {
-  return Object.values(state.rounds)
-    .filter(r => r.status === 'active')
-    .sort((a, b) => (b.id === state.activeRoundId) - (a.id === state.activeRoundId) || b.createdAt - a.createdAt);
 }
 
 /** Your most recent finished round and what you made in it (amount is null if you only kept score). */

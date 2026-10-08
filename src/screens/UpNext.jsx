@@ -1,49 +1,38 @@
-import { Suspense, lazy, useEffect, useLayoutEffect, useRef, useState } from 'react';
+import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { Header, Icon, Screen } from '../components/ui.jsx';
-import { Spot } from '../components/Spot.jsx';
+import { Later, part } from '../components/Later.jsx';
+import { PlansAndNext } from '../components/UpNextPlans.jsx';
 import { useStore } from '../lib/store.js';
-import { roundsInProgress } from '../lib/rounds.js';
-import { GAMES, cardOnly, holeComplete } from '../lib/round.js';
-import { gameLabel, myIds } from '../lib/format.js';
-import { nameOf } from '../lib/ledger.js';
-import { canonicalOf } from '../lib/shared-tab.js';
-import { openRewards, rewardLineText } from '../lib/play-for.js';
-import { money } from '../lib/golf.js';
-import { RoundRow } from '../components/RoundRow.jsx';
-import { activeRounds, lastResult, myTab } from '../lib/history.js';
+import { activeRounds } from '../lib/rounds-live.js';
+import { holeComplete } from '../lib/round.js';
+import { gameLabel } from '../lib/format.js';
 import { AvatarButton, BottomNav } from '../nav.jsx';
 import { useNav } from '../lib/nav.js';
 import { syncConfigured } from '../lib/supabase.js';
-import { RSVP_LABEL, countsLine, dayLabel, daysUntil, planChoice, planCounts, upcomingPlans, whenLabel } from '../lib/plan-basics.js';
-import { countdownLine, weekdayOf } from '../lib/countdown.js';
+import { upcomingPlans } from '../lib/plan-basics.js';
 import { updateSafe } from '../lib/app-update.js';
 import { applyUpdate, useUpdateReady } from '../lib/sw-update.js';
-import { currentTrips } from '../lib/trips.js';
-import { recapRound } from '../lib/recap-round.js';
+import { anyTrips, lastDoneRound } from '../lib/upnext-first.js';
 import { endUpNextVisit } from '../lib/upnext-card.js';
 
-// Up next paints first with what's always on it: rounds going on, plans, the Tab. The rest loads
-// right after (its files are saved for offline like every other), each part in its own boundary so
-// the cards above never wait or blank: the recap, challenges, reminders, callouts, Lately and trips.
+// Up next paints first with what it can tell without the Tab's money: rounds going on, the plans
+// and the card for the next round. The rest loads right after (its files are saved for offline
+// like every other), each part in its own boundary so the cards above never wait or blank: the
+// recap, the trips, challenges, reminders, callouts, Lately and the Tab at a glance (UpNextMore.jsx).
 const more = () => import('../components/UpNextMore.jsx');
-const trips = () => import('../components/Trips.jsx');
-// A part that can't load (no signal before the app was ever saved offline) is left off, never the whole screen
-const part = (load, name) => lazy(() => load().then(m => ({ default: m[name] }), () => ({ default: () => null })));
 const RecapSection = part(more, 'RecapSection');
-const ChallengesSection = part(more, 'ChallengesSection');
+const TripsNow = part(more, 'TripsNow');
+const PlansLater = part(more, 'PlansLater');
 const CalloutsSection = part(more, 'CalloutsSection');
 const LatelySection = part(more, 'LatelySection');
+const TabGlance = part(more, 'TabGlance');
 const UpNextSync = part(more, 'UpNextSync');
-const TripUpNext = part(trips, 'TripUpNext');
-const TripSheet = part(trips, 'TripSheet');
 const JoinSheet = part(() => import('../components/Live.jsx'), 'JoinSheet');
 const RemindersUpNext = part(() => import('../components/Reminders.jsx'), 'RemindersUpNext');
-const FriendsUpNext = part(() => import('../components/FriendsFeed.jsx'), 'FriendsUpNext');
 const ShippedUpNext = part(() => import('../components/RoadmapUpNext.jsx'), 'ShippedUpNext');
 const WhatsNewUpNext = part(() => import('../components/WhatsNewUpNext.jsx'), 'WhatsNewUpNext');
 // Start fetching straight away, alongside the first paint, rather than when React gets to them
 if (typeof window !== 'undefined') more().catch(() => {});
-const Later = ({ children }) => <Suspense fallback={null}>{children}</Suspense>;
 
 /** Home: what's next for you. A round to finish, what you owe and are owed, and how the last one went. */
 export default function UpNext() {
@@ -54,23 +43,17 @@ export default function UpNext() {
   // It shipped and What's new: one a visit, and leaving starts the next (upnext-card.js)
   useEffect(() => endUpNextVisit, []);
   const live = activeRounds(state);
-  const last = lastResult(state);
-  const tab = myTab(state);
-  // Square on money can still leave a reward to sort out ("You owe Sam lunch"), which isn't money
-  const rewards = tab.people ? [] : openRewards(state, { ids: myIds(state), canon: canonicalOf(state) });
-  const squareText = !rewards.length ? 'You’re all square. Nobody owes you, you owe nobody.'
-    : `Square on money. ${rewards.length === 1 ? `${rewardLineText(rewards[0], id => nameOf(state, id))}.` : `${rewards.length} rewards to sort out.`}`;
+  const last = lastDoneRound(state);
   const hasHistory = !!last;
-  // A trip on now leads with where you stand, its planned rounds grouped under it
-  const onNow = currentTrips(state);
-  const onTrip = new Set(onNow.flatMap(t => t.planned.map(p => p.id)));
-  const plans = upcomingPlans(state).filter(p => !onTrip.has(p.id));
-  // The day after a round: its recap, then a few lines for the group text (see recap.js, callouts.js).
-  // Only which round it's about is worked out here; the card loads with the rest (UpNextMore.jsx)
-  const recapId = recapRound(state)?.id ?? null;
+  // A trip on now leads with where you stand, its planned rounds grouped under it. Which trips are on
+  // takes the money (trips.js), so with any trip about the trips and the plans come just after the
+  // first paint together, and a trip's rounds never show under Upcoming first and then move
+  const trips = anyTrips(state);
+  const plans = trips ? null : upcomingPlans(state);
   const anyChallenges = Object.keys(state.challenges || {}).length > 0;
   // A new version only shows up here once no round is going on, so a tap never cuts into one
   const updateReady = useUpdateReady() && updateSafe(state);
+  const onJoin = syncConfigured ? () => setJoining(true) : null;
 
   return (
     <Screen>
@@ -82,7 +65,8 @@ export default function UpNext() {
             <span className="row-main"><b>Update ready</b> <span className="un-sub">Tap to refresh</span></span>
           </button>
         )}
-        {recapId && <Later><RecapSection /></Later>}
+        {/* The day after a round: its recap, then a few lines for the group text (see recap.js, callouts.js) */}
+        <Later><RecapSection /></Later>
 
         {live.map(r => {
           const played = r.holes.filter(h => holeComplete(r, h)).length;
@@ -99,7 +83,7 @@ export default function UpNext() {
           );
         })}
 
-        {onNow.length > 0 && <Later>{onNow.map(t => <TripUpNext key={t.trip.id} status={t} renderPlan={p => <UpcomingCard key={p.id} plan={p} />} />)}</Later>}
+        {trips && <Later><TripsNow /></Later>}
 
         {/* Reminders, It shipped and What's new share one slot: the first card shows, the rest wait
             behind it ("2 more"), so the next round stays near the top */}
@@ -112,97 +96,20 @@ export default function UpNext() {
           <Later><WhatsNewUpNext /></Later>
         </CardStack>
 
-        {plans.length > 0 && <div className="sec-label">Upcoming</div>}
-        {plans.map(p => <UpcomingCard key={p.id} plan={p} />)}
-        {anyChallenges && <Later><ChallengesSection /></Later>}
-        {/* Starting a round at the course (or running the last one back) stays one tap, plans or not; a Big Game on the calendar isn't a trip, so Start a trip stays */}
-        {live.length === 0 && <PlanNext last={last?.round} fresh={!hasHistory} planned={plans.length > 0 || onNow.length > 0} trip={!onNow.some(t => t.trip.format !== 'big')}
-          onJoin={syncConfigured ? () => setJoining(true) : null} />}
-        {!hasHistory && <FirstSteps />}
-
-        {/* Friends' rounds you're not in, live, and the way into the group feed (friend-feed.js) */}
-        <Later><FriendsUpNext show={hasHistory || plans.length > 0 || onNow.length > 0} /></Later>
+        {trips
+          ? <Later><PlansLater live={live} last={last} anyChallenges={anyChallenges} onJoin={onJoin} /></Later>
+          : <PlansAndNext plans={plans} onNow={[]} live={live} last={last} anyChallenges={anyChallenges} onJoin={onJoin} />}
 
         <Later><CalloutsSection /></Later>
-        <Later><LatelySection recapId={recapId} /></Later>
-
-        {hasHistory && (
-          <>
-            <div className="sec-label">The Tab</div>
-            <button className="tab-glance" onClick={() => nav.setTab('ledger')} aria-label={tab.people ? `The Tab: owed to you ${money(tab.owed)}, you owe ${money(tab.owe)}` : `The Tab: ${squareText}`}>
-              {tab.people ? (
-                <>
-                  <div><div className="bl">Owed to you</div><div className={`lr-big ${tab.owed ? 'pos' : ''}`}>{tab.owed ? money(tab.owed) : '–'}</div></div>
-                  <div><div className="bl">You owe</div><div className={`lr-big ${tab.owe ? 'neg' : ''}`}>{tab.owe ? money(tab.owe) : '–'}</div></div>
-                </>
-              ) : (
-                <div className="tg-square"><Icon name={rewards.length ? 'gift' : 'handshake'} fill /> <span>{squareText}</span></div>
-              )}
-              <span className="chevron"><Icon name="caret-right" /></span>
-            </button>
-
-            {/* The recap already shows the last round, so it isn't there twice */}
-            {recapId !== last.round.id && (
-              <>
-                <div className="sec-label">Last time out</div>
-                <RoundRow round={last.round} state={state} className="card" withYear />
-              </>
-            )}
-          </>
-        )}
+        <Later><LatelySection /></Later>
+        {/* The Tab at a glance and the last round out, once there's a finished round */}
+        {hasHistory && <Later><TabGlance /></Later>}
       </div>
       <BottomNav />
       {/* Picks up answers, votes, payments and trip news that came in since last time */}
       <Later><UpNextSync /></Later>
       {joining && <Later><JoinSheet open onClose={() => setJoining(false)} /></Later>}
     </Screen>
-  );
-}
-
-/**
- * An upcoming round: the countdown ("Saturday, 2 days"), the group's game so far, the course and
- * who's in. A round still on opens its preview from the strip under it.
- */
-function UpcomingCard({ plan }) {
-  const nav = useNav();
-  const { game } = planChoice(plan);
-  const me = plan.host ? plan.hostWho : plan.localMe;
-  const mine = plan.answers?.[me]?.status;
-  // A trip's scheduled round for a group you organized but aren't in (trip-templates.js marks you
-  // out of it): you're not one of its players, so you're neither counted out nor "out"
-  const notIn = !!(plan.host && plan.session && mine === 'out');
-  const c = (n => (notIn ? { ...n, out: Math.max(0, n.out - 1) } : n))(planCounts(plan));
-  const off = plan.status === 'off' || (plan.gone && plan.status !== 'started'); // a started round goes on either way
-  // Kept for another day: the new plan isn't on this phone yet, so this one says where it went
-  const moved = !off && plan.movedTo ? plan.movedTo : null;
-  const started = plan.status === 'started' && !off && !moved;
-  // Still to come: a plan from yesterday that never started has nothing left to count down to
-  const ahead = !off && !started && !moved && (daysUntil(plan.date) ?? 0) >= 0;
-  const card = (
-    <button className={`upcoming-card ${off ? 'off' : ''} ${ahead ? 'has-preview' : ''}`} onClick={() => nav.push('plan', { id: plan.id })}>
-      <div className="row-main">
-        <div className="eyebrow">{ahead ? countdownLine(plan) : whenLabel(plan)}{off ? (plan.status === 'off' ? ' · Called off' : ' · Deleted') : moved ? ' · Moved' : started ? ' · The round is on' : ''}</div>
-        {/* A round a trip's schedule planned (trip-templates.js) leads with its matches */}
-        <div className="uc-title d">{plan.session?.line || `${GAMES[game]?.name || 'Golf'} · ${plan.course?.name || 'Course to be set'}`}</div>
-        <div className="uc-sub">{off ? `Organized by ${plan.host ? 'you' : plan.hostName || 'a friend'}` : moved ? `Moved to ${moved.date ? dayLabel(moved.date) : 'another day'}${moved.code ? '. Tap for the new plan' : ''}` : started ? (plan.liveCode ? 'Tap to follow along' : 'Teeing off now') : plan.session?.line ? `${GAMES[game]?.name || 'Golf'} · ${plan.course?.name || 'Course to be set'} · ${countsLine(c)}` : countsLine(c)}</div>
-      </div>
-      {!off && !started && !moved && !notIn && <span className={`who-status ${mine || 'none'}`}>{mine ? `You’re ${RSVP_LABEL[mine].toLowerCase()}` : 'Answer'}</span>}
-      <span className="chevron"><Icon name="caret-right" /></span>
-    </button>
-  );
-  if (!ahead) return card;
-  // Today's or tomorrow's round says so, rather than naming today's weekday
-  const until = daysUntil(plan.date);
-  const day = until === 0 ? 'Today’s' : until === 1 ? 'Tomorrow’s' : weekdayOf(plan);
-  return (
-    <div className="uc-wrap">
-      {card}
-      <button className="uc-preview" onClick={() => nav.push('preview', { id: plan.id })}>
-        <Icon name="binoculars" fill />
-        <span className="row-main"><b>{day ? `${day} preview` : 'The preview'}</b> <span className="uc-pv-sub">Strokes, head to head, a card for the group</span></span>
-        <Icon name="caret-right" />
-      </button>
-    </div>
   );
 }
 
@@ -246,71 +153,5 @@ function CardStack({ children }) {
         </button>
       )}
     </div>
-  );
-}
-
-/** The prompt to set up the next round, with a one-tap "same again" when there's a last one. */
-function PlanNext({ last, fresh, planned = false, trip = false, onJoin = null }) {
-  const nav = useNav();
-  const [tripping, setTripping] = useState(false);
-  const again = last && GAMES[last.game] && !cardOnly(last);
-  return (
-    <>
-      <div className="plan-card">
-        <Spot kind="tee" size={92} className="pc-mascot" plate={false} />
-        <span className="eyebrow">{planned ? 'Something else' : fresh ? 'Welcome to the first tee' : 'Nothing on the calendar'}</span>
-        <div className="pc-title d">{planned ? 'Playing now, or another day?' : 'Plan your next round'}</div>
-        <div className="pc-sub">{planned
-          ? 'Start a round at the course in one tap, or plan another one for later.'
-          : fresh
-          ? 'Pick a game, a course and your group. Birdie Bank keeps score, does the math and settles up.'
-          : 'Pick the game, the course and the bets. Everyone joins from a link.'}</div>
-        <div className="pc-actions">
-          <button className="pc-btn" onClick={() => nav.push('newRound')}><Icon name="golf" fill /> Start a round</button>
-          {again && <button className="pc-btn ghost" onClick={() => nav.push('newRound', { rematch: last.id })}><Icon name="arrow-counter-clockwise" /> Run it back</button>}
-        </div>
-        {onJoin && <button className="pc-join" onClick={onJoin}>Got a code? <u>Join a friend’s round</u></button>}
-      </div>
-      {/* The other ways to play, as three small tiles under the card */}
-      <div className="sec-label">More ways to play</div>
-      <div className={`more-tiles ${trip ? '' : 'two'}`}>
-        <button className="more-tile" onClick={() => nav.push('newRound', { ahead: true })}><Spot kind="calendar" size={64} /><span>Plan ahead</span></button>
-        {trip && <button className="more-tile" onClick={() => setTripping(true)}><Spot kind="suitcase" size={64} /><span>Start a trip</span></button>}
-        <button className="more-tile" onClick={() => nav.push('bigGameSetup')}><Spot kind="crowd" size={64} /><span>Big Game</span></button>
-      </div>
-      {tripping && <Later><TripSheet open onClose={() => setTripping(false)} onDone={t => { setTripping(false); nav.push('trip', { id: t.id }); }} /></Later>}
-    </>
-  );
-}
-
-/** A brand new organizer's first three steps, each ticked off as it happens. */
-function FirstSteps() {
-  const nav = useNav();
-  const state = useStore();
-  const people = Object.keys(state.players || {}).filter(id => id !== state.me).length;
-  const rounds = Object.values(state.rounds || {});
-  // A round already going opens for its link (Invite is in its menu); otherwise sending one starts with a round
-  const active = roundsInProgress(state)[0] || null;
-  const steps = [
-    { done: people > 0, title: 'Add your group', sub: 'The people you play with', go: () => nav.setTab('people') },
-    { done: rounds.length > 0, title: 'Start a round', sub: 'Pick a game and a course', go: () => nav.push('newRound') },
-    { done: rounds.some(r => r.shared), title: 'Send the group the link', sub: active ? 'Invite the group from the round menu' : 'They follow the money live', go: () => (active ? nav.push('play', { id: active.id }) : nav.push('newRound')) },
-  ];
-  if (steps.every(x => x.done)) return null;
-  return (
-    <>
-      <div className="sec-label">Your first round</div>
-      <ol className="first-steps">
-        {steps.map((x, i) => (
-          <li key={x.title}>
-            <button className={`fs-row ${x.done ? 'done' : ''}`} onClick={x.go} disabled={x.done}>
-              <span className="fs-num" aria-hidden="true">{x.done ? <Icon name="check" /> : i + 1}</span>
-              <span className="row-main"><span className="fs-title">{x.title}</span><span className="fs-sub">{x.done ? 'Done' : x.sub}</span></span>
-              {!x.done && <Icon name="caret-right" />}
-            </button>
-          </li>
-        ))}
-      </ol>
-    </>
   );
 }
