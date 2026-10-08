@@ -57,8 +57,15 @@ function draw(ctx, m) {
   ctx.font = `600 38px ${BODY}`;
   ctx.fillText(clip(ctx, m.meta, m.faced ? inner - 340 : inner - 200), PAD, 318);
 
-  // The headline: how many rounds, and the holes under it
-  let y = 560;
+  // The headline: how many rounds, and the holes under it. A quiet year (a few tiles, a line or
+  // two) used to leave the bottom third of the card bare, so the block below the title is centred
+  // in the room left above the footer and the tiles grow a little when there's space to spare.
+  const sectionsH = m.sections.reduce((a, s, i) => a + (i ? 72 : 56) + 8 + Math.min(2, s.lines.length) * 54, 0);
+  const rows = Math.ceil(m.tiles.length / 2);
+  const tileH = rows && (560 + 154 + rows * 194 + sectionsH) < footerY - 420 ? 210 : 170;
+  const used = 154 + rows * (tileH + 24) + sectionsH;
+  const slack = Math.max(0, footerY - 80 - (560 + used));
+  let y = 560 + Math.round(slack / 2);
   ctx.fillStyle = C.ink;
   fit(ctx, m.headline, 800, DISPLAY, 180, 90, inner);
   ctx.fillText(clip(ctx, m.headline, inner), PAD - 6, y);
@@ -69,7 +76,7 @@ function draw(ctx, m) {
   y += 70;
 
   // The tiles, two to a row
-  const gap = 24, half = (inner - gap) / 2, tileH = 170;
+  const gap = 24, half = (inner - gap) / 2;
   let col = 0;
   for (const t of m.tiles) {
     drawTile(ctx, t, PAD + col * (half + gap), y, half, tileH);
