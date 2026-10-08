@@ -4,7 +4,7 @@
 import { useEffect } from 'react';
 import { Icon, Sheet, useUI } from './ui.jsx';
 import { Spot } from './Spot.jsx';
-import { answerAsk, bootPush, pushConfigured, useNotify } from '../lib/push-client.js';
+import { ASK_PREVIEW, answerAsk, bootPush, pushConfigured, useNotify } from '../lib/push-client.js';
 
 const WHAT = [
   ['hand-waving', 'Who’s in, as your group answers'],
@@ -56,5 +56,5 @@ function NotifySheet() {
 }
 
 export function NotifyAsk() {
-  return pushConfigured ? <NotifySheet /> : null;
+  return pushConfigured || ASK_PREVIEW ? <NotifySheet /> : null;
 }

@@ -22,6 +22,9 @@ import { cleanMuted, mergePrefs } from './push-prefs.js';
 const KEY = import.meta.env.VITE_VAPID_PUBLIC_KEY || '';
 /** Push is switched on for this build. */
 export const pushConfigured = !!KEY && supabaseConfigured;
+// A dev look at the "Want a heads-up?" sheet without push set up: open a dev server with ?askPreview
+// (as ?art and ?gallery show the drawings). Never in a production build; the answers do nothing.
+export const ASK_PREVIEW = !!(import.meta.env.DEV && typeof location !== 'undefined' && /[?&]askPreview(?=[=&]|$)/.test(location.search));
 const PREFS = 'bb-notify';
 const PICKS = 'bb-notify-picks';
 
@@ -47,7 +50,7 @@ function savePicks(p) { try { if (p) localStorage.setItem(PICKS, JSON.stringify(
 
 // --------------------------- status (for UI) --------------------------------
 
-let snap = { asking: null, subscribed: false, busy: false, tick: 0, muted: cleanMuted(loadPicks()?.muted) };
+let snap = { asking: ASK_PREVIEW ? 'planned' : null, subscribed: false, busy: false, tick: 0, muted: cleanMuted(loadPicks()?.muted) };
 const listeners = new Set();
 function set(patch) { snap = { ...snap, ...patch }; listeners.forEach(l => l()); }
 const sub = l => { listeners.add(l); return () => listeners.delete(l); };
@@ -251,6 +254,7 @@ export function notifyMoment(moment) {
 /** The sheet's answer: 'on' (it goes on to the browser's prompt) or anything else for Not now. */
 export async function answerAsk(answer) {
   set({ asking: null });
+  if (ASK_PREVIEW && !pushConfigured) return 'later';
   if (answer === 'on') return turnOn();
   savePrefs(afterNotNow(loadPrefs()));
   return 'later';
