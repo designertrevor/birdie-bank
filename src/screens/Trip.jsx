@@ -28,6 +28,7 @@ import { planShareLink, sharePlan, usePlanLive } from '../lib/plan-sync.js';
 import { PlansOffError } from '../lib/plan-adapters.js';
 import { tripAnswers, tripInviteText, tripLinkPlan } from '../lib/trip-people.js';
 import { plansByDay } from '../lib/trip-templates.js';
+import { teesOffLine } from '../lib/tees-off.js';
 import { DraftCard, FlightsView, ScheduleCard } from '../components/TripMode.jsx';
 import { buzz } from '../lib/delight.js';
 import { allTripPays } from '../lib/trip-expenses.js';
@@ -404,7 +405,9 @@ function Standings({ st, state, label, me, flights = false }) {
   // With flights, who's going is listed once, by flight, below
   if (!st.standings.length && st.going.length > 1 && flights) return <p className="trip-empty">The standings fill in as soon as a round is finished. Who’s going is below, by flight.</p>;
   if (!st.standings.length && st.going.length > 1) {
-    // Who's going, before anyone has played: everyone even
+    // Who's going, before anyone has played: everyone even, and when it tees off instead of a
+    // dash for each of them (tees-off.js: the first planned round, or the trip's first day)
+    const when = { planned: st.planned, start: st.trip.start };
     return (
       <>
         <div className="trip-table">
@@ -413,11 +416,11 @@ function Standings({ st, state, label, me, flights = false }) {
               <span className="tr-rank">–</span>
               <Avatar id={id} name={nameOf(state, id)} />
               <span className="tr-main"><span className="tr-name">{label(id)}</span></span>
-              <span className="tr-amt none">–</span>
+              <span className="tr-amt soon">{teesOffLine(when)}</span>
             </div>
           ))}
         </div>
-        <p className="field-help pad trip-note">Who’s going. The standings fill in as soon as a round is finished, and anyone who plays a round for the trip joins them.</p>
+        <p className="field-help pad trip-note">Who’s going. {teesOffLine(when, new Date(), { long: true })}. The standings fill in as soon as a round is finished, and anyone who plays a round for the trip joins them.</p>
       </>
     );
   }

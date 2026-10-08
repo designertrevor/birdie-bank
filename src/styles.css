@@ -3417,6 +3417,8 @@ a.header-btn.rm-open { text-decoration: none; }
 /* ---------- O10 polish10: a pass on the overnight 9 screens ---------- */
 /* Before anyone has played, a trip's standings show a quiet dash, not a bold one that reads as a minus */
 .trip-row .tr-amt.none { color: var(--mute-soft); font-weight: 600; }
+/* O11: or, with a round ahead, when the trip tees off ("Tees off Fri"), quiet and a size down so it fits the money column */
+.trip-row .tr-amt.soon { color: var(--mute); font-weight: 700; font-size: 14px; }
 
 /* O10 trend: the handicap guide from your rounds on Your stats, next to the official index */
 .trend-official { text-align: right; padding-bottom: 6px; }

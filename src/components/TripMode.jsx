@@ -20,6 +20,7 @@ import {
 import { flightBoard } from '../lib/flights.js';
 import { draftState } from '../lib/draft-sync.js';
 import { makeScheduledRounds, setDayCourse } from '../lib/trip-store.js';
+import { teesOffLine } from '../lib/tees-off.js';
 
 const first = name => String(name || '').trim().split(/\s+/)[0] || 'Player';
 const plus = (iso, n) => {
@@ -278,6 +279,8 @@ export function FlightsView({ st }) {
   const board = flightBoard(state, st.trip);
   if (!board.length) return null;
   const any = board.some(f => f.rows.some(r => r.rounds));
+  // Before anyone has played, each row says when the trip tees off instead of a dash (tees-off.js)
+  const soon = any ? null : teesOffLine({ planned: st.planned, start: st.trip.start });
   return (
     <>
       {board.map(f => (
@@ -295,7 +298,7 @@ export function FlightsView({ st }) {
                     <span className="tr-name">{mine ? 'You' : r.name}</span>
                     <span className="tr-sub">{r.rounds ? `${r.rounds} round${r.rounds === 1 ? '' : 's'}` : 'No round finished yet'}</span>
                   </span>
-                  <span className={`tr-amt tm-net ${r.rounds ? toParTone(r.net) : ''}`}>{r.rounds ? toParText(r.net) : '–'}</span>
+                  <span className={`tr-amt tm-net ${r.rounds ? toParTone(r.net) : soon ? 'soon' : ''}`}>{r.rounds ? toParText(r.net) : soon || '–'}</span>
                 </div>
               );
             })}
