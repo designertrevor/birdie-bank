@@ -327,7 +327,9 @@ function PlayRound({ round, mount, momentUp = false }) {
   const promptLater = () => {
     const later = betPrompt.later;
     update(s => markPrompt(s, round.id, { pos: betPrompt.pos, later }));
-    showToast(`Not this hole. It’ll ask again on hole ${holeAtPos(round, later.pos)}`);
+    // A closest-to-the-pin ask names why that hole: it's the next par 3
+    const at = holeAtPos(round, later.pos);
+    showToast(later.kind === 'ctp' ? `Not this hole. It’ll ask again on the next par 3, hole ${at}` : `Not this hole. It’ll ask again on hole ${at}`);
   };
   const promptSkip = () => {
     update(s => markPrompt(s, round.id, { skip: true }));

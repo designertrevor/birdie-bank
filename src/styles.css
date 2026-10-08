@@ -1772,7 +1772,10 @@ button.lately-row:active { background: var(--surface); }
 /* The bets card tightens once every bet is in and the totals start to count (Reveal's `tight`), as one
    smooth shrink rather than a snap: sizes and spacing only, since putting the label and text on one
    line can't animate. The scroll nudge still brings four players' totals on screen at 375x812 */
-.rv-card { transition: padding var(--duration-slow) var(--ease-smooth-out); }
+.rv-card { max-height: 100vh; transition: padding var(--duration-slow) var(--ease-smooth-out), max-height var(--duration-slow) var(--ease-smooth-out); }
+/* A long card (a Nassau with presses, many side bets) caps once it has tightened and scrolls inside,
+   so the totals under it land on screen; the cap comes down with the shrink, so no snap */
+.rv-card.compact { max-height: 36vh; overflow-y: auto; overscroll-behavior: contain; }
 .rv-card-title { transition: padding var(--duration-slow) var(--ease-smooth-out), font-size var(--duration-slow) var(--ease-smooth-out); }
 .rv-label, .rv-text, .rv-val { transition: font-size var(--duration-slow) var(--ease-smooth-out); }
 .rv-card.compact { padding: 0 14px 4px; }
