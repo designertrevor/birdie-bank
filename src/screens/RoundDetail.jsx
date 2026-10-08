@@ -1,5 +1,6 @@
 import { Fragment, useEffect, useRef, useState } from 'react';
 import { Empty, Header, Icon, PickChip, Screen, Segmented, useUI } from '../components/ui.jsx';
+import { Stage } from '../components/Stage.jsx';
 import { Spot } from '../components/Spot.jsx';
 import { AvatarArt } from '../components/Avatar.jsx';
 import { CrownedFace, Podium } from '../components/Podium.jsx';
@@ -161,9 +162,13 @@ export default function RoundDetail({ id, celebrate }) {
       {notes.map(n => <p key={n.text} className="hint-card"><Icon name={n.kind === 'left' ? 'user-minus' : n.kind === 'joined' ? 'user-plus' : n.kind === 'casual' ? 'smiley' : 'warning'} fill /> {n.text}</p>)}
     </div>
   );
+  // The beats are a stage of their own (Stage.jsx): on toward Share each slides in from the right, and
+  // Back sends it out the way it came while the one before comes in from the left
+  const stageDir = stageBack ? 'pop' : 'push';
   if (stage !== 'detail') {
     return (
-      <Screen key={stage} className={`finale-stage ${stageBack ? 'back' : ''}`}>
+      <Stage id={stage} dir={stageDir}>
+      <Screen key={stage} className="finale-stage">
         {stage === 'reveal' && casualMe && <NiceRound round={round} me={meId} onDetail={() => { setRevealSeen(true); setStage('detail'); }} onDone={done} />}
         {stage === 'reveal' && !casualMe && <Reveal round={round} res={res} instant={revealSeen} onNext={() => { setRevealSeen(true); setStage(ownSettle ? 'settle' : 'share'); }} onDetail={() => { setRevealSeen(true); setStage('detail'); }} extra={<>{round.trip?.id && <div style={{ marginTop: 12 }}><TripRoundNote round={round} /></div>}{notesEl}{saveRow && <div style={{ marginTop: 12 }}>{saveRow}</div>}</>} />}
         {stage === 'settle' && <SettleUp round={round} res={tab} onBack={() => setStage('reveal')} onNext={() => setStage('share')} />}
@@ -172,6 +177,7 @@ export default function RoundDetail({ id, celebrate }) {
           : <ShareCard round={round} res={res} onBack={() => setStage(ownSettle ? 'settle' : 'reveal')} onDone={done} />)}
         {signingIn && <SignInSheet open onClose={() => setSigningIn(false)} />}
       </Screen>
+      </Stage>
     );
   }
 
@@ -184,7 +190,8 @@ export default function RoundDetail({ id, celebrate }) {
   };
 
   return (
-    <Screen>
+    <Stage id={stage} dir={stageDir}>
+    <Screen key="detail">
       {/* From the finale, Back returns to the reveal (its end state), so the round can still be settled and shared */}
       <Header title={celebrate ? 'Final results' : 'Round'} onBack={celebrate ? () => setStage('reveal') : nav.pop} small
         right={solo ? null : <button className="header-btn" onClick={() => { setShareFrom('detail'); setStage('share'); }}><Icon name="share-network" /> Share</button>} />
@@ -344,6 +351,7 @@ export default function RoundDetail({ id, celebrate }) {
       )}
       {signingIn && <SignInSheet open onClose={() => setSigningIn(false)} />}
     </Screen>
+    </Stage>
   );
 }
 

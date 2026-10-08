@@ -894,22 +894,30 @@ function PlayRound({ round, mount, momentUp = false }) {
  * the round has a later hole to ask on), one to put it away for the round, and a way to turn it off.
  */
 function BetPromptCard({ prompt, onAdd, onLater = null, onSkip, onOff }) {
+  // Put away, the card folds up and fades (bp-out) before the answer lands and it goes; adding a bet
+  // opens the editor over it straight away instead
+  const [out, setOut] = useState(false);
+  const away = fn => () => { if (out) return; setOut(true); setTimeout(fn, BP_OUT_MS); };
   return (
-    <div className="bet-prompt" role="group" aria-labelledby="bp-title">
-      <div className="bp-ic" aria-hidden="true"><Icon name={prompt.kind === 'ctp' ? 'target' : 'hand-coins'} fill /></div>
-      <div className="bp-main">
-        <div className="bp-title" id="bp-title">{prompt.title}</div>
-        <div className="bp-text">{prompt.text}</div>
-        <div className="bp-actions">
-          <button className="pill-btn on" onClick={onAdd}><Icon name="plus" /> Add a side bet</button>
-          {onLater && <button className="pill-btn ghost" onClick={onLater}>Not this hole</button>}
-          <button className="pill-btn ghost" onClick={onSkip}>Not this round</button>
+    <div className={`bp-wrap ${out ? 'out' : ''}`}>
+      <div className="bet-prompt" role="group" aria-labelledby="bp-title">
+        <div className="bp-ic" aria-hidden="true"><Icon name={prompt.kind === 'ctp' ? 'target' : 'hand-coins'} fill /></div>
+        <div className="bp-main">
+          <div className="bp-title" id="bp-title">{prompt.title}</div>
+          <div className="bp-text">{prompt.text}</div>
+          <div className="bp-actions">
+            <button className="pill-btn on" onClick={onAdd}><Icon name="plus" /> Add a side bet</button>
+            {onLater && <button className="pill-btn ghost" onClick={away(onLater)}>Not this hole</button>}
+            <button className="pill-btn ghost" onClick={away(onSkip)}>Not this round</button>
+          </div>
+          <button className="link-btn bp-off" onClick={away(onOff)}>Don’t ask again</button>
         </div>
-        <button className="link-btn bp-off" onClick={onOff}>Don’t ask again</button>
       </div>
     </div>
   );
 }
+// How long the card takes to fold away: the row's 260ms fold in styles.css plus a beat, so it lands at nothing before it goes
+const BP_OUT_MS = 300;
 
 // --------------------------- Round length ---------------------------------
 

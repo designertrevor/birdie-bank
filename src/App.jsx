@@ -1,5 +1,6 @@
 import { Suspense, lazy, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { UIProvider } from './components/ui.jsx';
+import { Stage } from './components/Stage.jsx';
 import ErrorBoundary from './components/ErrorBoundary.jsx';
 import { NavCtx } from './lib/nav.js';
 import { getState, useStore } from './lib/store.js';
@@ -341,6 +342,12 @@ export default function App() {
 
   const nav = useMemo(() => ({ push, pop, replace, reset, layer, tab, setTab: t => { setTab(t); setStack([]); } }), [push, pop, replace, reset, layer, tab]);
 
+  // Which way the top screen changed, for the stage (Stage.jsx): deeper is a push, shallower a pop,
+  // the same depth (a tab, a replaced screen, a reset) a swap
+  const depth = useRef(stack.length);
+  const dir = stack.length > depth.current ? 'push' : stack.length < depth.current ? 'pop' : 'swap';
+  useEffect(() => { depth.current = stack.length; });
+
   if (!onboarded) {
     const joined = (id, done) => {
       try { sessionStorage.removeItem('bb-join'); } catch { /* ignore */ }
@@ -380,9 +387,11 @@ export default function App() {
         <div className="device">
           <ErrorBoundary onReset={() => reset('upnext')}>
             <Suspense fallback={<div className="screen active" aria-busy="true" />}>
-              <KeptScope.Provider value={top ? String(top.key) : `tab:${tab}`}>
-                {Top ? <Top key={top.key} {...top.params} /> : <TabScreen key={tab} />}
-              </KeptScope.Provider>
+              <Stage id={top ? String(top.key) : `tab:${tab}`} dir={dir}>
+                <KeptScope.Provider value={top ? String(top.key) : `tab:${tab}`}>
+                  {Top ? <Top key={top.key} {...top.params} /> : <TabScreen key={tab} />}
+                </KeptScope.Provider>
+              </Stage>
             </Suspense>
           </ErrorBoundary>
           <Suspense fallback={null}><NotifyAsk /></Suspense>

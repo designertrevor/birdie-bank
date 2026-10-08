@@ -25,6 +25,8 @@
   --display: "Bricolage Grotesque", Inter, system-ui, sans-serif;
   --spring: cubic-bezier(.3,1.5,.5,1);
   --ease-out: cubic-bezier(.2,.8,.3,1);
+  /* Exits: things leave quicker than they arrive, picking up speed on the way out */
+  --ease-in: cubic-bezier(.4,0,.7,.2);
   /* Motion tokens (transitions.dev scale), used by the end-of-round reveal */
   --duration-stagger: 40ms; --duration-micro: 80ms; --duration-quick: 150ms; --duration-fast: 250ms; --duration-slow: 400ms; --duration-very-slow: 500ms;
   --ease-smooth-out: cubic-bezier(.22,1,.36,1); --ease-bounce: cubic-bezier(.34,1.36,.64,1);
@@ -62,6 +64,21 @@ button { font-family: inherit; }
 .screen.active .scroll > *:nth-child(6) { animation-delay: .2s; }
 .screen.active .scroll > *:nth-child(n+7) { animation-delay: .24s; }
 @keyframes screenIn { from { opacity: 0; transform: translateY(10px); } }
+/* Screens leave the way they came (Stage.jsx). A pushed screen slides in from the right over the one
+   before, which waits underneath; Back slides it out to the right again while the one under comes in
+   from the left; a tab or a replaced screen fades out over the new one. The in- rules reach one nested
+   stage (the end-of-round beats inside their screen) only when it hasn't moved yet; the out- and under
+   rules reach any depth and come last, so a leaving screen leaves whatever its own stage says. */
+.stage { display: contents; }
+.stage.in-push > .screen.active, .stage.in-push > .stage.in-none > .screen.active { animation: screenPush var(--duration-fast) var(--ease-smooth-out) both; }
+.stage.in-pop > .screen.active, .stage.in-pop > .stage.in-none > .screen.active { animation: screenBack var(--duration-fast) var(--ease-smooth-out) both; }
+.stage.out-pop .screen.active { animation: screenPushOut var(--duration-fast) var(--ease-in) both; pointer-events: none; }
+.stage.out-swap .screen.active { animation: screenFade var(--duration-fast) ease-in both; pointer-events: none; }
+.stage.under .screen.active { animation: none; pointer-events: none; }
+@keyframes screenPush { from { opacity: 0; transform: translateX(var(--distance-medium)); } }
+@keyframes screenBack { from { opacity: 0; transform: translateX(calc(-1 * var(--distance-medium))); } }
+@keyframes screenPushOut { to { opacity: 0; transform: translateX(var(--distance-medium)); } }
+@keyframes screenFade { to { opacity: 0; } }
 @keyframes rise { from { opacity: 0; transform: translateY(14px); } }
 @keyframes pop { 0% { transform: scale(1); } 40% { transform: scale(1.3); } 100% { transform: scale(1); } }
 @keyframes float { 50% { transform: translateY(-8px) rotate(4deg); } }
@@ -441,6 +458,12 @@ a.set-row { text-decoration: none; }
 @keyframes fadeIn { from { opacity: 0; } }
 /* Starts fully below the screen: its own height plus the gap and the home bar under it */
 @keyframes sheetUp { from { transform: translateY(calc(100% + var(--sheet-gap) + env(safe-area-inset-bottom) + 8px)); } }
+/* ...and leaves the same way: a still copy of the closing sheet (ui.jsx useExitGhost) slides the card
+   back down below the screen while the scrim clears. After the open rules, so these win on the copy. */
+.sheet-overlay.closing, .numpad-overlay.closing { display: flex; pointer-events: none; animation: scrimOut var(--duration-fast) ease-in both; }
+.sheet-overlay.closing > *, .numpad-overlay.closing > * { animation: sheetDown var(--duration-fast) var(--ease-in) both; }
+@keyframes scrimOut { to { background: transparent; } }
+@keyframes sheetDown { to { transform: translateY(calc(100% + var(--sheet-gap) + env(safe-area-inset-bottom) + 8px)); } }
 .sheet, .numpad-sheet, .sc-sheet, .rules-sheet {
   --canvas: var(--sheet-bg); --card: var(--sheet-card); --surface: var(--sheet-surface); --surface-strong: var(--sheet-surface-strong);
   background: var(--sheet-bg); width: 100%; max-width: 560px; max-height: 100%; border-radius: var(--sheet-radius);
@@ -1066,9 +1089,7 @@ button:disabled { cursor: not-allowed; }
 .screen.active .scroll > .share-img { animation: imgIn var(--duration-slow) ease-in-out both; }
 @keyframes imgIn { from { opacity: 0; filter: blur(var(--blur-small)); transform: scale(.98); } }
 /* Finale beats: reveal, settle up and share slide in on their way forward, and from the left on the way back. No exit, so nothing waits */
-.screen.active.finale-stage { animation: stageIn var(--duration-fast) var(--ease-smooth-out) both; }
-.screen.active.finale-stage.back { --stage-dx: calc(-1 * var(--distance-medium)); }
-@keyframes stageIn { from { opacity: 0; transform: translateX(var(--stage-dx, var(--distance-medium))); } }
+/* The end-of-round beats slide on and back as a stage of their own (Stage.jsx, .stage rules above) */
 @media (prefers-reduced-motion: reduce) {
   .rv-step, .reveal-title .rt.out { transform: none; filter: none; }
   .reveal-amt.wait { opacity: 1; }
@@ -2051,11 +2072,19 @@ button.trip-card:active { transform: scale(.97); }
 /* ---------- Any side bets on this hole? (o7 bet-prompt): the card on the Play screen ---------- */
 /* It fades in after a beat, so a moment banner that arrives with the new hole wins and the card never flashes */
 .bet-prompt {
-  display: flex; gap: 12px; align-items: flex-start; margin: 4px 16px 10px; padding: 14px 14px 6px;
+  display: flex; gap: 12px; align-items: flex-start; padding: 14px 14px 6px; min-height: 0; overflow: hidden;
   background: var(--card); border-radius: 18px; box-shadow: inset 0 0 0 1.5px var(--surface-strong);
   animation: bp-in .32s var(--spring) .45s both;
 }
 @keyframes bp-in { from { opacity: 0; transform: translateY(-6px); } to { opacity: 1; transform: none; } }
+/* Its row: put away, the row folds to nothing as the card fades back up the way it came, so the score
+   rows below slide up instead of jumping (Play.jsx BetPromptCard waits BP_OUT_MS, a beat past this 260ms) */
+.bp-wrap { display: grid; grid-template-rows: 1fr; margin: 4px 16px 10px; transition: grid-template-rows 260ms var(--ease-in), margin 260ms var(--ease-in); }
+.bp-wrap.out { grid-template-rows: 0fr; margin-top: 0; margin-bottom: 0; pointer-events: none; }
+.bp-wrap > .bet-prompt { transition: padding 260ms var(--ease-in); }
+/* The padding folds too, or the row would stop 20px short of nothing */
+.bp-wrap.out > .bet-prompt { animation: bp-out 200ms ease-in both; padding-top: 0; padding-bottom: 0; }
+@keyframes bp-out { to { opacity: 0; transform: translateY(-6px); } }
 .bp-ic { width: 36px; height: 36px; flex: none; display: grid; place-items: center; border-radius: 50%; background: var(--surface); color: var(--pink-text); font-size: 19px; }
 .bp-main { min-width: 0; flex: 1; }
 .bp-title { font-size: 15px; font-weight: 700; color: var(--ink); line-height: 1.3; }

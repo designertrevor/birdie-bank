@@ -163,6 +163,44 @@ function useDialog(open, onClose) {
   return ref;
 }
 
+/** How long a closing sheet's copy stays: the exit animations in styles.css run --duration-fast (250ms) */
+const EXIT_MS = 320;
+/**
+ * A sheet leaves the way it came. When a sheet, number pad or confirm unmounts, a still copy of it
+ * is left in its place with the `closing` class, which runs the open animation backwards (the card
+ * slides down, the scrim fades) and goes when that ends. The copy is a plain DOM clone, nothing in
+ * it tappable or read out, so every sheet gets the exit without its caller changing, whether `open`
+ * was turned off or the whole component was dropped. Reduced motion skips it (nothing would move).
+ */
+function useExitGhost(ref) {
+  useLayoutEffect(() => () => {
+    const el = ref.current;
+    const parent = el?.parentNode;
+    if (!parent || typeof matchMedia !== 'function' || matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+    // Scroll positions and typed values aren't cloned, so read them now, while it's still on screen
+    const live = [el, ...el.querySelectorAll('*')].map(n => ({ st: n.scrollTop, sl: n.scrollLeft, v: 'value' in n ? n.value : undefined }));
+    // Once React has taken it out of the page (StrictMode's rehearsal leaves it in, so nothing to do then)
+    queueMicrotask(() => {
+      if (el.isConnected || !parent.isConnected) return;
+      const ghost = el.cloneNode(true);
+      ghost.classList.add('closing');
+      ghost.setAttribute('aria-hidden', 'true');
+      ghost.removeAttribute('role');
+      ghost.inert = true;
+      ghost.querySelectorAll('[id]').forEach(n => n.removeAttribute('id'));
+      parent.appendChild(ghost);
+      [ghost, ...ghost.querySelectorAll('*')].forEach((n, i) => {
+        const s = live[i];
+        if (!s) return;
+        if (s.st) n.scrollTop = s.st;
+        if (s.sl) n.scrollLeft = s.sl;
+        if (s.v !== undefined && n.value !== s.v) n.value = s.v;
+      });
+      setTimeout(() => ghost.remove(), EXIT_MS);
+    });
+  }, [ref]);
+}
+
 /**
  * Renders a sheet at its screen, so it covers the whole screen from the bottom up. Left inside a
  * step's .scroll, iOS Safari clips it to the scroll's edges: cut off above the buttons below, sliding
@@ -182,6 +220,7 @@ export function Sheet(props) {
 
 function SheetInner({ onClose, title, children, className = 'sheet' }) {
   const ref = useDialog(true, onClose);
+  useExitGhost(ref);
   return (
     <div ref={ref} tabIndex={-1} className="sheet-overlay open" onClick={e => e.target === e.currentTarget && onClose?.()} role="dialog" aria-modal="true" aria-label={title}>
       <div className={className}>
@@ -229,6 +268,7 @@ function NumpadInner({ title, prefix = '', suffix = '', initial = '', min, max, 
   const shown = v === '' ? '–' : (neg ? '+' : '') + v;
   const sfx = n => (typeof suffix === 'function' ? suffix(n) : suffix);
   const ref = useDialog(true, onClose);
+  useExitGhost(ref);
   return (
     <div ref={ref} tabIndex={-1} className="numpad-overlay open" onClick={e => e.target === e.currentTarget && onClose()} role="dialog" aria-modal="true" aria-label={title}>
       <div className="numpad-sheet">
@@ -332,6 +372,7 @@ export function UIProvider({ children }) {
 
 function Confirm({ confirm, close }) {
   const ref = useDialog(true, () => close(null));
+  useExitGhost(ref);
   return (
     <div ref={ref} tabIndex={-1} className="sheet-overlay open" onClick={e => e.target === e.currentTarget && close(null)} role="alertdialog" aria-modal="true" aria-labelledby="bb-confirm-title" aria-describedby={confirm.text ? 'bb-confirm-text' : undefined}>
       <div className="sheet">
