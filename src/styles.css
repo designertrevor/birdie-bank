@@ -3622,8 +3622,6 @@ a.header-btn.rm-open { text-decoration: none; }
 .tab-faces { display: inline-flex; }
 .tab-faces .avatar { margin: 0 -8px 0 0; box-shadow: 0 0 0 2px var(--canvas); }
 .tab-faces .avatar:last-child { margin-right: 0; }
-.tab-spark { margin-top: 10px; }
-.tab-spark .season-chart { width: 100%; height: 44px; display: block; }
 .pay-btn.icon-only { flex: 0 0 52px; padding: 0; }
 .tab-card > .tab-part { display: block; margin: 10px 2px 0; }
 .square-line { display: flex; align-items: center; gap: 12px; margin: 4px 16px 12px; padding: 10px 14px; border-radius: 18px; background: var(--win-bg); color: var(--win); font-size: 14px; font-weight: 700; }
@@ -3869,3 +3867,103 @@ a.header-btn.rm-open { text-decoration: none; }
 .ob-review-v { font-size: 16px; font-weight: 600; color: var(--ink); margin-top: 1px; line-height: 1.3; }
 .ob-review-tick { font-size: 22px; color: var(--check); flex-shrink: 0; animation: pop .4s calc(.3s + var(--i) * .08s) var(--spring) both; }
 .ob-ready { margin: 4px 0 14px; padding: 0 4px; }
+
+/* ---------- O11 oura: a pass on the data screens (the Tab, Your stats, Hall of fame, Season) ----------
+   One idea per card, lots of air: a small caps eyebrow, one big number, a quiet line under it. The
+   charts share chart-axis.js: a thin line, a dot a round and a brighter last one, a dotted baseline,
+   three labels down the right and dates along the bottom. Each chart gets one plain sentence under
+   it (data-insights.js) behind a small arrow. Tokens throughout, so it all reads in light and dark. */
+
+/* The charts: axis labels in the muted small size, dots a touch quieter than the last one */
+.chart-axis text { fill: var(--mute); font-size: 11px; font-weight: 600; font-family: Inter, system-ui, sans-serif; font-variant-numeric: tabular-nums; }
+.chart-dot.pt { stroke-width: 1.5; opacity: .9; }
+.chart-dot.last { stroke-width: 2.5; }
+.chart-zero { stroke: var(--mute-soft); opacity: .6; stroke-dasharray: 2 5; stroke-linecap: round; }
+.chart-card .season-chart { margin-top: 6px; }
+.cc-head { align-items: flex-start; }
+.cc-cap { margin-top: 2px; font-size: 13px; color: var(--mute); font-weight: 500; }
+.cc-none { margin: 14px 0 6px; font-size: 14px; color: var(--mute); }
+
+/* The insight row: an arrow, a few words in caps, then the sentence. Up is the win green, down the
+   loss red, steady and early days the muted grey */
+.insight { margin-top: 12px; }
+.insight-label { display: flex; align-items: center; gap: 6px; font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: .08em; color: var(--mute); }
+.insight-label i { font-size: 16px; }
+.insight.k-up .insight-label { color: var(--win); }
+.insight.k-down .insight-label { color: var(--loss); }
+.insight-text { margin: 4px 0 0; font-size: 15px; line-height: 1.45; color: var(--body); text-wrap: pretty; }
+.insight.pad-x { padding: 0 20px; margin: 0 0 14px; }
+.chart-card .insight { margin-top: 14px; padding-top: 12px; border-top: 1px solid var(--line-soft); }
+
+/* The range pill in a card's corner: a small segmented control, the chosen side in ink */
+.range-pill { display: inline-flex; flex-shrink: 0; gap: 2px; padding: 3px; border-radius: 999px; background: var(--surface); }
+.rp-btn { border: none; background: none; min-height: 30px; padding: 0 11px; border-radius: 999px; font-family: inherit; font-size: 12px; font-weight: 700; color: var(--mute); cursor: pointer; white-space: nowrap; transition: transform .2s var(--spring), background .15s, color .15s; }
+.rp-btn.active { background: var(--ink); color: var(--on-ink); }
+.rp-btn:active { transform: scale(.95); }
+
+/* Score tiles: a 2-up grid of small cards, each a label, a word on its state in colour, one big number */
+.stat-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; margin: 4px 16px 10px; }
+.stat-tile { display: flex; flex-direction: column; align-items: flex-start; gap: 2px; min-width: 0; padding: 14px 14px 12px; border-radius: 20px; background: var(--card); box-shadow: var(--card-shadow); text-align: left; border: none; font-family: inherit; color: var(--ink); }
+.stat-tile.tap { cursor: pointer; transition: transform .2s var(--spring); }
+.stat-tile.tap:active { transform: scale(.97); }
+.st-top { display: flex; align-items: center; justify-content: space-between; gap: 6px; width: 100%; }
+.st-top .eyebrow { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.st-chev { color: var(--mute-soft); font-size: 14px; flex-shrink: 0; }
+.st-state { font-size: 14px; font-weight: 700; color: var(--mute); }
+.st-state.pos { color: var(--win) !important; }
+.st-state.neg { color: var(--loss) !important; }
+.st-big { margin-top: 8px; font-size: 30px; font-weight: 800; letter-spacing: -.03em; line-height: 1.05; font-variant-numeric: tabular-nums; max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.st-big.long { font-size: 20px; line-height: 1.2; white-space: normal; overflow-wrap: anywhere; }
+.st-sub { margin-top: 4px; font-size: 13px; color: var(--mute); font-weight: 500; line-height: 1.3; overflow-wrap: anywhere; }
+
+/* A row that folds open one more line: the body is a grid row that grows from nothing and back,
+   the same fold both ways (in on ease-out, out on ease-in) */
+.fold-list { list-style: none; margin: 0 16px 10px; padding: 4px 14px; background: var(--card); border-radius: 20px; box-shadow: var(--card-shadow); }
+.fold-row { border-bottom: 1px solid var(--line); }
+.fold-row:last-child { border-bottom: 0; }
+.fold-head { display: flex; align-items: center; gap: 12px; width: 100%; min-height: 60px; padding: 10px 0; background: none; border: none; text-align: left; cursor: pointer; font-family: inherit; color: var(--ink); }
+.fold-ic { width: 36px; height: 36px; flex-shrink: 0; display: grid; place-items: center; border-radius: 12px; background: var(--surface); color: var(--icon); font-size: 18px; }
+.fold-head .row-main { flex: 1; min-width: 0; }
+.fold-title { display: block; font-weight: 700; font-size: 15px; color: var(--ink); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.fold-title .sl-place { font-weight: 500; color: var(--mute); }
+.fold-sub { display: block; margin-top: 2px; font-size: 13px; font-weight: 500; color: var(--mute); font-variant-numeric: tabular-nums; }
+.fold-val { flex-shrink: 0; font-size: 17px; font-weight: 800; color: var(--ink); white-space: nowrap; font-variant-numeric: tabular-nums; }
+.fold-chev { flex-shrink: 0; width: 24px; display: grid; place-items: center; color: var(--mute-soft); font-size: 14px; transition: transform var(--duration-fast) var(--ease-smooth-out); }
+.fold-row.open .fold-chev { transform: rotate(180deg); }
+.fold-body { display: grid; grid-template-rows: 0fr; transition: grid-template-rows var(--duration-fast) var(--ease-in); }
+.fold-row.open .fold-body { grid-template-rows: 1fr; transition-timing-function: var(--ease-smooth-out); }
+.fold-inner { min-height: 0; overflow: hidden; }
+.fold-text { margin: 0; padding: 0 0 12px 48px; font-size: 14px; line-height: 1.45; color: var(--body); }
+
+/* THE TAB's hero: one big number in the middle, who it's with under it, then the season's headline
+   and its sentence; the chart sits in its own card below with the Season | All time pill */
+.tab-hero { text-align: center; padding: 10px 0 4px; }
+.tab-hero .tab-big { font-size: 48px; letter-spacing: -.04em; line-height: 1; }
+.tab-hero .tab-who { justify-content: center; margin-top: 10px; }
+.tab-headline { margin: 18px 0 0; font-size: 24px; font-weight: 800; letter-spacing: -.02em; line-height: 1.15; color: var(--ink); }
+.tab-hero .insight { margin-top: 8px; }
+.tab-hero .insight-label { justify-content: center; }
+.tab-hero .insight-text { margin-left: auto; margin-right: auto; max-width: 32ch; }
+.tab-spark { margin-top: 2px; }
+
+/* YOUR STATS: the four headline tiles on the score grid, the trend card's pill, the game and course
+   lists as fold rows */
+.stats-tiles.stat-grid .stat-tile { grid-column: auto; }
+.trend-card .cc-head { align-items: flex-start; }
+.trend-card .trend-official { padding-bottom: 0; }
+.trend-card .trend-pill { display: flex; justify-content: flex-end; margin: 4px 0 2px; }
+.trend-card .insight { margin-top: 10px; }
+
+/* HALL OF FAME: the records as score tiles, with who holds it in the accent and the number big */
+.badge-tile { gap: 2px; box-shadow: var(--card-shadow); }
+.bt-top { display: flex; align-items: center; justify-content: space-between; gap: 8px; width: 100%; }
+.bt-ic { width: 28px; height: 28px; margin: 0; font-size: 15px; }
+.bt-k { font-size: 12px; font-weight: 600; letter-spacing: .08em; }
+.bt-who { font-size: 14px; font-weight: 700; color: var(--pink-text); }
+.badge-tile.empty .bt-who { color: var(--mute); }
+.bt-v { margin-top: 8px; font-size: 30px; letter-spacing: -.03em; line-height: 1.05; font-variant-numeric: tabular-nums; }
+.bt-sub { display: block; margin-top: 4px; font-size: 13px; font-weight: 500; color: var(--mute); line-height: 1.3; }
+.hof-hero .insight { margin-top: 10px; text-align: left; }
+
+/* SEASON: the same chart card and score tiles, so the set reads as one system */
+.season .chart-card { margin-top: 2px; }

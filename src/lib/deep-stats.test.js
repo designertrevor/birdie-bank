@@ -9,7 +9,7 @@ import { tabResults } from './play-for.js';
 import { profileStats } from './profile-model.js';
 import { isLatest, rangeBounds, rangeLabel, rangeOfKind, roundsInRange, shiftRange, statsLinkLabel } from './history.js';
 import { oldRounds } from './overnight5-money.fixtures.js';
-import { bestOf, deepStats, dollarsIn, gameParts, pressCount, pressesIn, seatIn, skinsIn, winRate } from './deep-stats.js';
+import { bestOf, deepStats, dollarsIn, gameParts, pressCount, pressesIn, seatIn, skinsIn, winRate, lineDetail, lineRecord } from './deep-stats.js';
 
 const flat9 = { id: 'f9', name: 'Flat Nine', city: 'Town', tees: [], holes: Array.from({ length: 9 }, (_, i) => ({ par: 4, hdcp: i + 1 })) };
 const oak = { ...flat9, id: 'oak', name: 'Oak Hollow', city: 'Bend' };
@@ -344,4 +344,16 @@ test('Junk played as a side game is its own line called Junk, never the main gam
   assert.equal(g['side:dots'].dollars.net, roundResults(junk).detail.byGame.dots.balances.me);
   assert.equal(g.dots.name, 'Dots');
   assert.equal(g.dots.rounds, 1);
+});
+
+test('lineRecord and lineDetail read a line’s record, money and points', async () => {
+  const { money } = await import('./golf.js');
+  const { points } = await import('./play-for.js');
+  const fmt = { money, points };
+  const line = { name: 'Nassau', rounds: 4, record: { won: 3, lost: 1, even: 0 }, dollars: { net: 40, rounds: 3 }, points: { net: 12, rounds: 1 } };
+  assert.equal(lineRecord(line), '3–1');
+  assert.equal(lineRecord({ ...line, record: { won: 2, lost: 1, even: 1 } }), '2–1–1');
+  assert.equal(lineDetail(line, fmt), 'Won 3, lost 1. +$40 over 3 rounds for money. +12 pts over 1 round for points.');
+  assert.equal(lineDetail({ ...line, record: { won: 2, lost: 1, even: 1 }, points: { net: 0, rounds: 0 } }, fmt), 'Won 2, lost 1, 1 even. +$40 over 3 rounds for money.');
+  assert.equal(lineDetail({ ...line, dollars: { net: 0, rounds: 0 }, points: { net: 0, rounds: 0 } }, fmt), 'Won 3, lost 1. Nothing on the line in these.');
 });
