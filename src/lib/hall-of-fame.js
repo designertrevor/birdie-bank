@@ -211,6 +211,26 @@ export function crewHall(state, crewId, { now = Date.now() } = {}) {
   };
 }
 
+/**
+ * Who's climbing: what each person won or lost over the season's last `n` rounds on the Tab, the
+ * same money the list adds up, biggest gain first. { rounds, rows: [{ id, cents }] }, with only the
+ * people whose money moved. For the hall of fame's one-line insight (data-insights.js).
+ */
+export function recentMovers(state, crewId, { now = Date.now(), n = 3 } = {}) {
+  const who = canonicalOf(state);
+  const since = lastBook(state, crewKey(crewId))?.closedAt || 0;
+  const recent = crewRounds(state, crewId, { now }).filter(r => finishedAt(r) > since && onTab(r)).slice(-n);
+  const by = new Map();
+  for (const r of recent) {
+    for (const [id, v] of Object.entries(moneyOf(state, r))) {
+      if (isJustPlaying(r, id) || !cents(v)) continue;
+      by.set(who(id), (by.get(who(id)) || 0) + cents(v));
+    }
+  }
+  const rows = [...by].filter(([, c]) => c).map(([id, c]) => ({ id, cents: c })).sort((a, b) => b.cents - a.cents || a.id.localeCompare(b.id));
+  return { rounds: recent.length, rows };
+}
+
 /** Your crews with a hall of fame worth opening: a finished round of the crew's, or a closed season. Smallest crew first. */
 export function hallCrews(state, { now = Date.now() } = {}) {
   return crewsOf(state).filter(c => booksOf(state, crewKey(c.id)).length || crewRounds(state, c.id, { now }).length);

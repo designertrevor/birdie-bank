@@ -13,10 +13,12 @@ import { points } from '../lib/play-for.js';
 import { rangeLabel, roundsInRange } from '../lib/history.js';
 import { useMyProfile } from '../lib/profiles.js';
 import { statsShareLine } from '../lib/profile-view.js';
-import { deepStats, lineAmount, lineSub, pressCount, pressText, skinsText, winRate } from '../lib/deep-stats.js';
-import { TREND_LABEL, handicapTrend, trendEmptyText, trendVsOfficial } from '../lib/hc-trend.js';
+import { deepStats, lineAmount, lineDetail, lineRecord, pressCount, pressText, skinsText, winRate } from '../lib/deep-stats.js';
+import { TREND_LABEL, handicapTrend, trendEmptyText } from '../lib/hc-trend.js';
+import { statsInsight, trendInsight } from '../lib/data-insights.js';
 import { formatIndex } from '../lib/format.js';
 import { TrendChart } from '../components/TrendChart.jsx';
+import { FoldRow, Insight, RangePill, StatTile } from '../components/DataCards.jsx';
 
 const RANGE_KEY = 'bb-stats-range';
 const KINDS = ['all', 'season', 'month', 'custom'];
@@ -80,13 +82,17 @@ export default function Stats({ range: given = null }) {
           </>
         ) : (
           <>
-            <div className="pf-tiles stats-tiles">
-              <Tile label="Rounds" value={String(st.rounds)} sub={recordLine(st.record)} />
-              <Tile label="Net" value={st.dollars.rounds ? money(st.dollars.net, { sign: true }) : '–'} tone={tone(st.dollars.net)}
+            {/* The headline numbers as score tiles: a label, a word on where it stands, the number big */}
+            <div className="stat-grid stats-tiles">
+              <StatTile label="Rounds" value={String(st.rounds)} state={recordWord(st.record)} sub={recordLine(st.record)} />
+              <StatTile label="Net" value={st.dollars.rounds ? money(st.dollars.net, { sign: true }) : '–'} tone={tone(st.dollars.net)}
+                state={st.dollars.rounds ? (st.dollars.net > 0 ? 'Up' : st.dollars.net < 0 ? 'Down' : 'Even') : null}
                 sub={st.dollars.rounds ? `${st.dollars.rounds} round${st.dollars.rounds === 1 ? '' : 's'} for money` : 'No money rounds'} />
-              <Tile label="Press win rate" value={rate == null ? '–' : `${rate}%`} sub={pressCount(made) ? `${made.won} of ${pressCount(made)} presses` : 'No presses yet'} />
-              <Tile label="Skins won" value={st.skins.rounds ? skinsText(st.skins.won) : '–'} sub={st.skins.rounds ? `in ${st.skins.rounds} round${st.skins.rounds === 1 ? '' : 's'} with skins` : 'No skins games'} />
+              <StatTile label="Press win rate" value={rate == null ? '–' : `${rate}%`} state={rate == null ? null : rate > 50 ? 'Ahead' : rate < 50 ? 'Behind' : 'Even'} tone={rate == null ? '' : rate > 50 ? 'pos' : rate < 50 ? 'neg' : ''}
+                sub={pressCount(made) ? `${made.won} of ${pressCount(made)} presses` : 'No presses yet'} />
+              <StatTile label="Skins won" value={st.skins.rounds ? skinsText(st.skins.won) : '–'} sub={st.skins.rounds ? `in ${st.skins.rounds} round${st.skins.rounds === 1 ? '' : 's'} with skins` : 'No skins games'} />
             </div>
+            <Insight insight={statsInsight(st)} className="pad-x" />
 
             <Trend trend={trend} />
 
@@ -149,10 +155,16 @@ export default function Stats({ range: given = null }) {
   );
 }
 
+/** How many of the trend's rounds the chart shows on its shorter setting. */
+const TREND_RECENT = 10;
+
 /** Your handicap guide from your own rounds, next to the official index you entered. */
 function Trend({ trend }) {
   const { guide, official, needed, used, byPar, points } = trend;
-  const vs = trendVsOfficial(guide, official);
+  // Last 10 or every round: a second grain inside the card, since the trend ignores the screen's range
+  const [recent, setRecent] = useState(true);
+  const drawn = points.filter(p => p.guide != null);
+  const shown = recent && drawn.length > TREND_RECENT ? points.slice(-TREND_RECENT) : points;
   return (
     <>
       <div className="sec-label">Handicap trend</div>
@@ -177,8 +189,14 @@ function Trend({ trend }) {
               <div className="trend-official-v d">{formatIndex(official)}</div>
             </div>
           </div>
-          {vs && <div className="cc-meta trend-vs">{vs}</div>}
-          <TrendChart points={points} official={official} />
+          {drawn.length > TREND_RECENT && (
+            <div className="trend-pill">
+              <RangePill label="Trend range" value={recent ? 'recent' : 'all'} onChange={v => setRecent(v === 'recent')}
+                options={[{ value: 'recent', label: `Last ${TREND_RECENT}` }, { value: 'all', label: 'All rounds' }]} />
+            </div>
+          )}
+          <TrendChart points={shown} official={official} />
+          <Insight insight={trendInsight(trend)} />
         </div>
       )}
       <p className="field-help pad">
@@ -198,6 +216,8 @@ function emptyText(range, label) {
 
 const tone = v => (v > 0 ? 'pos' : v < 0 ? 'neg' : '');
 const recordLine = r => `${r.won} won, ${r.lost} lost${r.even ? `, ${r.even} even` : ''}`;
+/** The word on the Rounds tile: where the record stands, or nothing before a result. */
+const recordWord = r => (r.won + r.lost + r.even === 0 ? null : r.won > r.lost ? 'Winning' : r.won < r.lost ? 'Losing' : 'Even');
 
 /** What the dollars are, honestly. */
 function moneyNote(st) {
@@ -206,34 +226,25 @@ function moneyNote(st) {
   return `Dollars come from rounds played for money${lunch}.${pts} Won and lost go by each game’s own result.`;
 }
 
-function Tile({ label, value, sub, tone: t = '' }) {
-  return (
-    <div className="pf-tile">
-      <div className="eyebrow">{label}</div>
-      <div className={`pf-v d ${t}`}>{value}</div>
-      {sub && <div className="st-s">{sub}</div>}
-    </div>
-  );
-}
-
 const Kv = ({ k, v }) => (
   <div className="kv-row"><span className="kv-k">{k}</span><span className="kv-v">{v}</span></div>
 );
 
-/** One row a game or course: its name and record on the left, its money (or points) on the right. */
+/**
+ * One row a game or course: its name and record on the left, its money (or points) on the right,
+ * and a tap folds open the record in words with the money and points each over their own rounds.
+ */
 function Lines({ lines, label, place = false }) {
   return (
-    <ul className="block stats-lines" aria-label={label}>
+    <ul className="fold-list" aria-label={label}>
       {lines.map(l => {
         const amt = lineAmount(l, FMT);
         return (
-          <li key={l.key} className="stats-line">
-            <span className="row-main">
-              <span className="sl-name">{l.name}{place && l.place ? <span className="sl-place"> · {l.place}</span> : null}</span>
-              <span className="sl-sub">{lineSub(l, FMT)}</span>
-            </span>
-            <span className={`sl-amt d ${amt.tone}`}>{amt.text}</span>
-          </li>
+          <FoldRow key={l.key} icon={place ? 'map-pin' : 'golf'} tone={amt.tone} value={amt.text}
+            title={<>{l.name}{place && l.place ? <span className="sl-place"> · {l.place}</span> : null}</>}
+            sub={`${l.rounds} round${l.rounds === 1 ? '' : 's'} · ${lineRecord(l)}`}>
+            <p className="fold-text">{lineDetail(l, FMT)}</p>
+          </FoldRow>
         );
       })}
     </ul>

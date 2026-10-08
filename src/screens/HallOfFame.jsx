@@ -15,7 +15,9 @@ import { nameOf } from '../lib/ledger.js';
 import { canonicalOf } from '../lib/pair-debts.js';
 import { points } from '../lib/play-for.js';
 import { crewsOf } from '../lib/crew-tabs.js';
-import { crewHall, crewSeason } from '../lib/hall-of-fame.js';
+import { crewHall, crewSeason, recentMovers } from '../lib/hall-of-fame.js';
+import { hallInsight } from '../lib/data-insights.js';
+import { Insight } from '../components/DataCards.jsx';
 
 const DASH = '–';
 const plural = (n, word) => `${n} ${word}${n === 1 ? '' : 's'}`;
@@ -33,6 +35,8 @@ export default function HallOfFame({ crew: crewId }) {
   const crew = crewsOf(state).find(c => c.id === crewId);
   const season = useMemo(() => (crew ? crewSeason(state, crew.id, { now }) : null), [state, crew, now]);
   const hall = useMemo(() => (crew ? crewHall(state, crew.id, { now }) : null), [state, crew, now]);
+  // Who's climbed the most over the last few rounds, for the line under the hero
+  const movers = useMemo(() => (crew ? recentMovers(state, crew.id, { now }) : null), [state, crew, now]);
   // The money list's faces, twins sorted out, for the podium and the champion's crown
   const listed = useMemo(() => (season?.money || []).map(r => ({ id: r.id, name: nameOf(state, r.id) })), [season, state]);
   const faces = useGroupAvatars(listed);
@@ -76,6 +80,7 @@ export default function HallOfFame({ crew: crewId }) {
           <div className="eyebrow">{crew.name}</div>
           <div className="d settle-count">{season.champion ? `${first(season.champion.id)} ${season.champion.id === me ? 'lead' : 'leads'} the season` : 'The season so far'}</div>
           <p>{season.rounds ? `${plural(season.rounds, 'round')} for money ${sinceLine}` : `No rounds for money ${sinceLine}`}</p>
+          <Insight insight={hallInsight(season, movers, { me, name: id => String(nameOf(state, id)).split(' ')[0] })} />
         </div>
 
         {season.money.length > 0 && (
@@ -169,13 +174,13 @@ export default function HallOfFame({ crew: crewId }) {
   );
 }
 
-/** One record as a badge tile. Nobody holding it yet shows the dash. */
+/** One record as a score tile: what it is, who holds it in the accent, the number big. Nobody holding it yet shows the dash. */
 const Badge = ({ icon, k, who, v, sub }) => (
   <div className={`badge-tile ${who ? '' : 'empty'}`}>
-    <span className="bt-ic" aria-hidden="true"><Icon name={icon} fill /></span>
-    <span className="bt-k">{k}</span>
+    <span className="bt-top"><span className="bt-k">{k}</span><span className="bt-ic" aria-hidden="true"><Icon name={icon} fill /></span></span>
+    <span className="bt-who">{who || 'Nobody yet'}</span>
     <span className="bt-v d">{v || DASH}</span>
-    <span className="bt-who">{who || 'Nobody yet'}{sub && <span className="sl-sub">{sub}</span>}</span>
+    {sub && <span className="bt-sub">{sub}</span>}
   </div>
 );
 

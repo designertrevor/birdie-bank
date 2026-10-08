@@ -9,7 +9,7 @@ import { applyRows } from './shared-tab.js';
 import { mergePeople } from './people-links.js';
 import { NOW, OCT, base, skins } from './crew-tabs.fixtures.js';
 import { o9Rounds } from './o9-money.fixtures.js';
-import { crewHall, crewRounds, crewSeason, hallCrews } from './hall-of-fame.js';
+import { crewHall, crewRounds, crewSeason, hallCrews, recentMovers } from './hall-of-fame.js';
 
 const SAT = crewKey('sat');
 /** The money list as { id: cents }, zeros left out. */
@@ -169,4 +169,21 @@ test('no rounds, no records; only crews with something to show get a hall of fam
   assert.equal(crewSeason(s, 'sat', { now: NOW }).champion, null);
   assert.deepEqual(hallCrews(s, { now: NOW }), []);
   assert.deepEqual(hallCrews(base([skins('r1', ['t', 'a'], [], { at: OCT(1) })]), { now: NOW }).map(c => c.id), ['sat']);
+});
+
+test('recentMovers is the last few rounds’ money, biggest gain first, and adds up to the list over all of them', () => {
+  const r1 = skins('r1', ['t', 'a', 'b'], [[1, 't'], [2, 't'], [3, 'b']], { at: OCT(3) });
+  const r2 = skins('r2', ['t', 'a', 'b'], [[1, 'a'], [2, 'a'], [3, 'a']], { at: OCT(5) });
+  const r3 = skins('r3', ['t', 'a', 'b'], [[1, 'b']], { at: OCT(6) });
+  const s = base([r1, r2, r3]);
+  const last = recentMovers(s, 'sat', { now: NOW, n: 2 });
+  assert.equal(last.rounds, 2);
+  assert.ok(last.rows.length >= 2);
+  assert.ok(last.rows.every((r, i) => !i || last.rows[i - 1].cents >= r.cents), 'biggest gain first');
+  assert.equal(last.rows.reduce((a, r) => a + r.cents, 0), 0, 'what one wins another loses');
+  // Over every round of the season it is the money list itself
+  const all = recentMovers(s, 'sat', { now: NOW, n: 10 });
+  assert.equal(all.rounds, 3);
+  assert.deepEqual(Object.fromEntries(all.rows.map(r => [r.id, r.cents])), listCents(crewSeason(s, 'sat', { now: NOW })));
+  assert.deepEqual(recentMovers(base([]), 'sat', { now: NOW }), { rounds: 0, rows: [] });
 });

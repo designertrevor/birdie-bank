@@ -312,6 +312,27 @@ export function lineSub(line, fmt) {
   return parts.join(' · ');
 }
 
+/** A line's record on its own: "3–1", with the even ones when there are some ("3–1–1"). */
+export function lineRecord(line) {
+  const r = line.record;
+  return (r.even ? [r.won, r.lost, r.even] : [r.won, r.lost]).join(EMPTY);
+}
+
+/**
+ * The line opened up (the fold under a game or course on Your stats): the record in words, then the
+ * money and the points each over their own rounds. "Won 3, lost 1. +$40 over 4 rounds for money."
+ */
+export function lineDetail(line, fmt) {
+  const r = line.record;
+  const rec = [`Won ${r.won}`, `lost ${r.lost}`];
+  if (r.even) rec.push(`${r.even} even`);
+  const parts = [`${rec.join(', ')}.`];
+  if (line.dollars.rounds) parts.push(`${fmt.money(line.dollars.net, { sign: true })} over ${plural(line.dollars.rounds, 'round')} for money.`);
+  if (line.points.rounds) parts.push(`${fmt.points(line.points.net, { sign: true })} over ${plural(line.points.rounds, 'round')} for points.`);
+  if (!line.dollars.rounds && !line.points.rounds) parts.push('Nothing on the line in these.');
+  return parts.join(' ');
+}
+
 /** "2 won, 1 lost, 1 halved" (only the parts there are), or "None yet". */
 export function pressText(rec) {
   if (!pressCount(rec)) return 'None yet';
