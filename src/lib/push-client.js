@@ -159,12 +159,17 @@ export async function forgetThisPhone() {
 // --------------------------- which ones -------------------------------------
 
 /** Save a muted list on the account. False when it couldn't be (no table yet, offline, signed out). */
+// Resolves to the server's own time for the row, so this phone's copy carries the same clock the
+// merge compares against (mergePrefs): a phone whose clock runs fast never wins over a newer save
+// from another phone. Null when the account couldn't take it.
 async function saveMutedToAccount(db, user, muted) {
-  if (!db || !user) return false;
+  if (!db || !user) return null;
   try {
-    const { error } = await db.from('push_prefs').upsert({ user_id: user.id, muted });
-    return !error;
-  } catch { return false; }
+    const { data, error } = await db.from('push_prefs').upsert({ user_id: user.id, muted }).select('updated_at').single();
+    if (error) return null;
+    const at = Date.parse(data?.updated_at);
+    return Number.isNaN(at) ? null : at;
+  } catch { return null; }
 }
 
 /**
@@ -177,8 +182,11 @@ export async function setMuted(muted) {
   set({ muted: clean });
   const { db, user } = await session().catch(() => ({ db: null, user: null }));
   savePicks({ muted: clean, at: Date.now(), uid: user?.id || null });
-  await saveMutedToAccount(db, user, clean);
+  const at = await saveMutedToAccount(db, user, clean);
+  // Saved: this phone's copy takes the server's time stamp, the one every other phone compares against
+  if (at != null && snapMutedIs(clean)) savePicks({ muted: clean, at, uid: user?.id || null });
 }
+const snapMutedIs = m => snap.muted.length === m.length && snap.muted.every((k, i) => k === m[i]);
 
 /**
  * After signing in: your account's muted list and this phone's, merged by whichever was saved
