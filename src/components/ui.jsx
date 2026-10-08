@@ -75,7 +75,7 @@ export function Empty({ title, text, action, illo = true, ids = null }) {
 }
 
 /**
- * A callout: a spot illustration (see Spot.jsx), a bold line and a sentence or two, on a card. For the
+ * A callout: a spot illustration (see SpotArt.jsx for the scenes), a bold line and a sentence or two, on a card. For the
  * notes worth stopping for (an invite, an idea, a first step). Quieter notes use .hint-card.
  * `action` goes under the words; `onDismiss` adds a close button.
  */
