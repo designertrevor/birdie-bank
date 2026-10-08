@@ -377,15 +377,24 @@ function Confirm({ confirm, close }) {
     <div ref={ref} tabIndex={-1} className="sheet-overlay open" onClick={e => e.target === e.currentTarget && close(null)} role="alertdialog" aria-modal="true" aria-labelledby="bb-confirm-title" aria-describedby={confirm.text ? 'bb-confirm-text' : undefined}>
       <div className="sheet">
         <div className="sheet-handle" />
-        <div className="sheet-title" id="bb-confirm-title">{confirm.title}</div>
+        {/* `cancelX`: closing without an answer is the sheet's accent X in the title row (as Sheet has), so the buttons are the answers */}
+        {confirm.cancelX
+          ? (
+            <div className="sheet-title-row">
+              <div className="sheet-title" id="bb-confirm-title">{confirm.title}</div>
+              <button className="icon-btn sheet-close" onClick={() => close(null)} aria-label={confirm.cancelLabel || 'Close'}><Icon name="x" /></button>
+            </div>
+          )
+          : <div className="sheet-title" id="bb-confirm-title">{confirm.title}</div>}
         {confirm.text && <p className="sheet-text" id="bb-confirm-text">{confirm.text}</p>}
         <div style={{ padding: '4px 16px 0', display: 'flex', flexDirection: 'column', gap: 10 }}>
           {(confirm.actions || [{ label: confirm.confirmLabel || 'Confirm', value: true, danger: confirm.danger }]).map(a => (
             <button key={a.label} className={`full-btn ${a.danger ? 'danger' : ''} ${a.secondary ? 'outline' : ''}`} onClick={() => close(a.value)}>{a.label}</button>
           ))}
-          {confirm.cancelLink
-            ? <button className="link-btn center" onClick={() => close(null)}>{confirm.cancelLabel || 'Cancel'}</button>
-            : <button className="full-btn outline" onClick={() => close(null)}>{confirm.cancelLabel || 'Cancel'}</button>}
+          {confirm.cancelX ? null
+            : confirm.cancelLink
+              ? <button className="link-btn center" onClick={() => close(null)}>{confirm.cancelLabel || 'Cancel'}</button>
+              : <button className="full-btn outline" onClick={() => close(null)}>{confirm.cancelLabel || 'Cancel'}</button>}
         </div>
       </div>
     </div>

@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {
   PLANS, PRICES_ARE_PLACEHOLDERS, REMIND_DAY, TRIAL_DAYS, VARIANTS, annualSavings, bucket, freePromise, isOrganizer, paywallAnswer, planStatus,
-  perMonthLabel, pickVariant, priceLabel, readFlag, shouldShowPaywall, trialTimeline, variantFor,
+  perMonthLabel, pickVariant, priceLabel, readFlag, shouldShowPaywall, trialCta, trialLine, trialTimeline, variantFor,
 } from './paywall.js';
 import { GAMES } from './round.js';
 
@@ -26,6 +26,27 @@ test('the trial reminds before it ends', () => {
   assert.equal(tl[2].when, 'Sun, Oct 11');
   assert.doesNotMatch(tl[0].text, /set up/);
   assert.match(trialTimeline(new Date(), { planned: true })[0].text, /group link is ready/);
+});
+
+test('the free trial is the same on both plans, and the plan picked says what comes after it', () => {
+  assert.equal(trialLine(PLANS.monthly), `${TRIAL_DAYS} days free, then $6.99 a month`);
+  assert.equal(trialLine(PLANS.annual), `${TRIAL_DAYS} days free, then $49.99 a year`);
+  // The button is the same whichever plan is picked; the fine print under it carries the price
+  assert.equal(trialCta(PLANS.monthly).button, trialCta(PLANS.annual).button);
+  assert.equal(trialCta(PLANS.monthly).button, `Start ${TRIAL_DAYS} days free`);
+  assert.equal(trialCta(PLANS.monthly).fine, 'No charge today, then $6.99 a month. Cancel any time.');
+  assert.equal(trialCta(PLANS.annual).fine, 'No charge today, then $49.99 a year. Cancel any time.');
+  // The timeline's last step says the price for the plan picked, and the dates don't move with it
+  const start = new Date(2026, 8, 27, 9);
+  const monthly = trialTimeline(start, { plan: PLANS.monthly });
+  const annual = trialTimeline(start, { plan: PLANS.annual });
+  assert.match(monthly[2].text, /^Pro starts at \$6\.99 a month, unless you cancel/);
+  assert.match(annual[2].text, /^Pro starts at \$49\.99 a year, unless you cancel/);
+  assert.equal(monthly[2].when, annual[2].when);
+  assert.equal(monthly[1].text, annual[1].text);
+  // The answer keeps the plan for either one
+  assert.equal(paywallAnswer({ variant: 'c', choice: 'trial', plan: 'monthly', now: 1 }).plan, 'monthly');
+  assert.equal(paywallAnswer({ variant: 'c', choice: 'trial', plan: 'monthly', now: 1 }).trialEnds, 1 + TRIAL_DAYS * 86400000);
 });
 
 test('the free promise counts the games', () => {

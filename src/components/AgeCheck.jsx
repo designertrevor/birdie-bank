@@ -1,5 +1,7 @@
 // The one-time "Are you 18 or older?" before money (age.js). Asked with the app's own confirm
-// sheet, saved on your profile, and never asked again once you've said yes.
+// sheet, saved on your profile, and never asked again once you've said yes. The sheet has the two
+// answers as buttons; closing it (the X, the scrim or Escape) is "not now": nothing is saved and
+// nothing goes ahead, and it's asked again the next time money comes up.
 import { useCallback } from 'react';
 import { useUI } from './ui.jsx';
 import { getState, update } from '../lib/store.js';
@@ -18,8 +20,8 @@ export function useAgeCheck() {
       title: AGE_COPY.title,
       text: force ? AGE_COPY.again : AGE_COPY.text,
       actions: [{ label: AGE_COPY.yes, value: 'adult' }, { label: AGE_COPY.no, value: 'under', secondary: true }],
-      // Closing without an answer is a text link, so it doesn't look like a third answer
-      cancelLabel: 'Not now', cancelLink: true,
+      // Closing without an answer is the sheet's X, so it doesn't look like a third answer
+      cancelLabel: 'Not now', cancelX: true,
     });
     if (answer === 'adult' || answer === 'under') update(s => setAgeAnswer(s, answer));
     return answer || null;
