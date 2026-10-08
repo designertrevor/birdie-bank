@@ -3,13 +3,17 @@
 // With the paywall flag on it's the Pro preview: under 2 rounds a short tour with a sample group,
 // and "Try free for 14 days" opens the same paywall preview as onboarding. Nothing is charged.
 // History and Players keep showing your own season for free; this is a new combined view.
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { Empty, Header, Icon, Screen } from '../components/ui.jsx';
 import FreePromise from '../components/FreePromise.jsx';
 import { useStore } from '../lib/store.js';
 import { useNav } from '../lib/nav.js';
 import { money } from '../lib/golf.js';
 import { recordText } from '../lib/ledger.js';
+import { netSeries, roundsInRange } from '../lib/history.js';
+import { tabInsight } from '../lib/data-insights.js';
+import { SeasonChart } from '../components/SeasonChart.jsx';
+import { Insight, StatTile } from '../components/DataCards.jsx';
 import { TRIAL_DAYS, planStatus } from '../lib/paywall.js';
 import { seasonAccess } from '../lib/entitlements.js';
 import { PAYWALL_ON } from '../lib/paywall-flag.js';
@@ -77,16 +81,36 @@ function TrialButton({ onTrial, status, onClick }) {
 function RealSeason({ state, preview = false }) {
   const nav = useNav();
   const b = seasonBoard(state);
+  // Your running net over the season's rounds for money, the same line the Tab draws (history.js)
+  const series = useMemo(() => netSeries(roundsInRange(state, { kind: 'season', year: b.year }), state), [state, b.year]);
+  const end = series.length ? series.at(-1).total : 0;
+  const sign = v => (v > 0 ? 'pos' : v < 0 ? 'neg' : '');
   return (
     <div className="scroll">
       {preview && <div className="season-banner" role="note"><Icon name="star" fill /> <span><b>Preview.</b> Your real rounds. Pro keeps it.</span></div>}
-      <div className="sec-label">Since {shortDay(b.since)} · {b.rounds} rounds</div>
-      <Balances rows={b.balances} />
-      <div className="block kv-block">
-        <Kv k={b.rival ? `You vs ${b.rival.name.split(' ')[0]}` : 'You vs a friend'} v={b.rival ? `${recordText(b.rival)} · ${signed(b.rival.net)}` : DASH} />
-        <Kv k="Biggest day" v={b.biggestDay ? `${signed(b.biggestDay.amount)} · ${b.biggestDay.course || shortDay(b.biggestDay.at)}` : DASH} />
-        <Kv k="Best game" v={b.bestGame ? `${b.bestGame.name}, ${signed(b.bestGame.net)}` : DASH} />
+      {series.length >= 2 && (
+        <div className="chart-card">
+          <div className="cc-head">
+            <div>
+              <div className="eyebrow">Your net</div>
+              <div className={`cc-big ${sign(end)}`}>{signed(end)}</div>
+              <div className="cc-cap">{series.length} rounds for money this season</div>
+            </div>
+          </div>
+          <SeasonChart series={series} label="This season" />
+          <Insight insight={tabInsight(series)} />
+        </div>
+      )}
+      {/* The season's four facts as score tiles: a label, a word on it, the number big */}
+      <div className="stat-grid">
+        <StatTile label="Rounds" value={String(b.rounds)} sub={`Since ${shortDay(b.since)}`} />
+        <StatTile label={b.rival ? `You vs ${b.rival.name.split(' ')[0]}` : 'You vs a friend'} value={b.rival ? signed(b.rival.net) : DASH} tone={b.rival ? sign(b.rival.net) : ''}
+          state={b.rival ? recordText(b.rival) : null} sub={b.rival ? `${b.rival.rounds} round${b.rival.rounds === 1 ? '' : 's'} together` : 'Most rounds together'} />
+        <StatTile label="Biggest day" value={b.biggestDay ? signed(b.biggestDay.amount) : DASH} tone={b.biggestDay ? 'pos' : ''} sub={b.biggestDay ? (b.biggestDay.course || shortDay(b.biggestDay.at)) : 'A day you came out ahead'} />
+        <StatTile label="Best game" long value={b.bestGame ? b.bestGame.name : DASH} state={b.bestGame ? signed(b.bestGame.net) : null} tone={b.bestGame ? 'pos' : ''} sub={b.bestGame ? `${b.bestGame.rounds} round${b.bestGame.rounds === 1 ? '' : 's'}` : 'The game that pays you best'} />
       </div>
+      <div className="sec-label">Everyone’s season</div>
+      <Balances rows={b.balances} />
       <p className="field-help pad">Only you see this. It adds up the money from the rounds you played this season, every game and side bet for money included. Points rounds stay out.</p>
       <button className="text-link stats-link" onClick={() => nav.push('stats', { range: { kind: 'season', year: b.year } })}>
         <Icon name="chart-bar" fill /> <span className="row-main">Your stats for the season<span className="sl-sub">By game and course, presses, skins and biggest wins</span></span> <Icon name="caret-right" />
