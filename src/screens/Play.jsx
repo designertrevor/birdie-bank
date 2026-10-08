@@ -707,8 +707,11 @@ function PlayRound({ round, mount, momentUp = false }) {
                 <div className="score-ctrl">
                   <button className="sc-btn" aria-label={`${p.name} one less`} disabled={v !== 'X' && v <= 1}
                     onClick={() => setScore(p.id, v === 'X' ? hole.par : Math.max(1, v - 1))}><Icon name="minus" /></button>
-                  <span ref={el => { numRefs.current[p.id] = el; }} className={`sc-num ${touched[p.id] ? '' : 'untouched'} ${v !== 'X' && v < hole.par ? 'birdie' : ''}`} aria-live="polite" aria-atomic="true">
-                    <span className="sr-only">{p.name} </span>{v === 'X' ? <><span aria-hidden="true">X</span><span className="sr-only">picked up</span></> : v}
+                  {/* The live region is the number alone, so the critter coming and going never re-reads the score */}
+                  <span ref={el => { numRefs.current[p.id] = el; }} className={`sc-num ${touched[p.id] ? '' : 'untouched'} ${v !== 'X' && v < hole.par ? 'birdie' : ''}`}>
+                    <span aria-live="polite" aria-atomic="true">
+                      <span className="sr-only">{p.name} </span>{v === 'X' ? <><span aria-hidden="true">X</span><span className="sr-only">picked up</span></> : v}
+                    </span>
                     <ScoreCritter score={v} par={hole.par} fresh={tapped.current.has(p.id)} />
                   </span>
                   <button className="sc-btn" aria-label={`${p.name} one more`} disabled={v !== 'X' && v >= 15}

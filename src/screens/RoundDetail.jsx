@@ -765,10 +765,11 @@ export function Scorecard({ round, current, onHole, holes = null }) {
         </thead>
         <tbody>
           {units.map(p => {
-            const sum = scoreSummary(round, p.id);
+            // Totals and to par over the holes shown, so a part of the round never counts holes past it
+            const sum = scoreSummary(round, p.id, out);
             // Net under the name only for someone who gets strokes: "E net E" says nothing
             const showNet = anyStrokes && !casual(p) && getsStrokes(round, p);
-            const par = toParOf(round, p, { withNet: showNet });
+            const par = toParOf(round, p, { withNet: showNet, holes: out });
             return (
               <tr key={p.id}>
                 <td className="sticky">

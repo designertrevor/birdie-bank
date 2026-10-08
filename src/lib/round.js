@@ -3214,11 +3214,12 @@ export function livePreview(round, hole, pending = null) {
 }
 
 /** Gross totals + counts for stats. Works for a player or a scramble team id. */
-export function scoreSummary(round, pid) {
+export function scoreSummary(round, pid, holes = round.holes) {
   let gross = 0, played = 0, birdies = 0, eagles = 0, pars = 0;
   const p = scorers(round).find(x => x.id === pid);
   if (!p) return { gross, played, birdies, eagles, pars };
-  for (const h of round.holes) {
+  // `holes`: a part of the round (the halfway card's first nine); strokes still fall as the whole round deals them
+  for (const h of holes) {
     const g = round.scores[h.no]?.[pid];
     if (g == null) continue;
     const eff = g === 'X' ? pickupGross(h.par, popsFor(round, p, h)) : g;

@@ -2,6 +2,7 @@ import { Suspense, lazy, useEffect, useLayoutEffect, useRef, useState } from 're
 import { Header, Icon, Screen } from '../components/ui.jsx';
 import { Spot } from '../components/Spot.jsx';
 import { useStore } from '../lib/store.js';
+import { roundsInProgress } from '../lib/rounds.js';
 import { GAMES, cardOnly, holeComplete } from '../lib/round.js';
 import { gameLabel, myIds } from '../lib/format.js';
 import { nameOf } from '../lib/ledger.js';
@@ -216,16 +217,24 @@ function CardStack({ children }) {
   useLayoutEffect(() => {
     const el = ref.current;
     if (!el) return undefined;
-    // Mark every card after the first as waiting (and the section labels with them) while it's piled
+    // Mark every card after the first as waiting while it's piled, along with each waiting card's own
+    // section label (the labels just before it); the top card keeps its label
     const read = () => {
       const cards = [...el.querySelectorAll('.remind-card')];
-      cards.forEach((c, i) => c.classList.toggle('cs-wait', !open && i > 0));
-      el.querySelectorAll('.sec-label').forEach(l => l.classList.toggle('cs-wait', !open && cards.length > 1));
+      cards.forEach((c, i) => {
+        const wait = !open && i > 0;
+        c.classList.toggle('cs-wait', wait);
+        for (let p = c.previousElementSibling; p && !p.classList.contains('remind-card'); p = p.previousElementSibling) {
+          if (p.classList.contains('sec-label')) p.classList.toggle('cs-wait', wait);
+        }
+      });
       setN(cards.length);
     };
     read();
+    // Watched for cards coming and going, and for a card React re-renders with a new className
+    // (which drops the waiting mark). Toggling a class that's already right makes no record, so no loop.
     const mo = new MutationObserver(read);
-    mo.observe(el, { subtree: true, childList: true });
+    mo.observe(el, { subtree: true, childList: true, attributes: true, attributeFilter: ['class'] });
     return () => mo.disconnect();
   }, [open]);
   return (
@@ -280,10 +289,12 @@ function FirstSteps() {
   const state = useStore();
   const people = Object.keys(state.players || {}).filter(id => id !== state.me).length;
   const rounds = Object.values(state.rounds || {});
+  // A round already going opens for its link (Invite is in its menu); otherwise sending one starts with a round
+  const active = roundsInProgress(state)[0] || null;
   const steps = [
     { done: people > 0, title: 'Add your group', sub: 'The people you play with', go: () => nav.setTab('people') },
     { done: rounds.length > 0, title: 'Start a round', sub: 'Pick a game and a course', go: () => nav.push('newRound') },
-    { done: rounds.some(r => r.shared), title: 'Send the group the link', sub: 'They follow the money live', go: () => nav.push('newRound') },
+    { done: rounds.some(r => r.shared), title: 'Send the group the link', sub: active ? 'Invite the group from the round menu' : 'They follow the money live', go: () => (active ? nav.push('play', { id: active.id }) : nav.push('newRound')) },
   ];
   if (steps.every(x => x.done)) return null;
   return (

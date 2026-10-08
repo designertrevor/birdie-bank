@@ -2,7 +2,8 @@
 // money is checked to be the same before and after.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { createRound, roundResults } from './round.js';
+import { createRound, roundResults, scoreSummary } from './round.js';
+import { toParOf } from './to-par.js';
 import { freshHole } from './moments.js';
 import { HALFWAY_POS, atHalfway, halfwayFor } from './halfway.js';
 
@@ -103,4 +104,15 @@ test('the sheet never changes the money', () => {
   halfwayFor(r);
   assert.equal(JSON.stringify(roundResults(r)), before);
   assert.equal(r.holes.length, 18);
+});
+
+test('the first nine’s card totals stop at nine, even once the tenth is in', () => {
+  // Ten holes saved: the sheet's card shows the first nine, so its totals and to par must too
+  const r = play(mk('stroke'), [...nine({ a: 3 }), { a: 6, b: 6, c: 6, d: 6 }]);
+  const first = halfwayFor(r).holes;
+  assert.equal(first.length, 9);
+  assert.deepEqual(scoreSummary(r, 'a', first), { ...scoreSummary(r, 'a', first), gross: 35, played: 9 });
+  assert.equal(scoreSummary(r, 'a').played, 10);
+  assert.deepEqual(toParOf(r, r.players[0], { holes: first }), { played: 9, gross: -1, net: null });
+  assert.equal(toParOf(r, r.players[0]).gross, 1);
 });

@@ -6,9 +6,10 @@ import { grossFor, netFor, popsFor } from './round.js';
 import { strokesOnHole } from './golf.js';
 
 /** { played, gross, net } to par for a scorer (a player, or a scramble team). `net` only when `withNet`. */
-export function toParOf(round, scorer, { withNet = false } = {}) {
+export function toParOf(round, scorer, { withNet = false, holes = round.holes } = {}) {
   let played = 0, gross = 0, net = 0;
-  for (const h of round.holes) {
+  // `holes`: a part of the round (the halfway card's first nine); strokes still fall as the whole round deals them
+  for (const h of holes) {
     const g = grossFor(round, scorer, h);
     if (g == null) continue;
     played++;
