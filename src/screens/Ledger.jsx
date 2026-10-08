@@ -5,6 +5,8 @@ import FreePromise from '../components/FreePromise.jsx';
 import { Avatar, SettleSheet } from '../components/Pay.jsx';
 import { PersonActions, RecentPaid, RewardLines, SquareStrip } from '../components/TabCard.jsx';
 import { SeasonChart } from '../components/SeasonChart.jsx';
+import { Insight, RangePill } from '../components/DataCards.jsx';
+import { tabInsight } from '../lib/data-insights.js';
 import { defaultRange, netSeries, roundsInRange } from '../lib/history.js';
 import { avatarFor, avatarModel } from '../lib/avatars.js';
 import { useStore } from '../lib/store.js';
@@ -110,8 +112,16 @@ export default function Ledger() {
   const squareNames = squareIds.map(id => first(nameOf(state, id)));
   // For the all square scene: the buddies of the people you've played with
   const squareBuddies = [...h2h.keys()].slice(0, 2).map((id, i) => { const m = avatarModel(avatarFor(state, id), { key: id, name: nameOf(state, id) }); return m.kind === 'buddy' ? m.buddy : ['visor', 'snapback'][i]; });
-  // Your running net this season, for the line under the big number
+  // Your running net, this season or over every round, for the chart under the big number and the
+  // hero's headline and sentence (data-insights.js). The pill starts on the season when it has a
+  // line to draw, else on all time
   const season = useMemo(() => netSeries(roundsInRange(state, defaultRange()), state), [state]);
+  const allTime = useMemo(() => netSeries(roundsInRange(state, { kind: 'all' }), state), [state]);
+  const [spanRaw, setSpan] = useState(null);
+  const span = spanRaw || (season.length >= 2 || allTime.length < 2 ? 'season' : 'all');
+  const series = span === 'season' ? season : allTime;
+  const insight = tabInsight(series, { scope: span === 'season' ? 'this season' : 'overall' });
+  const seriesEnd = series.length ? series.at(-1).total : 0;
 
   // The same Settle up sheet the person screen opens for a part payment
   const partDebt = p => {
@@ -212,17 +222,30 @@ export default function Ledger() {
         ) : (
           <>
             {people.length > 0 && (
-              <div className="tab-overall">
-                <div className="eyebrow">Overall</div>
-                <div className={`tab-big d ${overall > 0 ? 'pos' : overall < 0 ? 'neg' : ''}`}>
-                  {overall > 0 ? `You’re up ${money(overall)}` : overall < 0 ? `You’re down ${money(-overall)}` : 'You’re even'}
-                </div>
-                {/* Who it's with, and how the season's gone: one number, one line */}
+              <div className="tab-overall tab-hero">
+                {/* One big number, who it's with under it, then how the season's gone in a line */}
+                <div className={`tab-big d ${overall > 0 ? 'pos' : overall < 0 ? 'neg' : ''}`}>{money(overall, { sign: true })}</div>
                 <div className="tab-who">
                   <span className="tab-faces">{people.slice(0, 5).map(p => <Avatar key={p.id} id={p.id} name={nameOf(state, p.id)} size="sm" />)}</span>
-                  <span>{people.length === 1 ? `With ${first(nameOf(state, people[0].id))}` : `Across ${people.length} people`}</span>
+                  <span>{overall > 0 ? 'You’re up' : overall < 0 ? 'You’re down' : 'You’re even'} · {people.length === 1 ? `with ${first(nameOf(state, people[0].id))}` : `across ${people.length} people`}</span>
                 </div>
-                {season.length >= 2 && <div className="tab-spark"><SeasonChart series={season} label="This season" flat /></div>}
+                <h2 className="d tab-headline">{insight.headline}</h2>
+                <Insight insight={insight} />
+              </div>
+            )}
+            {people.length > 0 && (season.length >= 2 || allTime.length >= 2) && (
+              <div className="chart-card tab-spark">
+                <div className="cc-head">
+                  <div>
+                    <div className="eyebrow">Your net</div>
+                    <div className={`cc-big ${seriesEnd > 0 ? 'pos' : seriesEnd < 0 ? 'neg' : ''}`}>{money(seriesEnd, { sign: true })}</div>
+                    <div className="cc-cap">{series.length ? `${series.length} round${series.length === 1 ? '' : 's'} for money` : 'No rounds for money yet'}{span === 'season' ? ' this season' : ' all time'}</div>
+                  </div>
+                  <RangePill label="Chart range" value={span} onChange={setSpan} options={[{ value: 'season', label: 'Season' }, { value: 'all', label: 'All time' }]} />
+                </div>
+                {series.length >= 2
+                  ? <SeasonChart series={series} label={span === 'season' ? 'This season' : 'All time'} />
+                  : <p className="cc-none">{series.length ? 'One round so far. The line starts at two.' : 'Finish a round for money and the line starts here.'}</p>}
               </div>
             )}
             <SinceBooks scope={ALL} />
