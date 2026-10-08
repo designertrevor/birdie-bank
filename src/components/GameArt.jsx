@@ -5,18 +5,8 @@
 import { GAMES } from '../lib/round.js';
 import { ArtImage } from './ArtFile.jsx';
 import { artFile } from '../lib/art-files.js';
+import { INK, BALL, PINK, DEEP, OCHRE, GOLD, COIN, TEAL, MINT, CORAL, LAV, PEACH } from '../lib/art-palette.js';
 
-const INK = '#0a0a0a';
-const BALL = '#fbf7ec';
-const PINK = '#ff4d8b';
-const DEEP = '#d42a6b';
-const OCHRE = '#e8b94a';
-const GOLD = '#c99a30';
-const TEAL = '#1a3a3a';
-const MINT = '#a4d4c5';
-const CORAL = '#ff6b5a';
-const LAV = '#b8a4ed';
-const PEACH = '#ffb084';
 const line = { stroke: INK, strokeWidth: 2.6, fill: 'none', strokeLinecap: 'round', strokeLinejoin: 'round' };
 
 /** Each group gets a colour, so a shelf of tiles shows its sections at a glance. */
@@ -48,7 +38,6 @@ function Flag({ x, y, h = 26, color = PINK, flip = false, big = false }) {
   );
 }
 // Coins are a shade lighter than the ochre backdrop they sit on, with an ink edge, so they read
-const COIN = '#ffd45c';
 const COIN_EDGE = '#b8862b';
 /** A coin, with a dollar on the face. */
 function Coin({ cx, cy, r = 8, color = COIN, edge = COIN_EDGE }) {

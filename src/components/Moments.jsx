@@ -8,7 +8,7 @@ import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { Icon, Sheet } from './ui.jsx';
 import { AvatarArt } from './Avatar.jsx';
-import { Scorecard } from '../screens/RoundDetail.jsx';
+import { Scorecard } from './Scorecard.jsx';
 import { useGroupAvatars } from '../lib/useAvatars.js';
 import { donePositions, finalMoment, firstShowing, freshHole, roundMoment } from '../lib/moments.js';
 import { atHalfway, halfwayFor } from '../lib/halfway.js';

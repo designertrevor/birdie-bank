@@ -7,7 +7,7 @@ import { PersonActions, RecentPaid, RewardLines, SquareStrip } from '../componen
 import { SeasonChart } from '../components/SeasonChart.jsx';
 import { Insight, RangePill } from '../components/DataCards.jsx';
 import { tabInsight } from '../lib/data-insights.js';
-import { defaultRange, netSeries, roundsInRange } from '../lib/history.js';
+import { netSeries, roundsInRange, seasonSeries } from '../lib/history.js';
 import { avatarFor, avatarModel } from '../lib/avatars.js';
 import { useStore } from '../lib/store.js';
 import { headToHeadSummary, nameOf, outstanding } from '../lib/ledger.js';
@@ -113,9 +113,11 @@ export default function Ledger() {
   // For the all square scene: the buddies of the people you've played with
   const squareBuddies = [...h2h.keys()].slice(0, 2).map((id, i) => { const m = avatarModel(avatarFor(state, id), { key: id, name: nameOf(state, id) }); return m.kind === 'buddy' ? m.buddy : ['visor', 'snapback'][i]; });
   // Your running net, this season or over every round, for the chart under the big number and the
-  // hero's headline and sentence (data-insights.js). The pill starts on the season when it has a
-  // line to draw, else on all time
-  const season = useMemo(() => netSeries(roundsInRange(state, defaultRange()), state), [state]);
+  // hero's headline and sentence (data-insights.js). Keyed on what the lines read (the rounds, who
+  // you are, your merges, a Big Game's money: history.js SEASON_READS), so a payment or a message
+  // doesn't redo them. The pill starts on the season when it has a line to draw, else on all time
+  const season = useMemo(() => seasonSeries({ rounds: state.rounds, me: state.me, players: state.players, links: state.links, unlinks: state.unlinks, accountOf: state.accountOf, trips: state.trips, tripPlans: state.tripPlans, bigCards: state.bigCards, bigRemote: state.bigRemote }),
+    [state.rounds, state.me, state.players, state.links, state.unlinks, state.accountOf, state.trips, state.tripPlans, state.bigCards, state.bigRemote]);
   const allTime = useMemo(() => netSeries(roundsInRange(state, { kind: 'all' }), state), [state]);
   const [spanRaw, setSpan] = useState(null);
   const span = spanRaw || (season.length >= 2 || allTime.length < 2 ? 'season' : 'all');

@@ -11,8 +11,9 @@ import { BIG_FORMAT } from './big-format.js';
 const MONTHS = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
 const SHORT = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
 
-/** When a round counts for History: when it finished, or when it started if it never did. */
-export const roundTime = r => r.finishedAt || r.createdAt || 0;
+// When a round counts, and the rounds going on, live in rounds-live.js (Up next's first paint reads them without the Tab's money)
+import { roundTime } from './rounds-live.js';
+export { activeRounds, roundTime } from './rounds-live.js';
 
 /** "2026-09-27" for a local date (what a date input gives back). */
 export function isoDay(d) {
@@ -172,6 +173,18 @@ export function netSeries(rounds, state) {
 }
 
 /**
+ * The parts of the state the season line reads: the rounds, who you are and your merges
+ * (people-links.js), and a Big Game's money (big-money.js). The Tab keys its memo on these, so a
+ * payment or a message doesn't redo the line; the test holds seasonSeries to them.
+ */
+export const SEASON_READS = ['rounds', 'me', 'players', 'links', 'unlinks', 'accountOf', 'trips', 'tripPlans', 'bigCards', 'bigRemote'];
+
+/** Your running net this season (netSeries over roundsInRange), for the line under the Tab's big number. */
+export function seasonSeries(state, now = new Date()) {
+  return netSeries(roundsInRange(state, defaultRange(now)), state);
+}
+
+/**
  * Net with each player over these rounds (positive: you came out ahead of them). This is the honest
  * head-to-head from roundResults().pairs, bet by bet, not who happened to pay whom in the fewest payments.
  * Money rounds, and reward rounds' side bets for money you had one in (the Tab's dollars).
@@ -242,13 +255,6 @@ export function myTab(state) {
     else if (mine.has(d.from)) { owe += d.amount; people++; }
   }
   return { owed: cents(owed), owe: cents(owe), net: cents(owed - owe), people };
-}
-
-/** Rounds still being played, the one the Play button resumes first. */
-export function activeRounds(state) {
-  return Object.values(state.rounds)
-    .filter(r => r.status === 'active')
-    .sort((a, b) => (b.id === state.activeRoundId) - (a.id === state.activeRoundId) || b.createdAt - a.createdAt);
 }
 
 /** Your most recent finished round and what you made in it (amount is null if you only kept score). */

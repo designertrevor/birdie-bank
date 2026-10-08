@@ -3,9 +3,10 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { createRound, roundResults } from './round.js';
 import {
-  activeRounds, defaultRange, headToHead, isLatest, lastResult, monthGroups, myNet, myTab, netSeries,
-  rangeBounds, rangeLabel, rangeOfKind, roundsInRange, shiftRange,
+  SEASON_READS, activeRounds, defaultRange, headToHead, isLatest, lastResult, monthGroups, myNet, myTab, netSeries,
+  rangeBounds, rangeLabel, rangeOfKind, roundsInRange, seasonSeries, shiftRange,
 } from './history.js';
+import { readFileSync } from 'node:fs';
 import { rematchSetup } from './rematch.js';
 
 const SETTINGS = { hcPct: 100, skins: { value: 2, carryover: true }, nassau: { front: 5, back: 5, total: 5, pressMode: 'manual', threshold: 2 } };
@@ -210,4 +211,26 @@ test('linked ids: head to head puts a friend’s ids together, and the season to
   assert.deepEqual(headToHead(rounds, linked), { bo: -2 });
   assert.deepEqual(netSeries(rounds, linked), netSeries(rounds, split));
   assert.deepEqual(myTab(linked).net, myTab(split).net);
+});
+
+test('the season line reads only the parts of the state the Tab keys its memo on', () => {
+  const rounds = [
+    skins('r1', new Date(2026, 8, 1), { winner: 'me' }),
+    skins('r2', new Date(2026, 8, 2), { winner: 'zbo', holes: 2, players: [PLAYERS[0], { id: 'zbo', name: 'Bo B.', index: 2, tee: 'Red' }] }),
+    { ...skins('r3', new Date(2026, 8, 3), { winner: 'bo' }), trip: { id: 'big1', format: 'big', name: 'The Cup', big: { groups: 2 } } },
+    { ...skins('r4', new Date(2026, 8, 4)), status: 'active' },
+  ];
+  const state = stateWith(rounds, { links: { zbo: 'bo' }, payments: [{ id: 'p1' }], talk: {}, plans: {}, challenges: {} });
+  const read = new Set();
+  const spy = new Proxy(state, { get(t, k) { if (typeof k === 'string') read.add(k); return t[k]; }, has(t, k) { if (typeof k === 'string') read.add(k); return k in t; } });
+  const line = seasonSeries(spy, NOW);
+  assert.deepEqual(line, seasonSeries(state, NOW));
+  assert.ok(line.length >= 2, 'the fixture draws a line');
+  for (const k of read) assert.ok(SEASON_READS.includes(k), `seasonSeries reads state.${k}, which SEASON_READS doesn't list`);
+  // The Tab passes exactly those parts, so its memo keys on them
+  const ledger = readFileSync(new URL('../screens/Ledger.jsx', import.meta.url), 'utf8');
+  const call = ledger.match(/seasonSeries\(\{ ([^}]+) \}\)/)?.[1].split(', ').map(x => x.split(':')[0]);
+  assert.deepEqual(call, SEASON_READS);
+  const deps = ledger.match(/seasonSeries\(\{[^}]+\}\),\s*\[([^\]]+)\]/)?.[1].split(', ').map(x => x.replace('state.', ''));
+  assert.deepEqual(deps, SEASON_READS);
 });

@@ -4,6 +4,7 @@
 // goes first, and only one of them shows a visit (upnext-card.js): this one waits for the next.
 import { useEffect, useState, useSyncExternalStore } from 'react';
 import { Icon, useFoldAway } from './ui.jsx';
+import { useStackCard } from './CardStack.jsx';
 import { useNav } from '../lib/nav.js';
 import { useStore } from '../lib/store.js';
 import { updateSafe } from '../lib/app-update.js';
@@ -19,8 +20,6 @@ export function WhatsNewUpNext() {
   const [items, setItems] = useState(null);
   // What this visit shows, kept after it's marked as seen so it stays put until you leave Up next
   const [shown, setShown] = useState(null);
-  // "Got it" folds the card shut before it goes, so the cards below slide up into its place
-  const [out, away] = useFoldAway();
   const slot = useSyncExternalStore(subscribeSlot, getSlot, getSlot);
 
   // It shipped gets a few seconds to find out, then this goes ahead without it
@@ -52,25 +51,29 @@ export function WhatsNewUpNext() {
     saveSeen(markSeen(items));
   }, [items, shown, safe, state.rounds, slot]);
 
+  // Its place on Up next's pile (CardStack.jsx), once it has something to say
+  const waiting = useStackCard({ showing: !!shown?.items.length && safe });
+  // "Got it" folds the card shut before it goes, so the cards below slide up into its place (ui.jsx)
+  const [out, away] = useFoldAway();
   if (!shown?.items.length || !safe) return null;
   const [first, ...rest] = shown.items;
   const names = [...rest.map(i => i.title), ...(shown.more ? [`${shown.more} more`] : [])];
   return (
     <div className={`fold-away ${out ? 'out' : ''}`}>
-      <div className="remind-card wn-card" role="status">
-        <div className="rc-head">
-          <span className="rc-ic" aria-hidden="true"><Icon name="sparkle" fill /></span>
-          <div className="row-main">
-            <div className="eyebrow">What’s new</div>
-            <div className="rc-title d">{first.title}</div>
-            <div className="rc-sub">{names.length ? `Also new: ${names.join(', ')}.` : first.blurb || 'New in this update.'}</div>
-          </div>
-        </div>
-        <div className="rc-acts">
-          <button className="rc-btn ink" onClick={() => { setShown({ items: [], more: 0, ids: [] }); nav.push('whatsNew', { fresh: shown.ids }); }}><Icon name="list-bullets" /> See what’s new</button>
-          <button className="rc-btn ghost" onClick={away(() => setShown({ items: [], more: 0, ids: [] }))}>Got it</button>
+    <div className={`remind-card wn-card${waiting ? ' cs-wait' : ''}`} role="status">
+      <div className="rc-head">
+        <span className="rc-ic" aria-hidden="true"><Icon name="sparkle" fill /></span>
+        <div className="row-main">
+          <div className="eyebrow">What’s new</div>
+          <div className="rc-title d">{first.title}</div>
+          <div className="rc-sub">{names.length ? `Also new: ${names.join(', ')}.` : first.blurb || 'New in this update.'}</div>
         </div>
       </div>
+      <div className="rc-acts">
+        <button className="rc-btn ink" onClick={() => { setShown({ items: [], more: 0, ids: [] }); nav.push('whatsNew', { fresh: shown.ids }); }}><Icon name="list-bullets" /> See what’s new</button>
+        <button className="rc-btn ghost" onClick={away(() => setShown({ items: [], more: 0, ids: [] }))}>Got it</button>
+      </div>
+    </div>
     </div>
   );
 }

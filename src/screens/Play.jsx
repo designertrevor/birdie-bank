@@ -34,7 +34,7 @@ import { optionsProblem, roundStakeLines, sideBetLine, stakeSummary } from '../l
 import { buzz, confettiFrom } from '../lib/delight.js';
 import { useNav } from '../lib/nav.js';
 import { dropKept, keptMap, useKept, useKeptScope } from '../lib/kept.js';
-import { Scorecard } from './RoundDetail.jsx';
+import { Scorecard } from '../components/Scorecard.jsx';
 import { LivePill, ShareSheet } from '../components/Live.jsx';
 import { GalleryBar } from '../components/Gallery.jsx';
 import { syncConfigured, useSeatRequests } from '../lib/sync.js';

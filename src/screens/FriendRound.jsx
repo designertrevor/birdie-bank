@@ -5,7 +5,7 @@ import { useMemo } from 'react';
 import { Empty, Header, Icon, Screen, useUI } from '../components/ui.jsx';
 import { Avatar } from '../components/Avatar.jsx';
 import { TalkSection } from '../components/Talk.jsx';
-import { Scorecard } from './RoundDetail.jsx';
+import { Scorecard } from '../components/Scorecard.jsx';
 import { useStore } from '../lib/store.js';
 import { useNav } from '../lib/nav.js';
 import { friendRoundView, friendsLine, shownRow, statusLine } from '../lib/friend-feed.js';

@@ -53,8 +53,5 @@ export const ART_ICONS = [
   { id: 'dots-three-circle', name: 'More games tag', used: ['Welcome, the game tags (13px)'] },
 ];
 
-/** The palette every drawing uses, for the sheet and the README. */
-export const PALETTE = [
-  ['Ink', '#0a0a0a'], ['Ball', '#fbf7ec'], ['Pink', '#ff4d8b'], ['Deep pink', '#d42a6b'], ['Ochre', '#e8b94a'], ['Gold', '#c99a30'],
-  ['Coin', '#ffd45c'], ['Teal', '#1a3a3a'], ['Mint', '#a4d4c5'], ['Coral', '#ff6b5a'], ['Lavender', '#b8a4ed'], ['Peach', '#ffb084'], ['Blush', '#ffd6e5'],
-];
+/** The palette every drawing uses, for the sheet and the README (the values live in art-palette.js). */
+export { PALETTE } from './art-palette.js';

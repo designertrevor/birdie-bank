@@ -1,6 +1,7 @@
-import { lazy, Suspense, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
+import { lazy, Suspense, useEffect, useMemo, useRef, useState } from 'react';
 import { Callout, Empty, Header, Icon, Numpad, PickChip, PickMark, PickRow, Screen, Segmented, Sheet, Steps, Toggle, useUI } from '../components/ui.jsx';
 import { GameArt } from '../components/GameArt.jsx';
+import { HouseRulesFold } from '../components/HouseRulesFold.jsx';
 import { Spot } from '../components/Spot.jsx';
 import { useGroupAvatars } from '../lib/useAvatars.js';
 import { RulesSheet } from '../components/Rules.jsx';
@@ -1324,44 +1325,6 @@ function VoteStep({ game, holesCount = 18, opts, onPlan, ballot = [], initialSid
 }
 
 // ---------------------------------------------------------------------------
-
-/**
- * The game's bets up front, its house rules (the on/off switches) folded under one row that says how
- * many are on, so the ones that change the money are always counted in plain sight.
- */
-function HouseRulesFold({ children }) {
-  const ref = useRef(null);
-  const [count, setCount] = useState({ all: 0, on: 0 });
-  const [open, setOpen] = useState(null);
-  useLayoutEffect(() => {
-    const el = ref.current;
-    if (!el) return;
-    const read = () => {
-      const all = el.querySelectorAll('.toggle-row [role="switch"]');
-      const on = el.querySelectorAll('.toggle-row [role="switch"][aria-checked="true"]').length;
-      setCount(c => (c.all === all.length && c.on === on ? c : { all: all.length, on }));
-    };
-    read();
-    const mo = new MutationObserver(read);
-    mo.observe(el, { subtree: true, childList: true, attributes: true, attributeFilter: ['aria-checked'] });
-    return () => mo.disconnect();
-  }, []);
-  const shown = open ?? false;
-  return (
-    <div ref={ref} className={`rules-fold ${shown ? 'open' : ''} ${count.all ? 'has-rules' : ''}`}>
-      {children}
-      {count.all > 0 && (
-        <button className="set-row rf-toggle" onClick={() => setOpen(!shown)} aria-expanded={shown}>
-          <div className="row-main">
-            <div className="set-name">House rules</div>
-            <div className="set-sub">{count.on ? `${count.on} on` : 'All off'} · {count.all} to choose from</div>
-          </div>
-          <span className="chevron"><Icon name={shown ? 'caret-up' : 'caret-down'} /></span>
-        </button>
-      )}
-    </div>
-  );
-}
 
 /** After setup: invite the group before the first tee, then start. */
 function ReadyStep({ round, onStart, onLater }) {

@@ -1,4 +1,5 @@
-import { Icon, PickChip, Segmented, Toggle } from './ui.jsx';
+import { Icon, PickChip, Segmented } from './ui.jsx';
+import { HouseRule } from './HouseRulesFold.jsx';
 import { GAMES, blindMultiplierOf } from '../lib/round.js';
 import { CHAPMAN_ALLOWANCE, DOT_KINDS, FOURSOMES_ALLOWANCE, SCRAMBLE_ALLOWANCE, sixesPairings } from '../lib/games.js';
 import { money as dollars } from '../lib/golf.js';
@@ -42,10 +43,7 @@ export function GameOptions({ game, get, set, onAmount, holesCount = 18, compact
   );
   // `value`: a toggle for a setting that isn't true or false, like 'total' against 'best' (off is the default)
   const toggle = (path, label, sub, value = null) => (
-    <div className="toggle-row" key={path}>
-      <div><div className="toggle-lbl">{label}</div>{sub && <div className="toggle-sub">{sub}</div>}</div>
-      <Toggle on={value == null ? !!get(path) : get(path) === value} onChange={v => set(path, value == null ? v : v ? value : OFF[path.split('.')[1]])} label={label} />
-    </div>
+    <HouseRule key={path} label={label} sub={sub} on={value == null ? !!get(path) : get(path) === value} onChange={v => set(path, value == null ? v : v ? value : OFF[path.split('.')[1]])} />
   );
   const label = t => (compact ? null : <div className="sec-label">{t}</div>);
   // House rules shared by a few games (added 2026-10-03): two partners' scores added up, for a side of
@@ -99,10 +97,8 @@ export function GameOptions({ game, get, set, onAmount, holesCount = 18, compact
         </div>
         {toggle('banker.par3Triple', 'Par 3 presses triple', 'On a par 3 a press is 3× instead of 2×, and the banker’s press back makes it 9×')}
         {/* On is 'after' (2026-10-06): only once someone presses. A round saved with true (any time) still shows on */}
-        <div className="toggle-row" key="banker.pressAll">
-          <div><div className="toggle-lbl">Banker presses everyone</div><div className="toggle-sub">Once someone presses the banker on a hole, the banker’s press back doubles every bet on it, not only the ones that were pressed</div></div>
-          <Toggle on={!!get('banker.pressAll')} onChange={v => set('banker.pressAll', v ? 'after' : false)} label="Banker presses everyone" />
-        </div>
+        <HouseRule key="banker.pressAll" label="Banker presses everyone" sub="Once someone presses the banker on a hole, the banker’s press back doubles every bet on it, not only the ones that were pressed"
+          on={!!get('banker.pressAll')} onChange={v => set('banker.pressAll', v ? 'after' : false)} />
       </>;
     }
     case 'nassau':

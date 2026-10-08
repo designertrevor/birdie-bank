@@ -5,14 +5,8 @@
 import { BuddyFigure } from './BuddyArt.jsx';
 import { ArtImage } from './ArtFile.jsx';
 import { PULLED_SCENES, artFile } from '../lib/art-files.js';
+import { INK, BALL, PINK, DEEP, OCHRE, GOLD, TEAL, CORAL } from '../lib/art-palette.js';
 
-const INK = '#0a0a0a';
-const BALL = '#fbf7ec';
-const PINK = '#ff4d8b';
-const DEEP = '#d42a6b';
-const OCHRE = '#e8b94a';
-const TEAL = '#1a3a3a';
-const CORAL = '#ff6b5a';
 const line = { stroke: INK, strokeWidth: 3, fill: 'none', strokeLinecap: 'round', strokeLinejoin: 'round' };
 
 const Sun = ({ cx = 322, cy = 54 }) => <circle cx={cx} cy={cy} r="26" fill="var(--sc-sun)" />;
@@ -96,7 +90,7 @@ const SCENES = {
     <path d="M140 150 Q200 110 260 150 Q230 144 200 150 Q170 144 140 150Z" fill={BALL} opacity=".55" />
     <ellipse cx="200" cy="204" rx="56" ry="12" fill={OCHRE} />
     <ellipse cx="200" cy="200" rx="56" ry="12" fill="#f2cf6a" />
-    <g><circle cx="186" cy="198" r="7" fill="#c99a30" /><circle cx="186" cy="196" r="7" fill={OCHRE} /><circle cx="212" cy="201" r="7" fill="#c99a30" /><circle cx="212" cy="199" r="7" fill={OCHRE} /></g>
+    <g><circle cx="186" cy="198" r="7" fill={GOLD} /><circle cx="186" cy="196" r="7" fill={OCHRE} /><circle cx="212" cy="201" r="7" fill={GOLD} /><circle cx="212" cy="199" r="7" fill={OCHRE} /></g>
     <g><rect x="228" y="180" width="12" height="18" rx="2" fill="var(--sc-sky)" stroke={INK} strokeWidth="2" /><rect x="229" y="186" width="10" height="11" fill={CORAL} /></g>
     <Row ids={ids.slice(0, 2)} cx={112} ground={226} size={60} gap={10} />
     <Row ids={ids.slice(2, 4)} cx={288} ground={226} size={60} gap={10} />

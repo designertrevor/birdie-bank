@@ -48,4 +48,4 @@ src/art/
 Flat colour, soft rounded shapes, ink outlines on faces and details, the smiley golf ball as the
 hero. Ink `#0a0a0a`, ball `#fbf7ec`, pink `#ff4d8b`, deep pink `#d42a6b`, ochre `#e8b94a`, gold
 `#c99a30`, coin `#ffd45c`, teal `#1a3a3a`, mint `#a4d4c5`, coral `#ff6b5a`, lavender `#b8a4ed`,
-peach `#ffb084`, blush `#ffd6e5`.
+peach `#ffb084`, blush `#ffd6e5` (the values live in `src/lib/art-palette.js`; the drawings import them).
