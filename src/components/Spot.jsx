@@ -5,19 +5,9 @@
 import { BuddyFigure } from './BuddyArt.jsx';
 import { ArtImage } from './ArtFile.jsx';
 import { artFile } from '../lib/art-files.js';
+import { INK, BALL, PINK, DEEP, OCHRE, GOLD, TEAL, MINT, CORAL, LAV, PEACH, BLUSH } from '../lib/art-palette.js';
 
-const INK = '#0a0a0a';
-const BALL = '#fbf7ec';
-const PINK = '#ff4d8b';
-const DEEP = '#d42a6b';
-const OCHRE = '#e8b94a';
-const TEAL = '#1a3a3a';
-const MINT = '#a4d4c5';
-const CORAL = '#ff6b5a';
 const line = { stroke: INK, strokeWidth: 3.4, fill: 'none', strokeLinecap: 'round', strokeLinejoin: 'round' };
-const LAV = '#b8a4ed';
-const PEACH = '#ffb084';
-const BLUSH = '#ffd6e5';
 
 // The plate: a soft blob of colour behind the scene, so the white ball never sits on a white card.
 // Each scene has its own colour; `plate={false}` drops it where the spot already sits on colour.
@@ -102,7 +92,7 @@ const SCENES = {
     <Shadow />
     <Ball cy={70} face="happy" />
     <path d="M36 40 L40 18 L50 30 L60 12 L70 30 L80 18 L84 40Z" fill={OCHRE} />
-    <rect x="36" y="38" width="48" height="7" rx="3" fill="#c99a30" />
+    <rect x="36" y="38" width="48" height="7" rx="3" fill={GOLD} />
     <g fill={PINK}><circle cx="60" cy="30" r="3.4" /><circle cx="45" cy="34" r="2.6" /><circle cx="75" cy="34" r="2.6" /></g>
   </>),
   // A trophy: the ball holding a cup
@@ -110,9 +100,9 @@ const SCENES = {
     <Shadow cx={54} />
     <Ball cx={48} face="happy" />
     <path d="M80 32 H108 V44 Q108 62 94 64 Q80 62 80 44Z" fill={OCHRE} />
-    <path d="M80 38 Q70 38 72 48 Q74 54 82 54" {...line} strokeWidth="3" stroke="#c99a30" />
-    <path d="M108 38 Q118 38 116 48 Q114 54 106 54" {...line} strokeWidth="3" stroke="#c99a30" />
-    <rect x="90" y="63" width="8" height="12" fill="#c99a30" />
+    <path d="M80 38 Q70 38 72 48 Q74 54 82 54" {...line} strokeWidth="3" stroke={GOLD} />
+    <path d="M108 38 Q118 38 116 48 Q114 54 106 54" {...line} strokeWidth="3" stroke={GOLD} />
+    <rect x="90" y="63" width="8" height="12" fill={GOLD} />
     <rect x="82" y="74" width="24" height="7" rx="2" fill={TEAL} />
     <Hand x={80} y={78} />
   </>),
