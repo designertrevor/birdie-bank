@@ -3,6 +3,7 @@
 // (nudges.js). There's no push yet, so these cards are the reminders.
 import { useMemo, useState } from 'react';
 import { Icon, Sheet, useUI } from './ui.jsx';
+import { useStackCard, useStackLabel } from './CardStack.jsx';
 import { TimePicker } from './DatePicker.jsx';
 import { Avatar } from './Pay.jsx';
 import { getState, update, useStore } from '../lib/store.js';
@@ -26,19 +27,22 @@ export function RemindersUpNext() {
   // The Booked sheet lives here, not on the card: once it's booked the card goes, the sheet stays for the text
   const [bookingId, setBookingId] = useState(null);
   const booking = bookingId ? state.plans?.[bookingId] : null;
+  // On Up next's pile (CardStack.jsx) the label goes with the first card, the tee times first
+  const labelWaits = useStackLabel(0);
   return (
     <>
-      {(tee.length > 0 || nudges.length > 0) && <div className="sec-label">Reminders</div>}
-      {tee.map(p => <TeeTimeCard key={p.id} plan={p} onBooked={() => setBookingId(p.id)} />)}
-      {nudges.map(n => <NudgeCard key={n.id} nudge={n} />)}
+      {(tee.length > 0 || nudges.length > 0) && <div className={`sec-label${labelWaits ? ' cs-wait' : ''}`}>Reminders</div>}
+      {tee.map((p, i) => <TeeTimeCard key={p.id} plan={p} at={i} onBooked={() => setBookingId(p.id)} />)}
+      {nudges.map((n, i) => <NudgeCard key={n.id} nudge={n} at={tee.length + i} />)}
       {booking && <BookedSheet plan={booking} open onClose={() => setBookingId(null)} />}
     </>
   );
 }
 
 /** "Book your tee time": the course's booking page, Booked, or put it off until tomorrow. */
-function TeeTimeCard({ plan, onBooked }) {
+function TeeTimeCard({ plan, at = 0, onBooked }) {
   const nav = useNav();
+  const waiting = useStackCard({ at });
   const state = useStore();
   const { showToast } = useUI();
   const url = planBookingUrl(state, plan);
@@ -47,7 +51,7 @@ function TeeTimeCard({ plan, onBooked }) {
     showToast('Okay, it’s back on Up next tomorrow');
   };
   return (
-    <div className="remind-card tee">
+    <div className={`remind-card tee${waiting ? ' cs-wait' : ''}`}>
       <div className="rc-head">
         <span className="rc-ic" aria-hidden="true"><Icon name="alarm" fill /></span>
         <div className="row-main">
@@ -72,8 +76,9 @@ function TeeTimeCard({ plan, onBooked }) {
 }
 
 /** "Mike still owes you $18 from Saturday", with the Tab's Remind text one tap away. */
-function NudgeCard({ nudge }) {
+function NudgeCard({ nudge, at = 0 }) {
   const state = useStore();
+  const waiting = useStackCard({ at });
   const { showToast } = useUI();
   const remind = useRemind();
   const name = nameOf(state, nudge.id);
@@ -88,7 +93,7 @@ function NudgeCard({ nudge }) {
     showToast(`Okay. Nothing about ${first} for a week`);
   };
   return (
-    <div className="remind-card nudge">
+    <div className={`remind-card nudge${waiting ? ' cs-wait' : ''}`}>
       <div className="rc-head">
         <Avatar id={nudge.id} name={name} />
         <div className="row-main">

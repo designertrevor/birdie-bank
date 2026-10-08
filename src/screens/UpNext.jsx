@@ -1,6 +1,7 @@
-import { useEffect, useLayoutEffect, useRef, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Header, Icon, Screen } from '../components/ui.jsx';
 import { Later, part } from '../components/Later.jsx';
+import { CardStack, StackSlot } from '../components/CardStack.jsx';
 import { PlansAndNext } from '../components/UpNextPlans.jsx';
 import { useStore } from '../lib/store.js';
 import { activeRounds } from '../lib/rounds-live.js';
@@ -89,11 +90,11 @@ export default function UpNext() {
             behind it ("2 more"), so the next round stays near the top */}
         <CardStack>
           {/* A tee time to book and friendly payment reminders: there's no push yet, so these are the reminders */}
-          <Later><RemindersUpNext /></Later>
+          <StackSlot at={0}><Later><RemindersUpNext /></Later></StackSlot>
           {/* Something you asked for or voted for on the roadmap shipped: said once (roadmap.js) */}
-          <Later><ShippedUpNext /></Later>
+          <StackSlot at={1}><Later><ShippedUpNext /></Later></StackSlot>
           {/* What landed in this update: said once, never while a round is going on (whats-new.js) */}
-          <Later><WhatsNewUpNext /></Later>
+          <StackSlot at={2}><Later><WhatsNewUpNext /></Later></StackSlot>
         </CardStack>
 
         {trips
@@ -110,48 +111,5 @@ export default function UpNext() {
       <Later><UpNextSync /></Later>
       {joining && <Later><JoinSheet open onClose={() => setJoining(false)} /></Later>}
     </Screen>
-  );
-}
-
-/**
- * A pile of cards with only the top one showing, and a "2 more" button that fans the rest out. The
- * cards come and go on their own (each loads later and can be dismissed), so it counts what's there.
- */
-function CardStack({ children }) {
-  const ref = useRef(null);
-  const [n, setN] = useState(0);
-  const [open, setOpen] = useState(false);
-  useLayoutEffect(() => {
-    const el = ref.current;
-    if (!el) return undefined;
-    // Mark every card after the first as waiting while it's piled, along with each waiting card's own
-    // section label (the labels just before it); the top card keeps its label
-    const read = () => {
-      const cards = [...el.querySelectorAll('.remind-card')];
-      cards.forEach((c, i) => {
-        const wait = !open && i > 0;
-        c.classList.toggle('cs-wait', wait);
-        for (let p = c.previousElementSibling; p && !p.classList.contains('remind-card'); p = p.previousElementSibling) {
-          if (p.classList.contains('sec-label')) p.classList.toggle('cs-wait', wait);
-        }
-      });
-      setN(cards.length);
-    };
-    read();
-    // Watched for cards coming and going, and for a card React re-renders with a new className
-    // (which drops the waiting mark). Toggling a class that's already right makes no record, so no loop.
-    const mo = new MutationObserver(read);
-    mo.observe(el, { subtree: true, childList: true, attributes: true, attributeFilter: ['class'] });
-    return () => mo.disconnect();
-  }, [open]);
-  return (
-    <div ref={ref} className={`card-stack ${n > 1 && !open ? 'piled' : ''}`}>
-      {children}
-      {n > 1 && (
-        <button className="cs-more" onClick={() => setOpen(!open)} aria-expanded={open}>
-          {open ? 'Show less' : `${n - 1} more`} <Icon name={open ? 'caret-up' : 'caret-down'} />
-        </button>
-      )}
-    </div>
   );
 }

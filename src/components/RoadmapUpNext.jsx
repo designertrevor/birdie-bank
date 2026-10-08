@@ -5,6 +5,7 @@
 import { Spot } from './Spot.jsx';
 import { useEffect, useState } from 'react';
 import { Icon } from './ui.jsx';
+import { useStackCard } from './CardStack.jsx';
 import { useNav } from '../lib/nav.js';
 import { roadmapItems, shippedNotes } from '../lib/roadmap.js';
 import { markNotesTold, refreshForUpNext, useRoadmap } from '../lib/roadmap-sync.js';
@@ -36,11 +37,13 @@ export function ShippedUpNext() {
     markNotesTold(notes.map(n => n.key));
   }, [base, shown, local, server]);
 
+  // Its place on Up next's pile (CardStack.jsx), once it has something to say
+  const waiting = useStackCard({ showing: !!shown?.length });
   if (!shown?.length) return null;
   const [first, ...more] = shown;
   const sub = more.length ? `${first.title}, and ${more.length} more you were waiting on` : first.title;
   return (
-    <div className="remind-card rm-live" role="status">
+    <div className={`remind-card rm-live${waiting ? ' cs-wait' : ''}`} role="status">
       <div className="rc-head">
         <Spot kind="gift" size={56} className="rc-spot" />
         <div className="row-main">
