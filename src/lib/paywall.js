@@ -140,13 +140,17 @@ export function planStatus(state, now = Date.now()) {
 const DAY = 24 * 60 * 60 * 1000;
 const fmtDay = d => d.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
 
-/** The trial, step by step: today, the reminder, and when Pro starts. `planned`: they just planned a round. */
-export function trialTimeline(start = new Date(), { days = TRIAL_DAYS, remind = REMIND_DAY, planned = false } = {}) {
+/**
+ * The trial, step by step: today, the reminder, and when Pro starts. `planned`: they just planned
+ * a round. `plan`: the plan they've picked (monthly or yearly, both with the same trial), so the
+ * last step says what Pro costs from then on.
+ */
+export function trialTimeline(start = new Date(), { days = TRIAL_DAYS, remind = REMIND_DAY, planned = false, plan = null } = {}) {
   const at = n => new Date(start.getTime() + n * DAY);
   return [
     { key: 'today', icon: 'check', title: 'Today', when: null, text: planned ? 'Everything in Pro. Your next round is set up and the group link is ready.' : 'Everything in Pro, starting with your next round.' },
     { key: 'remind', icon: 'bell', title: `Day ${remind}`, when: fmtDay(at(remind)), text: 'We remind you the trial is ending. No surprises.' },
-    { key: 'start', icon: 'star', title: `Day ${days}`, when: fmtDay(at(days)), text: 'Pro starts, unless you cancel. Two taps.' },
+    { key: 'start', icon: 'star', title: `Day ${days}`, when: fmtDay(at(days)), text: plan ? `Pro starts at ${priceLabel(plan)}, unless you cancel. Two taps.` : 'Pro starts, unless you cancel. Two taps.' },
   ];
 }
 
@@ -161,6 +165,22 @@ export function priceLabel(plan) {
 export function perMonthLabel(plan) {
   const m = plan.per === 'year' ? plan.price / 12 : plan.price;
   return `${dollars(Math.round(m * 100) / 100)} a month`;
+}
+
+/** A plan's line on the paywall: the same trial on each, then its price. "14 days free, then $6.99 a month". */
+export function trialLine(plan, days = TRIAL_DAYS) {
+  return `${days} days free, then ${priceLabel(plan)}`;
+}
+
+/**
+ * The button and the fine print under it, for the plan picked: both plans start the same free
+ * trial, and the fine print says what comes after it. Nothing is charged today either way.
+ */
+export function trialCta(plan, days = TRIAL_DAYS) {
+  return {
+    button: `Start ${days} days free`,
+    fine: `No charge today, then ${priceLabel(plan)}. Cancel any time.`,
+  };
 }
 
 /** How much yearly saves against paying monthly for a year, as a whole percent. */

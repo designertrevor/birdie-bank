@@ -8,7 +8,7 @@ import { useNav } from '../lib/nav.js';
 import { GAMES } from '../lib/round.js';
 import {
   DEFAULT_PLAN, PLANS, PRICES_ARE_PLACEHOLDERS, PRO_FEATURES, REMIND_DAY, TRIAL_DAYS, VARIANTS,
-  annualSavings, freePromise, paywallAnswer, perMonthLabel, priceLabel, trialTimeline, variantFor,
+  annualSavings, freePromise, paywallAnswer, perMonthLabel, trialCta, trialLine, trialTimeline, variantFor,
 } from '../lib/paywall.js';
 
 export default function Paywall({ source = 'onboarding' }) {
@@ -36,10 +36,16 @@ export default function Paywall({ source = 'onboarding' }) {
   return <View plan={plan} setPlan={setPlan} onClose={onClose} onTrial={() => answer('trial')} onFree={() => answer('free')} freeWayOut={VARIANTS[variant]?.freeWayOut ?? true} />;
 }
 
-/** C: "Trial with a free way out". The trial timeline, the plans, the free promise and a full free button. */
+/**
+ * C: "Trial with a free way out". The trial timeline, the plans, the free promise and a full free
+ * button. The trial is the same on both plans; the one picked says what comes after it, on its
+ * row, on the timeline's last step and under the button.
+ */
 function TrialWithFreeWayOut({ plan, setPlan, onClose, onTrial, onFree, freeWayOut }) {
   const [start] = useState(() => new Date());
-  const steps = trialTimeline(start, { planned: Object.values(getState().plans || {}).some(p => p.host) });
+  const picked = PLANS[plan] || PLANS[DEFAULT_PLAN];
+  const steps = trialTimeline(start, { planned: Object.values(getState().plans || {}).some(p => p.host), plan: picked });
+  const cta = trialCta(picked);
   const save = annualSavings();
   const games = Object.keys(GAMES).length;
   return (
@@ -77,10 +83,10 @@ function TrialWithFreeWayOut({ plan, setPlan, onClose, onTrial, onFree, freeWayO
           {Object.values(PLANS).map(p => {
             const on = plan === p.id;
             return (
-              <button key={p.id} role="radio" aria-checked={on} aria-label={`${p.label}, ${priceLabel(p)}${p.per === 'year' ? `, ${perMonthLabel(p)}, save ${save}%` : ''}, ${TRIAL_DAYS} days free`} className={`list-item pick pw-plan ${on ? 'on' : ''}`} onClick={() => setPlan(p.id)}>
+              <button key={p.id} role="radio" aria-checked={on} aria-label={`${p.label}, ${trialLine(p)}${p.per === 'year' ? `, ${perMonthLabel(p)}, save ${save}%` : ''}`} className={`list-item pick pw-plan ${on ? 'on' : ''}`} onClick={() => setPlan(p.id)}>
                 <div className="row-main">
                   <div className="li-name">{p.label} {p.per === 'year' && <span className="pw-save">Save {save}%</span>}</div>
-                  <div className="li-sub">{priceLabel(p)}{p.per === 'year' ? ` (${perMonthLabel(p)})` : ''} · {TRIAL_DAYS} days free</div>
+                  <div className="li-sub">{trialLine(p)}{p.per === 'year' ? ` (${perMonthLabel(p)})` : ''}</div>
                 </div>
                 <PickMark on={on} add={false} />
               </button>
@@ -96,9 +102,9 @@ function TrialWithFreeWayOut({ plan, setPlan, onClose, onTrial, onFree, freeWayO
         {PRICES_ARE_PLACEHOLDERS && <p className="field-help pad">Preview: prices aren’t final and nothing is charged.</p>}
       </div>
       <div className="cta-wrap">
-        <button className="full-btn" onClick={onTrial}>Start my free trial <Icon name="arrow-right" /></button>
+        <button className="full-btn" onClick={onTrial}>{cta.button} <Icon name="arrow-right" /></button>
         {freeWayOut && <button className="full-btn outline" onClick={onFree}>Keep scoring for free</button>}
-        <p className="pw-fine">No charge today. Cancel any time.</p>
+        <p className="pw-fine">{cta.fine}</p>
       </div>
     </Screen>
   );
