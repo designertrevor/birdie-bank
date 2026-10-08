@@ -173,6 +173,18 @@ export function netSeries(rounds, state) {
 }
 
 /**
+ * The parts of the state the season line reads: the rounds, who you are and your merges
+ * (people-links.js), and a Big Game's money (big-money.js). The Tab keys its memo on these, so a
+ * payment or a message doesn't redo the line; the test holds seasonSeries to them.
+ */
+export const SEASON_READS = ['rounds', 'me', 'players', 'links', 'unlinks', 'accountOf', 'trips', 'tripPlans', 'bigCards', 'bigRemote'];
+
+/** Your running net this season (netSeries over roundsInRange), for the line under the Tab's big number. */
+export function seasonSeries(state, now = new Date()) {
+  return netSeries(roundsInRange(state, defaultRange(now)), state);
+}
+
+/**
  * Net with each player over these rounds (positive: you came out ahead of them). This is the honest
  * head-to-head from roundResults().pairs, bet by bet, not who happened to pay whom in the fewest payments.
  * Money rounds, and reward rounds' side bets for money you had one in (the Tab's dollars).

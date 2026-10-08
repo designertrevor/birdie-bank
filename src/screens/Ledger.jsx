@@ -5,7 +5,7 @@ import FreePromise from '../components/FreePromise.jsx';
 import { Avatar, SettleSheet } from '../components/Pay.jsx';
 import { PersonActions, RecentPaid, RewardLines, SquareStrip } from '../components/TabCard.jsx';
 import { SeasonChart } from '../components/SeasonChart.jsx';
-import { defaultRange, netSeries, roundsInRange } from '../lib/history.js';
+import { SEASON_READS, seasonSeries } from '../lib/history.js';
 import { avatarFor, avatarModel } from '../lib/avatars.js';
 import { useStore } from '../lib/store.js';
 import { headToHeadSummary, nameOf, outstanding } from '../lib/ledger.js';
@@ -110,8 +110,10 @@ export default function Ledger() {
   const squareNames = squareIds.map(id => first(nameOf(state, id)));
   // For the all square scene: the buddies of the people you've played with
   const squareBuddies = [...h2h.keys()].slice(0, 2).map((id, i) => { const m = avatarModel(avatarFor(state, id), { key: id, name: nameOf(state, id) }); return m.kind === 'buddy' ? m.buddy : ['visor', 'snapback'][i]; });
-  // Your running net this season, for the line under the big number
-  const season = useMemo(() => netSeries(roundsInRange(state, defaultRange()), state), [state]);
+  // Your running net this season, for the line under the big number: keyed on what it reads (the
+  // rounds, who you are, your merges, a Big Game's money: SEASON_READS), so a payment or a message doesn't redo it
+  const season = useMemo(() => seasonSeries({ rounds: state.rounds, me: state.me, players: state.players, links: state.links, unlinks: state.unlinks, accountOf: state.accountOf, trips: state.trips, tripPlans: state.tripPlans, bigCards: state.bigCards, bigRemote: state.bigRemote }),
+    [state.rounds, state.me, state.players, state.links, state.unlinks, state.accountOf, state.trips, state.tripPlans, state.bigCards, state.bigRemote]);
 
   // The same Settle up sheet the person screen opens for a part payment
   const partDebt = p => {
