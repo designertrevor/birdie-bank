@@ -4,6 +4,7 @@
 // Opened with nav.push('share', { kind: 'recap' | 'trip' | 'cup', id }), or { kind: 'wrapped', year } for
 // your year in review (wrapped.js), drawn by wrapped-image.js, or { kind: 'profile' } for your own
 // profile card (profile-card.js), a square drawn by profile-card-image.js. Only ever yours: it takes no id.
+// { kind: 'rivalry', id } is you against one friend (rivalry-card.js), a square drawn by rivalry-card-image.js.
 import { useCallback, useState } from 'react';
 import { Empty, Header, Screen } from '../components/ui.jsx';
 import { BuddyArt } from '../components/BuddyArt.jsx';
@@ -21,10 +22,29 @@ import { wrappedCardModel, yearInReview } from '../lib/wrapped.js';
 import { renderWrapped } from '../lib/wrapped-image.js';
 import { profileCard, profileCardModel } from '../lib/profile-card.js';
 import { renderProfileCard } from '../lib/profile-card-image.js';
+import { rivalryCard, rivalryCardModel } from '../lib/rivalry-card.js';
+import { renderRivalryCard } from '../lib/rivalry-card-image.js';
 import { photoAllowed } from '../lib/avatars.js';
 import { supabaseUrl } from '../lib/supabase.js';
 
 const card = model => ({ model, alt: model.alt, text: cardText(model) });
+
+/**
+ * A buddy as a picture the canvas can draw: the avatar's SVG, drawn once on the page (hidden) and
+ * read as a data link. Returns [src, grab]: put `grab` on the hidden span that holds the BuddyArt,
+ * keyed on the buddy and backdrop so a new buddy reads again. A photo needs none of this.
+ */
+function useBuddySrc() {
+  const [src, setSrc] = useState(null);
+  const grab = useCallback(node => {
+    const svg = node?.querySelector('svg');
+    if (svg && typeof XMLSerializer !== 'undefined') setSrc(`data:image/svg+xml;charset=utf-8,${encodeURIComponent(new XMLSerializer().serializeToString(svg))}`);
+  }, []);
+  return [src, grab];
+}
+
+/** What the canvas draws for an avatar model: an allowed photo, the buddy read from the page, or nothing (initials). */
+const drawableSrc = (a, buddySrc) => (a.kind === 'photo' && photoAllowed(a.url, supabaseUrl) ? a.url : a.kind === 'buddy' ? buddySrc : null);
 
 export default function ShareScreen({ kind, id, year }) {
   const nav = useNav();
@@ -34,6 +54,7 @@ export default function ShareScreen({ kind, id, year }) {
   );
 
   if (kind === 'profile') return <ProfileShare state={state} onBack={nav.pop} />;
+  if (kind === 'rivalry') return <RivalryShare state={state} id={id} onBack={nav.pop} gone={gone} />;
 
   if (kind === 'wrapped') return <WrappedShare state={state} year={year} onBack={nav.pop} gone={gone} />;
   if (kind === 'recap') {
@@ -84,15 +105,11 @@ export default function ShareScreen({ kind, id, year }) {
 function WrappedShare({ state, year, onBack, gone }) {
   const card = profileCard(state);
   const a = card.avatar;
-  const [buddySrc, setBuddySrc] = useState(null);
-  const grab = useCallback(node => {
-    const svg = node?.querySelector('svg');
-    if (svg && typeof XMLSerializer !== 'undefined') setBuddySrc(`data:image/svg+xml;charset=utf-8,${encodeURIComponent(new XMLSerializer().serializeToString(svg))}`);
-  }, []);
+  const [buddySrc, grab] = useBuddySrc();
   const y = yearInReview(state, year || new Date().getFullYear());
   if (!y.rounds) return gone(`No rounds in ${y.year} yet`, 'Finish a round and your year in review starts here.');
   const link = appLink();
-  const avatarSrc = a.kind === 'photo' && photoAllowed(a.url, supabaseUrl) ? a.url : a.kind === 'buddy' ? buddySrc : null;
+  const avatarSrc = drawableSrc(a, buddySrc);
   // Only your own money is on it: Show amounts (off until you turn it on) is all that puts it there
   return (
     <Screen>
@@ -112,14 +129,9 @@ function WrappedShare({ state, year, onBack, gone }) {
  */
 function ProfileShare({ state, onBack }) {
   const card = profileCard(state);
-  const [buddySrc, setBuddySrc] = useState(null);
   const a = card.avatar;
-  // The buddy as the avatar draws it, read once it's on the page (keyed below, so a new buddy reads again)
-  const grab = useCallback(node => {
-    const svg = node?.querySelector('svg');
-    if (svg && typeof XMLSerializer !== 'undefined') setBuddySrc(`data:image/svg+xml;charset=utf-8,${encodeURIComponent(new XMLSerializer().serializeToString(svg))}`);
-  }, []);
-  const avatarSrc = a.kind === 'photo' && photoAllowed(a.url, supabaseUrl) ? a.url : a.kind === 'buddy' ? buddySrc : null;
+  const [buddySrc, grab] = useBuddySrc();
+  const avatarSrc = drawableSrc(a, buddySrc);
   const link = appLink();
   const hasMoney = !!(card.season.money || card.nemesis);
   return (
@@ -136,10 +148,36 @@ function ProfileShare({ state, onBack }) {
   );
 }
 
-/** The year in review (or the profile card) while its image is being drawn: the same words, as tiles. */
-function WrappedStandIn({ model }) {
+/**
+ * You against one friend, from the face-to-face header on their screen. Both avatars go on the
+ * image: a photo when it's one the app may fetch, a buddy drawn here once, hidden, and handed to
+ * the canvas; initials need nothing. Their money follows the Tab's rule: with their profile Only
+ * you, the switch holds the amounts off (amountsRule) and the model keeps them off too.
+ */
+function RivalryShare({ state, id, onBack, gone }) {
+  const card = rivalryCard(state, id);
+  const [youSrc, grabYou] = useBuddySrc();
+  const [themSrc, grabThem] = useBuddySrc();
+  if (!card.rounds) return gone('No rounds together yet', `Finish a round with ${card.them.name.split(' ')[0] || 'them'} and the rivalry starts here.`);
+  const link = appLink();
+  const you = card.you.avatar, them = card.them.avatar;
   return (
-    <div className={`share-card${model.headline ? '' : ' square'}`}>
+    <Screen>
+      <ShareView title="Share the rivalry" small onBack={onBack} what="Rivalry" link={link} square
+        make={show => { const m = rivalryCardModel(card, { showAmounts: show, link, youSrc: drawableSrc(you, youSrc), themSrc: drawableSrc(them, themSrc) }); return { model: m, alt: m.alt, text: m.text }; }}
+        render={renderRivalryCard} fileName={slugName('rivalry', `${card.you.name.split(' ')[0] || 'you'} v ${card.them.name}`)}
+        money={card.moneyRounds > 0} people={[{ id, name: card.them.name }]} standIn={m => <WrappedStandIn model={m} square />}
+        onText="The money between you is on the image" offText="The record, the streak and your last round together, no money" />
+      {you.kind === 'buddy' && <span key={`you-${you.buddy}-${you.bg}`} ref={grabYou} hidden><BuddyArt id={you.buddy} bg={you.bg} /></span>}
+      {them.kind === 'buddy' && <span key={`them-${them.buddy}-${them.bg}`} ref={grabThem} hidden><BuddyArt id={them.buddy} bg={them.bg} /></span>}
+    </Screen>
+  );
+}
+
+/** The year in review (or a square card) while its image is being drawn: the same words, as tiles. */
+function WrappedStandIn({ model, square = !model.headline }) {
+  return (
+    <div className={`share-card${square ? ' square' : ''}`}>
       <div className="sc-brand">{model.eyebrow}</div>
       <div className="sc-meta">{model.title}</div>
       {model.headline && <div className="sc-big d wrapped-big">{model.headline}<br />{model.sub}</div>}

@@ -36,7 +36,17 @@ export function RivalryCard({ rv, name, isNemesis, id = null }) {
     <>
       <div className="sec-label">Rivalry</div>
       <div className="rival-card">
-        {isNemesis && <div className="rv-tag"><Icon name="skull" fill /> Your nemesis</div>}
+        {/* The nemesis tag on the left, and on the right the card for the group text (Share.jsx, kind rivalry) */}
+        {(isNemesis || (id && me)) && (
+          <div className="rv-head">
+            {isNemesis && <div className="rv-tag"><Icon name="skull" fill /> Your nemesis</div>}
+            {id && me && (
+              <button className="pill-btn sm rv-share" onClick={() => nav.push('share', { kind: 'rivalry', id })} aria-label="Share this rivalry">
+                <Icon name="share-network" /> Share
+              </button>
+            )}
+          </div>
+        )}
         {/* Face to face, like a fight card: you, the record, them */}
         {id && me && (
           <div className="rv-vs" aria-hidden="true">

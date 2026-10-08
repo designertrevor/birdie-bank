@@ -8,7 +8,12 @@ import { drawPng, drawTile } from './wrapped-image.js';
 export const CARD_SIZE = 1080;
 
 
-function avatar(ctx, a, pic, cx, cy, r) {
+/**
+ * One person's avatar as a ringed circle: their picture (`pic`, a photo or a buddy) covering it, or
+ * their initials on their colour. Shared with the rivalry card (rivalry-card-image.js), where
+ * `a.mirror` flips a buddy so the two face each other.
+ */
+export function drawAvatar(ctx, a, pic, cx, cy, r) {
   ctx.save();
   ctx.beginPath(); ctx.arc(cx, cy, r, 0, Math.PI * 2); ctx.closePath();
   ctx.fillStyle = a.bg;
@@ -18,6 +23,7 @@ function avatar(ctx, a, pic, cx, cy, r) {
     // Cover the circle, cropping the long side
     const s = Math.max((2 * r) / pic.width, (2 * r) / pic.height);
     const w = pic.width * s, h = pic.height * s;
+    if (a.mirror) { ctx.translate(cx * 2, 0); ctx.scale(-1, 1); }
     ctx.drawImage(pic, cx - w / 2, cy - h / 2, w, h);
   } else {
     ctx.fillStyle = a.ink;
@@ -46,7 +52,7 @@ function draw(ctx, m, pic) {
 
   // You: the avatar, then the eyebrow, your name and the season beside it
   const r = 92, cx = PAD + r, cy = 92 + r;
-  avatar(ctx, m.avatar, pic, cx, cy, r);
+  drawAvatar(ctx, m.avatar, pic, cx, cy, r);
   ctx.textAlign = 'left';
   ctx.textBaseline = 'alphabetic';
   // The name stops short of the ochre dot (it starts at W - 240)
