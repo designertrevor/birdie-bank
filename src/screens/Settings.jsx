@@ -25,6 +25,9 @@ import { useAgeCheck } from '../components/AgeCheck.jsx';
 import { NotifyRow } from '../components/NotifyRow.jsx';
 import { ageLine } from '../lib/age.js';
 
+// Settings, Notifications, Which ones lives with its row (NotifyRow.jsx); App.jsx loads it from this chunk like Defaults and About
+export { NotifyPicks } from '../components/NotifyRow.jsx';
+
 /**
  * Your profile at the top of Settings: your avatar big, your name, and what's left to set up as
  * chips, each opening your profile.
