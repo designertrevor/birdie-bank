@@ -1,6 +1,7 @@
 // Per-game panels shown above the score rows while playing.
 import { useEffect, useState } from 'react';
 import { Icon, PickChip, useUI } from './ui.jsx';
+import { GameArt } from './GameArt.jsx';
 import { update, uid } from '../lib/store.js';
 import {
   hammerOptions, hammerTable, holeAtPos, holeComplete, nassauAmounts, nassauPressOptions, nassauWinners, playersOn, pointsTable, pressMode, rabbitTable,
@@ -226,10 +227,15 @@ export function SixesPanel({ round, hole }) {
 
 // --------------------------- Totals & points -------------------------------
 
-export function ChipsPanel({ icon, label, items, color = 'var(--lav)' }) {
+/** The game's own art in a panel, where an icon used to stand in for the game. */
+export function PanelArt({ game }) {
+  return <GameArt game={game} className="bn-art" />;
+}
+
+export function ChipsPanel({ icon, game = null, label, items, color = 'var(--lav)' }) {
   return (
     <div className="banker-bar" style={{ background: color }}>
-      <div><div className="bl">{label}</div><div className="bn"><Icon name={icon} fill /> {items[0]?.lead || 'Even'}</div></div>
+      <div><div className="bl">{label}</div><div className="bn">{game ? <PanelArt game={game} /> : <Icon name={icon} fill />} {items[0]?.lead || 'Even'}</div></div>
       <div className="skin-counts">{items.map(it => <span key={it.id} className="press-chip">{it.name} {it.value}</span>)}</div>
     </div>
   );
@@ -246,7 +252,7 @@ export function TotalsPanel({ round }) {
     const tied = played ? sorted.filter(x => x.over === sorted[0].over) : [];
     const nameOf = x => x.players.map(pid => firstName(round.players.find(p => p.id === pid)?.name || '')).join(' & ');
     const lead = !played ? 'Nobody’s ahead yet' : tied.length === sorted.length ? 'All level' : tied.length > 1 ? `${tied.length} teams tied for the lead` : `${nameOf(sorted[0])} lead`;
-    return <ChipsPanel icon="target" label={`Team quota · ${played} hole${played === 1 ? '' : 's'}`} items={sorted.map((x, i) => ({ id: x.id, name: nameOf(x), value: x.over > 0 ? `+${tenth(x.over)}` : x.over < 0 ? `−${tenth(-x.over)}` : '0', lead: i === 0 ? lead : null }))} />;
+    return <ChipsPanel icon="target" game={round.game} label={`Team quota · ${played} hole${played === 1 ? '' : 's'}`} items={sorted.map((x, i) => ({ id: x.id, name: nameOf(x), value: x.over > 0 ? `+${tenth(x.over)}` : x.over < 0 ? `−${tenth(-x.over)}` : '0', lead: i === 0 ? lead : null }))} />;
   }
   const lowerWins = round.game === 'stroke';
   // To par with a real minus sign, as the rest of the app writes it
@@ -257,7 +263,7 @@ export function TotalsPanel({ round }) {
   const key = x => (round.game === 'quota' ? x.vsQuota : x.total);
   const tied = played ? sorted.filter(x => key(x) === key(sorted[0])) : [];
   const lead = !played ? 'Nobody’s ahead yet' : tied.length === sorted.length ? 'All level' : tied.length > 1 ? `${tied.length} tied for the lead` : `${firstName(sorted[0].name)} leads`;
-  return <ChipsPanel icon={round.game === 'stroke' ? 'list-numbers' : round.game === 'quota' ? 'target' : 'star'} label={`${label} · ${played} hole${played === 1 ? '' : 's'}`} items={sorted.map((x, i) => ({ id: x.id, name: firstName(x.name), value: fmt(x), lead: i === 0 ? lead : null }))} />;
+  return <ChipsPanel icon={round.game === 'stroke' ? 'list-numbers' : round.game === 'quota' ? 'target' : 'star'} game={round.game} label={`${label} · ${played} hole${played === 1 ? '' : 's'}`} items={sorted.map((x, i) => ({ id: x.id, name: firstName(x.name), value: fmt(x), lead: i === 0 ? lead : null }))} />;
 }
 
 /**
@@ -274,7 +280,7 @@ export function ScramblePanel({ round }) {
   const fmt = v => (v === 0 ? 'E' : v > 0 ? `+${v}` : String(v));
   const gap = teams.length > 1 ? teams[1].toPar - teams[0].toPar : 0;
   const lead = !played ? 'Nobody’s ahead yet' : gap === 0 ? 'Tied at the top' : `${teams[0].name} lead by ${gap}`;
-  return <ChipsPanel icon="list-numbers" label={`Net to par · low team wins · ${played} hole${played === 1 ? '' : 's'}`} items={teams.map((t, i) => ({ id: t.id, name: t.name, value: fmt(t.toPar), lead: i === 0 ? lead : null }))} />;
+  return <ChipsPanel icon="list-numbers" game={round.game} label={`Net to par · low team wins · ${played} hole${played === 1 ? '' : 's'}`} items={teams.map((t, i) => ({ id: t.id, name: t.name, value: fmt(t.toPar), lead: i === 0 ? lead : null }))} />;
 }
 
 export function PointsPanel({ round }) {
@@ -284,14 +290,14 @@ export function PointsPanel({ round }) {
   const sorted = [...round.players].sort((a, b) => pts[b.id] - pts[a.id]);
   const label = { nines: '5-3-1 points', bbb: 'Points so far', dots: 'Dots so far' }[round.game];
   const lead = rows.length ? (pts[sorted[0].id] === pts[sorted[1]?.id] ? 'Tied at the top' : `${firstName(sorted[0].name)} leads`) : 'Nobody’s ahead yet';
-  return <ChipsPanel icon={{ nines: 'number-circle-nine', bbb: 'confetti', dots: 'medal' }[round.game]} label={label} items={sorted.map((p, i) => ({ id: p.id, name: firstName(p.name), value: pts[p.id], lead: i === 0 ? lead : null }))} />;
+  return <ChipsPanel icon={{ nines: 'number-circle-nine', bbb: 'confetti', dots: 'medal' }[round.game]} game={round.game} label={label} items={sorted.map((p, i) => ({ id: p.id, name: firstName(p.name), value: pts[p.id], lead: i === 0 ? lead : null }))} />;
 }
 
 export function MoneyPanel({ round, results, icon, label }) {
   const money = unitFmt(round); // points in a points or reward round
   const sorted = [...round.players].sort((a, b) => results.balances[b.id] - results.balances[a.id]);
   const any = sorted.some(p => results.balances[p.id] !== 0);
-  return <ChipsPanel icon={icon} label={label} items={sorted.map((p, i) => ({ id: p.id, name: firstName(p.name), value: money(results.balances[p.id], { sign: true }), lead: i === 0 ? (any ? `${firstName(p.name)} up` : 'All square') : null }))} />;
+  return <ChipsPanel icon={icon} game={round.game} label={label} items={sorted.map((p, i) => ({ id: p.id, name: firstName(p.name), value: money(results.balances[p.id], { sign: true }), lead: i === 0 ? (any ? `${firstName(p.name)} up` : 'All square') : null }))} />;
 }
 
 // --------------------------- Rabbit ---------------------------------------
@@ -306,7 +312,7 @@ export function RabbitPanel({ round, hole }) {
     <div className="banker-bar" style={{ background: 'var(--lav)' }}>
       <div>
         <div className="bl">{leg?.seg.label} · ends H{holeAtPos(round, leg?.seg.end)}</div>
-        <div className="bn"><Icon name="rabbit" fill /> {holder ? `${nameOf(round, holder)} has the rabbit` : 'The rabbit is loose'}</div>
+        <div className="bn"><PanelArt game="rabbit" /> {holder ? `${nameOf(round, holder)} has the rabbit` : 'The rabbit is loose'}</div>
       </div>
       <div className="skin-counts">
         {won.map(l => <span key={l.seg.label} className="press-chip">{l.seg.label}: {firstName(nameOf(round, l.holder))}</span>)}
@@ -328,7 +334,7 @@ export function SnakePanel({ round, hole, marks }) {
     <div className="banker-bar" style={{ background: 'var(--lav)' }}>
       <div>
         <div className="bl">{t.legs.length > 1 ? `${leg.seg.label} · ` : ''}{leg.count ? `${leg.count} three-putt${leg.count === 1 ? '' : 's'} · worth ${money(leg.value)}` : 'No three-putts yet'}</div>
-        <div className="bn"><Icon name="wave-sine" fill /> {leg.holder ? `${firstName(nameOf(round, leg.holder))} has the snake` : 'Nobody has the snake'}</div>
+        <div className="bn"><PanelArt game="snake" /> {leg.holder ? `${firstName(nameOf(round, leg.holder))} has the snake` : 'Nobody has the snake'}</div>
       </div>
       <div className="skin-counts">
         {done.map(l => <span key={l.seg.label} className="press-chip">{l.seg.label}: {firstName(nameOf(round, l.holder))}</span>)}
