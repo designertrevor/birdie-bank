@@ -32,6 +32,8 @@ import { holeStrokeNotes, holeStrokeNoteText } from '../lib/stroke-key.js';
 import { DRIVE_GAMES, drivesNeeded } from '../lib/scramble-drives.js';
 import { optionsProblem, roundStakeLines, sideBetLine, stakeSummary } from '../lib/stakes.js';
 import { buzz, confettiFrom } from '../lib/delight.js';
+import { sound } from '../lib/sound-play.js';
+import { scoreSound } from '../lib/sounds.js';
 import { useNav } from '../lib/nav.js';
 import { dropKept, keptMap, useKept, useKeptScope } from '../lib/kept.js';
 import { Scorecard } from '../components/Scorecard.jsx';
@@ -405,6 +407,7 @@ function PlayRound({ round, mount, momentUp = false }) {
       showToast(`${name}!`);
       confettiFrom(numRefs.current[pid], v <= hole.par - 2 ? 60 : 30);
       buzz([20, 40, 20]);
+      sound(scoreSound(v, hole.par));
     }
   };
 

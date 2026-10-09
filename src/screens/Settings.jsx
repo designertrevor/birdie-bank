@@ -1,5 +1,7 @@
 import { useState } from 'react';
 import { Callout, Empty, FileButton, Header, Icon, Numpad, Screen, Segmented, Toggle, useUI } from '../components/ui.jsx';
+import { sound } from '../lib/sound-play.js';
+import { soundsOn } from '../lib/sounds.js';
 import { RulesSheet } from '../components/Rules.jsx';
 import { Avatar } from '../components/Avatar.jsx';
 import { ProfilePrivacy } from '../components/ProfilePrivacy.jsx';
@@ -176,6 +178,11 @@ export default function Settings() {
           <div className="eyebrow" style={{ marginBottom: 10 }}>Theme</div>
           <Segmented label="Theme" className="press-mode-row" btn="pm-btn" value={state.settings.theme} onChange={v => update(s => { s.settings.theme = v; })}
             options={[{ value: 'system', label: 'System' }, { value: 'light', label: 'Light' }, { value: 'dark', label: 'Dark' }]} />
+        </div>
+        {/* Optional sounds (lib/sounds.js), off until turned on; turning them on plays the birdie so you hear what you get */}
+        <div className="toggle-row">
+          <div><div className="toggle-lbl" id="sounds-lbl">Sounds</div><div className="toggle-sub" id="sounds-sub">A quiet chirp for a birdie, a match won, a lead change, the final totals and a payment. Your music keeps playing</div></div>
+          <Toggle on={soundsOn(state.settings)} onChange={v => { update(s => { s.settings.sounds = v; }); if (v) sound('birdie'); }} labelledBy="sounds-lbl" describedBy="sounds-sub" />
         </div>
         <NotifyRow signedIn={!!acct.user} />
         <div className="sec-label">Up next</div>

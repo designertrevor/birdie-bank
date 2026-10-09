@@ -13,6 +13,8 @@ import { useGroupAvatars } from '../lib/useAvatars.js';
 import { donePositions, finalMoment, firstShowing, freshHole, roundMoment } from '../lib/moments.js';
 import { atHalfway, halfwayFor } from '../lib/halfway.js';
 import { buzz, confetti, confettiFrom } from '../lib/delight.js';
+import { sound } from '../lib/sound-play.js';
+import { momentSound } from '../lib/sounds.js';
 
 const ICON = {
   won: 'trophy', halved: 'handshake', change: 'arrows-left-right', dormie: 'lock-simple', square: 'scales', lead: 'arrow-circle-up',
@@ -60,6 +62,8 @@ export function RoundMoments({ round, onFinish, onShowing = null }) {
 
   // Before paint, so the card is never drawn under a moment that just arrived (reduced motion skips its fade)
   useLayoutEffect(() => { onShowing?.(!!moment || !!half); }, [moment, half, onShowing]);
+  // The optional sound for a match won or a lead change (lib/sounds.js); quiet unless Sounds is on
+  useEffect(() => { sound(momentSound(moment)); }, [moment]);
   if (!moment && !half) return null;
   const close = () => setMoment(null);
   return (

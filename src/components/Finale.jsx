@@ -11,6 +11,7 @@ import { PayButton, RequestButton } from './Pay.jsx';
 import { Avatar, AvatarArt } from './Avatar.jsx';
 import { useGroupAvatars } from '../lib/useAvatars.js';
 import { buzz, confettiFrom } from '../lib/delight.js';
+import { sound } from '../lib/sound-play.js';
 import { gameLabel, meFor, placeOf, roundDate, roundPlayerName, shareText } from '../lib/format.js';
 import { gamesLine } from '../lib/side-games.js';
 import { markRoundAsked, roundAsked, submitReaction } from '../lib/feedback.js';
@@ -158,6 +159,7 @@ export function Reveal({ round, res, onNext, onDetail, extra, instant = false })
     if (!done || square || instant) return;
     confettiFrom(hero.current, 70);
     buzz([20, 40, 20]);
+    sound('total');
   }, [done, square, instant]);
 
   // Partners who won together are one winning side, not a tie
@@ -318,6 +320,7 @@ export function SettleUp({ round, res, onBack, onNext }) {
     }
     markTransfer(round, t, code);
     buzz(15);
+    sound('paid');
     showToast(`${name(t.from)} is square with ${name(t.to)}`, { label: 'Undo', run: () => {
       const x = getState().settlements.findLast(z => z.roundId === round.id && z.from === t.from && z.to === t.to);
       if (x) undoPayments([x]);

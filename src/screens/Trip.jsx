@@ -31,6 +31,7 @@ import { plansByDay } from '../lib/trip-templates.js';
 import { teesOffLine } from '../lib/tees-off.js';
 import { DraftCard, FlightsView, ScheduleCard } from '../components/TripMode.jsx';
 import { buzz } from '../lib/delight.js';
+import { sound } from '../lib/sound-play.js';
 import { allTripPays } from '../lib/trip-expenses.js';
 import { markTripPayment, undoPayments, usePaymentsOff, useTabSync } from '../lib/tab-sync.js';
 import { TRIP_FORMATS, canDeleteTrip, canMarkLine, canRecount, doneAsk, myTripAllIn, myTripNet, partPlan, roundsInDates, startsLine, tripByGame, tripDates, tripHidden, tripOf, tripStatus, upDown } from '../lib/trips.js';
@@ -574,6 +575,7 @@ function TripSettlePage({ id, who = null }) {
   const mark = t => {
     const { shared, at } = markTripPayment({ tripId: id, from: t.from, to: t.to, part: !!who });
     buzz(15);
+    sound('paid');
     const iPaid = t.from === me, gotIt = t.to === me;
     const text = iPaid ? `You paid ${short(t.to)}` : gotIt ? `${short(t.from)} paid you` : `${short(t.from)} paid ${short(t.to)}`;
     showToast(shared ? `${text}. Everyone in the rounds sees it.` : text, { label: 'Undo', run: () => {

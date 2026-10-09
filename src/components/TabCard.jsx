@@ -12,6 +12,7 @@ import { PAY_APPS, payInfoFor } from '../lib/pay.js';
 import { money } from '../lib/golf.js';
 import { gameLabel, meFor, myIds } from '../lib/format.js';
 import { buzz } from '../lib/delight.js';
+import { sound } from '../lib/sound-play.js';
 import { ago, canonicalOf, recentPayment, roundRows, roundStatus, shortDate, stripRound } from '../lib/shared-tab.js';
 import { CARRY_REASONS, cardCarry, sharedOwed } from '../lib/carry.js';
 import { answerCarry, askCarry, markPaid, undoLastPayment, usePaymentsOff } from '../lib/tab-sync.js';
@@ -89,6 +90,7 @@ export function PersonActions({ other, net, meId }) {
     const mine = myIds(now);
     const allSquare = !outstanding(now).some(t => mine.has(t.from) || mine.has(t.to));
     buzz(allSquare ? [15, 40, 15] : 15);
+    sound('paid');
     showToast(allSquare ? 'All square. Nobody owes anybody.' : shared ? `Marked paid. ${first} sees it too.` : 'Marked paid', { label: 'Undo', run: () => undoLastPayment(meId, other) }, { tone: 'win' });
   };
   const answer = type => {
