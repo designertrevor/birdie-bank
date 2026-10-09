@@ -3434,8 +3434,9 @@ a.header-btn.rm-open { text-decoration: none; }
 .trip-card-eb .tce-when { flex-shrink: 0; white-space: pre; }
 
 /* ---------- O10 whatsnew: What's new, the release notes screen and its Up next card ---------- */
+.whats-new .rm-intro { padding: 0 20px 12px; font-size: 14px; color: var(--mute); }
 .whats-new .rm-list { margin-bottom: 6px; }
-.whats-new .rm-cta { margin-top: 16px; }
+.whats-new .rm-cta { margin-top: 20px; }
 .whats-new .rm-tag { background: var(--mint); color: var(--on-pastel); }
 .wn-card .rc-sub { text-wrap: pretty; }
 
@@ -3456,15 +3457,15 @@ a.header-btn.rm-open { text-decoration: none; }
 .trend-empty .field-help { margin-top: 4px; }
 
 /* O10 halloffame: a crew's money list, ranked, one row a person; you get the picked-row tint */
-.hof-list { list-style: none; padding: 6px 14px; }
-.hof-row { display: flex; align-items: center; gap: 12px; min-height: 52px; padding: 8px 0; border-bottom: 1px solid var(--line); }
+.hof-list { list-style: none; padding: 4px 14px; }
+.hof-row { display: flex; align-items: center; gap: 12px; min-height: 56px; padding: 8px 0; border-bottom: 1px solid var(--line); }
 .hof-row:last-child { border-bottom: 0; }
 .hof-row.me { margin: 0 -14px; padding: 8px 14px; background: var(--pick-tint); border-radius: 14px; border-bottom-color: transparent; }
 .hof-row .avatar { margin: 0; flex-shrink: 0; }
-.hof-rank { width: 18px; flex-shrink: 0; text-align: center; font-weight: 700; color: var(--mute); font-variant-numeric: tabular-nums; }
-.hof-name { display: block; font-weight: 700; color: var(--ink); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.hof-sub { display: block; margin-top: 1px; font-size: 13px; color: var(--mute); font-variant-numeric: tabular-nums; }
-.hof-amt { flex-shrink: 0; font-family: var(--display); font-size: 18px; font-weight: 800; color: var(--ink); font-variant-numeric: tabular-nums; }
+.hof-rank { width: 20px; flex-shrink: 0; text-align: center; font-size: 14px; font-weight: 700; color: var(--mute); font-variant-numeric: tabular-nums; }
+.hof-name { display: block; font-size: 15px; font-weight: 700; color: var(--ink); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.hof-sub { display: block; margin-top: 2px; font-size: 13px; color: var(--mute); font-variant-numeric: tabular-nums; }
+.hof-amt { flex-shrink: 0; min-width: 56px; text-align: right; font-family: var(--display); font-size: 17px; font-weight: 800; color: var(--ink); font-variant-numeric: tabular-nums; }
 .hof .kv-k .sl-sub { margin-top: 1px; }
 /* O10 wrapped: the year in review's stand-in while its image is drawn, the stats as tiles */
 .wrapped-tiles { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin: 12px 0; }
@@ -3740,22 +3741,27 @@ a.header-btn.rm-open { text-decoration: none; }
 .lp-now { margin-left: auto; align-self: flex-start; font-size: 11px; color: rgba(10,10,10,.5); }
 
 /* What's new: the newest on a hero card, the rest as one compact list a month */
-.wn-hero { margin: 4px 16px 6px; padding: 16px; border-radius: 24px; background: var(--card); display: flex; gap: 12px; align-items: center; }
-.wn-hero .spot { flex-shrink: 0; margin-left: -8px; }
+.wn-hero { margin: 0 16px 4px; padding: 16px 18px 16px 12px; border-radius: 24px; background: var(--card); box-shadow: var(--card-shadow); display: flex; gap: 12px; align-items: center; }
+.wn-hero .spot { flex-shrink: 0; margin-left: -4px; }
 .wn-hero-words { min-width: 0; display: flex; flex-direction: column; gap: 4px; }
-.wn-hero-title { margin: 0; font-size: 22px; font-weight: 800; letter-spacing: -.02em; line-height: 1.15; }
+.wn-hero-title { margin: 0; font-size: 20px; font-weight: 800; letter-spacing: -.02em; line-height: 1.2; text-wrap: balance; }
+.wn-hero .rm-meta { margin-top: 8px; }
 .rm-list.compact { background: var(--card); border-radius: 20px; overflow: hidden; margin-left: 16px; margin-right: 16px; padding: 0; }
-.rm-list.compact .rm-card { background: none; border-radius: 0; margin: 0; padding: 12px 16px; box-shadow: none; }
+.rm-list.compact .rm-card { background: none; border-radius: 0; margin: 0; padding: 14px 16px; box-shadow: none; }
+.rm-list.compact .rm-area { margin-bottom: 2px; }
+.rm-list.compact .rm-meta { margin-top: 6px; }
 .rm-list.compact .rm-card + .rm-card { border-top: 1px solid var(--line); }
 .rm-list.compact .rm-blurb { display: none; }
-.rm-list.compact .rm-title { font-size: 16px; }
+.rm-list.compact .rm-title { font-size: 15px; line-height: 1.3; }
 .wn-month:has(.rm-list.compact:empty) { display: none; }
 
 /* HALL OF FAME: the leader crowned, the money list's top three on a podium, records as badges */
-.hof-hero { display: flex; flex-direction: column; align-items: center; text-align: center; }
-.hof-hero .crowned, .hof-hero .spot { margin-bottom: 6px; }
-.badge-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; margin: 0 16px 10px; }
-.badge-tile { display: flex; flex-direction: column; gap: 2px; padding: 14px; border-radius: 20px; background: var(--card); min-width: 0; }
+.hof-hero { display: flex; flex-direction: column; align-items: center; text-align: center; padding-top: 8px; }
+.hof-hero .settle-count { margin-top: 2px; line-height: 1.15; text-wrap: balance; }
+.hof-hero > p { max-width: 300px; }
+.hof-hero .crowned, .hof-hero .spot { margin-bottom: 10px; }
+.badge-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; margin: 0 16px 6px; }
+.badge-tile { display: flex; flex-direction: column; gap: 2px; padding: 14px 14px 12px; border-radius: 20px; background: var(--card); min-width: 0; }
 .bt-ic { width: 36px; height: 36px; border-radius: 50%; display: grid; place-items: center; background: var(--ochre); color: var(--on-pastel); font-size: 18px; margin-bottom: 6px; }
 .badge-tile.empty .bt-ic { background: var(--surface); color: var(--mute-soft); }
 .bt-k { font-size: 12px; font-weight: 700; color: var(--mute); text-transform: uppercase; letter-spacing: .05em; }

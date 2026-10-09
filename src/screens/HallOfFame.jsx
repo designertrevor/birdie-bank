@@ -76,7 +76,7 @@ export default function HallOfFame({ crew: crewId }) {
       <Header title="Hall of fame" small onBack={nav.pop} />
       <div className="scroll">
         <div className="settle-lede hof-hero">
-          {season.champion && faces.get(season.champion.id) ? <CrownedFace model={faces.get(season.champion.id)} size={84} /> : <Spot kind="cup" size={110} />}
+          {season.champion && faces.get(season.champion.id) ? <CrownedFace model={faces.get(season.champion.id)} size={76} /> : <Spot kind="cup" size={96} />}
           <div className="eyebrow">{crew.name}</div>
           <div className="d settle-count">{season.champion ? `${first(season.champion.id)} ${season.champion.id === me ? 'lead' : 'leads'} the season` : 'The season so far'}</div>
           <p>{season.rounds ? `${plural(season.rounds, 'round')} for money ${sinceLine}` : `No rounds for money ${sinceLine}`}</p>
