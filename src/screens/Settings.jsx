@@ -327,7 +327,7 @@ export function Defaults() {
             <GameOptions game={g} get={get} set={set} onAmount={(path, label, o) => setPad({ path, label, ...o })} compact />
           </div>
         ))}
-        <button className="danger-link" onClick={async () => { if (await ask({ title: 'Reset your game defaults?', text: 'Every game goes back to the standard bets and house rules. Rounds you’ve played don’t change.', confirmLabel: 'Reset' })) update(st => { st.settings = { ...structuredClone(DEFAULT_SETTINGS), theme: st.settings.theme, shareAmounts: st.settings.shareAmounts, betPrompt: st.settings.betPrompt, callouts: st.settings.callouts, nudgeDays: st.settings.nudgeDays, shareUsage: st.settings.shareUsage }; }); }}><Icon name="arrow-counter-clockwise" /> Reset to defaults</button>
+        <button className="danger-link" onClick={async () => { if (await ask({ title: 'Reset your game defaults?', text: 'Every game goes back to the standard bets and house rules. Rounds you’ve played don’t change.', confirmLabel: 'Reset' })) update(st => { st.settings = { ...structuredClone(DEFAULT_SETTINGS), theme: st.settings.theme, shareAmounts: st.settings.shareAmounts, betPrompt: st.settings.betPrompt, callouts: st.settings.callouts, nudgeDays: st.settings.nudgeDays, shareUsage: st.settings.shareUsage, sounds: st.settings.sounds }; }); }}><Icon name="arrow-counter-clockwise" /> Reset to defaults</button>
       </div>
       <Numpad open={!!pad} title={pad?.label} prefix="$" initial={pad ? get(pad.path) : ''} min={pad?.min} max={pad?.max}
         onClose={() => setPad(null)} onDone={v => { set(pad.path, v); setPad(null); }} />
