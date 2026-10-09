@@ -8,11 +8,13 @@ import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { Icon, Sheet } from './ui.jsx';
 import { AvatarArt } from './Avatar.jsx';
+import { GameArt } from './GameArt.jsx';
 import { Scorecard } from './Scorecard.jsx';
 import { useGroupAvatars } from '../lib/useAvatars.js';
 import { donePositions, finalMoment, firstShowing, freshHole, roundMoment } from '../lib/moments.js';
 import { atHalfway, halfwayFor } from '../lib/halfway.js';
 import { buzz, confetti, confettiFrom } from '../lib/delight.js';
+import { roundTheme, themeVars } from '../lib/round-theme.js';
 
 const ICON = {
   won: 'trophy', halved: 'handshake', change: 'arrows-left-right', dormie: 'lock-simple', square: 'scales', lead: 'arrow-circle-up',
@@ -62,13 +64,15 @@ export function RoundMoments({ round, onFinish, onShowing = null }) {
   useLayoutEffect(() => { onShowing?.(!!moment || !!half); }, [moment, half, onShowing]);
   if (!moment && !half) return null;
   const close = () => setMoment(null);
+  // The main game's theme rides along: its art as a sticker on the banner, the match-won screen and the halfway sheet
+  const theme = roundTheme(round);
   return (
     <>
       {moment && (moment.level === 'big'
-        ? <MatchWon key={moment.id} moment={moment} onClose={close} onFinish={onFinish && !moment.more ? () => { close(); onFinish(); } : null} />
-        : <MomentBanner key={moment.id} moment={moment} round={round} onClose={close} />)}
+        ? <MatchWon key={moment.id} moment={moment} theme={theme} onClose={close} onFinish={onFinish && !moment.more ? () => { close(); onFinish(); } : null} />
+        : <MomentBanner key={moment.id} moment={moment} round={round} theme={theme} onClose={close} />)}
       {/* The ninth hole's own banner goes first; the sheet comes up once it has left, so the two never stack */}
-      {half && !moment && <HalfwaySheet model={half} round={round} onClose={() => setHalf(null)} />}
+      {half && !moment && <HalfwaySheet model={half} round={round} theme={theme} onClose={() => setHalf(null)} />}
     </>
   );
 }
@@ -78,14 +82,17 @@ export function RoundMoments({ round, onFinish, onShowing = null }) {
  * the game's own summary, everyone's money so far and the first nine's card. Display only: the
  * money is what the bar already shows.
  */
-function HalfwaySheet({ model, round, onClose }) {
+function HalfwaySheet({ model, round, theme = null, onClose }) {
   const faces = useGroupAvatars(round.players);
   useEffect(() => { buzz([15, 30, 15]); }, []);
   return (
     <Sheet open onClose={onClose} title="Halfway" className="sc-sheet">
-      <div className="hw-head">
-        <div className="hw-title d">{model.title}</div>
-        <p className="hw-text">{model.text}</p>
+      <div className={`hw-head ${theme ? 'themed' : ''}`} style={themeVars(theme)}>
+        {theme && <GameArt game={theme.game} className="hw-art" />}
+        <div className="hw-words">
+          <div className="hw-title d">{model.title}</div>
+          <p className="hw-text">{model.text}</p>
+        </div>
       </div>
       {model.steps.length > 0 && (
         <div className="hw-card">
@@ -121,7 +128,7 @@ function HalfwaySheet({ model, round, onClose }) {
 }
 
 /** A card that rises above the buttons (the money bar stays in view), cheers a little and leaves on its own. Tap to dismiss. */
-function MomentBanner({ moment, round, onClose }) {
+function MomentBanner({ moment, round, theme = null, onClose }) {
   const faces = useGroupAvatars(round?.players);
   const hero = moment.hero && faces.get(moment.hero);
   const ref = useRef(null);
@@ -137,17 +144,19 @@ function MomentBanner({ moment, round, onClose }) {
   // With reduced motion there's no exit animation to wait for, so it just goes
   useEffect(() => { if (out && reduced()) onClose(); }, [out, onClose]);
   return (
-    <button ref={ref} type="button" className={`moment-banner k-${moment.kind} ${out ? 'out' : ''}`} onClick={() => setOut(true)}
-      onAnimationEnd={e => { if (out && e.target === e.currentTarget) onClose(); }} role="status" aria-live="polite">
+    <button ref={ref} type="button" className={`moment-banner k-${moment.kind} ${theme ? 'stuck' : ''} ${out ? 'out' : ''}`} onClick={() => setOut(true)}
+      onAnimationEnd={e => { if (out && e.target === e.currentTarget) onClose(); }} role="status" aria-live="polite" style={themeVars(theme)}>
       {/* The player it's about, as their buddy; a moment about nobody in particular keeps its icon */}
       <span className={`mo-ic ${hero ? 'mo-face' : ''}`}>{hero ? <AvatarArt model={hero} /> : <Icon name={ICON[moment.kind]} fill />}</span>
       <span className="mo-txt"><span className="mo-title">{moment.title}</span><span className="mo-sub">{moment.text}</span></span>
+      {/* The game's art, stuck on the corner like a sticker, so every moment wears the round's theme */}
+      {theme && <span className="mo-sticker" aria-hidden="true"><GameArt game={theme.game} /></span>}
     </button>
   );
 }
 
 /** The match is over before the last hole: a full screen to say so, like finishing a lesson. */
-function MatchWon({ moment, onClose, onFinish }) {
+function MatchWon({ moment, theme = null, onClose, onFinish }) {
   const ref = useRef(null);
   const btn = useRef(null);
   useEffect(() => {
@@ -168,10 +177,10 @@ function MatchWon({ moment, onClose, onFinish }) {
   const holes = `${moment.left} hole${moment.left === 1 ? '' : 's'}`;
   // On the page itself, above the toasts: the hole's money toast would sit on the buttons
   return createPortal(
-    <div ref={ref} className="match-won" role="dialog" aria-modal="true" aria-labelledby="mw-title" aria-describedby="mw-sub">
+    <div ref={ref} className="match-won" role="dialog" aria-modal="true" aria-labelledby="mw-title" aria-describedby="mw-sub" style={themeVars(theme)}>
       <div className="mw-rays" aria-hidden="true" />
       <div className="mw-body">
-        <div className="mw-trophy"><Icon name="trophy" fill /></div>
+        <div className="mw-trophy"><Icon name="trophy" fill />{theme && <span className="mw-sticker" aria-hidden="true"><GameArt game={theme.game} /></span>}</div>
         <p className="mw-eyebrow">Match over</p>
         <h2 id="mw-title" className="mw-title">{moment.title}</h2>
         <p className="mw-score">{moment.text}</p>

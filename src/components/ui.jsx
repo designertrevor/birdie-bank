@@ -26,8 +26,8 @@ export function Header({ title, onBack, onClose, right, small }) {
   );
 }
 
-export function Screen({ children, className = '' }) {
-  return <div className={`screen active ${className}`}>{children}</div>;
+export function Screen({ children, className = '', style = undefined }) {
+  return <div className={`screen active ${className}`} style={style}>{children}</div>;
 }
 
 /**

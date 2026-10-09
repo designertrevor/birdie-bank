@@ -24,7 +24,7 @@ import { findCourse } from '../lib/courses.js';
 import { money, netScoreName, scoreName, pickupGross } from '../lib/golf.js';
 import { halfStrokesOn, strokesRulesLines, strokesWords } from '../lib/allowances.js';
 import {
-  BBBPicker, DotsRow, HammerPanel, MatchPanel, MoneyPanel, PointsPanel, PotPicker, RabbitPanel, ScramblePanel, SixesPanel, SnakePanel, SnakePicker, TeamPanel, TotalsPanel, VegasPanel,
+  BBBPicker, DotsRow, HammerPanel, MatchPanel, MoneyPanel, PanelArt, PointsPanel, PotPicker, RabbitPanel, ScramblePanel, SixesPanel, SnakePanel, SnakePicker, TeamPanel, TotalsPanel, VegasPanel,
 } from '../components/GamePanels.jsx';
 import { GameOptions } from '../components/GameOptions.jsx';
 import { DrivesShortfall, ScrambleDrivesPicker } from '../components/ScrambleDrives.jsx';
@@ -53,6 +53,8 @@ import { pushRoundFinished } from '../lib/push-client.js';
 import { useBigSync } from '../lib/big-sync.js';
 import { betPromptFor, markPrompt } from '../lib/bet-prompt.js';
 import { RoundMoments } from '../components/Moments.jsx';
+import { GameArt } from '../components/GameArt.jsx';
+import { roundTheme, themeVars } from '../lib/round-theme.js';
 import { challengesBack } from '../lib/challenge-sync.js';
 import { FirstTeeSheet } from '../components/FirstTee.jsx';
 import { isLocked, lockAgreement, noteChanges, showFirstTee } from '../lib/agreed.js';
@@ -214,6 +216,9 @@ function PlayRound({ round, mount, momentUp = false }) {
   const main = useMemo(() => gameView(round, 'main'), [round]);
   // Everyone just playing (a card kept from an invite): no game, no money, no panels, just the card
   const solo = cardOnly(round);
+  // The main game's theme, carried in from Round ready: the money bar's band, the hole tile and the
+  // progress line take its colour (a card only round has none and keeps the plain look)
+  const theme = roundTheme(round);
   // Who keeps score (shared rounds): only that phone edits, the other players read (see keeper.js)
   const stateMe = useStore(s => s.me);
   const me = keeperMe(round, { me: stateMe });
@@ -530,7 +535,7 @@ function PlayRound({ round, mount, momentUp = false }) {
   }, [round, hole, phase, dirty, game, draft, banker, wolf, marks]);
 
   return (
-    <Screen className="play">
+    <Screen className={`play ${theme ? 'themed' : ''}`} style={themeVars(theme)}>
       <div className="play-top">
         <button className="header-close" onClick={() => nav.pop()} aria-label="Leave round (it stays saved)"><Icon name="caret-down" /></button>
         <div className="play-title">
@@ -539,8 +544,10 @@ function PlayRound({ round, mount, momentUp = false }) {
         </div>
         <button className="header-close" onClick={() => setMenu(true)} aria-label="Round menu"><Icon name="dots-three" /></button>
       </div>
+      {/* How far through the round, as a line under the header (the words above say it for screen readers) */}
+      <div className="play-track" aria-hidden="true"><span style={{ transform: `scaleX(${(idx + 1) / round.holes.length})` }} /></div>
       {/* A Big Game's group round with no money of its own shows the game across every group instead */}
-      {solo ? <CardBar round={round} /> : round.trip?.format === BIG_FORMAT && !ownMoney(round) ? <BigBar round={round} /> : <MoneyBar round={round} hole={hole} preview={preview} />}
+      {solo ? <CardBar round={round} /> : round.trip?.format === BIG_FORMAT && !ownMoney(round) ? <BigBar round={round} /> : <MoneyBar round={round} hole={hole} preview={preview} art={theme ? game : null} />}
       {round.trip?.format === BIG_FORMAT && ownMoney(round) && (
         <button className="big-link" onClick={() => nav.push('bigGame', { id: round.trip.id })}><Icon name="users-four" fill /> {round.trip.name}: the board across every group <Icon name="caret-right" /></button>
       )}
@@ -1293,7 +1300,7 @@ function CardBar({ round }) {
 }
 
 /** Everyone's money, pinned under the header from the first hole, updating as scores go in. */
-function MoneyBar({ round: full, hole, preview }) {
+function MoneyBar({ round: full, hole, preview, art = null }) {
   // The bar is the betting players' money: anyone just playing is named under it, with no amount
   const round = bettingRound(full);
   const casual = full.players.filter(p => isJustPlaying(full, p.id)).map(p => p.name.split(' ')[0]);
@@ -1325,14 +1332,15 @@ function MoneyBar({ round: full, hole, preview }) {
   // and the dollar side bets line under it in a reward round, which the label would hide as well
   const cashSaid = cash ? `. Side bets for money: ${cashLine || 'all square'}` : '';
   const boxProps = byGame
-    ? { type: 'button', className: 'money-bar mb-tap', 'aria-label': `${word} so far, ${thru.toLowerCase()}: ${said}${cashSaid}. Show by game`, 'aria-haspopup': 'dialog', onClick: () => setOpen(true) }
-    : { className: 'money-bar', role: 'group', 'aria-label': `${word} so far` };
+    ? { type: 'button', className: `money-bar mb-tap ${art ? 'themed' : ''}`, 'aria-label': `${word} so far, ${thru.toLowerCase()}: ${said}${cashSaid}. Show by game`, 'aria-haspopup': 'dialog', onClick: () => setOpen(true) }
+    : { className: `money-bar ${art ? 'themed' : ''}`, role: 'group', 'aria-label': `${word} so far` };
   // Not a live region: it changes on every tap. The saved hole's result is announced by the toast.
   return (
     <>
     <Box {...boxProps}>
       <div className="mb-head">
-        <span>{word}</span>
+        {/* The main game's art on the bar's band: the round's theme */}
+        <span className="mb-word">{art && <GameArt game={art} className="mb-art" />}{word}</span>
         <span>{byGame ? `${thru} · Tap for games` : thru}</span>
       </div>
       <div className="mb-items" style={{ gridTemplateColumns: `repeat(${round.players.length}, minmax(0, 1fr))` }}>
@@ -1477,7 +1485,7 @@ function SkinsPanel({ round, hole, onChange }) {
     <div className="banker-bar" style={{ background: 'var(--lav)' }}>
       <div>
         <div className="bl">This hole is worth</div>
-        <div className="bn"><Icon name="coins" fill /> {worth.join(' · ')}</div>
+        <div className="bn"><PanelArt game="skins" /> {worth.join(' · ')}</div>
       </div>
       <div className="skin-counts">
         {round.players.map(p => <span key={p.id} className="press-chip">{p.name.split(' ')[0]} {Math.round(counts[p.id] * 10) / 10}</span>)}

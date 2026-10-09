@@ -1,6 +1,7 @@
 import { lazy, Suspense, useEffect, useMemo, useRef, useState } from 'react';
 import { Callout, Empty, Header, Icon, Numpad, PickChip, PickMark, PickRow, Screen, Segmented, Sheet, Steps, Toggle, useUI } from '../components/ui.jsx';
 import { GameArt } from '../components/GameArt.jsx';
+import { roundGameIds, roundTheme, themeVars } from '../lib/round-theme.js';
 import { HouseRulesFold } from '../components/HouseRulesFold.jsx';
 import { Spot } from '../components/Spot.jsx';
 import { useGroupAvatars } from '../lib/useAvatars.js';
@@ -1341,6 +1342,10 @@ function ReadyStep({ round, onStart, onLater }) {
     return m?.kind === 'buddy' ? m.buddy : ['visor', 'bucket', 'snapback', 'flatcap', 'beanie'][i];
   });
   const what = countsMoney(round) ? 'the money' : 'the scores';
+  // The main game's theme starts here and carries into the round: the card wears its colour, with
+  // every game's art on top (the main game first and biggest)
+  const theme = roundTheme(round);
+  const games = roundGameIds(round);
   return (
     <>
       <div className="scroll">
@@ -1348,7 +1353,12 @@ function ReadyStep({ round, onStart, onLater }) {
           <Spot kind="crowd" ids={crew} size={220} className="ready-crew" plate={false} />
           <div className="ready-title d">You’re set for {gameLabel(round)}</div>
         </div>
-        <div className="block">
+        <div className={`block ready-card ${theme ? 'themed' : ''}`} style={themeVars(theme)}>
+          {games.length > 0 && (
+            <div className="ready-games" aria-hidden="true">
+              {games.map((g, i) => <GameArt key={g} game={g} className={`ready-art ${i ? 'side' : 'main'}`} />)}
+            </div>
+          )}
           <div className="ready-row"><span>Course</span><b>{round.course.name}{round.nine ? ` · ${round.nine === 'front' ? 'Front' : 'Back'} 9` : ''}</b></div>
           <div className="ready-row"><span>{round.teams ? 'Teams' : 'Players'}</span><b>{round.teams ? round.teams.map(t => t.name).join(' v ') : names.join(', ')}</b></div>
           {casualNames.length > 0 && <div className="ready-row"><span>Just playing</span><b>{casualNames.join(', ')}</b></div>}

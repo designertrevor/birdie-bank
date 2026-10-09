@@ -3987,3 +3987,64 @@ a.header-btn.rm-open { text-decoration: none; }
 
 /* SEASON: the same chart card and score tiles, so the set reads as one system */
 .season .chart-card { margin-top: 2px; }
+
+/* ROUND THEME (o12): the main game's colour and art, carried from Round ready into the round. The
+   custom properties come from lib/round-theme.js (themeVars) on the Play screen, a moment banner, the
+   match-won screen, the halfway sheet's head and the Round ready card: --gt the tint, --gt-soft its pale
+   wash, --gt-ink text on the tint. Light mode: the wash as a band. Dark mode: the tint as an accent
+   only (a label, a line, a ring), never a big pale wash. A card only round has no theme and keeps the
+   plain look. Text colours on these are checked in round-theme.test.js */
+.play-track { height: 3px; margin: 10px 16px 0; border-radius: 999px; background: var(--surface); overflow: hidden; flex-shrink: 0; }
+.play-track > span { display: block; height: 100%; border-radius: inherit; background: var(--gt, var(--mint)); transform-origin: left center; }
+.play.themed .mc:first-of-type { background: var(--gt); }
+.play.themed .mc:first-of-type .ml, .play.themed .mc:first-of-type .mv { color: var(--gt-ink); }
+/* The money bar: its head is a band in the game's wash, with the game's art beside the word */
+.mb-word { display: inline-flex; align-items: center; gap: 6px; min-width: 0; }
+.mb-art { width: 20px; height: 20px; flex-shrink: 0; margin: -3px 0; border-radius: 6px; }
+.money-bar.themed { padding-top: 0; }
+.money-bar.themed .mb-head { align-items: center; margin: 0 -8px 6px; padding: 7px 16px 6px; border-radius: 20px 20px 0 0; background: var(--gt-soft); color: var(--body); }
+.money-bar.themed .mb-word { color: var(--ink); }
+.money-bar.themed .mb-item.lead { background: var(--gt-soft); }
+.money-bar.themed .mb-item.lead .mb-p, .money-bar.themed .mb-item.lead .mb-d { color: var(--body); }
+/* A game panel's art, where an icon used to stand in for the game */
+.bn-art { width: 26px; height: 26px; flex-shrink: 0; border-radius: 7px; outline: 2px solid rgba(255,255,255,.6); }
+/* Moments: the game's art stuck on the banner's corner like a sticker. It comes and goes with the banner */
+.moment-banner.stuck { padding-right: 52px; }
+.mo-sticker {
+  position: absolute; top: -12px; right: 12px; width: 36px; height: 36px; padding: 2px; border-radius: 11px; background: #fff;
+  box-shadow: 0 4px 10px rgba(10,26,26,.18); transform: rotate(8deg); pointer-events: none;
+  animation: moSticker .5s .3s var(--ease-bounce) both;
+}
+.mo-sticker .game-art, .mw-sticker .game-art { width: 100%; height: 100%; }
+@keyframes moSticker { from { opacity: 0; transform: rotate(-14deg) scale(.4); } }
+.mw-trophy { position: relative; }
+.mw-sticker {
+  position: absolute; top: -8px; right: -18px; width: 54px; height: 54px; padding: 3px; border-radius: 16px; background: #fff;
+  box-shadow: 0 6px 0 rgba(0,0,0,.18); transform: rotate(10deg); animation: moSticker .6s .7s var(--ease-bounce) both;
+}
+/* The halfway sheet: the game's art beside the title */
+.hw-head.themed { display: flex; align-items: center; gap: 14px; }
+.hw-art { width: 56px; height: 56px; flex-shrink: 0; transform: rotate(-4deg); }
+.hw-words { min-width: 0; }
+/* Round ready: the summary card wears the game's wash, every game's art on top, the main game biggest */
+.ready-card { padding: 8px 16px 4px; }
+.ready-card.themed { --rc-bg: var(--gt-soft); background: var(--gt-soft); }
+.ready-card.themed .ready-row { color: var(--body); border-bottom-color: rgba(10,10,10,.08); }
+.ready-games { display: flex; align-items: center; padding: 6px 0 10px; }
+.ready-art { width: 52px; height: 52px; flex-shrink: 0; border-radius: 15px; box-shadow: 0 0 0 3px var(--rc-bg, var(--card)); transform: rotate(-4deg); }
+.ready-art.side { width: 40px; height: 40px; border-radius: 12px; margin-left: -4px; transform: rotate(5deg); }
+.ready-art.side:nth-child(odd) { transform: rotate(-3deg); }
+:root[data-theme="dark"] .money-bar.themed .mb-head { background: var(--surface); background: color-mix(in srgb, var(--gt) 10%, var(--card)); color: var(--mute); }
+:root[data-theme="dark"] .money-bar.themed .mb-word { color: var(--ink); }
+:root[data-theme="dark"] .money-bar.themed .mb-item.lead { background: var(--surface); box-shadow: inset 0 0 0 1.5px var(--gt); }
+:root[data-theme="dark"] .money-bar.themed .mb-item.lead .mb-p, :root[data-theme="dark"] .money-bar.themed .mb-item.lead .mb-d { color: var(--mute); }
+:root[data-theme="dark"] .ready-card.themed { --rc-bg: var(--card); background: var(--card); box-shadow: var(--card-shadow), inset 0 3px 0 var(--gt); }
+:root[data-theme="dark"] .ready-card.themed .ready-row { color: var(--mute); border-bottom-color: var(--line-soft); }
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) .money-bar.themed .mb-head { background: var(--surface); background: color-mix(in srgb, var(--gt) 10%, var(--card)); color: var(--mute); }
+  :root:not([data-theme="light"]) .money-bar.themed .mb-word { color: var(--ink); }
+  :root:not([data-theme="light"]) .money-bar.themed .mb-item.lead { background: var(--surface); box-shadow: inset 0 0 0 1.5px var(--gt); }
+  :root:not([data-theme="light"]) .money-bar.themed .mb-item.lead .mb-p, :root:not([data-theme="light"]) .money-bar.themed .mb-item.lead .mb-d { color: var(--mute); }
+  :root:not([data-theme="light"]) .ready-card.themed { --rc-bg: var(--card); background: var(--card); box-shadow: var(--card-shadow), inset 0 3px 0 var(--gt); }
+  :root:not([data-theme="light"]) .ready-card.themed .ready-row { color: var(--mute); border-bottom-color: var(--line-soft); }
+}
