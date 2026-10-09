@@ -8,6 +8,7 @@ import { Scene, sceneShows } from '../components/Scenes.jsx';
 import { useEffect, useState } from 'react';
 import { ArtIcon, Icon, Numpad, PickChip, PickMark, PickRow, Screen } from '../components/ui.jsx';
 import { getState, update, uid } from '../lib/store.js';
+import { track } from '../lib/analytics.js';
 import { formatIndex } from '../lib/format.js';
 import { money } from '../lib/golf.js';
 import { GAMES } from '../lib/round.js';
@@ -117,6 +118,7 @@ export default function Onboarding({ onDone, play = null }) {
       ? [...paywall, ['newRound', { ahead: true, game: suggestedGame(a), ballot: ballotGames(a), onboarding: true }]]
       : paywall;
     onDone?.(routes);
+    track('onboarding_finished', { path: planNext ? 'plan' : 'done', from: play ? 'rules' : 'app' });
     update(s => {
       // Starting over keeps you as the same player, so your rounds and the Tab stay yours
       const again = s.me && s.players[s.me] ? s.me : null;

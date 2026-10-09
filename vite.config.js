@@ -54,7 +54,8 @@ function buildStamp() {
   return {
     name: 'bb-build-stamp',
     config(_, { command }) {
-      return { define: { __APP_BUILT__: command === 'build' ? String(built) : '0' } };
+      // The id goes in too, the same one /version.json names, so a crash report names its build (ops.js)
+      return { define: { __APP_BUILT__: command === 'build' ? String(built) : '0', __APP_BUILD_ID__: JSON.stringify(command === 'build' ? id : 'dev') } };
     },
     generateBundle() {
       this.emitFile({ type: 'asset', fileName: 'version.json', source: JSON.stringify({ id, built }) });

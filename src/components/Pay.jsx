@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { Icon, Numpad, Sheet, useUI } from './ui.jsx';
 import { update, useStore } from '../lib/store.js';
+import { track } from '../lib/analytics.js';
 import { markPaid } from '../lib/tab-sync.js';
 import { money } from '../lib/golf.js';
 import { myIds } from '../lib/format.js';
@@ -51,7 +52,10 @@ export function RequestButton({ payer, mine, amount, note, who = null, full = fa
   const ask = requestFor({ payer, mine, amount, name, note: note || 'Golf' });
   if (!ask) return null;
   const app = PAY_APPS[ask.app].name;
-  const asked = () => { if (who) update(s => noteNudge(s, who)); };
+  const asked = () => {
+    track('request_sent', { app: ask.app, via: ask.kind });
+    if (who) update(s => noteNudge(s, who));
+  };
   // `full`: the longer words for a sheet row, with the amount and the app
   const label = full ? `Request ${money(amount)} ${ask.kind === 'link' ? 'on Venmo' : `with your ${app}`}` : 'Request';
   if (ask.kind === 'link') {

@@ -7,6 +7,7 @@ import { BallIllo, Empty, Header, Icon, PickChip, PickMark, PickRow, Screen, She
 import { LinkBrand, LinkHowTo } from '../components/LinkBrand.jsx';
 import { Avatar } from '../components/Pay.jsx';
 import { getState, update, uid, useStore } from '../lib/store.js';
+import { roundProps, track } from '../lib/analytics.js';
 import { useNav } from '../lib/nav.js';
 import { useKept } from '../lib/kept.js';
 import { GAMES, SIDE_GAMES, createRound, holesInPlay } from '../lib/round.js';
@@ -542,6 +543,7 @@ export function RollCall({ id }) {
       }
     }
     update(s => { addRound(s, withCh); });
+    track('round_started', roundProps(withCh, { from: 'plan' }));
     markChallengesOn(used, rid);
     editPlan(id, p => { p.status = 'started'; p.roundId = rid; }).then(r => { if (r === 'taken') showToast(PLAN_LOCKED); });
     // Friends on the plan can follow the round live from the same page

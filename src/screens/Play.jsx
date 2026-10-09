@@ -6,6 +6,7 @@ import { AvatarArt } from '../components/Avatar.jsx';
 import { useGroupAvatars } from '../lib/useAvatars.js';
 import { RulesSheet } from '../components/Rules.jsx';
 import { DEFAULT_SETTINGS, getState, update, useStore } from '../lib/store.js';
+import { roundProps, track } from '../lib/analytics.js';
 import {
   GAMES, addPlayerProblem, bankerHoleSetup, canLeave, defaultNine, holeComplete, leftRule, livePreview, nassauPressOptions, playersLeft, playersOn, playsHole, pressMode,
   betPresets, blindMultiplierOf, noHandicap, resizeRound, roundLegs, roundResults, scoredHolesDropped, scorers, skinsKinds, skinsTable, strokesFor, popsFor, wolfHoleSetup, changeBets, wholeRoundOnly,
@@ -117,6 +118,7 @@ export default function Play({ id }) {
     for (const k of DRAFTS.keys()) if (k.startsWith(`${id}:`)) DRAFTS.delete(k);
     update(s => { const rr = s.rounds[id]; rr.status = 'done'; rr.finishedAt = Date.now(); markUsualPlayed(s, rr, rr.finishedAt); leaveRound(s, id); });
     pushRoundFinished(getState().rounds[id]);
+    track('round_finished', roundProps(getState().rounds[id], { early: true }));
     nav.reset('history', ['roundDetail', { id, celebrate: true }]);
   };
   const keeps = canEdit(round, keeperMe(round, { me: getState().me }), !!round.shared?.host);
@@ -487,6 +489,7 @@ function PlayRound({ round, mount, momentUp = false }) {
       leaveRound(s, round.id);
     });
     pushRoundFinished(getState().rounds[round.id]);
+    track('round_finished', roundProps(getState().rounds[round.id], { early: false }));
     nav.reset('history', ['roundDetail', { id: round.id, celebrate: true }]);
     return true;
   };
@@ -515,6 +518,7 @@ function PlayRound({ round, mount, momentUp = false }) {
       FINISHED_HERE.add(round.id);
       update(s => { const rr = s.rounds[round.id]; rr.status = 'done'; rr.finishedAt = Date.now(); markUsualPlayed(s, rr, rr.finishedAt); leaveRound(s, round.id); });
       pushRoundFinished(getState().rounds[round.id]);
+      track('round_finished', roundProps(getState().rounds[round.id], { early: true }));
       nav.reset('history', ['roundDetail', { id: round.id, celebrate: true }]);
     }
     if (choice === 'later') nav.push('newRound', { reschedule: round.id });

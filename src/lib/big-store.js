@@ -6,6 +6,7 @@
 import { getState, uid, update } from './store.js';
 import { createRound } from './round.js';
 import { addRound } from './rounds.js';
+import { roundProps, track } from './analytics.js';
 import { defaultTee, findCourse } from './courses.js';
 import { isOrganizer, newTrip, tripOf, tripStamp } from './trips.js';
 import { BIG_FORMAT, BIG_NAME, cleanBig, frozenHoles, groupsProblem, startDay } from './big-game.js';
@@ -160,6 +161,7 @@ export async function startGroups(tripId) {
     for (const m of made) addRound(st, { ...m.round, trip: stamp });
     st.activeRoundId = mine.round.id;
   });
+  track('round_started', roundProps(mine.round, { from: 'big', trip: true }));
   return { ok: true, shared: await shareGroups(tripId), roundId: mine.round.id };
 }
 

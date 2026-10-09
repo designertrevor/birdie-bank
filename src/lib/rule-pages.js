@@ -8,6 +8,7 @@ import { GAMES, GAME_GROUPS, SIDE_GAMES } from './round.js';
 import { escapeHtml } from './og.js';
 import { APP_NAME, SITE_URL } from './app-name.js';
 import { RULE_KEYS, playPath, ruleName, rulePath } from './rule-links.js';
+import { CARRY_REF_SCRIPT } from './attribution.js';
 
 export { RULE_KEYS, SIDE_ONLY, playFromSearch, playPath, ruleFile, ruleKeyOf, ruleName, rulePath, ruleSlug } from './rule-links.js';
 
@@ -152,6 +153,7 @@ export function pageHead({ title, shareTitle = title, description, url, imageAlt
 }
 
 const topBar = right => `<header class="top"><a class="brand" href="/"><img src="/icon.svg" alt="" width="34" height="34"><span>${escapeHtml(APP_NAME)}</span></a>${right}</header>`;
+// A creator's ?ref= code on a rule page rides along on its links into the app (attribution.js)
 const footer = () => `<footer class="foot"><p>Friendly wagers only. ${escapeHtml(APP_NAME)} never holds or moves money: your group settles up between yourselves.</p><p><a href="/rules">Every game’s rules</a> · <a href="/privacy.html">Privacy</a> · <a href="/terms.html">Terms</a></p></footer>`;
 const icon = (name, kind = 'fill') => `<i class="ph-${kind} ph-${escapeHtml(name)}" aria-hidden="true"></i>`;
 
@@ -196,6 +198,7 @@ ${sections.map(([h, html]) => `<section class="rule"><h2>${e(h)}</h2>${html}</se
 </main>
 ${footer()}
 </div>
+${CARRY_REF_SCRIPT}
 </body>`;
   return `<!DOCTYPE html>\n<html lang="en">\n${pageHead(meta)}\n${body}\n</html>\n`;
 }
@@ -242,6 +245,7 @@ ${groups.map(([g, keys]) => `<section class="group"><h2>${e(g)}</h2><ul class="c
 </main>
 ${footer()}
 </div>
+${CARRY_REF_SCRIPT}
 </body>`;
   return `<!DOCTYPE html>\n<html lang="en">\n${pageHead(meta)}\n${body}\n</html>\n`;
 }
