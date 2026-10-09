@@ -19,11 +19,13 @@ export default function Paywall({ source = 'onboarding' }) {
   const { showToast } = useUI();
   // One variant per phone, kept once it's picked, so an A/B test can compare them later
   const [variant] = useState(() => variantFor(getState(), getState().me || 'anon') || 'c');
-  useEffect(() => { track('paywall_viewed', { source, variant }); }, [variant, source]);
+  // An early tester with Pro for life gets a thank-you instead (below), so it isn't a paywall seen
+  const { lifetime } = useLifetimePro();
+  useEffect(() => { if (!lifetime) track('paywall_viewed', { source, variant }); }, [variant, source, lifetime]);
   useEffect(() => {
-    if (getState().paywall?.variant === variant) return;
+    if (lifetime || getState().paywall?.variant === variant) return;
     update(st => { st.paywall = { ...(st.paywall || {}), variant, shownAt: Date.now(), source }; });
-  }, [variant, source]);
+  }, [variant, source, lifetime]);
   const [plan, setPlan] = useState(DEFAULT_PLAN);
 
   const answer = choice => {
@@ -37,7 +39,6 @@ export default function Paywall({ source = 'onboarding' }) {
 
   // An early tester with Pro for life never sees the paywall: a thank-you in its place, in case a
   // route still points here (the onboarding check skips it once the account has been read)
-  const { lifetime } = useLifetimePro();
   if (lifetime) return <LifetimeThanks onClose={() => nav.pop()} />;
 
   const View = VIEWS[variant] || VIEWS.c;
