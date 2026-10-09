@@ -1,6 +1,12 @@
 // The end of a round in three beats: the money reveal, settling up, and a results card to share.
 import { Spot } from './Spot.jsx';
 import { CrownedFace } from './Podium.jsx';
+import { RaceBoard } from './RaceBoard.jsx';
+import { GameArt } from './GameArt.jsx';
+import { CheerArt } from './ResultsArt.jsx';
+import { useArtSrc } from '../lib/useArtSrc.js';
+import { gameTheme } from '../lib/game-theme.js';
+import './finale.css';
 import { useEffect, useRef, useState } from 'react';
 import { Header, Icon, useUI } from './ui.jsx';
 import { getState, useStore } from '../lib/store.js';
@@ -8,18 +14,18 @@ import { roundResults } from '../lib/round.js';
 import { money } from '../lib/golf.js';
 import { payInfoFor } from '../lib/pay.js';
 import { PayButton, RequestButton } from './Pay.jsx';
-import { Avatar, AvatarArt } from './Avatar.jsx';
+import { Avatar } from './Avatar.jsx';
 import { useGroupAvatars } from '../lib/useAvatars.js';
 import { buzz, confettiFrom } from '../lib/delight.js';
 import { sound } from '../lib/sound-play.js';
-import { gameLabel, meFor, placeOf, roundDate, roundPlayerName, shareText } from '../lib/format.js';
+import { gameLabel, meFor, roundDate, roundPlayerName, shareText } from '../lib/format.js';
 import { gamesLine } from '../lib/side-games.js';
 import { markRoundAsked, roundAsked, submitReaction } from '../lib/feedback.js';
 import { codeOf } from '../lib/shared-tab.js';
 import { markTransfer, undoPayments, useTabSync } from '../lib/tab-sync.js';
 import { useNav } from '../lib/nav.js';
 import { revealSteps, revealTiming } from '../lib/reveal.js';
-import { renderResultsCard, resultsAlt, shareCardModel, shareImageName } from '../lib/shareImage.js';
+import { cardReaction, renderResultsCard, resultsAlt, shareCardModel, shareImageName } from '../lib/shareImage.js';
 import { shareRoundLink } from '../lib/share.js';
 import { ShareView } from './ShareSheet.jsx';
 import { countsMoney, playForOf, rewardOutcome, unitFmt } from '../lib/play-for.js';
@@ -53,22 +59,6 @@ function useCountUp(target, { delay = 0, duration = 1100, skip = false } = {}) {
     return () => { cancelAnimationFrame(raf); clearTimeout(land); };
   }, [target, delay, duration, skip]);
   return [v, phase];
-}
-
-function CountRow({ place, name, face, amount, me, delay, duration, skip, games = '', fmt = money, index = 0 }) {
-  const [v, phase] = useCountUp(amount, { delay, duration, skip });
-  const done = v === amount;
-  // Motion hooks: --i staggers the entrance, the phase dims the number until its turn, then pops it when it lands
-  const motion = `${phase}${phase === 'done' && amount !== 0 ? ' landed' : ''}`;
-  return (
-    <div className={`reveal-row ${place === 1 && amount > 0 && done ? 'top' : ''}`} style={{ '--i': index }}>
-      <div className="sr">{place}</div>
-      {face && <AvatarArt model={face} size="sm" className="rv-av" />}
-      <div className="sn">{name}{me ? ' (you)' : ''}{games && <span className="rv-games">{games}</span>}</div>
-      {/* Whole dollars while counting, then the exact amount: $2.50 used to land on "+$3" */}
-      <div className={`reveal-amt ${motion} ${done && amount > 0 ? 'pos' : done && amount < 0 ? 'neg' : ''}`}>{fmt(done ? amount : Math.round(v), { sign: true })}</div>
-    </div>
-  );
 }
 
 function StepAmount({ amount, skip, fmt = money }) {
@@ -166,6 +156,10 @@ export function Reveal({ round, res, onNext, onDetail, extra, instant = false })
   const leaders = res.standings.filter(p => p.amount === top.amount).map(p => p.id);
   const side = tied && round.teams?.find(tm => tm.players.length === leaders.length && tm.players.every(pid => leaders.includes(pid)));
   const leaderNames = res.standings.filter(p => leaders.includes(p.id)).map(p => p.name.split(' ')[0]).join(' & ');
+  // Who takes the crown when the last total lands: the winner, or everyone level on top (up to four)
+  const crowned = square || (res.big && !res.big.final) || leaders.length > 4 ? [] : leaders;
+  const heroFaces = crowned.map(id => [id, faces.get(id)]).filter(([, f]) => f);
+  const theme = gameTheme(round.game);
   // A reward round says what's won: "Ann wins lunch", "Ann and Bo share a drink"
   const prize = reward ? rewardOutcome(round, res) : null;
   const winnerTitle = prize?.winners.length ? prize.win.replace(/\.$/, '')
@@ -178,14 +172,19 @@ export function Reveal({ round, res, onNext, onDetail, extra, instant = false })
     <>
       <Header title="Final results" small />
       <div ref={scroller} className={`scroll rv-scroll ${skipped ? 'rv-still' : ''}`} onClick={() => { if (!done) setSkipped(true); }}>
-        <div className="reveal-head" ref={hero}>
-          <div className="eyebrow">{round.course.name} · {gameLabel(round)}</div>
+        {/* The main game's colour as a band behind the head, with its art beside the course */}
+        <div className="reveal-head rv-themed" ref={hero} style={{ '--rv-tint': theme.tint }}>
+          <div className="rv-eyebrow"><GameArt game={round.game} className="rv-game" /><span className="eyebrow">{round.course.name} · {gameLabel(round)}</span></div>
           <div className="reveal-title d">
             {titles.map(x => <span key={x} className={`rt ${x === title ? '' : 'out'}`} aria-hidden={x !== title}>{x}</span>)}
           </div>
           <div className={`rv-skip ${done ? 'gone' : ''}`} aria-hidden={done}>Tap to skip</div>
-          {/* The winner's buddy takes the crown once the totals land */}
-          {done && !square && !tied && !(res.big && !res.big.final) && faces.get(top.id) && <div className="rv-crowned"><CrownedFace model={faces.get(top.id)} size={76} /></div>}
+          {/* The winner's buddy takes the crown once the totals land; a tie or a winning side crowns them all */}
+          {done && heroFaces.length > 0 && (
+            <div className={`rv-crowned ${heroFaces.length > 1 ? 'many' : ''}`}>
+              {heroFaces.map(([id, face]) => <CrownedFace key={id} model={face} size={heroFaces.length > 1 ? 56 : 76} />)}
+            </div>
+          )}
         </div>
         {nSteps > 0 && (
           <div className={`rv-card ${resolved ? 'compact' : ''}`}>
@@ -193,11 +192,10 @@ export function Reveal({ round, res, onNext, onDetail, extra, instant = false })
             {steps.map((s, i) => <RevealStep key={s.key} step={s} on={i < visible} skip={skipped} fmt={fmt} />)}
           </div>
         )}
-        {/* Losers land first, the winner last. Equal money shares a place, so partners both land on top */}
-        {res.standings.map((p, i) => (
-          <CountRow key={p.id} place={placeOf(res.standings, res.standings.indexOf(p))} name={p.name} face={faces.get(p.id)} amount={p.amount} me={p.id === me}
-            delay={t.stepsEnd + (count - 1 - i) * t.stagger} duration={t.count} skip={skipped} games={gamesLine(res.detail?.byGame, p.id, fmt)} fmt={fmt} index={i} />
-        ))}
+        {/* The race: the rows line up in the round's order, losers land first and the winner last, and
+            the rows pass each other as the totals count. Equal money shares a place, so partners both land on top */}
+        <RaceBoard scroller={scroller} standings={res.standings} start={round.players.map(p => p.id)} timing={t} skip={skipped}
+          faces={faces} me={me} fmt={fmt} gamesFor={id => gamesLine(res.detail?.byGame, id, fmt)} crowned={crowned} />
         {/* A reward round: who wins it and who's buying, where the payments would be */}
         {reward && <div className={`rv-reward-wrap ${done ? 'on' : ''}`} aria-hidden={!done}><RewardCard round={round} res={res} />{res.cash && <CashCard round={round} res={res} />}</div>}
         {extra}
@@ -382,20 +380,35 @@ export function SettleUp({ round, res, onBack, onNext }) {
 export function ShareCard({ round, res, onBack, onDone, doneLabel = 'Done' }) {
   // No live link when someone keeps their money private: watching the round would show it
   const link = shareRoundLink(getState(), round, { money: countsMoney(round) });
+  // A Big Game's group round shares the game's money (res, from bigRoundResults)
+  const results = res?.big ? res : roundResults(round);
+  // The character reaction and the game's art, drawn on the page (hidden) for the canvas to take
+  const faces = useGroupAvatars(round.players);
+  const reaction = cardReaction(results);
+  const buddies = (reaction?.ids || []).map((id, i) => (faces.get(id)?.kind === 'buddy' ? faces.get(id).buddy : STAND_IN_BUDDIES[i]));
+  const theme = gameTheme(round.game);
+  const [cheer, grabCheer] = useArtSrc();
+  const [game, grabGame] = useArtSrc();
   const make = show => {
-    // A Big Game's group round shares the game's money (res, from bigRoundResults)
-    const model = shareCardModel(round, res?.big ? res : roundResults(round), { showAmounts: show, link });
+    const model = shareCardModel(round, results, { showAmounts: show, link, art: { cheer: buddies.length ? cheer : null, game } });
     return { model, alt: resultsAlt(model), text: shareText(round, res, { amounts: show }) };
   };
   return (
+    <>
+    {buddies.length > 0 && <span key={`cheer-${buddies.join('-')}-${reaction.kind}`} ref={grabCheer} hidden><CheerArt buddies={buddies} crowned={reaction.kind !== 'square'} /></span>}
+    <span key={`game-${round.game}`} ref={grabGame} hidden><GameArt game={round.game} tint={theme.soft} size={240} /></span>
     <ShareView title="Share" onBack={onBack} onDone={onDone} doneLabel={doneLabel} make={make} render={renderResultsCard}
       fileName={shareImageName(round)} link={link} what="Results" money={countsMoney(round)} people={bettors(round)}
       onText="Dollar figures are on the image" offText="Only the order and the bets, no money"
       standIn={(m, show) => <ResultsStandIn round={round} res={res} show={show} />}>
       <HowWasIt round={round} />
     </ShareView>
+    </>
   );
 }
+
+// Someone with a photo or initials still gets a buddy in the reaction, the same stand-ins the round's tie hero uses
+const STAND_IN_BUDDIES = ['visor', 'snapback', 'bucket', 'flatcap'];
 
 /** The results card in plain boxes while the image is being drawn. */
 function ResultsStandIn({ round, res, show }) {
@@ -405,7 +418,7 @@ function ResultsStandIn({ round, res, show }) {
   const tops = res.standings.filter(p => p.amount > 0 && p.amount === res.standings[0].amount);
   return (
     <div className="share-card">
-      <div className="sc-brand">Birdie Bank</div>
+      <div className="sc-top"><div className="sc-brand">Birdie Bank</div><GameArt game={round.game} className="sc-game" /></div>
       <div className="sc-meta">{round.course.name} · {roundDate(round)} · {gameLabel(round)}</div>
       <div className="sc-big d">{tops.length ? <>{tops.map(p => p.name.split(' ')[0]).join(' & ')}{show && <><br />{fmt(tops[0].amount, { sign: true })}</>}</> : 'All square'}</div>
       {reward && <div className="sc-meta">{reward.text}</div>}

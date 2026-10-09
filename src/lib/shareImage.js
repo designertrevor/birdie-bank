@@ -3,6 +3,7 @@
 import { gameLabel, roundDate } from './format.js';
 import { revealSteps } from './reveal.js';
 import { countsMoney, rewardOutcome, unitFmt } from './play-for.js';
+import { gameTheme } from './game-theme.js';
 
 export const IMAGE_W = 1080;
 export const IMAGE_H = 1920;
@@ -10,11 +11,26 @@ export const IMAGE_H = 1920;
 const first = n => (n || '').split(' ')[0];
 
 /**
+ * The card's character reaction: { kind, ids }. 'win' is the winner's buddy crowned and cheering,
+ * 'tie' everyone level on top together (up to four, partners who won as a side too), 'square' the
+ * group with no crown. Null while a Big Game waits on its other groups, or with five or more level
+ * on top. Only who, never how much.
+ */
+export function cardReaction(res) {
+  if (!res?.standings?.length || (res.big && !res.big.final)) return null;
+  const top = res.standings[0];
+  if (res.standings.every(p => p.amount === 0)) return { kind: 'square', ids: res.standings.slice(0, 4).map(p => p.id) };
+  const leaders = res.standings.filter(p => p.amount === top.amount);
+  if (leaders.length > 4) return null;
+  return { kind: leaders.length === 1 ? 'win' : 'tie', ids: leaders.map(p => p.id) };
+}
+
+/**
  * Everything the card says, as plain strings. With showAmounts off, no dollar figure appears
  * anywhere: the winner, the order and the bets still read, the money does not. A points or reward
  * round is never money, so its points always show, and a reward round says who's buying.
  */
-export function shareCardModel(round, res, { showAmounts: moneyOn = true, link = null } = {}) {
+export function shareCardModel(round, res, { showAmounts: moneyOn = true, link = null, art = null } = {}) {
   const showAmounts = countsMoney(round) ? moneyOn : true;
   const money = unitFmt(round);
   const reward = rewardOutcome(round, res);
@@ -31,6 +47,10 @@ export function shareCardModel(round, res, { showAmounts: moneyOn = true, link =
     sub = showAmounts ? `${money(top.amount, { sign: true })} each` : side ? 'take it' : 'tie for top';
   }
   else { headline = first(top.name); sub = showAmounts ? money(top.amount, { sign: true }) : 'takes it'; }
+
+  const reaction = cardReaction(res);
+  // The main game's colour and art: a multi-game round reads as its first game
+  const { tint, soft, ink } = gameTheme(round.game);
 
   // Ranks share a place on equal money
   let place = 0;
@@ -59,6 +79,10 @@ export function shareCardModel(round, res, { showAmounts: moneyOn = true, link =
     reward: reward && !square ? reward.text : null,
     // The short link back to the round, when there is one to print
     footer: link ? String(link).replace(/^https?:\/\//, '').replace(/\/$/, '') : countsMoney(round) ? 'Settled with Birdie Bank' : 'Scored with Birdie Bank',
+    theme: { game: round.game || null, tint, soft, ink },
+    reaction,
+    // The pictures the page drew for the canvas (ResultsArt.jsx): { cheer, game } data links, when ready
+    art: art && (art.cheer || art.game) ? { cheer: art.cheer || null, game: art.game || null } : null,
   };
 }
 
@@ -69,7 +93,9 @@ export function shareCardModel(round, res, { showAmounts: moneyOn = true, link =
 export function resultsAlt(m) {
   const order = m.standings.map(p => `${p.place}. ${p.name}${p.amount ? ` ${p.amount}` : ''}`).join(', ');
   const bets = m.bets.filter(b => b.text).map(b => `${b.label} ${b.text}${b.value && b.value !== '–' ? ` ${b.value}` : ''}`).join('; ');
-  return [`Results card: ${[m.course, m.meta].filter(Boolean).join(', ')}`, `${m.headline} ${m.sub}`, m.reward, order, bets ? `${m.betsTitle}: ${bets}` : '']
+  const cheer = m.art?.cheer && m.reaction && m.reaction.kind !== 'square'
+    ? `${m.headline}${m.reaction.ids.length > 1 ? ' in crowns' : '’s buddy in a crown'}, arms up` : '';
+  return [`Results card: ${[m.course, m.meta].filter(Boolean).join(', ')}`, `${m.headline} ${m.sub}`, cheer, m.reward, order, bets ? `${m.betsTitle}: ${bets}` : '']
     .filter(Boolean).join('. ');
 }
 
@@ -127,40 +153,61 @@ export function spaced(ctx, text, x, y, spacing) {
   for (const ch of text) { ctx.fillText(ch, cx, y); cx += ctx.measureText(ch).width + spacing; }
 }
 
-function draw(ctx, m) {
+/** Draw a picture to fit inside a box (contain), sitting on the box's bottom edge, centred across. */
+function drawContained(ctx, pic, x, y, w, h) {
+  const iw = pic.width || w, ih = pic.height || h;
+  const k = Math.min(w / iw, h / ih);
+  const dw = iw * k, dh = ih * k;
+  ctx.drawImage(pic, x + (w - dw) / 2, y + h - dh, dw, dh);
+}
+
+function draw(ctx, m, pics = {}) {
   const W = IMAGE_W, H = IMAGE_H, PAD = 96, inner = W - PAD * 2;
+  const theme = m.theme || { tint: C.peach, ink: C.onPastel };
   ctx.fillStyle = C.bg;
   ctx.fillRect(0, 0, W, H);
-  // A couple of soft shapes for colour, kept to the corners
-  ctx.fillStyle = C.pink;
-  ctx.beginPath(); ctx.arc(W - 40, 70, 250, 0, Math.PI * 2); ctx.fill();
-  ctx.fillStyle = C.ochre;
-  ctx.beginPath(); ctx.arc(W - 250, 250, 56, 0, Math.PI * 2); ctx.fill();
   ctx.fillStyle = 'rgba(164,212,197,.10)';
   ctx.beginPath(); ctx.arc(W + 60, H + 40, 240, 0, Math.PI * 2); ctx.fill();
+
+  // The game's colour as a band across the top, its bottom edge bowed a little
+  const bandH = 500;
+  ctx.fillStyle = theme.tint;
+  ctx.beginPath();
+  ctx.moveTo(0, 0); ctx.lineTo(W, 0); ctx.lineTo(W, bandH - 36);
+  ctx.quadraticCurveTo(W / 2, bandH + 36, 0, bandH - 36);
+  ctx.closePath(); ctx.fill();
+
+  // The reaction on the right of the band, standing on its edge; the words keep left of it
+  const cheer = pics.cheer;
+  const artW = 430, artX = W - PAD - artW + 30;
+  if (cheer) drawContained(ctx, cheer, artX, 84, artW, bandH - 64);
+  const textW = cheer ? artX - PAD - 24 : inner;
 
   ctx.textBaseline = 'alphabetic';
   ctx.textAlign = 'left';
 
-  // Wordmark and where
-  ctx.fillStyle = C.mint;
+  // Wordmark and where, in ink on the band
+  ctx.fillStyle = theme.ink;
   ctx.font = `800 40px ${DISPLAY}`;
-  spaced(ctx, m.brand.toUpperCase(), PAD, 170, 6);
-  ctx.fillStyle = C.ink;
-  fit(ctx, m.course, 700, BODY, 52, 34, inner - 260);
-  ctx.fillText(clip(ctx, m.course, inner - 260), PAD, 262);
-  ctx.fillStyle = C.soft;
+  spaced(ctx, m.brand.toUpperCase(), PAD, 150, 6);
+  fit(ctx, m.course, 700, BODY, 52, 34, textW);
+  ctx.fillText(clip(ctx, m.course, textW), PAD, 240);
+  ctx.save();
+  ctx.globalAlpha = 0.72;
   ctx.font = `600 38px ${BODY}`;
-  ctx.fillText(clip(ctx, m.meta, inner - 200), PAD, 318);
+  ctx.fillText(clip(ctx, m.meta, textW), PAD, 296);
+  ctx.restore();
+  // The game's art as a sticker under the words
+  if (pics.game) ctx.drawImage(pics.game, PAD, 334, 120, 120);
 
   // The headline: who won, and how much
-  let y = 540;
+  let y = 680;
   ctx.fillStyle = C.ink;
-  fit(ctx, m.headline, 800, DISPLAY, 200, 96, inner);
+  fit(ctx, m.headline, 800, DISPLAY, 180, 96, inner);
   ctx.fillText(clip(ctx, m.headline, inner), PAD - 6, y);
-  y += m.big ? 170 : 96;
+  y += m.big ? 156 : 92;
   ctx.fillStyle = m.big ? C.mint : C.soft;
-  if (m.big) fit(ctx, m.sub, 800, DISPLAY, 170, 80, inner);
+  if (m.big) fit(ctx, m.sub, 800, DISPLAY, 150, 80, inner);
   else ctx.font = `500 64px ${DISPLAY}`;
   ctx.fillText(clip(ctx, m.sub, inner), PAD - 4, y);
   y += 90;
@@ -255,14 +302,22 @@ export function renderShareImage(round, res, opts = {}) {
 
 /** Draw a ready results card model (shareCardModel) and return it as a PNG blob. */
 export async function renderResultsCard(model) {
-  await fontsReady();
-  const canvas = document.createElement('canvas');
-  canvas.width = IMAGE_W;
-  canvas.height = IMAGE_H;
-  const ctx = canvas.getContext('2d');
-  if (!ctx) throw new Error('Canvas unavailable');
-  draw(ctx, model);
-  return new Promise((resolve, reject) => canvas.toBlob(b => (b ? resolve(b) : reject(new Error('Could not make the image'))), 'image/png'));
+  const [, cheer, game] = await Promise.all([fontsReady(), loadImage(model.art?.cheer), loadImage(model.art?.game)]);
+  const paint = pics => {
+    const canvas = document.createElement('canvas');
+    canvas.width = IMAGE_W;
+    canvas.height = IMAGE_H;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) throw new Error('Canvas unavailable');
+    draw(ctx, model, pics);
+    return new Promise((resolve, reject) => canvas.toBlob(b => (b ? resolve(b) : reject(new Error('Could not make the image'))), 'image/png'));
+  };
+  try { return await paint({ cheer, game }); }
+  catch (e) {
+    // A browser that won't export a canvas with a drawing on it: the card again, words only
+    if (!cheer && !game) throw e;
+    return paint({});
+  }
 }
 
 /** Load a picture to draw, or null when it won't load (a photo with no CORS, no signal) in time. */

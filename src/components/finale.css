@@ -1,0 +1,46 @@
+/* The end of a round (Finale.jsx, RaceBoard.jsx): the leaderboard race, the crowns as the last total
+   lands, and the main game's colour (game-theme.js) on the reveal's head and the podium's steps.
+   Loads with the round screen, never on the first screen. */
+
+/* The race: rows slide past each other (RaceBoard's FLIP), a row that passes rides on top (its z-index) */
+.reveal-row { position: relative; }
+.rv-av-wrap { position: relative; display: inline-grid; flex-shrink: 0; }
+/* A buddy bobs while its total counts */
+.rv-av-wrap.racing .rv-av { animation: buddyBob 260ms ease-in-out infinite alternate; }
+@keyframes buddyBob { to { transform: translateY(-2px); } }
+/* The crown drops onto the winner's buddy on the board as the last total lands */
+.crown-art.rv-row-crown {
+  position: absolute; left: 50%; top: -13px; width: 22px; z-index: 1; pointer-events: none;
+  transform: translateX(-50%) rotate(-8deg); filter: drop-shadow(0 1px 0 rgba(0,0,0,.15));
+  animation: crownOn .6s var(--ease-bounce) both;
+}
+.rv-still .crown-art.rv-row-crown { animation: none; }
+/* Everyone level on top: their crowned buddies side by side under the title */
+.rv-crowned.many { gap: 8px; }
+
+/* The main game's colour as a band behind the reveal's head: a pale wash in light, a low one in dark */
+.reveal-head.rv-themed {
+  --rv-mix: 34%;
+  margin: 4px 16px 14px; padding: 14px 16px 16px; border-radius: 24px;
+  background: var(--card);
+  background: color-mix(in srgb, var(--rv-tint) var(--rv-mix), var(--card));
+}
+:root[data-theme="dark"] .reveal-head.rv-themed { --rv-mix: 18%; }
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]):not([data-theme="dark"]) .reveal-head.rv-themed { --rv-mix: 18%; } }
+.rv-eyebrow { display: inline-flex; align-items: center; justify-content: center; gap: 8px; max-width: 100%; }
+.rv-eyebrow .eyebrow { color: var(--body); min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.game-art.rv-game { width: 28px; height: 28px; flex-shrink: 0; }
+.rv-themed .rv-skip { color: var(--mute); }
+
+/* The podium's steps in the game's colour (Podium's `tint`) */
+.podium.themed .pod-1 .pod-step { background: var(--pod-1); }
+.podium.themed .pod-2 .pod-step { background: var(--pod-2); }
+.podium.themed .pod-3 .pod-step { background: var(--pod-3); }
+
+/* The results card's stand-in while the image draws: the game's art by the wordmark */
+.sc-top { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.game-art.sc-game { width: 30px; height: 30px; flex-shrink: 0; }
+
+@media (prefers-reduced-motion: reduce) {
+  .rv-av-wrap.racing .rv-av, .crown-art.rv-row-crown { animation: none; }
+}
