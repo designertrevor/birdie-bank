@@ -2,6 +2,7 @@
 // results and the season's hall of fame, so a win looks the same everywhere.
 import { AvatarArt } from './Avatar.jsx';
 import { placeLabel } from '../lib/format.js';
+import { lighten } from '../lib/game-theme.js';
 
 /** A crown, drawn to sit on top of an avatar circle. */
 export function Crown({ className = 'crown-art' }) {
@@ -29,11 +30,14 @@ export function CrownedFace({ model, size = 96 }) {
  * The top three on steps (second, first, third from left), each with their buddy, name and amount.
  * `standings` is sorted best first; `faces` maps id to an avatar model; `fmt` formats an amount.
  */
-export function Podium({ standings, faces, fmt }) {
+export function Podium({ standings, faces, fmt, tint = null }) {
   const top = standings.slice(0, 3).map((p, i) => ({ ...p, label: placeLabel(standings, i), i }));
   const order = top.length === 3 ? [top[1], top[0], top[2]] : top;
+  // `tint` (a game's colour, game-theme.js) builds the steps in it: first place in the full colour,
+  // second and third in paler washes of it, so the podium reads as that game's
+  const steps = tint ? { '--pod-1': tint, '--pod-2': lighten(tint, 0.38), '--pod-3': lighten(tint, 0.6) } : undefined;
   return (
-    <div className="podium" role="list" aria-label="Top three">
+    <div className={`podium ${tint ? 'themed' : ''}`.trim()} style={steps} role="list" aria-label="Top three">
       {order.map(p => (
         <div key={p.id} className={`pod pod-${p.i + 1}`} role="listitem">
           <span className="pod-face">{p.i === 0 && faces.get(p.id) ? <CrownedFace model={faces.get(p.id)} size={64} /> : faces.get(p.id) && <AvatarArt model={faces.get(p.id)} />}</span>

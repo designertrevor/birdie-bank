@@ -20,6 +20,7 @@ import { bigRoundResults } from '../lib/big-money.js';
 import { gamesLine } from '../lib/side-games.js';
 import { betStretchLine } from '../lib/stakes.js';
 import { teamLineText } from '../lib/reveal.js';
+import { gameTheme } from '../lib/game-theme.js';
 import { ByGameTable } from '../components/SideGames.jsx';
 import { accountsEnabled, useAccount } from '../lib/cloud.js';
 import { SignInSheet } from '../components/Account.jsx';
@@ -226,7 +227,7 @@ export default function RoundDetail({ id, celebrate }) {
         {!solo && <>
         <div className="sec-label">Standings</div>
         {/* Three or more with a winner: the top three on a podium, then everyone in one list */}
-        {res.standings.length >= 3 && !allSquare && !(res.big && !res.big.final) && <Podium standings={res.standings} faces={faces} fmt={fmt} />}
+        {res.standings.length >= 3 && !allSquare && !(res.big && !res.big.final) && <Podium standings={res.standings} faces={faces} fmt={fmt} tint={gameTheme(round.game).tint} />}
         <div className="stand-group">
           {res.standings.map((p, i) => (
             <div key={p.id} className="stand-line">
