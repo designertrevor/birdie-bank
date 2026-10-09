@@ -1441,6 +1441,25 @@ button.who-status { cursor: pointer; min-height: 36px; }
 .pw-free .pw-list li > i { color: var(--win); }
 .pw-fine { font-size: 13px; color: var(--mute); text-align: center; line-height: 1.4; }
 
+/* YOUR PLAN and the cancel screen (Settings, paywall flag only) */
+.yp-card { margin-top: 8px; padding: 18px 18px 16px; box-shadow: var(--card-shadow); }
+.yp-top { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.yp-badge { width: 44px; height: 44px; border-radius: 14px; background: var(--surface); color: var(--icon); display: grid; place-items: center; font-size: 24px; }
+.yp-card.pro .yp-badge { background: var(--pink); color: #fff; }
+.yp-tag { font-size: 12px; font-weight: 700; padding: 4px 10px; border-radius: 999px; background: var(--surface); color: var(--ink); white-space: nowrap; }
+.yp-title { margin-top: 14px; font-size: 26px; font-weight: 800; letter-spacing: -.02em; line-height: 1.1; }
+.yp-text { margin-top: 6px; font-size: 15px; color: var(--body); line-height: 1.45; }
+.yp-fine { margin-top: 6px; font-size: 13px; color: var(--mute); }
+.yp-act { margin-top: 14px; }
+.yp-empty { display: flex; align-items: center; gap: 12px; }
+.yp-empty-ic { width: 36px; height: 36px; border-radius: 50%; background: var(--surface); color: var(--icon); display: grid; place-items: center; font-size: 18px; flex-shrink: 0; }
+.yp-empty-title { font-weight: 700; font-size: 15px; }
+.yp-cancel { display: block; margin: 18px auto 24px; color: var(--mute); text-decoration-color: var(--surface-strong); }
+.cp-hero { padding: 20px 20px 14px; }
+.cp-title { margin-top: 8px; font-size: 28px; font-weight: 800; letter-spacing: -.03em; line-height: 1.12; text-wrap: balance; }
+.cp-lead { margin-top: 8px; font-size: 15px; color: var(--body); }
+.cancel-plan .cta-wrap .link-btn { color: var(--mute); }
+
 /* SIDE GAMES (several games in one round) */
 .side-game .sg-head { display: flex; align-items: center; gap: 12px; }
 .side-game .sg-icon { font-size: 22px; color: var(--icon); flex-shrink: 0; }
