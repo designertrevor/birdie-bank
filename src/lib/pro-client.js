@@ -13,8 +13,12 @@ const CLOUD_META = 'bb-cloud'; // cloud.js keeps the signed-in account's id here
 const readJson = k => { try { return JSON.parse(localStorage.getItem(k)); } catch { return null; } };
 const save = v => { try { if (v) localStorage.setItem(KEY, JSON.stringify(v)); else localStorage.removeItem(KEY); } catch { /* storage blocked */ } };
 
+// Local dev only: `?lifetime=on` shows this phone as Pro for life for this page load, so the plan
+// screens can be checked before the SQL has run. Never in a production or preview build.
+const DEV_LIFETIME = !!(import.meta.env?.DEV && typeof location !== 'undefined' && /[?&]lifetime=on(?:&|$)/.test(location.search));
+
 // Until the account is known, the copy saved for the account this phone was last signed in as
-let snap = savedFor(readJson(KEY), readJson(CLOUD_META)?.uid || null);
+let snap = DEV_LIFETIME ? { lifetime: true, since: null } : savedFor(readJson(KEY), readJson(CLOUD_META)?.uid || null);
 const listeners = new Set();
 const set = next => { snap = next; listeners.forEach(l => l()); };
 const sub = l => { listeners.add(l); return () => listeners.delete(l); };
@@ -43,7 +47,7 @@ export async function refreshPro(uid) {
 let booted = false;
 /** Call once at launch: read Pro for whichever account signs in, and forget it on sign-out. */
 export function bootPro() {
-  if (booted || !supabaseConfigured) return;
+  if (booted || !supabaseConfigured || DEV_LIFETIME) return;
   booted = true;
   let uid = null;
   import('./cloud.js').then(c => {
