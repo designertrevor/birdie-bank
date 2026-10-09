@@ -45,6 +45,7 @@ import { PLAN_LOCKED, editPlan } from '../lib/plan-sync.js';
 import { rebookIfMoved } from '../lib/tee-reminders.js';
 import { shouldShowPaywall } from '../lib/paywall.js';
 import { PAYWALL_ON } from '../lib/paywall-flag.js';
+import { hasLifetimePro } from '../lib/pro-client.js';
 import { matchingUsual, planFromUsual, setupFromUsual, usualsOf } from '../lib/usuals.js';
 import { SaveUsualButton, UsualsList } from '../components/Usuals.jsx';
 import PlayForPicker from '../components/PlayFor.jsx';
@@ -354,7 +355,7 @@ export default function NewRound({ rematch, fromPlan, present, edit = null, ahea
       if (course && !st.favorites.includes(course.id)) st.favorites = [course.id, ...st.favorites].slice(0, 6);
       if (replaces && st.rounds[replaces]) { delete st.rounds[replaces]; leaveRound(st, replaces); }
     });
-    const paywall = onboarding && shouldShowPaywall(getState(), PAYWALL_ON) ? [['paywall', { source: 'onboarding' }]] : [];
+    const paywall = onboarding && shouldShowPaywall(getState(), PAYWALL_ON, { pro: hasLifetimePro() }) ? [['paywall', { source: 'onboarding' }]] : [];
     nav.reset('upnext', ['plan', { id }], ...paywall);
   };
 

@@ -23,6 +23,7 @@ import {
 } from '../lib/onboarding.js';
 import { AGE_COPY, setAgeAnswer } from '../lib/age.js';
 import { PAYWALL_ON } from '../lib/paywall-flag.js';
+import { hasLifetimePro } from '../lib/pro-client.js';
 import { shouldShowPaywall } from '../lib/paywall.js';
 
 const QUESTION = {
@@ -111,7 +112,7 @@ export default function Onboarding({ onDone, play = null }) {
   // so backing out of the plan still lands there)
   const finish = planNext => {
     const organizer = organizerRecord(a);
-    const paywall = shouldShowPaywall({ organizer }, PAYWALL_ON) ? [['paywall', { source: 'onboarding' }]] : [];
+    const paywall = shouldShowPaywall({ organizer }, PAYWALL_ON, { pro: hasLifetimePro() }) ? [['paywall', { source: 'onboarding' }]] : [];
     const routes = planNext
       ? [...paywall, ['newRound', { ahead: true, game: suggestedGame(a), ballot: ballotGames(a), onboarding: true }]]
       : paywall;

@@ -6,6 +6,8 @@ import { Header, Icon, PickMark, Screen, useUI } from '../components/ui.jsx';
 import { getState, update } from '../lib/store.js';
 import { useNav } from '../lib/nav.js';
 import { GAMES } from '../lib/round.js';
+import { useLifetimePro } from '../lib/pro-client.js';
+import { LIFETIME_LINE } from '../lib/lifetime-pro.js';
 import {
   DEFAULT_PLAN, PLANS, PRICES_ARE_PLACEHOLDERS, PRO_FEATURES, REMIND_DAY, TRIAL_DAYS, VARIANTS,
   annualSavings, freePromise, paywallAnswer, perMonthLabel, trialCta, trialLine, trialTimeline, variantFor,
@@ -29,6 +31,11 @@ export default function Paywall({ source = 'onboarding' }) {
       : 'You’re on Free. Your round still works.');
     nav.pop();
   };
+
+  // An early tester with Pro for life never sees the paywall: a thank-you in its place, in case a
+  // route still points here (the onboarding check skips it once the account has been read)
+  const { lifetime } = useLifetimePro();
+  if (lifetime) return <LifetimeThanks onClose={() => nav.pop()} />;
 
   const View = VIEWS[variant] || VIEWS.c;
   // From Settings or the Season preview it's a look at Pro, so it closes without an answer. After onboarding, "Keep scoring for free" is the way out
@@ -111,3 +118,20 @@ function TrialWithFreeWayOut({ plan, setPlan, onClose, onTrial, onFree, freeWayO
 }
 
 const VIEWS = { c: TrialWithFreeWayOut };
+
+/** Pro for life: nothing to pick and nothing to pay. */
+function LifetimeThanks({ onClose }) {
+  return (
+    <Screen className="paywall">
+      <Header title="" onClose={onClose} />
+      <div className="scroll">
+        <div className="pw-hero">
+          <div className="pw-badge"><Icon name="star" fill /></div>
+          <h1 className="pw-title d">You’ve got Pro for life</h1>
+          <p className="pw-lead">{LIFETIME_LINE}. Nothing to pay, ever.</p>
+        </div>
+      </div>
+      <div className="cta-wrap"><button className="full-btn" onClick={onClose}>Back to it</button></div>
+    </Screen>
+  );
+}
