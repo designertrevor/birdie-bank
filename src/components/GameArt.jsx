@@ -5,13 +5,13 @@
 import { GAMES } from '../lib/round.js';
 import { ArtImage } from './ArtFile.jsx';
 import { artFile } from '../lib/art-files.js';
+import { GROUP_TINTS } from '../lib/game-theme.js';
 import { INK, BALL, PINK, DEEP, OCHRE, GOLD, COIN, TEAL, MINT, CORAL, LAV, PEACH } from '../lib/art-palette.js';
 
 const line = { stroke: INK, strokeWidth: 2.6, fill: 'none', strokeLinecap: 'round', strokeLinejoin: 'round' };
 
 /** Each group gets a colour, so a shelf of tiles shows its sections at a glance. */
-// eslint-disable-next-line react-refresh/only-export-components
-export const GROUP_TINT = { Classics: OCHRE, 'Head to head': PINK, Team: MINT, 'Full round': LAV, Points: PEACH };
+export const GROUP_TINT = GROUP_TINTS;
 
 /** A small ball, face optional: the game's players. */
 function Ball({ cx, cy, r = 9, face = true, grin = false }) {
