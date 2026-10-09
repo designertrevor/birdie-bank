@@ -260,9 +260,9 @@ a.set-row { text-decoration: none; }
 
 /* HOLE META: a quiet row of light tiles, so the hole's pot card below is the one coloured block */
 .hole-meta {
-  display: flex; flex-shrink: 0; gap: 6px; margin: 8px 16px 8px; padding: 0;
+  display: flex; flex-shrink: 0; gap: 6px; margin: 8px 16px 8px; padding: 0; justify-content: center;
 }
-.mc { flex: 1; padding: 8px 4px 7px; text-align: center; cursor: pointer; border-radius: 16px; background: var(--card); transition: background .15s; }
+.mc { flex: 0 0 calc((100% - 18px) / 4); aspect-ratio: 1; min-width: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 6px 4px; text-align: center; cursor: pointer; border-radius: 16px; background: var(--card); transition: background .15s; }
 .mc:active { background: var(--surface); }
 .mc:first-of-type { background: var(--mint); }
 .mc:first-of-type .ml, .mc:first-of-type .mv { color: var(--on-pastel); }
@@ -848,8 +848,8 @@ button:disabled { cursor: not-allowed; }
 .sc-table td.sc-tap { cursor: pointer; }
 .sc-table td.sc-tap:active { background: var(--cur-cell); }
 .sc-table .hcp-row td, .sc-table .par-row td { padding-block: 8px; font-size: 12px; color: var(--mute); }
-.strokes-cell { flex: 1.6; min-width: 0; }
-.strokes-cell .mv { display: block; font-family: Inter, system-ui, sans-serif; font-size: 14px; font-weight: 700; line-height: 1.25; padding-top: 6px; overflow-wrap: anywhere; }
+.strokes-cell { min-width: 0; }
+.strokes-cell .mv { display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; overflow: hidden; font-family: Inter, system-ui, sans-serif; font-size: 13px; font-weight: 700; line-height: 1.25; padding-top: 4px; overflow-wrap: anywhere; }
 .strokes-cell .stroke-dots { color: var(--mint); margin-right: 4px; }
 .sc-mark.birdie { border-radius: 50%; box-shadow: 0 0 0 2px var(--pink-text); color: var(--pink-text); }
 .sc-mark.eagle { border-radius: 50%; background: var(--pink-fill); color: #fff; }
@@ -4022,8 +4022,6 @@ a.header-btn.rm-open { text-decoration: none; }
    plain look. Text colours on these are checked in round-theme.test.js */
 .play-track { height: 3px; margin: 10px 16px 0; border-radius: 999px; background: var(--surface); overflow: hidden; flex-shrink: 0; }
 .play-track > span { display: block; height: 100%; border-radius: inherit; background: var(--gt, var(--mint)); transform-origin: left center; }
-.play.themed .mc:first-of-type { background: var(--gt); }
-.play.themed .mc:first-of-type .ml, .play.themed .mc:first-of-type .mv { color: var(--gt-ink); }
 /* The money bar: its head is a band in the game's wash, with the game's art beside the word */
 .mb-word { display: inline-flex; align-items: center; gap: 6px; min-width: 0; }
 .mb-art { width: 20px; height: 20px; flex-shrink: 0; margin: -3px 0; border-radius: 6px; }

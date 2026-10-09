@@ -613,11 +613,12 @@ function PlayRound({ round, mount, momentUp = false }) {
         <div className="mc"><span className="ml">HCP</span><span className="mv">{hole.hdcp ?? '–'}</span></div>
         {round.useHandicaps && !solo && (() => {
           // Who gets a stroke here, up top, so a birdie that doesn't move the money makes sense
-          // Someone just playing has no game to get strokes in
+          // Someone just playing has no game to get strokes in. The tile is a square, so past two names it
+          // gives the count; each player's row says who gets one
           const getting = units.filter(u => !isJustPlaying(round, u.id) && strokesFor(round, u, hole) > 0).map(u => u.team ? u.name : u.name.split(' ')[0]);
           return (
             <div className="mc strokes-cell"><span className="ml">Strokes</span>
-              <span className="mv">{getting.length ? <><span className="stroke-dots" aria-hidden="true">●</span>{getting.join(', ')}</> : 'None'}</span>
+              <span className="mv">{getting.length ? <><span className="stroke-dots" aria-hidden="true">●</span>{getting.length > 2 ? `${getting.length} players` : getting.join(', ')}</> : 'None'}</span>
             </div>
           );
         })()}

@@ -1,6 +1,6 @@
 // "Want a heads-up?": our own ask for notifications, right after you plan a round or join one
 // (push-client.js notifyMoment, notify-ask.js decides when). Turn them on goes on to the browser's
-// own prompt; Not now backs off. Mounted once in App.jsx; shows nothing without push switched on.
+// own prompt; the sheet's X backs off (Not now, as on the age sheet). Mounted once in App.jsx; shows nothing without push switched on.
 import { useEffect } from 'react';
 import { Icon, Sheet, useUI } from './ui.jsx';
 import { Spot } from './Spot.jsx';
@@ -49,7 +49,6 @@ function NotifySheet() {
       <p className="notify-fine">Invites and tee times too. No amounts on your lock screen, and you can turn them off in Settings.</p>
       <div className="notify-acts">
         <button className="full-btn" disabled={busy} onClick={() => answer('on')}>Turn on notifications</button>
-        <button className="link-btn center" onClick={() => answer('later')}>Not now</button>
       </div>
     </Sheet>
   );

@@ -91,7 +91,7 @@ export function trendInsight(trend, { window = 5 } = {}) {
   const span = `over the last ${plural(k, 'round')}`;
   // A lower guide is the better way to go, so coming down is the up arrow; under three tenths is noise
   if (change <= -0.3) return { kind: 'up', label: 'Coming down', text: `Your guide has come down ${Math.abs(change).toFixed(1)} ${span}${tail}.` };
-  if (change >= 0.3) return { kind: 'down', label: 'Creeping up', text: `Your guide has gone up ${change.toFixed(1)} ${span}${tail}.` };
+  if (change >= 0.3) return { kind: 'down', label: 'Slipping', text: `Your guide has gone up ${change.toFixed(1)} ${span}${tail}.` };
   return { kind: 'flat', label: 'Holding steady', text: `Your guide has held at about ${formatIndex(trend.guide)} ${span}${tail}.` };
 }
 
