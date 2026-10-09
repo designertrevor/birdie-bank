@@ -96,8 +96,9 @@ export function createTracker() {
   return {
     /** Count one moment. Unknown events are ignored; properties are cleaned (cleanProps). */
     track(event, props) {
-      if (state === 'off' || !EVENTS.has(event)) return;
-      if (state !== 'waiting' && !allowed()) return;
+      // Share usage data off drops it here, before it can wait in the queue: an event counted while
+      // it was off must never go out later because the switch came back on
+      if (state === 'off' || !EVENTS.has(event) || !allowed()) return;
       let ctx = {};
       try { ctx = opts.context() || {}; } catch { /* no context */ }
       const item = ['capture', event, cleanProps({ ...props, ...ctx })];
@@ -106,8 +107,8 @@ export function createTracker() {
     },
     /** The account, as an opaque id (never an email). */
     identify(id) {
-      if (state === 'off' || !id) return;
-      if (state === 'ready') { if (allowed()) run(['identify', id]); } else push(['identify', id]);
+      if (state === 'off' || !id || !allowed()) return;
+      if (state === 'ready') run(['identify', id]); else push(['identify', id]);
     },
     /** Signed out: the next events start a fresh anonymous id. */
     reset() {

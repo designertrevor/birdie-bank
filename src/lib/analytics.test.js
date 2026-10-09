@@ -69,6 +69,10 @@ test('analytics: Share usage data off sends nothing and never loads the library;
   await tick();
   assert.equal(loads, 0);
   assert.equal(t.status().queued, 0, 'what waited is dropped');
+  // Counted while it's off: never queued, so switching it back on doesn't send it late
+  t.track('round_finished', { game: 'skins' });
+  t.identify('abc123');
+  assert.equal(t.status().queued, 0, 'nothing waits while sharing is off');
   on = true;
   t.sharingChanged(true);
   await tick();
