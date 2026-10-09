@@ -127,3 +127,17 @@ test('Settings has the Share usage data switch, on by default, and the privacy p
   const privacy = read('../../public/privacy.html');
   for (const word of ['Sentry', 'PostHog', 'Share usage data', '%SUPPORT_EMAIL%', 'creator']) assert.ok(privacy.includes(word), word);
 });
+
+test('crash reports: switching Share usage data off stops a loaded Sentry sending anything (its session counts skip beforeSend)', async () => {
+  let on = true;
+  const enabled = [];
+  const s = { ...fakeSentry(), setEnabled: v => enabled.push(v) };
+  const r = createCrashReporter();
+  r.start({ allowed: () => on, load: () => s });
+  await tick();
+  on = false;
+  r.sharingChanged(false);
+  on = true;
+  r.sharingChanged(true);
+  assert.deepEqual(enabled, [false, true]);
+});

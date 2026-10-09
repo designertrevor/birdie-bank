@@ -52,8 +52,9 @@ export function createCrashReporter() {
       loader = load;
       go();
     },
-    /** Share usage data was switched: on loads Sentry if it hadn't, off drops what's waiting. */
+    /** Share usage data was switched: on loads Sentry if it hadn't, off drops what's waiting and stops a loaded Sentry sending. */
     sharingChanged(on) {
+      if (client?.setEnabled) { try { client.setEnabled(!!on); } catch { /* ignore */ } }
       if (!on) queue = [];
       else go();
     },

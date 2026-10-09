@@ -10,7 +10,7 @@ import { scrubBreadcrumb, scrubEvent } from './scrub.js';
 
 /** Start Sentry and hand back how to report an error (with the React component stack, if any). */
 export function startSentry({ dsn, release, environment, allowed = () => true }) {
-  init({
+  const client = init({
     dsn,
     release,
     environment,
@@ -40,6 +40,12 @@ export function startSentry({ dsn, release, environment, allowed = () => true })
         if (context?.where) scope.setTag('where', String(context.where).slice(0, 32));
         captureException(error);
       });
+    },
+    // Share usage data switched: beforeSend already drops errors while it's off, but the session
+    // counts skip beforeSend, so the client itself stops (and starts again) sending anything
+    setEnabled(on) {
+      const opts = client?.getOptions?.();
+      if (opts) opts.enabled = !!on;
     },
   };
 }
