@@ -11,8 +11,10 @@
     "test": "node --test src/lib/*.test.js"
   },
   "dependencies": {
+    "@sentry/browser": "^11.6.0",
     "@supabase/supabase-js": "^2.117.1",
     "@vercel/functions": "^3.9.9",
+    "posthog-js": "^1.438.3",
     "react": "^19.2.0",
     "react-dom": "^19.2.0"
   },

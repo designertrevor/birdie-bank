@@ -203,6 +203,11 @@ export default function Settings() {
           <div className="row-main"><div className="set-name">Restore from a backup</div><div className="set-sub">Add what’s missing, or replace everything</div></div>
           <span className="chevron"><Icon name="caret-right" /></span>
         </FileButton>
+        {/* Crash reports and usage counts (ops.js): anonymous, and this turns both off */}
+        <div className="toggle-row">
+          <div><div className="toggle-lbl" id="usage-lbl">Share usage data</div><div className="toggle-sub" id="usage-sub">Anonymous crash reports and counts like rounds played, so we can fix bugs and see what’s working. Never names, scores or money.</div></div>
+          <Toggle on={state.settings.shareUsage !== false} onChange={v => update(s => { s.settings.shareUsage = v; })} labelledBy="usage-lbl" describedBy="usage-sub" />
+        </div>
         {PAYWALL_ON && isOrganizer(state) && <>
           <div className="sec-label">Your plan</div>
           {row('star', 'Birdie Bank Pro', planStatus(state), () => nav.push('paywall', { source: 'settings' }))}
@@ -312,7 +317,7 @@ export function Defaults() {
             <GameOptions game={g} get={get} set={set} onAmount={(path, label, o) => setPad({ path, label, ...o })} compact />
           </div>
         ))}
-        <button className="danger-link" onClick={async () => { if (await ask({ title: 'Reset your game defaults?', text: 'Every game goes back to the standard bets and house rules. Rounds you’ve played don’t change.', confirmLabel: 'Reset' })) update(st => { st.settings = { ...structuredClone(DEFAULT_SETTINGS), theme: st.settings.theme, shareAmounts: st.settings.shareAmounts, betPrompt: st.settings.betPrompt, callouts: st.settings.callouts, nudgeDays: st.settings.nudgeDays }; }); }}><Icon name="arrow-counter-clockwise" /> Reset to defaults</button>
+        <button className="danger-link" onClick={async () => { if (await ask({ title: 'Reset your game defaults?', text: 'Every game goes back to the standard bets and house rules. Rounds you’ve played don’t change.', confirmLabel: 'Reset' })) update(st => { st.settings = { ...structuredClone(DEFAULT_SETTINGS), theme: st.settings.theme, shareAmounts: st.settings.shareAmounts, betPrompt: st.settings.betPrompt, callouts: st.settings.callouts, nudgeDays: st.settings.nudgeDays, shareUsage: st.settings.shareUsage }; }); }}><Icon name="arrow-counter-clockwise" /> Reset to defaults</button>
       </div>
       <Numpad open={!!pad} title={pad?.label} prefix="$" initial={pad ? get(pad.path) : ''} min={pad?.min} max={pad?.max}
         onClose={() => setPad(null)} onDone={v => { set(pad.path, v); setPad(null); }} />

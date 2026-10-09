@@ -22,6 +22,7 @@ export const DEFAULT_SETTINGS = {
   shareAmounts: false, // results image shows dollar amounts (off until you turn it on, then remembered)
   betPrompt: true,     // "Any side bets on this hole?" on the Play screen (see bet-prompt.js); personal, never a round's
   callouts: true,      // callouts for the group text on Up next (see callouts.js); off from the card or Settings
+  shareUsage: true,    // Share usage data: anonymous crash reports and usage counts (ops.js); off sends neither
   nudgeDays: 7,        // suggest a friendly payment reminder on Up next once someone has owed you this many days; 0 is Off (see nudges.js)
   banker: { defaultBet: 5, min: 1, max: 20, ties: 'push', rotation: 'rotate', birdies: 'off', par3Triple: false, pressAll: false },
   nassau: { front: 5, back: 5, total: 5, pressMode: 'manual', threshold: 2, turnPress: false, noLastPress: false, teamScore: 'best', bye: 'off' },

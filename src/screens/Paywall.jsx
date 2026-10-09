@@ -4,6 +4,7 @@
 import { useEffect, useState } from 'react';
 import { Header, Icon, PickMark, Screen, useUI } from '../components/ui.jsx';
 import { getState, update } from '../lib/store.js';
+import { track } from '../lib/analytics.js';
 import { useNav } from '../lib/nav.js';
 import { GAMES } from '../lib/round.js';
 import {
@@ -16,6 +17,7 @@ export default function Paywall({ source = 'onboarding' }) {
   const { showToast } = useUI();
   // One variant per phone, kept once it's picked, so an A/B test can compare them later
   const [variant] = useState(() => variantFor(getState(), getState().me || 'anon') || 'c');
+  useEffect(() => { track('paywall_viewed', { source, variant }); }, [variant, source]);
   useEffect(() => {
     if (getState().paywall?.variant === variant) return;
     update(st => { st.paywall = { ...(st.paywall || {}), variant, shownAt: Date.now(), source }; });
@@ -24,6 +26,7 @@ export default function Paywall({ source = 'onboarding' }) {
 
   const answer = choice => {
     update(st => { st.paywall = { ...(st.paywall || {}), ...paywallAnswer({ variant, choice, plan, source }) }; });
+    track('plan_picked', { choice, plan, variant, source });
     showToast(choice === 'trial'
       ? (PRICES_ARE_PLACEHOLDERS ? 'Pro trial preview on. Nothing is charged.' : `Pro trial on. We’ll remind you on day ${REMIND_DAY}.`)
       : 'You’re on Free. Your round still works.');

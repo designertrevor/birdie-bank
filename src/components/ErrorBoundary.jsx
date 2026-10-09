@@ -1,6 +1,7 @@
 import { Component } from 'react';
 import { NavCtx } from '../lib/nav.js';
 import { forgetPlace } from '../lib/kept.js';
+import { reportError } from '../lib/crash.js';
 
 /**
  * Last line of defence: if a screen throws, show a way back instead of a blank page.
@@ -15,6 +16,8 @@ export default class ErrorBoundary extends Component {
   static getDerivedStateFromError(error) { return { error }; }
   componentDidCatch(error, info) {
     console.error('Birdie Bank crashed:', error, info?.componentStack);
+    // A crash report (crash.js), with which components it was in; nothing without a Sentry DSN
+    reportError(error, { componentStack: info?.componentStack, where: 'screen' });
     // Never come back to a screen that just crashed: the next launch starts on Up next
     forgetPlace();
   }

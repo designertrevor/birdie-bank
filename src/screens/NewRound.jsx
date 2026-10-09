@@ -8,6 +8,7 @@ import { RulesSheet } from '../components/Rules.jsx';
 import { Avatar } from '../components/Avatar.jsx';
 import { DateSheet, TimePicker } from '../components/DatePicker.jsx';
 import { DEFAULT_SETTINGS, getState, update, uid, useStore } from '../lib/store.js';
+import { roundProps, track } from '../lib/analytics.js';
 import { inviteeLine, savePerson, tripInvitees } from '../lib/trip-people.js';
 import { canonicalOf } from '../lib/pair-debts.js';
 import { playFromSearch } from '../lib/rule-links.js';
@@ -354,6 +355,7 @@ export default function NewRound({ rematch, fromPlan, present, edit = null, ahea
       if (course && !st.favorites.includes(course.id)) st.favorites = [course.id, ...st.favorites].slice(0, 6);
       if (replaces && st.rounds[replaces]) { delete st.rounds[replaces]; leaveRound(st, replaces); }
     });
+    track('plan_created', { game, holes: holesCount, invited: people.length, trip: !!tripPick, from: onboarding ? 'onboarding' : 'setup' });
     const paywall = onboarding && shouldShowPaywall(getState(), PAYWALL_ON) ? [['paywall', { source: 'onboarding' }]] : [];
     nav.reset('upnext', ['plan', { id }], ...paywall);
   };
@@ -454,6 +456,7 @@ export default function NewRound({ rematch, fromPlan, present, edit = null, ahea
     // The roll call's keys to player ids, so a round kept for another day carries its challenges to the right people
     if (fromPlan) editPlan(fromPlan, p => { p.status = 'started'; p.roundId = id; if (pre?.idOf && Object.keys(pre.idOf).length) p.rollIds = { ...pre.idOf }; });
     markChallengesOn(challengesIn, id);
+    track('round_started', roundProps(round, { from: fromPlan ? 'plan' : 'setup' }));
     setCreatedId(id);
     setStep(4);
   };
