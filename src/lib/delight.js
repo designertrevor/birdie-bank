@@ -1,5 +1,6 @@
 // Playful feedback: confetti, count-ups, haptics. All respect reduced motion, and all of it is
-// silent: no sounds, nothing that takes the phone's audio, so the player's music or podcast keeps playing.
+// silent: nothing that takes the phone's audio, so the player's music or podcast keeps playing.
+// The only sounds are the optional ones in sound-play.js, off unless the player turns them on.
 const CLAY = ['#ff4d8b', '#e8b94a', '#b8a4ed', '#a4d4c5', '#ffb084', '#ff6b5a'];
 const reduce = () => window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
 

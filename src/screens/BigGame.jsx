@@ -17,6 +17,7 @@ import { canonicalOf } from '../lib/pair-debts.js';
 import { PAY_APPS, payInfoFor } from '../lib/pay.js';
 import { dayLabel, daysUntil } from '../lib/plans.js';
 import { buzz } from '../lib/delight.js';
+import { sound } from '../lib/sound-play.js';
 import { keeperName, keeperOf } from '../lib/keeper.js';
 import { nameOf } from '../lib/ledger.js';
 import { shareLink } from '../lib/sync.js';
@@ -269,6 +270,7 @@ function Money({ bs, st, id, state, me, isMe, name, off }) {
   const mark = t => {
     const { shared, at } = markTripPayment({ tripId: id, from: t.from, to: t.to });
     buzz(15);
+    sound('paid');
     const text = t.from === me ? `You paid ${short(t.to)}` : t.to === me ? `${short(t.from)} paid you` : `${short(t.from)} paid ${short(t.to)}`;
     showToast(shared ? `${text}. Everyone in the game sees it.` : text, { label: 'Undo', run: () => {
       const pair = [t.from, t.to].sort().join();

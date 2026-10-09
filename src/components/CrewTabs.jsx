@@ -11,6 +11,7 @@ import { nameOf, outstanding } from '../lib/ledger.js';
 import { canonicalOf } from '../lib/pair-debts.js';
 import { payInfoFor } from '../lib/pay.js';
 import { buzz } from '../lib/delight.js';
+import { sound } from '../lib/sound-play.js';
 import { markCrewPayment } from '../lib/tab-sync.js';
 import { bookScopeName, booksOf, lastBook, myBookNet, openRounds, rolledIn } from '../lib/books.js';
 import { hallCrews } from '../lib/hall-of-fame.js';
@@ -76,6 +77,7 @@ export function OneTab({ tab }) {
   const mark = l => {
     const { shared, undo } = markCrewPayment({ crewId: tab.id, from: l.from, to: l.to });
     buzz(15);
+    sound('paid');
     const text = l.from === me ? `You paid ${first(nameOf(state, l.to))}` : l.to === me ? `${first(nameOf(state, l.from))} paid you` : `${first(nameOf(state, l.from))} paid ${first(nameOf(state, l.to))}`;
     showToast(shared ? `${text}. Their phone sees it too.` : text, { label: 'Undo', run: undo });
   };

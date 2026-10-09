@@ -12,6 +12,7 @@ import { nameOf } from '../lib/ledger.js';
 import { canonicalOf } from '../lib/pair-debts.js';
 import { payInfoFor } from '../lib/pay.js';
 import { buzz } from '../lib/delight.js';
+import { sound } from '../lib/sound-play.js';
 import { CUP_KINDS, FOURSOMES_GAME, MAX_STAKE, balanceTeams, cleanStake, cupCounts, cupHeadline, cupKindsFor, cupPoints, moveTo, pairMatches, teamHandicaps } from '../lib/cup.js';
 import { DRAFT_ORDERS, draftOrder } from '../lib/draft.js';
 import { FLIGHT_NAMES, flightTeams, flightsOf } from '../lib/flights.js';
@@ -444,6 +445,7 @@ export function StakeLines({ st }) {
     const m = markStake(st.trip.id, l);
     if (!m) return;
     buzz(15);
+    sound('paid');
     const text = l.fromId === me ? `You paid ${label(l.toId, l.toName)}` : l.toId === me ? `${label(l.fromId, l.fromName)} paid you` : `${label(l.fromId, l.fromName)} paid ${label(l.toId, l.toName)}`;
     showToast(`${text}. Everyone on the trip sees it.`, { label: 'Undo', run: () => undoStake(st.trip.id, m.id) });
   };
