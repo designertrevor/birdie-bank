@@ -17,6 +17,7 @@ import { Insight, StatTile } from '../components/DataCards.jsx';
 import { TRIAL_DAYS, planStatus } from '../lib/paywall.js';
 import { seasonAccess } from '../lib/entitlements.js';
 import { PAYWALL_ON } from '../lib/paywall-flag.js';
+import { useLifetimePro } from '../lib/pro-client.js';
 import { MIN_REAL_ROUNDS, realRoundCount, sampleBoard, seasonBoard } from '../lib/season.js';
 import { ClosedSeasons, HallLinks } from '../components/CrewTabs.jsx';
 
@@ -28,7 +29,8 @@ export default function Season() {
   const nav = useNav();
   const state = useStore();
   const [free, setFree] = useState(false);
-  const { access } = seasonAccess(state, undefined, { gated: PAYWALL_ON });
+  const { lifetime } = useLifetimePro();
+  const { access } = seasonAccess(state, undefined, { gated: PAYWALL_ON, lifetime });
   const n = realRoundCount(state);
   const real = n >= MIN_REAL_ROUNDS;
   const trial = () => nav.push('paywall', { source: 'season' });
@@ -45,7 +47,8 @@ export default function Season() {
     );
   }
 
-  if (access === 'open') {
+  // Pro for life (an early tester) sees the whole thing, the same as before the paywall
+  if (access === 'open' || access === 'pro') {
     return (
       <Screen className="season">
         <Header title="Season" onBack={nav.pop} />

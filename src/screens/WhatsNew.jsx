@@ -33,7 +33,7 @@ export default function WhatsNew({ fresh = null }) {
         {/* The newest one gets the stage; everything else is a compact list under it */}
         {hero && (
           <div className="wn-hero">
-            <Spot kind="gift" size={104} />
+            <Spot kind="gift" size={88} />
             <div className="wn-hero-words">
               <span className="eyebrow rm-area">{hero.area}</span>
               <h2 className="wn-hero-title d">{hero.title}</h2>
@@ -45,7 +45,7 @@ export default function WhatsNew({ fresh = null }) {
             </div>
           </div>
         )}
-        {groups.length === 0 && <div className="rm-empty"><Spot kind="sleep" size={96} /><p>Nothing here yet. New things land here after each update.</p></div>}
+        {groups.length === 0 && <div className="rm-empty"><Spot kind="sleep" size={88} /><p>Nothing here yet. New things land here after each update.</p></div>}
         {shown.map(g => (
           <section key={g.label} className="wn-month">
             <div className="sec-label">{g.label}</div>

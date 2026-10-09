@@ -4,6 +4,7 @@
 // and keeps it, and what they chose is saved with the variant so the two can be compared.
 // Invited players never see it: only someone who came through organizer onboarding qualifies.
 // Pure functions of plain data, so they're easy to test.
+import { LIFETIME_LINE } from './lifetime-pro.js';
 
 export const TRIAL_DAYS = 14;
 /** The day we remind them the trial is ending, so there are no surprises. */
@@ -105,9 +106,10 @@ export function readFlag({ env = {}, search = '', saved = null } = {}) {
 /**
  * Whether to show the paywall at the end of onboarding: the flag is on, this phone's owner came
  * through organizer onboarding (not a join link or an RSVP link), and they haven't answered it yet.
+ * `pro`: they already have Pro (an early tester's Pro for life), so they never see it.
  */
-export function shouldShowPaywall(state, flagOn) {
-  if (!flagOn || !state) return false;
+export function shouldShowPaywall(state, flagOn, { pro = false } = {}) {
+  if (!flagOn || !state || pro) return false;
   if (!state.organizer) return false;
   return !state.paywall?.choice;
 }
@@ -125,8 +127,9 @@ export function isOrganizer(state) {
   return Object.values(state.plans || {}).some(p => p.host);
 }
 
-/** The Settings line for Pro: where this phone stands. */
-export function planStatus(state, now = Date.now()) {
+/** The Settings line for Pro: where this phone stands. `lifetime`: an early tester's Pro for life. */
+export function planStatus(state, now = Date.now(), { lifetime = false } = {}) {
+  if (lifetime) return LIFETIME_LINE;
   const p = state?.paywall;
   if (p?.choice === 'trial' && p.trialEnds > now) {
     const days = Math.ceil((p.trialEnds - now) / DAY);

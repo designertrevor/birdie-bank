@@ -21,6 +21,7 @@ import { PAYWALL_ON } from '../lib/paywall-flag.js';
 import { SUPPORT_EMAIL, helpMailto } from '../lib/support.js';
 import { TERMS_PATH } from '../lib/terms-page.js';
 import { isOrganizer, planStatus } from '../lib/paywall.js';
+import { useLifetimePro } from '../lib/pro-client.js';
 import { accountsEnabled, signOut, syncNow, unsyncedCount, useAccount } from '../lib/cloud.js';
 import { NUDGE_CHOICES, nudgeChoiceLabel, nudgeDays } from '../lib/nudges.js';
 import { useAgeCheck } from '../components/AgeCheck.jsx';
@@ -75,6 +76,7 @@ export default function Settings() {
   const acct = useAccount();
   const [signingIn, setSigningIn] = useState(false);
   const checkAge = useAgeCheck();
+  const { lifetime } = useLifetimePro();
 
   const logOut = async () => {
     if (unsyncedCount() > 0) {
@@ -210,9 +212,10 @@ export default function Settings() {
           <div className="row-main"><div className="set-name">Restore from a backup</div><div className="set-sub">Add what’s missing, or replace everything</div></div>
           <span className="chevron"><Icon name="caret-right" /></span>
         </FileButton>
-        {PAYWALL_ON && isOrganizer(state) && <>
+        {/* Plans only show with the paywall flag on. An early tester's line is a quiet thank-you (Pro for life) */}
+        {PAYWALL_ON && (isOrganizer(state) || lifetime) && <>
           <div className="sec-label">Your plan</div>
-          {row('star', 'Birdie Bank Pro', planStatus(state), () => nav.push('paywall', { source: 'settings' }))}
+          {row('star', 'Your plan', planStatus(state, undefined, { lifetime }), () => nav.push('yourPlan'))}
         </>}
         {/* Feedback: easy to find, warm, and out of the way of your own settings */}
         <Callout spot="bulb" soft title="Help shape Birdie Bank"

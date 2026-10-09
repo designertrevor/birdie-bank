@@ -62,6 +62,9 @@ const Challenge = screen(challenge);
 const Share = screen(() => import('./screens/Share.jsx'));
 const ChallengeLink = screen(challenge, 'ChallengeLink');
 const Paywall = screen(() => import('./screens/Paywall.jsx'));
+const yourPlan = () => import('./screens/YourPlan.jsx');
+const YourPlan = screen(yourPlan);
+const CancelPlan = screen(yourPlan, 'CancelPlan');
 const Season = screen(() => import('./screens/Season.jsx'));
 const Stats = screen(() => import('./screens/Stats.jsx'));
 const Lately = screen(() => import('./screens/Lately.jsx'));
@@ -177,7 +180,7 @@ const SCREENS = {
   roundDetail: RoundDetail, newRound: NewRound, play: Play,
   playerEdit: PlayerEdit, crewEdit: CrewEdit, person: Person,
   settings: Settings, defaults: Defaults, courses: Courses, courseEdit: CourseEdit, about: About, suggest: Suggest, notifyPicks: NotifyPicks,
-  plan: Plan, rollCall: RollCall, planLink: PlanLink, preview: Preview, paywall: Paywall, season: Season,
+  plan: Plan, rollCall: RollCall, planLink: PlanLink, preview: Preview, paywall: Paywall, yourPlan: YourPlan, cancelPlan: CancelPlan, season: Season,
   challenge: Challenge, challengeLink: ChallengeLink,
   joinInvite: JoinInviteScreen, lately: Lately, trip: Trip, tripSettle: TripSettle, draft: Draft, draftLink: DraftLink,
   bigGame: BigGame, bigGameSetup: BigGameSetup, roadmap: Roadmap, whatsNew: WhatsNew,
@@ -294,6 +297,8 @@ export default function App() {
       sync.bootSync();
     }).catch(() => {});
     import('./lib/feedback.js').catch(() => {});
+    // Pro for life for early testers, read after sign-in (quiet until its SQL has run)
+    import('./lib/pro-client.js').then(p => p.bootPro()).catch(() => {});
     preloadScreens();
     const q = new URLSearchParams(location.search).get('join');
     if (q) {
