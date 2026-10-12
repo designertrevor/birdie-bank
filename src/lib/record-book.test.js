@@ -194,3 +194,86 @@ test('record book: the money screens never read the limited view', async () => {
     assert.ok(/useRecordBook\(\)/.test(read(f)), `${f} reads the Record Book view`);
   }
 });
+
+// ---------- A Big Game is one unit: its money comes from every group's round together ----------
+import { BIG_FORMAT, cleanBig } from './big-game.js';
+import { newTrip, tripStamp } from './trips.js';
+import { myNet } from './history.js';
+import { bigStatus } from './big-money.js';
+
+const OCT = (day, hour = 12, min = 0) => new Date(2026, 9, day, hour, min).getTime();
+const NAMES = { a: 'Ann', b: 'Bob', c: 'Cal', d: 'Dave', e: 'Eve', f: 'Fay', g: 'Gus', h: 'Hal' };
+const G1 = ['a', 'b', 'c', 'd'], G2 = ['e', 'f', 'g', 'h'];
+function bigGame() {
+  const big = cleanBig({
+    v: 2, hcPct: 100, useHandicaps: false,
+    people: Object.fromEntries(Object.entries(NAMES).map(([id, name]) => [id, { name, hc: 0 }])),
+    groups: [
+      { id: 'g1', name: 'Group 1', players: G1, keeper: 'b', roundId: 'r1', code: 'BIGAAA' },
+      { id: 'g2', name: 'Group 2', players: G2, keeper: 'g', roundId: 'r2', code: 'BIGBBB' },
+    ],
+    pot: { on: true, kind: 'gross', stake: 20, places: [50, 30, 20] },
+    skins: { on: false }, teams: { on: false }, bets: [],
+  });
+  return newTrip({ id: 't_big', name: 'Big Game', start: '2026-10-17', end: '2026-10-17', by: 'a', format: BIG_FORMAT, big, now: OCT(10) });
+}
+const SCORES = { 1: { a: 3 }, 2: { e: 3 }, 3: { b: 3 }, 4: { f: 3 }, 5: { c: 5 }, 6: { g: 2 }, 9: { b: 5 } };
+function groupRound(id, ids, code, trip, finishedAt) {
+  const r = createRound({ id, game: 'stroke', course: flat9, holesCount: 9, players: ids.map(x => ({ id: x, name: NAMES[x], index: 0 })), settings: { stroke: { stake: 0, payout: 'pot', cap: false, nassau: false } }, hcPct: 100, useHandicaps: false });
+  for (const h of r.holes) r.scores[h.no] = Object.fromEntries(ids.map(p => [p, SCORES[h.no]?.[p] ?? 4]));
+  r.createdAt = OCT(17, 8);
+  r.status = 'done';
+  r.finishedAt = finishedAt;
+  r.trip = tripStamp(trip);
+  r.shareCode = code;
+  return r;
+}
+/** Ann's phone: a Big Game whose second group finished an hour before the first, nine rounds in between, one older round. */
+function withBig() {
+  const trip = bigGame();
+  const rounds = {
+    r1: groupRound('r1', G1, 'BIGAAA', trip, OCT(17, 15)),
+    r2: groupRound('r2', G2, 'BIGBBB', trip, OCT(17, 14)),
+    oldest: round('oldest', G1, 'b', OCT(16)),
+  };
+  for (let i = 1; i <= 9; i++) rounds[`mid${i}`] = round(`mid${i}`, G1, 'c', OCT(17, 14, i * 5));
+  return { me: 'a', players: {}, rounds, settlements: [], carries: [], tabRows: {}, plans: {}, trips: { t_big: trip }, links: {}, unlinks: [] };
+}
+
+test('record book: a Big Game is never split, so its money stays on its round in the views', () => {
+  const s = withBig();
+  assert.ok(bigStatus(s, 't_big').final, 'the game is decided on the full state');
+  const full = myNet(s.rounds.r1, s);
+  assert.notEqual(full, 0, 'Ann has Big Game money on her round');
+  const v = recordBookView(s, { gated: true, pro: false });
+  // The game counts as one of the ten, both its rounds stay, and the older round is hidden instead
+  assert.equal(v.total, 11);
+  assert.equal(v.hidden, 1);
+  assert.ok(v.state.rounds.r1 && v.state.rounds.r2, 'both of the Big Game rounds stay together');
+  assert.ok(!v.state.rounds.oldest);
+  assert.ok(bigStatus(v.state, 't_big').final, 'still decided in the view');
+  assert.equal(myNet(v.state.rounds.r1, v.state), full, 'the same Big Game money on the round in the view');
+  // When the game itself is the older one, all of it is hidden, not one group
+  const t = withBig();
+  t.rounds.r1.finishedAt = OCT(15, 15);
+  t.rounds.r2.finishedAt = OCT(15, 14);
+  t.rounds.mid9.finishedAt = OCT(15, 14, 30);
+  const w = recordBookView(t, { gated: true, pro: false, keep: 9 });
+  assert.ok(!w.state.rounds.r1 && !w.state.rounds.r2);
+  assert.equal(w.hidden, 2, 'the Big Game and the round between its groups');
+  assert.ok(!w.state.rounds.mid9);
+  assert.equal(myNet(t.rounds.r1, t), full, 'the stored state still has the game, money and all');
+  // And the Tab reads the stored state: nothing about the game changes there
+  assert.deepEqual(tabBalances(s), tabBalances(withBig()));
+});
+
+test('record book: the view never writes to the stored state (frozen state, limit on)', () => {
+  const freeze = o => { if (o && typeof o === 'object' && !Object.isFrozen(o)) { Object.freeze(o); for (const v of Object.values(o)) freeze(v); } return o; };
+  const s = freeze(group());
+  const before = JSON.stringify(s);
+  const v = recordBookView(s, { gated: true, pro: false });
+  assert.equal(v.hidden, 5);
+  // The money a record view would show never feeds back: the Tab on the stored state is unchanged
+  assert.deepEqual(tabBalances(s), { a: 14, b: 2, c: -2, d: -14 });
+  assert.equal(JSON.stringify(s), before);
+});

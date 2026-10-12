@@ -10,6 +10,7 @@
 import { countsAsDone } from './big-money.js';
 import { linksOf } from './people-links.js';
 import { roundTime } from './rounds-live.js';
+import { BIG_FORMAT } from './big-format.js';
 
 /** How many finished rounds a free group sees in its record views. */
 export const FREE_ROUNDS = 10;
@@ -50,16 +51,45 @@ function frozenLinks(state) {
  */
 export function recordBookView(state, { gated = false, pro = false, keep = FREE_ROUNDS } = {}) {
   const limited = recordBookLimited({ gated, pro });
-  const rounds = Object.values(state?.rounds || {});
-  const done = rounds.filter(r => r && countsAsDone(state, r));
-  const total = done.length;
+  const units = finishedUnits(state);
+  const total = units.length;
   if (!limited || total <= keep) return { state, limited, hidden: 0, total };
-  // Newest first; a tie on time goes by id, so every phone hides the same rounds
-  const sorted = [...done].sort((a, b) => roundTime(b) - roundTime(a) || String(a.id).localeCompare(String(b.id)));
-  const out = new Set(sorted.slice(keep).map(r => r.id));
+  // Newest first; a tie on time goes by key, so every phone hides the same rounds
+  const sorted = [...units].sort((a, b) => b.at - a.at || a.key.localeCompare(b.key));
+  // A unit with a round still being played always stays, whatever its age
+  const gone = sorted.slice(keep).filter(u => !u.rounds.some(r => r?.status === 'active'));
+  if (!gone.length) return { state, limited, hidden: 0, total };
+  const out = new Set();
+  for (const u of gone) for (const r of u.rounds) out.add(r);
   const kept = {};
-  for (const [k, r] of Object.entries(state.rounds)) if (!out.has(r?.id ?? k)) kept[k] = r;
-  return { state: { ...state, rounds: kept, links: frozenLinks(state) }, limited, hidden: out.size, total };
+  for (const [k, r] of Object.entries(state.rounds)) if (!out.has(r)) kept[k] = r;
+  return { state: { ...state, rounds: kept, links: frozenLinks(state) }, limited, hidden: gone.length, total };
+}
+
+/**
+ * The finished rounds as the record views count them, one unit each. A Big Game is one unit with
+ * every round of its groups: its money is worked out from all of them together (big-money.js), so
+ * hiding some of its group rounds would move or drop the game's money in the views that remain.
+ */
+function finishedUnits(state) {
+  const rounds = Object.values(state?.rounds || {}).filter(Boolean);
+  const bigKey = r => (r?.trip?.format === BIG_FORMAT && r.trip.id ? `big:${r.trip.id}` : null);
+  const byBig = new Map();
+  for (const r of rounds) {
+    const k = bigKey(r);
+    if (k) byBig.set(k, [...(byBig.get(k) || []), r]);
+  }
+  const units = new Map();
+  for (const r of rounds) {
+    if (!countsAsDone(state, r)) continue;
+    const big = bigKey(r);
+    const key = big || `round:${r.id}`;
+    const at = roundTime(r);
+    const u = units.get(key);
+    if (u) u.at = Math.max(u.at, at);
+    else units.set(key, { key, at, rounds: big ? byBig.get(big) : [r] });
+  }
+  return [...units.values()];
 }
 
 /**

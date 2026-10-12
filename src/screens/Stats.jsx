@@ -58,7 +58,13 @@ export default function Stats({ range: given = null }) {
   // The Record Book limit (record-book.js): with the paywall flag on and no Pro, the stats read the
   // last 10 finished rounds. With the flag off `view` is the store's own state
   const { state: view, line } = useRecordBook();
-  const st = useMemo(() => deepStats(view, roundsInRange(view, range)), [view, range]);
+  // The same slice of the state as before the limit (who is who decides which seats are yours), so
+  // with the flag off the numbers are exactly what they were
+  const vr = view.rounds, vl = view.links;
+  const st = useMemo(() => {
+    const s = { rounds: vr, me, players, links: vl, unlinks, accountOf };
+    return deepStats(s, roundsInRange(s, range));
+  }, [vr, me, players, vl, unlinks, accountOf, range]);
   // The handicap trend looks at every round you've finished, whatever the range (and the Record
   // Book limit: it's the handicap guide the way official handicaps count it, so it keeps every round)
   const { customCourses } = state;
