@@ -7,7 +7,11 @@
     { "source": "/roadmap", "destination": "/index.html" },
     { "source": "/terms", "destination": "/terms.html" }
   ],
+  "functions": {
+    "api/push-ideas.js": { "includeFiles": "ROADMAP.md" }
+  },
   "crons": [
-    { "path": "/api/push-tee", "schedule": "0 15 * * *" }
+    { "path": "/api/push-tee", "schedule": "0 15 * * *" },
+    { "path": "/api/push-ideas", "schedule": "0 17 * * *" }
   ]
 }

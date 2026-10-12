@@ -1,5 +1,6 @@
 // "The game you asked for is live": on Up next, once, when something you asked for or voted for on
-// the roadmap ships (roadmap.js shippedNotes). There's no push yet, so this is how you hear. It
+// the roadmap ships (roadmap.js shippedNotes). Someone who sent the idea in from an account with
+// push on also gets a push (api/push-ideas.js, idea-push.js), which opens here; voters hear only here. It
 // loads nothing more until this phone has voted or sent an idea. It goes ahead of What's new, and
 // only one of them shows a visit (upnext-card.js).
 import { Spot } from './Spot.jsx';

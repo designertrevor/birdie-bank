@@ -7,7 +7,7 @@ test('every push kind sits in exactly one switch, and every switch only names re
   const seen = PUSH_GROUPS.flatMap(g => g.kinds);
   assert.deepEqual([...seen].sort(), Object.keys(PUSH_KINDS).sort());
   assert.equal(new Set(seen).size, seen.length);
-  assert.deepEqual(PUSH_GROUPS.map(g => g.id), ['in', 'talk', 'finished', 'pay', 'tee']);
+  assert.deepEqual(PUSH_GROUPS.map(g => g.id), ['in', 'talk', 'finished', 'pay', 'tee', 'shipped']);
 });
 
 test('all on by default: nothing muted means every switch is on and every kind gets through', () => {

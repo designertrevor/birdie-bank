@@ -1,4 +1,4 @@
-// The server's side of push (api/push.js and api/push-tee.js): who's asking, who to send to, and
+// The server's side of push (api/push.js, api/push-tee.js and api/push-ideas.js): who's asking, who to send to, and
 // sending. `fetch` is passed in, so tests run it with no network. Server only.
 //
 // Push is off (every call answers 204 and sends nothing) until all of these are set in Vercel:
@@ -8,6 +8,7 @@
 // and the app only asks for a push when VITE_VAPID_PUBLIC_KEY (the public half) is set at build.
 import { okEndpoint, pushRequest, vapidKeys } from './web-push.js';
 import { pushPayload, pushText, recipientResult } from './push-events.js';
+import { ideaPushes } from './idea-push.js';
 
 /** The push settings from the environment, or null when push is off. */
 export function pushConfig(env = {}) {
@@ -122,5 +123,23 @@ export async function handleTee(cfg, today, fetchImpl = fetch) {
     const payload = pushPayload({ kind: 'tee', scope: 'plan', code: r.plan_code, data: { day: r.plan_date, course: pushText(r.plan_course, 48) } });
     sent += (await sendAll(cfg, [r], payload, { topic: `tee${r.plan_code}`, fetchImpl })).sent;
   }
+  return sent;
+}
+
+/**
+ * Ideas that shipped and whose sender hasn't heard yet, each with the sender's subscriptions
+ * (push_ideas_due). `items` is idea-push.js shippedItems: the ROADMAP.md items shipped lately, so the
+ * database knows which folded-in ideas shipped too. Each idea comes back once; the database stamps it sent.
+ */
+export function ideasDue(cfg, today, items, fetchImpl = fetch) {
+  return rpc(cfg, 'push_ideas_due', { p_today: today, p_items: items }, fetchImpl);
+}
+
+/** The daily shipped-idea pushes: one push per person, covering every idea of theirs that shipped. Returns how many went. */
+export async function handleIdeas(cfg, today, items, fetchImpl = fetch) {
+  if (!cfg) return 0;
+  const rows = await ideasDue(cfg, today, items, fetchImpl);
+  let sent = 0;
+  for (const p of ideaPushes(rows)) sent += (await sendAll(cfg, p.rows, p.payload, { topic: 'ideashipped', fetchImpl })).sent;
   return sent;
 }
