@@ -20,6 +20,30 @@ createRoot(document.getElementById('root')).render(
   </StrictMode>,
 );
 
+// The splash (index.html) stays until the first real screen is in: a screen that's still loading
+// its code (aria-busy) keeps it up. It fades, then goes. Ten seconds at most, whatever happens.
+function hideSplash() {
+  const splash = document.getElementById('splash');
+  if (!splash) return;
+  const root = document.getElementById('root');
+  let done = false;
+  const go = () => {
+    if (done) return;
+    done = true;
+    mo.disconnect();
+    clearTimeout(cap);
+    splash.classList.add('out');
+    setTimeout(() => splash.remove(), 300);
+  };
+  const ready = () => wantsArt ? root.childElementCount > 0
+    : !!root.querySelector('.screen.active') && !root.querySelector('[aria-busy="true"]');
+  const mo = new MutationObserver(() => { if (ready()) requestAnimationFrame(go); });
+  mo.observe(root, { childList: true, subtree: true, attributes: true, attributeFilter: ['aria-busy', 'class'] });
+  const cap = setTimeout(go, 10000);
+  if (ready()) requestAnimationFrame(go);
+}
+hideSplash();
+
 // Crash reports and usage counts load once the first screen is up, never ahead of it
 if ('requestIdleCallback' in window) requestIdleCallback(opsAfterPaint, { timeout: 4000 });
 else setTimeout(opsAfterPaint, 2000);

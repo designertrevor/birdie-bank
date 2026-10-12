@@ -27,12 +27,55 @@
 <link rel="icon" href="/icon.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="/apple-touch-icon.png">
 <title>Birdie Bank</title>
-<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
+<!-- The fonts and icons load without holding up the first paint (media="print" until they arrive), so the
+     splash below shows at once on a cold start instead of a blank screen while these come in -->
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,800&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" media="print" onload="this.media='all'">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@phosphor-icons/web@2.1.1/src/bold/style.css" media="print" onload="this.media='all'">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@phosphor-icons/web@2.1.1/src/fill/style.css" media="print" onload="this.media='all'">
+<noscript>
 <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,800&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@phosphor-icons/web@2.1.1/src/bold/style.css">
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@phosphor-icons/web@2.1.1/src/fill/style.css">
+</noscript>
+<script>
+  // The theme you picked in Settings, before anything paints, so the splash (and the app) open in it.
+  // A plain text check on the saved state, no parsing, so it costs nothing on a big save
+  try {
+    var saved = localStorage.getItem('birdie-bank-v1') || '';
+    var m = saved.match(/"theme":"(light|dark)"/);
+    if (m) document.documentElement.dataset.theme = m[1];
+  } catch (e) { /* storage blocked: follow the system */ }
+</script>
+<style>
+  /* The splash: the ball on its tee and the name, drawn by the page itself so it's up on the first
+     frame. main.jsx fades it out once the first screen is in. */
+  html, body { margin: 0; background: #f8f2e4; }
+  #splash { position: fixed; inset: 0; z-index: 9999; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 14px;
+    background: #f8f2e4; color: #0a0a0a; transition: opacity .25s ease-out; }
+  #splash.out { opacity: 0; pointer-events: none; }
+  #splash svg { width: 112px; height: 112px; animation: sp-bob 1.6s ease-in-out infinite; }
+  #splash .sp-name { font: 800 30px/1 "Bricolage Grotesque", -apple-system, system-ui, sans-serif; letter-spacing: -.02em; }
+  #splash .sp-dot { fill: rgba(10,10,10,.09); }
+  @keyframes sp-bob { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-6px); } }
+  @media (prefers-reduced-motion: reduce) { #splash svg { animation: none; } }
+  @media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) body, :root:not([data-theme="light"]) #splash { background: #0f1413; color: #f6f1e4; } }
+  :root[data-theme="dark"] body, :root[data-theme="dark"] #splash { background: #0f1413; color: #f6f1e4; }
+</style>
 </head>
 <body>
+<div id="splash" role="status" aria-label="Loading Birdie Bank">
+  <svg viewBox="0 0 150 150" aria-hidden="true">
+    <ellipse cx="75" cy="142" rx="34" ry="6" class="sp-dot" />
+    <path d="M62 108 L75 140 L88 108Z" fill="#ff6b5a" />
+    <circle cx="75" cy="66" r="46" fill="#fbf7ec" />
+    <circle cx="75" cy="66" r="45" fill="none" stroke="rgba(10,10,10,.14)" stroke-width="2" />
+    <g class="sp-dot"><circle cx="58" cy="48" r="5" /><circle cx="80" cy="40" r="5" /><circle cx="98" cy="58" r="5" /><circle cx="54" cy="92" r="5" /><circle cx="96" cy="86" r="5" /></g>
+    <circle cx="64" cy="66" r="5" fill="#0a0a0a" /><circle cx="86" cy="66" r="5" fill="#0a0a0a" />
+    <path d="M64 80 Q75 90 86 80" stroke="#0a0a0a" stroke-width="4" fill="none" stroke-linecap="round" />
+  </svg>
+  <div class="sp-name">Birdie Bank</div>
+</div>
 <div id="root"></div>
 <script type="module" src="/src/main.jsx"></script>
 </body>
