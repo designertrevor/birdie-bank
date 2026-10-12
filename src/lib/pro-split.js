@@ -142,17 +142,19 @@ export function mergeSplits(cur = {}, incoming = []) {
 }
 
 /**
- * Your split standing (not undone), tidied: the one for this purchase, else the newest of yours from
- * an earlier one. One split stands at a time: while one does, nothing offers another (a second
- * trial answer from the Season preview would otherwise be a new purchase and split the price
- * again). Undo it first to split again.
+ * Your split standing (not undone), tidied, or null. One split stands at a time: while one does,
+ * nothing offers another (a second trial answer from the Season preview would otherwise be a new
+ * purchase and split the price again), and only it is on the Tab. When two of your phones each
+ * split before they synced (each with its own trial answer, so two purchases), the newest split
+ * stands, on every phone alike (by when it was made, then its id), so the price is never on the
+ * Tab twice; Undo it and the other stands. Undo it first to split again.
  */
-export function activeSplit(state, id = splitIdFor(state)) {
+export function activeSplit(state) {
   if (!state?.proSplits || !state.me) return null;
   const who = canonicalOf(state);
   const me = who(state.me);
   const mine = Object.values(state.proSplits).map(cleanSplit).filter(s => s && !s.undone && who(s.by) === me);
-  return mine.find(s => s.id === id) || mine.sort((a, b) => (b.at || 0) - (a.at || 0))[0] || null;
+  return mine.sort((a, b) => (b.at || 0) - (a.at || 0) || (a.id < b.id ? 1 : a.id > b.id ? -1 : 0))[0] || null;
 }
 
 /**
@@ -167,9 +169,9 @@ export function allSplitMoney(state, { flag = splitsOn() } = {}) {
   const who = canonicalOf(state);
   const me = who(state.me);
   const out = [];
-  for (const raw of Object.values(state.proSplits)) {
-    const s = cleanSplit(raw);
-    if (!s || s.undone || who(s.by) !== me) continue;
+  // Only the split standing (activeSplit): never two at once, even from two phones that split before syncing
+  const standing = activeSplit(state);
+  for (const s of standing ? [standing] : []) {
     const parts = s.people.filter(p => who(p.id) !== me && p.cents > 0).map(p => ({ id: who(p.id), cents: p.cents, part: null }));
     if (!parts.length) continue;
     const balances = { [me]: 0 };
@@ -245,4 +247,59 @@ export function groupWord(n) {
   if (n === 3) return 'the three of you';
   if (n === 4) return 'your foursome';
   return `the ${n} of you`;
+}
+
+/**
+ * Payments for a split: what a payment from the Tab puts toward Pro split with the group carries
+ * `tab: 'pro'` (shared-tab.js allocatePayment), the way a payment from a crew's tab names the crew,
+ * so a trip never counts it as paying the trip's rounds (trips.js) and a crew's tab never takes it
+ * (crew-tabs.js puts it on Other rounds, where the split's money is).
+ */
+export const SPLIT_TAB = 'pro';
+export const isSplitPayment = s => s?.tab === SPLIT_TAB;
+/**
+ * Whether a payment counts on this phone's Tab: every payment does, but a payment for a split only
+ * with the flag on, so with it off the Tab is as if no split was ever made (no split's money, and
+ * no payment for one leaving the organizer owing it back).
+ */
+export const countsPayment = s => splitsOn() || !isSplitPayment(s);
+
+/**
+ * The pairs splits put money between, for who can pay whom on the Tab: the split standing's
+ * (organizer and each friend), and any two people with a payment for a split between them, so a
+ * split undone after a friend paid still has a line for the organizer to pay it back.
+ */
+export function splitPayPairs(state, list = allSplitMoney(state)) {
+  const out = splitPairs(list);
+  if (!splitsOn()) return out;
+  const who = canonicalOf(state);
+  for (const s of state?.settlements || []) {
+    if (!isSplitPayment(s)) continue;
+    const f = who(s.from), t = who(s.to);
+    if (f && t && f !== t) out.add(pairKey(f, t));
+  }
+  return out;
+}
+
+/**
+ * What's open between two people on Pro splits, in cents: positive when `from` owes `to`. The split
+ * standing (allSplitMoney, so nothing with the flag off) less the payments for splits between them.
+ */
+export function splitOpen(state, from, to) {
+  const who = canonicalOf(state);
+  const F = who(from), T = who(to);
+  let c = 0;
+  for (const x of allSplitMoney(state)) {
+    for (const p of x.parts) {
+      if (x.payer === T && p.id === F) c += p.cents;
+      if (x.payer === F && p.id === T) c -= p.cents;
+    }
+  }
+  for (const s of state?.settlements || []) {
+    if (!isSplitPayment(s)) continue;
+    const f = who(s.from), t = who(s.to), a = Math.round((Number(s.amount) || 0) * 100);
+    if (f === F && t === T) c -= a;
+    else if (f === T && t === F) c += a;
+  }
+  return c;
 }

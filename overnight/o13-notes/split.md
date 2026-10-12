@@ -85,3 +85,42 @@ split made while it was on.
 ## SQL or Vercel steps
 
 None.
+
+## Money check (before merge)
+
+`src/lib/pro-split.money.test.js`: 14 simulations. $49.99, $59.99 and $6.99 across 2 to 8 people,
+with the organizer in and out, to the cent. The Tab, settle-up and Where it comes from before and
+after a split, and after Undo. Undo after a friend paid. Round money left alone. The organizer's two
+phones, and a friend's phone on the shared Tab. The flag off, including after a split was paid.
+Paying just the split leaves a trip and a crew's tab alone.
+
+Money bugs found and fixed on the branch:
+
+1. **Two phones could put the price on the Tab twice.** The trial answer isn't synced, so two of the
+   organizer's phones that each split before syncing made two splits with different ids, and both
+   counted. Now only one split stands on the Tab, the newest, the same on every phone.
+2. **A payment for the split went to a trip or a crew's tab.** A Tab payment had no way to say it
+   was for Pro, so a trip counted it toward its rounds (the trip showed the friend square while the
+   Tab still had them owing), and a crew's tab took it. The part of a payment that pays a split is
+   now marked as a split payment (`tab: 'pro'`). It comes after the shared rounds, the trip plan and
+   the trip expenses, and before the rest. Trips and crew tabs skip it.
+3. **After Undo, a friend who had already paid couldn't be paid back.** Their balance was right,
+   but the Tab had no line between them, because the split was gone and they had no round together.
+   A split payment now keeps that pair payable.
+4. **With the flag off, a split that had been paid left the organizer owing the money back.** The
+   split's money dropped off the Tab but the payment stayed. Split payments now count only while
+   the flag is on.
+5. **A split could get stuck on the Tab with no way to undo it.** Your plan only showed the split
+   row during the trial, so once the trial ended (or on a second phone with no trial answer, or on
+   Pro for life) the friends still owed and there was no Undo. The row now shows whenever a split
+   stands. Redo after Undo is now always newer than the undone stub, so other phones take it back.
+
+Left as is (not money-wrong, noted for Trevor):
+
+- A part payment fills the shared live rounds first, then the split. So $12.50 "for Pro" from a
+  friend who also owes on a shared round pays the round first, and the friend's phone shows that
+  round paid. Their phone never sees the split, so it shows them square while the organizer's still
+  shows the rest owing. Whole-card payments agree on both phones.
+- A shared round's settle-up status on the organizer's phone follows the Tab's netting, so a split
+  can show the organizer's $2 to a friend as "square" when the friend owes more for Pro. The
+  friend's phone shows it open. Display only, and trip expenses already do the same.

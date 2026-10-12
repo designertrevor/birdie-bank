@@ -11,7 +11,7 @@ import { planDebts } from './trip-plan.js';
 import { allExpenses, allTripMoney, allTripPays, expensePairDebts, expensePairs, expensesBetween, tripMoney } from './trip-expenses.js';
 import { allStakeMoney, stakeBetween, stakeMoney } from './cup-stake.js';
 import { allBigMoney, bigAcross, bigBetween, bigMoney, bigOf, bigTripIds, countsAsDone, withBigMoney } from './big-money.js';
-import { allSplitMoney, splitPairs, splitsBetween } from './pro-split.js';
+import { allSplitMoney, countsPayment, splitPayPairs, splitsBetween } from './pro-split.js';
 
 const toCents = v => Math.round((Number(v) || 0) * 100);
 /** Whether two players had a side bet for money together in a reward round. */
@@ -127,7 +127,8 @@ export function tabBalances(state, { now = Date.now() } = {}) {
     for (const [id, v] of Object.entries(tabResults(r).balances)) add(id, v);
   }
   for (const x of [...allTripMoney(state), ...allStakeMoney(state, { now }), ...allBigMoney(state), ...allSplitMoney(state)]) for (const [id, c] of Object.entries(x.balances)) add(id, c / 100);
-  for (const s of state.settlements || []) { add(s.from, s.amount); add(s.to, -s.amount); }
+  // A payment for a split counts only while splits do (pro-split.js countsPayment)
+  for (const s of state.settlements || []) { if (!countsPayment(s)) continue; add(s.from, s.amount); add(s.to, -s.amount); }
   return bal;
 }
 
@@ -184,7 +185,9 @@ export function outstanding(state, { now = Date.now() } = {}) {
   const spent = allExpenses(state);
   // Pro split with the group (pro-split.js): between the organizer and each friend in it the same way
   const pro = allSplitMoney(state);
-  const spentPairs = spent.length || pro.length ? new Set([...expensePairs(spent), ...splitPairs(pro)]) : null;
+  // ...and a split undone after a friend paid still lets the organizer pay it back (splitPayPairs)
+  const proPairs = splitPayPairs(state, pro);
+  const spentPairs = spent.length || proPairs.size ? new Set([...expensePairs(spent), ...proPairs]) : null;
   const canPay = spentPairs ? (a, b) => together.has(pairKey(a, b)) || spentPairs.has(pairKey(a, b)) : (a, b) => together.has(pairKey(a, b));
   const direct = sharedDebts(state, { now });
   // A trip's published plan (trip-plan.js): its rounds and their payments come out of the
@@ -242,7 +245,7 @@ function planBalances(state, trip, now = Date.now()) {
     for (const [id, c] of Object.entries(x.balances)) add(id, c);
   }
   for (const s of state.settlements || []) {
-    if (skipPays.has(s)) continue;
+    if (skipPays.has(s) || !countsPayment(s)) continue;
     add(s.from, toCents(s.amount)); add(s.to, -toCents(s.amount));
   }
   return bal;
@@ -284,7 +287,7 @@ export function personStory(state, ids, other, { now = Date.now() } = {}) {
     items.push({ kind: 'round', id: r.id, round: r, amount, money: isMoney, ...(cashPairs && them.some(id => hasCashWith(r, me, id)) ? { cash } : {}), at: r.finishedAt || r.createdAt || 0 });
   }
   // Payments, and payments for trip expenses (trip-expenses.js), which every phone on the trip has
-  for (const s of [...(state.settlements || []), ...allTripPays(state)]) {
+  for (const s of [...(state.settlements || []).filter(countsPayment), ...allTripPays(state)]) {
     // amount: what the payment did for your side (they paid you: +, you paid them: -)
     if (isThem(s.from) && isMine(s.to)) { items.push({ kind: 'payment', id: s.id, settlement: s, amount: s.amount, at: s.at || 0 }); paid += s.amount; }
     else if (isMine(s.from) && isThem(s.to)) { items.push({ kind: 'payment', id: s.id, settlement: s, amount: -s.amount, at: s.at || 0 }); paid -= s.amount; }

@@ -11,7 +11,7 @@ import { onTab, tabResults } from './play-for.js';
 import { allTripPays, expensesBetween } from './trip-expenses.js';
 import { stakeBetween } from './cup-stake.js';
 import { bigBetween } from './big-money.js';
-import { splitsBetween } from './pro-split.js';
+import { countsPayment, splitsBetween } from './pro-split.js';
 
 const toCents = v => Math.round((Number(v) || 0) * 100);
 
@@ -98,7 +98,7 @@ export function breakdownWith(state, ids, other, { now = Date.now() } = {}) {
     rounds.push({ round: r, at: r.finishedAt || r.createdAt || 0, total, items });
   }
   // Payments, and payments for trip expenses (trip-expenses.js)
-  for (const s of [...(state.settlements || []), ...allTripPays(state)]) {
+  for (const s of [...(state.settlements || []).filter(countsPayment), ...allTripPays(state)]) {
     if (isThem(s.from) && isMine(s.to)) paid += toCents(s.amount);
     else if (isMine(s.from) && isThem(s.to)) paid -= toCents(s.amount);
   }

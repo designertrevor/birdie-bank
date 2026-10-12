@@ -72,8 +72,8 @@ export default function YourPlan() {
           {c.fine && <p className="yp-fine">{c.fine}</p>}
           {p.id === 'free' && <button className="pill-btn dark yp-act" onClick={() => nav.push('paywall', { source: 'settings' })}>See what Pro adds <Icon name="arrow-right" /></button>}
         </div>
-        {/* Split it with the group (pro-split.js): a purchase to split, so not Pro for life or Free */}
-        {p.plan && p.id !== 'lifetime' && <SplitProRow plan={p.plan} />}
+        {/* Split it with the group (pro-split.js): offered for a purchase (not Pro for life or Free), and a split standing always shows, with Undo */}
+        <SplitProRow plan={p.id !== 'lifetime' ? p.plan : null} />
         {other && (
           <button className="set-row" onClick={() => update(st => { st.paywall = { ...(st.paywall || {}), plan: other.id }; })}>
             <div className="set-icon"><Icon name="arrows-left-right" fill /></div>

@@ -27,7 +27,8 @@ function undoSplit(split) {
   const before = split;
   update(st => { st.proSplits = { ...(st.proSplits || {}), [split.id]: undoneSplit(split) }; });
   track('pro_split_undone', { people: split.people.length });
-  return () => saveSplit({ ...before, updatedAt: Date.now() });
+  // Newer than the stub it replaces, so every phone takes it back, even in the same millisecond
+  return () => saveSplit({ ...before, updatedAt: Math.max(Date.now(), undoneSplit(split).updatedAt + 1) });
 }
 
 /** "Sam, Jo and Al": the friends in a split, by first name. */
@@ -124,16 +125,19 @@ function SplitInner({ plan, onDone }) {
 }
 
 /**
- * Your plan's row for the split: the split standing, with Undo, or "Split it with your group" to
- * open the sheet. Nothing with the flag off or no purchase to split (Pro for life has nothing to pay).
+ * Your plan's row for the split: the split standing, with Undo, whatever the plan is now (the trial
+ * over, Pro for life, or a second phone with no trial answer of its own: the friends still owe it on
+ * the Tab, so Undo is always here), or "Split it with your group" to open the sheet when there's a
+ * purchase to split (`plan`; Pro for life has nothing to pay). Nothing with the flag off.
  */
 export function SplitProRow({ plan }) {
   const state = useStore();
   const { showToast } = useUI();
   const [open, setOpen] = useState(false);
-  if (!splitsOn() || !plan || !splitIdFor(state)) return null;
+  if (!splitsOn()) return null;
   const me = state.me ? canonicalOf(state)(state.me) : null;
   const split = activeSplit(state);
+  if (!split && (!plan || !splitIdFor(state))) return null;
   if (split) {
     const owing = split.people.filter(p => p.id !== split.by);
     const undo = () => {
