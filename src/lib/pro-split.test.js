@@ -11,7 +11,7 @@ import { tabsOf } from './crew-tabs.js';
 import { applyDoc, toDocs } from './cloud-model.js';
 import { makeBackup, parseBackup } from './backup.js';
 import {
-  MAX_SPLIT, activeSplit, allSplitMoney, cleanSplit, eachCents, groupWord, mergeSplits, newSplit, setSplitsOn, splitCandidates,
+  MAX_SPLIT, activeSplit, allSplitMoney, cleanSplit, eachCents, sharesVary, groupWord, mergeSplits, newSplit, setSplitsOn, splitCandidates,
   splitIdFor, splitShares, splitsBetween, undoneSplit,
 } from './pro-split.js';
 
@@ -61,7 +61,14 @@ test('odd cents go to the organizer first, then friends by id, whatever order th
   const s = splitShares(4999, ['c', 'a', 'b'], { organizer: 't', organizerIn: true });
   assert.deepEqual(s, [{ id: 't', cents: 1250 }, { id: 'a', cents: 1250 }, { id: 'b', cents: 1250 }, { id: 'c', cents: 1249 }]);
   assert.deepEqual(splitShares(4999, ['b', 'c', 'a'], { organizer: 't' }), s);
-  assert.equal(eachCents(s), 1249);
+  // The headline names the share most people pay ($12.50), not the one odd share
+  assert.equal(eachCents(s), 1250);
+  assert.equal(sharesVary(s), true);
+  // The three friends: two at $12.50, one at $12.49, so the lines say "about $12.50 each"
+  assert.equal(eachCents(s.slice(1)), 1250);
+  // Two shares that differ: the larger one, and an even split doesn't vary
+  assert.equal(eachCents([{ id: 'a', cents: 350 }, { id: 'b', cents: 349 }]), 350);
+  assert.equal(sharesVary(splitShares(5000, ['a', 'b', 'c'], { organizer: 't' })), false);
   // $50 for a foursome: the roadmap's "$12.50 each"
   assert.ok(splitShares(5000, ['a', 'b', 'c'], { organizer: 't' }).every(x => x.cents === 1250));
   // $6.99 over 2: the organizer keeps the odd cent

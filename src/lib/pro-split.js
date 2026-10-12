@@ -65,10 +65,20 @@ export function splitShares(total, friends, { organizer, organizerIn = true } = 
   });
 }
 
-/** "$12.50 each": the share most people pay, for the headline (the even share, before odd cents). */
+/**
+ * "$12.50 each": the share most people pay, for the headline. $49.99 for a foursome is three shares
+ * of $12.50 and one of $12.49, so it's $12.50 (a tie goes to the larger share).
+ */
 export function eachCents(shares) {
   if (!shares?.length) return 0;
-  return Math.min(...shares.map(s => s.cents));
+  const count = new Map();
+  for (const s of shares) count.set(s.cents, (count.get(s.cents) || 0) + 1);
+  return [...count].sort((a, b) => b[1] - a[1] || b[0] - a[0])[0][0];
+}
+
+/** True when the shares aren't all the same (odd cents), so a line saying "each" says "about". */
+export function sharesVary(shares) {
+  return new Set((shares || []).map(s => s.cents)).size > 1;
 }
 
 /** The split's id for a purchase: the paywall answer's time (the trial preview), or a subscription's id later. */

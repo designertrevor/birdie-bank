@@ -10,7 +10,7 @@ import { money } from '../lib/golf.js';
 import { track } from '../lib/analytics.js';
 import { canonicalOf } from '../lib/pair-debts.js';
 import {
-  MAX_SPLIT, activeSplit, eachCents, groupWord, newSplit, splitCandidates, splitIdFor, splitShares, splitsOn, undoneSplit,
+  MAX_SPLIT, activeSplit, eachCents, groupWord, sharesVary, newSplit, splitCandidates, splitIdFor, splitShares, splitsOn, undoneSplit,
 } from '../lib/pro-split.js';
 
 const first = n => String(n || '').trim().split(/\s+/)[0] || 'Someone';
@@ -80,7 +80,7 @@ function SplitInner({ plan, onDone }) {
     saveSplit(split);
     track('pro_split_confirmed', { people: split.people.length, organizer_in: meIn, plan: plan.id });
     const owing = split.people.filter(p => p.id !== me);
-    showToast(`On the Tab: ${owing.length === 1 ? `${first(owing[0].name)} owes` : `${owing.length} friends owe`} you ${dollars(eachCents(owing))}${owing.length === 1 ? '' : ' each'}`,
+    showToast(`On the Tab: ${owing.length === 1 ? `${first(owing[0].name)} owes` : `${owing.length} friends owe`} you ${sharesVary(owing) ? 'about ' : ''}${dollars(eachCents(owing))}${owing.length === 1 ? '' : ' each'}`,
       { label: 'Undo', run: () => undoSplit(split) }, { tone: 'money' });
     onDone?.(true);
   };
@@ -149,7 +149,7 @@ export function SplitProRow({ plan }) {
         <div className="set-icon"><Icon name="users-three" fill /></div>
         <div className="row-main">
           <div className="set-name">Split with your group</div>
-          <div className="set-sub">{friendsLine(split, me)} {owing.length === 1 ? 'owes' : 'owe'} you {dollars(eachCents(owing))}{owing.length === 1 ? '' : ' each'} on the Tab, of {dollars(split.price)}.</div>
+          <div className="set-sub">{friendsLine(split, me)} {owing.length === 1 ? 'owes' : 'owe'} you {sharesVary(owing) ? 'about ' : ''}{dollars(eachCents(owing))}{owing.length === 1 ? '' : ' each'} on the Tab, of {dollars(split.price)}.</div>
         </div>
         <button type="button" className="pill-btn sm" onClick={undo}>Undo</button>
       </div>
