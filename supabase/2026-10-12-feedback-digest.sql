@@ -1,6 +1,7 @@
 -- The weekly feedback digest (added 2026-10-12, Overnight 13). Run this once in Supabase:
 -- Dashboard, SQL Editor, New query, paste, Run. Safe to run again. Needs schema.sql's feedback
--- table and 2026-10-08-push.sql (push_subscriptions), both already run.
+-- table, 2026-10-07-roadmap.sql (feedback.roadmap_status) and 2026-10-08-push.sql
+-- (push_subscriptions), all already run.
 --
 -- What it adds:
 --  • app_admins: the accounts that may read the digest. Nobody else can read other people's

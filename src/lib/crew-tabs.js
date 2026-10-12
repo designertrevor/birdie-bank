@@ -203,8 +203,8 @@ export function tabsOf(state, { now = Date.now() } = {}) {
     }
   }
   for (const s of state.settlements || []) {
-    if (tripOfPayment(s)) continue;
-    if (!countsPayment(s)) continue; // a payment for a split with the flag off (pro-split.js) // Settle the trip's, counted on the trip
+    if (tripOfPayment(s)) continue; // Settle the trip's, counted on the trip
+    if (!countsPayment(s)) continue; // a payment for a split with the flag off (pro-split.js)
     let key;
     if (s.tab) key = crewBy.has(s.tab) ? s.tab : OTHER;
     else if (s.code) key = codeKey.get(s.code) || OTHER;
