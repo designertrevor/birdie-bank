@@ -9,6 +9,8 @@ import { useNav } from '../lib/nav.js';
 import { GAMES } from '../lib/round.js';
 import { useLifetimePro } from '../lib/pro-client.js';
 import { LIFETIME_LINE } from '../lib/lifetime-pro.js';
+import { SplitProSheet } from '../components/SplitPro.jsx';
+import { activeSplit, splitCandidates, splitsOn } from '../lib/pro-split.js';
 import {
   DEFAULT_PLAN, PLANS, PRICES_ARE_PLACEHOLDERS, PRO_FEATURES, REMIND_DAY, TRIAL_DAYS, VARIANTS,
   annualSavings, freePromise, paywallAnswer, perMonthLabel, trialCta, trialLine, trialTimeline, variantFor,
@@ -27,6 +29,8 @@ export default function Paywall({ source = 'onboarding' }) {
     update(st => { st.paywall = { ...(st.paywall || {}), variant, shownAt: Date.now(), source }; });
   }, [variant, source, lifetime]);
   const [plan, setPlan] = useState(DEFAULT_PLAN);
+  // Right after picking a plan: offer to split it with the group (pro-split.js), when there's a group to split with
+  const [splitting, setSplitting] = useState(null);
 
   const answer = choice => {
     update(st => { st.paywall = { ...(st.paywall || {}), ...paywallAnswer({ variant, choice, plan, source }) }; });
@@ -34,6 +38,7 @@ export default function Paywall({ source = 'onboarding' }) {
     showToast(choice === 'trial'
       ? (PRICES_ARE_PLACEHOLDERS ? 'Pro trial preview on. Nothing is charged.' : `Pro trial on. We’ll remind you on day ${REMIND_DAY}.`)
       : 'You’re on Free. Your round still works.');
+    if (choice === 'trial' && splitsOn() && !activeSplit(getState()) && splitCandidates(getState()).people.length) { setSplitting(PLANS[plan] || PLANS[DEFAULT_PLAN]); return; }
     nav.pop();
   };
 
@@ -44,7 +49,11 @@ export default function Paywall({ source = 'onboarding' }) {
   const View = VIEWS[variant] || VIEWS.c;
   // From Settings or the Season preview it's a look at Pro, so it closes without an answer. After onboarding, "Keep scoring for free" is the way out
   const onClose = source !== 'onboarding' ? () => nav.pop() : null;
-  return <View plan={plan} setPlan={setPlan} onClose={onClose} onTrial={() => answer('trial')} onFree={() => answer('free')} freeWayOut={VARIANTS[variant]?.freeWayOut ?? true} />;
+  return (
+    <View plan={plan} setPlan={setPlan} onClose={onClose} onTrial={() => answer('trial')} onFree={() => answer('free')} freeWayOut={VARIANTS[variant]?.freeWayOut ?? true}>
+      <SplitProSheet open={!!splitting} plan={splitting} onDone={() => nav.pop()} />
+    </View>
+  );
 }
 
 /**
@@ -52,7 +61,7 @@ export default function Paywall({ source = 'onboarding' }) {
  * button. The trial is the same on both plans; the one picked says what comes after it, on its
  * row, on the timeline's last step and under the button.
  */
-function TrialWithFreeWayOut({ plan, setPlan, onClose, onTrial, onFree, freeWayOut }) {
+function TrialWithFreeWayOut({ plan, setPlan, onClose, onTrial, onFree, freeWayOut, children }) {
   const [start] = useState(() => new Date());
   const picked = PLANS[plan] || PLANS[DEFAULT_PLAN];
   const steps = trialTimeline(start, { planned: Object.values(getState().plans || {}).some(p => p.host), plan: picked });
@@ -117,6 +126,7 @@ function TrialWithFreeWayOut({ plan, setPlan, onClose, onTrial, onFree, freeWayO
         {freeWayOut && <button className="full-btn outline" onClick={onFree}>Keep scoring for free</button>}
         <p className="pw-fine">{cta.fine}</p>
       </div>
+      {children}
     </Screen>
   );
 }

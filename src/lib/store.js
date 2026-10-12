@@ -82,6 +82,7 @@ function fresh() {
     tripPlans: {},     // the organizer's published plan for each trip, from the server (see trip-plan.js)
     tripPlanSeen: {},  // the plan version you last saw for each trip, for "Updated" (this phone only)
     tripExpenses: {},  // trip expenses, yours and friends': { id: expense } (see trip-expenses.js), synced in the profile
+    proSplits: {},     // Pro split with your group, one per purchase, behind the paywall flag (see pro-split.js), synced in the profile
     cupRemote: {},     // a team points trip's matches and stake marks from the server, by trip and row (see cup-sync.js)
     cupPaid: {},       // the stake payments you marked for each team points trip (see cup.js), synced in the profile
     books: {},         // closed seasons: a crew's or the whole Tab's books, with their totals (see books.js), synced in the profile

@@ -17,6 +17,7 @@ import { useLifetimePro } from '../lib/pro-client.js';
 import { LIFETIME_LINE, sinceLine } from '../lib/lifetime-pro.js';
 import { RIVALRY_ROUNDS, bestMomentTile, groupNumbers, numbersLine } from '../lib/plan-numbers.js';
 import { money } from '../lib/golf.js';
+import { SplitProRow } from '../components/SplitPro.jsx';
 
 const DASH = '–';
 const day = t => new Date(t).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
@@ -71,6 +72,8 @@ export default function YourPlan() {
           {c.fine && <p className="yp-fine">{c.fine}</p>}
           {p.id === 'free' && <button className="pill-btn dark yp-act" onClick={() => nav.push('paywall', { source: 'settings' })}>See what Pro adds <Icon name="arrow-right" /></button>}
         </div>
+        {/* Split it with the group (pro-split.js): a purchase to split, so not Pro for life or Free */}
+        {p.plan && p.id !== 'lifetime' && <SplitProRow plan={p.plan} />}
         {other && (
           <button className="set-row" onClick={() => update(st => { st.paywall = { ...(st.paywall || {}), plan: other.id }; })}>
             <div className="set-icon"><Icon name="arrows-left-right" fill /></div>

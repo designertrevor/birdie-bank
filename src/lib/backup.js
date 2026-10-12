@@ -27,6 +27,8 @@ MAPS.push('talk');
 MAPS.push('books');
 // Booking pages saved for courses and when you last nudged each person (tee-reminders.js, nudges.js)
 MAPS.push('courseLinks', 'nudges');
+// And Pro split with your group (pro-split.js), undone ones as a stub
+MAPS.push('proSplits');
 
 /** birdie-bank-backup-2026-09-30.json, in the phone's own date. */
 export function backupFileName(date = new Date()) {
