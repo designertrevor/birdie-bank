@@ -23,7 +23,7 @@ create table if not exists public.push_prefs (
   user_id uuid primary key default auth.uid() references auth.users (id) on delete cascade,
   muted text[] not null default '{}'
     check (coalesce(array_length(muted, 1), 0) <= 16
-           and muted <@ array['invite', 'rsvp', 'finished', 'paid', 'carry', 'carried', 'talk', 'tee']::text[]),
+           and muted <@ array['invite', 'rsvp', 'finished', 'paid', 'carry', 'carried', 'talk', 'tee', 'shipped']::text[]),
   updated_at timestamptz not null default now()
 );
 
