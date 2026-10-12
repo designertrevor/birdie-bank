@@ -15,6 +15,7 @@ import { updateSafe } from '../lib/app-update.js';
 import { applyUpdate, useUpdateReady } from '../lib/sw-update.js';
 import { anyTrips, lastDoneRound } from '../lib/upnext-first.js';
 import { endUpNextVisit } from '../lib/upnext-card.js';
+import { PAYWALL_ON } from '../lib/paywall-flag.js';
 
 // Up next paints first with what it can tell without the Tab's money: rounds going on, the plans
 // and the card for the next round. The rest loads right after (its files are saved for offline
@@ -32,6 +33,7 @@ const JoinSheet = part(() => import('../components/Live.jsx'), 'JoinSheet');
 const RemindersUpNext = part(() => import('../components/Reminders.jsx'), 'RemindersUpNext');
 const ShippedUpNext = part(() => import('../components/RoadmapUpNext.jsx'), 'ShippedUpNext');
 const WhatsNewUpNext = part(() => import('../components/WhatsNewUpNext.jsx'), 'WhatsNewUpNext');
+const TrialReminderUpNext = part(() => import('../components/TrialReminderUpNext.jsx'), 'TrialReminderUpNext');
 // Start fetching straight away, alongside the first paint, rather than when React gets to them
 if (typeof window !== 'undefined') more().catch(() => {});
 
@@ -89,6 +91,8 @@ export default function UpNext() {
         {/* Reminders, It shipped and What's new share one slot: the first card shows, the rest wait
             behind it ("2 more"), so the next round stays near the top */}
         <CardStack>
+          {/* The Pro trial ends in two days or less: the end date and the price, first (paywall flag only, trial.js) */}
+          {PAYWALL_ON && <StackSlot at={-1}><Later><TrialReminderUpNext /></Later></StackSlot>}
           {/* A tee time to book and friendly payment reminders: there's no push yet, so these are the reminders */}
           <StackSlot at={0}><Later><RemindersUpNext /></Later></StackSlot>
           {/* Something you asked for or voted for on the roadmap shipped: said once (roadmap.js) */}

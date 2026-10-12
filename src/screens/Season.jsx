@@ -18,6 +18,7 @@ import { TRIAL_DAYS, planStatus } from '../lib/paywall.js';
 import { seasonAccess } from '../lib/entitlements.js';
 import { PAYWALL_ON } from '../lib/paywall-flag.js';
 import { useLifetimePro } from '../lib/pro-client.js';
+import { upsellAllowed } from '../lib/upsell-guard.js';
 import { MIN_REAL_ROUNDS, realRoundCount, sampleBoard, seasonBoard } from '../lib/season.js';
 import { ClosedSeasons, HallLinks } from '../components/CrewTabs.jsx';
 
@@ -37,6 +38,9 @@ export default function Season() {
   // Already on the trial preview: say so instead of offering (and restarting) the 14 days
   const [now] = useState(() => Date.now());
   const onTrial = state.paywall?.choice === 'trial' && state.paywall.trialEnds > now;
+  // No trial offer while a round is live (upsell-guard.js): the preview stays, the button waits
+  const offer = upsellAllowed(state, { gated: PAYWALL_ON });
+  const trialButton = offer ? <TrialButton onTrial={onTrial} status={planStatus(state, now)} onClick={trial} /> : null;
 
   if (access === 'none') {
     return (
@@ -63,10 +67,10 @@ export default function Season() {
     <Screen className="season">
       <Header title={real ? 'Season' : 'See what Pro does'} onBack={nav.pop} />
       <p className="season-sub">{real ? `Preview · built from your ${n} rounds` : `Preview · a sample group until you’ve played ${MIN_REAL_ROUNDS} rounds`}</p>
-      {real ? <RealSeason state={state} preview /> : <Tour trialButton={<TrialButton onTrial={onTrial} status={planStatus(state, now)} onClick={trial} />} onFree={() => setFree(true)} />}
+      {real ? <RealSeason state={state} preview /> : <Tour trialButton={trialButton} onFree={() => setFree(true)} />}
       {real && (
         <div className="cta-wrap">
-          <TrialButton onTrial={onTrial} status={planStatus(state, now)} onClick={trial} />
+          {trialButton}
           <button className="link-btn center" onClick={() => setFree(true)}>What stays free forever</button>
         </div>
       )}

@@ -1,5 +1,5 @@
 // Whether the paywall shows on this phone. Read once at startup; see readFlag in paywall.js.
-import { readFlag } from './paywall.js';
+import { readFlag } from './paywall-read-flag.js';
 
 const KEY = 'bb-paywall';
 

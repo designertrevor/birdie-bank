@@ -6,6 +6,9 @@
 import { useSyncExternalStore } from 'react';
 import { getSupabase, supabaseConfigured } from './supabase.js';
 import { NO_PRO, readEntitlement, savedFor, toSaved } from './lifetime-pro.js';
+import { getState, useStore } from './store.js';
+import { PAYWALL_ON } from './paywall-flag.js';
+import { canUsePro, hasPro } from './entitlements.js';
 
 const KEY = 'bb-pro';
 const CLOUD_META = 'bb-cloud'; // cloud.js keeps the signed-in account's id here (meta.uid)
@@ -29,6 +32,21 @@ export function proNow() { return snap; }
 export function hasLifetimePro() { return snap.lifetime === true; }
 /** The same in React. */
 export function useLifetimePro() { return useSyncExternalStore(sub, () => snap, () => snap); }
+
+/**
+ * The entitlement check for a Pro feature, in React: true with the paywall flag off, and with it on
+ * for the trial, a paid plan or Pro for life (canUsePro in entitlements.js). Re-renders as the trial
+ * starts or Pro for life is read.
+ */
+export function useCanUsePro() {
+  const state = useStore();
+  const { lifetime } = useLifetimePro();
+  return canUsePro(state, { gated: PAYWALL_ON, lifetime: lifetime === true });
+}
+/** Whether this phone's owner has Pro right now (trial, paid or Pro for life), ignoring the flag. Outside React. */
+export function hasProNow() { return hasPro(getState(), { lifetime: snap.lifetime === true }); }
+/** The entitlement check outside React: canUsePro with the flag and Pro for life filled in. */
+export function canUseProNow() { return canUsePro(getState(), { gated: PAYWALL_ON, lifetime: snap.lifetime === true }); }
 
 /** Read the account's row. Leaves things as they are when it can't (offline, no table yet). */
 export async function refreshPro(uid) {
