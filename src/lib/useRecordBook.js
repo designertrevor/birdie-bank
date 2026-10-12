@@ -5,7 +5,7 @@ import { useMemo } from 'react';
 import { useStore } from './store.js';
 import { PAYWALL_ON } from './paywall-flag.js';
 import { useLifetimePro } from './pro-client.js';
-import { currentPlan } from './entitlements.js';
+import { canUsePro } from './entitlements.js';
 import { recordBookLine, recordBookView } from './record-book.js';
 import { roundsInProgress } from './rounds-live.js';
 
@@ -14,8 +14,9 @@ export function useRecordBook() {
   const state = useStore();
   const { lifetime } = useLifetimePro();
   return useMemo(() => {
-    // Pro here is the trial, a paid plan or Pro for life
-    const pro = PAYWALL_ON ? currentPlan(state, { lifetime }).pro : true;
+    // The one entitlement check (entitlements.js): the trial, a paid plan or Pro for life, and
+    // always true with the flag off
+    const pro = canUsePro(state, { gated: PAYWALL_ON, lifetime: lifetime === true });
     const view = recordBookView(state, { gated: PAYWALL_ON, pro });
     const live = roundsInProgress(state).length > 0;
     return { ...view, line: recordBookLine({ hidden: view.hidden, live }) };

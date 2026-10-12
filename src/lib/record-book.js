@@ -17,7 +17,7 @@ export const FREE_ROUNDS = 10;
 
 /**
  * Whether the record views are limited on this phone: only with the paywall flag on (`gated`) and
- * no Pro. `pro` is true for the trial, a paid plan and Pro for life (currentPlan(...).pro).
+ * no Pro. `pro` is true for the trial, a paid plan and Pro for life (canUsePro in entitlements.js).
  */
 export function recordBookLimited({ gated = false, pro = false } = {}) {
   return !!gated && !pro;
