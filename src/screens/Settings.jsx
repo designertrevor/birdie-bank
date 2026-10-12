@@ -21,6 +21,7 @@ import { PAYWALL_ON } from '../lib/paywall-flag.js';
 import { SUPPORT_EMAIL, helpMailto } from '../lib/support.js';
 import { TERMS_PATH } from '../lib/terms-page.js';
 import { isOrganizer, planStatus } from '../lib/paywall.js';
+import { upsellAllowed } from '../lib/upsell-guard.js';
 import { useLifetimePro } from '../lib/pro-client.js';
 import { accountsEnabled, signOut, syncNow, unsyncedCount, useAccount } from '../lib/cloud.js';
 import { NUDGE_CHOICES, nudgeChoiceLabel, nudgeDays } from '../lib/nudges.js';
@@ -223,7 +224,7 @@ export default function Settings() {
         {/* Plans only show with the paywall flag on. An early tester's line is a quiet thank-you (Pro for life) */}
         {PAYWALL_ON && (isOrganizer(state) || lifetime) && <>
           <div className="sec-label">Your plan</div>
-          {row('star', 'Your plan', planStatus(state, undefined, { lifetime }), () => nav.push('yourPlan'))}
+          {row('star', 'Your plan', planStatus(state, undefined, { lifetime, offer: upsellAllowed(state, { gated: PAYWALL_ON }) }), () => nav.push('yourPlan'))}
         </>}
         {/* Feedback: easy to find, warm, and out of the way of your own settings */}
         <Callout spot="bulb" soft title="Help shape Birdie Bank"

@@ -115,15 +115,16 @@ export function isOrganizer(state) {
   return Object.values(state.plans || {}).some(p => p.host);
 }
 
-/** The Settings line for Pro: where this phone stands. `lifetime`: an early tester's Pro for life. */
-export function planStatus(state, now = Date.now(), { lifetime = false } = {}) {
+/** The Settings line for Pro: where this phone stands. `lifetime`: an early tester’s Pro for life. `offer`: false while a round is live, so the line carries no upsell. */
+export function planStatus(state, now = Date.now(), { lifetime = false, offer = true } = {}) {
   if (lifetime) return LIFETIME_LINE;
   const p = state?.paywall;
   if (p?.choice === 'trial' && p.trialEnds > now) {
     const days = Math.ceil((p.trialEnds - now) / DAY);
     return `Pro trial preview · ${days} ${days === 1 ? 'day' : 'days'} left`;
   }
-  return 'Free · see what Pro adds';
+  // No upsell while a round is live (upsell-guard.js): just the plan's name
+  return offer ? 'Free · see what Pro adds' : 'Free';
 }
 
 // --------------------------- what it shows -----------------------------------
