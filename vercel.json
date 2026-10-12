@@ -8,6 +8,7 @@
     { "source": "/terms", "destination": "/terms.html" }
   ],
   "crons": [
-    { "path": "/api/push-tee", "schedule": "0 15 * * *" }
+    { "path": "/api/push-tee", "schedule": "0 15 * * *" },
+    { "path": "/api/push-digest", "schedule": "0 15 * * 1" }
   ]
 }

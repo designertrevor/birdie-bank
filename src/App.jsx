@@ -84,6 +84,7 @@ const BigGameSetup = screen(() => import('./screens/BigGameSetup.jsx'));
 const Roadmap = screen(() => import('./screens/Roadmap.jsx'));
 const WhatsNew = screen(() => import('./screens/WhatsNew.jsx'));
 const HallOfFame = screen(() => import('./screens/HallOfFame.jsx'));
+const Digest = screen(() => import('./screens/Digest.jsx'));
 // The notifications ask shows only after planning or joining a round, never on the first paint, so it
 // loads after Up next (and is left off if it can't load, rather than reloading the app)
 const NotifyAsk = lazy(() => import('./components/NotifyAsk.jsx').then(m => ({ default: m.NotifyAsk }), () => ({ default: () => null })));
@@ -98,6 +99,11 @@ function roadmapLink() {
     if (location.pathname.replace(/\/+$/, '') !== '/roadmap' && !q.has('roadmap')) return null;
     return { ids: q.has('ids') };
   } catch { return null; }
+}
+
+/** The feedback digest link (?digest, from Trevor's Monday push): the server decides who can read it. */
+function digestLink() {
+  try { return new URLSearchParams(location.search).has('digest'); } catch { return false; }
 }
 
 /** A plan link (?plan=CODE, &p=WHO for one person's own) waiting to open: { code, who } or null. */
@@ -128,7 +134,7 @@ function pendingChallengeLink() {
 function linkWaiting() {
   try {
     const q = new URLSearchParams(location.search);
-    return !!(roadmapLink() || q.get('plan') || q.get('challenge') || q.get('join') || q.get('draft') || q.get('play') || sessionStorage.getItem('bb-plan') || sessionStorage.getItem('pending-challenge') || sessionStorage.getItem('bb-join') || sessionStorage.getItem('pending-draft') || sessionStorage.getItem('bb-play'));
+    return !!(roadmapLink() || digestLink() || q.get('plan') || q.get('challenge') || q.get('join') || q.get('draft') || q.get('play') || sessionStorage.getItem('bb-plan') || sessionStorage.getItem('pending-challenge') || sessionStorage.getItem('bb-join') || sessionStorage.getItem('pending-draft') || sessionStorage.getItem('bb-play'));
   } catch { return false; }
 }
 
@@ -183,7 +189,7 @@ const SCREENS = {
   plan: Plan, rollCall: RollCall, planLink: PlanLink, preview: Preview, paywall: Paywall, yourPlan: YourPlan, cancelPlan: CancelPlan, season: Season,
   challenge: Challenge, challengeLink: ChallengeLink,
   joinInvite: JoinInviteScreen, lately: Lately, trip: Trip, tripSettle: TripSettle, draft: Draft, draftLink: DraftLink,
-  bigGame: BigGame, bigGameSetup: BigGameSetup, roadmap: Roadmap, whatsNew: WhatsNew,
+  bigGame: BigGame, bigGameSetup: BigGameSetup, roadmap: Roadmap, whatsNew: WhatsNew, digest: Digest,
   friends: Friends, friendRound: FriendRound,
   profile: Profile, stats: Stats, share: Share, closeBooks: CloseBooks, book: Book, hallOfFame: HallOfFame,
 };
@@ -242,6 +248,7 @@ export default function App() {
       return [{ name: 'draftLink', params: draftAt, key: Date.now() }];
     }
     if (roadmapAt) return [{ name: 'roadmap', params: roadmapAt, key: Date.now() }];
+    if (digestLink()) return [{ name: 'digest', params: {}, key: Date.now() }];
     // A join link for someone already set up opens the invite card (seats, "Not on the list? Add me")
     const code = syncConfigured ? pendingJoin() : null;
     try { sessionStorage.removeItem('bb-join'); } catch { /* ignore */ }
@@ -312,6 +319,7 @@ export default function App() {
     if (new URLSearchParams(location.search).get('play')) history.replaceState(null, '', location.pathname);
     // Someone set up who opened the roadmap link has it on top of Up next; a reload starts at home
     if (getState().onboarded && roadmapLink()) history.replaceState(null, '', '/');
+    if (digestLink()) history.replaceState(null, '', location.pathname);
   }, []);
 
   // Overlays opened in place over a screen (the course editor over round setup): the phone's back
