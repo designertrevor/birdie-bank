@@ -9,6 +9,8 @@ import { Avatar } from '../components/Avatar.jsx';
 import { AvatarPicker } from '../components/AvatarPicker.jsx';
 import { HomeCourseSheet } from '../components/HomeCourseSheet.jsx';
 import { update, useStore } from '../lib/store.js';
+import { useRecordBook } from '../lib/useRecordBook.js';
+import { RecordBookNote } from '../components/RecordBookNote.jsx';
 import { useNav } from '../lib/nav.js';
 import { formatIndex } from '../lib/format.js';
 import { PAY_APPS, PAY_APP_IDS, handleText, payInfo } from '../lib/pay.js';
@@ -48,7 +50,10 @@ export default function Profile() {
   const [picking, setPicking] = useState(false);
   const [home, setHome] = useState(false);
   // The deeper stats, all time, from your rounds on this phone (their records go with your profile, the money never)
-  const deep = useMemo(() => deepStats(state), [state]);
+  // The Record Book limit (record-book.js) applies to these, the way it does to Your stats. The
+  // tiles above are your profile as people see it, from every round, so they stay as they are
+  const { state: view, line } = useRecordBook();
+  const deep = useMemo(() => deepStats(view), [view]);
 
   if (!card) {
     return (
@@ -124,6 +129,7 @@ export default function Profile() {
                     <Icon name="caret-right" />
                   </button>
                 </div>
+                <RecordBookNote line={line} />
               </>
             )}
           </>

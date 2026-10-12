@@ -10,6 +10,7 @@ import { Empty, Header, Screen } from '../components/ui.jsx';
 import { BuddyArt } from '../components/BuddyArt.jsx';
 import { ShareView } from '../components/ShareSheet.jsx';
 import { useStore } from '../lib/store.js';
+import { useRecordBook } from '../lib/useRecordBook.js';
 import { useNav } from '../lib/nav.js';
 import { nameOf } from '../lib/ledger.js';
 import { countsMoney } from '../lib/play-for.js';
@@ -49,12 +50,14 @@ const drawableSrc = (a, buddySrc) => (a.kind === 'photo' && photoAllowed(a.url, 
 export default function ShareScreen({ kind, id, year }) {
   const nav = useNav();
   const state = useStore();
+  // The rivalry card shares what the Player card shows (the Record Book limit, record-book.js)
+  const { state: records } = useRecordBook();
   const gone = (title, text) => (
     <Screen><Header title="Share" small onBack={nav.pop} /><div className="scroll"><Empty title={title} text={text} /></div></Screen>
   );
 
   if (kind === 'profile') return <ProfileShare state={state} onBack={nav.pop} />;
-  if (kind === 'rivalry') return <RivalryShare state={state} id={id} onBack={nav.pop} gone={gone} />;
+  if (kind === 'rivalry') return <RivalryShare state={records} id={id} onBack={nav.pop} gone={gone} />;
 
   if (kind === 'wrapped') return <WrappedShare state={state} year={year} onBack={nav.pop} gone={gone} />;
   if (kind === 'recap') {

@@ -3,6 +3,8 @@ import { Empty, Header, Icon, Numpad, PickChip, PickRow, Screen, Sheet, useUI } 
 import { Avatar, PayButton, RequestButton } from '../components/Pay.jsx';
 import { useRemind } from '../lib/useRemind.js';
 import { update, uid, useStore } from '../lib/store.js';
+import { useRecordBook } from '../lib/useRecordBook.js';
+import { RecordBookNote } from '../components/RecordBookNote.jsx';
 import { firstName, formatIndex, myIds, playerLabel, sortedPlayers } from '../lib/format.js';
 import { mergePlayer, mergedInto, unmergePlayer } from '../lib/merge.js';
 import { headToHeadSummary, nameOf, outstanding, tabWith } from '../lib/ledger.js';
@@ -27,7 +29,12 @@ export default function People() {
   const nav = useNav();
   const state = useStore();
   const mine = myIds(state);
-  const h2h = headToHeadSummary(state, mine);
+  // Everyone you've played with, from every round, so nobody with money on the Tab drops off the list
+  const everyone = headToHeadSummary(state, mine);
+  // The Record Book limit (record-book.js): with the paywall flag on and no Pro, each card's record
+  // and the nemesis read the last 10 finished rounds. With the flag off `view` is the store's state
+  const { state: view, line } = useRecordBook();
+  const h2h = view === state ? everyone : headToHeadSummary(view, mine);
   const plan = outstanding(state);
   const remind = useRemind();
   const me = state.me && state.players[state.me];
@@ -35,9 +42,9 @@ export default function People() {
   // Everyone you've added, plus people you've only met in a joined round. A friend with more than
   // one id (a claimed seat, "Same person as...") is one card, under the id kept for them
   const who = canonicalOf(state);
-  const ids = new Set([...Object.keys(state.players), ...h2h.keys()].map(who));
+  const ids = new Set([...Object.keys(state.players), ...everyone.keys()].map(who));
   for (const id of mine) { ids.delete(id); ids.delete(who(id)); }
-  const people = [...ids].map(id => ({ id, name: nameOf(state, id), h: h2h.get(id), p: state.players[id] }))
+  const people = [...ids].map(id => ({ id, name: nameOf(state, id), h: h2h.get(id), older: !h2h.get(id) && !!everyone.get(id), p: state.players[id] }))
     .sort((a, b) => (b.h?.rounds || 0) - (a.h?.rounds || 0) || a.name.localeCompare(b.name));
   const crews = Object.values(state.crews).sort((a, b) => a.name.localeCompare(b.name));
   const myPay = me && payInfo(me);
@@ -55,9 +62,9 @@ export default function People() {
             <span className="chevron"><Icon name="caret-right" /></span>
           </button>
         )}
-        <NemesisCard n={nemesis(state, mine)} />
+        <NemesisCard n={nemesis(view, mine)} />
         <div className="sec-label">Your people</div>
-        {people.map(({ id, name, h, p }) => {
+        {people.map(({ id, name, h, older, p }) => {
           const tab = tabWith(plan, mine, id);
           const amount = Math.abs(tab);
           const first = name.split(' ')[0];
@@ -69,11 +76,11 @@ export default function People() {
                 <div className={tab ? 'tp-name' : 'set-name'}>{name}</div>
                 {rsvp && <div className={`rsvp-tag ${rsvp.status || 'none'}`}>{rsvp.status ? `${RSVP_LABEL[rsvp.status]} for ${dayName(rsvp.plan.date)}` : `No answer for ${dayName(rsvp.plan.date)} yet`}</div>}
                 <div className={tab ? 'tp-sub' : 'set-sub'}>
-                  {h ? `${h.rounds} round${h.rounds === 1 ? '' : 's'} · won ${h.won}, lost ${h.lost}${h.even ? `, even ${h.even}` : ''}` : p?.index != null ? `Index ${formatIndex(p.index)}` : 'No rounds together yet'}
+                  {h ? `${h.rounds} round${h.rounds === 1 ? '' : 's'} · won ${h.won}, lost ${h.lost}${h.even ? `, even ${h.even}` : ''}` : older ? 'Your rounds together are older ones' : p?.index != null ? `Index ${formatIndex(p.index)}` : 'No rounds together yet'}
                   {tab > 0 ? ` · owes you ${money(amount)}` : tab < 0 ? ` · you owe ${money(amount)}` : ''}
                 </div>
               </div>
-              {h ? <div className={`pr-amt d ${h.net > 0 ? 'pos' : h.net < 0 ? 'neg' : ''}`}>{money(h.net, { sign: true })}</div> : <span className="new-chip">New</span>}
+              {h ? <div className={`pr-amt d ${h.net > 0 ? 'pos' : h.net < 0 ? 'neg' : ''}`}>{money(h.net, { sign: true })}</div> : older ? null : <span className="new-chip">New</span>}
               <span className="chevron"><Icon name="caret-right" /></span>
             </button>
           );
@@ -100,6 +107,7 @@ export default function People() {
             <p className="pe-sub">Then pick them in one tap when you start a round. Everyone gets a Ball buddy.</p>
           </div>
         )}
+        <RecordBookNote line={line} />
         <button className="add-row" onClick={() => nav.push('playerEdit', {})}><div className="add-ci"><Icon name="plus" /></div><span className="add-lbl">Add a player</span></button>
 
         {crews.length > 0 ? (

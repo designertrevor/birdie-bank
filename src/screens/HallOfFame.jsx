@@ -9,6 +9,8 @@ import { Spot } from '../components/Spot.jsx';
 import { CrownedFace, Podium } from '../components/Podium.jsx';
 import { useGroupAvatars } from '../lib/useAvatars.js';
 import { useStore } from '../lib/store.js';
+import { useRecordBook } from '../lib/useRecordBook.js';
+import { RecordBookNote } from '../components/RecordBookNote.jsx';
 import { useNav } from '../lib/nav.js';
 import { money } from '../lib/golf.js';
 import { nameOf } from '../lib/ledger.js';
@@ -33,10 +35,14 @@ export default function HallOfFame({ crew: crewId }) {
   const state = useStore();
   const [now] = useState(() => Date.now());
   const crew = crewsOf(state).find(c => c.id === crewId);
+  // The season's money list adds up to the crew's tab, so it always counts every round
   const season = useMemo(() => (crew ? crewSeason(state, crew.id, { now }) : null), [state, crew, now]);
-  const hall = useMemo(() => (crew ? crewHall(state, crew.id, { now }) : null), [state, crew, now]);
+  // The Record Book limit (record-book.js): with the paywall flag on and no Pro, the records and the
+  // crew's history read the last 10 finished rounds. With the flag off `view` is the store's state
+  const { state: view, line } = useRecordBook();
+  const hall = useMemo(() => (crew ? crewHall(view, crew.id, { now }) : null), [view, crew, now]);
   // Who's climbed the most over the last few rounds, for the line under the hero
-  const movers = useMemo(() => (crew ? recentMovers(state, crew.id, { now }) : null), [state, crew, now]);
+  const movers = useMemo(() => (crew ? recentMovers(view, crew.id, { now }) : null), [view, crew, now]);
   // The money list's faces, twins sorted out, for the podium and the champion's crown
   const listed = useMemo(() => (season?.money || []).map(r => ({ id: r.id, name: nameOf(state, r.id) })), [season, state]);
   const faces = useGroupAvatars(listed);
@@ -62,7 +68,8 @@ export default function HallOfFame({ crew: crewId }) {
   const sinceLine = season.since ? `since the books closed on ${day(season.since)}` : 'this season';
   const rewardWord = season.rewards.names.length === 1 ? season.rewards.names[0].toLowerCase() : 'the reward';
 
-  if (!hall.rounds && !hall.seasons.length) {
+  // (With the Record Book limit on, a crew whose rounds are all older ones still shows its season's money)
+  if (!hall.rounds && !hall.seasons.length && !season.rounds) {
     return (
       <Screen>
         <Header title="Hall of fame" small onBack={nav.pop} />
@@ -161,6 +168,7 @@ export default function HallOfFame({ crew: crewId }) {
           <Badge icon="calendar-check" k="Most rounds" who={records.regular ? regularNames(records.regular.ids || [records.regular.id]) : null} v={records.regular ? String(records.regular.n) : null} />
         </div>
         <p className="field-help pad">Only you see this. It’s built from the crew’s rounds on this phone, back to the first one. Points rounds count in points and reward rounds in the reward, never in the money.</p>
+        <RecordBookNote line={line} />
         <button className="text-link stats-link" onClick={() => nav.push('share', { kind: 'wrapped', year: new Date(now).getFullYear() })}>
           <Icon name="share-network" /> <span className="row-main">Your year in review<span className="sl-sub">A card for your Story, money only if you show it</span></span> <Icon name="caret-right" />
         </button>

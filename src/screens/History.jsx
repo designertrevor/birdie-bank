@@ -1,7 +1,8 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Empty, Header, Icon, PickChip, Screen } from '../components/ui.jsx';
 import { RangeBar } from '../components/RangeBar.jsx';
-import { useStore } from '../lib/store.js';
+import { useRecordBook } from '../lib/useRecordBook.js';
+import { RecordBookNote } from '../components/RecordBookNote.jsx';
 import { GAMES } from '../lib/round.js';
 import { money } from '../lib/golf.js';
 import { nameOf } from '../lib/ledger.js';
@@ -65,7 +66,9 @@ function startRange(state) {
 
 export default function History() {
   const nav = useNav();
-  const state = useStore();
+  // The Record Book limit (record-book.js): with the paywall flag on and no Pro, the last 10
+  // finished rounds. With the flag off it's every round, the store's own state
+  const { state, line } = useRecordBook();
   const [range, setRangeRaw] = useState(() => startRange(state));
   const [filter, setFilter] = useKept('history:filter', 'all');
   const setRange = r => { setRangeRaw(r); try { sessionStorage.setItem(RANGE_KEY, JSON.stringify(r)); } catch { /* ignore */ } };
@@ -170,6 +173,7 @@ export default function History() {
                 ))}
               </>
             )}
+            <RecordBookNote line={line} />
           </>
         )}
       </div>
