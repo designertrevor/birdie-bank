@@ -19,6 +19,7 @@ import { RIVALRY_ROUNDS, bestMomentTile, groupNumbers, numbersLine } from '../li
 import { money } from '../lib/golf.js';
 import { chargeNotice, trialProgress } from '../lib/trial.js';
 import { upsellAllowed } from '../lib/upsell-guard.js';
+import { SplitProRow } from '../components/SplitPro.jsx';
 
 const DASH = '–';
 const day = t => new Date(t).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
@@ -79,6 +80,8 @@ export default function YourPlan() {
           {p.id === 'free' && offer && <button className="pill-btn dark yp-act" onClick={() => nav.push('paywall', { source: 'settings' })}>See what Pro adds <Icon name="arrow-right" /></button>}
         </div>
         {t && <TrialTimeline t={t} />}
+        {/* Split it with the group (pro-split.js): offered for a purchase (not Pro for life or Free), and a split standing always shows, with Undo */}
+        <SplitProRow plan={p.id !== 'lifetime' ? p.plan : null} />
         {other && (
           <button className="set-row" onClick={() => update(st => { st.paywall = { ...(st.paywall || {}), plan: other.id }; })}>
             <div className="set-icon"><Icon name="arrows-left-right" fill /></div>
