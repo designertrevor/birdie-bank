@@ -7,6 +7,8 @@ import { useMemo, useState } from 'react';
 import { Empty, Header, Icon, Screen } from '../components/ui.jsx';
 import { RangeBar } from '../components/RangeBar.jsx';
 import { useStore } from '../lib/store.js';
+import { useRecordBook } from '../lib/useRecordBook.js';
+import { RecordBookNote } from '../components/RecordBookNote.jsx';
 import { useNav } from '../lib/nav.js';
 import { money } from '../lib/golf.js';
 import { points } from '../lib/play-for.js';
@@ -53,12 +55,18 @@ export default function Stats({ range: given = null }) {
   const [range, setRangeRaw] = useState(() => startRange(given));
   const setRange = r => { setRangeRaw(r); try { sessionStorage.setItem(RANGE_KEY, JSON.stringify(r)); } catch { /* ignore */ } };
   const { rounds, me, players, links, unlinks, accountOf } = state;
-  // Who is who (links, unlinks, accounts) decides which seats are yours, so it's part of the key
+  // The Record Book limit (record-book.js): with the paywall flag on and no Pro, the stats read the
+  // last 10 finished rounds. With the flag off `view` is the store's own state
+  const { state: view, line } = useRecordBook();
+  // The same slice of the state as before the limit (who is who decides which seats are yours), so
+  // with the flag off the numbers are exactly what they were
+  const vr = view.rounds, vl = view.links;
   const st = useMemo(() => {
-    const s = { rounds, me, players, links, unlinks, accountOf };
+    const s = { rounds: vr, me, players, links: vl, unlinks, accountOf };
     return deepStats(s, roundsInRange(s, range));
-  }, [rounds, me, players, links, unlinks, accountOf, range]);
-  // The handicap trend looks at every round you've finished, whatever the range
+  }, [vr, me, players, vl, unlinks, accountOf, range]);
+  // The handicap trend looks at every round you've finished, whatever the range (and the Record
+  // Book limit: it's the handicap guide the way official handicaps count it, so it keeps every round)
   const { customCourses } = state;
   const trend = useMemo(
     () => handicapTrend({ rounds, me, players, links, unlinks, accountOf, customCourses }),
@@ -78,6 +86,7 @@ export default function Stats({ range: given = null }) {
         {st.rounds === 0 ? (
           <>
             <Empty illo="card" title="No rounds here" text={emptyText(range, label)} />
+            <RecordBookNote line={line} />
             <Trend trend={trend} />
           </>
         ) : (
@@ -144,6 +153,7 @@ export default function Stats({ range: given = null }) {
               </>
             )}
 
+            <RecordBookNote line={line} />
             <p className="field-help pad stats-foot"><Icon name={privacy.profile === 'hidden' ? 'lock-simple' : 'users-three'} fill /> {statsShareLine(privacy)} {moneyNote(st)}</p>
             <button className="text-link stats-link" onClick={() => nav.push('share', { kind: 'wrapped', year: range.kind === 'season' && range.year ? range.year : new Date().getFullYear() })}>
               <Icon name="share-network" /> <span className="row-main">Your year in review<span className="sl-sub">A card for your Story, money only if you show it</span></span> <Icon name="caret-right" />
