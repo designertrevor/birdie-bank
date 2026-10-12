@@ -62,6 +62,9 @@ own account to `roadmap_status = 'shipped'`, `roadmap_title`, `shipped_on = toda
 
 ## SQL / Vercel
 
-- Run in order (skip any already run): `2026-10-07-roadmap.sql`, `2026-10-08-push.sql`,
-  `2026-10-08-push-prefs.sql`, then `supabase/2026-10-12-idea-push.sql`.
+- `supabase/2026-10-12-idea-push.sql` needs `2026-10-07-roadmap.sql` (already run). It is safe to
+  run before or after `2026-10-08-push-prefs.sql`: the push sends nothing until push_prefs and
+  push_subscriptions both exist, so a "Your ideas" switch turned off on a phone is always respected.
+- Security check (2026-10-11): the cron answers 401 without the secret; each idea is stamped with
+  `pushed_at is null` in the update, so two runs at once (a retried cron) can't both send it.
 - Vercel: the cron registers on the next production deploy. Needs `CRON_SECRET` (same as push-tee).

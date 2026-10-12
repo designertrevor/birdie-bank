@@ -1,9 +1,10 @@
 -- The shipped-idea push (added 2026-10-12): "The game you asked for is live", once a day, to the
 -- person who sent the idea in. Run this once in Supabase: Dashboard, SQL Editor, New query, paste,
--- Run. Safe to run again. Needs, run first and in this order:
+-- Run. Safe to run again. Needs, run first:
 --   2026-10-07-roadmap.sql      (feedback.user_id, roadmap_status, roadmap_item, shipped_on)
---   2026-10-08-push.sql         (push_subscriptions)
---   2026-10-08-push-prefs.sql   (push_prefs)
+-- Safe to run before or after 2026-10-08-push.sql and 2026-10-08-push-prefs.sql: until both of those
+-- have run, push_ideas_due finds nothing (so nobody who switched "Your ideas" off on a phone before
+-- the account could save it gets a push), and push-prefs.sql already allows 'shipped'.
 --
 -- What it adds:
 --  • feedback.pushed_at: when the sender got the push about that idea. Set here, once, so an idea
@@ -33,11 +34,17 @@ alter table public.feedback add column if not exists pushed_at timestamptz;
 create index if not exists feedback_ship_push on public.feedback (roadmap_item)
   where pushed_at is null and user_id is not null;
 
--- The "Your ideas" switch saves to the account
-alter table public.push_prefs drop constraint if exists push_prefs_muted_check;
-alter table public.push_prefs add constraint push_prefs_muted_check
-  check (coalesce(array_length(muted, 1), 0) <= 16
-         and muted <@ array['invite', 'rsvp', 'finished', 'paid', 'carry', 'carried', 'talk', 'tee', 'shipped']::text[]);
+-- The "Your ideas" switch saves to the account (when push_prefs isn't there yet, push-prefs.sql
+-- creates it with this same check)
+do $$
+begin
+  if to_regclass('public.push_prefs') is not null then
+    alter table public.push_prefs drop constraint if exists push_prefs_muted_check;
+    alter table public.push_prefs add constraint push_prefs_muted_check
+      check (coalesce(array_length(muted, 1), 0) <= 16
+             and muted <@ array['invite', 'rsvp', 'finished', 'paid', 'carry', 'carried', 'talk', 'tee', 'shipped']::text[]);
+  end if;
+end $$;
 
 -- p_today is YYYY-MM-DD. p_items is [{ "id": "r-…", "title": "…", "shipped": "YYYY-MM-DD" }]: the
 -- public roadmap items shipped lately (idea-push.js shippedItems), never anything private.
@@ -49,6 +56,9 @@ declare
   rec record;
 begin
   if p_today is null or p_today !~ '^\d{4}-\d{2}-\d{2}$' then return; end if;
+  -- Nothing until the switches and the subscriptions are on the account (push-prefs.sql, push.sql),
+  -- so a "Your ideas" switched off is always seen
+  if to_regclass('public.push_prefs') is null or to_regclass('public.push_subscriptions') is null then return; end if;
   today := p_today::date;
   for rec in
     with items as (
@@ -83,7 +93,10 @@ begin
       and exists (select 1 from public.push_subscriptions s where s.user_id = d.user_id)
     limit 500
   loop
-    update public.feedback set pushed_at = now() where id = rec.id;
+    -- Stamp it, and only send when this call is the one that did: two runs at once (a retried
+    -- cron) can both pick the same idea, but the second waits here and then finds it stamped
+    update public.feedback set pushed_at = now() where id = rec.id and pushed_at is null;
+    if not found then continue; end if;
     return query
       select rec.id, rec.kind, rec.title, s.user_id, s.endpoint, s.p256dh, s.auth
       from public.push_subscriptions s where s.user_id = rec.user_id limit 20;
