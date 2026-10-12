@@ -9,6 +9,8 @@ import { syncConfigured } from './lib/supabase.js';
 import { cleanCode } from './lib/sync-codes.js';
 import { KeptScope, notePlace, startPlace } from './lib/kept.js';
 import { cleanTripId } from './lib/draft-keys.js';
+import { PAYWALL_ON } from './lib/paywall-flag.js';
+import { allowedRoutes, routeAllowed } from './lib/upsell-guard.js';
 import UpNext from './screens/UpNext.jsx';
 
 // Only Up next (the first screen) is in the main bundle; the rest load on demand. The service
@@ -219,7 +221,9 @@ export default function App() {
   const [fromLink] = useState(linkWaiting);
   const [restored] = useState(() => {
     const back = startPlace(getState(), { screens: Object.keys(SCREENS), tabs: Object.keys(TABS) });
-    return back && !fromLink ? back : null;
+    if (!back || fromLink) return null;
+    // Never come back onto the paywall while a round is live (upsell-guard.js)
+    return PAYWALL_ON ? { ...back, stack: allowedRoutes(back.stack, getState()) } : back;
   });
   const [tab, setTab] = useState(() => restored?.tab || 'upnext');
   // A plan link opens straight onto the plan: for someone set up, on top of Up next
@@ -267,6 +271,8 @@ export default function App() {
   });
 
   const push = useCallback((name, params = {}) => {
+    // The upsell guard: no paywall or Pro sheet while a round is live (upsell-guard.js)
+    if (PAYWALL_ON && !routeAllowed(name, getState())) return;
     setStack(s => [...s, { name, params, key: Date.now() + Math.random() }]);
     try { history.pushState({ bb: true }, ''); } catch { /* ignore */ }
   }, []);
@@ -277,11 +283,13 @@ export default function App() {
   }, []);
   /** Swap the top screen for another, with no new history entry (sending an idea → the roadmap). */
   const replace = useCallback((name, params = {}) => {
+    if (PAYWALL_ON && !routeAllowed(name, getState())) return;
     setStack(s => [...s.slice(0, -1), { name, params, key: Date.now() + Math.random() }]);
   }, []);
   /** Replace the whole stack (e.g. finish a round → go to its results). */
   const reset = useCallback((nextTab, ...routes) => {
     if (nextTab) setTab(nextTab);
+    if (PAYWALL_ON) routes = allowedRoutes(routes, getState());
     setStack(routes.map(([name, params = {}]) => ({ name, params, key: Date.now() + Math.random() })));
   }, []);
 
