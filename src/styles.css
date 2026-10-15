@@ -3288,11 +3288,6 @@ a.header-btn.rm-open { text-decoration: none; }
   display: inline-block; margin-left: 6px; padding: 1px 8px; border-radius: 999px; vertical-align: 1px;
   background: var(--surface); color: var(--body); font-size: 11px; font-weight: 700; letter-spacing: .02em; white-space: nowrap;
 }
-.pick-extra .jp-chip { min-height: 36px; gap: 6px; font-size: 13px; }
-/* Off, it sits on the player's card like the tee and handicap chips (a card-colored pill would vanish into it) */
-.pick-extra .jp-chip:not(.on) { background: var(--surface); color: var(--body); }
-.pick-extra .jp-chip i { font-size: 15px; }
-.pick-extra .jp-chip:not(.on) i { color: var(--icon); }
 .jp-step-help { margin: -2px 0 12px; }
 .jp-setup-note { margin-top: 4px; margin-bottom: 16px; }
 .mb-jp { padding: 6px 8px 2px; font-size: 11px; font-weight: 600; color: var(--mute); text-align: center; overflow-wrap: anywhere; }
@@ -4088,12 +4083,9 @@ a.header-btn.rm-open { text-decoration: none; }
   color: var(--ink);
 }
 .player-pick.on .pick-extra .hc-chip:not(.missing) i { color: color-mix(in srgb, var(--ink) 70%, transparent); }
-/* Just playing, off: no fill and a dashed edge with an empty ring, so it reads as a choice to tap,
-   not a setting that's on like the tee and index chips beside it (Trevor 2026-10-14) */
-.player-pick .pick-extra .jp-chip:not(.on) {
-  background: transparent; box-shadow: none; color: var(--body);
-  border: 1.5px dashed color-mix(in srgb, var(--ink) 35%, transparent);
-}
-.player-pick .pick-extra .jp-chip:not(.on) i { color: color-mix(in srgb, var(--ink) 50%, transparent); }
+/* A picked player's ⋯ menu button, in the bottom right corner of the card */
+.pick-extra .player-more { margin-left: auto; background: transparent; color: var(--body); }
+.pm-row { margin-top: 8px; }
+.pm-group { margin-bottom: 16px; }
 /* A ring of ink, so black tees show in dark mode and white tees in light */
 .tee-select .tee-dot { box-shadow: 0 0 0 1.5px color-mix(in srgb, var(--ink) 45%, transparent); }

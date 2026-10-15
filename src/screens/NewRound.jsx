@@ -833,6 +833,7 @@ function PlayersStep({ game, gameKey, course, holesCount, nine, picked, setPicke
   const [hcFor, setHcFor] = useState(null);
   const [indexFor, setIndexFor] = useState(null);
   const [teeFor, setTeeFor] = useState(null);
+  const [moreFor, setMoreFor] = useState(null);
   const teeOf = pid => course.tees?.find(t => t.name === (tees[pid] || firstTee(course)?.name)) || firstTee(course);
   const holes = useMemo(() => holesInPlay(course, holesCount, nine), [course, holesCount, nine]);
   // Past the game's own cap when the extra people can be just playing (just-playing.js)
@@ -888,11 +889,9 @@ function PlayersStep({ game, gameKey, course, holesCount, nine, picked, setPicke
         )}
         <div className="sec-label">Players · {pickedLine(gameKey, picked, justPlaying)}</div>
         {/* Who's just playing is said here, so the count above stays on one line */}
-        {casualOk ? (
-          casualNow.length > 0
-            ? <p className="field-help pad jp-step-help">{justPlayingWho(casualNow, state.me, pid => state.players[pid]?.name)} just playing: on the card with everyone and out of every game.</p>
-            : picked.length > 1 && <p className="field-help pad jp-step-help">Someone not up for a bet? Mark them <strong>{JUST_PLAYING}</strong>. They’re on the card with everyone and out of every game.</p>
-        ) : cantJustPlay(gameKey) && <p className="field-help pad jp-step-help">{cantJustPlay(gameKey)}</p>}
+        {/* Most people in a round are betting, so Just playing lives in each player's ⋯ menu and only
+            gets a line here once someone is (Trevor 2026-10-14) */}
+        {casualNow.length > 0 && <p className="field-help pad jp-step-help">{justPlayingWho(casualNow, state.me, pid => state.players[pid]?.name)} just playing: on the card with everyone and out of every game.</p>}
         <div className="pick-list">
           {players.map(p => {
             const on = picked.includes(p.id);
@@ -928,14 +927,12 @@ function PlayersStep({ game, gameKey, course, holesCount, nine, picked, setPicke
                         {p.index == null ? <>Add index <Icon name="plus" /></> : <>Index <strong>{formatIndex(p.index)}</strong> <Icon name="pencil-simple" /></>}
                       </button>
                     )}
-                    {/* Out of every bet: a selection chip like the tee's, filled with a check when it's on */}
-                    {casualOk && (bettingCount > 1 || casual) && (
-                      <PickChip small className="jp-chip" icon="circle" iconFill={false} on={casual} onClick={() => toggleCasual(p.id)}>{JUST_PLAYING}</PickChip>
-                    )}
                     {showHc && !casual && <button className={`hc-chip ${hc.source === 'none' ? 'missing' : ''}`} onClick={() => setHcFor(p.id)}
                       aria-label={`${p.name}’s ${holesCount === 9 ? '9-hole handicap' : 'course handicap'}: ${hc.value < 0 ? `+${-hc.value}` : hc.value}${hcNote ? hcNote.replace(' · ', ', ') : ''}. Change it`}>
                       {holesCount === 9 ? '9-hole handicap' : 'Course handicap'} <strong>{hc.value < 0 ? `+${-hc.value}` : hc.value}</strong>{hcNote} <Icon name="pencil-simple" />
                     </button>}
+                    {/* The rarer things for this player, out of the way in the corner */}
+                    <button className="icon-btn sm player-more" onClick={() => setMoreFor(p.id)} aria-haspopup="dialog" aria-label={`More for ${p.name}`}><Icon name="dots-three" /></button>
                   </div>
                 )}
               </div>
@@ -953,6 +950,9 @@ function PlayersStep({ game, gameKey, course, holesCount, nine, picked, setPicke
         <button className="full-btn" disabled={!valid} onClick={onNext}>{valid ? <>Next: Bets <Icon name="arrow-right" /></> : needText}</button>
       </div>
       <QuickAddPlayer open={adding} onClose={() => setAdding(false)} onAdded={pid => { setAdding(false); if (picked.length < most) setPicked([...picked, pid]); }} />
+      <PlayerMore pid={moreFor} onClose={() => setMoreFor(null)} name={moreFor === state.me ? 'You' : state.players[moreFor]?.name}
+        casual={justPlaying.includes(moreFor)} canCasual={casualOk && (bettingCount > 1 || justPlaying.includes(moreFor))} whyNot={(casualOk ? 'Needs someone else betting first' : cantJustPlay(gameKey)) || 'Not in this game'}
+        onCasual={() => toggleCasual(moreFor)} onRemove={() => { toggle(moreFor); setMoreFor(null); }} />
       {/* The tees as our own sheet, not the phone's wheel (Trevor 2026-10-14) */}
       <Sheet open={!!teeFor} onClose={() => setTeeFor(null)} title={teeFor === state.me ? 'Your tees' : `${state.players[teeFor]?.name}’s tees`}>
         <div className="tee-sheet" role="radiogroup" aria-label={`${state.players[teeFor]?.name}’s tees`}>
@@ -982,6 +982,21 @@ function PlayersStep({ game, gameKey, course, holesCount, nine, picked, setPicke
           setIndexFor(null);
         }} />
     </>
+  );
+}
+
+/** A picked player's ⋯ menu on the Players step: Just playing, and taking them out of the round. */
+function PlayerMore({ pid, onClose, name, casual, canCasual, whyNot, onCasual, onRemove }) {
+  return (
+    <Sheet open={!!pid} onClose={onClose} title={name}>
+      <div className="toggle-row pm-row">
+        <div><div className="toggle-lbl" id="pm-jp">{JUST_PLAYING}</div><div className="toggle-sub" id="pm-jp-sub">{canCasual ? 'On the card with everyone, out of every game and bet' : whyNot}</div></div>
+        <Toggle on={casual} onChange={onCasual} labelledBy="pm-jp" describedBy="pm-jp-sub" disabled={!canCasual} />
+      </div>
+      <div className="menu-group pm-group">
+        <button className="menu-row danger" onClick={onRemove}><Icon name="user-minus" /><span className="mr-label">Take out of this round</span></button>
+      </div>
+    </Sheet>
   );
 }
 
