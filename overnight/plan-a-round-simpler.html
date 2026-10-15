@@ -1,0 +1,515 @@
+<title>Get a Round Going</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,800&family=Inter:wght@400;500;600;700&display=swap">
+<style>
+/* Layout: a working doc. Today's flow, what other apps do, then six decisions, each with phone wireframes side by side and a pick + note saved for Claude. */
+:root {
+  --canvas: #f8f2e4; --surface: #efe8d6; --card: #ffffff; --line: #e6dfcb;
+  --ink: #0a0a0a; --body: #3a3a3a; --mute: #6a6a6a;
+  --teal: #1a3a3a; --mint: #a4d4c5; --pink: #ff4d8b; --pink-text: #c92463; --pink-fill: #d42a6b;
+  --ochre: #e8b94a; --lav: #b8a4ed; --check: #15a04c; --focus: #6b4fd0;
+  --chip: #f1ebdc; --chip-on: #1a3a3a; --on-chip-on: #ffffff;
+  --phone-edge: #d9d1bc; --shadow: 0 1px 2px rgba(74,52,14,.05), 0 6px 18px rgba(74,52,14,.07);
+  --display: "Bricolage Grotesque", Inter, system-ui, sans-serif;
+  --text: Inter, system-ui, -apple-system, sans-serif;
+}
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
+  --canvas: #0f1413; --surface: #283030; --card: #1e2524; --line: #303937;
+  --ink: #f5f0e4; --body: #d5d0c3; --mute: #a8a498;
+  --teal: #a4d4c5; --pink-text: #ff4d8b; --chip: #283030; --chip-on: #a4d4c5; --on-chip-on: #0a0a0a;
+  --check: #4ade80; --focus: #b8a4ed; --phone-edge: #353e3c; --shadow: inset 0 0 0 1px rgba(255,255,255,.05);
+  color-scheme: dark } }
+:root[data-theme="dark"] {
+  --canvas: #0f1413; --surface: #283030; --card: #1e2524; --line: #303937;
+  --ink: #f5f0e4; --body: #d5d0c3; --mute: #a8a498;
+  --teal: #a4d4c5; --pink-text: #ff4d8b; --chip: #283030; --chip-on: #a4d4c5; --on-chip-on: #0a0a0a;
+  --check: #4ade80; --focus: #b8a4ed; --phone-edge: #353e3c; --shadow: inset 0 0 0 1px rgba(255,255,255,.05);
+  color-scheme: dark }
+
+* { box-sizing: border-box; }
+body { background: var(--canvas); color: var(--body); font: 15px/1.55 var(--text); padding: 40px 16px 80px; }
+.wrap { max-width: 1060px; margin: 0 auto; display: flex; flex-direction: column; gap: 56px; }
+h1, h2, h3 { font-family: var(--display); color: var(--ink); text-wrap: balance; margin: 0; }
+h1 { font-size: clamp(34px, 6vw, 52px); font-weight: 800; line-height: 1.02; letter-spacing: -.02em; }
+h2 { font-size: 28px; font-weight: 800; letter-spacing: -.01em; }
+h3 { font-size: 19px; font-weight: 800; }
+p { margin: 0; max-width: 66ch; }
+a { color: var(--pink-text); }
+.eyebrow { font-size: 12px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; color: var(--mute); }
+.stack { display: flex; flex-direction: column; gap: 14px; }
+.lede { font-size: 18px; color: var(--body); }
+
+/* Today's flow strip */
+.flow { display: flex; flex-wrap: wrap; gap: 8px; align-items: stretch; }
+.fstep { background: var(--card); box-shadow: var(--shadow); border-radius: 16px; padding: 12px 14px; flex: 1 1 150px; min-width: 0; }
+.fstep b { display: block; color: var(--ink); font-size: 14px; }
+.fstep span { font-size: 13px; color: var(--mute); }
+.fstep.req b::after { content: "Required"; margin-left: 6px; font-size: 10px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: var(--pink-text); }
+.problems { display: grid; grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)); gap: 12px; }
+.problem { border-top: 2px solid var(--ink); padding-top: 10px; }
+.problem b { color: var(--ink); display: block; margin-bottom: 2px; }
+.problem p { font-size: 14px; }
+
+/* Mobbin refs */
+.refs { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 12px; }
+.ref { background: var(--card); box-shadow: var(--shadow); border-radius: 16px; padding: 14px 16px; display: flex; flex-direction: column; gap: 4px; min-width: 0; }
+.ref .app { font-family: var(--display); font-weight: 800; color: var(--ink); font-size: 16px; }
+.ref p { font-size: 14px; }
+.ref a { font-size: 13px; font-weight: 600; margin-top: auto; padding-top: 6px; }
+.principle { background: var(--teal); color: var(--canvas); border-radius: 22px; padding: 22px 24px; }
+.principle h3 { color: inherit; font-size: 24px; }
+.principle p { color: inherit; opacity: .9; margin-top: 6px; }
+.states { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 14px; }
+.state { border-radius: 999px; padding: 4px 12px; font-size: 13px; font-weight: 600; background: rgba(255,255,255,.14); }
+
+/* Decisions */
+.decision { display: flex; flex-direction: column; gap: 18px; border-top: 1px solid var(--line); padding-top: 28px; }
+.dhead { display: flex; flex-direction: column; gap: 6px; }
+.options { display: grid; grid-template-columns: repeat(auto-fit, minmax(270px, 1fr)); gap: 18px; align-items: start; }
+.opt { display: flex; flex-direction: column; gap: 10px; align-items: center; min-width: 0; }
+.opt-label { width: 100%; max-width: 280px; display: flex; flex-direction: column; gap: 2px; }
+.opt-label b { color: var(--ink); font-size: 15px; }
+.opt-label .rec { font-size: 11px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: var(--check); }
+.opt-label p { font-size: 13.5px; color: var(--body); }
+
+/* Phone wireframe */
+.phone { width: 100%; max-width: 280px; aspect-ratio: 9 / 17.5; border-radius: 34px; border: 7px solid var(--phone-edge); background: var(--canvas); overflow: hidden; display: flex; flex-direction: column; font-size: 12px; color: var(--body); position: relative; }
+.phone .bar { height: 22px; flex: none; }
+.phone .scr { flex: 1; padding: 4px 14px 14px; display: flex; flex-direction: column; gap: 9px; min-height: 0; }
+.phone .top { display: flex; justify-content: space-between; align-items: center; font-size: 12px; color: var(--mute); }
+.phone .top b { color: var(--ink); font-size: 13px; }
+.ph1 { font-family: var(--display); font-weight: 800; color: var(--ink); font-size: 21px; line-height: 1.1; }
+.ph2 { font-family: var(--display); font-weight: 800; color: var(--ink); font-size: 15px; }
+.sub { color: var(--mute); font-size: 11.5px; }
+.card { background: var(--card); box-shadow: var(--shadow); border-radius: 14px; padding: 10px 12px; display: flex; flex-direction: column; gap: 6px; }
+.row { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 7px 0; border-bottom: 1px solid var(--line); }
+.row:last-child { border-bottom: 0; }
+.row .k { color: var(--ink); font-weight: 600; }
+.row .v { color: var(--mute); text-align: right; }
+.row .v.set { color: var(--ink); }
+.chips { display: flex; flex-wrap: wrap; gap: 5px; }
+.c { background: var(--chip); border-radius: 999px; padding: 4px 9px; font-size: 11px; font-weight: 600; color: var(--ink); white-space: nowrap; }
+.c.on { background: var(--chip-on); color: var(--on-chip-on); }
+.c.dash { background: transparent; border: 1px dashed var(--mute); color: var(--mute); }
+.tag { border-radius: 999px; padding: 2px 8px; font-size: 10px; font-weight: 700; white-space: nowrap; }
+.t-set { background: var(--mint); color: #0a0a0a; }
+.t-vote { background: var(--ochre); color: #0a0a0a; }
+.t-open { background: var(--chip); color: var(--mute); }
+.btn { margin-top: auto; background: var(--pink-fill); color: #fff; border-radius: 999px; text-align: center; padding: 11px; font-weight: 700; font-size: 13px; }
+.btn.ghost { background: transparent; color: var(--ink); border: 1.5px solid var(--line); margin-top: 0; }
+.link { color: var(--pink-text); font-weight: 600; font-size: 11.5px; text-align: center; }
+.msg { background: var(--surface); border-radius: 14px; padding: 10px 12px; color: var(--ink); font-size: 12.5px; }
+.avs { display: flex; }
+.av { width: 22px; height: 22px; border-radius: 50%; border: 2px solid var(--canvas); margin-left: -6px; display: grid; place-items: center; font-size: 9px; font-weight: 700; color: #0a0a0a; }
+.av:first-child { margin-left: 0; }
+.a1 { background: var(--mint); } .a2 { background: var(--lav); } .a3 { background: var(--ochre); } .a4 { background: #ffb084; } .a5 { background: #cfe8f3; }
+.daygrid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 5px; }
+.day { background: var(--card); box-shadow: var(--shadow); border-radius: 10px; padding: 6px 4px; text-align: center; font-size: 10px; color: var(--mute); }
+.day b { display: block; font-size: 14px; color: var(--ink); font-family: var(--display); }
+.day.on { background: var(--chip-on); color: var(--on-chip-on); }
+.day.on b { color: var(--on-chip-on); }
+.vote { display: flex; flex-direction: column; gap: 3px; }
+.vote .line { display: flex; justify-content: space-between; font-size: 11.5px; color: var(--ink); }
+.meter { height: 6px; border-radius: 3px; background: var(--chip); overflow: hidden; }
+.meter i { display: block; height: 100%; background: var(--teal); border-radius: 3px; }
+.bubble { align-self: flex-start; background: var(--card); box-shadow: var(--shadow); border-radius: 14px 14px 14px 4px; padding: 7px 10px; max-width: 85%; font-size: 11.5px; color: var(--ink); }
+.bubble.me { align-self: flex-end; background: var(--chip-on); color: var(--on-chip-on); border-radius: 14px 14px 4px 14px; }
+.bubble small { display: block; color: var(--mute); font-size: 9.5px; }
+.bubble.me small { color: inherit; opacity: .7; }
+.rsvp { display: grid; grid-template-columns: repeat(3, 1fr); gap: 5px; }
+.rsvp div { background: var(--card); box-shadow: var(--shadow); border-radius: 12px; padding: 8px 2px; text-align: center; font-weight: 700; color: var(--ink); font-size: 11.5px; }
+.rsvp div.on { background: var(--chip-on); color: var(--on-chip-on); }
+.nav { display: flex; justify-content: space-around; border-top: 1px solid var(--line); padding: 7px 0 4px; font-size: 9.5px; color: var(--mute); flex: none; }
+.nav b { color: var(--ink); }
+.sheet { position: absolute; inset: auto 6px 6px 6px; background: var(--card); border-radius: 22px; padding: 12px; box-shadow: 0 -6px 28px rgba(0,0,0,.18); display: flex; flex-direction: column; gap: 7px; }
+.dim { position: absolute; inset: 0; background: rgba(10,26,26,.35); }
+
+/* Pick + note */
+.pick { background: var(--surface); border-radius: 18px; padding: 14px 16px; display: flex; flex-direction: column; gap: 10px; }
+.pick-row { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.pick-row .eyebrow { margin-right: 4px; }
+.pick button { font: 600 14px var(--text); border-radius: 999px; padding: 7px 14px; border: 1.5px solid var(--line); background: var(--card); color: var(--ink); cursor: pointer; }
+.pick button[aria-pressed="true"] { background: var(--chip-on); border-color: var(--chip-on); color: var(--on-chip-on); }
+.pick button:focus-visible, .pick textarea:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
+.pick textarea { width: 100%; min-height: 54px; resize: vertical; font: 14px/1.45 var(--text); border-radius: 12px; border: 1.5px solid var(--line); background: var(--card); color: var(--ink); padding: 9px 12px; }
+.saved { font-size: 12.5px; color: var(--mute); min-height: 1.2em; }
+
+/* Summary */
+.newflow { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 12px; }
+.nf { background: var(--card); box-shadow: var(--shadow); border-radius: 18px; padding: 16px; display: flex; flex-direction: column; gap: 6px; }
+.nf .n { font-family: var(--display); font-weight: 800; font-size: 28px; color: var(--pink-text); line-height: 1; }
+.nf b { color: var(--ink); }
+.nf p { font-size: 14px; }
+ul.cuts { margin: 0; padding-left: 20px; display: flex; flex-direction: column; gap: 6px; max-width: 70ch; }
+ul.cuts b { color: var(--ink); }
+@media (prefers-reduced-motion: no-preference) { .pick button { transition: background .15s, color .15s; } }
+</style>
+
+<div class="wrap">
+
+<header class="stack">
+  <div class="eyebrow">Upcoming rounds · rethink · 12 Oct 2026</div>
+  <h1>Get a round going, with or without a date</h1>
+  <p class="lede">Planning ahead today asks for a game and a day before anyone else sees a thing. Most real plans start as "who's up for golf soon?" This page lays out what's built, what other apps do, and six calls to make. Pick an option under each one and add a note; your answers save here and I'll read them back.</p>
+</header>
+
+<section class="stack" aria-labelledby="today">
+  <div class="eyebrow">What's built now</div>
+  <h2 id="today">Four screens before a friend sees anything</h2>
+  <div class="flow" role="list">
+    <div class="fstep" role="listitem"><b>Play tab</b><span>Pick a game, then the quiet "Schedule for later" link</span></div>
+    <div class="fstep req" role="listitem"><b>What are you playing?</b><span>A game must be picked</span></div>
+    <div class="fstep req" role="listitem"><b>When are you playing?</b><span>Day from a 14-day strip, holes, course</span></div>
+    <div class="fstep" role="listitem"><b>Who's invited?</b><span>Pick people or skip for a link</span></div>
+    <div class="fstep" role="listitem"><b>What's up for a vote?</b><span>Bet, other games, side games, play for</span></div>
+    <div class="fstep" role="listitem"><b>Plan page</b><span>RSVP, votes, chat, morning text, roll call</span></div>
+  </div>
+  <div class="problems">
+    <div class="problem"><b>The game comes first, then gets voted on</b><p>The organizer has to choose a game to get in, even though you decided the group votes on it.</p></div>
+    <div class="problem"><b>A day is required</b><p>No way to say "not sure yet" or "one of these Saturdays". That's the exact case you hit.</p></div>
+    <div class="problem"><b>Hard to find</b><p>The way in sits under Play, after picking a game, as a quiet link. Up next only offers it when nothing's planned.</p></div>
+    <div class="problem"><b>Setup before sending</b><p>The ballot step asks the organizer to build the vote. Friends could add to it later instead.</p></div>
+  </div>
+</section>
+
+<section class="stack" aria-labelledby="refs">
+  <div class="eyebrow">From Mobbin</div>
+  <h2 id="refs">How other apps start a plan</h2>
+  <div class="refs">
+    <div class="ref"><span class="app">Partiful</span><p>One screen to make an event. The date row says "Set a date..." and right under it: "Can't decide when? Poll your guests." Everything else is optional rows.</p><a href="https://mobbin.com/screens/a27e2898-ece0-410a-a924-21e6bfa77a2a" target="_blank" rel="noopener">Open on Mobbin</a></div>
+    <div class="ref"><span class="app">Tripsy</span><p>A trip invite can go out with "No dates yet" as its status. Accept or Decline, dates come later.</p><a href="https://mobbin.com/screens/fa0dee8b-c28e-4eb8-8e62-96847de91565" target="_blank" rel="noopener">Open on Mobbin</a></div>
+    <div class="ref"><span class="app">GroupMe</span><p>Events get two big buttons, "I'm in" and "Can't go". Polls show each option's count and who voted, with a voting end time.</p><a href="https://mobbin.com/screens/b699aec3-92c9-4579-af4e-820156a72176" target="_blank" rel="noopener">Open on Mobbin</a></div>
+    <div class="ref"><span class="app">Apple Invites</span><p>Shows the organizer exactly what guests will see (Going, Not going, Maybe) before it's sent.</p><a href="https://mobbin.com/screens/5a5a0fdb-b99a-4352-bd57-80680ca6862d" target="_blank" rel="noopener">Open on Mobbin</a></div>
+    <div class="ref"><span class="app">DICE groups</span><p>Make the group first, add options later: "Once there are some options in the group, everyone can start voting."</p><a href="https://mobbin.com/flows/81b8f9b2-10ab-4197-8508-760e36ac4661" target="_blank" rel="noopener">Open on Mobbin</a></div>
+    <div class="ref"><span class="app">Polarsteps / Splitwise</span><p>Create the thing, then "Invite with link, even if they're not on the app yet". The empty group says "You're the only one here".</p><a href="https://mobbin.com/flows/9492cf76-86c8-49f5-a82a-3d013f83bc9b" target="_blank" rel="noopener">Open on Mobbin</a></div>
+  </div>
+  <div class="principle">
+    <h3>Start with the ask. Fill in the rest together.</h3>
+    <p>Every detail of a round (day, course, game, bet) can be in one of three states, and the plan page shows which. Nothing has to be set to send the link.</p>
+    <div class="states"><span class="state">Set</span><span class="state">Up for a vote</span><span class="state">Not yet</span></div>
+  </div>
+</section>
+
+<!-- D1 -->
+<section class="decision" aria-labelledby="d1">
+  <div class="dhead"><div class="eyebrow">Call 1 of 6</div><h3 id="d1">How do you start a plan?</h3><p>What the organizer sees after tapping "Plan a round".</p></div>
+  <div class="options">
+    <div class="opt">
+      <div class="phone" aria-label="Wireframe: one-screen ask"><div class="bar"></div><div class="scr">
+        <div class="top"><span>Cancel</span><b>New round</b><span></span></div>
+        <div class="ph1">Who's up for golf?</div>
+        <div class="msg">Trying to get a round in soon. Who's in?</div>
+        <div class="card">
+          <div class="row"><span class="k">When</span><span class="v">Not sure yet ▾</span></div>
+          <div class="row"><span class="k">Where</span><span class="v">Any course</span></div>
+          <div class="row"><span class="k">Game and bet</span><span class="v">Group picks</span></div>
+        </div>
+        <div class="sub">Ask</div>
+        <div class="chips"><span class="c on">Dave</span><span class="c on">Sam</span><span class="c">Mike</span><span class="c">Jordan</span><span class="c dash">+ Name</span></div>
+        <div class="btn">Send to the group</div>
+        <div class="link">Or copy the link</div>
+      </div></div>
+      <div class="opt-label"><span class="rec">My recommendation</span><b>A. One-screen ask</b><p>Partiful's model. A message, three optional rows that default to "not yet", who to ask, Send. Tap a row to set it or open it to a vote.</p></div>
+    </div>
+    <div class="opt">
+      <div class="phone" aria-label="Wireframe: just the people"><div class="bar"></div><div class="scr">
+        <div class="top"><span>Cancel</span><b>New round</b><span></span></div>
+        <div class="ph1">Who do you want to play with?</div>
+        <div class="card">
+          <div class="row"><span class="k">Dave</span><span class="v set">✓</span></div>
+          <div class="row"><span class="k">Sam</span><span class="v set">✓</span></div>
+          <div class="row"><span class="k">Mike</span><span class="v"></span></div>
+          <div class="row"><span class="k">Jordan</span><span class="v"></span></div>
+        </div>
+        <div class="sub">Day, course, game and bet get sorted on the plan page.</div>
+        <div class="btn">Start the plan (2)</div>
+        <div class="link">Skip, I'll send a link</div>
+      </div></div>
+      <div class="opt-label"><b>B. Just the people</b><p>The fewest decisions possible. Pick friends, send, and every detail starts as "not yet" on the plan page. Fastest, but the first text friends get is thin.</p></div>
+    </div>
+    <div class="opt">
+      <div class="phone" aria-label="Wireframe: today's steps, each skippable"><div class="bar"></div><div class="scr">
+        <div class="top"><span>Back</span><b>2 of 4</b><span></span></div>
+        <div class="ph1">When are you playing?</div>
+        <div class="daygrid"><div class="day">Sat<b>18</b></div><div class="day">Sun<b>19</b></div><div class="day">Sat<b>25</b></div><div class="day">Sun<b>26</b></div></div>
+        <div class="card"><div class="row"><span class="k">Tee time</span><span class="v">Optional</span></div></div>
+        <div class="btn">Next: Who's invited</div>
+        <div class="link">Decide later</div>
+      </div></div>
+      <div class="opt-label"><b>C. Today's steps, all skippable</b><p>Keep the four screens, add "Decide later" to each. Least rebuild, but still four screens to tap through.</p></div>
+    </div>
+  </div>
+  <div class="pick" data-q="start"></div>
+</section>
+
+<!-- D2 -->
+<section class="decision" aria-labelledby="d2">
+  <div class="dhead"><div class="eyebrow">Call 2 of 6</div><h3 id="d2">When there's no date yet</h3><p>What "Not sure yet" turns into.</p></div>
+  <div class="options">
+    <div class="opt">
+      <div class="phone" aria-label="Wireframe: pick a few days to vote on"><div class="bar"></div><div class="scr">
+        <div class="top"><span>Back</span><b>When</b><span>Done</span></div>
+        <div class="chips"><span class="c">Set a day</span><span class="c on">A few options</span><span class="c">Not sure yet</span></div>
+        <div class="sub">Tap the days that could work. Friends tick theirs.</div>
+        <div class="daygrid">
+          <div class="day">Sat<b>18</b></div><div class="day on">Sun<b>19</b></div><div class="day on">Sat<b>25</b></div><div class="day">Sun<b>26</b></div>
+          <div class="day on">Sat<b>1</b></div><div class="day">Sun<b>2</b></div><div class="day">Sat<b>8</b></div><div class="day">Pick<b>+</b></div>
+        </div>
+        <div class="card"><div class="row"><span class="k">Morning or afternoon?</span><span class="v">Either</span></div></div>
+        <div class="sub">Friends can add a day too.</div>
+        <div class="btn">Use these 3 days</div>
+      </div></div>
+      <div class="opt-label"><span class="rec">My recommendation</span><b>A. A few options, or not sure</b><p>Three choices on one row: set a day, offer a few, or not sure yet. With "not sure", friends just suggest days. Optional morning or afternoon instead of a tee time.</p></div>
+    </div>
+    <div class="opt">
+      <div class="phone" aria-label="Wireframe: rough window"><div class="bar"></div><div class="scr">
+        <div class="top"><span>Back</span><b>When</b><span>Done</span></div>
+        <div class="ph2">Roughly when?</div>
+        <div class="card">
+          <div class="row"><span class="k">This weekend</span><span class="v"></span></div>
+          <div class="row"><span class="k">Next weekend</span><span class="v set">✓</span></div>
+          <div class="row"><span class="k">Sometime in November</span><span class="v"></span></div>
+          <div class="row"><span class="k">No idea yet</span><span class="v"></span></div>
+        </div>
+        <div class="sub">Friends answer which days in that window work.</div>
+        <div class="btn">Done</div>
+      </div></div>
+      <div class="opt-label"><b>B. A rough window</b><p>Pick a window, not days. Friends then tick days inside it. Feels natural ("next weekend?") but adds a second step for friends.</p></div>
+    </div>
+    <div class="opt">
+      <div class="phone" aria-label="Wireframe: anyone suggests a day"><div class="bar"></div><div class="scr">
+        <div class="top"><span>Back</span><b>Golf soon?</b><span></span></div>
+        <div class="card">
+          <div class="ph2">Day <span class="tag t-open">Not yet</span></div>
+          <div class="vote"><div class="line"><span>Sat Oct 25</span><span>Dave, Sam</span></div><div class="meter"><i style="width:66%"></i></div></div>
+          <div class="vote"><div class="line"><span>Sun Oct 26</span><span>Mike</span></div><div class="meter"><i style="width:33%"></i></div></div>
+          <div class="link">+ Suggest a day</div>
+        </div>
+        <div class="sub">Nobody had to pick options first.</div>
+      </div></div>
+      <div class="opt-label"><b>C. Friends propose</b><p>No options up front. Anyone suggests a day, others +1 it. Loosest, and the plan page does the work. Could be the "Not sure yet" half of A.</p></div>
+    </div>
+  </div>
+  <div class="pick" data-q="when"></div>
+</section>
+
+<!-- D3 -->
+<section class="decision" aria-labelledby="d3">
+  <div class="dhead"><div class="eyebrow">Call 3 of 6</div><h3 id="d3">The plan page before it's settled</h3><p>What the group looks at during the week.</p></div>
+  <div class="options">
+    <div class="opt">
+      <div class="phone" aria-label="Wireframe: still to decide checklist"><div class="bar"></div><div class="scr">
+        <div class="top"><span>‹</span><b>Golf soon?</b><span>Share</span></div>
+        <div class="avs"><span class="av a1">D</span><span class="av a2">S</span><span class="av a3">M</span><span class="av a4">J</span><span class="av a5">T</span></div>
+        <div class="sub">3 in · 1 maybe · 1 hasn't answered</div>
+        <div class="card">
+          <div class="row"><span class="k">Day</span><span class="tag t-vote">Voting · 4 of 5</span></div>
+          <div class="row"><span class="k">Course</span><span class="tag t-set">Riverside</span></div>
+          <div class="row"><span class="k">Game</span><span class="tag t-vote">Skins leads</span></div>
+          <div class="row"><span class="k">Bet</span><span class="tag t-open">Not yet</span></div>
+        </div>
+        <div class="bubble"><small>Dave</small>Sat works if it's before 10</div>
+        <div class="bubble me"><small>You</small>8:40 it is</div>
+        <div class="btn">Lock in Sat Oct 25</div>
+      </div></div>
+      <div class="opt-label"><span class="rec">My recommendation</span><b>A. Still to decide</b><p>Four rows with a state each, so anyone sees what's missing at a glance. The plan's chat sits under it. Tap a row to vote or suggest.</p></div>
+    </div>
+    <div class="opt">
+      <div class="phone" aria-label="Wireframe: chat first"><div class="bar"></div><div class="scr">
+        <div class="top"><span>‹</span><b>Golf soon?</b><span>5</span></div>
+        <div class="bubble"><small>Trevor</small>Trying to get a round in. Who's in?</div>
+        <div class="card">
+          <div class="ph2">Which day?</div>
+          <div class="vote"><div class="line"><span>Sat Oct 25</span><span>4</span></div><div class="meter"><i style="width:80%"></i></div></div>
+          <div class="vote"><div class="line"><span>Sun Oct 26</span><span>1</span></div><div class="meter"><i style="width:20%"></i></div></div>
+        </div>
+        <div class="bubble"><small>Sam</small>Skins again? 😅</div>
+        <div class="card"><div class="ph2">Game</div><div class="chips"><span class="c on">Skins 3</span><span class="c">Nassau 1</span></div></div>
+        <div class="msg" style="margin-top:auto">Message the group…</div>
+      </div></div>
+      <div class="opt-label"><b>B. Chat first</b><p>The thread is the page and each decision is a poll card in it, like a group text with polls. Feels social, but what's settled gets buried as the chat grows.</p></div>
+    </div>
+  </div>
+  <div class="pick" data-q="page"></div>
+</section>
+
+<!-- D4 -->
+<section class="decision" aria-labelledby="d4">
+  <div class="dhead"><div class="eyebrow">Call 4 of 6</div><h3 id="d4">The friend's side, with no date</h3><p>What Dave sees when he opens the link (no install, no paywall, as today).</p></div>
+  <div class="options">
+    <div class="opt">
+      <div class="phone" aria-label="Wireframe: one card, then days"><div class="bar"></div><div class="scr">
+        <div class="avs"><span class="av a5">T</span></div>
+        <div class="ph1">Trevor wants to get a round in</div>
+        <div class="sub">No day yet · Riverside · Game and bet up to the group</div>
+        <div class="rsvp"><div class="on">I'm in</div><div>Maybe</div><div>Can't</div></div>
+        <div class="ph2">Which days work?</div>
+        <div class="daygrid"><div class="day on">Sun<b>19</b></div><div class="day on">Sat<b>25</b></div><div class="day">Sat<b>1</b></div><div class="day">Add<b>+</b></div></div>
+        <div class="link">Vote on the game and bet (optional)</div>
+        <div class="btn">Send my answer</div>
+      </div></div>
+      <div class="opt-label"><span class="rec">My recommendation</span><b>A. In, then which days</b><p>The invite card you picked in September, with "No day yet" where the date goes. One tap for in, tick the days, done. The game vote is there but optional.</p></div>
+    </div>
+    <div class="opt">
+      <div class="phone" aria-label="Wireframe: everything on one scroll"><div class="bar"></div><div class="scr">
+        <div class="ph2">Golf soon? · from Trevor</div>
+        <div class="card"><div class="ph2">You in?</div><div class="rsvp"><div class="on">In</div><div>Maybe</div><div>Out</div></div></div>
+        <div class="card"><div class="ph2">Days</div><div class="chips"><span class="c on">Sun 19</span><span class="c on">Sat 25</span><span class="c">Sat 1</span></div></div>
+        <div class="card"><div class="ph2">Game</div><div class="chips"><span class="c on">Skins</span><span class="c">Nassau</span><span class="c">Wolf</span></div></div>
+        <div class="card"><div class="ph2">Bet</div><div class="chips"><span class="c">$5</span><span class="c on">$10</span><span class="c">$20</span></div></div>
+        <div class="btn">Send</div>
+      </div></div>
+      <div class="opt-label"><b>B. Everything at once</b><p>All four questions stacked. Quicker for keen friends, heavier for someone who just wants to say "I'm in".</p></div>
+    </div>
+  </div>
+  <div class="pick" data-q="friend"></div>
+</section>
+
+<!-- D5 -->
+<section class="decision" aria-labelledby="d5">
+  <div class="dhead"><div class="eyebrow">Call 5 of 6</div><h3 id="d5">Who locks in the day?</h3><p>Votes need an end. Same rule would apply to the game and bet.</p></div>
+  <div class="options">
+    <div class="opt">
+      <div class="phone" aria-label="Wireframe: organizer locks with a nudge"><div class="bar"></div><div class="scr">
+        <div class="top"><span>‹</span><b>Golf soon?</b><span></span></div>
+        <div class="dim"></div>
+        <div class="sheet">
+          <div class="ph2">Sat Oct 25 works for 4 of 5</div>
+          <div class="sub">Jordan hasn't answered. Lock it in and they'll get the day with everyone else.</div>
+          <div class="card"><div class="row"><span class="k">Tee time</span><span class="v">8:40 AM</span></div></div>
+          <div class="btn" style="margin-top:4px">Lock in Saturday</div>
+          <div class="link">Wait for Jordan</div>
+        </div>
+      </div></div>
+      <div class="opt-label"><span class="rec">My recommendation</span><b>A. Organizer locks, the app nudges</b><p>When one day clearly leads, the organizer gets a nudge with the count. Locking texts the group and adds the tee time.</p></div>
+    </div>
+    <div class="opt">
+      <div class="phone" aria-label="Wireframe: auto lock at a deadline"><div class="bar"></div><div class="scr">
+        <div class="top"><span>‹</span><b>Golf soon?</b><span></span></div>
+        <div class="card">
+          <div class="row"><span class="k">Day</span><span class="tag t-vote">Voting</span></div>
+          <div class="sub">Voting closes Wed at 8 PM, or when everyone's answered. The top day wins.</div>
+        </div>
+        <div class="vote"><div class="line"><span>Sat Oct 25</span><span>4</span></div><div class="meter"><i style="width:80%"></i></div></div>
+        <div class="vote"><div class="line"><span>Sun Oct 26</span><span>1</span></div><div class="meter"><i style="width:20%"></i></div></div>
+      </div></div>
+      <div class="opt-label"><b>B. Closes on its own</b><p>A voting deadline, like GroupMe's polls. Hands-off, but ties and a late "actually I can't" need rules.</p></div>
+    </div>
+    <div class="opt">
+      <div class="phone" aria-label="Wireframe: anyone can lock"><div class="bar"></div><div class="scr">
+        <div class="top"><span>‹</span><b>Golf soon?</b><span></span></div>
+        <div class="card">
+          <div class="row"><span class="k">Day</span><span class="tag t-set">Sat Oct 25</span></div>
+          <div class="sub">Sam locked it in · Undo</div>
+        </div>
+        <div class="bubble"><small>Sam</small>Booked 8:40 at Riverside</div>
+      </div></div>
+      <div class="opt-label"><b>C. Anyone in the group</b><p>Whoever books the tee time locks it. Matches how groups really work, but two people could lock different days.</p></div>
+    </div>
+  </div>
+  <div class="pick" data-q="lock"></div>
+</section>
+
+<!-- D6 -->
+<section class="decision" aria-labelledby="d6">
+  <div class="dhead"><div class="eyebrow">Call 6 of 6</div><h3 id="d6">Where "Plan a round" lives</h3><p>Today it's under Play, after picking a game.</p></div>
+  <div class="options">
+    <div class="opt">
+      <div class="phone" aria-label="Wireframe: on Up next"><div class="bar"></div><div class="scr">
+        <div class="top"><b>Up next</b><span class="av a5">T</span></div>
+        <div class="card">
+          <div class="ph2">Get a round going</div>
+          <div class="sub">Ask the group, sort the day later.</div>
+          <div class="btn" style="margin-top:4px">Plan a round</div>
+        </div>
+        <div class="card">
+          <div class="ph2">Golf soon? <span class="tag t-vote">Day voting</span></div>
+          <div class="sub">3 in · Sat 25 leads</div>
+        </div>
+        <div class="sub" style="margin-top:auto">Lately</div>
+        <div class="card"><div class="sub">Sam paid you $15</div></div>
+      </div><div class="nav"><b>Up next</b><span>Tab</span><span>Play</span><span>History</span><span>Players</span></div></div>
+      <div class="opt-label"><span class="rec">My recommendation</span><b>A. Always on Up next</b><p>A "Get a round going" card stays on Up next even with a plan already going. Play keeps "Schedule for later" for a round you've started building.</p></div>
+    </div>
+    <div class="opt">
+      <div class="phone" aria-label="Wireframe: Play asks first"><div class="bar"></div><div class="scr">
+        <div class="top"><b>Play</b><span></span></div>
+        <div class="ph1">Playing now or later?</div>
+        <div class="card"><div class="ph2">Now</div><div class="sub">Pick a game and go</div></div>
+        <div class="card"><div class="ph2">Later</div><div class="sub">Ask the group, no date needed</div></div>
+      </div><div class="nav"><span>Up next</span><span>Tab</span><b>Play</b><span>History</span><span>Players</span></div></div>
+      <div class="opt-label"><b>B. Play asks first</b><p>The Play tab opens on "Now or later?". Clear, but adds a tap to every live round, which is the main job.</p></div>
+    </div>
+  </div>
+  <div class="pick" data-q="entry"></div>
+</section>
+
+<section class="stack" aria-labelledby="sum">
+  <div class="eyebrow">If you take every recommendation</div>
+  <h2 id="sum">The new flow</h2>
+  <div class="newflow">
+    <div class="nf"><span class="n">1</span><b>Plan a round</b><p>From Up next. One screen: a message, When / Where / Game and bet all "not yet" by default, who to ask.</p></div>
+    <div class="nf"><span class="n">2</span><b>Send</b><p>Group text or link. Friends tap I'm in and tick the days that work.</p></div>
+    <div class="nf"><span class="n">3</span><b>Sort it out</b><p>The plan page shows what's set, what's being voted on and what's open, with the chat under it.</p></div>
+    <div class="nf"><span class="n">4</span><b>Lock it in</b><p>The organizer locks the day when it's clear. Morning text and roll call work as now.</p></div>
+  </div>
+  <h3 style="margin-top:10px">What goes away</h3>
+  <ul class="cuts">
+    <li><b>Picking a game to get in.</b> The game becomes one row, defaulting to "Group picks".</li>
+    <li><b>The required day.</b> Set, a few options, or not sure yet.</li>
+    <li><b>The separate invite and ballot screens.</b> People are on the first screen; the ballot fills from what friends vote and suggest. The organizer can still seed it.</li>
+    <li><b>Nothing at the tee changes.</b> Roll call, Tee off and the voted game work the same once the day is locked.</li>
+  </ul>
+  <h3 style="margin-top:10px">Smaller questions for later</h3>
+  <ul class="cuts">
+    <li>Should a plan with no day nudge the organizer after a week ("Still want to play? 3 people said they're in")?</li>
+    <li>Course as a vote too, or just set or open?</li>
+    <li>Does a usual (your saved game set-up) fill the Game and bet row as the suggestion, as it does now?</li>
+  </ul>
+</section>
+
+</div>
+
+<script>
+const QS = { start: ['A', 'B', 'C'], when: ['A', 'B', 'C'], page: ['A', 'B'], friend: ['A', 'B'], lock: ['A', 'B', 'C'], entry: ['A', 'B'] };
+const answers = {};
+let db = null;
+const els = {};
+
+function render(q) {
+  const box = els[q]; if (!box) return;
+  const a = answers[q] || {};
+  box.querySelectorAll('button').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.v === a.choice)));
+  const ta = box.querySelector('textarea');
+  if (document.activeElement !== ta) ta.value = a.note || '';
+}
+
+function status(q, text) { const s = els[q]?.querySelector('.saved'); if (s) s.textContent = text; }
+
+async function save(q, patch) {
+  answers[q] = { ...(answers[q] || {}), ...patch };
+  render(q);
+  if (!db) { status(q, 'Saving is off in this view, so this answer stays on screen only.'); return; }
+  try { await db.collection('picks').doc(q).set({ ...answers[q], at: Date.now() }); status(q, 'Saved'); }
+  catch (e) { status(q, 'Couldn’t save that. ' + (e && e.message ? e.message : '')); }
+}
+
+document.querySelectorAll('.pick').forEach(box => {
+  const q = box.dataset.q; els[q] = box;
+  const opts = QS[q].map(v => `<button type="button" data-v="${v}" aria-pressed="false">${v}</button>`).join('');
+  box.innerHTML = `<div class="pick-row"><span class="eyebrow">My pick</span>${opts}<button type="button" data-v="mix" aria-pressed="false">A mix</button></div>
+    <label class="eyebrow" for="note-${q}">Note</label>
+    <textarea id="note-${q}" placeholder="What would you change?"></textarea>
+    <div class="saved" aria-live="polite"></div>`;
+  box.querySelectorAll('button').forEach(b => b.addEventListener('click', () => save(q, { choice: b.dataset.v })));
+  const ta = box.querySelector('textarea');
+  let t; ta.addEventListener('input', () => { clearTimeout(t); status(q, ''); t = setTimeout(() => save(q, { note: ta.value }), 700); });
+});
+
+(async () => {
+  try { db = await window.claude?.use?.('db'); } catch (e) { db = null; }
+  if (!db) return;
+  db.collection('picks').onSnapshot(snap => {
+    snap.docs.forEach(d => { if (QS[d.id]) { answers[d.id] = d.data() || {}; render(d.id); } });
+  }, () => {});
+})();
+</script>

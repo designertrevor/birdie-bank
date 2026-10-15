@@ -30,3 +30,11 @@ dist-ssr
 
 # Agent worktrees
 .claude/worktrees/
+
+# Design review images and HTML pages, kept on disk only (too big for git)
+/screenshots-for-illustration-brief/
+/overnight/illustration-run-1/
+/overnight/illustration-run-2/
+/overnight/layout-lab-current/
+/overnight/ILLUSTRATION-RUN-2-*.html
+/overnight/dark-mode-*.html

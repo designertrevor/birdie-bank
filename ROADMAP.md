@@ -12,6 +12,47 @@ The plan for growing Birdie Bank into a $10k/mo business, and the checklist we w
 - **Gates:** don't move to the next step until the current step's gate is met. Record when it is.
 - **Build what's asked for:** big features nobody has requested wait until the feedback (area 20) shows people want them.
 - **Quality is ongoing, not a gate:** bugs, a fluid experience, and the right features and games for each kind of user get attention in every step. Playing real rounds is how we find them, not something to wait on.
+- **Launch first:** the Launch list below is the short path to strangers paying. Work it before other open items. When one of its items ships, check off its line in the checklist as usual, then mark it Done in the Launch table and update the count.
+
+---
+
+## Launch
+
+The full checklist runs all the way to the $10k/mo future. This is the much shorter list of what strangers need to find the app, sign up, play a round and pay. Everything else waits until after launch. Added 2026-10-12 after the call with Nick Ugre (Squirrel, about $10k a month five months after launch), whose advice was to launch at 70% and let real users show what's missing.
+
+These rows point at checklist items rather than repeating them as checkboxes, so the checklist count stays honest. Status is Done, Partial or To do.
+
+**Progress:** web launch 194 of 208 (93%), App Store launch 194 of 212 (92%). The 194 is everything already shipped; the rest is below.
+
+**Web launch** (the web app as it is, paid through Stripe, shared by link)
+
+| # | What | Area | Status |
+|---|---|---|---|
+| 1 | Pick the final name and buy its domain (unblocks 2, 3, 13 and the store listing) | 16 | To do |
+| 2 | Quick logo and app icon, good enough to start | 16 | To do |
+| 3 | Custom email (SMTP) so sign-in emails reach anyone | 1 | To do |
+| 4 | A paid course search plan (the free plan is 35 searches a day across everyone) | 6 | Partial |
+| 5 | Decide the free and Pro split, and a launch price | 11 | To do |
+| 6 | Stripe on the web, with promo codes | 11 | To do |
+| 7 | The paywall and trial live at the end of organizer onboarding (built behind the flag) | 3, 11 | Partial |
+| 8 | The free promise shown for real | 11 | Partial |
+| 9 | Paywall rules: visible trial timeline, a reminder, no pop-ups mid-round, no surprise charge | 11 | Partial |
+| 10 | Your plan in Settings with real receipts and cancel | 11 | Partial |
+| 11 | Terms of service and privacy policy finished | 14 | Partial |
+| 12 | Support: the help link and a reply within a day | 15 | Partial |
+| 13 | A simple home page with pricing and legal links | 18 | To do |
+| 14 | A legal check of how betting is worded, before paying creators | 14 | To do |
+
+**App Store launch adds**
+
+| # | What | Area | Status |
+|---|---|---|---|
+| 15 | Sign in with Apple (Apple requires it when Google sign-in is offered) | 1 | To do |
+| 16 | App Store and Google Play apps (Capacitor wrapper) | 13 | To do |
+| 17 | In-app purchases through RevenueCat, with restore purchases | 11 | To do |
+| 18 | 6 to 8 store screenshot slides per store | 19 | To do |
+
+**Not needed for launch:** leagues, events and partners (pro shops, GHIN, tee times, trips, trophies); the wider friends feed, reputation and Find a game; Pro extras (Trip Pass, Split Pro on the Tab, the Record Book limit, the Bank collects, referrals, club captains, price tests); brand polish (final logo, the full illustration set, Lottie or Rive motion, the game colours redone, shareable templates, the preview video); Slack and the feedback automation; creator prep (deal pricing, the brief, finishing attribution), done right before S4; Live Activity, new games, shared hole fixes, the welcome email, universal links, the admin view, and the merge offer at sign-up. The art in the app now is good enough to launch with.
 
 ---
 
@@ -65,7 +106,9 @@ The plan for growing Birdie Bank into a $10k/mo business, and the checklist we w
 
 **The big date:** the creator test (S4) runs February to April 2027, when golf season starts back up. Everything before it is about being ready: a product groups keep using, a smooth path from video to paying, and an App Store app.
 
-Last updated: 2026-10-12 (splash screen shipped to main)
+**Launch comes first (2026-10-12):** the new Launch section above is the short list between today and strangers paying: 14 items for a web launch, 4 more for the App Store. The name is the first one, since it unblocks the logo, custom email and the home page.
+
+Last updated: 2026-10-12 (Launch section added, splash screen shipped to main)
 
 ---
 
@@ -392,7 +435,7 @@ Nothing is gated before launch (2026-09-29). Testers use everything; this area i
 - [x] `S1` Built on `feedback/design2` (2026-10-07, from Trevor): every entrance has its exit. Sheets, number pads and confirms slide back down as the scrim clears (`useExitGhost` in `ui.jsx`), screens leave the way they came through a stage (`Stage.jsx`: pushed screens slide in from the right and Back slides them out that side, tabs crossfade, the end-of-round beats slide too), and the side-bet card folds up when put away. Shipped to main 2026-10-07.
 - [ ] `S2` Quick logo and app icon (good enough to start). Moved out of S1 (2026-09-26) so it doesn't hold anything up, but do it early in S2, before organizer onboarding and the paywall.
 - [ ] `S2` Final logo: symbol plus the name set in type, and an app icon that stands out on a home screen
-- [ ] `S2` Brand foundations: colors, typography, voice and tone (friendly trash talk, never casino), a short brand guide
+- [ ] `S2` (partial) Brand foundations: colors, typography, voice and tone (friendly trash talk, never casino), a short brand guide. `BRAND.md` holds the brief from Trevor's 2026-10-07 interview (audience, moments, principles, visual and illustration direction, palette checked against Clay with no matches, name sweep with Teetab recommended). Still to do: the name decision, logo, and a proper type and voice guide (2026-10-07)
 - [x] `S2` Copy audit applied across the app: "group" (crew only for saved lists), "bets" not "stakes", "each player puts in" not "ante", "Gets 5 strokes" not "HC 5", one delete verb, and the money screen called the Tab. Deeper pink (#d42a6b) behind small white text (2026-09-27)
 - [x] `S2` Motion for the killer end-of-round moment: bets rise in as they resolve, totals count up and pop, the winner's row lifts with a pink glow, the title crossfades, and Reveal, Settle up and Share slide in. Tap to skip and reduced motion show the finished screen at once, and the reveal runs a little faster than before (2026-09-30). For filming: once the bets resolve the card tightens to one line a bet and every total lands on a phone screen (2026-09-30, Trevor's review)
 - [x] `S1` Floating sheets: every bottom sheet is a card inset 12px from the sides and the bottom, with 30px corners all round like the phone's own, the accent X to close, and its own raised surface (white over a dimmed page in light mode, a lighter gray with a faint edge over a darker scrim in dark mode) so the sheet's top edge never disappears. Text inside stays AA in both themes (from Trevor, 2026-10-06)
@@ -642,10 +685,12 @@ The audit found 60 ways to make the app calmer, clearer and worth a screenshot, 
 - 2026-10-07 (night): Groups B to F of Trevor's review done on `feedback/design2`: onboarding (group B), setup and Round ready (C), Up next and the light and dark themes with Mobbin references (D), the in-round and results items (E: critter fade, "Not this hole", the Halfway sheet, the reveal's smooth shrink, Back from the breakdown) and a motion pass from Trevor (F: every entrance has its exit). Group E ran as a remote agent, which turned out to draw on the same usage pool. Trevor settled every open call the same day (critter off follower phones, "Not this hole", no halfway moment on nine holes, the compact reveal layout stays gone, the side slide and the fold stay) and the two follow-ups shipped: the par 3 reason in the toast and the bets card's 36vh cap.
 - 2026-10-07 (night): The branch reviewed against main (24 commits, 72 files): no money or data bugs, nine findings, the five correctness ones fixed (the Up next card pile, the halfway card's totals, the "Send the group the link" first step, the score's live region), four cleanups noted in the feedback doc for later. Lint clean, 2,219 tests, production build fine. Ready to merge on Trevor's word.
 - 2026-10-07 (night): The design pass shipped to main from `feedback/design2` (fast-forward, 30 commits): Ball buddies for everyone, the spot illustrations, game art and scenes, the calmer notes and toasts, Round ready, the Round menu, Settings, Play, the results, Up next, the Tab, onboarding, the overnight 9 and 10 screens, Trevor's 28 review items with his calls, the motion exits and the five review fixes. Checklist: 175 of 276 done (63%).
+- 2026-10-07: Branding interview with Trevor, 12 questions, written up as `BRAND.md`: who it's for (Jackson's group), the app is at its best before and after the round, anticipation and competition without pressure, money as bragging rights, humor without cheese, ball buddies as garnish, warm retro look with modern golf culture. Palette checked against Clay's stylesheet: no matching values, nothing to change. Name sweep: Teetab clean everywhere and recommended, Teepals weak (pending TEE PAL mark, PayPal -pal risk), Teepot cut (live competitor). Area 16 brand foundations marked partial.
 - 2026-10-08 (night): Overnight 11 built locally on `overnight11/next` (ten items, six agents in their own worktrees, each branch lint, test and build clean before its merge): the first screen 510 kB to 377 kB with the four review cleanups, the four unseen screens checked with a seeded crew (year in review spacing fixed, a dev switch for the heads-up sheet), "Tees off Fri" trip standings, the trial on both plans, the age sheet's X, Share the rivalry, notification settings with its SQL, requests on the roadmap and the shipped note for courses too, and the Oura pass on the data screens (14 Oura screens from Mobbin). A review of the first four branches found no blockers; its one finding (push picks compared the phone's clock to the server's) fixed. Tests: 2,273 passing. Nothing checked off until it merges to main.
 - 2026-10-09 (night): Overnight 12 built locally on `overnight12/next`, branched from `overnight11/next` since overnight 11 wasn't reviewed yet (five agents on Opus in their own worktrees, each branch lint, test and build clean before its merge): the race on the reveal, the cheering winner on the results image, the game's theme in the round, on the reveal and the share card, the Mobbin pass on Play, Round ready, Hall of fame and What's new, Pro for life (SQL), Your plan and the cancel screen, Sentry and PostHog behind env vars with a Share usage data switch, creator codes (SQL), optional sounds, and the hosting review. The nine overnight 11 lines were put back in the house order (own words first, built note after), which had broken the public roadmap's titles and vote ids. A review of the merged diff found no money or security bugs and fixed four (usage counts queued while sharing was off, Sentry session pings after the switch went off, Reset to defaults turning Sounds off, lifetime holders counted as paywall views). Tests: 2,351 passing. First screen 379 kB of 481. Checklist: 175 of 276 now; 184 if overnight 11 ships, 194 (70.3%) if both ship.
 - 2026-10-10: Overnights 11 and 12 shipped to main (fast-forward of `overnight12/next`) with Trevor's answers to both review queues: the Hole tile back to mint and the hole tiles square, the trend says Slipping, the heads-up sheet's X replaces Not now, and two new lines (the shipped-idea push as a daily cron, the game colours redone with the new illustration set). Tests: 2,351 passing. First screen 379 kB of 481. Three SQL files to run. Checklist: 194 of 278 done (69.8%), up from 175 of 276 (63.4%).
 - 2026-10-12: Splash screen shipped to main (from Trevor): a cold start showed a blank screen while the outside fonts and icon styles loaded; they no longer block the first paint, and the page draws the ball and name right away until the app is ready.
+- 2026-10-12: Added the Launch section after Trevor's call with Nick Ugre (launch at 70%, paywall from day one). It sorts the 84 open checklist items into what launch needs (14 for a web launch, 4 more for the App Store, mostly the name, payments, legal and store items) and what waits until after. Web launch 194 of 208 (93%), App Store launch 194 of 212 (92%). The full checklist is unchanged at 194 of 278.
 - 2026-10-14: Trevor played Best ball 2v2 at Logan River (back nine) with friends. Feedback: the share link failed ("Couldn't start sharing"), the bug report never reached him, 9/18 was buried under the games, nine tee chips per player, no way to set a friend's handicap in setup, and no scores on the share. Built and shipped to main the same day: holes, which nine and the start hole up top on the Course step, a tee dropdown and an Index chip on each player (with better contrast on the picked card), Show scores on the results image and text, an email for each feedback message (needs Resend and a webhook), and the real error attached to bug reports with one retry on a dropped connection. The share failure didn't reproduce in a test of the same setup, so the next report will say why. Tests: 2,353 passing.
 - 2026-10-14: Setup follow-ups from Trevor shipped to main: any start hole for a shotgun start right under Holes, and a tee sheet in place of the phone's picker. Then Just playing moved off the player card into a ⋯ menu in its corner (with Take out of this round), and the "Someone not up for a bet?" prompt above the list is gone, since nearly everyone in a round is betting. Also dropped an unused import in onboarding that left local dev on the splash screen. Tests: 2,353 passing. Checklist: 201 of 285 (70.5%).
 - 2026-10-14: More setup feedback from Trevor shipped to main: HCP instead of Index across the app, no course handicap chip on the player cards, the no-handicap warning under the Players heading, the Rules pill's fill on a picked game, and the starting hole sheet in two columns (1 to 9, 10 to 18). Tests: 2,353 passing. Checklist: 202 of 286 (70.6%).
