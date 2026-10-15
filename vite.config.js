@@ -13,8 +13,9 @@ import { TERMS_FILE, TERMS_PATH, renderTermsPage } from './src/lib/terms-page.js
 import { fillSupportEmail } from './src/lib/support.js'
 
 // Files the service worker should not save for offline use
-// (and not the public rule pages, sitemap or robots.txt: they're web pages, not the app)
-const SKIP = /(^|\/)(sw\.js|prototype\.html)$|\.map$|^rules\/|^(sitemap\.xml|robots\.txt|version\.json|terms\.html)$/;
+// (and not the public rule pages, sitemap or robots.txt: they're web pages, not the app; nor the iPhone
+// launch images, since iOS fetches only the one for its own screen, scripts/splash-images.mjs)
+const SKIP = /(^|\/)(sw\.js|prototype\.html)$|\.map$|^rules\/|^splash\/|^(sitemap\.xml|robots\.txt|version\.json|terms\.html)$/;
 // The JS the first screen (Up next) waits for: the entry and what it imports up front. Main was
 // 481 kB before overnight 8 split the later parts of Up next out; a build over it says so.
 const FIRST_SCREEN_BUDGET = 481_000;
