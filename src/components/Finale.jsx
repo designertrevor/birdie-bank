@@ -8,8 +8,8 @@ import { useArtSrc } from '../lib/useArtSrc.js';
 import { gameTheme } from '../lib/game-theme.js';
 import './finale.css';
 import { useEffect, useRef, useState } from 'react';
-import { Header, Icon, useUI } from './ui.jsx';
-import { getState, useStore } from '../lib/store.js';
+import { Header, Icon, Toggle, useUI } from './ui.jsx';
+import { getState, update, useStore } from '../lib/store.js';
 import { roundResults } from '../lib/round.js';
 import { money } from '../lib/golf.js';
 import { payInfoFor } from '../lib/pay.js';
@@ -18,7 +18,7 @@ import { Avatar } from './Avatar.jsx';
 import { useGroupAvatars } from '../lib/useAvatars.js';
 import { buzz, confettiFrom } from '../lib/delight.js';
 import { sound } from '../lib/sound-play.js';
-import { gameLabel, meFor, roundDate, roundPlayerName, shareText } from '../lib/format.js';
+import { gameLabel, meFor, roundDate, roundPlayerName, scoreLine, shareText } from '../lib/format.js';
 import { gamesLine } from '../lib/side-games.js';
 import { markRoundAsked, roundAsked, submitReaction } from '../lib/feedback.js';
 import { codeOf } from '../lib/shared-tab.js';
@@ -389,9 +389,11 @@ export function ShareCard({ round, res, onBack, onDone, doneLabel = 'Done' }) {
   const theme = gameTheme(round.game);
   const [cheer, grabCheer] = useArtSrc();
   const [game, grabGame] = useArtSrc();
+  // Show scores: on until you turn it off, then remembered (Trevor 2026-10-14: the group wanted the golf, not just the bet)
+  const scoresOn = useStore().settings.shareScores !== false;
   const make = show => {
-    const model = shareCardModel(round, results, { showAmounts: show, link, art: { cheer: buddies.length ? cheer : null, game } });
-    return { model, alt: resultsAlt(model), text: shareText(round, res, { amounts: show }) };
+    const model = shareCardModel(round, results, { showAmounts: show, showScores: scoresOn, link, art: { cheer: buddies.length ? cheer : null, game } });
+    return { model, alt: resultsAlt(model), text: shareText(round, res, { amounts: show, scores: scoresOn }) };
   };
   return (
     <>
@@ -400,7 +402,11 @@ export function ShareCard({ round, res, onBack, onDone, doneLabel = 'Done' }) {
     <ShareView title="Share" onBack={onBack} onDone={onDone} doneLabel={doneLabel} make={make} render={renderResultsCard}
       fileName={shareImageName(round)} link={link} what="Results" money={countsMoney(round)} people={bettors(round)}
       onText="Dollar figures are on the image" offText="Only the order and the bets, no money"
-      standIn={(m, show) => <ResultsStandIn round={round} res={res} show={show} />}>
+      standIn={(m, show) => <ResultsStandIn round={round} res={res} show={show} scores={scoresOn} />}>
+      <div className="toggle-row share-toggle">
+        <div><div className="toggle-lbl" id="share-scores">Show scores</div><div className="toggle-sub">{scoresOn ? 'Everyone’s total and score to par are on the image' : 'Only the result of the bets'}</div></div>
+        <Toggle on={scoresOn} onChange={on => update(s => { s.settings.shareScores = !!on; })} labelledBy="share-scores" />
+      </div>
       <HowWasIt round={round} />
     </ShareView>
     </>
@@ -411,7 +417,7 @@ export function ShareCard({ round, res, onBack, onDone, doneLabel = 'Done' }) {
 const STAND_IN_BUDDIES = ['visor', 'snapback', 'bucket', 'flatcap'];
 
 /** The results card in plain boxes while the image is being drawn. */
-function ResultsStandIn({ round, res, show }) {
+function ResultsStandIn({ round, res, show, scores = false }) {
   const fmt = unitFmt(round);
   const reward = rewardOutcome(round, res);
   // Everyone tied for the top, so a shared win isn't credited to whoever sorted first
@@ -424,7 +430,7 @@ function ResultsStandIn({ round, res, show }) {
       {reward && <div className="sc-meta">{reward.text}</div>}
       <div className="sc-list">
         {res.standings.map(p => (
-          <div key={p.id} className="sc-line"><span>{p.name}</span>{show && <span>{fmt(p.amount, { sign: true })}</span>}</div>
+          <div key={p.id} className="sc-line"><span>{p.name}{scores && scoreLine(round, p.id) ? <span className="sc-score"> {scoreLine(round, p.id)}</span> : null}</span>{show && <span>{fmt(p.amount, { sign: true })}</span>}</div>
         ))}
       </div>
     </div>

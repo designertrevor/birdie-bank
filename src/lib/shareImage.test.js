@@ -111,3 +111,18 @@ test('the pictures ride along, and amounts hidden stay hidden with them on', () 
   assert.equal(plain.art, null);
   assert.doesNotMatch(resultsAlt(plain), /crown/);
 });
+
+test('show scores puts each player total and to par on the card, the alt text and nothing when off', () => {
+  const r = mk('nassau', 2);
+  for (let h = 1; h <= 9; h++) r.scores[h] = { a: h <= 4 ? 3 : 4, b: 5 };
+  const on = shareCardModel(r, roundResults(r), { showScores: true });
+  assert.deepEqual(on.standings.map(p => p.score), ['32 (-4)', '45 (+9)']);
+  assert.match(resultsAlt(on), /Ann Lee shot 32 \(-4\)/);
+  assert.deepEqual(shareCardModel(r, roundResults(r)).standings.map(p => p.score), [null, null]);
+});
+
+test('a score part way through says how many holes it covers', () => {
+  const r = mk('nassau', 2);
+  for (let h = 1; h <= 3; h++) r.scores[h] = { a: 4, b: 4 };
+  assert.equal(shareCardModel(r, roundResults(r), { showScores: true }).standings[0].score, '12 (E), 3 holes');
+});

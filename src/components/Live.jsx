@@ -10,6 +10,7 @@ import { gameLabel } from '../lib/format.js';
 import { useNav } from '../lib/nav.js';
 import { useGroupAvatars } from '../lib/useAvatars.js';
 import { AvatarArt } from './Avatar.jsx';
+import { isNetworkError, noteError } from '../lib/recent-errors.js';
 
 /**
  * What to say when sharing fails: our own plain messages ("Shared scoring isn’t set up yet") as
@@ -20,6 +21,7 @@ function plainError(e, fallback) {
   const m = String(e?.message || '');
   if (/isn’t set up yet|^Round not found$/.test(m)) return m === 'Round not found' ? 'No round with that code. Check it with the scorekeeper.' : `${m}.`;
   if (typeof navigator !== 'undefined' && navigator.onLine === false) return 'No signal. Try again when you’re back online.';
+  if (isNetworkError(e)) return 'Weak signal, so it didn’t go through. Try again in a moment.';
   return fallback;
 }
 
@@ -57,7 +59,19 @@ export function ShareSheet({ round, open, onClose }) {
   const start = async () => {
     setBusy(true);
     try { await shareRound(round.id); }
-    catch (e) { showToast(plainError(e, 'Couldn’t start sharing. Try again.')); }
+    catch (e) {
+      // A dropped connection on the course is the usual cause: try once more before saying so
+      let err = e;
+      if (isNetworkError(e)) {
+        await new Promise(r => setTimeout(r, 1500));
+        try { await shareRound(round.id); err = null; } catch (e2) { err = e2; }
+      }
+      if (err) {
+        // The real cause goes with the next bug report (feedback.js), the golfer gets the plain version
+        noteError('share-round', err);
+        showToast(plainError(err, 'Couldn’t start sharing. Try again.'));
+      }
+    }
     setBusy(false);
   };
   const send = async () => {

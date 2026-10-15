@@ -16,6 +16,7 @@ import { recordOn, refreshBig } from './big-sync.js';
 import { changesReach } from './big-sync-model.js';
 import { codeOf } from './pair-debts.js';
 import { isoDate } from './plans.js';
+import { noteError } from './recent-errors.js';
 
 /** Whether a change to the game from this phone reaches every phone in it now (big-sync-model.js changesReach). */
 export const bigChangesReach = (state, tripId) => changesReach(state, tripId, recordOn());
@@ -178,7 +179,7 @@ export async function shareGroups(tripId) {
     const r = g.roundId ? s.rounds[g.roundId] : null;
     if (!r) continue;
     if (codeOf(r)) { codes[g.id] = codeOf(r); continue; }
-    try { codes[g.id] = await shareRound(r.id); } catch { /* no signal: try again from the game's page */ }
+    try { codes[g.id] = await shareRound(r.id); } catch (e) { noteError('share-big-game', e); } // try again from the game's page
   }
   const changed = big.groups.some(g => codes[g.id] && codes[g.id] !== g.code);
   if (changed) editBig(tripId, b => ({ ...b, groups: b.groups.map(g => ({ ...g, code: codes[g.id] || g.code })) }));

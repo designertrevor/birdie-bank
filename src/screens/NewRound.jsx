@@ -399,7 +399,7 @@ export default function NewRound({ rematch, fromPlan, present, edit = null, ahea
     const players = orderedPicked.map(pid => ({ ...s.players[pid], tee: tees[pid] || defaultTee, courseHcOverride: hcOverride[pid] }));
     // Share-image choice and the side bet card are personal settings, not part of a round's bets
     // Half strokes are this round's choice, never next time's default
-    const { shareAmounts: _personal, betPrompt: _prompt, halfStrokes: _half, ...settings } = structuredClone(opts);
+    const { shareAmounts: _personal, shareScores: _scores, betPrompt: _prompt, halfStrokes: _half, ...settings } = structuredClone(opts);
     const sides = sidesFor(game);
     const halfStrokes = !!opts.halfStrokes && halfStrokesOffered(game, sides);
     // Team quota (a Quota house rule) is played in teams too, when it's on; only the betting players count
@@ -548,7 +548,7 @@ export default function NewRound({ rematch, fromPlan, present, edit = null, ahea
           )}
         </>
       ) : <Header title="Round ready" small onClose={() => nav.reset('upnext')} />}
-      {step === 0 && <GameStep usual={planning || (usual && matchingUsual(state, usual.round)) ? null : usual} onUsual={repeatUsual} onPickUsual={planning ? planUsual : pickUsual} planning={planning} onPlan={fromPlan ? null : () => { setMode('plan'); setBuilt(false); setReached(0); setStep(1); }} game={game} setGame={gm => { setGame(gm); if (gm && !GAMES[gm].holes.includes(holesCount)) setHolesCount(GAMES[gm].holes[0]); }} holesCount={holesCount} setHolesCount={setHolesCount} onNext={() => setStep(1)} />}
+      {step === 0 && <GameStep usual={planning || (usual && matchingUsual(state, usual.round)) ? null : usual} onUsual={repeatUsual} onPickUsual={planning ? planUsual : pickUsual} planning={planning} onPlan={fromPlan ? null : () => { setMode('plan'); setBuilt(false); setReached(0); setStep(1); }} game={game} setGame={gm => { setGame(gm); if (gm && !GAMES[gm].holes.includes(holesCount)) setHolesCount(GAMES[gm].holes[0]); }} onNext={() => setStep(1)} />}
       {step === 1 && planning && (
         <CourseStep editor={editor} openEditor={openEditor} closeEditor={closeEditor} courseId={courseId} setCourseId={id => { setCourseId(id); setTees({}); setStartHole(null); }} holesCount={holesCount} nine={nine} setNine={setNine} onNext={editing ? savePlan : () => setStep(2)}
           nextLabel={editing ? 'Save changes' : 'Next: Who’s invited'} nextIcon={editing ? 'check' : 'arrow-right'}
@@ -561,7 +561,8 @@ export default function NewRound({ rematch, fromPlan, present, edit = null, ahea
       )}
       {step === 2 && planning && <InviteStep invited={invited} setInvited={setInvited} onNext={() => setStep(3)} />}
       {step === 3 && planning && <VoteStep game={game} holesCount={holesCount} opts={opts} onPlan={makePlan} ballot={ballot} initialSides={planSides.length ? planSides : sidesFor(game).map(sg => sg.game)} playFor={playFor} setPlayFor={setPlayFor} tripRow={tripRow} />}
-      {step === 1 && !planning && <CourseStep editor={editor} openEditor={openEditor} closeEditor={closeEditor} courseId={courseId} setCourseId={id => { setCourseId(id); setTees({}); setStartHole(null); }} holesCount={holesCount} nine={nine} setNine={setNine} onNext={() => setStep(2)} />}
+      {step === 1 && !planning && <CourseStep editor={editor} openEditor={openEditor} closeEditor={closeEditor} courseId={courseId} setCourseId={id => { setCourseId(id); setTees({}); setStartHole(null); }} holesCount={holesCount} nine={nine} setNine={setNine}
+        game={g} setHolesCount={setHolesCount} startHole={startHole} setStartHole={setStartHole} onNext={() => setStep(2)} />}
       {step === 2 && !planning && course && (
         <PlayersStep game={g} gameKey={game} course={course} holesCount={holesCount} nine={nine} picked={picked} setPicked={setPicked}
           tees={tees} setTees={setTees} hcOverride={hcOverride} setHcOverride={setHcOverride}
@@ -582,10 +583,9 @@ export default function NewRound({ rematch, fromPlan, present, edit = null, ahea
 
 // ---------------------------------------------------------------------------
 
-function GameStep({ usual, onUsual, onPickUsual, planning, onPlan, game, setGame, holesCount, setHolesCount, onNext }) {
+function GameStep({ usual, onUsual, onPickUsual, planning, onPlan, game, setGame, onNext }) {
   const nav = useNav();
   const [rules, setRules] = useState(null);
-  const g = game && GAMES[game];
   const u = usual?.round;
   const state = useStore();
   // Your games: what you've played lately, then what you said your group plays, at most four
@@ -658,7 +658,6 @@ function GameStep({ usual, onUsual, onPickUsual, planning, onPlan, game, setGame
         <button className="quiet-row" onClick={() => nav.push('suggest', { kind: 'game' })}>
           <Icon name="chat-circle-dots" /> <span>Don’t see your game? <u>Tell us how it’s played</u></span>
         </button>
-        {!planning && <HolesPicker game={g} holesCount={holesCount} setHolesCount={setHolesCount} />}
       </div>
       <div className="cta-wrap">
         <button className="full-btn" disabled={!game} onClick={onNext}>{game ? <>{planning ? 'Next: When' : 'Next: Course'} <Icon name="arrow-right" /></> : 'Pick a game'}</button>
@@ -679,7 +678,7 @@ const CourseEdit = lazy(() => import('./Settings.jsx').then(m => ({ default: m.C
  * `onSkip`: planning ahead, the course can wait ("Course to be set" on the plan), so the way
  * forward never depends on knowing it yet.
  */
-export function CourseStep({ editor, openEditor, closeEditor, courseId, setCourseId, holesCount, nine, setNine, onNext, top = null, nextLabel = 'Next: Players', nextIcon = 'arrow-right', onSkip = null, skipLabel = 'Decide the course later' }) {
+export function CourseStep({ editor, openEditor, closeEditor, courseId, setCourseId, holesCount, nine, setNine, game = null, setHolesCount = null, startHole = null, setStartHole = null, onNext, top = null, nextLabel = 'Next: Players', nextIcon = 'arrow-right', onSkip = null, skipLabel = 'Decide the course later' }) {
   const state = useStore();
   const [q, setQ] = useState('');
   const searchRef = useRef(null);
@@ -777,6 +776,22 @@ export function CourseStep({ editor, openEditor, closeEditor, courseId, setCours
     <>
       <div className="scroll">
         {top}
+        {/* How much of the course: up top, so a back-nine round is set before anything else (Trevor's round, 2026-10-14) */}
+        {setHolesCount && <HolesPicker game={game} holesCount={holesCount} setHolesCount={setHolesCount} />}
+        {holesCount === 9 && (!course || course.holes.length === 18) && (
+          <div className="block">
+            <div className="eyebrow" style={{ marginBottom: 10 }}>Which nine?</div>
+            <Segmented label="Which nine" value={nine} onChange={setNine} options={[{ value: 'front', label: 'Front 9' }, { value: 'back', label: 'Back 9' }]} />
+          </div>
+        )}
+        {/* 18 starting on the back: the common case gets a switch here, any other hole is in More options */}
+        {setStartHole && course && holesCount === 18 && course.holes.length === 18 && (startHole == null || startHole === 1 || startHole === 10) && (
+          <div className="block">
+            <div className="eyebrow" style={{ marginBottom: 10 }}>Tee off on</div>
+            <Segmented label="Tee off on" value={startHole === 10 ? 10 : 1} onChange={no => setStartHole(no === 1 ? null : no)} options={[{ value: 1, label: 'Hole 1' }, { value: 10, label: 'Hole 10' }]} />
+          </div>
+        )}
+        {tooShort && <p className="hint-card"><Icon name="info" fill /> {course.name} has 9 holes, so you’ll play it twice for 18.</p>}
         <div style={{ padding: '4px 16px 8px' }}>
           <label className="sr-only" htmlFor="course-q">Search courses</label>
           <input id="course-q" ref={searchRef} className="search-box" type="search" placeholder="Search courses or cities" value={q} onChange={e => setQ(e.target.value)} />
@@ -790,13 +805,6 @@ export function CourseStep({ editor, openEditor, closeEditor, courseId, setCours
         {needle && more.length > 0 && <><div className="sec-label">More courses{api.loading ? ' · searching' : ''}</div><div style={{ padding: '0 16px' }}>{more.map(apiRow)}</div></>}
         {matches.length === 0 && more.length === 0 && !api.loading && <RequestCourse query={q} onAddYourself={openEditor} />}
         <button className="add-row" aria-label="Add a course" onClick={() => openEditor({})}><span className="add-ci" aria-hidden="true"><Icon name="plus" /></span><span className="add-lbl">Add a course</span></button>
-        {course && holesCount === 9 && course.holes.length === 18 && (
-          <div className="block">
-            <div className="eyebrow" style={{ marginBottom: 10 }}>Which nine?</div>
-            <Segmented label="Which nine" value={nine} onChange={setNine} options={[{ value: 'front', label: 'Front 9' }, { value: 'back', label: 'Back 9' }]} />
-          </div>
-        )}
-        {tooShort && <p className="hint-card"><Icon name="info" fill /> {course.name} has 9 holes, so you’ll play it twice for 18.</p>}
       </div>
       <div className="cta-wrap">
         {course
@@ -826,6 +834,7 @@ function PlayersStep({ game, gameKey, course, holesCount, nine, picked, setPicke
   const crews = Object.values(state.crews);
   const [adding, setAdding] = useState(false);
   const [hcFor, setHcFor] = useState(null);
+  const [indexFor, setIndexFor] = useState(null);
   const holes = useMemo(() => holesInPlay(course, holesCount, nine), [course, holesCount, nine]);
   // Past the game's own cap when the extra people can be just playing (just-playing.js)
   const most = maxPicked(gameKey);
@@ -897,23 +906,31 @@ function PlayersStep({ game, gameKey, course, holesCount, nine, picked, setPicke
                   <Avatar id={p.id} name={p.name} />
                   <div className="row-main">
                     <div className="li-name">{playerLabel(p, state.me)}</div>
-                    <div className="li-sub">{casual ? JUST_PLAYING : p.index == null ? 'No handicap index' : `Index ${formatIndex(p.index)}`}</div>
+                    {/* Once picked, the Index chip below says it, so the line only shows on the people not in yet */}
+                    {(casual || !on || noHandicaps) && <div className="li-sub">{casual ? JUST_PLAYING : p.index == null ? 'No handicap index' : `Index ${formatIndex(p.index)}`}</div>}
                   </div>
                   <PickMark on={on} />
                 </button>
                 {on && (
                   <div className="pick-extra">
-                    {course.tees?.length > 0 && (
-                      <div className="tee-chips" role="radiogroup" aria-label={`${p.name}’s tee`}>
-                        {course.tees.map(t => {
-                          const active = (tees[p.id] || firstTee(course).name) === t.name;
-                          return (
-                            <button key={t.name} role="radio" aria-checked={active} className={`tee-chip ${active ? 'active' : ''}`} onClick={() => setTees({ ...tees, [p.id]: t.name })}>
-                              <span className="tee-dot" style={teeDotStyle(t)} />{t.name}{t.slope ? '' : ' (no slope)'}
-                            </button>
-                          );
-                        })}
-                      </div>
+                    {/* One tee for the group is the usual, so it's a quiet dropdown, not a chip per tee (Trevor, 2026-10-14) */}
+                    {course.tees?.length > 1 && (() => {
+                      const cur = course.tees.find(t => t.name === (tees[p.id] || firstTee(course).name)) || firstTee(course);
+                      return (
+                        <label className="hc-chip tee-select">
+                          <span className="tee-dot" style={teeDotStyle(cur)} />{cur.name} tees <Icon name="caret-down" />
+                          <select aria-label={`${p.name}’s tee`} value={cur.name} onChange={e => setTees({ ...tees, [p.id]: e.target.value })}>
+                            {course.tees.map(t => <option key={t.name} value={t.name}>{t.name}{t.slope ? '' : ' (no slope)'}</option>)}
+                          </select>
+                        </label>
+                      );
+                    })()}
+                    {/* Their index, set or fixed right here and kept on the player for next time, for friends without an account */}
+                    {!noHandicaps && !casual && (
+                      <button className={`hc-chip ${p.index == null && showHc ? 'missing' : ''}`} onClick={() => setIndexFor(p.id)}
+                        aria-label={p.index == null ? `${p.name}’s handicap index: add one` : `${p.name}’s handicap index ${formatIndex(p.index)}. Change it`}>
+                        {p.index == null ? <>Add index <Icon name="plus" /></> : <>Index <strong>{formatIndex(p.index)}</strong> <Icon name="pencil-simple" /></>}
+                      </button>
                     )}
                     {/* Out of every bet: a selection chip like the tee's, filled with a check when it's on */}
                     {casualOk && (bettingCount > 1 || casual) && (
@@ -932,8 +949,8 @@ function PlayersStep({ game, gameKey, course, holesCount, nine, picked, setPicke
         <button className="add-row" aria-label="Add a player" onClick={() => setAdding(true)}><span className="add-ci" aria-hidden="true"><Icon name="plus" /></span><span className="add-lbl">Add a player</span></button>
         {noHc.length > 0 && (
           <p className="hint-card warn"><Icon name="warning" fill /> {noHc.length === picked.length
-            ? 'Nobody has a handicap yet, so nobody gets strokes. Tap a course handicap to set it.'
-            : `${listNames(noHc.map(pid => state.players[pid]?.name || '?'))} ${noHc.length === 1 ? 'has' : 'have'} no handicap, so they play as scratch (0) and everyone else gets strokes from them. Tap a course handicap to set it.`}</p>
+            ? 'Nobody has a handicap yet, so nobody gets strokes. Tap Add index on each player to set one.'
+            : `${listNames(noHc.map(pid => state.players[pid]?.name || '?'))} ${noHc.length === 1 ? 'has' : 'have'} no handicap, so they play as scratch (0) and everyone else gets strokes from them. Tap Add index to set one.`}</p>
         )}
       </div>
       <div className="cta-wrap">
@@ -942,6 +959,14 @@ function PlayersStep({ game, gameKey, course, holesCount, nine, picked, setPicke
       <QuickAddPlayer open={adding} onClose={() => setAdding(false)} onAdded={pid => { setAdding(false); if (picked.length < most) setPicked([...picked, pid]); }} />
       <Numpad open={!!hcFor} title={`${state.players[hcFor]?.name}’s ${holesCount === 9 ? '9-hole ' : ''}course handicap`} initial={hcFor ? courseHc(hcFor).value : ''} allowNegative min={-10} max={60}
         onClose={() => setHcFor(null)} onDone={v => { setHcOverride({ ...hcOverride, [hcFor]: v }); setHcFor(null); }} />
+      <Numpad open={!!indexFor} title={`${state.players[indexFor]?.name}’s handicap index`} initial={indexFor ? state.players[indexFor]?.index ?? '' : ''} allowDecimal allowNegative min={-10} max={54}
+        onClose={() => setIndexFor(null)} onDone={v => {
+          const pid = indexFor;
+          // A new index replaces any course handicap typed in for this round, so the strokes follow it
+          update(s => { if (s.players[pid]) s.players[pid].index = v; });
+          if (hcOverride[pid] != null) { const { [pid]: _gone, ...rest } = hcOverride; setHcOverride(rest); }
+          setIndexFor(null);
+        }} />
     </>
   );
 }

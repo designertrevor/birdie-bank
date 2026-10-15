@@ -74,12 +74,24 @@ export function placeOf(standings, i) {
  * settle-up. Points are bragging rights, so a points or reward round always shows them, and a
  * reward round adds who wins it and who's buying.
  */
-export function shareText(round, res, { amounts = true } = {}) {
+/** A player's (or a team's) total and to par over the holes they scored: "38 (+2)", "71 (E)". Null with nothing scored. */
+export function scoreLine(round, pid) {
+  const { gross, played } = scoreSummary(round, pid);
+  if (!played) return null;
+  const par = round.holes.filter(h => round.scores[h.no]?.[pid] != null).reduce((a, h) => a + h.par, 0);
+  const d = gross - par;
+  return `${gross} (${d === 0 ? 'E' : d > 0 ? `+${d}` : `-${-d}`})${played < round.holes.length ? `, ${played} holes` : ''}`;
+}
+
+export function shareText(round, res, { amounts = true, scores = false } = {}) {
   const lines = [`${gameLabel(round)} at ${round.course.name} · ${roundDate(round)}`];
   const isMoney = countsMoney(round);
   const show = amounts || !isMoney;
   const fmt = unitFmt(round);
-  res.standings.forEach((p, i) => lines.push(show ? `${placeOf(res.standings, i)}. ${p.name} ${fmt(p.amount, { sign: true })}` : `${placeOf(res.standings, i)}. ${p.name}`));
+  res.standings.forEach((p, i) => {
+    const shot = scores && scoreLine(round, p.id);
+    lines.push(`${placeOf(res.standings, i)}. ${p.name}${shot ? `, shot ${shot}` : ''}${show ? ` ${fmt(p.amount, { sign: true })}` : ''}`);
+  });
   const reward = rewardOutcome(round, res);
   if (reward) lines.push('', reward.text);
   else if (playForOf(round).kind === 'points') lines.push('', 'Played for bragging rights');

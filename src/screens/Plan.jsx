@@ -44,6 +44,7 @@ import { betPeople } from '../lib/pair-bets.js';
 import { useAgeCheck } from '../components/AgeCheck.jsx';
 import { needsAgeCheck } from '../lib/age.js';
 import { notifyMoment, pushRsvp } from '../lib/push-client.js';
+import { noteError } from '../lib/recent-errors.js';
 
 const first = name => String(name || '').trim().split(/\s+/)[0];
 const listNames = n => (n.length < 2 ? n.join('') : `${n.slice(0, -1).join(', ')} and ${n.at(-1)}`);
@@ -548,7 +549,7 @@ export function RollCall({ id }) {
     editPlan(id, p => { p.status = 'started'; p.roundId = rid; }).then(r => { if (r === 'taken') showToast(PLAN_LOCKED); });
     // Friends on the plan can follow the round live from the same page
     if (plan.code && syncConfigured) {
-      shareRound(rid).then(code => editPlan(id, p => { p.liveCode = code; })).catch(() => { /* the round still starts; share it from the round menu */ });
+      shareRound(rid).then(code => editPlan(id, p => { p.liveCode = code; })).catch(e => noteError('share-plan-round', e)); // the round still starts; share it from the round menu
     }
     nav.reset('upnext', ['play', { id: rid }]);
   };
