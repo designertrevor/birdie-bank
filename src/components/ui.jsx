@@ -503,12 +503,12 @@ export function PickRow({ on, onClick, title, sub, lead, radio = false, add = !r
  * in a tight grid (hole numbers), where the fill alone reads and the width has to hold. An `icon`
  * shows while it's off and gives way to the check once picked, so a chip never wears two icons.
  */
-export function PickChip({ on, onClick, radio = false, small = false, check = true, icon, disabled, label, title, className = '', children }) {
+export function PickChip({ on, onClick, radio = false, small = false, check = true, icon, iconFill = true, disabled, label, title, className = '', children }) {
   const a11y = radio ? { role: 'radio', 'aria-checked': !!on } : { 'aria-pressed': !!on };
   return (
     <button type="button" className={`pill-btn pick-chip ${small ? 'sm' : ''} ${on ? 'on' : ''} ${className}`} disabled={disabled} onClick={onClick}
       aria-label={label} title={title} {...a11y}>
-      {check && on ? <Icon name="check" className="pc-check" /> : icon ? <Icon name={icon} fill /> : null}
+      {check && on ? <Icon name="check" className="pc-check" /> : icon ? <Icon name={icon} fill={iconFill} /> : null}
       {children}
     </button>
   );

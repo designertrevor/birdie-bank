@@ -2,7 +2,7 @@
 // them), your name with the friendly wagers note, then "Here's your group", which leads into
 // setting up the next round (the plan flow: the organizer suggests, the group votes) and, when
 // the flag is on, the paywall. Invited players arrive from a link and skip all of this.
-import { Spot, SpotScene } from '../components/Spot.jsx';
+import { Spot } from '../components/Spot.jsx';
 import { GameArt } from '../components/GameArt.jsx';
 import { Scene, sceneShows } from '../components/Scenes.jsx';
 import { useEffect, useState } from 'react';

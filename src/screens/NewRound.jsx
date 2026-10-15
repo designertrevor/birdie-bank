@@ -404,7 +404,8 @@ export default function NewRound({ rematch, fromPlan, present, edit = null, ahea
     const halfStrokes = !!opts.halfStrokes && halfStrokesOffered(game, sides);
     // Team quota (a Quota house rule) is played in teams too, when it's on; only the betting players count
     const round = createRound({
-      id, game, course, holesCount, nine, startHole, players, settings, hcPct: opts.hcPct, useHandicaps: useHc && !(noHc.length && noHc.length === betting.length),
+      // A start left over from other holes (the nine or course changed) is the first hole
+      id, game, course, holesCount, nine, startHole: holesInPlay(course, holesCount, nine).some(h => h.no === startHole) ? startHole : null, players, settings, hcPct: opts.hcPct, useHandicaps: useHc && !(noHc.length && noHc.length === betting.length),
       teams: teamsCfg(game, settings, betting.length) ? teams : null, halfStrokes, justPlaying: casualIds,
     });
     // "Quota moves after the round": each player starts from the quota their last such round left them,
@@ -561,7 +562,7 @@ export default function NewRound({ rematch, fromPlan, present, edit = null, ahea
       )}
       {step === 2 && planning && <InviteStep invited={invited} setInvited={setInvited} onNext={() => setStep(3)} />}
       {step === 3 && planning && <VoteStep game={game} holesCount={holesCount} opts={opts} onPlan={makePlan} ballot={ballot} initialSides={planSides.length ? planSides : sidesFor(game).map(sg => sg.game)} playFor={playFor} setPlayFor={setPlayFor} tripRow={tripRow} />}
-      {step === 1 && !planning && <CourseStep editor={editor} openEditor={openEditor} closeEditor={closeEditor} courseId={courseId} setCourseId={id => { setCourseId(id); setTees({}); setStartHole(null); }} holesCount={holesCount} nine={nine} setNine={setNine}
+      {step === 1 && !planning && <CourseStep editor={editor} openEditor={openEditor} closeEditor={closeEditor} courseId={courseId} setCourseId={id => { setCourseId(id); setTees({}); }} holesCount={holesCount} nine={nine} setNine={setNine}
         game={g} setHolesCount={setHolesCount} startHole={startHole} setStartHole={setStartHole} onNext={() => setStep(2)} />}
       {step === 2 && !planning && course && (
         <PlayersStep game={g} gameKey={game} course={course} holesCount={holesCount} nine={nine} picked={picked} setPicked={setPicked}
@@ -777,20 +778,16 @@ export function CourseStep({ editor, openEditor, closeEditor, courseId, setCours
       <div className="scroll">
         {top}
         {/* How much of the course: up top, so a back-nine round is set before anything else (Trevor's round, 2026-10-14) */}
-        {setHolesCount && <HolesPicker game={game} holesCount={holesCount} setHolesCount={setHolesCount} />}
+        {setHolesCount && <HolesPicker game={game} holesCount={holesCount} setHolesCount={n => { setHolesCount(n); setStartHole?.(null); }} />}
         {holesCount === 9 && (!course || course.holes.length === 18) && (
           <div className="block">
             <div className="eyebrow" style={{ marginBottom: 10 }}>Which nine?</div>
-            <Segmented label="Which nine" value={nine} onChange={setNine} options={[{ value: 'front', label: 'Front 9' }, { value: 'back', label: 'Back 9' }]} />
+            <Segmented label="Which nine" value={nine} onChange={v => { setNine(v); setStartHole?.(null); }} options={[{ value: 'front', label: 'Front 9' }, { value: 'back', label: 'Back 9' }]} />
           </div>
         )}
-        {/* 18 starting on the back: the common case gets a switch here, any other hole is in More options */}
-        {setStartHole && course && holesCount === 18 && course.holes.length === 18 && (startHole == null || startHole === 1 || startHole === 10) && (
-          <div className="block">
-            <div className="eyebrow" style={{ marginBottom: 10 }}>Tee off on</div>
-            <Segmented label="Tee off on" value={startHole === 10 ? 10 : 1} onChange={no => setStartHole(no === 1 ? null : no)} options={[{ value: 1, label: 'Hole 1' }, { value: 10, label: 'Hole 10' }]} />
-          </div>
-        )}
+        {/* Where the group tees off, right under the holes: 1, 10, or any hole for a shotgun start (Trevor 2026-10-14) */}
+        {/* Before a course is picked the holes are just numbers, and the start stays put when one is */}
+        {setStartHole && <TeeOffPicker holes={course ? holesInPlay(course, holesCount, nine) : plainHoles(holesCount, nine)} canTen={holesCount === 18} startHole={startHole} setStartHole={setStartHole} />}
         {tooShort && <p className="hint-card"><Icon name="info" fill /> {course.name} has 9 holes, so you’ll play it twice for 18.</p>}
         <div style={{ padding: '4px 16px 8px' }}>
           <label className="sr-only" htmlFor="course-q">Search courses</label>
@@ -835,6 +832,8 @@ function PlayersStep({ game, gameKey, course, holesCount, nine, picked, setPicke
   const [adding, setAdding] = useState(false);
   const [hcFor, setHcFor] = useState(null);
   const [indexFor, setIndexFor] = useState(null);
+  const [teeFor, setTeeFor] = useState(null);
+  const teeOf = pid => course.tees?.find(t => t.name === (tees[pid] || firstTee(course)?.name)) || firstTee(course);
   const holes = useMemo(() => holesInPlay(course, holesCount, nine), [course, holesCount, nine]);
   // Past the game's own cap when the extra people can be just playing (just-playing.js)
   const most = maxPicked(gameKey);
@@ -915,14 +914,11 @@ function PlayersStep({ game, gameKey, course, holesCount, nine, picked, setPicke
                   <div className="pick-extra">
                     {/* One tee for the group is the usual, so it's a quiet dropdown, not a chip per tee (Trevor, 2026-10-14) */}
                     {course.tees?.length > 1 && (() => {
-                      const cur = course.tees.find(t => t.name === (tees[p.id] || firstTee(course).name)) || firstTee(course);
+                      const cur = teeOf(p.id);
                       return (
-                        <label className="hc-chip tee-select">
+                        <button className="hc-chip tee-select" onClick={() => setTeeFor(p.id)} aria-haspopup="dialog" aria-label={`${p.name}’s tees: ${cur.name}. Change them`}>
                           <span className="tee-dot" style={teeDotStyle(cur)} />{cur.name} tees <Icon name="caret-down" />
-                          <select aria-label={`${p.name}’s tee`} value={cur.name} onChange={e => setTees({ ...tees, [p.id]: e.target.value })}>
-                            {course.tees.map(t => <option key={t.name} value={t.name}>{t.name}{t.slope ? '' : ' (no slope)'}</option>)}
-                          </select>
-                        </label>
+                        </button>
                       );
                     })()}
                     {/* Their index, set or fixed right here and kept on the player for next time, for friends without an account */}
@@ -934,7 +930,7 @@ function PlayersStep({ game, gameKey, course, holesCount, nine, picked, setPicke
                     )}
                     {/* Out of every bet: a selection chip like the tee's, filled with a check when it's on */}
                     {casualOk && (bettingCount > 1 || casual) && (
-                      <PickChip small className="jp-chip" icon="smiley" on={casual} onClick={() => toggleCasual(p.id)}>{JUST_PLAYING}</PickChip>
+                      <PickChip small className="jp-chip" icon="circle" iconFill={false} on={casual} onClick={() => toggleCasual(p.id)}>{JUST_PLAYING}</PickChip>
                     )}
                     {showHc && !casual && <button className={`hc-chip ${hc.source === 'none' ? 'missing' : ''}`} onClick={() => setHcFor(p.id)}
                       aria-label={`${p.name}’s ${holesCount === 9 ? '9-hole handicap' : 'course handicap'}: ${hc.value < 0 ? `+${-hc.value}` : hc.value}${hcNote ? hcNote.replace(' · ', ', ') : ''}. Change it`}>
@@ -957,6 +953,24 @@ function PlayersStep({ game, gameKey, course, holesCount, nine, picked, setPicke
         <button className="full-btn" disabled={!valid} onClick={onNext}>{valid ? <>Next: Bets <Icon name="arrow-right" /></> : needText}</button>
       </div>
       <QuickAddPlayer open={adding} onClose={() => setAdding(false)} onAdded={pid => { setAdding(false); if (picked.length < most) setPicked([...picked, pid]); }} />
+      {/* The tees as our own sheet, not the phone's wheel (Trevor 2026-10-14) */}
+      <Sheet open={!!teeFor} onClose={() => setTeeFor(null)} title={teeFor === state.me ? 'Your tees' : `${state.players[teeFor]?.name}’s tees`}>
+        <div className="tee-sheet" role="radiogroup" aria-label={`${state.players[teeFor]?.name}’s tees`}>
+          {teeFor && course.tees.map(t => {
+            const on = teeOf(teeFor).name === t.name;
+            return (
+              <button key={t.name} className={`list-item pick ${on ? 'on' : ''}`} role="radio" aria-checked={on} onClick={() => { setTees({ ...tees, [teeFor]: t.name }); setTeeFor(null); }}>
+                <span className="tee-dot" style={teeDotStyle(t)} />
+                <div className="row-main">
+                  <div className="li-name">{t.name}</div>
+                  <div className="li-sub">{t.slope ? [t.rating != null ? `Rating ${t.rating}` : null, `Slope ${t.slope}`].filter(Boolean).join(' · ') : 'No rating or slope on file'}</div>
+                </div>
+                <PickMark on={on} add={false} />
+              </button>
+            );
+          })}
+        </div>
+      </Sheet>
       <Numpad open={!!hcFor} title={`${state.players[hcFor]?.name}’s ${holesCount === 9 ? '9-hole ' : ''}course handicap`} initial={hcFor ? courseHc(hcFor).value : ''} allowNegative min={-10} max={60}
         onClose={() => setHcFor(null)} onDone={v => { setHcOverride({ ...hcOverride, [hcFor]: v }); setHcFor(null); }} />
       <Numpad open={!!indexFor} title={`${state.players[indexFor]?.name}’s handicap index`} initial={indexFor ? state.players[indexFor]?.index ?? '' : ''} allowDecimal allowNegative min={-10} max={54}
@@ -1023,7 +1037,7 @@ function SetupStep({ game, course, holesCount, nine, picked, setPicked, casual =
   const [holePick, setHolePick] = useState(false);
   const [more, setMore] = useState(false);
   const holes = holesInPlay(course, holesCount, nine);
-  const firstHole = startHole ?? holes[0].no;
+  const firstHole = holes.some(h => h.no === startHole) ? startHole : holes[0].no;
   const set = (path, v) => setOpts(o => { const n = structuredClone(o); const k = path.split('.'); let t = n; for (const x of k.slice(0, -1)) t = t[x]; t[k.at(-1)] = v; return n; });
   const get = path => path.split('.').reduce((t, k) => t?.[k], opts);
   const move = (i, d) => setPicked(p => { const n = [...p]; const j = i + d; if (j < 0 || j >= n.length) return p; [n[i], n[j]] = [n[j], n[i]]; return n; });
@@ -1155,7 +1169,7 @@ function SetupStep({ game, course, holesCount, nine, picked, setPicked, casual =
       </div>
       <Numpad open={!!pad} title={pad?.title} {...padUnit({ playFor })} initial={pad ? get(pad.path) : ''} min={pad?.min} max={pad?.max}
         onClose={() => setPad(null)} onDone={v => { set(pad.path, v); setPad(null); }} />
-      <HolePicker open={holePick} holes={holes} value={startHole ?? holes[0].no} onClose={() => setHolePick(false)} onPick={no => { setStartHole(no); setHolePick(false); }} />
+      <HolePicker open={holePick} holes={holes} value={firstHole} onClose={() => setHolePick(false)} onPick={no => { setStartHole(no); setHolePick(false); }} />
     </>
   );
 }
@@ -1178,6 +1192,32 @@ function dayName(iso) {
 const teeCount = n => `${n} ${n === 1 ? 'tee' : 'tees'}`;
 
 /** 9 or 18 holes, with the lengths the game can't be played over switched off. */
+/** Holes 1 to 18 (or the nine) with no pars, for the tee off choice before a course is picked. */
+function plainHoles(holesCount, nine) {
+  const from = holesCount === 9 && nine === 'back' ? 10 : 1;
+  return Array.from({ length: holesCount }, (_, i) => ({ no: from + i }));
+}
+
+/** Tee off on: the first hole, hole 10 on an 18, or any other hole from the hole sheet. */
+function TeeOffPicker({ holes, canTen, startHole, setStartHole }) {
+  const [picking, setPicking] = useState(false);
+  const first = holes[0].no;
+  const ten = canTen && holes.some(h => h.no === 10) ? 10 : null;
+  // A start that isn't on these holes any more (the nine changed) is the first hole
+  const at = holes.some(h => h.no === startHole) ? startHole : first;
+  const other = at !== first && at !== ten;
+  const options = [{ value: first, label: `Hole ${first}` }, ...(ten ? [{ value: ten, label: 'Hole 10' }] : []),
+    { value: 'other', label: other ? `Hole ${at}` : 'Other', aria: other ? `Hole ${at}, change it` : 'Another hole' }];
+  return (
+    <div className="block">
+      <div className="eyebrow" style={{ marginBottom: 10 }}>Tee off on</div>
+      <Segmented label="Tee off on" value={other ? 'other' : at} onChange={v => (v === 'other' ? setPicking(true) : setStartHole(v === first ? null : v))} options={options} />
+      <p className="field-help">{other ? `Shotgun start on hole ${at}. The round wraps around from there.` : 'Shotgun start? Tap Other to pick any hole.'}</p>
+      <HolePicker open={picking} holes={holes} value={at} onClose={() => setPicking(false)} onPick={no => { setStartHole(no === first ? null : no); setPicking(false); }} />
+    </div>
+  );
+}
+
 function HolesPicker({ game, holesCount, setHolesCount }) {
   return (
     <div className="block">
@@ -1428,7 +1468,7 @@ function HolePicker({ open, holes, value, onClose, onPick }) {
       <div className="hole-grid-pick" role="listbox" aria-label="Starting hole">
         {holes.map(h => (
           <button key={h.no} role="option" aria-selected={h.no === value} className={`hole-opt ${h.no === value ? 'on' : ''}`} onClick={() => onPick(h.no)}>
-            <strong>{h.no}</strong><span>Par {h.par}</span>
+            <strong>{h.no}</strong>{h.par != null && <span>Par {h.par}</span>}
           </button>
         ))}
       </div>

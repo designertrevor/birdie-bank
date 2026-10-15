@@ -4074,21 +4074,26 @@ a.header-btn.rm-open { text-decoration: none; }
   :root:not([data-theme="light"]) .ready-card.themed .ready-row { color: var(--mute); border-bottom-color: var(--line-soft); }
 }
 
-/* The tee as one chip with a native picker under it (New round, Players) */
-.tee-select { position: relative; }
+/* The tee as one chip that opens the tee sheet (New round, Players) */
 .tee-select .tee-dot { margin-right: 0; }
-.tee-select select { position: absolute; inset: 0; width: 100%; height: 100%; opacity: 0; font-size: 16px; cursor: pointer; appearance: none; }
-.tee-select:focus-within { outline: 2px solid var(--ink); outline-offset: 2px; }
+.tee-sheet { display: flex; flex-direction: column; gap: 8px; padding: 8px 16px 16px; }
+.tee-sheet .list-item { width: 100%; margin: 0; border: none; font: inherit; text-align: left; gap: 12px; }
+.tee-sheet .tee-dot { width: 22px; height: 22px; margin: 0; flex-shrink: 0; border-radius: 50%; box-shadow: 0 0 0 1.5px color-mix(in srgb, var(--ink) 45%, transparent); }
 
 /* Chips on a picked player sit on the pink tint, so they're a see-through layer of ink with a pink
    edge rather than the page's surface colour, which read as dark holes in dark mode (Trevor 2026-10-14) */
-.player-pick.on .pick-extra .hc-chip:not(.missing),
-.player-pick.on .pick-extra .jp-chip:not(.on) {
+.player-pick.on .pick-extra .hc-chip:not(.missing) {
   background: color-mix(in srgb, var(--ink) 7%, transparent);
   box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--pink-fill) 40%, transparent);
   color: var(--ink);
 }
-.player-pick.on .pick-extra .hc-chip:not(.missing) i,
-.player-pick.on .pick-extra .jp-chip:not(.on) i { color: color-mix(in srgb, var(--ink) 70%, transparent); }
+.player-pick.on .pick-extra .hc-chip:not(.missing) i { color: color-mix(in srgb, var(--ink) 70%, transparent); }
+/* Just playing, off: no fill and a dashed edge with an empty ring, so it reads as a choice to tap,
+   not a setting that's on like the tee and index chips beside it (Trevor 2026-10-14) */
+.player-pick .pick-extra .jp-chip:not(.on) {
+  background: transparent; box-shadow: none; color: var(--body);
+  border: 1.5px dashed color-mix(in srgb, var(--ink) 35%, transparent);
+}
+.player-pick .pick-extra .jp-chip:not(.on) i { color: color-mix(in srgb, var(--ink) 50%, transparent); }
 /* A ring of ink, so black tees show in dark mode and white tees in light */
 .tee-select .tee-dot { box-shadow: 0 0 0 1.5px color-mix(in srgb, var(--ink) 45%, transparent); }
