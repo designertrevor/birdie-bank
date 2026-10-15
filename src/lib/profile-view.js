@@ -170,11 +170,11 @@ export function sinceText(at) {
   return `Playing since ${new Date(at).toLocaleDateString('en-US', { month: 'short', year: 'numeric' })}`;
 }
 
-/** The line under your name: "Index 12.4 · Birch Creek". */
+/** The line under your name: "HCP 12.4 · Birch Creek". */
 export function profileSubline(profile, formatIndex) {
   const parts = [];
-  if (num(profile?.index) != null) parts.push(`Index ${formatIndex(profile.index)}`);
-  else parts.push('No handicap index');
+  if (num(profile?.index) != null) parts.push(`HCP ${formatIndex(profile.index)}`);
+  else parts.push('No HCP');
   if (profile?.homeCourse?.name) parts.push(profile.homeCourse.name);
   return parts.join(' · ');
 }

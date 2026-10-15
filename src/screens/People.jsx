@@ -50,7 +50,7 @@ export default function People() {
             <Avatar id={me.id} name={me.name} />
             <div className="row-main">
               <div className="set-name">{playerLabel(me, state.me)}</div>
-              <div className="set-sub">{me.index == null ? 'No handicap' : `Index ${formatIndex(me.index)}`} · {myPay ? `${PAY_APPS[myPay.app].name} ${handleText(myPay)}` : 'Add how you get paid'}</div>
+              <div className="set-sub">{me.index == null ? 'No handicap' : `HCP ${formatIndex(me.index)}`} · {myPay ? `${PAY_APPS[myPay.app].name} ${handleText(myPay)}` : 'Add how you get paid'}</div>
             </div>
             <span className="chevron"><Icon name="caret-right" /></span>
           </button>
@@ -69,7 +69,7 @@ export default function People() {
                 <div className={tab ? 'tp-name' : 'set-name'}>{name}</div>
                 {rsvp && <div className={`rsvp-tag ${rsvp.status || 'none'}`}>{rsvp.status ? `${RSVP_LABEL[rsvp.status]} for ${dayName(rsvp.plan.date)}` : `No answer for ${dayName(rsvp.plan.date)} yet`}</div>}
                 <div className={tab ? 'tp-sub' : 'set-sub'}>
-                  {h ? `${h.rounds} round${h.rounds === 1 ? '' : 's'} · won ${h.won}, lost ${h.lost}${h.even ? `, even ${h.even}` : ''}` : p?.index != null ? `Index ${formatIndex(p.index)}` : 'No rounds together yet'}
+                  {h ? `${h.rounds} round${h.rounds === 1 ? '' : 's'} · won ${h.won}, lost ${h.lost}${h.even ? `, even ${h.even}` : ''}` : p?.index != null ? `HCP ${formatIndex(p.index)}` : 'No rounds together yet'}
                   {tab > 0 ? ` · owes you ${money(amount)}` : tab < 0 ? ` · you owe ${money(amount)}` : ''}
                 </div>
               </div>
@@ -210,10 +210,10 @@ export function PlayerEdit({ id, onSaved }) {
             aria-invalid={duplicate || undefined} aria-describedby={duplicate ? 'pe-name-err' : undefined} />
           {profName && profName !== trimmed && <p className="field-help">{who}’s own profile says “{profName}”, so that’s the name you see everywhere. The name here is used if they ever take theirs off.</p>}
           {duplicate && <p className="field-error" id="pe-name-err" role="status">Someone already has that name. Add an initial so scorecards stay clear, or merge them below if it’s the same person.</p>}
-          <div className="field-label">Handicap index <span className="opt">optional</span></div>
+          <div className="field-label">Handicap <span className="opt">optional</span></div>
           <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
-            <button className="amt-btn" onClick={() => setPad(true)} aria-label={index == null ? 'Handicap index: add one' : `Handicap index ${formatIndex(index)}. Change it`}>{index == null ? 'Add' : formatIndex(index)}</button>
-            {index != null && <button className="header-btn" onClick={() => setIndex(null)} aria-label="Clear the handicap index">Clear</button>}
+            <button className="amt-btn" onClick={() => setPad(true)} aria-label={index == null ? 'Handicap: add one' : `Handicap ${formatIndex(index)}. Change it`}>{index == null ? 'Add' : formatIndex(index)}</button>
+            {index != null && <button className="header-btn" onClick={() => setIndex(null)} aria-label="Clear the handicap">Clear</button>}
           </div>
           <p className="field-help">Their usual 18-hole index. Strokes are worked out from it for each course and tee.</p>
           <div className="field-label" id="pe-pay">{isMe ? 'How you get paid' : `How ${trimmed.split(' ')[0] || 'they'} ${trimmed ? 'gets' : 'get'} paid`} <span className="opt">optional</span></div>
@@ -276,7 +276,7 @@ export function PlayerEdit({ id, onSaved }) {
           </button>
         ))}
       </Sheet>
-      <Numpad open={pad} title="Handicap index" initial={index ?? ''} allowDecimal allowNegative min={-10} max={54}
+      <Numpad open={pad} title="Handicap" initial={index ?? ''} allowDecimal allowNegative min={-10} max={54}
         onClose={() => setPad(false)} onDone={v => { setIndex(v); setPad(false); }} />
     </Screen>
   );
@@ -316,7 +316,7 @@ export function CrewEdit({ id }) {
           {players.length === 0 && <Empty illo="crowd" title="No players yet" text="Add players first, then group them into a crew." />}
           {players.map(p => (
             <PickRow key={p.id} on={sel.includes(p.id)} onClick={() => toggle(p.id)} lead={<Avatar id={p.id} name={p.name} />}
-              title={playerLabel(p, state.me)} sub={p.index == null ? 'No handicap' : `Index ${formatIndex(p.index)}`} />
+              title={playerLabel(p, state.me)} sub={p.index == null ? 'No handicap' : `HCP ${formatIndex(p.index)}`} />
           ))}
         </div>
         {existing && <button className="danger-link" onClick={remove}><Icon name="trash" /> Delete crew</button>}

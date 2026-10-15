@@ -501,7 +501,7 @@ function TripForm({ trip, onDone }) {
             <div className="trip-count tm-flights">
               <div className="row-main">
                 <div className="toggle-lbl" id="trip-flights-lbl">Handicap flights</div>
-                <div className="toggle-sub">{flightsOn ? `Everyone sorted into ${FLIGHT_NAMES.slice(0, flightsOf(pool).length).join(', ')} by index today, with a net leaderboard for each flight on the trip.` : 'A, B, C and D by handicap index, each with its own net leaderboard, so everyone has someone to beat.'}</div>
+                <div className="toggle-sub">{flightsOn ? `Everyone sorted into ${FLIGHT_NAMES.slice(0, flightsOf(pool).length).join(', ')} by handicap today, with a net leaderboard for each flight on the trip.` : 'A, B, C and D by handicap, each with its own net leaderboard, so everyone has someone to beat.'}</div>
               </div>
               <Toggle on={flightsOn} onChange={setFlightsOn} labelledBy="trip-flights-lbl" />
             </div>
@@ -616,7 +616,7 @@ function WhoGoing({ picked, onChange, byIndex = false, canSkip = false }) {
       </div>
       {all.length === 0 && <Empty illo="suitcase" title="Nobody packed yet" text={canSkip ? 'Add friends by name above, or skip this and they add themselves from the first round’s link.' : 'Add friends by name above.'} />}
       {all.length > 0 && query.trim() && !list.length && typed?.kind !== 'new' && typed?.kind !== 'self' && <p className="field-help">Nobody by that name.</p>}
-      {byIndex && <p className="field-help">Someone new is saved to your players with no handicap. Add their index on Players to balance the teams or flights by it.</p>}
+      {byIndex && <p className="field-help">Someone new is saved to your players with no handicap. Add their HCP on Players to balance the teams or flights by it.</p>}
     </div>
   );
 }

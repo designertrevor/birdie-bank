@@ -830,7 +830,6 @@ function PlayersStep({ game, gameKey, course, holesCount, nine, picked, setPicke
   const players = sortedPlayers(state);
   const crews = Object.values(state.crews);
   const [adding, setAdding] = useState(false);
-  const [hcFor, setHcFor] = useState(null);
   const [indexFor, setIndexFor] = useState(null);
   const [teeFor, setTeeFor] = useState(null);
   const [moreFor, setMoreFor] = useState(null);
@@ -888,6 +887,12 @@ function PlayersStep({ game, gameKey, course, holesCount, nine, picked, setPicke
           </div>
         )}
         <div className="sec-label">Players · {pickedLine(gameKey, picked, justPlaying)}</div>
+        {/* Up top, not under the list, so it's seen before Next (Trevor 2026-10-14) */}
+        {noHc.length > 0 && (
+          <p className="hint-card warn nohc-top"><Icon name="warning" fill /> {noHc.length === bettingCount
+            ? 'Nobody has a handicap yet, so nobody gets strokes. Tap Add HCP on each player to set one.'
+            : `${listNames(noHc.map(pid => state.players[pid]?.name || '?'))} ${noHc.length === 1 ? 'has' : 'have'} no handicap, so they play as scratch (0) and everyone else gets strokes from them. Tap Add HCP to set one.`}</p>
+        )}
         {/* Who's just playing is said here, so the count above stays on one line */}
         {/* Most people in a round are betting, so Just playing lives in each player's ⋯ menu and only
             gets a line here once someone is (Trevor 2026-10-14) */}
@@ -896,16 +901,14 @@ function PlayersStep({ game, gameKey, course, holesCount, nine, picked, setPicke
           {players.map(p => {
             const on = picked.includes(p.id);
             const casual = on && justPlaying.includes(p.id);
-            const hc = on ? courseHc(p.id) : null;
-            const hcNote = hc && { set: ' · edited', index: ' · from index', none: ' · none, plays as 0', whs: '' }[hc.source];
             return (
               <div key={p.id} className={`list-item pick player-pick ${on ? 'on' : ''}`}>
                 <button className="pick-main" onClick={() => toggle(p.id)} aria-pressed={on}>
                   <Avatar id={p.id} name={p.name} />
                   <div className="row-main">
                     <div className="li-name">{playerLabel(p, state.me)}</div>
-                    {/* Once picked, the Index chip below says it, so the line only shows on the people not in yet */}
-                    {(casual || !on || noHandicaps) && <div className="li-sub">{casual ? JUST_PLAYING : p.index == null ? 'No handicap index' : `Index ${formatIndex(p.index)}`}</div>}
+                    {/* Once picked, the HCP chip below says it, so the line only shows on the people not in yet */}
+                    {(casual || !on || noHandicaps) && <div className="li-sub">{casual ? JUST_PLAYING : p.index == null ? 'No HCP' : `HCP ${formatIndex(p.index)}`}</div>}
                   </div>
                   <PickMark on={on} />
                 </button>
@@ -923,14 +926,10 @@ function PlayersStep({ game, gameKey, course, holesCount, nine, picked, setPicke
                     {/* Their index, set or fixed right here and kept on the player for next time, for friends without an account */}
                     {!noHandicaps && !casual && (
                       <button className={`hc-chip ${p.index == null && showHc ? 'missing' : ''}`} onClick={() => setIndexFor(p.id)}
-                        aria-label={p.index == null ? `${p.name}’s handicap index: add one` : `${p.name}’s handicap index ${formatIndex(p.index)}. Change it`}>
-                        {p.index == null ? <>Add index <Icon name="plus" /></> : <>Index <strong>{formatIndex(p.index)}</strong> <Icon name="pencil-simple" /></>}
+                        aria-label={p.index == null ? `${p.name}’s handicap: add one` : `${p.name}’s handicap ${formatIndex(p.index)}. Change it`}>
+                        {p.index == null ? <>Add HCP <Icon name="plus" /></> : <>HCP <strong>{formatIndex(p.index)}</strong> <Icon name="pencil-simple" /></>}
                       </button>
                     )}
-                    {showHc && !casual && <button className={`hc-chip ${hc.source === 'none' ? 'missing' : ''}`} onClick={() => setHcFor(p.id)}
-                      aria-label={`${p.name}’s ${holesCount === 9 ? '9-hole handicap' : 'course handicap'}: ${hc.value < 0 ? `+${-hc.value}` : hc.value}${hcNote ? hcNote.replace(' · ', ', ') : ''}. Change it`}>
-                      {holesCount === 9 ? '9-hole handicap' : 'Course handicap'} <strong>{hc.value < 0 ? `+${-hc.value}` : hc.value}</strong>{hcNote} <Icon name="pencil-simple" />
-                    </button>}
                     {/* The rarer things for this player, out of the way in the corner */}
                     <button className="icon-btn sm player-more" onClick={() => setMoreFor(p.id)} aria-haspopup="dialog" aria-label={`More for ${p.name}`}><Icon name="dots-three" /></button>
                   </div>
@@ -940,11 +939,6 @@ function PlayersStep({ game, gameKey, course, holesCount, nine, picked, setPicke
           })}
         </div>
         <button className="add-row" aria-label="Add a player" onClick={() => setAdding(true)}><span className="add-ci" aria-hidden="true"><Icon name="plus" /></span><span className="add-lbl">Add a player</span></button>
-        {noHc.length > 0 && (
-          <p className="hint-card warn"><Icon name="warning" fill /> {noHc.length === picked.length
-            ? 'Nobody has a handicap yet, so nobody gets strokes. Tap Add index on each player to set one.'
-            : `${listNames(noHc.map(pid => state.players[pid]?.name || '?'))} ${noHc.length === 1 ? 'has' : 'have'} no handicap, so they play as scratch (0) and everyone else gets strokes from them. Tap Add index to set one.`}</p>
-        )}
       </div>
       <div className="cta-wrap">
         <button className="full-btn" disabled={!valid} onClick={onNext}>{valid ? <>Next: Bets <Icon name="arrow-right" /></> : needText}</button>
@@ -971,9 +965,7 @@ function PlayersStep({ game, gameKey, course, holesCount, nine, picked, setPicke
           })}
         </div>
       </Sheet>
-      <Numpad open={!!hcFor} title={`${state.players[hcFor]?.name}’s ${holesCount === 9 ? '9-hole ' : ''}course handicap`} initial={hcFor ? courseHc(hcFor).value : ''} allowNegative min={-10} max={60}
-        onClose={() => setHcFor(null)} onDone={v => { setHcOverride({ ...hcOverride, [hcFor]: v }); setHcFor(null); }} />
-      <Numpad open={!!indexFor} title={`${state.players[indexFor]?.name}’s handicap index`} initial={indexFor ? state.players[indexFor]?.index ?? '' : ''} allowDecimal allowNegative min={-10} max={54}
+      <Numpad open={!!indexFor} title={`${state.players[indexFor]?.name}’s handicap`} initial={indexFor ? state.players[indexFor]?.index ?? '' : ''} allowDecimal allowNegative min={-10} max={54}
         onClose={() => setIndexFor(null)} onDone={v => {
           const pid = indexFor;
           // A new index replaces any course handicap typed in for this round, so the strokes follow it
@@ -1021,13 +1013,13 @@ export function QuickAddPlayer({ open, onClose, onAdded }) {
           <input id="qa-name" className="name-input" value={name} onChange={e => setName(e.target.value)} maxLength={24} placeholder="Name" autoFocus
             aria-invalid={dup || undefined} aria-describedby={dup ? 'qa-name-err' : undefined} />
           {dup && <p className="field-error" id="qa-name-err" role="status">Someone already has that name. Add an initial.</p>}
-          <div className="field-label">Handicap index <span className="opt">optional</span></div>
-          <button className="amt-btn" onClick={() => setPad(true)} aria-label={index == null ? 'Handicap index: add one' : `Handicap index ${formatIndex(index)}. Change it`}>{index == null ? 'Add' : formatIndex(index)}</button>
-          <p className="field-help">Their 18-hole handicap index. We halve it for 9 holes.</p>
+          <div className="field-label">Handicap <span className="opt">optional</span></div>
+          <button className="amt-btn" onClick={() => setPad(true)} aria-label={index == null ? 'Handicap: add one' : `Handicap ${formatIndex(index)}. Change it`}>{index == null ? 'Add' : formatIndex(index)}</button>
+          <p className="field-help">Their 18-hole handicap (HCP). We halve it for 9 holes.</p>
           <div style={{ marginTop: 16 }}><button className="full-btn" disabled={!t || dup} onClick={add}>Add to round</button></div>
         </div>
       </Sheet>
-      <Numpad open={pad} title="Handicap index" initial={index ?? ''} allowDecimal allowNegative min={-10} max={54}
+      <Numpad open={pad} title="Handicap" initial={index ?? ''} allowDecimal allowNegative min={-10} max={54}
         onClose={() => setPad(false)} onDone={v => { setIndex(v); setPad(false); }} />
     </>
   );
@@ -1480,8 +1472,8 @@ function HolePicker({ open, holes, value, onClose, onPick }) {
   return (
     <Sheet open={open} onClose={onClose} title="Starting hole">
       <p className="sheet-text">Pick where the group tees off. The round runs from there and wraps around.</p>
-      <div className="hole-grid-pick" role="listbox" aria-label="Starting hole">
-        {holes.map(h => (
+      <div className="hole-grid-pick" role="listbox" aria-label="Starting hole" style={{ gridTemplateRows: `repeat(${Math.ceil(holes.length / 2)}, auto)` }}>
+        {[...holes].sort((a, b) => a.no - b.no).map(h => (
           <button key={h.no} role="option" aria-selected={h.no === value} className={`hole-opt ${h.no === value ? 'on' : ''}`} onClick={() => onPick(h.no)}>
             <strong>{h.no}</strong>{h.par != null && <span>Par {h.par}</span>}
           </button>

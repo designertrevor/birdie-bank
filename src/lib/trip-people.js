@@ -128,7 +128,7 @@ export function savePerson(s, person, now = Date.now()) {
 /** A line under each name on the list: "Usual · 12 rounds together", "3 rounds together", or the handicap. */
 export function inviteeLine(p) {
   const rounds = p.rounds ? `${p.rounds} round${p.rounds === 1 ? '' : 's'} together` : '';
-  const hc = p.index != null ? `Index ${p.index}` : '';
+  const hc = p.index != null ? `HCP ${p.index}` : '';
   return [p.usual ? 'Usual' : '', rounds || hc].filter(Boolean).join(' · ') || 'In your players';
 }
 

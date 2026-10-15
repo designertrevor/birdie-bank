@@ -86,7 +86,7 @@ export function profileCardModel(card, { showAmounts = false, link = null, avata
   const rec = season.record;
   const played = rec.won + rec.lost + rec.even;
   const tiles = [
-    { value: formatIndex(card.index), label: 'Handicap index' },
+    { value: formatIndex(card.index), label: 'HCP' },
     { value: card.guide == null ? EMPTY : formatIndex(card.guide), label: GUIDE_LABEL },
     { value: String(season.rounds), label: `Rounds in ${season.year}` },
     { value: played ? recordText(rec) : EMPTY, label: rec.even ? `${season.year}: won, lost, even` : `${season.year}: won, lost` },
@@ -117,7 +117,7 @@ export function profileCardModel(card, { showAmounts = false, link = null, avata
   const text = [
     `${m.title}, player card`,
     '',
-    `Handicap index: ${formatIndex(card.index)}`,
+    `HCP: ${formatIndex(card.index)}`,
     card.guide == null ? null : `Trend from my rounds: ${formatIndex(card.guide)} (a guide, not an official index)`,
     `${season.year} season: ${plural(season.rounds, 'round')}${played ? `, ${recordText(rec)} (${rec.even ? 'won, lost, even' : 'won, lost'})` : ''}`,
     card.favoriteGame ? `Favorite game: ${card.favoriteGame.name}` : null,

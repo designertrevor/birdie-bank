@@ -51,7 +51,7 @@ function ProfileHero({ me, pay, profile, onOpen }) {
         <Avatar id={me.id} name={me.name} letters={2} size="lg" />
         <span className="pf-hero-words">
           <span className="pf-hero-name d">{me.name}</span>
-          <span className="pf-hero-sub">{me.index == null ? 'No handicap index' : `Index ${formatIndex(me.index)}`}{pay ? ` · Paid on ${PAY_APPS[pay.app].name}` : ''}</span>
+          <span className="pf-hero-sub">{me.index == null ? 'No HCP' : `HCP ${formatIndex(me.index)}`}{pay ? ` · Paid on ${PAY_APPS[pay.app].name}` : ''}</span>
           <span className="pf-hero-link">Your profile <Icon name="caret-right" /></span>
         </span>
       </button>
@@ -507,7 +507,7 @@ export function CourseEdit({ id, prefill = null, onDone = null }) {
               <button className="pill-btn" onClick={() => setPad({ kind: 'rating', t: ti, title: `${t.name} course rating`, min: 25, max: 80, decimal: true })}>Rating {t.rating ?? '–'}</button>
               <button className="pill-btn" onClick={() => setPad({ kind: 'slope', t: ti, title: `${t.name} slope`, min: 55, max: 155 })}>Slope {t.slope ?? '–'}</button>
             </div>
-            {(t.rating == null || t.slope == null) && <p className="field-help">No rating or slope? Players get strokes from their index instead.</p>}
+            {(t.rating == null || t.slope == null) && <p className="field-help">No rating or slope? Players get strokes from their HCP instead.</p>}
           </div>
         ))}
         <button className="add-row" onClick={() => setC(x => ({ ...x, tees: [...x.tees, { name: '', color: TEE_COLORS[x.tees.length % TEE_COLORS.length], rating: null, slope: null }] }))}>

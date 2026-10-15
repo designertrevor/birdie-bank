@@ -255,8 +255,8 @@ export default function Onboarding({ onDone, play = null }) {
           {acct.user && <p className="field-help" style={{ marginTop: 0 }}>Signed in as {acct.user.email}. Your rounds will save to your account.</p>}
           <label className="field-label" htmlFor="ob-name">Your name</label>
           <input id="ob-name" aria-label="Your name" className="name-input" value={name} onChange={e => setName(e.target.value)} placeholder="e.g. Sam" autoComplete="given-name" maxLength={24} />
-          <label className="field-label" htmlFor="ob-index">Handicap index <span className="opt">optional</span></label>
-          <button id="ob-index" className="amt-btn field-btn" aria-label={index == null ? 'Handicap index, optional. Add' : `Handicap index ${formatIndex(index)}. Change`} onClick={() => setPad(true)}>{index == null ? 'Add' : formatIndex(index)}</button>
+          <label className="field-label" htmlFor="ob-index">Handicap <span className="opt">optional</span></label>
+          <button id="ob-index" className="amt-btn field-btn" aria-label={index == null ? 'Handicap, optional. Add' : `Handicap ${formatIndex(index)}. Change`} onClick={() => setPad(true)}>{index == null ? 'Add' : formatIndex(index)}</button>
           <p className="field-help">No handicap? Leave it blank. When you do use them, the best player gets no strokes and everyone else gets the difference.</p>
           <div className="field-label" id="ob-buddy">Pick a Ball buddy <span className="opt">optional</span></div>
           <div className="av-grid ob-buddies" role="radiogroup" aria-labelledby="ob-buddy">
@@ -298,7 +298,7 @@ export default function Onboarding({ onDone, play = null }) {
           !agreed && 'tick Friendly wagers only',
           asksAge(a) && !age && 'answer the age question',
         ].filter(Boolean).join(', then ').replace(/^./, c => `To go on, ${c}`) + '.')}
-        <Numpad open={pad} title="Handicap index" initial={index ?? ''} allowDecimal allowNegative min={-10} max={54}
+        <Numpad open={pad} title="Handicap" initial={index ?? ''} allowDecimal allowNegative min={-10} max={54}
           onClose={() => setPad(false)} onDone={v => { setIndex(v); setPad(false); }} />
       </Screen>
     );

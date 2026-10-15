@@ -148,7 +148,7 @@ test('picking someone from a round saves them as a player, and never changes a s
 test('the line under each name', () => {
   assert.equal(inviteeLine({ usual: true, rounds: 12, index: 4 }), 'Usual · 12 rounds together');
   assert.equal(inviteeLine({ usual: false, rounds: 1, index: 4 }), '1 round together');
-  assert.equal(inviteeLine({ usual: false, rounds: 0, index: 4 }), 'Index 4');
+  assert.equal(inviteeLine({ usual: false, rounds: 0, index: 4 }), 'HCP 4');
   assert.equal(inviteeLine({ usual: false, rounds: 0, index: null }), 'In your players');
 });
 

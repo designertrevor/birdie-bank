@@ -236,6 +236,12 @@ a.set-row { text-decoration: none; }
   transition: transform .25s var(--spring), background .2s, box-shadow .2s;
 }
 .game-row.selected { background: var(--pick-tint); box-shadow: inset 0 0 0 2px var(--pink-fill); }
+/* On the pink tint the Rules pill is a see-through layer of ink with a pink edge, like the chips on a
+   picked player, so it doesn't read as a dark hole in dark mode (Trevor 2026-10-14) */
+.game-row.selected .rules-chip {
+  background: color-mix(in srgb, var(--ink) 7%, transparent);
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--pink-fill) 40%, transparent);
+}
 .game-row.locked { background: var(--surface); cursor: default; }
 .game-row.locked .gn, .game-row.locked .gs { opacity: .55; }
 .game-row:active:not(.locked) { transform: scale(.97); }
@@ -981,7 +987,8 @@ button:disabled { cursor: not-allowed; }
 /* Hole picker sheet */
 .hole-pick-btn { width: 100%; border: none; background: var(--surface); border-radius: 14px; padding: 14px; font: inherit; font-size: 16px; font-weight: 600; color: var(--ink); display: flex; align-items: center; justify-content: space-between; cursor: pointer; }
 .hole-pick-btn i { color: var(--mute); }
-.hole-grid-pick { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; padding: 8px 16px 16px; }
+/* Down the left column, then the right: 1 to 9, then 10 to 18 (rows set inline from the count) */
+.hole-grid-pick { display: grid; grid-template-columns: 1fr 1fr; grid-auto-flow: column; gap: 8px; padding: 8px 16px 16px; }
 .hole-opt { border: none; background: var(--surface); border-radius: 14px; padding: 12px 14px; font: inherit; color: var(--ink); text-align: left; display: flex; align-items: baseline; gap: 8px; cursor: pointer; transition: transform .2s var(--spring); }
 .hole-opt:active { transform: scale(.96); }
 .hole-opt strong { font-family: var(--display); font-size: 18px; font-weight: 800; }
@@ -4086,6 +4093,8 @@ a.header-btn.rm-open { text-decoration: none; }
 /* A picked player's ⋯ menu button, in the bottom right corner of the card */
 .pick-extra .player-more { margin-left: auto; background: transparent; color: var(--body); }
 .pm-row { margin-top: 8px; }
+/* Who has no handicap, said at the top of the players so it's seen before Next */
+.nohc-top { margin-top: 0; margin-bottom: 12px; }
 .pm-group { margin-bottom: 16px; }
 /* A ring of ink, so black tees show in dark mode and white tees in light */
 .tee-select .tee-dot { box-shadow: 0 0 0 1.5px color-mix(in srgb, var(--ink) 45%, transparent); }
