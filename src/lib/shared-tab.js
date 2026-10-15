@@ -454,6 +454,28 @@ export function roundStatus(round, rows) {
 }
 
 /**
+ * Where you stand with each person you had money with in one round, never anyone else's:
+ * [{ id, st: 'paid' | 'owesYou' | 'youOwe' | 'carried' }]. Money between two other people is
+ * theirs to sort out, so it isn't on your Tab.
+ */
+export function myRoundStatus(round, rows, me) {
+  const out = new Map();
+  const match = (r, t) => r.from === t.from && r.to === t.to;
+  for (const t of tabResults(round).transfers) {
+    const fromMe = t.from === me;
+    if (fromMe === (t.to === me)) continue;
+    const other = fromMe ? t.to : t.from;
+    const paid = rows.filter(r => r.kind === 'payment' && r.status === 'paid' && match(r, t)).reduce((a, r) => a + cents(r.amount), 0);
+    const netted = rows.some(r => r.kind === 'payment' && r.status === 'netted' && match(r, t));
+    const carried = rows.some(r => r.kind === 'carry' && r.status === 'agreed' && ((r.from === t.from && r.to === t.to) || (r.from === t.to && r.to === t.from)));
+    const st = netted || paid >= cents(t.amount) ? 'paid' : carried ? 'carried' : fromMe ? 'youOwe' : 'owesYou';
+    // Anything still open with someone outranks a paid line
+    if (!out.has(other) || out.get(other) === 'paid') out.set(other, st);
+  }
+  return [...out].map(([id, st]) => ({ id, st }));
+}
+
+/**
  * The round the who-is-square strip follows: your newest finished shared round from the last
  * 30 days that had at least one payment to make. { round, latest } where latest says it's your
  * most recent finished round of all, or null.

@@ -6,11 +6,9 @@ import { Avatar } from './Pay.jsx';
 import { update, useStore } from '../lib/store.js';
 import { useNav } from '../lib/nav.js';
 import { useShareText } from '../lib/useShare.js';
-import { useGroupAvatars } from '../lib/useAvatars.js';
 import { liveLinkFor } from '../lib/share.js';
 import { countsMoney } from '../lib/play-for.js';
 
-const STATUS_WORD = { square: 'Square', owes: 'Owes', waiting: 'Waiting', carried: 'Carried' };
 const MOMENT_ICON = { won: 'trophy', final: 'trophy', bigskin: 'fire', skin: 'coins', lonewolf: 'paw-print', blindwolf: 'paw-print', wolfdown: 'paw-print', hammer: 'hammer', hammerback: 'hammer', swing: 'arrows-down-up' };
 
 /** Put the recap away for this round, on this phone. */
@@ -18,11 +16,12 @@ function dismissRecap(roundId) {
   update(s => { s.recapSeen = { ...(s.recapSeen || {}), [roundId]: Date.now() }; });
 }
 
-/** The last round, the day after: who took it, a moment or two, who's paid and what carried. */
+/** The last round, the day after: who took it, a moment or two, your own money from it and what you carried. */
 export function RecapCard({ recap }) {
   const nav = useNav();
-  const faces = useGroupAvatars(recap.round.players);
-  const { paid, carried, moments } = recap;
+  const { paid, moments } = recap;
+  const mine = paid?.mine || [];
+  const carried = recap.carried.filter(c => c.mine);
   const open = () => nav.push(...recap.target);
   return (
     <section className="recap-card" aria-label={`Recap: ${recap.title}`}>
@@ -44,27 +43,13 @@ export function RecapCard({ recap }) {
         </ul>
       )}
 
-      {paid && (
+      {/* Only your own lines: what two other people owe each other stays between them */}
+      {mine.length > 0 && (
         <div className="recap-block">
-          <div className="recap-bh">
-            <span className="bl">Who’s paid</span>
-            <span className="recap-count">{paid.allSquare ? 'Everyone’s square' : `${paid.square} of ${paid.total} square`}</span>
-          </div>
-          <ul className="sq-people">
-            {paid.people.map(p => (
-              <li key={p.id} className={`sq-p ${p.status}`}>
-                <Avatar model={faces.get(p.id)} />
-                <span className="sq-word" aria-hidden="true">{STATUS_WORD[p.status]}</span>
-                <span className="sr-only">{p.name}: {STATUS_WORD[p.status].toLowerCase()}</span>
-              </li>
-            ))}
+          <div className="recap-bh"><span className="bl">Your money</span></div>
+          <ul className="recap-mine">
+            {mine.map(l => <li key={l.id} className={l.status}>{l.text}</li>)}
           </ul>
-          {paid.mine.length > 0 && (
-            <ul className="recap-mine">
-              {paid.mine.map(l => <li key={l.id} className={l.status}>{l.text}</li>)}
-            </ul>
-          )}
-          <p className="recap-note">Amounts only show to the two people involved.</p>
         </div>
       )}
 
@@ -79,7 +64,7 @@ export function RecapCard({ recap }) {
 
       <div className="recap-actions">
         <button className="recap-btn" onClick={open}><Icon name="flag-pennant" /> See the round</button>
-        {paid && !paid.allSquare && <button className="recap-btn" onClick={() => nav.setTab('ledger')}><Icon name="hand-coins" /> Open the Tab</button>}
+        {mine.some(l => l.status === 'open') && <button className="recap-btn" onClick={() => nav.setTab('ledger')}><Icon name="hand-coins" /> Open the Tab</button>}
         <button className="recap-btn" onClick={() => nav.push('share', { kind: 'recap', id: recap.id })}><Icon name="share-network" /> Share</button>
       </div>
     </section>

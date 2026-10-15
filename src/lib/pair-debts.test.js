@@ -4,7 +4,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { createRound, roundResults } from './round.js';
 import { fewestPayments, outstanding, roundsTogether, tabBalances, tabWith } from './ledger.js';
-import { allocatePayment, applyRows, roundRows, roundStatus, stripRound } from './shared-tab.js';
+import { allocatePayment, applyRows, myRoundStatus, roundRows, roundStatus, stripRound } from './shared-tab.js';
 import { activeCarry, cardCarry, carryReducer, carryRows, carrySplit, sharedOwed, splitCodes, splitRounds } from './carry.js';
 import { pairDebt, sharedDebts } from './pair-debts.js';
 
@@ -295,4 +295,19 @@ test('linked ids: Sam’s phone works out the same amount as Trevor’s', () => 
   const sam = stateOf('zs', [{ ...r1, localMe: 's', claims: { s: 'zs' } }, { ...r2, claims: { q_t: 't' } }], { players: { q_t: { id: 'q_t', name: 'Trevor', createdAt: 1 } } });
   assert.equal(pairDebt(trevor, 's', 't', { now: NOW }), pairDebt(sam, 'zs', 'q_t', { now: NOW }));
   assert.equal(pairDebt(sam, 'zs', 't', { now: NOW }), 1800);
+});
+
+test('your strip: only the people you had money with, from your side, never two other people', () => {
+  // Cy wins two skins off Bo and me; Bo and I halve the rest
+  const r = round('r1', ['a', 'b', 'c'], { 1: { c: 3, a: 4, b: 4 }, 2: { c: 3, a: 4, b: 4 } }, { code: 'AAAAAA' });
+  let s = stateOf('a', [r]);
+  const ts = roundResults(r).transfers;
+  assert.ok(ts.some(t => t.from === 'b'), 'Bo owes someone too');
+  assert.deepEqual(myRoundStatus(r, roundRows(s, r), 'a'), [{ id: 'c', st: 'youOwe' }]);
+  assert.deepEqual(myRoundStatus(r, roundRows(s, r), 'c').map(x => x.st), ['owesYou', 'owesYou']);
+  const mine = ts.find(t => t.from === 'a');
+  s = applyRows(s, allocatePayment(s, mine, { now: NOW, makeId: () => 'p' }).rows);
+  assert.deepEqual(myRoundStatus(r, roundRows(s, r), 'a'), [{ id: 'c', st: 'paid' }]);
+  // Bo still owes Cy, which isn't on my strip at all
+  assert.equal(roundStatus(r, roundRows(s, r)).b, 'owes');
 });

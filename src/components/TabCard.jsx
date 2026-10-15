@@ -13,12 +13,11 @@ import { money } from '../lib/golf.js';
 import { gameLabel, meFor, myIds } from '../lib/format.js';
 import { buzz } from '../lib/delight.js';
 import { sound } from '../lib/sound-play.js';
-import { ago, canonicalOf, recentPayment, roundRows, roundStatus, shortDate, stripRound } from '../lib/shared-tab.js';
+import { ago, canonicalOf, myRoundStatus, recentPayment, roundRows, shortDate, stripRound } from '../lib/shared-tab.js';
 import { CARRY_REASONS, cardCarry, sharedOwed } from '../lib/carry.js';
 import { answerCarry, askCarry, markPaid, undoLastPayment, usePaymentsOff } from '../lib/tab-sync.js';
 import { openRewards, rewardLineText } from '../lib/play-for.js';
 import { useGroupAvatars } from '../lib/useAvatars.js';
-import { bettors } from '../lib/round.js';
 
 const firstOf = name => name.split(' ')[0];
 
@@ -198,11 +197,15 @@ function CarrySheet({ open, onClose, owed, first, iOwe, rest, onAsk }) {
   );
 }
 
-const STATUS_WORD = { square: 'Square', owes: 'Owes', waiting: 'Waiting', carried: 'Carried' };
+const STATUS_WORD = { paid: 'Paid', owesYou: 'Owes you', youOwe: 'You owe', carried: 'Carried' };
+// The strip's colours: paid reads green, what you owe reads red
+const STATUS_CLASS = { paid: 'square', owesYou: 'waiting', youOwe: 'owes', carried: 'carried' };
 
 /**
- * Who's square in your latest shared round. Status only, never amounts: those stay between
- * the two people. Labelled by the round ("Last round · Sat, Sep 26"), never by the week.
+ * Where you stand with each person you had money with in your latest shared round. Only your own
+ * lines: what two other people owe each other is theirs to sort out, so it's never shown here.
+ * Status only, the amounts are on each person's card. Gone once nothing of yours is open.
+ * Labelled by the round ("Last round · Sat, Sep 26"), never by the week.
  */
 export function SquareStrip() {
   const state = useStore();
@@ -211,24 +214,26 @@ export function SquareStrip() {
   const faces = useGroupAvatars(pick?.round.players);
   if (!pick) return null;
   const { round, latest } = pick;
-  const status = roundStatus(round, roundRows(state, round));
   const me = meFor(round, state);
-  // Anyone just playing had nothing to pay, so the strip leaves them off (shared-tab.js roundStatus)
-  const people = bettors(round).map(p => ({ id: p.id, name: p.id === me ? 'You' : firstOf(p.name), st: status[p.id] || 'square' }));
-  const square = people.filter(p => p.st === 'square').length;
+  const people = myRoundStatus(round, roundRows(state, round), me).map(p => ({ ...p, name: firstOf(round.players.find(x => x.id === p.id)?.name || nameOf(state, p.id)) }));
+  const left = people.filter(p => p.st === 'owesYou' || p.st === 'youOwe');
+  if (!left.length) return null;
   const date = new Date(round.finishedAt || round.createdAt).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
   const label = latest ? `Last round · ${date}` : date;
+  const one = people.length === 1 ? people[0] : null;
+  const head = one ? (one.st === 'youOwe' ? `You owe ${one.name}` : `${one.name} owes you`)
+    : `Square with ${people.filter(p => p.st === 'paid').length} of ${people.length}`;
   return (
     <>
       <div className="sq-strip" onClick={() => setOpen(true)}>
-        <button className="sq-head" onClick={e => { e.stopPropagation(); setOpen(true); }} aria-label={`${label}: ${square} of ${people.length} square. See who`}>
+        <button className="sq-head" onClick={e => { e.stopPropagation(); setOpen(true); }} aria-label={`${label}: ${head}. See who`}>
           <span className="eyebrow">{label}</span>
-          <span className="sq-count d">{square} of {people.length} square</span>
+          <span className="sq-count d">{head}</span>
           <span className="chevron"><Icon name="caret-right" /></span>
         </button>
         <ul className="sq-people">
           {people.map(p => (
-            <li key={p.id} className={`sq-p ${p.st}`}>
+            <li key={p.id} className={`sq-p ${STATUS_CLASS[p.st]}`}>
               <Avatar model={faces.get(p.id)} />
               <span className="sq-word" aria-hidden="true">{STATUS_WORD[p.st]}</span>
               <span className="sr-only">{p.name}: {STATUS_WORD[p.st].toLowerCase()}</span>
@@ -237,11 +242,11 @@ export function SquareStrip() {
         </ul>
       </div>
       <AtScreen>
-      <Sheet open={open} onClose={() => setOpen(false)} title="Who’s square">
-        <p className="sheet-text">Everyone in this round sees this list. Amounts only show to the two people involved.</p>
+      <Sheet open={open} onClose={() => setOpen(false)} title="Who you’re square with">
+        <p className="sheet-text">Just the people you had money with in this round. What others owe each other stays between them.</p>
         <ul className="sq-list">
           {people.map(p => (
-            <li key={p.id} className={`sq-row ${p.st}`}>
+            <li key={p.id} className={`sq-row ${STATUS_CLASS[p.st]}`}>
               <Avatar model={faces.get(p.id)} />
               <span className="sq-name">{p.name}</span>
               <span className="sq-badge">{STATUS_WORD[p.st]}</span>
