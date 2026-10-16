@@ -22,7 +22,7 @@ The full checklist runs all the way to the $10k/mo future. This is the much shor
 
 These rows point at checklist items rather than repeating them as checkboxes, so the checklist count stays honest. Status is Done, Partial or To do.
 
-**Progress:** web launch 203 of 217 (94%), App Store launch 203 of 221 (92%). Overall checklist 203 of 288 (70.5%). The 203 is everything already shipped; the rest is below. Updated 2026-10-15.
+**Progress:** web launch 203 of 228 (89%), App Store launch 203 of 232 (87.5%). Overall checklist 203 of 308 (65.9%). The 203 is everything already shipped; the rest is below. Updated 2026-10-16, when the hardening rows (15 to 25, area 25) were added.
 
 **Web launch** (the web app as it is, paid through Stripe, shared by link)
 
@@ -30,7 +30,7 @@ These rows point at checklist items rather than repeating them as checkboxes, so
 |---|---|---|---|
 | 1 | Pick the final name and buy its domain (unblocks 2, 3, 13 and the store listing) | 16 | To do |
 | 2 | Quick logo and app icon, good enough to start | 16 | To do |
-| 3 | Custom email (SMTP) so sign-in emails reach anyone | 1 | To do |
+| 3 | Custom email (SMTP) so sign-in emails reach anyone, with SPF, DKIM and DMARC | 1, 25 | To do |
 | 4 | A paid course search plan (the free plan is 35 searches a day across everyone) | 6 | Partial |
 | 5 | Decide the free and Pro split, and a launch price | 11 | To do |
 | 6 | Stripe on the web, with promo codes | 11 | To do |
@@ -42,15 +42,26 @@ These rows point at checklist items rather than repeating them as checkboxes, so
 | 12 | Support: the help link and a reply within a day | 15 | Partial |
 | 13 | A simple home page with pricing and legal links | 18 | To do |
 | 14 | A legal check of how betting is worded, before paying creators | 14 | To do |
+| 15 | Prove the data walls hold between accounts | 25 | To do |
+| 16 | Every settle-up adds to zero, and money in whole cents | 25 | To do |
+| 17 | Supabase Pro backups and one restore tried | 25 | To do |
+| 18 | Security headers | 25 | To do |
+| 19 | Spend alerts and outside uptime checks | 25 | To do |
+| 20 | Secret scanning, Dependabot and old keys rotated | 25 | To do |
+| 21 | Weak signal and double tap test | 25 | To do |
+| 22 | Odd names test | 25 | To do |
+| 23 | Recently deleted rounds (30 days) | 25 | To do |
+| 24 | Stripe webhooks checked and safe to repeat | 25 | To do |
+| 25 | Every account in the business's name | 25 | To do |
 
 **App Store launch adds**
 
 | # | What | Area | Status |
 |---|---|---|---|
-| 15 | Sign in with Apple (Apple requires it when Google sign-in is offered) | 1 | To do |
-| 16 | App Store and Google Play apps (Capacitor wrapper) | 13 | To do |
-| 17 | In-app purchases through RevenueCat, with restore purchases | 11 | To do |
-| 18 | 6 to 8 store screenshot slides per store | 19 | To do |
+| 26 | Sign in with Apple (Apple requires it when Google sign-in is offered) | 1 | To do |
+| 27 | App Store and Google Play apps (Capacitor wrapper) | 13 | To do |
+| 28 | In-app purchases through RevenueCat, with restore purchases | 11 | To do |
+| 29 | 6 to 8 store screenshot slides per store | 19 | To do |
 
 **Not needed for launch:** leagues, events and partners (pro shops, GHIN, tee times, trips, trophies); the wider friends feed, reputation and Find a game; Pro extras (Trip Pass, Split Pro on the Tab, the Record Book limit, the Bank collects, referrals, club captains, price tests); brand polish (final logo, the full illustration set, Lottie or Rive motion, the game colours redone, shareable templates, the preview video); Slack and the feedback automation; creator prep (deal pricing, the brief, finishing attribution), done right before S4; Live Activity, new games, shared hole fixes, the welcome email, universal links, the admin view, and the merge offer at sign-up. The art in the app now is good enough to launch with.
 
@@ -102,7 +113,9 @@ These rows point at checklist items rather than repeating them as checkboxes, so
 
 **Shipped to main 2026-10-12 (from Trevor):** a splash screen on a cold start (the ball on its tee and the name, in your saved theme) instead of a blank screen, and the fonts and icons no longer hold up the first paint.
 
-**Next in S2:** the on-brand art set from the art sheet, then the game colours, the share image's stand-in buddy and the in-round art redone with it (area 24), real payments for the paywall test (Stripe, area 11), talks with the three head pros (area 23), the rest of mid-round settings (teams, order, play for), "Any side bets on this hole?", and the quick logo once the name is picked (area 16).
+**Hardening added 2026-10-16 (area 25):** 20 items from a senior engineer's checklist, 11 of them launch rows. First a hardening session with no outside blockers (data walls, settle-ups add to zero, headers, keys and packages, spend alerts and uptime, weak signal and double taps, odd names, Recently deleted), then backups with the first outside groups, the Stripe items with Stripe, and the email and account items at the rename.
+
+**Next in S2:** a hardening session (area 25), the on-brand art set from the art sheet, then the game colours, the share image's stand-in buddy and the in-round art redone with it (area 24), real payments for the paywall test (Stripe, area 11), talks with the three head pros (area 23), the rest of mid-round settings (teams, order, play for), "Any side bets on this hole?", and the quick logo once the name is picked (area 16).
 
 **The big date:** the creator test (S4) runs February to April 2027, when golf season starts back up. Everything before it is about being ready: a product groups keep using, a smooth path from video to paying, and an App Store app.
 
@@ -419,9 +432,9 @@ Nothing is gated before launch (2026-09-29). Testers use everything; this area i
 
 ### 14. Trust and legal
 - [x] "Friendly wagers only" screen in onboarding
-- [ ] `S3` (partial) Terms of service and privacy policy. Privacy policy at /privacy.html (2026-09-25), still due its legal review; the terms of service draft is at /terms.html (built 2026-10-06, `src/lib/terms-page.js`) with a draft banner until a lawyer reads both. The privacy page names Sentry and PostHog on `overnight12/next` (2026-10-09)
+- [ ] `S3` (partial) Terms of service and privacy policy. Privacy policy at /privacy.html (2026-09-25), still due its legal review; the terms of service draft is at /terms.html (built 2026-10-06, `src/lib/terms-page.js`) with a draft banner until a lawyer reads both. The privacy page names Sentry and PostHog on `overnight12/next` (2026-10-09). Before launch, check it names everyone that gets data: Sentry, PostHog, Resend, push and Stripe (2026-10-16)
 - [x] `S3` Age check (18+ at minimum, higher in some places) Shipped 2026-10-07 (overnight 9).
-- [ ] `S3` One-time legal review of how betting is worded, before App Store review and the creator test
+- [ ] `S3` One-time legal review of how betting is worded, before App Store review and the creator test. Include Apple's App Store rules on gambling apps and the state rules on social betting (2026-10-16); the app never moves money, which helps
 
 ### 15. Behind the scenes
 - [x] `S2` Crash reporting (Sentry). Built on `overnight12/next` (2026-10-09): errors from the error boundary and anything uncaught go to Sentry once `VITE_SENTRY_DSN` is set in Vercel, loaded after the first paint and scrubbed of names, amounts and query strings; the Share usage data switch turns it off. Shipped to main 2026-10-10. Live 2026-10-15: the `VITE_SENTRY_DSN` key is in Vercel (Production), IP addresses are not stored, and the live build reports to the birdie-bank org on sentry.io.
@@ -597,6 +610,30 @@ The audit found 60 ways to make the app calmer, clearer and worth a screenshot, 
 - [x] `S3` Share the rivalry: a "You v Mike" card for the group text from the face-to-face header. Built on `overnight11/next` (2026-10-08): a Share pill on the rivalry card opens a "Trevor v Mike" image (record, who leads, the streak, rounds together, money only with Show amounts). Shipped to main 2026-10-10.
 - [ ] `S2` Revisit the game colours with the new illustration set (Trevor's review, 2026-10-09): the group tints feel random rather than intentional. For now the Hole tile is back to mint and the money bar band, the progress line, the moment stickers, the podium and the share card keep the game's colour. Also redo the share image's stand-in buddy (for players with a photo or initials) and the game art in the round with the new set
 
+### 25. Hardening (from the 2026-10-16 engineering checklist)
+From Trevor, 2026-10-16: a long list from a senior engineer of what vibe-coded apps miss, checked against this code. Already in place: row level security on every table, money in whole cents in the Big Game and trip code, Sentry and PostHog, Delete your account, the backup file, about 170 test files, keys kept on the server, the paywall flag and Undo. These are the gaps worth closing. Enterprise items (SSO, SAML, SCIM, SOC 2, HIPAA, PCI, data residency, a second region, on-call) are skipped, see Decisions.
+
+- [ ] `S2` Prove the data walls hold: a script signs in as two test accounts and tries to read and change the other's rounds, Tab, plans, trips and profile through Supabase. Every attempt must fail. Run it after each new SQL file
+- [ ] `S2` Every settle-up adds to zero: one test runs every game and side game with random scores and checks the payouts sum to exactly $0.00, plus a sweep for money paths still doing math in dollars instead of whole cents
+- [ ] `S2` Backups you've restored: Supabase Pro (daily backups, $25 a month) once strangers' groups are on it, and one restore into a scratch project to prove it works. Point in time recovery (about $100 a month) waits for real revenue
+- [ ] `S2` Security headers in `vercel.json`: HSTS, `X-Content-Type-Options`, `Referrer-Policy` and `frame-ancestors`
+- [ ] `S2` Spend alerts and outside uptime checks: Vercel spend management, the Supabase spend cap, a watch on the GolfCourseAPI quota, and a free outside check on the site and `/api/courses`
+- [ ] `S2` Keys and packages: GitHub secret scanning and Dependabot on, `npm audit` clean, and any key that was ever pasted into a chat or committed rotated
+- [ ] `S2` Weak signal and double taps: score holes in airplane mode and come back, and double tap "I paid", Save hole and Start round; nothing lost and nothing counted twice
+- [ ] `S2` Odd names: O'Brien, José, an emoji and a 30 character name through setup, the Tab, the reveal and the share image
+- [ ] `S2` A deleted round can come back: "Recently deleted" keeps rounds for 30 days, so a wrong tap is a restore and not lost money history
+- [ ] `S2` Stripe done safely: check the signature on every webhook, handle the same webhook twice without a second unlock, and let Stripe Billing and Stripe Tax handle refunds, retries and sales tax rather than our own code
+- [ ] `S1` SPF, DKIM and DMARC on the new domain with the custom email, so sign-in emails don't land in spam
+- [ ] `S2` Every account in the business's name: Vercel, Supabase, GitHub, the domain, Stripe, Sentry and PostHog under a business email at the rename, not a personal one
+- [ ] `S3` Split `Play.jsx` (1,571 lines) and `NewRound.jsx` (1,485 lines) into smaller pieces before the App Store work
+- [ ] `S3` An end to end test of start a round, score it and settle up, run before each ship
+- [ ] `S3` A load test before the creator videos go out: a few hundred phones joining and scoring at once
+- [ ] `S5` Rate limits on `/api/join` and `/api/courses` (round codes are 6 random characters, about 887 million, fine at this size)
+- [ ] `S5` A staging environment with its own Supabase project
+- [ ] `S5` A status page
+- [ ] `S5` Reminders in each person's time zone (the tee time push runs at 15:00 UTC, the US morning), with growth outside the US
+- [ ] `S5` A full content security policy (Supabase, Sentry and PostHog make it fiddly)
+
 ## Open questions
 
 **Pricing and payments are unknown, and that's fine.** We'll learn what people pay for by testing and talking to groups, not by predicting. It doesn't block building anything else. Prices, plans and the free and Pro split in this file are placeholders. Things to learn along the way:
@@ -631,6 +668,7 @@ The audit found 60 ways to make the app calmer, clearer and worth a screenshot, 
 - 2026-09-28: The paywall stays off for everyone until real payments exist: it's a preview behind a flag, so no one taps "Start my free trial" and expects something to happen. Onboarding ends with planning the next round, and the paywall comes after the plan (cancelling the plan still lands on it). The friendly wagers note is a checkbox on the name screen, as in the wireframe.
 - 2026-09-28: Overnight 2 calls confirmed. Kept as built: legs under way keep their bet, old short rounds use the new unfinished-leg money, the Tab routes through mutual friends (Trevor to judge the wording), carried skins after the last hole go to nobody by default, the Snake and Hammer defaults, fixed-side games can't add a player mid-round, the paywall rules and the smaller calls. Changed: a skin carried from before a late joiner arrived stays with the players who built it, doubling Snake gets an optional cap (4 doubles by default), and the ballot shows each game's own unit ("$5 a side", "$1 a point").
 - 2026-09-28: Plans stay open to anyone with the code for S2, like live rounds. Tighten before the creator test.
+- 2026-10-16: From a senior engineer's checklist of what vibe-coded apps miss: the money, data and recovery gaps go on the roadmap (area 25), and the enterprise ones are skipped until a real reason shows up: SSO, SAML, SCIM, MFA beyond Google's, SOC 2, HIPAA, PCI (Stripe holds the cards), data residency, a second region, autoscaling (Vercel and Supabase do it), on-call, a versioned public API, customer API keys, purchase order invoices and the AI items.
 - 2026-09-29: Stop hiding Pro before launch. The app is only with friends and small groups, so everything is open and unlabelled; the free and Pro split happens at the official launch, and early testers get Pro for life.
 
 ## Progress log
@@ -699,3 +737,4 @@ The audit found 60 ways to make the app calmer, clearer and worth a screenshot, 
 - 2026-10-14: From Trevor: why look at payments that don't involve me? The who's square strip on the Tab now lists only the people you had money with in that round, from your side (Owes you, You owe, Paid, Carried), and hides once nothing of yours is open. The recap card's "Who's paid" row of everyone became "Your money" with just your lines, and only your own carry-overs. Still showing other people's amounts: "Who owes who" on the Tab, kept from the 2026-09-28 decision, waiting on Trevor.
 - 2026-10-14: The iPhone launch images shipped to main. They were built on 2026-10-12 right after the splash screen but sat on a branch nobody merged: 26 images (13 iPhone sizes, light and dark) drawn from the splash by `scripts/splash-images.mjs`, kept out of the offline download. Also added from that branch: an "Add it to your Home Screen" card for testers as an S2 idea in area 13. Checklist: 203 of 288 (70.5%).
 - 2026-10-15: The three overnight 12 SQL files are run in Supabase (notification picks, Pro for life, creator codes), and crash reports and usage counts are live: a Sentry project and a PostHog project (both US, IP addresses discarded), their keys in Vercel for Production, and production redeployed so the live build carries both. No checklist lines change. Checklist: 203 of 288 (70.5%). Launch: web 203 of 217 (94%), App Store 203 of 221 (92%).
+- 2026-10-16: Added area 25, Hardening: 20 items from a senior engineer's checklist of what vibe-coded apps miss, checked against the code (row level security is on every table already). 11 are new launch rows (15 to 25) and SPF, DKIM and DMARC joined the custom email row; the App Store rows are now 26 to 29. The legal review now covers Apple's gambling rules, and the privacy policy item lists everyone that gets data. Checklist: 203 of 308 (65.9%). Launch: web 203 of 228 (89%), App Store 203 of 232 (87.5%).
