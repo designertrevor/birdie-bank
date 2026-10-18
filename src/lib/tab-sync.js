@@ -17,6 +17,8 @@ import { closeBooks } from './books.js';
 import { canonicalOf } from './pair-debts.js';
 import { BadRowError, TAB_CHECK_MS, TabOffError, supabaseTab } from './tab-adapters.js';
 import { pushTab } from './push-client.js';
+import { flushQueue, queueRows } from './tab-queue.js';
+import { tapOnce } from './tap-once.js';
 
 export { TabOffError, TAB_CHECK_MS } from './tab-adapters.js';
 
@@ -76,10 +78,7 @@ export function usePaymentsOff() {
 
 function readQueue() { try { return JSON.parse(localStorage.getItem(QUEUE)) || []; } catch { return []; } }
 function writeQueue(q) { try { localStorage.setItem(QUEUE, JSON.stringify(q.slice(-500))); } catch { /* storage full */ } }
-function enqueue(rows) {
-  const keys = new Set(rows.map(r => `${r.code}|${r.id}`));
-  writeQueue([...readQueue().filter(r => !keys.has(`${r.code}|${r.id}`)), ...rows]);
-}
+function enqueue(rows) { writeQueue(queueRows(readQueue(), rows)); }
 
 let flushing = null;
 /** Send every row waiting on this phone. Safe to call often. */
@@ -89,21 +88,15 @@ export function flushTab() {
     if (off) return;
     const adapter = await getTabAdapter();
     if (!adapter) return;
-    for (const row of readQueue()) {
-      try {
-        await adapter.upsertRow(row);
-        // Only drop it if nothing newer for the same row was queued meanwhile
-        writeQueue(readQueue().filter(r => !(r.code === row.code && r.id === row.id && r.updatedAt === row.updatedAt)));
-      } catch (e) {
-        if (e instanceof BadRowError) {
-          console.warn('Shared Tab: the server refused a row, dropping it', row.id, e.cause);
-          writeQueue(readQueue().filter(r => !(r.code === row.code && r.id === row.id && r.updatedAt === row.updatedAt)));
-          continue;
-        }
-        noteError(e);
-        break;
-      }
-    }
+    // Oldest first, and a row sent again after a lost reply lands on the same row (tab-queue.js)
+    await flushQueue({
+      read: readQueue, write: writeQueue, send: row => adapter.upsertRow(row), onError: noteError,
+      skip: (e, row) => {
+        if (!(e instanceof BadRowError)) return false;
+        console.warn('Shared Tab: the server refused a row, dropping it', row.id, e.cause);
+        return true;
+      },
+    });
   })().finally(() => { flushing = null; });
   return flushing;
 }
@@ -196,9 +189,15 @@ if (typeof window !== 'undefined') {
   window.addEventListener('online', () => flushTab());
   document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') flushTab(); });
   if (readQueue().length) setTimeout(() => flushTab(), 3000);
+  // Weak signal often never fires 'online': rows still waiting try again now and then
+  setInterval(() => { if (readQueue().length) flushTab(); }, TAB_CHECK_MS);
 }
 
 // --------------------------- actions -----------------------------------------
+
+// A second tap on "I paid" (or Mark paid, Settle the trip) that lands before the screen caught up
+// still has the old amount: it returns the first tap's result instead of paying it again
+const paidTap = tapOnce();
 
 /**
  * Record `from` paying `to` (the person card, the Settle up sheet). Ties the payment to the
@@ -206,6 +205,9 @@ if (typeof window !== 'undefined') {
  * Returns { shared }: true when the other phone will see it.
  */
 export function markPaid({ from, to, amount }) {
+  return paidTap(`card:${from}>${to}:${Math.round(amount * 100)}`, () => payCard({ from, to, amount }));
+}
+function payCard({ from, to, amount }) {
   const s = getState();
   const now = Date.now();
   const { rows, settlements, expenses } = allocatePayment(s, { from, to, amount }, { now, makeId: () => uid() });
@@ -218,6 +220,9 @@ export function markPaid({ from, to, amount }) {
 
 /** Mark one round transfer paid in full (the end-of-round settle-up). */
 export function markTransfer(round, t, code) {
+  return paidTap(`transfer:${round.id}:${t.from}>${t.to}`, () => payTransfer(round, t, code));
+}
+function payTransfer(round, t, code) {
   const now = Date.now();
   if (!code) {
     take([], { add: [{ id: uid('s_'), from: t.from, to: t.to, amount: t.amount, at: now, roundId: round.id }] });
@@ -238,6 +243,9 @@ export function markTransfer(round, t, code) {
  * payment on this phone and your account. Returns { shared, at }.
  */
 export function markTripPayment({ tripId, from, to, part = false }) {
+  return paidTap(`trip:${tripId}:${from}>${to}:${part ? 'part' : 'all'}`, () => payTrip({ tripId, from, to, part }));
+}
+function payTrip({ tripId, from, to, part }) {
   const now = Date.now();
   const { rows, settlements, expenses } = tripPayment(getState(), tripId, from, to, { now, part });
   commit(rows, { add: settlements });
@@ -247,6 +255,7 @@ export function markTripPayment({ tripId, from, to, part = false }) {
 
 /** Take back payments (one tap, no confirm: it can be put back the same way). Returns a redo function. */
 export function undoPayments(settlementsToUndo, netted = null) {
+  paidTap.reset();
   const s = getState();
   // From the payments list: what that payment netted is taken back with it
   if (!netted) netted = nettedFor(s, settlementsToUndo);
@@ -316,6 +325,9 @@ function undoMadeAt(at, ids) {
  * Returns { shared, undo }.
  */
 export function markCrewPayment({ crewId, from, to }) {
+  return paidTap(`crew:${crewId}:${from}>${to}`, () => payCrew({ crewId, from, to }));
+}
+function payCrew({ crewId, from, to }) {
   const now = Date.now();
   const { rows, settlements } = crewPayment(getState(), crewId, from, to, { now, makeId: () => uid() });
   commit(rows, { add: settlements });

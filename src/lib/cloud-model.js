@@ -39,6 +39,14 @@ export function toDocs(state) {
   for (const p of Object.values(state.players)) put('player', p.id, p);
   for (const c of Object.values(state.crews)) put('crew', c.id, c);
   for (const c of Object.values(state.customCourses)) put('course', c.id, c);
+  // A deleted round (recently-deleted.js) is the same round document with deletedAt inside, so a
+  // delete and a restore reach your other phones like any edit. A round in play wins over a stale copy
+  for (const r of Object.values(state.deletedRounds || {})) {
+    if (!r?.id || state.rounds[r.id]) continue;
+    const data = { ...r };
+    for (const k of ROUND_LOCAL) delete data[k];
+    put('round', r.id, data);
+  }
   for (const r of Object.values(state.rounds)) {
     const data = { ...r };
     for (const k of ROUND_LOCAL) delete data[k];
@@ -60,6 +68,20 @@ export function hashAll(docs) {
 /** Put one document (or its deletion, when data is null) into a state draft (mutates). */
 export function applyDoc(draft, kind, id, data) {
   const map = { player: 'players', crew: 'crews', course: 'customCourses', round: 'rounds' }[kind];
+  // A round deleted on another phone moves to Recently deleted here, and a restore moves it back
+  if (kind === 'round' && data != null && data.deletedAt) {
+    const was = draft.rounds[id];
+    delete draft.rounds[id];
+    if (!draft.deletedRounds || typeof draft.deletedRounds !== 'object') draft.deletedRounds = {};
+    draft.deletedRounds[id] = { ...data };
+    if (was) {
+      // Its payments went with it on that phone (their own documents say so too)
+      draft.settlements = draft.settlements.filter(s => s.roundId !== id);
+      if (draft.activeRoundId === id) draft.activeRoundId = nextActiveId(draft, id);
+    }
+    return;
+  }
+  if (kind === 'round' && draft.deletedRounds?.[id]) delete draft.deletedRounds[id];
   if (map) {
     if (data == null) delete draft[map][id];
     else if (kind === 'round') draft.rounds[id] = { ...data, _remote: draft.rounds[id]?._remote };

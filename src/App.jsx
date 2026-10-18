@@ -46,6 +46,7 @@ const Defaults = screen(settings, 'Defaults');
 const Courses = screen(settings, 'Courses');
 const CourseEdit = screen(settings, 'CourseEdit');
 const About = screen(settings, 'About');
+const RecentlyDeleted = screen(settings, 'RecentlyDeleted');
 const NotifyPicks = screen(settings, 'NotifyPicks');
 const NewRound = screen(() => import('./screens/NewRound.jsx'));
 const Play = screen(() => import('./screens/Play.jsx'));
@@ -179,7 +180,7 @@ function preloadScreens() {
 const SCREENS = {
   roundDetail: RoundDetail, newRound: NewRound, play: Play,
   playerEdit: PlayerEdit, crewEdit: CrewEdit, person: Person,
-  settings: Settings, defaults: Defaults, courses: Courses, courseEdit: CourseEdit, about: About, suggest: Suggest, notifyPicks: NotifyPicks,
+  settings: Settings, defaults: Defaults, courses: Courses, courseEdit: CourseEdit, about: About, suggest: Suggest, notifyPicks: NotifyPicks, recentlyDeleted: RecentlyDeleted,
   plan: Plan, rollCall: RollCall, planLink: PlanLink, preview: Preview, paywall: Paywall, yourPlan: YourPlan, cancelPlan: CancelPlan, season: Season,
   challenge: Challenge, challengeLink: ChallengeLink,
   joinInvite: JoinInviteScreen, lately: Lately, trip: Trip, tripSettle: TripSettle, draft: Draft, draftLink: DraftLink,
@@ -291,8 +292,11 @@ export default function App() {
   useEffect(() => {
     // Accounts, profiles and live sync start right after the first paint, in the same order as
     // always; feedback.js sends any suggestions queued while offline
-    Promise.all([import('./lib/cloud.js'), import('./lib/profiles.js'), import('./lib/sync.js')]).then(([cloud, profiles, sync]) => {
+    Promise.all([import('./lib/cloud.js'), import('./lib/profiles.js'), import('./lib/sync.js'), import('./lib/recently-deleted.js')]).then(([cloud, profiles, sync, trash]) => {
       cloud.bootCloud();
+      // Rounds deleted more than 30 days ago go for good, once cloud sync is listening so the
+      // account and your other phones hear it (recently-deleted.js)
+      trash.purgeOnLaunch();
       profiles.bootProfiles();
       sync.bootSync();
     }).catch(() => {});

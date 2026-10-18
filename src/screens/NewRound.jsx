@@ -378,8 +378,15 @@ export default function NewRound({ rematch, fromPlan, present, edit = null, ahea
     nav.pop();
   };
 
-  // A round already in progress is never touched: it stays saved and you can switch back to it
+  // A round already in progress is never touched: it stays saved and you can switch back to it.
+  // One start at a time, so a double tap (or one while the handicap or age question is up) makes one round
+  const starting = useRef(false);
   const start = async () => {
+    if (starting.current) return;
+    starting.current = true;
+    try { await startRound(); } finally { starting.current = false; }
+  };
+  const startRound = async () => {
     const s = getState();
     // Only the betting players' handicaps matter: someone just playing gets no strokes
     const noHc = useHc && game !== 'bbb' ? betting.filter(pid => s.players[pid]?.index == null && hcOverride[pid] == null) : [];
