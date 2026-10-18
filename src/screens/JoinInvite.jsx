@@ -3,7 +3,7 @@
 // Not on the list? Ask the scorekeeper for a seat and wait here for them to let you in.
 // No organizer onboarding. They become "me" using their player from the shared round.
 import { Spot } from '../components/Spot.jsx';
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { BallIllo, Icon, Screen, Segmented } from '../components/ui.jsx';
 import { Avatar } from '../components/Avatar.jsx';
 import { LinkBrand, LinkHowTo } from '../components/LinkBrand.jsx';
@@ -12,7 +12,7 @@ import { getState, update, uid } from '../lib/store.js';
 import { useNav } from '../lib/nav.js';
 import { afterJoin, inviteBetLines, teamLine } from '../lib/join.js';
 import { cancelSeatRequest, fetchShared, joinShared, requestSeat, watchSeatRequest } from '../lib/sync.js';
-import { assemble, cleanRequestName } from '../lib/sync-model.js';
+import { assemble, cleanRequestName, newRequestNo } from '../lib/sync-model.js';
 import { GAMES, addPlayerProblem, isJustPlaying } from '../lib/round.js';
 import { JUST_PLAYING, JUST_PLAYING_HELP, JUST_PLAYING_TAG, addJustPlayingProblem, cardOnlyRound } from '../lib/just-playing.js';
 import { addRound } from '../lib/rounds.js';
@@ -46,6 +46,10 @@ export default function JoinInvite({ code, onJoined, onSkip, setUp = false }) {
   const [err, setErr] = useState(null);
   const [tries, setTries] = useState(0);
   const [busy, setBusy] = useState(false);
+  // A seat request on its way: a second tap on Ask to join (before Sending shows) asks once
+  const asking = useRef(false);
+  // ...and asking again after an error goes in the same slot, so a request that did get there is still one request
+  const askNo = useRef(null);
   // card → seat → confirm, or watch, or ask → waiting → (in: join) | no | gone
   const [step, setStep] = useState(() => (loadSeat(code) ? 'waiting' : 'card'));
   const [seat, setSeat] = useState(null);
@@ -252,16 +256,20 @@ export default function JoinInvite({ code, onJoined, onSkip, setUp = false }) {
     const casual = !jpProblem && (casualPick ?? !!betProblem);
     const problem = casual ? null : betProblem;
     const send = async () => {
-      // Just playing has no money on it, so it never asks the age question
-      if (!casual && !(await okToPlay())) return;
-      setBusy(true); setAskErr(false);
+      if (asking.current) return;
+      asking.current = true;
       try {
-        const clean = cleanRequestName(name);
-        const no = await requestSeat(code, clean, { justPlaying: casual });
-        saveSeat(code, { no, name: clean, ...(casual ? { justPlaying: true } : {}) });
-        setStep('waiting');
-      } catch { setAskErr(true); }
-      setBusy(false);
+        // Just playing has no money on it, so it never asks the age question
+        if (!casual && !(await okToPlay())) return;
+        setBusy(true); setAskErr(false);
+        try {
+          const clean = cleanRequestName(name);
+          const no = await requestSeat(code, clean, { justPlaying: casual, no: (askNo.current ??= newRequestNo()) });
+          saveSeat(code, { no, name: clean, ...(casual ? { justPlaying: true } : {}) });
+          setStep('waiting');
+        } catch { setAskErr(true); }
+        setBusy(false);
+      } finally { asking.current = false; }
     };
     return (
       <Screen className="onboard">

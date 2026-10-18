@@ -1,0 +1,28 @@
+# Uptime check from outside our own network (ROADMAP area 25). Every 15 minutes GitHub's servers
+# load the app, a rule page and the course search endpoint. When one is down the run fails and
+# GitHub emails the repo owner. The course check sends a bad id on purpose: the function answers
+# 400 without calling GolfCourseAPI, so it proves the server is up without using the daily quota.
+name: Uptime
+on:
+  schedule:
+    - cron: '*/15 * * * *'
+  workflow_dispatch:
+permissions: {}
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    steps:
+      - name: Check the live site
+        env:
+          SITE: https://birdie-bank.vercel.app
+        run: |
+          fail=0
+          check() {
+            code=$(curl -s -o /dev/null -w '%{http_code}' --max-time 20 --retry 2 --retry-delay 5 "$SITE$1")
+            if [ "$code" = "$2" ]; then echo "ok   $1 ($code)"; else echo "DOWN $1 (got $code, want $2)"; fail=1; fi
+          }
+          check / 200
+          check /rules 200
+          check '/api/courses?id=bad' 400
+          exit $fail

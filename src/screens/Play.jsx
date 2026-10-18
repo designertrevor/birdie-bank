@@ -44,6 +44,7 @@ import { syncConfigured, useSeatRequests } from '../lib/sync.js';
 import { AddPlayerSheet } from '../components/AddPlayer.jsx';
 import { firstName, gameLabel, holeMoneyLine } from '../lib/format.js';
 import { shortNames } from '../lib/short-names.js';
+import { KEEP_DAYS, restoreRound, softDeleteRound } from '../lib/recently-deleted.js';
 import { countsMoney, inUnits, onTab, padUnit, playForShort, unitFmt, wholeDelta } from '../lib/play-for.js';
 import { leaveRound, roundsInProgress } from '../lib/rounds.js';
 import { RoundsInProgressSheet } from '../components/RoundsInProgress.jsx';
@@ -161,6 +162,11 @@ function useWakeLock() {
 // Unsaved scores per hole ("roundId:holeNo"), kept while moving between holes so nothing typed is
 // lost, and saved with your place so switching to another app (or the phone reloading) keeps them too
 const DRAFTS = keptMap('drafts');
+// When this phone last saved a hole, per round. The next hole opens under the same button with every
+// score at par, so a double tap on Save would save that hole too: a tap that soon after, before any
+// score on the new hole is touched, is the same tap
+const SAVED_AT = new Map();
+const SAVE_GAP_MS = 800;
 // Rounds whose locked-in rules card this phone has closed (a phone that isn't keeping score sees it until then)
 const AGREED_SEEN = new Set();
 
@@ -426,8 +432,16 @@ function PlayRound({ round, mount, momentUp = false }) {
     return later === -1 ? idx + 1 : later;
   }, [round, idx, isLast]);
 
+  // One save at a time: the last hole waits on finishing, which can ask first
+  const saving = useRef(false);
   const saveHole = async () => {
-    if (!editable) return;
+    if (!editable || saving.current) return;
+    const last = SAVED_AT.get(round.id);
+    if (last && last.hole !== hole.no && !dirty && Date.now() - last.at < SAVE_GAP_MS) return;
+    saving.current = true;
+    try { await saveThisHole(); } finally { saving.current = false; }
+  };
+  const saveThisHole = async () => {
     if (game === 'wolf' && wolf.partner === undefined) { showToast(`Pick ${round.players.find(p => p.id === wolf.wolf)?.name.split(' ')[0] || 'the wolf'}’s partner, or go lone wolf`); return; }
     const scores = Object.fromEntries(units.map(p => [p.id, draft[p.id]]));
     // ...and a pot added while this hole was open still saves the hole as nobody's when nobody's tapped
@@ -455,6 +469,7 @@ function PlayRound({ round, mount, momentUp = false }) {
         }
       }
     });
+    SAVED_AT.set(round.id, { hole: hole.no, at: Date.now() });
     if (pressMode(round) === 'auto' && !isLast) {
       const r = getState().rounds[round.id];
       const legs = roundLegs(r);
@@ -523,12 +538,15 @@ function PlayRound({ round, mount, momentUp = false }) {
     }
     if (choice === 'later') nav.push('newRound', { reschedule: round.id });
     if (choice === 'discard') {
-      const sure = await ask({ title: 'Delete this round?', text: 'Scores and bets from this round will be gone for good.', confirmLabel: 'Delete round', danger: true });
+      const sure = await ask({ title: 'Delete this round?', text: `It leaves Up next and the Tab. You can bring it back from Settings, Recently deleted, for ${KEEP_DAYS} days.`, confirmLabel: 'Delete round', danger: true });
       if (!sure) return;
       // A challenge that went into it is agreed again for the next round together
       challengesBack(getState().rounds[round.id]);
-      update(s => { delete s.rounds[round.id]; leaveRound(s, round.id); });
+      // It waits in Settings, Recently deleted, for 30 days (recently-deleted.js)
+      const id = round.id;
+      update(s => { softDeleteRound(s, id); });
       nav.reset('upnext');
+      showToast('Round deleted', { label: 'Undo', run: () => update(s => { restoreRound(s, id); }) });
     }
   };
 

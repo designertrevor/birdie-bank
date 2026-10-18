@@ -162,7 +162,7 @@ test('a trip started without picking anyone is just the organizer, and plans its
   const s = world({ trips: { t1: trip } });
   assert.deepEqual(trip.people, []);
   assert.deepEqual(tripGoing(s, trip), ['me']);
-  assert.equal(tripStatus(s, 't1', NOW.getTime()).phase, 'soon');
+  assert.equal(tripStatus(s, 't1', { now: NOW.getTime() }).phase, 'soon');
   assert.equal(tripPlanDay(trip, '2026-10-05'), '2026-10-16');
 });
 

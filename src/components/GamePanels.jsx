@@ -34,7 +34,7 @@ export function MatchPanel({ round, hole, readOnly = false }) {
   const bets = nassauBets(winners, [...round.presses, ...byes], nassauAmounts(round), LEGS);
   const names = sideNames(round);
   // One match fills the row, so it says the leader's name; Nassau's three tiles use a letter
-  const short = names.map((n, i) => (round.teams ? ['A', 'B'][i] : round.game === 'match' ? n.split(' ')[0] : n.charAt(0).toUpperCase()));
+  const short = names.map((n, i) => (round.teams ? ['A', 'B'][i] : round.game === 'match' ? n.split(' ')[0] : ([...n][0] || '').toUpperCase()));
   // Pop a tile when its score moved since this phone last showed it (the hole screen remounts on every save)
   const vals = legs.map(leg => { const s = bets.find(x => x.key === leg).status; return `${s.leader}:${s.by}`; });
   const [popped] = useState(() => { const was = TILE_SEEN.get(round.id); return was ? legs.filter((leg, i) => was[i] !== vals[i]) : []; });

@@ -20,7 +20,7 @@ import { APP_NAME } from './app-name.js';
 
 const EMPTY = '–';
 const first = n => String(n || '').trim().split(/\s+/)[0] || '';
-const initialsOf = n => String(n || '').trim().split(/\s+/).filter(Boolean).slice(0, 2).map(w => w[0].toUpperCase()).join('');
+const initialsOf = n => String(n || '').trim().split(/\s+/).filter(Boolean).slice(0, 2).map(w => [...w][0].toUpperCase()).join('');
 const plural = (n, word, many = `${word}s`) => `${n} ${n === 1 ? word : many}`;
 
 /**

@@ -1,0 +1,17 @@
+# Weekly pull requests for outdated or vulnerable packages (ROADMAP area 25). Minor and patch
+# updates come grouped in one pull request so they're quick to review.
+version: 2
+updates:
+  - package-ecosystem: npm
+    directory: /
+    schedule:
+      interval: weekly
+      day: monday
+    open-pull-requests-limit: 5
+    groups:
+      minor-and-patch:
+        update-types: [minor, patch]
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: monthly

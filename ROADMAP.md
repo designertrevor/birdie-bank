@@ -22,7 +22,7 @@ The full checklist runs all the way to the $10k/mo future. This is the much shor
 
 These rows point at checklist items rather than repeating them as checkboxes, so the checklist count stays honest. Status is Done, Partial or To do.
 
-**Progress:** web launch 203 of 228 (89%), App Store launch 203 of 232 (87.5%). Overall checklist 203 of 308 (65.9%). The 203 is everything already shipped; the rest is below. Updated 2026-10-16, when the hardening rows (15 to 25, area 25) were added.
+**Progress:** web launch 207 of 228 (91%), App Store launch 207 of 232 (89%). Overall checklist 207 of 308 (67.2%). The 207 is everything already shipped; the rest is below. Updated 2026-10-17 after the first hardening session (built on `hardening/1`).
 
 **Web launch** (the web app as it is, paid through Stripe, shared by link)
 
@@ -42,15 +42,15 @@ These rows point at checklist items rather than repeating them as checkboxes, so
 | 12 | Support: the help link and a reply within a day | 15 | Partial |
 | 13 | A simple home page with pricing and legal links | 18 | To do |
 | 14 | A legal check of how betting is worded, before paying creators | 14 | To do |
-| 15 | Prove the data walls hold between accounts | 25 | To do |
-| 16 | Every settle-up adds to zero, and money in whole cents | 25 | To do |
+| 15 | Prove the data walls hold between accounts (run the round codes SQL first) | 25 | Partial |
+| 16 | Every settle-up adds to zero, and money in whole cents | 25 | Done |
 | 17 | Supabase Pro backups and one restore tried | 25 | To do |
-| 18 | Security headers | 25 | To do |
-| 19 | Spend alerts and outside uptime checks | 25 | To do |
-| 20 | Secret scanning, Dependabot and old keys rotated | 25 | To do |
-| 21 | Weak signal and double tap test | 25 | To do |
-| 22 | Odd names test | 25 | To do |
-| 23 | Recently deleted rounds (30 days) | 25 | To do |
+| 18 | Security headers | 25 | Done |
+| 19 | Spend alerts and outside uptime checks | 25 | Partial |
+| 20 | Secret scanning, Dependabot and old keys rotated | 25 | Partial |
+| 21 | Weak signal and double tap test | 25 | Partial |
+| 22 | Odd names test | 25 | Done |
+| 23 | Recently deleted rounds (30 days) | 25 | Done |
 | 24 | Stripe webhooks checked and safe to repeat | 25 | To do |
 | 25 | Every account in the business's name | 25 | To do |
 
@@ -112,6 +112,8 @@ These rows point at checklist items rather than repeating them as checkboxes, so
 **Polish 2026-10-06 (from Trevor, on `feedback/floating-sheets`):** sheets float as rounded cards inset from the screen edges, with a raised surface that reads clearly against the page in dark mode.
 
 **Shipped to main 2026-10-12 (from Trevor):** a splash screen on a cold start (the ball on its tee and the name, in your saved theme) instead of a blank screen, and the fonts and icons no longer hold up the first paint.
+
+**Hardening session 1, 2026-10-17 (on `hardening/1`, not on main yet):** settle-ups proven to add to zero, security headers, odd names, Recently deleted, double tap fixes on "I paid" and Save hole, an uptime check, Dependabot and the data walls script. The script found live rounds, payments and plans readable by anyone with the public key: `supabase/2026-10-06-round-codes.sql` was never run, and running it is now the first thing to do. Left for Trevor: that SQL, two test accounts for the script, spend settings in Vercel and Supabase, key rotation, and one airplane mode round.
 
 **Hardening added 2026-10-16 (area 25):** 20 items from a senior engineer's checklist, 11 of them launch rows. First a hardening session with no outside blockers (data walls, settle-ups add to zero, headers, keys and packages, spend alerts and uptime, weak signal and double taps, odd names, Recently deleted), then backups with the first outside groups, the Stripe items with Stripe, and the email and account items at the rename.
 
@@ -613,15 +615,15 @@ The audit found 60 ways to make the app calmer, clearer and worth a screenshot, 
 ### 25. Hardening (from the 2026-10-16 engineering checklist)
 From Trevor, 2026-10-16: a long list from a senior engineer of what vibe-coded apps miss, checked against this code. Already in place: row level security on every table, money in whole cents in the Big Game and trip code, Sentry and PostHog, Delete your account, the backup file, about 170 test files, keys kept on the server, the paywall flag and Undo. These are the gaps worth closing. Enterprise items (SSO, SAML, SCIM, SOC 2, HIPAA, PCI, data residency, a second region, on-call) are skipped, see Decisions.
 
-- [ ] `S2` Prove the data walls hold: a script signs in as two test accounts and tries to read and change the other's rounds, Tab, plans, trips and profile through Supabase. Every attempt must fail. Run it after each new SQL file
-- [ ] `S2` Every settle-up adds to zero: one test runs every game and side game with random scores and checks the payouts sum to exactly $0.00, plus a sweep for money paths still doing math in dollars instead of whole cents
+- [ ] `S2` (partial) Prove the data walls hold: a script signs in as two test accounts and tries to read and change the other's rounds, Tab, plans, trips and profile through Supabase. Every attempt must fail. Run it after each new SQL file. Built 2026-10-17: `node scripts/data-walls.mjs` reads every table as a stranger and with a made-up code, and with `BB_TOKEN_A` and `BB_TOKEN_B` tries one account's rows from the other (reads and a no-op update, never a change). Its first run found a real hole: live rounds, scorecards, Tab payments, plans and challenges could be listed by anyone with the public key, because `supabase/2026-10-06-round-codes.sql` was never run. Left: run that SQL, then the script again with two test accounts
+- [x] `S2` Every settle-up adds to zero: one test runs every game and side game with random scores and checks the payouts sum to exactly $0.00, plus a sweep for money paths still doing math in dollars instead of whole cents. Done 2026-10-17: `src/lib/zero-sum.test.js` runs about 17,000 seeded cases (every game, every side game on every main game, two-player side bets, all at once, Big Game, trip expenses and the team points stake), each net to the cent, the settle-up payments reproducing every net and head to heads equal and opposite. No money bug found. The sweep found every fractional cent rounded once by `roundCents`; `fewestPayments` quietly absorbing an unbalanced total is the one place a future bug could hide
 - [ ] `S2` Backups you've restored: Supabase Pro (daily backups, $25 a month) once strangers' groups are on it, and one restore into a scratch project to prove it works. Point in time recovery (about $100 a month) waits for real revenue
-- [ ] `S2` Security headers in `vercel.json`: HSTS, `X-Content-Type-Options`, `Referrer-Policy` and `frame-ancestors`
-- [ ] `S2` Spend alerts and outside uptime checks: Vercel spend management, the Supabase spend cap, a watch on the GolfCourseAPI quota, and a free outside check on the site and `/api/courses`
-- [ ] `S2` Keys and packages: GitHub secret scanning and Dependabot on, `npm audit` clean, and any key that was ever pasted into a chat or committed rotated
-- [ ] `S2` Weak signal and double taps: score holes in airplane mode and come back, and double tap "I paid", Save hole and Start round; nothing lost and nothing counted twice
-- [ ] `S2` Odd names: O'Brien, José, an emoji and a 30 character name through setup, the Tab, the reveal and the share image
-- [ ] `S2` A deleted round can come back: "Recently deleted" keeps rounds for 30 days, so a wrong tap is a restore and not lost money history
+- [x] `S2` Security headers in `vercel.json`: HSTS, `X-Content-Type-Options`, `Referrer-Policy` and `frame-ancestors`. Done 2026-10-17, with `X-Frame-Options` and a `Permissions-Policy` (location for Courses near me only, no camera, microphone or payment)
+- [ ] `S2` (partial) Spend alerts and outside uptime checks: Vercel spend management, the Supabase spend cap, a watch on the GolfCourseAPI quota, and a free outside check on the site and `/api/courses`. The uptime check is built (2026-10-17, `.github/workflows/uptime.yml`): every 15 minutes GitHub loads the app, a rule page and the course endpoint (a bad id, so no quota is used) and emails Trevor when one fails. Left for Trevor: the spend settings in Vercel and Supabase
+- [ ] `S2` (partial) Keys and packages: GitHub secret scanning and Dependabot on, `npm audit` clean, and any key that was ever pasted into a chat or committed rotated. Done 2026-10-17: secret scanning and push protection were already on, `.github/dependabot.yml` added (weekly, starts once it's on main), `npm audit` at 0 (the 13 were all in Vite's dev server), and the git history has no secret keys. Left for Trevor: rotate any key pasted into a chat, and turn on Dependabot security updates in the repo's settings. The repo is public, so the code and SQL are readable by anyone
+- [ ] `S2` (partial) Weak signal and double taps: score holes in airplane mode and come back, and double tap "I paid", Save hole and Start round; nothing lost and nothing counted twice. Fixed 2026-10-17: a fast second "I paid" could pay twice and flip the debt (`tap-once.js` guards every payment action, Undo clears it), a fast second Save hole saved the next hole as all pars and could finish the round twice, Start round and "Add me" could each send twice, and Tab payments waiting on weak signal now try again every 30 seconds. Offline scoring was already safe. Left: one real phone round in airplane mode
+- [x] `S2` Odd names: O'Brien, José, an emoji and a 30 character name through setup, the Tab, the reveal and the share image. Done 2026-10-17 (names are capped at 24 letters): an emoji at the start of a word was cut in half in the rivalry card, the profile card, the duplicate first name chips and the match play panel, now fixed; apostrophes, accents and Hebrew came through whole (`src/lib/odd-names.test.js`)
+- [x] `S2` A deleted round can come back: "Recently deleted" keeps rounds for 30 days, so a wrong tap is a restore and not lost money history. Done 2026-10-17: deleting a round (finished or in progress) moves it, with its payments and trash talk, to Settings, Recently deleted, with an Undo toast; Restore puts it all back, and rounds go for good after 30 days. Synced to your other phones inside the round's own record, so no SQL
 - [ ] `S2` Stripe done safely: check the signature on every webhook, handle the same webhook twice without a second unlock, and let Stripe Billing and Stripe Tax handle refunds, retries and sales tax rather than our own code
 - [ ] `S1` SPF, DKIM and DMARC on the new domain with the custom email, so sign-in emails don't land in spam
 - [ ] `S2` Every account in the business's name: Vercel, Supabase, GitHub, the domain, Stripe, Sentry and PostHog under a business email at the rename, not a personal one
@@ -738,3 +740,4 @@ From Trevor, 2026-10-16: a long list from a senior engineer of what vibe-coded a
 - 2026-10-14: The iPhone launch images shipped to main. They were built on 2026-10-12 right after the splash screen but sat on a branch nobody merged: 26 images (13 iPhone sizes, light and dark) drawn from the splash by `scripts/splash-images.mjs`, kept out of the offline download. Also added from that branch: an "Add it to your Home Screen" card for testers as an S2 idea in area 13. Checklist: 203 of 288 (70.5%).
 - 2026-10-15: The three overnight 12 SQL files are run in Supabase (notification picks, Pro for life, creator codes), and crash reports and usage counts are live: a Sentry project and a PostHog project (both US, IP addresses discarded), their keys in Vercel for Production, and production redeployed so the live build carries both. No checklist lines change. Checklist: 203 of 288 (70.5%). Launch: web 203 of 217 (94%), App Store 203 of 221 (92%).
 - 2026-10-16: Added area 25, Hardening: 20 items from a senior engineer's checklist of what vibe-coded apps miss, checked against the code (row level security is on every table already). 11 are new launch rows (15 to 25) and SPF, DKIM and DMARC joined the custom email row; the App Store rows are now 26 to 29. The legal review now covers Apple's gambling rules, and the privacy policy item lists everyone that gets data. Checklist: 203 of 308 (65.9%). Launch: web 203 of 228 (89%), App Store 203 of 232 (87.5%).
+- 2026-10-17: Hardening session 1 on `hardening/1`. Done: settle-ups add to zero (about 17,000 seeded cases, no money bug), security headers, odd names (emoji initials cut in half in four places, fixed), Recently deleted rounds with Undo. Partly done: the data walls script (its first run found live rounds, payments, plans and challenges listable by anyone, since `2026-10-06-round-codes.sql` was never run), the uptime check, Dependabot and a clean `npm audit`, and double tap fixes (a fast second "I paid" paid twice, a fast second Save hole saved the next hole as all pars). Also fixed a test that broke on today's date. Tests: 2,382 passing. Checklist: 207 of 308 (67.2%). Launch: web 207 of 228 (91%), App Store 207 of 232 (89%).

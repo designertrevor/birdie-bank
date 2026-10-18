@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Callout, Empty, FileButton, Header, Icon, Numpad, Screen, Segmented, Toggle, useUI } from '../components/ui.jsx';
+import { Callout, Empty, FileButton, Header, Icon, Numpad, Screen, Segmented, Toggle, useFoldAway, useUI } from '../components/ui.jsx';
 import { sound } from '../lib/sound-play.js';
 import { soundsOn } from '../lib/sounds.js';
 import { RulesSheet } from '../components/Rules.jsx';
@@ -13,7 +13,8 @@ import { GAMES, blindMultiplierOf } from '../lib/round.js';
 import { GameOptions } from '../components/GameOptions.jsx';
 import { money } from '../lib/golf.js';
 import { useNav } from '../lib/nav.js';
-import { formatIndex, hcPctLabel } from '../lib/format.js';
+import { formatIndex, gameLabel, hcPctLabel, roundDate } from '../lib/format.js';
+import { KEEP_DAYS, daysLeftLabel, deletedAgoLabel, deletedList, restoreRound } from '../lib/recently-deleted.js';
 import { PAY_APPS, payInfo } from '../lib/pay.js';
 import { SignInSheet, syncLabel } from '../components/Account.jsx';
 import { DeleteAccountButton } from '../components/DeleteAccount.jsx';
@@ -206,6 +207,8 @@ export default function Settings() {
           <Toggle on={state.settings.betPrompt !== false} onChange={v => update(s => { s.settings.betPrompt = v; })} labelledBy="bet-prompt-lbl" describedBy="bet-prompt-sub" />
         </div>
         <div className="sec-label">Your data</div>
+        {/* Deleted rounds wait here for 30 days (recently-deleted.js) */}
+        {row('trash', 'Recently deleted', trashLine(deletedList(state).length), () => nav.push('recentlyDeleted'))}
         {row('export', 'Back up your data', 'Save rounds, players, courses and payments to a file', backup)}
         <FileButton id="restore-file" className="set-row" accept="application/json,.json" onPick={restore}>
           <div className="set-icon"><Icon name="download-simple" fill /></div>
@@ -246,6 +249,54 @@ export default function Settings() {
         {acct.user && <DeleteAccountButton />}
       </div>
       {signingIn && <SignInSheet open onClose={() => setSigningIn(false)} />}
+    </Screen>
+  );
+}
+
+const trashLine = n => (n ? `${n} ${n === 1 ? 'round' : 'rounds'} you can bring back` : `Deleted rounds wait here for ${KEEP_DAYS} days`);
+
+/** One deleted round: what it was, when it went, how long it has, and Restore. It folds shut as it goes back. */
+function DeletedRow({ round, onRestore }) {
+  const [out, away] = useFoldAway();
+  const who = round.players.map(p => (p.name || '?').split(' ')[0]).join(', ');
+  return (
+    <div className={`fold-away ${out ? 'out' : ''}`}>
+      <div className="set-row static">
+        <div className="row-main">
+          <div className="set-name">{round.course?.name || 'Round'}</div>
+          <div className="set-sub">{[roundDate(round), gameLabel(round)].filter(Boolean).join(' · ')}</div>
+          {who && <div className="set-sub">{who}</div>}
+          <div className="set-sub">{deletedAgoLabel(round)} · {daysLeftLabel(round)}</div>
+        </div>
+        <button className="pill-btn sm dark" onClick={away(onRestore)} aria-label={`Restore ${round.course?.name || 'round'}, ${roundDate(round)}`}>
+          <Icon name="arrow-counter-clockwise" /> Restore
+        </button>
+      </div>
+    </div>
+  );
+}
+
+/** Settings, Recently deleted: rounds deleted in the last 30 days, each one tap from coming back. */
+export function RecentlyDeleted() {
+  const nav = useNav();
+  const state = useStore();
+  const { showToast } = useUI();
+  const list = deletedList(state);
+  const restore = id => () => {
+    update(s => { restoreRound(s, id); });
+    showToast('Round restored. It’s back in History and the Tab', null, { tone: 'win' });
+  };
+  return (
+    <Screen>
+      <Header title="Recently deleted" onBack={nav.pop} />
+      <div className="scroll">
+        {list.length === 0
+          ? <Empty title="Nothing deleted" text={`Rounds you delete wait here for ${KEEP_DAYS} days, so a wrong tap is easy to undo.`} />
+          : <>
+            <p className="hint-card"><Icon name="clock-counter-clockwise" fill /> Restore puts a round back in History and the Tab, with its payments. After {KEEP_DAYS} days it’s gone for good.</p>
+            {list.map(r => <DeletedRow key={r.id} round={r} onRestore={restore(r.id)} />)}
+          </>}
+      </div>
     </Screen>
   );
 }

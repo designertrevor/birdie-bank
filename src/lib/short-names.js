@@ -21,9 +21,9 @@ export function shortNames(people, fallback = 'Player') {
     if (!p.length) { out.set(key, fallback); continue; }
     if (byFirst.get(p[0].toLowerCase()) < 2) { out.set(key, p[0]); continue; }
     // Shared first name: add the last initial, or the whole name when the initials match as well
-    const initial = p.length > 1 ? `${p[0]} ${p[p.length - 1][0].toUpperCase()}` : p[0];
+    const initial = p.length > 1 ? `${p[0]} ${[...p[p.length - 1]][0].toUpperCase()}` : p[0];
     const clash = people.some(([k, n]) => k !== key && parts(n)[0]?.toLowerCase() === p[0].toLowerCase()
-      && (parts(n).length > 1 ? `${parts(n)[0]} ${parts(n).at(-1)[0].toUpperCase()}` : parts(n)[0]).toLowerCase() === initial.toLowerCase());
+      && (parts(n).length > 1 ? `${parts(n)[0]} ${[...parts(n).at(-1)][0].toUpperCase()}` : parts(n)[0]).toLowerCase() === initial.toLowerCase());
     out.set(key, clash ? p.join(' ') : initial);
   }
   return out;
