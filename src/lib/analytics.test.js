@@ -2,6 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { EVENTS, REOPEN_AFTER, cleanProps, createTracker, daysBetween, openProps } from './analytics-core.js';
 import { attachTracker, roundProps, track, trackingOff, waitingCount } from './analytics.js';
+import { hasAccountHint, markJoinedByLink, noteSigningIn, takeSigningIn, usageRole } from './usage-role.js';
 
 const tick = () => new Promise(r => setTimeout(r, 0));
 const DAY = 864e5;
@@ -123,12 +124,101 @@ test('cleanProps: only the allowed keys, and only numbers, yes/no and short slug
 });
 
 test('the event list is the one the roadmap asks for', () => {
-  assert.deepEqual([...EVENTS].sort(), ['app_opened', 'onboarding_finished', 'paywall_viewed', 'plan_created', 'plan_picked', 'request_sent', 'round_finished', 'round_started']);
+  assert.deepEqual([...EVENTS].sort(), [
+    'app_opened', 'invite_opened', 'onboarding_finished', 'paywall_viewed', 'plan_created', 'plan_picked',
+    'request_sent', 'round_finished', 'round_started', 'rsvp_answered', 'seat_taken', 'signed_in', 'signin_viewed',
+  ]);
+});
+
+/** A stand-in localStorage. */
+function fakeStorage() {
+  const m = new Map();
+  return {
+    get length() { return m.size; },
+    key: i => [...m.keys()][i] ?? null,
+    getItem: k => (m.has(k) ? m.get(k) : null),
+    setItem: (k, v) => m.set(k, String(v)),
+    removeItem: k => m.delete(k),
+  };
+}
+
+test('the invited friend path: each event goes out with only its own slugs', async () => {
+  const t = createTracker();
+  const c = fakeClient();
+  t.start({ key: 'k', load: () => c });
+  await tick();
+  t.track('invite_opened', { source: 'join', first_open: true });
+  t.track('invite_opened', { source: 'plan', first_open: false });
+  t.track('seat_taken', { via: 'tile', role: 'guest' });
+  t.track('seat_taken', { via: 'add_me', role: 'member' });
+  t.track('rsvp_answered', { choice: 'maybe' });
+  t.track('signin_viewed', { source: 'save_tab' });
+  t.identify('hash123');
+  t.track('signed_in', { source: 'save_tab', path: 'google', role: 'guest', rounds_done: 1 });
+  assert.deepEqual(c.log, [
+    ['capture', 'invite_opened', { source: 'join', first_open: true }],
+    ['capture', 'invite_opened', { source: 'plan', first_open: false }],
+    ['capture', 'seat_taken', { via: 'tile', role: 'guest' }],
+    ['capture', 'seat_taken', { via: 'add_me', role: 'member' }],
+    ['capture', 'rsvp_answered', { choice: 'maybe' }],
+    ['capture', 'signin_viewed', { source: 'save_tab' }],
+    ['identify', 'hash123'],
+    ['capture', 'signed_in', { source: 'save_tab', path: 'google', role: 'guest', rounds_done: 1 }],
+  ]);
+});
+
+test('the invited friend path: no name, email, course or amount can ride along', async () => {
+  const t = createTracker();
+  const c = fakeClient();
+  t.start({ key: 'k', load: () => c });
+  await tick();
+  const personal = { name: 'Sam Smith', email: 'sam@example.com', course: 'Pebble Beach', amount: 40, bet: 5, code: 'ABC123', player: 'p_1' };
+  t.track('invite_opened', { source: 'join', first_open: true, ...personal });
+  t.track('seat_taken', { via: 'tile', role: 'guest', ...personal });
+  t.track('rsvp_answered', { choice: 'in', ...personal });
+  t.track('signin_viewed', { source: 'friends', ...personal });
+  t.track('signed_in', { source: 'settings', path: 'email', role: 'member', rounds_done: 2, ...personal });
+  // ...and an allowed key carrying something personal is dropped too
+  t.track('signed_in', { source: 'sam@example.com', path: 'Pebble Beach', role: 'Sam Smith', rounds_done: 0 });
+  const sent = c.log.map(x => x[2]);
+  for (const p of sent) {
+    for (const k of Object.keys(personal)) assert.equal(k in p, false, `${k} never goes out`);
+    for (const v of Object.values(p)) assert.equal(/@| /.test(String(v)), false, `no email or name in ${v}`);
+  }
+  assert.deepEqual(sent.at(-1), { rounds_done: 0 });
+});
+
+test('usageRole: guest from a link without an account, member once signed in, organizer otherwise', () => {
+  const st = fakeStorage();
+  assert.equal(usageRole({ storage: st }), 'organizer');
+  assert.equal(hasAccountHint(st), false);
+  markJoinedByLink(st);
+  assert.equal(usageRole({ storage: st }), 'guest');
+  assert.equal(usageRole({ storage: st, signedIn: true }), 'member');
+  st.setItem('bb-auth-token', '{}');
+  assert.equal(hasAccountHint(st), true);
+  assert.equal(usageRole({ storage: st }), 'member', 'a saved session counts before Supabase loads');
+  assert.equal(usageRole({ storage: st, signedIn: false }), 'guest', 'who they were before signing in');
+  assert.equal(usageRole({ storage: null }), 'organizer', 'storage blocked');
+});
+
+test('a sign-in on its way is taken once, and only within a day', () => {
+  const st = fakeStorage();
+  const now = Date.UTC(2026, 9, 19, 15);
+  assert.equal(takeSigningIn({ storage: st, now }), null);
+  noteSigningIn({ source: 'save_tab', path: 'google', role: 'guest', now, storage: st });
+  assert.deepEqual(takeSigningIn({ storage: st, now: now + 60000 }), { source: 'save_tab', path: 'google', role: 'guest' });
+  assert.equal(takeSigningIn({ storage: st, now: now + 60000 }), null, 'once');
+  noteSigningIn({ source: 'settings', path: 'email', role: 'organizer', now, storage: st });
+  assert.equal(takeSigningIn({ storage: st, now: now + 25 * 3600e3 }), null, 'an email link opened a day later is not this sign-in');
+  st.setItem('bb-signin-pending', 'not json');
+  assert.equal(takeSigningIn({ storage: st, now }), null);
 });
 
 test('openProps: days since the last open and the last round, and a quick return is not a new open', () => {
   const now = Date.UTC(2026, 9, 9, 15);
   assert.deepEqual(openProps({ lastOpenAt: 0, now }), { first_open: true, rounds_done: 0 });
+  assert.deepEqual(openProps({ lastOpenAt: 0, now, role: 'guest' }), { first_open: true, rounds_done: 0, role: 'guest' });
   assert.deepEqual(openProps({ lastOpenAt: now - 3 * DAY - 5000, now, lastRoundAt: now - 10 * DAY, roundsDone: 7 }),
     { first_open: false, rounds_done: 7, days_since_open: 3, days_since_round: 10 });
   assert.equal(openProps({ lastOpenAt: now - REOPEN_AFTER + 1000, now }), null);

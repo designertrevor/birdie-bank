@@ -4,7 +4,9 @@
 import { accountNow, accountsEnabled, onAccount } from './cloud.js';
 import { getSupabase } from './supabase.js';
 import { saveAttribution } from './attribution.js';
-import { identify, reset } from './analytics.js';
+import { identify, reset, track } from './analytics.js';
+import { getState } from './store.js';
+import { takeSigningIn } from './usage-role.js';
 
 /** A one-way hash of the account id: the same on every phone, and it can't be turned back into the id. */
 async function opaqueId(id) {
@@ -23,7 +25,19 @@ export function watchAccount({ withAnalytics }) {
     const was = who;
     who = id;
     if (!id) { if (was && withAnalytics) reset(); return; }
-    if (withAnalytics) { const hashed = await opaqueId(id); if (hashed) identify(hashed); }
+    if (withAnalytics) {
+      // identify links this phone's anonymous id to the account, so a guest's invite_opened and
+      // seat_taken from before land on the same person (PostHog attributes past anonymous events
+      // to the identified person, person_profiles 'identified_only' included). Before signed_in,
+      // so that one is the account's
+      const hashed = await opaqueId(id);
+      if (hashed) identify(hashed);
+      const signing = takeSigningIn();
+      if (signing) {
+        const roundsDone = Object.values(getState().rounds || {}).filter(r => r?.status === 'done').length;
+        track('signed_in', { ...signing, rounds_done: roundsDone });
+      }
+    }
     const db = await getSupabase().catch(() => null);
     await saveAttribution({ db, userId: id, storage: localStorage });
   };
