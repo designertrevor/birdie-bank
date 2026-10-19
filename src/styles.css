@@ -4098,3 +4098,10 @@ a.header-btn.rm-open { text-decoration: none; }
 .pm-group { margin-bottom: 16px; }
 /* A ring of ink, so black tees show in dark mode and white tees in light */
 .tee-select .tee-dot { box-shadow: 0 0 0 1.5px color-mix(in srgb, var(--ink) 45%, transparent); }
+
+/* Add it to your Home Screen (InstallUpNext.jsx): the steps as a short numbered list with icons */
+.install-steps { list-style: none; margin: 12px 0 2px; padding: 0; display: grid; gap: 8px; counter-reset: is; }
+.install-steps li { display: flex; align-items: center; gap: 10px; font-size: 14px; color: var(--body); line-height: 1.35; }
+.install-steps li::before { counter-increment: is; content: counter(is); width: 22px; height: 22px; flex-shrink: 0; border-radius: 50%; background: var(--surface); color: var(--ink); font-size: 12px; font-weight: 800; display: grid; place-items: center; }
+.is-ic { width: 30px; height: 30px; flex-shrink: 0; border-radius: 9px; background: var(--surface); color: var(--icon); display: grid; place-items: center; font-size: 17px; }
+.install-steps .link-btn { font-size: inherit; padding: 0; min-height: 0; }
