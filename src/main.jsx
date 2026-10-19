@@ -4,6 +4,8 @@ import './styles.css';
 import App from './App.jsx';
 import { registerServiceWorker } from './lib/sw-update.js';
 import { opsAfterPaint, opsAtLaunch } from './lib/ops.js';
+// Listening from the start for Android's install prompt, which fires once, early (install-prompt.js)
+import './lib/install-prompt.js';
 
 // Before anything renders: keep a creator's ?ref= code before the app tidies the address, and
 // catch errors from the start (ops.js; each part is off without its key)
