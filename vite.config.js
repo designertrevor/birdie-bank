@@ -120,7 +120,7 @@ function rulePages() {
         configFile: false, root: root ?? undefined, logLevel: 'error', appType: 'custom',
         server: { middlewareMode: true, hmr: false, ws: false },
         optimizeDeps: { noDiscovery: true, include: [] },
-        esbuild: { jsx: 'automatic', jsxDev: false },
+        oxc: { jsx: { runtime: 'automatic', development: false } },
       });
       try {
         const { RULES } = await server.ssrLoadModule('/src/components/rules-content.jsx');

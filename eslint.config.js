@@ -24,7 +24,27 @@ export default defineConfig([
     },
     rules: {
       'no-unused-vars': ['error', { varsIgnorePattern: '^[A-Z_]' }],
+      // New in eslint 10's recommended set. It flags a starting value that every path then replaces
+      // (let x = 0; try { x = ... } catch { x = 0 }), which this code does on purpose in 11 places so
+      // the fallback is in plain sight. Off, since none of them is a bug
+      'no-useless-assignment': 'off',
+      // React Compiler advisories (eslint-plugin-react-hooks 7.1): a ref read during render, Date.now in
+      // render, setState inside an effect. Six places in App.jsx, Play.jsx, RoadmapUpNext.jsx and
+      // WhatsNewUpNext.jsx do these on purpose; warnings until each is reworked (ROADMAP area 25)
+      'react-hooks/refs': 'warn',
+      'react-hooks/purity': 'warn',
+      'react-hooks/set-state-in-effect': 'warn',
+      // The art galleries export the list of their drawings beside the components (made with
+      // Object.keys, so not a constant the vite preset already allows)
+      'react-refresh/only-export-components': ['error', {
+        allowConstantExport: true, allowCompoundComponents: true, allowExportNames: ['GAME_ART_KINDS', 'SCENE_KINDS'],
+      }],
     },
+  },
+  {
+    // The entry point renders the app and exports nothing, by design
+    files: ['src/main.jsx'],
+    rules: { 'react-refresh/only-export-components': 'off' },
   },
   {
     // Vercel serverless functions and their tests run on Node
