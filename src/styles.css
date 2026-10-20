@@ -791,7 +791,7 @@ button:disabled { cursor: not-allowed; }
 /* Play: each player's face beside their name, and a critter when the score is a birdie or better */
 .score-row > .avatar { margin-right: 0; width: 38px; height: 38px; align-self: flex-start; margin-top: 2px; }
 .sc-num { position: relative; }
-/* The birdie critter pops in beside the tapped score, holds a beat and floats off (2.4s, the same as CRITTER_MS in Play.jsx) */
+/* The birdie critter pops in beside the tapped score, holds a beat and floats off (2.4s, the same as CRITTER_MS in play/HoleScores.jsx) */
 .sc-critter { position: absolute; top: -12px; left: -14px; width: 28px; height: 28px; border-radius: 50%; overflow: hidden; box-shadow: 0 0 0 2px var(--card); animation: critterPop 2.4s ease-out both; }
 .sc-critter .buddy-art { width: 100%; height: 100%; display: block; }
 @keyframes critterPop {
@@ -2115,7 +2115,7 @@ button.trip-card:active { transform: scale(.97); }
 }
 @keyframes bp-in { from { opacity: 0; transform: translateY(-6px); } to { opacity: 1; transform: none; } }
 /* Its row: put away, the row folds to nothing as the card fades back up the way it came, so the score
-   rows below slide up instead of jumping (Play.jsx BetPromptCard waits BP_OUT_MS, a beat past this 260ms) */
+   rows below slide up instead of jumping (play/HoleScores.jsx BetPromptCard waits BP_OUT_MS, a beat past this 260ms) */
 .bp-wrap { display: grid; grid-template-rows: 1fr; margin: 4px 16px 10px; transition: grid-template-rows 260ms var(--ease-in), margin 260ms var(--ease-in); }
 .bp-wrap.out { grid-template-rows: 0fr; margin-top: 0; margin-bottom: 0; pointer-events: none; }
 .bp-wrap > .bet-prompt { transition: padding 260ms var(--ease-in); }

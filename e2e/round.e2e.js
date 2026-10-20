@@ -234,7 +234,7 @@ async function playThrough(page, nav, step, context, problems) {
       const box = page.locator('[aria-live="polite"]').filter({ hasText: new RegExp(`^${PLAYERS[p]}\\s*${holePar + d}$`) });
       await assert.doesNotReject(box.waitFor(), `${PLAYERS[p]} shows ${holePar + d} on hole ${h + 1}`);
     }
-    // Save right after the last save, with nothing touched, counts as a double tap (Play.jsx, 800 ms)
+    // Save right after the last save, with nothing touched, counts as a double tap (play/shared.js, 800 ms)
     if (STROKES[h].every(d => d === 0)) await page.waitForTimeout(900);
     await page.getByRole('button', { name: h === 17 ? /^Finish round/ : /^Save & next hole/ }).click();
     if (h === 8) {

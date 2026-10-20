@@ -10,7 +10,7 @@ import { readFileSync, readdirSync } from 'node:fs';
 const SRC = new URL('../', import.meta.url);
 const read = rel => readFileSync(new URL(rel, SRC), 'utf8');
 const jsxFiles = [
-  ...readdirSync(new URL('screens/', SRC)).filter(f => f.endsWith('.jsx')).map(f => `screens/${f}`),
+  ...readdirSync(new URL('screens/', SRC), { recursive: true }).filter(f => f.endsWith('.jsx')).map(f => `screens/${f}`),
   ...readdirSync(new URL('components/', SRC)).filter(f => f.endsWith('.jsx')).map(f => `components/${f}`),
   'App.jsx', 'nav.jsx',
 ];
@@ -152,7 +152,7 @@ test('the toast is keyed, so the same words twice in a row are read out twice', 
 });
 
 test('the money bar, as a button, says everyone’s total (its label replaces what’s inside it)', () => {
-  const play = read('screens/Play.jsx');
+  const play = read('screens/play/MoneyBar.jsx');
   assert.match(play, /'aria-label': `\$\{word\} so far, \$\{thru\.toLowerCase\(\)\}: \$\{said\}\$\{cashSaid\}\. Show by game`/);
   // A reward round's dollar side bets line sits inside the button too, so the label carries it
   assert.match(play, /const cashSaid = cash \? `\. Side bets for money: \$\{cashLine \|\| 'all square'\}` : '';/);

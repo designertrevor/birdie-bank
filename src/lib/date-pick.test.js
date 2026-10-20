@@ -193,7 +193,7 @@ test('tapping the time: an hour first gives :00, minutes wait for an hour, AM an
 test('no native date or time input is left: every one is the app’s own picker', () => {
   const src = new URL('../', import.meta.url);
   const files = [
-    ...readdirSync(new URL('screens/', src)).filter(f => f.endsWith('.jsx')).map(f => `screens/${f}`),
+    ...readdirSync(new URL('screens/', src), { recursive: true }).filter(f => f.endsWith('.jsx')).map(f => `screens/${f}`),
     ...readdirSync(new URL('components/', src)).filter(f => f.endsWith('.jsx')).map(f => `components/${f}`),
     'App.jsx',
   ];
@@ -201,7 +201,7 @@ test('no native date or time input is left: every one is the app’s own picker'
   assert.deepEqual(bad, []);
   // And the pickers are where the native inputs were
   const uses = f => readFileSync(new URL(f, src), 'utf8');
-  assert.match(uses('screens/NewRound.jsx'), /<TimePicker id="when-time"/);
+  assert.match(uses('screens/newround/Pickers.jsx'), /<TimePicker id="when-time"/);
   assert.match(uses('components/Reminders.jsx'), /<TimePicker id="booked-time"/);
   assert.match(uses('components/RangeBar.jsx'), /<DateRangePicker /);
   assert.match(uses('components/Trips.jsx'), /<DatePicker id="trip-start"[\s\S]*<DatePicker id="trip-end"/);
