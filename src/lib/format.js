@@ -1,6 +1,7 @@
 // Shared display helpers and derived stats (kept out of component files for fast refresh).
 import { GAMES, SIDE_GAMES, cardOnly, scoreSummary, sideGamesOf } from './round.js';
 import { money } from './golf.js';
+import { toParText } from './to-par.js';
 import { linksOf } from './people-links.js';
 import { countsMoney, playForOf, rewardOutcome, tabResultsFor, unitFmt } from './play-for.js';
 
@@ -74,13 +75,13 @@ export function placeOf(standings, i) {
  * settle-up. Points are bragging rights, so a points or reward round always shows them, and a
  * reward round adds who wins it and who's buying.
  */
-/** A player's (or a team's) total and to par over the holes they scored: "38 (+2)", "71 (E)". Null with nothing scored. */
+/** A player's (or a team's) total and to par over the holes they scored: "38 (+2)", "71 (E)", "32 (−4)" with a real minus. Null with nothing scored. */
 export function scoreLine(round, pid) {
   const { gross, played } = scoreSummary(round, pid);
   if (!played) return null;
   const par = round.holes.filter(h => round.scores[h.no]?.[pid] != null).reduce((a, h) => a + h.par, 0);
   const d = gross - par;
-  return `${gross} (${d === 0 ? 'E' : d > 0 ? `+${d}` : `-${-d}`})${played < round.holes.length ? `, ${played} holes` : ''}`;
+  return `${gross} (${toParText(d)})${played < round.holes.length ? `, ${played} holes` : ''}`;
 }
 
 export function shareText(round, res, { amounts = true, scores = false } = {}) {

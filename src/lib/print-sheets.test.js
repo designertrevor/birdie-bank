@@ -166,7 +166,7 @@ test('round results: the standings, the money and who pays who are roundResults�
   assert.ok(sheet.owes.length > 0);
   assert.equal(sheet.headline, 'Sam Ray wins the day');
   assert.deepEqual(sheet.podium.map(p => p.id), res.standings.slice(0, 3).map(p => p.id));
-  assert.equal(sheet.standings[0].score, '34 (-2)', 'each player’s score from the card, as the app writes it');
+  assert.equal(sheet.standings[0].score, '34 (−2)', 'each player’s score from the card, as the app writes it');
   // Every standing adds back to zero, as the round's money does
   assert.equal(Math.round(res.standings.reduce((a, p) => a + p.amount, 0) * 100), 0);
 });
@@ -351,6 +351,13 @@ test('pages: a pairings session longer than a page goes on, a session never shar
   const groups = n => Array.from({ length: n }, (_, i) => ({ key: `g${i}`, players: [] }));
   const pages = pairingPages({ sessions: [{ key: 'd1', groups: groups(8) }, { key: 'd2', groups: groups(2) }] });
   assert.deepEqual(pages.map(p => [p.session.key, p.groups.length, p.part, p.parts]), [['d1', 6, 1, 2], ['d1', 2, 2, 2], ['d2', 2, 1, 1]]);
+});
+
+test('results standings: the score to par has a real minus, as in the app', () => {
+  const r = round('r_par', ['a', 'b'], { scores: { 1: { a: 3 }, 2: { a: 2 }, 3: { b: 5 } } });
+  const score = id => roundSheetResults(stateOf([r]), r).standings.find(p => p.id === id).score;
+  assert.equal(score('a'), '33 (−3)');
+  assert.equal(score('b'), '37 (+1)');
 });
 
 test('results blocks: headline, podium, standings, who pays who, tables and notes, in that order', () => {
