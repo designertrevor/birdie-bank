@@ -167,6 +167,12 @@ const DRAFTS = keptMap('drafts');
 // score on the new hole is touched, is the same tap
 const SAVED_AT = new Map();
 const SAVE_GAP_MS = 800;
+const markSaved = (roundId, holeNo) => SAVED_AT.set(roundId, { hole: holeNo, at: Date.now() });
+/** A tap on another hole's Save within the gap of the last save, with nothing touched since */
+const sameTap = (roundId, holeNo, dirty) => {
+  const last = SAVED_AT.get(roundId);
+  return !!last && last.hole !== holeNo && !dirty && Date.now() - last.at < SAVE_GAP_MS;
+};
 // Rounds whose locked-in rules card this phone has closed (a phone that isn't keeping score sees it until then)
 const AGREED_SEEN = new Set();
 
@@ -293,7 +299,7 @@ function PlayRound({ round, mount, momentUp = false }) {
   const requests = useSeatRequests(round.id);
   const numRefs = useRef({});
   // Whose score was tapped since this hole opened: only those get the birdie critter (ScoreCritter)
-  const tapped = useRef(new Set());
+  const [tapped, setTapped] = useState(() => new Set());
 
   // --- The first-tee rules card (see agreed.js) ---
   // 'lock' on the keeper's phone before hole 1; 'view' is "What we agreed" from the menu
@@ -411,7 +417,7 @@ function PlayRound({ round, mount, momentUp = false }) {
   const setMarksDirty = m => { setDirty(true); setMarks(m); };
   const setScore = (pid, v) => {
     setDirty(true);
-    tapped.current.add(pid);
+    setTapped(t => (t.has(pid) ? t : new Set(t).add(pid)));
     setDraft(d => ({ ...d, [pid]: v }));
     setTouched(t => ({ ...t, [pid]: true }));
     buzz(8);
@@ -436,8 +442,7 @@ function PlayRound({ round, mount, momentUp = false }) {
   const saving = useRef(false);
   const saveHole = async () => {
     if (!editable || saving.current) return;
-    const last = SAVED_AT.get(round.id);
-    if (last && last.hole !== hole.no && !dirty && Date.now() - last.at < SAVE_GAP_MS) return;
+    if (sameTap(round.id, hole.no, dirty)) return;
     saving.current = true;
     try { await saveThisHole(); } finally { saving.current = false; }
   };
@@ -469,7 +474,7 @@ function PlayRound({ round, mount, momentUp = false }) {
         }
       }
     });
-    SAVED_AT.set(round.id, { hole: hole.no, at: Date.now() });
+    markSaved(round.id, hole.no);
     if (pressMode(round) === 'auto' && !isLast) {
       const r = getState().rounds[round.id];
       const legs = roundLegs(r);
@@ -744,7 +749,7 @@ function PlayRound({ round, mount, momentUp = false }) {
                     <span aria-live="polite" aria-atomic="true">
                       <span className="sr-only">{p.name} </span>{v === 'X' ? <><span aria-hidden="true">X</span><span className="sr-only">picked up</span></> : v}
                     </span>
-                    <ScoreCritter score={v} par={hole.par} fresh={tapped.current.has(p.id)} />
+                    <ScoreCritter score={v} par={hole.par} fresh={tapped.has(p.id)} />
                   </span>
                   <button className="sc-btn" aria-label={`${p.name} one more`} disabled={v !== 'X' && v >= 15}
                     onClick={() => setScore(p.id, v === 'X' ? hole.par + 1 : Math.min(15, v + 1))}><Icon name="plus" /></button>

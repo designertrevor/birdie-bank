@@ -18,9 +18,11 @@ export function WhatsNewUpNext() {
   const state = useStore();
   const safe = updateSafe(state);
   const [items, setItems] = useState(null);
-  // What this visit shows, kept after it's marked as seen so it stays put until you leave Up next
+  // What this visit shows, kept after it's marked as seen so it stays put until you leave Up next:
+  // the notes it claimed the visit with (upnext-card.js)
   const [shown, setShown] = useState(null);
   const slot = useSyncExternalStore(subscribeSlot, getSlot, getSlot);
+  if (!shown && slot.showing === 'whatsNew' && slot.says) setShown(slot.says);
 
   // It shipped gets a few seconds to find out, then this goes ahead without it
   useEffect(() => {
@@ -46,9 +48,7 @@ export function WhatsNewUpNext() {
     const notes = cardNotes(items, rec, { safe });
     if (!notes) return;
     // Not marked seen until it shows, so a visit It shipped took keeps this for the next one
-    if (!claimCard('whatsNew')) return;
-    setShown(notes);
-    saveSeen(markSeen(items));
+    if (claimCard('whatsNew', notes)) saveSeen(markSeen(items));
   }, [items, shown, safe, state.rounds, slot]);
 
   // Its place on Up next's pile (CardStack.jsx), once it has something to say
