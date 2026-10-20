@@ -1,5 +1,5 @@
 import { Icon, PickChip, Segmented } from './ui.jsx';
-import { HouseRule } from './HouseRulesFold.jsx';
+import { FoldRule, HouseRule } from './HouseRulesFold.jsx';
 import { GAMES, blindMultiplierOf } from '../lib/round.js';
 import { CHAPMAN_ALLOWANCE, DOT_KINDS, FOURSOMES_ALLOWANCE, SCRAMBLE_ALLOWANCE, sixesPairings } from '../lib/games.js';
 import { money as dollars } from '../lib/golf.js';
@@ -293,8 +293,9 @@ export function GameOptions({ game, get, set, onAmount, holesCount = 18, compact
         {pot && !team && toggle('quota.split', 'Everyone over quota shares', 'The pot is split by points over quota: +4 gets twice what +2 does. Nobody over, and the best finish takes it', 'over')}
         {pot && n >= 4 && (canTeam || get('quota.team')) && toggle('quota.team', 'Team quota', canTeam ? 'Partners add up their points and their quotas. The team furthest over takes the pot' : 'Teams are picked when the round is set up, so this one plays each player for themselves')}
         {/* Rolling quota (2026-10-20): "Quota moves after the round" by the name crews know it by. Half the
-            difference has a cap, the most one round moves it; switching to half with none saved starts at 3 */}
-        <div className="block">
+            difference has a cap, the most one round moves it; switching to half with none saved starts at 3.
+            It's a house rule (the first-tee card and rule page say so), so the fold counts it when it's on */}
+        <FoldRule on={adjust !== 'off'}><div className="block">
           <div className="eyebrow" style={{ margin: '0 0 10px' }}>Rolling quota</div>
           <Segmented label="Rolling quota: how the quota moves after the round" className="press-mode-row" btn="pm-btn" value={adjust}
             onChange={v => { set('quota.adjust', v); if (v === 'half' && get('quota.cap') == null) set('quota.cap', 3); }}
@@ -306,7 +307,7 @@ export function GameOptions({ game, get, set, onAmount, holesCount = 18, compact
             <Segmented label="Most it moves in one round" className="press-mode-row" btn="pm-btn" value={get('quota.cap') ?? 0} onChange={v => set('quota.cap', v)}
               options={[{ value: 2, label: '2' }, { value: 3, label: '3' }, { value: 0, label: 'No limit' }]} />
           </>}
-        </div>
+        </div></FoldRule>
       </>;
     }
     case 'nines':

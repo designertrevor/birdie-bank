@@ -1,7 +1,7 @@
 // Round setup, Bets: the game's bets stay up front and its house rules (the on/off switches) fold
 // under one row that says how many are on, so the ones that change the money are always counted
-// in plain sight. Each switch row (HouseRule) reports itself and whether it's on, so the fold
-// counts from what's rendered rather than reading the page.
+// in plain sight. Each switch row (HouseRule), and a rule picked another way (FoldRule), reports
+// itself and whether it's on, so the fold counts from what's rendered rather than reading the page.
 import { createContext, useCallback, useContext, useId, useLayoutEffect, useMemo, useState } from 'react';
 import { Icon, Toggle } from './ui.jsx';
 
@@ -34,13 +34,24 @@ export function HouseRulesFold({ children }) {
   );
 }
 
-/** A switch row: the label, a line under it and the switch. Inside a HouseRulesFold it counts as a house rule. */
-export function HouseRule({ label, sub = null, on, onChange }) {
+/** Count as one of the fold's house rules, on or off (nothing outside a HouseRulesFold). */
+function useFoldRule(on) {
   const fold = useContext(Ctx);
   const id = useId();
   const report = fold?.report, forget = fold?.forget;
   useLayoutEffect(() => { report?.(id, !!on); }, [report, id, on]);
   useLayoutEffect(() => () => forget?.(id), [forget, id]);
+}
+
+/** A house rule that isn't a switch, like Quota's Rolling quota (Off, 1 point, Half): it counts in the fold, on when `on`. */
+export function FoldRule({ on, children }) {
+  useFoldRule(on);
+  return children;
+}
+
+/** A switch row: the label, a line under it and the switch. Inside a HouseRulesFold it counts as a house rule. */
+export function HouseRule({ label, sub = null, on, onChange }) {
+  useFoldRule(on);
   return (
     <div className="toggle-row">
       <div><div className="toggle-lbl">{label}</div>{sub && <div className="toggle-sub">{sub}</div>}</div>

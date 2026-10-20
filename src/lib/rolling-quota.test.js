@@ -2,6 +2,7 @@
 // one round moves it at half the difference, and setup saying where each quota moved from last time.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
+import { readFileSync } from 'node:fs';
 import { quotaAdjusted } from './games.js';
 import { createRound, nextQuotas, roundResults, wholeRoundOnly } from './round.js';
 import { carriedLine, carriedQuotas, movedWords, myQuotaLine, withQuotaRules } from './quota-carry.js';
@@ -77,4 +78,16 @@ test('the bet line calls it Rolling quota', () => {
   assert.match(houseRulesLine('quota', { adjust: 'half', cap: 3 }), /rolling quota/);
   assert.match(houseRulesLine('quota', { adjust: 'one' }), /rolling quota/);
   assert.doesNotMatch(houseRulesLine('quota', { adjust: 'off' }), /rolling/);
+});
+
+test('setup counts Rolling quota among the House rules: on at 1 point or Half, off at Off', () => {
+  // The fold counts the rules that report to it as they render (HouseRulesFold.jsx), so the Segmented
+  // block has to sit inside a FoldRule, on whenever it isn't Off (it read "All off" on Half)
+  const src = readFileSync(new URL('../components/GameOptions.jsx', import.meta.url), 'utf8');
+  const quota = src.slice(src.indexOf("case 'quota': {"), src.indexOf("case 'nines':"));
+  assert.match(quota, /<FoldRule on=\{adjust !== 'off'\}><div className="block">[\s\S]*label="Rolling quota: how the quota moves after the round"[\s\S]*<\/div><\/FoldRule>/);
+  assert.ok(quota.indexOf("{label('House rules')}") < quota.indexOf('<FoldRule'), 'under the House rules label, inside the fold');
+  const fold = readFileSync(new URL('../components/HouseRulesFold.jsx', import.meta.url), 'utf8');
+  assert.match(fold, /export function FoldRule\(\{ on, children \}\) \{\n {2}useFoldRule\(on\);/);
+  assert.match(fold, /export function HouseRule\([^)]*\) \{\n {2}useFoldRule\(on\);/);
 });
