@@ -3,6 +3,10 @@
 //   GET /api/courses?q=pinehurst   -> GolfCourseAPI /v1/search
 //   GET /api/courses?id=7k2m9qb4   -> GolfCourseAPI /v1/courses/{id}
 // Without a key it answers 503 { error: 'not_configured' } and the app hides API results.
+// Every upstream call is counted in Supabase and Trevor is emailed as the day's quota runs low
+// (src/lib/course-quota.js); the count runs beside the upstream call and never slows or breaks it.
+
+import { watchCourseQuota } from '../src/lib/course-quota.js';
 
 const UPSTREAM = 'https://api.golfcourseapi.com/v1';
 const ID_RE = /^[0-9abcdefghjkmnpqrstvwxyz]{8}$/;
@@ -49,14 +53,21 @@ export default async function handler(req, res) {
   if (parsed.error) return send(res, parsed.status, { error: parsed.error });
 
   let upstream;
+  const call = fetch(UPSTREAM + parsed.path, {
+    headers: { Authorization: `Bearer ${key}`, Accept: 'application/json' },
+    signal: AbortSignal.timeout(8000),
+  });
+  // Count the call while it's in flight (an unreachable API still counts: a high count errs on the safe side)
+  const counted = watchCourseQuota(process.env);
   try {
-    upstream = await fetch(UPSTREAM + parsed.path, {
-      headers: { Authorization: `Bearer ${key}`, Accept: 'application/json' },
-      signal: AbortSignal.timeout(8000),
-    });
+    upstream = await call;
   } catch {
+    await counted;
     return send(res, 504, { error: 'upstream_unreachable' });
   }
+  await counted;
+  // Over the limit: note it (not a second count), which emails once a day
+  if (upstream.status === 429) await watchCourseQuota(process.env, { add: 0, limited: true });
   if (upstream.status === 404) return send(res, 404, { error: 'not_found' }, 'public, s-maxage=3600');
   // A bad or expired key is our problem, not the caller's; don't echo upstream details
   if (upstream.status === 401 || upstream.status === 403) return send(res, 502, { error: 'upstream_auth' });

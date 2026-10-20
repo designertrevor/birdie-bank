@@ -54,3 +54,10 @@ GolfCourseAPI with the server-side `GOLFCOURSEAPI_KEY`. Without that variable it
 `customCourses` (with `source: 'golfcourseapi'`), so it syncs, works offline and can be
 corrected like any course you added. `npm run dev` has no `/api`; put
 `VITE_COURSE_SAMPLES=1` in `.env.local` to search a few made-up courses instead.
+
+GolfCourseAPI allows a fixed number of calls a day (35 on the free plan) and reports nothing about
+how many are left, so the function counts each call in Supabase (`supabase/2026-10-20-course-api-usage.sql`)
+and `src/lib/course-quota.js` emails `FEEDBACK_EMAIL` through Resend once a day at 80% of the
+plan's calls, once when they run out, and the first time the API answers 429. Set
+`GOLFCOURSEAPI_DAILY_QUOTA` in Vercel to the plan's limit after an upgrade (see
+`overnight/COURSE-QUOTA-WATCH.md`).
