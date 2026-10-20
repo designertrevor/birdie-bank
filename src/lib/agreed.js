@@ -10,7 +10,7 @@
 //   { skipped }  the card was skipped (the time). It can still be locked in from the round menu.
 // It lives in the round's meta, so it syncs to every phone in a shared round. Only the phone keeping
 // score locks it or records changes (see keeper.js).
-import { GAMES, POT_GAMES, bettors, blindMultiplierOf, gameKeyLabel, gameKeys, greeniesInPot, holesPlayed, isJustPlaying, matchScored, oneBall, scorers, sideGamesOf } from './round.js';
+import { GAMES, POT_GAMES, bettors, blindMultiplierOf, calcuttaSalesOf, gameKeyLabel, gameKeys, greeniesInPot, holesPlayed, isJustPlaying, matchScored, oneBall, scorers, sideGamesOf } from './round.js';
 import { potHolesLine } from './side-games.js';
 import { sideBetLine, stakeSummary } from './stakes.js';
 import { inUnits } from './play-for.js';
@@ -220,7 +220,8 @@ export function agreementItems(round, choices = round.agreed) {
     const label = gameKeyLabel(round, key);
     // Skins and Wolf keep their house rules out of the bet line, since they're listed as rules below
     const holes = round.holes?.length ?? 18;
-    const full = key === 'main' ? stakeSummary(game, round.settings, holes) : sideBetLine(game, block);
+    // The Calcutta's line says its pot once lots are sold, as setup and the printed sheets do
+    const full = key === 'main' ? stakeSummary(game, round.settings, holes) : sideBetLine(game, block, game === 'calcutta' ? { auction: { sales: calcuttaSalesOf(round) } } : null);
     // The newer house rules' tags come off the bet line too, since they're listed as rules
     const tags = houseRulesLine(game, block, holes);
     const bet = game === 'skins' || game === 'wolf' ? full.split(' · ')[0] : tags && full.endsWith(` · ${tags}`) ? full.slice(0, -(tags.length + 3)) : full;
@@ -310,6 +311,8 @@ export function changeText(before, after) {
     return null;
   }
   if (before.text === after.text) return null;
+  // The Calcutta's auction run after the card was locked fills in its pot: that's the bet, not a change to it
+  if (after.id === 'bet:calcutta' && before.text.startsWith('Auction at the first tee')) return null;
   if (after.id.startsWith('bet:')) {
     const [a, b] = [before.text.split(' · '), after.text.split(' · ')];
     const [x, y] = [amountOf(a[0]), amountOf(b[0])];

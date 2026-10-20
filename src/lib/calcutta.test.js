@@ -8,6 +8,7 @@ import {
   addPlayerToRound, calcuttaTable, createRound, gameView, joinGames, leftRule, roundResults, sideGameChoices, sideGamesOf, wholeRoundOnly,
 } from './round.js';
 import { calcuttaBetLine, roundStakeLines } from './stakes.js';
+import { agreementItems, lockAgreement, noteChanges } from './agreed.js';
 import { sideExample } from './side-games.js';
 import { TEAM_DEFAULTS } from './settings.js';
 
@@ -294,6 +295,24 @@ test('the bet line and the worked example', () => {
   assert.match(sideExample('calcutta', { payout: 'top2' }, 4), /70% of the pot, and second 30%/);
   assert.match(sideExample('calcutta', { payout: 'top2' }, 3), /whole pot/);
   assert.match(sideExample('calcutta', { payout: 'top3', buyBack: true }, 6), /60%, 30% and 10%.*buy half/);
+});
+
+test('the first-tee card says the pot once lots are sold, and an auction after locking it isn\'t a change', () => {
+  const r = withCalcutta(round('stroke', ['a', 'b', 'c', 'd']), {});
+  r.status = 'active';
+  const line = x => agreementItems(x).find(i => i.id === 'bet:calcutta').text;
+  assert.equal(line(r), 'Auction at the first tee · 70/30');
+  r.agreed = lockAgreement(r);
+  withCalcutta(r, { a: { buyer: 'b', bid: 40 }, b: { buyer: 'a', bid: 30 }, c: { buyer: 'a', bid: 20 }, d: { buyer: 'c', bid: 15 } });
+  assert.equal(line(r), '$105 pot · 70/30');
+  assert.equal(line(r), roundStakeLines(r)[1].line, 'the same line as setup and the printed sheets');
+  const agreed = noteChanges(r);
+  assert.deepEqual(agreed.changes, []);
+  assert.equal(agreed.seen.find(i => i.id === 'bet:calcutta').text, '$105 pot · 70/30');
+  // A bid fixed later is a change
+  r.agreed = agreed;
+  withCalcutta(r, { a: { buyer: 'b', bid: 50 }, b: { buyer: 'a', bid: 30 }, c: { buyer: 'a', bid: 20 }, d: { buyer: 'c', bid: 15 } });
+  assert.deepEqual(noteChanges(r).changes.map(c => c.text), ['Calcutta raised to $115 pot']);
 });
 
 test('the rule pages: /rules/calcutta, and the names people type find it and Rolling quota', async () => {
