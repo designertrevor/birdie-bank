@@ -379,9 +379,9 @@ test('quota moves after the round: next quotas for a finished round, and they ca
   assert.deepEqual(bal(r), bal(off));
   // Carried: the same nine, or doubled for 18
   const state = { me: 'a', players: { a: { id: 'a', name: 'Ann' }, b: { id: 'b', name: 'Bo' } }, rounds: { r } };
-  assert.deepEqual(carriedQuotas(state, ['a', 'b', 'x'], 9), { a: { quota: 21, from: 18, roundId: 'r' }, b: { quota: 18, from: 18, roundId: 'r' } });
+  assert.deepEqual(carriedQuotas(state, ['a', 'b', 'x'], 9), { a: { quota: 21, from: 18, last: 18, roundId: 'r' }, b: { quota: 18, from: 18, last: 18, roundId: 'r' } });
   assert.equal(carriedQuotas(state, ['a'], 18).a.quota, 42);
-  assert.equal(carriedLine(carriedQuotas(state, ['a', 'b'], 9), id => NAMES[id]), 'Ann 21 · Bo 18');
+  assert.equal(carriedLine(carriedQuotas(state, ['a', 'b'], 9), id => NAMES[id]), 'Ann 21 (up 3) · Bo 18');
   // A round with the rule off carries nothing
   assert.deepEqual(carriedQuotas({ ...state, rounds: { r: { ...r, settings: { ...r.settings, quota: { ...r.settings.quota, adjust: 'off' } } } } }, ['a'], 9), {});
   // A carried quota is the one the round plays to
@@ -479,7 +479,7 @@ test('the bet line names each new rule that is on', () => {
   const want = {
     banker: 'banker presses everyone', nassau: 'a bye for half', match: 'a bye', skins: 'birdies win two skins', wolf: 'birdies double',
     hammer: 'halved holes carry', vegas: 'no double digits', sixes: 'auto press at 2 down', stroke: 'low gross too', stableford: 'big birdies',
-    quota: 'Stableford points · quota moves 1 after · team quota', rabbit: 'back nine rabbit doubles', snake: 'snake split', dots: 'penalty dots',
+    quota: 'Stableford points · rolling quota · team quota', rabbit: 'back nine rabbit doubles', snake: 'snake split', dots: 'penalty dots',
   };
   for (const [game, set] of Object.entries(on)) {
     assert.equal(houseRulesLine(game, { ...DEFAULTS[game], ...set }), want[game], game);
@@ -497,7 +497,7 @@ test('the first-tee card lists the new rules that are on, and only those', () =>
   for (const game of Object.keys(OFF)) for (const h of houseRulesFor(game, DEFAULTS[game])) if (Object.keys(OFF[game]).includes(h.id)) assert.equal(h.on, false, `${game} ${h.id}`);
   const r = mk('quota', ['a', 'b', 'c', 'd'], { teams: [['a', 'b'], ['c', 'd']], set: { payout: 'pot', team: true, adjust: 'half', table: 'stableford' } });
   const rules = agreementItems(r).filter(x => x.group === 'rules' && x.on).map(x => x.text);
-  assert.deepEqual(rules, ['Stableford points: bogey 1, par 2, birdie 3, eagle 4', 'Quotas move half the difference for next time', 'Team quota: partners’ points against their quotas added up']);
+  assert.deepEqual(rules, ['Stableford points: bogey 1, par 2, birdie 3, eagle 4', 'Rolling quota: quotas move half the difference for next time', 'Team quota: partners’ points against their quotas added up']);
   const d = mk('dots', ['a', 'b'], { set: { kinds: { ...DEFAULTS.dots.kinds, water: true, ob: true } } });
   assert.ok(agreementItems(d).some(x => x.on && x.text === 'Penalty dots: water and out of bounds cost a dot'));
   const n = mk('nassau', ['a', 'b'], { set: { bye: 'half' } });

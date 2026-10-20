@@ -292,9 +292,20 @@ export function GameOptions({ game, get, set, onAmount, holesCount = 18, compact
         {!team && fbt('quota', 'Each nine against half your quota, and the 18 against all of it')}
         {pot && !team && toggle('quota.split', 'Everyone over quota shares', 'The pot is split by points over quota: +4 gets twice what +2 does. Nobody over, and the best finish takes it', 'over')}
         {pot && n >= 4 && (canTeam || get('quota.team')) && toggle('quota.team', 'Team quota', canTeam ? 'Partners add up their points and their quotas. The team furthest over takes the pot' : 'Teams are picked when the round is set up, so this one plays each player for themselves')}
+        {/* Rolling quota (2026-10-20): "Quota moves after the round" by the name crews know it by. Half the
+            difference has a cap, the most one round moves it; switching to half with none saved starts at 3 */}
         <div className="block">
-          {seg('quota.adjust', [{ value: 'off', label: 'Off' }, { value: 'one', label: '1 point' }, { value: 'half', label: 'Half' }], 'Quota moves after the round', true)}
-          {help({ off: 'Everyone’s quota comes from their handicap every time.', one: 'Beat your quota and it goes up 1 next time; miss it and it comes down 1. Next time picks it up for you.', half: 'Your quota moves half of what you beat it or missed it by: +6 makes it 3 higher next time. Next time picks it up for you.' }[adjust])}
+          <div className="eyebrow" style={{ margin: '0 0 10px' }}>Rolling quota</div>
+          <Segmented label="Rolling quota: how the quota moves after the round" className="press-mode-row" btn="pm-btn" value={adjust}
+            onChange={v => { set('quota.adjust', v); if (v === 'half' && get('quota.cap') == null) set('quota.cap', 3); }}
+            options={[{ value: 'off', label: 'Off' }, { value: 'one', label: '1 point' }, { value: 'half', label: 'Half' }]} />
+          {help({ off: 'Everyone’s quota comes from their handicap every time.', one: 'Your quota rolls from round to round: beat it and it goes up 1 next time, miss it and it comes down 1. Next time picks it up for you.', half: `Your quota rolls from round to round, moving half of what you beat it or missed it by: +6 makes it 3 higher next time${(get('quota.cap') ?? 0) > 0 ? `, and never more than ${get('quota.cap')} in one round` : ''}. Next time picks it up for you.` }[adjust])}
+          {adjust === 'half' && <>
+            <div className="eyebrow" style={{ margin: '14px 0 8px' }}>Most it moves in one round</div>
+            {/* Rounds and defaults from before the cap have none: no limit */}
+            <Segmented label="Most it moves in one round" className="press-mode-row" btn="pm-btn" value={get('quota.cap') ?? 0} onChange={v => set('quota.cap', v)}
+              options={[{ value: 2, label: '2' }, { value: 3, label: '3' }, { value: 0, label: 'No limit' }]} />
+          </>}
         </div>
       </>;
     }

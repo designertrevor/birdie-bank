@@ -12,6 +12,7 @@ import { GAMES, bettingRound, cardOnly, gameView, holeAtPos, isJustPlaying, hole
 import { halfStrokesOn, strokesWords } from '../lib/allowances.js';
 import { matchLabel } from '../lib/games.js';
 import { money } from '../lib/golf.js';
+import { calcuttaPlace } from '../lib/calcutta.js';
 import { canEdit, keeperMe } from '../lib/keeper.js';
 import { useNav } from '../lib/nav.js';
 import { KEEP_DAYS, restoreRound, softDeleteRound } from '../lib/recently-deleted.js';
@@ -644,6 +645,29 @@ function GameBreakdown({ round, res, label = null }) {
         {t.holes.length > 0 && t.paidOut === 0 && <p className="field-help" style={{ padding: '0 20px' }}>Nobody won a {what}, so nobody pays.</p>}
         {t.paidOut > 0 && t.handedBack > 0 && <p className="field-help" style={{ padding: '0 20px' }}>{cents(t.handedBack)} still carried after the last {what} goes back to everyone.</p>}
         {round.players.length > t.inPot.length && <p className="field-help" style={{ padding: '0 20px' }}>Players who joined late or left early aren’t in the pot.</p>}
+      </>
+    );
+  }
+  if (round.game === 'calcutta' && res.detail.calcutta) {
+    // The Calcutta: each lot, where it finished, who owns it and what it paid
+    const t = res.detail.calcutta;
+    const nameOf = id => first(names[id] || round.calcutta?.main?.players.find(p => p.id === id)?.name || '?');
+    return (
+      <>
+        <div className="sec-label">{label || 'Calcutta'} · {money(t.pot)} pot</div>
+        {t.sold.length < 2 && <p className="hint-card"><Icon name="gavel" fill /> {t.sold.length ? 'Only one lot sold' : 'Nothing sold at the auction'}, so nobody pays.</p>}
+        {t.sold.length >= 2 && t.sold.map(x => (
+          <div key={x.id} className="leg-row">
+            <div className="leg-name">{x.score == null ? '–' : calcuttaPlace(x.place, x.tied)}</div>
+            <div className={`leg-winner ${x.prize ? '' : 'leg-tie'}`}>
+              {x.name}
+              <div className="li-sub">{nameOf(x.buyer)} paid {money(x.bid)}{x.back ? `, ${x.backers.map(nameOf).join(' & ')} bought back half` : ''}</div>
+            </div>
+            <div className={`leg-amt ${x.prize ? '' : 'zero'}`}>{x.prize ? money(x.prize) : '–'}</div>
+          </div>
+        ))}
+        {t.sold.length >= 2 && !t.started && <p className="field-help" style={{ padding: '0 20px' }}>Nothing is paid until the first hole is in.</p>}
+        {t.unsold.length > 0 && <p className="field-help" style={{ padding: '0 20px' }}>Not sold, so out of the pot: {t.unsold.map(id => t.entries.find(e => e.id === id)?.name).filter(Boolean).join(', ')}.</p>}
       </>
     );
   }

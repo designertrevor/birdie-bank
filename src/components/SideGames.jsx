@@ -1,6 +1,6 @@
 // Side games: Skins, Junk, a Birdie pot, Snake, Rabbit and the closest to the pin and long drive pots riding along with the main game.
 // Setup rows and the add sheet, the by-game money table, and the one-line "games in small type".
-import { useState } from 'react';
+import { Suspense, lazy, useState } from 'react';
 import { Icon, Numpad, PickChip, Segmented, Sheet, Toggle } from './ui.jsx';
 import { RulesSheet } from './Rules.jsx';
 import { GameArt } from './GameArt.jsx';
@@ -13,6 +13,10 @@ import { money } from '../lib/golf.js';
 import { betChangeNote, optionsProblem, sideBetLine } from '../lib/stakes.js';
 import { firstName } from '../lib/format.js';
 import { countsMoney, inUnits, padUnit, points, unitFmt, wholeByGame, wholePoints } from '../lib/play-for.js';
+import { liveSales } from '../lib/calcutta.js';
+
+// The Calcutta's auction sheet loads when it's opened, so setup's first screen doesn't carry it
+const AuctionSheet = lazy(() => import('./AuctionSheet.jsx').then(m => ({ default: m.AuctionSheet }), () => ({ default: () => null })));
 
 /** "Skins, Junk or a Birdie pot": the side games still on offer, in words. */
 const orList = xs => {
@@ -21,17 +25,19 @@ const orList = xs => {
 };
 
 /** Where the bet amount lives in a side game's settings. */
-const amountKey = (game, s) => (game === 'skins' ? (s?.payout === 'pot' ? 'stake' : 'value') : game === 'dots' ? 'value' : 'stake'); // Snake, Rabbit and the pots: stake
+const amountKey = (game, s) => (game === 'calcutta' ? null : game === 'skins' ? (s?.payout === 'pot' ? 'stake' : 'value') : game === 'dots' ? 'value' : 'stake'); // Snake, Rabbit and the pots: stake
 
 /** "a Birdie pot", "a closest to the pin pot": a side game's name in the "Add a side game" line. */
-const offerName = k => ({ birdies: 'a Birdie pot', ctp: 'a closest to the pin pot', drive: 'a long drive pot' }[k] || SIDE_GAMES[k].label);
+const offerName = k => ({ birdies: 'a Birdie pot', ctp: 'a closest to the pin pot', drive: 'a long drive pot', calcutta: 'a Calcutta' }[k] || SIDE_GAMES[k].label);
 
 /**
  * The "Side games" part of the Bets step. `defaults` holds every game's settings (the setup's opts),
  * so a new side game starts from the group's usual Skins or Dots bets. `playFor` is the round's
- * (points and reward rounds read in points).
+ * (points and reward rounds read in points). For the Calcutta: `entries` are what goes up for auction
+ * (calcuttaEntries), `buyers` who can bid ([{ id, name }]), and `started` a round already under way,
+ * which can't add a Calcutta (its auction is before the first tee) but can still fix one.
  */
-export function SideGamesSetup({ game, sideGames, setSideGames, defaults, players = 4, playFor = null, holes = null, holesCount = holes?.length ?? 18 }) {
+export function SideGamesSetup({ game, sideGames, setSideGames, defaults, players = 4, playFor = null, holes = null, holesCount = holes?.length ?? 18, entries = [], buyers = [], started = false }) {
   const fmt = unitFmt({ playFor });
   const u = t => inUnits({ playFor }, t);
   const unit = padUnit({ playFor });
@@ -41,6 +47,7 @@ export function SideGamesSetup({ game, sideGames, setSideGames, defaults, player
   const [rulePad, setRulePad] = useState(null); // an amount in those rules being changed
   const [howTo, setHowTo] = useState(null); // the side game whose how-to-play sheet is open
   const [picking, setPicking] = useState(false); // the long drive holes picker
+  const [auction, setAuction] = useState(false); // the Calcutta's auction sheet
   if (!game) return null;
   if (oneBall(game)) {
     return (
@@ -50,7 +57,8 @@ export function SideGamesSetup({ game, sideGames, setSideGames, defaults, player
       </>
     );
   }
-  const choices = sideGameChoices(game, sideGames);
+  // The Calcutta's auction is before the first tee, so a round under way can't add one
+  const choices = sideGameChoices(game, sideGames).filter(k => !(started && k === 'calcutta'));
   const full = sideGames.length >= MAX_GAMES - 1;
   const change = (i, fn) => setSideGames(list => list.map((sg, k) => (k === i ? { ...sg, settings: fn(structuredClone(sg.settings)) } : sg)));
   const remove = i => setSideGames(list => list.filter((_, k) => k !== i));
@@ -64,6 +72,10 @@ export function SideGamesSetup({ game, sideGames, setSideGames, defaults, player
   // The closest to the pin pot pays for being closest, so Junk's greenies are off next to it (see gameView)
   const hasCtp = sideGames.some(sg => sg.game === 'ctp');
   const driveAt = sideGames.findIndex(sg => sg.game === 'drive');
+  const calcuttaAt = sideGames.findIndex(sg => sg.game === 'calcutta');
+  const buyerIds = buyers.map(b => b.id);
+  const salesOf = sg => liveSales(sg.auction?.sales, entries, buyerIds);
+  const setSales = sales => setSideGames(list => list.map(sg => (sg.game === 'calcutta' ? { ...sg, auction: { ...(sg.auction || {}), sales } } : sg)));
   const padGame = pad != null ? sideGames[pad] : null;
   return (
     <>
@@ -72,6 +84,10 @@ export function SideGamesSetup({ game, sideGames, setSideGames, defaults, player
         const meta = SIDE_GAMES[sg.game];
         const key = amountKey(sg.game, sg.settings);
         const problem = optionsProblem(sg.game, { [sg.game]: sg.settings });
+        // The Calcutta's line and button read its pot from the sales still in the round
+        const sold = sg.game === 'calcutta' ? salesOf(sg) : null;
+        const potOf = sold ? Object.values(sold).reduce((a, x) => a + x.bid, 0) : 0;
+        const line = sideBetLine(sg.game, sg.settings, sold ? { auction: { sales: sold } } : sg);
         return (
           <div key={sg.game} className="block side-game">
             <div className="sg-head">
@@ -80,11 +96,35 @@ export function SideGamesSetup({ game, sideGames, setSideGames, defaults, player
                 <div className="sg-name"><span className="set-name">{meta.label}</span>
                   <button className="rules-chip" onClick={() => setHowTo(sg.game)} aria-label={`How to play ${meta.label}`}><Icon name="info" /> Rules</button>
                 </div>
-                <div className="set-sub">{u(sideBetLine(sg.game, sg.settings))}</div>
+                <div className="set-sub">{u(line)}</div>
               </div>
-              <button className="nassau-bet-btn" aria-label={`${meta.label} bet: ${fmt(sg.settings[key] ?? 0)}. Change`} onClick={() => setPad(i)}>{fmt(sg.settings[key] ?? 0)}</button>
+              {sold ? (
+                <button className="nassau-bet-btn" aria-label={`Calcutta auction: ${Object.keys(sold).length} sold, ${fmt(potOf)} pot. Open the auction`} onClick={() => setAuction(true)}>{Object.keys(sold).length ? fmt(potOf) : <Icon name="gavel" />}</button>
+              ) : (
+                <button className="nassau-bet-btn" aria-label={`${meta.label} bet: ${fmt(sg.settings[key] ?? 0)}. Change`} onClick={() => setPad(i)}>{fmt(sg.settings[key] ?? 0)}</button>
+              )}
             </div>
-            <p className="field-help">{u(sideExample(sg.game, asPlayedWith(sg.game, sg.settings, sideGames), players, holes))}</p>
+            <p className="field-help">{u(sideExample(sg.game, asPlayedWith(sg.game, sg.settings, sideGames), sold ? entries.length || players : players, holes))}</p>
+            {sold && (
+              <>
+                <button className="quiet-row flush sg-rules" onClick={() => setAuction(true)} disabled={!entries.length}
+                  aria-label={`Run the auction: ${Object.keys(sold).length} of ${entries.length} sold`}>
+                  <Icon name="gavel" /> <span>{!entries.length ? 'Pick the players first' : Object.keys(sold).length ? `${Object.keys(sold).length} of ${entries.length} sold · ${fmt(potOf)} pot` : `Run the auction: ${entries.length} ${entries.some(e => e.players.length > 1) ? 'teams' : 'players'} to sell`}</span> <Icon name="caret-right" />
+                </button>
+                <div className="pot-unclaimed">
+                  <div className="toggle-lbl">Pays</div>
+                  <Segmented label="Calcutta: how the pot pays" className="press-mode-row" btn="pm-btn" value={sg.settings.payout === 'top3' ? 'top3' : 'top2'}
+                    onChange={v => change(i, st => ({ ...st, payout: v }))}
+                    options={[{ value: 'top2', label: '70/30' }, { value: 'top3', label: '60/30/10' }]} />
+                  <p className="field-help">{sg.settings.payout === 'top3' ? 'First, second and third with 5 or more sold; fewer pays 70/30.' : 'First and second with 4 or more sold; fewer, and the winner’s owner takes it all.'}</p>
+                </div>
+                <div className="toggle-row flush">
+                  <div><div className="toggle-lbl">Buy-backs</div><div className="toggle-sub">A player can buy half of themselves back for half the price</div></div>
+                  <Toggle on={!!sg.settings.buyBack} onChange={v => change(i, s => ({ ...s, buyBack: v }))} label="Calcutta buy-backs" />
+                </div>
+                {started && <p className="field-help">The auction was at the first tee. Fix a bid or a buyer here if one went in wrong.</p>}
+              </>
+            )}
             {POT_GAMES.includes(sg.game) && (
               <>
                 {sg.game === 'drive' && holes?.length ? (
@@ -177,6 +217,12 @@ export function SideGamesSetup({ game, sideGames, setSideGames, defaults, player
         })}
       </Sheet>
       <RulesSheet game={howTo} open={!!howTo} onClose={() => setHowTo(null)} />
+      {auction && calcuttaAt >= 0 && entries.length > 0 && (
+        <Suspense fallback={null}>
+          <AuctionSheet entries={entries} buyers={buyers} sales={sideGames[calcuttaAt].auction?.sales || {}} settings={sideGames[calcuttaAt].settings}
+            onChange={setSales} onClose={() => setAuction(false)} fmt={fmt} unit={unit} />
+        </Suspense>
+      )}
       {picking && driveAt >= 0 && holes?.length > 0 && (
         <DriveHoles settings={sideGames[driveAt].settings} holes={holes} onClose={() => setPicking(false)}
           onChange={nos => change(driveAt, st => ({ ...st, holes: nos }))} />

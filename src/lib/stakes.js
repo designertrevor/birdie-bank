@@ -1,8 +1,9 @@
 // What's on the line in a game: a one-line summary and a sanity check on its options.
 import { money } from './golf.js';
-import { POT_NAMES, TEAM_GAMES, betChanges, blindMultiplierOf, gameKeyLabel, sideGamesOf } from './round.js';
+import { POT_NAMES, TEAM_GAMES, betChanges, blindMultiplierOf, calcuttaSalesOf, gameKeyLabel, sideGamesOf } from './round.js';
 import { inUnits, pointsLines } from './play-for.js';
 import { houseRulesLine } from './house-rules.js';
+import { splitsLine, validSale } from './calcutta.js';
 
 /** Why a game's options can't be used as they stand, or null when they're fine. */
 export function optionsProblem(game, settings) {
@@ -19,12 +20,26 @@ export function optionsProblem(game, settings) {
  * The bet line for a side game in setup and the round menu: "$2 a skin", "$1 a dot",
  * "$5 each in the birdie pot". `settings` is the side game's own block.
  */
-export function sideBetLine(game, settings) {
+export function sideBetLine(game, settings, sg = null) {
+  if (game === 'calcutta') return calcuttaBetLine(settings, sg?.auction);
   if (game === 'birdies') return `${money(settings?.stake ?? 0)} each in the birdie pot`;
   // Named, so a round with a pot as its main game and both side pots doesn't read "each in the pot" three times
   if (game === 'ctp' || game === 'drive') return `${money(settings?.stake ?? 0)} each in the ${POT_NAMES[game]}`;
   // The bet in its own unit ("$2 a skin"); the worked example under it covers the house rules
   return stakeSummary(game, { [game]: settings }).split(' · ')[0];
+}
+
+/**
+ * The Calcutta's bet line: "$240 pot · 70/30" once bids are in, else "Auction at the first tee · 70/30".
+ * `auction` is the side game's own ({ sales }). Only sales that count make the pot (see calcutta.js).
+ */
+export function calcuttaBetLine(settings, auction = null) {
+  const sales = Object.values(auction?.sales || {}).filter(x => validSale(x));
+  const payout = settings?.payout === 'top3' ? 'top3' : 'top2';
+  const split = sales.length >= 2 ? splitsLine(sales.length, payout) : payout === 'top3' ? '60/30/10' : '70/30';
+  const back = settings?.buyBack ? ' · buy-backs' : '';
+  if (!sales.length) return `Auction at the first tee · ${split}${back}`;
+  return `${money(sales.reduce((a, x) => a + x.bid, 0))} pot · ${split}${back}`;
 }
 
 /**
@@ -40,7 +55,9 @@ export function roundStakeLines(round, { since = true } = {}) {
 function moneyStakeLines(round, since = true) {
   const lines = [{ key: 'main', line: stakeSummary(round.game, round.settings, round.holes?.length ?? 18) }];
   for (const sg of sideGamesOf(round)) {
-    const line = sideBetLine(sg.game, sg.settings);
+    // The Calcutta's pot counts only the sales still in the round (setup can outlive a change of players).
+    // A round set up again (`since` false) holds a new auction, so its line has no pot yet
+    const line = sideBetLine(sg.game, sg.settings, sg.game === 'calcutta' ? { auction: { sales: since ? calcuttaSalesOf(round, sg) : {} } } : sg);
     const from = line && since ? betChanges(round, sg.game).at(-1) : null;
     if (line) lines.push({ key: sg.game, line: from ? `${line} from hole ${from.no}` : line });
   }

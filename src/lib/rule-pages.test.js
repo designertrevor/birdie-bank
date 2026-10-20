@@ -18,7 +18,7 @@ test('rule pages: one for every game in GAMES and every side game, each with rul
   for (const k of Object.keys(GAMES)) assert.ok(RULE_KEYS.includes(k), `page for ${k}`);
   for (const k of Object.keys(SIDE_GAMES)) assert.ok(RULE_KEYS.includes(k), `page for side game ${k}`);
   assert.equal(new Set(RULE_KEYS).size, RULE_KEYS.length, 'no game twice');
-  assert.deepEqual(SIDE_ONLY.sort(), ['birdies', 'ctp', 'drive']);
+  assert.deepEqual(SIDE_ONLY.sort(), ['birdies', 'calcutta', 'ctp', 'drive']);
   // The build reads each page's sections from rules-content.jsx, so every key must be there
   const src = readFileSync(new URL('../components/rules-content.jsx', import.meta.url), 'utf8');
   const have = new Set([...src.slice(src.indexOf('export const RULES = {')).matchAll(/^ {2}(\w+): \{$/gm)].map(m => m[1]));

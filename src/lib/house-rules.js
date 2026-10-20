@@ -45,7 +45,7 @@ export function houseRulesLine(game, gs, holes = 18) {
   if (game === 'snake' && gs.fourPutt && (gs.growth || 'flat') !== 'flat') on.push('four-putts count twice');
   // Added 2026-10-05 (overnight 9): Quota's three and one more for most games
   if (game === 'quota' && gs.table === 'stableford') on.push('Stableford points');
-  if (game === 'quota' && (gs.adjust === 'one' || gs.adjust === 'half')) on.push(gs.adjust === 'one' ? 'quota moves 1 after' : 'quota moves half after');
+  if (game === 'quota' && (gs.adjust === 'one' || gs.adjust === 'half')) on.push('rolling quota');
   if (teamQ) on.push('team quota');
   if (game === 'stableford' && gs.table === 'chicago') on.push('big birdies');
   if (game === 'stroke' && gs.gross && gs.payout === 'pot') on.push('low gross too');

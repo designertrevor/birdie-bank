@@ -113,7 +113,7 @@ export function houseRulesFor(game, s, holes = 18) {
         r('nassau', 'Front, back and total: a pot each, nines against half quota', full && s.nassau && s.payout === 'pot' && !team),
         r('split', 'Everyone over quota shares the pot', s.split === 'over' && s.payout === 'pot' && !team),
         r('table', 'Stableford points: bogey 1, par 2, birdie 3, eagle 4', s.table === 'stableford'),
-        r('adjust', s.adjust === 'half' ? 'Quotas move half the difference for next time' : 'Quotas move 1 for next time: up if you beat it, down if you miss', s.adjust === 'one' || s.adjust === 'half'),
+        r('adjust', s.adjust === 'half' ? `Rolling quota: quotas move half the difference for next time${s.cap > 0 ? `, ${s.cap} at most` : ''}` : 'Rolling quota: quotas move 1 for next time, up if you beat it, down if you miss', s.adjust === 'one' || s.adjust === 'half'),
         r('team', 'Team quota: partners’ points against their quotas added up', team),
       ];
     }
@@ -136,6 +136,11 @@ export function houseRulesFor(game, s, holes = 18) {
     ];
     // Closest to the pin and long drive pots: what a hole nobody wins does. One rule, always on, so a
     // switch from carries to split after locking in reads as one change
+    // The Calcutta (2026-10-20): how the pot pays, always said, and buy-backs when they're on
+    case 'calcutta': return [
+      r('payout', s.payout === 'top3' ? 'The Calcutta pays 60/30/10 with 5 or more sold' : 'The Calcutta pays 70/30 with 4 or more sold, else all to first', true),
+      r('buyBack', 'A player can buy half of themselves back for half the price', s.buyBack),
+    ];
     case 'ctp': case 'drive': {
       const hole = game === 'ctp' ? 'A par 3' : 'A long drive hole';
       return [r('unclaimed', s.unclaimed === 'split' ? `${hole} nobody wins is split across the ones won` : `${hole} nobody wins carries to the next`, true)];

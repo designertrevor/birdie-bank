@@ -290,7 +290,7 @@ export const RULES = {
         <li><strong>Front, back and total</strong>: played for a pot over 18 holes, the front nine, the back nine and the 18 are a pot each, each at the amount you set. Each nine is measured against half your quota, so a quota of 24 needs 12 on the front and 12 on the back, and the 18 against all of it. A nine still being played pays on the holes so far.</li>
         <li><strong>Everyone over quota shares</strong>: in a pot, everyone who beats their quota shares it by how far over they are. At +4 and +2, a $15 pot is $10 and $5. Nobody over, and the best finish takes it as usual.</li>
         <li><strong>Team quota</strong>: in a pot with four or more players, partners add up their points and their quotas. The team furthest over takes the pot and splits it; tied teams share it. Ann +2 and Bo level beat Cy +2 and Di −1. Pick the teams when you set up the round.</li>
-        <li><strong>Quota moves after the round</strong>: the way leagues keep quotas honest. <strong>1 point</strong>: beat your quota and it goes up 1 next time, miss it and it comes down 1. <strong>Half</strong>: it moves half of what you beat it or missed it by, so +6 makes it 3 higher. The next Quota round with the rule on starts you there, and the results show everyone’s number for next time.</li>
+        <li><strong>Rolling quota</strong> (quota moves after the round): the way leagues keep quotas honest, and a crew that plays often keeps one going. <strong>1 point</strong>: beat your quota and it goes up 1 next time, miss it and it comes down 1. <strong>Half</strong>: it moves half of what you beat it or missed it by, so +6 makes it 3 higher, and never more than the most a round can move it (3 unless your group picks 2 or no limit). The next Quota round with the rule on starts each of you from there, setup says where (“Your quota is 31, up 2 from last time”), and the results show everyone’s number for next time.</li>
       </ul>],
     ],
   },
@@ -403,6 +403,36 @@ export const RULES = {
       ['Stopping early', <p key="s">Only the par 3s played count. Stop after 9 and the pot is the front nine’s share. Added partway through? Go back to the par 3s already played and tap who was closest, and they count too.</p>],
       ['Joining late', <p key="j">The pot is for the players who started. Anyone added partway, or who leaves early, sits it out.</p>],
       ['With Junk', <p key="k">The pot pays for being closest, so Junk’s greenies are off while it’s on. Sandies, chip-ins and the rest still count in Junk.</p>],
+    ],
+  },
+  calcutta: {
+    title: 'How to play a Calcutta',
+    sub: '2–8 players · A side game · An auction before the first tee',
+    sections: [
+      ['Overview', <p key="o">Before the first tee every player goes up for auction, and the highest bidder <strong>owns</strong> them. The bids make the pot. After the round the pot pays whoever owns the top finishers in the main game. You can buy yourself, and you can own more than one player.</p>],
+      ['The auction', <ol key="a">
+        <li>The organizer opens the auction sheet and takes the players one at a time.</li>
+        <li>The group bids out loud. The winning bid and the buyer go in: whole dollars, tap a quick amount or type one.</li>
+        <li>In a team game (Best ball, Vegas, 2 v 2 Nassau and the like) each <strong>team</strong> goes up instead, and one buyer owns the whole team.</li>
+        <li>Nobody bids on a player? Leave them unsold: they’re out of the pot.</li>
+      </ol>],
+      ['Who finished where', <ul key="w">
+        <li><strong>Stroke play</strong>: fewest net strokes. <strong>Stableford</strong>: most points. <strong>Quota</strong>: furthest over quota.</li>
+        <li><strong>Any other game</strong>: most money won in it (Nassau, Skins, Wolf and the rest).</li>
+        <li>A team’s finish is its players’ added up.</li>
+      </ul>],
+      ['Paying out', <ul key="p">
+        <li>With 4 or more sold: <strong>70%</strong> of the pot to the owner of first, <strong>30%</strong> to the owner of second.</li>
+        <li>With fewer: the owner of the winner takes it all.</li>
+        <li>Ties share the places they cover: two tied for first split first and second between them.</li>
+        <li>Four players go for $40, $30, $20 and $10, a $100 pot. Ann wins and Bo is second: Ann’s owner takes $70 and Bo’s $30.</li>
+      </ul>],
+      ['House rules', <ul key="hr">
+        <li><strong>Top three</strong>: 60%, 30% and 10% to the owners of first, second and third, with 5 or more sold.</li>
+        <li><strong>Buy-backs</strong>: a player someone else bought can buy half of themselves back for half the price. Bo goes for $30 and buys back half for $15, so Bo and the owner each get half of what Bo wins.</li>
+      </ul>],
+      ['Stopping early', <p key="s">The Calcutta pays on where everyone stands on the holes played, like a bet still being played. Nothing is paid until the first hole is in.</p>],
+      ['Joining late or leaving', <p key="j">Anyone added partway was never auctioned, so they’re not in the pot. Someone who leaves stays in: their bids stand, and whoever owns them is paid on where they finish.</p>],
     ],
   },
   drive: {

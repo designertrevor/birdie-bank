@@ -20,7 +20,7 @@ import { useNearbyCourses } from '../lib/useNearbyCourses.js';
 import { mergeNear, milesLabel } from '../lib/nearby.js';
 import NearYou from '../components/NearYou.jsx';
 import RequestCourse from '../components/RequestCourse.jsx';
-import { GAMES, GAME_GROUPS, MAX_GAMES, SIDE_GAMES, bettors, createRound, effectiveCourseHc, holesInPlay, isJustPlaying, oneBall, sideGamesOf } from '../lib/round.js';
+import { GAMES, GAME_GROUPS, MAX_GAMES, SIDE_GAMES, bettors, calcuttaSalesOf, createRound, effectiveCourseHc, holesInPlay, isJustPlaying, oneBall, sideGamesOf } from '../lib/round.js';
 import { JUST_PLAYING, canJustPlay, cantJustPlay, justPlayingWho, maxPicked, pickedCheck, pickedLine } from '../lib/just-playing.js';
 import { SideGamesSetup } from '../components/SideGames.jsx';
 import { PairBetsSetup } from '../components/PairBets.jsx';
@@ -30,7 +30,8 @@ import { optionsProblem, roundStakeLines, sideBetLine, stakeSummary } from '../l
 import { syncConfigured } from '../lib/sync.js';
 import { ShareSheet } from '../components/Live.jsx';
 import { defaultTeams, teamsCfg, teamsProblem } from '../lib/teams.js';
-import { carriedLine, carriedQuotas, withQuotaRules } from '../lib/quota-carry.js';
+import { carriedLine, carriedQuotas, myQuotaLine, withQuotaRules } from '../lib/quota-carry.js';
+import { calcuttaEntries } from '../lib/calcutta.js';
 import { rematchSetup } from '../lib/rematch.js';
 import { halfStrokesOffered, pctsDiffer } from '../lib/allowances.js';
 import { StrokesSetup } from '../components/StrokesSetup.jsx';
@@ -172,7 +173,12 @@ export default function NewRound({ rematch, fromPlan, present, edit = null, ahea
   const [picked, setPicked] = useKept('setup:picked', () => pre?.picked ?? (state.me ? [state.me] : []));
   const [tees, setTees] = useKept('setup:tees', pre?.tees ?? {});          // pid -> tee name
   const [hcOverride, setHcOverride] = useKept('setup:hcOverride', pre?.hcOverride ?? {}); // pid -> number
-  const [opts, setOpts] = useKept('setup:opts', () => withBets(structuredClone(state.settings), pre));
+  // A "Play this now" name with a house rule in it (/?play=rolling-quota) turns that rule on
+  const [opts, setOpts] = useKept('setup:opts', () => {
+    const o = withBets(structuredClone(state.settings), pre);
+    for (const [g, on] of Object.entries(fromPlay?.rules || {})) o[g] = { ...(o[g] || {}), ...on };
+    return o;
+  });
   // Off for a brand new setup: a missing handicap must never quietly play as scratch. Run it back,
   // a usual or a plan keeps the group's own choice
   const [useHc, setUseHc] = useKept('setup:useHc', pre?.useHc ?? false);
@@ -419,6 +425,9 @@ export default function NewRound({ rematch, fromPlan, present, edit = null, ahea
     // and Team quota only stays on with its teams
     withQuotaRules(s, round);
     if (sides.length) round.sideGames = structuredClone(sides);
+    // The Calcutta keeps only the sales still in the round: a lot or a buyer from before a change of players goes
+    const cal = round.sideGames?.find(sg => sg.game === 'calcutta');
+    if (cal?.auction) cal.auction = { sales: calcuttaSalesOf(round, cal) };
     if (playFor) round.playFor = structuredClone(playFor);
     // Side bets whose two players are both still in the round (setup's list can outlive a change of players),
     // agreed challenges among them
@@ -1066,6 +1075,9 @@ function SetupStep({ game, course, holesCount, nine, picked, setPicked, casual =
   useEffect(() => {
     if (quotaTeams && teamsProblem(game, teams, picked, tcfg)) setTeams(defaultTeams(game, picked, tcfg));
   }, [quotaTeams, game, teams, picked, tcfg, setTeams]);
+  // The Calcutta's lots: the players, or the teams the round will be played in (calcutta.js)
+  const calcuttaLots = sideGames.some(sg => sg.game === 'calcutta')
+    ? calcuttaEntries({ players: picked.map(pid => ({ id: pid, name: names[pid] })), teams: tcfg ? teams : null }) : [];
   // Quotas carried from last time under "Quota moves after the round", shown before the round is made
   const carried = game === 'quota' && (opts.quota?.adjust === 'one' || opts.quota?.adjust === 'half') ? carriedQuotas(state, picked, holesCount) : {};
   // A round-shaped draft for the side bets: the players picked (with course handicaps, for the
@@ -1142,10 +1154,14 @@ function SetupStep({ game, course, holesCount, nine, picked, setPicked, casual =
           </>
         )}
         {Object.keys(carried).length > 0 && (
-          <p className="hint-card"><Icon name="target" fill /> Quotas from last time: {carriedLine(carried, pid => names[pid])}.{Object.keys(carried).length < picked.length ? ' The rest come from handicaps.' : ''}</p>
+          <p className="hint-card"><Icon name="target" fill /> {/* One span: the card lays its children out in a row */}
+            <span>Rolling quota. {myQuotaLine(carried, state.me) && <strong>{myQuotaLine(carried, state.me)} </strong>}
+              {carriedLine(carried, pid => names[pid], state.me) && `${myQuotaLine(carried, state.me) ? 'The others' : 'From last time'}: ${carriedLine(carried, pid => names[pid], state.me)}.`}
+              {Object.keys(carried).length < picked.length ? ' The rest come from handicaps.' : ''}</span></p>
         )}
 
-        <SideGamesSetup game={game} sideGames={sideGames} setSideGames={setSideGames} defaults={opts} players={picked.length || 4} playFor={playFor} holes={holes} holesCount={holesCount} />
+        <SideGamesSetup game={game} sideGames={sideGames} setSideGames={setSideGames} defaults={opts} players={picked.length || 4} playFor={playFor} holes={holes} holesCount={holesCount}
+          entries={calcuttaLots} buyers={picked.map(pid => ({ id: pid, name: names[pid] }))} />
 
         {setPairBets && pairBets.some(b => challengeIdOfBet(b.id)) && (
           <p className="hint-card ch-setup-note"><Icon name="sword" fill /> {challengeNote(betRound, pairBets)}</p>
