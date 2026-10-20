@@ -13,7 +13,7 @@
 //   carried   you agreed to roll it, or would rather settle up: the person who asked (players: [their seat])
 //   talk      you posted trash talk on a round, plan or challenge: everyone on it, but you. It says
 //             what you wrote (data.text), one push per comment
-//   tee       the tee time reminder: the plan's organizer, sent by the daily job, never by the app
+//   tee       the tee time reminder: the plan's organizer, sent by the hourly job at 8 in their morning, never by the app
 // Who counts as "on it" is the server's call (supabase/2026-10-08-push.sql push_targets): it only
 // sends when the caller is on that round, plan or challenge too, and only to people on it, and
 // never a kind someone switched off in Settings (push-prefs.js, supabase/2026-10-08-push-prefs.sql).
@@ -51,7 +51,7 @@ export function pushText(v, max = 40) {
 /**
  * A request as the server accepts it from the app, or null. Only the kinds above, a real code, and
  * short plain text; `to` comes from the kind, never from the request. The tee reminder only ever
- * comes from the daily job.
+ * comes from the hourly job.
  */
 export function cleanPushRequest(body, { fromServer = false } = {}) {
   if (!body || typeof body !== 'object') return null;

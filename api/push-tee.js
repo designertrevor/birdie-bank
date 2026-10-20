@@ -1,11 +1,11 @@
-// The tee time reminder as a push: once a day (vercel.json crons) this sends "Book your tee time"
-// to the organizer of each plan whose reminder day has come and that isn't booked yet, once per
-// plan (push_tee_due in supabase/2026-10-08-push.sql). Up next still shows the card as before.
+// The tee time reminder as a push: every hour (vercel.json crons, "0 * * * *") this sends "Book
+// your tee time" to the organizer of each plan whose reminder day has come and that isn't booked
+// yet, in the hour their own clock reads 8 (the zone their newest phone saved, push-zones.js), once
+// per plan (push_tee_due in supabase/2026-10-20-push-timezones.sql). Up next still shows the card.
 //
 // Vercel calls it with "Authorization: Bearer <CRON_SECRET>". Off, answering 204 and sending
 // nothing, until CRON_SECRET is set and push is on (see api/push.js for the rest).
-// The day is the one in the US (Vercel runs it at 15:00 UTC, the morning there), the same day a
-// phone in the US shows the card.
+// "Today" is the organizer's own day, the same day their phone shows the card.
 import { handleTee, pushConfig } from '../src/lib/push-server.js';
 
 const env = () => ({
@@ -23,8 +23,7 @@ export default {
     if (request.headers.get('authorization') !== `Bearer ${e.CRON_SECRET}`) return empty(401);
     const cfg = pushConfig(e);
     if (!cfg) return empty(204);
-    const today = new Date(Date.now() - 7 * 3600000).toISOString().slice(0, 10);
-    await handleTee(cfg, today);
+    await handleTee(cfg, new Date());
     return empty(204);
   },
 };

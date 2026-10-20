@@ -8,6 +8,7 @@
 // and the app only asks for a push when VITE_VAPID_PUBLIC_KEY (the public half) is set at build.
 import { okEndpoint, pushRequest, vapidKeys } from './web-push.js';
 import { pushPayload, pushText, recipientResult } from './push-events.js';
+import { DEFAULT_ZONE, TEE_HOUR, teeDays } from './push-zones.js';
 
 /** The push settings from the environment, or null when push is off. */
 export function pushConfig(env = {}) {
@@ -34,15 +35,17 @@ export async function callerId(cfg, token, fetchImpl = fetch) {
 
 const service = cfg => ({ apikey: cfg.serviceKey, Authorization: `Bearer ${cfg.serviceKey}`, 'Content-Type': 'application/json' });
 
-/** Call one of the push functions as the service role. [] when it isn't there yet (the SQL hasn't run) or fails. */
-async function rpc(cfg, name, args, fetchImpl) {
+/** Call one of the push functions as the service role. Null when it isn't there yet (the SQL hasn't run) or fails. */
+async function rpcOrNull(cfg, name, args, fetchImpl) {
   try {
     const res = await fetchImpl(`${cfg.url}/rest/v1/rpc/${name}`, { method: 'POST', headers: service(cfg), body: JSON.stringify(args), signal: AbortSignal.timeout(5000) });
-    if (!res.ok) return [];
+    if (!res.ok) return null;
     const rows = await res.json();
-    return Array.isArray(rows) ? rows : [];
-  } catch { return []; }
+    return Array.isArray(rows) ? rows : null;
+  } catch { return null; }
 }
+/** The same, [] when it isn't there or fails. */
+const rpc = async (cfg, name, args, fetchImpl) => (await rpcOrNull(cfg, name, args, fetchImpl)) || [];
 
 /**
  * The subscriptions to send a request to: the server checks the caller is on that round or plan,
@@ -55,9 +58,23 @@ export function pushTargets(cfg, caller, req, fetchImpl = fetch) {
   }, fetchImpl);
 }
 
-/** Plans whose tee time reminder is due today (`today` YYYY-MM-DD), each with its organizer's subscriptions. */
-export function teeDue(cfg, today, fetchImpl = fetch) {
-  return rpc(cfg, 'push_tee_due', { p_today: today }, fetchImpl);
+/**
+ * Plans whose tee time reminder goes now, each with its organizer's subscriptions. The database
+ * hands over the zones its subscriptions are in (push_tee_zones); the ones whose clock reads
+ * `hour` now go back with their own today (push-zones.js teeDays), and push_tee_due picks each
+ * organizer by the zone of their newest phone, marking each plan sent so it goes once.
+ * Until supabase/2026-10-20-push-timezones.sql runs there are no zones: then it's the old daily
+ * send, on Utah's day, in the hour Utah's clock reads `hour`.
+ */
+export async function teeDue(cfg, now = new Date(), fetchImpl = fetch, { hour = TEE_HOUR } = {}) {
+  const zones = await rpcOrNull(cfg, 'push_tee_zones', {}, fetchImpl);
+  if (zones === null) {
+    const today = teeDays([DEFAULT_ZONE], now, hour)[DEFAULT_ZONE];
+    return today ? rpc(cfg, 'push_tee_due', { p_today: today }, fetchImpl) : [];
+  }
+  const days = teeDays(zones, now, hour);
+  if (!Object.keys(days).length) return [];
+  return rpc(cfg, 'push_tee_due', { p_days: days }, fetchImpl);
 }
 
 /**
@@ -113,10 +130,13 @@ export function payloadGroups(req, rows) {
   return [...groups.values()];
 }
 
-/** The daily tee time reminders: one push per due plan to its organizer. Returns how many went. */
-export async function handleTee(cfg, today, fetchImpl = fetch) {
+/**
+ * The tee time reminders, run every hour: one push per due plan to its organizer, in the hour of
+ * their own morning (teeDue). Returns how many went.
+ */
+export async function handleTee(cfg, now = new Date(), fetchImpl = fetch, opts = {}) {
   if (!cfg) return 0;
-  const rows = await teeDue(cfg, today, fetchImpl);
+  const rows = await teeDue(cfg, now, fetchImpl, opts);
   let sent = 0;
   for (const r of rows) {
     const payload = pushPayload({ kind: 'tee', scope: 'plan', code: r.plan_code, data: { day: r.plan_date, course: pushText(r.plan_course, 48) } });

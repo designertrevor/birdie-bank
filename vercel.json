@@ -21,6 +21,6 @@
     }
   ],
   "crons": [
-    { "path": "/api/push-tee", "schedule": "0 15 * * *" }
+    { "path": "/api/push-tee", "schedule": "0 * * * *" }
   ]
 }

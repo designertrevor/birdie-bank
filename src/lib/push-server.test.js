@@ -23,14 +23,18 @@ function sub(user, host = 'fcm.googleapis.com') {
 }
 
 /** A fake network: Supabase's user check and RPCs, and push services answering `status` per endpoint. */
-function fakeFetch({ user = 'u-caller', rows = [], status = {} } = {}) {
+function fakeFetch({ user = 'u-caller', rows = [], status = {}, rpcs = {} } = {}) {
   const calls = [];
   const fn = async (url, init = {}) => {
     calls.push({ url, init });
     const u = String(url);
     const json = body => ({ ok: true, status: 200, json: async () => body });
     if (u.endsWith('/auth/v1/user')) return init.headers.Authorization === 'Bearer good' ? json({ id: user }) : { ok: false, status: 401, json: async () => ({}) };
-    if (u.includes('/rest/v1/rpc/')) return json(rows);
+    if (u.includes('/rest/v1/rpc/')) {
+      const name = u.split('/rest/v1/rpc/')[1];
+      if (name in rpcs) return rpcs[name] === 404 ? { ok: false, status: 404, json: async () => ({}) } : json(rpcs[name]);
+      return json(rows);
+    }
     if (u.includes('/rest/v1/push_subscriptions')) return { ok: true, status: 204 };
     const s = status[u] ?? 201;
     return { ok: s < 300, status: s };
@@ -96,14 +100,37 @@ test('a subscription the push service says is gone is deleted, and a bad endpoin
   assert.ok(!f.calls.some(c => String(c.url).includes('localhost')));
 });
 
-test('the daily tee time reminder sends one push per due plan to its organizer', async () => {
+test('the hourly tee time reminder sends one push per due plan, to the zones at 8 in the morning', async () => {
   const cfg = pushConfig(ENV);
   const rows = [{ plan_code: 'AB12CD', plan_date: '2026-10-10', plan_course: 'Birch Creek', ...sub('u-host') }];
-  const f = fakeFetch({ rows });
-  assert.equal(await handleTee(cfg, '2026-10-08', f), 1);
+  const zones = [{ time_zone: 'America/Denver' }, { time_zone: 'Asia/Tokyo' }, { time_zone: 'America/Los_Angeles' }];
+  const f = fakeFetch({ rows, rpcs: { push_tee_zones: zones } });
+  // 14:00 UTC on Oct 8 is 8:00 in Denver (summer time), 7:00 in Los Angeles, 23:00 in Tokyo
+  assert.equal(await handleTee(cfg, new Date('2026-10-08T14:00:00Z'), f), 1);
   const rpc = f.calls.find(c => String(c.url).endsWith('/rest/v1/rpc/push_tee_due'));
-  assert.deepEqual(JSON.parse(rpc.init.body), { p_today: '2026-10-08' });
-  assert.equal(await handleTee(null, '2026-10-08', f), 0);
+  assert.deepEqual(JSON.parse(rpc.init.body), { p_days: { 'America/Denver': '2026-10-08' } });
+  // 23:00 UTC is 8:00 the next day in Tokyo
+  const g = fakeFetch({ rows, rpcs: { push_tee_zones: zones } });
+  await handleTee(cfg, new Date('2026-10-08T23:00:00Z'), g);
+  assert.deepEqual(JSON.parse(g.calls.find(c => String(c.url).endsWith('/rpc/push_tee_due')).init.body), { p_days: { 'Asia/Tokyo': '2026-10-09' } });
+  assert.equal(await handleTee(null, new Date('2026-10-08T14:00:00Z'), f), 0);
+});
+
+test('an hour when no zone is at 8 asks for nothing', async () => {
+  const cfg = pushConfig(ENV);
+  const f = fakeFetch({ rows: [sub('u-host')], rpcs: { push_tee_zones: [{ time_zone: 'America/Denver' }] } });
+  assert.equal(await handleTee(cfg, new Date('2026-10-08T03:00:00Z'), f), 0);
+  assert.ok(!f.calls.some(c => String(c.url).endsWith('/rpc/push_tee_due')));
+});
+
+test('before the time zone SQL runs, the tee reminder goes on Utah\u2019s day in Utah\u2019s 8 o\u2019clock hour', async () => {
+  const cfg = pushConfig(ENV);
+  const rows = [{ plan_code: 'AB12CD', plan_date: '2026-10-10', plan_course: 'Birch Creek', ...sub('u-host') }];
+  const f = fakeFetch({ rows, rpcs: { push_tee_zones: 404 } });
+  assert.equal(await handleTee(cfg, new Date('2026-10-09T03:00:00Z'), f), 0);
+  assert.ok(!f.calls.some(c => String(c.url).endsWith('/rpc/push_tee_due')));
+  assert.equal(await handleTee(cfg, new Date('2026-10-09T14:30:00Z'), f), 1);
+  assert.deepEqual(JSON.parse(f.calls.find(c => String(c.url).endsWith('/rpc/push_tee_due')).init.body), { p_today: '2026-10-09' });
 });
 
 test('a round finished push tells each person how they did, by the seats the database says are theirs', async () => {
