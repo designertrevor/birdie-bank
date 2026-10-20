@@ -228,7 +228,7 @@ export default function RoundDetail({ id, celebrate }) {
         {res.standings.length >= 3 && !allSquare && !(res.big && !res.big.final) && <Podium standings={res.standings} faces={faces} fmt={fmt} tint={gameTheme(round.game).tint} />}
         <div className="stand-group">
           {res.standings.map((p, i) => (
-            <div key={p.id} className="stand-line">
+            <div key={p.id} className="stand-line" data-testid="standing">
               <div className="sr">{placeLabel(res.standings, i)}</div>
               {faces.get(p.id) && <AvatarArt model={faces.get(p.id)} size="sm" />}
               <div className="sn">{p.name}{strokesNote(p)}{res.detail.byGame && <span className="rv-games">{gamesLine(res.detail.byGame, p.id, fmt)}</span>}</div>
@@ -271,7 +271,7 @@ export default function RoundDetail({ id, celebrate }) {
             : res.transfers.length === 0 && <p className="hint-card" style={{ margin: 0 }}><Icon name="handshake" fill /> Nobody owes anybody. First round’s on whoever three-putted last.</p>}
           {res.transfers.map(t => (
             <div key={t.from + t.to} className="talk-pay">
-              <div className="pay-row">
+              <div className="pay-row" data-testid="payment">
                 <span className="pf">{roundPlayerName(round, t.from)}</span><span className="pa"><Icon name="arrow-right" /></span><span className="pt">{roundPlayerName(round, t.to)}</span>
                 <span className="pm">{money(t.amount)}</span>
               </div>

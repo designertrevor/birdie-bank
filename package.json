@@ -8,7 +8,8 @@
     "build": "vite build",
     "lint": "eslint . && node scripts/no-em-dashes.mjs",
     "preview": "vite preview",
-    "test": "node --test src/lib/*.test.js"
+    "test": "node --test src/lib/*.test.js",
+    "e2e": "node --test --test-reporter=spec e2e/*.e2e.js"
   },
   "dependencies": {
     "@sentry/browser": "^11.7.0",
@@ -27,6 +28,7 @@
     "eslint-plugin-react-hooks": "^7.1.1",
     "eslint-plugin-react-refresh": "^0.5.7",
     "globals": "^16.5.0",
+    "playwright-core": "^1.64.1",
     "vite": "^8.3.4"
   }
 }
