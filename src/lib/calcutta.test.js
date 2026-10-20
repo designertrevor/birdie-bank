@@ -212,6 +212,21 @@ test('the Calcutta pays on money in a money game, and teams go up together in a 
   assert.equal(sumCents(roundResults(r).balances), 0);
 });
 
+test('money review: players who won the same in a money game tie, even when the cents split them', () => {
+  // A $40 Skins pot, three skins: Ann, Bo and Cy win one each ($13.33 a skin), so each is up $3.33
+  // and the cents make one of them $3.34. In the Calcutta the three tie for first and share the pot
+  const r = round('skins', ['a', 'b', 'c', 'd'], { settings: { skins: { payout: 'pot', stake: 10, carryover: false } } });
+  play(r, (pid, no) => ({ a: 1, b: 2, c: 3 }[pid] === no ? 3 : 4));
+  withCalcutta(r, Object.fromEntries(['a', 'b', 'c', 'd'].map(id => [id, { buyer: id, bid: 25 }])));
+  const res = roundResults(r);
+  assert.deepEqual(res.detail.byGame.main.balances, { a: 3.34, b: 3.33, c: 3.33, d: -10 });
+  const t = res.detail.byGame.calcutta.detail.calcutta;
+  assert.deepEqual(t.sold.map(s => [s.id, s.place, s.tied]), [['a', 1, true], ['b', 1, true], ['c', 1, true], ['d', 4, false]]);
+  // $100 three ways, the spare cent to the first auctioned (not $70 to Ann and $15 each to Bo and Cy)
+  assert.deepEqual(t.sold.map(s => s.prize), [33.34, 33.33, 33.33, 0]);
+  assert.equal(sumCents(res.balances), 0);
+});
+
 test('team buy-back: the team buys half of itself, split between its players', () => {
   const r = round('bestball', ['a', 'b', 'c', 'd'], { teams: [['a', 'b'], ['c', 'd']], settings: { bestball: { format: 'total', stake: 10 } } });
   play(r, (pid) => (pid === 'c' ? 3 : 4));

@@ -2742,6 +2742,8 @@ export function gameResults(round) {
     detail.rabbit = t;
   }
 
+  // The money before it's put in whole cents, for the Calcutta's finish (see exactMoney)
+  const exact = { ...balances };
   round2();
   const standings = [...round.players]
     .map(p => ({ ...p, amount: balances[p.id] }))
@@ -2753,7 +2755,20 @@ export function gameResults(round) {
     const v = Math.round((raw[a][b] || 0) * 100) / 100 || 0;
     pairs[a][b] = v; pairs[b][a] = -v || 0;
   }
-  return { balances, standings, transfers: minimalTransfers(balances), detail, pairs };
+  const out = { balances, standings, transfers: minimalTransfers(balances), detail, pairs };
+  EXACT_MONEY.set(out, exact);
+  return out;
+}
+
+/**
+ * gameResults' money for each player before it was put in whole cents ({ pid: dollars }), kept off
+ * the result itself so nothing that compares or saves results sees it. Putting money in cents can
+ * leave players who won the same a cent apart ($10 three ways is $3.34, $3.33 and $3.33), and the
+ * Calcutta ranks on money in a money game, where that cent would turn a tie for first into a win.
+ */
+const EXACT_MONEY = new WeakMap();
+function exactMoney(res) {
+  return EXACT_MONEY.get(res) || res.balances;
 }
 
 // --------------------------- Several games at once ------------------------
@@ -3038,10 +3053,11 @@ const TOTALS_GAMES = ['stroke', 'stableford', 'quota'];
 export function calcuttaScores(main, entries) {
   const inMain = new Set(main.players.map(p => p.id));
   const totals = TOTALS_GAMES.includes(main.game) ? Object.fromEntries(totalsTable(main).map(t => [t.id, t])) : null;
-  const money = totals ? null : gameResults(main).balances;
+  // Money to the millionth of a dollar, not in cents: players who won the same tie (see exactMoney)
+  const money = totals ? null : exactMoney(gameResults(main));
   const one = pid => {
     if (!inMain.has(pid)) return null;
-    if (!totals) return money[pid] ?? 0;
+    if (!totals) return Math.round((money[pid] ?? 0) * 1e6) / 1e6;
     const t = totals[pid];
     if (!t || !t.played || !playsWholeRound(main, pid)) return null;
     return main.game === 'stroke' ? -t.total : main.game === 'quota' ? t.vsQuotaExact : t.total;
