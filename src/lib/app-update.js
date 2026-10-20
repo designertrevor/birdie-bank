@@ -1,7 +1,8 @@
 // When a new version of the app may take over (decided 2026-10-01, overnight 6). A phone in the
 // middle of a round never reloads by itself: a new version waits until no round is going on
 // this phone (one you're playing, one you're only watching, or a finished one you're fixing),
-// then applies on its own right at launch, or from a tap on "Update ready" on Up next.
+// then applies on its own at the next launch, behind the splash and before the first screen shows,
+// or from a tap on "Update ready" on Up next. The page never reloads once the app is on the screen.
 // Plain functions so the rule is tested; sw-update.js does the browser side.
 
 /** A round that keeps an update waiting: still being played or watched, or reopened to fix scores. */
@@ -24,8 +25,8 @@ export function openedFromLink(search = '', hash = '') {
 
 /**
  * What to do about a new version: 'apply' (swap now and reload), 'offer' (show the note on Up next),
- * or 'wait' (say nothing until no round is going on). `launching` is true only while the app is
- * just opening and the person hasn't touched anything yet, so a reload then loses nothing.
+ * or 'wait' (say nothing until no round is going on). `launching` is true only while the splash
+ * is still up at the start of a launch (sw-update.js), so a reload then is never seen.
  * `fromLink` (see openedFromLink) never reloads at launch: the note on Up next offers it instead.
  */
 export function updateAction({ waiting, safe, launching = false, fromLink = false }) {
