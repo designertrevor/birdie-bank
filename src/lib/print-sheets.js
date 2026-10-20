@@ -565,14 +565,24 @@ export function bigSheetResults(state, st, bs) {
 
 // --------------------------- the results sheet's pages ---------------------------
 
+/** The space under a section, in rows. */
+const SECTION_GAP = 0.55;
+
 /**
- * How tall a block is, in rows of a table (about 2em, 0.3 inch on paper), measured off the pages as
- * Print.jsx draws them: a section's title is 1.5 rows, a table's column heads about 1, a standing
- * with a line under the name 1.6. A page has about 29 rows under the big header and 31 after.
+ * How tall a block is, in rows of a table (about 2em, 0.3 inch on paper), measured off the Letter
+ * pages as Print.jsx draws them in Chrome's print render (2026-10-20): a section's title is 1.05 rows,
+ * a table's column heads 0.8, a standing with a line under the name 1.6, and the space under a
+ * section 0.55. Each estimate is a little over what it measured. A page has 28 rows under the big
+ * header and 30 after.
  */
 export function blockSize(b) {
   if (!b.rows) return b.size || 1;
-  return (b.title ? 1.5 : 0) + (b.columns ? 0.95 : 0) + b.rows.length * (b.rowSize || 1) + 0.2;
+  return (b.title ? 1.05 : 0) + (b.columns ? 0.8 : 0) + b.rows.length * (b.rowSize || 1) + SECTION_GAP;
+}
+
+/** The empty space under a block (part of its blockSize), which the foot of a page can take instead. */
+export function blockGap(b) {
+  return b.rows ? SECTION_GAP : b.gap || 0;
 }
 
 /**
@@ -582,19 +592,20 @@ export function blockSize(b) {
 export function resultBlocks(results) {
   if (!results) return [];
   if (results.empty) return [{ kind: 'empty', text: results.empty, size: 3 }];
-  const out = [{ kind: 'headline', text: results.headline, sub: results.sub, size: 2.2 }];
-  if (results.podium?.length) out.push({ kind: 'podium', rows: null, items: results.podium, size: 8 });
+  const out = [{ kind: 'headline', text: results.headline, sub: results.sub, size: 2.1, gap: 0.45 }];
+  if (results.podium?.length) out.push({ kind: 'podium', rows: null, items: results.podium, size: 7.7, gap: 0.7 });
   if (results.standings?.length) out.push({ kind: 'standings', title: 'Standings', columns: true, rows: results.standings, scoreCol: results.scoreCol, valueLabel: results.valueLabel, rowSize: results.standings.some(r => r.sub) ? 1.6 : 1 });
   if (results.owesTitle) out.push({ kind: 'owes', title: results.owesTitle, rows: results.owes.length ? results.owes : [{ none: true }] });
   for (const t of results.tables || []) if (t.rows.length) out.push({ kind: 'table', title: t.title, columns: t.columns, rows: t.rows });
-  for (const n of results.notes || []) out.push({ kind: 'note', text: n, size: 1 + Math.floor(String(n).length / 110) });
+  for (const n of results.notes || []) out.push({ kind: 'note', text: n, size: 1 + Math.floor(String(n).length / 110), gap: 0.3 });
   return out;
 }
 
 /**
  * Blocks onto pages: as many as fit on each (`first` rows of room on the first page, under the
- * big header, `rest` on the next), a block with rows split where it runs out of room (at least
- * three rows, or one on a page of its own), the rest carried on with "(continued)". [[block]].
+ * big header, `rest` on the next; the last block's gap can hang off the foot of a page), a block
+ * with rows split where it runs out of room (at least three rows, or one on a page of its own), the
+ * rest carried on with "(continued)". [[block]].
  */
 export function paginate(blocks, { first: firstRoom = 28, rest = 30 } = {}) {
   const pages = [[]];
@@ -606,10 +617,10 @@ export function paginate(blocks, { first: firstRoom = 28, rest = 30 } = {}) {
     const b = queue.shift();
     const size = blockSize(b);
     const empty = pages.at(-1).length === 0;
-    if (size <= left) { pages.at(-1).push(b); left -= size; continue; }
+    if (size - blockGap(b) <= left) { pages.at(-1).push(b); left -= size; continue; }
     if (b.rows && b.rows.length > 1) {
       const rs = b.rowSize || 1;
-      const fixed = size - b.rows.length * rs;
+      const fixed = size - b.rows.length * rs - SECTION_GAP;
       const fit = Math.floor((left - fixed) / rs);
       const min = empty ? 1 : Math.min(3, b.rows.length);
       if (fit >= min && fit < b.rows.length) {

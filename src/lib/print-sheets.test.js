@@ -9,7 +9,7 @@ import { BIG_FORMAT, cleanBig } from './big-game.js';
 import { bigStatus } from './big-money.js';
 import { money } from './golf.js';
 import {
-  applyStarts, balancedChunks, holdPrivateMoney, blockSize, cartPairs, cartSigns, groupsFromFlights, hcText, longDate, needsStarts, pairingPages,
+  applyStarts, balancedChunks, holdPrivateMoney, blockGap, blockSize, cartPairs, cartSigns, groupsFromFlights, hcText, longDate, needsStarts, pairingPages,
   paginate, printEvent, resultBlocks, roundEvent, roundSheetResults, startSlots, startText, tripEvent,
 } from './print-sheets.js';
 
@@ -307,8 +307,44 @@ test('pages: blocks fill a page, a long table splits with “(continued)”, and
   const tables = pages.flat().filter(b => b.kind === 'table');
   assert.equal(tables.flatMap(b => b.rows).length, 70);
   assert.deepEqual(tables.map(b => b.title), ['Money by game', ...tables.slice(1).map(() => 'Money by game (continued)')]);
-  for (const [i, p] of pages.entries()) assert.ok(p.reduce((a, b) => a + blockSize(b), 0) <= (i === 0 ? 26 : 29) + 0.001, `page ${i + 1} fits`);
+  for (const [i, p] of pages.entries()) assert.ok(p.reduce((a, b) => a + blockSize(b), 0) - blockGap(p.at(-1)) <= (i === 0 ? 26 : 29) + 0.001, `page ${i + 1} fits`);
   assert.equal(pages.at(-1).at(-1).kind, 'note');
+});
+
+/** Rows on each page, the last block's gap left off (it can hang off the foot of a page). */
+const used = p => p.reduce((a, b) => a + blockSize(b), 0) - blockGap(p.at(-1));
+
+test('pages: a 4-player 9-hole round’s results fit one page, a 16-player trip’s still break', () => {
+  // The round from the Overnight 14 QA (Skins + Calcutta, Birch Creek): it measured 27.4 rows of the
+  // first page's 28.1 in Chrome's Letter print render, and used to spill one row onto page 2.
+  const four = ['Alex Morgan', 'Casey Lin', 'Drew Park', 'Blake Reed'];
+  const stand = names => names.map((n, i) => ({ id: `p${i}`, place: String(i + 1), name: n, score: '36 (E)', value: '+$10' }));
+  const round = {
+    headline: 'Alex Morgan wins the day', sub: 'Skins + Calcutta · 9 holes',
+    podium: stand(four).slice(0, 3), standings: stand(four), scoreCol: true, valueLabel: 'Money',
+    owesTitle: 'Who pays who', owes: [{ from: 'Blake Reed', to: 'Alex Morgan', amount: '$51.50' }, { from: 'Blake Reed', to: 'Casey Lin', amount: '$10' }, { from: 'Drew Park', to: 'Casey Lin', amount: '$10' }],
+    tables: [{ title: 'By game', columns: ['Skins', 'Calcutta', 'Total'], rows: four.map(n => ({ name: n, cells: ['+$1', '+$1', '+$2'] })) }],
+    notes: ['Fewest payments to square everyone up.'],
+  };
+  const one = paginate(resultBlocks(round));
+  assert.equal(one.length, 1);
+  assert.ok(used(one[0]) <= 28);
+
+  const sixteen = Array.from({ length: 16 }, (_, i) => `Player ${i + 1}`);
+  const trip = {
+    headline: 'Final results', sub: '4 rounds · 16 players',
+    podium: stand(sixteen).slice(0, 3), standings: stand(sixteen), scoreCol: false,
+    owesTitle: 'Settle the trip', owes: sixteen.slice(1).map(n => ({ from: n, to: 'Player 1', amount: '$5' })),
+    tables: [
+      { title: 'Money by game', columns: ['Skins', 'Nassau', 'Total'], rows: sixteen.map(n => ({ name: n, cells: ['+$1', '+$1', '+$2'] })) },
+      { title: 'All in, with the expenses', columns: ['Golf', 'Expenses', 'All in'], rows: sixteen.map(n => ({ name: n, cells: ['+$1', '+$1', '+$2'] })) },
+    ],
+  };
+  const pages = paginate(resultBlocks(trip));
+  assert.ok(pages.length >= 3, `${pages.length} pages`);
+  for (const [i, p] of pages.entries()) assert.ok(used(p) <= (i === 0 ? 28 : 30) + 0.001, `page ${i + 1} fits`);
+  for (const kind of ['standings', 'owes']) assert.equal(pages.flat().filter(b => b.kind === kind).flatMap(b => b.rows).length, kind === 'owes' ? 15 : 16);
+  assert.ok(pages.flat().some(b => / \(continued\)$/.test(b.title || '')), 'a long block carries on with “(continued)”');
 });
 
 test('pages: a pairings session longer than a page goes on, a session never shares a page', () => {
