@@ -57,6 +57,10 @@ export const DEFAULT_SETTINGS = {
   // Long drive's holes are picked for each round (none picked: every par 5, see potHoles in round.js)
   ctp: { stake: 5, unclaimed: 'carry' },
   drive: { stake: 5, unclaimed: 'carry' },
+  // The Calcutta, a side game only (2026-10-20): the bids are each round's own (round.sideGames[i].auction),
+  // so these are only its house rules: 'top2' pays 70/30 (all to first under 4 sold), 'top3' 60/30/10
+  // from 5 sold; buyBack lets a player buy half of themselves back from their owner (see calcutta.js)
+  calcutta: { payout: 'top2', buyBack: false },
   rev: SETTINGS_REV,
 };
 

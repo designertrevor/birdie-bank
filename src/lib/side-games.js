@@ -1,6 +1,7 @@
 // Side games in words: worked examples, the by-game line and the Nassau note. Pure, so tests can load it.
 import { GAMES, POT_GAMES, SIDE_GAMES, TEAM_GAMES, holeComplete, potHoles, potHolesDefault, sideGamesOf } from './round.js';
 import { DOT_KINDS } from './games.js';
+import { calcuttaSplits } from './calcutta.js';
 import { money } from './golf.js';
 import { points, wholeByGame } from './play-for.js';
 
@@ -114,6 +115,14 @@ export function sideExample(game, settings, n = 4, holes = null) {
   if (game === 'birdies') {
     const eagle = s.eagleShares ?? 2;
     return `Every net birdie takes a share of the ${money((s.stake || 0) * n)} pot${eagle > 1 ? `, and a net eagle takes ${eagle}` : ''}. No birdies, nobody pays.`;
+  }
+  if (game === 'calcutta') {
+    // n is the entries (players, or teams in a team game) going up for auction
+    const split = calcuttaSplits(n, s.payout === 'top3' ? 'top3' : 'top2');
+    const pays = split.length === 3 ? 'The owners of first, second and third take 60%, 30% and 10% of the pot'
+      : split.length === 2 ? 'Whoever owns first takes 70% of the pot, and second 30%'
+        : 'Whoever owns the winner takes the whole pot';
+    return `Everyone goes up for auction before the first tee, and the bids make the pot. ${pays}, on how the main game finishes.${s.buyBack ? ' A player can buy half of themselves back for half the price.' : ''}`;
   }
   if (game === 'snake') {
     return `Three-putt and you take the snake. Hold it at the end and you pay the other ${others} ${money(s.stake)} each${s.growth === 'flat' ? '' : ', more as it grows'}.`;

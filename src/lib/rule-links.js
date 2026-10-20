@@ -23,6 +23,7 @@ const ALIASES = {
   junk: 'dots', garbage: 'dots', trash: 'dots', hollywood: 'sixes', 'round-robin': 'sixes', foursomes: 'altshot',
   'four-ball': 'bestball', fourball: 'bestball', pinehurst: 'chapman', chicago: 'quota', 'acey-deucey': 'aces',
   'split-sixes': 'nines', '5-3-1': 'nines', bbb: 'bbb', ctp: 'ctp', 'long-drive': 'drive',
+  'rolling-quota': 'quota', auction: 'calcutta',
 };
 
 /** The page's slug for a game key: "wolf", "match-play". */

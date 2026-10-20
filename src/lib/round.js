@@ -13,6 +13,7 @@ import {
 import { payFields } from './pay-fields.js';
 import { gamePct, halfStrokesOn, playsAtPct } from './allowances.js';
 import { betsMoney, betsOf, isCashBet } from './pair-bets.js';
+import { calcuttaEntries, calcuttaMoney } from './calcutta.js';
 
 /**
  * Every game the app can score. `teams` says how players are grouped in the setup step:
@@ -317,7 +318,7 @@ export function createRound({ id, game, course, holesCount, nine, startHole, pla
  * or both, which is read once for the round, and a Snake split into nines or not).
  */
 export function wholeRoundOnly(game, before, after) {
-  if (game === 'scramble' || game === 'birdies' || POT_GAMES.includes(game)) return true;
+  if (game === 'scramble' || game === 'birdies' || game === 'calcutta' || POT_GAMES.includes(game)) return true;
   // A team game's layout (Nassau, one bet or per hole, match or stroke, balls that count) is for the whole round
   if (isTeamGame(game)) return ['format', 'scoring', 'count'].some(k => (before?.[k] ?? null) !== (after?.[k] ?? null));
   if (game === 'skins') return before?.payout === 'pot' || after?.payout === 'pot' || (before?.kind || 'net') !== (after?.kind || 'net');
@@ -622,7 +623,8 @@ function mainAddProblem(round) {
  * the players who started, so it only takes someone new before the first hole they'd miss (`late`).
  */
 function sideTakes(sg, late) {
-  if (sg.game === 'birdies' || POT_GAMES.includes(sg.game)) return !late;
+  // The Calcutta's auction is before the first tee, so it's for the players who started too
+  if (sg.game === 'birdies' || sg.game === 'calcutta' || POT_GAMES.includes(sg.game)) return !late;
   if (sg.game === 'skins' && sg.settings?.payout === 'pot') return !late;
   return true;
 }
@@ -760,12 +762,15 @@ function withSideRule(text, round, kind) {
   const sgs = sideGamesOf(round);
   if (!sgs.length) return text;
   const notes = [];
-  // The birdie, closest to the pin and long drive pots: one sentence for them all
-  const pots = sgs.filter(sg => POT_NAMES[sg.game]).map(sg => POT_NAMES[sg.game]);
+  // The birdie, closest to the pin and long drive pots: one sentence for them all. Someone who leaves
+  // stays in the Calcutta (its bids were paid at the auction), so it has a sentence of its own
+  const leftCalcutta = kind === 'left' && sgs.some(sg => sg.game === 'calcutta');
+  const pots = sgs.filter(sg => POT_NAMES[sg.game] && !(leftCalcutta && sg.game === 'calcutta')).map(sg => POT_NAMES[sg.game]);
   if (pots.length) {
     const what = pots.length === 1 ? `The ${pots[0]} is` : `The ${nameList(pots)} are`;
     notes.push(kind === 'joined' ? `${what} for the players who started, so they’re not in ${pots.length === 1 ? 'it' : 'them'}.` : `They’re out of the ${nameList(pots)}.`);
   }
+  if (leftCalcutta) notes.push('In the Calcutta their bids stand, and whoever owns them is paid on where they finish.');
   const others = sgs.filter(sg => !POT_NAMES[sg.game]).map(sg => SIDE_GAMES[sg.game].label);
   if (others.length) notes.push(kind === 'joined' ? `They’re in ${others.join(' and ')} from there.` : `${others.join(' and ')} carr${others.length > 1 ? 'y' : 'ies'} on among the players still there.`);
   return [text, ...notes].join(' ');
@@ -2717,6 +2722,13 @@ export function gameResults(round) {
     detail.pot = t;
   }
 
+  if (round.game === 'calcutta') {
+    // The Calcutta, a side game only (see calcuttaTable): owners of the top finishers share the bids
+    const t = calcuttaTable(round);
+    addSpread(t.deltas);
+    detail.calcutta = t;
+  }
+
   if (round.game === 'rabbit') {
     const t = rabbitTable(round);
     // Like Nassau, a leg that isn't finished pays whoever holds the rabbit on the holes played
@@ -2760,6 +2772,8 @@ export const SIDE_GAMES = {
   rabbit: { label: 'Rabbit', icon: 'rabbit' },
   ctp: { label: 'Closest to the pin', icon: 'crosshair' },
   drive: { label: 'Long drive', icon: 'golf' },
+  // The Calcutta (2026-10-20): an auction before the first tee, paid on the main game's finish (see calcutta.js)
+  calcutta: { label: 'Calcutta', icon: 'gavel' },
 };
 
 /** Most games in one round, the main game included. */
@@ -2771,7 +2785,7 @@ export const MAX_GAMES = 4;
  * hole outright; Rabbit is a one-pot skin), and Junk with Bingo Bango Bongo (the greenie and the
  * bango both pay for being closest).
  */
-const CLASH = { skins: ['skins', 'rabbit'], rabbit: ['rabbit', 'skins'], dots: ['dots', 'bbb'], snake: ['snake'], birdies: ['birdies'], ctp: ['ctp', 'bbb'], drive: ['drive'] };
+const CLASH = { skins: ['skins', 'rabbit'], rabbit: ['rabbit', 'skins'], dots: ['dots', 'bbb'], snake: ['snake'], birdies: ['birdies'], ctp: ['ctp', 'bbb'], drive: ['drive'], calcutta: ['calcutta'] };
 function clashes(key, game) { return (CLASH[key] || []).includes(game); }
 /**
  * A closest to the pin pot pays for the same shot as a greenie, so it never rides on a Dots round,
@@ -2854,9 +2868,13 @@ export function gameView(full, key) {
   const noGreenie = sg.game === 'dots' && sideGamesOf(round).some(x => x.game === 'ctp');
   const settings = noGreenie ? withoutGreenie(sg.settings) : sg.settings;
   const betHistory = !Array.isArray(sg.betHistory) ? undefined : noGreenie ? sg.betHistory.map(e => ({ ...e, settings: withoutGreenie(e.settings) })) : sg.betHistory;
+  // The Calcutta pays on the main game's finish, so its view carries the main game's view and the
+  // auction's sales (kept on the side game's entry, never in its settings: see calcuttaTable)
+  const calcutta = sg.game === 'calcutta' ? { sales: sg.auction?.sales && typeof sg.auction.sales === 'object' ? sg.auction.sales : {}, main: gameView(full, 'main') } : null;
   return {
     ...round, game: sg.game, settings: { ...round.settings, [sg.game]: settings }, teams: null, presses: [], betHistory,
     players: own ? playsAtPct(players, pct, round.joined) : players, ...(own ? { hcPct: pct } : {}),
+    ...(calcutta ? { calcutta } : {}),
   };
 }
 
@@ -2906,7 +2924,7 @@ export function birdiePotShares(round) {
 /** The side games that are a pot of this kind. */
 export const POT_GAMES = ['ctp', 'drive'];
 /** What each pot is called in a sentence ("They’re out of the birdie pot"), the birdie pot too. */
-export const POT_NAMES = { birdies: 'birdie pot', ctp: 'closest to the pin pot', drive: 'long drive pot' };
+export const POT_NAMES = { birdies: 'birdie pot', ctp: 'closest to the pin pot', drive: 'long drive pot', calcutta: 'Calcutta' };
 /** What tapping "nobody" saves for a pot hole nobody won. */
 export const POT_NONE = 'none';
 
@@ -2999,6 +3017,67 @@ export function potTable(round, key = round.game) {
   const deltas = Object.fromEntries(round.players.map(p => [p.id, 0]));
   if (paidOut > 0) for (const id of inPot) deltas[id] = won[id].amount - paidOut / n;
   return { key, inPot, stake, pot: stake * n, worth, unclaimed, holes, won, paidOut, handedBack, deltas: roundCents(deltas) };
+}
+
+// --------------------------- The Calcutta --------------------------------
+// A side game (2026-10-20). Before the first tee each player, or each team in a team game, is sold at
+// auction: the side game's entry keeps the sales, round.sideGames[i].auction = { sales: { entryId:
+// { buyer, bid, back? } } }, `bid` whole dollars (or points), `back` the buy-back house rule taken. The
+// money is calcuttaMoney (calcutta.js); this works out where each entry finished in the main game.
+// Kept out of the side game's settings so a rematch, a usual or a bet change never carries old bids.
+
+/** The totals games: an entry's finish is its total, not its money (a pot pays one and ties the rest). */
+const TOTALS_GAMES = ['stroke', 'stableford', 'quota'];
+
+/**
+ * Each Calcutta entry's finish in the main game `main` (its game view), higher better:
+ * { entryId: number | null }. Stroke play: fewest net strokes; Stableford: most points; Quota: furthest
+ * over quota; any other game: most money won in it. A team adds up its players'. In a totals game,
+ * a player who left or joined partway has no finish (null, last); elsewhere their money stands.
+ */
+export function calcuttaScores(main, entries) {
+  const inMain = new Set(main.players.map(p => p.id));
+  const totals = TOTALS_GAMES.includes(main.game) ? Object.fromEntries(totalsTable(main).map(t => [t.id, t])) : null;
+  const money = totals ? null : gameResults(main).balances;
+  const one = pid => {
+    if (!inMain.has(pid)) return null;
+    if (!totals) return money[pid] ?? 0;
+    const t = totals[pid];
+    if (!t || !t.played || !playsWholeRound(main, pid)) return null;
+    return main.game === 'stroke' ? -t.total : main.game === 'quota' ? t.vsQuotaExact : t.total;
+  };
+  const out = {};
+  for (const e of entries) {
+    const each = e.players.map(one);
+    out[e.id] = each.some(v => v == null) ? null : Math.round(each.reduce((a, v) => a + v, 0) * 1e6) / 1e6;
+  }
+  return out;
+}
+
+/** The Calcutta's entries for a round (or its Calcutta view): its players, or its teams in a team game. */
+export function calcuttaEntriesOf(round) {
+  const main = round?.calcutta?.main || round;
+  // Someone added partway was never auctioned, so they're no entry (and can't be bought later)
+  const players = main.players.filter(p => main.joined?.[p.id] == null);
+  return calcuttaEntries({ players, teams: main.teams });
+}
+
+/**
+ * The Calcutta worked out on its game view `round` (round.game 'calcutta'): calcuttaMoney's table plus
+ * { entries, scores, started, payout, buyBack }. Only players in the Calcutta can buy; a player added
+ * partway was never auctioned, so they're in no entry and the pot is the same without them.
+ */
+export function calcuttaTable(round) {
+  const s = round.settings?.calcutta || {};
+  const main = round.calcutta?.main;
+  const sales = round.calcutta?.sales || {};
+  const buyers = round.players.map(p => p.id);
+  const entries = main ? calcuttaEntriesOf(round) : [];
+  const scores = main ? calcuttaScores(main, entries) : {};
+  const started = !!main && main.holes.some(h => holeComplete(main, h));
+  const payout = s.payout === 'top3' ? 'top3' : 'top2';
+  const t = calcuttaMoney({ entries, sales, scores, buyers, payout, buyBack: !!s.buyBack, started });
+  return { ...t, entries, scores, started, payout, buyBack: !!s.buyBack };
 }
 
 /** What the side bets between two players are called in the by-game table (see pair-bets.js). */

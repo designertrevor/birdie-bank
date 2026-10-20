@@ -251,6 +251,16 @@ const SCENES = {
     <path d="M56 14 L50 10 M56 14 L52 20" {...line} strokeWidth="3" stroke={TEAL} />
     <g {...line} strokeWidth="2.4" stroke="#fff"><path d="M22 30 L30 26" /><path d="M26 37 L34 34" /></g>
   </>),
+  // Calcutta: the auctioneer's gavel coming down on a ball on its block, sold
+  calcutta: () => (<>
+    <rect x="10" y="48" width="30" height="8" rx="3" fill={OCHRE} />
+    <Ball cx={25} cy={39} r={9} grin />
+    <g transform="rotate(-35 44 22)">
+      <rect x="30" y="16" width="26" height="12" rx="4" fill={CORAL} />
+      <rect x="40" y="27" width="5" height="26" rx="2.5" fill={DEEP} />
+    </g>
+    <g {...line} strokeWidth="2.4" stroke={PINK}><path d="M10 30 L5 27" /><path d="M12 24 L9 19" /></g>
+  </>),
 };
 
 /** The games that have art, for the design check. */
