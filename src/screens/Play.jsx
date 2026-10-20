@@ -576,21 +576,20 @@ function PlayRound({ round, mount, momentUp = false }) {
       {round.trip?.format === BIG_FORMAT && ownMoney(round) && (
         <button className="big-link" onClick={() => nav.push('bigGame', { id: round.trip.id })}><Icon name="users-four" fill /> {round.trip.name}: the board across every group <Icon name="caret-right" /></button>
       )}
-      {sharedLive && keeper && round.status === 'active' && !round.editing && (
+      {/* Only the other phones see who has the card; the keeper's own Hand off lives in the round menu, since it's rarely used */}
+      {sharedLive && keeper && !amKeeper && round.status === 'active' && !round.editing && (
         <div className="seat-req keeper-bar" role="status">
           <Icon name="pencil-simple" fill />
           <span className="sr-text">
-            {amKeeper ? 'You’re keeping score' : tookBy && left == null && !declined ? <><strong>{tookName}</strong> took the card</> : <><strong>{holderName}</strong> is keeping score</>}
-            {!amKeeper && left > 0 && <span className="sr-sub">Asked. {holderName} can say yes or no. <button className="link-btn inline" onClick={takeBack}>Undo<span className="sr-only">: take back asking {holderName} for the card</span></button></span>}
-            {!amKeeper && left == null && declined && <span className="sr-sub">{holderName} said no, so they’re keeping it.</span>}
+            {tookBy && left == null && !declined ? <><strong>{tookName}</strong> took the card</> : <><strong>{holderName}</strong> is keeping score</>}
+            {left > 0 && <span className="sr-sub">Asked. {holderName} can say yes or no. <button className="link-btn inline" onClick={takeBack}>Undo<span className="sr-only">: take back asking {holderName} for the card</span></button></span>}
+            {left == null && declined && <span className="sr-sub">{holderName} said no, so they’re keeping it.</span>}
           </span>
-          {amKeeper
-            ? <button className="pill-btn" onClick={() => setHandSheet(true)}>Hand off</button>
-            : inRound && (left === 0
-              ? <button className="pill-btn" onClick={takeCard}>Take the card</button>
-              : left > 0
-                ? <button className="pill-btn ghost" disabled aria-live="off" aria-label={`You can take the card in ${Math.ceil(left / 1000)} seconds if ${holderName} doesn’t answer`}>Take the card in <span className="sr-clock">{clockText(left)}</span></button>
-                : <button className="pill-btn" onClick={askCard}>{declined ? 'Ask again' : 'Ask for it'}</button>)}
+          {inRound && (left === 0
+            ? <button className="pill-btn" onClick={takeCard}>Take the card</button>
+            : left > 0
+              ? <button className="pill-btn ghost" disabled aria-live="off" aria-label={`You can take the card in ${Math.ceil(left / 1000)} seconds if ${holderName} doesn’t answer`}>Take the card in <span className="sr-clock">{clockText(left)}</span></button>
+              : <button className="pill-btn" onClick={askCard}>{declined ? 'Ask again' : 'Ask for it'}</button>)}
         </div>
       )}
       {/* Friends watching from their feed, and the players, trash talking mid-round */}
@@ -825,6 +824,9 @@ function PlayRound({ round, mount, momentUp = false }) {
         <div className="menu-group">
           {syncConfigured && (
             <MenuRow icon="broadcast" label={round.shared ? 'Live' : 'Invite the group'} value={round.shared ? `Code ${round.shared.code}` : null} onClick={() => { setMenu(false); setLive(true); }} />
+          )}
+          {amKeeper && round.status === 'active' && !round.editing && (
+            <MenuRow icon="pencil-simple" label="Hand off the card" value="You’re keeping score" onClick={() => { setMenu(false); setHandSheet(true); }} />
           )}
           {editable && <>
           <MenuRow icon="user-plus" label="Add a player" onClick={() => { setMenu(false); setAddSheet(true); }} />
