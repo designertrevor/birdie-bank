@@ -101,6 +101,11 @@ export default function People() {
           </div>
         )}
         <button className="add-row" onClick={() => nav.push('playerEdit', {})}><div className="add-ci"><Icon name="plus" /></div><span className="add-lbl">Add a player</span></button>
+        {people.length > 0 && (
+          <button className="text-link" onClick={() => nav.push('friends', { view: 'list' })}>
+            <Icon name="users-three" fill /> All your friends, and people you might know
+          </button>
+        )}
 
         {crews.length > 0 ? (
           <>
