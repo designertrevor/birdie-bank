@@ -1152,10 +1152,10 @@ function SetupStep({ game, course, holesCount, nine, picked, setPicked, casual =
           </>
         )}
         {Object.keys(carried).length > 0 && (
-          <p className="hint-card"><Icon name="target" fill /> Rolling quota.{' '}
-            {myQuotaLine(carried, state.me) && <strong>{myQuotaLine(carried, state.me)} </strong>}
-            {carriedLine(carried, pid => names[pid], state.me) && `${myQuotaLine(carried, state.me) ? 'The others' : 'From last time'}: ${carriedLine(carried, pid => names[pid], state.me)}.`}
-            {Object.keys(carried).length < picked.length ? ' The rest come from handicaps.' : ''}</p>
+          <p className="hint-card"><Icon name="target" fill /> {/* One span: the card lays its children out in a row */}
+            <span>Rolling quota. {myQuotaLine(carried, state.me) && <strong>{myQuotaLine(carried, state.me)} </strong>}
+              {carriedLine(carried, pid => names[pid], state.me) && `${myQuotaLine(carried, state.me) ? 'The others' : 'From last time'}: ${carriedLine(carried, pid => names[pid], state.me)}.`}
+              {Object.keys(carried).length < picked.length ? ' The rest come from handicaps.' : ''}</span></p>
         )}
 
         <SideGamesSetup game={game} sideGames={sideGames} setSideGames={setSideGames} defaults={opts} players={picked.length || 4} playFor={playFor} holes={holes} holesCount={holesCount}

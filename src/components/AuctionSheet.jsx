@@ -50,7 +50,7 @@ export function AuctionSheet({ entries, buyers, sales, settings, onChange, onClo
 
         <div className="block">
           <div className="eyebrow" id="auction-bid-lbl">Winning bid</div>
-          <div className="chip-row auction-chips" role="group" aria-labelledby="auction-bid-lbl">
+          <div className="chip-row auction-chips" role="radiogroup" aria-labelledby="auction-bid-lbl">
             {CALCUTTA_CHIPS.map(v => (
               <PickChip key={v} radio on={draft.bid === v} onClick={() => setLot({ bid: v })}>{fmt(v)}</PickChip>
             ))}
@@ -92,12 +92,15 @@ export function AuctionSheet({ entries, buyers, sales, settings, onChange, onClo
         <ul className="auction-list">
           {entries.map((e, k) => {
             const s = live[e.id];
+            // A lot half filled in says what it's missing
+            const part = !s ? sales?.[e.id] : null;
+            const state = s ? `${nameOf(s.buyer)}${s.back ? ' · half back' : ''}` : part?.bid != null ? 'No buyer yet' : part?.buyer != null ? `${nameOf(part.buyer)} · no bid yet` : 'Not sold';
             return (
               <li key={e.id}>
                 <button className={`auction-row ${k === i ? 'on' : ''}`} onClick={() => setAt(k)} aria-current={k === i ? 'true' : undefined}>
                   <span className="row-main">{e.name}</span>
-                  <span className="li-sub">{s ? `${nameOf(s.buyer)}${s.back ? ' · half back' : ''}` : 'Not sold'}</span>
-                  <strong>{s ? fmt(s.bid) : '–'}</strong>
+                  <span className={`li-sub ${part ? 'auction-part' : ''}`}>{state}</span>
+                  <strong>{s ? fmt(s.bid) : part?.bid != null ? fmt(part.bid) : '–'}</strong>
                 </button>
               </li>
             );

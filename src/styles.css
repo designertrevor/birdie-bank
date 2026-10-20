@@ -2431,14 +2431,15 @@ button.ch-main:active { transform: scale(.98); }
 .auction-lot .auction-name { font-size: 26px; font-weight: 800; color: var(--ink); margin: 4px 0 2px; overflow-wrap: anywhere; }
 .auction-chips { padding: 0; flex-wrap: wrap; gap: 8px; }
 .auction-chips .pick-chip { min-height: 44px; }
-.auction-back { margin-top: 12px; }
-.auction-nav { display: flex; gap: 10px; }
-.auction-nav .full-btn.outline { flex: 0 0 64px; }
-.auction-nav .full-btn:not(.outline) { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.toggle-row.auction-back { margin: 12px 0 0; padding: 12px 0 0; background: none; border-radius: 0; border-top: 1px solid var(--line); }
+.cta-wrap.auction-nav { flex-direction: row; align-items: stretch; }
+.auction-nav .full-btn.outline { flex: 0 0 64px; width: 64px; padding: 0; }
+.auction-nav .full-btn:not(.outline) { flex: 1; width: auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .auction-list { list-style: none; margin: 0 16px; padding: 0; }
 .auction-row { display: flex; align-items: center; gap: 10px; width: 100%; min-height: 48px; padding: 8px 10px; border: none; border-bottom: 1px solid var(--line); background: none; color: var(--ink); font: inherit; text-align: left; cursor: pointer; border-radius: 10px; }
 .auction-row.on { background: var(--surface); }
 .auction-row .row-main { flex: 1; min-width: 0; font-weight: 600; overflow-wrap: anywhere; }
+.auction-row .auction-part { color: var(--warn-mark); font-weight: 600; }
 .auction-row strong { font-variant-numeric: tabular-nums; min-width: 44px; text-align: right; }
 .calcutta-due .link-btn.inline { min-height: 0; padding: 0; font-size: inherit; color: inherit; }
 .pot-hole-chips { padding: 0 16px 6px; }

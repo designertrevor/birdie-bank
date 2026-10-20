@@ -479,7 +479,7 @@ test('the bet line names each new rule that is on', () => {
   const want = {
     banker: 'banker presses everyone', nassau: 'a bye for half', match: 'a bye', skins: 'birdies win two skins', wolf: 'birdies double',
     hammer: 'halved holes carry', vegas: 'no double digits', sixes: 'auto press at 2 down', stroke: 'low gross too', stableford: 'big birdies',
-    quota: 'Stableford points · rolling quota, 1 a round · team quota', rabbit: 'back nine rabbit doubles', snake: 'snake split', dots: 'penalty dots',
+    quota: 'Stableford points · rolling quota · team quota', rabbit: 'back nine rabbit doubles', snake: 'snake split', dots: 'penalty dots',
   };
   for (const [game, set] of Object.entries(on)) {
     assert.equal(houseRulesLine(game, { ...DEFAULTS[game], ...set }), want[game], game);

@@ -55,8 +55,9 @@ export function roundStakeLines(round, { since = true } = {}) {
 function moneyStakeLines(round, since = true) {
   const lines = [{ key: 'main', line: stakeSummary(round.game, round.settings, round.holes?.length ?? 18) }];
   for (const sg of sideGamesOf(round)) {
-    // The Calcutta's pot counts only the sales still in the round (setup can outlive a change of players)
-    const line = sideBetLine(sg.game, sg.settings, sg.game === 'calcutta' ? { auction: { sales: calcuttaSalesOf(round, sg) } } : sg);
+    // The Calcutta's pot counts only the sales still in the round (setup can outlive a change of players).
+    // A round set up again (`since` false) holds a new auction, so its line has no pot yet
+    const line = sideBetLine(sg.game, sg.settings, sg.game === 'calcutta' ? { auction: { sales: since ? calcuttaSalesOf(round, sg) : {} } } : sg);
     const from = line && since ? betChanges(round, sg.game).at(-1) : null;
     if (line) lines.push({ key: sg.game, line: from ? `${line} from hole ${from.no}` : line });
   }

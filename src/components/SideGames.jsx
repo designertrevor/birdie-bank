@@ -99,7 +99,7 @@ export function SideGamesSetup({ game, sideGames, setSideGames, defaults, player
                 <div className="set-sub">{u(line)}</div>
               </div>
               {sold ? (
-                <button className="nassau-bet-btn" aria-label={`Calcutta auction: ${Object.keys(sold).length} sold, ${fmt(potOf)} pot. Open the auction`} onClick={() => setAuction(true)}>{Object.keys(sold).length ? fmt(potOf) : 'Auction'}</button>
+                <button className="nassau-bet-btn" aria-label={`Calcutta auction: ${Object.keys(sold).length} sold, ${fmt(potOf)} pot. Open the auction`} onClick={() => setAuction(true)}>{Object.keys(sold).length ? fmt(potOf) : <Icon name="gavel" />}</button>
               ) : (
                 <button className="nassau-bet-btn" aria-label={`${meta.label} bet: ${fmt(sg.settings[key] ?? 0)}. Change`} onClick={() => setPad(i)}>{fmt(sg.settings[key] ?? 0)}</button>
               )}
