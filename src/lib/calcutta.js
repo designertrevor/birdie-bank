@@ -20,6 +20,13 @@
 //    pay half the bid (here: into the pot, in place of half the owner's bid, which is the same money) and
 //    take half of whatever their entry wins.
 // Ties share the places they cover: two tied for first split first and second between them.
+// Where a spare cent goes (money review, 2026-10-20), always the same way for the same round:
+//  • a place's prize: never, since whole-dollar bids at whole-percent splits are whole cents (any
+//    remainder would go to first);
+//  • a tie: the tied entries share their places' prizes, the spare cents to the one auctioned first
+//    ($31 three ways is $10.34, $10.33, $10.33);
+//  • a buy-back: the owner takes the odd cent of the half, and a team's half is shared among its
+//    players in the team's order, the spare cents to the first.
 
 /** Quick amounts on the auction sheet, in whole dollars (or points). */
 export const CALCUTTA_CHIPS = [5, 10, 20, 25, 50, 100];
