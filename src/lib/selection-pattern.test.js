@@ -10,7 +10,7 @@ import { readFileSync, readdirSync } from 'node:fs';
 const SRC = new URL('../', import.meta.url);
 const read = rel => readFileSync(new URL(rel, SRC), 'utf8');
 const jsxFiles = [
-  ...readdirSync(new URL('screens/', SRC)).filter(f => f.endsWith('.jsx')).map(f => `screens/${f}`),
+  ...readdirSync(new URL('screens/', SRC), { recursive: true }).filter(f => f.endsWith('.jsx')).map(f => `screens/${f}`),
   ...readdirSync(new URL('components/', SRC)).filter(f => f.endsWith('.jsx')).map(f => `components/${f}`),
   'App.jsx', 'nav.jsx',
 ];
@@ -67,7 +67,7 @@ test('every screen that picks from a list uses the shared pieces', () => {
   const uses = f => /\bPick(Row|Chip|Mark)\b/.test(read(f));
   for (const f of [
     'screens/NewRound.jsx', 'screens/BigGameSetup.jsx', 'screens/Plan.jsx', 'screens/People.jsx', 'screens/Profile.jsx',
-    'screens/Onboarding.jsx', 'screens/Play.jsx', 'screens/Trip.jsx', 'screens/History.jsx', 'screens/RoundDetail.jsx',
+    'screens/Onboarding.jsx', 'screens/play/RoundSheets.jsx', 'screens/play/HolePanels.jsx', 'screens/Trip.jsx', 'screens/History.jsx', 'screens/RoundDetail.jsx',
     'components/PairBets.jsx', 'components/SideGames.jsx', 'components/GameOptions.jsx', 'components/GamePanels.jsx',
     'components/Challenges.jsx', 'components/BigGame.jsx', 'components/AddPlayer.jsx', 'components/PlayFor.jsx',
     'components/TabCard.jsx', 'components/HomeCourseSheet.jsx', 'components/ScrambleDrives.jsx',

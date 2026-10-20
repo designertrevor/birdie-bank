@@ -193,7 +193,7 @@ test('tapping the time: an hour first gives :00, minutes wait for an hour, AM an
 test('no native date or time input is left: every one is the app’s own picker', () => {
   const src = new URL('../', import.meta.url);
   const files = [
-    ...readdirSync(new URL('screens/', src)).filter(f => f.endsWith('.jsx')).map(f => `screens/${f}`),
+    ...readdirSync(new URL('screens/', src), { recursive: true }).filter(f => f.endsWith('.jsx')).map(f => `screens/${f}`),
     ...readdirSync(new URL('components/', src)).filter(f => f.endsWith('.jsx')).map(f => `components/${f}`),
     'App.jsx',
   ];
