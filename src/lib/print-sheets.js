@@ -31,6 +31,7 @@ import { HOST, betLabel, planChoice, planPeople, planRules, timeLabel } from './
 import { BIG_BET_KINDS, POT_KINDS, bigSummary, placesLabel } from './big-game.js';
 import { toParText } from './big-view.js';
 import { BIG_FORMAT } from './big-format.js';
+import { heldNote, keepsMoneyPrivate } from './share.js';
 
 /** Two to a cart. */
 export const CART_SIZE = 2;
@@ -627,11 +628,46 @@ export function paginate(blocks, { first: firstRoom = 28, rest = 30 } = {}) {
 
 // --------------------------- any of them ---------------------------------------
 
+const HAS_MONEY = /\$\d/;
+
+/**
+ * The results with the money taken off when someone on the sheet keeps their money private
+ * (share.js keepsMoneyPrivate, the one profile setting). A printed sheet goes on a wall, so it
+ * follows the share card's rule (amountsRule): one person holding theirs back keeps every amount
+ * off, since the others' amounts would give theirs away. Places, scores and points stay; the money
+ * column reads "–", any table or line under a name with dollars in it goes, and so does who pays
+ * who, with a note saying why.
+ */
+export function holdPrivateMoney(state, results) {
+  if (!results || results.empty) return results;
+  const seen = new Set();
+  const held = [];
+  for (const r of results.standings || []) {
+    if (r.id == null || seen.has(r.id)) continue;
+    seen.add(r.id);
+    if (keepsMoneyPrivate(state, r.id)) held.push(first(r.name));
+  }
+  if (!held.length) return results;
+  const isMoney = results.valueLabel === 'Money';
+  const hide = r => ({ ...r, value: isMoney || HAS_MONEY.test(String(r.value)) ? '–' : r.value, sub: r.sub && HAS_MONEY.test(r.sub) ? null : r.sub });
+  const standings = (results.standings || []).map(hide);
+  const byId = new Map(standings.map(r => [r.id, r]));
+  const hadOwes = !!results.owesTitle;
+  return {
+    ...results,
+    standings,
+    podium: (results.podium || []).map(r => byId.get(r.id) || hide(r)),
+    tables: (results.tables || []).filter(t => !t.rows.some(row => row.cells.some(c => HAS_MONEY.test(String(c))))),
+    owes: [], owesTitle: null,
+    notes: [...(results.notes || []).filter(n => !HAS_MONEY.test(n) && !(hadOwes && /pay|owes|square/i.test(n))), `Amounts stay off: ${heldNote([...new Set(held)])}.`],
+  };
+}
+
 /** The event for the print screen: { kind: 'round' | 'trip' | 'big', id }, or null when it's gone. */
 export function printEvent(state, kind, id, { now = Date.now() } = {}) {
-  if (kind === 'round') return roundEvent(state, state.rounds?.[id]);
-  if (kind === 'trip' || kind === 'big') return tripEvent(state, id, { now });
-  return null;
+  const event = kind === 'round' ? roundEvent(state, state.rounds?.[id])
+    : kind === 'trip' || kind === 'big' ? tripEvent(state, id, { now }) : null;
+  return event?.results ? { ...event, results: holdPrivateMoney(state, event.results) } : event;
 }
 
 /** Which sheet a print screen opens on: a finished round's results, everything else's pairings. */

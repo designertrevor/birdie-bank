@@ -9,7 +9,7 @@ import { BIG_FORMAT, cleanBig } from './big-game.js';
 import { bigStatus } from './big-money.js';
 import { money } from './golf.js';
 import {
-  applyStarts, balancedChunks, blockSize, cartPairs, cartSigns, groupsFromFlights, hcText, longDate, needsStarts, pairingPages,
+  applyStarts, balancedChunks, holdPrivateMoney, blockSize, cartPairs, cartSigns, groupsFromFlights, hcText, longDate, needsStarts, pairingPages,
   paginate, printEvent, resultBlocks, roundEvent, roundSheetResults, startSlots, startText, tripEvent,
 } from './print-sheets.js';
 
@@ -195,6 +195,28 @@ test('round results: a points round reads in whole points and nobody pays', () =
   assert.ok(sheet.standings.every(p => /pts?$/.test(p.value)), 'points, never dollars');
   assert.doesNotMatch(JSON.stringify(sheet.standings), /\$/);
   assert.match(sheet.notes.join(' '), /points/);
+});
+
+test('results: someone on the sheet who keeps their money private keeps every amount off the paper', () => {
+  const r = samDay({ game: 'stroke', settings: { stroke: { stake: 5, payout: 'pot', cap: false, nassau: false } } });
+  r.sideGames = [{ game: 'skins', settings: { value: 2, carryover: true } }];
+  // Sam has an account whose profile doesn't reach this phone: his money is private (share.js)
+  const state = stateOf([r], { accountOf: { s: 'acct-sam' } });
+  const open = printEvent(stateOf([r]), 'round', r.id);
+  assert.ok(open.results.owes.length > 0);
+  assert.match(JSON.stringify(open.results), /\$\d/);
+  const ev = printEvent(state, 'round', r.id);
+  assert.doesNotMatch(JSON.stringify(ev.results), /\$\d/, 'no dollar amount anywhere on the results');
+  assert.deepEqual(ev.results.owes, []);
+  assert.equal(ev.results.owesTitle, null);
+  assert.ok(ev.results.standings.every(p => p.value === '–'));
+  assert.deepEqual(ev.results.standings.map(p => p.id), open.results.standings.map(p => p.id), 'the places stay');
+  assert.equal(ev.results.headline, open.results.headline);
+  assert.match(ev.results.notes.at(-1), /Amounts stay off: Sam keeps their money private/);
+  // A points round keeps its points
+  const pts = samDay({ playFor: { kind: 'points' } });
+  const held = holdPrivateMoney(stateOf([pts], { accountOf: { s: 'acct-sam' } }), roundSheetResults(stateOf([pts]), pts));
+  assert.ok(held.standings.every(p => /pts?$/.test(p.value)));
 });
 
 test('round results: all square has no podium and says so', () => {
