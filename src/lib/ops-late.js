@@ -10,6 +10,7 @@ import { BUILD_ID } from './build-info.js';
 import { SITE_URL } from './app-name.js';
 import { getState, subscribe } from './store.js';
 import { LAST_OPEN } from './ops.js';
+import { usageRole } from './usage-role.js';
 
 const SENTRY_DSN = import.meta.env.VITE_SENTRY_DSN || '';
 const POSTHOG_KEY = import.meta.env.VITE_POSTHOG_KEY || '';
@@ -23,7 +24,7 @@ const environment = () => {
   try { return location.hostname === new URL(SITE_URL).hostname ? 'production' : 'preview'; } catch { return 'production'; }
 };
 
-/** When the last round on this phone finished, and how many have. */
+/** When the last round on this phone finished, how many have, and who this phone is (usage-role.js). */
 function roundsSoFar() {
   let last = 0;
   let done = 0;
@@ -32,7 +33,7 @@ function roundsSoFar() {
     done += 1;
     last = Math.max(last, r.finishedAt || r.createdAt || 0);
   }
-  return { lastRoundAt: last || null, roundsDone: done };
+  return { lastRoundAt: last || null, roundsDone: done, role: usageRole() };
 }
 
 /** Start whatever has a key. `launch`: what ops.js noted at launch. */
