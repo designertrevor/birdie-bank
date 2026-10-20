@@ -51,8 +51,12 @@ Security verdicts (`review.md`): both SQL files and every endpoint OK. `rate_hit
 
 ## Checks
 
-2,540 tests pass (2,403 before). Lint clean, no em dashes. `npm run e2e` passes in about 34 seconds. First screen 416 kB of 481. Index chunk 262.67 kB (262.65 before). Screenshots: `overnight/o14-shots/` (untracked), QA note `o14-notes/qa.md`.
+2,545 tests pass (2,403 before). Lint clean, no em dashes. `npm run e2e` passes in about 34 seconds. First screen 416 kB of 481. Index chunk 262.67 kB (262.65 before). Screenshots: `overnight/o14-shots/` (untracked), QA note `o14-notes/qa.md`.
 
 ## How it ran
 
 Seven Opus builders in parallel (about 1.8M subagent tokens), one money reviewer before the games merge, one refactor builder after all merges, one merged-diff reviewer and one QA agent. About 3.6M subagent tokens in all, no fix loops. The 5-hour usage window was checked before each wave.
+
+## QA fixes (after the queue was built)
+
+From `o14-notes/qa.md`: the results sheet for a 4-player 9-hole round now fits one Letter page (the pagination estimate matched a Chrome render); `sw.js` sends the status page's files straight to the network so they never go stale; the first-tee card says "$105 pot · 70/30" once bids exist; print standings use the real minus sign (which also fixes the share card and finale); Quota's house rules summary counts Rolling quota. Left as is: the status page shows green on the dev server (dev has no /api) and the Home course hint has no info icon.
