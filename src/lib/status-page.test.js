@@ -4,6 +4,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
+import vm from 'node:vm';
 import { CHECKS, SLOW_MS, TIMEOUT_MS, checkedAgo, judge, runCheck, summary } from '../../public/status-core.js';
 import coursesHandler from '../../api/courses.js';
 import push, { healthAnswer } from '../../api/push.js';
@@ -141,4 +142,24 @@ test('the page is at /status, blends into Safari\'s bars, follows the picked the
   // Linked from Settings and watched by the uptime check
   assert.match(read('src/screens/Settings.jsx'), /href="\/status"/);
   assert.match(read('.github/workflows/uptime.yml'), /check \/status 200/);
+});
+
+test('the service worker sends the status page\'s script and styles to the network, never its runtime cache', () => {
+  // Run public/sw.js with a stand-in worker and see which GETs it answers itself (cache first, saved
+  // to birdie-bank-runtime, which nothing clears) and which it leaves to the network
+  const listeners = {};
+  const origin = 'https://birdie-bank.vercel.app';
+  const sandbox = {
+    self: { addEventListener: (type, fn) => { listeners[type] = fn; } },
+    location: new URL(origin), URL, caches: { match: () => Promise.resolve(null), open: () => Promise.resolve({ put() {} }) },
+    fetch: () => Promise.resolve(new Response('')), setTimeout, clearTimeout, Response,
+  };
+  vm.runInNewContext(read('public/sw.js'), sandbox);
+  const answers = path => {
+    let answered = false;
+    listeners.fetch({ request: { method: 'GET', mode: 'no-cors', url: origin + path }, respondWith: () => { answered = true; } });
+    return answered;
+  };
+  for (const f of ['/status.js', '/status-core.js', '/status.css', '/status.js?v=2']) assert.equal(answers(f), false, f);
+  for (const f of ['/assets/index-3f9a1c.js', '/assets/index-3f9a1c.css', '/icon.svg', '/status-board.png']) assert.equal(answers(f), true, f);
 });

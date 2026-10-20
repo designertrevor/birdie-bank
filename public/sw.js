@@ -5,7 +5,8 @@
 //   Chunks the last version already saved are copied over rather than downloaded again.
 // - The app page: network first, but fall back to the saved copy after a few seconds, so
 //   one bar of signal on the course doesn't leave a blank screen.
-// - Everything else: cache first (built files are content hashed; fonts and icons are versioned).
+// - Everything else: cache first (built files are content hashed; fonts and icons are versioned),
+//   except the status page's script and styles, which have no hash and go to the network.
 // - Updates: a new version installs in the background and then waits. It never takes over by
 //   itself, so a phone mid-round keeps the version it started on. The app sends 'apply-update'
 //   when no round is going on (src/lib/app-update.js), or it takes over once every tab is closed.
@@ -16,6 +17,9 @@ const RUNTIME = 'birdie-bank-runtime';
 const PAGE_TIMEOUT = 3500;
 
 const CDN = /fonts\.(googleapis|gstatic)\.com|cdn\.jsdelivr\.net/;
+// The status page's own files (public/status.html): their names have no hash, so a saved copy would
+// never update, and the page has to ask the network to mean anything
+const STATUS_FILES = /^\/status(-core)?\.(js|css)$/;
 
 /** Save a stylesheet and the font files it points at (Latin subsets only for Google Fonts). */
 async function cacheStylesheet(cache, href) {
@@ -99,6 +103,8 @@ self.addEventListener('fetch', e => {
   if (url.origin === location.origin && url.pathname.startsWith('/api/')) return;
   // So does the "which build is live" check (src/lib/app-update.js)
   if (url.origin === location.origin && url.pathname === '/version.json') return;
+  // And the status page's script and styles, never saved (STATUS_FILES)
+  if (url.origin === location.origin && STATUS_FILES.test(url.pathname)) return;
   if (req.mode === 'navigate') {
     // Only the app itself (/) is the offline copy; plain pages like /privacy.html and the rule pages
     // (/rules/wolf) cache under their own path, so opening one never replaces the app's saved copy
