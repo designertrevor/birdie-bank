@@ -66,7 +66,8 @@ test('the shared pieces exist and carry their state for screen readers', () => {
 test('every screen that picks from a list uses the shared pieces', () => {
   const uses = f => /\bPick(Row|Chip|Mark)\b/.test(read(f));
   for (const f of [
-    'screens/NewRound.jsx', 'screens/BigGameSetup.jsx', 'screens/Plan.jsx', 'screens/People.jsx', 'screens/Profile.jsx',
+    'screens/newround/GameStep.jsx', 'screens/newround/CourseStep.jsx', 'screens/newround/PlayersStep.jsx', 'screens/newround/PlanSteps.jsx',
+    'screens/BigGameSetup.jsx', 'screens/Plan.jsx', 'screens/People.jsx', 'screens/Profile.jsx',
     'screens/Onboarding.jsx', 'screens/play/RoundSheets.jsx', 'screens/play/HolePanels.jsx', 'screens/Trip.jsx', 'screens/History.jsx', 'screens/RoundDetail.jsx',
     'components/PairBets.jsx', 'components/SideGames.jsx', 'components/GameOptions.jsx', 'components/GamePanels.jsx',
     'components/Challenges.jsx', 'components/BigGame.jsx', 'components/AddPlayer.jsx', 'components/PlayFor.jsx',
