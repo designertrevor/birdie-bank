@@ -19,11 +19,14 @@ function fakeFetch({ row = { calls: 1, limited_before: false }, rpcStatus = 200,
     if (url.includes('/rest/v1/rpc/course_api_call')) {
       return new Response(JSON.stringify([typeof row === 'function' ? row(body) : row]), { status: rpcStatus, headers: { 'content-type': 'application/json' } });
     }
+    // The shared rate limit (src/lib/rate-limit.js) says yes and isn't counted as a call here
+    if (url.includes('/rest/v1/rpc/rate_hit')) return new Response('true', { status: 200, headers: { 'content-type': 'application/json' } });
     if (url.startsWith('https://api.resend.com/')) return new Response('{"id":"x"}', { status: resendStatus });
     if (url.startsWith('https://api.golfcourseapi.com/') && upstream) return upstream();
     throw new TypeError(`unexpected fetch ${url}`);
   };
   fetchImpl.calls = calls;
+  fetchImpl.limits = () => calls.filter(c => c.url.includes('/rest/v1/rpc/rate_hit'));
   fetchImpl.rpc = () => calls.filter(c => c.url.includes('course_api_call'));
   fetchImpl.mail = () => calls.filter(c => c.url.startsWith('https://api.resend.com/'));
   return fetchImpl;
@@ -223,4 +226,6 @@ test('courses function: a quiet call counts, an unreachable API still counts, an
   const bare = fakeFetch({ upstream: json(200, { courses: [] }) });
   assert.equal((await callHandler('/api/courses?q=pinehurst', { env: { GOLFCOURSEAPI_KEY: 'gca-key' }, fetchImpl: bare })).statusCode, 200);
   assert.equal(bare.calls.length, 1);
+  // With it, the shared rate limit is asked first: per IP, then everyone
+  assert.deepEqual(f.limits().map(c => c.body.p_key), ['courses:ip:unknown', 'courses:all']);
 });

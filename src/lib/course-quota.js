@@ -20,13 +20,18 @@ export const DEFAULT_QUOTA = 35;
 export const WARN_AT = 0.8;
 const PRICING = 'https://golfcourseapi.com (Pro is $9.99 a month for 10,000 calls a day)';
 
+/** The plan's GolfCourseAPI calls a day: GOLFCOURSEAPI_DAILY_QUOTA, or the free plan's 35 when it isn't a whole number. */
+export function dailyQuota(env = {}) {
+  const q = Number.parseInt(env.GOLFCOURSEAPI_DAILY_QUOTA, 10);
+  return Number.isInteger(q) && q > 0 ? q : DEFAULT_QUOTA;
+}
+
 /** The watch's settings from the environment: { url, serviceKey, quota, warnAt, mail }. mail is null when Resend isn't set. */
 export function quotaConfig(env = {}) {
   const url = (env.VITE_SUPABASE_URL || env.SUPABASE_URL || '').replace(/\/$/, '');
   const serviceKey = env.SUPABASE_SERVICE_ROLE_KEY;
   if (!url || !serviceKey) return null;
-  const q = Number.parseInt(env.GOLFCOURSEAPI_DAILY_QUOTA, 10);
-  const quota = Number.isInteger(q) && q > 0 ? q : DEFAULT_QUOTA;
+  const quota = dailyQuota(env);
   const mail = env.RESEND_API_KEY && env.FEEDBACK_EMAIL
     ? { key: env.RESEND_API_KEY, to: env.FEEDBACK_EMAIL, from: env.FEEDBACK_FROM || 'Birdie Bank <onboarding@resend.dev>' }
     : null;

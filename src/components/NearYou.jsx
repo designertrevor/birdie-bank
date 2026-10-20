@@ -3,6 +3,7 @@
 // note when location is off or nothing is close.
 import { Icon } from './ui.jsx';
 import { RADIUS_MI } from '../lib/nearby.js';
+import { LIMITED_COPY } from '../lib/courseApi.js';
 
 const placeName = p => (p ? [p.town, p.region].filter(Boolean).join(', ') : '');
 
@@ -12,6 +13,8 @@ const NOTES = {
   nofix: 'Couldn’t tell where you are just now. Try again in a moment, or search by course or town.',
   off: 'Courses near you need the course database, which isn’t on here. Search your saved courses or add one.',
   error: 'Couldn’t look up courses near you right now. Try again, or search by course or town.',
+  // Over the course search rate limit (src/lib/rate-limit.js)
+  limited: LIMITED_COPY,
 };
 
 export default function NearYou({ near, count, children }) {
