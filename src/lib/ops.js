@@ -36,6 +36,9 @@ export function opsAtLaunch() {
   }
 }
 
+/** This launch is the first time the app opened on this phone (for invite_opened). */
+export const firstOpen = () => !!launch && !launch.lastOpenAt;
+
 /** After the first paint (main.jsx): load the rest, or turn it all off when there's nothing to do. */
 export function opsAfterPaint() {
   let unsaved = false;

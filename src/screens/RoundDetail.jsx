@@ -173,7 +173,7 @@ export default function RoundDetail({ id, celebrate }) {
         {stage === 'share' && (shareFrom === 'detail'
           ? <ShareCard round={round} res={res} onBack={() => setStage('detail')} onDone={() => setStage('detail')} doneLabel="Done" />
           : <ShareCard round={round} res={res} onBack={() => setStage(ownSettle ? 'settle' : 'reveal')} onDone={done} />)}
-        {signingIn && <SignInSheet open onClose={() => setSigningIn(false)} />}
+        {signingIn && <SignInSheet open source="save_tab" onClose={() => setSigningIn(false)} />}
       </Screen>
       </Stage>
     );
@@ -347,7 +347,7 @@ export default function RoundDetail({ id, celebrate }) {
           <button className="full-btn outline" onClick={done}>Done</button>
         </div>
       )}
-      {signingIn && <SignInSheet open onClose={() => setSigningIn(false)} />}
+      {signingIn && <SignInSheet open source="save_tab" onClose={() => setSigningIn(false)} />}
     </Screen>
     </Stage>
   );

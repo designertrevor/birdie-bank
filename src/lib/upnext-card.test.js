@@ -31,5 +31,5 @@ test('one card a visit, and the other waits for the next visit', () => {
   assert.equal(claimCard('whatsNew'), true);
   assert.equal(claimCard('shipped'), false); // came late: told next visit
   endUpNextVisit();
-  assert.deepEqual(getSlot(), { showing: null, shipped: 'pending', whatsNew: false });
+  assert.deepEqual(getSlot(), { showing: null, shipped: 'pending', whatsNew: false, says: null });
 });

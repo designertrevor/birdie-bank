@@ -9,10 +9,19 @@
 // a short queue. "Share usage data" off in Settings drops them. Pure: the library is handed in
 // (`load`), so the tests drive it with a stand-in.
 
-// The events, by name, so a typo can't make a new one
+// The events, by name, so a typo can't make a new one. The invited friend's path (for the funnel
+// invite opened > seat taken > round finished > sign-in viewed > signed in):
+//  invite_opened {source: join | plan, first_open}   a join link or a plan's RSVP link opened
+//  seat_taken    {via: tile | add_me, role}          took a seat, or was let in after "Add me"
+//  rsvp_answered {choice: in | maybe | out}          answered a plan
+//  signin_viewed {source}                            the sign-in sheet opened (save_tab, friends, settings, roadmap, onboarding)
+//  signed_in     {source, path, role, rounds_done}   came back signed in (path: google | email | apple)
+// role: guest (joined from a link, no account), member (joined from a link, signed in) or
+// organizer (set the app up itself), usage-role.js
 export const EVENTS = new Set([
   'app_opened', 'round_started', 'round_finished', 'plan_created', 'onboarding_finished',
   'paywall_viewed', 'plan_picked', 'request_sent',
+  'invite_opened', 'seat_taken', 'rsvp_answered', 'signin_viewed', 'signed_in',
 ]);
 
 // Every property any event may carry. Anything else is dropped on the phone.
@@ -48,11 +57,13 @@ export const REOPEN_AFTER = 30 * 60 * 1000;
 /**
  * The app_opened properties for an open at `now`, or null when it's too soon after the last one to
  * count (the phone came back from another app within half an hour). `lastRoundAt`: when the last
- * round on this phone finished; `roundsDone`: how many it has.
+ * round on this phone finished; `roundsDone`: how many it has; `role`: guest, member or organizer
+ * (usage-role.js).
  */
-export function openProps({ lastOpenAt, now, lastRoundAt = null, roundsDone = 0 }) {
+export function openProps({ lastOpenAt, now, lastRoundAt = null, roundsDone = 0, role = null }) {
   if (lastOpenAt && now - lastOpenAt < REOPEN_AFTER) return null;
   const props = { first_open: !lastOpenAt, rounds_done: roundsDone };
+  if (role) props.role = role;
   const d = daysBetween(lastOpenAt, now);
   if (d != null) props.days_since_open = d;
   const r = daysBetween(lastRoundAt, now);

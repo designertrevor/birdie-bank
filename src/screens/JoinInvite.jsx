@@ -24,6 +24,9 @@ import { money } from '../lib/golf.js';
 import { bigInvite } from '../lib/big-view.js';
 import { useAgeCheck } from '../components/AgeCheck.jsx';
 import { needsAgeCheck } from '../lib/age.js';
+import { track } from '../lib/analytics.js';
+import { firstOpen } from '../lib/ops.js';
+import { markJoinedByLink, usageRole } from '../lib/usage-role.js';
 
 // A seat request survives the page being closed, so reopening the link keeps waiting
 const seatKey = code => `bb-seat:${code}`;
@@ -64,6 +67,9 @@ export default function JoinInvite({ code, onJoined, onSkip, setUp = false }) {
   // is what the round can take
   const [casualPick, setCasualPick] = useState(null);
 
+  // The link opened: counted once per invite card
+  useEffect(() => { track('invite_opened', { source: 'join', first_open: firstOpen() }); }, [code]);
+
   useEffect(() => {
     let cancelled = false;
     fetchShared(code)
@@ -74,7 +80,8 @@ export default function JoinInvite({ code, onJoined, onSkip, setUp = false }) {
 
   const round = useMemo(() => (found ? assemble(found.meta, found.holes) : null), [found]);
 
-  const join = async (player, watcherName) => {
+  // `via`: how a seat was taken, a tile on the seats ('tile') or let in after "Add me" ('add_me')
+  const join = async (player, watcherName, via = 'tile') => {
     setBusy(true); setJoinErr(false);
     try {
       if (setUp) {
@@ -91,6 +98,11 @@ export default function JoinInvite({ code, onJoined, onSkip, setUp = false }) {
       const latest = (await fetchShared(code).catch(() => null)) || found;
       const id = await joinShared(code, latest, player?.id ?? null);
       saveSeat(code, null);
+      if (player) {
+        if (!setUp) markJoinedByLink();
+        // A phone that set the app up itself counts as a member in someone else's round
+        track('seat_taken', { via, role: usageRole() === 'guest' ? 'guest' : 'member' });
+      }
       onJoined(id, latest.meta.status === 'done');
     } catch {
       setBusy(false);
@@ -143,7 +155,7 @@ export default function JoinInvite({ code, onJoined, onSkip, setUp = false }) {
         try {
           const latest = await fetchShared(code);
           const me = latest?.meta.players?.find(p => p.id === r.playerId);
-          if (me) { setFound(latest); join(me); return; }
+          if (me) { setFound(latest); join(me, undefined, 'add_me'); return; }
         } catch { /* no signal yet */ }
         await new Promise(res => setTimeout(res, 1500));
       }

@@ -2,7 +2,8 @@
 // roadmap, RoadmapUpNext.jsx) and "What's new" (what landed in this update, WhatsNewUpNext.jsx)
 // never show together. The one that isn't shown isn't marked as told or seen, so it waits for a
 // later visit. "It shipped" goes first: it's about something you picked yourself.
-// The rule is pure (upNextCard); the slot below is this visit's record of it, kept in memory.
+// The rule is pure (upNextCard); the slot below is this visit's record of it, kept in memory,
+// with what the card on screen says (`says`), so it stays put after it's marked as told or seen.
 
 /**
  * Which news card this visit shows: 'shipped', 'whatsNew' or null (not yet).
@@ -21,7 +22,7 @@ export function upNextCard({ showing = null, shipped = 'pending', whatsNew = fal
 /** How long What's new waits on It shipped (a slow file, or no signal for the roadmap) before going ahead. */
 export const SHIPPED_WAIT_MS = 4000;
 
-const fresh = () => ({ showing: null, shipped: 'pending', whatsNew: false });
+const fresh = () => ({ showing: null, shipped: 'pending', whatsNew: false, says: null });
 let slot = fresh();
 const listeners = new Set();
 function set(patch) { slot = { ...slot, ...patch }; listeners.forEach(l => l()); }
@@ -32,13 +33,17 @@ export const getSlot = () => slot;
 /** It shipped has nothing to say this visit (or is done waiting on it). */
 export function shippedNone() { if (slot.shipped === 'pending') set({ shipped: 'none' }); }
 
-/** A card has something to show: true when it may show it now (and it then holds the visit). */
-export function claimCard(card) {
+/**
+ * A card has something to show: true when it may show it now (and it then holds the visit, with
+ * `says` kept as what it shows).
+ */
+export function claimCard(card, says) {
   const next = card === 'shipped' ? { ...slot, shipped: 'ready' } : { ...slot, whatsNew: true };
   const wins = upNextCard(next) === card;
   if (wins) next.showing = card;
+  if (wins && says !== undefined) next.says = says;
   // Only tell the cards when something changed, so asking again while waiting never loops
-  if (next.showing !== slot.showing || next.shipped !== slot.shipped || next.whatsNew !== slot.whatsNew) set(next);
+  if (next.showing !== slot.showing || next.shipped !== slot.shipped || next.whatsNew !== slot.whatsNew || next.says !== slot.says) set(next);
   return wins;
 }
 

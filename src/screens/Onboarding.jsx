@@ -151,7 +151,7 @@ export default function Onboarding({ onDone, play = null }) {
           {accountsEnabled && <button className="full-btn outline" onClick={() => setSigningIn(true)}>I have an account</button>}
           <p className="pw-fine">Got a link from a friend? Open it and you’re in, no setup.</p>
         </div>
-        {signingIn && <SignInSheet open onClose={() => setSigningIn(false)} title="Welcome back" text="Sign in and your rounds, players and the Tab come right back." />}
+        {signingIn && <SignInSheet open source="onboarding" onClose={() => setSigningIn(false)} title="Welcome back" text="Sign in and your rounds, players and the Tab come right back." />}
       </Screen>
     );
   }

@@ -248,7 +248,7 @@ export default function Settings() {
         {!acct.user && <button className="danger-link" onClick={reset}><Icon name="trash" /> Erase all data</button>}
         {acct.user && <DeleteAccountButton />}
       </div>
-      {signingIn && <SignInSheet open onClose={() => setSigningIn(false)} />}
+      {signingIn && <SignInSheet open source="settings" onClose={() => setSigningIn(false)} />}
     </Screen>
   );
 }
