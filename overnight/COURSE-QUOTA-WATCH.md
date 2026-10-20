@@ -13,7 +13,7 @@ Course search runs through GolfCourseAPI, which allows a fixed number of calls a
 
 ## What you need to do (one time)
 
-1. **Run the SQL in Supabase.** Open https://supabase.com/dashboard/project/yffribkjqvkncmypexfa, click **SQL Editor** in the left sidebar, click **New query**, paste the whole of `supabase/2026-10-20-course-api-usage.sql`, click **Run**. It says "Success. No rows returned". Safe to run twice.
+1. **Run the SQL in Supabase.** Done 2026-10-20 from Chrome: SQL Editor, New query, the whole of `supabase/2026-10-20-course-api-usage.sql`, Run (it warns about "destructive operations" because of the two `drop function if exists` lines; Run query). It said "Success. No rows returned", and a check on two made-up days gave the right counts and flags before those rows were deleted.
 2. Nothing else. There is no new secret: the Supabase service role key (for push) and the Resend keys (for feedback emails) are already in Vercel, and the watch uses those.
 
 ## When you upgrade to Pro
@@ -29,5 +29,4 @@ Course search runs through GolfCourseAPI, which allows a fixed number of calls a
 
 ## What I could not check from here
 
-- The SQL ran only in my head: there is no Postgres on this Mac and no Supabase key here. It follows the same shape as the push SQL (`2026-10-08-push.sql`). If Supabase shows an error when you run it, paste the error into a chat.
 - GolfCourseAPI doesn't say what hour its day resets. The watch counts by UTC day; if the real reset is at another hour, the "over the limit" email catches it and says so.
