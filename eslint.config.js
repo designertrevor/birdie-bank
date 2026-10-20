@@ -41,8 +41,8 @@ export default defineConfig([
     rules: { 'react-refresh/only-export-components': 'off' },
   },
   {
-    // Vercel serverless functions and their tests run on Node
-    files: ['api/**/*.js', 'middleware.js', 'src/**/*.test.js'],
+    // Vercel serverless functions, their tests and the end to end test run on Node
+    files: ['api/**/*.js', 'middleware.js', 'src/**/*.test.js', 'e2e/**/*.js'],
     languageOptions: { globals: { ...globals.browser, ...globals.node } },
   },
 ])
