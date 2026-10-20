@@ -118,3 +118,42 @@ someone leaving, side game choices, no bids moves nothing, bet lines, rule links
    - A. Money won in the main game (built) **(suggested)**
    - B. Net strokes for every game, whatever the main game pays on
    - C. Let the organizer pick "money" or "net score" per round
+
+## Money review (2026-10-20)
+
+Checked with scripts against the real modules:
+- `calcuttaMoney` alone: 198,000 cases, 2 to 8 players, teams of 2 and 3, $0 and uneven bids,
+  self-purchases, ties at first, at second and three-way, 70/30, 60/30/10 and all to first, buy-backs
+  on and off. Every case adds to zero in cents, each person's net is exactly paid out less paid in, and
+  the prizes add up to the pot.
+- `roundResults` with Skins, Stroke, Stableford, Quota, Nassau (singles and 2 v 2), Banker, Snake,
+  Rabbit, Junk, BBB, Best ball (2 v 2, 4 v 4), Match 3 v 3 and Vegas, plus the Calcutta: 16,800 rounds.
+  The Calcutta line matches its table, the games add to the round, transfers square everyone, pairs
+  are within the usual cent per pair. 1,800 more with a late joiner and a leaver: the joiner is never
+  a lot and his Calcutta line is always $0.
+- Rounding: $85 at 70/30 and $47 at 60/30/10 come out in whole cents (whole-dollar bids at
+  whole-percent splits always do). Spare cents: a tie's go to the lot auctioned first, a buy-back's odd
+  cent to the owner. Now written in the `calcutta.js` header.
+- Run it back, a usual and a plan drop the bids. Bids ride in the shared round's meta with the side
+  game. Rolling quota: the cap holds up and down, a half rounds away from zero both ways, merged
+  duplicates carry the right quota, no one else's leaks in.
+
+Bug fixed:
+1. **Cent dust broke ties in money games.** A $40 Skins pot split three ways is $3.34, $3.33 and
+   $3.33, so the Calcutta paid one owner $70 and the other two $15 each, when it should have been about
+   $33.33 each. The ranking now uses the main game's money before it's rounded to cents. Test: "money
+   review: players who won the same in a money game tie, even when the cents split them".
+
+Questions for Trevor:
+5. **One lot sold**: today it's void and nobody pays, but the bet line still says "$40 pot · 70/30".
+   A. Void, and the line says "needs two sold" **(suggested)** B. Owner of that one lot takes it back.
+6. **An unsold player finishes first**: today the best *sold* lot takes first. A. Keep it **(suggested)**
+   B. That place's prize goes back to the buyers in proportion to their bids.
+7. **Removing the Calcutta mid-round** wipes the bids without asking. A. Ask first ("$85 in bids goes
+   away") **(suggested)** B. Lock it once a hole is in.
+8. **Teams changed after the auction**: the sale stays on the team's slot. A. Keep it B. Clear that
+   lot's sale and say so **(suggested for changes before the first tee)**.
+9. **Rolling quota across crews**: a quota carries from a player's last rolling round in any group.
+   A. Keep it B. Only from rounds with the same crew **(suggested, leagues keep their own)**.
+
+`npm test`: 2,428 pass. `npm run lint` clean.
