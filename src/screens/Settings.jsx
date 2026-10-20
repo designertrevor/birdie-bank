@@ -244,6 +244,7 @@ export default function Settings() {
           <div className="row-main"><div className="set-name">Help</div><div className="set-sub">{`Questions or trouble? Email ${SUPPORT_EMAIL}`}</div></div>
           <span className="chevron"><Icon name="envelope-simple" /></span>
         </a>
+        <a className="set-row" href="/status" target="_blank" rel="noopener"><div className="set-icon"><Icon name="pulse" fill /></div><div className="row-main"><div className="set-name">Service status</div><div className="set-sub">Is something down? Check live</div></div><span className="chevron"><Icon name="arrow-square-out" /></span></a>
         {row('info', 'About Birdie Bank', 'Rules, handicaps and the fine print', () => nav.push('about'))}
         {!acct.user && <button className="danger-link" onClick={reset}><Icon name="trash" /> Erase all data</button>}
         {acct.user && <DeleteAccountButton />}
