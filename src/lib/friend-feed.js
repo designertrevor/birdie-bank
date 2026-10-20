@@ -262,7 +262,8 @@ function lowLine(players) {
  * A round for the feed, from the round itself. `people` says, for each linked seat, whether they're a
  * friend and whether their money may show. Returns null for a round that can't be shown.
  * { id, code, status: 'live' | 'done', title, game, course, thru, holes, hole, friends, line, result,
- *   players: [{ id, name, friend, place, amount, amountText, toPar, played }], isMoney, at, following, target, talk }
+ *   players: [{ id, name, friend, place, amount, amountText, toPar, played }], isMoney, at, following, target, talk, people }
+ * `people` is the feed's word on each linked seat, as it came (feed-brags.js and friends-list.js read it).
  * `talk` false: the gallery has no trash talk on this round (its money stays back from you).
  */
 export function roundView(round, { code, people = {}, at = 0, following = false, source = 'feed', target = null, talk = true } = {}) {
@@ -336,7 +337,7 @@ export function roundView(round, { code, people = {}, at = 0, following = false,
     game: gameLabel(round), course: round.course?.name || null,
     thru, holes: round.holes.length, hole: Math.min(thru + 1, round.holes.length),
     friends, names: players.map(p => p.name), line, players, isMoney, playFor: playForOf(round).kind,
-    at, following, round, talk,
+    at, following, round, talk, people,
     target: target || ['friendRound', { code }],
   };
 }

@@ -78,7 +78,9 @@ function localRows() {
       if (!k?.startsWith('bb-live:')) continue;
       const v = JSON.parse(localStorage.getItem(k));
       if (!v?.meta) continue;
-      const people = Object.fromEntries((v.meta.players || []).map(p => [p.id, { friend: true, money: false, account: null }]));
+      // Everyone in it is a friend, unless the copy says who is (testing suggestions: { [seat]: { friend, money, account } })
+      const people = v.people && typeof v.people === 'object' ? v.people
+        : Object.fromEntries((v.meta.players || []).map(p => [p.id, { friend: true, money: false, account: null }]));
       rows.push({ code: k.slice('bb-live:'.length), meta: v.meta, holes: v.holes || {}, people, updatedAt: Date.now() });
     }
   } catch { /* storage blocked */ }
