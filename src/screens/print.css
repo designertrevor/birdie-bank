@@ -1,0 +1,102 @@
+/* Printable sheets (Print.jsx): Letter pages, black on white. On screen they're a preview, the
+   pages small and white on the app's canvas in light and dark mode alike (paper is white). Every
+   size inside a page is in em off the page's own width (cqw), so the preview and the paper are the
+   same page at two sizes. Printing shows only the copy put on the body (.print-doc), and only while
+   the print screen is open (html.bb-print), so printing anywhere else in the app is as it was. */
+
+/* ---------- on screen ---------- */
+.print-preview { display: grid; gap: 18px; padding: 6px 16px 24px; }
+.print-doc { display: none; }
+.print-how { text-align: center; margin: 0; }
+.print-starts .sec-label { padding: 0 0 8px; }
+.print-start-row { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; margin-top: 10px; }
+.print-time { flex: 1; min-width: 150px; }
+.print-gaps { flex: 1; min-width: 200px; }
+
+/* A page: Letter is 8.5 by 11 inches with half-inch margins, so the room inside is 7.5 by 10 */
+.pg { position: relative; aspect-ratio: 8.5 / 11; background: #fff; color: #000; border-radius: 6px; box-shadow: 0 1px 2px rgba(0, 0, 0, .12), 0 8px 24px rgba(0, 0, 0, .14); overflow: hidden; }
+.pg-pad { position: absolute; inset: 0; padding: 5.882%; }
+.pg-in { container-type: inline-size; height: 100%; display: flex; flex-direction: column; font-family: Inter, system-ui, sans-serif; color: #000; }
+/* 1em is 1.95% of the page's width: 10.5pt on paper */
+.pg-in > * { font-size: 1.95cqw; }
+.pg-in > .pg-foot { font-size: calc(1.95cqw * .78); }
+.pg-body { flex: 1; min-height: 0; overflow: hidden; }
+.pg-in table { border-collapse: collapse; width: 100%; }
+.pg-in .num { text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.pg-in .strong { font-weight: 700; }
+.pg-in .mute { color: #444; }
+
+.pg-head { border-bottom: .2em solid #000; padding-bottom: .6em; margin-bottom: 1em; }
+.pg-kicker { font-size: .85em; font-weight: 700; letter-spacing: .12em; text-transform: uppercase; }
+.pg-title { font-family: var(--display); font-size: 2.6em; line-height: 1.05; font-weight: 800; margin: .1em 0 .15em; letter-spacing: -.01em; }
+.pg-meta { font-size: 1em; color: #222; }
+.pg-head.small { display: flex; justify-content: space-between; gap: 1em; align-items: baseline; border-bottom-width: .1em; padding-bottom: .35em; }
+.pg-title-s { font-weight: 700; }
+.pg-foot { display: flex; justify-content: space-between; gap: 1em; border-top: .08em solid #000; padding-top: .4em; margin-top: .6em; color: #333; }
+.pg-foot span:nth-child(2) { flex: 1; text-align: center; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.pg-empty { font-size: 1.4em; margin-top: 2em; text-align: center; color: #222; }
+.pg-line { margin-bottom: 1em; line-height: 1.4; }
+.pg-note { color: #333; font-size: .92em; }
+.pg-session { font-size: 1.2em; font-weight: 800; margin: 0 0 .55em; letter-spacing: -.005em; }
+.pg-blank { display: inline-block; min-width: 7em; border-bottom: .08em solid #000; color: #555; font-weight: 500; font-size: .85em; text-align: left; }
+.pg-blank.wide { min-width: 9em; height: 1em; vertical-align: baseline; }
+
+/* Pairings: group cards two across */
+.pg-groups { display: grid; grid-template-columns: 1fr 1fr; gap: 1em; }
+.pg-group { border: .1em solid #000; border-radius: .5em; padding: .7em .85em .75em; break-inside: avoid; }
+.pg-group-head { display: flex; justify-content: space-between; align-items: baseline; gap: .6em; border-bottom: .08em solid #000; padding-bottom: .35em; margin-bottom: .3em; }
+.pg-group-name { font-family: var(--display); font-weight: 800; font-size: 1.45em; line-height: 1.1; }
+.pg-group-sub { font-family: Inter, system-ui, sans-serif; font-weight: 600; font-size: .62em; }
+.pg-group-start { font-weight: 700; text-align: right; white-space: nowrap; }
+.pg-players th { font-size: .75em; font-weight: 600; text-transform: uppercase; letter-spacing: .06em; text-align: left; color: #333; padding: .2em 0; }
+.pg-players td { font-size: 1.12em; padding: .22em 0; border-bottom: .05em solid #bbb; }
+.pg-players tr:last-child td { border-bottom: 0; }
+.pg-group-line { margin-top: .4em; line-height: 1.3; font-size: .92em; }
+
+/* Cart signs: one a page, read from a few feet */
+.cart { height: 100%; display: flex; flex-direction: column; text-align: center; }
+.cart-top { display: flex; justify-content: space-between; align-items: baseline; border-bottom: .12em solid #000; padding-bottom: .3em; }
+.cart-group { font-family: var(--display); font-weight: 800; font-size: 4.2em; line-height: 1; text-align: left; letter-spacing: -.01em; }
+.cart-no { font-size: 1.6em; font-weight: 700; }
+.cart-start { font-size: 2.6em; font-weight: 700; margin-top: .55em; }
+.cart-session { font-size: 1.3em; margin-top: .3em; color: #222; }
+.cart-names { flex: 1; display: flex; flex-direction: column; justify-content: center; gap: .3em; }
+.cart-name { font-family: var(--display); font-weight: 800; font-size: 6.4em; line-height: 1.02; letter-spacing: -.015em; overflow-wrap: anywhere; }
+.cart-name.lg { font-size: 5em; }
+.cart-name.xl { font-size: 3.8em; }
+.cart-line { border-top: .12em solid #000; padding-top: .7em; min-height: 6em; }
+.cart-match { font-size: 1.7em; font-weight: 700; margin-bottom: .4em; }
+.cart-label { font-size: 1em; font-weight: 700; letter-spacing: .14em; text-transform: uppercase; }
+.cart-bet { font-size: 2em; font-weight: 600; line-height: 1.2; margin-top: .15em; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+
+/* Results */
+.res-head { margin-bottom: .9em; }
+.res-big { font-family: var(--display); font-weight: 800; font-size: 2em; line-height: 1.1; }
+.res-podium { display: flex; align-items: flex-end; justify-content: center; gap: .8em; margin: .4em 0 1.4em; height: 14em; }
+.res-pod { width: 30%; display: flex; flex-direction: column; align-items: stretch; text-align: center; }
+.res-pod-name { font-weight: 700; font-size: 1.2em; line-height: 1.15; overflow-wrap: anywhere; }
+.res-pod-val { font-variant-numeric: tabular-nums; margin: .15em 0 .35em; }
+.res-pod-step { border: .12em solid #000; border-bottom-width: .2em; display: flex; align-items: center; justify-content: center; font-family: var(--display); font-weight: 800; font-size: 2.2em; }
+.res-pod.p1 .res-pod-step { height: 3.2em; background: #000; color: #fff; }
+.res-pod.p2 .res-pod-step { height: 2.3em; }
+.res-pod.p3 .res-pod-step { height: 1.6em; }
+.res-sec { margin-bottom: 1.1em; break-inside: avoid; }
+.res-table th, .res-table td { padding: .3em .4em; border-bottom: .06em solid #999; text-align: left; vertical-align: top; line-height: 1.4; }
+.res-table thead th { font-size: .78em; text-transform: uppercase; letter-spacing: .06em; font-weight: 700; border-bottom: .12em solid #000; }
+.res-table .place { width: 3.6em; font-weight: 700; }
+.res-table th.num, .res-table td.num { text-align: right; }
+.res-table.grid tbody th { font-weight: 600; }
+.res-table.owes .pays { color: #444; width: 3em; }
+.res-sub { display: block; font-size: .82em; color: #444; }
+.res-note { font-size: .95em; line-height: 1.45; color: #222; margin: 0 0 .6em; }
+
+/* ---------- on paper ---------- */
+@media print {
+  @page { size: letter; margin: .5in; }
+  html.bb-print, html.bb-print body { height: auto !important; min-height: 0 !important; overflow: visible !important; background: #fff !important; }
+  html.bb-print body > :not(.print-doc) { display: none !important; }
+  html.bb-print .print-doc { display: block; }
+  .print-doc .pg { width: 7.5in; height: 9.85in; aspect-ratio: auto; border-radius: 0; box-shadow: none; break-after: page; page-break-after: always; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  .print-doc .pg:last-child { break-after: auto; page-break-after: auto; }
+  .print-doc .pg-pad { padding: 0; }
+}

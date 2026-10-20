@@ -391,6 +391,7 @@ export function ShareCard({ round, res, onBack, onDone, doneLabel = 'Done' }) {
   const [game, grabGame] = useArtSrc();
   // Show scores: on until you turn it off, then remembered (Trevor 2026-10-14: the group wanted the golf, not just the bet)
   const scoresOn = useStore().settings.shareScores !== false;
+  const nav = useNav();
   const make = show => {
     const model = shareCardModel(round, results, { showAmounts: show, showScores: scoresOn, link, art: { cheer: buddies.length ? cheer : null, game } });
     return { model, alt: resultsAlt(model), text: shareText(round, res, { amounts: show, scores: scoresOn }) };
@@ -407,6 +408,8 @@ export function ShareCard({ round, res, onBack, onDone, doneLabel = 'Done' }) {
         <div><div className="toggle-lbl" id="share-scores">Show scores</div><div className="toggle-sub">{scoresOn ? 'Everyone’s total and score to par are on the image' : 'Only the result of the bets'}</div></div>
         <Toggle on={scoresOn} onChange={on => update(s => { s.settings.shareScores = !!on; })} labelledBy="share-scores" />
       </div>
+      {/* For the clubhouse wall: the results on paper, the same numbers as here (Print.jsx) */}
+      {round.status === 'done' && <button className="text-link" onClick={() => nav.push('print', { kind: 'round', id: round.id })}><Icon name="printer" /> Print the results sheet</button>}
       <HowWasIt round={round} />
     </ShareView>
     </>

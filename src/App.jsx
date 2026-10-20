@@ -61,6 +61,8 @@ const Preview = screen(() => import('./screens/Preview.jsx'));
 const challenge = () => import('./screens/Challenge.jsx');
 const Challenge = screen(challenge);
 const Share = screen(() => import('./screens/Share.jsx'));
+// Pairings, cart signs and results to print, for a trip, a Big Game or a finished round
+const Print = screen(() => import('./screens/Print.jsx'));
 const ChallengeLink = screen(challenge, 'ChallengeLink');
 const Paywall = screen(() => import('./screens/Paywall.jsx'));
 const yourPlan = () => import('./screens/YourPlan.jsx');
@@ -186,7 +188,7 @@ const SCREENS = {
   joinInvite: JoinInviteScreen, lately: Lately, trip: Trip, tripSettle: TripSettle, draft: Draft, draftLink: DraftLink,
   bigGame: BigGame, bigGameSetup: BigGameSetup, roadmap: Roadmap, whatsNew: WhatsNew,
   friends: Friends, friendRound: FriendRound,
-  profile: Profile, stats: Stats, share: Share, closeBooks: CloseBooks, book: Book, hallOfFame: HallOfFame,
+  profile: Profile, stats: Stats, share: Share, print: Print, closeBooks: CloseBooks, book: Book, hallOfFame: HallOfFame,
 };
 // Settings lives behind the avatar on Up next, so it's a pushed screen rather than a tab
 const TABS = { upnext: UpNext, ledger: Ledger, history: History, people: People };
