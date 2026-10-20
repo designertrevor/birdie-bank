@@ -57,11 +57,22 @@ export function cleanUrl(v) {
   try { const u = new URL(v); return `${u.origin}${u.pathname}`; } catch { return v.split(/[?#]/)[0]; }
 }
 const URL_FIELDS = ['document-uri', 'referrer', 'blocked-uri', 'source-file'];
+// The fields a report may carry on to Sentry. Anything else in a body is dropped, so the endpoint
+// can't be used to put arbitrary data in Sentry. The sample is left out too: it's the first
+// characters of the blocked inline code and could hold anything.
+const KEEP = ['document-uri', 'referrer', 'blocked-uri', 'violated-directive', 'effective-directive', 'original-policy',
+  'disposition', 'source-file', 'line-number', 'column-number', 'status-code'];
+/** The longest text one field keeps (the policy itself is about 1,500 characters). */
+export const MAX_FIELD = 2048;
 const cleaned = r => {
-  const out = { ...r };
-  for (const f of URL_FIELDS) if (out[f] != null) out[f] = cleanUrl(out[f]);
-  // The sample is the first characters of the blocked inline code; it could hold anything, so it stays out
-  delete out['script-sample'];
+  const out = {};
+  for (const f of KEEP) {
+    let v = r[f];
+    if (typeof v === 'number' && Number.isFinite(v)) { out[f] = v; continue; }
+    if (typeof v !== 'string') continue;
+    if (URL_FIELDS.includes(f)) v = cleanUrl(v);
+    out[f] = v.slice(0, MAX_FIELD);
+  }
   return out;
 };
 

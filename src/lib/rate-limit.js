@@ -1,5 +1,5 @@
-// Rate limits for the public api functions (ROADMAP area 25): api/join.js, api/courses.js and the
-// emails api/feedback-notify.js sends. Two layers, checked in order:
+// Rate limits for the public api functions (ROADMAP area 25): api/join.js, api/courses.js,
+// api/csp-report.js and the emails api/feedback-notify.js sends. Two layers, checked in order:
 //   1. A token bucket in this function instance's memory, per IP (and one for everyone). Free and
 //      instant, but Vercel runs many instances and starts fresh ones often, so it only stops a
 //      flood that keeps landing on one warm instance.
@@ -35,6 +35,15 @@ export const LIMITS = {
     // Free plan (35 a day): 10 an hour. Pro (10,000 a day): 1,250 an hour.
     global: { share: 1 / 8, floor: 10, windowSeconds: 3600 },
   },
+  cspReport: {
+    // Content security policy reports (api/csp-report.js), which go on to Sentry. Anyone can POST
+    // there, so without a cap a script could fill Sentry's quota with junk. A page that breaks the
+    // policy sends one report per thing it blocks, so 20 a minute from one phone is plenty, and
+    // 100 an hour for everyone is far above what a handful of testers make. Past it the report is
+    // dropped (still a 204, so browsers never retry).
+    ip: { max: 20, windowSeconds: 60 },
+    all: { max: 100, windowSeconds: 3600 },
+  },
   feedback: {
     // Feedback emails (api/feedback-notify.js), everyone together. Every call comes from Supabase's
     // webhook, so there's no IP worth counting. A busy testing day is a few dozen messages; 20 an
@@ -64,6 +73,7 @@ export function courseRules(env = {}) {
 
 export const joinRules = () => [{ scope: 'ip', ...LIMITS.join.ip }];
 export const feedbackRules = () => [{ scope: 'all', ...LIMITS.feedback.all }];
+export const cspReportRules = () => [{ scope: 'ip', ...LIMITS.cspReport.ip }, { scope: 'all', ...LIMITS.cspReport.all }];
 
 // ---------------------------------------------------------------------------
 // Layer 1: a token bucket. Full at the start (max tokens), one token per request, refilling

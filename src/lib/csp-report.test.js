@@ -2,8 +2,9 @@
 // to Sentry's security endpoint for the DSN, or logged when there's no DSN.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { MAX_REPORTS, cleanUrl, logLine, readReports, sentrySecurityUrl } from './csp-report.js';
-import handler from '../../api/csp-report.js';
+import { MAX_FIELD, MAX_REPORTS, cleanUrl, logLine, readReports, sentrySecurityUrl } from './csp-report.js';
+import handler, { cspReportHandler } from '../../api/csp-report.js';
+import { createLimiter, cspReportRules, LIMITS } from './rate-limit.js';
 
 const DSN = 'https://abc123@o4508.ingest.us.sentry.io/4508999';
 
@@ -114,4 +115,31 @@ test('with the app DSN each report goes to Sentry, tagged with the deploy, in th
     await handler.fetch(post(JSON.stringify(OLD)));
     assert.equal(new URL(sent[0].url).host, 'o1.ingest.de.sentry.io');
   });
+});
+
+test('only the known report fields go on, each cut to a sane length', () => {
+  const [r] = readReports(JSON.stringify({ 'csp-report': {
+    'document-uri': 'https://birdie-bank.vercel.app/', 'blocked-uri': `https://x.example/${'a'.repeat(5000)}`,
+    'line-number': 3, 'effective-directive': { nested: 'junk' }, 'anything-else': 'spam', 'script-sample': 'secret',
+  } }));
+  assert.deepEqual(Object.keys(r).sort(), ['blocked-uri', 'document-uri', 'line-number']);
+  assert.equal(r['blocked-uri'].length, MAX_FIELD);
+  assert.equal(r['line-number'], 3);
+});
+
+test('reports past the rate limit are dropped quietly, still a 204, and a body that says it is too big is never read', async () => {
+  const limited = cspReportHandler(createLimiter('csp-test', [{ scope: 'ip', max: 2, windowSeconds: 60 }], { now: () => 1000 }));
+  await withEnv({ VITE_SENTRY_DSN: DSN }, async ({ sent }) => {
+    const many = JSON.stringify(Array.from({ length: 5 }, () => NEW[0]));
+    assert.equal((await limited.fetch(post(many, 'application/reports+json'))).status, 204);
+    assert.equal(sent.length, 2);
+    assert.equal((await limited.fetch(post(JSON.stringify(OLD)))).status, 204);
+    assert.equal(sent.length, 2);
+    const big = new Request('https://birdie-bank.vercel.app/api/csp-report', { method: 'POST', headers: { 'Content-Length': String(1e7) }, body: JSON.stringify(OLD) });
+    assert.equal((await handler.fetch(big)).status, 204);
+    assert.equal(sent.length, 2);
+  });
+  // The real limits: per IP first, then everyone, so one phone can't spend everyone's hour
+  assert.deepEqual(cspReportRules().map(r => r.scope), ['ip', 'all']);
+  assert.ok(LIMITS.cspReport.ip.max <= LIMITS.cspReport.all.max);
 });
