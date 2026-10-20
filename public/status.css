@@ -1,0 +1,71 @@
+/* The status page (status.html). The app's own colours (src/styles.css), light and dark, and the
+   theme you picked in Settings (status.js sets data-theme before paint, like index.html). One token,
+   --canvas, paints the page, both Safari strips and theme-color. */
+:root {
+  --canvas: #f8f2e4; --card: #ffffff; --ink: #0a0a0a; --body: #3a3a3a; --mute: #6a6a6a; --line: #ebe6d6; --pink: #d6336c;
+  --up: #0f6b4f; --up-bg: #d6efe6; --slow: #8a5a00; --slow-bg: #fff1c9; --down: #7a7a7a; --down-bg: #ece7da; --focus: #6b4fd0;
+  --edge-top-background: var(--canvas); --edge-bottom-background: var(--canvas);
+  color-scheme: light;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --canvas: #0f1413; --card: #1e2524; --ink: #f6f1e4; --body: #d6d1c4; --mute: #a39e92; --line: #2c312f; --pink: #ff6fa0;
+    --up: #6fd3a8; --up-bg: #173a2e; --slow: #f2c14e; --slow-bg: #3a3116; --down: #8f978f; --down-bg: #283030; --focus: #b8a4ed;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --canvas: #0f1413; --card: #1e2524; --ink: #f6f1e4; --body: #d6d1c4; --mute: #a39e92; --line: #2c312f; --pink: #ff6fa0;
+  --up: #6fd3a8; --up-bg: #173a2e; --slow: #f2c14e; --slow-bg: #3a3116; --down: #8f978f; --down-bg: #283030; --focus: #b8a4ed;
+  color-scheme: dark;
+}
+* { box-sizing: border-box; }
+html { background: var(--edge-top-background); -webkit-text-size-adjust: 100%; }
+body {
+  margin: 0; background: var(--edge-bottom-background); color: var(--body);
+  font: 16px/1.5 Inter, system-ui, -apple-system, sans-serif; -webkit-font-smoothing: antialiased; text-wrap: pretty;
+  padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
+}
+.edge-top::after, .edge-bottom::after { content: ""; position: fixed; left: 0; right: 0; pointer-events: none; z-index: 2147483647; }
+.edge-top::after { top: 0; height: max(12px, env(safe-area-inset-top)); background: var(--edge-top-background); }
+.edge-bottom::after { bottom: 0; height: max(12px, env(safe-area-inset-bottom)); background: var(--edge-bottom-background); }
+main { max-width: 640px; margin: 0 auto; padding: 32px 16px 56px; }
+a { color: var(--pink); }
+a:focus-visible, button:focus-visible { outline: 3px solid var(--focus); outline-offset: 3px; border-radius: 12px; }
+.back { display: inline-flex; align-items: center; min-height: 44px; font-weight: 600; text-decoration: none; margin-bottom: 8px; }
+h1 { font-family: "Bricolage Grotesque", Inter, sans-serif; font-weight: 800; color: var(--ink); letter-spacing: -.02em; font-size: 40px; line-height: 1.05; margin: 0 0 24px; }
+.dot { width: 12px; height: 12px; border-radius: 50%; flex-shrink: 0; background: var(--down); }
+[data-state="up"] .dot, [data-tone="up"] .dot { background: var(--up); }
+[data-state="slow"] .dot, [data-tone="slow"] .dot { background: var(--slow); }
+[data-state="down"] .dot, [data-tone="down"] .dot { background: var(--down); }
+[data-state="wait"] .dot, [data-tone="wait"] .dot { background: var(--line); animation: pulse 1.2s ease-in-out infinite; }
+@keyframes pulse { 50% { opacity: .4; } }
+.summary { display: flex; align-items: flex-start; gap: 14px; background: var(--card); border: 1px solid var(--line); border-radius: 20px; padding: 18px 20px; }
+.summary .dot { width: 16px; height: 16px; margin-top: 7px; }
+.summary[data-tone="up"] { background: var(--up-bg); border-color: transparent; }
+.summary[data-tone="slow"] { background: var(--slow-bg); border-color: transparent; }
+.summary[data-tone="down"] { background: var(--down-bg); border-color: transparent; }
+.summary-text { margin: 0; font-family: "Bricolage Grotesque", Inter, sans-serif; font-weight: 800; font-size: 24px; line-height: 1.2; color: var(--ink); letter-spacing: -.01em; }
+.summary-sub { margin: 4px 0 0; color: var(--body); }
+.summary-sub:empty { display: none; }
+.checks { list-style: none; margin: 16px 0 0; padding: 0; background: var(--card); border: 1px solid var(--line); border-radius: 20px; overflow: hidden; }
+.row { display: flex; align-items: flex-start; gap: 14px; padding: 16px 20px; }
+.row + .row { border-top: 1px solid var(--line); }
+.row .dot { margin-top: 6px; }
+.row-main { flex: 1; min-width: 0; }
+.row-name { font-weight: 600; color: var(--ink); }
+.row-what { font-size: 14px; color: var(--mute); }
+.row-detail { font-size: 14px; color: var(--body); margin-top: 4px; }
+.row-side { text-align: right; flex-shrink: 0; font-size: 14px; }
+.row-ms { font-weight: 600; color: var(--ink); font-variant-numeric: tabular-nums; }
+.row-when { color: var(--mute); font-size: 12px; white-space: nowrap; }
+.again {
+  display: flex; align-items: center; justify-content: center; width: 100%; height: 52px; margin-top: 20px; border: 0; border-radius: 999px;
+  background: var(--ink); color: var(--canvas); font: 800 17px/1 "Bricolage Grotesque", Inter, sans-serif; cursor: pointer;
+}
+.again:disabled { opacity: .5; cursor: default; }
+.note { color: var(--mute); font-size: 14px; margin: 20px 0 0; }
+.foot { margin: 32px 0 0; padding-top: 20px; border-top: 1px solid var(--line); color: var(--mute); font-size: 14px; }
+@media (min-width: 560px) { .again { max-width: 280px; } }
+@media (max-width: 380px) { .row { padding: 14px 16px; gap: 12px; } .summary { padding: 16px; } }
+@media (prefers-reduced-motion: reduce) { [data-state="wait"] .dot, [data-tone="wait"] .dot { animation: none; } }

@@ -2,6 +2,8 @@
 // the API key (env GOLFCOURSEAPI_KEY) stays on the server.
 //   GET /api/courses?q=pinehurst   -> GolfCourseAPI /v1/search
 //   GET /api/courses?id=7k2m9qb4   -> GolfCourseAPI /v1/courses/{id}
+//   GET /api/courses?health=1      -> 200 { ok, configured }, for the status page (public/status.html):
+//                                     never calls GolfCourseAPI, so it spends none of the quota
 // Without a key it answers 503 { error: 'not_configured' } and the app hides API results.
 // Every upstream call is counted in Supabase and Trevor is emailed as the day's quota runs low
 // (src/lib/course-quota.js); the count runs beside the upstream call and never slows or breaks it.
@@ -46,9 +48,10 @@ export default async function handler(req, res) {
     return send(res, 405, { error: 'method_not_allowed' });
   }
   const key = process.env.GOLFCOURSEAPI_KEY;
+  const url = new URL(req.url || '/', 'http://localhost');
+  if (url.searchParams.has('health')) return send(res, 200, { ok: true, configured: !!key });
   if (!key) return send(res, 503, { error: 'not_configured' });
 
-  const url = new URL(req.url || '/', 'http://localhost');
   const parsed = parseRequest(url.search);
   if (parsed.error) return send(res, parsed.status, { error: parsed.error });
 

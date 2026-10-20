@@ -21,8 +21,16 @@ const env = () => ({
 
 const empty = status => new Response(null, { status, headers: { 'Cache-Control': 'no-store' } });
 
+/** GET /api/push?health=1, for the status page (public/status.html): is the function up and set up. Sends nothing. */
+export function healthAnswer(cfg) {
+  return new Response(JSON.stringify({ ok: true, configured: !!cfg }), {
+    status: 200, headers: { 'Content-Type': 'application/json; charset=utf-8', 'Cache-Control': 'no-store' },
+  });
+}
+
 export default {
   async fetch(request) {
+    if (request.method === 'GET' && new URL(request.url).searchParams.has('health')) return healthAnswer(pushConfig(env()));
     if (request.method !== 'POST') return empty(405);
     const cfg = pushConfig(env());
     if (!cfg) return empty(204);

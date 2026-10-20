@@ -2,6 +2,8 @@
 # load the app, a rule page and the course search endpoint. When one is down the run fails and
 # GitHub emails the repo owner. The course check sends a bad id on purpose: the function answers
 # 400 without calling GolfCourseAPI, so it proves the server is up without using the daily quota.
+# For a person rather than a robot, the status page (https://birdie-bank.vercel.app/status,
+# public/status.html) checks the same things and more from their own phone, live.
 name: Uptime
 on:
   schedule:
@@ -25,4 +27,5 @@ jobs:
           check / 200
           check /rules 200
           check '/api/courses?id=bad' 400
+          check /status 200
           exit $fail
