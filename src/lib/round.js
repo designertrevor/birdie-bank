@@ -13,7 +13,7 @@ import {
 import { payFields } from './pay-fields.js';
 import { gamePct, halfStrokesOn, playsAtPct } from './allowances.js';
 import { betsMoney, betsOf, isCashBet } from './pair-bets.js';
-import { calcuttaEntries, calcuttaMoney } from './calcutta.js';
+import { calcuttaEntries, calcuttaMoney, liveSales, validSale } from './calcutta.js';
 
 /**
  * Every game the app can score. `teams` says how players are grouped in the setup step:
@@ -331,7 +331,7 @@ export function wholeRoundOnly(game, before, after) {
   // Stableford's points table is read once for the round (Modified always was, and Big birdies with it),
   // and Quota's "moves after the round" looks at the whole round, so neither can start partway
   if (game === 'stableford' && ((before?.table === 'chicago') !== (after?.table === 'chicago') || !!before?.modified !== !!after?.modified)) return true;
-  if (game === 'quota' && (before?.adjust || 'off') !== (after?.adjust || 'off')) return true;
+  if (game === 'quota' && ((before?.adjust || 'off') !== (after?.adjust || 'off') || (before?.cap || 0) !== (after?.cap || 0))) return true;
   if (game === 'stroke' || game === 'stableford' || game === 'quota') return before?.payout === 'pot' || after?.payout === 'pot';
   return false;
 }
@@ -1834,7 +1834,7 @@ export function nextQuotas(round) {
   const out = {};
   for (const t of totalsTable(round)) {
     if (!playsWholeRound(round, t.id) || t.played < round.holes.length) continue;
-    const next = quotaAdjusted(t.quota, t.vsQuotaExact, adjust);
+    const next = quotaAdjusted(t.quota, t.vsQuotaExact, adjust, round.settings.quota.cap || 0);
     if (next != null) out[t.id] = { quota: t.quota, next, over: t.vsQuota };
   }
   return out;
@@ -3060,6 +3060,19 @@ export function calcuttaEntriesOf(round) {
   // Someone added partway was never auctioned, so they're no entry (and can't be bought later)
   const players = main.players.filter(p => main.joined?.[p.id] == null);
   return calcuttaEntries({ players, teams: main.teams });
+}
+
+/**
+ * The Calcutta's sales that count in `round` for its side game entry `sg`: an entry still in the round
+ * and a buyer still in the Calcutta (see liveSales). For the bet line and for cleaning up a new round.
+ */
+export function calcuttaSalesOf(round, sg = sideGamesOf(round).find(x => x.game === 'calcutta')) {
+  if (!sg) return {};
+  // A setup draft has no players or holes yet: every sale with a whole-dollar bid
+  if (!Array.isArray(round?.players) || !Array.isArray(round?.holes)) return Object.fromEntries(Object.entries(sg.auction?.sales || {}).filter(([, x]) => validSale(x)));
+  const view = gameView(round, 'calcutta');
+  if (!view) return {};
+  return liveSales(sg.auction?.sales, calcuttaEntriesOf(view), view.players.map(p => p.id));
 }
 
 /**

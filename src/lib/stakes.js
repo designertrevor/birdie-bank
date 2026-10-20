@@ -1,6 +1,6 @@
 // What's on the line in a game: a one-line summary and a sanity check on its options.
 import { money } from './golf.js';
-import { POT_NAMES, TEAM_GAMES, betChanges, blindMultiplierOf, gameKeyLabel, sideGamesOf } from './round.js';
+import { POT_NAMES, TEAM_GAMES, betChanges, blindMultiplierOf, calcuttaSalesOf, gameKeyLabel, sideGamesOf } from './round.js';
 import { inUnits, pointsLines } from './play-for.js';
 import { houseRulesLine } from './house-rules.js';
 import { splitsLine, validSale } from './calcutta.js';
@@ -55,7 +55,8 @@ export function roundStakeLines(round, { since = true } = {}) {
 function moneyStakeLines(round, since = true) {
   const lines = [{ key: 'main', line: stakeSummary(round.game, round.settings, round.holes?.length ?? 18) }];
   for (const sg of sideGamesOf(round)) {
-    const line = sideBetLine(sg.game, sg.settings, sg);
+    // The Calcutta's pot counts only the sales still in the round (setup can outlive a change of players)
+    const line = sideBetLine(sg.game, sg.settings, sg.game === 'calcutta' ? { auction: { sales: calcuttaSalesOf(round, sg) } } : sg);
     const from = line && since ? betChanges(round, sg.game).at(-1) : null;
     if (line) lines.push({ key: sg.game, line: from ? `${line} from hole ${from.no}` : line });
   }

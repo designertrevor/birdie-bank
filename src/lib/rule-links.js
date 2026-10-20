@@ -55,8 +55,16 @@ export function playFromSearch(search) {
   try { raw = new URLSearchParams(search || '').get('play'); } catch { return null; }
   const key = ruleKeyOf(raw);
   if (!key) return null;
-  return GAMES[key] ? { game: key } : { side: key };
+  // A name that is a game with a house rule on ("rolling-quota") brings the rule with it
+  const rules = PRESETS[String(raw).trim().toLowerCase().replace(/[\s_]+/g, '-')];
+  return GAMES[key] ? { game: key, ...(rules ? { rules: structuredClone(rules) } : {}) } : { side: key };
 }
+
+/**
+ * Names that are a game played with a house rule on: Rolling quota is Quota with "Quota moves after the
+ * round" at half the difference (2026-10-20). Only rules switched on, so setup keeps the group's bets.
+ */
+const PRESETS = { 'rolling-quota': { quota: { adjust: 'half' } } };
 
 /** The game's name as the pages show it. */
 export const ruleName = key => GAMES[key]?.name || SIDE_GAMES[key]?.label || key;

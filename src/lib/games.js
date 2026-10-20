@@ -142,11 +142,19 @@ export function quotaPoints(gross, par, { minus = false, table = 'chicago' } = {
  * TXGA https://txga.org/first-round-of-womens-partnership-suspended/ ("adjusted 50-percent": 33 and
  * 40 points makes the next quota 36.5).
  */
-export function quotaAdjusted(quota, over, adjust = 'off') {
+export function quotaAdjusted(quota, over, adjust = 'off', cap = 0) {
   if (quota == null || over == null || !Number.isFinite(over)) return null;
   const d = Math.round(over * 1e6) / 1e6;
   if (adjust === 'one') return quota + Math.sign(d);
-  if (adjust === 'half') return quota + Math.sign(d) * Math.round(Math.abs(d) / 2);
+  // Rolling quota's cap (`cap`, 2026-10-20): the most one round can move it, 0 or unset for no limit, so
+  // one hot round doesn't saddle a player for weeks. Rounds saved before it have none. A league's own
+  // version: Golf Software's "Plus/Minus result" moves a quota by bands of points over or under
+  // (https://www.golfsoftware.com/help/lmw/QuotaSettings.html, checked 2026-10-20); a cap of 3 is the
+  // run's pick, flagged for Trevor
+  if (adjust === 'half') {
+    const move = Math.round(Math.abs(d) / 2);
+    return quota + Math.sign(d) * (cap > 0 ? Math.min(move, cap) : move);
+  }
   return null;
 }
 

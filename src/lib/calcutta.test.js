@@ -3,7 +3,7 @@
 // Every round plays a flat course of par 4s with handicaps off, so the finishes are easy to see.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { calcuttaEntries, calcuttaMoney, calcuttaSplits, placeLabel, splitsLine, validSale } from './calcutta.js';
+import { calcuttaEntries, calcuttaMoney, calcuttaSplits, calcuttaPlace, splitsLine, validSale } from './calcutta.js';
 import {
   addPlayerToRound, calcuttaTable, createRound, gameView, joinGames, leftRule, roundResults, sideGameChoices, sideGamesOf, wholeRoundOnly,
 } from './round.js';
@@ -56,9 +56,9 @@ test('the split by place: 70/30 from four sold, all to first under four, 60/30/1
   assert.deepEqual(calcuttaSplits(5, 'top3'), [60, 30, 10]);
   assert.equal(splitsLine(3), 'All to first');
   assert.equal(splitsLine(6, 'top3'), '60/30/10');
-  assert.equal(placeLabel(1), '1st');
-  assert.equal(placeLabel(2, true), 'T2');
-  assert.equal(placeLabel(13), '13th');
+  assert.equal(calcuttaPlace(1), '1st');
+  assert.equal(calcuttaPlace(2, true), 'T2');
+  assert.equal(calcuttaPlace(13), '13th');
 });
 
 test('a sale counts with a whole dollar bid from a buyer in the Calcutta', () => {
@@ -287,4 +287,10 @@ test('the rule pages: /rules/calcutta, and the names people type find it and Rol
   assert.equal(ruleKeyOf('Auction'), 'calcutta');
   assert.equal(ruleKeyOf('Rolling quota'), 'quota');
   assert.deepEqual(playFromSearch('?play=calcutta'), { side: 'calcutta' });
+});
+
+test('Rolling quota by name: ?play=rolling-quota opens Quota with the rule on', async () => {
+  const { playFromSearch } = await import('./rule-links.js');
+  assert.deepEqual(playFromSearch('?play=rolling-quota'), { game: 'quota', rules: { quota: { adjust: 'half' } } });
+  assert.deepEqual(playFromSearch('?play=quota'), { game: 'quota' });
 });

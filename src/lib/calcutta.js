@@ -25,7 +25,7 @@
 export const CALCUTTA_CHIPS = [5, 10, 20, 25, 50, 100];
 
 /** The most one bid can be, in whole dollars (or points): a guard against a slip on the keypad. */
-export const CALCUTTA_MAX_BID = 5000;
+export const CALCUTTA_MAX_BID = 999;
 
 const TEAM_NAMES = ['Team A', 'Team B', 'Team C', 'Team D'];
 const firstOf = n => String(n || '').trim().split(/\s+/)[0] || '?';
@@ -66,6 +66,15 @@ export function validSale(sale, buyers) {
   if (!sale || typeof sale !== 'object') return false;
   const bid = sale.bid;
   return Number.isInteger(bid) && bid >= 1 && bid <= CALCUTTA_MAX_BID && (!buyers || buyers.includes(sale.buyer));
+}
+
+/**
+ * The sales that still count for these `entries` and `buyers` (player ids): an auction run in setup can
+ * outlive a change of players or teams, and a sale for an entry or a buyer no longer there is dropped.
+ */
+export function liveSales(sales, entries, buyers) {
+  const ids = new Set(entries.map(e => e.id));
+  return Object.fromEntries(Object.entries(sales || {}).filter(([id, sale]) => ids.has(id) && validSale(sale, buyers)));
 }
 
 /** `cents` shared as evenly as whole cents allow among `n`, the spare cents to the first ones. */
@@ -166,7 +175,7 @@ export function splitsLine(count, payout = 'top2') {
 }
 
 /** "1st", "2nd", "3rd", "4th"; tied places read "T2". */
-export function placeLabel(place, tied = false) {
+export function calcuttaPlace(place, tied = false) {
   const n = place;
   const sfx = n % 100 >= 11 && n % 100 <= 13 ? 'th' : { 1: 'st', 2: 'nd', 3: 'rd' }[n % 10] || 'th';
   return tied ? `T${n}` : `${n}${sfx}`;

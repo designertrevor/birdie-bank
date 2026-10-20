@@ -43,7 +43,8 @@ export const DEFAULT_SETTINGS = {
   ...structuredClone(TEAM_DEFAULTS),
   stroke: { stake: 5, payout: 'pot', cap: false, nassau: false, gross: false }, // cap: net double bogey is the most a hole costs; gross: a low gross pot too
   stableford: { ...REV2_DEFAULTS.stableford, nassau: false, table: 'standard' }, // table 'chicago': the big birdies points
-  quota: { ...REV2_DEFAULTS.quota, nassau: false, minus: false, split: 'top', table: 'chicago', adjust: 'off', team: false },
+  // cap (Rolling quota, 2026-10-20): the most a quota moves after one round at half the difference, 0 for no limit
+  quota: { ...REV2_DEFAULTS.quota, nassau: false, minus: false, split: 'top', table: 'chicago', adjust: 'off', team: false, cap: 3 },
   nines: { point: 1, sweep: false, birdie: false }, // sweep: win a hole by 2 and take all nine; birdie: 7-1-1
   aces: { ace: 2, deuce: 1, carry: false },
   bbb: { value: 1, sweep: false, netBongo: false, bingoDrive: false }, // sweep: all three points on a hole count double; bingoDrive: bingo is the longest drive

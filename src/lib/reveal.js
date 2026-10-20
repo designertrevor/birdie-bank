@@ -94,7 +94,7 @@ function sideStep(key, g, name, players) {
   const amount = g.balances[best] || 0;
   const d = g.detail || {};
   if (amount <= 0) {
-    const text = { skins: 'No skins won', dots: 'No dots', birdies: 'No birdies, nobody pays', ctp: 'Nobody won a par 3, nobody pays', drive: 'No long drive won, nobody pays' }[key] || 'All square';
+    const text = { skins: 'No skins won', dots: 'No dots', birdies: 'No birdies, nobody pays', ctp: 'Nobody won a par 3, nobody pays', drive: 'No long drive won, nobody pays', calcutta: 'Nothing sold, nobody pays' }[key] || 'All square';
     return { key: `side-${key}`, label: g.label, text, tie: true };
   }
   let text = `${name(best)} comes out ahead`;
@@ -118,6 +118,13 @@ function sideStep(key, g, name, players) {
       const nos = d.pot.won[best].holes;
       text = key === 'ctp' ? `${name(best)} was closest on ${holesOf(nos)}` : `${name(best)} had the long drive on ${holesOf(nos)}`;
     }
+  }
+  // The Calcutta: who owned the winner, the way the table tells it ("Bo owned Ann, who won")
+  if (key === 'calcutta' && d.calcutta?.sold?.length) {
+    const top = d.calcutta.sold[0];
+    const won = d.calcutta.sold.filter(x => x.place === 1);
+    const owned = top.owners?.some(o => o.id === best);
+    if (won.length === 1 && owned) text = top.buyer === best && top.players.includes(best) ? (top.players.length > 1 ? `${name(best)} bought their own team, and it won` : `${name(best)} bought themselves and won`) : `${name(best)} owned ${top.name}, who won`;
   }
   return { key: `side-${key}`, label: g.label, text, amount };
 }

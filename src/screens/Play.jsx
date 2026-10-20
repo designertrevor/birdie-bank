@@ -12,7 +12,7 @@ import {
   betPresets, blindMultiplierOf, noHandicap, resizeRound, roundLegs, roundResults, scoredHolesDropped, scorers, skinsKinds, skinsTable, strokesFor, popsFor, wolfHoleSetup, changeBets, wholeRoundOnly,
   gameView, sideGamesOf, holeFixOf, gameKeys, gameKeyLabel, settingsAt, wolfCarryBefore, posOf, isTeamGame, matchScored, oneBall, teamCounting,
 } from '../lib/round.js';
-import { POT_GAMES, SIDE_GAMES, bankerPress, bankerPressAll, bankerPressAllNow, bettingRound, bettors, cardOnly, holeAtPos, isJustPlaying, potHoles, potMarksFor } from '../lib/round.js';
+import { POT_GAMES, SIDE_GAMES, bankerPress, bankerPressAll, bankerPressAllNow, bettingRound, bettors, calcuttaEntriesOf, calcuttaSalesOf, cardOnly, holeAtPos, isJustPlaying, potHoles, potMarksFor, roundStarted } from '../lib/round.js';
 import { JUST_PLAYING_TAG, addJustPlayingProblem, niceRound } from '../lib/just-playing.js';
 import { CourseTeeSheet, FixHoleSheet } from '../components/FixHole.jsx';
 import { HandicapsSheet } from '../components/HandicapsSheet.jsx';
@@ -670,6 +670,10 @@ function PlayRound({ round, mount, momentUp = false }) {
       {phase === 'scores' && (
         <div className="scroll">
           {!editable && sharedLive && <p className="field-help" style={{ padding: '0 20px' }}>{round.status === 'active' ? `Scores as ${holderName} saves them. Browse any hole.` : 'Only the players in this round can fix its scores.'}</p>}
+          {/* A Calcutta's auction is before the first tee: until two lots are sold, say where to run it */}
+          {editable && !solo && !roundStarted(round) && sideGamesOf(round).some(sg => sg.game === 'calcutta') && Object.keys(calcuttaSalesOf(round)).length < 2 && (
+            <p className="hint-card calcutta-due"><Icon name="gavel" fill /> The Calcutta’s auction is before the first tee. <button className="link-btn inline" onClick={() => setGamesSheet(true)}>Run the auction</button></p>
+          )}
           {betPrompt && <BetPromptCard prompt={betPrompt} onAdd={promptAdd} onLater={betPrompt.later ? promptLater : null} onSkip={promptSkip} onOff={promptOff} />}
           {!solo && <HoleBets round={round} hole={hole} editable={editable} me={me} />}
           {game === 'bbb' && editable && !solo && <BBBPicker round={main} hole={hole} marks={marks} setMarks={setMarksDirty} />}
@@ -1126,6 +1130,8 @@ function GamesSheet({ round, onClose }) {
   const bad = list.some(sg => optionsProblem(sg.game, { [sg.game]: sg.settings }));
   const changed = JSON.stringify(list) !== JSON.stringify(sideGamesOf(round));
   const played = round.holes.filter(h => holeComplete(round, h)).length;
+  // The Calcutta's lots and buyers, as the round would play them with the games being edited
+  const calView = list.some(sg => sg.game === 'calcutta') ? gameView({ ...round, sideGames: list }, 'calcutta') : null;
   const save = () => {
     const before = Object.fromEntries(sideGamesOf(round).map(sg => [sg.game, sg]));
     // A game whose bets changed here is played for them on every hole
@@ -1150,7 +1156,8 @@ function GamesSheet({ round, onClose }) {
     <Sheet open onClose={onClose} title="Side games" className="sc-sheet">
       <p className="sheet-text">Same course, same players, same scores. {played ? `A new game counts the ${played} hole${played === 1 ? '' : 's'} already scored too.` : 'Every game reads the one scorecard.'}</p>
       {played > 0 && sideGamesOf(round).length > 0 && <p className="field-help pad">Changes here cover the whole round. To change a bet from the next hole, use Bets.</p>}
-      <SideGamesSetup game={round.game} sideGames={list} setSideGames={edit} defaults={round.settings} players={round.players.length} playFor={round.playFor} holes={round.holes} holesCount={round.holes.length} />
+      <SideGamesSetup game={round.game} sideGames={list} setSideGames={edit} defaults={round.settings} players={round.players.length} playFor={round.playFor} holes={round.holes} holesCount={round.holes.length}
+        entries={calView ? calcuttaEntriesOf(calView) : []} buyers={calView ? calView.players.map(p => ({ id: p.id, name: p.name })) : []} started={roundStarted(round)} />
       {/* A pot added partway: its holes already played count once the winner is tapped */}
       {potCatchUpNotes(round, list).map(t => <p key={t} className="field-help pad">{t}</p>)}
       <div className="cta-wrap">
@@ -1169,7 +1176,8 @@ function GamesSheet({ round, onClose }) {
  */
 function BetsSheet({ round, onClose }) {
   const { showToast } = useUI();
-  const sides = sideGamesOf(round);
+  // The Calcutta's bets are its auction, kept under Side games, so it has no bet to change here
+  const sides = sideGamesOf(round).filter(sg => sg.game !== 'calcutta');
   const [pick, setPick] = useState('main');
   const gameKey = pick === 'main' || sides.some(sg => sg.game === pick) ? pick : 'main';
   const side = gameKey !== 'main';
@@ -1243,7 +1251,7 @@ function BetsSheet({ round, onClose }) {
         {sides.length > 0 && (
           <div className="block">
             <Segmented label="Which game" className="press-mode-row game-pick" btn="pm-btn" value={gameKey} onChange={setPick}
-              options={gameKeys(round).map(k => ({ value: k, label: gameKeyLabel(round, k) }))} />
+              options={gameKeys(round).filter(k => k !== 'calcutta').map(k => ({ value: k, label: gameKeyLabel(round, k) }))} />
             <p className="field-help">Each game’s bet changes on its own.</p>
           </div>
         )}

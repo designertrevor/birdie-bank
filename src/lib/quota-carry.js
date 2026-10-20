@@ -32,7 +32,9 @@ export function carriedQuotas(state, playerIds, holesCount) {
       // Their last round with the rule on decides it; one they didn't finish leaves their quota as it is
       if (next) {
         const n = r.holes?.length || 18;
-        out[pid] = { quota: n === holesCount ? next.next : Math.round(next.next * holesCount / n), from: next.quota, roundId: r.id };
+        const scale = v => (n === holesCount ? v : Math.round(v * holesCount / n));
+        // `last`: the quota they played to last time, at this round's length, so setup can say how far it moved
+        out[pid] = { quota: scale(next.next), from: next.quota, last: scale(next.quota), roundId: r.id };
       }
       break;
     }
@@ -40,9 +42,29 @@ export function carriedQuotas(state, playerIds, holesCount) {
   return out;
 }
 
-/** "Ann 26 · Bo 31": the carried quotas in a line, by first name. '' when none. */
-export function carriedLine(carried, nameOf) {
-  return Object.entries(carried || {}).map(([pid, c]) => `${String(nameOf(pid) || '').split(' ')[0]} ${c.quota}`).join(' · ');
+/** "up 2", "down 1", "same as": how far a carried quota moved from the one played to last time. */
+export function movedWords(c) {
+  const d = c?.last != null ? c.quota - c.last : 0;
+  return d > 0 ? `up ${d}` : d < 0 ? `down ${-d}` : 'the same as';
+}
+
+/**
+ * "Ann 26 (up 2) · Bo 31 (down 1)": the carried quotas in a line, by first name, each with how far it
+ * moved since last time. `skip` leaves one player out (yours, said on its own). '' when none.
+ */
+export function carriedLine(carried, nameOf, skip = null) {
+  return Object.entries(carried || {}).filter(([pid]) => pid !== skip).map(([pid, c]) => {
+    const w = movedWords(c);
+    return `${String(nameOf(pid) || '').split(' ')[0]} ${c.quota}${w === 'the same as' ? '' : ` (${w})`}`;
+  }).join(' · ');
+}
+
+/** "Your quota is 31, up 2 from last time." (or "the same as last time"), or '' when yours isn't carried. */
+export function myQuotaLine(carried, me) {
+  const c = me ? carried?.[me] : null;
+  if (!c) return '';
+  const w = movedWords(c);
+  return `Your quota is ${c.quota}, ${w === 'the same as' ? 'the same as' : `${w} from`} last time.`;
 }
 
 /**
