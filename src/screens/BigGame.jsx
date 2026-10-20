@@ -176,6 +176,7 @@ export default function BigGame({ id, view: firstView = null }) {
         {started && view === 'money' && <Money bs={bs} st={st} id={id} state={state} me={me} isMe={isMe} name={name} off={off} />}
 
         {!started && <Setup bs={bs} name={name} />}
+        <button className="text-link" onClick={() => nav.push('print', { kind: 'big', id })}><Icon name="printer" /> Print pairings, cart signs and results</button>
         {organizer && !started && <button className="text-link danger" onClick={del}><Icon name="trash" /> Delete the game</button>}
         {!organizer && <p className="field-help pad">{host ? `${host} set up the game. ` : ''}Only the organizer changes it.</p>}
       </div>

@@ -290,6 +290,8 @@ function TripPage({ id, view: firstView = null, add = false }) {
           </>
         )}
 
+        <button className="text-link" onClick={() => nav.push('print', { kind: 'trip', id })}><Icon name="printer" /> Print pairings, cart signs and results</button>
+
         <div className="trip-foot">
           <details className="how"><summary>How this trip works</summary><p>{TRIP_FORMATS[trip.format]?.name || TRIP_FORMATS.money.name}. Each round keeps its own games and bets. Someone who plays only some rounds is on the trip for those rounds.</p></details>
           {st.organizer && !del_.ok && <p className="field-help">{!st.paid.length && st.expenses.length ? 'The trip has expenses, so it stays. Once they’re deleted under Expenses, the trip can be too.' : 'Trip money has been paid, so the trip stays.'} You can still edit its name and dates.</p>}
