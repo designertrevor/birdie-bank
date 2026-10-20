@@ -56,11 +56,13 @@
 <link rel="apple-touch-icon" href="/apple-touch-icon.png">
 <title>Birdie Bank</title>
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
-<!-- The fonts and icons load without holding up the first paint (media="print" until they arrive), so the
-     splash below shows at once on a cold start instead of a blank screen while these come in -->
-<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,800&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" media="print" onload="this.media='all'">
-<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@phosphor-icons/web@2.1.1/src/bold/style.css" media="print" onload="this.media='all'">
-<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@phosphor-icons/web@2.1.1/src/fill/style.css" media="print" onload="this.media='all'">
+<!-- The fonts and icons load without holding up the first paint (media="print" until they arrive, then the
+     script below switches each one on), so the splash shows at once on a cold start instead of a blank
+     screen while these come in. No onload="" on the links: the content security policy (vercel.json)
+     allows this one script by its hash, and an inline handler would need an exception of its own -->
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,800&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" media="print" data-late>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@phosphor-icons/web@2.1.1/src/bold/style.css" media="print" data-late>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@phosphor-icons/web@2.1.1/src/fill/style.css" media="print" data-late>
 <noscript>
 <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,800&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@phosphor-icons/web@2.1.1/src/bold/style.css">
@@ -68,12 +70,19 @@
 </noscript>
 <script>
   // The theme you picked in Settings, before anything paints, so the splash (and the app) open in it.
-  // A plain text check on the saved state, no parsing, so it costs nothing on a big save
+  // A plain text check on the saved state, no parsing, so it costs nothing on a big save.
+  // Its hash is in vercel.json's content security policy: change a character here and
+  // src/lib/csp.test.js says which hash to put there instead
   try {
     var saved = localStorage.getItem('birdie-bank-v1') || '';
     var m = saved.match(/"theme":"(light|dark)"/);
     if (m) document.documentElement.dataset.theme = m[1];
   } catch (e) { /* storage blocked: follow the system */ }
+  // The late stylesheets above: on once they've loaded (already loaded, from the offline copy, counts too)
+  document.querySelectorAll('link[data-late]').forEach(function (l) {
+    var on = function () { l.media = 'all'; };
+    if (l.sheet) on(); else l.addEventListener('load', on);
+  });
 </script>
 <style>
   /* The splash: the ball on its tee and the name, drawn by the page itself so it's up on the first
