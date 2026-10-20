@@ -2,7 +2,8 @@
 // phone for that course, so the next plan there has it, and read from the course database when it
 // sends one) and pick a day to be reminded. From that day Up next shows "Book your tee time" with
 // the link, until they tap Booked: that puts the tee time on the plan, everyone with the link sees
-// it, and there's a text for the group. There's no push yet, so the card is the reminder.
+// it, and there's a text for the group. With notifications on, a push also comes at 8 that morning
+// in the organizer's own zone (api/push-tee.js, push-zones.js).
 // The app never books anything itself: it only links to the course's own page.
 // Pure functions of plain data, so they're easy to test.
 //

@@ -12,12 +12,18 @@
 // saved on your account in push_prefs (supabase/2026-10-08-push-prefs.sql, where the server leaves
 // them out for you) and on this phone, so the switches show with no signal. Until that SQL runs the
 // save to the account fails quietly and every push still goes.
+//
+// The subscription also carries this phone's time zone (push-zones.js), so the tee time reminder
+// comes in your own morning (supabase/2026-10-20-push-timezones.sql). It's saved again when the
+// zone changes (a trip, a move), checked each time the app comes back to the front. Until that SQL
+// runs the save goes without it.
 import { useSyncExternalStore } from 'react';
 import { getSupabase, supabaseConfigured } from './supabase.js';
 import { getState } from './store.js';
 import { afterNotNow, afterOff, afterOn, afterShown, pushSupport, settingsRow, shouldAsk } from './notify-ask.js';
 import { carriedPushes, carryPushes, cleanPushRequest, finishResults, paidPushes, pushSlot, rememberPush, talkPush } from './push-events.js';
 import { cleanMuted, mergePrefs } from './push-prefs.js';
+import { deviceZone } from './push-zones.js';
 
 const KEY = import.meta.env.VITE_VAPID_PUBLIC_KEY || '';
 /** Push is switched on for this build. */
@@ -27,6 +33,7 @@ export const pushConfigured = !!KEY && supabaseConfigured;
 export const ASK_PREVIEW = !!(import.meta.env.DEV && typeof location !== 'undefined' && /[?&]askPreview(?=[=&]|$)/.test(location.search));
 const PREFS = 'bb-notify';
 const PICKS = 'bb-notify-picks';
+const ZONE = 'bb-push-zone';
 
 // --------------------------- this phone -------------------------------------
 
@@ -85,14 +92,30 @@ async function subscription(make) {
   return reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: toKey(KEY) });
 }
 
-/** Save this phone's subscription on your account. False when it couldn't be (no table yet, offline). */
+// The zone this phone last saved with its subscription ("uid zone"), so a change of zone is noticed
+function savedZone() { try { return localStorage.getItem(ZONE) || ''; } catch { return ''; } }
+function keepZone(v) { try { if (v) localStorage.setItem(ZONE, v); else localStorage.removeItem(ZONE); } catch { /* storage blocked */ } }
+
+/** Save this phone's subscription, and its time zone, on your account. False when it couldn't be (no table yet, offline). */
 async function save(s) {
   const { db, user } = await session();
   if (!db || !user || !s) return false;
   const j = s.toJSON();
   if (!j?.endpoint || !j.keys?.p256dh || !j.keys?.auth) return false;
-  const { error } = await db.from('push_subscriptions').upsert({ user_id: user.id, endpoint: j.endpoint, p256dh: j.keys.p256dh, auth: j.keys.auth });
+  const row = { user_id: user.id, endpoint: j.endpoint, p256dh: j.keys.p256dh, auth: j.keys.auth };
+  const zone = deviceZone();
+  let { error } = await db.from('push_subscriptions').upsert(zone ? { ...row, time_zone: zone } : row);
+  // Before supabase/2026-10-20-push-timezones.sql runs there's no time_zone column: save without it
+  // (the next launch tries the zone again, so it lands once the SQL has run)
+  if (error && zone && /time_zone/.test(`${error.message || ''} ${error.details || ''}`)) ({ error } = await db.from('push_subscriptions').upsert(row));
+  if (!error) keepZone(zone ? `${user.id} ${zone}` : '');
   return !error;
+}
+
+/** Whether this phone's zone moved since its subscription was last saved (for whoever is signed in now). */
+function zoneMoved(uid) {
+  const zone = deviceZone();
+  return !!(zone && uid && savedZone() !== `${uid} ${zone}`);
 }
 
 /**
@@ -156,6 +179,7 @@ export async function forgetThisPhone() {
     if (s && db && user) await db.from('push_subscriptions').delete().eq('user_id', user.id).eq('endpoint', s.endpoint);
   } catch { /* signing out goes ahead either way */ }
   savePicks(null);
+  keepZone('');
   set({ subscribed: false, muted: [] });
 }
 
@@ -228,6 +252,10 @@ export function bootPush() {
     };
     c.onAccount(check);
     check();
+    // Back at the front after a flight: the reminders follow the phone to its new zone
+    document.addEventListener('visibilitychange', () => {
+      if (document.visibilityState === 'visible' && zoneMoved(uid)) refreshSubscription();
+    });
   }).catch(() => {});
 }
 
