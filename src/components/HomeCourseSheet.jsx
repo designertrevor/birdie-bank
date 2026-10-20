@@ -5,6 +5,7 @@ import { PickRow, Sheet } from './ui.jsx';
 import { useStore } from '../lib/store.js';
 import { coursePickerSections } from '../lib/courses.js';
 import { useCourseSearch } from '../lib/useCourseSearch.js';
+import { LIMITED_COPY } from '../lib/courseApi.js';
 
 function Body({ current, onPick }) {
   const state = useStore();
@@ -38,6 +39,7 @@ function Body({ current, onPick }) {
         {mine.map(local)}
         {needle && more.length > 0 && <div className="sec-label flush">More courses{api.loading ? ' · searching' : ''}</div>}
         {needle && more.map(r => row(`api:${r.apiId}`, r.name, r.city, { id: `api:${r.apiId}`, name: r.name, place: r.city || '' }))}
+        {needle && api.limited && <p className="hint-card">{LIMITED_COPY}</p>}
         {needle && !exact && q.trim().length >= 3 && row('typed', `Use “${q.trim()}”`, 'Not listed? Your profile shows it as you typed it', { id: null, name: q.trim() })}
         {rest.length > 0 && <div className="sec-label flush">All courses</div>}
         {rest.map(local)}

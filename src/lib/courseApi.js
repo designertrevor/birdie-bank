@@ -176,8 +176,24 @@ async function samples() {
 /** Whether a search could return anything; false once the server has said it isn't set up. */
 export function courseSearchAvailable() { return !off || samplesOn(); }
 
+/** What the picker says when the server is rate limiting course search. */
+export const LIMITED_COPY = 'Lots of course searches just now. Try again in a minute.';
+
+/** The seconds a 429 asks us to wait (its Retry-After), 60 when it doesn't say. */
+export function retryAfterOf(res) {
+  const n = Number.parseInt(res?.headers?.get?.('retry-after'), 10);
+  return Number.isInteger(n) && n > 0 ? n : 60;
+}
+
+/** Thrown by getCourse when /api/courses says too many requests; the picker says "Try again in a minute". */
+export class CourseLimitError extends Error {
+  constructor(retryAfter) { super('Too many course lookups just now'); this.name = 'CourseLimitError'; this.limited = true; this.retryAfter = retryAfter; }
+}
+
 async function getJson(url, signal) {
   const res = await fetch(url, { signal, headers: { Accept: 'application/json' } });
+  // Over the rate limit (src/lib/rate-limit.js): a short wait, never "not set up"
+  if (res.status === 429) return { res, json: null, limited: retryAfterOf(res) };
   // Vite's dev server answers unknown paths with index.html, which means "no API here"
   const json = (res.headers.get('content-type') || '').includes('application/json') ? await res.json().catch(() => null) : null;
   if (!json || (res.status === 503 && json.error === 'not_configured')) off = true;
@@ -185,8 +201,8 @@ async function getJson(url, signal) {
 }
 
 /**
- * Search the course database. Resolves { status: 'ok' | 'off' | 'error', results }.
- * Only an abort rejects, so callers can drop stale requests.
+ * Search the course database. Resolves { status: 'ok' | 'off' | 'error' | 'limited', results },
+ * with retryAfter (seconds) when it's 'limited'. Only an abort rejects, so callers can drop stale requests.
  */
 export async function searchCourses(query, { signal } = {}) {
   const q = cleanQuery(query);
@@ -201,7 +217,8 @@ export async function searchCourses(query, { signal } = {}) {
   const key = q.toLowerCase();
   if (searchCache.has(key)) return { status: 'ok', results: searchCache.get(key) };
   try {
-    const { res, json } = await getJson(`${ENDPOINT}?q=${encodeURIComponent(q)}`, signal);
+    const { res, json, limited } = await getJson(`${ENDPOINT}?q=${encodeURIComponent(q)}`, signal);
+    if (limited) return { status: 'limited', results: [], retryAfter: limited };
     if (off) return { status: 'off', results: [] };
     if (!res.ok) return { status: 'error', results: [] };
     const results = mapSearch(json);
@@ -213,7 +230,7 @@ export async function searchCourses(query, { signal } = {}) {
   }
 }
 
-/** Fetch one course's scorecard in the app's shape. Throws when it can't be used. */
+/** Fetch one course's scorecard in the app's shape. Throws when it can't be used (a CourseLimitError when it's the rate limit). */
 export async function getCourse(apiId) {
   const id = String(apiId || '').toLowerCase();
   if (!API_ID_RE.test(id)) throw new Error('Not a course id');
@@ -222,6 +239,7 @@ export async function getCourse(apiId) {
     json = (await samples()).SAMPLE_COURSES[id];
   } else {
     const r = await getJson(`${ENDPOINT}?id=${id}`);
+    if (r.limited) throw new CourseLimitError(r.limited);
     if (!r.res.ok) throw new Error(`Course lookup failed (${r.res.status})`);
     json = r.json;
   }

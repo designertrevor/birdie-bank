@@ -11,6 +11,14 @@
 // Off, answering 204 and sending nothing, until all three are set.
 //
 // One-tap reactions ("Great", "Just OK") don't email unless they come with words.
+//
+// Rate limited by emails sent, not by caller (src/lib/rate-limit.js). Without the secret header it
+// answers 401 before reading anything, so the URL alone is no use to anyone. But the feedback
+// table takes inserts from anyone with the app's public key, and each insert calls this, so a
+// flood of rows would be a flood of email (and Resend's free plan stops at 100 a day). Every call
+// comes from Supabase's webhook, so a per-IP limit means nothing here: it's one ceiling for
+// everyone, 20 emails an hour. Rows past it still land in the table; only the email is skipped.
+import { createLimiter, feedbackRules, tooManyResponse } from '../src/lib/rate-limit.js';
 
 const DASHBOARD = 'https://supabase.com/dashboard/project/yffribkjqvkncmypexfa';
 const LABELS = { bug: 'Something’s broken', feature: 'A feature', game: 'A new game', course: 'A course', reaction: 'After the round' };
@@ -47,6 +55,9 @@ export function feedbackEmail(row) {
   };
 }
 
+// One per instance, so its memory buckets last; it reads process.env on each request
+const limiter = createLimiter('feedback', feedbackRules(), { env: () => process.env });
+
 export default {
   async fetch(request) {
     const { RESEND_API_KEY: key, FEEDBACK_EMAIL: to, FEEDBACK_WEBHOOK_SECRET: secret, FEEDBACK_FROM: from } = process.env;
@@ -58,6 +69,8 @@ export default {
     const row = payload?.record;
     if (payload?.type !== 'INSERT' || !row) return empty(204);
     if (row.kind === 'reaction' && !Object.values(row.details || {}).some(v => typeof v === 'string' && v.trim() && v !== row.details?.reaction)) return empty(204);
+    const verdict = await limiter.check();
+    if (!verdict.allowed) return tooManyResponse(verdict.retryAfter);
     const mail = feedbackEmail(row);
     const res = await fetch('https://api.resend.com/emails', {
       method: 'POST',

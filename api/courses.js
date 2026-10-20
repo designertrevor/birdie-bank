@@ -5,8 +5,12 @@
 // Without a key it answers 503 { error: 'not_configured' } and the app hides API results.
 // Every upstream call is counted in Supabase and Trevor is emailed as the day's quota runs low
 // (src/lib/course-quota.js); the count runs beside the upstream call and never slows or breaks it.
+// Rate limited before any upstream call (src/lib/rate-limit.js): 30 a minute per IP, and an hourly
+// ceiling for everyone that keeps one bad hour from spending the day's quota. Over it answers 429
+// with Retry-After and one line of text, and the app shows "Try again in a minute".
 
 import { watchCourseQuota } from '../src/lib/course-quota.js';
+import { clientIp, courseRules, createLimiter, tooManyHeaders, tooManyText } from '../src/lib/rate-limit.js';
 
 const UPSTREAM = 'https://api.golfcourseapi.com/v1';
 const ID_RE = /^[0-9abcdefghjkmnpqrstvwxyz]{8}$/;
@@ -40,7 +44,23 @@ function send(res, status, body, cache = 'no-store') {
   res.end(JSON.stringify(body));
 }
 
-export default async function handler(req, res) {
+function tooMany(res, retryAfter) {
+  res.statusCode = 429;
+  for (const [k, v] of Object.entries(tooManyHeaders(retryAfter))) res.setHeader(k, v);
+  res.end(tooManyText(retryAfter));
+}
+
+// One per instance, so its memory buckets last; it reads process.env on each request
+const limiter = createLimiter('courses', () => courseRules(process.env), { env: () => process.env });
+
+/** The handler with its own limiter, for tests. */
+export function coursesHandler(limiter) {
+  return (req, res) => handle(req, res, limiter);
+}
+
+export default function handler(req, res) { return handle(req, res, limiter); }
+
+async function handle(req, res, limiter) {
   if (req.method !== 'GET') {
     res.setHeader('Allow', 'GET');
     return send(res, 405, { error: 'method_not_allowed' });
@@ -51,6 +71,10 @@ export default async function handler(req, res) {
   const url = new URL(req.url || '/', 'http://localhost');
   const parsed = parseRequest(url.search);
   if (parsed.error) return send(res, parsed.status, { error: parsed.error });
+
+  // Only requests that would reach GolfCourseAPI count; repeats the CDN answers never get here
+  const verdict = await limiter.check(clientIp(req.headers));
+  if (!verdict.allowed) return tooMany(res, verdict.retryAfter);
 
   let upstream;
   const call = fetch(UPSTREAM + parsed.path, {

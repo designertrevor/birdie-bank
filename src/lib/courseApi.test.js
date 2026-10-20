@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { apiCourseId, cityLabel, cleanQuery, courseName, courseSearchAvailable, getCourse, handicapsComplete, mapCourse, mapSearch, searchCourses } from './courseApi.js';
+import { LIMITED_COPY, apiCourseId, cityLabel, cleanQuery, courseName, courseSearchAvailable, getCourse, handicapsComplete, mapCourse, mapSearch, retryAfterOf, searchCourses } from './courseApi.js';
 import { courseTag, courseWarning, defaultTee, teeDotStyle } from './courses.js';
 import { SAMPLE_COURSES, SAMPLE_SEARCH } from '../data/courseApiSamples.js';
 import handler, { parseRequest } from '../../api/courses.js';
@@ -249,6 +249,24 @@ test('client: unusable scorecards and failures throw, search errors stay quiet',
   assert.equal(out.bad, 'Not a course id');
   assert.deepEqual(out.search, { status: 'error', results: [] });
   assert.equal(courseSearchAvailable(), true);
+});
+
+test('client: a 429 is a short wait, never "not set up", and is not cached', async () => {
+  const limited = () => () => new Response('Too many requests. Try again in a minute.\n', { status: 429, headers: { 'content-type': 'text/plain', 'retry-after': '42' } });
+  const { out, urls } = await withFetch(limited, async () => ({
+    a: await searchCourses('sand hollow'),
+    b: await searchCourses('sand hollow'),
+    card: await getCourse('7k2m9qb4').catch(e => e),
+  }));
+  assert.deepEqual(out.a, { status: 'limited', results: [], retryAfter: 42 });
+  assert.deepEqual(out.b, out.a);
+  assert.equal(urls.length, 3, 'a limited search is asked again next time');
+  assert.equal(out.card.name, 'CourseLimitError');
+  assert.equal(out.card.limited, true);
+  assert.equal(out.card.retryAfter, 42);
+  assert.equal(courseSearchAvailable(), true);
+  assert.equal(retryAfterOf({ headers: new Headers() }), 60);
+  assert.match(LIMITED_COPY, /Try again in a minute/);
 });
 
 test('client goes quiet for the session once the server has no key', async () => {

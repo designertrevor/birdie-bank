@@ -5,9 +5,23 @@
 // key (the same one the app ships with), naming its code in the header the app sends for it
 // (x-round-code, x-plan-code or x-challenge-code, see supabase/2026-10-06-round-codes.sql), and
 // swaps what it is into the page's preview tags. Anything goes wrong: the plain page.
+//
+// Rate limited at 60 a minute per IP (src/lib/rate-limit.js), and that is generous on purpose.
+// This endpoint is low risk, so please don't tighten it without a reason:
+//  • Only link-preview bots get here through middleware.js; people opening a link never do.
+//    Anyone can call /api/join directly, but it only reads with the public anon key, which anyone
+//    can already use against Supabase straight away, so it opens nothing new.
+//  • Guessing codes is hopeless: a round code is 6 random characters, about 887 million of them,
+//    and a wrong code shows the default card. At 60 a minute one IP would need about 28 years to
+//    try them all.
+//  • The CDN keeps each link's answer for 5 minutes, so a busy link costs one lookup.
+//  • WhatsApp's and Facebook's fetchers come from a handful of shared IPs for everyone's links,
+//    so a tight limit would break real previews first.
+// The limit is there to cap the cost of a flood of invocations, not to protect the codes.
 import { cleanCode } from '../src/lib/sync-model.js';
 import { challengePreview, draftPreview, injectMeta, joinPreview, planPreview } from '../src/lib/og.js';
 import { linkTarget, targetQuery, targetUrl } from '../src/lib/link-target.js';
+import { clientIp, createLimiter, joinRules, tooManyResponse } from '../src/lib/rate-limit.js';
 
 // Vercel only hands .env.production to the build, not to functions at runtime, so fall back to
 // the same public values the app ships with.
@@ -43,8 +57,13 @@ export async function previewFor(target, lookup = metaFor) {
   return null;
 }
 
+// One per instance, so its memory buckets last; it reads process.env on each request
+const limiter = createLimiter('join', joinRules(), { env: () => process.env });
+
 export default {
   async fetch(request) {
+    const verdict = await limiter.check(clientIp(request.headers));
+    if (!verdict.allowed) return tooManyResponse(verdict.retryAfter);
     const url = new URL(request.url);
     // Older middleware sent ?code= for a join link
     const old = cleanCode(url.searchParams.get('code'));

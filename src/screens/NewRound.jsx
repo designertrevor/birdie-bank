@@ -14,7 +14,7 @@ import { inviteeLine, savePerson, tripInvitees } from '../lib/trip-people.js';
 import { canonicalOf } from '../lib/pair-debts.js';
 import { playFromSearch } from '../lib/rule-links.js';
 import { allCourses, coursePar, coursePickerSections, courseTag, defaultTee as firstTee, isStarred, teeDotStyle, toggleStarred } from '../lib/courses.js';
-import { getCourse } from '../lib/courseApi.js';
+import { getCourse, LIMITED_COPY } from '../lib/courseApi.js';
 import { useCourseSearch } from '../lib/useCourseSearch.js';
 import { useNearbyCourses } from '../lib/useNearbyCourses.js';
 import { mergeNear, milesLabel } from '../lib/nearby.js';
@@ -744,8 +744,8 @@ export function CourseStep({ editor, openEditor, closeEditor, courseId, setCours
         s.favorites = [c.id, ...s.favorites.filter(f => f !== c.id)].slice(0, 6);
       });
       pick(c.id);
-    } catch {
-      showToast('Couldn’t load that scorecard. You can add it yourself.');
+    } catch (e) {
+      showToast(e?.limited ? LIMITED_COPY : 'Couldn’t load that scorecard. You can add it yourself.');
     } finally {
       setLoadingId(null);
     }
@@ -807,7 +807,9 @@ export function CourseStep({ editor, openEditor, closeEditor, courseId, setCours
         {recent.length > 0 && <><div className="sec-label">{recentLabel}</div><div style={{ padding: '0 16px' }}>{recent.map(row)}</div></>}
         {rest.length > 0 && <><div className="sec-label">{needle ? `${rest.length} result${rest.length === 1 ? '' : 's'}` : 'All courses'}</div><div style={{ padding: '0 16px' }}>{rest.map(row)}</div></>}
         {needle && more.length > 0 && <><div className="sec-label">More courses{api.loading ? ' · searching' : ''}</div><div style={{ padding: '0 16px' }}>{more.map(apiRow)}</div></>}
-        {matches.length === 0 && more.length === 0 && !api.loading && <RequestCourse query={q} onAddYourself={openEditor} />}
+        {/* Over the course search rate limit (src/lib/rate-limit.js): a calm wait, not "no such course" */}
+        {needle && api.limited && <p className="hint-card"><Icon name="info" fill /> {LIMITED_COPY}</p>}
+        {matches.length === 0 && more.length === 0 && !api.loading && !api.limited && <RequestCourse query={q} onAddYourself={openEditor} />}
         <button className="add-row" aria-label="Add a course" onClick={() => openEditor({})}><span className="add-ci" aria-hidden="true"><Icon name="plus" /></span><span className="add-lbl">Add a course</span></button>
       </div>
       <div className="cta-wrap">
