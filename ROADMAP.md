@@ -294,6 +294,7 @@ Put more money into the winning creators and copy their video formats with other
 - [x] `S3` Trip expenses on the same Tab as the bets: gas, dinner, the house, split any way, and one settle-up for everything at the end. Trip organizers juggle Squabbit, Splitwise and Venmo today (from the Reddit research, 2026-09-30) Built 2026-10-04 (overnight 7, shipped 2026-10-04).
 - [ ] `S3` Split Pro on the Tab: when an organizer buys Pro, offer to split its cost across the group ("$12.50 each for your foursome"). The purchase stays the organizer's own Built on `overnight13/next` (2026-10-11), waiting for review: behind the paywall flag, after picking a plan the organizer gets "Split it with your group?" (who's in, You in or out, exact cents with the odd cent on the organizer first), the shares go on the Tab as money owed to the organizer with Undo, money-checked with 14 simulations; friends see their share only on the organizer's phones for now (a server table is the follow-up).
 - [ ] `S5` The Bank collects for you (Pro idea): friendly automatic nudges for what's still owed, so nobody has to be the one asking for $20
+- [ ] `S2` During a trip, the Tab follows the trip's settle plan, so the Tab and Settle the trip name the same person to pay (QA on two phones, 2026-10-11: Mike's Tab said pay Trev $12 while Settle the trip said pay Dalton $12; both add up). Trevor's pick in the Overnight 13 review (2026-10-25): fix it in the next run
 
 ### 8. History and stats
 - [x] Round history, season stats, head-to-head

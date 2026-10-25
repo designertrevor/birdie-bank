@@ -4,6 +4,8 @@ Roadmap area 22: "take the median views of their last 10 to 15 videos, leaving o
 
 ## Summary
 
+**Decided by Trevor (2026-10-25):** drop Bad Golf, Mully Golf, Mia Baker Golf, Andy Castell Golf, Skins Golf TV and Adequate Golf from the list. Keep the fee-by-views rule and the 3x outlier rule. Their codes stay in `src/lib/creator-codes.js` in case one starts posting again.
+
 This time the real pages opened. YouTube channel pages gave real per-video view counts for 25 channels, so every YouTube median below is measured, not a tracker average. TikTok profiles showed follower counts but not the video grid (TikTok blocked it after one load), and Instagram was not tried, since it needs a login. At the roadmap's $300 to $500 flat fee, **the best-value 10 that look realistic at that price** are: Nick Voke ($3.83 per 1,000 views, thin sample), The DOD King, Carter Vynckier ($5.26), Short Game King ($5.75), Chance Taylor ($6.94), Cheeky Golf Club ($7.14), The Golf Mates Club ($8.16), Not A Scratch Golfer ($8.70), Sabrina Andolpho ($10.00), Josh Kelley ($11.11) and James Nicholas ($22.22, YouTube only; his TikTok has 398.5K followers). Three names are cheaper per view on paper but will not take $500: Ian Poulter ($1.76), Ryan Ruffels ($2.75) and Gabby Golf Girl ($4.78). Treat them as stretch deals with a real quote. Five names from the O10 list have stopped posting and should come off it: Bad Golf (last video 3 years ago), Mully Golf (last TikTok February 2022), Mia Baker Golf and Andy Castell Golf (no long video for a year), plus Skins Golf TV and Adequate Golf (under 2K subscribers and inactive). One surprise: The Golf Mates Club is a "best of" channel run by Golf Mates (251K), so that deal goes through the Golf Mates team.
 
 ## Method
