@@ -14,7 +14,7 @@ import { matchLabel } from '../lib/games.js';
 import { money } from '../lib/golf.js';
 import { canEdit, keeperMe } from '../lib/keeper.js';
 import { useNav } from '../lib/nav.js';
-import { leaveRound } from '../lib/rounds.js';
+import { KEEP_DAYS, restoreRound, softDeleteRound } from '../lib/recently-deleted.js';
 import { bigGroupName, gameLabel, meFor, placeLabel, roundDate, roundPlayerName } from '../lib/format.js';
 import { bigRoundResults } from '../lib/big-money.js';
 import { gamesLine } from '../lib/side-games.js';
@@ -52,7 +52,7 @@ const STAGE_ORDER = ['reveal', 'settle', 'share', 'detail'];
 
 export default function RoundDetail({ id, celebrate }) {
   const nav = useNav();
-  const { ask } = useUI();
+  const { ask, showToast } = useUI();
   const state = useStore();
   const round = state.rounds[id];
   const hero = useRef();
@@ -86,7 +86,7 @@ export default function RoundDetail({ id, celebrate }) {
   const [view, setView] = useState('card');
 
   if (!round) {
-    return <Screen><Header title="Round" onBack={nav.pop} /><Empty title="Round not found" text="It may have been deleted. Finished rounds are in History." action={<button className="ec" onClick={nav.pop}>Go back</button>} /></Screen>;
+    return <Screen><Header title="Round" onBack={nav.pop} /><Empty title="Round not found" text="It may have been deleted. Deleted rounds wait in Settings, Recently deleted, for 30 days." action={<button className="ec" onClick={nav.pop}>Go back</button>} /></Screen>;
   }
   const own = roundResults(round);
   // The games' own round, without anyone just playing (round.js bettingRound), for the breakdowns
@@ -115,15 +115,13 @@ export default function RoundDetail({ id, celebrate }) {
   const talk = round.status === 'done' ? roundTalk(round, state) : null;
   const payTitle = t => `${roundPlayerName(round, t.from).split(' ')[0]} pays ${roundPlayerName(round, t.to).split(' ')[0]}`;
 
+  // A deleted round waits in Settings, Recently deleted, for 30 days (recently-deleted.js), and the
+  // toast puts it straight back
   const del = async () => {
-    if (!(await ask({ title: 'Delete this round?', text: 'It’ll be removed from History and the Tab.', confirmLabel: 'Delete round', danger: true }))) return;
-    update(s => {
-      delete s.rounds[id];
-      if (s.talk) delete s.talk[`round:${id}`];
-      leaveRound(s, id);
-      s.settlements = s.settlements.filter(x => x.roundId !== id);
-    });
+    if (!(await ask({ title: 'Delete this round?', text: `It leaves History and the Tab. You can bring it back from Settings, Recently deleted, for ${KEEP_DAYS} days.`, confirmLabel: 'Delete round', danger: true }))) return;
     nav.reset('history');
+    update(s => { softDeleteRound(s, id); });
+    showToast('Round deleted', { label: 'Undo', run: () => update(s => { restoreRound(s, id); }) });
   };
   // Fixing scores keeps the round finished, so it keeps counting on the tab while you edit.
   // Any other round in progress is left alone.
@@ -175,7 +173,7 @@ export default function RoundDetail({ id, celebrate }) {
         {stage === 'share' && (shareFrom === 'detail'
           ? <ShareCard round={round} res={res} onBack={() => setStage('detail')} onDone={() => setStage('detail')} doneLabel="Done" />
           : <ShareCard round={round} res={res} onBack={() => setStage(ownSettle ? 'settle' : 'reveal')} onDone={done} />)}
-        {signingIn && <SignInSheet open onClose={() => setSigningIn(false)} />}
+        {signingIn && <SignInSheet open source="save_tab" onClose={() => setSigningIn(false)} />}
       </Screen>
       </Stage>
     );
@@ -349,7 +347,7 @@ export default function RoundDetail({ id, celebrate }) {
           <button className="full-btn outline" onClick={done}>Done</button>
         </div>
       )}
-      {signingIn && <SignInSheet open onClose={() => setSigningIn(false)} />}
+      {signingIn && <SignInSheet open source="save_tab" onClose={() => setSigningIn(false)} />}
     </Screen>
     </Stage>
   );

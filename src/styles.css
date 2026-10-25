@@ -236,6 +236,12 @@ a.set-row { text-decoration: none; }
   transition: transform .25s var(--spring), background .2s, box-shadow .2s;
 }
 .game-row.selected { background: var(--pick-tint); box-shadow: inset 0 0 0 2px var(--pink-fill); }
+/* On the pink tint the Rules pill is a see-through layer of ink with a pink edge, like the chips on a
+   picked player, so it doesn't read as a dark hole in dark mode (Trevor 2026-10-14) */
+.game-row.selected .rules-chip {
+  background: color-mix(in srgb, var(--ink) 7%, transparent);
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--pink-fill) 40%, transparent);
+}
 .game-row.locked { background: var(--surface); cursor: default; }
 .game-row.locked .gn, .game-row.locked .gs { opacity: .55; }
 .game-row:active:not(.locked) { transform: scale(.97); }
@@ -742,7 +748,7 @@ button:disabled { cursor: not-allowed; }
 .player-pick { flex-direction: column; align-items: stretch; padding: 0; overflow: hidden; }
 .player-pick:active { transform: none; }
 .pick-main { display: flex; align-items: center; width: 100%; background: none; border: none; padding: 14px 16px; text-align: left; cursor: pointer; }
-.pick-extra { padding: 0 16px 14px; display: flex; flex-direction: column; gap: 10px; align-items: flex-start; }
+.pick-extra { padding: 0 16px 14px; display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
 .hc-row > .row-main { padding: 14px 16px 10px; }
 
 /* Setup picks get a light pink tint and a pink ring when chosen, like the game rows */
@@ -981,7 +987,8 @@ button:disabled { cursor: not-allowed; }
 /* Hole picker sheet */
 .hole-pick-btn { width: 100%; border: none; background: var(--surface); border-radius: 14px; padding: 14px; font: inherit; font-size: 16px; font-weight: 600; color: var(--ink); display: flex; align-items: center; justify-content: space-between; cursor: pointer; }
 .hole-pick-btn i { color: var(--mute); }
-.hole-grid-pick { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; padding: 8px 16px 16px; }
+/* Down the left column, then the right: 1 to 9, then 10 to 18 (rows set inline from the count) */
+.hole-grid-pick { display: grid; grid-template-columns: 1fr 1fr; grid-auto-flow: column; gap: 8px; padding: 8px 16px 16px; }
 .hole-opt { border: none; background: var(--surface); border-radius: 14px; padding: 12px 14px; font: inherit; color: var(--ink); text-align: left; display: flex; align-items: baseline; gap: 8px; cursor: pointer; transition: transform .2s var(--spring); }
 .hole-opt:active { transform: scale(.96); }
 .hole-opt strong { font-family: var(--display); font-size: 18px; font-weight: 800; }
@@ -1113,6 +1120,7 @@ button:disabled { cursor: not-allowed; }
 .sc-big { font-size: 44px; font-weight: 800; letter-spacing: -.03em; line-height: 1; margin-top: 16px; flex: 1; }
 .sc-list { display: flex; flex-direction: column; }
 .sc-line { display: flex; justify-content: space-between; padding: 7px 0; border-top: 1px solid rgba(255,255,255,.15); font-weight: 600; font-variant-numeric: tabular-nums; }
+.sc-line .sc-score { font-weight: 500; opacity: .65; font-size: .9em; }
 
 /* Quiet links to "Suggest something" from inside the main flows */
 .quiet-row { display: flex; align-items: center; gap: 8px; width: calc(100% - 32px); margin: 6px 16px 4px; padding: 12px 4px; background: none; border: none; color: var(--mute); font-size: 14px; text-align: left; cursor: pointer; }
@@ -3293,11 +3301,6 @@ a.header-btn.rm-open { text-decoration: none; }
   display: inline-block; margin-left: 6px; padding: 1px 8px; border-radius: 999px; vertical-align: 1px;
   background: var(--surface); color: var(--body); font-size: 11px; font-weight: 700; letter-spacing: .02em; white-space: nowrap;
 }
-.pick-extra .jp-chip { min-height: 36px; gap: 6px; font-size: 13px; }
-/* Off, it sits on the player's card like the tee and handicap chips (a card-colored pill would vanish into it) */
-.pick-extra .jp-chip:not(.on) { background: var(--surface); color: var(--body); }
-.pick-extra .jp-chip i { font-size: 15px; }
-.pick-extra .jp-chip:not(.on) i { color: var(--icon); }
 .jp-step-help { margin: -2px 0 12px; }
 .jp-setup-note { margin-top: 4px; margin-bottom: 16px; }
 .mb-jp { padding: 6px 8px 2px; font-size: 11px; font-weight: 600; color: var(--mute); text-align: center; overflow-wrap: anywhere; }
@@ -4087,3 +4090,33 @@ a.header-btn.rm-open { text-decoration: none; }
 .split-row { display: flex; align-items: center; gap: 12px; padding: 14px 16px; margin: 0 16px 8px; }
 .split-row .row-main { flex: 1; min-width: 0; }
 .split-row .pill-btn { flex-shrink: 0; }
+
+/* The tee as one chip that opens the tee sheet (New round, Players) */
+.tee-select .tee-dot { margin-right: 0; }
+.tee-sheet { display: flex; flex-direction: column; gap: 8px; padding: 8px 16px 16px; }
+.tee-sheet .list-item { width: 100%; margin: 0; border: none; font: inherit; text-align: left; gap: 12px; }
+.tee-sheet .tee-dot { width: 22px; height: 22px; margin: 0; flex-shrink: 0; border-radius: 50%; box-shadow: 0 0 0 1.5px color-mix(in srgb, var(--ink) 45%, transparent); }
+
+/* Chips on a picked player sit on the pink tint, so they're a see-through layer of ink with a pink
+   edge rather than the page's surface colour, which read as dark holes in dark mode (Trevor 2026-10-14) */
+.player-pick.on .pick-extra .hc-chip:not(.missing) {
+  background: color-mix(in srgb, var(--ink) 7%, transparent);
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--pink-fill) 40%, transparent);
+  color: var(--ink);
+}
+.player-pick.on .pick-extra .hc-chip:not(.missing) i { color: color-mix(in srgb, var(--ink) 70%, transparent); }
+/* A picked player's ⋯ menu button, in the bottom right corner of the card */
+.pick-extra .player-more { margin-left: auto; background: transparent; color: var(--body); }
+.pm-row { margin-top: 8px; }
+/* Who has no handicap, said at the top of the players so it's seen before Next */
+.nohc-top { margin-top: 0; margin-bottom: 12px; }
+.pm-group { margin-bottom: 16px; }
+/* A ring of ink, so black tees show in dark mode and white tees in light */
+.tee-select .tee-dot { box-shadow: 0 0 0 1.5px color-mix(in srgb, var(--ink) 45%, transparent); }
+
+/* Add it to your Home Screen (InstallUpNext.jsx): the steps as a short numbered list with icons */
+.install-steps { list-style: none; margin: 12px 0 2px; padding: 0; display: grid; gap: 8px; counter-reset: is; }
+.install-steps li { display: flex; align-items: center; gap: 10px; font-size: 14px; color: var(--body); line-height: 1.35; }
+.install-steps li::before { counter-increment: is; content: counter(is); width: 22px; height: 22px; flex-shrink: 0; border-radius: 50%; background: var(--surface); color: var(--ink); font-size: 12px; font-weight: 800; display: grid; place-items: center; }
+.is-ic { width: 30px; height: 30px; flex-shrink: 0; border-radius: 9px; background: var(--surface); color: var(--icon); display: grid; place-items: center; font-size: 17px; }
+.install-steps .link-btn { font-size: inherit; padding: 0; min-height: 0; }

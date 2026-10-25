@@ -286,7 +286,7 @@ function TalkSheet({ item, web, serverOn, onClose }) {
         ))}
         {web && <p className="field-help">Open the app to vote and comment.</p>}
       </div>
-      {signingIn && <SignInSheet open onClose={() => setSigningIn(false)} title="Sign in to comment" text="Sign in once and your votes count for everyone, and you can join the conversation on any idea." />}
+      {signingIn && <SignInSheet open source="roadmap" onClose={() => setSigningIn(false)} title="Sign in to comment" text="Sign in once and your votes count for everyone, and you can join the conversation on any idea." />}
     </Sheet>
   );
 }

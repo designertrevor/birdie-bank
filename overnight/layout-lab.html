@@ -1,0 +1,855 @@
+<title>Birdie Bank Layout Lab</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700;12..96,800&family=Inter:wght@400;500;600;700&display=swap">
+<style>
+/* Layout: sticky progress bar, screen list on the left, the chosen phone and its notes on the right; "Compare all" lays the four options side by side. */
+:root{
+  --bg:#fffaf0; --surface:#f5f0e0; --card:#ffffff; --ink:#0a0a0a; --body:#3a3a3a; --mute:#6a6a6a; --line:#e4dccb;
+  --pink:#d42a6b; --pink-soft:#ffe1ec; --teal:#1a3a3a; --ok:#2f6b5a;
+  /* wireframe paper: the phones stay on paper in both themes, like printed sheets */
+  --w-paper:#fcfbf8; --w-ink:#1c1c1c; --w-line:#cfcac0; --w-fill:#ebe7df; --w-mute:#7a766e; --w-acc:#ff4d8b;
+  --display:"Bricolage Grotesque",ui-sans-serif,system-ui,sans-serif;
+  --text:"Inter",ui-sans-serif,system-ui,-apple-system,sans-serif;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --bg:#121615; --surface:#1a1f1e; --card:#1f2524; --ink:#f3efe6; --body:#cfcac0; --mute:#9a958c; --line:#2d3533;
+  --pink:#ff6b9d; --pink-soft:#3a1d29; --teal:#a4d4c5; --ok:#8fd0b8; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#121615; --surface:#1a1f1e; --card:#1f2524; --ink:#f3efe6; --body:#cfcac0; --mute:#9a958c; --line:#2d3533;
+  --pink:#ff6b9d; --pink-soft:#3a1d29; --teal:#a4d4c5; --ok:#8fd0b8; color-scheme:dark}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--body);font:14px/1.5 var(--text);padding-inline:16px;padding-block:0 48px}
+button{font:inherit;color:inherit;cursor:pointer}
+button:focus-visible,textarea:focus-visible{outline:2px solid var(--pink);outline-offset:2px}
+h1,h2,h3{font-family:var(--display);color:var(--ink);text-wrap:balance;margin:0}
+
+/* sticky bar */
+.top{position:sticky;top:env(safe-area-inset-top,0px);z-index:5;background:var(--bg);margin-inline:-16px;padding:10px 16px;border-bottom:1px solid var(--line);display:flex;align-items:center;gap:14px}
+.top .brand{font-family:var(--display);font-weight:800;color:var(--ink);font-size:16px;white-space:nowrap}
+.prog{flex:1;display:flex;align-items:center;gap:10px;min-width:0}
+.prog-track{flex:1;height:8px;border-radius:99px;background:var(--surface);overflow:hidden;max-width:320px}
+.prog-fill{height:100%;background:var(--pink);border-radius:99px;transition:width .35s ease}
+.prog-txt{font-size:12.5px;color:var(--mute);white-space:nowrap;font-variant-numeric:tabular-nums}
+.btn-sm{border:1px solid var(--ink);background:var(--ink);color:var(--bg);border-radius:99px;padding:6px 14px;font-weight:600;font-size:13px;white-space:nowrap}
+.saved{font-size:12px;color:var(--ok);white-space:nowrap}
+
+.intro{max-width:1240px;margin:28px auto 18px;display:grid;gap:6px}
+.intro h1{font-size:clamp(28px,4vw,40px);font-weight:800;letter-spacing:-.01em}
+.intro p{margin:0;max-width:68ch}
+
+.wrap{max-width:1240px;margin:0 auto;display:grid;grid-template-columns:230px minmax(0,1fr);gap:28px;align-items:start}
+.side{position:sticky;top:64px;display:grid;gap:16px}
+.grp-lbl{font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--mute);font-weight:600;margin-bottom:4px}
+.scr-btn{display:flex;align-items:center;gap:10px;width:100%;text-align:left;background:none;border:0;border-radius:10px;padding:7px 10px;color:var(--body)}
+.scr-btn:hover{background:var(--surface)}
+.scr-btn.on{background:var(--ink);color:var(--bg)}
+.scr-btn .n{font-variant-numeric:tabular-nums;font-size:12px;opacity:.6;width:16px}
+.scr-btn .nm{flex:1;font-weight:500}
+.scr-btn .pk{font-size:11px;font-weight:700;border-radius:99px;padding:1px 7px;background:var(--pink);color:#fff}
+
+.main{min-width:0;display:grid;gap:18px}
+.s-head{display:grid;gap:6px}
+.s-eyebrow{font-size:11.5px;letter-spacing:.08em;text-transform:uppercase;color:var(--pink);font-weight:700}
+.s-head h2{font-size:30px;font-weight:800}
+.s-why{max-width:70ch;margin:0}
+.use{display:inline-flex;gap:6px;align-items:center;font-size:12.5px;color:var(--mute)}
+.use b{color:var(--ink);font-weight:600}
+
+.optbar{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.opt{border:1px solid var(--line);background:var(--card);border-radius:99px;padding:7px 14px;font-weight:600;font-size:13px;display:flex;gap:6px;align-items:center}
+.opt.on{border-color:var(--ink);background:var(--ink);color:var(--bg)}
+.opt .star{color:var(--pink)}
+.opt.on .star{color:var(--pink)}
+.spacer{flex:1}
+.toggle{border:1px solid var(--line);background:none;border-radius:99px;padding:7px 14px;font-size:13px;font-weight:600}
+.toggle.on{background:var(--surface);border-color:var(--ink)}
+
+.single{display:grid;grid-template-columns:auto minmax(0,1fr);gap:32px;align-items:start}
+.stage{display:flex;align-items:center;gap:10px}
+.arrow{width:38px;height:38px;border-radius:50%;border:1px solid var(--line);background:var(--card);font-size:18px;display:grid;place-items:center;flex:none}
+.notes{display:grid;gap:14px;max-width:440px;padding-top:6px}
+.notes h3{font-size:24px;font-weight:700}
+.notes .idea{font-size:15.5px;color:var(--ink);margin:0}
+.tag{display:inline-block;font-size:11px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;padding:3px 9px;border-radius:99px;background:var(--pink-soft);color:var(--pink)}
+.tag.mob{background:var(--surface);color:var(--teal);border:1px solid var(--line)}
+.tag.today{background:var(--surface);color:var(--mute)}
+.pc{display:grid;gap:4px}
+.pc .k{font-size:11px;letter-spacing:.08em;text-transform:uppercase;font-weight:700;color:var(--mute)}
+.pc p{margin:0}
+.fav{display:inline-flex;align-items:center;gap:8px;border:1.5px solid var(--pink);color:var(--pink);background:none;border-radius:99px;padding:9px 18px;font-weight:700;width:max-content}
+.fav.on{background:var(--pink);color:#fff}
+.note-box{display:grid;gap:6px}
+.note-box label{font-size:12.5px;font-weight:600;color:var(--ink)}
+.note-box textarea{width:100%;min-height:74px;border-radius:12px;border:1px solid var(--line);background:var(--card);color:var(--ink);padding:10px 12px;font:inherit;resize:vertical}
+.hint{font-size:12px;color:var(--mute)}
+
+.compare{display:grid;grid-template-columns:repeat(auto-fill,minmax(236px,1fr));gap:22px}
+.cmp{display:grid;gap:8px;justify-items:start}
+.cmp-h{display:flex;gap:8px;align-items:baseline;width:100%}
+.cmp-h b{font-family:var(--display);color:var(--ink);font-size:16px}
+.cmp-h span{font-size:12px;color:var(--mute)}
+.mini{width:225px;height:487px;cursor:zoom-in}
+.mini .ph{transform:scale(.75);transform-origin:top left}
+.refs{border-top:1px solid var(--line);padding-top:14px;display:grid;gap:6px}
+.refs .k{font-size:11px;letter-spacing:.08em;text-transform:uppercase;font-weight:700;color:var(--mute)}
+.refs ul{margin:0;padding:0;list-style:none;display:grid;gap:5px}
+.refs a{color:var(--ink);font-weight:600;text-decoration:underline;text-decoration-color:var(--pink);text-underline-offset:3px}
+.refs li span{color:var(--mute)}
+.shots{display:flex;gap:16px;flex-wrap:wrap;justify-content:center}
+.shotfig{margin:0}
+.ph.shot{height:auto;display:block;border-color:var(--line);background:var(--surface)}
+.ph.shot img{display:block;width:100%;height:auto}
+.fav-sm{border:1px solid var(--pink);color:var(--pink);background:none;border-radius:99px;padding:4px 12px;font-size:12.5px;font-weight:700}
+.fav-sm.on{background:var(--pink);color:#fff}
+
+.finish{max-width:1240px;margin:40px auto 0;border:1px solid var(--line);background:var(--card);border-radius:20px;padding:22px;display:flex;gap:18px;align-items:center;flex-wrap:wrap}
+.finish h3{font-size:20px}
+.finish p{margin:2px 0 0}
+.finish .btn-lg{margin-left:auto;background:var(--pink);color:#fff;border:0;border-radius:99px;padding:12px 22px;font-weight:700}
+
+@media (max-width:900px){
+  .wrap{grid-template-columns:1fr}
+  .side{position:static;display:flex;overflow-x:auto;gap:6px;padding-bottom:4px}
+  .side .grp{display:contents}
+  .grp-lbl{display:none}
+  .scr-btn{width:auto;white-space:nowrap;border:1px solid var(--line)}
+  .single{grid-template-columns:1fr}
+  .stage{justify-content:center}
+  .top .brand{display:none}
+}
+@media (max-width:420px){ .arrow{display:none} .prog-track{display:none} }
+
+/* ---------- wireframe phone primitives ---------- */
+.ph{width:300px;height:620px;flex:none;background:var(--w-paper);color:var(--w-ink);border:1.5px solid var(--w-ink);border-radius:36px;overflow:hidden;display:flex;flex-direction:column;font:11.5px/1.35 var(--text);position:relative;box-shadow:0 1px 0 var(--line)}
+.ph *{box-sizing:border-box}
+.ph .sb{height:30px;flex:none;display:flex;align-items:center;justify-content:space-between;padding:0 22px;font-size:10.5px;font-weight:600}
+.ph .sb i{width:60px;height:14px;border-radius:99px;background:var(--w-ink);display:block}
+.ph .bd{flex:1;min-height:0;overflow:hidden;padding:6px 14px 10px;display:flex;flex-direction:column;gap:9px}
+.ph .nv{flex:none;height:56px;border-top:1.2px solid var(--w-line);display:grid;grid-template-columns:repeat(5,1fr);align-items:center;text-align:center;font-size:8.5px;color:var(--w-mute);padding-bottom:6px}
+.ph .nv span{display:grid;justify-items:center;gap:2px}
+.ph .nv span::before{content:"";width:16px;height:16px;border-radius:5px;border:1.4px solid currentColor}
+.ph .nv .on{color:var(--w-ink);font-weight:700}
+.ph .nv .on::before{background:var(--w-ink)}
+.ph .nv .ctr::before{width:34px;height:34px;border-radius:50%;background:var(--w-ink);border:0}
+.ph .h1{font-family:var(--display);font-size:21px;font-weight:800;line-height:1.1;letter-spacing:-.01em}
+.ph .h2{font-family:var(--display);font-size:16px;font-weight:700;line-height:1.15}
+.ph .h3{font-size:12.5px;font-weight:700}
+.ph .big{font-family:var(--display);font-weight:800;font-size:40px;line-height:1;letter-spacing:-.02em;font-variant-numeric:tabular-nums}
+.ph .sm{font-size:10px;color:var(--w-mute)}
+.ph .lbl{font-size:8.5px;letter-spacing:.09em;text-transform:uppercase;font-weight:700;color:var(--w-mute)}
+.ph .row{display:flex;align-items:center;gap:8px}
+.ph .col{display:flex;flex-direction:column;gap:6px}
+.ph .sp{flex:1}
+.ph .box{border:1.2px solid var(--w-line);border-radius:14px;padding:10px}
+.ph .fill{background:var(--w-fill);border-color:transparent}
+.ph .inv{background:var(--w-ink);color:var(--w-paper);border-color:var(--w-ink)}
+.ph .inv .sm,.ph .inv .lbl{color:#b9b4aa}
+.ph .acc{color:var(--w-acc)}
+.ph .btn{height:38px;border-radius:99px;background:var(--w-ink);color:var(--w-paper);display:flex;align-items:center;justify-content:center;font-weight:700;font-size:12px;flex:none}
+.ph .btn.pk{background:var(--w-acc);color:#fff}
+.ph .btn.gh{background:none;color:var(--w-ink);border:1.3px solid var(--w-ink)}
+.ph .btn.s{height:28px;font-size:10.5px;padding:0 12px}
+.ph .chip{border:1.1px solid var(--w-line);border-radius:99px;padding:3px 9px;font-size:9.5px;font-weight:600;white-space:nowrap;display:inline-flex;align-items:center;gap:4px}
+.ph .chip.on{background:var(--w-ink);color:var(--w-paper);border-color:var(--w-ink)}
+.ph .chip.ak{background:var(--w-acc);color:#fff;border-color:var(--w-acc)}
+.ph .av{width:24px;height:24px;border-radius:50%;border:1.3px solid var(--w-ink);background:var(--w-paper);display:grid;place-items:center;font-size:9.5px;font-weight:700;flex:none}
+.ph .av.l{width:38px;height:38px;font-size:13px}
+.ph .av.xl{width:54px;height:54px;font-size:17px}
+.ph .av.e{border-style:dashed;color:var(--w-mute)}
+.ph .stack{display:flex}.ph .stack .av{margin-left:-7px}.ph .stack .av:first-child{margin-left:0}
+.ph .art{background:repeating-linear-gradient(45deg,var(--w-fill) 0 5px,transparent 5px 10px);border:1.2px dashed var(--w-line);border-radius:12px}
+.ph .hr{height:1.2px;background:var(--w-line);flex:none}
+.ph .tr{display:flex;align-items:center;gap:8px;padding:7px 0;border-bottom:1.1px solid var(--w-line)}
+.ph .tr:last-child{border-bottom:0}
+.ph .num{font-variant-numeric:tabular-nums;font-weight:700}
+.ph .chev::after{content:"›";font-size:15px;color:var(--w-mute);padding-left:4px}
+.ph .tbar{height:7px;border-radius:99px;background:var(--w-fill);overflow:hidden}
+.ph .tbar i{display:block;height:100%;background:var(--w-ink);border-radius:99px}
+.ph .tbar i.a{background:var(--w-acc)}
+.ph .hdr{display:flex;align-items:center;gap:8px;min-height:30px}
+.ph .ic{width:28px;height:28px;border-radius:50%;background:var(--w-fill);display:grid;place-items:center;font-size:12px;flex:none}
+.ph .g2{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.ph .g3{display:grid;grid-template-columns:repeat(3,1fr);gap:7px}
+.ph .tbl{width:100%;border-collapse:collapse;font-size:9.5px;font-variant-numeric:tabular-nums}
+.ph .tbl td,.ph .tbl th{border:1px solid var(--w-line);padding:4px 2px;text-align:center}
+.ph .tbl th{font-weight:700;background:var(--w-fill)}
+.ph .tbl .cur{background:var(--w-ink);color:var(--w-paper);font-weight:700}
+.ph .tbl td:first-child,.ph .tbl th:first-child{text-align:left;padding-left:5px}
+.ph .step{display:flex;align-items:center;gap:8px}
+.ph .step b{width:30px;height:30px;border-radius:50%;border:1.3px solid var(--w-ink);display:grid;place-items:center;font-size:15px}
+.ph .step b.f{background:var(--w-ink);color:var(--w-paper)}
+.ph .step .v{font-family:var(--display);font-size:26px;font-weight:800;width:28px;text-align:center}
+.ph .dot{width:7px;height:7px;border-radius:50%;background:var(--w-acc);display:inline-block}
+.ph .chk{width:18px;height:18px;border-radius:50%;border:1.3px solid var(--w-ink);display:grid;place-items:center;font-size:10px;flex:none}
+.ph .chk.f{background:var(--w-ink);color:var(--w-paper)}
+.ph .perf{border-top:1.5px dashed var(--w-line);margin:0 -10px}
+.ph .bubble{background:var(--w-fill);border-radius:14px 14px 14px 4px;padding:7px 10px;max-width:78%}
+.ph .bubble.me{background:var(--w-ink);color:var(--w-paper);border-radius:14px 14px 4px 14px;margin-left:auto}
+.ph .seg{display:flex;gap:3px}.ph .seg i{flex:1;height:3px;border-radius:9px;background:var(--w-line)}.ph .seg i.f{background:var(--w-ink)}
+.ph .pad{display:grid;grid-template-columns:repeat(3,1fr);gap:7px}
+.ph .pad div{height:48px;border-radius:14px;border:1.2px solid var(--w-line);display:grid;place-items:center;font-family:var(--display);font-size:20px;font-weight:700}
+.ph .pad .on{background:var(--w-ink);color:var(--w-paper);border-color:var(--w-ink)}
+.ph .heat{display:grid;grid-template-columns:repeat(13,1fr);gap:3px}
+.ph .heat i{aspect-ratio:1;border-radius:3px;background:var(--w-fill);display:block}
+.ph .heat i.w{background:var(--w-ink)}.ph .heat i.l{background:var(--w-line)}.ph .heat i.t{background:var(--w-acc)}
+@media (prefers-reduced-motion:reduce){*{transition:none!important}}
+</style>
+
+<header class="top">
+  <span class="brand">Layout Lab</span>
+  <div class="prog"><div class="prog-track"><div class="prog-fill" id="pf" style="width:0%"></div></div><span class="prog-txt" id="pt">0 of 10 screens picked</span></div>
+  <span class="saved" id="saved"></span>
+  <button class="btn-sm" id="finTop" type="button">Finish</button>
+</header>
+
+<section class="intro">
+  <h1>Ten screens, five new layouts each</h1>
+  <p>The screens a group will open most, from planning Saturday to settling the Tab. Each opens on <b>Current</b>, a screenshot of the app as it is today, then five directions wireframed with real copy. A to D are mine; E on every screen is built from Mobbin references, linked under each screen. Star the ones you like (more than one is fine), leave a note on what to mix, and hit Finish. The <span class="tag">Suggested</span> tag is my pick; <span class="tag today">Close to today</span> marks the one nearest the current app, and <span class="tag mob">From Mobbin</span> marks option E.</p>
+</section>
+
+<div class="wrap">
+  <nav class="side" id="side" aria-label="Screens"></nav>
+  <main class="main" id="main"></main>
+</div>
+
+<section class="finish">
+  <div><h3>Done picking?</h3><p id="finTxt">Your stars and notes save as you go. Finish marks the review done, then say "done" in chat and I'll build from your picks.</p></div>
+  <button class="btn-lg" id="finBig" type="button">Finish review</button>
+</section>
+
+<script>
+/* ---------- wireframe helpers ---------- */
+const sb = () => `<div class="sb"><span>9:41</span><i></i><span>5G ▮</span></div>`;
+const nav = on => `<div class="nv">${[['upnext','Up next'],['tab','Tab'],['play',''],['history','History'],['players','Players']].map(([k,l])=>`<span class="${k===on?'on':''} ${k==='play'?'ctr':''}">${l}</span>`).join('')}</div>`;
+const av = (l,c='') => `<span class="av ${c}">${l}</span>`;
+const ph = (body,tab) => `<div class="ph">${sb()}<div class="bd">${body}</div>${tab?nav(tab):''}</div>`;
+const tr = (l,r,cls='') => `<div class="tr ${cls}">${l}<span class="sp"></span>${r}</div>`;
+const hdr = (t,l='‹',r='') => `<div class="hdr"><span class="ic">${l}</span><span class="h3" style="flex:1;text-align:center">${t}</span><span class="ic">${r||'⋯'}</span></div>`;
+const bar = (pct,a) => `<div class="tbar"><i class="${a?'a':''}" style="width:${pct}%"></i></div>`;
+
+/* ---------- the ten screens ---------- */
+const SCREENS = [
+{ id:'upnext', group:'Every day', name:'Up next (home)', use:'Opened most days between rounds',
+  why:'The first thing anyone sees. Today it stacks a resume card, plans, Lately, the feed and notes. The question is what earns the top spot when there is no round going on.',
+  suggested:'A',
+  opts:[
+  { k:'A', name:'One next thing', idea:'One big card for whatever is next, then a short "also this week" list. Everything else lives in its own tab.',
+    good:'Calm, scannable, matches "one main action on Up next". Works empty or busy.', watch:'Friends\' rounds and trash talk lose their home here; they need a spot elsewhere.',
+    html:ph(`<div class="row"><span class="h1">Up next</span><span class="sp"></span>${av('T')}</div>
+    <div class="box inv col" style="gap:8px;padding:14px"><span class="lbl">Saturday · 8:10 AM</span><span class="h2" style="font-size:20px">Skins at Logan River</span>
+    <div class="row"><span class="stack">${av('T')}${av('M')}${av('J')}${av('?','e')}</span><span class="sm">3 of 4 in · Dave hasn't answered</span></div>
+    <div class="row" style="margin-top:4px"><span class="big" style="font-size:30px">4 days</span><span class="sp"></span><span class="btn pk s">Nudge Dave</span></div></div>
+    <span class="lbl" style="margin-top:6px">Also this week</span>
+    <div class="col" style="gap:0">${tr('<span class="ic">$</span><span>Mike owes you <b>$14</b></span>','<span class="chev"></span>')}${tr('<span class="ic">⚑</span><span>Dave challenged you to closest to the pin</span>','<span class="chev"></span>')}${tr('<span class="ic">↺</span><span>Last round: you won <b>$8</b></span>','<span class="chev"></span>')}</div>`,'upnext') },
+  { k:'B', name:'Week timeline', idea:'A vertical rail from today to last weekend. Every plan, vote, payment and result sits on its day.',
+    good:'Shows the build-up to Saturday, which is when the brand says the app is at its best.', watch:'Gets long fast for people in two or three groups.',
+    html:ph(`<div class="row"><span class="h1">Up next</span><span class="sp"></span>${av('T')}</div>
+    <div class="col" style="gap:0;border-left:1.5px solid var(--w-line);margin-left:6px;padding-left:14px">
+      <div class="col" style="position:relative;padding-bottom:12px"><span class="dot" style="position:absolute;left:-18.5px;top:3px"></span><span class="lbl acc">Today</span><div class="box"><span class="h3">Vote closes tonight</span><div class="sm">Skins 2 · Nassau 1 · you haven't voted</div><div class="row" style="margin-top:7px"><span class="chip on">Skins</span><span class="chip">Nassau</span><span class="chip">Wolf</span></div></div></div>
+      <div class="col" style="padding-bottom:12px"><span class="lbl">Sat · 8:10 AM</span><div class="box fill"><span class="h3">Skins at Logan River</span><div class="row" style="margin-top:4px"><span class="stack">${av('T')}${av('M')}${av('J')}</span><span class="sm">3 of 4 in</span></div></div></div>
+      <div class="col" style="padding-bottom:12px"><span class="lbl">Last Sat</span><div class="row"><span class="h3">You won $8</span><span class="sm">Skins · Logan River</span></div></div>
+      <div class="col"><span class="lbl">Oct 4</span><div class="row"><span class="h3">Lost $3</span><span class="sm">Nassau · Riverside</span></div><div class="sm">Mike paid you $6 · Settled</div></div>
+    </div>`,'upnext') },
+  { k:'C', name:'Mini dashboard', idea:'Four number tiles up top (Cal AI style), then the live friends feed.',
+    good:'Gives a reason to open it on a Tuesday. Numbers feel like a scoreboard, not a to-do list.', watch:'Tiles need real data; a new user sees four zeros. Money up front can feel like pressure.',
+    html:ph(`<div class="row"><span class="h1">Morning, Trev</span><span class="sp"></span>${av('T')}</div>
+    <div class="g2"><div class="box"><span class="lbl">Next round</span><div class="h2" style="font-size:22px">4 days</div><span class="sm">Sat 8:10 · 3 in</span></div><div class="box"><span class="lbl">Your Tab</span><div class="h2 acc" style="font-size:22px">+$22</div><span class="sm">2 people owe you</span></div><div class="box"><span class="lbl">Season</span><div class="h2" style="font-size:22px">2nd</div><span class="sm">$4 behind Mike</span></div><div class="box"><span class="lbl">This month</span><div class="h2" style="font-size:22px">3</div><span class="sm">rounds played</span></div></div>
+    <span class="lbl" style="margin-top:4px">Friends</span>
+    ${tr(`${av('M')}<div class="col" style="gap:1px"><span><b>Mike</b> is on hole 7 at Riverside</span><span class="sm"><span class="dot"></span> Live · up $6</span></div>`,'<span class="chev"></span>')}
+    ${tr(`${av('D')}<div class="col" style="gap:1px"><span><b>Dave</b> won Wolf at Eagle Lake</span><span class="sm">Yesterday · +$11</span></div>`,'<span class="chev"></span>')}
+    <div class="sp"></div><div class="btn">Plan a round</div>`,'upnext') },
+  { k:'D', name:'Group chat first', idea:'The crew\'s thread is the home: the plan pinned on top, votes and jabs as messages below.',
+    good:'Pulls the trash talk out of the group text and into the app. Most "daily" feel of the four.', watch:'Competes with iMessage head on. Quiet groups make it look dead.',
+    html:ph(`<div class="row"><span class="h1">Saturday crew</span><span class="sp"></span><span class="chip">2 groups ▾</span></div>
+    <div class="box inv row" style="padding:9px 11px"><div class="col" style="gap:1px"><span class="h3">Sat 8:10 · Logan River</span><span class="sm">3 of 4 in · Skins leads the vote</span></div><span class="sp"></span><span class="chip ak">I'm in</span></div>
+    <div class="col" style="gap:7px;flex:1;justify-content:flex-end">
+      <div class="row" style="align-items:flex-end">${av('M')}<div class="bubble">Nassau or I riot.</div></div>
+      <div class="sm" style="text-align:center">Dave voted Skins · Jackson is in</div>
+      <div class="row" style="align-items:flex-end">${av('J')}<div class="bubble">Only if we tee at 8:30. Some of us have kids.</div></div>
+      <div class="bubble me">You have kids at 8:10 too</div>
+      <div class="row" style="gap:5px;justify-content:flex-end"><span class="chip">Ouch 2</span><span class="chip">Fair 1</span></div>
+    </div>
+    <div class="box row" style="border-radius:99px;padding:8px 12px"><span class="sm">Say something to the crew</span><span class="sp"></span><span class="ic" style="width:22px;height:22px">↑</span></div>`,'upnext') }
+  ]},
+
+{ id:'plan', group:'Before the round', name:'Plan a round', use:'Opened by every player from the link, several times a week',
+  why:'This is the page a friend opens from the group text. It has to answer "when, where, am I in" in one glance, then let them vote on the game and bet.',
+  suggested:'A',
+  opts:[
+  { k:'A', name:'Invite ticket', idea:'A ticket card with the day and tee time, seat tiles for who\'s in, and three big RSVP buttons.',
+    good:'The friend from the link gets it in a second. Open seats create a little pressure to claim one, the fun kind.', watch:'The vote moves below the fold.',
+    html:ph(`${hdr('Saturday round','‹','↗')}
+    <div class="box" style="padding:14px;border-color:var(--w-ink)"><span class="lbl">Sat Oct 17</span><div class="big">8:10 AM</div><div class="sm" style="margin-top:3px">Logan River GC · 18 holes · Blue tees</div>
+    <div class="perf" style="margin:12px -14px"></div>
+    <div class="g2" style="grid-template-columns:repeat(4,1fr);gap:6px">${['T','M','J'].map(x=>`<div class="col" style="align-items:center;gap:3px">${av(x,'l')}<span class="sm">In</span></div>`).join('')}<div class="col" style="align-items:center;gap:3px">${av('+','l e')}<span class="sm">Open</span></div></div></div>
+    <span class="h2" style="margin-top:4px">Are you in?</span>
+    <div class="g3"><div class="btn">I'm in</div><div class="btn gh">Maybe</div><div class="btn gh">Out</div></div>
+    <div class="box row"><span class="ic">♣</span><div class="col" style="gap:1px"><span class="h3">The game: still voting</span><span class="sm">Skins leads · closes Fri 6 PM</span></div><span class="sp"></span><span class="chev"></span></div>`) },
+  { k:'B', name:'Poll', idea:'Leads with the game and bet votes as bars, who\'s in as a face row on top.',
+    good:'Makes the group decision feel like a game itself. Easy to see what\'s winning.', watch:'The logistics (time, course) shrink to one line.',
+    html:ph(`${hdr('Saturday round','‹','↗')}
+    <div class="sm" style="text-align:center">Sat Oct 17 · 8:10 AM · Logan River</div>
+    <div class="row" style="justify-content:center"><span class="stack">${av('T','l')}${av('M','l')}${av('J','l')}${av('?','l e')}</span></div>
+    <div class="sm" style="text-align:center;margin-top:-4px">3 in · waiting on Dave</div>
+    <span class="lbl" style="margin-top:6px">What are we playing?</span>
+    <div class="col" style="gap:8px">${[['Skins',3,75,1],['Nassau',1,25],['Wolf',0,2]].map(([n,c,p,a])=>`<div class="col" style="gap:3px"><div class="row"><b>${n}</b>${a?'<span class="chip ak">Your vote</span>':''}<span class="sp"></span><span class="num">${c}</span></div>${bar(p,a)}</div>`).join('')}</div>
+    <span class="lbl" style="margin-top:6px">How much?</span>
+    <div class="row"><span class="chip">$1</span><span class="chip on">$2 a skin · 2</span><span class="chip">$5 · 1</span></div>
+    <div class="sp"></div><div class="btn">Lock it in</div><div class="sm" style="text-align:center">Only you can lock it. Votes close Fri 6 PM.</div>`) },
+  { k:'C', name:'Checklist', idea:'The plan as five rows that tick off: when, where, who, game, bet. The organizer sees what\'s left.',
+    good:'Great for the organizer. Clear progress and an obvious next nudge.', watch:'Reads like admin to the friend who just wants to say "in".',
+    html:ph(`${hdr('Saturday round','‹','↗')}
+    <div class="row"><span class="h1">3 of 5 set</span><span class="sp"></span><span class="sm">Tees off in 4 days</span></div>
+    <div class="seg"><i class="f"></i><i class="f"></i><i class="f"></i><i></i><i></i></div>
+    <div class="col" style="gap:0;margin-top:4px">
+      ${tr('<span class="chk f">✓</span><div class="col" style="gap:1px"><span class="lbl">When</span><b>Sat Oct 17 · 8:10 AM</b></div>','<span class="chev"></span>')}
+      ${tr('<span class="chk f">✓</span><div class="col" style="gap:1px"><span class="lbl">Where</span><b>Logan River GC</b></div>','<span class="chev"></span>')}
+      ${tr(`<span class="chk f">✓</span><div class="col" style="gap:1px"><span class="lbl">Who</span><b>Trev, Mike, Jackson</b></div>`,'<span class="chip">Dave?</span>')}
+      ${tr('<span class="chk"></span><div class="col" style="gap:1px"><span class="lbl">Game</span><b>Voting · Skins leads 3 to 1</b></div>','<span class="chev"></span>')}
+      ${tr('<span class="chk"></span><div class="col" style="gap:1px"><span class="lbl">Bet</span><span class="sm">Waits on the game</span></div>','')}
+    </div>
+    <div class="sp"></div><div class="btn pk">Nudge Dave</div><div class="btn gh">Share the link</div>`) },
+  { k:'D', name:'Find a day', idea:'A date strip that shows how many can make each day, then tee time chips for the best one.',
+    good:'Solves the hardest part of planning (picking the day) instead of assuming it.', watch:'A new step to build: everyone has to mark availability first.',
+    html:ph(`${hdr('Plan a round','‹','✕')}
+    <span class="h1">When can the crew play?</span>
+    <div class="row" style="gap:5px">${[['Thu','15','1/4'],['Fri','16','2/4'],['Sat','17','4/4',1],['Sun','18','3/4'],['Mon','19','0/4']].map(([d,n,c,o])=>`<div class="box ${o?'inv':''}" style="flex:1;padding:7px 2px;text-align:center"><div class="sm">${d}</div><div class="h2">${n}</div><div class="sm">${c}</div></div>`).join('')}</div>
+    <div class="row sm"><span class="stack">${av('T')}${av('M')}${av('J')}${av('D')}</span> everyone can do Saturday</div>
+    <span class="lbl" style="margin-top:6px">Tee times at Logan River</span>
+    <div class="row" style="flex-wrap:wrap;gap:6px"><span class="chip" style="opacity:.45">7:30 full</span><span class="chip on">8:10</span><span class="chip">8:50</span><span class="chip">9:30</span><span class="chip">10:10</span></div>
+    <div class="box row"><span class="ic">⛳</span><div class="col" style="gap:1px"><b>Logan River GC</b><span class="sm">Your usual · 18 holes</span></div><span class="sp"></span><span class="sm">Change</span></div>
+    <div class="sp"></div><div class="btn">Propose Sat 8:10</div>`) }
+  ]},
+
+{ id:'setup', group:'Before the round', name:'Round setup', use:'Every round, by the organizer',
+  why:'Course, players, game, bet, handicaps. Today it\'s a long form with many toggles. Most groups play the same thing every week, so setup should be one tap for them and still clear for a first-timer.',
+  suggested:'D',
+  opts:[
+  { k:'A', name:'Summary first', idea:'Every choice is one row with its current value and Change. Smart defaults fill it; you only fix what\'s off.',
+    good:'Short, honest, nothing hidden. Close to how Round ready reads today.', watch:'A first-timer doesn\'t learn what the games are.',
+    html:ph(`${hdr('New round','✕','')}
+    ${[['Course','Logan River GC','Blue tees · 18 holes'],['Players','Trev, Mike, Dave','+ Add'],['Game','Skins','Win a hole outright'],['Bet','$2 a skin','Ties carry'],['Handicaps','Off','']].map(([k,v,s])=>`<div class="box row"><div class="col" style="gap:1px"><span class="lbl">${k}</span><b style="font-size:13px">${v}</b>${s?`<span class="sm">${s}</span>`:''}</div><span class="sp"></span><span class="sm" style="text-decoration:underline">Change</span></div>`).join('')}
+    <div class="row sm"><span class="chip">+ Side game</span><span class="chip">Play for lunch</span></div>
+    <div class="sp"></div><div class="btn">Ready</div>`) },
+  { k:'B', name:'Game cards', idea:'Big swipeable cards, one per game, with art and a one-line rule. The bet sits right under the card.',
+    good:'Shows off the 25 games and the new art set. Fun to browse.', watch:'Slower when you already know what you want.',
+    html:ph(`${hdr('Pick the game','‹','✕')}
+    <div class="row" style="gap:8px;margin:0 -24px;padding:0 6px">
+      <div class="box" style="width:40px;height:270px;opacity:.5"></div>
+      <div class="box col" style="flex:1;height:290px;padding:12px;border-color:var(--w-ink)"><div class="art" style="flex:1"></div><span class="h1">Skins</span><span class="sm">Win a hole outright, win the skin. Ties carry to the next hole.</span><span class="chip" style="width:max-content">Best for 3 to 4</span></div>
+      <div class="box" style="width:40px;height:270px;opacity:.5"></div>
+    </div>
+    <div class="row" style="justify-content:center;gap:4px"><span class="dot" style="background:var(--w-ink)"></span><span class="dot" style="background:var(--w-line)"></span><span class="dot" style="background:var(--w-line)"></span><span class="dot" style="background:var(--w-line)"></span></div>
+    <div class="box row"><div class="col" style="gap:1px"><span class="lbl">Per skin</span><b>$2</b></div><span class="sp"></span><div class="step"><b>−</b><b class="f">+</b></div></div>
+    <div class="sp"></div><div class="btn">Next: who's playing</div>`) },
+  { k:'C', name:'One question a screen', idea:'A short wizard: game, players, bet, ready. A grid of game tiles on the first step.',
+    good:'The easiest for a new organizer. Matches the onboarding they just did.', watch:'Four screens for a regular is three too many unless "Run it back" skips it.',
+    html:ph(`<div class="hdr"><span class="ic">‹</span><div class="seg" style="flex:1"><i class="f"></i><i></i><i></i><i></i></div><span class="ic">✕</span></div>
+    <span class="h1">What's the game?</span><span class="sm" style="margin-top:-4px">3 players. You can add side games later.</span>
+    <div class="g2">${['Skins','Nassau','Wolf','Banker','Snake','Best ball'].map((g,i)=>`<div class="box col ${i===0?'inv':''}" style="gap:6px;padding:9px"><div class="art" style="height:46px;${i===0?'border-color:#555':''}"></div><b>${g}</b></div>`).join('')}</div>
+    <div class="sm" style="text-align:center;text-decoration:underline">See all 25 games</div>
+    <div class="sp"></div><div class="btn">Continue</div>`) },
+  { k:'D', name:'Run it back', idea:'Your usuals on top, each a full setup you start in one tap. "Something new" opens the wizard.',
+    good:'Most groups play the same game every Saturday. Setup becomes one tap 80% of the time.', watch:'Needs a good path for the first round, before there are any usuals.',
+    html:ph(`${hdr('New round','✕','')}
+    <span class="h1">Run it back?</span>
+    ${[['Saturday skins','Trev, Mike, Dave','Skins · $2 a skin · Logan River',1],['Trip Nassau','Trev, Mike, Jackson, Dave','Nassau · $5 · 2 v 2']].map(([n,p,s,f])=>`<div class="box col ${f?'':''}" style="gap:6px;${f?'border-color:var(--w-ink)':''}"><div class="row"><span class="h2">${n}</span><span class="sp"></span><span class="sm">${f?'Last Sat':'Sep 12'}</span></div><div class="row"><span class="stack">${av('T')}${av('M')}${av('D')}</span><span class="sm">${p}</span></div><div class="sm">${s}</div><div class="row"><div class="btn s ${f?'':'gh'}" style="flex:1">Tee off</div><div class="btn s gh">Tweak</div></div></div>`).join('')}
+    <div class="row sm" style="margin:4px 0"><span class="hr" style="flex:1"></span>or<span class="hr" style="flex:1"></span></div>
+    <div class="box row"><span class="ic">+</span><b>Something new</b><span class="sp"></span><span class="chev"></span></div>
+    <div class="box row"><span class="ic">⇢</span><b>From Saturday's plan</b><span class="sp"></span><span class="sm">4 in</span></div>`) }
+  ]},
+
+{ id:'ready', group:'Before the round', name:'Round ready / first tee', use:'Every round, once, with the whole group looking',
+  why:'The handoff from setup to hole 1. The group is standing at the tee, so this is the one screen everyone looks at together. Today: a summary table, the invite card, Tee off and two links.',
+  suggested:'C',
+  opts:[
+  { k:'A', name:'Summary, trimmed', idea:'Today\'s screen with less: a smaller scene, a four-line summary, a one-line invite and Tee off.',
+    good:'Lowest risk. Already tested in real rounds.', watch:'Doesn\'t give the group anything to agree on.',
+    html:ph(`<div class="hdr"><span class="h3" style="flex:1">Round ready</span><span class="ic">✕</span></div>
+    <div class="art" style="height:96px"></div>
+    <span class="h1" style="text-align:center">You're set for Skins</span>
+    <div class="box col" style="gap:0">${tr('<span class="sm">Course</span>','<b>Logan River GC</b>')}${tr('<span class="sm">Players</span>','<b>Trev, Mike, Dave</b>')}${tr('<span class="sm">On the line</span>','<b>$2 a skin · carryovers</b>')}${tr('<span class="sm">Handicaps</span>','<b>Off</b>')}</div>
+    <div class="box row"><span class="ic">↗</span><span><b>Invite the group</b> <span class="sm">to watch live</span></span><span class="sp"></span><span class="chev"></span></div>
+    <div class="sp"></div><div class="btn">Tee off on hole 1 →</div>
+    <div class="row sm" style="justify-content:center;gap:18px"><span>Save as a usual</span><span>Schedule for later</span></div>`) },
+  { k:'B', name:'Boarding pass', idea:'A ticket for the round with a QR code the others scan to follow along. No typing names, no link sharing.',
+    good:'The scan is faster than a text at the tee. A fun, collectible feel.', watch:'Scanning at the tee only works when people are standing together (which they are).',
+    html:ph(`<div class="hdr"><span class="h3" style="flex:1">Round ready</span><span class="ic">✕</span></div>
+    <div class="box col" style="padding:14px;border-color:var(--w-ink);gap:10px">
+      <div class="row"><div class="col" style="gap:0"><span class="lbl">From</span><span class="h2">Logan River</span></div><span class="sp"></span><span class="h2">→</span><span class="sp"></span><div class="col" style="gap:0;text-align:right"><span class="lbl">To</span><span class="h2">Hole 1</span></div></div>
+      <div class="g2">${[['Game','Skins'],['Stake','$2 a skin'],['Players','3'],['Tees','Blue']].map(([k,v])=>`<div class="col" style="gap:0"><span class="lbl">${k}</span><b>${v}</b></div>`).join('')}</div>
+      <div class="perf" style="margin:0 -14px"></div>
+      <div class="row"><div style="width:84px;height:84px;background:repeating-conic-gradient(var(--w-ink) 0 25%,transparent 0 50%) 0 0/14px 14px;border-radius:6px"></div><div class="col" style="gap:3px"><b>Scan to follow live</b><span class="sm">Mike and Dave see the money on their own phones. No download.</span></div></div>
+    </div>
+    <div class="sp"></div><div class="btn">Tee off →</div>`) },
+  { k:'C', name:'What we agreed', idea:'The house rules as a short checklist everyone reads at the tee, with faces ticking in as they agree.',
+    good:'Kills the hole-6 argument before it starts. Uses the first-tee rules card that already exists.', watch:'One more beat before hole 1; keep it skippable.',
+    html:ph(`<div class="hdr"><span class="h3" style="flex:1">First tee</span><span class="ic">✕</span></div>
+    <span class="h1">Skins, $2 a skin</span><span class="sm" style="margin-top:-4px">Logan River · Trev, Mike, Dave</span>
+    <span class="lbl" style="margin-top:6px">What we agreed</span>
+    <div class="col" style="gap:0">${['Ties carry to the next hole','Gimmes inside the leather','No handicaps today','Skins left on 18 split evenly'].map(x=>tr(`<span class="chk f">✓</span><span>${x}</span>`,'')).join('')}</div>
+    <div class="sm" style="text-decoration:underline">Change a rule</div>
+    <div class="box fill row" style="margin-top:4px"><span class="stack">${av('T')}${av('M')}${av('D','e')}</span><span class="sm">Trev and Mike agreed · Dave's phone is in the bag</span></div>
+    <div class="sp"></div><div class="btn">Agreed. Tee off →</div>`) },
+  { k:'D', name:'The lineup', idea:'Players big across the screen with any strokes they get, and the most that\'s on the line.',
+    good:'Feels like a matchup card before a fight. Good for handicap games.', watch:'With handicaps off, the strokes row is empty and the screen goes thin.',
+    html:ph(`<div class="hdr"><span class="h3" style="flex:1">Round ready</span><span class="ic">✕</span></div>
+    <div class="col" style="align-items:center;gap:2px;margin-top:8px"><span class="lbl">Today's game</span><span class="h1">Skins</span><span class="sm">$2 a skin · ties carry</span></div>
+    <div class="g3" style="margin-top:10px">${[['T','Trev','Scratch'],['M','Mike','1 stroke · H5'],['D','Dave','2 strokes · H5, 9']].map(([l,n,s])=>`<div class="col" style="align-items:center;gap:4px;text-align:center">${av(l,'xl')}<b>${n}</b><span class="sm">${s}</span></div>`).join('')}</div>
+    <div class="box fill col" style="align-items:center;gap:2px;margin-top:10px"><span class="lbl">Most on the line</span><span class="big" style="font-size:30px">$36</span><span class="sm">if one player takes all 18 skins</span></div>
+    <div class="sp"></div><div class="btn">Tee off on hole 1 →</div><div class="row sm" style="justify-content:center;gap:18px"><span>Invite the group</span><span>Save as a usual</span></div>`) }
+  ]},
+
+{ id:'score', group:'On the course', name:'Scoring a hole', use:'18 times a round, one-handed, in sun and wind',
+  why:'The most-used screen by far. Today it stacks a money card, three tiles, the "worth" card, a side-bet prompt and the players. Brand rule: quick and quiet during the round.',
+  suggested:'C',
+  opts:[
+  { k:'A', name:'Cleaned up', idea:'Today\'s layout with the clutter folded: hole, par and HCP in one line, money as one thin strip, the side-bet prompt as a chip.',
+    good:'Same muscle memory as now. The players and steppers get the room.', watch:'Still a tap per stroke for big numbers.',
+    html:ph(`<div class="hdr"><span class="ic">⌄</span><div class="col" style="flex:1;align-items:center;gap:0"><b>Logan River GC</b><span class="sm">Skins</span></div><span class="ic">⋯</span></div>
+    <div class="row" style="align-items:flex-end"><span class="big">1</span><div class="col" style="gap:0;padding-bottom:4px"><b>Par 5 · HCP 5</b><span class="sm">Hole 1 of 18</span></div><span class="sp"></span><span class="chip ak">Worth $4</span></div>
+    <div class="row box fill" style="padding:7px 10px;justify-content:space-between"><span class="sm">Trev <b style="color:var(--w-ink)">$0</b></span><span class="sm">Mike <b style="color:var(--w-ink)">$0</b></span><span class="sm">Dave <b style="color:var(--w-ink)">$0</b></span><span class="sm">▾</span></div>
+    ${['Trev','Mike','Dave'].map(n=>`<div class="box row" style="padding:10px">${av(n[0],'l')}<b style="font-size:14px">${n}</b><span class="sp"></span><div class="step"><b>−</b><span class="v">5</span><b class="f">+</b></div></div>`).join('')}
+    <span class="chip" style="width:max-content">+ Side bet on this hole</span>
+    <div class="sp"></div><div class="row"><span class="btn gh" style="width:40px">←</span><div class="btn" style="flex:1">Save · Hole 2 →</div></div>`) },
+  { k:'B', name:'Number pad', idea:'Pick a player, tap their score on a big pad, it jumps to the next player. Like entering a PIN.',
+    good:'One tap per player no matter the score. Big targets for gloves and sun.', watch:'You see one player\'s entry at a time; easy to lose track of who\'s done.',
+    html:ph(`<div class="hdr"><span class="ic">⌄</span><div class="col" style="flex:1;align-items:center;gap:0"><b>Hole 1 · Par 5</b><span class="sm">Worth 1 skin ($4)</span></div><span class="ic">⋯</span></div>
+    <div class="g3">${[['Trev','5','on'],['Mike','–','cur'],['Dave','–','']].map(([n,s,c])=>`<div class="box col" style="align-items:center;gap:2px;padding:8px;${c==='cur'?'border:2px solid var(--w-acc)':''}${c==='on'?';background:var(--w-fill)':''}"><span class="sm">${n}</span><span class="h1">${s}</span></div>`).join('')}</div>
+    <div class="sm" style="text-align:center">Mike's score</div>
+    <div class="pad">${['3','4','5','6','7','8','9','10+','Pick up'].map(x=>`<div style="${x==='Pick up'?'font-size:12px':''}${x==='10+'?';font-size:16px':''}">${x}</div>`).join('')}</div>
+    <div class="row sm" style="justify-content:center;gap:6px"><span class="chip">2</span><span class="sm">Birdie on par 5 is a 4</span></div>
+    <div class="sp"></div><div class="btn">Next hole →</div>`) },
+  { k:'C', name:'Par chips', idea:'Each player starts at par. Tap Birdie, Bogey or a neighbour chip only when they didn\'t make par.',
+    good:'Most holes, most players make par or bogey: often zero or one tap per player. Speaks golfer.', watch:'A 9 on a par 3 needs the "more" chip; rare but must be easy.',
+    html:ph(`<div class="hdr"><span class="ic">⌄</span><div class="col" style="flex:1;align-items:center;gap:0"><b>Hole 1 · Par 5 · HCP 5</b><span class="sm">Skins · worth $4</span></div><span class="ic">⋯</span></div>
+    <div class="row box fill" style="padding:7px 10px;justify-content:space-between"><span class="sm">Trev <b style="color:var(--w-ink)">+$4</b></span><span class="sm">Mike <b style="color:var(--w-ink)">$0</b></span><span class="sm">Dave <b style="color:var(--w-ink)">−$4</b></span></div>
+    ${[['Trev','4',1],['Mike','5',2],['Dave','6',3]].map(([n,s,sel])=>`<div class="box col" style="gap:8px"><div class="row">${av(n[0])}<b style="font-size:13px">${n}</b><span class="sp"></span><span class="h2">${s}</span></div><div class="row" style="gap:4px">${['Eagle','Birdie','Par','Bogey','Dbl','+'].map((c,i)=>`<span class="chip ${i===sel?'on':''}" style="flex:1;justify-content:center;padding:5px 0">${c}</span>`).join('')}</div></div>`).join('')}
+    <div class="sm" style="text-align:center">Everyone starts at par. Tap only what changed.</div>
+    <div class="sp"></div><div class="row"><span class="btn gh" style="width:40px">←</span><div class="btn" style="flex:1">Hole 2 →</div></div>`) },
+  { k:'D', name:'Scorecard grid', idea:'The paper card on screen: tap any cell, a stepper slides up. Current hole is the dark column.',
+    good:'Familiar to anyone who\'s kept a paper card. Fixing an old hole is one tap.', watch:'Small targets; nine columns at a time on a phone.',
+    html:ph(`<div class="hdr"><span class="ic">⌄</span><div class="col" style="flex:1;align-items:center;gap:0"><b>Logan River · Skins</b><span class="sm">Front 9</span></div><span class="ic">⋯</span></div>
+    <table class="tbl"><tr><th>Hole</th>${[1,2,3,4,5,6,7,8,9].map(h=>`<th class="${h===4?'cur':''}">${h}</th>`).join('')}</tr><tr><th>Par</th>${[5,4,3,4,4,5,3,4,4].map((p,i)=>`<th class="${i===3?'cur':''}">${p}</th>`).join('')}</tr>
+    ${[['Trev',[5,4,3]],['Mike',[6,4,2]],['Dave',[5,5,4]]].map(([n,s])=>`<tr><td><b>${n}</b></td>${[0,1,2,3,4,5,6,7,8].map(i=>`<td class="${i===3?'cur':''}">${s[i]??(i===3?'·':'')}</td>`).join('')}</tr>`).join('')}
+    <tr><td class="sm">Skin</td><td>T</td><td>c</td><td>M</td><td class="cur">$4</td>${'<td></td>'.repeat(5)}</tr></table>
+    <div class="row sm" style="gap:10px"><span>c = carried</span><span class="sp"></span><span>Back 9 ›</span></div>
+    <div class="sp"></div>
+    <div class="box col" style="border-color:var(--w-ink);border-radius:22px 22px 14px 14px;gap:10px"><div class="row"><b>Mike · Hole 4</b><span class="sp"></span><span class="sm">Par 4</span></div><div class="row" style="justify-content:center"><div class="step"><b>−</b><span class="v">4</span><b class="f">+</b></div></div><div class="btn s">Next: Dave</div></div>`) }
+  ]},
+
+{ id:'live', group:'On the course', name:'Live money (the group\'s view)', use:'Every hole, on everyone else\'s phone',
+  why:'What Mike and Dave see from the link while Trev keeps the card. They glance at it between shots, so one look should tell them where they stand.',
+  suggested:'A',
+  opts:[
+  { k:'A', name:'Money race', idea:'One bar per player around zero, with the carry and the next hole\'s worth underneath.',
+    good:'Readable from arm\'s length in one glance. The race is the drama.', watch:'Hides scores; some will want strokes, not just dollars.',
+    html:ph(`<div class="hdr"><span class="ic">‹</span><div class="col" style="flex:1;align-items:center;gap:0"><b><span class="dot"></span> Live · Hole 7</b><span class="sm">Skins at Logan River</span></div><span class="ic">↗</span></div>
+    <div class="col" style="gap:12px;margin-top:8px">${[['Trev',8,60],['Mike',2,15],['Dave',-10,75]].map(([n,v,w])=>`<div class="col" style="gap:4px"><div class="row">${av(n[0])}<b>${n}</b><span class="sp"></span><span class="h2">${v>0?'+':v<0?'−':''}$${Math.abs(v)}</span></div><div style="display:grid;grid-template-columns:1fr 1fr;gap:2px"><div class="tbar" style="direction:rtl">${v<0?`<i style="width:${w}%"></i>`:''}</div><div class="tbar">${v>0?`<i class="a" style="width:${w}%"></i>`:''}</div></div></div>`).join('')}</div>
+    <div class="box inv row" style="margin-top:6px"><div class="col" style="gap:1px"><span class="lbl">Hole 8 is worth</span><span class="h2">3 skins · $12</span></div><span class="sp"></span><span class="sm">2 carried</span></div>
+    <span class="lbl" style="margin-top:4px">Lately</span>
+    ${tr('<span class="sm">H6</span><span>Trev birdied for the skin</span>','<b>+$8</b>')}${tr('<span class="sm">H5</span><span>Tied. Carries.</span>','')}
+    <div class="sp"></div><div class="row" style="gap:6px;justify-content:center"><span class="chip">Clutch</span><span class="chip">Ouch</span><span class="chip">Pay up</span><span class="chip">+</span></div>`) },
+  { k:'B', name:'Live scorecard', idea:'The full card with totals and a money row at the bottom.',
+    good:'Everything there for the stats people. Shows exactly how each skin was won.', watch:'Dense; hard to read with the phone at your hip.',
+    html:ph(`<div class="hdr"><span class="ic">‹</span><div class="col" style="flex:1;align-items:center;gap:0"><b><span class="dot"></span> Live · Hole 7</b><span class="sm">Skins at Logan River</span></div><span class="ic">↗</span></div>
+    <table class="tbl"><tr><th></th>${[1,2,3,4,5,6,7].map(h=>`<th class="${h===7?'cur':''}">${h}</th>`).join('')}<th>Tot</th></tr>
+    ${[['Trev',[5,4,3,4,4,4],'+1'],['Mike',[6,4,2,5,4,5],'+3'],['Dave',[5,5,4,4,4,6],'+5']].map(([n,s,t])=>`<tr><td><b>${n}</b></td>${[0,1,2,3,4,5,6].map(i=>`<td class="${i===6?'cur':''}">${s[i]??''}</td>`).join('')}<td><b>${t}</b></td></tr>`).join('')}
+    <tr><td class="sm">Skin</td><td>–</td><td>–</td><td>M</td><td>T</td><td>c</td><td>T</td><td class="cur">?</td><td></td></tr></table>
+    <div class="g3">${[['Trev','+$8'],['Mike','+$2'],['Dave','−$10']].map(([n,v])=>`<div class="box col" style="align-items:center;gap:0;padding:8px"><span class="sm">${n}</span><span class="h2">${v}</span></div>`).join('')}</div>
+    <div class="sm">Hole 7 is worth 2 skins ($8). Ties carry.</div>`) },
+  { k:'C', name:'Hole by hole', idea:'A running story: each hole as a line saying what happened, newest first.',
+    good:'Catches up someone who looked away for three holes. Feels like a live blog.', watch:'Standings need a summary up top or they get lost.',
+    html:ph(`<div class="hdr"><span class="ic">‹</span><div class="col" style="flex:1;align-items:center;gap:0"><b><span class="dot"></span> Live</b><span class="sm">Skins at Logan River</span></div><span class="ic">↗</span></div>
+    <div class="row" style="justify-content:space-between"><span class="chip on">Trev +$8</span><span class="chip">Mike +$2</span><span class="chip">Dave −$10</span></div>
+    <div class="box inv col" style="gap:2px"><span class="lbl">Now · Hole 7 · Par 3</span><span class="h2">Worth 2 skins, $8</span><span class="sm">Waiting on Trev's card</span></div>
+    ${[['6','Trev birdied. Takes 2 skins.','+$8'],['5','Everyone made par. Carries.',''],['4','Trev, outright with a 4.','+$4'],['3','Mike chipped in for 2.','+$4'],['2','Tie. Carries.',''],['1','Tie. Carries.','']].map(([h,t,v])=>`<div class="row" style="gap:10px;padding:5px 0;border-bottom:1.1px solid var(--w-line)"><span class="av">${h}</span><span style="flex:1">${t}</span><b>${v}</b></div>`).join('')}`) },
+  { k:'D', name:'Just you', idea:'Your number, huge. Everything else is a swipe away.',
+    good:'The answer to "how am I doing" with zero reading. Lovely as a lock-screen live activity later.', watch:'Says little about the others; the race drama is gone.',
+    html:ph(`<div class="hdr"><span class="ic">‹</span><div class="col" style="flex:1;align-items:center;gap:0"><b><span class="dot"></span> Live · Hole 7</b><span class="sm">Skins at Logan River</span></div><span class="ic">↗</span></div>
+    <div class="col" style="align-items:center;gap:4px;margin-top:30px">${av('M','xl')}<span class="sm">You, Mike</span><span class="big" style="font-size:64px">+$2</span><span class="sm">2nd · 12 holes to play</span></div>
+    <div class="box fill col" style="gap:4px;margin-top:16px"><div class="row"><span>Trev</span><span class="sp"></span><b>+$8</b></div><div class="row"><span>Dave</span><span class="sp"></span><b>−$10</b></div></div>
+    <div class="box row"><span class="ic">$</span><span>Hole 7 is worth <b>$8</b></span></div>
+    <div class="sp"></div><div class="row" style="gap:6px;justify-content:center"><span class="chip">Clutch</span><span class="chip">Ouch</span><span class="chip">Pay up</span></div>
+    <div class="sm" style="text-align:center">Swipe for the card</div>`) }
+  ]},
+
+{ id:'results', group:'After the round', name:'Results and settle up', use:'Every round, by everyone, then shared',
+  why:'The brand\'s best moment: the math is done and the winner gets to relish it. It has two jobs that pull against each other: celebrate, and say who pays who.',
+  suggested:'A',
+  opts:[
+  { k:'A', name:'Podium, then pay', idea:'The crowned winner and a podium up top, then who pays who with the pay and roll-over buttons.',
+    good:'Celebration first, money right after, both on one screen. Close to the design pass\'s direction.', watch:'Long scroll for big groups or several games.',
+    html:ph(`<div class="hdr"><span class="ic">✕</span><span class="h3" style="flex:1;text-align:center">Final · Logan River</span><span class="ic">↗</span></div>
+    <div class="col" style="align-items:center;gap:2px"><span class="lbl acc">♛ Winner</span><span class="h1">Trev takes it</span><span class="sm">7 skins · +$14</span></div>
+    <div class="row" style="align-items:flex-end;justify-content:center;gap:6px;margin-top:4px">${[['M','+$2',54],['T','+$14',80],['D','−$16',36]].map(([l,v,h])=>`<div class="col" style="align-items:center;gap:4px;width:70px">${av(l,'l')}<div class="box fill" style="height:${h}px;width:100%;display:grid;place-items:center;border-radius:10px 10px 0 0"><b>${v}</b></div></div>`).join('')}</div>
+    <span class="lbl" style="margin-top:6px">Who pays who</span>
+    <div class="box col" style="gap:8px">${[['D','Dave pays Trev','$14'],['D','Dave pays Mike','$2']].map(([l,t,v])=>`<div class="row">${av(l)}<span>${t}</span><span class="sp"></span><b>${v}</b></div>`).join('')}<div class="row"><div class="btn s pk" style="flex:1">Pay with Venmo</div><div class="btn s gh" style="flex:1">Roll to next time</div></div></div>
+    <div class="sp"></div><div class="btn">Share the results</div>`) },
+  { k:'B', name:'The receipt', idea:'A paper receipt, itemized by game and side bet, with the total at the bottom and a tear-off edge.',
+    good:'Nobody argues with a receipt. Great with several games in one round.', watch:'Feels more like a bill than a win.',
+    html:ph(`<div class="hdr"><span class="ic">✕</span><span class="h3" style="flex:1;text-align:center">Round receipt</span><span class="ic">↗</span></div>
+    <div class="box col" style="gap:5px;padding:14px;font-family:ui-monospace,Menlo,monospace;font-size:10.5px;border-color:var(--w-ink)">
+      <div style="text-align:center"><b>LOGAN RIVER GC</b><br><span class="sm">SAT OCT 10 · 18 HOLES</span></div><div class="perf" style="margin:4px -14px"></div>
+      ${[['SKINS (7)','TREV','+$14'],['SKINS (1)','MIKE','+$2'],['SKINS (0)','DAVE','−$16'],['SIDE: CTP H7','MIKE','+$5'],['SIDE: CTP H7','DAVE','−$5']].map(([a,b,c])=>`<div class="row"><span>${a}</span><span class="sp"></span><span>${b}</span><span style="width:44px;text-align:right">${c}</span></div>`).join('')}
+      <div class="perf" style="margin:4px -14px"></div>
+      ${[['TREV','+$14'],['MIKE','+$7'],['DAVE','−$21']].map(([a,c])=>`<div class="row"><b>${a}</b><span class="sp"></span><b>${c}</b></div>`).join('')}
+      <div style="text-align:center;margin-top:6px" class="sm">THANKS FOR PLAYING. DAVE, SEE YOU SATURDAY.</div>
+    </div>
+    <div class="sp"></div><div class="btn">Settle up</div>`) },
+  { k:'C', name:'Story recap', idea:'Tap-through cards like a story: the winner, the moment of the day, the money, then share.',
+    good:'Made for screenshotting into the group text. Uses the match moments that already exist.', watch:'The money is three taps away for people who just want to pay.',
+    html:ph(`<div class="seg" style="margin-top:2px"><i class="f"></i><i class="f"></i><i></i><i></i></div>
+    <div class="row"><span class="sm">Logan River · Sat</span><span class="sp"></span><span class="ic">✕</span></div>
+    <div class="box inv col" style="flex:1;padding:16px;gap:10px;justify-content:flex-end">
+      <span class="lbl">Moment of the day</span><div class="art" style="flex:1;border-color:#555"></div>
+      <span class="h1">Dave's three-putt on 18 cost him $8</span><span class="sm">Four skins were riding. Mike and Trev split it.</span>
+    </div>
+    <div class="row"><span class="sm">Tap for next</span><span class="sp"></span><div class="btn s gh">Share this card</div></div>`) },
+  { k:'D', name:'Settle first', idea:'Leads with the payments as cards you can mark paid or roll over. The winner is a banner, not the headline.',
+    good:'Fastest path to everyone square. Nobody hunts for the Venmo button.', watch:'Undersells the win, which the brand says is the point.',
+    html:ph(`<div class="hdr"><span class="ic">✕</span><span class="h3" style="flex:1;text-align:center">Settle up</span><span class="ic">↗</span></div>
+    <div class="box fill row"><span class="acc">♛</span><span><b>Trev won</b> <span class="sm">Bragging rights through Saturday.</span></span></div>
+    ${[['D','T','Dave pays Trev','$14'],['D','M','Dave pays Mike','$7']].map(([a,b,t,v])=>`<div class="box col" style="gap:10px"><div class="row"><span class="stack">${av(a,'l')}${av(b,'l')}</span><div class="col" style="gap:0"><b>${t}</b><span class="sm">Skins and closest to the pin</span></div><span class="sp"></span><span class="h2">${v}</span></div><div class="row"><div class="btn s" style="flex:1">I paid</div><div class="btn s gh" style="flex:1">Roll to next time</div></div></div>`).join('')}
+    <div class="sm" style="text-align:center">Where it comes from ›</div>
+    <div class="sp"></div><div class="btn gh">See the full results</div>`) }
+  ]},
+
+{ id:'tab', group:'Every day', name:'The Tab', use:'Weekly, after rounds and before paying',
+  why:'Who owes who across every round and crew. The brand says money stays calm, and "Roll to next time" matters as much as "I paid".',
+  suggested:'C',
+  opts:[
+  { k:'A', name:'Net and people', idea:'Your net, big, then one row per person with what\'s between you.',
+    good:'Simple and close to today with less on each card.', watch:'A big net number can feel like a bank balance.',
+    html:ph(`<div class="row"><span class="h1">Tab</span><span class="sp"></span>${av('T')}</div>
+    <div class="col" style="gap:0"><span class="lbl">Your net</span><span class="big">+$22</span><span class="sm">Across 3 people and 1 trip</span></div>
+    <div class="col" style="gap:0">${[['M','Mike','owes you','$14'],['D','Dave','owes you','$16'],['J','Jackson','you owe','$8']].map(([l,n,s,v])=>tr(`${av(l,'l')}<div class="col" style="gap:0"><b style="font-size:13px">${n}</b><span class="sm">${s}</span></div>`,`<span class="h2">${v}</span><span class="chev"></span>`)).join('')}</div>
+    <div class="box row"><span class="ic">✈</span><div class="col" style="gap:0"><b>Scottsdale trip</b><span class="sm">Settles Nov 2</span></div><span class="sp"></span><span class="chev"></span></div>
+    <div class="sp"></div><div class="btn gh">Settle everything</div>`,'tab') },
+  { k:'B', name:'Two columns', idea:'Owed to you on the left, you owe on the right. Splitwise-style.',
+    good:'Instant read of both sides. Familiar from other split apps.', watch:'Uneven columns look odd when one side is empty.',
+    html:ph(`<div class="row"><span class="h1">Tab</span><span class="sp"></span>${av('T')}</div>
+    <div class="g2"><div class="box fill col" style="gap:0"><span class="lbl">Owed to you</span><span class="h1">$30</span></div><div class="box col" style="gap:0"><span class="lbl">You owe</span><span class="h1">$8</span></div></div>
+    <div class="g2" style="align-items:start">
+      <div class="col">${[['M','Mike','$14'],['D','Dave','$16']].map(([l,n,v])=>`<div class="box col" style="gap:4px;padding:8px">${av(l)}<b>${n}</b><span class="h2">${v}</span><span class="chip" style="width:max-content">Remind</span></div>`).join('')}</div>
+      <div class="col"><div class="box col" style="gap:4px;padding:8px">${av('J')}<b>Jackson</b><span class="h2">$8</span><span class="chip on" style="width:max-content">Pay</span></div></div>
+    </div>`,'tab') },
+  { k:'C', name:'See-saw bars', idea:'One bar per friend swinging left (you owe) or right (they owe), around a center line. Calm, visual, no big total.',
+    good:'Money as a friendly balance, not a statement. Fits "bragging rights over bankroll".', watch:'Exact amounts are smaller; needs the number next to each bar.',
+    html:ph(`<div class="row"><span class="h1">Tab</span><span class="sp"></span>${av('T')}</div>
+    <div class="row sm"><span>You owe</span><span class="sp"></span><span>Owed to you</span></div>
+    <div class="col" style="gap:12px;position:relative">
+      <div style="position:absolute;left:50%;top:0;bottom:0;width:1.2px;background:var(--w-ink)"></div>
+      ${[['Mike',14,0],['Dave',16,0],['Jackson',8,1],['Sam',0,0]].map(([n,v,neg])=>`<div class="col" style="gap:3px"><div class="row">${neg?`<b>${n}</b><span class="sp"></span>`:`<span class="sp"></span><b>${n}</b>`}</div><div style="display:grid;grid-template-columns:1fr 1fr;gap:0;height:12px">${neg?`<div style="display:flex;justify-content:flex-end"><i style="display:block;width:${v*5}%;background:var(--w-ink);border-radius:99px 0 0 99px"></i></div><div></div>`:`<div></div><div>${v?`<i style="display:block;height:100%;width:${v*5}%;background:var(--w-acc);border-radius:0 99px 99px 0"></i>`:''}</div>`}</div><div class="row sm">${neg?`<span>$${v}</span>`:`<span class="sp"></span><span>${v?'$'+v:'Square'}</span>`}</div></div>`).join('')}
+    </div>
+    <div class="box fill row" style="margin-top:6px"><span class="sm">Net</span><b>+$22</b><span class="sp"></span><span class="sm">Season ›</span></div>
+    <div class="sp"></div><div class="btn gh">Settle up</div>`,'tab') },
+  { k:'D', name:'Statement', idea:'A running list of every round and payment, newest first, with the balance after each.',
+    good:'Answers "wait, where did that $16 come from" without a tap.', watch:'Reads like a bank statement; the brand wants Monarch, not Chase.',
+    html:ph(`<div class="row"><span class="h1">Tab</span><span class="sp"></span>${av('T')}</div>
+    <div class="row"><span class="chip on">Everyone</span><span class="chip">Mike</span><span class="chip">Dave</span><span class="chip">Jackson</span></div>
+    ${[['Oct 10','Skins · Logan River','+$14','+$22'],['Oct 8','Mike paid you','−$6','+$8'],['Oct 4','Nassau · Riverside','−$3','+$14'],['Oct 3','Rolled to next time','','+$17'],['Sep 27','Wolf · Eagle Lake','+$11','+$17'],['Sep 20','You paid Dave','+$5','+$6']].map(([d,t,v,b])=>tr(`<div class="col" style="gap:0"><span class="sm">${d}</span><b>${t}</b></div>`,`<div class="col" style="gap:0;text-align:right"><b>${v||'–'}</b><span class="sm">${b}</span></div>`)).join('')}`,'tab') }
+  ]},
+
+{ id:'history', group:'Every day', name:'History', use:'Weekly, mostly after a round and on slow days',
+  why:'The record book: every round, your money over time, head to heads. The place people go to relish a win or check a grudge.',
+  suggested:'C',
+  opts:[
+  { k:'A', name:'Chart and months', idea:'Today\'s idea cleaned up: a money line on top, rounds grouped by month below.',
+    good:'Known pattern, compact rows, the chart gives the season shape.', watch:'Every round looks the same in a row; the good ones don\'t stand out.',
+    html:ph(`<div class="row"><span class="h1">History</span><span class="sp"></span>${av('T')}</div>
+    <div class="row"><span class="chip on">2026</span><span class="chip">All time</span><span class="sp"></span><span class="sm">24 rounds</span></div>
+    <div class="box col" style="gap:4px"><div class="row"><span class="lbl">Your net</span><span class="sp"></span><b>+$47</b></div><svg viewBox="0 0 260 70" style="width:100%;height:70px"><path d="M0 50 L30 44 L60 52 L90 38 L120 41 L150 28 L180 34 L210 20 L240 24 L260 14" fill="none" stroke="#1c1c1c" stroke-width="2"/><line x1="0" y1="50" x2="260" y2="50" stroke="#cfcac0" stroke-dasharray="3 3"/><circle cx="260" cy="14" r="3.5" fill="#ff4d8b"/></svg></div>
+    <div class="row"><b>October</b><span class="sp"></span><span class="sm">3 rounds · +$19</span></div>
+    ${[['Oct 10','Skins · Logan River','+$14'],['Oct 4','Nassau · Riverside','−$3'],['Oct 3','Wolf · Eagle Lake','+$8']].map(([d,t,v])=>tr(`<span class="sm" style="width:36px">${d}</span><b>${t}</b>`,`<b>${v}</b><span class="chev"></span>`)).join('')}
+    <div class="row"><b>September</b><span class="sp"></span><span class="sm">5 rounds · +$28</span></div>`,'history') },
+  { k:'B', name:'Year in squares', idea:'A grid of the year, GitHub-style: a square per week, dark for a win, pink for a big day.',
+    good:'Shows streaks and how much you\'ve played at a glance. Very shareable.', watch:'Needs a list under it for detail; most squares are empty in winter.',
+    html:ph(`<div class="row"><span class="h1">History</span><span class="sp"></span>${av('T')}</div>
+    <div class="row"><span class="h2">2026</span><span class="sp"></span><span class="sm">24 rounds · 14 wins</span></div>
+    <div class="heat">${Array.from({length:52},(_,i)=>{const m=[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,'l','w','w','l','w','t','w','l','w','w','w','l','w','w','l','t','w','w','l','w','w','l','w','w','t','w','l',0,0,0,0,0,0,0,0,0,0][i];return `<i class="${m||''}"></i>`}).join('')}</div>
+    <div class="row sm" style="gap:10px"><span><i style="display:inline-block;width:8px;height:8px;background:var(--w-ink);border-radius:2px"></i> Won</span><span><i style="display:inline-block;width:8px;height:8px;background:var(--w-line);border-radius:2px"></i> Lost</span><span><i style="display:inline-block;width:8px;height:8px;background:var(--w-acc);border-radius:2px"></i> Big day</span></div>
+    <div class="g3">${[['Streak','3 wins'],['Best','+$31'],['Played','24']].map(([k,v])=>`<div class="box col" style="gap:0;padding:8px"><span class="lbl">${k}</span><b style="font-size:13px">${v}</b></div>`).join('')}</div>
+    <span class="lbl">Latest</span>
+    ${tr('<b>Skins · Logan River</b><span class="sm">Oct 10</span>','<b>+$14</b><span class="chev"></span>')}${tr('<b>Nassau · Riverside</b><span class="sm">Oct 4</span>','<b>−$3</b><span class="chev"></span>')}`,'history') },
+  { k:'C', name:'Round cards', idea:'Each round is a card with the game\'s art, the winner, and your result. Big days get a bigger card.',
+    good:'Every round feels like a memory, not a row. Showcases the new art set.', watch:'Fewer rounds per screen; needs the month filter.',
+    html:ph(`<div class="row"><span class="h1">History</span><span class="sp"></span>${av('T')}</div>
+    <div class="row"><span class="chip on">All</span><span class="chip">Wins</span><span class="chip">Trips</span><span class="chip">With Mike</span></div>
+    <div class="box col" style="gap:7px;border-color:var(--w-ink)"><div class="art" style="height:78px"></div><div class="row"><div class="col" style="gap:0"><span class="sm">Oct 10 · Logan River</span><span class="h2">Skins</span></div><span class="sp"></span><span class="chip ak">You won +$14</span></div><div class="row sm"><span class="stack">${av('T')}${av('M')}${av('D')}</span>7 skins, birdie on 6</div></div>
+    <div class="g2">${[['Oct 4','Nassau','−$3','Mike won'],['Oct 3','Wolf','+$8','You won']].map(([d,g,v,w])=>`<div class="box col" style="gap:5px;padding:8px"><div class="art" style="height:46px"></div><span class="sm">${d}</span><b>${g}</b><div class="row"><span class="sm">${w}</span><span class="sp"></span><b>${v}</b></div></div>`).join('')}</div>`,'history') },
+  { k:'D', name:'Stats first', idea:'Season tiles and a head-to-head row lead; the round list is the bottom half.',
+    good:'Gives competitive players their numbers without a separate Stats screen.', watch:'Overlaps with Your stats and the Players tab.',
+    html:ph(`<div class="row"><span class="h1">History</span><span class="sp"></span>${av('T')}</div>
+    <div class="g2">${[['Net','+$47'],['Win rate','58%'],['Rounds','24'],['Skins won','61']].map(([k,v])=>`<div class="box col" style="gap:0"><span class="lbl">${k}</span><span class="h2" style="font-size:20px">${v}</span></div>`).join('')}</div>
+    <span class="lbl">Head to head</span>
+    <div class="row" style="gap:6px">${[['M','8–5'],['D','11–2'],['J','3–4']].map(([l,r])=>`<div class="box row" style="flex:1;padding:6px;gap:5px">${av(l)}<b>${r}</b></div>`).join('')}</div>
+    <span class="lbl">Rounds</span>
+    ${tr('<b>Skins · Logan River</b><span class="sm">Oct 10</span>','<b>+$14</b>')}${tr('<b>Nassau · Riverside</b><span class="sm">Oct 4</span>','<b>−$3</b>')}${tr('<b>Wolf · Eagle Lake</b><span class="sm">Oct 3</span>','<b>+$8</b>')}`,'history') }
+  ]},
+
+{ id:'players', group:'Every day', name:'Players', use:'Weekly, and every time someone new joins',
+  why:'Your people: friends, the crew, rivalries. Today it\'s a list with tabs per crew. It\'s also where the competitive "who\'s my nemesis" fun lives.',
+  suggested:'E',
+  opts:[
+  { k:'A', name:'List with record', idea:'One row per person: buddy, name, your record against them, and the money between you.',
+    good:'Plain and useful. Sorting by most played puts your crew on top.', watch:'Flat; no sense of a crew or a rivalry.',
+    html:ph(`<div class="row"><span class="h1">Players</span><span class="sp"></span><span class="ic">+</span></div>
+    <div class="row"><span class="chip on">Everyone</span><span class="chip">Saturday crew</span><span class="chip">Trip</span></div>
+    <div class="box row" style="border-radius:99px;padding:7px 12px"><span class="sm">Search players</span></div>
+    <div class="col" style="gap:0">${[['M','Mike','14 rounds','8–5','+$14'],['D','Dave','12 rounds','11–2','+$16'],['J','Jackson','7 rounds','3–4','−$8'],['S','Sam','2 rounds','1–1','–']].map(([l,n,r,w,v])=>tr(`${av(l,'l')}<div class="col" style="gap:0"><b style="font-size:13px">${n}</b><span class="sm">${r} · you're ${w}</span></div>`,`<b>${v}</b><span class="chev"></span>`)).join('')}</div>
+    <div class="sp"></div><div class="btn gh">Invite a friend</div>`,'players') },
+  { k:'B', name:'Roster', idea:'A grid of buddy avatars per crew, like a team sheet. Tap one for their card.',
+    good:'Shows off the Ball buddies. Feels like your team.', watch:'Less info per person until you tap.',
+    html:ph(`<div class="row"><span class="h1">Players</span><span class="sp"></span><span class="ic">+</span></div>
+    <div class="row"><b>Saturday crew</b><span class="sp"></span><span class="sm">4 players</span></div>
+    <div class="g2" style="grid-template-columns:repeat(3,1fr)">${[['T','You'],['M','Mike'],['D','Dave'],['J','Jackson']].map(([l,n])=>`<div class="box col" style="align-items:center;gap:4px;padding:10px 4px">${av(l,'xl')}<b>${n}</b></div>`).join('')}<div class="box col" style="align-items:center;gap:4px;padding:10px 4px;border-style:dashed">${av('+','xl e')}<span class="sm">Add</span></div></div>
+    <div class="row" style="margin-top:6px"><b>Scottsdale trip</b><span class="sp"></span><span class="sm">8 players</span></div>
+    <div class="row"><span class="stack">${['T','M','D','J','S','K','R'].map(l=>av(l,'l')).join('')}</span><span class="sm">+1</span></div>`,'players') },
+  { k:'C', name:'Rivalry first', idea:'Your nemesis gets a big card up top (the one you lose to most), then everyone else as a list.',
+    good:'Turns a contact list into competition. Uses the rivalry cards and "Your nemesis" that exist.', watch:'Must stay playful, never a guilt trip for losing.',
+    html:ph(`<div class="row"><span class="h1">Players</span><span class="sp"></span><span class="ic">+</span></div>
+    <div class="box inv col" style="gap:8px;padding:14px"><span class="lbl">Your nemesis</span><div class="row">${av('J','xl')}<span class="h2" style="font-size:20px;margin:0 4px">vs</span>${av('T','xl')}<span class="sp"></span><div class="col" style="gap:0;text-align:right"><span class="h1" style="color:var(--w-paper)">3–4</span><span class="sm">Jackson leads</span></div></div><span class="sm">He's taken $8 off you this season. Saturday's a chance.</span><div class="btn pk s" style="width:max-content">Challenge Jackson</div></div>
+    <span class="lbl" style="margin-top:4px">Everyone</span>
+    <div class="col" style="gap:0">${[['M','Mike','8–5','You lead'],['D','Dave','11–2','You lead'],['S','Sam','1–1','Even']].map(([l,n,r,s])=>tr(`${av(l,'l')}<div class="col" style="gap:0"><b style="font-size:13px">${n}</b><span class="sm">${s}</span></div>`,`<b>${r}</b><span class="chev"></span>`)).join('')}</div>`,'players') },
+  { k:'D', name:'Season leaderboard', idea:'Players ranked by money this season, with movement since last week.',
+    good:'Competitive groups will check it every Monday. The crew\'s hall of fame in one list.', watch:'Can feel like pressure for whoever\'s last. Might be better inside a crew page than as the tab.',
+    html:ph(`<div class="row"><span class="h1">Players</span><span class="sp"></span><span class="ic">+</span></div>
+    <div class="row"><span class="chip on">Saturday crew</span><span class="chip">This season ▾</span></div>
+    ${[['1','M','Mike','+$51','▲1'],['2','T','You','+$47','▼1'],['3','J','Jackson','+$3','–'],['4','D','Dave','−$101','–']].map(([r,l,n,v,m],i)=>`<div class="box row ${i===0?'inv':''}" style="padding:9px"><span class="h2" style="width:16px">${r}</span>${av(l,'l')}<b style="font-size:13px">${n}</b><span class="sp"></span><span class="sm">${m}</span><b style="font-size:13px">${v}</b></div>`).join('')}
+    <div class="sm" style="text-align:center">Dave has bought everyone lunch twice. Respect.</div>
+    <div class="sp"></div><div class="btn gh">Hall of fame</div>`,'players') }
+  ]}
+];
+
+/* ---------- option E on every screen, built from Mobbin references ---------- */
+const M = id => 'https://mobbin.com/screens/' + id;
+const MOBBIN = {
+upnext: { refs:[['Formula 1','20af03ec-43c7-4286-902c-66389cc19271','Countdown strip pinned under the header'],['Garmin Connect','7bfd20ab-2add-4401-96bc-e002c0fb0ff8','Event card with "in 19 weeks" chip, then modules'],['Snapchat','caf49323-7318-424e-b6c2-7a8576d72cf9','Countdown as a big day-number tile'],['BFF','32f3e8cd-6243-4df9-a7e9-b9e4575d86c6','Date rail with RSVP on each event']],
+  opt:{ k:'E', name:'Countdown strip', idea:'A thin live countdown pinned under the header (F1 style), then short modules: this week, challenges, friends.',
+    good:'The countdown builds Saturday anticipation on every open without taking the whole screen.', watch:'A ticking clock all week could feel like a nag for people with no round planned; hide it then.',
+    html:ph(`<div class="row"><span class="h1">Up next</span><span class="sp"></span>${av('T')}</div>
+    <div class="box inv row" style="padding:8px 11px;border-radius:10px"><span class="lbl" style="color:var(--w-paper)">Skins · Sat</span><span class="sp"></span><span class="num" style="letter-spacing:.04em">03<span class="sm">d</span> 21<span class="sm">h</span> 04<span class="sm">m</span></span></div>
+    <div class="row"><span class="h3">This week</span><span class="sp"></span><span class="sm">See all</span></div>
+    <div class="row" style="gap:8px;overflow:hidden">${[['17','Sat','Skins','3 of 4 in'],['22','Thu','9 after work','Plan']].map(([d,w,t,s],i)=>`<div class="box col" style="min-width:${i?110:150}px;gap:4px;${i?'opacity:.7':''}"><div class="row"><div class="box" style="padding:2px 6px;text-align:center"><div class="lbl">${w}</div><b>${d}</b></div><b>${t}</b></div><span class="sm">${s}</span></div>`).join('')}</div>
+    <div class="row"><span class="h3">Challenges</span><span class="sp"></span><span class="sm">See all</span></div>
+    <div class="box row"><span class="art" style="width:38px;height:38px;border-radius:50%"></span><div class="col" style="gap:1px"><b>Closest to the pin, hole 7</b><span class="sm">Dave vs you · $5 · Saturday</span></div></div>
+    <div class="row"><span class="h3">Friends</span><span class="sp"></span><span class="sm">See all</span></div>
+    ${tr(`${av('M')}<span><b>Mike</b> on hole 7 · up $6</span>`,'<span class="dot"></span>')}`,'upnext') } },
+plan: { refs:[['Apple Invites','5a5a0fdb-b99a-4352-bd57-80680ca6862d','Full-bleed art with Going / Not going / Maybe in one bar'],['Luma','0348988b-2412-466e-a0b2-afcb45ff215b','"Alex invited you" note above the RSVP'],['BFF','a270e80e-2c68-4165-b5a8-f03042cab0f2','Event chat preview under the RSVP'],['GroupMe','a5a5450d-8c2b-4896-aa82-4f1fc2867db5','Going / Not going / Pending tabs for attendees']],
+  opt:{ k:'E', name:'Invitation poster', idea:'Apple Invites style: the course art fills the top, the round\'s name sits on it, one three-way RSVP bar, then a peek at the round\'s chat.',
+    good:'Feels like an invitation to something, which is the anticipation the brand wants. The chat preview pulls trash talk in.', watch:'Needs good course or game art for every round, or it falls back to a pattern.',
+    html:ph(`<div style="margin:-6px -14px 0;height:250px;position:relative" class="art"><div style="position:absolute;inset:auto 0 0 0;padding:14px;background:linear-gradient(transparent,var(--w-paper))"><div class="h1" style="font-size:26px">Saturday Skins</div><div class="sm" style="color:var(--w-ink)">Sat Oct 17 · 8:10 AM · Logan River GC</div></div></div>
+    <div class="box row" style="padding:0;overflow:hidden">${['✓ Going','✕ Out','? Maybe'].map((x,i)=>`<div style="flex:1;text-align:center;padding:9px 0;font-weight:700;${i===0?'background:var(--w-ink);color:var(--w-paper)':''};${i?'border-left:1.2px solid var(--w-line)':''}">${x}</div>`).join('')}</div>
+    <div class="box fill row">${av('T')}<span class="sm" style="color:var(--w-ink)"><b>Trev invited you.</b> $2 skins unless the vote says otherwise.</span></div>
+    <div class="row"><span class="stack">${av('T')}${av('M')}${av('J')}</span><span class="sm">3 going · Dave pending</span></div>
+    <div class="box col" style="gap:5px"><span class="lbl">Round chat</span><div class="row">${av('M')}<span>Nassau or I riot.</span></div><span class="sm">12 messages · See all</span></div>`) } },
+setup: { refs:[['Apple Games','00e13567-8d0e-4fde-88a9-5a6b5cf83f53','Game art hero, player count, settings as tappable rows, one Start button'],['Formula 1','ab6e89d7-80b6-4a0e-97ef-3f3f1340f7da','Game types as radio cards with a short badge'],['Abode','a327db81-ca41-4554-8bca-302a0679926f','Category tiles in a sheet, difficulty as a segmented control'],['Deezer','c72f4bf4-114c-4c01-821e-829a727ecbdb','Two big mode cards under the game art']],
+  opt:{ k:'E', name:'Game page', idea:'Apple Games style: the game\'s art and name as a hero, then four setting rows (stake, players, course, handicaps) and one Start button.',
+    good:'The game feels like the event. Settings stay a tap away without a form look.', watch:'You still need a way to switch games: swipe the hero or tap the name.',
+    html:ph(`<div style="margin:-6px -14px 0;height:170px;position:relative" class="art"><span class="ic" style="position:absolute;left:12px;top:10px">‹</span><span class="chip" style="position:absolute;right:12px;top:12px;background:var(--w-paper)">Switch game ⇄</span></div>
+    <div class="row sm"><span class="ic" style="width:18px;height:18px">♣</span>Classic · Best for 3 to 4</div>
+    <span class="h1" style="font-size:26px">Skins</span><span class="sm" style="margin-top:-6px">Win the hole outright, win the skin. Ties carry.</span>
+    ${[['$','Stake','$2 a skin'],['☺','Players','Trev, Mike, Dave'],['⛳','Course','Logan River · Blue'],['±','Handicaps','Off']].map(([i,k,v])=>`<div class="box fill row" style="padding:8px 10px"><span class="ic" style="background:var(--w-paper)">${i}</span><div class="col" style="gap:0"><span class="sm">${k}</span><b>${v}</b></div><span class="sp"></span><span class="sm">⌃⌄</span></div>`).join('')}
+    <div class="sp"></div><div class="btn">Start and invite the group</div>`) } },
+ready: { refs:[['Fixtured','f38fb580-c136-492b-9f76-141acbcd67fb','Glass match card: two sides, records under names, standings table below'],['Apple Sports','ca47e978-21c7-4144-9a16-a10d5dae51e4','Records under each team name, time in the middle'],['Premier League','20854574-a9a3-4acb-b20e-3de8f4f7f854','Head-to-head bar: wins, played, wins']],
+  opt:{ k:'E', name:'Match preview', idea:'A sports-app match card: everyone with their season record, the stake in the middle, and the crew\'s standings right under it.',
+    good:'Makes a Saturday round feel like a fixture. The records start the trash talk at the tee.', watch:'For a first round with no history the records are blank; show handicaps instead.',
+    html:ph(`<div class="hdr"><span class="ic">✕</span><span class="h3" style="flex:1;text-align:center">Match preview</span><span class="ic">↗</span></div>
+    <div class="box inv col" style="padding:14px;gap:12px;border-radius:20px"><span class="lbl" style="text-align:center;color:var(--w-paper)">Logan River · Skins · $2</span>
+    <div class="g3">${[['T','Trev','8–5–1'],['M','Mike','6–7–1'],['D','Dave','2–11']].map(([l,n,r])=>`<div class="col" style="align-items:center;gap:3px">${av(l,'xl')}<b>${n}</b><span class="sm">${r}</span></div>`).join('')}</div>
+    <div class="col" style="align-items:center;gap:0"><span class="sm">Tees off</span><span class="h1" style="color:var(--w-paper)">8:10 AM</span></div></div>
+    <div class="box col" style="gap:0"><div class="row lbl" style="padding-bottom:4px"><span style="width:14px">#</span><span>Saturday crew</span><span class="sp"></span><span style="width:30px;text-align:right">Rds</span><span style="width:40px;text-align:right">Net</span></div>
+    ${[['1','Mike','14','+$51'],['2','Trev','13','+$47'],['4','Dave','12','−$101']].map(r=>`<div class="row" style="padding:5px 0;border-top:1.1px solid var(--w-line)"><span style="width:14px" class="sm">${r[0]}</span><b>${r[1]}</b><span class="sp"></span><span class="num" style="width:30px;text-align:right">${r[2]}</span><span class="num" style="width:40px;text-align:right">${r[3]}</span></div>`).join('')}</div>
+    <div class="sp"></div><div class="btn">Tee off →</div>`) } },
+score: { refs:[['Future Pro','87674950-48c0-471d-ae93-7eba02d4da06','Big number with − / + over a keypad in one sheet'],['Me+','93696285-63a9-4685-a678-487dd66b2b70','Quick-pick presets above the keypad'],['Expensify','358be16c-95fe-4f6f-b0fe-626084f480d8','Huge value, soft pill keys, one Next'],['Lovi','0814a086-1380-48eb-82bb-e409adcc4a18','Stepper card with "4 of 8" style context']],
+  opt:{ k:'E', name:'Quick-pick sheet', idea:'Players stay listed; tapping one raises a sheet with their big number, golf presets (Birdie 4, Par 5, Bogey 6) and − / + for anything else.',
+    good:'Presets cover most holes in one tap, the list keeps everyone visible, and the sheet gives big targets.', watch:'Two taps per player when you tap them one by one; auto-advance to the next player helps.',
+    html:ph(`<div class="hdr"><span class="ic">⌄</span><div class="col" style="flex:1;align-items:center;gap:0"><b>Hole 1 · Par 5</b><span class="sm">Worth $4</span></div><span class="ic">⋯</span></div>
+    ${[['Trev','4'],['Mike','·'],['Dave','·']].map(([n,s],i)=>`<div class="row box" style="padding:8px 10px;${i===1?'border:2px solid var(--w-acc)':''}">${av(n[0])}<b>${n}</b><span class="sp"></span><span class="h2">${s}</span></div>`).join('')}
+    <div class="sp"></div>
+    <div class="box col" style="margin:0 -14px -10px;border-radius:24px 24px 0 0;border-color:var(--w-ink);padding:14px;gap:10px;background:var(--w-paper)">
+      <div class="row"><b>Mike</b><span class="sp"></span><span class="sm">Then Dave</span></div>
+      <div class="row" style="justify-content:center;gap:18px"><span class="step"><b>−</b></span><span class="big" style="font-size:52px">5</span><span class="step"><b class="f">+</b></span></div>
+      <div class="row" style="gap:6px">${[['Eagle','3'],['Birdie','4'],['Par','5'],['Bogey','6'],['Dbl','7']].map(([l,v],i)=>`<div class="box col ${i===2?'inv':''}" style="flex:1;align-items:center;gap:0;padding:6px 0"><b style="font-size:14px">${v}</b><span class="sm" style="font-size:8.5px">${l}</span></div>`).join('')}</div>
+      <div class="btn">Next: Dave</div>
+    </div>`) } },
+live: { refs:[['FotMob','7dc77398-839f-48b2-8b12-29ac90b2b9c1','Live Activity in the Dynamic Island: score and clock'],['Apple Sports','ca47e978-21c7-4144-9a16-a10d5dae51e4','Dense, calm scoreboard rows on a dark ground'],['DAZN','8c37c667-f203-4a3b-8fe6-4ef921a0b2c7','Score header with a live updates feed under tabs']],
+  opt:{ k:'E', name:'Lock screen', idea:'Live Activity on the lock screen and Dynamic Island: hole, who\'s up, what the next hole is worth. The app stays in the pocket.',
+    good:'The quietest possible "during": a glance at the lock screen, no unlock. The strongest App Store feature on this list.', watch:'Native only (needs the iOS app). Push budgets limit how often it updates.',
+    html:`<div class="ph" style="background:var(--w-ink);color:var(--w-paper)"><div class="sb"><span>9:41</span><span style="width:120px;height:26px;border-radius:99px;background:#000;display:flex;align-items:center;justify-content:space-between;padding:0 10px;font-size:9px;font-weight:700"><span>H7</span><span style="color:var(--w-acc)">+$8</span></span><span>5G ▮</span></div>
+    <div class="bd" style="align-items:center;gap:4px;padding-top:30px"><span class="sm" style="color:#b9b4aa">Saturday, October 17</span><span class="big" style="font-size:64px;color:var(--w-paper)">10:42</span></div>
+    <div style="margin:0 12px 24px;border-radius:22px;background:#2a2a2a;padding:12px;display:flex;flex-direction:column;gap:9px">
+      <div class="row"><span class="sm" style="color:#b9b4aa">Skins · Logan River</span><span class="sp"></span><span class="sm" style="color:#b9b4aa"><span class="dot"></span> Hole 7</span></div>
+      <div class="row" style="justify-content:space-between">${[['Trev','+$8'],['Mike','+$2'],['Dave','−$10']].map(([n,v])=>`<div class="col" style="gap:0;align-items:center"><span class="sm" style="color:#b9b4aa">${n}</span><b style="font-size:17px">${v}</b></div>`).join('')}</div>
+      <div style="height:1px;background:#444"></div>
+      <div class="row"><span class="sm" style="color:#b9b4aa">Hole 8 is worth</span><span class="sp"></span><b>3 skins · $12</b></div>
+    </div></div>` } },
+results: { refs:[['Deezer','1ffcf774-12cc-4587-adf0-5b16c8dfc2ce','Score badge on top, your rank, top three with medals, Challenge a friend'],['LinkedIn','a083ebd1-ecfa-4798-a454-cc5164e9b493','Result sticker, "41% couldn\'t solve it" stat, Send'],['Apple News','9d6d2b9e-e1dc-4cd6-8b0e-8c15b51e7727','Rosette badge, one summary card, Done and Share'],['Quizlet','22670919-b826-45b1-94f7-0f29d33a45ef','Score vs best as two calm tiles']],
+  opt:{ k:'E', name:'Score badge', idea:'Like a daily game result: your number in a big stamp, a one-line stat that stings, the ranked list, then Run it back or Challenge.',
+    good:'Every player gets their own moment, not only the winner. "Run it back" turns the result into next Saturday.', watch:'Settling up needs its own clear button so the badge doesn\'t bury it.',
+    html:ph(`<div class="hdr"><span class="ic">✕</span><span class="h3" style="flex:1;text-align:center">Skins · Logan River</span><span class="ic">↗</span></div>
+    <div class="col" style="align-items:center;gap:6px;padding:10px 0 4px"><div style="border:2.5px solid var(--w-ink);border-radius:14px;padding:4px 16px;transform:rotate(-3deg)" class="big">+$14</div><span class="sm">Your best day since August</span></div>
+    <div class="box fill row"><span class="ic" style="background:var(--w-paper)">♛</span><div class="col" style="gap:0"><b>1st of 3</b><span class="sm">7 skins, 4 of them carries</span></div></div>
+    <div class="col" style="gap:0">${[['1','T','You','+$14'],['2','M','Mike','+$2'],['3','D','Dave','−$16']].map(([r,l,n,v],i)=>`<div class="row" style="padding:7px 8px;border-radius:10px;${i===0?'background:var(--w-ink);color:var(--w-paper)':''}"><span class="av" style="width:16px;height:16px;font-size:8px;${i===0?'border-color:var(--w-paper);background:var(--w-ink);color:var(--w-paper)':''}">${r}</span>${av(l)}<b>${n}</b><span class="sp"></span><b>${v}</b></div>`).join('')}</div>
+    <div class="sp"></div><div class="btn">Settle up</div><div class="btn gh">Run it back next Saturday</div>`) } },
+tab: { refs:[['Revolut','4a30eb35-3271-47a1-9f82-20e5aceb2479','Settle-up sheet: tick people, then Remind or Mark as paid'],['GoPay','005a4a08-fb29-4032-bd5d-e64864d0a81e','Ticket card, "people still owe you", tick to mark settled'],['Splitwise','497254f8-4a8f-448a-bc3b-0d279d7979eb','Per-friend balance with Settle up and Remind chips'],['Monzo','0d05e08e-2846-48fa-b63d-fe72446607e1','Settle all or part as one row with a big amount']],
+  opt:{ k:'E', name:'Tick and settle', idea:'Revolut style: one card says what\'s still owed, every person has a tick box, and the sheet ends with Remind, Mark paid or Roll over.',
+    good:'Settling five people takes one pass instead of five screens. Roll over sits right next to Paid.', watch:'Mixing "they owe me" and "I owe them" in one checklist needs care.',
+    html:ph(`<div class="row"><span class="h1">Tab</span><span class="sp"></span>${av('T')}</div>
+    <div class="box col" style="align-items:center;gap:2px;padding:14px;border-style:dashed"><span class="sm">People still owe you</span><span class="big" style="font-size:34px">$30</span><span class="sm">You owe Jackson $8</span></div>
+    <div class="row"><span class="h3">Settle up</span><span class="sp"></span><span class="sm">Select all ☐</span></div>
+    <div class="box col" style="gap:0">${[['M','Mike','Owes you','$14',1],['D','Dave','Owes you','$16',1],['J','Jackson','You owe','$8',0]].map(([l,n,s,v,c])=>`<div class="row" style="padding:7px 0;border-bottom:1.1px solid var(--w-line)"><span class="chk ${c?'f':''}" style="border-radius:5px">${c?'✓':''}</span>${av(l)}<div class="col" style="gap:0"><b>${n}</b><span class="sm">${s}</span></div><span class="sp"></span><b>${v}</b></div>`).join('')}</div>
+    <div class="sp"></div><div class="g2"><div class="btn gh">Remind 2</div><div class="btn">Mark paid</div></div><div class="sm" style="text-align:center;text-decoration:underline">Roll to next time</div>`,'tab') } },
+history: { refs:[['Nike Run Club','b689bdd6-045d-4e4d-8785-ef053793b835','W / M / Y / All, one huge number, three stats, bar chart, recent'],['Runna','70ae1c0a-8823-4ebe-8220-949f0c58787a','Cards with a coloured left edge and three stats each'],['The Outsiders','dd028d1b-1154-4311-b0d1-cffcc65ffc75','Cumulative line over per-day bars, vs last month'],['Tonal','fc400513-e1be-49cc-9f5b-8cd6fd55f259','Month review headline with a change chip']],
+  opt:{ k:'E', name:'Big number', idea:'Nike Run Club style: a Week / Month / Year / All switch, one huge net number, three small stats, bars per round, then cards with a win or loss edge.',
+    good:'The period switch answers "how\'s my month" and "how\'s my year" on one screen. The edges show streaks without a chart.', watch:'Leads with money; consider leading with rounds or wins instead.',
+    html:ph(`<div class="row"><span class="h1">History</span><span class="sp"></span>${av('T')}</div>
+    <div class="box row" style="padding:3px;border-radius:99px;gap:2px">${['W','M','Y','All'].map((x,i)=>`<span style="flex:1;text-align:center;padding:4px 0;border-radius:99px;font-weight:700;${i===1?'background:var(--w-ink);color:var(--w-paper)':''}">${x}</span>`).join('')}</div>
+    <span class="sm">October 2026 ▾</span>
+    <div class="row" style="align-items:baseline;gap:6px"><span class="big" style="font-size:48px;font-style:italic">+$19</span><span class="chip">vs −$4 Sep</span></div>
+    <div class="g3">${[['3','Rounds'],['2','Wins'],['12','Skins']].map(([v,k])=>`<div class="col" style="gap:0"><b style="font-size:16px">${v}</b><span class="sm">${k}</span></div>`).join('')}</div>
+    <div class="row" style="align-items:flex-end;height:46px;gap:5px;border-bottom:1.2px solid var(--w-line)">${[0,0,22,0,0,6,0,0,0,30,0,0].map((h,i)=>`<i style="flex:1;height:${h||2}px;background:${h? (i===5?'var(--w-line)':'var(--w-ink)'):'transparent'};border-radius:3px 3px 0 0"></i>`).join('')}</div>
+    ${[['Skins · Logan River','Oct 10','+$14',1],['Nassau · Riverside','Oct 4','−$3',0]].map(([t,d,v,w])=>`<div class="box row" style="padding:8px 10px;border-left:4px solid ${w?'var(--w-ink)':'var(--w-line)'}"><div class="col" style="gap:0"><span class="sm">${d}</span><b>${t}</b></div><span class="sp"></span><b>${v}</b></div>`).join('')}`,'history') } },
+players: { refs:[['Jomo','7a616de2-4608-496a-84b6-7aecd8ff3d9c','Squad card: today\'s rank, then a weekly scoreboard of who won each day'],['Premier League','20854574-a9a3-4acb-b20e-3de8f4f7f854','Head-to-head as wins / played / wins with one split bar'],['Life Reset','f6f2a12c-eebc-4d5b-83f5-353e1cf9a5da','Season league with your row highlighted and movement arrows'],['FotMob','0380608e-ddb8-498d-a4a9-4a9ee9107cd6','Past meetings as a simple list of results']],
+  opt:{ k:'E', name:'Crew scoreboard', idea:'Jomo style: each crew is a card with a row of Saturdays showing who won each one, then head-to-head bars against each friend.',
+    good:'The weekly row turns the crew into a running season with almost no reading. Head-to-head bars are honest and light.', watch:'Groups that play irregularly get a sparse row; label by round, not by week.',
+    html:ph(`<div class="row"><span class="h1">Players</span><span class="sp"></span><span class="ic">+</span></div>
+    <div class="box col" style="gap:8px"><div class="row"><b style="font-size:13px">Saturday crew</b><span class="sp"></span><span class="chip">+ Invite</span></div>
+    <span class="lbl">Who won each Saturday</span>
+    <div class="row" style="justify-content:space-between">${[['M','Sep 19'],['T','Sep 26'],['D','Oct 3'],['T','Oct 10'],['?','Oct 17']].map(([l,d])=>`<div class="col" style="align-items:center;gap:3px">${av(l,l==='?'?'e':'')}<span class="sm" style="font-size:8.5px">${d}</span></div>`).join('')}</div></div>
+    <span class="lbl" style="margin-top:4px">Head to head</span>
+    ${[['M','Mike',8,13,5],['D','Dave',11,13,2],['J','Jackson',3,7,4]].map(([l,n,w,p,lo])=>`<div class="col" style="gap:4px;padding:4px 0"><div class="row">${av(l)}<b>${n}</b><span class="sp"></span><span class="sm">${p} played</span></div><div class="row" style="gap:6px"><b style="width:18px">${w}</b><div style="flex:1;display:flex;gap:3px;height:7px"><i style="flex:${w};background:var(--w-acc);border-radius:99px"></i><i style="flex:${p-w-lo||.01};background:var(--w-line);border-radius:99px"></i><i style="flex:${lo};background:var(--w-ink);border-radius:99px"></i></div><b style="width:18px;text-align:right">${lo}</b></div></div>`).join('')}`,'players') } }
+};
+SCREENS.forEach(s => { const m = MOBBIN[s.id]; if (!m) return; s.opts.push({ ...m.opt, mobbin: true }); s.refs = m.refs; });
+
+/* ---------- "Current": screenshots of the app as it is today (main, 2026-10-12, sample data) ---------- */
+const CURRENT = {
+  upnext: [['upnext'], 'Last round\'s recap fills the top: the winner, who\'s paid, three buttons. Reminders come next, and Saturday\'s plan sits further down the scroll.'],
+  tab: [['tab'], 'A big net number, a trend sentence, a full chart card, then a card per person with a remind bell and a paid button.'],
+  history: [['history'], 'Season / Month / Custom, a game filter, the net chart, a stats link, head-to-head tiles, then rounds grouped by month.'],
+  players: [['players'], 'You on top, then a large card per friend with their answer for Saturday, record, money and a Remind button.'],
+  plan: [['plan'], 'The organizer\'s view: game and course card, a preview link, In / Maybe / Out, the bet vote, then Invite the group and Roll call.'],
+  setup: [['setup', 'setup-2'], 'Four steps (Game, Course, Players, Bets). Your usual sits on top of the game list. The second shot is the Bets step.'],
+  ready: [['ready', 'ready-2'], 'Buddies scene, the summary card, the invite card and Tee off. Teeing off opens the First tee sheet (second shot).'],
+  score: [['score'], 'Money card, Hole / Par / HCP tiles, the "worth" card with skin counts, then one row per player with − and +. Hole 1 also shows the side bet prompt.'],
+  live: [['score', 'live'], 'There is no separate money screen for the scorer: the money strip tops the hole screen, and the Scorecard sheet is in the round menu. The friends\' live link page isn\'t shown here, since it needs a published round.'],
+  results: [['results', 'results-2'], 'A pink winner card, a save-to-account nudge, the podium and standings, then Who pays who and the scorecard further down (second shot).']
+};
+const shot = (n, cap) => `<figure class="shotfig"><div class="ph shot"><img src="current/${n}.jpg" alt="${cap.replace(/"/g, '&quot;')}" loading="lazy"></div></figure>`;
+SCREENS.forEach(s => { const c = CURRENT[s.id]; if (!c) return;
+  s.opts.unshift({ k: 'Now', name: 'Current', current: true, idea: c[1],
+    good: 'What testers use today, captured from the app on main with sample rounds.', watch: 'Compare the density: count the cards and buttons above the fold against each layout.',
+    html: shot(c[0][0], s.name + ', current app'), extra: c[0].slice(1).map(n => shot(n, s.name + ', current app, continued')).join('') }); });
+
+/* ---------- state + storage ---------- */
+const ORDER = ['Every day','Before the round','On the course','After the round'];
+SCREENS.sort((a, b) => ORDER.indexOf(a.group) - ORDER.indexOf(b.group));
+const state = { screen: SCREENS[0].id, opt: 'Now', compare: false };
+const lbl = x => x.current ? 'Current' : `${x.k} · ${esc(x.name)}`;
+let picks = {};      // { screenId: { favorites:[], note:'' } }
+let db = null;
+const LS = 'bb-layout-lab-picks';
+try { const s = JSON.parse(localStorage.getItem(LS) || 'null'); if (s) picks = s; } catch (e) {}
+try { const h = location.hash.slice(1); if (SCREENS.some(s => s.id === h)) state.screen = h; } catch (e) {}
+
+const scr = () => SCREENS.find(s => s.id === state.screen);
+const pickOf = id => picks[id] || { favorites: [], note: '' };
+const esc = s => String(s).replace(/[&<>"]/g, c => ({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;' }[c]));
+
+function flash(t) { const el = document.getElementById('saved'); el.textContent = t; clearTimeout(flash.t); flash.t = setTimeout(() => el.textContent = '', 1800); }
+
+async function save(id) {
+  const p = pickOf(id);
+  try { localStorage.setItem(LS, JSON.stringify(picks)); } catch (e) {}
+  if (!db) { flash('Saved on this device'); return; }
+  try {
+    const s = SCREENS.find(x => x.id === id);
+    await db.collection('picks').doc(id).set({ screen: s.name, favorites: p.favorites, favoriteNames: p.favorites.map(k => s.opts.find(o => o.k === k).name), note: p.note || '', at: new Date().toISOString() });
+    flash('Saved');
+  } catch (e) { flash('Saved on this device only'); }
+}
+
+function toggleFav(k) {
+  const id = state.screen, p = { ...pickOf(id) };
+  p.favorites = p.favorites.includes(k) ? p.favorites.filter(x => x !== k) : [...p.favorites, k].sort();
+  picks[id] = p; save(id); render();
+}
+
+/* ---------- render ---------- */
+function renderSide() {
+  document.getElementById('side').innerHTML = ORDER.map(g => `<div class="grp"><div class="grp-lbl">${g}</div>${SCREENS.filter(s => s.group === g).map(s => { const f = pickOf(s.id).favorites; const n = SCREENS.indexOf(s) + 1;
+    return `<button class="scr-btn ${s.id === state.screen ? 'on' : ''}" data-s="${s.id}" type="button"><span class="n">${n}</span><span class="nm">${esc(s.name)}</span>${f.length ? `<span class="pk">★ ${f.join('')}</span>` : ''}</button>`; }).join('')}</div>`).join('');
+  const done = SCREENS.filter(s => pickOf(s.id).favorites.length).length;
+  document.getElementById('pf').style.width = (done / SCREENS.length * 100) + '%';
+  document.getElementById('pt').textContent = `${done} of ${SCREENS.length} screens picked`;
+}
+
+function tagFor(s, o) {
+  if (o.current) return '<span class="tag today">Current app</span>';
+  return [s.suggested === o.k ? '<span class="tag">Suggested</span>' : '', o.mobbin ? '<span class="tag mob">From Mobbin</span>' : '', (s.id === 'ready' || s.id === 'score') && o.k === 'A' || (s.id === 'history' && o.k === 'A') || (s.id === 'tab' && o.k === 'A') || (s.id === 'players' && o.k === 'A') || (s.id === 'setup' && o.k === 'A') || (s.id === 'results' && o.k === 'A') ? '<span class="tag today">Close to today</span>' : ''].join(' ');
+}
+
+function renderMain() {
+  const s = scr(), p = pickOf(s.id), o = s.opts.find(x => x.k === state.opt);
+  const n = SCREENS.indexOf(s) + 1;
+  let h = `<div class="s-head"><span class="s-eyebrow">${n} of ${SCREENS.length} · ${s.group}</span><h2>${esc(s.name)}</h2><p class="s-why">${esc(s.why)}</p><span class="use">How often: <b>${esc(s.use)}</b></span></div>
+  <div class="optbar" role="tablist" aria-label="Layouts">${s.opts.map(x => `<button class="opt ${!state.compare && x.k === state.opt ? 'on' : ''}" data-o="${x.k}" role="tab" aria-selected="${!state.compare && x.k === state.opt}" type="button">${lbl(x)}${p.favorites.includes(x.k) ? ' <span class="star">★</span>' : ''}</button>`).join('')}
+  <span class="spacer"></span><button class="toggle ${state.compare ? 'on' : ''}" id="cmpBtn" type="button">${state.compare ? 'One at a time' : 'Compare all six'}</button></div>`;
+  if (state.compare) {
+    h += `<div class="compare">${s.opts.map(x => `<div class="cmp"><div class="cmp-h"><b>${lbl(x)}</b>${s.suggested === x.k ? '<span>Suggested</span>' : ''}</div><div class="mini" data-o="${x.k}" title="Open ${esc(x.name)}">${x.html}</div><button class="fav-sm ${p.favorites.includes(x.k) ? 'on' : ''}" data-fav="${x.k}" type="button">${p.favorites.includes(x.k) ? '★ Starred' : '☆ Star'}</button></div>`).join('')}</div>`;
+  } else {
+    h += `<div class="single"><div class="stage"><button class="arrow" data-step="-1" aria-label="Previous layout" type="button">‹</button><div class="shots">${o.html}${o.extra || ''}</div><button class="arrow" data-step="1" aria-label="Next layout" type="button">›</button></div>
+    <div class="notes"><div>${tagFor(s, o)}</div><h3>${o.current ? 'Current app' : `${o.k} · ${esc(o.name)}`}</h3><p class="idea">${esc(o.idea)}</p>
+    <div class="pc"><span class="k">Good for</span><p>${esc(o.good)}</p></div><div class="pc"><span class="k">Watch out</span><p>${esc(o.watch)}</p></div>
+    <button class="fav ${p.favorites.includes(o.k) ? 'on' : ''}" data-fav="${o.k}" type="button">${p.favorites.includes(o.k) ? '★ Starred' : '☆ Star this layout'}</button>
+    <span class="hint">Arrow keys flip through layouts. Star as many as you like.</span></div></div>`;
+  }
+  if (s.refs) h += `<div class="refs"><span class="k">Mobbin references for this screen</span><ul>${s.refs.map(([a,id,t]) => `<li><a href="${M(id)}" target="_blank" rel="noopener">${esc(a)}</a> <span>${esc(t)}</span></li>`).join('')}</ul></div>`;
+  h += `<div class="note-box"><label for="note-${s.id}">Notes for ${esc(s.name)}: what to mix, what to drop</label><textarea id="note-${s.id}" placeholder="e.g. A's hero card with C's tiles under it">${esc(p.note || '')}</textarea></div>`;
+  document.getElementById('main').innerHTML = h;
+}
+
+function render() { renderSide(); renderMain(); }
+
+document.addEventListener('click', e => {
+  const t = e.target.closest('[data-s],[data-o],[data-fav],[data-step],#cmpBtn,#finTop,#finBig');
+  if (!t) return;
+  if (t.dataset.s) { state.screen = t.dataset.s; state.opt = scr().opts[0].k; try { history.replaceState(null, '', '#' + t.dataset.s); } catch (e) {} render(); document.getElementById('main').scrollIntoView({ block: 'start', behavior: 'smooth' }); }
+  else if (t.dataset.fav) toggleFav(t.dataset.fav);
+  else if (t.dataset.o) { state.opt = t.dataset.o; state.compare = false; render(); }
+  else if (t.dataset.step) stepOpt(+t.dataset.step);
+  else if (t.id === 'cmpBtn') { state.compare = !state.compare; render(); }
+  else if (t.id === 'finTop' || t.id === 'finBig') finish();
+});
+function stepOpt(d) { const ks = scr().opts.map(x => x.k); state.opt = ks[(ks.indexOf(state.opt) + d + ks.length) % ks.length]; render(); }
+document.addEventListener('keydown', e => {
+  if (e.target.matches('textarea,input') || state.compare) return;
+  if (e.key === 'ArrowRight') stepOpt(1); else if (e.key === 'ArrowLeft') stepOpt(-1);
+});
+document.addEventListener('input', e => {
+  if (!e.target.matches('textarea[id^="note-"]')) return;
+  const id = e.target.id.slice(5); picks[id] = { ...pickOf(id), note: e.target.value };
+  clearTimeout(save.t); save.t = setTimeout(() => { save(id); renderSide(); }, 700);
+});
+
+async function finish() {
+  const done = SCREENS.filter(s => pickOf(s.id).favorites.length).length;
+  const txt = document.getElementById('finTxt');
+  if (!db) { txt.textContent = `Saved on this device (${done} of ${SCREENS.length} picked). Say "done" in chat and paste your picks if I can't see them.`; return; }
+  try { await db.collection('review').doc('status').set({ finished: true, at: new Date().toISOString(), answered: done, total: SCREENS.length }); txt.textContent = `Finished with ${done} of ${SCREENS.length} screens picked. Say "done" in chat and I'll build from your stars.`; flash('Finished'); }
+  catch (e) { txt.textContent = 'Couldn\'t mark it finished. Your stars are still saved, just say "done" in chat.'; }
+}
+
+render();
+
+(async () => {
+  try { db = await window.claude?.use?.('db'); } catch (e) { db = null; }
+  if (!db) return;
+  db.collection('picks').onSnapshot(snap => {
+    snap.docs.forEach(d => { const v = d.data(); if (v) picks[d.id] = { favorites: v.favorites || [], note: v.note || '' }; });
+    const active = document.activeElement; if (active && active.matches('textarea')) { renderSide(); return; }
+    render();
+  }, () => {});
+})();
+</script>

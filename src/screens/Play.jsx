@@ -44,6 +44,7 @@ import { syncConfigured, useSeatRequests } from '../lib/sync.js';
 import { AddPlayerSheet } from '../components/AddPlayer.jsx';
 import { firstName, gameLabel, holeMoneyLine } from '../lib/format.js';
 import { shortNames } from '../lib/short-names.js';
+import { KEEP_DAYS, restoreRound, softDeleteRound } from '../lib/recently-deleted.js';
 import { countsMoney, inUnits, onTab, padUnit, playForShort, unitFmt, wholeDelta } from '../lib/play-for.js';
 import { leaveRound, roundsInProgress } from '../lib/rounds.js';
 import { RoundsInProgressSheet } from '../components/RoundsInProgress.jsx';
@@ -161,6 +162,17 @@ function useWakeLock() {
 // Unsaved scores per hole ("roundId:holeNo"), kept while moving between holes so nothing typed is
 // lost, and saved with your place so switching to another app (or the phone reloading) keeps them too
 const DRAFTS = keptMap('drafts');
+// When this phone last saved a hole, per round. The next hole opens under the same button with every
+// score at par, so a double tap on Save would save that hole too: a tap that soon after, before any
+// score on the new hole is touched, is the same tap
+const SAVED_AT = new Map();
+const SAVE_GAP_MS = 800;
+const markSaved = (roundId, holeNo) => SAVED_AT.set(roundId, { hole: holeNo, at: Date.now() });
+/** A tap on another hole's Save within the gap of the last save, with nothing touched since */
+const sameTap = (roundId, holeNo, dirty) => {
+  const last = SAVED_AT.get(roundId);
+  return !!last && last.hole !== holeNo && !dirty && Date.now() - last.at < SAVE_GAP_MS;
+};
 // Rounds whose locked-in rules card this phone has closed (a phone that isn't keeping score sees it until then)
 const AGREED_SEEN = new Set();
 
@@ -287,7 +299,7 @@ function PlayRound({ round, mount, momentUp = false }) {
   const requests = useSeatRequests(round.id);
   const numRefs = useRef({});
   // Whose score was tapped since this hole opened: only those get the birdie critter (ScoreCritter)
-  const tapped = useRef(new Set());
+  const [tapped, setTapped] = useState(() => new Set());
 
   // --- The first-tee rules card (see agreed.js) ---
   // 'lock' on the keeper's phone before hole 1; 'view' is "What we agreed" from the menu
@@ -405,7 +417,7 @@ function PlayRound({ round, mount, momentUp = false }) {
   const setMarksDirty = m => { setDirty(true); setMarks(m); };
   const setScore = (pid, v) => {
     setDirty(true);
-    tapped.current.add(pid);
+    setTapped(t => (t.has(pid) ? t : new Set(t).add(pid)));
     setDraft(d => ({ ...d, [pid]: v }));
     setTouched(t => ({ ...t, [pid]: true }));
     buzz(8);
@@ -426,8 +438,15 @@ function PlayRound({ round, mount, momentUp = false }) {
     return later === -1 ? idx + 1 : later;
   }, [round, idx, isLast]);
 
+  // One save at a time: the last hole waits on finishing, which can ask first
+  const saving = useRef(false);
   const saveHole = async () => {
-    if (!editable) return;
+    if (!editable || saving.current) return;
+    if (sameTap(round.id, hole.no, dirty)) return;
+    saving.current = true;
+    try { await saveThisHole(); } finally { saving.current = false; }
+  };
+  const saveThisHole = async () => {
     if (game === 'wolf' && wolf.partner === undefined) { showToast(`Pick ${round.players.find(p => p.id === wolf.wolf)?.name.split(' ')[0] || 'the wolf'}’s partner, or go lone wolf`); return; }
     const scores = Object.fromEntries(units.map(p => [p.id, draft[p.id]]));
     // ...and a pot added while this hole was open still saves the hole as nobody's when nobody's tapped
@@ -455,6 +474,7 @@ function PlayRound({ round, mount, momentUp = false }) {
         }
       }
     });
+    markSaved(round.id, hole.no);
     if (pressMode(round) === 'auto' && !isLast) {
       const r = getState().rounds[round.id];
       const legs = roundLegs(r);
@@ -523,12 +543,15 @@ function PlayRound({ round, mount, momentUp = false }) {
     }
     if (choice === 'later') nav.push('newRound', { reschedule: round.id });
     if (choice === 'discard') {
-      const sure = await ask({ title: 'Delete this round?', text: 'Scores and bets from this round will be gone for good.', confirmLabel: 'Delete round', danger: true });
+      const sure = await ask({ title: 'Delete this round?', text: `It leaves Up next and the Tab. You can bring it back from Settings, Recently deleted, for ${KEEP_DAYS} days.`, confirmLabel: 'Delete round', danger: true });
       if (!sure) return;
       // A challenge that went into it is agreed again for the next round together
       challengesBack(getState().rounds[round.id]);
-      update(s => { delete s.rounds[round.id]; leaveRound(s, round.id); });
+      // It waits in Settings, Recently deleted, for 30 days (recently-deleted.js)
+      const id = round.id;
+      update(s => { softDeleteRound(s, id); });
       nav.reset('upnext');
+      showToast('Round deleted', { label: 'Undo', run: () => update(s => { restoreRound(s, id); }) });
     }
   };
 
@@ -558,21 +581,20 @@ function PlayRound({ round, mount, momentUp = false }) {
       {round.trip?.format === BIG_FORMAT && ownMoney(round) && (
         <button className="big-link" onClick={() => nav.push('bigGame', { id: round.trip.id })}><Icon name="users-four" fill /> {round.trip.name}: the board across every group <Icon name="caret-right" /></button>
       )}
-      {sharedLive && keeper && round.status === 'active' && !round.editing && (
+      {/* Only the other phones see who has the card; the keeper's own Hand off lives in the round menu, since it's rarely used */}
+      {sharedLive && keeper && !amKeeper && round.status === 'active' && !round.editing && (
         <div className="seat-req keeper-bar" role="status">
           <Icon name="pencil-simple" fill />
           <span className="sr-text">
-            {amKeeper ? 'You’re keeping score' : tookBy && left == null && !declined ? <><strong>{tookName}</strong> took the card</> : <><strong>{holderName}</strong> is keeping score</>}
-            {!amKeeper && left > 0 && <span className="sr-sub">Asked. {holderName} can say yes or no. <button className="link-btn inline" onClick={takeBack}>Undo<span className="sr-only">: take back asking {holderName} for the card</span></button></span>}
-            {!amKeeper && left == null && declined && <span className="sr-sub">{holderName} said no, so they’re keeping it.</span>}
+            {tookBy && left == null && !declined ? <><strong>{tookName}</strong> took the card</> : <><strong>{holderName}</strong> is keeping score</>}
+            {left > 0 && <span className="sr-sub">Asked. {holderName} can say yes or no. <button className="link-btn inline" onClick={takeBack}>Undo<span className="sr-only">: take back asking {holderName} for the card</span></button></span>}
+            {left == null && declined && <span className="sr-sub">{holderName} said no, so they’re keeping it.</span>}
           </span>
-          {amKeeper
-            ? <button className="pill-btn" onClick={() => setHandSheet(true)}>Hand off</button>
-            : inRound && (left === 0
-              ? <button className="pill-btn" onClick={takeCard}>Take the card</button>
-              : left > 0
-                ? <button className="pill-btn ghost" disabled aria-live="off" aria-label={`You can take the card in ${Math.ceil(left / 1000)} seconds if ${holderName} doesn’t answer`}>Take the card in <span className="sr-clock">{clockText(left)}</span></button>
-                : <button className="pill-btn" onClick={askCard}>{declined ? 'Ask again' : 'Ask for it'}</button>)}
+          {inRound && (left === 0
+            ? <button className="pill-btn" onClick={takeCard}>Take the card</button>
+            : left > 0
+              ? <button className="pill-btn ghost" disabled aria-live="off" aria-label={`You can take the card in ${Math.ceil(left / 1000)} seconds if ${holderName} doesn’t answer`}>Take the card in <span className="sr-clock">{clockText(left)}</span></button>
+              : <button className="pill-btn" onClick={askCard}>{declined ? 'Ask again' : 'Ask for it'}</button>)}
         </div>
       )}
       {/* Friends watching from their feed, and the players, trash talking mid-round */}
@@ -727,7 +749,7 @@ function PlayRound({ round, mount, momentUp = false }) {
                     <span aria-live="polite" aria-atomic="true">
                       <span className="sr-only">{p.name} </span>{v === 'X' ? <><span aria-hidden="true">X</span><span className="sr-only">picked up</span></> : v}
                     </span>
-                    <ScoreCritter score={v} par={hole.par} fresh={tapped.current.has(p.id)} />
+                    <ScoreCritter score={v} par={hole.par} fresh={tapped.has(p.id)} />
                   </span>
                   <button className="sc-btn" aria-label={`${p.name} one more`} disabled={v !== 'X' && v >= 15}
                     onClick={() => setScore(p.id, v === 'X' ? hole.par + 1 : Math.min(15, v + 1))}><Icon name="plus" /></button>
@@ -807,6 +829,9 @@ function PlayRound({ round, mount, momentUp = false }) {
         <div className="menu-group">
           {syncConfigured && (
             <MenuRow icon="broadcast" label={round.shared ? 'Live' : 'Invite the group'} value={round.shared ? `Code ${round.shared.code}` : null} onClick={() => { setMenu(false); setLive(true); }} />
+          )}
+          {amKeeper && round.status === 'active' && !round.editing && (
+            <MenuRow icon="pencil-simple" label="Hand off the card" value="You’re keeping score" onClick={() => { setMenu(false); setHandSheet(true); }} />
           )}
           {editable && <>
           <MenuRow icon="user-plus" label="Add a player" onClick={() => { setMenu(false); setAddSheet(true); }} />

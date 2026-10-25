@@ -34,6 +34,7 @@ const RemindersUpNext = part(() => import('../components/Reminders.jsx'), 'Remin
 const ShippedUpNext = part(() => import('../components/RoadmapUpNext.jsx'), 'ShippedUpNext');
 const WhatsNewUpNext = part(() => import('../components/WhatsNewUpNext.jsx'), 'WhatsNewUpNext');
 const TrialReminderUpNext = part(() => import('../components/TrialReminderUpNext.jsx'), 'TrialReminderUpNext');
+const InstallUpNext = part(() => import('../components/InstallUpNext.jsx'), 'InstallUpNext');
 // Start fetching straight away, alongside the first paint, rather than when React gets to them
 if (typeof window !== 'undefined') more().catch(() => {});
 
@@ -94,6 +95,8 @@ export default function UpNext() {
           {/* The Pro trial ends in two days or less: the end date and the price, first (paywall flag only, trial.js) */}
           {PAYWALL_ON && <StackSlot at={-1}><Later><TrialReminderUpNext /></Later></StackSlot>}
           {/* A tee time to book and friendly payment reminders: there's no push yet, so these are the reminders */}
+          {/* In a phone's browser: add it to the Home Screen, on top while it's there (install-card.js) */}
+          <StackSlot at={-1}><Later><InstallUpNext /></Later></StackSlot>
           <StackSlot at={0}><Later><RemindersUpNext /></Later></StackSlot>
           {/* Something you asked for or voted for on the roadmap shipped: said once (roadmap.js) */}
           <StackSlot at={1}><Later><ShippedUpNext /></Later></StackSlot>

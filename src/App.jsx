@@ -48,6 +48,7 @@ const Defaults = screen(settings, 'Defaults');
 const Courses = screen(settings, 'Courses');
 const CourseEdit = screen(settings, 'CourseEdit');
 const About = screen(settings, 'About');
+const RecentlyDeleted = screen(settings, 'RecentlyDeleted');
 const NotifyPicks = screen(settings, 'NotifyPicks');
 const NewRound = screen(() => import('./screens/NewRound.jsx'));
 const Play = screen(() => import('./screens/Play.jsx'));
@@ -187,7 +188,7 @@ function preloadScreens() {
 const SCREENS = {
   roundDetail: RoundDetail, newRound: NewRound, play: Play,
   playerEdit: PlayerEdit, crewEdit: CrewEdit, person: Person,
-  settings: Settings, defaults: Defaults, courses: Courses, courseEdit: CourseEdit, about: About, suggest: Suggest, notifyPicks: NotifyPicks,
+  settings: Settings, defaults: Defaults, courses: Courses, courseEdit: CourseEdit, about: About, suggest: Suggest, notifyPicks: NotifyPicks, recentlyDeleted: RecentlyDeleted,
   plan: Plan, rollCall: RollCall, planLink: PlanLink, preview: Preview, paywall: Paywall, yourPlan: YourPlan, cancelPlan: CancelPlan, season: Season,
   challenge: Challenge, challengeLink: ChallengeLink,
   joinInvite: JoinInviteScreen, lately: Lately, trip: Trip, tripSettle: TripSettle, draft: Draft, draftLink: DraftLink,
@@ -306,8 +307,11 @@ export default function App() {
   useEffect(() => {
     // Accounts, profiles and live sync start right after the first paint, in the same order as
     // always; feedback.js sends any suggestions queued while offline
-    Promise.all([import('./lib/cloud.js'), import('./lib/profiles.js'), import('./lib/sync.js')]).then(([cloud, profiles, sync]) => {
+    Promise.all([import('./lib/cloud.js'), import('./lib/profiles.js'), import('./lib/sync.js'), import('./lib/recently-deleted.js')]).then(([cloud, profiles, sync, trash]) => {
       cloud.bootCloud();
+      // Rounds deleted more than 30 days ago go for good, once cloud sync is listening so the
+      // account and your other phones hear it (recently-deleted.js)
+      trash.purgeOnLaunch();
       profiles.bootProfiles();
       sync.bootSync();
     }).catch(() => {});
@@ -365,10 +369,14 @@ export default function App() {
   const nav = useMemo(() => ({ push, pop, replace, reset, layer, tab, setTab: t => { setTab(t); setStack([]); } }), [push, pop, replace, reset, layer, tab]);
 
   // Which way the top screen changed, for the stage (Stage.jsx): deeper is a push, shallower a pop,
-  // the same depth (a tab, a replaced screen, a reset) a swap
-  const depth = useRef(stack.length);
-  const dir = stack.length > depth.current ? 'push' : stack.length < depth.current ? 'pop' : 'swap';
-  useEffect(() => { depth.current = stack.length; });
+  // the same depth (a tab, a replaced screen, a reset) a swap. Worked out when the stage's id moves,
+  // against the depth when it last moved (the depth never changes without the top screen changing too)
+  const stageId = stack.length ? String(stack[stack.length - 1].key) : `tab:${tab}`;
+  const [staged, setStaged] = useState({ id: stageId, depth: stack.length, dir: 'swap' });
+  if (staged.id !== stageId) {
+    const dir = stack.length > staged.depth ? 'push' : stack.length < staged.depth ? 'pop' : 'swap';
+    setStaged({ id: stageId, depth: stack.length, dir });
+  }
 
   if (!onboarded) {
     const joined = (id, done) => {
@@ -409,7 +417,7 @@ export default function App() {
         <div className="device">
           <ErrorBoundary onReset={() => reset('upnext')}>
             <Suspense fallback={<div className="screen active" aria-busy="true" />}>
-              <Stage id={top ? String(top.key) : `tab:${tab}`} dir={dir}>
+              <Stage id={stageId} dir={staged.dir}>
                 <KeptScope.Provider value={top ? String(top.key) : `tab:${tab}`}>
                   {Top ? <Top key={top.key} {...top.params} /> : <TabScreen key={tab} />}
                 </KeptScope.Provider>

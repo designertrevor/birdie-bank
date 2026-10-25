@@ -142,8 +142,8 @@ test('stats: the words around them', () => {
   assert.equal(recordText(null), '–');
   assert.equal(sinceText(Date.UTC(2026, 8, 15)), 'Playing since Sep 2026');
   assert.equal(sinceText(null), null);
-  assert.equal(profileSubline({ index: 12.4, homeCourse: { name: 'Birch Creek' } }, fmtIndex), 'Index 12.4 · Birch Creek');
-  assert.equal(profileSubline({ index: null, homeCourse: null }, fmtIndex), 'No handicap index');
+  assert.equal(profileSubline({ index: 12.4, homeCourse: { name: 'Birch Creek' } }, fmtIndex), 'HCP 12.4 · Birch Creek');
+  assert.equal(profileSubline({ index: null, homeCourse: null }, fmtIndex), 'No HCP');
   // A favorite game this app doesn't know keeps the name it came with
   assert.equal(tile(statTiles({ rounds: 2, record: { won: 1, lost: 1, even: 0 }, favoriteGame: { id: 'future', name: 'Bingo Bango' } }), 'game').value, 'Bingo Bango');
 });

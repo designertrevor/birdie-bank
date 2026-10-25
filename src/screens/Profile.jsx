@@ -147,10 +147,10 @@ export default function Profile() {
           <input id="pf-name" className="name-input" value={name} maxLength={24} onChange={e => setName(e.target.value)} placeholder="Your name"
             aria-invalid={duplicate || undefined} aria-describedby={duplicate ? 'pf-name-err' : undefined} />
           {duplicate && <p className="field-error" id="pf-name-err" role="status">Someone you play with has that name. Add an initial so scorecards stay clear.</p>}
-          <div className="field-label">Handicap index <span className="opt">optional</span></div>
+          <div className="field-label">Handicap <span className="opt">optional</span></div>
           <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
-            <button className="amt-btn" onClick={() => setPad(true)} aria-label={index == null ? 'Handicap index: add one' : `Handicap index ${formatIndex(index)}. Change it`}>{index == null ? 'Add' : formatIndex(index)}</button>
-            {index != null && <button className="header-btn" onClick={() => setIndex(null)} aria-label="Clear the handicap index">Clear</button>}
+            <button className="amt-btn" onClick={() => setPad(true)} aria-label={index == null ? 'Handicap: add one' : `Handicap ${formatIndex(index)}. Change it`}>{index == null ? 'Add' : formatIndex(index)}</button>
+            {index != null && <button className="header-btn" onClick={() => setIndex(null)} aria-label="Clear the handicap">Clear</button>}
           </div>
           <div className="field-label" id="pf-home">Home course <span className="opt">optional</span></div>
           <button className="pf-home" aria-labelledby="pf-home" aria-describedby="pf-home-v" onClick={() => setHome(true)}>
@@ -183,7 +183,7 @@ export default function Profile() {
           <button className="full-btn" disabled={!trimmed || duplicate} onClick={save}>Save changes</button>
         </div>
       )}
-      <Numpad open={pad} title="Handicap index" initial={index ?? ''} allowDecimal allowNegative min={-10} max={54}
+      <Numpad open={pad} title="Handicap" initial={index ?? ''} allowDecimal allowNegative min={-10} max={54}
         onClose={() => setPad(false)} onDone={v => { setIndex(v); setPad(false); }} />
       <AvatarPicker open={picking} onClose={() => setPicking(false)} />
       <HomeCourseSheet open={home} current={me.homeCourse} onPick={pickHome} onClose={() => setHome(false)} />

@@ -1,15 +1,24 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Icon, Sheet } from './ui.jsx';
 import { previewBuild, sendEmailCode, signInWithGoogle, verifyEmailCode } from '../lib/cloud.js';
+import { track } from '../lib/analytics.js';
+import { noteSigningIn, usageRole } from '../lib/usage-role.js';
 
-/** Sign in with Google or an emailed link / code. */
-export function SignInSheet({ open, onClose, title = 'Save your rounds', text = 'Sign in to keep your rounds, players and the Tab safe, and pick up on any phone or computer.' }) {
+/**
+ * Sign in with Google or an emailed link / code. `source`: where it opened from, for usage counts
+ * (save_tab, friends, settings, roadmap, onboarding); signed_in goes out once the phone is back
+ * signed in (ops-account.js).
+ */
+export function SignInSheet({ open, onClose, source, title = 'Save your rounds', text = 'Sign in to keep your rounds, players and the Tab safe, and pick up on any phone or computer.' }) {
   const [email, setEmail] = useState('');
   const [sentTo, setSentTo] = useState(null);
   const [code, setCode] = useState('');
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState(null);
   const validEmail = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim());
+  useEffect(() => { if (open && !previewBuild) track('signin_viewed', { source }); }, [open, source]);
+  // Who's signing in and from where, before the page leaves for Google or the email link
+  const leaving = path => noteSigningIn({ source, path, role: usageRole({ signedIn: false }) });
 
   const run = async fn => {
     setBusy(true); setErr(null);
@@ -17,8 +26,8 @@ export function SignInSheet({ open, onClose, title = 'Save your rounds', text = 
     catch (e) { setErr(friendly(e)); }
     setBusy(false);
   };
-  const google = () => run(signInWithGoogle); // leaves the page and comes back signed in
-  const send = () => run(async () => { await sendEmailCode(email.trim()); setSentTo(email.trim()); });
+  const google = () => run(async () => { leaving('google'); await signInWithGoogle(); }); // leaves the page and comes back signed in
+  const send = () => run(async () => { leaving('email'); await sendEmailCode(email.trim()); setSentTo(email.trim()); });
   const verify = () => run(async () => { await verifyEmailCode(sentTo, code); onClose(); });
 
   if (previewBuild) {

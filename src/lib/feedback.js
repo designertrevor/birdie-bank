@@ -4,6 +4,7 @@
 import { getState } from './store.js';
 import { GAMES } from './round.js';
 import { getSupabase } from './supabase.js';
+import { recentErrors } from './recent-errors.js';
 
 const QUEUE = 'bb-feedback-queue';
 
@@ -28,6 +29,8 @@ export function feedbackContext(roundId = null) {
     installed: window.matchMedia?.('(display-mode: standalone)').matches || false,
     online: navigator.onLine,
     theme: s.settings.theme,
+    // Errors shown only as a friendly toast lately (recent-errors.js), so a bug report says what broke
+    errors: recentErrors(),
     counts: { players: Object.keys(s.players).length, rounds: Object.keys(s.rounds).length },
     round: r ? {
       id: r.id, game: r.game, gameName: GAMES[r.game]?.name, sideGames: Array.isArray(r.sideGames) ? r.sideGames.map(sg => sg?.game) : undefined, course: r.course?.name, courseId: r.course?.id,

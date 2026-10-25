@@ -1,6 +1,6 @@
 // The results image: a story-sized PNG of the round (course, game, winner, standings, the bets)
 // drawn on a canvas in the app's fonts. shareCardModel is pure and tested; the drawing needs a DOM.
-import { gameLabel, roundDate } from './format.js';
+import { gameLabel, roundDate, scoreLine } from './format.js';
 import { revealSteps } from './reveal.js';
 import { countsMoney, rewardOutcome, unitFmt } from './play-for.js';
 import { gameTheme } from './game-theme.js';
@@ -30,7 +30,7 @@ export function cardReaction(res) {
  * anywhere: the winner, the order and the bets still read, the money does not. A points or reward
  * round is never money, so its points always show, and a reward round says who's buying.
  */
-export function shareCardModel(round, res, { showAmounts: moneyOn = true, link = null, art = null } = {}) {
+export function shareCardModel(round, res, { showAmounts: moneyOn = true, showScores = false, link = null, art = null } = {}) {
   const showAmounts = countsMoney(round) ? moneyOn : true;
   const money = unitFmt(round);
   const reward = rewardOutcome(round, res);
@@ -56,7 +56,8 @@ export function shareCardModel(round, res, { showAmounts: moneyOn = true, link =
   let place = 0;
   const standings = res.standings.map((p, i) => {
     if (i === 0 || p.amount !== res.standings[i - 1].amount) place = i + 1;
-    return { id: p.id, place, name: p.name, amount: showAmounts ? money(p.amount, { sign: true }) : null, sign: Math.sign(p.amount) };
+    // Show scores: their total and to par, "38 (+2)", for the group that wants the golf as well as the bet
+    return { id: p.id, place, name: p.name, amount: showAmounts ? money(p.amount, { sign: true }) : null, sign: Math.sign(p.amount), score: showScores ? scoreLine(round, p.id) : null };
   });
 
   const { title, steps } = revealSteps(round, res);
@@ -91,7 +92,7 @@ export function shareCardModel(round, res, { showAmounts: moneyOn = true, link =
  * hidden here too: "Results card: Pebble Beach, Sep 26 · Nassau. Ann +$15. 1. Ann Lee +$15, 2. Bo Diaz."
  */
 export function resultsAlt(m) {
-  const order = m.standings.map(p => `${p.place}. ${p.name}${p.amount ? ` ${p.amount}` : ''}`).join(', ');
+  const order = m.standings.map(p => `${p.place}. ${p.name}${p.score ? ` shot ${p.score}` : ''}${p.amount ? ` ${p.amount}` : ''}`).join(', ');
   const bets = m.bets.filter(b => b.text).map(b => `${b.label} ${b.text}${b.value && b.value !== '–' ? ` ${b.value}` : ''}`).join('; ');
   const cheer = m.art?.cheer && m.reaction && m.reaction.kind !== 'square'
     ? `${m.headline}${m.reaction.ids.length > 1 ? ' in crowns' : '’s buddy in a crown'}, arms up` : '';
@@ -250,7 +251,24 @@ function draw(ctx, m, pics = {}) {
       ctx.fillText(p.amount, PAD + inner, cy + 18);
       ctx.restore();
     }
-    ctx.fillText(clip(ctx, p.name, inner - 90 - amtW - 24), PAD + 84, cy + 16);
+    const room = inner - 90 - amtW - 24;
+    let scoreW = 0;
+    if (p.score) {
+      ctx.save();
+      ctx.font = `600 ${n > 6 ? 32 : 36}px ${BODY}`;
+      scoreW = Math.min(ctx.measureText(p.score).width + 20, room / 2);
+      ctx.restore();
+    }
+    const name = clip(ctx, p.name, room - scoreW);
+    ctx.fillText(name, PAD + 84, cy + 16);
+    if (p.score) {
+      const nameW = ctx.measureText(name).width;
+      ctx.save();
+      ctx.font = `600 ${n > 6 ? 32 : 36}px ${BODY}`;
+      ctx.fillStyle = C.soft;
+      ctx.fillText(clip(ctx, p.score, scoreW - 20), PAD + 84 + nameW + 20, cy + 14);
+      ctx.restore();
+    }
   }
   y += n * rowH;
   ctx.fillStyle = C.faint;

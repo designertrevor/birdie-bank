@@ -471,12 +471,12 @@ export function useSeatRequests(roundId) {
 /**
  * Ask for a seat in a shared round. Returns the request's slot number to watch.
  * Throws when it can't be sent, so the joiner can be told to ask the scorekeeper instead.
+ * `no`: the slot to use, so asking again after an error lands on the same request.
  */
-export async function requestSeat(code, name, { justPlaying = false } = {}) {
+export async function requestSeat(code, name, { justPlaying = false, no = newRequestNo() } = {}) {
   const adapter = await getAdapter();
   const data = buildRequest(name, Date.now(), { justPlaying });
   if (!adapter || !data) throw new Error('Can’t send a request');
-  const no = newRequestNo();
   await adapter.upsertHole(code, no, data);
   return no;
 }

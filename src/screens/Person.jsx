@@ -126,7 +126,7 @@ export default function Person({ id: opened }) {
           <Avatar id={id} name={name} size="lg" />
           <div className="ph-sub">
             {info ? `${PAY_APPS[info.app].name} ${handleText(info)}` : 'No payment app yet'}
-            {player?.index != null ? ` · Index ${formatIndex(player.index)}` : fv?.index != null ? ` · Index ${formatIndex(fv.index)}` : ''}
+            {player?.index != null ? ` · HCP ${formatIndex(player.index)}` : fv?.index != null ? ` · HCP ${formatIndex(fv.index)}` : ''}
           </div>
           {fv?.homeCourse && <div className="ph-sub pf-home-line"><Icon name="flag-pennant" fill /> Home course: {fv.homeCourse.name}</div>}
           <div className="eyebrow" style={{ marginTop: 14 }}>{tab > 0 ? `${firstName} owes you` : tab < 0 ? `You owe ${firstName}` : 'On the Tab'}</div>

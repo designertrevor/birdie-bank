@@ -37,6 +37,9 @@ export function startPostHog({ key, host, enabled = true }) {
   if (enabled && posthog.has_opted_out_capturing()) posthog.opt_in_capturing({ captureEventName: false });
   return {
     capture: (event, props) => posthog.capture(event, props),
+    // With person_profiles 'identified_only', events before identify are anonymous, and identify
+    // still attributes them to the person it makes (PostHog docs, Anonymous vs identified events),
+    // so a guest's earlier invite_opened and seat_taken join their account
     identify: id => posthog.identify(id),
     reset: () => posthog.reset(),
     setEnabled: on => (on ? posthog.opt_in_capturing({ captureEventName: false }) : posthog.opt_out_capturing()),

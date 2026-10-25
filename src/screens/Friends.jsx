@@ -43,7 +43,7 @@ export default function Friends() {
           <button className="text-link fr-privacy-link" onClick={() => nav.push('profile')}><Icon name="lock-simple" /> Your profile setting</button>
         </div>
       </div>
-      <SignInSheet open={signingIn} onClose={() => setSigningIn(false)} title="See friends’ rounds" text="Sign in to see the rounds people you’ve played with are playing, even ones you’re not in, and keep your own rounds safe." />
+      <SignInSheet open={signingIn} source="friends" onClose={() => setSigningIn(false)} title="See friends’ rounds" text="Sign in to see the rounds people you’ve played with are playing, even ones you’re not in, and keep your own rounds safe." />
     </Screen>
   );
 }

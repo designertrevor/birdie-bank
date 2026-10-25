@@ -71,6 +71,7 @@ function fresh() {
     favorites: [],     // courses picked lately, newest first (the picker's fallback for Recently played)
     starredCourses: [], // courses you starred to keep at the top of the picker, synced in the profile
     rounds: {},
+    deletedRounds: {}, // rounds deleted in the last 30 days, with deletedAt, until restored or gone for good (see recently-deleted.js)
     activeRoundId: null,
     settlements: [],
     carries: [],       // carry-overs between two people (see carry.js)

@@ -271,7 +271,7 @@ function Players({ picked, setPicked, course, holesCount, tees, setTees, hcOverr
                 <button className="pick-main" onClick={() => toggle(p.id)} aria-pressed={on}>
                   <div className="row-main">
                     <div className="li-name">{playerLabel(p, state.me)}</div>
-                    <div className="li-sub">{p.index == null ? 'No handicap index' : `Index ${formatIndex(p.index)}`}</div>
+                    <div className="li-sub">{p.index == null ? 'No HCP' : `HCP ${formatIndex(p.index)}`}</div>
                   </div>
                   <PickMark on={on} />
                 </button>

@@ -205,7 +205,7 @@ export function TeamsPicker({ people, value, onChange, live: liveOk = true }) {
     set({ teams: moveTo(cup.teams, p, 1 - from), captains: cup.captains.map(c => (c === p.id ? null : c)), pick: drafting && free.length ? 'draft' : 'hand' });
   };
   const help = mode === 'flights'
-    ? 'Everyone sorted into flights A to D by handicap index, then each flight split between the teams, so both have the same number of A players, B players and so on. Tap anyone to move them across.'
+    ? 'Everyone sorted into flights A to D by handicap, then each flight split between the teams, so both have the same number of A players, B players and so on. Tap anyone to move them across.'
     : mode === 'balance' ? 'Best player first, then picks snake back and forth so neither team gets every low handicap. Tap anyone to move them across.'
     : live ? (captainsSet ? 'Each captain gets a link once the trip is started and picks on their own phone, on their turn. Every phone sees each pick as it’s made.' : 'Pick a captain for each team. Each one gets a link and picks on their own phone, on their turn.')
     : 'Pick a captain for each team, then the captains take turns picking. Pass the phone around.';

@@ -44,6 +44,8 @@ import { betPeople } from '../lib/pair-bets.js';
 import { useAgeCheck } from '../components/AgeCheck.jsx';
 import { needsAgeCheck } from '../lib/age.js';
 import { notifyMoment, pushRsvp } from '../lib/push-client.js';
+import { noteError } from '../lib/recent-errors.js';
+import { firstOpen } from '../lib/ops.js';
 
 const first = name => String(name || '').trim().split(/\s+/)[0];
 const listNames = n => (n.length < 2 ? n.join('') : `${n.slice(0, -1).join(', ')} and ${n.at(-1)}`);
@@ -126,6 +128,7 @@ function PlanBody({ plan, standalone = false, onSkip }) {
     taken(r, myName, true);
     // Your own answer on someone else's plan: the organizer hears it, and saying you're in is a good moment to offer notifications
     if (r === true && patch.status) {
+      track('rsvp_answered', { choice: patch.status });
       pushRsvp(getState().plans?.[plan.id], patch.status, myName);
       if (patch.status === 'in') notifyMoment('joined');
     }
@@ -397,7 +400,7 @@ function WhoAreYou({ plan, defaultName, standalone, onSkip }) {
   const addMe = () => {
     const who = uid('g_');
     pick(who);
-    answerPlan(plan.id, who, { name: cleanName(name), status: 'in' });
+    answerPlan(plan.id, who, { name: cleanName(name), status: 'in' }).then(r => { if (r === true) track('rsvp_answered', { choice: 'in' }); });
   };
   const host = plan.hostName || 'The organizer';
   const choice = planChoice(plan);
@@ -548,7 +551,7 @@ export function RollCall({ id }) {
     editPlan(id, p => { p.status = 'started'; p.roundId = rid; }).then(r => { if (r === 'taken') showToast(PLAN_LOCKED); });
     // Friends on the plan can follow the round live from the same page
     if (plan.code && syncConfigured) {
-      shareRound(rid).then(code => editPlan(id, p => { p.liveCode = code; })).catch(() => { /* the round still starts; share it from the round menu */ });
+      shareRound(rid).then(code => editPlan(id, p => { p.liveCode = code; })).catch(e => noteError('share-plan-round', e)); // the round still starts; share it from the round menu
     }
     nav.reset('upnext', ['play', { id: rid }]);
   };
@@ -628,6 +631,9 @@ export function PlanLink({ code, who = null, standalone = false, onSkip }) {
   const [tries, setTries] = useState(0);
   const plan = useStore(s => (id ? s.plans?.[id] : null));
   usePlanLive(standalone ? id : null, plan?.code);
+
+  // The RSVP link opened: counted once per plan link
+  useEffect(() => { track('invite_opened', { source: 'plan', first_open: firstOpen() }); }, [code]);
 
   useEffect(() => {
     let cancelled = false;

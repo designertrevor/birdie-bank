@@ -8,6 +8,10 @@ case "$VERCEL_GIT_COMMIT_REF" in
   *) echo "Skipping build: $VERCEL_GIT_COMMIT_REF is not a preview branch"; exit 0 ;;
 esac
 
+# A redeploy of the commit already live (Deployments, Redeploy) is deliberate, usually
+# to pick up new environment variables, so always build it.
+[ -n "$VERCEL_GIT_PREVIOUS_SHA" ] && [ "$VERCEL_GIT_PREVIOUS_SHA" = "$VERCEL_GIT_COMMIT_SHA" ] && exit 1
+
 # Compare with the last deployed commit on this branch, or the parent commit.
 BASE="${VERCEL_GIT_PREVIOUS_SHA:-HEAD^}"
 git cat-file -e "$BASE^{commit}" 2>/dev/null || exit 1

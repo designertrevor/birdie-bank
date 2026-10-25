@@ -29,6 +29,8 @@ MAPS.push('books');
 MAPS.push('courseLinks', 'nudges');
 // And Pro split with your group (pro-split.js), undone ones as a stub
 MAPS.push('proSplits');
+// And Recently deleted (recently-deleted.js), so a round deleted before the backup can still come back
+MAPS.push('deletedRounds');
 
 /** birdie-bank-backup-2026-09-30.json, in the phone's own date. */
 export function backupFileName(date = new Date()) {
@@ -138,6 +140,13 @@ export function mergeBackup(current, data) {
       next[k][id] = structuredClone(v);
       if (countKey[k]) added[countKey[k]]++;
     }
+  }
+  // A round in both History and Recently deleted: one this phone deleted stays deleted, and one
+  // deleted only in the backup stays in History
+  for (const id of Object.keys(next.deletedRounds || {})) {
+    if (!next.rounds[id]) continue;
+    if (current.deletedRounds?.[id] && !current.rounds?.[id]) { delete next.rounds[id]; added.rounds--; }
+    else delete next.deletedRounds[id];
   }
   for (const k of LISTS) {
     if (!Array.isArray(data[k])) continue;
