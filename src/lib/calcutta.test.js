@@ -315,6 +315,22 @@ test('the first-tee card says the pot once lots are sold, and an auction after l
   assert.deepEqual(noteChanges(r).changes.map(c => c.text), ['Calcutta raised to $115 pot']);
 });
 
+test('one lot sold: the pot is void, so the bet line says two lots are needed (setup, the first-tee card, the sheets)', () => {
+  assert.equal(calcuttaBetLine({ payout: 'top2' }, { sales: { a: { buyer: 'b', bid: 40 } } }), '$40 bid · needs 2 lots sold');
+  assert.equal(calcuttaBetLine({ payout: 'top3', buyBack: true }, { sales: { a: { buyer: 'b', bid: 40 }, b: { buyer: 'a', bid: 0 } } }), '$40 bid · needs 2 lots sold · buy-backs');
+  const r = withCalcutta(round('stroke', ['a', 'b', 'c', 'd']), { a: { buyer: 'b', bid: 40 } });
+  r.status = 'active';
+  const line = x => agreementItems(x).find(i => i.id === 'bet:calcutta').text;
+  assert.equal(roundStakeLines(r)[1].line, '$40 bid · needs 2 lots sold');
+  assert.equal(line(r), '$40 bid · needs 2 lots sold');
+  assert.deepEqual(roundResults(r).detail.byGame.calcutta.balances, { a: 0, b: 0, c: 0, d: 0 }, 'and nobody pays');
+  // Locked with one lot sold, then the second sells: the auction filling in, not a change to the bet
+  r.agreed = lockAgreement(r);
+  withCalcutta(r, { a: { buyer: 'b', bid: 40 }, b: { buyer: 'a', bid: 25 } });
+  assert.equal(line(r), '$65 pot · All to first');
+  assert.deepEqual(noteChanges(r).changes, []);
+});
+
 test('the rule pages: /rules/calcutta, and the names people type find it and Rolling quota', async () => {
   const { ruleKeyOf, playFromSearch } = await import('./rule-links.js');
   assert.equal(ruleKeyOf('calcutta'), 'calcutta');

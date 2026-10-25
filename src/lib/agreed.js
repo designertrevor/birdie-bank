@@ -312,7 +312,8 @@ export function changeText(before, after) {
   }
   if (before.text === after.text) return null;
   // The Calcutta's auction run after the card was locked fills in its pot: that's the bet, not a change to it
-  if (after.id === 'bet:calcutta' && before.text.startsWith('Auction at the first tee')) return null;
+  // (one lot sold is still the auction filling in, not a pot yet)
+  if (after.id === 'bet:calcutta' && (before.text.startsWith('Auction at the first tee') || before.text.includes('needs 2 lots sold'))) return null;
   if (after.id.startsWith('bet:')) {
     const [a, b] = [before.text.split(' · '), after.text.split(' · ')];
     const [x, y] = [amountOf(a[0]), amountOf(b[0])];

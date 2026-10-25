@@ -84,7 +84,7 @@ export function AuctionSheet({ entries, buyers, sales, settings, onChange, onClo
         <div className="cta-wrap auction-nav">
           <button className="full-btn outline" disabled={i === 0} onClick={() => setAt(i - 1)} aria-label="Previous lot"><Icon name="arrow-left" /></button>
           <button className="full-btn" onClick={() => (last ? onClose() : setAt(i + 1))}>
-            {last ? `Done · ${fmt(pot)} pot` : <>Next: {entries[i + 1].name} <Icon name="arrow-right" /></>}
+            {last ? (soldCount >= 2 ? `Done · ${fmt(pot)} pot` : 'Done · needs 2 lots sold') : <>Next: {entries[i + 1].name} <Icon name="arrow-right" /></>}
           </button>
         </div>
 

@@ -31,7 +31,9 @@ export function sideBetLine(game, settings, sg = null) {
 
 /**
  * The Calcutta's bet line: "$240 pot · 70/30" once bids are in, else "Auction at the first tee · 70/30".
- * `auction` is the side game's own ({ sales }). Only sales that count make the pot (see calcutta.js).
+ * With only one lot sold the pot is void (calcuttaMoney moves nothing), so the line says so:
+ * "$40 bid · needs 2 lots sold". `auction` is the side game's own ({ sales }). Only sales that count
+ * make the pot (see calcutta.js).
  */
 export function calcuttaBetLine(settings, auction = null) {
   const sales = Object.values(auction?.sales || {}).filter(x => validSale(x));
@@ -39,6 +41,7 @@ export function calcuttaBetLine(settings, auction = null) {
   const split = sales.length >= 2 ? splitsLine(sales.length, payout) : payout === 'top3' ? '60/30/10' : '70/30';
   const back = settings?.buyBack ? ' · buy-backs' : '';
   if (!sales.length) return `Auction at the first tee · ${split}${back}`;
+  if (sales.length < 2) return `${money(sales.reduce((a, x) => a + x.bid, 0))} bid · needs 2 lots sold${back}`;
   return `${money(sales.reduce((a, x) => a + x.bid, 0))} pot · ${split}${back}`;
 }
 
