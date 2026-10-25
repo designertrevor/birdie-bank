@@ -60,3 +60,11 @@ Seven Opus builders in parallel (about 1.8M subagent tokens), one money reviewer
 ## QA fixes (after the queue was built)
 
 From `o14-notes/qa.md`: the results sheet for a 4-player 9-hole round now fits one Letter page (the pagination estimate matched a Chrome render); `sw.js` sends the status page's files straight to the network so they never go stale; the first-tee card says "$105 pot · 70/30" once bids exist; print standings use the real minus sign (which also fixes the share card and finale); Quota's house rules summary counts Rolling quota. Left as is: the status page shows green on the dev server (dev has no /api) and the Home course hint has no info icon.
+
+## Review applied (2026-10-25)
+
+All 28 answers kept the Suggested pick. Applied on the branch: the Calcutta bet line says "needs 2 lots sold" when fewer are sold (setup, round menu, first-tee card, print sheets, the auction's Done button); your own rounds keep scoring and game brags but no longer produce a big win brag; `.github/workflows/e2e.yml` runs the e2e round on pull requests and pushes to main with the failure screenshot as an artifact; `E2E_BUILD=1 npm run e2e` drives the production build. Main (Overnight 13, `3cdecde`) is merged in; four conflicts kept both sides, and `vercel.json` now has the hourly tee cron plus the ideas and digest crons. The "next run" picks are new roadmap lines in areas 5 and 25.
+
+Both SQL files ran in Supabase through Chrome on 2026-10-25 and were checked: `rate_hit`, the `rate_limits` table and the hourly cleanup cron exist; `push_subscriptions.time_zone`, `push_tee_zones`, `push_tee_due(jsonb)`, the zone trigger and the newest-phone index exist. Remaining before ship: `SUPABASE_SERVICE_ROLE_KEY` for Preview in Vercel (Trevor), and the two-phone round on the preview for the Play split.
+
+Checks after the merge and the review changes: 2,628 tests pass, lint clean, e2e passes on the dev server and on the production build.
