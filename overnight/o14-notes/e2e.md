@@ -43,7 +43,15 @@ npm run e2e                 # headless
 E2E_HEADED=1 npm run e2e    # watch it in a Chrome window
 E2E_SLOWMO=150 npm run e2e  # slow it down
 E2E_VERBOSE=1 npm run e2e   # print each stage
+E2E_BUILD=1 npm run e2e     # on the production build (Trevor's pick 2C, 2026-10-25)
 ```
+
+**`E2E_BUILD=1`** runs `vite build` first (into `dist/`, with the same keys blanked and the paywall
+off) and serves `dist/` with `vite preview` on the chosen port instead of the dev server, so the
+test drives the built chunks, the service worker and the build stamp that phones load. It checks the
+page's scripts are the hashed ones from `/assets/` and none of the dev server's. The build takes
+about a second here, so a run is about 34 s either way (both passed on 2026-10-25: dev 34.7 s, build
+33.8 s). The GitHub Action runs the dev server; use the flag before a ship.
 
 It starts its own Vite dev server on the first free port from 5180 to 5189 (checked on both
 127.0.0.1 and ::1, so it never shares one with another worktree's server) and closes it at the end.
@@ -84,8 +92,8 @@ About 34 seconds a run on this Mac, about 22 of them the 18 holes of tapping.
 
 - Only Skins, with no handicaps, one phone, and no side games or side bets.
 - Live sharing, accounts, sign-in, sync and the cloud (all switched off for the test).
-- The dev server, not the production build: the service worker, chunk splitting and the
-  launch-time update swap aren't exercised.
+- The production build only with `E2E_BUILD=1`, and even then the launch-time update swap isn't
+  exercised (one build, so nothing newer to swap to).
 - Marking a payment paid, Pay buttons, the payment apps, closing the books.
 - Only Chrome at one size. No Safari, so not the iOS Safari bars.
 - Planning ahead ("Set up your next round" from onboarding) and the paywall.

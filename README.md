@@ -12,7 +12,8 @@ prototype is kept at `/prototype.html`.
 npm install
 npm run dev     # http://localhost:5173
 npm test        # game maths (node:test)
-npm run e2e     # start a round, score 18, settle up in Chrome (before each ship)
+npm run e2e     # start a round, score 18, settle up in Chrome (every PR and push to main on GitHub)
+E2E_BUILD=1 npm run e2e  # the same on the production build (before each ship)
 npm run lint
 npm run build
 ```

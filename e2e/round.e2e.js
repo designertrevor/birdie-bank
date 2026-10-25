@@ -3,6 +3,8 @@
 //   npm run e2e                 headless, about 45 seconds
 //   E2E_HEADED=1 npm run e2e    watch it in a Chrome window
 //   E2E_SLOWMO=150 npm run e2e  slower, to follow along
+//   E2E_BUILD=1 npm run e2e     on the production build: vite build, then vite preview serves dist/
+//                               (the real chunks, service worker and build stamp), a second or two more
 //
 // What it proves, in a real browser at iPhone size (390 by 844) on a phone with nothing saved:
 // a new organizer gets through onboarding (age check and friendly wagers note included), sets up
@@ -27,7 +29,7 @@ import { fileURLToPath } from 'node:url';
 import { existsSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { createServer } from 'vite';
+import { build, createServer, preview } from 'vite';
 import { chromium } from 'playwright-core';
 
 const ROOT = fileURLToPath(new URL('..', import.meta.url));
@@ -139,8 +141,15 @@ before(async () => {
   for (const k of ['VITE_SUPABASE_URL', 'VITE_SUPABASE_ANON_KEY', 'VITE_SENTRY_DSN', 'VITE_POSTHOG_KEY', 'VITE_POSTHOG_HOST', 'VITE_VAPID_PUBLIC_KEY', 'VITE_COURSE_SAMPLES']) process.env[k] = '';
   process.env.VITE_PAYWALL = 'off';
   const port = await freePort();
-  server = await createServer({ root: ROOT, logLevel: 'error', clearScreen: false, server: { port, strictPort: true, host: '127.0.0.1' } });
-  await server.listen();
+  const at = { port, strictPort: true, host: '127.0.0.1' };
+  if (process.env.E2E_BUILD) {
+    // The production build, as phones load it: build into dist/, then serve that with vite preview
+    await build({ root: ROOT, logLevel: 'error', clearScreen: false });
+    server = await preview({ root: ROOT, logLevel: 'error', clearScreen: false, preview: at });
+  } else {
+    server = await createServer({ root: ROOT, logLevel: 'error', clearScreen: false, server: at });
+    await server.listen();
+  }
   base = `http://127.0.0.1:${port}`;
   browser = await launch();
 });
@@ -177,6 +186,11 @@ async function playThrough(page, nav, step, context, problems) {
   await context.addInitScript(() => { window.__e2eSaved ??= localStorage.length; });
   await page.goto(`${base}/`);
   assert.equal(await page.evaluate(() => window.__e2eSaved), 0, 'starts with nothing saved');
+  // E2E_BUILD: the page is the built one (hashed chunks from /assets/), not the dev server's modules
+  if (process.env.E2E_BUILD) {
+    const scripts = await page.evaluate(() => [...document.scripts].map(x => x.src).filter(Boolean));
+    assert.ok(scripts.some(src => /\/assets\/.+\.js$/.test(src)) && !scripts.some(src => src.includes('/@vite/')), `built scripts: ${scripts.join(', ')}`);
+  }
 
   // --- Onboarding: the welcome, four questions, your name, the summary ---
   step('onboarding');
