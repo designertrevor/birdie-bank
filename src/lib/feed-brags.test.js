@@ -1,4 +1,4 @@
-// Brags in the Friends feed (feed-brags.js): eagles, hot rounds, birdie streaks, big wins, lone
+// Brags in the Friends feed (feed-brags.js): eagles, hot rounds, birdie streaks, big wins (friends' rounds), lone
 // wolves, Nassau sweeps and hammer runs, from rounds the feed already has, and never past anyone's
 // profile setting: Only you never shows, and hidden money shows the win without the amount.
 import { test } from 'node:test';
@@ -102,32 +102,40 @@ test('look: the game’s own art for its own moments, in its group’s colour', 
 
 // --------------------------- your own rounds --------------------------------
 
-test('your rounds: your big win shows its amount, someone else’s says “won big” with none', () => {
-  // You win three skins: $45. Bo wins three in another round
+test('your rounds: scoring brags but no big win, since Lately already shows your recap', () => {
+  // You win three skins ($45) with three birdies; Bo does the same in another round
   const mine = skins('a', 3);
   const bos = skins('b', 3, { at: NOW - 2 * HOUR });
   const items = feedBrags(state([mine, bos]), { now: NOW });
   const texts = items.map(i => i.text);
-  assert.ok(texts.includes('You won $45 at Pebble Creek'), texts.join(' | '));
-  assert.ok(texts.includes('Bo won big at Pebble Creek'));
-  assert.ok(texts.includes('You made 3 birdies at Pebble Creek. Hot putter'));
-  // Money between two other people never shows in the feed
-  assert.ok(!items.some(i => /Bo/.test(i.text) && /\$/.test(i.text)));
-  // Under the bar is no big win
-  const small = skins('a', 1);
-  assert.ok(!feedBrags(state([small]), { now: NOW }).some(i => i.brag === 'bigwin'), `less than ${BIG_WIN}`);
+  assert.ok(texts.includes('You made 3 birdies at Pebble Creek. Hot putter'), texts.join(' | '));
+  assert.ok(texts.includes('Bo made 3 birdies at Pebble Creek. Hot putter'));
+  assert.ok(!items.some(i => i.brag === 'bigwin'), 'no big win from your own rounds, yours or anyone else’s');
+  assert.ok(!texts.some(t => /\$|won big/.test(t)));
   // Each one opens its round, in the game's colour
-  const win = items.find(i => i.text === 'You won $45 at Pebble Creek');
-  assert.deepEqual(win.target, ['roundDetail', { id: mine.id }]);
-  assert.equal(win.tint, 'ochre');
-  assert.match(win.sub, /^Skins · 1h ago$/);
+  const hot = items.find(i => i.text === 'You made 3 birdies at Pebble Creek. Hot putter');
+  assert.deepEqual(hot.target, ['roundDetail', { id: mine.id }]);
+  assert.equal(hot.tint, 'ochre');
+  assert.match(hot.sub, /^Skins · 1h ago$/);
 });
 
-test('your rounds: points are bragging rights and show for everyone', () => {
+test('your rounds: a points round makes no big win either', () => {
   const r = skins('b', 3, { playFor: { kind: 'points' } });
-  const texts = feedBrags(state([r]), { now: NOW }).map(i => i.text);
-  assert.ok(texts.includes('Bo won 45 pts at Pebble Creek'), texts.join(' | '));
-  assert.ok(!texts.some(t => /\$/.test(t)));
+  const items = feedBrags(state([r]), { now: NOW });
+  assert.ok(items.some(i => i.text === 'Bo made 3 birdies at Pebble Creek. Hot putter'), items.map(i => i.text).join(' | '));
+  assert.ok(!items.some(i => i.brag === 'bigwin'));
+});
+
+test('the big win itself: the bar, the amount only where it may show, and points', () => {
+  const ctx = (amount, show) => ({ key: 'k', who: id => (id === 'a' ? 'me' : id), name: id => id.toUpperCase(), amountOf: () => amount, showAmount: () => show });
+  const r = skins('b', 3);
+  const win = (x, c) => roundBrags(x, { ...c, bigWins: true }).filter(b => b.brag === 'bigwin').map(b => b.text);
+  assert.deepEqual(win(r, ctx(45, true)).slice(0, 1), ['You won $45 at Pebble Creek']);
+  assert.ok(win(r, ctx(45, false)).includes('B won big at Pebble Creek'));
+  assert.deepEqual(win(r, ctx(BIG_WIN - 1, true)), [], `less than ${BIG_WIN}`);
+  assert.deepEqual(roundBrags(r, { ...ctx(45, true), bigWins: false }).filter(b => b.brag === 'bigwin'), []);
+  const pts = skins('b', 3, { playFor: { kind: 'points' } });
+  assert.ok(win(pts, ctx(45, true)).includes('B won 45 pts at Pebble Creek'));
 });
 
 test('your rounds: an eagle, a hole in one, a lone wolf, a sweep and a hammer run', () => {

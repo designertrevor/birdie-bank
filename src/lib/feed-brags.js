@@ -5,9 +5,8 @@
 //
 // Where they come from, and who they may be about (the privacy rules):
 //  • Your own finished rounds on this phone (you were there): anyone in them, but nobody just
-//    playing (no bet, no spotlight, as in callouts.js). Amounts follow Lately's rule: yours show,
-//    someone else's win is "won big" with no amount, since money between two other people never
-//    shows in the feed.
+//    playing (no bet, no spotlight, as in callouts.js). Scoring and game brags only, no big win:
+//    Lately already shows your recap of the round with what you won (Trevor, 2026-10-25).
 //  • Friends' finished rounds from friend_rounds() (friend-feed.js): the server only sends a round
 //    when nobody in it is Only you, so Only you never shows. Brags there are about your friends
 //    only (people you've played with), never a friend of a friend or a guest with no account.
@@ -17,7 +16,7 @@
 //  • Points are bragging rights and show for everyone, as everywhere in the feed.
 // Each item is a Lately row ({ id, kind: 'brag', brag, at, text, sub, target, icon, tint }) with the
 // game's own icon and its group's colour (game-theme.js), so LatelyList draws it like the rest.
-import { GAMES, cardOnly, gameView, hammerTable, holeComplete, isJustPlaying, nassauWinners, oneBall, roundLegs, roundResults, sideNames, sides, wolfHoleResult } from './round.js';
+import { GAMES, cardOnly, gameView, hammerTable, holeComplete, isJustPlaying, nassauWinners, oneBall, roundLegs, sideNames, sides, wolfHoleResult } from './round.js';
 import { bigGroupName, gameLabel, meFor, myIds } from './format.js';
 import { money } from './golf.js';
 import { countsMoney, playForOf, points } from './play-for.js';
@@ -149,10 +148,11 @@ export function hammerRun(round) {
  *  • who(pid): the person key, 'me' for you, or null for someone the feed may not talk about
  *  • name(pid): their first name; amountOf(pid): what they won when this phone may know it, else
  *    null; showAmount(pid): whether that amount may show (else the win reads without it)
+ *  • bigWins: false leaves out the big win (your own rounds, whose recap already says what you won)
  */
 export function roundBrags(round, ctx) {
   if (!round || !Array.isArray(round.players) || !GAMES[round.game] || cardOnly(round)) return [];
-  const { key, who, name, amountOf = () => null, showAmount = () => false } = ctx;
+  const { key, who, name, amountOf = () => null, showAmount = () => false, bigWins = true } = ctx;
   const course = round.course?.name || 'the course';
   const ok = pid => who(pid) != null && !isJustPlaying(round, pid);
   const you = pid => who(pid) === 'me';
@@ -173,7 +173,7 @@ export function roundBrags(round, ctx) {
   }
   // A big win: what they won in the round, by its own unit (never a Big Game's group round, whose money is the game's)
   const kind = playForOf(round).kind;
-  if (!bigGroupName(round) && kind !== 'reward') {
+  if (bigWins && !bigGroupName(round) && kind !== 'reward') {
     for (const p of round.players) {
       if (!ok(p.id)) continue;
       const v = amountOf(p.id);
@@ -245,18 +245,14 @@ function playedIn(round, state) {
 export function bragRounds(state, { rounds = [] } = {}) {
   const keys = personKeys(state);
   const out = [];
-  // Your own finished rounds: you were there, so everyone in them, with amounts as Lately shows them
+  // Your own finished rounds: you were there, so everyone in them. No big win: Lately's recap has it
   for (const r of Object.values(state?.rounds || {})) {
     if (!r || r.status !== 'done' || !Array.isArray(r.players) || !Array.isArray(r.holes) || !playedIn(r, state)) continue;
-    let res = null;
-    try { res = roundResults(r); } catch { res = null; }
-    const pts = !countsMoney(r);
     out.push({
       key: `round:${r.id}`, round: r, at: roundTime(r), target: ['roundDetail', { id: r.id }],
       who: pid => keys.local(pid),
       name: pid => first(nameOf(state, pid) || r.players.find(p => p.id === pid)?.name),
-      amountOf: pid => (res ? Number(res.balances?.[pid]) || 0 : null),
-      showAmount: pid => pts || keys.local(pid) === 'me',
+      bigWins: false,
     });
   }
   // Friends' finished rounds: only your friends, and amounts only where the feed shows them
