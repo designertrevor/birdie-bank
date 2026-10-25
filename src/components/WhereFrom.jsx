@@ -18,6 +18,9 @@ const first = n => String(n || '').trim().split(/\s+/)[0] || '?';
 const cls = v => (v > 0 ? 'pos' : v < 0 ? 'neg' : 'zero');
 /** What the money that isn't a round's is called: trip expenses, the cup, a Big Game, or a mix of them. */
 const tripMoneyLabel = list => {
+  // Pro split with the group (pro-split.js) on its own: "Your Pro"
+  if (list.every(x => x.expense.pro)) return 'Your Pro, split';
+  if (list.some(x => x.expense.pro)) return 'Trips and your Pro';
   const big = list.some(x => x.expense.big);
   if (big) return list.some(x => !x.expense.big) ? 'Trips and Big Games' : 'The Big Game';
   return list.some(x => x.expense.stake) ? 'Trip expenses and the cup' : 'Trip expenses';
@@ -141,7 +144,7 @@ export function TabWhereFrom({ other }) {
                     <span>{x.expense.what} · {shortDate(x.at)}</span>
                     <strong className={cls(x.amount)}>{money(x.amount, { sign: true })}</strong>
                   </div>
-                  <div className="wf-rline">{x.expense.big ? (x.amount > 0 ? `${f} pays you from the Big Game` : `You pay ${f} from the Big Game`) : x.expense.stake ? (x.amount > 0 ? `Your team won the cup, ${f} pays the stake` : `${f}’s team won the cup, you pay the stake`) : x.amount > 0 ? `You paid, ${f}’s share` : `${f} paid, your share`}</div>
+                  <div className="wf-rline">{x.expense.pro ? `${f}’s share of your Pro` : x.expense.big ? (x.amount > 0 ? `${f} pays you from the Big Game` : `You pay ${f} from the Big Game`) : x.expense.stake ? (x.amount > 0 ? `Your team won the cup, ${f} pays the stake` : `${f}’s team won the cup, you pay the stake`) : x.amount > 0 ? `You paid, ${f}’s share` : `${f} paid, your share`}</div>
                 </div>
               ))}
             </>

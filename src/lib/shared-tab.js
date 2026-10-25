@@ -21,6 +21,7 @@ import { tripStatus, tripsOf } from './trips.js';
 import { planRows } from './trip-plan.js';
 import { stakeRaw } from './cup-stake.js';
 import { bigRaw } from './big-money.js';
+import { SPLIT_TAB, splitOpen, splitsOn } from './pro-split.js';
 
 export { FETCH_DAYS, canonicalOf, codeOf, nettedId, pairDebt, played, sharedRounds };
 
@@ -277,6 +278,7 @@ function tripLocalParts(state, F, T, { now = Date.now() } = {}) {
  * - Then the trip expenses between the two that no plan covers (ledger.js expenseDebts): all of
  *   them with the whole card, in whichever way they run, or what a part payment has left over, as
  *   payments for them (trip-expenses.js) that every phone with the trip's expenses gets.
+ * - Then Pro split with the group (pro-split.js), the same way, on payments marked for it.
  * Whatever the shared rounds don't explain (local-only rounds, money passed on) is a local
  * settlement with no code, as before: it can run the other way when the shared rounds owe more
  * than the whole card. Returns { rows, settlements, expenses } to send and to add.
@@ -298,7 +300,17 @@ export function allocatePayment(state, { from, to, amount }, { now = Date.now(),
   const onPlan = planRows(state, F, T, { amount: whole ? null : Math.max(0, total - settle), now, fromTab: true });
   rows.push(...onPlan.rows);
   const spent = expensePayments(state, F, T, { amount: whole ? null : Math.max(0, total - settle - onPlan.cents), now });
-  let left = total - settle - onPlan.cents - spent.cents;
+  // Then Pro split with the group (pro-split.js): all of it with the whole card, or what a part
+  // payment has left over, as a payment marked for it (`tab: 'pro'`), so a trip or a crew's tab
+  // never counts the split's money as paying their rounds
+  const afterSpent = total - settle - onPlan.cents - spent.cents;
+  const proOpen = splitsOn() ? splitOpen(state, F, T) : 0;
+  const proPaid = whole ? proOpen : proOpen > 0 ? Math.max(0, Math.min(proOpen, afterSpent)) : 0;
+  if (proPaid) {
+    const [pf, pt] = proPaid > 0 ? [from, to] : [to, from];
+    settlements.push({ id: `sp_${makeId()}`, from: pf, to: pt, amount: Math.abs(proPaid) / 100, at: now, tab: SPLIT_TAB });
+  }
+  let left = afterSpent - proPaid;
   // The whole card: each trip's part between them from rounds only this phone has goes on that
   // trip (2026-10-04), so Settle the trip has the pair square too, even when the Tab netted it
   // against money from before the trip; the rest is a payment as before. It never settles the

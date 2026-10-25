@@ -1464,6 +1464,12 @@ button.who-status { cursor: pointer; min-height: 36px; }
 .yp-empty-ic { width: 36px; height: 36px; border-radius: 50%; background: var(--surface); color: var(--icon); display: grid; place-items: center; font-size: 18px; flex-shrink: 0; }
 .yp-empty-title { font-weight: 700; font-size: 15px; }
 .yp-cancel { display: block; margin: 18px auto 24px; color: var(--mute); text-decoration-color: var(--surface-strong); }
+/* Your plan: the trial's timeline (paywall rules, overnight 13) */
+.yp-trial-head { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; }
+.yp-trial-day { font-size: 20px; font-weight: 800; letter-spacing: -.01em; }
+.yp-trial-bar { margin: 10px 0 16px; height: 8px; border-radius: 999px; background: var(--surface); overflow: hidden; }
+.yp-trial-bar > span { display: block; height: 100%; border-radius: inherit; background: var(--win); transition: width .3s ease-out; }
+.remind-card.trial-rc { box-shadow: inset 0 0 0 2px var(--surface-strong); }
 .cp-hero { padding: 20px 20px 14px; }
 .cp-title { margin-top: 8px; font-size: 28px; font-weight: 800; letter-spacing: -.03em; line-height: 1.12; text-wrap: balance; }
 .cp-lead { margin-top: 8px; font-size: 15px; color: var(--body); }
@@ -4098,6 +4104,15 @@ a.header-btn.rm-open { text-decoration: none; }
   :root:not([data-theme="light"]) .ready-card.themed { --rc-bg: var(--card); background: var(--card); box-shadow: var(--card-shadow), inset 0 3px 0 var(--gt); }
   :root:not([data-theme="light"]) .ready-card.themed .ready-row { color: var(--mute); border-bottom-color: var(--line-soft); }
 }
+
+/* SPLIT PRO WITH YOUR GROUP (pro-split.js, behind the paywall flag) */
+.split-pro .split-lead { margin: 0 0 12px; }
+.split-pro .split-head { font-size: 24px; font-weight: 800; color: var(--ink); margin: 4px 0 6px; font-variant-numeric: tabular-nums; }
+.split-pro .exp-tick:disabled { opacity: .5; cursor: default; }
+.split-pro .link-btn.center { display: block; margin: 6px auto 0; }
+.split-row { display: flex; align-items: center; gap: 12px; padding: 14px 16px; margin: 0 16px 8px; }
+.split-row .row-main { flex: 1; min-width: 0; }
+.split-row .pill-btn { flex-shrink: 0; }
 
 /* The tee as one chip that opens the tee sheet (New round, Players) */
 .tee-select .tee-dot { margin-right: 0; }

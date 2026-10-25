@@ -14,6 +14,8 @@
 //   talk      you posted trash talk on a round, plan or challenge: everyone on it, but you. It says
 //             what you wrote (data.text), one push per comment
 //   tee       the tee time reminder: the plan's organizer, sent by the hourly job at 8 in their morning, never by the app
+//   shipped   an idea you sent in has shipped ("The game you asked for is live"): you, sent by its own
+//             daily job (api/push-ideas.js, idea-push.js says what it says), never by the app
 // Who counts as "on it" is the server's call (supabase/2026-10-08-push.sql push_targets): it only
 // sends when the caller is on that round, plan or challenge too, and only to people on it, and
 // never a kind someone switched off in Settings (push-prefs.js, supabase/2026-10-08-push-prefs.sql).
@@ -31,6 +33,7 @@ export const PUSH_KINDS = {
   carried: { scopes: ['round'], to: 'players' },
   talk: { scopes: ['round', 'plan', 'challenge'], to: 'all' },
   tee: { scopes: ['plan'], to: 'host', server: true },
+  shipped: { scopes: ['idea'], to: 'self', server: true },
 };
 
 const CODE = /^[A-Z0-9]{4,8}$/;

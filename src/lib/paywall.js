@@ -87,21 +87,9 @@ export function variantFor(state, key, variants = VARIANTS) {
 
 // --------------------------- who sees it -------------------------------------
 
-/**
- * The flag. Off unless turned on: `VITE_PAYWALL=on` at build time, or `?paywall=on` in the
- * address bar on that phone (remembered; `?paywall=off` turns it back off). Local dev follows
- * production, so the paywall doesn't show there until you ask for it.
- * Returns { on, remember } where `remember` is the override to save, if the URL set one.
- */
-export function readFlag({ env = {}, search = '', saved = null } = {}) {
-  const q = new URLSearchParams(search).get('paywall');
-  if (q === 'on' || q === 'off') return { on: q === 'on', remember: q };
-  if (saved === 'on' || saved === 'off') return { on: saved === 'on', remember: null };
-  const v = String(env.VITE_PAYWALL ?? '').toLowerCase();
-  if (v === 'on' || v === '1' || v === 'true') return { on: true, remember: null };
-  if (v === 'off' || v === '0' || v === 'false') return { on: false, remember: null };
-  return { on: false, remember: null };
-}
+// The flag itself (readFlag) lives in paywall-read-flag.js, so the first screen can read it
+// without loading the rest of this file.
+export { readFlag } from './paywall-read-flag.js';
 
 /**
  * Whether to show the paywall at the end of onboarding: the flag is on, this phone's owner came
@@ -127,15 +115,16 @@ export function isOrganizer(state) {
   return Object.values(state.plans || {}).some(p => p.host);
 }
 
-/** The Settings line for Pro: where this phone stands. `lifetime`: an early tester's Pro for life. */
-export function planStatus(state, now = Date.now(), { lifetime = false } = {}) {
+/** The Settings line for Pro: where this phone stands. `lifetime`: an early tester’s Pro for life. `offer`: false while a round is live, so the line carries no upsell. */
+export function planStatus(state, now = Date.now(), { lifetime = false, offer = true } = {}) {
   if (lifetime) return LIFETIME_LINE;
   const p = state?.paywall;
   if (p?.choice === 'trial' && p.trialEnds > now) {
     const days = Math.ceil((p.trialEnds - now) / DAY);
     return `Pro trial preview · ${days} ${days === 1 ? 'day' : 'days'} left`;
   }
-  return 'Free · see what Pro adds';
+  // No upsell while a round is live (upsell-guard.js): just the plan's name
+  return offer ? 'Free · see what Pro adds' : 'Free';
 }
 
 // --------------------------- what it shows -----------------------------------

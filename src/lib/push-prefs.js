@@ -12,6 +12,7 @@ export const PUSH_GROUPS = [
   { id: 'finished', label: 'Round finished', sub: 'A shared round is done, and how you did', kinds: ['finished'] },
   { id: 'pay', label: 'Payments', sub: 'Someone paid you, or asked to roll it to next time', kinds: ['paid', 'carry', 'carried'] },
   { id: 'tee', label: 'Tee time reminder', sub: 'A nudge to book, on the day you picked for a round you’re organizing', kinds: ['tee'] },
+  { id: 'shipped', label: 'Your ideas', sub: 'A game, course or idea you sent in is live', kinds: ['shipped'] },
 ];
 
 const KINDS = Object.keys(PUSH_KINDS);

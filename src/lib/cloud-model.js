@@ -5,6 +5,7 @@ import { stable } from './sync-model.js';
 import { mergeSettings, migrateSettings } from './settings.js';
 import { nextActiveId } from './rounds.js';
 import { mergeExpenses } from './trip-expenses.js';
+import { mergeSplits } from './pro-split.js';
 import { keepAgeAnswer } from './age.js';
 
 // Round fields that only mean something on this phone
@@ -28,6 +29,8 @@ export function toDocs(state) {
     tripHidden: state.tripHidden && typeof state.tripHidden === 'object' && !Array.isArray(state.tripHidden) ? state.tripHidden : {},
     // Trip expenses (trip-expenses.js), yours and the ones friends' phones sent, deleted ones as a stub
     tripExpenses: state.tripExpenses && typeof state.tripExpenses === 'object' && !Array.isArray(state.tripExpenses) ? state.tripExpenses : {},
+    // Pro split with your group (pro-split.js), one per purchase, undone ones as a stub
+    proSplits: state.proSplits && typeof state.proSplits === 'object' && !Array.isArray(state.proSplits) ? state.proSplits : {},
     // Stake payments you marked on a team points trip (cup.js), kept off the Tab
     cupPaid: state.cupPaid && typeof state.cupPaid === 'object' && !Array.isArray(state.cupPaid) ? state.cupPaid : {},
     // Closed seasons (books.js): a marker and the season's totals; the money is in the payments and carries
@@ -122,6 +125,10 @@ export function applyDoc(draft, kind, id, data) {
     // adding one at once both keep theirs (a deleted one stays as a stub, so it stays deleted)
     if (data.tripExpenses && typeof data.tripExpenses === 'object' && !Array.isArray(data.tripExpenses)) {
       draft.tripExpenses = mergeExpenses(draft.tripExpenses || {}, Object.values(data.tripExpenses));
+    }
+    // Pro splits came later again, kept split by split like trip expenses, the newer copy of each
+    if (data.proSplits && typeof data.proSplits === 'object' && !Array.isArray(data.proSplits)) {
+      draft.proSplits = mergeSplits(draft.proSplits || {}, Object.values(data.proSplits));
     }
     // And the stake marks of team points trips later still
     if (data.cupPaid && typeof data.cupPaid === 'object' && !Array.isArray(data.cupPaid)) draft.cupPaid = data.cupPaid;

@@ -22,12 +22,14 @@ import { PAYWALL_ON } from '../lib/paywall-flag.js';
 import { SUPPORT_EMAIL, helpMailto } from '../lib/support.js';
 import { TERMS_PATH } from '../lib/terms-page.js';
 import { isOrganizer, planStatus } from '../lib/paywall.js';
+import { upsellAllowed } from '../lib/upsell-guard.js';
 import { useLifetimePro } from '../lib/pro-client.js';
 import { accountsEnabled, signOut, syncNow, unsyncedCount, useAccount } from '../lib/cloud.js';
 import { NUDGE_CHOICES, nudgeChoiceLabel, nudgeDays } from '../lib/nudges.js';
 import { useAgeCheck } from '../components/AgeCheck.jsx';
 import { NotifyRow } from '../components/NotifyRow.jsx';
 import { ageLine } from '../lib/age.js';
+import { useDigestAdmin } from '../lib/digest-sync.js';
 
 // Settings, Notifications, Which ones lives with its row (NotifyRow.jsx); App.jsx loads it from this chunk like Defaults and About
 export { NotifyPicks } from '../components/NotifyRow.jsx';
@@ -78,6 +80,8 @@ export default function Settings() {
   const [signingIn, setSigningIn] = useState(false);
   const checkAge = useAgeCheck();
   const { lifetime } = useLifetimePro();
+  // The feedback digest row shows only for an account the server lists as an admin (app_admins)
+  const digestAdmin = useDigestAdmin();
 
   const logOut = async () => {
     if (unsyncedCount() > 0) {
@@ -223,7 +227,7 @@ export default function Settings() {
         {/* Plans only show with the paywall flag on. An early tester's line is a quiet thank-you (Pro for life) */}
         {PAYWALL_ON && (isOrganizer(state) || lifetime) && <>
           <div className="sec-label">Your plan</div>
-          {row('star', 'Your plan', planStatus(state, undefined, { lifetime }), () => nav.push('yourPlan'))}
+          {row('star', 'Your plan', planStatus(state, undefined, { lifetime, offer: upsellAllowed(state, { gated: PAYWALL_ON }) }), () => nav.push('yourPlan'))}
         </>}
         {/* Feedback: easy to find, warm, and out of the way of your own settings */}
         <Callout spot="bulb" soft title="Help shape Birdie Bank"
@@ -233,6 +237,7 @@ export default function Settings() {
           </div>}>
           A game, a course, a feature or something broken. It’s built around what golfers ask for.
         </Callout>
+        {digestAdmin && row('tray', 'Feedback digest', 'The latest ideas to approve for the roadmap', () => nav.push('digest'))}
         <div className="sec-label">About</div>
         <button className="set-row" onClick={() => nav.push('whatsNew')}>
           <div className="set-icon"><Icon name="sparkle" fill /></div>

@@ -138,4 +138,7 @@ test('the Settings line shows the trial days left', () => {
   assert.equal(planStatus({ paywall: { choice: 'trial', trialEnds: now + 3.5 * 86400000 } }, now), 'Pro trial preview · 4 days left');
   assert.equal(planStatus({ paywall: { choice: 'trial', trialEnds: now + 3600000 } }, now), 'Pro trial preview · 1 day left');
   assert.equal(planStatus({ paywall: { choice: 'trial', trialEnds: now - 1 } }, now), 'Free · see what Pro adds');
+  // While a round is live (offer false) the Settings row names the plan with no upsell
+  assert.equal(planStatus({}, now, { offer: false }), 'Free');
+  assert.equal(planStatus({ paywall: { choice: 'trial', trialEnds: now + 3600000 } }, now, { offer: false }), 'Pro trial preview · 1 day left');
 });

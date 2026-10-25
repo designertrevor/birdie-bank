@@ -4,7 +4,7 @@
 // list is empty and "Cancel anyway" only explains that nothing is charged.
 // TODO(pro): once Stripe is wired up, pass the account's subscription to currentPlan, list its
 // receipts, and have "Cancel anyway" end the plan at the end of what's paid for.
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
 import { Empty, Header, Icon, Screen, useUI } from '../components/ui.jsx';
 import { StatTile } from '../components/DataCards.jsx';
 import { FreePromiseList } from '../components/FreePromise.jsx';
@@ -17,6 +17,9 @@ import { useLifetimePro } from '../lib/pro-client.js';
 import { LIFETIME_LINE, sinceLine } from '../lib/lifetime-pro.js';
 import { RIVALRY_ROUNDS, bestMomentTile, groupNumbers, numbersLine } from '../lib/plan-numbers.js';
 import { money } from '../lib/golf.js';
+import { chargeNotice, trialProgress } from '../lib/trial.js';
+import { upsellAllowed } from '../lib/upsell-guard.js';
+import { SplitProRow } from '../components/SplitPro.jsx';
 
 const DASH = '–';
 const day = t => new Date(t).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
@@ -32,14 +35,14 @@ function Off({ title }) {
 }
 
 /** What the plan card says for each plan. */
-function planCopy(p, ent) {
+function planCopy(p, ent, state, now) {
   if (p.id === 'lifetime') return { title: 'Pro for life', tag: 'Early tester', text: `${LIFETIME_LINE}. Nothing to pay, ever.`, fine: sinceLine(ent) };
   if (p.id === 'trial') {
     return {
       title: 'Pro trial',
       tag: `${p.daysLeft} ${p.daysLeft === 1 ? 'day' : 'days'} left`,
       text: `Then ${p.plan.label} at ${priceLabel(p.plan)}, from ${day(p.ends)}. We remind you on day ${REMIND_DAY}.`,
-      fine: 'Nothing is charged yet.',
+      fine: chargeNotice(state, now) || 'Nothing is charged yet.',
     };
   }
   if (p.id === 'annual' || p.id === 'monthly') {
@@ -52,9 +55,14 @@ export default function YourPlan() {
   const nav = useNav();
   const state = useStore();
   const ent = useLifetimePro();
-  const p = currentPlan(state, { lifetime: ent.lifetime });
+  const [now] = useState(() => Date.now());
+  const p = currentPlan(state, { lifetime: ent.lifetime, now });
   if (!PAYWALL_ON) return <Off title="Your plan" />;
-  const c = planCopy(p, ent);
+  const c = planCopy(p, ent, state, now);
+  // The trial, day by day: where it stands, the reminder and the end date with the price after
+  const t = p.id === 'trial' ? trialProgress(state, now) : null;
+  // No "See what Pro adds" while a round is live (upsell-guard.js)
+  const offer = upsellAllowed(state, { gated: PAYWALL_ON, now });
   // The trial's plan can change before it starts; Pro for life and Free have nothing to switch
   const other = p.id === 'trial' ? Object.values(PLANS).find(x => x.id !== p.plan.id) : null;
   return (
@@ -69,8 +77,11 @@ export default function YourPlan() {
           <div className="yp-title d">{c.title}</div>
           <p className="yp-text">{c.text}</p>
           {c.fine && <p className="yp-fine">{c.fine}</p>}
-          {p.id === 'free' && <button className="pill-btn dark yp-act" onClick={() => nav.push('paywall', { source: 'settings' })}>See what Pro adds <Icon name="arrow-right" /></button>}
+          {p.id === 'free' && offer && <button className="pill-btn dark yp-act" onClick={() => nav.push('paywall', { source: 'settings' })}>See what Pro adds <Icon name="arrow-right" /></button>}
         </div>
+        {t && <TrialTimeline t={t} />}
+        {/* Split it with the group (pro-split.js): offered for a purchase (not Pro for life or Free), and a split standing always shows, with Undo */}
+        <SplitProRow plan={p.id !== 'lifetime' ? p.plan : null} />
         {other && (
           <button className="set-row" onClick={() => update(st => { st.paywall = { ...(st.paywall || {}), plan: other.id }; })}>
             <div className="set-icon"><Icon name="arrows-left-right" fill /></div>
@@ -91,6 +102,35 @@ export default function YourPlan() {
         {p.cancel && <button className="link-btn yp-cancel" onClick={() => nav.push('cancelPlan')}>Cancel plan</button>}
       </div>
     </Screen>
+  );
+}
+
+/** The trial's timeline: day N of 14 with a bar, then day 1, the reminder and the end, each ticked once passed. */
+function TrialTimeline({ t }) {
+  return (
+    <>
+      <div className="sec-label">Your trial</div>
+      <div className="block yp-trial">
+        <div className="yp-trial-head">
+          <span className="yp-trial-day d">Day {t.day} of {t.of}</span>
+          <span className="li-sub">{t.daysLeft} {t.daysLeft === 1 ? 'day' : 'days'} left</span>
+        </div>
+        <div className="yp-trial-bar" role="progressbar" aria-label="Trial progress" aria-valuemin={1} aria-valuemax={t.of} aria-valuenow={t.day} aria-valuetext={`Day ${t.day} of ${t.of}`}>
+          <span style={{ width: `${t.pct}%` }} />
+        </div>
+        <ol className="pw-timeline yp-trial-steps" aria-label="How the trial goes">
+          {t.steps.map(s => (
+            <li key={s.key} className={`pw-step ${s.done ? 'now' : ''}`}>
+              <span className="pw-dot"><Icon name={s.done ? 'check' : s.icon} fill={!s.done} /></span>
+              <div>
+                <div className="pw-step-title">{s.title}<span className="pw-when"> · {s.when}</span></div>
+                <div className="li-sub">{s.text}</div>
+              </div>
+            </li>
+          ))}
+        </ol>
+      </div>
+    </>
   );
 }
 

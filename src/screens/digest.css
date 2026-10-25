@@ -1,0 +1,26 @@
+/* The feedback digest (Digest.jsx): loads with its screen, never on the first one */
+.dg-intro { margin: 4px 20px 12px; font-size: 15px; line-height: 1.45; color: var(--body); }
+.dg-days { padding: 0 16px 6px; }
+.dg-loading { padding: 40px 20px; text-align: center; color: var(--mute); font-size: 15px; }
+.dg-reactions { margin: 10px 20px 0; font-size: 13px; color: var(--mute); }
+.dg-n { color: var(--mute-soft); font-variant-numeric: tabular-nums; margin-left: 4px; }
+.dg-ready { margin: 12px 16px 4px; padding: 14px 16px; border-radius: 20px; background: var(--win-bg); color: var(--ink); }
+.dg-ready-head { display: flex; align-items: center; gap: 8px; font-size: 15px; }
+.dg-ready-head i { color: var(--win); font-size: 20px; }
+.dg-ready-text { margin: 6px 0 10px; font-size: 13px; line-height: 1.4; color: var(--body); }
+.dg-ready-acts, .dg-btns { display: flex; gap: 8px; flex-wrap: wrap; }
+.dg-list { list-style: none; margin: 0; padding: 0; }
+.dg-item { margin: 0 16px 10px; padding: 14px 16px; border-radius: 20px; background: var(--card); box-shadow: var(--card-shadow); }
+.dg-item.is-skip { opacity: .62; }
+.dg-top { display: flex; gap: 12px; align-items: flex-start; }
+.dg-kind { color: var(--icon); font-size: 20px; margin-top: 2px; flex-shrink: 0; }
+.dg-top .row-main { min-width: 0; display: flex; flex-direction: column; gap: 4px; }
+.dg-body { font-size: 15px; font-weight: 600; color: var(--ink); line-height: 1.35; overflow-wrap: anywhere; }
+.dg-detail { font-size: 14px; color: var(--body); line-height: 1.4; overflow-wrap: anywhere; }
+.dg-meta { font-size: 12px; color: var(--mute); }
+.dg-acts { display: flex; flex-direction: column; gap: 8px; margin-top: 12px; }
+.dg-area select { width: 100%; min-height: 44px; border: none; border-radius: 14px; background: var(--surface); color: var(--ink); font: inherit; font-size: 15px; padding: 0 12px; }
+.dg-note { font-size: 15px; padding: 10px 12px; }
+.dg-done { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-top: 10px; }
+.dg-tag { font-size: 13px; font-weight: 700; padding: 6px 10px; border-radius: 999px; background: var(--surface); color: var(--body); }
+.dg-tag.approve { background: var(--win-bg); color: var(--win); }

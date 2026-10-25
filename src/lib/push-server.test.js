@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { Buffer } from 'node:buffer';
 import { createECDH } from 'node:crypto';
-import { handlePush, handleTee, payloadGroups, pushConfig } from './push-server.js';
+import { handleIdeas, handlePush, handleTee, payloadGroups, pushConfig } from './push-server.js';
 import { cleanPushRequest } from './push-events.js';
 
 const b64u = b => Buffer.from(b).toString('base64url');
@@ -131,6 +131,23 @@ test('before the time zone SQL runs, the tee reminder goes on Utah\u2019s day in
   assert.ok(!f.calls.some(c => String(c.url).endsWith('/rpc/push_tee_due')));
   assert.equal(await handleTee(cfg, new Date('2026-10-09T14:30:00Z'), f), 1);
   assert.deepEqual(JSON.parse(f.calls.find(c => String(c.url).endsWith('/rpc/push_tee_due')).init.body), { p_today: '2026-10-09' });
+});
+
+test('the daily shipped-idea push sends one push per person, with the roadmap items it was given', async () => {
+  const cfg = pushConfig(ENV);
+  const a = sub('u-a');
+  const rows = [
+    { feedback_id: 'f1', idea_kind: 'game', idea_title: 'Wolf', ...a },
+    { feedback_id: 'f2', idea_kind: 'course', idea_title: 'Birch Creek', ...a },
+    { feedback_id: 'f3', idea_kind: 'feature', idea_title: 'Dark mode', ...sub('u-b') },
+  ];
+  const f = fakeFetch({ rows });
+  const items = [{ id: 'r-abc', title: 'Wolf', shipped: '2026-10-11' }];
+  assert.equal(await handleIdeas(cfg, '2026-10-12', items, f), 2);
+  const rpc = f.calls.find(c => String(c.url).endsWith('/rest/v1/rpc/push_ideas_due'));
+  assert.deepEqual(JSON.parse(rpc.init.body), { p_today: '2026-10-12', p_items: items });
+  assert.equal(f.calls.filter(c => String(c.url).startsWith('https://fcm.googleapis.com/')).length, 2);
+  assert.equal(await handleIdeas(null, '2026-10-12', items, f), 0);
 });
 
 test('a round finished push tells each person how they did, by the seats the database says are theirs', async () => {

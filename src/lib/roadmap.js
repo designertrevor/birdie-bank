@@ -220,7 +220,7 @@ export function tabFor(items, id, ideas = []) {
 
 // --------------------------- "it's live" -------------------------------------
 
-const ASKED_LINE = {
+export const ASKED_LINE = {
   game: 'The game you asked for is live',
   course: 'The course you asked for is in',
   feature: 'The idea you sent in is live',

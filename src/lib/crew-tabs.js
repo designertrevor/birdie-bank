@@ -24,6 +24,7 @@ import { onTab, tabResults } from './play-for.js';
 import { tripOfPayment } from './trip-pay.js';
 import { tripStatus, tripsOf } from './trips.js';
 import { squareRows } from './shared-tab.js';
+import { countsPayment } from './pro-split.js';
 
 export const OTHER = 'other';
 export const crewKey = id => `crew:${id}`;
@@ -203,6 +204,7 @@ export function tabsOf(state, { now = Date.now() } = {}) {
   }
   for (const s of state.settlements || []) {
     if (tripOfPayment(s)) continue; // Settle the trip's, counted on the trip
+    if (!countsPayment(s)) continue; // a payment for a split with the flag off (pro-split.js)
     let key;
     if (s.tab) key = crewBy.has(s.tab) ? s.tab : OTHER;
     else if (s.code) key = codeKey.get(s.code) || OTHER;

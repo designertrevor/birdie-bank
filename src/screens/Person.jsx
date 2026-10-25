@@ -6,6 +6,8 @@ import { PersonActions, RewardLines } from '../components/TabCard.jsx';
 import { TabWhereFrom } from '../components/WhereFrom.jsx';
 import { useTabSync } from '../lib/tab-sync.js';
 import { uid, update, useStore } from '../lib/store.js';
+import { useRecordBook } from '../lib/useRecordBook.js';
+import { RecordBookNote } from '../components/RecordBookNote.jsx';
 import { nameOf, outstanding, personStory, tabWith } from '../lib/ledger.js';
 import { PAY_APPS, handleText, payInfoFor } from '../lib/pay.js';
 import { money } from '../lib/golf.js';
@@ -48,10 +50,15 @@ export default function Person({ id: opened }) {
   const fv = friendView(usePersonProfile(id), player);
   const plan = outstanding(state);
   const tab = tabWith(plan, mine, id);
+  // The money story uses every round: what's open between you two always counts them all
   const story = personStory(state, mine, id);
+  // The Record Book limit (record-book.js): with the paywall flag on and no Pro, the story's rounds
+  // and the rivalry read the last 10 finished rounds. With the flag off `view` is the store's state
+  const { state: view, line } = useRecordBook();
+  const shown = view === state ? story : personStory(view, mine, id);
   // You against them, all time, from the same story (the Record Book)
-  const rv = rivalry(state, mine, id);
-  const nem = nemesis(state, mine);
+  const rv = rivalry(view, mine, id);
+  const nem = nemesis(view, mine);
   // What the two of you said in rounds together, newest first (talk.js)
   const talk = kept === state.me ? [] : personTalk(state, id);
   const amount = Math.abs(tab);
@@ -196,8 +203,8 @@ export default function Person({ id: opened }) {
         )}
 
         <div className="sec-label">The story</div>
-        {story.items.length === 0 && <p className="hint-card"><Icon name="flag-pennant" fill /> No finished rounds with {firstName} yet. Play one and every bet between you shows up here.</p>}
-        {story.items.map(it => it.kind === 'carry' ? (
+        {shown.items.length === 0 && story.rounds === shown.rounds && <p className="hint-card"><Icon name="flag-pennant" fill /> No finished rounds with {firstName} yet. Play one and every bet between you shows up here.</p>}
+        {shown.items.map(it => it.kind === 'carry' ? (
           <div key={it.id} className="ledger-row static">
             <div className="lr-info">
               <div className="lr-name" style={{ fontSize: 16 }}>Carried over · agreed {when(it.at)}</div>
@@ -206,10 +213,10 @@ export default function Person({ id: opened }) {
             <div className="lr-amt d story-amt">{money(Math.abs(it.amount))}</div>
           </div>
         ) : it.kind === 'expense' ? (
-          <button key={it.id} className="ledger-row" onClick={() => (it.expense.big ? nav.push('bigGame', { id: it.expense.tripId, view: 'money' }) : nav.push('trip', { id: it.expense.tripId, view: it.expense.stake ? 'cup' : 'expenses' }))}>
+          <button key={it.id} className="ledger-row" onClick={() => (it.expense.pro ? nav.push('yourPlan') : it.expense.big ? nav.push('bigGame', { id: it.expense.tripId, view: 'money' }) : nav.push('trip', { id: it.expense.tripId, view: it.expense.stake ? 'cup' : 'expenses' }))}>
             <div className="lr-info">
-              <div className="lr-name" style={{ fontSize: 16 }}>{it.expense.big ? it.expense.what : it.expense.stake ? 'Cup stake · team points trip' : `${it.expense.what} · trip expense`}</div>
-              <div className="lr-status">{when(it.at)} · {it.expense.big ? (it.amount > 0 ? `${firstName} pays you from the Big Game` : `You pay ${firstName} from the Big Game`) : it.expense.stake ? (it.amount > 0 ? `Your team won the cup, ${firstName} pays the stake` : `${firstName}’s team won the cup, you pay the stake`) : it.amount > 0 ? `You paid, ${firstName}’s share` : `${firstName} paid, your share`}</div>
+              <div className="lr-name" style={{ fontSize: 16 }}>{it.expense.pro ? 'Pro · split with your group' : it.expense.big ? it.expense.what : it.expense.stake ? 'Cup stake · team points trip' : `${it.expense.what} · trip expense`}</div>
+              <div className="lr-status">{when(it.at)} · {it.expense.pro ? `${firstName}’s share of your Pro` : it.expense.big ? (it.amount > 0 ? `${firstName} pays you from the Big Game` : `You pay ${firstName} from the Big Game`) : it.expense.stake ? (it.amount > 0 ? `Your team won the cup, ${firstName} pays the stake` : `${firstName}’s team won the cup, you pay the stake`) : it.amount > 0 ? `You paid, ${firstName}’s share` : `${firstName} paid, your share`}</div>
             </div>
             <div className={`lr-amt d story-amt ${it.amount > 0 ? 'pos' : 'neg'}`}>{money(it.amount, { sign: true })}</div>
           </button>
@@ -231,6 +238,7 @@ export default function Person({ id: opened }) {
             <div className="lr-amt d story-amt">{money(Math.abs(it.amount))}</div>
           </div>
         ))}
+        {story.rounds > shown.rounds && <RecordBookNote line={line} />}
 
         {!isMine && (
           <>
