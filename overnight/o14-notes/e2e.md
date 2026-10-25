@@ -51,7 +51,15 @@ It blanks the Supabase, Sentry, PostHog, push and course sample keys and turns t
 own server, whatever `.env.local` says, so it never reaches the cloud or anyone's data. It uses
 `playwright-core` (a new dev dependency, no browser download) with the Chrome in /Applications; with
 no Chrome, set `CHROME_PATH` or run `npx playwright-core install chromium` once. On a failure it saves
-a screenshot to `$TMPDIR/birdie-bank-e2e-failure.png` and prints the path.
+a screenshot to `$TMPDIR/birdie-bank-e2e-failure.png` (or to `E2E_SCREENSHOT` when set) and prints the path.
+
+**On GitHub (Trevor's pick 1C, 2026-10-25).** `.github/workflows/e2e.yml` runs it on every pull
+request and every push to main: checkout, Node 24 with npm's cache, `npm ci`, `npm run e2e`, with a
+15 minute timeout. ubuntu-latest has Google Chrome, which the test finds through the `chrome` channel
+(else `CHROME_PATH`, `CHROME_BIN`, which the runners set, or `google-chrome` in /usr/bin). On a failure
+the screenshot is uploaded with the run as the `e2e-failure` artifact. The same steps were run on a
+clean copy of the tracked files on the Mac (npm ci, then the test): passed in 36 s. A forced failure
+saved the screenshot to `E2E_SCREENSHOT`, and a bad `CHROME_BIN` fell through to the next Chrome.
 
 Added to the README's command list. There is no ship checklist in the repo (searched ROADMAP.md,
 overnight/ and the README for one), so nothing else was updated.

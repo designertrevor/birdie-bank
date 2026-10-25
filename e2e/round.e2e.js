@@ -14,13 +14,17 @@
 //
 // It starts its own Vite dev server on a free port from 5180 to 5189, with the cloud, crash reports,
 // usage counts and the paywall switched off, so it never touches Supabase or another phone's data.
-// It drives the Google Chrome already on the Mac through playwright-core (nothing to download). With
-// no Chrome, set CHROME_PATH, or run `npx playwright-core install chromium` once.
+// It drives the Google Chrome already on the machine through playwright-core (nothing to download):
+// the Mac's in /Applications, or google-chrome on Linux (GitHub's ubuntu-latest has it, see
+// .github/workflows/e2e.yml). With no Chrome, set CHROME_PATH, or run
+// `npx playwright-core install chromium` once. On a failure it saves a screenshot to
+// $TMPDIR/birdie-bank-e2e-failure.png, or to E2E_SCREENSHOT when that's set.
 import { after, before, test } from 'node:test';
 import assert from 'node:assert/strict';
 import net from 'node:net';
 import process from 'node:process';
 import { fileURLToPath } from 'node:url';
+import { existsSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { createServer } from 'vite';
@@ -102,14 +106,23 @@ async function freePort() {
   throw new Error('No free port from 5180 to 5189');
 }
 
-/** Chrome from /Applications, else CHROME_PATH, else playwright's own Chromium if it was installed. */
+// Where Linux keeps Google Chrome (or Chromium) when the 'chrome' channel doesn't find it
+const LINUX_CHROMES = ['/usr/bin/google-chrome', '/usr/bin/google-chrome-stable', '/usr/bin/chromium', '/usr/bin/chromium-browser'];
+
+/**
+ * CHROME_PATH (or CHROME_BIN, which GitHub's runners set) first, then the installed Google Chrome
+ * (/Applications on a Mac, /opt/google/chrome on Linux), then one on Linux's PATH, then playwright's
+ * own Chromium if it was installed.
+ */
 async function launch() {
   const opts = { headless: !process.env.E2E_HEADED, slowMo: Number(process.env.E2E_SLOWMO) || 0 };
+  const paths = [process.env.CHROME_PATH, process.env.CHROME_BIN].filter(Boolean);
   const tries = [
-    process.env.CHROME_PATH ? { ...opts, executablePath: process.env.CHROME_PATH } : null,
+    ...paths.map(executablePath => ({ ...opts, executablePath })),
     { ...opts, channel: 'chrome' },
+    ...LINUX_CHROMES.filter(p => existsSync(p)).map(executablePath => ({ ...opts, executablePath })),
     opts,
-  ].filter(Boolean);
+  ];
   let last;
   for (const o of tries) {
     try { return await chromium.launch(o); } catch (e) { last = e; }
@@ -150,7 +163,7 @@ test('start a round, score all 18 holes, settle up', { timeout: 180_000 }, async
     await playThrough(page, nav, step, context, problems);
   } catch (e) {
     // A picture of where it stopped, for whoever reads the failure
-    const shot = join(tmpdir(), 'birdie-bank-e2e-failure.png');
+    const shot = process.env.E2E_SCREENSHOT || join(tmpdir(), 'birdie-bank-e2e-failure.png');
     await page.screenshot({ path: shot }).catch(() => {});
     e.message += `\nScreenshot: ${shot}${problems.length ? `\nConsole: ${problems.join(' | ')}` : ''}`;
     throw e;

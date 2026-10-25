@@ -1,0 +1,42 @@
+# The end to end test (ROADMAP area 25, e2e/round.e2e.js) on every pull request and every push to
+# main: a whole Skins round in Chrome at iPhone size, from onboarding to Settle up and the Tab. It
+# runs on GitHub's free minutes, not Vercel's build minutes. ubuntu-latest comes with Google Chrome,
+# which the test finds by itself (the 'chrome' channel, else CHROME_BIN or google-chrome on the PATH),
+# so nothing is downloaded. The test starts its own Vite server with the cloud, crash reports, usage
+# counts and the paywall switched off, so it needs no secrets. On a failure the screenshot of where it
+# stopped is saved with the run (Summary, Artifacts, e2e-failure). About a minute, with npm's cache.
+name: E2E
+on:
+  pull_request:
+  push:
+    branches: [main]
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: e2e-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  round:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          cache: npm
+      - name: Install
+        run: npm ci
+      - name: Play a round
+        env:
+          E2E_SCREENSHOT: ${{ runner.temp }}/birdie-bank-e2e-failure.png
+        run: npm run e2e
+      - name: Save the failure screenshot
+        if: failure()
+        uses: actions/upload-artifact@v7
+        with:
+          name: e2e-failure
+          path: ${{ runner.temp }}/birdie-bank-e2e-failure.png
+          if-no-files-found: ignore
+          retention-days: 14
