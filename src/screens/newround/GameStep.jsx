@@ -11,7 +11,8 @@ import { gameLabel } from '../../lib/format.js';
 import { roundStakeLines } from '../../lib/stakes.js';
 import { useNav } from '../../lib/nav.js';
 
-export function GameStep({ usual, onUsual, onPickUsual, planning, onPlan, game, setGame, onNext }) {
+// `nextLabel`: the button's words when a game is picked ("Done" when opened from the overview)
+export function GameStep({ usual, onUsual, onPickUsual, planning, onPlan, game, setGame, onNext, nextLabel = null }) {
   const nav = useNav();
   const [rules, setRules] = useState(null);
   const u = usual?.round;
@@ -88,7 +89,7 @@ export function GameStep({ usual, onUsual, onPickUsual, planning, onPlan, game, 
         </button>
       </div>
       <div className="cta-wrap">
-        <button className="full-btn" disabled={!game} onClick={onNext}>{game ? <>{planning ? 'Next: When' : 'Next: Course'} <Icon name="arrow-right" /></> : 'Pick a game'}</button>
+        <button className="full-btn" disabled={!game} onClick={onNext}>{game ? <>{nextLabel || (planning ? 'Next: When' : 'Next: Course')} <Icon name={nextLabel ? 'check' : 'arrow-right'} /></> : 'Pick a game'}</button>
         {!planning && onPlan && <button className="text-link cta-link" disabled={!game} onClick={onPlan}><Icon name="calendar-plus" /> Schedule for later</button>}
       </div>
       <RulesSheet game={rules} open={!!rules} onClose={() => setRules(null)} />

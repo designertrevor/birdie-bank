@@ -7,14 +7,9 @@ import { useUI } from '../../components/ui.jsx';
 import { useAgeCheck } from '../../components/AgeCheck.jsx';
 import { getState, uid, update } from '../../lib/store.js';
 import { roundProps, track } from '../../lib/analytics.js';
-import { calcuttaSalesOf, createRound, holesInPlay } from '../../lib/round.js';
-import { betsOf, cleanBet } from '../../lib/pair-bets.js';
-import { teamsCfg } from '../../lib/teams.js';
-import { withQuotaRules } from '../../lib/quota-carry.js';
+import { buildSetupRound, finishSetupRound, noHandicapIds } from '../../lib/setup-round.js';
 import { rematchSetup } from '../../lib/rematch.js';
-import { halfStrokesOffered } from '../../lib/allowances.js';
 import { addRound, leaveRound } from '../../lib/rounds.js';
-import { findCourse } from '../../lib/courses.js';
 import { newPlan } from '../../lib/plans.js';
 import { setupForPlan } from '../../lib/plan-setup.js';
 import { PLAN_LOCKED, editPlan } from '../../lib/plan-sync.js';
@@ -22,16 +17,15 @@ import { rebookIfMoved } from '../../lib/tee-reminders.js';
 import { shouldShowPaywall } from '../../lib/paywall.js';
 import { PAYWALL_ON } from '../../lib/paywall-flag.js';
 import { hasLifetimePro } from '../../lib/pro-client.js';
-import { planFromUsual, setupFromUsual, usualsOf } from '../../lib/usuals.js';
+import { planFromUsual, setupFromUsual } from '../../lib/usuals.js';
 import { needsAgeCheck } from '../../lib/age.js';
 import { countsMoney } from '../../lib/play-for.js';
-import { withSessionWorth } from '../../lib/trip-templates.js';
-import { cleanRoundCup, cupCounts } from '../../lib/cup.js';
 import { tripStamp } from '../../lib/trips.js';
-import { challengeIdOfBet, movedFromFor } from '../../lib/challenges.js';
+import { movedFromFor } from '../../lib/challenges.js';
 import { challengesBack, markChallengesOn } from '../../lib/challenge-sync.js';
 import { useNav } from '../../lib/nav.js';
 import { listNames, withBets } from '../../lib/setup-screen.js';
+import { OVERVIEW } from '../../lib/setup-overview.js';
 
 /** Plan it (`makePlan`), save an edited plan (`savePlan`), or turn this setup into a plan (`later`). */
 export function usePlanActions(setup) {
@@ -138,7 +132,7 @@ export function useStartRound(setup) {
   const startRound = async () => {
     const s = getState();
     // Only the betting players' handicaps matter: someone just playing gets no strokes
-    const noHc = useHc && game !== 'bbb' ? betting.filter(pid => s.players[pid]?.index == null && hcOverride[pid] == null) : [];
+    const noHc = noHandicapIds(s, { useHc, game, betting, hcOverride });
     if (noHc.length) {
       const names = noHc.map(pid => s.players[pid]?.name || '?');
       const all = noHc.length === betting.length;
@@ -152,31 +146,10 @@ export function useStartRound(setup) {
       if (all) setUseHc(false);
     }
     const id = uid('r_');
-    const players = orderedPicked.map(pid => ({ ...s.players[pid], tee: tees[pid] || defaultTee, courseHcOverride: hcOverride[pid] }));
-    // Share-image choice and the side bet card are personal settings, not part of a round's bets
-    // Half strokes are this round's choice, never next time's default
-    const { shareAmounts: _personal, shareScores: _scores, betPrompt: _prompt, halfStrokes: _half, ...settings } = structuredClone(opts);
-    const sides = sidesFor(game);
-    const halfStrokes = !!opts.halfStrokes && halfStrokesOffered(game, sides);
-    // Team quota (a Quota house rule) is played in teams too, when it's on; only the betting players count
-    const round = createRound({
-      // A start left over from other holes (the nine or course changed) is the first hole
-      id, game, course, holesCount, nine, startHole: holesInPlay(course, holesCount, nine).some(h => h.no === startHole) ? startHole : null, players, settings, hcPct: opts.hcPct, useHandicaps: useHc && !(noHc.length && noHc.length === betting.length),
-      teams: teamsCfg(game, settings, betting.length) ? teams : null, halfStrokes, justPlaying: casualIds,
+    // The round itself is built in setup-round.js, so a test can pin what each set of choices saves
+    const { round, settings, challengesIn } = buildSetupRound(s, {
+      id, game, course, holesCount, nine, startHole, orderedPicked, betting, tees, defaultTee, hcOverride, opts, sides: sidesFor(game), useHc, noHc, teams, casualIds, playFor, shownBets,
     });
-    // "Quota moves after the round": each player starts from the quota their last such round left them,
-    // and Team quota only stays on with its teams
-    withQuotaRules(s, round);
-    if (sides.length) round.sideGames = structuredClone(sides);
-    // The Calcutta keeps only the sales still in the round: a lot or a buyer from before a change of players goes
-    const cal = round.sideGames?.find(sg => sg.game === 'calcutta');
-    if (cal?.auction) cal.auction = { sales: calcuttaSalesOf(round, cal) };
-    if (playFor) round.playFor = structuredClone(playFor);
-    // Side bets whose two players are both still in the round (setup's list can outlive a change of players),
-    // agreed challenges among them
-    const bets = betsOf({ ...round, bets: shownBets }).map(b => cleanBet(round, b));
-    if (bets.length) round.bets = bets;
-    const challengesIn = bets.map(b => challengeIdOfBet(b.id)).filter(Boolean);
     // Money needs a yes to "Are you 18 or older?" once (age.js). Under 18 keeps the round and
     // turns the money off: points instead of money, or a reward round's side bets for points
     if (needsAgeCheck(s, round)) {
@@ -193,21 +166,8 @@ export function useStartRound(setup) {
         return;
       }
     }
-    // Counted for the trip: the stamp rides in the round to every phone in it (trips.js)
-    if (tripPick) round.trip = tripStamp(tripPick);
-    // Its matches for a team points trip, as set up here (a scramble or Chapman has none: one ball a
-    // team; alternate shot is foursomes between its two teams)
-    if (tripCup && roundCup && cupCounts(game)) {
-      const c = cleanRoundCup({ game, players: round.players, teams: round.teams, cup: withSessionWorth(roundCup, (fromSession?.trip === tripPick.id ? fromSession : schedHit?.session) || null, tripPick.id) });
-      if (c) round.cup = c;
-    }
-    // A round the trip's schedule planned keeps its place in it (trip-templates.js)
-    const planSession = fromPlan ? s.plans?.[fromPlan]?.session : null;
-    if (tripPick && planSession?.trip === tripPick.id) round.session = structuredClone(planSession);
-    else if (tripPick && schedHit && round.cup) round.session = structuredClone(schedHit.session);
-    // Started from a saved usual (still the same game at the same course): finishing it updates "Last played"
-    const from = usualId && usualsOf(s).find(u => u.id === usualId);
-    if (from && from.game === game && (from.courseId === course.id || findCourse(s, from.courseId)?.id === course.id)) round.usualId = usualId;
+    // The trip, its matches, the schedule's place and the usual it came from (setup-round.js)
+    finishSetupRound(s, round, { game, course, tripPick, tripCup, roundCup, fromSession, schedHit, fromPlan, usualId });
     update(st => {
       addRound(st, round);
       if (fromPlan && st.plans?.[fromPlan]) st.plans[fromPlan].roundId = id;
@@ -230,10 +190,10 @@ export function useStartRound(setup) {
 export function useLoadSetup(setup) {
   const {
     state, usual, setGame, setHolesCount, setCourseId, setNine, setPicked, setTees, setHcOverride, setOpts, setUseHc, setStartHole, setTeams, setJustPlaying,
-    setSideGames, setPlayFor, setMissing, setStep, setUsualId, setLostCourse, setPairBets, setInvited, setPlanSides,
+    setSideGames, setPlayFor, setMissing, setStep, setPassDone, setUsualId, setLostCourse, setPairBets, setInvited, setPlanSides,
   } = setup;
 
-  // Load a setup (last time's, or a saved usual), then land on the bets to confirm, or on
+  // Load a setup (last time's, or a saved usual), then land on the overview to confirm, or on
   // whatever step still needs something (a course or a player not on this phone)
   const loadSetup = p => {
     setGame(p.game); setHolesCount(p.holesCount); setCourseId(p.courseId); setNine(p.nine);
@@ -246,7 +206,9 @@ export function useLoadSetup(setup) {
     setSideGames(structuredClone(p.sideGames || []));
     setPlayFor(p.playFor ?? null);
     setMissing(p.missing || []);
-    setStep(p.step ?? 3);
+    // Everything carried over: the overview, to look it over (setup-overview.js). Else the step that still needs something
+    const at = p.step ?? 3;
+    if (at >= 3) { setPassDone(true); setStep(OVERVIEW); } else setStep(at);
   };
   const repeatUsual = () => {
     loadSetup({ ...rematchSetup(state, usual.round), courseId: usual.course.id, step: 3 });

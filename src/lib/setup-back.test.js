@@ -2,6 +2,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { TAP_THROUGH_MS, setupBack } from './setup-back.js';
+import { HANDICAPS_STEP, OVERVIEW, PLAY_FOR_STEP } from './setup-overview.js';
 
 test('Back with the course editor open only closes the editor, on any step and when editing a plan', () => {
   assert.deepEqual(setupBack({ step: 1, editorOpen: true }), { to: 'editor' });
@@ -23,4 +24,18 @@ test('without the editor: one step back, and out of setup from the first step or
   assert.deepEqual(setupBack({ step: 1 }), { to: 'step', step: 0 });
   assert.deepEqual(setupBack({ step: 0 }), { to: 'close' });
   assert.deepEqual(setupBack({ step: 1, editing: true }), { to: 'close' });
+});
+
+test('with the overview: Back from it leaves setup, and a step goes back to it once the first pass is done', () => {
+  assert.deepEqual(setupBack({ step: OVERVIEW, hub: true }), { to: 'close' });
+  // First pass: the game step returns to the overview, the others go one step back as before
+  assert.deepEqual(setupBack({ step: 0, hub: true }), { to: 'step', step: OVERVIEW });
+  assert.deepEqual(setupBack({ step: 2, hub: true }), { to: 'step', step: 1 });
+  // Opened from the overview after the pass: straight back to it
+  for (const step of [0, 1, 2, 3, HANDICAPS_STEP, PLAY_FOR_STEP]) assert.deepEqual(setupBack({ step, hub: true, passDone: true }), { to: 'step', step: OVERVIEW });
+  assert.deepEqual(setupBack({ step: HANDICAPS_STEP, hub: true }), { to: 'step', step: OVERVIEW });
+  // The editor still closes first
+  assert.deepEqual(setupBack({ step: 1, hub: true, passDone: true, editorOpen: true }), { to: 'editor' });
+  // Planning has no overview: as before
+  assert.deepEqual(setupBack({ step: 0 }), { to: 'close' });
 });

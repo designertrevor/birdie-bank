@@ -1,0 +1,48 @@
+/* Round setup's overview (OverviewStep.jsx, Layout Lab A): Run it back on top, then one list with a
+   row for each choice. Built on the look tokens (look.css), so it reads right in both looks. */
+
+/* Run it back: the last round, set up again in one tap */
+.ov-again {
+  display: flex; align-items: center; gap: 14px; width: calc(100% - 32px); margin: 4px 16px 22px; padding: 18px 16px 18px 18px;
+  border: 0; border-radius: var(--r-card); background: var(--band-butter); box-shadow: var(--hair);
+  font: inherit; color: var(--ink); text-align: left; cursor: pointer; transition: transform .2s var(--spring);
+}
+.ov-again:active { transform: scale(.98); }
+.ov-again-text { display: flex; flex-direction: column; gap: 3px; min-width: 0; flex: 1; }
+.ov-again .eyebrow { color: var(--pink-text); }
+.ov-again-title { font-family: var(--display); font-weight: var(--display-weight); font-size: 21px; line-height: 1.2; letter-spacing: -.01em; }
+.ov-again-sub { font-size: 13px; color: var(--body); line-height: 1.4; }
+.ov-again-btn {
+  margin-top: 10px; align-self: flex-start; display: inline-flex; align-items: center; gap: 6px; padding: 8px 14px;
+  border-radius: var(--r-btn); background: var(--ink); color: var(--on-ink); font-weight: 700; font-size: 14px;
+}
+.ov-again-art { width: 64px; height: 64px; flex-shrink: 0; }
+
+/* The heading: the one big line on the screen */
+.ov-head { padding: 2px 20px 16px; }
+.ov-title { margin: 0; font-family: var(--display); font-weight: var(--display-weight); font-size: 30px; line-height: 1.1; letter-spacing: -.02em; color: var(--ink); }
+.ov-lede { margin: 6px 0 0; font-size: 14px; line-height: 1.45; color: var(--mute); }
+
+/* The choices: one card, hairlines between rows */
+.ov-list { margin: 0 16px 14px; border-radius: var(--r-card); background: var(--card); box-shadow: var(--hair); overflow: hidden; }
+.ov-row {
+  display: flex; align-items: center; gap: 12px; width: 100%; padding: 14px 14px 14px 16px; min-height: 64px;
+  border: 0; background: transparent; font: inherit; color: inherit; text-align: left; cursor: pointer; transition: background-color .15s ease;
+}
+.ov-row + .ov-row { border-top: 1px solid var(--line-soft); }
+.ov-row:active:not(:disabled) { background: var(--surface); }
+.ov-row:disabled { cursor: default; }
+.ov-row:disabled .ov-main, .ov-row:disabled .ov-change { opacity: .45; }
+.ov-main { display: flex; flex-direction: column; gap: 2px; min-width: 0; flex: 1; }
+.ov-label { font-size: 12px; font-weight: 600; letter-spacing: .02em; color: var(--mute); }
+.ov-value { font-family: var(--display); font-weight: var(--display-weight); font-size: 18px; line-height: 1.25; color: var(--ink); overflow-wrap: anywhere; }
+.ov-empty { font-family: var(--body-font); font-weight: 500; font-size: 16px; color: var(--mute-soft); }
+.ov-sub { font-size: 13px; line-height: 1.4; color: var(--mute); }
+.ov-note { display: flex; align-items: center; gap: 5px; font-size: 13px; font-weight: 600; line-height: 1.4; color: var(--state-vote-ink); }
+.ov-change {
+  flex-shrink: 0; padding: 7px 12px; border-radius: var(--r-chip); background: var(--surface);
+  font-size: 13px; font-weight: 700; color: var(--ink);
+}
+/* Not set yet: an edge, no fill (the plan's "Not yet" state); something to fix: Up for a vote's colours */
+.ov-row.todo .ov-change { background: transparent; box-shadow: inset 0 0 0 1px var(--state-not-edge); }
+.ov-row.fix .ov-change { background: var(--state-vote-bg); color: var(--state-vote-ink); }
