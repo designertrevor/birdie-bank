@@ -25,6 +25,7 @@ import { movedFromFor } from '../../lib/challenges.js';
 import { challengesBack, markChallengesOn } from '../../lib/challenge-sync.js';
 import { useNav } from '../../lib/nav.js';
 import { listNames, withBets } from '../../lib/setup-screen.js';
+import { OVERVIEW } from '../../lib/setup-overview.js';
 
 /** Plan it (`makePlan`), save an edited plan (`savePlan`), or turn this setup into a plan (`later`). */
 export function usePlanActions(setup) {
@@ -189,10 +190,10 @@ export function useStartRound(setup) {
 export function useLoadSetup(setup) {
   const {
     state, usual, setGame, setHolesCount, setCourseId, setNine, setPicked, setTees, setHcOverride, setOpts, setUseHc, setStartHole, setTeams, setJustPlaying,
-    setSideGames, setPlayFor, setMissing, setStep, setUsualId, setLostCourse, setPairBets, setInvited, setPlanSides,
+    setSideGames, setPlayFor, setMissing, setStep, setPassDone, setUsualId, setLostCourse, setPairBets, setInvited, setPlanSides,
   } = setup;
 
-  // Load a setup (last time's, or a saved usual), then land on the bets to confirm, or on
+  // Load a setup (last time's, or a saved usual), then land on the overview to confirm, or on
   // whatever step still needs something (a course or a player not on this phone)
   const loadSetup = p => {
     setGame(p.game); setHolesCount(p.holesCount); setCourseId(p.courseId); setNine(p.nine);
@@ -205,7 +206,9 @@ export function useLoadSetup(setup) {
     setSideGames(structuredClone(p.sideGames || []));
     setPlayFor(p.playFor ?? null);
     setMissing(p.missing || []);
-    setStep(p.step ?? 3);
+    // Everything carried over: the overview, to look it over (setup-overview.js). Else the step that still needs something
+    const at = p.step ?? 3;
+    if (at >= 3) { setPassDone(true); setStep(OVERVIEW); } else setStep(at);
   };
   const repeatUsual = () => {
     loadSetup({ ...rematchSetup(state, usual.round), courseId: usual.course.id, step: 3 });

@@ -15,6 +15,7 @@ import { moneyOff } from '../../lib/age.js';
 import { tripOf, tripPlanDay } from '../../lib/trips.js';
 import { challengeIdOfBet, challengesForRound } from '../../lib/challenges.js';
 import { nextSaturday, planSetup, withBets } from '../../lib/setup-screen.js';
+import { OVERVIEW } from '../../lib/setup-overview.js';
 
 /**
  * Setup's picks: the game, course, players, bets and the rest, started from NewRound's props (`edit`,
@@ -38,10 +39,16 @@ export function useSetupState({ state, edit, rematch, reschedule, fromPlan, pres
   const [date, setDate] = useKept('setup:date', () => editing?.date || (tripId && tripPlanDay(tripOf(getState(), tripId))) || nextSaturday());
   const [teeTime, setTeeTime] = useKept('setup:teeTime', editing?.teeTime || '');
   const [invited, setInvited] = useKept('setup:invited', () => (reschedule && pre ? pre.picked.filter(pid => pid !== getState().me) : []));
-  const [step, showStep] = useKept('setup:step', pre?.step ?? (ahead && GAMES[preGame] ? 1 : 0));
+  // A round to play now opens on the overview (setup-overview.js): filled in from Run it back or a
+  // plan it lands there with the first pass done, else on whichever step still needs something
+  const startsPlanning = !!(ahead || editing || (reschedule && pre));
+  const [step, showStep] = useKept('setup:step', startsPlanning ? pre?.step ?? (ahead && GAMES[preGame] ? 1 : 0) : pre?.step != null && pre.step < 3 ? pre.step : OVERVIEW);
+  // The first pass through the steps is done: from here a step opened from the overview goes back to it
+  const [passDone, setPassDone] = useKept('setup:passDone', !startsPlanning && pre?.step === 3);
   // The furthest step reached, so a tap on the step bar can go forward again after going back
   const [reached, setReached] = useKept('setup:reached', () => (reschedule && pre?.step ? 3 : pre?.step ?? (ahead && GAMES[preGame] ? 1 : 0)));
-  const setStep = n => { showStep(n); setReached(r => Math.max(r, n)); };
+  // Only the four steps count as reached: the overview and its own choices aren't on the step bar
+  const setStep = n => { showStep(n); if (n <= 3) setReached(r => Math.max(r, n)); };
   const [game, setGame] = useKept('setup:game', pre?.game ?? (GAMES[preGame] ? preGame : null));
   const [holesCount, setHolesCount] = useKept('setup:holesCount', pre?.holesCount ?? (GAMES[preGame]?.holes.includes(18) === false ? GAMES[preGame].holes[0] : 18));
   const [courseId, setCourseId] = useKept('setup:courseId', pre?.courseId ?? null);
@@ -95,7 +102,7 @@ export function useSetupState({ state, edit, rematch, reschedule, fromPlan, pres
 
   return {
     editing, pre, mode, setMode, replaces, setReplaces, built, setBuilt, planning, date, setDate, teeTime, setTeeTime, invited, setInvited,
-    step, showStep, reached, setReached, setStep, game, setGame, holesCount, setHolesCount, courseId, setCourseId, nine, setNine, picked, setPicked,
+    step, showStep, passDone, setPassDone, reached, setReached, setStep, game, setGame, holesCount, setHolesCount, courseId, setCourseId, nine, setNine, picked, setPicked,
     tees, setTees, hcOverride, setHcOverride, opts, setOpts, useHc, setUseHc, startHole, setStartHole, teams, setTeams, justPlaying, setJustPlaying,
     casualIds, betting, setBetting, sideGames, setSideGames, sidesFor, editSides, createdId, setCreatedId, usual, usualId, setUsualId,
     missing, setMissing, planSides, setPlanSides, lostCourse, setLostCourse, playFor, setPlayFor,

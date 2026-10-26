@@ -10,7 +10,7 @@ import { JUST_PLAYING, canJustPlay, cantJustPlay, justPlayingWho, maxPicked, pic
 import { formatIndex, playerLabel, sortedPlayers } from '../../lib/format.js';
 import { listNames } from '../../lib/setup-screen.js';
 
-export function PlayersStep({ game, gameKey, course, holesCount, nine, picked, setPicked, tees, setTees, hcOverride, setHcOverride, justPlaying = [], setJustPlaying, useHc, setUseHc, noHandicaps = false, onNext }) {
+export function PlayersStep({ game, gameKey, course, holesCount, nine, picked, setPicked, tees, setTees, hcOverride, setHcOverride, justPlaying = [], setJustPlaying, useHc, setUseHc, noHandicaps = false, onNext, nextLabel = null }) {
   const state = useStore();
   const { showToast } = useUI();
   const players = sortedPlayers(state);
@@ -127,7 +127,7 @@ export function PlayersStep({ game, gameKey, course, holesCount, nine, picked, s
         <button className="add-row" aria-label="Add a player" onClick={() => setAdding(true)}><span className="add-ci" aria-hidden="true"><Icon name="plus" /></span><span className="add-lbl">Add a player</span></button>
       </div>
       <div className="cta-wrap">
-        <button className="full-btn" disabled={!valid} onClick={onNext}>{valid ? <>Next: Bets <Icon name="arrow-right" /></> : needText}</button>
+        <button className="full-btn" disabled={!valid} onClick={onNext}>{valid ? <>{nextLabel || 'Next: Bets'} <Icon name={nextLabel ? 'check' : 'arrow-right'} /></> : needText}</button>
       </div>
       <QuickAddPlayer open={adding} onClose={() => setAdding(false)} onAdded={pid => { setAdding(false); if (picked.length < most) setPicked([...picked, pid]); }} />
       <PlayerMore pid={moreFor} onClose={() => setMoreFor(null)} name={moreFor === state.me ? 'You' : state.players[moreFor]?.name}

@@ -1,5 +1,6 @@
 // Setup's bets step (NewRound.jsx): the summary, play for, teams or order, the house rules, side
-// games, side bets, and More options (handicaps and the starting hole), then Create round.
+// games, side bets, and More options (handicaps and the starting hole), then back to the overview
+// (`startLabel`; Create round is on the overview now, OverviewStep.jsx).
 import { useEffect, useMemo, useState } from 'react';
 import { Icon, Numpad, Toggle } from '../../components/ui.jsx';
 import { HouseRulesFold } from '../../components/HouseRulesFold.jsx';
@@ -23,7 +24,7 @@ import { challengeNote } from '../../lib/setup-screen.js';
 import { HolePicker } from './Pickers.jsx';
 
 export function SetupStep({ game, course, holesCount, nine, picked, setPicked, casual = [], opts, setOpts, useHc, setUseHc, startHole, setStartHole, onStart, onLater = null, teams, setTeams, sideGames = [], setSideGames, playFor = null, setPlayFor,
-  tees = {}, hcOverride = {}, defaultTee = null, pairBets = [], setPairBets, tripRow = null, tripLink = null }) {
+  tees = {}, hcOverride = {}, defaultTee = null, pairBets = [], setPairBets, tripRow = null, tripLink = null, startLabel = 'Create round', startIcon = 'arrow-right' }) {
   const state = useStore();
   const [pad, setPad] = useState(null); // {path, title, min, max}
   const [holePick, setHolePick] = useState(false);
@@ -163,7 +164,7 @@ export function SetupStep({ game, course, holesCount, nine, picked, setPicked, c
         {tripLink}
       </div>
       <div className="cta-wrap">
-        <button className="full-btn" disabled={optsBad || teamsBad} onClick={onStart}>Create round <Icon name="arrow-right" /></button>
+        <button className="full-btn" disabled={optsBad || teamsBad} onClick={onStart}>{startLabel} <Icon name={startIcon} /></button>
         {onLater && <button className="text-link cta-link" disabled={optsBad} onClick={onLater}><Icon name="calendar-plus" /> Schedule for later</button>}
       </div>
       <Numpad open={!!pad} title={pad?.title} {...padUnit({ playFor })} initial={pad ? get(pad.path) : ''} min={pad?.min} max={pad?.max}
