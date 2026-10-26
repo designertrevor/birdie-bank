@@ -4,7 +4,7 @@
 # branches nobody previews and pushes that only touch docs or SQL.
 
 case "$VERCEL_GIT_COMMIT_REF" in
-  main|overnight*|feedback*) ;;
+  main|overnight*|feedback*|overhaul*) ;;
   *) echo "Skipping build: $VERCEL_GIT_COMMIT_REF is not a preview branch"; exit 0 ;;
 esac
 
