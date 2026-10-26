@@ -8,6 +8,7 @@ import { scoreName } from '../../lib/golf.js';
 import { buzz, confettiFrom } from '../../lib/delight.js';
 import { sound } from '../../lib/sound-play.js';
 import { scoreSound } from '../../lib/sounds.js';
+import { startScore } from '../../lib/par-chips.js';
 import { DRAFTS } from './shared.js';
 
 /**
@@ -25,8 +26,8 @@ export function useHoleDraft({ round, hole, units, main, game, editable, showToa
   // A score confirmed at par also stays when the hole's par was fixed before saving (see keepsDraft)
   const mine = id => keepsDraft(kept, id, saved, hole.par);
   const [dirty, setDirty] = useState(wasDirty);
-  const [base] = useState(() => Object.fromEntries(units.map(p => [p.id, mine(p.id) ? kept.base[p.id] : saved[p.id] ?? hole.par])));
-  const [draft, setDraft] = useState(() => Object.fromEntries(units.map(p => [p.id, mine(p.id) ? kept.draft[p.id] : saved[p.id] ?? hole.par])));
+  const [base] = useState(() => Object.fromEntries(units.map(p => [p.id, mine(p.id) ? kept.base[p.id] : startScore(saved, p.id, hole.par)])));
+  const [draft, setDraft] = useState(() => Object.fromEntries(units.map(p => [p.id, mine(p.id) ? kept.draft[p.id] : startScore(saved, p.id, hole.par)])));
   const [touched, setTouched] = useState(() => Object.fromEntries(units.map(p => [p.id, saved[p.id] != null || (wasDirty && !!kept.touched[p.id])])));
   // Best ball and Shamble: whose scores count for each team on this hole (only scores entered, while entering)
   const counting = editable ? teamCounting(main, hole, Object.fromEntries(units.filter(u => touched[u.id]).map(u => [u.id, draft[u.id]]))) : teamCounting(main, hole);

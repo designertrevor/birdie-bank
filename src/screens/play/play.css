@@ -1,0 +1,141 @@
+/* ============================================================
+   THE HOLE ON SCREEN, overhaul (2026-10-26): Layout Lab C's par chips with A's folding.
+   Hole, par and HCP on one line, money as one thin strip, the side bet ask as a chip, and big,
+   heavy numbers that read in the sun in both looks.
+   ============================================================ */
+
+/* Big numbers on the course: the classic display face at 800. The new look's serif tops out at 600,
+   which thins out in the sun, so the scores take the new body face at 800 there instead */
+.play { --play-num: var(--display); --play-num-weight: 800; }
+:root[data-look="new"] .play, :root[data-look="new"] .score-pad { --play-num: var(--body-font); --play-num-weight: 800; }
+.score-pad { --play-num: var(--display); --play-num-weight: 800; }
+
+/* ---------- The hole line: the number big, then par and HCP, opens the card ---------- */
+.hole-line {
+  display: flex; align-items: center; gap: 12px; margin: 10px 16px 8px; padding: 2px 4px; flex-shrink: 0;
+  background: none; border: none; color: inherit; font: inherit; text-align: left; cursor: pointer; position: relative;
+}
+.hole-line .hl-no {
+  font-family: var(--play-num); font-weight: var(--play-num-weight); font-size: 52px; line-height: .9; letter-spacing: -.03em;
+  color: var(--ink); font-variant-numeric: tabular-nums; min-width: 34px;
+}
+.hole-line .hl-main { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.hole-line .hl-meta { font-size: 18px; font-weight: 700; color: var(--ink); display: flex; align-items: center; gap: 8px; }
+.hole-line .hl-strokes { font-size: 13px; color: var(--mute); font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.hole-line .fixed-tag { position: static; }
+.hole-line .hl-card {
+  flex: none; display: inline-flex; align-items: center; gap: 5px; padding: 8px 12px; border-radius: var(--r-chip);
+  background: var(--card); box-shadow: var(--hair); font-size: 13px; font-weight: 700; color: var(--ink);
+}
+.hole-line:active .hl-card { transform: scale(.96); }
+.play.themed .hole-line .hl-no { color: var(--gt-ink, var(--ink)); }
+
+/* ---------- The money strip: one line of names and amounts ---------- */
+.money-strip {
+  display: flex; align-items: center; gap: 8px; margin: 8px 16px 0; padding: 5px 8px 5px 10px; width: calc(100% - 32px);
+  background: var(--card); box-shadow: var(--hair); border: none; border-radius: var(--r-chip); flex-shrink: 0;
+  font: inherit; color: inherit; text-align: left; cursor: pointer; min-height: 40px;
+}
+.money-strip:active { transform: scale(.985); }
+.money-strip.themed { background: var(--gt-soft, var(--card)); }
+.money-strip .ms-art { width: 22px; height: 22px; flex: none; }
+.ms-items { flex: 1; min-width: 0; display: grid; grid-auto-flow: column; grid-auto-columns: minmax(0, 1fr); gap: 4px; }
+.ms-item { display: flex; flex-direction: column; align-items: center; min-width: 0; line-height: 1.15; }
+.ms-p { font-size: 11.5px; font-weight: 600; color: var(--body); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 100%; }
+.ms-item.lead .ms-p { color: var(--ink); font-weight: 800; }
+.ms-a { font-family: var(--play-num); font-weight: var(--play-num-weight); font-size: 17px; color: var(--ink); font-variant-numeric: tabular-nums; }
+.ms-a.pos { color: var(--win); }
+.ms-a.neg { color: var(--loss); }
+.ms-a.bump { animation: pop .35s var(--spring); display: inline-block; }
+.ms-more { color: var(--mute); font-size: 14px; flex: none; }
+.money-bar.ms-detail { margin: 0 16px 12px; box-shadow: var(--hair); }
+
+/* ---------- Skins: what the hole is worth, folded to one line ---------- */
+.worth-strip { margin: 0 16px 8px; padding: 8px 10px 8px 12px; border-radius: var(--r-chip); background: var(--band-lilac); flex-shrink: 0; }
+.ws-main { display: flex; align-items: center; gap: 8px; }
+.ws-main .bn-art { width: 24px; height: 24px; flex: none; }
+.ws-text { flex: 1; min-width: 0; font-size: 16px; font-weight: 800; color: var(--ink); font-family: var(--play-num); }
+.ws-l { font-family: var(--body-font); font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: .06em; color: var(--body); margin-right: 2px; }
+.ws-change {
+  flex: none; border: none; cursor: pointer; padding: 6px 10px; border-radius: var(--r-chip); background: var(--card); color: var(--ink);
+  font: inherit; font-size: 13px; font-weight: 700; box-shadow: var(--hair);
+}
+.ws-counts { margin-top: 3px; font-size: 12px; color: var(--body); font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+/* ---------- Any side bets? as a chip ---------- */
+.bp-chip-row { display: flex; align-items: center; gap: 6px; min-height: 0; overflow: hidden; }
+.bp-chip {
+  flex: 1; min-width: 0; display: inline-flex; align-items: center; gap: 8px; padding: 9px 12px; border-radius: var(--r-chip);
+  border: 1.5px dashed var(--line); background: var(--card); color: var(--ink); font: inherit; font-size: 14px; font-weight: 700; cursor: pointer; text-align: left;
+}
+.bp-chip > span { flex: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.bp-chip > .ph-fill { color: var(--pink-text); font-size: 17px; }
+.bp-chip > .ph-bold { color: var(--mute); }
+.bp-chip-x { flex: none; width: 40px; height: 40px; display: grid; place-items: center; border: none; border-radius: var(--r-chip); background: var(--surface); color: var(--mute); cursor: pointer; }
+.bp-wrap > .bp-chip-row { transition: opacity 200ms ease-in; }
+.bp-wrap.out > .bp-chip-row { opacity: 0; }
+
+/* ---------- A row: name and the big number, then the chips ---------- */
+.pcard.pc-row { display: block; padding: 12px 12px 12px 14px; }
+.pc-head { display: flex; align-items: center; gap: 10px; }
+.pc-head > .avatar { width: 36px; height: 36px; flex: none; align-self: center; }
+.pc-head .row-main { flex: 1; min-width: 0; }
+.pc-row .pname { font-size: 19px; }
+.pc-row .ps { font-size: 13px; }
+.sc-num.pc-num {
+  width: auto; min-width: 48px; text-align: right; font-family: var(--play-num); font-weight: var(--play-num-weight);
+  font-size: 40px; line-height: 1; letter-spacing: -.02em; padding-right: 4px;
+}
+.score-name.pu { color: var(--loss); }
+
+.pc-chips { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)) 48px; gap: 5px; margin-top: 10px; }
+.pc-chip {
+  height: 44px; min-width: 0; padding: 0 2px; border: none; border-radius: var(--r-chip); background: var(--surface); color: var(--ink);
+  font: inherit; font-size: 14px; font-weight: 700; cursor: pointer; display: grid; place-items: center;
+  transition: transform .18s var(--spring), background .15s, color .15s;
+}
+.pc-chip:active { transform: scale(.92); }
+.pc-chip .pc-l { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100%; }
+/* A chip set by a tap: ink, the strongest contrast there is, readable in full sun */
+.pc-chip.on { background: var(--ink); color: var(--on-ink); }
+.pc-chip.on.eagle, .pc-chip.on.birdie { background: var(--pink-fill); color: #fff; }
+/* Par before anyone's touched it: the quiet default the muted number shows too */
+.pc-chip.on.soft { background: var(--card); color: var(--ink); box-shadow: inset 0 0 0 2px var(--ink); }
+.pc-chip.more { font-size: 18px; background: var(--card); box-shadow: inset 0 0 0 1.5px var(--line); }
+.pc-chip.more.on { background: var(--ink); color: var(--on-ink); box-shadow: none; }
+.pc-chip .pc-v { font-family: var(--play-num); font-weight: var(--play-num-weight); font-size: 20px; }
+.pc-help { margin: 2px 20px 12px; font-size: 13px; color: var(--mute); text-align: center; }
+.pcard.pc-row.with-dots .dots-row, .pcard.pc-row.with-dots > :last-child:not(.pc-chips) { margin-top: 10px; }
+
+/* ---------- The number pad sheet ---------- */
+.score-pad .sp-sub { margin: 0; padding: 0 16px 6px; }
+.sp-now { display: flex; align-items: center; justify-content: center; gap: 22px; padding: 4px 16px 12px; }
+.sp-step {
+  width: 56px; height: 56px; border-radius: 50%; border: none; background: var(--surface); color: var(--ink); font-size: 22px;
+  display: grid; place-items: center; cursor: pointer; flex: none; transition: transform .2s var(--spring);
+}
+.sp-step.plus { background: var(--ink); color: var(--on-ink); }
+.sp-step:active { transform: scale(.88); }
+.sp-step:disabled { opacity: .35; transform: none; }
+.sp-big { display: flex; flex-direction: column; align-items: center; min-width: 110px; }
+.sp-num { font-family: var(--play-num); font-weight: var(--play-num-weight); font-size: 68px; line-height: 1; color: var(--ink); font-variant-numeric: tabular-nums; }
+.sp-num.under { color: var(--pink-text); }
+.sp-name { margin-top: 4px; font-size: 14px; font-weight: 700; color: var(--body); }
+.sp-keys { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 6px; padding: 0 16px; }
+.sp-key {
+  height: 54px; border: none; border-radius: var(--r-chip); background: var(--surface); color: var(--ink); cursor: pointer;
+  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 1px; font: inherit;
+  transition: transform .18s var(--spring), background .15s;
+}
+.sp-key:active { transform: scale(.92); }
+.sp-key .sp-k { font-family: var(--play-num); font-weight: var(--play-num-weight); font-size: 22px; line-height: 1.05; font-variant-numeric: tabular-nums; }
+.sp-key .sp-kl { font-size: 10px; font-weight: 700; color: var(--mute); text-transform: uppercase; letter-spacing: .04em; }
+.sp-key.on { background: var(--ink); color: var(--on-ink); }
+.sp-key.on .sp-kl { color: inherit; opacity: .8; }
+.sp-foot { display: flex; gap: 8px; padding: 12px 16px calc(14px + env(safe-area-inset-bottom)); align-items: center; }
+.sp-pickup {
+  flex: none; height: 52px; padding: 0 14px; border: none; border-radius: var(--r-btn); background: var(--surface); color: var(--ink);
+  font: inherit; font-size: 15px; font-weight: 700; display: inline-flex; align-items: center; gap: 6px; cursor: pointer;
+}
+.sp-pickup.on { background: var(--loss-bg); color: var(--loss); }
+.sp-foot .sp-next { flex: 1; margin: 0; }

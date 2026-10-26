@@ -14,6 +14,7 @@ import { pushRoundFinished } from '../../lib/push-client.js';
 import { challengesBack } from '../../lib/challenge-sync.js';
 import { useNav } from '../../lib/nav.js';
 import { isKeeper, keeperSaved } from '../../lib/keeper.js';
+import { holeScores } from '../../lib/par-chips.js';
 import { DRAFTS, FINISHED_HERE, markSaved, sameTap } from './shared.js';
 
 /**
@@ -34,7 +35,8 @@ export function useHoleSave({ round, hole, isLast, nextIdx, units, game, editabl
   };
   const saveThisHole = async () => {
     if (game === 'wolf' && wolf.partner === undefined) { showToast(`Pick ${round.players.find(p => p.id === wolf.wolf)?.name.split(' ')[0] || 'the wolf'}’s partner, or go lone wolf`); return; }
-    const scores = Object.fromEntries(units.map(p => [p.id, draft[p.id]]));
+    // Every box as shown, untouched ones at par (par-chips.js holeScores, the same as the stepper saved)
+    const scores = holeScores(units, draft);
     // ...and a pot added while this hole was open still saves the hole as nobody's when nobody's tapped
     const holeMarks = potMarksFor(round, hole, marks);
     DRAFTS.delete(draftKey);

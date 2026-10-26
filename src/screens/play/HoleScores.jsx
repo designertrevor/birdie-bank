@@ -1,6 +1,6 @@
 // The hole's scrolling middle (Play.jsx): the notes and cards over the scores (the Calcutta's
 // auction, "Any side bets?", this hole's side bets), the game's pickers, and a row per player or team
-// with the score stepper, or the saved scores when this phone isn't keeping score.
+// with its par chips (ParChips.jsx), or the saved scores when this phone isn't keeping score.
 import { useEffect, useState } from 'react';
 import { Icon } from '../../components/ui.jsx';
 import { BuddyArt } from '../../components/BuddyArt.jsx';
@@ -16,6 +16,7 @@ import { holeStrokeNotes, holeStrokeNoteText } from '../../lib/stroke-key.js';
 import { DRIVE_GAMES } from '../../lib/scramble-drives.js';
 import { unitFmt } from '../../lib/play-for.js';
 import { firstName } from '../../lib/format.js';
+import { ParChipRow, ScorePadSheet } from './ParChips.jsx';
 
 /**
  * `entry` is useHoleDraft's state for the hole; `prompt` is useBetPrompt's. `faces` are the players'
@@ -24,6 +25,8 @@ import { firstName } from '../../lib/format.js';
 export function HoleScores({ round, main, hole, game, solo, editable, sharedLive, holderName, me, units, faces, shortRowNames, entry, banker, wolf, prompt, onRunAuction }) {
   const { saved, draft, touched, counting, junk, snakeSide, pots, potHere, marks, setMarksDirty, numRefs, tapped, setScore } = entry;
   const { betPrompt, promptAdd, promptLater, promptSkip, promptOff } = prompt;
+  // Whose number pad is up (a box's id), or null
+  const [pad, setPad] = useState(null);
   return (
     <div className="scroll">
       {!editable && sharedLive && <p className="field-help" style={{ padding: '0 20px' }}>{round.status === 'active' ? `Scores as ${holderName} saves them. Browse any hole.` : 'Only the players in this round can fix its scores.'}</p>}
@@ -67,7 +70,7 @@ export function HoleScores({ round, main, hole, game, solo, editable, sharedLive
       {editable && units.map(p => {
         const casual = isJustPlaying(round, p.id);
         // First names on the score rows (a last initial only when two share one), so a name
-        // never wraps to two lines beside the buddy and the stepper
+        // never wraps to two lines beside the buddy and the number
         const short = p.team ? p.name : shortRowNames.get(p.id) || p.name;
         const st = round.useHandicaps && !casual ? popsFor(round, p, hole) : 0;
         // Best ball and Shamble: whose score counts for the team, once the team's scores are all in
@@ -78,48 +81,57 @@ export function HoleScores({ round, main, hole, game, solo, editable, sharedLive
         const isWolf = wolf?.wolf === p.id;
         const shown = v === 'X' ? pickupGross(hole.par, st) : v;
         return (
-          <div key={p.id} className={`pcard score-row ${game === 'dots' || junk ? 'with-dots' : ''} ${isBanker || isWolf ? 'bkr' : ''}`}>
-            {!p.team && faces.get(p.id) && <AvatarArt model={faces.get(p.id)} />}
-            <div className="row-main">
-              <div className="pname" style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                {short}
-                {isBanker && <span className="bkr-badge"><Icon name="bank" fill /> Banker</span>}
-                {isWolf && <span className="bkr-badge"><Icon name="paw-print" fill /> Wolf</span>}
-                {casual && !solo && <span className="jp-tag">{JUST_PLAYING_TAG}</span>}
-                {/* Only someone on a team gets its letter: anyone just playing (or only in the side games) is on none */}
-                {round.teams && !p.team && round.teams.some(t => t.players.includes(p.id)) && <span className={`side-tag ${round.teams.findIndex(t => t.players.includes(p.id)) === 0 ? 'a' : 'b'}`}>{['A', 'B', 'C', 'D'][round.teams.findIndex(t => t.players.includes(p.id))]}</span>}
-                {counts && <span className="counts-tag">Counts</span>}
+          <div key={p.id} className={`pcard score-row pc-row ${game === 'dots' || junk ? 'with-dots' : ''} ${isBanker || isWolf ? 'bkr' : ''}`}>
+            <div className="pc-head">
+              {!p.team && faces.get(p.id) && <AvatarArt model={faces.get(p.id)} />}
+              <div className="row-main">
+                <div className="pname" style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                  {short}
+                  {isBanker && <span className="bkr-badge"><Icon name="bank" fill /> Banker</span>}
+                  {isWolf && <span className="bkr-badge"><Icon name="paw-print" fill /> Wolf</span>}
+                  {casual && !solo && <span className="jp-tag">{JUST_PLAYING_TAG}</span>}
+                  {/* Only someone on a team gets its letter: anyone just playing (or only in the side games) is on none */}
+                  {round.teams && !p.team && round.teams.some(t => t.players.includes(p.id)) && <span className={`side-tag ${round.teams.findIndex(t => t.players.includes(p.id)) === 0 ? 'a' : 'b'}`}>{['A', 'B', 'C', 'D'][round.teams.findIndex(t => t.players.includes(p.id))]}</span>}
+                  {counts && <span className="counts-tag">Counts</span>}
+                </div>
+                {p.team && <div className="ps">{p.players.map(pid => round.players.find(x => x.id === pid)?.name.split(' ')[0]).join(', ')}{round.useHandicaps ? ` · team handicap ${p.courseHc ?? 0}` : ''}</div>}
+                <div className="ps">
+                  {st > 0 && <span className="stroke-dots"><span aria-hidden="true">{'●'.repeat(st)}</span> Gets {strokesWords(st, halfStrokesOn(round))}</span>}
+                  {st < 0 && <span className="stroke-dots">Gives back {strokesWords(-st, halfStrokesOn(round))}</span>}
+                  {!casual && holeStrokeNotes(round, p, hole).map(x => <span key={x.key} className="stroke-note"> · {holeStrokeNoteText(x)}</span>)}
+                  {game === 'banker' && !isBanker && !casual && <span> Bet {unitFmt(round)(banker.bets[p.id] || 0)}{banker.doubled[p.id] ? ` · ${bankerPress(round, hole) ** (banker.doubleBack ? 2 : 1)}×` : banker.doubleBack && bankerPressAllNow(round, hole, banker) ? ` · ${bankerPress(round, hole)}×` : ''}</span>}
+                  {touched[p.id] && v !== 'X' && <span className={`score-name s${Math.max(-2, Math.min(2, v - hole.par))}`}> {scoreName(v, hole.par)}{counted !== 0 && `, ${netScoreName(v - counted, hole.par)}`}</span>}
+                  {v === 'X' && <span className="score-name pu"> Picked up, counts {shown}</span>}
+                </div>
               </div>
-              {p.team && <div className="ps">{p.players.map(pid => round.players.find(x => x.id === pid)?.name.split(' ')[0]).join(', ')}{round.useHandicaps ? ` · team handicap ${p.courseHc ?? 0}` : ''}</div>}
-              <div className="ps">
-                {st > 0 && <span className="stroke-dots"><span aria-hidden="true">{'●'.repeat(st)}</span> Gets {strokesWords(st, halfStrokesOn(round))}</span>}
-                {st < 0 && <span className="stroke-dots">Gives back {strokesWords(-st, halfStrokesOn(round))}</span>}
-                {!casual && holeStrokeNotes(round, p, hole).map(x => <span key={x.key} className="stroke-note"> · {holeStrokeNoteText(x)}</span>)}
-                {game === 'banker' && !isBanker && !casual && <span> Bet {unitFmt(round)(banker.bets[p.id] || 0)}{banker.doubled[p.id] ? ` · ${bankerPress(round, hole) ** (banker.doubleBack ? 2 : 1)}×` : banker.doubleBack && bankerPressAllNow(round, hole, banker) ? ` · ${bankerPress(round, hole)}×` : ''}</span>}
-                {touched[p.id] && v !== 'X' && <span className={`score-name s${Math.max(-2, Math.min(2, v - hole.par))}`}> {scoreName(v, hole.par)}{counted !== 0 && `, ${netScoreName(v - counted, hole.par)}`}</span>}
-              </div>
-              <button className={`pickup-btn ${v === 'X' ? 'on' : ''}`} onClick={() => setScore(p.id, v === 'X' ? hole.par : 'X')} aria-pressed={v === 'X'}>
-                <Icon name="hand-grabbing" /> {v === 'X' ? `Picked up (counts ${shown})` : 'Picked up'}
-              </button>
-            </div>
-            <div className="score-ctrl">
-              <button className="sc-btn" aria-label={`${p.name} one less`} disabled={v !== 'X' && v <= 1}
-                onClick={() => setScore(p.id, v === 'X' ? hole.par : Math.max(1, v - 1))}><Icon name="minus" /></button>
               {/* The live region is the number alone, so the critter coming and going never re-reads the score */}
-              <span ref={el => { numRefs.current[p.id] = el; }} className={`sc-num ${touched[p.id] ? '' : 'untouched'} ${v !== 'X' && v < hole.par ? 'birdie' : ''}`}>
+              <span ref={el => { numRefs.current[p.id] = el; }} className={`sc-num pc-num ${touched[p.id] ? '' : 'untouched'} ${v !== 'X' && v < hole.par ? 'birdie' : ''}`}>
                 <span aria-live="polite" aria-atomic="true">
                   <span className="sr-only">{p.name} </span>{v === 'X' ? <><span aria-hidden="true">X</span><span className="sr-only">picked up</span></> : v}
                 </span>
                 <ScoreCritter score={v} par={hole.par} fresh={tapped.has(p.id)} />
               </span>
-              <button className="sc-btn" aria-label={`${p.name} one more`} disabled={v !== 'X' && v >= 15}
-                onClick={() => setScore(p.id, v === 'X' ? hole.par + 1 : Math.min(15, v + 1))}><Icon name="plus" /></button>
             </div>
+            <ParChipRow name={p.name} v={v} par={hole.par} touched={!!touched[p.id]} onScore={n => setScore(p.id, n)} onPad={() => setPad(p.id)} />
             {game === 'dots' && main.players.some(x => x.id === p.id) && <DotsRow round={main} player={p} hole={hole} marks={marks} setMarks={setMarksDirty} gross={touched[p.id] ? v : null} />}
             {junk && junk.players.some(x => x.id === p.id) && <DotsRow round={junk} player={p} hole={hole} marks={marks} setMarks={setMarksDirty} gross={touched[p.id] ? v : null} label={`${firstName(p.name)}’s junk`} />}
           </div>
         );
       })}
+      {editable && units.length > 0 && <p className="pc-help">Everyone starts at par. Tap only what changed, or + for anything else.</p>}
+      {editable && (() => {
+        // The pad for one box, and Next through the rest in playing order
+        const at = units.findIndex(u => u.id === pad);
+        const unit = units[at];
+        const after = units[at + 1];
+        const casual = unit && isJustPlaying(round, unit.id);
+        return (
+          <ScorePadSheet open={!!unit} unit={unit} hole={hole} v={unit ? draft[unit.id] : null}
+            strokes={unit && round.useHandicaps && !casual ? popsFor(round, unit, hole) : 0}
+            onScore={n => setScore(unit.id, n)} next={after ? (after.team ? after.name : shortRowNames.get(after.id) || after.name) : null}
+            onNext={() => setPad(after.id)} onClose={() => setPad(null)} />
+        );
+      })()}
     </div>
   );
 }
@@ -151,15 +163,32 @@ function ScoreCritter({ score, par, fresh = false }) {
 // --------------------------- Any side bets? -------------------------------
 
 /**
- * The "Any side bets on this hole?" card (bet-prompt.js): what it suggests, one tap to add it (the
+ * "Any side bets on this hole?" (bet-prompt.js), folded to a chip over the scores so the players
+ * keep the room: the chip opens the card, which says what it suggests, with one tap to add it (the
  * side bet editor opens filled in), one to put it off to later in the round (`onLater`, only when
  * the round has a later hole to ask on), one to put it away for the round, and a way to turn it off.
+ * The chip's × puts it off the same way Not this hole does (or Not this round, with no later hole).
  */
 function BetPromptCard({ prompt, onAdd, onLater = null, onSkip, onOff }) {
   // Put away, the card folds up and fades (bp-out) before the answer lands and it goes; adding a bet
   // opens the editor over it straight away instead
   const [out, setOut] = useState(false);
+  const [openCard, setOpenCard] = useState(false);
   const away = fn => () => { if (out) return; setOut(true); setTimeout(fn, BP_OUT_MS); };
+  if (!openCard) {
+    return (
+      <div className={`bp-wrap ${out ? 'out' : ''}`}>
+        <div className="bp-chip-row" role="group" aria-labelledby="bp-title">
+          <button type="button" className="bp-chip" aria-expanded="false" onClick={() => setOpenCard(true)}>
+            <Icon name={prompt.kind === 'ctp' ? 'target' : 'hand-coins'} fill />
+            <span id="bp-title">{prompt.title}</span>
+            <Icon name="caret-down" />
+          </button>
+          <button type="button" className="bp-chip-x" aria-label={onLater ? 'Not this hole' : 'Not this round'} onClick={away(onLater || onSkip)}><Icon name="x" /></button>
+        </div>
+      </div>
+    );
+  }
   return (
     <div className={`bp-wrap ${out ? 'out' : ''}`}>
       <div className="bet-prompt" role="group" aria-labelledby="bp-title">

@@ -99,25 +99,24 @@ export function PlayBanners({ round, card, editable, dirty, requests, doneEditin
   );
 }
 
-/** Hole, par and HCP (and who gets a stroke here), as a tile that opens the scorecard. */
+/**
+ * Hole, par and HCP on one line (Layout Lab A), with who gets a stroke here under it, as one button
+ * that opens the scorecard. The hole number is big; the rest is one quiet line.
+ */
 export function HoleMeta({ round, hole, units, solo, holeFixed, onOpen }) {
+  // Who gets a stroke here, up top, so a birdie that doesn't move the money makes sense. Someone just
+  // playing has no game to get strokes in. Past two names it gives the count; each row says who
+  const getting = round.useHandicaps && !solo
+    ? units.filter(u => !isJustPlaying(round, u.id) && strokesFor(round, u, hole) > 0).map(u => u.team ? u.name : u.name.split(' ')[0])
+    : null;
   return (
-    <div className="hole-meta" onClick={onOpen} role="button" tabIndex={0} aria-label={holeFixed ? `Open scorecard. Hole ${hole.no}’s par or HCP was fixed for this round` : 'Open scorecard'}>
-      {holeFixed && <span className="fixed-tag" aria-hidden="true">Fixed</span>}
-      <div className="mc"><span className="ml">Hole</span><span className="mv">{hole.no}</span></div>
-      <div className="mc"><span className="ml">Par</span><span className="mv">{hole.par}</span></div>
-      <div className="mc"><span className="ml">HCP</span><span className="mv">{hole.hdcp ?? '–'}</span></div>
-      {round.useHandicaps && !solo && (() => {
-        // Who gets a stroke here, up top, so a birdie that doesn't move the money makes sense
-        // Someone just playing has no game to get strokes in. The tile is a square, so past two names it
-        // gives the count; each player's row says who gets one
-        const getting = units.filter(u => !isJustPlaying(round, u.id) && strokesFor(round, u, hole) > 0).map(u => u.team ? u.name : u.name.split(' ')[0]);
-        return (
-          <div className="mc strokes-cell"><span className="ml">Strokes</span>
-            <span className="mv">{getting.length ? <><span className="stroke-dots" aria-hidden="true">●</span>{getting.length > 2 ? `${getting.length} players` : getting.join(', ')}</> : 'None'}</span>
-          </div>
-        );
-      })()}
-    </div>
+    <button type="button" className="hole-line" onClick={onOpen} aria-label={holeFixed ? `Open scorecard. Hole ${hole.no}’s par or HCP was fixed for this round` : 'Open scorecard'}>
+      <span className="hl-no" aria-hidden="true">{hole.no}</span>
+      <span className="hl-main">
+        <span className="hl-meta">Par {hole.par} · HCP {hole.hdcp ?? '–'}{holeFixed && <span className="fixed-tag">Fixed</span>}</span>
+        {getting && <span className="hl-strokes"><span className="stroke-dots" aria-hidden="true">●</span>{getting.length ? `Strokes: ${getting.length > 2 ? `${getting.length} players` : getting.join(', ')}` : 'No strokes here'}</span>}
+      </span>
+      <span className="hl-card"><Icon name="table" /> Card</span>
+    </button>
   );
 }
