@@ -4,7 +4,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { createRound } from './round.js';
-import { holeMountKey, isSameTap, nextHoleIdx, onTheLine, ownMoney } from './play-screen.js';
+import { bigBoardOnly, holeMountKey, isSameTap, nextHoleIdx, onTheLine, ownMoney, showsLiveMoney } from './play-screen.js';
 
 const course = { id: 'f', name: 'Flat', city: 'T', tees: [], holes: Array.from({ length: 9 }, (_, i) => ({ par: 4, hdcp: i + 1 })) };
 const P = ['a', 'b', 'c'].map((id, i) => ({ id, name: ['Ann Lee', 'Bo Ray', 'Cy Doe'][i], index: 0 }));
@@ -68,6 +68,27 @@ test('a Big Game group round has money of its own only with a game, a bet, side 
   assert.equal(ownMoney(mk()), true);
   assert.equal(ownMoney({ ...mk('stroke', { stroke: { stake: 0 } }), sideGames: [{ game: 'dots', settings: {} }] }), true);
   assert.equal(ownMoney({ ...mk('stroke', { stroke: { stake: 0 } }), bets: [{ id: 'b1', kind: 'match', sides: ['a', 'b'], stake: 5 }] }), true);
+});
+
+test('a watching phone opens on live money, except a Big Game group with no money of its own', () => {
+  const big = { ...mk('stroke', { stroke: { stake: 0 } }), trip: { id: 't', format: 'big' } };
+  assert.equal(big.status, 'active');
+  assert.equal(bigBoardOnly(big), true);
+  // The Big Game board stays: the hole view, never everyone at $0 with "No money moved"
+  assert.equal(showsLiveMoney(big, false, 'money'), false);
+  assert.equal(showsLiveMoney(big, false, 'hole'), false);
+  // A Big Game group with a bet of its own has its own money to show
+  const betting = { ...mk('stroke', { stroke: { stake: 5 } }), trip: { id: 't', format: 'big' } };
+  assert.equal(bigBoardOnly(betting), false);
+  assert.equal(showsLiveMoney(betting, false, 'money'), true);
+  // Any other round: live money when watching with it picked, never on the keeper's phone or once it's over
+  const r = mk();
+  assert.equal(bigBoardOnly(r), false);
+  assert.equal(bigBoardOnly({ ...mk('stroke', { stroke: { stake: 0 } }), trip: { id: 't', format: 'weekend' } }), false);
+  assert.equal(showsLiveMoney(r, false, 'money'), true);
+  assert.equal(showsLiveMoney(r, false, 'hole'), false);
+  assert.equal(showsLiveMoney(r, true, 'money'), false);
+  assert.equal(showsLiveMoney({ ...r, status: 'complete' }, false, 'money'), false);
 });
 
 test('what the banker has on the line', () => {

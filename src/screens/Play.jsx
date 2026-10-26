@@ -29,7 +29,7 @@ import { LiveMoney } from '../components/LiveMoney.jsx';
 import { roundTheme, themeVars } from '../lib/round-theme.js';
 import { FirstTeeSheet } from '../components/FirstTee.jsx';
 import { canEdit, keeperMe, keeperName, shouldLeaveHole } from '../lib/keeper.js';
-import { holeMountKey, nextHoleIdx } from '../lib/play-screen.js';
+import { bigBoardOnly, holeMountKey, nextHoleIdx, showsLiveMoney } from '../lib/play-screen.js';
 // The pieces of the round in progress, one file each (src/screens/play/)
 import { FINISHED_HERE, dropDrafts, useWakeLock } from './play/shared.js';
 import { useHoleDraft } from './play/useHoleDraft.js';
@@ -162,9 +162,10 @@ function PlayRound({ round, mount, momentUp = false, watch = 'money', setWatch }
   const [fixSheet, setFixSheet] = useHole('fixSheet', null); // 'hole' | 'tee' | 'hc' | 'lineup' | 'playFor'
   const holeFixed = !!holeFixOf(round, hole.no);
   // A phone watching the round (someone else has the card) opens on the live money: the race, the
-  // story hole by hole, and the card. "This hole" shows the hole as before (`watch`, kept in Play)
+  // story hole by hole, and the card. "This hole" shows the hole as before (`watch`, kept in Play).
+  // A Big Game group with no money of its own opens on the hole, under the Big Game board (play-screen.js)
   const watching = !editable && round.status === 'active';
-  const money = watching && watch === 'money';
+  const money = showsLiveMoney(round, editable, watch);
   const requests = useSeatRequests(round.id);
 
   // The first-tee rules card, then "Any side bets on this hole?" (useHoleCards.js)
@@ -212,7 +213,7 @@ function PlayRound({ round, mount, momentUp = false, watch = 'money', setWatch }
           units={units} faces={faces} shortRowNames={shortRowNames} entry={entry} banker={banker} wolf={wolf} prompt={prompt} onRunAuction={() => setGamesSheet(true)} />
       )}
 
-      {watching && !money && (
+      {watching && !money && !bigBoardOnly(round) && (
         <div className="lm-back"><button type="button" className="pill-btn" onClick={() => setWatch('money')}><Icon name="chart-bar-horizontal" /> Live money</button></div>
       )}
       {!money && <div className="cta-wrap play-cta">
