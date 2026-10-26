@@ -62,8 +62,12 @@ export function Steps({ steps, current, canGo, onGo }) {
   );
 }
 
-/** An empty screen: a picture, a line, a sentence and one action. `illo` is true for the ball on a tee, a Spot kind ('wallet', 'card', 'sleep'...) for that scene, or false for none. */
-export function Empty({ title, text, action, illo = true, ids = null }) {
+/**
+ * An empty screen: a picture, a line, a sentence and one action. `illo` is a Spot kind ('card',
+ * 'sleep', 'tumbleweed'...) for that drawing, true for the first ball on a tee, or false for none.
+ * Left out, it's the lone ball in the grass, for a screen whose thing is gone or not found.
+ */
+export function Empty({ title, text, action, illo = 'loneball', ids = null }) {
   return (
     <div className="empty-state">
       {illo === true ? <BallIllo /> : illo ? <Spot kind={illo} ids={ids} size={150} className="empty-illo" /> : null}

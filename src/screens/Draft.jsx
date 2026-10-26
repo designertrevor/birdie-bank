@@ -7,6 +7,8 @@ import { useEffect } from 'react';
 import { BallIllo, Empty, Header, Icon, Screen, useUI } from '../components/ui.jsx';
 import { LinkBrand } from '../components/LinkBrand.jsx';
 import { Avatar } from '../components/Pay.jsx';
+import { Spot } from '../components/Spot.jsx';
+import '../art-places.css';
 import { TeamDot } from '../components/Cup.jsx';
 import { useStore } from '../lib/store.js';
 import { useNav } from '../lib/nav.js';
@@ -62,7 +64,7 @@ function DraftBody({ tripId }) {
     if (trip && isOrganizer(state, trip) && cup?.draft?.live && cup.captains[0] && cup.captains[1] && status === 'ok') {
       return (
         <div className="scroll">
-          <Empty title="Start the draft" text={`${first(state.players[cup.captains[0]]?.name)} and ${first(state.players[cup.captains[1]]?.name)} pick on their own phones, on their turns.`}
+          <Empty illo="clipboard" title="Start the draft" text={`${first(state.players[cup.captains[0]]?.name)} and ${first(state.players[cup.captains[1]]?.name)} pick on their own phones, on their turns.`}
             action={<button className="full-btn" onClick={() => startDraft(tripId, cup.draft)}>Start the draft</button>} />
         </div>
       );
@@ -111,6 +113,9 @@ function DraftBody({ tripId }) {
   const headline = merged.done ? 'The draft is done'
     : myTurn ? (seats.size > 1 ? `${capName(turn)}’s pick for ${def.names[turn]}` : `Your pick for ${def.names[turn]}`)
     : `${capName(turn)}’s pick for ${def.names[turn]}`;
+  // The head's drawing for the moment the draft is at: the coin toss before the first pick, the
+  // captain's whistle while they pick, the full board once it's done
+  const art = merged.done ? 'clipboard' : order === 0 ? 'coinflip' : 'whistle';
   const sub = merged.done
     ? (organizer ? (cup?.schedule ? 'The teams are on the trip, and every round on its schedule is planned with its matches.' : 'The teams are on the trip.') : `The teams go on the trip from ${def.byName ? `${def.byName}’s` : 'the organizer’s'} phone.`)
     : `${order} of ${total} picked · ${DRAFT_ORDERS[def.order].name.toLowerCase()}, ${def.names[def.first]} first`;
@@ -118,6 +123,7 @@ function DraftBody({ tripId }) {
   return (
     <div className="scroll">
       <div className={`block tm-draft-head ${turn != null ? `t${turn}` : ''}`} role="status" aria-live="polite">
+        <Spot kind={art} size={76} className="tm-draft-art" />
         <div className="eyebrow">{trip?.name || def.title || `${def.names[0]} v ${def.names[1]}`}</div>
         <div className="d tm-draft-big">{headline}</div>
         <div className="tm-draft-sub">{sub}</div>

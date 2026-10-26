@@ -6,6 +6,7 @@
 import { useState } from 'react';
 import { Icon, Segmented, Sheet, useUI } from './ui.jsx';
 import { Avatar, PayButton } from './Pay.jsx';
+import { ArtNote } from './ArtNote.jsx';
 import { useStore } from '../lib/store.js';
 import { money } from '../lib/golf.js';
 import { nameOf } from '../lib/ledger.js';
@@ -72,7 +73,7 @@ export function CupMatches({ cup }) {
   const state = useStore();
   const [editing, setEditing] = useState(null);
   const entries = [...cup.entries].reverse().filter(e => e.matches.length || e.mixed);
-  if (!entries.length) return <p className="trip-empty">No matches yet. Each round counted for the trip pairs off its players by team: four-ball for two against two, or singles. An Alternate shot round is foursomes, partners taking turns on one ball.</p>;
+  if (!entries.length) return <ArtNote spot="pennant">No matches yet. Each round counted for the trip pairs off its players by team: four-ball for two against two, or singles. An Alternate shot round is foursomes, partners taking turns on one ball.</ArtNote>;
   const nameIn = (e, id) => first(e.players.find(p => p.id === id)?.name);
   return (
     <>

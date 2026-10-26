@@ -8,6 +8,7 @@
 import { useEffect, useState } from 'react';
 import { Empty, Header, Icon, PickRow, Screen, Segmented, Sheet, useUI } from '../components/ui.jsx';
 import { Scene } from '../components/Scenes.jsx';
+import { ArtNote } from '../components/ArtNote.jsx';
 import { daysUntil } from '../lib/plan-basics.js';
 import { Avatar, PayButton, RequestButton } from '../components/Pay.jsx';
 import { RoundRow } from '../components/RoundRow.jsx';
@@ -233,7 +234,7 @@ function TripPage({ id, view: firstView = null, add = false }) {
         )}
         {view === 'rounds' && (
           <>
-            {st.rounds.length === 0 && st.planned.length === 0 && <p className="trip-empty">No rounds yet. Start one at the course, or plan the trip’s rounds so everyone can answer.</p>}
+            {st.rounds.length === 0 && st.planned.length === 0 && <ArtNote spot="tees">No rounds yet. Start one at the course, or plan the trip’s rounds so everyone can answer.</ArtNote>}
             {(st.done.length > 0 || st.live.length > 0) && <div className="sec-label">Played</div>}
             {st.live.map(r => <LiveRow key={r.id} round={r} />)}
             {[...st.done].reverse().map(r => <RoundRow key={r.id} round={r} state={state} className="card" />)}
@@ -387,7 +388,7 @@ function TripInvite({ st }) {
 function Standings({ st, state, label, me, flights = false }) {
   if (!st.standings.length && st.points) {
     const rows = Object.entries(st.points).sort((a, b) => b[1] - a[1]);
-    if (!rows.length) return <p className="trip-empty">The points fill in as soon as a round is finished.</p>;
+    if (!rows.length) return <ArtNote spot="standings">The points fill in as soon as a round is finished.</ArtNote>;
     return (
       <div className="trip-table">
         {rows.map(([id, v], i) => (
@@ -427,7 +428,7 @@ function Standings({ st, state, label, me, flights = false }) {
       </>
     );
   }
-  if (!st.standings.length) return <p className="trip-empty">The standings fill in as soon as a round is finished. Anyone who plays a round for the trip is in them.</p>;
+  if (!st.standings.length) return <ArtNote spot="standings">The standings fill in as soon as a round is finished. Anyone who plays a round for the trip is in them.</ArtNote>;
   const total = st.done.filter(r => st.money.includes(r)).length;
   return (
     <>

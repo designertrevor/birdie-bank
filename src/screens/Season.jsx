@@ -58,7 +58,7 @@ export default function Season() {
         <Header title="Season" onBack={nav.pop} />
         {real
           ? <><p className="season-sub">Built from your {n} rounds</p><RealSeason state={state} /></>
-          : <div className="scroll"><Empty illo="cup" title="Your season starts here" text={`Play ${MIN_REAL_ROUNDS} rounds for money this year and your season shows here: everyone’s totals, you against your most-played friend, your biggest day and best game.`} /><HallLinks /><ClosedSeasons /></div>}
+          : <div className="scroll"><Empty illo="punchcard" title="Your season starts here" text={`Play ${MIN_REAL_ROUNDS} rounds for money this year and your season shows here: everyone’s totals, you against your most-played friend, your biggest day and best game.`} /><HallLinks /><ClosedSeasons /></div>}
       </Screen>
     );
   }
