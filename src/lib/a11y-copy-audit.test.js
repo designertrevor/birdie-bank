@@ -151,9 +151,9 @@ test('the toast is keyed, so the same words twice in a row are read out twice', 
   assert.match(read('components/ui.jsx'), /<span key=\{toast\.key\}>\{toast\.msg\}<\/span>/);
 });
 
-test('the money bar, as a button, says everyone’s total (its label replaces what’s inside it)', () => {
+test('the money strip, as a button, says everyone’s total (its label replaces what’s inside it)', () => {
   const play = read('screens/play/MoneyBar.jsx');
-  assert.match(play, /'aria-label': `\$\{word\} so far, \$\{thru\.toLowerCase\(\)\}: \$\{said\}\$\{cashSaid\}\. Show by game`/);
+  assert.match(play, /aria-label=\{`\$\{word\} so far, \$\{thru\.toLowerCase\(\)\}: \$\{said\}\$\{cashSaid\}\. Show more`\}/);
   // A reward round's dollar side bets line sits inside the button too, so the label carries it
   assert.match(play, /const cashSaid = cash \? `\. Side bets for money: \$\{cashLine \|\| 'all square'\}` : '';/);
 });

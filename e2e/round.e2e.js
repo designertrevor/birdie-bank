@@ -8,8 +8,9 @@
 //
 // What it proves, in a real browser at iPhone size (390 by 844) on a phone with nothing saved:
 // a new organizer gets through onboarding (age check and friendly wagers note included), sets up
-// an 18-hole Skins round for four on a built-in course, taps in every score with the + and - buttons,
-// gets past the first tee card, the side bets card and the halfway sheet, and finishes. Then the
+// an 18-hole Skins round for four on a built-in course, taps in every score with the par chips (an
+// eagle through the number pad sheet), gets past the first tee card, the side bets chip and the
+// halfway sheet, and finishes. Then the
 // money is checked everywhere it shows: the reveal, Settle up, the results page and the Tab. Every
 // amount adds to zero and matches what this file works out on its own from the Skins rules
 // (carryovers on, a carry left after 18 goes unclaimed), and no console error or page error fires.
@@ -247,6 +248,8 @@ async function playThrough(page, nav, step, context, problems) {
   // --- Scoring, all 18 holes ---
   step('scoring');
   await page.getByRole('dialog', { name: 'First tee' }).getByRole('button', { name: 'Skip for now' }).click();
+  // The side bets ask is a chip over the scores: open it, then put it away for the round
+  await page.getByRole('group', { name: 'Any side bets this round?' }).getByRole('button', { name: /Any side bets this round\?/ }).click();
   await page.getByRole('group', { name: 'Any side bets this round?' }).getByRole('button', { name: 'Not this round' }).click();
   let par = 0;
   for (let h = 0; h < 18; h++) {
@@ -255,10 +258,20 @@ async function playThrough(page, nav, step, context, problems) {
     par += holePar;
     for (let p = 0; p < 4; p++) {
       const d = STROKES[h][p];
-      const button = page.getByRole('button', { name: `${PLAYERS[p]} one ${d < 0 ? 'less' : 'more'}` });
-      for (let k = 0; k < Math.abs(d); k++) await button.click();
+      const want = holePar + d;
+      // Everyone starts at par: a par is left alone, one or two over or one under is a chip, and an
+      // eagle goes in through the number pad sheet (the + chip), which covers the pad too
+      if (d === -2) {
+        await page.getByRole('button', { name: `${PLAYERS[p]}: another score. Number pad` }).click();
+        const pad = page.getByRole('dialog', { name: `${PLAYERS[p]} · Hole ${h + 1}` });
+        await pad.getByRole('group', { name: 'Scores' }).getByRole('button', { name: new RegExp(`^${want}(,|$)`) }).click();
+        await pad.getByRole('button', { name: 'Close', exact: true }).click();
+        await pad.waitFor({ state: 'hidden' });
+      } else if (d !== 0) {
+        await page.getByRole('button', { name: `${PLAYERS[p]} ${{ '-1': 'Birdie', 1: 'Bogey', 2: 'Double' }[d]}, ${want}`, exact: true }).click();
+      }
       // The score box reads out "Drew 3" (the skins chips above can say the same, so only the box counts)
-      const box = page.locator('[aria-live="polite"]').filter({ hasText: new RegExp(`^${PLAYERS[p]}\\s*${holePar + d}$`) });
+      const box = page.locator('.pc-row [aria-live="polite"]').filter({ hasText: new RegExp(`^${PLAYERS[p]}\\s*${holePar + d}$`) });
       await assert.doesNotReject(box.waitFor(), `${PLAYERS[p]} shows ${holePar + d} on hole ${h + 1}`);
     }
     // Save right after the last save, with nothing touched, counts as a double tap (play/shared.js, 800 ms)

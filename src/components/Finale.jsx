@@ -8,7 +8,8 @@ import { useArtSrc } from '../lib/useArtSrc.js';
 import { gameTheme } from '../lib/game-theme.js';
 import './finale.css';
 import { useEffect, useRef, useState } from 'react';
-import { Header, Icon, Toggle, useUI } from './ui.jsx';
+import { Header, Icon, Sheet, Toggle, useUI } from './ui.jsx';
+import { Scorecard } from './Scorecard.jsx';
 import { getState, update, useStore } from '../lib/store.js';
 import { roundResults } from '../lib/round.js';
 import { money } from '../lib/golf.js';
@@ -109,6 +110,7 @@ export function Reveal({ round, res, onNext, onDetail, extra, instant = false })
   const t = revealTiming(nSteps, count);
   // Coming back to this beat (or reduced motion) shows the end state straight away
   const [skipped, setSkipped] = useState(() => instant || reducedMotion());
+  const [cardOpen, setCardOpen] = useState(false);
   const [shown, setShown] = useState(0);
   const [landed, setLanded] = useState(false);
   const done = skipped || landed;
@@ -198,8 +200,14 @@ export function Reveal({ round, res, onNext, onDetail, extra, instant = false })
           faces={faces} me={me} fmt={fmt} gamesFor={id => gamesLine(res.detail?.byGame, id, fmt)} crowned={crowned} />
         {/* A reward round: who wins it and who's buying, where the payments would be */}
         {reward && <div className={`rv-reward-wrap ${done ? 'on' : ''}`} aria-hidden={!done}><RewardCard round={round} res={res} />{res.cash && <CashCard round={round} res={res} />}</div>}
+        {/* The scores behind the money, one tap away once it lands (Trevor's ask on Layout Lab A) */}
+        {done && <div className="rv-card-link"><button type="button" className="pill-btn ghost" onClick={e => { e.stopPropagation(); setCardOpen(true); }}><Icon name="table" /> Scorecard</button></div>}
         {extra}
       </div>
+      <Sheet open={cardOpen} onClose={() => setCardOpen(false)} title="Scorecard" className="sc-sheet">
+        <Scorecard round={round} />
+        <div className="cta-wrap"><button className="full-btn outline" onClick={() => setCardOpen(false)}>Close</button></div>
+      </Sheet>
       <div className="cta-wrap">
         <button className="full-btn" onClick={onNext}>{pays ? <>Who pays who <Icon name="arrow-right" /></> : <>Share results <Icon name="arrow-right" /></>}</button>
         <button className="full-btn outline" onClick={onDetail}>See the full breakdown</button>

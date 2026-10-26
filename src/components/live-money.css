@@ -1,0 +1,51 @@
+/* ============================================================
+   LIVE MONEY (overhaul 2026-10-26): the money race, the next hole, and the round hole by hole.
+   ============================================================ */
+.lm-scroll { padding-top: 6px; }
+.lm-race { list-style: none; margin: 4px 16px 0; padding: 14px 14px 6px; background: var(--card); box-shadow: var(--hair); border-radius: var(--r-card); display: flex; flex-direction: column; gap: 12px; }
+.lm-row { display: flex; flex-direction: column; gap: 6px; }
+.lm-who { display: flex; align-items: center; gap: 10px; }
+.lm-who .avatar { width: 32px; height: 32px; flex: none; }
+.lm-name { flex: 1; min-width: 0; font-size: 17px; font-weight: 700; color: var(--ink); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+/* Big and heavy, read from arm's length between shots (the body face at 800 in the new look) */
+.lm-amt { font-family: var(--display); font-weight: 800; font-size: 26px; color: var(--ink); font-variant-numeric: tabular-nums; letter-spacing: -.01em; }
+:root[data-look="new"] .lm-amt { font-family: var(--body-font); }
+.lm-amt.pos { color: var(--win); }
+.lm-amt.neg { color: var(--loss); }
+.lm-track { display: grid; grid-template-columns: 1fr 1fr; gap: 3px; height: 10px; }
+.lm-half { position: relative; background: var(--surface); border-radius: 999px; overflow: hidden; }
+.lm-half > i { position: absolute; top: 0; bottom: 0; border-radius: 999px; transition: width .5s var(--ease-out, ease-out); }
+.lm-left > i { right: 0; background: var(--loss); }
+.lm-right > i { left: 0; background: var(--win); }
+
+.lm-next { display: flex; align-items: center; gap: 10px; margin: 10px 16px 0; padding: 12px 14px; border-radius: var(--r-card); background: var(--ink); color: var(--on-ink); }
+.lm-next-main { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.lm-next-l { font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: .06em; opacity: .75; }
+.lm-next-v { font-family: var(--display); font-weight: var(--display-weight); font-size: 20px; line-height: 1.2; }
+.lm-next-c { flex: none; font-size: 13px; font-weight: 700; opacity: .8; }
+
+.lm-actions { display: flex; gap: 8px; margin: 10px 16px 0; }
+.lm-btn {
+  flex: 1; height: 46px; border: none; border-radius: var(--r-btn); background: var(--card); box-shadow: var(--hair); color: var(--ink);
+  font: inherit; font-size: 15px; font-weight: 700; display: inline-flex; align-items: center; justify-content: center; gap: 7px; cursor: pointer;
+}
+.lm-btn:active { transform: scale(.97); }
+
+.lm-story { list-style: none; margin: 0 16px 16px; padding: 0 14px; background: var(--card); box-shadow: var(--hair); border-radius: var(--r-card); }
+.lm-hole + .lm-hole { border-top: 1px solid var(--line); }
+.lm-hole-btn { width: 100%; display: flex; align-items: center; gap: 12px; padding: 11px 0; border: none; background: none; color: inherit; font: inherit; text-align: left; }
+button.lm-hole-btn { cursor: pointer; }
+.lm-no {
+  flex: none; width: 30px; height: 30px; border-radius: 50%; display: grid; place-items: center; background: var(--surface);
+  font-size: 13px; font-weight: 800; color: var(--ink); font-variant-numeric: tabular-nums;
+}
+.lm-hole.moved .lm-no { background: var(--band-butter); }
+.lm-line { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 1px; }
+.lm-title { font-size: 15px; font-weight: 700; color: var(--ink); line-height: 1.3; }
+.lm-text { font-size: 13px; color: var(--body); line-height: 1.35; }
+.lm-hole:not(.moved) .lm-title { font-weight: 600; color: var(--body); }
+.lm-won { flex: none; font-weight: 800; font-size: 15px; color: var(--win); font-variant-numeric: tabular-nums; }
+.lm-empty { margin: 0 20px 16px; color: var(--mute); font-size: 14px; }
+
+/* The watching phone's way back to the money from a hole */
+.lm-back { display: flex; justify-content: center; margin: 0 16px 6px; }

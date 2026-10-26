@@ -165,16 +165,16 @@ function SkinsPanel({ round, hole, onChange }) {
     const tag = kinds.length > 1 ? `${kind === 'net' ? 'Net' : 'Gross'} ` : '';
     return pot ? `${tag}${skins}` : `${tag}${skins} · ${money(row?.purse ?? t.value * (round.players.length - 1))}`;
   });
+  // Folded to one slim line (Layout Lab A): what the hole is worth and the price of a skin to change it,
+  // with the skins each player has won so far quiet under it
   return (
-    <div className="banker-bar" style={{ background: 'var(--lav)' }}>
-      <div>
-        <div className="bl">This hole is worth</div>
-        <div className="bn"><PanelArt game="skins" /> {worth.join(' · ')}</div>
+    <div className="worth-strip">
+      <div className="ws-main">
+        <PanelArt game="skins" />
+        <span className="ws-text"><span className="ws-l">Worth</span> {worth.join(' · ')}</span>
+        {onChange && <button className="ws-change" onClick={onChange}>{pot ? `${money(cfg.stake ?? cfg.value)} each in` : `${money(cfg.value)} a skin`}</button>}
       </div>
-      <div className="skin-counts">
-        {round.players.map(p => <span key={p.id} className="press-chip">{p.name.split(' ')[0]} {Math.round(counts[p.id] * 10) / 10}</span>)}
-        {onChange && <button className="change-btn" onClick={onChange}>{pot ? `${money(cfg.stake ?? cfg.value)} each in` : `${money(cfg.value)} a skin`}</button>}
-      </div>
+      <div className="ws-counts">Skins won: {round.players.map(p => `${p.name.split(' ')[0]} ${Math.round(counts[p.id] * 10) / 10}`).join(' · ')}</div>
     </div>
   );
 }

@@ -1,11 +1,13 @@
-// A friend's round from the Friends feed, read only: who's up, everyone's score so far, the
-// scorecard, and (once you Watch) live updates, reactions and trash talk from the gallery. It never
+// A friend's round from the Friends feed, read only: who's up, everyone's score so far, the round
+// hole by hole, the scorecard, and (once you Watch) live updates, reactions and trash talk from the
+// gallery. It never
 // joins your rounds, History or the Tab. Money shows only for players who chose Show my money.
 import { useMemo } from 'react';
 import { Empty, Header, Icon, Screen, useUI } from '../components/ui.jsx';
 import { Avatar } from '../components/Avatar.jsx';
 import { TalkSection } from '../components/Talk.jsx';
 import { Scorecard } from '../components/Scorecard.jsx';
+import { HoleStory } from '../components/LiveMoney.jsx';
 import { useStore } from '../lib/store.js';
 import { useNav } from '../lib/nav.js';
 import { friendRoundView, friendsLine, shownRow, statusLine } from '../lib/friend-feed.js';
@@ -98,6 +100,14 @@ export default function FriendRound({ code }) {
           })}
         </ul>
         {hidden && <p className="field-help pad">Amounts show only for people you’ve played with who turned on Show my money.</p>}
+
+        {/* The round hole by hole, newest first (LiveMoney.jsx). It names amounts, so only when every amount shows */}
+        {view.players.every(p => p.justPlaying || p.amountText != null) && (
+          <>
+            <div className="sec-label">Hole by hole</div>
+            <HoleStory round={view.round} limit={done ? null : 6} />
+          </>
+        )}
 
         <div className="sec-label">Scorecard</div>
         <Scorecard round={view.round} />

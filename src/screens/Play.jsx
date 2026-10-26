@@ -25,6 +25,7 @@ import { BIG_FORMAT } from '../lib/big-game.js';
 import { pushRoundFinished } from '../lib/push-client.js';
 import { useBigSync } from '../lib/big-sync.js';
 import { RoundMoments } from '../components/Moments.jsx';
+import { LiveMoney } from '../components/LiveMoney.jsx';
 import { roundTheme, themeVars } from '../lib/round-theme.js';
 import { FirstTeeSheet } from '../components/FirstTee.jsx';
 import { canEdit, keeperMe, keeperName, shouldLeaveHole } from '../lib/keeper.js';
@@ -50,6 +51,9 @@ export default function Play({ id }) {
   useBigSync({ live: round?.trip?.format === BIG_FORMAT && round?.status === 'active' });
   // Whether a moment banner is up, so the "Any side bets?" card waits for it (it outlives the hole's remount)
   const [momentUp, setMomentUp] = useState(false);
+  // A phone watching the round: the live money or the hole (PlayRound). Held here, above the hole's
+  // remount, so opening another hole from the story doesn't lose it
+  const [watch, setWatch] = useKept('watch', 'money');
   // The round you open is the one the play button brings you back to
   const inPlay = round?.status === 'active';
   useEffect(() => {
@@ -92,7 +96,7 @@ export default function Play({ id }) {
   const mount = holeMountKey(round);
   return (
     <>
-      <PlayRound key={mount} mount={mount} round={round} momentUp={momentUp} />
+      <PlayRound key={mount} mount={mount} round={round} momentUp={momentUp} watch={watch} setWatch={setWatch} />
       {/* Outside the hole, which remounts on every save, so it sees the hole that was just scored */}
       <RoundMoments round={round} onFinish={keeps ? finishHere : null} onShowing={setMomentUp} />
     </>
@@ -103,7 +107,7 @@ export default function Play({ id }) {
  * The hole on screen. It remounts on every save (and on the changes holeMountKey lists), so its
  * state starts fresh for each hole; what's open on it is kept by `mount` so a reload brings it back.
  */
-function PlayRound({ round, mount, momentUp = false }) {
+function PlayRound({ round, mount, momentUp = false, watch = 'money', setWatch }) {
   useWakeLock();
   // What's open on this hole comes back after a reload (the hole remounts on every save, which closes it)
   const scope = useKeptScope();
@@ -157,6 +161,10 @@ function PlayRound({ round, mount, momentUp = false }) {
   const [handSheet, setHandSheet] = useHole('handSheet', false);
   const [fixSheet, setFixSheet] = useHole('fixSheet', null); // 'hole' | 'tee' | 'hc' | 'lineup' | 'playFor'
   const holeFixed = !!holeFixOf(round, hole.no);
+  // A phone watching the round (someone else has the card) opens on the live money: the race, the
+  // story hole by hole, and the card. "This hole" shows the hole as before (`watch`, kept in Play)
+  const watching = !editable && round.status === 'active';
+  const money = watching && watch === 'money';
   const requests = useSeatRequests(round.id);
 
   // The first-tee rules card, then "Any side bets on this hole?" (useHoleCards.js)
@@ -185,22 +193,29 @@ function PlayRound({ round, mount, momentUp = false }) {
 
   return (
     <Screen className={`play ${theme ? 'themed' : ''}`} style={themeVars(theme)}>
-      <PlayHeader round={round} idx={idx} hole={hole} game={game} solo={solo} theme={theme} preview={preview} onLive={() => setLive(true)} onMenu={() => setMenu(true)} />
+      <PlayHeader round={round} idx={idx} hole={hole} game={game} solo={solo} theme={theme} preview={preview} onLive={() => setLive(true)} onMenu={() => setMenu(true)} noMoney={money && !solo} />
       <PlayBanners round={round} card={keeping} editable={editable} dirty={dirty} requests={requests} doneEditing={doneEditing} onLetIn={setAddSheet} />
-      <HoleMeta round={round} hole={hole} units={units} solo={solo} holeFixed={holeFixed} onOpen={() => setCard(true)} />
+      {money && (
+        <LiveMoney round={round} me={me} holderName={keeping.holderName} onCard={() => setCard(true)} onThisHole={() => setWatch('hole')}
+          onHole={no => { setWatch('hole'); goHole(round.holes.findIndex(h => h.no === no)); }} />
+      )}
+      {!money && <HoleMeta round={round} hole={hole} units={units} solo={solo} holeFixed={holeFixed} onOpen={() => setCard(true)} />}
 
-      {!solo && (
+      {!money && !solo && (
         <HolePanels main={main} game={game} hole={hole} editable={editable} banker={banker} setBanker={setBanker} phase={phase} setPhase={setPhase}
           wolf={wolf} setWolf={setWolf} draft={draft} touched={touched} marks={marks} setMarks={setMarksDirty} results={results}
           onBankerPick={() => setBankerPick(true)} onBet={pid => setBetPad(pid)} onSkinsBet={() => setBetsSheet(true)} />
       )}
 
-      {phase === 'scores' && (
+      {!money && phase === 'scores' && (
         <HoleScores round={round} main={main} hole={hole} game={game} solo={solo} editable={editable} sharedLive={keeping.sharedLive} holderName={keeping.holderName} me={me}
           units={units} faces={faces} shortRowNames={shortRowNames} entry={entry} banker={banker} wolf={wolf} prompt={prompt} onRunAuction={() => setGamesSheet(true)} />
       )}
 
-      <div className="cta-wrap play-cta">
+      {watching && !money && (
+        <div className="lm-back"><button type="button" className="pill-btn" onClick={() => setWatch('money')}><Icon name="chart-bar-horizontal" /> Live money</button></div>
+      )}
+      {!money && <div className="cta-wrap play-cta">
         {!editable ? (
           <div style={{ display: 'flex', gap: 8 }}>
             <button className="full-btn outline" style={{ width: 64, flex: 'none' }} disabled={idx === 0} onClick={() => goHole(idx - 1)} aria-label="Previous hole"><Icon name="arrow-left" /></button>
@@ -216,7 +231,7 @@ function PlayRound({ round, mount, momentUp = false }) {
             </button>
           </div>
         )}
-      </div>
+      </div>}
 
       <RoundMenu open={menu} onClose={() => setMenu(false)} round={round} hole={hole} game={game} editable={editable} solo={solo} me={me} amKeeper={keeping.amKeeper}
         onCard={() => setCard(true)} onBets={() => setBetsSheet(true)} onLive={() => setLive(true)} onFix={setFixSheet} onGames={() => setGamesSheet(true)}
@@ -236,7 +251,7 @@ function PlayRound({ round, mount, momentUp = false }) {
       {leftSheet && <LeftSheet round={round} idx={idx} onClose={() => setLeftSheet(false)} onEnd={() => { setLeftSheet(false); endEarly(); }} />}
       <Sheet open={card} onClose={() => setCard(false)} title="Scorecard" className="sc-sheet">
         <p className="sheet-text">{editable ? 'Tap a hole to jump to it and fix scores.' : 'Tap a hole to jump to it.'}</p>
-        <Scorecard round={round} current={hole.no} onHole={no => { setCard(false); goHole(round.holes.findIndex(h => h.no === no)); }} />
+        <Scorecard round={round} current={hole.no} onHole={no => { setCard(false); if (watching) setWatch('hole'); goHole(round.holes.findIndex(h => h.no === no)); }} />
         {editable && (
           <button className="quiet-row fix-link" onClick={() => { setCard(false); setFixSheet('hole'); }}>
             <Icon name="wrench" /> <span><u>Wrong par or HCP?</u> Fix hole {hole.no}</span>
