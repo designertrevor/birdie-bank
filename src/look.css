@@ -1,0 +1,28 @@
+/* ============================================================
+   THE OVERHAUL LOOK (overhaul/next, 2026-10-26)
+   Shared tokens for the new screens. On by default (<html data-look="new">); ?look=classic brings
+   back today's type and edges to compare, kept on this phone, and ?look=new undoes it (main.jsx).
+   Values here are the classic ones, so a screen built with these tokens reads right in both looks.
+   The new look's values and its rules for the older screens are in look-new.css.
+   ============================================================ */
+:root {
+  --body-font: Inter, system-ui, -apple-system, sans-serif;
+  --display-weight: 800;   /* headlines and names in the display face */
+  --money-weight: 800;     /* big numbers: money, scores, the countdown */
+  --hair: var(--card-shadow);  /* a card's edge: a soft lift in classic, a hairline in the new look */
+  --r-card: 22px; --r-btn: 999px; --r-chip: 999px;
+  /* Pastel bands for sections and illustrated cards, from the brand's ochre, mint and lavender */
+  --band-butter: #fff1c9; --band-mint: #dff1ea; --band-lilac: #ece5fb; --band-peach: #ffe6d6;
+  /* A plan detail's three states: Set, Up for a vote, Not yet */
+  --state-set-bg: var(--win-bg); --state-set-ink: var(--win);
+  --state-vote-bg: var(--warn-bg); --state-vote-ink: var(--warn-ink);
+  --state-not-edge: var(--line);
+}
+:root[data-theme="dark"] {
+  --band-butter: #33301f; --band-mint: #1d3530; --band-lilac: #2a2540; --band-peach: #3a2a20;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --band-butter: #33301f; --band-mint: #1d3530; --band-lilac: #2a2540; --band-peach: #3a2a20;
+  }
+}

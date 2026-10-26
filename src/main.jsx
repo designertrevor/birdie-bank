@@ -1,11 +1,21 @@
 import { StrictMode, Suspense, lazy } from 'react';
 import { createRoot } from 'react-dom/client';
 import './styles.css';
+import './look.css';
+import './look-new.css';
 import App from './App.jsx';
 import { registerServiceWorker, reloadPending, updateBehindSplash } from './lib/sw-update.js';
 import { opsAfterPaint, opsAtLaunch } from './lib/ops.js';
 // Listening from the start for Android's install prompt, which fires once, early (install-prompt.js)
 import './lib/install-prompt.js';
+
+// The overhaul look is on unless this phone asked for the classic one (?look=classic, undone with
+// ?look=new), set before the first render so nothing paints in the wrong type (look.css)
+try {
+  const pick = (location.search.match(/[?&]look=(new|classic)/) || [])[1];
+  if (pick) localStorage.setItem('bb-look', pick);
+  document.documentElement.dataset.look = (pick || localStorage.getItem('bb-look')) === 'classic' ? 'classic' : 'new';
+} catch { document.documentElement.dataset.look = 'new'; }
 
 // Before anything renders: keep a creator's ?ref= code before the app tidies the address, and
 // catch errors from the start (ops.js; each part is off without its key)

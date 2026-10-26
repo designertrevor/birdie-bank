@@ -1,0 +1,12 @@
+/* ============================================================
+   THE NEW LOOK: values and rules for <html data-look="new"> (see look.css)
+   ============================================================ */
+:root[data-look="new"] {
+  --display: "Fraunces", Georgia, "Times New Roman", serif;
+  --body-font: "Figtree", Inter, system-ui, -apple-system, sans-serif;
+  --display-weight: 500;
+  --money-weight: 600;
+  --hair: inset 0 0 0 1px var(--line);
+  --r-card: 14px; --r-btn: 10px; --r-chip: 8px;
+}
+:root[data-look="new"] body { font-family: var(--body-font); }
