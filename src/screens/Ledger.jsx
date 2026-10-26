@@ -1,18 +1,17 @@
 // The Tab: your net with each friend across every round, squared in the fewest payments.
+// Layout Lab E (overhaul, 2026-10-26): one card says what's still owed, then two sections, "Owes
+// you" and "You owe", a card per person with Paid and Roll to next time side by side. The sections
+// come from tab-sections.js, which only reads the plan the Tab always had (ledger.js outstanding).
 import { useMemo, useState } from 'react';
-import { Empty, Header, Icon, Screen, Segmented, useUI } from '../components/ui.jsx';
+import './tab.css';
+import { Empty, Header, Icon, Screen, useUI } from '../components/ui.jsx';
 import FreePromise from '../components/FreePromise.jsx';
 import { Avatar, SettleSheet } from '../components/Pay.jsx';
 import { PersonActions, RecentPaid, RewardLines, SquareStrip } from '../components/TabCard.jsx';
-import { SeasonChart } from '../components/SeasonChart.jsx';
-import { Insight, RangePill } from '../components/DataCards.jsx';
-import { tabInsight } from '../lib/data-insights.js';
-import { netSeries, roundsInRange, seasonSeries } from '../lib/history.js';
 import { avatarFor, avatarModel } from '../lib/avatars.js';
 import { useStore } from '../lib/store.js';
 import { headToHeadSummary, nameOf, outstanding } from '../lib/ledger.js';
-import { allTripPays } from '../lib/trip-expenses.js';
-import { canonicalOf, paymentGroups, recentPayment } from '../lib/shared-tab.js';
+import { paymentGroups } from '../lib/shared-tab.js';
 import { sharedDebts } from '../lib/pair-debts.js';
 import { undoPayments, useTabSync } from '../lib/tab-sync.js';
 import { useTripPlans } from '../lib/trip-plan-sync.js';
@@ -20,11 +19,11 @@ import { useBigSync } from '../lib/big-sync.js';
 import { useCupSync } from '../lib/cup-sync.js';
 import { money } from '../lib/golf.js';
 import { myIds } from '../lib/format.js';
+import { tabSections, tabSummary } from '../lib/tab-sections.js';
 import { AvatarButton, BottomNav } from '../nav.jsx';
 import { useNav } from '../lib/nav.js';
 import { PAYWALL_ON } from '../lib/paywall-flag.js';
 import { isOrganizer } from '../lib/paywall.js';
-import { openRewards } from '../lib/play-for.js';
 import { StartTripLink, TripTabCard } from '../components/Trips.jsx';
 import { currentTrips, tripHidden, tripsOf } from '../lib/trips.js';
 import { tripSettleOf } from '../lib/trip-pay.js';
@@ -65,21 +64,13 @@ export default function Ledger() {
   const showSeason = PAYWALL_ON ? isOrganizer(state) : Object.values(state.rounds).some(r => r.status === 'done');
   const mine = myIds(state);
   const isMe = id => mine.has(id);
-
-  // One row per friend: what the plan has between you (a friend you pass money on for can be both ways, so it's netted)
-  const byPerson = new Map();
-  for (const t of plan) {
-    if (isMe(t.from) === isMe(t.to)) continue;
-    const other = isMe(t.from) ? t.to : t.from;
-    const cur = byPerson.get(other) || { id: other, net: 0, debts: [] };
-    cur.net = Math.round((cur.net + (isMe(t.to) ? t.amount : -t.amount)) * 100) / 100;
-    cur.debts.push(t);
-    byPerson.set(other, cur);
-  }
-  const people = [...byPerson.values()].filter(p => p.net).sort((a, b) => b.net - a.net);
-  const others = plan.filter(t => !isMe(t.from) && !isMe(t.to));
-  const overall = Math.round(people.reduce((a, p) => a + p.net, 0) * 100) / 100;
   const h2h = headToHeadSummary(state, mine);
+
+  // Who owes you, who you owe, and who's square: the plan's lines with you, person by person
+  const sections = tabSections(state, { plan, mine, h2h });
+  const { owesYou, youOwe, people, others, recentSquare, rewardOnly, squareIds, meId } = sections;
+  const summary = tabSummary(sections, id => nameOf(state, id));
+  const squareNames = squareIds.map(id => first(nameOf(state, id)));
   // One row per tap: a tap that paid several rounds, or went both ways, is one payment
   const history = paymentGroups(state);
   // A payment talks on its round's settle-up line (talk.js paymentTalk): reactions and jabs on a paid mark
@@ -87,43 +78,18 @@ export default function Ledger() {
   useTalkSync([...new Set([...payTalks.values()].filter(Boolean).map(t => roundThread(t.round)))]);
   const hasRounds = Object.values(state.rounds).some(r => r.status === 'done');
   const hasShared = sharedDebts(state).length > 0;
-  // Trips on now (or just settled): a card each on top. Their money is already in each total below
+  // Trips on now (or just settled): a card each under the summary. Their money is already in each total below
   const trips = currentTrips(state);
   const tripNames = tripsOf(state);
   const tripOf = s => s.settlements.map(x => tripSettleOf(x)?.id).find(Boolean);
+  // For the all square scene: the buddies of the people you've played with
+  const squareBuddies = [...h2h.keys()].slice(0, 2).map((id, i) => { const m = avatarModel(avatarFor(state, id), { key: id, name: nameOf(state, id) }); return m.kind === 'buddy' ? m.buddy : ['visor', 'snapback'][i]; });
 
   // One tap, no confirm: it can be put back from the toast, and a shared payment updates both phones
   const undo = s => {
     const redo = undoPayments(s.settlements);
     showToast(`${nameOf(state, s.from).split(' ')[0]} owes ${nameOf(state, s.to).split(' ')[0]} again`, { label: 'Undo', run: redo });
   };
-  // People you squared with lately keep a card for a few days, so the last payment can be taken back
-  const who = canonicalOf(state);
-  const meId = state.me || [...mine][0] || null;
-  const recentSquare = [...new Set([...state.settlements, ...allTripPays(state)].flatMap(s => [s.from, s.to]).map(who))]
-    .filter(id => meId && !isMe(id) && !people.some(p => p.id === id))
-    .map(id => ({ id, pay: recentPayment(state, meId, id) }))
-    .filter(x => x.pay)
-    .sort((a, b) => b.pay.at - a.pay.at);
-  // Rewards from reward rounds ("You owe Sam lunch"): on the person's card, or a card of their own
-  // for someone square on money (a Square card of their own carries it). Never counted in dollars or in who's square.
-  const rewardOnly = [...new Set(openRewards(state, { ids: mine, canon: who }).map(l => l.other))].filter(id => !people.some(p => p.id === id) && !recentSquare.some(x => x.id === id));
-  const squareIds = [...h2h.keys()].filter(id => !byPerson.has(id) && !recentSquare.some(x => x.id === id) && !rewardOnly.includes(id));
-  const squareNames = squareIds.map(id => first(nameOf(state, id)));
-  // For the all square scene: the buddies of the people you've played with
-  const squareBuddies = [...h2h.keys()].slice(0, 2).map((id, i) => { const m = avatarModel(avatarFor(state, id), { key: id, name: nameOf(state, id) }); return m.kind === 'buddy' ? m.buddy : ['visor', 'snapback'][i]; });
-  // Your running net, this season or over every round, for the chart under the big number and the
-  // hero's headline and sentence (data-insights.js). Keyed on what the lines read (the rounds, who
-  // you are, your merges, a Big Game's money: history.js SEASON_READS), so a payment or a message
-  // doesn't redo them. The pill starts on the season when it has a line to draw, else on all time
-  const season = useMemo(() => seasonSeries({ rounds: state.rounds, me: state.me, players: state.players, links: state.links, unlinks: state.unlinks, accountOf: state.accountOf, trips: state.trips, tripPlans: state.tripPlans, bigCards: state.bigCards, bigRemote: state.bigRemote }),
-    [state.rounds, state.me, state.players, state.links, state.unlinks, state.accountOf, state.trips, state.tripPlans, state.bigCards, state.bigRemote]);
-  const allTime = useMemo(() => netSeries(roundsInRange(state, { kind: 'all' }), state), [state]);
-  const [spanRaw, setSpan] = useState(null);
-  const span = spanRaw || (season.length >= 2 || allTime.length < 2 ? 'season' : 'all');
-  const series = span === 'season' ? season : allTime;
-  const insight = tabInsight(series, { scope: span === 'season' ? 'this season' : 'overall' });
-  const seriesEnd = series.length ? series.at(-1).total : 0;
 
   // The same Settle up sheet the person screen opens for a part payment
   const partDebt = p => {
@@ -139,12 +105,13 @@ export default function Ledger() {
     const n = h2h.get(p.id)?.rounds || 0;
     const me = owesMe ? p.debts[0].to : p.debts[0].from;
     return (
-      <div key={p.id} className="tab-card">
+      <div key={p.id} className="tab-card te-card">
         <button className="tab-person" onClick={() => nav.push('person', { id: p.id })} aria-label={`${name}: ${owesMe ? 'owes you' : 'you owe'} ${money(amount)}. See the story`}>
           <Avatar id={p.id} name={name} />
           <div className="row-main">
             <div className="tp-name">{name}</div>
-            <div className="tp-sub">{owesMe ? 'Owes you' : 'You owe'}{n ? ` · ${n} round${n === 1 ? '' : 's'} together` : ''}</div>
+            {/* The section already says which way it goes, so the line under the name is the story */}
+            <div className="tp-sub">{n ? `${n} round${n === 1 ? '' : 's'} together` : owesMe ? 'Owes you' : 'You owe'}</div>
           </div>
           <div className={`tp-amt ${owesMe ? 'pos' : 'neg'}`}>{money(amount)}</div>
           <span className="chevron"><Icon name="caret-right" /></span>
@@ -160,7 +127,7 @@ export default function Ledger() {
   const squareCard = ({ id, pay }) => {
     const name = nameOf(state, id);
     return (
-      <div key={id} className="tab-card square-card">
+      <div key={id} className="tab-card te-card square-card">
         <button className="tab-person" onClick={() => nav.push('person', { id })} aria-label={`Square with ${name}. See the story`}>
           <Avatar id={id} name={name} />
           <div className="row-main">
@@ -178,7 +145,7 @@ export default function Ledger() {
   const rewardCard = id => {
     const name = nameOf(state, id);
     return (
-      <div key={`reward:${id}`} className="tab-card">
+      <div key={`reward:${id}`} className="tab-card te-card">
         <button className="tab-person" onClick={() => nav.push('person', { id })} aria-label={`${name}. See the story`}>
           <Avatar id={id} name={name} />
           <div className="row-main">
@@ -201,64 +168,70 @@ export default function Ledger() {
     </button>
   );
 
+  // A section's head: its name, how many, and its total on the right
+  const sectionHead = (title, list, total, tone) => (
+    <div className="te-head">
+      <h2 className="te-title">{title}<span className="te-count">{list.length}</span></h2>
+      <span className={`te-total ${tone}`}>{money(total)}</span>
+    </div>
+  );
+
+  const anySquare = recentSquare.length > 0 || rewardOnly.length > 0 || (squareIds.length > 0 && people.length > 0);
+
   return (
     <Screen>
       <Header title="Tab" right={<AvatarButton />} />
-      <div className="scroll">
-        {showSeason && (
-          <div className="tab-view">
-            <Segmented label="Tab view" className="press-mode-row" btn="pm-btn" value="person"
-              onChange={v => v === 'season' && nav.push('season')}
-              options={[{ value: 'person', label: 'By person' }, { value: 'season', label: PAYWALL_ON ? <>Season<span className="pro-tag"><span className="sr-only">, </span>Pro</span></> : 'Season' }]} />
-          </div>
-        )}
+      <div className="scroll tab-e">
         <TabSwitch tabs={switches} value={view} onChange={setView} />
         {one ? <OneTab tab={one} /> : <>
-        <SquareStrip />
+        {plan.length > 0 && summary.lead && (
+          // What's still owed, big, and what you owe under it: the one thing to read on the screen
+          <div className="te-summary">
+            <span className="te-label">{summary.lead.label}</span>
+            <span className={`te-big ${summary.lead.tone}`}>{money(summary.lead.amount)}</span>
+            {summary.sub && <span className="te-sub">{summary.sub.text} <b className="neg">{money(summary.sub.amount)}</b></span>}
+            {people.length > 1 && (
+              <span className="te-net">
+                <span className="tab-faces">{people.slice(0, 5).map(p => <Avatar key={p.id} id={p.id} name={nameOf(state, p.id)} size="sm" />)}</span>
+                {sections.net > 0 ? 'You’re up' : sections.net < 0 ? 'You’re down' : 'You’re even'} {money(Math.abs(sections.net))} across {people.length} people
+              </span>
+            )}
+          </div>
+        )}
         {trips.map(t => <TripTabCard key={t.trip.id} status={t} />)}
         {trips.some(t => t.money.length > 0) && plan.length > 0 && <p className="field-help pad trip-folded">{trips.filter(t => t.money.length > 0).every(t => t.big) ? 'The game’s money is in each person’s total below.' : 'Trip money is in each person’s total below.'}</p>}
+        <SquareStrip />
         {plan.length === 0 ? (
           <Empty title={hasRounds ? 'All square' : 'Nothing owed yet'} illo={hasRounds ? 'highfive' : 'wallet'} ids={squareBuddies}
             text={hasRounds ? 'Nobody owes anybody. Time to go win it back.' : 'Finish a round and the Tab fills in. Money nets out across every round, so you pay less often.'}
             action={!hasRounds && <button className="ec" onClick={() => nav.push('newRound')}><Icon name="golf" fill /> Start a round</button>} />
         ) : (
           <>
-            {people.length > 0 && (
-              <div className="tab-overall tab-hero">
-                {/* One big number, who it's with under it, then how the season's gone in a line */}
-                <div className={`tab-big d ${overall > 0 ? 'pos' : overall < 0 ? 'neg' : ''}`}>{money(overall, { sign: true })}</div>
-                <div className="tab-who">
-                  <span className="tab-faces">{people.slice(0, 5).map(p => <Avatar key={p.id} id={p.id} name={nameOf(state, p.id)} size="sm" />)}</span>
-                  <span>{overall > 0 ? 'You’re up' : overall < 0 ? 'You’re down' : 'You’re even'} · {people.length === 1 ? `with ${first(nameOf(state, people[0].id))}` : `across ${people.length} people`}</span>
-                </div>
-                <h2 className="d tab-headline">{insight.headline}</h2>
-                <Insight insight={insight} />
-              </div>
-            )}
-            {people.length > 0 && (season.length >= 2 || allTime.length >= 2) && (
-              <div className="chart-card tab-spark">
-                <div className="cc-head">
-                  <div>
-                    <div className="eyebrow">Your net</div>
-                    <div className={`cc-big ${seriesEnd > 0 ? 'pos' : seriesEnd < 0 ? 'neg' : ''}`}>{money(seriesEnd, { sign: true })}</div>
-                    <div className="cc-cap">{series.length ? `${series.length} round${series.length === 1 ? '' : 's'} for money` : 'No rounds for money yet'}{span === 'season' ? ' this season' : ' all time'}</div>
-                  </div>
-                  <RangePill label="Chart range" value={span} onChange={setSpan} options={[{ value: 'season', label: 'Season' }, { value: 'all', label: 'All time' }]} />
-                </div>
-                {series.length >= 2
-                  ? <SeasonChart series={series} label={span === 'season' ? 'This season' : 'All time'} />
-                  : <p className="cc-none">{series.length ? 'One round so far. The line starts at two.' : 'Finish a round for money and the line starts here.'}</p>}
-              </div>
-            )}
             <SinceBooks scope={ALL} />
-            {people.map(personRow)}
-            {recentSquare.map(squareCard)}
-            {rewardOnly.map(rewardCard)}
-            {squareIds.length > 0 && people.length > 0 && (
-              <div className="square-line">
-                <span className="tab-faces">{squareIds.slice(0, 5).map(id => <Avatar key={id} id={id} name={nameOf(state, id)} size="sm" />)}</span>
-                <span><Icon name="check-circle" fill /> All square with {listNames(squareNames)}</span>
-              </div>
+            {owesYou.length > 0 && (
+              <section className="te-section" aria-label="Owes you">
+                {sectionHead('Owes you', owesYou, sections.owedToYou, 'pos')}
+                {owesYou.map(personRow)}
+              </section>
+            )}
+            {youOwe.length > 0 && (
+              <section className="te-section" aria-label="You owe">
+                {sectionHead('You owe', youOwe, sections.youOweTotal, 'neg')}
+                {youOwe.map(personRow)}
+              </section>
+            )}
+            {anySquare && (
+              <section className="te-section" aria-label="Square">
+                <div className="te-head"><h2 className="te-title">Square</h2></div>
+                {recentSquare.map(squareCard)}
+                {rewardOnly.map(rewardCard)}
+                {squareIds.length > 0 && people.length > 0 && (
+                  <div className="square-line">
+                    <span className="tab-faces">{squareIds.slice(0, 5).map(id => <Avatar key={id} id={id} name={nameOf(state, id)} size="sm" />)}</span>
+                    <span><Icon name="check-circle" fill /> All square with {listNames(squareNames)}</span>
+                  </div>
+                )}
+              </section>
             )}
             {others.length > 0 && (
               <>
@@ -294,9 +267,15 @@ export default function Ledger() {
             })}
           </>
         )}
-        {/* The season's tools, together in one short list */}
-        {(hasRounds || trips.length === 0) && (
-          <div className={`tab-tools ${hasRounds ? '' : 'solo'}`}>
+        {/* The season's tools, together in one short list. Season moved here from the switch at the
+            top, so the summary card has the top of the screen to itself */}
+        {(showSeason || hasRounds || trips.length === 0) && (
+          <div className={`tab-tools ${showSeason || hasRounds ? '' : 'solo'}`}>
+            {showSeason && (
+              <button className="text-link stats-link" onClick={() => nav.push('season')}>
+                <Icon name="chart-line-up" fill /> <span className="row-main">Season{PAYWALL_ON && <span className="pro-tag"><span className="sr-only">, </span>Pro</span>}<span className="sl-sub">Your net over the season, the standings and records</span></span> <Icon name="caret-right" />
+              </button>
+            )}
             {hasRounds && (
               <button className="text-link stats-link" onClick={() => nav.push('closeBooks', { scope: ALL })}>
                 <Icon name="book-bookmark" fill /> <span className="row-main">Close the books<span className="sl-sub">Keep everyone’s totals, then settle up or roll to next season</span></span> <Icon name="caret-right" />
