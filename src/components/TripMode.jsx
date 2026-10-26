@@ -6,6 +6,8 @@ import { Icon, PickChip, PickMark, PickRow, Segmented, useUI } from './ui.jsx';
 import { PickField, PickSheet } from './DatePicker.jsx';
 import { Avatar } from './Pay.jsx';
 import { TeamDot } from './Cup.jsx';
+import { Spot } from './Spot.jsx';
+import '../art-places.css';
 import { useStore } from '../lib/store.js';
 import { useNav } from '../lib/nav.js';
 import { nameOf } from '../lib/ledger.js';
@@ -178,6 +180,8 @@ export function ScheduleCard({ st, onRounds }) {
           </div>
         ))}
         {planned.length > 0 && <p className="field-help">{planned.length} round{planned.length === 1 ? ' is' : 's are'} planned, each with its matches{started ? `, and ${started} started` : ''}. Each one starts from its roll call on Up next.</p>}
+        {/* Before the rounds are planned, the clock: each group is about to get its tee time */}
+        {!planned.length && !past.length && st.organizer && !problem && !drafting && <Spot kind="clock" size={72} className="tm-sched-art" />}
         {!planned.length && !past.length && (drafting ? <p className="field-help">The rounds are planned as soon as the draft is done.</p>
           : problem ? <p className="field-help">{problem}</p>
           : st.organizer ? <p className="field-help">Plan every round now: each group gets its day, a tee time and its matches.</p> : null)}

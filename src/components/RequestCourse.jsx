@@ -5,6 +5,8 @@
 // course editor with the name filled in, so the round isn't held up waiting on us.
 import { useId, useRef, useState } from 'react';
 import { FileButton, Icon, useUI } from './ui.jsx';
+import { Spot } from './Spot.jsx';
+import '../art-places.css';
 import { getState, STORE_KEY } from '../lib/store.js';
 import { shrinkImage, submitFeedback } from '../lib/feedback.js';
 import { canRequestCourse, cleanCourseName, courseRequestView, findCourseRequest, requestCourse } from '../lib/course-request.js';
@@ -78,7 +80,7 @@ export default function RequestCourse({ query, onAddYourself, roundId = null }) 
       : status === 'queued' ? 'No signal right now, so your request is saved on this phone and sends by itself when you’re back online.'
         : `You asked for ${entry.name} ${askedOn(entry.at)}, so it’s already on our list. Add it yourself for now if you’re playing it soon.`;
     return (
-      <div className="block rc-card" role="status">
+      <div className="block rc-ask" role="status">
         <div className="rc-done-icon" aria-hidden="true"><Icon name="check-circle" fill /></div>
         <div className="rc-title">{status === 'already' ? 'Already requested' : 'Thanks, we’ll add it'}</div>
         <p className="rc-text">{text}</p>
@@ -88,7 +90,9 @@ export default function RequestCourse({ query, onAddYourself, roundId = null }) 
   }
 
   return (
-    <div className="block rc-card">
+    <div className="block rc-ask">
+      {/* The empty green heads the card: a course that isn't in the list yet */}
+      <Spot kind="flagempty" size={84} className="course-ask-art" />
       <div className="rc-title">Can’t find it?</div>
       <p className="rc-text">{sendable ? <>No course matches “{name}”. Ask us to add it for everyone, or add it yourself in a minute from the scorecard.</> : 'Type a bit more of the course name, then ask us to add it.'}</p>
       <label className="field-label" htmlFor={`${ids}-city`}>City and state <span className="opt">optional</span></label>

@@ -2,6 +2,7 @@
 // (passed in as children, so they look and pick like the rest of the picker), and a plain
 // note when location is off or nothing is close.
 import { Icon } from './ui.jsx';
+import { ArtNote } from './ArtNote.jsx';
 import { RADIUS_MI } from '../lib/nearby.js';
 import { LIMITED_COPY } from '../lib/courseApi.js';
 
@@ -40,7 +41,7 @@ export default function NearYou({ near, count, children }) {
       <div className="sec-label">Near you{looking ? ' · looking' : ''}</div>
       {found && <div style={{ padding: '0 16px' }}>{children}</div>}
       {!found && status === 'ready' && (
-        <p className="hint-card"><Icon name="map-pin" fill /> No courses in our database within {RADIUS_MI} miles of {placeName(place) || 'you'} yet. Search by name, or add yours from the scorecard.</p>
+        <ArtNote spot="pin" size={84}>No courses in our database within {RADIUS_MI} miles of {placeName(place) || 'you'} yet. Search by name, or add yours from the scorecard.</ArtNote>
       )}
       {note && <p className="hint-card"><Icon name={status === 'denied' ? 'navigation-arrow' : 'info'} fill /> {note}</p>}
       <div className="near-foot">

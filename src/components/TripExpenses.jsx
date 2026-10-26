@@ -6,6 +6,7 @@ import { dropKept, useKept, useKeptScope } from '../lib/kept.js';
 import { Icon, PickChip, PickMark, Segmented, Sheet, useUI } from './ui.jsx';
 import { Avatar } from './Pay.jsx';
 import { AtScreen } from './Trips.jsx';
+import { ArtNote } from './ArtNote.jsx';
 import { useStore } from '../lib/store.js';
 import { money } from '../lib/golf.js';
 import { nameOf } from '../lib/ledger.js';
@@ -77,7 +78,7 @@ export function TripExpensesView({ st, me, adding = false, onAdded }) {
         <div className="add-ci"><Icon name="receipt" /></div><span className="add-lbl">Add an expense</span>
       </button>
       {st.expenses.length === 0 && (
-        <p className="trip-empty">Gas, dinner, the house: add what someone paid for the group and how to split it. It’s in everyone’s total on the Tab right away, and it settles with the rounds, once, at the end.</p>
+        <ArtNote spot="expenses">Gas, dinner, the house: add what someone paid for the group and how to split it. It’s in everyone’s total on the Tab right away, and it settles with the rounds, once, at the end.</ArtNote>
       )}
       {st.expenses.length > 0 && <div className="sec-label">Expenses · {st.expenses.length}</div>}
       {st.expenses.map(x => <ExpenseRow key={x.id} x={x} me={me} short={short} onOpen={() => setOpenId(x.id)} />)}

@@ -56,7 +56,7 @@ function GroupFeed({ state, rounds }) {
   // The talk on your rounds and plans, and on the friends' rounds you watch
   useTalkSync([...recentTalkKeys(state), ...rounds.filter(v => v.following && v.talk !== false).map(v => followThread(v.code))]);
   if (!live.length && !plans.length && !lately.length) {
-    return <Empty illo="sleep" title="Quiet out there" text="When people you’ve played with tee off, their rounds show up here live, even ones you’re not in. Plans you’re invited to, big wins, birdie runs, settle-ups and trash talk show up too." />;
+    return <Empty illo="tumbleweed" title="Quiet out there" text="When people you’ve played with tee off, their rounds show up here live, even ones you’re not in. Plans you’re invited to, big wins, birdie runs, settle-ups and trash talk show up too." />;
   }
   return (
     <>

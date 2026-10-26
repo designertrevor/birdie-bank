@@ -5,6 +5,8 @@ import { useEffect, useRef, useState } from 'react';
 import { FileButton, Icon, Segmented, Sheet, useUI } from './ui.jsx';
 import { AvatarArt } from './Avatar.jsx';
 import { BuddyArt } from './BuddyArt.jsx';
+import { Spot } from './Spot.jsx';
+import '../art-places.css';
 import { BACKDROPS, BUDDIES, SHELVES, avatarModel, buddyAvatar, buddyOf, initialsAvatar, initialsOf, shelfOf } from '../lib/avatars.js';
 import { removePhoto, setAvatar, uploadPhoto, useMyProfile } from '../lib/profiles.js';
 import { useAccount } from '../lib/cloud.js';
@@ -90,7 +92,8 @@ function PickerBody({ onClose }) {
   return (
     <>
       <div className="av-preview">
-        <AvatarArt model={model} size="xl" />
+        {/* The Photo tab with no photo yet: the empty frame, not someone else's look */}
+        {tab === 'photo' && !photo && !hasPhoto ? <Spot kind="frame" size={112} className="av-frame" /> : <AvatarArt model={model} size="xl" />}
         <p className="field-help">People you play with see this on seats, the Tab and results.</p>
       </div>
       <div style={{ padding: '0 16px 8px' }}>

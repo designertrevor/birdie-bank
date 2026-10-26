@@ -1,0 +1,30 @@
+/* ============================================================
+   WHERE THE ROUND 4 DRAWINGS SIT (overhaul/art, 2026-10-26)
+   The art's own rules on the screens that show it: the empty note with its drawing, the Hall of
+   fame record badges, the draft's head, the trip schedule and the side games sheet. Each drawing
+   gets room of its own; the dark theme's cream outline comes from .art-outline in styles.css.
+   ============================================================ */
+
+/* An empty view inside a screen: the drawing on top, centred, and one sentence under it */
+.art-note { margin: 4px 16px 14px; padding: 24px 20px 22px; border-radius: var(--r-card); background: var(--surface); display: flex; flex-direction: column; align-items: center; gap: 12px; text-align: center; }
+.art-note-spot { flex-shrink: 0; }
+.art-note-text { margin: 0; max-width: 290px; font-size: 14px; line-height: 1.45; color: var(--body); text-wrap: pretty; }
+
+/* Hall of fame: each record badge carries its drawing where the round icon was; nobody holding it yet dims it */
+.bt-art { width: 48px; height: 48px; flex-shrink: 0; margin: -6px -6px -4px 0; }
+.badge-tile.empty .bt-art { opacity: .4; filter: grayscale(1); }
+
+/* The draft's head: one drawing for the moment it's at (the coin toss, a captain's call, the full board) */
+.tm-draft-art { display: block; width: 76px; height: 76px; margin: 2px auto 6px; }
+
+/* The trip's schedule before its rounds are planned: the clock over the line that says they get tee times */
+.tm-sched-art { display: block; width: 72px; height: 72px; margin: 6px auto 0; }
+
+/* Add a side game: the hand of cards heads the sheet */
+.sg-sheet-art { display: block; width: 88px; height: 88px; margin: 0 auto 4px; }
+
+/* The avatar picker's Photo tab before there's a photo: the empty frame stands in the preview */
+.av-frame { display: block; width: 112px; height: 112px; margin: 0 auto 8px; }
+
+/* Can't find it? in the course search: the empty green heads the card, flush with its title */
+.course-ask-art { display: block; width: 84px; height: 84px; margin: -4px 0 6px -6px; }

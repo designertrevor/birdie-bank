@@ -201,7 +201,7 @@ export default function Ledger() {
         {trips.map(t => <TripTabCard key={t.trip.id} status={t} />)}
         {trips.some(t => t.money.length > 0) && plan.length > 0 && <p className="field-help pad trip-folded">{trips.filter(t => t.money.length > 0).every(t => t.big) ? 'The game’s money is in each person’s total below.' : 'Trip money is in each person’s total below.'}</p>}
         {plan.length === 0 ? (
-          <Empty title={hasRounds ? 'All square' : 'Nothing owed yet'} illo={hasRounds ? 'highfive' : 'wallet'} ids={squareBuddies}
+          <Empty title={hasRounds ? 'All square' : 'Nothing owed yet'} illo={hasRounds ? 'highfive' : 'coinstack'} ids={squareBuddies}
             text={hasRounds ? 'Nobody owes anybody. Time to go win it back.' : 'Finish a round and the Tab fills in. Money nets out across every round, so you pay less often.'}
             action={!hasRounds && <button className="ec" onClick={() => nav.push('newRound')}><Icon name="golf" fill /> Start a round</button>} />
         ) : (

@@ -4,6 +4,8 @@ import { Suspense, lazy, useState } from 'react';
 import { Icon, Numpad, PickChip, Segmented, Sheet, Toggle } from './ui.jsx';
 import { RulesSheet } from './Rules.jsx';
 import { GameArt } from './GameArt.jsx';
+import { Spot } from './Spot.jsx';
+import '../art-places.css';
 import { GAMES, MAX_GAMES, POT_GAMES, SIDE_GAMES, oneBall, potHoles, potHolesDefault, sideGameChoices } from '../lib/round.js';
 import { DOT_KINDS } from '../lib/games.js';
 import { asPlayedWith, dotsNote, potHolesLine, sideExample, skinsRulesLine } from '../lib/side-games.js';
@@ -198,6 +200,7 @@ export function SideGamesSetup({ game, sideGames, setSideGames, defaults, player
         </button>
       )}
       <Sheet open={adding} onClose={() => setAdding(false)} title="Add a side game">
+        <Spot kind="cards" size={88} className="sg-sheet-art" />
         <p className="sheet-text">Each side game has its own bet. {countsMoney({ playFor }) ? 'The money adds up' : 'The points add up'} into one total each.</p>
         {choices.map(k => {
           const s = { ...(DEFAULT_SETTINGS[k] || {}), ...(defaults?.[k] || {}) };
