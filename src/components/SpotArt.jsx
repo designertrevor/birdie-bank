@@ -51,6 +51,9 @@ function Ball({ cx = 60, cy = 66, r = 30, face = 'smile' }) {
 const Shadow = ({ cx = 60, cy = 108, rx = 26 }) => <ellipse cx={cx} cy={cy} rx={rx} ry="4.5" fill="rgba(10,10,10,.09)" />;
 const Hand = ({ x, y }) => <circle cx={x} cy={y} r="5.5" fill={BALL} stroke="rgba(10,10,10,.22)" strokeWidth="1.6" />;
 
+/** A spot that only exists as an outside file (src/art/spots): nothing to draw by hand, so the card stays empty until its file lands. */
+const FileOnly = () => null;
+
 const SCENES = {
   // The ball on a tee, as on the first empty states
   tee: () => (<>
@@ -187,6 +190,94 @@ const SCENES = {
     <rect x="35" y="57" width="20" height="12" rx="5" fill={INK} />
     <rect x="65" y="57" width="20" height="12" rx="5" fill={INK} />
   </>),
+  // Spots that landed as outside files on 2026-10-26 (round 4): drawn only by their file
+  podium: () => ( // Winner, the end of a round
+    <FileOnly />
+  ),
+  handshake: () => ( // All square
+    <FileOnly />
+  ),
+  piggy: () => ( // The pot
+    <FileOnly />
+  ),
+  receipt: () => ( // The breakdown
+    <FileOnly />
+  ),
+  clipboard: () => ( // The draft board
+    <FileOnly />
+  ),
+  whistle: () => ( // The captain
+    <FileOnly />
+  ),
+  pennant: () => ( // A team
+    <FileOnly />
+  ),
+  coinflip: () => ( // Who picks first
+    <FileOnly />
+  ),
+  pin: () => ( // The course on a trip
+    <FileOnly />
+  ),
+  clock: () => ( // Tee times
+    <FileOnly />
+  ),
+  tees: () => ( // The rounds of a trip
+    <FileOnly />
+  ),
+  tumbleweed: () => ( // Nothing here
+    <FileOnly />
+  ),
+  frame: () => ( // No photo yet
+    <FileOnly />
+  ),
+  flagempty: () => ( // No ball on the green
+    <FileOnly />
+  ),
+  loneball: () => ( // A lone ball
+    <FileOnly />
+  ),
+  standings: () => ( // Trip standings
+    <FileOnly />
+  ),
+  expenses: () => ( // Trip expenses
+    <FileOnly />
+  ),
+  bragging: () => ( // Bragging rights
+    <FileOnly />
+  ),
+  buying: () => ( // Who is buying
+    <FileOnly />
+  ),
+  agreed: () => ( // As agreed
+    <FileOnly />
+  ),
+  hotstreak: () => ( // Hot streak
+    <FileOnly />
+  ),
+  skinsking: () => ( // Skins king
+    <FileOnly />
+  ),
+  lowround: () => ( // Low round
+    <FileOnly />
+  ),
+  nobirdies: () => ( // No net birdies
+    <FileOnly />
+  ),
+  mostrounds: () => ( // Most rounds
+    <FileOnly />
+  ),
+  coinstack: () => ( // The pot, as coins
+    <FileOnly />
+  ),
+  cards: () => ( // A hand of cards
+    <FileOnly />
+  ),
+  ribbons: () => ( // The record book
+    <FileOnly />
+  ),
+  punchcard: () => ( // A punch card
+    <FileOnly />
+  ),
 };
 
 // Scenes made of Ball buddies. `ids` picks who; the defaults are a mixed group.

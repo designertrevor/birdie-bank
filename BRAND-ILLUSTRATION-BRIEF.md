@@ -4,31 +4,42 @@ How to make the app's illustration family with AI tools (Recraft, Quiver, or wha
 
 ## The direction
 
-**Deliberately dorky.** The drawings look like a person with opinions drew them, not a picture-perfect AI set. Golfers in the app are slightly wrong on purpose: odd proportions, a hunched putter stance, nobody looks athletic, one off detail per drawing. The copy matches ("Clubs packed. Standards low." / "Good company. Questionable golf."). Self-deprecation gives people permission to be bad at golf, which is the opposite of pressure.
+**Deliberately dorky, drawn with one line.** Decided 2026-10-26 after four rounds in Recraft (the notes are in `overnight/ILLUSTRATION-COMMENTS-OCT26.md` and `overnight/ILLUSTRATION-ROUND-4.html`). The drawings look like a person with opinions drew them, not a picture-perfect AI set: golfers are slightly wrong on purpose, one wide with a belly, one pencil-thin with a tiny head, one pear-shaped, one with a big head on a stocky body, nobody athletic, silly stiff poses. The copy matches ("Clubs packed. Standards low."). Self-deprecation gives people permission to be bad at golf, which is the opposite of pressure.
 
-**Why not the other two test sets.** The clean sticker set (thick ink outline, white halo) scales well but is the default look of every AI-built app and has nothing golf, warm or retro in it. The hand-drawn crosshatch set is warm but the hatching is an AI tell, drifts across 50 drawings, and turns to mush under 52px.
+**The look.** One confident brush ink line, flat fills, lots of the drawing left white, no texture, no hatching, no wobbly lines, no gradients, no shadows. It came from a farmer's-market poster Trevor supplied (orange and black on lime) and the two first-tee drawings made from it, not from the cut-paper car the first brief named. The banker sticker is the reference for every face.
+
+**Why not the other test sets.** The cut-paper car was charming but the model drifted back to its house style every pass. The clean sticker set with the thick outline and white halo is the default look of every AI-built app. The crosshatch set was warm but the hatching is an AI tell and turns to mush under 52px. Trevor's words on the hatched and dark-featured tries: "makes me feel like I have to squint".
 
 ## Two tiers, one family
 
 | Tier | What | Box | Style |
 |---|---|---|---|
-| **Big** | scenes, hero empty states, onboarding, trip, recap heroes | 400 by 240 and 120 by 120 at 110px or more | goofy flat humans and props, limited palette, a thin ink line on faces and details only, flat fills, no texture |
-| **Small** | game stickers, critters, buddy faces, spots used under 100px | 64 by 64 and 120 by 120 | flat badge style, chunky silhouettes, 2 to 4 colors plus ink, reads at 28px |
+| **Big** | scenes, hero empty states, onboarding, trip, recap heroes | 400 by 240 and 120 by 120 at 110px or more | the four friends in brush ink with flat fills, lots of white, a flat ground strip and a low hill, open sky |
+| **Small** | game stickers, critters, buddy faces, spots used under 100px | 64 by 64 and 120 by 120 | the same line with fewer fills: one chunky object, one or two colours plus ink, reads at 28px |
 
-What ties them together: the same palette, the same ink line weight at the same scale, the same cream ball #fbf7ec, and the same sense of humor. The small tier is the big tier's objects with the people removed.
+What ties them together: the same brush line at the same weight, the same palette, the same white ball with dimple dots, and the same sense of humour. The small tier is the big tier's objects with the people removed.
 
 **Humans own the scenes. Ball buddies are avatars.** Scenes show people (the group on the tee, at the clubhouse, in the car). The buddies stay as profile pictures and the faces on moments and results. Critters are the other avatar shelf.
 
 ## Rules every drawing follows
 
-1. Palette only: ink #0a0a0a, ball #fbf7ec, pink #ff4d8b (one pop per image at most), deep pink #d42a6b, ochre #e8b94a, gold #c99a30, coin #ffd45c, teal #1a3a3a, mint #a4d4c5, coral #ff6b5a, lavender #b8a4ed, peach #ffb084, blush #ffd6e5.
-2. Transparent background. SVG where the tool can, otherwise PNG at 3x the box.
-3. Must read on a white card and on a #1a1f1e dark card. Scenes get a separate dusk file.
-4. No text, no logos, no "Birdie Bank". The name is changing.
-5. Warm and a little retro in the look (old golf), modern buddies in the content (bucket hats, snapbacks, a cooler, a cart). No blazers, no country-club wealth.
-6. Funny like a friend. A losing face is rueful, never crushed. Jokes live in heroes and empty states, never on the Tab or on results where someone just lost money.
-7. Not kiddie, not casino. No treasure chests, confetti explosions, dice (except the Vegas sticker), chips, neon.
-8. The white sticker halo is a CSS filter the app can add, not something baked into the drawing.
+1. **One face everywhere.** Two dot eyes, one tiny nose stroke, and no mouth or one short flat line. Same on balls and on people. Nobody frowns unless the moment is sad, nobody grins. Noses stay small and the same shape across a sheet.
+2. **Props have no faces.** A ball inside a prop drawing (dice, a star, crossed clubs, a trophy) is a plain white ball with dimples. The ball only gets a face when it is the character.
+3. **Drop the ball when the prop carries it.** The megaphone, the scorecard, the gift box, the calendar and the phone are drawn as the object. No ball holding it.
+4. **Balls are white** (#fbf7ec with ink dimples), never lime, never a colour.
+5. **Hats get a full ink outline.** One skin colour per sheet (peach). Arms stay down unless they do something.
+6. **Marks stay small.** Dots, pins and dimples are a hint, never a blob.
+7. Palette only: ink #0a0a0a, ball #fbf7ec, pink #ff4d8b (one pop per image at most), deep pink #d42a6b, ochre #e8b94a, gold #c99a30, coin #ffd45c, teal #1a3a3a, mint #a4d4c5, coral #ff6b5a, lavender #b8a4ed, peach #ffb084, blush #ffd6e5. The model's lime is snapped on export: mint for grass, cream for balls, ochre for coins and cups.
+8. Transparent background, SVG. The sky is cut out completely, including the pockets between arms and legs, so the dark theme's outline hugs the drawing. Gaps over grass or another object stay filled. Never flood-fill.
+9. One file for both themes. In the dark theme the app draws a thin cream outline around scenes and spots, like a sticker (a CSS drop-shadow filter, `.art-outline` in `styles.css`). Buddies, critters and game art sit on a colour backdrop and skip it. No dusk files, no recolouring.
+10. No text, no logos, no "Birdie Bank". The name is changing.
+11. Warm and a little retro in the look (old golf), modern buddies in the content (bucket hats, snapbacks, a cooler, a cart). No blazers, no country-club wealth.
+12. Funny like a friend. A losing face is rueful, never crushed. Jokes live in heroes and empty states, never on the Tab or on results where someone just lost money.
+13. Not kiddie, not casino. No treasure chests, confetti explosions, dice (except the Vegas sticker), chips, neon.
+
+## How the set was made (so the next one matches)
+
+Recraft Studio, model Recraft V4.1 Vector, the saved brand palette on, and three style references attached to every prompt: the banker sticker, the first-tee pick and the birdie-and-eagle pair (`overnight/illustration-run-2/trevor-pick-11.png`, `-1.png`, `-13.png`). The prompt describes only the subject, the bodies and the pose, plus "drawn in the same brush ink line and flat fills as the references" and the face rule. Two candidates per prompt, judged at full size, never from thumbnails. Exported as SVG and run through the export script (strip the canvas fill, split sheets, snap colours, crop), which is what `src/art/` holds now.
 
 ## The starter batch (make these first, in this order)
 

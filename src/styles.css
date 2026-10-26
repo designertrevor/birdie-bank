@@ -3823,6 +3823,11 @@ a.header-btn.rm-open { text-decoration: none; }
   :root:not([data-theme="light"]):not([data-theme="dark"]) .art-dark { display: inline; }
 }
 .art-icon { width: 1em; height: 1em; display: inline-block; vertical-align: -0.125em; }
+/* Scenes and spots keep one file: in the dark theme the app draws a thin cream outline around the drawing, like a sticker (Trevor, 2026-10-11). Buddies, critters and game art sit on a colour backdrop and skip it. */
+:root[data-theme="dark"] .art-outline { filter: drop-shadow(0 1.5px 0 #fbf7ec) drop-shadow(0 -1.5px 0 #fbf7ec) drop-shadow(1.5px 0 0 #fbf7ec) drop-shadow(-1.5px 0 0 #fbf7ec); }
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]):not([data-theme="dark"]) .art-outline { filter: drop-shadow(0 1.5px 0 #fbf7ec) drop-shadow(0 -1.5px 0 #fbf7ec) drop-shadow(1.5px 0 0 #fbf7ec) drop-shadow(-1.5px 0 0 #fbf7ec); }
+}
 
 /* The art sheet (?art): every drawing, labelled, in both themes */
 .art-sheet { max-width: 1120px; margin: 0 auto; padding: 0 20px 80px; color: var(--ink); }

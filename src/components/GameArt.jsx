@@ -284,7 +284,7 @@ export function GameArt({ game, tint = null, size = null, className = '' }) {
   return (
     <svg className={`game-art ${className}`.trim()} viewBox="0 0 64 64" width={size || undefined} height={size || undefined} aria-hidden="true" focusable="false">
       <rect width="64" height="64" rx="18" fill={bg} />
-      {file ? <ArtImage file={file} w={64} h={64} /> : <Scene />}
+      {file ? <ArtImage file={file} w={64} h={64} outline={false} /> : <Scene />}
     </svg>
   );
 }

@@ -23,6 +23,9 @@ const Smile = () => <path d="M26 45 Q32 50.5 38 45" {...round} />;
 const Grin = () => <path d="M25 45 Q32 53 39 45Z" fill={INK} />;
 
 /** Each buddy: the hat, then the face, drawn over the ball. */
+/** A hat or critter that only exists as an outside file (src/art): nothing to draw by hand until its file lands. */
+const FileOnly = () => null;
+
 const ART = {
   bucket: () => (
     <>
@@ -166,6 +169,55 @@ const ART = {
       <Cheeks /><Smile />
     </>
   ),
+  // Hats that landed as outside files on 2026-10-26 (round 4)
+  umbrella: () => ( // Umbrella hat
+    <FileOnly />
+  ),
+  trucker: () => ( // Trucker cap
+    <FileOnly />
+  ),
+  backwards: () => ( // Backwards cap
+    <FileOnly />
+  ),
+  fishing: () => ( // Fishing hat
+    <FileOnly />
+  ),
+  propeller: () => ( // Propeller beanie
+    <FileOnly />
+  ),
+  viking: () => ( // Viking helmet
+    <FileOnly />
+  ),
+  captain: () => ( // Captain’s hat
+    <FileOnly />
+  ),
+  tophat: () => ( // Top hat
+    <FileOnly />
+  ),
+  beret: () => ( // Beret
+    <FileOnly />
+  ),
+  bowler: () => ( // Bowler
+    <FileOnly />
+  ),
+  safari: () => ( // Safari helmet
+    <FileOnly />
+  ),
+  hardhat: () => ( // Hard hat
+    <FileOnly />
+  ),
+  chef: () => ( // Chef hat
+    <FileOnly />
+  ),
+  wizard: () => ( // Wizard hat
+    <FileOnly />
+  ),
+  flowers: () => ( // Flower crown
+    <FileOnly />
+  ),
+  cone: () => ( // Traffic cone
+    <FileOnly />
+  ),
 };
 
 /**
@@ -259,6 +311,31 @@ const CRITTERS = {
       <circle cx="41" cy="53" r="3.8" fill={BALL} stroke="rgba(10,10,10,.2)" strokeWidth="1" />
     </>
   ),
+  // Critters that landed as outside files on 2026-10-26 (round 4)
+  albatross: () => ( // Albatross
+    <FileOnly />
+  ),
+  sandbagger: () => ( // Sandbagger
+    <FileOnly />
+  ),
+  friedegg: () => ( // Fried egg
+    <FileOnly />
+  ),
+  gator: () => ( // Water hazard gator
+    <FileOnly />
+  ),
+  banana: () => ( // Banana ball
+    <FileOnly />
+  ),
+  wormburner: () => ( // Worm burner
+    <FileOnly />
+  ),
+  snowman: () => ( // Snowman
+    <FileOnly />
+  ),
+  turtle: () => ( // Slow play
+    <FileOnly />
+  ),
 };
 
 /**
@@ -269,7 +346,7 @@ export function BuddyFigure({ id, x = 0, y = 0, size = 64 }) {
   const Critter = CRITTERS[id];
   const Hat = ART[id] || ART.bucket;
   const file = fileFor(id);
-  return <g transform={`translate(${x} ${y}) scale(${size / 64})`}>{file ? <ArtImage file={file} w={64} h={64} /> : Critter ? <Critter /> : <><Ball /><Hat /></>}</g>;
+  return <g transform={`translate(${x} ${y}) scale(${size / 64})`}>{file ? <ArtImage file={file} w={64} h={64} outline={false} /> : Critter ? <Critter /> : <><Ball /><Hat /></>}</g>;
 }
 
 /** The outside drawing for a buddy (src/art/buddies/<id>.svg) or a critter (src/art/critters/<id>.svg), if one has landed. */
@@ -283,7 +360,7 @@ export function BuddyArt({ id, bg, className = '' }) {
   return (
     <svg className={`buddy-art ${className}`} viewBox="0 0 64 64" aria-hidden="true" focusable="false">
       <rect width="64" height="64" fill={backdropOf(bg).hex} />
-      {file ? <ArtImage file={file} w={64} h={64} /> : Critter ? <Critter /> : <><Ball /><Hat /></>}
+      {file ? <ArtImage file={file} w={64} h={64} outline={false} /> : Critter ? <Critter /> : <><Ball /><Hat /></>}
     </svg>
   );
 }
