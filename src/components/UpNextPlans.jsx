@@ -123,7 +123,7 @@ function MoreWays({ trip = false }) {
       <button className="un-go" onClick={() => nav.push('newRound', { ahead: true })}>
         <span className="row-main">
           <span className="un-go-title">Get a round going</span>
-          <span className="un-go-sub">Pick a day and ask the group. They answer from a link.</span>
+          <span className="un-go-sub">No day needed yet. Ask the group and pick it together.</span>
         </span>
         <Spot kind="calendar" size={76} plate={false} className="un-go-art" />
       </button>
