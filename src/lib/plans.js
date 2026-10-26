@@ -391,7 +391,8 @@ export function morningText(plan, link, settings, now = new Date()) {
 // `usualId` is the organizer's own saved usual, which means nothing on a friend's phone, and
 // `setup` (plan-setup.js) is keyed by the organizer's own player ids and holds handicap edits.
 // `teeSnooze` is the organizer putting off the tee time reminder until tomorrow (tee-reminders.js).
-const LOCAL_ONLY = ['code', 'host', 'answers', 'localMe', 'syncedAt', 'gone', 'unsent', 'metaUnsent', 'roundId', 'usualId', 'setup', 'rollIds', 'teeSnooze'];
+// `daysSent` is a friend having sent which days work on a plan with no day yet (plan-open.js).
+const LOCAL_ONLY = ['code', 'host', 'answers', 'localMe', 'syncedAt', 'gone', 'unsent', 'metaUnsent', 'roundId', 'usualId', 'setup', 'rollIds', 'teeSnooze', 'daysSent'];
 
 /** The shared part of a plan (what friends' phones read). */
 export function planMeta(plan) {

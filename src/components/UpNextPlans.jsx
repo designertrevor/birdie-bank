@@ -107,9 +107,10 @@ function OpenPlanCard({ plan }) {
       <div className="row-main">
         <div className="eyebrow">{ready ? `Ready to lock in ${shortDay(lead.iso)}` : 'No day yet'}</div>
         <div className="uc-title d">{plan.course?.name ? `Golf soon? · ${plan.course.name}` : 'Golf soon?'}</div>
-        <div className="uc-sub">{[countsLine(planCounts(plan)), lead && !ready ? `${shortDay(lead.iso)} leads` : null].filter(Boolean).join(' · ')}</div>
+        <div className="uc-sub">{countsLine(planCounts(plan))}</div>
+        {/* What's set, up for a vote or not yet: a detail still open just says its name */}
         <div className="uc-tags">
-          {tags.map(([k, s]) => <span key={k} className={`st-tag sm ${s.state}`}><span className="sr-only">{k}: {STATE_LABEL[s.state]}, </span>{s.state === 'not' ? `${k}: ${s.label}` : s.label}</span>)}
+          {tags.map(([k, s]) => <span key={k} className={`st-tag sm ${s.state}`}><span className="sr-only">{k}: {STATE_LABEL[s.state]}, </span>{s.state === 'not' ? k : s.label}</span>)}
         </div>
       </div>
       <span className={`who-status ${mine || 'none'}`}>{mine ? `You’re ${RSVP_LABEL[mine].toLowerCase()}` : 'Answer'}</span>

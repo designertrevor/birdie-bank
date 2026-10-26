@@ -232,11 +232,12 @@ function PlanBody({ plan: saved, standalone = false, onSkip }) {
   const lead = noDay ? leadingDay(plan) : null;
   const nudge = noDay && plan.host && planned ? lockNudge(plan) : null;
   const answered = !!mine?.status;
-  const asking = noDay && planned && !plan.host && (!answered || changing);
+  // Someone who added their own name from the link is in already: they still get asked which days
+  const asking = noDay && planned && !plan.host && (!answered || changing || (!plan.daysSent && mine.status !== 'out' && !mine.days?.length));
   const openVote = canVote && planned && (answered || plan.host || asking) ? () => setSheet('vote') : null;
   const rows = [
     ...(noDay ? [
-      { key: 'day', icon: 'calendar-blank', label: 'Day', s: states.day, sub: options.length ? `${options.length} day${options.length === 1 ? '' : 's'} so far${plan.when.part ? ` · ${PART_LABEL[plan.when.part].toLowerCase()}` : ''}` : 'Friends say when they can play', onOpen: planned && (answered || plan.host) ? () => setSheet('day') : null },
+      { key: 'day', icon: 'calendar-blank', label: 'Day', s: states.day, sub: options.length ? `${options.length} day${options.length === 1 ? '' : 's'} so far${plan.when.part ? ` · ${PART_LABEL[plan.when.part].toLowerCase()}` : ''}` : 'Friends say when they can', onOpen: planned && (answered || plan.host) ? () => setSheet('day') : null },
       { key: 'course', icon: 'map-pin', label: 'Course', s: states.course, onOpen: planned && plan.host ? () => setSheet('course') : null },
     ] : []),
     { key: 'game', icon: game?.icon || 'cards', label: noDay ? 'Game' : 'The game', s: states.game, onOpen: gameT.rows.length > 1 || sideT.length ? openVote : null, sub: onSides.length ? `With ${onSides.map(k => SIDE_GAMES[k].label).join(' and ')}` : null },
@@ -287,7 +288,7 @@ function PlanBody({ plan: saved, standalone = false, onSkip }) {
         )}
 
         {/* No day yet, a friend: in, maybe or can't, then which days, then Send (plan-open.js) */}
-        {asking && <FriendAnswer plan={plan} mine={mine} options={options} onSend={a => { answer(a); setChanging(false); }} onVote={canVote ? () => setSheet('vote') : null} />}
+        {asking && <FriendAnswer plan={plan} mine={mine} options={options} onSend={a => { answer(a); setChanging(false); update(s => { const p = s.plans?.[plan.id]; if (p) p.daysSent = true; }); }} onVote={canVote ? () => setSheet('vote') : null} />}
         {noDay && planned && !plan.host && answered && !changing && (
           <div className="pd-mine">
             <span className={`ps-status ${mine.status}`}>{mine.status === 'out' ? 'You can’t make it' : mine.status === 'maybe' ? 'You’re a maybe' : 'You’re in'}</span>

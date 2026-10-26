@@ -35,7 +35,7 @@ button.pd-row:active { background: var(--surface); }
 
 /* Who's in as seat tiles */
 .pd-seats { display: flex; flex-wrap: wrap; gap: 6px 4px; }
-.ps-cell { width: calc(25% - 3px); min-width: 0; }
+.ps-cell { width: calc(20% - 4px); min-width: 0; }
 .pd-seat { width: 100%; display: flex; flex-direction: column; align-items: center; gap: 3px; padding: 6px 2px; border: none; background: none; font: inherit; color: var(--ink); border-radius: 12px; }
 button.pd-seat { cursor: pointer; }
 button.pd-seat:active { background: var(--surface); }
@@ -70,7 +70,8 @@ button.pd-seat:active { background: var(--surface); }
 .pd-answer { margin: 8px 0 0; }
 .pd-answer .rsvp-row { padding-top: 6px; }
 .pd-q { margin: 14px 20px 2px; font-family: var(--display); font-weight: var(--display-weight); font-size: 22px; color: var(--ink); }
-.pd-answer .pd-help, .pd-answer .pd-days { margin-left: 16px; margin-right: 16px; }
+.pd-answer .pd-days { margin-left: 16px; margin-right: 16px; }
+.pd-answer .pd-help { margin: 2px 20px 8px; }
 .pd-answer-btns { display: flex; flex-direction: column; gap: 10px; margin: 16px 16px 4px; }
 .pd-vote-btn .opt { font-family: var(--body-font); font-weight: 500; font-size: 15px; color: var(--mute); }
 .pd-mine { display: flex; align-items: center; gap: 10px; margin: 12px 16px 0; padding: 12px 14px; border-radius: var(--r-card); box-shadow: var(--hair); background: var(--card); }
@@ -85,6 +86,7 @@ button.pd-seat:active { background: var(--surface); }
 /* Sheets */
 .pd-sheet { padding: 6px 16px 16px; display: flex; flex-direction: column; gap: 8px; }
 .pd-seg { margin: 4px 0; }
+.pd-seg .holes-btn { font-family: var(--body-font); font-size: 15px; font-weight: 700; padding-left: 6px; padding-right: 6px; white-space: nowrap; }
 .pd-help { margin: 2px 0 4px; font-size: 14px; line-height: 1.4; color: var(--mute); }
 .pd-sub-label { margin-top: 10px; font-size: 12px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: var(--mute); }
 .pd-done { margin-top: 10px; }
@@ -109,6 +111,7 @@ button.pd-seat:active { background: var(--surface); }
 /* Up next's card for a plan with no day yet */
 .upcoming-card.open-plan { background: var(--band-butter); }
 .uc-tags { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 8px; }
+.uc-tags .st-tag { max-width: 150px; }
 .upcoming-card.open-plan .st-tag.not { box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--ink) 20%, transparent); }
 
 /* Shared: the new look keeps buttons on these screens to its smaller radius */

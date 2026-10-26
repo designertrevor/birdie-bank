@@ -87,7 +87,7 @@ export function SeatTiles({ people, me, onTap, onAdd, addLabel = 'Ask more' }) {
         const tile = (
           <>
             <Avatar id={p.who} name={p.name} />
-            <span className="ps-name">{first(p.name)}{p.who === me ? ' (you)' : ''}</span>
+            <span className="ps-name">{p.who === me ? 'You' : first(p.name)}</span>
             <span className={`ps-status ${p.status || 'none'}`}>{p.status === 'in' ? 'In' : p.status === 'maybe' ? 'Maybe' : 'No answer'}</span>
           </>
         );
@@ -124,13 +124,13 @@ export function WhenSheet({ open, value, onDone, onClose }) {
   const soon = soonDays(new Date());
   const extra = [...(v.days || []), v.date].filter(d => d && !soon.includes(d));
   const days = [...new Set([...soon, ...extra])].sort();
-  const toggle = iso => {
-    if (v.mode === 'set') { setV({ ...v, date: v.date === iso ? null : iso }); return; }
-    const has = v.days.includes(iso);
-    if (!has && v.days.length >= MAX_DAY_OPTIONS) return;
-    setV({ ...v, days: has ? v.days.filter(d => d !== iso) : [...v.days, iso].sort() });
-  };
-  const add = iso => (v.mode === 'set' ? setV({ ...v, date: iso }) : setV({ ...v, days: [...new Set([...v.days, iso])].sort().slice(0, MAX_DAY_OPTIONS) }));
+  const toggle = iso => setV(x => {
+    if (x.mode === 'set') return { ...x, date: x.date === iso ? null : iso };
+    const has = x.days.includes(iso);
+    if (!has && x.days.length >= MAX_DAY_OPTIONS) return x;
+    return { ...x, days: has ? x.days.filter(d => d !== iso) : [...x.days, iso].sort() };
+  });
+  const add = iso => setV(x => (x.mode === 'set' ? { ...x, date: iso } : { ...x, days: [...new Set([...x.days, iso])].sort().slice(0, MAX_DAY_OPTIONS) }));
   const ok = v.mode === 'open' || (v.mode === 'set' ? !!v.date : v.days.length > 0);
   return (
     <Sheet open={open} onClose={onClose} title="When">
