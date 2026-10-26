@@ -20,7 +20,7 @@ import { usualIdFor } from '../lib/usuals.js';
 import { payFields, sendReminder } from '../lib/pay.js';
 import { shareLink, shareRound, syncConfigured } from '../lib/sync.js';
 import {
-  RSVPS, RSVP_LABEL, betLabel, betUnitLabel, cleanName, countsLine, daysUntil, inviteText, isoDate, morningText, nudgeAllText, nudgeText,
+  RSVPS, RSVP_LABEL, betLabel, betUnitLabel, cleanName, countsLine, daysFit, daysKept, daysUntil, inviteText, roomForADay, isoDate, morningText, nudgeAllText, nudgeText,
   dayLabel, movedPlanOf, planChoice, planCounts, planPeople, planRules, planSides, planStart, rollCallDefault, tally, tallySides, timeLabel,
 } from '../lib/plans.js';
 import { TeeTimeSection } from '../components/Reminders.jsx';
@@ -38,7 +38,7 @@ import { TalkSection } from '../components/Talk.jsx';
 import { planTalk, planThread } from '../lib/talk.js';
 import { talkCounts } from '../lib/talk-counts.js';
 import { TalkCount } from '../components/TalkCount.jsx';
-import { PART_LABEL, dayOptions, detailStates, leadingDay, lockNudge, lockText, normalizePlan, shortDay, waitingLine, whenLine } from '../lib/plan-open.js';
+import { MAX_DAY_OPTIONS, PART_LABEL, dayOptions, detailStates, leadingDay, lockNudge, lockText, normalizePlan, offeredDays, shortDay, waitingLine, whenLine } from '../lib/plan-open.js';
 import { DayTiles, DetailRows, LockSheet, SeatTiles, WhereSheet } from './plan/PlanParts.jsx';
 import { useTalkSync } from '../lib/talk-sync.js';
 import { PlanChallenges } from '../components/Challenges.jsx';
@@ -150,6 +150,16 @@ function PlanBody({ plan: saved, standalone = false, onSkip }) {
       if (patch.status === 'in') notifyMoment('joined');
     }
   });
+  // A vote holds 32 characters, days and all (plans.js daysFit). The day pickers stop at what fits;
+  // a longer game or side vote picked after can still leave too little room, so keep the soonest and say so
+  const withDays = patch => {
+    const next = { ...mine, ...patch };
+    if (!noDay || !next.days?.length || daysFit(next)) return patch;
+    const kept = daysKept(next);
+    showToast(`Kept your first ${kept.length} day${kept.length === 1 ? '' : 's'}. That’s as many as one answer holds`);
+    return { ...patch, days: kept };
+  };
+  const vote = patch => answer(withDays(patch));
   const link = planShareLink(plan);
 
   // The group link: share the plan first if it hasn't been yet
@@ -202,10 +212,10 @@ function PlanBody({ plan: saved, standalone = false, onSkip }) {
     if (now.code) send(lockText(now, planShareLink(now)), 'Copied. Paste it in your group text');
     else showToast(`Locked in for ${shortDay(iso)}`);
   };
-  // A day added by the organizer goes on offer for everyone; anyone's own pick is their answer
+  // A day added by the organizer goes on offer for everyone, up to MAX_DAY_OPTIONS; anyone's own pick is their answer
   const saveDays = (list, added = []) => {
-    answer({ days: list });
-    if (plan.host && added.length) editPlan(plan.id, p => { const w = normalizePlan(p).when; p.when = { ...w, mode: 'options', days: [...new Set([...w.days, ...added])].sort() }; });
+    vote({ days: list });
+    if (plan.host && added.length) editPlan(plan.id, p => { const w = normalizePlan(p).when; p.when = { ...w, mode: 'options', days: offeredDays(w.days, added) }; });
   };
   const setCourse = c => {
     setSheet(null);
@@ -288,7 +298,7 @@ function PlanBody({ plan: saved, standalone = false, onSkip }) {
         )}
 
         {/* No day yet, a friend: in, maybe or can't, then which days, then Send (plan-open.js) */}
-        {asking && <FriendAnswer plan={plan} mine={mine} options={options} onSend={a => { answer(a); setChanging(false); update(s => { const p = s.plans?.[plan.id]; if (p) p.daysSent = true; }); }} onVote={canVote ? () => setSheet('vote') : null} />}
+        {asking && <FriendAnswer plan={plan} mine={mine} options={options} onSend={a => { vote(a); setChanging(false); update(s => { const p = s.plans?.[plan.id]; if (p) p.daysSent = true; }); }} onVote={canVote ? () => setSheet('vote') : null} />}
         {noDay && planned && !plan.host && answered && !changing && (
           <div className="pd-mine">
             <span className={`ps-status ${mine.status}`}>{mine.status === 'out' ? 'You can’t make it' : mine.status === 'maybe' ? 'You’re a maybe' : 'You’re in'}</span>
@@ -412,11 +422,11 @@ function PlanBody({ plan: saved, standalone = false, onSkip }) {
       {/* The vote on the game, the bet and the side games, from the rows or the friend's optional button */}
       <Sheet open={sheet === 'vote'} onClose={() => setSheet(null)} title="The game and the bet">
         <div className="pd-sheet">
-          <VoteBlock label="Your vote: the game" kind="game" t={gameT} mineValue={mine?.game} onVote={v => answer({ game: v })}
+          <VoteBlock label="Your vote: the game" kind="game" t={gameT} mineValue={mine?.game} onVote={v => vote({ game: v })}
             render={g => GAMES[g]?.name || g} hideSuggested={plan.groupPicks.game} />
           <VoteBlock label={manyGames ? `Your vote: the bet for ${GAMES[betGame]?.name || 'the game'}` : 'Your vote: the bet'} kind="bet" t={betT} mineValue={myBet}
             onVote={v => answer({ bet: v, betGame: v == null ? null : betGame })} render={b => unit(betGame, b)} hideSuggested={plan.groupPicks.bet} />
-          <SideVote plan={plan} rows={sideT} rules={rules} mine={mine?.sides || {}} onVote={(k, v) => answer({ sides: { ...(mine?.sides || {}), [k]: v } })} />
+          <SideVote plan={plan} rows={sideT} rules={rules} mine={mine?.sides || {}} onVote={(k, v) => vote({ sides: { ...(mine?.sides || {}), [k]: v } })} />
           {!answered && <p className="field-help">Your vote goes with your answer when you send it.</p>}
           <button type="button" className="full-btn pd-done" onClick={() => setSheet(null)}>Done</button>
         </div>
@@ -478,7 +488,7 @@ function FriendAnswer({ plan, mine, options, onSend, onVote }) {
   const [days, setDays] = useState(() => mine?.days || []);
   const shown = [...new Set([...options.map(o => o.iso), ...days])].sort();
   const counts = Object.fromEntries(options.map(o => [o.iso, o.votes]));
-  const toggle = iso => setDays(d => (d.includes(iso) ? d.filter(x => x !== iso) : [...d, iso].sort()));
+  const { toggle, add, full } = dayTicks(mine, days, setDays);
   const labels = { in: 'I’m in', maybe: 'Maybe', out: 'Can’t' };
   return (
     <div className="pd-answer">
@@ -493,7 +503,7 @@ function FriendAnswer({ plan, mine, options, onSend, onVote }) {
         <>
           <h2 className="pd-q">Which days work?</h2>
           <p className="pd-help">{shown.length ? `Tick every day you could play${plan.when.part ? ` (${PART_LABEL[plan.when.part].toLowerCase()})` : ''}. Not here? Add one.` : 'No days on the list yet. Add the days you could play.'}</p>
-          <DayTiles days={shown} on={days} onToggle={toggle} onAdd={iso => setDays(d => [...new Set([...d, iso])].sort())} addLabel="Add" counts={counts} label="Days that work for you" />
+          <DayTiles days={shown} on={days} onToggle={toggle} onAdd={add} addLabel="Add" counts={counts} label="Days that work for you" full={full} />
         </>
       )}
       <div className="pd-answer-btns">
@@ -504,6 +514,26 @@ function FriendAnswer({ plan, mine, options, onSend, onVote }) {
   );
 }
 
+const FULL_NOTE = 'That’s as many days as one answer holds';
+
+/**
+ * Ticking days for your answer, stopping at what fits in one vote next to your game and side votes
+ * (plans.js daysFit), so no ticked day is cut when it's saved. `full` is the note once no more fit.
+ */
+function dayTicks(mine, days, setDays) {
+  const fits = iso => daysFit({ ...mine, days: [...days, iso] });
+  const toggle = iso => {
+    if (days.includes(iso)) setDays(days.filter(x => x !== iso));
+    else if (fits(iso)) setDays([...days, iso].sort());
+  };
+  const add = iso => {
+    if (days.includes(iso) || !fits(iso)) return false;
+    setDays([...days, iso].sort());
+    return true;
+  };
+  return { toggle, add, full: roomForADay({ ...mine, days }) ? null : FULL_NOTE };
+}
+
 /** Which days work for you on a plan with no day yet, with how many can make each; anyone can add a day. */
 function DaySheet({ open, plan, mine, options, host, onSave, onClose }) {
   const [days, setDays] = useState(() => mine?.days || []);
@@ -512,12 +542,15 @@ function DaySheet({ open, plan, mine, options, host, onSave, onClose }) {
   if (open !== was) { setWas(open); if (open) { setDays(mine?.days || []); setAdded([]); } }
   const shown = [...new Set([...options.map(o => o.iso), ...days])].sort();
   const counts = Object.fromEntries(options.map(o => [o.iso, o.votes]));
-  const toggle = iso => setDays(d => (d.includes(iso) ? d.filter(x => x !== iso) : [...d, iso].sort()));
+  const { toggle, add, full } = dayTicks(mine, days, setDays);
+  // The organizer's added days go on offer for everyone, so they stop at MAX_DAY_OPTIONS on offer
+  const offerFull = host && offeredDays(plan.when.days, added).length >= MAX_DAY_OPTIONS ? `Up to ${MAX_DAY_OPTIONS} days on offer` : null;
   return (
     <Sheet open={open} onClose={onClose} title="Which days work?">
       <div className="pd-sheet">
         <p className="pd-help">{host ? 'Tick the days you can play. A day you add goes on the list for everyone.' : 'Tick the days you can play, or add one.'}{plan.when.part ? ` ${PART_LABEL[plan.when.part]}s.` : ''}</p>
-        <DayTiles days={shown} on={days} onToggle={toggle} onAdd={iso => { setDays(d => [...new Set([...d, iso])].sort()); setAdded(a => [...a, iso]); }} addLabel="Add" counts={counts} label="Days that work for you" />
+        <DayTiles days={shown} on={days} onToggle={toggle} onAdd={iso => { if (add(iso)) setAdded(a => [...a, iso]); }}
+          addLabel="Add" counts={counts} label="Days that work for you" full={full} addFull={offerFull} />
         {options.filter(o => o.votes).map(o => (
           <p key={o.iso} className="pd-who-day"><b>{shortDay(o.iso)}</b> {[o.ins.map(first).join(', '), o.maybes.length ? `${o.maybes.map(first).join(', ')} maybe` : ''].filter(Boolean).join(' · ')}</p>
         ))}

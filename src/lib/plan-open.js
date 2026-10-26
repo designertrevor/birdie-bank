@@ -154,6 +154,17 @@ export function dayOptions(plan, now = new Date()) {
   return [...map.values()].sort((a, b) => a.iso.localeCompare(b.iso));
 }
 
+/**
+ * The days on offer once the organizer adds `added`: today on, soonest first, at most
+ * MAX_DAY_OPTIONS. Days already on offer keep their place; added ones fill what's left.
+ */
+export function offeredDays(days, added = [], now = new Date()) {
+  const ahead = list => daySet(list).filter(d => (daysUntil(d, now) ?? -1) >= 0);
+  const have = ahead(days).slice(0, MAX_DAY_OPTIONS);
+  const extra = ahead(added).filter(d => !have.includes(d));
+  return daySet([...have, ...extra.slice(0, MAX_DAY_OPTIONS - have.length)]);
+}
+
 /** The day most people can make: most votes, then most who are in, then the soonest. Null before anyone picks one. */
 export function leadingDay(plan, now = new Date()) {
   let best = null;

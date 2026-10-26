@@ -2,9 +2,9 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {
   ASK_DEFAULT, askText, codeDay, dayCode, dayOptions, decodeDays, detailStates, encodeDays, leadingDay, lockNudge, lockText,
-  normalizePlan, shortDay, soonDays, waitingLine, whenLine,
+  MAX_DAY_OPTIONS, normalizePlan, offeredDays, shortDay, soonDays, waitingLine, whenLine,
 } from './plan-open.js';
-import { answersFrom, gameVoteChoice, inviteText, newPlan, nudgeText, parseGameVote, planChoice, planPeople, tally, upcomingPlans } from './plans.js';
+import { answersFrom, daysFit, daysKept, gameVoteChoice, inviteText, newPlan, nudgeText, parseGameVote, planChoice, planPeople, roomForADay, tally, upcomingPlans } from './plans.js';
 import { cleanAsk, groupGames, newAskPlan } from './plan-ask.js';
 
 const NOW = new Date(2026, 9, 20, 9); // Tue Oct 20, 2026
@@ -46,6 +46,47 @@ test('a game vote carries the days after a second ~, and fits the 32 characters 
   const back = answersFrom([{ who: 'dave', name: 'Dave', status: 'in' }], [{ who: 'dave', kind: 'game', choice: `~~${enc}` }]);
   assert.deepEqual(back.dave.days, days);
   assert.deepEqual(planPeople({ people: [{ id: 'dave', name: 'Dave' }], answers: back })[0].days, days);
+});
+
+test('day ticks stop at what one vote holds, so no ticked day is cut (long and short game ids)', () => {
+  const WEEKENDS = ['2026-10-24', '2026-10-25', '2026-10-31', '2026-11-01', '2026-11-07', '2026-11-08', '2026-11-14', '2026-11-15', '2026-11-21', '2026-11-22'];
+  const most = a => { let n = 0; while (n < WEEKENDS.length && daysFit({ ...a, days: WEEKENDS.slice(0, n + 1) })) n++; return n; };
+  // "stableford~~" leaves 20 characters: seven days of "8f." fit, the eighth doesn't
+  assert.equal(most({ game: 'stableford' }), 7);
+  assert.equal(gameVoteChoice({ game: 'stableford', days: WEEKENDS.slice(0, 7) }).length, 32);
+  assert.equal(roomForADay({ game: 'stableford', days: WEEKENDS.slice(0, 6) }, NOW), true);
+  assert.equal(roomForADay({ game: 'stableford', days: WEEKENDS.slice(0, 7) }, NOW), false);
+  // The review's repro: eight ticked on a Stableford vote would come back as seven
+  assert.equal(daysFit({ game: 'stableford', days: WEEKENDS.slice(0, 8) }), false);
+  assert.deepEqual(daysKept({ game: 'stableford', days: WEEKENDS.slice(0, 8) }), WEEKENDS.slice(0, 7));
+  assert.deepEqual(parseGameVote(gameVoteChoice({ game: 'stableford', days: WEEKENDS.slice(0, 7) })).days, WEEKENDS.slice(0, 7));
+  // Short ids hold more: Skins eight, BBB and no game vote nine, and every one reads back whole
+  assert.equal(most({ game: 'skins' }), 8);
+  assert.equal(most({ game: 'bbb' }), 9);
+  assert.equal(most({}), 10);
+  for (const game of ['skins', 'bbb']) {
+    const n = most({ game });
+    assert.deepEqual(parseGameVote(gameVoteChoice({ game, days: WEEKENDS.slice(0, n) })).days, WEEKENDS.slice(0, n));
+    assert.equal(roomForADay({ game, days: WEEKENDS.slice(0, n - 1) }, NOW), true);
+    assert.equal(roomForADay({ game, days: WEEKENDS.slice(0, n) }, NOW), false);
+  }
+  // Side game votes take room too, and the same count drives the "full" note
+  const sides = { game: 'stableford', sides: { skins: true, dots: false } };
+  assert.equal(most(sides), 3);
+  assert.equal(roomForADay({ ...sides, days: WEEKENDS.slice(0, 3) }, NOW), false);
+  // Nothing ticked always fits; a duplicate doesn't take room twice
+  assert.equal(daysFit({ game: 'stableford', days: [] }), true);
+  assert.equal(daysFit({ game: 'stableford', days: [...WEEKENDS.slice(0, 7), WEEKENDS[0]] }), true);
+});
+
+test('days on offer: the organizer adds up to MAX_DAY_OPTIONS, today on, the ones offered first keep their place', () => {
+  const six = ['2026-10-24', '2026-10-25', '2026-10-31', '2026-11-01', '2026-11-07', '2026-11-08'];
+  assert.equal(MAX_DAY_OPTIONS, 6);
+  assert.deepEqual(offeredDays(six.slice(0, 4), ['2026-11-07', '2026-11-08', '2026-11-14'], NOW), six);
+  assert.deepEqual(offeredDays(six, ['2026-10-21'], NOW), six);
+  // A day already on offer, a past one, or junk adds nothing
+  assert.deepEqual(offeredDays(['2026-10-24'], ['2026-10-24', '2026-10-19', 'junk'], NOW), ['2026-10-24']);
+  assert.deepEqual(offeredDays(['2026-10-18', '2026-10-24'], [], NOW), ['2026-10-24']);
 });
 
 // --------------------------- the normalizer --------------------------------
