@@ -39,9 +39,9 @@ export function OverviewStep({ rows, passDone, next, ready, again = null, onAgai
           <p className="ov-lede">{passDone ? 'Tap any line to change it.' : 'Pick the game first. The rest follows in order, then comes back here.'}</p>
         </div>
         {hints}
-        <div className="ov-list" role="list">
+        <div className="ov-list">
           {rows.map(r => (
-            <button key={r.key} role="listitem" className={`ov-row ${r.state}`} disabled={!r.open} onClick={() => onOpen(r.step)}
+            <button key={r.key} className={`ov-row ${r.state}`} disabled={!r.open} onClick={() => onOpen(r.step)}
               aria-label={`${r.label}: ${r.value || 'not set yet'}${r.note ? `. ${r.note}` : ''}. ${r.state === 'todo' ? 'Pick' : 'Change'}`}>
               <span className="ov-main">
                 <span className="ov-label">{r.label}</span>

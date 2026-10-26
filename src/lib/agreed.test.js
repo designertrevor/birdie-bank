@@ -2,7 +2,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { createRound, changeBets, gameResults } from './round.js';
-import { agreementItems, changeLine, houseRulesFor, lockAgreement, noteChanges, showFirstTee, pressesText } from './agreed.js';
+import { agreementItems, changeLine, houseRulesFor, lockAgreement, noteChanges, showFirstTee, pressesText, teeRules } from './agreed.js';
 
 const course = { id: 'f', name: 'Flat', city: 'T', tees: [], holes: Array.from({ length: 9 }, (_, i) => ({ par: 4, hdcp: i + 1 })) };
 const P = ['a', 'b', 'c'].map((id, i) => ({ id, name: ['Ann Lee', 'Bo Ray', 'Cy Doe'][i], index: 0 }));
@@ -151,4 +151,19 @@ test('a scramble card lists each team’s strokes, not each player’s', () => {
   assert.equal(it[`strokes:${r.teams[0].id}`].text, 'scratch');
   assert.equal(it[`strokes:${r.teams[1].id}`].text, '2 strokes');
   assert.equal(it[`strokes:${r.teams[1].id}`].label, r.teams[1].name);
+});
+
+test('Round ready\'s short "What we agreed": the house rules on, game names when there are several, and the rest counted', () => {
+  const one = mk('skins');
+  assert.deepEqual(teeRules(one), { lines: ['Carryovers', 'A carry left after the last hole goes unclaimed'], more: 0 });
+  const two = mk('nassau');
+  two.sideGames = [{ game: 'skins', settings: { ...SETTINGS.skins, canadian: true } }];
+  const t = teeRules(two, 2);
+  assert.equal(t.lines.length, 2);
+  assert.match(t.lines[0], /^Nassau: Press at the turn$/);
+  assert.equal(t.more, 2); // two shown, two more (the side skins' rules) on the first tee card
+  // Nothing on: no lines
+  const bare = mk('skins');
+  bare.settings.skins.carryover = false;
+  assert.deepEqual(teeRules(bare), { lines: [], more: 0 });
 });

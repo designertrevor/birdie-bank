@@ -217,7 +217,7 @@ export default function NewRound({ rematch, fromPlan, present, edit = null, ahea
       {step === OVERVIEW && hub && (
         <OverviewStep rows={rows} passDone={passDone} next={nextStep(rows)} ready={canCreate(rows)} again={passDone ? null : usual} onAgain={onAgain}
           onOpen={openStep} onNext={() => openStep(nextStep(rows) ?? 3)} onCreate={() => { setStageDir('push'); start(); }}
-          onLater={laterFromOverview} laterOk={!!game} hints={<>{lostHint}{missingHint}</>} tripRow={tripRow} />
+          onLater={laterFromOverview} laterOk={!!game} hints={<>{lostHint}{missingHint}</>} tripRow={passDone ? tripRow : null} />
       )}
       {step === 0 && <GameStep usual={null} onUsual={repeatUsual} onPickUsual={planning ? planUsual : pickUsual} planning={planning} onPlan={fromPlan ? null : planIt}
         game={game} setGame={pickGame} onNext={() => (planning ? setStep(1) : advance(0))} nextLabel={opened ? 'Done' : null} />}

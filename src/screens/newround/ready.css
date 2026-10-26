@@ -1,0 +1,26 @@
+/* Round ready, trimmed (ReadyStep.jsx, Layout Lab A): a smaller scene so the summary, the invite
+   and Tee off fit together, what's on the line heading the card next to the game art, and the
+   short "What we agreed" (Layout Lab C) closing the card. */
+.ready-hero { padding-bottom: 10px; }
+.ready-hero .ready-crew { width: 150px; height: 150px; margin: -30px 0 -26px; }
+.ready-hero .ready-title { font-family: var(--display); font-weight: var(--display-weight); font-size: 26px; }
+.ready-card { border-radius: var(--r-card); padding-top: 14px; }
+.ready-head { display: flex; align-items: center; gap: 12px; padding-bottom: 10px; border-bottom: 1px solid var(--line-soft); }
+.ready-card.themed .ready-head, .ready-card.themed .ready-agreed { border-color: rgba(10,10,10,.08); }
+.ready-head .ready-games { padding: 0; flex-shrink: 0; }
+.ready-head .ready-art { width: 44px; height: 44px; border-radius: 13px; }
+.ready-head .ready-art.side { width: 32px; height: 32px; border-radius: 10px; }
+.ready-stake { display: flex; flex-direction: column; gap: 1px; min-width: 0; }
+.ready-stake b { font-family: var(--display); font-weight: var(--money-weight); font-size: 20px; line-height: 1.2; color: var(--ink); }
+.ready-k { font-size: 12px; font-weight: 600; letter-spacing: .02em; color: var(--mute); }
+
+.ready-agreed { padding: 12px 0 10px; }
+.ready-agreed ul { list-style: none; margin: 6px 0 0; padding: 0; display: flex; flex-direction: column; gap: 4px; }
+.ready-agreed li { display: flex; align-items: baseline; gap: 8px; font-size: 14px; line-height: 1.4; color: var(--ink); }
+.ready-agreed li i { color: var(--win); font-size: 13px; flex-shrink: 0; }
+.ready-agreed-none { margin: 6px 0 0; font-size: 14px; color: var(--ink); }
+.ready-agreed-more { margin: 6px 0 0; font-size: 12.5px; line-height: 1.4; color: var(--mute); }
+:root[data-theme="dark"] .ready-card.themed .ready-head, :root[data-theme="dark"] .ready-card.themed .ready-agreed { border-color: var(--line-soft); }
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) .ready-card.themed .ready-head, :root:not([data-theme="light"]) .ready-card.themed .ready-agreed { border-color: var(--line-soft); }
+}

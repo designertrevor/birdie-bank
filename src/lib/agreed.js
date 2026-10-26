@@ -249,6 +249,17 @@ export function agreementItems(round, choices = round.agreed) {
   return items;
 }
 
+/**
+ * The house rules that are on, for Round ready's short "What we agreed" (newround/ReadyStep.jsx):
+ * { lines, more }, at most `max` lines (each game's name in front when there's more than one game)
+ * and how many more the first tee card lists. The full card, with strokes and the calls, is FirstTeeSheet.
+ */
+export function teeRules(round, max = 4) {
+  const one = gameKeys(round).length === 1;
+  const on = agreementItems(round, { gimmes: 'none', mulligans: 'none' }).filter(x => x.group === 'rules' && x.on).map(x => (one ? x.text : `${x.label}: ${x.text}`));
+  return { lines: on.slice(0, max), more: Math.max(0, on.length - max) };
+}
+
 /** Whether the rules card is locked in. */
 export function isLocked(round) {
   return !!round?.agreed?.at;
