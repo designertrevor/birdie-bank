@@ -15,8 +15,8 @@ import { ASK_MS, clockText } from '../../lib/keeper.js';
 import { useNav } from '../../lib/nav.js';
 import { CardBar, MoneyBar } from './MoneyBar.jsx';
 
-/** The header, the line that shows how far through the round, and the money bar (or the Big Game's board, or the card). */
-export function PlayHeader({ round, idx, hole, game, solo, theme, preview, onLive, onMenu }) {
+/** The header, the line that shows how far through the round, and the money strip (or the Big Game's board, or the card). */
+export function PlayHeader({ round, idx, hole, game, solo, theme, preview, onLive, onMenu, noMoney = false }) {
   const nav = useNav();
   return (
     <>
@@ -31,7 +31,8 @@ export function PlayHeader({ round, idx, hole, game, solo, theme, preview, onLiv
     {/* How far through the round, as a line under the header (the words above say it for screen readers) */}
     <div className="play-track" aria-hidden="true"><span style={{ transform: `scaleX(${(idx + 1) / round.holes.length})` }} /></div>
     {/* A Big Game's group round with no money of its own shows the game across every group instead */}
-    {solo ? <CardBar round={round} /> : round.trip?.format === BIG_FORMAT && !ownMoney(round) ? <BigBar round={round} /> : <MoneyBar round={round} hole={hole} preview={preview} art={theme ? game : null} />}
+    {/* The live money view (a phone watching the round) has the race instead, so no strip over it */}
+    {noMoney ? null : solo ? <CardBar round={round} /> : round.trip?.format === BIG_FORMAT && !ownMoney(round) ? <BigBar round={round} /> : <MoneyBar round={round} hole={hole} preview={preview} art={theme ? game : null} />}
     {round.trip?.format === BIG_FORMAT && ownMoney(round) && (
       <button className="big-link" onClick={() => nav.push('bigGame', { id: round.trip.id })}><Icon name="users-four" fill /> {round.trip.name}: the board across every group <Icon name="caret-right" /></button>
     )}

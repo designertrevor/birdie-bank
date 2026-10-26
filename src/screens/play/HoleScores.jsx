@@ -60,7 +60,7 @@ export function HoleScores({ round, main, hole, game, solo, editable, sharedLive
               </div>
             </div>
             <div className="score-ctrl">
-              <span className={`sc-num ${v == null ? 'untouched' : ''}`}>
+              <span className={`sc-num pc-num ${v == null ? 'untouched' : ''}`}>
                 <span className="sr-only">{p.name} </span>{v == null ? <><span aria-hidden="true">–</span><span className="sr-only">no score yet</span></> : v === 'X' ? pickupGross(hole.par, st) : v}
               </span>
             </div>

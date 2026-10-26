@@ -28,7 +28,6 @@
   background: var(--card); box-shadow: var(--hair); font-size: 13px; font-weight: 700; color: var(--ink);
 }
 .hole-line:active .hl-card { transform: scale(.96); }
-.play.themed .hole-line .hl-no { color: var(--gt-ink, var(--ink)); }
 
 /* ---------- The money strip: one line of names and amounts ---------- */
 .money-strip {
@@ -38,6 +37,11 @@
 }
 .money-strip:active { transform: scale(.985); }
 .money-strip.themed { background: var(--gt-soft, var(--card)); }
+/* In the dark the theme's pastel would sit under light text: a tint of the game's colour on the card instead */
+:root[data-theme="dark"] .money-strip.themed { background: color-mix(in srgb, var(--gt) 14%, var(--card)); }
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) .money-strip.themed { background: color-mix(in srgb, var(--gt) 14%, var(--card)); }
+}
 .money-strip .ms-art { width: 22px; height: 22px; flex: none; }
 .ms-items { flex: 1; min-width: 0; display: grid; grid-auto-flow: column; grid-auto-columns: minmax(0, 1fr); gap: 4px; }
 .ms-item { display: flex; flex-direction: column; align-items: center; min-width: 0; line-height: 1.15; }

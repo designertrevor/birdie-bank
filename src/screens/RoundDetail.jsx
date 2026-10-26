@@ -21,6 +21,7 @@ import { bigRoundResults } from '../lib/big-money.js';
 import { gamesLine } from '../lib/side-games.js';
 import { betStretchLine } from '../lib/stakes.js';
 import { teamLineText } from '../lib/reveal.js';
+import './results.css';
 import { gameTheme } from '../lib/game-theme.js';
 import { ByGameTable } from '../components/SideGames.jsx';
 import { accountsEnabled, useAccount } from '../lib/cloud.js';
@@ -82,6 +83,8 @@ export default function RoundDetail({ id, celebrate }) {
   const [revealSeen, setRevealSeen] = useState(() => celebrate && finaleStage.get(id)?.at === round?.finishedAt);
   // Share from the saved round opens the same results image, and comes back here after
   const [shareFrom, setShareFrom] = useState(null);
+  // ...and Pay or mark paid on it opens Settle up, which comes back here too
+  const [settleFrom, setSettleFrom] = useState(null);
   const faces = useGroupAvatars(round?.players);
   // Under the standings and who pays: the scorecard, the trash talk, or the game-by-game detail
   const [view, setView] = useState('card');
@@ -154,6 +157,8 @@ export default function RoundDetail({ id, celebrate }) {
     </button>
   );
   const done = () => { finaleStage.delete(id); nav.reset('history'); };
+  // Three or more with a winner: the top three on a podium, in the winner's block
+  const podium = !solo && res.standings.length >= 3 && !allSquare && !(res.big && !res.big.final);
   // Who left and which holes didn't count, said plainly so nobody wonders where the money went
   const notes = [...roundNotes(round), ...(justPlayingNote(round) ? [{ kind: 'casual', text: justPlayingNote(round) }] : [])];
   const notesEl = notes.length > 0 && (
@@ -170,7 +175,9 @@ export default function RoundDetail({ id, celebrate }) {
       <Screen key={stage} className="finale-stage">
         {stage === 'reveal' && casualMe && <NiceRound round={round} me={meId} onDetail={() => { setRevealSeen(true); setStage('detail'); }} onDone={done} />}
         {stage === 'reveal' && !casualMe && <Reveal round={round} res={res} instant={revealSeen} onNext={() => { setRevealSeen(true); setStage(ownSettle ? 'settle' : 'share'); }} onDetail={() => { setRevealSeen(true); setStage('detail'); }} extra={<>{round.trip?.id && <div style={{ marginTop: 12 }}><TripRoundNote round={round} /></div>}{notesEl}{saveRow && <div style={{ marginTop: 12 }}>{saveRow}</div>}</>} />}
-        {stage === 'settle' && <SettleUp round={round} res={tab} onBack={() => setStage('reveal')} onNext={() => setStage('share')} />}
+        {stage === 'settle' && (settleFrom === 'detail'
+          ? <SettleUp round={round} res={tab} onBack={() => setStage('detail')} onNext={() => { setShareFrom('detail'); setStage('share'); }} />
+          : <SettleUp round={round} res={tab} onBack={() => setStage('reveal')} onNext={() => setStage('share')} />)}
         {stage === 'share' && (shareFrom === 'detail'
           ? <ShareCard round={round} res={res} onBack={() => setStage('detail')} onDone={() => setStage('detail')} doneLabel="Done" />
           : <ShareCard round={round} res={res} onBack={() => setStage(ownSettle ? 'settle' : 'reveal')} onDone={done} />)}
@@ -204,40 +211,25 @@ export default function RoundDetail({ id, celebrate }) {
             {cardFromLine(round) && <div className="me-line">{cardFromLine(round)}</div>}
           </div>
         ) : (
-        <div className="winner-hero" ref={hero}>
-          {/* The winner's buddy in the crown; a tie or all square shows the group instead */}
-          {!allSquare && !tie && faces.get(top.id) && !(res.big && !res.big.final)
-            ? <CrownedFace model={faces.get(top.id)} size={92} />
+        // Layout Lab A: the crowned winner and the podium as one block, then who pays who. With three or
+        // more and a winner the podium carries the crown; otherwise the crowned face (or the group) does
+        <div className={`results-a ${podium ? 'with-podium' : ''}`} ref={hero} style={{ '--ra-tint': gameTheme(round.game).soft, '--ra-strong': gameTheme(round.game).tint }}>
+          {!podium && (!allSquare && !tie && faces.get(top.id) && !(res.big && !res.big.final)
+            ? <CrownedFace model={faces.get(top.id)} size={84} />
             : allSquare || tie
-              ? <Spot kind={allSquare ? 'highfive' : 'crowd'} ids={heroBuddies} size={128} className="hero-spot" plate={false} />
-              : <Icon name="crown" fill className="crown" />}
-          <div className="wn">{heroTitle}</div>
-          <div className="wa">{heroAmt}</div>
-          <div className="ws">{round.course.name} · {roundDate(round)} · {gameLabel(round)} · {played === round.holes.length ? `${played} holes` : `${played} of ${round.holes.length} holes`}</div>
+              ? <Spot kind={allSquare ? 'highfive' : 'crowd'} ids={heroBuddies} size={120} className="hero-spot" plate={false} />
+              : <Icon name="crown" fill className="crown" />)}
+          {!allSquare && !(res.big && !res.big.final) && <div className="ra-eyebrow"><Icon name="crown-simple" fill /> {tie ? 'Top of the table' : 'Winner'}</div>}
+          <div className="ra-title d">{heroTitle}</div>
+          <div className={`ra-amt ${allSquare || (res.big && !res.big.final) ? 'zero' : ''}`}>{heroAmt}</div>
+          <div className="ra-sub">{round.course.name} · {roundDate(round)} · {gameLabel(round)} · {played === round.holes.length ? `${played} holes` : `${played} of ${round.holes.length} holes`}</div>
           {meRow && meRow.id !== top.id && !allSquare && <div className="me-line">You: {fmt(meRow.amount, { sign: true })}</div>}
           {nice && <div className="me-line">You were just playing: {nice.score} ({nice.toPar})</div>}
+          {podium && <Podium standings={res.standings} faces={faces} fmt={fmt} tint={gameTheme(round.game).tint} />}
         </div>
         )}
 
-        {round.trip?.id && <TripRoundNote round={round} />}
-        {notesEl}
-        {saveRow}
-
         {!solo && <>
-        <div className="sec-label">Standings</div>
-        {/* Three or more with a winner: the top three on a podium, then everyone in one list */}
-        {res.standings.length >= 3 && !allSquare && !(res.big && !res.big.final) && <Podium standings={res.standings} faces={faces} fmt={fmt} tint={gameTheme(round.game).tint} />}
-        <div className="stand-group">
-          {res.standings.map((p, i) => (
-            <div key={p.id} className="stand-line" data-testid="standing">
-              <div className="sr">{placeLabel(res.standings, i)}</div>
-              {faces.get(p.id) && <AvatarArt model={faces.get(p.id)} size="sm" />}
-              <div className="sn">{p.name}{strokesNote(p)}{res.detail.byGame && <span className="rv-games">{gamesLine(res.detail.byGame, p.id, fmt)}</span>}</div>
-              <div className={`sa ${p.amount > 0 ? 'pos' : p.amount < 0 ? 'neg' : ''}`}>{fmt(p.amount, { sign: true })}</div>
-            </div>
-          ))}
-        </div>
-
         {!isMoney && (
           <>
             <div className="sec-label">{playForOf(round).kind === 'reward' ? 'The reward' : 'Bragging rights'}</div>
@@ -284,8 +276,39 @@ export default function RoundDetail({ id, celebrate }) {
             : round.trip?.id
             ? `Fewest payments for this round alone. It’s on the trip, so it’s settled once with the trip’s other rounds, and it’s on the Tab until then.`
             : 'Fewest payments to square everyone up. They’re on the Tab until marked paid.'}</p>}
+          {/* Layout Lab A's two buttons: pay (Settle up's pay buttons and Mark paid) and roll it to next
+              time, which lives on the Tab with the rest of what's owed */}
+          {ownSettle && !res.big && (
+            <div className="ra-pay-acts">
+              <button className="full-btn" onClick={() => { setSettleFrom('detail'); setStage('settle'); }}><Icon name="hand-coins" /> Pay or mark paid</button>
+              <button className="full-btn outline" onClick={() => { finaleStage.delete(id); nav.reset('ledger'); }}>Roll to next time</button>
+            </div>
+          )}
         </div>
         </>}
+        </>}
+
+        {/* Everyone in one list, after the podium and the payments (the podium shows the top three) */}
+        {!solo && <>
+        <div className="sec-label">Standings</div>
+        <div className="stand-group">
+          {res.standings.map((p, i) => (
+            <div key={p.id} className="stand-line" data-testid="standing">
+              <div className="sr">{placeLabel(res.standings, i)}</div>
+              {faces.get(p.id) && <AvatarArt model={faces.get(p.id)} size="sm" />}
+              <div className="sn">{p.name}{strokesNote(p)}{res.detail.byGame && <span className="rv-games">{gamesLine(res.detail.byGame, p.id, fmt)}</span>}</div>
+              <div className={`sa ${p.amount > 0 ? 'pos' : p.amount < 0 ? 'neg' : ''}`}>{fmt(p.amount, { sign: true })}</div>
+            </div>
+          ))}
+        </div>
+
+        </>}
+
+        {round.trip?.id && <TripRoundNote round={round} />}
+        {notesEl}
+        {saveRow}
+
+        {!solo && <>
 
         {/* The rest in three views, so the results lead with who won and who pays */}
         <div className="rd-views">

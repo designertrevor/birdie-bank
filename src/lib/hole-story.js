@@ -53,7 +53,13 @@ export function holeStory(round) {
     const m = roundMoment(r, pos);
     const scored = scoringLine(round, hole);
     let title, text;
-    if (m) { title = m.title; text = m.text; }
+    if (m) {
+      title = m.title;
+      // The amount already sits at the end of the line, so the moment's text drops it when it leads with it
+      const amt = fmt(best);
+      text = best > 0 && m.text.startsWith(amt) ? m.text.slice(amt.length).replace(/^, and the lead/, 'Takes the lead').replace(/^[.,]\s*/, '') : m.text;
+      if (text) text = text[0].toUpperCase() + text.slice(1);
+    }
     else if (best > 0) { title = `${who} ${fmt(best, { sign: true })}`; text = scored ? `${scored}.` : ''; }
     else {
       const carries = round.game === 'skins' && round.settings?.skins?.carryover !== false;
