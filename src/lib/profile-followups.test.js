@@ -81,8 +81,8 @@ test('critters: saved like any buddy, survive the server round trip, and draw on
 
 test('critters: an app that doesn’t know one yet shows initials on its backdrop, and twins still split', () => {
   // What an older app does with a buddy it has never heard of (the same rule this app uses)
-  assert.deepEqual(avatarModel({ kind: 'buddy', id: 'albatross', bg: 'teal' }, { name: 'Sam' }), { kind: 'initials', text: 'S', bg: 'teal' });
-  assert.equal(avatarLabel({ kind: 'buddy', id: 'albatross' }), 'A character');
+  assert.deepEqual(avatarModel({ kind: 'buddy', id: 'pterodactyl', bg: 'teal' }, { name: 'Sam' }), { kind: 'initials', text: 'S', bg: 'teal' });
+  assert.equal(avatarLabel({ kind: 'buddy', id: 'pterodactyl' }), 'A character');
   const two = noTwins([avatarModel(buddyAvatar('goose')), avatarModel(buddyAvatar('goose'))]);
   assert.equal(two[0].bg, 'lav');
   assert.notEqual(two[1].bg, 'lav', 'the second goose moves to another backdrop');

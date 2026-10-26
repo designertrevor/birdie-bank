@@ -5,7 +5,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { Spot, SPOT_KINDS } from '../components/SpotArt.jsx';
 import { GameArt, GAME_ART_KINDS } from '../components/GameArt.jsx';
-import { SceneArt, SCENE_KINDS } from '../components/Scenes.jsx';
+import { Scene, SCENE_KINDS } from '../components/Scenes.jsx';
 import { BuddyArt } from '../components/BuddyArt.jsx';
 import { ArtIcon, BallIllo } from '../components/ui.jsx';
 import { ART_FILES, PULLED_SCENES } from '../lib/art-files.js';
@@ -106,7 +106,7 @@ export default function ArtSheet() {
           const u = ART_USES[`scenes/${k}`];
           return (
             <Card key={k} kind="scenes" id={k} name={u.name} used={u.used} px={u.px} box="400 by 240" wide>
-              <div className="as-phone"><svg className="scene" viewBox="0 0 400 240" preserveAspectRatio="xMidYMax slice" aria-hidden="true"><SceneArt kind={k} /></svg></div>
+              <div className="as-phone"><Scene kind={k} /></div>
             </Card>
           );
         })}

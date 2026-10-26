@@ -49,3 +49,13 @@ Flat colour, soft rounded shapes, ink outlines on faces and details, the smiley 
 hero. Ink `#0a0a0a`, ball `#fbf7ec`, pink `#ff4d8b`, deep pink `#d42a6b`, ochre `#e8b94a`, gold
 `#c99a30`, coin `#ffd45c`, teal `#1a3a3a`, mint `#a4d4c5`, coral `#ff6b5a`, lavender `#b8a4ed`,
 peach `#ffb084`, blush `#ffd6e5` (the values live in `src/lib/art-palette.js`; the drawings import them).
+
+## What landed on 2026-10-26 (branch art/round-4)
+
+Every drawing in the manifest plus 30 new spots, 16 new hats and 14 new critters came in as SVGs from
+Recraft (the raw exports are in `overnight/illustration-raw-svg/`, the review pages in `overnight/`).
+Each file has its canvas fill stripped, its sheet split, its colours snapped to the palette and its
+box cropped square (scenes keep the full canvas). In the dark theme a scene or spot gets a thin cream
+outline from the app (`.art-outline` in `styles.css`); buddies, critters and game art sit on their
+backdrop and skip it. The new spot ids are listed in `art-manifest.js` as "not placed yet": the
+screens that will show them are the overhaul's job.

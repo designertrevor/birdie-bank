@@ -2,11 +2,13 @@
 // it takes the hand-drawn one's size, clipping and layout. Both themes' files are in the markup
 // and the stylesheet shows the right one (.art-light / .art-dark).
 /** `file` from artFile(); `x`, `y`, `w`, `h` in the parent SVG's units. `slice` fills the box and crops, like the scenes. */
-export function ArtImage({ file, x = 0, y = 0, w, h, slice = false }) {
+export function ArtImage({ file, x = 0, y = 0, w, h, slice = false, outline = true }) {
   const par = slice ? 'xMidYMax slice' : 'xMidYMid meet';
+  // In the dark theme a drawing with no dark file gets a thin cream outline, like a sticker (styles.css .art-outline)
+  const cls = [file.dark ? 'art-light' : '', outline && !file.dark ? 'art-outline' : ''].filter(Boolean).join(' ') || undefined;
   return (
     <>
-      <image href={file.light} x={x} y={y} width={w} height={h} preserveAspectRatio={par} className={file.dark ? 'art-light' : undefined} />
+      <image href={file.light} x={x} y={y} width={w} height={h} preserveAspectRatio={par} className={cls} />
       {file.dark && <image href={file.dark} x={x} y={y} width={w} height={h} preserveAspectRatio={par} className="art-dark" />}
     </>
   );
