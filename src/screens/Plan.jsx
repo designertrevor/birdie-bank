@@ -93,7 +93,7 @@ export default function PlanScreen({ id }) {
  * tiles, In / Maybe / Out, then the game and the bet as rows that open the vote. With no day yet
  * (plan-open.js): the same ticket saying "No day yet", then the four details (Day, Course, Game,
  * Bet) each with its state; a friend answers in, then which days, and the organizer locks the day.
- * No chat on the page (Trevor, 2026-10-26): the trash talk is behind a quiet row once there is some.
+ * No chat on the page (Trevor, 2026-10-26): the trash talk is behind a quiet row that opens a sheet.
  */
 function PlanBody({ plan: saved, standalone = false, onSkip }) {
   const nav = useNav();
@@ -371,8 +371,9 @@ function PlanBody({ plan: saved, standalone = false, onSkip }) {
         {/* The organizer's booking link, the day to be reminded to book, and Booked (tee-reminders.js) */}
         {planned && plan.host && !plan.movedTo && !noDay && (days ?? 0) >= 0 && <TeeTimeSection plan={plan} />}
 
-        {/* The trash talk is off the page; a plan that already has some keeps it one tap away */}
-        {plan.status !== 'off' && !plan.gone && talkCounts(talkRows || {}).comments + talkCounts(talkRows || {}).reactions > 0 && (
+        {/* The trash talk is off the page, one quiet row away: always there while the plan is on, so
+            anyone can start it, and kept after tee off once there is some */}
+        {plan.status !== 'off' && !plan.gone && (planned || talkCounts(talkRows || {}).comments + talkCounts(talkRows || {}).reactions > 0) && (
           <button className="pd-talk" onClick={() => setSheet('talk')}><Icon name="chat-circle" /> <span className="row-main">Trash talk</span> <TalkCount rows={talkRows} /> <Icon name="caret-right" /></button>
         )}
 
