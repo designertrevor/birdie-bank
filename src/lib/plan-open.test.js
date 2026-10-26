@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {
   ASK_DEFAULT, askText, codeDay, dayCode, dayOptions, decodeDays, detailStates, encodeDays, leadingDay, lockNudge, lockText,
-  normalizePlan, shortDay, waitingLine, whenLine,
+  normalizePlan, shortDay, soonDays, waitingLine, whenLine,
 } from './plan-open.js';
 import { answersFrom, gameVoteChoice, inviteText, newPlan, nudgeText, parseGameVote, planChoice, planPeople, tally, upcomingPlans } from './plans.js';
 import { cleanAsk, groupGames, newAskPlan } from './plan-ask.js';
@@ -215,4 +215,9 @@ test('up next: plans with no day stay while they are on, after the ones with a d
     f: { id: 'f', status: 'planned', date: '2026-10-22' },
   } };
   assert.deepEqual(upcomingPlans(state, NOW).map(p => p.id), ['f', 'a', 'c', 'b', 'd']);
+});
+
+test('soon days: the next weekend days from today', () => {
+  assert.deepEqual(soonDays(NOW, 4), ['2026-10-24', '2026-10-25', '2026-10-31', '2026-11-01']);
+  assert.deepEqual(soonDays(new Date(2026, 9, 25, 9), 2), ['2026-10-25', '2026-10-31']);
 });

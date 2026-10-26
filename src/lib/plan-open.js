@@ -104,6 +104,16 @@ export function shortDay(iso) {
   return `${DAYS[day.getDay()]} ${MONTHS[m - 1]} ${d}`;
 }
 
+/** The days golfers reach for when picking a few: the next `n` Saturdays and Sundays, from today on. */
+export function soonDays(now = new Date(), n = 8) {
+  const out = [];
+  for (let i = 0; out.length < n && i < 70; i++) {
+    const d = new Date(now.getFullYear(), now.getMonth(), now.getDate() + i);
+    if (d.getDay() === 0 || d.getDay() === 6) out.push(`${d.getFullYear()}-${pad2(d.getMonth() + 1)}-${pad2(d.getDate())}`);
+  }
+  return out;
+}
+
 /** "Sat" and "25" for a day tile. */
 export function dayTile(iso) {
   if (!validDay(iso)) return { top: '', bottom: '' };
@@ -223,6 +233,14 @@ export function whenLine(plan, now = new Date()) {
   if (p.date) return [dayLabel(p.date, now), timeLabel(p.teeTime) || PART_LABEL[p.when.part]].filter(Boolean).join(' · ');
   const lead = leadingDay(p, now);
   return lead ? `No day yet · ${shortDay(lead.iso)} leads` : 'No day yet';
+}
+
+/** "Sun Oct 25 · Morning", "3 days to pick from", "Not sure yet": the ask's When row. `v`: { mode, date, days, part }. */
+export function whenWords(v) {
+  const part = PART_LABEL[v.part];
+  if (v.mode === 'set' && v.date) return [shortDay(v.date), part].filter(Boolean).join(' · ');
+  if (v.mode === 'options' && v.days.length) return `${v.days.length === 1 ? shortDay(v.days[0]) : `${v.days.length} days to pick from`}${part ? ` · ${part}` : ''}`;
+  return `Not sure yet${part ? ` · ${part}` : ''}`;
 }
 
 // --------------------------- texts ------------------------------------------
