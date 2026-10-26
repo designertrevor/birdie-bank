@@ -188,9 +188,10 @@ function PlanBody({ plan: saved, standalone = false, onSkip }) {
     send(nudgeText(plan, p.name, planShareLink(getState().plans[plan.id], p.who)), `Nudge copied. Paste it to ${first(p.name)}`);
   };
   const morning = () => send(morningText(plan, link, settings), 'Text copied. Paste it in your group text');
+  // offAt: a plan with no day stays on Up next a few days from now, so friends see it's off (plan-basics.js upcomingPlans)
   const callOff = async () => {
     if (!(await ask({ title: 'Call it off?', text: 'Everyone with the link sees it’s off. Nothing on the Tab changes.', confirmLabel: 'Call it off', cancelLabel: 'Keep it on', danger: true }))) return;
-    editPlan(plan.id, p => { p.status = 'off'; }).then(r => { if (r === 'taken') showToast(PLAN_LOCKED); });
+    editPlan(plan.id, p => { p.status = 'off'; p.offAt = Date.now(); }).then(r => { if (r === 'taken') showToast(PLAN_LOCKED); });
   };
   const del = async () => {
     const text = plan.host ? 'It comes off Up next here and for the group.' : 'It comes off your Up next. The plan stays on for everyone else.';

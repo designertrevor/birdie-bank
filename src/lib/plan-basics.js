@@ -168,20 +168,38 @@ export function dayChoices(now = new Date(), n = 14) {
 
 /** How long a plan with no day yet that was called off stays on Up next, so friends see it's off. */
 const OPEN_OFF_MS = 3 * 86400000;
+/** How long a plan with no day yet stays on Up next with nothing happening on it. */
+export const OPEN_STALE_MS = 30 * 86400000;
+
+/**
+ * When anything last happened on a plan, in ms: when it was made, or anyone's latest answer
+ * (each answer's `at`, which moves on every in, maybe, out, day or vote, and comes from the server
+ * for friends' answers). The organizer's own edits ride in the plan with no time, so they don't count.
+ * 0 when the plan has no time at all.
+ */
+export function planActivity(p) {
+  const ats = Object.values(p?.answers || {}).map(a => Number(a?.at) || 0);
+  return Math.max(Number(p?.createdAt) || 0, ...ats);
+}
 
 /**
  * Plans for Up next, soonest first: still planned, or called off (so friends see that), from
  * yesterday on. A friend's plan that has started stays too, so they can follow the round (the
  * organizer has the round itself). Older ones drop off by themselves.
  * A plan with no day yet (plan-open.js) stays while it's on, after the ones with a day, oldest
- * first; called off, it stays a few days from when it was made.
+ * first, until 30 days go by with nothing happening on it (planActivity). Called off, it stays
+ * 3 days from when it was called off (`offAt`); plans called off before that was kept count from
+ * when they were made.
  */
 export function upcomingPlans(state, now = new Date()) {
   const dated = p => daysUntil(p.date, now) != null;
   const keep = p => {
     if (!p || !(p.status === 'planned' || p.status === 'off' || (p.status === 'started' && !p.host))) return false;
     if (dated(p)) return daysUntil(p.date, now) >= -1;
-    return p.status === 'planned' || (p.status === 'off' && now.getTime() - (p.createdAt || 0) < OPEN_OFF_MS);
+    if (p.status === 'off') return now.getTime() - (Number(p.offAt) || p.createdAt || 0) < OPEN_OFF_MS;
+    // A plan with no time at all can't be aged, so it stays
+    const last = planActivity(p);
+    return p.status !== 'planned' || !last || now.getTime() - last < OPEN_STALE_MS;
   };
   return Object.values(state?.plans || {})
     .filter(keep)
