@@ -1,6 +1,14 @@
 /* ============================================================
    THE NEW LOOK: values and rules for <html data-look="new"> (see look.css)
+   After the Good Dog study (2026-10-23) and the serif experiment (2026-10-12): Fraunces at a medium
+   weight for headlines and money, Figtree for everything else, hairline edges instead of lifted
+   cards, smaller corners, soft-rectangle buttons, thin icons, pink only on the one thing to tap.
+   Play keeps heavy, high-contrast numbers for the sun. The mechanical half (every older rule that
+   sets the display face, the heavy weights, the corners) is look-new.gen.css, written by
+   scripts/look-new-css.mjs. ?type=inter swaps in the runner-up pairing, Fraunces 400 and Inter.
    ============================================================ */
+@import './look-new.gen.css';
+
 :root[data-look="new"] {
   --display: "Fraunces", Georgia, "Times New Roman", serif;
   --body-font: "Figtree", Inter, system-ui, -apple-system, sans-serif;
@@ -8,5 +16,148 @@
   --money-weight: 600;
   --hair: inset 0 0 0 1px var(--line);
   --r-card: 14px; --r-btn: 10px; --r-chip: 8px;
+  /* The brand's cream, a touch lighter and calmer, with white cards and a warm hairline. Ink takes
+     a green tint (the dark theme's green-black) so black type sits softer on the cream */
+  --canvas: #f9f5ec; --surface: #f1ecdf; --surface-strong: #e4ddcb; --card: #ffffff;
+  --line: #e4ddcd; --line-soft: #ece6d8;
+  --ink: #121614; --body: #3c403d; --mute: #5d615d; --mute-soft: #6c6f6a;
+  --card-shadow: var(--hair);
+  --sheet-radius: 20px; --sheet-card: #f9f5ec; --sheet-surface: #f1ecdf; --sheet-surface-strong: #e4ddcb;
+  --sheet-edge: transparent; --sheet-shadow: 0 10px 30px rgba(10, 26, 26, .12);
+  /* Pastel bands, closer to the Good Dog study's butter, mint and lilac */
+  --band-butter: #f8ebbf; --band-mint: #ddefe8; --band-lilac: #e9e2f8; --band-peach: #ffe4d4;
+  --eyebrow: var(--body);
 }
-:root[data-look="new"] body { font-family: var(--body-font); }
+:root[data-look="new"][data-theme="dark"] {
+  --canvas: #0f1312; --surface: #232a28; --surface-strong: #2f3735; --card: #181e1d;
+  --line: #2b3331; --line-soft: #222827;
+  --ink: #f5f0e4; --body: #d5d0c3; --mute: #a8a498; --mute-soft: #a09c90;
+  --sheet-bg: #181e1d; --sheet-card: #202726; --sheet-surface: #262d2c; --sheet-surface-strong: #313937;
+  --sheet-edge: #2b3331; --sheet-shadow: 0 10px 30px rgba(0, 0, 0, .45);
+  --band-butter: #322e1d; --band-mint: #1b3330; --band-lilac: #29243d; --band-peach: #38291f;
+}
+@media (prefers-color-scheme: dark) {
+  :root[data-look="new"]:not([data-theme="light"]):not([data-theme="dark"]) {
+    --canvas: #0f1312; --surface: #232a28; --surface-strong: #2f3735; --card: #181e1d;
+    --line: #2b3331; --line-soft: #222827;
+    --ink: #f5f0e4; --body: #d5d0c3; --mute: #a8a498; --mute-soft: #a09c90;
+    --sheet-bg: #181e1d; --sheet-card: #202726; --sheet-surface: #262d2c; --sheet-surface-strong: #313937;
+    --sheet-edge: #2b3331; --sheet-shadow: 0 10px 30px rgba(0, 0, 0, .45);
+    --band-butter: #322e1d; --band-mint: #1b3330; --band-lilac: #29243d; --band-peach: #38291f;
+  }
+}
+
+/* The runner-up pairing (?type=inter): the serif experiment's Fraunces 400 with Inter, no softening */
+:root[data-look="new"][data-type="inter"] {
+  --body-font: Inter, system-ui, -apple-system, sans-serif;
+  --display-weight: 400; --money-weight: 500;
+}
+:root[data-look="new"][data-type="inter"] body { font-variation-settings: "SOFT" 0; }
+
+/* Type. Fraunces's soft axis rounds its corners a little (the Good Dog study's setting); it rides
+   down from the body, and the body face ignores it */
+:root[data-look="new"] body { font-family: var(--body-font); font-variation-settings: "SOFT" 50; }
+:root[data-look="new"] .screen-title { font-size: 34px; letter-spacing: -.02em; }
+:root[data-look="new"] .onboard-title { letter-spacing: -.02em; }
+/* Section labels: sentence case, like the study's "Last time out", not tracked capitals */
+:root[data-look="new"] .sec-label { text-transform: none; font-size: 15px; font-weight: 600; letter-spacing: 0; color: var(--body); padding-top: 24px; }
+:root[data-look="new"] .eyebrow { font-weight: 600; letter-spacing: .1em; }
+:root[data-look="new"] .li-sub, :root[data-look="new"] .set-sub { color: var(--mute); }
+
+/* Thin icons: Phosphor regular uses the same glyph codes as bold (main.jsx loads it for this look
+   only). Play keeps the bold ones for the sun */
+:root[data-look="new"] .ph-bold { font-family: "Phosphor" !important; }
+:root[data-look="new"] .screen.play .ph-bold { font-family: "Phosphor-Bold" !important; }
+
+/* Buttons: soft rectangles in the body face. The main one stays ink, so the pink stays for the one
+   thing a screen marks pink itself (.full-btn.pink, the play button's badge, a pick) */
+:root[data-look="new"] .full-btn { height: 54px; font-size: 17px; font-weight: 600; letter-spacing: 0; }
+:root[data-look="new"] .full-btn.outline:not(:disabled) { background: var(--card); box-shadow: var(--hair); }
+:root[data-look="new"] .sheet-cancel { height: 52px; font-size: 16px; font-weight: 600; background: var(--card); box-shadow: var(--hair); }
+:root[data-look="new"] .pill-btn { font-weight: 600; }
+:root[data-look="new"] .pill-btn:not(.on):not(.dark):not(.lone):not(.auto):not(.penalty) { box-shadow: var(--hair); }
+:root[data-look="new"] .chip { border-radius: var(--r-chip); }
+:root[data-look="new"] .chip.ochre, :root[data-look="new"] .chip.pink { transform: none; }
+:root[data-look="new"] .header-btn { border-radius: var(--r-btn); background: transparent; box-shadow: var(--hair); }
+:root[data-look="new"] .header-back,
+:root[data-look="new"] .header-close,
+:root[data-look="new"] .icon-btn { background: transparent; box-shadow: var(--hair); }
+:root[data-look="new"] .text-link, :root[data-look="new"] .link-btn { font-weight: 600; }
+
+/* An empty state's one button: the pink is it, flat, with no pink step under it */
+:root[data-look="new"] .ec { background: var(--pink-fill); color: #fff; box-shadow: none; font-size: 17px; padding: 15px 26px; }
+:root[data-look="new"] .ec:active { transform: scale(.96); box-shadow: none; }
+:root[data-look="new"] .et { letter-spacing: -.015em; }
+
+/* Fields: a card with a hairline, the focus ring as before */
+:root[data-look="new"] .search-box,
+:root[data-look="new"] .text-input,
+:root[data-look="new"] .name-input { border-radius: var(--r-btn); background: var(--card); box-shadow: var(--hair); }
+:root[data-look="new"] .search-box:focus,
+:root[data-look="new"] .text-input:focus,
+:root[data-look="new"] .name-input:focus { box-shadow: 0 0 0 1px var(--line), 0 0 0 3px var(--lav); }
+:root[data-look="new"] .add-row { border-width: 1px; }
+:root[data-look="new"] .set-row.add-side { border-width: 1px; }
+
+/* Segmented controls: a hairline rectangle, the picked side a filled one inside it */
+:root[data-look="new"] .holes-toggle,
+:root[data-look="new"] .press-mode-row,
+:root[data-look="new"] .as-seg { border-radius: 12px; background: var(--card); box-shadow: var(--hair); }
+:root[data-look="new"] .holes-btn,
+:root[data-look="new"] .pm-btn,
+:root[data-look="new"] .as-seg button { border-radius: 9px; font-weight: 500; }
+:root[data-look="new"] .holes-btn.active,
+:root[data-look="new"] .pm-btn.active,
+:root[data-look="new"] .as-seg button.on { font-weight: 600; box-shadow: none; }
+:root[data-look="new"] .as-seg button.on { background: var(--ink); color: var(--on-ink); }
+
+/* Cards: the hairline instead of the lift (--card-shadow above), and no shadow of their own */
+:root[data-look="new"] .talk-tray { box-shadow: var(--hair); }
+:root[data-look="new"] .reveal-row.top { box-shadow: var(--hair); }
+:root[data-look="new"] .card-stack.piled .remind-card:not(.cs-wait) { box-shadow: var(--hair), 0 6px 0 -2px var(--surface-strong), 0 12px 0 -5px var(--line); }
+/* Rows in a list on a card share the hairline as their divider */
+:root[data-look="new"] .hist-row + .hist-row { border-top-color: var(--line); }
+
+/* Sheets: smaller corners, the handle a hairline, cards inside on the canvas tone */
+:root[data-look="new"] .sheet-handle { height: 4px; background: var(--line); }
+:root[data-look="new"] .sheet-title { letter-spacing: -.01em; }
+:root[data-look="new"] .sheet-item { box-shadow: var(--hair); }
+:root[data-look="new"] .sheet-item.selected, :root[data-look="new"] .sheet-item.venmo,
+:root[data-look="new"] .sheet-item.feedback-cta { box-shadow: none; }
+
+/* Toasts: a soft rectangle in the body face */
+:root[data-look="new"] .toast { border-radius: 12px; font-family: var(--body-font); font-weight: 600; font-size: 15px; }
+:root[data-look="new"] .toast-act { border-radius: 8px; font-weight: 700; }
+
+/* Headers: the title row sits on a hairline once the page scrolls under it */
+:root[data-look="new"] .screen-header { min-height: 58px; }
+
+/* Bottom nav: a hairline over it, a plain round play button without the pink step under it */
+:root[data-look="new"] .bottom-nav { box-shadow: inset 0 1px 0 var(--line); padding-top: 6px; }
+:root[data-look="new"] .nav-play { width: 56px; height: 56px; box-shadow: none; transform: translateY(-2px); font-size: 24px; }
+:root[data-look="new"] .nav-play i { font-size: 24px; }
+:root[data-look="new"] .nav-btn.center:active .nav-play { transform: translateY(0); box-shadow: none; }
+:root[data-look="new"] .nav-lbl { font-weight: 500; }
+:root[data-look="new"] .nav-btn.active .nav-lbl { font-weight: 600; }
+:root[data-look="new"] .nav-btn i { font-size: 25px; }
+/* Tabs you're not on draw in outline, the one you're on filled */
+:root[data-look="new"] .nav-btn:not(.active):not(.center) .ph-fill { font-family: "Phosphor" !important; }
+
+/* Play in the sun: the scorer's buttons keep their weight, cards get the hairline, the money bar's
+   leader an ochre edge instead of a slab */
+:root[data-look="new"] .screen.play .pcard { box-shadow: var(--hair); }
+:root[data-look="new"] .screen.play .play-course { font-family: var(--display); font-weight: 600; font-size: 19px; letter-spacing: -.01em; }
+:root[data-look="new"] .screen.play .full-btn { font-weight: 700; }
+:root[data-look="new"] .screen.play .money-bar { box-shadow: var(--hair); }
+
+/* The pink slabs become cards with a pink edge; the go button keeps the pink, the one thing to tap */
+:root[data-look="new"] .resume-card { background: var(--card); color: var(--ink); box-shadow: inset 0 0 0 1.5px var(--pink-fill); }
+:root[data-look="new"] .resume-card .resume-go { background: var(--pink-fill); color: #fff; }
+:root[data-look="new"] .resume-card .resume-pulse { background: var(--pink); }
+:root[data-look="new"] .resume-card .resume-eyebrow { color: var(--pink-text); font-weight: 600; }
+:root[data-look="new"] .resume-card .resume-sub { color: var(--mute); }
+:root[data-look="new"] .winner-hero { background: var(--card); color: var(--ink); box-shadow: var(--hair); }
+:root[data-look="new"] .winner-hero .wa { color: var(--pink-text); }
+
+/* Setup's step bar: soft tags, the steps still to come in the readable grey */
+:root[data-look="new"] .step:not(.done):not(.active) { color: var(--mute); }
