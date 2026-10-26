@@ -32,6 +32,10 @@ button.pd-row:active { background: var(--surface); }
 .pd-day.on .pdd-top, .pd-day.on .pdd-sub { color: var(--on-ink); opacity: .8; }
 .pd-day.add { background: transparent; box-shadow: inset 0 0 0 1.5px var(--edge); }
 .pd-day.add b { font-size: 18px; padding: 3px 0; }
+/* No room for another day in this answer: the days not ticked step back */
+.pd-day:disabled { opacity: .4; cursor: default; }
+.pd-day:disabled:active { transform: none; }
+.pd-days-full { margin-top: 8px; }
 
 /* Who's in as seat tiles */
 .pd-seats { display: flex; flex-wrap: wrap; gap: 6px 4px; }

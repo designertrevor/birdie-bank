@@ -3,6 +3,7 @@
 // split up (roadmap area 25), so the screen reads the same as before.
 import { holeComplete } from './round.js';
 import { betsOf } from './pair-bets.js';
+import { BIG_FORMAT } from './big-format.js';
 
 /**
  * What the hole on screen is keyed by, so it remounts when any of these change on this phone or
@@ -42,6 +43,21 @@ export function isSameTap(last, holeNo, dirty, now, gapMs) {
 /** A round with money of its own: a game with a bet, side games or side bets (a Big Game's group round starts with none). */
 export function ownMoney(round) {
   return (round.sideGames?.length || 0) > 0 || betsOf(round).length > 0 || round.game !== 'stroke' || (round.settings?.stroke?.stake || 0) > 0;
+}
+
+/** A Big Game group round with no money of its own: its board is the Big Game's (BigBar), not the round's. */
+export function bigBoardOnly(round) {
+  return round.trip?.format === BIG_FORMAT && !ownMoney(round);
+}
+
+/**
+ * Whether the screen shows the live money view: a phone watching the round (someone else has the
+ * card) with Live money picked (`watch`, 'money' or 'hole'). Never on a Big Game group round with no
+ * money of its own, where it would show everyone at $0 and "No money moved" on every hole: that
+ * phone opens on the hole with the Big Game board on top.
+ */
+export function showsLiveMoney(round, editable, watch) {
+  return !editable && round.status === 'active' && watch === 'money' && !bigBoardOnly(round);
 }
 
 /**

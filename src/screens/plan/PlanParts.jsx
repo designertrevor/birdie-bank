@@ -50,9 +50,12 @@ export function DetailRows({ rows }) {
 /**
  * Day tiles to tick: `days` are the ones to show, `on` the ticked ones. `add` puts a "+" tile at
  * the end that opens the calendar; `counts` puts how many can make each day under it.
+ * `full`: a note when no more days can be ticked (the unticked ones and "+" stop), and `addFull`
+ * a note when only adding is done (the organizer has offered as many as a plan takes).
  */
-export function DayTiles({ days, on, onToggle, onAdd, addLabel = 'Pick', counts = null, radio = false, label }) {
+export function DayTiles({ days, on, onToggle, onAdd, addLabel = 'Pick', counts = null, radio = false, label, full = null, addFull = null }) {
   const [picking, setPicking] = useState(false);
+  const note = full || addFull;
   return (
     <>
       <div className="pd-days" role={radio ? 'radiogroup' : 'group'} aria-label={label}>
@@ -61,7 +64,7 @@ export function DayTiles({ days, on, onToggle, onAdd, addLabel = 'Pick', counts 
           const picked = on.includes(iso);
           const a11y = radio ? { role: 'radio', 'aria-checked': picked } : { 'aria-pressed': picked };
           return (
-            <button key={iso} type="button" className={`pd-day ${picked ? 'on' : ''}`} onClick={() => onToggle(iso)} {...a11y}
+            <button key={iso} type="button" className={`pd-day ${picked ? 'on' : ''}`} disabled={!!full && !picked} onClick={() => onToggle(iso)} {...a11y}
               aria-label={`${shortDay(iso)}${counts?.[iso] ? `, ${counts[iso]} can make it` : ''}`}>
               <span className="pdd-top">{t.top}</span><b>{t.bottom}</b>
               <span className="pdd-sub">{counts ? (counts[iso] ? `${counts[iso]} can` : ' ') : t.month}</span>
@@ -69,11 +72,12 @@ export function DayTiles({ days, on, onToggle, onAdd, addLabel = 'Pick', counts 
           );
         })}
         {onAdd && (
-          <button type="button" className="pd-day add" onClick={() => setPicking(true)}>
+          <button type="button" className="pd-day add" disabled={!!note} onClick={() => setPicking(true)}>
             <span className="pdd-top">{addLabel}</span><b><Icon name="plus" /></b><span className="pdd-sub">a day</span>
           </button>
         )}
       </div>
+      {note && <p className="pd-help pd-days-full" role="status">{note}</p>}
       {onAdd && <DateSheet open={picking} onClose={() => setPicking(false)} title="Pick a day" min={isoDate()} onPick={iso => onAdd(iso)} />}
     </>
   );

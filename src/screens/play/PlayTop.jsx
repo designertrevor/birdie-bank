@@ -10,7 +10,7 @@ import { addJustPlayingProblem } from '../../lib/just-playing.js';
 import { BIG_FORMAT } from '../../lib/big-game.js';
 import { firstName, gameLabel } from '../../lib/format.js';
 import { onTab } from '../../lib/play-for.js';
-import { ownMoney } from '../../lib/play-screen.js';
+import { bigBoardOnly, ownMoney } from '../../lib/play-screen.js';
 import { ASK_MS, clockText } from '../../lib/keeper.js';
 import { useNav } from '../../lib/nav.js';
 import { CardBar, MoneyBar } from './MoneyBar.jsx';
@@ -32,7 +32,7 @@ export function PlayHeader({ round, idx, hole, game, solo, theme, preview, onLiv
     <div className="play-track" aria-hidden="true"><span style={{ transform: `scaleX(${(idx + 1) / round.holes.length})` }} /></div>
     {/* A Big Game's group round with no money of its own shows the game across every group instead */}
     {/* The live money view (a phone watching the round) has the race instead, so no strip over it */}
-    {noMoney ? null : solo ? <CardBar round={round} /> : round.trip?.format === BIG_FORMAT && !ownMoney(round) ? <BigBar round={round} /> : <MoneyBar round={round} hole={hole} preview={preview} art={theme ? game : null} />}
+    {noMoney ? null : solo ? <CardBar round={round} /> : bigBoardOnly(round) ? <BigBar round={round} /> : <MoneyBar round={round} hole={hole} preview={preview} art={theme ? game : null} />}
     {round.trip?.format === BIG_FORMAT && ownMoney(round) && (
       <button className="big-link" onClick={() => nav.push('bigGame', { id: round.trip.id })}><Icon name="users-four" fill /> {round.trip.name}: the board across every group <Icon name="caret-right" /></button>
     )}

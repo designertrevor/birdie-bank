@@ -2,10 +2,11 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {
   ASK_DEFAULT, askText, codeDay, dayCode, dayOptions, decodeDays, detailStates, encodeDays, leadingDay, lockNudge, lockText,
-  normalizePlan, shortDay, soonDays, waitingLine, whenLine,
+  MAX_DAY_OPTIONS, normalizePlan, offeredDays, shortDay, soonDays, waitingLine, whenLine,
 } from './plan-open.js';
-import { answersFrom, gameVoteChoice, inviteText, newPlan, nudgeText, parseGameVote, planChoice, planPeople, tally, upcomingPlans } from './plans.js';
+import { answersFrom, daysFit, daysKept, gameVoteChoice, inviteText, newPlan, nudgeText, parseGameVote, planChoice, planPeople, roomForADay, tally, upcomingPlans } from './plans.js';
 import { cleanAsk, groupGames, newAskPlan } from './plan-ask.js';
+import { planActivity } from './plan-basics.js';
 
 const NOW = new Date(2026, 9, 20, 9); // Tue Oct 20, 2026
 const SETTINGS = { skins: { value: 2, payout: 'per', carryover: true }, nassau: { front: 5, back: 5, total: 5 }, wolf: { point: 1 }, bestball: { front: 5, back: 5, total: 5 } };
@@ -46,6 +47,47 @@ test('a game vote carries the days after a second ~, and fits the 32 characters 
   const back = answersFrom([{ who: 'dave', name: 'Dave', status: 'in' }], [{ who: 'dave', kind: 'game', choice: `~~${enc}` }]);
   assert.deepEqual(back.dave.days, days);
   assert.deepEqual(planPeople({ people: [{ id: 'dave', name: 'Dave' }], answers: back })[0].days, days);
+});
+
+test('day ticks stop at what one vote holds, so no ticked day is cut (long and short game ids)', () => {
+  const WEEKENDS = ['2026-10-24', '2026-10-25', '2026-10-31', '2026-11-01', '2026-11-07', '2026-11-08', '2026-11-14', '2026-11-15', '2026-11-21', '2026-11-22'];
+  const most = a => { let n = 0; while (n < WEEKENDS.length && daysFit({ ...a, days: WEEKENDS.slice(0, n + 1) })) n++; return n; };
+  // "stableford~~" leaves 20 characters: seven days of "8f." fit, the eighth doesn't
+  assert.equal(most({ game: 'stableford' }), 7);
+  assert.equal(gameVoteChoice({ game: 'stableford', days: WEEKENDS.slice(0, 7) }).length, 32);
+  assert.equal(roomForADay({ game: 'stableford', days: WEEKENDS.slice(0, 6) }, NOW), true);
+  assert.equal(roomForADay({ game: 'stableford', days: WEEKENDS.slice(0, 7) }, NOW), false);
+  // The review's repro: eight ticked on a Stableford vote would come back as seven
+  assert.equal(daysFit({ game: 'stableford', days: WEEKENDS.slice(0, 8) }), false);
+  assert.deepEqual(daysKept({ game: 'stableford', days: WEEKENDS.slice(0, 8) }), WEEKENDS.slice(0, 7));
+  assert.deepEqual(parseGameVote(gameVoteChoice({ game: 'stableford', days: WEEKENDS.slice(0, 7) })).days, WEEKENDS.slice(0, 7));
+  // Short ids hold more: Skins eight, BBB and no game vote nine, and every one reads back whole
+  assert.equal(most({ game: 'skins' }), 8);
+  assert.equal(most({ game: 'bbb' }), 9);
+  assert.equal(most({}), 10);
+  for (const game of ['skins', 'bbb']) {
+    const n = most({ game });
+    assert.deepEqual(parseGameVote(gameVoteChoice({ game, days: WEEKENDS.slice(0, n) })).days, WEEKENDS.slice(0, n));
+    assert.equal(roomForADay({ game, days: WEEKENDS.slice(0, n - 1) }, NOW), true);
+    assert.equal(roomForADay({ game, days: WEEKENDS.slice(0, n) }, NOW), false);
+  }
+  // Side game votes take room too, and the same count drives the "full" note
+  const sides = { game: 'stableford', sides: { skins: true, dots: false } };
+  assert.equal(most(sides), 3);
+  assert.equal(roomForADay({ ...sides, days: WEEKENDS.slice(0, 3) }, NOW), false);
+  // Nothing ticked always fits; a duplicate doesn't take room twice
+  assert.equal(daysFit({ game: 'stableford', days: [] }), true);
+  assert.equal(daysFit({ game: 'stableford', days: [...WEEKENDS.slice(0, 7), WEEKENDS[0]] }), true);
+});
+
+test('days on offer: the organizer adds up to MAX_DAY_OPTIONS, today on, the ones offered first keep their place', () => {
+  const six = ['2026-10-24', '2026-10-25', '2026-10-31', '2026-11-01', '2026-11-07', '2026-11-08'];
+  assert.equal(MAX_DAY_OPTIONS, 6);
+  assert.deepEqual(offeredDays(six.slice(0, 4), ['2026-11-07', '2026-11-08', '2026-11-14'], NOW), six);
+  assert.deepEqual(offeredDays(six, ['2026-10-21'], NOW), six);
+  // A day already on offer, a past one, or junk adds nothing
+  assert.deepEqual(offeredDays(['2026-10-24'], ['2026-10-24', '2026-10-19', 'junk'], NOW), ['2026-10-24']);
+  assert.deepEqual(offeredDays(['2026-10-18', '2026-10-24'], [], NOW), ['2026-10-24']);
 });
 
 // --------------------------- the normalizer --------------------------------
@@ -208,13 +250,47 @@ test('texts: the ask with its days, nudges say soon, and the lock text', () => {
 test('up next: plans with no day stay while they are on, after the ones with a day', () => {
   const state = { plans: {
     a: { id: 'a', status: 'planned', date: '2026-10-25' },
-    b: { id: 'b', status: 'planned', date: null, createdAt: 5 },
-    c: { id: 'c', status: 'planned', createdAt: 2 },
+    b: { id: 'b', status: 'planned', date: null, createdAt: NOW.getTime() - 5 * 86400000 },
+    c: { id: 'c', status: 'planned', createdAt: NOW.getTime() - 6 * 86400000 },
     d: { id: 'd', status: 'off', date: null, createdAt: NOW.getTime() - 86400000 },
     e: { id: 'e', status: 'off', date: null, createdAt: NOW.getTime() - 10 * 86400000 },
     f: { id: 'f', status: 'planned', date: '2026-10-22' },
   } };
   assert.deepEqual(upcomingPlans(state, NOW).map(p => p.id), ['f', 'a', 'c', 'b', 'd']);
+});
+
+test('up next: a plan with no day called off stays 3 days from when it was called off', () => {
+  const DAY = 86400000;
+  const state = { plans: {
+    // Made 4 days ago, called off just now: friends still see "Called off"
+    late: { id: 'late', status: 'off', date: null, createdAt: NOW.getTime() - 4 * DAY, offAt: NOW.getTime() - 60000 },
+    // Called off 3 days ago and more: gone
+    old: { id: 'old', status: 'off', date: null, createdAt: NOW.getTime() - 5 * DAY, offAt: NOW.getTime() - 3 * DAY - 1 },
+    // Called off before offAt was kept: from when it was made, as before
+    before: { id: 'before', status: 'off', date: null, createdAt: NOW.getTime() - 2 * DAY },
+    beforeOld: { id: 'beforeOld', status: 'off', date: null, createdAt: NOW.getTime() - 4 * DAY },
+  } };
+  assert.deepEqual(upcomingPlans(state, NOW).map(p => p.id).sort(), ['before', 'late']);
+});
+
+test('up next: a plan with no day drops off after 30 days with nothing happening on it', () => {
+  const DAY = 86400000;
+  const at = n => NOW.getTime() - n * DAY;
+  const state = { plans: {
+    fresh: { id: 'fresh', status: 'planned', date: null, createdAt: at(29) },
+    stale: { id: 'stale', status: 'planned', date: null, createdAt: at(31) },
+    // Made long ago, but someone answered last week: still going
+    answered: { id: 'answered', status: 'planned', date: null, createdAt: at(60), answers: { dave: { name: 'Dave', status: 'in', at: at(7) } } },
+    quiet: { id: 'quiet', status: 'planned', date: null, createdAt: at(60), answers: { dave: { name: 'Dave', status: 'in', at: at(45) } } },
+    // No time on it at all: kept, it can't be aged
+    untimed: { id: 'untimed', status: 'planned', date: null },
+    // A dated plan never ages this way, only by its day
+    dated: { id: 'dated', status: 'planned', date: '2026-10-25', createdAt: at(90) },
+  } };
+  assert.deepEqual(upcomingPlans(state, NOW).map(p => p.id), ['dated', 'untimed', 'answered', 'fresh']);
+  assert.equal(planActivity(state.plans.answered), at(7));
+  assert.equal(planActivity(state.plans.stale), at(31));
+  assert.equal(planActivity({}), 0);
 });
 
 test('soon days: the next weekend days from today', () => {

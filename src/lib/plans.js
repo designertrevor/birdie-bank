@@ -19,8 +19,8 @@ import { inUnits, playForLine, storedPlayFor } from './play-for.js';
 import { halfStrokesOffered } from './allowances.js';
 import { applySetup } from './plan-setup.js';
 import { linksOf } from './people-links.js';
-import { RSVPS, HOST, planPeople, planChoice, daysUntil, timeLabel, dayLabel, upcomingPlans } from './plan-basics.js';
-import { askText, decodeDays, encodeDays } from './plan-open.js';
+import { RSVPS, HOST, planPeople, planChoice, daysUntil, timeLabel, dayLabel, upcomingPlans, isoDate } from './plan-basics.js';
+import { askText, dayCode, decodeDays, encodeDays } from './plan-open.js';
 
 // Who's in, the vote, the dates and Up next's list live in plan-basics.js, so Up next can load them alone
 export { RSVPS, HOST, RSVP_LABEL, betsFor, suggestedBetFor, planPeople, planCounts, countsLine, tally, planChoice, isoDate, daysUntil, timeLabel, dayLabel, whenLabel, dayChoices, upcomingPlans, movedPlanOf } from './plan-basics.js';
@@ -126,12 +126,46 @@ export function ballotSides(plan) {
  * plan-open.js encodeDays), as many as fit in the 32 characters the server keeps.
  */
 export function gameVoteChoice(a) {
+  const { head, prefix } = voteHead(a);
+  const days = Array.isArray(a?.days) && a.days.length ? encodeDays(a.days, VOTE_MAX - prefix.length) : '';
+  return days ? `${prefix}${days}` : head;
+}
+
+/** The most characters one vote can hold on the server. */
+const VOTE_MAX = 32;
+
+// The game and side votes, and what goes in front of the days, so the room for days is worked out one way
+function voteHead(a) {
   const game = a?.game ?? null;
   const sides = Object.entries(a?.sides || {}).filter(([k, v]) => SIDE_GAMES[k] && typeof v === 'boolean');
   const head = sides.length ? `${game || ''}~${sides.map(([k, v]) => (v ? k : `-${k}`)).join('.')}` : game;
-  const prefix = sides.length ? `${head}~` : `${game || ''}~~`;
-  const days = Array.isArray(a?.days) && a.days.length ? encodeDays(a.days, 32 - prefix.length) : '';
-  return days ? `${prefix}${days}` : head;
+  return { head, prefix: sides.length ? `${head}~` : `${game || ''}~~` };
+}
+
+/** The days of `a.days` that fit in a's game vote, soonest first: what the server keeps of them. */
+export function daysKept(a) {
+  const days = Array.isArray(a?.days) ? a.days : [];
+  return decodeDays(encodeDays(days, Math.max(0, VOTE_MAX - voteHead(a).prefix.length)));
+}
+
+/**
+ * Whether every day in `a.days` fits next to the game and side votes, so none is cut when it's
+ * saved. The day pickers stop more ticks once this would go false (a Stableford vote holds
+ * seven days, a Skins vote eight, fewer with side game votes).
+ */
+export function daysFit(a) {
+  return daysKept(a).length === decodeDays(encodeDays(a?.days || [], Infinity)).length;
+}
+
+/**
+ * Whether one more day fits in a's game vote, for the day pickers' "full" note. A day near `now`
+ * stands in for the next tick: codes only get longer every 1296 days (two characters until July
+ * 2029), and the pickers check the exact day with daysFit before they add it.
+ */
+export function roomForADay(a, now = new Date()) {
+  const used = encodeDays(a?.days || [], Infinity);
+  const next = dayCode(isoDate(now)) || '00';
+  return (used ? used.length + 1 : 0) + next.length <= VOTE_MAX - voteHead(a).prefix.length;
 }
 
 /** { game, sides?, days? } from a stored game vote. */

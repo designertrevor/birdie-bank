@@ -279,11 +279,13 @@ export default function RoundDetail({ id, celebrate }) {
             ? `Fewest payments for this round alone. It’s on the trip, so it’s settled once with the trip’s other rounds, and it’s on the Tab until then.`
             : 'Fewest payments to square everyone up. They’re on the Tab until marked paid.'}</p>}
           {/* Layout Lab A's two buttons: pay (Settle up's pay buttons and Mark paid) and roll it to next
-              time, which lives on the Tab with the rest of what's owed */}
+              time, which lives on the Tab with the rest of what's owed. The Tab rolls a person's whole
+              line (rounds both phones have, and the other phone agrees), not one round, so this opens
+              the Tab and says so rather than reading as done */}
           {ownSettle && !res.big && (
             <div className="ra-pay-acts">
               <button className="full-btn" onClick={() => { setSettleFrom('detail'); setStage('settle'); }}><Icon name="hand-coins" /> Pay or mark paid</button>
-              <button className="full-btn outline" onClick={() => { finaleStage.delete(id); nav.reset('ledger'); }}>Roll to next time</button>
+              <button className="full-btn outline" onClick={() => { finaleStage.delete(id); nav.reset('ledger'); }}><Icon name="arrow-u-down-right" /> Roll it on the Tab</button>
             </div>
           )}
         </div>
