@@ -1,0 +1,3822 @@
+{
+ "r_skins": {
+  "round": {
+   "id": "r_skins",
+   "game": "skins",
+   "status": "active",
+   "createdAt": 1790000000000,
+   "finishedAt": null,
+   "course": {
+    "id": "cc_logan",
+    "name": "Logan River GC",
+    "city": "Logan",
+    "tees": [
+     {
+      "name": "Blue",
+      "color": "#2457d6"
+     },
+     {
+      "name": "White",
+      "color": "#ffffff"
+     }
+    ]
+   },
+   "holesCount": 18,
+   "nine": null,
+   "holes": [
+    {
+     "no": 1,
+     "courseIdx": 0,
+     "par": 4,
+     "hdcp": 1,
+     "rank": 1
+    },
+    {
+     "no": 2,
+     "courseIdx": 1,
+     "par": 5,
+     "hdcp": 8,
+     "rank": 8
+    },
+    {
+     "no": 3,
+     "courseIdx": 2,
+     "par": 3,
+     "hdcp": 15,
+     "rank": 15
+    },
+    {
+     "no": 4,
+     "courseIdx": 3,
+     "par": 4,
+     "hdcp": 4,
+     "rank": 4
+    },
+    {
+     "no": 5,
+     "courseIdx": 4,
+     "par": 4,
+     "hdcp": 11,
+     "rank": 11
+    },
+    {
+     "no": 6,
+     "courseIdx": 5,
+     "par": 3,
+     "hdcp": 18,
+     "rank": 18
+    },
+    {
+     "no": 7,
+     "courseIdx": 6,
+     "par": 5,
+     "hdcp": 7,
+     "rank": 7
+    },
+    {
+     "no": 8,
+     "courseIdx": 7,
+     "par": 4,
+     "hdcp": 14,
+     "rank": 14
+    },
+    {
+     "no": 9,
+     "courseIdx": 8,
+     "par": 4,
+     "hdcp": 3,
+     "rank": 3
+    },
+    {
+     "no": 10,
+     "courseIdx": 9,
+     "par": 4,
+     "hdcp": 10,
+     "rank": 10
+    },
+    {
+     "no": 11,
+     "courseIdx": 10,
+     "par": 5,
+     "hdcp": 17,
+     "rank": 17
+    },
+    {
+     "no": 12,
+     "courseIdx": 11,
+     "par": 3,
+     "hdcp": 6,
+     "rank": 6
+    },
+    {
+     "no": 13,
+     "courseIdx": 12,
+     "par": 4,
+     "hdcp": 13,
+     "rank": 13
+    },
+    {
+     "no": 14,
+     "courseIdx": 13,
+     "par": 4,
+     "hdcp": 2,
+     "rank": 2
+    },
+    {
+     "no": 15,
+     "courseIdx": 14,
+     "par": 3,
+     "hdcp": 9,
+     "rank": 9
+    },
+    {
+     "no": 16,
+     "courseIdx": 15,
+     "par": 5,
+     "hdcp": 16,
+     "rank": 16
+    },
+    {
+     "no": 17,
+     "courseIdx": 16,
+     "par": 4,
+     "hdcp": 5,
+     "rank": 5
+    },
+    {
+     "no": 18,
+     "courseIdx": 17,
+     "par": 4,
+     "hdcp": 12,
+     "rank": 12
+    }
+   ],
+   "par": 72,
+   "useHandicaps": false,
+   "hcPct": 100,
+   "players": [
+    {
+     "id": "me",
+     "name": "Trevor Nielsen",
+     "tee": "Blue",
+     "index": 8.4,
+     "courseHc": 9,
+     "courseHcOverride": null,
+     "payApp": "venmo",
+     "payHandle": "trev",
+     "plays": 0
+    },
+    {
+     "id": "mike",
+     "name": "Mike Allred",
+     "tee": "Blue",
+     "index": 12.1,
+     "courseHc": 13,
+     "courseHcOverride": null,
+     "plays": 0
+    },
+    {
+     "id": "dave",
+     "name": "Dave Olsen",
+     "tee": "Blue",
+     "index": 18,
+     "courseHc": 20,
+     "courseHcOverride": null,
+     "plays": 0
+    }
+   ],
+   "teams": null,
+   "settings": {
+    "theme": "system",
+    "hcPct": 100,
+    "skins": {
+     "value": 2,
+     "carryover": true,
+     "kind": "net",
+     "payout": "per",
+     "stake": 10,
+     "lastCarry": "void",
+     "backDouble": false,
+     "birdieDouble": false
+    },
+    "nassau": {
+     "front": 5,
+     "back": 5,
+     "total": 5,
+     "pressMode": "manual",
+     "threshold": 2,
+     "turnPress": false,
+     "noLastPress": false,
+     "teamScore": "best",
+     "bye": "off"
+    },
+    "wolf": {
+     "point": 2,
+     "loneMultiplier": 2,
+     "blind": false,
+     "blindPlus": 1
+    },
+    "banker": {
+     "defaultBet": 5,
+     "min": 1,
+     "max": 20,
+     "ties": "push",
+     "rotation": "rotate",
+     "birdies": "off",
+     "par3Triple": false,
+     "pressAll": false
+    },
+    "match": {
+     "stake": 10,
+     "pressMode": "off",
+     "threshold": 2,
+     "teamScore": "best",
+     "bye": "off"
+    },
+    "stroke": {
+     "stake": 5,
+     "payout": "pot",
+     "cap": false,
+     "nassau": false,
+     "gross": false
+    },
+    "vegas": {
+     "point": 1,
+     "birdieFlip": true,
+     "birdieDouble": false,
+     "daytona": false,
+     "max9": false
+    },
+    "ctp": {
+     "stake": 5,
+     "unclaimed": "carry"
+    },
+    "birdies": {
+     "stake": 5,
+     "eagleShares": 2
+    },
+    "dots": {
+     "value": 1,
+     "auto": true,
+     "greenieCarry": false,
+     "kinds": {
+      "greenie": true,
+      "sandy": true,
+      "barkie": true,
+      "chipin": true,
+      "polie": false,
+      "arnie": false,
+      "hogan": false
+     }
+    }
+   },
+   "scores": {},
+   "banker": {},
+   "wolf": {},
+   "marks": {},
+   "presses": [],
+   "pressSeq": 0,
+   "current": 0,
+   "left": {}
+  },
+  "settings": {
+   "theme": "system",
+   "hcPct": 100,
+   "skins": {
+    "value": 2,
+    "carryover": true,
+    "kind": "net",
+    "payout": "per",
+    "stake": 10,
+    "lastCarry": "void",
+    "backDouble": false,
+    "birdieDouble": false
+   },
+   "nassau": {
+    "front": 5,
+    "back": 5,
+    "total": 5,
+    "pressMode": "manual",
+    "threshold": 2,
+    "turnPress": false,
+    "noLastPress": false,
+    "teamScore": "best",
+    "bye": "off"
+   },
+   "wolf": {
+    "point": 2,
+    "loneMultiplier": 2,
+    "blind": false,
+    "blindPlus": 1
+   },
+   "banker": {
+    "defaultBet": 5,
+    "min": 1,
+    "max": 20,
+    "ties": "push",
+    "rotation": "rotate",
+    "birdies": "off",
+    "par3Triple": false,
+    "pressAll": false
+   },
+   "match": {
+    "stake": 10,
+    "pressMode": "off",
+    "threshold": 2,
+    "teamScore": "best",
+    "bye": "off"
+   },
+   "stroke": {
+    "stake": 5,
+    "payout": "pot",
+    "cap": false,
+    "nassau": false,
+    "gross": false
+   },
+   "vegas": {
+    "point": 1,
+    "birdieFlip": true,
+    "birdieDouble": false,
+    "daytona": false,
+    "max9": false
+   },
+   "ctp": {
+    "stake": 5,
+    "unclaimed": "carry"
+   },
+   "birdies": {
+    "stake": 5,
+    "eagleShares": 2
+   },
+   "dots": {
+    "value": 1,
+    "auto": true,
+    "greenieCarry": false,
+    "kinds": {
+     "greenie": true,
+     "sandy": true,
+     "barkie": true,
+     "chipin": true,
+     "polie": false,
+     "arnie": false,
+     "hogan": false
+    }
+   }
+  },
+  "challengesIn": []
+ },
+ "r_skins_gross9": {
+  "round": {
+   "id": "r_skins_gross9",
+   "game": "skins",
+   "status": "active",
+   "createdAt": 1790000000000,
+   "finishedAt": null,
+   "course": {
+    "id": "cc_logan",
+    "name": "Logan River GC",
+    "city": "Logan",
+    "tees": [
+     {
+      "name": "Blue",
+      "color": "#2457d6"
+     },
+     {
+      "name": "White",
+      "color": "#ffffff"
+     }
+    ]
+   },
+   "holesCount": 9,
+   "nine": "back",
+   "holes": [
+    {
+     "no": 14,
+     "courseIdx": 13,
+     "par": 4,
+     "hdcp": 2,
+     "rank": 1
+    },
+    {
+     "no": 15,
+     "courseIdx": 14,
+     "par": 3,
+     "hdcp": 9,
+     "rank": 4
+    },
+    {
+     "no": 16,
+     "courseIdx": 15,
+     "par": 5,
+     "hdcp": 16,
+     "rank": 8
+    },
+    {
+     "no": 17,
+     "courseIdx": 16,
+     "par": 4,
+     "hdcp": 5,
+     "rank": 2
+    },
+    {
+     "no": 18,
+     "courseIdx": 17,
+     "par": 4,
+     "hdcp": 12,
+     "rank": 6
+    },
+    {
+     "no": 10,
+     "courseIdx": 9,
+     "par": 4,
+     "hdcp": 10,
+     "rank": 5
+    },
+    {
+     "no": 11,
+     "courseIdx": 10,
+     "par": 5,
+     "hdcp": 17,
+     "rank": 9
+    },
+    {
+     "no": 12,
+     "courseIdx": 11,
+     "par": 3,
+     "hdcp": 6,
+     "rank": 3
+    },
+    {
+     "no": 13,
+     "courseIdx": 12,
+     "par": 4,
+     "hdcp": 13,
+     "rank": 7
+    }
+   ],
+   "par": 36,
+   "useHandicaps": false,
+   "hcPct": 100,
+   "players": [
+    {
+     "id": "me",
+     "name": "Trevor Nielsen",
+     "tee": "Blue",
+     "index": 8.4,
+     "courseHc": 5,
+     "courseHcOverride": null,
+     "payApp": "venmo",
+     "payHandle": "trev",
+     "plays": 0
+    },
+    {
+     "id": "mike",
+     "name": "Mike Allred",
+     "tee": "Blue",
+     "index": 12.1,
+     "courseHc": 7,
+     "courseHcOverride": null,
+     "plays": 0
+    },
+    {
+     "id": "dave",
+     "name": "Dave Olsen",
+     "tee": "Blue",
+     "index": 18,
+     "courseHc": 10,
+     "courseHcOverride": null,
+     "plays": 0
+    },
+    {
+     "id": "jo",
+     "name": "Jo Park",
+     "tee": "Blue",
+     "index": 3.2,
+     "courseHc": 2,
+     "courseHcOverride": null,
+     "plays": 0
+    }
+   ],
+   "teams": null,
+   "settings": {
+    "theme": "system",
+    "hcPct": 100,
+    "skins": {
+     "value": 5,
+     "carryover": false,
+     "kind": "gross",
+     "payout": "per",
+     "stake": 10,
+     "lastCarry": "void",
+     "backDouble": false,
+     "birdieDouble": false
+    },
+    "nassau": {
+     "front": 5,
+     "back": 5,
+     "total": 5,
+     "pressMode": "manual",
+     "threshold": 2,
+     "turnPress": false,
+     "noLastPress": false,
+     "teamScore": "best",
+     "bye": "off"
+    },
+    "wolf": {
+     "point": 2,
+     "loneMultiplier": 2,
+     "blind": false,
+     "blindPlus": 1
+    },
+    "banker": {
+     "defaultBet": 5,
+     "min": 1,
+     "max": 20,
+     "ties": "push",
+     "rotation": "rotate",
+     "birdies": "off",
+     "par3Triple": false,
+     "pressAll": false
+    },
+    "match": {
+     "stake": 10,
+     "pressMode": "off",
+     "threshold": 2,
+     "teamScore": "best",
+     "bye": "off"
+    },
+    "stroke": {
+     "stake": 5,
+     "payout": "pot",
+     "cap": false,
+     "nassau": false,
+     "gross": false
+    },
+    "vegas": {
+     "point": 1,
+     "birdieFlip": true,
+     "birdieDouble": false,
+     "daytona": false,
+     "max9": false
+    },
+    "ctp": {
+     "stake": 5,
+     "unclaimed": "carry"
+    },
+    "birdies": {
+     "stake": 5,
+     "eagleShares": 2
+    },
+    "dots": {
+     "value": 1,
+     "auto": true,
+     "greenieCarry": false,
+     "kinds": {
+      "greenie": true,
+      "sandy": true,
+      "barkie": true,
+      "chipin": true,
+      "polie": false,
+      "arnie": false,
+      "hogan": false
+     }
+    }
+   },
+   "scores": {},
+   "banker": {},
+   "wolf": {},
+   "marks": {},
+   "presses": [],
+   "pressSeq": 0,
+   "current": 0,
+   "left": {}
+  },
+  "settings": {
+   "theme": "system",
+   "hcPct": 100,
+   "skins": {
+    "value": 5,
+    "carryover": false,
+    "kind": "gross",
+    "payout": "per",
+    "stake": 10,
+    "lastCarry": "void",
+    "backDouble": false,
+    "birdieDouble": false
+   },
+   "nassau": {
+    "front": 5,
+    "back": 5,
+    "total": 5,
+    "pressMode": "manual",
+    "threshold": 2,
+    "turnPress": false,
+    "noLastPress": false,
+    "teamScore": "best",
+    "bye": "off"
+   },
+   "wolf": {
+    "point": 2,
+    "loneMultiplier": 2,
+    "blind": false,
+    "blindPlus": 1
+   },
+   "banker": {
+    "defaultBet": 5,
+    "min": 1,
+    "max": 20,
+    "ties": "push",
+    "rotation": "rotate",
+    "birdies": "off",
+    "par3Triple": false,
+    "pressAll": false
+   },
+   "match": {
+    "stake": 10,
+    "pressMode": "off",
+    "threshold": 2,
+    "teamScore": "best",
+    "bye": "off"
+   },
+   "stroke": {
+    "stake": 5,
+    "payout": "pot",
+    "cap": false,
+    "nassau": false,
+    "gross": false
+   },
+   "vegas": {
+    "point": 1,
+    "birdieFlip": true,
+    "birdieDouble": false,
+    "daytona": false,
+    "max9": false
+   },
+   "ctp": {
+    "stake": 5,
+    "unclaimed": "carry"
+   },
+   "birdies": {
+    "stake": 5,
+    "eagleShares": 2
+   },
+   "dots": {
+    "value": 1,
+    "auto": true,
+    "greenieCarry": false,
+    "kinds": {
+     "greenie": true,
+     "sandy": true,
+     "barkie": true,
+     "chipin": true,
+     "polie": false,
+     "arnie": false,
+     "hogan": false
+    }
+   }
+  },
+  "challengesIn": []
+ },
+ "r_nassau_hc": {
+  "round": {
+   "id": "r_nassau_hc",
+   "game": "nassau",
+   "status": "active",
+   "createdAt": 1790000000000,
+   "finishedAt": null,
+   "course": {
+    "id": "cc_logan",
+    "name": "Logan River GC",
+    "city": "Logan",
+    "tees": [
+     {
+      "name": "Blue",
+      "color": "#2457d6"
+     },
+     {
+      "name": "White",
+      "color": "#ffffff"
+     }
+    ]
+   },
+   "holesCount": 18,
+   "nine": null,
+   "holes": [
+    {
+     "no": 1,
+     "courseIdx": 0,
+     "par": 4,
+     "hdcp": 1,
+     "rank": 1
+    },
+    {
+     "no": 2,
+     "courseIdx": 1,
+     "par": 5,
+     "hdcp": 8,
+     "rank": 8
+    },
+    {
+     "no": 3,
+     "courseIdx": 2,
+     "par": 3,
+     "hdcp": 15,
+     "rank": 15
+    },
+    {
+     "no": 4,
+     "courseIdx": 3,
+     "par": 4,
+     "hdcp": 4,
+     "rank": 4
+    },
+    {
+     "no": 5,
+     "courseIdx": 4,
+     "par": 4,
+     "hdcp": 11,
+     "rank": 11
+    },
+    {
+     "no": 6,
+     "courseIdx": 5,
+     "par": 3,
+     "hdcp": 18,
+     "rank": 18
+    },
+    {
+     "no": 7,
+     "courseIdx": 6,
+     "par": 5,
+     "hdcp": 7,
+     "rank": 7
+    },
+    {
+     "no": 8,
+     "courseIdx": 7,
+     "par": 4,
+     "hdcp": 14,
+     "rank": 14
+    },
+    {
+     "no": 9,
+     "courseIdx": 8,
+     "par": 4,
+     "hdcp": 3,
+     "rank": 3
+    },
+    {
+     "no": 10,
+     "courseIdx": 9,
+     "par": 4,
+     "hdcp": 10,
+     "rank": 10
+    },
+    {
+     "no": 11,
+     "courseIdx": 10,
+     "par": 5,
+     "hdcp": 17,
+     "rank": 17
+    },
+    {
+     "no": 12,
+     "courseIdx": 11,
+     "par": 3,
+     "hdcp": 6,
+     "rank": 6
+    },
+    {
+     "no": 13,
+     "courseIdx": 12,
+     "par": 4,
+     "hdcp": 13,
+     "rank": 13
+    },
+    {
+     "no": 14,
+     "courseIdx": 13,
+     "par": 4,
+     "hdcp": 2,
+     "rank": 2
+    },
+    {
+     "no": 15,
+     "courseIdx": 14,
+     "par": 3,
+     "hdcp": 9,
+     "rank": 9
+    },
+    {
+     "no": 16,
+     "courseIdx": 15,
+     "par": 5,
+     "hdcp": 16,
+     "rank": 16
+    },
+    {
+     "no": 17,
+     "courseIdx": 16,
+     "par": 4,
+     "hdcp": 5,
+     "rank": 5
+    },
+    {
+     "no": 18,
+     "courseIdx": 17,
+     "par": 4,
+     "hdcp": 12,
+     "rank": 12
+    }
+   ],
+   "par": 72,
+   "useHandicaps": true,
+   "hcPct": 80,
+   "players": [
+    {
+     "id": "me",
+     "name": "Trevor Nielsen",
+     "tee": "Blue",
+     "index": 8.4,
+     "courseHc": 9,
+     "courseHcOverride": null,
+     "payApp": "venmo",
+     "payHandle": "trev",
+     "plays": 5
+    },
+    {
+     "id": "mike",
+     "name": "Mike Allred",
+     "tee": "Blue",
+     "index": 12.1,
+     "courseHc": 13,
+     "courseHcOverride": null,
+     "plays": 8
+    },
+    {
+     "id": "dave",
+     "name": "Dave Olsen",
+     "tee": "Blue",
+     "index": 18,
+     "courseHc": 20,
+     "courseHcOverride": null,
+     "plays": 14
+    },
+    {
+     "id": "jo",
+     "name": "Jo Park",
+     "tee": "Blue",
+     "index": 3.2,
+     "courseHc": 3,
+     "courseHcOverride": null,
+     "plays": 0
+    }
+   ],
+   "teams": [
+    {
+     "id": "t0",
+     "name": "Trevor & Jo",
+     "players": [
+      "me",
+      "jo"
+     ]
+    },
+    {
+     "id": "t1",
+     "name": "Mike & Dave",
+     "players": [
+      "mike",
+      "dave"
+     ]
+    }
+   ],
+   "settings": {
+    "theme": "system",
+    "hcPct": 80,
+    "skins": {
+     "value": 2,
+     "carryover": true,
+     "kind": "net",
+     "payout": "per",
+     "stake": 10,
+     "lastCarry": "void",
+     "backDouble": false,
+     "birdieDouble": false
+    },
+    "nassau": {
+     "front": 5,
+     "back": 5,
+     "total": 5,
+     "pressMode": "manual",
+     "threshold": 2,
+     "turnPress": false,
+     "noLastPress": false,
+     "teamScore": "best",
+     "bye": "off"
+    },
+    "wolf": {
+     "point": 2,
+     "loneMultiplier": 2,
+     "blind": false,
+     "blindPlus": 1
+    },
+    "banker": {
+     "defaultBet": 5,
+     "min": 1,
+     "max": 20,
+     "ties": "push",
+     "rotation": "rotate",
+     "birdies": "off",
+     "par3Triple": false,
+     "pressAll": false
+    },
+    "match": {
+     "stake": 10,
+     "pressMode": "off",
+     "threshold": 2,
+     "teamScore": "best",
+     "bye": "off"
+    },
+    "stroke": {
+     "stake": 5,
+     "payout": "pot",
+     "cap": false,
+     "nassau": false,
+     "gross": false
+    },
+    "vegas": {
+     "point": 1,
+     "birdieFlip": true,
+     "birdieDouble": false,
+     "daytona": false,
+     "max9": false
+    },
+    "ctp": {
+     "stake": 5,
+     "unclaimed": "carry"
+    },
+    "birdies": {
+     "stake": 5,
+     "eagleShares": 2
+    },
+    "dots": {
+     "value": 1,
+     "auto": true,
+     "greenieCarry": false,
+     "kinds": {
+      "greenie": true,
+      "sandy": true,
+      "barkie": true,
+      "chipin": true,
+      "polie": false,
+      "arnie": false,
+      "hogan": false
+     }
+    }
+   },
+   "scores": {},
+   "banker": {},
+   "wolf": {},
+   "marks": {},
+   "presses": [],
+   "pressSeq": 0,
+   "current": 0,
+   "left": {},
+   "halfStrokes": true,
+   "sideGames": [
+    {
+     "game": "skins",
+     "settings": {
+      "value": 1,
+      "carryover": true,
+      "kind": "net",
+      "payout": "per"
+     }
+    },
+    {
+     "game": "ctp",
+     "settings": {
+      "stake": 5,
+      "unclaimed": "carry"
+     }
+    }
+   ],
+   "bets": [
+    {
+     "id": "b_1",
+     "kind": "match",
+     "sides": [
+      "me",
+      "mike"
+     ],
+     "stake": 20
+    },
+    {
+     "id": "b_2",
+     "kind": "hole",
+     "sides": [
+      "dave",
+      "jo"
+     ],
+     "stake": 2,
+     "holes": [
+      1,
+      9
+     ]
+    }
+   ]
+  },
+  "settings": {
+   "theme": "system",
+   "hcPct": 80,
+   "skins": {
+    "value": 2,
+    "carryover": true,
+    "kind": "net",
+    "payout": "per",
+    "stake": 10,
+    "lastCarry": "void",
+    "backDouble": false,
+    "birdieDouble": false
+   },
+   "nassau": {
+    "front": 5,
+    "back": 5,
+    "total": 5,
+    "pressMode": "manual",
+    "threshold": 2,
+    "turnPress": false,
+    "noLastPress": false,
+    "teamScore": "best",
+    "bye": "off"
+   },
+   "wolf": {
+    "point": 2,
+    "loneMultiplier": 2,
+    "blind": false,
+    "blindPlus": 1
+   },
+   "banker": {
+    "defaultBet": 5,
+    "min": 1,
+    "max": 20,
+    "ties": "push",
+    "rotation": "rotate",
+    "birdies": "off",
+    "par3Triple": false,
+    "pressAll": false
+   },
+   "match": {
+    "stake": 10,
+    "pressMode": "off",
+    "threshold": 2,
+    "teamScore": "best",
+    "bye": "off"
+   },
+   "stroke": {
+    "stake": 5,
+    "payout": "pot",
+    "cap": false,
+    "nassau": false,
+    "gross": false
+   },
+   "vegas": {
+    "point": 1,
+    "birdieFlip": true,
+    "birdieDouble": false,
+    "daytona": false,
+    "max9": false
+   },
+   "ctp": {
+    "stake": 5,
+    "unclaimed": "carry"
+   },
+   "birdies": {
+    "stake": 5,
+    "eagleShares": 2
+   },
+   "dots": {
+    "value": 1,
+    "auto": true,
+    "greenieCarry": false,
+    "kinds": {
+     "greenie": true,
+     "sandy": true,
+     "barkie": true,
+     "chipin": true,
+     "polie": false,
+     "arnie": false,
+     "hogan": false
+    }
+   }
+  },
+  "challengesIn": []
+ },
+ "r_wolf_points": {
+  "round": {
+   "id": "r_wolf_points",
+   "game": "wolf",
+   "status": "active",
+   "createdAt": 1790000000000,
+   "finishedAt": null,
+   "course": {
+    "id": "cc_logan",
+    "name": "Logan River GC",
+    "city": "Logan",
+    "tees": [
+     {
+      "name": "Blue",
+      "color": "#2457d6"
+     },
+     {
+      "name": "White",
+      "color": "#ffffff"
+     }
+    ]
+   },
+   "holesCount": 18,
+   "nine": null,
+   "holes": [
+    {
+     "no": 1,
+     "courseIdx": 0,
+     "par": 4,
+     "hdcp": 1,
+     "rank": 1
+    },
+    {
+     "no": 2,
+     "courseIdx": 1,
+     "par": 5,
+     "hdcp": 8,
+     "rank": 8
+    },
+    {
+     "no": 3,
+     "courseIdx": 2,
+     "par": 3,
+     "hdcp": 15,
+     "rank": 15
+    },
+    {
+     "no": 4,
+     "courseIdx": 3,
+     "par": 4,
+     "hdcp": 4,
+     "rank": 4
+    },
+    {
+     "no": 5,
+     "courseIdx": 4,
+     "par": 4,
+     "hdcp": 11,
+     "rank": 11
+    },
+    {
+     "no": 6,
+     "courseIdx": 5,
+     "par": 3,
+     "hdcp": 18,
+     "rank": 18
+    },
+    {
+     "no": 7,
+     "courseIdx": 6,
+     "par": 5,
+     "hdcp": 7,
+     "rank": 7
+    },
+    {
+     "no": 8,
+     "courseIdx": 7,
+     "par": 4,
+     "hdcp": 14,
+     "rank": 14
+    },
+    {
+     "no": 9,
+     "courseIdx": 8,
+     "par": 4,
+     "hdcp": 3,
+     "rank": 3
+    },
+    {
+     "no": 10,
+     "courseIdx": 9,
+     "par": 4,
+     "hdcp": 10,
+     "rank": 10
+    },
+    {
+     "no": 11,
+     "courseIdx": 10,
+     "par": 5,
+     "hdcp": 17,
+     "rank": 17
+    },
+    {
+     "no": 12,
+     "courseIdx": 11,
+     "par": 3,
+     "hdcp": 6,
+     "rank": 6
+    },
+    {
+     "no": 13,
+     "courseIdx": 12,
+     "par": 4,
+     "hdcp": 13,
+     "rank": 13
+    },
+    {
+     "no": 14,
+     "courseIdx": 13,
+     "par": 4,
+     "hdcp": 2,
+     "rank": 2
+    },
+    {
+     "no": 15,
+     "courseIdx": 14,
+     "par": 3,
+     "hdcp": 9,
+     "rank": 9
+    },
+    {
+     "no": 16,
+     "courseIdx": 15,
+     "par": 5,
+     "hdcp": 16,
+     "rank": 16
+    },
+    {
+     "no": 17,
+     "courseIdx": 16,
+     "par": 4,
+     "hdcp": 5,
+     "rank": 5
+    },
+    {
+     "no": 18,
+     "courseIdx": 17,
+     "par": 4,
+     "hdcp": 12,
+     "rank": 12
+    }
+   ],
+   "par": 72,
+   "useHandicaps": false,
+   "hcPct": 100,
+   "players": [
+    {
+     "id": "dave",
+     "name": "Dave Olsen",
+     "tee": "Blue",
+     "index": 18,
+     "courseHc": 20,
+     "courseHcOverride": null,
+     "plays": 0
+    },
+    {
+     "id": "me",
+     "name": "Trevor Nielsen",
+     "tee": "Blue",
+     "index": 8.4,
+     "courseHc": 9,
+     "courseHcOverride": null,
+     "payApp": "venmo",
+     "payHandle": "trev",
+     "plays": 0
+    },
+    {
+     "id": "jo",
+     "name": "Jo Park",
+     "tee": "Blue",
+     "index": 3.2,
+     "courseHc": 3,
+     "courseHcOverride": null,
+     "plays": 0
+    },
+    {
+     "id": "mike",
+     "name": "Mike Allred",
+     "tee": "Blue",
+     "index": 12.1,
+     "courseHc": 13,
+     "courseHcOverride": null,
+     "plays": 0
+    }
+   ],
+   "teams": null,
+   "settings": {
+    "theme": "system",
+    "hcPct": 100,
+    "skins": {
+     "value": 2,
+     "carryover": true,
+     "kind": "net",
+     "payout": "per",
+     "stake": 10,
+     "lastCarry": "void",
+     "backDouble": false,
+     "birdieDouble": false
+    },
+    "nassau": {
+     "front": 5,
+     "back": 5,
+     "total": 5,
+     "pressMode": "manual",
+     "threshold": 2,
+     "turnPress": false,
+     "noLastPress": false,
+     "teamScore": "best",
+     "bye": "off"
+    },
+    "wolf": {
+     "point": 2,
+     "loneMultiplier": 2,
+     "blind": true,
+     "blindPlus": 1,
+     "carry": true
+    },
+    "banker": {
+     "defaultBet": 5,
+     "min": 1,
+     "max": 20,
+     "ties": "push",
+     "rotation": "rotate",
+     "birdies": "off",
+     "par3Triple": false,
+     "pressAll": false
+    },
+    "match": {
+     "stake": 10,
+     "pressMode": "off",
+     "threshold": 2,
+     "teamScore": "best",
+     "bye": "off"
+    },
+    "stroke": {
+     "stake": 5,
+     "payout": "pot",
+     "cap": false,
+     "nassau": false,
+     "gross": false
+    },
+    "vegas": {
+     "point": 1,
+     "birdieFlip": true,
+     "birdieDouble": false,
+     "daytona": false,
+     "max9": false
+    },
+    "ctp": {
+     "stake": 5,
+     "unclaimed": "carry"
+    },
+    "birdies": {
+     "stake": 5,
+     "eagleShares": 2
+    },
+    "dots": {
+     "value": 1,
+     "auto": true,
+     "greenieCarry": false,
+     "kinds": {
+      "greenie": true,
+      "sandy": true,
+      "barkie": true,
+      "chipin": true,
+      "polie": false,
+      "arnie": false,
+      "hogan": false
+     }
+    }
+   },
+   "scores": {},
+   "banker": {},
+   "wolf": {},
+   "marks": {},
+   "presses": [],
+   "pressSeq": 0,
+   "current": 0,
+   "left": {},
+   "playFor": {
+    "kind": "points"
+   }
+  },
+  "settings": {
+   "theme": "system",
+   "hcPct": 100,
+   "skins": {
+    "value": 2,
+    "carryover": true,
+    "kind": "net",
+    "payout": "per",
+    "stake": 10,
+    "lastCarry": "void",
+    "backDouble": false,
+    "birdieDouble": false
+   },
+   "nassau": {
+    "front": 5,
+    "back": 5,
+    "total": 5,
+    "pressMode": "manual",
+    "threshold": 2,
+    "turnPress": false,
+    "noLastPress": false,
+    "teamScore": "best",
+    "bye": "off"
+   },
+   "wolf": {
+    "point": 2,
+    "loneMultiplier": 2,
+    "blind": true,
+    "blindPlus": 1,
+    "carry": true
+   },
+   "banker": {
+    "defaultBet": 5,
+    "min": 1,
+    "max": 20,
+    "ties": "push",
+    "rotation": "rotate",
+    "birdies": "off",
+    "par3Triple": false,
+    "pressAll": false
+   },
+   "match": {
+    "stake": 10,
+    "pressMode": "off",
+    "threshold": 2,
+    "teamScore": "best",
+    "bye": "off"
+   },
+   "stroke": {
+    "stake": 5,
+    "payout": "pot",
+    "cap": false,
+    "nassau": false,
+    "gross": false
+   },
+   "vegas": {
+    "point": 1,
+    "birdieFlip": true,
+    "birdieDouble": false,
+    "daytona": false,
+    "max9": false
+   },
+   "ctp": {
+    "stake": 5,
+    "unclaimed": "carry"
+   },
+   "birdies": {
+    "stake": 5,
+    "eagleShares": 2
+   },
+   "dots": {
+    "value": 1,
+    "auto": true,
+    "greenieCarry": false,
+    "kinds": {
+     "greenie": true,
+     "sandy": true,
+     "barkie": true,
+     "chipin": true,
+     "polie": false,
+     "arnie": false,
+     "hogan": false
+    }
+   }
+  },
+  "challengesIn": []
+ },
+ "r_bestball_reward": {
+  "round": {
+   "id": "r_bestball_reward",
+   "game": "bestball",
+   "status": "active",
+   "createdAt": 1790000000000,
+   "finishedAt": null,
+   "course": {
+    "id": "cc_logan",
+    "name": "Logan River GC",
+    "city": "Logan",
+    "tees": [
+     {
+      "name": "Blue",
+      "color": "#2457d6"
+     },
+     {
+      "name": "White",
+      "color": "#ffffff"
+     }
+    ]
+   },
+   "holesCount": 18,
+   "nine": null,
+   "holes": [
+    {
+     "no": 1,
+     "courseIdx": 0,
+     "par": 4,
+     "hdcp": 1,
+     "rank": 1
+    },
+    {
+     "no": 2,
+     "courseIdx": 1,
+     "par": 5,
+     "hdcp": 8,
+     "rank": 8
+    },
+    {
+     "no": 3,
+     "courseIdx": 2,
+     "par": 3,
+     "hdcp": 15,
+     "rank": 15
+    },
+    {
+     "no": 4,
+     "courseIdx": 3,
+     "par": 4,
+     "hdcp": 4,
+     "rank": 4
+    },
+    {
+     "no": 5,
+     "courseIdx": 4,
+     "par": 4,
+     "hdcp": 11,
+     "rank": 11
+    },
+    {
+     "no": 6,
+     "courseIdx": 5,
+     "par": 3,
+     "hdcp": 18,
+     "rank": 18
+    },
+    {
+     "no": 7,
+     "courseIdx": 6,
+     "par": 5,
+     "hdcp": 7,
+     "rank": 7
+    },
+    {
+     "no": 8,
+     "courseIdx": 7,
+     "par": 4,
+     "hdcp": 14,
+     "rank": 14
+    },
+    {
+     "no": 9,
+     "courseIdx": 8,
+     "par": 4,
+     "hdcp": 3,
+     "rank": 3
+    },
+    {
+     "no": 10,
+     "courseIdx": 9,
+     "par": 4,
+     "hdcp": 10,
+     "rank": 10
+    },
+    {
+     "no": 11,
+     "courseIdx": 10,
+     "par": 5,
+     "hdcp": 17,
+     "rank": 17
+    },
+    {
+     "no": 12,
+     "courseIdx": 11,
+     "par": 3,
+     "hdcp": 6,
+     "rank": 6
+    },
+    {
+     "no": 13,
+     "courseIdx": 12,
+     "par": 4,
+     "hdcp": 13,
+     "rank": 13
+    },
+    {
+     "no": 14,
+     "courseIdx": 13,
+     "par": 4,
+     "hdcp": 2,
+     "rank": 2
+    },
+    {
+     "no": 15,
+     "courseIdx": 14,
+     "par": 3,
+     "hdcp": 9,
+     "rank": 9
+    },
+    {
+     "no": 16,
+     "courseIdx": 15,
+     "par": 5,
+     "hdcp": 16,
+     "rank": 16
+    },
+    {
+     "no": 17,
+     "courseIdx": 16,
+     "par": 4,
+     "hdcp": 5,
+     "rank": 5
+    },
+    {
+     "no": 18,
+     "courseIdx": 17,
+     "par": 4,
+     "hdcp": 12,
+     "rank": 12
+    }
+   ],
+   "par": 72,
+   "useHandicaps": true,
+   "hcPct": 100,
+   "players": [
+    {
+     "id": "me",
+     "name": "Trevor Nielsen",
+     "tee": "Blue",
+     "index": 8.4,
+     "courseHc": 9,
+     "courseHcOverride": null,
+     "payApp": "venmo",
+     "payHandle": "trev",
+     "plays": 6
+    },
+    {
+     "id": "mike",
+     "name": "Mike Allred",
+     "tee": "Blue",
+     "index": 12.1,
+     "courseHc": 13,
+     "courseHcOverride": null,
+     "plays": 10
+    },
+    {
+     "id": "dave",
+     "name": "Dave Olsen",
+     "tee": "Blue",
+     "index": 18,
+     "courseHc": 20,
+     "courseHcOverride": null,
+     "plays": 17
+    },
+    {
+     "id": "jo",
+     "name": "Jo Park",
+     "tee": "Blue",
+     "index": 3.2,
+     "courseHc": 3,
+     "courseHcOverride": null,
+     "plays": 0
+    }
+   ],
+   "teams": [
+    {
+     "id": "t0",
+     "name": "Trevor & Mike",
+     "players": [
+      "me",
+      "mike"
+     ]
+    },
+    {
+     "id": "t1",
+     "name": "Dave & Jo",
+     "players": [
+      "dave",
+      "jo"
+     ]
+    }
+   ],
+   "settings": {
+    "theme": "system",
+    "hcPct": 100,
+    "skins": {
+     "value": 2,
+     "carryover": true,
+     "kind": "net",
+     "payout": "per",
+     "stake": 10,
+     "lastCarry": "void",
+     "backDouble": false,
+     "birdieDouble": false
+    },
+    "nassau": {
+     "front": 5,
+     "back": 5,
+     "total": 5,
+     "pressMode": "manual",
+     "threshold": 2,
+     "turnPress": false,
+     "noLastPress": false,
+     "teamScore": "best",
+     "bye": "off"
+    },
+    "wolf": {
+     "point": 2,
+     "loneMultiplier": 2,
+     "blind": false,
+     "blindPlus": 1
+    },
+    "banker": {
+     "defaultBet": 5,
+     "min": 1,
+     "max": 20,
+     "ties": "push",
+     "rotation": "rotate",
+     "birdies": "off",
+     "par3Triple": false,
+     "pressAll": false
+    },
+    "match": {
+     "stake": 10,
+     "pressMode": "off",
+     "threshold": 2,
+     "teamScore": "best",
+     "bye": "off"
+    },
+    "stroke": {
+     "stake": 5,
+     "payout": "pot",
+     "cap": false,
+     "nassau": false,
+     "gross": false
+    },
+    "vegas": {
+     "point": 1,
+     "birdieFlip": true,
+     "birdieDouble": false,
+     "daytona": false,
+     "max9": false
+    },
+    "ctp": {
+     "stake": 5,
+     "unclaimed": "carry"
+    },
+    "birdies": {
+     "stake": 5,
+     "eagleShares": 2
+    },
+    "dots": {
+     "value": 1,
+     "auto": true,
+     "greenieCarry": false,
+     "kinds": {
+      "greenie": true,
+      "sandy": true,
+      "barkie": true,
+      "chipin": true,
+      "polie": false,
+      "arnie": false,
+      "hogan": false
+     }
+    }
+   },
+   "scores": {},
+   "banker": {},
+   "wolf": {},
+   "marks": {},
+   "presses": [],
+   "pressSeq": 0,
+   "current": 0,
+   "left": {},
+   "playFor": {
+    "kind": "reward",
+    "reward": "Lunch",
+    "owes": "last"
+   },
+   "bets": [
+    {
+     "id": "b_3",
+     "kind": "ctp",
+     "sides": [
+      "me",
+      "dave"
+     ],
+     "stake": 5,
+     "playFor": "money"
+    }
+   ]
+  },
+  "settings": {
+   "theme": "system",
+   "hcPct": 100,
+   "skins": {
+    "value": 2,
+    "carryover": true,
+    "kind": "net",
+    "payout": "per",
+    "stake": 10,
+    "lastCarry": "void",
+    "backDouble": false,
+    "birdieDouble": false
+   },
+   "nassau": {
+    "front": 5,
+    "back": 5,
+    "total": 5,
+    "pressMode": "manual",
+    "threshold": 2,
+    "turnPress": false,
+    "noLastPress": false,
+    "teamScore": "best",
+    "bye": "off"
+   },
+   "wolf": {
+    "point": 2,
+    "loneMultiplier": 2,
+    "blind": false,
+    "blindPlus": 1
+   },
+   "banker": {
+    "defaultBet": 5,
+    "min": 1,
+    "max": 20,
+    "ties": "push",
+    "rotation": "rotate",
+    "birdies": "off",
+    "par3Triple": false,
+    "pressAll": false
+   },
+   "match": {
+    "stake": 10,
+    "pressMode": "off",
+    "threshold": 2,
+    "teamScore": "best",
+    "bye": "off"
+   },
+   "stroke": {
+    "stake": 5,
+    "payout": "pot",
+    "cap": false,
+    "nassau": false,
+    "gross": false
+   },
+   "vegas": {
+    "point": 1,
+    "birdieFlip": true,
+    "birdieDouble": false,
+    "daytona": false,
+    "max9": false
+   },
+   "ctp": {
+    "stake": 5,
+    "unclaimed": "carry"
+   },
+   "birdies": {
+    "stake": 5,
+    "eagleShares": 2
+   },
+   "dots": {
+    "value": 1,
+    "auto": true,
+    "greenieCarry": false,
+    "kinds": {
+     "greenie": true,
+     "sandy": true,
+     "barkie": true,
+     "chipin": true,
+     "polie": false,
+     "arnie": false,
+     "hogan": false
+    }
+   }
+  },
+  "challengesIn": []
+ },
+ "r_banker_casual": {
+  "round": {
+   "id": "r_banker_casual",
+   "game": "banker",
+   "status": "active",
+   "createdAt": 1790000000000,
+   "finishedAt": null,
+   "course": {
+    "id": "cc_logan",
+    "name": "Logan River GC",
+    "city": "Logan",
+    "tees": [
+     {
+      "name": "Blue",
+      "color": "#2457d6"
+     },
+     {
+      "name": "White",
+      "color": "#ffffff"
+     }
+    ]
+   },
+   "holesCount": 18,
+   "nine": null,
+   "holes": [
+    {
+     "no": 1,
+     "courseIdx": 0,
+     "par": 4,
+     "hdcp": 1,
+     "rank": 1
+    },
+    {
+     "no": 2,
+     "courseIdx": 1,
+     "par": 5,
+     "hdcp": 8,
+     "rank": 8
+    },
+    {
+     "no": 3,
+     "courseIdx": 2,
+     "par": 3,
+     "hdcp": 15,
+     "rank": 15
+    },
+    {
+     "no": 4,
+     "courseIdx": 3,
+     "par": 4,
+     "hdcp": 4,
+     "rank": 4
+    },
+    {
+     "no": 5,
+     "courseIdx": 4,
+     "par": 4,
+     "hdcp": 11,
+     "rank": 11
+    },
+    {
+     "no": 6,
+     "courseIdx": 5,
+     "par": 3,
+     "hdcp": 18,
+     "rank": 18
+    },
+    {
+     "no": 7,
+     "courseIdx": 6,
+     "par": 5,
+     "hdcp": 7,
+     "rank": 7
+    },
+    {
+     "no": 8,
+     "courseIdx": 7,
+     "par": 4,
+     "hdcp": 14,
+     "rank": 14
+    },
+    {
+     "no": 9,
+     "courseIdx": 8,
+     "par": 4,
+     "hdcp": 3,
+     "rank": 3
+    },
+    {
+     "no": 10,
+     "courseIdx": 9,
+     "par": 4,
+     "hdcp": 10,
+     "rank": 10
+    },
+    {
+     "no": 11,
+     "courseIdx": 10,
+     "par": 5,
+     "hdcp": 17,
+     "rank": 17
+    },
+    {
+     "no": 12,
+     "courseIdx": 11,
+     "par": 3,
+     "hdcp": 6,
+     "rank": 6
+    },
+    {
+     "no": 13,
+     "courseIdx": 12,
+     "par": 4,
+     "hdcp": 13,
+     "rank": 13
+    },
+    {
+     "no": 14,
+     "courseIdx": 13,
+     "par": 4,
+     "hdcp": 2,
+     "rank": 2
+    },
+    {
+     "no": 15,
+     "courseIdx": 14,
+     "par": 3,
+     "hdcp": 9,
+     "rank": 9
+    },
+    {
+     "no": 16,
+     "courseIdx": 15,
+     "par": 5,
+     "hdcp": 16,
+     "rank": 16
+    },
+    {
+     "no": 17,
+     "courseIdx": 16,
+     "par": 4,
+     "hdcp": 5,
+     "rank": 5
+    },
+    {
+     "no": 18,
+     "courseIdx": 17,
+     "par": 4,
+     "hdcp": 12,
+     "rank": 12
+    }
+   ],
+   "par": 72,
+   "useHandicaps": true,
+   "hcPct": 100,
+   "players": [
+    {
+     "id": "me",
+     "name": "Trevor Nielsen",
+     "tee": "Blue",
+     "index": 8.4,
+     "courseHc": 9,
+     "courseHcOverride": null,
+     "payApp": "venmo",
+     "payHandle": "trev",
+     "plays": 0
+    },
+    {
+     "id": "mike",
+     "name": "Mike Allred",
+     "tee": "Blue",
+     "index": 12.1,
+     "courseHc": 10,
+     "courseHcOverride": 10,
+     "plays": 1
+    },
+    {
+     "id": "dave",
+     "name": "Dave Olsen",
+     "tee": "White",
+     "index": 18,
+     "courseHc": 16,
+     "courseHcOverride": null,
+     "plays": 7
+    },
+    {
+     "id": "sam",
+     "name": "Sam Reyes",
+     "tee": "Blue",
+     "index": null,
+     "courseHc": 0,
+     "courseHcOverride": null,
+     "plays": -9
+    }
+   ],
+   "teams": null,
+   "settings": {
+    "theme": "system",
+    "hcPct": 100,
+    "skins": {
+     "value": 2,
+     "carryover": true,
+     "kind": "net",
+     "payout": "per",
+     "stake": 10,
+     "lastCarry": "void",
+     "backDouble": false,
+     "birdieDouble": false
+    },
+    "nassau": {
+     "front": 5,
+     "back": 5,
+     "total": 5,
+     "pressMode": "manual",
+     "threshold": 2,
+     "turnPress": false,
+     "noLastPress": false,
+     "teamScore": "best",
+     "bye": "off"
+    },
+    "wolf": {
+     "point": 2,
+     "loneMultiplier": 2,
+     "blind": false,
+     "blindPlus": 1
+    },
+    "banker": {
+     "defaultBet": 5,
+     "min": 1,
+     "max": 20,
+     "ties": "push",
+     "rotation": "rotate",
+     "birdies": "off",
+     "par3Triple": false,
+     "pressAll": false
+    },
+    "match": {
+     "stake": 10,
+     "pressMode": "off",
+     "threshold": 2,
+     "teamScore": "best",
+     "bye": "off"
+    },
+    "stroke": {
+     "stake": 5,
+     "payout": "pot",
+     "cap": false,
+     "nassau": false,
+     "gross": false
+    },
+    "vegas": {
+     "point": 1,
+     "birdieFlip": true,
+     "birdieDouble": false,
+     "daytona": false,
+     "max9": false
+    },
+    "ctp": {
+     "stake": 5,
+     "unclaimed": "carry"
+    },
+    "birdies": {
+     "stake": 5,
+     "eagleShares": 2
+    },
+    "dots": {
+     "value": 1,
+     "auto": true,
+     "greenieCarry": false,
+     "kinds": {
+      "greenie": true,
+      "sandy": true,
+      "barkie": true,
+      "chipin": true,
+      "polie": false,
+      "arnie": false,
+      "hogan": false
+     }
+    }
+   },
+   "scores": {},
+   "banker": {},
+   "wolf": {},
+   "marks": {},
+   "presses": [],
+   "pressSeq": 0,
+   "current": 0,
+   "left": {},
+   "justPlaying": {
+    "sam": true
+   }
+  },
+  "settings": {
+   "theme": "system",
+   "hcPct": 100,
+   "skins": {
+    "value": 2,
+    "carryover": true,
+    "kind": "net",
+    "payout": "per",
+    "stake": 10,
+    "lastCarry": "void",
+    "backDouble": false,
+    "birdieDouble": false
+   },
+   "nassau": {
+    "front": 5,
+    "back": 5,
+    "total": 5,
+    "pressMode": "manual",
+    "threshold": 2,
+    "turnPress": false,
+    "noLastPress": false,
+    "teamScore": "best",
+    "bye": "off"
+   },
+   "wolf": {
+    "point": 2,
+    "loneMultiplier": 2,
+    "blind": false,
+    "blindPlus": 1
+   },
+   "banker": {
+    "defaultBet": 5,
+    "min": 1,
+    "max": 20,
+    "ties": "push",
+    "rotation": "rotate",
+    "birdies": "off",
+    "par3Triple": false,
+    "pressAll": false
+   },
+   "match": {
+    "stake": 10,
+    "pressMode": "off",
+    "threshold": 2,
+    "teamScore": "best",
+    "bye": "off"
+   },
+   "stroke": {
+    "stake": 5,
+    "payout": "pot",
+    "cap": false,
+    "nassau": false,
+    "gross": false
+   },
+   "vegas": {
+    "point": 1,
+    "birdieFlip": true,
+    "birdieDouble": false,
+    "daytona": false,
+    "max9": false
+   },
+   "ctp": {
+    "stake": 5,
+    "unclaimed": "carry"
+   },
+   "birdies": {
+    "stake": 5,
+    "eagleShares": 2
+   },
+   "dots": {
+    "value": 1,
+    "auto": true,
+    "greenieCarry": false,
+    "kinds": {
+     "greenie": true,
+     "sandy": true,
+     "barkie": true,
+     "chipin": true,
+     "polie": false,
+     "arnie": false,
+     "hogan": false
+    }
+   }
+  },
+  "challengesIn": []
+ },
+ "r_stroke_nohc": {
+  "round": {
+   "id": "r_stroke_nohc",
+   "game": "stroke",
+   "status": "active",
+   "createdAt": 1790000000000,
+   "finishedAt": null,
+   "course": {
+    "id": "cc_logan",
+    "name": "Logan River GC",
+    "city": "Logan",
+    "tees": [
+     {
+      "name": "Blue",
+      "color": "#2457d6"
+     },
+     {
+      "name": "White",
+      "color": "#ffffff"
+     }
+    ]
+   },
+   "holesCount": 18,
+   "nine": null,
+   "holes": [
+    {
+     "no": 1,
+     "courseIdx": 0,
+     "par": 4,
+     "hdcp": 1,
+     "rank": 1
+    },
+    {
+     "no": 2,
+     "courseIdx": 1,
+     "par": 5,
+     "hdcp": 8,
+     "rank": 8
+    },
+    {
+     "no": 3,
+     "courseIdx": 2,
+     "par": 3,
+     "hdcp": 15,
+     "rank": 15
+    },
+    {
+     "no": 4,
+     "courseIdx": 3,
+     "par": 4,
+     "hdcp": 4,
+     "rank": 4
+    },
+    {
+     "no": 5,
+     "courseIdx": 4,
+     "par": 4,
+     "hdcp": 11,
+     "rank": 11
+    },
+    {
+     "no": 6,
+     "courseIdx": 5,
+     "par": 3,
+     "hdcp": 18,
+     "rank": 18
+    },
+    {
+     "no": 7,
+     "courseIdx": 6,
+     "par": 5,
+     "hdcp": 7,
+     "rank": 7
+    },
+    {
+     "no": 8,
+     "courseIdx": 7,
+     "par": 4,
+     "hdcp": 14,
+     "rank": 14
+    },
+    {
+     "no": 9,
+     "courseIdx": 8,
+     "par": 4,
+     "hdcp": 3,
+     "rank": 3
+    },
+    {
+     "no": 10,
+     "courseIdx": 9,
+     "par": 4,
+     "hdcp": 10,
+     "rank": 10
+    },
+    {
+     "no": 11,
+     "courseIdx": 10,
+     "par": 5,
+     "hdcp": 17,
+     "rank": 17
+    },
+    {
+     "no": 12,
+     "courseIdx": 11,
+     "par": 3,
+     "hdcp": 6,
+     "rank": 6
+    },
+    {
+     "no": 13,
+     "courseIdx": 12,
+     "par": 4,
+     "hdcp": 13,
+     "rank": 13
+    },
+    {
+     "no": 14,
+     "courseIdx": 13,
+     "par": 4,
+     "hdcp": 2,
+     "rank": 2
+    },
+    {
+     "no": 15,
+     "courseIdx": 14,
+     "par": 3,
+     "hdcp": 9,
+     "rank": 9
+    },
+    {
+     "no": 16,
+     "courseIdx": 15,
+     "par": 5,
+     "hdcp": 16,
+     "rank": 16
+    },
+    {
+     "no": 17,
+     "courseIdx": 16,
+     "par": 4,
+     "hdcp": 5,
+     "rank": 5
+    },
+    {
+     "no": 18,
+     "courseIdx": 17,
+     "par": 4,
+     "hdcp": 12,
+     "rank": 12
+    }
+   ],
+   "par": 72,
+   "useHandicaps": true,
+   "hcPct": 100,
+   "players": [
+    {
+     "id": "me",
+     "name": "Trevor Nielsen",
+     "tee": "Blue",
+     "index": 8.4,
+     "courseHc": 9,
+     "courseHcOverride": null,
+     "payApp": "venmo",
+     "payHandle": "trev",
+     "plays": 9
+    },
+    {
+     "id": "sam",
+     "name": "Sam Reyes",
+     "tee": "Blue",
+     "index": null,
+     "courseHc": 0,
+     "courseHcOverride": null,
+     "plays": 0
+    },
+    {
+     "id": "jo",
+     "name": "Jo Park",
+     "tee": "Blue",
+     "index": 3.2,
+     "courseHc": 3,
+     "courseHcOverride": null,
+     "plays": 3
+    }
+   ],
+   "teams": null,
+   "settings": {
+    "theme": "system",
+    "hcPct": 100,
+    "skins": {
+     "value": 2,
+     "carryover": true,
+     "kind": "net",
+     "payout": "per",
+     "stake": 10,
+     "lastCarry": "void",
+     "backDouble": false,
+     "birdieDouble": false
+    },
+    "nassau": {
+     "front": 5,
+     "back": 5,
+     "total": 5,
+     "pressMode": "manual",
+     "threshold": 2,
+     "turnPress": false,
+     "noLastPress": false,
+     "teamScore": "best",
+     "bye": "off"
+    },
+    "wolf": {
+     "point": 2,
+     "loneMultiplier": 2,
+     "blind": false,
+     "blindPlus": 1
+    },
+    "banker": {
+     "defaultBet": 5,
+     "min": 1,
+     "max": 20,
+     "ties": "push",
+     "rotation": "rotate",
+     "birdies": "off",
+     "par3Triple": false,
+     "pressAll": false
+    },
+    "match": {
+     "stake": 10,
+     "pressMode": "off",
+     "threshold": 2,
+     "teamScore": "best",
+     "bye": "off"
+    },
+    "stroke": {
+     "stake": 5,
+     "payout": "pot",
+     "cap": false,
+     "nassau": false,
+     "gross": false
+    },
+    "vegas": {
+     "point": 1,
+     "birdieFlip": true,
+     "birdieDouble": false,
+     "daytona": false,
+     "max9": false
+    },
+    "ctp": {
+     "stake": 5,
+     "unclaimed": "carry"
+    },
+    "birdies": {
+     "stake": 5,
+     "eagleShares": 2
+    },
+    "dots": {
+     "value": 1,
+     "auto": true,
+     "greenieCarry": false,
+     "kinds": {
+      "greenie": true,
+      "sandy": true,
+      "barkie": true,
+      "chipin": true,
+      "polie": false,
+      "arnie": false,
+      "hogan": false
+     }
+    }
+   },
+   "scores": {},
+   "banker": {},
+   "wolf": {},
+   "marks": {},
+   "presses": [],
+   "pressSeq": 0,
+   "current": 0,
+   "left": {}
+  },
+  "settings": {
+   "theme": "system",
+   "hcPct": 100,
+   "skins": {
+    "value": 2,
+    "carryover": true,
+    "kind": "net",
+    "payout": "per",
+    "stake": 10,
+    "lastCarry": "void",
+    "backDouble": false,
+    "birdieDouble": false
+   },
+   "nassau": {
+    "front": 5,
+    "back": 5,
+    "total": 5,
+    "pressMode": "manual",
+    "threshold": 2,
+    "turnPress": false,
+    "noLastPress": false,
+    "teamScore": "best",
+    "bye": "off"
+   },
+   "wolf": {
+    "point": 2,
+    "loneMultiplier": 2,
+    "blind": false,
+    "blindPlus": 1
+   },
+   "banker": {
+    "defaultBet": 5,
+    "min": 1,
+    "max": 20,
+    "ties": "push",
+    "rotation": "rotate",
+    "birdies": "off",
+    "par3Triple": false,
+    "pressAll": false
+   },
+   "match": {
+    "stake": 10,
+    "pressMode": "off",
+    "threshold": 2,
+    "teamScore": "best",
+    "bye": "off"
+   },
+   "stroke": {
+    "stake": 5,
+    "payout": "pot",
+    "cap": false,
+    "nassau": false,
+    "gross": false
+   },
+   "vegas": {
+    "point": 1,
+    "birdieFlip": true,
+    "birdieDouble": false,
+    "daytona": false,
+    "max9": false
+   },
+   "ctp": {
+    "stake": 5,
+    "unclaimed": "carry"
+   },
+   "birdies": {
+    "stake": 5,
+    "eagleShares": 2
+   },
+   "dots": {
+    "value": 1,
+    "auto": true,
+    "greenieCarry": false,
+    "kinds": {
+     "greenie": true,
+     "sandy": true,
+     "barkie": true,
+     "chipin": true,
+     "polie": false,
+     "arnie": false,
+     "hogan": false
+    }
+   }
+  },
+  "challengesIn": []
+ },
+ "r_match_sides": {
+  "round": {
+   "id": "r_match_sides",
+   "game": "match",
+   "status": "active",
+   "createdAt": 1790000000000,
+   "finishedAt": null,
+   "course": {
+    "id": "cc_logan",
+    "name": "Logan River GC",
+    "city": "Logan",
+    "tees": [
+     {
+      "name": "Blue",
+      "color": "#2457d6"
+     },
+     {
+      "name": "White",
+      "color": "#ffffff"
+     }
+    ]
+   },
+   "holesCount": 18,
+   "nine": null,
+   "holes": [
+    {
+     "no": 1,
+     "courseIdx": 0,
+     "par": 4,
+     "hdcp": 1,
+     "rank": 1
+    },
+    {
+     "no": 2,
+     "courseIdx": 1,
+     "par": 5,
+     "hdcp": 8,
+     "rank": 8
+    },
+    {
+     "no": 3,
+     "courseIdx": 2,
+     "par": 3,
+     "hdcp": 15,
+     "rank": 15
+    },
+    {
+     "no": 4,
+     "courseIdx": 3,
+     "par": 4,
+     "hdcp": 4,
+     "rank": 4
+    },
+    {
+     "no": 5,
+     "courseIdx": 4,
+     "par": 4,
+     "hdcp": 11,
+     "rank": 11
+    },
+    {
+     "no": 6,
+     "courseIdx": 5,
+     "par": 3,
+     "hdcp": 18,
+     "rank": 18
+    },
+    {
+     "no": 7,
+     "courseIdx": 6,
+     "par": 5,
+     "hdcp": 7,
+     "rank": 7
+    },
+    {
+     "no": 8,
+     "courseIdx": 7,
+     "par": 4,
+     "hdcp": 14,
+     "rank": 14
+    },
+    {
+     "no": 9,
+     "courseIdx": 8,
+     "par": 4,
+     "hdcp": 3,
+     "rank": 3
+    },
+    {
+     "no": 10,
+     "courseIdx": 9,
+     "par": 4,
+     "hdcp": 10,
+     "rank": 10
+    },
+    {
+     "no": 11,
+     "courseIdx": 10,
+     "par": 5,
+     "hdcp": 17,
+     "rank": 17
+    },
+    {
+     "no": 12,
+     "courseIdx": 11,
+     "par": 3,
+     "hdcp": 6,
+     "rank": 6
+    },
+    {
+     "no": 13,
+     "courseIdx": 12,
+     "par": 4,
+     "hdcp": 13,
+     "rank": 13
+    },
+    {
+     "no": 14,
+     "courseIdx": 13,
+     "par": 4,
+     "hdcp": 2,
+     "rank": 2
+    },
+    {
+     "no": 15,
+     "courseIdx": 14,
+     "par": 3,
+     "hdcp": 9,
+     "rank": 9
+    },
+    {
+     "no": 16,
+     "courseIdx": 15,
+     "par": 5,
+     "hdcp": 16,
+     "rank": 16
+    },
+    {
+     "no": 17,
+     "courseIdx": 16,
+     "par": 4,
+     "hdcp": 5,
+     "rank": 5
+    },
+    {
+     "no": 18,
+     "courseIdx": 17,
+     "par": 4,
+     "hdcp": 12,
+     "rank": 12
+    }
+   ],
+   "par": 72,
+   "useHandicaps": false,
+   "hcPct": 100,
+   "players": [
+    {
+     "id": "me",
+     "name": "Trevor Nielsen",
+     "tee": "Blue",
+     "index": 8.4,
+     "courseHc": 9,
+     "courseHcOverride": null,
+     "payApp": "venmo",
+     "payHandle": "trev",
+     "plays": 0
+    },
+    {
+     "id": "mike",
+     "name": "Mike Allred",
+     "tee": "Blue",
+     "index": 12.1,
+     "courseHc": 13,
+     "courseHcOverride": null,
+     "plays": 0
+    },
+    {
+     "id": "dave",
+     "name": "Dave Olsen",
+     "tee": "Blue",
+     "index": 18,
+     "courseHc": 20,
+     "courseHcOverride": null,
+     "plays": 0
+    }
+   ],
+   "teams": [
+    {
+     "id": "t0",
+     "name": "Trevor",
+     "players": [
+      "me"
+     ]
+    },
+    {
+     "id": "t1",
+     "name": "Mike & Dave",
+     "players": [
+      "mike",
+      "dave"
+     ]
+    }
+   ],
+   "settings": {
+    "theme": "system",
+    "hcPct": 100,
+    "skins": {
+     "value": 2,
+     "carryover": true,
+     "kind": "net",
+     "payout": "per",
+     "stake": 10,
+     "lastCarry": "void",
+     "backDouble": false,
+     "birdieDouble": false
+    },
+    "nassau": {
+     "front": 5,
+     "back": 5,
+     "total": 5,
+     "pressMode": "manual",
+     "threshold": 2,
+     "turnPress": false,
+     "noLastPress": false,
+     "teamScore": "best",
+     "bye": "off"
+    },
+    "wolf": {
+     "point": 2,
+     "loneMultiplier": 2,
+     "blind": false,
+     "blindPlus": 1
+    },
+    "banker": {
+     "defaultBet": 5,
+     "min": 1,
+     "max": 20,
+     "ties": "push",
+     "rotation": "rotate",
+     "birdies": "off",
+     "par3Triple": false,
+     "pressAll": false
+    },
+    "match": {
+     "stake": 10,
+     "pressMode": "off",
+     "threshold": 2,
+     "teamScore": "best",
+     "bye": "off"
+    },
+    "stroke": {
+     "stake": 5,
+     "payout": "pot",
+     "cap": false,
+     "nassau": false,
+     "gross": false
+    },
+    "vegas": {
+     "point": 1,
+     "birdieFlip": true,
+     "birdieDouble": false,
+     "daytona": false,
+     "max9": false
+    },
+    "ctp": {
+     "stake": 5,
+     "unclaimed": "carry"
+    },
+    "birdies": {
+     "stake": 5,
+     "eagleShares": 2
+    },
+    "dots": {
+     "value": 1,
+     "auto": true,
+     "greenieCarry": false,
+     "kinds": {
+      "greenie": true,
+      "sandy": true,
+      "barkie": true,
+      "chipin": true,
+      "polie": false,
+      "arnie": false,
+      "hogan": false
+     }
+    }
+   },
+   "scores": {},
+   "banker": {},
+   "wolf": {},
+   "marks": {},
+   "presses": [],
+   "pressSeq": 0,
+   "current": 0,
+   "left": {},
+   "sideGames": [
+    {
+     "game": "birdies",
+     "settings": {
+      "stake": 5,
+      "eagleShares": 2
+     }
+    },
+    {
+     "game": "dots",
+     "settings": {
+      "value": 1,
+      "auto": true,
+      "greenieCarry": false,
+      "kinds": {
+       "greenie": true,
+       "sandy": true,
+       "barkie": true,
+       "chipin": true,
+       "polie": false,
+       "arnie": false,
+       "hogan": false
+      }
+     }
+    }
+   ]
+  },
+  "settings": {
+   "theme": "system",
+   "hcPct": 100,
+   "skins": {
+    "value": 2,
+    "carryover": true,
+    "kind": "net",
+    "payout": "per",
+    "stake": 10,
+    "lastCarry": "void",
+    "backDouble": false,
+    "birdieDouble": false
+   },
+   "nassau": {
+    "front": 5,
+    "back": 5,
+    "total": 5,
+    "pressMode": "manual",
+    "threshold": 2,
+    "turnPress": false,
+    "noLastPress": false,
+    "teamScore": "best",
+    "bye": "off"
+   },
+   "wolf": {
+    "point": 2,
+    "loneMultiplier": 2,
+    "blind": false,
+    "blindPlus": 1
+   },
+   "banker": {
+    "defaultBet": 5,
+    "min": 1,
+    "max": 20,
+    "ties": "push",
+    "rotation": "rotate",
+    "birdies": "off",
+    "par3Triple": false,
+    "pressAll": false
+   },
+   "match": {
+    "stake": 10,
+    "pressMode": "off",
+    "threshold": 2,
+    "teamScore": "best",
+    "bye": "off"
+   },
+   "stroke": {
+    "stake": 5,
+    "payout": "pot",
+    "cap": false,
+    "nassau": false,
+    "gross": false
+   },
+   "vegas": {
+    "point": 1,
+    "birdieFlip": true,
+    "birdieDouble": false,
+    "daytona": false,
+    "max9": false
+   },
+   "ctp": {
+    "stake": 5,
+    "unclaimed": "carry"
+   },
+   "birdies": {
+    "stake": 5,
+    "eagleShares": 2
+   },
+   "dots": {
+    "value": 1,
+    "auto": true,
+    "greenieCarry": false,
+    "kinds": {
+     "greenie": true,
+     "sandy": true,
+     "barkie": true,
+     "chipin": true,
+     "polie": false,
+     "arnie": false,
+     "hogan": false
+    }
+   }
+  },
+  "challengesIn": []
+ },
+ "r_vegas": {
+  "round": {
+   "id": "r_vegas",
+   "game": "vegas",
+   "status": "active",
+   "createdAt": 1790000000000,
+   "finishedAt": null,
+   "course": {
+    "id": "cc_logan",
+    "name": "Logan River GC",
+    "city": "Logan",
+    "tees": [
+     {
+      "name": "Blue",
+      "color": "#2457d6"
+     },
+     {
+      "name": "White",
+      "color": "#ffffff"
+     }
+    ]
+   },
+   "holesCount": 18,
+   "nine": null,
+   "holes": [
+    {
+     "no": 1,
+     "courseIdx": 0,
+     "par": 4,
+     "hdcp": 1,
+     "rank": 1
+    },
+    {
+     "no": 2,
+     "courseIdx": 1,
+     "par": 5,
+     "hdcp": 8,
+     "rank": 8
+    },
+    {
+     "no": 3,
+     "courseIdx": 2,
+     "par": 3,
+     "hdcp": 15,
+     "rank": 15
+    },
+    {
+     "no": 4,
+     "courseIdx": 3,
+     "par": 4,
+     "hdcp": 4,
+     "rank": 4
+    },
+    {
+     "no": 5,
+     "courseIdx": 4,
+     "par": 4,
+     "hdcp": 11,
+     "rank": 11
+    },
+    {
+     "no": 6,
+     "courseIdx": 5,
+     "par": 3,
+     "hdcp": 18,
+     "rank": 18
+    },
+    {
+     "no": 7,
+     "courseIdx": 6,
+     "par": 5,
+     "hdcp": 7,
+     "rank": 7
+    },
+    {
+     "no": 8,
+     "courseIdx": 7,
+     "par": 4,
+     "hdcp": 14,
+     "rank": 14
+    },
+    {
+     "no": 9,
+     "courseIdx": 8,
+     "par": 4,
+     "hdcp": 3,
+     "rank": 3
+    },
+    {
+     "no": 10,
+     "courseIdx": 9,
+     "par": 4,
+     "hdcp": 10,
+     "rank": 10
+    },
+    {
+     "no": 11,
+     "courseIdx": 10,
+     "par": 5,
+     "hdcp": 17,
+     "rank": 17
+    },
+    {
+     "no": 12,
+     "courseIdx": 11,
+     "par": 3,
+     "hdcp": 6,
+     "rank": 6
+    },
+    {
+     "no": 13,
+     "courseIdx": 12,
+     "par": 4,
+     "hdcp": 13,
+     "rank": 13
+    },
+    {
+     "no": 14,
+     "courseIdx": 13,
+     "par": 4,
+     "hdcp": 2,
+     "rank": 2
+    },
+    {
+     "no": 15,
+     "courseIdx": 14,
+     "par": 3,
+     "hdcp": 9,
+     "rank": 9
+    },
+    {
+     "no": 16,
+     "courseIdx": 15,
+     "par": 5,
+     "hdcp": 16,
+     "rank": 16
+    },
+    {
+     "no": 17,
+     "courseIdx": 16,
+     "par": 4,
+     "hdcp": 5,
+     "rank": 5
+    },
+    {
+     "no": 18,
+     "courseIdx": 17,
+     "par": 4,
+     "hdcp": 12,
+     "rank": 12
+    }
+   ],
+   "par": 72,
+   "useHandicaps": true,
+   "hcPct": 90,
+   "players": [
+    {
+     "id": "me",
+     "name": "Trevor Nielsen",
+     "tee": "Blue",
+     "index": 8.4,
+     "courseHc": 9,
+     "courseHcOverride": null,
+     "payApp": "venmo",
+     "payHandle": "trev",
+     "plays": 5
+    },
+    {
+     "id": "mike",
+     "name": "Mike Allred",
+     "tee": "Blue",
+     "index": 12.1,
+     "courseHc": 13,
+     "courseHcOverride": null,
+     "plays": 9
+    },
+    {
+     "id": "dave",
+     "name": "Dave Olsen",
+     "tee": "Blue",
+     "index": 18,
+     "courseHc": 20,
+     "courseHcOverride": null,
+     "plays": 15
+    },
+    {
+     "id": "jo",
+     "name": "Jo Park",
+     "tee": "Blue",
+     "index": 3.2,
+     "courseHc": 3,
+     "courseHcOverride": null,
+     "plays": 0
+    }
+   ],
+   "teams": [
+    {
+     "id": "t0",
+     "name": "Trevor & Mike",
+     "players": [
+      "me",
+      "mike"
+     ]
+    },
+    {
+     "id": "t1",
+     "name": "Dave & Jo",
+     "players": [
+      "dave",
+      "jo"
+     ]
+    }
+   ],
+   "settings": {
+    "theme": "system",
+    "hcPct": 90,
+    "skins": {
+     "value": 2,
+     "carryover": true,
+     "kind": "net",
+     "payout": "per",
+     "stake": 10,
+     "lastCarry": "void",
+     "backDouble": false,
+     "birdieDouble": false
+    },
+    "nassau": {
+     "front": 5,
+     "back": 5,
+     "total": 5,
+     "pressMode": "manual",
+     "threshold": 2,
+     "turnPress": false,
+     "noLastPress": false,
+     "teamScore": "best",
+     "bye": "off"
+    },
+    "wolf": {
+     "point": 2,
+     "loneMultiplier": 2,
+     "blind": false,
+     "blindPlus": 1
+    },
+    "banker": {
+     "defaultBet": 5,
+     "min": 1,
+     "max": 20,
+     "ties": "push",
+     "rotation": "rotate",
+     "birdies": "off",
+     "par3Triple": false,
+     "pressAll": false
+    },
+    "match": {
+     "stake": 10,
+     "pressMode": "off",
+     "threshold": 2,
+     "teamScore": "best",
+     "bye": "off"
+    },
+    "stroke": {
+     "stake": 5,
+     "payout": "pot",
+     "cap": false,
+     "nassau": false,
+     "gross": false
+    },
+    "vegas": {
+     "point": 1,
+     "birdieFlip": true,
+     "birdieDouble": false,
+     "daytona": false,
+     "max9": false
+    },
+    "ctp": {
+     "stake": 5,
+     "unclaimed": "carry"
+    },
+    "birdies": {
+     "stake": 5,
+     "eagleShares": 2
+    },
+    "dots": {
+     "value": 1,
+     "auto": true,
+     "greenieCarry": false,
+     "kinds": {
+      "greenie": true,
+      "sandy": true,
+      "barkie": true,
+      "chipin": true,
+      "polie": false,
+      "arnie": false,
+      "hogan": false
+     }
+    }
+   },
+   "scores": {},
+   "banker": {},
+   "wolf": {},
+   "marks": {},
+   "presses": [],
+   "pressSeq": 0,
+   "current": 0,
+   "left": {}
+  },
+  "settings": {
+   "theme": "system",
+   "hcPct": 90,
+   "skins": {
+    "value": 2,
+    "carryover": true,
+    "kind": "net",
+    "payout": "per",
+    "stake": 10,
+    "lastCarry": "void",
+    "backDouble": false,
+    "birdieDouble": false
+   },
+   "nassau": {
+    "front": 5,
+    "back": 5,
+    "total": 5,
+    "pressMode": "manual",
+    "threshold": 2,
+    "turnPress": false,
+    "noLastPress": false,
+    "teamScore": "best",
+    "bye": "off"
+   },
+   "wolf": {
+    "point": 2,
+    "loneMultiplier": 2,
+    "blind": false,
+    "blindPlus": 1
+   },
+   "banker": {
+    "defaultBet": 5,
+    "min": 1,
+    "max": 20,
+    "ties": "push",
+    "rotation": "rotate",
+    "birdies": "off",
+    "par3Triple": false,
+    "pressAll": false
+   },
+   "match": {
+    "stake": 10,
+    "pressMode": "off",
+    "threshold": 2,
+    "teamScore": "best",
+    "bye": "off"
+   },
+   "stroke": {
+    "stake": 5,
+    "payout": "pot",
+    "cap": false,
+    "nassau": false,
+    "gross": false
+   },
+   "vegas": {
+    "point": 1,
+    "birdieFlip": true,
+    "birdieDouble": false,
+    "daytona": false,
+    "max9": false
+   },
+   "ctp": {
+    "stake": 5,
+    "unclaimed": "carry"
+   },
+   "birdies": {
+    "stake": 5,
+    "eagleShares": 2
+   },
+   "dots": {
+    "value": 1,
+    "auto": true,
+    "greenieCarry": false,
+    "kinds": {
+     "greenie": true,
+     "sandy": true,
+     "barkie": true,
+     "chipin": true,
+     "polie": false,
+     "arnie": false,
+     "hogan": false
+    }
+   }
+  },
+  "challengesIn": []
+ },
+ "r_trip_usual": {
+  "round": {
+   "id": "r_trip_usual",
+   "game": "skins",
+   "status": "active",
+   "createdAt": 1790000000000,
+   "finishedAt": null,
+   "course": {
+    "id": "cc_logan",
+    "name": "Logan River GC",
+    "city": "Logan",
+    "tees": [
+     {
+      "name": "Blue",
+      "color": "#2457d6"
+     },
+     {
+      "name": "White",
+      "color": "#ffffff"
+     }
+    ]
+   },
+   "holesCount": 18,
+   "nine": null,
+   "holes": [
+    {
+     "no": 1,
+     "courseIdx": 0,
+     "par": 4,
+     "hdcp": 1,
+     "rank": 1
+    },
+    {
+     "no": 2,
+     "courseIdx": 1,
+     "par": 5,
+     "hdcp": 8,
+     "rank": 8
+    },
+    {
+     "no": 3,
+     "courseIdx": 2,
+     "par": 3,
+     "hdcp": 15,
+     "rank": 15
+    },
+    {
+     "no": 4,
+     "courseIdx": 3,
+     "par": 4,
+     "hdcp": 4,
+     "rank": 4
+    },
+    {
+     "no": 5,
+     "courseIdx": 4,
+     "par": 4,
+     "hdcp": 11,
+     "rank": 11
+    },
+    {
+     "no": 6,
+     "courseIdx": 5,
+     "par": 3,
+     "hdcp": 18,
+     "rank": 18
+    },
+    {
+     "no": 7,
+     "courseIdx": 6,
+     "par": 5,
+     "hdcp": 7,
+     "rank": 7
+    },
+    {
+     "no": 8,
+     "courseIdx": 7,
+     "par": 4,
+     "hdcp": 14,
+     "rank": 14
+    },
+    {
+     "no": 9,
+     "courseIdx": 8,
+     "par": 4,
+     "hdcp": 3,
+     "rank": 3
+    },
+    {
+     "no": 10,
+     "courseIdx": 9,
+     "par": 4,
+     "hdcp": 10,
+     "rank": 10
+    },
+    {
+     "no": 11,
+     "courseIdx": 10,
+     "par": 5,
+     "hdcp": 17,
+     "rank": 17
+    },
+    {
+     "no": 12,
+     "courseIdx": 11,
+     "par": 3,
+     "hdcp": 6,
+     "rank": 6
+    },
+    {
+     "no": 13,
+     "courseIdx": 12,
+     "par": 4,
+     "hdcp": 13,
+     "rank": 13
+    },
+    {
+     "no": 14,
+     "courseIdx": 13,
+     "par": 4,
+     "hdcp": 2,
+     "rank": 2
+    },
+    {
+     "no": 15,
+     "courseIdx": 14,
+     "par": 3,
+     "hdcp": 9,
+     "rank": 9
+    },
+    {
+     "no": 16,
+     "courseIdx": 15,
+     "par": 5,
+     "hdcp": 16,
+     "rank": 16
+    },
+    {
+     "no": 17,
+     "courseIdx": 16,
+     "par": 4,
+     "hdcp": 5,
+     "rank": 5
+    },
+    {
+     "no": 18,
+     "courseIdx": 17,
+     "par": 4,
+     "hdcp": 12,
+     "rank": 12
+    }
+   ],
+   "par": 72,
+   "useHandicaps": false,
+   "hcPct": 100,
+   "players": [
+    {
+     "id": "me",
+     "name": "Trevor Nielsen",
+     "tee": "Blue",
+     "index": 8.4,
+     "courseHc": 9,
+     "courseHcOverride": null,
+     "payApp": "venmo",
+     "payHandle": "trev",
+     "plays": 0
+    },
+    {
+     "id": "mike",
+     "name": "Mike Allred",
+     "tee": "Blue",
+     "index": 12.1,
+     "courseHc": 13,
+     "courseHcOverride": null,
+     "plays": 0
+    },
+    {
+     "id": "dave",
+     "name": "Dave Olsen",
+     "tee": "Blue",
+     "index": 18,
+     "courseHc": 20,
+     "courseHcOverride": null,
+     "plays": 0
+    }
+   ],
+   "teams": null,
+   "settings": {
+    "theme": "system",
+    "hcPct": 100,
+    "skins": {
+     "value": 2,
+     "carryover": true,
+     "kind": "net",
+     "payout": "per",
+     "stake": 10,
+     "lastCarry": "void",
+     "backDouble": false,
+     "birdieDouble": false
+    },
+    "nassau": {
+     "front": 5,
+     "back": 5,
+     "total": 5,
+     "pressMode": "manual",
+     "threshold": 2,
+     "turnPress": false,
+     "noLastPress": false,
+     "teamScore": "best",
+     "bye": "off"
+    },
+    "wolf": {
+     "point": 2,
+     "loneMultiplier": 2,
+     "blind": false,
+     "blindPlus": 1
+    },
+    "banker": {
+     "defaultBet": 5,
+     "min": 1,
+     "max": 20,
+     "ties": "push",
+     "rotation": "rotate",
+     "birdies": "off",
+     "par3Triple": false,
+     "pressAll": false
+    },
+    "match": {
+     "stake": 10,
+     "pressMode": "off",
+     "threshold": 2,
+     "teamScore": "best",
+     "bye": "off"
+    },
+    "stroke": {
+     "stake": 5,
+     "payout": "pot",
+     "cap": false,
+     "nassau": false,
+     "gross": false
+    },
+    "vegas": {
+     "point": 1,
+     "birdieFlip": true,
+     "birdieDouble": false,
+     "daytona": false,
+     "max9": false
+    },
+    "ctp": {
+     "stake": 5,
+     "unclaimed": "carry"
+    },
+    "birdies": {
+     "stake": 5,
+     "eagleShares": 2
+    },
+    "dots": {
+     "value": 1,
+     "auto": true,
+     "greenieCarry": false,
+     "kinds": {
+      "greenie": true,
+      "sandy": true,
+      "barkie": true,
+      "chipin": true,
+      "polie": false,
+      "arnie": false,
+      "hogan": false
+     }
+    }
+   },
+   "scores": {},
+   "banker": {},
+   "wolf": {},
+   "marks": {},
+   "presses": [],
+   "pressSeq": 0,
+   "current": 0,
+   "left": {},
+   "trip": {
+    "id": "t_vegas",
+    "name": "Mesquite",
+    "start": "2026-11-06",
+    "end": "2026-11-08",
+    "format": "stroke"
+   },
+   "usualId": "u_sat"
+  },
+  "settings": {
+   "theme": "system",
+   "hcPct": 100,
+   "skins": {
+    "value": 2,
+    "carryover": true,
+    "kind": "net",
+    "payout": "per",
+    "stake": 10,
+    "lastCarry": "void",
+    "backDouble": false,
+    "birdieDouble": false
+   },
+   "nassau": {
+    "front": 5,
+    "back": 5,
+    "total": 5,
+    "pressMode": "manual",
+    "threshold": 2,
+    "turnPress": false,
+    "noLastPress": false,
+    "teamScore": "best",
+    "bye": "off"
+   },
+   "wolf": {
+    "point": 2,
+    "loneMultiplier": 2,
+    "blind": false,
+    "blindPlus": 1
+   },
+   "banker": {
+    "defaultBet": 5,
+    "min": 1,
+    "max": 20,
+    "ties": "push",
+    "rotation": "rotate",
+    "birdies": "off",
+    "par3Triple": false,
+    "pressAll": false
+   },
+   "match": {
+    "stake": 10,
+    "pressMode": "off",
+    "threshold": 2,
+    "teamScore": "best",
+    "bye": "off"
+   },
+   "stroke": {
+    "stake": 5,
+    "payout": "pot",
+    "cap": false,
+    "nassau": false,
+    "gross": false
+   },
+   "vegas": {
+    "point": 1,
+    "birdieFlip": true,
+    "birdieDouble": false,
+    "daytona": false,
+    "max9": false
+   },
+   "ctp": {
+    "stake": 5,
+    "unclaimed": "carry"
+   },
+   "birdies": {
+    "stake": 5,
+    "eagleShares": 2
+   },
+   "dots": {
+    "value": 1,
+    "auto": true,
+    "greenieCarry": false,
+    "kinds": {
+     "greenie": true,
+     "sandy": true,
+     "barkie": true,
+     "chipin": true,
+     "polie": false,
+     "arnie": false,
+     "hogan": false
+    }
+   }
+  },
+  "challengesIn": []
+ }
+}
