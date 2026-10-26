@@ -320,9 +320,10 @@ export function SpotScene({ kind = 'tee' }) {
 
 /**
  * One spot illustration. `kind` picks the scene (see SCENES, plus 'crowd' and 'highfive', which
- * draw the buddies in `ids`). Decorative: screen readers skip it.
+ * draw the buddies in `ids`). Decorative: screen readers skip it. `outline={false}` drops the dark
+ * theme's cream outline, for a drawing on its own light plate (.art-plate).
  */
-export function Spot({ kind = 'tee', ids = null, size = 96, className = '', plate = 'auto' }) {
+export function Spot({ kind = 'tee', ids = null, size = 96, className = '', plate = 'auto', outline = true }) {
   const Scene = SCENES[kind];
   // An outside drawing (src/art/spots/<kind>.svg) takes the whole box, plate and all
   const file = artFile('spots', kind);
@@ -330,7 +331,7 @@ export function Spot({ kind = 'tee', ids = null, size = 96, className = '', plat
   const color = plate === false ? null : plate === 'auto' ? (size >= 56 ? PLATE_OF[kind] : null) : plate;
   return (
     <svg className={`spot ${className}`.trim()} viewBox="0 0 120 120" width={size} height={size} aria-hidden="true" focusable="false">
-      {file ? <ArtImage file={file} w={120} h={120} /> : <>
+      {file ? <ArtImage file={file} w={120} h={120} outline={outline} /> : <>
         {color && <Plate color={color} />}
         {kind === 'crowd' ? <Crowd ids={ids} /> : kind === 'highfive' ? <HighFive ids={ids} /> : Scene ? <Scene plated={!!color} /> : <SCENES.tee />}
       </>}

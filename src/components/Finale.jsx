@@ -7,6 +7,7 @@ import { CheerArt } from './ResultsArt.jsx';
 import { useArtSrc } from '../lib/useArtSrc.js';
 import { gameTheme } from '../lib/game-theme.js';
 import './finale.css';
+import '../art-places.css';
 import { useEffect, useRef, useState } from 'react';
 import { Header, Icon, Sheet, Toggle, useUI } from './ui.jsx';
 import { Scorecard } from './Scorecard.jsx';
@@ -187,6 +188,11 @@ export function Reveal({ round, res, onNext, onDetail, extra, instant = false })
               {heroFaces.map(([id, face]) => <CrownedFace key={id} model={face} size={heroFaces.length > 1 ? 56 : 76} />)}
             </div>
           )}
+          {/* Nobody to crown: the handshake when it's all square, the trophy still up for grabs while a
+              Big Game waits on its other groups, the crowned ball when too many are level on top */}
+          {done && !heroFaces.length && (
+            <Spot kind={square ? 'handshake' : res.big && !res.big.final ? 'podium' : 'crown'} size={88} className="rv-spot" />
+          )}
         </div>
         {nSteps > 0 && (
           <div className={`rv-card ${resolved ? 'compact' : ''}`}>
@@ -272,7 +278,8 @@ export function RewardCard({ round, res }) {
   const mine = o.winners.includes(me) || o.owers.includes(me);
   return (
     <div className={`reward-card ${square ? 'square' : ''}`}>
-      <Icon name={square ? 'handshake' : 'gift'} fill className="rc-icon" />
+      {/* Who's buying, on its cream plate (its ball is cut out to the sky); the handshake when nobody won */}
+      {square ? <Spot kind="handshake" size={64} className="reward-art" /> : <Spot kind="buying" size={64} outline={false} className="reward-art art-plate" />}
       <div className="rc-text">
         <div className="rc-win d">{o.win}</div>
         <div className="rc-buy">{o.buy}</div>
@@ -342,6 +349,7 @@ export function SettleUp({ round, res, onBack, onNext }) {
       <Header title="Settle up" onBack={onBack} />
       <div className="scroll">
         <div className="settle-lede">
+          <Spot kind="receipt" size={76} className="settle-art" />
           <div className="d settle-count">{n} payment{n === 1 ? '' : 's'} square{n === 1 ? 's' : ''} everyone up</div>
           <p>Every bet is netted first, so nobody sends money that just comes back to them.</p>
         </div>

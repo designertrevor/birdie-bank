@@ -57,6 +57,6 @@ Recraft (the raw exports are in `overnight/illustration-raw-svg/`, the review pa
 Each file has its canvas fill stripped, its sheet split, its colours snapped to the palette and its
 box cropped square (scenes keep the full canvas). In the dark theme a scene or spot gets a thin cream
 outline from the app (`.art-outline` in `styles.css`); buddies, critters and game art sit on their
-backdrop and skip it. The overhaul placed most of the new spots on 2026-10-26 (each one's
-screens are in `art-manifest.js`); the results ones (podium, handshake, receipt, bragging, buying,
-agreed, nobirdies, crown), piggy and mostrounds still say "not placed yet".
+backdrop and skip it. The overhaul placed the new spots on 2026-10-26 (each one's screens are
+in `art-manifest.js`); agreed, piggy and mostrounds still say "not placed yet". bragging and buying
+sit on a cream disc (`.art-plate`) with no dark outline, since their ball is cut out to the sky.

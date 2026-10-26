@@ -28,3 +28,23 @@
 
 /* Can't find it? in the course search: the empty green heads the card, flush with its title */
 .course-ask-art { display: block; width: 84px; height: 84px; margin: -4px 0 6px -6px; }
+
+/* A cream disc behind a drawing whose ball is cut out to the sky (bragging, buying, agreed): the ball
+   reads white in both themes, so it skips the dark outline (Spot outline={false}) */
+.art-plate { border-radius: 50%; background: #fbf7ec; }
+
+/* Results: the drawing that stands in the winner's block or the reveal's head when there's no face to crown */
+.rv-spot { display: block; margin: 8px auto 0; }
+.results-a .ra-spot { display: block; margin: -6px auto 2px; }
+
+/* A reward round's card: who's buying on its plate, or the handshake when nobody won, where the icon was */
+.reward-card .reward-art { width: 64px; height: 64px; flex-shrink: 0; margin: -4px 0 -4px -4px; }
+
+/* Settle up: the receipt over the count of payments */
+.settle-art { display: block; width: 76px; height: 76px; margin: 0 0 6px -4px; }
+
+/* The plan's Lock in the day sheet: the clock over the day, since the tee time is set here too */
+.pd-lock-art { display: block; width: 64px; height: 64px; margin: 0 0 2px -4px; }
+
+/* An art note inside a block that already has its side padding */
+.art-note.flush { margin: 0; }

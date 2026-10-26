@@ -84,18 +84,38 @@ are untouched.
 - **pin** wasn't seen in place: the "no courses near you" state needs the course database and a
   location, which the dev server here doesn't have. Checked at 150 and 56 on the contact sheet.
 
-## Left for later (results and plan, owned by the other builders)
+## Second pass: results and the plan (after merging overhaul/next)
 
-- **podium**: results, the winner's card hero (where the crowd or the winner's crowned buddy shows now).
-- **handshake**: results when all square, in place of the hand-drawn high five on the results hero.
-- **receipt**: results, the full breakdown (By game) section's head or its empty state.
-- **bragging / buying / agreed**: the results reward cards (Bragging rights, Who's buying, As agreed),
-  one per card at about 72px.
-- **nobirdies**: the Birdie pot result when nobody made a net birdie.
-- **crown**: results, the winner line when the winner has no buddy (a photo or initials).
-- **piggy**: results, the pot line for pot games (Birdie pot, closest to the pin).
-- **clock**: the plan page's tee time row (the plan builder's page).
+| Drawing | Screen | Size |
+|---|---|---|
+| handshake | Results, the all square hero (was the hand-drawn high five), the reveal's head when it's all square, and a reward round's card when nobody won | 120 / 88 / 64 |
+| podium | Results and the reveal while a Big Game waits on its other groups: the trophy still up for grabs (was a crown icon) | 88 |
+| crown | The reveal's head when there's no face to crown (more than four level on top) | 88 |
+| receipt | Settle up, over "3 payments square everyone up" | 76 |
+| buying | A reward round's card, who's buying (was a gift icon), on a cream plate | 64 |
+| bragging | A points round's Bragging rights (was a hint card), on a cream plate | 96 |
+| nobirdies | Details, the Birdie pot when nobody made a net birdie (was a hint card) | 96 |
+| clock | The plan's Lock in the day sheet, where the tee time is set | 64 |
+
+The podium block stays the winner's focal point: nothing was added inside it, and a winner with a
+face still gets their crowned buddy. **The plate**: bragging and buying have their ball cut out to the
+sky, so they sit on a cream disc (`.art-plate`) with the dark outline off (`Spot outline={false}`,
+new); the ball reads white in both themes. Checked in light and dark.
+
+Not placed: **agreed** (its home is Round ready's What we agreed, the setup builder's screen; it needs
+the plate too), **piggy** (no results spot where a pink pig fits calmly; the pot breakdowns are dense
+tables), **mostrounds** (doesn't read). The six see-through drawings already placed before tonight
+(megaphone in the round menu, gift on What's new and Up next, bulb on Suggest, Settings and Roadmap)
+still show the dimple squares in dark; `outline={false}` plus `className="art-plate"` fixes each one.
+
+Not seen in place: the reveal's handshake, podium and crown (the reveal only opens straight after a
+round, and the screenshot set-up can't reopen it), and the podium on a waiting Big Game. Same files and
+sizes as the ones checked on the round page.
+
+Found on the way, not fixed (not an art change): on a reward round's ochre card in the dark theme, the
+"Jackson wins lunch" and "Dev's buying" text is pale on ochre and hard to read (see
+`overhaul-shots/art/results-reward-dark.png`).
 
 ## Checks
 
-`npm test` 2657 pass, `npm run lint` clean (no em dashes), `npm run build` ok.
+`npm test` 2682 pass (after the merge), `npm run lint` clean (no em dashes), `npm run build` ok.
