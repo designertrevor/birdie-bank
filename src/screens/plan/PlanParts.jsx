@@ -5,6 +5,8 @@ import { useState } from 'react';
 import { Icon, PickChip, PickRow, Segmented, Sheet } from '../../components/ui.jsx';
 import { DateSheet, TimePicker } from '../../components/DatePicker.jsx';
 import { Avatar } from '../../components/Avatar.jsx';
+import { Spot } from '../../components/Spot.jsx';
+import '../../art-places.css';
 import { useStore } from '../../lib/store.js';
 import { GAMES } from '../../lib/round.js';
 import { coursePickerSections } from '../../lib/courses.js';
@@ -240,6 +242,8 @@ export function LockSheet({ open, options, initial, people, onLock, onClose }) {
   return (
     <Sheet open={open} onClose={onClose} title="Lock in the day">
       <div className="pd-sheet">
+        {/* The clock heads the sheet: the day gets locked here, and the tee time with it */}
+        <Spot kind="clock" size={64} className="pd-lock-art" />
         <div className="pd-lock-big">{shortDay(o.iso)} works for {o.votes} of {notOut.length}</div>
         <p className="pd-help">{waiting.length ? `${waitingLine(waiting)}. Lock it in and they’ll get the day with everyone else.` : 'Everyone has answered. Lock it in and the group gets the day.'}</p>
         {options.length > 1 && (

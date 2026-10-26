@@ -2,6 +2,7 @@ import { Fragment, useEffect, useRef, useState } from 'react';
 import { Empty, Header, Icon, PickChip, Screen, Segmented, useUI } from '../components/ui.jsx';
 import { Stage } from '../components/Stage.jsx';
 import { Spot } from '../components/Spot.jsx';
+import { ArtNote } from '../components/ArtNote.jsx';
 import { Scorecard } from '../components/Scorecard.jsx';
 import { AvatarArt } from '../components/Avatar.jsx';
 import { CrownedFace, Podium } from '../components/Podium.jsx';
@@ -217,8 +218,9 @@ export default function RoundDetail({ id, celebrate }) {
           {!podium && (!allSquare && !tie && faces.get(top.id) && !(res.big && !res.big.final)
             ? <CrownedFace model={faces.get(top.id)} size={84} />
             : allSquare || tie
-              ? <Spot kind={allSquare ? 'highfive' : 'crowd'} ids={heroBuddies} size={120} className="hero-spot" plate={false} />
-              : <Icon name="crown" fill className="crown" />)}
+              ? <Spot kind={allSquare ? 'handshake' : 'crowd'} ids={heroBuddies} size={120} className="hero-spot" plate={false} />
+              // Nobody to crown yet (a Big Game waiting on its other groups): the trophy still up for grabs
+              : <Spot kind={res.big && !res.big.final ? 'podium' : 'crown'} size={88} className="ra-spot" />)}
           {!allSquare && !(res.big && !res.big.final) && <div className="ra-eyebrow"><Icon name="crown-simple" fill /> {tie ? 'Top of the table' : 'Winner'}</div>}
           <div className="ra-title d">{heroTitle}</div>
           <div className={`ra-amt ${allSquare || (res.big && !res.big.final) ? 'zero' : ''}`}>{heroAmt}</div>
@@ -236,7 +238,7 @@ export default function RoundDetail({ id, celebrate }) {
             <div style={{ padding: '0 16px' }}>
               {playForOf(round).kind === 'reward'
                 ? <RewardCard round={round} res={res} />
-                : <p className="hint-card" style={{ margin: 0 }}><Icon name="trophy" fill /> Played for points, so nothing goes on the Tab. Just bragging rights.</p>}
+                : <ArtNote spot="bragging" plated className="flush">Played for points, so nothing goes on the Tab. Just bragging rights.</ArtNote>}
             </div>
           </>
         )}
@@ -633,7 +635,7 @@ function GameBreakdown({ round, res, label = null }) {
     return (
       <>
         <div className="sec-label">{label || 'Birdie pot'}</div>
-        {b.holes.length === 0 && <p className="hint-card"><Icon name="bird" fill /> No net birdies, so nobody pays.</p>}
+        {b.holes.length === 0 && <ArtNote spot="nobirdies">No net birdies, so nobody pays.</ArtNote>}
         {b.holes.length > 0 && byPlayer.map(p => (
           <div key={p.id} className="leg-row">
             <div className="leg-name">{first(p.name)}</div>
