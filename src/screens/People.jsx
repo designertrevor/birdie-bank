@@ -22,7 +22,8 @@ import { nemesis } from '../lib/rivalry.js';
 import { NemesisCard } from '../components/Rivalry.jsx';
 
 /** "today", "tomorrow", "Saturday" or "Sat, Oct 10" for the RSVP tag. */
-const dayName = iso => { const d = dayLabel(iso); return d === 'Today' || d === 'Tomorrow' ? d.toLowerCase() : d; };
+// A plan with no day yet (plan-open.js) reads "In for the next round"
+const dayName = iso => { const d = dayLabel(iso); return !d ? 'the next round' : d === 'Today' || d === 'Tomorrow' ? d.toLowerCase() : d; };
 
 /** Players as cards: your record and net with each person, newest friends from joined rounds too. */
 export default function People() {

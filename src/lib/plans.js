@@ -20,6 +20,7 @@ import { halfStrokesOffered } from './allowances.js';
 import { applySetup } from './plan-setup.js';
 import { linksOf } from './people-links.js';
 import { RSVPS, HOST, planPeople, planChoice, daysUntil, timeLabel, dayLabel, upcomingPlans } from './plan-basics.js';
+import { askText, decodeDays, encodeDays } from './plan-open.js';
 
 // Who's in, the vote, the dates and Up next's list live in plan-basics.js, so Up next can load them alone
 export { RSVPS, HOST, RSVP_LABEL, betsFor, suggestedBetFor, planPeople, planCounts, countsLine, tally, planChoice, isoDate, daysUntil, timeLabel, dayLabel, whenLabel, dayChoices, upcomingPlans, movedPlanOf } from './plan-basics.js';
@@ -121,25 +122,34 @@ export function ballotSides(plan) {
 /**
  * A game vote as the server keeps it: "nassau", or with side game votes "nassau~skins.-dots"
  * (yes to Skins, no to Junk; "~skins" with no game vote). Null when there's nothing to keep.
+ * On a plan with no day yet, the days someone can make ride after a second "~" ("skins~~9k.9l",
+ * plan-open.js encodeDays), as many as fit in the 32 characters the server keeps.
  */
 export function gameVoteChoice(a) {
   const game = a?.game ?? null;
   const sides = Object.entries(a?.sides || {}).filter(([k, v]) => SIDE_GAMES[k] && typeof v === 'boolean');
-  if (!sides.length) return game;
-  return `${game || ''}~${sides.map(([k, v]) => (v ? k : `-${k}`)).join('.')}`;
+  const head = sides.length ? `${game || ''}~${sides.map(([k, v]) => (v ? k : `-${k}`)).join('.')}` : game;
+  const prefix = sides.length ? `${head}~` : `${game || ''}~~`;
+  const days = Array.isArray(a?.days) && a.days.length ? encodeDays(a.days, 32 - prefix.length) : '';
+  return days ? `${prefix}${days}` : head;
 }
 
-/** { game, sides? } from a stored game vote. */
+/** { game, sides?, days? } from a stored game vote. */
 export function parseGameVote(choice) {
-  const [g, rest] = String(choice ?? '').split('~');
+  const [g, rest, dayPart] = String(choice ?? '').split('~');
   const out = { game: g || null };
-  if (rest != null) {
+  // "skins~~9k" has days and no side votes
+  if (rest != null && (rest !== '' || dayPart == null)) {
     out.sides = {};
     for (const t of rest.split('.')) {
       const no = t.startsWith('-');
       const k = no ? t.slice(1) : t;
       if (SIDE_GAMES[k]) out.sides[k] = !no;
     }
+  }
+  if (dayPart != null) {
+    const days = decodeDays(dayPart);
+    if (days.length) out.days = days;
   }
   return out;
 }
@@ -322,6 +332,8 @@ const listNames = names => (names.length < 2 ? names.join('') : `${names.slice(0
 
 function dayWords(plan, now) {
   const n = daysUntil(plan.date, now);
+  // No day yet (plan-open.js): golf soon
+  if (n == null) return 'soon';
   const d = dayLabel(plan.date, now);
   if (n === 0) return 'today';
   if (n === 1) return 'tomorrow';
@@ -330,6 +342,8 @@ function dayWords(plan, now) {
 
 /** The group invite: what, when, where, and a link to answer and vote. */
 export function inviteText(plan, link, now = new Date()) {
+  // No day yet: the organizer's ask, the days on offer and the link (plan-open.js)
+  if (daysUntil(plan.date, now) == null) return askText(plan, link, now);
   const { game } = planChoice(plan);
   const t = timeLabel(plan.teeTime);
   return [

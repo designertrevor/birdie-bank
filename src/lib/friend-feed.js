@@ -456,7 +456,7 @@ export function planItem(plan, now = new Date()) {
   const answer = mine === 'in' ? 'You’re in' : mine === 'out' ? 'You’re out' : mine === 'maybe' ? 'You’re a maybe' : 'Answer';
   return {
     id: `plan:${plan.id}`, kind: 'plan', at: plan.createdAt || 0,
-    text: `${host} invited you · ${whenLabel(plan, now)}`,
+    text: `${host} invited you · ${whenLabel(plan, now) || 'No day yet'}`,
     sub: [`${GAMES[game]?.name || 'Golf'} at ${plan.course?.name || 'a course to be set'}`, countsLine(planCounts(plan)), answer].filter(Boolean).join(' · '),
     target: ['plan', { id: plan.id }],
   };
