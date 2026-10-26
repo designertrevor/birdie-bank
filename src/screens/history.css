@@ -1,0 +1,100 @@
+/* ============================================================
+   HISTORY (overhaul): Layout Lab A's compact chart and month list, with C's round cards.
+   Built on the look tokens (look.css), so it reads in the new look and in ?look=classic.
+   ============================================================ */
+
+/* The range: label and arrows on the left, a small switch for the kind on the right */
+.range-bar.compact { margin: 0 16px 10px; gap: 8px; }
+.rb-row { display: flex; align-items: center; justify-content: space-between; gap: 8px; min-height: 44px; }
+.range-bar.compact .range-step { justify-content: flex-start; gap: 2px; flex: 0 1 auto; min-width: 0; }
+.range-bar.compact .range-label {
+  flex: 0 1 auto; text-align: left; font-size: 17px; font-weight: var(--display-weight); white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.range-bar.compact > .rb-row > .range-label { padding-left: 4px; }
+.rb-kinds { display: flex; gap: 2px; padding: 3px; border-radius: var(--r-chip); background: var(--surface); flex-shrink: 0; }
+.rb-kind {
+  height: 32px; padding: 0 10px; border: none; border-radius: calc(var(--r-chip) - 2px); background: none; color: var(--mute);
+  font: inherit; font-size: 13px; font-weight: 700; cursor: pointer; white-space: nowrap;
+}
+.rb-kind.active { background: var(--card); color: var(--ink); box-shadow: var(--hair); }
+/* The tap target stays 44px tall around the 32px look */
+.rb-kind { position: relative; }
+.rb-kind::after { content: ''; position: absolute; inset: -6px 0; }
+.hx-games { flex-wrap: nowrap; overflow-x: auto; scrollbar-width: none; padding-bottom: 12px; }
+.hx-games::-webkit-scrollbar { display: none; }
+.hx-games .pill-btn { flex-shrink: 0; }
+
+/* The chart card: net and count on one line, the line, the stats link inside its foot */
+.hx-chart { border-radius: var(--r-card); box-shadow: var(--hair); padding: 14px 16px 0; margin-bottom: 8px; }
+.hx-head { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; }
+.hx-meta { font-size: 13px; font-weight: 600; color: var(--mute); }
+.hx-big {
+  font-family: var(--display); font-weight: var(--money-weight); font-size: 34px; line-height: 1.1; letter-spacing: -.02em;
+  color: var(--ink); font-variant-numeric: tabular-nums; margin-top: 2px;
+}
+.hx-chart .season-chart { margin: 4px 0 2px; }
+.hx-stats {
+  display: flex; align-items: center; gap: 8px; width: calc(100% + 32px); margin: 8px -16px 0; padding: 12px 16px; min-height: 52px;
+  border: none; border-top: 1px solid var(--line-soft); background: none; color: var(--ink); font: inherit; font-size: 14px; font-weight: 600;
+  text-align: left; cursor: pointer;
+}
+.hx-stats i { color: var(--icon); }
+.hx-stats .sl-sub { display: block; font-size: 12px; font-weight: 500; color: var(--mute); margin-top: 1px; }
+.hx-chart:not(:has(.season-chart)) { padding-top: 0; }
+.hx-chart:not(:has(.season-chart)) .hx-stats { margin-top: 0; border-top: none; }
+
+/* Head to head: a quiet strip of small tiles */
+.hx-h2h { margin-top: 8px; }
+.hx-label { padding: 12px 20px 8px; font-size: 13px; font-weight: 700; color: var(--ink); }
+.hx-label span { display: block; font-weight: 500; color: var(--mute); margin-top: 1px; }
+.hx-h2h .h2h-item { border-radius: var(--r-card); box-shadow: var(--hair); padding: 10px 12px; min-width: 96px; }
+.hx-h2h .h2h-amt { font-size: 18px; font-weight: var(--money-weight); }
+
+/* The months and their round cards */
+.hx-month .month-head { padding-top: 18px; }
+.hx-month .mh-name { font-family: var(--display); font-weight: var(--display-weight); }
+.hx-cards { display: flex; flex-direction: column; gap: 8px; padding: 0 16px; }
+.hx-cards > .books-mark { margin: 0; border-radius: var(--r-card); }
+
+.rc-card {
+  display: grid; grid-template-columns: 48px minmax(0, 1fr) auto; column-gap: 12px; row-gap: 10px; align-items: center; width: 100%;
+  padding: 12px 14px 12px 12px; border: none; border-radius: var(--r-card); background: var(--card); box-shadow: var(--hair);
+  color: var(--ink); font: inherit; text-align: left; cursor: pointer; transition: transform .2s var(--spring);
+}
+.rc-card:active { transform: scale(.98); }
+.rc-art { width: 48px; height: 48px; display: block; }
+.rc-main { display: flex; flex-direction: column; min-width: 0; }
+.rc-meta { font-size: 12px; font-weight: 600; color: var(--mute); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.rc-game {
+  font-family: var(--display); font-weight: var(--display-weight); font-size: 19px; line-height: 1.2; letter-spacing: -.01em;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-top: 1px;
+}
+.rc-who { display: flex; align-items: center; gap: 4px; font-size: 13px; font-weight: 600; color: var(--body); margin-top: 2px; min-width: 0; }
+.rc-who.you { color: var(--win); }
+.rc-who i { font-size: 14px; }
+.rc-end { display: flex; flex-direction: column; align-items: flex-end; gap: 2px; align-self: start; padding-top: 14px; }
+.rc-amt { font-family: var(--display); font-weight: var(--money-weight); font-size: 20px; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.rc-amt.other { font-family: inherit; font-size: 14px; font-weight: 700; color: var(--mute); }
+.rc-foot {
+  grid-column: 1 / -1; display: flex; align-items: center; gap: 10px; min-width: 0; padding-top: 10px; border-top: 1px solid var(--line-soft);
+}
+.rc-faces { display: inline-flex; flex-shrink: 0; align-items: center; }
+.rc-faces .avatar { width: 24px; height: 24px; margin: 0 -6px 0 0; font-size: 11px; box-shadow: 0 0 0 2px var(--card); }
+.rc-faces .avatar:last-child { margin-right: 0; }
+.rc-more { margin-left: 10px; font-size: 12px; font-weight: 700; color: var(--mute); }
+.rc-moment { display: flex; align-items: center; gap: 6px; flex: 1; min-width: 0; font-size: 13px; color: var(--body); }
+.rc-moment i { color: var(--ochre); font-size: 15px; flex-shrink: 0; }
+.rc-mt { font-weight: 700; color: var(--ink); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; }
+.rc-hole { flex-shrink: 0; color: var(--mute); font-size: 12px; font-weight: 600; }
+.rc-moment.quiet { color: var(--mute); font-size: 12px; font-weight: 600; }
+/* A good day: the bigger card, on a butter band */
+.rc-card.big { grid-template-columns: 64px minmax(0, 1fr) auto; background: var(--band-butter); }
+.rc-card.big .rc-art { width: 64px; height: 64px; }
+.rc-card.big .rc-game { font-size: 22px; }
+.rc-card.big .rc-amt { font-size: 24px; }
+.rc-card.big .rc-foot { border-top-color: rgba(10, 10, 10, .08); }
+.rc-card.big .rc-faces .avatar { box-shadow: 0 0 0 2px var(--band-butter); }
+@media (prefers-reduced-motion: reduce) { .rc-card:active { transform: none; } }
+
+.hx-trash { margin-top: 10px; }
+.hx-trash span { color: var(--mute); }

@@ -227,10 +227,8 @@ test('the season line reads only the parts of the state the Tab keys its memo on
   assert.deepEqual(line, seasonSeries(state, NOW));
   assert.ok(line.length >= 2, 'the fixture draws a line');
   for (const k of read) assert.ok(SEASON_READS.includes(k), `seasonSeries reads state.${k}, which SEASON_READS doesn't list`);
-  // The Tab passes exactly those parts, so its memo keys on them
+  // The Tab used to draw this line under its big number, keyed on SEASON_READS. Since the overhaul
+  // (Layout Lab E, 2026-10-26) the chart lives on History only, so the Tab must not work it out
   const ledger = readFileSync(new URL('../screens/Ledger.jsx', import.meta.url), 'utf8');
-  const call = ledger.match(/seasonSeries\(\{ ([^}]+) \}\)/)?.[1].split(', ').map(x => x.split(':')[0]);
-  assert.deepEqual(call, SEASON_READS);
-  const deps = ledger.match(/seasonSeries\(\{[^}]+\}\),\s*\[([^\]]+)\]/)?.[1].split(', ').map(x => x.replace('state.', ''));
-  assert.deepEqual(deps, SEASON_READS);
+  assert.ok(!ledger.includes('seasonSeries('), 'the Tab draws no season line any more');
 });
