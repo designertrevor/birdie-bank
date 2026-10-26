@@ -15,7 +15,20 @@ try {
   const pick = (location.search.match(/[?&]look=(new|classic)/) || [])[1];
   if (pick) localStorage.setItem('bb-look', pick);
   document.documentElement.dataset.look = (pick || localStorage.getItem('bb-look')) === 'classic' ? 'classic' : 'new';
+  // The runner-up type pairing on the new look, to compare: ?type=inter (Fraunces 400 and Inter, the
+  // serif experiment's), undone with ?type=figtree; kept on this phone like the look (look-new.css)
+  const type = (location.search.match(/[?&]type=(figtree|inter)/) || [])[1];
+  if (type) localStorage.setItem('bb-type', type);
+  if ((type || localStorage.getItem('bb-type')) === 'inter') document.documentElement.dataset.type = 'inter';
 } catch { document.documentElement.dataset.look = 'new'; }
+// The new look's thin icons: Phosphor regular, fetched only when the new look is on (look-new.css
+// maps the bold class onto it, outside Play)
+if (document.documentElement.dataset.look === 'new') {
+  const thin = document.createElement('link');
+  thin.rel = 'stylesheet';
+  thin.href = 'https://cdn.jsdelivr.net/npm/@phosphor-icons/web@2.1.1/src/regular/style.css';
+  document.head.appendChild(thin);
+}
 
 // Before anything renders: keep a creator's ?ref= code before the app tidies the address, and
 // catch errors from the start (ops.js; each part is off without its key)
