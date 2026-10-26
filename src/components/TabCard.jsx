@@ -144,7 +144,7 @@ export function PersonActions({ other, net, meId }) {
             <button className="pay-btn settle" onClick={paid} aria-label={owesMe ? `${first} paid me ${money(amount)}` : `I paid ${first} ${money(amount)}`}><span className="pay-in"><Icon name="check-circle" fill /><span className="pay-lbl">{owesMe ? `${first} paid me` : 'I paid'}</span></span></button>
             {canRoll && (
               <button className={`pay-btn settle ${partOnly ? 'roll-part' : ''}`} onClick={() => setRolling(true)}
-                aria-label={partOnly ? undefined : `Roll what’s between you and ${first} to next time`}><span className="pay-in"><Icon name="arrow-u-down-right" /><span className="pay-lbl">{partOnly ? `Roll ${money(shared.amount)} from your shared rounds to next time` : 'Roll to next time'}</span></span></button>
+                aria-label={partOnly ? `Roll ${money(shared.amount)} from your shared rounds to next time` : `Roll what’s between you and ${first} to next time`}><span className="pay-in"><Icon name="arrow-u-down-right" /><span className="pay-lbl">{partOnly ? `Roll ${money(shared.amount)} to next time` : 'Roll to next time'}</span></span></button>
             )}
           </div>
           {/* The payment app and a nudge, a step quieter */}

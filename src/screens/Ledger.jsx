@@ -200,7 +200,6 @@ export default function Ledger() {
         )}
         {trips.map(t => <TripTabCard key={t.trip.id} status={t} />)}
         {trips.some(t => t.money.length > 0) && plan.length > 0 && <p className="field-help pad trip-folded">{trips.filter(t => t.money.length > 0).every(t => t.big) ? 'The game’s money is in each person’s total below.' : 'Trip money is in each person’s total below.'}</p>}
-        <SquareStrip />
         {plan.length === 0 ? (
           <Empty title={hasRounds ? 'All square' : 'Nothing owed yet'} illo={hasRounds ? 'highfive' : 'wallet'} ids={squareBuddies}
             text={hasRounds ? 'Nobody owes anybody. Time to go win it back.' : 'Finish a round and the Tab fills in. Money nets out across every round, so you pay less often.'}
@@ -220,6 +219,8 @@ export default function Ledger() {
                 {youOwe.map(personRow)}
               </section>
             )}
+            {/* Where you stand from the last round: context for the sections above, so it sits under them */}
+            <SquareStrip />
             {anySquare && (
               <section className="te-section" aria-label="Square">
                 <div className="te-head"><h2 className="te-title">Square</h2></div>
@@ -242,6 +243,7 @@ export default function Ledger() {
             <details className="how pad"><summary>How the Tab works</summary><p>Netted across every round, then squared in the fewest payments. Nobody is asked to pay someone they haven’t played with.{hasShared ? ' Money from rounds you shared live stays between the two players, so both phones agree on it.' : ''}</p></details>
           </>
         )}
+        {plan.length === 0 && <SquareStrip />}
         {plan.length === 0 && <SinceBooks scope={ALL} />}
         {plan.length === 0 && rewardOnly.map(rewardCard)}
         {plan.length === 0 && recentSquare.map(squareCard)}
