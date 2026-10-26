@@ -26,6 +26,7 @@ import { SetupStep } from './newround/SetupStep.jsx';
 import { InviteStep, VoteStep } from './newround/PlanSteps.jsx';
 import { HandicapsStep, OverviewStep, PlayForStep } from './newround/OverviewStep.jsx';
 import { HolesPicker, WhenPicker } from './newround/Pickers.jsx';
+import PlanAsk from './plan/PlanAsk.jsx';
 
 // The Big Game's setup (BigGameSetup.jsx) uses the course step and Add a player too
 export { CourseStep, QuickAddPlayer };
@@ -47,7 +48,16 @@ const PLAN_QUESTIONS = ['What are you playing?', 'When are you playing?', 'Whoâ€
  * plan with the same setup (the round goes once the plan is made). `trip`: started from a trip's
  * page, so it counts for that trip.
  */
-export default function NewRound({ rematch, fromPlan, present, edit = null, ahead = false, game: gameIn = null, play = null, ballot = [], onboarding = false, reschedule = null, trip: tripId = null }) {
+export default function NewRound(props) {
+  // "Plan ahead" and Up next's "Get a round going" open the one-screen ask (plan/PlanAsk.jsx). A plan
+  // for a trip, the end of organizer onboarding (a game already picked) and anything carried over
+  // from a setup keep the full steps.
+  const { ahead = false, trip = null, onboarding = false, game = null, edit = null, reschedule = null, fromPlan = null, rematch = null, play = null } = props;
+  if (ahead && !trip && !onboarding && !game && !edit && !reschedule && !fromPlan && !rematch && !play) return <PlanAsk />;
+  return <NewRoundSetup {...props} />;
+}
+
+function NewRoundSetup({ rematch, fromPlan, present, edit = null, ahead = false, game: gameIn = null, play = null, ballot = [], onboarding = false, reschedule = null, trip: tripId = null }) {
   const nav = useNav();
   const { ask } = useUI();
   const state = useStore();

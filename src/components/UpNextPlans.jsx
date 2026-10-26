@@ -14,6 +14,8 @@ import { GAMES, cardOnly } from '../lib/round.js';
 import { useNav } from '../lib/nav.js';
 import { RSVP_LABEL, countsLine, dayLabel, daysUntil, planChoice, planCounts, whenLabel } from '../lib/plan-basics.js';
 import { countdownLine, weekdayOf } from '../lib/countdown.js';
+import { STATE_LABEL, detailStates, leadingDay, lockNudge, normalizePlan, shortDay } from '../lib/plan-open.js';
+import '../screens/plan/plan.css';
 
 const TripSheet = part(() => import('./Trips.jsx'), 'TripSheet');
 
@@ -41,10 +43,13 @@ export function PlansAndNext({ plans, onNow, live, last, onJoin }) {
 
 /**
  * An upcoming round: the countdown ("Saturday, 2 days"), the group's game so far, the course and
- * who's in. A round still on opens its preview from the strip under it.
+ * who's in. A round still on opens its preview from the strip under it. A plan with no day yet
+ * (plan-open.js) says so where the countdown goes, with the leading day and its four details' states.
  */
-export function UpcomingCard({ plan }) {
+export function UpcomingCard({ plan: saved }) {
   const nav = useNav();
+  const plan = normalizePlan(saved);
+  if (!plan.date && plan.status === 'planned' && !plan.gone) return <OpenPlanCard plan={plan} />;
   const { game } = planChoice(plan);
   const me = plan.host ? plan.hostWho : plan.localMe;
   const mine = plan.answers?.[me]?.status;
@@ -83,6 +88,35 @@ export function UpcomingCard({ plan }) {
         <Icon name="caret-right" />
       </button>
     </div>
+  );
+}
+
+/**
+ * A plan with no day yet: "No day yet" (or the day that leads, or Ready to lock for the organizer),
+ * who's in, and Day, Course, Game and Bet as small state tags.
+ */
+function OpenPlanCard({ plan }) {
+  const nav = useNav();
+  const me = plan.host ? plan.hostWho : plan.localMe;
+  const mine = plan.answers?.[me]?.status;
+  const lead = leadingDay(plan);
+  const ready = plan.host && !!lockNudge(plan);
+  const st = detailStates(plan, { name: g => GAMES[g]?.name || 'A game' });
+  const tags = [['Day', st.day], ['Course', st.course], ['Game', st.game], ['Bet', st.bet]];
+  return (
+    <button className="upcoming-card open-plan" onClick={() => nav.push('plan', { id: plan.id })}>
+      <div className="row-main">
+        <div className="eyebrow">{ready ? `Ready to lock in ${shortDay(lead.iso)}` : 'No day yet'}</div>
+        <div className="uc-title d">{plan.course?.name ? `Golf soon? · ${plan.course.name}` : 'Golf soon?'}</div>
+        <div className="uc-sub">{countsLine(planCounts(plan))}</div>
+        {/* What's set, up for a vote or not yet: a detail still open just says its name */}
+        <div className="uc-tags">
+          {tags.map(([k, s]) => <span key={k} className={`st-tag sm ${s.state}`}><span className="sr-only">{k}: {STATE_LABEL[s.state]}, </span>{s.state === 'not' ? k : s.label}</span>)}
+        </div>
+      </div>
+      <span className={`who-status ${mine || 'none'}`}>{mine ? `You’re ${RSVP_LABEL[mine].toLowerCase()}` : 'Answer'}</span>
+      <span className="chevron"><Icon name="caret-right" /></span>
+    </button>
   );
 }
 

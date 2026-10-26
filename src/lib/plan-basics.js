@@ -43,7 +43,8 @@ export function planPeople(plan) {
 }
 function pick(a) {
   const bet = a?.bet ?? null;
-  return { status: RSVPS.includes(a?.status) ? a.status : null, game: a?.game ?? null, bet, betGame: bet != null ? a?.betGame ?? null : null, sides: a?.sides || null, self: a?.self === true };
+  // `days`: the days they can make on a plan with no day yet (plan-open.js), null when they haven't said
+  return { status: RSVPS.includes(a?.status) ? a.status : null, game: a?.game ?? null, bet, betGame: bet != null ? a?.betGame ?? null : null, sides: a?.sides || null, days: Array.isArray(a?.days) ? a.days : null, self: a?.self === true };
 }
 
 /** Counts for the card: { in, maybe, out, waiting } (waiting: invited and no answer yet). */
@@ -165,17 +166,28 @@ export function dayChoices(now = new Date(), n = 14) {
   });
 }
 
+/** How long a plan with no day yet that was called off stays on Up next, so friends see it's off. */
+const OPEN_OFF_MS = 3 * 86400000;
+
 /**
  * Plans for Up next, soonest first: still planned, or called off (so friends see that), from
  * yesterday on. A friend's plan that has started stays too, so they can follow the round (the
  * organizer has the round itself). Older ones drop off by themselves.
+ * A plan with no day yet (plan-open.js) stays while it's on, after the ones with a day, oldest
+ * first; called off, it stays a few days from when it was made.
  */
 export function upcomingPlans(state, now = new Date()) {
+  const dated = p => daysUntil(p.date, now) != null;
+  const keep = p => {
+    if (!p || !(p.status === 'planned' || p.status === 'off' || (p.status === 'started' && !p.host))) return false;
+    if (dated(p)) return daysUntil(p.date, now) >= -1;
+    return p.status === 'planned' || (p.status === 'off' && now.getTime() - (p.createdAt || 0) < OPEN_OFF_MS);
+  };
   return Object.values(state?.plans || {})
-    .filter(p => p && (p.status === 'planned' || p.status === 'off' || (p.status === 'started' && !p.host)) && (daysUntil(p.date, now) ?? -99) >= -1)
+    .filter(keep)
     // A round kept for another day: the new plan takes the old one's place once it's on this phone
     .filter(p => !(p.movedTo && movedPlanOf(state, p)))
-    .sort((a, b) => String(a.date).localeCompare(String(b.date)) || String(a.teeTime || '').localeCompare(String(b.teeTime || '')) || (a.createdAt || 0) - (b.createdAt || 0));
+    .sort((a, b) => (dated(b) - dated(a)) || String(a.date || '').localeCompare(String(b.date || '')) || String(a.teeTime || '').localeCompare(String(b.teeTime || '')) || (a.createdAt || 0) - (b.createdAt || 0));
 }
 
 /**

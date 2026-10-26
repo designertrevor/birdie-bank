@@ -22,8 +22,9 @@ import { RSVP_LABEL, dayLabel, rsvpFor } from '../lib/plans.js';
 import { nemesis } from '../lib/rivalry.js';
 import { NemesisCard } from '../components/Rivalry.jsx';
 
-/** "today", "tomorrow" or the short weekday ("Sat") for the RSVP tag. */
-const dayName = iso => { const d = dayLabel(iso); return d === 'Today' || d === 'Tomorrow' ? d.toLowerCase() : d.slice(0, 3); };
+/** "today", "tomorrow" or the short weekday ("Sat") for the RSVP tag; a plan with no day yet (plan-open.js) reads "soon". */
+const dayName = iso => { const d = dayLabel(iso); return !d ? 'soon' : d === 'Today' || d === 'Tomorrow' ? d.toLowerCase() : d.slice(0, 3); };
+const cap = t => t.charAt(0).toUpperCase() + t.slice(1);
 
 // The row of big avatars on top: the people you've played with most, once the list is long
 // enough to need it, and only those you've played a couple of rounds with
@@ -120,7 +121,7 @@ export default function People() {
                     <div className="row-main">
                       <div className="pl-name">{name}{!h && !older && <span className="new-chip">New</span>}</div>
                       <div className="pl-sub">
-                        {rsvp && <span className={`pl-rsvp ${rsvp.status || 'none'}`}>{rsvp.status ? `${RSVP_LABEL[rsvp.status]} ${dayName(rsvp.plan.date)}` : `${dayName(rsvp.plan.date)}?`}</span>}
+                        {rsvp && <span className={`pl-rsvp ${rsvp.status || 'none'}`}>{rsvp.status ? `${RSVP_LABEL[rsvp.status]} ${dayName(rsvp.plan.date)}` : `${cap(dayName(rsvp.plan.date))}?`}</span>}
                         <span className="pl-record">{record}</span>
                       </div>
                     </div>

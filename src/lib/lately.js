@@ -114,7 +114,8 @@ export function latelyItems(state, now = Date.now(), { carries = state?.carries,
     const me = plan.host ? plan.hostWho : plan.localMe;
     // Mid-sentence: "in for tomorrow", "in for Saturday"
     const label = dayLabel(plan.date, new Date(t));
-    const day = label === 'Today' || label === 'Tomorrow' ? label.toLowerCase() : label;
+    // A plan with no day yet (plan-open.js): "in for the next round"
+    const day = !label ? 'the next round' : label === 'Today' || label === 'Tomorrow' ? label.toLowerCase() : label;
     for (const [who, a] of Object.entries(plan.answers || {})) {
       if (who === me || !a?.status || !inWindow(a.at)) continue;
       // A trip's scheduled round starts with its group marked in by the organizer: only an answer

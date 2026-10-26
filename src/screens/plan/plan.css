@@ -1,0 +1,118 @@
+/* ============================================================
+   GET A ROUND GOING (overhaul, 2026-10-27): the one-screen ask (PlanAsk.jsx), the plan page's
+   ticket, detail rows, day tiles and seat tiles (Plan.jsx, PlanParts.jsx) and Up next's card for a
+   plan with no day yet. Built on the shared look tokens (look.css), so it reads in both looks.
+   ============================================================ */
+
+/* A detail's state: Set, Up for a vote, Not yet */
+.st-tag { flex-shrink: 0; max-width: 55%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 13px; font-weight: 700; padding: 5px 10px; border-radius: var(--r-chip); }
+.st-tag.set { background: var(--state-set-bg); color: var(--state-set-ink); }
+.st-tag.vote { background: var(--state-vote-bg); color: var(--state-vote-ink); }
+.st-tag.not { background: transparent; color: var(--mute); box-shadow: inset 0 0 0 1.5px var(--state-not-edge); }
+.st-tag.sm { font-size: 12px; padding: 3px 8px; max-width: none; }
+
+/* The detail rows */
+.pd-rows { margin: 0 16px; background: var(--card); border-radius: var(--r-card); box-shadow: var(--hair); overflow: hidden; }
+.pd-row { display: flex; align-items: center; gap: 12px; width: 100%; min-height: 60px; padding: 10px 14px; border: none; background: none; font: inherit; color: var(--ink); text-align: left; }
+.pd-row + .pd-row { border-top: 1px solid var(--line); }
+button.pd-row { cursor: pointer; }
+button.pd-row:active { background: var(--surface); }
+.pd-ic { width: 34px; height: 34px; border-radius: 50%; display: grid; place-items: center; background: var(--surface); color: var(--icon); flex-shrink: 0; font-size: 18px; }
+.pd-k { display: block; font-weight: 700; font-size: 16px; }
+.pd-sub { display: block; font-size: 13px; color: var(--mute); margin-top: 1px; }
+.pd-go { color: var(--mute-soft); }
+
+/* Day tiles */
+.pd-days { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; margin: 4px 0 8px; }
+.pd-day { display: flex; flex-direction: column; align-items: center; gap: 1px; padding: 8px 4px; min-height: 66px; border: none; border-radius: var(--r-btn); background: var(--surface); color: var(--ink); font: inherit; cursor: pointer; transition: transform .2s var(--spring); }
+.pd-day:active { transform: scale(.95); }
+.pd-day b { font-family: var(--display); font-weight: var(--money-weight); font-size: 22px; line-height: 1.1; font-variant-numeric: tabular-nums; }
+.pdd-top, .pdd-sub { font-size: 12px; color: var(--mute); font-weight: 600; }
+.pd-day.on { background: var(--ink); color: var(--on-ink); }
+.pd-day.on .pdd-top, .pd-day.on .pdd-sub { color: var(--on-ink); opacity: .8; }
+.pd-day.add { background: transparent; box-shadow: inset 0 0 0 1.5px var(--edge); }
+.pd-day.add b { font-size: 18px; padding: 3px 0; }
+
+/* Who's in as seat tiles */
+.pd-seats { display: flex; flex-wrap: wrap; gap: 6px 4px; }
+.ps-cell { width: calc(20% - 4px); min-width: 0; }
+.pd-seat { width: 100%; display: flex; flex-direction: column; align-items: center; gap: 3px; padding: 6px 2px; border: none; background: none; font: inherit; color: var(--ink); border-radius: 12px; }
+button.pd-seat { cursor: pointer; }
+button.pd-seat:active { background: var(--surface); }
+.ps-name { font-size: 14px; font-weight: 700; max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.ps-status { font-size: 12px; font-weight: 700; color: var(--mute); }
+.ps-status.in { color: var(--win); }
+.ps-status.maybe { color: var(--warn-ink); }
+.ps-status.out { color: var(--loss); }
+.pd-seat.open .avatar { background: transparent; box-shadow: inset 0 0 0 1.5px var(--edge); color: var(--mute); display: grid; place-items: center; }
+.ps-out { width: 100%; margin: 2px 0 0; font-size: 13px; color: var(--mute); text-align: center; }
+
+/* The ticket */
+.pd-ticket { margin: 4px 16px 6px; padding: 20px 18px 12px; background: var(--card); border-radius: var(--r-card); box-shadow: var(--hair); display: flex; flex-direction: column; gap: 4px; position: relative; animation: rise .4s var(--ease-out); }
+.pd-ticket.no-day { background: var(--band-butter); box-shadow: none; }
+.pt-from { display: flex; align-items: center; gap: 10px; font-size: 15px; color: var(--body); margin-bottom: 8px; }
+.pt-from strong { color: var(--ink); }
+.pt-eyebrow { font-size: 13px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: var(--pink-text); }
+.pt-big { font-family: var(--display); font-weight: var(--money-weight); font-size: 46px; line-height: 1.02; letter-spacing: -.02em; color: var(--ink); font-variant-numeric: tabular-nums; margin: 2px 0 4px; }
+.pt-ask { margin: 4px 0 2px; font-size: 17px; line-height: 1.35; color: var(--ink); }
+.pt-line { font-size: 15px; color: var(--body); display: flex; align-items: center; gap: 6px; }
+.pt-line i { color: var(--icon); }
+.pd-ticket .ic-note { display: flex; gap: 6px; align-items: center; margin-top: 6px; }
+.pd-ticket .ph-follow { align-self: flex-start; }
+/* The perforation: a dashed line with the canvas biting a half circle out of each side */
+.pt-perf { position: relative; height: 1px; margin: 16px -18px 12px; border-top: 2px dashed var(--line); }
+.pt-perf::before, .pt-perf::after { content: ''; position: absolute; top: -12px; width: 22px; height: 22px; border-radius: 50%; background: var(--canvas); }
+.pt-perf::before { left: -11px; }
+.pt-perf::after { right: -11px; }
+.pd-ticket.no-day .pt-perf { border-top-color: color-mix(in srgb, var(--ink) 18%, transparent); }
+
+/* A friend's answer and the organizer's nudge */
+.pd-answer { margin: 8px 0 0; }
+.pd-answer .rsvp-row { padding-top: 6px; }
+.pd-q { margin: 14px 20px 2px; font-family: var(--display); font-weight: var(--display-weight); font-size: 22px; color: var(--ink); }
+.pd-answer .pd-days { margin-left: 16px; margin-right: 16px; }
+.pd-answer .pd-help { margin: 2px 20px 8px; }
+.pd-answer-btns { display: flex; flex-direction: column; gap: 10px; margin: 16px 16px 4px; }
+.pd-vote-btn .opt { font-family: var(--body-font); font-weight: 500; font-size: 15px; color: var(--mute); }
+.pd-mine { display: flex; align-items: center; gap: 10px; margin: 12px 16px 0; padding: 12px 14px; border-radius: var(--r-card); box-shadow: var(--hair); background: var(--card); }
+.pd-mine .ps-status { font-size: 14px; }
+.pd-mine-days { font-size: 14px; color: var(--body); min-width: 0; }
+.pd-nudge { margin: 14px 16px 0; padding: 14px 16px; border-radius: var(--r-card); background: var(--band-mint); color: var(--ink); display: flex; gap: 10px; }
+.pd-nudge b { display: block; font-family: var(--display); font-weight: var(--display-weight); font-size: 19px; }
+.pd-nudge span { display: block; font-size: 14px; color: var(--body); margin-top: 2px; }
+.pd-talk { display: flex; align-items: center; gap: 10px; width: calc(100% - 32px); margin: 18px 16px 0; padding: 12px 14px; border: none; border-radius: var(--r-card); background: var(--surface); color: var(--ink); font: inherit; font-weight: 600; cursor: pointer; text-align: left; }
+.pd-talk i { color: var(--icon); }
+
+/* Sheets */
+.pd-sheet { padding: 6px 16px 16px; display: flex; flex-direction: column; gap: 8px; }
+.pd-seg { margin: 4px 0; }
+.pd-seg .holes-btn { font-family: var(--body-font); font-size: 15px; font-weight: 700; padding-left: 6px; padding-right: 6px; white-space: nowrap; }
+.pd-help { margin: 2px 0 4px; font-size: 14px; line-height: 1.4; color: var(--mute); }
+.pd-sub-label { margin-top: 10px; font-size: 12px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: var(--mute); }
+.pd-done { margin-top: 10px; }
+.pd-list { max-height: 52vh; overflow-y: auto; margin: 0 -4px; }
+.pd-chips { flex-wrap: wrap; padding: 0; }
+.pd-lock-big { font-family: var(--display); font-weight: var(--display-weight); font-size: 26px; line-height: 1.15; color: var(--ink); margin-top: 4px; }
+.pd-who-day { margin: 0; font-size: 14px; color: var(--body); }
+.pd-who-day b { color: var(--ink); margin-right: 4px; }
+
+/* The ask */
+.pa-title { margin: 8px 20px 10px; font-family: var(--display); font-weight: var(--display-weight); font-size: 34px; line-height: 1.08; letter-spacing: -.02em; color: var(--ink); }
+.pa-msg { display: block; width: calc(100% - 32px); margin: 0 16px; padding: 14px 16px; border: none; border-radius: var(--r-card); background: var(--band-butter); color: var(--ink); font: inherit; font-size: 18px; line-height: 1.35; resize: none; }
+.pa-msg:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
+.pa-hint { margin: 10px 20px 12px; font-size: 14px; line-height: 1.4; color: var(--mute); }
+.pa-people { display: flex; flex-wrap: wrap; gap: 8px; padding: 0 16px; }
+.pa-chip { display: inline-flex; align-items: center; gap: 6px; min-height: 44px; padding: 0 16px; border: none; border-radius: var(--r-chip); background: var(--card); box-shadow: var(--hair); color: var(--ink); font: inherit; font-weight: 600; font-size: 15px; cursor: pointer; }
+.pa-chip.on { background: var(--ink); color: var(--on-ink); box-shadow: none; }
+.pa-chip.add { background: transparent; box-shadow: inset 0 0 0 1.5px var(--edge); color: var(--body); }
+.pa-add { margin: 10px 16px 0; }
+.plan-ask .cta-wrap .text-link { align-self: center; }
+
+/* Up next's card for a plan with no day yet */
+.upcoming-card.open-plan { background: var(--band-butter); }
+.uc-tags { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 8px; }
+.uc-tags .st-tag { max-width: 150px; }
+.upcoming-card.open-plan .st-tag.not { box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--ink) 20%, transparent); }
+
+/* Shared: the new look keeps buttons on these screens to its smaller radius */
+.plan-page ~ .cta-wrap .full-btn, .plan-ask .full-btn, .pd-sheet .full-btn, .pd-answer .full-btn { border-radius: var(--r-btn); }

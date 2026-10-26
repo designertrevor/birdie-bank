@@ -21,7 +21,7 @@ import { payFields, sendReminder } from '../lib/pay.js';
 import { shareLink, shareRound, syncConfigured } from '../lib/sync.js';
 import {
   RSVPS, RSVP_LABEL, betLabel, betUnitLabel, cleanName, countsLine, daysUntil, inviteText, isoDate, morningText, nudgeAllText, nudgeText,
-  dayLabel, movedPlanOf, planChoice, planCounts, planPeople, planRules, planSides, planStart, rollCallDefault, tally, tallySides, timeLabel, whenLabel,
+  dayLabel, movedPlanOf, planChoice, planCounts, planPeople, planRules, planSides, planStart, rollCallDefault, tally, tallySides, timeLabel,
 } from '../lib/plans.js';
 import { TeeTimeSection } from '../components/Reminders.jsx';
 import { PlansOffError } from '../lib/plan-adapters.js';
@@ -36,6 +36,10 @@ import { planCupFor, sessionEyebrow, withSessionWorth } from '../lib/trip-templa
 import { PLAN_LOCKED, answerPlan, editPlan, openPlanLink, planShareLink, removePlan, sharePlan, usePlanLive, usePlansOff } from '../lib/plan-sync.js';
 import { TalkSection } from '../components/Talk.jsx';
 import { planTalk, planThread } from '../lib/talk.js';
+import { talkCounts } from '../lib/talk-counts.js';
+import { TalkCount } from '../components/TalkCount.jsx';
+import { PART_LABEL, dayOptions, detailStates, leadingDay, lockNudge, lockText, normalizePlan, shortDay, waitingLine, whenLine } from '../lib/plan-open.js';
+import { DayTiles, DetailRows, LockSheet, SeatTiles, WhereSheet } from './plan/PlanParts.jsx';
 import { useTalkSync } from '../lib/talk-sync.js';
 import { PlanChallenges } from '../components/Challenges.jsx';
 import { challengeIdOfBet, challengeWhat, withChallenges } from '../lib/challenges.js';
@@ -76,27 +80,39 @@ export default function PlanScreen({ id }) {
   return (
     <Screen>
       <Header title={plan.host ? 'Your round' : 'Upcoming round'} small onBack={nav.pop}
-        right={plan.host && plan.status === 'planned' && !plan.gone ? <button className="pill-btn sm" onClick={() => nav.push('newRound', { edit: plan.id })}><Icon name="pencil-simple" /> Edit</button> : null} />
+        right={plan.host && plan.status === 'planned' && !plan.gone && plan.date ? <button className="pill-btn sm" onClick={() => nav.push('newRound', { edit: plan.id })}><Icon name="pencil-simple" /> Edit</button> : null} />
       {plan.trip?.id && <button className="trip-line" onClick={() => nav.push('trip', { id: plan.trip.id })}><Icon name="suitcase-rolling" /> Part of {plan.trip.name} <Icon name="caret-right" /></button>}
       <PlanBody plan={plan} />
     </Screen>
   );
 }
 
-/** The plan page itself. `standalone`: a friend who opened the link and hasn't set up the app. */
-function PlanBody({ plan, standalone = false, onSkip }) {
+/**
+ * The plan page itself. `standalone`: a friend who opened the link and hasn't set up the app.
+ * With a day (Layout Lab Plan A): the ticket with the day and tee time big and who's in as seat
+ * tiles, In / Maybe / Out, then the game and the bet as rows that open the vote. With no day yet
+ * (plan-open.js): the same ticket saying "No day yet", then the four details (Day, Course, Game,
+ * Bet) each with its state; a friend answers in, then which days, and the organizer locks the day.
+ * No chat on the page (Trevor, 2026-10-26): the trash talk is behind a quiet row once there is some.
+ */
+function PlanBody({ plan: saved, standalone = false, onSkip }) {
   const nav = useNav();
   const { ask, showToast } = useUI();
   const settings = useStore(s => s.settings);
   const myPlayer = useStore(s => s.players?.[s.me]);
+  // Plans saved before the day could wait read the same as new ones (plan-open.js)
+  const plan = normalizePlan(saved);
+  const talkRows = useStore(s => s.talk?.[planThread(plan)]);
   const off = usePlansOff();
   const send = useSend();
-  // The plan's trash talk: look now, and every so often while it's open
-  useTalkSync([planThread(plan)], { live: true });
+  // The plan's trash talk: picked up when the page opens, for the row at the bottom
+  useTalkSync([planThread(plan)]);
   // Challenges on this plan come and go live while it's on screen
   useChallengesLive({ planCode: plan.code });
   const [marking, setMarking] = useState(null); // the organizer marking someone's answer
   const [sharing, setSharing] = useState(false);
+  const [sheet, setSheet] = useState(null); // 'vote', 'day', 'course', 'lock' or 'talk'
+  const [changing, setChanging] = useState(false); // a friend changing their answer to a plan with no day
   const me = plan.host ? plan.hostWho : plan.localMe;
   const people = planPeople(plan);
   const counts = planCounts(plan);
@@ -108,6 +124,7 @@ function PlanBody({ plan, standalone = false, onSkip }) {
   // A points or reward plan votes on the same bets, read as points
   const unit = (g, b) => inUnits(plan, betUnitLabel(g, rules, b) || money(b));
   const days = daysUntil(plan.date);
+  const noDay = !plan.date;
   const planned = plan.status === 'planned' && !plan.gone;
   const host = plan.hostName || 'The organizer';
 
@@ -171,6 +188,30 @@ function PlanBody({ plan, standalone = false, onSkip }) {
     await removePlan(plan.id);
     if (standalone) onSkip?.(); else nav.pop();
   };
+  // The organizer locks in the day (plan-open.js lockNudge): the plan becomes a dated one, and the group hears it
+  const lock = async (iso, tee) => {
+    setSheet(null);
+    const r = await editPlan(plan.id, p => {
+      p.date = iso;
+      if (tee) p.teeTime = tee;
+      p.when = { ...normalizePlan(p).when, mode: 'set' };
+    });
+    if (r === 'taken') { showToast(PLAN_LOCKED); return; }
+    track('plan_locked', { people: counts.in + counts.maybe });
+    const now = getState().plans[plan.id];
+    if (now.code) send(lockText(now, planShareLink(now)), 'Copied. Paste it in your group text');
+    else showToast(`Locked in for ${shortDay(iso)}`);
+  };
+  // A day added by the organizer goes on offer for everyone; anyone's own pick is their answer
+  const saveDays = (list, added = []) => {
+    answer({ days: list });
+    if (plan.host && added.length) editPlan(plan.id, p => { const w = normalizePlan(p).when; p.when = { ...w, mode: 'options', days: [...new Set([...w.days, ...added])].sort() }; });
+  };
+  const setCourse = c => {
+    setSheet(null);
+    editPlan(plan.id, p => { p.course = c; }).then(r => { if (r === 'taken') showToast(PLAN_LOCKED); });
+    if (c?.id) update(st => { if (!st.favorites.includes(c.id)) st.favorites = [c.id, ...st.favorites].slice(0, 6); });
+  };
 
   const gameT = tally(plan, 'game');
   // The bet vote is for the game you voted for (or the group's pick), in that game's own unit
@@ -183,41 +224,57 @@ function PlanBody({ plan, standalone = false, onSkip }) {
   const onSides = planSides(plan, choice.game);
   const sugGame = plan.suggested?.game;
   const sugBet = sugGame ? tally(plan, 'bet', sugGame).rows.find(r => r.suggested)?.choice ?? plan.suggested?.bet : null;
+  const canVote = gameT.rows.length > 1 || betT.rows.length > 1 || sideT.length > 0;
+
+  // The four details and their states (plan-open.js)
+  const states = detailStates(plan, { name: g => GAMES[g]?.name || 'A game', unit });
+  const options = noDay ? dayOptions(plan) : [];
+  const lead = noDay ? leadingDay(plan) : null;
+  const nudge = noDay && plan.host && planned ? lockNudge(plan) : null;
+  const answered = !!mine?.status;
+  // Someone who added their own name from the link is in already: they still get asked which days
+  const asking = noDay && planned && !plan.host && (!answered || changing || (!plan.daysSent && mine.status !== 'out' && !mine.days?.length));
+  const openVote = canVote && planned && (answered || plan.host || asking) ? () => setSheet('vote') : null;
+  const rows = [
+    ...(noDay ? [
+      { key: 'day', icon: 'calendar-blank', label: 'Day', s: states.day, sub: options.length ? `${options.length} day${options.length === 1 ? '' : 's'} so far${plan.when.part ? ` · ${PART_LABEL[plan.when.part].toLowerCase()}` : ''}` : 'Friends say when they can', onOpen: planned && (answered || plan.host) ? () => setSheet('day') : null },
+      { key: 'course', icon: 'map-pin', label: 'Course', s: states.course, onOpen: planned && plan.host ? () => setSheet('course') : null },
+    ] : []),
+    { key: 'game', icon: game?.icon || 'cards', label: noDay ? 'Game' : 'The game', s: states.game, onOpen: gameT.rows.length > 1 || sideT.length ? openVote : null, sub: onSides.length ? `With ${onSides.map(k => SIDE_GAMES[k].label).join(' and ')}` : null },
+    { key: 'bet', icon: 'coins', label: noDay ? 'Bet' : 'The bet', s: states.bet, onOpen: betT.rows.length > 1 ? openVote : null, sub: playForLine(plan) || null },
+  ];
+  const seatTap = plan.host && planned ? p => (p.who !== me && !p.self ? setMarking(p) : null) : null;
+  const notes = (
+    <>
+      {plan.status === 'off' && <p className="ic-note"><Icon name="calendar-x" fill /> {plan.host ? 'You called this one off.' : `${host} called this one off.`}</p>}
+      {plan.gone && plan.status === 'planned' && <p className="ic-note"><Icon name="calendar-x" fill /> {host} deleted this plan.</p>}
+      {planned && plan.booked && !plan.movedTo && <p className="ic-note"><Icon name="calendar-check" fill /> Tee time booked{plan.teeTime ? ` for ${timeLabel(plan.teeTime)}` : ''}.</p>}
+      {plan.movedTo && <MovedNote plan={plan} host={host} />}
+      {plan.status === 'started' && !plan.movedTo && (
+        <p className="ic-note"><Icon name="flag-pennant" fill /> The round is on.{plan.liveCode ? ' Follow the money live.' : ''}</p>
+      )}
+      {plan.status === 'started' && !plan.movedTo && plan.liveCode && (
+        <a className="pill-btn ph-follow" href={shareLink(plan.liveCode)}><Icon name="broadcast" fill /> Follow along</a>
+      )}
+    </>
+  );
 
   return (
     <>
-      <div className="scroll">
-        <div className="invite-card plan-hero">
-          <div className="ic-from">
-            {plan.host ? <span>You’re getting a game together</span> : <><Avatar name={host} /> <span><strong>{host}</strong> is getting a game together</span></>}
-          </div>
-          <div className="eyebrow ph-when">{whenLabel(plan) || 'Date to be set'}</div>
-          <div className="ic-game"><Icon name={game?.icon || 'golf'} fill /> {game?.name || 'Golf'}</div>
-          <div className="ic-course">{plan.course?.name || 'Course to be set'} · {plan.holesCount} holes{choice.bet ? ` · ${inUnits(plan, betLabel(choice.game, rules, choice.bet, plan.holesCount ?? 18) || money(choice.bet))}` : ''}</div>
-          {playForLine(plan) && <div className="ic-playfor"><Icon name={plan.playFor?.kind === 'reward' ? 'gift' : 'trophy'} fill /> {playForLine(plan)}</div>}
-          {/* A round a trip's schedule planned (trip-templates.js): its place in the schedule and its matches */}
-          {sessionEyebrow(plan) && <div className="ic-playfor"><Icon name="users-three" fill /> {sessionEyebrow(plan)}{plan.session.line ? `: ${plan.session.line}` : ''}</div>}
-          {plan.status === 'off' && <p className="ic-note"><Icon name="calendar-x" fill /> {plan.host ? 'You called this one off.' : `${host} called this one off.`}</p>}
-          {plan.gone && plan.status === 'planned' && <p className="ic-note"><Icon name="calendar-x" fill /> {host} deleted this plan.</p>}
-          {planned && plan.booked && !plan.movedTo && <p className="ic-note"><Icon name="calendar-check" fill /> Tee time booked{plan.teeTime ? ` for ${timeLabel(plan.teeTime)}` : ''}.</p>}
-          {plan.movedTo && <MovedNote plan={plan} host={host} />}
-          {plan.status === 'started' && !plan.movedTo && (
-            <p className="ic-note"><Icon name="flag-pennant" fill /> The round is on.{plan.liveCode ? ' Follow the money live.' : ''}</p>
-          )}
-          {plan.status === 'started' && !plan.movedTo && plan.liveCode && (
-            <a className="pill-btn ph-follow" href={shareLink(plan.liveCode)}><Icon name="broadcast" fill /> Follow along</a>
-          )}
-        </div>
+      <div className="scroll plan-page">
+        <PlanTicket plan={plan} people={people} me={me} rules={rules} notes={notes} onSeat={seatTap}
+          onAdd={plan.host && planned && !(off && !plan.code) ? invite : null} />
 
-        {planned && !standalone && (days ?? 0) >= 0 && (
+        {planned && !standalone && !noDay && (days ?? 0) >= 0 && (
           <button className="uc-preview pv-entry" onClick={() => nav.push('preview', { id: plan.id, fromPlan: true })}>
             <Icon name="binoculars" fill />
-            <span className="row-main"><b>{weekdayOf(plan) ? `${weekdayOf(plan)} preview` : 'The preview'}</b>{toGoLabel(plan) ? <span className="uc-pv-sub"> · {toGoLabel(plan)}</span> : null}<span className="uc-pv-sub uc-pv-line">Who gets strokes where, head to head, and a card for the group text</span></span>
+            <span className="row-main"><b>{weekdayOf(plan) ? `${weekdayOf(plan)} preview` : 'The preview'}</b>{toGoLabel(plan) ? <span className="uc-pv-sub"> · {toGoLabel(plan)}</span> : null}<span className="uc-pv-sub uc-pv-line">Who gets strokes where, head to head, the lineup, and a card for the group text</span></span>
             <Icon name="caret-right" />
           </button>
         )}
 
-        {planned && (
+        {/* A dated plan: In / Maybe / Out right under the ticket, as today */}
+        {planned && !noDay && (
           <>
             <div className="sec-label">Are you in?</div>
             <div className="rsvp-row" role="radiogroup" aria-label="Are you in?">
@@ -227,32 +284,53 @@ function PlanBody({ plan, standalone = false, onSkip }) {
                 </button>
               ))}
             </div>
-            {mine?.status && mine.status !== 'out' && (
-              <>
-                <VoteBlock label="Your vote: the game" kind="game" t={gameT} mineValue={mine.game} onVote={v => answer({ game: v })}
-                  render={g => GAMES[g]?.name || g} />
-                <VoteBlock label={manyGames ? `Your vote: the bet for ${GAMES[betGame]?.name || 'the game'}` : 'Your vote: the bet'} kind="bet" t={betT} mineValue={myBet}
-                  onVote={v => answer({ bet: v, betGame: v == null ? null : betGame })} render={b => unit(betGame, b)} />
-                <SideVote plan={plan} rows={sideT} rules={rules} mine={mine.sides || {}} onVote={(k, v) => answer({ sides: { ...(mine.sides || {}), [k]: v } })} />
-                <p className="field-help pad">
-                  {voters > 1
-                    ? `The group’s pick so far: ${GAMES[choice.game]?.name}${choice.bet ? `, ${unit(choice.game, choice.bet)}` : ''}${onSides.length ? `, with ${onSides.map(k => SIDE_GAMES[k].label).join(' and ')}` : ''}.`
-                    : `${plan.host ? 'You suggested' : `${host} suggested`} ${GAMES[sugGame]?.name || 'a game'}${sugBet ? ` at ${unit(sugGame, sugBet)}` : ''}. The group decides; a tie goes to the suggestion.`}
-                </p>
-              </>
+          </>
+        )}
+
+        {/* No day yet, a friend: in, maybe or can't, then which days, then Send (plan-open.js) */}
+        {asking && <FriendAnswer plan={plan} mine={mine} options={options} onSend={a => { answer(a); setChanging(false); update(s => { const p = s.plans?.[plan.id]; if (p) p.daysSent = true; }); }} onVote={canVote ? () => setSheet('vote') : null} />}
+        {noDay && planned && !plan.host && answered && !changing && (
+          <div className="pd-mine">
+            <span className={`ps-status ${mine.status}`}>{mine.status === 'out' ? 'You can’t make it' : mine.status === 'maybe' ? 'You’re a maybe' : 'You’re in'}</span>
+            <span className="row-main pd-mine-days">{mine.status !== 'out' && (mine.days?.length ? mine.days.map(shortDay).join(', ') : 'No days picked yet')}</span>
+            <button type="button" className="pill-btn sm" onClick={() => setChanging(true)}>Change</button>
+          </div>
+        )}
+
+        {nudge && (
+          <div className="pd-nudge" role="status">
+            <div className="row-main">
+              <b>{shortDay(nudge.iso)} works for {nudge.votes} of {nudge.of}</b>
+              <span>{nudge.waiting.length ? `${waitingLine(nudge.waiting)}. Lock it in and they’ll get the day too.` : 'Everyone has answered. Lock it in?'}</span>
+            </div>
+          </div>
+        )}
+
+        {!asking && (
+          <>
+            <div className="sec-label">{noDay ? 'Still to decide' : 'What we’re playing'}</div>
+            <DetailRows rows={rows} />
+            {canVote && planned && (answered || plan.host) && (
+              <p className="field-help pad">
+                {plan.groupPicks.game && !voters ? 'The group picks the game and the bet. Tap a row to vote.'
+                  : voters > 1 || plan.groupPicks.game
+                  ? `The group’s pick so far: ${GAMES[choice.game]?.name}${choice.bet ? `, ${unit(choice.game, choice.bet)}` : ''}${onSides.length ? `, with ${onSides.map(k => SIDE_GAMES[k].label).join(' and ')}` : ''}. Tap a row to vote.`
+                  : `${plan.host ? 'You suggested' : `${host} suggested`} ${GAMES[sugGame]?.name || 'a game'}${sugBet ? ` at ${unit(sugGame, sugBet)}` : ''}. The group decides; a tie goes to the suggestion.`}
+              </p>
             )}
           </>
         )}
 
         <PlanChallenges plan={plan} myName={myPlayer?.name} />
 
-        <div className="sec-label">Who’s in · {countsLine(counts)}</div>
+        <div className="sec-label">Everyone · {countsLine(counts)}</div>
         <div className="who-list">
           {people.map(p => (
             <div key={p.who} className="who-row">
               <Avatar id={p.who} name={p.name} />
               <div className="row-main">
                 <div className="set-name">{first(p.name)}{p.who === me ? ' (you)' : ''}</div>
+                {noDay && p.status && p.status !== 'out' && p.days?.length > 0 && <div className="set-sub">Can make {p.days.map(shortDay).join(', ')}</div>}
                 {(p.game || p.bet || sideYes(plan, p).length > 0) && p.status !== 'out' && (
                   <div className="set-sub">Votes {[GAMES[p.game]?.name, voteBetLabel(p, unit), ...sideYes(plan, p)].filter(Boolean).join(', ')}</div>
                 )}
@@ -281,25 +359,32 @@ function PlanBody({ plan, standalone = false, onSkip }) {
         )}
 
         {/* The organizer's booking link, the day to be reminded to book, and Booked (tee-reminders.js) */}
-        {planned && plan.host && !plan.movedTo && (days ?? 0) >= 0 && <TeeTimeSection plan={plan} />}
+        {planned && plan.host && !plan.movedTo && !noDay && (days ?? 0) >= 0 && <TeeTimeSection plan={plan} />}
 
-        {plan.status !== 'off' && !plan.gone && <TalkSection ctx={planTalk(plan)} on="plan" />}
+        {/* The trash talk is off the page; a plan that already has some keeps it one tap away */}
+        {plan.status !== 'off' && !plan.gone && talkCounts(talkRows || {}).comments + talkCounts(talkRows || {}).reactions > 0 && (
+          <button className="pd-talk" onClick={() => setSheet('talk')}><Icon name="chat-circle" /> <span className="row-main">Trash talk</span> <TalkCount rows={talkRows} /> <Icon name="caret-right" /></button>
+        )}
 
-        {planned && plan.host && <button className="text-link" onClick={() => nav.push('newRound', { edit: plan.id })}><Icon name="pencil-simple" /> Change the day, time, course or holes</button>}
+        {planned && plan.host && !noDay && <button className="text-link" onClick={() => nav.push('newRound', { edit: plan.id })}><Icon name="pencil-simple" /> Change the day, time, course or holes</button>}
         {planned && plan.host && <button className="danger-link" onClick={callOff}><Icon name="calendar-x" /> Call it off</button>}
         {(!planned || !plan.host) && !standalone && <button className="danger-link" onClick={del}><Icon name="trash" /> Delete plan</button>}
         {standalone && <p className="field-help pad">{noMoneyNote(plan) || 'Friendly wagers only. Birdie Bank never holds or moves money. You settle up yourselves.'}</p>}
       </div>
 
-      {planned && (
+      {planned && !asking && (
         <div className="cta-wrap">
+          {/* No day yet: once a day leads, the organizer can lock it in (the nudge above says when it's clear) */}
+          {noDay && plan.host && lead && (
+            <button className="full-btn pink" onClick={() => setSheet('lock')}><Icon name="lock-simple" fill /> Lock in {shortDay(lead.iso)}</button>
+          )}
           {plan.host && days != null && days <= 0 && (
             <button className="full-btn" onClick={() => nav.push('rollCall', { id: plan.id })}><Icon name="list-checks" /> Roll call</button>
           )}
           {(days != null && days <= 1 && (plan.code || !plan.host || off)) ? (
             <button className={`full-btn ${plan.host && days <= 0 ? 'outline' : ''}`} onClick={morning}><Icon name="chat-circle-text" /> {days <= 0 ? 'Send the morning text' : 'Text the group'}</button>
           ) : plan.host && !(off && !plan.code) ? (
-            <button className={`full-btn ${days != null && days <= 0 ? 'outline' : ''}`} disabled={sharing} onClick={invite}><Icon name="share-network" /> {sharing ? 'Getting the link…' : plan.code ? 'Send the group link' : 'Invite the group'}</button>
+            <button className={`full-btn ${(days != null && days <= 0) || (noDay && lead) ? 'outline' : ''}`} disabled={sharing} onClick={invite}><Icon name="share-network" /> {sharing ? 'Getting the link…' : plan.code ? 'Send the group link' : 'Invite the group'}</button>
           ) : null}
           {plan.host && days != null && days > 0 && (
             <button className="full-btn outline" onClick={() => nav.push('rollCall', { id: plan.id })}>Playing now? Roll call</button>
@@ -309,7 +394,7 @@ function PlanBody({ plan, standalone = false, onSkip }) {
           {plan.host && !standalone && <button className="text-link centered" onClick={() => nav.reset('upnext')}><Icon name="check" /> Done for now. It’s saved on Up next</button>}
         </div>
       )}
-      {!planned && standalone && (
+      {(!planned || asking) && standalone && (
         <div className="cta-wrap"><button className="full-btn outline" onClick={onSkip}>Start my own round instead</button></div>
       )}
 
@@ -323,7 +408,122 @@ function PlanBody({ plan, standalone = false, onSkip }) {
           ))}
         </div>
       </Sheet>
+
+      {/* The vote on the game, the bet and the side games, from the rows or the friend's optional button */}
+      <Sheet open={sheet === 'vote'} onClose={() => setSheet(null)} title="The game and the bet">
+        <div className="pd-sheet">
+          <VoteBlock label="Your vote: the game" kind="game" t={gameT} mineValue={mine?.game} onVote={v => answer({ game: v })}
+            render={g => GAMES[g]?.name || g} hideSuggested={plan.groupPicks.game} />
+          <VoteBlock label={manyGames ? `Your vote: the bet for ${GAMES[betGame]?.name || 'the game'}` : 'Your vote: the bet'} kind="bet" t={betT} mineValue={myBet}
+            onVote={v => answer({ bet: v, betGame: v == null ? null : betGame })} render={b => unit(betGame, b)} hideSuggested={plan.groupPicks.bet} />
+          <SideVote plan={plan} rows={sideT} rules={rules} mine={mine?.sides || {}} onVote={(k, v) => answer({ sides: { ...(mine?.sides || {}), [k]: v } })} />
+          {!answered && <p className="field-help">Your vote goes with your answer when you send it.</p>}
+          <button type="button" className="full-btn pd-done" onClick={() => setSheet(null)}>Done</button>
+        </div>
+      </Sheet>
+      {noDay && <DaySheet open={sheet === 'day'} plan={plan} mine={mine} options={options} host={plan.host} onClose={() => setSheet(null)} onSave={(list, added) => { saveDays(list, added); setSheet(null); }} />}
+      {noDay && plan.host && <WhereSheet open={sheet === 'course'} current={plan.course} onClose={() => setSheet(null)} onPick={setCourse} />}
+      {noDay && plan.host && lead && (
+        <LockSheet open={sheet === 'lock'} options={options.filter(o => o.votes > 0).sort((a, b) => b.votes - a.votes || a.iso.localeCompare(b.iso))} initial={lead.iso} people={people} onLock={lock} onClose={() => setSheet(null)} />
+      )}
+      <Sheet open={sheet === 'talk'} onClose={() => setSheet(null)} title="Trash talk">
+        <TalkSection ctx={planTalk(plan)} on="plan" title="This plan" />
+      </Sheet>
     </>
+  );
+}
+
+/**
+ * The ticket at the top of the plan (Layout Lab Plan A): the day and tee time big, the course, and
+ * who's in as seat tiles under a perforation. With no day yet it says so where the day goes, with
+ * the organizer's ask and what's still open (plan-open.js).
+ */
+function PlanTicket({ plan, people, me, rules, notes, onSeat, onAdd }) {
+  const host = plan.hostName || 'The organizer';
+  const choice = planChoice(plan);
+  const game = GAMES[choice.game];
+  const noDay = !plan.date;
+  const lead = noDay ? leadingDay(plan) : null;
+  const bet = !plan.groupPicks.bet && choice.bet ? inUnits(plan, betLabel(choice.game, rules, choice.bet, plan.holesCount ?? 18) || money(choice.bet)) : '';
+  const facts = noDay
+    ? [plan.course?.name || 'Any course', plan.groupPicks.game ? 'Game and bet up to the group' : [game?.name, bet].filter(Boolean).join(', ')]
+    : [plan.course?.name || 'Course to be set', `${plan.holesCount} holes`, plan.groupPicks.game ? null : game?.name, bet];
+  const time = timeLabel(plan.teeTime) || PART_LABEL[plan.when.part];
+  return (
+    <div className={`pd-ticket ${noDay ? 'no-day' : ''}`}>
+      <div className="pt-from">
+        {plan.host ? <span>{noDay ? 'You’re getting a round going' : 'You’re getting a game together'}</span> : <><Avatar name={host} /> <span><strong>{first(host)}</strong> {noDay ? 'wants to get a round in' : 'is getting a game together'}</span></>}
+      </div>
+      <div className="pt-eyebrow">{noDay ? (lead ? `${shortDay(lead.iso)} leads so far` : 'When works?') : [shortDay(plan.date), toGoLabel(plan)].filter(Boolean).join(' · ')}</div>
+      <div className="pt-big">{noDay ? 'No day yet' : time || weekdayOf(plan) || shortDay(plan.date)}</div>
+      {noDay && plan.ask && <p className="pt-ask">“{plan.ask}”</p>}
+      <div className="pt-line">{facts.filter(Boolean).join(' · ')}</div>
+      {playForLine(plan) && <div className="pt-line"><Icon name={plan.playFor?.kind === 'reward' ? 'gift' : 'trophy'} fill /> {playForLine(plan)}</div>}
+      {/* A round a trip's schedule planned (trip-templates.js): its place in the schedule and its matches */}
+      {sessionEyebrow(plan) && <div className="pt-line"><Icon name="users-three" fill /> {sessionEyebrow(plan)}{plan.session.line ? `: ${plan.session.line}` : ''}</div>}
+      {notes}
+      <div className="pt-perf" aria-hidden="true" />
+      <SeatTiles people={people} me={me} onTap={onSeat} onAdd={onAdd} />
+    </div>
+  );
+}
+
+/**
+ * A friend's answer to a plan with no day yet (plan pick A): I'm in, Maybe or Can't, then the days
+ * that work (any day can be added), then Send my answer. The game and bet vote is there but
+ * optional, as an outline button under Send (Trevor: visible, clearly secondary, not a text link).
+ */
+function FriendAnswer({ plan, mine, options, onSend, onVote }) {
+  const [status, setStatus] = useState(mine?.status || null);
+  const [days, setDays] = useState(() => mine?.days || []);
+  const shown = [...new Set([...options.map(o => o.iso), ...days])].sort();
+  const counts = Object.fromEntries(options.map(o => [o.iso, o.votes]));
+  const toggle = iso => setDays(d => (d.includes(iso) ? d.filter(x => x !== iso) : [...d, iso].sort()));
+  const labels = { in: 'I’m in', maybe: 'Maybe', out: 'Can’t' };
+  return (
+    <div className="pd-answer">
+      <div className="rsvp-row" role="radiogroup" aria-label="Are you in?">
+        {RSVPS.map(s => (
+          <button key={s} role="radio" aria-checked={status === s} className={`rsvp-btn ${s} ${status === s ? 'on' : ''}`} onClick={() => setStatus(s)}>
+            <Icon name={STATUS_ICON[s]} fill /> {labels[s]}
+          </button>
+        ))}
+      </div>
+      {status && status !== 'out' && (
+        <>
+          <h2 className="pd-q">Which days work?</h2>
+          <p className="pd-help">{shown.length ? `Tick every day you could play${plan.when.part ? ` (${PART_LABEL[plan.when.part].toLowerCase()})` : ''}. Not here? Add one.` : 'No days on the list yet. Add the days you could play.'}</p>
+          <DayTiles days={shown} on={days} onToggle={toggle} onAdd={iso => setDays(d => [...new Set([...d, iso])].sort())} addLabel="Add" counts={counts} label="Days that work for you" />
+        </>
+      )}
+      <div className="pd-answer-btns">
+        <button type="button" className="full-btn pink" disabled={!status} onClick={() => onSend({ status, days: status === 'out' ? [] : days })}>Send my answer</button>
+        {onVote && <button type="button" className="full-btn outline pd-vote-btn" onClick={onVote}><Icon name="cards" /> Vote on the game and bet <span className="opt">(optional)</span></button>}
+      </div>
+    </div>
+  );
+}
+
+/** Which days work for you on a plan with no day yet, with how many can make each; anyone can add a day. */
+function DaySheet({ open, plan, mine, options, host, onSave, onClose }) {
+  const [days, setDays] = useState(() => mine?.days || []);
+  const [added, setAdded] = useState([]);
+  const [was, setWas] = useState(open);
+  if (open !== was) { setWas(open); if (open) { setDays(mine?.days || []); setAdded([]); } }
+  const shown = [...new Set([...options.map(o => o.iso), ...days])].sort();
+  const counts = Object.fromEntries(options.map(o => [o.iso, o.votes]));
+  const toggle = iso => setDays(d => (d.includes(iso) ? d.filter(x => x !== iso) : [...d, iso].sort()));
+  return (
+    <Sheet open={open} onClose={onClose} title="Which days work?">
+      <div className="pd-sheet">
+        <p className="pd-help">{host ? 'Tick the days you can play. A day you add goes on the list for everyone.' : 'Tick the days you can play, or add one.'}{plan.when.part ? ` ${PART_LABEL[plan.when.part]}s.` : ''}</p>
+        <DayTiles days={shown} on={days} onToggle={toggle} onAdd={iso => { setDays(d => [...new Set([...d, iso])].sort()); setAdded(a => [...a, iso]); }} addLabel="Add" counts={counts} label="Days that work for you" />
+        {options.filter(o => o.votes).map(o => (
+          <p key={o.iso} className="pd-who-day"><b>{shortDay(o.iso)}</b> {[o.ins.map(first).join(', '), o.maybes.length ? `${o.maybes.map(first).join(', ')} maybe` : ''].filter(Boolean).join(' · ')}</p>
+        ))}
+        <button type="button" className="full-btn pd-done" onClick={() => onSave(days, added)}>Save</button>
+      </div>
+    </Sheet>
   );
 }
 
@@ -368,7 +568,7 @@ function SideVote({ plan, rows, rules, mine, onVote }) {
 }
 
 /** One vote: the choices with their tally, yours marked. */
-function VoteBlock({ label, kind, t, mineValue, onVote, render }) {
+function VoteBlock({ label, kind, t, mineValue, onVote, render, hideSuggested = false }) {
   if (t.rows.length < 2) return null;
   const top = Math.max(1, ...t.rows.map(r => r.votes));
   return (
@@ -380,7 +580,7 @@ function VoteBlock({ label, kind, t, mineValue, onVote, render }) {
           return (
             <button key={r.choice} role="radio" aria-checked={on} className={`vote-row ${on ? 'on' : ''} ${r.leading ? 'leading' : ''}`} onClick={() => onVote(on ? null : r.choice)}>
               <span className="vr-bar" style={{ width: `${Math.round((r.votes / top) * 100)}%` }} aria-hidden="true" />
-              <span className="vr-name">{render(r.choice)}{r.suggested && <span className="vr-tag">Suggested</span>}</span>
+              <span className="vr-name">{render(r.choice)}{r.suggested && !hideSuggested && <span className="vr-tag">Suggested</span>}</span>
               <span className="vr-n">{r.votes} {r.votes === 1 ? 'vote' : 'votes'}</span>
               <span className="vr-check"><PickMark on={on} add={false} /></span>
             </button>
@@ -411,10 +611,12 @@ function WhoAreYou({ plan, defaultName, standalone, onSkip }) {
     <>
       <div className="scroll join-body plan-who">
         <div className="invite-card">
-          <div className="ic-from"><Avatar name={host} /> <span><strong>{host}</strong> is getting a game together</span></div>
-          <div className="eyebrow ph-when">{whenLabel(plan)}</div>
-          <div className="ic-game"><Icon name={game?.icon || 'golf'} fill /> {game?.name || 'Golf'}</div>
-          <div className="ic-course">{plan.course?.name || 'Course to be set'} · {plan.holesCount} holes{bet ? ` · ${bet}` : ''}</div>
+          <div className="ic-from"><Avatar name={host} /> <span><strong>{host}</strong> {plan.date ? 'is getting a game together' : 'wants to get a round in'}</span></div>
+          {/* No day yet (plan-open.js): "No day yet" where the date goes, and the group picks the game */}
+          <div className="eyebrow ph-when">{whenLine(plan)}</div>
+          <div className="ic-game"><Icon name={plan.groupPicks?.game ? 'golf' : game?.icon || 'golf'} fill /> {plan.groupPicks?.game ? 'Golf soon?' : game?.name || 'Golf'}</div>
+          {plan.ask && <div className="ic-course">“{plan.ask}”</div>}
+          <div className="ic-course">{plan.course?.name || (plan.date ? 'Course to be set' : 'Any course')} · {plan.groupPicks?.game ? 'Game and bet up to the group' : `${plan.holesCount} holes${bet ? ` · ${bet}` : ''}`}</div>
           {playForLine(plan) && <div className="ic-playfor"><Icon name={plan.playFor?.kind === 'reward' ? 'gift' : 'trophy'} fill /> {playForLine(plan)}</div>}
         </div>
         {!adding ? (
