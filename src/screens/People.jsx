@@ -15,32 +15,44 @@ import { savePlayerCard } from '../lib/player-save.js';
 import { money } from '../lib/golf.js';
 import { AvatarButton, BottomNav } from '../nav.jsx';
 import { roundsInProgress } from '../lib/rounds.js';
+import './people.css';
 import { useNav } from '../lib/nav.js';
 import { useKept } from '../lib/kept.js';
 import { RSVP_LABEL, dayLabel, rsvpFor } from '../lib/plans.js';
 import { nemesis } from '../lib/rivalry.js';
 import { NemesisCard } from '../components/Rivalry.jsx';
 
-/** "today", "tomorrow", "Saturday" or "Sat, Oct 10" for the RSVP tag. */
-const dayName = iso => { const d = dayLabel(iso); return d === 'Today' || d === 'Tomorrow' ? d.toLowerCase() : d; };
+/** "today", "tomorrow" or the short weekday ("Sat") for the RSVP tag. */
+const dayName = iso => { const d = dayLabel(iso); return d === 'Today' || d === 'Tomorrow' ? d.toLowerCase() : d.slice(0, 3); };
 
-/** Players as cards: your record and net with each person, newest friends from joined rounds too. */
+// The row of big avatars on top: the people you've played with most, once the list is long
+// enough to need it, and only those you've played a couple of rounds with
+const REGULARS_MAX = 5;
+const REGULARS_FROM = 6; // people in the list before the row shows
+const SEARCH_FROM = 8;
+
+/**
+ * Players: you, then everyone you play with as compact rows (Layout Lab, none loved: the photo or
+ * Ball buddy and the name first, the record kept to a quiet line, no crews first since most people
+ * play with more than one). The money between you over every round is on their card (Person.jsx). Money on the Tab between you is a small pill on the row that opens
+ * Remind, Request or Pay. Newest friends from joined rounds are here too.
+ */
 export default function People() {
   const nav = useNav();
   const state = useStore();
   const mine = myIds(state);
   // Everyone you've played with, from every round, so nobody with money on the Tab drops off the list
   const everyone = headToHeadSummary(state, mine);
-  // The Record Book limit (record-book.js): with the paywall flag on and no Pro, each card's record
+  // The Record Book limit (record-book.js): with the paywall flag on and no Pro, each row's record
   // and the nemesis read the last 10 finished rounds. With the flag off `view` is the store's state
   const { state: view, line } = useRecordBook();
   const h2h = view === state ? everyone : headToHeadSummary(view, mine);
   const plan = outstanding(state);
-  const remind = useRemind();
+  const [q, setQ] = useState('');
+  const [paying, setPaying] = useState(null);
   const me = state.me && state.players[state.me];
-  const myApp = payInfoFor(state, state.me);
   // Everyone you've added, plus people you've only met in a joined round. A friend with more than
-  // one id (a claimed seat, "Same person as...") is one card, under the id kept for them
+  // one id (a claimed seat, "Same person as...") is one row, under the id kept for them
   const who = canonicalOf(state);
   const ids = new Set([...Object.keys(state.players), ...everyone.keys()].map(who));
   for (const id of mine) { ids.delete(id); ids.delete(who(id)); }
@@ -48,58 +60,83 @@ export default function People() {
     .sort((a, b) => (b.h?.rounds || 0) - (a.h?.rounds || 0) || a.name.localeCompare(b.name));
   const crews = Object.values(state.crews).sort((a, b) => a.name.localeCompare(b.name));
   const myPay = me && payInfo(me);
+  const needle = q.trim().toLowerCase();
+  const shown = needle ? people.filter(x => x.name.toLowerCase().includes(needle)) : people;
+  const regulars = people.length >= REGULARS_FROM ? people.filter(x => (x.h?.rounds || 0) >= 2).slice(0, REGULARS_MAX) : [];
   return (
     <Screen>
       <Header title="Players" right={<AvatarButton />} />
       <div className="scroll">
         {me && (
-          <button className="set-row" onClick={() => nav.push('profile')}>
+          <button className="pl-me" onClick={() => nav.push('profile')}>
             <Avatar id={me.id} name={me.name} />
             <div className="row-main">
-              <div className="set-name">{playerLabel(me, state.me)}</div>
-              <div className="set-sub">{me.index == null ? 'No handicap' : `HCP ${formatIndex(me.index)}`} · {myPay ? `${PAY_APPS[myPay.app].name} ${handleText(myPay)}` : 'Add how you get paid'}</div>
+              <div className="pl-name">{playerLabel(me, state.me)}</div>
+              <div className="pl-sub">{me.index == null ? 'No handicap' : `HCP ${formatIndex(me.index)}`} · {myPay ? `${PAY_APPS[myPay.app].name} ${handleText(myPay)}` : 'Add how you get paid'}</div>
             </div>
             <span className="chevron"><Icon name="caret-right" /></span>
           </button>
         )}
-        <NemesisCard n={nemesis(view, mine)} />
-        <div className="sec-label">Your people</div>
-        {people.map(({ id, name, h, older, p }) => {
-          const tab = tabWith(plan, mine, id);
-          const amount = Math.abs(tab);
-          const first = name.split(' ')[0];
-          const rsvp = rsvpFor(state, id);
-          const row = (
-            <button key={id} className={tab ? 'tab-person' : 'set-row person-row'} onClick={() => nav.push('person', { id })}>
-              <Avatar id={id} name={name} />
-              <div className="row-main">
-                <div className={tab ? 'tp-name' : 'set-name'}>{name}</div>
-                {rsvp && <div className={`rsvp-tag ${rsvp.status || 'none'}`}>{rsvp.status ? `${RSVP_LABEL[rsvp.status]} for ${dayName(rsvp.plan.date)}` : `No answer for ${dayName(rsvp.plan.date)} yet`}</div>}
-                <div className={tab ? 'tp-sub' : 'set-sub'}>
-                  {h ? `${h.rounds} round${h.rounds === 1 ? '' : 's'} · won ${h.won}, lost ${h.lost}${h.even ? `, even ${h.even}` : ''}` : older ? 'Your rounds together are older ones' : p?.index != null ? `HCP ${formatIndex(p.index)}` : 'No rounds together yet'}
-                  {tab > 0 ? ` · owes you ${money(amount)}` : tab < 0 ? ` · you owe ${money(amount)}` : ''}
-                </div>
-              </div>
-              {h ? <div className={`pr-amt d ${h.net > 0 ? 'pos' : h.net < 0 ? 'neg' : ''}`}>{money(h.net, { sign: true })}</div> : older ? null : <span className="new-chip">New</span>}
-              <span className="chevron"><Icon name="caret-right" /></span>
-            </button>
-          );
-          if (!tab) return row;
-          // Money on the Tab between you: Remind and Request right on the card, or pay them in their app
-          return (
-            <div key={id} className="tab-card">
-              {row}
-              <div className="pay-acts">
-                {tab > 0 ? (
-                  <>
-                    <button className="pay-btn" onClick={() => remind(id, amount)} aria-label={`Remind ${first} about ${money(amount)}`}><span className="pay-in"><Icon name="bell-ringing" fill /><span className="pay-lbl">Remind</span></span></button>
-                    <RequestButton payer={payInfoFor(state, id)} mine={myApp} amount={amount} note="Golf" who={id} />
-                  </>
-                ) : <PayButton info={payInfoFor(state, id)} amount={amount} note="Golf" />}
-              </div>
+
+        {/* The people you play with most, big and one tap away (the Roster idea, kept to one row) */}
+        {regulars.length >= 3 && !needle && (
+          <>
+            <div className="sec-label">Played with most</div>
+            <div className="pl-regulars">
+              {regulars.map(({ id, name }) => (
+                <button key={id} className="pl-reg" onClick={() => nav.push('person', { id })}>
+                  <Avatar id={id} name={name} className="pl-reg-av" />
+                  <span className="pl-reg-name">{firstName(name)}</span>
+                </button>
+              ))}
             </div>
-          );
-        })}
+          </>
+        )}
+
+        {people.length > 0 && (
+          <div className="pl-head">
+            <div className="sec-label">Your people <span className="opt">{people.length}</span></div>
+            {people.length >= SEARCH_FROM && <button className="pl-add-btn" onClick={() => nav.push('playerEdit', {})} aria-label="Add a player"><Icon name="plus" /> Add</button>}
+          </div>
+        )}
+        {people.length >= SEARCH_FROM && (
+          <div className="pl-search">
+            <label className="sr-only" htmlFor="pl-q">Search players</label>
+            <input id="pl-q" className="search-box" type="search" placeholder="Search players" value={q} onChange={e => setQ(e.target.value)} autoComplete="off" />
+          </div>
+        )}
+        {people.length > 0 && (
+          <div className="pl-list">
+            {shown.map(({ id, name, h, older, p }) => {
+              const tab = tabWith(plan, mine, id);
+              const amount = Math.abs(tab);
+              const rsvp = rsvpFor(state, id);
+              const record = h ? `${h.rounds} round${h.rounds === 1 ? '' : 's'} · won ${h.won}, lost ${h.lost}${h.even ? `, even ${h.even}` : ''}`
+                : older ? 'Your rounds together are older ones' : p?.index != null ? `HCP ${formatIndex(p.index)}` : 'No rounds together yet';
+              return (
+                <div key={id} className="pl-row">
+                  <button className="pl-main" onClick={() => nav.push('person', { id })}>
+                    <Avatar id={id} name={name} />
+                    <div className="row-main">
+                      <div className="pl-name">{name}{!h && !older && <span className="new-chip">New</span>}</div>
+                      <div className="pl-sub">
+                        {rsvp && <span className={`pl-rsvp ${rsvp.status || 'none'}`}>{rsvp.status ? `${RSVP_LABEL[rsvp.status]} ${dayName(rsvp.plan.date)}` : `${dayName(rsvp.plan.date)}?`}</span>}
+                        <span className="pl-record">{record}</span>
+                      </div>
+                    </div>
+                  </button>
+                  {/* Money on the Tab between you: one small pill, Remind and Request or Pay behind it */}
+                  {tab ? (
+                    <button className={`pl-owe ${tab > 0 ? 'pos' : 'neg'}`} onClick={() => setPaying({ id, name, tab })} aria-label={tab > 0 ? `${name} owes you ${money(amount)}. Remind or request` : `You owe ${name} ${money(amount)}. Pay`}>
+                      {tab > 0 ? `+${money(amount)}` : `−${money(amount)}`}
+                    </button>
+                  ) : <span className="chevron" aria-hidden="true"><Icon name="caret-right" /></span>}
+                </div>
+              );
+            })}
+            {needle && !shown.length && <p className="pl-none">Nobody called “{q.trim()}”. <button className="pl-none-add" onClick={() => nav.push('playerEdit', {})}>Add them</button></p>}
+          </div>
+        )}
         {people.length < 1 && (
           <div className="people-empty">
             <div className="pe-outlines" aria-hidden="true">{[0, 1, 2, 3].map(i => <span key={i} className="pe-ghost"><Icon name="plus" /></span>)}</div>
@@ -114,6 +151,9 @@ export default function People() {
             <Icon name="users-three" fill /> All your friends, and people you might know
           </button>
         )}
+
+        {/* The rivalry, kept below the list so the people come first */}
+        <NemesisCard n={nemesis(view, mine)} />
 
         {crews.length > 0 ? (
           <>
@@ -136,7 +176,33 @@ export default function People() {
         )}
       </div>
       <BottomNav />
+      <PaySheet who={paying} onClose={() => setPaying(null)} />
     </Screen>
+  );
+}
+
+/** What's on the Tab with one person: Remind and Request when they owe you, Pay when you owe them. */
+function PaySheet({ who, onClose }) {
+  const nav = useNav();
+  const state = useStore();
+  const remind = useRemind();
+  if (!who) return null;
+  const { id, name, tab } = who;
+  const amount = Math.abs(tab);
+  const first = firstName(name);
+  return (
+    <Sheet open onClose={onClose} title={tab > 0 ? `${first} owes you ${money(amount)}` : `You owe ${first} ${money(amount)}`}>
+      <div className="pay-acts wrap pl-pay">
+        {tab > 0 ? (
+          <>
+            <button className="pay-btn" onClick={() => { remind(id, amount); onClose(); }} aria-label={`Remind ${first} about ${money(amount)}`}><span className="pay-in"><Icon name="bell-ringing" fill /><span className="pay-lbl">Remind</span></span></button>
+            <RequestButton payer={payInfoFor(state, id)} mine={payInfoFor(state, state.me)} amount={amount} note="Golf" who={id} />
+          </>
+        ) : <PayButton info={payInfoFor(state, id)} amount={amount} note="Golf" />}
+      </div>
+      {tab < 0 && !payInfoFor(state, id) && <p className="field-help pl-pay-help">{first} hasn’t added how they get paid yet.</p>}
+      <button className="text-link" onClick={() => { onClose(); nav.push('person', { id }); }}><Icon name="user" /> {first}’s card and the rounds behind it</button>
+    </Sheet>
   );
 }
 

@@ -13,14 +13,20 @@ import { syncConfigured } from '../lib/supabase.js';
 import { upcomingPlans } from '../lib/plan-basics.js';
 import { updateSafe } from '../lib/app-update.js';
 import { applyUpdate, useUpdateReady } from '../lib/sw-update.js';
-import { anyTrips, lastDoneRound } from '../lib/upnext-first.js';
+import { TILES_FROM, anyTrips, doneCount, lastDoneRound } from '../lib/upnext-first.js';
 import { endUpNextVisit } from '../lib/upnext-card.js';
 import { PAYWALL_ON } from '../lib/paywall-flag.js';
+import './upnext.css';
 
 // Up next paints first with what it can tell without the Tab's money: rounds going on, the plans
 // and the card for the next round. The rest loads right after (its files are saved for offline
 // like every other), each part in its own boundary so the cards above never wait or blank: the
-// recap, the trips, challenges, reminders, callouts, Lately and the Tab at a glance (UpNextMore.jsx).
+// recap, the trips, challenges, reminders, the number tiles, callouts, Lately and the Tab at a
+// glance (UpNextMore.jsx).
+//
+// The order is the overhaul's (Layout Lab A with E's cards and C's tiles): the one next thing on
+// top (a round going on, the countdown and the upcoming rounds, or the card to start one), the
+// ways to get one going, then the reminders, and the look back (tiles, recap, Lately) further down.
 const more = () => import('../components/UpNextMore.jsx');
 const RecapSection = part(more, 'RecapSection');
 const TripsNow = part(more, 'TripsNow');
@@ -28,8 +34,11 @@ const PlansLater = part(more, 'PlansLater');
 const CalloutsSection = part(more, 'CalloutsSection');
 const LatelySection = part(more, 'LatelySection');
 const TabGlance = part(more, 'TabGlance');
+const StatTiles = part(more, 'StatTiles');
+const ChallengesSection = part(more, 'ChallengesSection');
 const UpNextSync = part(more, 'UpNextSync');
 const JoinSheet = part(() => import('../components/Live.jsx'), 'JoinSheet');
+const FriendsUpNext = part(() => import('../components/FriendsFeed.jsx'), 'FriendsUpNext');
 const RemindersUpNext = part(() => import('../components/Reminders.jsx'), 'RemindersUpNext');
 const ShippedUpNext = part(() => import('../components/RoadmapUpNext.jsx'), 'ShippedUpNext');
 const WhatsNewUpNext = part(() => import('../components/WhatsNewUpNext.jsx'), 'WhatsNewUpNext');
@@ -55,6 +64,8 @@ export default function UpNext() {
   const trips = anyTrips(state);
   const plans = trips ? null : upcomingPlans(state);
   const anyChallenges = Object.keys(state.challenges || {}).length > 0;
+  // C's number tiles only once there's enough to count: never a row of zeros for someone new
+  const tiles = doneCount(state) >= TILES_FROM;
   // A new version only shows up here once no round is going on, so a tap never cuts into one
   const updateReady = useUpdateReady() && updateSafe(state);
   const onJoin = syncConfigured ? () => setJoining(true) : null;
@@ -69,9 +80,6 @@ export default function UpNext() {
             <span className="row-main"><b>Update ready</b> <span className="un-sub">Tap to refresh</span></span>
           </button>
         )}
-        {/* The day after a round: its recap, then a few lines for the group text (see recap.js, callouts.js) */}
-        <Later><RecapSection /></Later>
-
         {live.map(r => {
           const played = r.holes.filter(h => holeComplete(r, h)).length;
           return (
@@ -89,8 +97,13 @@ export default function UpNext() {
 
         {trips && <Later><TripsNow /></Later>}
 
+        {/* The one next thing: the countdown, the upcoming rounds, Start a round with Run it back, and Get a round going */}
+        {trips
+          ? <Later><PlansLater live={live} last={last} onJoin={onJoin} /></Later>
+          : <PlansAndNext plans={plans} onNow={[]} live={live} last={last} onJoin={onJoin} />}
+
         {/* Reminders, It shipped and What's new share one slot: the first card shows, the rest wait
-            behind it ("2 more"), so the next round stays near the top */}
+            behind it ("2 more"), so the screen stays calm */}
         <CardStack>
           {/* The Pro trial ends in two days or less: the end date and the price, first (paywall flag only, trial.js) */}
           {PAYWALL_ON && <StackSlot at={-1}><Later><TrialReminderUpNext /></Later></StackSlot>}
@@ -104,14 +117,19 @@ export default function UpNext() {
           <StackSlot at={2}><Later><WhatsNewUpNext /></Later></StackSlot>
         </CardStack>
 
-        {trips
-          ? <Later><PlansLater live={live} last={last} anyChallenges={anyChallenges} onJoin={onJoin} /></Later>
-          : <PlansAndNext plans={plans} onNow={[]} live={live} last={last} anyChallenges={anyChallenges} onJoin={onJoin} />}
+        {anyChallenges && <Later><ChallengesSection /></Later>}
 
+        {/* The look back: your numbers once there are a few rounds, then the day-after recap and
+            a few lines for the group text (see recap.js, callouts.js) */}
+        {tiles && <Later><StatTiles /></Later>}
+        <Later><RecapSection /></Later>
         <Later><CalloutsSection /></Later>
+
+        {/* Friends' rounds you're not in, live, and the way into the group feed (friend-feed.js) */}
+        <Later><FriendsUpNext show={hasHistory || trips || plans.length > 0} /></Later>
         <Later><LatelySection /></Later>
-        {/* The Tab at a glance and the last round out, once there's a finished round */}
-        {hasHistory && <Later><TabGlance /></Later>}
+        {/* The Tab at a glance (its own tile once the tiles show) and the last round out, once there's a finished round */}
+        {hasHistory && <Later><TabGlance tiles={tiles} /></Later>}
       </div>
       <BottomNav />
       {/* Picks up answers, votes, payments and trip news that came in since last time */}

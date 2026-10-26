@@ -1,0 +1,67 @@
+/* ============================================================
+   PLAYERS, the overhaul (2026-10-26): compact rows with the photo or Ball buddy and the name first,
+   the record on a quiet line, and the people you play with most as one row of big avatars.
+   ============================================================ */
+
+/* You, on top: the same compact row as everyone else, on a card */
+.pl-me {
+  display: flex; align-items: center; width: calc(100% - 32px); margin: 6px 16px 4px; padding: 12px 12px 12px 14px; border: none;
+  border-radius: var(--r-card); background: var(--card); box-shadow: var(--hair); color: inherit; font: inherit; text-align: left; cursor: pointer;
+  transition: transform .2s var(--spring);
+}
+.pl-me:active { transform: scale(.98); }
+
+/* Played with most: one row, never more */
+.pl-regulars { display: flex; justify-content: flex-start; gap: 6px; margin: 0 12px; }
+.pl-reg {
+  flex: 0 1 20%; min-width: 0; display: flex; flex-direction: column; align-items: center; gap: 6px; padding: 4px 2px 6px;
+  border: none; background: none; color: var(--ink); font: inherit; cursor: pointer; transition: transform .2s var(--spring);
+}
+.pl-reg:active { transform: scale(.94); }
+.avatar.pl-reg-av { width: 60px; height: 60px; margin: 0; font-size: 24px; }
+.pl-reg-name { max-width: 100%; font-size: 13px; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+/* The list's head, with Add beside it */
+.pl-head { display: flex; align-items: flex-end; justify-content: space-between; padding-right: 16px; }
+.pl-add-btn {
+  display: inline-flex; align-items: center; gap: 4px; min-height: 36px; margin-bottom: 4px; padding: 0 12px; border: none;
+  border-radius: var(--r-btn); background: var(--surface); color: var(--ink); font: inherit; font-size: 14px; font-weight: 700; cursor: pointer;
+}
+.pl-search { margin: 0 16px 8px; }
+.pl-search .search-box { padding: 11px 16px; box-shadow: var(--hair); }
+
+/* The rows: one card, hairlines between */
+.pl-list { margin: 0 16px 10px; border-radius: var(--r-card); background: var(--card); box-shadow: var(--hair); overflow: hidden; }
+.pl-row { display: flex; align-items: center; gap: 4px; padding-right: 10px; border-top: 1px solid var(--line-soft); }
+.pl-row:first-child { border-top: none; }
+.pl-main {
+  flex: 1; min-width: 0; display: flex; align-items: center; min-height: 60px; padding: 9px 4px 9px 14px; border: none;
+  background: none; color: inherit; font: inherit; text-align: left; cursor: pointer;
+}
+.pl-main:active { background: var(--surface); }
+.pl-main .row-main, .pl-me .row-main { min-width: 0; }
+.pl-name {
+  display: flex; align-items: center; gap: 6px; font-family: var(--display); font-weight: var(--display-weight); font-size: 17px; line-height: 1.2;
+  color: var(--ink); white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.pl-name .new-chip { font-family: var(--body-font); }
+.pl-sub { display: flex; align-items: center; gap: 6px; margin-top: 2px; font-size: 13px; color: var(--mute); white-space: nowrap; overflow: hidden; }
+.pl-record { overflow: hidden; text-overflow: ellipsis; font-variant-numeric: tabular-nums; }
+.pl-rsvp { flex-shrink: 0; padding: 1px 6px; border-radius: var(--r-chip); background: var(--surface); color: var(--mute); font-size: 11px; font-weight: 700; }
+.pl-rsvp.in { background: var(--win-bg); color: var(--win); }
+.pl-rsvp.maybe { background: var(--state-vote-bg); color: var(--state-vote-ink); }
+.pl-rsvp.out { background: var(--loss-bg); color: var(--loss); }
+.pl-owe {
+  flex-shrink: 0; min-height: 32px; padding: 0 10px; border: none; border-radius: var(--r-chip); font: inherit; font-size: 14px; font-weight: 700;
+  font-variant-numeric: tabular-nums; cursor: pointer; transition: transform .2s var(--spring);
+}
+.pl-owe.pos { background: var(--win-bg); color: var(--win); }
+.pl-owe.neg { background: var(--loss-bg); color: var(--loss); }
+.pl-owe:active { transform: scale(.94); }
+.pl-row > .chevron { flex-shrink: 0; }
+.pl-none { margin: 0; padding: 16px; font-size: 14px; color: var(--mute); }
+.pl-none-add { border: none; background: none; padding: 0; font: inherit; font-weight: 700; color: var(--ink); text-decoration: underline; cursor: pointer; }
+
+/* The Tab with one person, in a sheet */
+.pl-pay { margin: 4px 20px 6px; }
+.pl-pay-help { margin: 4px 20px; }
