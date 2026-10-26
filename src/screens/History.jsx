@@ -1,4 +1,8 @@
+// History (overhaul, 2026-10-26): Layout Lab A's compact chart and month list, with C's round
+// cards so each round reads as a story (RoundCard.jsx). Same ranges, game filter, stats, head to
+// head, closed seasons and round detail as before; Recently deleted is a quiet link at the end.
 import { useEffect, useMemo, useState } from 'react';
+import './history.css';
 import { Empty, Header, Icon, PickChip, Screen } from '../components/ui.jsx';
 import { RangeBar } from '../components/RangeBar.jsx';
 import { useRecordBook } from '../lib/useRecordBook.js';
@@ -10,13 +14,19 @@ import { AvatarButton, BottomNav } from '../nav.jsx';
 import { useNav } from '../lib/nav.js';
 import { useKept } from '../lib/kept.js';
 import {
-  defaultRange, headToHead, lastResult, monthGroups, netSeries, rangeLabel, roundTime, roundsInRange, statsLinkLabel, withClosedBooks,
+  defaultRange, headToHead, lastResult, monthGroups, myNet, netSeries, rangeLabel, roundTime, roundsInRange, statsLinkLabel, withClosedBooks,
 } from '../lib/history.js';
 import { BooksClosedRow, ClosedSeasons } from '../components/CrewTabs.jsx';
 import { booksOf } from '../lib/books.js';
-import { RoundRow } from '../components/RoundRow.jsx';
+import { RoundCard } from '../components/RoundCard.jsx';
 import { SeasonChart } from '../components/SeasonChart.jsx';
+import { BOX } from '../lib/chart-axis.js';
+import { bigDays } from '../lib/round-story.js';
+import { deletedList } from '../lib/recently-deleted.js';
 
+// A shorter drawing box than the Tab's old chart had, so the line sits over the rounds instead of
+// filling the screen (Trevor: A "felt more compact and professionally designed")
+const COMPACT = { ...BOX, h: 104, padT: 8, padB: 20 };
 const REDUCED = typeof window !== 'undefined' && window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
 const RANGE_KEY = 'bb-history-range';
 
@@ -96,6 +106,9 @@ export default function History() {
   const books = booksOf(state);
   const groupKeys = groups.map(g => g.key);
   const label = rangeLabel(range);
+  // Your best win of each month gets the bigger card
+  const big = useMemo(() => bigDays(groups, r => myNet(r, state)), [groups, state]);
+  const trash = deletedList(state).length;
 
   return (
     <Screen>
@@ -106,12 +119,12 @@ export default function History() {
             action={<button className="ec" onClick={() => nav.push('newRound')}><Icon name="golf" fill /> Start a round</button>} />
         ) : (
           <>
-            <RangeBar range={range} onChange={setRange} />
+            <RangeBar compact range={range} onChange={setRange} />
 
             {games.length > 1 && (
-              <div className="chip-row" role="radiogroup" aria-label="Filter by game">
+              <div className="chip-row hx-games" role="radiogroup" aria-label="Filter by game">
                 {['all', ...games].map(g => (
-                  <PickChip key={g} radio on={game === g} onClick={() => setFilter(g)}>{g === 'all' ? 'All games' : GAMES[g].name}</PickChip>
+                  <PickChip key={g} radio small on={game === g} onClick={() => setFilter(g)}>{g === 'all' ? 'All games' : GAMES[g].name}</PickChip>
                 ))}
               </div>
             )}
@@ -120,30 +133,27 @@ export default function History() {
               <Empty illo="card" title="No rounds here" text={range.kind === 'custom' ? 'Nothing finished between those dates. Try a wider range.' : `Nothing finished in ${range.kind === 'season' ? `the ${label}` : label}. Try another ${range.kind}.`} />
             ) : (
               <>
-                {series.length > 0 && (
-                  <div className="chart-card">
-                    <div className="cc-head">
-                      <div>
-                        <div className="eyebrow">Your net</div>
-                        <div className={`cc-big ${net > 0 ? 'pos' : net < 0 ? 'neg' : ''}`}><CountUp key={label + game} value={net} /></div>
+                {/* The money line, compact: your net and the count on one line, the chart, then the stats a tap away */}
+                <div className="chart-card hx-chart">
+                  {series.length > 0 && (
+                    <>
+                      <div className="hx-head">
+                        <span className="eyebrow">Your net</span>
+                        <span className="hx-meta">{series.length < shown.length ? `${series.length} of ${shown.length} rounds for money` : `${series.length} round${series.length === 1 ? '' : 's'}`}</span>
                       </div>
-                      <div className="cc-meta">{series.length < shown.length ? `${series.length} of ${shown.length} rounds for money` : `${series.length} round${series.length === 1 ? '' : 's'}`}</div>
-                    </div>
-                    <SeasonChart series={series} label={label} />
-                  </div>
-                )}
-
-                {/* Deeper stats for the same range: by game, by course, presses, skins and biggest wins */}
-                <button className="text-link stats-link" onClick={() => nav.push('stats', { range })}>
-                  <Icon name="chart-bar" fill /> <span className="row-main">{statsLinkLabel(range)}<span className="sl-sub">By game and course, presses, skins and biggest wins</span></span> <Icon name="caret-right" />
-                </button>
-
-                <ClosedSeasons />
+                      <div className={`hx-big ${net > 0 ? 'pos' : net < 0 ? 'neg' : ''}`}><CountUp key={label + game} value={net} /></div>
+                      <SeasonChart series={series} label={label} box={COMPACT} />
+                    </>
+                  )}
+                  {/* Deeper stats for the same range: by game, by course, presses, skins and biggest wins */}
+                  <button className="hx-stats" onClick={() => nav.push('stats', { range })}>
+                    <Icon name="chart-bar" fill /> <span className="row-main">{statsLinkLabel(range)}<span className="sl-sub">By game and course, presses, skins and biggest wins</span></span> <Icon name="caret-right" />
+                  </button>
+                </div>
 
                 {h2h.length > 0 && (
-                  <>
-                    <div className="sec-label">Head to head</div>
-                    <p className="field-help pad" style={{ marginTop: -4 }}>What you won or lost against each person, bet by bet.</p>
+                  <section className="hx-h2h" aria-label="Head to head">
+                    <div className="hx-label">Head to head <span>What you won or lost against each person, bet by bet</span></div>
                     <div className="h2h">
                       {h2h.map(([pid, v]) => (
                         <div key={pid} className="h2h-item">
@@ -152,11 +162,13 @@ export default function History() {
                         </div>
                       ))}
                     </div>
-                  </>
+                  </section>
                 )}
 
+                <ClosedSeasons />
+
                 {groups.map(g => (
-                  <section key={g.key} className="month-group" aria-label={g.label}>
+                  <section key={g.key} className="month-group hx-month" aria-label={g.label}>
                     <div className="month-head">
                       <span className="mh-name">{g.label}</span>
                       <span className="mh-meta">
@@ -164,16 +176,22 @@ export default function History() {
                         {g.played > 0 && <> · <span className={g.net > 0 ? 'pos' : g.net < 0 ? 'neg' : ''}>{money(g.net, { sign: true })}</span></>}
                       </span>
                     </div>
-                    <div className="month-rows">
+                    <div className="hx-cards">
                       {withClosedBooks(g.rounds, books, g.key, range, groupKeys).map(x => (x.book
                         ? <BooksClosedRow key={x.book.id} book={x.book} />
-                        : <RoundRow key={x.round.id} round={x.round} state={state} />))}
+                        : <RoundCard key={x.round.id} round={x.round} state={state} big={big.has(x.round.id)} />))}
                     </div>
                   </section>
                 ))}
               </>
             )}
             <RecordBookNote line={line} />
+            {/* Deleted rounds wait 30 days in Settings (recently-deleted.js): a way back from here too */}
+            {trash > 0 && (
+              <button className="quiet-row hx-trash" onClick={() => nav.push('recentlyDeleted')}>
+                <Icon name="trash" /> <u>Recently deleted</u> <span>{trash} round{trash === 1 ? '' : 's'}</span>
+              </button>
+            )}
           </>
         )}
       </div>

@@ -1,7 +1,6 @@
 import { money } from '../lib/golf.js';
 import { BOX, axisFor, labelIndexes, pathOf, pointsOn, showDots, yOf } from '../lib/chart-axis.js';
 
-const { w: W, h: H, padR, padB } = BOX;
 const shortDay = t => new Date(t).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
 const tick = v => (v ? money(v) : '0');
 
@@ -11,15 +10,17 @@ const tick = v => (v ? money(v) : '0');
  * each round and a brighter one on the last. `series` is netSeries(): [{ id, t, amount, total }],
  * oldest first. Rounds are spaced evenly, so a busy week doesn't squash into one point; past a
  * couple of dozen rounds the dots go and the line speaks. Colours come from the theme tokens, so
- * it reads in light and dark. The maths is chart-axis.js, tested there.
+ * it reads in light and dark. The maths is chart-axis.js, tested there. `box` is the drawing box
+ * (chart-axis.js BOX); History passes a shorter one so its chart stays compact.
  */
-export function SeasonChart({ series, label }) {
+export function SeasonChart({ series, label, box = BOX }) {
   if (!series.length) return null;
+  const { w: W, h: H, padR, padB } = box;
   const totals = [0, ...series.map(p => p.total)];
   const axis = axisFor(totals, { include: 0 });
-  const pts = pointsOn(totals, axis);
+  const pts = pointsOn(totals, axis, box);
   const line = pathOf(pts);
-  const zero = yOf(0, axis);
+  const zero = yOf(0, axis, box);
   const area = `${line} L${pts.at(-1).x.toFixed(1)} ${zero.toFixed(1)} L${pts[0].x.toFixed(1)} ${zero.toFixed(1)} Z`;
   const end = totals.at(-1);
   const tone = end > 0 ? 'up' : end < 0 ? 'down' : 'flat';
@@ -38,7 +39,7 @@ export function SeasonChart({ series, label }) {
       {dots && pts.slice(1, -1).map((p, i) => <circle key={series[i].id} className="chart-dot pt" cx={p.x} cy={p.y} r={2.5} />)}
       <circle className="chart-dot last" cx={last.x} cy={last.y} r={4} />
       <g className="chart-axis" aria-hidden="true">
-        {axis.ticks.map(v => <text key={v} x={W - 2} y={yOf(v, axis)} dy=".35em" textAnchor="end">{tick(v)}</text>)}
+        {axis.ticks.map(v => <text key={v} x={W - 2} y={yOf(v, axis, box)} dy=".35em" textAnchor="end">{tick(v)}</text>)}
         {days.map(d => <text key={d.x} x={d.x} y={H - padB + 16} textAnchor={d.x < 30 ? 'start' : d.x > W - padR - 30 ? 'end' : 'middle'}>{d.text}</text>)}
       </g>
     </svg>

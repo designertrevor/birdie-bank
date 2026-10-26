@@ -1,0 +1,14 @@
+/* A person card's actions (TabCard.jsx PersonActions), on the Tab and the person screen.
+   Paid and Roll to next time sit side by side at the same size and weight; the payment app and
+   the reminder bell are a quieter row under them. */
+.pay-acts.settle-pair { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 8px; margin-top: 12px; }
+.pay-acts.settle-pair.solo { grid-template-columns: minmax(0, 1fr); }
+.pay-btn.settle { height: 46px; border-radius: var(--r-btn); background: var(--card); color: var(--ink); box-shadow: inset 0 0 0 1.5px var(--ink); }
+.pay-btn.settle i { font-size: 17px; }
+.pay-btn.settle.roll-part { height: auto; min-height: 46px; }
+.pay-acts.pay-more { margin-top: 8px; gap: 8px; }
+.pay-acts.pay-more:empty { display: none; }
+.pay-more .pay-btn { height: 40px; font-size: 13px; border-radius: var(--r-btn); }
+.pay-more .pay-btn.icon-only { flex: 0 0 48px; }
+/* "Roll $10 to next time" (just the shared rounds' part) wraps to two lines rather than cutting off */
+.pay-btn.settle.roll-part { padding: 6px 12px; text-align: center; justify-content: center; }

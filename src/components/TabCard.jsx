@@ -3,6 +3,7 @@
 // Used by the Tab and the person screen, so the card works the same in both places.
 import { useCallback, useState } from 'react';
 import { createPortal } from 'react-dom';
+import './tab-card.css';
 import { Icon, PickChip, Sheet, useUI } from './ui.jsx';
 import { Avatar, PayButton, RequestButton } from './Pay.jsx';
 import { getState, update, useStore } from '../lib/store.js';
@@ -136,28 +137,28 @@ export function PersonActions({ other, net, meId }) {
         </div>
       )}
       {owed && (
-        <div className="pay-acts wrap">
-          {owesMe ? (
-            <>
-              {carry?.status !== 'agreed' && (
+        <>
+          {/* Paid and Roll to next time side by side, the same size and weight: rolling it over is
+              as good an answer as paying (the overhaul's Tab, Layout Lab E) */}
+          <div className={`pay-acts settle-pair ${canRoll ? '' : 'solo'}`}>
+            <button className="pay-btn settle" onClick={paid} aria-label={owesMe ? `${first} paid me ${money(amount)}` : `I paid ${first} ${money(amount)}`}><span className="pay-in"><Icon name="check-circle" fill /><span className="pay-lbl">{owesMe ? `${first} paid me` : 'I paid'}</span></span></button>
+            {canRoll && (
+              <button className={`pay-btn settle ${partOnly ? 'roll-part' : ''}`} onClick={() => setRolling(true)}
+                aria-label={partOnly ? `Roll ${money(shared.amount)} from your shared rounds to next time` : `Roll what’s between you and ${first} to next time`}><span className="pay-in"><Icon name="arrow-u-down-right" /><span className="pay-lbl">{partOnly ? `Roll ${money(shared.amount)} to next time` : 'Roll to next time'}</span></span></button>
+            )}
+          </div>
+          {/* The payment app and a nudge, a step quieter */}
+          {(!owesMe || carry?.status !== 'agreed') && (
+            <div className="pay-acts pay-more">
+              {owesMe ? (
                 <>
                   <button className="pay-btn icon-only" onClick={() => remind(other, amount)} aria-label={`Remind ${first} about ${money(amount)}`}><span className="pay-in"><Icon name="bell-ringing" fill /></span></button>
                   <RequestButton payer={theirApp} mine={myApp} amount={amount} note="Golf" who={other} />
                 </>
-              )}
-              <button className="pay-btn ink" onClick={paid} aria-label={`${first} paid me ${money(amount)}`}><span className="pay-in"><Icon name="check-circle" fill /><span className="pay-lbl">{first} paid me</span></span></button>
-            </>
-          ) : (
-            <>
-              <PayButton info={theirApp} amount={amount} note="Golf" />
-              <button className="pay-btn ink" onClick={paid} aria-label={`I paid ${first} ${money(amount)}`}><span className="pay-in"><Icon name="check-circle" fill /><span className="pay-lbl">I paid</span></span></button>
-            </>
+              ) : <PayButton info={theirApp} amount={amount} note="Golf" />}
+            </div>
           )}
-          {canRoll && (
-            <button className={`pay-btn ${partOnly ? 'roll-part' : ''}`} onClick={() => setRolling(true)}
-              aria-label={partOnly ? undefined : `Roll what’s between you and ${first} to next time`}><span className="pay-in"><Icon name="arrow-u-down-right" /><span className="pay-lbl">{partOnly ? `Roll ${money(shared.amount)} from your shared rounds to next time` : 'Roll to next time'}</span></span></button>
-          )}
-        </div>
+        </>
       )}
       {pay && <RecentPaid meId={meId} other={other} pay={pay} />}
       <AtScreen>
