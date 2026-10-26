@@ -1,0 +1,81 @@
+/* ============================================================
+   UP NEXT, the overhaul (2026-10-26): A's one next thing, E's countdown strip and illustrated
+   cards, C's number tiles. Built on the shared tokens in look.css so it reads right in both looks.
+   ============================================================ */
+
+/* The countdown strip: a thin clock to the next planned round, ink on canvas in both themes */
+.un-strip {
+  display: flex; align-items: center; gap: 10px; width: calc(100% - 32px); margin: 8px 16px 4px; padding: 10px 14px;
+  border: none; border-radius: var(--r-btn); background: var(--ink); color: var(--canvas); font: inherit; text-align: left;
+  cursor: pointer; transition: transform .2s var(--spring);
+}
+.un-strip:active { transform: scale(.98); }
+.un-strip-ic { font-size: 16px; opacity: .8; }
+.un-strip-what { flex: 1; min-width: 0; font-size: 14px; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.un-strip-clock { display: flex; gap: 8px; font-family: var(--display); font-weight: var(--money-weight); font-size: 20px; font-variant-numeric: tabular-nums; letter-spacing: .02em; }
+.un-strip-unit small { font-family: var(--body-font); font-size: 11px; font-weight: 600; margin-left: 1px; opacity: .65; }
+
+/* The card that starts a round: the one next thing when nothing's planned */
+.un-eyebrow { display: block; font-size: 12px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; color: var(--mute); }
+.un-start {
+  position: relative; overflow: hidden; display: flex; flex-direction: column; align-items: flex-start; gap: 6px;
+  margin: 8px 16px 12px; padding: 22px 20px 18px; border-radius: var(--r-card); background: var(--band-mint); box-shadow: var(--hair); color: var(--ink);
+}
+.un-start-art { position: absolute; right: -6px; top: 6px; transform: rotate(-6deg); pointer-events: none; }
+.un-start-title { font-family: var(--display); font-weight: var(--display-weight); font-size: 30px; line-height: 1.05; letter-spacing: -.02em; max-width: 72%; }
+.un-start-sub { font-size: 15px; line-height: 1.4; color: var(--body); max-width: 74%; }
+.un-start-acts { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 14px; }
+.un-btn {
+  display: inline-flex; align-items: center; gap: 7px; min-height: 48px; padding: 12px 18px; border: none; border-radius: var(--r-btn);
+  background: var(--pink-fill); color: #fff; font: inherit; font-size: 16px; font-weight: 700; cursor: pointer; transition: transform .2s var(--spring);
+}
+.un-btn.ghost { background: var(--card); color: var(--ink); box-shadow: var(--hair); }
+.un-btn:active { transform: scale(.95); }
+.un-join { margin-top: 10px; padding: 6px 0; border: none; background: none; font: inherit; font-size: 14px; color: var(--mute); cursor: pointer; text-align: left; }
+.un-join u { color: var(--ink); font-weight: 700; text-underline-offset: 3px; }
+/* Under the upcoming rounds it's a shorter card on plain white */
+.un-start.slim { background: var(--card); padding: 16px 18px 14px; margin-top: 4px; }
+.un-start.slim .un-start-title { font-size: 21px; max-width: none; }
+.un-start.slim .un-start-acts { margin-top: 8px; }
+
+/* Get a round going: always here, a lilac card with the calendar */
+.un-go {
+  display: flex; align-items: center; gap: 10px; width: calc(100% - 32px); margin: 0 16px 10px; padding: 14px 10px 14px 18px;
+  border: none; border-radius: var(--r-card); background: var(--band-lilac); box-shadow: var(--hair); color: var(--ink);
+  font: inherit; text-align: left; cursor: pointer; transition: transform .2s var(--spring);
+}
+.un-go:active { transform: scale(.97); }
+.un-go .row-main { display: flex; flex-direction: column; gap: 3px; }
+.un-go-title { font-family: var(--display); font-weight: var(--display-weight); font-size: 21px; letter-spacing: -.01em; }
+.un-go-sub { font-size: 14px; line-height: 1.35; color: var(--body); }
+.un-go-art { flex-shrink: 0; }
+
+/* A trip and a Big Game, side by side */
+.un-ways { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; margin: 0 16px 8px; }
+.un-ways.one { grid-template-columns: 1fr; }
+.un-way {
+  display: flex; align-items: center; gap: 6px; min-height: 64px; padding: 4px 12px 4px 6px; border: none; border-radius: var(--r-card);
+  background: var(--band-butter); box-shadow: var(--hair); color: var(--ink); font: inherit; font-size: 15px; font-weight: 700;
+  text-align: left; cursor: pointer; transition: transform .2s var(--spring);
+}
+.un-way.trip { background: var(--band-peach); }
+.un-way:active { transform: scale(.96); }
+.un-way .spot { flex-shrink: 0; }
+
+/* The number tiles, once there are a few rounds: four pastel tiles in a 2 by 2 grid */
+.un-tiles { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; margin: 0 16px 8px; }
+.un-tile {
+  display: flex; flex-direction: column; align-items: flex-start; gap: 2px; min-width: 0; padding: 14px 14px 13px; border: none;
+  border-radius: var(--r-card); background: var(--card); box-shadow: var(--hair); color: var(--ink); font: inherit; text-align: left;
+  cursor: pointer; transition: transform .2s var(--spring);
+}
+.un-tile:active { transform: scale(.96); }
+.un-tile.tab { background: var(--band-mint); }
+.un-tile.season { background: var(--band-butter); }
+.un-tile.played { background: var(--band-lilac); }
+.un-tile.best, .un-tile.rival { background: var(--band-peach); }
+.un-tile-label { font-size: 12px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: var(--mute); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100%; }
+.un-tile-big { font-family: var(--display); font-weight: var(--money-weight); font-size: 28px; line-height: 1.15; font-variant-numeric: tabular-nums; letter-spacing: -.01em; }
+.un-tile-big.pos { color: var(--win); }
+.un-tile-big.neg { color: var(--loss); }
+.un-tile-sub { font-size: 13px; color: var(--body); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100%; }

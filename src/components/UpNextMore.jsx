@@ -30,6 +30,7 @@ import { refreshPlans } from '../lib/plan-sync.js';
 import { refreshTab } from '../lib/tab-sync.js';
 import { refreshChallenges } from '../lib/challenge-sync.js';
 import { useTripPlans } from '../lib/trip-plan-sync.js';
+import { homeTiles } from '../lib/upnext-tiles.js';
 import { useCupSync } from '../lib/cup-sync.js';
 import { useBigSync } from '../lib/big-sync.js';
 
@@ -45,16 +46,19 @@ export function TripsNow() {
 }
 
 /** The upcoming rounds and the next-round card when a trip is about: the plans a trip on now groups are left to it. */
-export function PlansLater({ live, last, anyChallenges, onJoin }) {
+export function PlansLater({ live, last, onJoin }) {
   const state = useStore();
   const onNow = useMemo(() => currentTrips(state), [state]);
   const onTrip = new Set(onNow.flatMap(t => t.planned.map(p => p.id)));
   const plans = upcomingPlans(state).filter(p => !onTrip.has(p.id));
-  return <PlansAndNext plans={plans} onNow={onNow} live={live} last={last} anyChallenges={anyChallenges} onJoin={onJoin} />;
+  return <PlansAndNext plans={plans} onNow={onNow} live={live} last={last} onJoin={onJoin} />;
 }
 
-/** The Tab at a glance (what you're owed and owe) and the last round out, for anyone with a finished round. */
-export function TabGlance() {
+/**
+ * The Tab at a glance (what you're owed and owe) and the last round out, for anyone with a finished
+ * round. With the number tiles showing (`tiles`), the Tab has its own tile, so only the last round is here.
+ */
+export function TabGlance({ tiles = false }) {
   const nav = useNav();
   const state = useStore();
   const last = lastResult(state);
@@ -68,18 +72,20 @@ export function TabGlance() {
   const recapId = recapRound(state)?.id ?? null;
   return (
     <>
-      <div className="sec-label">The Tab</div>
-      <button className="tab-glance" onClick={() => nav.setTab('ledger')} aria-label={tab.people ? `The Tab: owed to you ${money(tab.owed)}, you owe ${money(tab.owe)}` : `The Tab: ${squareText}`}>
-        {tab.people ? (
-          <>
-            <div><div className="bl">Owed to you</div><div className={`lr-big ${tab.owed ? 'pos' : ''}`}>{tab.owed ? money(tab.owed) : '–'}</div></div>
-            <div><div className="bl">You owe</div><div className={`lr-big ${tab.owe ? 'neg' : ''}`}>{tab.owe ? money(tab.owe) : '–'}</div></div>
-          </>
-        ) : (
-          <div className="tg-square"><Icon name={rewards.length ? 'gift' : 'handshake'} fill /> <span>{squareText}</span></div>
-        )}
-        <span className="chevron"><Icon name="caret-right" /></span>
-      </button>
+      {!tiles && <>
+        <div className="sec-label">The Tab</div>
+        <button className="tab-glance" onClick={() => nav.setTab('ledger')} aria-label={tab.people ? `The Tab: owed to you ${money(tab.owed)}, you owe ${money(tab.owe)}` : `The Tab: ${squareText}`}>
+          {tab.people ? (
+            <>
+              <div><div className="bl">Owed to you</div><div className={`lr-big ${tab.owed ? 'pos' : ''}`}>{tab.owed ? money(tab.owed) : '–'}</div></div>
+              <div><div className="bl">You owe</div><div className={`lr-big ${tab.owe ? 'neg' : ''}`}>{tab.owe ? money(tab.owe) : '–'}</div></div>
+            </>
+          ) : (
+            <div className="tg-square"><Icon name={rewards.length ? 'gift' : 'handshake'} fill /> <span>{squareText}</span></div>
+          )}
+          <span className="chevron"><Icon name="caret-right" /></span>
+        </button>
+      </>}
 
       {recapId !== last.round.id && (
         <>
@@ -87,6 +93,33 @@ export function TabGlance() {
           <RoundRow round={last.round} state={state} className="card" withYear />
         </>
       )}
+    </>
+  );
+}
+
+/**
+ * The number tiles (Layout Lab C): the Tab, your season, rounds played and a best day or a rival,
+ * once you've finished a few rounds (Up next decides when, TILES_FROM). Each tile only with
+ * something real in it (upnext-tiles.js).
+ */
+export function StatTiles() {
+  const nav = useNav();
+  const state = useStore();
+  const tiles = useMemo(() => homeTiles(state), [state]);
+  if (!tiles.length) return null;
+  const go = g => (g.tab ? nav.setTab(g.tab) : nav.push(g.push, g.params || {}));
+  return (
+    <>
+      <div className="sec-label">Your golf</div>
+      <div className="un-tiles">
+        {tiles.map(t => (
+          <button key={t.id} className={`un-tile ${t.id}`} onClick={() => go(t.go)} aria-label={`${t.label}: ${t.big}. ${t.sub}`}>
+            <span className="un-tile-label">{t.label}</span>
+            <span className={`un-tile-big ${t.tone || ''}`}>{t.big}</span>
+            <span className="un-tile-sub">{t.sub}</span>
+          </button>
+        ))}
+      </div>
     </>
   );
 }

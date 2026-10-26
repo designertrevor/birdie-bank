@@ -1,11 +1,13 @@
-// The middle of Up next: the upcoming rounds, the card that plans the next one, a new organizer's
-// first steps and the way into friends' rounds. Up next draws it on the first paint; with a trip
-// about it comes just after instead (UpNextMore.jsx), once the trip's standing is worked out, so a
-// trip's rounds never show under Upcoming first and then move under the trip.
+// The top of Up next: the countdown to the next round, the upcoming rounds, the card that starts
+// one (with Run it back), a new organizer's first steps and the ways to get one going later. Up
+// next draws it on the first paint; with a trip about it comes just after instead (UpNextMore.jsx),
+// once the trip's standing is worked out, so a trip's rounds never show under Upcoming first and
+// then move under the trip.
 import { useState } from 'react';
 import { Icon } from './ui.jsx';
 import { Spot } from './Spot.jsx';
 import { Later, part } from './Later.jsx';
+import { CountdownStrip } from './UpNextCountdown.jsx';
 import { useStore } from '../lib/store.js';
 import { roundsInProgress } from '../lib/rounds-live.js';
 import { GAMES, cardOnly } from '../lib/round.js';
@@ -13,27 +15,26 @@ import { useNav } from '../lib/nav.js';
 import { RSVP_LABEL, countsLine, dayLabel, daysUntil, planChoice, planCounts, whenLabel } from '../lib/plan-basics.js';
 import { countdownLine, weekdayOf } from '../lib/countdown.js';
 
-const ChallengesSection = part(() => import('./UpNextMore.jsx'), 'ChallengesSection');
 const TripSheet = part(() => import('./Trips.jsx'), 'TripSheet');
-const FriendsUpNext = part(() => import('./FriendsFeed.jsx'), 'FriendsUpNext');
 
 /**
- * Upcoming rounds through the Friends row. `plans` are the upcoming plans not under a trip on now
- * (`onNow`, the trips' standings, or none); `last` is the newest finished round, for "Run it back".
+ * The one next thing (Layout Lab A): the countdown strip, the upcoming rounds, then the card to
+ * start one. `plans` are the upcoming plans not under a trip on now (`onNow`, the trips'
+ * standings, or none); `last` is the newest finished round, for "Run it back".
  */
-export function PlansAndNext({ plans, onNow, live, last, anyChallenges, onJoin }) {
+export function PlansAndNext({ plans, onNow, live, last, onJoin }) {
   const hasHistory = !!last;
+  const planned = plans.length > 0 || onNow.length > 0;
   return (
     <>
+      {live.length === 0 && <CountdownStrip plans={plans} />}
       {plans.length > 0 && <div className="sec-label">Upcoming</div>}
       {plans.map(p => <UpcomingCard key={p.id} plan={p} />)}
-      {anyChallenges && <Later><ChallengesSection /></Later>}
-      {/* Starting a round at the course (or running the last one back) stays one tap, plans or not; a Big Game on the calendar isn't a trip, so Start a trip stays */}
-      {live.length === 0 && <PlanNext last={last} fresh={!hasHistory} planned={plans.length > 0 || onNow.length > 0} trip={!onNow.some(t => t.trip.format !== 'big')} onJoin={onJoin} />}
+      {/* Starting a round at the course (or running the last one back) stays one tap, plans or not */}
+      {live.length === 0 && <StartCard last={last} fresh={!hasHistory} planned={planned} onJoin={onJoin} />}
       {!hasHistory && <FirstSteps />}
-
-      {/* Friends' rounds you're not in, live, and the way into the group feed (friend-feed.js) */}
-      <Later><FriendsUpNext show={hasHistory || plans.length > 0 || onNow.length > 0} /></Later>
+      {/* A Big Game on the calendar isn't a trip, so Start a trip stays */}
+      <MoreWays trip={!onNow.some(t => t.trip.format !== 'big')} />
     </>
   );
 }
@@ -85,34 +86,50 @@ export function UpcomingCard({ plan }) {
   );
 }
 
-/** The prompt to set up the next round, with a one-tap "same again" when there's a last one. */
-function PlanNext({ last, fresh, planned = false, trip = false, onJoin = null }) {
+/**
+ * The card that starts a round: big and illustrated when nothing's planned (the one next thing),
+ * a shorter line under the upcoming rounds when something is. Start a round is the main action,
+ * with a one-tap "same again" beside it when there's a last one.
+ */
+function StartCard({ last, fresh, planned = false, onJoin = null }) {
   const nav = useNav();
-  const [tripping, setTripping] = useState(false);
   const again = last && GAMES[last.game] && !cardOnly(last);
   return (
-    <>
-      <div className="plan-card">
-        <Spot kind="tee" size={92} className="pc-mascot" plate={false} />
-        <span className="eyebrow">{planned ? 'Something else' : fresh ? 'Welcome to the first tee' : 'Nothing on the calendar'}</span>
-        <div className="pc-title d">{planned ? 'Playing now, or another day?' : 'Plan your next round'}</div>
-        <div className="pc-sub">{planned
-          ? 'Start a round at the course in one tap, or plan another one for later.'
-          : fresh
-          ? 'Pick a game, a course and your group. Birdie Bank keeps score, does the math and settles up.'
-          : 'Pick the game, the course and the bets. Everyone joins from a link.'}</div>
-        <div className="pc-actions">
-          <button className="pc-btn" onClick={() => nav.push('newRound')}><Icon name="golf" fill /> Start a round</button>
-          {again && <button className="pc-btn ghost" onClick={() => nav.push('newRound', { rematch: last.id })}><Icon name="arrow-counter-clockwise" /> Run it back</button>}
-        </div>
-        {onJoin && <button className="pc-join" onClick={onJoin}>Got a code? <u>Join a friend’s round</u></button>}
+    <div className={`un-start ${planned ? 'slim' : ''}`}>
+      {!planned && <Spot kind="tee" size={104} className="un-start-art" plate={false} />}
+      <span className="un-eyebrow">{planned ? 'Something else' : fresh ? 'Welcome to the first tee' : 'Nothing on the calendar'}</span>
+      <div className="un-start-title">{planned ? 'Playing now?' : fresh ? 'Your first round' : 'Play a round'}</div>
+      {!planned && <div className="un-start-sub">{fresh
+        ? 'Pick a game, a course and your group. Birdie Bank keeps score, does the math and settles up.'
+        : 'Pick the game, the course and the bets. Everyone follows along from a link.'}</div>}
+      <div className="un-start-acts">
+        <button className="un-btn" onClick={() => nav.push('newRound')}><Icon name="golf" fill /> Start a round</button>
+        {again && <button className="un-btn ghost" onClick={() => nav.push('newRound', { rematch: last.id })}><Icon name="arrow-counter-clockwise" /> Run it back</button>}
       </div>
-      {/* The other ways to play, as three small tiles under the card */}
-      <div className="sec-label">More ways to play</div>
-      <div className={`more-tiles ${trip ? '' : 'two'}`}>
-        <button className="more-tile" onClick={() => nav.push('newRound', { ahead: true })}><Spot kind="calendar" size={64} /><span>Plan ahead</span></button>
-        {trip && <button className="more-tile" onClick={() => setTripping(true)}><Spot kind="suitcase" size={64} /><span>Start a trip</span></button>}
-        <button className="more-tile" onClick={() => nav.push('bigGameSetup')}><Spot kind="crowd" size={64} /><span>Big Game</span></button>
+      {onJoin && <button className="un-join" onClick={onJoin}>Got a code? <u>Join a friend’s round</u></button>}
+    </div>
+  );
+}
+
+/**
+ * The other ways to play, as illustrated cards: Get a round going (a day and the group, asked
+ * ahead, always here), then a trip and a Big Game side by side.
+ */
+function MoreWays({ trip = false }) {
+  const nav = useNav();
+  const [tripping, setTripping] = useState(false);
+  return (
+    <>
+      <button className="un-go" onClick={() => nav.push('newRound', { ahead: true })}>
+        <span className="row-main">
+          <span className="un-go-title">Get a round going</span>
+          <span className="un-go-sub">Pick a day and ask the group. They answer from a link.</span>
+        </span>
+        <Spot kind="calendar" size={76} plate={false} className="un-go-art" />
+      </button>
+      <div className={`un-ways ${trip ? '' : 'one'}`}>
+        {trip && <button className="un-way trip" onClick={() => setTripping(true)}><Spot kind="suitcase" size={56} plate={false} /><span>Start a trip</span></button>}
+        <button className="un-way big" onClick={() => nav.push('bigGameSetup')}><Spot kind="crowd" size={56} plate={false} /><span>Big Game</span></button>
       </div>
       {tripping && <Later><TripSheet open onClose={() => setTripping(false)} onDone={t => { setTripping(false); nav.push('trip', { id: t.id }); }} /></Later>}
     </>
