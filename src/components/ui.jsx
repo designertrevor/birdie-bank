@@ -15,9 +15,29 @@ export function ArtIcon({ name, fill = true, className = '' }) {
   return <svg className={`art-icon ${className}`.trim()} viewBox="0 0 24 24" aria-hidden="true" focusable="false"><ArtImage file={file} w={24} h={24} /></svg>;
 }
 
+/**
+ * A screen's header. A tab's large title tucks into a small one with a hairline under it once its
+ * scroll moves (iOS's large title, with a little slack so it doesn't flicker at the top), and comes
+ * back the same way when you scroll back up.
+ */
 export function Header({ title, onBack, onClose, right, small }) {
+  const large = !small && !onBack;
+  const ref = useRef(null);
+  const [tucked, setTucked] = useState(false);
+  useEffect(() => {
+    const scroller = large ? ref.current?.parentElement?.querySelector(':scope > .scroll') : null;
+    if (!scroller) return undefined;
+    let on = false;
+    const read = () => {
+      const next = on ? scroller.scrollTop > 4 : scroller.scrollTop > 24;
+      if (next !== on) { on = next; setTucked(next); }
+    };
+    read();
+    scroller.addEventListener('scroll', read, { passive: true });
+    return () => scroller.removeEventListener('scroll', read);
+  }, [large]);
   return (
-    <div className="screen-header">
+    <div ref={ref} className={`screen-header ${large ? 'large' : ''} ${tucked ? 'tucked' : ''}`}>
       {onBack && <button className="header-back" onClick={onBack} aria-label="Back"><Icon name="arrow-left" /></button>}
       <span className="screen-title" style={small || onBack ? { fontSize: 20, letterSpacing: '-.01em', flex: 1 } : { flex: 1 }}>{title}</span>
       {right}

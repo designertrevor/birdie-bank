@@ -34,7 +34,7 @@
   --ink: #f5f0e4; --body: #d5d0c3; --mute: #a8a498; --mute-soft: #a09c90;
   --sheet-bg: #181e1d; --sheet-card: #202726; --sheet-surface: #262d2c; --sheet-surface-strong: #313937;
   --sheet-edge: #2b3331; --sheet-shadow: 0 10px 30px rgba(0, 0, 0, .45);
-  --band-butter: #322e1d; --band-mint: #1b3330; --band-lilac: #29243d; --band-peach: #38291f;
+  --band-butter: #3f3415; --band-mint: #1b3330; --band-lilac: #29243d; --band-peach: #45281e;
 }
 @media (prefers-color-scheme: dark) {
   :root[data-look="new"]:not([data-theme="light"]):not([data-theme="dark"]) {
@@ -43,7 +43,7 @@
     --ink: #f5f0e4; --body: #d5d0c3; --mute: #a8a498; --mute-soft: #a09c90;
     --sheet-bg: #181e1d; --sheet-card: #202726; --sheet-surface: #262d2c; --sheet-surface-strong: #313937;
     --sheet-edge: #2b3331; --sheet-shadow: 0 10px 30px rgba(0, 0, 0, .45);
-    --band-butter: #322e1d; --band-mint: #1b3330; --band-lilac: #29243d; --band-peach: #38291f;
+    --band-butter: #3f3415; --band-mint: #1b3330; --band-lilac: #29243d; --band-peach: #45281e;
   }
 }
 
@@ -129,8 +129,11 @@
 :root[data-look="new"] .toast { border-radius: 12px; font-family: var(--body-font); font-weight: 600; font-size: 15px; }
 :root[data-look="new"] .toast-act { border-radius: 8px; font-weight: 700; }
 
-/* Headers: the title row sits on a hairline once the page scrolls under it */
+/* Headers: the title row sits on a hairline once the page scrolls under it, and a tab's large
+   title tucks to the small size (Header in ui.jsx, .tucked in styles.css) */
 :root[data-look="new"] .screen-header { min-height: 58px; }
+:root[data-look="new"] .screen-header.tucked { min-height: 0; }
+:root[data-look="new"] .screen-header.tucked .screen-title { font-size: 20px; letter-spacing: -.01em; }
 
 /* Bottom nav: a hairline over it, a plain round play button without the pink step under it */
 :root[data-look="new"] .bottom-nav { box-shadow: inset 0 1px 0 var(--line); padding-top: 6px; }

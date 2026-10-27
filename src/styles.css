@@ -40,7 +40,7 @@ body {
   -webkit-font-smoothing: antialiased; -webkit-tap-highlight-color: transparent;
   text-wrap: pretty; /* no single-word last lines in running text */
 }
-h1, h2, h3, .screen-title, .sheet-title, .numpad-title, .rules-title, .onboard-title, .play-title { text-wrap: balance; }
+h1, h2, h3, .screen-title, .uc-title, .sheet-title, .numpad-title, .rules-title, .onboard-title, .play-title { text-wrap: balance; }
 button { font-family: inherit; }
 .d { font-family: var(--display); }
 .device {
@@ -94,6 +94,13 @@ button { font-family: inherit; }
 }
 .screen-title { font-family: var(--display); font-size: 34px; font-weight: 800; letter-spacing: -.03em; color: var(--ink); }
 .screen-header .screen-title[style*="18px"] { font-size: 20px !important; letter-spacing: -.01em; }
+/* A tab's large title tucks to the small size once the page scrolls, with a hairline (Header in ui.jsx) */
+.screen-header.large { transition: padding .25s cubic-bezier(.2, .8, .2, 1), box-shadow .25s ease-out; }
+.screen-header.large .screen-title { transition: font-size .25s cubic-bezier(.2, .8, .2, 1); }
+.screen-header.large .av-in-btn { transition: width .25s cubic-bezier(.2, .8, .2, 1), height .25s cubic-bezier(.2, .8, .2, 1); }
+.screen-header.tucked { padding-top: 6px; padding-bottom: 6px; min-height: 0; box-shadow: 0 1px 0 var(--line); }
+.screen-header.tucked .screen-title { font-size: 20px; letter-spacing: -.01em; }
+.screen-header.tucked .avatar-btn .av-in-btn { width: 34px; height: 34px; font-size: 13px; }
 .header-btn {
   font-size: 14px; font-weight: 600; padding: 9px 14px; border-radius: 999px; border: none;
   background: var(--surface); color: var(--ink); cursor: pointer; display: inline-flex; align-items: center; gap: 6px;
