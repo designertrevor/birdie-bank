@@ -113,10 +113,17 @@ button.pd-seat:active { background: var(--surface); }
 .plan-ask .cta-wrap .text-link { align-self: center; }
 
 /* Up next's card for a plan with no day yet */
-.upcoming-card.open-plan { background: var(--band-butter); }
+/* A plan with no day yet sits on white like every other upcoming round: colour on Up next is for
+   the ways to start one. The RSVP sits beside the title, not halfway down a taller card */
+.upcoming-card.open-plan { align-items: flex-start; }
+.upcoming-card.open-plan .who-status { margin-top: 16px; }
+.upcoming-card.open-plan .chevron { margin-top: 20px; }
 .uc-tags { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 8px; }
 .uc-tags .st-tag { max-width: 150px; }
-.upcoming-card.open-plan .st-tag.not { box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--ink) 20%, transparent); }
+.uc-open { margin-top: 6px; font-size: 13px; color: var(--mute); }
+/* The organizer's Lock in row, under the card like the preview row */
+.uc-lock b { color: var(--ink); }
+.uc-preview.uc-lock > i:first-child { color: var(--ink); }
 
 /* Shared: the new look keeps buttons on these screens to its smaller radius */
 .plan-page ~ .cta-wrap .full-btn, .plan-ask .full-btn, .pd-sheet .full-btn, .pd-answer .full-btn { border-radius: var(--r-btn); }

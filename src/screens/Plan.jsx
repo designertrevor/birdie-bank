@@ -65,7 +65,7 @@ function useSend() {
   };
 }
 
-export default function PlanScreen({ id }) {
+export default function PlanScreen({ id, lock = false }) {
   const nav = useNav();
   const plan = useStore(s => s.plans?.[id]);
   usePlanLive(id, plan?.code);
@@ -82,7 +82,7 @@ export default function PlanScreen({ id }) {
       <Header title={plan.host ? 'Your round' : 'Upcoming round'} small onBack={nav.pop}
         right={plan.host && plan.status === 'planned' && !plan.gone && plan.date ? <button className="pill-btn sm" onClick={() => nav.push('newRound', { edit: plan.id })}><Icon name="pencil-simple" /> Edit</button> : null} />
       {plan.trip?.id && <button className="trip-line" onClick={() => nav.push('trip', { id: plan.trip.id })}><Icon name="suitcase-rolling" /> Part of {plan.trip.name} <Icon name="caret-right" /></button>}
-      <PlanBody plan={plan} />
+      <PlanBody plan={plan} lock={lock} />
     </Screen>
   );
 }
@@ -94,8 +94,9 @@ export default function PlanScreen({ id }) {
  * (plan-open.js): the same ticket saying "No day yet", then the four details (Day, Course, Game,
  * Bet) each with its state; a friend answers in, then which days, and the organizer locks the day.
  * No chat on the page (Trevor, 2026-10-26): the trash talk is behind a quiet row that opens a sheet.
+ * `lock`: Up next's "Lock in" row opened it, so the lock sheet is up straight away when there's a day to lock.
  */
-function PlanBody({ plan: saved, standalone = false, onSkip }) {
+function PlanBody({ plan: saved, standalone = false, onSkip, lock: lockFirst = false }) {
   const nav = useNav();
   const { ask, showToast } = useUI();
   const settings = useStore(s => s.settings);
@@ -111,7 +112,7 @@ function PlanBody({ plan: saved, standalone = false, onSkip }) {
   useChallengesLive({ planCode: plan.code });
   const [marking, setMarking] = useState(null); // the organizer marking someone's answer
   const [sharing, setSharing] = useState(false);
-  const [sheet, setSheet] = useState(null); // 'vote', 'day', 'course', 'lock' or 'talk'
+  const [sheet, setSheet] = useState(() => (lockFirst && plan.host && !plan.date && plan.status === 'planned' && leadingDay(plan) ? 'lock' : null)); // 'vote', 'day', 'course', 'lock' or 'talk'
   const [changing, setChanging] = useState(false); // a friend changing their answer to a plan with no day
   const me = plan.host ? plan.hostWho : plan.localMe;
   const people = planPeople(plan);

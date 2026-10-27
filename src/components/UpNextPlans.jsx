@@ -92,31 +92,49 @@ export function UpcomingCard({ plan: saved }) {
 }
 
 /**
- * A plan with no day yet: "No day yet" (or the day that leads, or Ready to lock for the organizer),
- * who's in, and Day, Course, Game and Bet as small state tags.
+ * A plan with no day yet: "No day yet" (with the day that leads), who's in, the game and bet as
+ * small state tags once they're set or up for a vote, and one quiet line for what's still open.
+ * The day sits in the eyebrow and the course in the title, so neither repeats as a tag. Once a day
+ * clearly leads, the organizer gets "Lock in" right on the card: it opens the plan's lock sheet.
  */
 function OpenPlanCard({ plan }) {
   const nav = useNav();
   const me = plan.host ? plan.hostWho : plan.localMe;
   const mine = plan.answers?.[me]?.status;
   const lead = leadingDay(plan);
-  const ready = plan.host && !!lockNudge(plan);
+  const nudge = plan.host ? lockNudge(plan) : null;
   const st = detailStates(plan, { name: g => GAMES[g]?.name || 'A game' });
-  const tags = [['Day', st.day], ['Course', st.course], ['Game', st.game], ['Bet', st.bet]];
-  return (
+  const tags = [['Game', st.game], ['Bet', st.bet]].filter(([, s]) => s.state !== 'not');
+  const open = [['course', st.course], ['game', st.game], ['bet', st.bet]].filter(([, s]) => s.state === 'not').map(([k]) => k);
+  const card = (
     <button className="upcoming-card open-plan" onClick={() => nav.push('plan', { id: plan.id })}>
       <div className="row-main">
-        <div className="eyebrow">{ready ? `Ready to lock in ${shortDay(lead.iso)}` : 'No day yet'}</div>
+        <div className="eyebrow">{nudge ? `Ready to lock in ${shortDay(nudge.iso)}` : lead ? `No day yet · ${shortDay(lead.iso)} leads` : 'No day yet'}</div>
         <div className="uc-title d">{plan.course?.name ? `Golf soon? · ${plan.course.name}` : 'Golf soon?'}</div>
         <div className="uc-sub">{countsLine(planCounts(plan))}</div>
-        {/* What's set, up for a vote or not yet: a detail still open just says its name */}
-        <div className="uc-tags">
-          {tags.map(([k, s]) => <span key={k} className={`st-tag sm ${s.state}`}><span className="sr-only">{k}: {STATE_LABEL[s.state]}, </span>{s.state === 'not' ? k : s.label}</span>)}
-        </div>
+        {/* What's set or up for a vote; what isn't yet is the quiet line under it */}
+        {tags.length > 0 && (
+          <div className="uc-tags">
+            {tags.map(([k, s]) => <span key={k} className={`st-tag sm ${s.state}`}><span className="sr-only">{k}: {STATE_LABEL[s.state]}, </span>{s.label}</span>)}
+          </div>
+        )}
+        {open.length > 0 && <div className="uc-open">Still open: {open.join(', ')}</div>}
       </div>
-      <span className={`who-status ${mine || 'none'}`}>{mine ? `You’re ${RSVP_LABEL[mine].toLowerCase()}` : 'Answer'}</span>
+      {/* The organizer about to lock it in is in anyway: the Lock in row says what matters */}
+      {!nudge && <span className={`who-status ${mine || 'none'}`}>{mine ? `You’re ${RSVP_LABEL[mine].toLowerCase()}` : 'Answer'}</span>}
       <span className="chevron"><Icon name="caret-right" /></span>
     </button>
+  );
+  if (!nudge) return card;
+  return (
+    <div className="uc-wrap open-plan-wrap">
+      {card}
+      <button className="uc-preview uc-lock" onClick={() => nav.push('plan', { id: plan.id, lock: true })}>
+        <Icon name="lock-simple" fill />
+        <span className="row-main"><b>Lock in {shortDay(nudge.iso)}</b> <span className="uc-pv-sub">{nudge.votes} of {nudge.of} can make it</span></span>
+        <Icon name="caret-right" />
+      </button>
+    </div>
   );
 }
 
