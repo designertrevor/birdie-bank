@@ -62,7 +62,8 @@
 .un-way:active { transform: scale(.96); }
 .un-way .spot { flex-shrink: 0; }
 
-/* The number tiles, once there are a few rounds: four pastel tiles in a 2 by 2 grid */
+/* The number tiles, once there are a few rounds: a 2 by 2 grid on white, with only the Tab in
+   mint (the Tab's own colour). Colour on Up next marks the ways to start a round, not the numbers */
 .un-tiles { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; margin: 0 16px 8px; }
 .un-tile {
   display: flex; flex-direction: column; align-items: flex-start; gap: 2px; min-width: 0; padding: 14px 14px 13px; border: none;
@@ -71,9 +72,6 @@
 }
 .un-tile:active { transform: scale(.96); }
 .un-tile.tab { background: var(--band-mint); }
-.un-tile.season { background: var(--band-butter); }
-.un-tile.played { background: var(--band-lilac); }
-.un-tile.best, .un-tile.rival { background: var(--band-peach); }
 .un-tile-label { font-size: 12px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: var(--mute); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100%; }
 .un-tile-big { font-family: var(--display); font-weight: var(--money-weight); font-size: 28px; line-height: 1.15; font-variant-numeric: tabular-nums; letter-spacing: -.01em; }
 .un-tile-big.pos { color: var(--win); }

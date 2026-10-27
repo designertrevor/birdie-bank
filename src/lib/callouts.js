@@ -54,7 +54,7 @@ export function neverMean(c) {
 }
 
 /** Who won a round: the ids at the top (a whole team when a team tops it), or [] when nobody did. */
-function winnersOf(round) {
+export function winnersOf(round) {
   let bal;
   try { bal = roundResults(round).balances; } catch { return []; }
   const top = Math.max(...round.players.map(p => bal[p.id] ?? 0));

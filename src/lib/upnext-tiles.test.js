@@ -36,14 +36,31 @@ test('a few money rounds give four tiles that match the Tab and the season', () 
   ]);
   const tiles = homeTiles(state, NOW);
   assert.equal(tiles.length, 4);
-  assert.deepEqual(tiles.map(t => t.id), ['tab', 'season', 'played', 'best']);
+  // Bragging rights before bankroll: the Tab, then the days you won and your rival, then the season's money
+  assert.deepEqual(tiles.map(t => t.id), ['tab', 'won', 'rival', 'season']);
   const tab = myTab(state);
   assert.equal(tiles[0].big, money(tab.net, { sign: true }));
+  // r1 and r3 are yours, r2 is Mike's
+  assert.equal(tiles[1].big, '2');
+  assert.equal(tiles[1].sub, 'Of 3 rounds this year');
   const board = seasonBoard(state, 2026);
-  assert.equal(tiles[1].big, money(board.balances.find(b => b.me).net, { sign: true }));
-  assert.equal(tiles[2].big, '3');
-  assert.equal(tiles[2].sub, '2 this month');
-  assert.equal(tiles[3].big, money(board.biggestDay.amount, { sign: true }));
+  assert.equal(tiles[2].label, 'You vs Mike');
+  assert.equal(tiles[2].big, `${board.rival.won}–${board.rival.lost}`);
+  assert.equal(tiles[3].big, money(board.balances.find(b => b.me).net, { sign: true }));
+});
+
+test('no day won yet: the rounds played tile stands in', () => {
+  // Mike takes every round; the one you play with Sam alone is a tie, so you never top one
+  const state = stateWith([
+    round('r1', ['me', 'mike'], { 1: { mike: 3 } }, at(10, 4)),
+    round('r2', ['me', 'mike'], { 2: { mike: 3 } }, at(10, 5)),
+    round('r3', ['me', 'sam'], {}, at(10, 6)),
+  ]);
+  const tiles = homeTiles(state, NOW);
+  assert.ok(!tiles.some(t => t.id === 'won'));
+  const played = tiles.find(t => t.id === 'played');
+  assert.equal(played.big, '3');
+  assert.equal(played.sub, '3 this month');
 });
 
 test('never an odd tile out, and never a zero dressed up as a number', () => {
