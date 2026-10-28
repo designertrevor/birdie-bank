@@ -60,3 +60,20 @@ outline from the app (`.art-outline` in `styles.css`); buddies, critters and gam
 backdrop and skip it. The overhaul placed the new spots on 2026-10-26 (each one's screens are
 in `art-manifest.js`); agreed, piggy and mostrounds still say "not placed yet". bragging and buying
 sit on a cream disc (`.art-plate`) with no dark outline, since their ball is cut out to the sky.
+
+## Fix pass, 2026-10-28
+
+Hand edits after Trevor's review, made in the files (scripts in that session's scratchpad: fill a
+region up to its ink, recolour the inside of thick ink, brush strokes):
+
+- agreed, bragging, buying, megaphone, gift and bulb have a solid cream ball body (and their hollow
+  legs and arms filled), so the dark theme no longer shows the dimples as squares. They no longer
+  need the cream plate.
+- The first tee, 19th hole and scorecard scenes have their faces (and a few arms and legs) filled
+  cream, one region at a time, never the sky; their frowns are short flat lines.
+- tees, podium, hardhat and gator lost their export specks; handshake lost its colour fringe, got
+  three fingers across the other hand and lavender and coral sleeves inside its ink line.
+- mostrounds is a ball and a tally of five; face-great has closed happy eyes; the punch card is
+  ochre; goldcrown is new, the round 4 crown on its own for the podium.
+- Buddies and critters carry their own thin line (`.buddy-ring` in styles.css): ink on a light card
+  or pastel backdrop, cream on a dark card or the teal backdrop.
