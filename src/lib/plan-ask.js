@@ -10,7 +10,7 @@ export const GROUP_GAMES = ['skins', 'nassau', 'wolf', 'bestball'];
 
 /**
  * The games on the ballot when the group picks: the ones you've played most (finished rounds),
- * then the usual favourites, four at most.
+ * then the ones you told onboarding the group plays, then the usual favourites, four at most.
  */
 export function groupGames(state, n = MAX_BALLOT_GAMES) {
   const count = new Map();
@@ -19,7 +19,7 @@ export function groupGames(state, n = MAX_BALLOT_GAMES) {
     count.set(r.game, (count.get(r.game) || 0) + 1);
   }
   const played = [...count.entries()].sort((a, b) => b[1] - a[1]).map(([k]) => k);
-  return [...new Set([...played, ...GROUP_GAMES])].filter(k => GAMES[k]).slice(0, n);
+  return [...new Set([...played, ...(state?.organizer?.games || []), ...GROUP_GAMES])].filter(k => GAMES[k]).slice(0, n);
 }
 
 /** The ask as typed: single spaces, trimmed, at most ASK_MAX characters, or the default when empty. */

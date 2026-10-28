@@ -168,6 +168,9 @@ test('group games: most played first, then the favourites', () => {
   const state = { rounds: { a: { status: 'done', game: 'banker' }, b: { status: 'done', game: 'banker' }, c: { status: 'done', game: 'wolf' }, d: { status: 'live', game: 'vegas' } } };
   assert.deepEqual(groupGames(state), ['banker', 'wolf', 'skins', 'nassau']);
   assert.deepEqual(groupGames({}), ['skins', 'nassau', 'wolf', 'bestball']);
+  // What onboarding was told the group plays comes after what's been played, before the favourites
+  assert.deepEqual(groupGames({ organizer: { games: ['vegas', 'stableford'] } }), ['vegas', 'stableford', 'skins', 'nassau']);
+  assert.deepEqual(groupGames({ ...state, organizer: { games: ['vegas', 'wolf', 'nope'] } }), ['banker', 'wolf', 'vegas', 'skins']);
 });
 
 // --------------------------- the day vote ----------------------------------

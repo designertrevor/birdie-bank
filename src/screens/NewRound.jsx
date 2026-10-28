@@ -49,11 +49,11 @@ const PLAN_QUESTIONS = ['What are you playing?', 'When are you playing?', 'Whoâ€
  * page, so it counts for that trip.
  */
 export default function NewRound(props) {
-  // "Plan ahead" and Up next's "Get a round going" open the one-screen ask (plan/PlanAsk.jsx). A plan
-  // for a trip, the end of organizer onboarding (a game already picked) and anything carried over
-  // from a setup keep the full steps.
-  const { ahead = false, trip = null, onboarding = false, game = null, edit = null, reschedule = null, fromPlan = null, rematch = null, play = null } = props;
-  if (ahead && !trip && !onboarding && !game && !edit && !reschedule && !fromPlan && !rematch && !play) return <PlanAsk />;
+  // "Plan ahead", Up next's "Get a round going" and the end of organizer onboarding (with the games
+  // it was told, `games`) open the one-screen ask (plan/PlanAsk.jsx). A plan for a trip and anything
+  // carried over from a setup keep the full steps.
+  const { ahead = false, trip = null, onboarding = false, games = null, game = null, edit = null, reschedule = null, fromPlan = null, rematch = null, play = null } = props;
+  if (ahead && !trip && !game && !edit && !reschedule && !fromPlan && !rematch && !play) return <PlanAsk onboarding={onboarding} told={games} />;
   return <NewRoundSetup {...props} />;
 }
 

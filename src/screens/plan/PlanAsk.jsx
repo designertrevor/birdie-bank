@@ -1,8 +1,9 @@
 // "Get a round going": the one-screen ask (overhaul, 2026-10-27). A message, three optional details
 // that start as Not yet (When, Where, Game and bet), who to ask, and Send. Nothing has to be set to
 // send: the group sorts out the rest on the plan page. Opened by "Plan ahead" and Up next's "Get a
-// round going" (nav.push('newRound', { ahead: true }), NewRound.jsx). The full setup's "Schedule
-// for later" still carries a whole setup into a plan (newround/PlanSteps.jsx).
+// round going" (nav.push('newRound', { ahead: true }), NewRound.jsx), and by the end of organizer
+// onboarding. The full setup's "Schedule for later" still carries a whole setup into a plan
+// (newround/PlanSteps.jsx).
 import { useState } from 'react';
 import { Header, Icon, Screen, useUI } from '../../components/ui.jsx';
 import { getState, uid, update, useStore } from '../../lib/store.js';
@@ -20,8 +21,16 @@ import { PlansOffError } from '../../lib/plan-adapters.js';
 import { cleanAsk, groupGames, newAskPlan } from '../../lib/plan-ask.js';
 import { ASK_DEFAULT, ASK_MAX, whenWords } from '../../lib/plan-open.js';
 import { DetailRows, GameBetSheet, WhenSheet, WhereSheet } from './PlanParts.jsx';
+import { PAYWALL_ON } from '../../lib/paywall-flag.js';
+import { hasLifetimePro } from '../../lib/pro-client.js';
+import { shouldShowPaywall } from '../../lib/paywall.js';
 
-export default function PlanAsk() {
+/**
+ * `onboarding`: the end of organizer onboarding, so the plan opens with the paywall on top (when
+ * it's on). `told`: the games onboarding was told the group plays; when it's one, it starts picked
+ * (still easy to hand back to the group), and either way they lead the ballot (groupGames).
+ */
+export default function PlanAsk({ onboarding = false, told = null }) {
   const nav = useNav();
   const { ask, showToast } = useUI();
   const state = useStore();
@@ -29,7 +38,7 @@ export default function PlanAsk() {
   const [msg, setMsg] = useKept('ask:msg', ASK_DEFAULT);
   const [when, setWhen] = useKept('ask:when', { mode: 'open', date: null, days: [], part: null });
   const [course, setCourse] = useKept('ask:course', null);
-  const [pick, setPick] = useKept('ask:pick', { game: null, bet: null });
+  const [pick, setPick] = useKept('ask:pick', () => ({ game: told?.length === 1 && GAMES[told[0]] ? told[0] : null, bet: null }));
   const [invited, setInvited] = useKept('ask:invited', []);
   const [sheet, setSheet] = useState(null);
   const [adding, setAdding] = useState(false);
@@ -71,7 +80,7 @@ export default function PlanAsk() {
       st.plans[id] = plan;
       if (course?.id && !st.favorites.includes(course.id)) st.favorites = [course.id, ...st.favorites].slice(0, 6);
     });
-    track('plan_created', { game: pick.game || 'group', holes: 18, invited: people.length, trip: false, from: 'ask', when: plan.when.mode });
+    track('plan_created', { game: pick.game || 'group', holes: 18, invited: people.length, trip: false, from: onboarding ? 'onboarding' : 'ask', when: plan.when.mode });
     try {
       await sharePlan(id);
       return { id, link: planShareLink(getState().plans[id]) };
@@ -80,8 +89,12 @@ export default function PlanAsk() {
       return { id, link: null };
     }
   };
-  // The plan page next, with Up next under it (what this screen kept goes as it closes)
-  const done = id => nav.reset('upnext', ['plan', { id }]);
+  // The plan page next, with Up next under it (what this screen kept goes as it closes); from
+  // onboarding, the paywall over it when it's on
+  const done = id => {
+    const paywall = onboarding && shouldShowPaywall(getState(), PAYWALL_ON, { pro: hasLifetimePro() }) ? [['paywall', { source: 'onboarding' }]] : [];
+    nav.reset('upnext', ['plan', { id }], ...paywall);
+  };
   const send = async () => {
     if (busy) return;
     setBusy(true);
