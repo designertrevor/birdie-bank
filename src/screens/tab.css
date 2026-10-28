@@ -41,5 +41,16 @@
 .te-card .tp-amt { font-weight: var(--money-weight); }
 .te-card .tp-name { font-weight: var(--display-weight); }
 .te-section .square-line { margin-top: 0; }
-.te-card > .tab-part { margin: 10px 2px 2px; }
+/* The link keeps its 44px to tap, but lets the hit area overlap the card's padding so the words
+   don't float in empty space at the foot of the card */
+.te-card > .tab-part { margin: 4px 2px -8px; }
 .tab-e .sq-strip { border-radius: var(--r-card); box-shadow: var(--hair); }
+/* How the Tab works opens from a 44px target, like every other control */
+.tab-e .how summary { min-height: 44px; }
+/* Not sent yet: one quiet line under the summary while changes wait for signal */
+.te-waiting { display: flex; align-items: center; gap: 8px; margin: -4px 20px 12px; font-size: 13px; line-height: 1.4; color: var(--mute); }
+.te-waiting i { flex-shrink: 0; font-size: 16px; }
+/* The tools list (Season, Close the books, a crew's Hall of fame) has the same hairline edge as every other card */
+.tab-e .tab-tools:not(.solo) { border-radius: var(--r-card); box-shadow: var(--hair); }
+/* A square card's last line (Didn't get it?, Undo) sits close to the foot too, its 44px target overlapping the padding */
+.te-card > .recent-paid:last-child { margin-bottom: -8px; }

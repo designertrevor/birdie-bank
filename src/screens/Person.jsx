@@ -148,7 +148,7 @@ export default function Person({ id: opened }) {
         <RivalryCard rv={rv} name={name} id={id} isNemesis={!isMine && nem?.id === id} />
         {talk.length > 0 && (
           <>
-            <div className="sec-label">Trash talk</div>
+            <h2 className="sec-label">Trash talk</h2>
             <ul className="talk-list person-talk" role="list">
               {talk.map(t => (
                 <li key={t.id}>
@@ -179,7 +179,7 @@ export default function Person({ id: opened }) {
 
         {fv?.tiles.length > 0 && (
           <>
-            <div className="sec-label">{firstName}’s profile</div>
+            <h2 className="sec-label">{firstName}’s profile</h2>
             <div className="pf-tiles">
               {fv.tiles.map(t => (
                 <div key={t.key} className={`pf-tile ${t.key === 'net' || t.key === 'best' ? 'money' : ''}`}>
@@ -202,9 +202,9 @@ export default function Person({ id: opened }) {
           </>
         )}
 
-        <div className="sec-label">The story</div>
+        <h2 className="sec-label">The story</h2>
         {shown.items.length === 0 && story.rounds === shown.rounds && <p className="hint-card"><Icon name="flag-pennant" fill /> No finished rounds with {firstName} yet. Play one and every bet between you shows up here.</p>}
-        {shown.items.map(it => it.kind === 'carry' ? (
+        {shown.items.length > 0 && <div className="te-list">{shown.items.map(it => it.kind === 'carry' ? (
           <div key={it.id} className="ledger-row static">
             <div className="lr-info">
               <div className="lr-name" style={{ fontSize: 16 }}>Carried over · agreed {when(it.at)}</div>
@@ -237,7 +237,7 @@ export default function Person({ id: opened }) {
             </div>
             <div className="lr-amt d story-amt">{money(Math.abs(it.amount))}</div>
           </div>
-        ))}
+        ))}</div>}
         {story.rounds > shown.rounds && <RecordBookNote line={line} />}
 
         {!isMine && (

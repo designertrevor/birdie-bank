@@ -114,7 +114,8 @@ function RealSeason({ state, preview = false }) {
         <StatTile label={b.rival ? `You vs ${b.rival.name.split(' ')[0]}` : 'You vs a friend'} value={b.rival ? signed(b.rival.net) : DASH} tone={b.rival ? sign(b.rival.net) : ''}
           state={b.rival ? recordText(b.rival) : null} sub={b.rival ? `${b.rival.rounds} round${b.rival.rounds === 1 ? '' : 's'} together` : 'Most rounds together'} />
         <StatTile label="Biggest day" value={b.biggestDay ? signed(b.biggestDay.amount) : DASH} tone={b.biggestDay ? 'pos' : ''} sub={b.biggestDay ? (b.biggestDay.course || shortDay(b.biggestDay.at)) : 'A day you came out ahead'} />
-        <StatTile label="Best game" long value={b.bestGame ? b.bestGame.name : DASH} state={b.bestGame ? signed(b.bestGame.net) : null} tone={b.bestGame ? 'pos' : ''} sub={b.bestGame ? `${b.bestGame.rounds} round${b.bestGame.rounds === 1 ? '' : 's'}` : 'The game that pays you best'} />
+        {/* The game's name is the big word, what it paid under it (a dollar figure in the small state line above read backwards) */}
+        <StatTile label="Best game" long value={b.bestGame ? b.bestGame.name : DASH} sub={b.bestGame ? `${signed(b.bestGame.net)} over ${b.bestGame.rounds} round${b.bestGame.rounds === 1 ? '' : 's'}` : 'The game that pays you best'} />
       </div>
       <div className="sec-label">Everyone’s season</div>
       <Balances rows={b.balances} />

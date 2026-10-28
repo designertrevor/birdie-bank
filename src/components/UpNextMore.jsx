@@ -73,7 +73,7 @@ export function TabGlance({ tiles = false }) {
   return (
     <>
       {!tiles && <>
-        <div className="sec-label">The Tab</div>
+        <h2 className="sec-label">The Tab</h2>
         <button className="tab-glance" onClick={() => nav.setTab('ledger')} aria-label={tab.people ? `The Tab: owed to you ${money(tab.owed)}, you owe ${money(tab.owe)}` : `The Tab: ${squareText}`}>
           {tab.people ? (
             <>
@@ -89,7 +89,7 @@ export function TabGlance({ tiles = false }) {
 
       {recapId !== last.round.id && (
         <>
-          <div className="sec-label">Last time out</div>
+          <h2 className="sec-label">Last time out</h2>
           <RoundRow round={last.round} state={state} className="card" withYear />
         </>
       )}
@@ -110,7 +110,7 @@ export function StatTiles() {
   const go = g => (g.tab ? nav.setTab(g.tab) : nav.push(g.push, g.params || {}));
   return (
     <>
-      <div className="sec-label">Your golf</div>
+      <h2 className="sec-label">Your golf</h2>
       <div className="un-tiles">
         {tiles.map(t => (
           <button key={t.id} className={`un-tile ${t.id}`} onClick={() => go(t.go)} aria-label={`${t.label}: ${t.big}. ${t.sub}`}>
@@ -145,7 +145,7 @@ export function RecapSection() {
   if (!recap) return null;
   return (
     <>
-      <div className="sec-label">The recap</div>
+      <h2 className="sec-label">The recap</h2>
       <RecapCard recap={recap} />
     </>
   );
@@ -164,7 +164,7 @@ export function CalloutsSection() {
   if (!lines.length) return null;
   return (
     <>
-      <div className="sec-label">For the group text</div>
+      <h2 className="sec-label">For the group text</h2>
       <CalloutsCard items={lines} />
     </>
   );
@@ -183,7 +183,7 @@ export function LatelySection() {
   if (!lately.length) return null;
   return (
     <>
-      <div className="sec-label">Lately</div>
+      <h2 className="sec-label">Lately</h2>
       <LatelyList items={lately.slice(0, LATELY_ON_HOME)} />
       {lately.length > LATELY_ON_HOME && (
         <button className="lately-all" onClick={() => nav.push('lately')}>See all {lately.length} <Icon name="caret-right" /></button>
