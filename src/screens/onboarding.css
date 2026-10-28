@@ -1,0 +1,84 @@
+/* ============================================================
+   ORGANIZER ONBOARDING (Onboarding.jsx), fix pass 2 (2026-10-28)
+   Each step is a page on its own stage: it slides in from the side you're heading to and the one
+   it replaces leaves the other way. The back button and the progress bar stay put above the pages.
+   Every step's drawing sits centred at the top with room around it.
+   ============================================================ */
+
+/* A scene sits straight on the page in both themes: the drawings' faces are filled, and in dark the
+   sticker outline (.art-outline) carries the edge, as everywhere else */
+.ob-flow { --ob-art-bg: transparent; }
+
+/* The bar over every page but the welcome: hidden there rather than gone, so it fades in and its fill moves on */
+.ob-flow .ob-top { position: absolute; top: 0; left: 0; right: 0; z-index: 2; height: 64px; padding: 10px 16px; background: var(--canvas); transition: opacity var(--duration-fast) var(--ease-smooth-out), visibility 0s; }
+.ob-flow .ob-top.off { opacity: 0; visibility: hidden; transition: opacity var(--duration-quick) ease-in, visibility 0s var(--duration-quick); }
+.ob-flow .ob-progress { height: 4px; background: var(--line); }
+.ob-flow .ob-progress i { width: 100%; transform-origin: left center; transition: transform var(--duration-slow) var(--ease-smooth-out); }
+
+/* The pages: each fills the screen under the bar, so the one leaving and the one coming in overlap
+   instead of stacking, and nothing is measured mid-move */
+.ob-stage { position: relative; flex: 1; min-height: 0; }
+.ob-page { position: absolute; inset: 0; display: flex; flex-direction: column; padding-top: 64px; background: var(--canvas); }
+.ob-page.first { padding-top: 0; }
+.ob-stage .stage.in-push > .ob-page { animation: screenPush var(--duration-fast) var(--ease-smooth-out) both; }
+.ob-stage .stage.in-pop > .ob-page { animation: screenBack var(--duration-fast) var(--ease-smooth-out) both; }
+.ob-stage .stage.under > .ob-page { animation: obAway var(--duration-fast) var(--ease-in) both; pointer-events: none; }
+.ob-stage .stage.out-pop > .ob-page { animation: screenPushOut var(--duration-fast) var(--ease-in) both; pointer-events: none; }
+@keyframes obAway { to { opacity: 0; transform: translateX(calc(-1 * var(--distance-medium))); } }
+/* A long step scrolls: its rows keep their height rather than squeezing to fit */
+.ob-flow .scroll > * { flex-shrink: 0; }
+.ob-flow .ob-body { padding: 4px 16px 24px; }
+
+/* The drawing at the top of a step: centred, with the page's widest margin under it */
+.ob-art { display: flex; justify-content: center; align-items: flex-end; margin: 8px 0 24px; }
+.ob-art-scene { overflow: hidden; border-radius: var(--r-card); background: var(--ob-art-bg); aspect-ratio: 1792 / 1024; }
+.ob-art-scene > svg { display: block; width: 100%; height: 100%; }
+.ob-art-spot { height: 176px; }
+.ob-art .ob-spot { width: 160px; height: 160px; }
+
+/* Questions: the title then the choices, one gap apart */
+.ob-flow .ob-q { margin: 0 0 16px; }
+.ob-flow .ob-q + .ob-sub { margin-top: -6px; }
+.ob-choices { display: flex; flex-direction: column; gap: 8px; }
+.ob-choices .ob-choice { margin: 0; min-height: 64px; }
+
+/* Payoffs: a moment, so they're centred under their drawing; the picture under the words runs full width */
+.ob-payoff { align-items: center; text-align: center; }
+.ob-payoff > * { align-self: stretch; }
+.ob-payoff .ob-art-spot { height: 148px; margin-bottom: 16px; }
+.ob-payoff .ob-art .ob-spot { width: 136px; height: 136px; }
+.ob-payoff .eyebrow { margin: 0 0 8px; }
+.ob-payoff .ob-sub { max-width: 340px; margin: 0 auto 20px; text-wrap: balance; }
+.ob-payoff .ob-jobs { text-align: left; }
+
+/* Welcome: the cast big, the name and the games under it, together in the middle of the room
+   above the buttons (auto margins, so a short phone scrolls instead of cutting the top off) */
+.ob-welcome { display: flex; flex-direction: column; align-items: center; text-align: center; gap: 8px; padding: 16px; }
+.ob-welcome > .ob-art { align-self: stretch; margin: auto 0 20px; }
+.ob-welcome > :last-child { margin-bottom: auto; }
+.ob-welcome .onboard-title { margin: 0; }
+.ob-welcome .onboard-text { max-width: 320px; }
+.ob-welcome .onboard-games { margin-top: 14px; gap: 2px 0; max-width: 360px; }
+/* A short phone: the drawings step down a size so the words and the first choices still show */
+@media (max-height: 700px) {
+  .ob-welcome .onboard-title { font-size: 40px; }
+  .ob-art { margin-bottom: 16px; }
+  .ob-art-spot { height: 132px; }
+  .ob-art .ob-spot { width: 120px; height: 120px; }
+  .ob-payoff .ob-art-spot { height: 104px; }
+  .ob-payoff .ob-art .ob-spot { width: 96px; height: 96px; }
+}
+
+/* Your name: the handicap opens the number pad from a field that looks like the name's */
+.ob-field-btn { display: flex; align-items: center; justify-content: space-between; gap: 12px; width: 100%; min-height: 52px; text-align: left; cursor: pointer; }
+.ob-field-btn.empty > span { color: var(--mute-soft); }
+.ob-field-btn > i { font-size: 18px; color: var(--icon); flex-shrink: 0; }
+.ob-form .ob-agree { margin-top: 20px; }
+
+/* All set: the line before the buttons says what the next round needs, which is nothing yet */
+.ob-flow .ob-next { margin: 4px 0 0; }
+
+@media (prefers-reduced-motion: reduce) {
+  .ob-stage .stage > .ob-page { animation: none; }
+  .ob-flow .ob-progress i { transition: none; }
+}

@@ -55,6 +55,9 @@
   flex-shrink: 0; min-height: 32px; padding: 0 10px; border: none; border-radius: var(--r-chip); font: inherit; font-size: 14px; font-weight: 700;
   font-variant-numeric: tabular-nums; cursor: pointer; transition: transform .2s var(--spring);
 }
+/* The pill stays small to look at, with a 44px target around it */
+.pl-owe { position: relative; }
+.pl-owe::after { content: ''; position: absolute; inset: -6px -4px; }
 .pl-owe.pos { background: var(--win-bg); color: var(--win); }
 .pl-owe.neg { background: var(--loss-bg); color: var(--loss); }
 .pl-owe:active { transform: scale(.94); }

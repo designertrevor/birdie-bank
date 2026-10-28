@@ -22,7 +22,7 @@
   margin: 8px 16px 12px; padding: 22px 20px 18px; border-radius: var(--r-card); background: var(--band-mint); box-shadow: var(--hair); color: var(--ink);
 }
 .un-start-art { position: absolute; right: -6px; top: 6px; transform: rotate(-6deg); pointer-events: none; }
-.un-start-title { font-family: var(--display); font-weight: var(--display-weight); font-size: 30px; line-height: 1.05; letter-spacing: -.02em; max-width: 72%; }
+.un-start-title { margin: 0; font-family: var(--display); font-weight: var(--display-weight); font-size: 30px; line-height: 1.05; letter-spacing: -.02em; max-width: 72%; }
 .un-start-sub { font-size: 15px; line-height: 1.4; color: var(--body); max-width: 74%; }
 .un-start-acts { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 14px; }
 .un-btn {
@@ -31,39 +31,43 @@
 }
 .un-btn.ghost { background: var(--card); color: var(--ink); box-shadow: var(--hair); }
 .un-btn:active { transform: scale(.95); }
-.un-join { margin-top: 10px; padding: 6px 0; border: none; background: none; font: inherit; font-size: 14px; color: var(--mute); cursor: pointer; text-align: left; }
+.un-join { min-height: 44px; margin-top: 4px; padding: 0; border: none; background: none; font: inherit; font-size: 14px; color: var(--mute); cursor: pointer; text-align: left; }
 .un-join u { color: var(--ink); font-weight: 700; text-underline-offset: 3px; }
-/* Under the upcoming rounds it's a shorter card on plain white */
-.un-start.slim { background: var(--card); padding: 16px 18px 14px; margin-top: 4px; }
-.un-start.slim .un-start-title { font-size: 21px; max-width: none; }
-.un-start.slim .un-start-acts { margin-top: 8px; }
+/* Under the upcoming rounds it's just its buttons on plain white, under a "Playing now?" label */
+.un-start.slim { background: var(--card); padding: 16px 16px 12px; margin-top: 0; gap: 0; }
+.un-start.slim .un-start-acts { margin-top: 0; }
+.un-start.slim .un-join { margin-top: 2px; margin-bottom: -6px; }
 
-/* Get a round going: always here, a lilac card with the calendar */
+/* More ways to play: one white card, Get a round going on top and a trip and a Big Game side by
+   side under a hairline. Plain rows inside, so a press darkens the row rather than shrinking it */
+.un-ways-card { margin: 0 16px 10px; border-radius: var(--r-card); background: var(--card); box-shadow: var(--hair); overflow: hidden; }
 .un-go {
-  display: flex; align-items: center; gap: 10px; width: calc(100% - 32px); margin: 0 16px 10px; padding: 14px 10px 14px 18px;
-  border: none; border-radius: var(--r-card); background: var(--band-lilac); box-shadow: var(--hair); color: var(--ink);
-  font: inherit; text-align: left; cursor: pointer; transition: transform .2s var(--spring);
+  display: flex; align-items: center; gap: 10px; width: 100%; min-height: 88px; padding: 12px 12px 12px 18px;
+  border: none; background: transparent; color: var(--ink); font: inherit; text-align: left; cursor: pointer; transition: background-color .15s ease-out;
 }
-.un-go:active { transform: scale(.97); }
 .un-go .row-main { display: flex; flex-direction: column; gap: 3px; }
 .un-go-title { font-family: var(--display); font-weight: var(--display-weight); font-size: 21px; letter-spacing: -.01em; }
 .un-go-sub { font-size: 14px; line-height: 1.35; color: var(--body); }
 .un-go-art { flex-shrink: 0; }
-
-/* A trip and a Big Game, side by side */
-.un-ways { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; margin: 0 16px 8px; }
+.un-ways { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); border-top: 1px solid var(--line); }
 .un-ways.one { grid-template-columns: 1fr; }
 .un-way {
-  display: flex; align-items: center; gap: 6px; min-height: 64px; padding: 4px 12px 4px 6px; border: none; border-radius: var(--r-card);
-  background: var(--band-butter); box-shadow: var(--hair); color: var(--ink); font: inherit; font-size: 15px; font-weight: 700;
-  text-align: left; cursor: pointer; transition: transform .2s var(--spring);
+  display: flex; align-items: center; gap: 6px; min-height: 64px; padding: 4px 12px 4px 8px; border: none; background: transparent;
+  color: var(--ink); font: inherit; font-size: 15px; font-weight: 700; text-align: left; cursor: pointer; transition: background-color .15s ease-out;
 }
-.un-way.trip { background: var(--band-peach); }
-.un-way:active { transform: scale(.96); }
+.un-way + .un-way { border-left: 1px solid var(--line); }
+.un-go:active, .un-way:active { background: var(--surface); }
 .un-way .spot { flex-shrink: 0; }
 
+/* Rhythm: more room between groups than inside one. A label opens each group with clear air above
+   it, and the cards inside sit 10px apart */
+.screen.upnext .sec-label { padding-top: 30px; }
+.screen.upnext .scroll > .un-strip + .sec-label { padding-top: 18px; }
+/* The Friends row is a plain white card like the rest; its crowd of buddies brings the colour */
+.screen.upnext .fr-all { background: var(--card); box-shadow: var(--hair); }
+
 /* The number tiles, once there are a few rounds: a 2 by 2 grid on white, with only the Tab in
-   mint (the Tab's own colour). Colour on Up next marks the ways to start a round, not the numbers */
+   mint (the Tab's own colour), the one tinted card in this part of the screen */
 .un-tiles { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; margin: 0 16px 8px; }
 .un-tile {
   display: flex; flex-direction: column; align-items: flex-start; gap: 2px; min-width: 0; padding: 14px 14px 13px; border: none;
@@ -77,3 +81,9 @@
 .un-tile-big.pos { color: var(--win); }
 .un-tile-big.neg { color: var(--loss); }
 .un-tile-sub { font-size: 13px; color: var(--body); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100%; }
+
+/* The trip card (Up next, the Tab): a hairline like every other card, so the round in progress keeps
+   the only pink edge, and today's chip in ink rather than pink, which is for the thing to tap.
+   Here because Up next's styles are always loaded first, wherever the card shows */
+:root[data-look="new"] .trip-card { border: none; box-shadow: var(--hair); }
+:root[data-look="new"] .trip-day.now { background: var(--ink); color: var(--canvas); }

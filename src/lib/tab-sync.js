@@ -77,7 +77,16 @@ export function usePaymentsOff() {
 // --------------------------- queue --------------------------------------------
 
 function readQueue() { try { return JSON.parse(localStorage.getItem(QUEUE)) || []; } catch { return []; } }
-function writeQueue(q) { try { localStorage.setItem(QUEUE, JSON.stringify(q.slice(-500))); } catch { /* storage full */ } }
+const waitListeners = new Set();
+function writeQueue(q) {
+  try { localStorage.setItem(QUEUE, JSON.stringify(q.slice(-500))); } catch { /* storage full */ }
+  waitListeners.forEach(l => l());
+}
+const subWait = l => { waitListeners.add(l); return () => waitListeners.delete(l); };
+/** How many Tab changes made on this phone haven't reached the other phones yet: 0 once they're sent. Display only. */
+export function useTabWaiting() {
+  return useSyncExternalStore(subWait, () => readQueue().length, () => 0);
+}
 function enqueue(rows) { writeQueue(queueRows(readQueue(), rows)); }
 
 let flushing = null;

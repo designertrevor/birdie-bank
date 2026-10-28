@@ -45,7 +45,7 @@ export function PayButton({ info, amount, note, className = 'pay-btn', children 
  * (or your Zelle and the amount) through the share sheet or a text. `who` is the payer's player id,
  * for the message and so Up next doesn't suggest a reminder right after.
  */
-export function RequestButton({ payer, mine, amount, note, who = null, full = false, className = 'pay-btn' }) {
+export function RequestButton({ payer, mine, amount, note, who = null, full = false, named = false, className = 'pay-btn' }) {
   const state = useStore();
   const { showToast } = useUI();
   const name = who ? nameOf(state, who) : '';
@@ -57,7 +57,8 @@ export function RequestButton({ payer, mine, amount, note, who = null, full = fa
     if (who) update(s => noteNudge(s, who));
   };
   // `full`: the longer words for a sheet row, with the amount and the app
-  const label = full ? `Request ${money(amount)} ${ask.kind === 'link' ? 'on Venmo' : `with your ${app}`}` : 'Request';
+  // `named`: the app in the words, where the button isn't filled in the app's colour (a Tab card)
+  const label = full ? `Request ${money(amount)} ${ask.kind === 'link' ? 'on Venmo' : `with your ${app}`}` : named ? `Request ${ask.kind === 'link' ? 'on' : 'with'} ${app}` : 'Request';
   if (ask.kind === 'link') {
     return (
       <a className={`${className} app-venmo`} href={ask.url} target="_blank" rel="noreferrer" onClick={asked} aria-label={`Request ${money(amount)} from ${handleText(payer)} on Venmo`}>

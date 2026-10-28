@@ -339,7 +339,7 @@ export function ChallengesUpNext({ list }) {
   if (!list.length) return null;
   return (
     <>
-      <div className="sec-label">Challenges</div>
+      <h2 className="sec-label">Challenges</h2>
       {list.map(ch => <ChallengeCard key={ch.id} ch={ch} onOpen={() => nav.push('challenge', { id: ch.id })} />)}
     </>
   );
@@ -365,7 +365,7 @@ export function PlanChallenges({ plan, myName }) {
   if (!list.length && !canMake) return null;
   return (
     <>
-      <div className="sec-label">Challenges</div>
+      <h2 className="sec-label">Challenges</h2>
       {list.map(ch => <ChallengeCard key={ch.id} ch={ch} onOpen={nav && (sideOf(state, ch) || markSides(state, ch).length) ? () => nav.push('challenge', { id: ch.id }) : null} />)}
       {canMake && (
         <button className="add-row ch-add" onClick={() => setMaking(true)}>

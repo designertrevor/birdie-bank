@@ -1,17 +1,22 @@
 // Organizer onboarding: a welcome, four questions one a screen (with a payoff after three of
 // them), your name with the friendly wagers note, then "Here's your group", which leads into
-// setting up the next round (the plan flow: the organizer suggests, the group votes) and, when
-// the flag is on, the paywall. Invited players arrive from a link and skip all of this.
+// getting the next round going (the one-screen ask, plan/PlanAsk.jsx: no day needed, the group
+// answers from one link) and, when the flag is on, the paywall. Invited players arrive from a
+// link and skip all of this.
+import './onboarding.css';
 import { Spot } from '../components/Spot.jsx';
 import { GameArt } from '../components/GameArt.jsx';
-import { Scene, sceneShows } from '../components/Scenes.jsx';
-import { useEffect, useState } from 'react';
+import { Scene } from '../components/Scenes.jsx';
+import { ArtImage } from '../components/ArtFile.jsx';
+import { Stage } from '../components/Stage.jsx';
+import { createContext, useContext, useState } from 'react';
 import { ArtIcon, Icon, Numpad, PickChip, PickMark, PickRow, Screen } from '../components/ui.jsx';
 import { getState, update, uid } from '../lib/store.js';
 import { track } from '../lib/analytics.js';
 import { formatIndex } from '../lib/format.js';
 import { money } from '../lib/golf.js';
 import { GAMES } from '../lib/round.js';
+import { artFile } from '../lib/art-files.js';
 import { playFromSearch } from '../lib/rule-links.js';
 import { SignInSheet } from '../components/Account.jsx';
 import { BuddyArt, BuddyFigure } from '../components/BuddyArt.jsx';
@@ -19,8 +24,8 @@ import { Avatar } from '../components/Avatar.jsx';
 import { BUDDIES, buddyAvatar } from '../lib/avatars.js';
 import { accountsEnabled, useAccount } from '../lib/cloud.js';
 import {
-  MATHS, ONBOARD_GAMES, SETTLES, SIZES, answered, ballotGames, gameList, nextStep, organizerRecord, payoff, prevStep,
-  progressOf, readyLines, settleLabel, settleMath, sizeLabel, suggestedGame, toggleGame, asksAge, nameReady,
+  MATHS, ONBOARD_GAMES, SETTLES, SIZES, answered, gameList, nextStep, organizerRecord, payoff, prevStep,
+  progressOf, settleLabel, settleMath, sizeLabel, suggestedGame, toggleGame, asksAge, nameReady,
 } from '../lib/onboarding.js';
 import { AGE_COPY, setAgeAnswer } from '../lib/age.js';
 import { PAYWALL_ON } from '../lib/paywall-flag.js';
@@ -34,21 +39,60 @@ const QUESTION = {
   math: { q: 'Who ends up doing the math?', options: MATHS },
 };
 
+// The group in the size question's picture: as many as you said, five at most (Crowd draws five)
+const CROWD = ['visor', 'snapback', 'bucket', 'flatcap', 'shades'];
+const crowdOf = size => CROWD.slice(0, Math.min(5, Number(size) || 4));
+
 /**
- * `onDone(routes)`: called when onboarding finishes, with the screens to open on top of Up next
- * ([name, params] pairs), just before the app switches over. `play`: a rule page's ?play= game to start with ticked.
+ * The drawing at the top of each step. A scene is the setting behind a question: the first tee on
+ * the welcome, the 19th hole for settling up, the table with the card out for the math. A spot is
+ * one thing that reacts to what you've said: a hand of cards for the games, the group at the size
+ * you picked, and on each payoff the answer it pays off (your payment app, the wallet, the tab).
  */
-/**
- * The setting behind each question: the tee for the games and the group (a foursome on the size
- * question, since most groups are four at most), the 19th hole for settling up, the table with the
- * card out for the math. Each question has its own; none repeats the one before.
- */
-function sceneFor(step) {
-  if (step === 'games') return { kind: 'course', ids: ['visor', 'snapback', 'bucket'] };
-  if (step === 'size') return { kind: 'course', ids: ['visor', 'snapback', 'bucket', 'flatcap'] };
-  if (step === 'settle') return { kind: 'clubhouse', ids: ['visor', 'snapback', 'bucket', 'shades'] };
-  if (step === 'math') return { kind: 'scorecard', ids: ['flatcap', 'visor', 'snapback', 'bucket'] };
+function artFor(step, a) {
+  if (step === 'welcome') return { scene: 'course' };
+  if (step === 'games') return { spot: 'cards' };
+  if (step === 'size') return { spot: 'crowd', ids: crowdOf(a.size) };
+  if (step === 'settle') return { scene: 'clubhouse' };
+  if (step === 'math') return { scene: 'scorecard' };
+  if (step === 'p-games') return { spot: 'shades' };
+  if (step === 'p-settle') return { spot: { app: 'link', cash: 'wallet', tab: 'receipt' }[a.settle] || 'face-ok' };
+  if (step === 'p-math') return { spot: a.math === 'me' ? 'skinsking' : 'card' };
   return null;
+}
+
+/**
+ * A step's drawing, centred. A scene sits whole, the ground on its bottom edge, with the sticker
+ * outline in the dark theme like every other drawing. A spot stands on its own. Decorative: screen
+ * readers skip it.
+ */
+function StepArt({ art }) {
+  if (!art) return null;
+  if (art.scene) {
+    const file = artFile('scenes', art.scene);
+    return (
+      <div className="ob-art ob-art-scene">
+        {file ? (
+          <svg viewBox="0 0 1792 1024" preserveAspectRatio="xMidYMax meet" aria-hidden="true" focusable="false">
+            <ArtImage file={file} w={1792} h={1024} />
+          </svg>
+        ) : <Scene kind={art.scene} />}
+      </div>
+    );
+  }
+  return (
+    <div className="ob-art ob-art-spot">
+      <Spot kind={art.spot} ids={art.ids} size={160} className="ob-spot" />
+    </div>
+  );
+}
+
+// The step on stage now. A page on its way out (Stage keeps it a beat to animate) goes inert, so
+// its buttons can't be tapped or read twice while the next page comes in
+const OnStage = createContext(null);
+function Page({ step, children }) {
+  const out = useContext(OnStage) !== step;
+  return <div className={`ob-page ${step === 'welcome' ? 'first' : ''}`} inert={out} aria-hidden={out || undefined}>{children}</div>;
 }
 
 /** The welcome's game tags: they drift a little, and wiggle when tapped, since they look tappable. Decorative. */
@@ -63,20 +107,15 @@ function GameTag({ icon, name, i }) {
   );
 }
 
-/** The ball that walks you through setup, reacting to what you've said so far. */
-function guideFor(step, a) {
-  if (step === 'games') return 'tee';
-  if (step === 'size') return 'crowd';
-  if (step === 'settle') return 'wallet';
-  if (step === 'math') return 'card';
-  if (step === 'p-games') return 'face-great';
-  if (step === 'p-settle') return a.settle === 'none' ? 'face-ok' : 'highfive';
-  if (step === 'p-math') return 'shades';
-  return null;
-}
-
+/**
+ * `onDone(routes)`: called when onboarding finishes, with the screens to open on top of Up next
+ * ([name, params] pairs), just before the app switches over. `play`: a rule page's ?play= game to start with ticked.
+ */
 export default function Onboarding({ onDone, play = null }) {
   const [step, setStep] = useState('welcome');
+  // Which way the last move went, so a step slides in from the side you're heading to and the one
+  // it replaces leaves the other way (Stage.jsx)
+  const [dir, setDir] = useState('push');
   // Arrived from "Play this now" on a game's rule page: that game is already ticked, and so it's
   // the one the first round suggests
   const [game] = useState(() => (play ? playFromSearch(`play=${encodeURIComponent(play)}`)?.game ?? null : null));
@@ -96,27 +135,22 @@ export default function Onboarding({ onDone, play = null }) {
   if (acct.user && acct.state === 'synced' && greeted !== acct.user.id) {
     setGreeted(acct.user.id);
     setSigningIn(false);
-    if (step === 'welcome') setStep('games');
+    if (step === 'welcome') { setDir('push'); setStep('games'); }
     if (!name) setName((acct.user.name || '').split(' ')[0]);
   }
 
-  // Each step starts at the top: the scroll is one element across steps, so a name step scrolled to
-  // the age question would otherwise open the review with its title out of view
-  useEffect(() => { document.querySelector('.onboard .scroll')?.scrollTo(0, 0); }, [step]);
-
-  const go = s => setStep(s);
-  const next = () => go(nextStep(step));
-  const back = () => go(prevStep(step));
+  // Each step is a page of its own on the stage, so it starts at the top wherever the last one was scrolled to
+  const next = () => { setDir('push'); setStep(nextStep(step)); };
+  const back = () => { setDir('pop'); setStep(prevStep(step)); };
   const set = (k, v) => setA(x => ({ ...x, [k]: v }));
 
-  // Save who you are and your answers, then open the next round's plan (and the paywall under it,
-  // so backing out of the plan still lands there)
+  // Save who you are and your answers, then open the ask for the next round (and the paywall under
+  // it, so backing out of the ask still lands there). The ask starts from what you told us: the
+  // games you play lead its ballot, and the one game you play is already picked.
   const finish = planNext => {
     const organizer = organizerRecord(a);
     const paywall = shouldShowPaywall({ organizer }, PAYWALL_ON, { pro: hasLifetimePro() }) ? [['paywall', { source: 'onboarding' }]] : [];
-    const routes = planNext
-      ? [...paywall, ['newRound', { ahead: true, game: suggestedGame(a), ballot: ballotGames(a), onboarding: true }]]
-      : paywall;
+    const routes = planNext ? [...paywall, ['newRound', { ahead: true, onboarding: true, games: organizer.games }]] : paywall;
     onDone?.(routes);
     track('onboarding_finished', { path: planNext ? 'plan' : 'done', from: play ? 'rules' : 'app' });
     update(s => {
@@ -133,11 +167,20 @@ export default function Onboarding({ onDone, play = null }) {
     });
   };
 
-  if (step === 'welcome') {
-    return (
-      <Screen className="onboard">
-        <div className="scroll onboard-body">
-          <Scene kind="course" ids={['bucket', 'shades', 'snapback', 'visor']} className="ob-scene" />
+  // `hint` says what's left when Continue can't go yet, so a grey button never looks broken
+  const cta = (label = 'Continue', ok = true, hint = null) => (
+    <div className="cta-wrap">
+      <button className="full-btn" disabled={!ok} onClick={next}>{label} <Icon name="arrow-right" /></button>
+      {!ok && hint && <p className="ob-hint" role="status">{hint}</p>}
+    </div>
+  );
+
+  // One page per step: its scroll and its buttons. The back button and the progress bar stay put above them.
+  const page = () => {
+    if (step === 'welcome') {
+      return (<>
+        <div className="scroll ob-welcome">
+          <StepArt art={artFor(step, a)} />
           <h1 className="onboard-title">Birdie Bank</h1>
           <p className="onboard-text">The bank for your golf game. Play any game, settle every bet, keep the Tab all season.</p>
           <div className="onboard-games" role="img" aria-label={`${WELCOME_TAGS.map(t => t[1]).join(', ')} and ${Object.keys(GAMES).length - WELCOME_TAGS.length} more games`}>
@@ -151,38 +194,13 @@ export default function Onboarding({ onDone, play = null }) {
           {accountsEnabled && <button className="full-btn outline" onClick={() => setSigningIn(true)}>I have an account</button>}
           <p className="pw-fine">Got a link from a friend? Open it and you’re in, no setup.</p>
         </div>
-        {signingIn && <SignInSheet open source="onboarding" onClose={() => setSigningIn(false)} title="Welcome back" text="Sign in and your rounds, players and the Tab come right back." />}
-      </Screen>
-    );
-  }
+      </>);
+    }
 
-  // The back button and the progress bar. On a question with a scene, the scene runs from the
-  // very top of the phone (behind the status bar) and this bar sits over its sky.
-  const scene = sceneFor(step);
-  const top = (
-    <div className={`ob-head ${scene && sceneShows(scene.kind) ? 'scenic' : ''}`}>
-      {scene && <Scene key={step} {...scene} className="ob-scene" />}
-      <div className="ob-top">
-        <button className="header-back" onClick={back} aria-label="Back"><Icon name="arrow-left" /></button>
-        <div className="ob-progress" role="progressbar" aria-label="Setup progress" aria-valuemin={0} aria-valuemax={100} aria-valuenow={Math.round(progressOf(step) * 100)}>
-          <i style={{ width: `${progressOf(step) * 100}%` }} />
-        </div>
-      </div>
-    </div>
-  );
-  // `hint` says what's left when Continue can't go yet, so a grey button never looks broken
-  const cta = (label = 'Continue', ok = true, hint = null) => (
-    <div className="cta-wrap">
-      <button className="full-btn" disabled={!ok} onClick={next}>{label} <Icon name="arrow-right" /></button>
-      {!ok && hint && <p className="ob-hint" role="status">{hint}</p>}
-    </div>
-  );
-
-  if (step === 'games') {
-    return (
-      <Screen className="onboard">
-        {top}
+    if (step === 'games') {
+      return (<>
         <div className="scroll ob-body">
+          <StepArt art={artFor(step, a)} />
           <h1 className="ob-q d">{QUESTION.games.q}</h1>
           <p className="ob-sub">{QUESTION.games.sub}</p>
           <div className="ob-tiles">
@@ -201,18 +219,16 @@ export default function Onboarding({ onDone, play = null }) {
           </div>
         </div>
         {cta('Continue', answered('games', a), 'Pick at least one game to go on.')}
-      </Screen>
-    );
-  }
+      </>);
+    }
 
-  if (QUESTION[step]) {
-    const q = QUESTION[step];
-    return (
-      <Screen className="onboard">
-        {top}
+    if (QUESTION[step]) {
+      const q = QUESTION[step];
+      return (<>
         <div className="scroll ob-body">
+          <StepArt art={artFor(step, a)} />
           <h1 className="ob-q d">{q.q}</h1>
-          <div role="radiogroup" aria-label={q.q}>
+          <div className="ob-choices" role="radiogroup" aria-label={q.q}>
             {q.options.map(o => {
               const on = a[step] === o.value;
               return (
@@ -223,17 +239,14 @@ export default function Onboarding({ onDone, play = null }) {
           </div>
         </div>
         {cta('Continue', answered(step, a), 'Pick one to go on.')}
-      </Screen>
-    );
-  }
+      </>);
+    }
 
-  const p = payoff(step, a);
-  if (p) {
-    return (
-      <Screen className="onboard">
-        {top}
-        <div className="scroll ob-body">
-          {guideFor(step, a) && <Spot key={step} kind={guideFor(step, a)} size={84} className="ob-guide" ids={['visor', 'snapback']} />}
+    const p = payoff(step, a);
+    if (p) {
+      return (<>
+        <div className="scroll ob-body ob-payoff">
+          <StepArt art={artFor(step, a)} />
           <div className="eyebrow">{p.eyebrow}</div>
           <h1 className="ob-q d">{p.title}</h1>
           <p className="ob-sub">{p.text}</p>
@@ -242,21 +255,20 @@ export default function Onboarding({ onDone, play = null }) {
           {step === 'p-math' && <FourJobs />}
         </div>
         {cta()}
-      </Screen>
-    );
-  }
+      </>);
+    }
 
-  if (step === 'name') {
-    return (
-      <Screen className="onboard">
-        {top}
-        <div className="scroll ob-body">
+    if (step === 'name') {
+      return (<>
+        <div className="scroll ob-body ob-form">
           <h1 className="ob-q d">Last thing. What should the group call you?</h1>
           {acct.user && <p className="field-help" style={{ marginTop: 0 }}>Signed in as {acct.user.email}. Your rounds will save to your account.</p>}
           <label className="field-label" htmlFor="ob-name">Your name</label>
           <input id="ob-name" aria-label="Your name" className="name-input" value={name} onChange={e => setName(e.target.value)} placeholder="e.g. Sam" autoComplete="given-name" maxLength={24} />
           <label className="field-label" htmlFor="ob-index">Handicap <span className="opt">optional</span></label>
-          <button id="ob-index" className="amt-btn field-btn" aria-label={index == null ? 'Handicap, optional. Add' : `Handicap ${formatIndex(index)}. Change`} onClick={() => setPad(true)}>{index == null ? 'Add' : formatIndex(index)}</button>
+          <button id="ob-index" className={`name-input ob-field-btn ${index == null ? 'empty' : ''}`} aria-label={index == null ? 'Handicap, optional. Add' : `Handicap ${formatIndex(index)}. Change`} onClick={() => setPad(true)}>
+            <span>{index == null ? 'Add your index' : formatIndex(index)}</span><Icon name={index == null ? 'plus' : 'pencil-simple'} />
+          </button>
           <p className="field-help">No handicap? Leave it blank. When you do use them, the best player gets no strokes and everyone else gets the difference.</p>
           <div className="field-label" id="ob-buddy">Pick a Ball buddy <span className="opt">optional</span></div>
           <div className="av-grid ob-buddies" role="radiogroup" aria-labelledby="ob-buddy">
@@ -298,23 +310,19 @@ export default function Onboarding({ onDone, play = null }) {
           !agreed && 'tick Friendly wagers only',
           asksAge(a) && !age && 'answer the age question',
         ].filter(Boolean).join(', then ').replace(/^./, c => `To go on, ${c}`) + '.')}
-        <Numpad open={pad} title="Handicap" initial={index ?? ''} allowDecimal allowNegative min={-10} max={54}
-          onClose={() => setPad(false)} onDone={v => { setIndex(v); setPad(false); }} />
-      </Screen>
-    );
-  }
+      </>);
+    }
 
-  // "All set": who you are, what you told us (each line checked off), what's ready, then the next round
-  const rows = [
-    ['Your games', gameList(a.games)],
-    ['Usually', sizeLabel(a.size)],
-    ['Settling up', settleLabel(a.settle)],
-    ['The math', 'Birdie Bank, every time'],
-  ];
-  const first = name.trim();
-  return (
-    <Screen className="onboard">
-      {top}
+    // "All set": who you are and what you told us, each line checked off, then the next round. What
+    // each answer gets you was said on its payoff, so it isn't listed again here.
+    const rows = [
+      ['Your games', gameList(a.games)],
+      ['Usually', sizeLabel(a.size)],
+      ['Settling up', settleLabel(a.settle)],
+      ['The math', 'Birdie Bank, every time'],
+    ];
+    const first = name.trim();
+    return (<>
       <div className="scroll ob-body">
         <div className="eyebrow">All set</div>
         <h1 className="ob-q d">{first}, your group is ready.</h1>
@@ -333,15 +341,35 @@ export default function Onboarding({ onDone, play = null }) {
             </div>
           ))}
         </div>
-        <ul className="pw-list ob-ready">
-          {readyLines(a).map(t => <li key={t}><Icon name="check-circle" fill /> {t}</li>)}
-        </ul>
-        <p className="ob-sub">Pick the day and the course, suggest a game and a bet, and the group votes from one link. About 30 seconds.</p>
+        <p className="ob-sub ob-next">No day needed. Send the group one link, see who’s in, and they help pick the day, the course and the game.</p>
       </div>
       <div className="cta-wrap">
-        <button className="full-btn" onClick={() => finish(true)}>Set up your next round <Icon name="arrow-right" /></button>
+        <button className="full-btn" onClick={() => finish(true)}>Get a round going <Icon name="arrow-right" /></button>
         <button className="full-btn outline" onClick={() => finish(false)}>I’ll do it later</button>
       </div>
+    </>);
+  };
+
+  const progress = progressOf(step);
+  return (
+    <Screen className="ob-flow">
+      {/* Hidden on the welcome rather than gone, so the bar fills from where it was as you move */}
+      <div className={`ob-top ${step === 'welcome' ? 'off' : ''}`} aria-hidden={step === 'welcome' || undefined}>
+        <button className="header-back" onClick={back} aria-label="Back" tabIndex={step === 'welcome' ? -1 : undefined}><Icon name="arrow-left" /></button>
+        <div className="ob-progress" role="progressbar" aria-label="Setup progress" aria-valuemin={0} aria-valuemax={100} aria-valuenow={Math.round(progress * 100)}>
+          <i style={{ transform: `scaleX(${progress})` }} />
+        </div>
+      </div>
+      <div className="ob-stage">
+        <OnStage.Provider value={step}>
+          <Stage id={step} dir={dir}>
+            <Page step={step}>{page()}</Page>
+          </Stage>
+        </OnStage.Provider>
+      </div>
+      {signingIn && <SignInSheet open source="onboarding" onClose={() => setSigningIn(false)} title="Welcome back" text="Sign in and your rounds, players and the Tab come right back." />}
+      <Numpad open={pad && step === 'name'} title="Handicap" initial={index ?? ''} allowDecimal allowNegative min={-10} max={54}
+        onClose={() => setPad(false)} onDone={v => { setIndex(v); setPad(false); }} />
     </Screen>
   );
 }
@@ -368,7 +396,7 @@ function SampleMoney({ game }) {
           <div className="ob-phone-holes">{Array.from({ length: 9 }, (_, h) => <i key={h} className={h < 4 ? 'on' : ''} />)}</div>
         </div>
       </div>
-      <span className="chip pink ob-mock-tag">Live, hole by hole</span>
+      <span className="chip ochre ob-mock-tag">Live, hole by hole</span>
     </div>
   );
 }

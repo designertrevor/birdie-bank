@@ -83,12 +83,22 @@ export function DayTiles({ days, on, onToggle, onAdd, addLabel = 'Pick', counts 
   );
 }
 
+/**
+ * How many seats across so the rows come out even: all in one row up to five, then as few rows of
+ * five or fewer as fit, shared out evenly (6 is 3 and 3, 7 is 4 and 3, 9 is 5 and 4).
+ */
+function seatColumns(n) {
+  if (n <= 5) return Math.max(n, 1);
+  return Math.ceil(n / Math.ceil(n / 5));
+}
+
 /** Who's on the plan as seat tiles: their face and their answer. `onAdd`: a "+" tile to ask more. */
 export function SeatTiles({ people, me, onTap, onAdd, addLabel = 'Ask more' }) {
   const shown = people.filter(p => p.status !== 'out');
   const out = people.length - shown.length;
+  const cols = seatColumns(shown.length + (onAdd ? 1 : 0));
   return (
-    <div className="pd-seats" role="list" aria-label="Who’s in">
+    <div className="pd-seats" role="list" aria-label="Who’s in" style={{ '--cols': cols }}>
       {shown.map(p => {
         const tile = (
           <>

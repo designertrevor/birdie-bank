@@ -346,7 +346,8 @@ export function BuddyFigure({ id, x = 0, y = 0, size = 64 }) {
   const Critter = CRITTERS[id];
   const Hat = ART[id] || ART.bucket;
   const file = fileFor(id);
-  return <g transform={`translate(${x} ${y}) scale(${size / 64})`}>{file ? <ArtImage file={file} w={64} h={64} outline={false} /> : Critter ? <Critter /> : <><Ball /><Hat /></>}</g>;
+  // Standing on the page with no backdrop, a buddy carries its own line: ink in the light theme, cream in the dark, so a white hat or a black brim never melts into the card
+  return <g transform={`translate(${x} ${y}) scale(${size / 64})`}>{file ? <ArtImage file={file} w={64} h={64} outline={false} ring="buddy-ring" /> : Critter ? <Critter /> : <><Ball /><Hat /></>}</g>;
 }
 
 /** The outside drawing for a buddy (src/art/buddies/<id>.svg) or a critter (src/art/critters/<id>.svg), if one has landed. */
@@ -360,7 +361,8 @@ export function BuddyArt({ id, bg, className = '' }) {
   return (
     <svg className={`buddy-art ${className}`} viewBox="0 0 64 64" aria-hidden="true" focusable="false">
       <rect width="64" height="64" fill={backdropOf(bg).hex} />
-      {file ? <ArtImage file={file} w={64} h={64} outline={false} /> : Critter ? <Critter /> : <><Ball /><Hat /></>}
+      {/* On its backdrop a buddy's (or critter's) line follows the backdrop, not the theme: ink on the pastels, cream on teal */}
+      {file ? <ArtImage file={file} w={64} h={64} outline={false} ring={backdropOf(bg).ink === '#ffffff' ? 'buddy-ring-cream' : 'buddy-ring-ink'} /> : Critter ? <Critter /> : <><Ball /><Hat /></>}
     </svg>
   );
 }

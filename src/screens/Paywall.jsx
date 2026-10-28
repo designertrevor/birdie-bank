@@ -3,6 +3,7 @@
 // a variant (see VARIANTS in lib/paywall.js); add a view to VIEWS below to test another one.
 import { useEffect, useState } from 'react';
 import { Header, Icon, PickMark, Screen, useUI } from '../components/ui.jsx';
+import { Spot } from '../components/Spot.jsx';
 import { getState, update } from '../lib/store.js';
 import { track } from '../lib/analytics.js';
 import { useNav } from '../lib/nav.js';
@@ -73,7 +74,7 @@ function TrialWithFreeWayOut({ plan, setPlan, onClose, onTrial, onFree, freeWayO
       {onClose && <Header title="" onClose={onClose} />}
       <div className="scroll">
         <div className="pw-hero">
-          <div className="pw-badge"><Icon name="star" fill /></div>
+          <Spot kind="cup" size={112} className="pw-art" />
           <h1 className="pw-title d">Try Pro free for {TRIAL_DAYS} days</h1>
           <p className="pw-lead">That covers your next round, and the one after.</p>
         </div>
@@ -140,7 +141,7 @@ function LifetimeThanks({ onClose }) {
       <Header title="" onClose={onClose} />
       <div className="scroll">
         <div className="pw-hero">
-          <div className="pw-badge"><Icon name="star" fill /></div>
+          <Spot kind="cup" size={112} className="pw-art" />
           <h1 className="pw-title d">You’ve got Pro for life</h1>
           <p className="pw-lead">{LIFETIME_LINE}. Nothing to pay, ever.</p>
         </div>

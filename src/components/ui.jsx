@@ -39,7 +39,8 @@ export function Header({ title, onBack, onClose, right, small }) {
   return (
     <div ref={ref} className={`screen-header ${large ? 'large' : ''} ${tucked ? 'tucked' : ''}`}>
       {onBack && <button className="header-back" onClick={onBack} aria-label="Back"><Icon name="arrow-left" /></button>}
-      <span className="screen-title" style={small || onBack ? { fontSize: 20, letterSpacing: '-.01em', flex: 1 } : { flex: 1 }}>{title}</span>
+      {/* The screen's one real heading, for screen readers' "jump to heading" */}
+      <h1 className="screen-title" style={small || onBack ? { fontSize: 20, letterSpacing: '-.01em', flex: 1 } : { flex: 1 }}>{title}</h1>
       {right}
       {onClose && <button className="header-close" onClick={onClose} aria-label="Close"><Icon name="x" /></button>}
     </div>

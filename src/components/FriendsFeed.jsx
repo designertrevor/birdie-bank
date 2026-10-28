@@ -77,7 +77,7 @@ export function FriendsUpNext({ show = true }) {
   if (!show && !list.length) return null;
   return (
     <>
-      <div className="sec-label fr-head">Friends{list.length > 0 && <span className="fr-live"><span className="live-dot" aria-hidden="true" />{list.length} playing now</span>}</div>
+      <h2 className="sec-label fr-head">Friends{list.length > 0 && <span className="fr-live"><span className="live-dot" aria-hidden="true" />{list.length} playing now</span>}</h2>
       {list.map(v => <FriendRoundCard key={v.id} view={v} />)}
       <button className="lately-all fr-all" onClick={() => nav.push('friends')}>
         <Spot kind="crowd" size={64} className="fr-crowd" />

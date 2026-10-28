@@ -1,8 +1,9 @@
 // "Get a round going": the one-screen ask (overhaul, 2026-10-27). A message, three optional details
 // that start as Not yet (When, Where, Game and bet), who to ask, and Send. Nothing has to be set to
 // send: the group sorts out the rest on the plan page. Opened by "Plan ahead" and Up next's "Get a
-// round going" (nav.push('newRound', { ahead: true }), NewRound.jsx). The full setup's "Schedule
-// for later" still carries a whole setup into a plan (newround/PlanSteps.jsx).
+// round going" (nav.push('newRound', { ahead: true }), NewRound.jsx), and by the end of organizer
+// onboarding. The full setup's "Schedule for later" still carries a whole setup into a plan
+// (newround/PlanSteps.jsx).
 import { useState } from 'react';
 import { Header, Icon, Screen, useUI } from '../../components/ui.jsx';
 import { getState, uid, update, useStore } from '../../lib/store.js';
@@ -20,8 +21,16 @@ import { PlansOffError } from '../../lib/plan-adapters.js';
 import { cleanAsk, groupGames, newAskPlan } from '../../lib/plan-ask.js';
 import { ASK_DEFAULT, ASK_MAX, whenWords } from '../../lib/plan-open.js';
 import { DetailRows, GameBetSheet, WhenSheet, WhereSheet } from './PlanParts.jsx';
+import { PAYWALL_ON } from '../../lib/paywall-flag.js';
+import { hasLifetimePro } from '../../lib/pro-client.js';
+import { shouldShowPaywall } from '../../lib/paywall.js';
 
-export default function PlanAsk() {
+/**
+ * `onboarding`: the end of organizer onboarding, so the plan opens with the paywall on top (when
+ * it's on). `told`: the games onboarding was told the group plays; when it's one, it starts picked
+ * (still easy to hand back to the group), and either way they lead the ballot (groupGames).
+ */
+export default function PlanAsk({ onboarding = false, told = null }) {
   const nav = useNav();
   const { ask, showToast } = useUI();
   const state = useStore();
@@ -29,7 +38,7 @@ export default function PlanAsk() {
   const [msg, setMsg] = useKept('ask:msg', ASK_DEFAULT);
   const [when, setWhen] = useKept('ask:when', { mode: 'open', date: null, days: [], part: null });
   const [course, setCourse] = useKept('ask:course', null);
-  const [pick, setPick] = useKept('ask:pick', { game: null, bet: null });
+  const [pick, setPick] = useKept('ask:pick', () => ({ game: told?.length === 1 && GAMES[told[0]] ? told[0] : null, bet: null }));
   const [invited, setInvited] = useKept('ask:invited', []);
   const [sheet, setSheet] = useState(null);
   const [adding, setAdding] = useState(false);
@@ -71,7 +80,7 @@ export default function PlanAsk() {
       st.plans[id] = plan;
       if (course?.id && !st.favorites.includes(course.id)) st.favorites = [course.id, ...st.favorites].slice(0, 6);
     });
-    track('plan_created', { game: pick.game || 'group', holes: 18, invited: people.length, trip: false, from: 'ask', when: plan.when.mode });
+    track('plan_created', { game: pick.game || 'group', holes: 18, invited: people.length, trip: false, from: onboarding ? 'onboarding' : 'ask', when: plan.when.mode });
     try {
       await sharePlan(id);
       return { id, link: planShareLink(getState().plans[id]) };
@@ -80,8 +89,12 @@ export default function PlanAsk() {
       return { id, link: null };
     }
   };
-  // The plan page next, with Up next under it (what this screen kept goes as it closes)
-  const done = id => nav.reset('upnext', ['plan', { id }]);
+  // The plan page next, with Up next under it (what this screen kept goes as it closes); from
+  // onboarding, the paywall over it when it's on
+  const done = id => {
+    const paywall = onboarding && shouldShowPaywall(getState(), PAYWALL_ON, { pro: hasLifetimePro() }) ? [['paywall', { source: 'onboarding' }]] : [];
+    nav.reset('upnext', ['plan', { id }], ...paywall);
+  };
   const send = async () => {
     if (busy) return;
     setBusy(true);
@@ -115,15 +128,22 @@ export default function PlanAsk() {
 
   return (
     <Screen className="plan-ask">
-      <Header title="New round" onClose={close} />
+      {/* One title and a close (Trevor, 2026-10-28): the screen is named for what it does, and the
+          message below is what the group gets, so it reads as a text field, not a second heading */}
+      <Header title="Get a round going" onClose={close} />
       <div className="scroll">
-        <h1 className="pa-title">Who’s up for golf?</h1>
-        <label className="sr-only" htmlFor="pa-msg">Your message</label>
-        <textarea id="pa-msg" className="pa-msg" rows={2} maxLength={ASK_MAX} value={msg} onChange={e => setMsg(e.target.value)} onBlur={() => setMsg(cleanAsk(msg))} />
-        <p className="pa-hint">Every detail is optional. Leave it as Not yet and the group fills it in.</p>
-        <DetailRows rows={rows} />
+        <label className="sec-label pa-label" htmlFor="pa-msg">Your message</label>
+        <div className="pa-text">
+          <textarea id="pa-msg" className="pa-msg" rows={2} maxLength={ASK_MAX} value={msg} aria-describedby="pa-msg-foot"
+            onChange={e => setMsg(e.target.value)} onBlur={() => setMsg(cleanAsk(msg))} />
+          <p className="pa-foot" id="pa-msg-foot"><Icon name="link" /> Goes to the group with the link to answer</p>
+        </div>
 
-        <div className="sec-label">Ask</div>
+        <div className="sec-label">The details</div>
+        <DetailRows rows={rows} />
+        <p className="pa-hint">Each one can wait. Leave it open and the group sorts it out.</p>
+
+        <div className="sec-label">Who to ask</div>
         <div className="pa-people" role="group" aria-label="Who to ask">
           {list.map(p => (
             <button key={p.id} type="button" className={`pa-chip ${on.has(p.id) ? 'on' : ''}`} aria-pressed={on.has(p.id)} onClick={() => toggle(p)}>
