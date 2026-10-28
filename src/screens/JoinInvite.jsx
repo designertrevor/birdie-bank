@@ -5,6 +5,7 @@
 import { Spot } from '../components/Spot.jsx';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { BallIllo, Icon, Screen, Segmented } from '../components/ui.jsx';
+import '../components/gone.css';
 import { Avatar } from '../components/Avatar.jsx';
 import { LinkBrand, LinkHowTo } from '../components/LinkBrand.jsx';
 import { useGroupAvatars } from '../lib/useAvatars.js';
@@ -186,7 +187,7 @@ export default function JoinInvite({ code, onJoined, onSkip, setUp = false }) {
       <Screen className="onboard">
         {brand}
         <div className="scroll onboard-body">
-          <BallIllo className="onboard-illo" face={!err} />
+          {missing ? <Spot kind="loneball" size={150} className="gone-art" /> : <BallIllo className="onboard-illo" face={!err} />}
           <h1 className="onboard-title" style={{ fontSize: 34 }} aria-live="polite">{err ? (missing ? 'Round not found' : 'No signal') : 'Finding your round…'}</h1>
           <p className="onboard-text" aria-live="polite">
             {!err && <>Code {code}</>}
@@ -480,9 +481,14 @@ export default function JoinInvite({ code, onJoined, onSkip, setUp = false }) {
       <div className="cta-wrap">
         <button className="full-btn" onClick={() => setStep('seat')}>Pick your seat <Icon name="arrow-right" /></button>
         <button className="full-btn outline" disabled={busy} onClick={() => (setUp ? join(null) : setStep('watch'))}>{busy ? 'Joining…' : 'I’m just watching'}</button>
-        {/* Not up for a bet at all: a card of your own on the same course (just-playing.js) */}
-        {!done && <button className="text-link own-card-link" onClick={() => setStep('own')}>Just keep my own score</button>}
-        {setUp && <button className="sheet-cancel" style={{ width: '100%', margin: 0 }} onClick={onSkip}>Not now</button>}
+        {/* The quiet ways out share one row: not up for a bet at all (a card of your own on the same
+            course, just-playing.js), and on a set-up phone, not now */}
+        {(!done || setUp) && (
+          <div className="join-quiet">
+            {!done && <button className="text-link" onClick={() => setStep('own')}>Just keep my own score</button>}
+            {setUp && <button className="text-link" onClick={onSkip}>Not now</button>}
+          </div>
+        )}
         {setUp && joinErr && <p className="field-error" role="alert" style={{ textAlign: 'center' }}>Couldn’t join. Check your signal and try again.</p>}
       </div>
     </Screen>

@@ -1,6 +1,7 @@
 // One friend: what's on the Tab between you, your record, and the round-by-round story behind it.
 import { useState } from 'react';
 import { Header, Icon, Screen, Sheet, useUI } from '../components/ui.jsx';
+import { Gone } from '../components/Gone.jsx';
 import { Avatar, SettleSheet } from '../components/Pay.jsx';
 import { PersonActions, RewardLines } from '../components/TabCard.jsx';
 import { TabWhereFrom } from '../components/WhereFrom.jsx';
@@ -116,6 +117,17 @@ export default function Person({ id: opened }) {
     const lastText = last ? `${rounds === 1 ? '' : 'last '}${roundDate(last)}${last.course?.name ? ` at ${last.course.name}` : ''}` : null;
     return [saved, rounds ? `${rounds} round${rounds === 1 ? '' : 's'}` : null, lastText].filter(Boolean).join(' · ') || 'No rounds yet';
   };
+
+  // An id this phone knows nothing about (a stale link, a player taken off): say so, rather than
+  // drawing a made-up "Someone" with a Tab and a rivalry
+  if (id !== state.me && !player && name === 'Someone') {
+    return (
+      <Screen>
+        <Header title="Player" small onBack={nav.pop} />
+        <Gone title="Player not found" text="They aren’t on this phone any more. Your rounds with them are still in History." action="Back to Players" onAction={() => nav.reset('people')} />
+      </Screen>
+    );
+  }
 
   return (
     <Screen>

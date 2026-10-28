@@ -921,7 +921,7 @@ button:disabled { cursor: not-allowed; }
   --sc-wall: #2a2f2e; --sc-door: #3a3330; --sc-stone: #1f2423; --sc-road: #2a2e2d; --sc-snow: #c8d4dc; --sc-glass: #30475a;
   --line: #303937; --line-soft: #283030;
   --teal: #173d3c; --icon: var(--mint); --pink-text: var(--pink); --coral-text: var(--coral); --focus: var(--lav); --win: #6fd3a8; --win-bg: #173a2e; --loss: #ff8a7d; --loss-bg: #3d1f1c; --check: #4ade80;
-  --on-ink: #0a0a0a; --bkr-card: #2e2a1c; --cur-cell: #3a2030; --pick-tint: #3a1d29;
+  --on-ink: #0a0a0a; --bkr-card: #2e2a1c; --cur-cell: #3a2030; --pick-tint: #262f2e;
   color-scheme: dark;
 }
 @media (prefers-color-scheme: dark) {
@@ -933,7 +933,7 @@ button:disabled { cursor: not-allowed; }
   --sc-wall: #2a2f2e; --sc-door: #3a3330; --sc-stone: #1f2423; --sc-road: #2a2e2d; --sc-snow: #c8d4dc; --sc-glass: #30475a;
   --line: #303937; --line-soft: #283030;
   --teal: #173d3c; --icon: var(--mint); --pink-text: var(--pink); --coral-text: var(--coral); --focus: var(--lav); --win: #6fd3a8; --win-bg: #173a2e; --loss: #ff8a7d; --loss-bg: #3d1f1c; --check: #4ade80;
-  --on-ink: #0a0a0a; --bkr-card: #2e2a1c; --cur-cell: #3a2030; --pick-tint: #3a1d29;
+  --on-ink: #0a0a0a; --bkr-card: #2e2a1c; --cur-cell: #3a2030; --pick-tint: #262f2e;
   color-scheme: dark;
   }
 }
@@ -1288,7 +1288,7 @@ button:disabled { cursor: not-allowed; }
 .ic-from { display: flex; align-items: center; gap: 10px; font-size: 15px; color: var(--body); margin-bottom: 10px; }
 .ic-from strong { color: var(--ink); }
 .ic-game { font-family: var(--display); font-size: 34px; font-weight: 800; letter-spacing: -.03em; line-height: 1.05; color: var(--ink); display: flex; align-items: center; gap: 10px; }
-.ic-game i { color: var(--pink-text); font-size: 30px; }
+.ic-game i { color: var(--ink); font-size: 30px; }
 .ic-course { font-size: 16px; color: var(--mute); }
 .ic-facts { margin-top: 14px; display: flex; flex-direction: column; gap: 10px; }
 .ic-facts > div { display: flex; flex-direction: column; gap: 4px; padding: 12px 14px; background: var(--surface); border-radius: 16px; }
@@ -1470,6 +1470,9 @@ button.who-status { cursor: pointer; min-height: 36px; }
 .pw-free .eyebrow, .pw-free .li-sub { color: var(--body); } /* mute on the green is under 4.5:1 */
 .pw-free .pw-list { margin-top: 10px; }
 .pw-free .pw-list li > i { color: var(--win); }
+/* The list scrolls under the buttons through a short fade, so a card cut at the edge reads as more below */
+.screen.paywall .cta-wrap { position: relative; }
+.screen.paywall .cta-wrap::before { content: ""; position: absolute; left: 0; right: 0; bottom: 100%; height: 28px; background: linear-gradient(transparent, var(--canvas)); pointer-events: none; }
 .pw-fine { font-size: 13px; color: var(--mute); text-align: center; line-height: 1.4; }
 
 /* YOUR PLAN and the cancel screen (Settings, paywall flag only) */
@@ -3141,7 +3144,7 @@ button.cal-title:active { transform: scale(.95); background: var(--surface); }
 .rm-card.flash { box-shadow: inset 0 0 0 2px var(--pink-fill); animation: rm-flash 1.4s var(--ease-out) 2; }
 @keyframes rm-flash { 50% { box-shadow: inset 0 0 0 2px var(--pink-fill), 0 0 0 6px var(--pick-tint); } }
 .rm-main { flex: 1; min-width: 0; }
-.rm-area { display: block; margin-bottom: 4px; color: var(--pink-text); }
+.rm-area { display: block; margin-bottom: 4px; color: var(--mute); }
 .rm-title { font-family: var(--display); font-size: 18px; font-weight: 800; line-height: 1.25; letter-spacing: -.01em; color: var(--ink); text-wrap: balance; }
 .rm-blurb { margin-top: 4px; font-size: 14px; line-height: 1.45; color: var(--body); }
 .rm-meta { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 10px; margin-top: 12px; }
@@ -3371,7 +3374,9 @@ a.header-btn.rm-open { text-decoration: none; }
 .ap-how .field-help, .join-how .field-help { margin-top: 10px; }
 .ap-how .pm-btn, .join-how .pm-btn { flex: 1 1 0; min-width: 0; padding: 0 8px; font-size: 14px; line-height: 1.1; }
 .join-how { width: 100%; margin: 12px 0 8px; text-align: left; }
-.own-card-link { align-self: center; justify-content: center; width: 100%; }
+/* The invite's quiet ways out (keep my own score, not now) on one row under the two buttons */
+.join-quiet { display: flex; justify-content: center; flex-wrap: wrap; gap: 4px 20px; }
+.join-quiet .text-link { min-height: 44px; justify-content: center; }
 /* The friendly finish: a card with the score, never money */
 .nice-scroll { padding: 8px 16px 24px; }
 .nice-card {
@@ -3601,7 +3606,7 @@ a.header-btn.rm-open { text-decoration: none; }
 .pf-hero-words { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
 .pf-hero-name { font-size: 26px; font-weight: 800; letter-spacing: -.02em; line-height: 1.1; }
 .pf-hero-sub { font-size: 14px; color: var(--mute); }
-.pf-hero-link { font-size: 14px; font-weight: 700; color: var(--pink-text); display: inline-flex; align-items: center; gap: 2px; margin-top: 2px; }
+.pf-hero-link { font-size: 14px; font-weight: 700; color: var(--ink); display: inline-flex; align-items: center; gap: 2px; margin-top: 2px; }
 .pf-hero-setup { display: flex; align-items: flex-start; gap: 12px; padding-top: 14px; border-top: 1px solid var(--line); }
 .pf-ring { width: 40px; height: 40px; border-radius: 50%; flex-shrink: 0; display: grid; place-items: center; background: conic-gradient(var(--win) var(--deg), var(--surface-strong) 0); }
 .pf-ring span { width: 32px; height: 32px; border-radius: 50%; background: var(--card); display: grid; place-items: center; font-size: 11px; font-weight: 800; color: var(--ink); font-variant-numeric: tabular-nums; }
