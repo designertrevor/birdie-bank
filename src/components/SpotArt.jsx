@@ -278,6 +278,9 @@ const SCENES = {
   punchcard: () => ( // A punch card
     <FileOnly />
   ),
+  goldcrown: () => ( // The winner's crown, on its own to sit on a face
+    <FileOnly />
+  ),
 };
 
 // Scenes made of Ball buddies. `ids` picks who; the defaults are a mixed group.

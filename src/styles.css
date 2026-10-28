@@ -3835,6 +3835,14 @@ a.header-btn.rm-open { text-decoration: none; }
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]):not([data-theme="dark"]) .art-outline { filter: drop-shadow(0 1.5px 0 #fbf7ec) drop-shadow(0 -1.5px 0 #fbf7ec) drop-shadow(1.5px 0 0 #fbf7ec) drop-shadow(-1.5px 0 0 #fbf7ec); }
 }
+/* A Ball buddy's own line (Trevor, 2026-10-28: a white hat vanished on a light card, a black brim on a dark one). On its
+   backdrop the line follows the backdrop: ink on the pastels, cream on teal. Standing on the page (the crew on the tee,
+   the high five) it follows the theme. In units of the buddy's 64 box. */
+.buddy-ring-ink, .buddy-ring { filter: drop-shadow(0 1.2px 0 #0a0a0a) drop-shadow(0 -1.2px 0 #0a0a0a) drop-shadow(1.2px 0 0 #0a0a0a) drop-shadow(-1.2px 0 0 #0a0a0a); }
+.buddy-ring-cream, :root[data-theme="dark"] .buddy-ring { filter: drop-shadow(0 1.2px 0 #fbf7ec) drop-shadow(0 -1.2px 0 #fbf7ec) drop-shadow(1.2px 0 0 #fbf7ec) drop-shadow(-1.2px 0 0 #fbf7ec); }
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]):not([data-theme="dark"]) .buddy-ring { filter: drop-shadow(0 1.2px 0 #fbf7ec) drop-shadow(0 -1.2px 0 #fbf7ec) drop-shadow(1.2px 0 0 #fbf7ec) drop-shadow(-1.2px 0 0 #fbf7ec); }
+}
 
 /* The art sheet (?art): every drawing, labelled, in both themes */
 .art-sheet { max-width: 1120px; margin: 0 auto; padding: 0 20px 80px; color: var(--ink); }
