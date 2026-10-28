@@ -141,3 +141,7 @@
 }
 .sp-pickup.on { background: var(--loss-bg); color: var(--loss); }
 .sp-foot .sp-next { flex: 1; margin: 0; }
+
+/* Small buttons on the scoring screen keep their size but take a 44px tap, for a gloved thumb */
+.ws-change, .play .change-btn { position: relative; }
+.ws-change::before, .play .change-btn::before { content: ''; position: absolute; left: 50%; top: 50%; width: max(100%, 44px); height: max(100%, 44px); transform: translate(-50%, -50%); }
