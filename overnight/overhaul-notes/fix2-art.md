@@ -67,3 +67,33 @@ strokes), not regenerated. Before and after shots of each changed drawing, light
 ## Checks
 
 `npm test` 2688 pass, `npm run lint` clean (one old warning in scripts/review-seed.js), `npm run build` ok.
+
+## Audit fixes (auditor-1 and auditor-2, owner art)
+
+Shots: `overnight/fix2-shots/art/audit/` (the audit's own recipes run against this branch, compare with
+`audit-shots-2/` in the overhaul worktree) and `<name>-<before|after>-<light|dark>.png` beside them.
+
+- **Broken, more-1: the results share card's game sticker was an empty cream square.** An SVG drawn
+  as a picture loads nothing from outside, so the game file the sticker places never came. The
+  reader (`src/lib/useArtSrc.js`, new `svgDataUrl`) now inlines every outside drawing as a data link
+  and drops the dark theme's copies before the canvas draws it. The profile and rivalry cards had the
+  same reader inline in `src/screens/Share.jsx` (a screen file: one-line change, it now calls
+  `useArtSrc`), so their buddies come through too. Checked on Share from a round, both themes.
+- **art-1 (auditor-1): teal avatars lost their circle on a dark card.** In dark, a buddy on the teal
+  backdrop gets a cream ring (`.av-teal`, Avatar.jsx), and BuddyArt drawn on its own (the art sheet,
+  the picker) a cream rim (`.bd-rim`). Palette kept, no new teal.
+- **art-2 (auditor-2): grey ring round avatars in dark** read as a halo: buddy avatars drop it in dark
+  (photos keep theirs).
+- **Wizard and cone balls** were about 40% small: their boxes are zoomed so the ball matches the set;
+  the hat crops at the top like the chef's.
+- **The old glossy ball** on the Join, Plan, Draft and Challenge link screens: `src/art/icons/ball.svg`
+  now exists (a copy of spots/tee.svg), so BallIllo draws the round 4 ball on a tee with the dark
+  outline. Known gap: its `face={false}` on errors can't hide the file's face.
+- **loneball** mound is mint now, so it has ground in light and isn't a cream slab in dark.
+- **High five** (hand-drawn): arms behind the bodies, drawing 6 units lower so the star clears the top.
+- **Albatross**: its ball is 1.7 times bigger with dimples.
+- **Scene notes** in art-manifest.js no longer mention a cream card.
+
+Not done: the calendar spot's "glare" (its body is the palette cream every spot uses; a darker cream
+would break the one-file rule), the hand-drawn game tiles' restyle and the Nines numeral (polish,
+usage is tight).

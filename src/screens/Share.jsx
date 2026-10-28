@@ -5,7 +5,7 @@
 // your year in review (wrapped.js), drawn by wrapped-image.js, or { kind: 'profile' } for your own
 // profile card (profile-card.js), a square drawn by profile-card-image.js. Only ever yours: it takes no id.
 // { kind: 'rivalry', id } is you against one friend (rivalry-card.js), a square drawn by rivalry-card-image.js.
-import { useCallback, useState } from 'react';
+import { useArtSrc } from '../lib/useArtSrc.js';
 import { Empty, Header, Screen } from '../components/ui.jsx';
 import { BuddyArt } from '../components/BuddyArt.jsx';
 import { ShareView } from '../components/ShareSheet.jsx';
@@ -36,12 +36,8 @@ const card = model => ({ model, alt: model.alt, text: cardText(model) });
  * keyed on the buddy and backdrop so a new buddy reads again. A photo needs none of this.
  */
 function useBuddySrc() {
-  const [src, setSrc] = useState(null);
-  const grab = useCallback(node => {
-    const svg = node?.querySelector('svg');
-    if (svg && typeof XMLSerializer !== 'undefined') setSrc(`data:image/svg+xml;charset=utf-8,${encodeURIComponent(new XMLSerializer().serializeToString(svg))}`);
-  }, []);
-  return [src, grab];
+  // The same reader as the results image: the buddy's outside file is inlined, or the canvas gets an empty circle
+  return useArtSrc();
 }
 
 /** What the canvas draws for an avatar model: an allowed photo, the buddy read from the page, or nothing (initials). */

@@ -363,6 +363,8 @@ export function BuddyArt({ id, bg, className = '' }) {
       <rect width="64" height="64" fill={backdropOf(bg).hex} />
       {/* On its backdrop a buddy's (or critter's) line follows the backdrop, not the theme: ink on the pastels, cream on teal */}
       {file ? <ArtImage file={file} w={64} h={64} outline={false} ring={backdropOf(bg).ink === '#ffffff' ? 'buddy-ring-cream' : 'buddy-ring-ink'} /> : Critter ? <Critter /> : <><Ball /><Hat /></>}
+      {/* The teal backdrop is as dark as a dark card: a cream rim keeps the circle there (styles.css .bd-rim; an avatar draws its own) */}
+      {backdropOf(bg).ink === '#ffffff' && <circle className="bd-rim" cx="32" cy="32" r="31.2" fill="none" stroke={BALL} strokeOpacity=".6" strokeWidth="1.6" />}
     </svg>
   );
 }
