@@ -30,7 +30,7 @@ export function PlansAndNext({ plans, onNow, live, last, onJoin }) {
   return (
     <>
       {live.length === 0 && <CountdownStrip plans={plans} />}
-      {plans.length > 0 && <div className="sec-label">Upcoming</div>}
+      {plans.length > 0 && <h2 className="sec-label">Upcoming</h2>}
       {plans.map(p => <UpcomingCard key={p.id} plan={p} />)}
       {/* Starting a round at the course (or running the last one back) stays one tap, plans or not */}
       {live.length === 0 && <StartCard last={last} fresh={!hasHistory} planned={planned} onJoin={onJoin} />}
@@ -139,52 +139,70 @@ function OpenPlanCard({ plan }) {
 }
 
 /**
- * The card that starts a round: big and illustrated when nothing's planned (the one next thing),
- * a shorter line under the upcoming rounds when something is. Start a round is the main action,
- * with a one-tap "same again" beside it when there's a last one.
+ * The card that starts a round: big, illustrated and the one tinted card when nothing's planned
+ * (the one next thing), and a plain white card of buttons under its own label when something is,
+ * so the plans keep the colour and the attention. Start a round is the main action, with a one-tap
+ * "same again" beside it when there's a last one.
  */
 function StartCard({ last, fresh, planned = false, onJoin = null }) {
   const nav = useNav();
   const again = last && GAMES[last.game] && !cardOnly(last);
-  return (
-    <div className={`un-start ${planned ? 'slim' : ''}`}>
-      {!planned && <Spot kind="tee" size={104} className="un-start-art" plate={false} />}
-      <span className="un-eyebrow">{planned ? 'Something else' : fresh ? 'Welcome to the first tee' : 'Nothing on the calendar'}</span>
-      <div className="un-start-title">{planned ? 'Playing now?' : fresh ? 'Your first round' : 'Play a round'}</div>
-      {!planned && <div className="un-start-sub">{fresh
-        ? 'Pick a game, a course and your group. Birdie Bank keeps score, does the math and settles up.'
-        : 'Pick the game, the course and the bets. Everyone follows along from a link.'}</div>}
+  const acts = (
+    <>
       <div className="un-start-acts">
         <button className="un-btn" onClick={() => nav.push('newRound')}><Icon name="golf" fill /> Start a round</button>
         {again && <button className="un-btn ghost" onClick={() => nav.push('newRound', { rematch: last.id })}><Icon name="arrow-counter-clockwise" /> Run it back</button>}
       </div>
       {onJoin && <button className="un-join" onClick={onJoin}>Got a code? <u>Join a friend’s round</u></button>}
+    </>
+  );
+  if (planned) {
+    return (
+      <section className="un-group" aria-labelledby="un-now">
+        <h2 className="sec-label" id="un-now">Playing now?</h2>
+        <div className="un-start slim">{acts}</div>
+      </section>
+    );
+  }
+  return (
+    <div className="un-start">
+      <Spot kind="tee" size={104} className="un-start-art" plate={false} />
+      <span className="un-eyebrow">{fresh ? 'Welcome to the first tee' : 'Nothing on the calendar'}</span>
+      <h2 className="un-start-title">{fresh ? 'Your first round' : 'Play a round'}</h2>
+      <div className="un-start-sub">{fresh
+        ? 'Pick a game, a course and your group. Birdie Bank keeps score, does the math and settles up.'
+        : 'Pick the game, the course and the bets. Everyone follows along from a link.'}</div>
+      {acts}
     </div>
   );
 }
 
 /**
- * The other ways to play, as illustrated cards: Get a round going (a day and the group, asked
- * ahead, always here), then a trip and a Big Game side by side.
+ * The other ways to play, under one label in one white card: Get a round going (a day and the
+ * group, asked ahead, always here) on top, then a trip and a Big Game side by side. The art carries
+ * the colour, so Up next has at most one tinted card at a time (Trevor, 2026-10-28).
  */
 function MoreWays({ trip = false }) {
   const nav = useNav();
   const [tripping, setTripping] = useState(false);
   return (
-    <>
-      <button className="un-go" onClick={() => nav.push('newRound', { ahead: true })}>
-        <span className="row-main">
-          <span className="un-go-title">Get a round going</span>
-          <span className="un-go-sub">No day needed yet. Ask the group and pick it together.</span>
-        </span>
-        <Spot kind="calendar" size={76} plate={false} className="un-go-art" />
-      </button>
-      <div className={`un-ways ${trip ? '' : 'one'}`}>
-        {trip && <button className="un-way trip" onClick={() => setTripping(true)}><Spot kind="suitcase" size={56} plate={false} /><span>Start a trip</span></button>}
-        <button className="un-way big" onClick={() => nav.push('bigGameSetup')}><Spot kind="crowd" size={56} plate={false} /><span>Big Game</span></button>
+    <section className="un-group" aria-labelledby="un-ways">
+      <h2 className="sec-label" id="un-ways">More ways to play</h2>
+      <div className="un-ways-card">
+        <button className="un-go" onClick={() => nav.push('newRound', { ahead: true })}>
+          <span className="row-main">
+            <span className="un-go-title">Get a round going</span>
+            <span className="un-go-sub">No day needed yet. Ask the group and pick it together.</span>
+          </span>
+          <Spot kind="calendar" size={68} plate={false} className="un-go-art" />
+        </button>
+        <div className={`un-ways ${trip ? '' : 'one'}`}>
+          {trip && <button className="un-way trip" onClick={() => setTripping(true)}><Spot kind="suitcase" size={52} plate={false} /><span>Start a trip</span></button>}
+          <button className="un-way big" onClick={() => nav.push('bigGameSetup')}><Spot kind="crowd" size={52} plate={false} /><span>Big Game</span></button>
+        </div>
       </div>
       {tripping && <Later><TripSheet open onClose={() => setTripping(false)} onDone={t => { setTripping(false); nav.push('trip', { id: t.id }); }} /></Later>}
-    </>
+    </section>
   );
 }
 
@@ -203,8 +221,8 @@ function FirstSteps() {
   ];
   if (steps.every(x => x.done)) return null;
   return (
-    <>
-      <div className="sec-label">Your first round</div>
+    <section className="un-group" aria-labelledby="un-steps">
+      <h2 className="sec-label" id="un-steps">Three steps to get going</h2>
       <ol className="first-steps">
         {steps.map((x, i) => (
           <li key={x.title}>
@@ -216,6 +234,6 @@ function FirstSteps() {
           </li>
         ))}
       </ol>
-    </>
+    </section>
   );
 }

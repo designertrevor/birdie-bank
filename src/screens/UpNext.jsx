@@ -71,7 +71,7 @@ export default function UpNext() {
   const onJoin = syncConfigured ? () => setJoining(true) : null;
 
   return (
-    <Screen>
+    <Screen className="upnext">
       <Header title="Up next" right={<AvatarButton />} />
       <div className="scroll">
         {updateReady && (

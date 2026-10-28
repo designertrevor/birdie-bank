@@ -172,7 +172,7 @@ function TripUpNextCard({ status: st, renderPlan }) {
     : line || `${roundsLine(st.done.length)} played`;
   return (
     <>
-      <div className="sec-label">Your trip</div>
+      <h2 className="sec-label">Your trip</h2>
       <div className="trip-card-wrap">
         <button className="trip-card" onClick={() => nav.push('trip', { id: st.trip.id })} aria-label={`${st.trip.name}. ${title}. See the trip`}>
           <div className="row-main">
