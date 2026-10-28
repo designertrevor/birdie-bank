@@ -52,3 +52,5 @@
 .te-waiting i { flex-shrink: 0; font-size: 16px; }
 /* The tools list (Season, Close the books, a crew's Hall of fame) has the same hairline edge as every other card */
 .tab-e .tab-tools:not(.solo) { border-radius: var(--r-card); box-shadow: var(--hair); }
+/* A square card's last line (Didn't get it?, Undo) sits close to the foot too, its 44px target overlapping the padding */
+.te-card > .recent-paid:last-child { margin-bottom: -8px; }
