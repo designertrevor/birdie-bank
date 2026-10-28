@@ -14,9 +14,9 @@ export const ART_KINDS = [
 
 /** Each scene and spot: its name, where it shows (and how big), for the sheet. */
 export const ART_USES = {
-  'scenes/course': { name: 'The first tee', used: ['Welcome, the hero'], px: 'whole, on a cream card 16px in from each side, 200 to 330px tall (the cream keeps the see-through faces from going black in dark)' },
-  'scenes/clubhouse': { name: 'The 19th hole', used: ['Set up: How do you settle up now?'], px: 'whole, on a cream card 16px in from each side (about 358 by 205)' },
-  'scenes/scorecard': { name: 'Doing the math', used: ['Set up: Who ends up doing the math?'], px: 'whole, on a cream card 16px in from each side (about 358 by 205)' },
+  'scenes/course': { name: 'The first tee', used: ['Welcome, the hero'], px: 'whole, 16px in from each side, 200 to 330px tall; faces filled cream (2026-10-28), so no card behind it in dark' },
+  'scenes/clubhouse': { name: 'The 19th hole', used: ['Set up: How do you settle up now?'], px: 'whole, 16px in from each side (about 358 by 205); faces filled cream, no card in dark' },
+  'scenes/scorecard': { name: 'Doing the math', used: ['Set up: Who ends up doing the math?'], px: 'whole, 16px in from each side (about 358 by 205); faces filled cream, no card in dark' },
   'scenes/roadtrip': { name: 'The road trip', used: ['Trip screen, before the first round is played'], px: 'full width, 150px tall' },
 
   'spots/tee': { name: 'Ball on a tee', used: ['Up next, on the Start a round card when nothing is planned (104px)', 'The notifications ask (30px)'] },
@@ -73,7 +73,7 @@ export const ART_USES = {
 
 /** The icons drawn as art: the welcome's game tags (Phosphor names) and the first ball. */
 export const ART_ICONS = [
-  { id: 'ball', name: 'The first ball on a tee', used: ['Join invite, Plan, Draft and Challenge link screens while they load or fail (180px)'] },
+  { id: 'ball', name: 'The first ball on a tee', used: ['Join invite, Plan, Draft and Challenge link screens while they load or fail (180px); since 2026-10-28 its file is the round 4 ball on a tee (a copy of spots/tee.svg), not the old glossy ball'] },
   { id: 'bank', name: 'Banker tag', used: ['Welcome, the game tags (13px)'] },
   { id: 'flag-pennant', name: 'Nassau tag', used: ['Welcome, the game tags (13px)'] },
   { id: 'coins', name: 'Skins tag', used: ['Welcome, the game tags (13px)'] },

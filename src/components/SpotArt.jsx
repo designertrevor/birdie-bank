@@ -304,15 +304,16 @@ function Crowd({ ids }) {
 // high five, and a pink star marks the slap (on the peach plate, ochre lines vanished)
 function HighFive({ ids }) {
   const [a, b] = ids?.length >= 2 ? ids : ['visor', 'snapback'];
-  return (<>
+  // The arms go behind the bodies, so they never cross a face, and the whole drawing sits 6 lower so the star clears the top
+  return (<g transform="translate(0 6)">
     <Shadow cy={104} rx={50} />
+    <g {...line} strokeWidth="4"><path d="M38 70 Q50 52 56 40" /><path d="M82 70 Q70 52 64 40" /></g>
     <g transform="rotate(10 30 90)"><BuddyFigure id={a} x={-4} y={40} size={62} /></g>
     <g transform="rotate(-10 90 90)"><BuddyFigure id={b} x={62} y={40} size={62} /></g>
-    <g {...line} strokeWidth="4"><path d="M38 70 Q50 52 56 40" /><path d="M82 70 Q70 52 64 40" /></g>
     <Hand x={56} y={38} /><Hand x={64} y={38} />
     <g {...line} strokeWidth="3"><path d="M60 26 V14" /><path d="M46 30 L37 20" /><path d="M74 30 L83 20" /></g>
     <path d="M60 6 L62.4 10.6 L67.5 11.3 L63.8 14.9 L64.7 20 L60 17.6 L55.3 20 L56.2 14.9 L52.5 11.3 L57.6 10.6Z" fill={PINK} />
-  </>);
+  </g>);
 }
 
 /** A scene's drawing on its own, as a group, to place inside a bigger drawing (120 by 120 units). */
