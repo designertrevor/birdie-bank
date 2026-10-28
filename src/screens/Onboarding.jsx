@@ -62,9 +62,9 @@ function artFor(step, a) {
 }
 
 /**
- * A step's drawing, centred. A scene sits whole on a cream card, the ground on its bottom edge:
- * the outside drawings leave faces and skies see-through, so in the dark theme the cream is what
- * keeps faces from going black. A spot stands on its own. Decorative: screen readers skip it.
+ * A step's drawing, centred. A scene sits whole, the ground on its bottom edge, with the sticker
+ * outline in the dark theme like every other drawing. A spot stands on its own. Decorative: screen
+ * readers skip it.
  */
 function StepArt({ art }) {
   if (!art) return null;
@@ -74,7 +74,7 @@ function StepArt({ art }) {
       <div className="ob-art ob-art-scene">
         {file ? (
           <svg viewBox="0 0 1792 1024" preserveAspectRatio="xMidYMax meet" aria-hidden="true" focusable="false">
-            <ArtImage file={file} w={1792} h={1024} outline={false} />
+            <ArtImage file={file} w={1792} h={1024} />
           </svg>
         ) : <Scene kind={art.scene} />}
       </div>

@@ -166,7 +166,7 @@ export default function HallOfFame({ crew: crewId }) {
           <Badge art="hotstreak" k="Longest win streak" who={records.streak ? first(records.streak.id) : null} v={records.streak ? `${records.streak.n} in a row` : null} />
           <Badge art="skinsking" k="Most skins in a round" who={records.skins ? first(records.skins.id) : null} v={records.skins ? `${records.skins.skins} skins` : null} sub={records.skins ? `${records.skins.course || 'A round'}, ${day(records.skins.at)}` : null} />
           <Badge art="lowround" k={records.low ? `Low ${records.low.holes}` : 'Low round'} who={records.low ? first(records.low.id) : null} v={records.low ? String(records.low.strokes) : null} sub={records.low ? `${records.low.course || 'A round'}, ${day(records.low.at)}` : null} />
-          <Badge art="punchcard" k="Most rounds" who={records.regular ? regularNames(records.regular.ids || [records.regular.id]) : null} v={records.regular ? String(records.regular.n) : null} />
+          <Badge art="mostrounds" k="Most rounds" who={records.regular ? regularNames(records.regular.ids || [records.regular.id]) : null} v={records.regular ? String(records.regular.n) : null} />
         </div>
         <p className="field-help pad">Only you see this. It’s built from the crew’s rounds on this phone, back to the first one. Points rounds count in points and reward rounds in the reward, never in the money.</p>
         <RecordBookNote line={line} />

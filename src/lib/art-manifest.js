@@ -63,11 +63,11 @@ export const ART_USES = {
   'spots/skinsking': { name: 'Skins king', used: ['Hall of fame, the Most skins in a round badge (48px)', 'Set up, the So you’re the bank payoff (136px)'] },
   'spots/lowround': { name: 'Low round', used: ['Hall of fame, the Low round badge (48px)'] },
   'spots/nobirdies': { name: 'No net birdies', used: ['Results, the Birdie pot when nobody made a net birdie (96px)'] },
-  'spots/mostrounds': { name: 'Most rounds', used: ['Not placed yet (redrawn 2026-10-28 as a ball and a tally of five; ready for the Hall of fame’s Most rounds badge, 48px)'] },
+  'spots/mostrounds': { name: 'Most rounds', used: ['Hall of fame, the Most rounds badge (48px; redrawn 2026-10-28 as a ball and a tally of five)'] },
   'spots/coinstack': { name: 'The pot, as coins', used: ['The Tab with nothing owed yet (150px)'] },
   'spots/cards': { name: 'A hand of cards', used: ['Set up, the Add a side game sheet (88px)', 'Set up, the games question (160px)'] },
   'spots/ribbons': { name: 'The record book', used: ['Hall of fame with no rounds yet (150px)'] },
-  'spots/punchcard': { name: 'A punch card', used: ['Hall of fame, the Most rounds badge (48px)', 'Season, before the rounds it needs (150px)'] },
+  'spots/punchcard': { name: 'A punch card', used: ['Season, before the rounds it needs (150px)'] },
   'spots/goldcrown': { name: 'The winner’s crown', used: ['Not placed yet (2026-10-28): the crown alone, wide not square, to sit on the winner’s face on the podium in place of the hand-drawn one'] },
 };
 

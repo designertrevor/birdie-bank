@@ -5,13 +5,9 @@
    Every step's drawing sits centred at the top with room around it.
    ============================================================ */
 
-/* The cream a scene sits on. In light the page shows through (the drawing sits on the page as
-   before); in dark the outside drawings' see-through faces would go black, so the scene gets a cream card */
+/* A scene sits straight on the page in both themes: the drawings' faces are filled, and in dark the
+   sticker outline (.art-outline) carries the edge, as everywhere else */
 .ob-flow { --ob-art-bg: transparent; }
-:root[data-theme="dark"] .ob-flow { --ob-art-bg: #efe8d8; }
-@media (prefers-color-scheme: dark) {
-  :root:not([data-theme="light"]):not([data-theme="dark"]) .ob-flow { --ob-art-bg: #efe8d8; }
-}
 
 /* The bar over every page but the welcome: hidden there rather than gone, so it fades in and its fill moves on */
 .ob-flow .ob-top { position: absolute; top: 0; left: 0; right: 0; z-index: 2; height: 64px; padding: 10px 16px; background: var(--canvas); transition: opacity var(--duration-fast) var(--ease-smooth-out), visibility 0s; }
