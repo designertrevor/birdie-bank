@@ -73,7 +73,7 @@ export default function FriendRound({ code }) {
             </div>
           ))}
 
-        <div className="sec-label">{done ? 'How it finished' : 'Scores so far'}</div>
+        <h2 className="sec-label">{done ? 'How it finished' : 'Scores so far'}</h2>
         <ul className="fr-board" role="list">
           {view.players.map(p => {
             const seat = view.round.players.find(x => x.id === p.id);
@@ -104,12 +104,12 @@ export default function FriendRound({ code }) {
         {/* The round hole by hole, newest first (LiveMoney.jsx). It names amounts, so only when every amount shows */}
         {view.players.every(p => p.justPlaying || p.amountText != null) && (
           <>
-            <div className="sec-label">Hole by hole</div>
+            <h2 className="sec-label">Hole by hole</h2>
             <HoleStory round={view.round} limit={done ? null : 6} />
           </>
         )}
 
-        <div className="sec-label">Scorecard</div>
+        <h2 className="sec-label">Scorecard</h2>
         <Scorecard round={view.round} />
 
         {following && ctx?.who

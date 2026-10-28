@@ -206,7 +206,7 @@ export default function RoundDetail({ id, celebrate }) {
         {solo ? (
           <div className="winner-hero nice-hero" ref={hero}>
             <Icon name="smiley" fill className="crown" />
-            <div className="wn">{nice ? nice.title : 'Your card'}</div>
+            <h1 className="wn">{nice ? nice.title : 'Your card'}</h1>
             <div className="wa">{nice ? <>{nice.score} <span className={`nice-par ${nice.tone}`}>{nice.toPar}</span></> : '–'}</div>
             <div className="ws">{round.course.name} · {roundDate(round)} · {nice ? nice.line : 'No scores yet'}</div>
             {cardFromLine(round) && <div className="me-line">{cardFromLine(round)}</div>}
@@ -222,7 +222,7 @@ export default function RoundDetail({ id, celebrate }) {
               // Nobody to crown yet (a Big Game waiting on its other groups): the trophy still up for grabs
               : <Spot kind={res.big && !res.big.final ? 'podium' : 'crown'} size={88} className="ra-spot" />)}
           {!allSquare && !(res.big && !res.big.final) && <div className="ra-eyebrow"><Icon name="crown-simple" fill /> {tie ? 'Top of the table' : 'Winner'}</div>}
-          <div className="ra-title d">{heroTitle}</div>
+          <h1 className="ra-title d">{heroTitle}</h1>
           <div className={`ra-amt ${allSquare || (res.big && !res.big.final) ? 'zero' : ''}`}>{heroAmt}</div>
           <div className="ra-sub">{round.course.name} · {roundDate(round)} · {gameLabel(round)} · {played === round.holes.length ? `${played} holes` : `${played} of ${round.holes.length} holes`}</div>
           {meRow && meRow.id !== top.id && !allSquare && <div className="me-line">You: {fmt(meRow.amount, { sign: true })}</div>}
@@ -234,7 +234,7 @@ export default function RoundDetail({ id, celebrate }) {
         {!solo && <>
         {!isMoney && (
           <>
-            <div className="sec-label">{playForOf(round).kind === 'reward' ? 'The reward' : 'Bragging rights'}</div>
+            <h2 className="sec-label">{playForOf(round).kind === 'reward' ? 'The reward' : 'Bragging rights'}</h2>
             <div style={{ padding: '0 16px' }}>
               {playForOf(round).kind === 'reward'
                 ? <RewardCard round={round} res={res} />
@@ -244,10 +244,10 @@ export default function RoundDetail({ id, celebrate }) {
         )}
         {/* A reward round's side bets for money: dollars on the Tab, apart from the reward's points */}
         {!isMoney && res.cash && <>
-        <div className="sec-label">Side bets for money</div>
+        <h2 className="sec-label">Side bets for money</h2>
         <div style={{ padding: '0 16px' }}>
           {tab.transfers.length === 0 && <p className="hint-card" style={{ margin: 0 }}><Icon name="handshake" fill /> The money bets came out square. Nothing goes on the Tab.</p>}
-          {tab.transfers.map(t => (
+          {tab.transfers.length > 0 && <div className="ra-pays">{tab.transfers.map(t => (
             <div key={t.from + t.to} className="talk-pay">
               <div className="pay-row">
                 <span className="pf">{roundPlayerName(round, t.from)}</span><span className="pa"><Icon name="arrow-right" /></span><span className="pt">{roundPlayerName(round, t.to)}</span>
@@ -255,16 +255,17 @@ export default function RoundDetail({ id, celebrate }) {
               </div>
               {talk && <TalkBar ctx={talk} on={payTarget(t.from, t.to)} title={payTitle(t)} />}
             </div>
-          ))}
+          ))}</div>}
           {tab.transfers.length > 0 && <p className="field-help" style={{ padding: '0 4px' }}>Only the side bets played for money. They’re on the Tab until marked paid; the points above decide the reward.</p>}
         </div>
         </>}
         {isMoney && <>
-        <div className="sec-label">Who pays who</div>
+        <h2 className="sec-label">Who pays who</h2>
         <div style={{ padding: '0 16px' }}>
           {res.big ? <p className="hint-card" style={{ margin: 0 }}><Icon name="handshake" fill /> {res.big.final ? `${round.trip.name} is settled once for the whole game, on its page.` : `${round.trip.name} is decided once every group is in. It’s settled once, on its page.`}</p>
             : res.transfers.length === 0 && <p className="hint-card" style={{ margin: 0 }}><Icon name="handshake" fill /> Nobody owes anybody. First round’s on whoever three-putted last.</p>}
-          {res.transfers.map(t => (
+          {/* One card of rows with hairlines, like the Tab: who pays who reads as one list */}
+          {res.transfers.length > 0 && <div className="ra-pays">{res.transfers.map(t => (
             <div key={t.from + t.to} className="talk-pay">
               <div className="pay-row" data-testid="payment">
                 <span className="pf">{roundPlayerName(round, t.from)}</span><span className="pa"><Icon name="arrow-right" /></span><span className="pt">{roundPlayerName(round, t.to)}</span>
@@ -272,7 +273,7 @@ export default function RoundDetail({ id, celebrate }) {
               </div>
               {talk && <TalkBar ctx={talk} on={payTarget(t.from, t.to)} title={payTitle(t)} />}
             </div>
-          ))}
+          ))}</div>}
           {res.transfers.length > 0 && <p className="field-help" style={{ padding: '0 4px' }}>{round.trip?.format === 'big'
             ? `Fewest payments for this round alone. It’s part of ${round.trip.name}, so it’s settled once with the whole game, and it’s on the Tab until then.`
             : round.trip?.id
@@ -285,7 +286,7 @@ export default function RoundDetail({ id, celebrate }) {
           {ownSettle && !res.big && (
             <div className="ra-pay-acts">
               <button className="full-btn" onClick={() => { setSettleFrom('detail'); setStage('settle'); }}><Icon name="hand-coins" /> Pay or mark paid</button>
-              <button className="full-btn outline" onClick={() => { finaleStage.delete(id); nav.reset('ledger'); }}><Icon name="arrow-u-down-right" /> Roll it on the Tab</button>
+              <button className="text-link ra-roll" onClick={() => { finaleStage.delete(id); nav.reset('ledger'); }}><Icon name="arrow-u-down-right" /> Roll it on the Tab</button>
             </div>
           )}
         </div>
@@ -294,7 +295,7 @@ export default function RoundDetail({ id, celebrate }) {
 
         {/* Everyone in one list, after the podium and the payments (the podium shows the top three) */}
         {!solo && <>
-        <div className="sec-label">Standings</div>
+        <h2 className="sec-label">Standings</h2>
         <div className="stand-group">
           {res.standings.map((p, i) => (
             <div key={p.id} className="stand-line" data-testid="standing">
@@ -324,14 +325,14 @@ export default function RoundDetail({ id, celebrate }) {
 
         {res.detail.byGame && (
           <>
-            <div className="sec-label">By game</div>
+            <h2 className="sec-label">By game</h2>
             <ByGameTable round={betRound} byGame={res.detail.byGame} total={res.balances} fmt={fmt} />
           </>
         )}
         {/* A reward round's side bets for money get their own table, in dollars, never added to the points */}
         {res.cash && (
           <>
-            {!res.detail.byGame && <div className="sec-label">By game</div>}
+            {!res.detail.byGame && <h2 className="sec-label">By game</h2>}
             <p className="field-help pad">{res.detail.byGame ? 'Above in points. ' : ''}Side bets for money, in dollars:</p>
             <ByGameTable round={betRound} byGame={{ cash: { label: res.cash.label, balances: res.cash.balances } }} total={res.cash.balances} fmt={money} caption="Side bets for money" />
           </>
@@ -355,7 +356,7 @@ export default function RoundDetail({ id, celebrate }) {
                 </>}
         </>}
         {(solo || view === 'card') && <>
-          <div className="sec-label">Scorecard</div>
+          <h2 className="sec-label">Scorecard</h2>
           <Scorecard round={round} />
         </>}
         <HowWasIt round={round} />
@@ -393,7 +394,7 @@ function GameBreakdown({ round, res, label = null }) {
     const multi = Object.keys(LEGS).length > 1;
     return (
       <>
-        <div className="sec-label">Bets{round.teams ? ` · ${sn[0]} v ${sn[1]}` : ''}</div>
+        <h2 className="sec-label">Bets{round.teams ? ` · ${sn[0]} v ${sn[1]}` : ''}</h2>
         {res.detail.lines.map(l => {
           const s = l.status;
           const who = s.leader === null ? (s.left === 0 ? 'Halved' : 'All square') : matchLabel(s, sn[s.leader]);
@@ -414,7 +415,7 @@ function GameBreakdown({ round, res, label = null }) {
     const sn = sideNames(round);
     return (
       <>
-        <div className="sec-label">Bets · {sn[0]} v {sn[1]}</div>
+        <h2 className="sec-label">Bets · {sn[0]} v {sn[1]}</h2>
         {res.detail.lines.map(l => {
           // The same words as the reveal (reveal.js), "Not played" for a leg with no holes in
           const who = !(l.status?.played ?? l.played) ? 'Not played' : teamLineText(l, sn);
@@ -438,7 +439,7 @@ function GameBreakdown({ round, res, label = null }) {
     const perPoint = points.length > 1 ? points.map(money).join(' then ') : money(points[0] ?? round.settings.vegas.point);
     return (
       <>
-        <div className="sec-label">Hole by hole · {perPoint} a point</div>
+        <h2 className="sec-label">Hole by hole · {perPoint} a point</h2>
         <div className="money-table-wrap">
           <table className="sc-table money-table">
             <thead><tr><th style={{ textAlign: 'left', paddingLeft: 12 }}>Hole</th><th>{t[0].name}</th><th>{t[1].name}</th><th>Points</th></tr></thead>
@@ -467,7 +468,7 @@ function GameBreakdown({ round, res, label = null }) {
     const pair = side => side.map(pid => first(names[pid])).join(' & ');
     return (
       <>
-        <div className="sec-label">Three matches</div>
+        <h2 className="sec-label">Three matches</h2>
         {res.detail.matches.map(m => {
           const s = m.status;
           const who = m.off ? 'Off: a player left' : !s.played ? 'Not played' : s.leader === null ? (s.left === 0 ? 'Halved' : 'All square') : matchLabel(s, pair(m.sides[s.leader]));
@@ -506,7 +507,7 @@ function GameBreakdown({ round, res, label = null }) {
     const sorted = [...rows].sort((a, b) => (lowerWins ? a.total - b.total : round.game === 'quota' ? b.vsQuota - a.vsQuota : b.total - a.total));
     return (
       <>
-        <div className="sec-label">{round.game === 'scramble' ? 'Team totals' : 'Totals'}</div>
+        <h2 className="sec-label">{round.game === 'scramble' ? 'Team totals' : 'Totals'}</h2>
         {sorted.map((x, i) => (
           <div key={x.id} className="leg-row">
             <div className="leg-name">{i + 1}</div>
@@ -517,7 +518,7 @@ function GameBreakdown({ round, res, label = null }) {
         {round.game === 'scramble' && <DrivesShortfall round={round} done={round.status === 'done'} />}
         {res.detail.pots && <>
           {/* Front, back and total, or low gross too (house rules): what each pot paid, and to whom */}
-          <div className="sec-label">{res.detail.pots.some(p => p.key === 'gross') ? 'Pots' : 'Front, back and total'}</div>
+          <h2 className="sec-label">{res.detail.pots.some(p => p.key === 'gross') ? 'Pots' : 'Front, back and total'}</h2>
           {res.detail.pots.map(p => {
             // What each winner took out of the pot (their stake back and the rest), so a pot shared
             // by everyone over quota lists them all, even one who only got their stake back plus a bit
@@ -544,7 +545,7 @@ function GameBreakdown({ round, res, label = null }) {
     const unit = round.game === 'dots' ? 'dots' : 'points';
     return (
       <>
-        <div className="sec-label">{label || (unit === 'dots' ? 'Dots' : 'Points')} by hole</div>
+        <h2 className="sec-label">{label || (unit === 'dots' ? 'Dots' : 'Points')} by hole</h2>
         {rows.length === 0 && <p className="hint-card"><Icon name="info" fill /> Nothing scored yet.</p>}
         {rows.length > 0 && (
           <div className="money-table-wrap">
@@ -565,7 +566,7 @@ function GameBreakdown({ round, res, label = null }) {
   if (round.game === 'rabbit') {
     return (
       <>
-        <div className="sec-label">Who had the rabbit</div>
+        <h2 className="sec-label">Who had the rabbit</h2>
         {res.detail.rabbit.legs.map(l => (
           <div key={l.seg.label} className="leg-row">
             <div className="leg-name">{l.seg.label}</div>
@@ -591,7 +592,7 @@ function GameBreakdown({ round, res, label = null }) {
       const claimed = ends.some(e => e.winner || e.rule === 'split');
       return (
         <div key={kind}>
-          <div className="sec-label">{both ? `${kind === 'net' ? 'Net' : 'Gross'} skins` : 'Skins won'}{label ? ' · side game' : ''}</div>
+          <h2 className="sec-label">{both ? `${kind === 'net' ? 'Net' : 'Gross'} skins` : 'Skins won'}{label ? ' · side game' : ''}</h2>
           {won.length === 0 && !claimed && <p className="hint-card"><Icon name="coins" fill /> No skins won. Every hole was tied.</p>}
           {won.map(r => (
             <div key={r.hole.no} className="leg-row">
@@ -636,7 +637,7 @@ function GameBreakdown({ round, res, label = null }) {
     const byPlayer = round.players.filter(p => b.inPot.includes(p.id));
     return (
       <>
-        <div className="sec-label">{label || 'Birdie pot'}</div>
+        <h2 className="sec-label">{label || 'Birdie pot'}</h2>
         {b.holes.length === 0 && <ArtNote spot="nobirdies">No net birdies, so nobody pays.</ArtNote>}
         {b.holes.length > 0 && byPlayer.map(p => (
           <div key={p.id} className="leg-row">
@@ -656,7 +657,7 @@ function GameBreakdown({ round, res, label = null }) {
     const cents = v => money(Math.round(v * 100) / 100);
     return (
       <>
-        <div className="sec-label">{label || (round.game === 'ctp' ? 'Closest to the pin' : 'Long drive')}</div>
+        <h2 className="sec-label">{label || (round.game === 'ctp' ? 'Closest to the pin' : 'Long drive')}</h2>
         {t.holes.length === 0 && <p className="hint-card"><Icon name="flag" fill /> {round.game === 'ctp' ? 'No par 3s in this round' : 'No long drive holes in this round'}, so nobody pays.</p>}
         {t.holes.map(h => {
           const who = h.winner && h.winner !== 'none' ? first(names[h.winner]) : null;
@@ -681,7 +682,7 @@ function GameBreakdown({ round, res, label = null }) {
     const nameOf = id => first(names[id] || round.calcutta?.main?.players.find(p => p.id === id)?.name || '?');
     return (
       <>
-        <div className="sec-label">{label || 'Calcutta'} · {money(t.pot)} pot</div>
+        <h2 className="sec-label">{label || 'Calcutta'} · {money(t.pot)} pot</h2>
         {t.sold.length < 2 && <p className="hint-card"><Icon name="gavel" fill /> {t.sold.length ? 'Only one lot sold' : 'Nothing sold at the auction'}, so nobody pays.</p>}
         {t.sold.length >= 2 && t.sold.map(x => (
           <div key={x.id} className="leg-row">
@@ -701,7 +702,7 @@ function GameBreakdown({ round, res, label = null }) {
   if (round.game === 'snake') {
     return (
       <>
-        <div className="sec-label">Who had the snake</div>
+        <h2 className="sec-label">Who had the snake</h2>
         {res.detail.snake.legs.map(l => (
           <div key={l.seg.label} className="leg-row">
             <div className="leg-name">{res.detail.snake.legs.length > 1 ? l.seg.label : 'Snake'}</div>
@@ -720,7 +721,7 @@ function GameBreakdown({ round, res, label = null }) {
     const rows = res.detail.hammer.filter(r => r.winner !== undefined);
     return (
       <>
-        <div className="sec-label">Hole by hole{round.teams ? ` · ${sn[0]} v ${sn[1]}` : ''}</div>
+        <h2 className="sec-label">Hole by hole{round.teams ? ` · ${sn[0]} v ${sn[1]}` : ''}</h2>
         <div className="money-table-wrap">
           <table className="sc-table money-table">
             <thead><tr><th style={{ textAlign: 'left', paddingLeft: 12 }}>Hole</th><th>Hammers</th><th>Won by</th><th>Worth</th></tr></thead>
@@ -747,7 +748,7 @@ function GameBreakdown({ round, res, label = null }) {
     };
     return (
       <>
-        <div className="sec-label">Hole by hole</div>
+        <h2 className="sec-label">Hole by hole</h2>
         <div className="money-table-wrap">
           <table className="sc-table money-table">
             <thead><tr><th style={{ textAlign: 'left', paddingLeft: 12 }}>Hole</th><th>{{ banker: 'Banker', wolf: 'Wolf', aces: 'Ace / deuce' }[round.game]}</th>{round.players.map(p => <th key={p.id}>{p.name.split(' ')[0]}</th>)}</tr></thead>
@@ -784,7 +785,7 @@ function TeamQuota({ round, teams, names }) {
   const tenth = v => Math.round(v * 10) / 10;
   return (
     <>
-      <div className="sec-label">Team quota</div>
+      <h2 className="sec-label">Team quota</h2>
       {sorted.map((t, i) => (
         <div key={t.id} className="leg-row">
           <div className="leg-name">{i + 1}</div>

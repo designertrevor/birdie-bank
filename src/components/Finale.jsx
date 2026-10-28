@@ -178,9 +178,9 @@ export function Reveal({ round, res, onNext, onDetail, extra, instant = false })
         {/* The main game's colour as a band behind the head, with its art beside the course */}
         <div className="reveal-head rv-themed" ref={hero} style={{ '--rv-tint': theme.tint }}>
           <div className="rv-eyebrow"><GameArt game={round.game} className="rv-game" /><span className="eyebrow">{round.course.name} · {gameLabel(round)}</span></div>
-          <div className="reveal-title d">
+          <h1 className="reveal-title d">
             {titles.map(x => <span key={x} className={`rt ${x === title ? '' : 'out'}`} aria-hidden={x !== title}>{x}</span>)}
-          </div>
+          </h1>
           <div className={`rv-skip ${done ? 'gone' : ''}`} aria-hidden={done}>Tap to skip</div>
           {/* The winner's buddy takes the crown once the totals land; a tie or a winning side crowns them all */}
           {done && heroFaces.length > 0 && (

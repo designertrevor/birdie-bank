@@ -3,7 +3,7 @@
    then who pays who with its two buttons, then the scorecard.
    ============================================================ */
 .results-a {
-  margin: 4px 16px 6px; padding: 18px 16px 4px; border-radius: var(--r-card); text-align: center;
+  margin: 4px 16px 6px; padding: 18px 16px 20px; border-radius: var(--r-card); text-align: center;
   background: var(--card); box-shadow: var(--hair); display: flex; flex-direction: column; align-items: center;
 }
 /* The game's own wash behind the winner, quiet enough for the amounts to stay the loudest thing */
@@ -17,6 +17,11 @@
 .results-a .hero-spot { display: block; margin: -10px auto -8px; }
 .results-a > .crown { font-size: 40px; color: var(--ochre); }
 .ra-eyebrow { display: inline-flex; align-items: center; gap: 5px; font-size: 12px; font-weight: 800; text-transform: uppercase; letter-spacing: .08em; color: var(--pink-text); }
+/* On the game's dark wash the pink needs a little light to stay readable at this size */
+:root[data-theme="dark"] .ra-eyebrow { color: color-mix(in srgb, var(--pink) 70%, #fff); }
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) .ra-eyebrow { color: color-mix(in srgb, var(--pink) 70%, #fff); }
+}
 .ra-title { font-family: var(--display); font-weight: var(--display-weight); font-size: 28px; line-height: 1.15; color: var(--ink); margin-top: 4px; }
 .ra-amt { font-family: var(--display); font-weight: var(--money-weight); font-size: 44px; line-height: 1.05; letter-spacing: -.02em; color: var(--win); font-variant-numeric: tabular-nums; margin-top: 2px; }
 .ra-sub { font-size: 13px; color: var(--body); margin-top: 6px; }
@@ -24,8 +29,18 @@
 .results-a .podium { width: 100%; margin: 16px 0 0; }
 .results-a.with-podium { padding-bottom: 0; overflow: hidden; }
 
-.ra-pay-acts { display: flex; gap: 8px; margin: 6px 0 4px; }
-.ra-pay-acts .full-btn { flex: 1; margin: 0; font-size: 15px; padding-left: 10px; padding-right: 10px; }
+/* Paying is the one big action; rolling it over is the quieter way out under it, so neither label
+   has to wrap at phone width */
+.ra-pay-acts { display: flex; flex-direction: column; align-items: stretch; gap: 2px; margin: 8px 0 4px; }
+.ra-pay-acts .full-btn { margin: 0; }
+.ra-pay-acts .ra-roll { align-self: center; display: inline-flex; align-items: center; gap: 6px; min-height: 44px; padding: 0 12px; }
+
+/* Who pays who: one card, a hairline between payments, each one's reactions under its row */
+.ra-pays { background: var(--card); box-shadow: var(--hair); border-radius: var(--r-card); overflow: hidden; }
+.ra-pays .talk-pay { margin: 0; }
+.ra-pays .talk-pay + .talk-pay { border-top: 1px solid var(--line-soft); }
+.ra-pays .pay-row { margin: 0; background: none; border-radius: 0; box-shadow: none; }
+.ra-pays .talk-bar { padding: 0 12px 12px; margin-top: -4px; }
 
 /* The reveal's own way to the scores (Finale.jsx) */
 .rv-card-link { display: flex; justify-content: center; margin: 4px 16px 12px; }
