@@ -92,7 +92,9 @@ button { font-family: inherit; }
   padding: 12px 16px 8px; display: flex; align-items: center; gap: 12px;
   justify-content: space-between; min-height: 60px; flex-shrink: 0;
 }
-.screen-title { font-family: var(--display); font-size: 34px; font-weight: 800; letter-spacing: -.03em; color: var(--ink); }
+.screen-title { margin: 0; font-family: var(--display); font-size: 34px; font-weight: 800; letter-spacing: -.03em; color: var(--ink); }
+/* Section labels can be real h2s (Up next, the Tab, History): no heading margins or weight of their own */
+h2.sec-label { margin: 0; }
 .screen-header .screen-title[style*="18px"] { font-size: 20px !important; letter-spacing: -.01em; }
 /* A tab's large title tucks to the small size once the page scrolls, with a hairline (Header in ui.jsx) */
 .screen-header.large { transition: padding .25s cubic-bezier(.2, .8, .2, 1), box-shadow .25s ease-out; }

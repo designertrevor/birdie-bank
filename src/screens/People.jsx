@@ -38,6 +38,11 @@ const SEARCH_FROM = 8;
  * play with more than one). The money between you over every round is on their card (Person.jsx). Money on the Tab between you is a small pill on the row that opens
  * Remind, Request or Pay. Newest friends from joined rounds are here too.
  */
+// "New" marks someone added in the last two weeks you haven't played with yet. Everyone you've never
+// played with read "New" before, which on a long list was a tag on every other row
+const NEW_FOR = 14 * 86400000;
+const justAdded = p => !!p?.createdAt && Date.now() - p.createdAt < NEW_FOR;
+
 export default function People() {
   const nav = useNav();
   const state = useStore();
@@ -82,7 +87,7 @@ export default function People() {
         {/* The people you play with most, big and one tap away (the Roster idea, kept to one row) */}
         {regulars.length >= 3 && !needle && (
           <>
-            <div className="sec-label">Played with most</div>
+            <h2 className="sec-label">Played with most</h2>
             <div className="pl-regulars">
               {regulars.map(({ id, name }) => (
                 <button key={id} className="pl-reg" onClick={() => nav.push('person', { id })}>
@@ -96,7 +101,7 @@ export default function People() {
 
         {people.length > 0 && (
           <div className="pl-head">
-            <div className="sec-label">Your people <span className="opt">{people.length}</span></div>
+            <h2 className="sec-label">Your people <span className="opt">{people.length}</span></h2>
             {people.length >= SEARCH_FROM && <button className="pl-add-btn" onClick={() => nav.push('playerEdit', {})} aria-label="Add a player"><Icon name="plus" /> Add</button>}
           </div>
         )}
@@ -119,7 +124,7 @@ export default function People() {
                   <button className="pl-main" onClick={() => nav.push('person', { id })}>
                     <Avatar id={id} name={name} />
                     <div className="row-main">
-                      <div className="pl-name">{name}{!h && !older && <span className="new-chip">New</span>}</div>
+                      <div className="pl-name">{name}{!h && !older && justAdded(p) && <span className="new-chip">New</span>}</div>
                       <div className="pl-sub">
                         {rsvp && <span className={`pl-rsvp ${rsvp.status || 'none'}`}>{rsvp.status ? `${RSVP_LABEL[rsvp.status]} ${dayName(rsvp.plan.date)}` : `${cap(dayName(rsvp.plan.date))}?`}</span>}
                         <span className="pl-record">{record}</span>
