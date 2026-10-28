@@ -165,6 +165,6 @@ test('person card: Paid and Roll call the same functions with the same arguments
   assert.ok(src.includes("const canRoll = !off && !carry && !!owed && !!shared && who(shared.from) === who(owed.from);"), 'Roll shows in the same cases');
   assert.ok(src.includes('{ label: \'Undo\', run: () => undoLastPayment(meId, other) }'), 'Paid’s undo is the same');
   const tab = fs.readFileSync(new URL('../screens/Ledger.jsx', import.meta.url), 'utf8');
-  assert.ok(tab.includes('<PersonActions other={p.id} net={p.net} meId={state.me || me} />'), 'the Tab passes the section’s net and the same meId');
+  assert.ok(tab.includes('<PersonActions other={p.id} net={p.net} meId={state.me || me} compact'), 'the Tab passes the section’s net and the same meId');
   assert.ok(tab.includes("const me = owesMe ? p.debts[0].to : p.debts[0].from;"), 'meId falls back the same way');
 });

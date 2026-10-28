@@ -57,7 +57,7 @@ export default function Season() {
       <Screen className="season">
         <Header title="Season" onBack={nav.pop} />
         {real
-          ? <><p className="season-sub">Built from your {n} rounds</p><RealSeason state={state} /></>
+          ? <RealSeason state={state} sub={`Built from your ${n} rounds`} />
           : <div className="scroll"><Empty illo="punchcard" title="Your season starts here" text={`Play ${MIN_REAL_ROUNDS} rounds for money this year and your season shows here: everyone’s totals, you against your most-played friend, your biggest day and best game.`} /><HallLinks /><ClosedSeasons /></div>}
       </Screen>
     );
@@ -66,8 +66,9 @@ export default function Season() {
   return (
     <Screen className="season">
       <Header title={real ? 'Season' : 'See what Pro does'} onBack={nav.pop} />
-      <p className="season-sub">{real ? `Preview · built from your ${n} rounds` : `Preview · a sample group until you’ve played ${MIN_REAL_ROUNDS} rounds`}</p>
-      {real ? <RealSeason state={state} preview /> : <Tour trialButton={trialButton} onFree={() => setFree(true)} />}
+      {real
+        ? <RealSeason state={state} preview sub={`Preview · built from your ${n} rounds`} />
+        : <><p className="season-sub">Preview · a sample group until you’ve played {MIN_REAL_ROUNDS} rounds</p><Tour trialButton={trialButton} onFree={() => setFree(true)} /></>}
       {real && (
         <div className="cta-wrap">
           {trialButton}
@@ -85,7 +86,9 @@ function TrialButton({ onTrial, status, onClick }) {
   return <button className="full-btn" onClick={onClick}>Try free for {TRIAL_DAYS} days <Icon name="arrow-right" /></button>;
 }
 
-function RealSeason({ state, preview = false }) {
+// `sub` (how many rounds it's built from) scrolls with the season: left above the scroll, the
+// tiles slid under it with no edge, cut mid-number
+function RealSeason({ state, preview = false, sub = null }) {
   const nav = useNav();
   const b = seasonBoard(state);
   // Your running net over the season's rounds for money, the same line the Tab draws (history.js)
@@ -94,6 +97,7 @@ function RealSeason({ state, preview = false }) {
   const sign = v => (v > 0 ? 'pos' : v < 0 ? 'neg' : '');
   return (
     <div className="scroll">
+      {sub && <p className="season-sub">{sub}</p>}
       {preview && <div className="season-banner" role="note"><Icon name="star" fill /> <span><b>Preview.</b> Your real rounds. Pro keeps it.</span></div>}
       {series.length >= 2 && (
         <div className="chart-card">

@@ -142,7 +142,8 @@ export default function History() {
                         <span className="hx-meta">{series.length < shown.length ? `${series.length} of ${shown.length} rounds for money` : `${series.length} round${series.length === 1 ? '' : 's'}`}</span>
                       </div>
                       <div className={`hx-big ${net > 0 ? 'pos' : net < 0 ? 'neg' : ''}`}><CountUp key={label + game} value={net} /></div>
-                      <SeasonChart series={series} label={label} box={COMPACT} />
+                      {/* One round is a number, not a line from nowhere */}
+                      {series.length >= 2 && <SeasonChart series={series} label={label} box={COMPACT} />}
                     </>
                   )}
                   {/* Deeper stats for the same range: by game, by course, presses, skins and biggest wins */}

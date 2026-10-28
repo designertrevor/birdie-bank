@@ -79,7 +79,8 @@ export function ShareView({ title, onBack, onDone, doneLabel = 'Done', make, ren
         )}
         {children}
       </div>
-      <div className="cta-wrap">
+      {/* The fade says the toggles carry on under the buttons */}
+      <div className="cta-wrap fade">
         <button className="full-btn" onClick={shareImage} disabled={!ready}><Icon name="share-network" /> {ready ? 'Share image' : 'Making the image…'}</button>
         <div className="cta-row">
           <button className="full-btn outline" onClick={shareText}><Icon name="text-aa" /> Share as text</button>

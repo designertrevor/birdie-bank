@@ -68,6 +68,8 @@ export default function People() {
   const myPay = me && payInfo(me);
   const needle = q.trim().toLowerCase();
   const shown = needle ? people.filter(x => x.name.toLowerCase().includes(needle)) : people;
+  // New: the three most recent adds from the last two weeks you haven't played with, not every one
+  const newest = new Set(people.filter(x => !x.h && !x.older && justAdded(x.p)).sort((a, b) => b.p.createdAt - a.p.createdAt).slice(0, 3).map(x => x.id));
   const regulars = people.length >= REGULARS_FROM ? people.filter(x => (x.h?.rounds || 0) >= 2).slice(0, REGULARS_MAX) : [];
   return (
     <Screen>
@@ -124,7 +126,7 @@ export default function People() {
                   <button className="pl-main" onClick={() => nav.push('person', { id })}>
                     <Avatar id={id} name={name} />
                     <div className="row-main">
-                      <div className="pl-name">{name}{!h && !older && justAdded(p) && <span className="new-chip">New</span>}</div>
+                      <div className="pl-name">{name}{newest.has(id) && <span className="new-chip">New</span>}</div>
                       <div className="pl-sub">
                         {rsvp && <span className={`pl-rsvp ${rsvp.status || 'none'}`}>{rsvp.status ? `${RSVP_LABEL[rsvp.status]} ${dayName(rsvp.plan.date)}` : `${cap(dayName(rsvp.plan.date))}?`}</span>}
                         <span className="pl-record">{record}</span>
@@ -136,7 +138,9 @@ export default function People() {
                     <button className={`pl-owe ${tab > 0 ? 'pos' : 'neg'}`} onClick={() => setPaying({ id, name, tab })} aria-label={tab > 0 ? `${name} owes you ${money(amount)}. Remind or request` : `You owe ${name} ${money(amount)}. Pay`}>
                       {tab > 0 ? `+${money(amount)}` : `−${money(amount)}`}
                     </button>
-                  ) : <span className="chevron" aria-hidden="true"><Icon name="caret-right" /></span>}
+                  ) : null}
+                  {/* The chevron on every row, money or not, so the column lines up */}
+                  <span className="chevron" aria-hidden="true"><Icon name="caret-right" /></span>
                 </div>
               );
             })}

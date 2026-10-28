@@ -17,12 +17,16 @@
   --state-set-bg: var(--win-bg); --state-set-ink: var(--win);
   --state-vote-bg: var(--warn-bg); --state-vote-ink: var(--warn-ink);
   --state-not-edge: var(--line);
+  /* A card's eyebrow (its date, its kind): teal, so pink stays on the one thing to tap */
+  --eyebrow-ink: #1f5f57;
 }
 :root[data-theme="dark"] {
+  --eyebrow-ink: #8fd3c3;
   --band-butter: #33301f; --band-mint: #1d3530; --band-lilac: #2a2540; --band-peach: #3a2a20;
 }
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) {
+    --eyebrow-ink: #8fd3c3;
     --band-butter: #33301f; --band-mint: #1d3530; --band-lilac: #2a2540; --band-peach: #3a2a20;
   }
 }

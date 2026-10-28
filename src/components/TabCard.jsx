@@ -59,9 +59,11 @@ export function RecentPaid({ meId, other, pay }) {
 
 /**
  * Everything you can do on one person's card: pay or remind, mark it paid, and roll it over.
- * `net` is what's on the Tab between you: positive when they owe you.
+ * `net` is what's on the Tab between you: positive when they owe you. `compact` (the Tab's list)
+ * leaves the reminder bell to the person's screen and puts `extra` (Paid part of it?) on the
+ * payment app's row, so a card is three short rows, not four.
  */
-export function PersonActions({ other, net, meId }) {
+export function PersonActions({ other, net, meId, compact = false, extra = null }) {
   const state = useStore();
   const { showToast } = useUI();
   const remind = useRemind();
@@ -91,7 +93,9 @@ export function PersonActions({ other, net, meId }) {
     const allSquare = !outstanding(now).some(t => mine.has(t.from) || mine.has(t.to));
     buzz(allSquare ? [15, 40, 15] : 15);
     sound('paid');
-    showToast(allSquare ? 'All square. Nobody owes anybody.' : shared ? `Marked paid. ${first} sees it too.` : 'Marked paid', { label: 'Undo', run: () => undoLastPayment(meId, other) }, { tone: 'win' });
+    // Says who, so the toast reads right over the next person's card
+    const said = owesMe ? `${first} paid you` : `You paid ${first}`;
+    showToast(allSquare ? 'All square. Nobody owes anybody.' : shared ? `${said}. ${first} sees it too.` : said, { label: 'Undo', run: () => undoLastPayment(meId, other) }, { tone: 'win' });
   };
   const answer = type => {
     answerCarry(carry, type);
@@ -148,14 +152,15 @@ export function PersonActions({ other, net, meId }) {
             )}
           </div>
           {/* The payment app and a nudge, a step quieter */}
-          {(!owesMe || carry?.status !== 'agreed') && (
-            <div className="pay-acts pay-more">
-              {owesMe ? (
+          {((!owesMe || carry?.status !== 'agreed') || extra) && (
+            <div className={`pay-acts pay-more ${compact ? 'compact' : ''}`}>
+              {(!owesMe || carry?.status !== 'agreed') && (owesMe ? (
                 <>
-                  <button className="pay-btn icon-only" onClick={() => remind(other, amount)} aria-label={`Remind ${first} about ${money(amount)}`}><span className="pay-in"><Icon name="bell-ringing" fill /></span></button>
+                  {!compact && <button className="pay-btn icon-only" onClick={() => remind(other, amount)} aria-label={`Remind ${first} about ${money(amount)}`}><span className="pay-in"><Icon name="bell-ringing" fill /></span></button>}
                   <RequestButton payer={theirApp} mine={myApp} amount={amount} note="Golf" who={other} named />
                 </>
-              ) : <PayButton info={theirApp} amount={amount} note="Golf" />}
+              ) : <PayButton info={theirApp} amount={amount} note="Golf" />)}
+              {extra}
             </div>
           )}
         </>

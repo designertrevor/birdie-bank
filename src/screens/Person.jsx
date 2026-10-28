@@ -118,9 +118,10 @@ export default function Person({ id: opened }) {
     return [saved, rounds ? `${rounds} round${rounds === 1 ? '' : 's'}` : null, lastText].filter(Boolean).join(' · ') || 'No rounds yet';
   };
 
-  // An id this phone knows nothing about (a stale link, a player taken off): say so, rather than
-  // drawing a made-up "Someone" with a Tab and a rivalry
-  if (id !== state.me && !player && name === 'Someone') {
+  // Nobody by that id on this phone (removed, or a link from another phone): say so, like every
+  // other screen whose thing is gone, rather than a card for "Someone" with a Tab and a rivalry
+  const gone = id !== state.me && !player && !story.items.length && !tab && !Object.values(state.rounds).some(r => r.players.some(p => canonicalOf(state)(p.id) === id));
+  if (gone) {
     return (
       <Screen>
         <Header title="Player" small onBack={nav.pop} />

@@ -3,7 +3,7 @@
 // (nudges.js). There's no push yet, so these cards are the reminders.
 import { useMemo, useState } from 'react';
 import { Icon, Sheet, useUI } from './ui.jsx';
-import { useStackCard, useStackLabel } from './CardStack.jsx';
+import { useStackCard } from './CardStack.jsx';
 import { TimePicker } from './DatePicker.jsx';
 import { Avatar } from './Pay.jsx';
 import { getState, update, useStore } from '../lib/store.js';
@@ -27,11 +27,9 @@ export function RemindersUpNext() {
   // The Booked sheet lives here, not on the card: once it's booked the card goes, the sheet stays for the text
   const [bookingId, setBookingId] = useState(null);
   const booking = bookingId ? state.plans?.[bookingId] : null;
-  // On Up next's pile (CardStack.jsx) the label goes with the first card, the tee times first
-  const labelWaits = useStackLabel(0);
+  // On Up next's pile (CardStack.jsx) the pile's own "Heads up" label covers these
   return (
     <>
-      {(tee.length > 0 || nudges.length > 0) && <div className={`sec-label${labelWaits ? ' cs-wait' : ''}`}>Reminders</div>}
       {tee.map((p, i) => <TeeTimeCard key={p.id} plan={p} at={i} onBooked={() => setBookingId(p.id)} />)}
       {nudges.map((n, i) => <NudgeCard key={n.id} nudge={n} at={tee.length + i} />)}
       {booking && <BookedSheet plan={booking} open onClose={() => setBookingId(null)} />}

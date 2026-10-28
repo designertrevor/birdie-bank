@@ -16,12 +16,7 @@
 .results-a .crowned { margin: 4px auto 6px; animation: pop .55s var(--spring) both; }
 .results-a .hero-spot { display: block; margin: -10px auto -8px; }
 .results-a > .crown { font-size: 40px; color: var(--ochre); }
-.ra-eyebrow { display: inline-flex; align-items: center; gap: 5px; font-size: 12px; font-weight: 800; text-transform: uppercase; letter-spacing: .08em; color: var(--pink-text); }
-/* On the game's dark wash the pink needs a little light to stay readable at this size */
-:root[data-theme="dark"] .ra-eyebrow { color: color-mix(in srgb, var(--pink) 70%, #fff); }
-@media (prefers-color-scheme: dark) {
-  :root:not([data-theme="light"]) .ra-eyebrow { color: color-mix(in srgb, var(--pink) 70%, #fff); }
-}
+.ra-eyebrow { display: inline-flex; align-items: center; gap: 5px; font-size: 12px; font-weight: 800; text-transform: uppercase; letter-spacing: .08em; color: var(--eyebrow-ink); }
 .ra-title { font-family: var(--display); font-weight: var(--display-weight); font-size: 28px; line-height: 1.15; color: var(--ink); margin-top: 4px; }
 .ra-amt { font-family: var(--display); font-weight: var(--money-weight); font-size: 44px; line-height: 1.05; letter-spacing: -.02em; color: var(--win); font-variant-numeric: tabular-nums; margin-top: 2px; }
 .ra-sub { font-size: 13px; color: var(--body); margin-top: 6px; }

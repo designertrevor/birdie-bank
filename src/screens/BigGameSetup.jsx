@@ -515,7 +515,7 @@ function Bets({ big, setBets, nameOf, today, was, busy, problem, onFinish }) {
         {problem && <p className="hint-card warn"><Icon name="warning" fill /> {problem}</p>}
       </div>
       <div className="cta-wrap">
-        <button className="full-btn pink" disabled={busy || !!problem} onClick={onFinish}>
+        <button className="full-btn" disabled={busy || !!problem} onClick={onFinish}>
           {busy ? 'Starting…' : was ? <>Save changes <Icon name="check" /></> : today ? <>Start the groups <Icon name="flag-pennant" fill /></> : <>Save the Big Game <Icon name="check" /></>}
         </button>
       </div>

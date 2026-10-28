@@ -2,11 +2,11 @@
 // plans under them, challenges, lines for the group text, Lately and the Tab at a glance. They need
 // the money (ledger.js, trips.js), the moments, the challenge rules and the trash talk, which the
 // first screen shouldn't wait for (see UpNext.jsx), and each one works out its own list.
-import { useEffect, useMemo } from 'react';
+import { useEffect, useId, useMemo, useState } from 'react';
 import { Icon } from './ui.jsx';
 import { Later, part } from './Later.jsx';
 import { RoundRow } from './RoundRow.jsx';
-import { PlansAndNext, UpcomingCard } from './UpNextPlans.jsx';
+import { MoreWays, PlansAndNext, UpcomingCard } from './UpNextPlans.jsx';
 import { useStore } from '../lib/store.js';
 import { useNav } from '../lib/nav.js';
 import { currentRecap, recapRound } from '../lib/recap.js';
@@ -36,6 +36,7 @@ import { useBigSync } from '../lib/big-sync.js';
 
 const LATELY_ON_HOME = 3;
 const TripUpNext = part(() => import('./Trips.jsx'), 'TripUpNext');
+const FriendsUpNext = part(() => import('./FriendsFeed.jsx'), 'FriendsUpNext');
 
 /** The trips on now (trips.js), where you stand on each, with its planned rounds grouped under it. */
 export function TripsNow() {
@@ -55,10 +56,10 @@ export function PlansLater({ live, last, onJoin }) {
 }
 
 /**
- * The Tab at a glance (what you're owed and owe) and the last round out, for anyone with a finished
- * round. With the number tiles showing (`tiles`), the Tab has its own tile, so only the last round is here.
+ * The Tab at a glance (what you're owed and owe), for anyone with a finished round and not yet
+ * the number tiles (which have their own Tab tile). It sits where the tiles would.
  */
-export function TabGlance({ tiles = false }) {
+export function TabGlance() {
   const nav = useNav();
   const state = useStore();
   const last = lastResult(state);
@@ -68,33 +69,70 @@ export function TabGlance({ tiles = false }) {
   const rewards = tab.people ? [] : openRewards(state, { ids: myIds(state), canon: canonicalOf(state) });
   const squareText = !rewards.length ? 'You’re all square. Nobody owes you, you owe nobody.'
     : `Square on money. ${rewards.length === 1 ? `${rewardLineText(rewards[0], id => nameOf(state, id))}.` : `${rewards.length} rewards to sort out.`}`;
-  // The recap already shows the last round, so it isn't there twice
-  const recapId = recapRound(state)?.id ?? null;
   return (
     <>
-      {!tiles && <>
-        <h2 className="sec-label">The Tab</h2>
-        <button className="tab-glance" onClick={() => nav.setTab('ledger')} aria-label={tab.people ? `The Tab: owed to you ${money(tab.owed)}, you owe ${money(tab.owe)}` : `The Tab: ${squareText}`}>
-          {tab.people ? (
-            <>
-              <div><div className="bl">Owed to you</div><div className={`lr-big ${tab.owed ? 'pos' : ''}`}>{tab.owed ? money(tab.owed) : '–'}</div></div>
-              <div><div className="bl">You owe</div><div className={`lr-big ${tab.owe ? 'neg' : ''}`}>{tab.owe ? money(tab.owe) : '–'}</div></div>
-            </>
-          ) : (
-            <div className="tg-square"><Icon name={rewards.length ? 'gift' : 'handshake'} fill /> <span>{squareText}</span></div>
-          )}
-          <span className="chevron"><Icon name="caret-right" /></span>
-        </button>
-      </>}
-
-      {recapId !== last.round.id && (
-        <>
-          <h2 className="sec-label">Last time out</h2>
-          <RoundRow round={last.round} state={state} className="card" withYear />
-        </>
-      )}
+      <h2 className="sec-label">The Tab</h2>
+      <button className="tab-glance" onClick={() => nav.setTab('ledger')} aria-label={tab.people ? `The Tab: owed to you ${money(tab.owed)}, you owe ${money(tab.owe)}` : `The Tab: ${squareText}`}>
+        {tab.people ? (
+          <>
+            <div><div className="bl">Owed to you</div><div className={`lr-big ${tab.owed ? 'pos' : ''}`}>{tab.owed ? money(tab.owed) : '–'}</div></div>
+            <div><div className="bl">You owe</div><div className={`lr-big ${tab.owe ? 'neg' : ''}`}>{tab.owe ? money(tab.owe) : '–'}</div></div>
+          </>
+        ) : (
+          <div className="tg-square"><Icon name={rewards.length ? 'gift' : 'handshake'} fill /> <span>{squareText}</span></div>
+        )}
+        <span className="chevron"><Icon name="caret-right" /></span>
+      </button>
     </>
   );
+}
+
+/**
+ * The foot of Up next: one "More" row that folds open the quieter things, so the screen stays
+ * short. Inside: friends' rounds and the group feed (when no friend is playing right now, which
+ * shows up top instead), lines for the group text, and the last round out (when the recap isn't
+ * already showing it). The row says what's in it; it opens and closes with the same fold, and
+ * what's inside stays in the page (inert while shut) so it's ready when it opens.
+ */
+export function MoreFold() {
+  const state = useStore();
+  const [open, setOpen] = useState(false);
+  const id = useId();
+  const lines = useMemo(() => callouts(state), [state]);
+  const last = lastResult(state);
+  const recapId = recapRound(state)?.id ?? null;
+  const lastOut = last && recapId !== last.round.id ? last.round : null;
+  if (!last) return null;
+  const what = ['Friends’ rounds', lines.length > 0 && 'lines for the group text', lastOut && 'your last round'].filter(Boolean);
+  const said = what.length > 1 ? `${what.slice(0, -1).join(', ')} and ${what.at(-1)}` : what[0];
+  return (
+    <section className={`un-fold ${open ? 'open' : ''}`} aria-label="More">
+      <button type="button" className="un-fold-head" aria-expanded={open} aria-controls={id} onClick={() => setOpen(o => !o)}>
+        <span className="row-main"><span className="un-fold-title">More</span><span className="un-fold-sub">{said}</span></span>
+        <span className="un-fold-chev" aria-hidden="true"><Icon name="caret-down" /></span>
+      </button>
+      <div className="un-fold-body" id={id} inert={!open}>
+        <div className="un-fold-inner">
+          <Later><FriendsUpNext only="link" /></Later>
+          {lines.length > 0 && <>
+            <h2 className="sec-label">For the group text</h2>
+            <CalloutsCard items={lines} />
+          </>}
+          {lastOut && <>
+            <h2 className="sec-label">Last time out</h2>
+            <RoundRow round={lastOut} state={state} className="card" withYear />
+          </>}
+        </div>
+      </div>
+    </section>
+  );
+}
+
+/** More ways to play, without Start a trip while a trip is on (a Big Game on the calendar isn't a trip). */
+export function WaysLater() {
+  const state = useStore();
+  const onNow = useMemo(() => currentTrips(state), [state]);
+  return <MoreWays trip={!onNow.some(t => t.trip.format !== 'big')} />;
 }
 
 /**
@@ -115,7 +153,8 @@ export function StatTiles() {
         {tiles.map(t => (
           <button key={t.id} className={`un-tile ${t.id}`} onClick={() => go(t.go)} aria-label={`${t.label}: ${t.big}. ${t.sub}`}>
             <span className="un-tile-label">{t.label}</span>
-            <span className={`un-tile-big ${t.tone || ''}`}>{t.big}</span>
+            {/* A long number (a trip's +$1,075.87) comes down a size rather than running to the tile's edge */}
+            <span className={`un-tile-big ${t.tone || ''} ${String(t.big).length > 7 ? 'long' : ''}`}>{t.big}</span>
             <span className="un-tile-sub">{t.sub}</span>
           </button>
         ))}
@@ -155,19 +194,6 @@ export function RecapSection() {
 export function ChallengesSection() {
   const list = useStore(s => myChallenges(s));
   return <ChallengesUpNext list={list} />;
-}
-
-/** A few lines for the group text (see callouts.js). */
-export function CalloutsSection() {
-  const state = useStore();
-  const lines = useMemo(() => callouts(state), [state]);
-  if (!lines.length) return null;
-  return (
-    <>
-      <h2 className="sec-label">For the group text</h2>
-      <CalloutsCard items={lines} />
-    </>
-  );
 }
 
 /**

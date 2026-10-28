@@ -48,13 +48,14 @@ export function RangePill({ value, onChange, options, label }) {
  * it, the number on the right and a chevron that turns. Opening and closing run the same fold,
  * so what slides down slides back up (Trevor's rule: every entrance gets its exit).
  */
-export function FoldRow({ icon, title, sub = null, value, tone = '', children }) {
+export function FoldRow({ icon, lead = null, title, sub = null, value, tone = '', children }) {
   const [open, setOpen] = useState(false);
   const id = useId();
   return (
     <li className={`fold-row ${open ? 'open' : ''}`}>
       <button type="button" className="fold-head" aria-expanded={open} aria-controls={id} onClick={() => setOpen(o => !o)}>
-        <span className="fold-ic" aria-hidden="true"><Icon name={icon} fill /></span>
+        {/* `lead` (a game's own art) takes the icon tile's place */}
+        {lead ? <span className="fold-lead" aria-hidden="true">{lead}</span> : <span className="fold-ic" aria-hidden="true"><Icon name={icon} fill /></span>}
         <span className="row-main">
           <span className="fold-title">{title}</span>
           {sub && <span className="fold-sub">{sub}</span>}

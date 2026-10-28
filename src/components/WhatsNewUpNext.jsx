@@ -70,7 +70,7 @@ export function WhatsNewUpNext() {
         </div>
       </div>
       <div className="rc-acts">
-        <button className="rc-btn ink" onClick={() => { setShown({ items: [], more: 0, ids: [] }); nav.push('whatsNew', { fresh: shown.ids }); }}><Icon name="list-bullets" /> See what’s new</button>
+        <button className="rc-btn soft" onClick={() => { setShown({ items: [], more: 0, ids: [] }); nav.push('whatsNew', { fresh: shown.ids }); }}><Icon name="list-bullets" /> See what’s new</button>
         <button className="rc-btn ghost" onClick={away(() => setShown({ items: [], more: 0, ids: [] }))}>Got it</button>
       </div>
     </div>

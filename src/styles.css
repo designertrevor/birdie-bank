@@ -75,8 +75,9 @@ button { font-family: inherit; }
 .stage.out-pop .screen.active { animation: screenPushOut var(--duration-fast) var(--ease-in) both; pointer-events: none; }
 .stage.out-swap .screen.active { animation: screenFade var(--duration-fast) ease-in both; pointer-events: none; }
 .stage.under .screen.active { animation: none; pointer-events: none; }
-@keyframes screenPush { from { opacity: 0; transform: translateX(var(--distance-medium)); } }
-@keyframes screenBack { from { opacity: 0; transform: translateX(calc(-1 * var(--distance-medium))); } }
+/* A pushed screen starts partly there, so its first frames are never a blank canvas */
+@keyframes screenPush { from { opacity: .4; transform: translateX(var(--distance-medium)); } }
+@keyframes screenBack { from { opacity: .4; transform: translateX(calc(-1 * var(--distance-medium))); } }
 @keyframes screenPushOut { to { opacity: 0; transform: translateX(var(--distance-medium)); } }
 @keyframes screenFade { to { opacity: 0; } }
 @keyframes rise { from { opacity: 0; transform: translateY(14px); } }
@@ -154,6 +155,9 @@ h2.sec-label { margin: 0; }
 .full-btn:active i { transform: translateX(4px); }
 .full-btn.outline { background: var(--surface); color: var(--ink); }
 .cta-wrap, .pin-btn { padding: 12px 16px calc(12px + env(safe-area-inset-bottom)); flex-shrink: 0; display: flex; flex-direction: column; gap: 10px; }
+/* A pinned footer over a scroll that carries on under it: a short canvas fade above, so the cut-off row reads as more */
+.cta-wrap.fade { position: relative; }
+.cta-wrap.fade::before { content: ''; position: absolute; left: 0; right: 0; top: -28px; height: 28px; background: linear-gradient(to bottom, transparent, var(--canvas)); pointer-events: none; }
 /* A sheet open at the screen sits after the footer, so it doesn't count as last */
 .screen > div[style*="border-top"]:nth-last-child(1 of :not(.sheet-overlay, .numpad-overlay, [hidden])) { border-top: none !important; padding-bottom: calc(14px + env(safe-area-inset-bottom)) !important; }
 
@@ -199,7 +203,7 @@ h2.sec-label { margin: 0; }
   width: 100%; border: none; background: var(--card); border-radius: 999px; padding: 14px 18px;
   font-size: 16px; outline: none; color: var(--ink); display: block; font-family: inherit;
 }
-.search-box:focus { box-shadow: 0 0 0 3px var(--lav); }
+.search-box:focus { box-shadow: 0 0 0 2px var(--ink); }
 .search-box::placeholder { color: var(--mute-soft); }
 
 /* HISTORY */
@@ -478,6 +482,9 @@ a.set-row { text-decoration: none; }
 .sheet-overlay.closing, .numpad-overlay.closing { display: flex; pointer-events: none; animation: scrimOut var(--duration-fast) ease-in both; }
 .sheet-overlay.closing > *, .numpad-overlay.closing > * { animation: sheetDown var(--duration-fast) var(--ease-in) both; }
 @keyframes scrimOut { to { background: transparent; } }
+/* While a sheet is up, the screen's pinned buttons step out, so none peeks past the floating sheet's
+   rounded corner (a black sliver of Save & next hole under the number pad) */
+.screen:has(> :is(.sheet-overlay, .numpad-overlay).open:not(.closing)) > :is(.cta-wrap, .pin-btn) { visibility: hidden; }
 @keyframes sheetDown { to { transform: translateY(calc(100% + var(--sheet-gap) + env(safe-area-inset-bottom) + 8px)); } }
 .sheet, .numpad-sheet, .sc-sheet, .rules-sheet {
   --canvas: var(--sheet-bg); --card: var(--sheet-card); --surface: var(--sheet-surface); --surface-strong: var(--sheet-surface-strong);
@@ -489,13 +496,15 @@ a.set-row { text-decoration: none; }
 .sheet { max-height: 90%; overflow-y: auto; overscroll-behavior: contain; }
 .rules-sheet { max-height: 85%; overflow-y: auto; overscroll-behavior: contain; }
 .numpad-sheet { overflow-y: auto; }
-/* The close X in a sheet's title row, in the accent color like iOS sheets */
-.sheet-close { color: var(--pink-text); }
+/* The close X in a sheet's title row: neutral, since pink is only for the one thing to tap */
+.sheet-close { color: var(--body); }
 /* A confirm whose way out is the X (the age check): the title and the X share the row */
+/* A sheet's title row stays put at the top while a long sheet scrolls under it */
+.sheet-head { position: sticky; top: 0; z-index: 2; display: flex; justify-content: space-between; align-items: center; padding: 12px 16px 4px; background: inherit; border-radius: inherit; }
 .sheet-title-row { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding-right: 16px; }
 .sheet-title-row .sheet-title { flex: 1; min-width: 0; }
 .sheet-handle { width: 40px; height: 5px; background: var(--surface-strong); margin: 10px auto 0; border-radius: 3px; }
-.sheet-title { font-family: var(--display); font-size: 22px; font-weight: 800; color: var(--ink); padding: 14px 20px 10px; }
+.sheet-title { margin: 0; font-family: var(--display); font-size: 22px; font-weight: 800; color: var(--ink); padding: 14px 20px 10px; }
 .sheet-item {
   display: flex; align-items: center; justify-content: space-between; padding: 16px; margin: 0 16px 8px; border-radius: 18px;
   background: var(--card); cursor: pointer; font-size: 16px; font-weight: 600; color: var(--ink); transition: transform .2s var(--spring);
@@ -578,6 +587,8 @@ a.set-row { text-decoration: none; }
 .toggle-lbl { font-size: 16px; font-weight: 600; color: var(--ink); }
 .toggle-sub { font-size: 13px; color: var(--mute); margin-top: 2px; }
 .tog { width: 56px; height: 34px; padding: 0; border: none; box-sizing: border-box; border-radius: 999px; background: var(--surface-strong); position: relative; cursor: pointer; flex-shrink: 0; transition: background .2s; }
+/* Off reads as a switch, not a smudge: a fill a third of the way to ink with an edge, about 3:1 on the card */
+.tog:not(.on) { background: color-mix(in srgb, var(--ink) 26%, var(--card)); box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--ink) 18%, transparent); }
 .tog.on { background: var(--pink); }
 .tog::after { content: ''; position: absolute; top: 4px; left: 4px; width: 26px; height: 26px; border-radius: 50%; background: #fff; box-shadow: 0 1px 3px rgba(0,0,0,.2); transition: left .3s var(--spring); }
 .tog.on::after { left: 26px; }
@@ -592,13 +603,13 @@ a.set-row { text-decoration: none; }
   font-family: var(--display); font-size: 24px; font-weight: 800; border: none; background: var(--surface); border-radius: 14px;
   padding: 10px 14px; width: 100%; outline: none; color: var(--ink);
 }
-.name-input:focus { box-shadow: 0 0 0 3px var(--lav); }
+.name-input:focus { box-shadow: 0 0 0 2px var(--ink); }
 .or-rule { display: flex; align-items: center; gap: 10px; margin: 14px 4px; color: var(--mute); font-size: 13px; font-weight: 600; }
 .or-rule::before, .or-rule::after { content: ''; flex: 1; height: 1px; background: var(--surface-strong); }
 .text-input { font: inherit; font-size: 16px; border: none; background: var(--surface); border-radius: 14px; padding: 12px 14px; width: 100%; outline: none; color: var(--ink); line-height: 1.45; }
 .text-input.area { resize: vertical; min-height: 96px; }
 .text-input::placeholder { color: var(--mute-soft); }
-.text-input:focus { box-shadow: 0 0 0 3px var(--lav); }
+.text-input:focus { box-shadow: 0 0 0 2px var(--ink); }
 .text-input[aria-invalid] { box-shadow: 0 0 0 2px var(--loss); }
 .fb-photo { display: flex; align-items: flex-end; gap: 10px; }
 .fb-photo img { width: 96px; height: 96px; object-fit: cover; border-radius: 14px; }
@@ -638,9 +649,9 @@ a.set-row { text-decoration: none; }
 .toast.has-act { display: flex; align-items: center; gap: 12px; padding: 4px 6px 4px 20px; white-space: normal; text-align: left; width: max-content; max-width: calc(100% - 32px); font-size: 15px; }
 .toast.has-act.show { pointer-events: auto; }
 .toast-act { min-height: 44px; padding: 0 14px; border: none; border-radius: 999px; background: rgba(128,128,128,.28); color: inherit; font: inherit; font-weight: 800; cursor: pointer; flex-shrink: 0; }
-/* Toast tones: ink for routine news, pink when money moved, mint for good news (paid, all square) */
+/* Toast tones: ink for routine news and good news alike (a mint toast vanished on mint cards), pink when money moved */
 .toast.t-money { background: var(--pink-fill); color: #fff; }
-.toast.t-win { background: var(--mint); color: var(--on-pastel); }
+.toast.t-win { background: var(--ink); color: var(--on-ink); }
 .confetti { position: fixed; pointer-events: none; z-index: 999; border-radius: 2px; }
 
 /* ============================================================
@@ -714,7 +725,7 @@ button:disabled { cursor: not-allowed; }
 .field-error { font-size: 13px; color: var(--loss); margin-top: 8px; font-weight: 600; }
 .field-btn { min-width: 120px; }
 .text-input { width: 100%; border: none; background: var(--surface); border-radius: 14px; padding: 12px 14px; font-size: 16px; outline: none; color: var(--ink); }
-.text-input:focus { box-shadow: 0 0 0 3px var(--lav); }
+.text-input:focus { box-shadow: 0 0 0 2px var(--ink); }
 .select { width: 100%; border: none; background: var(--surface); border-radius: 14px; padding: 14px; font-size: 16px; font-weight: 600; color: var(--ink); appearance: none; }
 .danger-link { display: flex; align-items: center; justify-content: center; gap: 6px; margin: 16px auto 8px; background: none; border: none; color: var(--loss); font-weight: 600; font-size: 15px; padding: 10px 16px; cursor: pointer; }
 .danger-link:disabled { color: var(--mute-soft); }
@@ -838,7 +849,8 @@ button:disabled { cursor: not-allowed; }
 .resume-card { margin: 4px 16px 12px; display: flex; align-items: center; gap: 14px; background: var(--pink-fill); color: #fff; border-radius: 24px; padding: 16px 16px 16px 20px; cursor: pointer; position: relative; overflow: hidden; transition: transform .2s var(--spring); }
 .resume-card:active { transform: scale(.97); }
 .resume-go { width: 48px; height: 48px; border-radius: 50%; background: #fff; color: var(--pink); display: grid; place-items: center; font-size: 22px; flex-shrink: 0; }
-.resume-pulse { position: absolute; left: 10px; top: 14px; width: 8px; height: 8px; border-radius: 50%; background: #fff; animation: pulse 1.6s ease-out infinite; }
+/* The live dot sits inline before "Round in progress", on the text's line, not loose in the card's corner */
+.resume-pulse { position: relative; display: inline-block; width: 8px; height: 8px; margin-right: 6px; vertical-align: .08em; border-radius: 50%; background: #fff; animation: pulse 1.6s ease-out infinite; }
 @keyframes pulse { 0% { box-shadow: 0 0 0 0 rgba(255,255,255,.7); } 100% { box-shadow: 0 0 0 12px rgba(255,255,255,0); } }
 .season-hero .ball { width: 150px; height: 150px; }
 .round-card { display: block; }
@@ -957,7 +969,9 @@ button:disabled { cursor: not-allowed; }
 .code-big { font-family: var(--display); font-size: 48px; font-weight: 800; letter-spacing: .12em; margin: 4px 0; }
 .code-link { font-size: 13px; opacity: .8; word-break: break-all; }
 .code-input { width: 100%; text-align: center; font-family: var(--display); font-size: 36px; font-weight: 800; letter-spacing: .2em; text-transform: uppercase; border: none; background: var(--card); color: var(--ink); border-radius: 18px; padding: 14px; outline: none; }
-.code-input:focus { box-shadow: 0 0 0 3px var(--lav); }
+.code-input:focus { box-shadow: 0 0 0 2px var(--ink); }
+/* The empty code field's example reads as an example, not as a code already typed in */
+.code-input::placeholder { color: var(--mute); opacity: .45; font-weight: 500; }
 .join-row { border-style: solid; background: var(--card); }
 .join-row .add-ci { background: var(--mint); color: var(--teal); }
 .finished-banner { margin: 8px 16px 0; padding: 12px 14px; border: none; border-radius: 16px; background: var(--ochre); color: var(--on-pastel); font-weight: 700; font-size: 14px; display: flex; gap: 8px; align-items: center; justify-content: center; cursor: pointer; flex-shrink: 0; }
@@ -1026,7 +1040,7 @@ button:disabled { cursor: not-allowed; }
   transition: transform .2s var(--spring);
 }
 .usual-card:active { transform: scale(.97); }
-.usual-card .eyebrow { color: var(--pink-text); }
+.usual-card .eyebrow { color: var(--eyebrow-ink); }
 .usual-card .uc-title { font-size: 20px; font-weight: 800; letter-spacing: -.01em; color: var(--ink); margin-top: 0; }
 .usual-card .uc-sub { font-size: 13px; color: var(--mute); margin-top: 0; }
 .uc-btn { margin-top: 8px; display: inline-flex; align-items: center; gap: 6px; padding: 8px 14px; border-radius: 999px; background: var(--mint); color: var(--on-pastel); font-weight: 700; font-size: 14px; }
@@ -1334,7 +1348,7 @@ button:disabled { cursor: not-allowed; }
   transition: transform .2s var(--spring);
 }
 .upcoming-card:active { transform: scale(.97); }
-.upcoming-card .eyebrow { color: var(--pink-text); }
+.upcoming-card .eyebrow { color: var(--eyebrow-ink); }
 .upcoming-card.off { background: var(--surface); }
 .upcoming-card.off .eyebrow { color: var(--mute); }
 .uc-title { font-size: 19px; font-weight: 800; letter-spacing: -.01em; color: var(--ink); margin-top: 2px; line-height: 1.2; }
@@ -1346,7 +1360,7 @@ button.who-status { cursor: pointer; min-height: 36px; }
 .who-status.out { background: var(--loss-bg); color: var(--loss); }
 .plan-hero { margin: 4px 16px 4px; }
 .plan-hero .ic-from { margin-bottom: 4px; }
-.ph-when { color: var(--pink-text); margin-top: 4px; }
+.ph-when { color: var(--eyebrow-ink); margin-top: 4px; }
 .plan-hero .ic-note { display: flex; gap: 6px; align-items: center; }
 .plan-hero .ic-note i { color: var(--icon); }
 .ph-follow { align-self: flex-start; margin-top: 8px; background: var(--ink); color: var(--on-ink); text-decoration: none; min-height: 44px; }
@@ -1669,10 +1683,9 @@ button.who-status { cursor: pointer; min-height: 36px; }
 .lately-row.static { cursor: default; }
 button.lately-row:active { background: var(--surface); }
 .lately-ic { width: 32px; height: 32px; border-radius: 50%; display: grid; place-items: center; font-size: 17px; flex-shrink: 0; color: var(--on-pastel); }
-.lately-ic.mint { background: var(--mint); }
-.lately-ic.lav { background: var(--lav); }
-.lately-ic.peach { background: var(--peach); }
-.lately-ic.ochre { background: var(--ochre); }
+/* One quiet chip for every kind of line (Trevor's note on Up next's colours: a column of coloured
+   dots was the same noise as the cards). The tint classes stay for anything that wants them back */
+.lately-ic.mint, .lately-ic.lav, .lately-ic.peach, .lately-ic.ochre, .lately-ic.pink { background: var(--surface); color: var(--ink); }
 .lately-main { flex: 1; min-width: 0; display: flex; flex-direction: column; }
 .lately-text { font-weight: 700; color: var(--ink); font-size: 15px; line-height: 1.3; }
 .lately-sub { font-size: 13px; color: var(--mute); margin-top: 2px; }
@@ -1952,7 +1965,7 @@ button.lately-row:active { background: var(--surface); }
   transition: transform .2s var(--spring);
 }
 button.trip-card:active { transform: scale(.97); }
-.trip-card .eyebrow { color: var(--pink-text); }
+.trip-card .eyebrow { color: var(--eyebrow-ink); }
 .trip-card.note { border-width: 1.5px; padding: 12px 12px 12px 16px; }
 .trip-card.wrap-up { display: block; cursor: default; padding: 16px; }
 .trip-card.on-tab { margin-top: 2px; }
@@ -1974,7 +1987,8 @@ button.trip-card:active { transform: scale(.97); }
 .ts-amt { font-family: var(--display); font-weight: 800; font-size: 17px; color: var(--ink); }
 .trip-card .pay-acts { margin-top: 12px; }
 .trip-hero { padding: 0 20px 12px; }
-.eyebrow.pink { color: var(--pink-text); }
+/* Named pink once; card eyebrows are teal now, so pink stays on the one thing to tap */
+.eyebrow.pink { color: var(--eyebrow-ink); }
 .trip-hero .trip-sub { margin-top: 6px; }
 /* "Count it for the trip?" sits above the start button */
 .trip-count { display: flex; align-items: center; gap: 12px; padding: 12px 14px; background: var(--card); border-radius: 18px; box-shadow: inset 0 0 0 2px var(--pink); }
@@ -2141,7 +2155,9 @@ button.trip-card:active { transform: scale(.97); }
 }
 .trip-hide::before { content: ''; position: absolute; inset: -6px; }
 .trip-hide:active { transform: scale(.88); background: var(--surface); }
-.trip-card-wrap > .trip-card .chevron { margin-top: 22px; }
+/* The chevron sits at the card's foot, well clear of the hide X's target in the top corner */
+.trip-card-wrap > .trip-card { align-items: stretch; }
+.trip-card-wrap > .trip-card .chevron { align-self: flex-end; margin: 0 0 4px; }
 .trip-updated {
   display: inline-block; margin-left: 4px; padding: 1px 8px; border-radius: 999px; vertical-align: 1px;
   background: var(--trip-tag-bg); color: var(--pink-text); font-size: 11px; font-weight: 700; letter-spacing: .02em; text-transform: none;
@@ -2240,7 +2256,7 @@ button.trip-card:active { transform: scale(.97); }
   text-align: left; cursor: pointer; transition: transform .2s var(--spring);
 }
 .uc-preview:active { transform: scale(.98); }
-.uc-preview > i:first-child { color: var(--pink-text); font-size: 18px; flex-shrink: 0; }
+.uc-preview > i:first-child { color: var(--ink); font-size: 18px; flex-shrink: 0; }
 .uc-preview > i:last-child { color: var(--mute-soft); font-size: 18px; flex-shrink: 0; }
 .uc-pv-sub { color: var(--mute); font-size: 13px; }
 .uc-pv-line { display: block; margin-top: 2px; }
@@ -2254,7 +2270,7 @@ button.trip-card:active { transform: scale(.97); }
 .pv-count-n { font-size: 38px; font-weight: 800; line-height: 1; font-variant-numeric: tabular-nums; }
 .pv-count-u { font-size: 11px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; margin-top: 3px; }
 .pv-count-t { font-size: 17px; font-weight: 800; }
-.pv-when { color: var(--pink-text); }
+.pv-when { color: var(--eyebrow-ink); }
 .pv-game { display: flex; align-items: center; gap: 6px; margin-top: 2px; font-size: 26px; font-weight: 800; letter-spacing: -.02em; line-height: 1.15; color: var(--ink); }
 .pv-game i { color: var(--icon); font-size: 22px; }
 .pv-sub { margin-top: 4px; font-size: 13px; color: var(--mute); }
@@ -2297,7 +2313,7 @@ button.trip-card:active { transform: scale(.97); }
   display: flex; flex-direction: column; align-items: flex-start; gap: 2px; width: 100%; min-height: 44px; padding: 12px 36px 6px 0;
   border: none; background: none; font: inherit; color: var(--ink); text-align: left; cursor: pointer;
 }
-.recap-head .eyebrow { color: var(--pink-text); }
+.recap-head .eyebrow { color: var(--eyebrow-ink); }
 .recap-title { font-size: 24px; font-weight: 800; letter-spacing: -.02em; line-height: 1.15; }
 .recap-yours { font-size: 15px; font-weight: 600; color: var(--body); font-variant-numeric: tabular-nums; }
 .recap-moments { list-style: none; margin: 8px 0 0; padding: 0; display: flex; flex-direction: column; gap: 8px; }
@@ -2358,8 +2374,8 @@ button.trip-card:active { transform: scale(.97); }
 .talk-react.static:active { transform: none; }
 .talk-react .tr-emoji { font-size: 20px; line-height: 1; }
 .talk-react .tr-n { font-variant-numeric: tabular-nums; font-size: 14px; }
-.talk-react.sm { min-width: 0; min-height: 36px; padding: 0 10px; font-size: 14px; position: relative; }
-.talk-react.sm::before { content: ''; position: absolute; inset: -4px 0; } /* a 44px tap target on a 36px pill */
+.talk-react.sm { min-width: 44px; min-height: 36px; padding: 0 10px; font-size: 14px; position: relative; }
+.talk-react.sm::before { content: ''; position: absolute; inset: -4px 0; } /* a 44 by 44 tap target on a 36px pill */
 .talk-react.sm i { font-size: 17px; color: var(--icon); }
 .talk-react.add { gap: 1px; }
 .talk-react.add .tr-plus { font-size: 11px; }
@@ -2398,7 +2414,6 @@ button.trip-card:active { transform: scale(.97); }
 .talk-count i { font-size: 13px; color: var(--icon); }
 .hr-main .talk-count { margin-top: 0; }
 .lately-main .talk-count { margin-top: 3px; }
-.lately-ic.pink { background: var(--pink); }
 /* The player card: what the two of you said lately */
 .person-talk { margin: 0 16px 6px; padding: 4px 0; gap: 0; background: var(--card); border-radius: 20px; }
 .person-talk li + li .talk-item { border-top: 1px solid var(--line-soft); }
@@ -2502,7 +2517,7 @@ button.ch-main:active { transform: scale(.98); }
 .exp-big.sm { font-size: 26px; }
 .exp-sum-sub { font-size: 13px; color: var(--mute); margin-top: 4px; line-height: 1.4; font-variant-numeric: tabular-nums; }
 .ledger-row.exp-row { gap: 12px; padding: 14px 14px 14px 12px; width: calc(100% - 32px); border: none; font: inherit; color: inherit; text-align: left; }
-.exp-ic { width: 40px; height: 40px; border-radius: 50%; flex-shrink: 0; display: grid; place-items: center; background: var(--trip-tag-bg); color: var(--pink-text); font-size: 19px; }
+.exp-ic { width: 40px; height: 40px; border-radius: 50%; flex-shrink: 0; display: grid; place-items: center; background: var(--surface); color: var(--ink); font-size: 19px; }
 .exp-name { font-family: var(--display); font-size: 17px; font-weight: 800; color: var(--ink); overflow-wrap: anywhere; }
 .exp-row .lr-info { min-width: 0; }
 .exp-mine { font-size: 13px; font-weight: 700; margin-top: 3px; font-variant-numeric: tabular-nums; }
@@ -2703,7 +2718,7 @@ button.ch-main:active { transform: scale(.98); }
 .remind-card.tee { box-shadow: inset 0 0 0 2px var(--mint); }
 .rc-head { display: flex; align-items: flex-start; gap: 12px; }
 .rc-ic { width: 40px; height: 40px; flex-shrink: 0; border-radius: 50%; display: grid; place-items: center; background: var(--mint); color: var(--on-pastel); font-size: 20px; }
-.remind-card .eyebrow { color: var(--pink-text); }
+.remind-card .eyebrow { color: var(--eyebrow-ink); }
 .rc-title { font-size: 19px; font-weight: 800; letter-spacing: -.01em; color: var(--ink); line-height: 1.2; margin-top: 2px; }
 .rc-title.sm { font-size: 16px; letter-spacing: 0; margin-top: 0; font-variant-numeric: tabular-nums; }
 .rc-sub { font-size: 13px; color: var(--mute); margin-top: 4px; line-height: 1.4; }
@@ -2735,7 +2750,7 @@ button.ch-main:active { transform: scale(.98); }
 .toggle-sub.share-held { color: var(--ink); font-weight: 600; }
 
 /* ---------- o8 follow: friends' rounds live, Watch, the group feed, the gallery on Play ---------- */
-.fr-eyebrow { display: flex; align-items: center; gap: 6px; color: var(--pink-text); }
+.fr-eyebrow { display: flex; align-items: center; gap: 6px; color: var(--eyebrow-ink); }
 .fr-eyebrow.done { color: var(--mute); }
 .fr-dot { width: 7px; height: 7px; border-radius: 50%; background: currentColor; flex-shrink: 0; animation: frPulse 1.6s ease-out infinite; }
 @keyframes frPulse { 0% { box-shadow: 0 0 0 0 color-mix(in srgb, currentColor 60%, transparent); } 100% { box-shadow: 0 0 0 8px transparent; } }
@@ -2993,7 +3008,7 @@ button.ch-main:active { transform: scale(.98); }
 /* The field: looks like the input it replaces, with the value, a calendar or clock, and a ring while its sheet is up */
 .pick-field { display: flex; align-items: center; justify-content: space-between; gap: 8px; min-height: 48px; text-align: left; cursor: pointer; line-height: 1.25; transition: transform .2s var(--spring), box-shadow .15s; }
 .pick-field:active:not(:disabled) { transform: scale(.98); }
-.pick-field[aria-expanded="true"] { box-shadow: 0 0 0 3px var(--lav); }
+.pick-field[aria-expanded="true"] { box-shadow: 0 0 0 2px var(--ink); }
 .pick-field:disabled { color: var(--mute-soft); cursor: not-allowed; }
 .pick-field .pf-text { flex: 1; min-width: 0; display: flex; flex-direction: column; }
 .pick-field .pf-main { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
@@ -3420,6 +3435,9 @@ a.header-btn.rm-open { text-decoration: none; }
    --------------------------------------------------------------------------- */
 /* Five or more steps (the Big Game's six): the bar scrolls sideways and every label fits its pill */
 .step-bar.many { position: relative; overflow-x: auto; scrollbar-width: none; -webkit-overflow-scrolling: touch; }
+/* In a trip or Big Game form (16px in from the screen) a scrolling step bar runs to the screen's
+   edges with the 16px gutter inside it, so the first step never sits flush against the edge */
+.trip-form .step-bar.many { margin-left: -16px; margin-right: -16px; padding-left: 16px; padding-right: 16px; scroll-padding-inline: 16px; }
 .step-bar.many::-webkit-scrollbar { display: none; }
 .step-bar.many .step { flex: 0 0 auto; padding: 8px 12px; min-height: 36px; white-space: nowrap; }
 /* The Trip page's views size to their labels, so "Expenses" keeps clear of its pill's edge; a cup trip's
@@ -3496,7 +3514,9 @@ a.header-btn.rm-open { text-decoration: none; }
 .settle-lede p { line-height: 1.45; }
 /* "I paid" and "I got it" are the quiet second button next to the pay app's, so a page of them
    doesn't stack up black bars */
-.pay-btn.got { background: var(--surface); color: var(--ink); }
+/* I got it / I paid leads a settle-up row (an ink outline, like Paid on the Tab); the payment app
+   beside it is the quiet one (tab-card.css .pay-more) */
+.pay-btn.got { background: var(--card); color: var(--ink); box-shadow: inset 0 0 0 1.5px var(--ink); }
 /* Days and months you can't pick are faded, as unavailable choices are everywhere else */
 .cal-day[aria-disabled] .cd-num { text-decoration: none; opacity: .35; }
 .cal-cell:disabled { text-decoration: none; opacity: .35; }
@@ -3534,7 +3554,8 @@ a.header-btn.rm-open { text-decoration: none; }
 .hof-list { list-style: none; padding: 4px 14px; }
 .hof-row { display: flex; align-items: center; gap: 12px; min-height: 56px; padding: 8px 0; border-bottom: 1px solid var(--line); }
 .hof-row:last-child { border-bottom: 0; }
-.hof-row.me { margin: 0 -14px; padding: 8px 14px; background: var(--pick-tint); border-radius: 14px; border-bottom-color: transparent; }
+/* You in the money list: in bold, not on a pink band (pink is for the one thing to tap) */
+.hof-row.me .hof-name { font-weight: 800; color: var(--ink); }
 .hof-row .avatar { margin: 0; flex-shrink: 0; }
 .hof-rank { width: 20px; flex-shrink: 0; text-align: center; font-size: 14px; font-weight: 700; color: var(--mute); font-variant-numeric: tabular-nums; }
 .hof-name { display: block; font-size: 15px; font-weight: 700; color: var(--ink); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
@@ -3687,7 +3708,7 @@ a.header-btn.rm-open { text-decoration: none; }
 .cb-from { grid-row: 1; grid-column: 1; }
 .cb-from .avatar { margin: 0; }
 .cb-group { width: 34px; height: 34px; }
-.cb-bubble { grid-row: 1; grid-column: 2; background: #2b7cf6; color: #fff; border-radius: 20px 20px 20px 6px; padding: 10px 14px; justify-self: start; }
+.cb-bubble { grid-row: 1; grid-column: 2; background: var(--surface); color: var(--ink); box-shadow: var(--hair); border-radius: 20px 20px 20px 6px; padding: 10px 14px; justify-self: start; }
 .cb-bubble .callout-text { font-size: 15px; font-weight: 600; line-height: 1.35; color: inherit; }
 .cb-send { grid-row: 2; grid-column: 1 / -1; justify-self: end; display: inline-flex; align-items: center; gap: 6px; font-size: 13px; font-weight: 700; color: var(--icon); }
 
@@ -4052,6 +4073,8 @@ a.header-btn.rm-open { text-decoration: none; }
 .fold-head { display: flex; align-items: center; gap: 12px; width: 100%; min-height: 60px; padding: 10px 0; background: none; border: none; text-align: left; cursor: pointer; font-family: inherit; color: var(--ink); }
 .fold-ic { width: 36px; height: 36px; flex-shrink: 0; display: grid; place-items: center; border-radius: 12px; background: var(--surface); color: var(--icon); font-size: 18px; }
 .fold-head .row-main { flex: 1; min-width: 0; }
+/* A game's own art can lead a row instead of the icon tile (Your stats, By game) */
+.fold-lead { display: grid; flex-shrink: 0; width: 40px; height: 40px; }
 .fold-title { display: block; font-weight: 700; font-size: 15px; color: var(--ink); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .fold-title .sl-place { font-weight: 500; color: var(--mute); }
 .fold-sub { display: block; margin-top: 2px; font-size: 13px; font-weight: 500; color: var(--mute); font-variant-numeric: tabular-nums; }
@@ -4087,7 +4110,7 @@ a.header-btn.rm-open { text-decoration: none; }
 .bt-top { display: flex; align-items: center; justify-content: space-between; gap: 8px; width: 100%; }
 .bt-ic { width: 28px; height: 28px; margin: 0; font-size: 15px; }
 .bt-k { font-size: 12px; font-weight: 600; letter-spacing: .08em; }
-.bt-who { font-size: 14px; font-weight: 700; color: var(--pink-text); }
+.bt-who { font-size: 14px; font-weight: 700; color: var(--ink); }
 .badge-tile.empty .bt-who { color: var(--mute); }
 .bt-v { margin-top: 8px; font-size: 30px; letter-spacing: -.03em; line-height: 1.05; font-variant-numeric: tabular-nums; }
 .bt-sub { display: block; margin-top: 4px; font-size: 13px; font-weight: 500; color: var(--mute); line-height: 1.3; }

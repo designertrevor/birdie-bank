@@ -68,13 +68,26 @@ export function FeedStatusNote({ status, onSignIn = null }) {
 /**
  * Up next's Friends section: friends' rounds going on now (the ones you watch first) and any that
  * finished in the last day, then the way into the whole group feed. `show` keeps it off a brand new
- * phone until there's something to see.
+ * phone until there's something to see. Up next splits it (`only`): 'live' is the section while a
+ * friend's round is on, up with Lately; 'link' is just the way into the feed, in the More fold,
+ * when there's nobody to watch.
  */
-export function FriendsUpNext({ show = true }) {
+export function FriendsUpNext({ show = true, only = null }) {
   const nav = useNav();
   const { rounds } = useFriendRounds();
   const list = upNextFriends(rounds);
   if (!show && !list.length) return null;
+  if (only === 'live' && !list.length) return null;
+  if (only === 'link') {
+    if (list.length) return null;
+    return (
+      <button className="lately-all fr-all" onClick={() => nav.push('friends')}>
+        <Spot kind="crowd" size={64} className="fr-crowd" />
+        <span className="row-main">Friends’ rounds and the group feed</span>
+        <Icon name="caret-right" />
+      </button>
+    );
+  }
   return (
     <>
       <h2 className="sec-label fr-head">Friends{list.length > 0 && <span className="fr-live"><span className="live-dot" aria-hidden="true" />{list.length} playing now</span>}</h2>
