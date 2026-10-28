@@ -3,7 +3,7 @@
 // sheets: who's banker on this hole, and one player's bet on the keypad.
 import { Icon, Numpad, PickChip, PickRow, Sheet } from '../../components/ui.jsx';
 import {
-  HammerPanel, MatchPanel, MoneyPanel, PanelArt, PointsPanel, RabbitPanel, ScramblePanel, SixesPanel, SnakePanel, TeamPanel, TotalsPanel, VegasPanel,
+  HammerPanel, MatchPanel, MoneyPanel, PointsPanel, RabbitPanel, ScramblePanel, SixesPanel, SnakePanel, TeamPanel, TotalsPanel, VegasPanel,
 } from '../../components/GamePanels.jsx';
 import { DrivesShortfall } from '../../components/ScrambleDrives.jsx';
 import {
@@ -170,7 +170,6 @@ function SkinsPanel({ round, hole, onChange }) {
   return (
     <div className="worth-strip">
       <div className="ws-main">
-        <PanelArt game="skins" />
         <span className="ws-text"><span className="ws-l">Worth</span> {worth.join(' · ')}</span>
         {onChange && <button className="ws-change" onClick={onChange}>{pot ? `${money(cfg.stake ?? cfg.value)} each in` : `${money(cfg.value)} a skin`}</button>}
       </div>

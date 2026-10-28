@@ -194,7 +194,7 @@ function PlayRound({ round, mount, momentUp = false, watch = 'money', setWatch }
 
   return (
     <Screen className={`play ${theme ? 'themed' : ''}`} style={themeVars(theme)}>
-      <PlayHeader round={round} idx={idx} hole={hole} game={game} solo={solo} theme={theme} preview={preview} onLive={() => setLive(true)} onMenu={() => setMenu(true)} noMoney={money && !solo} />
+      <PlayHeader round={round} idx={idx} hole={hole} solo={solo} theme={theme} preview={preview} onLive={() => setLive(true)} onMenu={() => setMenu(true)} noMoney={money && !solo} />
       <PlayBanners round={round} card={keeping} editable={editable} dirty={dirty} requests={requests} doneEditing={doneEditing} onLetIn={setAddSheet} />
       {money && (
         <LiveMoney round={round} me={me} holderName={keeping.holderName} onCard={() => setCard(true)} onThisHole={() => setWatch('hole')}
