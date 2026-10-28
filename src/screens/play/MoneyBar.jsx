@@ -2,7 +2,6 @@
 import { useState } from 'react';
 import { Icon, Sheet } from '../../components/ui.jsx';
 import './play.css';
-import { GameArt } from '../../components/GameArt.jsx';
 import { ByGameTable } from '../../components/SideGames.jsx';
 import { bettingRound, holeComplete, isJustPlaying, playsHole } from '../../lib/round.js';
 import { JUST_PLAYING_TAG, niceRound } from '../../lib/just-playing.js';
@@ -44,7 +43,7 @@ export function CardBar({ round }) {
  * picture in a sheet: thru which hole, what this hole moves, each game's money, the side bets for
  * money in a reward round, and who's just playing.
  */
-export function MoneyBar({ round: full, hole, preview, art = null }) {
+export function MoneyBar({ round: full, hole, preview, themed = false }) {
   // The bar is the betting players' money: anyone just playing is named under it, with no amount
   const round = bettingRound(full);
   const casual = full.players.filter(p => isJustPlaying(full, p.id)).map(p => p.name.split(' ')[0]);
@@ -77,10 +76,9 @@ export function MoneyBar({ round: full, hole, preview, art = null }) {
   // Not a live region: it changes on every tap. The saved hole's result is announced by the toast.
   return (
     <>
-    <button type="button" className={`money-strip ${art ? 'themed' : ''}`} aria-haspopup="dialog" onClick={() => setOpen(true)}
+    <button type="button" className={`money-strip ${themed ? 'themed' : ''}`} aria-haspopup="dialog" onClick={() => setOpen(true)}
       aria-label={`${word} so far, ${thru.toLowerCase()}: ${said}${cashSaid}. Show more`}>
-      {/* The main game's art on the strip: the round's theme */}
-      {art && <GameArt game={art} className="ms-art" />}
+      {/* The round's theme is the strip's colour alone: the game's art was too small here to add anything */}
       <span className="ms-items">
         {round.players.map(p => {
           const v = preview.balances[p.id];

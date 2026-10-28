@@ -3,6 +3,7 @@
 // as an SVG, hidden on the page, and handed to the canvas as a picture (lib/useArtSrc.js), the way the
 // profile and rivalry cards take their buddies.
 import { BuddyFigure } from './BuddyArt.jsx';
+import { CROWN_BOX, CrownShape } from './Podium.jsx';
 import { INK, BALL, PINK, OCHRE, MINT, CORAL, LAV } from '../lib/art-palette.js';
 
 const CELL = 96, H = 112, EDGE = 8;
@@ -12,12 +13,10 @@ const BITS = [[-40, 26, PINK, 'r'], [37, 20, OCHRE, 'r'], [-27, 8, MINT, 'c'], [
 
 /** The crown from Podium.jsx, as a group: `w` wide with its top centre at (x, y), tipped a little. */
 function CrownMark({ x, y, w }) {
-  const k = w / 64;
+  const k = w / CROWN_BOX.w;
   return (
-    <g transform={`translate(${x - w / 2} ${y}) rotate(-8 ${w / 2} ${18 * k}) scale(${k})`}>
-      <path d="M6 32 L10 6 L22 20 L32 2 L42 20 L54 6 L58 32Z" fill="#e8b94a" stroke={INK} strokeWidth="2" strokeLinejoin="round" />
-      <rect x="6" y="28" width="52" height="8" rx="3" fill="#c99a30" stroke={INK} strokeWidth="2" />
-      <circle cx="32" cy="20" r="4" fill="#ff4d8b" /><circle cx="17" cy="24" r="3" fill="#ff4d8b" /><circle cx="47" cy="24" r="3" fill="#ff4d8b" />
+    <g transform={`translate(${x - w / 2} ${y}) rotate(-8 ${w / 2} ${(CROWN_BOX.h * k) / 2}) scale(${k}) translate(${-CROWN_BOX.x} ${-CROWN_BOX.y})`}>
+      <CrownShape />
     </g>
   );
 }
@@ -39,7 +38,7 @@ function Cheer({ cx, buddy, crowned, i }) {
         <circle cx={cx - 33} cy={48} r="4.6" fill={BALL} stroke={INK} strokeWidth="1.8" />
         <circle cx={cx + 33} cy={48} r="4.6" fill={BALL} stroke={INK} strokeWidth="1.8" />
         <BuddyFigure id={buddy} x={cx - 32} y={44} size={64} />
-        {crowned && <CrownMark x={cx} y={36} w={38} />}
+        {crowned && <CrownMark x={cx} y={22} w={32} />}
       </g>
     </g>
   );

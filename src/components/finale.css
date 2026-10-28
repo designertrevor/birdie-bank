@@ -10,7 +10,7 @@
 @keyframes buddyBob { to { transform: translateY(-2px); } }
 /* The crown drops onto the winner's buddy on the board as the last total lands */
 .crown-art.rv-row-crown {
-  position: absolute; left: 50%; top: -13px; width: 22px; z-index: 1; pointer-events: none;
+  position: absolute; left: 50%; top: -15px; width: 21px; z-index: 1; pointer-events: none;
   transform: translateX(-50%) rotate(-8deg); filter: drop-shadow(0 1px 0 rgba(0,0,0,.15));
   animation: crownOn .6s var(--ease-bounce) both;
 }

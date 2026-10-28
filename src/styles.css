@@ -749,7 +749,8 @@ button:disabled { cursor: not-allowed; }
 .game-art.sg-icon { width: 36px; height: 36px; flex-shrink: 0; }
 .game-art.ob-tile-art { width: 40px; height: 40px; }
 .summary-card { background: var(--ochre); }
-.summary-card .li-sub { color: rgba(0,0,0,.65); }
+/* Dark text on the ochre in both themes (the new look's quieter sub colour would sit grey on it) */
+.summary-card .li-sub, :root[data-look="new"] .summary-card .li-sub { color: rgba(10,10,10,.72); }
 .order-num { width: 28px; height: 28px; border-radius: 50%; background: var(--surface); display: grid; place-items: center; font-weight: 800; font-family: var(--display); margin-right: 12px; flex-shrink: 0; }
 .set-row.static { gap: 6px; }
 
@@ -1572,7 +1573,7 @@ button.who-status { cursor: pointer; min-height: 36px; }
 .reward-card { display: flex; gap: 12px; align-items: flex-start; padding: 16px; border-radius: 20px; background: var(--ochre); color: var(--on-pastel); }
 .reward-card.square { background: var(--surface); color: var(--ink); }
 .reward-card .rc-icon { font-size: 28px; flex-shrink: 0; }
-.reward-card .rc-text { min-width: 0; }
+.reward-card .rc-text { min-width: 0; color: inherit; } /* the card's own text colour, not the round card's .rc-text grey */
 .reward-card .rc-win { font-size: 22px; font-weight: 800; letter-spacing: -.02em; line-height: 1.15; overflow-wrap: anywhere; }
 .reward-card .rc-buy { font-size: 16px; font-weight: 700; margin-top: 2px; overflow-wrap: anywhere; }
 .reward-card .rc-note { font-size: 13px; margin-top: 6px; opacity: .8; }
@@ -3604,9 +3605,9 @@ a.header-btn.rm-open { text-decoration: none; }
 .ft-art { display: flex; justify-content: center; margin: -18px 0 -14px; }
 
 /* RESULTS: the winner's buddy in a crown, the top three on a podium, everyone in one list */
-.crowned { position: relative; display: inline-grid; place-items: center; width: var(--face); height: calc(var(--face) * 1.22); align-content: end; }
+.crowned { position: relative; display: inline-grid; place-items: center; width: var(--face); height: calc(var(--face) * 1.3); align-content: end; }
 .crowned .avatar { width: var(--face); height: var(--face); margin: 0; box-shadow: 0 0 0 4px rgba(255,255,255,.55); }
-.crowned .crown-art { position: absolute; top: 0; left: 50%; width: calc(var(--face) * .62); transform: translateX(-50%) rotate(-8deg); z-index: 1; filter: drop-shadow(0 2px 0 rgba(0,0,0,.12)); animation: crownOn .7s .25s var(--ease-bounce) both; }
+.crowned .crown-art { position: absolute; top: 0; left: 50%; width: calc(var(--face) * .54); transform: translateX(-50%) rotate(-8deg); z-index: 1; filter: drop-shadow(0 2px 0 rgba(0,0,0,.12)); animation: crownOn .7s .25s var(--ease-bounce) both; }
 @keyframes crownOn { from { transform: translate(-50%, -18px) rotate(-30deg); opacity: 0; } }
 .winner-hero .crowned { margin: 0 auto 2px; animation: pop .55s var(--spring) both; }
 .winner-hero .hero-spot { display: block; margin: -16px auto -14px; }
@@ -3622,6 +3623,16 @@ a.header-btn.rm-open { text-decoration: none; }
 .pod-2 .pod-step { height: 56px; background: var(--mint); }
 .pod-3 .pod-step { height: 42px; background: var(--peach); }
 .pod-1 .pod-face { min-height: 82px; }
+/* In the dark the pastel steps glared: the same colours sunk into the card, first place strongest,
+   with light numbers on the two lower steps */
+:root[data-theme="dark"] .podium .pod-1 .pod-step { background: color-mix(in srgb, var(--pod-tint, var(--ochre)) 72%, var(--card)); }
+:root[data-theme="dark"] .podium .pod-2 .pod-step { background: color-mix(in srgb, var(--pod-tint, var(--mint)) 42%, var(--card)); color: var(--ink); }
+:root[data-theme="dark"] .podium .pod-3 .pod-step { background: color-mix(in srgb, var(--pod-tint, var(--peach)) 28%, var(--card)); color: var(--ink); }
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) .podium .pod-1 .pod-step { background: color-mix(in srgb, var(--pod-tint, var(--ochre)) 72%, var(--card)); }
+  :root:not([data-theme="light"]) .podium .pod-2 .pod-step { background: color-mix(in srgb, var(--pod-tint, var(--mint)) 42%, var(--card)); color: var(--ink); }
+  :root:not([data-theme="light"]) .podium .pod-3 .pod-step { background: color-mix(in srgb, var(--pod-tint, var(--peach)) 28%, var(--card)); color: var(--ink); }
+}
 .stand-group { margin: 0 16px 8px; background: var(--card); border-radius: 20px; overflow: hidden; }
 .stand-line { display: flex; align-items: center; gap: 10px; padding: 10px 16px; position: relative; }
 .stand-line + .stand-line::before { content: ''; position: absolute; top: 0; left: 16px; right: 16px; height: 1px; background: var(--line); }

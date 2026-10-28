@@ -46,8 +46,12 @@ export function ReadyStep({ round, onStart, onLater }) {
     <>
       <div className="scroll">
         <div className="ready-hero">
-          <Spot kind="crowd" ids={crew} size={160} className="ready-crew" plate={false} />
-          <div className="ready-title d">You’re set for {gameLabel(round)}</div>
+          {/* The crew stands on a patch of the game's colour, so a white hat in the light and a black
+              brim in the dark still have something to read against */}
+          <div className="ready-ground" style={themeVars(theme)}>
+            <Spot kind="crowd" ids={crew} size={160} className="ready-crew" plate={false} />
+          </div>
+          <h1 className="ready-title d">You’re set for {gameLabel(round)}</h1>
         </div>
         <div className={`block ready-card ${theme ? 'themed' : ''}`} style={themeVars(theme)}>
           {/* What's on the line heads the card, next to every game's art (the main game first and biggest) */}

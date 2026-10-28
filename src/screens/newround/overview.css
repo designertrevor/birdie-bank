@@ -10,6 +10,11 @@
 .ov-again:active { transform: scale(.98); }
 .ov-again-text { display: flex; flex-direction: column; gap: 3px; min-width: 0; flex: 1; }
 .ov-again .eyebrow { color: var(--pink-text); }
+/* On the dark butter the pink needs a little light to stay readable at eyebrow size */
+:root[data-theme="dark"] .ov-again .eyebrow { color: color-mix(in srgb, var(--pink) 70%, #fff); }
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) .ov-again .eyebrow { color: color-mix(in srgb, var(--pink) 70%, #fff); }
+}
 .ov-again-title { font-family: var(--display); font-weight: var(--display-weight); font-size: 21px; line-height: 1.2; letter-spacing: -.01em; }
 .ov-again-sub { font-size: 13px; color: var(--body); line-height: 1.4; }
 .ov-again-btn {
@@ -46,3 +51,7 @@
 /* Not set yet: an edge, no fill (the plan's "Not yet" state); something to fix: Up for a vote's colours */
 .ov-row.todo .ov-change { background: transparent; box-shadow: inset 0 0 0 1px var(--state-not-edge); }
 .ov-row.fix .ov-change { background: var(--state-vote-bg); color: var(--state-vote-ink); }
+
+/* Setup's small controls keep their size but take a 44px tap: the step tabs and a side game's rules dot */
+.step.tappable, .gt-info { position: relative; }
+.step.tappable::before, .gt-info::before { content: ''; position: absolute; left: 50%; top: 50%; width: max(100%, 44px); height: max(100%, 44px); transform: translate(-50%, -50%); }

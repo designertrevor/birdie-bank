@@ -68,7 +68,7 @@ export const ART_USES = {
   'spots/cards': { name: 'A hand of cards', used: ['Set up, the Add a side game sheet (88px)', 'Set up, the games question (160px)'] },
   'spots/ribbons': { name: 'The record book', used: ['Hall of fame with no rounds yet (150px)'] },
   'spots/punchcard': { name: 'A punch card', used: ['Season, before the rounds it needs (150px)'] },
-  'spots/goldcrown': { name: 'The winner’s crown', used: ['Not placed yet (2026-10-28): the crown alone, wide not square, to sit on the winner’s face on the podium in place of the hand-drawn one'] },
+  'spots/goldcrown': { name: 'The winner’s crown', used: ['On the winner’s buddy: the results podium and crowned face (35 to 45px wide), the reveal and its race rows (21px), Hall of fame’s champion; the results image draws the same crown from its paths in Podium.jsx'] },
 };
 
 /** The icons drawn as art: the welcome's game tags (Phosphor names) and the first ball. */

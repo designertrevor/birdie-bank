@@ -16,14 +16,14 @@ import { useNav } from '../../lib/nav.js';
 import { CardBar, MoneyBar } from './MoneyBar.jsx';
 
 /** The header, the line that shows how far through the round, and the money strip (or the Big Game's board, or the card). */
-export function PlayHeader({ round, idx, hole, game, solo, theme, preview, onLive, onMenu, noMoney = false }) {
+export function PlayHeader({ round, idx, hole, solo, theme, preview, onLive, onMenu, noMoney = false }) {
   const nav = useNav();
   return (
     <>
     <div className="play-top">
       <button className="header-close" onClick={() => nav.pop()} aria-label="Leave round (it stays saved)"><Icon name="caret-down" /></button>
       <div className="play-title">
-        <div className="play-course">{round.course.name}</div>
+        <h1 className="play-course">{round.course.name}</h1>
         <div className="play-progress">{round.trip?.format === 'big' && !ownMoney(round) ? round.trip.name : gameLabel(round)} · Hole {idx + 1} of {round.holes.length} {round.shared && <button className="pill-link" onClick={() => onLive()}><LivePill round={round} /></button>}</div>
       </div>
       <button className="header-close" onClick={() => onMenu()} aria-label="Round menu"><Icon name="dots-three" /></button>
@@ -32,7 +32,7 @@ export function PlayHeader({ round, idx, hole, game, solo, theme, preview, onLiv
     <div className="play-track" aria-hidden="true"><span style={{ transform: `scaleX(${(idx + 1) / round.holes.length})` }} /></div>
     {/* A Big Game's group round with no money of its own shows the game across every group instead */}
     {/* The live money view (a phone watching the round) has the race instead, so no strip over it */}
-    {noMoney ? null : solo ? <CardBar round={round} /> : bigBoardOnly(round) ? <BigBar round={round} /> : <MoneyBar round={round} hole={hole} preview={preview} art={theme ? game : null} />}
+    {noMoney ? null : solo ? <CardBar round={round} /> : bigBoardOnly(round) ? <BigBar round={round} /> : <MoneyBar round={round} hole={hole} preview={preview} themed={!!theme} />}
     {round.trip?.format === BIG_FORMAT && ownMoney(round) && (
       <button className="big-link" onClick={() => nav.push('bigGame', { id: round.trip.id })}><Icon name="users-four" fill /> {round.trip.name}: the board across every group <Icon name="caret-right" /></button>
     )}
