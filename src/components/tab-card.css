@@ -8,7 +8,34 @@
 .pay-btn.settle.roll-part { height: auto; min-height: 46px; }
 .pay-acts.pay-more { margin-top: 8px; gap: 8px; }
 .pay-acts.pay-more:empty { display: none; }
-.pay-more .pay-btn { height: 40px; font-size: 13px; border-radius: var(--r-btn); }
+.pay-more .pay-btn { height: 44px; font-size: 14px; border-radius: var(--r-btn); }
 .pay-more .pay-btn.icon-only { flex: 0 0 48px; }
+/* The payment app, quieter than Paid and Roll (Trevor, 2026-10-28): no brand fill here, just the
+   app's colour on its icon and name over the quiet surface, so it still reads as Venmo or Cash App.
+   Sheets and other screens keep the filled brand buttons (styles.css .app-*). */
+.pay-more .pay-btn[class*="app-"] { background: var(--surface) !important; color: var(--app-ink) !important; }
+.pay-more .pay-btn.app-venmo { --app-ink: var(--venmo); }
+.pay-more .pay-btn.app-cashapp { --app-ink: var(--cashapp); }
+.pay-more .pay-btn.app-paypal { --app-ink: var(--paypal); }
+.pay-more .pay-btn.app-zelle { --app-ink: var(--zelle); }
+/* The same brands, lifted enough to read on a dark card */
+:root[data-theme="dark"] .pay-more .pay-btn.app-venmo { --app-ink: #7cbcf0; }
+:root[data-theme="dark"] .pay-more .pay-btn.app-cashapp { --app-ink: #4fd68a; }
+:root[data-theme="dark"] .pay-more .pay-btn.app-paypal { --app-ink: #8fb2ff; }
+:root[data-theme="dark"] .pay-more .pay-btn.app-zelle { --app-ink: #c3a0ff; }
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) .pay-more .pay-btn.app-venmo { --app-ink: #7cbcf0; }
+  :root:not([data-theme="light"]) .pay-more .pay-btn.app-cashapp { --app-ink: #4fd68a; }
+  :root:not([data-theme="light"]) .pay-more .pay-btn.app-paypal { --app-ink: #8fb2ff; }
+  :root:not([data-theme="light"]) .pay-more .pay-btn.app-zelle { --app-ink: #c3a0ff; }
+}
 /* "Roll $10 to next time" (just the shared rounds' part) wraps to two lines rather than cutting off */
 .pay-btn.settle.roll-part { padding: 6px 12px; text-align: center; justify-content: center; }
+
+/* A list of plain rows in one card with hairlines between, not a stack of cards: the Tab's Everyone
+   else and Payments, and the story on a person's screen */
+.te-list { margin: 0 16px 10px; border-radius: var(--r-card); background: var(--card); box-shadow: var(--hair); overflow: hidden; }
+.te-list > * + * { border-top: 1px solid var(--line); }
+.te-list .ledger-row, .te-list .pay-talk { width: 100%; margin: 0; border-radius: 0; background: none; box-shadow: none; }
+.te-list .ledger-row:active { transform: none; background: var(--surface); }
+.te-list .ledger-row.static:active { background: none; }

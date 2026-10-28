@@ -41,5 +41,8 @@
 .te-card .tp-amt { font-weight: var(--money-weight); }
 .te-card .tp-name { font-weight: var(--display-weight); }
 .te-section .square-line { margin-top: 0; }
-.te-card > .tab-part { margin: 10px 2px 2px; }
+/* The link keeps its 44px to tap, but lets the hit area overlap the card's padding so the words
+   don't float in empty space at the foot of the card */
+.te-card > .tab-part { margin: 4px 2px -8px; }
 .tab-e .sq-strip { border-radius: var(--r-card); box-shadow: var(--hair); }
+

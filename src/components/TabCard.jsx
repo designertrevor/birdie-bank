@@ -153,7 +153,7 @@ export function PersonActions({ other, net, meId }) {
               {owesMe ? (
                 <>
                   <button className="pay-btn icon-only" onClick={() => remind(other, amount)} aria-label={`Remind ${first} about ${money(amount)}`}><span className="pay-in"><Icon name="bell-ringing" fill /></span></button>
-                  <RequestButton payer={theirApp} mine={myApp} amount={amount} note="Golf" who={other} />
+                  <RequestButton payer={theirApp} mine={myApp} amount={amount} note="Golf" who={other} named />
                 </>
               ) : <PayButton info={theirApp} amount={amount} note="Golf" />}
             </div>

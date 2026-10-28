@@ -236,8 +236,8 @@ export default function Ledger() {
             )}
             {others.length > 0 && (
               <>
-                <div className="sec-label">{people.length ? 'Everyone else' : 'Who owes who'}</div>
-                {others.map(otherRow)}
+                <h2 className="sec-label">{people.length ? 'Everyone else' : 'Who owes who'}</h2>
+                <div className="te-list">{others.map(otherRow)}</div>
               </>
             )}
             <details className="how pad"><summary>How the Tab works</summary><p>Netted across every round, then squared in the fewest payments. Nobody is asked to pay someone they haven’t played with.{hasShared ? ' Money from rounds you shared live stays between the two players, so both phones agree on it.' : ''}</p></details>
@@ -249,7 +249,8 @@ export default function Ledger() {
         {plan.length === 0 && recentSquare.map(squareCard)}
         {history.length > 0 && (
           <>
-            <div className="sec-label">Payments</div>
+            <h2 className="sec-label">Payments</h2>
+            <div className="te-list">
             {history.slice(0, 30).map(s => {
               const line = `${isMe(s.from) ? 'You' : nameOf(state, s.from)} paid ${isMe(s.to) ? 'you' : nameOf(state, s.to)}`;
               const pt = payTalks.get(s.key);
@@ -267,6 +268,7 @@ export default function Ledger() {
                 </div>
               );
             })}
+            </div>
           </>
         )}
         {/* The season's tools, together in one short list. Season moved here from the switch at the
