@@ -113,7 +113,7 @@
 
 /* Cards: the hairline instead of the lift (--card-shadow above), and no shadow of their own */
 :root[data-look="new"] .talk-tray { box-shadow: var(--hair); }
-:root[data-look="new"] .reveal-row.top { box-shadow: var(--hair); }
+:root[data-look="new"] .reveal-row.top { box-shadow: inset 0 0 0 2px var(--ochre); }
 :root[data-look="new"] .card-stack.piled .remind-card:not(.cs-wait) { box-shadow: var(--hair), 0 6px 0 -2px var(--surface-strong), 0 12px 0 -5px var(--line); }
 /* Rows in a list on a card share the hairline as their divider */
 :root[data-look="new"] .hist-row + .hist-row { border-top-color: var(--line); }

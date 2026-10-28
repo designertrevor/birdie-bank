@@ -98,8 +98,11 @@ export default function RoundDetail({ id, celebrate }) {
   const betRound = bettingRound(round);
   // You were just playing: a friendly "Nice round" with your score instead of a money reveal
   const meId = meFor(round, state);
-  const solo = cardOnly(round);
-  const casualMe = round.players.some(p => p.id === meId) && isJustPlaying(round, meId);
+  // A round of one is a card too, whatever game it was set up with: nobody to win from, so it ends on
+  // the score (Nice round), never "All square, nobody owes anybody"
+  const alone = round.players.length === 1;
+  const solo = cardOnly(round) || alone;
+  const casualMe = round.players.some(p => p.id === meId) && (alone || isJustPlaying(round, meId));
   const nice = casualMe ? niceRound(round, meId) : null;
   // A Big Game's group round with no money of its own shows each player's money from the whole game
   const res = bigGroupName(round) ? bigRoundResults(state, round, own) : own;
@@ -299,7 +302,8 @@ export default function RoundDetail({ id, celebrate }) {
         <div className="stand-group">
           {res.standings.map((p, i) => (
             <div key={p.id} className="stand-line" data-testid="standing">
-              <div className="sr">{placeLabel(res.standings, i)}</div>
+              {/* Everyone level on top gets the gold disc, so a tie never reads as a ranking */}
+              <div className={`sr ${p.amount === top.amount ? 'gold' : ''}`}>{placeLabel(res.standings, i)}</div>
               {faces.get(p.id) && <AvatarArt model={faces.get(p.id)} size="sm" />}
               <div className="sn">{p.name}{strokesNote(p)}{res.detail.byGame && <span className="rv-games">{gamesLine(res.detail.byGame, p.id, fmt)}</span>}</div>
               <div className={`sa ${p.amount > 0 ? 'pos' : p.amount < 0 ? 'neg' : ''}`}>{fmt(p.amount, { sign: true })}</div>
@@ -452,7 +456,7 @@ function GameBreakdown({ round, res, label = null }) {
                     const turned = r.flipped[k] || r.high?.[k];
                     return <td key={k} className={turned ? 'neg' : ''}>{r.numbers[k]}{turned ? ' ↺' : ''}</td>;
                   })}
-                  <td className={r.diff > 0 ? 'pos' : r.diff < 0 ? 'neg' : 'zero'}>{r.diff === 0 ? '·' : `${r.diff > 0 ? t[0].name : t[1].name} +${Math.abs(r.diff)}`}</td>
+                  <td className={r.diff > 0 ? 'pos' : r.diff < 0 ? 'neg' : 'zero'}>{r.diff === 0 ? '–' : `${r.diff > 0 ? t[0].name : t[1].name} +${Math.abs(r.diff)}`}</td>
                 </tr>
               ))}
             </tbody>
@@ -553,7 +557,7 @@ function GameBreakdown({ round, res, label = null }) {
               <thead><tr><th style={{ textAlign: 'left', paddingLeft: 12 }}>Hole</th>{round.players.map(p => <th key={p.id}>{first(p.name)}</th>)}</tr></thead>
               <tbody>
                 {rows.map(r => (
-                  <tr key={r.hole.no}><td>{r.hole.no}</td>{round.players.map(p => <td key={p.id} className={r.points[p.id] ? 'pos' : 'zero'}>{r.points[p.id] || '·'}</td>)}</tr>
+                  <tr key={r.hole.no}><td>{r.hole.no}</td>{round.players.map(p => <td key={p.id} className={r.points[p.id] ? 'pos' : 'zero'}>{r.points[p.id] || '–'}</td>)}</tr>
                 ))}
                 <tr><td><strong>Total</strong></td>{round.players.map(p => <td key={p.id}><strong>{res.detail.points[p.id]}</strong></td>)}</tr>
               </tbody>
@@ -729,9 +733,9 @@ function GameBreakdown({ round, res, label = null }) {
               {rows.map(r => (
                 <tr key={r.hole.no}>
                   <td>{r.hole.no}</td>
-                  <td>{r.hammers.length || '·'}{r.conceded != null ? ' · folded' : ''}{r.birdie ? ' · birdie' : ''}</td>
+                  <td>{r.hammers.length || '–'}{r.conceded != null ? ' · folded' : ''}{r.birdie ? ' · birdie' : ''}</td>
                   <td>{r.winner == null ? 'Halved' : round.teams ? sn[r.winner] : first(sn[r.winner])}</td>
-                  <td className={r.net > 0 ? 'pos' : r.net < 0 ? 'neg' : 'zero'}>{r.value ? money(r.value) : '·'}</td>
+                  <td className={r.net > 0 ? 'pos' : r.net < 0 ? 'neg' : 'zero'}>{r.value ? money(r.value) : '–'}</td>
                 </tr>
               ))}
             </tbody>
@@ -743,7 +747,7 @@ function GameBreakdown({ round, res, label = null }) {
   if (round.game === 'banker' || round.game === 'wolf' || round.game === 'aces') {
     const col = h => {
       if (round.game === 'banker') return first(names[h.banker]);
-      if (round.game === 'aces') return [h.ace && `${first(names[h.ace])} ace`, h.deuce && `${first(names[h.deuce])} deuce`].filter(Boolean).join(' · ') || '·';
+      if (round.game === 'aces') return [h.ace && `${first(names[h.ace])} ace`, h.deuce && `${first(names[h.deuce])} deuce`].filter(Boolean).join(' · ') || '–';
       return round.wolf[h.no]?.partner === null ? `${first(names[round.wolf[h.no].wolf])} (${round.wolf[h.no].blind ? 'blind' : 'lone'})` : first(names[round.wolf[h.no]?.wolf]);
     };
     return (
@@ -757,7 +761,7 @@ function GameBreakdown({ round, res, label = null }) {
                 <tr key={h.no}>
                   <td>{h.no}</td>
                   <td style={{ whiteSpace: 'nowrap' }}>{col(h)}</td>
-                  {round.players.map(p => { const v = h.deltas[p.id]; return <td key={p.id} className={v > 0 ? 'pos' : v < 0 ? 'neg' : 'zero'}>{v ? money(v, { sign: true }) : '·'}</td>; })}
+                  {round.players.map(p => { const v = h.deltas[p.id]; return <td key={p.id} className={v > 0 ? 'pos' : v < 0 ? 'neg' : 'zero'}>{v ? money(v, { sign: true }) : '–'}</td>; })}
                 </tr>
               ))}
             </tbody>

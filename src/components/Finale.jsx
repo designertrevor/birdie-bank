@@ -231,7 +231,8 @@ export function NiceRound({ round, me, onDetail, onDone }) {
   const hero = useRef();
   const faces = useGroupAvatars(round.players);
   const n = niceRound(round, me);
-  const solo = cardOnly(round);
+  // A round of one ends here too, as its own card (RoundDetail's `alone`)
+  const solo = cardOnly(round) || round.players.length === 1;
   const p = round.players.find(x => x.id === me);
   useEffect(() => {
     if (!n || reducedMotion()) return;

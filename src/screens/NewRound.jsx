@@ -211,7 +211,7 @@ function NewRoundSetup({ rematch, fromPlan, present, edit = null, ahead = false,
 
   return (
     <Stage id={stageId} dir={stageDir}>
-    <Screen key={stageId}>
+    <Screen key={stageId} className="setup">
       {step !== 4 ? (
         <>
           <Header title={editing ? 'Edit plan' : planning ? 'Plan a round' : 'New round'} onBack={back} onClose={editing ? null : close} />

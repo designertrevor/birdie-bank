@@ -50,7 +50,8 @@ export function CrownedFace({ model, size = 96 }) {
  * `standings` is sorted best first; `faces` maps id to an avatar model; `fmt` formats an amount.
  */
 export function Podium({ standings, faces, fmt, tint = null }) {
-  const top = standings.slice(0, 3).map((p, i) => ({ ...p, label: placeLabel(standings, i), i }));
+  // `rank` is the place with ties shared (two level on top are both 1st), so tied players stand on steps of the same height
+  const top = standings.slice(0, 3).map((p, i) => ({ ...p, label: placeLabel(standings, i), i, rank: Math.min(3, 1 + standings.filter(q => q.amount > p.amount).length) }));
   const order = top.length === 3 ? [top[1], top[0], top[2]] : top;
   // Everyone level with first wears the crown, as on the reveal: a tie for top crowns them all
   const crowned = p => p.i === 0 || (top[0].amount > 0 && p.amount === top[0].amount);
@@ -61,7 +62,7 @@ export function Podium({ standings, faces, fmt, tint = null }) {
   return (
     <div className={`podium ${tint ? 'themed' : ''}`.trim()} style={steps} role="list" aria-label="Top three">
       {order.map(p => (
-        <div key={p.id} className={`pod pod-${p.i + 1}`} role="listitem">
+        <div key={p.id} className={`pod pod-${p.rank}`} role="listitem">
           <span className="pod-face">{crowned(p) && faces.get(p.id) ? <CrownedFace model={faces.get(p.id)} size={64} /> : faces.get(p.id) && <AvatarArt model={faces.get(p.id)} />}</span>
           <span className="pod-name">{p.name.split(' ')[0]}</span>
           <span className={`pod-amt ${p.amount > 0 ? 'pos' : p.amount < 0 ? 'neg' : ''}`}>{fmt(p.amount, { sign: true })}</span>

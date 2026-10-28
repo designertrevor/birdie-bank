@@ -8,10 +8,10 @@
 }
 /* The game's own wash behind the winner, quiet enough for the amounts to stay the loudest thing */
 .results-a { background: color-mix(in srgb, var(--ra-tint, var(--card)) 45%, var(--card)); }
-/* In the dark the pale wash turns grey: a little of the game's full colour on the card instead */
-:root[data-theme="dark"] .results-a { background: color-mix(in srgb, var(--ra-strong, var(--card)) 14%, var(--card)); }
+/* In the dark a mix of the game's colour read olive: the card, with the game's colour as an edge on top */
+:root[data-theme="dark"] .results-a { background: var(--card); box-shadow: var(--hair), inset 0 3px 0 var(--ra-strong, var(--ochre)); }
 @media (prefers-color-scheme: dark) {
-  :root:not([data-theme="light"]) .results-a { background: color-mix(in srgb, var(--ra-strong, var(--card)) 14%, var(--card)); }
+  :root:not([data-theme="light"]) .results-a { background: var(--card); box-shadow: var(--hair), inset 0 3px 0 var(--ra-strong, var(--ochre)); }
 }
 .results-a .crowned { margin: 4px auto 6px; animation: pop .55s var(--spring) both; }
 .results-a .hero-spot { display: block; margin: -10px auto -8px; }
@@ -45,3 +45,6 @@
 /* The reveal's own way to the scores (Finale.jsx) */
 .rv-card-link { display: flex; justify-content: center; margin: 4px 16px 12px; }
 .ra-amt.zero { color: var(--ink); }
+
+/* Standings: every place level with first wears the gold disc */
+.stand-line .sr.gold { background: var(--ochre); color: var(--on-pastel); }

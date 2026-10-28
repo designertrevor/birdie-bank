@@ -10,9 +10,10 @@
   content: ''; position: absolute; left: 50%; top: 50%; width: 196px; height: 104px; transform: translate(-50%, -48%);
   border-radius: 50%; background: color-mix(in srgb, var(--gt, var(--mint)) 55%, var(--canvas));
 }
-:root[data-theme="dark"] .ready-ground::before { background: color-mix(in srgb, var(--gt, var(--mint)) 62%, var(--card)); }
+/* In the dark the clear game colour: mixed toward the canvas it went a muddy mustard */
+:root[data-theme="dark"] .ready-ground::before { background: var(--gt, var(--mint)); }
 @media (prefers-color-scheme: dark) {
-  :root:not([data-theme="light"]) .ready-ground::before { background: color-mix(in srgb, var(--gt, var(--mint)) 62%, var(--card)); }
+  :root:not([data-theme="light"]) .ready-ground::before { background: var(--gt, var(--mint)); }
 }
 .ready-hero .ready-title { font-family: var(--display); font-weight: var(--display-weight); font-size: 26px; }
 .ready-card { border-radius: var(--r-card); padding-top: 14px; }
@@ -35,3 +36,6 @@
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) .ready-card.themed .ready-head, :root:not([data-theme="light"]) .ready-card.themed .ready-agreed { border-color: var(--line-soft); }
 }
+
+/* Invite the group is the second action: an outline, so Tee off is the one filled button */
+.ready-invite { background: transparent; color: var(--ink); box-shadow: inset 0 0 0 1.5px var(--ink); }
