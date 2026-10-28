@@ -22,7 +22,7 @@ const SOURCES = ['src/styles.css', 'src/components/finale.css', 'src/screens/dig
 export const OUT = 'src/look-new.gen.css';
 
 // Names, list titles, buttons, chips, tags, inputs and avatar initials: the body face in this look
-const SANS = /^\.(li-name|pname|lr-name|gn|rc-course|seat-name|tp-name|lb-name|exp-name|trip-pay-name|ob-tile-name|full-btn|rsvp-btn|dbl-btn|amt-btn|np-btn|holes-btn|pm-btn|sheet-cancel|np-quick-btn|nassau-bet-btn|nassau-bet-lbl|bet-chip|tp-chip|avatar|avatar-btn|join-avatar|hc-chip|hole-opt|toast|name-input|code-input|bn|range-label|ic-game|pv-names|rules-section|co-title|order-num|sc-brand|np-hole|lh-num|fs-num|pw-step-title|ec)\b|set-name|ob-review-me/;
+const SANS = /^\.(li-name|pname|lr-name|gn|rc-course|seat-name|tp-name|lb-name|exp-name|trip-pay-name|ob-tile-name|full-btn|rsvp-btn|dbl-btn|amt-btn|np-btn|holes-btn|pm-btn|sheet-cancel|np-quick-btn|nassau-bet-btn|nassau-bet-lbl|bet-chip|tp-chip|avatar|avatar-btn|join-avatar|hc-chip|hole-opt|toast|name-input|code-input|bn|range-label|pv-names|rules-section|co-title|order-num|sc-brand|np-hole|lh-num|fs-num|pw-step-title|ec)\b|set-name|ob-review-me/;
 // Money and counts: the display face at the money weight, lining tabular figures
 const MONEY = /(amt|-a\b|\.sa\b|\.mv\b|\.wa\b|\.dc\b|money|big|-val\b|-v\b|net\b|tot\b|total|pts|score|count|-num\b|-n\b|\.sr\b|\.st-|\.pm\b|\.et\b|-value\b|tp-value|ob-amt|rv-val|hw-val|fr-par-v|wrapped-tile b)/;
 // Never Play's hole title

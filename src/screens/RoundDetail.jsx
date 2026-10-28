@@ -1,5 +1,6 @@
 import { Fragment, useEffect, useRef, useState } from 'react';
-import { Empty, Header, Icon, PickChip, Screen, Segmented, useUI } from '../components/ui.jsx';
+import { Header, Icon, PickChip, Screen, Segmented, useUI } from '../components/ui.jsx';
+import { Gone } from '../components/Gone.jsx';
 import { Stage } from '../components/Stage.jsx';
 import { Spot } from '../components/Spot.jsx';
 import { ArtNote } from '../components/ArtNote.jsx';
@@ -91,7 +92,7 @@ export default function RoundDetail({ id, celebrate }) {
   const [view, setView] = useState('card');
 
   if (!round) {
-    return <Screen><Header title="Round" onBack={nav.pop} /><Empty title="Round not found" text="It may have been deleted. Deleted rounds wait in Settings, Recently deleted, for 30 days." action={<button className="ec" onClick={nav.pop}>Go back</button>} /></Screen>;
+    return <Screen><Header title="Round" onBack={nav.pop} /><Gone title="Round not found" text="It may have been deleted. Deleted rounds wait in Settings, Recently deleted, for 30 days." onAction={nav.pop} /></Screen>;
   }
   const own = roundResults(round);
   // The games' own round, without anyone just playing (round.js bettingRound), for the breakdowns

@@ -6,7 +6,8 @@
 // organizer edits, deletes or says "Done playing"; anyone can hide the trip from their own Tab and
 // Up next. See trips.js, trip-plan.js and trip-expenses.js for how it's all worked out.
 import { useEffect, useState } from 'react';
-import { Empty, Header, Icon, PickRow, Screen, Segmented, Sheet, useUI } from '../components/ui.jsx';
+import { Header, Icon, PickRow, Screen, Segmented, Sheet, useUI } from '../components/ui.jsx';
+import { Gone } from '../components/Gone.jsx';
 import { Scene } from '../components/Scenes.jsx';
 import { ArtNote } from '../components/ArtNote.jsx';
 import { daysUntil } from '../lib/plan-basics.js';
@@ -108,7 +109,7 @@ function TripPage({ id, view: firstView = null, add = false }) {
   // phone puts the teams on the trip as soon as the last pick is in
   useDraftSync(st?.cup?.def?.draft?.live && st.cup.def.teams.flat().length <= 2 ? id : null);
   if (!st) {
-    return <Screen><Header title="Trip" small onBack={nav.pop} /><div className="scroll"><Empty illo="suitcase" title="This trip is gone" text="Its rounds and their money are still in History and on the Tab." action={<button className="ec" onClick={nav.pop}>Go back</button>} /></div></Screen>;
+    return <Screen><Header title="Trip" small onBack={nav.pop} /><Gone title="This trip is gone" text="Its rounds and their money are still in History and on the Tab." onAction={nav.pop} /></Screen>;
   }
   const { trip } = st;
   const cup = st.cup;
@@ -557,7 +558,7 @@ function TripSettlePage({ id, who = null }) {
   const { me, label, short } = useWho(state);
   useSeenPlan(id, st?.published.version || 0);
   if (!st) {
-    return <Screen><Header title="Settle the trip" small onBack={nav.pop} /><div className="scroll"><Empty illo="suitcase" title="This trip is gone" text="Its rounds and their money are still in History and on the Tab." action={<button className="ec" onClick={nav.pop}>Go back</button>} /></div></Screen>;
+    return <Screen><Header title="Settle the trip" small onBack={nav.pop} /><Gone title="This trip is gone" text="Its rounds and their money are still in History and on the Tab." onAction={nav.pop} /></Screen>;
   }
   const { trip } = st;
   const plan = who ? partPlan(st.plan, who) : st.plan;

@@ -4,6 +4,8 @@
 // Friends open it from the group link with no install and no paywall (PlanLink below).
 import { useEffect, useState } from 'react';
 import { BallIllo, Empty, Header, Icon, PickChip, PickMark, PickRow, Screen, Sheet, useUI } from '../components/ui.jsx';
+import { Spot } from '../components/Spot.jsx';
+import '../components/gone.css';
 import { LinkBrand, LinkHowTo } from '../components/LinkBrand.jsx';
 import { Avatar } from '../components/Pay.jsx';
 import { getState, update, uid, useStore } from '../lib/store.js';
@@ -900,7 +902,7 @@ export function PlanLink({ code, who = null, standalone = false, onSkip }) {
     <Screen className="onboard">
       {standalone ? <LinkBrand /> : <Header title="Upcoming round" small onBack={nav.pop} />}
       <div className="scroll onboard-body">
-        <BallIllo className="onboard-illo" face={!err} />
+        {missing ? <Spot kind="loneball" size={150} className="gone-art" /> : <BallIllo className="onboard-illo" face={!err} />}
         <h1 className="onboard-title" style={{ fontSize: 34 }} aria-live="polite">{err ? (err === 'off' ? 'Not quite ready' : missing ? 'Plan not found' : 'No signal') : 'Finding the plan…'}</h1>
         <p className="onboard-text" aria-live="polite">
           {!err && <>Code {code}</>}

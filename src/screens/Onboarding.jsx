@@ -9,7 +9,7 @@ import { GameArt } from '../components/GameArt.jsx';
 import { Scene } from '../components/Scenes.jsx';
 import { ArtImage } from '../components/ArtFile.jsx';
 import { Stage } from '../components/Stage.jsx';
-import { createContext, useContext, useState } from 'react';
+import { createContext, useContext, useEffect, useState } from 'react';
 import { ArtIcon, Icon, Numpad, PickChip, PickMark, PickRow, Screen } from '../components/ui.jsx';
 import { getState, update, uid } from '../lib/store.js';
 import { track } from '../lib/analytics.js';
@@ -21,7 +21,7 @@ import { playFromSearch } from '../lib/rule-links.js';
 import { SignInSheet } from '../components/Account.jsx';
 import { BuddyArt, BuddyFigure } from '../components/BuddyArt.jsx';
 import { Avatar } from '../components/Avatar.jsx';
-import { BUDDIES, buddyAvatar } from '../lib/avatars.js';
+import { BUDDIES, avatarModel, buddyAvatar } from '../lib/avatars.js';
 import { accountsEnabled, useAccount } from '../lib/cloud.js';
 import {
   MATHS, ONBOARD_GAMES, SETTLES, SIZES, answered, gameList, nextStep, organizerRecord, payoff, prevStep,
@@ -95,6 +95,14 @@ function Page({ step, children }) {
   return <div className={`ob-page ${step === 'welcome' ? 'first' : ''}`} inert={out} aria-hidden={out || undefined}>{children}</div>;
 }
 
+/** What's left before Continue, in one short line: "Add your name and tick Friendly wagers to go on." */
+function stillToDo(left) {
+  const l = left.filter(Boolean);
+  if (!l.length) return null;
+  const said = l.length === 1 ? l[0] : `${l.slice(0, -1).join(', ')} and ${l[l.length - 1]}`;
+  return `${said[0].toUpperCase()}${said.slice(1)} to go on.`;
+}
+
 /** The welcome's game tags: they drift a little, and wiggle when tapped, since they look tappable. Decorative. */
 const WELCOME_TAGS = [['bank', 'Banker'], ['flag-pennant', 'Nassau'], ['coins', 'Skins'], ['paw-print', 'Wolf'], ['dice-five', 'Vegas'], ['sword', 'Match play'], ['star', 'Stableford']];
 function GameTag({ icon, name, i }) {
@@ -138,6 +146,23 @@ export default function Onboarding({ onDone, play = null }) {
     if (step === 'welcome') { setDir('push'); setStep('games'); }
     if (!name) setName((acct.user.name || '').split(' ')[0]);
   }
+
+  // The steps' outside drawings start loading on the welcome, so each is there when its page slides in
+  useEffect(() => {
+    for (const [kind, id] of [['scenes', 'clubhouse'], ['scenes', 'scorecard'], ['spots', 'cards'], ['spots', 'shades'], ['spots', 'link'], ['spots', 'wallet'], ['spots', 'receipt'], ['spots', 'face-ok'], ['spots', 'skinsking'], ['spots', 'card']]) {
+      const f = artFile(kind, id);
+      for (const url of [f?.light, f?.dark]) if (url) new Image().src = url;
+    }
+  }, []);
+
+  // Near the end, warm what opens next (the ask, the paywall), so finishing never shows a blank frame
+  // while their code loads
+  const nearEnd = step === 'name' || step === 'group';
+  useEffect(() => {
+    if (!nearEnd) return;
+    import('./NewRound.jsx').catch(() => {});
+    import('./Paywall.jsx').catch(() => {});
+  }, [nearEnd]);
 
   // Each step is a page of its own on the stage, so it starts at the top wherever the last one was scrolled to
   const next = () => { setDir('push'); setStep(nextStep(step)); };
@@ -305,11 +330,11 @@ export default function Onboarding({ onDone, play = null }) {
             </div>
           )}
         </div>
-        {cta('Continue', nameReady({ name, agreed, age }, a), [
+        {cta('Continue', nameReady({ name, agreed, age }, a), stillToDo([
           !name.trim() && 'add your name',
-          !agreed && 'tick Friendly wagers only',
+          !agreed && 'tick Friendly wagers',
           asksAge(a) && !age && 'answer the age question',
-        ].filter(Boolean).join(', then ').replace(/^./, c => `To go on, ${c}`) + '.')}
+        ]))}
       </>);
     }
 
@@ -328,7 +353,7 @@ export default function Onboarding({ onDone, play = null }) {
         <h1 className="ob-q d">{first}, your group is ready.</h1>
         <div className="block ob-review">
           <div className="ob-review-me">
-            <Avatar name={first} model={buddy ? buddyAvatar(buddy) : null} size="lg" className="ob-review-av" />
+            <Avatar name={first} model={buddy ? avatarModel(buddyAvatar(buddy), { name: first }) : null} size="lg" className="ob-review-av" />
             <div className="row-main">
               <div className="li-name">{first}</div>
               <div className="li-sub">Runs the group{index != null ? ` · ${formatIndex(index)} index` : ''}</div>

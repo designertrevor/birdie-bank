@@ -67,3 +67,45 @@ learns names, so nobody is pre-asked.
 
 Checks: npm test (2688 pass), npm run lint (0 errors, one old warning in scripts/review-seed.js),
 npm run build, npm run e2e all pass.
+
+## Audit fixes (auditor-1, owner onb, plus three the coordinator handed over)
+
+Shots: `overnight/fix2-shots/onb/audit-before/` (copied from audit-shots-2) and `audit-after/`
+(the audit script's onboarding and more areas, rerun on this branch).
+
+Broken
+- onboarding-1: All set showed the old straw hat buddy. It was handed `buddyAvatar()` ({ kind, id })
+  where Avatar wants a model ({ buddy }); now `avatarModel(buddyAvatar(buddy))`. No other caller passes it raw.
+
+Should
+- onboarding-2 (shared): picked rows and tiles in dark were maroon. Dark `--pick-tint` is now a
+  neutral lift (#262f2e) with the pink ring and check kept. App-wide: every `.list-item.pick.on`,
+  game row, tile, trip template and the plan's tag background read the same way now.
+- onboarding-3: the empty handicap field reads as a placeholder (16px body, mute) with an ink plus.
+- onboarding-4: the blank frame into Get a round going was its code loading; the ask and paywall
+  chunks now load while you're on the name step.
+- more-2: Join invite's quiet ways out (Just keep my own score, Not now) share one text row under the
+  two buttons; the game title is the serif (`ic-game` out of the sans list in look-new-css.mjs) and its
+  icon is ink, not pink (also onboarding-14).
+- more-3: a person card for someone this phone doesn't know shows Player not found, Back to Players,
+  instead of a made-up "Someone".
+- more-4: one gone layout. New `components/Gone.jsx` (lone ball, serif title, one line, one full-width
+  ink button at the foot) on Round not found (history and play), This trip is gone (trip and its
+  settle page), This challenge is gone, and the person card. The link pages (plan, challenge, join)
+  show the same lone ball when nothing's found (the glossy ball stays for loading), and a missing
+  challenge in the app now has Go back at the foot like the plan.
+
+Polish done
+- onboarding-5: the steps' drawings start loading on the welcome.
+- onboarding-6: a short canvas fade under the fixed bar.
+- onboarding-9: one short hint: "Add your name, tick Friendly wagers and answer the age question to go on."
+- onboarding-11: the four jobs' stamps and strikes are ink and grey.
+- onboarding-12: the paywall list fades into the buttons.
+- more-8: What's new and Roadmap category eyebrows are mute, not pink.
+- more-9 (part): Settings' "Your profile" link is ink.
+
+Left, with why
+- onboarding-7 (All set rows staggering in), onboarding-8 (art on name and All set): polish, usage is tight.
+- onboarding-10: the number pad's close is the shared Numpad (owner shared).
+- more-9 rest: toggles on in pink are the shared switch; the Help shape callout is shared Callout.
+- more-10: the Status page header, left for a later pass.

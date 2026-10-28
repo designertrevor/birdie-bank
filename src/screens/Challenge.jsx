@@ -2,7 +2,10 @@
 // stands, Accept, Counter or Decline, and sending it again. Also where a challenge link
 // (?challenge=CODE) opens, for someone set up or, with no install and no paywall, for anyone.
 import { useEffect, useState } from 'react';
-import { BallIllo, Empty, Header, Icon, Screen } from '../components/ui.jsx';
+import { BallIllo, Header, Icon, Screen } from '../components/ui.jsx';
+import { Spot } from '../components/Spot.jsx';
+import '../components/gone.css';
+import { Gone } from '../components/Gone.jsx';
 import { ChallengeCard, ChallengeExtras } from '../components/Challenges.jsx';
 import { LinkBrand, LinkHowTo } from '../components/LinkBrand.jsx';
 import { useStore } from '../lib/store.js';
@@ -20,7 +23,7 @@ export default function ChallengeScreen({ id }) {
   return (
     <Screen>
       <Header title="Challenge" small onBack={nav.pop} />
-      {ch ? <ChallengeBody ch={ch} onGone={nav.pop} /> : <div className="scroll"><Empty title="This challenge is gone" text="It was taken off this phone. Your other challenges are on Up next." action={<button className="ec" onClick={nav.pop}>Go back</button>} /></div>}
+      {ch ? <ChallengeBody ch={ch} onGone={nav.pop} /> : <Gone title="This challenge is gone" text="It was taken off this phone. Your other challenges are on Up next." onAction={nav.pop} />}
     </Screen>
   );
 }
@@ -96,7 +99,7 @@ export function ChallengeLink({ code, standalone = false, onSkip }) {
     <Screen className="onboard">
       {standalone ? <LinkBrand /> : <Header title="Challenge" small onBack={nav.pop} />}
       <div className="scroll onboard-body">
-        <BallIllo className="onboard-illo" face={!err} />
+        {missing ? <Spot kind="loneball" size={150} className="gone-art" /> : <BallIllo className="onboard-illo" face={!err} />}
         <h1 className="onboard-title" style={{ fontSize: 34 }} aria-live="polite">{err ? (err === 'off' ? 'Not quite ready' : missing ? 'Challenge not found' : 'No signal') : 'Finding the challenge…'}</h1>
         <p className="onboard-text" aria-live="polite">
           {!err && <>Code {code}</>}
@@ -105,10 +108,11 @@ export function ChallengeLink({ code, standalone = false, onSkip }) {
           {err === 'offline' && <>Couldn’t get the challenge. Check your signal and try again.</>}
         </p>
       </div>
-      {/* A missing challenge in the app has only the header's back: no empty bar of buttons */}
-      {err && (!missing || standalone) && (
+      {/* A missing challenge in the app gets Go back at the foot, like every other not-found page (Gone.jsx) */}
+      {err && (
         <div className="cta-wrap">
           {!missing && <button className="full-btn" onClick={() => { setErr(null); setTries(t => t + 1); }}>Try again <Icon name="arrow-clockwise" /></button>}
+          {!standalone && missing && <button className="full-btn" onClick={nav.pop}>Go back</button>}
           {standalone && <button className={`full-btn ${missing ? '' : 'outline'}`} onClick={onSkip}>Start my own round instead</button>}
         </div>
       )}

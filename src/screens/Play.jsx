@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { Empty, Icon, Screen, Sheet, useUI } from '../components/ui.jsx';
+import { Header, Icon, Screen, Sheet, useUI } from '../components/ui.jsx';
+import { Gone } from '../components/Gone.jsx';
 import { useGroupAvatars } from '../lib/useAvatars.js';
 import { RulesSheet } from '../components/Rules.jsx';
 import { getState, update, useStore } from '../lib/store.js';
@@ -76,7 +77,8 @@ export default function Play({ id }) {
   if (!round) {
     return (
       <Screen>
-        <Empty title="Round not found" text="It may have been deleted." action={<button className="ec" onClick={() => nav.reset('upnext')}>Back to Up next</button>} />
+        <Header title="Round" small onBack={nav.pop} />
+        <Gone title="Round not found" text="It may have been deleted." action="Back to Up next" onAction={() => nav.reset('upnext')} />
       </Screen>
     );
   }
