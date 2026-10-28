@@ -3,7 +3,8 @@
    cards, C's number tiles. Built on the shared tokens in look.css so it reads right in both looks.
    ============================================================ */
 
-/* The countdown strip: a thin clock to the next planned round, ink on canvas in both themes */
+/* The countdown strip: a thin clock to the next planned round, ink on the light canvas. In dark it's
+   a card with a hairline like the rest, not a cream block brighter than the round it counts down to */
 .un-strip {
   display: flex; align-items: center; gap: 10px; width: calc(100% - 32px); margin: 8px 16px 4px; padding: 10px 14px;
   border: none; border-radius: var(--r-btn); background: var(--ink); color: var(--canvas); font: inherit; text-align: left;
@@ -14,6 +15,8 @@
 .un-strip-what { flex: 1; min-width: 0; font-size: 14px; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .un-strip-clock { display: flex; gap: 8px; font-family: var(--display); font-weight: var(--money-weight); font-size: 20px; font-variant-numeric: tabular-nums; letter-spacing: .02em; }
 .un-strip-unit small { font-family: var(--body-font); font-size: 11px; font-weight: 600; margin-left: 1px; opacity: .65; }
+:root[data-theme="dark"] .un-strip { background: var(--card); color: var(--ink); box-shadow: var(--hair); }
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) .un-strip { background: var(--card); color: var(--ink); box-shadow: var(--hair); } }
 
 /* The card that starts a round: the one next thing when nothing's planned */
 .un-eyebrow { display: block; font-size: 12px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; color: var(--mute); }
@@ -21,10 +24,16 @@
   position: relative; overflow: hidden; display: flex; flex-direction: column; align-items: flex-start; gap: 6px;
   margin: 8px 16px 12px; padding: 22px 20px 18px; border-radius: var(--r-card); background: var(--band-mint); box-shadow: var(--hair); color: var(--ink);
 }
-.un-start-art { position: absolute; right: -6px; top: 6px; transform: rotate(-6deg); pointer-events: none; }
+.un-start-art { position: absolute; right: 12px; top: 8px; transform: rotate(-6deg); pointer-events: none; }
 .un-start-title { margin: 0; font-family: var(--display); font-weight: var(--display-weight); font-size: 30px; line-height: 1.05; letter-spacing: -.02em; max-width: 72%; }
 .un-start-sub { font-size: 15px; line-height: 1.4; color: var(--body); max-width: 74%; }
 .un-start-acts { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 14px; }
+/* Playing now? (something's planned): no card, the two buttons straight on the canvas filling the
+   width, Join a friend's round centred under them */
+.un-now .un-start-acts { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 10px; margin: 0 16px; }
+.un-now .un-start-acts.solo { grid-template-columns: minmax(0, 1fr); }
+.un-now .un-btn { justify-content: center; }
+.un-now .un-join { display: block; margin: 4px auto 0; text-align: center; }
 .un-btn {
   display: inline-flex; align-items: center; gap: 7px; min-height: 48px; padding: 12px 18px; border: none; border-radius: var(--r-btn);
   background: var(--pink-fill); color: #fff; font: inherit; font-size: 16px; font-weight: 700; cursor: pointer; transition: transform .2s var(--spring);
@@ -33,31 +42,23 @@
 .un-btn:active { transform: scale(.95); }
 .un-join { min-height: 44px; margin-top: 4px; padding: 0; border: none; background: none; font: inherit; font-size: 14px; color: var(--mute); cursor: pointer; text-align: left; }
 .un-join u { color: var(--ink); font-weight: 700; text-underline-offset: 3px; }
-/* Under the upcoming rounds it's just its buttons on plain white, under a "Playing now?" label */
-.un-start.slim { background: var(--card); padding: 16px 16px 12px; margin-top: 0; gap: 0; }
-.un-start.slim .un-start-acts { margin-top: 0; }
-.un-start.slim .un-join { margin-top: 2px; margin-bottom: -6px; }
 
-/* More ways to play: one white card, Get a round going on top and a trip and a Big Game side by
-   side under a hairline. Plain rows inside, so a press darkens the row rather than shrinking it */
+/* More ways to play: three equal rows in one white card, hairlines between. Plain rows inside, so a
+   press darkens the row rather than shrinking it */
 .un-ways-card { margin: 0 16px 10px; border-radius: var(--r-card); background: var(--card); box-shadow: var(--hair); overflow: hidden; }
-.un-go {
-  display: flex; align-items: center; gap: 10px; width: 100%; min-height: 88px; padding: 12px 12px 12px 18px;
-  border: none; background: transparent; color: var(--ink); font: inherit; text-align: left; cursor: pointer; transition: background-color .15s ease-out;
-}
-.un-go .row-main { display: flex; flex-direction: column; gap: 3px; }
-.un-go-title { font-family: var(--display); font-weight: var(--display-weight); font-size: 21px; letter-spacing: -.01em; }
-.un-go-sub { font-size: 14px; line-height: 1.35; color: var(--body); }
-.un-go-art { flex-shrink: 0; }
-.un-ways { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); border-top: 1px solid var(--line); }
-.un-ways.one { grid-template-columns: 1fr; }
 .un-way {
-  display: flex; align-items: center; gap: 6px; min-height: 64px; padding: 4px 12px 4px 8px; border: none; background: transparent;
-  color: var(--ink); font: inherit; font-size: 15px; font-weight: 700; text-align: left; cursor: pointer; transition: background-color .15s ease-out;
+  display: flex; align-items: center; gap: 12px; width: 100%; min-height: 72px; padding: 8px 14px 8px 10px; border: none; background: transparent;
+  color: var(--ink); font: inherit; text-align: left; cursor: pointer; transition: background-color .15s ease-out;
 }
-.un-way + .un-way { border-left: 1px solid var(--line); }
-.un-go:active, .un-way:active { background: var(--surface); }
+.un-way + .un-way { border-top: 1px solid var(--line); }
+.un-way:active { background: var(--surface); }
 .un-way .spot { flex-shrink: 0; }
+.un-way .row-main { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.un-way-title { font-size: 17px; font-weight: 700; }
+.un-way-sub { font-size: 14px; color: var(--mute); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.un-way > i { color: var(--mute-soft); flex-shrink: 0; }
+/* The new organizer's checklist: the step the big button above covers isn't a second button */
+.fs-row.static { cursor: default; }
 
 /* Rhythm: more room between groups than inside one. A label opens each group with clear air above
    it, and the cards inside sit 10px apart */
@@ -87,3 +88,67 @@
    Here because Up next's styles are always loaded first, wherever the card shows */
 :root[data-look="new"] .trip-card { border: none; box-shadow: var(--hair); }
 :root[data-look="new"] .trip-day.now { background: var(--ink); color: var(--canvas); }
+
+/* Round in progress: the live dot's ring is pink, so in dark it never leaves a grey halo over the edge */
+@keyframes un-pulse-pink { 0% { box-shadow: 0 0 0 0 rgba(255, 77, 139, .55); } 100% { box-shadow: 0 0 0 10px rgba(255, 77, 139, 0); } }
+:root[data-look="new"] .resume-card .resume-pulse { animation-name: un-pulse-pink; }
+/* A second round going at once: a plain card with a hairline and an ink play button, so only the
+   first carries the pink */
+:root[data-look="new"] .resume-card.quiet { box-shadow: var(--hair); }
+:root[data-look="new"] .resume-card.quiet .resume-go { background: var(--ink); color: var(--canvas); }
+:root[data-look="new"] .resume-card.quiet .resume-pulse { background: var(--eyebrow-ink); animation: none; }
+
+/* The More fold at the foot: one row that says what's inside, opening and closing with the same
+   grid-rows fold (what slides down slides back up) */
+.un-fold { margin: 30px 16px 8px; border-radius: var(--r-card); background: var(--card); box-shadow: var(--hair); }
+.un-fold-head {
+  display: flex; align-items: center; gap: 12px; width: 100%; min-height: 64px; padding: 12px 16px; border: none; background: none;
+  font: inherit; color: var(--ink); text-align: left; cursor: pointer;
+}
+.un-fold-head .row-main { display: flex; flex-direction: column; gap: 2px; min-width: 0; flex: 1; }
+.un-fold-title { font-size: 17px; font-weight: 700; }
+.un-fold-sub { font-size: 14px; color: var(--mute); }
+.un-fold-chev { color: var(--mute-soft); transition: transform var(--duration-fast) var(--ease-in); }
+.un-fold.open .un-fold-chev { transform: rotate(180deg); transition-timing-function: var(--ease-smooth-out); }
+.un-fold-body { display: grid; grid-template-rows: 0fr; transition: grid-template-rows var(--duration-fast) var(--ease-in); }
+.un-fold.open .un-fold-body { grid-template-rows: 1fr; transition-timing-function: var(--ease-smooth-out); }
+.un-fold-inner { min-height: 0; overflow: hidden; }
+/* Inside the fold the pieces sit on the card's own inset, not the screen's */
+.un-fold-inner > .sec-label { padding: 18px 16px 8px; }
+.un-fold-inner > .fr-all, .un-fold-inner > .callouts, .un-fold-inner > .card { width: calc(100% - 24px); margin: 0 12px 12px; }
+.un-fold-inner > :first-child { border-top: 1px solid var(--line); margin-top: 0; }
+.un-fold-inner > .fr-all:first-child { border-top: none; margin-top: 4px; }
+
+/* A long number on a tile (a trip's +$1,075.87) comes down a size */
+.un-tile-big.long { font-size: 22px; }
+
+/* The recap: its actions on one line (Share as an icon), the eyebrow one line with an ellipsis */
+.recap-actions { flex-wrap: nowrap; }
+.recap-actions .recap-btn { flex: 1 1 auto; justify-content: center; min-width: 0; white-space: nowrap; }
+.recap-actions .recap-btn.icon { flex: 0 0 44px; width: 44px; padding: 0; }
+.recap-head .eyebrow { display: block; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: calc(100% - 36px); }
+/* A callout card has the same hairline as every card, its bubble at the top rather than floating mid-card */
+.callout-list.bubbles .callout-row { box-shadow: var(--hair); align-items: start; }
+.callout-off { margin-top: 0; }
+
+/* The trip card's days (Up next, the Tab): plain words after a "Rounds" label, played ones in ink,
+   today underlined, so they don't read as buttons. The trip's own page keeps its day chips */
+.trip-days-l { font-size: 12px; font-weight: 600; color: var(--mute); margin-right: 2px; }
+.trip-screen .trip-days-l { display: none; }
+:root[data-look="new"] .trip-card .trip-days { gap: 10px; align-items: baseline; }
+:root[data-look="new"] .trip-card .trip-day { flex: none; min-width: 0; padding: 0; border-radius: 0; background: none; color: var(--mute); font-size: 13px; }
+:root[data-look="new"] .trip-card .trip-day.done { background: none; color: var(--ink); }
+:root[data-look="new"] .trip-card .trip-day.now { background: none; color: var(--ink); font-weight: 800; text-decoration: underline; text-underline-offset: 3px; }
+/* The expenses line joins the foot of the trip card instead of floating under it as a pill */
+:root[data-look="new"] .trip-card-wrap:has(+ .trip-line) > .trip-card { margin-bottom: 0; border-bottom-left-radius: 0; border-bottom-right-radius: 0; }
+:root[data-look="new"] .trip-card-wrap + .trip-line { width: calc(100% - 32px); margin: 0 16px 10px; border-radius: 0 0 var(--r-card) var(--r-card); background: var(--card); box-shadow: var(--hair); }
+:root[data-look="new"] .trip-card-wrap + .trip-line i:first-child { color: var(--icon); }
+
+/* A Heads up card (a reminder, an update): its buttons start under its words, not back at the
+   card's edge under the picture, so the left edge doesn't zigzag. Only for the plain cards: a
+   picture, its words, its buttons */
+.remind-card:has(> .rc-head:first-child + .rc-acts:last-child) { display: grid; grid-template-columns: auto minmax(0, 1fr); column-gap: 12px; }
+.remind-card:has(> .rc-head:first-child + .rc-acts:last-child) > .rc-head { display: contents; }
+.remind-card:has(> .rc-head:first-child + .rc-acts:last-child) > .rc-acts { grid-column: 2; }
+/* What's new's button is a quiet one: a filled button is for the screen's main action */
+.rc-btn.soft { background: var(--surface); color: var(--ink); }

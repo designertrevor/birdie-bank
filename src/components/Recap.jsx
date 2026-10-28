@@ -65,7 +65,8 @@ export function RecapCard({ recap }) {
       <div className="recap-actions">
         <button className="recap-btn" onClick={open}><Icon name="flag-pennant" /> See the round</button>
         {mine.some(l => l.status === 'open') && <button className="recap-btn" onClick={() => nav.setTab('ledger')}><Icon name="hand-coins" /> Open the Tab</button>}
-        <button className="recap-btn" onClick={() => nav.push('share', { kind: 'recap', id: recap.id })}><Icon name="share-network" /> Share</button>
+        {/* Share is the icon alone, so the row stays one line beside See the round and Open the Tab */}
+        <button className="recap-btn icon" onClick={() => nav.push('share', { kind: 'recap', id: recap.id })} aria-label="Share the recap"><Icon name="share-network" /></button>
       </div>
     </section>
   );

@@ -22,7 +22,8 @@ const TripSheet = part(() => import('./Trips.jsx'), 'TripSheet');
 /**
  * The one next thing (Layout Lab A): the countdown strip, the upcoming rounds, then the card to
  * start one. `plans` are the upcoming plans not under a trip on now (`onNow`, the trips'
- * standings, or none); `last` is the newest finished round, for "Run it back".
+ * standings, or none); `last` is the newest finished round, for "Run it back". The other ways to
+ * play (MoreWays) sit lower on Up next, after your golf and Lately.
  */
 export function PlansAndNext({ plans, onNow, live, last, onJoin }) {
   const hasHistory = !!last;
@@ -35,8 +36,6 @@ export function PlansAndNext({ plans, onNow, live, last, onJoin }) {
       {/* Starting a round at the course (or running the last one back) stays one tap, plans or not */}
       {live.length === 0 && <StartCard last={last} fresh={!hasHistory} planned={planned} onJoin={onJoin} />}
       {!hasHistory && <FirstSteps />}
-      {/* A Big Game on the calendar isn't a trip, so Start a trip stays */}
-      <MoreWays trip={!onNow.some(t => t.trip.format !== 'big')} />
     </>
   );
 }
@@ -139,28 +138,27 @@ function OpenPlanCard({ plan }) {
 }
 
 /**
- * The card that starts a round: big, illustrated and the one tinted card when nothing's planned
- * (the one next thing), and a plain white card of buttons under its own label when something is,
- * so the plans keep the colour and the attention. Start a round is the main action, with a one-tap
- * "same again" beside it when there's a last one.
+ * Starting a round: big, illustrated and the one tinted card when nothing's planned (the one next
+ * thing). With something planned it's just its buttons on the canvas under "Playing now?", side by
+ * side and filling the width, so the plans keep the colour and the attention. Start a round is the
+ * main action, with a one-tap "same again" beside it when there's a last one.
  */
 function StartCard({ last, fresh, planned = false, onJoin = null }) {
   const nav = useNav();
   const again = last && GAMES[last.game] && !cardOnly(last);
   const acts = (
-    <>
-      <div className="un-start-acts">
-        <button className="un-btn" onClick={() => nav.push('newRound')}><Icon name="golf" fill /> Start a round</button>
-        {again && <button className="un-btn ghost" onClick={() => nav.push('newRound', { rematch: last.id })}><Icon name="arrow-counter-clockwise" /> Run it back</button>}
-      </div>
-      {onJoin && <button className="un-join" onClick={onJoin}>Got a code? <u>Join a friend’s round</u></button>}
-    </>
+    <div className={`un-start-acts ${again ? '' : 'solo'}`}>
+      <button className="un-btn" onClick={() => nav.push('newRound')}><Icon name="golf" fill /> Start a round</button>
+      {again && <button className="un-btn ghost" onClick={() => nav.push('newRound', { rematch: last.id })}><Icon name="arrow-counter-clockwise" /> Run it back</button>}
+    </div>
   );
+  const join = onJoin && <button className="un-join" onClick={onJoin}>Got a code? <u>Join a friend’s round</u></button>;
   if (planned) {
     return (
-      <section className="un-group" aria-labelledby="un-now">
+      <section className="un-group un-now" aria-labelledby="un-now">
         <h2 className="sec-label" id="un-now">Playing now?</h2>
-        <div className="un-start slim">{acts}</div>
+        {acts}
+        {join}
       </section>
     );
   }
@@ -173,33 +171,35 @@ function StartCard({ last, fresh, planned = false, onJoin = null }) {
         ? 'Pick a game, a course and your group. Birdie Bank keeps score, does the math and settles up.'
         : 'Pick the game, the course and the bets. Everyone follows along from a link.'}</div>
       {acts}
+      {join}
     </div>
   );
 }
 
 /**
- * The other ways to play, under one label in one white card: Get a round going (a day and the
- * group, asked ahead, always here) on top, then a trip and a Big Game side by side. The art carries
- * the colour, so Up next has at most one tinted card at a time (Trevor, 2026-10-28).
+ * The other ways to play: three equal rows in one white card, each with its art, a name and one
+ * line. Get a round going (a day and the group, asked ahead) is always here; Start a trip goes
+ * while a trip is on (`trip` false). The art carries the colour.
  */
-function MoreWays({ trip = false }) {
+export function MoreWays({ trip = false }) {
   const nav = useNav();
   const [tripping, setTripping] = useState(false);
+  const rows = [
+    { key: 'ask', art: 'calendar', title: 'Get a round going', sub: 'No day needed yet. Ask the group', go: () => nav.push('newRound', { ahead: true }) },
+    trip && { key: 'trip', art: 'suitcase', title: 'Start a trip', sub: 'A few days of golf on one Tab', go: () => setTripping(true) },
+    { key: 'big', art: 'crowd', title: 'Big Game', sub: 'A few groups, one leaderboard', go: () => nav.push('bigGameSetup') },
+  ].filter(Boolean);
   return (
     <section className="un-group" aria-labelledby="un-ways">
       <h2 className="sec-label" id="un-ways">More ways to play</h2>
       <div className="un-ways-card">
-        <button className="un-go" onClick={() => nav.push('newRound', { ahead: true })}>
-          <span className="row-main">
-            <span className="un-go-title">Get a round going</span>
-            <span className="un-go-sub">No day needed yet. Ask the group and pick it together.</span>
-          </span>
-          <Spot kind="calendar" size={68} plate={false} className="un-go-art" />
-        </button>
-        <div className={`un-ways ${trip ? '' : 'one'}`}>
-          {trip && <button className="un-way trip" onClick={() => setTripping(true)}><Spot kind="suitcase" size={52} plate={false} /><span>Start a trip</span></button>}
-          <button className="un-way big" onClick={() => nav.push('bigGameSetup')}><Spot kind="crowd" size={52} plate={false} /><span>Big Game</span></button>
-        </div>
+        {rows.map(r => (
+          <button key={r.key} className="un-way" onClick={r.go}>
+            <Spot kind={r.art} size={56} plate={false} />
+            <span className="row-main"><span className="un-way-title">{r.title}</span><span className="un-way-sub">{r.sub}</span></span>
+            <Icon name="caret-right" />
+          </button>
+        ))}
       </div>
       {tripping && <Later><TripSheet open onClose={() => setTripping(false)} onDone={t => { setTripping(false); nav.push('trip', { id: t.id }); }} /></Later>}
     </section>
@@ -216,7 +216,8 @@ function FirstSteps() {
   const active = roundsInProgress(state)[0] || null;
   const steps = [
     { done: people > 0, title: 'Add your group', sub: 'The people you play with', go: () => nav.setTab('people') },
-    { done: rounds.length > 0, title: 'Start a round', sub: 'Pick a game and a course', go: () => nav.push('newRound') },
+    // Start a round is the big button above, so this step says so rather than being a second one
+    { done: rounds.length > 0, title: 'Start a round', sub: 'With the Start a round button above', go: null },
     { done: rounds.some(r => r.shared), title: 'Send the group the link', sub: active ? 'Invite the group from the round menu' : 'They follow the money live', go: () => (active ? nav.push('play', { id: active.id }) : nav.push('newRound')) },
   ];
   if (steps.every(x => x.done)) return null;
@@ -226,11 +227,18 @@ function FirstSteps() {
       <ol className="first-steps">
         {steps.map((x, i) => (
           <li key={x.title}>
-            <button className={`fs-row ${x.done ? 'done' : ''}`} onClick={x.go} disabled={x.done}>
-              <span className="fs-num" aria-hidden="true">{x.done ? <Icon name="check" /> : i + 1}</span>
-              <span className="row-main"><span className="fs-title">{x.title}</span><span className="fs-sub">{x.done ? 'Done' : x.sub}</span></span>
-              {!x.done && <Icon name="caret-right" />}
-            </button>
+            {x.go && !x.done ? (
+              <button className="fs-row" onClick={x.go}>
+                <span className="fs-num" aria-hidden="true">{i + 1}</span>
+                <span className="row-main"><span className="fs-title">{x.title}</span><span className="fs-sub">{x.sub}</span></span>
+                <Icon name="caret-right" />
+              </button>
+            ) : (
+              <div className={`fs-row static ${x.done ? 'done' : ''}`}>
+                <span className="fs-num" aria-hidden="true">{x.done ? <Icon name="check" /> : i + 1}</span>
+                <span className="row-main"><span className="fs-title">{x.title}</span><span className="fs-sub">{x.done ? 'Done' : x.sub}</span></span>
+              </div>
+            )}
           </li>
         ))}
       </ol>

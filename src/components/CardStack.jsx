@@ -2,7 +2,7 @@
 // and a "2 more" button fans the rest out. The cards come and go on their own (each loads later
 // and can be dismissed), so each one reports itself to the pile (useStackCard) and is told whether
 // it waits behind the top card, rather than the pile reading the page: a card that re-renders
-// keeps its waiting mark, and only a waiting card's own section label hides (useStackLabel).
+// keeps its waiting mark. The pile carries one label for all of them ("Heads up").
 import { createContext, useCallback, useContext, useId, useLayoutEffect, useMemo, useState } from 'react';
 import { Icon } from './ui.jsx';
 
@@ -26,6 +26,8 @@ export function CardStack({ children }) {
   return (
     <Ctx.Provider value={value}>
       <div className={`card-stack ${n > 1 && !open ? 'piled' : ''}`}>
+        {/* One label for the pile, whichever card is on top (reminders, an update, the install card) */}
+        {n > 0 && <h2 className="sec-label">Heads up</h2>}
         {children}
         {n > 1 && (
           <button className="cs-more" onClick={() => setOpen(!open)} aria-expanded={open}>
@@ -59,8 +61,3 @@ export function useStackCard({ at = 0, showing = true } = {}) {
   return showing && waits(pile, at);
 }
 
-/** Whether the section label before the card at `at` hides with it (the top card keeps its label). */
-// eslint-disable-next-line react-refresh/only-export-components
-export function useStackLabel(at = 0) {
-  return waits(useContext(Ctx), at);
-}

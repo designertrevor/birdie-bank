@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { Header, Icon, Screen } from '../components/ui.jsx';
 import { Later, part } from '../components/Later.jsx';
 import { CardStack, StackSlot } from '../components/CardStack.jsx';
-import { PlansAndNext } from '../components/UpNextPlans.jsx';
+import { MoreWays, PlansAndNext } from '../components/UpNextPlans.jsx';
 import { useStore } from '../lib/store.js';
 import { activeRounds } from '../lib/rounds-live.js';
 import { holeComplete } from '../lib/round.js';
@@ -24,19 +24,22 @@ import './upnext.css';
 // recap, the trips, challenges, reminders, the number tiles, callouts, Lately and the Tab at a
 // glance (UpNextMore.jsx).
 //
-// The order is the overhaul's (Layout Lab A with E's cards and C's tiles): the one next thing on
-// top (a round going on, the countdown and the upcoming rounds, or the card to start one), the
-// ways to get one going, then the reminders, and the look back (tiles, recap, Lately) further down.
+// The order is the overhaul's (Layout Lab A with E's cards and C's tiles), cut down after the
+// audit (2026-10-28): the one next thing on top (a round going on, the countdown and the upcoming
+// rounds, or the card to start one), then Heads up, your golf, the recap and Lately, the other ways
+// to play, and one "More" row at the foot that folds open the quieter things (friends' rounds,
+// lines for the group text, the last round out).
 const more = () => import('../components/UpNextMore.jsx');
 const RecapSection = part(more, 'RecapSection');
 const TripsNow = part(more, 'TripsNow');
 const PlansLater = part(more, 'PlansLater');
-const CalloutsSection = part(more, 'CalloutsSection');
 const LatelySection = part(more, 'LatelySection');
 const TabGlance = part(more, 'TabGlance');
 const StatTiles = part(more, 'StatTiles');
 const ChallengesSection = part(more, 'ChallengesSection');
 const UpNextSync = part(more, 'UpNextSync');
+const MoreFold = part(more, 'MoreFold');
+const WaysLater = part(more, 'WaysLater');
 const JoinSheet = part(() => import('../components/Live.jsx'), 'JoinSheet');
 const FriendsUpNext = part(() => import('../components/FriendsFeed.jsx'), 'FriendsUpNext');
 const RemindersUpNext = part(() => import('../components/Reminders.jsx'), 'RemindersUpNext');
@@ -80,13 +83,14 @@ export default function UpNext() {
             <span className="row-main"><b>Update ready</b> <span className="un-sub">Tap to refresh</span></span>
           </button>
         )}
-        {live.map(r => {
+        {/* Two or more going: a label says so, and only the first keeps the pink, the rest go quiet */}
+        {live.length > 1 && <h2 className="sec-label">Going now</h2>}
+        {live.map((r, i) => {
           const played = r.holes.filter(h => holeComplete(r, h)).length;
           return (
-            <button key={r.id} className="resume-card" onClick={() => nav.push('play', { id: r.id })}>
-              <div className="resume-pulse" aria-hidden="true" />
+            <button key={r.id} className={`resume-card ${i > 0 ? 'quiet' : ''}`} onClick={() => nav.push('play', { id: r.id })}>
               <div className="row-main">
-                <div className="bl resume-eyebrow">{played ? 'Round in progress' : 'Ready to tee off'}</div>
+                <div className="bl resume-eyebrow"><span className="resume-pulse" aria-hidden="true" />{played ? 'Round in progress' : 'Ready to tee off'}</div>
                 <div className="d" style={{ fontSize: 20, fontWeight: 800 }}>{r.trip?.format === 'big' ? r.trip.name : gameLabel(r)} · {r.course.name}</div>
                 <div className="resume-sub">{played} of {r.holes.length} holes · {r.players.map(p => p.name.split(' ')[0]).join(', ')}</div>
               </div>
@@ -119,17 +123,20 @@ export default function UpNext() {
 
         {anyChallenges && <Later><ChallengesSection /></Later>}
 
-        {/* The look back: your numbers once there are a few rounds, then the day-after recap and
-            a few lines for the group text (see recap.js, callouts.js) */}
-        {tiles && <Later><StatTiles /></Later>}
+        {/* The look back: your numbers once there are a few rounds (before that the Tab at a
+            glance), then the day-after recap (see recap.js) */}
+        {tiles ? <Later><StatTiles /></Later> : hasHistory && <Later><TabGlance /></Later>}
         <Later><RecapSection /></Later>
-        <Later><CalloutsSection /></Later>
 
-        {/* Friends' rounds you're not in, live, and the way into the group feed (friend-feed.js) */}
-        <Later><FriendsUpNext show={hasHistory || trips || plans.length > 0} /></Later>
+        {/* A friend's round going on now (friend-feed.js), then Lately */}
+        <Later><FriendsUpNext only="live" /></Later>
         <Later><LatelySection /></Later>
-        {/* The Tab at a glance (its own tile once the tiles show) and the last round out, once there's a finished round */}
-        {hasHistory && <Later><TabGlance tiles={tiles} /></Later>}
+
+        {/* The other ways to play: Start a trip goes while a trip is on, which takes the money */}
+        {trips ? <Later><WaysLater /></Later> : <MoreWays trip />}
+
+        {/* The quieter things, folded: friends' rounds, lines for the group text, the last round out */}
+        {hasHistory && <Later><MoreFold /></Later>}
       </div>
       <BottomNav />
       {/* Picks up answers, votes, payments and trip news that came in since last time */}
