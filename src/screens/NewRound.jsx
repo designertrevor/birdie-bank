@@ -216,7 +216,8 @@ function NewRoundSetup({ rematch, fromPlan, present, edit = null, ahead = false,
         <>
           <Header title={editing ? 'Edit plan' : planning ? 'Plan a round' : 'New round'} onBack={back} onClose={editing ? null : close} />
           {!editing && (planning || (!passDone && step <= 3)) && <Steps steps={planning ? PLAN_STEPS : STEPS} current={step} canGo={canGo} onGo={goTo} />}
-          {step !== OVERVIEW && <h2 className="step-q d">{(planning ? PLAN_QUESTIONS : QUESTIONS)[step] || OWN_QUESTIONS[step]}</h2>}
+          {/* Editing a plan is one page under "Edit plan", so it has no second title */}
+          {step !== OVERVIEW && !editing && <h2 className="step-q d">{(planning ? PLAN_QUESTIONS : QUESTIONS)[step] || OWN_QUESTIONS[step]}</h2>}
           {step === 1 && lostHint}
           {step === 2 && planning && stillMissing.length > 0 && (
             <p className="hint-card"><Icon name="user-plus" fill /> {listNames(stillMissing)} {stillMissing.length === 1 ? 'isn’t' : 'aren’t'} saved on this phone yet. Add {stillMissing.length === 1 ? 'their name' : 'their names'} below, or send the group link.</p>

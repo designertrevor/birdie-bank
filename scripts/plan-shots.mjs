@@ -48,13 +48,18 @@ const friend = { ...friendOf('pl_friend'), localMe: a.id };
 says(friend, b.id, b.name, { status: 'in', days: [days[1]] });
 const friendAfter = { ...friendOf('pl_friend2'), localMe: a.id, daysSent: true };
 says(says(friendAfter, b.id, b.name, { status: 'in', days: [days[1]] }), a.id, a.name, { status: 'in', days: [days[1], days[2]] });
-const datedOf = (id, n) => {
-  const p = newPlan({ id, hostName: P[me].name, game: 'skins', holesCount: 18, date: days[0], teeTime: '08:40', course, people: people.slice(0, n), ballot: { games: ['nassau', 'wolf'], bets: [2, 5] }, suggestedBet: 2, settings: seed.settings, now: NOW });
+const datedOf = (id, n, date = days[0]) => {
+  const p = newPlan({ id, hostName: P[me].name, game: 'skins', holesCount: 18, date, teeTime: '08:40', course, people: people.slice(0, n), ballot: { games: ['nassau', 'wolf'], bets: [2, 5] }, suggestedBet: 2, settings: seed.settings, now: NOW });
   return says(says(p, a.id, a.name, { status: 'in', game: 'nassau' }), b.id, b.name, { status: 'maybe' });
 };
 const dated = datedOf('pl_dated', 3);
 const datedFull = datedOf('pl_dated5', 5);
 const off = { ...datedOf('pl_off', 3), status: 'off', offAt: NOW - 3600000 };
+const offOpen = { ...voted, id: 'pl_offopen', status: 'off', offAt: NOW - 3600000 };
+// A round today (the fixed clock's Monday), for Up next's card on the day
+const today = datedOf('pl_today', 3, '2026-10-26');
+// A friend's copy of a dated plan
+const friendDated = { ...datedOf('pl_fdated', 4), host: false, hostName: 'Trevor', localMe: a.id };
 
 // In-page helpers: tap by text, wait
 const HELPERS = `
@@ -96,6 +101,14 @@ const SHOTS = [
   { id: 'dated-ticket-rows', plans: [dated], steps: 'card(); await w(1200); down(".pd-rows"); await w();' },
   { id: 'dated-bottom', plans: [dated], steps: 'card(); await w(1200); bottom(); await w();' },
   { id: 'called-off', plans: [off], steps: 'card(); await w(1200);' },
+  { id: 'called-off-open', plans: [offOpen], steps: 'card(); await w(1200);' },
+  { id: 'called-off-open-bottom', plans: [offOpen], steps: 'card(); await w(1200); bottom(); await w();' },
+  { id: 'friend-dated-bottom', plans: [friendDated], steps: 'card(); await w(1200); bottom(); await w();' },
+  { id: 'upnext-today', plans: [today], steps: 'down(".upcoming-card"); await w();' },
+  { id: 'roll-call', plans: [dated], steps: 'card(); await w(1200); tap("Playing now? Roll call"); await w(1200);' },
+  { id: 'preview', plans: [dated], steps: 'card(); await w(1200); document.querySelector(".pv-entry").click(); await w(1200);' },
+  { id: 'preview-bottom', plans: [dated], steps: 'card(); await w(1200); document.querySelector(".pv-entry").click(); await w(1200); bottom(); await w();' },
+  { id: 'edit', plans: [dated], steps: 'card(); await w(1200); tap("Edit"); await w(1200);' },
   { id: 'talk-sheet', plans: [dated], steps: 'card(); await w(1200); tap("Trash talk"); await w(900);' },
   // The friend's view from the link with no app set up: the organizer's phone shares the plan
   // (the dev server's local adapter), then a clean profile opens the link

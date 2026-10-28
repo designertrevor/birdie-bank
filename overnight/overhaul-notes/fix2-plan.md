@@ -76,3 +76,60 @@ BASE=http://127.0.0.1:5202/ OUT=overnight/fix2-shots/plan/ SUFFIX=-after node sc
   row stays.
 - Loading and failure for a link ("Finding the plan…", Plan not found, No signal, Try again) and a
   deleted plan ("This plan is gone") were already there.
+
+## Audit fixes (auditor-2, owner plan)
+
+Before and after shots in `overnight/fix2-shots/plan/audit/` (`<state>-before|after-<theme>.png`).
+`scripts/plan-shots.mjs` now also shoots roll call, the preview, Edit plan, a round today on Up
+next, a plan called off with no day, and a friend's dated plan.
+
+Fixed:
+- **plan-1 (broken)** A friend's red "Delete plan" is now a quiet "Hide from my Up next" (eye-slash),
+  and its confirm reads "Hide this plan?" / "Hide it" / "Keep it", not red. The organizer keeps Delete plan.
+- **plan-2 (broken)** Seats, the Everyone list and the "Trevor wants to get a round in" line use one
+  `PlanAvatar` (PlanParts.jsx): on the organizer's phone their seat is their profile avatar (the plan
+  stores them as `hostWho`, which had no avatar, so it fell back to the halo). A friend's own seat is
+  their profile too. Sharing a plan now carries the organizer's avatar (`hostAvatar`,
+  plan-sync.js), so friends see the same face. Plans shared before tonight carry none; there the
+  organizer's seat and header line show the same name-based face, so they at least match.
+- **home-11** On the day, the organizer's Up next card has **Start this round** (black, inside the
+  card) that opens roll call. Left for home: the strip still says "Nassau · Mon" not "Today", and
+  Playing now? still has the pink Start a round; dropping it on the day is home's call.
+- **plan-3** "+ Name" is a dashed hairline. The picked state was already ink with a check; the audit
+  shots just had nobody picked.
+- **plan-4** Pink is the screen's send action: Invite the group (when it's the main button), Text the
+  group, and roll call's Tee off. The organizer's outline buttons stay outline.
+- **plan-5** The Everyone list's Maybe uses the vote tokens (butter) and No answer is a hairline, like
+  the detail tags. Not changed: the dark `--warn-bg` behind the vote tokens is shared app-wide.
+- **plan-6** With the lock nudge up, its card carries the pink Lock in and the pinned one goes, so
+  it's never on screen twice. The pinned buttons sit under a hairline.
+- **plan-7** Called off: the hero line says "You called this one off" (or "Trevor called this one
+  off"), Still to decide / What we're playing goes, and the organizer gets **Put it back on**.
+- **plan-8** The preview's countdown tile and stroke dots are ink, not pink. The meta line drops the
+  day (it's in the countdown), keeps the tee time, and its dots don't end a line.
+- **plan-9** Roll call: the setup is a white hairline card, rows for who's here are white with an ink
+  check on mint, 32px above "Who showed up?", and Tee off is the pink.
+- **plan-10** Edit plan: the picked day scrolls into view on the strip (WhenPicker), and the second
+  title ("When are you playing?") is gone when editing.
+- **plan-13 (part)** Hints use text-wrap: pretty (no "it out." orphan).
+- **plan-14 (part)** The add tile reads "+" over "Pick a day" / "Add a day".
+- **plan-17 (part)** Trash talk is a white hairline row like the cards.
+- **plan-18** The lock sheet has one title ("Sun Nov 1 works for 4 of 6"), the clock centred, and the
+  day tiles in date order (each with its count).
+- **plan-20** Rows that can't be tapped keep the chevron's room, so tags line up.
+- **plan-21 (part)** The preview row on the plan no longer repeats "5 days to go"; a vote for
+  another game's bet reads "$5 a side for Nassau"; the "Change the day..." link is gone (Edit is in
+  the header).
+- **plan-22** Head to head records keep "2 and 2" together, and their lines are 600.
+
+Skipped, with why:
+- **plan-13 (value chips)** Trevor kept the Set / Up for a vote / Not yet tags as built.
+- **plan-14 (today's ring)** and **plan-19 (trash talk sheet's inner card, clipped jabs)**: the
+  calendar (DatePicker) and Talk.jsx are shared components.
+- **plan-15 (ticket notches)** Cutting the notches with a mask also cuts the card's hairline, so it
+  needs the edge redrawn as an SVG; polish, left for a later pass.
+- **plan-16 (one vocabulary)** In / Maybe / Out are the app-wide RSVP labels and the friend's view
+  was kept as built; When / Where on the ask name its sheets (morning or afternoon live under When).
+- **plan-17 (Challenges card)** The Challenges card is the shared Challenges component.
+- **plan-21 (Booked bar, reminder strip)** Reminders.jsx; Booked is a toggle and a chip would shrink
+  its tap.

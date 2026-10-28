@@ -1,6 +1,6 @@
 // Setup's small pickers (NewRound.jsx and its steps): 9 or 18 holes, the hole to tee off on, the
 // starting hole sheet, and the day and tee time of a planned round.
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { Icon, Segmented, Sheet } from '../../components/ui.jsx';
 import { DateSheet, TimePicker } from '../../components/DatePicker.jsx';
 import { dayChoices, isoDate } from '../../lib/plans.js';
@@ -66,10 +66,17 @@ export function WhenPicker({ date, setDate, teeTime, setTeeTime }) {
     const extra = { ...dayChoices(day, 1)[0], top: day.toLocaleDateString('en-US', { weekday: 'short' }) };
     return [extra, ...list];
   }, [date]);
+  // The picked day starts in view (an edited plan's day can sit past the right edge), the strip only
+  const strip = useRef(null);
+  useEffect(() => {
+    const el = strip.current;
+    const on = el?.querySelector('.day-chip.on');
+    if (on) el.scrollLeft = Math.max(0, on.offsetLeft - el.offsetLeft - (el.clientWidth - on.offsetWidth) / 2);
+  }, []);
   return (
     <div className="block when-block">
       <div className="eyebrow" id="when-day" style={{ marginBottom: 10 }}>Day</div>
-      <div className="day-strip" role="radiogroup" aria-labelledby="when-day">
+      <div className="day-strip" role="radiogroup" aria-labelledby="when-day" ref={strip}>
         {days.map(d => (
           <button key={d.iso} role="radio" aria-checked={d.iso === date} aria-label={dayName(d.iso)} className={`day-chip ${d.iso === date ? 'on' : ''}`} onClick={() => setDate(d.iso)}>
             <span className="dc-top">{d.top}</span><span className="dc-bottom">{d.bottom}</span>

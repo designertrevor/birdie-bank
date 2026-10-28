@@ -13,6 +13,7 @@ import { ShareView } from '../components/ShareSheet.jsx';
 import { renderPreviewCard } from '../lib/preview-image.js';
 import { planShareLink, usePlanLive } from '../lib/plan-sync.js';
 import { pctWords } from '../lib/allowances.js';
+import { timeLabel } from '../lib/plans.js';
 
 const listNames = n => (n.length < 2 ? n.join('') : `${n.slice(0, -1).join(', ')} and ${n.at(-1)}`);
 
@@ -52,7 +53,8 @@ export default function PreviewScreen({ id, fromPlan = false }) {
           <div className="row-main">
             <div className="eyebrow pv-when">{cd ? cd.label : pv.when}</div>
             <div className="pv-game d"><Icon name={pv.gameIcon} fill /> {pv.gameName}</div>
-            <div className="pv-sub">{pv.course} · {pv.when}{pv.holes ? ` · ${pv.holes} holes` : ''}</div>
+            {/* The day is in the countdown's line already; a no-break space keeps each dot with what follows it */}
+            <div className="pv-sub">{[pv.course, cd ? timeLabel(plan.teeTime) : pv.when, pv.holes ? `${pv.holes}\u00a0holes` : null].filter(Boolean).join('\u00a0· ')}</div>
           </div>
         </div>
         {plan.status === 'off' && <p className="hint-card"><Icon name="calendar-x" fill /> This round is called off.</p>}
@@ -179,7 +181,7 @@ function Records({ pv }) {
         <div key={`${r.a}|${r.b}`} className="who-row">
           <span className="pv-pair" aria-hidden="true"><Avatar id={r.aId} name={r.aName} /><Avatar id={r.bId} name={r.bName} /></span>
           <div className="row-main">
-            <div className="set-name">{recordSentence(r.rec, r.aName, r.bName, { scope: r.scope, aIsYou: r.aMe, bIsYou: r.bMe })}</div>
+            <div className="set-name">{recordSentence(r.rec, r.aName, r.bName, { scope: r.scope, aIsYou: r.aMe, bIsYou: r.bMe }).replace(/(\d+) and (\d+)/g, '$1\u00a0and\u00a0$2')}</div>
             <div className="set-sub">{r.rec.rounds} round{r.rec.rounds === 1 ? '' : 's'} together{r.scope === 'season' ? ' this season' : ''}</div>
           </div>
         </div>
