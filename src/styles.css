@@ -2222,7 +2222,7 @@ button.trip-card:active { transform: scale(.97); }
 /* The preview page */
 .pv-hero { display: flex; align-items: center; gap: 14px; margin: 4px 16px 4px; padding: 18px; border-radius: 28px; background: var(--card); box-shadow: 0 1px 0 var(--line); }
 .pv-count {
-  flex-shrink: 0; width: 76px; height: 76px; border-radius: 22px; background: var(--pink-fill); color: #fff;
+  flex-shrink: 0; width: 76px; height: 76px; border-radius: 22px; background: var(--ink); color: var(--on-ink);
   display: flex; flex-direction: column; align-items: center; justify-content: center; transform: rotate(-3deg);
 }
 .pv-count-n { font-size: 38px; font-weight: 800; line-height: 1; font-variant-numeric: tabular-nums; }
@@ -2248,12 +2248,12 @@ button.trip-card:active { transform: scale(.97); }
 .pv-grid tbody tr { border-top: 1px solid var(--line); }
 .pv-grid .pv-gn { width: 62px; overflow: hidden; text-align: left; text-overflow: ellipsis; white-space: nowrap; color: var(--ink); font-weight: 700; }
 .pv-grid thead .pv-gn, .pv-grid .pv-hcp .pv-gn { color: var(--mute); font-weight: 600; }
-.pv-dot { display: inline-grid; place-items: center; width: 14px; height: 14px; border-radius: 50%; background: var(--pink-fill); color: #fff; font-size: 10px; font-weight: 800; vertical-align: middle; }
+.pv-dot { display: inline-grid; place-items: center; width: 14px; height: 14px; border-radius: 50%; background: var(--ink); color: var(--on-ink); font-size: 10px; font-weight: 800; vertical-align: middle; }
 .pv-dot.two { width: 18px; height: 18px; background: var(--ink); color: var(--on-ink); }
 .pv-strokes { display: flex; flex-direction: column; gap: 6px; list-style: none; font-size: 14px; line-height: 1.4; color: var(--body); }
 /* Head to head: the two faces, then the record */
 .pv-recs { margin-bottom: 10px; }
-.pv-recs .set-name { line-height: 1.35; }
+.pv-recs .set-name { line-height: 1.35; font-weight: 600; }
 .pv-pair { display: flex; flex-shrink: 0; }
 .pv-pair .avatar { margin: 0; }
 .pv-pair .avatar + .avatar { margin-left: -12px; box-shadow: 0 0 0 2px var(--card); }

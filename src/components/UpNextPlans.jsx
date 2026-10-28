@@ -87,6 +87,10 @@ export function UpcomingCard({ plan: saved }) {
         <span className="row-main"><b>{day ? `${day} preview` : 'The preview'}</b> <span className="uc-pv-sub">Strokes, head to head, a card for the group</span></span>
         <Icon name="caret-right" />
       </button>
+      {/* On the day the organizer starts this round right from its card: roll call, then tee off with the plan's setup */}
+      {until === 0 && plan.host && (
+        <div className="uc-start"><button className="full-btn" onClick={() => nav.push('rollCall', { id: plan.id })}><Icon name="flag-pennant" fill /> Start this round</button></div>
+      )}
     </div>
   );
 }

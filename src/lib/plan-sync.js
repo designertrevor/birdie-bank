@@ -7,6 +7,7 @@
 // organizer's phone: they mark who's in themselves, and the group link stays hidden.
 import { useEffect, useSyncExternalStore } from 'react';
 import { getState, update } from './store.js';
+import { shareableAvatar } from './avatars.js';
 import { getSupabase, supabaseConfigured } from './supabase.js';
 import { PlansOffError, planLocalAdapter, planSupabaseAdapter } from './plan-adapters.js';
 import { newCode, stable } from './sync-model.js';
@@ -93,8 +94,11 @@ export async function sharePlan(id) {
   const adapter = await getPlanAdapter();
   if (!adapter) throw new PlansOffError();
   const code = newCode();
+  // The organizer's face goes with the plan, so friends see the same avatar the organizer has everywhere
+  const face = plan.host ? shareableAvatar(getState().profile?.avatar) : null;
+  if (face && !plan.hostAvatar) update(s => { const p = s.plans?.[id]; if (p) p.hostAvatar = face; });
   try {
-    await adapter.create(code, planMeta(plan));
+    await adapter.create(code, planMeta(getState().plans[id]));
     // Every answer the organizer already has (their own, and anyone they marked) goes up too
     for (const [who, a] of Object.entries(plan.answers || {})) await pushAnswer(adapter, code, who, a);
   } catch (e) { noteError(e); throw e; }

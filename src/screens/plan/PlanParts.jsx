@@ -18,6 +18,19 @@ import './plan.css';
 
 const first = name => String(name || '').trim().split(/\s+/)[0];
 
+/**
+ * Someone on a plan, with the same face they have everywhere else. The organizer is `hostWho` on the
+ * plan (not a player id), so on their own phone that's their profile, and on a friend's phone it's the
+ * avatar the plan carried when it was shared (plan-sync.js), else the one their name gives.
+ */
+export function PlanAvatar({ plan, who, name, size = '' }) {
+  const me = useStore(s => s.me);
+  const host = !who || who === plan.hostWho;
+  // Your own seat on someone else's plan is you
+  if (!host) return <Avatar id={who === plan.localMe && !plan.host ? me : who} name={name} size={size} />;
+  return <Avatar id={plan.host ? me : null} name={name || plan.hostName} size={size} seat={plan.hostAvatar ? { avatar: plan.hostAvatar } : null} />;
+}
+
 /** A detail's state as a tag: Set (with what it is), Up for a vote, Not yet. */
 export function StateTag({ s }) {
   return <span className={`st-tag ${s.state}`} title={STATE_LABEL[s.state]}><span className="sr-only">{STATE_LABEL[s.state]}: </span>{s.label}</span>;
@@ -36,7 +49,7 @@ export function DetailRows({ rows }) {
             <span className="pd-ic" aria-hidden="true"><Icon name={r.icon} /></span>
             <span className="row-main"><span className="pd-k">{r.label}</span>{r.sub && <span className="pd-sub">{r.sub}</span>}</span>
             <StateTag s={r.s} />
-            {r.onOpen && <Icon name="caret-right" className="pd-go" />}
+            <Icon name="caret-right" className={`pd-go ${r.onOpen ? '' : 'hidden'}`} />
           </>
         );
         return r.onOpen
@@ -73,7 +86,7 @@ export function DayTiles({ days, on, onToggle, onAdd, addLabel = 'Pick', counts 
         })}
         {onAdd && (
           <button type="button" className="pd-day add" disabled={!!note} onClick={() => setPicking(true)}>
-            <span className="pdd-top">{addLabel}</span><b><Icon name="plus" /></b><span className="pdd-sub">a day</span>
+            <b><Icon name="plus" /></b><span className="pdd-sub">{addLabel} a day</span>
           </button>
         )}
       </div>
@@ -93,7 +106,7 @@ function seatColumns(n) {
 }
 
 /** Who's on the plan as seat tiles: their face and their answer. `onAdd`: a "+" tile to ask more. */
-export function SeatTiles({ people, me, onTap, onAdd, addLabel = 'Ask more' }) {
+export function SeatTiles({ plan, people, me, onTap, onAdd, addLabel = 'Ask more' }) {
   const shown = people.filter(p => p.status !== 'out');
   const out = people.length - shown.length;
   const cols = seatColumns(shown.length + (onAdd ? 1 : 0));
@@ -102,7 +115,7 @@ export function SeatTiles({ people, me, onTap, onAdd, addLabel = 'Ask more' }) {
       {shown.map(p => {
         const tile = (
           <>
-            <Avatar id={p.who} name={p.name} />
+            <PlanAvatar plan={plan} who={p.who} name={p.name} />
             <span className="ps-name">{p.who === me ? 'You' : first(p.name)}</span>
             <span className={`ps-status ${p.status || 'none'}`}>{p.status === 'in' ? 'In' : p.status === 'maybe' ? 'Maybe' : 'No answer'}</span>
           </>
@@ -254,14 +267,13 @@ export function LockSheet({ open, options, initial, people, onLock, onClose }) {
   const weekday = dayTile(o.iso).top;
   const day = { Sun: 'Sunday', Mon: 'Monday', Tue: 'Tuesday', Wed: 'Wednesday', Thu: 'Thursday', Fri: 'Friday', Sat: 'Saturday' }[weekday] || shortDay(o.iso);
   return (
-    <Sheet open={open} onClose={onClose} title="Lock in the day">
+    <Sheet open={open} onClose={onClose} title={`${shortDay(o.iso)} works for ${o.votes} of ${notOut.length}`}>
       <div className="pd-sheet">
         {/* The clock heads the sheet: the day gets locked here, and the tee time with it */}
         <Spot kind="clock" size={64} className="pd-lock-art" />
-        <div className="pd-lock-big">{shortDay(o.iso)} works for {o.votes} of {notOut.length}</div>
         <p className="pd-help">{waiting.length ? `${waitingLine(waiting)}. Lock it in and they’ll get the day with everyone else.` : 'Everyone has answered. Lock it in and the group gets the day.'}</p>
         {options.length > 1 && (
-          <DayTiles days={options.map(x => x.iso)} on={[o.iso]} onToggle={setIso} radio label="The day" counts={Object.fromEntries(options.map(x => [x.iso, x.votes]))} />
+          <DayTiles days={options.map(x => x.iso).sort()} on={[o.iso]} onToggle={setIso} radio label="The day" counts={Object.fromEntries(options.map(x => [x.iso, x.votes]))} />
         )}
         <div className="pd-sub-label">Tee time</div>
         <TimePicker id="pd-lock-tee" label="Tee time" value={tee} onChange={setTee} placeholder="Add it once it’s booked" />

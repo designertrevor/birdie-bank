@@ -39,7 +39,7 @@ import { planTalk, planThread } from '../lib/talk.js';
 import { talkCounts } from '../lib/talk-counts.js';
 import { TalkCount } from '../components/TalkCount.jsx';
 import { MAX_DAY_OPTIONS, PART_LABEL, dayOptions, detailStates, leadingDay, lockNudge, lockText, normalizePlan, offeredDays, shortDay, waitingLine, whenLine } from '../lib/plan-open.js';
-import { DayTiles, DetailRows, LockSheet, SeatTiles, WhereSheet } from './plan/PlanParts.jsx';
+import { DayTiles, DetailRows, LockSheet, PlanAvatar, SeatTiles, WhereSheet } from './plan/PlanParts.jsx';
 import { useTalkSync } from '../lib/talk-sync.js';
 import { PlanChallenges } from '../components/Challenges.jsx';
 import { challengeIdOfBet, challengeWhat, withChallenges } from '../lib/challenges.js';
@@ -194,9 +194,14 @@ function PlanBody({ plan: saved, standalone = false, onSkip, lock: lockFirst = f
     if (!(await ask({ title: 'Call it off?', text: 'Everyone with the link sees it’s off. Nothing on the Tab changes.', confirmLabel: 'Call it off', cancelLabel: 'Keep it on', danger: true }))) return;
     editPlan(plan.id, p => { p.status = 'off'; p.offAt = Date.now(); }).then(r => { if (r === 'taken') showToast(PLAN_LOCKED); });
   };
+  // A friend only takes it off their own Up next, so it's a quiet "hide", not a red delete
+  // Called off by mistake: back on, and everyone with the link sees it's on again
+  const putBack = () => editPlan(plan.id, p => { p.status = 'planned'; delete p.offAt; }).then(r => { if (r === 'taken') showToast(PLAN_LOCKED); });
   const del = async () => {
-    const text = plan.host ? 'It comes off Up next here and for the group.' : 'It comes off your Up next. The plan stays on for everyone else.';
-    if (!(await ask({ title: 'Delete this plan?', text, confirmLabel: 'Delete plan', danger: true }))) return;
+    const ok = plan.host
+      ? await ask({ title: 'Delete this plan?', text: 'It comes off Up next here and for the group.', confirmLabel: 'Delete plan', danger: true })
+      : await ask({ title: 'Hide this plan?', text: 'It comes off your Up next. The plan stays on for everyone else.', confirmLabel: 'Hide it', cancelLabel: 'Keep it' });
+    if (!ok) return;
     await removePlan(plan.id);
     if (standalone) onSkip?.(); else nav.pop();
   };
@@ -258,7 +263,6 @@ function PlanBody({ plan: saved, standalone = false, onSkip, lock: lockFirst = f
   const seatTap = plan.host && planned ? p => (p.who !== me && !p.self ? setMarking(p) : null) : null;
   const notes = (
     <>
-      {plan.status === 'off' && <p className="ic-note"><Icon name="calendar-x" fill /> {plan.host ? 'You called this one off.' : `${host} called this one off.`}</p>}
       {plan.gone && plan.status === 'planned' && <p className="ic-note"><Icon name="calendar-x" fill /> {host} deleted this plan.</p>}
       {planned && plan.booked && !plan.movedTo && <p className="ic-note"><Icon name="calendar-check" fill /> Tee time booked{plan.teeTime ? ` for ${timeLabel(plan.teeTime)}` : ''}.</p>}
       {plan.movedTo && <MovedNote plan={plan} host={host} />}
@@ -280,7 +284,7 @@ function PlanBody({ plan: saved, standalone = false, onSkip, lock: lockFirst = f
         {planned && !standalone && !noDay && (days ?? 0) >= 0 && (
           <button className="uc-preview pv-entry" onClick={() => nav.push('preview', { id: plan.id, fromPlan: true })}>
             <Icon name="binoculars" fill />
-            <span className="row-main"><b>{weekdayOf(plan) ? `${weekdayOf(plan)} preview` : 'The preview'}</b>{toGoLabel(plan) ? <span className="uc-pv-sub"> · {toGoLabel(plan)}</span> : null}<span className="uc-pv-sub uc-pv-line">Who gets strokes where, head to head, the lineup, and a card for the group text</span></span>
+            <span className="row-main"><b>{weekdayOf(plan) ? `${weekdayOf(plan)} preview` : 'The preview'}</b><span className="uc-pv-sub uc-pv-line">Who gets strokes where, head to head, the lineup, and a card for the group text</span></span>
             <Icon name="caret-right" />
           </button>
         )}
@@ -315,12 +319,13 @@ function PlanBody({ plan: saved, standalone = false, onSkip, lock: lockFirst = f
               <b>{shortDay(nudge.iso)} works for {nudge.votes} of {nudge.of}</b>
               <span>{nudge.waiting.length ? `${waitingLine(nudge.waiting)}. Lock it in and they’ll get the day too.` : 'Everyone has answered. Lock it in?'}</span>
               {/* The card asks, so it carries the answer (the same sheet as the button below) */}
-              <button type="button" className="pill-btn pd-nudge-btn" onClick={() => setSheet('lock')}><Icon name="lock-simple" fill /> Lock in {shortDay(nudge.iso)}</button>
+              <button type="button" className="full-btn pink pd-nudge-btn" onClick={() => setSheet('lock')}><Icon name="lock-simple" fill /> Lock in {shortDay(nudge.iso)}</button>
             </div>
           </div>
         )}
 
-        {!asking && (
+        {/* Called off, nothing is left to decide: the ticket says so, and the host can put it back on */}
+        {!asking && plan.status !== 'off' && !plan.gone && (
           <>
             <div className="sec-label">{noDay ? 'Still to decide' : 'What we’re playing'}</div>
             <DetailRows rows={rows} />
@@ -341,7 +346,7 @@ function PlanBody({ plan: saved, standalone = false, onSkip, lock: lockFirst = f
         <div className="who-list">
           {people.map(p => (
             <div key={p.who} className="who-row">
-              <Avatar id={p.who} name={p.name} />
+              <PlanAvatar plan={plan} who={p.who} name={p.name} />
               <div className="row-main">
                 <div className="set-name">{first(p.name)}{p.who === me ? ' (you)' : ''}</div>
                 {noDay && p.status && p.status !== 'out' && p.days?.length > 0 && <div className="set-sub">Can make {p.days.map(shortDay).join(', ')}</div>}
@@ -381,25 +386,27 @@ function PlanBody({ plan: saved, standalone = false, onSkip, lock: lockFirst = f
           <button className="pd-talk" onClick={() => setSheet('talk')}><Icon name="chat-circle" /> <span className="row-main">Trash talk</span> <TalkCount rows={talkRows} /> <Icon name="caret-right" /></button>
         )}
 
-        {planned && plan.host && !noDay && <button className="text-link pd-edit-link" onClick={() => nav.push('newRound', { edit: plan.id })}><Icon name="pencil-simple" /> Change the day, time, course or holes</button>}
         {planned && plan.host && <button className="danger-link" onClick={callOff}><Icon name="calendar-x" /> Call it off</button>}
-        {(!planned || !plan.host) && !standalone && <button className="danger-link" onClick={del}><Icon name="trash" /> Delete plan</button>}
+        {(!planned || !plan.host) && !standalone && (plan.host
+          ? <button className="danger-link" onClick={del}><Icon name="trash" /> Delete plan</button>
+          : <button className="text-link pd-edit-link" onClick={del}><Icon name="eye-slash" /> Hide from my Up next</button>)}
         {standalone && <p className="field-help pad">{noMoneyNote(plan) || 'Friendly wagers only. Birdie Bank never holds or moves money. You settle up yourselves.'}</p>}
       </div>
 
       {planned && !asking && (
         <div className="cta-wrap">
           {/* No day yet: once a day leads, the organizer can lock it in (the nudge above says when it's clear) */}
-          {noDay && plan.host && lead && (
+          {/* With the nudge up, its card carries Lock in, so it isn't here twice */}
+          {noDay && plan.host && lead && !nudge && (
             <button className="full-btn pink" onClick={() => setSheet('lock')}><Icon name="lock-simple" fill /> Lock in {shortDay(lead.iso)}</button>
           )}
           {plan.host && days != null && days <= 0 && (
             <button className="full-btn" onClick={() => nav.push('rollCall', { id: plan.id })}><Icon name="list-checks" /> Roll call</button>
           )}
           {(days != null && days <= 1 && (plan.code || !plan.host || off)) ? (
-            <button className={`full-btn ${plan.host && days <= 0 ? 'outline' : ''}`} onClick={morning}><Icon name="chat-circle-text" /> {days <= 0 ? 'Send the morning text' : 'Text the group'}</button>
+            <button className={`full-btn ${plan.host && days <= 0 ? 'outline' : 'pink'}`} onClick={morning}><Icon name="chat-circle-text" /> {days <= 0 ? 'Send the morning text' : 'Text the group'}</button>
           ) : plan.host && !(off && !plan.code) ? (
-            <button className={`full-btn ${(days != null && days <= 0) || (noDay && lead) ? 'outline' : ''}`} disabled={sharing} onClick={invite}><Icon name="share-network" /> {sharing ? 'Getting the link…' : plan.code ? 'Send the group link' : 'Invite the group'}</button>
+            <button className={`full-btn ${(days != null && days <= 0) || (noDay && lead && !nudge) ? 'outline' : 'pink'}`} disabled={sharing} onClick={invite}><Icon name="share-network" /> {sharing ? 'Getting the link…' : plan.code ? 'Send the group link' : 'Invite the group'}</button>
           ) : null}
           {plan.host && days != null && days > 0 && (
             <button className="full-btn outline" onClick={() => nav.push('rollCall', { id: plan.id })}>Playing now? Roll call</button>
@@ -408,6 +415,9 @@ function PlanBody({ plan: saved, standalone = false, onSkip, lock: lockFirst = f
           {/* The plan is saved, so the organizer has a plain way back into the app from down here, not only the header's arrow */}
           {plan.host && !standalone && <button className="text-link centered" onClick={() => nav.reset('upnext')}><Icon name="check" /> Done for now. It’s saved on Up next</button>}
         </div>
+      )}
+      {plan.status === 'off' && plan.host && !plan.gone && (
+        <div className="cta-wrap"><button className="full-btn outline" onClick={putBack}><Icon name="arrow-counter-clockwise" /> Put it back on</button></div>
       )}
       {(!planned || asking) && standalone && (
         <div className="cta-wrap"><button className="full-btn outline" onClick={onSkip}>Start my own round instead</button></div>
@@ -470,7 +480,7 @@ function PlanTicket({ plan, people, me, rules, notes, onSeat, onAdd }) {
   return (
     <div className={`pd-ticket ${noDay ? 'no-day' : ''} ${off ? 'off' : ''}`}>
       <div className="pt-from">
-        {plan.host ? <span>{noDay ? 'You’re getting a round going' : 'You’re getting a game together'}</span> : <><Avatar name={host} /> <span><strong>{first(host)}</strong> {noDay ? 'wants to get a round in' : 'is getting a game together'}</span></>}
+        {plan.host ? <span>{off ? 'You called this one off' : noDay ? 'You’re getting a round going' : 'You’re getting a game together'}</span> : <><PlanAvatar plan={plan} who={plan.hostWho} name={host} /> <span><strong>{first(host)}</strong> {off ? 'called this one off' : noDay ? 'wants to get a round in' : 'is getting a game together'}</span></>}
       </div>
       <div className="pt-eyebrow">{off ? ['Called off', noDay ? null : shortDay(plan.date)].filter(Boolean).join(' · ') : when}</div>
       <div className="pt-big">{noDay ? 'No day yet' : time || weekdayOf(plan) || shortDay(plan.date)}</div>
@@ -481,7 +491,7 @@ function PlanTicket({ plan, people, me, rules, notes, onSeat, onAdd }) {
       {sessionEyebrow(plan) && <div className="pt-line"><Icon name="users-three" fill /> {sessionEyebrow(plan)}{plan.session.line ? `: ${plan.session.line}` : ''}</div>}
       {notes}
       <div className="pt-perf" aria-hidden="true" />
-      <SeatTiles people={people} me={me} onTap={onSeat} onAdd={onAdd} />
+      <SeatTiles plan={plan} people={people} me={me} onTap={onSeat} onAdd={onAdd} />
     </div>
   );
 }
@@ -572,7 +582,7 @@ function DaySheet({ open, plan, mine, options, host, onSave, onClose }) {
 function voteBetLabel(p, unit) {
   if (!p.bet) return null;
   if (!p.betGame) return money(p.bet); // from before bets were per game: one amount for every game
-  return `${unit(p.betGame, p.bet)}${p.betGame !== p.game ? ` in ${GAMES[p.betGame]?.name}` : ''}`;
+  return `${unit(p.betGame, p.bet)}${p.betGame !== p.game ? ` for ${GAMES[p.betGame]?.name}` : ''}`;
 }
 
 /** The side games someone said yes to, by name ("Skins"). */
@@ -652,7 +662,7 @@ function WhoAreYou({ plan, defaultName, standalone, onSkip }) {
     <>
       <div className="scroll join-body plan-who">
         <div className="invite-card">
-          <div className="ic-from"><Avatar name={host} /> <span><strong>{host}</strong> {plan.date ? 'is getting a game together' : 'wants to get a round in'}</span></div>
+          <div className="ic-from"><PlanAvatar plan={plan} who={plan.hostWho} name={host} /> <span><strong>{host}</strong> {plan.date ? 'is getting a game together' : 'wants to get a round in'}</span></div>
           {/* No day yet (plan-open.js): "No day yet" where the date goes, and the group picks the game */}
           <div className="eyebrow ph-when">{whenLine(plan)}</div>
           <div className="ic-game"><Icon name={plan.groupPicks?.game ? 'golf' : game?.icon || 'golf'} fill /> {plan.groupPicks?.game ? 'Golf soon?' : game?.name || 'Golf'}</div>
@@ -804,7 +814,7 @@ export function RollCall({ id }) {
   };
 
   return (
-    <Screen>
+    <Screen className="roll-call">
       <Header title="Roll call" small onBack={nav.pop} />
       <div className="scroll">
         <div className="block summary-card">
@@ -853,7 +863,7 @@ export function RollCall({ id }) {
       <div className="cta-wrap">
         {planTrip ? <p className="field-help trip-counts"><Icon name="suitcase-rolling" /> Counts for {planTrip.name}</p>
           : <CountForTrip trip={tripToday} on={countTrip} onChange={setCountTrip} />}
-        <button className="full-btn" disabled={!!setup.problem || starting} onClick={start}>Tee off with {setup.players.length} <Icon name="arrow-right" /></button>
+        <button className="full-btn pink" disabled={!!setup.problem || starting} onClick={start}>Tee off with {setup.players.length} <Icon name="arrow-right" /></button>
         <button className="full-btn outline" onClick={toSetup}>Change the setup</button>
       </div>
     </Screen>

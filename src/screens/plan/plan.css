@@ -88,16 +88,16 @@ button.pd-seat:active { background: var(--surface); }
 .pd-nudge { margin: 14px 16px 0; padding: 14px 16px; border-radius: var(--r-card); background: var(--band-mint); color: var(--ink); display: flex; gap: 10px; }
 .pd-nudge b { display: block; font-family: var(--display); font-weight: var(--display-weight); font-size: 19px; }
 .pd-nudge span { display: block; font-size: 14px; color: var(--body); margin-top: 2px; }
-.pd-nudge-btn { margin-top: 12px; min-height: 44px; padding: 0 16px; background: var(--card); }
+.pd-nudge-btn { margin-top: 12px; }
 .pd-edit-link { justify-content: center; margin: 14px auto 0; }
-.pd-talk { display: flex; align-items: center; gap: 10px; width: calc(100% - 32px); margin: 18px 16px 0; padding: 12px 14px; border: none; border-radius: var(--r-card); background: var(--surface); color: var(--ink); font: inherit; font-weight: 600; cursor: pointer; text-align: left; }
+.pd-talk { display: flex; align-items: center; gap: 10px; width: calc(100% - 32px); min-height: 52px; margin: 18px 16px 0; padding: 12px 14px; border: none; border-radius: var(--r-card); background: var(--card); box-shadow: var(--hair); color: var(--ink); font: inherit; font-weight: 600; cursor: pointer; text-align: left; }
 .pd-talk i { color: var(--icon); }
 
 /* Sheets */
 .pd-sheet { padding: 6px 16px 16px; display: flex; flex-direction: column; gap: 8px; }
 .pd-seg { margin: 4px 0; }
 .pd-seg .holes-btn { font-family: var(--body-font); font-size: 15px; font-weight: 700; padding-left: 6px; padding-right: 6px; white-space: nowrap; }
-.pd-help { margin: 2px 0 4px; font-size: 14px; line-height: 1.4; color: var(--mute); }
+.pd-help { margin: 2px 0 4px; font-size: 14px; line-height: 1.4; color: var(--mute); text-wrap: pretty; }
 .pd-sub-label { margin-top: 10px; font-size: 12px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: var(--mute); }
 .pd-done { margin-top: 10px; }
 .pd-list { max-height: 52vh; overflow-y: auto; margin: 0 -4px; }
@@ -115,11 +115,12 @@ button.pd-seat:active { background: var(--surface); }
 .pa-msg { display: block; width: 100%; margin: 0; padding: 0; border: none; background: transparent; color: var(--ink); font: inherit; font-size: 18px; line-height: 1.35; resize: none; outline: none; }
 .pa-foot { display: flex; align-items: center; gap: 6px; margin: 10px 0 0; padding-top: 10px; border-top: 1px solid var(--line); font-size: 13px; color: var(--mute); }
 .pa-foot i { font-size: 14px; }
-.pa-hint { margin: 10px 20px 0; font-size: 14px; line-height: 1.4; color: var(--mute); }
+.pa-hint { margin: 10px 20px 0; font-size: 14px; line-height: 1.4; color: var(--mute); text-wrap: pretty; }
 .pa-people { display: flex; flex-wrap: wrap; gap: 8px; padding: 0 16px; }
 .pa-chip { display: inline-flex; align-items: center; gap: 6px; min-height: 44px; padding: 0 16px; border: none; border-radius: var(--r-chip); background: var(--card); box-shadow: var(--hair); color: var(--ink); font: inherit; font-weight: 600; font-size: 15px; cursor: pointer; }
 .pa-chip.on { background: var(--ink); color: var(--on-ink); box-shadow: none; }
-.pa-chip.add { background: transparent; box-shadow: inset 0 0 0 1.5px var(--edge); color: var(--body); }
+/* The add slot: a dashed hairline, so it reads as a space for a name, not a heavier chip */
+.pa-chip.add { background: transparent; box-shadow: none; border: 1.5px dashed var(--line); color: var(--body); }
 .pa-add { margin: 10px 16px 0; }
 .plan-ask .cta-wrap .text-link { align-self: center; }
 
@@ -132,6 +133,9 @@ button.pd-seat:active { background: var(--surface); }
 .uc-tags { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 8px; }
 .uc-tags .st-tag { max-width: 150px; }
 .uc-open { margin-top: 6px; font-size: 13px; color: var(--mute); }
+/* On the day: the organizer's Start this round, inside the card */
+.uc-start { padding: 4px 14px 14px; }
+.uc-start .full-btn { border-radius: var(--r-btn); }
 /* The organizer's Lock in row, under the card like the preview row */
 .uc-lock b { color: var(--ink); }
 .uc-preview.uc-lock > i:first-child { color: var(--ink); }
@@ -141,3 +145,28 @@ button.pd-seat:active { background: var(--surface); }
 
 /* The booking reminder's "No reminder" chip: room around its two words, so they don't touch its edges */
 .plan-page .day-chip.tb-none { padding: 0 12px; }
+
+/* The plan page's answers in the Everyone list use the same three states as the detail tags:
+   Maybe is up in the air (butter), No answer is open (a hairline), not a filled beige */
+.plan-page .who-status.maybe { background: var(--state-vote-bg); color: var(--state-vote-ink); }
+.plan-page .who-status.none { background: transparent; color: var(--mute); box-shadow: inset 0 0 0 1.5px var(--state-not-edge); }
+
+/* The pinned buttons sit under a hairline, so it's clear the page scrolls beneath them */
+.plan-page ~ .cta-wrap { box-shadow: 0 -1px 0 var(--line); }
+
+/* A row that can't be tapped keeps its chevron's room, so the tags line up down the column */
+.pd-go.hidden { visibility: hidden; }
+
+/* Roll call: a plain card for the setup and white rows with an ink check on mint for who's here,
+   so the pink is only Tee off */
+.roll-call .summary-card { background: var(--card); box-shadow: var(--hair); }
+.roll-call .summary-card, .roll-call .summary-card .d, .roll-call .summary-card .stake-big { color: var(--ink); }
+/* Beats the pastel card's dark sub text in both looks */
+:root .roll-call .block.summary-card .li-sub { color: var(--mute); }
+.roll-call .step-q { margin-top: 32px; }
+.roll-call .list-item.pick.on { background: var(--card); box-shadow: var(--hair); }
+.roll-call .li-check.on { background: var(--state-set-bg); border-color: var(--state-set-bg); color: var(--ink); }
+.roll-call .add-ci { background: var(--surface); }
+
+/* The lock sheet's clock sits centred over the day tiles */
+.pd-sheet .pd-lock-art { margin: 0 auto 2px; }
