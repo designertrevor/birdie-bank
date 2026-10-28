@@ -1,6 +1,6 @@
 // One friend: what's on the Tab between you, your record, and the round-by-round story behind it.
 import { useState } from 'react';
-import { Header, Icon, Screen, Sheet, useUI } from '../components/ui.jsx';
+import { Empty, Header, Icon, Screen, Sheet, useUI } from '../components/ui.jsx';
 import { Avatar, SettleSheet } from '../components/Pay.jsx';
 import { PersonActions, RewardLines } from '../components/TabCard.jsx';
 import { TabWhereFrom } from '../components/WhereFrom.jsx';
@@ -116,6 +116,20 @@ export default function Person({ id: opened }) {
     const lastText = last ? `${rounds === 1 ? '' : 'last '}${roundDate(last)}${last.course?.name ? ` at ${last.course.name}` : ''}` : null;
     return [saved, rounds ? `${rounds} round${rounds === 1 ? '' : 's'}` : null, lastText].filter(Boolean).join(' · ') || 'No rounds yet';
   };
+
+  // Nobody by that id on this phone (removed, or a link from another phone): say so, like every
+  // other screen whose thing is gone, rather than a card for "Someone" with an Edit button
+  const gone = !player && !story.items.length && !tab && !Object.values(state.rounds).some(r => r.players.some(p => canonicalOf(state)(p.id) === id));
+  if (gone) {
+    return (
+      <Screen>
+        <Header title="Player" onBack={nav.pop} />
+        <div className="scroll">
+          <Empty title="Player not found" text="They may have been removed from this phone. Their rounds stay in History." action={<button className="ec" onClick={() => nav.setTab('people')}>Back to Players</button>} />
+        </div>
+      </Screen>
+    );
+  }
 
   return (
     <Screen>

@@ -272,7 +272,8 @@ function SheetInner({ onClose, title, children, className = 'sheet' }) {
       <div className={className}>
         <div className="sheet-handle" />
         {title && (
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '12px 16px 4px 16px' }}>
+          // Sticky, so a long sheet's title and its X stay in reach while it scrolls
+          <div className="sheet-head">
             {/* The sheet's heading, for screen readers' "jump to heading" */}
             <h2 className="d" style={{ margin: 0, fontSize: 22, fontWeight: 800 }}>{title}</h2>
             {onClose && <button className="icon-btn sheet-close" onClick={onClose} aria-label="Close"><Icon name="x" /></button>}

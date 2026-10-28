@@ -154,6 +154,9 @@ h2.sec-label { margin: 0; }
 .full-btn:active i { transform: translateX(4px); }
 .full-btn.outline { background: var(--surface); color: var(--ink); }
 .cta-wrap, .pin-btn { padding: 12px 16px calc(12px + env(safe-area-inset-bottom)); flex-shrink: 0; display: flex; flex-direction: column; gap: 10px; }
+/* A pinned footer over a scroll that carries on under it: a short canvas fade above, so the cut-off row reads as more */
+.cta-wrap.fade { position: relative; }
+.cta-wrap.fade::before { content: ''; position: absolute; left: 0; right: 0; top: -28px; height: 28px; background: linear-gradient(to bottom, transparent, var(--canvas)); pointer-events: none; }
 /* A sheet open at the screen sits after the footer, so it doesn't count as last */
 .screen > div[style*="border-top"]:nth-last-child(1 of :not(.sheet-overlay, .numpad-overlay, [hidden])) { border-top: none !important; padding-bottom: calc(14px + env(safe-area-inset-bottom)) !important; }
 
@@ -478,6 +481,9 @@ a.set-row { text-decoration: none; }
 .sheet-overlay.closing, .numpad-overlay.closing { display: flex; pointer-events: none; animation: scrimOut var(--duration-fast) ease-in both; }
 .sheet-overlay.closing > *, .numpad-overlay.closing > * { animation: sheetDown var(--duration-fast) var(--ease-in) both; }
 @keyframes scrimOut { to { background: transparent; } }
+/* While a sheet is up, the screen's pinned buttons step out, so none peeks past the floating sheet's
+   rounded corner (a black sliver of Save & next hole under the number pad) */
+.screen:has(> :is(.sheet-overlay, .numpad-overlay).open:not(.closing)) > :is(.cta-wrap, .pin-btn) { visibility: hidden; }
 @keyframes sheetDown { to { transform: translateY(calc(100% + var(--sheet-gap) + env(safe-area-inset-bottom) + 8px)); } }
 .sheet, .numpad-sheet, .sc-sheet, .rules-sheet {
   --canvas: var(--sheet-bg); --card: var(--sheet-card); --surface: var(--sheet-surface); --surface-strong: var(--sheet-surface-strong);
@@ -492,6 +498,8 @@ a.set-row { text-decoration: none; }
 /* The close X in a sheet's title row: neutral, since pink is only for the one thing to tap */
 .sheet-close { color: var(--body); }
 /* A confirm whose way out is the X (the age check): the title and the X share the row */
+/* A sheet's title row stays put at the top while a long sheet scrolls under it */
+.sheet-head { position: sticky; top: 0; z-index: 2; display: flex; justify-content: space-between; align-items: center; padding: 12px 16px 4px; background: inherit; border-radius: inherit; }
 .sheet-title-row { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding-right: 16px; }
 .sheet-title-row .sheet-title { flex: 1; min-width: 0; }
 .sheet-handle { width: 40px; height: 5px; background: var(--surface-strong); margin: 10px auto 0; border-radius: 3px; }
@@ -578,6 +586,8 @@ a.set-row { text-decoration: none; }
 .toggle-lbl { font-size: 16px; font-weight: 600; color: var(--ink); }
 .toggle-sub { font-size: 13px; color: var(--mute); margin-top: 2px; }
 .tog { width: 56px; height: 34px; padding: 0; border: none; box-sizing: border-box; border-radius: 999px; background: var(--surface-strong); position: relative; cursor: pointer; flex-shrink: 0; transition: background .2s; }
+/* Off reads as a switch, not a smudge: a fill a third of the way to ink with an edge, about 3:1 on the card */
+.tog:not(.on) { background: color-mix(in srgb, var(--ink) 26%, var(--card)); box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--ink) 18%, transparent); }
 .tog.on { background: var(--pink); }
 .tog::after { content: ''; position: absolute; top: 4px; left: 4px; width: 26px; height: 26px; border-radius: 50%; background: #fff; box-shadow: 0 1px 3px rgba(0,0,0,.2); transition: left .3s var(--spring); }
 .tog.on::after { left: 26px; }
@@ -910,7 +920,7 @@ button:disabled { cursor: not-allowed; }
   --sc-wall: #2a2f2e; --sc-door: #3a3330; --sc-stone: #1f2423; --sc-road: #2a2e2d; --sc-snow: #c8d4dc; --sc-glass: #30475a;
   --line: #303937; --line-soft: #283030;
   --teal: #173d3c; --icon: var(--mint); --pink-text: var(--pink); --coral-text: var(--coral); --focus: var(--lav); --win: #6fd3a8; --win-bg: #173a2e; --loss: #ff8a7d; --loss-bg: #3d1f1c; --check: #4ade80;
-  --on-ink: #0a0a0a; --bkr-card: #2e2a1c; --cur-cell: #3a2030; --pick-tint: #3a1d29;
+  --on-ink: #0a0a0a; --bkr-card: #2e2a1c; --cur-cell: #3a2030; --pick-tint: #26302e;
   color-scheme: dark;
 }
 @media (prefers-color-scheme: dark) {
@@ -922,7 +932,7 @@ button:disabled { cursor: not-allowed; }
   --sc-wall: #2a2f2e; --sc-door: #3a3330; --sc-stone: #1f2423; --sc-road: #2a2e2d; --sc-snow: #c8d4dc; --sc-glass: #30475a;
   --line: #303937; --line-soft: #283030;
   --teal: #173d3c; --icon: var(--mint); --pink-text: var(--pink); --coral-text: var(--coral); --focus: var(--lav); --win: #6fd3a8; --win-bg: #173a2e; --loss: #ff8a7d; --loss-bg: #3d1f1c; --check: #4ade80;
-  --on-ink: #0a0a0a; --bkr-card: #2e2a1c; --cur-cell: #3a2030; --pick-tint: #3a1d29;
+  --on-ink: #0a0a0a; --bkr-card: #2e2a1c; --cur-cell: #3a2030; --pick-tint: #26302e;
   color-scheme: dark;
   }
 }
