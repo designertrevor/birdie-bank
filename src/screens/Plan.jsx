@@ -252,8 +252,8 @@ function PlanBody({ plan: saved, standalone = false, onSkip, lock: lockFirst = f
       { key: 'day', icon: 'calendar-blank', label: 'Day', s: states.day, sub: options.length ? `${options.length} day${options.length === 1 ? '' : 's'} so far${plan.when.part ? ` · ${PART_LABEL[plan.when.part].toLowerCase()}` : ''}` : 'Friends say when they can', onOpen: planned && (answered || plan.host) ? () => setSheet('day') : null },
       { key: 'course', icon: 'map-pin', label: 'Course', s: states.course, onOpen: planned && plan.host ? () => setSheet('course') : null },
     ] : []),
-    { key: 'game', icon: game?.icon || 'cards', label: noDay ? 'Game' : 'The game', s: states.game, onOpen: gameT.rows.length > 1 || sideT.length ? openVote : null, sub: onSides.length ? `With ${onSides.map(k => SIDE_GAMES[k].label).join(' and ')}` : null },
-    { key: 'bet', icon: 'coins', label: noDay ? 'Bet' : 'The bet', s: states.bet, onOpen: betT.rows.length > 1 ? openVote : null, sub: playForLine(plan) || null },
+    { key: 'game', icon: plan.groupPicks.game ? 'cards' : game?.icon || 'cards', label: noDay ? 'Game' : 'The game', s: states.game, onOpen: gameT.rows.length > 1 || sideT.length ? openVote : null, sub: onSides.length ? `With ${onSides.map(k => SIDE_GAMES[k].label).join(' and ')}` : null },
+    { key: 'bet', icon: 'currency-dollar', label: noDay ? 'Bet' : 'The bet', s: states.bet, onOpen: betT.rows.length > 1 ? openVote : null, sub: playForLine(plan) || null },
   ];
   const seatTap = plan.host && planned ? p => (p.who !== me && !p.self ? setMarking(p) : null) : null;
   const notes = (
@@ -314,6 +314,8 @@ function PlanBody({ plan: saved, standalone = false, onSkip, lock: lockFirst = f
             <div className="row-main">
               <b>{shortDay(nudge.iso)} works for {nudge.votes} of {nudge.of}</b>
               <span>{nudge.waiting.length ? `${waitingLine(nudge.waiting)}. Lock it in and they’ll get the day too.` : 'Everyone has answered. Lock it in?'}</span>
+              {/* The card asks, so it carries the answer (the same sheet as the button below) */}
+              <button type="button" className="pill-btn pd-nudge-btn" onClick={() => setSheet('lock')}><Icon name="lock-simple" fill /> Lock in {shortDay(nudge.iso)}</button>
             </div>
           </div>
         )}
@@ -379,7 +381,7 @@ function PlanBody({ plan: saved, standalone = false, onSkip, lock: lockFirst = f
           <button className="pd-talk" onClick={() => setSheet('talk')}><Icon name="chat-circle" /> <span className="row-main">Trash talk</span> <TalkCount rows={talkRows} /> <Icon name="caret-right" /></button>
         )}
 
-        {planned && plan.host && !noDay && <button className="text-link" onClick={() => nav.push('newRound', { edit: plan.id })}><Icon name="pencil-simple" /> Change the day, time, course or holes</button>}
+        {planned && plan.host && !noDay && <button className="text-link pd-edit-link" onClick={() => nav.push('newRound', { edit: plan.id })}><Icon name="pencil-simple" /> Change the day, time, course or holes</button>}
         {planned && plan.host && <button className="danger-link" onClick={callOff}><Icon name="calendar-x" /> Call it off</button>}
         {(!planned || !plan.host) && !standalone && <button className="danger-link" onClick={del}><Icon name="trash" /> Delete plan</button>}
         {standalone && <p className="field-help pad">{noMoneyNote(plan) || 'Friendly wagers only. Birdie Bank never holds or moves money. You settle up yourselves.'}</p>}
@@ -462,12 +464,15 @@ function PlanTicket({ plan, people, me, rules, notes, onSeat, onAdd }) {
     ? [plan.course?.name || 'Any course', plan.groupPicks.game ? 'Game and bet up to the group' : [game?.name, bet].filter(Boolean).join(', ')]
     : [plan.course?.name || 'Course to be set', `${plan.holesCount} holes`, plan.groupPicks.game ? null : game?.name, bet];
   const time = timeLabel(plan.teeTime) || PART_LABEL[plan.when.part];
+  // Called off or deleted: the ticket says so where the countdown was, and the day steps back
+  const off = plan.status === 'off' || (plan.gone && plan.status === 'planned');
+  const when = noDay ? (lead ? `${shortDay(lead.iso)} leads so far` : 'When works?') : [shortDay(plan.date), toGoLabel(plan)].filter(Boolean).join(' · ');
   return (
-    <div className={`pd-ticket ${noDay ? 'no-day' : ''}`}>
+    <div className={`pd-ticket ${noDay ? 'no-day' : ''} ${off ? 'off' : ''}`}>
       <div className="pt-from">
         {plan.host ? <span>{noDay ? 'You’re getting a round going' : 'You’re getting a game together'}</span> : <><Avatar name={host} /> <span><strong>{first(host)}</strong> {noDay ? 'wants to get a round in' : 'is getting a game together'}</span></>}
       </div>
-      <div className="pt-eyebrow">{noDay ? (lead ? `${shortDay(lead.iso)} leads so far` : 'When works?') : [shortDay(plan.date), toGoLabel(plan)].filter(Boolean).join(' · ')}</div>
+      <div className="pt-eyebrow">{off ? ['Called off', noDay ? null : shortDay(plan.date)].filter(Boolean).join(' · ') : when}</div>
       <div className="pt-big">{noDay ? 'No day yet' : time || weekdayOf(plan) || shortDay(plan.date)}</div>
       {noDay && plan.ask && <p className="pt-ask">“{plan.ask}”</p>}
       <div className="pt-line">{facts.filter(Boolean).join(' · ')}</div>

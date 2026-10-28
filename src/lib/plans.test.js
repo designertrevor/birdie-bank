@@ -236,6 +236,9 @@ test('texts: the invite and the morning text name the day, the course, who is in
     'Golf today! Rancho Park, tee time 8:10 AM.\nIn: Trevor, Mike and Dave.\nGame: Skins, $5 a skin · carryovers.\nhttps://x/?plan=ABCDEF');
   const early = new Date(2026, 8, 28, 9);
   assert.match(inviteText(p, 'L', early), /^Golf Saturday at 8:10 AM\? Rancho Park\.\nThinking Skins\./);
+  // A message written on the ask leads, even with the day set; the default one doesn't
+  assert.match(inviteText({ ...p, ask: 'Who wants Rancho this weekend?' }, 'L', early), /^Who wants Rancho this weekend\?\nGolf Saturday at 8:10 AM\?/);
+  assert.match(inviteText({ ...p, ask: 'Trying to get a round in soon. Who’s in?' }, 'L', early), /^Golf Saturday/);
 });
 
 // --------------------------- the bet vote, per game ---------------------------

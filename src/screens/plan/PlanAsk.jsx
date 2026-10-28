@@ -128,15 +128,22 @@ export default function PlanAsk({ onboarding = false, told = null }) {
 
   return (
     <Screen className="plan-ask">
-      <Header title="New round" onClose={close} />
+      {/* One title and a close (Trevor, 2026-10-28): the screen is named for what it does, and the
+          message below is what the group gets, so it reads as a text field, not a second heading */}
+      <Header title="Get a round going" onClose={close} />
       <div className="scroll">
-        <h1 className="pa-title">Who’s up for golf?</h1>
-        <label className="sr-only" htmlFor="pa-msg">Your message</label>
-        <textarea id="pa-msg" className="pa-msg" rows={2} maxLength={ASK_MAX} value={msg} onChange={e => setMsg(e.target.value)} onBlur={() => setMsg(cleanAsk(msg))} />
-        <p className="pa-hint">Every detail is optional. Leave it as Not yet and the group fills it in.</p>
-        <DetailRows rows={rows} />
+        <label className="sec-label pa-label" htmlFor="pa-msg">Your message</label>
+        <div className="pa-text">
+          <textarea id="pa-msg" className="pa-msg" rows={2} maxLength={ASK_MAX} value={msg} aria-describedby="pa-msg-foot"
+            onChange={e => setMsg(e.target.value)} onBlur={() => setMsg(cleanAsk(msg))} />
+          <p className="pa-foot" id="pa-msg-foot"><Icon name="link" /> Goes to the group with the link to answer</p>
+        </div>
 
-        <div className="sec-label">Ask</div>
+        <div className="sec-label">The details</div>
+        <DetailRows rows={rows} />
+        <p className="pa-hint">Each one can wait. Leave it open and the group sorts it out.</p>
+
+        <div className="sec-label">Who to ask</div>
         <div className="pa-people" role="group" aria-label="Who to ask">
           {list.map(p => (
             <button key={p.id} type="button" className={`pa-chip ${on.has(p.id) ? 'on' : ''}`} aria-pressed={on.has(p.id)} onClick={() => toggle(p)}>
