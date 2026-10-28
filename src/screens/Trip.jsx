@@ -6,6 +6,7 @@
 // organizer edits, deletes or says "Done playing"; anyone can hide the trip from their own Tab and
 // Up next. See trips.js, trip-plan.js and trip-expenses.js for how it's all worked out.
 import { useEffect, useState } from 'react';
+import '../components/tab-card.css';
 import { Empty, Header, Icon, PickRow, Screen, Segmented, Sheet, useUI } from '../components/ui.jsx';
 import { Scene } from '../components/Scenes.jsx';
 import { ArtNote } from '../components/ArtNote.jsx';
@@ -237,7 +238,8 @@ function TripPage({ id, view: firstView = null, add = false }) {
             {st.rounds.length === 0 && st.planned.length === 0 && <ArtNote spot="tees">No rounds yet. Start one at the course, or plan the trip’s rounds so everyone can answer.</ArtNote>}
             {(st.done.length > 0 || st.live.length > 0) && <div className="sec-label">Played</div>}
             {st.live.map(r => <LiveRow key={r.id} round={r} />)}
-            {[...st.done].reverse().map(r => <RoundRow key={r.id} round={r} state={state} className="card" />)}
+            {/* One card of rows with hairlines, like the standings, not cards stacked edge to edge */}
+            <div className="te-list">{[...st.done].reverse().map(r => <RoundRow key={r.id} round={r} state={state} />)}</div>
             {/* Planned rounds day by day, a Trip Mode schedule's groups under their session (trip-templates.js) */}
             {plansByDay(st.planned).map(d => d.sessions.map(sess => (
               <div key={`${d.date}${sess.key}`}>
@@ -635,9 +637,9 @@ function TripSettlePage({ id, who = null }) {
                 <span className="pm">{money(t.amount)}</span>
               </div>
               {app && <div className="trip-pay-sub">To {iPay ? `${short(other)}’s` : 'your'} {PAY_APPS[app.app]?.name || 'pay app'}</div>}
-              <div className="pay-acts wrap">
+              <div className="pay-acts wrap pay-more settle-row-acts">
                 {iPay ? <PayButton info={payInfoFor(state, other)} amount={t.amount} note={note} />
-                  : <RequestButton payer={payInfoFor(state, other)} mine={myApp} amount={t.amount} note={note} who={other} />}
+                  : <RequestButton payer={payInfoFor(state, other)} mine={myApp} amount={t.amount} note={note} who={other} named />}
                 <button className="pay-btn got" onClick={() => mark(t)}><span className="pay-in"><Icon name="check-circle" fill /><span className="pay-lbl">{iPay ? 'I paid' : 'I got it'}</span></span></button>
               </div>
             </div>

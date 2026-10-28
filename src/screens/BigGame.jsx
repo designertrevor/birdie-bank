@@ -6,6 +6,7 @@
 // organizer starts the groups, adds side bets or closes the game early. See big-game.js,
 // big-money.js and big-sync.js for how it's all worked out.
 import { useState } from 'react';
+import '../components/tab-card.css';
 import { Empty, Header, Icon, Screen, Segmented, Sheet, useUI } from '../components/ui.jsx';
 import { Avatar, PayButton, RequestButton } from '../components/Pay.jsx';
 import { BetsList, BigBetSheet, BigDots, GroupCard, MoneyTable, PotTable, SkinsList, TeamsTable } from '../components/BigGame.jsx';
@@ -181,7 +182,7 @@ export default function BigGame({ id, view: firstView = null }) {
         {!organizer && <p className="field-help pad">{host ? `${host} set up the game. ` : ''}Only the organizer changes it.</p>}
       </div>
       <div className="cta-wrap">
-        {organizer && !started && <button className="full-btn pink" disabled={busy || soon} onClick={start}>{busy ? 'Starting…' : soon ? `Start the groups ${day.toLowerCase() === 'tomorrow' ? 'tomorrow' : `on ${day}`}` : <>Start the groups <Icon name="flag-pennant" fill /></>}</button>}
+        {organizer && !started && <button className="full-btn" disabled={busy || soon} onClick={start}>{busy ? 'Starting…' : soon ? `Start the groups ${day.toLowerCase() === 'tomorrow' ? 'tomorrow' : `on ${day}`}` : <>Start the groups <Icon name="flag-pennant" fill /></>}</button>}
         {reach && started && !bs.final && !bs.ended && bs.field.groups.some(g => g.status === 'done') && <button className="link-btn center" onClick={close}>Group still out there? Close the game now</button>}
         {reach && bs.ended && !paidAny && <button className="link-btn center" onClick={() => closeBig(id, false)}>Still playing? Open the game again</button>}
         {/* A weekly game: next time's starts from this one, the same players, groups and pots */}
@@ -213,13 +214,15 @@ function Groups({ bs, state, name, organizer, onOpen }) {
         const status = !g.roundId ? (g.keeper ? `${name(g.keeper) === 'You' ? 'You keep' : `${first(name(g.keeper))} keeps`} score` : 'One player keeps score')
           : g.status === 'waiting' ? (g.code ? 'Scores not on this phone yet' : organizer ? 'No link yet: share the groups again' : 'Not shared yet')
           : g.status === 'done' ? 'Finished'
-          : `${g.thru ? `Thru ${g.thru}` : 'Not teed off'} · ${keeping(g)}`;
+          // The title already says when your phone has it, so the line doesn't say it again
+          : [g.thru ? `Thru ${g.thru}` : 'Not teed off', local ? null : keeping(g)].filter(Boolean).join(' · ');
         return (
           <button key={g.id} className={`ledger-row big-group ${g.status}`} onClick={() => onOpen(g)} disabled={!g.roundId}>
             <div className="lr-info">
               <div className="lr-name" style={{ fontSize: 16 }}>{g.name}{local ? ' · your phone has it' : ''}</div>
               <div className="lr-status">{g.players.map(name).join(', ')}</div>
-              <div className={`lr-status big-group-st ${g.status}`}>{status}</div>
+              {/* Pink only once a group is out there scoring; before that it's a plain status line */}
+              <div className={`lr-status big-group-st ${g.status === 'live' && !g.thru ? 'pending' : g.status}`}>{status}</div>
             </div>
             {g.roundId && <span className="chevron"><Icon name="caret-right" /></span>}
           </button>
@@ -301,9 +304,9 @@ function Money({ bs, st, id, state, me, isMe, name, off }) {
               <span className="pm">{money(t.amount)}</span>
             </div>
             {app && <div className="trip-pay-sub">To {iPay ? `${short(other)}’s` : 'your'} {PAY_APPS[app.app]?.name || 'pay app'}</div>}
-            <div className="pay-acts wrap">
+            <div className="pay-acts wrap pay-more settle-row-acts">
               {iPay ? <PayButton info={payInfoFor(state, other)} amount={t.amount} note={st.trip.name} />
-                : <RequestButton payer={payInfoFor(state, other)} mine={myApp} amount={t.amount} note={st.trip.name} who={other} />}
+                : <RequestButton payer={payInfoFor(state, other)} mine={myApp} amount={t.amount} note={st.trip.name} who={other} named />}
               <button className="pay-btn got" onClick={() => mark(t)}><span className="pay-in"><Icon name="check-circle" fill /><span className="pay-lbl">{iPay ? 'I paid' : 'I got it'}</span></span></button>
             </div>
           </div>

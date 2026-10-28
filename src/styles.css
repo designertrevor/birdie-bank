@@ -2126,7 +2126,9 @@ button.trip-card:active { transform: scale(.97); }
 }
 .trip-hide::before { content: ''; position: absolute; inset: -6px; }
 .trip-hide:active { transform: scale(.88); background: var(--surface); }
-.trip-card-wrap > .trip-card .chevron { margin-top: 22px; }
+/* The chevron sits at the card's foot, well clear of the hide X's target in the top corner */
+.trip-card-wrap > .trip-card { align-items: stretch; }
+.trip-card-wrap > .trip-card .chevron { align-self: flex-end; margin: 0 0 4px; }
 .trip-updated {
   display: inline-block; margin-left: 4px; padding: 1px 8px; border-radius: 999px; vertical-align: 1px;
   background: var(--trip-tag-bg); color: var(--pink-text); font-size: 11px; font-weight: 700; letter-spacing: .02em; text-transform: none;
@@ -2486,7 +2488,7 @@ button.ch-main:active { transform: scale(.98); }
 .exp-big.sm { font-size: 26px; }
 .exp-sum-sub { font-size: 13px; color: var(--mute); margin-top: 4px; line-height: 1.4; font-variant-numeric: tabular-nums; }
 .ledger-row.exp-row { gap: 12px; padding: 14px 14px 14px 12px; width: calc(100% - 32px); border: none; font: inherit; color: inherit; text-align: left; }
-.exp-ic { width: 40px; height: 40px; border-radius: 50%; flex-shrink: 0; display: grid; place-items: center; background: var(--trip-tag-bg); color: var(--pink-text); font-size: 19px; }
+.exp-ic { width: 40px; height: 40px; border-radius: 50%; flex-shrink: 0; display: grid; place-items: center; background: var(--surface); color: var(--ink); font-size: 19px; }
 .exp-name { font-family: var(--display); font-size: 17px; font-weight: 800; color: var(--ink); overflow-wrap: anywhere; }
 .exp-row .lr-info { min-width: 0; }
 .exp-mine { font-size: 13px; font-weight: 700; margin-top: 3px; font-variant-numeric: tabular-nums; }
@@ -3478,7 +3480,9 @@ a.header-btn.rm-open { text-decoration: none; }
 .settle-lede p { line-height: 1.45; }
 /* "I paid" and "I got it" are the quiet second button next to the pay app's, so a page of them
    doesn't stack up black bars */
-.pay-btn.got { background: var(--surface); color: var(--ink); }
+/* I got it / I paid leads a settle-up row (an ink outline, like Paid on the Tab); the payment app
+   beside it is the quiet one (tab-card.css .pay-more) */
+.pay-btn.got { background: var(--card); color: var(--ink); box-shadow: inset 0 0 0 1.5px var(--ink); }
 /* Days and months you can't pick are faded, as unavailable choices are everywhere else */
 .cal-day[aria-disabled] .cd-num { text-decoration: none; opacity: .35; }
 .cal-cell:disabled { text-decoration: none; opacity: .35; }

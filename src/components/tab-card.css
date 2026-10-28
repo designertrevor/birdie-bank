@@ -47,3 +47,8 @@
 .pay-acts.pay-more.compact .tab-part { margin: 0 2px 0 auto; }
 /* Square people and rewards as rows of one card too, each row keeping its own last line */
 :root .te-list > .te-card, :root[data-look] .te-list > .te-card { margin: 0; border-radius: 0; box-shadow: none; background: none; }
+/* A trip's or Big Game's settle-up row: I got it / I paid first and widest, the app quiet after it */
+.settle-row-acts .pay-btn.got { order: -1; flex: 1 1 auto; }
+.settle-row-acts .pay-btn[class*="app-"] { flex: 0 1 auto; }
+/* Round rows inside a one-card list (a trip's played rounds) */
+:root .te-list > .hist-row, :root[data-look] .te-list > .hist-row { width: 100%; margin: 0; border-radius: 0; box-shadow: none; background: none; }
