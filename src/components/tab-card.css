@@ -41,3 +41,9 @@
 :root[data-look] .te-list .ledger-row, :root[data-look] .te-list .pay-talk { width: 100%; margin: 0; border-radius: 0; background: none; box-shadow: none; }
 .te-list .ledger-row:active { transform: none; background: var(--surface); }
 .te-list .ledger-row.static:active { background: none; }
+/* The Tab's compact card: the app's button keeps its size, Paid part of it? sits at the row's end */
+.pay-acts.pay-more.compact { align-items: center; }
+.pay-acts.pay-more.compact .pay-btn { flex: 0 1 auto; padding: 0 14px; }
+.pay-acts.pay-more.compact .tab-part { margin: 0 2px 0 auto; }
+/* Square people and rewards as rows of one card too, each row keeping its own last line */
+:root .te-list > .te-card, :root[data-look] .te-list > .te-card { margin: 0; border-radius: 0; box-shadow: none; background: none; }

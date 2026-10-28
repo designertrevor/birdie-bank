@@ -116,9 +116,9 @@ export default function Ledger() {
           <div className={`tp-amt ${owesMe ? 'pos' : 'neg'}`}>{money(amount)}</div>
           <span className="chevron"><Icon name="caret-right" /></span>
         </button>
-        <PersonActions other={p.id} net={p.net} meId={state.me || me} />
-        {/* Part payments and where it comes from are a tap away on the person, so the card has one job */}
-        <button className="link-btn tab-part" onClick={() => setOpen(partDebt(p))}>Paid part of it?</button>
+        {/* Compact: the reminder bell and where it comes from are on the person's screen; Paid part
+            of it? shares the payment app's row, so the card is three short rows */}
+        <PersonActions other={p.id} net={p.net} meId={state.me || me} compact extra={<button className="link-btn tab-part" onClick={() => setOpen(partDebt(p))}>Paid part of it?</button>} />
         <RewardLines other={p.id} />
       </div>
     );
@@ -199,6 +199,10 @@ export default function Ledger() {
           </div>
         )}
         <TabWaiting />
+        {/* You're square but others still owe each other: the all-square moment still leads */}
+        {plan.length > 0 && !summary.lead && people.length === 0 && (
+          <Empty title="You’re all square" illo="highfive" ids={squareBuddies} text="Nobody owes you, you owe nobody. What the others owe each other is below." />
+        )}
         {trips.map(t => <TripTabCard key={t.trip.id} status={t} />)}
         {trips.some(t => t.money.length > 0) && plan.length > 0 && <p className="field-help pad trip-folded">{trips.filter(t => t.money.length > 0).every(t => t.big) ? 'The game’s money is in each person’s total below.' : 'Trip money is in each person’s total below.'}</p>}
         {plan.length === 0 ? (
@@ -225,8 +229,7 @@ export default function Ledger() {
             {anySquare && (
               <section className="te-section" aria-label="Square">
                 <div className="te-head"><h2 className="te-title">Square</h2></div>
-                {recentSquare.map(squareCard)}
-                {rewardOnly.map(rewardCard)}
+                {(recentSquare.length > 0 || rewardOnly.length > 0) && <div className="te-list">{recentSquare.map(squareCard)}{rewardOnly.map(rewardCard)}</div>}
                 {squareIds.length > 0 && people.length > 0 && (
                   <div className="square-line">
                     <span className="tab-faces">{squareIds.slice(0, 5).map(id => <Avatar key={id} id={id} name={nameOf(state, id)} size="sm" />)}</span>
@@ -246,8 +249,7 @@ export default function Ledger() {
         )}
         {plan.length === 0 && <SquareStrip />}
         {plan.length === 0 && <SinceBooks scope={ALL} />}
-        {plan.length === 0 && rewardOnly.map(rewardCard)}
-        {plan.length === 0 && recentSquare.map(squareCard)}
+        {plan.length === 0 && (recentSquare.length > 0 || rewardOnly.length > 0) && <div className="te-list">{rewardOnly.map(rewardCard)}{recentSquare.map(squareCard)}</div>}
         {history.length > 0 && (
           <>
             <h2 className="sec-label">Payments</h2>

@@ -59,9 +59,11 @@ export function RecentPaid({ meId, other, pay }) {
 
 /**
  * Everything you can do on one person's card: pay or remind, mark it paid, and roll it over.
- * `net` is what's on the Tab between you: positive when they owe you.
+ * `net` is what's on the Tab between you: positive when they owe you. `compact` (the Tab's list)
+ * leaves the reminder bell to the person's screen and puts `extra` (Paid part of it?) on the
+ * payment app's row, so a card is three short rows, not four.
  */
-export function PersonActions({ other, net, meId }) {
+export function PersonActions({ other, net, meId, compact = false, extra = null }) {
   const state = useStore();
   const { showToast } = useUI();
   const remind = useRemind();
@@ -150,14 +152,15 @@ export function PersonActions({ other, net, meId }) {
             )}
           </div>
           {/* The payment app and a nudge, a step quieter */}
-          {(!owesMe || carry?.status !== 'agreed') && (
-            <div className="pay-acts pay-more">
-              {owesMe ? (
+          {((!owesMe || carry?.status !== 'agreed') || extra) && (
+            <div className={`pay-acts pay-more ${compact ? 'compact' : ''}`}>
+              {(!owesMe || carry?.status !== 'agreed') && (owesMe ? (
                 <>
-                  <button className="pay-btn icon-only" onClick={() => remind(other, amount)} aria-label={`Remind ${first} about ${money(amount)}`}><span className="pay-in"><Icon name="bell-ringing" fill /></span></button>
+                  {!compact && <button className="pay-btn icon-only" onClick={() => remind(other, amount)} aria-label={`Remind ${first} about ${money(amount)}`}><span className="pay-in"><Icon name="bell-ringing" fill /></span></button>}
                   <RequestButton payer={theirApp} mine={myApp} amount={amount} note="Golf" who={other} named />
                 </>
-              ) : <PayButton info={theirApp} amount={amount} note="Golf" />}
+              ) : <PayButton info={theirApp} amount={amount} note="Golf" />)}
+              {extra}
             </div>
           )}
         </>
