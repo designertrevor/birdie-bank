@@ -58,9 +58,12 @@ export function FirstTeeSheet({ round, open, mode = 'view', canEdit = false, me 
         )}
         <div className="ft-sec">
           <div className="ft-h">Strokes</div>
-          <div className="ft-chips">
-            {group('strokes').map(x => <span key={x.id} className="ft-chip"><strong>{x.label}</strong> {x.text}</span>)}
-          </div>
+          {/* No handicaps is one plain line: a chip saying "Strokes" under the Strokes heading said it twice */}
+          {group('strokes').some(x => x.id === 'strokes')
+            ? <div className="ft-line">{group('strokes').find(x => x.id === 'strokes').text}</div>
+            : <div className="ft-chips">
+              {group('strokes').map(x => <span key={x.id} className="ft-chip"><strong>{x.label}</strong> {x.text}</span>)}
+            </div>}
         </div>
         <div className="ft-sec">
           <div className="ft-h">Bets</div>
