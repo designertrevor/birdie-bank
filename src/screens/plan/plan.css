@@ -58,7 +58,7 @@ button.pd-seat:active { background: var(--surface); }
 .pd-ticket { margin: 4px 16px 6px; padding: 20px 18px 12px; background: var(--card); border-radius: var(--r-card); box-shadow: var(--hair); display: flex; flex-direction: column; gap: 4px; position: relative; animation: rise .4s var(--ease-out); }
 .pt-from { display: flex; align-items: center; gap: 10px; font-size: 15px; color: var(--body); margin-bottom: 8px; }
 .pt-from strong { color: var(--ink); }
-.pt-eyebrow { font-size: 13px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: var(--pink-text); }
+.pt-eyebrow { font-size: 13px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: var(--eyebrow-ink); }
 .pt-big { font-family: var(--display); font-weight: var(--money-weight); font-size: 46px; line-height: 1.02; letter-spacing: -.02em; color: var(--ink); font-variant-numeric: tabular-nums; margin: 2px 0 4px; }
 .pt-ask { margin: 4px 0 2px; font-size: 17px; line-height: 1.35; color: var(--ink); }
 .pt-line { font-size: 15px; color: var(--body); display: flex; align-items: center; gap: 6px; }

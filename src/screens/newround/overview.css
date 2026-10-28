@@ -9,12 +9,7 @@
 }
 .ov-again:active { transform: scale(.98); }
 .ov-again-text { display: flex; flex-direction: column; gap: 3px; min-width: 0; flex: 1; }
-.ov-again .eyebrow { color: var(--pink-text); }
-/* On the dark butter the pink needs a little light to stay readable at eyebrow size */
-:root[data-theme="dark"] .ov-again .eyebrow { color: color-mix(in srgb, var(--pink) 70%, #fff); }
-@media (prefers-color-scheme: dark) {
-  :root:not([data-theme="light"]) .ov-again .eyebrow { color: color-mix(in srgb, var(--pink) 70%, #fff); }
-}
+.ov-again .eyebrow { color: var(--eyebrow-ink); }
 .ov-again-title { font-family: var(--display); font-weight: var(--display-weight); font-size: 21px; line-height: 1.2; letter-spacing: -.01em; }
 .ov-again-sub { font-size: 13px; color: var(--body); line-height: 1.4; }
 .ov-again-btn {

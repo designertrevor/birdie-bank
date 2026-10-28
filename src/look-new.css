@@ -157,7 +157,7 @@
 :root[data-look="new"] .resume-card { background: var(--card); color: var(--ink); box-shadow: inset 0 0 0 1.5px var(--pink-fill); }
 :root[data-look="new"] .resume-card .resume-go { background: var(--pink-fill); color: #fff; }
 :root[data-look="new"] .resume-card .resume-pulse { background: var(--pink); }
-:root[data-look="new"] .resume-card .resume-eyebrow { color: var(--pink-text); font-weight: 600; }
+:root[data-look="new"] .resume-card .resume-eyebrow { color: var(--eyebrow-ink); font-weight: 600; }
 :root[data-look="new"] .resume-card .resume-sub { color: var(--mute); }
 :root[data-look="new"] .winner-hero { background: var(--card); color: var(--ink); box-shadow: var(--hair); }
 :root[data-look="new"] .winner-hero .wa { color: var(--pink-text); }

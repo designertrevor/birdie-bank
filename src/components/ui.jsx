@@ -273,7 +273,8 @@ function SheetInner({ onClose, title, children, className = 'sheet' }) {
         <div className="sheet-handle" />
         {title && (
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '12px 16px 4px 16px' }}>
-            <span className="d" style={{ fontSize: 22, fontWeight: 800 }}>{title}</span>
+            {/* The sheet's heading, for screen readers' "jump to heading" */}
+            <h2 className="d" style={{ margin: 0, fontSize: 22, fontWeight: 800 }}>{title}</h2>
             {onClose && <button className="icon-btn sheet-close" onClick={onClose} aria-label="Close"><Icon name="x" /></button>}
           </div>
         )}
@@ -427,11 +428,11 @@ function Confirm({ confirm, close }) {
         {confirm.cancelX
           ? (
             <div className="sheet-title-row">
-              <div className="sheet-title" id="bb-confirm-title">{confirm.title}</div>
+              <h2 className="sheet-title" id="bb-confirm-title">{confirm.title}</h2>
               <button className="icon-btn sheet-close" onClick={() => close(null)} aria-label={confirm.cancelLabel || 'Close'}><Icon name="x" /></button>
             </div>
           )
-          : <div className="sheet-title" id="bb-confirm-title">{confirm.title}</div>}
+          : <h2 className="sheet-title" id="bb-confirm-title">{confirm.title}</h2>}
         {confirm.text && <p className="sheet-text" id="bb-confirm-text">{confirm.text}</p>}
         <div style={{ padding: '4px 16px 0', display: 'flex', flexDirection: 'column', gap: 10 }}>
           {(confirm.actions || [{ label: confirm.confirmLabel || 'Confirm', value: true, danger: confirm.danger }]).map(a => (

@@ -91,7 +91,9 @@ export function PersonActions({ other, net, meId }) {
     const allSquare = !outstanding(now).some(t => mine.has(t.from) || mine.has(t.to));
     buzz(allSquare ? [15, 40, 15] : 15);
     sound('paid');
-    showToast(allSquare ? 'All square. Nobody owes anybody.' : shared ? `Marked paid. ${first} sees it too.` : 'Marked paid', { label: 'Undo', run: () => undoLastPayment(meId, other) }, { tone: 'win' });
+    // Says who, so the toast reads right over the next person's card
+    const said = owesMe ? `${first} paid you` : `You paid ${first}`;
+    showToast(allSquare ? 'All square. Nobody owes anybody.' : shared ? `${said}. ${first} sees it too.` : said, { label: 'Undo', run: () => undoLastPayment(meId, other) }, { tone: 'win' });
   };
   const answer = type => {
     answerCarry(carry, type);

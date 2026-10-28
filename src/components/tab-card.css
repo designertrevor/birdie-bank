@@ -36,6 +36,8 @@
    else and Payments, and the story on a person's screen */
 .te-list { margin: 0 16px 10px; border-radius: var(--r-card); background: var(--card); box-shadow: var(--hair); overflow: hidden; }
 .te-list > * + * { border-top: 1px solid var(--line); }
-.te-list .ledger-row, .te-list .pay-talk { width: 100%; margin: 0; border-radius: 0; background: none; box-shadow: none; }
+/* :root[data-look] outranks the look's own card rules, which give every .ledger-row a radius and a hairline */
+:root .te-list .ledger-row, :root .te-list .pay-talk,
+:root[data-look] .te-list .ledger-row, :root[data-look] .te-list .pay-talk { width: 100%; margin: 0; border-radius: 0; background: none; box-shadow: none; }
 .te-list .ledger-row:active { transform: none; background: var(--surface); }
 .te-list .ledger-row.static:active { background: none; }
