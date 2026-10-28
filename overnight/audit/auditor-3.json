@@ -1,0 +1,2141 @@
+[
+ {
+  "id": "play-1",
+  "area": "play",
+  "screen": "Reveal: share card",
+  "files": [
+   "audit-shots-2/play/reveal-share-card-light.png",
+   "audit-shots-2/play/reveal-share-card-dark.png"
+  ],
+  "theme": "both",
+  "severity": "broken",
+  "issue": "The share image has an empty cream rounded square under 'Oct 26 · Skins' in its gold header. The game badge never draws into the canvas, so every shared image goes out with a blank tile.",
+  "fix": "In the share card canvas (Podium.jsx / share image code), draw the game's badge into that slot from its paths like the crown, or drop the placeholder rect when the art isn't drawn.",
+  "owner": "play"
+ },
+ {
+  "id": "play-2",
+  "area": "play",
+  "screen": "Solo round finish and results",
+  "files": [
+   "audit-shots-2/play/solo-nice-round-light.png",
+   "audit-shots-2/play/solo-nice-round-dark.png",
+   "audit-shots-2/play/results-solo-light.png",
+   "audit-shots-2/play/results-solo-dark.png",
+   "audit-shots-2/play/results-solo-scrolled-light.png",
+   "audit-shots-2/play/results-solo-scrolled-dark.png"
+  ],
+  "theme": "both",
+  "severity": "broken",
+  "issue": "A solo round ends on a money result. The hero says 'All square $0' with the handshake, 'Who pays who: Nobody owes anybody', and Standings ranks Trevor 1 of 1 with $0. The Nice round screen named in the index never shows. On the reveal, a small handshake sits low in a large lavender card with about 430px of empty canvas under the Scorecard button.",
+  "fix": "Branch on players.length === 1: the hero shows the score (gross, to par, net) as the key number with a solo spot illustration, and the reveal and results drop Who pays who, Standings, the podium and the $0 line.",
+  "owner": "play"
+ },
+ {
+  "id": "setup-1",
+  "area": "setup",
+  "screen": "Setup overview, entrance",
+  "files": [
+   "audit-shots-2/setup/overview-fresh-mid-light.png",
+   "audit-shots-2/setup/overview-fresh-mid-dark.png"
+  ],
+  "theme": "both",
+  "severity": "should",
+  "issue": "150 ms into the overview's entrance the whole screen is empty canvas, header included, in both themes. Every other step's -mid shot (game, run it back, schedule for later) already shows its content, so opening New round flashes a blank page.",
+  "fix": "Keep the overview's header and Run it back card static on mount and animate only the rows (Stage children), the way the Game step does; drop the opacity:0 start or delay on the overview Stage wrapper.",
+  "owner": "play"
+ },
+ {
+  "id": "setup-2",
+  "area": "setup",
+  "screen": "Setup overview, Run it back card (dark)",
+  "files": [
+   "audit-shots-2/setup/overview-fresh-dark.png"
+  ],
+  "theme": "dark",
+  "severity": "should",
+  "issue": "The ochre Run it back card turns into a brown-olive slab in dark (#3f3415), the muddy band the brief calls out.",
+  "fix": "Give ochre game cards one dark treatment: card surface #1a1f1e with a 1.5px ochre (#e8b94a) border or left edge, matching Round ready's dark card, instead of the darkened ochre fill.",
+  "owner": "play"
+ },
+ {
+  "id": "setup-3",
+  "area": "setup",
+  "screen": "Bets step summary card (dark)",
+  "files": [
+   "audit-shots-2/setup/bets-dark.png"
+  ],
+  "theme": "dark",
+  "severity": "should",
+  "issue": "The '$2 a skin · carryovers' summary keeps the full light ochre fill (#e8b94a) in dark, the brightest block on the screen. The same game card goes brown on the overview and dark-with-gold-edge on Round ready, so one card has three dark looks.",
+  "fix": "Use the same dark ochre-card recipe as the overview and Round ready (dark surface plus ochre edge, ochre money text) for .bets summary in dark.",
+  "owner": "play"
+ },
+ {
+  "id": "setup-4",
+  "area": "setup",
+  "screen": "Round ready, crew oval (dark)",
+  "files": [
+   "audit-shots-2/setup/round-ready-dark.png"
+  ],
+  "theme": "dark",
+  "severity": "should",
+  "issue": "The oval the crew stands on is #997e39 in dark, a muddy mustard-olive that reads dirty next to the clean cream balls.",
+  "fix": "In dark, draw the oval in the clear game colour (#e8b94a at full strength, the hat outlines now carry contrast) or in a lifted surface (#232a28) with an ochre rim; avoid mixing ochre toward the dark canvas.",
+  "owner": "play"
+ },
+ {
+  "id": "setup-5",
+  "area": "setup",
+  "screen": "Round ready",
+  "files": [
+   "audit-shots-2/setup/round-ready-scrolled-light.png",
+   "audit-shots-2/setup/round-ready-scrolled-dark.png"
+  ],
+  "theme": "both",
+  "severity": "should",
+  "issue": "Invite the group is a second solid ink (cream in dark) button on the screen, styled like Tee off on hole 1, so the screen has two primaries competing for the one action that matters.",
+  "fix": "Make Invite the group a secondary button (transparent, 1.5px ink hairline border) so Tee off on hole 1 stays the only filled button.",
+  "owner": "play"
+ },
+ {
+  "id": "setup-6",
+  "area": "setup",
+  "screen": "Game and Course steps, radio rings",
+  "files": [
+   "audit-shots-2/setup/game-light.png",
+   "audit-shots-2/setup/game-dark.png",
+   "audit-shots-2/setup/course-light.png",
+   "audit-shots-2/setup/course-dark.png"
+  ],
+  "theme": "both",
+  "severity": "should",
+  "issue": "The empty radio ring on each game and course row is 1.35:1 against its card (#e4ddcb on white, #2f3735 on #181e1d), under the 3:1 a control needs, so in sun the rows show no choice affordance at all.",
+  "fix": "Draw the unselected ring 2px in a mute line of at least 3:1 (about #9e9887 light, #66706d dark).",
+  "owner": "play"
+ },
+ {
+  "id": "setup-7",
+  "area": "setup",
+  "screen": "Players and Course steps, selected rows",
+  "files": [
+   "audit-shots-2/setup/players-picked-light.png",
+   "audit-shots-2/setup/players-picked-dark.png",
+   "audit-shots-2/setup/course-picked-light.png"
+  ],
+  "theme": "both",
+  "severity": "should",
+  "issue": "A picked row gets a pink wash, a 3px pink border and a pink check, so four picked players make a wall of pink slabs and pink stops meaning 'the thing to tap'. In dark the wash is a wine-maroon (#3a1d29 to #472c36) that reads muddy.",
+  "fix": "Show selection in ink: white card (dark #1a1f1e), 2px ink border (cream in dark) and an ink check disc; keep pink for the one action.",
+  "owner": "play"
+ },
+ {
+  "id": "setup-8",
+  "area": "setup",
+  "screen": "Setup steps, content under the fixed title and footer",
+  "files": [
+   "audit-shots-2/setup/course-picked-light.png",
+   "audit-shots-2/setup/players-too-few-wolf-light.png",
+   "audit-shots-2/setup/game-picked-bottom-light.png",
+   "audit-shots-2/setup/players-picked-light.png"
+  ],
+  "theme": "both",
+  "severity": "should",
+  "issue": "Step content slides under the fixed title block and the footer with a hard edge: the Hole 1 / Hole 10 / Other control is sliced in half on Course picked, Trevor's card has no top on Players for Wolf, a game tile is cut on Game, and the last player card is cut mid-chip above Next. Picking a course also scrolls the page so the tee choice lands half hidden.",
+  "fix": "Add a 16px fade (mask-image linear-gradient) under the title block and above the footer, or a hairline that appears on scroll; after picking a course keep scrollTop so the Holes and Tee off cards stay whole.",
+  "owner": "play"
+ },
+ {
+  "id": "setup-9",
+  "area": "setup",
+  "screen": "Course step",
+  "files": [
+   "audit-shots-2/setup/course-light.png",
+   "audit-shots-2/setup/course-dark.png"
+  ],
+  "theme": "both",
+  "severity": "should",
+  "issue": "Before any course is picked the footer shows an active ink 'Pick a course' button with a search icon, while the Game step shows a disabled 'Pick a game' in the same state. Search, the main task, sits third under Holes and Tee off on.",
+  "fix": "Disable the footer button until a course is picked (same style as Game), and order the step search, Favorites, Recently played, then Holes and Tee off on once a course is chosen.",
+  "owner": "play"
+ },
+ {
+  "id": "setup-10",
+  "area": "setup",
+  "screen": "Add a side game sheet",
+  "files": [
+   "audit-shots-2/setup/side-games-sheet-light.png",
+   "audit-shots-2/setup/side-games-sheet-scrolled-light.png",
+   "audit-shots-2/setup/side-games-sheet-dark.png"
+  ],
+  "theme": "both",
+  "severity": "should",
+  "issue": "Closest to the pin, Long drive and Calcutta have no art tile, so their text floats right of an empty 72px gutter while Junk, Birdie pot and Snake above them have one.",
+  "fix": "Draw badge-tier tiles for the three (a pin flag, a driver, a gavel or ticket), or when a side game has no art drop the gutter so text starts at the card's padding.",
+  "owner": "art"
+ },
+ {
+  "id": "setup-11",
+  "area": "setup",
+  "screen": "First tee sheet",
+  "files": [
+   "audit-shots-2/setup/first-tee-on-start-light.png",
+   "audit-shots-2/setup/first-tee-on-start-dark.png"
+  ],
+  "theme": "both",
+  "severity": "should",
+  "issue": "The card asks the group to decide gimmes and mulligans, but on open its action (Lock it in) is below the fold: only a black sliver shows at the sheet's bottom edge.",
+  "fix": "Pin Lock it in and Skip for now in a sheet footer (position: sticky; bottom: 0 with the sheet's fill) so the decision and its action show together.",
+  "owner": "play"
+ },
+ {
+  "id": "play-3",
+  "area": "play",
+  "screen": "Scoring, money strip (every game)",
+  "files": [
+   "audit-shots-2/play/hole-18-last-light.png",
+   "audit-shots-2/play/hole-18-last-dark.png",
+   "audit-shots-2/play/hole-9-before-turn-light.png"
+  ],
+  "theme": "both",
+  "severity": "should",
+  "issue": "The live money on the strip is the number people glance at on a tee in full sun, and it is only 5.05:1 (red #b83226 on the ochre wash #f9ebcc) and 5.49:1 (green #0f6b4f) in light, 5.51:1 for the coral minus in dark (#ff8a7d on #353423). Under the ~7:1 a glanced number needs outdoors.",
+  "fix": "On .money-strip use darker money tokens: minus #8f2219, plus #0a5440 in light (both above 7:1 on #f9ebcc); in dark lift the strip ground to a neutral #1a1f1e so #ff8a7d and #6fd3a8 clear 7:1. Keep the game colour as a 3px top rule or the progress bar instead of the fill.",
+  "owner": "play"
+ },
+ {
+  "id": "play-4",
+  "area": "play",
+  "screen": "Scoring, money strip in dark (Skins, Wolf, Banker, Nassau, Snake, Hammer, Vegas)",
+  "files": [
+   "audit-shots-2/play/hole-fresh-dark.png",
+   "audit-shots-2/play/snake-hole-1-dark.png",
+   "audit-shots-2/play/hammer-hole-1-dark.png",
+   "audit-shots-2/play/vegas-hole-1-dark.png"
+  ],
+  "theme": "dark",
+  "severity": "should",
+  "issue": "The game-coloured strip goes muddy in dark: ochre becomes olive #353423, Snake's peach becomes brown #38322b, Hammer and Vegas pink become maroon-brown #38252c. These are the olive and brown bands the brief calls out, and they sit at the top of every scoring screen.",
+  "fix": "In the dark theme give .money-strip the plain card surface (#1a1f1e) with a 1px hairline, and carry the game colour only in the progress bar above it (already there) or a 4px left rule. Do not mix the pastel into the dark surface.",
+  "owner": "play"
+ },
+ {
+  "id": "play-5",
+  "area": "play",
+  "screen": "Game panels in dark (Wolf, Hammer, Snake, Stableford, Banker, Nassau tiles, live money keeper band)",
+  "files": [
+   "audit-shots-2/play/wolf-hole-1-dark.png",
+   "audit-shots-2/play/banker-hole-5-dark.png",
+   "audit-shots-2/play/hammer-hole-1-dark.png",
+   "audit-shots-2/play/snake-hole-1-dark.png",
+   "audit-shots-2/play/stableford-points-hole-4-dark.png",
+   "audit-shots-2/play/nassau-hole-6-dark.png",
+   "audit-shots-2/play/live-money-watching-dark.png"
+  ],
+  "theme": "dark",
+  "severity": "should",
+  "issue": "In dark the game panels keep their full light pastel fill (lavender #b8a4ed, ochre #e8b94a, mint tiles), so a 290px bright slab is the loudest thing on a dark screen, while Skins' Worth panel on the same screen correctly goes deep indigo (#29243d). Inconsistent and glaring at night.",
+  "fix": "Give the Wolf, Hammer, Snake, Stableford and Banker panels and the Nassau front/back/total tiles the same dark treatment as the Worth panel: a deep tint of the game colour (for example color-mix(in srgb, var(--lav) 18%, var(--card))) with light text, and keep the bright pastel only for a small badge or the chip that is picked.",
+  "owner": "play"
+ },
+ {
+  "id": "play-6",
+  "area": "play",
+  "screen": "Scoring, unchanged score numbers",
+  "files": [
+   "audit-shots-2/play/hole-fresh-light.png",
+   "audit-shots-2/play/hole-fresh-dark.png"
+  ],
+  "theme": "both",
+  "severity": "should",
+  "issue": "A player's score that is still the default par shows in grey (#6c6f6a on white, 5.1:1; #a09c90 on #181e1d, 6.2:1). It is the one number the scorer checks before Save, and in sun the grey reads as missing.",
+  "fix": "Keep the default number in ink (#0a0a0a / #f1ecdf) and mark 'not touched yet' some other way, for example the outlined Par chip that is already there, or a small 'par' caption under the number.",
+  "owner": "play"
+ },
+ {
+  "id": "play-7",
+  "area": "play",
+  "screen": "Scoring, sticky header when scrolled",
+  "files": [
+   "audit-shots-2/play/hole-editing-light.png",
+   "audit-shots-2/play/hole-fresh-scrolled-light.png",
+   "audit-shots-2/play/vegas-hole-1-scrolled-dark.png",
+   "audit-shots-2/play/wolf-hole-1-scrolled-light.png"
+  ],
+  "theme": "both",
+  "severity": "should",
+  "issue": "Player cards slide under the sticky Worth or game panel with a hard cut: Trevor's card shows only its chip row with no name, and on Vegas a sliver of his avatar pokes out under the panel. The scorer can tap a chip row without seeing whose it is.",
+  "fix": "Add a 16px fade (mask-image: linear-gradient(to bottom, transparent, #000 16px)) or a canvas-coloured gradient under the sticky stack, and add scroll-margin-top on .score-card so a card scrolled to never parks with its name hidden.",
+  "owner": "play"
+ },
+ {
+  "id": "play-8",
+  "area": "play",
+  "screen": "Scoring, Wolf and other tall game panels",
+  "files": [
+   "audit-shots-2/play/wolf-hole-1-scrolled-light.png",
+   "audit-shots-2/play/wolf-partner-picked-scrolled-light.png"
+  ],
+  "theme": "both",
+  "severity": "should",
+  "issue": "With the Wolf panel sticky, the fixed header stack (title, strip, hole, panel) runs to y 655 of 844 plus the footer, leaving about a third of the screen for four players. After the partner is picked the panel stays full height.",
+  "fix": "Once a partner or Lone wolf is picked, collapse the Wolf panel to one line ('Trevor + Jackson v Marcus, Dev', with a Change link) and let the rest scroll; same for Hammer once a hammer is thrown.",
+  "owner": "play"
+ },
+ {
+  "id": "play-9",
+  "area": "play",
+  "screen": "Scoring footnote",
+  "files": [
+   "audit-shots-2/play/hole-editing-light.png",
+   "audit-shots-2/play/hole-editing-dark.png"
+  ],
+  "theme": "both",
+  "severity": "should",
+  "issue": "An empty filled pill (dark grey in light, light grey in dark, about 38 by 22pt) sits on top of the footnote's 'anything else.' after a score is changed. It looks like a toast caught collapsing and covers the text.",
+  "fix": "Find the element (likely the undo or saved toast) and position it above the Save bar (bottom: calc(footer height + 12px)), never over content; make its exit fade and scale out without leaving an empty shell.",
+  "owner": "play"
+ },
+ {
+  "id": "play-10",
+  "area": "play",
+  "screen": "Every bottom sheet over scoring",
+  "files": [
+   "audit-shots-2/play/pad-light.png",
+   "audit-shots-2/play/pad-dark.png",
+   "audit-shots-2/play/money-strip-sheet-light.png",
+   "audit-shots-2/play/scorecard-sheet-light.png"
+  ],
+  "theme": "both",
+  "severity": "should",
+  "issue": "The floating sheet's rounded bottom-right corner lets the Save & next hole button peek out behind it: a black sliver in light, a cream sliver in dark, at the very bottom-right of every sheet.",
+  "fix": "Either hide or dim the sticky footer while a sheet is open (the scrim should cover it: raise the scrim z-index above .play-footer), or inset the footer so it sits fully behind the sheet.",
+  "owner": "shared"
+ },
+ {
+  "id": "play-11",
+  "area": "play",
+  "screen": "Long sheets (Round menu, Add a player, Rules, Bets)",
+  "files": [
+   "audit-shots-2/play/menu-add-player-scrolled-light.png",
+   "audit-shots-2/play/round-menu-scrolled-light.png",
+   "audit-shots-2/play/menu-rules-scrolled-dark.png"
+  ],
+  "theme": "both",
+  "severity": "should",
+  "issue": "When a sheet scrolls, its title and close button scroll away with the content and get sliced at the sheet's top edge (Add a player shows half the title and half the close circle). There is no way to close without scrolling back up or dragging.",
+  "fix": "Make the sheet header (title row and close button) position: sticky; top: 0 with the sheet background and a hairline that appears once scrolled, in ui.jsx Sheet.",
+  "owner": "shared"
+ },
+ {
+  "id": "play-12",
+  "area": "play",
+  "screen": "Toggle rows (Bets, Handicaps, Fix hole, Course and tee)",
+  "files": [
+   "audit-shots-2/play/menu-bets-scrolled-light.png",
+   "audit-shots-2/play/menu-bets-scrolled-dark.png",
+   "audit-shots-2/play/menu-handicaps-bottom-light.png"
+  ],
+  "theme": "both",
+  "severity": "should",
+  "issue": "An off switch is nearly invisible: track #e4ddcb on the card #f9f5ec (about 1.25:1) with a white knob in light, #313937 on #202726 in dark. Canadian skins, Back nine doubles and the rest read as plain text rows with a smudge.",
+  "fix": "Give the off track a visible fill and edge: light #cfc6b0 with a 1px #b9b09a border, dark #3e4745 with a 1px #56605d border, and a 1px shadow on the knob, so the control clears 3:1.",
+  "owner": "shared"
+ },
+ {
+  "id": "play-13",
+  "area": "play",
+  "screen": "Handicaps sheet, tee chips in dark",
+  "files": [
+   "audit-shots-2/play/menu-handicaps-dark.png",
+   "audit-shots-2/play/menu-handicaps-scrolled-dark.png"
+  ],
+  "theme": "dark",
+  "severity": "should",
+  "issue": "The Black tee dot (#1a1a1a) disappears on the dark chip (#262d2c), and the black half of Black/Blue goes with it, so 'Black' has no swatch and 'Black/Blue' looks like a half moon.",
+  "fix": "Give every tee dot a 1px ring in dark (box-shadow: 0 0 0 1.5px #8a8f8b) or draw black as #000 with a light outline, the same way White already has a ring in light.",
+  "owner": "play"
+ },
+ {
+  "id": "play-14",
+  "area": "play",
+  "screen": "Handicaps sheet",
+  "files": [
+   "audit-shots-2/play/menu-handicaps-light.png",
+   "audit-shots-2/play/menu-handicaps-scrolled-light.png"
+  ],
+  "theme": "both",
+  "severity": "should",
+  "issue": "Each player repeats all nine tee chips plus a handicap chip, 36 chips for four players, so the sheet is three screens long to change one number. Crammed, against the breathing-room note.",
+  "fix": "Show one 'Tees' picker for the group at the top, then each player as one row: name, 'Gets 3 strokes', 'Course handicap 9' edit chip, and a small 'Blue' tee tag that opens a tee picker only when someone plays different tees.",
+  "owner": "play"
+ },
+ {
+  "id": "play-15",
+  "area": "play",
+  "screen": "Add a player sheet",
+  "files": [
+   "audit-shots-2/play/menu-add-player-light.png",
+   "audit-shots-2/play/menu-add-player-dark.png"
+  ],
+  "theme": "both",
+  "severity": "should",
+  "issue": "A stray hyphen sits after the handicap stepper ('- 6 + -'). It reads as a minus sign or a broken value, and the empty-value rule asks for an en dash, not a hyphen.",
+  "fix": "Remove the trailing '-' (it looks like an empty strokes caption) or replace it with real text such as 'Gets 2 strokes' once known; use an en dash only for a true empty value.",
+  "owner": "play"
+ },
+ {
+  "id": "play-16",
+  "area": "play",
+  "screen": "Vegas hole 1, 2 v 2",
+  "files": [
+   "audit-shots-2/play/vegas-hole-1-light.png",
+   "audit-shots-2/play/vegas-hole-1-dark.png"
+  ],
+  "theme": "both",
+  "severity": "should",
+  "issue": "Nothing on the Vegas scoring screen shows the teams: four separate player cards, four separate strip amounts, and a plain white panel explaining Vegas with a generic '4 and 5 make 45'. The scorer cannot see who is paired with whom.",
+  "fix": "Group the cards by team with a team label and shared tint (Team 1: Trevor + Jackson), and make the panel say the live numbers for this hole ('Trevor and Jackson 45, Marcus and Dev 56'). Style the panel like the other game panels, not a bare white card.",
+  "owner": "play"
+ },
+ {
+  "id": "play-17",
+  "area": "play",
+  "screen": "Stableford panel",
+  "files": [
+   "audit-shots-2/play/stableford-points-hole-4-light.png",
+   "audit-shots-2/play/stableford-points-hole-4-dark.png"
+  ],
+  "theme": "both",
+  "severity": "should",
+  "issue": "The panel's 'Dev 9 / Marcus 8 / Trevor 7 / Jackson 6' are white pills that look like tappable chips, and their numbers disagree with the strip right above ('-5 pts', '+15 pts'), so the screen shows two different points totals with no label for either.",
+  "fix": "Render the standings as plain text rows (no chip fill or border), and label the two numbers: 'Stableford points' in the panel and 'Points won' (or the bet's name) on the strip.",
+  "owner": "play"
+ },
+ {
+  "id": "play-18",
+  "area": "play",
+  "screen": "Scorecard sheet and Halfway scorecard",
+  "files": [
+   "audit-shots-2/play/scorecard-sheet-light.png",
+   "audit-shots-2/play/halfway-sheet-scrolled-light.png"
+  ],
+  "theme": "both",
+  "severity": "should",
+  "issue": "The card shows holes 1 to 7 and the rest is cut at the sheet edge with no fade or arrow (on Halfway a half circle is sliced at the right edge). Nothing says it scrolls sideways to 18.",
+  "fix": "Add a right-edge fade on the scroll container (mask-image: linear-gradient(to right, #000 85%, transparent)) and scroll the current hole into view; or split into Front 9 and Back 9 tabs.",
+  "owner": "play"
+ },
+ {
+  "id": "play-19",
+  "area": "play",
+  "screen": "End round confirm",
+  "files": [
+   "audit-shots-2/play/menu-end-round-light.png",
+   "audit-shots-2/play/menu-end-round-dark.png"
+  ],
+  "theme": "both",
+  "severity": "should",
+  "issue": "Delete round is a full-width solid red button sitting between Finish and Keep playing, so the destructive action is the second-biggest, middle target, easy to hit when reaching for Keep playing.",
+  "fix": "Order: Finish and count holes played (primary), Keep playing (secondary), then 'Delete round' as a quiet red text link with its own confirm.",
+  "owner": "play"
+ },
+ {
+  "id": "play-20",
+  "area": "play",
+  "screen": "Reveal: share card",
+  "files": [
+   "audit-shots-2/play/reveal-share-card-light.png",
+   "audit-shots-2/play/reveal-share-card-dark.png"
+  ],
+  "theme": "both",
+  "severity": "should",
+  "issue": "The ranked list on the share image goes by money but only shows strokes: Marcus 72 (+1) is 1st, Dev 70 (-1) 2nd and Trevor 70 (-1) 4th. With Show amounts off, the order looks wrong to anyone who sees it.",
+  "fix": "When amounts are hidden, show what the ranking is based on (skins won, '10 skins') in place of or next to the stroke total, or add a small 'by skins' caption above the list.",
+  "owner": "play"
+ },
+ {
+  "id": "play-21",
+  "area": "play",
+  "screen": "Reveal: share card",
+  "files": [
+   "audit-shots-2/play/reveal-share-card-light.png",
+   "audit-shots-2/play/reveal-share-card-dark.png",
+   "audit-shots-2/play/reveal-share-card-scrolled-light.png",
+   "audit-shots-2/play/reveal-share-card-scrolled-dark.png"
+  ],
+  "theme": "both",
+  "severity": "should",
+  "issue": "The share image uses a heavy grotesque for 'Marcus', 'Logan River GC' and 'BIRDIE BANK', while the app's display type is the Fraunces serif (Final results, Settle up, the results hero). The thing friends actually see doesn't look like the app.",
+  "fix": "Use the app's display serif for the winner name and course line in the canvas text calls, and keep Figtree for the small rows and labels.",
+  "owner": "play"
+ },
+ {
+  "id": "play-22",
+  "area": "play",
+  "screen": "Results: tie for top",
+  "files": [
+   "audit-shots-2/play/results-tie-light.png",
+   "audit-shots-2/play/results-tie-dark.png",
+   "audit-shots-2/play/results-nassau-teams-light.png",
+   "audit-shots-2/play/results-nassau-teams-dark.png",
+   "audit-shots-2/play/results-stroke-tie-light.png",
+   "audit-shots-2/play/results-stroke-tie-dark.png"
+  ],
+  "theme": "both",
+  "severity": "should",
+  "issue": "Players tied for first stand on different podium heights. Dev (Wolf), Riley (Nassau) and Riley (stroke play) are T1 but stand on the lower second-place step while the other T1 gets the tall centre step, so the podium contradicts its own labels.",
+  "fix": "In the podium, give tied ranks the same step height (both at the rank-1 height) and centre the pair, with the next rank on its own step.",
+  "owner": "play"
+ },
+ {
+  "id": "play-23",
+  "area": "play",
+  "screen": "Results: standings with a tie",
+  "files": [
+   "audit-shots-2/play/results-tie-scrolled-light.png",
+   "audit-shots-2/play/results-tie-scrolled-dark.png",
+   "audit-shots-2/play/results-nassau-teams-scrolled-light.png",
+   "audit-shots-2/play/results-nassau-teams-scrolled-dark.png",
+   "audit-shots-2/play/results-stroke-tie-scrolled-light.png",
+   "audit-shots-2/play/results-stroke-tie-scrolled-dark.png",
+   "audit-shots-2/play/results-all-square-light.png",
+   "audit-shots-2/play/results-all-square-dark.png"
+  ],
+  "theme": "both",
+  "severity": "should",
+  "issue": "In Standings only the first T1 row gets the gold rank disc. The second T1 (Dev, Riley, Jackson and Marcus on all square) gets the plain grey disc, so a tie looks like a ranking.",
+  "fix": "Key the gold fill on rank === 1 rather than row index, so every T1 disc is gold.",
+  "owner": "play"
+ },
+ {
+  "id": "play-24",
+  "area": "play",
+  "screen": "Results: Nassau 2 v 2",
+  "files": [
+   "audit-shots-2/play/results-nassau-teams-light.png",
+   "audit-shots-2/play/results-nassau-teams-dark.png",
+   "audit-shots-2/play/results-nassau-teams-scrolled-light.png",
+   "audit-shots-2/play/results-nassau-teams-scrolled-dark.png"
+  ],
+  "theme": "both",
+  "severity": "should",
+  "issue": "A team result shows on an individual three-step podium. Trevor and Riley share the win, Sam stands alone on step 3 as 'T3', and his partner Tyler isn't on the podium at all.",
+  "fix": "For team games, swap the podium for two team blocks side by side (paired avatars, team name, one amount), with the winning team on the raised block and wearing the crown.",
+  "owner": "play"
+ },
+ {
+  "id": "play-25",
+  "area": "play",
+  "screen": "Results: played for a reward",
+  "files": [
+   "audit-shots-2/play/results-reward-light.png",
+   "audit-shots-2/play/results-reward-dark.png"
+  ],
+  "theme": "both",
+  "severity": "should",
+  "issue": "The hero leads with '+15 pts' and 'You: -15 pts' on a round played for lunch. The stake (Trevor buys lunch) only appears in the card below, so the key number is one nobody played for.",
+  "fix": "When playingFor is reward, make the hero line the reward ('Trevor buys lunch') and drop the points number and the You chip, or show them small.",
+  "owner": "play"
+ },
+ {
+  "id": "play-26",
+  "area": "play",
+  "screen": "Results: played for a reward",
+  "files": [
+   "audit-shots-2/play/results-reward-light.png",
+   "audit-shots-2/play/results-reward-dark.png"
+  ],
+  "theme": "both",
+  "severity": "should",
+  "issue": "The reward card's headline reads 'Sam wins loser buys lunch.' as one run-on sentence. History has the same line.",
+  "fix": "Build the string as 'Sam wins. Loser buys lunch.' or name the buyer: 'Sam wins, Trevor buys lunch.' (the next line can then go).",
+  "owner": "play"
+ },
+ {
+  "id": "play-27",
+  "area": "play",
+  "screen": "Results: played for a reward",
+  "files": [
+   "audit-shots-2/play/results-reward-light.png",
+   "audit-shots-2/play/results-reward-dark.png"
+  ],
+  "theme": "both",
+  "severity": "should",
+  "issue": "The reward card sets up an open IOU ('It stays on your Tab until it's done') but has no way to close it. The card raises the decision without carrying the action.",
+  "fix": "Add a secondary button inside .reward-card, 'Lunch is bought' or 'Mark done', that marks the reward settled and updates the Tab.",
+  "owner": "play"
+ },
+ {
+  "id": "play-28",
+  "area": "play",
+  "screen": "Results: who pays who",
+  "files": [
+   "audit-shots-2/play/results-skins-win-light.png",
+   "audit-shots-2/play/results-skins-win-dark.png",
+   "audit-shots-2/play/results-skins-win-scrolled-light.png",
+   "audit-shots-2/play/results-skins-win-scrolled-dark.png",
+   "audit-shots-2/play/results-money-light.png",
+   "audit-shots-2/play/results-money-dark.png",
+   "audit-shots-2/play/results-tie-light.png",
+   "audit-shots-2/play/results-tie-dark.png"
+  ],
+  "theme": "both",
+  "severity": "should",
+  "issue": "Every payment row carries its own reaction row, so each payment is about 195px tall. With five players the list runs to about 1.5 screens and Pay or mark paid falls far below the fold.",
+  "fix": "Put the react and comment buttons inline at the right of each payment row (after the amount), or show one reaction row under the card, bringing rows to about 64px.",
+  "owner": "play"
+ },
+ {
+  "id": "play-29",
+  "area": "play",
+  "screen": "Settle up",
+  "files": [
+   "audit-shots-2/play/reveal-settle-up-light.png",
+   "audit-shots-2/play/reveal-settle-up-dark.png",
+   "audit-shots-2/play/reveal-settle-up-scrolled-light.png",
+   "audit-shots-2/play/reveal-settle-up-scrolled-dark.png",
+   "audit-shots-2/play/settle-up-light.png",
+   "audit-shots-2/play/settle-up-dark.png",
+   "audit-shots-2/play/settle-up-scrolled-light.png",
+   "audit-shots-2/play/settle-up-scrolled-dark.png"
+  ],
+  "theme": "both",
+  "severity": "should",
+  "issue": "Each payment you owe has a saturated Venmo-blue 'Pay on Venmo' button (#2b76ad), repeated per row. It's off palette and the loudest thing on the screen, louder than the black primary. Trevor asked for the payment app button on the Tab to be quieter.",
+  "fix": "Style Pay on Venmo like the app's primary (ink fill in light, cream in dark) with a small Venmo glyph, or as the same outline secondary used on the Tab, so blue appears only in the glyph.",
+  "owner": "play"
+ },
+ {
+  "id": "play-30",
+  "area": "play",
+  "screen": "Settle up",
+  "files": [
+   "audit-shots-2/play/reveal-settle-up-light.png",
+   "audit-shots-2/play/reveal-settle-up-dark.png",
+   "audit-shots-2/play/settle-up-light.png",
+   "audit-shots-2/play/settle-up-dark.png"
+  ],
+  "theme": "both",
+  "severity": "should",
+  "issue": "Settle up shows each payment as its own card, while results' Who pays who is now one card with hairlines between payments. The same list looks different on adjacent screens.",
+  "fix": "Render Settle up's payments in the same single-card list with hairline dividers (the results pay-list class), with the buttons under each row.",
+  "owner": "play"
+ },
+ {
+  "id": "play-31",
+  "area": "play",
+  "screen": "Reveal: Done",
+  "files": [
+   "audit-shots-2/play/reveal-done-results-light.png",
+   "audit-shots-2/play/reveal-done-results-dark.png",
+   "audit-shots-2/play/reveal-done-results-scrolled-light.png",
+   "audit-shots-2/play/reveal-done-results-scrolled-dark.png",
+   "audit-shots-2/play/reveal-done-results-bottom-light.png",
+   "audit-shots-2/play/reveal-done-results-bottom-dark.png"
+  ],
+  "theme": "both",
+  "severity": "should",
+  "issue": "After Done on the reveal you land at the top of History, not on the round you just finished. The Oct 26 round is the first card but isn't opened, highlighted or marked new, so the celebration ends on a list.",
+  "fix": "Route Done to that round's results (roundDetail), or land on History with that card scrolled into view and briefly highlighted, with a 'Just finished' tag.",
+  "owner": "play"
+ },
+ {
+  "id": "play-32",
+  "area": "play",
+  "screen": "Results: stroke play",
+  "files": [
+   "audit-shots-2/play/results-stroke-tie-light.png",
+   "audit-shots-2/play/results-stroke-tie-dark.png",
+   "audit-shots-2/play/results-stroke-tie-scrolled-light.png",
+   "audit-shots-2/play/results-stroke-tie-scrolled-dark.png"
+  ],
+  "theme": "both",
+  "severity": "should",
+  "issue": "In stroke play, the podium and Standings show only money. Nobody's score (Trevor +1, Tyler +18) appears outside the scorecard, though the score is the game.",
+  "fix": "For stroke play, add the gross and to-par ('73, +1') beside each name in Standings and under each name on the podium.",
+  "owner": "play"
+ },
+ {
+  "id": "play-33",
+  "area": "play",
+  "screen": "Results: scorecard",
+  "files": [
+   "audit-shots-2/play/results-money-bottom-light.png",
+   "audit-shots-2/play/results-money-bottom-dark.png",
+   "audit-shots-2/play/results-tie-bottom-light.png",
+   "audit-shots-2/play/results-tie-bottom-dark.png",
+   "audit-shots-2/play/results-reward-scrolled-light.png",
+   "audit-shots-2/play/results-reward-scrolled-dark.png",
+   "audit-shots-2/play/reveal-banker-scrolled-light.png",
+   "audit-shots-2/play/reveal-banker-scrolled-dark.png"
+  ],
+  "theme": "both",
+  "severity": "should",
+  "issue": "The scorecard shows holes 1 to 8 with the 9th column cut at the card edge and no cue that it scrolls. OUT, IN and the totals are off screen, so the card seems to stop at 8.",
+  "fix": "Add a right-edge fade mask on the scroller, keep a sticky Tot column at the right, or split it into Front 9 / Back 9 with a small segmented toggle.",
+  "owner": "play"
+ },
+ {
+  "id": "trips-1",
+  "area": "trips",
+  "screen": "Start a trip, Players",
+  "files": [
+   "audit-shots-2/trips/start-trip-players-scrolled-light.png",
+   "audit-shots-2/trips/start-trip-players-scrolled-dark.png"
+  ],
+  "theme": "both",
+  "severity": "should",
+  "issue": "The Handicap flights toggle in its off state is nearly invisible: the track (#e4ddcb) on the card (#f9f5ec) measures 1.24:1 in light, and #313937 on #202726 is 1.28:1 in dark. The white knob is the only thing that reads, so it looks like a stray dot, not a switch.",
+  "fix": "Give the off track a 3:1 colour, for example .toggle[aria-checked=false] { background: color-mix(in srgb, var(--ink) 28%, var(--card)) } in both themes, or a 1.5px var(--mute) border on the track.",
+  "owner": "shared"
+ },
+ {
+  "id": "trips-2",
+  "area": "trips",
+  "screen": "Settle the trip",
+  "files": [
+   "audit-shots-2/trips/trip-settle-scrolled-light.png",
+   "audit-shots-2/trips/trip-settle-scrolled-dark.png"
+  ],
+  "theme": "both",
+  "severity": "should",
+  "issue": "The Mark paid chip on each payment row is about 27px tall (measured 55px at 2x), well under the 44px tap the rest of the app gives buttons. It sits next to the pay row where a mis-tap marks money paid.",
+  "fix": "Give the chip min-height: 44px (or keep the visual 28px pill and add an invisible ::before hit pad of 8px top and bottom like the app's other small buttons).",
+  "owner": "home"
+ },
+ {
+  "id": "trips-3",
+  "area": "trips",
+  "screen": "Big Game board",
+  "files": [
+   "audit-shots-2/trips/big-game-board-light.png",
+   "audit-shots-2/trips/big-game-board-dark.png"
+  ],
+  "theme": "both",
+  "severity": "should",
+  "issue": "Both group cards end in a pink status line, \"Not teed off · Your phone is keeping score\". Pink is spent on two status lines that are not taps, and the title already says \"your phone has it\", so it repeats itself.",
+  "fix": "Set the status line to var(--mute) (keep pink, or a mint dot, only for a live state like On hole 7) and drop \"Your phone is keeping score\" since the title says it.",
+  "owner": "home"
+ },
+ {
+  "id": "trips-4",
+  "area": "trips",
+  "screen": "Big Game board, Skins",
+  "files": [
+   "audit-shots-2/trips/big-game-board-skins-scrolled-light.png",
+   "audit-shots-2/trips/big-game-board-skins-scrolled-dark.png"
+  ],
+  "theme": "both",
+  "severity": "should",
+  "issue": "Before anyone has scored, the Skins view lists all 18 holes as identical \"Still out / Not every group has played it\" rows, about two and a half screens of the same line.",
+  "fix": "Show one empty state (\"No skins yet. Holes fill in as every group plays them.\") until the first hole is complete, then list only holes that are done or carried.",
+  "owner": "home"
+ },
+ {
+  "id": "trips-5",
+  "area": "trips",
+  "screen": "Big Game setup, Bets",
+  "files": [
+   "audit-shots-2/trips/big-game-setup-bets-light.png",
+   "audit-shots-2/trips/big-game-setup-bets-dark.png"
+  ],
+  "theme": "both",
+  "severity": "should",
+  "issue": "The step tab strip is scrolled so the first chip (Day) sits flush against the left screen edge with no gutter, cut off. Start a trip's step tabs keep the 16px gutter.",
+  "fix": "Give the strip scroll-padding-inline and padding-inline: 16px (and scroll the active tab into view with inline: 'nearest') so the first chip never touches the edge.",
+  "owner": "home"
+ },
+ {
+  "id": "trips-6",
+  "area": "trips",
+  "screen": "Big Game setup, Bets",
+  "files": [
+   "audit-shots-2/trips/big-game-setup-bets-light.png",
+   "audit-shots-2/trips/big-game-setup-bets-dark.png"
+  ],
+  "theme": "both",
+  "severity": "should",
+  "issue": "The Big Game's final button, Start the groups, is pink, while Start a trip's final button (Start the trip) and every Next button in both setups are black (cream in dark). The primary colour changes between two sibling setups.",
+  "fix": "Pick one rule for the last step's button across Start a trip, Big Game and round setup (pink for the one go action, or black) and apply it to both.",
+  "owner": "home"
+ },
+ {
+  "id": "trips-7",
+  "area": "trips",
+  "screen": "Start a trip, Teams",
+  "files": [
+   "audit-shots-2/trips/start-trip-teams-dark.png"
+  ],
+  "theme": "dark",
+  "severity": "should",
+  "issue": "In dark the Red team panel (#46201c) and the Cup's Red score tile read brown, not red, beside the navy Blue panel. It is the olive and brown band problem the brief calls out.",
+  "fix": "Lift the dark red team tint toward rose, for example color-mix(in srgb, var(--coral) 22%, var(--canvas)), and check the white names stay above 4.5:1.",
+  "owner": "home"
+ },
+ {
+  "id": "trips-8",
+  "area": "trips",
+  "screen": "Trip page hero",
+  "files": [
+   "audit-shots-2/trips/start-trip-done-light.png",
+   "audit-shots-2/trips/start-trip-done-dark.png"
+  ],
+  "theme": "both",
+  "severity": "should",
+  "issue": "The car illustration is cropped at the top by the header bar: the windshield frame and the drivers' caps are cut off, so the scene looks clipped rather than placed.",
+  "fix": "Add top margin to the hero art so the whole car sits below the header (or let the header float transparent over the art), and size it so the roof clears by at least 16px.",
+  "owner": "home"
+ },
+ {
+  "id": "trips-9",
+  "area": "trips",
+  "screen": "Trip page, during",
+  "files": [
+   "audit-shots-2/trips/trip-during-light.png",
+   "audit-shots-2/trips/trip-during-dark.png"
+  ],
+  "theme": "both",
+  "severity": "should",
+  "issue": "The hero says \"You're down $63\" in large red, and the line under it says \"All in with expenses, you're owed $1,035.87\" in green. The two money headlines contradict each other and the big one is not the real bottom line.",
+  "fix": "Lead with the all-in number as the h1 (\"You're owed $1,035.87\") and move the rounds-only figure to the sub line (\"Down $63 on the golf\").",
+  "owner": "home"
+ },
+ {
+  "id": "trips-10",
+  "area": "trips",
+  "screen": "Trip page, Rounds",
+  "files": [
+   "audit-shots-2/trips/trip-rounds-light.png",
+   "audit-shots-2/trips/trip-rounds-dark.png"
+  ],
+  "theme": "both",
+  "severity": "should",
+  "issue": "Played rounds are separate cards stacked about 4px apart, so their borders nearly touch and look like a broken list. Every other list (Standings, Games, Expenses table) is one card with hairlines.",
+  "fix": "Put the played rounds in one card with hairline dividers like the Standings list.",
+  "owner": "home"
+ },
+ {
+  "id": "trips-11",
+  "area": "trips",
+  "screen": "Trip page, Expenses and Heading home",
+  "files": [
+   "audit-shots-2/trips/trip-expenses-light.png",
+   "audit-shots-2/trips/trip-expenses-dark.png"
+  ],
+  "theme": "both",
+  "severity": "should",
+  "issue": "Expense icons (gas, dinner, house) and the Leaving early and Done playing icons sit on pink discs (maroon in dark). Pink goes on five decorative circles per screen, not on the thing to tap.",
+  "fix": "Put these icons on neutral discs (var(--surface)) or the category pastels (ochre for gas, peach for food, mint for the house), keeping pink for the one action.",
+  "owner": "home"
+ },
+ {
+  "id": "trips-12",
+  "area": "trips",
+  "screen": "Up next, trip card",
+  "files": [
+   "audit-shots-2/trips/upnext-trip-ahead-light.png",
+   "audit-shots-2/trips/upnext-trip-ahead-dark.png"
+  ],
+  "theme": "both",
+  "severity": "should",
+  "issue": "The trip card has a close X at the top right and a chevron about 22px below it on the same edge. The two hit areas overlap, so dismissing the card or opening the trip is a coin flip.",
+  "fix": "Move the dismiss into a ... menu or onto a swipe, or put the X on the eyebrow line with the chevron centred and keep 44px between their hit areas.",
+  "owner": "home"
+ },
+ {
+  "id": "trips-13",
+  "area": "trips",
+  "screen": "Captains' draft",
+  "files": [
+   "audit-shots-2/trips/draft-stage-1-light.png",
+   "audit-shots-2/trips/draft-stage-1-dark.png"
+  ],
+  "theme": "both",
+  "severity": "should",
+  "issue": "The Red captain slot truncates the name to \"Jacks...\" while the slot has room to spare: the avatar and name are centred with wide padding and the C badge takes the right side.",
+  "fix": "Left-align the avatar and name in the captain slot (justify-content: flex-start, gap 8px) so the full name fits, and only truncate after that.",
+  "owner": "home"
+ },
+ {
+  "id": "trips-14",
+  "area": "trips",
+  "screen": "Cup trip (Bandon Cup), Cup view",
+  "files": [
+   "audit-shots-2/trips/cup-view-light.png",
+   "audit-shots-2/trips/cup-view-dark.png"
+  ],
+  "theme": "both",
+  "severity": "should",
+  "issue": "A team points trip opens on the money hero ('You're down $63', 'you're owed $1,035.87') with the Cup score (Blue 1, Red 2) pushed below the day chips, the note and the tab bar, so the thing the trip is about sits halfway down the screen.",
+  "fix": "On a Cup trip make the hero the Cup score ('Red leads 2 to 1' with the two team tiles) and move the money line into the Money tab or a quiet sub line.",
+  "owner": "home"
+ },
+ {
+  "id": "trips-15",
+  "area": "trips",
+  "screen": "Settle the trip",
+  "files": [
+   "audit-shots-2/trips/trip-settle-scrolled-light.png",
+   "audit-shots-2/trips/trip-settle-scrolled-dark.png"
+  ],
+  "theme": "both",
+  "severity": "should",
+  "issue": "Every payment row carries two filled buttons, a saturated Venmo-blue Request (or Pay on Venmo) and a filled 'I got it', so four rows make eight filled slabs and a column of off-palette blue. Money UI is meant to stay calm.",
+  "fix": "Make the payment-app action a quiet outline button with the app's small logo (as the Tab's quieter payment button), keep 'I got it' as the single filled action, or merge both into one row action that opens a small sheet.",
+  "owner": "home"
+ },
+ {
+  "id": "setup-12",
+  "area": "setup",
+  "screen": "Round ready card (dark)",
+  "files": [
+   "audit-shots-2/setup/round-ready-dark.png",
+   "audit-shots-2/setup/round-ready-scrolled-dark.png"
+  ],
+  "theme": "dark",
+  "severity": "polish",
+  "issue": "The dark On the line card has a gold line on its top edge only, which curves down into the corner radii and fades out, so it looks like a rendering slip rather than a border.",
+  "fix": "Either a full 1px ochre border all round or none; if it is meant as an accent, make it a straight 3px top bar inside the card clipped by overflow:hidden.",
+  "owner": "play"
+ },
+ {
+  "id": "setup-13",
+  "area": "setup",
+  "screen": "Players step, more button on a picked player",
+  "files": [
+   "audit-shots-2/setup/players-picked-light.png",
+   "audit-shots-2/setup/players-picked-dark.png"
+  ],
+  "theme": "both",
+  "severity": "polish",
+  "issue": "The round '...' button on a picked player's card has a border of 1.14:1 against the pink wash (1.17:1 in dark), so it is a floating dot pattern with no visible button.",
+  "fix": "Give the more button the chip fill (rgba(10,10,10,.06), dark rgba(255,255,255,.08)) or a 1.5px border of at least 3:1.",
+  "owner": "play"
+ },
+ {
+  "id": "setup-14",
+  "area": "setup",
+  "screen": "Players step, order",
+  "files": [
+   "audit-shots-2/setup/players-picked-light.png",
+   "audit-shots-2/setup/players-too-few-wolf-light.png"
+  ],
+  "theme": "both",
+  "severity": "polish",
+  "issue": "Picked players stay where they were in the list, so picked and unpicked cards interleave (Trevor, Ben, Cody, Dev picked, Jackson picked...). Checking who is in means scrolling the whole list.",
+  "fix": "Group picked players at the top under a 'Playing' label and the rest under 'Add', or keep order but add a picked summary row of avatars above the list.",
+  "owner": "play"
+ },
+ {
+  "id": "setup-15",
+  "area": "setup",
+  "screen": "Game step, card styles",
+  "files": [
+   "audit-shots-2/setup/game-light.png",
+   "audit-shots-2/setup/game-picked-bottom-light.png",
+   "audit-shots-2/setup/game-picked-bottom-dark.png"
+  ],
+  "theme": "both",
+  "severity": "polish",
+  "issue": "The step mixes two card styles: Your games are list cards with a hairline border, while Head to head and Points are borderless grid tiles, so the page looks like two components glued together.",
+  "fix": "Give the grid tiles the same 1px border (#e4ddcd, dark #2b3331) and radius as the list cards.",
+  "owner": "play"
+ },
+ {
+  "id": "setup-16",
+  "area": "setup",
+  "screen": "Setup steps and First tee, section labels",
+  "files": [
+   "audit-shots-2/setup/bets-light.png",
+   "audit-shots-2/setup/bets-scrolled-light.png",
+   "audit-shots-2/setup/course-light.png",
+   "audit-shots-2/setup/first-tee-on-start-light.png"
+  ],
+  "theme": "both",
+  "severity": "polish",
+  "issue": "Setup uses three label styles: sentence-case grey ('Your games', 'Skins', 'Side games', 'Favorites'), uppercase tracked ('PLAY FOR', 'PAYOUT', 'HOLES', 'TEE OFF ON'), and on First tee uppercase bold with no tracking ('STROKES', 'BETS', 'GIMMES'). The Bets step shows two of them stacked.",
+  "fix": "Pick one section label token (sentence case, 15px, mute, 600) for outside-card section heads and one eyebrow token (uppercase, 12px, .12em tracking) for inside-card labels, and apply both in ui.jsx so First tee matches.",
+  "owner": "shared"
+ },
+ {
+  "id": "setup-17",
+  "area": "setup",
+  "screen": "Add a side game sheet, titles",
+  "files": [
+   "audit-shots-2/setup/side-games-sheet-light.png"
+  ],
+  "theme": "both",
+  "severity": "polish",
+  "issue": "Titles repeat the game in the price: 'Birdie pot · $5 each in the birdie pot' and 'Closest to the pin · $5 each in the closest to the pin pot' wrap to two lines.",
+  "fix": "Shorten to 'Birdie pot · $5 each' and 'Closest to the pin · $5 each'; the description already explains the pot.",
+  "owner": "play"
+ },
+ {
+  "id": "setup-18",
+  "area": "setup",
+  "screen": "Add a side game sheet, add control",
+  "files": [
+   "audit-shots-2/setup/side-games-sheet-light.png",
+   "audit-shots-2/setup/side-games-sheet-dark.png"
+  ],
+  "theme": "both",
+  "severity": "polish",
+  "issue": "Each side game's add control is a bare 24px '+' glyph with no button shape, unlike the Players step's 44px circle '+' button.",
+  "fix": "Use the same 44px circle add button as the Players step (1.5px border, centred +).",
+  "owner": "play"
+ },
+ {
+  "id": "setup-19",
+  "area": "setup",
+  "screen": "Bets step, Value per skin",
+  "files": [
+   "audit-shots-2/setup/bets-light.png",
+   "audit-shots-2/setup/bets-dark.png"
+  ],
+  "theme": "both",
+  "severity": "polish",
+  "issue": "The '$2' value is a plain beige tile with no edit cue, so it reads as a label rather than a field (the HCP chip on Players carries a pencil, the pad has steppers).",
+  "fix": "Add a pencil glyph or a -/+ stepper to the value tile, matching the HCP chip.",
+  "owner": "play"
+ },
+ {
+  "id": "setup-20",
+  "area": "setup",
+  "screen": "Bets step, helper placement",
+  "files": [
+   "audit-shots-2/setup/bets-light.png",
+   "audit-shots-2/setup/bets-scrolled-light.png"
+  ],
+  "theme": "both",
+  "severity": "polish",
+  "issue": "'Win a skin: up $6, $2 from each of the other 3.' sits outside and below its card, while every other helper line on the step sits inside its card. The 'Add a side game' description also wraps to three lines with 'of Skins' alone.",
+  "fix": "Move the skin helper inside the Value per skin card under the row; shorten the side game line to 'Junk, a birdie pot, Snake, closest to the pin and more'.",
+  "owner": "play"
+ },
+ {
+  "id": "setup-21",
+  "area": "setup",
+  "screen": "Playing with handicaps and What are you playing for",
+  "files": [
+   "audit-shots-2/setup/handicaps-sheet-light.png",
+   "audit-shots-2/setup/playing-for-reward-light.png"
+  ],
+  "theme": "both",
+  "severity": "polish",
+  "issue": "Both open as full pages holding one small card, leaving about 60% of the screen as empty canvas, with three ways out (back, close, Done). The handicaps note 'Each player's handicap and tees are on Players.' is plain text, not a way there.",
+  "fix": "Present them as bottom sheets sized to their content with Done as the only exit, and make 'Players' a link to the Players step.",
+  "owner": "play"
+ },
+ {
+  "id": "setup-22",
+  "area": "setup",
+  "screen": "Setup overview, fresh",
+  "files": [
+   "audit-shots-2/setup/overview-fresh-light.png",
+   "audit-shots-2/setup/overview-fresh-dark.png"
+  ],
+  "theme": "both",
+  "severity": "polish",
+  "issue": "Rows that can't be set yet fade to 1.87:1 ('Not set yet' #bdbebc on white) and 'Schedule for later' to 1.95:1 (#b3b2ac), with nothing saying why. In sun they vanish and the disabled link reads broken.",
+  "fix": "Keep locked rows at least 3:1 (#8f918e) and show 'Pick a game first' as the sub line; hide Schedule for later until a game is picked, or keep it enabled.",
+  "owner": "play"
+ },
+ {
+  "id": "setup-23",
+  "area": "setup",
+  "screen": "Setup overview, fresh, hierarchy",
+  "files": [
+   "audit-shots-2/setup/overview-fresh-light.png"
+  ],
+  "theme": "both",
+  "severity": "polish",
+  "issue": "'Or start fresh' is set at about 28pt serif, larger than the page title 'New round' and the Run it back headline, so the fallback path outranks the suggestion above it.",
+  "fix": "Set 'Or start fresh' as an h2 at the section size (about 22pt) and let the Run it back card lead.",
+  "owner": "play"
+ },
+ {
+  "id": "setup-24",
+  "area": "setup",
+  "screen": "Setup overview, Run it back eyebrow",
+  "files": [
+   "audit-shots-2/setup/overview-fresh-light.png"
+  ],
+  "theme": "light",
+  "severity": "polish",
+  "issue": "The pink 'RUN IT BACK' eyebrow on the pale ochre card measures 4.50:1, right at the floor, and spends pink on a label beside the card's real action.",
+  "fix": "Set the eyebrow in ink or mute (#5d615d) and leave pink for actions.",
+  "owner": "play"
+ },
+ {
+  "id": "setup-25",
+  "area": "setup",
+  "screen": "Sheet titles: First tee vs Add a side game",
+  "files": [
+   "audit-shots-2/setup/first-tee-on-start-light.png",
+   "audit-shots-2/setup/side-games-sheet-light.png"
+  ],
+  "theme": "both",
+  "severity": "polish",
+  "issue": "'First tee' is a bold sans title while 'Add a side game' on the same flow is the serif display, so sheets don't share a title style.",
+  "fix": "Use the one Sheet title style from ui.jsx (serif display) for every sheet, First tee included.",
+  "owner": "shared"
+ },
+ {
+  "id": "setup-26",
+  "area": "setup",
+  "screen": "First tee sheet, house rules",
+  "files": [
+   "audit-shots-2/setup/first-tee-on-start-light.png",
+   "audit-shots-2/setup/first-tee-card-menu-scrolled-light.png"
+  ],
+  "theme": "both",
+  "severity": "polish",
+  "issue": "House rules says 'None. Straight up.' and the very next line is a rule, 'Presses: Press when 2 down', so the card contradicts itself.",
+  "fix": "Only say 'None. Straight up.' when there are no rules; otherwise list them ('Press when 2 down').",
+  "owner": "play"
+ },
+ {
+  "id": "setup-27",
+  "area": "setup",
+  "screen": "First tee sheet, art and segments",
+  "files": [
+   "audit-shots-2/setup/first-tee-on-start-light.png"
+  ],
+  "theme": "both",
+  "severity": "polish",
+  "issue": "The art's ground shadow nearly touches the caption (about 8px), so the hero has no breathing room, and 'Inside the leather' breaks onto two lines inside the segmented control while the other segments are one line.",
+  "fix": "Give the art 20 to 24px below it; shorten the segment to 'In the leather'.",
+  "owner": "play"
+ },
+ {
+  "id": "setup-28",
+  "area": "setup",
+  "screen": "Schedule for later (Plan a round, When)",
+  "files": [
+   "audit-shots-2/setup/schedule-for-later-light.png",
+   "audit-shots-2/setup/schedule-for-later-dark.png"
+  ],
+  "theme": "both",
+  "severity": "polish",
+  "issue": "The day chips run off the card's right edge with no fade, and the picked day (the solid sixth chip) is almost entirely hidden, so you can't see which day is set.",
+  "fix": "scrollIntoView({inline:'center'}) the selected day chip on mount, and add a 24px right-edge fade mask on the chip row.",
+  "owner": "plan"
+ },
+ {
+  "id": "setup-29",
+  "area": "setup",
+  "screen": "Look it over",
+  "files": [
+   "audit-shots-2/setup/overview-all-set-light.png",
+   "audit-shots-2/setup/run-it-back-light.png"
+  ],
+  "theme": "both",
+  "severity": "polish",
+  "issue": "'Tap any line to change it.' sits over six identical Change buttons, saying the same thing twice and adding six filled chips down the right edge.",
+  "fix": "Drop the subtitle, or keep it and replace the Change buttons with a quiet chevron per row.",
+  "owner": "play"
+ },
+ {
+  "id": "setup-30",
+  "area": "setup",
+  "screen": "Round ready, footer links",
+  "files": [
+   "audit-shots-2/setup/round-ready-light.png"
+  ],
+  "theme": "both",
+  "severity": "polish",
+  "issue": "'Save as a usual' is unclear copy (a usual what?).",
+  "fix": "'Save as our usual' or 'Save as a usual game'.",
+  "owner": "play"
+ },
+ {
+  "id": "setup-31",
+  "area": "setup",
+  "screen": "Players step for Wolf with two",
+  "files": [
+   "audit-shots-2/setup/players-too-few-wolf-light.png"
+  ],
+  "theme": "both",
+  "severity": "polish",
+  "issue": "The only cue that Wolf needs exactly four is the disabled footer 'Add 2 more players'; nothing near the title says it, and the screen opens scrolled with the first picked card cut.",
+  "fix": "Add a sub line under 'Who's in?' ('Wolf takes exactly 4') and open the step at scrollTop 0.",
+  "owner": "play"
+ },
+ {
+  "id": "play-34",
+  "area": "play",
+  "screen": "Scoring footnote",
+  "files": [
+   "audit-shots-2/play/hole-fresh-scrolled-light.png",
+   "audit-shots-2/play/nassau-hole-6-light.png"
+  ],
+  "theme": "both",
+  "severity": "polish",
+  "issue": "The hint 'Everyone starts at par. Tap only what changed, or + for anything else.' wraps with 'anything else.' alone on the second line on every scoring screen.",
+  "fix": "Add text-wrap: balance (or pretty) to the hint, or shorten it to 'Everyone starts at par. Tap what changed, or + for more.'",
+  "owner": "play"
+ },
+ {
+  "id": "play-35",
+  "area": "play",
+  "screen": "Nassau front/back/total",
+  "files": [
+   "audit-shots-2/play/nassau-hole-6-light.png"
+  ],
+  "theme": "both",
+  "severity": "polish",
+  "issue": "The match tiles read 'T 1 up', using an initial for the leader. With two or more players sharing an initial it is ambiguous, and 'Starts H10' is shorthand.",
+  "fix": "Use the first name ('Trevor 1 up') at a slightly smaller size, or the leader's avatar at 20px beside '1 up'; write 'From hole 10'.",
+  "owner": "play"
+ },
+ {
+  "id": "play-36",
+  "area": "play",
+  "screen": "Scorecard sheet",
+  "files": [
+   "audit-shots-2/play/scorecard-sheet-light.png",
+   "audit-shots-2/play/scorecard-sheet-dark.png"
+  ],
+  "theme": "both",
+  "severity": "polish",
+  "issue": "Only the 'HCP' label cell has the tinted header fill while the rest of the HCP row is the body colour, so the sticky first column looks like a stray tile. Unplayed holes show tiny grey dots that read as specks, and the current hole's tinted column goes muddy maroon (#3a2030) in dark.",
+  "fix": "Give the whole HCP row the header fill (or none), use an en dash or blank for unplayed holes, and in dark tint the current column with a neutral lift (#262d2c) plus the pink header cell only.",
+  "owner": "play"
+ },
+ {
+  "id": "play-37",
+  "area": "play",
+  "screen": "Scorecard sheet footer link",
+  "files": [
+   "audit-shots-2/play/scorecard-sheet-light.png"
+  ],
+  "theme": "both",
+  "severity": "polish",
+  "issue": "'Wrong par or HCP? Fix hole 3': the underline sits on the question while the actual action, 'Fix hole 3', is the grey, un-underlined part.",
+  "fix": "Underline and ink 'Fix hole 3' as the link and set the question in the muted colour.",
+  "owner": "play"
+ },
+ {
+  "id": "play-38",
+  "area": "play",
+  "screen": "Money sheet (from the strip)",
+  "files": [
+   "audit-shots-2/play/money-strip-sheet-light.png"
+  ],
+  "theme": "both",
+  "severity": "polish",
+  "issue": "The Money sheet repeats exactly the four numbers already on the strip plus 'Thru 2 holes.' and a Close button that duplicates the X. Tapping the strip gives nothing new.",
+  "fix": "Show hole-by-hole movement or skins won per player here (the Halfway sheet's 'Skins won' block is a good model), and drop the extra Close button.",
+  "owner": "play"
+ },
+ {
+  "id": "play-39",
+  "area": "play",
+  "screen": "Round menu",
+  "files": [
+   "audit-shots-2/play/round-menu-light.png"
+  ],
+  "theme": "both",
+  "severity": "polish",
+  "issue": "The three top tiles (Scorecard, Bets, Invite) repeat rows in the list below (Bets, Invite the group), so the menu shows Bets and Invite twice with the same icons.",
+  "fix": "Keep the tiles and drop the duplicate Bets and Invite the group rows, or drop the tiles; one entry per action.",
+  "owner": "play"
+ },
+ {
+  "id": "play-40",
+  "area": "play",
+  "screen": "Round menu sheets: disabled footer button",
+  "files": [
+   "audit-shots-2/play/menu-bets-bottom-light.png",
+   "audit-shots-2/play/menu-handicaps-bottom-light.png",
+   "audit-shots-2/play/menu-add-side-game-light.png",
+   "audit-shots-2/play/menu-round-length-light.png"
+  ],
+  "theme": "both",
+  "severity": "polish",
+  "issue": "The disabled save button says four different things: 'No changes yet' (Bets), 'No change yet' (Handicaps, Play for, Fix hole, Course and tee), 'No changes' (Side games), 'No change' (Round length). Side bets uses a secondary 'Done' instead.",
+  "fix": "Pick one disabled label ('No changes yet') and one enabled label ('Save changes') for every round-menu sheet.",
+  "owner": "play"
+ },
+ {
+  "id": "play-41",
+  "area": "play",
+  "screen": "Bets and Handicaps sheets, section labels",
+  "files": [
+   "audit-shots-2/play/menu-bets-light.png",
+   "audit-shots-2/play/menu-handicaps-scrolled-light.png",
+   "audit-shots-2/play/halfway-sheet-scrolled-light.png"
+  ],
+  "theme": "both",
+  "severity": "polish",
+  "issue": "One sheet mixes two label styles: 'Skins' and 'Players' and 'Every score so far' are sentence-case grey 15px, while 'PAYOUT', 'SCORES', 'STROKES GIVEN', 'SKINS WON' are letter-spaced caps eyebrows.",
+  "fix": "Use one section label style across sheets (the caps eyebrow, .eyebrow) for every group heading, and keep sentence case only for field labels like 'Name'.",
+  "owner": "shared"
+ },
+ {
+  "id": "play-42",
+  "area": "play",
+  "screen": "Sheet titles",
+  "files": [
+   "audit-shots-2/play/menu-end-round-light.png",
+   "audit-shots-2/play/halfway-sheet-light.png",
+   "audit-shots-2/play/round-menu-light.png"
+  ],
+  "theme": "both",
+  "severity": "polish",
+  "issue": "'End this round?' and 'Halfway' titles are in the serif (Fraunces) and inset 8px further right than every other sheet title, which is bold sans at the sheet's left edge.",
+  "fix": "If serif is meant for moment sheets only, keep Halfway but set End this round? in the standard sheet title; either way align all sheet titles to the same left inset as the body.",
+  "owner": "shared"
+ },
+ {
+  "id": "play-43",
+  "area": "play",
+  "screen": "Sheet description text",
+  "files": [
+   "audit-shots-2/play/money-strip-sheet-light.png",
+   "audit-shots-2/play/menu-play-for-light.png",
+   "audit-shots-2/play/menu-fix-hole-light.png"
+  ],
+  "theme": "both",
+  "severity": "polish",
+  "issue": "On most sheets the description under the title starts about 3.5pt right of the title's left edge (title x 59, text x 66 at 2x), so the left edge wobbles. The pad sheet lines them up.",
+  "fix": "Remove the extra left padding on the sheet subtitle (.sheet-sub) so title and description share one left edge.",
+  "owner": "shared"
+ },
+ {
+  "id": "play-44",
+  "area": "play",
+  "screen": "Side bet prompt chip",
+  "files": [
+   "audit-shots-2/play/wolf-hole-1-light.png",
+   "audit-shots-2/play/stableford-points-hole-4-light.png"
+  ],
+  "theme": "both",
+  "severity": "polish",
+  "issue": "The X that dismisses 'Any side bets this round?' / 'Closest to the pin?' is a 40 by 39pt grey square, under the 44pt target, right next to the scoring cards.",
+  "fix": "Make the dismiss button 44 by 44 (height match the prompt row) or give it a 2px invisible pad.",
+  "owner": "play"
+ },
+ {
+  "id": "play-45",
+  "area": "play",
+  "screen": "Scoring, Card button",
+  "files": [
+   "audit-shots-2/play/hole-fresh-light.png"
+  ],
+  "theme": "both",
+  "severity": "polish",
+  "issue": "The Card button beside the hole number is drawn 32pt tall. If it lacks the app's invisible pad it misses 44pt; even with it, it looks small next to the 44pt header buttons.",
+  "fix": "Confirm the ::after hit pad on .card-btn reaches 44pt; consider drawing it 40pt tall to match the visual weight of the round buttons above.",
+  "owner": "play"
+ },
+ {
+  "id": "play-46",
+  "area": "play",
+  "screen": "Scoring, pink on non-tap text",
+  "files": [
+   "audit-shots-2/play/hole-fresh-light.png",
+   "audit-shots-2/play/pad-light.png"
+  ],
+  "theme": "both",
+  "severity": "polish",
+  "issue": "Pink is spent on information, not actions: every 'Gets 1 stroke' line, the strokes dot, a birdie score number and 'Birdie, net eagle', the scorecard's net totals and the rules bullets are pink, so the Birdie chip and Save have competition.",
+  "fix": "Set 'Gets 1 stroke' and the net captions in ink or body grey and keep only the small pink dot as the stroke marker; show under-par scores in ink with the scorecard circle convention.",
+  "owner": "play"
+ },
+ {
+  "id": "play-47",
+  "area": "play",
+  "screen": "Bottom of the scoring list",
+  "files": [
+   "audit-shots-2/play/wolf-hole-7-light.png",
+   "audit-shots-2/play/banker-hole-5-light.png",
+   "audit-shots-2/play/vegas-hole-1-light.png"
+  ],
+  "theme": "both",
+  "severity": "polish",
+  "issue": "The last player card is cut flat by the Save bar mid-line ('Gets 1 stroke' sliced in half on Wolf hole 7) with no fade, so the list looks broken rather than scrollable.",
+  "fix": "Add a 24px canvas-coloured gradient on top of the sticky footer (.play-footer::before) so content fades out under it.",
+  "owner": "play"
+ },
+ {
+  "id": "play-48",
+  "area": "play",
+  "screen": "Wolf, partner picked",
+  "files": [
+   "audit-shots-2/play/wolf-partner-picked-light.png"
+  ],
+  "theme": "both",
+  "severity": "polish",
+  "issue": "After picking Jackson, only the wolf's card is marked (ochre fill and Wolf tag); Jackson's card shows nothing, so the scoring list does not show the team.",
+  "fix": "Tag the partner card with a 'Partner' chip in the same style as the Wolf tag, and give both cards the same faint tint.",
+  "owner": "play"
+ },
+ {
+  "id": "play-49",
+  "area": "play",
+  "screen": "Banker hole 5",
+  "files": [
+   "audit-shots-2/play/banker-hole-5-light.png"
+  ],
+  "theme": "both",
+  "severity": "polish",
+  "issue": "In the Banker panel 'On the line' sits 7px higher than 'Banker this hole' so the two labels and the two big values do not share baselines, and the footer has no Back arrow on step 1 while every other hole has one.",
+  "fix": "Align both label/value stacks to a common baseline (align-items: last baseline), and keep the Back arrow on the bets step.",
+  "owner": "play"
+ },
+ {
+  "id": "play-50",
+  "area": "play",
+  "screen": "Banker bets step",
+  "files": [
+   "audit-shots-2/play/banker-hole-5-scrolled-light.png"
+  ],
+  "theme": "both",
+  "severity": "polish",
+  "issue": "Each player card shows the bet twice (the big '$2' at top right and the selected '$2' chip), and the locked 'Unlocks when someone doubles' block is grey on grey at 4.3:1 in light.",
+  "fix": "Drop the big top-right amount until a double changes it, and raise the locked text to the body colour (#3a3a3a) with the lock reason as a caption.",
+  "owner": "play"
+ },
+ {
+  "id": "play-51",
+  "area": "play",
+  "screen": "Hammer hole 1",
+  "files": [
+   "audit-shots-2/play/hammer-hole-1-light.png"
+  ],
+  "theme": "both",
+  "severity": "polish",
+  "issue": "The two hammer buttons stack one per line, left-aligned, leaving the right half of the panel empty, and the money strip and progress bar are pink, so the screen spends brand pink on a band instead of the tap.",
+  "fix": "Put 'Trevor hammers · $10' and 'Sam hammers · $10' side by side at 50% width; give Hammer and Vegas a strip colour from the pastel set other than pink (peach or mint).",
+  "owner": "play"
+ },
+ {
+  "id": "play-52",
+  "area": "play",
+  "screen": "Live money (watching phone)",
+  "files": [
+   "audit-shots-2/play/live-money-watching-light.png",
+   "audit-shots-2/play/live-money-watching-dark.png"
+  ],
+  "theme": "both",
+  "severity": "polish",
+  "issue": "The 'NOW · HOLE 3 · PAR 4 / Worth 1 skin · $6' card is a solid ink slab (cream slab in dark) that looks exactly like the primary button but does nothing, and nothing on the screen says when the money last synced.",
+  "fix": "Restyle the Now card as a hairline card with the worth line in ink, and add a quiet 'Updated 1 min ago' (or 'Can't reach Jackson's phone') line under the Live pill.",
+  "owner": "play"
+ },
+ {
+  "id": "play-53",
+  "area": "play",
+  "screen": "Invite the group sheet",
+  "files": [
+   "audit-shots-2/play/menu-invite-dark.png"
+  ],
+  "theme": "dark",
+  "severity": "polish",
+  "issue": "The Live pill's pulse ring renders as a grey disc larger than the pill that spills over its left edge in dark.",
+  "fix": "Make the pulse ring the mint token at low alpha (rgba(111,211,168,.25)) and keep it inside the pill (overflow: hidden on .live-pill or a smaller max scale).",
+  "owner": "play"
+ },
+ {
+  "id": "play-54",
+  "area": "play",
+  "screen": "Halfway sheet",
+  "files": [
+   "audit-shots-2/play/halfway-sheet-light.png"
+  ],
+  "theme": "both",
+  "severity": "polish",
+  "issue": "In Skins won the player name is a small grey caption and the hole list ('H3, H6') is the bold line, so the hierarchy is upside down; money here is set in the serif while the strip and live money use the bold sans.",
+  "fix": "Make the name the bold line with 'Holes 3 and 6' as the caption, and set money in the same numeral style as the strip (or decide serif money for moments and apply it to results too).",
+  "owner": "play"
+ },
+ {
+  "id": "play-55",
+  "area": "play",
+  "screen": "Round menu sheets, stepper styles",
+  "files": [
+   "audit-shots-2/play/menu-add-player-light.png",
+   "audit-shots-2/play/menu-fix-hole-light.png",
+   "audit-shots-2/play/pad-light.png"
+  ],
+  "theme": "both",
+  "severity": "polish",
+  "issue": "Steppers are drawn two ways: on the pad and Fix hole the + is a solid ink circle and the minus is beige, on Add a player both are beige. Same control, different weight.",
+  "fix": "Use one Stepper style everywhere (both buttons beige with ink glyphs, or both outlined), in ui.jsx.",
+  "owner": "shared"
+ },
+ {
+  "id": "play-56",
+  "area": "play",
+  "screen": "Number pad sheet",
+  "files": [
+   "audit-shots-2/play/pad-light.png",
+   "audit-shots-2/play/pad-dark.png"
+  ],
+  "theme": "both",
+  "severity": "polish",
+  "issue": "The small caps captions on the pad keys (ACE, EAGLE, BIRDIE, PAR, BOGEY, DBL) are grey on the key fill at 5.3:1 light and 5.6:1 dark, small and hard to read outdoors.",
+  "fix": "Set the key captions in the body colour (#3a3a3a / #d5d0c3) at 12px semibold.",
+  "owner": "play"
+ },
+ {
+  "id": "play-57",
+  "area": "play",
+  "screen": "Side games and Play for sheets",
+  "files": [
+   "audit-shots-2/play/menu-add-side-game-light.png",
+   "audit-shots-2/play/menu-play-for-light.png"
+  ],
+  "theme": "both",
+  "severity": "polish",
+  "issue": "The title is repeated as a section label right below it: 'Side games' sheet has a 'Side games' label, 'Play for' sheet has a 'PLAY FOR' eyebrow.",
+  "fix": "Drop the repeated section label when a sheet has only one group.",
+  "owner": "play"
+ },
+ {
+  "id": "play-58",
+  "area": "play",
+  "screen": "Handicaps sheet",
+  "files": [
+   "audit-shots-2/play/menu-handicaps-light.png"
+  ],
+  "theme": "both",
+  "severity": "polish",
+  "issue": "The 'Course handicap 9 ✎' chip has a pink outline, a pink accent on a secondary edit control.",
+  "fix": "Use the hairline border (var(--line)) like the other chips and keep the pencil icon as the edit cue.",
+  "owner": "play"
+ },
+ {
+  "id": "play-59",
+  "area": "play",
+  "screen": "Results: scorecard",
+  "files": [
+   "audit-shots-2/play/results-money-bottom-light.png",
+   "audit-shots-2/play/results-money-bottom-dark.png",
+   "audit-shots-2/play/results-tie-bottom-light.png",
+   "audit-shots-2/play/results-tie-bottom-dark.png",
+   "audit-shots-2/play/results-points-scrolled-light.png",
+   "audit-shots-2/play/results-points-scrolled-dark.png"
+  ],
+  "theme": "both",
+  "severity": "polish",
+  "issue": "Pink does decoration across the scorecard: stroke dots on many cells, the birdie rings and 'net -2' / 'net -13' in pink text. Pink should mark the one thing to tap.",
+  "fix": "Draw birdie rings in ink (or teal), stroke dots in mute, and net text in the body colour. Keep pink for the eagle fill only, or drop it there too.",
+  "owner": "play"
+ },
+ {
+  "id": "play-60",
+  "area": "play",
+  "screen": "Results: scorecard",
+  "files": [
+   "audit-shots-2/play/results-money-bottom-light.png",
+   "audit-shots-2/play/results-money-bottom-dark.png",
+   "audit-shots-2/play/results-skins-win-bottom-light.png",
+   "audit-shots-2/play/results-skins-win-bottom-dark.png"
+  ],
+  "theme": "both",
+  "severity": "polish",
+  "issue": "In the scorecard header, the HCP row shades only its label cell, while Par shades the whole row. The two header rows look unrelated.",
+  "fix": "Shade the full HCP row like Par, or neither, so the header reads as one band.",
+  "owner": "play"
+ },
+ {
+  "id": "play-61",
+  "area": "play",
+  "screen": "Results: scorecard legend",
+  "files": [
+   "audit-shots-2/play/results-all-square-scrolled-light.png",
+   "audit-shots-2/play/results-all-square-scrolled-dark.png",
+   "audit-shots-2/play/results-skins-win-bottom-light.png",
+   "audit-shots-2/play/results-skins-win-bottom-dark.png",
+   "audit-shots-2/play/results-solo-scrolled-light.png",
+   "audit-shots-2/play/results-solo-scrolled-dark.png"
+  ],
+  "theme": "both",
+  "severity": "polish",
+  "issue": "The legend always lists birdie, eagle and bogey, even on an all-square card with every score at par. Cards full of double boxes have no 'double' entry.",
+  "fix": "Build the legend from the symbols actually on the card, and add 'double+' for the double box.",
+  "owner": "play"
+ },
+ {
+  "id": "play-62",
+  "area": "play",
+  "screen": "Results podium and reward hero (dark)",
+  "files": [
+   "audit-shots-2/play/results-money-dark.png",
+   "audit-shots-2/play/results-reward-dark.png",
+   "audit-shots-2/play/results-points-dark.png"
+  ],
+  "theme": "dark",
+  "severity": "polish",
+  "issue": "In dark, the winner's avatar gets a mid-grey ring (about #8a8a85) on the podium and the reward hero. It looks dull and disabled next to the gold crown.",
+  "fix": "Set the winner avatar ring in dark to the game colour (ochre) or cream, matching the light theme's white ring.",
+  "owner": "play"
+ },
+ {
+  "id": "play-63",
+  "area": "play",
+  "screen": "Results and reveal: crown",
+  "files": [
+   "audit-shots-2/play/results-money-light.png",
+   "audit-shots-2/play/results-money-dark.png",
+   "audit-shots-2/play/reveal-settled-light.png",
+   "audit-shots-2/play/reveal-settled-dark.png",
+   "audit-shots-2/play/results-tie-light.png",
+   "audit-shots-2/play/results-tie-dark.png"
+  ],
+  "theme": "both",
+  "severity": "polish",
+  "issue": "The crown sits differently each time. On the results podium it floats about 6px above the avatar ring. On the reveal hero it overlaps the cap. In the reveal list it pokes past the winner row's top edge.",
+  "fix": "Use one placement: crown bottom overlapping the avatar top by about 15% of its height, on the podium, the hero and the row, with the row padded so it stays inside.",
+  "owner": "play"
+ },
+ {
+  "id": "play-64",
+  "area": "play",
+  "screen": "Reveal: Adding it up",
+  "files": [
+   "audit-shots-2/play/reveal-adding-up-light.png",
+   "audit-shots-2/play/reveal-adding-up-dark.png",
+   "audit-shots-2/play/solo-nice-round-light.png",
+   "audit-shots-2/play/solo-nice-round-dark.png"
+  ],
+  "theme": "both",
+  "severity": "polish",
+  "issue": "The reveal hero's eyebrow has a 28px game badge (coin stack, scorecard) next to 'LOGAN RIVER GC · SKINS'. It's the same tiny coin art Trevor had taken off the scoring strip for being too small to read.",
+  "fix": "Drop the badge from the eyebrow, or move it to a 64px+ spot above the title.",
+  "owner": "play"
+ },
+ {
+  "id": "play-65",
+  "area": "play",
+  "screen": "Reveal and settle up: pinned footer",
+  "files": [
+   "audit-shots-2/play/reveal-settled-light.png",
+   "audit-shots-2/play/reveal-settled-dark.png",
+   "audit-shots-2/play/reveal-settle-up-light.png",
+   "audit-shots-2/play/reveal-settle-up-dark.png"
+  ],
+  "theme": "both",
+  "severity": "polish",
+  "issue": "Content meets the pinned footer with a hard cut. A sliver of the Scorecard button pokes out above Who pays who on the reveal, and the 'Where it comes from' card is sliced through its avatar on Settle up.",
+  "fix": "Add a 24px gradient from transparent to the canvas colour above the sticky footer (the shared footer bar), or a hairline top border.",
+  "owner": "shared"
+ },
+ {
+  "id": "play-66",
+  "area": "play",
+  "screen": "Round results: sticky header",
+  "files": [
+   "audit-shots-2/play/results-money-scrolled-light.png",
+   "audit-shots-2/play/results-money-scrolled-dark.png",
+   "audit-shots-2/play/results-tie-bottom-light.png",
+   "audit-shots-2/play/results-tie-bottom-dark.png",
+   "audit-shots-2/play/results-money-bottom-light.png",
+   "audit-shots-2/play/results-money-bottom-dark.png"
+  ],
+  "theme": "both",
+  "severity": "polish",
+  "issue": "On scroll, content slides under the 'Round' header with no edge. The footnote and standings rows show half-cut lines just under the header ('Fewest payments to square...').",
+  "fix": "Give the sticky header a hairline bottom border (or a short fade) once scrolled past 0, via a scrolled class in ui.jsx Header.",
+  "owner": "shared"
+ },
+ {
+  "id": "play-67",
+  "area": "play",
+  "screen": "Results hero eyebrow",
+  "files": [
+   "audit-shots-2/play/results-money-light.png",
+   "audit-shots-2/play/results-money-dark.png",
+   "audit-shots-2/play/results-tie-light.png",
+   "audit-shots-2/play/results-tie-dark.png",
+   "audit-shots-2/play/results-reward-light.png",
+   "audit-shots-2/play/results-reward-dark.png"
+  ],
+  "theme": "both",
+  "severity": "polish",
+  "issue": "The 'WINNER' and 'TOP OF THE TABLE' eyebrows and their crown icon are pink on a hero card where nothing is tappable, breaking the pink-only-on-the-tap rule. The known list covers the ticket and Up next date eyebrows, not this one.",
+  "fix": "Set the results eyebrow and icon in ink or mute (or ochre to echo the crown), and keep pink for the primary action.",
+  "owner": "play"
+ },
+ {
+  "id": "play-68",
+  "area": "play",
+  "screen": "Reveal: share sheet",
+  "files": [
+   "audit-shots-2/play/reveal-share-card-light.png",
+   "audit-shots-2/play/reveal-share-card-dark.png"
+  ],
+  "theme": "both",
+  "severity": "polish",
+  "issue": "The 'Show amounts' toggle's subtitle describes the off state ('Only the order and the bets, no money'), so it reads as contradicting its own label.",
+  "fix": "Change the subtitle to describe the on state ('Each player's win or loss is on the image') or prefix it with 'Off:'.",
+  "owner": "play"
+ },
+ {
+  "id": "play-69",
+  "area": "play",
+  "screen": "Feedback card (results and share)",
+  "files": [
+   "audit-shots-2/play/reveal-share-card-scrolled-light.png",
+   "audit-shots-2/play/reveal-share-card-scrolled-dark.png",
+   "audit-shots-2/play/results-points-scrolled-light.png",
+   "audit-shots-2/play/results-points-scrolled-dark.png"
+  ],
+  "theme": "both",
+  "severity": "polish",
+  "issue": "In the 'How was Birdie Bank today?' card, the 'Just OK' face is a smaller ball on a tee while the other two are full-size balls, so the row looks uneven. 'Something was off' wraps and leaves 'off' alone on line 2.",
+  "fix": "Draw all three faces at the same ball size (put the tee under each, or under none) and shorten the label to 'Not great', or give the labels white-space: nowrap at a slightly smaller size.",
+  "owner": "play"
+ },
+ {
+  "id": "play-70",
+  "area": "play",
+  "screen": "Reveal: share sheet (dark)",
+  "files": [
+   "audit-shots-2/play/reveal-share-card-dark.png"
+  ],
+  "theme": "dark",
+  "severity": "polish",
+  "issue": "The Show amounts toggle's off track in dark (about #2a302e) barely separates from the card, so the switch reads as a floating white dot.",
+  "fix": "Give the off track a lighter fill (mute at 30%) or a 1px hairline border in dark.",
+  "owner": "shared"
+ },
+ {
+  "id": "play-71",
+  "area": "play",
+  "screen": "Settle up",
+  "files": [
+   "audit-shots-2/play/reveal-settle-up-scrolled-light.png",
+   "audit-shots-2/play/reveal-settle-up-scrolled-dark.png",
+   "audit-shots-2/play/settle-up-scrolled-light.png",
+   "audit-shots-2/play/settle-up-scrolled-dark.png"
+  ],
+  "theme": "both",
+  "severity": "polish",
+  "issue": "Each 'Where it comes from' row repeats its amount: '-$6' large on the right and '-$6 Skins' in the sub line.",
+  "fix": "Make the sub line just the game ('Skins', 'Banker'), or list per-game parts only when there's more than one.",
+  "owner": "play"
+ },
+ {
+  "id": "play-72",
+  "area": "play",
+  "screen": "Settle up",
+  "files": [
+   "audit-shots-2/play/settle-up-light.png",
+   "audit-shots-2/play/settle-up-dark.png",
+   "audit-shots-2/play/reveal-settle-up-light.png",
+   "audit-shots-2/play/reveal-settle-up-dark.png"
+  ],
+  "theme": "both",
+  "severity": "polish",
+  "issue": "'Mark paid' is a beige filled button (light) or dark filled (dark), unlike the app's secondary buttons, which are white with a hairline (See the full breakdown, Save as a usual, Edit scores).",
+  "fix": "Use the shared secondary button class for Mark paid so secondary actions look the same everywhere.",
+  "owner": "play"
+ },
+ {
+  "id": "play-73",
+  "area": "play",
+  "screen": "Settle up from a past round",
+  "files": [
+   "audit-shots-2/play/settle-up-light.png",
+   "audit-shots-2/play/settle-up-dark.png",
+   "audit-shots-2/play/settle-up-scrolled-light.png",
+   "audit-shots-2/play/settle-up-scrolled-dark.png"
+  ],
+  "theme": "both",
+  "severity": "polish",
+  "issue": "Settle up opened from a past round's results (Oct 21) still pins 'Share results' as its main action. The share step belongs to the end-of-round flow, and here the person came to pay.",
+  "fix": "When opened from roundDetail, make the footer 'Done' (back to the results) and keep Share results for the reveal flow only.",
+  "owner": "play"
+ },
+ {
+  "id": "play-74",
+  "area": "play",
+  "screen": "Results: hero, podium and standings",
+  "files": [
+   "audit-shots-2/play/results-money-light.png",
+   "audit-shots-2/play/results-money-dark.png",
+   "audit-shots-2/play/results-money-scrolled-light.png",
+   "audit-shots-2/play/results-money-scrolled-dark.png"
+  ],
+  "theme": "both",
+  "severity": "polish",
+  "issue": "Each player's amount shows three times in a row: hero (+$15), podium (+$15) and Standings (+$15), with Who pays who in between. The screen feels long and repetitive, not focused on the winner.",
+  "fix": "Drop the amounts from the podium (names only), or fold Standings into the podium and show only players 4+ below it.",
+  "owner": "play"
+ },
+ {
+  "id": "play-75",
+  "area": "play",
+  "screen": "Results: tie headline",
+  "files": [
+   "audit-shots-2/play/results-tie-light.png",
+   "audit-shots-2/play/results-tie-dark.png",
+   "audit-shots-2/play/results-stroke-tie-light.png",
+   "audit-shots-2/play/results-stroke-tie-dark.png"
+  ],
+  "theme": "both",
+  "severity": "polish",
+  "issue": "The tie headline breaks as 'Trevor and / Dev tie for top' and 'Trevor and / Riley tie for top', which splits the pair of names.",
+  "fix": "Put a non-breaking space between 'and' and the second name, or set text-wrap: balance with 'Trevor and Dev' kept together.",
+  "owner": "play"
+ },
+ {
+  "id": "play-76",
+  "area": "play",
+  "screen": "Results: section rhythm",
+  "files": [
+   "audit-shots-2/play/results-money-scrolled-light.png",
+   "audit-shots-2/play/results-money-scrolled-dark.png",
+   "audit-shots-2/play/results-tie-scrolled-light.png",
+   "audit-shots-2/play/results-tie-scrolled-dark.png"
+  ],
+  "theme": "both",
+  "severity": "polish",
+  "issue": "The gap from 'Roll it on the Tab' down to the Standings label is about 140px, while other section gaps on the page are about 60 to 80px, so the page looks like it ended.",
+  "fix": "Use the page's standard section gap (the same margin-top as the Who pays who label) above Standings.",
+  "owner": "play"
+ },
+ {
+  "id": "play-77",
+  "area": "play",
+  "screen": "Round screens: section labels",
+  "files": [
+   "audit-shots-2/play/results-money-light.png",
+   "audit-shots-2/play/results-money-dark.png",
+   "audit-shots-2/play/reveal-settled-light.png",
+   "audit-shots-2/play/reveal-settled-dark.png",
+   "audit-shots-2/play/reveal-settle-up-light.png",
+   "audit-shots-2/play/reveal-settle-up-dark.png",
+   "audit-shots-2/play/results-points-light.png",
+   "audit-shots-2/play/results-points-dark.png"
+  ],
+  "theme": "both",
+  "severity": "polish",
+  "issue": "Section labels change style between adjacent round screens. Results and Settle up use sentence-case grey sans ('Who pays who', 'Where it comes from', 'Bragging rights'), while the reveal and share card use uppercase tracked labels ('SKINS WON', 'TOTALS').",
+  "fix": "Pick one label token for in-card and section labels across reveal, results and settle up (for example, the uppercase tracked eyebrow in mute for both), and apply it in all three.",
+  "owner": "shared"
+ },
+ {
+  "id": "play-78",
+  "area": "play",
+  "screen": "Reveal list (dark)",
+  "files": [
+   "audit-shots-2/play/reveal-adding-up-dark.png",
+   "audit-shots-2/play/reveal-settled-dark.png"
+  ],
+  "theme": "dark",
+  "severity": "polish",
+  "issue": "In dark, the rank discs on the reveal rows (#232a28 on the #181e1d row) barely show, so the 1 to 4 column reads as loose numbers.",
+  "fix": "Lift the dark rank disc fill to the surface-2 token or add a hairline ring so the disc reads as a shape.",
+  "owner": "play"
+ },
+ {
+  "id": "trips-16",
+  "area": "trips",
+  "screen": "Big Game board",
+  "files": [
+   "audit-shots-2/trips/big-game-board-scrolled-light.png",
+   "audit-shots-2/trips/big-game-board-scrolled-dark.png"
+  ],
+  "theme": "both",
+  "severity": "polish",
+  "issue": "On the Board before scores, each row shows a thin en dash at the left (rank) and a heavy bold dash at the right (score). Two different dash weights in one row read as a glitch.",
+  "fix": "Render both empty cells with the same .num-empty style: an en dash in var(--mute) at the body weight.",
+  "owner": "home"
+ },
+ {
+  "id": "trips-17",
+  "area": "trips",
+  "screen": "Big Game board",
+  "files": [
+   "audit-shots-2/trips/big-game-board-light.png",
+   "audit-shots-2/trips/big-game-board-dark.png"
+  ],
+  "theme": "both",
+  "severity": "polish",
+  "issue": "The G1 · 0 and G2 · 0 pills are solid black (solid cream in dark), the heaviest things on the screen, and look like a primary segmented control or two buttons even though they are only counts.",
+  "fix": "Make them hairline chips (1px var(--line) border, transparent fill, var(--body) text), or fold the counts into the group cards.",
+  "owner": "home"
+ },
+ {
+  "id": "trips-18",
+  "area": "trips",
+  "screen": "Big Game board",
+  "files": [
+   "audit-shots-2/trips/big-game-board-light.png",
+   "audit-shots-2/trips/big-game-board-dark.png"
+  ],
+  "theme": "both",
+  "severity": "polish",
+  "issue": "\"Send every group its link\" is a half-width hairline button left-aligned under the cards, while the same action on the Cup trip (\"Send the link\") is a full-width black button inside a card. One action, two treatments.",
+  "fix": "Use one share-link component for trips and Big Game: either the full-width button inside its card, or the hairline secondary everywhere.",
+  "owner": "home"
+ },
+ {
+  "id": "trips-19",
+  "area": "trips",
+  "screen": "Big Game setup, step tabs",
+  "files": [
+   "audit-shots-2/trips/big-game-setup-bets-light.png",
+   "audit-shots-2/trips/big-game-setup-bets-dark.png"
+  ],
+  "theme": "both",
+  "severity": "polish",
+  "issue": "Big Game's finished steps are plain mint chips, while Start a trip marks finished steps with a check (\"✓ Trip\"). Same step-tab component, two looks.",
+  "fix": "Reuse the Start a trip step tab with the check on done steps.",
+  "owner": "home"
+ },
+ {
+  "id": "trips-20",
+  "area": "trips",
+  "screen": "Big Game, Add a side bet sheet",
+  "files": [
+   "audit-shots-2/trips/big-game-side-bet-sheet-light.png",
+   "audit-shots-2/trips/big-game-side-bet-sheet-dark.png"
+  ],
+  "theme": "both",
+  "severity": "polish",
+  "issue": "The pink Start the groups button behind the sheet shows as a pink (dark: maroon) sliver at the sheet's two bottom corners, under its rounded edge.",
+  "fix": "Hide the page's sticky footer while a sheet is open, or have the scrim cover the footer layer (raise .sheet-backdrop's z-index above .sticky-footer).",
+  "owner": "shared"
+ },
+ {
+  "id": "trips-21",
+  "area": "trips",
+  "screen": "Big Game, Add a side bet sheet",
+  "files": [
+   "audit-shots-2/trips/big-game-side-bet-sheet-light.png",
+   "audit-shots-2/trips/big-game-side-bet-sheet-dark.png"
+  ],
+  "theme": "both",
+  "severity": "polish",
+  "issue": "How much shows $10 in a filled box with no field border, chevron or stepper, so it does not read as editable.",
+  "fix": "Use the same input style as the trip's \"On the cup $ ___ a person\" field (border, caret), or add minus and plus steppers.",
+  "owner": "home"
+ },
+ {
+  "id": "trips-22",
+  "area": "trips",
+  "screen": "Big Game board, Money",
+  "files": [
+   "audit-shots-2/trips/big-game-board-money-light.png",
+   "audit-shots-2/trips/big-game-board-money-dark.png"
+  ],
+  "theme": "both",
+  "severity": "polish",
+  "issue": "The Money tab is two loose grey paragraphs with no card, while Board, Skins and Bets each show a card or a dashed action card. It feels unfinished.",
+  "fix": "Put the pot and payout split in a small stat card (Pot $180 · 50/30/20 · Skins $90) like the Expenses tab's Spent on the trip card, then the note under it.",
+  "owner": "home"
+ },
+ {
+  "id": "trips-23",
+  "area": "trips",
+  "screen": "Start a trip sheet",
+  "files": [
+   "audit-shots-2/trips/start-trip-sheet-light.png",
+   "audit-shots-2/trips/start-trip-sheet-dark.png"
+  ],
+  "theme": "both",
+  "severity": "polish",
+  "issue": "At first view the First day and Last day fields sit under the sticky Next button, and the fade cuts their text in half (\"Mon, Oct 26\" shows as the top half of the letters). It reads as clipped, not as \"scroll for more\".",
+  "fix": "Add padding-bottom equal to the footer height to the sheet body, or end the fade above the footer and stop the list on a whole row.",
+  "owner": "shared"
+ },
+ {
+  "id": "trips-24",
+  "area": "trips",
+  "screen": "Start a trip sheet",
+  "files": [
+   "audit-shots-2/trips/start-trip-template-dark.png"
+  ],
+  "theme": "dark",
+  "severity": "polish",
+  "issue": "The template number badges are split navy and maroon diagonals in dark, which read muddy brown next to the clean pastel split in light.",
+  "fix": "Use lifted team colours in dark (for example #2a4170 and #6a2a33) or put the number on a single neutral surface with two small team dots.",
+  "owner": "home"
+ },
+ {
+  "id": "trips-25",
+  "area": "trips",
+  "screen": "Start a trip sheet",
+  "files": [
+   "audit-shots-2/trips/start-trip-sheet-scrolled-light.png",
+   "audit-shots-2/trips/start-trip-sheet-scrolled-dark.png"
+  ],
+  "theme": "both",
+  "severity": "polish",
+  "issue": "Optional labels are styled three ways: \"Where optional\" (no separator), \"Course (optional)\" in parentheses on the schedule step, and \"On the cup optional\" on the teams step.",
+  "fix": "Use one pattern everywhere, for example the label then \" (optional)\" in var(--mute) at the same size.",
+  "owner": "shared"
+ },
+ {
+  "id": "trips-26",
+  "area": "trips",
+  "screen": "Start a trip, Schedule",
+  "files": [
+   "audit-shots-2/trips/start-trip-after-teams-light.png",
+   "audit-shots-2/trips/start-trip-after-teams-dark.png"
+  ],
+  "theme": "both",
+  "severity": "polish",
+  "issue": "The Day card is a filled beige panel holding filled inputs, a filled segmented control and filled chips, three surface layers deep. The sticky footer's fade also cuts the selected 90% chip into a black blob with a gradient tail.",
+  "fix": "Make the Day card white (dark: --card) with a hairline border so the controls inside are one layer, and pad the scroll area so a chip row never ends under the fade.",
+  "owner": "home"
+ },
+ {
+  "id": "trips-27",
+  "area": "trips",
+  "screen": "Trip page hero art",
+  "files": [
+   "audit-shots-2/trips/trip-before-dark.png"
+  ],
+  "theme": "dark",
+  "severity": "polish",
+  "issue": "In dark the road is a hollow cream pill outline and the hill band has a cream rim, so the ground reads as a sticker cut-out floating on the canvas instead of a road.",
+  "fix": "In the dark version, fill the road solid (ink or a dark grey) and keep the cream outline only on the car, following the scene rule for dark.",
+  "owner": "art"
+ },
+ {
+  "id": "trips-28",
+  "area": "trips",
+  "screen": "Trip page",
+  "files": [
+   "audit-shots-2/trips/start-trip-done-light.png",
+   "audit-shots-2/trips/start-trip-done-dark.png"
+  ],
+  "theme": "both",
+  "severity": "polish",
+  "issue": "The day chips (Mon AM, Mon PM, Tue / Wed, Fri, Sat) look like a second tab bar above the real segmented control, but nothing marks them as tappable or says what they are.",
+  "fix": "Label the row (\"Rounds\") and give the chips a hairline style with a chevron or date, or drop them since the Rounds tab lists the same thing.",
+  "owner": "home"
+ },
+ {
+  "id": "trips-29",
+  "area": "trips",
+  "screen": "Trip page, before",
+  "files": [
+   "audit-shots-2/trips/trip-before-light.png",
+   "audit-shots-2/trips/trip-before-dark.png"
+  ],
+  "theme": "both",
+  "severity": "polish",
+  "issue": "Every standings row ends in the same bold serif \"Tees off Nov 12\", nine times. Heavy repeated type where the money will later sit.",
+  "fix": "Show an en dash in the money column before the trip and say \"Tees off Nov 12\" once in the note under the card.",
+  "owner": "home"
+ },
+ {
+  "id": "trips-30",
+  "area": "trips",
+  "screen": "Trip page, Expenses",
+  "files": [
+   "audit-shots-2/trips/trip-expenses-light.png",
+   "audit-shots-2/trips/trip-expenses-dark.png"
+  ],
+  "theme": "both",
+  "severity": "polish",
+  "issue": "In the Dinner row the date breaks across lines: \"Mon,\" ends line one and \"Oct 26\" sits alone on line two.",
+  "fix": "Wrap the date in a span with white-space: nowrap, or put the date on its own line in every expense row.",
+  "owner": "home"
+ },
+ {
+  "id": "trips-31",
+  "area": "trips",
+  "screen": "Trip page, bottom",
+  "files": [
+   "audit-shots-2/trips/start-trip-done-bottom-light.png",
+   "audit-shots-2/trips/start-trip-done-bottom-dark.png"
+  ],
+  "theme": "both",
+  "severity": "polish",
+  "issue": "The bottom links don't share a left edge: Print pairings starts at the 20px gutter, \"How this trip works +\" is inset about 4px more, and Delete the trip sits between them.",
+  "fix": "Align the disclosure summary, print link and delete link to the same 20px gutter (remove the extra padding-left on the details summary).",
+  "owner": "home"
+ },
+ {
+  "id": "trips-32",
+  "area": "trips",
+  "screen": "Trip page, Cup schedule",
+  "files": [
+   "audit-shots-2/trips/start-trip-done-bottom-light.png",
+   "audit-shots-2/trips/start-trip-done-bottom-dark.png"
+  ],
+  "theme": "both",
+  "severity": "polish",
+  "issue": "\"Plan them again from the teams\" and \"See the rounds\" are two beige buttons of different widths stacked left-aligned inside the schedule card, which makes a ragged right edge.",
+  "fix": "Make them one full-width secondary button and a text link, or put them side by side at equal width.",
+  "owner": "home"
+ },
+ {
+  "id": "trips-33",
+  "area": "trips",
+  "screen": "Up next, trip card",
+  "files": [
+   "audit-shots-2/trips/upnext-trip-ahead-light.png",
+   "audit-shots-2/trips/upnext-trip-ahead-dark.png"
+  ],
+  "theme": "both",
+  "severity": "polish",
+  "issue": "The eyebrow \"BANDON BOYS  · NOV 12 TO 15\" has a wider gap before the middle dot than after it (a trailing space on the trip name).",
+  "fix": "Trim the name before joining, or build the eyebrow with gap rather than literal spaces.",
+  "owner": "home"
+ },
+ {
+  "id": "trips-34",
+  "area": "trips",
+  "screen": "Up next, trip",
+  "files": [
+   "audit-shots-2/trips/upnext-trip-ahead-light.png",
+   "audit-shots-2/trips/upnext-trip-ahead-dark.png"
+  ],
+  "theme": "both",
+  "severity": "polish",
+  "issue": "\"Paid for something? Add an expense\" is a half-width filled pill floating under the trip card, a one-off style not used elsewhere on Up next.",
+  "fix": "Make it a row inside the trip card (hairline above, chevron) or a full-width secondary row matching Lately's See all.",
+  "owner": "home"
+ },
+ {
+  "id": "trips-35",
+  "area": "trips",
+  "screen": "Captains' draft",
+  "files": [
+   "audit-shots-2/trips/draft-stage-1-dark.png"
+  ],
+  "theme": "dark",
+  "severity": "polish",
+  "issue": "In dark the avatars in Still to pick look washed out and grey (a pale #d7d5cc ring and dimmed faces) next to the full-colour captain avatars above, so the list looks disabled.",
+  "fix": "Drop the dimming filter or opacity on unpicked avatars in dark, or dim them the same way in both themes if it means \"not picked yet\".",
+  "owner": "home"
+ },
+ {
+  "id": "trips-36",
+  "area": "trips",
+  "screen": "Big Game setup, Day",
+  "files": [
+   "audit-shots-2/trips/big-game-setup-day-light.png",
+   "audit-shots-2/trips/big-game-setup-day-dark.png"
+  ],
+  "theme": "both",
+  "severity": "polish",
+  "issue": "Section labels on one screen mix two styles: \"Name\" is a sentence-case label, while \"DAY\" and \"HOLES\" are letterspaced caps eyebrows inside the cards below it.",
+  "fix": "Use one field-label style for all three (sentence case, var(--body), 15px medium) to match Start a trip's labels.",
+  "owner": "shared"
+ },
+ {
+  "id": "trips-37",
+  "area": "trips",
+  "screen": "Share the standings",
+  "files": [
+   "audit-shots-2/trips/trip-share-light.png",
+   "audit-shots-2/trips/trip-share-dark.png"
+  ],
+  "theme": "both",
+  "severity": "polish",
+  "issue": "The share image's list ends at row nine and the bottom third of the card is empty teal, and the Show amounts sub line promises 'The order and the cup' on a money trip that has no cup.",
+  "fix": "Size the card to its content (or vertically centre the list with the leader line), and word the sub line per trip type ('Just the order, no money' for a money trip).",
+  "owner": "home"
+ }
+]

@@ -1,0 +1,1302 @@
+[
+  {
+    "id": "tab-1",
+    "area": "tab",
+    "screen": "The Tab: Everyone else / Who owes who; person story; Players lists",
+    "files": [
+      "audit-shots-2/tab/tab-both-sides-bottom-light.png",
+      "audit-shots-2/tab/tab-both-sides-bottom-dark.png",
+      "audit-shots-2/players/person-jackson-scrolled-light.png",
+      "audit-shots-2/players/person-marcus-nemesis-scrolled-dark.png",
+      "audit-shots-2/tab/tab-all-square-scrolled-light.png"
+    ],
+    "theme": "both",
+    "severity": "broken",
+    "issue": "Rows inside the one-card lists (Everyone else, Who owes who, a person's The story) each draw their own rounded top corners: at every hairline between rows the white row bulges into a curved notch at both ends, so the card reads as a stack of overlapping tabs, not one card of rows. Classic's Tab doesn't do it, so it came in with tonight's 'one card of rows' change.",
+    "fix": "Give the inner row element border-radius: 0 (keep the radius and overflow: hidden on the wrapping card only), or set .row + .row { border-top-left-radius: 0; border-top-right-radius: 0 } on the Tab's row list and the person screen's story list.",
+    "owner": "home"
+  },
+  {
+    "id": "plan-1",
+    "area": "plan",
+    "screen": "Friend's view of a plan (Riley from Trevor's link)",
+    "files": [
+      "audit-shots-2/plan/friend-view-answered-light.png",
+      "audit-shots-2/plan/friend-view-no-answer-scrolled-light.png"
+    ],
+    "theme": "both",
+    "severity": "broken",
+    "issue": "A friend opening the organizer's plan sees a red 'Delete plan' link. Per Plan.jsx del() it only takes the plan off her own Up next, but the label says she deletes the plan for everyone, which reads as a destructive action she shouldn't have.",
+    "fix": "In Plan.jsx when !plan.host, label the link 'Remove from my Up next' (icon: eye-off or x, not trash) and keep 'Delete plan' only for the host.",
+    "owner": "plan"
+  },
+  {
+    "id": "plan-2",
+    "area": "plan",
+    "screen": "Plan seats and Everyone list",
+    "files": [
+      "audit-shots-2/plan/plan-dated-ticket-scrolled-dark.png",
+      "audit-shots-2/plan/friend-view-no-answer-light.png",
+      "audit-shots-2/plan/friend-view-answered-light.png"
+    ],
+    "theme": "both",
+    "severity": "broken",
+    "issue": "Trevor shows up with two different avatars on the same screen: the red cap in the header and every other screen, but the halo buddy in the plan's seat row and the 'Trevor (you)' row of Everyone. Friends will think it's a different person.",
+    "fix": "Resolve the organizer's seat avatar from the profile (canonicalOf(me).avatar) when the plan renders, not from the avatar stored on the plan's seat at creation; or update the stored seat when the profile avatar changes.",
+    "owner": "plan"
+  },
+  {
+    "id": "home-1",
+    "area": "home",
+    "screen": "Up next with 8 rounds (the busy verdict)",
+    "files": [
+      "audit-shots-2/home/upnext-many-rounds-light.png",
+      "audit-shots-2/home/upnext-many-rounds-scrolled-light.png",
+      "audit-shots-2/home/upnext-many-rounds-bottom-light.png",
+      "audit-shots-2/home/upnext-many-rounds-dark.png"
+    ],
+    "theme": "both",
+    "severity": "should",
+    "issue": "Tonight's fix only partly landed. The tinted cards are down to one (the Tab tile), and white cards with hairlines read calmer. But the screen still feels busy because it now runs ten groups over three screens (strip, Upcoming, Playing now?, More ways to play, Reminders stack, Your golf, recap, For the group text, Friends, Lately), and colour still comes from places other than cards: the saturated blue chat bubbles, the peach Lately icon circles, the pink binoculars, the green You're in chip and the beige trip chips. The focal point (the next round) owns barely a third of the first screen.",
+    "fix": "Cut the groups to five above the fold-and-a-half: Upcoming, Playing now?, Your golf, Lately, More ways to play. Move the recap and For the group text into one 'From your last round' card shown only in the 48h after a round; fold Friends into a 'See all' row at the foot of Lately. Make the chat bubble cream with ink text (Plan's message field style) and Lately icons neutral (see separate findings).",
+    "owner": "home"
+  },
+  {
+    "id": "home-2",
+    "area": "home",
+    "screen": "Up next: card edges",
+    "files": [
+      "audit-shots-2/home/upnext-one-round-open-plan-bottom-light.png",
+      "audit-shots-2/home/upnext-many-rounds-bottom-light.png",
+      "audit-shots-2/tab/tab-both-sides-light.png"
+    ],
+    "theme": "both",
+    "severity": "should",
+    "issue": "Three edge treatments on one scroll: most cards have the 2px #E4DDCD hairline (dark #2B3331), but the For the group text callout cards and the Tab summary card are plain white with no border at all (measured: no edge pixels at x=32), so they float differently from their neighbours.",
+    "fix": "Give the callout card (.callout-card) and the Tab summary card the same border: 1px solid var(--line) as .card; or remove the hairline everywhere. One rule, not two.",
+    "owner": "home"
+  },
+  {
+    "id": "home-3",
+    "area": "home",
+    "screen": "Up next: For the group text callouts",
+    "files": [
+      "audit-shots-2/home/upnext-one-round-open-plan-bottom-light.png",
+      "audit-shots-2/home/upnext-many-rounds-bottom-dark.png",
+      "audit-shots-2/home/upnext-two-rounds-live-scrolled-light.png"
+    ],
+    "theme": "both",
+    "severity": "should",
+    "issue": "The iMessage-blue chat bubbles are the most saturated thing on Up next in both themes, a second brand colour Trevor didn't ask for, and they make the 'too many colours' feeling worse. The bubble's vertical position also shifts card to card because the content is centred in a fixed-height card.",
+    "fix": "Render the bubble as cream (var(--surface-2)) with ink text and a hairline, like a quote, keep blue only on the share-sheet preview. Top-align the bubble in the card (align-items: flex-start, 24px top padding).",
+    "owner": "home"
+  },
+  {
+    "id": "home-4",
+    "area": "home",
+    "screen": "Up next: Lately rows",
+    "files": [
+      "audit-shots-2/home/upnext-one-round-open-plan-bottom-light.png",
+      "audit-shots-2/history/lately-light.png",
+      "audit-shots-2/players/friends-feed-light.png"
+    ],
+    "theme": "both",
+    "severity": "should",
+    "issue": "Lately rows wear three different filled icon circles (peach calendar, gold flag, gold flame, mint hand), so a list of six rows is a column of coloured dots. It is exactly the alternating-colour noise Trevor flagged.",
+    "fix": "Use one neutral icon chip for all kinds: 40px circle in var(--surface-2) with an ink icon; let the game art (the small game tile) be the only colour, and only on game rows.",
+    "owner": "home"
+  },
+  {
+    "id": "home-5",
+    "area": "home",
+    "screen": "Up next: Playing now? group",
+    "files": [
+      "audit-shots-2/home/upnext-one-round-open-plan-light.png",
+      "audit-shots-2/home/upnext-countdown-today-light.png",
+      "audit-shots-2/home/upnext-countdown-today-dark.png",
+      "audit-shots-2/home/upnext-many-rounds-light.png"
+    ],
+    "theme": "both",
+    "severity": "should",
+    "issue": "'Playing now?' is a card holding two buttons of different widths (pink Start a round about 310px, Run it back about 280px) that leave ~75px dead on the right, plus a link under them. A card around buttons adds a surface with nothing to say.",
+    "fix": "Drop the card: put the two buttons straight on the canvas in a 2-column grid (grid-template-columns: 1fr 1fr; gap 10px) so they fill the width, and the Join a friend's round link centred under them.",
+    "owner": "home"
+  },
+  {
+    "id": "home-6",
+    "area": "home",
+    "screen": "Up next: last round recap card",
+    "files": [
+      "audit-shots-2/home/upnext-one-round-open-plan-scrolled-light.png",
+      "audit-shots-2/home/upnext-one-round-open-plan-scrolled-dark.png"
+    ],
+    "theme": "both",
+    "severity": "should",
+    "issue": "The recap card's three actions wrap: See the round and Run it back sit on one line and Share is orphaned alone on a second line. The eyebrow 'LAST TIME OUT · OCT 21 · LOGAN RIVER GC' also wraps with 'RIVER GC' on its own line.",
+    "fix": "Make the actions one row of equal ghost buttons (grid 1fr 1fr auto with Share as an icon-only 44px button), or move Share into the card header as an icon. Shorten the eyebrow to 'Oct 21 · Logan River GC' and set white-space: nowrap; text-overflow: ellipsis.",
+    "owner": "home"
+  },
+  {
+    "id": "home-7",
+    "area": "home",
+    "screen": "Up next for a new organizer",
+    "files": [
+      "audit-shots-2/home/upnext-new-user-light.png",
+      "audit-shots-2/home/upnext-new-user-scrolled-light.png"
+    ],
+    "theme": "both",
+    "severity": "should",
+    "issue": "'Start a round' appears twice within one screen: the pink hero button and step 2 of 'Three steps to get going'. The checklist step also has its own tile icon, number and chevron, so the first screen has the same action in two weights.",
+    "fix": "Make the checklist start at 'Add your people' when the hero already offers Start a round, or turn the hero button into 'Add your people' and keep Start a round as step 2. One Start a round per screen.",
+    "owner": "home"
+  },
+  {
+    "id": "home-8",
+    "area": "home",
+    "screen": "Up next: groups and spacing",
+    "files": [
+      "audit-shots-2/home/upnext-one-round-light.png",
+      "audit-shots-2/home/upnext-one-round-scrolled-light.png",
+      "audit-shots-2/home/upnext-install-card-light.png"
+    ],
+    "theme": "both",
+    "severity": "should",
+    "issue": "The What's new / reminder / install card sits 20px under the More ways to play card with no group label, breaking tonight's own rule (groups open with a label and 30px of air). The card's text column also starts at x=168 (192 on reminders) while its buttons start at x=64, so the left edge zigzags.",
+    "fix": "Give the card stack its own label ('Heads up') with the 30px group gap, and lay the card out as icon on top-left then text and buttons all on the same 32px left inset (or put the avatar inline with the title and start everything at 64).",
+    "owner": "home"
+  },
+  {
+    "id": "home-9",
+    "area": "home",
+    "screen": "Up next: round in progress card",
+    "files": [
+      "audit-shots-2/home/upnext-round-in-progress-light.png",
+      "audit-shots-2/home/upnext-round-in-progress-dark.png",
+      "audit-shots-2/classic/classic-upnext-light.png"
+    ],
+    "theme": "both",
+    "severity": "should",
+    "issue": "The live dot on the Round in progress card sits above the text's x-height, nearly in the card's corner, and in dark it carries a grey halo that spills over the pink border. Classic shows the same stray white dot at the card's top-left.",
+    "fix": "Put the dot inline before 'ROUND IN PROGRESS' (display: inline-block; width 8px; vertical-align: 0.1em; margin-right 6px) and drop the halo box-shadow in dark, or tint it with the card surface.",
+    "owner": "home"
+  },
+  {
+    "id": "home-10",
+    "area": "home",
+    "screen": "Up next: two rounds live",
+    "files": [
+      "audit-shots-2/home/upnext-two-rounds-live-light.png",
+      "audit-shots-2/home/upnext-two-rounds-live-dark.png"
+    ],
+    "theme": "both",
+    "severity": "should",
+    "issue": "With two rounds going there are two pink-bordered cards, each with a pink live eyebrow and a pink play circle: six pink marks above the fold, so pink stops meaning 'the one thing to tap'. No group label tells you these are both live.",
+    "fix": "Under a 'Going now' label, show one card with two rows (hairline between), each with an ink play button; keep pink only on the round you last scored.",
+    "owner": "home"
+  },
+  {
+    "id": "home-11",
+    "area": "home",
+    "screen": "Up next: a round today",
+    "files": [
+      "audit-shots-2/home/upnext-countdown-today-light.png",
+      "audit-shots-2/home/upnext-countdown-today-dark.png"
+    ],
+    "theme": "both",
+    "severity": "should",
+    "issue": "Two hours before tee time the plan card still only offers a chevron and 'Today's preview'; the start action for this round isn't on it (the pink Start a round under Playing now? starts a blank round). The strip says 'Nassau · Mon' while the card says 'Today'.",
+    "fix": "On the day, give the plan card a primary 'Start this round' button (it fills setup from the plan) and drop Playing now? to Run it back only. Make the strip say 'Today' when the date is today.",
+    "owner": "plan"
+  },
+  {
+    "id": "home-12",
+    "area": "home",
+    "screen": "Up next during a trip",
+    "files": [
+      "audit-shots-2/home/upnext-trip-on-light.png",
+      "audit-shots-2/home/upnext-trip-on-dark.png"
+    ],
+    "theme": "both",
+    "severity": "should",
+    "issue": "The trip card's Wed / Fri / Sat tan chips have no label and look like buttons; the 'Trip expenses' half-width beige pill floats under the card unlabelled; then a black strip. Three shapes 20px apart with no hierarchy, and the eyebrow has a double space ('BANDON BOYS  · DAY 6').",
+    "fix": "Label the day chips ('Rounds: Wed, Fri, Sat') as plain text, move Trip expenses inside the card as a row with a chevron, and fix the eyebrow join (single space before the middle dot).",
+    "owner": "home"
+  },
+  {
+    "id": "tab-2",
+    "area": "tab",
+    "screen": "The Tab: person cards",
+    "files": [
+      "audit-shots-2/tab/tab-both-sides-light.png",
+      "audit-shots-2/tab/tab-with-trip-scrolled-dark.png",
+      "audit-shots-2/tab/tab-with-crew-light.png"
+    ],
+    "theme": "both",
+    "severity": "should",
+    "issue": "Each person card is ~440px tall (header, Paid me, bell + Request, Paid part of it? link), so only two and a half people fit per screen, and three people means three screens of near-identical cards. The money list is hard to scan.",
+    "fix": "Collapse cards to one row (avatar, name, amount, chevron) plus one action row: '[Name] paid me' as a compact ghost button and the Request icon button; move the bell and Paid part of it? into the person screen. Target ~150px per person.",
+    "owner": "home"
+  },
+  {
+    "id": "tab-3",
+    "area": "tab",
+    "screen": "The Tab: section heading styles",
+    "files": [
+      "audit-shots-2/tab/tab-both-sides-light.png",
+      "audit-shots-2/tab/tab-both-sides-bottom-light.png",
+      "audit-shots-2/tab/tab-all-square-light.png",
+      "audit-shots-2/home/upnext-one-round-light.png"
+    ],
+    "theme": "both",
+    "severity": "should",
+    "issue": "Owes you / You owe / Square are 44px Fraunces with a count chip and a coloured total, but Everyone else, Payments and Who owes who on the same screen are 17px grey Figtree, and Up next's labels are the grey Figtree style. Two heading systems on one screen.",
+    "fix": "Pick one h2 style for screen sections (the 17px Figtree label used on Up next), and show the count and total in the section's first row or a right-aligned meta in the same label line.",
+    "owner": "shared"
+  },
+  {
+    "id": "tab-4",
+    "area": "tab",
+    "screen": "The Tab with everyone paid up",
+    "files": [
+      "audit-shots-2/tab/tab-all-square-light.png",
+      "audit-shots-2/tab/tab-all-square-dark.png",
+      "audit-shots-2/tab/tab-all-square-scrolled-light.png"
+    ],
+    "theme": "both",
+    "severity": "should",
+    "issue": "All square has no summary hero, so the first thing you see is four full-size 'Square with X' cards (~220px each) saying the same thing. The one message ('everyone's paid up') never gets its moment.",
+    "fix": "Lead with the summary card in its all-square state ('All square' + the handshake art, generous space), then a single card of rows 'Square with Marcus, Dev, Riley, Cody' with last-paid dates.",
+    "owner": "home"
+  },
+  {
+    "id": "tab-5",
+    "area": "tab",
+    "screen": "Season",
+    "files": [
+      "audit-shots-2/tab/season-scrolled-light.png",
+      "audit-shots-2/tab/season-scrolled-dark.png"
+    ],
+    "theme": "both",
+    "severity": "should",
+    "issue": "'Built from your 8 rounds' is sticky under the header and the tiles scroll under it with no edge or background, so cut-off digits ('$28' as '<half glyph>') show between the line and the cards.",
+    "fix": "Let the subtitle scroll with the content, or give the sticky header block a solid var(--bg) background and a hairline bottom border like the tab headers.",
+    "owner": "home"
+  },
+  {
+    "id": "plan-3",
+    "area": "plan",
+    "screen": "Get a round going (the ask): Who to ask",
+    "files": [
+      "audit-shots-2/plan/ask-light.png",
+      "audit-shots-2/plan/ask-scrolled-light.png",
+      "audit-shots-2/plan/ask-filled-dark.png"
+    ],
+    "theme": "both",
+    "severity": "should",
+    "issue": "Every name chip in Who to ask looks the same (white, hairline) in every ask shot, so you can't tell whether anyone is picked, and the '+ Name' chip has a heavier tan border than the rest.",
+    "fix": "Show the picked state clearly: ink fill with cream text and a check (same as History's selected filter chip), unpicked hairline; give '+ Name' a dashed hairline so it reads as an add slot.",
+    "owner": "plan"
+  },
+  {
+    "id": "plan-4",
+    "area": "plan",
+    "screen": "Plan page: primary button colour",
+    "files": [
+      "audit-shots-2/plan/ask-filled-light.png",
+      "audit-shots-2/plan/plan-nothing-set-light.png",
+      "audit-shots-2/plan/roll-call-light.png"
+    ],
+    "theme": "both",
+    "severity": "should",
+    "issue": "The same job gets different colours: the ask's 'Send to the group' is pink, the plan page's 'Invite the group' is black, roll call's 'Tee off' is black while its checks are pink.",
+    "fix": "Decide one rule (pink = the send/commit action on a screen) and apply it: Invite the group and Tee off pink; roll call's checks ink.",
+    "owner": "plan"
+  },
+  {
+    "id": "plan-5",
+    "area": "plan",
+    "screen": "Plan page: status chips",
+    "files": [
+      "audit-shots-2/plan/plan-days-voted-light.png",
+      "audit-shots-2/plan/plan-days-voted-dark.png",
+      "audit-shots-2/plan/plan-dated-ticket-light.png",
+      "audit-shots-2/plan/plan-dated-ticket-scrolled-dark.png"
+    ],
+    "theme": "both",
+    "severity": "should",
+    "issue": "Chip colours drift from the brand rule (Set mint, Up for a vote butter, Not yet hairline): 'No answer' is a filled beige, 'Maybe' is saturated gold while 'leads' is butter (two yellows side by side), and in dark the 'leads' chips are olive-brown and the Maybe chip is the brightest thing on screen.",
+    "fix": "Map every chip to three tokens: --chip-set (mint), --chip-vote (butter, dark: #3A3424 text #F2D98A), --chip-open (hairline, no fill). Maybe uses --chip-vote, No answer uses --chip-open.",
+    "owner": "plan"
+  },
+  {
+    "id": "plan-6",
+    "area": "plan",
+    "screen": "Plan page with days voted",
+    "files": [
+      "audit-shots-2/plan/plan-days-voted-light.png",
+      "audit-shots-2/plan/plan-days-voted-bottom-dark.png"
+    ],
+    "theme": "both",
+    "severity": "should",
+    "issue": "'Lock in Sat Nov 7' appears twice within ~120px: the white button on the mint nudge card and the pinned pink button under it. The pinned footer stacks three actions (~380px) and the content is cut hard under it with no hairline or fade.",
+    "fix": "With the nudge on screen, hide the pinned pink Lock in (keep Invite / Done for now), or drop the card's button. Give the pinned footer a hairline top border and a 24px fade (mask-image) so content clearly scrolls under it.",
+    "owner": "plan"
+  },
+  {
+    "id": "plan-7",
+    "area": "plan",
+    "screen": "Plan after calling it off",
+    "files": [
+      "audit-shots-2/plan/plan-called-off-light.png",
+      "audit-shots-2/plan/plan-called-off-scrolled-dark.png"
+    ],
+    "theme": "both",
+    "severity": "should",
+    "issue": "After Call it off the page still says 'You're getting a round going', shows 'Still to decide' with 'Sat Nov 7 leads', and keeps the vote rows live, so it still reads like an open plan apart from the red eyebrow.",
+    "fix": "In the off state, swap the hero line to 'You called this one off', grey out the detail rows (no chevrons, opacity .55), hide Still to decide, and offer one action: 'Start it up again'.",
+    "owner": "plan"
+  },
+  {
+    "id": "plan-8",
+    "area": "plan",
+    "screen": "Saturday preview",
+    "files": [
+      "audit-shots-2/plan/plan-preview-light.png",
+      "audit-shots-2/plan/plan-preview-dark.png",
+      "audit-shots-2/plan/plan-preview-from-home-scrolled-dark.png"
+    ],
+    "theme": "both",
+    "severity": "should",
+    "issue": "Pink is used as data here: the pink 5 DAYS tile, the pink eyebrow and pink stroke dots, none of them tappable. The meta line wraps with a trailing '·' at the end of line one, and the day appears three times (tile, eyebrow, meta).",
+    "fix": "Make the countdown tile ink on cream and the stroke dots ink; show the day once (tile) and drop it from the meta; join meta parts with a non-breaking space before each ' · '.",
+    "owner": "plan"
+  },
+  {
+    "id": "plan-9",
+    "area": "plan",
+    "screen": "Roll call",
+    "files": [
+      "audit-shots-2/plan/roll-call-light.png",
+      "audit-shots-2/plan/roll-call-dark.png"
+    ],
+    "theme": "both",
+    "severity": "should",
+    "issue": "A saturated gold header band, then three rows filled pink with pink borders (wine/maroon fills in dark) for people who are here, and the heading is crammed 24px under the band. Loud for a checklist and pink again isn't the one thing to tap.",
+    "fix": "Drop the gold band for the plain header; checked rows white with an ink check in a mint circle; 32px above the first heading.",
+    "owner": "plan"
+  },
+  {
+    "id": "plan-10",
+    "area": "plan",
+    "screen": "Edit plan",
+    "files": [
+      "audit-shots-2/plan/plan-edit-light.png",
+      "audit-shots-2/plan/plan-edit-scrolled-dark.png"
+    ],
+    "theme": "both",
+    "severity": "should",
+    "issue": "The picked day (Sat Oct 31) is scrolled off the right of the day strip so only the black chip's edge peeks in; the screen has two titles ('Edit plan' and 'When are you playing?').",
+    "fix": "scrollIntoView({inline: 'center'}) the selected day chip on mount; drop the second title or make it the section label 'When'.",
+    "owner": "plan"
+  },
+  {
+    "id": "plan-11",
+    "area": "plan",
+    "screen": "Sheets: section labels",
+    "files": [
+      "audit-shots-2/plan/ask-when-few-options-picked-light.png",
+      "audit-shots-2/plan/ask-when-set-a-day-dark.png",
+      "audit-shots-2/plan/ask-light.png"
+    ],
+    "theme": "both",
+    "severity": "should",
+    "issue": "Sheets label sections in uppercase tracked caps (MORNING OR AFTERNOON?, TEE TIME, REMIND ME TO BOOK, HOLES) while the page behind uses sentence-case Figtree labels (Your message, The details, Who to ask).",
+    "fix": "Use the sentence-case section label component in sheets too; keep tracked caps for eyebrows over a single value only.",
+    "owner": "shared"
+  },
+  {
+    "id": "plan-12",
+    "area": "plan",
+    "screen": "Where sheet",
+    "files": [
+      "audit-shots-2/plan/ask-where-sheet-light.png",
+      "audit-shots-2/plan/ask-when-few-options-picked-light.png"
+    ],
+    "theme": "both",
+    "severity": "should",
+    "issue": "The selected course is a pink-filled row with a pink border and pink check, while the When sheet's selection is black. Course rows are also inset (x 82 to 697) narrower than the search field above (58 to 722).",
+    "fix": "Use one selected style in sheets (ink border 2px + ink check, no fill) and align list rows to the search field's edges.",
+    "owner": "shared"
+  },
+  {
+    "id": "history-1",
+    "area": "history",
+    "screen": "History: horizontal scrollers",
+    "files": [
+      "audit-shots-2/history/history-20-rounds-light.png",
+      "audit-shots-2/history/history-3-rounds-light.png"
+    ],
+    "theme": "both",
+    "severity": "should",
+    "issue": "Head to head tiles and the game filter chips run off the right edge cut mid-glyph ('+$30.5', 'Jackson' at the bezel) with no fade or peek spacing, so it reads as a layout overflow rather than a scroller.",
+    "fix": "Give the scroller scroll-padding-inline: 32px, a 24px mask-image fade on the right, and size tiles so the third one is cut at about half (width: calc((100% - 32px) / 2.4)).",
+    "owner": "home"
+  },
+  {
+    "id": "history-2",
+    "area": "history",
+    "screen": "History: moment line",
+    "files": [
+      "audit-shots-2/history/history-8-rounds-bottom-dark.png",
+      "audit-shots-2/history/round-detail-light.png",
+      "audit-shots-2/history/round-detail-scrolled-light.png"
+    ],
+    "theme": "both",
+    "severity": "should",
+    "issue": "The round's moment says 'Trevor & Riley win the match' and Who pays who / Standings say 'Trevor', on Trevor's own phone, while the line above says 'You and Riley tied for the top'. The app calls him 'You' everywhere else.",
+    "fix": "Run the moment text and the round detail's names through the same you-label helper the result lines use (name === me ? 'You' : name).",
+    "owner": "play"
+  },
+  {
+    "id": "history-3",
+    "area": "history",
+    "screen": "Segmented controls",
+    "files": [
+      "audit-shots-2/history/history-3-rounds-light.png",
+      "audit-shots-2/history/history-month-dark.png",
+      "audit-shots-2/history/round-detail-scrolled-light.png",
+      "audit-shots-2/history/stats-light.png",
+      "audit-shots-2/players/friends-feed-light.png"
+    ],
+    "theme": "both",
+    "severity": "should",
+    "issue": "Three segmented-control styles: beige track with a white thumb (History Season/Month/Custom), white track with a black thumb (Round detail, Your stats, Friends, Print), and in dark the History one's selected segment is barely distinguishable from the track.",
+    "fix": "One .seg component: hairline track on var(--surface), ink thumb with cream text (cream thumb with ink text in dark). Replace History's period switch with it.",
+    "owner": "shared"
+  },
+  {
+    "id": "history-4",
+    "area": "history",
+    "screen": "Round detail: hole by hole",
+    "files": [
+      "audit-shots-2/history/round-detail-details-light.png",
+      "audit-shots-2/history/round-detail-details-bottom-light.png"
+    ],
+    "theme": "both",
+    "severity": "should",
+    "issue": "Empty cells in the hole-by-hole money table show a middle dot '·'; the project rule is an en dash for an empty value in a table.",
+    "fix": "Render empty money cells as '–' in the muted colour.",
+    "owner": "play"
+  },
+  {
+    "id": "history-5",
+    "area": "history",
+    "screen": "Your stats: By game",
+    "files": [
+      "audit-shots-2/history/stats-scrolled-dark.png"
+    ],
+    "theme": "both",
+    "severity": "should",
+    "issue": "Every game row in By game uses the same tee-and-ball icon, while History and Up next show each game's own art tile. Nothing tells Skins from Banker at a glance.",
+    "fix": "Use the game's art tile (the 48px rounded square used on History cards) as the row icon.",
+    "owner": "home"
+  },
+  {
+    "id": "history-6",
+    "area": "history",
+    "screen": "Empty Stats and Hall of fame",
+    "files": [
+      "audit-shots-2/history/stats-empty-dark.png",
+      "audit-shots-2/history/hall-of-fame-empty-dark.png"
+    ],
+    "theme": "both",
+    "severity": "should",
+    "issue": "Both empty states end with no action; Stats still shows a Handicap trend card under 'No rounds here' (two empty states stacked); Hall of fame says 'Play a round with New crew' (the crew's default name leaks into copy).",
+    "fix": "Add a 'Start a round' ghost button under each; hide Handicap trend until there's a round; write 'Play a round with this crew'.",
+    "owner": "home"
+  },
+  {
+    "id": "history-7",
+    "area": "history",
+    "screen": "Hall of fame: podium",
+    "files": [
+      "audit-shots-2/history/hall-of-fame-light.png",
+      "audit-shots-2/history/hall-of-fame-dark.png",
+      "audit-shots-2/history/round-detail-light.png"
+    ],
+    "theme": "both",
+    "severity": "should",
+    "issue": "The crown and Jackson appear twice (hero avatar and podium). The podium steps are mint / gold / peach here but all gold on Round detail; in dark they turn grey-green, olive and brown.",
+    "fix": "Drop the hero avatar (let the podium be the hero) or drop the crown from the podium. Use one podium palette everywhere (gold 1st, butter 2nd, cream 3rd), with dark tokens that stay warm, not olive.",
+    "owner": "home"
+  },
+  {
+    "id": "history-8",
+    "area": "history",
+    "screen": "Hall of fame: You row and record names",
+    "files": [
+      "audit-shots-2/history/hall-of-fame-light.png",
+      "audit-shots-2/history/hall-of-fame-dark.png",
+      "audit-shots-2/history/hall-of-fame-scrolled-light.png"
+    ],
+    "theme": "both",
+    "severity": "should",
+    "issue": "The money list highlights 'You' with a pink row fill (wine in dark) and every record holder's name is pink. Pink as a highlight, not an action.",
+    "fix": "Mark You with bold text and a mint 'You' chip, keep the row white; record names ink.",
+    "owner": "home"
+  },
+  {
+    "id": "history-9",
+    "area": "history",
+    "screen": "Your year in review",
+    "files": [
+      "audit-shots-2/history/share-wrapped-light.png",
+      "audit-shots-2/history/share-wrapped-dark.png"
+    ],
+    "theme": "both",
+    "severity": "should",
+    "issue": "The share card uses a geometric bold sans and a teal / hot pink palette that don't belong to the brand (Fraunces, Figtree, cream). '8 rounds' headline and the '8 Rounds' tile repeat each other.",
+    "fix": "Restyle the card with Fraunces headline, Figtree labels, cream background and one brand accent; replace the Rounds tile with Holes or Best game.",
+    "owner": "home"
+  },
+  {
+    "id": "shared-1",
+    "area": "shared",
+    "screen": "Push entrances ('-mid' shots)",
+    "files": [
+      "audit-shots-2/plan/ask-mid-light.png",
+      "audit-shots-2/tab/tab-person-sam-mid-dark.png",
+      "audit-shots-2/players/person-jackson-mid-light.png",
+      "audit-shots-2/history/round-detail-mid-light.png"
+    ],
+    "theme": "both",
+    "severity": "should",
+    "issue": "150ms into the push into the ask, Sam's story and Jackson's person screen the whole viewport is blank canvas (header too), while Round detail at the same moment already shows content. Those screens flash empty on entry.",
+    "fix": "Start the entering screen at opacity .4 / translateX(24px) instead of 0, or render the header immediately and stagger only the body; match the Round detail entrance (Stage.jsx).",
+    "owner": "shared"
+  },
+  {
+    "id": "home-13",
+    "area": "home",
+    "screen": "Join a friend's round sheet",
+    "files": [
+      "audit-shots-2/home/join-sheet-light.png",
+      "audit-shots-2/home/join-sheet-code-dark.png"
+    ],
+    "theme": "both",
+    "severity": "should",
+    "issue": "The code field's placeholder 'ABC123' is set in heavy dark grey at 64px, so the empty field looks already filled in.",
+    "fix": "Placeholder colour var(--muted) at 40% and weight 400, or show six empty slot boxes.",
+    "owner": "shared"
+  },
+  {
+    "id": "art-1",
+    "area": "art",
+    "screen": "Up next: Get a round going spot",
+    "files": [
+      "audit-shots-2/home/upnext-one-round-open-plan-bottom-dark.png",
+      "audit-shots-2/home/upnext-countdown-today-dark.png"
+    ],
+    "theme": "dark",
+    "severity": "should",
+    "issue": "The calendar spot's solid white body glares on the dark card, much brighter than the other spots, which use the cream fill.",
+    "fix": "Use the cream (#F3EEDF) body in dark like the other spots, via the shared dark art token.",
+    "owner": "art"
+  },
+  {
+    "id": "history-10",
+    "area": "history",
+    "screen": "Lately and Friends feed: icons",
+    "files": [
+      "audit-shots-2/history/lately-light.png",
+      "audit-shots-2/players/friends-feed-scrolled-light.png"
+    ],
+    "theme": "both",
+    "severity": "polish",
+    "issue": "Titles wrap with a one-word orphan ('took it', 'putter') and game rows use a generic flag icon instead of the game's art.",
+    "fix": "text-wrap: pretty on row titles; game rows use the game art tile.",
+    "owner": "home"
+  },
+  {
+    "id": "art-2",
+    "area": "art",
+    "screen": "Avatars in dark",
+    "files": [
+      "audit-shots-2/history/hall-of-fame-dark.png",
+      "audit-shots-2/history/round-detail-dark.png"
+    ],
+    "theme": "dark",
+    "severity": "polish",
+    "issue": "Avatars on Hall of fame's hero and the podium get a grey ring in dark (cream in light), which reads as a muddy halo.",
+    "fix": "Use the card surface colour for the avatar ring in dark (or no ring) so the colour blob sits clean.",
+    "owner": "art"
+  },
+  {
+    "id": "home-14",
+    "area": "home",
+    "screen": "Up next for a new organizer: hero art",
+    "files": [
+      "audit-shots-2/home/upnext-new-user-light.png",
+      "audit-shots-2/home/upnext-new-user-dark.png"
+    ],
+    "theme": "both",
+    "severity": "polish",
+    "issue": "The tee illustration's grass is sliced flat by the hero card's right edge.",
+    "fix": "Pull the art inside the card's padding (right: 24px) or let it bleed with overflow: visible and a full grass tuft.",
+    "owner": "home"
+  },
+  {
+    "id": "home-15",
+    "area": "home",
+    "screen": "More ways to play card",
+    "files": [
+      "audit-shots-2/home/upnext-one-round-light.png",
+      "audit-shots-2/home/upnext-countdown-today-dark.png"
+    ],
+    "theme": "both",
+    "severity": "polish",
+    "issue": "Inside the one card, Get a round going is a 36px Fraunces headline with a description, while Start a trip and Big Game are 17px bold rows split in two columns. Three rows of the same importance, two type scales. The trip art's club touches the hairline above.",
+    "fix": "Make all three equal rows (56px art, 17px bold title, one-line muted description, chevron) with hairlines between.",
+    "owner": "home"
+  },
+  {
+    "id": "home-16",
+    "area": "home",
+    "screen": "What's new card",
+    "files": [
+      "audit-shots-2/home/upnext-one-round-light.png"
+    ],
+    "theme": "both",
+    "severity": "polish",
+    "issue": "The What's new card uses a filled black 'See what's new' button, as loud as the screen's main action.",
+    "fix": "Make it a ghost button or a text link; save filled buttons for the screen's primary action.",
+    "owner": "home"
+  },
+  {
+    "id": "home-17",
+    "area": "home",
+    "screen": "Install card",
+    "files": [
+      "audit-shots-2/home/upnext-install-card-light.png",
+      "audit-shots-2/home/upnext-install-card-dark.png"
+    ],
+    "theme": "both",
+    "severity": "polish",
+    "issue": "Each install step has both a number circle and an icon tile, two markers per line.",
+    "fix": "Keep the icon tile and drop the number (the order reads top to bottom).",
+    "owner": "home"
+  },
+  {
+    "id": "home-18",
+    "area": "home",
+    "screen": "Upcoming plan card",
+    "files": [
+      "audit-shots-2/home/upnext-one-round-open-plan-light.png",
+      "audit-shots-2/home/upnext-many-rounds-light.png"
+    ],
+    "theme": "both",
+    "severity": "polish",
+    "issue": "The Saturday preview row's binoculars icon is pink though it's not the main action; the You're in pill crowds the title, so a longer course name wraps under it.",
+    "fix": "Ink binoculars; move You're in under the title, next to '3 in · 1 maybe'.",
+    "owner": "home"
+  },
+  {
+    "id": "home-19",
+    "area": "home",
+    "screen": "Countdown strip in dark",
+    "files": [
+      "audit-shots-2/home/upnext-countdown-today-dark.png",
+      "audit-shots-2/home/upnext-many-rounds-dark.png"
+    ],
+    "theme": "dark",
+    "severity": "polish",
+    "issue": "The countdown strip flips to a cream block in dark, the brightest shape on the screen above the actual next round.",
+    "fix": "In dark use the card surface with a hairline and cream text, like the other cards.",
+    "owner": "home"
+  },
+  {
+    "id": "home-20",
+    "area": "home",
+    "screen": "Your golf tiles",
+    "files": [
+      "audit-shots-2/home/upnext-trip-on-scrolled-light.png"
+    ],
+    "theme": "both",
+    "severity": "polish",
+    "issue": "During a trip the Tab tile's '+$1,075.87' fills the tile edge to edge; a bigger number will clip.",
+    "fix": "Round to whole dollars in tiles, or use font-size: clamp() with the tile width.",
+    "owner": "home"
+  },
+  {
+    "id": "home-21",
+    "area": "home",
+    "screen": "Turn off callouts",
+    "files": [
+      "audit-shots-2/home/upnext-one-round-open-plan-bottom-light.png"
+    ],
+    "theme": "both",
+    "severity": "polish",
+    "issue": "'Turn off callouts' floats with ~60px above and ~145px below it, so it looks like its own section.",
+    "fix": "Tuck it under the callouts with 12px gap, 13px muted, left-aligned with the cards.",
+    "owner": "home"
+  },
+  {
+    "id": "home-22",
+    "area": "home",
+    "screen": "Up next during a trip: More ways to play",
+    "files": [
+      "audit-shots-2/home/upnext-trip-on-scrolled-light.png"
+    ],
+    "theme": "both",
+    "severity": "polish",
+    "issue": "With the trip on, Big Game sits alone as a short full-width row in the More ways to play card, looking orphaned.",
+    "fix": "Fold Big Game into the trip card as a row, or keep the card's row height and art size the same as the others.",
+    "owner": "home"
+  },
+  {
+    "id": "home-23",
+    "area": "home",
+    "screen": "Rounds in progress sheet",
+    "files": [
+      "audit-shots-2/home/rounds-in-progress-sheet-light.png",
+      "audit-shots-2/home/rounds-in-progress-sheet-dark.png"
+    ],
+    "theme": "both",
+    "severity": "polish",
+    "issue": "Row titles are regular weight while every other list row title in the app is bold.",
+    "fix": "Use the list row title style (17px, 600).",
+    "owner": "home"
+  },
+  {
+    "id": "tab-6",
+    "area": "tab",
+    "screen": "The Tab: Remind bell",
+    "files": [
+      "audit-shots-2/tab/tab-both-sides-light.png"
+    ],
+    "theme": "both",
+    "severity": "polish",
+    "issue": "The remind button is a bare filled bell in a beige tile with no label, beside a labelled Request button.",
+    "fix": "Label it 'Remind' (icon + text) or move it into the person screen.",
+    "owner": "home"
+  },
+  {
+    "id": "tab-7",
+    "area": "tab",
+    "screen": "The Tab: How the Tab works and tools",
+    "files": [
+      "audit-shots-2/tab/tab-both-sides-bottom-light.png",
+      "audit-shots-2/tab/tab-all-square-bottom-light.png"
+    ],
+    "theme": "both",
+    "severity": "polish",
+    "issue": "'How the Tab works +' floats with a 130px gap below it; in the tools card the icons centre on two- or three-line blocks instead of aligning with the title.",
+    "fix": "Close the gap to the section rhythm (30px); align-items: flex-start on tool rows with the icon at the title's cap height.",
+    "owner": "home"
+  },
+  {
+    "id": "tab-8",
+    "area": "tab",
+    "screen": "The Tab during a trip",
+    "files": [
+      "audit-shots-2/tab/tab-with-trip-light.png",
+      "audit-shots-2/tab/tab-with-trip-bottom-light.png"
+    ],
+    "theme": "both",
+    "severity": "polish",
+    "issue": "The summary meta starts with an orphaned '· settle after the last round'; the avatar stack shows 5 of 8 with no '+3'; amounts mix '$78.12' with '$49'.",
+    "fix": "Build the meta from parts joined with ' · ' only between present parts; add a +N chip to the stack; show cents only when any amount in the list has cents, then show them on all.",
+    "owner": "home"
+  },
+  {
+    "id": "tab-9",
+    "area": "tab",
+    "screen": "Person's story from the Tab",
+    "files": [
+      "audit-shots-2/tab/tab-person-sam-light.png",
+      "audit-shots-2/tab/tab-person-sam-scrolled-light.png",
+      "audit-shots-2/players/person-jackson-light.png"
+    ],
+    "theme": "both",
+    "severity": "polish",
+    "issue": "'Where it comes from' and 'Paid part of it?' links sit side by side in different colours and baselines; '3–0' then 'You lead 3–0' repeat the score.",
+    "fix": "Same link style and baseline for both (or stack them); drop the big score or the 'You lead' line.",
+    "owner": "home"
+  },
+  {
+    "id": "tab-10",
+    "area": "tab",
+    "screen": "Paid part of it? sheets",
+    "files": [
+      "audit-shots-2/tab/paid-part-sheet-light.png",
+      "audit-shots-2/tab/paid-part-amount-dark.png"
+    ],
+    "theme": "both",
+    "severity": "polish",
+    "issue": "Tapping 'Paid part of it?' opens a sheet titled 'Settle up' with Pay on Venmo first, and the amount sheet has no name, no 'of $13' cap and no close button.",
+    "fix": "Title the sheet 'Paid part of it?' and lead with 'I paid part of it'; show 'Amount Ben got (of $13)' and a close X on the keypad sheet.",
+    "owner": "home"
+  },
+  {
+    "id": "tab-11",
+    "area": "tab",
+    "screen": "Paid toast",
+    "files": [
+      "audit-shots-2/tab/paid-toast-light.png",
+      "audit-shots-2/tab/paid-toast-mid-dark.png"
+    ],
+    "theme": "both",
+    "severity": "polish",
+    "issue": "The 'Marked paid / Undo' toast covers the next card's Request button and doesn't say who was marked paid; its mint fill matches mint surfaces underneath.",
+    "fix": "Raise the toast above the nav with 16px clearance, say 'Sam marked paid', and use the ink toast style (cream text) used elsewhere.",
+    "owner": "shared"
+  },
+  {
+    "id": "tab-12",
+    "area": "tab",
+    "screen": "Season: bars",
+    "files": [
+      "audit-shots-2/tab/season-scrolled-light.png",
+      "audit-shots-2/tab/season-scrolled-dark.png",
+      "audit-shots-2/tab/close-the-books-light.png"
+    ],
+    "theme": "both",
+    "severity": "polish",
+    "issue": "Names are centred in their column so they don't line up; negative bars are pink outlines with a pale fill (dark: maroon fill that reads brown); the two link rows under it have no card.",
+    "fix": "Right-align names to the axis; negative bars solid muted red at 60%; put the link rows in a card like the Tab's tools.",
+    "owner": "home"
+  },
+  {
+    "id": "tab-13",
+    "area": "tab",
+    "screen": "Close the books",
+    "files": [
+      "audit-shots-2/tab/close-the-books-light.png",
+      "audit-shots-2/tab/close-the-books-scrolled-dark.png"
+    ],
+    "theme": "both",
+    "severity": "polish",
+    "issue": "The intro text starts at x=33 while section labels start at x=40; 'Stays owed into the next season.' repeats under every one of eight rows.",
+    "fix": "Align intro to the label inset; show the explanation once under the section label and drop it from the rows.",
+    "owner": "home"
+  },
+  {
+    "id": "tab-14",
+    "area": "tab",
+    "screen": "Crew tab and New crew",
+    "files": [
+      "audit-shots-2/tab/tab-crew-saturday-dark.png",
+      "audit-shots-2/tab/crew-edit-light.png",
+      "audit-shots-2/tab/tab-with-crew-light.png"
+    ],
+    "theme": "both",
+    "severity": "polish",
+    "issue": "The crew tab leads with a plain 'You're even' headline while Everyone leads with a summary card; the scope chip row ends 3px from the right edge; New crew lists each player as its own card instead of one card of rows.",
+    "fix": "Use the summary card on crew tabs too; give the scope chips the 32px gutter (or make them a scroller); one card of rows in New crew.",
+    "owner": "home"
+  },
+  {
+    "id": "plan-13",
+    "area": "plan",
+    "screen": "The ask: rows",
+    "files": [
+      "audit-shots-2/plan/ask-light.png",
+      "audit-shots-2/plan/ask-filled-light.png"
+    ],
+    "theme": "both",
+    "severity": "polish",
+    "issue": "Each detail row has an outlined value chip and a chevron (two affordances), and the hint under the details orphans 'it out.'",
+    "fix": "Show the value as muted text before the chevron (no chip), chip only for the set (mint) state; text-wrap: pretty on hints.",
+    "owner": "plan"
+  },
+  {
+    "id": "plan-14",
+    "area": "plan",
+    "screen": "When sheet",
+    "files": [
+      "audit-shots-2/plan/ask-when-few-options-light.png",
+      "audit-shots-2/plan/ask-when-day-picker-dark.png"
+    ],
+    "theme": "both",
+    "severity": "polish",
+    "issue": "The add tile splits its label around the plus ('Pick + a day'); in the day picker today's lavender ring reads as selected.",
+    "fix": "Put the plus before the label ('+ Pick a day'); mark today with a small dot under the date, not a ring.",
+    "owner": "plan"
+  },
+  {
+    "id": "plan-15",
+    "area": "plan",
+    "screen": "Plan ticket notch",
+    "files": [
+      "audit-shots-2/plan/plan-nothing-set-light.png",
+      "audit-shots-2/plan/plan-nothing-set-dark.png"
+    ],
+    "theme": "both",
+    "severity": "polish",
+    "issue": "The ticket's side notches are filled canvas circles laid over the card; the hairline stops at them with no arc, so they look pasted on.",
+    "fix": "Cut the notches with a radial-gradient mask on the card so the border follows the curve, or draw the border as an SVG path.",
+    "owner": "plan"
+  },
+  {
+    "id": "plan-16",
+    "area": "plan",
+    "screen": "Plan wording",
+    "files": [
+      "audit-shots-2/plan/ask-filled-light.png",
+      "audit-shots-2/plan/plan-nothing-set-light.png",
+      "audit-shots-2/plan/plan-dated-ticket-light.png",
+      "audit-shots-2/plan/friend-view-answering-light.png"
+    ],
+    "theme": "both",
+    "severity": "polish",
+    "issue": "The same things go by different names: When/Where/Game and bet + 'Not sure yet' on the ask vs Day/Course/Game/Bet + 'Not yet' on the plan; 'Out' on the dated ticket vs 'Can't' in the friend's view.",
+    "fix": "One vocabulary: Day, Course, Game, Bet; 'Not yet'; 'Can't make it'.",
+    "owner": "plan"
+  },
+  {
+    "id": "plan-17",
+    "area": "plan",
+    "screen": "Plan page: extra surfaces",
+    "files": [
+      "audit-shots-2/plan/plan-dated-ticket-scrolled-light.png",
+      "audit-shots-2/plan/plan-dated-ticket-scrolled-dark.png"
+    ],
+    "theme": "both",
+    "severity": "polish",
+    "issue": "Challenges is a dashed beige card with a purple icon and Trash talk is a beige pill row: two more surface styles on the plan page.",
+    "fix": "Make both rows in a white hairline card with neutral icons.",
+    "owner": "plan"
+  },
+  {
+    "id": "plan-18",
+    "area": "plan",
+    "screen": "Lock in sheet",
+    "files": [
+      "audit-shots-2/plan/plan-lock-sheet-light.png",
+      "audit-shots-2/plan/plan-lock-sheet-dark.png"
+    ],
+    "theme": "both",
+    "severity": "polish",
+    "issue": "Two titles ('Lock in the day' and 'Sat Nov 7 works...'), the clock art floats left of centre, and day tiles aren't in date order.",
+    "fix": "One title, centre the art, sort tiles by date with the leader marked.",
+    "owner": "plan"
+  },
+  {
+    "id": "plan-19",
+    "area": "plan",
+    "screen": "Trash talk sheet",
+    "files": [
+      "audit-shots-2/plan/plan-trash-talk-sheet-light.png"
+    ],
+    "theme": "both",
+    "severity": "polish",
+    "issue": "A beige card inside the sheet; Quick jabs chips are clipped by the card padding ('practicin').",
+    "fix": "Drop the inner card; let the chip scroller bleed to the sheet edge with a fade.",
+    "owner": "plan"
+  },
+  {
+    "id": "plan-20",
+    "area": "plan",
+    "screen": "Chips without chevrons",
+    "files": [
+      "audit-shots-2/plan/friend-view-answered-light.png",
+      "audit-shots-2/plan/plan-called-off-light.png"
+    ],
+    "theme": "both",
+    "severity": "polish",
+    "issue": "Where a row has no chevron its value chip shifts right, so the column of values goes ragged.",
+    "fix": "Reserve the chevron's width (visibility: hidden) on rows that can't be tapped.",
+    "owner": "plan"
+  },
+  {
+    "id": "plan-21",
+    "area": "plan",
+    "screen": "Dated plan ticket",
+    "files": [
+      "audit-shots-2/plan/plan-dated-ticket-light.png",
+      "audit-shots-2/plan/plan-dated-ticket-scrolled-light.png",
+      "audit-shots-2/plan/plan-dated-ticket-bottom-light.png"
+    ],
+    "theme": "both",
+    "severity": "polish",
+    "issue": "'5 DAYS TO GO' repeats in the preview row; Marcus's vote reads 'Votes Skins, $5 a side in Nassau'; the reminder strip is clipped at the card padding; 'Booked' is a full-width beige bar that reads like a status; 'Change the day...' link duplicates Edit.",
+    "fix": "Drop the repeat; write 'Votes Skins, $5 a side'; let the strip sit inside the padding; make Booked a mint chip; remove the Change link (Edit is in the header).",
+    "owner": "plan"
+  },
+  {
+    "id": "plan-22",
+    "area": "plan",
+    "screen": "Saturday preview: head to head",
+    "files": [
+      "audit-shots-2/plan/plan-preview-scrolled-light.png"
+    ],
+    "theme": "both",
+    "severity": "polish",
+    "issue": "Head to head rows break '2 and 2' across lines and titles are regular weight.",
+    "fix": "Non-breaking spaces in the record; row titles 600.",
+    "owner": "plan"
+  },
+  {
+    "id": "history-11",
+    "area": "history",
+    "screen": "History list: big-day card",
+    "files": [
+      "audit-shots-2/history/history-3-rounds-scrolled-light.png",
+      "audit-shots-2/history/history-8-rounds-scrolled-light.png"
+    ],
+    "theme": "light",
+    "severity": "polish",
+    "issue": "The butter big-day card's art tile is 128px vs 96px on others, pushing its title column to x=208 vs 176, so titles don't line up down the list; art is cropped by the tile.",
+    "fix": "Same 96px tile on every card; let the butter fill alone mark the big day.",
+    "owner": "home"
+  },
+  {
+    "id": "history-12",
+    "area": "history",
+    "screen": "History: section labels",
+    "files": [
+      "audit-shots-2/history/history-3-rounds-light.png",
+      "audit-shots-2/home/upnext-one-round-light.png"
+    ],
+    "theme": "both",
+    "severity": "polish",
+    "issue": "History mixes a bold 17px 'Head to head' with a subtitle, serif tracked caps 'OCTOBER', and Up next uses grey Figtree labels.",
+    "fix": "One label style for sections; month headers can stay caps but in Figtree like other eyebrows.",
+    "owner": "shared"
+  },
+  {
+    "id": "history-13",
+    "area": "history",
+    "screen": "History: single-round chart",
+    "files": [
+      "audit-shots-2/history/history-custom-light.png",
+      "audit-shots-2/history/history-month-dark.png"
+    ],
+    "theme": "both",
+    "severity": "polish",
+    "issue": "With one round the chart draws a line from nowhere, with $15 / $5 / -$5 ticks and an unlabelled dashed zero line.",
+    "fix": "Under 2 rounds hide the chart and show the number alone.",
+    "owner": "home"
+  },
+  {
+    "id": "history-14",
+    "area": "history",
+    "screen": "Round detail: tables",
+    "files": [
+      "audit-shots-2/history/round-detail-scrolled-light.png",
+      "audit-shots-2/history/round-detail-details-light.png"
+    ],
+    "theme": "both",
+    "severity": "polish",
+    "issue": "The scorecard and hole-by-hole tables have no hairline edge, unlike every card around them; only the HCP label cell is beige.",
+    "fix": "Give the table wrapper the card's border and radius; tint the whole HCP row or none of it.",
+    "owner": "play"
+  },
+  {
+    "id": "history-15",
+    "area": "history",
+    "screen": "Round detail: Who pays who and Where it comes from",
+    "files": [
+      "audit-shots-2/history/round-detail-light.png",
+      "audit-shots-2/history/round-detail-details-bottom-light.png"
+    ],
+    "theme": "both",
+    "severity": "polish",
+    "issue": "Every Who pays who row carries its own reaction and comment chips, doubling the rows' height; Where it comes from is three separate cards (not one card of rows) and repeats each amount ('-$6' and '-$6 Banker').",
+    "fix": "One reaction row for the whole card; one card of rows with hairlines; sub line just 'Banker'.",
+    "owner": "play"
+  },
+  {
+    "id": "history-16",
+    "area": "history",
+    "screen": "Your stats tiles",
+    "files": [
+      "audit-shots-2/history/stats-light.png"
+    ],
+    "theme": "both",
+    "severity": "polish",
+    "issue": "A status word is wedged between label and number ('ROUNDS / Winning / 8', 'NET / Up / +$45').",
+    "fix": "Move Winning / Up to the sub line or drop it; label then number.",
+    "owner": "home"
+  },
+  {
+    "id": "history-17",
+    "area": "history",
+    "screen": "Handicap trend",
+    "files": [
+      "audit-shots-2/history/stats-light.png"
+    ],
+    "theme": "both",
+    "severity": "polish",
+    "issue": "The axis runs 8.0 at top to 12.0 at bottom (inverted, correct for handicaps but unexplained) and the dashed line isn't labelled.",
+    "fix": "Label the dashed line 'Official 11.3' and add 'lower is better' under the axis.",
+    "owner": "home"
+  },
+  {
+    "id": "history-18",
+    "area": "history",
+    "screen": "Hall of fame: records and biggest wins",
+    "files": [
+      "audit-shots-2/history/hall-of-fame-scrolled-light.png",
+      "audit-shots-2/history/hall-of-fame-bottom-dark.png",
+      "audit-shots-2/history/stats-bottom-light.png"
+    ],
+    "theme": "both",
+    "severity": "polish",
+    "issue": "Record labels wrap beside the art so tiles start at different heights; Biggest wins shows money in black here but green on Stats, and the primary text is grey regular.",
+    "fix": "Put the art top-right with the label full width under it; money green, names 600 ink.",
+    "owner": "home"
+  },
+  {
+    "id": "players-1",
+    "area": "players",
+    "screen": "Players: money pills",
+    "files": [
+      "audit-shots-2/players/players-8-light.png",
+      "audit-shots-2/players/players-8-dark.png",
+      "audit-shots-2/players/players-3-dark.png"
+    ],
+    "theme": "both",
+    "severity": "polish",
+    "issue": "Rows with money show a filled mint or pink pill and no chevron; rows without money show a chevron. Mint and pink pills plus the In Sat / Maybe Sat chips make the list colourful, and the chevron column disappears on money rows.",
+    "fix": "Show money as coloured text (no fill) followed by the chevron on every row.",
+    "owner": "home"
+  },
+  {
+    "id": "players-2",
+    "area": "players",
+    "screen": "Players: nemesis card and Add a player",
+    "files": [
+      "audit-shots-2/players/players-8-scrolled-light.png",
+      "audit-shots-2/players/players-3-dark.png"
+    ],
+    "theme": "both",
+    "severity": "polish",
+    "issue": "The nemesis card has a pink border and red eyebrow, and Add a player is a dashed beige card with a gold plus: two more surface treatments on the list.",
+    "fix": "Nemesis card with the standard hairline and a red skull chip only; Add a player as a plain row at the end of the list card (ink plus).",
+    "owner": "home"
+  },
+  {
+    "id": "players-3",
+    "area": "players",
+    "screen": "Players with 25",
+    "files": [
+      "audit-shots-2/players/players-25-scrolled-light.png",
+      "audit-shots-2/players/players-25-bottom-dark.png"
+    ],
+    "theme": "both",
+    "severity": "polish",
+    "issue": "Fifteen 'New' chips in a row still dominate the list (the 14-day rule fires on every seeded add).",
+    "fix": "Show 'New' only on the 3 most recent adds, or group them under a 'Just added' label.",
+    "owner": "home"
+  },
+  {
+    "id": "players-4",
+    "area": "players",
+    "screen": "Players: empty state",
+    "files": [
+      "audit-shots-2/players/players-empty-light.png"
+    ],
+    "theme": "both",
+    "severity": "polish",
+    "issue": "The empty card and the Add a player card sit 10px apart and the empty card's dashed plus circles look tappable but aren't.",
+    "fix": "Put the Add button inside the empty card, or make the circles open Add.",
+    "owner": "home"
+  },
+  {
+    "id": "players-5",
+    "area": "players",
+    "screen": "Search focus ring",
+    "files": [
+      "audit-shots-2/players/players-search-dark.png",
+      "audit-shots-2/players/player-add-dark.png"
+    ],
+    "theme": "both",
+    "severity": "polish",
+    "issue": "The focus ring is a thick lavender stroke, a colour not used for anything else in the UI.",
+    "fix": "Use a 2px ink (cream in dark) focus ring, or the brand pink at 40%.",
+    "owner": "shared"
+  },
+  {
+    "id": "players-6",
+    "area": "players",
+    "screen": "Edit player",
+    "files": [
+      "audit-shots-2/players/player-edit-light.png"
+    ],
+    "theme": "both",
+    "severity": "polish",
+    "issue": "The handicap '21.0' is a beige pill and 'Clear' a white pill beside it, different from every other input.",
+    "fix": "Use the standard input for handicap with an inline clear X.",
+    "owner": "home"
+  },
+  {
+    "id": "players-7",
+    "area": "players",
+    "screen": "Friends list",
+    "files": [
+      "audit-shots-2/players/friends-list-dark.png"
+    ],
+    "theme": "both",
+    "severity": "polish",
+    "issue": "Each friend is a separate card while the Players list beside it is one card of rows.",
+    "fix": "One card of rows with hairlines.",
+    "owner": "home"
+  },
+  {
+    "id": "players-8",
+    "area": "players",
+    "screen": "Avatar picker",
+    "files": [
+      "audit-shots-2/players/avatar-picker-buddies-light.png",
+      "audit-shots-2/players/avatar-picker-buddies-scrolled-light.png",
+      "audit-shots-2/players/avatar-picker-photo-light.png"
+    ],
+    "theme": "both",
+    "severity": "polish",
+    "issue": "Selected avatar gets a pink ring and pink check badge while the selected backdrop gets an ink ring; the Photo tab's Done is disabled-looking beige.",
+    "fix": "Ink ring + ink check for the selected avatar; Done as the standard secondary button.",
+    "owner": "shared"
+  },
+  {
+    "id": "classic-1",
+    "area": "classic",
+    "screen": "Classic Up next and Tab",
+    "files": [
+      "audit-shots-2/classic/classic-upnext-light.png",
+      "audit-shots-2/classic/classic-tab-bottom-light.png"
+    ],
+    "theme": "light",
+    "severity": "polish",
+    "issue": "Classic still holds together. Two slips: the live dot on Round in progress sits loose at the card's top-left corner, and the nav mixes filled grey icons (Up next, Players) with an outline History icon when inactive.",
+    "fix": "Inline the dot before the eyebrow; use outline icons for all inactive tabs in classic.",
+    "owner": "shared"
+  },
+  {
+    "id": "classic-2",
+    "area": "classic",
+    "screen": "Classic History",
+    "files": [
+      "audit-shots-2/classic/classic-history-bottom-light.png",
+      "audit-shots-2/classic/classic-players-scrolled-light.png"
+    ],
+    "theme": "light",
+    "severity": "polish",
+    "issue": "Classic truncates the moment ('Trevor & Riley win the ma…') and player meta ('won 2, lost 0, ev…') where the overhaul wraps them.",
+    "fix": "Let the classic moment line wrap to two lines (white-space: normal) like the overhaul.",
+    "owner": "home"
+  },
+  {
+    "id": "classic-3",
+    "area": "classic",
+    "screen": "Classic scoring",
+    "files": [
+      "audit-shots-2/classic/classic-scoring-light.png"
+    ],
+    "theme": "light",
+    "severity": "polish",
+    "issue": "The prefilled score digits are mid-grey, so every player's '4' reads as a placeholder even after par is picked.",
+    "fix": "Ink digits once a chip is chosen; grey only before any input.",
+    "owner": "play"
+  }
+]
