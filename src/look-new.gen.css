@@ -193,6 +193,7 @@
 :root[data-look="new"] .cal-day.today .cd-num,
 :root[data-look="new"] .cal-cell.now,
 :root[data-look="new"] .nice-par,
+:root[data-look="new"] .hof-row.me .hof-name,
 :root[data-look="new"] .ip-title,
 :root[data-look="new"] .pf-ring span,
 :root[data-look="new"] .pod-step,
@@ -256,6 +257,7 @@
 :root[data-look="new"] .screen.play .tm-total .d,
 :root[data-look="new"] .screen.play .big-group-head .d,
 :root[data-look="new"] .screen.play .cal-cell.now,
+:root[data-look="new"] .screen.play .hof-row.me .hof-name,
 :root[data-look="new"] .screen.play .ip-title,
 :root[data-look="new"] .screen.play .ob-review-me .li-name {
   font-family: var(--body-font); font-weight: 800; letter-spacing: -.01em; font-variant-numeric: tabular-nums;
@@ -435,7 +437,6 @@
 :root[data-look="new"] .rm-vote,
 :root[data-look="new"] .hr-extra,
 :root[data-look="new"] .ic-playfor,
-:root[data-look="new"] .hof-row.me,
 :root[data-look="new"] .wrapped-tile,
 :root[data-look="new"] .mw-sticker,
 :root[data-look="new"] .dg-area select { border-radius: 12px; }

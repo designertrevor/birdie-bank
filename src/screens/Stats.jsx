@@ -20,6 +20,8 @@ import { TREND_LABEL, handicapTrend, trendEmptyText } from '../lib/hc-trend.js';
 import { statsInsight, trendInsight } from '../lib/data-insights.js';
 import { formatIndex } from '../lib/format.js';
 import { TrendChart } from '../components/TrendChart.jsx';
+import { GameArt } from '../components/GameArt.jsx';
+import { GAMES } from '../lib/round.js';
 import { FoldRow, Insight, RangePill, StatTile } from '../components/DataCards.jsx';
 
 const RANGE_KEY = 'bb-stats-range';
@@ -85,9 +87,11 @@ export default function Stats({ range: given = null }) {
 
         {st.rounds === 0 ? (
           <>
-            <Empty illo="card" title="No rounds here" text={emptyText(range, label)} />
+            <Empty illo="card" title="No rounds here" text={emptyText(range, label)}
+              action={<button className="ec" onClick={() => nav.push('newRound')}><Icon name="golf" fill /> Start a round</button>} />
             <RecordBookNote line={line} />
-            <Trend trend={trend} />
+            {/* No second empty state under the first: the trend shows once there's a round to draw from */}
+            {trend.points.length > 0 && <Trend trend={trend} />}
           </>
         ) : (
           <>
@@ -250,7 +254,7 @@ function Lines({ lines, label, place = false }) {
       {lines.map(l => {
         const amt = lineAmount(l, FMT);
         return (
-          <FoldRow key={l.key} icon={place ? 'map-pin' : 'golf'} tone={amt.tone} value={amt.text}
+          <FoldRow key={l.key} icon={place ? 'map-pin' : 'golf'} lead={!place && GAMES[l.key] ? <GameArt game={l.key} size={40} /> : null} tone={amt.tone} value={amt.text}
             title={<>{l.name}{place && l.place ? <span className="sl-place"> · {l.place}</span> : null}</>}
             sub={`${l.rounds} round${l.rounds === 1 ? '' : 's'} · ${lineRecord(l)}`}>
             <p className="fold-text">{lineDetail(l, FMT)}</p>

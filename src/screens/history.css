@@ -16,12 +16,15 @@
   height: 32px; padding: 0 10px; border: none; border-radius: calc(var(--r-chip) - 2px); background: none; color: var(--mute);
   font: inherit; font-size: 13px; font-weight: 700; cursor: pointer; white-space: nowrap;
 }
-.rb-kind.active { background: var(--card); color: var(--ink); box-shadow: var(--hair); }
+.rb-kind.active { background: var(--ink); color: var(--canvas); }
+/* (Ink thumb, like the other switches: the white one on beige all but vanished in dark) */
 /* The tap target stays 44px tall around the 32px look */
 .rb-kind { position: relative; }
 .rb-kind::after { content: ''; position: absolute; inset: -6px 0; }
 .hx-games { flex-wrap: nowrap; overflow-x: auto; scrollbar-width: none; padding-bottom: 12px; }
 .hx-games::-webkit-scrollbar { display: none; }
+/* A sideways row fades at its right edge, so a chip or tile cut there reads as more to scroll, not a broken layout */
+.hx-games, .hx-h2h .h2h { mask-image: linear-gradient(to right, #000 calc(100% - 32px), transparent); -webkit-mask-image: linear-gradient(to right, #000 calc(100% - 32px), transparent); scroll-padding-inline: 16px; }
 .hx-games .pill-btn { flex-shrink: 0; }
 
 /* The chart card: net and count on one line, the line, the stats link inside its foot */
@@ -52,7 +55,7 @@
 
 /* The months and their round cards */
 .hx-month .month-head { padding-top: 18px; }
-.hx-month .mh-name { font-family: var(--display); font-weight: var(--display-weight); }
+.hx-month .mh-name { font-family: var(--body-font); font-weight: 700; }
 .hx-cards { display: flex; flex-direction: column; gap: 8px; padding: 0 16px; }
 .hx-cards > .books-mark { margin: 0; border-radius: var(--r-card); }
 
@@ -88,8 +91,8 @@
 .rc-hole { flex-shrink: 0; color: var(--mute); font-size: 12px; font-weight: 600; }
 .rc-moment.quiet { color: var(--mute); font-size: 12px; font-weight: 600; }
 /* A good day: the bigger card, on a butter band */
-.rc-card.big { grid-template-columns: 64px minmax(0, 1fr) auto; background: var(--band-butter); }
-.rc-card.big .rc-art { width: 64px; height: 64px; }
+/* (The same art size as every card, so titles line up down the list; the band and type mark it) */
+.rc-card.big { background: var(--band-butter); }
 .rc-card.big .rc-game { font-size: 22px; }
 .rc-card.big .rc-amt { font-size: 24px; }
 .rc-card.big .rc-foot { border-top-color: rgba(10, 10, 10, .08); }

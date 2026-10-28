@@ -3506,7 +3506,8 @@ a.header-btn.rm-open { text-decoration: none; }
 .hof-list { list-style: none; padding: 4px 14px; }
 .hof-row { display: flex; align-items: center; gap: 12px; min-height: 56px; padding: 8px 0; border-bottom: 1px solid var(--line); }
 .hof-row:last-child { border-bottom: 0; }
-.hof-row.me { margin: 0 -14px; padding: 8px 14px; background: var(--pick-tint); border-radius: 14px; border-bottom-color: transparent; }
+/* You in the money list: in bold, not on a pink band (pink is for the one thing to tap) */
+.hof-row.me .hof-name { font-weight: 800; color: var(--ink); }
 .hof-row .avatar { margin: 0; flex-shrink: 0; }
 .hof-rank { width: 20px; flex-shrink: 0; text-align: center; font-size: 14px; font-weight: 700; color: var(--mute); font-variant-numeric: tabular-nums; }
 .hof-name { display: block; font-size: 15px; font-weight: 700; color: var(--ink); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
@@ -4024,6 +4025,8 @@ a.header-btn.rm-open { text-decoration: none; }
 .fold-head { display: flex; align-items: center; gap: 12px; width: 100%; min-height: 60px; padding: 10px 0; background: none; border: none; text-align: left; cursor: pointer; font-family: inherit; color: var(--ink); }
 .fold-ic { width: 36px; height: 36px; flex-shrink: 0; display: grid; place-items: center; border-radius: 12px; background: var(--surface); color: var(--icon); font-size: 18px; }
 .fold-head .row-main { flex: 1; min-width: 0; }
+/* A game's own art can lead a row instead of the icon tile (Your stats, By game) */
+.fold-lead { display: grid; flex-shrink: 0; width: 40px; height: 40px; }
 .fold-title { display: block; font-weight: 700; font-size: 15px; color: var(--ink); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .fold-title .sl-place { font-weight: 500; color: var(--mute); }
 .fold-sub { display: block; margin-top: 2px; font-size: 13px; font-weight: 500; color: var(--mute); font-variant-numeric: tabular-nums; }
@@ -4059,7 +4062,7 @@ a.header-btn.rm-open { text-decoration: none; }
 .bt-top { display: flex; align-items: center; justify-content: space-between; gap: 8px; width: 100%; }
 .bt-ic { width: 28px; height: 28px; margin: 0; font-size: 15px; }
 .bt-k { font-size: 12px; font-weight: 600; letter-spacing: .08em; }
-.bt-who { font-size: 14px; font-weight: 700; color: var(--pink-text); }
+.bt-who { font-size: 14px; font-weight: 700; color: var(--ink); }
 .badge-tile.empty .bt-who { color: var(--mute); }
 .bt-v { margin-top: 8px; font-size: 30px; letter-spacing: -.03em; line-height: 1.05; font-variant-numeric: tabular-nums; }
 .bt-sub { display: block; margin-top: 4px; font-size: 13px; font-weight: 500; color: var(--mute); line-height: 1.3; }

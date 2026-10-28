@@ -7,7 +7,7 @@ import { Empty, Header, Icon, Screen } from '../components/ui.jsx';
 import { Avatar } from '../components/Avatar.jsx';
 import { Spot } from '../components/Spot.jsx';
 import '../art-places.css';
-import { CrownedFace, Podium } from '../components/Podium.jsx';
+import { Podium } from '../components/Podium.jsx';
 import { useGroupAvatars } from '../lib/useAvatars.js';
 import { useStore } from '../lib/store.js';
 import { useRecordBook } from '../lib/useRecordBook.js';
@@ -74,7 +74,8 @@ export default function HallOfFame({ crew: crewId }) {
     return (
       <Screen>
         <Header title="Hall of fame" small onBack={nav.pop} />
-        <div className="scroll"><Empty illo="ribbons" title="No rounds yet" text={`Play a round with ${crew.name} and its money list, champions and records start here.`} /></div>
+        <div className="scroll"><Empty illo="ribbons" title="No rounds yet" text="Play a round with this crew and its money list, champions and records start here."
+          action={<button className="ec" onClick={() => nav.push('newRound')}><Icon name="golf" fill /> Start a round</button>} /></div>
       </Screen>
     );
   }
@@ -84,7 +85,8 @@ export default function HallOfFame({ crew: crewId }) {
       <Header title="Hall of fame" small onBack={nav.pop} />
       <div className="scroll">
         <div className="settle-lede hof-hero">
-          {season.champion && faces.get(season.champion.id) ? <CrownedFace model={faces.get(season.champion.id)} size={76} /> : <Spot kind="cup" size={96} />}
+          {/* The cup leads: the champion's crowned face is on the podium just below, so it isn't there twice */}
+          <Spot kind="cup" size={96} />
           <div className="eyebrow">{crew.name}</div>
           <div className="d settle-count">{season.champion ? `${first(season.champion.id)} ${season.champion.id === me ? 'lead' : 'leads'} the season` : 'The season so far'}</div>
           <p>{season.rounds ? `${plural(season.rounds, 'round')} for money ${sinceLine}` : `No rounds for money ${sinceLine}`}</p>
