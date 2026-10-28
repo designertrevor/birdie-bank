@@ -2,7 +2,7 @@
 // Layout Lab E (overhaul, 2026-10-26): one card says what's still owed, then two sections, "Owes
 // you" and "You owe", a card per person with Paid and Roll to next time side by side. The sections
 // come from tab-sections.js, which only reads the plan the Tab always had (ledger.js outstanding).
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import './tab.css';
 import { Empty, Header, Icon, Screen, useUI } from '../components/ui.jsx';
 import FreePromise from '../components/FreePromise.jsx';
@@ -13,7 +13,7 @@ import { useStore } from '../lib/store.js';
 import { headToHeadSummary, nameOf, outstanding } from '../lib/ledger.js';
 import { paymentGroups } from '../lib/shared-tab.js';
 import { sharedDebts } from '../lib/pair-debts.js';
-import { undoPayments, useTabSync } from '../lib/tab-sync.js';
+import { undoPayments, usePaymentsOff, useTabSync, useTabWaiting } from '../lib/tab-sync.js';
 import { useTripPlans } from '../lib/trip-plan-sync.js';
 import { useBigSync } from '../lib/big-sync.js';
 import { useCupSync } from '../lib/cup-sync.js';
@@ -198,6 +198,7 @@ export default function Ledger() {
             )}
           </div>
         )}
+        <TabWaiting />
         {trips.map(t => <TripTabCard key={t.trip.id} status={t} />)}
         {trips.some(t => t.money.length > 0) && plan.length > 0 && <p className="field-help pad trip-folded">{trips.filter(t => t.money.length > 0).every(t => t.big) ? 'The game’s money is in each person’s total below.' : 'Trip money is in each person’s total below.'}</p>}
         {plan.length === 0 ? (
@@ -303,6 +304,26 @@ export default function Ledger() {
     </Screen>
   );
 }
+
+/**
+ * Changes made here (a payment, an ask to roll it over) that haven't reached the other phones yet:
+ * said quietly once they've waited a few seconds, so a tap with signal never flashes it, and gone
+ * as soon as they're sent. The money on this phone already counts them.
+ */
+function TabWaiting() {
+  // With payments off (no server, or its table not there yet) changes stay on this phone by design: nothing to say
+  const off = usePaymentsOff();
+  const any = useTabWaiting() > 0 && !off;
+  const [late, setLate] = useState(false);
+  useEffect(() => {
+    if (!any) return undefined;
+    const t = setTimeout(() => setLate(true), WAIT_SAY_MS);
+    return () => { clearTimeout(t); setLate(false); };
+  }, [any]);
+  if (!any || !late) return null;
+  return <p className="te-waiting" role="status"><Icon name="cloud-slash" /> Not sent yet. Your latest changes reach the group when there’s signal.</p>;
+}
+const WAIT_SAY_MS = 6000;
 
 function listNames(names) {
   if (names.length <= 1) return names.join('');
