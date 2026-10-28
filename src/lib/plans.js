@@ -20,7 +20,7 @@ import { halfStrokesOffered } from './allowances.js';
 import { applySetup } from './plan-setup.js';
 import { linksOf } from './people-links.js';
 import { RSVPS, HOST, planPeople, planChoice, daysUntil, timeLabel, dayLabel, upcomingPlans, isoDate } from './plan-basics.js';
-import { askText, dayCode, decodeDays, encodeDays } from './plan-open.js';
+import { ASK_DEFAULT, askText, dayCode, decodeDays, encodeDays } from './plan-open.js';
 
 // Who's in, the vote, the dates and Up next's list live in plan-basics.js, so Up next can load them alone
 export { RSVPS, HOST, RSVP_LABEL, betsFor, suggestedBetFor, planPeople, planCounts, countsLine, tally, planChoice, isoDate, daysUntil, timeLabel, dayLabel, whenLabel, dayChoices, upcomingPlans, movedPlanOf } from './plan-basics.js';
@@ -380,7 +380,11 @@ export function inviteText(plan, link, now = new Date()) {
   if (daysUntil(plan.date, now) == null) return askText(plan, link, now);
   const { game } = planChoice(plan);
   const t = timeLabel(plan.teeTime);
+  // A message the organizer wrote on the ask goes first, even with the day set; the default one
+  // ("...soon. Who's in?") would only repeat the question the day line asks
+  const own = typeof plan.ask === 'string' && plan.ask.trim() && plan.ask.trim() !== ASK_DEFAULT ? plan.ask.trim() : null;
   return [
+    own,
     `Golf ${dayWords(plan, now)}${t ? ` at ${t}` : ''}? ${plan.course?.name || ''}.`.replace(' .', '.'),
     `Thinking ${GAMES[game]?.name || 'a game'}${playForLine(plan) ? `, ${playForLine(plan).toLowerCase()}` : ''}. Tap to say if you’re in and vote on the game and the bet:`,
     link,
