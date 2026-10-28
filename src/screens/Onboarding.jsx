@@ -9,7 +9,7 @@ import { GameArt } from '../components/GameArt.jsx';
 import { Scene } from '../components/Scenes.jsx';
 import { ArtImage } from '../components/ArtFile.jsx';
 import { Stage } from '../components/Stage.jsx';
-import { useState } from 'react';
+import { createContext, useContext, useState } from 'react';
 import { ArtIcon, Icon, Numpad, PickChip, PickMark, PickRow, Screen } from '../components/ui.jsx';
 import { getState, update, uid } from '../lib/store.js';
 import { track } from '../lib/analytics.js';
@@ -85,6 +85,14 @@ function StepArt({ art }) {
       <Spot kind={art.spot} ids={art.ids} size={160} className="ob-spot" />
     </div>
   );
+}
+
+// The step on stage now. A page on its way out (Stage keeps it a beat to animate) goes inert, so
+// its buttons can't be tapped or read twice while the next page comes in
+const OnStage = createContext(null);
+function Page({ step, children }) {
+  const out = useContext(OnStage) !== step;
+  return <div className={`ob-page ${step === 'welcome' ? 'first' : ''}`} inert={out} aria-hidden={out || undefined}>{children}</div>;
 }
 
 /** The welcome's game tags: they drift a little, and wiggle when tapped, since they look tappable. Decorative. */
@@ -353,9 +361,11 @@ export default function Onboarding({ onDone, play = null }) {
         </div>
       </div>
       <div className="ob-stage">
-        <Stage id={step} dir={dir}>
-          <div className={`ob-page ${step === 'welcome' ? 'first' : ''}`}>{page()}</div>
-        </Stage>
+        <OnStage.Provider value={step}>
+          <Stage id={step} dir={dir}>
+            <Page step={step}>{page()}</Page>
+          </Stage>
+        </OnStage.Provider>
       </div>
       {signingIn && <SignInSheet open source="onboarding" onClose={() => setSigningIn(false)} title="Welcome back" text="Sign in and your rounds, players and the Tab come right back." />}
       <Numpad open={pad && step === 'name'} title="Handicap" initial={index ?? ''} allowDecimal allowNegative min={-10} max={54}
