@@ -50,3 +50,5 @@
 /* Not sent yet: one quiet line under the summary while changes wait for signal */
 .te-waiting { display: flex; align-items: center; gap: 8px; margin: -4px 20px 12px; font-size: 13px; line-height: 1.4; color: var(--mute); }
 .te-waiting i { flex-shrink: 0; font-size: 16px; }
+/* The tools list (Season, Close the books, a crew's Hall of fame) has the same hairline edge as every other card */
+.tab-e .tab-tools:not(.solo) { border-radius: var(--r-card); box-shadow: var(--hair); }

@@ -2,6 +2,7 @@
 // (Everyone, then a chip for each crew or trip with money, one tap deep), one tab's own payments,
 // the bars of everyone's final net, and the list of closed seasons Season and History keep.
 import { Icon, useUI } from './ui.jsx';
+import './tab-card.css';
 import { Avatar, PayButton, RequestButton } from './Pay.jsx';
 import { TripTabCard } from './Trips.jsx';
 import { useStore } from '../lib/store.js';
@@ -137,14 +138,19 @@ export function OneTab({ tab }) {
               <span className="chevron"><Icon name="caret-right" /></span>
             </button>
             {isCrew && (
-              <div className="pay-acts wrap">
-                {owesMe
-                  ? <RequestButton payer={payInfoFor(state, other)} mine={payInfoFor(state, state.me)} amount={l.amount} note={note} who={other} />
-                  : <PayButton info={payInfoFor(state, other)} amount={l.amount} note={note} />}
-                <button className="pay-btn ink" onClick={() => mark(l)} aria-label={owesMe ? `${first(name)} paid me ${money(l.amount)}` : `I paid ${first(name)} ${money(l.amount)}`}>
-                  <span className="pay-in"><Icon name="check-circle" fill /><span className="pay-lbl">{owesMe ? `${first(name)} paid me` : 'I paid'}</span></span>
-                </button>
-              </div>
+              <>
+                {/* Paid leads and the payment app is a step quieter, as on Everyone (TabCard.jsx) */}
+                <div className="pay-acts settle-pair solo">
+                  <button className="pay-btn settle" onClick={() => mark(l)} aria-label={owesMe ? `${first(name)} paid me ${money(l.amount)}` : `I paid ${first(name)} ${money(l.amount)}`}>
+                    <span className="pay-in"><Icon name="check-circle" fill /><span className="pay-lbl">{owesMe ? `${first(name)} paid me` : 'I paid'}</span></span>
+                  </button>
+                </div>
+                <div className="pay-acts pay-more">
+                  {owesMe
+                    ? <RequestButton payer={payInfoFor(state, other)} mine={payInfoFor(state, state.me)} amount={l.amount} note={note} who={other} named />
+                    : <PayButton info={payInfoFor(state, other)} amount={l.amount} note={note} />}
+                </div>
+              </>
             )}
             {against && (
               <p className="crew-net-note">
@@ -156,7 +162,8 @@ export function OneTab({ tab }) {
       })}
       {others.length > 0 && (
         <>
-          <div className="sec-label">{mine.length ? 'Everyone else' : 'Who owes who'}</div>
+          <h2 className="sec-label">{mine.length ? 'Everyone else' : 'Who owes who'}</h2>
+          <div className="te-list">
           {others.map(l => (
             <div key={l.from + l.to} className="ledger-row static trip-other">
               <div className="lr-info">
@@ -166,18 +173,22 @@ export function OneTab({ tab }) {
               {isCrew && <button className="pill-btn sm" onClick={() => mark(l)} aria-label={`Mark paid: ${nameOf(state, l.from)} paid ${nameOf(state, l.to)} ${money(l.amount)}`}>Mark paid</button>}
             </div>
           ))}
+          </div>
         </>
       )}
       {isCrew && <SinceRolled scope={tab.key} />}
       {isCrew ? (
         <>
           <p className="field-help pad">Only rounds where everyone else who played is in this crew, squared in the fewest payments. With your other tabs it adds up to Everyone.</p>
-          <button className="text-link stats-link" onClick={() => nav.push('hallOfFame', { crew: tab.id })}>
-            <Icon name="trophy" fill /> <span className="row-main">Hall of fame<span className="sl-sub">The season’s money list, champions, biggest wins and records</span></span> <Icon name="caret-right" />
-          </button>
-          <button className="text-link stats-link" onClick={() => nav.push('closeBooks', { scope: tab.key })}>
-            <Icon name="book-bookmark" fill /> <span className="row-main">Close the books<span className="sl-sub">Save the season with everyone’s totals, then settle up or roll each balance to next season</span></span> <Icon name="caret-right" />
-          </button>
+          {/* The crew's tools in one short list, like Everyone's */}
+          <div className="tab-tools">
+            <button className="text-link stats-link" onClick={() => nav.push('hallOfFame', { crew: tab.id })}>
+              <Icon name="trophy" fill /> <span className="row-main">Hall of fame<span className="sl-sub">The season’s money list, champions, biggest wins and records</span></span> <Icon name="caret-right" />
+            </button>
+            <button className="text-link stats-link" onClick={() => nav.push('closeBooks', { scope: tab.key })}>
+              <Icon name="book-bookmark" fill /> <span className="row-main">Close the books<span className="sl-sub">Save the season with everyone’s totals, then settle up or roll each balance to next season</span></span> <Icon name="caret-right" />
+            </button>
+          </div>
         </>
       ) : (
         <p className="field-help pad">Rounds outside your crews and trips. They settle with the rest on Everyone, and with your other tabs they add up to it.</p>
