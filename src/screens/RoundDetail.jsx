@@ -238,7 +238,7 @@ export default function RoundDetail({ id, celebrate }) {
             <div style={{ padding: '0 16px' }}>
               {playForOf(round).kind === 'reward'
                 ? <RewardCard round={round} res={res} />
-                : <ArtNote spot="bragging" plated className="flush">Played for points, so nothing goes on the Tab. Just bragging rights.</ArtNote>}
+                : <ArtNote spot="bragging" className="flush">Played for points, so nothing goes on the Tab. Just bragging rights.</ArtNote>}
             </div>
           </>
         )}

@@ -278,8 +278,8 @@ export function RewardCard({ round, res }) {
   const mine = o.winners.includes(me) || o.owers.includes(me);
   return (
     <div className={`reward-card ${square ? 'square' : ''}`}>
-      {/* Who's buying, on its cream plate (its ball is cut out to the sky); the handshake when nobody won */}
-      {square ? <Spot kind="handshake" size={64} className="reward-art" /> : <Spot kind="buying" size={64} outline={false} className="reward-art art-plate" />}
+      {/* Who's buying (its ball is solid now, so no plate under it); the handshake when nobody won */}
+      {square ? <Spot kind="handshake" size={64} className="reward-art" /> : <Spot kind="buying" size={64} className="reward-art" />}
       <div className="rc-text">
         <div className="rc-win d">{o.win}</div>
         <div className="rc-buy">{o.buy}</div>
