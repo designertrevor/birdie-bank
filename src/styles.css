@@ -582,6 +582,8 @@ a.set-row { text-decoration: none; }
 .tog::after { content: ''; position: absolute; top: 4px; left: 4px; width: 26px; height: 26px; border-radius: 50%; background: #fff; box-shadow: 0 1px 3px rgba(0,0,0,.2); transition: left .3s var(--spring); }
 .tog.on::after { left: 26px; }
 .tog:disabled { opacity: .45; }
+/* Off, the track carries an edge a thumb can find in the sun (its fill alone was 1.25:1 on a card) */
+.tog:not(.on) { box-shadow: inset 0 0 0 1.5px var(--mute); }
 
 /* NASSAU SETUP */
 .nassau-bet-row { display: flex; align-items: center; justify-content: space-between; padding: 12px 12px 12px 18px; margin: 0 16px 8px; background: var(--card); border-radius: 18px; border: none !important; }
@@ -751,6 +753,15 @@ button:disabled { cursor: not-allowed; }
 .summary-card { background: var(--ochre); }
 /* Dark text on the ochre in both themes (the new look's quieter sub colour would sit grey on it) */
 .summary-card .li-sub, :root[data-look="new"] .summary-card .li-sub { color: rgba(10,10,10,.72); }
+/* In the dark the bright ochre block was the loudest thing on the screen: the card, with an ochre edge on top */
+:root[data-theme="dark"] .block.summary-card { background: var(--card); box-shadow: var(--hair), inset 0 3px 0 var(--ochre); }
+:root[data-theme="dark"] .block.summary-card, :root .block.summary-card .d { color: var(--ink); }
+:root[data-theme="dark"] .block.summary-card .li-sub { color: var(--mute); }
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) .block.summary-card { background: var(--card); box-shadow: var(--hair), inset 0 3px 0 var(--ochre); }
+  :root:not([data-theme="light"]) .block.summary-card, :root .block.summary-card .d { color: var(--ink); }
+  :root:not([data-theme="light"]) .block.summary-card .li-sub { color: var(--mute); }
+}
 .order-num { width: 28px; height: 28px; border-radius: 50%; background: var(--surface); display: grid; place-items: center; font-weight: 800; font-family: var(--display); margin-right: 12px; flex-shrink: 0; }
 .set-row.static { gap: 6px; }
 
@@ -764,7 +775,8 @@ button:disabled { cursor: not-allowed; }
 /* Setup picks get a light pink tint and a pink ring when chosen, like the game rows */
 .list-item.pick { transition: transform .2s var(--spring), background .2s, box-shadow .2s; }
 .list-item.pick.on { background: var(--pick-tint); box-shadow: inset 0 0 0 2px var(--pink-fill); }
-.tee-dot { width: 10px; height: 10px; border-radius: 50%; display: inline-block; margin-right: 6px; box-shadow: inset 0 0 0 1px rgba(0,0,0,.2); }
+/* A ring of ink on every tee dot, so a black tee shows on a dark chip and a white one on a light chip */
+.tee-dot { width: 10px; height: 10px; border-radius: 50%; display: inline-block; margin-right: 6px; box-shadow: 0 0 0 1.5px color-mix(in srgb, var(--ink) 45%, transparent); }
 .hc-chip { border: none; background: var(--surface); border-radius: 999px; padding: 6px 12px; font-size: 13px; color: var(--body); cursor: pointer; display: inline-flex; align-items: center; gap: 6px; }
 .hc-chip strong { color: var(--ink); font-family: var(--display); font-size: 15px; }
 .hc-chip.missing { color: #8a5a00; background: #fff1c9; }
@@ -1039,11 +1051,10 @@ button:disabled { cursor: not-allowed; }
 .reveal-head { padding: 12px 20px 16px; text-align: center; }
 .reveal-title { font-size: 34px; font-weight: 800; letter-spacing: -.03em; margin-top: 4px; }
 .reveal-row { display: flex; align-items: center; gap: 12px; padding: 16px; margin: 0 16px 8px; background: var(--card); border-radius: 20px; }
-.reveal-row.top { background: var(--pink-fill); color: #fff; }
-.reveal-row.top .sn, .reveal-row.top .reveal-amt { color: #fff !important; }
+/* The winner's row: a gold edge (the crown's colour) on the card, not a pink slab, so pink stays on the
+   buttons; the amount keeps its win green */
+.reveal-row.top { background: var(--card); color: var(--ink); box-shadow: inset 0 0 0 2px var(--ochre); }
 .reveal-row.top .sr { background: var(--ochre); color: var(--on-pastel); }
-/* The per-game line under a winner's name: the usual muted grey is unreadable on the pink */
-.reveal-row.top .rv-games { color: rgba(255,255,255,.82); }
 .reveal-amt { font-family: var(--display); font-size: 30px; font-weight: 800; letter-spacing: -.02em; color: var(--ink); font-variant-numeric: tabular-nums; }
 /* Reveal motion. Rows are laid out from the start: they stagger in (--i), their totals wait dimmed until
    their turn, pop when they land, and the winner's row lifts and glows. Tapping to skip (.rv-still) shows the end state. */
@@ -1057,7 +1068,7 @@ button:disabled { cursor: not-allowed; }
 .screen.active .scroll > .reveal-row { animation: rowIn var(--duration-slow) var(--ease-smooth-out) both; animation-delay: calc(var(--duration-micro) + var(--i, 0) * var(--duration-stagger)); }
 @keyframes rowIn { from { opacity: 0; transform: translateY(var(--distance-medium)); } }
 .reveal-row { transition: background-color var(--duration-fast) var(--ease-out), box-shadow var(--duration-very-slow) var(--ease-smooth-out); }
-.reveal-row.top { box-shadow: 0 12px 28px -10px rgba(212,42,107,.6); }
+.reveal-row.top { box-shadow: inset 0 0 0 2px var(--ochre), 0 10px 24px -14px rgba(10,10,10,.35); }
 .screen.active .scroll > .reveal-row.top { animation: winLift var(--duration-very-slow) var(--ease-smooth-out); }
 @keyframes winLift { 40% { transform: translateY(-3px) scale(1.025); } }
 .reveal-amt { transform-origin: right center; transition: opacity var(--duration-fast) ease-in-out; }
@@ -2044,7 +2055,6 @@ button.trip-card:active { transform: scale(.97); }
 .sq-p .avatar.av-buddy, .sq-p .avatar.av-photo { margin: 0; width: 36px; height: 36px; }
 /* The reveal: a small avatar between the place and the name */
 .reveal-row .rv-av { margin: 0; width: 32px; height: 32px; font-size: 14px; }
-.reveal-row.top .rv-av { box-shadow: 0 0 0 2px rgba(255,255,255,.7); }
 
 /* Your profile */
 .profile-hero { text-align: center; padding: 8px 20px 14px; }

@@ -37,10 +37,18 @@
 }
 .money-strip:active { transform: scale(.985); }
 .money-strip.themed { background: var(--gt-soft, var(--card)); }
-/* In the dark the theme's pastel would sit under light text: a tint of the game's colour on the card instead */
-:root[data-theme="dark"] .money-strip.themed { background: color-mix(in srgb, var(--gt) 14%, var(--card)); }
+/* In the dark a tint of the game's colour went olive or brown: the plain card, with the game's colour as a
+   rule down its left edge */
+:root[data-theme="dark"] .money-strip.themed { background: var(--card); box-shadow: var(--hair), inset 3px 0 0 var(--gt); }
 @media (prefers-color-scheme: dark) {
-  :root:not([data-theme="light"]) .money-strip.themed { background: color-mix(in srgb, var(--gt) 14%, var(--card)); }
+  :root:not([data-theme="light"]) .money-strip.themed { background: var(--card); box-shadow: var(--hair), inset 3px 0 0 var(--gt); }
+}
+/* Read in full sun: on the light strip the amounts take deeper red and green (7:1 and up) */
+:root:not([data-theme="dark"]) .money-strip .ms-a.neg { color: #8f2219; }
+:root:not([data-theme="dark"]) .money-strip .ms-a.pos { color: #0a5440; }
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) .money-strip .ms-a.neg { color: var(--loss); }
+  :root:not([data-theme="light"]) .money-strip .ms-a.pos { color: var(--win); }
 }
 .ms-items { flex: 1; min-width: 0; display: grid; grid-auto-flow: column; grid-auto-columns: minmax(0, 1fr); gap: 4px; }
 .ms-item { display: flex; flex-direction: column; align-items: center; min-width: 0; line-height: 1.15; }
@@ -145,3 +153,6 @@
 /* Small buttons on the scoring screen keep their size but take a 44px tap, for a gloved thumb */
 .ws-change, .play .change-btn { position: relative; }
 .ws-change::before, .play .change-btn::before { content: ''; position: absolute; left: 50%; top: 50%; width: max(100%, 44px); height: max(100%, 44px); transform: translate(-50%, -50%); }
+
+/* The first tee card's Lock it in stays at the sheet's foot while the calls scroll above it */
+.ft-cta { position: sticky; bottom: -16px; z-index: 1; background: var(--sheet-bg); box-shadow: 0 -1px 0 var(--line-soft); }

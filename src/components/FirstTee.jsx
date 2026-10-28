@@ -85,7 +85,8 @@ export function FirstTeeSheet({ round, open, mode = 'view', canEdit = false, me 
           <p className="field-help">Gimmes and mulligans are on the honor system: the app records the call, it doesn’t score it.</p>
         </div>
       </div>
-      <div className="cta-wrap">
+      {/* Pinned to the sheet's foot, so the calls and Lock it in show together */}
+      <div className="cta-wrap ft-cta">
         {locking
           ? <>
             <button className="full-btn" onClick={() => onLock(calls)}><Icon name="lock-simple" fill /> Lock it in</button>

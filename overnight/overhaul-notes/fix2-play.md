@@ -55,3 +55,30 @@ with no game) and live ones (Wolf, Banker, hole 9, hole 18, a fresh round).
 
 Checks: npm test, npm run lint (one old warning in scripts/review-seed.js), npm run build and
 npm run e2e (a full 18-hole Skins round to Settle up) all pass.
+
+## Audit fixes (auditor-1 to 3, owner play)
+
+Fixed:
+- **A round of one** ends on its own card: the Nice round finish and results (score, to par, the card),
+  never "All square $0, nobody owes anybody". Display only; scoring a one-player round is unchanged.
+- **In the sun**: the money strip's amounts are a deeper red and green on the light strip (7:1 and up);
+  an off switch has a 1.5px edge in the mute colour (app-wide `.tog`); the empty rings on setup rows
+  are mute (3:1 and up); every tee dot has an ink ring, so Black shows on a dark chip.
+- **Dark bands**: the money strip, Run it back, the Bets summary card, the results winner block and
+  the reveal's head are the plain card with the game's colour as an edge (left on the strip, on top
+  elsewhere), not olive or brown washes; the Round ready oval is the clear game colour.
+- **Setup selection**: a picked game, course or player is the card with a 2px ink edge and an ink
+  check (no pink wash, border or check).
+- **Ties**: players level on top stand on steps of the same height, and every T1 in Standings wears
+  the gold disc.
+- **The reveal's winner row**: a gold-edged card with the amount in win green, not a pink slab.
+- **Round ready**: Invite the group is an outline button, so Tee off is the one filled button.
+- **First tee sheet**: Lock it in and Skip for now are pinned at the sheet's foot.
+- **Hole by hole tables**: an empty cell is an en dash, not a middle dot.
+
+Left (bigger changes, or a call for Trevor): the share card's blank game tile (canvas art), team
+results on a three-step podium, the reward round's hero and a "Lunch is bought" action, Settle up as
+one card and its blue Venmo button, the default par number in grey (kept as built), Delete round's
+place in the end-round dialog (the shared ask dialog has no quiet style), setup and scoring fades
+under the fixed header, collapsing the Wolf panel, Vegas teams, the Stableford panel, the handicaps
+sheet's chip wall, the scorecard's sideways cue, Done landing on History, the overview's entrance.

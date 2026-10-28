@@ -85,7 +85,7 @@ export function ReadyStep({ round, onStart, onLater }) {
             <button className="text-link inline" onClick={() => setSharing(true)}>Send it again</button></p>
         ) : (
           <Callout spot="link" title={`Let the group watch ${what} live`}
-            action={<button className="pill-btn co-act dark" onClick={() => setSharing(true)}><Icon name="share-network" /> Invite the group</button>}>
+            action={<button className="pill-btn co-act ready-invite" onClick={() => setSharing(true)}><Icon name="share-network" /> Invite the group</button>}>
             No download. They just open a link on their own phone.
           </Callout>
         ))}
