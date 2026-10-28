@@ -68,3 +68,5 @@
 /* The Tab with one person, in a sheet */
 .pl-pay { margin: 4px 20px 6px; }
 .pl-pay-help { margin: 4px 20px; }
+/* The money on a row reads as coloured text, not a filled pill: Players stays a calm list */
+.pl-owe.pos, .pl-owe.neg { background: none; padding: 0 4px; }

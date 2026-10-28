@@ -147,7 +147,7 @@
 /* A Heads up card (a reminder, an update): its buttons start under its words, not back at the
    card's edge under the picture, so the left edge doesn't zigzag. Only for the plain cards: a
    picture, its words, its buttons */
-.remind-card:has(> .rc-head:first-child + .rc-acts:last-child) { display: grid; grid-template-columns: auto minmax(0, 1fr); column-gap: 12px; }
+.remind-card:not(.cs-wait):has(> .rc-head:first-child + .rc-acts:last-child) { display: grid; grid-template-columns: auto minmax(0, 1fr); column-gap: 12px; }
 .remind-card:has(> .rc-head:first-child + .rc-acts:last-child) > .rc-head { display: contents; }
 .remind-card:has(> .rc-head:first-child + .rc-acts:last-child) > .rc-acts { grid-column: 2; }
 /* What's new's button is a quiet one: a filled button is for the screen's main action */
