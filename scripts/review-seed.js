@@ -3,7 +3,6 @@
 // app's own functions. Every number comes from a fixed random seed, so a rebuild gives the same state.
 // buildSeed(now) returns the state; newOnlyPlans(state, now) returns the plans only the New copy has.
 
-/* eslint-disable no-undef */
 export async function buildSeed(NOW, SEED = 5) {
   const R = await import('/src/lib/round.js');
   const C = await import('/src/lib/courses.js');
