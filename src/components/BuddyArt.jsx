@@ -361,8 +361,8 @@ export function BuddyArt({ id, bg, className = '' }) {
   return (
     <svg className={`buddy-art ${className}`} viewBox="0 0 64 64" aria-hidden="true" focusable="false">
       <rect width="64" height="64" fill={backdropOf(bg).hex} />
-      {/* On its backdrop a buddy's line follows the backdrop, not the theme: ink on the pastels, cream on teal (critters draw their own) */}
-      {file ? <ArtImage file={file} w={64} h={64} outline={false} ring={Critter ? '' : backdropOf(bg).ink === '#ffffff' ? 'buddy-ring-cream' : 'buddy-ring-ink'} /> : Critter ? <Critter /> : <><Ball /><Hat /></>}
+      {/* On its backdrop a buddy's (or critter's) line follows the backdrop, not the theme: ink on the pastels, cream on teal */}
+      {file ? <ArtImage file={file} w={64} h={64} outline={false} ring={backdropOf(bg).ink === '#ffffff' ? 'buddy-ring-cream' : 'buddy-ring-ink'} /> : Critter ? <Critter /> : <><Ball /><Hat /></>}
     </svg>
   );
 }
