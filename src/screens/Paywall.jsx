@@ -51,7 +51,7 @@ export default function Paywall({ source = 'onboarding' }) {
   // From Settings or the Season preview it's a look at Pro, so it closes without an answer. After onboarding, "Keep scoring for free" is the way out
   const onClose = source !== 'onboarding' ? () => nav.pop() : null;
   return (
-    <View plan={plan} setPlan={setPlan} onClose={onClose} onTrial={() => answer('trial')} onFree={() => answer('free')} freeWayOut={VARIANTS[variant]?.freeWayOut ?? true}>
+    <View plan={plan} source={source} setPlan={setPlan} onClose={onClose} onTrial={() => answer('trial')} onFree={() => answer('free')} freeWayOut={VARIANTS[variant]?.freeWayOut ?? true}>
       <SplitProSheet open={!!splitting} plan={splitting} onDone={() => nav.pop()} />
     </View>
   );
@@ -62,7 +62,7 @@ export default function Paywall({ source = 'onboarding' }) {
  * button. The trial is the same on both plans; the one picked says what comes after it, on its
  * row, on the timeline's last step and under the button.
  */
-function TrialWithFreeWayOut({ plan, setPlan, onClose, onTrial, onFree, freeWayOut, children }) {
+function TrialWithFreeWayOut({ plan, source, setPlan, onClose, onTrial, onFree, freeWayOut, children }) {
   const [start] = useState(() => new Date());
   const picked = PLANS[plan] || PLANS[DEFAULT_PLAN];
   // "Your next round is set up" only straight after onboarding set one up; from Settings or Season nothing was (more-4)
