@@ -21,7 +21,7 @@ import { playFromSearch } from '../lib/rule-links.js';
 import { SignInSheet } from '../components/Account.jsx';
 import { BuddyArt, BuddyFigure } from '../components/BuddyArt.jsx';
 import { Avatar } from '../components/Avatar.jsx';
-import { BUDDIES, avatarModel, buddyAvatar } from '../lib/avatars.js';
+import { BUDDIES, autoBuddyFor, avatarModel, buddyAvatar } from '../lib/avatars.js';
 import { accountsEnabled, useAccount } from '../lib/cloud.js';
 import {
   MATHS, ONBOARD_GAMES, SETTLES, SIZES, answered, gameList, nextStep, organizerRecord, payoff, prevStep,
@@ -196,7 +196,10 @@ export default function Onboarding({ onDone, play = null }) {
       if (again) { s.players[id].name = name.trim(); s.players[id].index = index; }
       else s.players[id] = { id, name: name.trim(), index, venmo: '', createdAt: Date.now() };
       s.me = id;
-      if (buddy) s.profile = { ...(s.profile || {}), avatar: buddyAvatar(buddy), updatedAt: Date.now() };
+      // No pick: the buddy All set showed is kept as yours, so Up next and every list wear the same face
+      // from the first screen (onboarding-1, onboarding-11). A pick from before (starting over) stays
+      const face = buddy || (!s.profile?.avatar && autoBuddyFor(name.trim())?.id);
+      if (face) s.profile = { ...(s.profile || {}), avatar: buddyAvatar(face), updatedAt: Date.now() };
       s.organizer = organizer;
       if (asksAge(a) && age) setAgeAnswer(s, age);
       s.onboarded = true;
@@ -359,7 +362,9 @@ export default function Onboarding({ onDone, play = null }) {
     ];
     const first = name.trim();
     // The finish gets its moment: your group, you first, at the size you said (onboarding-8)
-    const crew = [...new Set([buddy || CROWD[0], ...crowdOf(a.size)])].slice(0, crowdOf(a.size).length);
+    // You first, wearing the face the card below shows (your pick, else the one your name gives), at every size (onboarding-1)
+    const face = buddy || autoBuddyFor(first)?.id || CROWD[0];
+    const crew = [...new Set([face, ...crowdOf(a.size)])].slice(0, crowdOf(a.size).length);
     return (<>
       <div className="scroll ob-body ob-done">
         <StepArt art={{ spot: 'crowd', ids: crew }} />
@@ -367,7 +372,7 @@ export default function Onboarding({ onDone, play = null }) {
         <h1 className="ob-q d">{first}, your group is ready.</h1>
         <div className="block ob-review">
           <div className="ob-review-me">
-            <Avatar name={first} model={buddy ? avatarModel(buddyAvatar(buddy), { name: first }) : null} size="lg" className="ob-review-av" />
+            <Avatar name={first} model={avatarModel(buddyAvatar(face), { name: first })} size="lg" className="ob-review-av" />
             <div className="row-main">
               <div className="li-name">{first}</div>
               <div className="li-sub">Runs the group{index != null ? ` · ${formatIndex(index)} index` : ''}</div>

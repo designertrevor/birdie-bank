@@ -48,7 +48,7 @@ test('a line becomes a short title: no brackets, no detail after a colon or full
   assert.equal(friendlyTitle('Snake (three-putts, each nine) and Hammer (double the hole): 18 games (2026-09-27)'), 'Snake and Hammer');
   assert.equal(friendlyTitle('(partial) House rules for every game, the variations real groups play. Some exist'), 'House rules for every game, the variations real groups play');
   assert.equal(friendlyTitle('**Carry it over:** either person can roll the balance'), 'Carry it over');
-  assert.equal(friendlyTitle('"Run it back" on a finished round: setup opens'), '"Run it back" on a finished round');
+  assert.equal(friendlyTitle('"Run it back" on a finished round: setup opens'), '“Run it back” on a finished round');
   assert.equal(friendlyTitle('Year in review ("Birdie Bank Wrapped")'), 'Year in review');
   assert.equal(friendlyTitle('New game: team best ball Built 2026-10-04 (overnight 7, shipped 2026-10-04).'), 'Team best ball');
   assert.equal(friendlyTitle('(partial) Request links on the Tab for every app. Venmo requests are built'), 'Request links on the Tab for every app');

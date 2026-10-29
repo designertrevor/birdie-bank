@@ -53,7 +53,7 @@ export const ART_USES = {
   'spots/tumbleweed': { name: 'Nothing here', used: ['Friends, the feed when nobody’s out playing (150px)'] },
   'spots/frame': { name: 'No photo yet', used: ['Your avatar, the Photo tab before there’s a photo (112px)'] },
   'spots/flagempty': { name: 'An empty green', used: ['Course picker, Can’t find it? when a search finds nothing (84px)'] },
-  'spots/loneball': { name: 'A lone ball', used: ['Gone and not-found screens: a crew, a round, a challenge, a Big Game, Print, Share and Recently deleted (150px)'] },
+  'spots/loneball': { name: 'A lone ball', used: ['Gone and not-found screens: a crew, a round, a challenge, a Big Game, Print, Share and Recently deleted (150px)', 'Something went wrong, the crash screen (150px)'] },
   'spots/standings': { name: 'Trip standings', used: ['Trip, the Standings view before a round is finished (96px)'] },
   'spots/expenses': { name: 'Trip expenses', used: ['Trip, the Expenses view with nothing logged (96px)'] },
   'spots/bragging': { name: 'Bragging rights', used: ['Results of a points round, Bragging rights (96px)'] },

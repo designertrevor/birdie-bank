@@ -103,3 +103,33 @@ overnight/n4-shots/screens/after/<area>/ (untracked), shot with scripts/audit-sh
 - classic-1: the date half is fixed (home-8); the title wrap beside the chip is the classic look's longer font, left.
 - classic-2: fixed. The nemesis line is balanced.
 - classic-3: kept. Last night's call was to wrap a moment rather than cut it; the hole stays at the row's end.
+
+## auditor-4, the rest
+
+- onboarding-1, onboarding-11: fixed. All set's crowd leads with your face at every size, the same face the card under it shows: your pick, else the buddy your name gives. Finishing without a pick keeps that buddy as your avatar, so Up next and every list wear the same face from the first screen (before, All set keyed it by name and the app by a fresh id, so they differed). A pick from before, when starting over, stays.
+- onboarding-7: fixed. Each step's scroll runs up under the bar (its canvas covers it, its fade is 20px), so a scrolled title fades out instead of being cut at the bar's edge.
+- onboarding-12: fixed with home-4 (step 2 is tappable); the hero art with home-3.
+- onboarding-13: kept. The Set / Up for a vote / Not yet tags on the ask's rows are the plan design's state tags (BRIEF's --state-* tokens), not values; they stay.
+- more-7: fixed. Settings' "Add your home course" and "Pick an avatar" chips open the profile with that sheet already up.
+- more-8: fixed. Something went wrong is one centred column (340px) with the lone ball over it, like the gone states (ART_USES has the use).
+- more-9 (shared): fixed with play-30 and play-2 (no footer fade in sheets, a fade under the title once scrolled).
+- more-10: the period is added. The off switch keeps its edge: it's the fix from the sun-readability pass (its fill alone was 1.25:1 on a card), so it isn't made a borderless warm track.
+- more-11: kept. Nassau's presses have the Presses section label above their card; the Banker amounts are a different control (chips), left for a pass on Game defaults.
+- more-13: fixed (stickers). About's game rules rows lead with each game's 36px sticker. The tee ball's few points off centre is the drawing's own box (art fixer).
+- more-14: fixed. Recently deleted, empty, sits centred with a Back to Settings button.
+- more-15: fixed. The picks screen is titled Notifications; "Which ones you get" is its section label.
+- more-16: fixed in part. The tile says FAVORITE (one line, level with its neighbours) and the stats row's line is one short sentence. The handicap tile and Clear heights: not reproduced here, left.
+- more-17: left. The player card image shares the share images' type and shapes (shareImage.js); see history-17.
+- more-18: fixed. With Only you, Show my money stays on the page, switched off, saying "Hidden while your profile is Only you."
+- more-19: radios fixed with more-1; the Home course search magnifier isn't added (HomeCourseSheet is a shared course search, left as is).
+- more-20: fixed. The old shipped item reads "The first 16 games, ..." (it was 16 when it shipped), and roadmap titles get curly quotes and apostrophes.
+- more-21: fixed. No votes yet says Vote, not 0; apostrophes are curly.
+- more-22: left. The public roadmap's header and art are the public link pages' own layout (LinkBrand); not changed tonight.
+- more-23: fixed. Note boxes have no resize grip; Send looks off until there's text, and a tap still shows what's missing.
+- more-24: fixed. Not on the list is the same tile with a dashed hairline; the day list never breaks inside a date (plan-5); the stranger's tiles wear the faces the plan carries (plan-1).
+- more-25: fixed. "Just keep my own score · Not now" are one centred row, one weight, a middle dot between.
+- more-26: left. Each gone state's copy fits what went missing (a round on History vs the round you were scoring); one GoneState per kind is a bigger change than tonight's.
+- more-27: fixed. The status page's cream is the app's (#f9f5ec, theme-color too) and Check again has room past the home bar. The wordmark lockup is left.
+- more-28 (shared): kept. A toast over a list row covers whatever is there; it now has the page halo (play-9) so it reads as on top.
+- more-29: kept. No See Pro button while nothing is gated (Trevor: no gating until launch, memory birdie-bank-no-gating-until-launch).
+- onboarding-3, more-2, more-3: see above (teal checks, sheet secondary buttons and scrim, gold outline tags).

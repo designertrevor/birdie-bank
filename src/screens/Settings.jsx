@@ -12,6 +12,7 @@ import { COURSES } from '../data/courses.js';
 import { GAMES, blindMultiplierOf } from '../lib/round.js';
 import { GameOptions } from '../components/GameOptions.jsx';
 import { money } from '../lib/golf.js';
+import { GameArt } from '../components/GameArt.jsx';
 import { useNav } from '../lib/nav.js';
 import { formatIndex, gameLabel, hcPctLabel, roundDate } from '../lib/format.js';
 import { KEEP_DAYS, daysLeftLabel, deletedAgoLabel, deletedList, restoreRound } from '../lib/recently-deleted.js';
@@ -40,17 +41,17 @@ export { NotifyPicks } from '../components/NotifyRow.jsx';
  */
 function ProfileHero({ me, pay, profile, onOpen }) {
   const steps = [
-    { done: !!profile?.avatar, label: 'Pick an avatar' },
+    { done: !!profile?.avatar, label: 'Pick an avatar', open: 'avatar' },
     { done: me.index != null, label: 'Add your handicap' },
     { done: !!pay, label: 'Add how you get paid' },
-    { done: !!profile?.homeCourse, label: 'Add your home course' },
+    { done: !!profile?.homeCourse, label: 'Add your home course', open: 'home' },
   ];
   const done = steps.filter(x => x.done).length;
   const left = steps.filter(x => !x.done);
   const deg = Math.round((done / steps.length) * 360);
   return (
     <div className="pf-hero">
-      <button className="pf-hero-main" onClick={onOpen}>
+      <button className="pf-hero-main" onClick={() => onOpen()}>
         <Avatar id={me.id} name={me.name} letters={2} size="lg" />
         <span className="pf-hero-words">
           <span className="pf-hero-name d">{me.name}</span>
@@ -62,7 +63,8 @@ function ProfileHero({ me, pay, profile, onOpen }) {
         <div className="pf-hero-setup">
           <span className="pf-ring" style={{ '--deg': `${deg}deg` }} aria-hidden="true"><span>{done}/{steps.length}</span></span>
           <div className="pf-chips">
-            {left.map(x => <button key={x.label} className="pf-chip" onClick={onOpen}><Icon name="plus" /> {x.label}</button>)}
+            {/* A chip opens its own sheet on your profile, not just the profile's top (more-7) */}
+            {left.map(x => <button key={x.label} className="pf-chip" onClick={() => onOpen(x.open)}><Icon name="plus" /> {x.label}</button>)}
           </div>
         </div>
       )}
@@ -158,7 +160,7 @@ export default function Settings() {
     <Screen>
       <Header title="Settings" onBack={nav.pop} />
       <div className="scroll">
-        {me && <ProfileHero me={me} pay={myPay} profile={state.profile} onOpen={() => nav.push('profile')} />}
+        {me && <ProfileHero me={me} pay={myPay} profile={state.profile} onOpen={open => nav.push('profile', open ? { open } : {})} />}
         <div className="sec-label">You</div>
         {accountsEnabled && (acct.user ? (
           <div className="set-row static">
@@ -188,7 +190,7 @@ export default function Settings() {
         </div>
         {/* Optional sounds (lib/sounds.js), off until turned on; turning them on plays the birdie so you hear what you get */}
         <div className="toggle-row">
-          <div><div className="toggle-lbl" id="sounds-lbl">Sounds</div><div className="toggle-sub" id="sounds-sub">A quiet chirp for a birdie, a match won, a lead change, the final totals and a payment. Your music keeps playing</div></div>
+          <div><div className="toggle-lbl" id="sounds-lbl">Sounds</div><div className="toggle-sub" id="sounds-sub">A quiet chirp for a birdie, a match won, a lead change, the final totals and a payment. Your music keeps playing.</div></div>
           <Toggle on={soundsOn(state.settings)} onChange={v => { update(s => { s.settings.sounds = v; }); if (v) sound('birdie'); }} labelledBy="sounds-lbl" describedBy="sounds-sub" />
         </div>
         <NotifyRow signedIn={!!acct.user} />
@@ -296,9 +298,10 @@ export function RecentlyDeleted() {
   return (
     <Screen>
       <Header title="Recently deleted" onBack={nav.pop} />
-      <div className="scroll">
+      {/* Empty, it sits centred with a way back, like every gone state (more-14) */}
+      <div className={`scroll ${list.length === 0 ? 'empty-center' : ''}`}>
         {list.length === 0
-          ? <Empty title="Nothing deleted" text={`Rounds you delete wait here for ${KEEP_DAYS} days, so a wrong tap is easy to undo.`} />
+          ? <Empty title="Nothing deleted" text={`Rounds you delete wait here for ${KEEP_DAYS} days, so a wrong tap is easy to undo.`} action={<button className="full-btn outline ec-back" onClick={nav.pop}>Back to Settings</button>} />
           : <>
             <p className="hint-card"><Icon name="clock-counter-clockwise" fill /> Restore puts a round back in History and the Tab, with its payments. After {KEEP_DAYS} days it’s gone for good.</p>
             {list.map(r => <DeletedRow key={r.id} round={r} onRestore={restore(r.id)} />)}
@@ -597,7 +600,9 @@ export function About() {
       <div className="scroll">
         <div className="sec-label">Game rules</div>
         {Object.entries(GAMES).map(([k, g]) => (
-          <button key={k} className="set-row" onClick={() => setRules(k)}>
+          <button key={k} className="set-row ab-game" onClick={() => setRules(k)}>
+            {/* Each game with its sticker, as on Stats and in setup (more-13) */}
+            <GameArt game={k} size={36} className="ab-game-art" />
             <div className="row-main"><div className="set-name">{g.name}</div><div className="set-sub">{g.players}</div></div>
             <span className="chevron"><Icon name="caret-right" /></span>
           </button>

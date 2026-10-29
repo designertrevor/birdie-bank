@@ -687,7 +687,8 @@ function WhoAreYou({ plan, defaultName, standalone, onSkip }) {
                 return (
                   <button key={p.id} className={`seat-tile ${theirs ? 'taken' : ''}`} disabled={theirs} onClick={() => pick(p.id)}
                     aria-label={theirs ? `${first(p.name)}, already answered from their own phone` : undefined}>
-                    <Avatar id={p.id} name={p.name} />
+                    {/* The face the plan carries for them, as on the plan page (plan-faces.js) */}
+                    <PlanAvatar plan={plan} who={p.id} name={p.name} />
                     <span className="seat-name">{first(p.name)}</span>
                     {/* Every tile three lines: No answer where nobody's answered yet (more-7) */}
                     <span className="seat-sub">{theirs ? 'Answered' : taken.has(p.id) ? RSVP_LABEL[plan.answers[p.id].status] || ' ' : 'No answer'}</span>

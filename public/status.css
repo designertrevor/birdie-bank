@@ -3,7 +3,7 @@
    --canvas, paints the page, both Safari strips and theme-color. The app's new type: Fraunces for the
    title and the summary, Figtree for the rest, and the brand mark in ink (pink is for taps). */
 :root {
-  --canvas: #f8f2e4; --card: #ffffff; --ink: #0a0a0a; --body: #3a3a3a; --mute: #6a6a6a; --line: #ebe6d6; --pink: #d6336c;
+  --canvas: #f9f5ec; --card: #ffffff; --ink: #0a0a0a; --body: #3a3a3a; --mute: #6a6a6a; --line: #ebe6d6; --pink: #d6336c;
   --up: #0f6b4f; --up-bg: #d6efe6; --slow: #8a5a00; --slow-bg: #fff1c9; --down: #7a7a7a; --down-bg: #ece7da; --focus: #6b4fd0;
   --edge-top-background: var(--canvas); --edge-bottom-background: var(--canvas);
   color-scheme: light;
@@ -30,7 +30,8 @@ body {
 .edge-top::after, .edge-bottom::after { content: ""; position: fixed; left: 0; right: 0; pointer-events: none; z-index: 2147483647; }
 .edge-top::after { top: 0; height: max(12px, env(safe-area-inset-top)); background: var(--edge-top-background); }
 .edge-bottom::after { bottom: 0; height: max(12px, env(safe-area-inset-bottom)); background: var(--edge-bottom-background); }
-main { max-width: 640px; margin: 0 auto; padding: 32px 16px 56px; }
+/* The app's own cream, and room under Check again past the home bar (more-27) */
+main { max-width: 640px; margin: 0 auto; padding: 32px 16px calc(56px + env(safe-area-inset-bottom)); }
 a { color: var(--pink); }
 a:focus-visible, button:focus-visible { outline: 3px solid var(--focus); outline-offset: 3px; border-radius: 12px; }
 .back { display: inline-flex; align-items: center; min-height: 44px; font-weight: 600; text-decoration: none; margin-bottom: 8px; color: var(--ink); }

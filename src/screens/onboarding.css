@@ -107,3 +107,9 @@
 .ob-flow .ob-job-you { color: var(--body); font-size: 15px; }
 .ob-flow .ob-job-you { animation-name: obJobFade; }
 @keyframes obJobFade { to { opacity: .75; } }
+
+/* A step's scroll runs up under the bar (its canvas and its fade cover it) instead of being cut at the
+   bar's edge, so a title scrolled up fades out rather than being sliced (onboarding-7) */
+.ob-page:not(.first) { padding-top: 0; }
+.ob-page:not(.first) > .scroll { padding-top: 68px; }
+.ob-flow .ob-top::after { height: 20px; }
