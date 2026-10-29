@@ -169,7 +169,7 @@ export function Scene({ kind = 'course', ids = DEFAULT_IDS, className = '' }) {
   return (
     <svg className={`scene ${className}`.trim()} viewBox="0 0 400 240" preserveAspectRatio="xMidYMax slice" aria-hidden="true" focusable="false">
       {/* A scene shows about 360px wide on a phone: its sticker border is sized for that */}
-      {file ? <ArtImage file={file} w={400} h={240} slice sticker={stickerUnits(400, 360)} /> : <SceneArt kind={kind} ids={ids} />}
+      {file ? <ArtImage file={file} w={400} h={240} slice sticker={stickerUnits(400, 360)} holeEdge={0} /> : <SceneArt kind={kind} ids={ids} />}
     </svg>
   );
 }

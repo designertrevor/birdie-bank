@@ -18,6 +18,12 @@
 //   node scripts/art-gaps.mjs fill <file> --at x,y --color #fbf7ec [--walls ...]   fills a see-through pocket:
 //        a new shape at the bottom of the drawing, the pocket's shape run under the ink around it
 //        (--inkwall <width>, on cut or fill, also inks the walls, where the shape would end on a bare edge)
+//   node scripts/art-gaps.mjs hole <file> --at x,y [--walls ...]   marks a see-through pocket as a hole in the sticker:
+//        its shape (run under the ink round it) goes into <name>.holes.svg beside the drawing, and the app keeps the
+//        white border out of it (ArtFile.jsx), so the background shows there however narrow it is. A cut adds its
+//        pocket there too.
+//   node scripts/art-gaps.mjs holes [files...]   rebuilds every .holes.svg from the drawing: its viewBox, the pockets
+//        its cuts made (the <name>-gapN clip paths) and the holes marked by hand
 //
 // Files default to every src/art/scenes and src/art/spots SVG.
 import fs from 'node:fs';
@@ -31,9 +37,9 @@ const flag = (k, d = null) => { const i = args.indexOf(`--${k}`); return i < 0 ?
 const ROOT = fileURLToPath(new URL('..', import.meta.url));
 const OUT = path.resolve(ROOT, flag('out', 'overnight/n3-shots/gaps'));
 const TAG = flag('tag', 'before');
-const named = (['cut', 'fill', 'crop', 'drop'].includes(mode) ? [] : args.slice(1)).filter((a, i, all) => !a.startsWith('--') && !(all[i - 1] || '').startsWith('--'));
+const named = (['cut', 'fill', 'crop', 'drop', 'hole'].includes(mode) ? [] : args.slice(1)).filter((a, i, all) => !a.startsWith('--') && !(all[i - 1] || '').startsWith('--'));
 const files = named.length ? named.map(f => path.resolve(ROOT, f)) : ['scenes', 'spots'].flatMap(k =>
-  fs.readdirSync(path.join(ROOT, 'src/art', k)).filter(f => f.endsWith('.svg')).map(f => path.join(ROOT, 'src/art', k, f)));
+  fs.readdirSync(path.join(ROOT, 'src/art', k)).filter(f => f.endsWith('.svg') && !/\.(holes|dark)\.svg$/.test(f)).map(f => path.join(ROOT, 'src/art', k, f)));
 if (mode === 'map' || mode === 'shots') fs.mkdirSync(OUT, { recursive: true });
 
 // Everything below runs in the page: draw, read pixels, flood fill, label
@@ -199,19 +205,21 @@ const EDIT = async ({ svg, op, seeds, walls, any, box, long }) => {
     for (let t = 0; t <= n; t++) { const x = Math.round(x0 + (x1 - x0) * t / n), y = Math.round(y0 + (y1 - y0) * t / n);
       for (let dy = -1; dy <= 1; dy++) for (let dx = -1; dx <= 1; dx++) { const xx = x + dx, yy = y + dy; if (xx >= 0 && yy >= 0 && xx < w && yy < h) wall[yy * w + xx] = 1; } }
   }
+  // A fill and a hole both start in a see-through pocket
+  const seeThrough = op === 'fill' || op === 'hole';
   const region = new Uint8Array(N); let count = 0; const used = new Set();
   for (const [sx, sy] of seeds) {
     const s0 = Math.round((sy - vb[1]) * k) * w + Math.round((sx - vb[0]) * k);
-    const want = op === 'fill' ? null : colour(s0);
+    const want = seeThrough ? null : colour(s0);
     if (op === 'cut' && (!want || want === '#0a0a0a')) return { error: `point ${sx},${sy} is on ${want || 'nothing'}` };
-    if (op === 'fill' && owner[s0]) return { error: `point ${sx},${sy} is on ${colour(s0)}, not a see-through pocket` };
-    const ok = op === 'fill' ? (p) => !owner[p] : (p) => colour(p) === want;
+    if (seeThrough && owner[s0]) return { error: `point ${sx},${sy} is on ${colour(s0)}, not a see-through pocket` };
+    const ok = seeThrough ? (p) => !owner[p] : (p) => colour(p) === want;
     const st = [s0];
     while (st.length) {
       const p = st.pop(); if (region[p] || wall[p] || !ok(p)) continue; region[p] = 1; count++;
       if (owner[p]) used.add(colour(p));
       const x = p % w; if (x > 0) st.push(p - 1); if (x < w - 1) st.push(p + 1); if (p >= w) st.push(p - w); if (p < N - w) st.push(p + w);
-      if (x === 0 || x === w - 1 || p < w || p >= N - w) if (op === 'fill') return { error: 'the pocket runs out to the edge: it is outside, not a pocket' };
+      if (x === 0 || x === w - 1 || p < w || p >= N - w) if (seeThrough) return { error: 'the pocket runs out to the edge: it is outside, not a pocket' };
     }
   }
   const core = region.slice();
@@ -307,7 +315,25 @@ if (mode === 'drop') {
   fs.writeFileSync(file, svg); console.log(path.basename(file), 'dropped', [...drop].join(','));
   await browser.close(); process.exit(0);
 }
-if (['cut', 'fill', 'crop'].includes(mode)) {
+// The holes file beside a drawing: its pockets as black shapes on nothing, in the drawing's own viewBox
+const holesPath = (file) => file.replace(/\.svg$/, '.holes.svg');
+const writeHoles = (file, svg, marked) => {
+  const vb = svg.match(/viewBox="([^"]+)"/)[1];
+  const name = path.basename(file, '.svg');
+  const cuts = [...svg.matchAll(new RegExp(`<clipPath id="${name}-gap\\d+"[^>]*><path[^>]* d="M[^MZ]*Z([^"]*)"`, 'g'))].map(m => m[1]);
+  if (!cuts.length && !marked.length) { if (fs.existsSync(holesPath(file))) fs.unlinkSync(holesPath(file)); return 0; }
+  const body = [...cuts.map(d => `<path data-src="cut" d="${d}"/>`), ...marked.map(d => `<path data-src="hole" d="${d}"/>`)].join('');
+  fs.writeFileSync(holesPath(file), `<svg xmlns="http://www.w3.org/2000/svg" viewBox="${vb}"><g fill="#000">${body}</g></svg>`);
+  return cuts.length + marked.length;
+};
+const markedHoles = (file) => fs.existsSync(holesPath(file)) ? [...fs.readFileSync(holesPath(file), 'utf8').matchAll(/data-src="hole" d="([^"]+)"/g)].map(m => m[1]) : [];
+if (mode === 'holes') {
+  const all = named.length ? files : ['scenes', 'spots', 'games', 'icons', 'critters'].flatMap(k =>
+    fs.readdirSync(path.join(ROOT, 'src/art', k)).filter(f => f.endsWith('.svg') && !/\.(holes|dark)\.svg$/.test(f)).map(f => path.join(ROOT, 'src/art', k, f)));
+  for (const f of all) { const n = writeHoles(f, fs.readFileSync(f, 'utf8'), markedHoles(f)); if (n) console.log(path.basename(f), n, 'holes'); }
+  await browser.close(); process.exit(0);
+}
+if (['cut', 'fill', 'crop', 'hole'].includes(mode)) {
   const file = path.resolve(ROOT, args[1]); const name = path.basename(file, '.svg');
   let svg = fs.readFileSync(file, 'utf8');
   const pairs = (v) => (v ? String(v).split(';').filter(Boolean).map(t => t.split(',').map(Number)) : []);
@@ -316,6 +342,11 @@ if (['cut', 'fill', 'crop'].includes(mode)) {
     box: flag('box') ? flag('box').split(',').map(Number) : null, long });
   if (r.error) { console.error(name, r.error); process.exit(1); }
   if (mode === 'crop') { save(path.resolve(ROOT, flag('out')), r.png); await browser.close(); process.exit(0); }
+  if (mode === 'hole') {
+    const n = writeHoles(file, svg, [...markedHoles(file), r.d]);
+    console.log(name, 'hole', r.count, 'px;', n, 'holes in', path.basename(holesPath(file)));
+    await browser.close(); process.exit(0);
+  }
   if (mode === 'fill') {
     // At the bottom of the drawing, so the ink and every shape already there stay on top
     const color = flag('color', '#fbf7ec');
@@ -352,6 +383,8 @@ if (['cut', 'fill', 'crop'].includes(mode)) {
     }
   }
   fs.writeFileSync(file, svg);
+  // A cut's pocket is a hole in the sticker too
+  if (mode === 'cut') writeHoles(file, svg, markedHoles(file));
   await browser.close(); process.exit(0);
 }
 for (const file of files) {

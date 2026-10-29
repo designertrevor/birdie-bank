@@ -7,6 +7,7 @@ import { OCHRE } from '../lib/art-palette.js';
 import { artFile } from '../lib/art-files.js';
 import { ArtImage } from './ArtFile.jsx';
 import './podium.css';
+import { stickerUnits } from '../lib/sticker.js';
 
 // The winner's crown: the round 4 crown alone, in gold (src/art/spots/goldcrown.svg). On the page the
 // file is shown, so a redrawn file lands with no code change; its paths are also kept here, since
@@ -26,12 +27,20 @@ export function CrownShape() {
   return <g>{CROWN_PATHS.map(([fill, d], i) => <path key={i} fill={fill} d={d} />)}</g>;
 }
 
-/** A crown, drawn to sit on top of an avatar circle. */
-export function Crown({ className = 'crown-art' }) {
-  const b = CROWN_BOX;
+// Room round the crown in its box for the sticker border (the drawing's own box has 5 units under it)
+const CROWN_PAD = 10;
+
+/**
+ * A crown, drawn to sit on top of an avatar circle: a die-cut sticker like every drawing, so its ink
+ * outline holds on a dark card. `px` is about how wide it shows, for the border's width (the reveal's
+ * row crown is 25px, a crowned face's 40 to 60px).
+ */
+export function Crown({ className = 'crown-art', px = /rv-row-crown/.test(className) ? 25 : 44 }) {
+  const b = CROWN_BOX, p = CROWN_PAD;
+  const box = [b.x - p, b.y - p, b.w + p * 2, b.h + p * 2];
   return (
-    <svg className={className} viewBox={`${b.x} ${b.y} ${b.w} ${b.h}`} aria-hidden="true" focusable="false">
-      {CROWN_FILE ? <ArtImage file={CROWN_FILE} x={b.x} y={b.y} w={b.w} h={b.h} /> : <CrownShape />}
+    <svg className={className} viewBox={box.join(' ')} aria-hidden="true" focusable="false">
+      {CROWN_FILE ? <ArtImage file={CROWN_FILE} x={b.x} y={b.y} w={b.w} h={b.h} sticker={stickerUnits(box[2], px)} /> : <CrownShape />}
     </svg>
   );
 }

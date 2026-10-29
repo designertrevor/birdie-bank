@@ -128,7 +128,7 @@ function Composer({ ctx, on }) {
   return (
     <>
       <div className="talk-jabs-head">
-        <AvatarArt model={{ kind: 'buddy', buddy: art.id, bg: art.bg }} size="sm" className="talk-jab-art" />
+        <AvatarArt model={{ kind: 'buddy', buddy: art.id, bg: art.bg }} size="sm" className="talk-jab-art" bare px={28} />
         <span className="talk-jabs-label">Quick jabs</span>
         <span className="talk-jabs-hint">Tap one to send it</span>
       </div>

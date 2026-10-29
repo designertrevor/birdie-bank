@@ -95,3 +95,23 @@ the drawings.
   drawing, and a stroke on each large colour region).
 - wizard: the round 4 file again with the whole hat, its cone shortened so the ball is the set's size.
 - birdie: the golf ball it stood on is gone and the bird is centred in its box, like the eagle.
+
+## Holes and framing, 2026-10-29 (night 4)
+
+- **Holes.** A pocket the background should show through (between legs, inside a handle or a
+  whistle's loop, under a chair) can be any width: `<id>.holes.svg` beside the drawing holds those
+  pockets as black shapes in the drawing's own viewBox, and the app keeps the white border out of
+  them (ArtFile.jsx draws the border alone under a mask, then the drawing on top). Make them with
+  `node scripts/art-gaps.mjs hole <file> --at x,y` (a see-through pocket) or `cut` (a cream pocket
+  made see-through, added to the holes file too); `holes` rebuilds every holes file, so run it after
+  changing a drawing's viewBox. Something that is part of the body (a flexed arm) is filled cream
+  instead, never a hole.
+- **Avatars fit their circle.** Every buddy and critter sits inside the circle with the same margin
+  (the whole drawing within 46% of the box from the centre, the outline included), the ball about the
+  same size across the set, and the outline round the silhouette is 2.8% of the box. A buddy never
+  starts on the backdrop of its own hat's colour. The teal backdrop is a sea teal (#3d7f77) and the
+  pink one a softer pink (#ff8ab0), so an ink outline holds on both and a big disc isn't the tap pink.
+- **Game stickers** fill 88% of their 64 box on the long side, centred. No motion dashes or ticks
+  standing off a drawing: the border wraps each one into a white smudge at 36 to 44px.
+- **Scenes** may run their ground to the box's sides: the scene's SVG lets the border show past them.
+  The road trip's hill ends inside its box, since the trip screen shows it edge to edge.

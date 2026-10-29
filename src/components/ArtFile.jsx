@@ -15,28 +15,33 @@ function useFilterId() {
 }
 
 /**
- * The sticker filter: the drawing's shape blurred and cut at a low level is the same shape grown
+ * The sticker filter: the drawing's shape dilated a little, blurred and cut at a low level is the same shape grown
  * by `r` evenly all round (and filled across gaps narrower than the border, as a die-cut sticker
  * is). That shape is filled white, with a hairline just outside it in the light theme so the white
  * edge still reads on a white card. `r` and the region are in the user units of whatever it's on.
  * The colours are set again in styles.css (.stk-edge, .stk-hair) so they follow the theme; the
  * attributes are what a share card's picture gets.
  */
-function StickerFilter({ id, r, x, y, w, h }) {
-  const s = r / 1.28;
+function StickerFilter({ id, r, x, y, w, h, edgeOnly = false }) {
+  // Grown in two steps: a small dilate first, so a thin ray or speed line is thick enough for the blur
+  // to reach full white round it (blur alone left a 2px stroke in a grey glow), then the blur and a
+  // steep cut for the rest, which keeps the edge round and even (a dilate alone grows square corners)
+  const d = r * 0.45;
+  const s = (r - d) / 1.28;
   const pad = r * 3;
   return (
     <filter id={id} filterUnits="userSpaceOnUse" x={x - pad} y={y - pad} width={w + pad * 2} height={h + pad * 2} colorInterpolationFilters="sRGB">
-      <feGaussianBlur in="SourceAlpha" stdDeviation={s} result="spread" />
-      {/* Cut at 0.1: a straight edge grows by 1.28 times the blur, which is r */}
-      <feComponentTransfer in="spread" result="cut"><feFuncA type="linear" slope="16" intercept="-1.12" /></feComponentTransfer>
+      <feMorphology in="SourceAlpha" operator="dilate" radius={d} result="grown" />
+      <feGaussianBlur in="grown" stdDeviation={s} result="spread" />
+      {/* Cut at 0.1: a straight edge grows by 1.28 times the blur, which with the dilate is r */}
+      <feComponentTransfer in="spread" result="cut"><feFuncA type="linear" slope="24" intercept="-1.9" /></feComponentTransfer>
       {/* A little lower for the hairline, so it sits just outside the white */}
-      <feComponentTransfer in="spread" result="ring"><feFuncA type="linear" slope="16" intercept="-0.5" /></feComponentTransfer>
+      <feComponentTransfer in="spread" result="ring"><feFuncA type="linear" slope="24" intercept="-0.75" /></feComponentTransfer>
       <feFlood className="stk-hair" floodColor="rgba(10,10,10,.14)" />
       <feComposite in2="ring" operator="in" result="hair" />
       <feFlood className="stk-edge" floodColor="#ffffff" />
       <feComposite in2="cut" operator="in" result="edge" />
-      <feMerge><feMergeNode in="hair" /><feMergeNode in="edge" /><feMergeNode in="SourceGraphic" /></feMerge>
+      <feMerge><feMergeNode in="hair" /><feMergeNode in="edge" />{!edgeOnly && <feMergeNode in="SourceGraphic" />}</feMerge>
     </filter>
   );
 }
@@ -62,17 +67,49 @@ export function Sticker({ r, box, children }) {
  * `file` from artFile(); `x`, `y`, `w`, `h` in the parent SVG's units. `slice` fills the box and crops, like the scenes.
  * `sticker` is the white border's width in the parent's units: by default 2.2% of the box's short side,
  * `false` (or `outline={false}`, the older name) for a drawing that sits inside another sticker or on its own backdrop.
+ *
+ * A drawing with a holes file (file.holes: the pockets between legs, inside handles) keeps most of the
+ * border out of them, so the background shows through a gap wider than the border (the blur alone
+ * fills anything under about two and a half borders): the border is drawn on its own under a mask
+ * with the holes cut out, shrunk by a quarter of the border so every edge inside a hole keeps a fine white
+ * line (`holeEdge`, in the parent's units: a scene passes 0, since its holes are flat strips between
+ * thick shapes, where a lining read as white dashes), then the drawing on top. A holes file that can't
+ * load leaves the border whole, as before.
  */
-export function ArtImage({ file, x = 0, y = 0, w, h, slice = false, sticker = null, outline = true }) {
+export function ArtImage({ file, x = 0, y = 0, w, h, slice = false, sticker = null, outline = true, holeEdge = null }) {
   const id = useFilterId();
   const par = slice ? 'xMidYMax slice' : 'xMidYMid meet';
   const r = sticker === false || outline === false ? 0 : sticker ?? Math.min(w, h) * 0.022;
+  const images = (filter) => (
+    <>
+      <image href={file.light} x={x} y={y} width={w} height={h} preserveAspectRatio={par} className={file.dark ? 'art-light' : undefined} filter={filter} />
+      {file.dark && <image href={file.dark} x={x} y={y} width={w} height={h} preserveAspectRatio={par} className="art-dark" filter={filter} />}
+    </>
+  );
+  if (r && file.holes) {
+    const pad = r * 3;
+    const region = { x: x - pad, y: y - pad, width: w + pad * 2, height: h + pad * 2 };
+    return (
+      <>
+        <defs>
+          <StickerFilter id={id} r={r} x={x} y={y} w={w} h={h} edgeOnly />
+          {/* The holes shrunk by a quarter of the border, so a thin loop or a leg keeps a white edge inside a hole too, as a die-cut does */}
+          <filter id={`${id}e`} filterUnits="userSpaceOnUse" {...region}><feMorphology operator="erode" radius={holeEdge ?? r / 4} /></filter>
+          <mask id={`${id}h`} maskUnits="userSpaceOnUse" {...region}>
+            <rect {...region} fill="#fff" />
+            <image href={file.holes} x={x} y={y} width={w} height={h} preserveAspectRatio={par} filter={`url(#${id}e)`} />
+          </mask>
+        </defs>
+        <g mask={`url(#${id}h)`}>{images(`url(#${id})`)}</g>
+        {images(undefined)}
+      </>
+    );
+  }
   const filter = r ? `url(#${id})` : undefined;
   return (
     <>
       {r ? <defs><StickerFilter id={id} r={r} x={x} y={y} w={w} h={h} /></defs> : null}
-      <image href={file.light} x={x} y={y} width={w} height={h} preserveAspectRatio={par} className={file.dark ? 'art-light' : undefined} filter={filter} />
-      {file.dark && <image href={file.dark} x={x} y={y} width={w} height={h} preserveAspectRatio={par} className="art-dark" filter={filter} />}
+      {images(filter)}
     </>
   );
 }

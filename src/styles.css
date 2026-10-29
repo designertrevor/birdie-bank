@@ -2084,22 +2084,17 @@ button.trip-card:active { transform: scale(.97); }
 @media (prefers-color-scheme: dark) { :root:not([data-theme="light"]):not([data-theme="dark"]) { --av-ring: rgba(255,255,255,.14); } }
 .avatar.av-buddy, .avatar.av-photo, .join-avatar.av-buddy, .join-avatar.av-photo { overflow: hidden; padding: 0; }
 .avatar.av-buddy, .avatar.av-photo { box-shadow: 0 0 0 1.5px var(--av-ring); background: var(--surface); }
-/* In the dark theme a buddy's colour circle needs no grey ring (it read as a muddy halo), except on the
-   teal backdrop, which is as dark as the card: there a cream ring keeps the circle */
-.bd-rim { display: none; }
-:root[data-theme="dark"] .bd-rim { display: inline; }
-:root[data-theme="dark"] .av-buddy .bd-rim { display: none; }
+/* In the dark theme a buddy's colour circle needs no grey ring (it read as a muddy halo). Every
+   backdrop, the sea teal too, reads on a dark card on its own (2026-10-29) */
 :root[data-theme="dark"] .avatar.av-buddy { box-shadow: none; }
-:root[data-theme="dark"] .avatar.av-buddy.av-teal { box-shadow: 0 0 0 1.5px rgba(251,247,236,.6); }
 @media (prefers-color-scheme: dark) {
-  :root:not([data-theme="light"]):not([data-theme="dark"]) .bd-rim { display: inline; }
-  :root:not([data-theme="light"]):not([data-theme="dark"]) .av-buddy .bd-rim { display: none; }
   :root:not([data-theme="light"]):not([data-theme="dark"]) .avatar.av-buddy { box-shadow: none; }
-  :root:not([data-theme="light"]):not([data-theme="dark"]) .avatar.av-buddy.av-teal { box-shadow: 0 0 0 1.5px rgba(251,247,236,.6); }
 }
 /* Initials get the same ring, so the teal colour still has an edge on dark cards */
 .avatar.av-initials:not(.av-in-btn) { box-shadow: 0 0 0 1.5px var(--av-ring); }
-.av-buddy > svg, .av-photo > img { display: block; width: 100%; height: 100%; }
+.av-buddy > svg, .av-photo > img, .av-bare > svg { display: block; width: 100%; height: 100%; }
+/* A buddy drawn as a sticker beside a label: no plate, no ring */
+.avatar.av-bare { background: none; box-shadow: none; overflow: visible; padding: 0; }
 .av-photo > img { object-fit: cover; }
 .avatar.sm { width: 30px; height: 30px; font-size: 14px; }
 .avatar.xl { width: 96px; height: 96px; font-size: 40px; margin: 0 auto; }
@@ -3731,7 +3726,7 @@ a.header-btn.rm-open { text-decoration: none; }
 /* RESULTS: the winner's buddy in a crown, the top three on a podium, everyone in one list */
 .crowned { position: relative; display: inline-grid; place-items: center; width: var(--face); height: calc(var(--face) * 1.3); align-content: end; }
 .crowned .avatar { width: var(--face); height: var(--face); margin: 0; box-shadow: 0 0 0 4px rgba(255,255,255,.55); }
-.crowned .crown-art { position: absolute; top: 0; left: 50%; width: calc(var(--face) * .54); transform: translateX(-50%) rotate(-8deg); z-index: 1; filter: drop-shadow(0 2px 0 rgba(0,0,0,.12)); animation: crownOn .7s .25s var(--ease-bounce) both; }
+.crowned .crown-art { position: absolute; top: 0; left: 50%; width: calc(var(--face) * .64); transform: translateX(-50%) rotate(-8deg); z-index: 1; animation: crownOn .7s .25s var(--ease-bounce) both; }
 @keyframes crownOn { from { transform: translate(-50%, -18px) rotate(-30deg); opacity: 0; } }
 .winner-hero .crowned { margin: 0 auto 2px; animation: pop .55s var(--spring) both; }
 .winner-hero .hero-spot { display: block; margin: -16px auto -14px; }
@@ -3896,6 +3891,8 @@ a.header-btn.rm-open { text-decoration: none; }
 
 /* ONBOARDING: the whole cast on the welcome, a ball that reacts on every question, and a hint under a grey Continue */
 .scene { display: block; width: 100%; }
+/* The ground runs to the box's sides: let its sticker border show past them, so it wraps the whole drawing */
+svg.scene { overflow: visible; }
 .gallery-scene { height: 100%; }
 .trip-scene { height: 150px; margin: -8px 0 14px; flex-shrink: 0; }
 .ob-cast { width: 280px; max-width: 100%; height: auto; display: block; margin: 0 auto 4px; }
@@ -3993,7 +3990,7 @@ svg.spot, svg.game-art { overflow: visible; }
 
 /* The art sheet (?art): every drawing, labelled, in both themes */
 .art-sheet { max-width: 1120px; margin: 0 auto; padding: 0 20px 80px; color: var(--ink); }
-.as-top { position: sticky; top: 0; z-index: 2; background: var(--canvas); padding: 16px 0 12px; display: flex; align-items: center; gap: 14px; flex-wrap: wrap; border-bottom: 1px solid var(--edge); }
+.as-top { position: relative; background: var(--canvas); padding: 16px 0 12px; display: flex; align-items: center; gap: 14px; flex-wrap: wrap; border-bottom: 1px solid var(--edge); }
 .as-top h1 { font-family: var(--display); font-size: 26px; font-weight: 800; letter-spacing: -.03em; margin: 0; }
 .as-jump { display: flex; gap: 4px 14px; flex-wrap: wrap; flex: 1; font-size: 13px; font-weight: 600; }
 .as-jump a { color: var(--mute); text-decoration: none; }

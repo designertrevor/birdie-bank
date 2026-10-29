@@ -18,10 +18,12 @@ export const BACKDROPS = [
   { id: 'peach', hex: '#ffb084', ink: '#0a0a0a' },
   { id: 'lav', hex: '#b8a4ed', ink: '#0a0a0a' },
   { id: 'ochre', hex: '#e8b94a', ink: '#0a0a0a' },
-  { id: 'pink', hex: '#ff4d8b', ink: '#0a0a0a' },
+  // A softer pink than the tap pink (#ff4d8b), so a big avatar disc never reads as a button and pink glasses still show on it (2026-10-29)
+  { id: 'pink', hex: '#ff8ab0', ink: '#0a0a0a' },
   { id: 'coral', hex: '#ff6b5a', ink: '#0a0a0a' },
   { id: 'blush', hex: '#ffd6e5', ink: '#0a0a0a' },
-  { id: 'teal', hex: '#1a3a3a', ink: '#ffffff' },
+  // A sea teal, not the brand's deep teal: on #1a3a3a an avatar's ink outline melted in and the circle was lost on a dark card (2026-10-29)
+  { id: 'teal', hex: '#3d7f77', ink: '#ffffff' },
 ];
 const BACKDROP = Object.fromEntries(BACKDROPS.map(b => [b.id, b]));
 export const backdropOf = id => BACKDROP[id] || BACKDROP.mint;
@@ -34,19 +36,19 @@ export const SHELVES = [
 
 /**
  * The Ball buddies and critters, in the order the picker shows them, each with the backdrop it
- * starts on and its shelf. All saved as { kind: 'buddy', id, bg }, so an older app that doesn't
- * know a new one shows initials on its backdrop.
+ * starts on (never its own hat's colour, or the hat melts into the circle) and its shelf. All saved
+ * as { kind: 'buddy', id, bg }, so an older app that doesn't know a new one shows initials on its backdrop.
  */
 export const BUDDIES = [
-  { id: 'bucket', name: 'Bucket hat', bg: 'mint' },
+  { id: 'bucket', name: 'Bucket hat', bg: 'peach' },
   { id: 'visor', name: 'Visor', bg: 'peach' },
   { id: 'snapback', name: 'Snapback', bg: 'lav' },
   { id: 'flatcap', name: 'Flat cap', bg: 'ochre' },
-  { id: 'shades', name: 'Shades', bg: 'pink' },
+  { id: 'shades', name: 'Shades', bg: 'lav' },
   { id: 'beanie', name: 'Beanie', bg: 'teal' },
-  { id: 'sweatband', name: 'Sweatband', bg: 'coral' },
-  { id: 'tourcap', name: 'Tour cap', bg: 'blush' },
-  { id: 'cowboy', name: 'Cowboy hat', bg: 'lav' },
+  { id: 'sweatband', name: 'Sweatband', bg: 'mint' },
+  { id: 'tourcap', name: 'Tour cap', bg: 'mint' },
+  { id: 'cowboy', name: 'Cowboy hat', bg: 'peach' },
   { id: 'straw', name: 'Straw hat', bg: 'mint' },
   { id: 'bandana', name: 'Bandana', bg: 'ochre' },
   { id: 'crown', name: 'Crown', bg: 'teal' },
@@ -57,8 +59,8 @@ export const BUDDIES = [
   // Sixteen more hats from the illustration round of 2026-10-26, outside files only
   { id: 'umbrella', name: 'Umbrella hat', bg: 'mint' },
   { id: 'trucker', name: 'Trucker cap', bg: 'peach' },
-  { id: 'backwards', name: 'Backwards cap', bg: 'lav' },
-  { id: 'fishing', name: 'Fishing hat', bg: 'ochre' },
+  { id: 'backwards', name: 'Backwards cap', bg: 'peach' },
+  { id: 'fishing', name: 'Fishing hat', bg: 'mint' },
   { id: 'propeller', name: 'Propeller beanie', bg: 'pink' },
   { id: 'viking', name: 'Viking helmet', bg: 'teal' },
   { id: 'captain', name: 'Captain’s hat', bg: 'coral' },
@@ -69,11 +71,11 @@ export const BUDDIES = [
   { id: 'hardhat', name: 'Hard hat', bg: 'ochre' },
   { id: 'chef', name: 'Chef hat', bg: 'pink' },
   { id: 'wizard', name: 'Wizard hat', bg: 'teal' },
-  { id: 'flowers', name: 'Flower crown', bg: 'coral' },
+  { id: 'flowers', name: 'Flower crown', bg: 'lav' },
   { id: 'cone', name: 'Traffic cone', bg: 'blush' },
   { id: 'birdie', name: 'Birdie', bg: 'mint', shelf: 'critters' },
   { id: 'eagle', name: 'Eagle', bg: 'teal', shelf: 'critters' },
-  { id: 'goose', name: 'Goose', bg: 'lav', shelf: 'critters' },
+  { id: 'goose', name: 'Goose', bg: 'mint', shelf: 'critters' },
   { id: 'gopher', name: 'Gopher', bg: 'blush', shelf: 'critters' },
   { id: 'flamingo', name: 'Flamingo', bg: 'ochre', shelf: 'critters' },
   { id: 'frog', name: 'Hazard frog', bg: 'peach', shelf: 'critters' },
@@ -82,12 +84,12 @@ export const BUDDIES = [
   // Golf-slang critters from the illustration round of 2026-10-26, outside files only
   { id: 'albatross', name: 'Albatross', bg: 'mint', shelf: 'critters' },
   { id: 'sandbagger', name: 'Sandbagger', bg: 'lav', shelf: 'critters' },
-  { id: 'friedegg', name: 'Fried egg', bg: 'ochre', shelf: 'critters' },
+  { id: 'friedegg', name: 'Fried egg', bg: 'teal', shelf: 'critters' },
   { id: 'gator', name: 'Water hazard gator', bg: 'pink', shelf: 'critters' },
   { id: 'banana', name: 'Banana ball', bg: 'teal', shelf: 'critters' },
   { id: 'wormburner', name: 'Worm burner', bg: 'coral', shelf: 'critters' },
   { id: 'snowman', name: 'Snowman', bg: 'blush', shelf: 'critters' },
-  { id: 'turtle', name: 'Slow play', bg: 'mint', shelf: 'critters' },
+  { id: 'turtle', name: 'Slow play', bg: 'peach', shelf: 'critters' },
 ].map(b => ({ shelf: 'buddies', ...b }));
 const BUDDY = Object.fromEntries(BUDDIES.map(b => [b.id, b]));
 export const buddyOf = id => BUDDY[id] || null;
