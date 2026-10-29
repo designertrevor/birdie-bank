@@ -1,0 +1,20 @@
+/* The scorecard (Scorecard.jsx). The table scrolls sideways inside the card, with a fade on the right
+   edge while more holes are off to the side, so it never looks like the card stops at hole 8 */
+.sc-wrap { overflow: hidden; }
+.sc-scroll { overflow-x: auto; overscroll-behavior-x: contain; }
+.sc-scroll.more { mask-image: linear-gradient(to right, #000 calc(100% - 32px), transparent); -webkit-mask-image: linear-gradient(to right, #000 calc(100% - 32px), transparent); }
+
+/* The header reads as one band: HCP shaded like Par, the whole row */
+.scorecard .hcp-row td { background: var(--surface); }
+
+/* Pink is for tapping, not decoration: a birdie is a ring of ink, an eagle two (golf's own marks),
+   the stroke dots are quiet, and to par under is ink like the rest */
+.sc-wrap .sc-mark.birdie { box-shadow: 0 0 0 1.5px var(--ink); color: var(--ink); }
+.sc-wrap .sc-mark.eagle { background: none; color: var(--ink); border-radius: 50%; box-shadow: 0 0 0 1.5px var(--ink), 0 0 0 3.5px var(--card), 0 0 0 5px var(--ink); }
+.sc-wrap .sc-strokes i { background: var(--mute); }
+.sc-wrap .sc-par.under { color: var(--ink); }
+.sc-wrap .sc-par.net { color: var(--body); }
+
+/* The hole being played: a neutral lift down its column in the dark (the pink header cell marks it) */
+:root[data-theme="dark"] .sc-table td.cur { background: var(--surface); }
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) .sc-table td.cur { background: var(--surface); } }
