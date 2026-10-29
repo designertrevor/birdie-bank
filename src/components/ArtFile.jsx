@@ -63,10 +63,11 @@ export function Sticker({ r, box, children }) {
  * `sticker` is the white border's width in the parent's units: by default 2.2% of the box's short side,
  * `false` (or `outline={false}`, the older name) for a drawing that sits inside another sticker or on its own backdrop.
  *
- * A drawing with a holes file (file.holes: the pockets between legs, inside handles) keeps the border out
- * of them, so the background shows there however narrow the gap (a plain die-cut fills anything under
- * twice the border): the border is drawn on its own under a mask with the holes cut out, then the
- * drawing on top. A holes file that can't load leaves the border whole, as before.
+ * A drawing with a holes file (file.holes: the pockets between legs, inside handles) keeps most of the
+ * border out of them, so the background shows through a gap wider than the border (the blur alone
+ * fills anything under about two and a half borders): the border is drawn on its own under a mask
+ * with the holes cut out, shrunk by half the border so every edge inside a hole keeps a thin white
+ * line, then the drawing on top. A holes file that can't load leaves the border whole, as before.
  */
 export function ArtImage({ file, x = 0, y = 0, w, h, slice = false, sticker = null, outline = true }) {
   const id = useFilterId();
@@ -85,9 +86,11 @@ export function ArtImage({ file, x = 0, y = 0, w, h, slice = false, sticker = nu
       <>
         <defs>
           <StickerFilter id={id} r={r} x={x} y={y} w={w} h={h} edgeOnly />
+          {/* The holes shrunk by half the border, so a thin loop or a leg keeps a white edge inside a hole too, as a die-cut does */}
+          <filter id={`${id}e`} filterUnits="userSpaceOnUse" {...region}><feMorphology operator="erode" radius={r / 2} /></filter>
           <mask id={`${id}h`} maskUnits="userSpaceOnUse" {...region}>
             <rect {...region} fill="#fff" />
-            <image href={file.holes} x={x} y={y} width={w} height={h} preserveAspectRatio={par} />
+            <image href={file.holes} x={x} y={y} width={w} height={h} preserveAspectRatio={par} filter={`url(#${id}e)`} />
           </mask>
         </defs>
         <g mask={`url(#${id}h)`}>{images(`url(#${id})`)}</g>
