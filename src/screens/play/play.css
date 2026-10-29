@@ -244,3 +244,20 @@
 
 /* First tee card: the high five gets room under it before the lede */
 .ft-card .ft-art { margin: -18px 0 10px; }
+
+/* Any side bets?: the chip and its × are 44px tall, a gloved thumb's tap */
+.bp-chip { min-height: 44px; }
+.bp-chip-x { width: 44px; height: 44px; }
+/* The number pad's key names (Birdie, Bogey) in the body colour, a touch bigger, for the sun */
+.sp-key .sp-kl { font-size: 11px; color: var(--body); }
+/* Banker: the banker and what's on the line sit on one line, labels and values level */
+.play .banker-bar { align-items: flex-end; }
+.play .banker-bar .change-btn { align-self: center; }
+/* A locked Double back reads, not greyed out to nothing: why it's locked is its label */
+.play .dbl-btn:disabled { color: var(--body); }
+
+/* The halfway sheet's bets: who leads in bold, what they won (the holes) as the caption under it, and
+   the amounts in the strip's own numerals */
+.hw-row .hw-label:has(+ .hw-line) { font-size: 15px; font-weight: 700; color: var(--ink); }
+.hw-row .hw-label + .hw-line { font-size: 13px; font-weight: 600; color: var(--mute); }
+.play .hw-val { font-family: var(--play-num); font-weight: var(--play-num-weight); }

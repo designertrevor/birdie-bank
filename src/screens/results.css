@@ -64,3 +64,6 @@
   :root:not([data-theme="light"]) .results-a { position: relative; box-shadow: var(--hair); overflow: hidden; }
   :root:not([data-theme="light"]) .results-a::before { content: ''; position: absolute; left: 0; right: 0; top: 0; height: 3px; background: var(--ra-strong, var(--ochre)); }
 }
+
+/* The results' tables (the hole by hole money) wear the card's hairline like everything around them */
+.money-table-wrap { box-shadow: var(--hair); }

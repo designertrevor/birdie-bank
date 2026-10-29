@@ -412,7 +412,7 @@ export const SHOTS = [
       await p.js(`tryTap('Skip for now'); await w(400); tap('Round menu'); await w(1000);`);
       await p.shoot('round-menu', 'Round menu');
       const sub = [['Bets', 'menu-bets', 'Bets from the round menu'], ['Handicaps', 'menu-handicaps', 'Handicaps from the round menu'], ['Play for', 'menu-play-for', 'Play for from the round menu'],
-        ['Add a side game', 'menu-add-side-game', 'Add a side game mid-round'], ['Side bets', 'menu-side-bets', 'Side bets mid-round'], ['Invite the group', 'menu-invite', 'Invite the group (share the round)'],
+        ['Add a side game', 'menu-add-side-game', 'Add a side game mid-round'], ['Side bets', 'menu-side-bets', 'Side bets mid-round'], ['Invite', 'menu-invite', 'Invite the group (share the round)'],
         ['Fix par or HCP', 'menu-fix-hole', 'Fix par or HCP for hole 3'], ['A player left', 'menu-player-left', 'A player left'], ['Add a player', 'menu-add-player', 'Add a player mid-round'],
         ['Round length', 'menu-round-length', 'Round length'], ['Course and tee', 'menu-course-tee', 'Course and tee'], ['Skins rules', 'menu-rules', 'Skins rules from the menu'], ['End round', 'menu-end-round', 'End round confirm']];
       for (const [label, id, what] of sub) {

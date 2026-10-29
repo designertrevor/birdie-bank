@@ -225,7 +225,11 @@ function PlayRound({ round, mount, momentUp = false, watch = 'money', setWatch }
             <button className="full-btn outline" style={{ flex: 1 }} disabled={isLast} onClick={() => goHole(idx + 1)}>{isLast ? 'Last hole' : <>Next hole <Icon name="arrow-right" /></>}</button>
           </div>
         ) : phase === 'bets' ? (
-          <button className="full-btn" onClick={() => setPhase('scores')}>Bets are in, enter scores <Icon name="arrow-right" /></button>
+          // The way back to the hole before is here on the bets step too, as on every other hole
+          <div style={{ display: 'flex', gap: 8 }}>
+            <button className="full-btn outline" style={{ width: 64, flex: 'none' }} disabled={idx === 0} onClick={() => goHole(idx - 1)} aria-label="Previous hole"><Icon name="arrow-left" /></button>
+            <button className="full-btn" style={{ flex: 1 }} onClick={() => setPhase('scores')}>Bets are in, enter scores <Icon name="arrow-right" /></button>
+          </div>
         ) : (
           <div style={{ display: 'flex', gap: 8 }}>
             <button className="full-btn outline" style={{ width: 64, flex: 'none' }} disabled={idx === 0} onClick={() => goHole(idx - 1)} aria-label="Previous hole"><Icon name="arrow-left" /></button>

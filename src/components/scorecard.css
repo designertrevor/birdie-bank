@@ -18,3 +18,5 @@
 /* The hole being played: a neutral lift down its column in the dark (the pink header cell marks it) */
 :root[data-theme="dark"] .sc-table td.cur { background: var(--surface); }
 @media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) .sc-table td.cur { background: var(--surface); } }
+/* The card's hairline edge, like the cards around it (none inside a sheet, where cards sit flat) */
+.sc-wrap { box-shadow: var(--hair); }

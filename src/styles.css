@@ -960,7 +960,9 @@ button:disabled { cursor: not-allowed; }
 .live-pill { display: inline-flex; align-items: center; gap: 5px; font-size: 11px; font-weight: 700; padding: 2px 8px; border-radius: 999px; background: var(--win-bg); color: var(--win); vertical-align: middle; }
 .live-pill.offline, .live-pill.ended { background: var(--loss-bg); color: var(--loss); }
 .live-pill.connecting { background: var(--surface); color: var(--mute); }
-.live-dot { width: 7px; height: 7px; border-radius: 50%; background: currentColor; animation: pulse 1.6s ease-out infinite; }
+.live-dot { width: 7px; height: 7px; border-radius: 50%; background: currentColor; animation: liveDot 1.6s ease-out infinite; }
+/* The live dot's ring is its own colour and stays small, so it never spills past the pill as a grey disc in the dark */
+@keyframes liveDot { 0% { box-shadow: 0 0 0 0 color-mix(in srgb, currentColor 45%, transparent); } 100% { box-shadow: 0 0 0 5px color-mix(in srgb, currentColor 0%, transparent); } }
 .pill-link { border: none; background: none; padding: 0; cursor: pointer; }
 .code-card { background: var(--teal); color: #fff; border-radius: 24px; padding: 20px; text-align: center; margin-bottom: 12px; }
 .code-card .bl { color: var(--mint); }

@@ -53,7 +53,7 @@ export function GamesSheet({ round, onClose }) {
     <Sheet open onClose={onClose} title="Side games" className="sc-sheet">
       <p className="sheet-text">Same course, same players, same scores. {played ? `A new game counts the ${played} hole${played === 1 ? '' : 's'} already scored too.` : 'Every game reads the one scorecard.'}</p>
       {played > 0 && sideGamesOf(round).length > 0 && <p className="field-help pad">Changes here cover the whole round. To change a bet from the next hole, use Bets.</p>}
-      <SideGamesSetup game={round.game} sideGames={list} setSideGames={edit} defaults={round.settings} players={round.players.length} playFor={round.playFor} holes={round.holes} holesCount={round.holes.length}
+      <SideGamesSetup label={false} game={round.game} sideGames={list} setSideGames={edit} defaults={round.settings} players={round.players.length} playFor={round.playFor} holes={round.holes} holesCount={round.holes.length}
         entries={calView ? calcuttaEntriesOf(calView) : []} buyers={calView ? calView.players.map(p => ({ id: p.id, name: p.name })) : []} started={roundStarted(round)} />
       {/* A pot added partway: its holes already played count once the winner is tapped */}
       {potCatchUpNotes(round, list).map(t => <p key={t} className="field-help pad">{t}</p>)}

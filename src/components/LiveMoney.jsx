@@ -3,6 +3,7 @@
 // around zero, what the next hole is worth, a Scorecard button, then each hole as a line, newest
 // first. Display only: the amounts are roundResults' and the holes' livePreview (hole-story.js).
 import { useMemo } from 'react';
+import { ago } from '../lib/shared-tab.js';
 import { Icon } from './ui.jsx';
 import { AvatarArt } from './Avatar.jsx';
 import { useGroupAvatars } from '../lib/useAvatars.js';
@@ -81,6 +82,8 @@ export function LiveMoney({ round, me, holderName, onCard, onHole, onThisHole })
           {next.carried > 0 && <span className="lm-next-c">{next.carried} carried</span>}
         </div>
       )}
+      {/* When the card last moved, so a quiet stretch reads as a slow hole, not a stuck screen */}
+      {round.keeper?.lastSaveAt && <p className="lm-synced">{holderName ? `${holderName.split(' ')[0]}’s` : 'The'} last save: {ago(round.keeper.lastSaveAt)}</p>}
       <div className="lm-actions">
         <button type="button" className="lm-btn" onClick={onCard}><Icon name="table" /> Scorecard</button>
         <button type="button" className="lm-btn" onClick={onThisHole}><Icon name="flag" /> This hole</button>

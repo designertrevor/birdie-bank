@@ -39,7 +39,7 @@ const offerName = k => ({ birdies: 'a Birdie pot', ctp: 'a closest to the pin po
  * (calcuttaEntries), `buyers` who can bid ([{ id, name }]), and `started` a round already under way,
  * which can't add a Calcutta (its auction is before the first tee) but can still fix one.
  */
-export function SideGamesSetup({ game, sideGames, setSideGames, defaults, players = 4, playFor = null, holes = null, holesCount = holes?.length ?? 18, entries = [], buyers = [], started = false }) {
+export function SideGamesSetup({ game, sideGames, setSideGames, defaults, players = 4, playFor = null, holes = null, holesCount = holes?.length ?? 18, entries = [], buyers = [], started = false, label = true }) {
   const fmt = unitFmt({ playFor });
   const u = t => inUnits({ playFor }, t);
   const unit = padUnit({ playFor });
@@ -81,7 +81,8 @@ export function SideGamesSetup({ game, sideGames, setSideGames, defaults, player
   const padGame = pad != null ? sideGames[pad] : null;
   return (
     <>
-      <div className="sec-label">Side games</div>
+      {/* The Side games sheet mid-round is titled that already, so it goes without */}
+      {label && <div className="sec-label">Side games</div>}
       {sideGames.map((sg, i) => {
         const meta = SIDE_GAMES[sg.game];
         const key = amountKey(sg.game, sg.settings);

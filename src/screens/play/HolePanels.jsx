@@ -102,7 +102,8 @@ function BankerPanel({ round, banker, setBanker, phase, setPhase, onPick, onBet,
             <div key={p.id} className="pcard">
               <div style={{ display: 'flex', alignItems: 'center', padding: '16px 16px 10px' }}>
                 <div style={{ flex: 1 }}><div className="pname">{p.name}</div><div className="ps">{p.plays ? `Gets ${p.plays} stroke${p.plays > 1 ? 's' : ''} on the round` : 'No strokes'}</div></div>
-                <div className="bet-now" aria-hidden="true">{money(banker.bets[p.id] || 0)}</div>
+                {/* The chips below say the bet; the big amount only shows once a press changes it */}
+                {banker.doubled[p.id] && <div className="bet-now" aria-hidden="true">{money((banker.bets[p.id] || 0) * (banker.doubleBack ? f * f : f))}</div>}
               </div>
               <BetChips name={p.name} value={banker.bets[p.id] || 0} fmt={money} presets={betPresets(round.settings.banker.min, round.settings.banker.max, round.settings.banker.defaultBet)}
                 onPick={v => setBanker({ ...banker, bets: { ...banker.bets, [p.id]: v } })} onMore={() => onBet(p.id)} />
