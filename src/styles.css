@@ -901,8 +901,6 @@ button:disabled { cursor: not-allowed; }
 .sc-legend { column-gap: 12px; row-gap: 8px; }
 .sc-legend .sc-key { display: inline-flex; align-items: center; gap: 6px; white-space: nowrap; }
 .sc-legend .sc-mark { width: 20px; height: 20px; font-size: 11px; }
-.key-critter { width: 22px; height: 22px; border-radius: 50%; overflow: hidden; display: inline-block; flex-shrink: 0; }
-.key-critter .buddy-art { width: 100%; height: 100%; display: block; }
 .sc-sheet .sc-wrap { margin: 0 16px 16px; }
 
 /* Course editor */
@@ -3667,7 +3665,8 @@ a.header-btn.rm-open { text-decoration: none; }
 .pod-name { font-weight: 700; font-size: 14px; color: var(--ink); max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; margin-top: 4px; }
 .pod-amt { font-family: var(--display); font-weight: 800; font-size: 17px; color: var(--ink); font-variant-numeric: tabular-nums; }
 .pod-amt.pos { color: var(--win); } .pod-amt.neg { color: var(--loss); }
-.pod-step { width: 100%; margin-top: 6px; border-radius: 16px 16px 6px 6px; display: grid; place-items: start center; padding-top: 8px; font-size: 22px; font-weight: 800; color: var(--on-pastel); }
+/* The steps' feet are square, so they stand flush on the foot of the block they sit in */
+.pod-step { width: 100%; margin-top: 6px; border-radius: 16px 16px 0 0; display: grid; place-items: start center; padding-top: 8px; font-size: 22px; font-weight: 800; color: var(--on-pastel); }
 .pod-1 .pod-step { height: 76px; background: var(--ochre); }
 .pod-2 .pod-step { height: 56px; background: var(--mint); }
 .pod-3 .pod-step { height: 42px; background: var(--peach); }
