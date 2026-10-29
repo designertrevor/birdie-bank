@@ -76,7 +76,8 @@
   cursor: pointer; transition: transform .2s var(--spring);
 }
 .un-tile:active { transform: scale(.96); }
-.un-tile.tab { background: var(--band-mint); }
+/* The cream hairline vanishes on mint: an ink one at low strength edges the Tab tile like its neighbours, in both themes (home-1) */
+.un-tile.tab { background: var(--band-mint); box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--ink) 12%, transparent); }
 .un-tile-label { font-size: 12px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: var(--mute); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100%; }
 .un-tile-big { font-family: var(--display); font-weight: var(--money-weight); font-size: 28px; line-height: 1.15; font-variant-numeric: tabular-nums; letter-spacing: -.01em; }
 .un-tile-big.pos { color: var(--win); }

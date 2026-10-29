@@ -1,6 +1,8 @@
 // Picking your avatar: a Ball buddy or a critter on a backdrop (two shelves), a photo, or your
 // initials on a color. Opened from
 // your profile. Every path ends on the same save, and friends see it on seats, the Tab and results.
+// Also a friend's, from their player card (players-4): a buddy or initials saved on the card on this
+// phone, which their own profile's pick replaces once they have one.
 import { useEffect, useRef, useState } from 'react';
 import { FileButton, Icon, Segmented, Sheet, useUI } from './ui.jsx';
 import { AvatarArt } from './Avatar.jsx';
@@ -8,6 +10,8 @@ import { BuddyArt } from './BuddyArt.jsx';
 import { Spot } from './Spot.jsx';
 import '../art-places.css';
 import { BACKDROPS, BUDDIES, SHELVES, avatarModel, buddyAvatar, buddyOf, initialsAvatar, initialsOf, shelfOf } from '../lib/avatars.js';
+import { normalizeAvatar } from '../lib/avatar-model.js';
+import { update, useStore } from '../lib/store.js';
 import { removePhoto, setAvatar, uploadPhoto, useMyProfile } from '../lib/profiles.js';
 import { useAccount } from '../lib/cloud.js';
 
@@ -25,12 +29,15 @@ function Backdrops({ value, onChange, label }) {
   );
 }
 
-function PickerBody({ onClose }) {
+function PickerBody({ onClose, playerId = null }) {
   const { showToast } = useUI();
   const acct = useAccount();
   const me = useMyProfile();
-  const cur = me.avatar;
-  const [tab, setTab] = useState(cur?.kind === 'photo' ? 'photo' : cur?.kind === 'initials' ? 'initials' : 'buddy');
+  // A friend's card: their saved avatar and name, no photo (a photo is someone's own, from their account)
+  const player = useStore(s => (playerId ? s.players[playerId] : null));
+  const friend = !!playerId;
+  const cur = friend ? normalizeAvatar(player?.avatar) : me.avatar;
+  const [tab, setTab] = useState(!friend && cur?.kind === 'photo' ? 'photo' : cur?.kind === 'initials' ? 'initials' : 'buddy');
   // The buddy and the initials keep their own picks while you flip between tabs
   const [buddy, setBuddy] = useState(() => (cur?.kind === 'buddy' && buddyOf(cur.id) ? buddyAvatar(cur.id, cur.bg) : buddyAvatar(BUDDIES[0].id)));
   const [bgTouched, setBgTouched] = useState(cur?.kind === 'buddy');
@@ -45,11 +52,11 @@ function PickerBody({ onClose }) {
   useEffect(() => () => { if (shown.current) URL.revokeObjectURL(shown.current); }, []);
   const file = photo?.file || null;
 
-  const name = me.name || 'You';
+  const name = friend ? player?.name || 'Friend' : me.name || 'You';
   const draft = tab === 'buddy' ? buddy : tab === 'initials' ? initials : cur?.kind === 'photo' ? cur : null;
   const model = tab === 'photo' && photo
     ? { kind: 'photo', url: photo.url, text: initialsOf(name, 2), bg: 'lav', preview: true }
-    : avatarModel(draft, { name, key: me.playerId, letters: 2 });
+    : avatarModel(draft, { name, key: friend ? playerId : me.playerId, letters: 2 });
 
   const pickBuddy = id => setBuddy(b => buddyAvatar(id, bgTouched ? b.bg : buddyOf(id).bg));
   const pickFile = e => {
@@ -64,6 +71,13 @@ function PickerBody({ onClose }) {
   };
 
   const save = async () => {
+    if (friend) {
+      const a = normalizeAvatar(tab === 'buddy' ? buddy : initials);
+      update(s => { s.players[playerId] = { ...(s.players[playerId] || { id: playerId, name, createdAt: Date.now() }), avatar: a }; });
+      showToast('Avatar saved');
+      onClose();
+      return;
+    }
     if (tab === 'photo') {
       if (!file) { onClose(); return; }
       setBusy(true);
@@ -88,24 +102,25 @@ function PickerBody({ onClose }) {
   };
 
   const hasPhoto = cur?.kind === 'photo';
-  const label = tab === 'photo' ? (file ? 'Use this photo' : 'Done') : 'Save';
+  // Save on every tab; a photo just picked says what saving does (players-10)
+  const label = tab === 'photo' && file ? 'Use this photo' : 'Save';
   return (
     <>
       <div className="av-preview">
         {/* The Photo tab with no photo yet: the empty frame, not someone else's look */}
         {tab === 'photo' && !photo && !hasPhoto ? <Spot kind="frame" size={112} className="av-frame" /> : <AvatarArt model={model} size="xl" />}
-        <p className="field-help">People you play with see this on seats, the Tab and results.</p>
+        <p className="field-help">{friend ? `On this phone. Once ${String(name).split(' ')[0]} picks one in their own profile, theirs shows.` : 'People you play with see this on seats, the Tab and results.'}</p>
       </div>
       <div style={{ padding: '0 16px 8px' }}>
         <Segmented label="Kind of avatar" className="press-mode-row" btn="pm-btn" value={tab} onChange={v => { setTab(v); setErr(null); }}
-          options={[{ value: 'buddy', label: 'Characters' }, { value: 'photo', label: 'Photo' }, { value: 'initials', label: 'Initials' }]} />
+          options={[{ value: 'buddy', label: 'Characters' }, ...(friend ? [] : [{ value: 'photo', label: 'Photo' }]), { value: 'initials', label: 'Initials' }]} />
       </div>
       {tab === 'buddy' && (
         <div className="av-pane">
           <div className="chip-row flush av-shelves" role="group" aria-label="Shelf">
             {SHELVES.map(x => (
               <button key={x.id} type="button" className={`pill-btn sm ${shelf === x.id ? 'on' : ''}`} aria-pressed={shelf === x.id} onClick={() => setShelf(x.id)}>
-                {x.name}{buddyOf(buddy.id)?.shelf === x.id && shelf !== x.id ? <><span className="av-shelf-dot" aria-hidden="true" /><span className="sr-only">, your pick is here</span></> : null}
+                {x.name}{buddyOf(buddy.id)?.shelf === x.id && shelf !== x.id ? <><Icon name="check" className="av-shelf-mark" /><span className="sr-only">, your pick is here</span></> : null}
               </button>
             ))}
           </div>
@@ -153,11 +168,11 @@ function PickerBody({ onClose }) {
   );
 }
 
-/** The avatar picker as a sheet. */
-export function AvatarPicker({ open, onClose }) {
+/** The avatar picker as a sheet: yours, or with `playerId` a friend's (`name` for the title). */
+export function AvatarPicker({ open, onClose, playerId = null, name = '' }) {
   return (
-    <Sheet open={open} onClose={onClose} title="Your avatar">
-      <PickerBody onClose={onClose} />
+    <Sheet open={open} onClose={onClose} title={playerId ? `${String(name).split(' ')[0] || 'Their'}’s avatar` : 'Your avatar'}>
+      <PickerBody onClose={onClose} playerId={playerId} />
     </Sheet>
   );
 }

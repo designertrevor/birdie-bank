@@ -24,7 +24,8 @@
 .hx-games { flex-wrap: nowrap; overflow-x: auto; scrollbar-width: none; padding-bottom: 12px; }
 .hx-games::-webkit-scrollbar { display: none; }
 /* A sideways row fades at its right edge, so a chip or tile cut there reads as more to scroll, not a broken layout */
-.hx-games, .hx-h2h .h2h { mask-image: linear-gradient(to right, #000 calc(100% - 32px), transparent); -webkit-mask-image: linear-gradient(to right, #000 calc(100% - 32px), transparent); scroll-padding-inline: 16px; }
+/* (56px: long enough that a tile cut mid-name reads as fading off, history-7) */
+.hx-games, .hx-h2h .h2h { mask-image: linear-gradient(to right, #000 calc(100% - 56px), transparent); -webkit-mask-image: linear-gradient(to right, #000 calc(100% - 56px), transparent); scroll-padding-inline: 16px; }
 .hx-games .pill-btn { flex-shrink: 0; }
 
 /* The chart card: net and count on one line, the line, the stats link inside its foot */
@@ -43,8 +44,10 @@
 }
 .hx-stats i { color: var(--icon); }
 .hx-stats .sl-sub { display: block; font-size: 12px; font-weight: 500; color: var(--mute); margin-top: 1px; }
-.hx-chart:not(:has(.season-chart)) { padding-top: 0; }
-.hx-chart:not(:has(.season-chart)) .hx-stats { margin-top: 0; border-top: none; }
+/* Only a card with no net at all (just the stats link) drops its top padding; one round's net without
+   a chart keeps the same air over YOUR NET as a season's, and its divider over the link (history-5) */
+.hx-chart:not(:has(.hx-head)) { padding-top: 0; }
+.hx-chart:not(:has(.hx-head)) .hx-stats { margin-top: 0; border-top: none; }
 
 /* Head to head: a quiet strip of small tiles */
 .hx-h2h { margin-top: 8px; }

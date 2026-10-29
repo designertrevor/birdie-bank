@@ -125,7 +125,7 @@ export function LeftSheet({ round, idx, onClose, onEnd }) {
       ) : (
         <>
           <div style={{ padding: '0 20px 12px' }}>
-            <div className="eyebrow" style={{ marginBottom: 8 }}>Who left</div>
+            <div className="field-label">Who left</div>
             <div className="chip-row" style={{ padding: 0 }} role="radiogroup" aria-label="Who left">
               {staying.map(p => (
                 <PickChip key={p.id} radio on={pid === p.id} disabled={!canLeave(round, p.id)} onClick={() => setPid(p.id)}>{p.name}</PickChip>

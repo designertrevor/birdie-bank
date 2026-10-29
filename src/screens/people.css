@@ -51,7 +51,7 @@
 .pl-record { min-width: 0; font-variant-numeric: tabular-nums; text-wrap: pretty; }
 .pl-rsvp { flex-shrink: 0; padding: 1px 6px; border-radius: var(--r-chip); background: var(--surface); color: var(--mute); font-size: 11px; font-weight: 700; }
 .pl-rsvp.in { background: var(--win-bg); color: var(--win); }
-.pl-rsvp.maybe { background: var(--state-vote-bg); color: var(--state-vote-ink); }
+.pl-rsvp.maybe { background: var(--state-vote-bg); color: var(--state-vote-ink); box-shadow: inset 0 0 0 1.5px var(--state-vote-edge); }
 .pl-rsvp.out { background: var(--loss-bg); color: var(--loss); }
 .pl-owe {
   flex-shrink: 0; min-height: 32px; padding: 0 10px; border: none; border-radius: var(--r-chip); font: inherit; font-size: 14px; font-weight: 700;
@@ -85,9 +85,19 @@
 .pl-add-lbl { font-weight: 600; font-size: 16px; color: var(--ink); }
 /* The empty state's one button, and its outlines read as faces to come, not as buttons (players-4) */
 .people-empty .pe-add { margin-top: 10px; }
-.people-empty .pe-ghost { border-style: solid; border-width: 1.5px; border-color: var(--line); }
+.people-empty .pe-art { margin: 4px auto 8px; }
 
 /* Edit player: the handicap is a field like the name, a quiet placeholder when empty, a clear X inside it once set (players-6) */
+/* Edit player: their avatar on top with a pencil badge that opens the picker (players-4) */
+.pe-face { display: flex; flex-direction: column; align-items: center; gap: 4px; padding: 20px 20px 4px; }
+.pe-face .field-help { margin: 4px 0 0; text-align: center; }
+.pe-face-btn { position: relative; padding: 0; border: none; background: none; border-radius: 50%; cursor: pointer; transition: transform .2s var(--spring); }
+.pe-face-btn:active { transform: scale(.94); }
+.pe-face-btn .avatar.lg { margin: 0; }
+.pe-face-edit {
+  position: absolute; right: -4px; bottom: -4px; width: 30px; height: 30px; border-radius: 50%; display: grid; place-items: center;
+  background: var(--card); color: var(--ink); font-size: 15px; box-shadow: var(--hair), 0 0 0 2px var(--canvas);
+}
 .pe-hc { position: relative; }
 .pe-hc-btn { display: flex; align-items: center; justify-content: space-between; gap: 12px; width: 100%; min-height: 52px; padding-right: 52px; text-align: left; cursor: pointer; }
 .pe-hc-btn.empty { padding-right: 18px; }

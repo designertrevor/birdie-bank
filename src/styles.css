@@ -74,12 +74,15 @@ button { font-family: inherit; }
 .stage.in-pop > .screen.active, .stage.in-pop > .stage.in-none > .screen.active { animation: screenBack var(--duration-fast) var(--ease-smooth-out) both; }
 .stage.out-pop .screen.active { animation: screenPushOut var(--duration-fast) var(--ease-in) both; pointer-events: none; }
 .stage.out-swap .screen.active { animation: screenFade var(--duration-fast) ease-in both; pointer-events: none; }
-.stage.under .screen.active { animation: none; pointer-events: none; }
+/* The one underneath fades out quickly as the new one comes in, so two screens' headers and words never
+   read through each other mid-push (history-14, setup-27) */
+.stage.under .screen.active { animation: screenUnder calc(var(--duration-fast) * .6) ease-in both; pointer-events: none; }
 /* A pushed screen starts partly there, so its first frames are never a blank canvas */
 @keyframes screenPush { from { opacity: .4; transform: translateX(var(--distance-medium)); } }
 @keyframes screenBack { from { opacity: .4; transform: translateX(calc(-1 * var(--distance-medium))); } }
 @keyframes screenPushOut { to { opacity: 0; transform: translateX(var(--distance-medium)); } }
 @keyframes screenFade { to { opacity: 0; } }
+@keyframes screenUnder { to { opacity: 0; } }
 @keyframes rise { from { opacity: 0; transform: translateY(14px); } }
 @keyframes pop { 0% { transform: scale(1); } 40% { transform: scale(1.3); } 100% { transform: scale(1); } }
 @keyframes float { 50% { transform: translateY(-8px) rotate(4deg); } }
@@ -346,7 +349,9 @@ a.set-row { text-decoration: none; }
   font-size: 22px; cursor: pointer; display: grid; place-items: center; flex-shrink: 0;
   transition: transform .2s var(--spring), background .15s;
 }
-.sc-btn:last-child { background: var(--ink); color: var(--on-ink); }
+/* Minus and plus the same weight, an ink edge on the card, so an enabled minus never looks like the
+   disabled one and plus doesn't read as the main action (play-44) */
+.sc-btn, .sc-btn:last-child { background: var(--card); color: var(--ink); box-shadow: inset 0 0 0 1.5px color-mix(in srgb, var(--ink) 35%, transparent); }
 .sc-btn:active { transform: scale(.85); }
 .sc-num { width: 44px; text-align: center; font-family: var(--display); font-size: 32px; font-weight: 800; color: var(--ink); flex-shrink: 0; font-variant-numeric: tabular-nums; }
 .sc-num.bump { animation: pop .3s var(--spring); }
@@ -514,6 +519,17 @@ a.set-row { text-decoration: none; }
 /* A sheet's title row stays put at the top while a long sheet scrolls under it */
 /* The title starts 20px in, on the same edge as a confirm's title and a sheet's words under it (play-42, play-43) */
 .sheet-head { position: sticky; top: 0; z-index: 2; display: flex; justify-content: space-between; align-items: center; padding: 12px 16px 4px 20px; background: inherit; border-radius: inherit; }
+/* Once a sheet has scrolled, a short fade under its title, so what slides under it fades out instead of
+   being sliced half a line down (play-2). Scroll-driven: a sheet that doesn't scroll shows none */
+@supports (animation-timeline: scroll()) {
+  :is(.sheet, .sc-sheet, .rules-sheet) { scroll-timeline: --sheet-scroll block; }
+  .sheet-head::after {
+    content: ''; position: absolute; left: 0; right: 0; top: 100%; height: 16px; pointer-events: none;
+    background: linear-gradient(var(--sheet-bg), transparent); opacity: 0;
+    animation: sheetEdgeIn linear both; animation-timeline: --sheet-scroll; animation-range: 0 16px;
+  }
+}
+@keyframes sheetEdgeIn { from { opacity: 0; } to { opacity: 1; } }
 .sheet-title-row { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding-right: 16px; }
 .sheet-title-row .sheet-title { flex: 1; min-width: 0; }
 .sheet-handle { width: 40px; height: 5px; background: var(--surface-strong); margin: 10px auto 0; border-radius: 3px; }
@@ -571,7 +587,8 @@ a.set-row { text-decoration: none; }
 .rules-section { font-family: var(--display); font-size: 17px; font-weight: 800; color: var(--ink); margin: 18px 0 6px; }
 .rules-body { font-size: 15px; color: var(--body); line-height: 1.55; }
 .rules-body li { margin-left: 18px; margin-bottom: 6px; }
-.rules-body li::marker { color: var(--pink-text); font-weight: 700; }
+/* Quiet bullets on a reading sheet: pink is only for the thing to tap (play-42) */
+.rules-body li::marker { color: var(--mute); font-weight: 700; }
 
 /* NASSAU MATCH STATUS */
 .match-status { display: flex; gap: 6px; margin: 0 16px 8px; flex-shrink: 0; }
@@ -612,6 +629,9 @@ a.set-row { text-decoration: none; }
 .tog:disabled { opacity: .45; }
 /* Off, the track carries an edge a thumb can find in the sun (its fill alone was 1.25:1 on a card) */
 .tog:not(.on) { box-shadow: inset 0 0 0 1.5px var(--mute); }
+/* The knob a size down with clear air all round, so off it never sits on that edge (it read as bitten, play-31) */
+.tog::after { top: 5px; left: 5px; width: 24px; height: 24px; }
+.tog.on::after { left: 27px; }
 
 /* NASSAU SETUP */
 .nassau-bet-row { display: flex; align-items: center; justify-content: space-between; padding: 12px 12px 12px 18px; margin: 0 16px 8px; background: var(--card); border-radius: 18px; border: none !important; }
@@ -621,6 +641,8 @@ a.set-row { text-decoration: none; }
   padding: 10px 14px; width: 100%; outline: none; color: var(--ink);
 }
 .name-input:focus { box-shadow: 0 0 0 2px var(--ink); }
+/* A hint, not a name already typed: lighter and smaller than what you type (play-32) */
+.name-input::placeholder { font-weight: 500; font-size: 18px; color: var(--mute); }
 .or-rule { display: flex; align-items: center; gap: 10px; margin: 14px 4px; color: var(--mute); font-size: 13px; font-weight: 600; }
 .or-rule::before, .or-rule::after { content: ''; flex: 1; height: 1px; background: var(--surface-strong); }
 .text-input { font: inherit; font-size: 16px; border: none; background: var(--surface); border-radius: 14px; padding: 12px 14px; width: 100%; outline: none; color: var(--ink); line-height: 1.45; }
@@ -661,6 +683,10 @@ a.set-row { text-decoration: none; }
   /* A long toast (a bets line) wraps inside the screen instead of pushing the page sideways */
   width: max-content; max-width: calc(100% - 32px); text-align: center; text-wrap: balance;
   transition: opacity .2s, transform .35s var(--spring);
+  /* A halo of the page around it, so words underneath (the hint over Save & next hole) never touch or
+     show through its edge, and a quicker fade so it's see-through for as short a time as it can be (play-9) */
+  box-shadow: 0 0 0 6px color-mix(in srgb, var(--canvas) 88%, transparent);
+  transition-duration: .12s, .35s;
 }
 .toast.show { opacity: 1; transform: translate(-50%, 0) scale(1); }
 .toast.has-act { display: flex; align-items: center; gap: 12px; padding: 4px 6px 4px 20px; white-space: normal; text-align: left; width: max-content; max-width: calc(100% - 32px); font-size: 15px; }
@@ -856,7 +882,7 @@ button:disabled { cursor: not-allowed; }
 }
 .pickup-btn.on { color: var(--loss); }
 .sc-num.untouched { color: var(--mute-soft); }
-.sc-btn:disabled { opacity: .35; transform: none; }
+.sc-btn:disabled { opacity: .4; transform: none; }
 .play-cta { background: var(--canvas); }
 .wolf-panel { margin: 0 16px 8px; padding: 12px 14px; background: var(--lav); border-radius: 20px; flex-shrink: 0; }
 .wolf-panel .bl { color: rgba(0,0,0,.75); font-size: 14px; }
@@ -1655,6 +1681,8 @@ button.who-status { cursor: pointer; min-height: 36px; }
 
 /* SEASON PREVIEW (Pro) and the free promise on the Tab (2026-09-29) */
 .link-btn.center { align-self: center; }
+/* The underline is the label's alone: an icon in the link sits out of it (a short line under the plus, trips-39) */
+.link-btn i { display: inline-block; text-decoration: none; }
 .tab-view { margin: 0 16px 10px; }
 .pro-tag { display: inline-block; margin-left: 6px; font-size: 10px; font-weight: 800; letter-spacing: .04em; padding: 2px 6px; border-radius: 999px; background: var(--pink-fill); color: #fff; vertical-align: 2px; }
 .pm-btn.active .pro-tag { background: var(--on-ink); color: var(--ink); }
@@ -1862,7 +1890,7 @@ button.lately-row:active { background: var(--surface); }
 .ft-line { color: var(--ink); font-size: 15px; }
 .ft-list { margin: 0; padding-left: 18px; color: var(--ink); font-size: 15px; line-height: 1.45; }
 .ft-list li + li { margin-top: 4px; }
-.ft-changes li::marker { color: var(--pink-text); }
+.ft-changes li::marker { color: var(--mute); }
 .ft-call + .ft-call { margin-top: 12px; }
 .ft-seg .pm-btn { flex: 1 1 0; min-width: 0; padding: 0 6px; font-size: 14px; line-height: 1.1; }
 .ft-skip { display: block; width: 100%; min-height: 44px; margin-top: 6px; background: none; border: none; color: var(--mute); font-weight: 600; font-size: 15px; cursor: pointer; }
@@ -2145,7 +2173,8 @@ button.trip-card:active { transform: scale(.97); }
 .av-pick:active { transform: scale(.92); }
 .av-pick .av-tile { width: 64px; height: 64px; margin: 0; }
 /* The picked buddy: an ink ring and an ink check, like the picked backdrop under it (players-8) */
-.av-pick.on .av-tile { box-shadow: 0 0 0 3px var(--canvas), 0 0 0 5px var(--ink); }
+/* Through the avatar's own ring (--av-stack), so the dark theme's "no ring on a buddy" doesn't drop it; --ink is cream in dark (players-3) */
+.av-pick.on { --av-stack: 0 0 0 3px var(--canvas), 0 0 0 5px var(--ink); --av-stack-teal: 0 0 0 3px var(--canvas), 0 0 0 5px var(--ink); }
 .av-check { position: absolute; right: -6px; bottom: -6px; width: 22px; height: 22px; border-radius: 50%; display: grid; place-items: center; background: var(--ink); color: var(--on-ink); font-size: 12px; box-shadow: 0 0 0 2px var(--canvas); }
 .av-eyebrow { margin: 14px 0 8px; text-align: center; }
 .av-swatches { display: grid; grid-template-columns: repeat(8, minmax(0, 1fr)); gap: 6px; justify-items: center; padding: 4px 0 8px; }
@@ -2172,7 +2201,8 @@ button.trip-card:active { transform: scale(.97); }
 
 /* ---------- Profile follow-ups: avatar shelves (critters), money privacy with Everyone (overnight 6 follow-ups, profiles) ---------- */
 .av-shelves { justify-content: center; padding: 4px 0 2px; }
-.av-shelf-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--pink-fill); display: inline-block; }
+/* The shelf your picked buddy is on: a small ink check, not a pink dot with no meaning (players-9) */
+.av-shelf-mark { margin-left: 4px; font-size: 12px; color: inherit; vertical-align: -1px; }
 .pf-money-seg .pm-btn { font-size: 13px; padding: 0 4px; }
 
 /* o6f side bets: either player changes a bet, money or points on a reward round, the reprice note */
@@ -3324,11 +3354,15 @@ a.header-btn.rm-open { text-decoration: none; }
 }
 .trip-form-cta .full-btn { margin: 0; }
 .trip-form-cta .link-btn.center { align-self: center; }
+/* The underline is the label's alone: an icon in the link sits out of it (a short line under the plus, trips-39) */
+.link-btn i { display: inline-block; text-decoration: none; }
 .trip-form-cta .field-help { margin: 2px 0 0; text-align: center; }
 /* Templates: picked like a game in setup */
 .tm-template { min-height: 64px; padding: 12px 14px; border-radius: 18px; background: var(--card); }
 .tm-template.on { background: var(--pick-tint); box-shadow: inset 0 0 0 2px var(--pink-fill); }
 .tm-template .li-check { margin-left: auto; }
+/* An empty ring you can see on the card, cream on cream before (trips-36) */
+.tm-template .li-check:not(.on) { border: 1.5px solid var(--mute); }
 .tm-template.scratch { min-height: 56px; }
 /* Who's going: find or add, then everyone you could take */
 .trip-who-step .trip-lede { margin: 0 0 16px; }

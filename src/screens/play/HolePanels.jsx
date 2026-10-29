@@ -97,7 +97,7 @@ function BankerPanel({ round, banker, setBanker, phase, setPhase, onPick, onBet,
       </div>
       {phase === 'bets' && (
         <div className="scroll">
-          <div style={{ padding: '6px 20px 8px' }}><div className="eyebrow">Step 1 of 2: Bets &amp; doubles</div></div>
+          <div style={{ padding: '6px 20px 8px' }}><div className="field-label">Step 1 of 2: Bets &amp; doubles</div></div>
           {others.map(p => (
             <div key={p.id} className="pcard">
               <div style={{ display: 'flex', alignItems: 'center', padding: '16px 16px 10px' }}>
