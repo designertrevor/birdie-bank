@@ -29,9 +29,9 @@ export function StatTile({ label, value, state = null, tone = '', sub = null, lo
   const inner = (
     <>
       <span className="st-top"><span className="eyebrow">{label}</span>{onClick && <Icon name="caret-right" className="st-chev" />}</span>
-      {state && <span className={`st-state ${tone}`}>{state}</span>}
       <span className={`st-big d ${tone} ${long ? 'long' : ''}`}>{value}</span>
-      {sub && <span className="st-sub">{sub}</span>}
+      {/* The label then the number: the word for it (Winning, Up) leads the line under the number (history-16) */}
+      {(state || sub) && <span className="st-sub">{state && <span className={`st-state ${tone}`}>{state}</span>}{state && sub ? ' · ' : ''}{sub}</span>}
     </>
   );
   if (onClick) return <button type="button" className="stat-tile tap" onClick={onClick} aria-label={aria}>{inner}</button>;

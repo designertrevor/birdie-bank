@@ -153,7 +153,7 @@ export default function Person({ id: opened }) {
           {(story.rounds > 0 || tab !== 0) && (
             <div className="mc-links">
               {story.rounds > 0 && <TabWhereFrom other={id} />}
-              {tab !== 0 && <button className="link-btn" onClick={() => setOpen(debt)}>Paid part of it?</button>}
+              {tab !== 0 && <button className="link-btn" onClick={() => setOpen({ ...debt, part: true })}>Paid part of it?</button>}
             </div>
           )}
         </div>

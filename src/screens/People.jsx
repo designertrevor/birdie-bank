@@ -145,17 +145,27 @@ export default function People() {
               );
             })}
             {needle && !shown.length && <p className="pl-none">Nobody called “{q.trim()}”. <button className="pl-none-add" onClick={() => nav.push('playerEdit', {})}>Add them</button></p>}
+            {/* Adding someone is the list's last row, not a dashed card of its own (players-2) */}
+            {!needle && (
+              <div className="pl-row pl-add-row">
+                <button className="pl-main" onClick={() => nav.push('playerEdit', {})}>
+                  <span className="pl-add-ci" aria-hidden="true"><Icon name="plus" /></span>
+                  <span className="row-main pl-add-lbl">Add a player</span>
+                </button>
+              </div>
+            )}
           </div>
         )}
         {people.length < 1 && (
           <div className="people-empty">
-            <div className="pe-outlines" aria-hidden="true">{[0, 1, 2, 3].map(i => <span key={i} className="pe-ghost"><Icon name="plus" /></span>)}</div>
+            <div className="pe-outlines" aria-hidden="true">{[0, 1, 2, 3].map(i => <span key={i} className="pe-ghost"><Icon name="user" /></span>)}</div>
             <div className="pe-title d">Add the people you play with</div>
             <p className="pe-sub">Then pick them in one tap when you start a round. Everyone gets a Ball buddy.</p>
+            {/* The card's own button, so the empty state carries its action (players-4) */}
+            <button className="full-btn pe-add" onClick={() => nav.push('playerEdit', {})}><Icon name="plus" /> Add a player</button>
           </div>
         )}
         <RecordBookNote line={line} />
-        <button className="add-row" onClick={() => nav.push('playerEdit', {})}><div className="add-ci"><Icon name="plus" /></div><span className="add-lbl">Add a player</span></button>
         {people.length > 0 && (
           <button className="text-link" onClick={() => nav.push('friends', { view: 'list' })}>
             <Icon name="users-three" fill /> All your friends, and people you might know
@@ -300,9 +310,12 @@ export function PlayerEdit({ id, onSaved }) {
           {profName && profName !== trimmed && <p className="field-help">{who}’s own profile says “{profName}”, so that’s the name you see everywhere. The name here is used if they ever take theirs off.</p>}
           {duplicate && <p className="field-error" id="pe-name-err" role="status">Someone already has that name. Add an initial so scorecards stay clear, or merge them below if it’s the same person.</p>}
           <div className="field-label">Handicap <span className="opt">optional</span></div>
-          <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
-            <button className="amt-btn" onClick={() => setPad(true)} aria-label={index == null ? 'Handicap: add one' : `Handicap ${formatIndex(index)}. Change it`}>{index == null ? 'Add' : formatIndex(index)}</button>
-            {index != null && <button className="header-btn" onClick={() => setIndex(null)} aria-label="Clear the handicap">Clear</button>}
+          {/* A field like the name above it, with an inline clear X once there's a number (players-6) */}
+          <div className="pe-hc">
+            <button className={`name-input pe-hc-btn ${index == null ? 'empty' : ''}`} onClick={() => setPad(true)} aria-label={index == null ? 'Handicap: add one' : `Handicap ${formatIndex(index)}. Change it`}>
+              <span>{index == null ? 'Add a handicap' : formatIndex(index)}</span>{index == null && <Icon name="plus" />}
+            </button>
+            {index != null && <button className="pe-hc-clear" onClick={() => setIndex(null)} aria-label="Clear the handicap"><Icon name="x" /></button>}
           </div>
           <p className="field-help">Their usual 18-hole index. Strokes are worked out from it for each course and tee.</p>
           <div className="field-label" id="pe-pay">{isMe ? 'How you get paid' : `How ${trimmed.split(' ')[0] || 'they'} ${trimmed ? 'gets' : 'get'} paid`} <span className="opt">optional</span></div>
@@ -401,7 +414,8 @@ export function CrewEdit({ id }) {
           <input id="ce-name" className="name-input" value={name} maxLength={28} onChange={e => setName(e.target.value)} placeholder="e.g. Saturday group" />
         </div>
         <div className="sec-label">Who’s in it · {sel.length} selected</div>
-        <div className="pick-list">
+        {/* One card of rows, like the Players list (tab-14) */}
+        <div className={`pick-list ${players.length ? 'joined' : ''}`}>
           {players.length === 0 && <Empty illo="crowd" title="No players yet" text="Add players first, then group them into a crew." />}
           {players.map(p => (
             <PickRow key={p.id} on={sel.includes(p.id)} onClick={() => toggle(p.id)} lead={<Avatar id={p.id} name={p.name} />}

@@ -155,6 +155,12 @@ export default function Onboarding({ onDone, play = null }) {
     }
   }, []);
 
+  // The buddy you pick starts loading now, so All set's card has your face on arrival, not a bare circle (onboarding-7)
+  useEffect(() => {
+    const f = buddy ? artFile('buddies', buddy) : null;
+    for (const url of [f?.light, f?.dark]) if (url) new Image().src = url;
+  }, [buddy]);
+
   // Near the end, warm what opens next (the ask, the paywall), so finishing never shows a blank frame
   // while their code loads
   const nearEnd = step === 'name' || step === 'group';
@@ -347,8 +353,11 @@ export default function Onboarding({ onDone, play = null }) {
       ['The math', 'Birdie Bank, every time'],
     ];
     const first = name.trim();
+    // The finish gets its moment: your group, you first, at the size you said (onboarding-8)
+    const crew = [...new Set([buddy || CROWD[0], ...crowdOf(a.size)])].slice(0, crowdOf(a.size).length);
     return (<>
-      <div className="scroll ob-body">
+      <div className="scroll ob-body ob-done">
+        <StepArt art={{ spot: 'crowd', ids: crew }} />
         <div className="eyebrow">All set</div>
         <h1 className="ob-q d">{first}, your group is ready.</h1>
         <div className="block ob-review">

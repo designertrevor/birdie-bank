@@ -28,13 +28,15 @@ const TripSheet = part(() => import('./Trips.jsx'), 'TripSheet');
 export function PlansAndNext({ plans, onNow, live, last, onJoin }) {
   const hasHistory = !!last;
   const planned = plans.length > 0 || onNow.length > 0;
+  // On the day of a round you organized, its card's Start this round is the pink; Start a round goes quiet (home-11)
+  const today = plans.some(p => p.host && p.status !== 'off' && p.status !== 'started' && !p.gone && !p.movedTo && daysUntil(p.date) === 0);
   return (
     <>
       {live.length === 0 && <CountdownStrip plans={plans} />}
       {plans.length > 0 && <h2 className="sec-label">Upcoming</h2>}
       {plans.map(p => <UpcomingCard key={p.id} plan={p} />)}
       {/* Starting a round at the course (or running the last one back) stays one tap, plans or not */}
-      {live.length === 0 && <StartCard last={last} fresh={!hasHistory} planned={planned} onJoin={onJoin} />}
+      {live.length === 0 && <StartCard last={last} fresh={!hasHistory} planned={planned} quiet={today} onJoin={onJoin} />}
       {!hasHistory && <FirstSteps />}
     </>
   );
@@ -88,7 +90,7 @@ export function UpcomingCard({ plan: saved }) {
       </button>
       {/* On the day the organizer starts this round right from its card: roll call, then tee off with the plan's setup */}
       {until === 0 && plan.host && (
-        <div className="uc-start"><button className="full-btn" onClick={() => nav.push('rollCall', { id: plan.id })}><Icon name="flag-pennant" fill /> Start this round</button></div>
+        <div className="uc-start"><button className="full-btn pink" onClick={() => nav.push('rollCall', { id: plan.id })}><Icon name="flag-pennant" fill /> Start this round</button></div>
       )}
     </div>
   );
@@ -147,12 +149,12 @@ function OpenPlanCard({ plan }) {
  * side and filling the width, so the plans keep the colour and the attention. Start a round is the
  * main action, with a one-tap "same again" beside it when there's a last one.
  */
-function StartCard({ last, fresh, planned = false, onJoin = null }) {
+function StartCard({ last, fresh, planned = false, quiet = false, onJoin = null }) {
   const nav = useNav();
   const again = last && GAMES[last.game] && !cardOnly(last);
   const acts = (
     <div className={`un-start-acts ${again ? '' : 'solo'}`}>
-      <button className="un-btn" onClick={() => nav.push('newRound')}><Icon name="golf" fill /> Start a round</button>
+      <button className={`un-btn ${quiet ? 'ghost' : ''}`} onClick={() => nav.push('newRound')}><Icon name="golf" fill /> Start a round</button>
       {again && <button className="un-btn ghost" onClick={() => nav.push('newRound', { rematch: last.id })}><Icon name="arrow-counter-clockwise" /> Run it back</button>}
     </div>
   );

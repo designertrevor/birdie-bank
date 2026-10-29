@@ -7,6 +7,7 @@ import { useNav } from '../lib/nav.js';
 import { GAMES } from '../lib/round.js';
 import { planChoice } from '../lib/plan-basics.js';
 import { weekdayOf } from '../lib/countdown.js';
+import { daysUntil } from '../lib/plan-basics.js';
 import { nextPlan, stripClock } from '../lib/upnext-first.js';
 
 /** The strip for the first of `plans` still ahead, or nothing. Ticks once a minute. */
@@ -21,11 +22,13 @@ export function CountdownStrip({ plans }) {
   const clock = plan && stripClock(plan, now);
   if (!clock) return null;
   const { game } = planChoice(plan);
-  const day = weekdayOf(plan).slice(0, 3);
+  // Today's round says Today, like its card, rather than today's weekday (home-11)
+  const until = daysUntil(plan.date);
+  const day = until === 0 ? 'Today' : until === 1 ? 'Tomorrow' : weekdayOf(plan).slice(0, 3);
   const name = GAMES[game]?.name || 'Golf';
   const said = clock.words || clock.parts.map(([n, u]) => `${Number(n)} ${{ d: 'days', h: 'hours', m: 'minutes' }[u]}`).join(', ');
   return (
-    <button className="un-strip" onClick={() => nav.push('plan', { id: plan.id })} aria-label={`${name} on ${weekdayOf(plan)}: ${said} to go`}>
+    <button className="un-strip" onClick={() => nav.push('plan', { id: plan.id })} aria-label={`${name} ${until === 0 ? 'today' : until === 1 ? 'tomorrow' : `on ${weekdayOf(plan)}`}: ${said} to go`}>
       <Icon name="flag-pennant" fill className="un-strip-ic" />
       <span className="un-strip-what">{name} · {day}</span>
       <span className="un-strip-clock" aria-hidden="true">

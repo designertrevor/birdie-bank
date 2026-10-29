@@ -1,6 +1,7 @@
 /* The status page (status.html). The app's own colours (src/styles.css), light and dark, and the
    theme you picked in Settings (status.js sets data-theme before paint, like index.html). One token,
-   --canvas, paints the page, both Safari strips and theme-color. */
+   --canvas, paints the page, both Safari strips and theme-color. The app's new type: Fraunces for the
+   title and the summary, Figtree for the rest, and the brand mark in ink (pink is for taps). */
 :root {
   --canvas: #f8f2e4; --card: #ffffff; --ink: #0a0a0a; --body: #3a3a3a; --mute: #6a6a6a; --line: #ebe6d6; --pink: #d6336c;
   --up: #0f6b4f; --up-bg: #d6efe6; --slow: #8a5a00; --slow-bg: #fff1c9; --down: #7a7a7a; --down-bg: #ece7da; --focus: #6b4fd0;
@@ -23,7 +24,7 @@
 html { background: var(--edge-top-background); -webkit-text-size-adjust: 100%; }
 body {
   margin: 0; background: var(--edge-bottom-background); color: var(--body);
-  font: 16px/1.5 Inter, system-ui, -apple-system, sans-serif; -webkit-font-smoothing: antialiased; text-wrap: pretty;
+  font: 16px/1.5 Figtree, Inter, system-ui, -apple-system, sans-serif; -webkit-font-smoothing: antialiased; text-wrap: pretty;
   padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
 }
 .edge-top::after, .edge-bottom::after { content: ""; position: fixed; left: 0; right: 0; pointer-events: none; z-index: 2147483647; }
@@ -32,8 +33,8 @@ body {
 main { max-width: 640px; margin: 0 auto; padding: 32px 16px 56px; }
 a { color: var(--pink); }
 a:focus-visible, button:focus-visible { outline: 3px solid var(--focus); outline-offset: 3px; border-radius: 12px; }
-.back { display: inline-flex; align-items: center; min-height: 44px; font-weight: 600; text-decoration: none; margin-bottom: 8px; }
-h1 { font-family: "Bricolage Grotesque", Inter, sans-serif; font-weight: 800; color: var(--ink); letter-spacing: -.02em; font-size: 40px; line-height: 1.05; margin: 0 0 24px; }
+.back { display: inline-flex; align-items: center; min-height: 44px; font-weight: 600; text-decoration: none; margin-bottom: 8px; color: var(--ink); }
+h1 { font-family: Fraunces, Georgia, serif; font-weight: 500; font-variation-settings: "SOFT" 50; color: var(--ink); letter-spacing: -.02em; font-size: 40px; line-height: 1.05; margin: 0 0 24px; }
 .dot { width: 12px; height: 12px; border-radius: 50%; flex-shrink: 0; background: var(--down); }
 [data-state="up"] .dot, [data-tone="up"] .dot { background: var(--up); }
 [data-state="slow"] .dot, [data-tone="slow"] .dot { background: var(--slow); }
@@ -45,7 +46,7 @@ h1 { font-family: "Bricolage Grotesque", Inter, sans-serif; font-weight: 800; co
 .summary[data-tone="up"] { background: var(--up-bg); border-color: transparent; }
 .summary[data-tone="slow"] { background: var(--slow-bg); border-color: transparent; }
 .summary[data-tone="down"] { background: var(--down-bg); border-color: transparent; }
-.summary-text { margin: 0; font-family: "Bricolage Grotesque", Inter, sans-serif; font-weight: 800; font-size: 24px; line-height: 1.2; color: var(--ink); letter-spacing: -.01em; }
+.summary-text { margin: 0; font-family: Fraunces, Georgia, serif; font-weight: 500; font-variation-settings: "SOFT" 50; font-size: 24px; line-height: 1.2; color: var(--ink); letter-spacing: -.01em; }
 .summary-sub { margin: 4px 0 0; color: var(--body); }
 .summary-sub:empty { display: none; }
 .checks { list-style: none; margin: 16px 0 0; padding: 0; background: var(--card); border: 1px solid var(--line); border-radius: 20px; overflow: hidden; }
@@ -56,12 +57,13 @@ h1 { font-family: "Bricolage Grotesque", Inter, sans-serif; font-weight: 800; co
 .row-name { font-weight: 600; color: var(--ink); }
 .row-what { font-size: 14px; color: var(--mute); }
 .row-detail { font-size: 14px; color: var(--body); margin-top: 4px; }
+.row-detail:empty { display: none; }
 .row-side { text-align: right; flex-shrink: 0; font-size: 14px; }
 .row-ms { font-weight: 600; color: var(--ink); font-variant-numeric: tabular-nums; }
 .row-when { color: var(--mute); font-size: 12px; white-space: nowrap; }
 .again {
-  display: flex; align-items: center; justify-content: center; width: 100%; height: 52px; margin-top: 20px; border: 0; border-radius: 999px;
-  background: var(--ink); color: var(--canvas); font: 800 17px/1 "Bricolage Grotesque", Inter, sans-serif; cursor: pointer;
+  display: flex; align-items: center; justify-content: center; width: 100%; height: 52px; margin-top: 20px; border: 0; border-radius: 10px;
+  background: var(--ink); color: var(--canvas); font: 600 17px/1 Figtree, Inter, sans-serif; cursor: pointer;
 }
 .again:disabled { opacity: .5; cursor: default; }
 .note { color: var(--mute); font-size: 14px; margin: 20px 0 0; }

@@ -17,7 +17,8 @@ export function BottomNav() {
   const [picking, setPicking] = useState(false);
   const item = (t, icon, label) => (
     <button className={`nav-btn ${nav.tab === t ? 'active' : ''}`} onClick={() => nav.setTab(t)} aria-current={nav.tab === t ? 'page' : undefined}>
-      <Icon name={icon} fill /><span className="nav-lbl">{label}</span>
+      {/* The tab you're on is filled, the others outline, in both looks (classic-1) */}
+      <Icon name={icon} fill={nav.tab === t} /><span className="nav-lbl">{label}</span>
     </button>
   );
   return (

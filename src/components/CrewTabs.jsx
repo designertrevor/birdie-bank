@@ -24,7 +24,6 @@ const dayWithYear = t => {
   return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: d.getFullYear() === new Date().getFullYear() ? undefined : 'numeric' });
 };
 const plural = (n, word) => `${n} ${word}${n === 1 ? '' : 's'}`;
-const upDown = (c, where) => (c > 0 ? `You’re up ${money(c / 100)}${where}` : c < 0 ? `You’re down ${money(-c / 100)}${where}` : `You’re even${where}`);
 
 /** Everyone, then a chip for each crew or trip with money and Other rounds. Nothing when there's only Everyone. */
 export function TabSwitch({ tabs, value, onChange }) {
@@ -116,9 +115,11 @@ export function OneTab({ tab }) {
   const sub = book ? `${plural(n, 'round')} since the books closed on ${dayWithYear(book.closedAt)} (${book.name})` : `${plural(n, 'round')}${tab.since ? ` since ${dayWithYear(tab.since)}` : ''}`;
   return (
     <>
-      <div className="tab-overall">
-        <div className="eyebrow">{tab.name} · {sub}</div>
-        <div className={`tab-big d ${myNet > 0 ? 'pos' : myNet < 0 ? 'neg' : ''}`}>{tab.lines.length ? upDown(myNet, '') : 'All square'}</div>
+      {/* The same summary card as Everyone leads with: what this tab is, your money on it big (tab-14) */}
+      <div className="te-summary">
+        <span className="te-label">{tab.name} · {sub}</span>
+        <span className={`te-big ${myNet > 0 ? 'pos' : myNet < 0 ? 'neg' : ''}`}>{myNet ? money(Math.abs(myNet) / 100) : tab.lines.length ? 'Even' : 'All square'}</span>
+        {(myNet !== 0 || tab.lines.length > 0) && <span className="te-sub">{myNet > 0 ? 'You’re up on this tab' : myNet < 0 ? 'You’re down on this tab' : 'You’re even. The others still owe each other'}</span>}
       </div>
       {mine.map(l => {
         const other = l.from === me ? l.to : l.from;

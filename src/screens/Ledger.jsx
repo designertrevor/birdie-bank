@@ -118,7 +118,7 @@ export default function Ledger() {
         </button>
         {/* Compact: the reminder bell and where it comes from are on the person's screen; Paid part
             of it? shares the payment app's row, so the card is three short rows */}
-        <PersonActions other={p.id} net={p.net} meId={state.me || me} compact extra={<button className="link-btn tab-part" onClick={() => setOpen(partDebt(p))}>Paid part of it?</button>} />
+        <PersonActions other={p.id} net={p.net} meId={state.me || me} compact extra={<button className="link-btn tab-part" onClick={() => setOpen({ ...partDebt(p), part: true })}>Paid part of it?</button>} />
         <RewardLines other={p.id} />
       </div>
     );
@@ -192,7 +192,8 @@ export default function Ledger() {
             {summary.sub && <span className="te-sub">{summary.sub.text} <b className="neg">{money(summary.sub.amount)}</b></span>}
             {people.length > 1 && (
               <span className="te-net">
-                <span className="tab-faces">{people.slice(0, 5).map(p => <Avatar key={p.id} id={p.id} name={nameOf(state, p.id)} size="sm" />)}</span>
+                {/* Five faces, then how many more (tab-8) */}
+                <span className="tab-faces">{people.slice(0, 5).map(p => <Avatar key={p.id} id={p.id} name={nameOf(state, p.id)} size="sm" />)}{people.length > 5 && <span className="tab-more" aria-hidden="true">+{people.length - 5}</span>}</span>
                 {sections.net > 0 ? 'You’re up' : sections.net < 0 ? 'You’re down' : 'You’re even'} {money(Math.abs(sections.net))} across {people.length} people
               </span>
             )}
@@ -232,7 +233,7 @@ export default function Ledger() {
                 {(recentSquare.length > 0 || rewardOnly.length > 0) && <div className="te-list">{recentSquare.map(squareCard)}{rewardOnly.map(rewardCard)}</div>}
                 {squareIds.length > 0 && people.length > 0 && (
                   <div className="square-line">
-                    <span className="tab-faces">{squareIds.slice(0, 5).map(id => <Avatar key={id} id={id} name={nameOf(state, id)} size="sm" />)}</span>
+                    <span className="tab-faces">{squareIds.slice(0, 5).map(id => <Avatar key={id} id={id} name={nameOf(state, id)} size="sm" />)}{squareIds.length > 5 && <span className="tab-more" aria-hidden="true">+{squareIds.length - 5}</span>}</span>
                     <span><Icon name="check-circle" fill /> All square with {listNames(squareNames)}</span>
                   </div>
                 )}

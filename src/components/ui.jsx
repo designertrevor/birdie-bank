@@ -18,14 +18,15 @@ export function ArtIcon({ name, fill = true, className = '' }) {
 /**
  * A screen's header. A tab's large title tucks into a small one with a hairline under it once its
  * scroll moves (iOS's large title, with a little slack so it doesn't flicker at the top), and comes
- * back the same way when you scroll back up.
+ * back the same way when you scroll back up. A small header just gains the hairline, so rows never
+ * slide under it with no edge (play-66).
  */
 export function Header({ title, onBack, onClose, right, small }) {
   const large = !small && !onBack;
   const ref = useRef(null);
   const [tucked, setTucked] = useState(false);
   useEffect(() => {
-    const scroller = large ? ref.current?.parentElement?.querySelector(':scope > .scroll') : null;
+    const scroller = ref.current?.parentElement?.querySelector(':scope > .scroll');
     if (!scroller) return undefined;
     let on = false;
     const read = () => {
@@ -35,9 +36,9 @@ export function Header({ title, onBack, onClose, right, small }) {
     read();
     scroller.addEventListener('scroll', read, { passive: true });
     return () => scroller.removeEventListener('scroll', read);
-  }, [large]);
+  }, []);
   return (
-    <div ref={ref} className={`screen-header ${large ? 'large' : ''} ${tucked ? 'tucked' : ''}`}>
+    <div ref={ref} className={`screen-header ${large ? 'large' : ''} ${tucked ? (large ? 'tucked' : 'edged') : ''}`}>
       {onBack && <button className="header-back" onClick={onBack} aria-label="Back"><Icon name="arrow-left" /></button>}
       {/* The screen's one real heading, for screen readers' "jump to heading" */}
       <h1 className="screen-title" style={small || onBack ? { fontSize: 20, letterSpacing: '-.01em', flex: 1 } : { flex: 1 }}>{title}</h1>
@@ -53,8 +54,9 @@ export function Screen({ children, className = '', style = undefined }) {
 
 /**
  * The setup step bar. Steps before the current one are green with a check.
- * `canGo(i)` and `onGo(i)` make a step tappable. Five or more steps scroll sideways (the green says
- * done, so they drop the check), keeping the one you're on in view. Moving to a step starts it at
+ * `canGo(i)` and `onGo(i)` make a step tappable. Five or more steps scroll sideways, keeping the one
+ * you're on in view; done steps keep their check there too, so Big Game's bar reads like Start a
+ * trip's (trips-19). Moving to a step starts it at
  * the top, with the title and this bar in view, wherever the last step was scrolled to.
  */
 export function Steps({ steps, current, canGo, onGo }) {
@@ -74,7 +76,7 @@ export function Steps({ steps, current, canGo, onGo }) {
     <div ref={ref} className={`step-bar${many ? ' many' : ''}`} role="group" aria-label={`Step ${current + 1} of ${steps.length}`}>
       {steps.map((s, i) => {
         const cls = `step ${i < current ? 'done' : ''} ${i === current ? 'active' : ''}`;
-        const label = <>{i < current && !many && <Icon name="check" className="step-check" />}{s}</>;
+        const label = <>{i < current && <Icon name="check" className="step-check" />}{s}</>;
         return i !== current && onGo && canGo?.(i)
           ? <button key={s} type="button" className={`${cls} tappable`} onClick={() => onGo(i)} aria-label={`Go to ${s}`}>{label}</button>
           : <div key={s} className={cls} aria-current={i === current ? 'step' : undefined}>{label}</div>;
@@ -327,7 +329,9 @@ function NumpadInner({ title, prefix = '', suffix = '', initial = '', min, max, 
               {tooLow ? `Minimum is ${prefix}${min}${sfx(min)}` : tooHigh ? `Maximum is ${prefix}${max}${sfx(max)}` : allowNegative ? 'Use ± for a plus handicap' : ' '}
             </div>
           </div>
-          <div className="numpad-value" aria-live="polite" aria-atomic="true">{prefix}{shown}{sfx(num ?? 0)}</div>
+          {/* Nothing typed yet is a faint dash, so it never reads as a minus key or a close */}
+          <div className={`numpad-value ${v === '' ? 'empty' : ''}`} aria-live="polite" aria-atomic="true">{prefix}{shown}{sfx(num ?? 0)}</div>
+          <button type="button" className="icon-btn sheet-close numpad-close" onClick={onClose} aria-label="Close"><Icon name="x" /></button>
         </div>
         {quick?.length > 0 && (
           <div className="np-quick" role="group" aria-label="Quick picks">
