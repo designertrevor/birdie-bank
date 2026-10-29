@@ -4,11 +4,11 @@
 
 /** The kinds, in sheet order. `box` is the drawing's units; files go in src/art/<id>/. */
 export const ART_KINDS = [
-  { id: 'scenes', name: 'Scenes', box: '400 by 240', note: 'Full bleed across the top of a screen. The app crops from the sky down to fit, so keep the ground and the people inside the middle 290 units (x 56 to 344). Add <id>.dark.svg for dusk in the dark theme; without it the day drawing shows in both.' },
-  { id: 'spots', name: 'Spot illustrations', box: '120 by 120', note: 'The smiley ball with one prop, for empty states, callouts and small moments. No backdrop: it sits on a white or dark card. Give it its own soft blob of colour if it needs one (the hand-drawn ones get a plate from the app, which a file replaces).' },
-  { id: 'games', name: 'Game art', box: '64 by 64', note: 'One sticker per game. The app draws the rounded backdrop in the group colour (Classics ochre, Head to head pink, Team mint, Full round lavender, Points peach); draw only what sits on it, with room at the edges.' },
-  { id: 'buddies', name: 'Ball buddies', box: '64 by 64', note: 'The golf ball in a hat, each with its own face. The app draws the backdrop colour and clips to a circle, so keep the hat inside the circle.' },
-  { id: 'critters', name: 'Critters', box: '64 by 64', note: 'Golf in-jokes in the same palette, on the backdrop without the ball. Birdie and eagle also pop up on scores, so they must read at 28px.' },
+  { id: 'scenes', name: 'Scenes', box: '400 by 240', note: 'Full bleed across the top of a screen. The app crops from the sky down to fit, so keep the ground and the people inside the middle 290 units (x 56 to 344). The sky is cut out: the app adds the white sticker border round the silhouette in both themes.' },
+  { id: 'spots', name: 'Spot illustrations', box: '120 by 120', note: 'The smiley ball with one prop, for empty states, callouts and small moments. No backdrop and no blob of colour: it sits on a white or dark card as a die-cut sticker, the app adding the white border round its silhouette.' },
+  { id: 'games', name: 'Game art', box: '64 by 64', note: 'One sticker per game, on the page with no colour plate behind it: the app adds the white border round its silhouette. Leave room at the edges for that border.' },
+  { id: 'buddies', name: 'Ball buddies', box: '64 by 64', note: 'The golf ball in a hat, each with its own face. The app draws the backdrop colour the player picked and clips to a circle, so keep the hat inside the circle. An ink outline goes round the whole head, the glasses and every hat, so nothing melts into a backdrop or the white page.' },
+  { id: 'critters', name: 'Critters', box: '64 by 64', note: 'Golf in-jokes in the same palette, with the buddies’ ink outline, on the backdrop as an avatar. Birdie and eagle also pop up on scores as stickers with no backdrop, so they must read at 28px.' },
   { id: 'icons', name: 'Icons used as art', box: '24 by 24 (the ball 150 by 150)', note: 'Phosphor glyphs standing in for drawings: the game tags on the welcome, and the first ball on a tee from before the buddies.' },
 ];
 
@@ -56,9 +56,9 @@ export const ART_USES = {
   'spots/loneball': { name: 'A lone ball', used: ['Gone and not-found screens: a crew, a round, a challenge, a Big Game, Print, Share and Recently deleted (150px)'] },
   'spots/standings': { name: 'Trip standings', used: ['Trip, the Standings view before a round is finished (96px)'] },
   'spots/expenses': { name: 'Trip expenses', used: ['Trip, the Expenses view with nothing logged (96px)'] },
-  'spots/bragging': { name: 'Bragging rights', used: ['Results of a points round, Bragging rights, on its cream plate (96px)'] },
-  'spots/buying': { name: 'Who is buying', used: ['A reward round’s card, who’s buying, on its cream plate (64px)'] },
-  'spots/agreed': { name: 'As agreed', used: ['Not placed yet (Round ready’s What we agreed is the setup builder’s; on a cream plate when it goes in)'] },
+  'spots/bragging': { name: 'Bragging rights', used: ['Results of a points round, Bragging rights (96px)'] },
+  'spots/buying': { name: 'Who is buying', used: ['A reward round’s card, who’s buying (64px)'] },
+  'spots/agreed': { name: 'As agreed', used: ['Not placed yet (Round ready’s What we agreed is the setup builder’s)'] },
   'spots/hotstreak': { name: 'Hot streak', used: ['Hall of fame, the Longest win streak badge (48px)'] },
   'spots/skinsking': { name: 'Skins king', used: ['Hall of fame, the Most skins in a round badge (48px)', 'Set up, the So you’re the bank payoff (136px)'] },
   'spots/lowround': { name: 'Low round', used: ['Hall of fame, the Low round badge (48px)'] },

@@ -3,21 +3,12 @@
 // 120 by 120 square with no backdrop, so they sit on any surface in both themes. The crowd scenes
 // use the Ball buddies themselves (BuddyFigure).
 import { BuddyFigure } from './BuddyArt.jsx';
-import { ArtImage } from './ArtFile.jsx';
+import { ArtImage, Sticker } from './ArtFile.jsx';
+import { stickerUnits } from '../lib/sticker.js';
 import { artFile } from '../lib/art-files.js';
 import { INK, BALL, PINK, DEEP, OCHRE, GOLD, TEAL, MINT, CORAL, LAV, PEACH, BLUSH } from '../lib/art-palette.js';
 
 const line = { stroke: INK, strokeWidth: 3.4, fill: 'none', strokeLinecap: 'round', strokeLinejoin: 'round' };
-
-// The plate: a soft blob of colour behind the scene, so the white ball never sits on a white card.
-// Each scene has its own colour; `plate={false}` drops it where the spot already sits on colour.
-const PLATES = { mint: MINT, lav: LAV, peach: PEACH, blush: BLUSH, ochre: OCHRE };
-const PLATE_OF = {
-  tee: 'mint', megaphone: 'blush', bulb: 'lav', link: 'mint', crown: 'blush', cup: 'peach', sleep: 'lav', suitcase: 'peach',
-  wallet: 'blush', card: 'lav', calendar: 'blush', bell: 'peach', gift: 'blush', shades: 'mint', crowd: 'mint', highfive: 'peach',
-  'face-great': 'mint', 'face-ok': 'peach', 'face-off': 'lav',
-};
-const Plate = ({ color }) => <path d="M14 68 C12 38 34 18 62 20 C90 22 108 42 106 70 C104 98 84 112 58 110 C32 108 16 96 14 68Z" fill={PLATES[color] || MINT} opacity=".9" />;
 
 /** The ball: body, dimples and a face. `cx`, `cy` and `r` place it; `face` picks the expression. */
 function Ball({ cx = 60, cy = 66, r = 30, face = 'smile' }) {
@@ -167,11 +158,10 @@ const SCENES = {
     <circle cx="96" cy="40" r="3" fill={OCHRE} />
     <g {...line} strokeWidth="3" stroke={PINK}><path d="M114 48 Q118 54 116 60" /><path d="M78 48 Q74 54 76 60" /></g>
   </>),
-  // Faces for "How was it?": great, just OK, something was off. On a plate (the setup guide)
-  // the ball sits smaller, so the colour shows round it and the ball never melts into the page
-  'face-great': ({ plated }) => <Ball cy={plated ? 64 : 60} r={plated ? 34 : 44} face="happy" />,
-  'face-ok': ({ plated }) => <Ball cy={plated ? 64 : 60} r={plated ? 34 : 44} face="flat" />,
-  'face-off': ({ plated }) => <Ball cy={plated ? 64 : 60} r={plated ? 34 : 44} face="worried" />,
+  // Faces for "How was it?": great, just OK, something was off
+  'face-great': () => <Ball cy={60} r={44} face="happy" />,
+  'face-ok': () => <Ball cy={60} r={44} face="flat" />,
+  'face-off': () => <Ball cy={60} r={44} face="worried" />,
   // Something you asked for shipped: the ball with a wrapped present
   gift: () => (<>
     <Shadow cx={56} />
@@ -294,19 +284,16 @@ function Crowd({ ids }) {
   const left = (120 - (size + step * (n - 1))) / 2;
   // Every other one stands a little in front, so it reads as a group
   const order = who.map((id, i) => ({ id, i })).sort((a, b) => (a.i % 2) - (b.i % 2));
-  return (<>
-    <Shadow cy={100} rx={52} />
-    {order.map(({ id, i }) => <BuddyFigure key={`${id}${i}`} id={id} x={left + step * i} y={(i % 2 ? 46 : 36) + (62 - size) / 2} size={size} />)}
-  </>);
+  // One sticker round the whole group (Spot), so no ground shadow and no border round each buddy
+  return order.map(({ id, i }) => <BuddyFigure key={`${id}${i}`} id={id} x={left + step * i} y={(i % 2 ? 46 : 36) + (62 - size) / 2} size={size} />);
 }
 
 // Two buddies leaning in, arms up to one clap in the middle: the arms and ink motion lines say
-// high five, and a pink star marks the slap (on the peach plate, ochre lines vanished)
+// high five, and a pink star marks the slap
 function HighFive({ ids }) {
   const [a, b] = ids?.length >= 2 ? ids : ['visor', 'snapback'];
   // The arms go behind the bodies, so they never cross a face, and the whole drawing sits 6 lower so the star clears the top
   return (<g transform="translate(0 6)">
-    <Shadow cy={104} rx={50} />
     <g {...line} strokeWidth="4"><path d="M38 70 Q50 52 56 40" /><path d="M82 70 Q70 52 64 40" /></g>
     <g transform="rotate(10 30 90)"><BuddyFigure id={a} x={-4} y={40} size={62} /></g>
     <g transform="rotate(-10 90 90)"><BuddyFigure id={b} x={62} y={40} size={62} /></g>
@@ -324,21 +311,23 @@ export function SpotScene({ kind = 'tee' }) {
 
 /**
  * One spot illustration. `kind` picks the scene (see SCENES, plus 'crowd' and 'highfive', which
- * draw the buddies in `ids`). Decorative: screen readers skip it. `outline={false}` drops the dark
- * theme's cream outline, for a drawing on its own light plate (.art-plate).
+ * draw the buddies in `ids`). Decorative: screen readers skip it. It sits on the page as a sticker,
+ * a white border round its silhouette sized for `size` (ArtFile.jsx); `outline={false}` drops the
+ * border, for a drawing inside something that already has one. No colour plate behind it any more
+ * (Trevor, 2026-10-29): a `plate` an older call still passes does nothing.
  */
-export function Spot({ kind = 'tee', ids = null, size = 96, className = '', plate = 'auto', outline = true }) {
+export function Spot({ kind = 'tee', ids = null, size = 96, className = '', outline = true }) {
   const Scene = SCENES[kind];
-  // An outside drawing (src/art/spots/<kind>.svg) takes the whole box, plate and all
+  // An outside drawing (src/art/spots/<kind>.svg) takes the whole box
   const file = artFile('spots', kind);
-  // Small spots (inline, in a row) stay plain; a card-sized one gets its colour
-  const color = plate === false ? null : plate === 'auto' ? (size >= 56 ? PLATE_OF[kind] : null) : plate;
+  const r = outline ? stickerUnits(120, size) : 0;
   return (
     <svg className={`spot ${className}`.trim()} viewBox="0 0 120 120" width={size} height={size} aria-hidden="true" focusable="false">
-      {file ? <ArtImage file={file} w={120} h={120} outline={outline} /> : <>
-        {color && <Plate color={color} />}
-        {kind === 'crowd' ? <Crowd ids={ids} /> : kind === 'highfive' ? <HighFive ids={ids} /> : Scene ? <Scene plated={!!color} /> : <SCENES.tee />}
-      </>}
+      {file ? <ArtImage file={file} w={120} h={120} sticker={r || false} /> : (
+        <Sticker r={r} box={[0, 0, 120, 120]}>
+          {kind === 'crowd' ? <Crowd ids={ids} /> : kind === 'highfive' ? <HighFive ids={ids} /> : Scene ? <Scene /> : <SCENES.tee />}
+        </Sticker>
+      )}
     </svg>
   );
 }

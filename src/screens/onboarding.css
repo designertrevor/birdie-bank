@@ -5,8 +5,8 @@
    Every step's drawing sits centred at the top with room around it.
    ============================================================ */
 
-/* A scene sits straight on the page in both themes: the drawings' faces are filled, and in dark the
-   sticker outline (.art-outline) carries the edge, as everywhere else */
+/* A scene sits straight on the page in both themes: the drawings' faces are filled, and the white
+   sticker border (ArtFile.jsx) carries the edge, as everywhere else */
 .ob-flow { --ob-art-bg: transparent; }
 
 /* The bar over every page but the welcome: hidden there rather than gone, so it fades in and its fill moves on */
