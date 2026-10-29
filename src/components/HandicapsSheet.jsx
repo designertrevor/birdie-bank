@@ -3,7 +3,7 @@
 // the round is under way. A change counts for every hole, the ones already played too, and the
 // sheet says whose strokes and money move before it's saved. The engine is changeHandicaps.
 import { useState } from 'react';
-import { Icon, Numpad, Sheet, Toggle, useUI } from './ui.jsx';
+import { Icon, Numpad, Segmented, Sheet, useUI } from './ui.jsx';
 import { StrokesSetup } from './StrokesSetup.jsx';
 import { update, useStore } from '../lib/store.js';
 import { findCourse, teeDotStyle } from '../lib/courses.js';
@@ -59,12 +59,12 @@ export function HandicapsSheet({ round, onClose }) {
     <>
       <Sheet open={!padFor} onClose={onClose} title="Handicaps" className="sc-sheet">
         <p className="sheet-text">A change here counts for the whole round, holes already played too.</p>
-        <div className="toggle-row">
-          <div>
-            <div className="toggle-lbl" id="hc-use-lbl">Play with handicaps</div>
-            <div className="toggle-sub" id="hc-use-sub">{useHc ? 'Better players give strokes on the hardest holes' : 'Everyone plays straight up, no strokes'}</div>
-          </div>
-          <Toggle on={useHc} onChange={setUseHc} labelledBy="hc-use-lbl" describedBy="hc-use-sub" />
+        {/* The same choice, the same control, as in setup (the Players and Handicaps steps) */}
+        <div className="block hc-choice">
+          <div className="eyebrow" style={{ marginBottom: 10 }}>Play with handicaps?</div>
+          <Segmented label="Play with handicaps" value={useHc ? 'on' : 'off'} onChange={v => setUseHc(v === 'on')}
+            options={[{ value: 'off', label: 'No, play even' }, { value: 'on', label: 'Yes' }]} />
+          <p className="field-help">{useHc ? 'Better players give strokes on the hardest holes.' : 'Everyone plays straight up, no strokes.'}</p>
         </div>
         {useHc && (
           <>

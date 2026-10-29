@@ -1,0 +1,18 @@
+/* The podium's faces (Podium.jsx), on the results and the hall of fame */
+
+/* Every face on the podium wears the same ring, crowned or not: the card's colour in the light, a
+   sticker's cream edge in the dark, so no buddy goes without one and the winner stands out by the
+   crown and the gold step alone */
+.podium .pod-face .avatar { box-shadow: 0 0 0 3px var(--card); border-radius: 50%; }
+:root[data-theme="dark"] .podium .pod-face .avatar { box-shadow: 0 0 0 2px var(--ink); }
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) .podium .pod-face .avatar { box-shadow: 0 0 0 2px var(--ink); }
+}
+/* The crown sits down onto the buddy's head instead of floating over the ring */
+.podium .crowned .crown-art { top: calc(var(--face) * .1); }
+
+/* Players level on a step share it (a tie for 3rd): their buddies side by side, a little overlapped */
+.podium .pod-faces { display: flex; align-items: flex-end; justify-content: center; }
+.podium .pod-faces > * + * { margin-left: -6px; }
+.podium:not(.team-podium) .pod-faces .avatar { width: 44px; height: 44px; }
+.pod-name.shared { white-space: normal; text-align: center; line-height: 1.2; text-wrap: balance; }

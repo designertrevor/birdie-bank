@@ -7,7 +7,8 @@ import { Icon, Sheet, Toggle, useUI } from './ui.jsx';
 import PlayForPicker from './PlayFor.jsx';
 import { holesPlayed } from '../lib/round.js';
 import { betsOf } from '../lib/pair-bets.js';
-import { playForOf, rewardNoun } from '../lib/play-for.js';
+import { inUnits, playForOf, rewardNoun } from '../lib/play-for.js';
+import { stakeHeadline } from '../lib/stakes.js';
 import { changePlayFor, standingLine, tabLine } from '../lib/lineup.js';
 import { buzz } from '../lib/delight.js';
 import { useAgeCheck } from './AgeCheck.jsx';
@@ -54,9 +55,15 @@ export function PlayForSheet({ round, onClose }) {
     buzz(20);
   };
 
+  // The example in the round's own bet ("$2 a skin becomes 2 pts a skin"), not a made-up $5 one
+  const bet = (() => { try { return stakeHeadline(round.game, round.settings); } catch { return ''; } })();
+  const pts = bet && inUnits({ playFor: { kind: 'points' } }, bet);
+  const example = !bet || !pts || pts === bet
+    ? (was.kind === 'money' ? 'a $5 bet is worth 5 pts.' : '5 pts is worth $5 played for money.')
+    : was.kind === 'money' ? `${bet} becomes ${pts}.` : `${pts} becomes ${bet} played for money.`;
   return (
     <Sheet open onClose={onClose} title="Play for" className="sc-sheet">
-      <p className="sheet-text">A change here counts for the whole round, holes already played too. The bets stay as they are: {was.kind === 'money' ? 'a $5 bet is worth 5 pts.' : '5 pts is worth $5 played for money.'}</p>
+      <p className="sheet-text">A change here counts for the whole round, holes already played too. The bets stay as they are: {example}</p>
       <PlayForPicker value={value} onChange={setValue} label={false} />
       {askCash && (
         <div className="toggle-row">

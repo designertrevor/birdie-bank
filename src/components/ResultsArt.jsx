@@ -3,6 +3,7 @@
 // as an SVG, hidden on the page, and handed to the canvas as a picture (lib/useArtSrc.js), the way the
 // profile and rivalry cards take their buddies.
 import { BuddyFigure } from './BuddyArt.jsx';
+import { Sticker } from './ArtFile.jsx';
 import { CROWN_BOX, CrownShape } from './Podium.jsx';
 import { INK, BALL, PINK, OCHRE, MINT, CORAL, LAV } from '../lib/art-palette.js';
 
@@ -31,6 +32,9 @@ function Cheer({ cx, buddy, crowned, i }) {
         ? <rect key={j} x={cx + dx - 3} y={y} width="6" height="9" rx="1.5" fill={c} transform={`rotate(${(j * 37) % 70 - 35} ${cx + dx} ${y + 4})`} />
         : <circle key={j} cx={cx + dx} cy={y + 4} r="3.2" fill={c} />))}
       <ellipse cx={cx} cy={106} rx="21" ry="3.6" fill="rgba(10,10,10,.18)" />
+      {/* The buddy, arms and crown as one die-cut sticker: a white edge round the lot, so the gold
+          crown and the cream ball read on the game's colour (on the band they went to outlines) */}
+      <Sticker r={2.4} box={[cx - 48, 4, 96, 104]}>
       <g transform={`rotate(${tilt} ${cx} 100)`}>
         {/* Arms up behind the ball, a hand at the end of each */}
         <path d={`M${cx - 18} 78 Q${cx - 31} 68 ${cx - 33} 50`} {...ARM} />
@@ -40,6 +44,7 @@ function Cheer({ cx, buddy, crowned, i }) {
         <BuddyFigure id={buddy} x={cx - 32} y={44} size={64} />
         {crowned && <CrownMark x={cx} y={22} w={32} />}
       </g>
+      </Sticker>
     </g>
   );
 }

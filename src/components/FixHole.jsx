@@ -87,8 +87,9 @@ export function FixHoleSheet({ round, holeNo, me = null, onClose }) {
       </div>
       <div className="toggle-row">
         <div>
-          <div className="toggle-lbl" id="fh-hdcp">Stroke index (HCP)</div>
-          {!twice && <div className="toggle-sub">1 is the hardest hole</div>}
+          {/* The short name the scorecard uses, with what it means under it (no "(HCP)" left alone on a line) */}
+          <div className="toggle-lbl" id="fh-hdcp">HCP</div>
+          {!twice && <div className="toggle-sub">Stroke index. 1 is the hardest hole</div>}
         </div>
         <Stepper id="fh-hdcp" label="Stroke index" value={twice ? hole.hdcp : hdcp} min={1} max={maxHdcp} onChange={setHdcp} disabled={twice} />
       </div>

@@ -8,8 +8,9 @@ import {
 } from '../../components/GamePanels.jsx';
 import { DrivesShortfall } from '../../components/ScrambleDrives.jsx';
 import {
-  bankerPress, bankerPressAll, betPresets, blindMultiplierOf, isTeamGame, matchScored, playersOn, posOf, settingsAt, skinsKinds, skinsTable, wolfCarryBefore,
+  bankerPress, bankerPressAll, betPresets, blindMultiplierOf, isJustPlaying, isTeamGame, matchScored, playersOn, popsFor, posOf, settingsAt, skinsKinds, skinsTable, wolfCarryBefore,
 } from '../../lib/round.js';
+import { halfStrokesOn, strokesWords } from '../../lib/allowances.js';
 import { DRIVE_GAMES } from '../../lib/scramble-drives.js';
 import { money } from '../../lib/golf.js';
 import { padUnit, unitFmt } from '../../lib/play-for.js';
@@ -86,6 +87,8 @@ function BankerPanel({ round, banker, setBanker, phase, setPhase, onPick, onBet,
   const anyDoubled = pressed || rule === 'any';
   const all = !!rule && anyDoubled;
   const canPick = round.settings.banker.rotation === 'choice' || true;
+  // The strokes that matter on the bets step are this hole's, as the score rows show them
+  const here = p => (round.useHandicaps && !isJustPlaying(round, p.id) ? popsFor(round, p, hole) : 0);
   return (
     <>
       <div className="banker-bar">
@@ -97,11 +100,11 @@ function BankerPanel({ round, banker, setBanker, phase, setPhase, onPick, onBet,
       </div>
       {phase === 'bets' && (
         <div className="scroll">
-          <div style={{ padding: '6px 20px 8px' }}><div className="eyebrow">Step 1 of 2: Bets &amp; doubles</div></div>
+          <div style={{ padding: '6px 20px 8px' }}><div className="eyebrow">Step 1 of 2: bets and doubles</div></div>
           {others.map(p => (
             <div key={p.id} className="pcard">
               <div style={{ display: 'flex', alignItems: 'center', padding: '16px 16px 10px' }}>
-                <div style={{ flex: 1 }}><div className="pname">{p.name}</div><div className="ps">{p.plays ? `Gets ${p.plays} stroke${p.plays > 1 ? 's' : ''} on the round` : 'No strokes'}</div></div>
+                <div style={{ flex: 1 }}><div className="pname">{p.name}</div>{here(p) > 0 && <div className="ps">Gets {strokesWords(here(p), halfStrokesOn(round))} here</div>}</div>
                 {/* The chips below say the bet; the big amount only shows once a press changes it */}
                 {banker.doubled[p.id] && <div className="bet-now" aria-hidden="true">{money((banker.bets[p.id] || 0) * (banker.doubleBack ? f * f : f))}</div>}
               </div>

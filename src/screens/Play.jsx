@@ -194,6 +194,16 @@ function PlayRound({ round, mount, momentUp = false, watch = 'money', setWatch }
     return livePreview(round, hole, counting ? { scores: draft, banker, wolf, marks: potMarksFor(round, hole, marks) } : null);
   }, [round, hole, phase, dirty, game, draft, banker, wolf, marks]);
 
+  const holeHead = (
+    <>
+      <HoleMeta round={round} hole={hole} units={units} solo={solo} holeFixed={holeFixed} onOpen={() => setCard(true)} />
+      {!solo && (
+        <HolePanels main={main} game={game} hole={hole} editable={editable} banker={banker} setBanker={setBanker} phase={phase} setPhase={setPhase}
+          wolf={wolf} setWolf={setWolf} draft={draft} touched={touched} marks={marks} setMarks={setMarksDirty} results={results}
+          onBankerPick={() => setBankerPick(true)} onBet={pid => setBetPad(pid)} onSkinsBet={() => setBetsSheet(true)} />
+      )}
+    </>
+  );
   return (
     <Screen className={`play ${theme ? 'themed' : ''}`} style={themeVars(theme)}>
       <PlayHeader round={round} idx={idx} hole={hole} solo={solo} theme={theme} preview={preview} onLive={() => setLive(true)} onMenu={() => setMenu(true)} noMoney={money && !solo} />
@@ -202,17 +212,13 @@ function PlayRound({ round, mount, momentUp = false, watch = 'money', setWatch }
         <LiveMoney round={round} me={me} holderName={keeping.holderName} onCard={() => setCard(true)} onThisHole={() => setWatch('hole')}
           onHole={no => { setWatch('hole'); goHole(round.holes.findIndex(h => h.no === no)); }} />
       )}
-      {!money && <HoleMeta round={round} hole={hole} units={units} solo={solo} holeFixed={holeFixed} onOpen={() => setCard(true)} />}
-
-      {!money && !solo && (
-        <HolePanels main={main} game={game} hole={hole} editable={editable} banker={banker} setBanker={setBanker} phase={phase} setPhase={setPhase}
-          wolf={wolf} setWolf={setWolf} draft={draft} touched={touched} marks={marks} setMarks={setMarksDirty} results={results}
-          onBankerPick={() => setBankerPick(true)} onBet={pid => setBetPad(pid)} onSkinsBet={() => setBetsSheet(true)} />
-      )}
-
+      {/* The hole line and the game's panel. While scores go in they ride at the top of the rows' scroll,
+          so only the header and the money strip stay put and the rows (the thing to tap, one-handed on
+          the course) get the screen once you scroll; on Banker's bets step they stand alone */}
+      {!money && phase !== 'scores' && holeHead}
       {!money && phase === 'scores' && (
         <HoleScores round={round} main={main} hole={hole} game={game} solo={solo} editable={editable} sharedLive={keeping.sharedLive} holderName={keeping.holderName} me={me}
-          units={units} faces={faces} shortRowNames={shortRowNames} entry={entry} banker={banker} wolf={wolf} prompt={prompt} onRunAuction={() => setGamesSheet(true)} />
+          units={units} faces={faces} shortRowNames={shortRowNames} entry={entry} banker={banker} wolf={wolf} prompt={prompt} onRunAuction={() => setGamesSheet(true)} head={holeHead} />
       )}
 
       {watching && !money && !bigBoardOnly(round) && (

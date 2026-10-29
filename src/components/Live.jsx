@@ -98,8 +98,8 @@ export function ShareSheet({ round, open, onClose }) {
         <div style={{ padding: '0 16px' }}>
           <p className="sheet-text" style={{ padding: '0 4px 12px' }}>Everyone follows along live from a link. You keep score, and can hand the card to a player.</p>
           <InvitePreview round={round} />
-          <button className="full-btn" disabled={busy} onClick={start}>{busy ? 'Starting…' : <>Get the link <Icon name="broadcast" fill /></>}</button>
-          <p className="field-help" style={{ textAlign: 'center', margin: '10px 8px 0' }}>Anyone with the link can follow the scores, so send it to your group only.</p>
+          <button className="full-btn" disabled={busy} onClick={start}>{busy ? 'Starting…' : <>Get the link <Icon name="link" /></>}</button>
+          <p className="field-help" style={{ textAlign: 'center', margin: '10px 8px 0' }}>Send it to your group only.</p>
         </div>
       ) : (
         <div style={{ padding: '0 16px' }}>

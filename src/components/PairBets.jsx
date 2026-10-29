@@ -222,9 +222,9 @@ export function PairBetsSetup({ round, bets, setBets }) {
       <div className="sec-label">Side bets</div>
       {list.map(b => <BetRow key={b.id} round={round} bet={b} onTap={() => setEditing(b.id)} />)}
       {list.length < MAX_BETS && (
-        <button className="set-row add-side" onClick={() => setEditing('new')}>
-          <div className="set-icon"><Icon name="plus" /></div>
-          <div className="row-main"><div className="set-name">Add a side bet</div><div className="set-sub">Two players, their own bet: a match, per hole, closest to the pin or your own</div></div>
+        <button className="add-row add-side" onClick={() => setEditing('new')}>
+          <span className="add-ci" aria-hidden="true"><Icon name="plus" /></span>
+          <span className="row-main"><span className="add-lbl">Add a side bet</span><span className="set-sub">Two players, their own bet: a match, per hole, closest to the pin or your own</span></span>
         </button>
       )}
       {editing && (
@@ -307,12 +307,13 @@ export function PairBetsSheet({ round, editable, me = null, onClose, start = nul
             <Icon name="hourglass-medium" fill /> <span>{waitingN === 1 ? 'A change is' : `${waitingN} changes are`} waiting on {keeper}’s phone. It goes in as soon as their phone hears it. <button className="link-btn inline" onClick={takeBack}>Take it back</button></span>
           </p>
         )}
-        {!list.length && <p className="hint-card"><Icon name="hand-coins" fill /> No side bets yet.{canAdd ? ' Two players can add their own match, a bet a hole, closest to the pin or anything else.' : ''}</p>}
+        {/* With the add card right under it the lede says it all; the empty note is for those who can't add */}
+        {!list.length && !canAdd && <p className="hint-card"><Icon name="hand-coins" fill /> No side bets yet.</p>}
         {list.map(r => <BetRow key={r.id} round={view} bet={r.bet} result={r} waiting={pending.has(r.id) ? keeper : null} onTap={canChange(r.bet) ? () => setEditing(r.id) : null} />)}
         {canAdd && list.length < MAX_BETS && (
-          <button className="set-row add-side" onClick={() => setEditing('new')}>
-            <div className="set-icon"><Icon name="plus" /></div>
-            <div className="row-main"><div className="set-name">Add a side bet</div><div className="set-sub">{played ? `From hole ${view.holes[from - 1]?.no ?? from} on, or the whole round` : 'For the whole round, or some of it'}</div></div>
+          <button className="add-row add-side" onClick={() => setEditing('new')}>
+            <span className="add-ci" aria-hidden="true"><Icon name="plus" /></span>
+            <span className="row-main"><span className="add-lbl">Add a side bet</span><span className="set-sub">{played ? `From hole ${view.holes[from - 1]?.no ?? from} on, or the whole round` : 'A match, a bet a hole, closest to the pin or anything else'}</span></span>
           </button>
         )}
         <div className="cta-wrap"><button className="full-btn outline" onClick={onClose}>Done</button></div>

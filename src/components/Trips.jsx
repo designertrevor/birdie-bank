@@ -331,7 +331,8 @@ export function StartTripLink({ onMade, className = 'text-link' }) {
   const [open, setOpen] = useState(false);
   return (
     <>
-      <button className={className} onClick={() => setOpen(true)}><Icon name="suitcase-rolling" /> Going on a golf trip? Start a trip</button>
+      {/* The link part underlined, like setup's "More than one group? Set up a Big Game" */}
+      <button className={className} onClick={() => setOpen(true)}><Icon name="suitcase-rolling" /> <span>Going on a golf trip? <u>Start a trip</u></span></button>
       <TripSheet open={open} onClose={() => setOpen(false)} onDone={t => { setOpen(false); onMade?.(t); }} />
     </>
   );

@@ -140,7 +140,7 @@ export function AddPlayerSheet({ round, request = null, onClose }) {
           {started && (
             <div style={{ padding: '0 20px 12px' }}>
               <div className="eyebrow" style={{ marginBottom: 8 }}>Starts on hole</div>
-              <div className="chip-row" style={{ padding: 0 }} role="radiogroup" aria-label="Starts on hole">
+              <div className="chip-row ap-holes" style={{ padding: 0 }} role="radiogroup" aria-label="Starts on hole">
                 {choices.map(h => (
                   <PickChip key={h.no} radio check={false} className="ap-hole" on={fromNo === h.no} onClick={() => setFromNo(h.no)}>{h.no}</PickChip>
                 ))}
@@ -166,7 +166,8 @@ export function AddPlayerSheet({ round, request = null, onClose }) {
             </div>
           )}
           {rule && <p className="hint-card"><Icon name="scales" fill /> {rule}</p>}
-          <div className="cta-wrap">
+          {/* Pinned to the sheet's foot like the other round sheets' Save, never half under its edge */}
+          <div className="cta-wrap ft-cta">
             <button className="full-btn" disabled={!preview || busy} onClick={apply}>
               {cleanName ? <>Add {firstName(cleanName)}{pos > 1 ? ` from hole ${fromNo}` : ''} <Icon name="user-plus" /></> : 'Type a name'}
             </button>

@@ -70,7 +70,8 @@ export function GameStep({ usual, onUsual, onPickUsual, planning, onPlan, game, 
                       <span className="gt-top"><GameArt game={key} className="game-icon sm" />
                         <button className="gt-info" onClick={e => { e.stopPropagation(); setRules(key); }} aria-label={`${info.name} rules`}><Icon name="info" /></button></span>
                       <span className="gn">{info.name}</span>
-                      <span className="gs">{game === key ? info.blurb : info.players}</span>
+                      {/* "2 v 2" and "4 v 4" kept whole, so no "v 4" is left alone on a line */}
+                      <span className="gs">{game === key ? info.blurb : info.players.replace(/(\d) v (\d)/g, '$1\u00a0v\u00a0$2')}</span>
                     </div>
                   );
                 })}
@@ -90,7 +91,8 @@ export function GameStep({ usual, onUsual, onPickUsual, planning, onPlan, game, 
       </div>
       <div className="cta-wrap">
         <button className="full-btn" disabled={!game} onClick={onNext}>{game ? <>{nextLabel || (planning ? 'Next: When' : 'Next: Course')} <Icon name={nextLabel ? 'check' : 'arrow-right'} /></> : 'Pick a game'}</button>
-        {!planning && onPlan && <button className="text-link cta-link" disabled={!game} onClick={onPlan}><Icon name="calendar-plus" /> Schedule for later</button>}
+        {/* Only once there is a game to schedule, as the overview does: a disabled link read as broken */}
+        {!planning && onPlan && game && <button className="text-link cta-link" onClick={onPlan}><Icon name="calendar-plus" /> Schedule for later</button>}
       </div>
       <RulesSheet game={rules} open={!!rules} onClose={() => setRules(null)} />
     </>

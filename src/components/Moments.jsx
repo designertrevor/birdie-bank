@@ -102,7 +102,7 @@ function HalfwaySheet({ model, round, theme = null, onClose }) {
         <div className="hw-card">
           <div className="rv-card-title">{model.stepsTitle}</div>
           {model.steps.map(s => (
-            <div key={s.key} className={`hw-row ${s.tie ? 'tie' : ''}`}>
+            <div key={s.key} className={`hw-row ${s.tie ? 'tie' : ''} ${s.who ? 'who' : ''}`}>
               <div className="hw-main">
                 <div className="hw-label">{s.label}</div>
                 {s.text && <div className="hw-line">{s.text}</div>}
@@ -125,7 +125,7 @@ function HalfwaySheet({ model, round, theme = null, onClose }) {
         </div>
       )}
       <div className="sec-label hw-sec">Every score so far</div>
-      <Scorecard round={round} holes={model.holes} />
+      <Scorecard round={round} holes={model.holes} compact />
       <div className="cta-wrap"><button className="full-btn" onClick={onClose}>Play on <Icon name="arrow-right" /></button></div>
     </Sheet>
   );

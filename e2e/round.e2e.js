@@ -342,7 +342,9 @@ async function playThrough(page, nav, step, context, problems) {
   assert.equal(Number((await card.getByRole('row', { name: /^Par / }).getByRole('cell').last().innerText()).trim()), par, 'course par');
   for (let p = 0; p < 4; p++) {
     const total = par + sum(STROKES.map(h => h[p]));
-    assert.equal(Number((await card.getByRole('row', { name: new RegExp(`^${PLAYERS[p]} `) }).getByRole('cell').last().innerText()).trim()), total, `${PLAYERS[p]}’s total`);
+    // The phone's owner reads "You" on the card, as in Who pays who and Standings
+    const row = p === 0 ? 'You' : PLAYERS[p];
+    assert.equal(Number((await card.getByRole('row', { name: new RegExp(`^${row} `) }).getByRole('cell').last().innerText()).trim()), total, `${PLAYERS[p]}’s total`);
   }
 
   // --- The Tab ---

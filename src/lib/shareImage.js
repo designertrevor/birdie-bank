@@ -213,8 +213,8 @@ function draw(ctx, m, pics = {}, f = { display: DISPLAY, w: 800, body: BODY, bra
   ctx.font = `600 38px ${f.body}`;
   ctx.fillText(clip(ctx, m.meta, textW), PAD, 296);
   ctx.restore();
-  // The game's art as a sticker under the words
-  if (pics.game) ctx.drawImage(pics.game, PAD, 334, 120, 120);
+  // The game's art as a sticker under the words, big enough to read (its edge drawn round it in Finale.jsx)
+  if (pics.game) ctx.drawImage(pics.game, PAD - 8, 322, 144, 144);
 
   // The headline: who won, and how much
   let y = 680;

@@ -35,7 +35,8 @@ export const REACTIONS = [
   { key: 'fire', emoji: '🔥', label: 'On fire' },
   { key: 'laugh', emoji: '😂', label: 'Too funny' },
   { key: 'yikes', emoji: '😬', label: 'Yikes' },
-  { key: 'money', emoji: '💸', label: 'Pay up', money: true },
+  // The money-mouth face, not money with wings: its grey wings read as a dimmed, disabled button in the dark
+  { key: 'money', emoji: '🤑', label: 'Pay up', money: true },
 ];
 const REACTION_BY_KEY = Object.fromEntries(REACTIONS.map(r => [r.key, r]));
 export const emojiOf = key => REACTION_BY_KEY[key]?.emoji || '';

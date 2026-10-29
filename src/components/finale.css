@@ -83,3 +83,47 @@
   :root:not([data-theme="light"]) .crowned .avatar { box-shadow: 0 0 0 3px var(--ink); }
   :root:not([data-theme="light"]) .reveal-row .sr { box-shadow: inset 0 0 0 1px var(--line); }
 }
+
+/* A step about a player (Skins won, points, deuces): you scan for who, so the name is the strong line
+   and what they won (H3, H6) the quieter one under it */
+.rv-step.who .rv-label { font-size: 15px; font-weight: 600; color: var(--ink); }
+.rv-step.who .rv-text { font-size: 14px; font-weight: 400; color: var(--body); }
+.rv-card.compact .rv-step.who .rv-label { font-size: 14px; }
+.rv-card.compact .rv-step.who .rv-text { font-size: 13px; }
+
+/* The winner row's crown clears the gold edge, and in the dark the gold 1 disc goes without the plain
+   discs' hairline ring (it read as an outline round the gold) */
+.reveal-row.top { padding-block: 20px; }
+.reveal-row.top .crown-art.rv-row-crown { top: -13px; }
+:root[data-theme="dark"] .reveal-row.top .sr { box-shadow: none; }
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) .reveal-row.top .sr { box-shadow: none; }
+}
+
+/* Once the totals land the "Tap to skip" line folds away, not just fades, so the settled reveal's
+   headline, crown and every row have that room at phone height */
+.reveal-head .rv-skip { max-height: 24px; overflow: hidden; transition: opacity .3s, max-height var(--duration-slow) var(--ease-smooth-out), margin var(--duration-slow) var(--ease-smooth-out); }
+.reveal-head .rv-skip.gone { max-height: 0; margin-top: 0; }
+
+/* The friendly finish: the card sits in the middle of the space over the buttons (the focal point
+   with room all round), not at the top over an empty half screen */
+.scroll.nice-scroll { display: flex; flex-direction: column; }
+.nice-scroll > .nice-card { margin-block: auto 0; }
+.nice-scroll > .nice-note { margin-bottom: auto; }
+
+/* In the dark the reward card is the dark card with a gold bar across the top (as the results hero
+   has), not a solid ochre slab brighter than everything round it; Mark it done is the cream button */
+:root[data-theme="dark"] .reward-card:not(.square):not(.cash-card) { background: linear-gradient(var(--ochre), var(--ochre)) top / 100% 4px no-repeat, var(--card); color: var(--ink); box-shadow: var(--hair); }
+:root[data-theme="dark"] .reward-card:not(.square):not(.cash-card) .rc-icon { color: var(--ochre); }
+:root[data-theme="dark"] .reward-card:not(.square):not(.cash-card) .rc-done { background: var(--ink); color: var(--on-ink); }
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) .reward-card:not(.square):not(.cash-card) { background: linear-gradient(var(--ochre), var(--ochre)) top / 100% 4px no-repeat, var(--card); color: var(--ink); box-shadow: var(--hair); }
+  :root:not([data-theme="light"]) .reward-card:not(.square):not(.cash-card) .rc-icon { color: var(--ochre); }
+  :root:not([data-theme="light"]) .reward-card:not(.square):not(.cash-card) .rc-done { background: var(--ink); color: var(--on-ink); }
+}
+
+/* Settle up: Mark paid wears the same 1px hairline as the app's other outline buttons (Edit scores),
+   and the paid count and Where it comes from start on the title's 16px gutter, not 4px in from it */
+:root[data-look="new"] .pay-btn.mark:not(.done) { box-shadow: var(--hair); }
+.settle-note { padding-inline: 16px; }
+.settle-from .sec-label { padding-left: 16px; padding-right: 16px; }

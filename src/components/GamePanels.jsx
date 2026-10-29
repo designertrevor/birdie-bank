@@ -179,9 +179,13 @@ export function VegasPanel({ round, hole, draft, touched }) {
           </div>
         ))}
       </div>
+      {/* This hole and the match, each named on its own line, so "take 11 points" and "All square"
+          never sit side by side reading like a contradiction */}
       <div className="vegas-line">
-        {pv ? (pv.diff === 0 ? 'Push. No points this hole' : `${pv.diff > 0 ? teams[0].name : teams[1].name} take${round.teams ? '' : 's'} ${Math.abs(pv.diff)} point${Math.abs(pv.diff) === 1 ? '' : 's'}${pv.mult > 1 ? ` (${pv.mult === 3 ? 'eagle' : 'birdie'} ${pv.mult}×)` : ''} · ${money(Math.abs(pv.diff) * point)} each`) : 'Low score first, high second: 4 and 5 make 45'}
-        <span className="vegas-total">{total === 0 ? 'All square' : `${total > 0 ? teams[0].name : teams[1].name} +${Math.abs(total)} · ${money(Math.abs(total) * point)}`}</span>
+        <span>{pv ? (pv.diff === 0 ? 'This hole: a push, no points' : <>This hole: <strong>{pv.diff > 0 ? teams[0].name : teams[1].name} +{Math.abs(pv.diff)}</strong>{pv.mult > 1 ? ` (${pv.mult === 3 ? 'eagle' : 'birdie'} ${pv.mult}×)` : ''} · {money(Math.abs(pv.diff) * point)} each</>) : 'Low score first, high second: 4 and 5 make 45'}</span>
+      </div>
+      <div className="vegas-line">
+        <span>Match: <span className="vegas-total">{total === 0 ? 'all square' : `${total > 0 ? teams[0].name : teams[1].name} +${Math.abs(total)} · ${money(Math.abs(total) * point)}`}</span></span>
       </div>
     </div>
   );
@@ -238,7 +242,8 @@ export function PanelArt({ game }) {
 export function ChipsPanel({ icon, game = null, label, items, color = 'var(--lav)' }) {
   return (
     <div className="banker-bar" style={{ '--panel-c': color }}>
-      <div><div className="bl">{label}</div><div className="bn">{game ? <PanelArt game={game} /> : <Icon name={icon} fill />} {items[0]?.lead || 'Even'}</div></div>
+      {/* The game's drawing beside the two lines, centred on them, at a size that reads */}
+      <div className={game ? 'bn-head' : undefined}>{game && <PanelArt game={game} />}<div><div className="bl">{label}</div><div className="bn">{!game && <Icon name={icon} fill />} {items[0]?.lead || 'Even'}</div></div></div>
       {/* Plain text standings, not chips: nothing here is tapped */}
       <div className="skin-counts cp-items">{items.map(it => <span key={it.id} className="cp-item">{it.name} <b>{it.value}</b></span>)}</div>
     </div>
@@ -314,9 +319,12 @@ export function RabbitPanel({ round, hole }) {
   const won = t.legs.filter(l => l.done && l.pays);
   return (
     <div className="banker-bar" style={{ '--panel-c': 'var(--lav)' }}>
-      <div>
-        <div className="bl">{leg?.seg.label} · ends H{holeAtPos(round, leg?.seg.end)}</div>
-        <div className="bn"><PanelArt game="rabbit" /> {holder ? `${nameOf(round, holder)} has the rabbit` : 'The rabbit is loose'}</div>
+      <div className="bn-head">
+        <PanelArt game="rabbit" />
+        <div>
+          <div className="bl">{leg?.seg.label} · ends H{holeAtPos(round, leg?.seg.end)}</div>
+          <div className="bn">{holder ? `${nameOf(round, holder)} has the rabbit` : 'The rabbit is loose'}</div>
+        </div>
       </div>
       <div className="skin-counts">
         {won.map(l => <span key={l.seg.label} className="press-chip">{l.seg.label}: {firstName(nameOf(round, l.holder))}</span>)}
@@ -336,9 +344,12 @@ export function SnakePanel({ round, hole, marks }) {
   const done = t.legs.filter(l => l.done && l !== leg && l.holder);
   return (
     <div className="banker-bar" style={{ '--panel-c': 'var(--lav)' }}>
-      <div>
-        <div className="bl">{t.legs.length > 1 ? `${leg.seg.label} · ` : ''}{leg.count ? `${leg.count} three-putt${leg.count === 1 ? '' : 's'} · worth ${money(leg.value)}` : 'No three-putts yet'}</div>
-        <div className="bn"><PanelArt game="snake" /> {leg.holder ? `${firstName(nameOf(round, leg.holder))} has the snake` : 'Nobody has the snake'}</div>
+      <div className="bn-head">
+        <PanelArt game="snake" />
+        <div>
+          <div className="bl">{t.legs.length > 1 ? `${leg.seg.label} · ` : ''}{leg.count ? `${leg.count} three-putt${leg.count === 1 ? '' : 's'} · worth ${money(leg.value)}` : 'No three-putts yet'}</div>
+          <div className="bn">{leg.holder ? `${firstName(nameOf(round, leg.holder))} has the snake` : 'Nobody has the snake'}</div>
+        </div>
       </div>
       <div className="skin-counts">
         {done.map(l => <span key={l.seg.label} className="press-chip">{l.seg.label}: {firstName(nameOf(round, l.holder))}</span>)}

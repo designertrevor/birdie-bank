@@ -38,17 +38,17 @@
 .money-strip:active { transform: scale(.985); }
 .money-strip.themed { background: var(--gt-soft, var(--card)); }
 /* In the dark a tint of the game's colour went olive or brown: the plain card, with the game's colour as a
-   rule down its left edge */
-:root[data-theme="dark"] .money-strip.themed { background: var(--card); box-shadow: var(--hair), inset 3px 0 0 var(--gt); }
+   straight bar across its top (a background, so the corners clip it square; an inset edge bent round them) */
+:root[data-theme="dark"] .money-strip.themed { background: linear-gradient(var(--gt), var(--gt)) top / 100% 3px no-repeat, var(--card); box-shadow: var(--hair); }
 @media (prefers-color-scheme: dark) {
-  :root:not([data-theme="light"]) .money-strip.themed { background: var(--card); box-shadow: var(--hair), inset 3px 0 0 var(--gt); }
+  :root:not([data-theme="light"]) .money-strip.themed { background: linear-gradient(var(--gt), var(--gt)) top / 100% 3px no-repeat, var(--card); box-shadow: var(--hair); }
 }
-/* Read in full sun: on the light strip the amounts take deeper red and green (7:1 and up) */
-:root:not([data-theme="dark"]) .money-strip .ms-a.neg { color: #8f2219; }
-:root:not([data-theme="dark"]) .money-strip .ms-a.pos { color: #0a5440; }
+/* Read in full sun: on the light strip the amounts take deeper red and green (7:1 and up). Set as the
+   strip's own tokens, since a colour rule on the amounts lost to the shared .neg and .pos ones */
+.money-strip { --loss: #8f2219; --win: #0a5440; }
+:root[data-theme="dark"] .money-strip { --loss: #ff8a7d; --win: #6fd3a8; }
 @media (prefers-color-scheme: dark) {
-  :root:not([data-theme="light"]) .money-strip .ms-a.neg { color: var(--loss); }
-  :root:not([data-theme="light"]) .money-strip .ms-a.pos { color: var(--win); }
+  :root:not([data-theme="light"]) .money-strip { --loss: #ff8a7d; --win: #6fd3a8; }
 }
 .ms-items { flex: 1; min-width: 0; display: grid; grid-auto-flow: column; grid-auto-columns: minmax(0, 1fr); gap: 4px; }
 .ms-item { display: flex; flex-direction: column; align-items: center; min-width: 0; line-height: 1.15; }
@@ -79,7 +79,7 @@
   border: 1.5px dashed var(--line); background: var(--card); color: var(--ink); font: inherit; font-size: 14px; font-weight: 700; cursor: pointer; text-align: left;
 }
 .bp-chip > span { flex: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.bp-chip > .ph-fill { color: var(--pink-text); font-size: 17px; }
+.bp-chip > .ph-fill { color: var(--icon); font-size: 17px; }
 .bp-chip > .ph-bold { color: var(--mute); }
 .bp-chip-x { flex: none; width: 40px; height: 40px; display: grid; place-items: center; border: none; border-radius: var(--r-chip); background: var(--surface); color: var(--mute); cursor: pointer; }
 .bp-wrap > .bp-chip-row { transition: opacity 200ms ease-in; }
@@ -106,9 +106,9 @@
 }
 .pc-chip:active { transform: scale(.92); }
 .pc-chip .pc-l { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100%; }
-/* A chip set by a tap: ink, the strongest contrast there is, readable in full sun */
+/* A chip set by a tap: ink, the strongest contrast there is, readable in full sun. A birdie or eagle too
+   (pink is for Save; the critter popping up is the celebration, as the scorecard's ink rings are) */
 .pc-chip.on { background: var(--ink); color: var(--on-ink); }
-.pc-chip.on.eagle, .pc-chip.on.birdie { background: var(--pink-fill); color: #fff; }
 /* Par before anyone's touched it: outlined, not filled, the one cue that this box is still to tap (the number is ink either way) */
 .pc-chip.on.soft { background: var(--card); color: var(--ink); box-shadow: inset 0 0 0 2px var(--ink); }
 .pc-chip.more { font-size: 18px; background: var(--card); box-shadow: inset 0 0 0 1.5px var(--line); }
@@ -154,7 +154,7 @@
 .ws-change, .play .change-btn { position: relative; }
 .ws-change::before, .play .change-btn::before { content: ''; position: absolute; left: 50%; top: 50%; width: max(100%, 44px); height: max(100%, 44px); transform: translate(-50%, -50%); }
 
-/* The first tee card's Lock it in stays at the sheet's foot while the calls scroll above it */
+/* The first tee card's Lock it in (and Add a player's button) stays at the sheet's foot while the rest scrolls above it */
 .ft-cta { position: sticky; bottom: -16px; z-index: 1; background: var(--sheet-bg); box-shadow: 0 -1px 0 var(--line-soft); }
 
 /* End round's Delete round: a quiet red link under Keep playing (ui.jsx ask, a `quiet` action) */
@@ -170,11 +170,21 @@
 .wolf-panel.folded .wolf-note { margin: 2px 0 6px; }
 
 /* ---------- The game panels: the game's pastel in light; in the dark the plain card with the colour as
-   a rule down its left edge, like the money strip, never a bright slab on a dark screen ---------- */
+   a straight bar across its top, like the money strip, never a bright slab on a dark screen ---------- */
 .play .banker-bar { background: var(--panel-c, var(--ochre)); }
-.play .wolf-panel, .play .press-bar { --panel-c: var(--lav); }
+.play .wolf-panel, .play .press-bar { --panel-c: var(--lav); background: var(--panel-c); }
+/* One game colour a screen: in a themed round the panel takes the round's colour, the same wash as the
+   money strip over it (a peach strip over a lavender panel read as two bands) */
+.play.themed :is(.banker-bar, .wolf-panel, .press-bar) { background: var(--gt-soft, var(--panel-c)); --panel-edge: var(--gt); }
+.play.themed .worth-strip { background: var(--gt-soft, var(--band-lilac)); }
+:root[data-theme="dark"] .play.themed .worth-strip { background: linear-gradient(var(--gt), var(--gt)) top / 100% 3px no-repeat, var(--card); box-shadow: var(--hair); }
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) .play.themed .worth-strip { background: linear-gradient(var(--gt), var(--gt)) top / 100% 3px no-repeat, var(--card); box-shadow: var(--hair); }
+}
 :root[data-theme="dark"] .play :is(.banker-bar, .wolf-panel, .press-bar), :root[data-theme="dark"] .play .banker-bar .bn { color: var(--ink); }
-:root[data-theme="dark"] .play :is(.banker-bar, .wolf-panel, .press-bar) { background: var(--card); box-shadow: var(--hair), inset 3px 0 0 var(--panel-c, var(--ochre)); }
+:root[data-theme="dark"] .play :is(.banker-bar, .wolf-panel, .press-bar) { --bar-c: var(--panel-edge, var(--panel-c, var(--ochre))); background: linear-gradient(var(--bar-c), var(--bar-c)) top / 100% 3px no-repeat, var(--card); box-shadow: var(--hair); }
+/* Every choice on the dark panel reads as a chip, Lone wolf too (on the card's colour it was loose text) */
+:root[data-theme="dark"] .play .wolf-panel .pill-btn { background: var(--surface); box-shadow: var(--hair); }
 :root[data-theme="dark"] .play :is(.banker-bar, .wolf-panel) :is(.bl, .wolf-note, .wp-v),
 :root[data-theme="dark"] .play .press-bar-lbl { color: var(--body); }
 :root[data-theme="dark"] .play :is(.banker-bar, .wolf-panel, .press-bar) :is(.change-btn, .press-chip) { background: var(--surface); color: var(--ink); }
@@ -183,7 +193,8 @@
 :root[data-theme="dark"] .play .ms-tile.ahead :is(.ms-lbl, .ms-sub, .ms-val) { color: var(--win); }
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) .play :is(.banker-bar, .wolf-panel, .press-bar), :root:not([data-theme="light"]) .play .banker-bar .bn { color: var(--ink); }
-  :root:not([data-theme="light"]) .play :is(.banker-bar, .wolf-panel, .press-bar) { background: var(--card); box-shadow: var(--hair), inset 3px 0 0 var(--panel-c, var(--ochre)); }
+  :root:not([data-theme="light"]) .play :is(.banker-bar, .wolf-panel, .press-bar) { --bar-c: var(--panel-edge, var(--panel-c, var(--ochre))); background: linear-gradient(var(--bar-c), var(--bar-c)) top / 100% 3px no-repeat, var(--card); box-shadow: var(--hair); }
+  :root:not([data-theme="light"]) .play .wolf-panel .pill-btn { background: var(--surface); box-shadow: var(--hair); }
   :root:not([data-theme="light"]) .play :is(.banker-bar, .wolf-panel) :is(.bl, .wolf-note, .wp-v),
   :root:not([data-theme="light"]) .play .press-bar-lbl { color: var(--body); }
   :root:not([data-theme="light"]) .play :is(.banker-bar, .wolf-panel, .press-bar) :is(.change-btn, .press-chip) { background: var(--surface); color: var(--ink); }
@@ -193,12 +204,12 @@
 
 /* Two teams: a side's name over its rows, and the side's colour down each row's left edge */
 .side-head { display: flex; align-items: center; gap: 8px; margin: 4px 20px 6px; font-size: 13px; font-weight: 700; color: var(--body); }
-.pcard.on-side { box-shadow: var(--card-shadow), inset 3px 0 0 var(--side-c); }
+.pcard.on-side { background: linear-gradient(var(--side-c), var(--side-c)) left / 3px 100% no-repeat, var(--card); }
 .pcard.side-a { --side-c: var(--teal); }
 .pcard.side-b { --side-c: var(--coral); }
-/* Vegas and a team game by holes: a game panel like the others, the card with the game's colour down
-   its left edge (Vegas's colour is pink, so a wash of it would be a pink slab) */
-.play .vegas-panel { background: var(--card); box-shadow: var(--hair), inset 3px 0 0 var(--gt, var(--line)); }
+/* Vegas and a team game by holes: a game panel like the others, the card with the game's colour as a
+   straight bar across its top (Vegas's colour is pink, so a wash of it would be a pink slab) */
+.play .vegas-panel { --bar-c: var(--gt, var(--line)); background: linear-gradient(var(--bar-c), var(--bar-c)) top / 100% 3px no-repeat, var(--card); box-shadow: var(--hair); }
 :root[data-theme="dark"] .pcard.side-a { --side-c: var(--mint); }
 @media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) .pcard.side-a { --side-c: var(--mint); } }
 /* Hammer: the two sides' hammer buttons share the row, half each, instead of a stack down the left */
@@ -261,3 +272,45 @@
 .hw-row .hw-label:has(+ .hw-line) { font-size: 15px; font-weight: 700; color: var(--ink); }
 .hw-row .hw-label + .hw-line { font-size: 13px; font-weight: 600; color: var(--mute); }
 .play .hw-val { font-family: var(--play-num); font-weight: var(--play-num-weight); }
+
+/* The wolf's and partner's rows: butter in the light; in the dark the plain card with a gold edge (a
+   butter wash went a muddy olive band, two of them once a partner's picked), the tags say who's who */
+:root[data-theme="dark"] .play .pcard.bkr { background: var(--card); box-shadow: var(--hair), inset 0 0 0 1.5px color-mix(in srgb, var(--ochre) 55%, transparent); }
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) .play .pcard.bkr { background: var(--card); box-shadow: var(--hair), inset 0 0 0 1.5px color-mix(in srgb, var(--ochre) 55%, transparent); }
+}
+
+/* The watching phone's "Jackson is keeping score" bar: the same gap under the progress line as the money
+   strip on the keeper's phone. In the dark the card with a mint bar on top and the pencil in mint (the mint
+   slab was the brightest block on the screen), its button on the surface */
+.play .seat-req.keeper-bar { margin-top: 12px; }
+:root[data-theme="dark"] .play .seat-req.keeper-bar { background: linear-gradient(var(--mint), var(--mint)) top / 100% 3px no-repeat, var(--card); box-shadow: var(--hair); color: var(--ink); }
+:root[data-theme="dark"] .play .seat-req.keeper-bar > i { color: var(--mint); }
+:root[data-theme="dark"] .play .seat-req.keeper-bar .pill-btn:not(.ghost) { background: var(--surface); color: var(--ink); }
+:root[data-theme="dark"] .play .seat-req.keeper-bar .pill-btn.ghost { color: var(--ink); box-shadow: inset 0 0 0 1.5px var(--line); }
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) .play .seat-req.keeper-bar { background: linear-gradient(var(--mint), var(--mint)) top / 100% 3px no-repeat, var(--card); box-shadow: var(--hair); color: var(--ink); }
+  :root:not([data-theme="light"]) .play .seat-req.keeper-bar > i { color: var(--mint); }
+  :root:not([data-theme="light"]) .play .seat-req.keeper-bar .pill-btn:not(.ghost) { background: var(--surface); color: var(--ink); }
+  :root:not([data-theme="light"]) .play .seat-req.keeper-bar .pill-btn.ghost { color: var(--ink); box-shadow: inset 0 0 0 1.5px var(--line); }
+}
+
+/* Vegas: the match's line sits right under the hole's */
+.vegas-line + .vegas-line { margin-top: 2px; }
+.vegas-line strong { color: var(--ink); }
+/* In the dark side A's tag takes the mint (the light theme's deep teal all but vanished on the dark
+   card while B's coral popped), so the two sides carry the same weight */
+:root[data-theme="dark"] .side-tag.a { background: var(--mint); color: #173d3c; }
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) .side-tag.a { background: var(--mint); color: #173d3c; }
+}
+
+/* The halfway sheet's numbers in the money strip's own numerals (the sans in the new look), not the serif:
+   the same amounts don't change face between the strip and the sheet over it */
+:root[data-look="new"] .hw-val { font-family: var(--body-font); font-weight: 800; }
+/* A step about a player: the name is the strong line, what they won the quieter one (as on the reveal) */
+.hw-row.who .hw-label { font-size: 15px; font-weight: 600; color: var(--ink); }
+.hw-row.who .hw-line { font-size: 14px; font-weight: 400; color: var(--body); }
+
+/* Nassau's Front 9 / Back 9 / Total tiles wear the card's hairline like every other card on the screen */
+.play .ms-tile { box-shadow: var(--hair); }

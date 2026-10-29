@@ -22,7 +22,7 @@ import { ParChipRow, ScorePadSheet } from './ParChips.jsx';
  * `entry` is useHoleDraft's state for the hole; `prompt` is useBetPrompt's. `faces` are the players'
  * avatars and `shortRowNames` their names as short as the rows need. `onRunAuction` opens Side games.
  */
-export function HoleScores({ round, main, hole, game, solo, editable, sharedLive, holderName, me, units, faces, shortRowNames, entry, banker, wolf, prompt, onRunAuction }) {
+export function HoleScores({ round, main, hole, game, solo, editable, sharedLive, holderName, me, units, faces, shortRowNames, entry, banker, wolf, prompt, onRunAuction, head = null }) {
   const { saved, draft, touched, counting, junk, snakeSide, pots, potHere, marks, setMarksDirty, numRefs, tapped, setScore } = entry;
   const { betPrompt, promptAdd, promptLater, promptSkip, promptOff } = prompt;
   // Whose number pad is up (a box's id), or null
@@ -34,6 +34,8 @@ export function HoleScores({ round, main, hole, game, solo, editable, sharedLive
   const rows = bySide ? [...units].sort((a, b) => (sideOf(a.id) < 0 ? 9 : sideOf(a.id)) - (sideOf(b.id) < 0 ? 9 : sideOf(b.id))) : units;
   return (
     <div className="scroll">
+      {/* The hole line and the game's panel scroll away with the rows (Play.jsx) */}
+      {head}
       {!editable && sharedLive && <p className="field-help" style={{ padding: '0 20px' }}>{round.status === 'active' ? `Scores as ${holderName} saves them. Browse any hole.` : 'Only the players in this round can fix its scores.'}</p>}
       {/* A Calcutta's auction is before the first tee: until two lots are sold, say where to run it */}
       {editable && !solo && !roundStarted(round) && sideGamesOf(round).some(sg => sg.game === 'calcutta') && Object.keys(calcuttaSalesOf(round)).length < 2 && (
@@ -103,7 +105,7 @@ export function HoleScores({ round, main, hole, game, solo, editable, sharedLive
                   {isPartner && <span className="bkr-badge"><Icon name="handshake" fill /> Partner</span>}
                   {casual && !solo && <span className="jp-tag">{JUST_PLAYING_TAG}</span>}
                   {/* Only someone on a team gets its letter: anyone just playing (or only in the side games) is on none */}
-                  {round.teams && !p.team && round.teams.some(t => t.players.includes(p.id)) && <span className={`side-tag ${round.teams.findIndex(t => t.players.includes(p.id)) === 0 ? 'a' : 'b'}`}>{['A', 'B', 'C', 'D'][round.teams.findIndex(t => t.players.includes(p.id))]}</span>}
+                  {round.teams && !p.team && !bySide && round.teams.some(t => t.players.includes(p.id)) && <span className={`side-tag ${round.teams.findIndex(t => t.players.includes(p.id)) === 0 ? 'a' : 'b'}`}>{['A', 'B', 'C', 'D'][round.teams.findIndex(t => t.players.includes(p.id))]}</span>}
                   {counts && <span className="counts-tag">Counts</span>}
                 </div>
                 {p.team && <div className="ps">{p.players.map(pid => round.players.find(x => x.id === pid)?.name.split(' ')[0]).join(', ')}{round.useHandicaps ? ` · team handicap ${p.courseHc ?? 0}` : ''}</div>}

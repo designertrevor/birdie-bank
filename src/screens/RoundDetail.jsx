@@ -180,6 +180,12 @@ export default function RoundDetail({ id, celebrate }) {
     && round.teams.every(t => t.players.length && t.players.every(pid => amountOf(pid) === amountOf(t.players[0])))
     ? round.teams.map(t => ({ id: t.id, name: t.name, players: t.players, amount: amountOf(t.players[0]) ?? 0 })).sort((a, b) => b.amount - a.amount)
     : null;
+  // A player's place by side, when the result is two sides: their side's step (T1 for a level match)
+  const sideLabel = pid => {
+    const t = teamSides.findIndex(x => x.players.includes(pid));
+    const level = teamSides[0].amount === teamSides[1].amount;
+    return level ? 'T1' : `T${t + 1}`;
+  };
   // Three or more with a winner: the top three on a podium, in the winner's block
   const podium = !solo && (res.standings.length >= 3 || teamSides) && !allSquare && !(res.big && !res.big.final);
   // Who left and which holes didn't count, said plainly so nobody wonders where the money went
@@ -227,7 +233,8 @@ export default function RoundDetail({ id, celebrate }) {
       <div className="scroll">
         {solo ? (
           <div className="winner-hero nice-hero" ref={hero}>
-            <Icon name="smiley" fill className="crown" />
+            {/* The player's own buddy, as on the Nice round screen that ends the same kind of round */}
+            {faces.get(meId) ? <span className="nice-hero-face"><AvatarArt model={faces.get(meId)} /></span> : <Icon name="smiley" fill className="crown" />}
             <h1 className="wn">{nice ? nice.title : 'Your card'}</h1>
             <div className="wa">{nice ? <>{nice.score} <span className={`nice-par ${nice.tone}`}>{nice.toPar}</span></> : '–'}</div>
             <div className="ws">{round.course.name} · {roundDate(round)} · {nice ? nice.line : 'No scores yet'}</div>
@@ -237,14 +244,16 @@ export default function RoundDetail({ id, celebrate }) {
         // Layout Lab A: the crowned winner and the podium as one block, then who pays who. With three or
         // more and a winner the podium carries the crown; otherwise the crowned face (or the group) does
         <div className={`results-a ${podium ? 'with-podium' : ''}`} ref={hero} style={{ '--ra-tint': gameTheme(round.game).soft, '--ra-strong': gameTheme(round.game).tint }}>
+          {/* The eyebrow first, in every hero, then the face (or the podium further down) */}
+          {!allSquare && !(res.big && !res.big.final) && <div className="ra-eyebrow"><Icon name="crown-simple" fill /> {tie && !winningSide ? 'Top of the table' : winningSide ? 'Winners' : 'Winner'}</div>}
           {!podium && (!allSquare && !tie && faces.get(top.id) && !(res.big && !res.big.final)
             ? <CrownedFace model={faces.get(top.id)} size={84} />
             : allSquare || tie
               ? <Spot kind={allSquare ? 'handshake' : 'crowd'} ids={heroBuddies} size={120} className="hero-spot" plate={false} />
               // Nobody to crown yet (a Big Game waiting on its other groups): the trophy still up for grabs
               : <Spot kind={res.big && !res.big.final ? 'podium' : 'crown'} size={88} className="ra-spot" />)}
-          {!allSquare && !(res.big && !res.big.final) && <div className="ra-eyebrow"><Icon name="crown-simple" fill /> {tie && !winningSide ? 'Top of the table' : winningSide ? 'Winners' : 'Winner'}</div>}
-          <h1 className="ra-title d">{heroTitle}</h1>
+          {/* A reward typed as a sentence ("Sam wins. Loser buys lunch") reads as its two sentences, a line each */}
+          <h1 className="ra-title d">{heroTitle.includes('. ') ? heroTitle.split('. ').map((t, i, all) => <span key={i} className="ra-line">{t}{i < all.length - 1 ? '.' : ''}</span>) : heroTitle}</h1>
           {heroAmt != null && <div className={`ra-amt ${allSquare || (res.big && !res.big.final) ? 'zero' : ''}`}>{heroAmt}</div>}
           <div className="ra-sub">{round.course.name} · {roundDate(round)} · {gameLabel(round)} · {played === round.holes.length ? `${played} holes` : `${played} of ${round.holes.length} holes`}</div>
           {meRow && meRow.id !== top.id && !allSquare && heroAmt != null && <div className="me-line">You: {fmt(meRow.amount, { sign: true })}</div>}
@@ -278,7 +287,7 @@ export default function RoundDetail({ id, celebrate }) {
                 <span className="pf">{payName(t.from)}</span><span className="pa"><Icon name="arrow-right" /></span><span className="pt">{payName(t.to)}</span>
                 <span className="pm">{money(t.amount)}</span>
               </div>
-              {talk && <TalkBar ctx={talk} on={payTarget(t.from, t.to)} title={payTitle(t)} />}
+              {talk && <TalkBar ctx={talk} on={payTarget(t.from, t.to)} title={payTitle(t)} one />}
             </div>
           ))}</div>}
           {tab.transfers.length > 0 && <p className="field-help" style={{ padding: '0 4px' }}>Only the side bets played for money. They’re on the Tab until marked paid; the points above decide the reward.</p>}
@@ -288,7 +297,8 @@ export default function RoundDetail({ id, celebrate }) {
         <h2 className="sec-label">Who pays who</h2>
         <div style={{ padding: '0 16px' }}>
           {res.big ? <p className="hint-card" style={{ margin: 0 }}><Icon name="handshake" fill /> {res.big.final ? `${round.trip.name} is settled once for the whole game, on its page.` : `${round.trip.name} is decided once every group is in. It’s settled once, on its page.`}</p>
-            : res.transfers.length === 0 && <p className="hint-card" style={{ margin: 0 }}><Icon name="handshake" fill /> Nobody owes anybody. First round’s on whoever three-putted last.</p>}
+            // Plain words under the heading: the hero's handshake right above already shows it
+            : res.transfers.length === 0 && <p className="ra-none">Nobody owes anybody. First round’s on whoever three-putted last.</p>}
           {/* One card of rows with hairlines, like the Tab: who pays who reads as one list */}
           {res.transfers.length > 0 && <div className="ra-pays">{res.transfers.map(t => (
             <div key={t.from + t.to} className="talk-pay">
@@ -296,7 +306,7 @@ export default function RoundDetail({ id, celebrate }) {
                 <span className="pf">{payName(t.from)}</span><span className="pa"><Icon name="arrow-right" /></span><span className="pt">{payName(t.to)}</span>
                 <span className="pm">{money(t.amount)}</span>
               </div>
-              {talk && <TalkBar ctx={talk} on={payTarget(t.from, t.to)} title={payTitle(t)} />}
+              {talk && <TalkBar ctx={talk} on={payTarget(t.from, t.to)} title={payTitle(t)} one />}
             </div>
           ))}</div>}
           {res.transfers.length > 0 && <p className="field-help" style={{ padding: '0 4px' }}>{round.trip?.format === 'big'
@@ -325,7 +335,8 @@ export default function RoundDetail({ id, celebrate }) {
           {res.standings.map((p, i) => (
             <div key={p.id} className="stand-line" data-testid="standing">
               {/* Everyone level on top gets the gold disc, so a tie never reads as a ranking */}
-              <div className={`sr ${p.amount === top.amount ? 'gold' : ''}`}>{placeLabel(res.standings, i)}</div>
+              {/* Two sides on the podium: the list ranks by side too (T1, T2), so it says what the podium's steps say */}
+              <div className={`sr ${p.amount === top.amount ? 'gold' : ''}`}>{teamSides ? sideLabel(p.id) : placeLabel(res.standings, i)}</div>
               {faces.get(p.id) && <AvatarArt model={faces.get(p.id)} size="sm" />}
               {/* Stroke play: the score is the game, so each line says it ("73 (+1)") beside the money */}
               <div className="sn">{p.id === meId ? 'You' : p.name}{round.game === 'stroke' && scoreLine(round, p.id) && <span className="li-sub"> · {scoreLine(round, p.id)}</span>}{strokesNote(p)}{res.detail.byGame && <span className="rv-games">{gamesLine(res.detail.byGame, p.id, fmt)}</span>}</div>
@@ -384,7 +395,7 @@ export default function RoundDetail({ id, celebrate }) {
         </>}
         {(solo || view === 'card') && <>
           <h2 className="sec-label">Scorecard</h2>
-          <Scorecard round={round} />
+          <Scorecard round={round} me={meId} />
         </>}
         <HowWasIt round={round} />
 
@@ -392,8 +403,11 @@ export default function RoundDetail({ id, celebrate }) {
           {round.status === 'done' && GAMES[round.game] && !solo && (
             <button className="full-btn" onClick={() => nav.push('newRound', { rematch: id })}><Icon name="arrow-counter-clockwise" /> Run it back</button>
           )}
-          {round.status === 'done' && !round.localMe && !solo && round.shared?.host !== false && <SaveUsualButton round={round} />}
-          {canEdit(round, keeperMe(round, state), !!round.shared?.host) && <button className="full-btn outline" onClick={edit}><Icon name="pencil-simple" /> Edit scores</button>}
+          {/* Run it back is the one big action; saving the usual and editing scores sit two-up under it, quieter */}
+          <div className="detail-two">
+            {round.status === 'done' && !round.localMe && !solo && round.shared?.host !== false && <SaveUsualButton round={round} />}
+            {canEdit(round, keeperMe(round, state), !!round.shared?.host) && <button className="full-btn outline" onClick={edit}><Icon name="pencil-simple" /> Edit scores</button>}
+          </div>
           <button className="danger-link" onClick={del}><Icon name="trash" /> Delete round</button>
         </div>
       </div>

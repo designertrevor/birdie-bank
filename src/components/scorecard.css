@@ -20,3 +20,30 @@
 @media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) .sc-table td.cur { background: var(--surface); } }
 /* The card's hairline edge, like the cards around it (none inside a sheet, where cards sit flat) */
 .sc-wrap { box-shadow: var(--hair); }
+
+/* The hole being played, in both themes: a neutral lift down its column under an ink header cell (pink
+   is for the one thing to tap, not a display cell) */
+.sc-wrap .sc-table td.cur { background: var(--surface); }
+.sc-wrap .sc-table th.cur { background: var(--ink); color: var(--on-ink); }
+
+/* A stroke's dot sits under its own number, inside the hole's cell, so it's clear which hole gets it
+   (on the cell's corner it landed on the line between two holes, and nicked the rings and boxes) */
+.sc-wrap .sc-cell { padding-bottom: 6px; }
+.sc-wrap .sc-strokes:not(.inline) { top: auto; bottom: -3px; right: 50%; transform: translateX(50%); }
+.sc-wrap .sc-strokes.give:not(.inline) { bottom: -6px; }
+
+/* Double or worse: a tighter double box, so it no longer runs into the marks beside it */
+.sc-wrap .sc-mark.dbl { box-shadow: 0 0 0 1.5px var(--mute-soft), 0 0 0 3px var(--card), 0 0 0 4px var(--mute-soft); }
+.sc-legend .sc-key:has(.dbl) { margin-left: 4px; }
+.sc-legend { column-gap: 14px; }
+/* No marks and no strokes (all square, every score par): no empty band where the key would be */
+.sc-legend:empty { display: none; }
+
+/* The halfway sheet's front nine: nine narrow columns, smaller marks and an Out total, all in 358px */
+.sc-compact .sc-table { table-layout: fixed; font-size: 13px; }
+.sc-compact .sc-table th, .sc-compact .sc-table td { padding-inline: 1px; min-width: 0; }
+.sc-compact .sc-table td { padding-block: 8px; }
+.sc-compact .scorecard .sticky { min-width: 0; width: 64px; padding-left: 10px; }
+.sc-compact .sc-cell { min-width: 22px; min-height: 22px; }
+.sc-compact .sc-mark { width: 22px; height: 22px; }
+.sc-compact .sc-name { display: block; overflow: hidden; text-overflow: ellipsis; }
