@@ -3865,6 +3865,8 @@ a.header-btn.rm-open { text-decoration: none; }
 
 /* ONBOARDING: the whole cast on the welcome, a ball that reacts on every question, and a hint under a grey Continue */
 .scene { display: block; width: 100%; }
+/* The ground runs to the box's sides: let its sticker border show past them, so it wraps the whole drawing */
+svg.scene { overflow: visible; }
 .gallery-scene { height: 100%; }
 .trip-scene { height: 150px; margin: -8px 0 14px; flex-shrink: 0; }
 .ob-cast { width: 280px; max-width: 100%; height: auto; display: block; margin: 0 auto 4px; }
